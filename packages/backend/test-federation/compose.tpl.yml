@@ -17,7 +17,13 @@ services:
       - ./.config/docker.env
     environment:
       - NODE_ENV=production
+    tmpfs:
+      - /misskey/packages/slacc/node_modules
     volumes:
+      - type: bind
+        source: ../../slacc
+        target: /misskey/packages/slacc
+        read_only: true
       - type: bind
         source: ../../../built
         target: /misskey/built
@@ -135,11 +141,12 @@ services:
         target: /usr/local/share/ca-certificates/rootCA.crt
         read_only: true
     working_dir: /misskey
+    # 共有 node_modules のインストールは setup に任せ、同時起動時のリンク競合を避ける。
+    # 各サーバーの設定は ._config_.json にマウント済みで、共有 built への設定生成は不要。
     command: >
       bash -ec "
-        bun install --frozen-lockfile
-        bun run --bun --filter backend migrate
-        bun run --bun --filter backend start
+        bun ./packages/backend/built/migration-runner.js up
+        bun ./packages/backend/built/entry.js
       "
     healthcheck:
       test: bash /misskey/healthcheck.sh

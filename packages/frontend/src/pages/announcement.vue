@@ -74,11 +74,13 @@ function _fetch_() {
 	announcement.value = null;
 	misskeyApi('announcements/show', {
 		announcementId: props.announcementId,
-	}).then(async _announcement => {
-		announcement.value = _announcement;
-	}).catch(err => {
-		error.value = err;
-	});
+	})
+		.then(async (_announcement) => {
+			announcement.value = _announcement;
+		})
+		.catch((err) => {
+			error.value = err;
+		});
 }
 
 async function read(target: Misskey.entities.Announcement): Promise<void> {
@@ -88,14 +90,16 @@ async function read(target: Misskey.entities.Announcement): Promise<void> {
 			title: i18n.ts._announcement.readConfirmTitle,
 			text: i18n.tsx._announcement.readConfirmText({ title: target.title }),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 	}
 
 	target.isRead = true;
 	await misskeyApi('i/read-announcement', { announcementId: target.id });
 	if ($i) {
 		updateCurrentAccountPartial({
-			unreadAnnouncements: $i.unreadAnnouncements.filter((a: { id: string; }) => a.id !== target.id),
+			unreadAnnouncements: $i.unreadAnnouncements.filter((a: { id: string }) => a.id !== target.id),
 		});
 	}
 }

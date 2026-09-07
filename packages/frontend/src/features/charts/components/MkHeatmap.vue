@@ -29,8 +29,15 @@ import type * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { chartText } from '@/features/charts/chart-i18n.js';
 
-export type HeatmapSource = 'active-users' | 'notes' | 'ap-requests-inbox-received' | 'ap-requests-deliver-succeeded' | 'ap-requests-deliver-failed';
-const props = withDefaults(defineProps<{ src: HeatmapSource; user?: Misskey.entities.User; label?: string }>(), { label: '' });
+export type HeatmapSource =
+	| 'active-users'
+	| 'notes'
+	| 'ap-requests-inbox-received'
+	| 'ap-requests-deliver-succeeded'
+	| 'ap-requests-deliver-failed';
+const props = withDefaults(defineProps<{ src: HeatmapSource; user?: Misskey.entities.User; label?: string }>(), {
+	label: '',
+});
 const rootEl = useTemplateRef('rootEl');
 const fetching = ref(true);
 const weeks = ref(25);
@@ -43,18 +50,38 @@ async function load() {
 	weeks.value = width > 700 ? 50 : width < 400 ? 10 : 25;
 	const limit = weeks.value * 7;
 	let values: number[] = [];
-	if (props.src === 'active-users') values = (await misskeyApi('charts/active-users', { limit, span: 'day' })).readWrite;
-	else if (props.src === 'notes') values = props.user ? (await misskeyApi('charts/user/notes', { userId: props.user.id, limit, span: 'day' })).inc : (await misskeyApi('charts/notes', { limit, span: 'day' })).local.inc;
-	else {
+	if (props.src === 'active-users') {
+		values = (await misskeyApi('charts/active-users', { limit, span: 'day' })).readWrite;
+	} else if (props.src === 'notes') {
+		values = props.user
+			? (await misskeyApi('charts/user/notes', { userId: props.user.id, limit, span: 'day' })).inc
+			: (await misskeyApi('charts/notes', { limit, span: 'day' })).local.inc;
+	} else {
 		const raw = await misskeyApi('charts/ap-request', { limit, span: 'day' });
-		values = props.src === 'ap-requests-inbox-received' ? raw.inboxReceived : props.src === 'ap-requests-deliver-succeeded' ? raw.deliverSucceeded : raw.deliverFailed;
+		values =
+			props.src === 'ap-requests-inbox-received'
+				? raw.inboxReceived
+				: props.src === 'ap-requests-deliver-succeeded'
+					? raw.deliverSucceeded
+					: raw.deliverFailed;
 	}
-	const max = values.slice().sort((a, b) => b - a).slice(0, 3).reduce((sum, value) => sum + value, 0) / 3 || 1;
+	const max =
+		values
+			.slice()
+			.sort((a, b) => b - a)
+			.slice(0, 3)
+			.reduce((sum, value) => sum + value, 0) / 3 || 1;
 	const today = new Date();
-	cells.value = values.map((value, ago) => {
-		const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ago);
-		return { date: date.toLocaleDateString(), value, level: value === 0 ? 0 : Math.max(0.12, Math.min(1, value / max)) };
-	}).reverse();
+	cells.value = values
+		.map((value, ago) => {
+			const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ago);
+			return {
+				date: date.toLocaleDateString(),
+				value,
+				level: value === 0 ? 0 : Math.max(0.12, Math.min(1, value / max)),
+			};
+		})
+		.reverse();
 	fetching.value = false;
 }
 watch(() => [props.src, props.user?.id], load);

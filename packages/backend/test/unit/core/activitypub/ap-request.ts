@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { verifyRequestSignature, type ParsedSignature } from '@/core/activitypub/http-signature.js';
+import { verifyRequestSignature } from '@/core/activitypub/http-signature.js';
+import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';

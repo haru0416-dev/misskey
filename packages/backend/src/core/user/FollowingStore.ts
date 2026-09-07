@@ -3,13 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { following, type FollowingInsert, type FollowingRow } from '@/db/schema/following.js';
+import { following } from '@/db/schema/following.js';
+import type { FollowingInsert, FollowingRow } from '@/db/schema/following.js';
 import { user as userTable } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
+import { memoizeInRequest } from '@/misc/request-scope.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
 import {
@@ -85,7 +88,9 @@ export async function listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(
 	followerId: MiUser['id'],
 	followeeIds: MiUser['id'][],
 ): Promise<MiFollowing[]> {
-	if (followeeIds.length === 0) return [];
+	if (followeeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()
@@ -100,7 +105,9 @@ export async function listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
 	followerId: MiUser['id'],
 	followeeIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (followeeIds.length === 0) return [];
+	if (followeeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ followeeId: following.followeeId })
@@ -149,7 +156,9 @@ export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
 	followeeId: MiUser['id'],
 	followerIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (followerIds.length === 0) return [];
+	if (followerIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ followerId: following.followerId })
@@ -164,7 +173,9 @@ export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
 	followerIds: MiUser['id'][],
 	followeeIds: MiUser['id'][],
 ): Promise<Pick<MiFollowing, 'followerId' | 'followeeId'>[]> {
-	if (followerIds.length === 0 || followeeIds.length === 0) return [];
+	if (followerIds.length === 0 || followeeIds.length === 0) {
+		return [];
+	}
 
 	return await db
 		.select({
@@ -178,18 +189,6 @@ export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
 				sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
 			),
 		);
-}
-
-export async function listNotificationFollowerIdsByFolloweeIdFromDatabase(
-	db: MiDrizzleDatabase,
-	followeeId: MiUser['id'],
-): Promise<MiUser['id'][]> {
-	const rows = await db
-		.select({ followerId: following.followerId })
-		.from(following)
-		.where(and(eq(following.followeeId, followeeId), eq(following.notify, 'normal')));
-
-	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowingsByFollowerIdWithPaginationFromDatabase(
@@ -314,23 +313,54 @@ export async function listFolloweeIdsWithRepliesByFollowerIdFromDatabase(
 		.where(eq(following.followerId, followerId));
 }
 
-export async function listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase(
+export type FollowerForNoteDelivery = Pick<
+	MiFollowing,
+	| 'followerId'
+	| 'followerHost'
+	| 'isFollowerHibernated'
+	| 'withReplies'
+	| 'notify'
+	| 'followerSharedInbox'
+	| 'followerInbox'
+>;
+
+/**
+ * 投稿 1 件の配送に要るフォロワー情報を 1 回で読む。fanout (ローカル・休眠でない)、通知 (notify)、
+ * 連合配送 (リモートの inbox) はそれぞれ同じ followee の following を別条件で読んでいたが、
+ * 3 本の合計はほぼ全フォロワーなので 1 本にまとめ、呼び出し側で絞る。
+ * 同一リクエスト内は listFollowersForNoteDeliveryForRequest で使い回す。
+ */
+export async function listFollowersForNoteDeliveryFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
-): Promise<Pick<MiFollowing, 'followerId' | 'withReplies'>[]> {
-	return await db
-		.select({
-			followerId: following.followerId,
-			withReplies: following.withReplies,
-		})
-		.from(following)
-		.where(
-			and(
-				eq(following.followeeId, followeeId),
-				isNull(following.followerHost),
-				eq(following.isFollowerHibernated, false),
-			),
-		);
+): Promise<FollowerForNoteDelivery[]> {
+	const statement = preparedQueryFor(db, 'following:forNoteDeliveryByFolloweeId', () =>
+		db
+			.select({
+				followerId: following.followerId,
+				followerHost: following.followerHost,
+				isFollowerHibernated: following.isFollowerHibernated,
+				withReplies: following.withReplies,
+				notify: following.notify,
+				followerSharedInbox: following.followerSharedInbox,
+				followerInbox: following.followerInbox,
+			})
+			.from(following)
+			.where(eq(following.followeeId, sql.placeholder('followeeId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+
+	return await statement.execute({ followeeId });
+}
+
+/** 投稿の各ステージ (fanout / 通知 / 連合配送) が同じリクエスト内で同じフォロワー一覧を共有する。 */
+export function listFollowersForNoteDeliveryForRequest(
+	db: MiDrizzleDatabase,
+	followeeId: MiUser['id'],
+): Promise<FollowerForNoteDelivery[]> {
+	return memoizeInRequest(`followersForNoteDelivery:${followeeId}`, () =>
+		listFollowersForNoteDeliveryFromDatabase(db, followeeId),
+	);
 }
 
 export async function listSharedInboxesFromFollowingsInDatabase(db: MiDrizzleDatabase): Promise<string[]> {
@@ -349,19 +379,6 @@ export async function listSharedInboxesFromFollowingsInDatabase(db: MiDrizzleDat
 				.filter((inbox): inbox is string => inbox != null),
 		),
 	];
-}
-
-export async function listFollowerInboxesByFolloweeIdFromDatabase(
-	db: MiDrizzleDatabase,
-	followeeId: MiUser['id'],
-): Promise<{ followerSharedInbox: MiFollowing['followerSharedInbox']; followerInbox: MiFollowing['followerInbox'] }[]> {
-	return await db
-		.select({
-			followerSharedInbox: following.followerSharedInbox,
-			followerInbox: following.followerInbox,
-		})
-		.from(following)
-		.where(and(eq(following.followeeId, followeeId), isNotNull(following.followerHost)));
 }
 
 export async function listFollowingsForUnfollowByFollowerIdFromDatabase(
@@ -421,7 +438,9 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 			.delete(following)
 			.where(and(eq(following.id, id), eq(following.followerId, followerId), eq(following.followeeId, followeeId)))
 			.returning({ id: following.id });
-		if (deleted.length === 0) return false;
+		if (deleted.length === 0) {
+			return false;
+		}
 
 		if (!movedToUriByUserId.get(followerId) && !movedToUriByUserId.get(followeeId)) {
 			await Promise.all([
@@ -432,7 +451,9 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 		}
 
 		for (const userId of [followerId, followeeId]) {
-			if (movedToUriByUserId.get(userId)) continue;
+			if (movedToUriByUserId.get(userId)) {
+				continue;
+			}
 
 			const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
 				countNonMovedFolloweesByFollowerIdFromDatabase(tx, userId),
@@ -636,7 +657,9 @@ async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
 	followerIds: MiUser['id'][],
 	isFollowerHibernated: boolean,
 ): Promise<void> {
-	if (followerIds.length === 0) return;
+	if (followerIds.length === 0) {
+		return;
+	}
 
 	await db.update(following).set({ isFollowerHibernated }).where(inArray(following.followerId, followerIds));
 }

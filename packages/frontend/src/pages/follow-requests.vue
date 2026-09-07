@@ -49,13 +49,17 @@ const tab = ref($i?.isLocked ? 'list' : 'sent');
 
 let paginator: Paginator<'following/requests/list' | 'following/requests/sent'>;
 
-watch(tab, (newTab) => {
-	if (newTab === 'list') {
-		paginator = markRaw(new Paginator('following/requests/list', { limit: 10 }));
-	} else {
-		paginator = markRaw(new Paginator('following/requests/sent', { limit: 10 }));
-	}
-}, { immediate: true });
+watch(
+	tab,
+	(newTab) => {
+		if (newTab === 'list') {
+			paginator = markRaw(new Paginator('following/requests/list', { limit: 10 }));
+		} else {
+			paginator = markRaw(new Paginator('following/requests/sent', { limit: 10 }));
+		}
+	},
+	{ immediate: true },
+);
 
 function accept(user: Misskey.entities.UserLite) {
 	os.apiWithDialog('following/requests/accept', { userId: user.id }).then(() => {
@@ -69,7 +73,9 @@ async function reject(user: Misskey.entities.UserLite) {
 		text: i18n.tsx.rejectFollowRequestConfirm({ name: user.name || user.username }),
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('following/requests/reject', { userId: user.id }).then(() => {
 		paginator.reload();
@@ -82,7 +88,9 @@ async function cancel(user: Misskey.entities.UserLite) {
 		text: i18n.tsx.cancelFollowRequestConfirm({ name: user.name || user.username }),
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('following/requests/cancel', { userId: user.id }).then(() => {
 		paginator.reload();
@@ -100,7 +108,8 @@ const headerTabs = computed(() => [
 		key: 'list',
 		title: i18n.ts._followRequest.recieved,
 		icon: 'ti ti-download',
-	}, {
+	},
+	{
 		key: 'sent',
 		title: i18n.ts._followRequest.sent,
 		icon: 'ti ti-upload',

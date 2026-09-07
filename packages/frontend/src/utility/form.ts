@@ -154,7 +154,9 @@ export function getDefaultFormValues<F extends FormWithDefault>(form: F): GetFor
 	const result = {} as GetFormResultType<F>;
 	for (const key of Object.keys(form) as (keyof F)[]) {
 		const item = form[key];
-		if (item == null) throw new Error(`Unknown form item: ${String(key)}`);
+		if (item == null) {
+			throw new Error(`Unknown form item: ${String(key)}`);
+		}
 		result[key] = item.default as GetItemType<F[typeof key]>;
 	}
 	return result;

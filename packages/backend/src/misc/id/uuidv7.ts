@@ -15,18 +15,22 @@ import * as crypto from 'node:crypto';
 export const uuidv7RegExp = /^[0-9a-f]{32}$/;
 
 const TIME_LENGTH = 12; // 48bit = hex 12桁
-const COUNTER_MASK = 0x03ffffff; // 26bit
+const COUNTER_MASK = 0x03_ff_ff_ff; // 26bit
 
 let counter = crypto.randomBytes(4).readUInt32BE(0) & COUNTER_MASK;
 
 export function genUuidv7(t: number): string {
-	if (isNaN(t)) throw new Error('Failed to create UUIDv7: Invalid Date');
-	if (t < 0) t = 0;
+	if (isNaN(t)) {
+		throw new Error('Failed to create UUIDv7: Invalid Date');
+	}
+	if (t < 0) {
+		t = 0;
+	}
 
 	counter = (counter + 1) & COUNTER_MASK;
 
 	const time = t.toString(16).padStart(TIME_LENGTH, '0').slice(-TIME_LENGTH);
-	const verAndRandA = (0x7000 | (counter >>> 14)).toString(16); // version 7 + カウンタ上位12bit
+	const verAndRandA = (0x70_00 | (counter >>> 14)).toString(16); // version 7 + カウンタ上位12bit
 	const randB = crypto.randomBytes(8);
 	randB[0] = 0x80 | ((counter >>> 8) & 0x3f); // variant 0b10 + カウンタ中位6bit
 	randB[1] = counter & 0xff; // カウンタ下位8bit

@@ -13,36 +13,43 @@ const CLIENT_ACCOUNT_RESPONSE_TIMEOUT_MS = 250;
 
 export const cli = new APIClient({ origin, fetch: (...args): Promise<Response> => fetch(...args) });
 
-type ApiArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
-	Misskey.Endpoints[E] extends { reqOptional: true }
-		? [userId?: string, params?: P]
-		: [userId: string | undefined, params: P];
+type ApiArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> = Misskey.Endpoints[E] extends {
+	reqOptional: true;
+}
+	? [userId?: string, params?: P]
+	: [userId: string | undefined, params: P];
 
-export async function api<
-	E extends keyof Misskey.Endpoints,
-	P extends Misskey.Endpoints[E]['req'] = never,
->(endpoint: E, ...[userId, params]: ApiArgs<E, P>): Promise<Misskey.api.SwitchCaseResponseType<E, P> | undefined> {
+export async function api<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req'] = never>(
+	endpoint: E,
+	...[userId, params]: ApiArgs<E, P>
+): Promise<Misskey.api.SwitchCaseResponseType<E, P> | undefined> {
 	let account: Pick<Misskey.entities.SignupResponse, 'id' | 'token'> | undefined;
 
 	if (userId) {
 		account = await getAccountFromId(userId);
-		if (!account) return;
+		if (!account) {
+			return;
+		}
 	}
 
-	const requestParams = params ?? {} as P;
-	return (cli.request as <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
-		endpoint: E,
-		params?: P,
-		credential?: string | null,
-	) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>)(endpoint, requestParams, account?.token);
+	const requestParams = params ?? ({} as P);
+	return (
+		cli.request as <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
+			endpoint: E,
+			params?: P,
+			credential?: string | null,
+		) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>
+	)(endpoint, requestParams, account?.token);
 }
 
 // mark-all-as-read送出を1秒間隔に制限する
 const readBlockingStatus = new Map<string, boolean>();
 export function sendMarkAllAsRead(userId: string): Promise<null | undefined | void> {
-	if (readBlockingStatus.get(userId)) return Promise.resolve();
+	if (readBlockingStatus.get(userId)) {
+		return Promise.resolve();
+	}
 	readBlockingStatus.set(userId, true);
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		setTimeout(() => {
 			readBlockingStatus.set(userId, false);
 			(api('notifications/mark-all-as-read', userId) as Promise<void>).then(resolve, resolve);
@@ -65,27 +72,46 @@ export function openAntenna(antennaId: string, loginId: string): ReturnType<type
 export function openChat(body: Misskey.entities.ChatMessage, loginId: string): ReturnType<typeof openClient> {
 	if (body.toRoomId != null) {
 		return openClient('push', `/chat/room/${body.toRoomId}`, loginId, { body });
-	} else {
-		return openClient('push', `/chat/user/${body.toUserId}`, loginId, { body });
 	}
+	return openClient('push', `/chat/user/${body.toUserId}`, loginId, { body });
 }
 
-export async function openPost(options: { initialText?: string; reply?: Misskey.entities.Note; renote?: Misskey.entities.Note }, loginId?: string): ReturnType<typeof openClient> {
+export async function openPost(
+	options: { initialText?: string; reply?: Misskey.entities.Note; renote?: Misskey.entities.Note },
+	loginId?: string,
+): ReturnType<typeof openClient> {
 	const url = '/share';
 	const query = new URLSearchParams();
-	if (options.initialText) query.set('text', options.initialText);
-	if (options.reply) query.set('replyId', options.reply.id);
-	if (options.renote) query.set('renoteId', options.renote.id);
+	if (options.initialText) {
+		query.set('text', options.initialText);
+	}
+	if (options.reply) {
+		query.set('replyId', options.reply.id);
+	}
+	if (options.renote) {
+		query.set('renoteId', options.renote.id);
+	}
 
 	return openClient('post', `${url}?${query}`, loginId, { options });
 }
 
-export async function openClient(order: SwMessageOrderType, url: string, loginId?: string, query: Record<string, SwMessage[string]> = {}): Promise<WindowClient | null> {
+export async function openClient(
+	order: SwMessageOrderType,
+	url: string,
+	loginId?: string,
+	query: Record<string, SwMessage[string]> = {},
+): Promise<WindowClient | null> {
 	const client = await findClient(loginId);
 
 	if (client) {
 		try {
-			client.postMessage({ type: 'order', ...query, order, ...(loginId === undefined ? {} : { loginId }), url } satisfies SwMessage);
+			client.postMessage({
+				type: 'order',
+				...query,
+				order,
+				...(loginId === undefined ? {} : { loginId }),
+				url,
+			} satisfies SwMessage);
 			return client;
 		} catch {
 			// matchAll() の完了後に閉じられたクライアントは再利用できない。
@@ -100,17 +126,19 @@ async function findClient(loginId?: string): Promise<WindowClient | null> {
 		includeUncontrolled: false,
 		type: 'window',
 	});
-	const availableClients = clients.filter(client => !(new URL(client.url)).searchParams.has('zen'));
+	const availableClients = clients.filter((client) => !new URL(client.url).searchParams.has('zen'));
 
-	if (loginId === undefined) return availableClients[0] ?? null;
+	if (loginId === undefined) {
+		return availableClients[0] ?? null;
+	}
 
 	const clientLoginIds = await Promise.all(availableClients.map(getClientLoginId));
-	const clientIndex = clientLoginIds.findIndex(clientLoginId => clientLoginId === loginId);
+	const clientIndex = clientLoginIds.findIndex((clientLoginId) => clientLoginId === loginId);
 	return availableClients[clientIndex] ?? null;
 }
 
 function getClientLoginId(client: WindowClient): Promise<string | null> {
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		const channel = new MessageChannel();
 		const finish = (loginId: string | null) => {
 			globalThis.clearTimeout(timeout);
@@ -121,7 +149,9 @@ function getClientLoginId(client: WindowClient): Promise<string | null> {
 
 		channel.port1.onmessage = (event: MessageEvent<unknown>) => {
 			const data = event.data;
-			if (typeof data !== 'object' || data === null || !('loginId' in data)) return finish(null);
+			if (typeof data !== 'object' || data === null || !('loginId' in data)) {
+				return finish(null);
+			}
 			const { loginId } = data;
 			finish(typeof loginId === 'string' ? loginId : null);
 		};

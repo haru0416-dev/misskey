@@ -186,19 +186,23 @@ const emit = defineEmits<{
 
 const tab = ref<'drafts' | 'scheduled'>(props.scheduled ? 'scheduled' : 'drafts');
 
-const draftsPaginator = markRaw(new Paginator('notes/drafts/list', {
-	limit: 10,
-	params: {
-		scheduled: false,
-	},
-}));
+const draftsPaginator = markRaw(
+	new Paginator('notes/drafts/list', {
+		limit: 10,
+		params: {
+			scheduled: false,
+		},
+	}),
+);
 
-const scheduledPaginator = markRaw(new Paginator('notes/drafts/list', {
-	limit: 10,
-	params: {
-		scheduled: true,
-	},
-}));
+const scheduledPaginator = markRaw(
+	new Paginator('notes/drafts/list', {
+		limit: 10,
+		params: {
+			scheduled: true,
+		},
+	}),
+);
 
 const currentDraftsCount = ref(0);
 misskeyApi('notes/drafts/count').then((count) => {
@@ -223,7 +227,9 @@ async function deleteDraft(draft: Misskey.entities.NoteDraft) {
 		text: i18n.ts._drafts.deleteAreYouSure,
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('notes/drafts/delete', { draftId: draft.id }).then(() => {
 		draftsPaginator.reload();

@@ -67,7 +67,7 @@ vi.mock('@/core/user/MutingStore.js', async (importOriginal) => ({
 
 vi.mock('@/core/webhook/WebhookStore.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@/core/webhook/WebhookStore.js')>()),
-	listWebhooksFromDatabase: vi.fn().mockResolvedValue([]),
+	listActiveWebhooksByUserIdAndEventFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/server/rest/user/user.js', async (importOriginal) => ({
@@ -130,7 +130,9 @@ describe('acceptAllFollowRequestsForApi', () => {
 			maxActive = Math.max(maxActive, active);
 			await createBarrier;
 			active--;
-			if (data.followerId === followers[3]!.id) throw new Error('stale request');
+			if (data.followerId === followers[3]!.id) {
+				throw new Error('stale request');
+			}
 			return data;
 		});
 		const publishMainStream = vi.fn();

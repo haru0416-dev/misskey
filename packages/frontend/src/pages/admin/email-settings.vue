@@ -113,7 +113,9 @@ async function testEmail() {
 		placeholder: 'test@example.com',
 		minLength: 1,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 	os.apiWithDialog('admin/send-email', {
 		to: destination,
 		subject: 'Test email',

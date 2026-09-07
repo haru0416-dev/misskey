@@ -30,7 +30,9 @@ function readConfiguredPort() {
 async function waitForController(controlUrl, target) {
 	const deadline = Date.now() + TARGET_READY_TIMEOUT_MS;
 	while (Date.now() < deadline) {
-		if (target.exitCode != null) throw new Error(`The bun e2e target exited early (code ${target.exitCode}).`);
+		if (target.exitCode != null) {
+			throw new Error(`The bun e2e target exited early (code ${target.exitCode}).`);
+		}
 		try {
 			// コントローラは POST しか受けないので、404 でも「応答した = 起動済み」と判定できる
 			await fetch(controlUrl, { signal: AbortSignal.timeout(2000) });
@@ -72,7 +74,9 @@ try {
 	});
 	exitCode = await test.exited;
 } finally {
-	if (target.exitCode == null) target.kill('SIGTERM');
+	if (target.exitCode == null) {
+		target.kill('SIGTERM');
+	}
 	await target.exited;
 }
 

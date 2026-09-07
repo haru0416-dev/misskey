@@ -6,12 +6,10 @@
 import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packNoteForApi, type ApiNoteDependencies } from '@/server/rest/note/note.js';
-import {
-	isNoteMutedOrBlockedForStream,
-	isNoteVisibleForMeForStream,
-	type StreamChannelDefinition,
-} from '../channel.js';
+import { packNoteForApi } from '@/server/rest/note/note.js';
+import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
 type MainStreamNotificationBody = {
 	userId?: string;
@@ -23,7 +21,9 @@ export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies>
 	requireCredential: true,
 	kind: 'read:account',
 	init: async (deps, ctx) => {
-		if (!ctx.user) return false;
+		if (!ctx.user) {
+			return false;
+		}
 		const user = ctx.user;
 
 		const handler = async (data: { type: string; body: JsonValue }) => {
@@ -31,8 +31,12 @@ export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies>
 				case 'notification': {
 					const body = data.body as MainStreamNotificationBody;
 					// ユーザーがミュートしたインスタンスの通知を無視する。
-					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) return;
-					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
+					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) {
+						return;
+					}
+					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) {
+						return;
+					}
 
 					if (body.note?.isHidden) {
 						const note = await packNoteForApi(deps, body.note.id, user, { detail: true });
@@ -42,9 +46,15 @@ export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies>
 				}
 				case 'mention': {
 					const note = data.body as Packed<'Note'>;
-					if (isInstanceMuted(note, ctx.userMutedInstances)) return;
-					if (!isNoteVisibleForMeForStream(ctx, note)) return;
-					if (isNoteMutedOrBlockedForStream(ctx, note)) return;
+					if (isInstanceMuted(note, ctx.userMutedInstances)) {
+						return;
+					}
+					if (!isNoteVisibleForMeForStream(ctx, note)) {
+						return;
+					}
+					if (isNoteMutedOrBlockedForStream(ctx, note)) {
+						return;
+					}
 					if (note.isHidden) {
 						const packed = await packNoteForApi(deps, note.id, user, { detail: true });
 						data = { type: data.type, body: packed as unknown as JsonValue };

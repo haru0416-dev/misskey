@@ -94,11 +94,14 @@ import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
 import { login } from '@/accounts.js';
 
-const props = withDefaults(defineProps<{
-	autoSet?: boolean;
-}>(), {
-	autoSet: false,
-});
+const props = withDefaults(
+	defineProps<{
+		autoSet?: boolean;
+	}>(),
+	{
+		autoSet: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'signup', user: Misskey.entities.SignupResponse): void;
@@ -118,8 +121,22 @@ const password = ref<string>('');
 const retypedPassword = ref<string>('');
 const invitationCode = ref<string>('');
 const email = ref('');
-const usernameState = ref<null | 'wait' | 'ok' | 'unavailable' | 'error' | 'invalid-format' | 'min-range' | 'max-range'>(null);
-const emailState = ref<null | 'wait' | 'ok' | 'unavailable:used' | 'unavailable:format' | 'unavailable:disposable' | 'unavailable:banned' | 'unavailable:mx' | 'unavailable:smtp' | 'unavailable' | 'error'>(null);
+const usernameState = ref<
+	null | 'wait' | 'ok' | 'unavailable' | 'error' | 'invalid-format' | 'min-range' | 'max-range'
+>(null);
+const emailState = ref<
+	| null
+	| 'wait'
+	| 'ok'
+	| 'unavailable:used'
+	| 'unavailable:format'
+	| 'unavailable:disposable'
+	| 'unavailable:banned'
+	| 'unavailable:mx'
+	| 'unavailable:smtp'
+	| 'unavailable'
+	| 'error'
+>(null);
 const passwordStrength = ref<'' | 'low' | 'medium' | 'high'>('');
 const passwordRetypeState = ref<null | 'match' | 'not-match'>(null);
 const submitting = ref<boolean>(false);
@@ -132,16 +149,18 @@ const usernameAbortController = ref<null | AbortController>(null);
 const emailAbortController = ref<null | AbortController>(null);
 
 const shouldDisableSubmitting = computed((): boolean => {
-	return submitting.value ||
-		instance.enableHcaptcha && !hCaptchaResponse.value ||
-		instance.enableMcaptcha && !mCaptchaResponse.value ||
-		instance.enableRecaptcha && !reCaptchaResponse.value ||
-		instance.enableTurnstile && !turnstileResponse.value ||
-		instance.enableTestcaptcha && !testcaptchaResponse.value ||
-		instance.emailRequiredForSignup && emailState.value !== 'ok' ||
-		instance.disableRegistration && invitationCode.value === '' ||
+	return (
+		submitting.value ||
+		(instance.enableHcaptcha && !hCaptchaResponse.value) ||
+		(instance.enableMcaptcha && !mCaptchaResponse.value) ||
+		(instance.enableRecaptcha && !reCaptchaResponse.value) ||
+		(instance.enableTurnstile && !turnstileResponse.value) ||
+		(instance.enableTestcaptcha && !testcaptchaResponse.value) ||
+		(instance.emailRequiredForSignup && emailState.value !== 'ok') ||
+		(instance.disableRegistration && invitationCode.value === '') ||
 		usernameState.value !== 'ok' ||
-		passwordRetypeState.value !== 'match';
+		passwordRetypeState.value !== 'match'
+	);
 });
 
 function getPasswordStrength(source: string): number {
@@ -150,7 +169,7 @@ function getPasswordStrength(source: string): number {
 
 	// 英数字
 	if (/[a-zA-Z]/.test(source) && /[0-9]/.test(source)) {
-		power += 0.020;
+		power += 0.02;
 	}
 
 	// 大文字と小文字が混ざってたら
@@ -175,11 +194,13 @@ function onChangeUsername(): void {
 	}
 
 	{
-		const err =
-			!username.value.match(/^[a-zA-Z0-9_]+$/) ? 'invalid-format' :
-			username.value.length < 1 ? 'min-range' :
-			username.value.length > 20 ? 'max-range' :
-			null;
+		const err = !username.value.match(/^[a-zA-Z0-9_]+$/)
+			? 'invalid-format'
+			: username.value.length < 1
+				? 'min-range'
+				: username.value.length > 20
+					? 'max-range'
+					: null;
 
 		if (err) {
 			usernameState.value = err;
@@ -193,15 +214,22 @@ function onChangeUsername(): void {
 	usernameState.value = 'wait';
 	usernameAbortController.value = new AbortController();
 
-	misskeyApi('username/available', {
-		username: username.value,
-	}, undefined, usernameAbortController.value.signal).then(result => {
-		usernameState.value = result.available ? 'ok' : 'unavailable';
-	}).catch((err) => {
-		if (err.name !== 'AbortError') {
-			usernameState.value = 'error';
-		}
-	});
+	misskeyApi(
+		'username/available',
+		{
+			username: username.value,
+		},
+		undefined,
+		usernameAbortController.value.signal,
+	)
+		.then((result) => {
+			usernameState.value = result.available ? 'ok' : 'unavailable';
+		})
+		.catch((err) => {
+			if (err.name !== 'AbortError') {
+				usernameState.value = 'error';
+			}
+		});
 }
 
 function onChangeEmail(): void {
@@ -216,22 +244,36 @@ function onChangeEmail(): void {
 	emailState.value = 'wait';
 	emailAbortController.value = new AbortController();
 
-	misskeyApi('email-address/available', {
-		emailAddress: email.value,
-	}, undefined, emailAbortController.value.signal).then(result => {
-		emailState.value = result.available ? 'ok' :
-			result.reason === 'used' ? 'unavailable:used' :
-			result.reason === 'format' ? 'unavailable:format' :
-			result.reason === 'disposable' ? 'unavailable:disposable' :
-			result.reason === 'banned' ? 'unavailable:banned' :
-			result.reason === 'mx' ? 'unavailable:mx' :
-			result.reason === 'smtp' ? 'unavailable:smtp' :
-			'unavailable';
-	}).catch((err) => {
-		if (err.name !== 'AbortError') {
-			emailState.value = 'error';
-		}
-	});
+	misskeyApi(
+		'email-address/available',
+		{
+			emailAddress: email.value,
+		},
+		undefined,
+		emailAbortController.value.signal,
+	)
+		.then((result) => {
+			emailState.value = result.available
+				? 'ok'
+				: result.reason === 'used'
+					? 'unavailable:used'
+					: result.reason === 'format'
+						? 'unavailable:format'
+						: result.reason === 'disposable'
+							? 'unavailable:disposable'
+							: result.reason === 'banned'
+								? 'unavailable:banned'
+								: result.reason === 'mx'
+									? 'unavailable:mx'
+									: result.reason === 'smtp'
+										? 'unavailable:smtp'
+										: 'unavailable';
+		})
+		.catch((err) => {
+			if (err.name !== 'AbortError') {
+				emailState.value = 'error';
+			}
+		});
 }
 
 function onChangePassword(): void {
@@ -254,7 +296,9 @@ function onChangePasswordRetype(): void {
 }
 
 async function onSubmit(): Promise<void> {
-	if (submitting.value) return;
+	if (submitting.value) {
+		return;
+	}
 	submitting.value = true;
 
 	const signupPayload: Misskey.entities.SignupRequest = {
@@ -269,16 +313,18 @@ async function onSubmit(): Promise<void> {
 		'testcaptcha-response': testcaptchaResponse.value,
 	};
 
-	const res = await window.fetch(`${config.apiUrl}/signup`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(signupPayload),
-	}).catch(() => {
-		onSignupApiError();
-		return null;
-	});
+	const res = await window
+		.fetch(`${config.apiUrl}/signup`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(signupPayload),
+		})
+		.catch(() => {
+			onSignupApiError();
+			return null;
+		});
 
 	if (res && res.ok) {
 		if (res.status === 204 || instance.emailRequiredForSignup) {
@@ -290,7 +336,9 @@ async function onSubmit(): Promise<void> {
 			emit('signupEmailPending');
 		} else {
 			const resJson = (await res.json()) as Misskey.entities.SignupResponse;
-			if (_DEV_) console.log(resJson);
+			if (_DEV_) {
+				console.log(resJson);
+			}
 
 			emit('signup', resJson);
 

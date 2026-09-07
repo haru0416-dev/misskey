@@ -22,7 +22,7 @@ export const flash = pgTable(
 			.notNull()
 			.$type<MiUser['id']>()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		script: varchar({ length: 65536 }).notNull(),
+		script: varchar({ length: 65_536 }).notNull(),
 		permissions: varchar({ length: 256 }).array().default(emptyVarcharArray).notNull(),
 		likedCount: integer().default(0).notNull(),
 		visibility: varchar({ length: 512 }).default('public').notNull().$type<MiFlash['visibility']>(),

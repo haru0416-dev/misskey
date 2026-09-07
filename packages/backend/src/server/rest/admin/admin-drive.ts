@@ -131,7 +131,9 @@ function getProxiedUrl(deps: ApiAdminDriveDependencies, url: string, mode?: 'sta
 }
 
 function getExternalVideoThumbnailUrl(deps: ApiAdminDriveDependencies, url: string): string | null {
-	if (deps.config.media.videoThumbnailGeneratorUrl == null) return null;
+	if (deps.config.media.videoThumbnailGeneratorUrl == null) {
+		return null;
+	}
 
 	return appendQuery(
 		`${deps.config.media.videoThumbnailGeneratorUrl}/thumbnail.webp`,
@@ -144,7 +146,9 @@ function getExternalVideoThumbnailUrl(deps: ApiAdminDriveDependencies, url: stri
 
 function getAdminDriveFileThumbnailUrl(deps: ApiAdminDriveDependencies, file: MiDriveFile): string | null {
 	if (file.type.startsWith('video')) {
-		if (file.thumbnailUrl) return file.thumbnailUrl;
+		if (file.thumbnailUrl) {
+			return file.thumbnailUrl;
+		}
 
 		return getExternalVideoThumbnailUrl(deps, file.webpublicUrl ?? file.url);
 	} else if (file.uri != null && file.userHost != null && deps.config.media.externalProxyEnabled) {
@@ -285,8 +289,12 @@ export async function handleApiAdminDriveFiles(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const files = await listDriveFilesForAdminFromDatabase(

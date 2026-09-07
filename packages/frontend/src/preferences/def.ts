@@ -430,7 +430,9 @@ export const PREF_DEF = definePreferences({
 		mergeStrategy: (a, b) => {
 			const installIds = new Set(a.map((plugin) => plugin.installId));
 			const names = new Set(a.map((plugin) => plugin.name));
-			if (b.some((plugin) => installIds.has(plugin.installId) || names.has(plugin.name))) throw new Error();
+			if (b.some((plugin) => installIds.has(plugin.installId) || names.has(plugin.name))) {
+				throw new Error();
+			}
 			return a.concat(b);
 		},
 	},

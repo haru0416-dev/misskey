@@ -44,7 +44,7 @@ const props = defineProps<{
 		notes: number;
 		replies: number;
 		renotes: number;
-	}[]
+	}[];
 }>();
 
 const viewBoxX = ref(147);
@@ -56,7 +56,7 @@ const pointsReply = ref<string>();
 const pointsRenote = ref<string>();
 const pointsTotal = ref<string>();
 let activity = props.activity.slice().reverse();
-let peak = Math.max(0, ...activity.map(d => d.total));
+let peak = Math.max(0, ...activity.map((d) => d.total));
 let dragHandler: AnimationFrameThrottled<[MouseEvent]> | null = null;
 
 function startDragging(handler: AnimationFrameThrottled<[MouseEvent]>) {
@@ -68,7 +68,9 @@ function startDragging(handler: AnimationFrameThrottled<[MouseEvent]>) {
 }
 
 function stopDragging() {
-	if (dragHandler == null) return;
+	if (dragHandler == null) {
+		return;
+	}
 	dragHandler.flush();
 	window.removeEventListener('mousemove', dragHandler);
 	window.removeEventListener('mouseleave', stopDragging);
@@ -83,16 +85,18 @@ function onMousedown(ev: MouseEvent) {
 	const basePos = pos.value;
 
 	// 動かした時
-	startDragging(throttleByAnimationFrame(me => {
-		const moveLeft = me.clientX - clickX;
-		const moveTop = me.clientY - clickY;
+	startDragging(
+		throttleByAnimationFrame((me) => {
+			const moveLeft = me.clientX - clickX;
+			const moveTop = me.clientY - clickY;
 
-		zoom.value = Math.max(1, baseZoom + (-moveTop / 20));
-		const minPos = Math.min(0, viewBoxX.value - ((activity.length - 1) * zoom.value));
-		pos.value = Math.max(minPos, Math.min(0, basePos + moveLeft));
+			zoom.value = Math.max(1, baseZoom + -moveTop / 20);
+			const minPos = Math.min(0, viewBoxX.value - (activity.length - 1) * zoom.value);
+			pos.value = Math.max(minPos, Math.min(0, basePos + moveLeft));
 
-		render();
-	}));
+			render();
+		}),
+	);
 }
 
 function render() {
@@ -109,11 +113,11 @@ function render() {
 	const nextPointsRenote: string[] = [];
 	const nextPointsTotal: string[] = [];
 	for (const [i, data] of activity.entries()) {
-		const x = (i * zoom.value) + pos.value;
-		nextPointsNote.push(`${x},${(1 - (data.notes / peak)) * viewBoxY.value}`);
-		nextPointsReply.push(`${x},${(1 - (data.replies / peak)) * viewBoxY.value}`);
-		nextPointsRenote.push(`${x},${(1 - (data.renotes / peak)) * viewBoxY.value}`);
-		nextPointsTotal.push(`${x},${(1 - (data.total / peak)) * viewBoxY.value}`);
+		const x = i * zoom.value + pos.value;
+		nextPointsNote.push(`${x},${(1 - data.notes / peak) * viewBoxY.value}`);
+		nextPointsReply.push(`${x},${(1 - data.replies / peak) * viewBoxY.value}`);
+		nextPointsRenote.push(`${x},${(1 - data.renotes / peak) * viewBoxY.value}`);
+		nextPointsTotal.push(`${x},${(1 - data.total / peak) * viewBoxY.value}`);
 	}
 	pointsNote.value = nextPointsNote.join(' ');
 	pointsReply.value = nextPointsReply.join(' ');
@@ -121,14 +125,20 @@ function render() {
 	pointsTotal.value = nextPointsTotal.join(' ');
 }
 
-watch(() => props.activity, (nextActivity) => {
-	activity = nextActivity.slice().reverse();
-	peak = Math.max(0, ...activity.map(d => d.total));
-	render();
-}, { immediate: true });
+watch(
+	() => props.activity,
+	(nextActivity) => {
+		activity = nextActivity.slice().reverse();
+		peak = Math.max(0, ...activity.map((d) => d.total));
+		render();
+	},
+	{ immediate: true },
+);
 
 onUnmounted(() => {
-	if (dragHandler == null) return;
+	if (dragHandler == null) {
+		return;
+	}
 	dragHandler.cancel();
 	window.removeEventListener('mousemove', dragHandler);
 	window.removeEventListener('mouseleave', stopDragging);

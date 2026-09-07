@@ -58,10 +58,14 @@ import * as UserProfileStore from '@/core/user/UserProfileStore.js';
 import * as UserSecurityKeyStore from '@/core/account/UserSecurityKeyStore.js';
 import * as UserStore from '@/core/user/UserStore.js';
 import * as WebhookStore from '@/core/webhook/WebhookStore.js';
-import { hashtag, type HashtagInsert } from '@/db/schema/hashtag.js';
-import { queueOutbox, type QueueOutboxInsert } from '@/db/schema/queue-outbox.js';
-import { userIp, type UserIpInsert } from '@/db/schema/user-ip.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase } from '@/drizzle.js';
+import { hashtag } from '@/db/schema/hashtag.js';
+import type { HashtagInsert } from '@/db/schema/hashtag.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import type { QueueOutboxInsert } from '@/db/schema/queue-outbox.js';
+import { userIp } from '@/db/schema/user-ip.js';
+import type { UserIpInsert } from '@/db/schema/user-ip.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import { createLocalSignupAccount as createLocalSignupAccountImpl } from '@/server/rest/auth/signup.js';
 

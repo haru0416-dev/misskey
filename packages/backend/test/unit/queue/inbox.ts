@@ -8,23 +8,22 @@
 // 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { parseRequestSignature } from '@/core/activitypub/http-signature.js';
 import * as Bull from 'bullmq';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
-import {
-	handleQueueInbox,
-	flushQueueInboxUpdateInstanceQueue,
-	type QueueInboxDependencies,
-} from '@/queue/handlers/inbox.js';
+import { handleQueueInbox, flushQueueInboxUpdateInstanceQueue } from '@/queue/handlers/inbox.js';
+import type { QueueInboxDependencies } from '@/queue/handlers/inbox.js';
 import type { InboxJobData } from '@/queue/types.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { MiUser } from '@/models/User.js';

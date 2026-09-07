@@ -55,11 +55,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const connection = useStream().useChannel('main');
 const images = ref<Misskey.entities.DriveFile[]>([]);
@@ -68,26 +64,29 @@ const fetching = ref(true);
 function onDriveFileCreated(file: Misskey.entities.DriveFile) {
 	if (/^image\/.+$/.test(file.type)) {
 		images.value.unshift(file);
-		if (images.value.length > 9) images.value.pop();
+		if (images.value.length > 9) {
+			images.value.pop();
+		}
 	}
 }
 
 const thumbnail = (image: Misskey.entities.DriveFile): string => {
-	return prefer.disableShowingAnimatedImages
-		? getStaticImageUrl(image.url)
-		: image.thumbnailUrl ?? image.url;
+	return prefer.disableShowingAnimatedImages ? getStaticImageUrl(image.url) : (image.thumbnailUrl ?? image.url);
 };
 
 misskeyApi('drive/stream', {
 	type: 'image/*',
 	limit: 9,
-}).then(res => {
-	images.value = res;
-}).catch(() => {
-	// 取得失敗時は空のまま (unhandled rejection を防ぐ)
-}).finally(() => {
-	fetching.value = false;
-});
+})
+	.then((res) => {
+		images.value = res;
+	})
+	.catch(() => {
+		// 取得失敗時は空のまま (unhandled rejection を防ぐ)
+	})
+	.finally(() => {
+		fetching.value = false;
+	});
 
 connection.on('driveFileCreated', onDriveFileCreated);
 onUnmounted(() => {

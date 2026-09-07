@@ -6,7 +6,8 @@
 import { beforeAll, describe, expect, test } from 'vitest';
 
 import { loadConfig } from '@/config.js';
-import { createApMfmService, type ApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
+import type { ApMfmService } from '@/core/activitypub/ApMfmService.js';
 import { createMfmService } from '@/core/mfm/MfmService.js';
 
 describe('ApMfmService', () => {

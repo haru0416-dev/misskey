@@ -59,19 +59,24 @@ const widgetPropsDef = {
 		type: 'radio' as const,
 		label: i18n.ts._widgetOptions._birthdayFollowings.period,
 		default: '3day',
-		options: [{
-			value: 'today' as const,
-			label: i18n.ts.today,
-		}, {
-			value: '3day' as const,
-			label: i18n.tsx.dayX({ day: 3 }),
-		}, {
-			value: 'week' as const,
-			label: i18n.ts.oneWeek,
-		}, {
-			value: 'month' as const,
-			label: i18n.ts.oneMonth,
-		}],
+		options: [
+			{
+				value: 'today' as const,
+				label: i18n.ts.today,
+			},
+			{
+				value: '3day' as const,
+				label: i18n.tsx.dayX({ day: 3 }),
+			},
+			{
+				value: 'week' as const,
+				label: i18n.ts.oneWeek,
+			},
+			{
+				value: 'month' as const,
+				label: i18n.ts.oneMonth,
+			},
+		],
 	},
 } satisfies FormWithDefault;
 
@@ -80,12 +85,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(
-	name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const now = useLowresTime();
 const nextDay = new Date();
@@ -106,18 +106,19 @@ const end = computed(() => {
 	}
 });
 
-const birthdayUsersPaginator = markRaw(new Paginator('users/get-following-users-by-birthday', {
-	limit: 18,
-	offsetMode: true,
-	computedParams: computed(() => {
-		if (widgetProps.period === 'today') {
-			return {
-				birthday: {
-					month: begin.value.getMonth() + 1,
-					day: begin.value.getDate(),
-				},
-			};
-		} else {
+const birthdayUsersPaginator = markRaw(
+	new Paginator('users/get-following-users-by-birthday', {
+		limit: 18,
+		offsetMode: true,
+		computedParams: computed(() => {
+			if (widgetProps.period === 'today') {
+				return {
+					birthday: {
+						month: begin.value.getMonth() + 1,
+						day: begin.value.getDate(),
+					},
+				};
+			}
 			return {
 				birthday: {
 					begin: {
@@ -130,13 +131,15 @@ const birthdayUsersPaginator = markRaw(new Paginator('users/get-following-users-
 					},
 				},
 			};
-		}
+		}),
 	}),
-}));
+);
 
 function getBirthdaySeparator(items: { birthday: string }[], index: number, birthday: string) {
 	const previous = items[index - 1];
-	if (previous == null || !isSeparatorNeeded(previous.birthday, birthday)) return null;
+	if (previous == null || !isSeparatorNeeded(previous.birthday, birthday)) {
+		return null;
+	}
 	return getSeparatorInfo(previous.birthday, birthday);
 }
 
@@ -148,22 +151,26 @@ function fetch() {
 const UPDATE_INTERVAL = 1000 * 60;
 let nextDayTimer: number | null = null;
 
-watch(now, (to) => {
-	// 次回更新までに日付が変わる場合、日付が変わった直後に強制的に更新するタイマーをセットする
-	if (nextDayMidnightTime - to <= UPDATE_INTERVAL) {
-		if (nextDayTimer != null) {
-			window.clearTimeout(nextDayTimer);
-			nextDayTimer = null;
-		}
+watch(
+	now,
+	(to) => {
+		// 次回更新までに日付が変わる場合、日付が変わった直後に強制的に更新するタイマーをセットする
+		if (nextDayMidnightTime - to <= UPDATE_INTERVAL) {
+			if (nextDayTimer != null) {
+				window.clearTimeout(nextDayTimer);
+				nextDayTimer = null;
+			}
 
-		nextDayTimer = window.setTimeout(() => {
-			fetch();
-			nextDay.setHours(24, 0, 0, 0);
-			nextDayMidnightTime = nextDay.getTime();
-			nextDayTimer = null;
-		}, nextDayMidnightTime - to);
-	}
-}, { immediate: true });
+			nextDayTimer = window.setTimeout(() => {
+				fetch();
+				nextDay.setHours(24, 0, 0, 0);
+				nextDayMidnightTime = nextDay.getTime();
+				nextDayTimer = null;
+			}, nextDayMidnightTime - to);
+		}
+	},
+	{ immediate: true },
+);
 
 defineExpose<WidgetComponentExpose>({
 	name,

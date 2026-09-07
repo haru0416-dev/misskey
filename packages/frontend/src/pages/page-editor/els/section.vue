@@ -21,7 +21,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-
 import { defineAsyncComponent, inject, onMounted, watch, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
@@ -36,31 +35,37 @@ const XBlocks = defineAsyncComponent(() => import('../blocks.vue'));
 
 const props = defineProps<{
 	dragStartCallback?: (ev: DragEvent) => void;
-	modelValue: Extract<Misskey.entities.PageBlock, { type: 'section'; }>,
+	modelValue: Extract<Misskey.entities.PageBlock, { type: 'section' }>;
 }>();
 
 const emit = defineEmits<{
-	(ev: 'update:modelValue', value: Extract<Misskey.entities.PageBlock, { type: 'section'; }>): void;
+	(ev: 'update:modelValue', value: Extract<Misskey.entities.PageBlock, { type: 'section' }>): void;
 	(ev: 'remove'): void;
 }>();
 
 const children = ref(deepClone(props.modelValue.children ?? []));
 
-watch(children, () => {
-	emit('update:modelValue', {
-		...props.modelValue,
-		children: children.value,
-	});
-}, {
-	deep: true,
-});
+watch(
+	children,
+	() => {
+		emit('update:modelValue', {
+			...props.modelValue,
+			children: children.value,
+		});
+	},
+	{
+		deep: true,
+	},
+);
 
 async function rename() {
 	const { canceled, result: title } = await os.inputText({
 		title: i18n.ts._pages.enterSectionTitle,
 		default: props.modelValue.title,
 	});
-	if (canceled || title == null) return;
+	if (canceled || title == null) {
+		return;
+	}
 	emit('update:modelValue', {
 		...props.modelValue,
 		title,
@@ -72,7 +77,9 @@ async function add() {
 		title: i18n.ts._pages.chooseBlock,
 		items: getPageBlockList(),
 	});
-	if (canceled || type == null) return;
+	if (canceled || type == null) {
+		return;
+	}
 
 	const id = genId();
 

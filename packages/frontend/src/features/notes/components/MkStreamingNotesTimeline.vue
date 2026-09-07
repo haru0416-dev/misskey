@@ -99,7 +99,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { useVirtualizer } from '@tanstack/vue-virtual';
-import { computed, watch, onUnmounted, provide, useTemplateRef, TransitionGroup, onMounted, shallowRef, ref, markRaw, nextTick } from 'vue';
+import {
+	computed,
+	watch,
+	onUnmounted,
+	provide,
+	useTemplateRef,
+	TransitionGroup,
+	onMounted,
+	shallowRef,
+	ref,
+	markRaw,
+	nextTick,
+} from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
@@ -125,32 +137,41 @@ import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-d
 import { Paginator } from '@/utility/paginator.js';
 import { notePage } from '@/filters/note.js';
 
-const props = withDefaults(defineProps<{
-	src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';
-	list?: string;
-	antenna?: string;
-	channel?: string;
-	role?: string;
-	sound?: boolean;
-	customSound?: SoundStore | null;
-	withRenotes?: boolean;
-	withReplies?: boolean;
-	withSensitive?: boolean;
-	onlyFiles?: boolean;
-	viewMode?: 'notes' | 'media';
-}>(), {
-	withRenotes: true,
-	withReplies: false,
-	withSensitive: true,
-	onlyFiles: false,
-	viewMode: 'notes',
-	sound: false,
-	customSound: null,
-});
+const props = withDefaults(
+	defineProps<{
+		src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';
+		list?: string;
+		antenna?: string;
+		channel?: string;
+		role?: string;
+		sound?: boolean;
+		customSound?: SoundStore | null;
+		withRenotes?: boolean;
+		withReplies?: boolean;
+		withSensitive?: boolean;
+		onlyFiles?: boolean;
+		viewMode?: 'notes' | 'media';
+	}>(),
+	{
+		withRenotes: true,
+		withReplies: false,
+		withSensitive: true,
+		onlyFiles: false,
+		viewMode: 'notes',
+		sound: false,
+		customSound: null,
+	},
+);
 
 provide('inTimeline', true);
-provide('tl_withSensitive', computed(() => props.withSensitive));
-provide(DI.inChannel, computed(() => props.src === 'channel' ? props.channel ?? null : null));
+provide(
+	'tl_withSensitive',
+	computed(() => props.withSensitive),
+);
+provide(
+	DI.inChannel,
+	computed(() => (props.src === 'channel' ? (props.channel ?? null) : null)),
+);
 
 let paginator: IPaginator<Misskey.entities.Note>;
 
@@ -159,80 +180,100 @@ function getWithFilesParam(): { withFiles?: true } {
 }
 
 if (props.src === 'antenna') {
-	paginator = markRaw(new Paginator('antennas/notes', {
-		computedParams: computed(() => ({
-			antennaId: props.antenna!,
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('antennas/notes', {
+			computedParams: computed(() => ({
+				antennaId: props.antenna!,
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'home') {
-	paginator = markRaw(new Paginator('notes/timeline', {
-		computedParams: computed(() => ({
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/timeline', {
+			computedParams: computed(() => ({
+				withRenotes: props.withRenotes,
+				...getWithFilesParam(),
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'local') {
-	paginator = markRaw(new Paginator('notes/local-timeline', {
-		computedParams: computed(() => ({
-			withRenotes: props.withRenotes,
-			withReplies: props.withReplies,
-			...getWithFilesParam(),
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/local-timeline', {
+			computedParams: computed(() => ({
+				withRenotes: props.withRenotes,
+				withReplies: props.withReplies,
+				...getWithFilesParam(),
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'social') {
-	paginator = markRaw(new Paginator('notes/hybrid-timeline', {
-		computedParams: computed(() => ({
-			withRenotes: props.withRenotes,
-			withReplies: props.withReplies,
-			...getWithFilesParam(),
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/hybrid-timeline', {
+			computedParams: computed(() => ({
+				withRenotes: props.withRenotes,
+				withReplies: props.withReplies,
+				...getWithFilesParam(),
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'global') {
-	paginator = markRaw(new Paginator('notes/global-timeline', {
-		computedParams: computed(() => ({
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/global-timeline', {
+			computedParams: computed(() => ({
+				withRenotes: props.withRenotes,
+				...getWithFilesParam(),
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'mentions') {
-	paginator = markRaw(new Paginator('notes/mentions', {
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/mentions', {
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'directs') {
-	paginator = markRaw(new Paginator('notes/mentions', {
-		params: {
-			visibility: 'specified',
-		},
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/mentions', {
+			params: {
+				visibility: 'specified',
+			},
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'list') {
-	paginator = markRaw(new Paginator('notes/user-list-timeline', {
-		computedParams: computed(() => ({
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-			listId: props.list!,
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('notes/user-list-timeline', {
+			computedParams: computed(() => ({
+				withRenotes: props.withRenotes,
+				...getWithFilesParam(),
+				listId: props.list!,
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'channel') {
-	paginator = markRaw(new Paginator('channels/timeline', {
-		computedParams: computed(() => ({
-			channelId: props.channel!,
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('channels/timeline', {
+			computedParams: computed(() => ({
+				channelId: props.channel!,
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else if (props.src === 'role') {
-	paginator = markRaw(new Paginator('roles/notes', {
-		computedParams: computed(() => ({
-			roleId: props.role!,
-		})),
-		useShallowRef: true,
-	}));
+	paginator = markRaw(
+		new Paginator('roles/notes', {
+			computedParams: computed(() => ({
+				roleId: props.role!,
+			})),
+			useShallowRef: true,
+		}),
+	);
 } else {
 	throw new Error('Unrecognized timeline type: ' + props.src);
 }
@@ -241,15 +282,23 @@ onMounted(() => {
 	paginator.init();
 
 	if (paginator.computedParams) {
-		watch(paginator.computedParams, () => {
-			paginator.reload();
-		}, { immediate: false, deep: true });
+		watch(
+			paginator.computedParams,
+			() => {
+				paginator.reload();
+			},
+			{ immediate: false, deep: true },
+		);
 	}
 });
 
 function isTop() {
-	if (scrollElement.value == null) return true;
-	if (rootEl.value == null) return true;
+	if (scrollElement.value == null) {
+		return true;
+	}
+	if (rootEl.value == null) {
+		return true;
+	}
 	return scrollElement.value.scrollTop <= rootScrollMargin.value + 1;
 }
 
@@ -257,39 +306,51 @@ const scrollElement = shallowRef<HTMLElement | null>(null);
 const scrollMargin = ref(0);
 const rootScrollMargin = ref(0);
 const canVirtualize = computed(() => props.viewMode === 'notes' && scrollElement.value != null);
-const mediaFiles = (note: Misskey.entities.Note) => (note.files ?? []).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
-const mediaNotes = computed(() => paginator.items.value.filter(note => {
-	const files = mediaFiles(note);
-	return files.length > 0 && (props.withSensitive || files.every(file => !file.isSensitive));
-}));
+const mediaFiles = (note: Misskey.entities.Note) =>
+	(note.files ?? []).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+const mediaNotes = computed(() =>
+	paginator.items.value.filter((note) => {
+		const files = mediaFiles(note);
+		return files.length > 0 && (props.withSensitive || files.every((file) => !file.isSensitive));
+	}),
+);
 
-const virtualizer = useVirtualizer(computed(() => ({
-	count: paginator.items.value.length,
-	getScrollElement: () => scrollElement.value,
-	estimateSize: () => 220,
-	getItemKey: (index) => paginator.items.value[index]?.id ?? index,
-	overscan: 5,
-	scrollMargin: scrollMargin.value,
-	useScrollendEvent: true,
-	// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
-	// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
-	useAnimationFrameWithResizeObserver: false,
-})));
+const virtualizer = useVirtualizer(
+	computed(() => ({
+		count: paginator.items.value.length,
+		getScrollElement: () => scrollElement.value,
+		estimateSize: () => 220,
+		getItemKey: (index) => paginator.items.value[index]?.id ?? index,
+		overscan: 5,
+		scrollMargin: scrollMargin.value,
+		useScrollendEvent: true,
+		// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
+		// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
+		useAnimationFrameWithResizeObserver: false,
+	})),
+);
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
-	const note = paginator.items.value[virtualItem.index];
-	if (note == null) return [];
-	const previousNote = paginator.items.value[virtualItem.index - 1];
-	const separatorInfo = previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
-		? getSeparatorInfo(previousNote.createdAt, note.createdAt)
-		: null;
-	return [{
-		index: virtualItem.index,
-		start: virtualItem.start,
-		note,
-		separatorInfo,
-	}];
-}));
+const virtualRows = computed(() =>
+	virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
+		const note = paginator.items.value[virtualItem.index];
+		if (note == null) {
+			return [];
+		}
+		const previousNote = paginator.items.value[virtualItem.index - 1];
+		const separatorInfo =
+			previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
+				? getSeparatorInfo(previousNote.createdAt, note.createdAt)
+				: null;
+		return [
+			{
+				index: virtualItem.index,
+				start: virtualItem.start,
+				note,
+				separatorInfo,
+			},
+		];
+	}),
+);
 
 // virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
 // 同座標に重なる) の状態で描画することがある。「全投稿が一瞬グチャッと重なってから展開する」
@@ -305,58 +366,78 @@ let layoutVerifyTimer: number | null = null;
 // 仮想ブランチへ切り替わった時点でラッチをリセットして検査をやり直す
 const virtualGateActive = computed(() => props.viewMode === 'notes' && canVirtualize.value);
 watch(virtualGateActive, (active, prev) => {
-	if (active && !prev) virtualLayoutVerified.value = false;
+	if (active && !prev) {
+		virtualLayoutVerified.value = false;
+	}
 });
 
 function isVirtualLayoutSane(len: number): boolean {
-	if (!virtualGateActive.value) return true; // 仮想ブランチ以外は対象外
-	if (len <= 1) return true; // 1件以下なら重なりようがない
+	if (!virtualGateActive.value) {
+		return true;
+	} // 仮想ブランチ以外は対象外
+	if (len <= 1) {
+		return true;
+	} // 1件以下なら重なりようがない
 	const container = notesEl.value;
 	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
 	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
-	if (container == null) return false;
+	if (container == null) {
+		return false;
+	}
 	const rowEls = [...container.children] as HTMLElement[];
-	if (rowEls.length < 2) return false;
+	if (rowEls.length < 2) {
+		return false;
+	}
 	// 隣接行が重なっていないかを検査する。縮退状態は「先頭数行が同座標に積み重なり後方は正常」の
 	// 混合形で現れるため、全行同topの判定では取りこぼす。高さ0の行 (ハードミュート等) は
 	// top が同値でも重ならないので誤検出しない (-2px は丸め誤差の許容)
 	for (let i = 1; i < rowEls.length; i++) {
 		const prev = rowEls[i - 1]!;
-		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) return false;
+		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) {
+			return false;
+		}
 	}
 	return true;
 }
 
-watch([virtualRows, () => paginator.items.value.length], ([, len]) => {
-	if (len === 0) {
-		virtualLayoutVerified.value = false;
-		if (layoutVerifyTimer != null) {
-			window.clearTimeout(layoutVerifyTimer);
-			layoutVerifyTimer = null;
+watch(
+	[virtualRows, () => paginator.items.value.length],
+	([, len]) => {
+		if (len === 0) {
+			virtualLayoutVerified.value = false;
+			if (layoutVerifyTimer != null) {
+				window.clearTimeout(layoutVerifyTimer);
+				layoutVerifyTimer = null;
+			}
+			return;
 		}
-		return;
-	}
-	if (virtualLayoutVerified.value) return;
-	if (isVirtualLayoutSane(len)) {
-		virtualLayoutVerified.value = true;
-		if (layoutVerifyTimer != null) {
-			window.clearTimeout(layoutVerifyTimer);
-			layoutVerifyTimer = null;
+		if (virtualLayoutVerified.value) {
+			return;
 		}
-	} else {
-		// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
-		layoutVerifyTimer ??= window.setTimeout(() => {
-			layoutVerifyTimer = null;
+		if (isVirtualLayoutSane(len)) {
 			virtualLayoutVerified.value = true;
-		}, 300);
-	}
-}, { immediate: true, flush: 'post' });
+			if (layoutVerifyTimer != null) {
+				window.clearTimeout(layoutVerifyTimer);
+				layoutVerifyTimer = null;
+			}
+		} else {
+			// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
+			layoutVerifyTimer ??= window.setTimeout(() => {
+				layoutVerifyTimer = null;
+				virtualLayoutVerified.value = true;
+			}, 300);
+		}
+	},
+	{ immediate: true, flush: 'post' },
+);
 
 const virtualLayoutPending = computed(() => paginator.items.value.length > 0 && !virtualLayoutVerified.value);
 
 function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
 	const previousNote = notes[index - 1];
-	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) return null;
+	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) {
+		return null;
+	}
 	return getSeparatorInfo(previousNote.createdAt, createdAt);
 }
 
@@ -365,11 +446,15 @@ const leavingNoteIds = shallowRef(new Set<string>());
 const animationTimers = new Map<string, number>();
 
 function measureElement(node: Element | ComponentPublicInstance | null) {
-	if (node instanceof Element) virtualizer.value.measureElement(node);
+	if (node instanceof Element) {
+		virtualizer.value.measureElement(node);
+	}
 }
 
 function updateScrollMargins() {
-	if (!rootEl.value || !notesEl.value || !scrollElement.value) return;
+	if (!rootEl.value || !notesEl.value || !scrollElement.value) {
+		return;
+	}
 	const rootRect = rootEl.value.getBoundingClientRect();
 	const notesRect = notesEl.value.getBoundingClientRect();
 	const scrollRect = scrollElement.value.getBoundingClientRect();
@@ -380,7 +465,9 @@ function updateScrollMargins() {
 
 let scrollMarginFrame: number | null = null;
 function scheduleScrollMarginUpdate() {
-	if (scrollMarginFrame != null) return;
+	if (scrollMarginFrame != null) {
+		return;
+	}
 	scrollMarginFrame = window.requestAnimationFrame(() => {
 		scrollMarginFrame = null;
 		updateScrollMargins();
@@ -388,34 +475,46 @@ function scheduleScrollMarginUpdate() {
 }
 
 function markNoteEntering(noteId: string) {
-	if (!prefer.animation || !canVirtualize.value) return;
+	if (!prefer.animation || !canVirtualize.value) {
+		return;
+	}
 	enteringNoteIds.value = new Set(enteringNoteIds.value).add(noteId);
 	const timerKey = `enter:${noteId}`;
 	const previousTimer = animationTimers.get(timerKey);
-	if (previousTimer != null) window.clearTimeout(previousTimer);
-	animationTimers.set(timerKey, window.setTimeout(() => {
-		const ids = new Set(enteringNoteIds.value);
-		ids.delete(noteId);
-		enteringNoteIds.value = ids;
-		animationTimers.delete(timerKey);
-	}, 700));
+	if (previousTimer != null) {
+		window.clearTimeout(previousTimer);
+	}
+	animationTimers.set(
+		timerKey,
+		window.setTimeout(() => {
+			const ids = new Set(enteringNoteIds.value);
+			ids.delete(noteId);
+			enteringNoteIds.value = ids;
+			animationTimers.delete(timerKey);
+		}, 700),
+	);
 }
 
 function removeItem(noteId: string) {
-	if (!prefer.animation || !canVirtualize.value || !paginator.items.value.some(note => note.id === noteId)) {
+	if (!prefer.animation || !canVirtualize.value || !paginator.items.value.some((note) => note.id === noteId)) {
 		paginator.removeItem(noteId);
 		return;
 	}
-	if (leavingNoteIds.value.has(noteId)) return;
+	if (leavingNoteIds.value.has(noteId)) {
+		return;
+	}
 	leavingNoteIds.value = new Set(leavingNoteIds.value).add(noteId);
 	const timerKey = `leave:${noteId}`;
-	animationTimers.set(timerKey, window.setTimeout(() => {
-		paginator.removeItem(noteId);
-		const ids = new Set(leavingNoteIds.value);
-		ids.delete(noteId);
-		leavingNoteIds.value = ids;
-		animationTimers.delete(timerKey);
-	}, 200));
+	animationTimers.set(
+		timerKey,
+		window.setTimeout(() => {
+			paginator.removeItem(noteId);
+			const ids = new Set(leavingNoteIds.value);
+			ids.delete(noteId);
+			leavingNoteIds.value = ids;
+			animationTimers.delete(timerKey);
+		}, 200),
+	);
 }
 
 function onScrollContainerScroll() {
@@ -433,7 +532,9 @@ function attachScrollElement(el: HTMLElement | null) {
 	// 一度解決したスクロールコンテナは維持する (リロード等で rootEl が一時的に消えても
 	// canVirtualize を落とさない。null に戻すと復帰時に非仮想ブランチで全ノートを
 	// 無駄にフルマウントしてから仮想ブランチへ入れ替えるスラッシングが起きる)
-	if (nextScrollElement == null || nextScrollElement === scrollElement.value) return;
+	if (nextScrollElement == null || nextScrollElement === scrollElement.value) {
+		return;
+	}
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	scrollElement.value = nextScrollElement;
 	// 先頭へ戻った瞬間にキューを開放するため、スクロール中も軽量な位置判定だけを行う。
@@ -444,24 +545,36 @@ function attachScrollElement(el: HTMLElement | null) {
 // ローディング中から存在するコンポーネントルートでスクロールコンテナを先に解決しておく。
 // rootEl (ノート描画後にしか存在しない) だけに頼ると、初回表示が非仮想ブランチ→仮想ブランチの
 // 二重マウントになり、仮想化レイアウト確定前の1〜2フレームで全行が同座標に重なって見える
-watch(containerEl, (comp) => {
-	const el = comp == null ? null : comp instanceof HTMLElement ? comp : comp.$el instanceof HTMLElement ? comp.$el : null;
-	attachScrollElement(el);
-}, { immediate: true });
-watch(rootEl, (el) => {
-	attachScrollElement(el);
-}, { immediate: true });
+watch(
+	containerEl,
+	(comp) => {
+		const el =
+			comp == null ? null : comp instanceof HTMLElement ? comp : comp.$el instanceof HTMLElement ? comp.$el : null;
+		attachScrollElement(el);
+	},
+	{ immediate: true },
+);
+watch(
+	rootEl,
+	(el) => {
+		attachScrollElement(el);
+	},
+	{ immediate: true },
+);
 
 watch(notesEl, () => nextTick(scheduleScrollMarginUpdate));
-watch(() => paginator.queuedAheadItemsCount.value, async () => {
-	const previousNotesTop = notesEl.value?.getBoundingClientRect().top;
-	await nextTick();
-	if (previousNotesTop != null && notesEl.value && scrollElement.value && scrollElement.value.scrollTop > 0) {
-		const notesTopDelta = notesEl.value.getBoundingClientRect().top - previousNotesTop;
-		scrollElement.value.scrollTop += notesTopDelta;
-	}
-	scheduleScrollMarginUpdate();
-});
+watch(
+	() => paginator.queuedAheadItemsCount.value,
+	async () => {
+		const previousNotesTop = notesEl.value?.getBoundingClientRect().top;
+		await nextTick();
+		if (previousNotesTop != null && notesEl.value && scrollElement.value && scrollElement.value.scrollTop > 0) {
+			const notesTopDelta = notesEl.value.getBoundingClientRect().top - previousNotesTop;
+			scrollElement.value.scrollTop += notesTopDelta;
+		}
+		scheduleScrollMarginUpdate();
+	},
+);
 
 onMounted(() => {
 	window.addEventListener('resize', scheduleScrollMarginUpdate, { passive: true });
@@ -470,9 +583,15 @@ onMounted(() => {
 onUnmounted(() => {
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	window.removeEventListener('resize', scheduleScrollMarginUpdate);
-	if (scrollMarginFrame != null) window.cancelAnimationFrame(scrollMarginFrame);
-	if (layoutVerifyTimer != null) window.clearTimeout(layoutVerifyTimer);
-	for (const timer of animationTimers.values()) window.clearTimeout(timer);
+	if (scrollMarginFrame != null) {
+		window.cancelAnimationFrame(scrollMarginFrame);
+	}
+	if (layoutVerifyTimer != null) {
+		window.clearTimeout(layoutVerifyTimer);
+	}
+	for (const timer of animationTimers.values()) {
+		window.clearTimeout(timer);
+	}
 	animationTimers.clear();
 });
 
@@ -482,7 +601,8 @@ let isPausingUpdate = false;
 watch(visibility, () => {
 	if (visibility.value === 'hidden') {
 		isPausingUpdate = true;
-	} else { // 'visible'
+	} else {
+		// 'visible'
 		isPausingUpdate = false;
 		if (isTop()) {
 			releaseQueue();
@@ -494,19 +614,25 @@ let adInsertionCounter = 0;
 
 const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =
-	prefer.pollingInterval === 1 ? MIN_POLLING_INTERVAL * 1.5 * 1.5 :
-	prefer.pollingInterval === 2 ? MIN_POLLING_INTERVAL * 1.5 :
-	MIN_POLLING_INTERVAL;
+	prefer.pollingInterval === 1
+		? MIN_POLLING_INTERVAL * 1.5 * 1.5
+		: prefer.pollingInterval === 2
+			? MIN_POLLING_INTERVAL * 1.5
+			: MIN_POLLING_INTERVAL;
 
 if (!store.realtimeMode) {
-	useInterval(async () => {
-		paginator.fetchNewer({
-			toQueue: !isTop() || isPausingUpdate,
-		});
-	}, POLLING_INTERVAL, {
-		immediate: false,
-		afterMounted: true,
-	});
+	useInterval(
+		async () => {
+			paginator.fetchNewer({
+				toQueue: !isTop() || isPausingUpdate,
+			});
+		},
+		POLLING_INTERVAL,
+		{
+			immediate: false,
+			afterMounted: true,
+		},
+	);
 
 	useGlobalEvent('notePosted', (note) => {
 		paginator.fetchNewer({
@@ -548,7 +674,7 @@ function prepend(note: Misskey.entities.Note & MisskeyEntity) {
 		if (props.customSound) {
 			sound.playMisskeySfxFile(props.customSound);
 		} else {
-			sound.playMisskeySfx($i && (note.userId === $i.id) ? 'noteMy' : 'note');
+			sound.playMisskeySfx($i && note.userId === $i.id ? 'noteMy' : 'note');
 		}
 	}
 }
@@ -568,9 +694,13 @@ const connections = {
 };
 
 function connectChannel() {
-	if (stream == null) return;
+	if (stream == null) {
+		return;
+	}
 	if (props.src === 'antenna') {
-		if (props.antenna == null) return;
+		if (props.antenna == null) {
+			return;
+		}
 		connections.antenna = stream.useChannel('antenna', {
 			antennaId: props.antenna,
 		});
@@ -607,13 +737,15 @@ function connectChannel() {
 		connections.main.on('mention', prepend);
 	} else if (props.src === 'directs') {
 		connections.main = stream.useChannel('main');
-		connections.main.on('mention', note => {
+		connections.main.on('mention', (note) => {
 			if (note.visibility === 'specified') {
 				prepend(note);
 			}
 		});
 	} else if (props.src === 'list') {
-		if (props.list == null) return;
+		if (props.list == null) {
+			return;
+		}
 		connections.userList = stream.useChannel('userList', {
 			withRenotes: props.withRenotes,
 			...getWithFilesParam(),
@@ -621,13 +753,17 @@ function connectChannel() {
 		});
 		connections.userList.on('note', prepend);
 	} else if (props.src === 'channel') {
-		if (props.channel == null) return;
+		if (props.channel == null) {
+			return;
+		}
 		connections.channel = stream.useChannel('channel', {
 			channelId: props.channel,
 		});
 		connections.channel.on('note', prepend);
 	} else if (props.src === 'role') {
-		if (props.role == null) return;
+		if (props.role == null) {
+			return;
+		}
 		connections.roleTimeline = stream.useChannel('roleTimeline', {
 			roleId: props.role,
 		});
@@ -649,12 +785,15 @@ if (store.realtimeMode) {
 	connectChannel();
 }
 
-watch(() => [props.list, props.antenna, props.channel, props.role, props.withRenotes], () => {
-	if (store.realtimeMode) {
-		disconnectChannel();
-		connectChannel();
-	}
-});
+watch(
+	() => [props.list, props.antenna, props.channel, props.role, props.withRenotes],
+	() => {
+		if (store.realtimeMode) {
+			disconnectChannel();
+			connectChannel();
+		}
+	},
+);
 watch(() => props.withSensitive, reloadTimeline);
 
 onUnmounted(() => {

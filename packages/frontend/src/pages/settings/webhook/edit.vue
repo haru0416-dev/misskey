@@ -106,13 +106,27 @@ const event_mention = ref(webhook.on.includes('mention'));
 
 function save() {
 	const events: Misskey.entities.UserWebhook['on'] = [];
-	if (event_follow.value) events.push('follow');
-	if (event_followed.value) events.push('followed');
-	if (event_note.value) events.push('note');
-	if (event_reply.value) events.push('reply');
-	if (event_renote.value) events.push('renote');
-	if (event_reaction.value) events.push('reaction');
-	if (event_mention.value) events.push('mention');
+	if (event_follow.value) {
+		events.push('follow');
+	}
+	if (event_followed.value) {
+		events.push('followed');
+	}
+	if (event_note.value) {
+		events.push('note');
+	}
+	if (event_reply.value) {
+		events.push('reply');
+	}
+	if (event_renote.value) {
+		events.push('renote');
+	}
+	if (event_reaction.value) {
+		events.push('reaction');
+	}
+	if (event_mention.value) {
+		events.push('mention');
+	}
 
 	os.apiWithDialog('i/webhooks/update', {
 		name: name.value,
@@ -129,7 +143,9 @@ async function del(): Promise<void> {
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: webhook.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('i/webhooks/delete', {
 		webhookId: props.webhookId,

@@ -8,22 +8,17 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import { isDebugLoggingEnabled } from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
-import {
-	handleQueueSystemWebhookDeliver,
-	handleQueueUserWebhookDeliver,
-	type QueueWebhookDeliverDependencies,
-} from './handlers/webhook-deliver.js';
+import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from './handlers/webhook-deliver.js';
+import type { QueueWebhookDeliverDependencies } from './handlers/webhook-deliver.js';
 import {
 	handleQueueRelationshipBlock,
 	handleQueueRelationshipFollow,
 	handleQueueRelationshipUnblock,
 	handleQueueRelationshipUnfollow,
-	type QueueRelationshipDependencies,
 } from './handlers/relationship.js';
-import {
-	handleQueuePostScheduledNote,
-	type QueuePostScheduledNoteDependencies,
-} from './handlers/post-scheduled-note.js';
+import type { QueueRelationshipDependencies } from './handlers/relationship.js';
+import { handleQueuePostScheduledNote } from './handlers/post-scheduled-note.js';
+import type { QueuePostScheduledNoteDependencies } from './handlers/post-scheduled-note.js';
 import {
 	handleQueueAggregateRetention,
 	handleQueueBakeBufferedReactions,
@@ -32,24 +27,20 @@ import {
 	handleQueueCleanCharts,
 	handleQueueResyncCharts,
 	handleQueueTickCharts,
-	type QueueSystemDependencies,
 } from './handlers/system.js';
-import { handleQueueCleanRemoteNotes, type QueueCleanRemoteNotesDependencies } from './handlers/clean-remote-notes.js';
-import {
-	handleQueueCheckModeratorsActivity,
-	type QueueCheckModeratorsActivityDependencies,
-} from './handlers/check-moderators-activity.js';
-import { handleQueueDeliver, type QueueDeliverDependencies } from './handlers/deliver.js';
-import { handleQueueInbox, type QueueInboxDependencies } from './handlers/inbox.js';
-import {
-	handleQueueEndedPollNotification,
-	type QueueEndedPollNotificationDependencies,
-} from './handlers/ended-poll-notification.js';
-import {
-	handleQueueCleanRemoteFiles,
-	handleQueueDeleteFile,
-	type QueueObjectStorageDependencies,
-} from './handlers/object-storage.js';
+import type { QueueSystemDependencies } from './handlers/system.js';
+import { handleQueueCleanRemoteNotes } from './handlers/clean-remote-notes.js';
+import type { QueueCleanRemoteNotesDependencies } from './handlers/clean-remote-notes.js';
+import { handleQueueCheckModeratorsActivity } from './handlers/check-moderators-activity.js';
+import type { QueueCheckModeratorsActivityDependencies } from './handlers/check-moderators-activity.js';
+import { handleQueueDeliver } from './handlers/deliver.js';
+import type { QueueDeliverDependencies } from './handlers/deliver.js';
+import { handleQueueInbox } from './handlers/inbox.js';
+import type { QueueInboxDependencies } from './handlers/inbox.js';
+import { handleQueueEndedPollNotification } from './handlers/ended-poll-notification.js';
+import type { QueueEndedPollNotificationDependencies } from './handlers/ended-poll-notification.js';
+import { handleQueueCleanRemoteFiles, handleQueueDeleteFile } from './handlers/object-storage.js';
+import type { QueueObjectStorageDependencies } from './handlers/object-storage.js';
 import {
 	handleQueueDeleteDriveFiles,
 	handleQueueDeleteDriveFile,
@@ -67,14 +58,12 @@ import {
 	handleQueueExportFavorites,
 	handleQueueExportNotes,
 	handleQueueExportClips,
-	type QueueDbDependencies,
 } from './handlers/db.js';
-import {
-	handleQueueExportCustomEmojis,
-	handleQueueImportCustomEmojis,
-	type QueueEmojisDependencies,
-} from './handlers/emojis.js';
-import { handleQueueDeleteAccount, type QueueDeleteAccountDependencies } from './handlers/delete-account.js';
+import type { QueueDbDependencies } from './handlers/db.js';
+import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from './handlers/emojis.js';
+import type { QueueEmojisDependencies } from './handlers/emojis.js';
+import { handleQueueDeleteAccount } from './handlers/delete-account.js';
+import type { QueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
@@ -128,11 +117,13 @@ function httpRelatedBackoff(config: Config, attemptsMade: number): number {
 }
 
 function getJobInfo(job: Bull.Job | undefined, increment = false): string {
-	if (job == null) return '-';
+	if (job == null) {
+		return '-';
+	}
 
 	const age = Date.now() - job.timestamp;
 	const formated =
-		age > 60000 ? `${Math.floor(age / 1000 / 60)}m` : age > 10000 ? `${Math.floor(age / 1000)}s` : `${age}ms`;
+		age > 60_000 ? `${Math.floor(age / 1000 / 60)}m` : age > 10_000 ? `${Math.floor(age / 1000)}s` : `${age}ms`;
 
 	const currentAttempts = job.attemptsMade + (increment ? 1 : 0);
 	const maxAttempts = job.opts.attempts ?? 0;
@@ -141,7 +132,9 @@ function getJobInfo(job: Bull.Job | undefined, increment = false): string {
 }
 
 function renderError(e?: Error): unknown {
-	if (!e) return '?';
+	if (!e) {
+		return '?';
+	}
 	if (e instanceof Bull.UnrecoverableError || e.name === 'AbortError') {
 		return `${e.name}: ${e.message}`;
 	}
@@ -160,7 +153,9 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	let outboxTimer: ReturnType<typeof setInterval> | undefined;
 	let isDispatchingOutbox = false;
 	const dispatchOutbox = async (): Promise<void> => {
-		if (isDispatchingOutbox) return;
+		if (isDispatchingOutbox) {
+			return;
+		}
 		isDispatchingOutbox = true;
 		try {
 			await dispatchQueueOutbox(deps.db, deps.dbQueue, deps.deliverQueue);
@@ -195,10 +190,14 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		const logger = deps.logger.createSubLogger('user-webhook');
 		userWebhookDeliverQueueWorker
 			.on('active', (job) => {
-				if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('completed', (job, result) => {
-				if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('failed', (job, err) =>
 				logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`),
@@ -230,10 +229,14 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		const logger = deps.logger.createSubLogger('system-webhook');
 		systemWebhookDeliverQueueWorker
 			.on('active', (job) => {
-				if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('completed', (job, result) => {
-				if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('failed', (job, err) =>
 				logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`),
@@ -307,7 +310,9 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		QUEUE.SYSTEM,
 		(job) => {
 			const handler = systemJobHandlers[job.name as SystemJobName];
-			if (handler == null) throw new Error(`unrecognized job type ${job.name} for system`);
+			if (handler == null) {
+				throw new Error(`unrecognized job type ${job.name} for system`);
+			}
 			return handler(job);
 		},
 		{
@@ -352,10 +357,14 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		const logger = deps.logger.createSubLogger('deliver');
 		deliverQueueWorker
 			.on('active', (job) => {
-				if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`active ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('completed', (job, result) => {
-				if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`completed(${result}) ${getJobInfo(job, true)} to=${job.data.to}`);
+				}
 			})
 			.on('failed', (job, err) =>
 				logger.error(`failed(${err.name}: ${err.message}) ${getJobInfo(job)} to=${job ? job.data.to : '-'}`),
@@ -387,10 +396,14 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		const logger = deps.logger.createSubLogger('inbox');
 		inboxQueueWorker
 			.on('active', (job) => {
-				if (isDebugLoggingEnabled()) logger.debug(`active ${getJobInfo(job, true)}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`active ${getJobInfo(job, true)}`);
+				}
 			})
 			.on('completed', (job, result) => {
-				if (isDebugLoggingEnabled()) logger.debug(`completed(${result}) ${getJobInfo(job, true)}`);
+				if (isDebugLoggingEnabled()) {
+					logger.debug(`completed(${result}) ${getJobInfo(job, true)}`);
+				}
 			})
 			.on('failed', (job, err) =>
 				logger.error(
@@ -468,9 +481,13 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		notePostCreate: (job) => handleQueueNotePostCreate(deps, job),
 	} satisfies DbJobHandlerMap;
 	const dispatchDbJob = <K extends DbJobName>(job: Bull.Job<DbJobData<K>, unknown, K>): Promise<unknown> => {
-		if (!Object.hasOwn(dbJobHandlers, job.name)) throw new Error(`unrecognized job type ${job.name} for db`);
+		if (!Object.hasOwn(dbJobHandlers, job.name)) {
+			throw new Error(`unrecognized job type ${job.name} for db`);
+		}
 		const handler: DbJobHandlerMap[K] | undefined = dbJobHandlers[job.name];
-		if (handler == null) throw new Error(`unrecognized job type ${job.name} for db`);
+		if (handler == null) {
+			throw new Error(`unrecognized job type ${job.name} for db`);
+		}
 		return handler(job);
 	};
 	const dbQueueWorker = new Bull.Worker<DbJobData<DbJobName>, unknown, DbJobName>(
@@ -525,7 +542,9 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 			]);
 		},
 		stop: async () => {
-			if (outboxTimer != null) clearInterval(outboxTimer);
+			if (outboxTimer != null) {
+				clearInterval(outboxTimer);
+			}
 			await Promise.all([
 				userWebhookDeliverQueueWorker.close(),
 				systemWebhookDeliverQueueWorker.close(),

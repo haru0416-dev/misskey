@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { index, pgTable, varchar, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { index, pgTable, varchar } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
 import { user } from './user.js';
 

@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { muting, type MutingInsert, type MutingRow } from '@/db/schema/muting.js';
+import { muting } from '@/db/schema/muting.js';
+import type { MutingInsert, MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -74,7 +76,9 @@ export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
 	muteeId: MiUser['id'],
 	muterIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (muterIds.length === 0) return [];
+	if (muterIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ muterId: muting.muterId })
@@ -177,7 +181,9 @@ export async function listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
 	muterId: MiUser['id'],
 	muteeIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (muteeIds.length === 0) return [];
+	if (muteeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ muteeId: muting.muteeId })
@@ -226,13 +232,17 @@ export async function createMutingInDatabase(db: MiDrizzleDatabase, values: Muti
 }
 
 export async function createMutingsInDatabase(db: MiDrizzleDatabase, values: MutingInsert[]): Promise<void> {
-	if (values.length === 0) return;
+	if (values.length === 0) {
+		return;
+	}
 
 	await db.insert(muting).values(values);
 }
 
 export async function deleteMutingsByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiMuting['id'][]): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db.delete(muting).where(inArray(muting.id, ids));
 }

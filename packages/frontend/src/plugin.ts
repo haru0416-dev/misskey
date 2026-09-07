@@ -103,8 +103,12 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 }
 
 async function authorizePlugin(plugin: Plugin) {
-	if (plugin.permissions == null || plugin.permissions.length === 0) return;
-	if (Object.hasOwn(store.pluginTokens, plugin.installId)) return;
+	if (plugin.permissions == null || plugin.permissions.length === 0) {
+		return;
+	}
+	if (Object.hasOwn(store.pluginTokens, plugin.installId)) {
+		return;
+	}
 
 	const token = await new Promise<string>((res, rej) => {
 		let dispose: () => void;
@@ -141,7 +145,9 @@ async function authorizePlugin(plugin: Plugin) {
 }
 
 export async function installPlugin(code: string, meta?: AiScriptPluginMeta) {
-	if (!code) return;
+	if (!code) {
+		return;
+	}
 
 	let realMeta: AiScriptPluginMeta;
 	if (!meta) {
@@ -262,20 +268,25 @@ export function launchPlugins() {
 		prefer.plugins.map((plugin) => {
 			if (plugin.active) {
 				return launchPlugin(plugin.installId);
-			} else {
-				return Promise.resolve();
 			}
+			return Promise.resolve();
 		}),
 	);
 }
 
 async function launchPlugin(id: Plugin['installId']): Promise<void> {
-	if (isSafeMode) return;
+	if (isSafeMode) {
+		return;
+	}
 	const plugin = prefer.plugins.find((x) => x.installId === id);
-	if (!plugin) return;
+	if (!plugin) {
+		return;
+	}
 
 	// 旧保存形式ではプラグインのソースが保存されていない。
-	if (plugin.src == null) return;
+	if (plugin.src == null) {
+		return;
+	}
 
 	pluginLogs.value.set(plugin.installId, []);
 
@@ -339,7 +350,9 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 
 function abortPlugin(plugin: Plugin): void {
 	const pluginContext = pluginContexts.get(plugin.installId);
-	if (!pluginContext) return;
+	if (!pluginContext) {
+		return;
+	}
 
 	pluginContext.abort();
 	pluginContexts.delete(plugin.installId);
@@ -361,11 +374,15 @@ export async function configPlugin(plugin: Plugin) {
 	const config = plugin.config;
 	for (const key in plugin.configData) {
 		const definition = config[key];
-		if (definition != null) definition.default = plugin.configData[key];
+		if (definition != null) {
+			definition.default = plugin.configData[key];
+		}
 	}
 
 	const { canceled, result } = await os.form(plugin.name, config);
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	prefer.commit(
 		'plugins',
@@ -403,7 +420,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 
 	function withContext<T>(fn: (ctx: Interpreter) => T): T {
 		const ctx = pluginContexts.get(id);
-		if (!ctx) throw new Error('Plugin context not found');
+		if (!ctx) {
+			throw new Error('Plugin context not found');
+		}
 		return fn(ctx);
 	}
 
@@ -510,7 +529,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 	] as const;
 	for (const [alias, source] of compatibilityAliases) {
 		const value = env[source];
-		if (value == null) throw new Error(`Plugin API ${source} is not registered`);
+		if (value == null) {
+			throw new Error(`Plugin API ${source} is not registered`);
+		}
 		env[alias] = value;
 	}
 
@@ -519,7 +540,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 
 export function getPluginHandlers<K extends keyof HandlerDef>(type: K): HandlerDef[K][] {
 	const cached = pluginHandlersCache.get(type);
-	if (cached != null) return cached as HandlerDef[K][];
+	if (cached != null) {
+		return cached as HandlerDef[K][];
+	}
 	const handlers = pluginHandlers.filter((x): x is PluginHandler<K> => x.type === type).map((x) => x.ctx);
 	pluginHandlersCache.set(type, handlers);
 	return handlers;

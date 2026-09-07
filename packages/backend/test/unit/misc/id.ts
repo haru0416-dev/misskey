@@ -35,7 +35,9 @@ describe('misc:id', () => {
 		for (let i = 1; i < additionals.length; i++) {
 			const current = additionals[i];
 			const previous = additionals[i - 1];
-			if (current == null || previous == null) throw new Error('Missing UUIDv7 sequence value');
+			if (current == null || previous == null) {
+				throw new Error('Missing UUIDv7 sequence value');
+			}
 			expect(current > previous).toBe(true);
 		}
 	});
@@ -82,7 +84,9 @@ describe('uuidv7 (property)', () => {
 				for (let i = 1; i < additionals.length; i++) {
 					const current = additionals[i];
 					const previous = additionals[i - 1];
-					if (current == null || previous == null) throw new Error('Missing UUIDv7 sequence value');
+					if (current == null || previous == null) {
+						throw new Error('Missing UUIDv7 sequence value');
+					}
 					expect(current > previous).toBe(true);
 				}
 			}),

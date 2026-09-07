@@ -27,13 +27,10 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
-import {
-	packUserDetailedManyForApi,
-	type MeDetailedApiResponse,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
+import { packUserDetailedManyForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiRoleDependencies = {
@@ -161,7 +158,9 @@ export async function handleApiRolesShow(
 ): Promise<Packed<'Role'>> {
 	const params = parseApiParams(rolesShowParamDef, body);
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError();
+	if (role == null) {
+		throw noSuchRoleError();
+	}
 
 	return await packApiRole(deps, role);
 }
@@ -173,7 +172,9 @@ export async function handleApiRolesUsers(
 ): Promise<{ id: string; user: MeDetailedApiResponse | UserDetailedNotMeApiResponse }[]> {
 	const params = parseApiParams(rolesUsersParamDef, body);
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw rolesUsersNoSuchRoleError();
+	if (role == null) {
+		throw rolesUsersNoSuchRoleError();
+	}
 
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
@@ -204,8 +205,12 @@ export async function handleApiRolesNotes(
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw rolesNotesNoSuchRoleError();
-	if (!role.isExplorable) return [];
+	if (role == null) {
+		throw rolesNotesNoSuchRoleError();
+	}
+	if (!role.isExplorable) {
+		return [];
+	}
 
 	const rawIds = await deps.redis.lrange(`list:roleTimeline:${role.id}`, 0, -1);
 	let noteIds =
@@ -218,7 +223,9 @@ export async function handleApiRolesNotes(
 					: rawIds.toSorted((a, b) => (a > b ? -1 : 1));
 	noteIds = noteIds.slice(0, params.limit);
 
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 

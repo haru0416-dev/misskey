@@ -22,21 +22,24 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { useRouter } from '@/router.js';
 
-const props = withDefaults(defineProps<{
-	to: string;
-	activeClass?: null | string;
-	behavior?: MkABehavior;
-	/**
-	 * 右クリックのメニューを差し替える。リンク以外の意味を持つ場合に使う (ハッシュタグ等)。
-	 * 遅延評価なのは、開かない限りメニューを組む必要が無いため。`os.contextMenu` は
-	 * イベントを同期で使うので、解決を待ってから渡すことはできない。
-	 */
-	contextMenu?: (() => MenuItem[]) | null;
-}>(), {
-	activeClass: null,
-	behavior: null,
-	contextMenu: null,
-});
+const props = withDefaults(
+	defineProps<{
+		to: string;
+		activeClass?: null | string;
+		behavior?: MkABehavior;
+		/**
+		 * 右クリックのメニューを差し替える。リンク以外の意味を持つ場合に使う (ハッシュタグ等)。
+		 * 遅延評価なのは、開かない限りメニューを組む必要が無いため。`os.contextMenu` は
+		 * イベントを同期で使うので、解決を待ってから渡すことはできない。
+		 */
+		contextMenu?: (() => MenuItem[]) | null;
+	}>(),
+	{
+		activeClass: null,
+		behavior: null,
+		contextMenu: null,
+	},
+);
 
 const behavior = props.behavior ?? inject<MkABehavior>('linkNavigationBehavior', null);
 const isWindow = inject<boolean>('inWindow', false);
@@ -48,52 +51,74 @@ defineExpose({ $el: el });
 const router = useRouter();
 
 const active = computed(() => {
-	if (props.activeClass == null) return false;
+	if (props.activeClass == null) {
+		return false;
+	}
 	const resolved = router.resolve(props.to);
-	if (resolved == null) return false;
-	if (resolved.route.path === router.currentRoute.value.path) return true;
-	if (resolved.route.name == null) return false;
-	if (router.currentRoute.value.name == null) return false;
+	if (resolved == null) {
+		return false;
+	}
+	if (resolved.route.path === router.currentRoute.value.path) {
+		return true;
+	}
+	if (resolved.route.name == null) {
+		return false;
+	}
+	if (router.currentRoute.value.name == null) {
+		return false;
+	}
 	return resolved.route.name === router.currentRoute.value.name;
 });
 
 function onContextmenu(ev: PointerEvent) {
 	const selection = window.getSelection();
-	if (selection && selection.toString() !== '') return;
+	if (selection && selection.toString() !== '') {
+		return;
+	}
 
 	if (props.contextMenu != null) {
 		void os.contextMenu(props.contextMenu(), ev);
 		return;
 	}
 
-	os.contextMenu([{
-		type: 'label',
-		text: props.to,
-	}, {
-		icon: 'ti ti-app-window',
-		text: i18n.ts.openInWindow,
-		action: () => {
-			os.pageWindow(props.to);
-		},
-	}, {
-		icon: 'ti ti-player-eject',
-		text: i18n.ts.showInPage,
-		action: () => {
-			router.pushByPath(props.to, 'forcePage');
-		},
-	}, { type: 'divider' }, {
-		icon: 'ti ti-external-link',
-		text: i18n.ts.openInNewTab,
-		action: () => {
-			window.open(props.to, '_blank', 'noopener');
-		},
-	}, {
-		icon: 'ti ti-link',
-		text: i18n.ts.copyLink,
-		action: () => {
-			copyToClipboard(`${url}${props.to}`);
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				type: 'label',
+				text: props.to,
+			},
+			{
+				icon: 'ti ti-app-window',
+				text: i18n.ts.openInWindow,
+				action: () => {
+					os.pageWindow(props.to);
+				},
+			},
+			{
+				icon: 'ti ti-player-eject',
+				text: i18n.ts.showInPage,
+				action: () => {
+					router.pushByPath(props.to, 'forcePage');
+				},
+			},
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-external-link',
+				text: i18n.ts.openInNewTab,
+				action: () => {
+					window.open(props.to, '_blank', 'noopener');
+				},
+			},
+			{
+				icon: 'ti ti-link',
+				text: i18n.ts.copyLink,
+				action: () => {
+					copyToClipboard(`${url}${props.to}`);
+				},
+			},
+		],
+		ev,
+	);
 }
 
 function openWindow() {
@@ -102,7 +127,9 @@ function openWindow() {
 
 function nav(ev: PointerEvent) {
 	// 制御キーとの組み合わせは無視（shiftを除く）
-	if (ev.metaKey || ev.altKey || ev.ctrlKey) return;
+	if (ev.metaKey || ev.altKey || ev.ctrlKey) {
+		return;
+	}
 
 	ev.preventDefault();
 

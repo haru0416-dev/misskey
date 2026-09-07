@@ -49,15 +49,18 @@ import { prefer } from '@/preferences.js';
 import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { DI } from '@/di.js';
 
-const props = withDefaults(defineProps<{
-	noteId: Misskey.entities.Note['id'];
-	reactions: Misskey.entities.Note['reactions'];
-	reactionEmojis: Misskey.entities.Note['reactionEmojis'];
-	myReaction: Misskey.entities.Note['myReaction'];
-	maxNumber?: number;
-}>(), {
-	maxNumber: Infinity,
-});
+const props = withDefaults(
+	defineProps<{
+		noteId: Misskey.entities.Note['id'];
+		reactions: Misskey.entities.Note['reactions'];
+		reactionEmojis: Misskey.entities.Note['reactionEmojis'];
+		myReaction: Misskey.entities.Note['myReaction'];
+		maxNumber?: number;
+	}>(),
+	{
+		maxNumber: Infinity,
+	},
+);
 
 const mock = inject(DI.mock, false);
 
@@ -75,67 +78,84 @@ if (props.myReaction != null) {
 }
 
 function onMockToggleReaction(emoji: string, count: number) {
-	if (!mock) return;
+	if (!mock) {
+		return;
+	}
 
 	const i = _reactions.value.findIndex((item) => item[0] === emoji);
-	if (i < 0) return;
+	if (i < 0) {
+		return;
+	}
 	const reaction = _reactions.value[i];
-	if (reaction == null) return;
+	if (reaction == null) {
+		return;
+	}
 
-	emit('mockUpdateMyReaction', emoji, (count - reaction[1]));
+	emit('mockUpdateMyReaction', emoji, count - reaction[1]);
 }
 
 function canReact(reaction: string) {
-	if (!$i) return false;
+	if (!$i) {
+		return false;
+	}
 	return !reaction.match(/@\w/) && (customEmojisMap.has(reaction) || isSupportedEmoji(reaction));
 }
 
-watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) => {
-	let newReactions: [string, number][] = [];
-	hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
+watch(
+	[() => props.reactions, () => props.maxNumber],
+	([newSource, maxNumber]) => {
+		let newReactions: [string, number][] = [];
+		hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
-	for (let i = 0; i < _reactions.value.length; i++) {
-		const current = _reactions.value[i];
-		if (current == null) continue;
-		const reaction = current[0];
-		const count = newSource[reaction];
-		if (count != null && count !== 0) {
-			current[1] = count;
-			newReactions.push(current);
+		for (let i = 0; i < _reactions.value.length; i++) {
+			const current = _reactions.value[i];
+			if (current == null) {
+				continue;
+			}
+			const reaction = current[0];
+			const count = newSource[reaction];
+			if (count != null && count !== 0) {
+				current[1] = count;
+				newReactions.push(current);
+			}
 		}
-	}
 
-	const newReactionsNames = new Set(newReactions.map(([x]) => x));
-	const sourceEntries = Object.entries(newSource);
-	const reactionAvailability = prefer.showAvailableReactionsFirstInNote
-		? new Map(sourceEntries.map(([reaction]) => [reaction, canReact(reaction)]))
-		: null;
-	newReactions = [
-		...newReactions,
-		...sourceEntries
-			.sort(([emojiA, countA], [emojiB, countB]) => {
-				if (reactionAvailability != null) {
-					const emojiAIsAvailable = reactionAvailability.get(emojiA) ?? false;
-					const emojiBIsAvailable = reactionAvailability.get(emojiB) ?? false;
-					if (!emojiAIsAvailable && emojiBIsAvailable) return 1;
-					if (emojiAIsAvailable && !emojiBIsAvailable) return -1;
+		const newReactionsNames = new Set(newReactions.map(([x]) => x));
+		const sourceEntries = Object.entries(newSource);
+		const reactionAvailability = prefer.showAvailableReactionsFirstInNote
+			? new Map(sourceEntries.map(([reaction]) => [reaction, canReact(reaction)]))
+			: null;
+		newReactions = [
+			...newReactions,
+			...sourceEntries
+				.sort(([emojiA, countA], [emojiB, countB]) => {
+					if (reactionAvailability != null) {
+						const emojiAIsAvailable = reactionAvailability.get(emojiA) ?? false;
+						const emojiBIsAvailable = reactionAvailability.get(emojiB) ?? false;
+						if (!emojiAIsAvailable && emojiBIsAvailable) {
+							return 1;
+						}
+						if (emojiAIsAvailable && !emojiBIsAvailable) {
+							return -1;
+						}
+						return countB - countA;
+					}
 					return countB - countA;
-				} else {
-					return countB - countA;
-				}
-			})
-			.filter(([y], i) => i < maxNumber && !newReactionsNames.has(y)),
-	];
+				})
+				.filter(([y], i) => i < maxNumber && !newReactionsNames.has(y)),
+		];
 
-	newReactions = newReactions.slice(0, props.maxNumber);
+		newReactions = newReactions.slice(0, props.maxNumber);
 
-	if (props.myReaction && !newReactions.some(([reaction]) => reaction === props.myReaction)) {
-		const count = requireReactionCount(newSource, props.myReaction);
-		newReactions.push([props.myReaction, count]);
-	}
+		if (props.myReaction && !newReactions.some(([reaction]) => reaction === props.myReaction)) {
+			const count = requireReactionCount(newSource, props.myReaction);
+			newReactions.push([props.myReaction, count]);
+		}
 
-	_reactions.value = newReactions;
-}, { immediate: true, deep: true });
+		_reactions.value = newReactions;
+	},
+	{ immediate: true, deep: true },
+);
 </script>
 
 <style lang="scss" module>

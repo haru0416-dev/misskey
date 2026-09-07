@@ -18,12 +18,12 @@ import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
-import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
-import { addCustomEmojiForApi, type ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
-import {
-	createExportCompletedNotification,
-	type ApiNotificationDependencies,
-} from '@/server/rest/notification/notification.js';
+import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
+import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmojiForApi } from '@/server/rest/emoji/emojis.js';
+import type { ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
+import { createExportCompletedNotification } from '@/server/rest/notification/notification.js';
+import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 
 export type QueueEmojisDependencies = ApiDriveFileUploadDependencies &
 	ApiEmojiDependencies &
@@ -48,7 +48,9 @@ export async function handleQueueExportCustomEmojis(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTempDir();
 
@@ -135,7 +137,9 @@ export async function handleQueueImportCustomEmojis(
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTempDir();
 
@@ -156,12 +160,18 @@ export async function handleQueueImportCustomEmojis(
 		const meta = JSON.parse(metaRaw) as { emojis: ExportedEmojiMetaRecord[] };
 
 		for (const record of meta.emojis) {
-			if (!record.downloaded) continue;
+			if (!record.downloaded) {
+				continue;
+			}
 			// アップロードされた zip 由来の値なので、バックトラックが二次時間になる形は避ける
 			// (`[a-zA-Z0-9_]+?` と `[a-zA-Z0-9.]+` は英数字が重複するため分割点が曖昧になっていた)
-			if (!/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9.]*)?$/.test(record.fileName)) continue;
+			if (!/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9.]*)?$/.test(record.fileName)) {
+				continue;
+			}
 			const emojiInfo = record.emoji;
-			if (!/^[a-zA-Z0-9_]+$/.test(emojiInfo.name)) continue;
+			if (!/^[a-zA-Z0-9_]+$/.test(emojiInfo.name)) {
+				continue;
+			}
 			const emojiPath = outputPath + '/' + record.fileName;
 			await deleteEmojiByNameAndHostFromDatabase(deps.db, emojiInfo.name, null);
 

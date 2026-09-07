@@ -60,7 +60,9 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 
 	/** テーマを更新し、同時に適用します。 */
 	public updateTheme(newTheme: Theme) {
-		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) return;
+		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) {
+			return;
+		}
 
 		this.isPreviewMode = false;
 
@@ -100,7 +102,9 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 
 	/** currentThemeを適用します。 */
 	private applyTheme() {
-		if (this.currentTheme == null || this.currentCompiledTheme == null) return;
+		if (this.currentTheme == null || this.currentCompiledTheme == null) {
+			return;
+		}
 
 		// hidden 中の startViewTransition はブラウザによって失敗するため、visible のときだけ使用する。
 		if (window.document.startViewTransition != null && window.document.visibilityState === 'visible') {
@@ -136,7 +140,9 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 	}
 
 	private updateAttributes() {
-		if (!this.currentTheme || !this.currentCompiledTheme) return;
+		if (!this.currentTheme || !this.currentCompiledTheme) {
+			return;
+		}
 
 		const colorScheme = this.currentTheme.base === 'dark' ? 'dark' : 'light';
 		window.document.documentElement.dataset['colorScheme'] = colorScheme;
@@ -144,7 +150,9 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		for (const tag of window.document.head.children) {
 			if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {
 				const htmlThemeColor = this.currentCompiledTheme['htmlThemeColor'];
-				if (htmlThemeColor != null) tag.setAttribute('content', htmlThemeColor);
+				if (htmlThemeColor != null) {
+					tag.setAttribute('content', htmlThemeColor);
+				}
 				break;
 			}
 		}
@@ -178,7 +186,9 @@ themeManager.on('previewStateChanged', (preview) => {
 });
 
 export async function addTheme(theme: Theme): Promise<void> {
-	if ($i == null) return;
+	if ($i == null) {
+		return;
+	}
 	const builtinThemes = await getBuiltinThemes();
 	if (builtinThemes.some((t) => t.id === theme.id)) {
 		throw new Error('builtin theme');
@@ -191,14 +201,18 @@ export async function addTheme(theme: Theme): Promise<void> {
 }
 
 export async function removeTheme(theme: Theme): Promise<void> {
-	if ($i == null) return;
+	if ($i == null) {
+		return;
+	}
 	const themes = prefer.themes.filter((t) => t.id !== theme.id);
 	prefer.commit('themes', themes);
 }
 
 export async function installTheme(code: string): Promise<void> {
 	const theme = parseThemeCode(code);
-	if (theme == null) return;
+	if (theme == null) {
+		return;
+	}
 	await addTheme(theme);
 }
 

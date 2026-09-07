@@ -53,38 +53,42 @@ import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
 
 function getFixedContainer(el: Element | null): Element | null {
-	if (el == null || el.tagName === 'BODY') return null;
+	if (el == null || el.tagName === 'BODY') {
+		return null;
+	}
 	const position = window.getComputedStyle(el).getPropertyValue('position');
 	if (position === 'fixed') {
 		return el;
-	} else {
-		return getFixedContainer(el.parentElement);
 	}
+	return getFixedContainer(el.parentElement);
 }
 
 type ModalTypes = 'popup' | 'dialog' | 'drawer';
 
-const props = withDefaults(defineProps<{
-	manualShowing?: boolean | null;
-	anchor?: { x: string; y: string; };
-	anchorElement?: HTMLElement | null;
-	preferType?: ModalTypes | 'auto';
-	zPriority?: 'low' | 'middle' | 'high';
-	noOverlap?: boolean;
-	transparentBg?: boolean;
-	hasInteractionWithOtherFocusTrappedEls?: boolean;
-	returnFocusTo?: HTMLElement | null;
-}>(), {
-	manualShowing: null,
-	anchorElement: null,
-	anchor: () => ({ x: 'center', y: 'bottom' }),
-	preferType: 'auto',
-	zPriority: 'low',
-	noOverlap: true,
-	transparentBg: false,
-	hasInteractionWithOtherFocusTrappedEls: false,
-	returnFocusTo: null,
-});
+const props = withDefaults(
+	defineProps<{
+		manualShowing?: boolean | null;
+		anchor?: { x: string; y: string };
+		anchorElement?: HTMLElement | null;
+		preferType?: ModalTypes | 'auto';
+		zPriority?: 'low' | 'middle' | 'high';
+		noOverlap?: boolean;
+		transparentBg?: boolean;
+		hasInteractionWithOtherFocusTrappedEls?: boolean;
+		returnFocusTo?: HTMLElement | null;
+	}>(),
+	{
+		manualShowing: null,
+		anchorElement: null,
+		anchor: () => ({ x: 'center', y: 'bottom' }),
+		preferType: 'auto',
+		zPriority: 'low',
+		noOverlap: true,
+		transparentBg: false,
+		hasInteractionWithOtherFocusTrappedEls: false,
+		returnFocusTo: null,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'opening'): void;
@@ -107,17 +111,15 @@ const zIndex = os.claimZIndex(props.zPriority);
 const useSendAnime = ref(false);
 const type = computed<ModalTypes>(() => {
 	if (props.preferType === 'auto') {
-		if ((prefer.menuStyle === 'drawer') || (prefer.menuStyle === 'auto' && isTouchUsing && deviceKind === 'smartphone')) {
+		if (prefer.menuStyle === 'drawer' || (prefer.menuStyle === 'auto' && isTouchUsing && deviceKind === 'smartphone')) {
 			return 'drawer';
-		} else {
-			return props.anchorElement != null ? 'popup' : 'dialog';
 		}
-	} else {
-		return props.preferType!;
+		return props.anchorElement != null ? 'popup' : 'dialog';
 	}
+	return props.preferType!;
 });
-const isEnableBgTransparent = computed(() => props.transparentBg && (type.value === 'popup'));
-const transitionName = computed((() =>
+const isEnableBgTransparent = computed(() => props.transparentBg && type.value === 'popup');
+const transitionName = computed(() =>
 	prefer.animation
 		? useSendAnime.value
 			? 'send'
@@ -126,9 +128,9 @@ const transitionName = computed((() =>
 				: type.value === 'popup'
 					? 'modal-popup'
 					: 'modal'
-		: ''
-));
-const transitionDuration = computed((() =>
+		: '',
+);
+const transitionDuration = computed(() =>
 	transitionName.value === 'send'
 		? 400
 		: transitionName.value === 'modal-popup'
@@ -137,8 +139,8 @@ const transitionDuration = computed((() =>
 				? 200
 				: transitionName.value === 'modal-drawer'
 					? 200
-					: 0
-));
+					: 0,
+);
 
 let releaseFocusTrap: (() => void) | null = null;
 let contentClicking = false;
@@ -148,13 +150,17 @@ function close(opts: { useSendAnimation?: boolean } = {}) {
 		useSendAnime.value = true;
 	}
 
-	if (props.anchorElement) props.anchorElement.style.pointerEvents = 'auto';
+	if (props.anchorElement) {
+		props.anchorElement.style.pointerEvents = 'auto';
+	}
 	showing.value = false;
 	emit('close');
 }
 
 function onBgClick() {
-	if (contentClicking) return;
+	if (contentClicking) {
+		return;
+	}
 	emit('click');
 }
 
@@ -163,7 +169,7 @@ if (type.value === 'drawer') {
 }
 
 const keymap = {
-	'esc': {
+	esc: {
 		allowRepeat: true,
 		callback: () => emit('esc'),
 	},
@@ -173,11 +179,19 @@ const MARGIN = 16;
 const SCROLLBAR_THICKNESS = 16;
 
 const align = () => {
-	if (props.anchorElement == null) return;
-	if (type.value === 'drawer') return;
-	if (type.value === 'dialog') return;
+	if (props.anchorElement == null) {
+		return;
+	}
+	if (type.value === 'drawer') {
+		return;
+	}
+	if (type.value === 'dialog') {
+		return;
+	}
 
-	if (content.value == null) return;
+	if (content.value == null) {
+		return;
+	}
 
 	const anchorRect = props.anchorElement.getBoundingClientRect();
 
@@ -191,14 +205,14 @@ const align = () => {
 	const y = anchorRect.top + (fixed.value ? 0 : window.scrollY);
 
 	if (props.anchor.x === 'center') {
-		left = x + (props.anchorElement.offsetWidth / 2) - (width / 2);
+		left = x + props.anchorElement.offsetWidth / 2 - width / 2;
 	} else if (props.anchor.x === 'left') {
 	} else if (props.anchor.x === 'right') {
 		left = x + props.anchorElement.offsetWidth;
 	}
 
 	if (props.anchor.y === 'center') {
-		top = (y - (height / 2));
+		top = y - height / 2;
 	} else if (props.anchor.y === 'top') {
 	} else if (props.anchor.y === 'bottom') {
 		top = y + props.anchorElement.offsetHeight;
@@ -206,48 +220,48 @@ const align = () => {
 
 	if (fixed.value) {
 		// 画面から横にはみ出る場合
-		if (left + width > (window.innerWidth - SCROLLBAR_THICKNESS)) {
-			left = (window.innerWidth - SCROLLBAR_THICKNESS) - width;
+		if (left + width > window.innerWidth - SCROLLBAR_THICKNESS) {
+			left = window.innerWidth - SCROLLBAR_THICKNESS - width;
 		}
 
-		const underSpace = ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN) - top;
-		const upperSpace = (anchorRect.top - MARGIN);
+		const underSpace = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - top;
+		const upperSpace = anchorRect.top - MARGIN;
 
 		// 画面から縦にはみ出る場合
-		if (top + height > ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN)) {
+		if (top + height > window.innerHeight - SCROLLBAR_THICKNESS - MARGIN) {
 			if (props.noOverlap && props.anchor.x === 'center') {
-				if (underSpace >= (upperSpace / 3)) {
+				if (underSpace >= upperSpace / 3) {
 					maxHeight.value = underSpace;
 				} else {
 					maxHeight.value = upperSpace;
-					top = (upperSpace + MARGIN) - height;
+					top = upperSpace + MARGIN - height;
 				}
 			} else {
-				top = ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN) - height;
+				top = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - height;
 			}
 		} else {
 			maxHeight.value = underSpace;
 		}
 	} else {
 		// 画面から横にはみ出る場合
-		if (left + width - window.scrollX > (window.innerWidth - SCROLLBAR_THICKNESS)) {
-			left = (window.innerWidth - SCROLLBAR_THICKNESS) - width + window.scrollX - 1;
+		if (left + width - window.scrollX > window.innerWidth - SCROLLBAR_THICKNESS) {
+			left = window.innerWidth - SCROLLBAR_THICKNESS - width + window.scrollX - 1;
 		}
 
-		const underSpace = ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN) - (top - window.scrollY);
-		const upperSpace = (anchorRect.top - MARGIN);
+		const underSpace = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - (top - window.scrollY);
+		const upperSpace = anchorRect.top - MARGIN;
 
 		// 画面から縦にはみ出る場合
-		if (top + height - window.scrollY > ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN)) {
+		if (top + height - window.scrollY > window.innerHeight - SCROLLBAR_THICKNESS - MARGIN) {
 			if (props.noOverlap && props.anchor.x === 'center') {
-				if (underSpace >= (upperSpace / 3)) {
+				if (underSpace >= upperSpace / 3) {
 					maxHeight.value = underSpace;
 				} else {
 					maxHeight.value = upperSpace;
-					top = window.scrollY + ((upperSpace + MARGIN) - height);
+					top = window.scrollY + (upperSpace + MARGIN - height);
 				}
 			} else {
-				top = ((window.innerHeight - SCROLLBAR_THICKNESS) - MARGIN) - height + window.scrollY - 1;
+				top = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - height + window.scrollY - 1;
 			}
 		} else {
 			maxHeight.value = underSpace;
@@ -267,13 +281,13 @@ const align = () => {
 
 	if (top >= anchorRect.top + props.anchorElement.offsetHeight + (fixed.value ? 0 : window.scrollY)) {
 		transformOriginY = 'top';
-	} else if ((top + height) <= anchorRect.top + (fixed.value ? 0 : window.scrollY)) {
+	} else if (top + height <= anchorRect.top + (fixed.value ? 0 : window.scrollY)) {
 		transformOriginY = 'bottom';
 	}
 
 	if (left >= anchorRect.left + props.anchorElement.offsetWidth + (fixed.value ? 0 : window.scrollX)) {
 		transformOriginX = 'left';
-	} else if ((left + width) <= anchorRect.left + (fixed.value ? 0 : window.scrollX)) {
+	} else if (left + width <= anchorRect.left + (fixed.value ? 0 : window.scrollX)) {
 		transformOriginX = 'right';
 	}
 
@@ -287,20 +301,32 @@ const onOpened = () => {
 	emit('opened');
 
 	nextTick(() => {
-		if (content.value == null) return;
+		if (content.value == null) {
+			return;
+		}
 
 		// コンテンツ内で押下して外側で離した場合を背景クリックと判定しない。
 		const el = content.value.children[0];
-		if (el == null) return;
-		el.addEventListener('mousedown', ev => {
-			contentClicking = true;
-			window.addEventListener('mouseup', ev => {
-				// click イベントより先に mouseup イベントが発生するかもしれないのでちょっと待つ
-				window.setTimeout(() => {
-					contentClicking = false;
-				}, 100);
-			}, { passive: true, once: true });
-		}, { passive: true });
+		if (el == null) {
+			return;
+		}
+		el.addEventListener(
+			'mousedown',
+			(ev) => {
+				contentClicking = true;
+				window.addEventListener(
+					'mouseup',
+					(ev) => {
+						// click イベントより先に mouseup イベントが発生するかもしれないのでちょっと待つ
+						window.setTimeout(() => {
+							contentClicking = false;
+						}, 100);
+					},
+					{ passive: true, once: true },
+				);
+			},
+			{ passive: true },
+		);
 	});
 };
 
@@ -313,33 +339,43 @@ const alignObserver = new ResizeObserver((entries, observer) => {
 });
 
 onMounted(() => {
-	watch(() => props.anchorElement, async () => {
-		if (props.anchorElement) {
-			props.anchorElement.style.pointerEvents = 'none';
-		}
-		fixed.value = (type.value === 'drawer') || (getFixedContainer(props.anchorElement) != null);
-
-		await nextTick();
-
-		align();
-	}, { immediate: true });
-
-	watch([showing, () => props.manualShowing], ([showing, manualShowing]) => {
-		if (manualShowing === true || (manualShowing == null && showing === true)) {
-			if (modalRootEl.value != null) {
-				const { release } = focusTrap(modalRootEl.value, props.hasInteractionWithOtherFocusTrappedEls);
-
-				releaseFocusTrap = release;
-				modalRootEl.value.focus();
+	watch(
+		() => props.anchorElement,
+		async () => {
+			if (props.anchorElement) {
+				props.anchorElement.style.pointerEvents = 'none';
 			}
-		} else {
-			releaseFocusTrap?.();
-			focusParent(props.returnFocusTo ?? props.anchorElement, true, false);
-		}
-	}, { immediate: true });
+			fixed.value = type.value === 'drawer' || getFixedContainer(props.anchorElement) != null;
+
+			await nextTick();
+
+			align();
+		},
+		{ immediate: true },
+	);
+
+	watch(
+		[showing, () => props.manualShowing],
+		([showing, manualShowing]) => {
+			if (manualShowing === true || (manualShowing == null && showing === true)) {
+				if (modalRootEl.value != null) {
+					const { release } = focusTrap(modalRootEl.value, props.hasInteractionWithOtherFocusTrappedEls);
+
+					releaseFocusTrap = release;
+					modalRootEl.value.focus();
+				}
+			} else {
+				releaseFocusTrap?.();
+				focusParent(props.returnFocusTo ?? props.anchorElement, true, false);
+			}
+		},
+		{ immediate: true },
+	);
 
 	nextTick(() => {
-		if (content.value) alignObserver.observe(content.value);
+		if (content.value) {
+			alignObserver.observe(content.value);
+		}
 	});
 });
 

@@ -7,13 +7,8 @@ import * as assert from 'assert';
 import * as crypto from 'node:crypto';
 import { encode as encodeToCbor } from 'cbor2';
 import * as OTPAuth from 'otpauth';
-import {
-	fixtureConfig,
-	openTestDatabase,
-	type TestDatabase,
-	updateUserInDatabase,
-	updateUserProfileInDatabase,
-} from '../fixtures.js';
+import { fixtureConfig, openTestDatabase, updateUserInDatabase, updateUserProfileInDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import { api, castAsError, signup, sendEnvUpdateRequest } from '../utils.js';
 import type {
 	AuthenticationResponseJSON,
@@ -507,7 +502,9 @@ describe('2要素認証', () => {
 		let lastPasskeyCallAt = 0;
 		const callPasskey = async <P extends misskey.entities.SigninWithPasskeyRequest>(params: P) => {
 			const wait = lastPasskeyCallAt + 300 - Date.now();
-			if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+			if (wait > 0) {
+				await new Promise((resolve) => setTimeout(resolve, wait));
+			}
 			lastPasskeyCallAt = Date.now();
 			return await api('signin-with-passkey', params);
 		};

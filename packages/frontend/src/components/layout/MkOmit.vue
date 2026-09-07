@@ -16,18 +16,23 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, onUnmounted, useTemplateRef, ref } from 'vue';
 import { i18n } from '@/i18n.js';
 
-const props = withDefaults(defineProps<{
-	maxHeight?: number;
-}>(), {
-	maxHeight: 200,
-});
+const props = withDefaults(
+	defineProps<{
+		maxHeight?: number;
+	}>(),
+	{
+		maxHeight: 200,
+	},
+);
 
 const content = useTemplateRef('content');
 const omitted = ref(false);
 const ignoreOmit = ref(false);
 
 const calcOmit = () => {
-	if (omitted.value || ignoreOmit.value || content.value == null) return;
+	if (omitted.value || ignoreOmit.value || content.value == null) {
+		return;
+	}
 	omitted.value = content.value.offsetHeight > props.maxHeight;
 };
 

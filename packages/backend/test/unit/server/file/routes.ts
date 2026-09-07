@@ -4,7 +4,8 @@
  */
 
 import * as fs from 'node:fs';
-import { createServer, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server, ServerResponse } from 'node:http';
 import * as path from 'node:path';
 import type { Hono } from 'hono';
 import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
@@ -15,15 +16,18 @@ import { createDownloadService } from '@/core/net/DownloadService.js';
 import { createFileInfoService } from '@/core/drive/FileInfoService.js';
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import { createInternalStorageService, type InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import { createInternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createLoggerService } from '@/core/LoggerService.js';
 import { createVideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import { loadConfig, type Config } from '@/config.js';
+import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
 import { createFileServerApp } from '@/server/file/routes.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
-import { driveFile, type DriveFileInsert } from '@/db/schema/drive-file.js';
+import { driveFile } from '@/db/schema/drive-file.js';
+import type { DriveFileInsert } from '@/db/schema/drive-file.js';
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 
 const dummyPath = path.resolve('test/resources/dummy-for-file-server-service.png');
@@ -58,7 +62,9 @@ async function listen(server: Server): Promise<string> {
 }
 
 async function close(server: Server): Promise<void> {
-	if (!server.listening) return;
+	if (!server.listening) {
+		return;
+	}
 
 	await new Promise<void>((resolve, reject) => {
 		server.close((err) => (err ? reject(err) : resolve()));

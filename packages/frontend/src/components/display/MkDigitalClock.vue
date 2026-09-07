@@ -20,17 +20,20 @@ import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { defaultIdlingRenderScheduler } from '@/utility/idle-render.js';
 import { ClockScheduler } from '@/utility/clock-scheduler.js';
 
-const props = withDefaults(defineProps<{
-	showS?: boolean;
-	showMs?: boolean;
-	offset?: number;
-	now?: () => Date;
-}>(), {
-	showS: true,
-	showMs: false,
-	offset: 0 - new Date().getTimezoneOffset(),
-	now: () => new Date(),
-});
+const props = withDefaults(
+	defineProps<{
+		showS?: boolean;
+		showMs?: boolean;
+		offset?: number;
+		now?: () => Date;
+	}>(),
+	{
+		showS: true,
+		showMs: false,
+		offset: 0 - new Date().getTimezoneOffset(),
+		now: () => new Date(),
+	},
+);
 
 const hh = ref('');
 const mm = ref('');
@@ -43,7 +46,9 @@ let mounted = false;
 
 watch(showColon, (v) => {
 	if (v) {
-		if (colonTimerId != null) window.clearTimeout(colonTimerId);
+		if (colonTimerId != null) {
+			window.clearTimeout(colonTimerId);
+		}
 		colonTimerId = window.setTimeout(() => {
 			showColon.value = false;
 			colonTimerId = null;
@@ -57,8 +62,12 @@ const tick = (): Date => {
 	hh.value = now.getHours().toString().padStart(2, '0');
 	mm.value = now.getMinutes().toString().padStart(2, '0');
 	ss.value = now.getSeconds().toString().padStart(2, '0');
-	ms.value = Math.floor(now.getMilliseconds() / 10).toString().padStart(2, '0');
-	if (now.getSeconds() !== prevSec) showColon.value = true;
+	ms.value = Math.floor(now.getMilliseconds() / 10)
+		.toString()
+		.padStart(2, '0');
+	if (now.getSeconds() !== prevSec) {
+		showColon.value = true;
+	}
 	prevSec = now.getSeconds();
 	return now;
 };
@@ -71,7 +80,9 @@ const clockScheduler = new ClockScheduler(() => {
 });
 
 function updateScheduler(): void {
-	if (!mounted) return;
+	if (!mounted) {
+		return;
+	}
 	if (props.showMs) {
 		clockScheduler.stop();
 		defaultIdlingRenderScheduler.add(tick);
@@ -92,7 +103,9 @@ onUnmounted(() => {
 	mounted = false;
 	defaultIdlingRenderScheduler.delete(tick);
 	clockScheduler.stop();
-	if (colonTimerId != null) window.clearTimeout(colonTimerId);
+	if (colonTimerId != null) {
+		window.clearTimeout(colonTimerId);
+	}
 });
 </script>
 

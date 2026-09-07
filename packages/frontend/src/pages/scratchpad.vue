@@ -78,15 +78,17 @@ import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 const parser = new Parser();
 let aiscript: Interpreter;
 const code = ref('');
-const logs = ref<{
-	id: number;
-	text: string;
-	print: boolean;
-}[]>([]);
+const logs = ref<
+	{
+		id: number;
+		text: string;
+		print: boolean;
+	}[]
+>([]);
 const root = ref<AsUiRoot | undefined>();
 const components = ref<Ref<AsUiComponent>[]>([]);
 const uiKey = ref(0);
-const uiInspectorOpenedComponents = ref(new WeakMap<AsUiComponent | Ref<AsUiComponent>, boolean>);
+const uiInspectorOpenedComponents = ref(new WeakMap<AsUiComponent | Ref<AsUiComponent>, boolean>());
 
 const saved = miLocalStorage.getItem('scratchpad');
 if (saved) {
@@ -100,55 +102,63 @@ watch(code, () => {
 function stringifyUiProps(uiProps: AsUiComponent) {
 	return JSON.stringify(
 		{ ...uiProps, type: undefined, id: undefined },
-		(k, v) => typeof v === 'function' ? '<function>' : v,
+		(k, v) => (typeof v === 'function' ? '<function>' : v),
 		2,
 	);
 }
 
 async function run() {
-	if (aiscript) aiscript.abort();
+	if (aiscript) {
+		aiscript.abort();
+	}
 	root.value = undefined;
 	components.value = [];
 	uiKey.value++;
 	logs.value = [];
-	aiscript = new Interpreter(({
-		...createAiScriptEnv({
-			storageKey: 'widget',
-			...($i?.token === undefined ? {} : { token: $i.token }),
-		}),
-		...registerAsUiLib(components.value, (_root) => {
-			root.value = _root.value;
-		}),
-	}), {
-		in: aiScriptReadline,
-		out: (value) => {
-			if (value.type === 'str' && value.value.toLowerCase().replace(',', '').includes('hello world')) {
-				claimAchievement('outputHelloWorldOnScratchpad');
-			}
-			logs.value.push({
-				id: Math.random(),
-				text: value.type === 'str' ? value.value : utils.valToString(value),
-				print: true,
-			});
+	aiscript = new Interpreter(
+		{
+			...createAiScriptEnv({
+				storageKey: 'widget',
+				...($i?.token === undefined ? {} : { token: $i.token }),
+			}),
+			...registerAsUiLib(components.value, (_root) => {
+				root.value = _root.value;
+			}),
 		},
-		err: (err) => {
-			os.alert({
-				type: 'error',
-				title: 'AiScript Error',
-				text: err.toString(),
-			});
-		},
-		log: (type, params) => {
-			switch (type) {
-				case 'end': logs.value.push({
+		{
+			in: aiScriptReadline,
+			out: (value) => {
+				if (value.type === 'str' && value.value.toLowerCase().replace(',', '').includes('hello world')) {
+					claimAchievement('outputHelloWorldOnScratchpad');
+				}
+				logs.value.push({
 					id: Math.random(),
-					text: utils.valToString(params.val as Value, true),
-					print: false,
-				}); break;
-				default: break;
-			}
+					text: value.type === 'str' ? value.value : utils.valToString(value),
+					print: true,
+				});
+			},
+			err: (err) => {
+				os.alert({
+					type: 'error',
+					title: 'AiScript Error',
+					text: err.toString(),
+				});
+			},
+			log: (type, params) => {
+				switch (type) {
+					case 'end':
+						logs.value.push({
+							id: Math.random(),
+							text: utils.valToString(params.val as Value, true),
+							print: false,
+						});
+						break;
+					default:
+						break;
+				}
+			},
 		},
-	});
+	);
 
 	let ast;
 	try {
@@ -174,11 +184,15 @@ async function run() {
 }
 
 onDeactivated(() => {
-	if (aiscript) aiscript.abort();
+	if (aiscript) {
+		aiscript.abort();
+	}
 });
 
 onUnmounted(() => {
-	if (aiscript) aiscript.abort();
+	if (aiscript) {
+		aiscript.abort();
+	}
 });
 
 const headerActions = computed(() => []);
@@ -186,13 +200,15 @@ const headerActions = computed(() => []);
 const headerTabs = computed(() => []);
 
 const showns = computed(() => {
-	if (root.value == null) return new Set<string>();
+	if (root.value == null) {
+		return new Set<string>();
+	}
 	const result = new Set<string>();
 	(function addChildrenToResult(c: AsUiComponent) {
 		result.add(c.id);
 		const children = c.children;
 		if (children) {
-			const childComponents = components.value.filter(v => children.includes(v.value.id));
+			const childComponents = components.value.filter((v) => children.includes(v.value.id));
 			for (const child of childComponents) {
 				addChildrenToResult(child.value);
 			}

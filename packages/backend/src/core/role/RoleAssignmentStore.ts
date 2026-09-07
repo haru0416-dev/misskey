@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { roleAssignment, type RoleAssignmentInsert, type RoleAssignmentRow } from '@/db/schema/role-assignment.js';
+import { roleAssignment } from '@/db/schema/role-assignment.js';
+import type { RoleAssignmentInsert, RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiRole } from '@/models/Role.js';
@@ -84,6 +86,37 @@ export async function fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
 	return row == null ? null : deserializeRoleAssignment(row);
 }
 
+const ASSIGNMENT_CACHE_MAX_USERS = 10_000;
+const assignmentsByUserId = new Map<MiUser['id'], { version: number; assignments: readonly MiRoleAssignment[] }>();
+
+/**
+ * ユーザーの割り当てを世代番号付きで使い回す (世代は fetchRolesCacheVersionFromDatabase 参照)。
+ * 期限切れの判定は呼び出し側が expiresAt で行うので、期限が過ぎても世代は変わらない。
+ * 上限に達したら全て捨てる (ユーザー数に対する割合は小さく、次の要求で読み直せばよい)。
+ */
+export async function listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	version: number,
+): Promise<readonly MiRoleAssignment[]> {
+	const cached = assignmentsByUserId.get(userId);
+	if (cached?.version === version) {
+		return cached.assignments;
+	}
+
+	const assignments = await listRoleAssignmentsByUserIdFromDatabase(db, userId);
+	for (const entry of assignments) {
+		Object.freeze(entry);
+	}
+	Object.freeze(assignments);
+	if (assignmentsByUserId.size >= ASSIGNMENT_CACHE_MAX_USERS) {
+		assignmentsByUserId.clear();
+	}
+	assignmentsByUserId.set(userId, { version, assignments });
+
+	return assignments;
+}
+
 export async function listRoleAssignmentsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -105,7 +138,9 @@ export async function listRoleAssignmentsByUserIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userIds: MiUser['id'][],
 ): Promise<MiRoleAssignment[]> {
-	if (userIds.length === 0) return [];
+	if (userIds.length === 0) {
+		return [];
+	}
 
 	const statement = preparedQueryFor(db, 'roleAssignment:byUserIds', () =>
 		db

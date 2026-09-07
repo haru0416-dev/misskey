@@ -46,13 +46,8 @@ import {
 	renderReject,
 	renderUndo,
 } from '../user/following.js';
-import {
-	packMeDetailedForApi,
-	packUserDetailedNotMeForApi,
-	packUserDetailedNotMeManyForApi,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packMeDetailedForApi, packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountBlockingDependencies = UserPackingDependencies & {
@@ -107,7 +102,9 @@ async function getTargetUserOrThrow(
 	errorFactory: () => ApiError,
 ): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw errorFactory();
+	if (user == null) {
+		throw errorFactory();
+	}
 
 	return user;
 }
@@ -143,7 +140,9 @@ export async function cancelFollowRequest(
 	silent = false,
 ): Promise<void> {
 	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
-	if (request == null) return;
+	if (request == null) {
+		return;
+	}
 
 	await deleteFollowRequestByIdFromDatabase(deps.db, request.id);
 
@@ -192,13 +191,17 @@ export async function unfollow(
 	silent = false,
 ): Promise<void> {
 	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
-	if (following == null) return;
+	if (following == null) {
+		return;
+	}
 
 	const [followingFollower, followingFollowee] = await Promise.all([
 		fetchUserByIdFromDatabase(deps.db, following.followerId),
 		fetchUserByIdFromDatabase(deps.db, following.followeeId),
 	]);
-	if (followingFollower == null || followingFollowee == null) return;
+	if (followingFollower == null || followingFollowee == null) {
+		return;
+	}
 
 	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(
 		deps.db,
@@ -206,7 +209,9 @@ export async function unfollow(
 		followingFollower.id,
 		followingFollowee.id,
 	);
-	if (!deleted) return;
+	if (!deleted) {
+		return;
+	}
 
 	await decrementFollowing(deps, followingFollower, followingFollowee);
 
@@ -282,7 +287,9 @@ async function deliverBlockActivity(
 	deps: ApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {
-	if (!isLocalUser(blocking.blocker) || !isRemoteUser(blocking.blockee)) return;
+	if (!isLocalUser(blocking.blocker) || !isRemoteUser(blocking.blockee)) {
+		return;
+	}
 
 	const content = addActivityContext(deps.config, renderBlock(deps.config, blocking));
 	enqueueDeliverJob(
@@ -299,7 +306,9 @@ async function deliverUndoBlockActivity(
 	deps: ApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {
-	if (!isLocalUser(blocking.blocker) || !isRemoteUser(blocking.blockee)) return;
+	if (!isLocalUser(blocking.blocker) || !isRemoteUser(blocking.blockee)) {
+		return;
+	}
 
 	const block = renderBlock(deps.config, blocking);
 	const content = addActivityContext(deps.config, renderUndo(deps.config, block, blocking.blocker));
@@ -375,7 +384,9 @@ export async function unblockForApi(
 	blockee: MiUser,
 ): Promise<void> {
 	const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id);
-	if (blocking == null) return;
+	if (blocking == null) {
+		return;
+	}
 
 	blocking.blocker = blocker;
 	blocking.blockee = blockee;

@@ -55,23 +55,27 @@ const props = defineProps<{
 }>();
 
 function submit() {
-	if (submitting.value) return;
+	if (submitting.value) {
+		return;
+	}
 	submitting.value = true;
 
 	misskeyApi('verify-email', {
 		code: props.code,
-	}).then(() => {
-		succeeded.value = true;
-		submitting.value = false;
-	}).catch(() => {
-		submitting.value = false;
+	})
+		.then(() => {
+			succeeded.value = true;
+			submitting.value = false;
+		})
+		.catch(() => {
+			submitting.value = false;
 
-		os.alert({
-			type: 'error',
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts.emailVerificationFailedError,
+			os.alert({
+				type: 'error',
+				title: i18n.ts.somethingHappened,
+				text: i18n.ts.emailVerificationFailedError,
+			});
 		});
-	});
 }
 </script>
 

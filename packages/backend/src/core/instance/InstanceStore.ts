@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, like, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
-import { instance, type InstanceInsert, type InstanceRow } from '@/db/schema/instance.js';
+import { and, asc, count, desc, eq, gt, inArray, like, ne, notInArray, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { instance } from '@/db/schema/instance.js';
+import type { InstanceInsert, InstanceRow } from '@/db/schema/instance.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -54,10 +56,14 @@ export async function createInstanceIfNotExistsInDatabase(
 		.values(values)
 		.onConflictDoNothing({ target: instance.host })
 		.returning();
-	if (inserted != null) return deserializeInstance(inserted);
+	if (inserted != null) {
+		return deserializeInstance(inserted);
+	}
 
 	const existing = await fetchInstanceByHostFromDatabase(db, values.host);
-	if (existing == null) throw new EntityNotFoundError('MiInstance', values);
+	if (existing == null) {
+		throw new EntityNotFoundError('MiInstance', values);
+	}
 	return existing;
 }
 
@@ -206,7 +212,9 @@ export async function listFederationInstancesFromDatabase(
 
 	if (typeof options.blocked === 'boolean') {
 		if (options.blocked) {
-			if (options.blockedHosts.length === 0) return [];
+			if (options.blockedHosts.length === 0) {
+				return [];
+			}
 			conditions.push(inArray(instance.host, options.blockedHosts));
 		} else if (options.blockedHosts.length > 0) {
 			conditions.push(notInArray(instance.host, options.blockedHosts));
@@ -223,7 +231,9 @@ export async function listFederationInstancesFromDatabase(
 
 	if (typeof options.silenced === 'boolean') {
 		if (options.silenced) {
-			if (options.silencedHosts.length === 0) return [];
+			if (options.silencedHosts.length === 0) {
+				return [];
+			}
 			conditions.push(inArray(instance.host, options.silencedHosts));
 		} else if (options.silencedHosts.length > 0) {
 			conditions.push(notInArray(instance.host, options.silencedHosts));

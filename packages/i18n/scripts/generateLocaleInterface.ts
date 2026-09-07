@@ -21,21 +21,15 @@ function createMemberType(item: string | LocaleRecord): ts.TypeNode {
 	if (typeof item !== 'string') {
 		return ts.factory.createTypeLiteralNode(createMembers(item));
 	}
-	const parameters = new Set(Array.from(
-		item.matchAll(parameterRegExp),
-		([, parameter]) => parameter,
-	));
+	const parameters = new Set(Array.from(item.matchAll(parameterRegExp), ([, parameter]) => parameter));
 	return parameters.size > 0
-		? ts.factory.createTypeReferenceNode(
-			ts.factory.createIdentifier('ParameterizedString'),
-			[
+		? ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ParameterizedString'), [
 				ts.factory.createUnionTypeNode(
 					Array.from(parameters, (parameter) =>
 						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(parameter)),
 					),
 				),
-			],
-		)
+			])
 		: ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
 }
 
@@ -72,16 +66,8 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 				false,
 				undefined,
 				ts.factory.createNamedImports([
-					ts.factory.createImportSpecifier(
-						true,
-						undefined,
-						ts.factory.createIdentifier('ILocale'),
-					),
-					ts.factory.createImportSpecifier(
-						true,
-						undefined,
-						ts.factory.createIdentifier('ParameterizedString'),
-					),
+					ts.factory.createImportSpecifier(true, undefined, ts.factory.createIdentifier('ILocale')),
+					ts.factory.createImportSpecifier(true, undefined, ts.factory.createIdentifier('ParameterizedString')),
 				]),
 			),
 			ts.factory.createStringLiteral('../types.js'),
@@ -93,22 +79,14 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 			undefined,
 			[
 				ts.factory.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
-					ts.factory.createExpressionWithTypeArguments(
-						ts.factory.createIdentifier('ILocale'),
-						undefined,
-					),
+					ts.factory.createExpressionWithTypeArguments(ts.factory.createIdentifier('ILocale'), undefined),
 				]),
 			],
 			members,
 		),
 	];
 
-	ts.addSyntheticLeadingComment(
-		elements[0],
-		ts.SyntaxKind.MultiLineCommentTrivia,
-		' eslint-disable ',
-		true,
-	);
+	ts.addSyntheticLeadingComment(elements[0], ts.SyntaxKind.MultiLineCommentTrivia, ' eslint-disable ', true);
 	ts.addSyntheticLeadingComment(
 		elements[0],
 		ts.SyntaxKind.SingleLineCommentTrivia,
@@ -129,19 +107,15 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 		.printList(
 			ts.ListFormat.MultiLine,
 			ts.factory.createNodeArray(elements),
-			ts.createSourceFile(
-				'locale.ts',
-				'',
-				ts.ScriptTarget.ESNext,
-				true,
-				ts.ScriptKind.TS,
-			),
+			ts.createSourceFile('locale.ts', '', ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS),
 		);
 
 	const autogenDir = `${__dirname}/../src/autogen`;
 	fs.mkdirSync(autogenDir, { recursive: true });
 	const outputPath = `${autogenDir}/locale.ts`;
-	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) return;
+	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) {
+		return;
+	}
 
 	// watcher や並行 reader に未完成のファイルを見せないため、テンポラリファイルから rename で置換する。
 	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');

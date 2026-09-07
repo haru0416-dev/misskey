@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Hono } from 'hono';
@@ -21,7 +22,9 @@ function requestHeaders(req: IncomingMessage): Headers {
 	const headers = new Headers();
 
 	for (const [key, value] of Object.entries(req.headers)) {
-		if (value == null) continue;
+		if (value == null) {
+			continue;
+		}
 
 		if (Array.isArray(value)) {
 			for (const item of value) {
@@ -40,7 +43,9 @@ function requestHeaders(req: IncomingMessage): Headers {
 }
 
 function requestBody(req: IncomingMessage): ReadableStream<Uint8Array> | undefined {
-	if (req.method === 'GET' || req.method === 'HEAD') return undefined;
+	if (req.method === 'GET' || req.method === 'HEAD') {
+		return undefined;
+	}
 	return Readable.toWeb(req) as ReadableStream<Uint8Array>;
 }
 

@@ -99,15 +99,25 @@ export function invalidateAfterMutation(accountId: QueryAccountId, endpoint: key
 		void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, target) });
 	};
 
-	if (USER_MUTATIONS.has(endpoint)) invalidateEndpoint('users/show');
+	if (USER_MUTATIONS.has(endpoint)) {
+		invalidateEndpoint('users/show');
+	}
 	if (endpoint.startsWith('admin/emoji/')) {
 		invalidateEndpointForAllAccounts('emoji');
 		invalidateEndpointForAllAccounts('emojis');
 	}
-	if (CLIP_MUTATIONS.has(endpoint)) invalidateEndpoint('clips/list');
-	if (ROLE_MUTATIONS.has(endpoint)) invalidateEndpoint('admin/roles/list');
-	if (USER_LIST_MUTATIONS.has(endpoint)) invalidateEndpoint('users/lists/list');
-	if (ANTENNA_MUTATIONS.has(endpoint)) invalidateEndpoint('antennas/list');
+	if (CLIP_MUTATIONS.has(endpoint)) {
+		invalidateEndpoint('clips/list');
+	}
+	if (ROLE_MUTATIONS.has(endpoint)) {
+		invalidateEndpoint('admin/roles/list');
+	}
+	if (USER_LIST_MUTATIONS.has(endpoint)) {
+		invalidateEndpoint('users/lists/list');
+	}
+	if (ANTENNA_MUTATIONS.has(endpoint)) {
+		invalidateEndpoint('antennas/list');
+	}
 	if (endpoint === 'channels/favorite' || endpoint === 'channels/unfavorite') {
 		invalidateEndpoint('channels/my-favorites');
 	}

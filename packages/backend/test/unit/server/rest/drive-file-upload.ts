@@ -8,13 +8,16 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { eq, inArray } from 'drizzle-orm';
-import { loadConfig, type Config } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
+import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
@@ -76,7 +79,9 @@ describe('addDriveFileForApi quota serialization', () => {
 		const upload = vi.fn(async (_meta, input) => {
 			storedKeys.add(input.key as string);
 			uploadedCount++;
-			if (uploadedCount === paths.length) releaseUploads?.();
+			if (uploadedCount === paths.length) {
+				releaseUploads?.();
+			}
 			await uploadsReady;
 		});
 		const deleteObject = vi.fn(async (_meta, input) => {
@@ -222,7 +227,9 @@ describe('addDriveFileForApi quota serialization', () => {
 			const rowIds = rows
 				.filter((row) => remoteFileIds.has((row.data as { file?: { id?: string } }).file?.id ?? ''))
 				.map((row) => row.id);
-			if (rowIds.length > 0) await db.delete(queueOutbox).where(inArray(queueOutbox.id, rowIds));
+			if (rowIds.length > 0) {
+				await db.delete(queueOutbox).where(inArray(queueOutbox.id, rowIds));
+			}
 			await deleteUserByIdFromDatabase(db, remoteUser.id);
 		}
 	});

@@ -5,7 +5,8 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/drive/DriveFileDeletionLogic.js';
+import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
+import type { DriveFileDeletionDependencies } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByUrlFromDatabase,
@@ -14,8 +15,8 @@ import {
 	listDriveFilesForUserFromDatabase,
 	updateDriveFileInDatabase,
 	updateDriveFilesFolderByIdsAndUserIdInDatabase,
-	type DriveFileUpdate,
 } from '@/core/drive/DriveFileStore.js';
+import type { DriveFileUpdate } from '@/core/drive/DriveFileStore.js';
 import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
 import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/chat/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
@@ -32,10 +33,14 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi, type ApiChatDependencies } from '../chat/chat.js';
-import { packDriveFileManyForApi, packDriveFileOrFailForApi, type ApiDriveFileDependencies } from './drive-file.js';
-import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
-import { getApiRolePolicies, isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi } from '../chat/chat.js';
+import type { ApiChatDependencies } from '../chat/chat.js';
+import { packDriveFileManyForApi, packDriveFileOrFailForApi } from './drive-file.js';
+import type { ApiDriveFileDependencies } from './drive-file.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
+import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
 
@@ -80,8 +85,12 @@ export async function handleApiDriveFilesList(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const files = await listDriveFilesForUserFromDatabase(
@@ -120,8 +129,12 @@ export async function handleApiDriveStream(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const files = await listDriveFilesForUserFromDatabase(
@@ -152,7 +165,9 @@ export async function handleApiDriveFilesShow(
 			? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
 			: await fetchDriveFileByUrlFromDatabase(deps.db, params.url);
 
-	if (file == null) throw noSuchFileError('067bc436-2718-4795-b0fb-ecbe43949e31');
+	if (file == null) {
+		throw noSuchFileError('067bc436-2718-4795-b0fb-ecbe43949e31');
+	}
 
 	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('25b73c73-68b1-41d0-bad1-381cfdf6579f');
@@ -222,8 +237,12 @@ export async function handleApiDriveFilesAttachedNotes(
 	let untilId = params.untilId ?? null;
 
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const notes = await listNotesByAttachedFileIdFromDatabase(deps.db, file.id, {
@@ -275,7 +294,9 @@ export async function handleApiDriveFilesDelete(
 	const params = parseApiParams(driveFilesDeleteParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
-	if (file == null) throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
+	if (file == null) {
+		throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
+	}
 
 	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('5eb8d909-2540-4970-90b8-dd6f86088121');
@@ -306,7 +327,9 @@ export async function handleApiDriveFilesUpdate(
 	const params = parseApiParams(driveFilesUpdateParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
-	if (file == null) throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+	if (file == null) {
+		throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+	}
 
 	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('01a53b27-82fc-445b-a0c1-b558465a8ed2');

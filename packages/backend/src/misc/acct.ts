@@ -9,7 +9,9 @@ export type Acct = {
 };
 
 export function parse(acct: string): Acct {
-	if (acct.startsWith('@')) acct = acct.substring(1);
+	if (acct.startsWith('@')) {
+		acct = acct.substring(1);
+	}
 	const separator = acct.indexOf('@');
 	const nextSeparator = separator === -1 ? -1 : acct.indexOf('@', separator + 1);
 	return separator === -1

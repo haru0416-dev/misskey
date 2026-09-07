@@ -9,26 +9,46 @@ import { getElementOrNull, getNodeOrNull } from '@/utility/get-dom-node-or-null.
 type MaybeHTMLElement = EventTarget | Node | Element | HTMLElement;
 
 export const isFocusable = (input: MaybeHTMLElement | null | undefined): input is HTMLElement => {
-	if (input == null || !(input instanceof HTMLElement)) return false;
+	if (input == null || !(input instanceof HTMLElement)) {
+		return false;
+	}
 
-	if (input.tabIndex < 0) return false;
-	if ('disabled' in input && input.disabled === true) return false;
-	if ('readonly' in input && input.readonly === true) return false;
+	if (input.tabIndex < 0) {
+		return false;
+	}
+	if ('disabled' in input && input.disabled === true) {
+		return false;
+	}
+	if ('readonly' in input && input.readonly === true) {
+		return false;
+	}
 
-	if (!input.ownerDocument.contains(input)) return false;
+	if (!input.ownerDocument.contains(input)) {
+		return false;
+	}
 
 	const style = window.getComputedStyle(input);
-	if (style.display === 'none') return false;
-	if (style.visibility === 'hidden') return false;
-	if (style.opacity === '0') return false;
-	if (style.pointerEvents === 'none') return false;
+	if (style.display === 'none') {
+		return false;
+	}
+	if (style.visibility === 'hidden') {
+		return false;
+	}
+	if (style.opacity === '0') {
+		return false;
+	}
+	if (style.pointerEvents === 'none') {
+		return false;
+	}
 
 	return true;
 };
 
 export const focusPrev = (input: MaybeHTMLElement | null | undefined, self = false, scroll = true) => {
 	const element = self ? input : getElementOrNull(input)?.previousElementSibling;
-	if (element == null) return;
+	if (element == null) {
+		return;
+	}
 	if (isFocusable(element)) {
 		focusOrScroll(element, scroll);
 	} else {
@@ -38,7 +58,9 @@ export const focusPrev = (input: MaybeHTMLElement | null | undefined, self = fal
 
 export const focusNext = (input: MaybeHTMLElement | null | undefined, self = false, scroll = true) => {
 	const element = self ? input : getElementOrNull(input)?.nextElementSibling;
-	if (element == null) return;
+	if (element == null) {
+		return;
+	}
 	if (isFocusable(element)) {
 		focusOrScroll(element, scroll);
 	} else {
@@ -48,7 +70,9 @@ export const focusNext = (input: MaybeHTMLElement | null | undefined, self = fal
 
 export const focusParent = (input: MaybeHTMLElement | null | undefined, self = false, scroll = true) => {
 	const element = self ? input : getNodeOrNull(input)?.parentElement;
-	if (element == null) return;
+	if (element == null) {
+		return;
+	}
 	if (isFocusable(element)) {
 		focusOrScroll(element, scroll);
 	} else {

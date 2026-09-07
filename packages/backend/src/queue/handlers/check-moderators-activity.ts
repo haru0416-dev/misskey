@@ -15,10 +15,8 @@ import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStor
 import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
 import type { ModeratorInactivityRemainingTime, SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import {
-	createAnnouncementWithSideEffects,
-	type AnnouncementCreateValues,
-} from '@/core/announcement/AnnouncementLogic.js';
+import { createAnnouncementWithSideEffects } from '@/core/announcement/AnnouncementLogic.js';
+import type { AnnouncementCreateValues } from '@/core/announcement/AnnouncementLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { getModeratorsForApi } from '@/server/rest/admin/admin-users.js';
 import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
@@ -205,7 +203,9 @@ async function notifyChangeToInvitationOnly(deps: QueueCheckModeratorsActivityDe
 export async function handleQueueCheckModeratorsActivity(
 	deps: QueueCheckModeratorsActivityDependencies,
 ): Promise<void> {
-	if (deps.meta.disableRegistration) return;
+	if (deps.meta.disableRegistration) {
+		return;
+	}
 
 	const evaluateResult = await evaluateModeratorsInactiveDays(deps);
 	if (evaluateResult.isModeratorsInactive) {

@@ -10,23 +10,40 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
 import { ErrorPage } from '@/server/web/views/error.js';
-import { createApiShellApp, type ApiShellDependencies } from './rest/shell.js';
-import { createClientBaseApp, type ClientBaseDependencies } from './web/client-base.js';
-import { createFeedApp, type FeedDependencies } from './web/feed.js';
-import { createHealthApp, type HealthDependencies } from './health.js';
-import { createFileServerApp, type FileServerDependencies } from './file/routes.js';
-import { createNodeinfoApp, type NodeinfoDependencies } from './nodeinfo.js';
-import { createOAuthApp, type OAuthDependencies } from './oauth/routes.js';
-import { createOpenApiApp, type OpenApiDependencies } from './openapi.js';
-import { createRootRoutes, type RootRouteDependencies } from './root-routes.js';
-import { createStaticAssetsApp, type StaticAssetsDependencies } from './static-assets.js';
-import { createUrlPreviewApp, type UrlPreviewDependencies } from './web/url-preview.js';
-import { createWebUtilityApp, type WebUtilityDependencies } from './web-utility.js';
-import { createWebMetadataApp, type WebMetadataDependencies } from './web/web-metadata.js';
-import { createWellKnownApp, type WellKnownDependencies } from './well-known.js';
-import { createInboxApp, type InboxEndpointDependencies } from './activitypub/inbox-endpoint.js';
-import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from './activitypub/object-routes.js';
-import { createClientPagesApp, type ClientPagesDependencies } from './web/client-pages.js';
+import { createApiShellApp } from './rest/shell.js';
+import type { ApiShellDependencies } from './rest/shell.js';
+import { createClientBaseApp } from './web/client-base.js';
+import type { ClientBaseDependencies } from './web/client-base.js';
+import { createFeedApp } from './web/feed.js';
+import type { FeedDependencies } from './web/feed.js';
+import { createHealthApp } from './health.js';
+import type { HealthDependencies } from './health.js';
+import { createFileServerApp } from './file/routes.js';
+import type { FileServerDependencies } from './file/routes.js';
+import { createNodeinfoApp } from './nodeinfo.js';
+import type { NodeinfoDependencies } from './nodeinfo.js';
+import { createOAuthApp } from './oauth/routes.js';
+import type { OAuthDependencies } from './oauth/routes.js';
+import { createOpenApiApp } from './openapi.js';
+import type { OpenApiDependencies } from './openapi.js';
+import { createRootRoutes } from './root-routes.js';
+import type { RootRouteDependencies } from './root-routes.js';
+import { createStaticAssetsApp } from './static-assets.js';
+import type { StaticAssetsDependencies } from './static-assets.js';
+import { createUrlPreviewApp } from './web/url-preview.js';
+import type { UrlPreviewDependencies } from './web/url-preview.js';
+import { createWebUtilityApp } from './web-utility.js';
+import type { WebUtilityDependencies } from './web-utility.js';
+import { createWebMetadataApp } from './web/web-metadata.js';
+import type { WebMetadataDependencies } from './web/web-metadata.js';
+import { createWellKnownApp } from './well-known.js';
+import type { WellKnownDependencies } from './well-known.js';
+import { createInboxApp } from './activitypub/inbox-endpoint.js';
+import type { InboxEndpointDependencies } from './activitypub/inbox-endpoint.js';
+import { createApObjectRoutesApp } from './activitypub/object-routes.js';
+import type { ApObjectRoutesDependencies } from './activitypub/object-routes.js';
+import { createClientPagesApp } from './web/client-pages.js';
+import type { ClientPagesDependencies } from './web/client-pages.js';
 
 type HttpMiddlewareDependencies = {
 	config: Config;
@@ -111,9 +128,15 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 			await next();
 
 			const location = c.res.headers.get('location');
-			if (c.res.status < 300 || c.res.status >= 400 || location == null) return;
-			if (!maybeApLookupRegex.test(c.req.header('accept') ?? '')) return;
-			if (isInternalActivityPubRedirect(location, deps.config)) return;
+			if (c.res.status < 300 || c.res.status >= 400 || location == null) {
+				return;
+			}
+			if (!maybeApLookupRegex.test(c.req.header('accept') ?? '')) {
+				return;
+			}
+			if (isInternalActivityPubRedirect(location, deps.config)) {
+				return;
+			}
 
 			c.res = activityPubRedirectRefusal(location, c.res.headers);
 			c.res.headers.delete('location');

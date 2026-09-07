@@ -26,7 +26,8 @@ import {
 	createUserNotePiningWithinLimitInDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
 } from '@/core/user/UserNotePiningStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -61,7 +62,9 @@ describe('count-check-insert limits', () => {
 				`,
 					[key],
 				);
-				if (Number(waiting.rows[0]?.count ?? 0) > 0) break;
+				if (Number(waiting.rows[0]?.count ?? 0) > 0) {
+					break;
+				}
 				await new Promise<void>((resolve) => setImmediate(resolve));
 			}
 

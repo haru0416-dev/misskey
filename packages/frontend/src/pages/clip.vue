@@ -53,35 +53,41 @@ import { Paginator } from '@/utility/paginator.js';
 const CTX_CLIP = !$i && assertServerContext(serverContext, 'clip') ? serverContext.clip : null;
 
 const props = defineProps<{
-	clipId: string,
+	clipId: string;
 }>();
 
 const clip = ref<Misskey.entities.Clip | null>(CTX_CLIP);
 const favorited = ref(false);
-const paginator = markRaw(new Paginator('clips/notes', {
-	limit: 10,
-	canSearch: true,
-	computedParams: computed(() => ({
-		clipId: props.clipId,
-	})),
-}));
+const paginator = markRaw(
+	new Paginator('clips/notes', {
+		limit: 10,
+		canSearch: true,
+		computedParams: computed(() => ({
+			clipId: props.clipId,
+		})),
+	}),
+);
 
-const isOwned = computed<boolean | null>(() => $i && clip.value && ($i.id === clip.value.userId));
+const isOwned = computed<boolean | null>(() => $i && clip.value && $i.id === clip.value.userId);
 
-watch(() => props.clipId, async () => {
-	if (CTX_CLIP && CTX_CLIP.id === props.clipId) {
-		clip.value = CTX_CLIP;
-		return;
-	}
+watch(
+	() => props.clipId,
+	async () => {
+		if (CTX_CLIP && CTX_CLIP.id === props.clipId) {
+			clip.value = CTX_CLIP;
+			return;
+		}
 
-	clip.value = await misskeyApi('clips/show', {
-		clipId: props.clipId,
-	});
+		clip.value = await misskeyApi('clips/show', {
+			clipId: props.clipId,
+		});
 
-	favorited.value = clip.value!.isFavorited ?? false;
-}, {
-	immediate: true,
-});
+		favorited.value = clip.value!.isFavorited ?? false;
+	},
+	{
+		immediate: true,
+	},
+);
 
 provide('currentClip', clip);
 
@@ -98,7 +104,9 @@ async function unfavorite() {
 		type: 'warning',
 		text: i18n.ts.unfavoriteConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	os.apiWithDialog('clips/unfavorite', {
 		clipId: props.clipId,
 	}).then(() => {
@@ -106,100 +114,123 @@ async function unfavorite() {
 	});
 }
 
-const headerActions = computed<PageHeaderItem[] | null>(() => clip.value && isOwned.value ? [{
-	icon: 'ti ti-pencil',
-	text: i18n.ts.edit,
-	handler: async (): Promise<void> => {
-		if (clip.value == null) return;
+const headerActions = computed<PageHeaderItem[] | null>(() =>
+	clip.value && isOwned.value
+		? ([
+				{
+					icon: 'ti ti-pencil',
+					text: i18n.ts.edit,
+					handler: async (): Promise<void> => {
+						if (clip.value == null) {
+							return;
+						}
 
-		const { canceled, result } = await os.form(clip.value.name, {
-			name: {
-				type: 'string',
-				label: i18n.ts.name,
-				default: clip.value.name,
-			},
-			description: {
-				type: 'string',
-				required: false,
-				multiline: true,
-				treatAsMfm: true,
-				label: i18n.ts.description,
-				default: clip.value.description,
-			},
-			isPublic: {
-				type: 'boolean',
-				label: i18n.ts.public,
-				default: clip.value.isPublic,
-			},
-		});
+						const { canceled, result } = await os.form(clip.value.name, {
+							name: {
+								type: 'string',
+								label: i18n.ts.name,
+								default: clip.value.name,
+							},
+							description: {
+								type: 'string',
+								required: false,
+								multiline: true,
+								treatAsMfm: true,
+								label: i18n.ts.description,
+								default: clip.value.description,
+							},
+							isPublic: {
+								type: 'boolean',
+								label: i18n.ts.public,
+								default: clip.value.isPublic,
+							},
+						});
 
-		if (canceled) return;
+						if (canceled) {
+							return;
+						}
 
-		os.apiWithDialog('clips/update', {
-			clipId: clip.value.id,
-			name: result.name,
-			isPublic: result.isPublic,
-			...(result.description === undefined ? {} : { description: result.description }),
-		});
+						os.apiWithDialog('clips/update', {
+							clipId: clip.value.id,
+							name: result.name,
+							isPublic: result.isPublic,
+							...(result.description === undefined ? {} : { description: result.description }),
+						});
 
-		clipsCache.delete();
-	},
-}, ...(clip.value.isPublic ? [{
-	icon: 'ti ti-share',
-	text: i18n.ts.share,
-	handler: (ev): void => {
-		const menuItems: MenuItem[] = [];
-
-		menuItems.push({
-			icon: 'ti ti-link',
-			text: i18n.ts.copyUrl,
-			action: () => {
-				copyToClipboard(`${url}/clips/${clip.value!.id}`);
-			},
-		}, {
-			icon: 'ti ti-code',
-			text: i18n.ts.embed,
-			action: () => {
-				genEmbedCode('clips', clip.value!.id);
-			},
-		});
-
-		if (isSupportShare()) {
-			menuItems.push({
-				icon: 'ti ti-share',
-				text: i18n.ts.share,
-				action: async () => {
-					navigator.share({
-						title: clip.value!.name,
-						text: clip.value!.description ?? '',
-						url: `${url}/clips/${clip.value!.id}`,
-					});
+						clipsCache.delete();
+					},
 				},
-			});
-		}
+				...(clip.value.isPublic
+					? ([
+							{
+								icon: 'ti ti-share',
+								text: i18n.ts.share,
+								handler: (ev): void => {
+									const menuItems: MenuItem[] = [];
 
-		os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
-	},
-}] satisfies PageHeaderItem[] : []), {
-	icon: 'ti ti-trash',
-	text: i18n.ts.delete,
-	danger: true,
-	handler: async (): Promise<void> => {
-		if (clip.value == null) return;
+									menuItems.push(
+										{
+											icon: 'ti ti-link',
+											text: i18n.ts.copyUrl,
+											action: () => {
+												copyToClipboard(`${url}/clips/${clip.value!.id}`);
+											},
+										},
+										{
+											icon: 'ti ti-code',
+											text: i18n.ts.embed,
+											action: () => {
+												genEmbedCode('clips', clip.value!.id);
+											},
+										},
+									);
 
-		const { canceled } = await os.confirm({
-			type: 'warning',
-			text: i18n.tsx.deleteAreYouSure({ x: clip.value.name }),
-		});
-		if (canceled) return;
+									if (isSupportShare()) {
+										menuItems.push({
+											icon: 'ti ti-share',
+											text: i18n.ts.share,
+											action: async () => {
+												navigator.share({
+													title: clip.value!.name,
+													text: clip.value!.description ?? '',
+													url: `${url}/clips/${clip.value!.id}`,
+												});
+											},
+										});
+									}
 
-		await os.apiWithDialog('clips/delete', {
-			clipId: clip.value.id,
-		});
+									os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+								},
+							},
+						] satisfies PageHeaderItem[])
+					: []),
+				{
+					icon: 'ti ti-trash',
+					text: i18n.ts.delete,
+					danger: true,
+					handler: async (): Promise<void> => {
+						if (clip.value == null) {
+							return;
+						}
 
-		clipsCache.delete();
-	},
-}] satisfies PageHeaderItem[] : null);
+						const { canceled } = await os.confirm({
+							type: 'warning',
+							text: i18n.tsx.deleteAreYouSure({ x: clip.value.name }),
+						});
+						if (canceled) {
+							return;
+						}
+
+						await os.apiWithDialog('clips/delete', {
+							clipId: clip.value.id,
+						});
+
+						clipsCache.delete();
+					},
+				},
+			] satisfies PageHeaderItem[])
+		: null,
+);
 
 definePage(() => ({
 	title: clip.value ? clip.value.name : i18n.ts.clip,

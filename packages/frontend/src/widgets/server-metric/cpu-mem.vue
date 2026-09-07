@@ -81,8 +81,8 @@ import { useServerStats } from './use-server-stats.js';
 import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
-	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>,
-	meta: Misskey.entities.ServerInfoResponse
+	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>;
+	meta: Misskey.entities.ServerInfoResponse;
 }>();
 
 const viewBoxX = ref<number>(50);
@@ -105,12 +105,20 @@ const memP = ref<string>('');
 
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
-	if (stats.value.length > 50) stats.value.shift();
+	if (stats.value.length > 50) {
+		stats.value.shift();
+	}
 
-	let cpuPolylinePointsStats = stats.value.map((s, i) => [viewBoxX.value - ((stats.value.length - 1) - i), (1 - s.cpu) * viewBoxY.value]);
-	let memPolylinePointsStats = stats.value.map((s, i) => [viewBoxX.value - ((stats.value.length - 1) - i), (1 - (s.mem.active / props.meta.mem.total)) * viewBoxY.value]);
-	cpuPolylinePoints.value = cpuPolylinePointsStats.map(xy => `${xy[0]},${xy[1]}`).join(' ');
-	memPolylinePoints.value = memPolylinePointsStats.map(xy => `${xy[0]},${xy[1]}`).join(' ');
+	let cpuPolylinePointsStats = stats.value.map((s, i) => [
+		viewBoxX.value - (stats.value.length - 1 - i),
+		(1 - s.cpu) * viewBoxY.value,
+	]);
+	let memPolylinePointsStats = stats.value.map((s, i) => [
+		viewBoxX.value - (stats.value.length - 1 - i),
+		(1 - s.mem.active / props.meta.mem.total) * viewBoxY.value,
+	]);
+	cpuPolylinePoints.value = cpuPolylinePointsStats.map((xy) => `${xy[0]},${xy[1]}`).join(' ');
+	memPolylinePoints.value = memPolylinePointsStats.map((xy) => `${xy[0]},${xy[1]}`).join(' ');
 
 	cpuPolygonPoints.value = `${viewBoxX.value - (stats.value.length - 1)},${viewBoxY.value} ${cpuPolylinePoints.value} ${viewBoxX.value},${viewBoxY.value}`;
 	memPolygonPoints.value = `${viewBoxX.value - (stats.value.length - 1)},${viewBoxY.value} ${memPolylinePoints.value} ${viewBoxX.value},${viewBoxY.value}`;
@@ -121,7 +129,7 @@ function onStats(connStats: Misskey.entities.ServerStats) {
 	memHeadY.value = memPolylinePointsStats.at(-1)![1];
 
 	cpuP.value = (connStats.cpu * 100).toFixed(0);
-	memP.value = (connStats.mem.active / props.meta.mem.total * 100).toFixed(0);
+	memP.value = ((connStats.mem.active / props.meta.mem.total) * 100).toFixed(0);
 }
 
 useServerStats(props.connection, onStats);

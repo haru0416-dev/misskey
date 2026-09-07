@@ -86,10 +86,19 @@ export type LightboxContent = {
 	sourceElement?: HTMLElement | null;
 };
 
-export function calculateSourceTransform({ fit, contentRenderingRect, sourceRect }: { fit: string; contentRenderingRect: Rect; sourceRect: Rect }): { x: number; y: number; scale: number } {
-	const scale = fit === 'cover'
-		? Math.max(sourceRect.width / contentRenderingRect.width, sourceRect.height / contentRenderingRect.height)
-		: Math.min(sourceRect.width / contentRenderingRect.width, sourceRect.height / contentRenderingRect.height);
+export function calculateSourceTransform({
+	fit,
+	contentRenderingRect,
+	sourceRect,
+}: {
+	fit: string;
+	contentRenderingRect: Rect;
+	sourceRect: Rect;
+}): { x: number; y: number; scale: number } {
+	const scale =
+		fit === 'cover'
+			? Math.max(sourceRect.width / contentRenderingRect.width, sourceRect.height / contentRenderingRect.height)
+			: Math.min(sourceRect.width / contentRenderingRect.width, sourceRect.height / contentRenderingRect.height);
 	const sourceContentWidth = contentRenderingRect.width * scale;
 	const sourceContentHeight = contentRenderingRect.height * scale;
 	return {
@@ -103,8 +112,14 @@ export function calculatePinchScale(scale: number, distanceDelta: number): numbe
 	return Math.max(Number.EPSILON, scale * Math.max(Number.EPSILON, 1 + distanceDelta / 200));
 }
 
-export function normalizeGestureTransform(transform: { x: number; y: number; scale: number }): { x: number; y: number; scale: number } {
-	if (!Number.isFinite(transform.scale) || transform.scale <= 1) return { x: 0, y: 0, scale: 1 };
+export function normalizeGestureTransform(transform: { x: number; y: number; scale: number }): {
+	x: number;
+	y: number;
+	scale: number;
+} {
+	if (!Number.isFinite(transform.scale) || transform.scale <= 1) {
+		return { x: 0, y: 0, scale: 1 };
+	}
 	return transform;
 }
 
@@ -127,10 +142,14 @@ export type PointerSample = { time: number; x: number; y: number };
  * 意図が読み取れる程度に動いてから確定させる。完全に同値の場合はどちらにもロックしない。
  */
 export function resolveSwipeAxis(totalX: number, totalY: number): 'vertical' | 'horizontal' | null {
-	if (Math.abs(totalX) === Math.abs(totalY)) return null;
+	if (Math.abs(totalX) === Math.abs(totalY)) {
+		return null;
+	}
 	const isVertical = Math.abs(totalY) > Math.abs(totalX);
 	const dominantDelta = isVertical ? totalY : totalX;
-	if (Math.abs(dominantDelta) < AXIS_SWIPE_HYSTERESIS) return null;
+	if (Math.abs(dominantDelta) < AXIS_SWIPE_HYSTERESIS) {
+		return null;
+	}
 	return isVertical ? 'vertical' : 'horizontal';
 }
 
@@ -143,23 +162,35 @@ export function resolveSwipeAxis(totalX: number, totalY: number): 'vertical' | '
 export function averagePointerVelocity(samples: PointerSample[], now: number): { x: number; y: number } {
 	const latest = samples.at(-1);
 	const oldest = samples.at(0);
-	if (latest == null || oldest == null || latest === oldest) return { x: 0, y: 0 };
-	if (now - latest.time > VELOCITY_WINDOW) return { x: 0, y: 0 };
+	if (latest == null || oldest == null || latest === oldest) {
+		return { x: 0, y: 0 };
+	}
+	if (now - latest.time > VELOCITY_WINDOW) {
+		return { x: 0, y: 0 };
+	}
 	const duration = latest.time - oldest.time;
-	if (duration <= 0) return { x: 0, y: 0 };
+	if (duration <= 0) {
+		return { x: 0, y: 0 };
+	}
 	return { x: (latest.x - oldest.x) / duration, y: (latest.y - oldest.y) / duration };
 }
 
 /** 十分な距離まで動かされた、またはその向きへ強く弾かれたなら閉じる */
 export function shouldCloseByVerticalSwipe(totalY: number, velocityY: number, viewportHeight: number): boolean {
-	if (Math.abs(totalY) > (viewportHeight / 3) * MIN_RATIO_TO_CLOSE) return true;
+	if (Math.abs(totalY) > (viewportHeight / 3) * MIN_RATIO_TO_CLOSE) {
+		return true;
+	}
 	return Math.sign(totalY) === Math.sign(velocityY) && Math.abs(velocityY) > MIN_VELOCITY_TO_SWIPE;
 }
 
 /** 左へなら次、右へなら前のコンテンツ。どちらの条件も満たさないなら元の位置へ戻す */
 export function resolveHorizontalSwipeIntent(totalX: number, velocityX: number): 'next' | 'prev' | null {
-	if (totalX < -HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX < 0 && velocityX < -MIN_VELOCITY_TO_SWIPE)) return 'next';
-	if (totalX > HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX > 0 && velocityX > MIN_VELOCITY_TO_SWIPE)) return 'prev';
+	if (totalX < -HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX < 0 && velocityX < -MIN_VELOCITY_TO_SWIPE)) {
+		return 'next';
+	}
+	if (totalX > HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX > 0 && velocityX > MIN_VELOCITY_TO_SWIPE)) {
+		return 'prev';
+	}
 	return null;
 }
 </script>
@@ -180,8 +211,16 @@ import { deviceKind } from '@/utility/device-kind.js';
 import { isTouchUsing } from '@/utility/touch.js';
 import { getFileMenu } from '@/features/media-viewer/get-file-menu.js';
 
-const props = withDefaults(defineProps<{ content: LightboxContent; activated: boolean; initiallyOpened?: boolean }>(), { initiallyOpened: false });
-const emit = defineEmits<{ (ev: 'close'): void; (ev: 'horizontalSwipe', offset: number): void; (ev: 'next'): void; (ev: 'prev'): void; (ev: 'cancelHorizontalSwipe'): void }>();
+const props = withDefaults(defineProps<{ content: LightboxContent; activated: boolean; initiallyOpened?: boolean }>(), {
+	initiallyOpened: false,
+});
+const emit = defineEmits<{
+	(ev: 'close'): void;
+	(ev: 'horizontalSwipe', offset: number): void;
+	(ev: 'next'): void;
+	(ev: 'prev'): void;
+	(ev: 'cancelHorizontalSwipe'): void;
+}>();
 
 // 前後のコンテンツへ移動しても設定が続くように、状態は親 (MkLightbox) 側に置く
 const pixelatedZoom = defineModel<boolean>('pixelatedZoom', { required: true });
@@ -202,13 +241,19 @@ const isVideoPlaying = computed(() => videoControl.value?.isPlaying ?? false);
 const isVideoActuallyPlaying = computed(() => videoControl.value?.isActuallyPlaying ?? false);
 const headerSize = 32;
 const footerSize = props.content.type === 'video' && !prefer.useNativeUiForVideoAudioPlayer ? 80 : 0;
-const padding = deviceKind === 'smartphone'
-	? { top: headerSize + 10, right: 0, bottom: footerSize + 10, left: 0 }
-	: { top: Math.max(30, headerSize + 10), right: 30, bottom: Math.max(30, footerSize + 10), left: 30 };
+const padding =
+	deviceKind === 'smartphone'
+		? { top: headerSize + 10, right: 0, bottom: footerSize + 10, left: 0 }
+		: { top: Math.max(30, headerSize + 10), right: 30, bottom: Math.max(30, footerSize + 10), left: 30 };
 
 function calcContentRenderingSize(content: LightboxContent) {
-	if (content.width == null || content.height == null || content.width <= 0 || content.height <= 0) return null;
-	const ratio = Math.min((window.innerWidth - padding.left - padding.right) / content.width, (window.innerHeight - padding.top - padding.bottom) / content.height);
+	if (content.width == null || content.height == null || content.width <= 0 || content.height <= 0) {
+		return null;
+	}
+	const ratio = Math.min(
+		(window.innerWidth - padding.left - padding.right) / content.width,
+		(window.innerHeight - padding.top - padding.bottom) / content.height,
+	);
 	return { width: content.width * ratio, height: content.height * ratio };
 }
 
@@ -224,19 +269,29 @@ function onVideoLoadedMetadata() {
 	onOriginalLoaded();
 
 	// ドライブ上のメタデータが無い場合に限り、動画自体の初期サイズから縦横比を確定させる
-	if (videoAspectRatio.value != null) return;
-	if (videoEl.value == null || videoEl.value.videoWidth === 0 || videoEl.value.videoHeight === 0) return;
+	if (videoAspectRatio.value != null) {
+		return;
+	}
+	if (videoEl.value == null || videoEl.value.videoWidth === 0 || videoEl.value.videoHeight === 0) {
+		return;
+	}
 	videoAspectRatio.value = videoEl.value.videoWidth / videoEl.value.videoHeight;
 }
 
 const contentRenderingSize = calcContentRenderingSize(props.content);
-const hiddenStyle = computed(() => contentRenderingSize == null ? { width: '100%', height: '100%' } : { width: `${contentRenderingSize.width}px`, height: `${contentRenderingSize.height}px` });
+const hiddenStyle = computed(() =>
+	contentRenderingSize == null
+		? { width: '100%', height: '100%' }
+		: { width: `${contentRenderingSize.width}px`, height: `${contentRenderingSize.height}px` },
+);
 const transform = ref({ x: 0, y: 0, scale: 1 });
 const isZooming = ref(false);
 let canOpenAnimation = false;
 
 function getContentRenderingRect(): Rect | null {
-	if (contentRenderingSize == null) return null;
+	if (contentRenderingSize == null) {
+		return null;
+	}
 	return {
 		left: (window.innerWidth - contentRenderingSize.width + padding.left - padding.right) / 2,
 		top: (window.innerHeight - contentRenderingSize.height + padding.top - padding.bottom) / 2,
@@ -247,10 +302,18 @@ function getContentRenderingRect(): Rect | null {
 function getSourceTransform() {
 	const sourceElement = props.content.sourceElement;
 	const contentRect = getContentRenderingRect();
-	if (sourceElement == null || contentRect == null) return null;
+	if (sourceElement == null || contentRect == null) {
+		return null;
+	}
 	const sourceRect = sourceElement.getBoundingClientRect();
-	if (sourceRect.width <= 0 || sourceRect.height <= 0) return null;
-	return calculateSourceTransform({ fit: sourceElement.dataset['objectFit'] ?? window.getComputedStyle(sourceElement).objectFit, contentRenderingRect: contentRect, sourceRect });
+	if (sourceRect.width <= 0 || sourceRect.height <= 0) {
+		return null;
+	}
+	return calculateSourceTransform({
+		fit: sourceElement.dataset['objectFit'] ?? window.getComputedStyle(sourceElement).objectFit,
+		contentRenderingRect: contentRect,
+		sourceRect,
+	});
 }
 
 if (props.activated) {
@@ -264,7 +327,9 @@ const hideForFallback = ref(!canOpenAnimation);
 
 function clampTransform(next: { x: number; y: number; scale: number }) {
 	const normalized = normalizeGestureTransform(next);
-	if (mainEl.value == null || normalized.scale === 1) return normalized;
+	if (mainEl.value == null || normalized.scale === 1) {
+		return normalized;
+	}
 	const rect = mainEl.value.getBoundingClientRect();
 	const margin = 24;
 	return {
@@ -275,7 +340,9 @@ function clampTransform(next: { x: number; y: number; scale: number }) {
 }
 
 function zoomInTo(x: number, y: number, factor = 1.1, withAnimation = false, clamp = true) {
-	if (mainEl.value == null) return;
+	if (mainEl.value == null) {
+		return;
+	}
 	const rect = mainEl.value.getBoundingClientRect();
 	const offsetX = x - rect.left;
 	const offsetY = y - rect.top;
@@ -291,7 +358,9 @@ function zoomInTo(x: number, y: number, factor = 1.1, withAnimation = false, cla
 		return;
 	}
 	isZooming.value = true;
-	if (withAnimation) enableTransition.value = true;
+	if (withAnimation) {
+		enableTransition.value = true;
+	}
 	transform.value = clamp ? clampTransform(next) : next;
 }
 
@@ -308,14 +377,19 @@ function closeThis() {
 	if (source != null) {
 		enableTransition.value = true;
 		transform.value = source;
-	} else hideForFallback.value = true;
+	} else {
+		hideForFallback.value = true;
+	}
 }
 
 function onWheel(event: WheelEvent) {
 	event.preventDefault();
 	const factor = event.deltaY > 0 ? 1 / 1.1 : 1.1;
-	if (transform.value.scale * factor < 1) resetToNeutral();
-	else zoomInTo(event.clientX, event.clientY, factor);
+	if (transform.value.scale * factor < 1) {
+		resetToNeutral();
+	} else {
+		zoomInTo(event.clientX, event.clientY, factor);
+	}
 }
 
 let isClick = false;
@@ -335,11 +409,15 @@ let velocitySamples: PointerSample[] = [];
 
 function pushVelocitySample(time: number, x: number, y: number) {
 	velocitySamples.push({ time, x, y });
-	while (velocitySamples.length > 2 && time - velocitySamples[0]!.time > VELOCITY_WINDOW) velocitySamples.shift();
+	while (velocitySamples.length > 2 && time - velocitySamples[0]!.time > VELOCITY_WINDOW) {
+		velocitySamples.shift();
+	}
 }
 
 function resolveClickAction(target: EventTarget | null) {
-	if (!(target instanceof Element)) return null;
+	if (!(target instanceof Element)) {
+		return null;
+	}
 	const action = target.closest('[data-gallery-click-action]')?.getAttribute('data-gallery-click-action');
 	return action === 'hidden' || action === 'video' ? action : null;
 }
@@ -360,28 +438,51 @@ function onPointerdown(ev: PointerEvent) {
 }
 
 function onPointermove(ev: PointerEvent) {
-	if (!pointers.has(ev.pointerId)) return;
+	if (!pointers.has(ev.pointerId)) {
+		return;
+	}
 	pointers.set(ev.pointerId, ev);
 	if (pointers.size > 1) {
 		isClick = false;
 		const [a, b] = Array.from(pointers.values());
-		if (a == null || b == null) return;
+		if (a == null || b == null) {
+			return;
+		}
 		const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 		if (pinchDistance > 0) {
 			const nextScale = calculatePinchScale(transform.value.scale, distance - pinchDistance);
-			if (nextScale <= 1) resetToNeutral();
-			else zoomInTo((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, nextScale / transform.value.scale, false, false);
+			if (nextScale <= 1) {
+				resetToNeutral();
+			} else {
+				zoomInTo(
+					(a.clientX + b.clientX) / 2,
+					(a.clientY + b.clientY) / 2,
+					nextScale / transform.value.scale,
+					false,
+					false,
+				);
+			}
 		}
 		pinchDistance = distance;
 		return;
 	}
-	if (pointerId !== ev.pointerId) return;
+	if (pointerId !== ev.pointerId) {
+		return;
+	}
 	const dx = ev.clientX - last.x;
 	const dy = ev.clientY - last.y;
-	if (Math.abs(ev.clientX - start.x) > 5 || Math.abs(ev.clientY - start.y) > 5) isClick = false;
-	if (isZooming.value) transform.value = clampTransform({ x: transform.value.x + dx, y: transform.value.y + dy, scale: transform.value.scale });
-	else if (vertical) transform.value.y += dy;
-	else if (horizontal) {
+	if (Math.abs(ev.clientX - start.x) > 5 || Math.abs(ev.clientY - start.y) > 5) {
+		isClick = false;
+	}
+	if (isZooming.value) {
+		transform.value = clampTransform({
+			x: transform.value.x + dx,
+			y: transform.value.y + dy,
+			scale: transform.value.scale,
+		});
+	} else if (vertical) {
+		transform.value.y += dy;
+	} else if (horizontal) {
 		horizontalDelta = ev.clientX - swipeOrigin.x;
 		emit('horizontalSwipe', horizontalDelta);
 	} else {
@@ -389,8 +490,11 @@ function onPointermove(ev: PointerEvent) {
 		if (axis != null) {
 			// 確定した地点を描画の基準に置き直すことで、ヒステリシス分だけ表示が飛ぶのを防ぐ
 			swipeOrigin = { x: ev.clientX, y: ev.clientY };
-			if (axis === 'vertical') vertical = true;
-			else horizontal = true;
+			if (axis === 'vertical') {
+				vertical = true;
+			} else {
+				horizontal = true;
+			}
 		}
 	}
 	pushVelocitySample(ev.timeStamp, ev.clientX, ev.clientY);
@@ -399,11 +503,15 @@ function onPointermove(ev: PointerEvent) {
 
 function onPointerup(ev: PointerEvent) {
 	pointers.delete(ev.pointerId);
-	if (mainEl.value?.hasPointerCapture(ev.pointerId)) mainEl.value.releasePointerCapture(ev.pointerId);
+	if (mainEl.value?.hasPointerCapture(ev.pointerId)) {
+		mainEl.value.releasePointerCapture(ev.pointerId);
+	}
 	pinchDistance = 0;
 	if (pointers.size > 0) {
 		const [nextPointer] = pointers.values();
-		if (nextPointer == null) return;
+		if (nextPointer == null) {
+			return;
+		}
 		pointerId = nextPointer.pointerId;
 		start = last = swipeOrigin = { x: nextPointer.clientX, y: nextPointer.clientY };
 		velocitySamples = [];
@@ -419,13 +527,20 @@ function onPointerup(ev: PointerEvent) {
 		const totalX = ev.clientX - start.x;
 		const totalY = ev.clientY - start.y;
 		if (vertical) {
-			if (shouldCloseByVerticalSwipe(totalY, velocity.y, window.innerHeight)) closeThis();
-			else resetToNeutral();
+			if (shouldCloseByVerticalSwipe(totalY, velocity.y, window.innerHeight)) {
+				closeThis();
+			} else {
+				resetToNeutral();
+			}
 		} else if (horizontal) {
 			const intent = resolveHorizontalSwipeIntent(totalX, velocity.x);
-			if (intent === 'next') emit('next');
-			else if (intent === 'prev') emit('prev');
-			else emit('cancelHorizontalSwipe');
+			if (intent === 'next') {
+				emit('next');
+			} else if (intent === 'prev') {
+				emit('prev');
+			} else {
+				emit('cancelHorizontalSwipe');
+			}
 		}
 	}
 	horizontal = false;
@@ -433,18 +548,24 @@ function onPointerup(ev: PointerEvent) {
 	horizontalDelta = 0;
 	if (isZooming.value) {
 		const normalized = clampTransform(transform.value);
-		if (normalized.scale === 1) resetToNeutral();
-		else transform.value = normalized;
+		if (normalized.scale === 1) {
+			resetToNeutral();
+		} else {
+			transform.value = normalized;
+		}
 	}
 }
 
-const doubleTapDetector = makeDoubleTapDetector(ev => {
+const doubleTapDetector = makeDoubleTapDetector((ev) => {
 	ev.preventDefault();
 	ev.stopPropagation();
-	if (isZooming.value) resetToNeutral();
-	else {
+	if (isZooming.value) {
+		resetToNeutral();
+	} else {
 		const touch = ev.touches.item(0);
-		if (touch != null) zoomInTo(touch.clientX, touch.clientY, 2, true);
+		if (touch != null) {
+			zoomInTo(touch.clientX, touch.clientY, 2, true);
+		}
 	}
 });
 
@@ -471,17 +592,27 @@ function cancelPointerGesture() {
 	horizontalDelta = 0;
 	velocitySamples = [];
 	doubleTapDetector.reset();
-	if (wasVertical || transform.value.scale <= 1) resetToNeutral();
-	if (wasHorizontal) emit('cancelHorizontalSwipe');
+	if (wasVertical || transform.value.scale <= 1) {
+		resetToNeutral();
+	}
+	if (wasHorizontal) {
+		emit('cancelHorizontalSwipe');
+	}
 }
 
 let sourceAnimationStarted = false;
 function animateFromSource() {
-	if (sourceAnimationStarted || !props.activated || props.content.sourceElement == null || rootEl.value == null) return;
+	if (sourceAnimationStarted || !props.activated || props.content.sourceElement == null || rootEl.value == null) {
+		return;
+	}
 	sourceAnimationStarted = true;
 	enableTransition.value = true;
 	transform.value = { x: 0, y: 0, scale: 1 };
-	void nextTick(() => { if (props.content.sourceElement != null) props.content.sourceElement.style.visibility = 'hidden'; });
+	void nextTick(() => {
+		if (props.content.sourceElement != null) {
+			props.content.sourceElement.style.visibility = 'hidden';
+		}
+	});
 }
 
 function onThumbnailLoaded() {
@@ -498,68 +629,120 @@ function onOriginalLoaded() {
 	animateFromSource();
 }
 
-watch([rootEl, hide], ([root, hidden]) => { if (root != null && hidden) animateFromSource(); }, { immediate: true });
-watch(() => props.content, content => {
-	if (content.file == null) hide.value = false;
-	else {
-		hide.value = shouldHideFileByDefault(content.file, true);
-		// 最初に開いた1枚はタイムライン側で既に明示的に表示させたものなので、
-		// 「常にぼかす」設定であってもここで隠し直さない
-		if (content.file.isSensitive && props.initiallyOpened) hide.value = false;
-	}
-}, { deep: true, immediate: true });
-watch(rootEl, root => { if (root != null) { infoShowing.value = true; hideForFallback.value = false; } }, { immediate: true });
+watch(
+	[rootEl, hide],
+	([root, hidden]) => {
+		if (root != null && hidden) {
+			animateFromSource();
+		}
+	},
+	{ immediate: true },
+);
+watch(
+	() => props.content,
+	(content) => {
+		if (content.file == null) {
+			hide.value = false;
+		} else {
+			hide.value = shouldHideFileByDefault(content.file, true);
+			// 最初に開いた1枚はタイムライン側で既に明示的に表示させたものなので、
+			// 「常にぼかす」設定であってもここで隠し直さない
+			if (content.file.isSensitive && props.initiallyOpened) {
+				hide.value = false;
+			}
+		}
+	},
+	{ deep: true, immediate: true },
+);
+watch(
+	rootEl,
+	(root) => {
+		if (root != null) {
+			infoShowing.value = true;
+			hideForFallback.value = false;
+		}
+	},
+	{ immediate: true },
+);
 
 function onClick(ev: MouseEvent) {
-	if (!isClick) return;
+	if (!isClick) {
+		return;
+	}
 	const action = clickAction ?? resolveClickAction(ev.target);
 	clickAction = null;
-	if (action === 'hidden') void onHiddenClick();
-	else if (action === 'video') onVideoClick();
-	else if (!isTouchUsing) isZooming.value ? resetToNeutral() : closeThis();
+	if (action === 'hidden') {
+		void onHiddenClick();
+	} else if (action === 'video') {
+		onVideoClick();
+	} else if (!isTouchUsing) {
+		isZooming.value ? resetToNeutral() : closeThis();
+	}
 }
 
 async function onHiddenClick() {
-	if (!hide.value || (props.content.file != null && !(await canRevealFile(props.content.file)))) return;
+	if (!hide.value || (props.content.file != null && !(await canRevealFile(props.content.file)))) {
+		return;
+	}
 	hide.value = false;
 	if (props.content.type === 'video') {
 		await nextTick();
-		if (props.activated) void videoEl.value?.play().catch(() => {});
+		if (props.activated) {
+			void videoEl.value?.play().catch(() => {});
+		}
 	}
 }
 
 function onVideoClick() {
-	if (prefer.useNativeUiForVideoAudioPlayer || videoEl.value == null) return;
-	if (videoEl.value.paused) void videoEl.value.play().catch(() => {});
-	else videoEl.value.pause();
+	if (prefer.useNativeUiForVideoAudioPlayer || videoEl.value == null) {
+		return;
+	}
+	if (videoEl.value.paused) {
+		void videoEl.value.play().catch(() => {});
+	} else {
+		videoEl.value.pause();
+	}
 }
 
 function openMenu(ev: PointerEvent) {
-	const menu: MenuItem[] = [{ type: 'component', component: markRaw(XFileInfo), props: { content: props.content } }, { type: 'divider' }, {
-		type: 'switch',
-		text: i18n.ts.pixelatedZoom,
-		icon: 'ti ti-grain',
-		ref: pixelatedZoom,
-	}, {
-		text: i18n.ts.hide,
-		icon: 'ti ti-eye-off',
-		action: () => { hide.value = true; },
-	}];
+	const menu: MenuItem[] = [
+		{ type: 'component', component: markRaw(XFileInfo), props: { content: props.content } },
+		{ type: 'divider' },
+		{
+			type: 'switch',
+			text: i18n.ts.pixelatedZoom,
+			icon: 'ti ti-grain',
+			ref: pixelatedZoom,
+		},
+		{
+			text: i18n.ts.hide,
+			icon: 'ti ti-eye-off',
+			action: () => {
+				hide.value = true;
+			},
+		},
+	];
 	if (props.content.file != null) {
 		// 権限やdevModeによっては空になるので、空のままdividerだけ足さない
 		const fileMenu = getFileMenu(props.content.file);
-		if (fileMenu.length > 0) menu.push({ type: 'divider' }, ...fileMenu);
+		if (fileMenu.length > 0) {
+			menu.push({ type: 'divider' }, ...fileMenu);
+		}
 	}
 	os.popupMenu(menu, (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
 }
 
 async function onActive() {
 	await nextTick();
-	if (props.activated && videoEl.value != null) void videoEl.value.play().catch(() => {});
+	if (props.activated && videoEl.value != null) {
+		void videoEl.value.play().catch(() => {});
+	}
 }
 
 function onDeactive() {
-	if (isZooming.value) resetToNeutral();
+	if (isZooming.value) {
+		resetToNeutral();
+	}
 	videoEl.value?.pause();
 }
 

@@ -22,7 +22,9 @@ class ChannelHub {
 
 	public post(sender: TestChannel, name: string, message: unknown): void {
 		for (const channel of this.channels.get(name) ?? []) {
-			if (channel === sender) continue;
+			if (channel === sender) {
+				continue;
+			}
 			channel.receive(message);
 		}
 	}
@@ -57,7 +59,9 @@ class TestChannel implements PersistedStateChannel {
 	}
 
 	public receive(message: unknown): void {
-		for (const listener of this.listeners) listener(new MessageEvent('message', { data: message }));
+		for (const listener of this.listeners) {
+			listener(new MessageEvent('message', { data: message }));
+		}
 	}
 }
 
@@ -191,7 +195,9 @@ describe('Pinia persisted state plugin', () => {
 		);
 		await store.$persistReady;
 
-		for (let i = 1; i <= 100; i++) store.$patch({ value: i });
+		for (let i = 1; i <= 100; i++) {
+			store.$patch({ value: i });
+		}
 		await store.$persistFlush();
 
 		expect(fixture.setCalls).toHaveLength(1);

@@ -27,12 +27,16 @@ export class MemoryKVCache<T> {
 	 */
 	public set(key: string, value: T): void {
 		if (this.limit !== Infinity) {
-			this.gc();
+			// 期限切れの掃除は interval の gc() に任せる。ここで gc() を呼ぶと set のたびに全件走査になり、
+			// 常に満杯の MFM パースキャッシュ (1000 件) では notes/create の CPU の 2.7% を占めていた (2026-09-03 実測)。
+			// 上限超過分は挿入順の先頭 (最も古く参照されたもの) から落とす。
 			this.cache.delete(key);
 
 			while (this.cache.size >= this.limit) {
 				const oldestKey = this.cache.keys().next().value;
-				if (oldestKey === undefined) break;
+				if (oldestKey === undefined) {
+					break;
+				}
 				this.cache.delete(oldestKey);
 			}
 		}
@@ -46,7 +50,9 @@ export class MemoryKVCache<T> {
 	@bindThis
 	public get(key: string): T | undefined {
 		const cached = this.cache.get(key);
-		if (cached == null) return undefined;
+		if (cached == null) {
+			return undefined;
+		}
 		if (Date.now() - cached.date > this.lifetime) {
 			this.cache.delete(key);
 			return undefined;
@@ -99,7 +105,9 @@ export class MemoryKVCache<T> {
 		}
 
 		const pendingFetch = this.pendingFetches.get(key);
-		if (pendingFetch !== undefined) return pendingFetch;
+		if (pendingFetch !== undefined) {
+			return pendingFetch;
+		}
 
 		const fetchPromise = fetcher()
 			.then((value) => {
@@ -123,7 +131,9 @@ export class MemoryKVCache<T> {
 
 		for (const [key, { date }] of this.cache.entries()) {
 			const age = now - date;
-			if (age >= this.lifetime) this.cache.delete(key);
+			if (age >= this.lifetime) {
+				this.cache.delete(key);
+			}
 		}
 	}
 
@@ -151,7 +161,9 @@ export class MemorySingleCache<T> {
 
 	@bindThis
 	public get(): T | undefined {
-		if (this.cachedAt == null) return undefined;
+		if (this.cachedAt == null) {
+			return undefined;
+		}
 		if (Date.now() - this.cachedAt > this.lifetime) {
 			this.value = undefined;
 			this.cachedAt = null;

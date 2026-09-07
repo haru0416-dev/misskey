@@ -73,7 +73,7 @@ function fetchValue() {
 		scope: scope.value,
 		key: key.value,
 		domain: props.domain === '@' ? null : props.domain,
-	}).then(res => {
+	}).then((res) => {
 		value.value = res;
 		valueForEditor.value = JSON5.stringify(res.value, null, '\t');
 	});
@@ -93,7 +93,9 @@ async function save() {
 		type: 'warning',
 		text: i18n.ts.saveConfirm,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		os.apiWithDialog('i/registry/set', {
 			scope: scope.value,
 			key: key.value,
@@ -108,7 +110,9 @@ function del() {
 		type: 'warning',
 		text: i18n.ts.deleteConfirm,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		os.apiWithDialog('i/registry/remove', {
 			scope: scope.value,
 			key: key.value,

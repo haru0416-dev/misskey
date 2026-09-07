@@ -10,11 +10,13 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { DB_MAX_NOTE_CW_LENGTH } from '@/const.js';
-import { createNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { createNoteForApi } from '@/server/rest/note/notes-create.js';
+import type { ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import type { MiLocalUser } from '@/models/User.js';
 
 /**

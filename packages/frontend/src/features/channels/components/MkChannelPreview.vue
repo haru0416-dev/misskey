@@ -61,17 +61,22 @@ const props = defineProps<{
 }>();
 
 const getLastReadedAt = (): number | null => {
-	return miLocalStorage.getItemAsJson(
-		`channelLastReadedAt:${props.channel.id}`,
-		(value): value is number => typeof value === 'number' && Number.isFinite(value),
-	) ?? null;
+	return (
+		miLocalStorage.getItemAsJson(
+			`channelLastReadedAt:${props.channel.id}`,
+			(value): value is number => typeof value === 'number' && Number.isFinite(value),
+		) ?? null
+	);
 };
 
 const lastReadedAt = ref(getLastReadedAt());
 
-watch(() => props.channel.id, () => {
-	lastReadedAt.value = getLastReadedAt();
-});
+watch(
+	() => props.channel.id,
+	() => {
+		lastReadedAt.value = getLastReadedAt();
+	},
+);
 
 const updateLastReadedAt = () => {
 	lastReadedAt.value = props.channel.lastNotedAt ? Date.parse(props.channel.lastNotedAt) : Date.now();
@@ -80,9 +85,8 @@ const updateLastReadedAt = () => {
 const bannerStyle = computed(() => {
 	if (props.channel.bannerUrl) {
 		return { backgroundImage: `url(${props.channel.bannerUrl})` };
-	} else {
-		return undefined;
 	}
+	return undefined;
 });
 </script>
 

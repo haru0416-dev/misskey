@@ -24,18 +24,24 @@ export async function readRequestBodyWithLimit(
 	const contentLength = hasDecimalContentLength ? Number(contentLengthHeader) : null;
 	const hasSafeContentLength = contentLength != null && Number.isSafeInteger(contentLength);
 	if (!hasTransferEncoding && hasDecimalContentLength) {
-		if (!hasSafeContentLength || contentLength > limit) throw makeLimitError();
+		if (!hasSafeContentLength || contentLength > limit) {
+			throw makeLimitError();
+		}
 	}
 
 	const body = request.body;
-	if (body == null) return new Uint8Array(0);
+	if (body == null) {
+		return new Uint8Array(0);
+	}
 
 	// Content-Length があり Transfer-Encoding がない場合、Hono の bodyLimit middleware は HTTP のフレーミングを信頼する。
 	// 固定長 JSON リクエストが大半のため、チャンクごとの Web Streams 処理を避ける。
 	// 事前申告と実際のサイズが異なる Request でも、読み取り後の検査で上限を保証する。
 	if (!hasTransferEncoding && hasSafeContentLength) {
 		const raw = new Uint8Array(await request.arrayBuffer());
-		if (raw.byteLength > limit) throw makeLimitError();
+		if (raw.byteLength > limit) {
+			throw makeLimitError();
+		}
 		return raw;
 	}
 
@@ -45,7 +51,9 @@ export async function readRequestBodyWithLimit(
 	try {
 		while (true) {
 			const { done, value } = await reader.read();
-			if (done) break;
+			if (done) {
+				break;
+			}
 			total += value.byteLength;
 			if (total > limit) {
 				await reader.cancel().catch(() => {});
@@ -57,7 +65,11 @@ export async function readRequestBodyWithLimit(
 		reader.releaseLock();
 	}
 
-	if (chunks.length === 0) return new Uint8Array(0);
-	if (chunks.length === 1) return chunks[0] ?? new Uint8Array(0);
+	if (chunks.length === 0) {
+		return new Uint8Array(0);
+	}
+	if (chunks.length === 1) {
+		return chunks[0] ?? new Uint8Array(0);
+	}
 	return Buffer.concat(chunks, total);
 }

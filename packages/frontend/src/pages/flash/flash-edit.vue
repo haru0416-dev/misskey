@@ -379,10 +379,7 @@ if (props.id) {
 const title = ref(flash.value?.title ?? 'New Play');
 const summary = ref(flash.value?.summary ?? '');
 const permissions = ref([]); // not implemented yet
-const {
-	model: visibility,
-	def: visibilityDef,
-} = useMkSelect({
+const { model: visibility, def: visibilityDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.public, value: 'public' },
 		{ label: i18n.ts.private, value: 'private' },
@@ -392,27 +389,35 @@ const {
 const script = ref(flash.value?.script ?? PRESET_DEFAULT);
 
 function selectPreset(ev: PointerEvent) {
-	os.popupMenu([{
-		text: 'Omikuji',
-		action: () => {
-			script.value = PRESET_OMIKUJI;
-		},
-	}, {
-		text: 'Shuffle',
-		action: () => {
-			script.value = PRESET_SHUFFLE;
-		},
-	}, {
-		text: 'Quiz',
-		action: () => {
-			script.value = PRESET_QUIZ;
-		},
-	}, {
-		text: 'Timeline viewer',
-		action: () => {
-			script.value = PRESET_TIMELINE;
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: 'Omikuji',
+				action: () => {
+					script.value = PRESET_OMIKUJI;
+				},
+			},
+			{
+				text: 'Shuffle',
+				action: () => {
+					script.value = PRESET_SHUFFLE;
+				},
+			},
+			{
+				text: 'Quiz',
+				action: () => {
+					script.value = PRESET_QUIZ;
+				},
+			},
+			{
+				text: 'Timeline viewer',
+				action: () => {
+					script.value = PRESET_TIMELINE;
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function save() {
@@ -452,13 +457,17 @@ function show() {
 }
 
 async function del() {
-	if (flash.value == null) return;
+	if (flash.value == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: flash.value.title }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('flash/delete', {
 		flashId: flash.value.id,

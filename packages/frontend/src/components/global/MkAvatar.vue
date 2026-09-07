@@ -57,23 +57,28 @@ const animation = ref(prefer.animation);
 const squareAvatars = ref(prefer.squareAvatars);
 
 type Decoration = Misskey.entities.UserDetailed['avatarDecorations'][number];
-type DecorationEditorDecoration = Omit<Misskey.entities.UserDetailed['avatarDecorations'][number], 'id'> & { blink?: boolean; };
+type DecorationEditorDecoration = Omit<Misskey.entities.UserDetailed['avatarDecorations'][number], 'id'> & {
+	blink?: boolean;
+};
 
-const props = withDefaults(defineProps<{
-	user: Misskey.entities.User;
-	target?: string | null;
-	link?: boolean;
-	preview?: boolean;
-	indicator?: boolean;
-	decorations?: DecorationEditorDecoration[];
-	forceShowDecoration?: boolean;
-}>(), {
-	target: null,
-	link: false,
-	preview: false,
-	indicator: false,
-	forceShowDecoration: false,
-});
+const props = withDefaults(
+	defineProps<{
+		user: Misskey.entities.User;
+		target?: string | null;
+		link?: boolean;
+		preview?: boolean;
+		indicator?: boolean;
+		decorations?: DecorationEditorDecoration[];
+		forceShowDecoration?: boolean;
+	}>(),
+	{
+		target: null,
+		link: false,
+		preview: false,
+		indicator: false,
+		forceShowDecoration: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'click', v: PointerEvent): void;
@@ -81,22 +86,26 @@ const emit = defineEmits<{
 
 const showDecoration = props.forceShowDecoration || prefer.showAvatarDecorations;
 
-const bound = computed(() => props.link
-	? { to: userPage(props.user), target: props.target }
-	: {});
+const bound = computed(() => (props.link ? { to: userPage(props.user), target: props.target } : {}));
 
 const url = computed(() => {
-	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) return getStaticImageUrl(props.user.avatarUrl);
+	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) {
+		return getStaticImageUrl(props.user.avatarUrl);
+	}
 	return props.user.avatarUrl;
 });
 
 function onClick(ev: PointerEvent): void {
-	if (props.link) return;
+	if (props.link) {
+		return;
+	}
 	emit('click', ev);
 }
 
 function getDecorationUrl(decoration: Decoration | DecorationEditorDecoration) {
-	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) return getStaticImageUrl(decoration.url);
+	if (prefer.disableShowingAnimatedImages || prefer.dataSaver.avatar) {
+		return getStaticImageUrl(decoration.url);
+	}
 	return decoration.url;
 }
 
@@ -122,12 +131,18 @@ function getDecorationIsBrink(decoration: Decoration | DecorationEditorDecoratio
 
 const color = ref<string | undefined>();
 
-watch(() => props.user.avatarBlurhash, () => {
-	if (props.user.avatarBlurhash == null) return;
-	color.value = extractAvgColorFromBlurhash(props.user.avatarBlurhash);
-}, {
-	immediate: true,
-});
+watch(
+	() => props.user.avatarBlurhash,
+	() => {
+		if (props.user.avatarBlurhash == null) {
+			return;
+		}
+		color.value = extractAvgColorFromBlurhash(props.user.avatarBlurhash);
+	},
+	{
+		immediate: true,
+	},
+);
 </script>
 
 <style lang="scss" module>

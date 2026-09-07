@@ -43,27 +43,30 @@ import EmImgWithBlurhash from './EmImgWithBlurhash.vue';
 import EmA from './EmA.vue';
 import { userPage } from '@/utils.js';
 
-const props = withDefaults(defineProps<{
-	user: Misskey.entities.User;
-	link?: boolean;
-	preview?: boolean;
-	indicator?: boolean;
-}>(), {
-	link: false,
-	preview: false,
-	indicator: false,
-});
+const props = withDefaults(
+	defineProps<{
+		user: Misskey.entities.User;
+		link?: boolean;
+		preview?: boolean;
+		indicator?: boolean;
+	}>(),
+	{
+		link: false,
+		preview: false,
+		indicator: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'click', v: MouseEvent): void;
 }>();
 
-const bound = computed(() => props.link
-	? { to: userPage(props.user) }
-	: {});
+const bound = computed(() => (props.link ? { to: userPage(props.user) } : {}));
 
 const url = computed(() => {
-	if (props.user.avatarUrl == null) return null;
+	if (props.user.avatarUrl == null) {
+		return null;
+	}
 	return props.user.avatarUrl;
 });
 

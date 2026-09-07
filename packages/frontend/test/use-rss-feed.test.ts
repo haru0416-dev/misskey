@@ -26,7 +26,9 @@ function renderFeed(url: string, onFetched?: () => void) {
 
 /** fetch が解決してから ref に反映されるまでのマイクロタスクを待つ。 */
 async function flush() {
-	for (let i = 0; i < 5; i++) await Promise.resolve();
+	for (let i = 0; i < 5; i++) {
+		await Promise.resolve();
+	}
 }
 
 /** init.ts が張るロケール取得などのモックと混ざるので、対象のエンドポイントだけ拾う。 */

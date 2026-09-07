@@ -4,14 +4,8 @@
  */
 
 import { expect, test } from '../support/fixtures';
-import {
-	closeInitialUserSetup,
-	login,
-	registerUser,
-	resetState,
-	type TestUser,
-	waitForPageCarryoverGuard,
-} from '../support/helpers';
+import { closeInitialUserSetup, login, registerUser, resetState, waitForPageCarryoverGuard } from '../support/helpers';
+import type { TestUser } from '../support/helpers';
 import type { Browser, Page } from '@playwright/test';
 
 const passwords = {

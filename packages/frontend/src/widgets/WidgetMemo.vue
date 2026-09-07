@@ -59,17 +59,14 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, save, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, save, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const migrationKey = `memoWidgetMigrationCompleted:${$i?.id ?? 'guest'}` as const;
-const shouldMigrateLegacyMemo = props.widget?.id !== '__PREVIEW__'
-	&& props.widget != null
-	&& props.widget.data.text === undefined
-	&& miLocalStorage.getItem(migrationKey) !== 'true';
+const shouldMigrateLegacyMemo =
+	props.widget?.id !== '__PREVIEW__' &&
+	props.widget != null &&
+	props.widget.data.text === undefined &&
+	miLocalStorage.getItem(migrationKey) !== 'true';
 if (shouldMigrateLegacyMemo) {
 	widgetProps.text = store.memo ?? '';
 	miLocalStorage.setItem(migrationKey, 'true');
@@ -88,17 +85,26 @@ const saveMemo = () => {
 
 const onChange = () => {
 	changed.value = true;
-	if (timeoutId != null) window.clearTimeout(timeoutId);
+	if (timeoutId != null) {
+		window.clearTimeout(timeoutId);
+	}
 	timeoutId = window.setTimeout(saveMemo, 1000);
 };
 
-watch(() => widgetProps.text, newText => {
-	text.value = newText;
-});
+watch(
+	() => widgetProps.text,
+	(newText) => {
+		text.value = newText;
+	},
+);
 
 onBeforeUnmount(() => {
-	if (timeoutId != null) window.clearTimeout(timeoutId);
-	if (changed.value) saveMemo();
+	if (timeoutId != null) {
+		window.clearTimeout(timeoutId);
+	}
+	if (changed.value) {
+		saveMemo();
+	}
 });
 
 defineExpose<WidgetComponentExpose>({

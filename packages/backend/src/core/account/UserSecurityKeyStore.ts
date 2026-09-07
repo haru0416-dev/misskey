@@ -4,7 +4,8 @@
  */
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { userSecurityKey, type UserSecurityKeyInsert, type UserSecurityKeyRow } from '@/db/schema/user-security-key.js';
+import { userSecurityKey } from '@/db/schema/user-security-key.js';
+import type { UserSecurityKeyInsert, UserSecurityKeyRow } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 

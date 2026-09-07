@@ -79,7 +79,9 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 		const form = deepClone(propsDef);
 		for (const item of Object.keys(form)) {
 			const definition = form[item];
-			if (definition != null) definition.default = (widgetProps as any)[item];
+			if (definition != null) {
+				definition.default = (widgetProps as any)[item];
+			}
 		}
 
 		const res = await new Promise<

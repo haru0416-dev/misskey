@@ -93,25 +93,35 @@ onMounted(() => {
 	searchType.value = props.type ?? 'nameAndDescription';
 });
 
-const featuredPaginator = markRaw(new Paginator('channels/featured', {
-	limit: 10,
-	noPaging: true,
-}));
-const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', {
-	limit: 100,
-	noPaging: true,
-}));
-const followingPaginator = markRaw(new Paginator('channels/followed', {
-	limit: 10,
-}));
-const ownedPaginator = markRaw(new Paginator('channels/owned', {
-	limit: 10,
-}));
+const featuredPaginator = markRaw(
+	new Paginator('channels/featured', {
+		limit: 10,
+		noPaging: true,
+	}),
+);
+const favoritesPaginator = markRaw(
+	new Paginator('channels/my-favorites', {
+		limit: 100,
+		noPaging: true,
+	}),
+);
+const followingPaginator = markRaw(
+	new Paginator('channels/followed', {
+		limit: 10,
+	}),
+);
+const ownedPaginator = markRaw(
+	new Paginator('channels/owned', {
+		limit: 10,
+	}),
+);
 
 async function search() {
 	const query = searchQuery.value.toString().trim();
 
-	if (query == null) return;
+	if (query == null) {
+		return;
+	}
 
 	const type = searchType.value.toString().trim();
 
@@ -120,40 +130,48 @@ async function search() {
 		return;
 	}
 
-	channelPaginator.value = markRaw(new Paginator('channels/search', {
-		limit: 10,
-		params: {
-			query: searchQuery.value,
-			type: type,
-		},
-	}));
+	channelPaginator.value = markRaw(
+		new Paginator('channels/search', {
+			limit: 10,
+			params: {
+				query: searchQuery.value,
+				type: type,
+			},
+		}),
+	);
 
 	key.value = query + type;
 }
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => [{
-	key: 'search',
-	title: i18n.ts.search,
-	icon: 'ti ti-search',
-}, {
-	key: 'featured',
-	title: i18n.ts._channel.featured,
-	icon: 'ti ti-comet',
-}, {
-	key: 'favorites',
-	title: i18n.ts.favorites,
-	icon: 'ti ti-star',
-}, {
-	key: 'following',
-	title: i18n.ts._channel.following,
-	icon: 'ti ti-eye',
-}, {
-	key: 'owned',
-	title: i18n.ts._channel.owned,
-	icon: 'ti ti-edit',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'search',
+		title: i18n.ts.search,
+		icon: 'ti ti-search',
+	},
+	{
+		key: 'featured',
+		title: i18n.ts._channel.featured,
+		icon: 'ti ti-comet',
+	},
+	{
+		key: 'favorites',
+		title: i18n.ts.favorites,
+		icon: 'ti ti-star',
+	},
+	{
+		key: 'following',
+		title: i18n.ts._channel.following,
+		icon: 'ti ti-eye',
+	},
+	{
+		key: 'owned',
+		title: i18n.ts._channel.owned,
+		icon: 'ti ti-edit',
+	},
+]);
 
 definePage(() => ({
 	title: i18n.ts.channel,

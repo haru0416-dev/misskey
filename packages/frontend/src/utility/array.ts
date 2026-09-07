@@ -9,7 +9,9 @@ type Predicate<T> = (x: T) => boolean;
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	let count = 0;
 	for (const x of xs) {
-		if (f(x)) count++;
+		if (f(x)) {
+			count++;
+		}
 	}
 	return count;
 }
@@ -23,7 +25,9 @@ export function concat<T>(xss: T[][]): T[] {
 }
 
 export function intersperse<T>(sep: T, xs: T[]): T[] {
-	if (xs.length === 0) return [];
+	if (xs.length === 0) {
+		return [];
+	}
 	const result = new Array<T>(xs.length * 2 - 1);
 	result[0] = xs[0]!;
 	for (let i = 1; i < xs.length; i++) {
@@ -51,7 +55,9 @@ export function uniqueBy<TValue, TKey>(values: TValue[], keySelector: (value: TV
 
 	for (const value of values) {
 		const key = keySelector(value);
-		if (!map.has(key)) map.set(key, value);
+		if (!map.has(key)) {
+			map.set(key, value);
+		}
 	}
 
 	return [...map.values()];
@@ -64,7 +70,9 @@ export function sum(xs: number[]): number {
 export function maximum(xs: number[]): number {
 	let result = -Infinity;
 	for (const x of xs) {
-		if (x > result) result = x;
+		if (x > result) {
+			result = x;
+		}
 	}
 	return result;
 }
@@ -73,9 +81,15 @@ function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
 		const x = xs[i];
 		const y = ys[i];
-		if (x == null || y == null) continue;
-		if (x < y) return true;
-		if (x > y) return false;
+		if (x == null || y == null) {
+			continue;
+		}
+		if (x < y) {
+			return true;
+		}
+		if (x > y) {
+			return false;
+		}
 	}
 	return xs.length < ys.length;
 }

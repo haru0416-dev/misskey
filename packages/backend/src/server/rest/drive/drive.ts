@@ -33,7 +33,8 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiDriveStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiDriveDependencies = {
@@ -171,7 +172,9 @@ async function resolveDriveFoldersForApi(
 
 	return await Promise.all(
 		srcs.map(async (src) => {
-			if (typeof src === 'object') return src;
+			if (typeof src === 'object') {
+				return src;
+			}
 			return folderById.get(src) ?? (await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src));
 		}),
 	);
@@ -194,7 +197,9 @@ export async function packDriveFolderForApi(
 
 	const packed = packDriveFolderBaseForApi(folder);
 
-	if (!opts.detail) return packed;
+	if (!opts.detail) {
+		return packed;
+	}
 
 	const [foldersCount, filesCount, parent] = await Promise.all([
 		countDriveFoldersByParentIdFromDatabase(deps.db, folder.id),

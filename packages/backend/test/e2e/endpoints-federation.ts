@@ -4,7 +4,8 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import * as Bull from 'bullmq';
@@ -111,7 +112,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -119,6 +119,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -133,7 +134,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt } from '../endpoints-context.js';
+import { createEndpointsContext, getAt } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -167,10 +169,10 @@ describe('Endpoints', () => {
 				id: genId(now),
 				host: `hono-fed-alpha-${now}.example`,
 				firstRetrievedAt: new Date(now),
-				usersCount: 1000001,
-				notesCount: 2000001,
-				followingCount: 3000001,
-				followersCount: 4000001,
+				usersCount: 1_000_001,
+				notesCount: 2_000_001,
+				followingCount: 3_000_001,
+				followersCount: 4_000_001,
 				latestRequestReceivedAt: new Date(now + 1000),
 				isNotResponding: false,
 				suspensionState: 'none',
@@ -191,10 +193,10 @@ describe('Endpoints', () => {
 				id: genId(now + 1),
 				host: `hono-fed-beta-${now}.example`,
 				firstRetrievedAt: new Date(now + 1),
-				usersCount: 1000002,
-				notesCount: 2000002,
-				followingCount: 5000001,
-				followersCount: 3000001,
+				usersCount: 1_000_002,
+				notesCount: 2_000_002,
+				followingCount: 5_000_001,
+				followersCount: 3_000_001,
 				latestRequestReceivedAt: null,
 				isNotResponding: true,
 				suspensionState: 'none',
@@ -510,7 +512,9 @@ describe('Endpoints', () => {
 			expect(noteRes.body['type']).toBe('Note');
 			expect(noteRes.body['id']).toBe(noteUri);
 			const content: unknown = Reflect.get(noteRes.body, 'content');
-			if (typeof content !== 'string') throw new Error('ActivityPub Note content is missing');
+			if (typeof content !== 'string') {
+				throw new Error('ActivityPub Note content is missing');
+			}
 			assert.ok(content.includes('ap/get resolve target'));
 
 			const userUri = `${config.instance.url}/users/${alice.id}`;
@@ -561,7 +565,9 @@ describe('Endpoints', () => {
 			expect(questionRes.body['type']).toBe('Question');
 			expect(questionRes.body['id']).toBe(questionUri);
 			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
-			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
+			if (!Array.isArray(choices)) {
+				throw new Error('ActivityPub Question choices are missing');
+			}
 			expect(
 				choices.map((choice: unknown) => {
 					assert.ok(typeof choice === 'object' && choice != null);

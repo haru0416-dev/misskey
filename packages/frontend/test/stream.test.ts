@@ -35,7 +35,9 @@ describe('stream heartbeat', () => {
 
 	afterAll(() => {
 		vi.useRealTimers();
-		if (visibilityDescriptor) Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+		if (visibilityDescriptor) {
+			Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+		}
 	});
 
 	test('pauses while hidden and resumes without duplicate timers', async () => {

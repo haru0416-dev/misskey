@@ -19,7 +19,9 @@ type NormalizeResult =
 	| { success: false; field: BrandingJsonField };
 
 function normalizeTheme(code: string | null, expectedBase: 'light' | 'dark'): string | null | undefined {
-	if (code == null || code.trim() === '') return null;
+	if (code == null || code.trim() === '') {
+		return null;
+	}
 	const theme = parseThemeOrNull(code);
 	return theme?.base === expectedBase ? code : undefined;
 }
@@ -30,10 +32,14 @@ export function normalizeBrandingJsonSettings(input: {
 	manifestJsonOverride: string;
 }): NormalizeResult {
 	const defaultLightTheme = normalizeTheme(input.defaultLightTheme, 'light');
-	if (defaultLightTheme === undefined) return { success: false, field: 'defaultLightTheme' };
+	if (defaultLightTheme === undefined) {
+		return { success: false, field: 'defaultLightTheme' };
+	}
 
 	const defaultDarkTheme = normalizeTheme(input.defaultDarkTheme, 'dark');
-	if (defaultDarkTheme === undefined) return { success: false, field: 'defaultDarkTheme' };
+	if (defaultDarkTheme === undefined) {
+		return { success: false, field: 'defaultDarkTheme' };
+	}
 
 	let manifestJsonOverride: unknown;
 	try {

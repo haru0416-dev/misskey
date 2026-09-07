@@ -3,13 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from 'drizzle-orm';
-import { flash, type FlashInsert, type FlashRow } from '@/db/schema/flash.js';
+import { and, asc, desc, eq, gt, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { flash } from '@/db/schema/flash.js';
+import type { FlashInsert, FlashRow } from '@/db/schema/flash.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
-import { MiFlash, type FlashVisibility } from '@/models/Flash.js';
+import { MiFlash } from '@/models/Flash.js';
+import type { FlashVisibility } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
 
 export type FlashOrder = 'asc' | 'desc';

@@ -15,10 +15,10 @@ function decorate(inner: Component, story: StoryObj, context: StoryContext): Com
 	let current = inner;
 
 	for (const decorator of story.decorators ?? []) {
-		const wrapper = decorator(() => current, context) as Component & {
+		const wrapped = current;
+		const wrapper = decorator(() => wrapped, context) as Component & {
 			components?: Record<string, Component>;
 		};
-		const wrapped = current;
 		current = {
 			...wrapper,
 			components: { ...(wrapper.components ?? {}), story: wrapped },

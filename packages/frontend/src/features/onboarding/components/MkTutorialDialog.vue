@@ -190,7 +190,9 @@ async function close(skip: boolean) {
 			type: 'warning',
 			text: i18n.ts._initialTutorial.skipAreYouSure,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	dialog.value?.close();

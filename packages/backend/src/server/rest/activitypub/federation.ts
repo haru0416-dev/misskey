@@ -19,8 +19,8 @@ import {
 	listInstancesOrderByFollowersCountDescFromDatabase,
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
-	type FederationInstancesSort,
 } from '@/core/instance/InstanceStore.js';
+import type { FederationInstancesSort } from '@/core/instance/InstanceStore.js';
 import { listAllDriveFilesByUserHostFromDatabase } from '@/core/drive/DriveFileStore.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import {
@@ -41,10 +41,13 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import type Logger from '@/logger.js';
-import { startApiAdminDriveFileDeletion, type ApiAdminDriveDependencies } from '../admin/admin-drive.js';
-import { packFollowingsForApi, type FollowingListItem } from '../user/following.js';
+import { startApiAdminDriveFileDeletion } from '../admin/admin-drive.js';
+import type { ApiAdminDriveDependencies } from '../admin/admin-drive.js';
+import { packFollowingsForApi } from '../user/following.js';
+import type { FollowingListItem } from '../user/following.js';
 import { isApiModerator } from '../role/role-policy.js';
-import { packUserDetailedNotMeManyForApi, type UserDetailedNotMeApiResponse } from '../user/user.js';
+import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFederationDependencies = {
@@ -124,7 +127,9 @@ export async function fetchOrRegisterFederatedInstance(
 	host = toPuny(host);
 
 	const index = await fetchInstanceByHostFromDatabase(deps.db, host);
-	if (index != null) return index;
+	if (index != null) {
+		return index;
+	}
 
 	return await createInstanceInDatabase(deps.db, {
 		id: genId(),
@@ -199,7 +204,9 @@ export function isDeliverSuspendedSoftware(
 	meta: Pick<MiMeta, 'deliverSuspendedSoftware'>,
 	software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>,
 ): boolean {
-	if (software.softwareName == null) return false;
+	if (software.softwareName == null) {
+		return false;
+	}
 	if (software.softwareVersion == null) {
 		return meta.deliverSuspendedSoftware.some(
 			(x) => x.software === software.softwareName && x.versionRange.trim() === '*',
@@ -308,7 +315,9 @@ export async function handleApiFederationShowInstance(
 ): Promise<Packed<'FederationInstance'> | null> {
 	const params = parseApiParams(federationShowInstanceParamDef, body);
 	const found = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
-	if (found == null) return null;
+	if (found == null) {
+		return null;
+	}
 
 	const [packed] = await packApiFederationInstances(deps, [found], user, deps.meta);
 	return packed ?? null;
@@ -464,8 +473,12 @@ export async function handleApiFederationUsers(
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const users = await listUsersByHostWithPaginationFromDatabase(deps.db, {

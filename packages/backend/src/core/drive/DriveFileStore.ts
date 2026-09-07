@@ -3,25 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	gt,
-	inArray,
-	isNotNull,
-	isNull,
-	like,
-	lt,
-	or,
-	sql,
-	sum,
-	type SQL,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, like, lt, or, sql, sum } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { driveFile, type DriveFileInsert, type DriveFileRow } from '@/db/schema/drive-file.js';
+import { driveFile } from '@/db/schema/drive-file.js';
+import type { DriveFileInsert, DriveFileRow } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -146,7 +132,9 @@ export async function listDriveFilesByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiDriveFile['id'][],
 ): Promise<MiDriveFile[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
@@ -167,7 +155,9 @@ export async function listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(
 	ids: MiDriveFile['id'][],
 	userId: NonNullable<MiDriveFile['userId']>,
 ): Promise<MiDriveFile[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()
@@ -413,7 +403,9 @@ export async function updateDriveFilesFolderByIdsAndUserIdInDatabase(
 	userId: NonNullable<MiDriveFile['userId']>,
 	folderId: MiDriveFile['folderId'],
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db
 		.update(driveFile)
@@ -452,7 +444,9 @@ export async function countDriveFilesGroupedByFolderIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	folderIds: NonNullable<MiDriveFile['folderId']>[],
 ): Promise<{ folderId: NonNullable<MiDriveFile['folderId']>; count: number }[]> {
-	if (folderIds.length === 0) return [];
+	if (folderIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({

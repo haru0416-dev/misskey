@@ -1,4 +1,4 @@
-import { describe, test, beforeAll, afterAll } from 'vitest';
+import { describe, test, beforeAll, expect, afterAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
@@ -8,13 +8,13 @@ import {
 	createModerator,
 	deepStrictEqualWithExcludedFields,
 	fetchActivityPubObject,
-	type LoginUser,
 	resolveRemoteNote,
 	resolveRemoteUser,
 	sleep,
 	uploadFile,
 	waitFor,
 } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
@@ -427,6 +427,40 @@ describe('Note', () => {
 	});
 
 	describe('Poll', () => {
+		test('指定公開アンケートの投票更新をフォローしていない宛先へ配送する', async () => {
+			const [author, voter, recipient] = await Promise.all([
+				createAccount('a.test'),
+				createAccount('a.test'),
+				createAccount('b.test'),
+			]);
+			const remoteRecipient = await resolveRemoteUser('b.test', recipient.id, author);
+			const note = (
+				await author.client.request('notes/create', {
+					text: 'specified poll',
+					visibility: 'specified',
+					visibleUserIds: [voter.id, remoteRecipient.id],
+					poll: { choices: ['one', 'two'] },
+				})
+			).createdNote;
+			const uri = `https://a.test/notes/${note.id}`;
+			let received: Misskey.entities.Note | undefined;
+			await waitFor(async () => {
+				received = (await recipient.client.request('notes/mentions', {})).find((entry) => entry.uri === uri);
+				return received != null;
+			}, 20_000);
+			assert(received);
+			const receivedId = received.id;
+			await voter.client.request('notes/polls/vote', { noteId: note.id, choice: 0 });
+			const local = await author.client.request('notes/show', { noteId: note.id });
+			expect(local.poll?.choices.map((choice) => choice.votes)).toEqual([1, 0]);
+			await waitFor(async () => {
+				const remote = await recipient.client.request('notes/show', { noteId: receivedId });
+				return remote.poll?.choices[0]?.votes === 1;
+			}, 20_000);
+			const remote = await recipient.client.request('notes/show', { noteId: receivedId });
+			expect(remote.poll?.choices.map((choice) => choice.votes)).toEqual([1, 0]);
+		});
+
 		describe("Any remote user's vote is delivered to the author", () => {
 			let carol: LoginUser;
 

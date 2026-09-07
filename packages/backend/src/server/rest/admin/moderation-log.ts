@@ -13,11 +13,8 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
-import {
-	packUserDetailedNotMeManyForApi,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiModerationLogDependencies = UserPackingDependencies & {
@@ -53,7 +50,9 @@ async function packModerationLogsForApi(
 
 	return logs.map((log, index) => {
 		const user = users[index];
-		if (user == null) throw new Error(`Packed moderation log user is missing at index ${index}`);
+		if (user == null) {
+			throw new Error(`Packed moderation log user is missing at index ${index}`);
+		}
 		return {
 			id: log.id,
 			createdAt: parseId(log.id).date.toISOString(),

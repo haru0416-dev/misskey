@@ -31,19 +31,22 @@ import type { PostFormProps } from '@/types/post-form.js';
 import MkModal from '@/components/overlay/MkModal.vue';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 
-const {
-	initialLocalOnly = undefined,
-	...props
-} = defineProps<PostFormProps & {
-	instant?: boolean;
-	fixed?: boolean;
-	autofocus?: boolean;
-}>();
+const { initialLocalOnly = undefined, ...props } = defineProps<
+	PostFormProps & {
+		instant?: boolean;
+		fixed?: boolean;
+		autofocus?: boolean;
+	}
+>();
 
-const forwardedProps = computed(() => Object.fromEntries(Object.entries({
-	...props,
-	...(initialLocalOnly === undefined ? {} : { initialLocalOnly }),
-}).filter(([, value]) => value !== undefined)));
+const forwardedProps = computed(() =>
+	Object.fromEntries(
+		Object.entries({
+			...props,
+			...(initialLocalOnly === undefined ? {} : { initialLocalOnly }),
+		}).filter(([, value]) => value !== undefined),
+	),
+);
 
 const emit = defineEmits<{
 	(ev: 'closed'): void;
@@ -60,7 +63,9 @@ function onPosted() {
 
 async function _close() {
 	const canClose = await form.value?.canClose();
-	if (!canClose) return;
+	if (!canClose) {
+		return;
+	}
 	form.value?.abortUploader();
 	modal.value?.close();
 }

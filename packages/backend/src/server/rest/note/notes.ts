@@ -58,17 +58,15 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packClipsManyForApi, type ApiClipDependencies } from '../clip/clips.js';
+import { packClipsManyForApi } from '../clip/clips.js';
+import type { ApiClipDependencies } from '../clip/clips.js';
 import { ApiError } from '../error.js';
-import {
-	fetchNoteDiffsForApi,
-	filterVisibleNotesForApi,
-	packNoteForApi,
-	packNoteManyForApi,
-	type ApiNoteDependencies,
-} from './note.js';
-import { grantAchievementForApi, type ApiNotificationDependencies } from '../notification/notification.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { fetchNoteDiffsForApi, filterVisibleNotesForApi, packNoteForApi, packNoteManyForApi } from './note.js';
+import type { ApiNoteDependencies } from './note.js';
+import { grantAchievementForApi } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
 
@@ -123,8 +121,12 @@ function resolveNoteSinceUntilId(
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 	return { sinceId, untilId };
 }
@@ -171,7 +173,9 @@ export async function handleApiNotesConversation(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesConversationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesConversationNoSuchNoteError();
+	if (note == null) {
+		throw notesConversationNoSuchNoteError();
+	}
 
 	const conversation: Awaited<ReturnType<typeof fetchNoteByIdFromDatabase>>[] = [];
 	let i = 0;
@@ -179,7 +183,9 @@ export async function handleApiNotesConversation(
 	const get = async (id: string): Promise<void> => {
 		i++;
 		const p = await fetchNoteByIdFromDatabase(deps.db, id);
-		if (p == null) return;
+		if (p == null) {
+			return;
+		}
 
 		if (i > params.offset) {
 			conversation.push(p);
@@ -272,7 +278,9 @@ export async function handleApiNotesRenotes(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesRenotesNoSuchNoteError();
+	if (note == null) {
+		throw notesRenotesNoSuchNoteError();
+	}
 
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
@@ -336,10 +344,14 @@ export async function handleApiNotesFavoritesCreate(
 ): Promise<void> {
 	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesFavoritesCreateNoSuchNoteError();
+	if (note == null) {
+		throw notesFavoritesCreateNoSuchNoteError();
+	}
 
 	const exist = await noteFavoriteExistsInDatabase(deps.db, me.id, note.id);
-	if (exist) throw notesFavoritesCreateAlreadyFavoritedError();
+	if (exist) {
+		throw notesFavoritesCreateAlreadyFavoritedError();
+	}
 
 	try {
 		await createNoteFavoriteInDatabase(deps.db, {
@@ -384,10 +396,14 @@ export async function handleApiNotesFavoritesDelete(
 ): Promise<void> {
 	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesFavoritesDeleteNoSuchNoteError();
+	if (note == null) {
+		throw notesFavoritesDeleteNoSuchNoteError();
+	}
 
 	const exist = await fetchNoteFavoriteFromDatabase(deps.db, me.id, note.id);
-	if (exist == null) throw notesFavoritesDeleteNotFavoritedError();
+	if (exist == null) {
+		throw notesFavoritesDeleteNotFavoritedError();
+	}
 
 	await deleteNoteFavoriteByIdFromDatabase(deps.db, exist.id);
 }
@@ -417,7 +433,9 @@ export async function handleApiNotesThreadMutingCreate(
 ): Promise<void> {
 	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesThreadMutingCreateNoSuchNoteError();
+	if (note == null) {
+		throw notesThreadMutingCreateNoSuchNoteError();
+	}
 
 	try {
 		await createNoteThreadMutingInDatabase(deps.db, {
@@ -427,7 +445,9 @@ export async function handleApiNotesThreadMutingCreate(
 		});
 	} catch (err) {
 		// (userId, threadId) には unique 制約があるので、二重ミュートは 500 ではなく明示的なエラーにする
-		if (isDuplicateKeyValueDatabaseError(err)) throw notesThreadMutingCreateAlreadyMutingError();
+		if (isDuplicateKeyValueDatabaseError(err)) {
+			throw notesThreadMutingCreateAlreadyMutingError();
+		}
 		throw err;
 	}
 }
@@ -448,7 +468,9 @@ export async function handleApiNotesThreadMutingDelete(
 ): Promise<void> {
 	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesThreadMutingDeleteNoSuchNoteError();
+	if (note == null) {
+		throw notesThreadMutingDeleteNoSuchNoteError();
+	}
 
 	await deleteNoteThreadMutingFromDatabase(deps.db, me.id, note.threadId ?? note.id);
 }
@@ -460,7 +482,9 @@ export async function handleApiNotesShow(
 ): Promise<Packed<'Note'>> {
 	const params = parseApiParams(notesShowParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesShowNoSuchNoteError();
+	if (note == null) {
+		throw notesShowNoSuchNoteError();
+	}
 
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 
@@ -505,7 +529,9 @@ export async function handleApiNotesGlobalTimeline(
 	const params = parseApiParams(notesGlobalTimelineParamDef, body);
 
 	const policies = await getApiRolePolicies(deps, me);
-	if (!policies.gtlAvailable) throw notesGlobalTimelineDisabledError();
+	if (!policies.gtlAvailable) {
+		throw notesGlobalTimelineDisabledError();
+	}
 
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
@@ -596,9 +622,13 @@ export async function handleApiNotesLocalTimeline(
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const policies = await getApiRolePolicies(deps, me);
-	if (!policies.ltlAvailable) throw notesLocalTimelineDisabledError();
+	if (!policies.ltlAvailable) {
+		throw notesLocalTimelineDisabledError();
+	}
 
-	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
+	if (params.withReplies && params.withFiles) {
+		throw notesLocalTimelineBothWithRepliesAndWithFilesError();
+	}
 
 	// ローカルタイムラインはフォロー関係を見ないので、fanout のフィルタが読む種別だけで足りる
 	const viewerRelation = me
@@ -689,9 +719,13 @@ export async function handleApiNotesHybridTimeline(
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const policies = await getApiRolePolicies(deps, me);
-	if (!policies.ltlAvailable) throw notesHybridTimelineDisabledError();
+	if (!policies.ltlAvailable) {
+		throw notesHybridTimelineDisabledError();
+	}
 
-	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
+	if (params.withReplies && params.withFiles) {
+		throw notesHybridTimelineBothWithRepliesAndWithFilesError();
+	}
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
 	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(
@@ -749,7 +783,9 @@ export async function handleApiNotesHybridTimeline(
 				excludePureRenotes: !params.withRenotes,
 				noteFilter: (note) => {
 					if (note.reply?.visibility === 'followers') {
-						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) {
+							return false;
+						}
 					}
 
 					return true;
@@ -789,13 +825,17 @@ async function getNotesFeaturedRanking(deps: ApiNotesDependencies, name: string,
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
 		const id = currentRankingResult[i];
 		const score = currentRankingResult[i + 1];
-		if (id == null || score == null) continue;
+		if (id == null || score == null) {
+			continue;
+		}
 		ranking.set(id, Number.parseInt(score, 10));
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
 		const id = previousRankingResult[i];
 		const scoreValue = previousRankingResult[i + 1];
-		if (id == null || scoreValue == null) continue;
+		if (id == null || scoreValue == null) {
+			continue;
+		}
 		const score = Number.parseInt(scoreValue, 10);
 		const exist = ranking.get(id);
 		ranking.set(id, exist != null ? (exist + score) / 2 : score);
@@ -845,7 +885,9 @@ export async function handleApiNotesFeatured(
 	}
 	noteIds = noteIds.slice(0, params.limit);
 
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	const [mutedByMe, blockedByOthers] = me
 		? await Promise.all([
@@ -857,8 +899,12 @@ export async function handleApiNotesFeatured(
 	const blockedSet = new Set(blockedByOthers);
 
 	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter((note) => {
-		if (me && isUserRelated(note, blockedSet)) return false;
-		if (me && isUserRelated(note, mutedSet)) return false;
+		if (me && isUserRelated(note, blockedSet)) {
+			return false;
+		}
+		if (me && isUserRelated(note, mutedSet)) {
+			return false;
+		}
 		return true;
 	});
 
@@ -883,10 +929,14 @@ export async function handleApiNotesClips(
 ): Promise<Packed<'Clip'>[]> {
 	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesClipsNoSuchNoteError();
+	if (note == null) {
+		throw notesClipsNoSuchNoteError();
+	}
 
 	const clipIds = await listClipNoteClipIdsByNoteIdFromDatabase(deps.db, note.id);
-	if (clipIds.length === 0) return [];
+	if (clipIds.length === 0) {
+		return [];
+	}
 
 	const clips = await listClipsByIdsFromDatabase(deps.db, clipIds, { isPublic: true });
 
@@ -930,7 +980,9 @@ export async function handleApiNotesSearch(
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
 	const policies = await getApiRolePolicies(deps, me);
-	if (!policies.canSearchNotes) throw notesSearchUnavailableError();
+	if (!policies.canSearchNotes) {
+		throw notesSearchUnavailableError();
+	}
 
 	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
@@ -1048,13 +1100,17 @@ export async function handleApiNotesSearchByTag(
 		let tagQuery: string[][];
 		if (params.tag != null) {
 			const tag = normalizeForSearch(params.tag);
-			if (!safeForSql(tag)) throw new Error('Injection');
+			if (!safeForSql(tag)) {
+				throw new Error('Injection');
+			}
 			tagQuery = [[tag]];
 		} else {
 			tagQuery = params.query!.map((tags) =>
 				tags.map((tag) => {
 					const normalized = normalizeForSearch(tag);
-					if (!safeForSql(normalized)) throw new Error('Injection');
+					if (!safeForSql(normalized)) {
+						throw new Error('Injection');
+					}
 					return normalized;
 				}),
 			);
@@ -1078,7 +1134,9 @@ export async function handleApiNotesSearchByTag(
 
 		return await packNoteManyForApi(deps, notes, me);
 	} catch (e) {
-		if (e instanceof Error && e.message === 'Injection') return [];
+		if (e instanceof Error && e.message === 'Injection') {
+			return [];
+		}
 		throw e;
 	}
 }
@@ -1163,7 +1221,9 @@ export async function handleApiNotesTimeline(
 				excludePureRenotes: !params.withRenotes,
 				noteFilter: (note) => {
 					if (note.reply?.visibility === 'followers') {
-						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) {
+							return false;
+						}
 					}
 
 					return true;
@@ -1210,7 +1270,9 @@ export async function handleApiNotesUserListTimeline(
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
-	if (list == null) throw notesUserListTimelineNoSuchListError();
+	if (list == null) {
+		throw notesUserListTimelineNoSuchListError();
+	}
 
 	const mutedChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 
@@ -1251,7 +1313,9 @@ export async function handleApiNotesPollsRecommendation(
 		offset: params.offset,
 	});
 
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	const notes = await listNotesByIdsFromDatabase(deps.db, noteIds);
 	notes.sort((a, b) => b.id.localeCompare(a.id));

@@ -70,11 +70,14 @@ import { parseHashtagQuery } from '@/features/search/hashtag-query.js';
 import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
-const props = withDefaults(defineProps<{
-	query?: string;
-}>(), {
-	query: '',
-});
+const props = withDefaults(
+	defineProps<{
+		query?: string;
+	}>(),
+	{
+		query: '',
+	},
+);
 
 const key = ref(0);
 const paginator = shallowRef<Paginator<'notes/search-by-tag'> | null>(null);
@@ -100,22 +103,26 @@ const { model: pollsFilter } = useMkSelect({ items: booleanFilterDef, initialVal
 
 const tags = computed(() => parseHashtagQuery(tagsInput.value));
 
-const toBooleanFilter = (value: BooleanFilter): boolean | null => value === 'all' ? null : value === 'include';
+const toBooleanFilter = (value: BooleanFilter): boolean | null => (value === 'all' ? null : value === 'include');
 
 function search() {
-	if (tags.value == null) return;
+	if (tags.value == null) {
+		return;
+	}
 
-	paginator.value = markRaw(new Paginator('notes/search-by-tag', {
-		limit: 10,
-		params: {
-			// 外側が OR、内側が AND。ここでは 1 組だけを送る。
-			query: [tags.value],
-			withFiles: filesFilter.value === 'include',
-			reply: toBooleanFilter(repliesFilter.value),
-			renote: toBooleanFilter(renotesFilter.value),
-			poll: toBooleanFilter(pollsFilter.value),
-		},
-	}));
+	paginator.value = markRaw(
+		new Paginator('notes/search-by-tag', {
+			limit: 10,
+			params: {
+				// 外側が OR、内側が AND。ここでは 1 組だけを送る。
+				query: [tags.value],
+				withFiles: filesFilter.value === 'include',
+				reply: toBooleanFilter(repliesFilter.value),
+				renote: toBooleanFilter(renotesFilter.value),
+				poll: toBooleanFilter(pollsFilter.value),
+			},
+		}),
+	);
 
 	key.value++;
 }

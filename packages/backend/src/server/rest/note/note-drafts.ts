@@ -35,9 +35,11 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isVisibleForMeForApi, packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from './note.js';
+import { isVisibleForMeForApi, packNoteForApi, packNoteManyForApi } from './note.js';
+import type { ApiNoteDependencies } from './note.js';
 import { packDriveFileManyByIdsForApi, packDriveFileManyForApi } from '../drive/drive-file.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
@@ -164,8 +166,12 @@ async function validateNoteDraft(
 	errors: DraftValidationErrorMap,
 ): Promise<void> {
 	if (data.isActuallyScheduled) {
-		if (data.scheduledAt == null) throw errors.scheduledAtRequired;
-		if (data.scheduledAt.getTime() < Date.now()) throw errors.scheduledAtMustBeInFuture;
+		if (data.scheduledAt == null) {
+			throw errors.scheduledAtRequired;
+		}
+		if (data.scheduledAt.getTime() < Date.now()) {
+			throw errors.scheduledAtMustBeInFuture;
+		}
 	}
 
 	if (data.pollExpiresAt != null && data.pollExpiresAt.getTime() < Date.now()) {
@@ -178,53 +184,86 @@ async function validateNoteDraft(
 
 	if (data.fileIds != null && data.fileIds.length > 0) {
 		const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, data.fileIds, me.id);
-		if (files.length !== data.fileIds.length) throw errors.noSuchFile;
+		if (files.length !== data.fileIds.length) {
+			throw errors.noSuchFile;
+		}
 	}
 
 	if (data.renoteId != null) {
 		const renote = await fetchNoteByIdFromDatabase(deps.db, data.renoteId);
-		if (renote == null) throw errors.noSuchRenoteTarget;
-		if (isRenote(renote) && !isQuote(renote)) throw errors.cannotReRenote;
+		if (renote == null) {
+			throw errors.noSuchRenoteTarget;
+		}
+		if (isRenote(renote) && !isQuote(renote)) {
+			throw errors.cannotReRenote;
+		}
 
 		if (renote.userId !== me.id) {
 			const blockExist = await blockingExistsInDatabase(deps.db, renote.userId, me.id);
-			if (blockExist) throw errors.youHaveBeenBlocked;
+			if (blockExist) {
+				throw errors.youHaveBeenBlocked;
+			}
 		}
 
-		if (renote.visibility === 'followers' && renote.userId !== me.id) throw errors.cannotRenoteDueToVisibility;
-		if (renote.visibility === 'specified') throw errors.cannotRenoteDueToVisibility;
+		if (renote.visibility === 'followers' && renote.userId !== me.id) {
+			throw errors.cannotRenoteDueToVisibility;
+		}
+		if (renote.visibility === 'specified') {
+			throw errors.cannotRenoteDueToVisibility;
+		}
 
 		if (renote.channelId && renote.channelId !== data.channelId) {
 			const renoteChannel = await fetchChannelByIdFromDatabase(deps.db, renote.channelId);
-			if (renoteChannel == null) throw errors.noSuchChannel;
-			if (!renoteChannel.allowRenoteToExternal) throw errors.cannotRenoteToExternal;
+			if (renoteChannel == null) {
+				throw errors.noSuchChannel;
+			}
+			if (!renoteChannel.allowRenoteToExternal) {
+				throw errors.cannotRenoteToExternal;
+			}
 		}
 	}
 
 	if (data.replyId != null) {
 		const reply = await fetchNoteByIdFromDatabase(deps.db, data.replyId);
-		if (reply == null) throw errors.noSuchReplyTarget;
-		if (isRenote(reply) && !isQuote(reply)) throw errors.cannotReplyToPureRenote;
-		if (!(await isVisibleForMeForApi(deps, reply, me.id))) throw errors.cannotReplyToInvisibleNote;
-		if (reply.visibility === 'specified' && data.visibility !== 'specified')
+		if (reply == null) {
+			throw errors.noSuchReplyTarget;
+		}
+		if (isRenote(reply) && !isQuote(reply)) {
+			throw errors.cannotReplyToPureRenote;
+		}
+		if (!(await isVisibleForMeForApi(deps, reply, me.id))) {
+			throw errors.cannotReplyToInvisibleNote;
+		}
+		if (reply.visibility === 'specified' && data.visibility !== 'specified') {
 			throw errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility;
+		}
 
 		if (reply.userId !== me.id) {
 			const blockExist = await blockingExistsInDatabase(deps.db, reply.userId, me.id);
-			if (blockExist) throw errors.youHaveBeenBlocked;
+			if (blockExist) {
+				throw errors.youHaveBeenBlocked;
+			}
 		}
 	}
 
 	if (data.channelId != null) {
 		const channel = await fetchChannelByIdFromDatabase(deps.db, data.channelId);
-		if (channel == null || channel.isArchived) throw errors.noSuchChannel;
+		if (channel == null || channel.isArchived) {
+			throw errors.noSuchChannel;
+		}
 	}
 }
 
 async function scheduleNoteDraft(deps: ApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
-	if (!draft.isActuallyScheduled) return;
-	if (draft.scheduledAt == null) return;
-	if (draft.scheduledAt.getTime() <= Date.now()) return;
+	if (!draft.isActuallyScheduled) {
+		return;
+	}
+	if (draft.scheduledAt == null) {
+		return;
+	}
+	if (draft.scheduledAt.getTime() <= Date.now()) {
+		return;
+	}
 
 	const delay = draft.scheduledAt.getTime() - Date.now();
 	await deps.postScheduledNoteQueue.add(
@@ -249,7 +288,9 @@ async function scheduleNoteDraft(deps: ApiNoteDraftDependencies, draft: MiNoteDr
 async function clearNoteDraftSchedule(deps: ApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
 	if (draft.scheduledAt != null) {
 		const job = await deps.postScheduledNoteQueue.getJob(`scheduled-${draft.id}-${draft.scheduledAt.getTime()}`);
-		if (job != null && !(await job.isActive())) await job.remove();
+		if (job != null && !(await job.isActive())) {
+			await job.remove();
+		}
 	}
 
 	// 古い revision は worker が拒否するため、リクエスト処理でキュー全体を走査しない。
@@ -277,7 +318,9 @@ async function packNoteDraftForApi(
 		try {
 			return await promise;
 		} catch (err) {
-			if (isEntityNotFoundError(err)) return null;
+			if (isEntityNotFoundError(err)) {
+				return null;
+			}
 			throw err;
 		}
 	}
@@ -348,7 +391,9 @@ async function packNoteDraftManyForApi(
 	drafts: MiNoteDraft[],
 	me: { id: string } | null | undefined,
 ): Promise<Packed<'NoteDraft'>[]> {
-	if (drafts.length === 0) return [];
+	if (drafts.length === 0) {
+		return [];
+	}
 
 	const userSources = [...new Set(drafts.map((draft) => draft.userId))];
 	const fileIds = [...new Set(drafts.flatMap((draft) => draft.fileIds))];
@@ -569,7 +614,9 @@ export async function handleApiNotesDraftsUpdate(
 	const params = parseApiParams(notesDraftsUpdateParamDef, body);
 
 	const existing = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
-	if (existing == null) throw draftNoSuchNoteDraftError();
+	if (existing == null) {
+		throw draftNoSuchNoteDraftError();
+	}
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!existing.isActuallyScheduled && params.isActuallyScheduled) {
@@ -732,7 +779,9 @@ export async function handleApiNotesDraftsDelete(
 ): Promise<void> {
 	const params = parseApiParams(notesDraftsDeleteParamDef, body);
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
-	if (draft == null) throw draftNoSuchNoteDraftError();
+	if (draft == null) {
+		throw draftNoSuchNoteDraftError();
+	}
 
 	await deleteNoteDraftByIdFromDatabase(deps.db, draft.id);
 	await clearNoteDraftSchedule(deps, draft);

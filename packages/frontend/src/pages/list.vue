@@ -49,47 +49,63 @@ function fetchList(): void {
 	misskeyApi('users/lists/show', {
 		listId: props.listId,
 		forPublic: true,
-	}).then(_list => {
-		list.value = _list;
-		if (_list.userIds == null || _list.userIds.length === 0) return;
-		misskeyApi('users/show', {
-			userIds: _list.userIds,
-		}).then(_users => {
-			users.value = _users;
+	})
+		.then((_list) => {
+			list.value = _list;
+			if (_list.userIds == null || _list.userIds.length === 0) {
+				return;
+			}
+			misskeyApi('users/show', {
+				userIds: _list.userIds,
+			}).then((_users) => {
+				users.value = _users;
+			});
+		})
+		.catch((err) => {
+			error.value = err;
 		});
-	}).catch(err => {
-		error.value = err;
-	});
 }
 
 function like() {
-	if (list.value == null) return;
+	if (list.value == null) {
+		return;
+	}
 	os.apiWithDialog('users/lists/favorite', {
 		listId: list.value.id,
 	}).then(() => {
-		if (list.value == null) return;
+		if (list.value == null) {
+			return;
+		}
 		list.value.isLiked = true;
-		list.value.likedCount = (list.value.likedCount != null ? list.value.likedCount + 1 : 1);
+		list.value.likedCount = list.value.likedCount != null ? list.value.likedCount + 1 : 1;
 	});
 }
 
 function unlike() {
-	if (list.value == null) return;
+	if (list.value == null) {
+		return;
+	}
 	os.apiWithDialog('users/lists/unfavorite', {
 		listId: list.value.id,
 	}).then(() => {
-		if (list.value == null) return;
+		if (list.value == null) {
+			return;
+		}
 		list.value.isLiked = false;
-		list.value.likedCount = (list.value.likedCount != null ? Math.max(0, list.value.likedCount - 1) : 0);
+		list.value.likedCount = list.value.likedCount != null ? Math.max(0, list.value.likedCount - 1) : 0;
 	});
 }
 
 async function create() {
-	if (list.value == null) return;
+	if (list.value == null) {
+		return;
+	}
 	const { canceled, result: name } = await os.inputText({
 		title: i18n.ts.enterListName,
 	});
-	if (canceled || name == null) return;
+	if (canceled || name == null) {
+		return;
+	}
 	await os.apiWithDialog('users/lists/create-from-public', { name: name, listId: list.value.id });
 }
 

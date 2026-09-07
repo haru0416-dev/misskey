@@ -14,17 +14,27 @@ import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
 import { createAiService } from '@/core/ai/AiService.js';
-import { createDownloadService, type DownloadService } from '@/core/net/DownloadService.js';
-import { createFileInfoService, type FileInfoService } from '@/core/drive/FileInfoService.js';
-import { createHttpRequestService, type HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createImageProcessingService, type ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import { createInternalStorageService, type InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import { createLoggerService, type LoggerService } from '@/core/LoggerService.js';
-import { createS3Service, type S3Service } from '@/core/drive/S3Service.js';
-import { createEmailService, type EmailService } from '@/core/email/EmailService.js';
-import { createUserAuthService, type UserAuthService } from '@/core/account/UserAuthService.js';
+import { createDownloadService } from '@/core/net/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
+import { createFileInfoService } from '@/core/drive/FileInfoService.js';
+import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import { createInternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import { createLoggerService } from '@/core/LoggerService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
+import { createS3Service } from '@/core/drive/S3Service.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
+import { createEmailService } from '@/core/email/EmailService.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import { createUserAuthService } from '@/core/account/UserAuthService.js';
+import type { UserAuthService } from '@/core/account/UserAuthService.js';
 import { createUtilityService } from '@/core/net/UtilityService.js';
-import { createWebAuthnService, type WebAuthnService } from '@/core/account/WebAuthnService.js';
+import { createWebAuthnService } from '@/core/account/WebAuthnService.js';
+import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import {
 	createDbQueue,
 	createDeliverQueue,
@@ -36,25 +46,25 @@ import {
 	createSystemQueue,
 	createSystemWebhookDeliverQueue,
 	createUserWebhookDeliverQueue,
-	type DbQueue,
-	type DeliverQueue,
-	type EndedPollNotificationQueue,
-	type InboxQueue,
-	type ObjectStorageQueue,
-	type PostScheduledNoteQueue,
-	type RelationshipQueue,
-	type SystemQueue,
-	type SystemWebhookDeliverQueue,
-	type UserWebhookDeliverQueue,
 } from '@/core/queue/queues.js';
-import { createVideoProcessingService, type VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import {
-	createChartWriters,
-	saveChartWriters,
-	startChartWriterSaveInterval,
-	type ChartWriters,
-} from '@/server/chart-runtime.js';
+import type {
+	DbQueue,
+	DeliverQueue,
+	EndedPollNotificationQueue,
+	InboxQueue,
+	ObjectStorageQueue,
+	PostScheduledNoteQueue,
+	RelationshipQueue,
+	SystemQueue,
+	SystemWebhookDeliverQueue,
+	UserWebhookDeliverQueue,
+} from '@/core/queue/queues.js';
+import { createVideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/server/chart-runtime.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -225,9 +235,13 @@ function shouldUseBunSql(): boolean {
 	if (driver != null && driver !== '' && driver !== 'pg' && driver !== 'bun-sql') {
 		throw new Error(`Unknown MK_DB_DRIVER: ${driver} (expected 'pg' or 'bun-sql')`);
 	}
-	if (driver === 'pg') return false;
+	if (driver === 'pg') {
+		return false;
+	}
 	if (typeof Bun === 'undefined') {
-		if (driver === 'bun-sql') throw new Error('MK_DB_DRIVER=bun-sql requires the bun runtime');
+		if (driver === 'bun-sql') {
+			throw new Error('MK_DB_DRIVER=bun-sql requires the bun runtime');
+		}
 		return false;
 	}
 	return true;
@@ -327,7 +341,9 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 			redisForReactions,
 			chartWriters,
 			dispose: async () => {
-				if (disposed) return;
+				if (disposed) {
+					return;
+				}
 				disposed = true;
 				clearInterval(chartWriterSaveIntervalId);
 				try {

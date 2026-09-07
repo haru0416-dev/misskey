@@ -88,31 +88,39 @@ const props = defineProps<{
 
 const post = ref<Misskey.entities.GalleryPost | null>(null);
 const error = ref<unknown>(null);
-const otherPostsPaginator = markRaw(new Paginator('users/gallery/posts', {
-	limit: 6,
-	computedParams: computed(() => ({
-		userId: post.value!.user.id,
-	})),
-}));
+const otherPostsPaginator = markRaw(
+	new Paginator('users/gallery/posts', {
+		limit: 6,
+		computedParams: computed(() => ({
+			userId: post.value!.user.id,
+		})),
+	}),
+);
 
 function fetchPost() {
 	post.value = null;
 	misskeyApi('gallery/posts/show', {
 		postId: props.postId,
-	}).then(_post => {
-		post.value = _post;
-	}).catch(_error => {
-		error.value = _error;
-	});
+	})
+		.then((_post) => {
+			post.value = _post;
+		})
+		.catch((_error) => {
+			error.value = _error;
+		});
 }
 
 function copyLink() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 	copyToClipboard(`${url}/gallery/${post.value.id}`);
 }
 
 function share() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 	navigator.share({
 		title: post.value.title,
 		...(post.value.description == null ? {} : { text: post.value.description }),
@@ -121,7 +129,9 @@ function share() {
 }
 
 function shareWithNote() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 	os.post({
 		initialText: `${post.value.title} ${url}/gallery/${post.value.id}`,
 		instant: true,
@@ -129,7 +139,9 @@ function shareWithNote() {
 }
 
 function like() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 	os.apiWithDialog('gallery/posts/like', {
 		postId: props.postId,
 	}).then(() => {
@@ -139,12 +151,16 @@ function like() {
 }
 
 async function unlike() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 	const confirm = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.unlikeConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	os.apiWithDialog('gallery/posts/unlike', {
 		postId: props.postId,
 	}).then(() => {
@@ -162,20 +178,28 @@ function edit() {
 }
 
 async function reportAbuse() {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 
 	const pageUrl = `${url}/gallery/${post.value.id}`;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
-		user: post.value.user,
-		initialComment: `Post: ${pageUrl}\n-----\n`,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
+		{
+			user: post.value.user,
+			initialComment: `Post: ${pageUrl}\n-----\n`,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function showMenu(ev: PointerEvent) {
-	if (!post.value) return;
+	if (!post.value) {
+		return;
+	}
 
 	const menuItems: MenuItem[] = [];
 
@@ -187,21 +211,29 @@ function showMenu(ev: PointerEvent) {
 		});
 
 		if ($i.isModerator || $i.isAdmin) {
-			menuItems.push({
-				type: 'divider',
-			}, {
-				icon: 'ti ti-trash',
-				text: i18n.ts.delete,
-				danger: true,
-				action: () => os.confirm({
-					type: 'warning',
-					text: i18n.ts.deleteConfirm,
-				}).then(({ canceled }) => {
-					if (canceled || !post.value) return;
+			menuItems.push(
+				{
+					type: 'divider',
+				},
+				{
+					icon: 'ti ti-trash',
+					text: i18n.ts.delete,
+					danger: true,
+					action: () =>
+						os
+							.confirm({
+								type: 'warning',
+								text: i18n.ts.deleteConfirm,
+							})
+							.then(({ canceled }) => {
+								if (canceled || !post.value) {
+									return;
+								}
 
-					os.apiWithDialog('gallery/posts/delete', { postId: post.value.id });
-				}),
-			});
+								os.apiWithDialog('gallery/posts/delete', { postId: post.value.id });
+							}),
+				},
+			);
 		}
 	}
 
@@ -216,9 +248,11 @@ const headerTabs = computed(() => []);
 
 definePage(() => ({
 	title: post.value ? post.value.title : i18n.ts.gallery,
-	...post.value ? {
-		avatar: post.value.user,
-	} : {},
+	...(post.value
+		? {
+				avatar: post.value.user,
+			}
+		: {}),
 }));
 </script>
 

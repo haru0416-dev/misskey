@@ -22,7 +22,7 @@ import { WorkerMultiDispatch } from '@shared/utility/worker-multi-dispatch.js';
 
 const isTest = import.meta.env.MODE === 'test' || window.localStorage.getItem('__MISSKEY_E2E_TEST__') === 'true';
 
-const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resolve => {
+const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>((resolve) => {
 	if (isTest) {
 		const canvas = window.document.createElement('canvas');
 		canvas.width = 64;
@@ -32,12 +32,11 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 	}
 
 	const testWorker = new TestWebGL2();
-	testWorker.addEventListener('message', event => {
+	testWorker.addEventListener('message', (event) => {
 		if (event.data.result) {
-			resolve(new WorkerMultiDispatch(
-				() => new DrawBlurhash(),
-				Math.max(1, Math.min(navigator.hardwareConcurrency - 1, 4)),
-			));
+			resolve(
+				new WorkerMultiDispatch(() => new DrawBlurhash(), Math.max(1, Math.min(navigator.hardwareConcurrency - 1, 4))),
+			);
 		} else {
 			const canvas = window.document.createElement('canvas');
 			canvas.width = 64;
@@ -56,18 +55,21 @@ import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
 import { genId } from '@/utility/id.js';
 
-const props = withDefaults(defineProps<{
-	blurhash: string | null;
-	onlyAvgColor?: boolean;
-	width?: number;
-	height?: number;
-	show?: boolean;
-}>(), {
-	onlyAvgColor: false,
-	width: 64,
-	height: 64,
-	show: true,
-});
+const props = withDefaults(
+	defineProps<{
+		blurhash: string | null;
+		onlyAvgColor?: boolean;
+		width?: number;
+		height?: number;
+		show?: boolean;
+	}>(),
+	{
+		onlyAvgColor: false,
+		width: 64,
+		height: 64,
+		show: true,
+	},
+);
 
 const canvas = useTemplateRef('canvas');
 const canvasWidth = ref(64);
@@ -76,14 +78,20 @@ const viewId = genId();
 const bitmapTmp = shallowRef<CanvasImageSource>();
 let disposed = false;
 
-watch([() => props.width, () => props.height], () => {
-	const dimensions = calculateBlurhashDimensions(props.width, props.height);
-	canvasWidth.value = dimensions.canvasWidth;
-	canvasHeight.value = dimensions.canvasHeight;
-}, { immediate: true });
+watch(
+	[() => props.width, () => props.height],
+	() => {
+		const dimensions = calculateBlurhashDimensions(props.width, props.height);
+		canvasWidth.value = dimensions.canvasWidth;
+		canvasHeight.value = dimensions.canvasHeight;
+	},
+	{ immediate: true },
+);
 
 function closeBitmap(bitmap: CanvasImageSource | undefined) {
-	if (typeof ImageBitmap !== 'undefined' && bitmap instanceof ImageBitmap) bitmap.close();
+	if (typeof ImageBitmap !== 'undefined' && bitmap instanceof ImageBitmap) {
+		bitmap.close();
+	}
 }
 
 function drawImage(bitmap: CanvasImageSource) {
@@ -107,18 +115,26 @@ function drawImage(bitmap: CanvasImageSource) {
 
 function drawAvg() {
 	const ctx = canvas.value?.getContext('2d');
-	if (ctx == null) return;
+	if (ctx == null) {
+		return;
+	}
 	ctx.fillStyle = (props.blurhash != null && extractAvgColorFromBlurhash(props.blurhash)) || '#888';
 	ctx.fillRect(0, 0, canvasWidth.value, canvasHeight.value);
 }
 
 async function draw() {
-	if (isTest && props.blurhash == null) return;
+	if (isTest && props.blurhash == null) {
+		return;
+	}
 	drawAvg();
-	if (props.blurhash == null || props.onlyAvgColor) return;
+	if (props.blurhash == null || props.onlyAvgColor) {
+		return;
+	}
 
 	const work = await canvasPromise;
-	if (disposed) return;
+	if (disposed) {
+		return;
+	}
 	if (work instanceof WorkerMultiDispatch) {
 		work.postMessage({ id: viewId, hash: props.blurhash }, undefined);
 	} else {
@@ -132,30 +148,47 @@ async function draw() {
 }
 
 function workerOnMessage(event: MessageEvent) {
-	if (event.data.id !== viewId) return;
+	if (event.data.id !== viewId) {
+		return;
+	}
 	drawImage(event.data.bitmap as ImageBitmap);
 }
 
-void canvasPromise.then(work => {
-	if (disposed) return;
-	if (work instanceof WorkerMultiDispatch) work.addListener(workerOnMessage);
+void canvasPromise.then((work) => {
+	if (disposed) {
+		return;
+	}
+	if (work instanceof WorkerMultiDispatch) {
+		work.addListener(workerOnMessage);
+	}
 	void draw();
 });
 
-watch(() => props.blurhash, () => void draw());
-watch(() => props.onlyAvgColor, () => void draw());
+watch(
+	() => props.blurhash,
+	() => void draw(),
+);
+watch(
+	() => props.onlyAvgColor,
+	() => void draw(),
+);
 
 onMounted(() => {
-	if (bitmapTmp.value != null) drawImage(bitmapTmp.value);
-	else void draw();
+	if (bitmapTmp.value != null) {
+		drawImage(bitmapTmp.value);
+	} else {
+		void draw();
+	}
 });
 
 onUnmounted(() => {
 	disposed = true;
 	closeBitmap(bitmapTmp.value);
 	bitmapTmp.value = undefined;
-	void canvasPromise.then(work => {
-		if (work instanceof WorkerMultiDispatch) work.removeListener(workerOnMessage);
+	void canvasPromise.then((work) => {
+		if (work instanceof WorkerMultiDispatch) {
+			work.removeListener(workerOnMessage);
+		}
 	});
 });
 </script>

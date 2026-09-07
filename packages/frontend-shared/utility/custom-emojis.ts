@@ -20,7 +20,9 @@ type EmojiSimpleCandidate = Record<string, unknown> & {
 };
 
 export function isEmojiSimple(value: unknown): value is Misskey.entities.EmojiSimple {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
 
 	const emoji = value as EmojiSimpleCandidate;
 	return (

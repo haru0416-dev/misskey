@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, sql, type SQL } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { userProfile, type UserProfileInsert, type UserProfileRow } from '@/db/schema/user-profile.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import type { UserProfileInsert, UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -96,7 +98,9 @@ export async function listUserProfilesByUserIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userIds: MiUser['id'][],
 ): Promise<MiUserProfile[]> {
-	if (userIds.length === 0) return [];
+	if (userIds.length === 0) {
+		return [];
+	}
 
 	const statement = preparedQueryFor(db, 'userProfile:byUserIds', () =>
 		db

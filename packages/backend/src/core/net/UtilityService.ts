@@ -16,7 +16,9 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	}
 
 	function isSelfHost(host: string | null): boolean {
-		if (host == null) return true;
+		if (host == null) {
+			return true;
+		}
 		return toPuny(config.runtime.host) === toPuny(host);
 	}
 
@@ -32,17 +34,23 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	}
 
 	function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-		if (host == null) return false;
+		if (host == null) {
+			return false;
+		}
 		return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
 	function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-		if (!silencedHosts || host == null) return false;
+		if (!silencedHosts || host == null) {
+			return false;
+		}
 		return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
 	function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-		if (!silencedHosts || host == null) return false;
+		if (!silencedHosts || host == null) {
+			return false;
+		}
 		return silencedHosts.includes(host.toLowerCase());
 	}
 
@@ -58,14 +66,21 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	}
 
 	function isFederationAllowedHost(host: string): boolean {
-		if (isSelfHost(host)) return true;
-		if (meta.federation === 'none') return false;
+		if (isSelfHost(host)) {
+			return true;
+		}
+		if (meta.federation === 'none') {
+			return false;
+		}
 		if (
 			meta.federation === 'specified' &&
 			!meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`))
-		)
+		) {
 			return false;
-		if (isBlockedHost(meta.blockedHosts, host)) return false;
+		}
+		if (isBlockedHost(meta.blockedHosts, host)) {
+			return false;
+		}
 
 		return true;
 	}
@@ -78,20 +93,21 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	function isDeliverSuspendedSoftware(
 		software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>,
 	): SoftwareSuspension | undefined {
-		if (software.softwareName == null) return undefined;
+		if (software.softwareName == null) {
+			return undefined;
+		}
 		if (software.softwareVersion == null) {
 			// バージョン不明のソフトウェアは、versionRange が * の場合だけ停止対象にする。
 			return meta.deliverSuspendedSoftware.find(
 				(x) => x.software === software.softwareName && x.versionRange.trim() === '*',
 			);
-		} else {
-			const softwareVersion = software.softwareVersion;
-			return meta.deliverSuspendedSoftware.find(
-				(x) =>
-					x.software === software.softwareName &&
-					semver.satisfies(softwareVersion, x.versionRange, { includePrerelease: true }),
-			);
 		}
+		const softwareVersion = software.softwareVersion;
+		return meta.deliverSuspendedSoftware.find(
+			(x) =>
+				x.software === software.softwareName &&
+				semver.satisfies(softwareVersion, x.versionRange, { includePrerelease: true }),
+		);
 	}
 
 	return {

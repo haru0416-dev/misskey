@@ -45,7 +45,9 @@ mainRouter.addListener('forcePush', (ctx) => {
 });
 
 mainRouter.addListener('change', (ctx) => {
-	if (_DEV_) console.log('mainRouter: change', ctx.fullPath);
+	if (_DEV_) {
+		console.log('mainRouter: change', ctx.fullPath);
+	}
 	analytics.page({
 		path: ctx.fullPath,
 		title: ctx.fullPath,

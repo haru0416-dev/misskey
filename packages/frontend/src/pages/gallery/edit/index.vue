@@ -18,17 +18,16 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 
 const props = defineProps<{
-	postId?: string,
+	postId?: string;
 }>();
 
 function _fetch_() {
 	if (props.postId == null) {
 		return Promise.resolve(null);
-	} else {
-		return misskeyApi('gallery/posts/show', {
-			postId: props.postId,
-		});
 	}
+	return misskeyApi('gallery/posts/show', {
+		postId: props.postId,
+	});
 }
 
 definePage(() => ({

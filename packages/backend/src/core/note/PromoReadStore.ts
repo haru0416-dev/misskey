@@ -4,7 +4,8 @@
  */
 
 import { and, eq } from 'drizzle-orm';
-import { promoRead, type PromoReadInsert } from '@/db/schema/promo-read.js';
+import { promoRead } from '@/db/schema/promo-read.js';
+import type { PromoReadInsert } from '@/db/schema/promo-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';

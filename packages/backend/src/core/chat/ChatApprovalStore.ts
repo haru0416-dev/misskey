@@ -4,7 +4,8 @@
  */
 
 import { and, eq, or } from 'drizzle-orm';
-import { chatApproval, type ChatApprovalInsert, type ChatApprovalRow } from '@/db/schema/chat-approval.js';
+import { chatApproval } from '@/db/schema/chat-approval.js';
+import type { ChatApprovalInsert, ChatApprovalRow } from '@/db/schema/chat-approval.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 

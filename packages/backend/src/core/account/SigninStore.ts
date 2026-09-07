@@ -4,7 +4,8 @@
  */
 
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm';
-import { signin, type SigninInsert, type SigninRow } from '@/db/schema/signin.js';
+import { signin } from '@/db/schema/signin.js';
+import type { SigninInsert, SigninRow } from '@/db/schema/signin.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiUser } from '@/models/User.js';
@@ -22,14 +23,15 @@ function signinHistoryCondition(userId: MiUser['id'], sinceId?: string | null, u
 		return and(eq(signin.userId, userId), gt(signin.id, sinceId));
 	} else if (untilId) {
 		return and(eq(signin.userId, userId), lt(signin.id, untilId));
-	} else {
-		return eq(signin.userId, userId);
 	}
+	return eq(signin.userId, userId);
 }
 
 export async function createSigninInDatabase(db: MiDrizzleDatabase, data: SigninInsert): Promise<MiSignin> {
 	const [row] = await db.insert(signin).values(data).returning();
-	if (row == null) throw new Error('Signin row was not created');
+	if (row == null) {
+		throw new Error('Signin row was not created');
+	}
 
 	return deserializeSignin(row);
 }

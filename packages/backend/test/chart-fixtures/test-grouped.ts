@@ -36,7 +36,9 @@ export default class TestGroupedChart extends Chart<typeof schema> {
 
 	@bindThis
 	public async increment(group: string): Promise<void> {
-		if (this.total[group] == null) this.total[group] = 0;
+		if (this.total[group] == null) {
+			this.total[group] = 0;
+		}
 
 		this.total[group]++;
 

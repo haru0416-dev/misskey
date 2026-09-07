@@ -6,5 +6,7 @@
 export async function runWriteTasks(tasks: Iterable<() => Promise<unknown>>): Promise<void> {
 	const results = await Promise.allSettled(Array.from(tasks, (task) => task()));
 	const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-	if (failed != null) throw failed.reason;
+	if (failed != null) {
+		throw failed.reason;
+	}
 }

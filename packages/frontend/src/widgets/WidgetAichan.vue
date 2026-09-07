@@ -32,25 +32,26 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const live2d = useTemplateRef('live2d');
 
 const moveCursor = (ev: MouseEvent) => {
-	if (!live2d.value || !live2d.value.contentWindow) return;
+	if (!live2d.value || !live2d.value.contentWindow) {
+		return;
+	}
 
 	const iframeRect = live2d.value.getBoundingClientRect();
-	live2d.value.contentWindow.postMessage({
-		type: 'moveCursor',
-		body: {
-			x: ev.clientX - iframeRect.left,
-			y: ev.clientY - iframeRect.top,
+	live2d.value.contentWindow.postMessage(
+		{
+			type: 'moveCursor',
+			body: {
+				x: ev.clientX - iframeRect.left,
+				y: ev.clientY - iframeRect.top,
+			},
 		},
-	}, '*');
+		'*',
+	);
 };
 
 const onMousemove = throttleByAnimationFrame(moveCursor);

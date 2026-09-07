@@ -20,7 +20,9 @@ export async function getStoragePersistenceStatusRef() {
 }
 
 export async function enableStoragePersistence() {
-	if (!storagePersistenceSupported) return;
+	if (!storagePersistenceSupported) {
+		return;
+	}
 	try {
 		const persisted = await navigator.storage.persist();
 		if (persisted) {

@@ -77,13 +77,17 @@ export class FileServerFileResolver {
 	public async resolveFileByAccessKey(key: string): Promise<FileResolveResult> {
 		const file = await fetchDriveFileByAccessKeyFromDatabase(this.db, key);
 
-		if (file == null) return { kind: 'not-found' };
+		if (file == null) {
+			return { kind: 'not-found' };
+		}
 
 		const isThumbnail = file.thumbnailAccessKey === key;
 		const isWebpublic = file.webpublicAccessKey === key;
 
 		if (!file.storedInternal) {
-			if (!(file.isLink && file.uri)) return { kind: 'unavailable' };
+			if (!(file.isLink && file.uri)) {
+				return { kind: 'unavailable' };
+			}
 			const result = await this.downloadAndDetectTypeFromUrl(file.uri);
 			const { kind: _kind, ...downloaded } = result;
 			file.size = (await fs.promises.stat(downloaded.path)).size; // DB file.sizeは正確とは限らないので

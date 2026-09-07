@@ -55,15 +55,18 @@ function selectButton(ev: PointerEvent) {
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
 	}).then(async (file) => {
-		if (!file) return;
-		if (props.validate && !await props.validate(file)) return;
+		if (!file) {
+			return;
+		}
+		if (props.validate && !(await props.validate(file))) {
+			return;
+		}
 
 		emit('update', file);
 		fileName.value = file.name;
 		fileUrl.value = file.url;
 	});
 }
-
 </script>
 
 <style module>

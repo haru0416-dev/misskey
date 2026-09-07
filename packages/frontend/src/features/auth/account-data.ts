@@ -16,7 +16,9 @@ type AccountWithTokenCandidate = Record<string, unknown> & {
 };
 
 export function isAccountWithToken(value: unknown): value is AccountWithToken {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return false;
+	}
 
 	const account = value as AccountWithTokenCandidate;
 	return (

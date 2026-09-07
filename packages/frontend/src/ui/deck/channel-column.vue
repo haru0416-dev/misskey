@@ -47,12 +47,13 @@ onMounted(() => {
 	if (props.column.channelId == null) {
 		setChannel();
 	} else if (!props.column.name && props.column.channelId) {
-		misskeyApi('channels/show', { channelId: props.column.channelId })
-			.then(value => updateColumn(props.column.id, { timelineNameCache: value.name }));
+		misskeyApi('channels/show', { channelId: props.column.channelId }).then((value) =>
+			updateColumn(props.column.id, { timelineNameCache: value.name }),
+		);
 	}
 });
 
-watch(soundSetting, v => {
+watch(soundSetting, (v) => {
 	updateColumn(props.column.id, { soundSetting: v });
 });
 
@@ -60,13 +61,16 @@ async function setChannel() {
 	const channels = await favoritedChannelsCache.fetch();
 	const { canceled, result: chosenChannelId } = await os.select({
 		title: i18n.ts.selectChannel,
-		items: channels.map(x => ({
-			value: x.id, label: x.name,
+		items: channels.map((x) => ({
+			value: x.id,
+			label: x.name,
 		})),
-		default: channels.find(x => x.id === props.column.channelId)?.id ?? null,
+		default: channels.find((x) => x.id === props.column.channelId)?.id ?? null,
 	});
-	if (canceled || chosenChannelId == null) return;
-	const chosenChannel = channels.find(x => x.id === chosenChannelId)!;
+	if (canceled || chosenChannelId == null) {
+		return;
+	}
+	const chosenChannel = channels.find((x) => x.id === chosenChannelId)!;
 	updateColumn(props.column.id, {
 		channelId: chosenChannel.id,
 		timelineNameCache: chosenChannel.name,
@@ -74,27 +78,34 @@ async function setChannel() {
 }
 
 async function post() {
-	if (props.column.channelId == null) return;
+	if (props.column.channelId == null) {
+		return;
+	}
 	if (!channel.value || channel.value.id !== props.column.channelId) {
 		channel.value = await misskeyApi('channels/show', {
 			channelId: props.column.channelId,
 		});
 	}
 	const targetChannel = channel.value;
-	if (targetChannel == null) return;
+	if (targetChannel == null) {
+		return;
+	}
 
 	os.post({
 		channel: targetChannel,
 	});
 }
 
-const menu: MenuItem[] = [{
-	icon: 'ti ti-pencil',
-	text: i18n.ts.selectChannel,
-	action: setChannel,
-}, {
-	icon: 'ti ti-bell',
-	text: i18n.ts._deck.newNoteNotificationSettings,
-	action: () => soundSettingsButton(soundSetting),
-}];
+const menu: MenuItem[] = [
+	{
+		icon: 'ti ti-pencil',
+		text: i18n.ts.selectChannel,
+		action: setChannel,
+	},
+	{
+		icon: 'ti ti-bell',
+		text: i18n.ts._deck.newNoteNotificationSettings,
+		action: () => soundSettingsButton(soundSetting),
+	},
+];
 </script>

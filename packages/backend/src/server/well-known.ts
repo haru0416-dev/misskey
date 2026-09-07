@@ -72,7 +72,9 @@ function XRD(...x: { element: string; value?: string; attributes?: Record<string
 }
 
 function wantsXrd(accept: string | undefined): boolean {
-	if (accept == null) return false;
+	if (accept == null) {
+		return false;
+	}
 
 	let xrdQ = -1;
 	let jrdQ = -1;
@@ -83,10 +85,15 @@ function wantsXrd(accept: string | undefined): boolean {
 			.split(';')
 			.map((x) => x.trim());
 		const q = Number(params.find((param) => param.startsWith('q='))?.slice(2) ?? '1');
-		if (!Number.isFinite(q) || q <= 0) continue;
-		if (type === xrd || type === 'application/xml' || type === 'text/xml') xrdQ = Math.max(xrdQ, q);
-		if (type === jrd || type === 'application/json' || type === '*/*' || type === 'application/*')
+		if (!Number.isFinite(q) || q <= 0) {
+			continue;
+		}
+		if (type === xrd || type === 'application/xml' || type === 'text/xml') {
+			xrdQ = Math.max(xrdQ, q);
+		}
+		if (type === jrd || type === 'application/json' || type === '*/*' || type === 'application/*') {
 			jrdQ = Math.max(jrdQ, q);
+		}
 	}
 
 	return xrdQ > jrdQ;
@@ -115,7 +122,9 @@ async function resolveWebFingerUser(deps: WellKnownDependencies, resource: strin
 
 	if (normalized.startsWith(`${deps.config.instance.url.toLowerCase()}/users/`)) {
 		const user = await fetchUserByIdFromDatabase(deps.db, normalized.split('/').pop()!);
-		if (user == null || user.host !== null || user.isSuspended) return null;
+		if (user == null || user.host !== null || user.isSuspended) {
+			return null;
+		}
 		return user;
 	}
 
@@ -126,10 +135,14 @@ async function resolveWebFingerUser(deps: WellKnownDependencies, resource: strin
 				? normalized.slice('acct:'.length)
 				: normalized,
 	);
-	if (acct.host && acct.host !== deps.config.runtime.host.toLowerCase()) return 422;
+	if (acct.host && acct.host !== deps.config.runtime.host.toLowerCase()) {
+		return 422;
+	}
 
 	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, acct.username, null);
-	if (user == null || user.isSuspended) return null;
+	if (user == null || user.isSuspended) {
+		return null;
+	}
 	return user;
 }
 
@@ -177,7 +190,9 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 	app.options('/.well-known/*', () => emptyResponse(204));
 
 	app.get('/.well-known/host-meta', () => {
-		if (deps.meta.federation === 'none') return emptyResponse(403);
+		if (deps.meta.federation === 'none') {
+			return emptyResponse(403);
+		}
 
 		return textResponse(
 			XRD({
@@ -193,7 +208,9 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 	});
 
 	app.get('/.well-known/host-meta.json', () => {
-		if (deps.meta.federation === 'none') return emptyResponse(403);
+		if (deps.meta.federation === 'none') {
+			return emptyResponse(403);
+		}
 
 		return jsonResponse({
 			links: [
@@ -207,7 +224,9 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 	});
 
 	app.get('/.well-known/nodeinfo', () => {
-		if (deps.meta.federation === 'none') return emptyResponse(403);
+		if (deps.meta.federation === 'none') {
+			return emptyResponse(403);
+		}
 
 		return jsonResponse({ links: getNodeinfoLinks(deps.config) });
 	});
@@ -217,14 +236,22 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 	});
 
 	app.get(webFingerPath, async (c) => {
-		if (deps.meta.federation === 'none') return emptyResponse(403);
+		if (deps.meta.federation === 'none') {
+			return emptyResponse(403);
+		}
 
 		const resource = c.req.query('resource');
-		if (resource == null) return emptyResponse(400);
+		if (resource == null) {
+			return emptyResponse(400);
+		}
 
 		const user = await resolveWebFingerUser(deps, resource);
-		if (typeof user === 'number') return emptyResponse(user);
-		if (user == null) return emptyResponse(404);
+		if (typeof user === 'number') {
+			return emptyResponse(user);
+		}
+		if (user == null) {
+			return emptyResponse(404);
+		}
 
 		return webFingerResponse(deps, user, c.req.header('accept'));
 	});

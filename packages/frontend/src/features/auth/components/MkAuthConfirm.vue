@@ -128,7 +128,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 const props = defineProps<{
 	name?: string;
 	icon?: string;
-	permissions?: (typeof Misskey.permissions[number])[];
+	permissions?: (typeof Misskey.permissions)[number][];
 	manualWaiting?: boolean;
 	waitOnDeny?: boolean;
 }>();
@@ -144,7 +144,7 @@ const phase = ref<'accountSelect' | 'consent' | 'success' | 'denied' | 'failed'>
 
 const selectedUser = ref<string | null>(null);
 
-const users = ref(new Map<string, Misskey.entities.UserDetailed & { token: string; }>());
+const users = ref(new Map<string, Misskey.entities.UserDetailed & { token: string }>());
 
 async function init() {
 	waiting.value = true;
@@ -157,7 +157,7 @@ async function init() {
 
 	const accounts = await getAccounts();
 
-	const accountIdsToFetch = accounts.map(a => a.id).filter(id => !users.value.has(id));
+	const accountIdsToFetch = accounts.map((a) => a.id).filter((id) => !users.value.has(id));
 
 	if (accountIdsToFetch.length > 0) {
 		const usersRes = await misskeyApi('users/show', {
@@ -165,11 +165,15 @@ async function init() {
 		});
 
 		for (const user of usersRes) {
-			if (users.value.has(user.id)) continue;
+			if (users.value.has(user.id)) {
+				continue;
+			}
 
-			const account = accounts.find(a => a.id === user.id);
+			const account = accounts.find((a) => a.id === user.id);
 
-			if (!account || account.token == null) continue;
+			if (!account || account.token == null) {
+				continue;
+			}
 
 			users.value.set(user.id, {
 				...user,
@@ -186,37 +190,45 @@ init();
 function clickAddAccount(ev: PointerEvent) {
 	selectedUser.value = null;
 
-	os.popupMenu([{
-		text: i18n.ts.existingAccount,
-		action: () => {
-			getAccountWithSigninDialog().then(async (res) => {
-				if (res != null) {
-					os.success();
-					await init();
-					if (users.value.has(res.id)) {
-						selectedUser.value = res.id;
-					}
-				}
-			});
-		},
-	}, {
-		text: i18n.ts.createAccount,
-		action: () => {
-			getAccountWithSignupDialog().then(async (res) => {
-				if (res != null) {
-					os.success();
-					await init();
-					if (users.value.has(res.id)) {
-						selectedUser.value = res.id;
-					}
-				}
-			});
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.existingAccount,
+				action: () => {
+					getAccountWithSigninDialog().then(async (res) => {
+						if (res != null) {
+							os.success();
+							await init();
+							if (users.value.has(res.id)) {
+								selectedUser.value = res.id;
+							}
+						}
+					});
+				},
+			},
+			{
+				text: i18n.ts.createAccount,
+				action: () => {
+					getAccountWithSignupDialog().then(async (res) => {
+						if (res != null) {
+							os.success();
+							await init();
+							if (users.value.has(res.id)) {
+								selectedUser.value = res.id;
+							}
+						}
+					});
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 function clickChooseAccount() {
-	if (selectedUser.value === null) return;
+	if (selectedUser.value === null) {
+		return;
+	}
 
 	phase.value = 'consent';
 }
@@ -227,7 +239,9 @@ function clickBackToAccountSelect() {
 }
 
 function clickCancel() {
-	if (selectedUser.value === null) return;
+	if (selectedUser.value === null) {
+		return;
+	}
 
 	const user = users.value.get(selectedUser.value)!;
 
@@ -240,7 +254,9 @@ function clickCancel() {
 }
 
 async function clickAccept() {
-	if (selectedUser.value === null) return;
+	if (selectedUser.value === null) {
+		return;
+	}
 
 	const user = users.value.get(selectedUser.value)!;
 

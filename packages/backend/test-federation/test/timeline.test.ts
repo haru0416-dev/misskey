@@ -6,13 +6,12 @@ import {
 	fetchAdmin,
 	isNoteUpdatedEventFired,
 	isFired,
-	type LoginUser,
-	type Request,
 	resolveRemoteUser,
 	sleep,
 	createRole,
 	waitFor,
 } from './utils.js';
+import type { LoginUser, Request } from './utils.js';
 
 const bAdmin = await fetchAdmin('b.test');
 
@@ -112,6 +111,7 @@ describe('Timeline', () => {
 			const endpointFired = notes.every(({ uri }) => uri !== `https://a.test/notes/${note!.id}`);
 			strictEqual(endpointFired, true);
 		}
+		return noteInB;
 	}
 
 	describe('homeTimeline', () => {
@@ -152,11 +152,37 @@ describe('Timeline', () => {
 
 			test("Receive remote followee's visible specified-only reply to invisible specified-only Note", async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a', visibility: 'specified' })).createdNote;
-				await postAndCheckReception(homeTimeline, true, {
+				const reply = await postAndCheckReception(homeTimeline, true, {
 					replyId: note.id,
 					visibility: 'specified',
 					visibleUserIds: [bobInA.id],
 				});
+				strictEqual(reply?.replyId, null);
+			});
+
+			test('Preserve the reply relation to a visible specified-only Note', async () => {
+				const text = crypto.randomUUID();
+				const parent = (
+					await alice.client.request('notes/create', {
+						text,
+						visibility: 'specified',
+						visibleUserIds: [bobInA.id],
+					})
+				).createdNote;
+				let parentInB: Misskey.entities.Note | undefined;
+				await waitFor(async () => {
+					const notes = await bob.client.request('notes/timeline', {});
+					parentInB = notes.find(({ uri }) => uri === `https://a.test/notes/${parent.id}`);
+					return parentInB != null;
+				});
+				const reply = await postAndCheckReception(homeTimeline, true, {
+					replyId: parent.id,
+					visibility: 'specified',
+					visibleUserIds: [bobInA.id],
+				});
+				strictEqual(reply?.replyId, parentInB!.id);
+				strictEqual(reply?.reply?.text, text);
+				await alice.client.request('notes/delete', { noteId: parent.id });
 			});
 		});
 	});

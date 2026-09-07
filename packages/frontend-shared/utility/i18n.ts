@@ -55,7 +55,9 @@ function compileInterpolator(value: string, onMissing?: (expression: string) => 
 		searchCursor = cursor;
 	}
 
-	if (expressions.length === 0) return null;
+	if (expressions.length === 0) {
+		return null;
+	}
 
 	return (arg) => {
 		let str = quasis[0] ?? '';
@@ -181,7 +183,9 @@ export class I18n<T extends ILocale> {
 					result[k] = build(value);
 				} else if (typeof value === 'string') {
 					const interpolator = compileInterpolator(value);
-					if (interpolator != null) result[k] = interpolator;
+					if (interpolator != null) {
+						result[k] = interpolator;
+					}
 				}
 			}
 			return result;

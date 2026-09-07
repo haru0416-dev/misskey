@@ -18,8 +18,10 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
-import { deletePageForApi, type ApiPageDependencies } from '@/server/rest/page/pages.js';
-import { deleteFileSyncForApi, type QueueObjectStorageDependencies } from './object-storage.js';
+import { deletePageForApi } from '@/server/rest/page/pages.js';
+import type { ApiPageDependencies } from '@/server/rest/page/pages.js';
+import { deleteFileSyncForApi } from './object-storage.js';
+import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDeleteAccountDependencies = QueueObjectStorageDependencies &
 	ApiPageDependencies & {
@@ -40,8 +42,12 @@ async function unindexNoteForApi(
 	deps: QueueDeleteAccountDependencies,
 	note: Pick<MiNote, 'id' | 'visibility'>,
 ): Promise<void> {
-	if (!deps.meilisearch) return;
-	if (!['home', 'public'].includes(note.visibility)) return;
+	if (!deps.meilisearch) {
+		return;
+	}
+	if (!['home', 'public'].includes(note.visibility)) {
+		return;
+	}
 
 	const index = deps.meilisearch.index(`${deps.config.search.meilisearch!.index}---notes`);
 	await index.deleteDocument(note.id);
@@ -52,7 +58,9 @@ export async function handleQueueDeleteAccount(
 	job: Bull.Job<DbUserDeleteJobData>,
 ): Promise<string | void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
 		throw new Bull.UnrecoverableError('Local account deletion requires an outbox coordinator');
 	}
@@ -66,7 +74,9 @@ export async function handleQueueDeleteAccount(
 				sinceId: cursor,
 			});
 
-			if (notes.length === 0) break;
+			if (notes.length === 0) {
+				break;
+			}
 
 			cursor = notes.at(-1)?.id ?? null;
 
@@ -90,7 +100,9 @@ export async function handleQueueDeleteAccount(
 				sinceId: cursor,
 			});
 
-			if (files.length === 0) break;
+			if (files.length === 0) {
+				break;
+			}
 
 			cursor = files.at(-1)?.id ?? null;
 
@@ -109,7 +121,9 @@ export async function handleQueueDeleteAccount(
 				order: 'asc',
 			});
 
-			if (pages.length === 0) break;
+			if (pages.length === 0) {
+				break;
+			}
 
 			for (const page of pages) {
 				const result = await deletePageForApi(deps, user, page.id);

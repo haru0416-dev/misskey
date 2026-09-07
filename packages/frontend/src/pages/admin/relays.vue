@@ -48,46 +48,54 @@ async function addRelay() {
 		type: 'url',
 		placeholder: i18n.ts.inboxUrl,
 	});
-	if (canceled || inbox == null) return;
+	if (canceled || inbox == null) {
+		return;
+	}
 	misskeyApi('admin/relays/add', {
 		inbox,
-	}).then(() => {
-		refresh();
-	}).catch((err: unknown) => {
-		os.alert({
-			type: 'error',
-			text: getErrorMessage(err),
+	})
+		.then(() => {
+			refresh();
+		})
+		.catch((err: unknown) => {
+			os.alert({
+				type: 'error',
+				text: getErrorMessage(err),
+			});
 		});
-	});
 }
 
 function remove(inbox: string) {
 	misskeyApi('admin/relays/remove', {
 		inbox,
-	}).then(() => {
-		refresh();
-	}).catch((err: unknown) => {
-		os.alert({
-			type: 'error',
-			text: getErrorMessage(err),
+	})
+		.then(() => {
+			refresh();
+		})
+		.catch((err: unknown) => {
+			os.alert({
+				type: 'error',
+				text: getErrorMessage(err),
+			});
 		});
-	});
 }
 
 function refresh() {
-	misskeyApi('admin/relays/list').then(relayList => {
+	misskeyApi('admin/relays/list').then((relayList) => {
 		relays.value = relayList;
 	});
 }
 
 refresh();
 
-const headerActions = computed(() => [{
-	asFullButton: true,
-	icon: 'ti ti-plus',
-	text: i18n.ts.addRelay,
-	handler: addRelay,
-}]);
+const headerActions = computed(() => [
+	{
+		asFullButton: true,
+		icon: 'ti ti-plus',
+		text: i18n.ts.addRelay,
+		handler: addRelay,
+	},
+]);
 
 const headerTabs = computed(() => []);
 

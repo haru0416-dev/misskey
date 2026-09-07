@@ -36,7 +36,11 @@ import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
 import { noteEvents } from '@/features/notes/useNoteCapture.js';
-import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as isEmojiMuted } from '@/features/custom-emojis/emoji-mute.js';
+import {
+	mute as muteEmoji,
+	unmute as unmuteEmoji,
+	checkMuted as isEmojiMuted,
+} from '@/features/custom-emojis/emoji-mute.js';
 import { addToEmojiPalette } from '@/features/emoji-picker/emoji-palette.js';
 
 const props = defineProps<{
@@ -67,8 +71,12 @@ const canGetInfo = computed(() => !props.reaction.match(/@\w/) && props.reaction
 const isLocalCustomEmoji = props.reaction[0] === ':' && props.reaction.includes('@.');
 
 async function toggleReaction() {
-	if (!canToggle.value) return;
-	if ($i == null) return;
+	if (!canToggle.value) {
+		return;
+	}
+	if ($i == null) {
+		return;
+	}
 
 	const me = $i;
 
@@ -78,14 +86,16 @@ async function toggleReaction() {
 			type: 'warning',
 			text: oldReaction !== props.reaction ? i18n.ts.changeReactionConfirm : i18n.ts.cancelReactionConfirm,
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 
 		if (oldReaction !== props.reaction) {
 			sound.playMisskeySfx('reaction');
 		}
 
 		if (mock) {
-			emit('reactionToggled', props.reaction, (props.count - 1));
+			emit('reactionToggled', props.reaction, props.count - 1);
 			return;
 		}
 
@@ -120,13 +130,15 @@ async function toggleReaction() {
 				text: i18n.tsx.reactAreYouSure({ emoji: props.reaction.replace('@.', '') }),
 			});
 
-			if (confirm.canceled) return;
+			if (confirm.canceled) {
+				return;
+			}
 		}
 
 		sound.playMisskeySfx('reaction');
 
 		if (mock) {
-			emit('reactionToggled', props.reaction, (props.count + 1));
+			emit('reactionToggled', props.reaction, props.count + 1);
 			return;
 		}
 
@@ -156,13 +168,17 @@ async function menu(ev: PointerEvent) {
 			text: i18n.ts.info,
 			icon: 'ti ti-info-circle',
 			action: async () => {
-				const { dispose } = os.popup(MkCustomEmojiDetailedDialog, {
-					emoji: await misskeyApiGet('emoji', {
-						name: props.reaction.replaceAll(/:/g, '').replace(/@\./, ''),
-					}),
-				}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = os.popup(
+					MkCustomEmojiDetailedDialog,
+					{
+						emoji: await misskeyApiGet('emoji', {
+							name: props.reaction.replaceAll(/:/g, '').replace(/@\./, ''),
+						}),
+					},
+					{
+						closed: () => dispose(),
+					},
+				);
 			},
 		});
 	}
@@ -176,7 +192,9 @@ async function menu(ev: PointerEvent) {
 					type: 'question',
 					title: i18n.tsx.unmuteX({ x: isLocalCustomEmoji ? `:${emojiName.value}:` : props.reaction }),
 				}).then(({ canceled }) => {
-					if (canceled) return;
+					if (canceled) {
+						return;
+					}
 					unmuteEmoji(props.reaction);
 				});
 			},
@@ -190,7 +208,9 @@ async function menu(ev: PointerEvent) {
 					type: 'question',
 					title: i18n.tsx.muteX({ x: isLocalCustomEmoji ? `:${emojiName.value}:` : props.reaction }),
 				}).then(({ canceled }) => {
-					if (canceled) return;
+					if (canceled) {
+						return;
+					}
 					muteEmoji(props.reaction);
 				});
 			},
@@ -211,50 +231,73 @@ async function menu(ev: PointerEvent) {
 }
 
 function anime() {
-	if (window.document.hidden || !prefer.animation || buttonEl.value == null) return;
+	if (window.document.hidden || !prefer.animation || buttonEl.value == null) {
+		return;
+	}
 
 	const rect = buttonEl.value.getBoundingClientRect();
 	const x = rect.left + 16;
-	const y = rect.top + (buttonEl.value.offsetHeight / 2);
-	const { dispose } = os.popup(MkReactionEffect, { reaction: props.reaction, x, y }, {
-		end: () => dispose(),
-	});
+	const y = rect.top + buttonEl.value.offsetHeight / 2;
+	const { dispose } = os.popup(
+		MkReactionEffect,
+		{ reaction: props.reaction, x, y },
+		{
+			end: () => dispose(),
+		},
+	);
 }
 
-watch(() => props.count, (newCount, oldCount) => {
-	if (oldCount < newCount) anime();
-});
+watch(
+	() => props.count,
+	(newCount, oldCount) => {
+		if (oldCount < newCount) {
+			anime();
+		}
+	},
+);
 
 onMounted(() => {
-	if (!props.isInitial) anime();
+	if (!props.isInitial) {
+		anime();
+	}
 });
 
 if (!mock) {
-	useTooltip(buttonEl, async (showing) => {
-		if (buttonEl.value == null) return;
+	useTooltip(
+		buttonEl,
+		async (showing) => {
+			if (buttonEl.value == null) {
+				return;
+			}
 
-		const [reactions, XDetails] = await Promise.all([
-			misskeyApiGet('notes/reactions', {
-				noteId: props.noteId,
-				type: props.reaction,
-				limit: 10,
-				_cacheKey_: props.count,
-			}),
-			import('@/features/notes/components/MkReactionsViewer.Details.vue').then((x) => x.default),
-		]);
+			const [reactions, XDetails] = await Promise.all([
+				misskeyApiGet('notes/reactions', {
+					noteId: props.noteId,
+					type: props.reaction,
+					limit: 10,
+					_cacheKey_: props.count,
+				}),
+				import('@/features/notes/components/MkReactionsViewer.Details.vue').then((x) => x.default),
+			]);
 
-		const users = reactions.map(x => x.user);
+			const users = reactions.map((x) => x.user);
 
-		const { dispose } = os.popup(XDetails, {
-			showing,
-			reaction: props.reaction,
-			users,
-			count: props.count,
-			anchorElement: buttonEl.value,
-		}, {
-			closed: () => dispose(),
-		});
-	}, 100);
+			const { dispose } = os.popup(
+				XDetails,
+				{
+					showing,
+					reaction: props.reaction,
+					users,
+					count: props.count,
+					anchorElement: buttonEl.value,
+				},
+				{
+					closed: () => dispose(),
+				},
+			);
+		},
+		100,
+	);
 }
 </script>
 

@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, gt, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, gt, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { renoteMuting, type RenoteMutingInsert, type RenoteMutingRow } from '@/db/schema/renote-muting.js';
+import { renoteMuting } from '@/db/schema/renote-muting.js';
+import type { RenoteMutingInsert, RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -116,7 +118,9 @@ export async function listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
 	muterId: MiUser['id'],
 	muteeIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (muteeIds.length === 0) return [];
+	if (muteeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ muteeId: renoteMuting.muteeId })

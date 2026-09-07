@@ -35,7 +35,9 @@ async function apply() {
 		type: 'info',
 		text: i18n.ts.reloadToApplySetting,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	unisonReload();
 }

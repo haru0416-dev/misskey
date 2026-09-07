@@ -18,10 +18,10 @@ import {
 	role,
 	signup,
 	startJobQueue,
-	type TestJobQueueRuntime,
 	UserToken,
 	WEBHOOK_HOST,
 } from '../../utils.js';
+import type { TestJobQueueRuntime } from '../../utils.js';
 
 describe('[シナリオ] ユーザ作成', () => {
 	let queue: TestJobQueueRuntime;

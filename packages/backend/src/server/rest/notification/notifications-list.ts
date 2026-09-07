@@ -19,16 +19,16 @@ import type { MiGroupedNotification, MiNotification } from '@/models/Notificatio
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { notificationTypes, obsoleteNotificationTypes } from '@/types.js';
-import { packChatRoomInvitationForApi, packChatRoomInvitationsForApi, type ApiChatDependencies } from '../chat/chat.js';
-import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies, type PackNoteBatchHint } from '../note/note.js';
-import { packApiRole, packApiRoles, type ApiRoleDependencies } from '../role/roles.js';
+import { packChatRoomInvitationForApi, packChatRoomInvitationsForApi } from '../chat/chat.js';
+import type { ApiChatDependencies } from '../chat/chat.js';
+import { packNoteForApi, packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies, PackNoteBatchHint } from '../note/note.js';
+import { packApiRole, packApiRoles } from '../role/roles.js';
+import type { ApiRoleDependencies } from '../role/roles.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-import {
-	markAllApiNotificationsAsRead,
-	resolveNotificationStreamId,
-	type ApiNotificationDependencies,
-} from './notification.js';
+import { markAllApiNotificationsAsRead, resolveNotificationStreamId } from './notification.js';
+import type { ApiNotificationDependencies } from './notification.js';
 
 export type ApiNotificationsListDependencies = ApiNoteDependencies &
 	ApiChatDependencies &
@@ -89,7 +89,9 @@ async function getApiNotifications(
 			);
 		}
 
-		if (notificationsRes.length === 0) return [];
+		if (notificationsRes.length === 0) {
+			return [];
+		}
 
 		notifications = notificationsRes.flatMap(([, fields]) => {
 			const data = fields[1];
@@ -102,9 +104,13 @@ async function getApiNotifications(
 			notifications = notifications.filter((n) => !excludeTypeSet.has(n.type));
 		}
 
-		if (notifications.length !== 0) break;
+		if (notifications.length !== 0) {
+			break;
+		}
 		const lastEntry = notificationsRes.at(-1);
-		if (lastEntry == null) return [];
+		if (lastEntry == null) {
+			return [];
+		}
 
 		if (options.sinceId && !options.untilId) {
 			sinceTime = lastEntry[0];
@@ -120,7 +126,7 @@ async function filterValidNotifiersForApi<T extends MiNotification | MiGroupedNo
 	deps: ApiNotificationsListDependencies,
 	notifications: T[],
 	meId: MiUser['id'],
-): Promise<T[]> {
+): Promise<{ notifications: T[]; notifiers: Map<MiUser['id'], MiUser> }> {
 	const [userIdsWhoMeMuting, profile] = await Promise.all([
 		listMuteeIdsByMuterIdFromDatabase(deps.db, meId),
 		fetchUserProfileByUserIdFromDatabase(deps.db, meId),
@@ -137,17 +143,28 @@ async function filterValidNotifiersForApi<T extends MiNotification | MiGroupedNo
 		notifierIds.length > 0 ? await listUsersByIdsFromDatabase(deps.db, notifierIds, { includeSuspended: true }) : [];
 	const notifierById = new Map(notifiers.map((notifier) => [notifier.id, notifier]));
 
-	return notifications.filter((notification) => {
-		if (!('notifierId' in notification)) return true;
-		if (mutingSet.has(notification.notifierId)) return false;
+	const filtered = notifications.filter((notification) => {
+		if (!('notifierId' in notification)) {
+			return true;
+		}
+		if (mutingSet.has(notification.notifierId)) {
+			return false;
+		}
 
 		const notifier = notifierById.get(notification.notifierId) ?? null;
-		if (notifier == null) return false;
-		if (notifier.host && userMutedInstances.has(notifier.host)) return false;
-		if (notifier.isSuspended) return false;
+		if (notifier == null) {
+			return false;
+		}
+		if (notifier.host && userMutedInstances.has(notifier.host)) {
+			return false;
+		}
+		if (notifier.isSuspended) {
+			return false;
+		}
 
 		return true;
 	});
+	return { notifications: filtered, notifiers: notifierById };
 }
 
 export async function packNotificationForApi<T extends MiNotification | MiGroupedNotification>(
@@ -165,8 +182,10 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 	},
 ): Promise<Record<string, unknown> | null> {
 	if (options.checkValidNotifier !== false) {
-		const filtered = await filterValidNotifiersForApi(deps, [src], meId);
-		if (filtered.length === 0) return null;
+		const { notifications: filtered } = await filterValidNotifiersForApi(deps, [src], meId);
+		if (filtered.length === 0) {
+			return null;
+		}
 	}
 
 	const needsNote = NOTE_REQUIRED_NOTIFICATION_TYPES.has(src.type) && 'noteId' in src;
@@ -181,7 +200,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 					omitUndefined({ detail: true, hint: hint?.notePackHint }),
 				).catch(() => null)
 		: undefined;
-	if (needsNote && !noteIfNeed) return null;
+	if (needsNote && !noteIfNeed) {
+		return null;
+	}
 
 	const needsUser = 'notifierId' in src;
 	const userIfNeed = needsUser
@@ -189,7 +210,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 			? hint.packedUsers.get((src as { notifierId: string }).notifierId)
 			: await packUserLiteForApi(deps, (src as { notifierId: string }).notifierId).catch(() => null)
 		: undefined;
-	if (needsUser && !userIfNeed) return null;
+	if (needsUser && !userIfNeed) {
+		return null;
+	}
 
 	if (src.type === 'reaction:grouped') {
 		const reactions = (
@@ -202,7 +225,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 				}),
 			)
 		).filter((r): r is { user: Packed<'UserLite'>; reaction: string } => r != null);
-		if (reactions.length === 0) return null;
+		if (reactions.length === 0) {
+			return null;
+		}
 
 		return { id: src.id, createdAt: src.createdAt, type: src.type, note: noteIfNeed, reactions };
 	} else if (src.type === 'renote:grouped') {
@@ -213,7 +238,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 				),
 			)
 		).filter((u): u is Packed<'UserLite'> => u != null);
-		if (users.length === 0) return null;
+		if (users.length === 0) {
+			return null;
+		}
 
 		return { id: src.id, createdAt: src.createdAt, type: src.type, note: noteIfNeed, users };
 	}
@@ -224,7 +251,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 			? hint.packedRoles.get(src.roleId)
 			: await fetchRoleByIdFromDatabase(deps.db, src.roleId).then((r) => (r ? packApiRole(deps, r) : null))
 		: undefined;
-	if (needsRole && !role) return null;
+	if (needsRole && !role) {
+		return null;
+	}
 
 	const needsChatRoomInvitation = src.type === 'chatRoomInvitationReceived';
 	const chatRoomInvitation = needsChatRoomInvitation
@@ -232,7 +261,9 @@ export async function packNotificationForApi<T extends MiNotification | MiGroupe
 			? hint.packedChatRoomInvitations.get(src.invitationId)
 			: await packChatRoomInvitationForApi(deps, src.invitationId, { id: meId }).catch(() => null)
 		: undefined;
-	if (needsChatRoomInvitation && !chatRoomInvitation) return null;
+	if (needsChatRoomInvitation && !chatRoomInvitation) {
+		return null;
+	}
 
 	return {
 		id: src.id,
@@ -256,9 +287,12 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 	notifications: T[],
 	meId: MiUser['id'],
 ): Promise<Record<string, unknown>[]> {
-	if (notifications.length === 0) return [];
+	if (notifications.length === 0) {
+		return [];
+	}
 
-	let validNotifications = await filterValidNotifiersForApi(deps, notifications, meId);
+	const filtered = await filterValidNotifiersForApi(deps, notifications, meId);
+	let validNotifications = filtered.notifications;
 
 	const noteIds = validNotifications
 		.map((x) => ('noteId' in x ? x.noteId : null))
@@ -271,11 +305,23 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 
 	const userIds: string[] = [];
 	for (const notification of validNotifications) {
-		if ('notifierId' in notification) userIds.push(notification.notifierId);
-		if (notification.type === 'reaction:grouped') userIds.push(...notification.reactions.map((x) => x.userId));
-		if (notification.type === 'renote:grouped') userIds.push(...notification.userIds);
+		if ('notifierId' in notification) {
+			userIds.push(notification.notifierId);
+		}
+		if (notification.type === 'reaction:grouped') {
+			userIds.push(...notification.reactions.map((x) => x.userId));
+		}
+		if (notification.type === 'renote:grouped') {
+			userIds.push(...notification.userIds);
+		}
 	}
-	const packedUsersArray = userIds.length > 0 ? await packUserLiteManyForApi(deps, [...new Set(userIds)]) : [];
+	const packedUsersArray =
+		userIds.length > 0
+			? await packUserLiteManyForApi(
+					deps,
+					[...new Set(userIds)].map((id) => filtered.notifiers.get(id) ?? id),
+				)
+			: [];
 	const packedUsers = new Map(packedUsersArray.map((p) => [p.id, p]));
 
 	const roleIds = validNotifications
@@ -347,8 +393,12 @@ export async function handleApiINotifications(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
-	if (params.includeTypes?.length === 0) return [];
-	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) return [];
+	if (params.includeTypes?.length === 0) {
+		return [];
+	}
+	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) {
+		return [];
+	}
 
 	const includeTypes = params.includeTypes?.filter(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
@@ -378,13 +428,17 @@ export async function handleApiINotifications(
 
 function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
 	const firstNotification = notifications[0];
-	if (firstNotification == null) return [];
+	if (firstNotification == null) {
+		return [];
+	}
 	const groupedNotifications: MiGroupedNotification[] = [firstNotification];
 	for (let i = 1; i < notifications.length; i++) {
 		const notification = notifications[i];
 		const prev = notifications[i - 1];
 		let prevGroupedNotification = groupedNotifications.at(-1);
-		if (notification == null || prev == null || prevGroupedNotification == null) continue;
+		if (notification == null || prev == null || prevGroupedNotification == null) {
+			continue;
+		}
 
 		if (prev.type === 'reaction' && notification.type === 'reaction' && prev.noteId === notification.noteId) {
 			if (prevGroupedNotification.type !== 'reaction:grouped') {
@@ -396,7 +450,9 @@ function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotifi
 					reactions: [{ userId: prev.notifierId, reaction: prev.reaction }],
 				};
 				prevGroupedNotification = groupedNotifications.at(-1);
-				if (prevGroupedNotification == null) continue;
+				if (prevGroupedNotification == null) {
+					continue;
+				}
 			}
 			if (prevGroupedNotification.type === 'reaction:grouped') {
 				prevGroupedNotification.reactions.push({ userId: notification.notifierId, reaction: notification.reaction });
@@ -414,7 +470,9 @@ function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotifi
 					userIds: [prev.notifierId],
 				};
 				prevGroupedNotification = groupedNotifications.at(-1);
-				if (prevGroupedNotification == null) continue;
+				if (prevGroupedNotification == null) {
+					continue;
+				}
 			}
 			if (prevGroupedNotification.type === 'renote:grouped') {
 				prevGroupedNotification.userIds.push(notification.notifierId);
@@ -438,8 +496,12 @@ export async function handleApiINotificationsGrouped(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
-	if (params.includeTypes?.length === 0) return [];
-	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) return [];
+	if (params.includeTypes?.length === 0) {
+		return [];
+	}
+	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) {
+		return [];
+	}
 
 	const includeTypes = params.includeTypes?.filter(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
@@ -460,7 +522,9 @@ export async function handleApiINotificationsGrouped(
 		}),
 	);
 
-	if (notifications.length === 0) return [];
+	if (notifications.length === 0) {
+		return [];
+	}
 
 	if (params.markAsRead) {
 		void markAllApiNotificationsAsRead(deps, me.id, false);

@@ -101,7 +101,9 @@ async function postProcessDriveFileDeletion(
 	const finalized = await deps.db.transaction(async (transaction) => {
 		if (isExpired && file.userHost !== null && file.uri != null) {
 			const replacementKeys = data.replacementKeys;
-			if (replacementKeys == null) throw new Error('Remote-link deletion is missing replacement keys');
+			if (replacementKeys == null) {
+				throw new Error('Remote-link deletion is missing replacement keys');
+			}
 			const updated = await transaction
 				.update(driveFile)
 				.set({
@@ -116,20 +118,26 @@ async function postProcessDriveFileDeletion(
 				})
 				.where(and(eq(driveFile.id, file.id), eq(driveFile.isLink, false)))
 				.returning({ id: driveFile.id });
-			if (updated.length === 0) return false;
+			if (updated.length === 0) {
+				return false;
+			}
 		} else {
 			const deleted = await transaction
 				.delete(driveFile)
 				.where(eq(driveFile.id, file.id))
 				.returning({ id: driveFile.id });
-			if (deleted.length === 0) return false;
+			if (deleted.length === 0) {
+				return false;
+			}
 		}
 		if (moderationLog != null && deps.logDriveFileDeletion != null) {
 			await deps.logDriveFileDeletion(transaction, moderationLog.deleter, data.operationId, moderationLog.info);
 		}
 		return true;
 	});
-	if (!finalized) return;
+	if (!finalized) {
+		return;
+	}
 
 	void deps.updateDriveChart?.(file, false);
 	if (file.userHost == null) {

@@ -6,7 +6,8 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { createDownloadService } from '@/core/net/DownloadService.js';
@@ -29,7 +30,9 @@ describe('core:net:DownloadService のファイル名決定', () => {
 	beforeAll(async () => {
 		server = createServer((_req, res) => {
 			const headers: Record<string, string> = { 'content-type': 'application/octet-stream' };
-			if (header != null) headers['content-disposition'] = header;
+			if (header != null) {
+				headers['content-disposition'] = header;
+			}
 			res.writeHead(200, headers);
 			res.end('body');
 		});

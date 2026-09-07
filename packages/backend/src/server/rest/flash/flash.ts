@@ -29,8 +29,10 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFlashDependencies = ApiRolePolicyDependencies & UserPackingDependencies;
@@ -61,11 +63,21 @@ export async function handleApiFlashUpdate(
 	const values: Partial<Parameters<typeof updateFlashInDatabase>[2]> = {
 		updatedAt: new Date(),
 	};
-	if (params.title !== undefined) values.title = params.title;
-	if (params.summary !== undefined) values.summary = params.summary;
-	if (params.script !== undefined) values.script = params.script;
-	if (params.permissions !== undefined) values.permissions = params.permissions;
-	if (params.visibility !== undefined) values.visibility = params.visibility;
+	if (params.title !== undefined) {
+		values.title = params.title;
+	}
+	if (params.summary !== undefined) {
+		values.summary = params.summary;
+	}
+	if (params.script !== undefined) {
+		values.script = params.script;
+	}
+	if (params.permissions !== undefined) {
+		values.permissions = params.permissions;
+	}
+	if (params.visibility !== undefined) {
+		values.visibility = params.visibility;
+	}
 
 	await updateFlashInDatabase(deps.db, flash.id, values);
 }
@@ -108,7 +120,9 @@ async function packFlashManyForApi(
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<Record<string, unknown>[]> {
-	if (flashes.length === 0) return [];
+	if (flashes.length === 0) {
+		return [];
+	}
 
 	const userIds = [...new Set(flashes.map((flash) => flash.userId))];
 	const flashIds = flashes.map((flash) => flash.id);

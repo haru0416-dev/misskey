@@ -98,16 +98,19 @@ import { store } from '@/store.js';
 import { prefer } from '@/preferences.js';
 import { maybeMakeRelative } from '@shared/utility/url.js';
 
-const props = withDefaults(defineProps<{
-	url: string;
-	detail?: boolean;
-	compact?: boolean;
-	showActions?: boolean;
-}>(), {
-	detail: false,
-	compact: false,
-	showActions: true,
-});
+const props = withDefaults(
+	defineProps<{
+		url: string;
+		detail?: boolean;
+		compact?: boolean;
+		showActions?: boolean;
+	}>(),
+	{
+		detail: false,
+		compact: false,
+		showActions: true,
+	},
+);
 
 const MOBILE_THRESHOLD = 500;
 const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
@@ -137,11 +140,20 @@ onDeactivated(() => {
 });
 
 const requestUrl = new URL(props.url, window.location.href);
-if (!['http:', 'https:'].includes(requestUrl.protocol)) throw new Error('invalid url');
+if (!['http:', 'https:'].includes(requestUrl.protocol)) {
+	throw new Error('invalid url');
+}
 
-if (requestUrl.hostname === 'twitter.com' || requestUrl.hostname === 'mobile.twitter.com' || requestUrl.hostname === 'x.com' || requestUrl.hostname === 'mobile.x.com') {
+if (
+	requestUrl.hostname === 'twitter.com' ||
+	requestUrl.hostname === 'mobile.twitter.com' ||
+	requestUrl.hostname === 'x.com' ||
+	requestUrl.hostname === 'mobile.x.com'
+) {
 	const m = requestUrl.pathname.match(/^\/.+\/status(?:es)?\/(\d+)/);
-	if (m) tweetId.value = m[1] ?? null;
+	if (m) {
+		tweetId.value = m[1] ?? null;
+	}
 }
 
 if (requestUrl.hostname === 'music.youtube.com' && requestUrl.pathname.match('^/(?:watch|channel)')) {
@@ -150,8 +162,9 @@ if (requestUrl.hostname === 'music.youtube.com' && requestUrl.pathname.match('^/
 
 requestUrl.hash = '';
 
-window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`)
-	.then(res => {
+window
+	.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`)
+	.then((res) => {
 		if (!res.ok) {
 			if (_DEV_) {
 				console.warn(`[HTTP${res.status}] Failed to fetch url preview`);
@@ -175,24 +188,38 @@ window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLa
 	});
 
 function adjustTweetHeight(message: MessageEvent) {
-	if (message.origin !== 'https://platform.twitter.com') return;
+	if (message.origin !== 'https://platform.twitter.com') {
+		return;
+	}
 	const embed = message.data?.['twttr.embed'];
-	if (embed?.method !== 'twttr.private.resize') return;
-	if (embed?.id !== embedId) return;
+	if (embed?.method !== 'twttr.private.resize') {
+		return;
+	}
+	if (embed?.id !== embedId) {
+		return;
+	}
 	const height = embed?.params[0]?.height;
-	if (height) tweetHeight.value = height;
+	if (height) {
+		tweetHeight.value = height;
+	}
 }
 
 function openPlayer(): void {
-	if (!summalyResult.value) return;
+	if (!summalyResult.value) {
+		return;
+	}
 
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/link-preview/components/MkYouTubePlayer.vue')), {
-		urlOrSummalyResult: summalyResult.value,
-	}, {
-		closed: () => {
-			dispose();
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/features/link-preview/components/MkYouTubePlayer.vue')),
+		{
+			urlOrSummalyResult: summalyResult.value,
 		},
-	});
+		{
+			closed: () => {
+				dispose();
+			},
+		},
+	);
 }
 
 window.addEventListener('message', adjustTweetHeight);

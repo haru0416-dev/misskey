@@ -32,7 +32,9 @@ export function createCachedResolver(options: { successTtlMs: number; failureTtl
 
 	function readCache(hostname: string): CacheEntry | null {
 		const entry = cache.get(hostname);
-		if (entry == null) return null;
+		if (entry == null) {
+			return null;
+		}
 		if (entry.expiresAt <= Date.now()) {
 			cache.delete(hostname);
 			return null;
@@ -43,7 +45,9 @@ export function createCachedResolver(options: { successTtlMs: number; failureTtl
 	function writeCache(hostname: string, addresses: ResolvedAddress[] | null): void {
 		if (cache.size >= MAX_ENTRIES) {
 			const oldest = cache.keys().next().value;
-			if (oldest !== undefined) cache.delete(oldest);
+			if (oldest !== undefined) {
+				cache.delete(oldest);
+			}
 		}
 		cache.set(hostname, {
 			addresses,
@@ -54,7 +58,9 @@ export function createCachedResolver(options: { successTtlMs: number; failureTtl
 	async function resolve(hostname: string): Promise<ResolvedAddress[]> {
 		const cached = readCache(hostname);
 		if (cached != null) {
-			if (cached.addresses == null) throw new Error(`Failed to resolve ${hostname}`);
+			if (cached.addresses == null) {
+				throw new Error(`Failed to resolve ${hostname}`);
+			}
 			return cached.addresses;
 		}
 
@@ -80,7 +86,9 @@ export function createCachedResolver(options: { successTtlMs: number; failureTtl
 	const lookup = ((hostname, optionsOrCallback, maybeCallback) => {
 		const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback;
 		const opts = typeof optionsOrCallback === 'function' ? {} : (optionsOrCallback ?? {});
-		if (callback == null) return;
+		if (callback == null) {
+			return;
+		}
 
 		resolve(hostname).then(
 			(addresses) => {

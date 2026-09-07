@@ -8,12 +8,14 @@ import * as fs from 'node:fs';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import { envOption } from '@/env.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyApp } from '@/server/app.js';
 import { createNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
-import { attachStreamServer, type StreamServerDependencies } from '@/server/streaming/server.js';
+import { attachStreamServer } from '@/server/streaming/server.js';
+import type { StreamServerDependencies } from '@/server/streaming/server.js';
 import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
 import { traceHttpRequest } from '@/telemetry.js';
 import { startQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
@@ -56,7 +58,9 @@ async function listen(server: Server, config: Config, logger: Logger): Promise<v
 }
 
 async function closeServer(server: Server): Promise<void> {
-	if (!server.listening) return;
+	if (!server.listening) {
+		return;
+	}
 
 	await new Promise<void>((resolve, reject) => {
 		server.close((err) => (err ? reject(err) : resolve()));
@@ -77,7 +81,9 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 			firstError ??= error;
 		}
 	}
-	if (firstError != null) throw firstError;
+	if (firstError != null) {
+		throw firstError;
+	}
 }
 
 export async function launchServer(

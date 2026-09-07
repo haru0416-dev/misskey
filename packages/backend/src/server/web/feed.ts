@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Hono, type Context, type Next } from 'hono';
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
 import type { Feed } from 'feed';
 import type { Config } from '@/config.js';
 import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
@@ -20,12 +21,16 @@ export type FeedDependencies = {
 };
 
 async function resolveFeed(deps: FeedDependencies, acct: string) {
-	if (deps.resolveFeed) return await deps.resolveFeed(acct);
+	if (deps.resolveFeed) {
+		return await deps.resolveFeed(acct);
+	}
 
 	const { username, host } = Acct.parse(acct);
 	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, username, host ?? null);
 
-	if (user == null || user.isSuspended || user.requireSigninToViewContents) return null;
+	if (user == null || user.isSuspended || user.requireSigninToViewContents) {
+		return null;
+	}
 
 	return await packFeed(deps, user);
 }
@@ -46,12 +51,18 @@ function parseFeedRequest(c: Context): {
 	format: FeedFormat;
 } | null {
 	const pathname = new URL(c.req.url).pathname;
-	if (!pathname.startsWith('/@')) return null;
+	if (!pathname.startsWith('/@')) {
+		return null;
+	}
 
 	const match = pathname.slice(2).match(/^(.*)\.(atom|rss|json)$/);
-	if (match == null) return null;
+	if (match == null) {
+		return null;
+	}
 	const [, acct, format] = match;
-	if (acct == null || format == null) return null;
+	if (acct == null || format == null) {
+		return null;
+	}
 
 	return {
 		acct: decodeURIComponent(acct),
@@ -64,10 +75,14 @@ export function createFeedApp(deps: FeedDependencies): Hono {
 
 	app.on(['GET', 'HEAD'], '*', async (c: Context, next: Next) => {
 		const request = parseFeedRequest(c);
-		if (request == null) return await next();
+		if (request == null) {
+			return await next();
+		}
 
 		const feed = await resolveFeed(deps, request.acct);
-		if (feed == null) return c.body(null, 404);
+		if (feed == null) {
+			return c.body(null, 404);
+		}
 
 		switch (request.format) {
 			case 'atom':

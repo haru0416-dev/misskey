@@ -52,10 +52,12 @@ const fetching = ref(true);
 const key = ref(0);
 
 const tick = () => {
-	if (props.userListId == null) return;
+	if (props.userListId == null) {
+		return;
+	}
 	misskeyApi('notes/user-list-timeline', {
 		listId: props.userListId,
-	}).then(res => {
+	}).then((res) => {
 		notes.value = res;
 		fetching.value = false;
 		key.value++;

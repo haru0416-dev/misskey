@@ -42,10 +42,7 @@ import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const {
-	model: origin,
-	def: originDef,
-} = useMkSelect({
+const { model: origin, def: originDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.all, value: 'combined' },
 		{ label: i18n.ts.local, value: 'local' },
@@ -57,36 +54,43 @@ const type = ref<string | null>(null);
 const searchHost = ref('');
 const userId = ref('');
 const viewMode = ref<'grid' | 'list'>('grid');
-const paginator = markRaw(new Paginator('admin/drive/files', {
-	limit: 10,
-	computedParams: computed(() => ({
-		type: (type.value && type.value !== '') ? type.value : null,
-		userId: (userId.value && userId.value !== '') ? userId.value : null,
-		origin: origin.value,
-		hostname: (searchHost.value && searchHost.value !== '') ? searchHost.value : null,
-	})),
-}));
+const paginator = markRaw(
+	new Paginator('admin/drive/files', {
+		limit: 10,
+		computedParams: computed(() => ({
+			type: type.value && type.value !== '' ? type.value : null,
+			userId: userId.value && userId.value !== '' ? userId.value : null,
+			origin: origin.value,
+			hostname: searchHost.value && searchHost.value !== '' ? searchHost.value : null,
+		})),
+	}),
+);
 
 function clear() {
 	os.confirm({
 		type: 'warning',
 		text: i18n.ts.clearCachedFilesConfirm,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		os.apiWithDialog('admin/drive/clean-remote-files', {});
 	});
 }
 
-const headerActions = computed(() => [{
-	text: i18n.ts.lookup,
-	icon: 'ti ti-search',
-	handler: lookupFile,
-}, {
-	text: i18n.ts.clearCachedFiles,
-	icon: 'ti ti-trash',
-	handler: clear,
-}]);
+const headerActions = computed(() => [
+	{
+		text: i18n.ts.lookup,
+		icon: 'ti ti-search',
+		handler: lookupFile,
+	},
+	{
+		text: i18n.ts.clearCachedFiles,
+		icon: 'ti ti-trash',
+		handler: clear,
+	},
+]);
 
 const headerTabs = computed(() => []);
 

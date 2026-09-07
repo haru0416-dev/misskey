@@ -4,7 +4,8 @@
  */
 
 import * as dns from 'node:dns';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
@@ -27,6 +28,26 @@ describe('core:net:HttpRequestService の接続先固定', () => {
 	beforeAll(async () => {
 		allowed = createServer((req, res) => {
 			hits.push(`allowed:${req.headers.host ?? ''}`);
+			if (req.url === '/redirect') {
+				res.writeHead(302, { location: '/actor?redirected=1' });
+				res.end();
+				return;
+			}
+			if (req.url === '/cross-origin') {
+				res.writeHead(302, { location: `http://remote.test:${allowedPort}/actor` });
+				res.end();
+				return;
+			}
+			if (req.url?.startsWith('/actor')) {
+				res.setHeader('content-type', 'application/activity+json');
+				res.end(JSON.stringify({ id: `http://${req.headers.host}${req.url}`, type: 'Person' }));
+				return;
+			}
+			if (req.url === '/wrong-host') {
+				res.setHeader('content-type', 'application/activity+json');
+				res.end(JSON.stringify({ id: `http://other.test:${allowedPort}/wrong-host`, type: 'Person' }));
+				return;
+			}
 			res.end('allowed');
 		});
 		blocked = createServer((req, res) => {
@@ -81,10 +102,49 @@ describe('core:net:HttpRequestService の接続先固定', () => {
 		);
 
 		expect(res.status).toBe(200);
+		expect(res.url).toBe(`http://pinned.test:${allowedPort}/`);
 		await expect(res.text()).resolves.toBe('allowed');
 		// Host には元のホスト名 (とポート) が入る。IP は入らない。
 		expect(hits).toStrictEqual([`allowed:pinned.test:${allowedPort}`]);
 		expect(call).toBeGreaterThan(0);
+	});
+
+	test('接続先を固定しても ActivityPub の ID を元の URL と照合できる', async () => {
+		vi.stubEnv('NODE_ENV', 'production');
+		vi.spyOn(dns.promises, 'lookup').mockImplementation((async () => [
+			{ address: '127.0.0.1', family: 4 },
+		]) as unknown as typeof dns.promises.lookup);
+
+		const url = `http://pinned.test:${allowedPort}/actor`;
+		await expect(serviceWith(['127.0.0.0/8']).getActivityJson(url)).resolves.toEqual({ id: url, type: 'Person' });
+		expect(hits).toStrictEqual([`allowed:pinned.test:${allowedPort}`]);
+	});
+
+	test.each([
+		['/redirect', 'pinned.test', '/actor?redirected=1'],
+		['/cross-origin', 'remote.test', '/actor'],
+	])('リダイレクト %s の最終 URL に論理ホスト名を保持する', async (path, host, finalPath) => {
+		vi.stubEnv('NODE_ENV', 'production');
+		vi.spyOn(dns.promises, 'lookup').mockImplementation((async () => [
+			{ address: '127.0.0.1', family: 4 },
+		]) as unknown as typeof dns.promises.lookup);
+
+		const res = await serviceWith(['127.0.0.0/8']).send(`http://pinned.test:${allowedPort}${path}`);
+		const finalUrl = `http://${host}:${allowedPort}${finalPath}`;
+		expect(res.url).toBe(finalUrl);
+		await expect(res.json()).resolves.toEqual({ id: finalUrl, type: 'Person' });
+		expect(hits).toStrictEqual([`allowed:pinned.test:${allowedPort}`, `allowed:${host}:${allowedPort}`]);
+	});
+
+	test('接続先を固定しても別ホストの ActivityPub ID は拒否する', async () => {
+		vi.stubEnv('NODE_ENV', 'production');
+		vi.spyOn(dns.promises, 'lookup').mockImplementation((async () => [
+			{ address: '127.0.0.1', family: 4 },
+		]) as unknown as typeof dns.promises.lookup);
+
+		await expect(
+			serviceWith(['127.0.0.0/8']).getActivityJson(`http://pinned.test:${allowedPort}/wrong-host`),
+		).rejects.toThrow(/does not match response url/);
 	});
 
 	test('検査で弾かれる宛先には接続しない', async () => {

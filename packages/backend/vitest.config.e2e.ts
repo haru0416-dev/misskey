@@ -1,5 +1,6 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
-import { BaseSequencer, type TestSpecification } from 'vitest/node';
+import { BaseSequencer } from 'vitest/node';
+import type { TestSpecification } from 'vitest/node';
 import { baseConfig } from './vitest.config.js';
 
 // vitest の既定はdurationキャッシュ順でファイル実行順が毎回変わる。共有DBを使うe2eは

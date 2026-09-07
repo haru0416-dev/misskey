@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Hono, type Context } from 'hono';
-import { UrlPreviewService, type UrlPreviewReply, type UrlPreviewRequest } from './UrlPreviewService.js';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
+import { UrlPreviewService } from './UrlPreviewService.js';
+import type { UrlPreviewReply, UrlPreviewRequest } from './UrlPreviewService.js';
 
 export type UrlPreviewDependencies = {
 	urlPreviewService: UrlPreviewService;
@@ -29,8 +31,12 @@ class CollectedUrlPreviewReply implements UrlPreviewReply {
 
 function queryValue(c: Context, name: string): unknown {
 	const values = new URL(c.req.url).searchParams.getAll(name);
-	if (values.length === 0) return undefined;
-	if (values.length === 1) return values[0];
+	if (values.length === 0) {
+		return undefined;
+	}
+	if (values.length === 1) {
+		return values[0];
+	}
 	return values;
 }
 

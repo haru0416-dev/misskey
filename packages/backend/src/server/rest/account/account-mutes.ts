@@ -32,12 +32,8 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { ApiError, clientError } from '../error.js';
 import type { ApiInternalEventPublisher } from '../events.js';
-import {
-	packUserDetailedNotMeForApi,
-	packUserDetailedNotMeManyForApi,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountMuteDependencies = UserPackingDependencies & {
@@ -97,7 +93,9 @@ async function getTargetUserOrThrow(
 	errorFactory: () => ApiError,
 ): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw errorFactory();
+	if (user == null) {
+		throw errorFactory();
+	}
 
 	return user;
 }

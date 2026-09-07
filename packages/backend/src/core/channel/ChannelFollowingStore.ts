@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, type Placeholder, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { Placeholder, SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import {
-	channelFollowing,
-	type ChannelFollowingInsert,
-	type ChannelFollowingRow,
-} from '@/db/schema/channel-following.js';
+import { channelFollowing } from '@/db/schema/channel-following.js';
+import type { ChannelFollowingInsert, ChannelFollowingRow } from '@/db/schema/channel-following.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';

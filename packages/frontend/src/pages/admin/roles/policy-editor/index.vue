@@ -439,12 +439,20 @@ const emit = defineEmits<{
 }>();
 
 const valuesModel = ref(props.rolePolicies);
-watch(valuesModel, (newVal) => {
-	emit('update:rolePolicies', newVal);
-}, { deep: true });
-watch(() => props.rolePolicies, () => {
-	valuesModel.value = props.rolePolicies;
-}, { deep: true });
+watch(
+	valuesModel,
+	(newVal) => {
+		emit('update:rolePolicies', newVal);
+	},
+	{ deep: true },
+);
+watch(
+	() => props.rolePolicies,
+	() => {
+		valuesModel.value = props.rolePolicies;
+	},
+	{ deep: true },
+);
 
 function setPolicyMeta(incoming: Partial<PolicyMetaRecord> | undefined): PolicyMetaRecord {
 	const meta: PolicyMetaRecord = {} as PolicyMetaRecord;
@@ -458,16 +466,26 @@ function setPolicyMeta(incoming: Partial<PolicyMetaRecord> | undefined): PolicyM
 }
 
 const policyMetaModel = ref(setPolicyMeta(props.policiesMeta));
-watch(policyMetaModel, (newVal) => {
-	emit('update:policiesMeta', newVal);
-}, { deep: true });
-watch(() => props.policiesMeta, () => {
-	policyMetaModel.value = setPolicyMeta(props.policiesMeta);
-}, { deep: true });
+watch(
+	policyMetaModel,
+	(newVal) => {
+		emit('update:policiesMeta', newVal);
+	},
+	{ deep: true },
+);
+watch(
+	() => props.policiesMeta,
+	() => {
+		policyMetaModel.value = setPolicyMeta(props.policiesMeta);
+	},
+	{ deep: true },
+);
 
 function matchQuery(keywords: string[]): boolean {
-	if (props.roleQuery == null || props.roleQuery.trim().length === 0) return true;
-	return keywords.some(keyword => keyword.toLowerCase().includes(props.roleQuery!.toLowerCase()));
+	if (props.roleQuery == null || props.roleQuery.trim().length === 0) {
+		return true;
+	}
+	return keywords.some((keyword) => keyword.toLowerCase().includes(props.roleQuery!.toLowerCase()));
 }
 
 const avatarDecorationLimit = computed({

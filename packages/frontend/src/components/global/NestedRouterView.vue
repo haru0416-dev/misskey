@@ -36,12 +36,11 @@ provide(DI.routerCurrentDepth, currentDepth + 1);
 function resolveNested(current: PathResolvedResult, d = 0): PathResolvedResult | null {
 	if (d === currentDepth) {
 		return current;
+	}
+	if (current.child) {
+		return resolveNested(current.child, d + 1);
 	} else {
-		if (current.child) {
-			return resolveNested(current.child, d + 1);
-		} else {
-			return null;
-		}
+		return null;
 	}
 }
 
@@ -52,7 +51,9 @@ const key = ref(router.getCurrentFullPath());
 
 router.useListener('change', ({ resolved }) => {
 	const current = resolveNested(resolved);
-	if (current == null || 'redirect' in current.route) return;
+	if (current == null || 'redirect' in current.route) {
+		return;
+	}
 	currentPageComponent.value = current.route.component;
 	currentPageProps.value = current.props;
 	key.value = router.getCurrentFullPath();

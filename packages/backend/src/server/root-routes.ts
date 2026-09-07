@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
@@ -103,7 +104,9 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 			url = new URL(`${deps.config.media.proxyUrl}/emoji.webp`);
 			url.searchParams.set('url', emoji.publicUrl || emoji.originalUrl);
 			url.searchParams.set('emoji', '1');
-			if (queryHas(c.req.url, 'static')) url.searchParams.set('static', '1');
+			if (queryHas(c.req.url, 'static')) {
+				url.searchParams.set('static', '1');
+			}
 		}
 
 		return c.redirect(url.toString(), 301);

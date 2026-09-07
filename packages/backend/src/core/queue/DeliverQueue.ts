@@ -5,7 +5,8 @@
 
 import type { Config } from '@/config.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
-import { addDeliverJob, type DeliverJobInput, type DeliverQueue } from '@/core/queue/queues.js';
+import { addDeliverJob } from '@/core/queue/queues.js';
+import type { DeliverJobInput, DeliverQueue } from '@/core/queue/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverJobData, ThinUser } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
@@ -17,8 +18,12 @@ export function createDeliverJob(
 	to: string | null,
 	isSharedInbox: boolean,
 ): DeliverJobInput | null {
-	if (content == null) return null;
-	if (to == null) return null;
+	if (content == null) {
+		return null;
+	}
+	if (to == null) {
+		return null;
+	}
 
 	const contentBody = JSON.stringify(content);
 	const digest = ApRequestCreator.createDigest(contentBody);

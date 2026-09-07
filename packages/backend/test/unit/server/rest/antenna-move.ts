@@ -4,7 +4,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import { loadConfig, type Config } from '@/config.js';
+import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import {
@@ -83,7 +84,9 @@ describe('onMoveAccountForApi (AntennaService#onMoveAccount 相当)', () => {
 
 		expect(publishInternalEvent).toHaveBeenCalledTimes(1);
 		const call = publishInternalEvent.mock.calls[0];
-		if (call == null) throw new Error('Missing antennaUpdated event');
+		if (call == null) {
+			throw new Error('Missing antennaUpdated event');
+		}
 		expect(call[0]).toBe('antennaUpdated');
 		expect(call[1]).toEqual(expect.objectContaining({ id: hitAntennaId }));
 	});

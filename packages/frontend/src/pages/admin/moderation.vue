@@ -198,10 +198,7 @@ const enableRegistration = ref(!meta.disableRegistration);
 const emailRequiredForSignup = ref(meta.emailRequiredForSignup);
 const signupRateLimitMinIntervalSeconds = ref(meta.signupRateLimitMinIntervalSeconds);
 const signupRateLimitMaxPerHour = ref(meta.signupRateLimitMaxPerHour);
-const {
-	model: ugcVisibilityForVisitor,
-	def: ugcVisibilityForVisitorDef,
-} = useMkSelect({
+const { model: ugcVisibilityForVisitor, def: ugcVisibilityForVisitorDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts._serverSettings._userGeneratedContentsVisibilityForVisitor.all, value: 'all' },
 		{ label: i18n.ts._serverSettings._userGeneratedContentsVisibilityForVisitor.localOnly, value: 'local' },
@@ -224,7 +221,9 @@ async function onChange_enableRegistration(value: boolean) {
 			type: 'warning',
 			text: i18n.ts.acknowledgeNotesAndEnable,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	enableRegistration.value = value;

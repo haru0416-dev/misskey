@@ -36,12 +36,15 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import { MiPage, pageNameSchema, type MiPageContentBlock } from '@/models/Page.js';
+import { MiPage, pageNameSchema } from '@/models/Page.js';
+import type { MiPageContentBlock } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packDriveFileForApi, packDriveFileManyForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
-import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packDriveFileForApi, packDriveFileManyForApi } from '../drive/drive-file.js';
+import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
@@ -109,7 +112,9 @@ export async function packPageForApi(
 				}
 				if (item.inputType === 'number') {
 					item.type = 'numberInput';
-					if (item.default) item.default = Number.parseInt(String(item.default), 10);
+					if (item.default) {
+						item.default = Number.parseInt(String(item.default), 10);
+					}
 				}
 				migrated = true;
 			}
@@ -170,7 +175,9 @@ async function packPageManyForApi(
 	pages: MiPage[],
 	me?: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Page'>[]> {
-	if (pages.length === 0) return [];
+	if (pages.length === 0) {
+		return [];
+	}
 
 	const users = pages.map(({ user, userId }) => user ?? userId);
 	const pageIds = pages.map((pageEntity) => pageEntity.id);
@@ -578,7 +585,9 @@ export async function handleApiIPageLikes(
 		untilId,
 	});
 
-	if (likes.length === 0) return [];
+	if (likes.length === 0) {
+		return [];
+	}
 
 	const pageIds = likes.map((like) => like.pageId);
 	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds).then(

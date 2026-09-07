@@ -54,8 +54,11 @@ describe('isKeywordIncluded', () => {
 					const whole = isKeywordIncluded(input, keywords);
 					const perElement = keywords.some((k) => isKeywordIncluded(input, [k]));
 					expect(whole).toBe(perElement);
-					if (whole) hits++;
-					else misses++;
+					if (whole) {
+						hits++;
+					} else {
+						misses++;
+					}
 				}),
 				{ numRuns: 500 },
 			);
@@ -68,7 +71,9 @@ describe('isKeywordIncluded', () => {
 			let reached = 0;
 			fc.assert(
 				fc.property(text, fc.array(word, { minLength: 1, maxLength: 3 }), (input, words) => {
-					if (input === '') return;
+					if (input === '') {
+						return;
+					}
 					reached++;
 					const expected = words.every((w) => input.includes(w));
 					expect(isKeywordIncluded(input, [words.join(' ')])).toBe(expected);
@@ -84,7 +89,9 @@ describe('isKeywordIncluded', () => {
 				fc.property(text, word, fc.constantFrom('', 'i', 'm', 's'), (input, pattern, flags) => {
 					const expected = new RegExp(pattern, flags).test(input);
 					expect(isKeywordIncluded(input, [`/${pattern}/${flags}`])).toBe(expected);
-					if (expected) matched++;
+					if (expected) {
+						matched++;
+					}
 				}),
 				{ numRuns: 500 },
 			);

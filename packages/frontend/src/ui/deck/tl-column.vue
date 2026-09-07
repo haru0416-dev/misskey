@@ -60,41 +60,45 @@ const withSensitive = ref(props.column.withSensitive ?? true);
 const onlyFiles = ref(props.column.onlyFiles ?? false);
 const mediaView = ref(props.column.mediaView ?? false);
 
-watch(withRenotes, v => {
+watch(withRenotes, (v) => {
 	updateColumn(props.column.id, {
 		withRenotes: v,
 	});
 });
 
-watch(withReplies, v => {
+watch(withReplies, (v) => {
 	updateColumn(props.column.id, {
 		withReplies: v,
 	});
 });
 
-watch(withSensitive, v => {
+watch(withSensitive, (v) => {
 	updateColumn(props.column.id, {
 		withSensitive: v,
 	});
 });
 
-watch(onlyFiles, v => {
+watch(onlyFiles, (v) => {
 	updateColumn(props.column.id, {
 		onlyFiles: v,
 		...(v ? {} : { mediaView: false }),
 	});
-	if (!v) mediaView.value = false;
+	if (!v) {
+		mediaView.value = false;
+	}
 });
 
-watch(mediaView, v => {
+watch(mediaView, (v) => {
 	updateColumn(props.column.id, {
 		mediaView: v,
 		...(v ? { onlyFiles: true } : {}),
 	});
-	if (v) onlyFiles.value = true;
+	if (v) {
+		onlyFiles.value = true;
+	}
 });
 
-watch(soundSetting, v => {
+watch(soundSetting, (v) => {
 	updateColumn(props.column.id, { soundSetting: v });
 });
 
@@ -107,15 +111,24 @@ onMounted(() => {
 async function setType() {
 	const { canceled, result: src } = await os.select({
 		title: i18n.ts.timeline,
-		items: [{
-			value: 'home', label: i18n.ts._timelines.home,
-		}, {
-			value: 'local', label: i18n.ts._timelines.local,
-		}, {
-			value: 'social', label: i18n.ts._timelines.social,
-		}, {
-			value: 'global', label: i18n.ts._timelines.global,
-		}],
+		items: [
+			{
+				value: 'home',
+				label: i18n.ts._timelines.home,
+			},
+			{
+				value: 'local',
+				label: i18n.ts._timelines.local,
+			},
+			{
+				value: 'social',
+				label: i18n.ts._timelines.social,
+			},
+			{
+				value: 'global',
+				label: i18n.ts._timelines.global,
+			},
+		],
 		default: props.column.tl ?? null,
 	});
 	if (canceled) {
@@ -124,7 +137,9 @@ async function setType() {
 		}
 		return;
 	}
-	if (src == null) return;
+	if (src == null) {
+		return;
+	}
 	updateColumn(props.column.id, {
 		tl: src ?? undefined,
 	});
@@ -133,19 +148,23 @@ async function setType() {
 const menu = computed<MenuItem[]>(() => {
 	const menuItems: MenuItem[] = [];
 
-	menuItems.push({
-		icon: 'ti ti-pencil',
-		text: i18n.ts.timeline,
-		action: setType,
-	}, {
-		icon: 'ti ti-bell',
-		text: i18n.ts._deck.newNoteNotificationSettings,
-		action: () => soundSettingsButton(soundSetting),
-	}, {
-		type: 'switch',
-		text: i18n.ts.showRenotes,
-		ref: withRenotes,
-	});
+	menuItems.push(
+		{
+			icon: 'ti ti-pencil',
+			text: i18n.ts.timeline,
+			action: setType,
+		},
+		{
+			icon: 'ti ti-bell',
+			text: i18n.ts._deck.newNoteNotificationSettings,
+			action: () => soundSettingsButton(soundSetting),
+		},
+		{
+			type: 'switch',
+			text: i18n.ts.showRenotes,
+			ref: withRenotes,
+		},
+	);
 
 	if (hasWithReplies(props.column.tl)) {
 		menuItems.push({
@@ -156,20 +175,24 @@ const menu = computed<MenuItem[]>(() => {
 		});
 	}
 
-	menuItems.push({
-		type: 'switch',
-		text: i18n.ts.fileAttachedOnly,
-		ref: onlyFiles,
-		disabled: hasWithReplies(props.column.tl) ? withReplies : false,
-	}, {
-		type: 'switch',
-		text: i18n.ts.mediaTimeline,
-		ref: mediaView,
-	}, {
-		type: 'switch',
-		text: i18n.ts.withSensitive,
-		ref: withSensitive,
-	});
+	menuItems.push(
+		{
+			type: 'switch',
+			text: i18n.ts.fileAttachedOnly,
+			ref: onlyFiles,
+			disabled: hasWithReplies(props.column.tl) ? withReplies : false,
+		},
+		{
+			type: 'switch',
+			text: i18n.ts.mediaTimeline,
+			ref: mediaView,
+		},
+		{
+			type: 'switch',
+			text: i18n.ts.withSensitive,
+			ref: withSensitive,
+		},
+	);
 
 	return menuItems;
 });

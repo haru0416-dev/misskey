@@ -65,26 +65,39 @@ const searched = ref(false);
 const searchResults = ref<Misskey.entities.ChatMessage[]>([]);
 
 function start(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts._chat.individualChat,
-		caption: i18n.ts._chat.individualChat_description,
-		icon: 'ti ti-user',
-		action: () => { startUser(); },
-	}, { type: 'divider' }, {
-		type: 'parent',
-		text: i18n.ts._chat.roomChat,
-		caption: i18n.ts._chat.roomChat_description,
-		icon: 'ti ti-users-group',
-		children: [{
-			text: i18n.ts._chat.createRoom,
-			icon: 'ti ti-plus',
-			action: () => { createRoom(); },
-		}],
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts._chat.individualChat,
+				caption: i18n.ts._chat.individualChat_description,
+				icon: 'ti ti-user',
+				action: () => {
+					startUser();
+				},
+			},
+			{ type: 'divider' },
+			{
+				type: 'parent',
+				text: i18n.ts._chat.roomChat,
+				caption: i18n.ts._chat.roomChat_description,
+				icon: 'ti ti-users-group',
+				children: [
+					{
+						text: i18n.ts._chat.createRoom,
+						icon: 'ti ti-plus',
+						action: () => {
+							createRoom();
+						},
+					},
+				],
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function startUser() {
-	os.selectUser({ localOnly: true }).then(user => {
+	os.selectUser({ localOnly: true }).then((user) => {
 		router.push('/chat/user/:userId', {
 			params: {
 				userId: user.id,
@@ -98,7 +111,9 @@ async function createRoom() {
 		title: i18n.ts.name,
 		minLength: 1,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	const room = await misskeyApi('chat/rooms/create', {
 		name: result,

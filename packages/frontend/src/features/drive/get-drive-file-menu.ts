@@ -19,7 +19,9 @@ function rename(file: Misskey.entities.DriveFile) {
 		placeholder: i18n.ts.inputNewFileName,
 		default: file.name,
 	}).then(({ canceled, result: name }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		misskeyApi('drive/files/update', {
 			fileId: file.id,
 			name: name,
@@ -52,7 +54,9 @@ async function describe(file: Misskey.entities.DriveFile) {
 
 function move(file: Misskey.entities.DriveFile) {
 	selectDriveFolder(null).then(({ canceled, folders }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		misskeyApi('drive/files/update', {
 			fileId: file.id,
 			folderId: folders[0] ? folders[0].id : null,
@@ -88,7 +92,9 @@ async function deleteFile(file: Misskey.entities.DriveFile) {
 		type: 'warning',
 		text: i18n.tsx.driveFileDeleteConfirm({ name: file.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('drive/files/delete', {
 		fileId: file.id,

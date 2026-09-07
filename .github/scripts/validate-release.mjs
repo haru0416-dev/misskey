@@ -54,4 +54,6 @@ if (tag !== rootPackage.version) {
 }
 
 console.log(`Validated published release ${tag} at ${tagCommit}`);
-if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `commit=${tagCommit}\n`);
+if (process.env.GITHUB_OUTPUT) {
+	appendFileSync(process.env.GITHUB_OUTPUT, `commit=${tagCommit}\n`);
+}

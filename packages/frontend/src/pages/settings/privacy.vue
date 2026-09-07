@@ -243,10 +243,7 @@ const makeNotesFollowersOnlyBefore = ref($i.makeNotesFollowersOnlyBefore ?? null
 const makeNotesHiddenBefore = ref($i.makeNotesHiddenBefore ?? null);
 const hideOnlineStatus = ref($i.hideOnlineStatus);
 const publicReactions = ref($i.publicReactions);
-const {
-	model: followingVisibility,
-	def: followingVisibilityDef,
-} = useMkSelect({
+const { model: followingVisibility, def: followingVisibilityDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.public, value: 'public' },
 		{ label: i18n.ts.followers, value: 'followers' },
@@ -254,10 +251,7 @@ const {
 	],
 	initialValue: $i.followingVisibility,
 });
-const {
-	model: followersVisibility,
-	def: followersVisibilityDef,
-} = useMkSelect({
+const { model: followersVisibility, def: followersVisibilityDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.public, value: 'public' },
 		{ label: i18n.ts.followers, value: 'followers' },
@@ -265,10 +259,7 @@ const {
 	],
 	initialValue: $i.followersVisibility,
 });
-const {
-	model: chatScope,
-	def: chatScopeDef,
-} = useMkSelect({
+const { model: chatScope, def: chatScopeDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts._chat._chatAllowedUsers.everyone, value: 'everyone' },
 		{ label: i18n.ts._chat._chatAllowedUsers.followers, value: 'followers' },
@@ -285,13 +276,12 @@ const makeNotesFollowersOnlyBefore_type = computed({
 			return null;
 		} else if (makeNotesFollowersOnlyBefore.value >= 0) {
 			return 'absolute';
-		} else {
-			return 'relative';
 		}
+		return 'relative';
 	},
 	set(value) {
 		if (value === 'relative') {
-			makeNotesFollowersOnlyBefore.value = -604800;
+			makeNotesFollowersOnlyBefore.value = -604_800;
 		} else if (value === 'absolute') {
 			makeNotesFollowersOnlyBefore.value = Math.floor(Date.now() / 1000);
 		} else {
@@ -302,32 +292,37 @@ const makeNotesFollowersOnlyBefore_type = computed({
 
 const makeNotesFollowersOnlyBefore_presets = [
 	{ label: i18n.ts.oneHour, value: -3600 },
-	{ label: i18n.ts.oneDay, value: -86400 },
-	{ label: i18n.ts.threeDays, value: -259200 },
-	{ label: i18n.ts.oneWeek, value: -604800 },
-	{ label: i18n.ts.oneMonth, value: -2592000 },
-	{ label: i18n.ts.threeMonths, value: -7776000 },
-	{ label: i18n.ts.oneYear, value: -31104000 },
+	{ label: i18n.ts.oneDay, value: -86_400 },
+	{ label: i18n.ts.threeDays, value: -259_200 },
+	{ label: i18n.ts.oneWeek, value: -604_800 },
+	{ label: i18n.ts.oneMonth, value: -2_592_000 },
+	{ label: i18n.ts.threeMonths, value: -7_776_000 },
+	{ label: i18n.ts.oneYear, value: -31_104_000 },
 ] satisfies MkSelectItem[];
 
 const makeNotesFollowersOnlyBefore_isCustomMode = ref(
 	makeNotesFollowersOnlyBefore.value != null &&
-	makeNotesFollowersOnlyBefore.value < 0 &&
-	!makeNotesFollowersOnlyBefore_presets.some((preset) => preset.value === makeNotesFollowersOnlyBefore.value),
+		makeNotesFollowersOnlyBefore.value < 0 &&
+		!makeNotesFollowersOnlyBefore_presets.some((preset) => preset.value === makeNotesFollowersOnlyBefore.value),
 );
 
 const makeNotesFollowersOnlyBefore_selection = computed({
-	get: () => makeNotesFollowersOnlyBefore_isCustomMode.value ? 'custom' : makeNotesFollowersOnlyBefore.value,
+	get: () => (makeNotesFollowersOnlyBefore_isCustomMode.value ? 'custom' : makeNotesFollowersOnlyBefore.value),
 	set(value) {
 		makeNotesFollowersOnlyBefore_isCustomMode.value = value === 'custom';
-		if (value !== 'custom') makeNotesFollowersOnlyBefore.value = value;
+		if (value !== 'custom') {
+			makeNotesFollowersOnlyBefore.value = value;
+		}
 	},
 });
 
 const makeNotesFollowersOnlyBefore_customMonths = computed({
-	get: () => makeNotesFollowersOnlyBefore.value ? Math.abs(makeNotesFollowersOnlyBefore.value) / (30 * 24 * 60 * 60) : null,
+	get: () =>
+		makeNotesFollowersOnlyBefore.value ? Math.abs(makeNotesFollowersOnlyBefore.value) / (30 * 24 * 60 * 60) : null,
 	set(value) {
-		if (value != null && value > 0) makeNotesFollowersOnlyBefore.value = -Math.abs(Math.floor(Number(value))) * 30 * 24 * 60 * 60;
+		if (value != null && value > 0) {
+			makeNotesFollowersOnlyBefore.value = -Math.abs(Math.floor(Number(value))) * 30 * 24 * 60 * 60;
+		}
 	},
 });
 
@@ -337,13 +332,12 @@ const makeNotesHiddenBefore_type = computed({
 			return null;
 		} else if (makeNotesHiddenBefore.value >= 0) {
 			return 'absolute';
-		} else {
-			return 'relative';
 		}
+		return 'relative';
 	},
 	set(value) {
 		if (value === 'relative') {
-			makeNotesHiddenBefore.value = -604800;
+			makeNotesHiddenBefore.value = -604_800;
 		} else if (value === 'absolute') {
 			makeNotesHiddenBefore.value = Math.floor(Date.now() / 1000);
 		} else {
@@ -354,32 +348,36 @@ const makeNotesHiddenBefore_type = computed({
 
 const makeNotesHiddenBefore_presets = [
 	{ label: i18n.ts.oneHour, value: -3600 },
-	{ label: i18n.ts.oneDay, value: -86400 },
-	{ label: i18n.ts.threeDays, value: -259200 },
-	{ label: i18n.ts.oneWeek, value: -604800 },
-	{ label: i18n.ts.oneMonth, value: -2592000 },
-	{ label: i18n.ts.threeMonths, value: -7776000 },
-	{ label: i18n.ts.oneYear, value: -31104000 },
+	{ label: i18n.ts.oneDay, value: -86_400 },
+	{ label: i18n.ts.threeDays, value: -259_200 },
+	{ label: i18n.ts.oneWeek, value: -604_800 },
+	{ label: i18n.ts.oneMonth, value: -2_592_000 },
+	{ label: i18n.ts.threeMonths, value: -7_776_000 },
+	{ label: i18n.ts.oneYear, value: -31_104_000 },
 ] satisfies MkSelectItem[];
 
 const makeNotesHiddenBefore_isCustomMode = ref(
 	makeNotesHiddenBefore.value != null &&
-	makeNotesHiddenBefore.value < 0 &&
-	!makeNotesHiddenBefore_presets.some((preset) => preset.value === makeNotesHiddenBefore.value),
+		makeNotesHiddenBefore.value < 0 &&
+		!makeNotesHiddenBefore_presets.some((preset) => preset.value === makeNotesHiddenBefore.value),
 );
 
 const makeNotesHiddenBefore_selection = computed({
-	get: () => makeNotesHiddenBefore_isCustomMode.value ? 'custom' : makeNotesHiddenBefore.value,
+	get: () => (makeNotesHiddenBefore_isCustomMode.value ? 'custom' : makeNotesHiddenBefore.value),
 	set(value) {
 		makeNotesHiddenBefore_isCustomMode.value = value === 'custom';
-		if (value !== 'custom') makeNotesHiddenBefore.value = value;
+		if (value !== 'custom') {
+			makeNotesHiddenBefore.value = value;
+		}
 	},
 });
 
 const makeNotesHiddenBefore_customMonths = computed({
-	get: () => makeNotesHiddenBefore.value ? Math.abs(makeNotesHiddenBefore.value) / (30 * 24 * 60 * 60) : null,
+	get: () => (makeNotesHiddenBefore.value ? Math.abs(makeNotesHiddenBefore.value) / (30 * 24 * 60 * 60) : null),
 	set(value) {
-		if (value != null && value > 0) makeNotesHiddenBefore.value = -Math.abs(Math.floor(Number(value))) * 30 * 24 * 60 * 60;
+		if (value != null && value > 0) {
+			makeNotesHiddenBefore.value = -Math.abs(Math.floor(Number(value))) * 30 * 24 * 60 * 60;
+		}
 	},
 });
 
@@ -393,7 +391,9 @@ async function update_requireSigninToViewContents(value: boolean) {
 			type: 'warning',
 			text: i18n.ts.acknowledgeNotesAndEnable,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	requireSigninToViewContents.value = value;

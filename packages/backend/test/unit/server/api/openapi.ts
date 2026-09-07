@@ -27,17 +27,17 @@ type ErrorResponse = {
 };
 
 type Operation = {
-	parameters?: Array<{
+	parameters?: {
 		name: string;
 		in: string;
 		required: boolean;
 		schema: Record<string, unknown>;
-	}>;
+	}[];
 	requestBody?: {
 		required: boolean;
 	};
 	responses: Record<string, ErrorResponse>;
-	security?: Array<Record<string, unknown>>;
+	security?: Record<string, unknown>[];
 };
 
 const spec = genOpenapiSpec({
@@ -49,7 +49,9 @@ const spec = genOpenapiSpec({
 
 function operationFor(endpointName: string, method: 'get' | 'post' = 'post'): Operation {
 	const operation = spec.paths[`/${endpointName}`]?.[method];
-	if (operation == null) throw new Error(`Missing OpenAPI operation: ${endpointName}`);
+	if (operation == null) {
+		throw new Error(`Missing OpenAPI operation: ${endpointName}`);
+	}
 	return operation as Operation;
 }
 
@@ -113,7 +115,9 @@ describe('OpenAPI errors', () => {
 		expect(examplesFor('admin/captcha/save', 400)['noResponseProvided']).toBeUndefined();
 		for (const path of Object.values(spec.paths)) {
 			expect(path.post['responses']).not.toHaveProperty('418');
-			if (path.get != null) expect(path.get['responses']).not.toHaveProperty('418');
+			if (path.get != null) {
+				expect(path.get['responses']).not.toHaveProperty('418');
+			}
 		}
 	});
 

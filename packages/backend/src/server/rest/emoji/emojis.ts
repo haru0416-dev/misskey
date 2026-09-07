@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/drive/DriveFileUploadLogic.js';
+import { uploadSystemDriveFileFromUrl } from '@/core/drive/DriveFileUploadLogic.js';
+import type { DriveFileUploadDependencies } from '@/core/drive/DriveFileUploadLogic.js';
 import {
 	addAliasesToEmojisByIdsInDatabase,
 	deleteEmojiByIdFromDatabase,
@@ -29,9 +30,11 @@ import {
 	updateEmojisByIdsReturningFromDatabase,
 } from '@/core/emoji/EmojiStore.js';
 import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
+import { addDbJob } from '@/core/queue/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/role/RoleStore.js';
+import { listRoleSummariesByIdsFromDatabase } from '@/core/role/RoleStore.js';
+import type { RoleSummary } from '@/core/role/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -339,7 +342,9 @@ function adminSameNameEmojiExistsError(): ApiError {
 }
 
 async function publishApiEmojiUpdated(deps: ApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
-	if (deps.publishBroadcastStream == null) return;
+	if (deps.publishBroadcastStream == null) {
+		return;
+	}
 
 	deps.publishBroadcastStream('emojiUpdated', {
 		emojis: emojis.map(packEmojiDetailed),
@@ -356,7 +361,9 @@ function orderEmojisByRequestedIds(ids: MiEmoji['id'][], emojis: MiEmoji[]): MiE
 	const emojiById = new Map(emojis.map((emoji) => [emoji.id, emoji]));
 	return ids.map((id) => {
 		const emoji = emojiById.get(id);
-		if (emoji == null) throw adminBulkNoSuchEmojiError();
+		if (emoji == null) {
+			throw adminBulkNoSuchEmojiError();
+		}
 		return emoji;
 	});
 }
@@ -374,7 +381,9 @@ async function updateEmojisAtomically(
 }
 
 async function publishApiEmojiDeleted(deps: ApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
-	if (deps.publishBroadcastStream == null) return;
+	if (deps.publishBroadcastStream == null) {
+		return;
+	}
 
 	deps.publishBroadcastStream('emojiDeleted', {
 		emojis: emojis.map(packEmojiDetailed),
@@ -382,7 +391,9 @@ async function publishApiEmojiDeleted(deps: ApiEmojiDependencies, emojis: MiEmoj
 }
 
 async function publishApiEmojiAdded(deps: ApiEmojiDependencies, emoji: MiEmoji): Promise<void> {
-	if (deps.publishBroadcastStream == null) return;
+	if (deps.publishBroadcastStream == null) {
+		return;
+	}
 
 	deps.publishBroadcastStream('emojiAdded', {
 		emoji: packEmojiDetailed(emoji),
@@ -451,7 +462,9 @@ export async function handleApiEmoji(
 ): Promise<Packed<'EmojiDetailed'>> {
 	const params = parseApiParams(emojiParamDef, body);
 	const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, params.name, null);
-	if (emoji == null) throw noSuchEmojiError();
+	if (emoji == null) {
+		throw noSuchEmojiError();
+	}
 
 	return packEmojiDetailed(emoji);
 }
@@ -493,9 +506,15 @@ export async function handleApiAdminEmojiAdd(
 ): Promise<Packed<'EmojiDetailed'>> {
 	const params = parseApiParams(adminEmojiAddParamDef, body);
 	const driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
-	if (driveFile == null) throw adminAddNoSuchFileError();
-	if (await emojiExistsWithLocalNameInDatabase(deps.db, params.name)) throw adminDuplicateEmojiNameError();
-	if (!FILE_TYPE_IMAGE.includes(driveFile.type)) throw adminUnsupportedFileTypeError();
+	if (driveFile == null) {
+		throw adminAddNoSuchFileError();
+	}
+	if (await emojiExistsWithLocalNameInDatabase(deps.db, params.name)) {
+		throw adminDuplicateEmojiNameError();
+	}
+	if (!FILE_TYPE_IMAGE.includes(driveFile.type)) {
+		throw adminUnsupportedFileTypeError();
+	}
 
 	const emoji = await insertEmojiInDatabase(deps.db, {
 		id: genId(),
@@ -540,7 +559,9 @@ export async function handleApiAdminEmojiDelete(
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiDeleteParamDef, body);
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.id);
-	if (emoji == null) throw adminDeleteNoSuchEmojiError();
+	if (emoji == null) {
+		throw adminDeleteNoSuchEmojiError();
+	}
 	await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
 	await publishApiEmojiDeleted(deps, [emoji]);
 	await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {
@@ -581,7 +602,9 @@ export async function handleApiAdminEmojiCopy(
 ): Promise<Packed<'EmojiDetailed'>> {
 	const params = parseApiParams(adminEmojiCopyParamDef, body);
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.emojiId);
-	if (emoji == null) throw adminCopyNoSuchEmojiError();
+	if (emoji == null) {
+		throw adminCopyNoSuchEmojiError();
+	}
 
 	const driveFile = await uploadSystemDriveFileFromUrl(deps, emoji.originalUrl).catch(() => {
 		throw adminCopyInternalError();
@@ -638,14 +661,18 @@ export async function handleApiAdminEmojiUpdate(
 	let driveFile;
 	if (params.fileId) {
 		driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
-		if (driveFile == null) throw adminUpdateNoSuchFileError();
+		if (driveFile == null) {
+			throw adminUpdateNoSuchFileError();
+		}
 	}
 
 	const emoji =
 		params.id != null
 			? await fetchEmojiByIdFromDatabase(deps.db, params.id)
 			: await fetchEmojiByNameAndHostFromDatabase(deps.db, params.name!, null);
-	if (emoji == null) throw adminNoSuchEmojiError();
+	if (emoji == null) {
+		throw adminNoSuchEmojiError();
+	}
 
 	const doNameUpdate = params.id != null && params.name != null && params.name !== emoji.name;
 	if (doNameUpdate && (await emojiExistsWithLocalNameInDatabase(deps.db, params.name!))) {
@@ -827,7 +854,9 @@ async function packEmojiDetailedAdmin(
 				.map((id) => hintRoles.get(id)!),
 		);
 		roles.sort((a, b) => {
-			if (a.displayOrder !== b.displayOrder) return b.displayOrder - a.displayOrder;
+			if (a.displayOrder !== b.displayOrder) {
+				return b.displayOrder - a.displayOrder;
+			}
 			return a.id.localeCompare(b.id);
 		});
 	}

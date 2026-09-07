@@ -4,11 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import {
-	avatarDecoration,
-	type AvatarDecorationInsert,
-	type AvatarDecorationRow,
-} from '@/db/schema/avatar-decoration.js';
+import { avatarDecoration } from '@/db/schema/avatar-decoration.js';
+import type { AvatarDecorationInsert, AvatarDecorationRow } from '@/db/schema/avatar-decoration.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 

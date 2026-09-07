@@ -9,26 +9,18 @@ import {
 	fetchHashtagByNameFromDatabase,
 	listHashtagsFromDatabase,
 	searchHashtagNamesFromDatabase,
-	type HashtagSort,
 } from '@/core/hashtag/HashtagStore.js';
-import {
-	listUsersByTagFromDatabase,
-	type UserListOrigin,
-	type UserListSort,
-	type UserListState,
-} from '@/core/user/UserStore.js';
+import type { HashtagSort } from '@/core/hashtag/HashtagStore.js';
+import { listUsersByTagFromDatabase } from '@/core/user/UserStore.js';
+import type { UserListOrigin, UserListSort, UserListState } from '@/core/user/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import {
-	packUserDetailedManyForApi,
-	type MeDetailedApiResponse,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packUserDetailedManyForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
@@ -101,14 +93,18 @@ async function getFeaturedRanking(
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
 		const noteId = currentRankingResult[i];
 		const scoreValue = currentRankingResult[i + 1];
-		if (noteId == null || scoreValue == null) continue;
+		if (noteId == null || scoreValue == null) {
+			continue;
+		}
 		const score = Number.parseInt(scoreValue, 10);
 		ranking.set(noteId, score);
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
 		const noteId = previousRankingResult[i];
 		const scoreValue = previousRankingResult[i + 1];
-		if (noteId == null || scoreValue == null) continue;
+		if (noteId == null || scoreValue == null) {
+			continue;
+		}
 		const score = Number.parseInt(scoreValue, 10);
 		const exist = ranking.get(noteId);
 		if (exist != null) {
@@ -140,7 +136,9 @@ async function getHashtagCharts(
 	}
 
 	const result = await redisPipeline.exec();
-	if (result == null) return {};
+	if (result == null) {
+		return {};
+	}
 
 	const charts: Record<string, number[]> = {};
 	for (const hashtag of hashtags) {
@@ -151,10 +149,13 @@ async function getHashtagCharts(
 		for (let j = 0; j < hashtags.length; j++) {
 			const hashtag = hashtags[j];
 			const entry = result[i * hashtags.length + j];
-			if (hashtag == null || entry == null || typeof entry[1] !== 'number')
+			if (hashtag == null || entry == null || typeof entry[1] !== 'number') {
 				throw new Error('Hashtag chart pipeline returned an incomplete result');
+			}
 			const chart = charts[hashtag];
-			if (chart == null) throw new Error(`Hashtag chart is missing for ${hashtag}`);
+			if (chart == null) {
+				throw new Error(`Hashtag chart is missing for ${hashtag}`);
+			}
 			chart.push(entry[1]);
 		}
 	}
@@ -199,7 +200,9 @@ export async function handleApiHashtagsTrend(
 
 	return ranking.map((tag) => {
 		const chart = charts[tag];
-		if (chart == null) throw new Error(`Hashtag chart is missing for ${tag}`);
+		if (chart == null) {
+			throw new Error(`Hashtag chart is missing for ${tag}`);
+		}
 
 		return {
 			tag,
@@ -243,7 +246,9 @@ export async function handleApiHashtagsShow(
 ): Promise<Packed<'Hashtag'>> {
 	const params = parseApiParams(hashtagsShowParamDef, body);
 	const hashtag = await fetchHashtagByNameFromDatabase(deps.db, normalizeForSearch(params.tag));
-	if (hashtag == null) throw noSuchHashtagError();
+	if (hashtag == null) {
+		throw noSuchHashtagError();
+	}
 
 	return packApiHashtag(hashtag);
 }
@@ -265,7 +270,9 @@ export async function handleApiHashtagsUsers(
 	const params = parseApiParams(hashtagsUsersParamDef, body);
 
 	const tag = normalizeForSearch(params.tag);
-	if (!safeForSql(tag)) throw new Error('Injection');
+	if (!safeForSql(tag)) {
+		throw new Error('Injection');
+	}
 
 	const users = await listUsersByTagFromDatabase(deps.db, {
 		tag,

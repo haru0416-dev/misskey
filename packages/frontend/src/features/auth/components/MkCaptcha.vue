@@ -40,9 +40,24 @@ import { store } from '@/store.js';
 // https://developers.google.com/recaptcha/docs/display?hl=ja
 // https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget
 export type Captcha = {
-	render(container: string | Node, options: {
-		readonly [_ in 'sitekey' | 'theme' | 'type' | 'size' | 'tabindex' | 'callback' | 'expired' | 'expired-callback' | 'error-callback' | 'endpoint']?: unknown;
-	}): string;
+	render(
+		container: string | Node,
+		options: {
+			readonly [
+				_ in
+					| 'sitekey'
+					| 'theme'
+					| 'type'
+					| 'size'
+					| 'tabindex'
+					| 'callback'
+					| 'expired'
+					| 'expired-callback'
+					| 'error-callback'
+					| 'endpoint'
+			]?: unknown;
+		},
+	): string;
 	remove(id: string): void;
 	execute(id: string): void;
 	reset(id?: string): void;
@@ -57,7 +72,7 @@ type CaptchaContainer = {
 
 declare global {
 	// Window を拡張してるため、空ではない
-	interface Window extends CaptchaContainer { }
+	interface Window extends CaptchaContainer {}
 }
 
 const props = defineProps<{
@@ -94,11 +109,16 @@ const testcaptchaPassed = ref(false);
 
 const variable = computed(() => {
 	switch (props.provider) {
-		case 'hcaptcha': return 'hcaptcha';
-		case 'recaptcha': return 'grecaptcha';
-		case 'turnstile': return 'turnstile';
-		case 'mcaptcha': return 'mcaptcha';
-		case 'testcaptcha': return 'testcaptcha';
+		case 'hcaptcha':
+			return 'hcaptcha';
+		case 'recaptcha':
+			return 'grecaptcha';
+		case 'turnstile':
+			return 'turnstile';
+		case 'mcaptcha':
+			return 'mcaptcha';
+		case 'testcaptcha':
+			return 'testcaptcha';
 	}
 });
 
@@ -106,36 +126,48 @@ const loaded = !!(window as any)[variable.value];
 
 const src = computed(() => {
 	switch (props.provider) {
-		case 'hcaptcha': return 'https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off';
-		case 'recaptcha': return 'https://www.recaptcha.net/recaptcha/api.js?render=explicit';
-		case 'turnstile': return 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-		case 'mcaptcha': return null;
-		case 'testcaptcha': return null;
+		case 'hcaptcha':
+			return 'https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off';
+		case 'recaptcha':
+			return 'https://www.recaptcha.net/recaptcha/api.js?render=explicit';
+		case 'turnstile':
+			return 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+		case 'mcaptcha':
+			return null;
+		case 'testcaptcha':
+			return null;
 	}
 });
 
 const scriptId = computed(() => `script-${props.provider}`);
 
-const captcha = computed<Captcha>(() => (window as any)[variable.value] ?? {} as unknown as Captcha);
+const captcha = computed<Captcha>(() => (window as any)[variable.value] ?? ({} as unknown as Captcha));
 
-watch(() => [props.instanceUrl, props.sitekey, props.secretKey], async () => {
-	// 変更があったときはリフレッシュと再レンダリングをしておかないと、変更後の値で再検証が出来ない
-	if (available.value) {
-		callback(undefined);
-		clearWidget();
-		await requestRender();
-	}
-});
+watch(
+	() => [props.instanceUrl, props.sitekey, props.secretKey],
+	async () => {
+		// 変更があったときはリフレッシュと再レンダリングをしておかないと、変更後の値で再検証が出来ない
+		if (available.value) {
+			callback(undefined);
+			clearWidget();
+			await requestRender();
+		}
+	},
+);
 
 if (loaded || props.provider === 'mcaptcha' || props.provider === 'testcaptcha') {
 	available.value = true;
 } else if (src.value !== null) {
-	(window.document.getElementById(scriptId.value) ?? window.document.head.appendChild(Object.assign(window.document.createElement('script'), {
-		async: true,
-		id: scriptId.value,
-		src: src.value,
-	})))
-		.addEventListener('load', () => available.value = true);
+	(
+		window.document.getElementById(scriptId.value) ??
+		window.document.head.appendChild(
+			Object.assign(window.document.createElement('script'), {
+				async: true,
+				id: scriptId.value,
+				src: src.value,
+			}),
+		)
+	).addEventListener('load', () => (available.value = true));
 }
 
 function reset() {
@@ -144,7 +176,9 @@ function reset() {
 			captcha.value.reset(captchaWidgetId.value);
 		} catch (error: unknown) {
 			// ignore
-			if (_DEV_) console.warn(error);
+			if (_DEV_) {
+				console.warn(error);
+			}
 		}
 	}
 
@@ -160,11 +194,15 @@ function reset() {
 function remove() {
 	if (captcha.value.remove && captchaWidgetId.value) {
 		try {
-			if (_DEV_) console.log('remove', props.provider, captchaWidgetId.value);
+			if (_DEV_) {
+				console.log('remove', props.provider, captchaWidgetId.value);
+			}
 			captcha.value.remove(captchaWidgetId.value);
 		} catch (error: unknown) {
 			// ignore
-			if (_DEV_) console.warn(error);
+			if (_DEV_) {
+				console.warn(error);
+			}
 		}
 	}
 
@@ -189,14 +227,17 @@ async function requestRender() {
 		});
 	} else if (props.provider === 'mcaptcha' && props.instanceUrl && props.sitekey) {
 		const { default: Reciever } = await import('@mcaptcha/core-glue');
-		mCaptchaReciever = new Reciever({
-			siteKey: {
-				key: props.sitekey,
-				instanceUrl: new URL(props.instanceUrl),
+		mCaptchaReciever = new Reciever(
+			{
+				siteKey: {
+					key: props.sitekey,
+					instanceUrl: new URL(props.instanceUrl),
+				},
 			},
-		}, (token: string) => {
-			callback(token);
-		});
+			(token: string) => {
+				callback(token);
+			},
+		);
 		mCaptchaReciever.listen();
 		mCaptchaRemoveState.value = false;
 	} else {
@@ -229,7 +270,9 @@ function onReceivedMessage(message: MessageEvent) {
 function testcaptchaSubmit() {
 	testcaptchaPassed.value = testcaptchaInput.value === 'ai-chan-kawaii';
 	callback(testcaptchaPassed.value ? 'testcaptcha-passed' : undefined);
-	if (!testcaptchaPassed.value) testcaptchaInput.value = '';
+	if (!testcaptchaPassed.value) {
+		testcaptchaInput.value = '';
+	}
 }
 
 onMounted(() => {
@@ -252,5 +295,4 @@ onBeforeUnmount(() => {
 defineExpose({
 	reset,
 });
-
 </script>

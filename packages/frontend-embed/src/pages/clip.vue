@@ -76,18 +76,23 @@ if (assertServerContext(serverContext, 'clip')) {
 	});
 }
 
-const pagination = computed(() => ({
-	endpoint: 'clips/notes',
-	params: {
-		clipId: props.clipId,
-	},
-} as Paging));
+const pagination = computed(
+	() =>
+		({
+			endpoint: 'clips/notes',
+			params: {
+				clipId: props.clipId,
+			},
+		}) as Paging,
+);
 
 const notesEl = useTemplateRef('notesEl');
 
 function top(ev: PointerEvent) {
 	const target = ev.target as HTMLElement | null;
-	if (target && isLink(target)) return;
+	if (target && isLink(target)) {
+		return;
+	}
 
 	if (notesEl.value) {
 		scrollToTop(notesEl.value.$el as HTMLElement, { behavior: 'smooth' });

@@ -52,7 +52,8 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
 import { isApiModerator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
@@ -449,7 +450,9 @@ export async function handleApiChannelsMyFavorites(
 ): Promise<ApiPackedChannel[]> {
 	parseApiParams(emptyParamDef, body);
 	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
-	if (channelIds.length === 0) return [];
+	if (channelIds.length === 0) {
+		return [];
+	}
 
 	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
 		(channels) => new Map(channels.map((channel) => [channel.id, channel])),
@@ -556,7 +559,9 @@ export async function handleApiChannelsFollow(
 		});
 	} catch (err) {
 		// (followerId, followeeId) は unique なので、二重フォローは 500 ではなく明示的なエラーにする
-		if (isDuplicateKeyValueDatabaseError(err)) throw channelFollowAlreadyFollowingError();
+		if (isDuplicateKeyValueDatabaseError(err)) {
+			throw channelFollowAlreadyFollowingError();
+		}
 		throw err;
 	}
 
@@ -613,7 +618,9 @@ export async function handleApiChannelsMuteCreate(
 			expiresAt,
 		});
 	} catch (err) {
-		if (!isDuplicateKeyValueDatabaseError(err)) throw err;
+		if (!isDuplicateKeyValueDatabaseError(err)) {
+			throw err;
+		}
 		await updateChannelMutingExpirationInDatabase(deps.db, me.id, targetChannel.id, expiresAt);
 	}
 
@@ -653,7 +660,9 @@ export async function handleApiChannelsMuteList(
 ): Promise<ApiPackedChannel[]> {
 	parseApiParams(emptyParamDef, body);
 	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
-	if (channelIds.length === 0) return [];
+	if (channelIds.length === 0) {
+		return [];
+	}
 
 	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
 		(channels) => new Map(channels.map((channel) => [channel.id, channel])),
@@ -673,7 +682,9 @@ export async function handleApiChannelsShow(
 ): Promise<ApiPackedChannel> {
 	const params = parseApiParams(channelShowParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
-	if (channel == null) throw channelsShowNoSuchChannelError();
+	if (channel == null) {
+		throw channelsShowNoSuchChannelError();
+	}
 
 	return await packChannelDetailedForApi(deps, channel, me);
 }
@@ -688,7 +699,9 @@ export async function handleApiChannelsTimeline(
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
-	if (channel == null) throw channelsTimelineNoSuchChannelError();
+	if (channel == null) {
+		throw channelsTimelineNoSuchChannelError();
+	}
 
 	let mutingChannelIds: string[] = [];
 	if (me) {

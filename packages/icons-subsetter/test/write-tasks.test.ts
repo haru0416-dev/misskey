@@ -10,15 +10,19 @@ describe('runWriteTasks', () => {
 	test('rejects when any generated file write fails', async () => {
 		let completedSlowWrite = false;
 		const writeFile = vi.fn(async (file: string) => {
-			if (file.endsWith('.css')) throw new Error('write failed');
+			if (file.endsWith('.css')) {
+				throw new Error('write failed');
+			}
 			await Promise.resolve();
 			completedSlowWrite = true;
 		});
 
-		await expect(runWriteTasks([
-			() => writeFile('built/tabler-icons-frontend.woff2'),
-			() => writeFile('built/tabler-icons-frontend.css'),
-		])).rejects.toThrow('write failed');
+		await expect(
+			runWriteTasks([
+				() => writeFile('built/tabler-icons-frontend.woff2'),
+				() => writeFile('built/tabler-icons-frontend.css'),
+			]),
+		).rejects.toThrow('write failed');
 		expect(writeFile).toHaveBeenCalledTimes(2);
 		expect(completedSlowWrite).toBe(true);
 	});

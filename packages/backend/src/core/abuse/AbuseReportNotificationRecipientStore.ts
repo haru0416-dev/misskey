@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
-import {
-	abuseReportNotificationRecipient,
-	type AbuseReportNotificationRecipientInsert,
-	type AbuseReportNotificationRecipientRow,
+import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { abuseReportNotificationRecipient } from '@/db/schema/abuse-report-notification-recipient.js';
+import type {
+	AbuseReportNotificationRecipientInsert,
+	AbuseReportNotificationRecipientRow,
 } from '@/db/schema/abuse-report-notification-recipient.js';
 import { systemWebhook, deserializeSystemWebhook } from '@/db/schema/system-webhook.js';
 import { user as userTable } from '@/db/schema/user.js';
@@ -54,7 +55,9 @@ function recipientFilterCondition(options: {
 	const conditions: SQL[] = [];
 
 	if (options.ids != null) {
-		if (options.ids.length === 0) return sql`false`;
+		if (options.ids.length === 0) {
+			return sql`false`;
+		}
 		conditions.push(inArray(abuseReportNotificationRecipient.id, options.ids));
 	}
 
@@ -73,7 +76,9 @@ function recipientFilterCondition(options: {
 			);
 		}
 
-		if (methodConditions.length === 0) return sql`false`;
+		if (methodConditions.length === 0) {
+			return sql`false`;
+		}
 		conditions.push(or(...methodConditions)!);
 	}
 
@@ -116,7 +121,9 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const rows = await db.select().from(abuseReportNotificationRecipient).where(recipientFilterCondition(options));
 
-	if (rows.length === 0) return [];
+	if (rows.length === 0) {
+		return [];
+	}
 
 	const userIds = options.joinUser ? rows.map((row) => row.userId).filter((x) => x != null) : [];
 	const users = userIds.length > 0 ? await db.select().from(userTable).where(inArray(userTable.id, userIds)) : [];
@@ -136,8 +143,12 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 			const joinedUserProfile = row.userId == null ? null : (userProfileMap.get(row.userId) ?? null);
 			const joinedWebhook = row.systemWebhookId == null ? null : (webhookMap.get(row.systemWebhookId) ?? null);
 
-			if (options.joinUser && (joinedUser == null || joinedUserProfile == null)) return null;
-			if (options.joinSystemWebhook && joinedWebhook == null) return null;
+			if (options.joinUser && (joinedUser == null || joinedUserProfile == null)) {
+				return null;
+			}
+			if (options.joinSystemWebhook && joinedWebhook == null) {
+				return null;
+			}
 
 			return deserializeRecipient(row, {
 				user: joinedUser,
@@ -191,7 +202,9 @@ export async function deleteAbuseReportNotificationRecipientsFromDatabase(
 	ids: MiAbuseReportNotificationRecipient['id'] | MiAbuseReportNotificationRecipient['id'][],
 ): Promise<void> {
 	const normalizedIds = Array.isArray(ids) ? ids : [ids];
-	if (normalizedIds.length === 0) return;
+	if (normalizedIds.length === 0) {
+		return;
+	}
 
 	await db.delete(abuseReportNotificationRecipient).where(inArray(abuseReportNotificationRecipient.id, normalizedIds));
 }

@@ -6,7 +6,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
 import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
@@ -29,7 +30,8 @@ import {
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
 import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createChartWriters, type ChartWriters } from '@/server/chart-runtime.js';
+import { createChartWriters } from '@/server/chart-runtime.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
 import {
 	handleQueueAggregateRetention,
@@ -39,8 +41,8 @@ import {
 	handleQueueCleanCharts,
 	handleQueueResyncCharts,
 	handleQueueTickCharts,
-	type QueueSystemDependencies,
 } from '@/queue/handlers/system.js';
+import type { QueueSystemDependencies } from '@/queue/handlers/system.js';
 import type { Config } from '@/config.js';
 
 describe('hono-queue-system', () => {

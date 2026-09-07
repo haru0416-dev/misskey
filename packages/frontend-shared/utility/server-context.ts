@@ -4,7 +4,9 @@
  */
 
 export function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
-	if (value == null || value.trim() === '') return null;
+	if (value == null || value.trim() === '') {
+		return null;
+	}
 
 	try {
 		const parsed: unknown = JSON.parse(value);
@@ -25,6 +27,8 @@ export function assertServerContext<Ctx extends Record<string, unknown> | null, 
 	ctx: Ctx,
 	entity: K,
 ): ctx is Ctx & Required<Pick<NonNullable<Ctx>, K>> {
-	if (ctx == null) return false;
+	if (ctx == null) {
+		return false;
+	}
 	return entity in ctx && (ctx as NonNullable<Ctx>)[entity] != null;
 }

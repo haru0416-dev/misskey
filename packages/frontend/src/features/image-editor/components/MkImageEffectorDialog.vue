@@ -82,7 +82,9 @@ async function cancel() {
 			type: 'warning',
 			text: i18n.ts._imageEffector.discardChangesConfirm,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	emit('cancel');
@@ -92,27 +94,36 @@ async function cancel() {
 const layers = reactive<ImageEffectorLayer[]>([]);
 
 function updateLayer(index: number, layer: ImageEffectorLayer) {
-	if (layers[index] == null) return;
+	if (layers[index] == null) {
+		return;
+	}
 	layers[index] = layer;
 }
 
-watch(layers, async () => {
-	if (renderer != null) {
-		renderer.render(layers);
-	}
-}, { deep: true });
+watch(
+	layers,
+	async () => {
+		if (renderer != null) {
+			renderer.render(layers);
+		}
+	},
+	{ deep: true },
+);
 
 function addEffect(ev: PointerEvent) {
-	os.popupMenu(Object.entries(FXS).map(([id, fx]) => ({
-		text: fx.uiDefinition.name,
-		action: () => {
-			layers.push({
-				id: genId(),
-				fxId: id as keyof typeof FXS,
-				params: Object.fromEntries(Object.entries(fx.uiDefinition.params).map(([k, v]) => [k, v.default])),
-			} as ImageEffectorLayer);
-		},
-	})), ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		Object.entries(FXS).map(([id, fx]) => ({
+			text: fx.uiDefinition.name,
+			action: () => {
+				layers.push({
+					id: genId(),
+					fxId: id as keyof typeof FXS,
+					params: Object.fromEntries(Object.entries(fx.uiDefinition.params).map(([k, v]) => [k, v.default])),
+				} as ImageEffectorLayer);
+			},
+		})),
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 function onLayerSwapUp(layer: ImageEffectorLayer) {
@@ -144,7 +155,9 @@ let renderer: ImageEffector | null = null;
 let imageBitmap: ImageBitmap | null = null;
 
 onMounted(async () => {
-	if (canvasEl.value == null) return;
+	if (canvasEl.value == null) {
+		return;
+	}
 
 	const closeWaiting = os.waiting();
 
@@ -239,26 +252,35 @@ watch(enabled, () => {
 const penMode = ref<'fill' | 'blur' | 'pixelate' | null>(null);
 
 function showPenMenu(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts._imageEffector._fxs.fill,
-		action: () => {
-			penMode.value = 'fill';
-		},
-	}, {
-		text: i18n.ts._imageEffector._fxs.blur,
-		action: () => {
-			penMode.value = 'blur';
-		},
-	}, {
-		text: i18n.ts._imageEffector._fxs.pixelate,
-		action: () => {
-			penMode.value = 'pixelate';
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts._imageEffector._fxs.fill,
+				action: () => {
+					penMode.value = 'fill';
+				},
+			},
+			{
+				text: i18n.ts._imageEffector._fxs.blur,
+				action: () => {
+					penMode.value = 'blur';
+				},
+			},
+			{
+				text: i18n.ts._imageEffector._fxs.pixelate,
+				action: () => {
+					penMode.value = 'pixelate';
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 function onImagePointerdown(ev: PointerEvent) {
-	if (canvasEl.value == null || imageBitmap == null || penMode.value == null) return;
+	if (canvasEl.value == null || imageBitmap == null || penMode.value == null) {
+		return;
+	}
 
 	const AW = canvasEl.value.clientWidth;
 	const AH = canvasEl.value.clientHeight;
@@ -268,9 +290,11 @@ function onImagePointerdown(ev: PointerEvent) {
 	let xOffset = 0;
 	let yOffset = 0;
 
-	if (AW / AH < BW / BH) { // 横長
+	if (AW / AH < BW / BH) {
+		// 横長
 		yOffset = AH - BH * (AW / BW);
-	} else { // 縦長
+	} else {
+		// 縦長
 		xOffset = AW - BW * (AH / BH);
 	}
 
@@ -280,10 +304,12 @@ function onImagePointerdown(ev: PointerEvent) {
 	let startX = ev.offsetX - xOffset;
 	let startY = ev.offsetY - yOffset;
 
-	if (AW / AH < BW / BH) { // 横長
+	if (AW / AH < BW / BH) {
+		// 横長
 		startX = startX / (Math.max(AW, AH) / Math.max(BH / BW, 1));
 		startY = startY / (Math.max(AW, AH) / Math.max(BW / BH, 1));
-	} else { // 縦長
+	} else {
+		// 縦長
 		startX = startX / (Math.min(AW, AH) / Math.max(BH / BW, 1));
 		startY = startY / (Math.min(AW, AH) / Math.max(BW / BH, 1));
 	}
@@ -340,10 +366,12 @@ function onImagePointerdown(ev: PointerEvent) {
 		let x = pointerX - xOffset;
 		let y = pointerY - yOffset;
 
-		if (AW / AH < BW / BH) { // 横長
+		if (AW / AH < BW / BH) {
+			// 横長
 			x = x / (Math.max(AW, AH) / Math.max(BH / BW, 1));
 			y = y / (Math.max(AW, AH) / Math.max(BW / BH, 1));
-		} else { // 縦長
+		} else {
+			// 縦長
 			x = x / (Math.min(AW, AH) / Math.max(BH / BW, 1));
 			y = y / (Math.min(AW, AH) / Math.max(BW / BH, 1));
 		}
@@ -352,10 +380,16 @@ function onImagePointerdown(ev: PointerEvent) {
 		const scaleY = Math.abs(y - startY);
 
 		const layerIndex = layers.findIndex((l) => l.id === id);
-		const layer = layerIndex !== -1 ? (layers[layerIndex] as Extract<ImageEffectorLayer, { fxId: 'fill' } | { fxId: 'blur' } | { fxId: 'pixelate' }>) : null;
+		const layer =
+			layerIndex !== -1
+				? (layers[layerIndex] as Extract<
+						ImageEffectorLayer,
+						{ fxId: 'fill' } | { fxId: 'blur' } | { fxId: 'pixelate' }
+					>)
+				: null;
 		if (layer != null) {
-			layer.params.offsetX = (x + startX) - 1;
-			layer.params.offsetY = (y + startY) - 1;
+			layer.params.offsetX = x + startX - 1;
+			layer.params.offsetY = y + startY - 1;
 			layer.params.scaleX = scaleX;
 			layer.params.scaleY = scaleY;
 			layers[layerIndex] = layer;

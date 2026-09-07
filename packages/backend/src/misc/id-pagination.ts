@@ -30,9 +30,8 @@ export function resolveIdPagination(options: IdPaginationOptions): IdPagination 
 		return { sinceId: options.sinceId, untilId: null, order: 'asc' };
 	} else if (options.untilId) {
 		return { sinceId: null, untilId: options.untilId, order: 'desc' };
-	} else {
-		return { sinceId: null, untilId: null, order: 'desc' };
 	}
+	return { sinceId: null, untilId: null, order: 'desc' };
 }
 
 /** ID が指定されている場合は日時境界を参照しない。 */

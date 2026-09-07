@@ -86,7 +86,8 @@ async function init() {
 
 	if ($i.alsoKnownAs && $i.alsoKnownAs.length > 0) {
 		const alsoKnownAs = await misskeyApi('users/show', { userIds: $i.alsoKnownAs });
-		accountAliases.value = (alsoKnownAs && alsoKnownAs.length > 0) ? alsoKnownAs.map(user => `@${Misskey.acct.toString(user)}`) : [''];
+		accountAliases.value =
+			alsoKnownAs && alsoKnownAs.length > 0 ? alsoKnownAs.map((user) => `@${Misskey.acct.toString(user)}`) : [''];
 	} else {
 		accountAliases.value = [''];
 	}
@@ -98,7 +99,9 @@ async function move(): Promise<void> {
 		type: 'warning',
 		text: i18n.tsx._accountMigration.migrationConfirm({ account }),
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	await os.apiWithDialog('i/move', {
 		moveToAccount: account,
 	});
@@ -110,12 +113,14 @@ function add(): void {
 }
 
 function updateAlias(index: number, alias: string): void {
-	if (accountAliases.value[index] == null) return;
+	if (accountAliases.value[index] == null) {
+		return;
+	}
 	accountAliases.value[index] = alias;
 }
 
 async function save(): Promise<void> {
-	const alsoKnownAs = accountAliases.value.map(alias => alias.trim()).filter(alias => alias !== '');
+	const alsoKnownAs = accountAliases.value.map((alias) => alias.trim()).filter((alias) => alias !== '');
 	const i = await os.apiWithDialog('i/update', {
 		alsoKnownAs,
 	});

@@ -191,7 +191,9 @@ function parseMicroformats(
 	let logo: string | null = null;
 
 	const hApp = doc.querySelector('.h-app');
-	if (hApp == null) return { name, logo };
+	if (hApp == null) {
+		return { name, logo };
+	}
 
 	const nameEl = hApp.querySelector('.p-name');
 	if (nameEl != null) {
@@ -512,7 +514,9 @@ export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
 		},
 		async claimGrantCode(code) {
 			const value = grantCodes.get(code);
-			if (value == null) return null;
+			if (value == null) {
+				return null;
+			}
 			if (value.status === 'pending') {
 				grantCodes.set(code, { status: 'exchanging', grant: value.grant });
 				return { status: 'claimed', grant: value.grant };
@@ -531,7 +535,9 @@ export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
 		async finalizeGrantCode(code, accessToken) {
 			const value = grantCodes.get(code);
 			if (value?.status !== 'exchanging') {
-				if (value?.status === 'revoked') grantCodes.set(code, { ...value, accessToken });
+				if (value?.status === 'revoked') {
+					grantCodes.set(code, { ...value, accessToken });
+				}
 				return 'revoked';
 			}
 			grantCodes.set(code, { status: 'issued', grant: value.grant, accessToken });
@@ -550,7 +556,9 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 	};
 	const consume = async <T>(key: string): Promise<T | null> => {
 		const raw = await redis.eval(consumeRedisValueScript, 1, key);
-		if (typeof raw !== 'string') return null;
+		if (typeof raw !== 'string') {
+			return null;
+		}
 		try {
 			return JSON.parse(raw) as T;
 		} catch {
@@ -563,7 +571,9 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 		setGrantCode: (code, value) => set(`oauth:grant:v2:${code}`, { status: 'pending', grant: value }),
 		async claimGrantCode(code) {
 			const raw = await redis.eval(claimRedisGrantCodeScript, 2, `oauth:grant:v2:${code}`, `oauth:grant:${code}`);
-			if (typeof raw !== 'string') return null;
+			if (typeof raw !== 'string') {
+				return null;
+			}
 			try {
 				return JSON.parse(raw) as AuthorizationCodeGrantClaim;
 			} catch {
@@ -822,7 +832,9 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				deps.logger.info(
 					`Detected multiple code use from ${claim.grant.clientId} for user ${claim.grant.userId}. Revoking the code.`,
 				);
-				if (claim.accessToken) await revokeAccessToken(claim.accessToken);
+				if (claim.accessToken) {
+					await revokeAccessToken(claim.accessToken);
+				}
 				throw new InvalidGrantError('grant request is invalid');
 			}
 			const granted = claim.grant;

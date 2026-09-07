@@ -7,7 +7,7 @@ import { ref, readonly, computed } from 'vue';
 
 const time = ref(Date.now());
 
-export const TIME_UPDATE_INTERVAL = 10000; // 10秒
+export const TIME_UPDATE_INTERVAL = 10_000; // 10秒
 
 /**
  * 精度が求められないが定期的に更新しないといけない時計で使用（10秒に一度更新）。
@@ -37,12 +37,16 @@ function updateTime() {
 
 function startTimer() {
 	updateTime();
-	if (intervalId != null) return;
+	if (intervalId != null) {
+		return;
+	}
 	intervalId = window.setInterval(updateTime, TIME_UPDATE_INTERVAL);
 }
 
 function stopTimer() {
-	if (intervalId == null) return;
+	if (intervalId == null) {
+		return;
+	}
 	window.clearInterval(intervalId);
 	intervalId = null;
 }

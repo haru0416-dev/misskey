@@ -14,7 +14,9 @@ function updateUserValue<T>(value: T, user: UserUpdate): T {
 	if (Array.isArray(value)) {
 		return value.map((item) => updateUserValue(item, user)) as T;
 	}
-	if (typeof value !== 'object' || value == null || !('id' in value) || value.id !== user.id) return value;
+	if (typeof value !== 'object' || value == null || !('id' in value) || value.id !== user.id) {
+		return value;
+	}
 	return { ...value, ...user };
 }
 
@@ -36,8 +38,12 @@ export function updateEmojiQueries(
 	queryClient.setQueriesData<{ emojis: Misskey.entities.EmojiSimple[] }>(
 		{ predicate: (query) => isEndpointQuery(query.queryKey, 'emojis') },
 		(current) => {
-			if (current == null) return current;
-			if (change.type === 'add') return { ...current, emojis: [change.emoji, ...current.emojis] };
+			if (current == null) {
+				return current;
+			}
+			if (change.type === 'add') {
+				return { ...current, emojis: [change.emoji, ...current.emojis] };
+			}
 			if (change.type === 'update') {
 				return {
 					...current,

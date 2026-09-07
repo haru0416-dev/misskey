@@ -71,14 +71,19 @@ function applied(reactions: Record<string, number>, myReaction: string | null): 
 function withDelta(reaction: string, delta: number): Record<string, number> {
 	const reactions = { ...props.announcement.reactions };
 	const next = (reactions[reaction] ?? 0) + delta;
-	if (next <= 0) delete reactions[reaction];
-	else reactions[reaction] = next;
+	if (next <= 0) {
+		delete reactions[reaction];
+	} else {
+		reactions[reaction] = next;
+	}
 	return reactions;
 }
 
 async function unreact(): Promise<void> {
 	const current = props.announcement.myReaction;
-	if (current == null) return;
+	if (current == null) {
+		return;
+	}
 	await misskeyApi('announcements/unreact', { announcementId: props.announcement.id });
 	emit('updated', applied(withDelta(current, -1), null));
 }
@@ -90,7 +95,9 @@ async function react(reaction: string): Promise<void> {
 }
 
 async function toggle(reaction: string): Promise<void> {
-	if ($i == null || busy.value || props.readonly) return;
+	if ($i == null || busy.value || props.readonly) {
+		return;
+	}
 	busy.value = true;
 	try {
 		// ピッカーの戻り値は保存形と表記が違うことがあるので、揃えてから今の状態と比べる。
@@ -109,7 +116,9 @@ async function toggle(reaction: string): Promise<void> {
 }
 
 async function pick(): Promise<void> {
-	if (pickerAnchor.value == null) return;
+	if (pickerAnchor.value == null) {
+		return;
+	}
 	const reaction = await os.pickEmoji(pickerAnchor.value, { asReactionPicker: true });
 	await toggle(reaction);
 }

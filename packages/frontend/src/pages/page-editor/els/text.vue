@@ -23,7 +23,7 @@ import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 
 const props = defineProps<{
 	dragStartCallback?: (ev: DragEvent) => void;
-	modelValue: Misskey.entities.PageBlock & { type: 'text' }
+	modelValue: Misskey.entities.PageBlock & { type: 'text' };
 }>();
 
 const emit = defineEmits<{
@@ -44,7 +44,9 @@ watch(text, () => {
 });
 
 onMounted(() => {
-	if (inputEl.value == null) return;
+	if (inputEl.value == null) {
+		return;
+	}
 	autocomplete = new Autocomplete(inputEl.value, text);
 });
 

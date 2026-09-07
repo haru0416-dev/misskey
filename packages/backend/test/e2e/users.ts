@@ -6,13 +6,8 @@
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { inspect } from 'node:util';
-import {
-	DEFAULT_POLICIES,
-	createUserWithProfileAndPublickeyInDatabase,
-	genId,
-	openTestDatabase,
-	type TestDatabase,
-} from '../fixtures.js';
+import { DEFAULT_POLICIES, createUserWithProfileAndPublickeyInDatabase, genId, openTestDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	failedApiCall,

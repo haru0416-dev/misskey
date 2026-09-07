@@ -39,7 +39,9 @@ type LogContext = {
 function loggerFactory(prefix: string, context: LogContext): RootLogger {
 	return {
 		debug: (message: string) => {
-			if (debug) console.log(`[DBG] ${prefix}${message}`);
+			if (debug) {
+				console.log(`[DBG] ${prefix}${message}`);
+			}
 		},
 		warn: (message: string) => {
 			context.warningCount++;

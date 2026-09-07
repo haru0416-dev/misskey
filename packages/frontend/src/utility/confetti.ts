@@ -8,7 +8,9 @@ import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 
 export function confetti(options: { duration?: number } = {}) {
-	if (!prefer.animation) return;
+	if (!prefer.animation) {
+		return;
+	}
 
 	const duration = options.duration ?? 1000 * 4;
 	const animationEnd = Date.now() + duration;

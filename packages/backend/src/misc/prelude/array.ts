@@ -45,9 +45,15 @@ function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
 		const x = xs[i];
 		const y = ys[i];
-		if (x == null || y == null) throw new Error('Array contains an empty element');
-		if (x < y) return true;
-		if (x > y) return false;
+		if (x == null || y == null) {
+			throw new Error('Array contains an empty element');
+		}
+		if (x < y) {
+			return true;
+		}
+		if (x > y) {
+			return false;
+		}
 	}
 	return xs.length < ys.length;
 }

@@ -5,7 +5,8 @@
 
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, index, pgEnum, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
-import { noteVisibilities, type noteReactionAcceptances } from '@/types.js';
+import { noteVisibilities } from '@/types.js';
+import type { noteReactionAcceptances } from '@/types.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';

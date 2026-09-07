@@ -37,29 +37,38 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'done', v: {
-		canceled: true;
-	} | {
-		result: Record<string, any>;
-	}): void;
+	(
+		ev: 'done',
+		v:
+			| {
+					canceled: true;
+			  }
+			| {
+					result: Record<string, any>;
+			  },
+	): void;
 	(ev: 'closed'): void;
 }>();
 
 const dialog = useTemplateRef('dialog');
 
-const values = ref((() => {
-	const obj: Record<string, any> = {};
-	for (const item in props.form) {
-		const definition = props.form[item];
-		if (definition == null) continue;
-		if ('default' in definition) {
-			obj[item] = definition.default ?? null;
-		} else {
-			obj[item] = null;
+const values = ref(
+	(() => {
+		const obj: Record<string, any> = {};
+		for (const item in props.form) {
+			const definition = props.form[item];
+			if (definition == null) {
+				continue;
+			}
+			if ('default' in definition) {
+				obj[item] = definition.default ?? null;
+			} else {
+				obj[item] = null;
+			}
 		}
-	}
-	return obj;
-})());
+		return obj;
+	})(),
+);
 
 const canSave = ref(true);
 
@@ -68,7 +77,9 @@ function onCanSaveStateChanged(newCanSave: boolean) {
 }
 
 function ok() {
-	if (!canSave.value) return;
+	if (!canSave.value) {
+		return;
+	}
 
 	emit('done', {
 		result: values.value,

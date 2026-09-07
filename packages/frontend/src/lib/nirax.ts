@@ -105,7 +105,7 @@ type GetPathParams<Path extends string> = Prettify<
 	}
 >;
 
-type UnwrapReadOnly<T> = T extends ReadonlyArray<infer U> ? U : T extends Readonly<infer U> ? U : T;
+type UnwrapReadOnly<T> = T extends readonly (infer U)[] ? U : T extends Readonly<infer U> ? U : T;
 
 type GetPaths<Def extends RouteDef> = Def extends { path: infer Path }
 	? Path extends string
@@ -258,7 +258,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 		let path = fullPath;
 		let queryString: string | null = null;
 		let hash: string | null = null;
-		if (path[0] === '/') path = path.substring(1);
+		if (path[0] === '/') {
+			path = path.substring(1);
+		}
 		if (path.includes('#')) {
 			hash = path.substring(path.indexOf('#') + 1);
 			path = path.substring(0, path.indexOf('#'));
@@ -298,7 +300,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 							break pathMatchLoop;
 						} else {
 							if (p.startsWith) {
-								if (parts[0] == null || !parts[0].startsWith(p.startsWith)) continue forEachRouteLoop;
+								if (parts[0] == null || !parts[0].startsWith(p.startsWith)) {
+									continue forEachRouteLoop;
+								}
 
 								props.set(p.name, safeURIDecode(parts[0].substring(p.startsWith.length)));
 								parts.shift();
@@ -322,9 +326,8 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 								child,
 								_parsedRoute,
 							};
-						} else {
-							continue forEachRouteLoop;
 						}
+						continue forEachRouteLoop;
 					}
 
 					if (route.hash != null && hash != null) {
@@ -348,22 +351,21 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 						props,
 						_parsedRoute,
 					};
-				} else {
-					if (route.children) {
-						const child = check(route.children, parts);
-						if (child) {
-							return {
-								route,
-								props,
-								child,
-								_parsedRoute,
-							};
-						} else {
-							continue forEachRouteLoop;
-						}
+				}
+				if (route.children) {
+					const child = check(route.children, parts);
+					if (child) {
+						return {
+							route,
+							props,
+							child,
+							_parsedRoute,
+						};
 					} else {
 						continue forEachRouteLoop;
 					}
+				} else {
+					continue forEachRouteLoop;
 				}
 			}
 
@@ -394,7 +396,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 						(current._parsedRoute.queryString ? '?' + current._parsedRoute.queryString : '') +
 						(current._parsedRoute.hash ? '#' + current._parsedRoute.hash : '');
 				}
-				if (_DEV_) console.log('Redirecting from', current._parsedRoute.fullPath, 'to', redirectPath);
+				if (_DEV_) {
+					console.log('Redirecting from', current._parsedRoute.fullPath, 'to', redirectPath);
+				}
 				if (_redirectCount > 10) {
 					throw new Error('redirect loop detected');
 				}
@@ -470,7 +474,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 		}
 		if (this.navHook) {
 			const cancel = this.navHook(fullPath, flag ?? undefined);
-			if (cancel) return;
+			if (cancel) {
+				return;
+			}
 		}
 		const res = this.resolveForNavigation(fullPath);
 		if (res.route.path === '/:(*)') {

@@ -140,11 +140,13 @@ function onNotification(notification: Misskey.entities.Notification, isClient = 
 
 		notifications.value.unshift(notification);
 		window.setTimeout(() => {
-			if (notifications.value.length > 3) notifications.value.pop();
+			if (notifications.value.length > 3) {
+				notifications.value.pop();
+			}
 		}, 500);
 
 		window.setTimeout(() => {
-			notifications.value = notifications.value.filter(x => x.id !== notification.id);
+			notifications.value = notifications.value.filter((x) => x.id !== notification.id);
 		}, 6000);
 	}
 
@@ -163,7 +165,7 @@ if ($i) {
 		const connection = useStream().useChannel('main');
 		connection.on('notification', onNotification);
 	}
-	globalEvents.on('clientNotification', notification => onNotification(notification, true));
+	globalEvents.on('clientNotification', (notification) => onNotification(notification, true));
 
 	if ('serviceWorker' in navigator) {
 		swInject();

@@ -105,21 +105,24 @@ import MkFolderPage from '@/components/layout/MkFolderPage.vue';
 import { deviceKind } from '@/utility/device-kind.js';
 import { useHeightTransition } from '@/composables/useHeightTransition.js';
 
-const props = withDefaults(defineProps<{
-	defaultOpen?: boolean;
-	maxHeight?: number | null;
-	withSpacer?: boolean;
-	spacerMin?: number;
-	spacerMax?: number;
-	canPage?: boolean;
-}>(), {
-	defaultOpen: false,
-	maxHeight: null,
-	withSpacer: true,
-	spacerMin: 14,
-	spacerMax: 22,
-	canPage: true,
-});
+const props = withDefaults(
+	defineProps<{
+		defaultOpen?: boolean;
+		maxHeight?: number | null;
+		withSpacer?: boolean;
+		spacerMin?: number;
+		spacerMax?: number;
+		canPage?: boolean;
+	}>(),
+	{
+		defaultOpen: false,
+		maxHeight: null,
+		withSpacer: true,
+		spacerMin: 14,
+		spacerMax: 22,
+		canPage: true,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'opened'): void;
@@ -153,14 +156,18 @@ pageFolderTeleportCount.value += 1000;
 async function toggle(ev: PointerEvent) {
 	if (asPage && !opened.value) {
 		pageId++;
-		const { dispose } = await popup(MkFolderPage, {
-			pageId,
-		}, {
-			closed: () => {
-				opened.value = false;
-				dispose();
+		const { dispose } = await popup(
+			MkFolderPage,
+			{
+				pageId,
 			},
-		});
+			{
+				closed: () => {
+					opened.value = false;
+					dispose();
+				},
+			},
+		);
 	}
 
 	if (!opened.value) {
@@ -174,7 +181,9 @@ async function toggle(ev: PointerEvent) {
 
 function updateBgSame() {
 	const themeValue = themeManager.currentCompiledTheme;
-	if (themeValue == null) return;
+	if (themeValue == null) {
+		return;
+	}
 	const parentBg = getBgColor(rootEl.value?.parentElement) ?? 'transparent';
 	const myBg = themeValue['panel'];
 	bgSame.value = parentBg === myBg;
@@ -189,13 +198,17 @@ onBeforeUnmount(() => {
 	themeManager.off('themeChanged', updateBgSame);
 });
 
-watch(opened, (isOpened) => {
-	if (isOpened) {
-		emit('opened');
-	} else {
-		emit('closed');
-	}
-}, { flush: 'post' });
+watch(
+	opened,
+	(isOpened) => {
+		if (isOpened) {
+			emit('opened');
+		} else {
+			emit('closed');
+		}
+	},
+	{ flush: 'post' },
+);
 </script>
 
 <style lang="scss" module>

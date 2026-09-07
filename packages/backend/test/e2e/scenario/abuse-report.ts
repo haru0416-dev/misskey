@@ -17,14 +17,16 @@ import {
 	role,
 	signup,
 	startJobQueue,
-	type TestJobQueueRuntime,
 	UserToken,
 	WEBHOOK_HOST,
 } from '../../utils.js';
+import type { TestJobQueueRuntime } from '../../utils.js';
 
 function first<T>(values: readonly T[]): T {
 	const value = values[0];
-	if (value == null) throw new Error('Expected a non-empty array');
+	if (value == null) {
+		throw new Error('Expected a non-empty array');
+	}
 	return value;
 }
 

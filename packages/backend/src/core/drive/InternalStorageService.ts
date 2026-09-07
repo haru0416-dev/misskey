@@ -34,7 +34,9 @@ export function createInternalStorageService(config: Config) {
 		try {
 			await fs.promises.unlink(resolvePath(key));
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+				throw error;
+			}
 		}
 	}
 

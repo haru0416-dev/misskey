@@ -33,13 +33,21 @@ function anchorToMfm(
 	if (txt.startsWith('@') && !(rel != null && rel.startsWith('me '))) {
 		const part = txt.split('@');
 		// user@host 形式は href のホストを補って acct にする。既に3片なら補う必要がない。
-		if (part.length === 2 && href) return `${txt}@${new URL(href).hostname}`;
-		if (part.length === 3) return txt;
+		if (part.length === 2 && href) {
+			return `${txt}@${new URL(href).hostname}`;
+		}
+		if (part.length === 3) {
+			return txt;
+		}
 		return '';
 	}
 
-	if (!href && !txt) return '';
-	if (!href) return txt;
+	if (!href && !txt) {
+		return '';
+	}
+	if (!href) {
+		return txt;
+	}
 	if (!txt || txt === href) {
 		return href.match(urlRegexFull) ? href : `<${href}>`;
 	}
@@ -48,10 +56,18 @@ function anchorToMfm(
 
 /** ノード配下のテキストを、br だけ改行に置き換えて連結する。 */
 function getText(node: htmlParser.Node): string {
-	if (node instanceof htmlParser.TextNode) return node.textContent;
-	if (!(node instanceof htmlParser.HTMLElement)) return '';
-	if (node.tagName === 'BR') return '\n';
-	if (node.childNodes != null) return node.childNodes.map((n) => getText(n)).join('');
+	if (node instanceof htmlParser.TextNode) {
+		return node.textContent;
+	}
+	if (!(node instanceof htmlParser.HTMLElement)) {
+		return '';
+	}
+	if (node.tagName === 'BR') {
+		return '\n';
+	}
+	if (node.childNodes != null) {
+		return node.childNodes.map((n) => getText(n)).join('');
+	}
 	return '';
 }
 
@@ -73,12 +89,18 @@ function parseRubyPairs(node: htmlParser.HTMLElement): [string, string][] | null
 			continue;
 		}
 
-		if (!(child instanceof htmlParser.HTMLElement)) continue;
-		if (child.tagName === 'RP') continue;
+		if (!(child instanceof htmlParser.HTMLElement)) {
+			continue;
+		}
+		if (child.tagName === 'RP') {
+			continue;
+		}
 
 		if (child.tagName === 'RT' && ruby.length > 0) {
 			const rt = getText(child);
-			if (RUBY_UNSUPPORTED.test(rt)) return null;
+			if (RUBY_UNSUPPORTED.test(rt)) {
+				return null;
+			}
 			ruby.at(-1)![1] = rt;
 			continue;
 		}

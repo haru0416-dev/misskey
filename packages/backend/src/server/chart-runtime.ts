@@ -4,9 +4,11 @@
  */
 
 import { toPuny } from '@/misc/to-puny.js';
-import { sql, type SQL } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
-import Chart, { type KVs } from '@/core/chart/core.js';
+import Chart from '@/core/chart/core.js';
+import type { KVs } from '@/core/chart/core.js';
 import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
 import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
@@ -96,7 +98,9 @@ class PerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> {
 	}
 
 	public async update(file: Pick<MiDriveFile, 'userId' | 'size'>, isAdditional: boolean): Promise<void> {
-		if (file.userId == null) return;
+		if (file.userId == null) {
+			return;
+		}
 		const fileSizeKb = file.size / 1000;
 		this.commit(
 			{

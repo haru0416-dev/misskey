@@ -33,7 +33,7 @@ export type ReconnectingWebSocketOptions = {
 };
 
 const WS_OPEN = 1;
-export const MAX_OFFLINE_MESSAGE_COUNT = 1_000;
+export const MAX_OFFLINE_MESSAGE_COUNT = 1000;
 export const MAX_OFFLINE_MESSAGE_BYTES = 1024 * 1024;
 
 export class ReconnectingWebSocket {
@@ -65,12 +65,13 @@ export class ReconnectingWebSocket {
 	constructor(url: string, protocols?: string | string[], options: ReconnectingWebSocketOptions = {}) {
 		this.url = url;
 		// 空文字列プロトコルは WebSocket コンストラクタで SyntaxError になるため渡さない
-		this.protocols = protocols === '' || protocols == null || (Array.isArray(protocols) && protocols.length === 0)
-			? undefined
-			: protocols;
+		this.protocols =
+			protocols === '' || protocols == null || (Array.isArray(protocols) && protocols.length === 0)
+				? undefined
+				: protocols;
 		this.wsConstructor = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketConstructor);
 		this.minReconnectionDelay = options.minReconnectionDelay ?? 1000;
-		this.maxReconnectionDelay = options.maxReconnectionDelay ?? 10000;
+		this.maxReconnectionDelay = options.maxReconnectionDelay ?? 10_000;
 		this.reconnectionDelayGrowFactor = options.reconnectionDelayGrowFactor ?? 1.3;
 		this.connectionTimeout = options.connectionTimeout ?? 4000;
 
@@ -83,14 +84,22 @@ export class ReconnectingWebSocket {
 
 	public set binaryType(value: string) {
 		this._binaryType = value;
-		if (this.ws) this.ws.binaryType = value;
+		if (this.ws) {
+			this.ws.binaryType = value;
+		}
 	}
 
-	public addEventListener<K extends keyof WebSocketEventMap>(type: K, listener: (ev: WebSocketEventMap[K]) => void): void {
+	public addEventListener<K extends keyof WebSocketEventMap>(
+		type: K,
+		listener: (ev: WebSocketEventMap[K]) => void,
+	): void {
 		this.listeners[type].add(listener);
 	}
 
-	public removeEventListener<K extends keyof WebSocketEventMap>(type: K, listener: (ev: WebSocketEventMap[K]) => void): void {
+	public removeEventListener<K extends keyof WebSocketEventMap>(
+		type: K,
+		listener: (ev: WebSocketEventMap[K]) => void,
+	): void {
 		this.listeners[type].delete(listener);
 	}
 
@@ -101,9 +110,14 @@ export class ReconnectingWebSocket {
 		} else {
 			this.messageQueue.push(data);
 			this.messageQueueBytes += new TextEncoder().encode(data).byteLength;
-			while (this.messageQueue.length > MAX_OFFLINE_MESSAGE_COUNT || this.messageQueueBytes > MAX_OFFLINE_MESSAGE_BYTES) {
+			while (
+				this.messageQueue.length > MAX_OFFLINE_MESSAGE_COUNT ||
+				this.messageQueueBytes > MAX_OFFLINE_MESSAGE_BYTES
+			) {
 				const dropped = this.messageQueue.shift();
-				if (dropped == null) break;
+				if (dropped == null) {
+					break;
+				}
 				this.messageQueueBytes -= new TextEncoder().encode(dropped).byteLength;
 			}
 		}
@@ -147,12 +161,17 @@ export class ReconnectingWebSocket {
 	}
 
 	private connect(): void {
-		if (this.closed) return;
+		if (this.closed) {
+			return;
+		}
 
-		const ws: WebSocketLike = this.protocols !== undefined
-			? new this.wsConstructor(this.url, this.protocols)
-			: new this.wsConstructor(this.url);
-		if (this._binaryType != null) ws.binaryType = this._binaryType;
+		const ws: WebSocketLike =
+			this.protocols !== undefined
+				? new this.wsConstructor(this.url, this.protocols)
+				: new this.wsConstructor(this.url);
+		if (this._binaryType != null) {
+			ws.binaryType = this._binaryType;
+		}
 		this.ws = ws;
 
 		// 一定時間内に open しなければ接続を打ち切って再試行する
@@ -173,7 +192,9 @@ export class ReconnectingWebSocket {
 			} catch (error) {
 				listenerError = error;
 			}
-			if (this.closed || this.ws !== ws || ws.readyState !== WS_OPEN) return;
+			if (this.closed || this.ws !== ws || ws.readyState !== WS_OPEN) {
+				return;
+			}
 			if (this.messageQueue.length > 0) {
 				const queue = this.messageQueue;
 				this.messageQueue = [];
@@ -182,7 +203,9 @@ export class ReconnectingWebSocket {
 					ws.send(data);
 				}
 			}
-			if (listenerError !== undefined) throw listenerError;
+			if (listenerError !== undefined) {
+				throw listenerError;
+			}
 		};
 		ws.onmessage = (ev) => {
 			this.emit('message', ev as { data: string });
@@ -196,7 +219,9 @@ export class ReconnectingWebSocket {
 				this.connectionTimer = null;
 			}
 			this.detach(ws);
-			if (this.ws === ws) this.ws = null;
+			if (this.ws === ws) {
+				this.ws = null;
+			}
 			this.emit('close', ev);
 			if (!this.closed) {
 				this.scheduleReconnect();
@@ -205,7 +230,9 @@ export class ReconnectingWebSocket {
 	}
 
 	private scheduleReconnect(): void {
-		if (this.reconnectTimer != null) return;
+		if (this.reconnectTimer != null) {
+			return;
+		}
 		this.retryCount++;
 		const delay = Math.min(
 			this.maxReconnectionDelay,

@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, lte, or, sql, type SQL } from 'drizzle-orm';
-import { ad, type AdInsert, type AdRow } from '@/db/schema/ad.js';
+import { and, asc, desc, eq, gt, lt, lte, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { ad } from '@/db/schema/ad.js';
+import type { AdInsert, AdRow } from '@/db/schema/ad.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAd } from '@/models/Ad.js';
 
@@ -37,32 +39,50 @@ function adPaginationCondition(sinceId?: string | null, untilId?: string | null)
 		return [gt(ad.id, sinceId)];
 	} else if (untilId) {
 		return [lt(ad.id, untilId)];
-	} else {
-		return [];
 	}
+	return [];
 }
 
 function adPaginationOrder(sinceId?: string | null, untilId?: string | null): AdOrder {
 	if (sinceId && !untilId) {
 		return asc(ad.id);
-	} else {
-		return desc(ad.id);
 	}
+	return desc(ad.id);
 }
 
 function pruneUndefinedAdUpdate(data: AdUpdate): AdUpdate {
 	const set: AdUpdate = {};
 
-	if (data.expiresAt !== undefined) set.expiresAt = data.expiresAt;
-	if (data.startsAt !== undefined) set.startsAt = data.startsAt;
-	if (data.place !== undefined) set.place = data.place;
-	if (data.priority !== undefined) set.priority = data.priority;
-	if (data.ratio !== undefined) set.ratio = data.ratio;
-	if (data.url !== undefined) set.url = data.url;
-	if (data.imageUrl !== undefined) set.imageUrl = data.imageUrl;
-	if (data.memo !== undefined) set.memo = data.memo;
-	if (data.dayOfWeek !== undefined) set.dayOfWeek = data.dayOfWeek;
-	if (data.isSensitive !== undefined) set.isSensitive = data.isSensitive;
+	if (data.expiresAt !== undefined) {
+		set.expiresAt = data.expiresAt;
+	}
+	if (data.startsAt !== undefined) {
+		set.startsAt = data.startsAt;
+	}
+	if (data.place !== undefined) {
+		set.place = data.place;
+	}
+	if (data.priority !== undefined) {
+		set.priority = data.priority;
+	}
+	if (data.ratio !== undefined) {
+		set.ratio = data.ratio;
+	}
+	if (data.url !== undefined) {
+		set.url = data.url;
+	}
+	if (data.imageUrl !== undefined) {
+		set.imageUrl = data.imageUrl;
+	}
+	if (data.memo !== undefined) {
+		set.memo = data.memo;
+	}
+	if (data.dayOfWeek !== undefined) {
+		set.dayOfWeek = data.dayOfWeek;
+	}
+	if (data.isSensitive !== undefined) {
+		set.isSensitive = data.isSensitive;
+	}
 
 	return set;
 }

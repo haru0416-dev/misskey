@@ -6,7 +6,8 @@
 import { SQL } from 'bun';
 import { drizzle } from 'drizzle-orm/bun-sql';
 import type { Config } from '@/config.js';
-import { createDrizzleQueryLogger, type MiDrizzleDatabase } from '@/drizzle.js';
+import { createDrizzleQueryLogger } from '@/drizzle.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
 
@@ -48,8 +49,12 @@ function encodeDate(value: Date): string {
 }
 
 function encodePostgresArrayElement(value: unknown): string {
-	if (value == null) return 'NULL';
-	if (Array.isArray(value)) return encodePostgresArray(value);
+	if (value == null) {
+		return 'NULL';
+	}
+	if (Array.isArray(value)) {
+		return encodePostgresArray(value);
+	}
 	const text = value instanceof Date ? encodeDate(value) : String(value);
 	return `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 }
@@ -61,15 +66,21 @@ function encodePostgresArray(values: readonly unknown[]): string {
 // Bun.sql は JS の配列を PostgreSQL の配列パラメータへ変換しないため、`= ANY($1)` に配列を渡すと
 // `malformed array literal` で落ちる。ドライバ境界で配列リテラルへ変換して node-postgres と揃える。
 function toBunSqlParameter(param: unknown): unknown {
-	if (Array.isArray(param)) return encodePostgresArray(param);
-	if (param instanceof Date) return encodeDate(param);
+	if (Array.isArray(param)) {
+		return encodePostgresArray(param);
+	}
+	if (param instanceof Date) {
+		return encodeDate(param);
+	}
 	return param;
 }
 
 // node-postgres は `{ rows, rowCount }` を返すが Bun.sql は行の配列そのものを返す。
 // `db.execute()` の戻り値を `result.rows` で読む既存コードのために、配列側へ形を合わせる。
 function withNodePostgresResultShape(rows: unknown): unknown {
-	if (!Array.isArray(rows)) return rows;
+	if (!Array.isArray(rows)) {
+		return rows;
+	}
 	const affected = (rows as { count?: number }).count;
 	Object.defineProperty(rows, 'rows', { value: rows, configurable: true });
 	Object.defineProperty(rows, 'rowCount', { value: affected ?? rows.length, configurable: true });
@@ -79,9 +90,13 @@ function withNodePostgresResultShape(rows: unknown): unknown {
 // Bun.sql の PostgresError は SQLSTATE を `errno` に入れ、`code` には `ERR_POSTGRES_SERVER_ERROR` を入れる。
 // 一意制約違反 (23505) やタイムアウト (57014) を `code` で判定している呼び出し側のために node-postgres へ寄せる。
 function normalizeDatabaseError(error: unknown): unknown {
-	if (error == null || typeof error !== 'object') return error;
+	if (error == null || typeof error !== 'object') {
+		return error;
+	}
 	const candidate = error as { code?: unknown; errno?: unknown };
-	if (candidate.code !== 'ERR_POSTGRES_SERVER_ERROR' || typeof candidate.errno !== 'string') return error;
+	if (candidate.code !== 'ERR_POSTGRES_SERVER_ERROR' || typeof candidate.errno !== 'string') {
+		return error;
+	}
 	Object.defineProperty(error, 'code', { value: candidate.errno, configurable: true, writable: true });
 	return error;
 }
@@ -103,7 +118,9 @@ function wrapBunSqlClient(client: SQL, transactionClient = client): DrizzleBunSq
 				then: (onFulfilled, onRejected) =>
 					(query.then(withNodePostgresResultShape) as Promise<unknown[]>).then(onFulfilled, (error: unknown) => {
 						const normalized = normalizeDatabaseError(error);
-						if (onRejected != null) return onRejected(normalized);
+						if (onRejected != null) {
+							return onRejected(normalized);
+						}
 						throw normalized;
 					}),
 			};
@@ -174,7 +191,9 @@ export function createBunSqlRuntime(config: Config): BunSqlRuntime {
 		db: db as unknown as MiDrizzleDatabase,
 		close: async () => {
 			await client.close();
-			if (transactionClient !== client) await transactionClient.close();
+			if (transactionClient !== client) {
+				await transactionClient.close();
+			}
 		},
 	};
 }

@@ -44,7 +44,9 @@ export class LocaleInliner {
 		this.scriptsDir = options.scriptsDir;
 		this.i18nFile = options.i18nFile;
 		const i18nChunk = options.manifest[this.i18nFile];
-		if (i18nChunk == null) throw new Error(`i18n entry '${this.i18nFile}' not found in manifest`);
+		if (i18nChunk == null) {
+			throw new Error(`i18n entry '${this.i18nFile}' not found in manifest`);
+		}
 		this.i18nFileName = this.stripScriptDir(i18nChunk.file);
 		this.logger = options.logger;
 		this.i18nSymbol = 'i18n';
@@ -89,16 +91,21 @@ export class LocaleInliner {
 	#detectI18nFacadeChunk() {
 		// preserveEntrySignatures が allow-extension でも facade chunk が生成されるため、実体のファイル名と識別子を解決する。
 		const chunk = this.chunks.find((x) => x.fileName === this.i18nFileName);
-		if (chunk == null) throw new Error(`i18n script file '${this.i18nFile}' not found`);
-		if (chunk.sourceCode == null) throw new Error(`Source code for '${this.i18nFile}' not loaded`);
+		if (chunk == null) {
+			throw new Error(`i18n script file '${this.i18nFile}' not found`);
+		}
+		if (chunk.sourceCode == null) {
+			throw new Error(`Source code for '${this.i18nFile}' not loaded`);
+		}
 		const fileLogger = this.logger.prefixed(`${chunk.fileName} (${chunk.chunkName}): `);
 		const facadeInfo = detectI18nFacadeChunk(chunk.sourceCode, chunk.fileName, fileLogger);
 		if (facadeInfo != null) {
 			const i18nSymbol = facadeInfo.nameMap[this.i18nSymbol];
-			if (i18nSymbol == null)
+			if (i18nSymbol == null) {
 				throw new Error(
 					`Facade module for i18n file does not map ${this.i18nSymbol}. mapping: ${JSON.stringify(facadeInfo.nameMap)}`,
 				);
+			}
 			this.logger.info(
 				`We detected ${this.i18nFileName} is facade chunk maps ${facadeInfo.fileName} with ${i18nSymbol} as ${this.i18nSymbol}`,
 			);

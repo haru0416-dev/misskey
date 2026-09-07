@@ -48,11 +48,13 @@ import MkInput from '@/components/form/MkInput.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkDraggable from '@/components/layout/MkDraggable.vue';
 
-const serverRules = ref<{ text: string; id: string; }[]>(instance.serverRules.map(text => ({ text, id: Math.random().toString() })));
+const serverRules = ref<{ text: string; id: string }[]>(
+	instance.serverRules.map((text) => ({ text, id: Math.random().toString() })),
+);
 
 async function save() {
 	await os.apiWithDialog('admin/update-meta', {
-		serverRules: serverRules.value.map(r => r.text),
+		serverRules: serverRules.value.map((r) => r.text),
 	});
 	fetchInstance(true);
 }
@@ -62,12 +64,14 @@ function add(): void {
 }
 
 function remove(id: string): void {
-	serverRules.value = serverRules.value.filter(r => r.id !== id);
+	serverRules.value = serverRules.value.filter((r) => r.id !== id);
 }
 
 function updateRule(index: number, text: string): void {
 	const rule = serverRules.value[index];
-	if (rule != null) rule.text = text;
+	if (rule != null) {
+		rule.text = text;
+	}
 }
 </script>
 

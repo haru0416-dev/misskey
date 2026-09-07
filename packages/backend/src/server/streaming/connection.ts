@@ -12,11 +12,10 @@ import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelM
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
-import {
-	markAllApiNotificationsAsRead,
-	type ApiNotificationDependencies,
-} from '@/server/rest/notification/notification.js';
-import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
+import { markAllApiNotificationsAsRead } from '@/server/rest/notification/notification.js';
+import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import { isJsonObject } from '@/misc/json-value.js';
+import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
@@ -61,7 +60,9 @@ async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> 
 			}),
 		]);
 	} finally {
-		if (timeoutId != null) clearTimeout(timeoutId);
+		if (timeoutId != null) {
+			clearTimeout(timeoutId);
+		}
 	}
 }
 
@@ -72,7 +73,9 @@ class StreamChannelSubscriberScope implements StreamChannelSubscriber {
 	constructor(private readonly subscriber: EventEmitter) {}
 
 	public on(eventName: string | symbol, listener: Parameters<EventEmitter['on']>[1]): void {
-		if (this.disposed) return;
+		if (this.disposed) {
+			return;
+		}
 		this.subscriber.on(eventName, listener);
 		this.listeners.push({ eventName, listener });
 	}
@@ -80,12 +83,16 @@ class StreamChannelSubscriberScope implements StreamChannelSubscriber {
 	public off(eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]): void {
 		this.subscriber.off(eventName, listener);
 		const index = this.listeners.findLastIndex((entry) => entry.eventName === eventName && entry.listener === listener);
-		if (index !== -1) this.listeners.splice(index, 1);
+		if (index !== -1) {
+			this.listeners.splice(index, 1);
+		}
 	}
 
 	public dispose(): void {
 		this.disposed = true;
-		for (const { eventName, listener } of this.listeners) this.subscriber.off(eventName, listener);
+		for (const { eventName, listener } of this.listeners) {
+			this.subscriber.off(eventName, listener);
+		}
 		this.listeners.length = 0;
 	}
 }
@@ -200,7 +207,9 @@ export class StreamConnection {
 		this.applyInternalEvent(data);
 	};
 	private applyInternalEvent(data: GlobalEvents['internal']['payload']): void {
-		if (this.user == null) return;
+		if (this.user == null) {
+			return;
+		}
 
 		switch (data.type) {
 			case 'follow':
@@ -222,39 +231,61 @@ export class StreamConnection {
 				}
 				break;
 			case 'followChannel':
-				if (data.body.userId === this.user.id) this.followingChannels.add(data.body.channelId);
+				if (data.body.userId === this.user.id) {
+					this.followingChannels.add(data.body.channelId);
+				}
 				break;
 			case 'unfollowChannel':
-				if (data.body.userId === this.user.id) this.followingChannels.delete(data.body.channelId);
+				if (data.body.userId === this.user.id) {
+					this.followingChannels.delete(data.body.channelId);
+				}
 				break;
 			case 'muteChannel':
-				if (data.body.userId === this.user.id) this.mutingChannels.add(data.body.channelId);
+				if (data.body.userId === this.user.id) {
+					this.mutingChannels.add(data.body.channelId);
+				}
 				break;
 			case 'unmuteChannel':
-				if (data.body.userId === this.user.id) this.mutingChannels.delete(data.body.channelId);
+				if (data.body.userId === this.user.id) {
+					this.mutingChannels.delete(data.body.channelId);
+				}
 				break;
 			case 'mute':
-				if (data.body.muterId === this.user.id) this.userIdsWhoMeMuting.add(data.body.muteeId);
+				if (data.body.muterId === this.user.id) {
+					this.userIdsWhoMeMuting.add(data.body.muteeId);
+				}
 				break;
 			case 'unmute':
-				if (data.body.muterId === this.user.id) this.userIdsWhoMeMuting.delete(data.body.muteeId);
+				if (data.body.muterId === this.user.id) {
+					this.userIdsWhoMeMuting.delete(data.body.muteeId);
+				}
 				break;
 			case 'renoteMute':
-				if (data.body.muterId === this.user.id) this.userIdsWhoMeMutingRenotes.add(data.body.muteeId);
+				if (data.body.muterId === this.user.id) {
+					this.userIdsWhoMeMutingRenotes.add(data.body.muteeId);
+				}
 				break;
 			case 'renoteUnmute':
-				if (data.body.muterId === this.user.id) this.userIdsWhoMeMutingRenotes.delete(data.body.muteeId);
+				if (data.body.muterId === this.user.id) {
+					this.userIdsWhoMeMutingRenotes.delete(data.body.muteeId);
+				}
 				break;
 			case 'blockingCreated':
-				if (data.body.blockeeId === this.user.id) this.userIdsWhoBlockingMe.add(data.body.blockerId);
+				if (data.body.blockeeId === this.user.id) {
+					this.userIdsWhoBlockingMe.add(data.body.blockerId);
+				}
 				break;
 			case 'blockingDeleted':
-				if (data.body.blockeeId === this.user.id) this.userIdsWhoBlockingMe.delete(data.body.blockerId);
+				if (data.body.blockeeId === this.user.id) {
+					this.userIdsWhoBlockingMe.delete(data.body.blockerId);
+				}
 				break;
 			case 'updateUserProfile':
 				if (data.body.userId === this.user.id) {
 					this.userMutedInstances.clear();
-					for (const host of data.body.mutedInstances) this.userMutedInstances.add(host);
+					for (const host of data.body.mutedInstances) {
+						this.userMutedInstances.add(host);
+					}
 				}
 				break;
 		}
@@ -287,12 +318,18 @@ export class StreamConnection {
 		user: MiUser | null | undefined,
 		token: MiAccessToken | null | undefined,
 	) {
-		if (user) this.user = user;
-		if (token) this.token = token;
+		if (user) {
+			this.user = user;
+		}
+		if (token) {
+			this.token = token;
+		}
 	}
 
 	private async fetch(): Promise<void> {
-		if (this.user == null) return;
+		if (this.user == null) {
+			return;
+		}
 		const snapshot = await fetchStreamConnectionSnapshot(this.deps, this.user.id);
 		this.userProfile = snapshot.userProfile;
 		this.following = snapshot.following;
@@ -320,15 +357,23 @@ export class StreamConnection {
 	}
 
 	public refresh(): Promise<void> {
-		if (this.user == null) return Promise.resolve();
-		if (this.refreshPromise != null) return this.refreshPromise;
+		if (this.user == null) {
+			return Promise.resolve();
+		}
+		if (this.refreshPromise != null) {
+			return this.refreshPromise;
+		}
 
 		this.pendingInternalEvents = [];
 		const refreshPromise = this.fetch().finally(() => {
 			const pendingInternalEvents = this.pendingInternalEvents;
 			this.pendingInternalEvents = null;
-			for (const event of pendingInternalEvents ?? []) this.applyInternalEvent(event);
-			if (this.refreshPromise === refreshPromise) this.refreshPromise = undefined;
+			for (const event of pendingInternalEvents ?? []) {
+				this.applyInternalEvent(event);
+			}
+			if (this.refreshPromise === refreshPromise) {
+				this.refreshPromise = undefined;
+			}
 		});
 		this.refreshPromise = refreshPromise;
 		return refreshPromise;
@@ -383,12 +428,16 @@ export class StreamConnection {
 	}
 
 	private onReadNotification(): void {
-		if (this.user == null) return;
+		if (this.user == null) {
+			return;
+		}
 		void markAllApiNotificationsAsRead(this.deps, this.user.id, false);
 	}
 
 	private onSubscribeNote(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') {
+			return;
+		}
 
 		const current = this.subscribingNotes[payload['id']] ?? 0;
 		const updated = current + 1;
@@ -400,10 +449,14 @@ export class StreamConnection {
 	}
 
 	private onUnsubscribeNote(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') {
+			return;
+		}
 
 		const current = this.subscribingNotes[payload['id']];
-		if (current == null) return;
+		if (current == null) {
+			return;
+		}
 		const updated = current - 1;
 		this.subscribingNotes[payload['id']] = updated;
 		if (updated <= 0) {
@@ -413,17 +466,29 @@ export class StreamConnection {
 	}
 
 	private onChannelConnectRequested(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload)) return;
+		if (!isJsonObject(payload)) {
+			return;
+		}
 		const { channel, id, params, pong } = payload;
-		if (typeof id !== 'string') return;
-		if (typeof channel !== 'string') return;
-		if (typeof pong !== 'boolean' && pong !== undefined && pong !== null) return;
-		if (params !== undefined && !isJsonObject(params)) return;
+		if (typeof id !== 'string') {
+			return;
+		}
+		if (typeof channel !== 'string') {
+			return;
+		}
+		if (typeof pong !== 'boolean' && pong !== undefined && pong !== null) {
+			return;
+		}
+		if (params !== undefined && !isJsonObject(params)) {
+			return;
+		}
 		void this.connectChannel(id, params, channel, pong ?? undefined).catch(() => {});
 	}
 
 	private onChannelDisconnectRequested(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') {
+			return;
+		}
 		this.disconnectChannel(payload['id']);
 	}
 
@@ -459,7 +524,9 @@ export class StreamConnection {
 		channelName: string,
 		pong = false,
 	): Promise<void> {
-		if (this.disposed) return;
+		if (this.disposed) {
+			return;
+		}
 		this.disconnectChannel(id);
 
 		if (this.channels.size + this.pendingChannelScopes.size >= MAX_CHANNELS_PER_CONNECTION) {
@@ -505,7 +572,9 @@ export class StreamConnection {
 			result = await withTimeout(initialization, `Stream channel initialization timed out: ${channelName}`);
 		} catch (error) {
 			subscriber.dispose();
-			if (this.pendingChannels.get(id) === subscriber) this.pendingChannels.delete(id);
+			if (this.pendingChannels.get(id) === subscriber) {
+				this.pendingChannels.delete(id);
+			}
 			const cleanupLateResult = initialization.then(
 				(lateResult) => lateResult && lateResult.dispose?.(),
 				() => {},
@@ -558,10 +627,18 @@ export class StreamConnection {
 	}
 
 	private onChannelMessageRequested(data: JsonValue | undefined): void {
-		if (!isJsonObject(data)) return;
-		if (typeof data['id'] !== 'string') return;
-		if (typeof data['type'] !== 'string') return;
-		if (data['body'] === undefined) return;
+		if (!isJsonObject(data)) {
+			return;
+		}
+		if (typeof data['id'] !== 'string') {
+			return;
+		}
+		if (typeof data['type'] !== 'string') {
+			return;
+		}
+		if (data['body'] === undefined) {
+			return;
+		}
 
 		const entry = this.channels.get(data['id']);
 		entry?.handle.onMessage?.(data['type'], data['body']);
@@ -577,7 +654,9 @@ export class StreamConnection {
 		for (const entry of this.channels.values()) {
 			entry.handle.dispose?.();
 		}
-		for (const subscriber of this.pendingChannels.values()) subscriber.dispose();
+		for (const subscriber of this.pendingChannels.values()) {
+			subscriber.dispose();
+		}
 		this.channels.clear();
 		this.pendingChannels.clear();
 		this.pendingChannelScopes.clear();
@@ -590,13 +669,17 @@ export async function refreshStreamConnections(connections: ReadonlyMap<StreamCo
 	const workers = Array.from({ length: Math.min(REFRESH_CONCURRENCY, pending.length) }, async () => {
 		while (index < pending.length) {
 			const [connection, terminate] = pending[index++]!;
-			if (!connections.has(connection)) continue;
+			if (!connections.has(connection)) {
+				continue;
+			}
 			let lastError: unknown;
 			let refreshed = false;
 			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
 				// 復旧中の DB 障害を増幅しないよう、再試行を直列化する。
 				// eslint-disable-next-line no-await-in-loop
-				if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+				if (delayMs > 0) {
+					await new Promise((resolve) => setTimeout(resolve, delayMs));
+				}
 				try {
 					// eslint-disable-next-line no-await-in-loop
 					await connection.refresh();

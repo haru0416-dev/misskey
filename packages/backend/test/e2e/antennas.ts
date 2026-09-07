@@ -17,7 +17,8 @@ import {
 	userList,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { DEFAULT_POLICIES, openTestDatabase, type TestDatabase, updateAntennaInDatabase } from '../fixtures.js';
+import { DEFAULT_POLICIES, openTestDatabase, updateAntennaInDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 
 const compareBy =
 	<T extends { id: string }>(selector: (s: T) => string = (s: T): string => s.id) =>
@@ -877,7 +878,9 @@ describe('アンテナ', () => {
 				async (prev, current) => {
 					const p = await prev;
 					const n = await current.note();
-					if (current.included) return p.concat(n);
+					if (current.included) {
+						return p.concat(n);
+					}
 					return p;
 				},
 				Promise.resolve([] as Note[]),

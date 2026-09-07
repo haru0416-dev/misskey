@@ -23,14 +23,16 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
 	handleApiAdminSuspendUser,
 	handleApiAdminUnsuspendUser,
 	handleQueueUserSuspensionPostEffects,
-	type ApiAdminUserSuspensionDependencies,
 } from '@/server/rest/admin/admin-user-suspension.js';
-import { createNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
+import { createNoteForApi } from '@/server/rest/note/notes-create.js';
+import type { ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import type { DeliverJobData, RelationshipJobData } from '@/queue/types.js';
@@ -198,9 +200,15 @@ describe('durable reliability boundaries', () => {
 		} finally {
 			const rows = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'notePostCreate'));
 			const ids = rows.map((row) => row.id);
-			if (ids.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, ids));
-			if (noteId != null) await deleteNotesByIdsFromDatabase(runtime.db, [noteId]);
-			if (noteId != null) await runtime.redisForTimelines.lrem(`list:userTimeline:${user.id}`, 0, noteId);
+			if (ids.length > 0) {
+				await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, ids));
+			}
+			if (noteId != null) {
+				await deleteNotesByIdsFromDatabase(runtime.db, [noteId]);
+			}
+			if (noteId != null) {
+				await runtime.redisForTimelines.lrem(`list:userTimeline:${user.id}`, 0, noteId);
+			}
 			await runtime.redis.del(`notificationTimeline:${follower.id}`);
 			await deleteUserByIdFromDatabase(runtime.db, follower.id);
 			await deleteUserByIdFromDatabase(runtime.db, user.id);

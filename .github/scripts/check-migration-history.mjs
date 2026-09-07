@@ -22,16 +22,22 @@ export function findProtectedMigrationChanges(nameStatus) {
 export function isJournalAppendOnly(baseJournal, currentJournal) {
 	const baseMetadata = { ...baseJournal, entries: undefined };
 	const currentMetadata = { ...currentJournal, entries: undefined };
-	if (JSON.stringify(baseMetadata) !== JSON.stringify(currentMetadata)) return false;
+	if (JSON.stringify(baseMetadata) !== JSON.stringify(currentMetadata)) {
+		return false;
+	}
 	const baseEntries = baseJournal.entries ?? [];
 	const currentEntries = currentJournal.entries ?? [];
-	if (currentEntries.length < baseEntries.length) return false;
+	if (currentEntries.length < baseEntries.length) {
+		return false;
+	}
 	return baseEntries.every((entry, index) => JSON.stringify(entry) === JSON.stringify(currentEntries[index]));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const base = process.argv[2];
-	if (!base) throw new Error('Usage: check-migration-history.mjs <base-commit>');
+	if (!base) {
+		throw new Error('Usage: check-migration-history.mjs <base-commit>');
+	}
 
 	const diff = execFileSync(
 		'git',
@@ -51,7 +57,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		} else {
 			const baseJournal = JSON.parse(execFileSync('git', ['show', `${base}:${journalPath}`], { encoding: 'utf8' }));
 			const currentJournal = JSON.parse(execFileSync('git', ['show', `HEAD:${journalPath}`], { encoding: 'utf8' }));
-			if (!isJournalAppendOnly(baseJournal, currentJournal)) violations.push(journalStatus.join('\t'));
+			if (!isJournalAppendOnly(baseJournal, currentJournal)) {
+				violations.push(journalStatus.join('\t'));
+			}
 		}
 	}
 

@@ -63,17 +63,21 @@ import { $i } from '@/i.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const paginator = markRaw(new Paginator('announcements', {
-	limit: 10,
-	computedParams: computed(() => ({
-		isActive: tab.value === 'current',
-	})),
-}));
+const paginator = markRaw(
+	new Paginator('announcements', {
+		limit: 10,
+		computedParams: computed(() => ({
+			isActive: tab.value === 'current',
+		})),
+	}),
+);
 
 const tab = ref('current');
 
 async function read(target: Misskey.entities.Announcement) {
-	if ($i == null) return;
+	if ($i == null) {
+		return;
+	}
 
 	if (target.needConfirmationToRead) {
 		const confirm = await os.confirm({
@@ -81,30 +85,35 @@ async function read(target: Misskey.entities.Announcement) {
 			title: i18n.ts._announcement.readConfirmTitle,
 			text: i18n.tsx._announcement.readConfirmText({ title: target.title }),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 	}
 
-	paginator.updateItem(target.id, a => ({
+	paginator.updateItem(target.id, (a) => ({
 		...a,
 		isRead: true,
 	}));
 	misskeyApi('i/read-announcement', { announcementId: target.id });
 	updateCurrentAccountPartial({
-		unreadAnnouncements: $i.unreadAnnouncements.filter(a => a.id !== target.id),
+		unreadAnnouncements: $i.unreadAnnouncements.filter((a) => a.id !== target.id),
 	});
 }
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => [{
-	key: 'current',
-	title: i18n.ts.currentAnnouncements,
-	icon: 'ti ti-flare',
-}, {
-	key: 'past',
-	title: i18n.ts.pastAnnouncements,
-	icon: 'ti ti-point',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'current',
+		title: i18n.ts.currentAnnouncements,
+		icon: 'ti ti-flare',
+	},
+	{
+		key: 'past',
+		title: i18n.ts.pastAnnouncements,
+		icon: 'ti ti-point',
+	},
+]);
 
 definePage(() => ({
 	title: i18n.ts.announcements,

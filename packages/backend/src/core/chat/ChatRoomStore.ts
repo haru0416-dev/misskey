@@ -3,18 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
-import { chatRoom, type ChatRoomInsert, type ChatRoomRow } from '@/db/schema/chat-room.js';
-import {
-	chatRoomInvitation,
-	type ChatRoomInvitationInsert,
-	type ChatRoomInvitationRow,
-} from '@/db/schema/chat-room-invitation.js';
-import {
-	chatRoomMembership,
-	type ChatRoomMembershipInsert,
-	type ChatRoomMembershipRow,
-} from '@/db/schema/chat-room-membership.js';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { chatRoom } from '@/db/schema/chat-room.js';
+import type { ChatRoomInsert, ChatRoomRow } from '@/db/schema/chat-room.js';
+import { chatRoomInvitation } from '@/db/schema/chat-room-invitation.js';
+import type { ChatRoomInvitationInsert, ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
+import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
+import type { ChatRoomMembershipInsert, ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveIdPagination } from '@/misc/id-pagination.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
@@ -375,12 +371,16 @@ export async function joinChatRoomFromInvitationInDatabase(
 				),
 			)
 			.limit(1);
-		if (invitation == null) throw new ChatRoomInvitationNotFoundError();
+		if (invitation == null) {
+			throw new ChatRoomInvitationNotFoundError();
+		}
 		const [membershipCount] = await tx
 			.select({ count: count() })
 			.from(chatRoomMembership)
 			.where(eq(chatRoomMembership.roomId, data.roomId));
-		if ((membershipCount?.count ?? 0) >= maximumMembers) throw new ChatRoomCapacityExceededError();
+		if ((membershipCount?.count ?? 0) >= maximumMembers) {
+			throw new ChatRoomCapacityExceededError();
+		}
 
 		const [row] = await tx.insert(chatRoomMembership).values(data).returning();
 
@@ -552,12 +552,16 @@ export async function createChatRoomInvitationInDatabase(
 			.from(chatRoomInvitation)
 			.where(chatRoomInvitationCondition(data.roomId, data.userId))
 			.limit(1);
-		if (membership != null || invitation != null) throw new ChatRoomInvitationConflictError();
+		if (membership != null || invitation != null) {
+			throw new ChatRoomInvitationConflictError();
+		}
 		const [membershipCount] = await tx
 			.select({ count: count() })
 			.from(chatRoomMembership)
 			.where(eq(chatRoomMembership.roomId, data.roomId));
-		if ((membershipCount?.count ?? 0) >= maximumMembers) throw new ChatRoomCapacityExceededError();
+		if ((membershipCount?.count ?? 0) >= maximumMembers) {
+			throw new ChatRoomCapacityExceededError();
+		}
 
 		const [row] = await tx.insert(chatRoomInvitation).values(data).returning();
 

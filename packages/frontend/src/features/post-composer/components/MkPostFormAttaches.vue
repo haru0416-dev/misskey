@@ -70,7 +70,9 @@ const emit = defineEmits<{
 let menuShowing = false;
 
 function detachMedia(id: string) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
 	if (props.detachMediaFn) {
 		props.detachMediaFn(id);
@@ -80,7 +82,9 @@ function detachMedia(id: string) {
 }
 
 async function detachAndDeleteMedia(file: Misskey.entities.DriveFile) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
 	detachMedia(file.id);
 
@@ -88,7 +92,9 @@ async function detachAndDeleteMedia(file: Misskey.entities.DriveFile) {
 		type: 'warning',
 		text: i18n.tsx.driveFileDeleteConfirm({ name: file.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('drive/files/delete', {
 		fileId: file.id,
@@ -112,14 +118,18 @@ function toggleSensitive(file: Misskey.entities.DriveFile) {
 }
 
 async function rename(file: Misskey.entities.DriveFile) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
 	const { canceled, result } = await os.inputText({
 		title: i18n.ts.enterFileName,
 		default: file.name,
 		minLength: 1,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 	misskeyApi('drive/files/update', {
 		fileId: file.id,
 		name: result,
@@ -130,84 +140,117 @@ async function rename(file: Misskey.entities.DriveFile) {
 }
 
 async function describe(file: Misskey.entities.DriveFile) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/drive/components/MkFileCaptionEditWindow.vue').then(x => x.default), {
-		default: file.comment !== null ? file.comment : '',
-		file: file,
-	}, {
-		done: caption => {
-			let comment = caption.length === 0 ? null : caption;
-			misskeyApi('drive/files/update', {
-				fileId: file.id,
-				comment: comment,
-			}).then(() => {
-				file.comment = comment;
-			});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/drive/components/MkFileCaptionEditWindow.vue').then((x) => x.default),
+		{
+			default: file.comment !== null ? file.comment : '',
+			file: file,
 		},
-		closed: () => dispose(),
-	});
+		{
+			done: (caption) => {
+				let comment = caption.length === 0 ? null : caption;
+				misskeyApi('drive/files/update', {
+					fileId: file.id,
+					comment: comment,
+				}).then(() => {
+					file.comment = comment;
+				});
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function showFileMenu(file: Misskey.entities.DriveFile, ev: PointerEvent | KeyboardEvent): void {
-	if (menuShowing) return;
+	if (menuShowing) {
+		return;
+	}
 
 	const isImage = file.type.startsWith('image/');
 
 	const menuItems: MenuItem[] = [];
 
-	menuItems.push({
-		text: i18n.ts.renameFile,
-		icon: 'ti ti-forms',
-		action: () => { rename(file); },
-	}, {
-		text: file.isSensitive ? i18n.ts.unmarkAsSensitive : i18n.ts.markAsSensitive,
-		icon: file.isSensitive ? 'ti ti-eye-exclamation' : 'ti ti-eye',
-		action: () => { toggleSensitive(file); },
-	}, {
-		text: i18n.ts.describeFile,
-		icon: 'ti ti-text-caption',
-		action: () => { describe(file); },
-	});
+	menuItems.push(
+		{
+			text: i18n.ts.renameFile,
+			icon: 'ti ti-forms',
+			action: () => {
+				rename(file);
+			},
+		},
+		{
+			text: file.isSensitive ? i18n.ts.unmarkAsSensitive : i18n.ts.markAsSensitive,
+			icon: file.isSensitive ? 'ti ti-eye-exclamation' : 'ti ti-eye',
+			action: () => {
+				toggleSensitive(file);
+			},
+		},
+		{
+			text: i18n.ts.describeFile,
+			icon: 'ti ti-text-caption',
+			action: () => {
+				describe(file);
+			},
+		},
+	);
 
 	if (isImage) {
 		menuItems.push({
 			text: i18n.ts.preview,
 			icon: 'ti ti-photo-search',
 			action: async () => {
-				const { dispose } = await os.popupAsyncWithDialog(import('@/features/media-viewer/components/MkImgPreviewDialog.vue').then(x => x.default), {
-					file: file,
-				}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = await os.popupAsyncWithDialog(
+					import('@/features/media-viewer/components/MkImgPreviewDialog.vue').then((x) => x.default),
+					{
+						file: file,
+					},
+					{
+						closed: () => dispose(),
+					},
+				);
 			},
 		});
 	}
 
-	menuItems.push({
-		type: 'divider',
-	}, {
-		text: i18n.ts.attachCancel,
-		icon: 'ti ti-circle-x',
-		action: () => { detachMedia(file.id); },
-	}, {
-		text: i18n.ts.deleteFile,
-		icon: 'ti ti-trash',
-		danger: true,
-		action: () => { detachAndDeleteMedia(file); },
-	});
+	menuItems.push(
+		{
+			type: 'divider',
+		},
+		{
+			text: i18n.ts.attachCancel,
+			icon: 'ti ti-circle-x',
+			action: () => {
+				detachMedia(file.id);
+			},
+		},
+		{
+			text: i18n.ts.deleteFile,
+			icon: 'ti ti-trash',
+			danger: true,
+			action: () => {
+				detachAndDeleteMedia(file);
+			},
+		},
+	);
 
 	if (prefer.devMode) {
-		menuItems.push({ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyFileId,
-			action: () => {
-				copyToClipboard(file.id);
+		menuItems.push(
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-hash',
+				text: i18n.ts.copyFileId,
+				action: () => {
+					copyToClipboard(file.id);
+				},
 			},
-		});
+		);
 	}
 
-	os.popupMenu(menuItems, ev.currentTarget ?? ev.target).then(() => menuShowing = false);
+	os.popupMenu(menuItems, ev.currentTarget ?? ev.target).then(() => (menuShowing = false));
 	menuShowing = true;
 }
 </script>

@@ -50,7 +50,9 @@ export function parseChangeLog(path: string): Release[] {
 			inCodeFence = !inCodeFence;
 			continue;
 		}
-		if (inCodeFence) continue;
+		if (inCodeFence) {
+			continue;
+		}
 
 		const categoryHeading = line.match(categoryHeadingRegexp);
 		if (categoryHeading) {

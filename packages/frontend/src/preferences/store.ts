@@ -59,9 +59,15 @@ function makeScope(
 	}>,
 ): Scope {
 	const c = {} as Scope;
-	if (scope.server != null) c.server = scope.server;
-	if (scope.account != null) c.account = scope.account;
-	if (scope.device != null) c.device = scope.device;
+	if (scope.server != null) {
+		c.server = scope.server;
+	}
+	if (scope.account != null) {
+		c.account = scope.account;
+	}
+	if (scope.device != null) {
+		c.device = scope.device;
+	}
 	return c;
 }
 
@@ -113,13 +119,17 @@ type PreferencesProfileCandidate = Record<string, unknown> & {
 };
 
 function isScope(value: unknown): value is Scope {
-	if (!isRecord(value)) return false;
+	if (!isRecord(value)) {
+		return false;
+	}
 	const scope = value as ScopeCandidate;
 	return isNullableString(scope.server) && isNullableString(scope.account) && isNullableString(scope.device);
 }
 
 function isValueMeta(value: unknown): value is ValueMeta {
-	if (!isRecord(value)) return false;
+	if (!isRecord(value)) {
+		return false;
+	}
 	const meta = value as ValueMetaCandidate;
 	return meta.sync === undefined || typeof meta.sync === 'boolean';
 }
@@ -131,9 +141,13 @@ function isPreferenceRecord(value: unknown): value is [scope: Scope, value: unkn
 export function isPossiblyNonNormalizedPreferencesProfile(
 	value: unknown,
 ): value is PossiblyNonNormalizedPreferencesProfile {
-	if (!isRecord(value)) return false;
+	if (!isRecord(value)) {
+		return false;
+	}
 	const profile = value as PreferencesProfileCandidate;
-	if (!isRecord(profile.preferences)) return false;
+	if (!isRecord(profile.preferences)) {
+		return false;
+	}
 
 	return (
 		typeof profile.id === 'string' &&
@@ -184,10 +198,9 @@ export function getInitialPrefValue<K extends keyof PREF>(k: K): ValueOf<K> {
 	const _default = PREF_DEF[k].default;
 	if (typeof _default === 'function') {
 		return _default() as ValueOf<K>;
-	} else {
-		// 設定値の参照共有を避けるため複製する。
-		return deepClone(_default as unknown as ValueOf<K>);
 	}
+	// 設定値の参照共有を避けるため複製する。
+	return deepClone(_default as unknown as ValueOf<K>);
 }
 
 function isAccountDependentKey<K extends keyof PREF>(key: K): boolean {
@@ -297,22 +310,30 @@ function getMatchedRecordFromProfile<K extends keyof PREF>(
 
 	if (currentAccount == null) {
 		const record = records.find(([scope]) => parseScope(scope).account == null);
-		if (record == null) throw new Error(`no record found for key: ${key}`);
+		if (record == null) {
+			throw new Error(`no record found for key: ${key}`);
+		}
 		return record;
 	}
 
 	const accountOverrideRecord = records.find(
 		([scope]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
 	);
-	if (accountOverrideRecord) return accountOverrideRecord;
+	if (accountOverrideRecord) {
+		return accountOverrideRecord;
+	}
 
 	const serverOverrideRecord = records.find(
 		([scope]) => parseScope(scope).server === host && parseScope(scope).account == null,
 	);
-	if (serverOverrideRecord) return serverOverrideRecord;
+	if (serverOverrideRecord) {
+		return serverOverrideRecord;
+	}
 
 	const record = records.find(([scope]) => parseScope(scope).account == null);
-	if (record == null) throw new Error(`no record found for key: ${key}`);
+	if (record == null) {
+		throw new Error(`no record found for key: ${key}`);
+	}
 	return record;
 }
 
@@ -371,11 +392,15 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 				const v = deepClone(value as Cloneable) as ValueOf<K>; // deep copy 兼 vueのプロキシ解除
 
 				if (deepEqual(this.$state[key], v)) {
-					if (_DEV_) console.log('(skip) prefer:commit', key, v);
+					if (_DEV_) {
+						console.log('(skip) prefer:commit', key, v);
+					}
 					return;
 				}
 
-				if (_DEV_) console.log('prefer:commit', key, v);
+				if (_DEV_) {
+					console.log('prefer:commit', key, v);
+				}
 
 				const oldValue = deepClone(this.$state[key] as ValueOf<K>);
 				localRevisions.set(key, (localRevisions.get(key) ?? 0) + 1);
@@ -475,13 +500,17 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 						if (!deepEqual(cloudValue, record[1])) {
 							this._rewriteRawState(key, cloudValue);
 							record[1] = cloudValue;
-							if (_DEV_) console.log('cloud fetched', key, cloudValue);
+							if (_DEV_) {
+								console.log('cloud fetched', key, cloudValue);
+							}
 						}
 					}
 				}
 
 				this.save();
-				if (_DEV_) console.log('cloud fetch completed');
+				if (_DEV_) {
+					console.log('cloud fetch completed');
+				}
 			},
 
 			save() {
@@ -496,16 +525,24 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 			},
 
 			isAccountOverrided<K extends keyof PREF>(key: K): boolean {
-				if (currentAccount == null) return false;
+				if (currentAccount == null) {
+					return false;
+				}
 				return this.profile.preferences[key].some(
 					([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
 				);
 			},
 
 			setAccountOverride<K extends keyof PREF>(key: K) {
-				if (currentAccount == null) return;
-				if (isAccountDependentKey(key)) throw new Error('already account-dependent');
-				if (this.isAccountOverrided(key)) return;
+				if (currentAccount == null) {
+					return;
+				}
+				if (isAccountDependentKey(key)) {
+					throw new Error('already account-dependent');
+				}
+				if (this.isAccountOverrided(key)) {
+					return;
+				}
 
 				const records = this.profile.preferences[key] as PrefRecord<K>[];
 				records.push([
@@ -521,15 +558,21 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 			},
 
 			clearAccountOverride<K extends keyof PREF>(key: K) {
-				if (currentAccount == null) return;
-				if (isAccountDependentKey(key)) throw new Error('cannot clear override for this account-dependent property');
+				if (currentAccount == null) {
+					return;
+				}
+				if (isAccountDependentKey(key)) {
+					throw new Error('cannot clear override for this account-dependent property');
+				}
 
 				const records = this.profile.preferences[key];
 
 				const index = records.findIndex(
 					([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
 				);
-				if (index === -1) return;
+				if (index === -1) {
+					return;
+				}
 
 				records.splice(index, 1);
 
@@ -543,14 +586,18 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 			},
 
 			async enableSync<K extends keyof PREF>(key: K): Promise<{ enabled: boolean } | null> {
-				if (this.isSyncEnabled(key)) return Promise.resolve(null);
+				if (this.isSyncEnabled(key)) {
+					return Promise.resolve(null);
+				}
 
 				// undefined ... cancel
 				async function resolveConflict(local: ValueOf<K>, remote: ValueOf<K>): Promise<ValueOf<K> | undefined> {
 					const merge = (PREF_DEF as PreferencesDefinition)[key]?.mergeStrategy;
 					let mergedValue: ValueOf<K> | undefined = undefined; // null と区別したいため
 					try {
-						if (merge != null) mergedValue = merge(local, remote) as ValueOf<K> | undefined;
+						if (merge != null) {
+							mergedValue = merge(local, remote) as ValueOf<K> | undefined;
+						}
 					} catch (_) {
 						// nop
 					}
@@ -581,7 +628,9 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 						],
 						default: mergedValue !== undefined ? 'merge' : 'remote',
 					});
-					if (canceled || choice == null) return undefined;
+					if (canceled || choice == null) {
+						return undefined;
+					}
 
 					if (choice === 'remote') {
 						return remote;
@@ -589,9 +638,8 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 						return local;
 					} else if (choice === 'merge') {
 						return mergedValue!;
-					} else {
-						return undefined;
 					}
+					return undefined;
 				}
 
 				const record = this.getMatchedRecordOf(key);
@@ -601,7 +649,9 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 				const existing = await io.cloudGet({ key, scope: record[0] });
 				if (existing != null && !deepEqual(record[1], existing.value)) {
 					const resolvedValue = await resolveConflict(record[1], existing.value);
-					if (resolvedValue === undefined) return { enabled: false }; // canceled
+					if (resolvedValue === undefined) {
+						return { enabled: false };
+					} // canceled
 					newValue = resolvedValue;
 				}
 
@@ -633,7 +683,9 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 			},
 
 			disableSync<K extends keyof PREF>(key: K) {
-				if (!this.isSyncEnabled(key)) return;
+				if (!this.isSyncEnabled(key)) {
+					return;
+				}
 
 				const record = this.getMatchedRecordOf(key);
 				delete record[2].sync;
@@ -647,7 +699,9 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 
 			reloadProfile() {
 				const newProfile = io.load();
-				if (newProfile == null) return;
+				if (newProfile == null) {
+					return;
+				}
 
 				this.profile = {
 					...newProfile,
@@ -685,8 +739,12 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 				const stopSyncWatcher = watch(sync, () => {
 					if (sync.value) {
 						this.enableSync(key).then((res) => {
-							if (res == null) return;
-							if (!res.enabled) sync.value = false;
+							if (res == null) {
+								return;
+							}
+							if (!res.enabled) {
+								sync.value = false;
+							}
 						});
 					} else {
 						this.disableSync(key);

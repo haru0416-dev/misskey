@@ -28,7 +28,8 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packApiApp, type ApiAppDependencies } from './app.js';
+import { packApiApp } from './app.js';
+import type { ApiAppDependencies } from './app.js';
 import { packUserDetailedNotMeForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
@@ -127,7 +128,9 @@ export async function handleApiAuthSessionGenerate(
 ): Promise<{ token: string; url: string }> {
 	const params = parseApiParams(authSessionGenerateParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
-	if (app == null) throw noSuchGenerateAppError();
+	if (app == null) {
+		throw noSuchGenerateAppError();
+	}
 
 	const token = randomUUID();
 	const session = await createAuthSessionInDatabase(deps.db, {
@@ -149,7 +152,9 @@ export async function handleApiAuthSessionShow(
 ): Promise<Awaited<ReturnType<typeof packApiAuthSession>>> {
 	const params = parseApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
-	if (session == null) throw noSuchSessionShowError();
+	if (session == null) {
+		throw noSuchSessionShowError();
+	}
 
 	return await packApiAuthSession(deps, session, user);
 }
@@ -161,7 +166,9 @@ export async function handleApiAuthAccept(
 ): Promise<void> {
 	const params = parseApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
-	if (session == null) throw noSuchSessionAcceptError();
+	if (session == null) {
+		throw noSuchSessionAcceptError();
+	}
 
 	const accessToken = secureRndstr(32);
 	const exists = await existsAccessTokenByAppIdAndUserIdFromDatabase(deps.db, session.appId, user.id);
@@ -196,11 +203,17 @@ export async function handleApiAuthSessionUserkey(
 }> {
 	const params = parseApiParams(authSessionUserkeyParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
-	if (app == null) throw noSuchUserkeyAppError();
+	if (app == null) {
+		throw noSuchUserkeyAppError();
+	}
 
 	const session = await fetchAuthSessionByTokenAndAppIdFromDatabase(deps.db, params.token, app.id);
-	if (session == null) throw noSuchSessionUserkeyError();
-	if (session.userId == null) throw pendingSessionError();
+	if (session == null) {
+		throw noSuchSessionUserkeyError();
+	}
+	if (session.userId == null) {
+		throw pendingSessionError();
+	}
 
 	const accessToken = await fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(deps.db, app.id, session.userId);
 	await deleteAuthSessionByIdFromDatabase(deps.db, session.id);

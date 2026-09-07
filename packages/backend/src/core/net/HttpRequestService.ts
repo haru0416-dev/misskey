@@ -45,7 +45,9 @@ const CONTENT_HEADERS = ['content-type', 'content-length', 'content-encoding', '
 
 function deleteHeaderCaseInsensitive(headers: Record<string, string>, name: string): void {
 	for (const key of Object.keys(headers)) {
-		if (key.toLowerCase() === name) delete headers[key];
+		if (key.toLowerCase() === name) {
+			delete headers[key];
+		}
 	}
 }
 
@@ -80,7 +82,9 @@ async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Arr
 		}
 	}
 
-	if (res.body == null) return new Uint8Array(0);
+	if (res.body == null) {
+		return new Uint8Array(0);
+	}
 
 	const reader = res.body.getReader();
 	const chunks: Uint8Array[] = [];
@@ -88,8 +92,12 @@ async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Arr
 	try {
 		for (;;) {
 			const { done, value } = await reader.read();
-			if (done) break;
-			if (value == null) continue;
+			if (done) {
+				break;
+			}
+			if (value == null) {
+				continue;
+			}
 			total += value.byteLength;
 			if (total > limit) {
 				throw new StatusError(`Response body exceeds size limit (${limit} bytes)`, 400, 'Payload Too Large');
@@ -254,8 +262,12 @@ export function createHttpRequestService(config: Config) {
 	 * socket レベル遮断はここには効かない。fetch 経路の遮断はこの事前検査が担う。
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<string[] | null> {
-		if (isLocalAddressAllowed) return null;
-		if (process.env['NODE_ENV'] !== 'production') return null;
+		if (isLocalAddressAllowed) {
+			return null;
+		}
+		if (process.env['NODE_ENV'] !== 'production') {
+			return null;
+		}
 
 		const host = url.hostname.replace(/^\[/, '').replace(/\]$/, '');
 
@@ -402,12 +414,20 @@ export function createHttpRequestService(config: Config) {
 				// 検査した IP へ繋ぎつつ、証明書は元のホスト名で検証する。
 				...(pinned != null && currentUrl.protocol === 'https:' ? { tls: { serverName: pinned.serverName } } : {}),
 			};
-			if (useProxy) init.proxy = proxyUrl;
+			if (useProxy) {
+				init.proxy = proxyUrl;
+			}
 
 			const res = await fetch(pinned?.url ?? currentUrl, init);
 
 			const location = res.headers.get('location');
 			if (!REDIRECT_STATUSES.has(res.status) || location == null) {
+				if (pinned != null) {
+					// ActivityPub の ID 照合には接続用 IP ではなく、最終取得先のホスト名が必要。
+					const responseUrl = new URL(currentUrl);
+					responseUrl.hash = '';
+					Object.defineProperty(res, 'url', { value: responseUrl.href });
+				}
 				return res;
 			}
 
@@ -424,7 +444,9 @@ export function createHttpRequestService(config: Config) {
 			if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
 				method = 'GET';
 				body = undefined;
-				for (const h of CONTENT_HEADERS) deleteHeaderCaseInsensitive(headers, h);
+				for (const h of CONTENT_HEADERS) {
+					deleteHeaderCaseInsensitive(headers, h);
+				}
 			}
 
 			// cross-origin リダイレクトでは資格情報を引き継がない。

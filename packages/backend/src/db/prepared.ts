@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { Query } from 'drizzle-orm';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 /**
@@ -38,10 +39,45 @@ export function preparedQueryFor<T>(db: MiDrizzleDatabase, key: string, build: (
 	}
 
 	const cached = queries.get(key);
-	if (cached !== undefined) return cached as T;
+	if (cached !== undefined) {
+		return cached as T;
+	}
 
 	const built = build();
 	queries.set(key, built);
 
 	return built;
+}
+
+/**
+ * 書き込み (insert / update / delete) の組み立て結果。SQL 文字列と placeholder の並びは
+ * 接続に依存しないので db インスタンスではなく key だけで保持する。
+ */
+const preparedStatementQueriesByKey = new Map<string, Query>();
+
+/**
+ * トランザクション内でも組み立て結果を使い回す書き込み用。
+ *
+ * `preparedQueryFor` は db インスタンスごとに保持するが、`db.transaction()` の tx は毎回別インスタンスなので、
+ * トランザクション内の insert / update / delete は毎回組み立て直しになっていた (notes/create の note 挿入・
+ * user 更新・outbox 挿入がこれに当たる)。ここでは `toSQL()` の結果を key 単位で保持し、実行時にその db の
+ * session へ結び付け直す。名前無しなので PostgreSQL 側に prepared statement は残らない。
+ *
+ * 結果行のマッピング (fields) を通さないため、行を読む select には使わない。
+ * placeholder に対応する値が `values` に無いと drizzle が例外を投げる。
+ */
+export async function executePreparedStatement(
+	db: MiDrizzleDatabase,
+	key: string,
+	build: () => { toSQL(): Query },
+	values: Record<string, unknown>,
+): Promise<void> {
+	let query = preparedStatementQueriesByKey.get(key);
+
+	if (query === undefined) {
+		query = build().toSQL();
+		preparedStatementQueriesByKey.set(key, query);
+	}
+
+	await db._.session.prepareQuery(query, undefined, UNNAMED_PREPARED_STATEMENT, false).execute(values);
 }

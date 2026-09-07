@@ -27,7 +27,9 @@ function appendUnique(target: Map<string, EmojiDef>, candidates: EmojiDef[], max
 		const key = canonicalName(emoji);
 		if (!target.has(key)) {
 			target.set(key, emoji);
-			if (target.size === max) return;
+			if (target.size === max) {
+				return;
+			}
 		}
 	}
 }
@@ -57,10 +59,18 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 
 	const matched = new Map<string, EmojiDef>();
 	appendUnique(matched, exact, max);
-	if (matched.size < max) appendUnique(matched, exactAliases, max);
-	if (matched.size < max) appendUnique(matched, prefixes, max);
-	if (matched.size < max) appendUnique(matched, prefixAliases, max);
-	if (matched.size < max) appendUnique(matched, partials, max);
+	if (matched.size < max) {
+		appendUnique(matched, exactAliases, max);
+	}
+	if (matched.size < max) {
+		appendUnique(matched, prefixes, max);
+	}
+	if (matched.size < max) {
+		appendUnique(matched, prefixAliases, max);
+	}
+	if (matched.size < max) {
+		appendUnique(matched, partials, max);
+	}
 
 	// 簡易あいまい検索（3文字以上）
 	if (matched.size < max && query.length > 3) {
@@ -74,7 +84,9 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 			let hit = 0;
 			for (const c of queryChars) {
 				pos = x.name.indexOf(c, pos);
-				if (pos <= -1) break;
+				if (pos <= -1) {
+					break;
+				}
 				hit++;
 			}
 
@@ -89,7 +101,9 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 			.sort((x, y) => y.score - x.score)
 			.slice(0, 6)
 			.forEach((it) => {
-				if (matched.size < max) matched.set(canonicalName(it.emoji), it.emoji);
+				if (matched.size < max) {
+					matched.set(canonicalName(it.emoji), it.emoji);
+				}
 			});
 	}
 
@@ -111,6 +125,8 @@ export function searchEmojiExact(query: string | null, emojiDb: EmojiDef[], max 
 
 	const matched = new Map<string, EmojiDef>();
 	appendUnique(matched, exact, max);
-	if (matched.size < max) appendUnique(matched, aliases, max);
+	if (matched.size < max) {
+		appendUnique(matched, aliases, max);
+	}
 	return [...matched.values()];
 }

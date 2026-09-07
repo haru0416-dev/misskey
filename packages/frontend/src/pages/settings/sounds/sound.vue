@@ -48,13 +48,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'update', result: { type: SoundType; fileId?: string; fileUrl?: string; volume: number; }): void;
+	(ev: 'update', result: { type: SoundType; fileId?: string; fileUrl?: string; volume: number }): void;
 }>();
 
-const {
-	model: type,
-	def: typeDef,
-} = useMkSelect({
+const { model: type, def: typeDef } = useMkSelect({
 	items: soundsTypes.map((x) => ({
 		label: getSoundTypeName(x),
 		value: x,
@@ -71,11 +68,13 @@ const volume = ref(props.def.volume);
 if (type.value === '_driveFile_' && fileId.value) {
 	await misskeyApi('drive/files/show', {
 		fileId: fileId.value,
-	}).then((res) => {
-		fileName.value = res.name;
-	}).catch((res) => {
-		driveFileError.value = true;
-	});
+	})
+		.then((res) => {
+			fileName.value = res.name;
+		})
+		.catch((res) => {
+			driveFileError.value = true;
+		});
 }
 
 function getSoundTypeName(f: SoundType): string {
@@ -123,7 +122,9 @@ function selectSound(ev: PointerEvent) {
 				okText: i18n.ts.continue,
 				cancelText: i18n.ts.cancel,
 			});
-			if (canceled) return;
+			if (canceled) {
+				return;
+			}
 		}
 
 		fileUrl.value = file.url;
@@ -153,15 +154,19 @@ function listen() {
 		return;
 	}
 
-	playMisskeySfxFile(type.value === '_driveFile_' ? {
-		type: '_driveFile_',
-		fileId: fileId.value as string,
-		fileUrl: fileUrl.value as string,
-		volume: volume.value,
-	} : {
-		type: type.value,
-		volume: volume.value,
-	});
+	playMisskeySfxFile(
+		type.value === '_driveFile_'
+			? {
+					type: '_driveFile_',
+					fileId: fileId.value as string,
+					fileUrl: fileUrl.value as string,
+					volume: volume.value,
+				}
+			: {
+					type: type.value,
+					volume: volume.value,
+				},
+	);
 }
 
 function save() {

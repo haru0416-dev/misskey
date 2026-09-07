@@ -22,38 +22,38 @@ describe('misc:should-hide-note-by-time', () => {
 
 	describe('hiddenBefore が null または undefined の場合', () => {
 		test('hiddenBefore が null のときは false を返す（非表示機能が有効でない）', () => {
-			const createdAt = new Date(epoch - 86400000);
+			const createdAt = new Date(epoch - 86_400_000);
 			expect(shouldHideNoteByTime(null, createdAt)).toBe(false);
 		});
 
 		test('hiddenBefore が undefined のときは false を返す（非表示機能が有効でない）', () => {
-			const createdAt = new Date(epoch - 86400000);
+			const createdAt = new Date(epoch - 86_400_000);
 			expect(shouldHideNoteByTime(undefined, createdAt)).toBe(false);
 		});
 	});
 
 	describe('相対時間モード (hiddenBefore <= 0)', () => {
 		test('閾値内に作成されたノートは false を返す（作成からの経過時間がまだ短い→表示）', () => {
-			const hiddenBefore = -86400;
-			const createdAt = new Date(epoch - 3600000);
+			const hiddenBefore = -86_400;
+			const createdAt = new Date(epoch - 3_600_000);
 			expect(shouldHideNoteByTime(hiddenBefore, createdAt)).toBe(false);
 		});
 
 		test('閾値を超えて作成されたノートは true を返す（指定期間以上経過している→非表示）', () => {
-			const hiddenBefore = -86400;
-			const createdAt = new Date(epoch - 172800000);
+			const hiddenBefore = -86_400;
+			const createdAt = new Date(epoch - 172_800_000);
 			expect(shouldHideNoteByTime(hiddenBefore, createdAt)).toBe(true);
 		});
 
 		test('ちょうど閾値で作成されたノートは true を返す（閾値に達したら非表示）', () => {
-			const hiddenBefore = -86400;
-			const createdAt = new Date(epoch - 86400000);
+			const hiddenBefore = -86_400;
+			const createdAt = new Date(epoch - 86_400_000);
 			expect(shouldHideNoteByTime(hiddenBefore, createdAt)).toBe(true);
 		});
 
 		test('ISO 8601 形式の文字列の createdAt に対応できる（文字列でも正しく判定）', () => {
-			const createdAtString = new Date(epoch - 86400000).toISOString();
-			const hiddenBefore = -86400;
+			const createdAtString = new Date(epoch - 86_400_000).toISOString();
+			const hiddenBefore = -86_400;
 			expect(shouldHideNoteByTime(hiddenBefore, createdAtString)).toBe(true);
 		});
 
@@ -67,13 +67,13 @@ describe('misc:should-hide-note-by-time', () => {
 	describe('絶対時間モード (hiddenBefore > 0)', () => {
 		test('閾値タイムスタンプより後に作成されたノートは false を返す（指定日時より後→表示）', () => {
 			const thresholdSeconds = Math.floor(epoch / 1000);
-			const createdAt = new Date(epoch + 3600000);
+			const createdAt = new Date(epoch + 3_600_000);
 			expect(shouldHideNoteByTime(thresholdSeconds, createdAt)).toBe(false);
 		});
 
 		test('閾値タイムスタンプより前に作成されたノートは true を返す（指定日時より前→非表示）', () => {
 			const thresholdSeconds = Math.floor(epoch / 1000);
-			const createdAt = new Date(epoch - 3600000);
+			const createdAt = new Date(epoch - 3_600_000);
 			expect(shouldHideNoteByTime(thresholdSeconds, createdAt)).toBe(true);
 		});
 
@@ -85,7 +85,7 @@ describe('misc:should-hide-note-by-time', () => {
 
 		test('ISO 8601 形式の文字列の createdAt に対応できる（文字列でも正しく判定）', () => {
 			const thresholdSeconds = Math.floor(epoch / 1000);
-			const createdAtString = new Date(epoch - 3600000).toISOString();
+			const createdAtString = new Date(epoch - 3_600_000).toISOString();
 			expect(shouldHideNoteByTime(thresholdSeconds, createdAtString)).toBe(true);
 		});
 	});

@@ -63,13 +63,27 @@ const event_mention = ref(true);
 
 async function create(): Promise<void> {
 	const events = [] as Misskey.entities.UserWebhook['on'];
-	if (event_follow.value) events.push('follow');
-	if (event_followed.value) events.push('followed');
-	if (event_note.value) events.push('note');
-	if (event_reply.value) events.push('reply');
-	if (event_renote.value) events.push('renote');
-	if (event_reaction.value) events.push('reaction');
-	if (event_mention.value) events.push('mention');
+	if (event_follow.value) {
+		events.push('follow');
+	}
+	if (event_followed.value) {
+		events.push('followed');
+	}
+	if (event_note.value) {
+		events.push('note');
+	}
+	if (event_reply.value) {
+		events.push('reply');
+	}
+	if (event_renote.value) {
+		events.push('renote');
+	}
+	if (event_reaction.value) {
+		events.push('reaction');
+	}
+	if (event_mention.value) {
+		events.push('mention');
+	}
 
 	os.apiWithDialog('i/webhooks/create', {
 		name: name.value,

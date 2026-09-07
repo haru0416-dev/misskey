@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ReplyError, type Redis } from 'ioredis';
+import { ReplyError } from 'ioredis';
+import type { Redis } from 'ioredis';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
@@ -164,7 +165,9 @@ export async function resolveNotificationStreamId(
 ): Promise<string> {
 	const key = `notificationTimeline:${userId}`;
 	const canonicalId = toXListId(notificationId);
-	if ((await deps.redis.xrange(key, canonicalId, canonicalId)).length > 0) return canonicalId;
+	if ((await deps.redis.xrange(key, canonicalId, canonicalId)).length > 0) {
+		return canonicalId;
+	}
 
 	// 遅延再試行では自動生成 ID が付く場合がある。ストリームは MAXLEN 制限済みなので、
 	// API 上の通知 ID を全走査しても探索量は制限内に収まる。
@@ -172,9 +175,13 @@ export async function resolveNotificationStreamId(
 	for (const [streamId, fields] of entries) {
 		const dataIndex = fields.indexOf('data');
 		const data = fields[dataIndex + 1];
-		if (dataIndex === -1 || data == null) continue;
+		if (dataIndex === -1 || data == null) {
+			continue;
+		}
 		try {
-			if ((JSON.parse(data) as { id?: unknown }).id === notificationId) return streamId;
+			if ((JSON.parse(data) as { id?: unknown }).id === notificationId) {
+				return streamId;
+			}
 		} catch {
 			// 不正な既存エントリがあっても、対象通知の探索は継続する。
 		}
@@ -214,10 +221,16 @@ export async function xaddApiNotification(
 			serialized,
 		))!;
 	} catch (err) {
-		if (!(err instanceof ReplyError)) throw err;
+		if (!(err instanceof ReplyError)) {
+			throw err;
+		}
 		const existing = await deps.redis.xrange(key, streamId, streamId);
-		if (existing[0]?.[1]?.[1] === serialized) return streamId;
-		if (existing.length > 0) throw err;
+		if (existing[0]?.[1]?.[1] === serialized) {
+			return streamId;
+		}
+		if (existing.length > 0) {
+			throw err;
+		}
 		return String(
 			await deps.redis.eval(
 				appendNotificationWithGeneratedStreamId,
@@ -237,7 +250,9 @@ export async function xaddApiNotifications(
 		notification: { id: string } & Record<string, unknown>;
 	}[],
 ): Promise<void> {
-	if (items.length === 0) return;
+	if (items.length === 0) {
+		return;
+	}
 
 	const batchSize = 1000;
 	for (let offset = 0; offset < items.length; offset += batchSize) {
@@ -255,11 +270,15 @@ export async function xaddApiNotifications(
 			);
 		}
 		const results = await pipeline.exec();
-		if (results == null) throw new Error('Failed to append notifications');
+		if (results == null) {
+			throw new Error('Failed to append notifications');
+		}
 
 		await Promise.all(
 			results.map(([error], index) => {
-				if (error == null) return Promise.resolve();
+				if (error == null) {
+					return Promise.resolve();
+				}
 				if (error instanceof ReplyError) {
 					const item = batch[index]!;
 					return xaddApiNotification(deps, item.userId, item.notification).then(() => undefined);
@@ -286,7 +305,9 @@ function createSimpleNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig[type]?.type === 'never') return;
+			if (profile?.notificationRecieveConfig[type]?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -302,7 +323,9 @@ function createSimpleNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', notification);
 					})
 					.catch(() => {}),
@@ -327,7 +350,9 @@ export function createRoleAssignedNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -350,7 +375,9 @@ export function createRoleAssignedNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', packed);
 					})
 					.catch(() => {}),
@@ -367,7 +394,9 @@ export function createScheduledNotePostedNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -384,7 +413,9 @@ export function createScheduledNotePostedNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', notification);
 					})
 					.catch(() => {}),
@@ -401,7 +432,9 @@ export function createScheduledNotePostFailedNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -418,7 +451,9 @@ export function createScheduledNotePostFailedNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', notification);
 					})
 					.catch(() => {}),
@@ -434,7 +469,9 @@ export async function createPollEndedNotification(
 	profile?: MiUserProfile,
 ): Promise<void> {
 	const resolvedProfile = profile ?? (await fetchUserProfileByUserIdFromDatabase(deps.db, userId));
-	if (resolvedProfile?.notificationRecieveConfig.pollEnded?.type === 'never') return;
+	if (resolvedProfile?.notificationRecieveConfig.pollEnded?.type === 'never') {
+		return;
+	}
 
 	const notification = {
 		id: genId(),
@@ -451,7 +488,9 @@ export async function createPollEndedNotification(
 		delay(2000, undefined, { ref: false })
 			.then(async () => {
 				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-				if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+				if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+					return;
+				}
 				deps.publishMainStream?.(userId, 'unreadNotification', notification);
 			})
 			.catch(() => {}),
@@ -467,7 +506,9 @@ export function createExportCompletedNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -485,7 +526,9 @@ export function createExportCompletedNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', notification);
 					})
 					.catch(() => {}),
@@ -507,7 +550,9 @@ function createAppNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.app?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.app?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -535,7 +580,9 @@ function createAppNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', packed);
 					})
 					.catch(() => {}),
@@ -548,7 +595,9 @@ function createTestNotification(deps: ApiNotificationDependencies, userId: MiUse
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.test?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.test?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -561,7 +610,9 @@ function createTestNotification(deps: ApiNotificationDependencies, userId: MiUse
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+				return;
+			}
 			deps.publishMainStream?.(userId, 'unreadNotification', notification);
 		})(),
 	);
@@ -575,7 +626,9 @@ function createAchievementEarnedNotification(
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-			if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') return;
+			if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') {
+				return;
+			}
 
 			const notification = {
 				id: genId(),
@@ -592,7 +645,9 @@ function createAchievementEarnedNotification(
 				delay(2000, undefined, { ref: false })
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+							return;
+						}
 						deps.publishMainStream?.(userId, 'unreadNotification', notification);
 					})
 					.catch(() => {}),
@@ -606,11 +661,17 @@ export async function grantAchievementForApi(
 	userId: MiUser['id'],
 	name: (typeof ACHIEVEMENT_TYPES)[number],
 ): Promise<void> {
-	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(name)) return;
+	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(name)) {
+		return;
+	}
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-	if (profile == null) return;
-	if (profile.achievements.some((a) => a.name === name)) return;
+	if (profile == null) {
+		return;
+	}
+	if (profile.achievements.some((a) => a.name === name)) {
+		return;
+	}
 
 	await updateUserProfileInDatabase(deps.db, userId, {
 		achievements: [
@@ -652,7 +713,9 @@ export async function markAllApiNotificationsAsRead(
 	const latestNotificationIdsRes = await deps.redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 1);
 	const latestNotificationId = latestNotificationIdsRes[0]?.[0];
 
-	if (latestNotificationId == null) return;
+	if (latestNotificationId == null) {
+		return;
+	}
 
 	await deps.redis.set(`latestReadNotification:${userId}`, latestNotificationId);
 
@@ -704,7 +767,9 @@ export async function handleApiNotificationsDelete(
 			const parseNotification = (fields: string[]): Record<string, unknown> | null => {
 				const dataIndex = fields.indexOf('data');
 				const data = fields[dataIndex + 1];
-				if (dataIndex === -1 || data == null) return null;
+				if (dataIndex === -1 || data == null) {
+					return null;
+				}
 				try {
 					return JSON.parse(data) as Record<string, unknown>;
 				} catch {
@@ -715,13 +780,15 @@ export async function handleApiNotificationsDelete(
 			if (targetKey != null) {
 				let first = targetIndex;
 				let last = targetIndex;
-				while (first > 0 && notificationGroupKey(parseNotification(entries[first - 1]![1]) ?? {}) === targetKey)
+				while (first > 0 && notificationGroupKey(parseNotification(entries[first - 1]![1]) ?? {}) === targetKey) {
 					first--;
+				}
 				while (
 					last + 1 < entries.length &&
 					notificationGroupKey(parseNotification(entries[last + 1]![1]) ?? {}) === targetKey
-				)
+				) {
 					last++;
+				}
 				idsToDelete = entries.slice(first, last + 1).map(([id]) => id);
 			}
 		}

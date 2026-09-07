@@ -65,30 +65,39 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'updateEmojis', emojis: string[]): void,
-	(ev: 'updateName', name: string): void,
-	(ev: 'del'): void,
+	(ev: 'updateEmojis', emojis: string[]): void;
+	(ev: 'updateName', name: string): void;
+	(ev: 'del'): void;
 }>();
 
 const emojis = ref<string[]>(deepClone(props.palette.emojis));
 
-watch(emojis, () => {
-	emit('updateEmojis', emojis.value);
-}, { deep: true });
+watch(
+	emojis,
+	() => {
+		emit('updateEmojis', emojis.value);
+	},
+	{ deep: true },
+);
 
 function remove(reaction: string, ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.remove,
-		action: () => {
-			emojis.value = emojis.value.filter(x => x !== reaction);
-		},
-	}], getHTMLElement(ev));
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.remove,
+				action: () => {
+					emojis.value = emojis.value.filter((x) => x !== reaction);
+				},
+			},
+		],
+		getHTMLElement(ev),
+	);
 }
 
 function pick(ev: PointerEvent) {
 	os.pickEmoji(getHTMLElement(ev), {
 		showPinned: false,
-	}).then(it => {
+	}).then((it) => {
 		const emoji = it;
 		if (!emojis.value.includes(emoji)) {
 			emojis.value.push(emoji);
@@ -106,7 +115,9 @@ function rename() {
 		title: i18n.ts.rename,
 		default: props.palette.name,
 	}).then(({ canceled, result: name }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		if (name != null) {
 			emit('updateName', name);
 		}
@@ -118,18 +129,23 @@ function copy() {
 }
 
 function paste() {
-	navigator.clipboard.readText().then(text => {
+	navigator.clipboard.readText().then((text) => {
 		emojis.value = text.split(' ');
 	});
 }
 
 function del(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.delete,
-		action: () => {
-			emit('del');
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.delete,
+				action: () => {
+					emit('del');
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 </script>
 

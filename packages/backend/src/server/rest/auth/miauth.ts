@@ -17,7 +17,8 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { uniqueItems } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { createTokenNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { createTokenNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import { packUserDetailedNotMeForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 

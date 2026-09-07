@@ -7,7 +7,8 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import endpoints, { IEndpoint } from '../endpoints.js';
 import { errors as basicErrors } from './errors.js';
-import { getSchemas, convertSchemaToOpenApiSchema, type OpenApiSchemaObject } from './schemas.js';
+import { getSchemas, convertSchemaToOpenApiSchema } from './schemas.js';
+import type { OpenApiSchemaObject } from './schemas.js';
 
 type ErrorExample = {
 	value: {
@@ -71,14 +72,19 @@ function authenticationMode(endpoint: IEndpoint): AuthenticationMode {
 		endpoint.meta.requireCredential === true ||
 		endpoint.meta.requireAdmin === true ||
 		endpoint.meta.requireModerator === true
-	)
+	) {
 		return 'required';
-	if (unauthenticatedEndpoints.has(endpoint.name)) return 'none';
+	}
+	if (unauthenticatedEndpoints.has(endpoint.name)) {
+		return 'none';
+	}
 	return 'optional';
 }
 
 function requestBodyKind(endpoint: IEndpoint, method: RequestMethod): RequestBodyKind {
-	if (method === 'get' || endpoint.name === 'endpoints') return 'none';
+	if (method === 'get' || endpoint.name === 'endpoints') {
+		return 'none';
+	}
 	return endpoint.meta.requireFile === true ? 'multipart' : 'json';
 }
 
@@ -93,7 +99,9 @@ function buildQueryParameters(schema: OpenApiSchemaObject): Record<string, unkno
 }
 
 function acceptsEmptyObject(params: IEndpoint['params'], schema: OpenApiSchemaObject): boolean {
-	if (params instanceof z.ZodType) return params.safeParse({}).success;
+	if (params instanceof z.ZodType) {
+		return params.safeParse({}).success;
+	}
 	return (schema.required?.length ?? 0) === 0;
 }
 
@@ -106,7 +114,9 @@ function buildErrorResponses(
 	const authMode = authenticationMode(endpoint);
 	const bodyKind = requestBodyKind(endpoint, method);
 	for (const [status, examples] of Object.entries(basicErrors)) {
-		if (status === '429' && endpoint.meta.limit == null) continue;
+		if (status === '429' && endpoint.meta.limit == null) {
+			continue;
+		}
 		const selected = Object.fromEntries(
 			Object.entries(examples).filter(([, example]) => {
 				switch (example.value.error.code) {
@@ -141,7 +151,9 @@ function buildErrorResponses(
 				}
 			}),
 		);
-		if (Object.keys(selected).length > 0) examplesByStatus.set(status, selected);
+		if (Object.keys(selected).length > 0) {
+			examplesByStatus.set(status, selected);
+		}
 	}
 
 	for (const [key, error] of Object.entries(endpoint.meta.errors ?? {})) {
@@ -234,7 +246,9 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 	const copiedEndpoints = JSON.parse(JSON.stringify(endpoints)) as IEndpoint[];
 	for (const [i, endpoint] of copiedEndpoints.entries()) {
 		const originalEndpoint = endpoints[i];
-		if (originalEndpoint == null) throw new Error(`OpenAPI endpoint copy is missing index ${i}`);
+		if (originalEndpoint == null) {
+			throw new Error(`OpenAPI endpoint copy is missing index ${i}`);
+		}
 		const originalParams = originalEndpoint.params;
 		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
 		const resSchema = endpoint.meta.res ? convertSchemaToOpenApiSchema(endpoint.meta.res, 'res', includeSelfRef) : {};

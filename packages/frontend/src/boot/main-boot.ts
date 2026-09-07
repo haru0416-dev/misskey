@@ -42,13 +42,20 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		let uiStyle = ui;
 		const searchParams = new URLSearchParams(window.location.search);
 
-		if (!$i) uiStyle = 'visitor';
+		if (!$i) {
+			uiStyle = 'visitor';
+		}
 
-		if (searchParams.has('zen')) uiStyle = 'zen';
-		if (uiStyle === 'deck' && prefer['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/')
+		if (searchParams.has('zen')) {
 			uiStyle = 'zen';
+		}
+		if (uiStyle === 'deck' && prefer['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/') {
+			uiStyle = 'zen';
+		}
 
-		if (searchParams.has('ui')) uiStyle = searchParams.get('ui');
+		if (searchParams.has('ui')) {
+			uiStyle = searchParams.get('ui');
+		}
 
 		let rootComponent: Component;
 		switch (uiStyle) {
@@ -205,7 +212,9 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 				if (prefer.serverDisconnectedBehavior === 'reload') {
 					window.location.reload();
 				} else if (prefer.serverDisconnectedBehavior === 'dialog') {
-					if (reloadDialogShowing) return;
+					if (reloadDialogShowing) {
+						return;
+					}
 					reloadDialogShowing = true;
 					const { canceled } = await confirm({
 						type: 'warning',
@@ -273,7 +282,9 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 	let safemodeRequestTimer: number | null = null;
 	const keymap = {
 		'p|n': () => {
-			if ($i == null) return;
+			if ($i == null) {
+				return;
+			}
 			post();
 		},
 		d: async () => {
@@ -283,7 +294,9 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 					type: 'question',
 					text: i18n.tsx.switchDarkModeManuallyWhenSyncEnabledConfirm({ x: i18n.ts.syncDeviceDarkMode }),
 				});
-				if (canceled) return;
+				if (canceled) {
+					return;
+				}
 
 				prefer.commit('syncDeviceDarkMode', false);
 				store.set('darkMode', value);

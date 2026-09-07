@@ -53,9 +53,8 @@ const countdownDate = computed(() => {
 		return i18n.ts.today;
 	} else if (days > 0) {
 		return i18n.tsx._timeIn.days({ n: days });
-	} else {
-		return i18n.tsx._ago.daysAgo({ n: Math.abs(days) });
 	}
+	return i18n.tsx._ago.daysAgo({ n: Math.abs(days) });
 });
 </script>
 

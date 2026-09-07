@@ -18,10 +18,12 @@ import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { decodeReactionForApi } from '../note/notes-reactions.js';
-import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { packNoteForApi, packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
 import { packUserLiteManyForApi } from './user.js';
 import { ApiError } from '../error.js';
-import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiUserReactionsDependencies = ApiNoteDependencies & ApiRolePolicyDependencies;
@@ -112,7 +114,9 @@ export async function handleApiUsersReactions(
 			untilId,
 		});
 
-		if (page.length === 0) break;
+		if (page.length === 0) {
+			break;
+		}
 
 		if (pagination.order === 'asc') {
 			sinceId = page[page.length - 1]!.id;
@@ -128,21 +132,33 @@ export async function handleApiUsersReactions(
 		const noteMap = new Map(notes.map((note) => [note.id, note]));
 
 		for (const reaction of page) {
-			if (collected.length >= params.limit) break;
+			if (collected.length >= params.limit) {
+				break;
+			}
 
 			const note = noteMap.get(reaction.noteId);
-			if (note == null) continue;
+			if (note == null) {
+				continue;
+			}
 
 			if (note.userId !== params.userId) {
-				if (me && isUserRelated(note, userIdsWhoBlockingMe)) continue;
-				if (me && isUserRelated(note, userIdsWhoMeMuting)) continue;
+				if (me && isUserRelated(note, userIdsWhoBlockingMe)) {
+					continue;
+				}
+				if (me && isUserRelated(note, userIdsWhoMeMuting)) {
+					continue;
+				}
 			}
 
 			collected.push({ ...reaction, note });
 		}
 
-		if (collected.length >= params.limit) break;
-		if (page.length < params.limit) break;
+		if (collected.length >= params.limit) {
+			break;
+		}
+		if (page.length < params.limit) {
+			break;
+		}
 	}
 
 	const userIds = [...new Set(collected.map((r) => r.userId))];

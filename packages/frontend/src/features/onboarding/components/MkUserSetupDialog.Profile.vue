@@ -46,16 +46,21 @@ const name = ref($i.name ?? '');
 const description = ref($i.description ?? '');
 
 watch(name, () => {
-	os.apiWithDialog('i/update', {
-		// 空文字列をnullにしたいので??は使うな
+	os.apiWithDialog(
+		'i/update',
+		{
+			// 空文字列をnullにしたいので??は使うな
 
-		name: name.value || null,
-	}, undefined, {
-		'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
-			title: i18n.ts.yourNameContainsProhibitedWords,
-			text: i18n.ts.yourNameContainsProhibitedWordsDescription,
+			name: name.value || null,
 		},
-	});
+		undefined,
+		{
+			'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
+				title: i18n.ts.yourNameContainsProhibitedWords,
+				text: i18n.ts.yourNameContainsProhibitedWordsDescription,
+			},
+		},
+	);
 });
 
 watch(description, () => {
@@ -69,7 +74,9 @@ watch(description, () => {
 async function setAvatar(ev: PointerEvent) {
 	const files = await os.chooseFileFromPc({ multiple: false });
 	const file = files[0];
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	let originalOrCropped = file;
 
@@ -87,7 +94,9 @@ async function setAvatar(ev: PointerEvent) {
 	}
 
 	const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
-	if (driveFile == null) return;
+	if (driveFile == null) {
+		return;
+	}
 
 	const i = await os.apiWithDialog('i/update', {
 		avatarId: driveFile.id,

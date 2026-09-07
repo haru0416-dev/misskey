@@ -8,17 +8,20 @@
 // 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
-import { handleInboxRequest, type InboxEndpointDependencies } from '@/server/activitypub/inbox-endpoint.js';
+import { handleInboxRequest } from '@/server/activitypub/inbox-endpoint.js';
+import type { InboxEndpointDependencies } from '@/server/activitypub/inbox-endpoint.js';
 import type { MiUser } from '@/models/User.js';
 
 type CapturedRequest = {

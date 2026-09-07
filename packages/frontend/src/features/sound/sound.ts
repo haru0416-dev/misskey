@@ -100,7 +100,9 @@ export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 			return cache.get(url) as AudioBuffer;
 		}
 		const pending = pendingLoads.get(url);
-		if (pending != null) return pending;
+		if (pending != null) {
+			return pending;
+		}
 	}
 
 	const load = (async (): Promise<AudioBuffer | undefined> => {
@@ -114,14 +116,20 @@ export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 
 			const arrayBuffer = await response.arrayBuffer();
 			const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-			if (useCache) cache.set(url, audioBuffer);
+			if (useCache) {
+				cache.set(url, audioBuffer);
+			}
 			return audioBuffer;
 		} finally {
-			if (useCache) pendingLoads.delete(url);
+			if (useCache) {
+				pendingLoads.delete(url);
+			}
 		}
 	})();
 
-	if (useCache) pendingLoads.set(url, load);
+	if (useCache) {
+		pendingLoads.set(url, load);
+	}
 	return load;
 }
 
@@ -136,7 +144,9 @@ export function playMisskeySfx(operationType: OperationType) {
 			// ドライブファイルが存在しない場合はデフォルトのサウンドを再生する
 			const default_ = getInitialPrefValue(`sound.on.${operationType}`);
 			const soundName = default_.type as Exclude<SoundType, '_driveFile_'>;
-			if (_DEV_) console.log(`Failed to play sound: ${sound.fileUrl}, so play default sound: ${soundName}`);
+			if (_DEV_) {
+				console.log(`Failed to play sound: ${sound.fileUrl}, so play default sound: ${soundName}`);
+			}
 			playMisskeySfxFileInternal({
 				type: soundName,
 				volume: sound.volume,
@@ -151,11 +161,17 @@ export function playMisskeySfx(operationType: OperationType) {
  */
 export async function playMisskeySfxFile(soundStore: SoundStore): Promise<boolean> {
 	// 連続して再生しない
-	if (!canPlay) return false;
+	if (!canPlay) {
+		return false;
+	}
 	// ユーザーアクティベーションが必要な場合はそれがない場合は再生しない
-	if ('userActivation' in navigator && !navigator.userActivation.hasBeenActive) return false;
+	if ('userActivation' in navigator && !navigator.userActivation.hasBeenActive) {
+		return false;
+	}
 	// サウンドがない場合は再生しない
-	if (soundStore.type === null || (soundStore.type === '_driveFile_' && !soundStore.fileUrl)) return false;
+	if (soundStore.type === null || (soundStore.type === '_driveFile_' && !soundStore.fileUrl)) {
+		return false;
+	}
 
 	canPlay = false;
 	return await playMisskeySfxFileInternal(soundStore).finally(() => {
@@ -178,7 +194,9 @@ async function playMisskeySfxFileInternal(soundStore: SoundStore): Promise<boole
 	const buffer = await loadAudio(url).catch(() => {
 		return undefined;
 	});
-	if (!buffer) return false;
+	if (!buffer) {
+		return false;
+	}
 	const volume = soundStore.volume * masterVolume;
 	createSourceNode(buffer, { volume }).soundSource.start();
 	return true;

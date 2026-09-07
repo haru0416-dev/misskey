@@ -6,7 +6,8 @@
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { createFileInfoService, type FileInfo, type FileInfoService } from '@/core/drive/FileInfoService.js';
+import { createFileInfoService } from '@/core/drive/FileInfoService.js';
+import type { FileInfo, FileInfoService } from '@/core/drive/FileInfoService.js';
 import type { AiService } from '@/core/ai/AiService.js';
 import { createLoggerService } from '@/core/LoggerService.js';
 
@@ -153,14 +154,14 @@ describe('FileInfoService', () => {
 			const path = `${resources}/25000x25000.png`;
 			const info = strip(await fileInfoService.getFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 75933,
+				size: 75_933,
 				md5: '268c5dde99e17cf8fe09f1ab3f97df56',
 				type: {
 					mime: 'application/octet-stream', // 画像として扱わない
 					ext: null,
 				},
-				width: 25000,
-				height: 25000,
+				width: 25_000,
+				height: 25_000,
 				orientation: undefined,
 			});
 		});
@@ -169,7 +170,7 @@ describe('FileInfoService', () => {
 			const path = `${resources}/rotate.jpg`;
 			const info = strip(await fileInfoService.getFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 12624,
+				size: 12_624,
 				md5: '68d5b2d8d1d1acbbce99203e3ec3857e',
 				type: {
 					mime: 'image/jpeg',
@@ -190,7 +191,7 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 19853,
+				size: 19_853,
 				md5: '4f557df8548bc3cecc794c652f690446',
 				type: {
 					mime: 'audio/mpeg',
@@ -206,7 +207,7 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 87630,
+				size: 87_630,
 				md5: '8bc9bb4fe5e77bb1871448209be635c1',
 				type: {
 					mime: 'audio/wav',
@@ -238,7 +239,7 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 108793,
+				size: 108_793,
 				md5: 'bc0f3adfe0e1ca99ae6c7528c46b3173',
 				type: {
 					mime: 'audio/flac',

@@ -32,7 +32,9 @@ export function mfmFunctionPicker(
 		anchorElement,
 		{
 			onClosed: () => {
-				if (onClosed) onClosed();
+				if (onClosed) {
+					onClosed();
+				}
 			},
 		},
 	);

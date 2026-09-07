@@ -16,7 +16,9 @@ export function collectModifications(
 	fileLogger: Logger,
 	inliner: LocaleInliner,
 ): TextModification[] {
-	if (sourceCode === '') return [];
+	if (sourceCode === '') {
+		return [];
+	}
 	let programNode: ESTree.Program;
 	try {
 		programNode = parseAst(sourceCode);
@@ -123,13 +125,23 @@ export function collectModifications(
 
 			const property = ctx.key;
 
-			if (node.type === 'ImportDeclaration') this.skip();
+			if (node.type === 'ImportDeclaration') {
+				this.skip();
+			}
 
 			if (node.type === 'Identifier') {
-				if (parent == null) throw new Error();
-				if (parent.type === 'Property' && !parent.computed && property === 'key') return;
-				if (parent.type === 'MemberExpression' && !parent.computed && property === 'property') return;
-				if (parent.type === 'ExportSpecifier' && property === 'exported') return;
+				if (parent == null) {
+					throw new Error();
+				}
+				if (parent.type === 'Property' && !parent.computed && property === 'key') {
+					return;
+				}
+				if (parent.type === 'MemberExpression' && !parent.computed && property === 'property') {
+					return;
+				}
+				if (parent.type === 'ExportSpecifier' && property === 'exported') {
+					return;
+				}
 				if (node.name === localI18nIdentifier) {
 					// i18n の識別子を直接参照するか、未対応の名前衝突がある場合は import を保持する。
 					fileLogger.error(
@@ -140,10 +152,14 @@ export function collectModifications(
 			} else if (node.type === 'MemberExpression') {
 				const i18nPath = parseI18nPropertyAccess(node);
 				if (i18nPath != null && i18nPath.length >= 2 && i18nPath[0] === 'ts') {
-					if (parent != null && parent.type === 'CallExpression' && property === 'callee') return;
-					if (i18nPath.at(-1)?.startsWith('_'))
+					if (parent != null && parent.type === 'CallExpression' && property === 'callee') {
+						return;
+					}
+					if (i18nPath.at(-1)?.startsWith('_')) {
 						fileLogger.debug(`found i18n grouped property access ${i18nPath.join('.')}`);
-					else fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n property access ${i18nPath.join('.')}`);
+					} else {
+						fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n property access ${i18nPath.join('.')}`);
+					}
 					// i18n.ts.* は文字列または文字列を含むオブジェクトへ解決される。
 					codeModifications.push({
 						type: 'localized',
@@ -173,30 +189,46 @@ export function collectModifications(
 				node.type === 'ArrowFunctionExpression'
 			) {
 				// 関数名・引数・関数スコープの宣言で i18n が隠れる場合は子要素を処理しない。
-				if (node.id?.name === localI18nIdentifier) this.skip();
-				if (node.params.flatMap((param) => declsOfPattern(param)).includes(localI18nIdentifier)) this.skip();
+				if (node.id?.name === localI18nIdentifier) {
+					this.skip();
+				}
+				if (node.params.flatMap((param) => declsOfPattern(param)).includes(localI18nIdentifier)) {
+					this.skip();
+				}
 
-				if (findFunctionScopeDecls(node).includes(localI18nIdentifier)) this.skip();
+				if (findFunctionScopeDecls(node).includes(localI18nIdentifier)) {
+					this.skip();
+				}
 			}
 
 			if (node.type === 'BlockStatement') {
 				// ブロック内の宣言で i18n が隠れる場合は子要素を処理しない。
-				if (findBlockScopeDecls(node).includes(localI18nIdentifier)) this.skip();
+				if (findBlockScopeDecls(node).includes(localI18nIdentifier)) {
+					this.skip();
+				}
 			}
 
 			if (node.type === 'CatchClause') {
 				if (node.param != null) {
-					if (declsOfPattern(node.param).includes(localI18nIdentifier)) this.skip();
+					if (declsOfPattern(node.param).includes(localI18nIdentifier)) {
+						this.skip();
+					}
 				}
 			} else if (node.type === 'ForStatement') {
 				if (node.init?.type === 'VariableDeclaration') {
-					if (node.init.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
+					if (node.init.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) {
+						this.skip();
+					}
 				}
 			} else if (node.type === 'ForInStatement' || node.type === 'ForOfStatement') {
 				if (node.left.type === 'VariableDeclaration') {
-					if (node.left.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) this.skip();
+					if (node.left.declarations.flatMap((x) => declsOfPattern(x.id)).includes(localI18nIdentifier)) {
+						this.skip();
+					}
 				} else {
-					if (declsOfPattern(node.left).includes(localI18nIdentifier)) this.skip();
+					if (declsOfPattern(node.left).includes(localI18nIdentifier)) {
+						this.skip();
+					}
 				}
 			}
 		},
@@ -213,12 +245,16 @@ export function collectModifications(
 			end = i18nImport.end;
 		} else if (i18nImportSpecifier === i18nImport.specifiers[0]) {
 			const nextSpecifier = i18nImport.specifiers[1];
-			if (nextSpecifier == null) throw new Error('Expected another i18n import specifier');
+			if (nextSpecifier == null) {
+				throw new Error('Expected another i18n import specifier');
+			}
 			begin = i18nImportSpecifier.start;
 			end = nextSpecifier.start;
 		} else {
 			const previousSpecifier = i18nImport.specifiers[i18nImport.specifiers.indexOf(i18nImportSpecifier) - 1];
-			if (previousSpecifier == null) throw new Error('Expected a previous i18n import specifier');
+			if (previousSpecifier == null) {
+				throw new Error('Expected a previous i18n import specifier');
+			}
 			begin = previousSpecifier.end;
 			end = i18nImportSpecifier.end;
 		}
@@ -231,12 +267,20 @@ export function collectModifications(
 	}
 
 	function parseI18nPropertyAccess(node: ESTree.Expression | ESTree.Super): string[] | null {
-		if (node.type === 'Identifier' && node.name === localI18nIdentifier) return [];
-		if (node.type !== 'MemberExpression') return null;
-		if (node.object.type === 'Super') return null;
+		if (node.type === 'Identifier' && node.name === localI18nIdentifier) {
+			return [];
+		}
+		if (node.type !== 'MemberExpression') {
+			return null;
+		}
+		if (node.object.type === 'Super') {
+			return null;
+		}
 
 		// オプショナルチェーンは置換対象外とする。
-		if (node.optional) return null;
+		if (node.optional) {
+			return null;
+		}
 
 		let id: string | null = null;
 		if (node.computed) {
@@ -252,10 +296,14 @@ export function collectModifications(
 			}
 		}
 		// 動的なプロパティアクセスは置換対象外とする。
-		if (id == null) return null;
+		if (id == null) {
+			return null;
+		}
 
 		const parentAccess = parseI18nPropertyAccess(node.object);
-		if (parentAccess == null) return null;
+		if (parentAccess == null) {
+			return null;
+		}
 		return [...parentAccess, id];
 	}
 
@@ -272,7 +320,9 @@ function declsOfPattern(
 		| ESTree.AssignmentTargetRest
 		| null,
 ): string[] {
-	if (pattern == null) return [];
+	if (pattern == null) {
+		return [];
+	}
 	switch (pattern.type) {
 		case 'Identifier':
 			return [pattern.name];
@@ -315,7 +365,9 @@ function lineCol(sourceCode: string, node: ESTree.Node): string {
 }
 
 function findFunctionScopeDecls(fn: ESTree.Function | ESTree.ArrowFunctionExpression): string[] {
-	if (fn.body == null) return [];
+	if (fn.body == null) {
+		return [];
+	}
 	const decls: string[] = [];
 	walk(fn.body, {
 		enter(node) {
@@ -346,9 +398,13 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 				if (node.type === 'VariableDeclaration' && node.kind !== 'var') {
 					decls.push(...node.declarations.flatMap((x) => declsOfPattern(x.id)));
 				} else if (node.type === 'FunctionDeclaration') {
-					if (node.id != null) decls.push(node.id.name);
+					if (node.id != null) {
+						decls.push(node.id.name);
+					}
 				} else if (node.type === 'ClassDeclaration') {
-					if (node.id != null) decls.push(node.id.name);
+					if (node.id != null) {
+						decls.push(node.id.name);
+					}
 				}
 
 				if (
@@ -373,59 +429,107 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 //region チェッカー関数
 
 function isLocalStorageGetItemLang(getItemCall: ESTree.Node): boolean {
-	if (getItemCall.type !== 'CallExpression') return false;
-	if (getItemCall.arguments.length !== 1) return false;
+	if (getItemCall.type !== 'CallExpression') {
+		return false;
+	}
+	if (getItemCall.arguments.length !== 1) {
+		return false;
+	}
 
 	const langLiteral = getItemCall.arguments[0];
-	if (langLiteral == null) return false;
-	if (!isStringLiteral(langLiteral, 'lang')) return false;
+	if (langLiteral == null) {
+		return false;
+	}
+	if (!isStringLiteral(langLiteral, 'lang')) {
+		return false;
+	}
 
 	const getItemFunction = getItemCall.callee;
-	if (!isMemberExpression(getItemFunction, 'getItem')) return false;
+	if (!isMemberExpression(getItemFunction, 'getItem')) {
+		return false;
+	}
 
 	const localStorageObject = getItemFunction.object;
-	if (!isIdentifier(localStorageObject, 'localStorage')) return false;
+	if (!isIdentifier(localStorageObject, 'localStorage')) {
+		return false;
+	}
 
 	return true;
 }
 
 function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
-	if (awaitNode.type !== 'AwaitExpression') return false;
+	if (awaitNode.type !== 'AwaitExpression') {
+		return false;
+	}
 
 	const thenCall = awaitNode.argument;
-	if (thenCall.type !== 'CallExpression') return false;
-	if (thenCall.arguments.length < 1) return false;
+	if (thenCall.type !== 'CallExpression') {
+		return false;
+	}
+	if (thenCall.arguments.length < 1) {
+		return false;
+	}
 
 	const arrowFunction = thenCall.arguments[0];
-	if (arrowFunction?.type !== 'ArrowFunctionExpression') return false;
-	if (arrowFunction.params.length !== 1) return false;
+	if (arrowFunction?.type !== 'ArrowFunctionExpression') {
+		return false;
+	}
+	if (arrowFunction.params.length !== 1) {
+		return false;
+	}
 
 	const arrowBodyCall = arrowFunction.body;
-	if (arrowBodyCall.type !== 'CallExpression') return false;
+	if (arrowBodyCall.type !== 'CallExpression') {
+		return false;
+	}
 
 	const jsonFunction = arrowBodyCall.callee;
-	if (!isMemberExpression(jsonFunction, 'json')) return false;
+	if (!isMemberExpression(jsonFunction, 'json')) {
+		return false;
+	}
 
 	const thenFunction = thenCall.callee;
-	if (!isMemberExpression(thenFunction, 'then')) return false;
+	if (!isMemberExpression(thenFunction, 'then')) {
+		return false;
+	}
 
 	const fetchCall = thenFunction.object;
-	if (fetchCall.type !== 'CallExpression') return false;
-	if (fetchCall.arguments.length < 1 || fetchCall.arguments.length > 2) return false;
+	if (fetchCall.type !== 'CallExpression') {
+		return false;
+	}
+	if (fetchCall.arguments.length < 1 || fetchCall.arguments.length > 2) {
+		return false;
+	}
 
 	const assetLocaleTemplate = fetchCall.arguments[0];
-	if (assetLocaleTemplate?.type !== 'TemplateLiteral') return false;
-	if (assetLocaleTemplate.quasis.length !== 3) return false;
-	if (assetLocaleTemplate.expressions.length !== 2) return false;
+	if (assetLocaleTemplate?.type !== 'TemplateLiteral') {
+		return false;
+	}
+	if (assetLocaleTemplate.quasis.length !== 3) {
+		return false;
+	}
+	if (assetLocaleTemplate.expressions.length !== 2) {
+		return false;
+	}
 	const [prefix, separator, suffix] = assetLocaleTemplate.quasis;
-	if (prefix?.value.cooked !== '/assets/locales/') return false;
-	if (separator?.value.cooked !== '.') return false;
-	if (suffix?.value.cooked !== '.json') return false;
+	if (prefix?.value.cooked !== '/assets/locales/') {
+		return false;
+	}
+	if (separator?.value.cooked !== '.') {
+		return false;
+	}
+	if (suffix?.value.cooked !== '.json') {
+		return false;
+	}
 
 	const fetchFunction = fetchCall.callee;
-	if (!isMemberExpression(fetchFunction, 'fetch')) return false;
+	if (!isMemberExpression(fetchFunction, 'fetch')) {
+		return false;
+	}
 	const windowObject = fetchFunction.object;
-	if (!isIdentifier(windowObject, 'window')) return false;
+	if (!isIdentifier(windowObject, 'window')) {
+		return false;
+	}
 
 	return true;
 }
@@ -443,7 +547,9 @@ type SpecifierResult =
 function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, i18nSymbol: string): SpecifierResult {
 	const imports = programNode.body.filter((x) => x.type === 'ImportDeclaration');
 	const importNode = imports.find((x) => x.source.value === `./${i18nFileName}`);
-	if (!importNode) return { type: 'no-import' };
+	if (!importNode) {
+		return { type: 'no-import' };
+	}
 
 	if (importNode.specifiers.length === 0) {
 		return { type: 'no-specifiers', importNode };
@@ -455,7 +561,9 @@ function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, 
 			specifier.imported.type === 'Identifier' &&
 			specifier.imported.name === i18nSymbol,
 	);
-	if (i18nImportSpecifier == null) return { type: 'no-import' };
+	if (i18nImportSpecifier == null) {
+		return { type: 'no-import' };
+	}
 
 	const localI18nIdentifier = i18nImportSpecifier.local.name;
 	return { type: 'specifier', localI18nIdentifier, importNode, importSpecifier: i18nImportSpecifier };

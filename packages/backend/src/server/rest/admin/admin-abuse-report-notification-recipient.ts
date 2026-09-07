@@ -27,7 +27,8 @@ import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/mode
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { packApiSystemWebhook } from './admin-system-webhooks.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
@@ -129,7 +130,9 @@ async function removeUnauthorizedRecipientUsers(
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
 	const recipientUserIds = new Set(userRecipients.map((recipient) => recipient.userId).filter((x) => x != null));
-	if (recipientUserIds.size === 0) return recipients;
+	if (recipientUserIds.size === 0) {
+		return recipients;
+	}
 
 	const authorizedUserIds = await listModeratorIdsForAbuseReportNotification(deps);
 	const authorizedUserRecipients: MiAbuseReportNotificationRecipient[] = [];
@@ -169,7 +172,9 @@ async function fetchRecipients(
 			method: params?.method,
 		}),
 	);
-	if (recipients.length === 0) return [];
+	if (recipients.length === 0) {
+		return [];
+	}
 
 	return await removeUnauthorizedRecipientUsers(deps, recipients);
 }
@@ -267,9 +272,13 @@ export async function handleApiAdminAbuseReportNotificationRecipientShow(
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
 	const params = parseApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
-	if (recipients.length === 0) throw noSuchRecipientError();
+	if (recipients.length === 0) {
+		throw noSuchRecipientError();
+	}
 	const recipient = recipients[0];
-	if (recipient == null) throw noSuchRecipientError();
+	if (recipient == null) {
+		throw noSuchRecipientError();
+	}
 
 	return await packApiAbuseReportNotificationRecipient(deps, recipient);
 }

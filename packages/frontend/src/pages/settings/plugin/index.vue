@@ -121,7 +121,9 @@ async function uninstall(plugin: Plugin) {
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: plugin.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await uninstallPlugin(plugin);
 

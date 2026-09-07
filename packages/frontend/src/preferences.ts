@@ -41,7 +41,9 @@ const io: StorageProvider = {
 				key: syncGroup + ':' + ctx.key,
 			})) as [Scope, unknown][];
 			const target = cloudData.find(([scope]) => isSameScope(scope, ctx.scope));
-			if (target == null) return null;
+			if (target == null) {
+				return null;
+			}
 			return {
 				// レジストリから読み出した生データなので、期待される値の型であることをここで表明する
 				value: target[1] as ValueOf<K>,
@@ -49,9 +51,8 @@ const io: StorageProvider = {
 		} catch (err) {
 			if (isNoSuchKeyError(err)) {
 				return null;
-			} else {
-				throw err;
 			}
+			throw err;
 		}
 	},
 
@@ -131,12 +132,18 @@ preferencesEvents.on('committed', () => {
 preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChannelMessage>) => {
 	const msg = ev.data;
 	if (msg.type === 'preferencesUpdate') {
-		if (msg.tabId === TAB_ID) return;
+		if (msg.tabId === TAB_ID) {
+			return;
+		}
 		if (latestPreferencesUpdate != null) {
-			if (msg.timestamp <= latestPreferencesUpdate.timestamp) return;
+			if (msg.timestamp <= latestPreferencesUpdate.timestamp) {
+				return;
+			}
 		}
 		prefer.reloadProfile();
-		if (_DEV_) console.log('prefer:received update from other tab');
+		if (_DEV_) {
+			console.log('prefer:received update from other tab');
+		}
 		latestPreferencesUpdate = {
 			tabId: msg.tabId,
 			timestamp: msg.timestamp,
@@ -149,24 +156,36 @@ preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChan
 let latestBackupAt = 0;
 const backupScheduler = new DeferredTaskScheduler(
 	async () => {
-		if ($i == null) return;
-		if (!store.enablePreferencesAutoCloudBackup) return;
-		if (prefer.profile.modifiedAt <= latestBackupAt) return;
+		if ($i == null) {
+			return;
+		}
+		if (!store.enablePreferencesAutoCloudBackup) {
+			return;
+		}
+		if (prefer.profile.modifiedAt <= latestBackupAt) {
+			return;
+		}
 
 		const backedUpModifiedAt = prefer.profile.modifiedAt;
 		try {
 			await cloudBackup();
 			latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
 		} catch {
-			if (store.enablePreferencesAutoCloudBackup) backupScheduler.request();
+			if (store.enablePreferencesAutoCloudBackup) {
+				backupScheduler.request();
+			}
 		}
 	},
 	1000 * 60 * 3,
 );
 
 function requestBackup(): void {
-	if ($i == null) return;
-	if (!store.enablePreferencesAutoCloudBackup) return;
+	if ($i == null) {
+		return;
+	}
+	if (!store.enablePreferencesAutoCloudBackup) {
+		return;
+	}
 	backupScheduler.request();
 }
 

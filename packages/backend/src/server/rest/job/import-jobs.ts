@@ -5,7 +5,8 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
+import { addDbJob } from '@/core/queue/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -18,8 +19,10 @@ import { omitUndefined } from '@/misc/clone.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError, rolePermissionDeniedError } from '../error.js';
 import type { ApiInternalEventPublisher } from '../events.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { resolveAlsoKnownAsForApi, type UserPackingDependencies } from '../user/user.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { resolveAlsoKnownAsForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiImportJobDependencies = UserPackingDependencies & {
@@ -44,14 +47,20 @@ const importJobOptions = (config: Pick<Config, 'queues'>) => ({
 
 async function checkRecentlyMovedForApi(deps: ApiImportJobDependencies, me: MiLocalUser): Promise<boolean> {
 	const oldSelfIds = await resolveAlsoKnownAsForApi(deps, me.alsoKnownAs);
-	if (!oldSelfIds || oldSelfIds.length === 0) return false;
+	if (!oldSelfIds || oldSelfIds.length === 0) {
+		return false;
+	}
 
 	const meUri = `${deps.config.instance.url}/users/${me.id}`;
 	const oldSelfs = await listUsersByIdsFromDatabase(deps.db, oldSelfIds, { includeSuspended: true });
 
 	for (const oldSelf of oldSelfs) {
-		if (oldSelf.movedToUri !== meUri) continue;
-		if (oldSelf.movedAt && oldSelf.movedAt.getTime() + 1000 * 60 * 60 * 2 > Date.now()) return true;
+		if (oldSelf.movedToUri !== meUri) {
+			continue;
+		}
+		if (oldSelf.movedAt && oldSelf.movedAt.getTime() + 1000 * 60 * 60 * 2 > Date.now()) {
+			return true;
+		}
 	}
 
 	return false;
@@ -71,8 +80,12 @@ async function validateImportFile(
 ): Promise<{ id: string }> {
 	const file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, fileId, me.id);
 
-	if (file == null) throw new ApiError({ status: 400, kind: 'client', ...errors.noSuchFile });
-	if (file.size === 0) throw new ApiError({ status: 400, kind: 'client', ...errors.emptyFile });
+	if (file == null) {
+		throw new ApiError({ status: 400, kind: 'client', ...errors.noSuchFile });
+	}
+	if (file.size === 0) {
+		throw new ApiError({ status: 400, kind: 'client', ...errors.emptyFile });
+	}
 
 	const checkMoving = await checkRecentlyMovedForApi(deps, me);
 	if (checkMoving ? file.size > 32 * 1024 * 1024 : file.size > 64 * 1024) {
@@ -242,11 +255,17 @@ export async function handleApiIImportAntennas(
 	const params = parseApiParams(importAntennasParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, me.id);
-	if (user == null) throw importAntennasNoSuchUserError();
+	if (user == null) {
+		throw importAntennasNoSuchUserError();
+	}
 
 	const file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
-	if (file == null) throw importAntennasNoSuchFileError();
-	if (file.size === 0) throw importAntennasEmptyFileError();
+	if (file == null) {
+		throw importAntennasNoSuchFileError();
+	}
+	if (file.size === 0) {
+		throw importAntennasEmptyFileError();
+	}
 
 	let parsed: unknown;
 	try {
@@ -255,13 +274,17 @@ export async function handleApiIImportAntennas(
 		throw invalidAntennaImportFileError();
 	}
 	const validated = exportedAntennasSchema.safeParse(parsed);
-	if (!validated.success) throw invalidAntennaImportFileError();
+	if (!validated.success) {
+		throw invalidAntennaImportFileError();
+	}
 
 	// 上限超過で1件も作られないのに実行枠 (1回/時) を消費すると、アンテナを整理しても
 	// 1時間再試行できなくなる。先に概算で弾いておく (競合を考慮した厳密な判定は下の transaction 内)
 	const policies = await getApiRolePolicies(deps, user);
 	const currentCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
-	if (currentCount + validated.data.length > policies.antennaLimit) throw importAntennasTooManyAntennasError();
+	if (currentCount + validated.data.length > policies.antennaLimit) {
+		throw importAntennasTooManyAntennasError();
+	}
 
 	await consumeRateLimit?.();
 
@@ -272,7 +295,9 @@ export async function handleApiIImportAntennas(
 		validated.data.map((antenna) => importedAntennaToCreateValues(antenna, now)),
 		async (tx) => {
 			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
-			if (currentUser == null) throw importAntennasNoSuchUserError();
+			if (currentUser == null) {
+				throw importAntennasNoSuchUserError();
+			}
 
 			const policies = await getApiRolePolicies({ ...deps, db: tx }, currentUser);
 			if (currentUser.id !== deps.meta.rootUserId && !policies.canImportAntennas) {
@@ -281,7 +306,9 @@ export async function handleApiIImportAntennas(
 			return policies.antennaLimit;
 		},
 	);
-	if (result.status === 'limitExceeded') throw importAntennasTooManyAntennasError();
+	if (result.status === 'limitExceeded') {
+		throw importAntennasTooManyAntennasError();
+	}
 
 	for (const antenna of result.antennas) {
 		deps.publishInternalEvent?.('antennaCreated', antenna);

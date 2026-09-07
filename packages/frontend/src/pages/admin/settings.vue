@@ -406,118 +406,142 @@ const meta = await misskeyApi('admin/meta');
 
 const proxyAccount = await misskeyApi('users/show', { userId: meta.proxyAccountId });
 
-const infoForm = useForm({
-	name: meta.name ?? '',
-	shortName: meta.shortName ?? '',
-	description: meta.description ?? '',
-	maintainerName: meta.maintainerName ?? '',
-	maintainerEmail: meta.maintainerEmail ?? '',
-	tosUrl: meta.tosUrl ?? '',
-	privacyPolicyUrl: meta.privacyPolicyUrl ?? '',
-	inquiryUrl: meta.inquiryUrl ?? '',
-	repositoryUrl: meta.repositoryUrl ?? '',
-	impressumUrl: meta.impressumUrl ?? '',
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		name: state.name,
-		shortName: state.shortName === '' ? null : state.shortName,
-		description: state.description,
-		maintainerName: state.maintainerName,
-		maintainerEmail: state.maintainerEmail,
-		tosUrl: state.tosUrl,
-		privacyPolicyUrl: state.privacyPolicyUrl,
-		inquiryUrl: state.inquiryUrl,
-		repositoryUrl: state.repositoryUrl,
-		impressumUrl: state.impressumUrl,
-	});
-	fetchInstance(true);
-});
+const infoForm = useForm(
+	{
+		name: meta.name ?? '',
+		shortName: meta.shortName ?? '',
+		description: meta.description ?? '',
+		maintainerName: meta.maintainerName ?? '',
+		maintainerEmail: meta.maintainerEmail ?? '',
+		tosUrl: meta.tosUrl ?? '',
+		privacyPolicyUrl: meta.privacyPolicyUrl ?? '',
+		inquiryUrl: meta.inquiryUrl ?? '',
+		repositoryUrl: meta.repositoryUrl ?? '',
+		impressumUrl: meta.impressumUrl ?? '',
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			name: state.name,
+			shortName: state.shortName === '' ? null : state.shortName,
+			description: state.description,
+			maintainerName: state.maintainerName,
+			maintainerEmail: state.maintainerEmail,
+			tosUrl: state.tosUrl,
+			privacyPolicyUrl: state.privacyPolicyUrl,
+			inquiryUrl: state.inquiryUrl,
+			repositoryUrl: state.repositoryUrl,
+			impressumUrl: state.impressumUrl,
+		});
+		fetchInstance(true);
+	},
+);
 
-const pinnedUsersForm = useForm({
-	pinnedUsers: meta.pinnedUsers.join('\n'),
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		pinnedUsers: state.pinnedUsers.split('\n'),
-	});
-	fetchInstance(true);
-});
+const pinnedUsersForm = useForm(
+	{
+		pinnedUsers: meta.pinnedUsers.join('\n'),
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			pinnedUsers: state.pinnedUsers.split('\n'),
+		});
+		fetchInstance(true);
+	},
+);
 
-const serviceWorkerForm = useForm({
-	enableServiceWorker: meta.enableServiceWorker,
-	swPublicKey: meta.swPublickey ?? '',
-	swPrivateKey: meta.swPrivateKey ?? '',
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		enableServiceWorker: state.enableServiceWorker,
-		swPublicKey: state.swPublicKey,
-		swPrivateKey: state.swPrivateKey,
-	});
-	fetchInstance(true);
-});
+const serviceWorkerForm = useForm(
+	{
+		enableServiceWorker: meta.enableServiceWorker,
+		swPublicKey: meta.swPublickey ?? '',
+		swPrivateKey: meta.swPrivateKey ?? '',
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			enableServiceWorker: state.enableServiceWorker,
+			swPublicKey: state.swPublicKey,
+			swPrivateKey: state.swPrivateKey,
+		});
+		fetchInstance(true);
+	},
+);
 
-const adForm = useForm({
-	notesPerOneAd: meta.notesPerOneAd,
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		notesPerOneAd: state.notesPerOneAd,
-	});
-	fetchInstance(true);
-});
+const adForm = useForm(
+	{
+		notesPerOneAd: meta.notesPerOneAd,
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			notesPerOneAd: state.notesPerOneAd,
+		});
+		fetchInstance(true);
+	},
+);
 
-const urlPreviewForm = useForm({
-	urlPreviewEnabled: meta.urlPreviewEnabled,
-	urlPreviewAllowRedirect: meta.urlPreviewAllowRedirect,
-	urlPreviewTimeout: meta.urlPreviewTimeout,
-	urlPreviewMaximumContentLength: meta.urlPreviewMaximumContentLength,
-	urlPreviewRequireContentLength: meta.urlPreviewRequireContentLength,
-	urlPreviewUserAgent: meta.urlPreviewUserAgent ?? '',
-	urlPreviewSummaryProxyUrl: meta.urlPreviewSummaryProxyUrl ?? '',
-	urlPreviewSensitiveList: meta.urlPreviewSensitiveList.join('\n'),
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		urlPreviewEnabled: state.urlPreviewEnabled,
-		urlPreviewAllowRedirect: state.urlPreviewAllowRedirect,
-		urlPreviewTimeout: state.urlPreviewTimeout,
-		urlPreviewMaximumContentLength: state.urlPreviewMaximumContentLength,
-		urlPreviewRequireContentLength: state.urlPreviewRequireContentLength,
-		urlPreviewUserAgent: state.urlPreviewUserAgent,
-		urlPreviewSummaryProxyUrl: state.urlPreviewSummaryProxyUrl,
-		urlPreviewSensitiveList: state.urlPreviewSensitiveList.split('\n').map(value => value.trim()).filter(Boolean),
-	});
-	fetchInstance(true);
-});
+const urlPreviewForm = useForm(
+	{
+		urlPreviewEnabled: meta.urlPreviewEnabled,
+		urlPreviewAllowRedirect: meta.urlPreviewAllowRedirect,
+		urlPreviewTimeout: meta.urlPreviewTimeout,
+		urlPreviewMaximumContentLength: meta.urlPreviewMaximumContentLength,
+		urlPreviewRequireContentLength: meta.urlPreviewRequireContentLength,
+		urlPreviewUserAgent: meta.urlPreviewUserAgent ?? '',
+		urlPreviewSummaryProxyUrl: meta.urlPreviewSummaryProxyUrl ?? '',
+		urlPreviewSensitiveList: meta.urlPreviewSensitiveList.join('\n'),
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			urlPreviewEnabled: state.urlPreviewEnabled,
+			urlPreviewAllowRedirect: state.urlPreviewAllowRedirect,
+			urlPreviewTimeout: state.urlPreviewTimeout,
+			urlPreviewMaximumContentLength: state.urlPreviewMaximumContentLength,
+			urlPreviewRequireContentLength: state.urlPreviewRequireContentLength,
+			urlPreviewUserAgent: state.urlPreviewUserAgent,
+			urlPreviewSummaryProxyUrl: state.urlPreviewSummaryProxyUrl,
+			urlPreviewSensitiveList: state.urlPreviewSensitiveList
+				.split('\n')
+				.map((value) => value.trim())
+				.filter(Boolean),
+		});
+		fetchInstance(true);
+	},
+);
 
-const federationForm = useForm({
-	federation: meta.federation,
-	federationHosts: meta.federationHosts.join('\n'),
-	deliverSuspendedSoftware: meta.deliverSuspendedSoftware,
-	signToActivityPubGet: meta.signToActivityPubGet,
-	proxyRemoteFiles: meta.proxyRemoteFiles,
-	allowExternalApRedirect: meta.allowExternalApRedirect,
-	cacheRemoteFiles: meta.cacheRemoteFiles,
-	cacheRemoteSensitiveFiles: meta.cacheRemoteSensitiveFiles,
-}, async (state) => {
-	await os.apiWithDialog('admin/update-meta', {
-		federation: state.federation,
-		federationHosts: state.federationHosts.split('\n'),
-		deliverSuspendedSoftware: state.deliverSuspendedSoftware,
-		signToActivityPubGet: state.signToActivityPubGet,
-		proxyRemoteFiles: state.proxyRemoteFiles,
-		allowExternalApRedirect: state.allowExternalApRedirect,
-		cacheRemoteFiles: state.cacheRemoteFiles,
-		cacheRemoteSensitiveFiles: state.cacheRemoteSensitiveFiles,
-	});
-	fetchInstance(true);
-});
+const federationForm = useForm(
+	{
+		federation: meta.federation,
+		federationHosts: meta.federationHosts.join('\n'),
+		deliverSuspendedSoftware: meta.deliverSuspendedSoftware,
+		signToActivityPubGet: meta.signToActivityPubGet,
+		proxyRemoteFiles: meta.proxyRemoteFiles,
+		allowExternalApRedirect: meta.allowExternalApRedirect,
+		cacheRemoteFiles: meta.cacheRemoteFiles,
+		cacheRemoteSensitiveFiles: meta.cacheRemoteSensitiveFiles,
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-meta', {
+			federation: state.federation,
+			federationHosts: state.federationHosts.split('\n'),
+			deliverSuspendedSoftware: state.deliverSuspendedSoftware,
+			signToActivityPubGet: state.signToActivityPubGet,
+			proxyRemoteFiles: state.proxyRemoteFiles,
+			allowExternalApRedirect: state.allowExternalApRedirect,
+			cacheRemoteFiles: state.cacheRemoteFiles,
+			cacheRemoteSensitiveFiles: state.cacheRemoteSensitiveFiles,
+		});
+		fetchInstance(true);
+	},
+);
 
-const proxyAccountForm = useForm({
-	description: proxyAccount.description,
-}, async (state) => {
-	await os.apiWithDialog('admin/update-proxy-account', {
-		description: state.description,
-	});
-	fetchInstance(true);
-});
+const proxyAccountForm = useForm(
+	{
+		description: proxyAccount.description,
+	},
+	async (state) => {
+		await os.apiWithDialog('admin/update-proxy-account', {
+			description: state.description,
+		});
+		fetchInstance(true);
+	},
+);
 
 async function openSetupWizard() {
 	const { canceled } = await os.confirm({
@@ -525,12 +549,17 @@ async function openSetupWizard() {
 		title: i18n.ts._serverSettings.restartServerSetupWizardConfirm_title,
 		text: i18n.ts._serverSettings.restartServerSetupWizardConfirm_text,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/server-setup/components/MkServerSetupWizardDialog.vue').then(x => x.default), {
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/server-setup/components/MkServerSetupWizardDialog.vue').then((x) => x.default),
+		{},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 const headerTabs = computed(() => []);

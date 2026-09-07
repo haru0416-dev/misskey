@@ -45,13 +45,16 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const props = withDefaults(defineProps<{
-	query?: string,
-	origin?: Endpoints['users/search']['req']['origin'],
-}>(), {
-	query: '',
-	origin: 'combined',
-});
+const props = withDefaults(
+	defineProps<{
+		query?: string;
+		origin?: Endpoints['users/search']['req']['origin'];
+	}>(),
+	{
+		query: '',
+		origin: 'combined',
+	},
+);
 
 const router = useRouter();
 
@@ -64,7 +67,9 @@ const searchOrigin = ref(toRef(props, 'origin').value);
 async function search() {
 	const query = searchQuery.value.toString().trim();
 
-	if (query == null || query === '') return;
+	if (query == null || query === '') {
+		return;
+	}
 
 	//#region AP lookup
 	if (query.startsWith('https://') && !query.includes(' ')) {
@@ -128,14 +133,16 @@ async function search() {
 		}
 	}
 
-	paginator.value = markRaw(new Paginator('users/search', {
-		limit: 10,
-		offsetMode: true,
-		params: {
-			query: query,
-			origin: instance.federation === 'none' ? 'local' : searchOrigin.value,
-		},
-	}));
+	paginator.value = markRaw(
+		new Paginator('users/search', {
+			limit: 10,
+			offsetMode: true,
+			params: {
+				query: query,
+				origin: instance.federation === 'none' ? 'local' : searchOrigin.value,
+			},
+		}),
+	);
 
 	key.value++;
 }

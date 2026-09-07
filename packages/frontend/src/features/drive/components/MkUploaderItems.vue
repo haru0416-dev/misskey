@@ -66,11 +66,13 @@ const props = defineProps<{
 	items: UploaderItem[];
 }>();
 
-const displayItems = computed(() => props.items.map(item => ({
-	item,
-	nameParts: getUploadNameParts(item),
-	previewable: isPreviewableUploaderItem(item),
-})));
+const displayItems = computed(() =>
+	props.items.map((item) => ({
+		item,
+		nameParts: getUploadNameParts(item),
+		previewable: isPreviewableUploaderItem(item),
+	})),
+);
 
 const emit = defineEmits<{
 	(ev: 'showMenu', item: UploaderItem, event: PointerEvent): void;
@@ -98,14 +100,20 @@ function getUploadNameParts(item: UploaderItem): {
 }
 
 function onContextmenu(item: UploaderItem, ev: PointerEvent) {
-	if (ev.target && isLink(ev.target as HTMLElement)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (ev.target && isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
 	emit('showMenuViaContextmenu', item, ev);
 }
 
 function onThumbnailClick(item: UploaderItem) {
-	if (!isPreviewableUploaderItem(item)) return;
+	if (!isPreviewableUploaderItem(item)) {
+		return;
+	}
 	previewUploaderItem(props.items, item);
 }
 </script>

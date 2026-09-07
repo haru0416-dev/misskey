@@ -14,17 +14,25 @@ export function extractLinkHeaderUrisByRel(header: string, rel: string): string[
 
 	for (const value of splitTopLevel(header, ',')) {
 		const match = /^\s*<([^>]*)>\s*(.*)$/s.exec(value);
-		if (match == null) continue;
+		if (match == null) {
+			continue;
+		}
 		const [, uri, rest] = match;
-		if (uri == null || rest == null) continue;
+		if (uri == null || rest == null) {
+			continue;
+		}
 
 		// RFC 8288 3.3: 同名パラメータが複数ある場合は最初の出現のみ有効
 		let relValue: string | null = null;
 		for (const param of splitTopLevel(rest, ';')) {
 			const eq = param.indexOf('=');
-			if (eq === -1) continue;
+			if (eq === -1) {
+				continue;
+			}
 			const name = param.slice(0, eq).trim().toLowerCase();
-			if (name !== 'rel' || relValue != null) continue;
+			if (name !== 'rel' || relValue != null) {
+				continue;
+			}
 			let raw = param.slice(eq + 1).trim();
 			if (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) {
 				raw = raw.slice(1, -1).replaceAll(/\\(.)/g, '$1');
@@ -54,9 +62,13 @@ function splitTopLevel(input: string, separator: ',' | ';'): string[] {
 				current += ch + input[++i];
 				continue;
 			}
-			if (ch === '"') inQuote = false;
+			if (ch === '"') {
+				inQuote = false;
+			}
 		} else if (inAngle) {
-			if (ch === '>') inAngle = false;
+			if (ch === '>') {
+				inAngle = false;
+			}
 		} else if (ch === '"') {
 			inQuote = true;
 		} else if (ch === '<') {
@@ -68,7 +80,9 @@ function splitTopLevel(input: string, separator: ',' | ';'): string[] {
 		}
 		current += ch;
 	}
-	if (current.trim() !== '') parts.push(current);
+	if (current.trim() !== '') {
+		parts.push(current);
+	}
 
 	return parts;
 }

@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
-import { chatMessage, type ChatMessageInsert, type ChatMessageRow } from '@/db/schema/chat-message.js';
+import { and, asc, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { chatMessage } from '@/db/schema/chat-message.js';
+import type { ChatMessageInsert, ChatMessageRow } from '@/db/schema/chat-message.js';
 import { chatRoom } from '@/db/schema/chat-room.js';
 import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

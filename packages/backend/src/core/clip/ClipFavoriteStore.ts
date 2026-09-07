@@ -4,7 +4,8 @@
  */
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { clipFavorite, type ClipFavoriteInsert, type ClipFavoriteRow } from '@/db/schema/clip-favorite.js';
+import { clipFavorite } from '@/db/schema/clip-favorite.js';
+import type { ClipFavoriteInsert, ClipFavoriteRow } from '@/db/schema/clip-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';

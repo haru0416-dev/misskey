@@ -70,16 +70,16 @@ import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkRadios from '@/components/form/MkRadios.vue';
 
-type AdminAnnouncementType = Misskey.entities.AdminAnnouncementsCreateRequest & { id: string; };
+type AdminAnnouncementType = Misskey.entities.AdminAnnouncementsCreateRequest & { id: string };
 
 const props = defineProps<{
-	user: Misskey.entities.User,
-	announcement?: Required<AdminAnnouncementType>,
+	user: Misskey.entities.User;
+	announcement?: Required<AdminAnnouncementType>;
 }>();
 
 const emit = defineEmits<{
-	(ev: 'done', v: { deleted?: boolean; updated?: AdminAnnouncementType; created?: AdminAnnouncementType; }): void,
-	(ev: 'closed'): void
+	(ev: 'done', v: { deleted?: boolean; updated?: AdminAnnouncementType; created?: AdminAnnouncementType }): void;
+	(ev: 'closed'): void;
 }>();
 
 const dialog = useTemplateRef('dialog');
@@ -130,7 +130,9 @@ async function del() {
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: title.value }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	if (props.announcement) {
 		await misskeyApi('admin/announcements/delete', {

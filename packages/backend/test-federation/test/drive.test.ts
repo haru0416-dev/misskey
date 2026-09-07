@@ -5,12 +5,12 @@ import {
 	createAccount,
 	deepStrictEqualWithExcludedFields,
 	fetchAdmin,
-	type LoginUser,
 	resolveRemoteNote,
 	resolveRemoteUser,
 	sleep,
 	uploadFile,
 } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 const bAdmin = await fetchAdmin('b.test');
 

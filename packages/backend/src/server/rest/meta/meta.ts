@@ -52,7 +52,9 @@ function currentFeaturedWindow(windowRange: number): number {
 }
 
 async function removeHiddenTagsFromFeaturedRanking(redis: Redis.Redis, tags: Set<string>): Promise<void> {
-	if (tags.size === 0) return;
+	if (tags.size === 0) {
+		return;
+	}
 
 	const currentWindow = currentFeaturedWindow(hashtagRankingWindow);
 	const previousWindow = currentWindow - 1;
@@ -71,7 +73,9 @@ function scheduleHiddenTagsRankingRemoval(
 	before: MiMeta | undefined,
 	hiddenTags: MiMeta['hiddenTags'] | undefined,
 ): void {
-	if (hiddenTags === undefined) return;
+	if (hiddenTags === undefined) {
+		return;
+	}
 
 	process.nextTick(() => {
 		const tags = new Set<string>(hiddenTags);
@@ -309,9 +313,13 @@ export async function handleApiServerInfo(meta: MiMeta): Promise<{
 	const systemInformation = await import('systeminformation');
 	const [memStats, fsStats] = await Promise.all([systemInformation.mem(), systemInformation.fsSize()]);
 	const cpu = os.cpus()[0];
-	if (cpu == null) throw new Error('CPU information is unavailable');
+	if (cpu == null) {
+		throw new Error('CPU information is unavailable');
+	}
 	const fs = fsStats[0];
-	if (fs == null) throw new Error('Filesystem information is unavailable');
+	if (fs == null) {
+		throw new Error('Filesystem information is unavailable');
+	}
 
 	return {
 		machine: os.hostname(),

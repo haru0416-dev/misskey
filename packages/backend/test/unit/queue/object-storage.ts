@@ -6,15 +6,16 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	deleteFileSyncForApi,
 	handleQueueCleanRemoteFiles,
 	handleQueueDeleteFile,
-	type QueueObjectStorageDependencies,
 } from '@/queue/handlers/object-storage.js';
+import type { QueueObjectStorageDependencies } from '@/queue/handlers/object-storage.js';
 import type { ObjectStorageFileJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';

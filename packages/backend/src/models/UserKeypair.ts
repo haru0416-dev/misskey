@@ -15,7 +15,9 @@ export class MiUserKeypair {
 	public privateKey: string;
 
 	constructor(data: Partial<MiUserKeypair>) {
-		if (data == null) return;
+		if (data == null) {
+			return;
+		}
 
 		for (const [k, v] of Object.entries(data)) {
 			(this as Record<string, unknown>)[k] = v;

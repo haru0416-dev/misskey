@@ -4,14 +4,16 @@
  */
 
 const dateTimeIntervals = {
-	day: 86400000,
-	hour: 3600000,
+	day: 86_400_000,
+	hour: 3_600_000,
 	ms: 1,
 };
 
 function dateUTC(time: number[]): Date {
 	const [year, month, date, hours, minutes, seconds, ms] = time;
-	if (year == null || month == null) throw new Error('wrong number of arguments');
+	if (year == null || month == null) {
+		throw new Error('wrong number of arguments');
+	}
 	const d =
 		time.length === 2
 			? Date.UTC(year, month)
@@ -27,7 +29,9 @@ function dateUTC(time: number[]): Date {
 								? Date.UTC(year, month, date, hours, minutes, seconds, ms)
 								: null;
 
-	if (d == null) throw new Error('wrong number of arguments');
+	if (d == null) {
+		throw new Error('wrong number of arguments');
+	}
 
 	return new Date(d);
 }

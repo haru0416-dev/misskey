@@ -134,12 +134,18 @@ const props = defineProps<{
 
 const page = ref<Misskey.entities.Page | null>(null);
 const error = ref<unknown>(null);
-const otherPostsPaginator = markRaw(new Paginator('users/pages', {
-	limit: 6,
-	computedParams: computed(() => page.value ? ({
-		userId: page.value.user.id,
-	}) : undefined),
-}));
+const otherPostsPaginator = markRaw(
+	new Paginator('users/pages', {
+		limit: 6,
+		computedParams: computed(() =>
+			page.value
+				? {
+						userId: page.value.user.id,
+					}
+				: undefined,
+		),
+	}),
+);
 const path = computed(() => props.username + '/' + props.pageName);
 
 function fetchPage() {
@@ -147,24 +153,28 @@ function fetchPage() {
 	misskeyApi('pages/show', {
 		name: props.pageName,
 		username: props.username,
-	}).then(async _page => {
-		page.value = _page;
+	})
+		.then(async (_page) => {
+			page.value = _page;
 
-		const pageViewInterruptors = getPluginHandlers('page_view_interruptor');
-		if (pageViewInterruptors.length > 0) {
-			let result = deepClone(_page);
-			for (const interruptor of pageViewInterruptors) {
-				result = await interruptor.handler(result);
+			const pageViewInterruptors = getPluginHandlers('page_view_interruptor');
+			if (pageViewInterruptors.length > 0) {
+				let result = deepClone(_page);
+				for (const interruptor of pageViewInterruptors) {
+					result = await interruptor.handler(result);
+				}
+				page.value = result;
 			}
-			page.value = result;
-		}
-	}).catch(err => {
-		error.value = err;
-	});
+		})
+		.catch((err) => {
+			error.value = err;
+		});
 }
 
 function share(ev: PointerEvent) {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	const menuItems: MenuItem[] = [];
 
@@ -186,13 +196,17 @@ function share(ev: PointerEvent) {
 }
 
 function copyLink() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	copyToClipboard(`${url}/@${page.value.user.username}/pages/${page.value.name}`);
 }
 
 function shareWithNote() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	os.post({
 		initialText: `${page.value.title || page.value.name}\n${url}/@${page.value.user.username}/pages/${page.value.name}`,
@@ -201,7 +215,9 @@ function shareWithNote() {
 }
 
 function shareWithNavigator() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	navigator.share({
 		title: page.value.title ?? page.value.name,
@@ -211,7 +227,9 @@ function shareWithNavigator() {
 }
 
 function like() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	os.apiWithDialog('pages/like', {
 		pageId: page.value.id,
@@ -222,13 +240,17 @@ function like() {
 }
 
 async function unlike() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	const confirm = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.unlikeConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	os.apiWithDialog('pages/unlike', {
 		pageId: page.value.id,
 	}).then(() => {
@@ -238,7 +260,9 @@ async function unlike() {
 }
 
 function pin(pin: boolean) {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	os.apiWithDialog('i/update', {
 		pinnedPageId: pin ? page.value.id : null,
@@ -246,20 +270,28 @@ function pin(pin: boolean) {
 }
 
 async function reportAbuse() {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	const pageUrl = `${url}/@${props.username}/pages/${props.pageName}`;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
-		user: page.value.user,
-		initialComment: `Page: ${pageUrl}\n-----\n`,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
+		{
+			user: page.value.user,
+			initialComment: `Page: ${pageUrl}\n-----\n`,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function showMenu(ev: PointerEvent) {
-	if (!page.value) return;
+	if (!page.value) {
+		return;
+	}
 
 	const menuItems: MenuItem[] = [];
 
@@ -267,11 +299,12 @@ function showMenu(ev: PointerEvent) {
 		menuItems.push({
 			icon: 'ti ti-pencil',
 			text: i18n.ts.edit,
-			action: () => router.push('/pages/edit/:initPageId', {
-				params: {
-					initPageId: page.value!.id,
-				},
-			}),
+			action: () =>
+				router.push('/pages/edit/:initPageId', {
+					params: {
+						initPageId: page.value!.id,
+					},
+				}),
 		});
 
 		if ($i.pinnedPageId === page.value.id) {
@@ -295,21 +328,29 @@ function showMenu(ev: PointerEvent) {
 		});
 
 		if ($i.isModerator || $i.isAdmin) {
-			menuItems.push({
-				type: 'divider',
-			}, {
-				icon: 'ti ti-trash',
-				text: i18n.ts.delete,
-				danger: true,
-				action: () => os.confirm({
-					type: 'warning',
-					text: i18n.ts.deleteConfirm,
-				}).then(({ canceled }) => {
-					if (canceled || !page.value) return;
+			menuItems.push(
+				{
+					type: 'divider',
+				},
+				{
+					icon: 'ti ti-trash',
+					text: i18n.ts.delete,
+					danger: true,
+					action: () =>
+						os
+							.confirm({
+								type: 'warning',
+								text: i18n.ts.deleteConfirm,
+							})
+							.then(({ canceled }) => {
+								if (canceled || !page.value) {
+									return;
+								}
 
-					os.apiWithDialog('pages/delete', { pageId: page.value.id });
-				}),
-			});
+								os.apiWithDialog('pages/delete', { pageId: page.value.id });
+							}),
+				},
+			);
 		}
 	}
 
@@ -324,14 +365,16 @@ const headerTabs = computed(() => []);
 
 definePage(() => ({
 	title: page.value ? page.value.title || page.value.name : i18n.ts.pages,
-	...page.value ? {
-		avatar: page.value.user,
-		path: `/@${page.value.user.username}/pages/${page.value.name}`,
-		share: {
-			title: page.value.title || page.value.name,
-			text: page.value.summary,
-		},
-	} : {},
+	...(page.value
+		? {
+				avatar: page.value.user,
+				path: `/@${page.value.user.username}/pages/${page.value.name}`,
+				share: {
+					title: page.value.title || page.value.name,
+					text: page.value.summary,
+				},
+			}
+		: {}),
 }));
 </script>
 

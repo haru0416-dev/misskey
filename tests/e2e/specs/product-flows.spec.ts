@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { devices, type Browser, type Page } from '@playwright/test';
+import { devices } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures';
 import {
 	closeInitialUserSetup,
@@ -11,9 +12,9 @@ import {
 	registerUser,
 	resetState,
 	seedE2eLocalStorage,
-	type TestUser,
 	waitForPageCarryoverGuard,
 } from '../support/helpers';
+import type { TestUser } from '../support/helpers';
 
 const passwords = {
 	alice: 'alice1234',

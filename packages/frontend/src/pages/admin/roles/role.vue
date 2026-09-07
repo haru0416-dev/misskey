@@ -75,18 +75,26 @@ const props = defineProps<{
 	id: string;
 }>();
 
-const usersPaginator = markRaw(new Paginator('admin/roles/users', {
-	limit: 20,
-	computedParams: computed(() => props.id ? ({
-		roleId: props.id,
-	}) : undefined),
-}));
+const usersPaginator = markRaw(
+	new Paginator('admin/roles/users', {
+		limit: 20,
+		computedParams: computed(() =>
+			props.id
+				? {
+						roleId: props.id,
+					}
+				: undefined,
+		),
+	}),
+);
 
 const expandedItemIds = ref<Misskey.entities.AdminRolesUsersResponse[number]['id'][]>([]);
 
-const role = reactive(await misskeyApi('admin/roles/show', {
-	roleId: props.id,
-}));
+const role = reactive(
+	await misskeyApi('admin/roles/show', {
+		roleId: props.id,
+	}),
+);
 
 function edit() {
 	router.push('/admin/roles/:id/edit', {
@@ -101,7 +109,9 @@ async function del() {
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: role.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('admin/roles/delete', {
 		roleId: role.id,
@@ -115,47 +125,71 @@ async function assign() {
 
 	const { canceled: canceled2, result: period } = await os.select({
 		title: i18n.ts.period + ': ' + role.name,
-		items: [{
-			value: 'indefinitely', label: i18n.ts.indefinitely,
-		}, {
-			value: 'oneHour', label: i18n.ts.oneHour,
-		}, {
-			value: 'oneDay', label: i18n.ts.oneDay,
-		}, {
-			value: 'oneWeek', label: i18n.ts.oneWeek,
-		}, {
-			value: 'oneMonth', label: i18n.ts.oneMonth,
-		}],
+		items: [
+			{
+				value: 'indefinitely',
+				label: i18n.ts.indefinitely,
+			},
+			{
+				value: 'oneHour',
+				label: i18n.ts.oneHour,
+			},
+			{
+				value: 'oneDay',
+				label: i18n.ts.oneDay,
+			},
+			{
+				value: 'oneWeek',
+				label: i18n.ts.oneWeek,
+			},
+			{
+				value: 'oneMonth',
+				label: i18n.ts.oneMonth,
+			},
+		],
 		default: 'indefinitely',
 	});
-	if (canceled2) return;
+	if (canceled2) {
+		return;
+	}
 
-	const expiresAt = period === 'indefinitely' ? null
-		: period === 'oneHour' ? Date.now() + (1000 * 60 * 60)
-		: period === 'oneDay' ? Date.now() + (1000 * 60 * 60 * 24)
-		: period === 'oneWeek' ? Date.now() + (1000 * 60 * 60 * 24 * 7)
-		: period === 'oneMonth' ? Date.now() + (1000 * 60 * 60 * 24 * 30)
-		: null;
+	const expiresAt =
+		period === 'indefinitely'
+			? null
+			: period === 'oneHour'
+				? Date.now() + 1000 * 60 * 60
+				: period === 'oneDay'
+					? Date.now() + 1000 * 60 * 60 * 24
+					: period === 'oneWeek'
+						? Date.now() + 1000 * 60 * 60 * 24 * 7
+						: period === 'oneMonth'
+							? Date.now() + 1000 * 60 * 60 * 24 * 30
+							: null;
 
 	await os.apiWithDialog('admin/roles/assign', { roleId: role.id, userId: user.id, expiresAt });
 	usersPaginator.reload();
 }
 
 async function unassign(userId: Misskey.entities.User['id'], ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.unassign,
-		icon: 'ti ti-x',
-		danger: true,
-		action: async () => {
-			await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId: userId });
-			usersPaginator.reload();
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.unassign,
+				icon: 'ti ti-x',
+				danger: true,
+				action: async () => {
+					await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId: userId });
+					usersPaginator.reload();
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function toggleItem(itemId: string) {
 	if (expandedItemIds.value.includes(itemId)) {
-		expandedItemIds.value = expandedItemIds.value.filter(x => x !== itemId);
+		expandedItemIds.value = expandedItemIds.value.filter((x) => x !== itemId);
 	} else {
 		expandedItemIds.value.push(itemId);
 	}

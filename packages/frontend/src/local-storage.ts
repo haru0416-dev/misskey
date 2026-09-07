@@ -65,7 +65,9 @@ export function getStorageItemAsJson<T>(
 	validate?: JsonValidator<T>,
 ): T | unknown | undefined {
 	const item = storage.getItem(key);
-	if (item === null) return undefined;
+	if (item === null) {
+		return undefined;
+	}
 
 	try {
 		const parsed: unknown = JSON.parse(item);

@@ -25,12 +25,22 @@ function isLocaleRecord(value: unknown): value is LocaleRecord {
 }
 
 function valueType(value: unknown): string {
-	if (Array.isArray(value)) return 'array';
-	if (value === null) return 'null';
+	if (Array.isArray(value)) {
+		return 'array';
+	}
+	if (value === null) {
+		return 'null';
+	}
 	return typeof value;
 }
 
-function verify(expected: LocaleRecord, actual: LocaleRecord, lang: string, errors: VerificationError[], trace?: string): void {
+function verify(
+	expected: LocaleRecord,
+	actual: LocaleRecord,
+	lang: string,
+	errors: VerificationError[],
+	trace?: string,
+): void {
 	for (const key in expected) {
 		if (!Object.prototype.hasOwnProperty.call(actual, key)) {
 			continue;
@@ -42,13 +52,23 @@ function verify(expected: LocaleRecord, actual: LocaleRecord, lang: string, erro
 
 		if (isLocaleRecord(expectedValue)) {
 			if (!isLocaleRecord(actualValue)) {
-				errors.push({ type: 'mismatched_type', lang, tree, data: { expected: 'object', actual: valueType(actualValue) } });
+				errors.push({
+					type: 'mismatched_type',
+					lang,
+					tree,
+					data: { expected: 'object', actual: valueType(actualValue) },
+				});
 				continue;
 			}
 			verify(expectedValue, actualValue, lang, errors, tree);
 		} else if (typeof expectedValue === 'string') {
 			if (typeof actualValue !== 'string') {
-				errors.push({ type: 'mismatched_type', lang, tree, data: { expected: 'string', actual: valueType(actualValue) } });
+				errors.push({
+					type: 'mismatched_type',
+					lang,
+					tree,
+					data: { expected: 'string', actual: valueType(actualValue) },
+				});
 				continue;
 			}
 
@@ -65,11 +85,15 @@ function verify(expected: LocaleRecord, actual: LocaleRecord, lang: string, erro
 
 export function verifyLocales(locales: Record<string, LocaleRecord>): VerificationError[] {
 	const original = locales['ja-JP'];
-	if (original === undefined) throw new Error('The ja-JP locale was not found.');
+	if (original === undefined) {
+		throw new Error('The ja-JP locale was not found.');
+	}
 
 	const errors: VerificationError[] = [];
 	for (const [lang, locale] of Object.entries(locales)) {
-		if (lang !== 'ja-JP') verify(original, locale, lang, errors);
+		if (lang !== 'ja-JP') {
+			verify(original, locale, lang, errors);
+		}
 	}
 	return errors;
 }
@@ -79,7 +103,9 @@ export function runVerification(
 	writeError: (error: VerificationError) => void = (error) => process.stderr.write(`${JSON.stringify(error)}\n`),
 ): number {
 	const errors = verifyLocales(locales);
-	for (const error of errors) writeError(error);
+	for (const error of errors) {
+		writeError(error);
+	}
 	return errors.length > 0 ? 1 : 0;
 }
 

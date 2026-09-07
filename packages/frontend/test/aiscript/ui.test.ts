@@ -6,7 +6,8 @@
 import { registerAsUiLib } from '@/aiscript/ui.js';
 import { errors, Interpreter, Parser, values } from '@syuilo/aiscript';
 import { describe, expect, test } from 'vitest';
-import { type Ref, ref } from 'vue';
+import { ref } from 'vue';
+import type { Ref } from 'vue';
 import type {
 	AsUiButton,
 	AsUiButtons,
@@ -543,7 +544,9 @@ describe('AiScript UI API', () => {
 			expect(buttons!.length).toBe(2);
 			const buttonAWithHandler = buttons?.[0];
 			const buttonBWithHandler = buttons?.[1];
-			if (buttonAWithHandler == null || buttonBWithHandler == null) throw new Error('Expected two buttons');
+			if (buttonAWithHandler == null || buttonBWithHandler == null) {
+				throw new Error('Expected two buttons');
+			}
 			const { onClick: onClickA, ...buttonA } = buttonAWithHandler;
 			expect(buttonA).toStrictEqual({
 				text: 'a',

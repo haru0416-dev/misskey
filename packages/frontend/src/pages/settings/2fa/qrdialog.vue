@@ -154,7 +154,9 @@ const qrCodeInstance = new QRCodeStyling({
 });
 
 onMounted(() => {
-	if (qrCodeEl.value != null) qrCodeInstance.append(qrCodeEl.value);
+	if (qrCodeEl.value != null) {
+		qrCodeInstance.append(qrCodeEl.value);
+	}
 });
 const page = ref(0);
 const token = ref<string | null>(null);
@@ -165,7 +167,9 @@ function cancel() {
 }
 
 async function tokenDone() {
-	if (token.value == null) return;
+	if (token.value == null) {
+		return;
+	}
 	const res = await os.apiWithDialog('i/2fa/done', {
 		token: token.value.toString(), // 実装ミスなどでnumberが入る可能性を払拭できないため念のためtoString
 	});

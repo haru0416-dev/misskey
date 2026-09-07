@@ -77,22 +77,28 @@ const labelId = useId();
 
 type SlotNames = NonNullable<T extends MkRadiosOption<any, infer U> ? U : never>;
 
-defineSlots<{
-	label?: () => void;
-	caption?: () => void;
-} & {
-	[K in `option-${SlotNames}`]: () => void;
-}>();
+defineSlots<
+	{
+		label?: () => void;
+		caption?: () => void;
+	} & {
+		[K in `option-${SlotNames}`]: () => void;
+	}
+>();
 
 const model = defineModel<T['value']>({ required: true });
 
 function getKey(value: OptionValue): PropertyKey {
-	if (value === null) return '___null___';
+	if (value === null) {
+		return '___null___';
+	}
 	return value;
 }
 
 function toggle(o: MkRadiosOption): void {
-	if (o.disabled) return;
+	if (o.disabled) {
+		return;
+	}
 	model.value = o.value;
 }
 </script>

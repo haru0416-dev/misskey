@@ -36,19 +36,23 @@ const isPlaying = ref(false);
 const isActuallyPlaying = ref(false);
 const elapsedTimeMs = ref(0);
 const durationMs = ref(0);
-const volume = ref(.25);
+const volume = ref(0.25);
 const speed = ref(1);
 const loop = ref(false);
 const bufferedEnd = ref(0);
 let mediaTickFrameId: number | null = null;
 
 const rangePercent = computed({
-	get: () => durationMs.value > 0 ? elapsedTimeMs.value / durationMs.value : 0,
-	set: to => {
+	get: () => (durationMs.value > 0 ? elapsedTimeMs.value / durationMs.value : 0),
+	set: (to) => {
 		const video = videoEl.value;
-		if (video == null || !Number.isFinite(to) || durationMs.value <= 0) return;
-		const currentTime = to * durationMs.value / 1000;
-		if (!Number.isFinite(currentTime)) return;
+		if (video == null || !Number.isFinite(to) || durationMs.value <= 0) {
+			return;
+		}
+		const currentTime = (to * durationMs.value) / 1000;
+		if (!Number.isFinite(currentTime)) {
+			return;
+		}
 		video.currentTime = currentTime;
 		elapsedTimeMs.value = currentTime * 1000;
 	},
@@ -56,41 +60,56 @@ const rangePercent = computed({
 
 const bufferedDataRatio = computed(() => {
 	const duration = videoEl.value?.duration;
-	if (duration == null || !Number.isFinite(duration) || duration <= 0) return 0;
+	if (duration == null || !Number.isFinite(duration) || duration <= 0) {
+		return 0;
+	}
 	return Math.min(1, Math.max(0, bufferedEnd.value / duration));
 });
 
 function showMenu(ev: PointerEvent) {
-	const menu: MenuItem[] = [{ type: 'switch', text: i18n.ts._mediaControls.loop, icon: 'ti ti-repeat', ref: loop }, {
-		type: 'radio',
-		text: i18n.ts._mediaControls.playbackRate,
-		icon: 'ti ti-clock-play',
-		ref: speed,
-		options: [.25, .5, .75, 1, 1.25, 1.5, 2].map(value => ({ label: `${value}x`, value })),
-	}];
-	if (window.document.pictureInPictureEnabled) menu.push({ text: i18n.ts._mediaControls.pip, icon: 'ti ti-picture-in-picture', action: togglePictureInPicture });
+	const menu: MenuItem[] = [
+		{ type: 'switch', text: i18n.ts._mediaControls.loop, icon: 'ti ti-repeat', ref: loop },
+		{
+			type: 'radio',
+			text: i18n.ts._mediaControls.playbackRate,
+			icon: 'ti ti-clock-play',
+			ref: speed,
+			options: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => ({ label: `${value}x`, value })),
+		},
+	];
+	if (window.document.pictureInPictureEnabled) {
+		menu.push({ text: i18n.ts._mediaControls.pip, icon: 'ti ti-picture-in-picture', action: togglePictureInPicture });
+	}
 	os.popupMenu(menu, ev.currentTarget ?? ev.target, { align: 'right' });
 }
 
 function togglePlayPause() {
 	const video = videoEl.value;
-	if (!isReady.value || video == null) return;
-	if (isPlaying.value) video.pause();
-	else {
+	if (!isReady.value || video == null) {
+		return;
+	}
+	if (isPlaying.value) {
+		video.pause();
+	} else {
 		isPlaying.value = true;
 		void video.play().catch(() => {
-			if (videoEl.value === video) isPlaying.value = false;
+			if (videoEl.value === video) {
+				isPlaying.value = false;
+			}
 		});
 	}
 }
 
 function togglePictureInPicture() {
-	if (window.document.pictureInPictureElement != null) void window.document.exitPictureInPicture();
-	else void videoEl.value?.requestPictureInPicture();
+	if (window.document.pictureInPictureElement != null) {
+		void window.document.exitPictureInPicture();
+	} else {
+		void videoEl.value?.requestPictureInPicture();
+	}
 }
 
 function toggleMute() {
-	volume.value = volume.value === 0 ? .25 : 0;
+	volume.value = volume.value === 0 ? 0.25 : 0;
 }
 
 function updateElapsedTime(video: HTMLVideoElement) {
@@ -110,7 +129,9 @@ function updateBuffered(video: HTMLVideoElement) {
 }
 
 function stopMediaTick() {
-	if (mediaTickFrameId == null) return;
+	if (mediaTickFrameId == null) {
+		return;
+	}
 	window.cancelAnimationFrame(mediaTickFrameId);
 	mediaTickFrameId = null;
 }
@@ -126,62 +147,132 @@ function updateMediaTick() {
 }
 
 function startMediaTick(video: HTMLVideoElement) {
-	if (mediaTickFrameId != null || video.paused || video.ended) return;
+	if (mediaTickFrameId != null || video.paused || video.ended) {
+		return;
+	}
 	updateElapsedTime(video);
 	mediaTickFrameId = window.requestAnimationFrame(updateMediaTick);
 }
 
-const stopVideoWatch = watch(videoEl, (video, _oldVideo, onCleanup) => {
-	stopMediaTick();
-	isReady.value = false;
-	isPlaying.value = false;
-	isActuallyPlaying.value = false;
-	elapsedTimeMs.value = 0;
-	durationMs.value = 0;
-	bufferedEnd.value = 0;
-	if (video == null) return;
-
-	const abortController = new AbortController();
-	onCleanup(() => {
-		abortController.abort();
+const stopVideoWatch = watch(
+	videoEl,
+	(video, _oldVideo, onCleanup) => {
 		stopMediaTick();
-	});
-	const options = { signal: abortController.signal };
-	video.addEventListener('play', () => { isPlaying.value = true; }, options);
-	video.addEventListener('playing', () => { isActuallyPlaying.value = true; startMediaTick(video); }, options);
-	video.addEventListener('waiting', () => { isActuallyPlaying.value = false; stopMediaTick(); }, options);
-	video.addEventListener('pause', () => { isPlaying.value = false; isActuallyPlaying.value = false; updateElapsedTime(video); stopMediaTick(); }, options);
-	video.addEventListener('ended', () => { isPlaying.value = false; isActuallyPlaying.value = false; updateElapsedTime(video); stopMediaTick(); }, options);
-	video.addEventListener('timeupdate', () => updateElapsedTime(video), options);
-	video.addEventListener('durationchange', () => updateDuration(video), options);
-	video.addEventListener('progress', () => updateBuffered(video), options);
-	video.addEventListener('loadedmetadata', () => { updateElapsedTime(video); updateDuration(video); updateBuffered(video); }, options);
-
-	isReady.value = true;
-	isPlaying.value = !video.paused && !video.ended;
-	isActuallyPlaying.value = isPlaying.value && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
-	updateElapsedTime(video);
-	updateDuration(video);
-	updateBuffered(video);
-	video.volume = volume.value;
-	video.playbackRate = speed.value;
-	video.loop = loop.value;
-	if (isActuallyPlaying.value) startMediaTick(video);
-
-	void hasAudio(video).then(had => {
-		if (!had && active.value && !abortController.signal.aborted && videoEl.value === video) {
-			video.loop = true;
-			video.muted = true;
-			void video.play().catch(() => {});
+		isReady.value = false;
+		isPlaying.value = false;
+		isActuallyPlaying.value = false;
+		elapsedTimeMs.value = 0;
+		durationMs.value = 0;
+		bufferedEnd.value = 0;
+		if (video == null) {
+			return;
 		}
-	});
-}, { immediate: true });
 
-watch(volume, value => { if (videoEl.value != null) videoEl.value.volume = value; });
-watch(speed, value => { if (videoEl.value != null) videoEl.value.playbackRate = value; });
-watch(loop, value => { if (videoEl.value != null) videoEl.value.loop = value; });
-watch(active, value => {
-	if (!value) videoEl.value?.pause();
+		const abortController = new AbortController();
+		onCleanup(() => {
+			abortController.abort();
+			stopMediaTick();
+		});
+		const options = { signal: abortController.signal };
+		video.addEventListener(
+			'play',
+			() => {
+				isPlaying.value = true;
+			},
+			options,
+		);
+		video.addEventListener(
+			'playing',
+			() => {
+				isActuallyPlaying.value = true;
+				startMediaTick(video);
+			},
+			options,
+		);
+		video.addEventListener(
+			'waiting',
+			() => {
+				isActuallyPlaying.value = false;
+				stopMediaTick();
+			},
+			options,
+		);
+		video.addEventListener(
+			'pause',
+			() => {
+				isPlaying.value = false;
+				isActuallyPlaying.value = false;
+				updateElapsedTime(video);
+				stopMediaTick();
+			},
+			options,
+		);
+		video.addEventListener(
+			'ended',
+			() => {
+				isPlaying.value = false;
+				isActuallyPlaying.value = false;
+				updateElapsedTime(video);
+				stopMediaTick();
+			},
+			options,
+		);
+		video.addEventListener('timeupdate', () => updateElapsedTime(video), options);
+		video.addEventListener('durationchange', () => updateDuration(video), options);
+		video.addEventListener('progress', () => updateBuffered(video), options);
+		video.addEventListener(
+			'loadedmetadata',
+			() => {
+				updateElapsedTime(video);
+				updateDuration(video);
+				updateBuffered(video);
+			},
+			options,
+		);
+
+		isReady.value = true;
+		isPlaying.value = !video.paused && !video.ended;
+		isActuallyPlaying.value = isPlaying.value && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
+		updateElapsedTime(video);
+		updateDuration(video);
+		updateBuffered(video);
+		video.volume = volume.value;
+		video.playbackRate = speed.value;
+		video.loop = loop.value;
+		if (isActuallyPlaying.value) {
+			startMediaTick(video);
+		}
+
+		void hasAudio(video).then((had) => {
+			if (!had && active.value && !abortController.signal.aborted && videoEl.value === video) {
+				video.loop = true;
+				video.muted = true;
+				void video.play().catch(() => {});
+			}
+		});
+	},
+	{ immediate: true },
+);
+
+watch(volume, (value) => {
+	if (videoEl.value != null) {
+		videoEl.value.volume = value;
+	}
+});
+watch(speed, (value) => {
+	if (videoEl.value != null) {
+		videoEl.value.playbackRate = value;
+	}
+});
+watch(loop, (value) => {
+	if (videoEl.value != null) {
+		videoEl.value.loop = value;
+	}
+});
+watch(active, (value) => {
+	if (!value) {
+		videoEl.value?.pause();
+	}
 });
 
 onBeforeUnmount(() => {

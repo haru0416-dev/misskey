@@ -129,9 +129,13 @@ async function generateDriveFileAlts(
 			deps.logger?.warn('web image not created (an error occurred)', { e: err });
 		}
 	} else {
-		if (satisfyWebpublic) deps.logger?.info('web image not created (original satisfies webpublic)');
-		else if (isAnimated) deps.logger?.info('web image not created (animated image)');
-		else deps.logger?.info('web image not created (from remote)');
+		if (satisfyWebpublic) {
+			deps.logger?.info('web image not created (original satisfies webpublic)');
+		} else if (isAnimated) {
+			deps.logger?.info('web image not created (animated image)');
+		} else {
+			deps.logger?.info('web image not created (from remote)');
+		}
 	}
 
 	let thumbnail: IImage | null = null;
@@ -163,8 +167,12 @@ async function uploadObjectStorageFile(
 	filename?: string,
 ): Promise<void> {
 	let uploadType = type;
-	if (uploadType === 'image/apng') uploadType = 'image/png';
-	if (!FILE_TYPE_BROWSERSAFE.includes(uploadType)) uploadType = 'application/octet-stream';
+	if (uploadType === 'image/apng') {
+		uploadType = 'image/png';
+	}
+	if (!FILE_TYPE_BROWSERSAFE.includes(uploadType)) {
+		uploadType = 'application/octet-stream';
+	}
 
 	const object: S3PutObject = {
 		key,
@@ -199,12 +207,24 @@ async function saveSystemDriveFile(
 		let [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
 
 		if (ext === '') {
-			if (type === 'image/jpeg') ext = '.jpg';
-			if (type === 'image/png') ext = '.png';
-			if (type === 'image/webp') ext = '.webp';
-			if (type === 'image/avif') ext = '.avif';
-			if (type === 'image/apng') ext = '.apng';
-			if (type === 'image/vnd.mozilla.apng') ext = '.apng';
+			if (type === 'image/jpeg') {
+				ext = '.jpg';
+			}
+			if (type === 'image/png') {
+				ext = '.png';
+			}
+			if (type === 'image/webp') {
+				ext = '.webp';
+			}
+			if (type === 'image/avif') {
+				ext = '.avif';
+			}
+			if (type === 'image/apng') {
+				ext = '.apng';
+			}
+			if (type === 'image/vnd.mozilla.apng') {
+				ext = '.apng';
+			}
 		}
 
 		if (!FILE_TYPE_BROWSERSAFE.includes(type)) {

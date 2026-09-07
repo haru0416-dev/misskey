@@ -6,14 +6,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleQueueCleanRemoteNotes,
-	type QueueCleanRemoteNotesDependencies,
-} from '@/queue/handlers/clean-remote-notes.js';
+import { handleQueueCleanRemoteNotes } from '@/queue/handlers/clean-remote-notes.js';
+import type { QueueCleanRemoteNotesDependencies } from '@/queue/handlers/clean-remote-notes.js';
 import type { Config } from '@/config.js';
 
 function fakeJob(): Bull.Job<Record<string, unknown>> {

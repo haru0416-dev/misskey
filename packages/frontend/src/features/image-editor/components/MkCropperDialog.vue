@@ -71,7 +71,9 @@ async function ok() {
 }
 
 async function crop() {
-	if (cropper == null) throw new Error('Cropper is not initialized');
+	if (cropper == null) {
+		throw new Error('Cropper is not initialized');
+	}
 
 	const croppedImage = await cropper.getCropperImage()!;
 	const croppedSection = await cropper.getCropperSelection()!;
@@ -84,7 +86,7 @@ async function crop() {
 
 	// executor を async にすると throw も toBlob の失敗も握り潰され、await が永久に解決しなくなる
 	const f = await new Promise<Blob>((res, rej) => {
-		croppedCanvas.toBlob(blob => {
+		croppedCanvas.toBlob((blob) => {
 			if (blob == null) {
 				rej(new Error('Failed to encode the cropped image'));
 				return;
@@ -100,12 +102,16 @@ async function crop() {
 	}
 
 	emit('ok', finalFile);
-	if (dialogEl.value != null) dialogEl.value.close();
+	if (dialogEl.value != null) {
+		dialogEl.value.close();
+	}
 }
 
 function cancel() {
 	emit('cancel');
-	if (dialogEl.value != null) dialogEl.value.close();
+	if (dialogEl.value != null) {
+		dialogEl.value.close();
+	}
 }
 
 function onImageLoad() {
@@ -118,28 +124,35 @@ function onImageLoad() {
 }
 
 onMounted(() => {
-	if (imgEl.value == null) return;
+	if (imgEl.value == null) {
+		return;
+	}
 
-	cropper = new Cropper(imgEl.value, {
-	});
+	cropper = new Cropper(imgEl.value, {});
 
 	const themeValue = themeManager.currentCompiledTheme!;
 
 	const selection = cropper.getCropperSelection()!;
 	selection.themeColor = tinycolor(themeValue['accent']).toHexString();
-	if (props.aspectRatio != null) selection.aspectRatio = props.aspectRatio;
+	if (props.aspectRatio != null) {
+		selection.aspectRatio = props.aspectRatio;
+	}
 	selection.initialAspectRatio = props.aspectRatio ?? 1;
 	selection.outlined = true;
 
 	window.setTimeout(() => {
-		if (cropper == null) return;
+		if (cropper == null) {
+			return;
+		}
 		cropper.getCropperImage()!.$center('contain');
 		selection.$center();
 	}, 100);
 
 	// モーダルオープンアニメーションが終わったあとで再度調整
 	window.setTimeout(() => {
-		if (cropper == null) return;
+		if (cropper == null) {
+			return;
+		}
 		cropper.getCropperImage()!.$center('contain');
 		selection.$center();
 	}, 500);

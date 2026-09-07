@@ -111,20 +111,35 @@ if (window.innerWidth > 1024) {
 }
 
 function onContextmenu(ev: PointerEvent) {
-	if (isLink(ev.target as HTMLElement)) return;
-	if (['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes((ev.target as HTMLElement).tagName) || (ev.target as HTMLElement).attributes.getNamedItem('contenteditable') != null) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (
+		['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes((ev.target as HTMLElement).tagName) ||
+		(ev.target as HTMLElement).attributes.getNamedItem('contenteditable') != null
+	) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 	const path = mainRouter.getCurrentFullPath();
-	os.contextMenu([{
-		type: 'label',
-		text: path,
-	}, {
-		icon: 'ti ti-window-maximize',
-		text: i18n.ts.openInWindow,
-		action: () => {
-			os.pageWindow(path);
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				type: 'label',
+				text: path,
+			},
+			{
+				icon: 'ti ti-window-maximize',
+				text: i18n.ts.openInWindow,
+				action: () => {
+					os.pageWindow(path);
+				},
+			},
+		],
+		ev,
+	);
 }
 </script>
 

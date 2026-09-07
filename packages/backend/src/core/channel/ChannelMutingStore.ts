@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, gt, inArray, isNull, lt, or, sql, type Placeholder } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import type { Placeholder } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { channelMuting, type ChannelMutingInsert, type ChannelMutingRow } from '@/db/schema/channel-muting.js';
+import { channelMuting } from '@/db/schema/channel-muting.js';
+import type { ChannelMutingInsert, ChannelMutingRow } from '@/db/schema/channel-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';

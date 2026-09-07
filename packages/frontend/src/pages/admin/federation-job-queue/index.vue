@@ -36,7 +36,9 @@ function clear() {
 		title: i18n.ts.clearQueueConfirmTitle,
 		text: i18n.ts.clearQueueConfirmText,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		os.apiWithDialog('admin/queue/clear', { queue: tab.value, state: '*' });
 	});
@@ -48,7 +50,9 @@ function promoteAllQueues() {
 		title: i18n.ts.retryAllQueuesConfirmTitle,
 		text: i18n.ts.retryAllQueuesConfirmText,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		os.apiWithDialog('admin/queue/promote-jobs', { queue: tab.value });
 	});
@@ -56,13 +60,16 @@ function promoteAllQueues() {
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => [{
-	key: 'deliver',
-	title: 'Deliver',
-}, {
-	key: 'inbox',
-	title: 'Inbox',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'deliver',
+		title: 'Deliver',
+	},
+	{
+		key: 'inbox',
+		title: 'Inbox',
+	},
+]);
 
 definePage(() => ({
 	title: i18n.ts.federationJobs,

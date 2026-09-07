@@ -8,14 +8,16 @@
 // 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as fs from 'node:fs';
 import { ZipArchive } from 'archiver';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import {
@@ -27,11 +29,8 @@ import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleQueueExportCustomEmojis,
-	handleQueueImportCustomEmojis,
-	type QueueEmojisDependencies,
-} from '@/queue/handlers/emojis.js';
+import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from '@/queue/handlers/emojis.js';
+import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import type { RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import type { MiUser } from '@/models/User.js';
@@ -89,7 +88,9 @@ describe('hono-queue-emojis', () => {
 	});
 
 	afterEach(() => {
-		for (const server of servers) server.close();
+		for (const server of servers) {
+			server.close();
+		}
 		servers = [];
 	});
 

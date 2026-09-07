@@ -32,9 +32,8 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 	function getClipName(clip: Misskey.entities.Clip) {
 		if ($i && clip.userId === $i.id && clip.notesCount != null) {
 			return `${clip.name} (${clip.notesCount}/${$i.policies.noteEachClipsLimit})`;
-		} else {
-			return clip.name;
 		}
+		return clip.name;
 	}
 
 	const appearNote = getAppearNote(props.note) ?? props.note;
@@ -63,9 +62,8 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 													...c,
 													notesCount: Math.max(0, (c.notesCount ?? 0) - 1),
 												};
-											} else {
-												return c;
 											}
+											return c;
 										}),
 									);
 								});
@@ -90,9 +88,8 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 									...c,
 									notesCount: (c.notesCount ?? 0) + 1,
 								};
-							} else {
-								return c;
 							}
+							return c;
 						}),
 					);
 				});
@@ -122,7 +119,9 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 						default: false,
 					},
 				});
-				if (canceled) return;
+				if (canceled) {
+					return;
+				}
 
 				const clip = await os.apiWithDialog('clips/create', {
 					name: result.name,
@@ -148,7 +147,9 @@ export function getAbuseNoteMenu(note: Misskey.entities.Note, text: string): Men
 		action: async (): Promise<void> => {
 			const localUrl = `${url}/notes/${note.id}`;
 			let noteInfo = '';
-			if (note.url ?? note.uri != null) noteInfo = `Note: ${note.url ?? note.uri}\n`;
+			if (note.url ?? note.uri != null) {
+				noteInfo = `Note: ${note.url ?? note.uri}\n`;
+			}
 			noteInfo += `Local Note: ${localUrl}\n`;
 			const { dispose } = await os.popupAsyncWithDialog(
 				import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
@@ -175,8 +176,12 @@ export function getCopyNoteLinkMenu(note: Misskey.entities.Note, text: string): 
 }
 
 function getNoteEmbedCodeMenu(note: Misskey.entities.Note, text: string): MenuItem | undefined {
-	if (note.url != null || note.uri != null) return undefined;
-	if (['specified', 'followers'].includes(note.visibility)) return undefined;
+	if (note.url != null || note.uri != null) {
+		return undefined;
+	}
+	if (['specified', 'followers'].includes(note.visibility)) {
+		return undefined;
+	}
 
 	return {
 		icon: 'ti ti-code',
@@ -204,8 +209,12 @@ export function getNoteMenu(props: {
 			type: 'warning',
 			text: i18n.ts.noteDeleteConfirm,
 		}).then(({ canceled }) => {
-			if (canceled) return;
-			if ($i == null) return;
+			if (canceled) {
+				return;
+			}
+			if ($i == null) {
+				return;
+			}
 
 			misskeyApi('notes/delete', {
 				noteId: appearNote.id,
@@ -224,8 +233,12 @@ export function getNoteMenu(props: {
 			type: 'warning',
 			text: i18n.ts.deleteAndEditConfirm,
 		}).then(({ canceled }) => {
-			if (canceled) return;
-			if ($i == null) return;
+			if (canceled) {
+				return;
+			}
+			if ($i == null) {
+				return;
+			}
 
 			misskeyApi('notes/delete', {
 				noteId: appearNote.id,
@@ -279,18 +292,24 @@ export function getNoteMenu(props: {
 	}
 
 	async function unclip(): Promise<void> {
-		if (!props.currentClip) return;
+		if (!props.currentClip) {
+			return;
+		}
 		os.apiWithDialog('clips/remove-note', { clipId: props.currentClip.id, noteId: appearNote.id });
 	}
 
 	async function removeFromAntenna(): Promise<void> {
-		if (!props.currentAntenna) return;
+		if (!props.currentAntenna) {
+			return;
+		}
 
 		const { canceled } = await os.confirm({
 			type: 'warning',
 			text: i18n.tsx.removeNoteFromAntennaConfirm({ name: props.currentAntenna.name }),
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		await os.apiWithDialog('antennas/remove-note', { antennaId: props.currentAntenna.id, noteId: appearNote.id });
 		globalEvents.emit('noteRemovedFromAntenna', props.currentAntenna.id, appearNote.id);
@@ -301,11 +320,13 @@ export function getNoteMenu(props: {
 			title: i18n.ts.numberOfDays,
 		});
 
-		if (canceled || days == null) return;
+		if (canceled || days == null) {
+			return;
+		}
 
 		os.apiWithDialog('admin/promo/create', {
 			noteId: appearNote.id,
-			expiresAt: Date.now() + 86400000 * days,
+			expiresAt: Date.now() + 86_400_000 * days,
 		});
 	}
 
@@ -322,7 +343,9 @@ export function getNoteMenu(props: {
 	}
 
 	async function translate(): Promise<void> {
-		if (props.translation.value != null) return;
+		if (props.translation.value != null) {
+			return;
+		}
 		if (prefer['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable && appearNote.text != null) {
 			props.translating.value = true;
 			try {
@@ -658,7 +681,9 @@ export function getNoteMenu(props: {
 	}
 
 	const cleanup = () => {
-		if (_DEV_) console.log('note menu cleanup', cleanups);
+		if (_DEV_) {
+			console.log('note menu cleanup', cleanups);
+		}
 		for (const cl of cleanups) {
 			cl();
 		}
@@ -673,9 +698,15 @@ export function getNoteMenu(props: {
 type Visibility = (typeof Misskey.noteVisibilities)[number];
 
 function smallerVisibility(a: Visibility, b: Visibility): Visibility {
-	if (a === 'specified' || b === 'specified') return 'specified';
-	if (a === 'followers' || b === 'followers') return 'followers';
-	if (a === 'home' || b === 'home') return 'home';
+	if (a === 'specified' || b === 'specified') {
+		return 'specified';
+	}
+	if (a === 'followers' || b === 'followers') {
+		return 'followers';
+	}
+	if (a === 'home' || b === 'home') {
+		return 'home';
+	}
 	// if (a === 'public' || b === 'public')
 	return 'public';
 }
@@ -801,7 +832,9 @@ export function getRenoteMenu(props: {
 				const channels = await favoritedChannelsCache.fetch();
 				return channels
 					.filter((channel) => {
-						if (!appearNote.channelId) return true;
+						if (!appearNote.channelId) {
+							return true;
+						}
 						return channel.id !== appearNote.channelId;
 					})
 					.map((channel) => ({

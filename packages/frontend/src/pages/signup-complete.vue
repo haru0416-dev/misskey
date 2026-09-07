@@ -39,22 +39,26 @@ const props = defineProps<{
 }>();
 
 function submit() {
-	if (submitting.value) return;
+	if (submitting.value) {
+		return;
+	}
 	submitting.value = true;
 
 	misskeyApi('signup-pending', {
 		code: props.code,
-	}).then(res => {
-		return login(res.i, '/');
-	}).catch(() => {
-		submitting.value = false;
+	})
+		.then((res) => {
+			return login(res.i, '/');
+		})
+		.catch(() => {
+			submitting.value = false;
 
-		os.alert({
-			type: 'error',
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts.emailVerificationFailedError,
+			os.alert({
+				type: 'error',
+				title: i18n.ts.somethingHappened,
+				text: i18n.ts.emailVerificationFailedError,
+			});
 		});
-	});
 }
 </script>
 

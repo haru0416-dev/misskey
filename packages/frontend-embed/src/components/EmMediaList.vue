@@ -40,10 +40,12 @@ const props = defineProps<{
 	originalEntityUrl: string;
 }>();
 
-const count = computed(() => props.mediaList.filter(media => previewable(media)).length);
+const count = computed(() => props.mediaList.filter((media) => previewable(media)).length);
 
 const previewable = (file: Misskey.entities.DriveFile): boolean => {
-	if (file.type === 'image/svg+xml') return true; // svgのwebpublic/thumbnailはpngなのでtrue
+	if (file.type === 'image/svg+xml') {
+		return true;
+	} // svgのwebpublic/thumbnailはpngなのでtrue
 	// FILE_TYPE_BROWSERSAFEに適合しないものはブラウザで表示するのに不適切
 	return (file.type.startsWith('video') || file.type.startsWith('image')) && FILE_TYPE_BROWSERSAFE.includes(file.type);
 };

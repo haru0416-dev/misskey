@@ -6,7 +6,9 @@
 import tinycolor from 'tinycolor2';
 
 export const getBgColor = (elem?: Element | null | undefined): string | null => {
-	if (elem == null) return null;
+	if (elem == null) {
+		return null;
+	}
 
 	const { backgroundColor: bg } = window.getComputedStyle(elem);
 

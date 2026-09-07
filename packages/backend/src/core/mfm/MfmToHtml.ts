@@ -20,7 +20,9 @@ export function mfmToHtml(
 	}
 
 	function toHtml(children?: readonly mfm.MfmNode[]): string {
-		if (children == null) return '';
+		if (children == null) {
+			return '';
+		}
 		return children.map((x) => handlers[x.type](x)).join('');
 	}
 
@@ -64,16 +66,15 @@ export function mfmToHtml(
 						const text = child?.type === 'text' ? child.props.text : '';
 						const [rubyBase = '', rubyText = ''] = text.split(' ');
 						return `<ruby>${escapeHtml(rubyBase)}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
-					} else {
-						const rt = node.children.at(-1);
-
-						if (!rt) {
-							return fnDefault(node);
-						}
-
-						const text = rt.type === 'text' ? rt.props.text : '';
-						return `<ruby>${toHtml(node.children.slice(0, -1))}<rp>(</rp><rt>${escapeHtml(text.trim())}</rt><rp>)</rp></ruby>`;
 					}
+					const rt = node.children.at(-1);
+
+					if (!rt) {
+						return fnDefault(node);
+					}
+
+					const text = rt.type === 'text' ? rt.props.text : '';
+					return `<ruby>${toHtml(node.children.slice(0, -1))}<rp>(</rp><rt>${escapeHtml(text.trim())}</rt><rp>)</rp></ruby>`;
 				}
 
 				default: {

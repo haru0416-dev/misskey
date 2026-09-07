@@ -1,7 +1,8 @@
 import { describe, test, beforeAll } from 'vitest';
 import assert, { deepStrictEqual, strictEqual } from 'assert';
 import * as Misskey from 'misskey-js';
-import { addCustomEmoji, createAccount, type LoginUser, resolveRemoteUser, sleep } from './utils.js';
+import { addCustomEmoji, createAccount, resolveRemoteUser, sleep } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 function first<T>(values: readonly T[]): T {
 	const value = values[0];
@@ -33,7 +34,7 @@ describe('Emoji', () => {
 		const notes = await bob.client.request('notes/timeline', {});
 		const noteInB = first(notes);
 
-		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
+		strictEqual(noteInB.text, `I love \u200B:${emoji.name}:\u200B`);
 		assert(noteInB.emojis != null);
 		assert(emoji.name in noteInB.emojis);
 		strictEqual(noteInB.emojis[emoji.name], emoji.url);
@@ -71,7 +72,7 @@ describe('Emoji', () => {
 		const notes = await bob.client.request('notes/timeline', {});
 		const noteInB = first(notes);
 
-		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
+		strictEqual(noteInB.text, `I love \u200B:${emoji.name}:\u200B`);
 		deepStrictEqual({ ...noteInB.emojis }, {});
 	});
 

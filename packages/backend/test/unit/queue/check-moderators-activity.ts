@@ -10,7 +10,8 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	updateUserLastActiveDateInDatabase,
@@ -20,10 +21,8 @@ import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleQueueCheckModeratorsActivity,
-	type QueueCheckModeratorsActivityDependencies,
-} from '@/queue/handlers/check-moderators-activity.js';
+import { handleQueueCheckModeratorsActivity } from '@/queue/handlers/check-moderators-activity.js';
+import type { QueueCheckModeratorsActivityDependencies } from '@/queue/handlers/check-moderators-activity.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createModeratorTestUser(

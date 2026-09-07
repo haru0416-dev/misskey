@@ -1,13 +1,7 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
 import * as Misskey from 'misskey-js';
-import {
-	assertNotificationReceived,
-	createAccount,
-	type LoginUser,
-	resolveRemoteNote,
-	resolveRemoteUser,
-	sleep,
-} from './utils.js';
+import { assertNotificationReceived, createAccount, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 describe('Notification', () => {
 	let alice: LoginUser, bob: LoginUser;
@@ -52,7 +46,9 @@ describe('Notification', () => {
 			// フックごと失敗するため、反映を待ってから解除する
 			for (let i = 0; i < 40; i++) {
 				const following = await bob.client.request('users/following', { userId: bob.id });
-				if (following.length > 0) break;
+				if (following.length > 0) {
+					break;
+				}
 				await sleep();
 			}
 			await bob.client.request('following/delete', { userId: aliceInB.id }).catch(() => {});

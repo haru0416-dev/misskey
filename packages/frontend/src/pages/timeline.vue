@@ -44,7 +44,13 @@ import { antennasCache, userListsCache, favoritedChannelsCache } from '@/cache.j
 import { deviceKind } from '@/utility/device-kind.js';
 import { deepMerge } from '@/utility/merge.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { availableBasicTimelines, hasWithReplies, isAvailableBasicTimeline, isBasicTimeline, basicTimelineIconClass } from '@/timelines.js';
+import {
+	availableBasicTimelines,
+	hasWithReplies,
+	isAvailableBasicTimeline,
+	isBasicTimeline,
+	basicTimelineIconClass,
+} from '@/timelines.js';
 import { prefer } from '@/preferences.js';
 
 const tlComponent = useTemplateRef('tlComponent');
@@ -63,19 +69,18 @@ const withRenotes = computed<boolean>({
 
 // computed内での無限ループを防ぐためのフラグ
 const localSocialTLFilterSwitchStore = ref<'withReplies' | 'onlyFiles' | false>(
-	store.tl.filter.withReplies ? 'withReplies' :
-	store.tl.filter.onlyFiles ? 'onlyFiles' :
-	false,
+	store.tl.filter.withReplies ? 'withReplies' : store.tl.filter.onlyFiles ? 'onlyFiles' : false,
 );
 
 const withReplies = computed<boolean>({
 	get: () => {
-		if (!$i) return false;
+		if (!$i) {
+			return false;
+		}
 		if (['local', 'social'].includes(src.value) && localSocialTLFilterSwitchStore.value === 'onlyFiles') {
 			return false;
-		} else {
-			return store.tl.filter.withReplies;
 		}
+		return store.tl.filter.withReplies;
 	},
 	set: (x) => saveTlFilter('withReplies', x),
 });
@@ -83,13 +88,14 @@ const onlyFiles = computed<boolean>({
 	get: () => {
 		if (['local', 'social'].includes(src.value) && localSocialTLFilterSwitchStore.value === 'withReplies') {
 			return false;
-		} else {
-			return store.tl.filter.onlyFiles;
 		}
+		return store.tl.filter.onlyFiles;
 	},
 	set: (x) => {
 		saveTlFilter('onlyFiles', x);
-		if (!x && mediaView.value) saveTlFilter('mediaView', false);
+		if (!x && mediaView.value) {
+			saveTlFilter('mediaView', false);
+		}
 	},
 });
 
@@ -97,7 +103,9 @@ const mediaView = computed<boolean>({
 	get: () => store.tl.filter.mediaView,
 	set: (x) => {
 		saveTlFilter('mediaView', x);
-		if (x && !onlyFiles.value) onlyFiles.value = true;
+		if (x && !onlyFiles.value) {
+			onlyFiles.value = true;
+		}
 	},
 });
 
@@ -121,12 +129,12 @@ const showFixedPostForm = prefer.model('showFixedPostForm');
 async function chooseList(ev: PointerEvent): Promise<void> {
 	const lists = await userListsCache.fetch();
 	const items: (MenuItem | undefined)[] = [
-		...lists.map(list => ({
+		...lists.map((list) => ({
 			type: 'link' as const,
 			text: list.name,
 			to: `/timeline/list/${list.id}`,
 		})),
-		(lists.length === 0 ? undefined : { type: 'divider' }),
+		lists.length === 0 ? undefined : { type: 'divider' },
 		{
 			type: 'link' as const,
 			icon: 'ti ti-plus',
@@ -134,19 +142,22 @@ async function chooseList(ev: PointerEvent): Promise<void> {
 			to: '/my/lists',
 		},
 	];
-	os.popupMenu(items.filter(i => i != null), ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		items.filter((i) => i != null),
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function chooseAntenna(ev: PointerEvent): Promise<void> {
 	const antennas = await antennasCache.fetch();
 	const items: (MenuItem | undefined)[] = [
-		...antennas.map(antenna => ({
+		...antennas.map((antenna) => ({
 			type: 'link' as const,
 			text: antenna.name,
 			indicate: antenna.hasUnreadNote,
 			to: `/timeline/antenna/${antenna.id}`,
 		})),
-		(antennas.length === 0 ? undefined : { type: 'divider' }),
+		antennas.length === 0 ? undefined : { type: 'divider' },
 		{
 			type: 'link' as const,
 			icon: 'ti ti-plus',
@@ -154,18 +165,25 @@ async function chooseAntenna(ev: PointerEvent): Promise<void> {
 			to: '/my/antennas',
 		},
 	];
-	os.popupMenu(items.filter(i => i != null), ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		items.filter((i) => i != null),
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function chooseChannel(ev: PointerEvent): Promise<void> {
 	const channels = await favoritedChannelsCache.fetch();
 	const items: (MenuItem | undefined)[] = [
-		...channels.map(channel => {
-			const lastReadedAt = miLocalStorage.getItemAsJson(
-				`channelLastReadedAt:${channel.id}`,
-				(value): value is number => typeof value === 'number' && Number.isFinite(value),
-			) ?? null;
-			const hasUnreadNote = (lastReadedAt && channel.lastNotedAt) ? Date.parse(channel.lastNotedAt) > lastReadedAt : !!(!lastReadedAt && channel.lastNotedAt);
+		...channels.map((channel) => {
+			const lastReadedAt =
+				miLocalStorage.getItemAsJson(
+					`channelLastReadedAt:${channel.id}`,
+					(value): value is number => typeof value === 'number' && Number.isFinite(value),
+				) ?? null;
+			const hasUnreadNote =
+				lastReadedAt && channel.lastNotedAt
+					? Date.parse(channel.lastNotedAt) > lastReadedAt
+					: !!(!lastReadedAt && channel.lastNotedAt);
 
 			return {
 				type: 'link' as const,
@@ -174,7 +192,7 @@ async function chooseChannel(ev: PointerEvent): Promise<void> {
 				to: `/channels/${channel.id}`,
 			};
 		}),
-		(channels.length === 0 ? undefined : { type: 'divider' }),
+		channels.length === 0 ? undefined : { type: 'divider' },
 		{
 			type: 'link',
 			icon: 'ti ti-plus',
@@ -182,7 +200,10 @@ async function chooseChannel(ev: PointerEvent): Promise<void> {
 			to: '/channels/new',
 		},
 	];
-	os.popupMenu(items.filter(i => i != null), ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		items.filter((i) => i != null),
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 function saveSrc(newSrc: TimelinePageSrc): void {
@@ -190,7 +211,7 @@ function saveSrc(newSrc: TimelinePageSrc): void {
 
 	if (newSrc.startsWith('userList:')) {
 		const id = newSrc.substring('userList:'.length);
-		out.userList = prefer.pinnedUserLists.find(l => l.id === id) ?? null;
+		out.userList = prefer.pinnedUserLists.find((l) => l.id === id) ?? null;
 	}
 
 	store.set('tl', out);
@@ -209,7 +230,9 @@ function saveTlFilter(key: keyof typeof store.tl.filter, newValue: boolean) {
 function switchTlIfNeeded() {
 	if (isBasicTimeline(src.value) && !isAvailableBasicTimeline(src.value)) {
 		const availableTimeline = availableBasicTimelines()[0];
-		if (availableTimeline != null) src.value = availableTimeline;
+		if (availableTimeline != null) {
+			src.value = availableTimeline;
+		}
 	}
 }
 
@@ -221,56 +244,64 @@ onActivated(() => {
 });
 
 const headerActions = computed<PageHeaderItem[]>(() => {
-	const items: PageHeaderItem[] = [{
-		icon: 'ti ti-dots',
-		text: i18n.ts.options,
-		handler: (ev) => {
-			const menuItems: MenuItem[] = [];
+	const items: PageHeaderItem[] = [
+		{
+			icon: 'ti ti-dots',
+			text: i18n.ts.options,
+			handler: (ev) => {
+				const menuItems: MenuItem[] = [];
 
-			menuItems.push({
-				type: 'switch',
-				icon: 'ti ti-repeat',
-				text: i18n.ts.showRenotes,
-				ref: withRenotes,
-			});
-
-			if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
 				menuItems.push({
 					type: 'switch',
-					icon: 'ti ti-messages',
-					text: i18n.ts.showRepliesToOthersInTimeline,
-					ref: withReplies,
-					disabled: onlyFiles,
+					icon: 'ti ti-repeat',
+					text: i18n.ts.showRenotes,
+					ref: withRenotes,
 				});
-			}
 
-			menuItems.push({
-				type: 'switch',
-				icon: 'ti ti-eye-exclamation',
-				text: i18n.ts.withSensitive,
-				ref: withSensitive,
-			}, {
-				type: 'switch',
-				icon: 'ti ti-photo',
-				text: i18n.ts.fileAttachedOnly,
-				ref: onlyFiles,
-				disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
-			}, {
-				type: 'switch',
-				icon: 'ti ti-layout-grid',
-				text: i18n.ts.mediaTimeline,
-				ref: mediaView,
-			}, {
-				type: 'divider',
-			}, {
-				type: 'switch',
-				text: i18n.ts.showFixedPostForm,
-				ref: showFixedPostForm,
-			});
+				if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
+					menuItems.push({
+						type: 'switch',
+						icon: 'ti ti-messages',
+						text: i18n.ts.showRepliesToOthersInTimeline,
+						ref: withReplies,
+						disabled: onlyFiles,
+					});
+				}
 
-			os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+				menuItems.push(
+					{
+						type: 'switch',
+						icon: 'ti ti-eye-exclamation',
+						text: i18n.ts.withSensitive,
+						ref: withSensitive,
+					},
+					{
+						type: 'switch',
+						icon: 'ti ti-photo',
+						text: i18n.ts.fileAttachedOnly,
+						ref: onlyFiles,
+						disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
+					},
+					{
+						type: 'switch',
+						icon: 'ti ti-layout-grid',
+						text: i18n.ts.mediaTimeline,
+						ref: mediaView,
+					},
+					{
+						type: 'divider',
+					},
+					{
+						type: 'switch',
+						text: i18n.ts.showFixedPostForm,
+						ref: showFixedPostForm,
+					},
+				);
+
+				os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+			},
 		},
-	}];
+	];
 
 	if (deviceKind === 'desktop') {
 		items.unshift({
@@ -285,39 +316,53 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 	return items;
 });
 
-const headerTabs = computed(() => [...(prefer.pinnedUserLists.map(l => ({
-	key: 'list:' + l.id,
-	title: l.name,
-	icon: 'ti ti-star',
-	iconOnly: true,
-}))), ...availableBasicTimelines().map(tl => ({
-	key: tl,
-	title: i18n.ts._timelines[tl],
-	icon: basicTimelineIconClass(tl),
-	iconOnly: true,
-})), {
-	icon: 'ti ti-list',
-	title: i18n.ts.lists,
-	iconOnly: true,
-	onClick: chooseList,
-}, {
-	icon: 'ti ti-antenna',
-	title: i18n.ts.antennas,
-	iconOnly: true,
-	onClick: chooseAntenna,
-}, {
-	icon: 'ti ti-device-tv',
-	title: i18n.ts.channel,
-	iconOnly: true,
-	onClick: chooseChannel,
-}] as Tab[]);
+const headerTabs = computed(
+	() =>
+		[
+			...prefer.pinnedUserLists.map((l) => ({
+				key: 'list:' + l.id,
+				title: l.name,
+				icon: 'ti ti-star',
+				iconOnly: true,
+			})),
+			...availableBasicTimelines().map((tl) => ({
+				key: tl,
+				title: i18n.ts._timelines[tl],
+				icon: basicTimelineIconClass(tl),
+				iconOnly: true,
+			})),
+			{
+				icon: 'ti ti-list',
+				title: i18n.ts.lists,
+				iconOnly: true,
+				onClick: chooseList,
+			},
+			{
+				icon: 'ti ti-antenna',
+				title: i18n.ts.antennas,
+				iconOnly: true,
+				onClick: chooseAntenna,
+			},
+			{
+				icon: 'ti ti-device-tv',
+				title: i18n.ts.channel,
+				iconOnly: true,
+				onClick: chooseChannel,
+			},
+		] as Tab[],
+);
 
-const headerTabsWhenNotLogin = computed(() => [...availableBasicTimelines().map(tl => ({
-	key: tl,
-	title: i18n.ts._timelines[tl],
-	icon: basicTimelineIconClass(tl),
-	iconOnly: true,
-}))] as Tab[]);
+const headerTabsWhenNotLogin = computed(
+	() =>
+		[
+			...availableBasicTimelines().map((tl) => ({
+				key: tl,
+				title: i18n.ts._timelines[tl],
+				icon: basicTimelineIconClass(tl),
+				iconOnly: true,
+			})),
+		] as Tab[],
+);
 
 definePage(() => ({
 	title: i18n.ts.timeline,

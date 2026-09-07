@@ -18,18 +18,19 @@ import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
 const props = defineProps<{
-	block: Extract<Misskey.entities.PageBlock, { type: 'note' }>,
-	page: Misskey.entities.Page,
+	block: Extract<Misskey.entities.PageBlock, { type: 'note' }>;
+	page: Misskey.entities.Page;
 }>();
 
 const note = ref<Misskey.entities.Note | null>(null);
 
 onMounted(() => {
-	if (props.block.note == null) return;
-	misskeyApi('notes/show', { noteId: props.block.note })
-		.then(result => {
-			note.value = result;
-		});
+	if (props.block.note == null) {
+		return;
+	}
+	misskeyApi('notes/show', { noteId: props.block.note }).then((result) => {
+		note.value = result;
+	});
 });
 </script>
 

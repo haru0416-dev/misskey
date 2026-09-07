@@ -34,7 +34,9 @@ function readUrl(name: string, fallback: string): URL {
 	const value = process.env[name] ?? fallback;
 	try {
 		const url = new URL(value);
-		if (!url.pathname.endsWith('/')) url.pathname += '/';
+		if (!url.pathname.endsWith('/')) {
+			url.pathname += '/';
+		}
 		return url;
 	} catch (error) {
 		throw new Error(`${name} must be a valid absolute URL`, { cause: error });
@@ -43,7 +45,9 @@ function readUrl(name: string, fallback: string): URL {
 
 if (mode === 'external') {
 	for (const name of ['MISSKEY_E2E_TARGET_URL', 'MISSKEY_E2E_CONTROL_URL']) {
-		if (process.env[name] == null) throw new Error(`${name} is required for an external e2e target`);
+		if (process.env[name] == null) {
+			throw new Error(`${name} is required for an external e2e target`);
+		}
 	}
 }
 
@@ -56,10 +60,12 @@ for (const [name, url] of [
 	['MISSKEY_E2E_TARGET_URL', transportUrl],
 	['MISSKEY_E2E_CONTROL_URL', controlUrl],
 ] as const) {
-	if (url.pathname !== '/') throw new Error(`${name} must be an origin URL without a path prefix`);
+	if (url.pathname !== '/') {
+		throw new Error(`${name} must be an origin URL without a path prefix`);
+	}
 }
 
-if (!Number.isSafeInteger(oauthClientPort) || oauthClientPort < 1 || oauthClientPort > 65535) {
+if (!Number.isSafeInteger(oauthClientPort) || oauthClientPort < 1 || oauthClientPort > 65_535) {
 	throw new Error('MISSKEY_E2E_OAUTH_CLIENT_PORT must be an integer between 1 and 65535');
 }
 
@@ -85,7 +91,9 @@ export function resolveStreamingUrl(): URL {
 let localSetupModule: LocalSetupModule | undefined;
 
 export async function setup(): Promise<void> {
-	if (testTarget.mode === 'external') return;
+	if (testTarget.mode === 'external') {
+		return;
+	}
 
 	localSetupModule = (await import(new URL('../built-test/entry.js', import.meta.url).href)) as LocalSetupModule;
 	await localSetupModule.setup();

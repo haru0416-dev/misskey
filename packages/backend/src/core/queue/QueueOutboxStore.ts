@@ -4,22 +4,23 @@
  */
 
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { executePreparedStatement } from '@/db/prepared.js';
 import type * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
-import {
-	addDbJobs,
-	addDeliverJobs,
-	type DbJobBulkInput,
-	type DbQueue,
-	type DeliverJobBulkInput,
-	type DeliverJobInput,
-	type DeliverQueue,
+import { addDbJobs, addDeliverJobs } from '@/core/queue/queues.js';
+import type {
+	DbJobBulkInput,
+	DbQueue,
+	DeliverJobBulkInput,
+	DeliverJobInput,
+	DeliverQueue,
 } from '@/core/queue/queues.js';
-import {
-	queueOutbox,
-	type QueueOutboxDeadLetterReason,
-	type QueueOutboxLastError,
-	type QueueOutboxRow,
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import type {
+	QueueOutboxDeadLetterReason,
+	QueueOutboxInsert,
+	QueueOutboxLastError,
+	QueueOutboxRow,
 } from '@/db/schema/queue-outbox.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -83,20 +84,30 @@ const invalidKeepJobs = Symbol('invalidKeepJobs');
 type KeepJobsOption = NonNullable<Bull.BulkJobOptions['removeOnComplete']>;
 
 function parseKeepJobs(value: unknown): KeepJobsOption | undefined | typeof invalidKeepJobs {
-	if (value === undefined || typeof value === 'boolean') return value;
-	if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : invalidKeepJobs;
-	if (!isRecord(value)) return invalidKeepJobs;
+	if (value === undefined || typeof value === 'boolean') {
+		return value;
+	}
+	if (typeof value === 'number') {
+		return Number.isFinite(value) && value >= 0 ? value : invalidKeepJobs;
+	}
+	if (!isRecord(value)) {
+		return invalidKeepJobs;
+	}
 
 	const serialized = value as SerializedKeepJobs;
 	const { age, count, limit } = serialized;
 	if (age === undefined) {
 		return typeof count === 'number' && Number.isFinite(count) && count >= 0 ? { count } : invalidKeepJobs;
 	}
-	if (typeof age !== 'number' || !Number.isFinite(age) || age < 0) return invalidKeepJobs;
-	if (count !== undefined && (typeof count !== 'number' || !Number.isFinite(count) || count < 0))
+	if (typeof age !== 'number' || !Number.isFinite(age) || age < 0) {
 		return invalidKeepJobs;
-	if (limit !== undefined && (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0))
+	}
+	if (count !== undefined && (typeof count !== 'number' || !Number.isFinite(count) || count < 0)) {
 		return invalidKeepJobs;
+	}
+	if (limit !== undefined && (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0)) {
+		return invalidKeepJobs;
+	}
 	return {
 		age,
 		...(count === undefined ? {} : { count }),
@@ -108,8 +119,12 @@ function parseDbJobData(name: OutboxDbJobName, value: SerializedDbJobData): DbJo
 	switch (name) {
 		case 'deleteAccount': {
 			const user = value['user'];
-			if (!isRecord(user) || typeof (user as SerializedDeleteAccountUser).id !== 'string') return null;
-			if (value['soft'] !== undefined && typeof value['soft'] !== 'boolean') return null;
+			if (!isRecord(user) || typeof (user as SerializedDeleteAccountUser).id !== 'string') {
+				return null;
+			}
+			if (value['soft'] !== undefined && typeof value['soft'] !== 'boolean') {
+				return null;
+			}
 			return value as DbJobMap['deleteAccount'];
 		}
 		case 'deleteDriveFile': {
@@ -183,32 +198,41 @@ function parseDbJobData(name: OutboxDbJobName, value: SerializedDbJobData): DbJo
 }
 
 function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput | null {
-	if (row.queue !== QUEUE.DB || !isRecord(row.data) || !isRecord(row.opts)) return null;
-	if (!['deleteAccount', 'deleteDriveFile', 'userSuspensionPostEffects', 'notePostCreate'].includes(row.name))
+	if (row.queue !== QUEUE.DB || !isRecord(row.data) || !isRecord(row.opts)) {
 		return null;
+	}
+	if (!['deleteAccount', 'deleteDriveFile', 'userSuspensionPostEffects', 'notePostCreate'].includes(row.name)) {
+		return null;
+	}
 	const name = row.name as OutboxDbJobName;
 	const data = row.data as SerializedDeleteAccountData;
 	const parsedData = parseDbJobData(name, data);
-	if (parsedData == null) return null;
+	if (parsedData == null) {
+		return null;
+	}
 	const removeOnComplete = parseKeepJobs((row.opts as SerializedJobOptions).removeOnComplete);
 	const removeOnFail = parseKeepJobs((row.opts as SerializedJobOptions).removeOnFail);
-	if (removeOnComplete === invalidKeepJobs || removeOnFail === invalidKeepJobs) return null;
+	if (removeOnComplete === invalidKeepJobs || removeOnFail === invalidKeepJobs) {
+		return null;
+	}
 	const serializedOpts = row.opts as SerializedJobOptions;
 	if (
 		serializedOpts.attempts !== undefined &&
 		(typeof serializedOpts.attempts !== 'number' ||
 			!Number.isInteger(serializedOpts.attempts) ||
 			serializedOpts.attempts < 1)
-	)
+	) {
 		return null;
+	}
 	const backoff = serializedOpts.backoff;
 	if (
 		backoff !== undefined &&
 		(!isRecord(backoff) ||
 			(backoff['type'] !== 'custom' && backoff['type'] !== 'exponential') ||
 			(backoff['delay'] !== undefined && typeof backoff['delay'] !== 'number'))
-	)
+	) {
 		return null;
+	}
 	const parsedBackoff =
 		backoff === undefined
 			? undefined
@@ -246,25 +270,35 @@ function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput | null {
 }
 
 function parseDeliverOutboxJob(row: QueueOutboxRow): DeliverJobBulkInput | null {
-	if (row.queue !== QUEUE.DELIVER || row.name !== 'deliver' || !isRecord(row.data) || !isRecord(row.opts)) return null;
+	if (row.queue !== QUEUE.DELIVER || row.name !== 'deliver' || !isRecord(row.data) || !isRecord(row.opts)) {
+		return null;
+	}
 	const envelope = row.data as SerializedDeliverEnvelope;
-	if (typeof envelope.name !== 'string' || !isRecord(envelope.data)) return null;
+	if (typeof envelope.name !== 'string' || !isRecord(envelope.data)) {
+		return null;
+	}
 	const data = envelope.data as SerializedDeliverData;
-	if (!isRecord(data.user) || typeof (data.user as SerializedDeliverUser).id !== 'string') return null;
+	if (!isRecord(data.user) || typeof (data.user as SerializedDeliverUser).id !== 'string') {
+		return null;
+	}
 	if (
 		typeof data.content !== 'string' ||
 		typeof data.digest !== 'string' ||
 		typeof data.to !== 'string' ||
 		typeof data.isSharedInbox !== 'boolean'
-	)
+	) {
 		return null;
+	}
 	const opts = row.opts as SerializedJobOptions;
 	if (
 		opts.attempts !== undefined &&
 		(typeof opts.attempts !== 'number' || !Number.isInteger(opts.attempts) || opts.attempts < 0)
-	)
+	) {
 		return null;
-	if (!isRecord(opts.backoff) || opts.backoff['type'] !== 'custom') return null;
+	}
+	if (!isRecord(opts.backoff) || opts.backoff['type'] !== 'custom') {
+		return null;
+	}
 
 	return {
 		name: envelope.name,
@@ -308,7 +342,9 @@ async function resolveDeliverJobStates(
 	jobIds: string[],
 ): Promise<Map<string, DeliverJobState>> {
 	const states = new Map<string, DeliverJobState>();
-	if (jobIds.length === 0) return states;
+	if (jobIds.length === 0) {
+		return states;
+	}
 
 	let replies: [Error | null, unknown][] | null;
 	try {
@@ -344,10 +380,15 @@ async function resolveDeliverJobStates(
 			states.set(jobId, 'pollError');
 			continue;
 		}
-		if (completed[1] != null) states.set(jobId, 'completed');
-		else if (failed[1] != null) states.set(jobId, 'failed');
-		else if (exists[1] !== 1) states.set(jobId, 'unknown');
-		else states.set(jobId, 'inFlight');
+		if (completed[1] != null) {
+			states.set(jobId, 'completed');
+		} else if (failed[1] != null) {
+			states.set(jobId, 'failed');
+		} else if (exists[1] !== 1) {
+			states.set(jobId, 'unknown');
+		} else {
+			states.set(jobId, 'inFlight');
+		}
 	}
 	return states;
 }
@@ -376,17 +417,59 @@ export type InlineDbOutboxJob = {
 	leaseToken: string;
 };
 
+/**
+ * 行数ごとに INSERT の形が変わるので、行数を key に含めて固定形を持つ。notePostCreate のステージ数
+ * (数行) を想定した上限で、超える場合は従来どおり組み立てる。
+ */
+const MAX_PREPARED_INLINE_JOB_ROWS = 16;
+
+function inlineJobInsertPlaceholders(rowCount: number): QueueOutboxInsert[] {
+	const placeholder = (name: string) => sql.placeholder(name) as unknown as string;
+	return Array.from({ length: rowCount }, (_, index) => ({
+		id: placeholder(`id${index}`),
+		queue: QUEUE.DB,
+		name: placeholder('name'),
+		kind: 'job' as const,
+		state: 'publishing' as const,
+		data: sql.placeholder(`data${index}`) as unknown as QueueOutboxInsert['data'],
+		opts: sql.placeholder('opts') as unknown as QueueOutboxInsert['opts'],
+		externalJobId: placeholder(`externalJobId${index}`),
+		leaseToken: placeholder(`leaseToken${index}`),
+		leaseExpiresAt: sql.placeholder('leaseExpiresAt') as unknown as Date,
+		updatedAt: sql.placeholder('updatedAt') as unknown as Date,
+	}));
+}
+
 export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
 	name: K,
 	dataList: DbJobMap[K][],
 	opts: Bull.BulkJobOptions,
 ): Promise<InlineDbOutboxJob[]> {
-	if (dataList.length === 0) return [];
+	if (dataList.length === 0) {
+		return [];
+	}
 
 	const now = new Date();
 	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
 	const jobs = dataList.map(() => ({ outboxId: genId(), leaseToken: genId() }));
+
+	if (dataList.length <= MAX_PREPARED_INLINE_JOB_ROWS) {
+		const values: Record<string, unknown> = { name, opts, leaseExpiresAt, updatedAt: now };
+		dataList.forEach((data, index) => {
+			values[`id${index}`] = jobs[index]!.outboxId;
+			values[`data${index}`] = data;
+			values[`externalJobId${index}`] = `outbox-${jobs[index]!.outboxId}`;
+			values[`leaseToken${index}`] = jobs[index]!.leaseToken;
+		});
+		await executePreparedStatement(
+			db,
+			`queueOutbox:enqueueInline:${dataList.length}`,
+			() => db.insert(queueOutbox).values(inlineJobInsertPlaceholders(dataList.length)),
+			values,
+		);
+		return jobs;
+	}
 
 	await db.insert(queueOutbox).values(
 		dataList.map((data, index) => ({
@@ -425,19 +508,23 @@ export async function enqueueInlineDbJobInOutbox<K extends OutboxDbJobName>(
  * leaseToken 付きの条件 DELETE 1本で、所有権の確認と完了を同時に行う。
  */
 export async function completeInlineDbOutboxJobs(db: MiDrizzleDatabase, jobs: InlineDbOutboxJob[]): Promise<void> {
-	if (jobs.length === 0) return;
-	await db.delete(queueOutbox).where(
-		and(
-			inArray(
-				queueOutbox.id,
-				jobs.map((job) => job.outboxId),
-			),
-			eq(queueOutbox.state, 'publishing'),
-			inArray(
-				queueOutbox.leaseToken,
-				jobs.map((job) => job.leaseToken),
-			),
-		),
+	if (jobs.length === 0) {
+		return;
+	}
+	await executePreparedStatement(
+		db,
+		'queueOutbox:completeInline',
+		() =>
+			db
+				.delete(queueOutbox)
+				.where(
+					and(
+						sql`${queueOutbox.id} = ANY(${sql.placeholder('ids')})`,
+						eq(queueOutbox.state, 'publishing'),
+						sql`${queueOutbox.leaseToken} = ANY(${sql.placeholder('leaseTokens')})`,
+					),
+				),
+		{ ids: jobs.map((job) => job.outboxId), leaseTokens: jobs.map((job) => job.leaseToken) },
 	);
 }
 
@@ -450,7 +537,9 @@ export async function releaseInlineDbOutboxJobs(
 	jobs: InlineDbOutboxJob[],
 	error: unknown,
 ): Promise<void> {
-	if (jobs.length === 0) return;
+	if (jobs.length === 0) {
+		return;
+	}
 	await db
 		.update(queueOutbox)
 		.set({
@@ -493,7 +582,9 @@ export async function runInlineDbOutboxJob(
 				)
 				.for('update')
 				.limit(1);
-			if (owned == null) return false;
+			if (owned == null) {
+				return false;
+			}
 
 			await task(tx);
 			await tx.delete(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
@@ -633,7 +724,9 @@ async function claimReadyRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
 			.orderBy(queueOutbox.createdAt)
 			.limit(READY_BATCH_SIZE)
 			.for('update', { skipLocked: true });
-		if (claimed.length === 0) return [];
+		if (claimed.length === 0) {
+			return [];
+		}
 
 		await tx
 			.update(queueOutbox)
@@ -672,7 +765,9 @@ async function claimPublishedRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
 			.orderBy(queueOutbox.availableAt, queueOutbox.createdAt)
 			.limit(RECONCILE_BATCH_SIZE)
 			.for('update', { skipLocked: true });
-		if (claimed.length === 0) return [];
+		if (claimed.length === 0) {
+			return [];
+		}
 
 		await tx
 			.update(queueOutbox)
@@ -706,7 +801,9 @@ async function markDeadLetter(
 	reason: QueueOutboxDeadLetterReason,
 	error: QueueOutboxLastError,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 	await db
 		.update(queueOutbox)
 		.set({
@@ -727,7 +824,9 @@ async function releaseReadyClaims(
 	leaseToken: string,
 	error: unknown,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 	await db
 		.update(queueOutbox)
 		.set({
@@ -748,7 +847,9 @@ async function dispatchReadyOutbox(
 	deliverQueue: DeliverQueue,
 ): Promise<number> {
 	const { rows, leaseToken } = await claimReadyRows(db);
-	if (rows.length === 0) return 0;
+	if (rows.length === 0) {
+		return 0;
+	}
 
 	const deliverRows = rows.flatMap((row) => {
 		const job = parseDeliverOutboxJob(row);
@@ -832,7 +933,9 @@ async function restorePublishedRows(db: MiDrizzleDatabase, rows: QueueOutboxRow[
 
 async function reconcilePublishedDeliveries(db: MiDrizzleDatabase, deliverQueue: DeliverQueue): Promise<void> {
 	const { rows, leaseToken } = await claimPublishedRows(db);
-	if (rows.length === 0) return;
+	if (rows.length === 0) {
+		return;
+	}
 
 	const validRows = rows.filter((row) => parseDeliverOutboxJob(row) != null);
 	const invalidIds = rows.filter((row) => parseDeliverOutboxJob(row) == null).map((row) => row.id);
@@ -925,7 +1028,9 @@ export async function getQueueOutboxStats(db: MiDrizzleDatabase): Promise<{
 			>`(extract(epoch from (now() - min(${queueOutbox.createdAt}) FILTER (WHERE ${queueOutbox.state} <> 'deadLetter'))) * 1000)::double precision`,
 		})
 		.from(queueOutbox);
-	if (stats == null) throw new Error('Queue outbox aggregate query returned no rows');
+	if (stats == null) {
+		throw new Error('Queue outbox aggregate query returned no rows');
+	}
 
 	return {
 		pending: stats.pending,

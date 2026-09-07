@@ -160,7 +160,9 @@ export async function handleQueueCheckExpiredMutings(deps: QueueSystemDependenci
 }
 
 export async function handleQueueBakeBufferedReactions(deps: QueueSystemDependencies): Promise<void> {
-	if (!deps.meta.enableReactionsBuffering) return;
+	if (!deps.meta.enableReactionsBuffering) {
+		return;
+	}
 
 	const bufferedNoteIds = new Set<string>();
 	const reactionRedisPrefix = deps.config.valkey.reactions.prefix;
@@ -195,7 +197,9 @@ export async function handleQueueBakeBufferedReactions(deps: QueueSystemDependen
 		}
 	} while (cursor !== '0');
 
-	if (bufferedNoteIds.size === 0) return;
+	if (bufferedNoteIds.size === 0) {
+		return;
+	}
 	const noteIds = [...bufferedNoteIds];
 
 	for (const noteId of noteIds) {

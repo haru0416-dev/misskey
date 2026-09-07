@@ -4,7 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { userKeypair, type UserKeypairRow } from '@/db/schema/user-keypair.js';
+import { userKeypair } from '@/db/schema/user-keypair.js';
+import type { UserKeypairRow } from '@/db/schema/user-keypair.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
@@ -36,13 +37,17 @@ export async function fetchUserKeypairFromDatabaseCached(
 	userId: MiUser['id'],
 ): Promise<MiUserKeypair> {
 	const cached = userKeypairCache.get(userId);
-	if (cached) return cached;
+	if (cached) {
+		return cached;
+	}
 
 	const keypair = await fetchUserKeypairFromDatabase(db, userId);
 
 	if (userKeypairCache.size >= MAX_USER_KEYPAIR_CACHE_SIZE) {
 		const oldestKey = userKeypairCache.keys().next().value;
-		if (oldestKey !== undefined) userKeypairCache.delete(oldestKey);
+		if (oldestKey !== undefined) {
+			userKeypairCache.delete(oldestKey);
+		}
 	}
 	userKeypairCache.set(userId, keypair);
 

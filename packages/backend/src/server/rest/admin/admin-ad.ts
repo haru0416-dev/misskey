@@ -127,7 +127,9 @@ export async function handleApiAdminAdDelete(
 	const params = parseApiParams(adminAdDeleteParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
-	if (ad == null) throw noSuchAdError('ccac9863-3a03-416e-b899-8a64041118b1');
+	if (ad == null) {
+		throw noSuchAdError('ccac9863-3a03-416e-b899-8a64041118b1');
+	}
 
 	await deleteAdFromDatabase(deps.db, ad.id);
 
@@ -161,7 +163,9 @@ export async function handleApiAdminAdUpdate(
 	const params = parseApiParams(adminAdUpdateParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
-	if (ad == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
+	if (ad == null) {
+		throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
+	}
 
 	const updatedAd = await updateAdInDatabase(
 		deps.db,
@@ -180,7 +184,9 @@ export async function handleApiAdminAdUpdate(
 		}),
 	);
 
-	if (updatedAd == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
+	if (updatedAd == null) {
+		throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
+	}
 
 	void logModerationEventInDatabase(deps, me, 'updateAd', {
 		adId: ad.id,

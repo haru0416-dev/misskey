@@ -38,13 +38,14 @@ import { Paginator } from '@/utility/paginator.js';
 
 const tab = ref('my');
 
-const paginator = markRaw(new Paginator('clips/list', {
-}));
+const paginator = markRaw(new Paginator('clips/list', {}));
 
-const favoritesPaginator = markRaw(new Paginator('clips/my-favorites', {
-	// ページネーションに対応していない
-	noPaging: true,
-}));
+const favoritesPaginator = markRaw(
+	new Paginator('clips/my-favorites', {
+		// ページネーションに対応していない
+		noPaging: true,
+	}),
+);
 
 async function create() {
 	const { canceled, result } = await os.form(i18n.ts.createNewClip, {
@@ -66,7 +67,9 @@ async function create() {
 		},
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('clips/create', {
 		name: result.name,
@@ -81,15 +84,18 @@ async function create() {
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => [{
-	key: 'my',
-	title: i18n.ts.myClips,
-	icon: 'ti ti-paperclip',
-}, {
-	key: 'favorites',
-	title: i18n.ts.favorites,
-	icon: 'ti ti-heart',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'my',
+		title: i18n.ts.myClips,
+		icon: 'ti ti-paperclip',
+	},
+	{
+		key: 'favorites',
+		title: i18n.ts.favorites,
+		icon: 'ti ti-heart',
+	},
+]);
 
 definePage(() => ({
 	title: i18n.ts.clip,

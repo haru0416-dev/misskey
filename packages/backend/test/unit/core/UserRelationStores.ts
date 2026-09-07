@@ -30,8 +30,10 @@ import {
 } from '@/core/user/RenoteMutingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { unfollow, type ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import { unfollow } from '@/server/rest/account/account-blocking.js';
+import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 
 describe('targeted user relation stores', () => {
 	let runtime: RuntimeDependencies;
@@ -55,7 +57,9 @@ describe('targeted user relation stores', () => {
 			}),
 		);
 		const [viewer, target, unrelated] = users;
-		if (viewer == null || target == null || unrelated == null) throw new Error('Failed to create relation test users');
+		if (viewer == null || target == null || unrelated == null) {
+			throw new Error('Failed to create relation test users');
+		}
 
 		for (const other of [target, unrelated]) {
 			await Promise.all([

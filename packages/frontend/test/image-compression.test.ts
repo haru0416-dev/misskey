@@ -25,8 +25,8 @@ describe('calculateTargetSize', () => {
 	test('どの入力でも上限を超えず、拡大せず、縦横比を保つ', () => {
 		// 高さ側のクランプを置いていないので、上限を超えないことは幅の選び方だけで
 		// 成り立っている必要がある。乱数を含む広い範囲で確かめる。
-		let seed = 20260826;
-		const rnd = (n: number) => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % n) + 1;
+		let seed = 20_260_826;
+		const rnd = (n: number) => ((seed = (seed * 1_103_515_245 + 12_345) & 0x7f_ff_ff_ff) % n) + 1;
 		const sizes: [number, number][] = [
 			[4032, 3024],
 			[1920, 1080],
@@ -36,7 +36,9 @@ describe('calculateTargetSize', () => {
 			[1, 4000],
 			[4000, 1],
 		];
-		for (let i = 0; i < 300; i++) sizes.push([rnd(6000), rnd(6000)]);
+		for (let i = 0; i < 300; i++) {
+			sizes.push([rnd(6000), rnd(6000)]);
+		}
 
 		const limits: [number, number][] = [
 			[2000, 2000],

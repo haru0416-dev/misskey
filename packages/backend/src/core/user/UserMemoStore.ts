@@ -5,7 +5,8 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { userMemo, type UserMemoInsert } from '@/db/schema/user-memo.js';
+import { userMemo } from '@/db/schema/user-memo.js';
+import type { UserMemoInsert } from '@/db/schema/user-memo.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -52,7 +53,12 @@ export async function fetchUserMemoTextFromDatabase(
 export async function listUserMemoTextsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
+	targetUserIds: MiUser['id'][],
 ): Promise<Map<MiUser['id'], string | null>> {
+	if (targetUserIds.length === 0) {
+		return new Map();
+	}
+
 	const statement = preparedQueryFor(db, 'userMemo:textsByUserId', () =>
 		db
 			.select({
@@ -60,10 +66,15 @@ export async function listUserMemoTextsByUserIdFromDatabase(
 				memo: userMemo.memo,
 			})
 			.from(userMemo)
-			.where(eq(userMemo.userId, sql.placeholder('userId')))
+			.where(
+				and(
+					eq(userMemo.userId, sql.placeholder('userId')),
+					sql`${userMemo.targetUserId} = ANY(${sql.placeholder('targetUserIds')})`,
+				),
+			)
 			.prepare(UNNAMED_PREPARED_STATEMENT),
 	);
-	const rows = await statement.execute({ userId });
+	const rows = await statement.execute({ userId, targetUserIds });
 
 	return new Map(rows.map((row) => [row.targetUserId, row.memo]));
 }

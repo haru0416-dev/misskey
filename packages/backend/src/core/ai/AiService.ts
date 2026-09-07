@@ -25,13 +25,17 @@ type DetectImagesResponse =
 	| { success: false; error: { code: string; message: string } };
 
 function isPrediction(v: unknown): v is Prediction {
-	if (typeof v !== 'object' || v === null) return false;
+	if (typeof v !== 'object' || v === null) {
+		return false;
+	}
 	const obj = v as Record<string, unknown>;
 	return typeof obj['className'] === 'string' && typeof obj['probability'] === 'number';
 }
 
 function isBatchItemResult(v: unknown): v is BatchItemResult {
-	if (typeof v !== 'object' || v === null) return false;
+	if (typeof v !== 'object' || v === null) {
+		return false;
+	}
 	const obj = v as Record<string, unknown>;
 	if (obj['success'] === true) {
 		return Array.isArray(obj['predictions']) && (obj['predictions'] as unknown[]).every(isPrediction);
@@ -46,11 +50,15 @@ function isBatchItemResult(v: unknown): v is BatchItemResult {
 }
 
 function isDetectImagesResponse(v: unknown): v is DetectImagesResponse {
-	if (typeof v !== 'object' || v === null) return false;
+	if (typeof v !== 'object' || v === null) {
+		return false;
+	}
 	const obj = v as Record<string, unknown>;
 	if (obj['success'] === true) {
 		const result = obj['result'];
-		if (typeof result !== 'object' || result === null) return false;
+		if (typeof result !== 'object' || result === null) {
+			return false;
+		}
 		const results = (result as Record<string, unknown>)['results'];
 		return Array.isArray(results) && (results as unknown[]).every(isBatchItemResult);
 	}
@@ -84,7 +92,9 @@ export function createAiService(meta: MiMeta, httpRequestService: HttpRequestSer
 	 * （API 呼び出し失敗時はセンシティブではない判定とする方針: misskey-dev/misskey#16804）。
 	 */
 	async function detectSensitiveMany(sources: Buffer[]): Promise<(Prediction[] | null)[]> {
-		if (sources.length === 0) return [];
+		if (sources.length === 0) {
+			return [];
+		}
 
 		const baseUrl = meta.sensitiveMediaDetectionApiUrl;
 		if (baseUrl == null || baseUrl.trim() === '') {

@@ -29,7 +29,9 @@ class MemoryStorageImpl implements MemoryStorage {
 	getItem(key: string): unknown | null;
 	getItem<T>(key: string, validate: ValueValidator<T>): T | null;
 	getItem<T>(key: string, validate?: ValueValidator<T>): T | unknown | null {
-		if (!this.storage.has(key)) return null;
+		if (!this.storage.has(key)) {
+			return null;
+		}
 		const value = this.storage.get(key);
 		if (validate != null && !validate(value)) {
 			this.storage.delete(key);

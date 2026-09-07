@@ -42,12 +42,10 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiAdminStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
 import { addActivityContext, genLocalUserUri } from '../user/following.js';
-import { isApiAdministrator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import {
-	packUserDetailedNotMeManyForApi,
-	packUserLiteManyForApi,
-	type UserDetailedNotMeApiResponse,
-} from '../user/user.js';
+import { isApiAdministrator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserDetailedNotMeManyForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAbuseReportsDependencies = {
@@ -173,7 +171,9 @@ async function notifyAbuseReportSystemWebhookForApi(
 	reports: MiAbuseUserReport[],
 	type: 'abuseReport' | 'abuseReportResolved',
 ): Promise<void> {
-	if (reports.length === 0) return;
+	if (reports.length === 0) {
+		return;
+	}
 
 	const inactiveRecipients = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, {
 		method: ['webhook'],
@@ -185,7 +185,9 @@ async function notifyAbuseReportSystemWebhookForApi(
 		on: [type],
 	});
 	const targetWebhooks = webhooks.filter((webhook) => !excludes.has(webhook.id));
-	if (targetWebhooks.length === 0) return;
+	if (targetWebhooks.length === 0) {
+		return;
+	}
 
 	const contents = await packAbuseReportsForSystemWebhook<typeof type>(deps, reports);
 	await Promise.all(
@@ -263,7 +265,9 @@ export async function handleApiAdminForwardAbuseUserReport(
 ): Promise<void> {
 	const params = parseApiParams(adminForwardAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
-	if (report == null) throw noSuchAbuseReportForForwardError();
+	if (report == null) {
+		throw noSuchAbuseReportForForwardError();
+	}
 
 	if (report.targetUserHost == null) {
 		throw new Error('The target user host is null.');
@@ -294,7 +298,9 @@ export async function handleApiAdminResolveAbuseUserReport(
 ): Promise<void> {
 	const params = parseApiParams(adminResolveAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
-	if (report == null) throw noSuchAbuseReportForResolveError();
+	if (report == null) {
+		throw noSuchAbuseReportForResolveError();
+	}
 
 	const resolvedAs = params.resolvedAs ?? null;
 	await resolveAbuseUserReportInDatabase(deps.db, report.id, {
@@ -321,7 +327,9 @@ export async function handleApiAdminUpdateAbuseUserReport(
 ): Promise<void> {
 	const params = parseApiParams(adminUpdateAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
-	if (report == null) throw noSuchAbuseReportForUpdateError();
+	if (report == null) {
+		throw noSuchAbuseReportForUpdateError();
+	}
 
 	await updateAbuseUserReportModerationNoteInDatabase(deps.db, report.id, params.moderationNote);
 
@@ -360,7 +368,9 @@ async function notifyAbuseReportAdminStreamForApi(
 	deps: ApiUsersReportAbuseDependencies,
 	reports: MiAbuseUserReport[],
 ): Promise<void> {
-	if (reports.length === 0 || deps.publishAdminStream == null) return;
+	if (reports.length === 0 || deps.publishAdminStream == null) {
+		return;
+	}
 
 	const moderatorIds = await getModeratorIdsExcludeExpireForApi(deps);
 
@@ -382,7 +392,9 @@ async function removeUnauthorizedRecipientUsersForApi(
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
 	const recipientUserIds = new Set(userRecipients.map((recipient) => recipient.userId).filter((x) => x != null));
-	if (recipientUserIds.size === 0) return recipients;
+	if (recipientUserIds.size === 0) {
+		return recipients;
+	}
 
 	const authorizedUserIds = await getModeratorIdsExcludeExpireForApi(deps);
 	const authorizedSet = new Set(authorizedUserIds);
@@ -411,7 +423,9 @@ async function notifyAbuseReportMailForApi(
 	deps: ApiUsersReportAbuseDependencies,
 	reports: MiAbuseUserReport[],
 ): Promise<void> {
-	if (reports.length === 0) return;
+	if (reports.length === 0) {
+		return;
+	}
 
 	const emailRecipientsRaw = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, {
 		method: ['email'],
@@ -423,8 +437,12 @@ async function notifyAbuseReportMailForApi(
 		.map((recipient) => recipient.userProfile?.email)
 		.filter((email): email is string => email != null);
 
-	if (deps.meta.email) recipientEmailAddresses.push(deps.meta.email);
-	if (recipientEmailAddresses.length === 0) return;
+	if (deps.meta.email) {
+		recipientEmailAddresses.push(deps.meta.email);
+	}
+	if (recipientEmailAddresses.length === 0) {
+		return;
+	}
 
 	for (const mailAddress of recipientEmailAddresses) {
 		await Promise.all(
@@ -510,7 +528,9 @@ export async function handleApiUsersReportAbuse(
 	const params = parseApiParams(usersReportAbuseParamDef, body);
 
 	const targetUser = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (targetUser == null) throw usersReportAbuseNoSuchUserError();
+	if (targetUser == null) {
+		throw usersReportAbuseNoSuchUserError();
+	}
 
 	if (targetUser.id === me.id) {
 		throw usersReportAbuseCannotReportYourselfError();

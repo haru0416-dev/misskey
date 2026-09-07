@@ -27,7 +27,9 @@ export class MiAd {
 	public isSensitive: boolean;
 
 	constructor(data: Partial<MiAd>) {
-		if (data == null) return;
+		if (data == null) {
+			return;
+		}
 
 		for (const [k, v] of Object.entries(data)) {
 			(this as Record<string, unknown>)[k] = v;

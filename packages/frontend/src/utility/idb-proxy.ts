@@ -31,17 +31,23 @@ if (idbAvailable) {
 }
 
 export async function get(key: string) {
-	if (idbAvailable) return iget(key);
+	if (idbAvailable) {
+		return iget(key);
+	}
 	return miLocalStorage.getItemAsJson(`${PREFIX}${key}`);
 }
 
 export async function set(key: string, val: unknown) {
-	if (idbAvailable) return iset(key, val);
+	if (idbAvailable) {
+		return iset(key, val);
+	}
 	return miLocalStorage.setItemAsJson(`${PREFIX}${key}`, val);
 }
 
 export async function update(key: string, updater: (value: unknown) => unknown) {
-	if (idbAvailable) return iupdate(key, updater);
+	if (idbAvailable) {
+		return iupdate(key, updater);
+	}
 	const storageKey = `${PREFIX}${key}` as `idbfallback::${string}`;
 	const write = () => {
 		const value = updater(miLocalStorage.getItemAsJson(storageKey));
@@ -55,10 +61,14 @@ export async function update(key: string, updater: (value: unknown) => unknown) 
 }
 
 async function del(key: string) {
-	if (idbAvailable) return idel(key);
+	if (idbAvailable) {
+		return idel(key);
+	}
 	return miLocalStorage.removeItem(`${PREFIX}${key}`);
 }
 
 export async function clear() {
-	if (idbAvailable) return iclear();
+	if (idbAvailable) {
+		return iclear();
+	}
 }

@@ -61,7 +61,7 @@ const props = defineProps<{
 	placeholder?: string;
 	autofocus?: boolean;
 	autocomplete?: string;
-	mfmAutocomplete?: boolean | SuggestionType[],
+	mfmAutocomplete?: boolean | SuggestionType[];
 	mfmPreview?: boolean;
 	spellcheck?: boolean;
 	debounce?: boolean;
@@ -103,7 +103,9 @@ function onInput(ev: InputEvent) {
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
+	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) {
+		return;
+	}
 
 	emit('keydown', ev);
 
@@ -129,7 +131,7 @@ function updated() {
 
 const debouncedUpdated = debounce(1000, updated);
 
-watch(modelValue, newValue => {
+watch(modelValue, (newValue) => {
 	v.value = newValue ?? '';
 });
 
@@ -145,9 +147,13 @@ watch(v, () => {
 	invalid.value = inputEl.value?.validity.badInput ?? true;
 });
 
-watch([changed, invalid], ([newChanged, newInvalid]) => {
-	emit('savingStateChange', newChanged, newInvalid);
-}, { immediate: true });
+watch(
+	[changed, invalid],
+	([newChanged, newInvalid]) => {
+		emit('savingStateChange', newChanged, newInvalid);
+	},
+	{ immediate: true },
+);
 
 onMounted(() => {
 	nextTick(() => {
@@ -157,7 +163,11 @@ onMounted(() => {
 	});
 
 	if (props.mfmAutocomplete && inputEl.value) {
-		autocompleteWorker = new Autocomplete(inputEl.value, v, props.mfmAutocomplete === true ? undefined : props.mfmAutocomplete);
+		autocompleteWorker = new Autocomplete(
+			inputEl.value,
+			v,
+			props.mfmAutocomplete === true ? undefined : props.mfmAutocomplete,
+		);
 	}
 });
 

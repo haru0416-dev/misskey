@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { blocking, type BlockingInsert, type BlockingRow } from '@/db/schema/blocking.js';
+import { blocking } from '@/db/schema/blocking.js';
+import type { BlockingInsert, BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -163,7 +165,9 @@ export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
 	blockerId: MiUser['id'],
 	blockeeIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (blockeeIds.length === 0) return [];
+	if (blockeeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ blockeeId: blocking.blockeeId })
@@ -194,7 +198,9 @@ export async function listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(
 	blockeeId: MiUser['id'],
 	blockerIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (blockerIds.length === 0) return [];
+	if (blockerIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ blockerId: blocking.blockerId })

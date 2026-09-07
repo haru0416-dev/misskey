@@ -89,14 +89,24 @@ const v = ref(deepClone(props.modelValue));
 
 const roles = await rolesCache.fetch();
 
-watch(() => props.modelValue, () => {
-	if (JSON.stringify(props.modelValue) === JSON.stringify(v.value)) return;
-	v.value = deepClone(props.modelValue);
-}, { deep: true });
+watch(
+	() => props.modelValue,
+	() => {
+		if (JSON.stringify(props.modelValue) === JSON.stringify(v.value)) {
+			return;
+		}
+		v.value = deepClone(props.modelValue);
+	},
+	{ deep: true },
+);
 
-watch(v, () => {
-	emit('update:modelValue', v.value);
-}, { deep: true });
+watch(
+	v,
+	() => {
+		emit('update:modelValue', v.value);
+	},
+	{ deep: true },
+);
 
 const typeDef = [
 	{ label: i18n.ts._role._condition.isLocal, value: 'isLocal' },
@@ -122,49 +132,82 @@ const typeDef = [
 
 type KeyOfUnion<T> = T extends T ? keyof T : never;
 
-type DistributiveOmit<T, K extends KeyOfUnion<T>> = T extends T
-	? Omit<T, K>
-	: never;
+type DistributiveOmit<T, K extends KeyOfUnion<T>> = T extends T ? Omit<T, K> : never;
 
 const typeModelForMkSelect = computed<GetMkSelectValueTypesFromDef<typeof typeDef>>({
 	get: () => v.value.type,
 	set: (t) => {
 		let newValue: DistributiveOmit<Misskey.entities.Role['condFormula'], 'id'>;
 		switch (t) {
-			case 'and': newValue = { type: 'and', values: [] }; break;
-			case 'or': newValue = { type: 'or', values: [] }; break;
-			case 'not': newValue = { type: 'not', value: { id: genId(), type: 'isRemote' } }; break;
-			case 'roleAssignedTo': newValue = { type: 'roleAssignedTo', roleId: '' }; break;
-			case 'createdLessThan': newValue = { type: 'createdLessThan', sec: 86400 }; break;
-			case 'createdMoreThan': newValue = { type: 'createdMoreThan', sec: 86400 }; break;
-			case 'followersLessThanOrEq': newValue = { type: 'followersLessThanOrEq', value: 10 }; break;
-			case 'followersMoreThanOrEq': newValue = { type: 'followersMoreThanOrEq', value: 10 }; break;
-			case 'followingLessThanOrEq': newValue = { type: 'followingLessThanOrEq', value: 10 }; break;
-			case 'followingMoreThanOrEq': newValue = { type: 'followingMoreThanOrEq', value: 10 }; break;
-			case 'notesLessThanOrEq': newValue = { type: 'notesLessThanOrEq', value: 10 }; break;
-			case 'notesMoreThanOrEq': newValue = { type: 'notesMoreThanOrEq', value: 10 }; break;
-			default: newValue = { type: t }; break;
+			case 'and':
+				newValue = { type: 'and', values: [] };
+				break;
+			case 'or':
+				newValue = { type: 'or', values: [] };
+				break;
+			case 'not':
+				newValue = { type: 'not', value: { id: genId(), type: 'isRemote' } };
+				break;
+			case 'roleAssignedTo':
+				newValue = { type: 'roleAssignedTo', roleId: '' };
+				break;
+			case 'createdLessThan':
+				newValue = { type: 'createdLessThan', sec: 86_400 };
+				break;
+			case 'createdMoreThan':
+				newValue = { type: 'createdMoreThan', sec: 86_400 };
+				break;
+			case 'followersLessThanOrEq':
+				newValue = { type: 'followersLessThanOrEq', value: 10 };
+				break;
+			case 'followersMoreThanOrEq':
+				newValue = { type: 'followersMoreThanOrEq', value: 10 };
+				break;
+			case 'followingLessThanOrEq':
+				newValue = { type: 'followingLessThanOrEq', value: 10 };
+				break;
+			case 'followingMoreThanOrEq':
+				newValue = { type: 'followingMoreThanOrEq', value: 10 };
+				break;
+			case 'notesLessThanOrEq':
+				newValue = { type: 'notesLessThanOrEq', value: 10 };
+				break;
+			case 'notesMoreThanOrEq':
+				newValue = { type: 'notesMoreThanOrEq', value: 10 };
+				break;
+			default:
+				newValue = { type: t };
+				break;
 		}
 		v.value = { id: v.value.id, ...newValue };
 	},
 });
 
-const assignedToDef = computed(() => roles.filter(r => r.target === 'manual').map(r => ({ label: r.name, value: r.id })) satisfies MkSelectItem[]);
+const assignedToDef = computed(
+	() =>
+		roles.filter((r) => r.target === 'manual').map((r) => ({ label: r.name, value: r.id })) satisfies MkSelectItem[],
+);
 
 function addChildValue() {
-	if (v.value.type !== 'and' && v.value.type !== 'or') return;
+	if (v.value.type !== 'and' && v.value.type !== 'or') {
+		return;
+	}
 	v.value.values.push({ id: genId(), type: 'isRemote' });
 }
 
 function childValuesItemUpdated(item: Misskey.entities.Role['condFormula']) {
-	if (v.value.type !== 'and' && v.value.type !== 'or') return;
-	const i = v.value.values.findIndex(_item => _item.id === item.id);
+	if (v.value.type !== 'and' && v.value.type !== 'or') {
+		return;
+	}
+	const i = v.value.values.findIndex((_item) => _item.id === item.id);
 	v.value.values[i] = item;
 }
 
 function removeChildItem(itemId: string) {
-	if (v.value.type !== 'and' && v.value.type !== 'or') return;
-	v.value.values = v.value.values.filter(_item => _item.id !== itemId);
+	if (v.value.type !== 'and' && v.value.type !== 'or') {
+		return;
+	}
+	v.value.values = v.value.values.filter((_item) => _item.id !== itemId);
 }
 
 function removeSelf() {

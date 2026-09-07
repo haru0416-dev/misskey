@@ -57,7 +57,9 @@ export async function readAndCompressImage(file: Blob, config: ImageCompressionC
 		// canvas は常に縮小後の寸法で作る。原寸で作ると iOS WebKit の 16,777,216px 制限に掛かる。
 		const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
 		const ctx = canvas.getContext('2d');
-		if (ctx == null) throw new Error('image-compression: failed to get a 2d context');
+		if (ctx == null) {
+			throw new Error('image-compression: failed to get a 2d context');
+		}
 		ctx.drawImage(bitmap, 0, 0);
 
 		return await canvas.convertToBlob({ type: config.mimeType, quality: config.quality });

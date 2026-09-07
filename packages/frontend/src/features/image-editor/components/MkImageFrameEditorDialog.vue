@@ -189,31 +189,33 @@ const preset = deepClone(props.preset) ?? {
 	name: '',
 };
 
-const params = reactive<ImageFrameParams>(deepClone(props.params) ?? {
-	borderThickness: 0.05,
-	borderRadius: 0,
-	labelTop: {
-		enabled: false,
-		scale: 1.0,
-		padding: 0.2,
-		textBig: '',
-		textSmall: '',
-		centered: false,
-		withQrCode: false,
+const params = reactive<ImageFrameParams>(
+	deepClone(props.params) ?? {
+		borderThickness: 0.05,
+		borderRadius: 0,
+		labelTop: {
+			enabled: false,
+			scale: 1.0,
+			padding: 0.2,
+			textBig: '',
+			textSmall: '',
+			centered: false,
+			withQrCode: false,
+		},
+		labelBottom: {
+			enabled: true,
+			scale: 1.0,
+			padding: 0.2,
+			textBig: '{year}/{0month}/{0day}',
+			textSmall: '{camera_mm}mm   f/{camera_f}   {camera_s}s   ISO{camera_iso}',
+			centered: false,
+			withQrCode: true,
+		},
+		bgColor: [1, 1, 1],
+		fgColor: [0, 0, 0],
+		font: 'sans-serif',
 	},
-	labelBottom: {
-		enabled: true,
-		scale: 1.0,
-		padding: 0.2,
-		textBig: '{year}/{0month}/{0day}',
-		textSmall: '{camera_mm}mm   f/{camera_f}   {camera_s}s   ISO{camera_iso}',
-		centered: false,
-		withQrCode: true,
-	},
-	bgColor: [1, 1, 1],
-	fgColor: [0, 0, 0],
-	font: 'sans-serif',
-});
+);
 
 const emit = defineEmits<{
 	(ev: 'ok', frame: ImageFrameParams): void;
@@ -230,7 +232,9 @@ async function cancel() {
 			type: 'question',
 			text: i18n.ts._imageFrameEditor.quitWithoutSaveConfirm,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	dialog.value?.close();
@@ -242,27 +246,33 @@ const updateThrottled = throttle(50, () => {
 	}
 });
 
-watch(params, async (newValue, oldValue) => {
-	updateThrottled();
-}, { deep: true });
+watch(
+	params,
+	async (newValue, oldValue) => {
+		updateThrottled();
+	},
+	{ deep: true },
+);
 
 const canvasEl = useTemplateRef('canvasEl');
 
 const sampleImage_3_2 = new Image();
 sampleImage_3_2.src = '/client-assets/sample/3-2.jpg';
-const sampleImage_3_2_loading = new Promise<void>(resolve => {
+const sampleImage_3_2_loading = new Promise<void>((resolve) => {
 	sampleImage_3_2.onload = () => resolve();
 });
 
 const sampleImage_2_3 = new Image();
 sampleImage_2_3.src = '/client-assets/sample/2-3.jpg';
-const sampleImage_2_3_loading = new Promise<void>(resolve => {
+const sampleImage_2_3_loading = new Promise<void>((resolve) => {
 	sampleImage_2_3.onload = () => resolve();
 });
 
 const sampleImageType = ref(props.image != null ? 'provided' : '3_2');
 watch(sampleImageType, async () => {
-	if (sampleImageType.value === 'provided') return;
+	if (sampleImageType.value === 'provided') {
+		return;
+	}
 	if (renderer != null) {
 		renderer.destroy(false);
 		renderer = null;
@@ -274,7 +284,9 @@ let imageFile = props.image;
 
 async function choiceImage() {
 	const files = await os.chooseFileFromPc({ multiple: false });
-	if (files.length === 0) return;
+	if (files.length === 0) {
+		return;
+	}
 	imageFile = files[0];
 	sampleImageType.value = 'provided';
 	if (renderer != null) {
@@ -288,7 +300,9 @@ let renderer: ImageFrameRenderer | null = null;
 let imageBitmap: ImageBitmap | null = null;
 
 async function initRenderer() {
-	if (canvasEl.value == null) return;
+	if (canvasEl.value == null) {
+		return;
+	}
 
 	if (sampleImageType.value === '3_2') {
 		renderer = new ImageFrameRenderer({
@@ -364,7 +378,9 @@ async function save() {
 			title: i18n.ts.name,
 			default: preset.name,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		preset.name = name || '';
 
@@ -390,21 +406,25 @@ async function save() {
 }
 
 function getHex(c: [number, number, number]) {
-	return `#${c.map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+	return `#${c
+		.map((x) =>
+			Math.round(x * 255)
+				.toString(16)
+				.padStart(2, '0'),
+		)
+		.join('')}`;
 }
 
 function getRgb(hex: string | number): [number, number, number] | null {
-	if (
-		typeof hex === 'number' ||
-		typeof hex !== 'string' ||
-		!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)
-	) {
+	if (typeof hex === 'number' || typeof hex !== 'string' || !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)) {
 		return null;
 	}
 
 	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
-	if (m == null) return [0, 0, 0];
-	return m.map(x => Number.parseInt(x, 16) / 255) as [number, number, number];
+	if (m == null) {
+		return [0, 0, 0];
+	}
+	return m.map((x) => Number.parseInt(x, 16) / 255) as [number, number, number];
 }
 </script>
 

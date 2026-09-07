@@ -22,8 +22,8 @@ import {
 	listAccessTokensByUserIdFromDatabase,
 	listAccessTokensWithAppByUserIdFromDatabase,
 	listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase,
-	type AccessTokenOrderField,
 } from '@/core/app/AccessTokenStore.js';
+import type { AccessTokenOrderField } from '@/core/app/AccessTokenStore.js';
 import type { AppRow } from '@/db/schema/app.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -143,7 +143,9 @@ export async function handleApiAppShow(
 ): Promise<Packed<'App'>> {
 	const params = parseApiParams(appShowParamDef, body);
 	const app = await fetchAppByIdFromDatabase(deps.db, params.appId);
-	if (app == null) throw noSuchAppError();
+	if (app == null) {
+		throw noSuchAppError();
+	}
 
 	return await packApiApp(deps, app, user, {
 		includeSecret: isSecureCredential && app.userId === user?.id,
@@ -233,7 +235,9 @@ export async function handleApiIAuthorizedApps(
 
 	return tokens.map((token) => {
 		const app = token.appId != null ? appById.get(token.appId) : undefined;
-		if (app == null) throw new Error(`App ${token.appId} not found`);
+		if (app == null) {
+			throw new Error(`App ${token.appId} not found`);
+		}
 
 		return {
 			id: app.id,

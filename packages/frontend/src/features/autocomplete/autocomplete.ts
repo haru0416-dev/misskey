@@ -71,13 +71,17 @@ export class Autocomplete {
 	}
 
 	public attach() {
-		if (this.attached) return;
+		if (this.attached) {
+			return;
+		}
 		this.attached = true;
 		this.textarea.addEventListener('input', this.onInput);
 	}
 
 	public detach() {
-		if (!this.attached) return;
+		if (!this.attached) {
+			return;
+		}
 		this.attached = false;
 		this.textarea.removeEventListener('input', this.onInput);
 		this.close();
@@ -202,7 +206,9 @@ export class Autocomplete {
 		if (type !== this.currentType) {
 			this.close();
 		}
-		if (this.opening) return;
+		if (this.opening) {
+			return;
+		}
 		this.opening = true;
 		this.currentType = type;
 
@@ -258,7 +264,9 @@ export class Autocomplete {
 	 * サジェストを閉じます。
 	 */
 	private close() {
-		if (this.suggestion == null) return;
+		if (this.suggestion == null) {
+			return;
+		}
 
 		this.suggestion.close();
 		this.suggestion = null;

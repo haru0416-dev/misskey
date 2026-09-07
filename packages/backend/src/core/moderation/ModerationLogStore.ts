@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, sql, type SQL } from 'drizzle-orm';
-import { moderationLog, type ModerationLogInsert, type ModerationLogRow } from '@/db/schema/moderation-log.js';
+import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { moderationLog } from '@/db/schema/moderation-log.js';
+import type { ModerationLogInsert, ModerationLogRow } from '@/db/schema/moderation-log.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
@@ -49,12 +51,16 @@ export async function createModerationLogsInDatabase(
 	db: MiDrizzleDatabase,
 	data: ModerationLogInsert[],
 ): Promise<void> {
-	if (data.length === 0) return;
+	if (data.length === 0) {
+		return;
+	}
 
 	const batchSize = 10_000;
 	const insertBatch = async (offset: number): Promise<void> => {
 		const batch = data.slice(offset, offset + batchSize);
-		if (batch.length === 0) return;
+		if (batch.length === 0) {
+			return;
+		}
 
 		await db.insert(moderationLog).values(batch);
 		await insertBatch(offset + batchSize);

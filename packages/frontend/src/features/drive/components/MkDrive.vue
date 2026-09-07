@@ -165,7 +165,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef, watch, computed, TransitionGroup, markRaw } from 'vue';
+import {
+	nextTick,
+	onActivated,
+	onBeforeUnmount,
+	onMounted,
+	ref,
+	useTemplateRef,
+	watch,
+	computed,
+	TransitionGroup,
+	markRaw,
+} from 'vue';
 import * as Misskey from 'misskey-js';
 import MkButton from '@/components/form/MkButton.vue';
 import type { MenuItem } from '@/types/menu.js';
@@ -186,18 +197,21 @@ import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js'
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const props = withDefaults(defineProps<{
-	initialFolder?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder['id'] | null;
-	type?: string;
-	multiple?: boolean;
-	select?: 'file' | 'folder' | null;
-	forceDisableInfiniteScroll?: boolean;
-}>(), {
-	initialFolder: null,
-	multiple: false,
-	select: null,
-	forceDisableInfiniteScroll: false,
-});
+const props = withDefaults(
+	defineProps<{
+		initialFolder?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder['id'] | null;
+		type?: string;
+		multiple?: boolean;
+		select?: 'file' | 'folder' | null;
+		forceDisableInfiniteScroll?: boolean;
+	}>(),
+	{
+		initialFolder: null,
+		multiple: false,
+		select: null,
+		forceDisableInfiniteScroll: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'changeSelectedFiles', v: Misskey.entities.DriveFile[]): void;
@@ -225,9 +239,13 @@ const selectedFiles = ref<Misskey.entities.DriveFile[]>([]);
 const selectedFolders = ref<Misskey.entities.DriveFolder[]>([]);
 const isRootSelected = ref(false);
 
-watch(selectedFiles, () => {
-	emit('changeSelectedFiles', selectedFiles.value);
-}, { deep: true });
+watch(
+	selectedFiles,
+	() => {
+		emit('changeSelectedFiles', selectedFiles.value);
+	},
+	{ deep: true },
+);
 
 watch([selectedFolders, isRootSelected], () => {
 	emit('changeSelectedFolders', isRootSelected.value ? [null, ...selectedFolders.value] : selectedFolders.value);
@@ -249,29 +267,43 @@ const typeFilterPrefix: Record<Exclude<typeof typeFilter.value, 'all'>, string> 
 };
 const canFilterByType = computed(() => props.type === undefined);
 const effectiveType = computed(() => {
-	if (props.type !== undefined) return props.type;
-	if (typeFilter.value === 'all') return undefined;
+	if (props.type !== undefined) {
+		return props.type;
+	}
+	if (typeFilter.value === 'all') {
+		return undefined;
+	}
 	return typeFilterPrefix[typeFilter.value];
 });
 
-const filesPaginator = markRaw(new Paginator('drive/files', {
-	limit: 30,
-	canFetchDetection: 'limit',
-	params: () => ({ // 自動でリロードしたくないためcomputedParamsは使わない
-		folderId: folder.value ? folder.value.id : null,
-		...(effectiveType.value === undefined ? {} : { type: effectiveType.value }),
-		sort: ['-createdAt', '+createdAt'].includes(sortModeSelect.value) ? null : sortModeSelect.value,
+const filesPaginator = markRaw(
+	new Paginator('drive/files', {
+		limit: 30,
+		canFetchDetection: 'limit',
+		params: () => ({
+			// 自動でリロードしたくないためcomputedParamsは使わない
+			folderId: folder.value ? folder.value.id : null,
+			...(effectiveType.value === undefined ? {} : { type: effectiveType.value }),
+			sort: ['-createdAt', '+createdAt'].includes(sortModeSelect.value) ? null : sortModeSelect.value,
+		}),
 	}),
-}));
-const foldersPaginator = markRaw(new Paginator('drive/folders', {
-	limit: 30,
-	canFetchDetection: 'limit',
-	params: () => ({ // 自動でリロードしたくないためcomputedParamsは使わない
-		folderId: folder.value ? folder.value.id : null,
+);
+const foldersPaginator = markRaw(
+	new Paginator('drive/folders', {
+		limit: 30,
+		canFetchDetection: 'limit',
+		params: () => ({
+			// 自動でリロードしたくないためcomputedParamsは使わない
+			folderId: folder.value ? folder.value.id : null,
+		}),
 	}),
-}));
+);
 
-const canFetchFiles = computed(() => !fetching.value && (filesPaginator.order.value === 'oldest' ? filesPaginator.canFetchNewer.value : filesPaginator.canFetchOlder.value));
+const canFetchFiles = computed(
+	() =>
+		!fetching.value &&
+		(filesPaginator.order.value === 'oldest' ? filesPaginator.canFetchNewer.value : filesPaginator.canFetchOlder.value),
+);
 
 async function fetchMoreFiles() {
 	if (filesPaginator.order.value === 'oldest') {
@@ -299,22 +331,28 @@ async function initialize() {
 }
 
 function onStreamDriveFileCreated(file: Misskey.entities.DriveFile) {
-	if (file.folderId !== (folder.value?.id ?? null)) return;
+	if (file.folderId !== (folder.value?.id ?? null)) {
+		return;
+	}
 	// 一覧は種類で絞り込めるので、絞り込みと合わない新着を差し込まない。
 	// 差し込むと「画像だけ」の表示に動画が混ざる。
-	if (effectiveType.value != null && !matchesTypeFilter(file.type, effectiveType.value)) return;
+	if (effectiveType.value != null && !matchesTypeFilter(file.type, effectiveType.value)) {
+		return;
+	}
 	filesPaginator.prepend(file);
 }
 
 /** `image/*` のようなワイルドカードを含む drive/files の type 指定に合うか。 */
 function matchesTypeFilter(fileType: string, filter: string): boolean {
-	if (filter.endsWith('/*')) return fileType.startsWith(filter.slice(0, -1));
+	if (filter.endsWith('/*')) {
+		return fileType.startsWith(filter.slice(0, -1));
+	}
 	return fileType === filter;
 }
 
 function onFileDragstart(file: Misskey.entities.DriveFile, ev: DragEvent) {
 	if (isEditMode.value) {
-		if (!selectedFiles.value.some(f => f.id === file.id)) {
+		if (!selectedFiles.value.some((f) => f.id === file.id)) {
 			selectedFiles.value.push(file);
 		}
 
@@ -328,7 +366,9 @@ function onFileDragstart(file: Misskey.entities.DriveFile, ev: DragEvent) {
 }
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// ドラッグ元が自分自身の所有するアイテムだったら
 	if (isDragSource.value) {
@@ -363,7 +403,9 @@ function onDragover(ev: DragEvent) {
 }
 
 function onDragenter() {
-	if (!isDragSource.value) draghover.value = true;
+	if (!isDragSource.value) {
+		draghover.value = true;
+	}
 }
 
 function onDragleave() {
@@ -373,7 +415,9 @@ function onDragleave() {
 function onDrop(ev: DragEvent): void | boolean {
 	draghover.value = false;
 
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// ドロップされてきたものがファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
@@ -388,14 +432,17 @@ function onDrop(ev: DragEvent): void | boolean {
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
 			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map(f => f.id),
+				fileIds: droppedData.map((f) => f.id),
 				folderId: folder.value ? folder.value.id : null,
 			}).then(() => {
-				globalEvents.emit('driveFilesUpdated', droppedData.map(x => ({
-					...x,
-					folderId: folder.value ? folder.value.id : null,
-					folder: folder.value,
-				})));
+				globalEvents.emit(
+					'driveFilesUpdated',
+					droppedData.map((x) => ({
+						...x,
+						folderId: folder.value ? folder.value.id : null,
+						folder: folder.value,
+					})),
+				);
 			});
 		}
 	}
@@ -406,36 +453,47 @@ function onDrop(ev: DragEvent): void | boolean {
 		const droppedData = getDragData(ev, 'driveFolders');
 		if (droppedData != null) {
 			const droppedFolder = droppedData[0];
-			if (droppedFolder == null) return;
+			if (droppedFolder == null) {
+				return;
+			}
 			// 移動先が自分自身ならreject
-			if (folder.value && droppedFolder.id === folder.value.id) return false;
-			if (foldersPaginator.items.value.some(f => f.id === droppedFolder.id)) return false;
+			if (folder.value && droppedFolder.id === folder.value.id) {
+				return false;
+			}
+			if (foldersPaginator.items.value.some((f) => f.id === droppedFolder.id)) {
+				return false;
+			}
 			misskeyApi('drive/folders/update', {
 				folderId: droppedFolder.id,
 				parentId: folder.value ? folder.value.id : null,
-			}).then(() => {
-				globalEvents.emit('driveFoldersUpdated', [droppedFolder].map(x => ({
-					...x,
-					parentId: folder.value ? folder.value.id : null,
-					parent: folder.value,
-				})));
-			}).catch(err => {
-				switch (err.code) {
-					case 'RECURSIVE_NESTING':
-						claimAchievement('driveFolderCircularReference');
-						os.alert({
-							type: 'error',
-							title: i18n.ts.unableToProcess,
-							text: i18n.ts.circularReferenceFolder,
-						});
-						break;
-					default:
-						os.alert({
-							type: 'error',
-							text: i18n.ts.somethingHappened,
-						});
-				}
-			});
+			})
+				.then(() => {
+					globalEvents.emit(
+						'driveFoldersUpdated',
+						[droppedFolder].map((x) => ({
+							...x,
+							parentId: folder.value ? folder.value.id : null,
+							parent: folder.value,
+						})),
+					);
+				})
+				.catch((err) => {
+					switch (err.code) {
+						case 'RECURSIVE_NESTING':
+							claimAchievement('driveFolderCircularReference');
+							os.alert({
+								type: 'error',
+								title: i18n.ts.unableToProcess,
+								text: i18n.ts.circularReferenceFolder,
+							});
+							break;
+						default:
+							os.alert({
+								type: 'error',
+								text: i18n.ts.somethingHappened,
+							});
+					}
+				});
 		}
 	}
 	//#endregion
@@ -453,7 +511,9 @@ async function urlUpload() {
 		type: 'url',
 		placeholder: i18n.ts.uploadFromUrlDescription,
 	});
-	if (canceled || !url) return;
+	if (canceled || !url) {
+		return;
+	}
 
 	await os.apiWithDialog('drive/files/upload-from-url', {
 		url: url,
@@ -471,7 +531,9 @@ async function createFolder() {
 		title: i18n.ts.createFolder,
 		placeholder: i18n.ts.folderName,
 	});
-	if (canceled || name == null) return;
+	if (canceled || name == null) {
+		return;
+	}
 
 	const createdFolder = await os.apiWithDialog('drive/folders/create', {
 		name: name,
@@ -487,7 +549,9 @@ async function renameFolder(folderToRename: Misskey.entities.DriveFolder) {
 		placeholder: i18n.ts.inputNewFolderName,
 		default: folderToRename.name,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	const updatedFolder = await os.apiWithDialog('drive/folders/update', {
 		folderId: folderToRename.id,
@@ -500,26 +564,28 @@ async function renameFolder(folderToRename: Misskey.entities.DriveFolder) {
 function deleteFolder(folderToDelete: Misskey.entities.DriveFolder) {
 	misskeyApi('drive/folders/delete', {
 		folderId: folderToDelete.id,
-	}).then(() => {
-		// 削除時に親フォルダに移動
-		cd(folderToDelete.parentId);
-		globalEvents.emit('driveFoldersDeleted', [folderToDelete]);
-	}).catch(err => {
-		switch (err.id) {
-			case 'b0fc8a17-963c-405d-bfbc-859a487295e1':
-				os.alert({
-					type: 'error',
-					title: i18n.ts.unableToDelete,
-					text: i18n.ts.hasChildFilesOrFolders,
-				});
-				break;
-			default:
-				os.alert({
-					type: 'error',
-					text: i18n.ts.unableToDelete,
-				});
-		}
-	});
+	})
+		.then(() => {
+			// 削除時に親フォルダに移動
+			cd(folderToDelete.parentId);
+			globalEvents.emit('driveFoldersDeleted', [folderToDelete]);
+		})
+		.catch((err) => {
+			switch (err.id) {
+				case 'b0fc8a17-963c-405d-bfbc-859a487295e1':
+					os.alert({
+						type: 'error',
+						title: i18n.ts.unableToDelete,
+						text: i18n.ts.hasChildFilesOrFolders,
+					});
+					break;
+				default:
+					os.alert({
+						type: 'error',
+						text: i18n.ts.unableToDelete,
+					});
+			}
+		});
 }
 
 function onFileClick(ev: PointerEvent, file: Misskey.entities.DriveFile) {
@@ -528,11 +594,11 @@ function onFileClick(ev: PointerEvent, file: Misskey.entities.DriveFile) {
 	}
 
 	if (props.select === 'file' || isEditMode.value) {
-		const isAlreadySelected = selectedFiles.value.some(f => f.id === file.id);
+		const isAlreadySelected = selectedFiles.value.some((f) => f.id === file.id);
 
 		if (isEditMode.value) {
 			if (isAlreadySelected) {
-				selectedFiles.value = selectedFiles.value.filter(f => f.id !== file.id);
+				selectedFiles.value = selectedFiles.value.filter((f) => f.id !== file.id);
 			} else {
 				selectedFiles.value.push(file);
 			}
@@ -541,7 +607,7 @@ function onFileClick(ev: PointerEvent, file: Misskey.entities.DriveFile) {
 
 		if (props.multiple) {
 			if (isAlreadySelected) {
-				selectedFiles.value = selectedFiles.value.filter(f => f.id !== file.id);
+				selectedFiles.value = selectedFiles.value.filter((f) => f.id !== file.id);
 			} else {
 				selectedFiles.value.push(file);
 			}
@@ -551,15 +617,18 @@ function onFileClick(ev: PointerEvent, file: Misskey.entities.DriveFile) {
 			}
 		}
 	} else {
-		os.popupMenu(getDriveFileMenu(file, folder.value), (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
+		os.popupMenu(
+			getDriveFileMenu(file, folder.value),
+			(ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined,
+		);
 	}
 }
 
 function chooseFolder(folderToChoose: Misskey.entities.DriveFolder) {
-	const isAlreadySelected = selectedFolders.value.some(f => f.id === folderToChoose.id);
+	const isAlreadySelected = selectedFolders.value.some((f) => f.id === folderToChoose.id);
 	if (props.multiple) {
 		if (isAlreadySelected) {
-			selectedFolders.value = selectedFolders.value.filter(f => f.id !== folderToChoose.id);
+			selectedFolders.value = selectedFolders.value.filter((f) => f.id !== folderToChoose.id);
 		} else {
 			selectedFolders.value.push(folderToChoose);
 		}
@@ -571,7 +640,7 @@ function chooseFolder(folderToChoose: Misskey.entities.DriveFolder) {
 }
 
 function unchoseFolder(folderToUnchose: Misskey.entities.DriveFolder) {
-	selectedFolders.value = selectedFolders.value.filter(f => f.id !== folderToUnchose.id);
+	selectedFolders.value = selectedFolders.value.filter((f) => f.id !== folderToUnchose.id);
 }
 
 function cd(target?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder['id' | 'parentId']) {
@@ -586,43 +655,56 @@ function cd(target?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder
 
 	misskeyApi('drive/folders/show', {
 		folderId: target,
-	}).then(folderToMove => {
+	}).then((folderToMove) => {
 		folder.value = folderToMove;
 		hierarchyFolders.value = [];
 
 		const dive = (folderToDive: Misskey.entities.DriveFolder) => {
 			hierarchyFolders.value.unshift(folderToDive);
-			if (folderToDive.parent) dive(folderToDive.parent);
+			if (folderToDive.parent) {
+				dive(folderToDive.parent);
+			}
 		};
 
-		if (folderToMove.parent) dive(folderToMove.parent);
+		if (folderToMove.parent) {
+			dive(folderToMove.parent);
+		}
 
 		initialize();
 	});
 }
 
 async function moveFilesBulk() {
-	if (selectedFiles.value.length === 0) return;
+	if (selectedFiles.value.length === 0) {
+		return;
+	}
 
 	const { canceled, folders } = await selectDriveFolder(folder.value ? folder.value.id : null);
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('drive/files/move-bulk', {
-		fileIds: selectedFiles.value.map(f => f.id),
+		fileIds: selectedFiles.value.map((f) => f.id),
 		folderId: folders[0] ? folders[0].id : null,
 	});
 
-	globalEvents.emit('driveFilesUpdated', selectedFiles.value.map(x => ({
-		...x,
-		folderId: folders[0] ? folders[0].id : null,
-		folder: folders[0] ?? null,
-	})));
+	globalEvents.emit(
+		'driveFilesUpdated',
+		selectedFiles.value.map((x) => ({
+			...x,
+			folderId: folders[0] ? folders[0].id : null,
+			folder: folders[0] ?? null,
+		})),
+	);
 }
 
 function goRoot() {
 	// 既にrootにいるなら何もしない
-	if (folder.value == null) return;
+	if (folder.value == null) {
+		return;
+	}
 
 	folder.value = null;
 	hierarchyFolders.value = [];
@@ -632,62 +714,89 @@ function goRoot() {
 function getMenu() {
 	const menu: MenuItem[] = [];
 
-	menu.push({
-		text: i18n.ts.addFile,
-		type: 'label',
-	}, {
-		text: i18n.ts.upload,
-		icon: 'ti ti-upload',
-		action: () => {
-			chooseFileFromPcAndUpload({
-				multiple: true,
-				...(folder.value == null ? {} : { folderId: folder.value.id }),
-			});
+	menu.push(
+		{
+			text: i18n.ts.addFile,
+			type: 'label',
 		},
-	}, {
-		text: i18n.ts.fromUrl,
-		icon: 'ti ti-link',
-		action: () => { urlUpload(); },
-	}, { type: 'divider' }, {
-		text: folder.value ? folder.value.name : i18n.ts.drive,
-		type: 'label',
-	});
+		{
+			text: i18n.ts.upload,
+			icon: 'ti ti-upload',
+			action: () => {
+				chooseFileFromPcAndUpload({
+					multiple: true,
+					...(folder.value == null ? {} : { folderId: folder.value.id }),
+				});
+			},
+		},
+		{
+			text: i18n.ts.fromUrl,
+			icon: 'ti ti-link',
+			action: () => {
+				urlUpload();
+			},
+		},
+		{ type: 'divider' },
+		{
+			text: folder.value ? folder.value.name : i18n.ts.drive,
+			type: 'label',
+		},
+	);
 
 	menu.push({
 		type: 'parent',
 		text: i18n.ts.sort,
 		icon: 'ti ti-arrows-sort',
-		children: [{
-			text: `${i18n.ts.registeredDate} (${i18n.ts.descendingOrder})`,
-			icon: 'ti ti-sort-descending-letters',
-			action: () => { sortModeSelect.value = '+createdAt'; },
-			active: sortModeSelect.value === '+createdAt',
-		}, {
-			text: `${i18n.ts.registeredDate} (${i18n.ts.ascendingOrder})`,
-			icon: 'ti ti-sort-ascending-letters',
-			action: () => { sortModeSelect.value = '-createdAt'; },
-			active: sortModeSelect.value === '-createdAt',
-		}, {
-			text: `${i18n.ts.size} (${i18n.ts.descendingOrder})`,
-			icon: 'ti ti-sort-descending-letters',
-			action: () => { sortModeSelect.value = '+size'; },
-			active: sortModeSelect.value === '+size',
-		}, {
-			text: `${i18n.ts.size} (${i18n.ts.ascendingOrder})`,
-			icon: 'ti ti-sort-ascending-letters',
-			action: () => { sortModeSelect.value = '-size'; },
-			active: sortModeSelect.value === '-size',
-		}, {
-			text: `${i18n.ts.name} (${i18n.ts.descendingOrder})`,
-			icon: 'ti ti-sort-descending-letters',
-			action: () => { sortModeSelect.value = '+name'; },
-			active: sortModeSelect.value === '+name',
-		}, {
-			text: `${i18n.ts.name} (${i18n.ts.ascendingOrder})`,
-			icon: 'ti ti-sort-ascending-letters',
-			action: () => { sortModeSelect.value = '-name'; },
-			active: sortModeSelect.value === '-name',
-		}],
+		children: [
+			{
+				text: `${i18n.ts.registeredDate} (${i18n.ts.descendingOrder})`,
+				icon: 'ti ti-sort-descending-letters',
+				action: () => {
+					sortModeSelect.value = '+createdAt';
+				},
+				active: sortModeSelect.value === '+createdAt',
+			},
+			{
+				text: `${i18n.ts.registeredDate} (${i18n.ts.ascendingOrder})`,
+				icon: 'ti ti-sort-ascending-letters',
+				action: () => {
+					sortModeSelect.value = '-createdAt';
+				},
+				active: sortModeSelect.value === '-createdAt',
+			},
+			{
+				text: `${i18n.ts.size} (${i18n.ts.descendingOrder})`,
+				icon: 'ti ti-sort-descending-letters',
+				action: () => {
+					sortModeSelect.value = '+size';
+				},
+				active: sortModeSelect.value === '+size',
+			},
+			{
+				text: `${i18n.ts.size} (${i18n.ts.ascendingOrder})`,
+				icon: 'ti ti-sort-ascending-letters',
+				action: () => {
+					sortModeSelect.value = '-size';
+				},
+				active: sortModeSelect.value === '-size',
+			},
+			{
+				text: `${i18n.ts.name} (${i18n.ts.descendingOrder})`,
+				icon: 'ti ti-sort-descending-letters',
+				action: () => {
+					sortModeSelect.value = '+name';
+				},
+				active: sortModeSelect.value === '+name',
+			},
+			{
+				text: `${i18n.ts.name} (${i18n.ts.ascendingOrder})`,
+				icon: 'ti ti-sort-ascending-letters',
+				action: () => {
+					sortModeSelect.value = '-name';
+				},
+				active: sortModeSelect.value === '-name',
+			},
+		],
 	});
 
 	if (canFilterByType.value) {
@@ -705,34 +814,51 @@ function getMenu() {
 			).map(([value, text, icon]) => ({
 				text,
 				icon,
-				action: () => { typeFilter.value = value; },
+				action: () => {
+					typeFilter.value = value;
+				},
 				active: typeFilter.value === value,
 			})),
 		});
 	}
 
 	if (folder.value) {
-		menu.push({
-			text: i18n.ts.renameFolder,
-			icon: 'ti ti-forms',
-			action: () => { if (folder.value) renameFolder(folder.value); },
-		}, {
-			text: i18n.ts.deleteFolder,
-			icon: 'ti ti-trash',
-			action: () => { deleteFolder(folder.value as Misskey.entities.DriveFolder); },
-		});
+		menu.push(
+			{
+				text: i18n.ts.renameFolder,
+				icon: 'ti ti-forms',
+				action: () => {
+					if (folder.value) {
+						renameFolder(folder.value);
+					}
+				},
+			},
+			{
+				text: i18n.ts.deleteFolder,
+				icon: 'ti ti-trash',
+				action: () => {
+					deleteFolder(folder.value as Misskey.entities.DriveFolder);
+				},
+			},
+		);
 	}
 
-	menu.push({
-		text: i18n.ts.createFolder,
-		icon: 'ti ti-folder-plus',
-		action: () => { createFolder(); },
-	}, { type: 'divider' }, {
-		type: 'switch',
-		text: i18n.ts.edit,
-		icon: 'ti ti-pointer',
-		ref: isEditMode,
-	});
+	menu.push(
+		{
+			text: i18n.ts.createFolder,
+			icon: 'ti ti-folder-plus',
+			action: () => {
+				createFolder();
+			},
+		},
+		{ type: 'divider' },
+		{
+			type: 'switch',
+			text: i18n.ts.edit,
+			icon: 'ti ti-pointer',
+			ref: isEditMode,
+		},
+	);
 
 	return menu;
 }
@@ -753,7 +879,7 @@ useGlobalEvent('driveFileCreated', (file) => {
 
 useGlobalEvent('driveFilesUpdated', (files) => {
 	for (const f of files) {
-		if (filesPaginator.items.value.some(x => x.id === f.id)) {
+		if (filesPaginator.items.value.some((x) => x.id === f.id)) {
 			if (f.folderId === (folder.value?.id ?? null)) {
 				filesPaginator.updateItem(f.id, () => f);
 			} else {
@@ -775,7 +901,7 @@ useGlobalEvent('driveFilesDeleted', (files) => {
 
 useGlobalEvent('driveFoldersUpdated', (folders) => {
 	for (const f of folders) {
-		if (foldersPaginator.items.value.some(x => x.id === f.id)) {
+		if (foldersPaginator.items.value.some((x) => x.id === f.id)) {
 			if (f.parentId === (folder.value?.id ?? null)) {
 				foldersPaginator.updateItem(f.id, () => f);
 			} else {
@@ -810,8 +936,7 @@ onMounted(() => {
 	}
 });
 
-onActivated(() => {
-});
+onActivated(() => {});
 
 onBeforeUnmount(() => {
 	if (connection != null) {

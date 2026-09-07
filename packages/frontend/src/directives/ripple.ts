@@ -13,8 +13,12 @@ const clickHandlers = new WeakMap<HTMLElement, () => void>();
 export const rippleDirective = {
 	mounted(el, binding) {
 		// 明示的に false であればバインドしない
-		if (binding.value === false) return;
-		if (!prefer.animation) return;
+		if (binding.value === false) {
+			return;
+		}
+		if (!prefer.animation) {
+			return;
+		}
 
 		const onClick = () => {
 			const rect = el.getBoundingClientRect();
@@ -36,7 +40,9 @@ export const rippleDirective = {
 
 	unmounted(el) {
 		const onClick = clickHandlers.get(el);
-		if (onClick == null) return;
+		if (onClick == null) {
+			return;
+		}
 		el.removeEventListener('click', onClick);
 		clickHandlers.delete(el);
 	},

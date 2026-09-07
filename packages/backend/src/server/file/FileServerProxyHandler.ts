@@ -15,7 +15,8 @@ import { isMimeImage } from '@/misc/is-mime-image.js';
 import { IImageStreamable, ImageProcessingService, webpDefault } from '@/core/drive/ImageProcessingService.js';
 import { createRangeStream, attachStreamCleanup, needsCleanup } from './FileServerUtils.js';
 import type { DownloadedFileResult, FileResolveResult, FileServerFileResolver } from './FileServerFileResolver.js';
-import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
+import { getFileServerHeader } from './FileServerTypes.js';
+import type { FileServerReply, FileServerRequest } from './FileServerTypes.js';
 
 type ProxySource = DownloadedFileResult | FileResolveResult;
 type CleanupableFile = ProxySource & { cleanup: () => void };
@@ -80,7 +81,9 @@ export class FileServerProxyHandler {
 			reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
 			return image.data;
 		} catch (e) {
-			if (needsCleanup(file)) file.cleanup();
+			if (needsCleanup(file)) {
+				file.cleanup();
+			}
 			throw e;
 		}
 	}
@@ -242,7 +245,9 @@ export class FileServerProxyHandler {
 	private async getStreamAndTypeFromUrl(url: string): Promise<ProxySource> {
 		if (url.startsWith(`${this.config.instance.url}/files/`)) {
 			const key = url.replace(`${this.config.instance.url}/files/`, '').split('/').shift();
-			if (!key) throw new StatusError('Invalid File Key', 400, 'Invalid File Key');
+			if (!key) {
+				throw new StatusError('Invalid File Key', 400, 'Invalid File Key');
+			}
 
 			return await this.fileResolver.resolveFileByAccessKey(key);
 		}

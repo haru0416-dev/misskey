@@ -21,9 +21,8 @@ function formatLocaleString(date: Date, format: string): string {
 			return date.toLocaleString(window.navigator.language, {
 				[kind]: option ? option : defaultLocaleStringFormats[kind],
 			});
-		} else {
-			return match;
 		}
+		return match;
 	});
 }
 
@@ -52,8 +51,12 @@ export function formatTimeString(date: Date, format: string): string {
 	return format.replace(
 		/\[(([^\[]|\[\])*)\]|(([yMdHhmst])\4{0,3})/g,
 		(match: string, localeformat?: string, unused?, datetimeformat?: string) => {
-			if (localeformat) return formatLocaleString(date, localeformat);
-			if (datetimeformat) return formatDateTimeString(date, datetimeformat);
+			if (localeformat) {
+				return formatLocaleString(date, localeformat);
+			}
+			if (datetimeformat) {
+				return formatDateTimeString(date, datetimeformat);
+			}
 			return match;
 		},
 	);

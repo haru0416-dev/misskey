@@ -108,7 +108,9 @@ export function calcPopupPosition(
 
 			if (props.align === 'top') {
 				top = rect.top + window.scrollY;
-				if (props.alignOffset != null) top += props.alignOffset;
+				if (props.alignOffset != null) {
+					top += props.alignOffset;
+				}
 			} else if (props.align === 'bottom') {
 			} else {
 				top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;

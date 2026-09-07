@@ -60,14 +60,17 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const props = withDefaults(defineProps<{
-	initialRoleIds?: string[],
-	infoMessage?: string,
-	title?: string,
-	publicOnly: boolean,
-}>(), {
-	publicOnly: true,
-});
+const props = withDefaults(
+	defineProps<{
+		initialRoleIds?: string[];
+		infoMessage?: string;
+		title?: string;
+		publicOnly: boolean;
+	}>(),
+	{
+		publicOnly: true,
+	},
+);
 
 const { initialRoleIds, infoMessage, title, publicOnly } = toRefs(props);
 
@@ -77,7 +80,7 @@ const selectedRoleIds = ref<string[]>(initialRoleIds.value ?? []);
 const fetching = ref(false);
 
 const selectedRoles = computed(() => {
-	const r = roles.value.filter(role => selectedRoleIds.value.includes(role.id));
+	const r = roles.value.filter((role) => selectedRoleIds.value.includes(role.id));
 	r.sort((a, b) => {
 		if (a.displayOrder !== b.displayOrder) {
 			return b.displayOrder - a.displayOrder;
@@ -91,24 +94,26 @@ const selectedRoles = computed(() => {
 async function fetchRoles() {
 	fetching.value = true;
 	const result = await misskeyApi('admin/roles/list', {});
-	roles.value = result.filter(it => publicOnly.value ? it.isPublic : true);
+	roles.value = result.filter((it) => (publicOnly.value ? it.isPublic : true));
 	fetching.value = false;
 }
 
 async function addRole() {
 	const items = roles.value
-		.filter(r => r.isPublic)
-		.filter(r => !selectedRoleIds.value.includes(r.id))
-		.map(r => ({ label: r.name, value: r.id }));
+		.filter((r) => r.isPublic)
+		.filter((r) => !selectedRoleIds.value.includes(r.id))
+		.map((r) => ({ label: r.name, value: r.id }));
 
 	const { canceled, result: roleId } = await os.select({ items });
-	if (canceled || roleId == null) return;
+	if (canceled || roleId == null) {
+		return;
+	}
 
 	selectedRoleIds.value.push(roleId);
 }
 
 async function removeRole(roleId: string) {
-	selectedRoleIds.value = selectedRoleIds.value.filter(x => x !== roleId);
+	selectedRoleIds.value = selectedRoleIds.value.filter((x) => x !== roleId);
 }
 
 function onOkClicked() {

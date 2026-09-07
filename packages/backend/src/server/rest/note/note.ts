@@ -52,10 +52,13 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiPollVote } from '@/models/PollVote.js';
 import type { MiUser } from '@/models/User.js';
-import { packDriveFileManyByIdsForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { packDriveFileManyByIdsForApi } from '../drive/drive-file.js';
+import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
 import { ApiError } from '../error.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
 
@@ -81,7 +84,9 @@ function decodeReaction(str: string): { reaction: string; name?: string; host?: 
 
 	if (custom) {
 		const name = custom[1];
-		if (name == null) return { reaction: str };
+		if (name == null) {
+			return { reaction: str };
+		}
 		const host = custom[2] ?? null;
 
 		return {
@@ -126,7 +131,9 @@ async function getBufferedReactions(
 	deps: ApiNoteDependencies,
 	noteId: MiNote['id'],
 ): Promise<{ deltas: Record<string, number>; pairs: [MiUser['id'], string][] }> {
-	if (!deps.meta.enableReactionsBuffering) return { deltas: {}, pairs: [] };
+	if (!deps.meta.enableReactionsBuffering) {
+		return { deltas: {}, pairs: [] };
+	}
 
 	const pipeline = deps.redis.pipeline();
 	pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
@@ -153,7 +160,9 @@ async function getBufferedReactionsMany(
 	const result = new Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>(
 		noteIds.map((id) => [id, { deltas: {}, pairs: [] }]),
 	);
-	if (!deps.meta.enableReactionsBuffering || noteIds.length === 0) return result;
+	if (!deps.meta.enableReactionsBuffering || noteIds.length === 0) {
+		return result;
+	}
 
 	const pipeline = deps.redis.pipeline();
 	for (const noteId of noteIds) {
@@ -181,7 +190,9 @@ async function getBufferedReactionsMany(
 }
 
 function isSelfHost(config: Config, host: string | null): boolean {
-	if (host == null) return true;
+	if (host == null) {
+		return true;
+	}
 	return toPuny(config.runtime.host) === toPuny(host);
 }
 
@@ -199,7 +210,9 @@ function parseEmojiStr(
 	noteUserHost: string | null,
 ): { name: string | null; host: string | null } {
 	const match = emojiName.match(parseEmojiStrRegexp);
-	if (!match) return { name: null, host: null };
+	if (!match) {
+		return { name: null, host: null };
+	}
 
 	const name = match[1]!;
 	const host = normalizeEmojiHost(config, match[2], noteUserHost);
@@ -224,7 +237,9 @@ export async function populateEmojisMany(
 		const request = requests[requestIndex]!;
 		for (const emojiName of new Set(request.emojiNames)) {
 			const { name, host } = parseEmojiStr(deps.config, emojiName, request.noteUserHost);
-			if (name == null || host == null) continue;
+			if (name == null || host == null) {
+				continue;
+			}
 			refs.push({ requestIndex, emojiName, name, host });
 		}
 	}
@@ -236,7 +251,9 @@ export async function populateEmojisMany(
 	const results = requests.map(() => ({}) as Record<string, string>);
 	for (let i = 0; i < refs.length; i++) {
 		const emoji = emojis[i];
-		if (emoji == null) continue;
+		if (emoji == null) {
+			continue;
+		}
 		results[refs[i]!.requestIndex]![refs[i]!.emojiName] = emoji.publicUrl || emoji.originalUrl;
 	}
 
@@ -247,7 +264,9 @@ async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
 	try {
 		return await promise;
 	} catch (err) {
-		if (isEntityNotFoundError(err)) return null;
+		if (isEntityNotFoundError(err)) {
+			return null;
+		}
 		throw err;
 	}
 }
@@ -303,18 +322,26 @@ export async function populateMyReactionForApi(
 	meId: MiUser['id'],
 ): Promise<string | undefined> {
 	const reactionsCount = Object.values(note.reactions).reduce((a, b) => a + b, 0);
-	if (reactionsCount === 0) return undefined;
-
-	if (note.reactionAndUserPairCache && reactionsCount <= note.reactionAndUserPairCache.length) {
-		const pair = note.reactionAndUserPairCache.find((p) => p.startsWith(meId));
-		if (pair) return normalizeReactionKey(pair.split('/')[1]!);
+	if (reactionsCount === 0) {
 		return undefined;
 	}
 
-	if (parseId(note.id).date.getTime() + 2000 > Date.now()) return undefined;
+	if (note.reactionAndUserPairCache && reactionsCount <= note.reactionAndUserPairCache.length) {
+		const pair = note.reactionAndUserPairCache.find((p) => p.startsWith(meId));
+		if (pair) {
+			return normalizeReactionKey(pair.split('/')[1]!);
+		}
+		return undefined;
+	}
+
+	if (parseId(note.id).date.getTime() + 2000 > Date.now()) {
+		return undefined;
+	}
 
 	const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, meId, note.id);
-	if (reaction) return normalizeReactionKey(reaction.reaction);
+	if (reaction) {
+		return normalizeReactionKey(reaction.reaction);
+	}
 
 	return undefined;
 }
@@ -337,30 +364,48 @@ async function shouldHideNoteForApi(
 	followeeIds?: Set<MiUser['id']>,
 	followeeIdCoverage?: Set<MiUser['id']>,
 ): Promise<boolean> {
-	if (meId === packedNote.userId) return false;
+	if (meId === packedNote.userId) {
+		return false;
+	}
 
 	const user = packedNote.user as { requireSigninToViewContents?: boolean; makeNotesHiddenBefore?: number | null };
-	if (user.requireSigninToViewContents && meId == null) return true;
+	if (user.requireSigninToViewContents && meId == null) {
+		return true;
+	}
 
-	if (shouldHideNoteByTime(user.makeNotesHiddenBefore, packedNote.createdAt)) return true;
+	if (shouldHideNoteByTime(user.makeNotesHiddenBefore, packedNote.createdAt)) {
+		return true;
+	}
 
 	if (packedNote.visibility === 'specified') {
-		if (meId == null) return true;
+		if (meId == null) {
+			return true;
+		}
 		const specified = packedNote.visibleUserIds?.includes(meId);
-		if (!specified) return true;
+		if (!specified) {
+			return true;
+		}
 	}
 
 	if (packedNote.visibility === 'followers') {
-		if (meId == null) return true;
-		if (packedNote.reply && meId === packedNote.reply.userId) return false;
-		if (packedNote.mentions?.includes(meId)) return false;
+		if (meId == null) {
+			return true;
+		}
+		if (packedNote.reply && meId === packedNote.reply.userId) {
+			return false;
+		}
+		if (packedNote.mentions?.includes(meId)) {
+			return false;
+		}
 
 		// followeeIds が全フォロー先、または coverage に含まれる対象者の照会結果なら再利用する。
 		const canUseHint = followeeIds != null && (followeeIdCoverage == null || followeeIdCoverage.has(packedNote.userId));
 		const isFollowing = canUseHint
 			? followeeIds.has(packedNote.userId)
 			: await followingExistsInDatabase(deps.db, meId, packedNote.userId);
-		if (!isFollowing) return true;
+		if (!isFollowing) {
+			return true;
+		}
 	}
 
 	return false;
@@ -424,16 +469,28 @@ export async function isVisibleForMeForApi(
 	},
 ): Promise<boolean> {
 	if (note.visibility === 'specified') {
-		if (meId == null) return false;
-		if (meId === note.userId) return true;
+		if (meId == null) {
+			return false;
+		}
+		if (meId === note.userId) {
+			return true;
+		}
 		return note.visibleUserIds.includes(meId);
 	}
 
 	if (note.visibility === 'followers') {
-		if (meId == null) return false;
-		if (meId === note.userId) return true;
-		if (note.reply && meId === note.reply.userId) return true;
-		if (note.mentions?.includes(meId)) return true;
+		if (meId == null) {
+			return false;
+		}
+		if (meId === note.userId) {
+			return true;
+		}
+		if (note.reply && meId === note.reply.userId) {
+			return true;
+		}
+		if (note.mentions?.includes(meId)) {
+			return true;
+		}
 
 		const [isFollowing, meHost] = await Promise.all([
 			hint?.followeeIdCoverage.has(note.userId)
@@ -698,11 +755,17 @@ function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTarge
 	const detailTargetIds = new Set<MiNote['id']>();
 	const addTarget = (note: MiNote, packDetail: boolean): void => {
 		targetById.set(note.id, note);
-		if (!packDetail || detailTargetIds.has(note.id)) return;
+		if (!packDetail || detailTargetIds.has(note.id)) {
+			return;
+		}
 
 		detailTargetIds.add(note.id);
-		if (note.reply) addTarget(note.reply, false);
-		if (note.renote) addTarget(note.renote, true);
+		if (note.reply) {
+			addTarget(note.reply, false);
+		}
+		if (note.renote) {
+			addTarget(note.renote, true);
+		}
 	};
 	for (const note of notes) {
 		addTarget(note, detail);
@@ -742,8 +805,12 @@ async function buildPackNoteStaticHint(
 		if (existing == null || typeof existing === 'string') {
 			userSrcById.set(target.userId, target.user ?? target.userId);
 		}
-		for (const fileId of target.fileIds) fileIds.add(fileId);
-		if (target.channelId) channelIds.add(target.channelId);
+		for (const fileId of target.fileIds) {
+			fileIds.add(fileId);
+		}
+		if (target.channelId) {
+			channelIds.add(target.channelId);
+		}
 		const buffered = bufferedReactions.get(target.id)!;
 		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 		emojiRequests.push({ emojiNames: collectReactionEmojiNames(reactions), noteUserHost: target.userHost });
@@ -801,7 +868,9 @@ export async function createPackNoteHintsForUsersForApi(
 	},
 ): Promise<Map<MiUser['id'], PackNoteBatchHint>> {
 	const uniqueUserIds = [...new Set(userIds)];
-	if (uniqueUserIds.length === 0 || notes.length === 0) return new Map();
+	if (uniqueUserIds.length === 0 || notes.length === 0) {
+		return new Map();
+	}
 
 	const detail = options?.detail ?? true;
 	const targetInfo = collectPackNoteTargets(notes, detail);
@@ -809,7 +878,9 @@ export async function createPackNoteHintsForUsersForApi(
 	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForApi(deps, notes, { detail }));
 	const reactionLookupNoteIds: MiNote['id'][] = [];
 	for (const target of targets) {
-		if (!detailTargetIds.has(target.id)) continue;
+		if (!detailTargetIds.has(target.id)) {
+			continue;
+		}
 		const buffered = staticHint.bufferedReactions.get(target.id)!;
 		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 		const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
@@ -858,7 +929,9 @@ export async function createPackNoteHintsForUsersForApi(
 		uniqueUserIds.map((userId) => {
 			const myReactions = new Map<MiNote['id'], string | undefined>();
 			for (const target of targets) {
-				if (!detailTargetIds.has(target.id)) continue;
+				if (!detailTargetIds.has(target.id)) {
+					continue;
+				}
 				const buffered = staticHint.bufferedReactions.get(target.id)!;
 				const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 				const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
@@ -907,22 +980,32 @@ export async function packNoteManyForApi(
 		followeeIds?: Set<MiUser['id']>;
 	},
 ): Promise<Packed<'Note'>[]> {
-	if (notes.length === 0) return [];
+	if (notes.length === 0) {
+		return [];
+	}
 
 	const detail = options?.detail ?? true;
 	const meId = me ? me.id : null;
 	if (detail) {
 		const relationIds = new Set<MiNote['id']>();
 		for (const note of notes) {
-			if (note.replyId != null && note.reply == null) relationIds.add(note.replyId);
-			if (note.renoteId != null && note.renote == null) relationIds.add(note.renoteId);
+			if (note.replyId != null && note.reply == null) {
+				relationIds.add(note.replyId);
+			}
+			if (note.renoteId != null && note.renote == null) {
+				relationIds.add(note.renoteId);
+			}
 		}
 		if (relationIds.size > 0) {
 			const relations = await listNotesByIdsFromDatabase(deps.db, [...relationIds]);
 			const relationById = new Map(relations.map((note) => [note.id, note]));
 			for (const note of notes) {
-				if (note.replyId != null && note.reply == null) note.reply = relationById.get(note.replyId) ?? null;
-				if (note.renoteId != null && note.renote == null) note.renote = relationById.get(note.renoteId) ?? null;
+				if (note.replyId != null && note.reply == null) {
+					note.reply = relationById.get(note.replyId) ?? null;
+				}
+				if (note.renoteId != null && note.renote == null) {
+					note.renote = relationById.get(note.renoteId) ?? null;
+				}
 			}
 		}
 	}
@@ -950,7 +1033,9 @@ export async function packNoteManyForApi(
 	if (meId != null && detail) {
 		const idsNeedingDbLookup: MiNote['id'][] = [];
 		for (const target of targets) {
-			if (!detailTargetIds.has(target.id)) continue;
+			if (!detailTargetIds.has(target.id)) {
+				continue;
+			}
 			const buffered = staticHint.bufferedReactions.get(target.id)!;
 			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
@@ -1107,8 +1192,12 @@ export async function handleApiUsersFeaturedNotes(
 	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
 
 	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter((note) => {
-		if (me && isUserRelated(note, userIdsWhoBlockingMe, false)) return false;
-		if (me && isUserRelated(note, userIdsWhoMeMuting, true)) return false;
+		if (me && isUserRelated(note, userIdsWhoBlockingMe, false)) {
+			return false;
+		}
+		if (me && isUserRelated(note, userIdsWhoMeMuting, true)) {
+			return false;
+		}
 
 		return true;
 	});
@@ -1181,7 +1270,9 @@ export async function translateTextForApi(
 	targetLang: string,
 ): Promise<{ sourceLang: string; text: string }> {
 	if (deps.meta.translatorProvider === 'libreTranslate') {
-		if (deps.meta.libreTranslateApiUrl == null) throw notesTranslateUnavailableError();
+		if (deps.meta.libreTranslateApiUrl == null) {
+			throw notesTranslateUnavailableError();
+		}
 
 		const endpoint = new URL(deps.meta.libreTranslateApiUrl);
 		endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/translate`;
@@ -1197,7 +1288,9 @@ export async function translateTextForApi(
 			target: targetLang.toLowerCase(),
 			format: 'text',
 		};
-		if (deps.meta.libreTranslateApiKey != null) body.api_key = deps.meta.libreTranslateApiKey;
+		if (deps.meta.libreTranslateApiKey != null) {
+			body.api_key = deps.meta.libreTranslateApiKey;
+		}
 
 		const res = await deps.httpRequestService.send(endpoint.href, {
 			method: 'POST',
@@ -1218,7 +1311,9 @@ export async function translateTextForApi(
 		};
 	}
 
-	if (deps.meta.deeplAuthKey == null) throw notesTranslateUnavailableError();
+	if (deps.meta.deeplAuthKey == null) {
+		throw notesTranslateUnavailableError();
+	}
 
 	const searchParams = new URLSearchParams();
 	searchParams.append('text', text);
@@ -1237,7 +1332,9 @@ export async function translateTextForApi(
 	});
 	const json = deeplTranslationResponse.parse(await res.json());
 	const translation = json.translations[0];
-	if (translation == null) throw notesTranslateUnavailableError();
+	if (translation == null) {
+		throw notesTranslateUnavailableError();
+	}
 
 	return {
 		sourceLang: translation.detected_source_language,
@@ -1258,7 +1355,9 @@ export async function handleApiNotesTranslate(
 	}
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesTranslateNoSuchNoteError();
+	if (note == null) {
+		throw notesTranslateNoSuchNoteError();
+	}
 
 	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
 		throw notesTranslateCannotTranslateInvisibleNoteError();
@@ -1269,7 +1368,9 @@ export async function handleApiNotesTranslate(
 	}
 
 	let targetLang = params.targetLang;
-	if (targetLang.includes('-')) targetLang = targetLang.split('-')[0]!;
+	if (targetLang.includes('-')) {
+		targetLang = targetLang.split('-')[0]!;
+	}
 
 	return await translateTextForApi(deps, note.text, targetLang);
 }
@@ -1301,7 +1402,9 @@ export async function handleApiUsersNotes(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(usersNotesParamDef, body);
 
-	if (params.withReplies && params.withFiles) throw usersNotesBothWithRepliesAndWithFilesError();
+	if (params.withReplies && params.withFiles) {
+		throw usersNotesBothWithRepliesAndWithFilesError();
+	}
 
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
@@ -1312,7 +1415,9 @@ export async function handleApiUsersNotes(
 			? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
 			: undefined;
 
-	if (viewerRelation != null && viewerRelation.blockerIds.includes(params.userId)) return [];
+	if (viewerRelation != null && viewerRelation.blockerIds.includes(params.userId)) {
+		return [];
+	}
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) =>
 		listUserTimelineNotesFromDatabase(deps.db, {
@@ -1334,8 +1439,12 @@ export async function handleApiUsersNotes(
 		const redisTimelines = [
 			params.withFiles ? `userTimelineWithFiles:${params.userId}` : `userTimeline:${params.userId}`,
 		];
-		if (params.withReplies) redisTimelines.push(`userTimelineWithReplies:${params.userId}`);
-		if (params.withChannelNotes) redisTimelines.push(`userTimelineWithChannel:${params.userId}`);
+		if (params.withReplies) {
+			redisTimelines.push(`userTimelineWithReplies:${params.userId}`);
+		}
+		if (params.withChannelNotes) {
+			redisTimelines.push(`userTimelineWithChannel:${params.userId}`);
+		}
 
 		const isFollowing = me != null && (await followingExistsInDatabase(deps.db, me.id, params.userId));
 
@@ -1360,13 +1469,18 @@ export async function handleApiUsersNotes(
 				hydrateChannels: !isSelf,
 				noteFilter: (note) => {
 					// リノート経由の本文にも同じセンシティブ判定を適用する。
-					if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
+					if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) {
+						return false;
+					}
 					if (
 						note.visibility === 'specified' &&
 						(!me || (me.id !== note.userId && !note.visibleUserIds.includes(me.id)))
-					)
+					) {
 						return false;
-					if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
+					}
+					if (note.visibility === 'followers' && !isFollowing && !isSelf) {
+						return false;
+					}
 
 					return true;
 				},

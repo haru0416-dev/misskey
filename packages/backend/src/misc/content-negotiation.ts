@@ -27,20 +27,30 @@ function parseAcceptHeader(header: string): AcceptRange[] {
 		headerIndex++;
 		const segments = splitQuoted(part, ';');
 		const mediaType = segments[0]?.trim().toLowerCase();
-		if (!mediaType) continue;
+		if (!mediaType) {
+			continue;
+		}
 
 		const slash = mediaType.indexOf('/');
-		if (slash === -1) continue;
+		if (slash === -1) {
+			continue;
+		}
 		const type = mediaType.slice(0, slash);
 		const subtype = mediaType.slice(slash + 1);
 
 		let q = 1;
 		for (const param of segments.slice(1)) {
 			const eq = param.indexOf('=');
-			if (eq === -1) continue;
-			if (param.slice(0, eq).trim().toLowerCase() !== 'q') continue;
+			if (eq === -1) {
+				continue;
+			}
+			if (param.slice(0, eq).trim().toLowerCase() !== 'q') {
+				continue;
+			}
 			const parsed = Number(param.slice(eq + 1).trim());
-			if (Number.isFinite(parsed)) q = Math.min(Math.max(parsed, 0), 1);
+			if (Number.isFinite(parsed)) {
+				q = Math.min(Math.max(parsed, 0), 1);
+			}
 			break; // q 以降は accept-ext (media type のパラメータではない)
 		}
 
@@ -65,7 +75,9 @@ function splitQuoted(input: string, separator: ',' | ';'): string[] {
 				current += ch + input[++i];
 				continue;
 			}
-			if (ch === '"') inQuote = false;
+			if (ch === '"') {
+				inQuote = false;
+			}
 		} else if (ch === '"') {
 			inQuote = true;
 		} else if (ch === separator) {
@@ -75,7 +87,9 @@ function splitQuoted(input: string, separator: ',' | ';'): string[] {
 		}
 		current += ch;
 	}
-	if (current.trim() !== '') parts.push(current);
+	if (current.trim() !== '') {
+		parts.push(current);
+	}
 
 	return parts;
 }
@@ -83,9 +97,13 @@ function splitQuoted(input: string, separator: ',' | ';'): string[] {
 /** candidate ('application/activity+json; charset=utf-8' 等、パラメータ付き可) に最も specific にマッチする range を返す (RFC 7231 §5.3.2)。 */
 function matchRange(ranges: AcceptRange[], candidate: string): AcceptRange | null {
 	const mediaType = candidate.split(';', 1)[0]?.trim().toLowerCase();
-	if (mediaType == null) return null;
+	if (mediaType == null) {
+		return null;
+	}
 	const slash = mediaType.indexOf('/');
-	if (slash === -1) return null;
+	if (slash === -1) {
+		return null;
+	}
 	const type = mediaType.slice(0, slash);
 	const subtype = mediaType.slice(slash + 1);
 
@@ -95,8 +113,12 @@ function matchRange(ranges: AcceptRange[], candidate: string): AcceptRange | nul
 			(range.type === '*' && range.subtype === '*') ||
 			(range.type === type && range.subtype === '*') ||
 			(range.type === type && range.subtype === subtype);
-		if (!matches) continue;
-		if (best == null || range.specificity > best.specificity) best = range;
+		if (!matches) {
+			continue;
+		}
+		if (best == null || range.specificity > best.specificity) {
+			best = range;
+		}
 	}
 
 	return best;
@@ -111,7 +133,9 @@ export function preferredMediaType<T extends string>(
 	}
 
 	const ranges = parseAcceptHeader(acceptHeader);
-	if (ranges.length === 0) return candidates[0] ?? null;
+	if (ranges.length === 0) {
+		return candidates[0] ?? null;
+	}
 
 	// q 値と specificity を優先し、同点ならヘッダ内の出現順と candidates の順で比較する:
 	// q 値 → マッチした range の specificity (exact > type/* > */*) → Accept ヘッダ内の出現順 →
@@ -121,7 +145,9 @@ export function preferredMediaType<T extends string>(
 	let bestRange: AcceptRange | null = null;
 	for (const candidate of candidates) {
 		const range = matchRange(ranges, candidate);
-		if (range == null || range.q === 0) continue;
+		if (range == null || range.q === 0) {
+			continue;
+		}
 		if (
 			bestRange == null ||
 			range.q > bestRange.q ||

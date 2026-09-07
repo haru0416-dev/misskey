@@ -87,7 +87,7 @@ import { ClockScheduler } from '@/utility/clock-scheduler.js';
 // https://stackoverflow.com/questions/1878907/how-can-i-find-the-difference-between-two-angles
 const angleDiff = (a: number, b: number) => {
 	const x = Math.abs(a - b);
-	return Math.abs((x + Math.PI) % (Math.PI * 2) - Math.PI);
+	return Math.abs(((x + Math.PI) % (Math.PI * 2)) - Math.PI);
 };
 
 const graduationsPadding = 0.5;
@@ -99,30 +99,33 @@ const mHandLengthRatio = 1;
 const sHandLengthRatio = 1;
 const numbersOpacityFactor = 0.35;
 
-const props = withDefaults(defineProps<{
-	thickness?: number;
-	offset?: number;
-	twentyfour?: boolean;
-	graduations?: 'none' | 'dots' | 'numbers';
-	fadeGraduations?: boolean;
-	sAnimation?: 'none' | 'elastic' | 'easeOut';
-	now?: () => Date;
-}>(), {
-	numbers: false,
-	thickness: 0.1,
-	offset: 0 - new Date().getTimezoneOffset(),
-	twentyfour: false,
-	graduations: 'dots',
-	fadeGraduations: true,
-	sAnimation: 'elastic',
-	now: () => new Date(),
-});
+const props = withDefaults(
+	defineProps<{
+		thickness?: number;
+		offset?: number;
+		twentyfour?: boolean;
+		graduations?: 'none' | 'dots' | 'numbers';
+		fadeGraduations?: boolean;
+		sAnimation?: 'none' | 'elastic' | 'easeOut';
+		now?: () => Date;
+	}>(),
+	{
+		numbers: false,
+		thickness: 0.1,
+		offset: 0 - new Date().getTimezoneOffset(),
+		twentyfour: false,
+		graduations: 'dots',
+		fadeGraduations: true,
+		sAnimation: 'elastic',
+		now: () => new Date(),
+	},
+);
 
 const graduationsMajor = computed(() => {
 	const angles: number[] = [];
 	const times = props.twentyfour ? 24 : 12;
 	for (let i = 0; i < times; i++) {
-		const angle = Math.PI * i / (times / 2);
+		const angle = (Math.PI * i) / (times / 2);
 		angles.push(angle);
 	}
 	return angles;
@@ -131,7 +134,7 @@ const texts = computed(() => {
 	const angles: number[] = [];
 	const times = props.twentyfour ? 24 : 12;
 	for (let i = 0; i < times; i++) {
-		const angle = Math.PI * i / (times / 2);
+		const angle = (Math.PI * i) / (times / 2);
 		angles.push(angle);
 	}
 	return angles;
@@ -166,27 +169,34 @@ function tick(): number | null {
 	if (previousS === s.value && previousM === m.value && previousH === h.value) {
 		return nextTickDelay;
 	}
-	hAngle.value = Math.PI * (h.value % (props.twentyfour ? 24 : 12) + (m.value + s.value / 60) / 60) / (props.twentyfour ? 12 : 6);
-	mAngle.value = Math.PI * (m.value + s.value / 60) / 30;
-	if (sOneRound && sLine.value && props.sAnimation !== 'none') { // 59 秒から 0 秒への遷移でも秒針の回転方向を維持する。
-		sAngle.value = Math.PI * 60 / 30;
-		sLine.value.addEventListener('transitionend', () => {
-			disableSAnimate.value = true;
-			requestAnimationFrame(() => {
-				sAngle.value = 0;
+	hAngle.value =
+		(Math.PI * ((h.value % (props.twentyfour ? 24 : 12)) + (m.value + s.value / 60) / 60)) /
+		(props.twentyfour ? 12 : 6);
+	mAngle.value = (Math.PI * (m.value + s.value / 60)) / 30;
+	if (sOneRound && sLine.value && props.sAnimation !== 'none') {
+		// 59 秒から 0 秒への遷移でも秒針の回転方向を維持する。
+		sAngle.value = (Math.PI * 60) / 30;
+		sLine.value.addEventListener(
+			'transitionend',
+			() => {
+				disableSAnimate.value = true;
 				requestAnimationFrame(() => {
-					disableSAnimate.value = false;
-					if (enabled) {
-						clockScheduler.resume();
-					}
+					sAngle.value = 0;
+					requestAnimationFrame(() => {
+						disableSAnimate.value = false;
+						if (enabled) {
+							clockScheduler.resume();
+						}
+					});
 				});
-			});
-		}, { once: true });
+			},
+			{ once: true },
+		);
 		sOneRound = false;
 		return null;
-	} else {
-		sAngle.value = Math.PI * s.value / 30;
 	}
+	sAngle.value = (Math.PI * s.value) / 30;
+
 	sOneRound = s.value === 59;
 	return nextTickDelay;
 }

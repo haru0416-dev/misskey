@@ -18,26 +18,34 @@ export function useInterval(
 		afterMounted: boolean;
 	},
 ): (() => void) | undefined {
-	if (Number.isNaN(interval)) return;
+	if (Number.isNaN(interval)) {
+		return;
+	}
 
 	const scheduler = new PollingScheduler(fn, interval);
 	let enabled = false;
 	let disposed = false;
 
 	const activate = () => {
-		if (disposed || enabled) return;
+		if (disposed || enabled) {
+			return;
+		}
 		enabled = true;
 		scheduler.start(options.immediate);
 	};
 
 	const pause = () => {
-		if (!enabled) return;
+		if (!enabled) {
+			return;
+		}
 		enabled = false;
 		scheduler.stop();
 	};
 
 	const clear = () => {
-		if (disposed) return;
+		if (disposed) {
+			return;
+		}
 		disposed = true;
 		enabled = false;
 		scheduler.dispose();
