@@ -3,128 +3,85 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
-import type { AnalyticsInstance, AnalyticsPlugin } from 'analytics';
+import type * as Misskey from 'misskey-js';
 
-/**
- * analytics moduleを読み込まなくても動作するようにするためのラッパー
- */
-class AnalyticsProxy implements AnalyticsInstance {
-	private analytics?: AnalyticsInstance;
+type GtagCommand =
+	| ['js', Date]
+	| ['config', string, Record<string, unknown>]
+	| ['set', Record<string, unknown>]
+	| ['event', 'page_view', Record<string, unknown>];
+type AnalyticsWindow = Window & {
+	ga4DataLayer?: unknown[];
+	gtag?: (...args: GtagCommand) => void;
+};
 
-	constructor(analytics?: AnalyticsInstance) {
-		if (analytics) {
-			this.analytics = analytics;
-		}
+let gtag: AnalyticsWindow['gtag'];
+let userId: string | undefined;
+const campaign: Record<string, string> = {};
+
+export const analytics = {
+	identify(id: string): void {
+		if (!gtag) return;
+		userId = id;
+		gtag('set', { user_id: id });
+	},
+	page(properties: { path: string; title?: string }): void {
+		if (!gtag) return;
+		const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
+		const pageUrl = canonical
+			? canonical.includes('?')
+				? canonical
+				: canonical + window.location.search
+			: window.location.href.replace(/#.*$/, '');
+		gtag('event', 'page_view', {
+			page_title: properties.title ?? document.title,
+			page_location: pageUrl,
+			page_path: properties.path,
+			page_hash: window.location.hash,
+			page_referrer: document.referrer || undefined,
+			...campaign,
+			...(userId ? { user_id: userId } : {}),
+		});
+	},
+};
+
+export function initAnalytics(instance: Pick<Misskey.entities.MetaDetailed, 'googleAnalyticsMeasurementId'>): void {
+	const measurementId = instance.googleAnalyticsMeasurementId;
+	if (!measurementId) return;
+	if (gtag) throw new Error('Analytics instance already exists.');
+
+	const parameters = new URLSearchParams(window.location.search);
+	for (const [key, field] of Object.entries({
+		id: 'Id',
+		campaign: 'Name',
+		source: 'Source',
+		medium: 'Medium',
+		content: 'Content',
+		keyword: 'Keyword',
+	})) {
+		const value = parameters.get(`utm_${key}`);
+		if (value) campaign[`campaign${field}`] = value;
 	}
 
-	public setAnalytics(analytics: AnalyticsInstance) {
-		if (this.analytics) {
-			throw new Error('Analytics instance already exists.');
-		}
-		this.analytics = analytics;
-	}
+	const target = window as AnalyticsWindow;
+	target.ga4DataLayer ??= [];
+	target.gtag ??= function () {
+		target.ga4DataLayer!.push(arguments);
+	};
+	gtag = target.gtag;
+	gtag('js', new Date());
+	gtag('config', measurementId, {
+		send_page_view: false,
+		anonymize_ip: false,
+		allow_google_signals: true,
+		allow_ad_personalization_signals: true,
+		cookie_flags: '',
+		...(_DEV_ ? { debug_mode: true } : {}),
+	});
 
-	public identify(...args: Parameters<AnalyticsInstance['identify']>) {
-		return this.analytics?.identify(...args) ?? Promise.resolve();
-	}
-
-	public track(...args: Parameters<AnalyticsInstance['track']>) {
-		return this.analytics?.track(...args) ?? Promise.resolve();
-	}
-
-	public page(...args: Parameters<AnalyticsInstance['page']>) {
-		return this.analytics?.page(...args) ?? Promise.resolve();
-	}
-
-	public user(...args: Parameters<AnalyticsInstance['user']>) {
-		return this.analytics?.user(...args) ?? Promise.resolve();
-	}
-
-	public reset(...args: Parameters<AnalyticsInstance['reset']>) {
-		return this.analytics?.reset(...args) ?? Promise.resolve();
-	}
-
-	public ready(...args: Parameters<AnalyticsInstance['ready']>) {
-		return (
-			this.analytics?.ready(...args) ??
-			function () {
-				void 0;
-			}
-		);
-	}
-
-	public on(...args: Parameters<AnalyticsInstance['on']>) {
-		return (
-			this.analytics?.on(...args) ??
-			function () {
-				void 0;
-			}
-		);
-	}
-
-	public once(...args: Parameters<AnalyticsInstance['once']>) {
-		return (
-			this.analytics?.once(...args) ??
-			function () {
-				void 0;
-			}
-		);
-	}
-
-	public getState(...args: Parameters<AnalyticsInstance['getState']>) {
-		return this.analytics?.getState(...args) ?? Promise.resolve();
-	}
-
-	public get storage() {
-		return (
-			this.analytics?.storage ?? {
-				getItem: () => null,
-				setItem: () => void 0,
-				removeItem: () => void 0,
-			}
-		);
-	}
-
-	public get plugins() {
-		return (
-			this.analytics?.plugins ?? {
-				enable: (p, c) => Promise.resolve(c ? c() : void 0),
-				disable: (p, c) => Promise.resolve(c ? c() : void 0),
-			}
-		);
-	}
-}
-
-export const analytics = new AnalyticsProxy();
-
-export async function initAnalytics(instance: Misskey.entities.MetaDetailed) {
-	// アナリティクスプロバイダに関する設定がひとつもない場合は、アナリティクスモジュールを読み込まない
-	if (!instance.googleAnalyticsMeasurementId) {
-		return;
-	}
-
-	const { default: Analytics } = await import('analytics');
-	const plugins: AnalyticsPlugin[] = [];
-
-	if (instance.googleAnalyticsMeasurementId) {
-		//@ts-expect-error Dynamic import
-		const { default: googleAnalytics } = await import('@analytics/google-analytics');
-
-		plugins.push(
-			googleAnalytics({
-				measurementIds: [instance.googleAnalyticsMeasurementId],
-				debug: _DEV_,
-			}),
-		);
-	}
-
-	analytics.setAnalytics(
-		Analytics({
-			app: 'misskey',
-			version: _VERSION_,
-			debug: _DEV_,
-			plugins,
-		}),
-	);
+	// 読込前の identify / page も同じキューに積み、SPA の初回表示を二重送信しない。
+	const script = document.createElement('script');
+	script.async = true;
+	script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}&l=ga4DataLayer`;
+	document.head.appendChild(script);
 }

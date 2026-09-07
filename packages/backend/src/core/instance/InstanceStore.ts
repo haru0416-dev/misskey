@@ -300,9 +300,3 @@ export async function listInstancesOrderByFollowingCountDescFromDatabase(
 
 	return rows.map((row) => deserializeInstance(row));
 }
-
-export async function listSuspendedInstancesFromDatabase(db: MiDrizzleDatabase): Promise<MiInstance[]> {
-	const rows = await db.select().from(instance).where(ne(instance.suspensionState, 'none'));
-
-	return rows.map((row) => deserializeInstance(row));
-}

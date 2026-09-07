@@ -330,7 +330,7 @@ export type FollowerForNoteDelivery = Pick<
  * 3 本の合計はほぼ全フォロワーなので 1 本にまとめ、呼び出し側で絞る。
  * 同一リクエスト内は listFollowersForNoteDeliveryForRequest で使い回す。
  */
-export async function listFollowersForNoteDeliveryFromDatabase(
+async function listFollowersForNoteDeliveryFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<FollowerForNoteDelivery[]> {

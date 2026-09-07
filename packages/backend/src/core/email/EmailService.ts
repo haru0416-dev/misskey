@@ -6,7 +6,6 @@
 import { promises as dns } from 'node:dns';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
-import juice from 'juice';
 import { isDisposableEmailDomain } from 'disposable-email-domains-js';
 import { UtilityService } from '@/core/net/UtilityService.js';
 import type { Config } from '@/config.js';
@@ -81,88 +80,47 @@ export function createEmailService(
 		};
 		const transporter = nodemailer.createTransport(options);
 
+		// 本文のリンクにも共通の装飾を適用し、呼び出し側のインライン指定を優先する。
+		const styledHtml = new HTMLRewriter()
+			.on('a', {
+				element(element) {
+					element.setAttribute(
+						'style',
+						`text-decoration: none; color: #5c62d8; ${element.getAttribute('style') ?? ''}`,
+					);
+				},
+			})
+			.transform(html);
+
 		const htmlContent = `<!doctype html>
-<html>
+<html style="background: #eee;">
 	<head>
 		<meta charset="utf-8">
 		<title>${subject}</title>
 		<style>
-			html {
-				background: #eee;
-			}
-
-			body {
-				padding: 16px;
-				margin: 0;
-				font-family: sans-serif;
-				font-size: 14px;
-			}
-
-			a {
-				text-decoration: none;
-				color: #5c62d8;
-			}
 			a:hover {
 				text-decoration: underline;
 			}
-
-			main {
-				max-width: 500px;
-				margin: 0 auto;
-				background: #fff;
-				color: #555;
-			}
-				main > header {
-					padding: 32px;
-					background: #191b2e;
-				}
-					main > header > img {
-						max-width: 128px;
-						max-height: 28px;
-						vertical-align: bottom;
-					}
-				main > article {
-					padding: 32px;
-				}
-					main > article > h1 {
-						margin: 0 0 1em 0;
-					}
-				main > footer {
-					padding: 32px;
-					border-top: solid 1px #eee;
-				}
-
-			nav {
-				box-sizing: border-box;
-				max-width: 500px;
-				margin: 16px auto 0 auto;
-				padding: 0 32px;
-			}
-				nav > a {
-					color: #888;
-				}
 		</style>
 	</head>
-	<body>
-		<main>
-			<header>
-				<img src="${meta.logoImageUrl ?? meta.iconUrl ?? iconUrl}"/>
+	<body style="padding: 16px; margin: 0; font-family: sans-serif; font-size: 14px;">
+		<main style="max-width: 500px; margin: 0 auto; background: #fff; color: #555;">
+			<header style="padding: 32px; background: #191b2e;">
+				<img src="${meta.logoImageUrl ?? meta.iconUrl ?? iconUrl}" style="max-width: 128px; max-height: 28px; vertical-align: bottom;">
 			</header>
-			<article>
-				<h1>${subject}</h1>
-				<div>${html}</div>
+			<article style="padding: 32px;">
+				<h1 style="margin: 0 0 1em 0;">${subject}</h1>
+				<div>${styledHtml}</div>
 			</article>
-			<footer>
-				<a href="${emailSettingUrl}">${'Email setting'}</a>
+			<footer style="padding: 32px; border-top: solid 1px #eee;">
+				<a href="${emailSettingUrl}" style="text-decoration: none; color: #5c62d8;">${'Email setting'}</a>
 			</footer>
 		</main>
-		<nav>
-			<a href="${config.instance.url}">${config.runtime.host}</a>
+		<nav style="box-sizing: border-box; max-width: 500px; margin: 16px auto 0 auto; padding: 0 32px;">
+			<a href="${config.instance.url}" style="text-decoration: none; color: #888;">${config.runtime.host}</a>
 		</nav>
 	</body>
 </html>`;
-
-		const inlinedHtml = juice(htmlContent);
 
 		try {
 			// HTML はサニタイズされないため、呼び出し側は信頼済みの本文だけを渡す。
@@ -176,7 +134,7 @@ export function createEmailService(
 				to: to,
 				subject: subject,
 				text: text,
-				html: inlinedHtml,
+				html: htmlContent,
 			});
 
 			logger.info(`Message sent: ${info.messageId}`);
