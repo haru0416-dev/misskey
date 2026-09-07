@@ -14,7 +14,6 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
-		"@analytics/google-analytics": "1.1.0",
 		"@mcaptcha/core-glue": "0.1.0-alpha-5",
 		"@misskey-dev/emoji-data": "17.0.6",
 		"@opentelemetry/api": "1.9.1",
@@ -29,10 +28,10 @@
 		"@syuilo/aiscript": "workspace:*",
 		"@tanstack/vue-query": "5.101.2",
 		"@tanstack/vue-virtual": "3.13.36",
-		"analytics": "0.8.19",
 		"canvas-confetti": "1.9.4",
 		"compare-versions": "6.1.1",
 		"cropperjs": "2.1.1",
+		"diff": "8.0.4",
 		"echarts": "6.1.0",
 		"eventemitter3": "5.0.4",
 		"exifreader": "4.41.0",
@@ -52,14 +51,12 @@
 		"shiki": "4.4.3",
 		"throttle-debounce": "5.0.2",
 		"tinycolor2": "1.6.0",
-		"v-code-diff": "1.13.1",
 		"vue": "3.5.38",
 		"wanakana": "5.3.1"
 	},
 	"devDependencies": {
 		"@misskey-dev/emoji-assets": "17.0.6",
 		"@misskey-dev/summaly": "5.5.1",
-		"@tabler/icons-webfont": "3.46.0",
 		"@testing-library/dom": "10.4.1",
 		"@testing-library/jest-dom": "7.0.1",
 		"@testing-library/user-event": "14.6.1",
@@ -79,7 +76,6 @@
 		"fast-check": "4.9.0",
 		"happy-dom": "20.10.6",
 		"lightningcss": "1.33.0",
-		"magic-string": "1.2.1",
 		"msw": "2.15.0",
 		"oxc-walker": "1.1.1",
 		"rolldown": "1.2.4",

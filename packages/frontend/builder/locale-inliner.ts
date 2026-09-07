@@ -5,7 +5,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'node:path';
-import MagicString from 'magic-string';
+import { RolldownMagicString } from 'rolldown';
 import { collectModifications } from './locale-inliner/collect-modifications.js';
 import { applyWithLocale } from './locale-inliner/apply-with-locale.js';
 import { blankLogger } from './logger.js';
@@ -132,7 +132,7 @@ export class LocaleInliner {
 				throw new Error(`Source code or modifications for ${chunk.fileName} is not available.`);
 			}
 			const fileLogger = localeLogger.prefixed(`${chunk.fileName} (${chunk.chunkName}): `);
-			const magicString = new MagicString(chunk.sourceCode);
+			const magicString = new RolldownMagicString(chunk.sourceCode);
 			applyWithLocale(magicString, chunk.modifications, localeName, localeJson, fileLogger);
 
 			await fs.writeFile(path.join(this.outputDir, localeName, chunk.fileName), magicString.toString());

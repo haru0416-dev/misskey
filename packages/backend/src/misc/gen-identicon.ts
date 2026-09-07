@@ -3,15 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/*
- * @napi-rs/canvas は読み込むだけで RSS が 29MB 増え、システムフォントの走査に約 0.5 秒かかる
- * (2026-09-03 実測)。使うのは identicon 生成だけなので、最初の要求まで読み込まない。
- */
-let canvasModule: Promise<typeof import('@napi-rs/canvas')> | undefined;
-function loadCanvas(): Promise<typeof import('@napi-rs/canvas')> {
-	canvasModule ??= import('@napi-rs/canvas');
-	return canvasModule;
-}
+import sharp from 'sharp';
 
 // xmur3 hash + mulberry32 による決定的 PRNG を使う。
 function createSeededRandom(seed: string): (max: number) => number {
@@ -61,24 +53,13 @@ const sideN = Math.floor(n / 2);
 
 export async function genIdenticon(seed: string): Promise<Buffer> {
 	const rand = createSeededRandom(seed);
-	const { createCanvas } = await loadCanvas();
-	const canvas = createCanvas(size, size);
-	const ctx = canvas.getContext('2d');
 
 	const bgColors = colors[rand(colors.length)];
 	if (bgColors == null) {
 		throw new Error('Identicon color palette is empty');
 	}
 
-	const bg = ctx.createLinearGradient(0, 0, size, size);
-	bg.addColorStop(0, bgColors[0]);
-	bg.addColorStop(1, bgColors[1]);
-
-	ctx.fillStyle = bg;
-	ctx.beginPath();
-	ctx.fillRect(0, 0, size, size);
-
-	ctx.fillStyle = '#ffffff';
+	const rectangles: string[] = [];
 
 	const side: boolean[][] = new Array(sideN);
 	for (let i = 0; i < side.length; i++) {
@@ -121,10 +102,14 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 
 			const actualX = margin + cellSize * x;
 			const actualY = margin + cellSize * y;
-			ctx.beginPath();
-			ctx.fillRect(actualX, actualY, cellSize, cellSize);
+			rectangles.push(`<rect x="${actualX}" y="${actualY}" width="${cellSize}" height="${cellSize}"/>`);
 		}
 	}
 
-	return await canvas.encode('png');
+	const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="${bgColors[0]}"/><stop offset="1" stop-color="${bgColors[1]}"/></linearGradient></defs>
+<rect width="${size}" height="${size}" fill="url(#bg)"/>
+<g fill="white">${rectangles.join('')}</g>
+</svg>`;
+	return await sharp(Buffer.from(svg)).png().toBuffer();
 }

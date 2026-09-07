@@ -5,6 +5,19 @@
 
 // bun-types パッケージ全体を "types" に追加すると @types/node の Request/Response/WebSocket 等の
 // グローバル宣言と衝突するため、実際に使っているBun APIだけを最小限に手書きしている。
+declare class HTMLRewriter {
+	on(
+		selector: string,
+		handlers: {
+			element(element: {
+				getAttribute(name: string): string | null;
+				setAttribute(name: string, value: string): void;
+			}): void;
+		},
+	): HTMLRewriter;
+	transform(input: string): string;
+}
+
 declare namespace Bun {
 	interface Subprocess {
 		readonly pid: number;

@@ -23,7 +23,7 @@ async function main() {
 	}
 	await fsp.mkdir('./built');
 
-	const css = await fsp.readFile('node_modules/@tabler/icons-webfont/dist/tabler-icons.min.css', 'utf-8');
+	const css = await fsp.readFile('vendor/tabler-icons/tabler-icons.min.css', 'utf-8');
 	const cssRegex = /\.(ti-[a-z0-9-]+)::?before\s*{\n?\s*content:\s*["']\\([a-fA-F0-9]+)["'];?\n?\s*}/g;
 	const rgMap = new Map<string, string>();
 	let matches: RegExpExecArray | null;
@@ -39,7 +39,7 @@ async function main() {
 		throw new Error('Tabler Icons base CSS rule was not found.');
 	}
 
-	const fontPath = 'node_modules/@tabler/icons-webfont/dist/fonts/';
+	const fontPath = 'vendor/tabler-icons/fonts/';
 	await fsp.copyFile(fontPath + 'tabler-icons.woff2', './built/tabler-icons.woff2');
 
 	const unicodeRangeValues = new Map<string, number[]>();
