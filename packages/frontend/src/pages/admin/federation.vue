@@ -48,10 +48,7 @@ import { useMkSelect } from '@/composables/useMkSelect.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const host = ref('');
-const {
-	model: state,
-	def: stateDef,
-} = useMkSelect({
+const { model: state, def: stateDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.all, value: 'all' },
 		{ label: i18n.ts.federating, value: 'federating' },
@@ -64,10 +61,7 @@ const {
 	],
 	initialValue: 'federating',
 });
-const {
-	model: sort,
-	def: sortDef,
-} = useMkSelect({
+const { model: sort, def: sortDef } = useMkSelect({
 	items: [
 		{ label: `${i18n.ts.pubSub} (${i18n.ts.descendingOrder})`, value: '+pubSub' },
 		{ label: `${i18n.ts.pubSub} (${i18n.ts.ascendingOrder})`, value: '-pubSub' },
@@ -84,23 +78,31 @@ const {
 	],
 	initialValue: '+pubSub',
 });
-const paginator = markRaw(new Paginator('federation/instances', {
-	limit: 10,
-	offsetMode: true,
-	computedParams: computed(() => ({
-		sort: sort.value,
-		host: host.value !== '' ? host.value : null,
-		...(
-			state.value === 'federating' ? { federating: true, suspended: false, blocked: false } :
-			state.value === 'subscribing' ? { subscribing: true, suspended: false, blocked: false } :
-			state.value === 'publishing' ? { publishing: true, suspended: false, blocked: false } :
-			state.value === 'suspended' ? { suspended: true } :
-			state.value === 'blocked' ? { blocked: true } :
-			state.value === 'silenced' ? { silenced: true } :
-			state.value === 'notResponding' ? { notResponding: true } :
-			{}),
-	})),
-}));
+const paginator = markRaw(
+	new Paginator('federation/instances', {
+		limit: 10,
+		offsetMode: true,
+		computedParams: computed(() => ({
+			sort: sort.value,
+			host: host.value !== '' ? host.value : null,
+			...(state.value === 'federating'
+				? { federating: true, suspended: false, blocked: false }
+				: state.value === 'subscribing'
+					? { subscribing: true, suspended: false, blocked: false }
+					: state.value === 'publishing'
+						? { publishing: true, suspended: false, blocked: false }
+						: state.value === 'suspended'
+							? { suspended: true }
+							: state.value === 'blocked'
+								? { blocked: true }
+								: state.value === 'silenced'
+									? { silenced: true }
+									: state.value === 'notResponding'
+										? { notResponding: true }
+										: {}),
+		})),
+	}),
+);
 
 function getStatus(instance: Misskey.entities.FederationInstance) {
 	switch (instance.suspensionState) {
@@ -113,9 +115,15 @@ function getStatus(instance: Misskey.entities.FederationInstance) {
 		case 'none':
 			break;
 	}
-	if (instance.isBlocked) return 'Blocked';
-	if (instance.isSilenced) return 'Silenced';
-	if (instance.isNotResponding) return 'Error';
+	if (instance.isBlocked) {
+		return 'Blocked';
+	}
+	if (instance.isSilenced) {
+		return 'Silenced';
+	}
+	if (instance.isNotResponding) {
+		return 'Error';
+	}
 	return 'Alive';
 }
 

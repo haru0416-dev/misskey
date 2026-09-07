@@ -4,7 +4,8 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import * as Bull from 'bullmq';
@@ -112,7 +113,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -120,6 +120,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -134,7 +135,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt } from '../endpoints-context.js';
+import { createEndpointsContext, getAt } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -2399,7 +2401,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			// フルスイートでは既存ユーザーのfollowersCountが不定のため、飛び抜けた値で先頭固定を保証する。
 			const popular = await signup({ username: `hup${suffix}` });
-			await updateUserInDatabase(db, popular.id, { followersCount: 999999999, updatedAt: new Date() });
+			await updateUserInDatabase(db, popular.id, { followersCount: 999_999_999, updatedAt: new Date() });
 
 			const stale = await signup({ username: `hus${suffix}` });
 			await updateUserInDatabase(db, stale.id, { updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10) });
@@ -2942,7 +2944,7 @@ describe('Endpoints', () => {
 				'i/update',
 				{
 					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#white_space
-					name: ' あ い う \u0009\u000b\u000c\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\ufeff',
+					name: ' あ い う \u0009\u000B\u000C\u0020\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\uFEFF',
 				},
 				alice,
 			);

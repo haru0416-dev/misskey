@@ -6,16 +6,18 @@
 import type * as Bull from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
-import { noteDraft, type NoteDraftRow } from '@/db/schema/note-draft.js';
+import { noteDraft } from '@/db/schema/note-draft.js';
+import type { NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
-import { fetchAndCreateNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { fetchAndCreateNoteForApi } from '@/server/rest/note/notes-create.js';
+import type { ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,
-	type ApiNotificationDependencies,
 } from '@/server/rest/notification/notification.js';
+import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 
 export type QueuePostScheduledNoteDependencies = ApiNotesCreateDependencies & ApiNotificationDependencies;
 

@@ -55,7 +55,9 @@ function safeURIDecode(str: string): string {
 const pathSegments = window.location.pathname.split('/');
 const page = pathSegments[2] ?? '';
 const contentId = safeURIDecode(pathSegments[3] ?? '');
-if (_DEV_) console.log(page, contentId);
+if (_DEV_) {
+	console.log(page, contentId);
+}
 
 const embedParams = inject(DI.embedParams, defaultEmbedParams);
 
@@ -71,9 +73,11 @@ const rootEl = shallowRef<HTMLElement | null>(null);
 let previousHeight = 0;
 const resizeObserver = new ResizeObserver(async () => {
 	const height = rootEl.value!.scrollHeight + (embedNoBorder.value ? 0 : 2); // border 上下1px
-	if (Math.abs(previousHeight - height) < 1) return; // 1px未満の変化は無視
+	if (Math.abs(previousHeight - height) < 1) {
+		return;
+	} // 1px未満の変化は無視
 	postMessageToParentWindow('misskey:embed:changeHeight', {
-		height: (maxHeight.value > 0 && height > maxHeight.value) ? maxHeight.value : height,
+		height: maxHeight.value > 0 && height > maxHeight.value ? maxHeight.value : height,
 	});
 	previousHeight = height;
 });

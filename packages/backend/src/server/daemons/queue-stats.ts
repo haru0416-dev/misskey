@@ -11,7 +11,7 @@ import type { Config } from '@/config.js';
 
 const ev = globalEventBus;
 
-const INTERVAL_MS = 10000;
+const INTERVAL_MS = 10_000;
 
 export type DaemonQueueStatsDependencies = {
 	config: Config;
@@ -66,7 +66,9 @@ export function startQueueStatsDaemon(deps: DaemonQueueStatsDependencies): { dis
 		ev.emit('queueStats', stats);
 
 		log.unshift(stats);
-		if (log.length > 200) log.pop();
+		if (log.length > 200) {
+			log.pop();
+		}
 
 		activeDeliverJobs = 0;
 		activeInboxJobs = 0;

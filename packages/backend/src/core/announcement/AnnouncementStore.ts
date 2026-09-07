@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, isNull, lt, notInArray, or, type SQL } from 'drizzle-orm';
-import { announcement, type AnnouncementInsert, type AnnouncementRow } from '@/db/schema/announcement.js';
+import { and, asc, desc, eq, gt, isNull, lt, notInArray, or } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { announcement } from '@/db/schema/announcement.js';
+import type { AnnouncementInsert, AnnouncementRow } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';

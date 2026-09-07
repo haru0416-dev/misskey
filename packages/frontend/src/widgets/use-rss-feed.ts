@@ -22,7 +22,9 @@ export function filterSafeRssItems(
 	items: Misskey.entities.FetchRssResponse['items'],
 ): Misskey.entities.FetchRssResponse['items'] {
 	return items.filter((item) => {
-		if (!item.link) return false;
+		if (!item.link) {
+			return false;
+		}
 		const itemUrl = tryParseUrl(item.link, base);
 		return itemUrl != null && (itemUrl.protocol === 'http:' || itemUrl.protocol === 'https:');
 	});
@@ -39,12 +41,16 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 	const intervalClear = ref<(() => void) | undefined>();
 
 	const tick = () => {
-		if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) return;
+		if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) {
+			return;
+		}
 
 		window
 			.fetch(fetchEndpoint.value, {})
 			.then((res) => {
-				if (!res.ok) throw new Error();
+				if (!res.ok) {
+					throw new Error();
+				}
 				return res.json();
 			})
 			.then((feed: Misskey.entities.FetchRssResponse) => {
@@ -64,7 +70,7 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 			if (intervalClear.value) {
 				intervalClear.value();
 			}
-			intervalClear.value = useInterval(tick, Math.max(10000, widgetProps.refreshIntervalSec * 1000), {
+			intervalClear.value = useInterval(tick, Math.max(10_000, widgetProps.refreshIntervalSec * 1000), {
 				immediate: true,
 				afterMounted: true,
 			});

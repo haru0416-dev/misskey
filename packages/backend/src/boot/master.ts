@@ -12,7 +12,8 @@ import type { Config } from '@/config.js';
 import { showMachineInfo } from '@/misc/show-machine-info.js';
 import { resolveHostProcessCounts } from '@/misc/process-topology.js';
 import { envOption } from '@/env.js';
-import { assignmentByWorkerId, workerEnvFor, type WorkerAssignment, type WorkerRole } from './cluster-roles.js';
+import { assignmentByWorkerId, workerEnvFor } from './cluster-roles.js';
+import type { WorkerAssignment, WorkerRole } from './cluster-roles.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
 
 const logger = new Logger('core', 'cyan');
@@ -38,7 +39,7 @@ function greet(props: { version: string }) {
 }
 
 export async function masterMain(config: Config) {
-	const disposers: Array<() => Promise<void>> = [];
+	const disposers: (() => Promise<void>)[] = [];
 
 	try {
 		bootLogger.createSubLogger('config').succ('Loaded');
@@ -46,7 +47,9 @@ export async function masterMain(config: Config) {
 		showEnvironment();
 		await showMachineInfo(bootLogger);
 		showNodejsVersion();
-		if (config.server.process.pidFile) fs.writeFileSync(config.server.process.pidFile, process.pid.toString());
+		if (config.server.process.pidFile) {
+			fs.writeFileSync(config.server.process.pidFile, process.pid.toString());
+		}
 	} catch (e) {
 		bootLogger.error('Fatal error occurred during initialization: ' + e, null, true);
 		process.exit(1);
@@ -188,7 +191,9 @@ function resolveTopology(config: Config): Topology {
 	// デーモンはストリーム配信先と同じ HTTP プロセスに割り当てる。
 	if (masterRole !== 'server') {
 		const owner = workerAssignments.find((assignment) => assignment.role === 'server') ?? workerAssignments[0];
-		if (owner != null) owner.ownsDaemons = true;
+		if (owner != null) {
+			owner.ownsDaemons = true;
+		}
 	}
 
 	return { httpWorkers, queueWorkers, masterRole, workerAssignments };
@@ -214,7 +219,9 @@ export function spawnWorker(assignment: WorkerAssignment): Promise<void> {
 				bootLogger.error('The server Listen failed due to the previous error.');
 				process.exit(1);
 			}
-			if (message !== 'ready') return;
+			if (message !== 'ready') {
+				return;
+			}
 			res();
 		});
 	});

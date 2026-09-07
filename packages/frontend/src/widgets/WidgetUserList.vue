@@ -57,11 +57,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure, save } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure, save } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const list = ref<Misskey.entities.UserList | null>(null);
 const users = ref<Misskey.entities.UserDetailed[]>([]);
@@ -71,13 +67,16 @@ async function chooseList() {
 	const lists = await misskeyApi('users/lists/list');
 	const { canceled, result: listId } = await os.select({
 		title: i18n.ts.selectList,
-		items: lists.map(x => ({
-			value: x.id, label: x.name,
+		items: lists.map((x) => ({
+			value: x.id,
+			label: x.name,
 		})),
 		default: widgetProps.listId,
 	});
-	if (canceled || listId == null) return;
-	const list = lists.find(x => x.id === listId)!;
+	if (canceled || listId == null) {
+		return;
+	}
+	const list = lists.find((x) => x.id === listId)!;
 	widgetProps.listId = list.id;
 	save();
 	fetch();

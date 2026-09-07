@@ -236,23 +236,21 @@ import { Paginator } from '@/utility/paginator.js';
 
 const $i = ensureSignin();
 
-const props = withDefaults(defineProps<{
-	userId: string;
-	initialTab?: string;
-}>(), {
-	initialTab: 'overview',
-});
+const props = withDefaults(
+	defineProps<{
+		userId: string;
+		initialTab?: string;
+	}>(),
+	{
+		initialTab: 'overview',
+	},
+);
 
 const result = await _fetch_();
 
 const tab = ref(props.initialTab);
-const {
-	model: chartSrc,
-	def: chartSrcDef,
-} = useMkSelect({
-	items: [
-		{ label: i18n.ts.notes, value: 'per-user-notes' },
-	],
+const { model: chartSrc, def: chartSrcDef } = useMkSelect({
+	items: [{ label: i18n.ts.notes, value: 'per-user-notes' }],
 	initialValue: 'per-user-notes',
 });
 const user = ref(result.user);
@@ -264,17 +262,16 @@ const silenced = ref(info.value.isSilenced);
 const suspended = ref(info.value.isSuspended);
 const isSystem = ref(user.value.host == null && user.value.username.includes('.'));
 const moderationNote = ref(info.value.moderationNote);
-const filesPaginator = markRaw(new Paginator('admin/drive/files', {
-	limit: 10,
-	computedParams: computed(() => ({
-		userId: props.userId,
-	})),
-}));
+const filesPaginator = markRaw(
+	new Paginator('admin/drive/files', {
+		limit: 10,
+		computedParams: computed(() => ({
+			userId: props.userId,
+		})),
+	}),
+);
 
-const {
-	model: announcementsStatus,
-	def: announcementsStatusDef,
-} = useMkSelect({
+const { model: announcementsStatus, def: announcementsStatusDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.active, value: 'active' },
 		{ label: i18n.ts.archived, value: 'archived' },
@@ -282,23 +279,31 @@ const {
 	initialValue: 'active',
 });
 
-const announcementsPaginator = markRaw(new Paginator('admin/announcements/list', {
-	limit: 10,
-	computedParams: computed(() => ({
-		userId: props.userId,
-		status: announcementsStatus.value,
-	})),
-}));
-const expandedRoleIds = ref<(typeof info.value.roles[number]['id'])[]>([]);
+const announcementsPaginator = markRaw(
+	new Paginator('admin/announcements/list', {
+		limit: 10,
+		computedParams: computed(() => ({
+			userId: props.userId,
+			status: announcementsStatus.value,
+		})),
+	}),
+);
+const expandedRoleIds = ref<(typeof info.value.roles)[number]['id'][]>([]);
 
 function _fetch_() {
-	return Promise.all([misskeyApi('users/show', {
-		userId: props.userId,
-	}), misskeyApi('admin/show-user', {
-		userId: props.userId,
-	}), iAmAdmin ? misskeyApi('admin/get-user-ips', {
-		userId: props.userId,
-	}) : Promise.resolve(null)]).then(([_user, _info, _ips]) => ({
+	return Promise.all([
+		misskeyApi('users/show', {
+			userId: props.userId,
+		}),
+		misskeyApi('admin/show-user', {
+			userId: props.userId,
+		}),
+		iAmAdmin
+			? misskeyApi('admin/get-user-ips', {
+					userId: props.userId,
+				})
+			: Promise.resolve(null),
+	]).then(([_user, _info, _ips]) => ({
 		user: _user,
 		info: _info,
 		ips: _ips,
@@ -334,15 +339,14 @@ async function resetPassword() {
 	});
 	if (confirm.canceled) {
 		return;
-	} else {
-		const { password } = await os.apiWithDialog('admin/reset-password', {
-			userId: user.value.id,
-		});
-		os.alert({
-			type: 'success',
-			text: i18n.tsx.newPasswordIs({ password }),
-		});
 	}
+	const { password } = await os.apiWithDialog('admin/reset-password', {
+		userId: user.value.id,
+	});
+	os.alert({
+		type: 'success',
+		text: i18n.tsx.newPasswordIs({ password }),
+	});
 }
 
 async function unsetMfa() {
@@ -352,11 +356,10 @@ async function unsetMfa() {
 	});
 	if (confirm.canceled) {
 		return;
-	} else {
-		await os.apiWithDialog('admin/unset-mfa', {
-			userId: user.value.id,
-		});
 	}
+	await os.apiWithDialog('admin/unset-mfa', {
+		userId: user.value.id,
+	});
 }
 
 async function toggleSuspend(v: boolean) {
@@ -377,12 +380,14 @@ async function unsetUserAvatar() {
 		type: 'warning',
 		text: i18n.ts.unsetUserAvatarConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	const process = async () => {
 		await misskeyApi('admin/unset-user-avatar', { userId: user.value.id });
 		os.success();
 	};
-	await process().catch(err => {
+	await process().catch((err) => {
 		os.alert({
 			type: 'error',
 			text: err.toString(),
@@ -396,12 +401,14 @@ async function unsetUserBanner() {
 		type: 'warning',
 		text: i18n.ts.unsetUserBannerConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	const process = async () => {
 		await misskeyApi('admin/unset-user-banner', { userId: user.value.id });
 		os.success();
 	};
-	await process().catch(err => {
+	await process().catch((err) => {
 		os.alert({
 			type: 'error',
 			text: err.toString(),
@@ -415,12 +422,14 @@ async function deleteAllFiles() {
 		type: 'warning',
 		text: i18n.ts.deleteAllFilesConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	const process = async () => {
 		await misskeyApi('admin/delete-all-files-of-a-user', { userId: user.value.id });
 		os.success();
 	};
-	await process().catch(err => {
+	await process().catch((err) => {
 		os.alert({
 			type: 'error',
 			text: err.toString(),
@@ -434,12 +443,16 @@ async function deleteAccount() {
 		type: 'warning',
 		text: i18n.ts.deleteAccountConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 
 	const typed = await os.inputText({
 		text: i18n.tsx.typeToConfirm({ x: user.value?.username }),
 	});
-	if (typed.canceled) return;
+	if (typed.canceled) {
+		return;
+	}
 
 	if (typed.result === user.value?.username) {
 		await os.apiWithDialog('admin/delete-account', {
@@ -454,122 +467,170 @@ async function deleteAccount() {
 }
 
 async function assignRole() {
-	const roles = await misskeyApi('admin/roles/list').then(it => it.filter(r => r.target === 'manual'));
+	const roles = await misskeyApi('admin/roles/list').then((it) => it.filter((r) => r.target === 'manual'));
 
 	const { canceled, result: roleId } = await os.select({
 		title: i18n.ts._role.chooseRoleToAssign,
-		items: roles.map(r => ({ label: r.name, value: r.id })),
+		items: roles.map((r) => ({ label: r.name, value: r.id })),
 	});
-	if (canceled || roleId == null) return;
+	if (canceled || roleId == null) {
+		return;
+	}
 
 	const { canceled: canceled2, result: period } = await os.select({
-		title: i18n.ts.period + ': ' + roles.find(r => r.id === roleId)!.name,
-		items: [{
-			value: 'indefinitely', label: i18n.ts.indefinitely,
-		}, {
-			value: 'oneHour', label: i18n.ts.oneHour,
-		}, {
-			value: 'oneDay', label: i18n.ts.oneDay,
-		}, {
-			value: 'oneWeek', label: i18n.ts.oneWeek,
-		}, {
-			value: 'oneMonth', label: i18n.ts.oneMonth,
-		}],
+		title: i18n.ts.period + ': ' + roles.find((r) => r.id === roleId)!.name,
+		items: [
+			{
+				value: 'indefinitely',
+				label: i18n.ts.indefinitely,
+			},
+			{
+				value: 'oneHour',
+				label: i18n.ts.oneHour,
+			},
+			{
+				value: 'oneDay',
+				label: i18n.ts.oneDay,
+			},
+			{
+				value: 'oneWeek',
+				label: i18n.ts.oneWeek,
+			},
+			{
+				value: 'oneMonth',
+				label: i18n.ts.oneMonth,
+			},
+		],
 		default: 'indefinitely',
 	});
-	if (canceled2) return;
+	if (canceled2) {
+		return;
+	}
 
-	const expiresAt = period === 'indefinitely' ? null
-		: period === 'oneHour' ? Date.now() + (1000 * 60 * 60)
-		: period === 'oneDay' ? Date.now() + (1000 * 60 * 60 * 24)
-		: period === 'oneWeek' ? Date.now() + (1000 * 60 * 60 * 24 * 7)
-		: period === 'oneMonth' ? Date.now() + (1000 * 60 * 60 * 24 * 30)
-		: null;
+	const expiresAt =
+		period === 'indefinitely'
+			? null
+			: period === 'oneHour'
+				? Date.now() + 1000 * 60 * 60
+				: period === 'oneDay'
+					? Date.now() + 1000 * 60 * 60 * 24
+					: period === 'oneWeek'
+						? Date.now() + 1000 * 60 * 60 * 24 * 7
+						: period === 'oneMonth'
+							? Date.now() + 1000 * 60 * 60 * 24 * 30
+							: null;
 
 	await os.apiWithDialog('admin/roles/assign', { roleId, userId: user.value.id, expiresAt });
 	refreshUser();
 }
 
-async function unassignRole(role: typeof info.value.roles[number], ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.unassign,
-		icon: 'ti ti-x',
-		danger: true,
-		action: async () => {
-			await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId: user.value.id });
-			refreshUser();
-		},
-	}], ev.currentTarget ?? ev.target);
+async function unassignRole(role: (typeof info.value.roles)[number], ev: PointerEvent) {
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.unassign,
+				icon: 'ti ti-x',
+				danger: true,
+				action: async () => {
+					await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId: user.value.id });
+					refreshUser();
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
-function toggleRoleItem(role: typeof info.value.roles[number]) {
+function toggleRoleItem(role: (typeof info.value.roles)[number]) {
 	if (expandedRoleIds.value.includes(role.id)) {
-		expandedRoleIds.value = expandedRoleIds.value.filter(x => x !== role.id);
+		expandedRoleIds.value = expandedRoleIds.value.filter((x) => x !== role.id);
 	} else {
 		expandedRoleIds.value.push(role.id);
 	}
 }
 
 async function createAnnouncement() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
-		user: user.value,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
+		{
+			user: user.value,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 async function editAnnouncement(announcement: Misskey.entities.AdminAnnouncementsListResponse[number]) {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then(x => x.default), {
-		user: user.value,
-		announcement,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
+		{
+			user: user.value,
+			announcement,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 watch(user, () => {
 	misskeyApi('ap/get', {
 		uri: user.value.uri ?? `${url}/users/${user.value.id}`,
-	}).then(res => {
+	}).then((res) => {
 		ap.value = res;
 	});
 });
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => isSystem.value ? [{
-	key: 'overview',
-	title: i18n.ts.overview,
-	icon: 'ti ti-info-circle',
-}, {
-	key: 'raw',
-	title: 'Raw',
-	icon: 'ti ti-code',
-}] : [{
-	key: 'overview',
-	title: i18n.ts.overview,
-	icon: 'ti ti-info-circle',
-}, {
-	key: 'roles',
-	title: i18n.ts.roles,
-	icon: 'ti ti-badges',
-}, {
-	key: 'announcements',
-	title: i18n.ts.announcements,
-	icon: 'ti ti-speakerphone',
-}, {
-	key: 'drive',
-	title: i18n.ts.drive,
-	icon: 'ti ti-cloud',
-}, {
-	key: 'chart',
-	title: i18n.ts.charts,
-	icon: 'ti ti-chart-line',
-}, {
-	key: 'raw',
-	title: 'Raw',
-	icon: 'ti ti-code',
-}]);
+const headerTabs = computed(() =>
+	isSystem.value
+		? [
+				{
+					key: 'overview',
+					title: i18n.ts.overview,
+					icon: 'ti ti-info-circle',
+				},
+				{
+					key: 'raw',
+					title: 'Raw',
+					icon: 'ti ti-code',
+				},
+			]
+		: [
+				{
+					key: 'overview',
+					title: i18n.ts.overview,
+					icon: 'ti ti-info-circle',
+				},
+				{
+					key: 'roles',
+					title: i18n.ts.roles,
+					icon: 'ti ti-badges',
+				},
+				{
+					key: 'announcements',
+					title: i18n.ts.announcements,
+					icon: 'ti ti-speakerphone',
+				},
+				{
+					key: 'drive',
+					title: i18n.ts.drive,
+					icon: 'ti ti-cloud',
+				},
+				{
+					key: 'chart',
+					title: i18n.ts.charts,
+					icon: 'ti ti-chart-line',
+				},
+				{
+					key: 'raw',
+					title: 'Raw',
+					icon: 'ti ti-code',
+				},
+			],
+);
 
 definePage(() => ({
 	title: user.value ? acct(user.value) : i18n.ts.userInfo,

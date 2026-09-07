@@ -42,7 +42,7 @@ const cidrSchema = z.string().refine((value) => {
 }, 'Must be an IPv4 or IPv6 CIDR range');
 const positiveIntegerSchema = z.int().positive();
 const nonNegativeIntegerSchema = z.int().nonnegative();
-const portSchema = z.int().min(1).max(65535);
+const portSchema = z.int().min(1).max(65_535);
 
 const tcpListenSchema = z.strictObject({
 	tcp: z.strictObject({
@@ -353,22 +353,34 @@ export type CompiledConfigEnvelope = z.output<typeof compiledConfigEnvelopeSchem
 
 export function parseDuration(value: string): number {
 	const match = /^(0|[1-9][0-9]*)(ms|s|m|h|d)$/.exec(value);
-	if (match == null) throw new Error(`Invalid duration: ${value}`);
+	if (match == null) {
+		throw new Error(`Invalid duration: ${value}`);
+	}
 	const [, amount, unit] = match;
-	if (amount == null || unit == null) throw new Error(`Invalid duration: ${value}`);
+	if (amount == null || unit == null) {
+		throw new Error(`Invalid duration: ${value}`);
+	}
 	const factors = { ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
 	const result = BigInt(amount) * BigInt(factors[unit as keyof typeof factors]);
-	if (result > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`Duration is too large: ${value}`);
+	if (result > BigInt(Number.MAX_SAFE_INTEGER)) {
+		throw new Error(`Duration is too large: ${value}`);
+	}
 	return Number(result);
 }
 
 export function parseByteSize(value: string): number {
 	const match = /^(0|[1-9][0-9]*)(B|KiB|MiB|GiB)$/.exec(value);
-	if (match == null) throw new Error(`Invalid byte size: ${value}`);
+	if (match == null) {
+		throw new Error(`Invalid byte size: ${value}`);
+	}
 	const [, amount, unit] = match;
-	if (amount == null || unit == null) throw new Error(`Invalid byte size: ${value}`);
+	if (amount == null || unit == null) {
+		throw new Error(`Invalid byte size: ${value}`);
+	}
 	const factors = { B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3 } as const;
 	const result = BigInt(amount) * BigInt(factors[unit as keyof typeof factors]);
-	if (result > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`Byte size is too large: ${value}`);
+	if (result > BigInt(Number.MAX_SAFE_INTEGER)) {
+		throw new Error(`Byte size is too large: ${value}`);
+	}
 	return Number(result);
 }

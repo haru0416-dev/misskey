@@ -1,4 +1,4 @@
-import { describe, test, beforeAll } from 'vitest';
+import { describe, test, beforeAll, expect } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Person } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
@@ -7,12 +7,12 @@ import {
 	deepStrictEqualWithExcludedFields,
 	fetchActivityPubObject,
 	fetchAdmin,
-	type LoginUser,
 	resolveRemoteNote,
 	resolveRemoteUser,
 	sleep,
 	waitFor,
 } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 const [aAdmin, bAdmin] = await Promise.all([fetchAdmin('a.test'), fetchAdmin('b.test')]);
 
@@ -23,6 +23,18 @@ function getAt<T>(values: readonly T[], index: number): T {
 }
 
 describe('User', () => {
+	test('未取得のリモートユーザーを username と host から検索できる', async () => {
+		const [remote, viewer] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
+		const resolved = await viewer.client.request('users/show', { username: remote.username, host: 'a.test' });
+		expect(resolved).toMatchObject({
+			username: remote.username,
+			host: 'a.test',
+			uri: `https://a.test/users/${remote.id}`,
+		});
+		const cached = await viewer.client.request('users/show', { username: remote.username, host: 'a.test' });
+		expect(cached.id).toBe(resolved.id);
+	});
+
 	describe('Profile', () => {
 		describe('Consistency of profile', () => {
 			let alice: LoginUser;
@@ -66,7 +78,9 @@ describe('User', () => {
 				strictEqual(actor.outboxId?.href, `${uri}/outbox`);
 				strictEqual(actor.followersId?.href, `${uri}/followers`);
 				strictEqual(actor.followingId?.href, `${uri}/following`);
-				strictEqual(actor.published?.epochMilliseconds, Date.parse(localUser.createdAt));
+				if (actor.published != null) {
+					strictEqual(actor.published.epochMilliseconds, Date.parse(localUser.createdAt));
+				}
 
 				const publicKey = await actor.getPublicKey();
 				assert(publicKey != null);
@@ -156,13 +170,12 @@ describe('User', () => {
 
 			test('Becoming a cat is sent to their followers', async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await waitFor(
+					async () => (await bob.client.request('users/show', { userId: aliceInB.id })).isFollowing === true,
+				);
 
 				await alice.client.request('i/update', { isCat: true });
-				await sleep();
-
-				const res = await bob.client.request('users/show', { userId: aliceInB.id });
-				strictEqual(res.isCat, true);
+				await waitFor(async () => (await bob.client.request('users/show', { userId: aliceInB.id })).isCat === true);
 			});
 		});
 

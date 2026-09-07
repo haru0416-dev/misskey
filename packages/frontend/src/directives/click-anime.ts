@@ -10,11 +10,15 @@ const cleanupByElement = new WeakMap<HTMLElement, () => void>();
 
 export const clickAnimeDirective = {
 	mounted(el) {
-		if (!prefer.animation) return;
+		if (!prefer.animation) {
+			return;
+		}
 
 		const target = el.children[0];
 
-		if (target == null) return;
+		if (target == null) {
+			return;
+		}
 
 		target.classList.add('_anime_bounce_standBy');
 

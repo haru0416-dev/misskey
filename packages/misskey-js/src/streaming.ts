@@ -1,11 +1,12 @@
 import { EventEmitter } from 'eventemitter3';
-import { ReconnectingWebSocket, type ReconnectingWebSocketOptions } from './reconnecting-ws.js';
+import { ReconnectingWebSocket } from './reconnecting-ws.js';
+import type { ReconnectingWebSocketOptions } from './reconnecting-ws.js';
 import type { BroadcastEvents, Channels } from './streaming.types.js';
 
 export function urlQuery(obj: Record<string, string | number | boolean | undefined>): string {
 	const params = Object.entries(obj)
-		.filter(([, v]) => Array.isArray(v) ? v.length : v !== undefined)
-		.reduce((a, [k, v]) => (a[k] = v!, a), {} as Record<string, string | number | boolean>);
+		.filter(([, v]) => (Array.isArray(v) ? v.length : v !== undefined))
+		.reduce((a, [k, v]) => ((a[k] = v!), a), {} as Record<string, string | number | boolean>);
 
 	return Object.entries(params)
 		.map((e) => `${e[0]}=${encodeURIComponent(e[1])}`)
@@ -25,7 +26,11 @@ export type StreamEvents = {
 export interface IStream extends EventEmitter<StreamEvents> {
 	state: 'initializing' | 'reconnecting' | 'connected';
 
-	useChannel<C extends keyof Channels>(channel: C, params?: Channels[C]['params'], name?: string): IChannelConnection<Channels[C]>;
+	useChannel<C extends keyof Channels>(
+		channel: C,
+		params?: Channels[C]['params'],
+		name?: string,
+	): IChannelConnection<Channels[C]>;
 	removeSharedConnection(connection: SharedConnection): void;
 	removeSharedConnectionPool(pool: Pool): void;
 	disconnectToChannel(connection: NonSharedConnection): void;
@@ -50,10 +55,14 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	private connectedChannelIds = new Set<string>();
 	private idCounter = 0;
 
-	constructor(origin: string, user: { token: string; } | null, options?: {
-		WebSocket?: ReconnectingWebSocketOptions['WebSocket'];
-		binaryType?: ReconnectingWebSocket['binaryType'];
-	}) {
+	constructor(
+		origin: string,
+		user: { token: string } | null,
+		options?: {
+			WebSocket?: ReconnectingWebSocketOptions['WebSocket'];
+			binaryType?: ReconnectingWebSocket['binaryType'];
+		},
+	) {
 		super();
 
 		this.genId = this.genId.bind(this);
@@ -69,7 +78,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		this.send = this.send.bind(this);
 		this.close = this.close.bind(this);
 
-		options = options ?? { };
+		options = options ?? {};
 
 		const query = urlQuery({
 			i: user?.token,
@@ -105,27 +114,38 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 			this.connectionsById.set(connection.id, list);
 		}
 		list.push(connection);
-		if (this.connectedChannelIds.has(connection.id)) connection.markConnected();
+		if (this.connectedChannelIds.has(connection.id)) {
+			connection.markConnected();
+		}
 	}
 
 	private unindexConnection(connection: Connection): void {
 		const list = this.connectionsById.get(connection.id);
-		if (list == null) return;
+		if (list == null) {
+			return;
+		}
 		const index = list.indexOf(connection);
-		if (index !== -1) list.splice(index, 1);
-		if (list.length === 0) this.connectionsById.delete(connection.id);
-	}
-
-	public useChannel<C extends keyof Channels>(channel: C, params?: Channels[C]['params'], name?: string): Connection<Channels[C]> {
-		if (params) {
-			return this.connectToChannel(channel, params);
-		} else {
-			return this.useSharedConnection(channel, name);
+		if (index !== -1) {
+			list.splice(index, 1);
+		}
+		if (list.length === 0) {
+			this.connectionsById.delete(connection.id);
 		}
 	}
 
+	public useChannel<C extends keyof Channels>(
+		channel: C,
+		params?: Channels[C]['params'],
+		name?: string,
+	): Connection<Channels[C]> {
+		if (params) {
+			return this.connectToChannel(channel, params);
+		}
+		return this.useSharedConnection(channel, name);
+	}
+
 	private useSharedConnection<C extends keyof Channels>(channel: C, name?: string): SharedConnection<Channels[C]> {
-		let pool = this.sharedConnectionPools.find(p => p.channel === channel);
+		let pool = this.sharedConnectionPools.find((p) => p.channel === channel);
 
 		if (pool == null) {
 			pool = new Pool(this, channel, this.genId());
@@ -139,16 +159,19 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	}
 
 	public removeSharedConnection(connection: SharedConnection): void {
-		this.sharedConnections = this.sharedConnections.filter(c => c !== connection);
+		this.sharedConnections = this.sharedConnections.filter((c) => c !== connection);
 		this.unindexConnection(connection);
 	}
 
 	public removeSharedConnectionPool(pool: Pool): void {
-		this.sharedConnectionPools = this.sharedConnectionPools.filter(p => p !== pool);
+		this.sharedConnectionPools = this.sharedConnectionPools.filter((p) => p !== pool);
 		this.connectedChannelIds.delete(pool.id);
 	}
 
-	private connectToChannel<C extends keyof Channels>(channel: C, params: Channels[C]['params']): NonSharedConnection<Channels[C]> {
+	private connectToChannel<C extends keyof Channels>(
+		channel: C,
+		params: Channels[C]['params'],
+	): NonSharedConnection<Channels[C]> {
 		const connection = new NonSharedConnection(this, channel, this.genId(), params);
 		this.nonSharedConnections.push(connection as unknown as NonSharedConnection);
 		this.indexConnection(connection as unknown as NonSharedConnection);
@@ -156,7 +179,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	}
 
 	public disconnectToChannel(connection: NonSharedConnection): void {
-		this.nonSharedConnections = this.nonSharedConnections.filter(c => c !== connection);
+		this.nonSharedConnections = this.nonSharedConnections.filter((c) => c !== connection);
 		this.unindexConnection(connection);
 		this.connectedChannelIds.delete(connection.id);
 	}
@@ -167,13 +190,19 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		this.state = 'connected';
 
 		if (isReconnect) {
-			for (const p of this.sharedConnectionPools) p.connect();
-			for (const c of this.nonSharedConnections) c.connect();
+			for (const p of this.sharedConnectionPools) {
+				p.connect();
+			}
+			for (const c of this.nonSharedConnections) {
+				c.connect();
+			}
 		}
 
 		// _connected_ はオフラインキューの flush 完了後に通知する。
 		queueMicrotask(() => {
-			if (this.state === 'connected') this.emit('_connected_');
+			if (this.state === 'connected') {
+				this.emit('_connected_');
+			}
 		});
 	}
 
@@ -185,7 +214,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		}
 	}
 
-	private onMessage(message: { data: string; }): void {
+	private onMessage(message: { data: string }): void {
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(message.data);
@@ -229,7 +258,9 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 
 			if (connections) {
 				this.connectedChannelIds.add(id);
-				for (const c of connections) c.markConnected();
+				for (const c of connections) {
+					c.markConnected();
+				}
 			}
 		} else if (RESERVED_STREAM_EVENT_TYPES.has(type)) {
 			this.emit('_error_', new Error(`Reserved streaming event type received: ${type}`));
@@ -244,10 +275,12 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	public send(typeOrPayload: Record<string, unknown> | unknown[]): void;
 	public send(typeOrPayload: string | Record<string, unknown> | unknown[], payload?: unknown): void {
 		if (typeof typeOrPayload === 'string') {
-			this.stream.send(JSON.stringify({
-				type: typeOrPayload,
-				...(payload === undefined ? {} : { body: payload }),
-			}));
+			this.stream.send(
+				JSON.stringify({
+					type: typeOrPayload,
+					...(payload === undefined ? {} : { body: payload }),
+				}),
+			);
 			return;
 		}
 
@@ -322,7 +355,9 @@ class Pool {
 	}
 
 	public connect(): void {
-		if (this.isConnected) return;
+		if (this.isConnected) {
+			return;
+		}
 		this.isConnected = true;
 		this.stream.send('connect', {
 			channel: this.channel,
@@ -338,7 +373,9 @@ class Pool {
 	}
 }
 
-export interface IChannelConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extends EventEmitter<Channel['events']> {
+export interface IChannelConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extends EventEmitter<
+	Channel['events']
+> {
 	id: string;
 	name?: string;
 	inCount: number;
@@ -350,7 +387,10 @@ export interface IChannelConnection<Channel extends AnyOf<Channels> = AnyOf<Chan
 	dispose(): void;
 }
 
-export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extends EventEmitter<Channel['events']> implements IChannelConnection<Channel> {
+export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channels>>
+	extends EventEmitter<Channel['events']>
+	implements IChannelConnection<Channel>
+{
 	public channel: string;
 	protected stream: Stream;
 	private disposed = false;
@@ -364,7 +404,7 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 
 	constructor(stream: Stream, channel: string, name?: string) {
 		super();
-		this.ready = new Promise(resolve => {
+		this.ready = new Promise((resolve) => {
 			this.resolveReady = resolve;
 		});
 
@@ -392,7 +432,9 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 	}
 
 	protected beginDispose(): boolean {
-		if (this.disposed) return false;
+		if (this.disposed) {
+			return false;
+		}
 		this.disposed = true;
 		return true;
 	}
@@ -417,7 +459,9 @@ class SharedConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> extend
 	}
 
 	public dispose(): void {
-		if (!this.beginDispose()) return;
+		if (!this.beginDispose()) {
+			return;
+		}
 		this.pool.dec();
 		this.removeAllListeners();
 		this.stream.removeSharedConnection(this as unknown as SharedConnection);
@@ -450,7 +494,9 @@ class NonSharedConnection<Channel extends AnyOf<Channels> = AnyOf<Channels>> ext
 	}
 
 	public dispose(): void {
-		if (!this.beginDispose()) return;
+		if (!this.beginDispose()) {
+			return;
+		}
 		this.removeAllListeners();
 		this.stream.send('disconnect', { id: this.id });
 		this.stream.disconnectToChannel(this as unknown as NonSharedConnection);

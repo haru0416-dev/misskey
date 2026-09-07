@@ -204,13 +204,17 @@ const profile = reactive({
 	isCat: $i.isCat ?? false,
 });
 
-watch(() => profile, () => {
-	save();
-}, {
-	deep: true,
-});
+watch(
+	() => profile,
+	() => {
+		save();
+	},
+	{
+		deep: true,
+	},
+);
 
-const fields = ref($i.fields.map(field => ({ id: genId(), name: field.name, value: field.value })) ?? []);
+const fields = ref($i.fields.map((field) => ({ id: genId(), name: field.name, value: field.value })) ?? []);
 const fieldEditMode = ref(false);
 
 function addField() {
@@ -226,32 +230,39 @@ while (fields.value.length < 4) {
 }
 
 function deleteField(itemId: string) {
-	fields.value = fields.value.filter(f => f.id !== itemId);
+	fields.value = fields.value.filter((f) => f.id !== itemId);
 }
 
 function saveFields() {
 	os.apiWithDialog('i/update', {
-		fields: fields.value.filter(field => field.name !== '' && field.value !== '').map(field => ({ name: field.name, value: field.value })),
+		fields: fields.value
+			.filter((field) => field.name !== '' && field.value !== '')
+			.map((field) => ({ name: field.name, value: field.value })),
 	});
 }
 
 function save() {
-	os.apiWithDialog('i/update', {
-		// 空文字列を null に変換するため、?? ではなく || を使う。
-		name: profile.name || null,
-		description: profile.description || null,
-		followedMessage: profile.followedMessage || null,
-		location: profile.location || null,
-		birthday: profile.birthday || null,
-		lang: profile.lang || null,
-		isBot: !!profile.isBot,
-		isCat: !!profile.isCat,
-	}, undefined, {
-		'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
-			title: i18n.ts.yourNameContainsProhibitedWords,
-			text: i18n.ts.yourNameContainsProhibitedWordsDescription,
+	os.apiWithDialog(
+		'i/update',
+		{
+			// 空文字列を null に変換するため、?? ではなく || を使う。
+			name: profile.name || null,
+			description: profile.description || null,
+			followedMessage: profile.followedMessage || null,
+			location: profile.location || null,
+			birthday: profile.birthday || null,
+			lang: profile.lang || null,
+			isBot: !!profile.isBot,
+			isCat: !!profile.isCat,
 		},
-	});
+		undefined,
+		{
+			'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
+				title: i18n.ts.yourNameContainsProhibitedWords,
+				text: i18n.ts.yourNameContainsProhibitedWordsDescription,
+			},
+		},
+	);
 	claimAchievement('profileFilled');
 	if (profile.name === 'syuilo' || profile.name === 'しゅいろ') {
 		claimAchievement('setNameToSyuilo');
@@ -271,53 +282,72 @@ function changeAvatar(ev: PointerEvent) {
 		claimAchievement('profileFilled');
 	}
 
-	os.popupMenu([{
-		text: i18n.ts.avatar,
-		type: 'label',
-	}, {
-		text: i18n.ts.upload,
-		icon: 'ti ti-upload',
-		action: async () => {
-			const files = await os.chooseFileFromPc({ multiple: false });
-			const file = files[0];
-			if (file == null) return;
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.avatar,
+				type: 'label',
+			},
+			{
+				text: i18n.ts.upload,
+				icon: 'ti ti-upload',
+				action: async () => {
+					const files = await os.chooseFileFromPc({ multiple: false });
+					const file = files[0];
+					if (file == null) {
+						return;
+					}
 
-			let originalOrCropped = file;
+					let originalOrCropped = file;
 
-			const { canceled } = await os.confirm({
-				type: 'question',
-				text: i18n.ts.cropImageAsk,
-				okText: i18n.ts.cropYes,
-				cancelText: i18n.ts.cropNo,
-			});
+					const { canceled } = await os.confirm({
+						type: 'question',
+						text: i18n.ts.cropImageAsk,
+						okText: i18n.ts.cropYes,
+						cancelText: i18n.ts.cropNo,
+					});
 
-			if (!canceled) {
-				originalOrCropped = await os.cropImageFile(file, {
-					aspectRatio: 1,
-				});
-			}
+					if (!canceled) {
+						originalOrCropped = await os.cropImageFile(file, {
+							aspectRatio: 1,
+						});
+					}
 
-			const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
-			if (driveFile == null) return;
-			done(driveFile);
-		},
-	}, {
-		text: i18n.ts.fromDrive,
-		icon: 'ti ti-cloud',
-		action: () => {
-			chooseDriveFile({ multiple: false }).then(files => {
-				const file = files[0];
-				if (file != null) done(file);
-			});
-		},
-	}, ...($i.avatarId != null ? [{
-		type: 'divider' as const,
-	}, {
-		text: i18n.ts._profile.removeAvatar,
-		icon: 'ti ti-trash',
-		danger: true,
-		action: removeAvatar,
-	}] : [])], ev.currentTarget ?? ev.target);
+					const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+					if (driveFile == null) {
+						return;
+					}
+					done(driveFile);
+				},
+			},
+			{
+				text: i18n.ts.fromDrive,
+				icon: 'ti ti-cloud',
+				action: () => {
+					chooseDriveFile({ multiple: false }).then((files) => {
+						const file = files[0];
+						if (file != null) {
+							done(file);
+						}
+					});
+				},
+			},
+			...($i.avatarId != null
+				? [
+						{
+							type: 'divider' as const,
+						},
+						{
+							text: i18n.ts._profile.removeAvatar,
+							icon: 'ti ti-trash',
+							danger: true,
+							action: removeAvatar,
+						},
+					]
+				: []),
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function removeAvatar() {
@@ -326,7 +356,9 @@ async function removeAvatar() {
 		text: i18n.ts._profile.removeAvatarConfirm,
 		okText: i18n.ts.remove,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	const i = await os.apiWithDialog('i/update', { avatarId: null });
 	$i.avatarId = i.avatarId;
@@ -342,53 +374,72 @@ function changeBanner(ev: PointerEvent) {
 		$i.bannerUrl = i.bannerUrl;
 	}
 
-	os.popupMenu([{
-		text: i18n.ts.banner,
-		type: 'label',
-	}, {
-		text: i18n.ts.upload,
-		icon: 'ti ti-upload',
-		action: async () => {
-			const files = await os.chooseFileFromPc({ multiple: false });
-			const file = files[0];
-			if (file == null) return;
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.banner,
+				type: 'label',
+			},
+			{
+				text: i18n.ts.upload,
+				icon: 'ti ti-upload',
+				action: async () => {
+					const files = await os.chooseFileFromPc({ multiple: false });
+					const file = files[0];
+					if (file == null) {
+						return;
+					}
 
-			let originalOrCropped = file;
+					let originalOrCropped = file;
 
-			const { canceled } = await os.confirm({
-				type: 'question',
-				text: i18n.ts.cropImageAsk,
-				okText: i18n.ts.cropYes,
-				cancelText: i18n.ts.cropNo,
-			});
+					const { canceled } = await os.confirm({
+						type: 'question',
+						text: i18n.ts.cropImageAsk,
+						okText: i18n.ts.cropYes,
+						cancelText: i18n.ts.cropNo,
+					});
 
-			if (!canceled) {
-				originalOrCropped = await os.cropImageFile(file, {
-					aspectRatio: 2,
-				});
-			}
+					if (!canceled) {
+						originalOrCropped = await os.cropImageFile(file, {
+							aspectRatio: 2,
+						});
+					}
 
-			const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
-			if (driveFile == null) return;
-			done(driveFile);
-		},
-	}, {
-		text: i18n.ts.fromDrive,
-		icon: 'ti ti-cloud',
-		action: () => {
-			chooseDriveFile({ multiple: false }).then(files => {
-				const file = files[0];
-				if (file != null) done(file);
-			});
-		},
-	}, ...($i.bannerId != null ? [{
-		type: 'divider' as const,
-	}, {
-		text: i18n.ts._profile.removeBanner,
-		icon: 'ti ti-trash',
-		danger: true,
-		action: removeBanner,
-	}] : [])], ev.currentTarget ?? ev.target);
+					const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+					if (driveFile == null) {
+						return;
+					}
+					done(driveFile);
+				},
+			},
+			{
+				text: i18n.ts.fromDrive,
+				icon: 'ti ti-cloud',
+				action: () => {
+					chooseDriveFile({ multiple: false }).then((files) => {
+						const file = files[0];
+						if (file != null) {
+							done(file);
+						}
+					});
+				},
+			},
+			...($i.bannerId != null
+				? [
+						{
+							type: 'divider' as const,
+						},
+						{
+							text: i18n.ts._profile.removeBanner,
+							icon: 'ti ti-trash',
+							danger: true,
+							action: removeBanner,
+						},
+					]
+				: []),
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function removeBanner() {
@@ -397,7 +448,9 @@ async function removeBanner() {
 		text: i18n.ts._profile.removeBannerConfirm,
 		okText: i18n.ts.remove,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	const i = await os.apiWithDialog('i/update', { bannerId: null });
 	$i.bannerId = i.bannerId;

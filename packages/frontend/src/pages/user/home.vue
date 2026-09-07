@@ -157,7 +157,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, computed, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, watch, ref, useTemplateRef } from 'vue';
+import {
+	defineAsyncComponent,
+	computed,
+	onMounted,
+	onUnmounted,
+	onActivated,
+	onDeactivated,
+	nextTick,
+	watch,
+	ref,
+	useTemplateRef,
+} from 'vue';
 import * as Misskey from 'misskey-js';
 import { getScrollContainer } from '@shared/utility/scroll.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
@@ -206,13 +217,16 @@ const XFiles = defineAsyncComponent(() => import('./index/files.vue'));
 const XActivity = defineAsyncComponent(() => import('./index/activity.vue'));
 const XTimeline = defineAsyncComponent(() => import('./index/timeline.vue'));
 
-const props = withDefaults(defineProps<{
-	user: Misskey.entities.UserDetailed;
-	/** Vitest では MkNotesTimeline が正常に動作しないため、テスト時だけ無効化する。 */
-	disableNotes?: boolean;
-}>(), {
-	disableNotes: false,
-});
+const props = withDefaults(
+	defineProps<{
+		user: Misskey.entities.UserDetailed;
+		/** Vitest では MkNotesTimeline が正常に動作しないため、テスト時だけ無効化する。 */
+		disableNotes?: boolean;
+	}>(),
+	{
+		disableNotes: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'showMoreFiles'): void;
@@ -236,15 +250,16 @@ watch(moderationNote, async () => {
 });
 
 const style = computed(() => {
-	if (props.user.bannerUrl == null) return {};
+	if (props.user.bannerUrl == null) {
+		return {};
+	}
 	if (prefer.disableShowingAnimatedImages) {
 		return {
-			backgroundImage: `url(${ getStaticImageUrl(props.user.bannerUrl) })`,
+			backgroundImage: `url(${getStaticImageUrl(props.user.bannerUrl)})`,
 		};
-	} else {
-		return {
-			backgroundImage: `url(${ props.user.bannerUrl })`,
-		};
+	}
+	return {
+		backgroundImage: `url(${props.user.bannerUrl})`,
 	};
 });
 
@@ -265,7 +280,9 @@ function showMemoTextarea() {
 }
 
 function adjustMemoTextarea() {
-	if (!memoTextareaEl.value) return;
+	if (!memoTextareaEl.value) {
+		return;
+	}
 	memoTextareaEl.value.style.height = '0px';
 	memoTextareaEl.value.style.height = `${memoTextareaEl.value.scrollHeight}px`;
 }
@@ -282,13 +299,14 @@ watch([props.user], () => {
 	memoDraft.value = props.user.memo;
 });
 
-async function reload() {
-}
+async function reload() {}
 
 let bannerParallaxResizeObserver: ResizeObserver | null = null;
 
 function calcBannerParallax() {
-	if (!bannerEl.value || !CSS.supports('view-timeline-inset', 'auto 100px')) return;
+	if (!bannerEl.value || !CSS.supports('view-timeline-inset', 'auto 100px')) {
+		return;
+	}
 	const elRect = bannerEl.value.getBoundingClientRect();
 	const scrollEl = getScrollContainer(bannerEl.value);
 	const scrollPosition = scrollEl?.scrollTop ?? window.scrollY;
@@ -324,11 +342,15 @@ onMounted(() => {
 	const narrowMeasureEl = rootEl.value?.parentElement?.parentElement ?? rootEl.value;
 	const updateNarrow = () => {
 		// keep-alive非活性時はROが0サイズを報告するため無視する
-		if (narrowMeasureEl && window.document.body.contains(narrowMeasureEl)) narrow.value = narrowMeasureEl.clientWidth < 1000;
+		if (narrowMeasureEl && window.document.body.contains(narrowMeasureEl)) {
+			narrow.value = narrowMeasureEl.clientWidth < 1000;
+		}
 	};
 	updateNarrow();
 	narrowResizeObserver = new ResizeObserver(updateNarrow);
-	if (narrowMeasureEl) narrowResizeObserver.observe(narrowMeasureEl);
+	if (narrowMeasureEl) {
+		narrowResizeObserver.observe(narrowMeasureEl);
+	}
 
 	if (isBirthday(user.value)) {
 		confetti({

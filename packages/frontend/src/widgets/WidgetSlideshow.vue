@@ -48,11 +48,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure, save } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure, save } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const images = ref<Misskey.entities.DriveFile[]>([]);
 const fetching = ref(true);
@@ -60,19 +56,25 @@ const slideA = useTemplateRef('slideA');
 const slideB = useTemplateRef('slideB');
 
 const change = () => {
-	if (images.value.length === 0 || slideA.value == null || slideB.value == null) return;
+	if (images.value.length === 0 || slideA.value == null || slideB.value == null) {
+		return;
+	}
 
 	const index = Math.floor(Math.random() * images.value.length);
 	const image = images.value[index];
-	if (image == null) return;
-	const img = `url(${ image.url })`;
+	if (image == null) {
+		return;
+	}
+	const img = `url(${image.url})`;
 
 	slideB.value.style.backgroundImage = img;
 
 	slideB.value.classList.add('anime');
 	window.setTimeout(() => {
 		// 既にこのウィジェットがunmountされていたら要素がない
-		if (slideA.value == null || slideB.value == null) return;
+		if (slideA.value == null || slideB.value == null) {
+			return;
+		}
 
 		slideA.value.style.backgroundImage = img;
 
@@ -81,23 +83,27 @@ const change = () => {
 };
 
 const fetch = () => {
-	if (slideA.value == null || slideB.value == null) return;
+	if (slideA.value == null || slideB.value == null) {
+		return;
+	}
 	fetching.value = true;
 
 	misskeyApi('drive/files', {
 		folderId: widgetProps.folderId,
 		type: 'image/*',
 		limit: 100,
-	}).then(res => {
-		images.value = res;
-		fetching.value = false;
-		slideA.value!.style.backgroundImage = '';
-		slideB.value!.style.backgroundImage = '';
-		change();
-	}).catch(() => {
-		images.value = [];
-		fetching.value = false;
-	});
+	})
+		.then((res) => {
+			images.value = res;
+			fetching.value = false;
+			slideA.value!.style.backgroundImage = '';
+			slideB.value!.style.backgroundImage = '';
+			change();
+		})
+		.catch(() => {
+			images.value = [];
+			fetching.value = false;
+		});
 };
 
 const choose = () => {
@@ -111,7 +117,7 @@ const choose = () => {
 	});
 };
 
-useInterval(change, 10000, {
+useInterval(change, 10_000, {
 	immediate: false,
 	afterMounted: true,
 });

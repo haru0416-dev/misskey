@@ -6,4 +6,6 @@
 import { genId } from '@/utility/id.js';
 
 export const TAB_ID = genId();
-if (_DEV_) console.log('TAB_ID', TAB_ID);
+if (_DEV_) {
+	console.log('TAB_ID', TAB_ID);
+}

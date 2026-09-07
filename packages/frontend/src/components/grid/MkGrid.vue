@@ -74,9 +74,9 @@ import { createRow, defaultGridRowSetting, resetRow } from '@/components/grid/ro
 import { makeHotkey } from '@/utility/hotkey.js';
 
 type RowHolder = {
-	row: GridRow,
-	cells: GridCell[],
-	origin: DataSource,
+	row: GridRow;
+	cells: GridCell[];
+	origin: DataSource;
 };
 
 const emit = defineEmits<{
@@ -177,20 +177,20 @@ const firstSelectionRowIdx = ref<number>(CELL_ADDRESS_NONE.row);
  * 選択状態のセルを取得するための計算プロパティ。選択状態とは{@link GridCell.selected}がtrueのセルのこと。
  */
 const selectedCell = computed(() => {
-	const selected = cells.value.flatMap(it => it.cells).filter(it => it.selected);
+	const selected = cells.value.flatMap((it) => it.cells).filter((it) => it.selected);
 	return selected.length > 0 ? selected[0] : undefined;
 });
 /**
  * 範囲選択状態のセルを取得するための計算プロパティ。範囲選択状態とは{@link GridCell.ranged}がtrueのセルのこと。
  */
-const rangedCells = computed(() => cells.value.flatMap(it => it.cells).filter(it => it.ranged));
+const rangedCells = computed(() => cells.value.flatMap((it) => it.cells).filter((it) => it.ranged));
 /**
  * 範囲選択状態のセルの範囲を取得するための計算プロパティ。左上のセル番地と右下のセル番地を計算する。
  */
 const rangedBounds = computed(() => {
 	const _cells = rangedCells.value;
-	const _cols = _cells.map(it => it.address.col);
-	const _rows = _cells.map(it => it.address.row);
+	const _cols = _cells.map((it) => it.address.col);
+	const _rows = _cells.map((it) => it.address.row);
 
 	const leftTop = {
 		col: Math.min(..._cols),
@@ -215,17 +215,17 @@ const availableBounds = computed(() => {
 		row: 0,
 	};
 	const rightBottom = {
-		col: Math.max(...columns.value.map(it => it.index)),
-		row: Math.max(...rows.value.filter(it => it.using).map(it => it.index)),
+		col: Math.max(...columns.value.map((it) => it.index)),
+		row: Math.max(...rows.value.filter((it) => it.using).map((it) => it.index)),
 	};
 	return { leftTop, rightBottom };
 });
 /**
  * 範囲選択状態の行を取得するための計算プロパティ。範囲選択状態とは{@link GridRow.ranged}がtrueの行のこと。
  */
-const rangedRows = computed(() => rows.value.filter(it => it.ranged));
+const rangedRows = computed(() => rows.value.filter((it) => it.ranged));
 
-const lastLine = computed(() => rows.value.filter(it => it.using).length - 1);
+const lastLine = computed(() => rows.value.filter((it) => it.using).length - 1);
 
 // endregion
 // #endregion
@@ -281,7 +281,7 @@ function onKeyDown(ev: KeyboardEvent) {
 		console.log(`[grid][key] ctrl: ${ctrlKey}, shift: ${shiftKey}, code: ${code}`);
 	}
 
-	function updateSelectionRange(newBounds: { leftTop: CellAddress, rightBottom: CellAddress }) {
+	function updateSelectionRange(newBounds: { leftTop: CellAddress; rightBottom: CellAddress }) {
 		unSelectionOutOfRange(newBounds.leftTop, newBounds.rightBottom);
 		expandCellRange(newBounds.leftTop, newBounds.rightBottom);
 	}
@@ -295,143 +295,150 @@ function onKeyDown(ev: KeyboardEvent) {
 			const max = availableBounds.value;
 			const bounds = rangedBounds.value;
 
-			makeHotkey({
-				'delete': () => {
-					if (rangedRows.value.length > 0) {
-						if (rowSetting.events.delete) {
-							rowSetting.events.delete(rangedRows.value);
+			makeHotkey(
+				{
+					delete: () => {
+						if (rangedRows.value.length > 0) {
+							if (rowSetting.events.delete) {
+								rowSetting.events.delete(rangedRows.value);
+							}
+						} else {
+							const context = createContext();
+							removeDataFromGrid(context, (cell) => {
+								emitCellValue(cell, undefined);
+							});
 						}
-					} else {
+					},
+					'ctrl+c|meta+c': () => {
 						const context = createContext();
-						removeDataFromGrid(context, (cell) => {
-							emitCellValue(cell, undefined);
+						copyGridDataToClipboard(data.value, context);
+					},
+					'ctrl+v|meta+v': async () => {
+						const context = createContext();
+						await pasteToGridFromClipboard(context, (row, col, parsedValue) => {
+							const cell = getCellAt({ row: row.index, col: col.index });
+							if (cell != null) {
+								emitCellValue(cell, parsedValue);
+							}
 						});
-					}
+					},
+					'ctrl+shift+right|meta+shift+right': () => {
+						updateSelectionRange({
+							leftTop: { col: selectedCellAddress.col, row: bounds.leftTop.row },
+							rightBottom: { col: max.rightBottom.col, row: bounds.rightBottom.row },
+						});
+					},
+					'ctrl+shift+left|meta+shift+left': () => {
+						updateSelectionRange({
+							leftTop: { col: max.leftTop.col, row: bounds.leftTop.row },
+							rightBottom: { col: selectedCellAddress.col, row: bounds.rightBottom.row },
+						});
+					},
+					'ctrl+shift+up|meta+shift+up': () => {
+						updateSelectionRange({
+							leftTop: { col: bounds.leftTop.col, row: max.leftTop.row },
+							rightBottom: { col: bounds.rightBottom.col, row: selectedCellAddress.row },
+						});
+					},
+					'ctrl+shift+down|meta+shift+down': () => {
+						updateSelectionRange({
+							leftTop: { col: bounds.leftTop.col, row: selectedCellAddress.row },
+							rightBottom: { col: bounds.rightBottom.col, row: max.rightBottom.row },
+						});
+					},
+					'ctrl+right|meta+right': () => {
+						selectionCell({ col: max.rightBottom.col, row: selectedCellAddress.row });
+					},
+					'ctrl+left|meta+left': () => {
+						selectionCell({ col: max.leftTop.col, row: selectedCellAddress.row });
+					},
+					'ctrl+up|meta+up': () => {
+						selectionCell({ col: selectedCellAddress.col, row: max.leftTop.row });
+					},
+					'ctrl+down|meta+down': () => {
+						selectionCell({ col: selectedCellAddress.col, row: max.rightBottom.row });
+					},
+					'shift+right': () => {
+						updateSelectionRange({
+							leftTop: {
+								col: bounds.leftTop.col < selectedCellAddress.col ? bounds.leftTop.col + 1 : selectedCellAddress.col,
+								row: bounds.leftTop.row,
+							},
+							rightBottom: {
+								col:
+									bounds.rightBottom.col > selectedCellAddress.col || bounds.leftTop.col === selectedCellAddress.col
+										? bounds.rightBottom.col + 1
+										: selectedCellAddress.col,
+								row: bounds.rightBottom.row,
+							},
+						});
+					},
+					'shift+left': () => {
+						updateSelectionRange({
+							leftTop: {
+								col:
+									bounds.leftTop.col < selectedCellAddress.col || bounds.rightBottom.col === selectedCellAddress.col
+										? bounds.leftTop.col - 1
+										: selectedCellAddress.col,
+								row: bounds.leftTop.row,
+							},
+							rightBottom: {
+								col:
+									bounds.rightBottom.col > selectedCellAddress.col
+										? bounds.rightBottom.col - 1
+										: selectedCellAddress.col,
+								row: bounds.rightBottom.row,
+							},
+						});
+					},
+					'shift+up': () => {
+						updateSelectionRange({
+							leftTop: {
+								col: bounds.leftTop.col,
+								row:
+									bounds.leftTop.row < selectedCellAddress.row || bounds.rightBottom.row === selectedCellAddress.row
+										? bounds.leftTop.row - 1
+										: selectedCellAddress.row,
+							},
+							rightBottom: {
+								col: bounds.rightBottom.col,
+								row:
+									bounds.rightBottom.row > selectedCellAddress.row
+										? bounds.rightBottom.row - 1
+										: selectedCellAddress.row,
+							},
+						});
+					},
+					'shift+down': () => {
+						updateSelectionRange({
+							leftTop: {
+								col: bounds.leftTop.col,
+								row: bounds.leftTop.row < selectedCellAddress.row ? bounds.leftTop.row + 1 : selectedCellAddress.row,
+							},
+							rightBottom: {
+								col: bounds.rightBottom.col,
+								row:
+									bounds.rightBottom.row > selectedCellAddress.row || bounds.leftTop.row === selectedCellAddress.row
+										? bounds.rightBottom.row + 1
+										: selectedCellAddress.row,
+							},
+						});
+					},
+					down: () => {
+						selectionCell({ col: selectedCellAddress.col, row: selectedCellAddress.row + 1 });
+					},
+					up: () => {
+						selectionCell({ col: selectedCellAddress.col, row: selectedCellAddress.row - 1 });
+					},
+					right: () => {
+						selectionCell({ col: selectedCellAddress.col + 1, row: selectedCellAddress.row });
+					},
+					left: () => {
+						selectionCell({ col: selectedCellAddress.col - 1, row: selectedCellAddress.row });
+					},
 				},
-				'ctrl+c|meta+c': () => {
-					const context = createContext();
-					copyGridDataToClipboard(data.value, context);
-				},
-				'ctrl+v|meta+v': async () => {
-					const context = createContext();
-					await pasteToGridFromClipboard(context, (row, col, parsedValue) => {
-						const cell = getCellAt({ row: row.index, col: col.index });
-						if (cell != null) emitCellValue(cell, parsedValue);
-					});
-				},
-				'ctrl+shift+right|meta+shift+right': () => {
-					updateSelectionRange({
-						leftTop: { col: selectedCellAddress.col, row: bounds.leftTop.row },
-						rightBottom: { col: max.rightBottom.col, row: bounds.rightBottom.row },
-					});
-				},
-				'ctrl+shift+left|meta+shift+left': () => {
-					updateSelectionRange({
-						leftTop: { col: max.leftTop.col, row: bounds.leftTop.row },
-						rightBottom: { col: selectedCellAddress.col, row: bounds.rightBottom.row },
-					});
-				},
-				'ctrl+shift+up|meta+shift+up': () => {
-					updateSelectionRange({
-						leftTop: { col: bounds.leftTop.col, row: max.leftTop.row },
-						rightBottom: { col: bounds.rightBottom.col, row: selectedCellAddress.row },
-					});
-				},
-				'ctrl+shift+down|meta+shift+down': () => {
-					updateSelectionRange({
-						leftTop: { col: bounds.leftTop.col, row: selectedCellAddress.row },
-						rightBottom: { col: bounds.rightBottom.col, row: max.rightBottom.row },
-					});
-				},
-				'ctrl+right|meta+right': () => {
-					selectionCell({ col: max.rightBottom.col, row: selectedCellAddress.row });
-				},
-				'ctrl+left|meta+left': () => {
-					selectionCell({ col: max.leftTop.col, row: selectedCellAddress.row });
-				},
-				'ctrl+up|meta+up': () => {
-					selectionCell({ col: selectedCellAddress.col, row: max.leftTop.row });
-				},
-				'ctrl+down|meta+down': () => {
-					selectionCell({ col: selectedCellAddress.col, row: max.rightBottom.row });
-				},
-				'shift+right': () => {
-					updateSelectionRange({
-						leftTop: {
-							col: bounds.leftTop.col < selectedCellAddress.col
-								? bounds.leftTop.col + 1
-								: selectedCellAddress.col,
-							row: bounds.leftTop.row,
-						},
-						rightBottom: {
-							col: (bounds.rightBottom.col > selectedCellAddress.col || bounds.leftTop.col === selectedCellAddress.col)
-								? bounds.rightBottom.col + 1
-								: selectedCellAddress.col,
-							row: bounds.rightBottom.row,
-						},
-					});
-				},
-				'shift+left': () => {
-					updateSelectionRange({
-						leftTop: {
-							col: (bounds.leftTop.col < selectedCellAddress.col || bounds.rightBottom.col === selectedCellAddress.col)
-								? bounds.leftTop.col - 1
-								: selectedCellAddress.col,
-							row: bounds.leftTop.row,
-						},
-						rightBottom: {
-							col: bounds.rightBottom.col > selectedCellAddress.col
-								? bounds.rightBottom.col - 1
-								: selectedCellAddress.col,
-							row: bounds.rightBottom.row,
-						},
-					});
-				},
-				'shift+up': () => {
-					updateSelectionRange({
-						leftTop: {
-							col: bounds.leftTop.col,
-							row: (bounds.leftTop.row < selectedCellAddress.row || bounds.rightBottom.row === selectedCellAddress.row)
-								? bounds.leftTop.row - 1
-								: selectedCellAddress.row,
-						},
-						rightBottom: {
-							col: bounds.rightBottom.col,
-							row: bounds.rightBottom.row > selectedCellAddress.row
-								? bounds.rightBottom.row - 1
-								: selectedCellAddress.row,
-						},
-					});
-				},
-				'shift+down': () => {
-					updateSelectionRange({
-						leftTop: {
-							col: bounds.leftTop.col,
-							row: bounds.leftTop.row < selectedCellAddress.row
-								? bounds.leftTop.row + 1
-								: selectedCellAddress.row,
-						},
-						rightBottom: {
-							col: bounds.rightBottom.col,
-							row: (bounds.rightBottom.row > selectedCellAddress.row || bounds.leftTop.row === selectedCellAddress.row)
-								? bounds.rightBottom.row + 1
-								: selectedCellAddress.row,
-						},
-					});
-				},
-				'down': () => {
-					selectionCell({ col: selectedCellAddress.col, row: selectedCellAddress.row + 1 });
-				},
-				'up': () => {
-					selectionCell({ col: selectedCellAddress.col, row: selectedCellAddress.row - 1 });
-				},
-				'right': () => {
-					selectionCell({ col: selectedCellAddress.col + 1, row: selectedCellAddress.row });
-				},
-				'left': () => {
-					selectionCell({ col: selectedCellAddress.col - 1, row: selectedCellAddress.row });
-				},
-			}, [])(ev);
+				[],
+			)(ev);
 
 			break;
 		}
@@ -454,7 +461,9 @@ function onMouseDown(ev: MouseEvent) {
 function onLeftMouseDown(ev: MouseEvent) {
 	const cellAddress = getCellAddress(ev.target as HTMLElement);
 	if (_DEV_) {
-		console.log(`[grid][mouse-left] state:${state.value}, button: ${ev.button}, cell: ${cellAddress.row}x${cellAddress.col}`);
+		console.log(
+			`[grid][mouse-left] state:${state.value}, button: ${ev.button}, cell: ${cellAddress.row}x${cellAddress.col}`,
+		);
 	}
 
 	switch (state.value) {
@@ -483,7 +492,9 @@ function onLeftMouseDown(ev: MouseEvent) {
 					expandCellRange(leftTop, rightBottom);
 
 					const previouslySelectedCell = getCellAt(selectedCellAddress);
-					if (previouslySelectedCell != null) previouslySelectedCell.selected = true;
+					if (previouslySelectedCell != null) {
+						previouslySelectedCell.selected = true;
+					}
 				} else {
 					selectionCell(cellAddress);
 				}
@@ -495,7 +506,7 @@ function onLeftMouseDown(ev: MouseEvent) {
 				state.value = 'cellSelecting';
 			} else if (isColumnHeaderCellAddress(cellAddress)) {
 				if (ev.shiftKey) {
-					const rangedColumnIndexes = rangedCells.value.map(it => it.address.col);
+					const rangedColumnIndexes = rangedCells.value.map((it) => it.address.col);
 					const targetColumnIndexes = [cellAddress.col, ...rangedColumnIndexes];
 					unSelectionRangeAll();
 
@@ -523,11 +534,11 @@ function onLeftMouseDown(ev: MouseEvent) {
 				} else {
 					unSelectionRangeAll();
 
-					const colCells = cells.value.flatMap(row => {
+					const colCells = cells.value.flatMap((row) => {
 						const cell = row.cells[cellAddress.col];
 						return cell == null ? [] : [cell];
 					});
-					selectionRange(...colCells.map(cell => cell.address));
+					selectionRange(...colCells.map((cell) => cell.address));
 
 					firstSelectionColumnIdx.value = cellAddress.col;
 				}
@@ -541,7 +552,7 @@ function onLeftMouseDown(ev: MouseEvent) {
 				getCellElement(ev.target as HTMLElement)?.focus();
 			} else if (isRowNumberCellAddress(cellAddress)) {
 				if (ev.shiftKey) {
-					const rangedRowIndexes = rangedRows.value.map(it => it.index);
+					const rangedRowIndexes = rangedRows.value.map((it) => it.index);
 					const targetRowIndexes = [cellAddress.row, ...rangedRowIndexes];
 					unSelectionRangeAll();
 
@@ -551,7 +562,7 @@ function onLeftMouseDown(ev: MouseEvent) {
 					};
 
 					const rightBottom = {
-						col: Math.min(...cells.value.map(it => it.cells.length - 1)),
+						col: Math.min(...cells.value.map((it) => it.cells.length - 1)),
 						row: Math.max(...targetRowIndexes),
 					};
 
@@ -570,8 +581,10 @@ function onLeftMouseDown(ev: MouseEvent) {
 				} else {
 					unSelectionRangeAll();
 					const rowCells = cells.value[cellAddress.row]?.cells;
-					if (rowCells == null) return;
-					selectionRange(...rowCells.map(cell => cell.address));
+					if (rowCells == null) {
+						return;
+					}
+					selectionRange(...rowCells.map((cell) => cell.address));
 					expandRowRange(cellAddress.row, cellAddress.row);
 
 					firstSelectionRowIdx.value = cellAddress.row;
@@ -603,7 +616,7 @@ function onRightMouseDown(ev: MouseEvent) {
 			}
 
 			const _rangedCells = [...rangedCells.value];
-			if (!_rangedCells.some(it => equalCellAddress(it.address, cellAddress))) {
+			if (!_rangedCells.some((it) => equalCellAddress(it.address, cellAddress))) {
 				// 範囲選択外を右クリックした場合は、範囲選択を解除（範囲選択内であれば範囲選択を維持する）
 				selectionCell(cellAddress);
 			}
@@ -689,7 +702,7 @@ function onMouseMove(ev: MouseEvent) {
 			};
 
 			const rightBottom = {
-				col: Math.min(...cells.value.map(it => it.cells.length - 1)),
+				col: Math.min(...cells.value.map((it) => it.cells.length - 1)),
 				row: Math.max(targetCellAddress.row, firstSelectionRowIdx.value),
 			};
 
@@ -699,8 +712,10 @@ function onMouseMove(ev: MouseEvent) {
 
 			// 行も同様に
 			const targetRow = rows.value[targetCellAddress.row];
-			if (targetRow == null) return;
-			const rangedRowIndexes = [targetRow.index, ...rangedRows.value.map(it => it.index)];
+			if (targetRow == null) {
+				return;
+			}
+			const rangedRowIndexes = [targetRow.index, ...rangedRows.value.map((it) => it.index)];
 			expandRowRange(Math.min(...rangedRowIndexes), Math.max(...rangedRowIndexes));
 
 			previousCellAddress.value = targetCellAddress;
@@ -739,7 +754,9 @@ function onContextMenu(ev: PointerEvent) {
 	switch (true) {
 		case availableCellAddress(cellAddress): {
 			const cell = getCellAt(cellAddress);
-			if (cell == null) break;
+			if (cell == null) {
+				break;
+			}
 			if (cell.setting.contextMenuFactory) {
 				menuItems.push(...cell.setting.contextMenuFactory(cell.column, cell.row, cell.value, context));
 			}
@@ -747,7 +764,9 @@ function onContextMenu(ev: PointerEvent) {
 		}
 		case isColumnHeaderCellAddress(cellAddress): {
 			const col = columns.value[cellAddress.col];
-			if (col == null) break;
+			if (col == null) {
+				break;
+			}
 			if (col.setting.contextMenuFactory) {
 				menuItems.push(...col.setting.contextMenuFactory(col, context));
 			}
@@ -755,7 +774,9 @@ function onContextMenu(ev: PointerEvent) {
 		}
 		case isRowNumberCellAddress(cellAddress): {
 			const row = rows.value[cellAddress.row];
-			if (row == null) break;
+			if (row == null) {
+				break;
+			}
 			if (row.setting.contextMenuFactory) {
 				menuItems.push(...row.setting.contextMenuFactory(row, context));
 			}
@@ -771,7 +792,7 @@ function onContextMenu(ev: PointerEvent) {
 function onCellEditBegin(sender: GridCell) {
 	state.value = 'cellEditing';
 	editingCellAddress.value = sender.address;
-	for (const cell of cells.value.flatMap(it => it.cells)) {
+	for (const cell of cells.value.flatMap((it) => it.cells)) {
 		if (cell.address.col !== sender.address.col || cell.address.row !== sender.address.row) {
 			// 編集状態となったセル以外は全部選択解除
 			cell.selected = false;
@@ -826,7 +847,9 @@ function onHeaderCellChangeWidth(sender: GridColumn, width: string) {
 	switch (state.value) {
 		case 'colResizing': {
 			const column = columns.value[sender.index];
-			if (column != null) column.width = width;
+			if (column != null) {
+				column.width = width;
+			}
 			break;
 		}
 	}
@@ -836,7 +859,9 @@ function onHeaderCellChangeContentSize(sender: GridColumn, newSize: Size) {
 	switch (state.value) {
 		case 'normal': {
 			const column = columns.value[sender.index];
-			if (column == null) break;
+			if (column == null) {
+				break;
+			}
 			const currentSize = column.contentSize;
 			if (currentSize.width !== newSize.width || currentSize.height !== newSize.height) {
 				// ヘッダセルのセル幅が確定したら、そのサイズを保持しておく（内容に引っ張られて想定よりも大きいセルサイズにならないようにするためのCSS作成に使用）
@@ -872,23 +897,25 @@ function onHeaderCellWidthLargest(sender: GridColumn) {
 function calcLargestCellWidth(column: GridColumn) {
 	const _cells = cells.value;
 	const currentColumn = columns.value[column.index];
-	if (currentColumn == null) return;
+	if (currentColumn == null) {
+		return;
+	}
 	const largestColumnWidth = currentColumn.contentSize.width;
 
-	const largestCellWidth = (_cells.length > 0)
-		? _cells
-			.flatMap(row => {
-				const cell = row.cells[column.index];
-				return cell == null ? [] : [cell];
-			})
-			.reduce(
-				(acc, value) => Math.max(acc, value.contentSize.width),
-				0,
-			)
-		: 0;
+	const largestCellWidth =
+		_cells.length > 0
+			? _cells
+					.flatMap((row) => {
+						const cell = row.cells[column.index];
+						return cell == null ? [] : [cell];
+					})
+					.reduce((acc, value) => Math.max(acc, value.contentSize.width), 0)
+			: 0;
 
 	if (_DEV_) {
-		console.log(`[grid][calc-largest] idx:${column.setting.bindTo}, col:${largestColumnWidth}, cell:${largestCellWidth}`);
+		console.log(
+			`[grid][calc-largest] idx:${column.setting.bindTo}, col:${largestColumnWidth}, cell:${largestCellWidth}`,
+		);
 	}
 
 	column.width = `${Math.max(largestColumnWidth, largestCellWidth)}px`;
@@ -909,11 +936,7 @@ function emitGridEvent(ev: GridEvent) {
 		columns: columns.value,
 	};
 
-	emit(
-		'event',
-		ev,
-		currentState,
-	);
+	emit('event', ev, currentState);
 }
 
 /**
@@ -923,7 +946,9 @@ function emitGridEvent(ev: GridEvent) {
 function emitCellValue(sender: GridCell | CellAddress, newValue: CellValue) {
 	const cellAddress = 'address' in sender ? sender.address : sender;
 	const cell = getCellAt(cellAddress);
-	if (cell == null) return;
+	if (cell == null) {
+		return;
+	}
 
 	emitGridEvent({
 		type: 'cell-value-change',
@@ -950,7 +975,9 @@ function selectionCell(target: CellAddress) {
 	unSelectionRangeAll();
 
 	const cell = getCellAt(target);
-	if (cell == null) return;
+	if (cell == null) {
+		return;
+	}
 	cell.selected = true;
 	cell.ranged = true;
 }
@@ -979,7 +1006,7 @@ function unSelectionRangeAll() {
 		cell.ranged = false;
 	}
 
-	const _rows = rows.value.filter(it => it.using);
+	const _rows = rows.value.filter((it) => it.using);
 	for (const row of _rows) {
 		row.ranged = false;
 	}
@@ -1000,7 +1027,9 @@ function unSelectionOutOfRange(leftTop: CellAddress, rightBottom: CellAddress) {
 		}
 	}
 
-	const outOfRangeRows = rows.value.filter((_, index) => index < safeBounds.leftTop.row || index > safeBounds.rightBottom.row);
+	const outOfRangeRows = rows.value.filter(
+		(_, index) => index < safeBounds.leftTop.row || index > safeBounds.rightBottom.row,
+	);
 	for (const row of outOfRangeRows) {
 		row.ranged = false;
 	}
@@ -1038,24 +1067,28 @@ function expandRowRange(top: number, bottom: number) {
  */
 function applyRowRules(targetCells: GridCell[]) {
 	const _rows = rows.value;
-	const targetRowIdxes = [...new Set(targetCells.map(it => it.address.row))];
-	const rowGroups = Array.of<{ row: GridRow, cells: GridCell[] }>();
+	const targetRowIdxes = [...new Set(targetCells.map((it) => it.address.row))];
+	const rowGroups = Array.of<{ row: GridRow; cells: GridCell[] }>();
 	for (const rowIdx of targetRowIdxes) {
-		const rowGroup = targetCells.filter(it => it.address.row === rowIdx);
+		const rowGroup = targetCells.filter((it) => it.address.row === rowIdx);
 		const row = _rows[rowIdx];
-		if (row != null) rowGroups.push({ row, cells: rowGroup });
+		if (row != null) {
+			rowGroups.push({ row, cells: rowGroup });
+		}
 	}
 
 	const _cells = cells.value;
-	for (const group of rowGroups.filter(it => it.row.using)) {
+	for (const group of rowGroups.filter((it) => it.row.using)) {
 		const row = group.row;
-		const targetCols = group.cells.map(it => it.column);
+		const targetCols = group.cells.map((it) => it.column);
 		const rowCells = _cells[group.row.index]?.cells;
-		if (rowCells == null) continue;
+		if (rowCells == null) {
+			continue;
+		}
 
 		const newStyles = rowSetting.styleRules
-			.filter(it => it.condition({ row, targetCols, cells: rowCells }))
-			.map(it => it.applyStyle);
+			.filter((it) => it.condition({ row, targetCols, cells: rowCells }))
+			.map((it) => it.applyStyle);
 
 		if (JSON.stringify(newStyles) !== JSON.stringify(row.additionalStyles)) {
 			row.additionalStyles = newStyles;
@@ -1065,10 +1098,12 @@ function applyRowRules(targetCells: GridCell[]) {
 
 function availableCellAddress(cellAddress: CellAddress): boolean {
 	const safeBounds = availableBounds.value;
-	return cellAddress.row >= safeBounds.leftTop.row &&
+	return (
+		cellAddress.row >= safeBounds.leftTop.row &&
 		cellAddress.col >= safeBounds.leftTop.col &&
 		cellAddress.row <= safeBounds.rightBottom.row &&
-		cellAddress.col <= safeBounds.rightBottom.col;
+		cellAddress.col <= safeBounds.rightBottom.col
+	);
 }
 
 function getCellAt(cellAddress: CellAddress): GridCell | undefined {
@@ -1083,9 +1118,10 @@ function isRowNumberCellAddress(cellAddress: CellAddress): boolean {
 	return cellAddress.row >= 0 && cellAddress.col === -1;
 }
 
-function getSafeAddressBounds(
-	bounds: { leftTop: CellAddress, rightBottom: CellAddress },
-): { leftTop: CellAddress, rightBottom: CellAddress } {
+function getSafeAddressBounds(bounds: { leftTop: CellAddress; rightBottom: CellAddress }): {
+	leftTop: CellAddress;
+	rightBottom: CellAddress;
+} {
 	const available = availableBounds.value;
 
 	const safeLeftTop = {
@@ -1138,16 +1174,19 @@ function refreshData() {
 
 	// 行数変動時の再レンダリングを抑えるため、minimumDefinitionCount まではセルを事前確保する。
 	const _data: DataSource[] = data.value;
-	const _rows: GridRow[] = (_data.length > rowSetting.minimumDefinitionCount)
-		? _data.map((_, index) => createRow(index, true, rowSetting))
-		: Array.from({ length: rowSetting.minimumDefinitionCount }, (_, index) => createRow(index, index < _data.length, rowSetting));
+	const _rows: GridRow[] =
+		_data.length > rowSetting.minimumDefinitionCount
+			? _data.map((_, index) => createRow(index, true, rowSetting))
+			: Array.from({ length: rowSetting.minimumDefinitionCount }, (_, index) =>
+					createRow(index, index < _data.length, rowSetting),
+				);
 	const _cols: GridColumn[] = columns.value;
 
-	const _cells: RowHolder[] = _rows.map(row => {
+	const _cells: RowHolder[] = _rows.map((row) => {
 		const origin = _data[row.index] ?? {};
 		const newCells = row.using
-			? _cols.map(col => createCell(col, row, origin[col.setting.bindTo], cellSettings))
-			: _cols.map(col => createCell(col, row, undefined, cellSettings));
+			? _cols.map((col) => createCell(col, row, origin[col.setting.bindTo], cellSettings))
+			: _cols.map((col) => createCell(col, row, undefined, cellSettings));
 
 		return { row, cells: newCells, origin };
 	});
@@ -1155,7 +1194,7 @@ function refreshData() {
 	rows.value = _rows;
 	cells.value = _cells;
 
-	const allCells = _cells.filter(it => it.row.using).flatMap(it => it.cells);
+	const allCells = _cells.filter((it) => it.row.using).flatMap((it) => it.cells);
 	for (const cell of allCells) {
 		cell.violation = cellValidation(allCells, cell, cell.value);
 	}
@@ -1184,12 +1223,14 @@ function patchData(newItems: DataSource[]) {
 
 		for (let rowIdx = rows.value.length; rowIdx < newItems.length; rowIdx++) {
 			const newItem = newItems[rowIdx];
-			if (newItem == null) continue;
+			if (newItem == null) {
+				continue;
+			}
 			const newRow = createRow(rowIdx, true, rowSetting);
 			newRows.push(newRow);
 			newCells.push({
 				row: newRow,
-				cells: _cols.map(col => createCell(col, newRow, newItem[col.setting.bindTo], cellSettings)),
+				cells: _cols.map((col) => createCell(col, newRow, newItem[col.setting.bindTo], cellSettings)),
 				origin: newItem,
 			});
 		}
@@ -1197,21 +1238,25 @@ function patchData(newItems: DataSource[]) {
 		rows.value.push(...newRows);
 		cells.value.push(...newCells);
 
-		applyRowRules(newCells.flatMap(it => it.cells));
+		applyRowRules(newCells.flatMap((it) => it.cells));
 	}
 
-	const usingRows = rows.value.filter(it => it.using);
+	const usingRows = rows.value.filter((it) => it.using);
 	if (usingRows.length > newItems.length) {
 		// 再マウントの負荷を避けるため、余った行は削除せず再利用可能な状態へ戻す。
 		for (let rowIdx = newItems.length; rowIdx < usingRows.length; rowIdx++) {
 			const row = rows.value[rowIdx];
 			const holder = cells.value[rowIdx];
-			if (row == null || holder == null) continue;
+			if (row == null || holder == null) {
+				continue;
+			}
 			resetRow(row);
 			for (let colIdx = 0; colIdx < _cols.length; colIdx++) {
 				holder.origin = {};
 				const cell = holder.cells[colIdx];
-				if (cell != null) resetCell(cell);
+				if (cell != null) {
+					resetCell(cell);
+				}
 			}
 		}
 	}
@@ -1220,14 +1265,18 @@ function patchData(newItems: DataSource[]) {
 	for (let rowIdx = 0; rowIdx < newItems.length; rowIdx++) {
 		const holder = cells.value[rowIdx];
 		const newItem = newItems[rowIdx];
-		if (holder == null || newItem == null) continue;
+		if (holder == null || newItem == null) {
+			continue;
+		}
 		holder.row.using = true;
 
 		const oldCells = holder.cells;
 		for (let colIdx = 0; colIdx < oldCells.length; colIdx++) {
 			const _col = columns.value[colIdx];
 			const oldCell = oldCells[colIdx];
-			if (_col == null || oldCell == null) continue;
+			if (_col == null || oldCell == null) {
+				continue;
+			}
 			const newValue = newItem[_col.setting.bindTo];
 			if (oldCell.value !== newValue) {
 				oldCell.value = _col.setting.valueTransformer
@@ -1239,7 +1288,7 @@ function patchData(newItems: DataSource[]) {
 	}
 
 	if (changedCells.length > 0) {
-		const allCells = cells.value.slice(0, newItems.length).flatMap(it => it.cells);
+		const allCells = cells.value.slice(0, newItems.length).flatMap((it) => it.cells);
 		for (const cell of allCells) {
 			cell.violation = cellValidation(allCells, cell, cell.value);
 		}
@@ -1250,10 +1299,10 @@ function patchData(newItems: DataSource[]) {
 		emitGridEvent({
 			type: 'cell-validation',
 			all: cells.value
-				.filter(it => it.row.using)
-				.flatMap(it => it.cells)
-				.map(it => it.violation)
-				.filter(it => !it.valid),
+				.filter((it) => it.row.using)
+				.flatMap((it) => it.cells)
+				.map((it) => it.violation)
+				.filter((it) => !it.valid),
 		});
 	}
 
@@ -1268,7 +1317,7 @@ function patchData(newItems: DataSource[]) {
 onMounted(() => {
 	state.value = 'normal';
 
-	const bindToList = columnSettings.map(it => it.bindTo);
+	const bindToList = columnSettings.map((it) => it.bindTo);
 	if (new Set(bindToList).size !== columnSettings.length) {
 		// 同じ取得元を複数列へ割り当てると更新対象を一意に決められない。
 		throw new Error(`Duplicate bindTo setting : [${bindToList.join(',')}]}]`);

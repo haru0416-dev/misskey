@@ -44,19 +44,22 @@ import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
 import { useHeightTransition } from '@/composables/useHeightTransition.js';
 
-const props = withDefaults(defineProps<{
-	showHeader?: boolean;
-	thin?: boolean;
-	naked?: boolean;
-	foldable?: boolean;
-	scrollable?: boolean;
-	expanded?: boolean;
-	maxHeight?: number | null;
-}>(), {
-	expanded: true,
-	showHeader: true,
-	maxHeight: null,
-});
+const props = withDefaults(
+	defineProps<{
+		showHeader?: boolean;
+		thin?: boolean;
+		naked?: boolean;
+		foldable?: boolean;
+		scrollable?: boolean;
+		expanded?: boolean;
+		maxHeight?: number | null;
+	}>(),
+	{
+		expanded: true,
+		showHeader: true,
+		maxHeight: null,
+	},
+);
 
 const rootEl = useTemplateRef('rootEl');
 const contentEl = useTemplateRef('contentEl');
@@ -70,8 +73,12 @@ const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
 });
 
 const calcOmit = () => {
-	if (omitted.value || ignoreOmit.value || props.maxHeight == null) return;
-	if (!contentEl.value) return;
+	if (omitted.value || ignoreOmit.value || props.maxHeight == null) {
+		return;
+	}
+	if (!contentEl.value) {
+		return;
+	}
 	const height = contentEl.value.offsetHeight;
 	omitted.value = height > props.maxHeight;
 };
@@ -86,24 +93,34 @@ function showMore() {
 }
 
 onMounted(() => {
-	watch(showBody, v => {
-		if (!rootEl.value) return;
-		const headerHeight = props.showHeader ? headerEl.value?.offsetHeight ?? 0 : 0;
-		rootEl.value.style.minHeight = `${headerHeight}px`;
-		if (v) {
-			rootEl.value.style.flexBasis = 'auto';
-		} else {
-			rootEl.value.style.flexBasis = `${headerHeight}px`;
-		}
-	}, {
-		immediate: true,
-	});
+	watch(
+		showBody,
+		(v) => {
+			if (!rootEl.value) {
+				return;
+			}
+			const headerHeight = props.showHeader ? (headerEl.value?.offsetHeight ?? 0) : 0;
+			rootEl.value.style.minHeight = `${headerHeight}px`;
+			if (v) {
+				rootEl.value.style.flexBasis = 'auto';
+			} else {
+				rootEl.value.style.flexBasis = `${headerHeight}px`;
+			}
+		},
+		{
+			immediate: true,
+		},
+	);
 
-	if (rootEl.value) rootEl.value.style.setProperty('--maxHeight', props.maxHeight + 'px');
+	if (rootEl.value) {
+		rootEl.value.style.setProperty('--maxHeight', props.maxHeight + 'px');
+	}
 
 	calcOmit();
 
-	if (contentEl.value) omitObserver.observe(contentEl.value);
+	if (contentEl.value) {
+		omitObserver.observe(contentEl.value);
+	}
 });
 
 onUnmounted(() => {

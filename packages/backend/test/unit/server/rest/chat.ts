@@ -19,13 +19,12 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { countDatabaseQueries, type QueryCounter } from '../../../query-counter.js';
-import {
-	packChatMessageDetailedForApi,
-	packChatMessagesDetailedForApi,
-	type ApiChatDependencies,
-} from '@/server/rest/chat/chat.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import { countDatabaseQueries } from '../../../query-counter.js';
+import type { QueryCounter } from '../../../query-counter.js';
+import { packChatMessageDetailedForApi, packChatMessagesDetailedForApi } from '@/server/rest/chat/chat.js';
+import type { ApiChatDependencies } from '@/server/rest/chat/chat.js';
 
 describe('chat message packing', () => {
 	let runtime: RuntimeDependencies;

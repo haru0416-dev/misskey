@@ -26,7 +26,9 @@ export const hotkeyDirective = {
 	},
 
 	unmounted(el) {
-		if (el._keyHandler == null) return;
+		if (el._keyHandler == null) {
+			return;
+		}
 		if (el._hotkey_global) {
 			window.document.removeEventListener('keydown', el._keyHandler);
 		} else {

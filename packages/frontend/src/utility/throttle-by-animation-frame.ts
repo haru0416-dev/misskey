@@ -17,12 +17,16 @@ export function throttleByAnimationFrame<T extends unknown[]>(
 	const invoke = () => {
 		const argsToUse = latestArgs;
 		latestArgs = null;
-		if (argsToUse != null) callback(...argsToUse);
+		if (argsToUse != null) {
+			callback(...argsToUse);
+		}
 	};
 
 	const throttled = ((...args: T) => {
 		latestArgs = args;
-		if (frameId != null) return;
+		if (frameId != null) {
+			return;
+		}
 
 		frameId = window.requestAnimationFrame(() => {
 			frameId = null;
@@ -39,7 +43,9 @@ export function throttleByAnimationFrame<T extends unknown[]>(
 	};
 
 	throttled.flush = () => {
-		if (frameId == null) return;
+		if (frameId == null) {
+			return;
+		}
 		window.cancelAnimationFrame(frameId);
 		frameId = null;
 		invoke();

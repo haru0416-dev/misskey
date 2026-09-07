@@ -71,7 +71,9 @@ function onLogin(res: Misskey.entities.SigninFlowResponse & { finished: true }) 
 }
 
 onMounted(async () => {
-	if (!$i) return;
+	if (!$i) {
+		return;
+	}
 
 	try {
 		const result = await misskeyApi('auth/session/show', {

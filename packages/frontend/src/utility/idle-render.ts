@@ -46,10 +46,14 @@ export class IdlingRenderScheduler {
 	}
 
 	#start(): void {
-		if (!this.#isActive() || this.#ricId != null || this.#rafId != null) return;
+		if (!this.#isActive() || this.#ricId != null || this.#rafId != null) {
+			return;
+		}
 		this.#ricId = this.#requestIdleCallback((deadline) => {
 			this.#ricId = null;
-			if (!this.#isActive()) return;
+			if (!this.#isActive()) {
+				return;
+			}
 			if (deadline.timeRemaining() <= 0) {
 				this.#start();
 				return;
@@ -57,7 +61,9 @@ export class IdlingRenderScheduler {
 
 			this.#rafId = window.requestAnimationFrame((time) => {
 				this.#rafId = null;
-				if (!this.#isActive()) return;
+				if (!this.#isActive()) {
+					return;
+				}
 				try {
 					for (const renderer of this.#renderers) {
 						renderer(time);
@@ -89,7 +95,9 @@ export class IdlingRenderScheduler {
 	};
 
 	add(renderer: FrameRequestCallback): void {
-		if (this.#disposed) return;
+		if (this.#disposed) {
+			return;
+		}
 		const wasEmpty = this.#renderers.size === 0;
 		this.#renderers.add(renderer);
 		if (wasEmpty && this.#renderers.size > 0) {
@@ -111,7 +119,9 @@ export class IdlingRenderScheduler {
 	}
 
 	dispose(): void {
-		if (this.#disposed) return;
+		if (this.#disposed) {
+			return;
+		}
 		this.#disposed = true;
 		this.#renderers.clear();
 		this.#stop();

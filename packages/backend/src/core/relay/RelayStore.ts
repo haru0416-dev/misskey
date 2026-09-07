@@ -4,7 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { relay, type RelayInsert, type RelayRow } from '@/db/schema/relay.js';
+import { relay } from '@/db/schema/relay.js';
+import type { RelayInsert, RelayRow } from '@/db/schema/relay.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiRelay } from '@/models/Relay.js';
 

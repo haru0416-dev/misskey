@@ -22,24 +22,32 @@ import tinycolor from 'tinycolor2';
 let tagCanvasLoadPromise: Promise<TagCanvasApi> | null = null;
 
 function loadTagCanvas(): Promise<TagCanvasApi> {
-	if (window.TagCanvas) return Promise.resolve(window.TagCanvas);
-	if (tagCanvasLoadPromise) return tagCanvasLoadPromise;
+	if (window.TagCanvas) {
+		return Promise.resolve(window.TagCanvas);
+	}
+	if (tagCanvasLoadPromise) {
+		return tagCanvasLoadPromise;
+	}
 
 	const promise = new Promise<TagCanvasApi>((resolve, reject) => {
 		const script = Object.assign(window.document.createElement('script'), {
 			async: true,
 			src: '/client-assets/tagcanvas.min.js',
 		});
-		script.addEventListener('load', () => {
-			if (window.TagCanvas) {
-				resolve(window.TagCanvas);
-			} else {
-				reject(new Error('TagCanvas did not initialize'));
-			}
-		}, { once: true });
+		script.addEventListener(
+			'load',
+			() => {
+				if (window.TagCanvas) {
+					resolve(window.TagCanvas);
+				} else {
+					reject(new Error('TagCanvas did not initialize'));
+				}
+			},
+			{ once: true },
+		);
 		script.addEventListener('error', () => reject(new Error('Failed to load TagCanvas')), { once: true });
 		window.document.head.appendChild(script);
-	}).catch(error => {
+	}).catch((error) => {
 		tagCanvasLoadPromise = null;
 		throw error;
 	});
@@ -49,8 +57,14 @@ function loadTagCanvas(): Promise<TagCanvasApi> {
 }
 
 const SAFE_FOR_HTML_ID = 'abcdefghijklmnopqrstuvwxyz';
-const idForCanvas = Array.from({ length: 16 }, () => SAFE_FOR_HTML_ID[Math.floor(Math.random() * SAFE_FOR_HTML_ID.length)]).join('');
-const idForTags = Array.from({ length: 16 }, () => SAFE_FOR_HTML_ID[Math.floor(Math.random() * SAFE_FOR_HTML_ID.length)]).join('');
+const idForCanvas = Array.from(
+	{ length: 16 },
+	() => SAFE_FOR_HTML_ID[Math.floor(Math.random() * SAFE_FOR_HTML_ID.length)],
+).join('');
+const idForTags = Array.from(
+	{ length: 16 },
+	() => SAFE_FOR_HTML_ID[Math.floor(Math.random() * SAFE_FOR_HTML_ID.length)],
+).join('');
 const started = ref(false);
 const rootEl = useTemplateRef('rootEl');
 const tagsEl = useTemplateRef('tagsEl');
@@ -64,7 +78,7 @@ function startTagCanvas(tagCanvas: TagCanvasApi): void {
 			textColour: tinycolor(themeManager.currentCompiledTheme!['fg']).toHexString(),
 			outlineColour: tinycolor(themeManager.currentCompiledTheme!['accent']).toHexString(),
 			outlineRadius: 10,
-			initial: [-0.030, -0.010],
+			initial: [-0.03, -0.01],
 			frontSelect: true,
 			imageRadius: 8,
 			dragThreshold: 3,
@@ -85,20 +99,30 @@ function startTagCanvas(tagCanvas: TagCanvasApi): void {
 }
 
 onMounted(() => {
-	if (rootEl.value) width.value = rootEl.value.offsetWidth;
-	loadTagCanvas().then(tagCanvas => {
-		if (!disposed) startTagCanvas(tagCanvas);
-	}).catch(() => {});
+	if (rootEl.value) {
+		width.value = rootEl.value.offsetWidth;
+	}
+	loadTagCanvas()
+		.then((tagCanvas) => {
+			if (!disposed) {
+				startTagCanvas(tagCanvas);
+			}
+		})
+		.catch(() => {});
 });
 
 onBeforeUnmount(() => {
 	disposed = true;
-	if (started.value) window.TagCanvas?.Delete(idForCanvas);
+	if (started.value) {
+		window.TagCanvas?.Delete(idForCanvas);
+	}
 });
 
 defineExpose({
 	update: () => {
-		if (started.value) window.TagCanvas?.Update(idForCanvas);
+		if (started.value) {
+			window.TagCanvas?.Update(idForCanvas);
+		}
 	},
 });
 </script>

@@ -38,18 +38,36 @@ const props = defineProps<{ video: Misskey.entities.DriveFile; marker?: string }
 const emit = defineEmits<{ (event: 'mediaClick', ev: Event): void }>();
 const hide = ref(shouldHideFileByDefault(props.video));
 
-watch(() => props.video, video => { hide.value = shouldHideFileByDefault(video); }, { deep: true });
+watch(
+	() => props.video,
+	(video) => {
+		hide.value = shouldHideFileByDefault(video);
+	},
+	{ deep: true },
+);
 
 async function reveal() {
-	if (await canRevealFile(props.video)) hide.value = false;
+	if (await canRevealFile(props.video)) {
+		hide.value = false;
+	}
 }
 
 function showMenu(ev: PointerEvent) {
-	os.popupMenu(getFileMenu(props.video, value => { hide.value = value; }), (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
+	os.popupMenu(
+		getFileMenu(props.video, (value) => {
+			hide.value = value;
+		}),
+		(ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined,
+	);
 }
 
 function onContextmenu(ev: PointerEvent) {
-	os.contextMenu(getFileMenu(props.video, value => { hide.value = value; }), ev);
+	os.contextMenu(
+		getFileMenu(props.video, (value) => {
+			hide.value = value;
+		}),
+		ev,
+	);
 }
 </script>
 

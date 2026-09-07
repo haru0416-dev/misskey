@@ -54,8 +54,12 @@ export const makeHotkey = (keymap: Keymap, ignoreElements = IGNORE_ELEMENTS) => 
 	const actions = parseKeymap(keymap);
 	return (ev: KeyboardEvent) => {
 		if (window.document.activeElement != null) {
-			if (ignoreElements.includes(window.document.activeElement.tagName.toLowerCase())) return;
-			if (getHTMLElementOrNull(window.document.activeElement)?.isContentEditable) return;
+			if (ignoreElements.includes(window.document.activeElement.tagName.toLowerCase())) {
+				return;
+			}
+			if (getHTMLElementOrNull(window.document.activeElement)?.isContentEditable) {
+				return;
+			}
 		}
 		for (const action of actions) {
 			if (matchPatterns(ev, action)) {
@@ -109,7 +113,9 @@ const parseOptions = (rawCallback: Keymap[keyof Keymap]) => {
 
 const matchPatterns = (ev: KeyboardEvent, action: Action) => {
 	const { patterns, options, callback } = action;
-	if (ev.repeat && !options.allowRepeat) return false;
+	if (ev.repeat && !options.allowRepeat) {
+		return false;
+	}
 	const key = ev.key.toLowerCase();
 	return patterns.some(({ which, ctrl, shift, alt }) => {
 		if (
@@ -123,10 +129,18 @@ const matchPatterns = (ev: KeyboardEvent, action: Action) => {
 		) {
 			return false;
 		}
-		if (!which.includes(key)) return false;
-		if (ctrl !== (ev.ctrlKey || ev.metaKey)) return false;
-		if (alt !== ev.altKey) return false;
-		if (shift !== ev.shiftKey) return false;
+		if (!which.includes(key)) {
+			return false;
+		}
+		if (ctrl !== (ev.ctrlKey || ev.metaKey)) {
+			return false;
+		}
+		if (alt !== ev.altKey) {
+			return false;
+		}
+		if (shift !== ev.shiftKey) {
+			return false;
+		}
 		return true;
 	});
 };
@@ -152,10 +166,16 @@ const storePattern = (ev: KeyboardEvent, callback: CallbackFunction) => {
 };
 
 const parseKeyCode = (input?: string | null) => {
-	if (input == null) return [];
+	if (input == null) {
+		return [];
+	}
 	const raw = getValueByKey(KEY_ALIASES, input);
-	if (raw == null) return [input];
-	if (typeof raw === 'string') return [trimLower(raw)];
+	if (raw == null) {
+		return [input];
+	}
+	if (typeof raw === 'string') {
+		return [trimLower(raw)];
+	}
 	return raw.map(trimLower);
 };
 

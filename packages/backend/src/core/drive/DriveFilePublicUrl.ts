@@ -35,7 +35,9 @@ export function getDriveFilePublicUrl(
 
 		if (key && !key.match('/')) {
 			const url = `${deps.config.instance.url}/files/${key}`;
-			if (deps.mode === 'avatar') return getProxiedUrl(deps.config, file.uri, 'avatar');
+			if (deps.mode === 'avatar') {
+				return getProxiedUrl(deps.config, file.uri, 'avatar');
+			}
 			return url;
 		}
 	}

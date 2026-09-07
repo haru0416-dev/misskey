@@ -21,11 +21,17 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	watch(
 		scrollContainerRef,
 		(el, _oldEl, onCleanup) => {
-			if (!el) return;
+			if (!el) {
+				return;
+			}
 
 			const captureAnchor = () => {
-				if (!el) return;
-				if (!ready) return;
+				if (!el) {
+					return;
+				}
+				if (!ready) {
+					return;
+				}
 
 				if (el.scrollTop < 100) {
 					// 上部にいるときはanchorを参照するとズレの原因になるし位置復元するメリットも乏しいため設定しない
@@ -39,7 +45,9 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				const anchorEls = el.querySelectorAll<HTMLElement>('[data-scroll-anchor]');
 				for (let i = anchorEls.length - 1; i > -1; i--) {
 					const anchorEl = anchorEls[i];
-					if (anchorEl == null) continue;
+					if (anchorEl == null) {
+						continue;
+					}
 					const anchorTop = anchorEl.getBoundingClientRect().top;
 					// 上端が viewPosition 以下の最初の要素（＝中央を跨ぐか、中央より上にある中で最も近いもの）を選択する
 					// 最下部スクロール時に min-height による空白に viewPosition が入った場合も最後のアイテムをキャプチャできる
@@ -70,11 +78,17 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	);
 
 	const restore = () => {
-		if (!anchorId) return;
+		if (!anchorId) {
+			return;
+		}
 		const scrollContainer = scrollContainerRef.value;
-		if (!scrollContainer) return;
+		if (!scrollContainer) {
+			return;
+		}
 		const scrollAnchorEl = scrollContainer.querySelector<HTMLElement>(`[data-scroll-anchor="${CSS.escape(anchorId)}"]`);
-		if (!scrollAnchorEl) return;
+		if (!scrollAnchorEl) {
+			return;
+		}
 		const anchorRect = scrollAnchorEl.getBoundingClientRect();
 		// anchorContentY: コンテンツ先頭からのアンカー要素上端の距離（scrollTopに依存しない）
 		const anchorContentY = scrollContainer.scrollTop + anchorRect.top - scrollContainer.getBoundingClientRect().top;
@@ -88,7 +102,9 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 			restoreTimer = null;
 		}
 		const el = scrollContainerRef.value;
-		if (el) savedScrollTop = el.scrollTop;
+		if (el) {
+			savedScrollTop = el.scrollTop;
+		}
 		ready = false;
 	});
 
@@ -113,6 +129,8 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 	});
 
 	onUnmounted(() => {
-		if (restoreTimer != null) window.clearTimeout(restoreTimer);
+		if (restoreTimer != null) {
+			window.clearTimeout(restoreTimer);
+		}
 	});
 }

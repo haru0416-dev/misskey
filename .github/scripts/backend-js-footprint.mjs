@@ -20,8 +20,8 @@ const __dirname = dirname(__filename);
 
 const [repoDirArg, outputFileArg] = process.argv.slice(2);
 
-const STARTUP_TIMEOUT = util.readIntegerEnv('MK_JS_FOOTPRINT_STARTUP_TIMEOUT_MS', 120000, 1);
-const SETTLE_TIME = util.readIntegerEnv('MK_JS_FOOTPRINT_SETTLE_TIME_MS', 10000, 0);
+const STARTUP_TIMEOUT = util.readIntegerEnv('MK_JS_FOOTPRINT_STARTUP_TIMEOUT_MS', 120_000, 1);
+const SETTLE_TIME = util.readIntegerEnv('MK_JS_FOOTPRINT_SETTLE_TIME_MS', 10_000, 0);
 const REQUEST_COUNT = util.readIntegerEnv('MK_JS_FOOTPRINT_REQUEST_COUNT', 10, 0);
 
 const repoDir = resolve(repoDirArg);
@@ -50,7 +50,7 @@ function createRequest() {
 		const req = http.request(
 			{
 				host: 'localhost',
-				port: 61812,
+				port: 61_812,
 				path: '/api/meta',
 				method: 'POST',
 			},
@@ -72,7 +72,9 @@ async function waitForServerReady(serverProcess) {
 		}, STARTUP_TIMEOUT);
 
 		function onMessage(message) {
-			if (message === 'ok') finish();
+			if (message === 'ok') {
+				finish();
+			}
 		}
 
 		function onExit(code, signal) {
@@ -87,8 +89,11 @@ async function waitForServerReady(serverProcess) {
 			serverProcess.off('message', onMessage);
 			serverProcess.off('exit', onExit);
 			serverProcess.off('error', onError);
-			if (error == null) resolvePromise();
-			else reject(error);
+			if (error == null) {
+				resolvePromise();
+			} else {
+				reject(error);
+			}
 		}
 
 		serverProcess.on('message', onMessage);
@@ -98,13 +103,15 @@ async function waitForServerReady(serverProcess) {
 }
 
 async function stopServer(serverProcess) {
-	if (serverProcess.exitCode != null || serverProcess.signalCode != null) return;
+	if (serverProcess.exitCode != null || serverProcess.signalCode != null) {
+		return;
+	}
 	serverProcess.kill('SIGTERM');
 
 	await new Promise((resolvePromise) => {
 		const timeout = globalThis.setTimeout(() => {
 			serverProcess.kill('SIGKILL');
-		}, 10000);
+		}, 10_000);
 		serverProcess.once('exit', () => {
 			clearTimeout(timeout);
 			resolvePromise(undefined);
@@ -116,14 +123,20 @@ function getPackageNameFromPath(filePath) {
 	const normalized = util.normalizePath(filePath);
 	const marker = '/node_modules/';
 	const index = normalized.lastIndexOf(marker);
-	if (index === -1) return null;
+	if (index === -1) {
+		return null;
+	}
 
 	const rest = normalized.slice(index + marker.length).split('/');
 	if (rest[0] === '.bun') {
 		const nestedNodeModulesIndex = rest.indexOf('node_modules');
-		if (nestedNodeModulesIndex === -1) return null;
+		if (nestedNodeModulesIndex === -1) {
+			return null;
+		}
 		const packageParts = rest.slice(nestedNodeModulesIndex + 1);
-		if (packageParts.length === 0) return null;
+		if (packageParts.length === 0) {
+			return null;
+		}
 		return packageParts[0].startsWith('@') ? packageParts.slice(0, 2).join('/') : packageParts[0];
 	}
 
@@ -140,7 +153,9 @@ function findPackageDir(filePath, packageName) {
 		}
 
 		const parent = dirname(current);
-		if (parent === current) break;
+		if (parent === current) {
+			break;
+		}
 		current = parent;
 	}
 
@@ -152,7 +167,9 @@ function readPackageInfo(filePath) {
 	if (externalPackageName != null) {
 		const packageDir = findPackageDir(filePath, externalPackageName);
 		const cacheKey = packageDir ?? externalPackageName;
-		if (packageInfoCache.has(cacheKey)) return packageInfoCache.get(cacheKey);
+		if (packageInfoCache.has(cacheKey)) {
+			return packageInfoCache.get(cacheKey);
+		}
 
 		let version = null;
 		if (packageDir != null) {
@@ -225,7 +242,9 @@ function analyzeSource(filePath, source) {
 }
 
 function readFileMetrics(filePath) {
-	if (fileMetricCache.has(filePath)) return fileMetricCache.get(filePath);
+	if (fileMetricCache.has(filePath)) {
+		return fileMetricCache.get(filePath);
+	}
 
 	const source = fsSync.readFileSync(filePath);
 	const sourceText = source.toString('utf8');
@@ -249,13 +268,17 @@ async function readTraceRecords() {
 	try {
 		content = await fs.readFile(traceFile, 'utf8');
 	} catch (err) {
-		if (err.code === 'ENOENT') return [];
+		if (err.code === 'ENOENT') {
+			return [];
+		}
 		throw err;
 	}
 
 	const records = [];
 	for (const line of content.split('\n')) {
-		if (line.trim() === '') continue;
+		if (line.trim() === '') {
+			continue;
+		}
 		try {
 			records.push(JSON.parse(line));
 		} catch {}
@@ -292,7 +315,9 @@ function summarizeRecords(records, phase) {
 	const nativePaths = new Set();
 
 	for (const record of records) {
-		if (typeof record.path !== 'string') continue;
+		if (typeof record.path !== 'string') {
+			continue;
+		}
 
 		const extension = extname(record.path);
 		if (jsExtensions.has(extension)) {
@@ -304,7 +329,9 @@ function summarizeRecords(records, phase) {
 
 	for (const nativePath of nativePaths) {
 		const packageInfo = readPackageInfo(nativePath);
-		if (packageInfo.category === 'external') nativePackageNames.add(packageInfo.name);
+		if (packageInfo.category === 'external') {
+			nativePackageNames.add(packageInfo.name);
+		}
 	}
 
 	const totals = emptyTotals();
@@ -363,7 +390,9 @@ function summarizeRecords(records, phase) {
 
 	for (const packageName of nativePackageNames) {
 		const packageSummary = packages.get(packageName);
-		if (packageSummary != null) packageSummary.nativeAddon = true;
+		if (packageSummary != null) {
+			packageSummary.nativeAddon = true;
+		}
 	}
 
 	const externalPackages = [...packages.values()].filter((packageSummary) => packageSummary.category === 'external');

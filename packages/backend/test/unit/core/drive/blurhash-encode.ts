@@ -42,7 +42,7 @@ describe('encodeBlurhash', () => {
 				fc.integer({ min: 1, max: 40 }),
 				fc.integer({ min: 1, max: 9 }),
 				fc.integer({ min: 1, max: 9 }),
-				fc.integer({ min: 0, max: 0xffffffff }),
+				fc.integer({ min: 0, max: 0xff_ff_ff_ff }),
 				(width, height, cx, cy, seed) => {
 					// xorshift で決定的にピクセルを埋める (fc.uint8Array だと縮小時に長さの制約が壊れる)
 					let s = seed || 1;
@@ -73,9 +73,13 @@ describe('encodeBlurhash', () => {
 		const { pixels, width, height } = await loadPixels('192.jpg');
 		const clamped = new Uint8ClampedArray(pixels);
 		const measure = (fn: () => string): number => {
-			for (let i = 0; i < 50; i++) fn();
+			for (let i = 0; i < 50; i++) {
+				fn();
+			}
 			const start = performance.now();
-			for (let i = 0; i < 200; i++) fn();
+			for (let i = 0; i < 200; i++) {
+				fn();
+			}
 			return (performance.now() - start) / 200;
 		};
 		const upstreamMs = measure(() => upstream.encode(clamped, width, height, 5, 5));

@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
-import {
-	userListMembership,
-	type UserListMembershipInsert,
-	type UserListMembershipRow,
-} from '@/db/schema/user-list-membership.js';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { userListMembership } from '@/db/schema/user-list-membership.js';
+import type { UserListMembershipInsert, UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import { userList } from '@/db/schema/user-list.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -91,7 +90,9 @@ export async function listUserListIdsContainingUserFromDatabase(
 	userId: MiUser['id'],
 	candidateUserListIds: MiUserList['id'][],
 ): Promise<Set<MiUserList['id']>> {
-	if (candidateUserListIds.length === 0) return new Set();
+	if (candidateUserListIds.length === 0) {
+		return new Set();
+	}
 
 	const rows = await db
 		.select({ userListId: userListMembership.userListId })
@@ -128,14 +129,19 @@ export async function listUserListMembershipsForFanoutByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<Pick<UserListMembershipRow, 'userListId' | 'userListUserId' | 'withReplies'>[]> {
-	return await db
-		.select({
-			userListId: userListMembership.userListId,
-			userListUserId: userListMembership.userListUserId,
-			withReplies: userListMembership.withReplies,
-		})
-		.from(userListMembership)
-		.where(eq(userListMembership.userId, userId));
+	const statement = preparedQueryFor(db, 'userListMembership:forFanoutByUserId', () =>
+		db
+			.select({
+				userListId: userListMembership.userListId,
+				userListUserId: userListMembership.userListUserId,
+				withReplies: userListMembership.withReplies,
+			})
+			.from(userListMembership)
+			.where(eq(userListMembership.userId, sql.placeholder('userId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+
+	return await statement.execute({ userId });
 }
 
 export async function listUserListMembershipsByUserIdFromDatabase(
@@ -233,13 +239,17 @@ export async function createUserListMembershipWithinLimitInDatabase(
 			.where(eq(userList.id, data.userListId))
 			.limit(1)
 			.for('update');
-		if (!lockedList) return false;
+		if (!lockedList) {
+			return false;
+		}
 
 		const [row] = await tx
 			.select({ value: count() })
 			.from(userListMembership)
 			.where(eq(userListMembership.userListId, data.userListId));
-		if ((row?.value ?? 0) >= limit) return false;
+		if ((row?.value ?? 0) >= limit) {
+			return false;
+		}
 
 		await tx.insert(userListMembership).values(data);
 		return true;
@@ -250,7 +260,9 @@ export async function createUserListMembershipsInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserListMembershipInsert[],
 ): Promise<void> {
-	if (data.length === 0) return;
+	if (data.length === 0) {
+		return;
+	}
 
 	await db.insert(userListMembership).values(data);
 }

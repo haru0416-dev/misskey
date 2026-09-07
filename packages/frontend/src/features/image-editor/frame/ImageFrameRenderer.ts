@@ -259,7 +259,9 @@ export class ImageFrameRenderer {
 				});
 
 				const blob = (await qrCodeInstance.getRawData('png')) as Blob | null;
-				if (blob == null) throw new Error('Failed to generate QR code');
+				if (blob == null) {
+					throw new Error('Failed to generate QR code');
+				}
 
 				const qrImageBitmap = await window.createImageBitmap(blob);
 

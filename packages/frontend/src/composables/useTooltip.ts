@@ -25,10 +25,16 @@ export function useTooltip(
 
 	const open = () => {
 		close();
-		if (!isHovering) return;
-		if (elRef.value == null) return;
+		if (!isHovering) {
+			return;
+		}
+		if (elRef.value == null) {
+			return;
+		}
 		const el = elRef.value instanceof Element ? elRef.value : elRef.value.$el;
-		if (!window.document.body.contains(el)) return; // openしようとしたときに既に元要素がDOMから消えている場合があるため
+		if (!window.document.body.contains(el)) {
+			return;
+		} // openしようとしたときに既に元要素がDOMから消えている場合があるため
 
 		const showing = ref(true);
 		onShow(showing);
@@ -45,14 +51,20 @@ export function useTooltip(
 	};
 
 	const onMouseover = () => {
-		if (isHovering) return;
-		if (Date.now() < ignoreMouseoverUntil) return;
+		if (isHovering) {
+			return;
+		}
+		if (Date.now() < ignoreMouseoverUntil) {
+			return;
+		}
 		isHovering = true;
 		timeoutId = window.setTimeout(open, delay);
 	};
 
 	const onMouseleave = () => {
-		if (!isHovering) return;
+		if (!isHovering) {
+			return;
+		}
 		isHovering = false;
 		window.clearTimeout(timeoutId);
 		close();
@@ -60,14 +72,18 @@ export function useTooltip(
 
 	const onTouchstart = () => {
 		ignoreMouseoverUntil = Date.now() + MOUSEOVER_IGNORE_DURATION;
-		if (isHovering) return;
+		if (isHovering) {
+			return;
+		}
 		isHovering = true;
 		timeoutId = window.setTimeout(open, delay);
 	};
 
 	const onTouchend = () => {
 		ignoreMouseoverUntil = Date.now() + MOUSEOVER_IGNORE_DURATION;
-		if (!isHovering) return;
+		if (!isHovering) {
+			return;
+		}
 		isHovering = false;
 		window.clearTimeout(timeoutId);
 		close();
@@ -76,7 +92,9 @@ export function useTooltip(
 	const stop = watch(
 		elRef,
 		(value, _oldValue, onCleanup) => {
-			if (value == null) return;
+			if (value == null) {
+				return;
+			}
 			const el = value instanceof Element ? value : value.$el;
 			el.addEventListener('mouseover', onMouseover, { passive: true });
 			el.addEventListener('mouseleave', onMouseleave, { passive: true });

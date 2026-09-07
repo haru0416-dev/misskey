@@ -9,7 +9,9 @@ import type { CSSProperties, VNode } from 'vue';
 import MkMfm from '@/components/global/MkMfm.js';
 
 function hasStyleProps(value: unknown): value is { style: CSSProperties } {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
 	const candidate = value as { style?: unknown };
 	return typeof candidate.style === 'object' && candidate.style !== null;
 }
@@ -24,7 +26,9 @@ function renderFunctionStyle(name: string, args: Record<string, string | true>):
 	) as VNode;
 	const children = root.children as VNode[];
 	const props = children[0]?.props;
-	if (!hasStyleProps(props)) throw new Error('Expected rendered MFM style props');
+	if (!hasStyleProps(props)) {
+		throw new Error('Expected rendered MFM style props');
+	}
 	return props.style;
 }
 
@@ -37,7 +41,9 @@ describe('MFM function styles', () => {
 		const secondChild = (second.children as VNode[])[0];
 		expect(firstChild).toBeDefined();
 		expect(secondChild).toBeDefined();
-		if (firstChild == null || secondChild == null) throw new Error('Expected rendered MFM children');
+		if (firstChild == null || secondChild == null) {
+			throw new Error('Expected rendered MFM children');
+		}
 
 		expect(firstChild.key).toBe(secondChild.key);
 	});

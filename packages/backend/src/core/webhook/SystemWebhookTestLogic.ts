@@ -103,7 +103,7 @@ const dummyUser3 = generateDummyUser({
 	name: 'DummyUser3',
 	followersCount: 60,
 	followingCount: 70,
-	notesCount: 15900,
+	notesCount: 15_900,
 });
 
 async function toPackedUserLiteForSystemWebhookTest(
@@ -196,7 +196,7 @@ async function createSystemWebhookTestPayload<T extends SystemWebhookEventType>(
 		}
 		case 'inactiveModeratorsWarning': {
 			const dummyTime: InactiveModeratorsWarningPayload['remainingTime'] = {
-				time: 100000,
+				time: 100_000,
 				asDays: 1,
 				asHours: 24,
 			};
@@ -228,7 +228,9 @@ export async function testSystemWebhookWithQueue<T extends SystemWebhookEventTyp
 		throw new NoSuchSystemWebhookForTestError();
 	}
 	const storedWebhook = webhooks[0];
-	if (storedWebhook == null) throw new NoSuchSystemWebhookForTestError();
+	if (storedWebhook == null) {
+		throw new NoSuchSystemWebhookForTestError();
+	}
 
 	const webhook = {
 		...storedWebhook,

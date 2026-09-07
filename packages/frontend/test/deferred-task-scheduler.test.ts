@@ -47,7 +47,9 @@ describe('DeferredTaskScheduler', () => {
 
 		const timer = timers.entries().next().value!;
 		timers.delete(timer[0]);
-		if (typeof timer[1] === 'function') timer[1]();
+		if (typeof timer[1] === 'function') {
+			timer[1]();
+		}
 		expect(task).toHaveBeenCalledOnce();
 
 		scheduler.request();

@@ -25,7 +25,9 @@ type FileEntry = {
 };
 
 function entryDisplayName(entry: FileEntry) {
-	if (!entry) return '';
+	if (!entry) {
+		return '';
+	}
 	return entry.displayName || entry.file;
 }
 
@@ -46,12 +48,18 @@ function stableChunkKey(manifestKey: string, chunk: Manifest[string]) {
 function collectStartupKeys(manifest: Manifest) {
 	const entryKey = findEntryKey(manifest);
 	const keys = new Set<string>();
-	if (entryKey == null) return keys;
+	if (entryKey == null) {
+		return keys;
+	}
 
 	function visit(key: string) {
-		if (keys.has(key)) return;
+		if (keys.has(key)) {
+			return;
+		}
 		const chunk = manifest[key];
-		if (!chunk || !chunk.file?.endsWith('.js')) return;
+		if (!chunk || !chunk.file?.endsWith('.js')) {
+			return;
+		}
 		keys.add(stableChunkKey(key, chunk));
 		for (const importKey of chunk.imports ?? []) {
 			visit(importKey);
@@ -90,7 +98,9 @@ async function collectReport(repoDir: string) {
 
 	const manifestEntries = await Promise.all(
 		Object.entries(manifest).map(async ([key, chunk]) => {
-			if (!chunk.file?.endsWith('.js')) return null;
+			if (!chunk.file?.endsWith('.js')) {
+				return null;
+			}
 			const builtFile = await resolveBuiltFile(outDir, chunk.file);
 			return {
 				key: stableChunkKey(key, chunk),
@@ -101,7 +111,9 @@ async function collectReport(repoDir: string) {
 		}),
 	);
 	for (const entry of manifestEntries) {
-		if (entry == null) continue;
+		if (entry == null) {
+			continue;
+		}
 		byKey.set(entry.key, entry);
 		byFile.add(entry.file);
 	}
@@ -109,9 +121,13 @@ async function collectReport(repoDir: string) {
 	const localeDir = path.join(outDir, locale);
 	if (await util.fileExists(localeDir)) {
 		for await (const fullPath of util.traverseDirectory(localeDir)) {
-			if (!fullPath.endsWith('.js')) continue;
+			if (!fullPath.endsWith('.js')) {
+				continue;
+			}
 			const relativePath = util.normalizePath(path.relative(outDir, fullPath));
-			if (byFile.has(relativePath)) continue;
+			if (byFile.has(relativePath)) {
+				continue;
+			}
 			const size = await util.fileSize(fullPath);
 			byKey.set(relativePath, {
 				key: relativePath,
@@ -171,7 +187,9 @@ function collectVisualizerReport(data: VisualizerReport) {
 
 		for (const [bundleId, partUid] of Object.entries(meta.moduleParts ?? {})) {
 			const part = nodeParts[partUid];
-			if (part == null) continue;
+			if (part == null) {
+				continue;
+			}
 
 			hasBundle = true;
 			row.renderedLength += part.renderedLength;
@@ -180,7 +198,9 @@ function collectVisualizerReport(data: VisualizerReport) {
 			bundleIds.add(bundleId);
 		}
 
-		if (hasBundle) moduleRows.push(row);
+		if (hasBundle) {
+			moduleRows.push(row);
+		}
 	}
 
 	let staticImports = 0;
@@ -334,7 +354,9 @@ function chunkMarkdownTable(
 	rows: ReturnType<typeof getChunkComparisonRows>,
 	total?: { beforeSize: number; afterSize: number },
 ) {
-	if (rows.length === 0) return '_No data_';
+	if (rows.length === 0) {
+		return '_No data_';
+	}
 
 	const lines = ['| Chunk | Before | After | Δ | Δ (%) |', '| --- | ---: | ---: | ---: | ---: |'];
 	if (total != null) {

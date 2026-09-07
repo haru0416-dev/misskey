@@ -9,7 +9,8 @@ import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import { assertOptionalCredential, authenticateApiToken, type ApiAuthenticated } from './auth/auth.js';
+import { assertOptionalCredential, authenticateApiToken } from './auth/auth.js';
+import type { ApiAuthenticated } from './auth/auth.js';
 import { ApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { hasApiRolePolicyOrIsRoot, isApiAdministrator, isApiModerator } from './role/role-policy.js';
@@ -137,7 +138,9 @@ const textDecoder = new TextDecoder();
 
 export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 	const raw = await readRequestBodyWithLimit(c.req.raw, JSON_BODY_LIMIT, payloadTooLargeError);
-	if (raw.byteLength === 0) return {};
+	if (raw.byteLength === 0) {
+		return {};
+	}
 	try {
 		const body = JSON.parse(textDecoder.decode(raw)) as unknown;
 		return body != null && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
@@ -151,7 +154,9 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 	if (authorization != null) {
 		// スキーム名は大文字小文字を区別するため、'bearer' は受け付けない。
 		const match = authorization.match(/^Bearer (.+)$/);
-		if (match?.[1] != null) return match[1];
+		if (match?.[1] != null) {
+			return match[1];
+		}
 	}
 
 	return typeof body['i'] === 'string' ? body['i'] : null;
@@ -160,7 +165,9 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 export function getRequestIp(c: Context, config: Config): string {
 	const remoteAddress = c.req.header('x-misskey-remote-address') ?? '0.0.0.0';
 	const trustedNetworks = config.server.reverseProxy.trustedNetworks;
-	if (trustedNetworks.length === 0) return remoteAddress;
+	if (trustedNetworks.length === 0) {
+		return remoteAddress;
+	}
 
 	const forwarded =
 		c.req
@@ -171,12 +178,16 @@ export function getRequestIp(c: Context, config: Config): string {
 		[c.req.header('x-real-ip') ?? c.req.header('cf-connecting-ip')].filter(
 			(address): address is string => address != null && address !== '',
 		);
-	if (forwarded.length === 0) return remoteAddress;
+	if (forwarded.length === 0) {
+		return remoteAddress;
+	}
 
 	const addresses = [...forwarded, remoteAddress];
 	const networks = trustedNetworks.map((network) => ipaddr.parseCIDR(network));
 	const isTrusted = (address: string): boolean => {
-		if (!ipaddr.isValid(address)) return false;
+		if (!ipaddr.isValid(address)) {
+			return false;
+		}
 
 		const parsed = ipaddr.process(address);
 		return networks.some(([network, prefix]) => parsed.kind() === network.kind() && parsed.match(network, prefix));
@@ -184,7 +195,9 @@ export function getRequestIp(c: Context, config: Config): string {
 
 	for (let index = addresses.length - 1, hop = 0; index > 0; index--, hop++) {
 		const address = addresses[index];
-		if (address != null && !isTrusted(address)) return address;
+		if (address != null && !isTrusted(address)) {
+			return address;
+		}
 	}
 
 	return addresses[0] ?? remoteAddress;

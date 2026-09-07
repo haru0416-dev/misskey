@@ -38,16 +38,21 @@ function safeURIDecode(str: string): string {
 	}
 }
 
-const props = withDefaults(defineProps<{
-	url: string;
-	rel?: string;
-	showUrlPreview?: boolean;
-}>(), {
-	showUrlPreview: true,
-});
+const props = withDefaults(
+	defineProps<{
+		url: string;
+		rel?: string;
+		showUrlPreview?: boolean;
+	}>(),
+	{
+		showUrlPreview: true,
+	},
+);
 
 const url = new URL(props.url);
-if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid url');
+if (!['http:', 'https:'].includes(url.protocol)) {
+	throw new Error('invalid url');
+}
 const self = isSameOrigin(url, local);
 const localPath = url.pathname + url.search + url.hash;
 const el = ref();

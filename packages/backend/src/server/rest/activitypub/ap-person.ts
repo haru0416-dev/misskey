@@ -23,9 +23,8 @@ import {
 	isDocument,
 	isEmoji,
 	isPropertyValue,
-	type IActor,
-	type IObject,
 } from '@/core/activitypub/type.js';
+import type { IActor, IObject } from '@/core/activitypub/type.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import {
 	fetchLocalUserByUsernameFromDatabase,
@@ -67,12 +66,13 @@ import {
 	parseLocalApUri,
 	resolveApObjectForApi,
 	resolveCollectionForApi,
-	type ApiApResolveDependencies,
-	type ApiAuthUser,
 } from './ap-resolve.js';
+import type { ApiApResolveDependencies, ApiAuthUser } from './ap-resolve.js';
 import { ApiError } from '../error.js';
-import { postMoveProcessForApi, type ApiAccountMoveDependencies } from '../account/account-move.js';
-import { uploadDriveFileFromUrlForApi, type ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
+import { postMoveProcessForApi } from '../account/account-move.js';
+import type { ApiAccountMoveDependencies } from '../account/account-move.js';
+import { uploadDriveFileFromUrlForApi } from '../drive/drive-file-upload.js';
+import type { ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
 import { updateUsertagsForApi } from '../account/account-update.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
@@ -244,7 +244,9 @@ export async function extractEmojisForApi(
 							license: tag._misskey_license?.freeText ?? null,
 						}),
 					);
-					if (emoji == null) throw new Error('emoji update failed');
+					if (emoji == null) {
+						throw new Error('emoji update failed');
+					}
 					return emoji;
 				}
 
@@ -278,9 +280,15 @@ export async function resolveImageForApi(
 
 	const image = await resolveApObjectForApi(deps, value);
 
-	if (!isDocument(image)) return null;
-	if (image.url == null || typeof image.url !== 'string') return null;
-	if (!checkHttps(image.url)) return null;
+	if (!isDocument(image)) {
+		return null;
+	}
+	if (image.url == null || typeof image.url !== 'string') {
+		return null;
+	}
+	if (!checkHttps(image.url)) {
+		return null;
+	}
 
 	const shouldBeCached = deps.meta.cacheRemoteFiles && (deps.meta.cacheRemoteSensitiveFiles || !image.sensitive);
 
@@ -297,7 +305,9 @@ export async function resolveImageForApi(
 			}),
 		);
 
-		if (!file.isLink || file.url === image.url) return file;
+		if (!file.isLink || file.url === image.url) {
+			return file;
+		}
 
 		await updateDriveFileInDatabase(deps.db, file.id, { url: image.url, uri: image.url });
 		return await fetchDriveFileByIdOrFailFromDatabase(deps.db, file.id);
@@ -386,34 +396,49 @@ async function processRemoteMoveForApi(
 	src: MiRemoteUser,
 	movePreventUris: string[] = [],
 ): Promise<string> {
-	if (!src.movedToUri) return 'skip: no movedToUri';
-	if (src.uri === src.movedToUri) return 'skip: movedTo itself (src)';
-	if (movePreventUris.length > 10) return 'skip: too many moves';
+	if (!src.movedToUri) {
+		return 'skip: no movedToUri';
+	}
+	if (src.uri === src.movedToUri) {
+		return 'skip: movedTo itself (src)';
+	}
+	if (movePreventUris.length > 10) {
+		return 'skip: too many moves';
+	}
 
 	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForApi(deps, src.movedToUri);
 
-	if (dst && dst.host == null) {
-		// ローカル移行先は URI から DB の完全なレコードを取得する。
-		dst = (await fetchUserByUriFromDatabase(deps.db, src.movedToUri)) as MiLocalUser | null;
-		if (dst == null) throw new Error('user not found');
-	} else if (dst) {
-		if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
+	if (dst && dst.host != null) {
+		if (movePreventUris.includes(src.movedToUri)) {
+			return 'skip: circular move';
+		}
 
 		// 連鎖移行を最新状態まで追跡し、循環検出用の URI を引き継ぐ。
 		await updatePersonForApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
 		dst = (await fetchPersonForApi(deps, src.movedToUri)) ?? dst;
-	} else {
+	} else if (dst == null) {
 		if (isSelfHost(deps.config, extractDbHost(src.movedToUri))) {
 			return 'failed: movedTo is local but not found';
 		}
 		dst = await resolvePersonForApi(deps, src.movedToUri);
 	}
 
-	if (dst.movedToUri === dst.uri) return 'skip: movedTo itself (dst)';
-	if (src.movedToUri !== dst.uri) return 'skip: missmatch uri';
-	if (dst.movedToUri === src.uri) return 'skip: dst.movedToUri === src.uri';
-	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return 'skip: dst.alsoKnownAs is empty';
-	if (!dst.alsoKnownAs.includes(src.uri)) return 'skip: alsoKnownAs does not include from.uri';
+	const dstUri = getUserUriForApPerson(deps.config, dst);
+	if (dst.movedToUri === dstUri) {
+		return 'skip: movedTo itself (dst)';
+	}
+	if (src.movedToUri !== dstUri) {
+		return 'skip: missmatch uri';
+	}
+	if (dst.movedToUri === src.uri) {
+		return 'skip: dst.movedToUri === src.uri';
+	}
+	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) {
+		return 'skip: dst.alsoKnownAs is empty';
+	}
+	if (!dst.alsoKnownAs.includes(src.uri)) {
+		return 'skip: alsoKnownAs does not include from.uri';
+	}
 
 	await postMoveProcessForApi(deps, src, dst);
 
@@ -499,9 +524,12 @@ export async function updatePersonForApi(
 	};
 
 	const moving = (() => {
-		if (exist.movedToUri === null && updates.movedToUri) return true;
-		if (exist.movedToUri !== null && updates.movedToUri !== null && exist.movedToUri !== updates.movedToUri)
+		if (exist.movedToUri === null && updates.movedToUri) {
 			return true;
+		}
+		if (exist.movedToUri !== null && updates.movedToUri !== null && exist.movedToUri !== updates.movedToUri) {
+			return true;
+		}
 		return false;
 	})();
 
@@ -516,7 +544,9 @@ export async function updatePersonForApi(
 			...(serializedAlsoKnownAs === undefined ? {} : { alsoKnownAs: serializedAlsoKnownAs }),
 		}),
 	);
-	if (!updated) return;
+	if (!updated) {
+		return;
+	}
 
 	if (person.publicKey) {
 		await updateUserPublickeyInDatabase(deps.db, exist.id, {
@@ -585,7 +615,9 @@ export async function createPersonForApi(
 	}
 
 	const object = await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
-	if (object.id == null) throw new Error('invalid object.id: ' + object.id);
+	if (object.id == null) {
+		throw new Error('invalid object.id: ' + object.id);
+	}
 
 	const person = validateActorForApi(deps.config, object, uri);
 
@@ -690,7 +722,9 @@ export async function createPersonForApi(
 		if (isDuplicateKeyValueError(e)) {
 			// alias URI が正規 URI と同じユーザーを指す場合は既存レコードを使う。
 			const u = await fetchUserByUriFromDatabase(deps.db, person.id);
-			if (u == null) throw new Error('already registered', { cause: e });
+			if (u == null) {
+				throw new Error('already registered', { cause: e });
+			}
 			user = u as MiRemoteUser;
 		} else {
 			throw e;
@@ -725,7 +759,9 @@ export async function fetchPersonForApi(
 ): Promise<MiLocalUser | MiRemoteUser | null> {
 	if (uri.startsWith(`${deps.config.instance.url}/`)) {
 		const id = uri.split('/').pop();
-		if (id == null) return null;
+		if (id == null) {
+			return null;
+		}
 		const u = await fetchUserByIdFromDatabase(deps.db, id);
 		return u as MiLocalUser | null;
 	}
@@ -739,7 +775,9 @@ export async function resolvePersonForApi(
 	history: Set<string> = new Set(),
 ): Promise<MiLocalUser | MiRemoteUser> {
 	const exist = await fetchPersonForApi(deps, uri);
-	if (exist) return exist;
+	if (exist) {
+		return exist;
+	}
 
 	return await createPersonForApi(deps, uri, history);
 }
@@ -750,7 +788,9 @@ export async function getAuthUserFromApIdForApi(
 	uri: string,
 ): Promise<ApiAuthUser | null> {
 	const user = (await resolvePersonForApi(deps, uri)) as MiRemoteUser;
-	if (user.isDeleted) return null;
+	if (user.isDeleted) {
+		return null;
+	}
 
 	const key = await fetchUserPublickeyByUserIdFromDatabase(deps.db, user.id);
 	return { user, key };
@@ -782,14 +822,18 @@ export async function validateAlsoKnownAsForApi(
 		dst = (await fetchPersonForApi(deps, dst.uri)) ?? dst;
 	}
 
-	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return null;
+	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) {
+		return null;
+	}
 
 	const dstUri = getUserUriForApPerson(deps.config, dst);
 
 	for (const srcUri of dst.alsoKnownAs) {
 		try {
 			let src = await fetchPersonForApi(deps, srcUri);
-			if (!src) continue; // このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
+			if (!src) {
+				continue;
+			} // このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
 
 			if (dst.host != null && src.host != null) {
 				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
@@ -802,7 +846,9 @@ export async function validateAlsoKnownAsForApi(
 				if (await check(resultUser, src)) {
 					resultUser = src;
 				}
-				if (instant && resultUser) return resultUser;
+				if (instant && resultUser) {
+					return resultUser;
+				}
 			}
 		} catch {
 			/* エラーが発生した候補は対象外とする。 */
@@ -867,7 +913,9 @@ async function webfingerForApi(
 		url = `${u.protocol}//${u.hostname}/.well-known/webfinger?${urlQuery({ resource: query })}`;
 	} else {
 		const m = query.match(webfingerAcctRegex);
-		if (!m) throw new Error(`Invalid query (${query})`);
+		if (!m) {
+			throw new Error(`Invalid query (${query})`);
+		}
 		const hostname = m[2];
 		const useHttp =
 			process.env['MISSKEY_WEBFINGER_USE_HTTP'] && process.env['MISSKEY_WEBFINGER_USE_HTTP'].toLowerCase() === 'true';

@@ -14,7 +14,8 @@ import type {
 	RelationshipJobData,
 	SystemWebhookDeliverJobData,
 } from '@/queue/types.js';
-import { fixtureConfig, openTestDatabase, type TestDatabase } from './fixtures.js';
+import { fixtureConfig, openTestDatabase } from './fixtures.js';
+import type { TestDatabase } from './fixtures.js';
 import { api, signup } from './utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -100,11 +101,15 @@ export async function createEndpointsContext(): Promise<EndpointsContext> {
 /** endpoints-*.ts のテスト本体が使う小さな断言ヘルパー。 */
 export function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
-	if (value == null) throw new Error(`missing element at ${index}`);
+	if (value == null) {
+		throw new Error(`missing element at ${index}`);
+	}
 	return value;
 }
 
 export function getDefined<T>(value: T | undefined): T {
-	if (value === undefined) throw new Error('expected a defined value');
+	if (value === undefined) {
+		throw new Error('expected a defined value');
+	}
 	return value;
 }

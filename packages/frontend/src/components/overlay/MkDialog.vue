@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts">
 export type Result = string | number | true | null;
-export type MkDialogReturnType<T = Result> = { canceled: true, result: undefined } | { canceled: false, result: T };
+export type MkDialogReturnType<T = Result> = { canceled: true; result: undefined } | { canceled: false; result: T };
 </script>
 
 <script lang="ts" setup>
@@ -72,30 +72,33 @@ type Select = {
 	default: OptionValue | null;
 };
 
-const props = withDefaults(defineProps<{
-	type?: 'success' | 'error' | 'warning' | 'info' | 'question' | 'waiting';
-	title?: string;
-	text?: string;
-	input?: Input;
-	select?: Select;
-	icon?: string;
-	actions?: {
-		text: string;
-		primary?: boolean,
-		danger?: boolean,
-		callback: (...args: unknown[]) => void;
-	}[];
-	showOkButton?: boolean;
-	showCancelButton?: boolean;
-	cancelableByBgClick?: boolean;
-	okText?: string;
-	cancelText?: string;
-}>(), {
-	type: 'info',
-	showOkButton: true,
-	showCancelButton: false,
-	cancelableByBgClick: true,
-});
+const props = withDefaults(
+	defineProps<{
+		type?: 'success' | 'error' | 'warning' | 'info' | 'question' | 'waiting';
+		title?: string;
+		text?: string;
+		input?: Input;
+		select?: Select;
+		icon?: string;
+		actions?: {
+			text: string;
+			primary?: boolean;
+			danger?: boolean;
+			callback: (...args: unknown[]) => void;
+		}[];
+		showOkButton?: boolean;
+		showCancelButton?: boolean;
+		cancelableByBgClick?: boolean;
+		okText?: string;
+		cancelText?: string;
+	}>(),
+	{
+		type: 'info',
+		showOkButton: true,
+		showCancelButton: false,
+		cancelableByBgClick: true,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'done', v: MkDialogReturnType): void;
@@ -126,10 +129,7 @@ const okButtonDisabledReason = computed<null | 'charactersExceeded' | 'character
 	return null;
 });
 
-const {
-	def: selectDef,
-	model: selectedValue,
-} = useMkSelect({
+const { def: selectDef, model: selectedValue } = useMkSelect({
 	items: computed(() => props.select?.items ?? []),
 	initialValue: props.select?.default ?? null,
 });
@@ -144,12 +144,11 @@ function done(canceled: boolean, result?: Result): void {
 }
 
 async function ok() {
-	if (!props.showOkButton) return;
+	if (!props.showOkButton) {
+		return;
+	}
 
-	const result =
-		props.input ? inputValue.value :
-		props.select ? selectedValue.value :
-		true;
+	const result = props.input ? inputValue.value : props.select ? selectedValue.value : true;
 	done(false, result);
 }
 
@@ -158,7 +157,9 @@ function cancel() {
 }
 
 function onBgClick() {
-	if (props.cancelableByBgClick) cancel();
+	if (props.cancelableByBgClick) {
+		cancel();
+	}
 }
 
 function onInputKeydown(evt: KeyboardEvent) {

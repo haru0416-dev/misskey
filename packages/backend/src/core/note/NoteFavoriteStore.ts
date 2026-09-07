@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
-import { noteFavorite, type NoteFavoriteInsert, type NoteFavoriteRow } from '@/db/schema/note-favorite.js';
+import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { noteFavorite } from '@/db/schema/note-favorite.js';
+import type { NoteFavoriteInsert, NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';

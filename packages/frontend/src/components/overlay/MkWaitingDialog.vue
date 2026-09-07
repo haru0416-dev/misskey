@@ -35,9 +35,14 @@ function done() {
 	modal.value?.close();
 }
 
-watch(() => props.showing, () => {
-	if (!props.showing) done();
-});
+watch(
+	() => props.showing,
+	() => {
+		if (!props.showing) {
+			done();
+		}
+	},
+);
 </script>
 
 <style lang="scss" module>

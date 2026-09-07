@@ -32,7 +32,9 @@ const router = useRouter();
 const code = ref<string | null>(null);
 
 async function install() {
-	if (!code.value) return;
+	if (!code.value) {
+		return;
+	}
 
 	try {
 		await installPlugin(code.value);

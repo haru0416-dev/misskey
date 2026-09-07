@@ -65,7 +65,9 @@ function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase
 	for (const category of Object.keys(
 		heapSnapshotUtil.heapSnapshotCategory,
 	) as (keyof typeof heapSnapshotUtil.heapSnapshotCategory)[]) {
-		if (category === 'total') continue;
+		if (category === 'total') {
+			continue;
+		}
 
 		const childKeys = new Set<string>();
 		for (const sample of samples) {
@@ -80,7 +82,9 @@ function summarizeHeapSnapshotBreakdowns(samples: MemoryReport['samples'], phase
 				.map((sample) => sample.phases[phase].heapSnapshot?.breakdowns?.[category]?.[childKey])
 				.filter((value) => Number.isFinite(value)) as number[];
 
-			if (values.length > 0) categoryBreakdown[childKey] = util.median(values);
+			if (values.length > 0) {
+				categoryBreakdown[childKey] = util.median(values);
+			}
 		}
 
 		if (Object.keys(categoryBreakdown).length > 0) {
@@ -100,7 +104,9 @@ function collapseHeapSnapshotBreakdown(breakdown: Record<string, number>) {
 	const otherValue = entries.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N).reduce((sum, [, value]) => sum + value, 0);
 
 	const collapsed = Object.fromEntries(topEntries);
-	if (otherValue > 0) collapsed.Other = otherValue;
+	if (otherValue > 0) {
+		collapsed.Other = otherValue;
+	}
 	return collapsed;
 }
 
@@ -134,7 +140,9 @@ function summarizeSamples(samples: MemoryReport['samples']) {
 				.map((sample) => sample.phases[phase].heapSnapshot?.categories?.[category])
 				.filter((value) => Number.isFinite(value)) as number[];
 
-			if (values.length > 0) heapSnapshotCategoryValues[category] = util.median(values);
+			if (values.length > 0) {
+				heapSnapshotCategoryValues[category] = util.median(values);
+			}
 		}
 
 		const heapSnapshotNodeCountValues = {} as Record<keyof typeof heapSnapshotUtil.heapSnapshotCategory, number>;
@@ -145,7 +153,9 @@ function summarizeSamples(samples: MemoryReport['samples']) {
 				.map((sample) => sample.phases[phase].heapSnapshot?.nodeCounts?.[category])
 				.filter((value) => Number.isFinite(value)) as number[];
 
-			if (values.length > 0) heapSnapshotNodeCountValues[category] = util.median(values);
+			if (values.length > 0) {
+				heapSnapshotNodeCountValues[category] = util.median(values);
+			}
 		}
 
 		if (Object.keys(heapSnapshotCategoryValues).length > 0) {
@@ -183,8 +193,12 @@ async function measureRepo(
 		...process.env,
 		MK_MEMORY_SAMPLE_COUNT: '1',
 	} as NodeJS.ProcessEnv;
-	if (round <= 0) measureEnv.MK_MEMORY_HEAP_SNAPSHOT = '0';
-	if (options.heapSnapshotSavePath != null) measureEnv.MK_MEMORY_HEAP_SNAPSHOT_SAVE_PATH = options.heapSnapshotSavePath;
+	if (round <= 0) {
+		measureEnv.MK_MEMORY_HEAP_SNAPSHOT = '0';
+	}
+	if (options.heapSnapshotSavePath != null) {
+		measureEnv.MK_MEMORY_HEAP_SNAPSHOT_SAVE_PATH = options.heapSnapshotSavePath;
+	}
 
 	const stdout = await util.run('bun', ['packages/backend/scripts/measure-memory.mts'], {
 		cwd: repoDir,
@@ -203,12 +217,16 @@ function headHeapSnapshotPath(round: number) {
 
 function selectRepresentativeHeadHeapSnapshotRound(samples: MemoryReport['samples'], summary: MemoryReport['summary']) {
 	const medianTotal = summary.afterGc.heapSnapshot?.categories?.total;
-	if (medianTotal == null || !Number.isFinite(medianTotal)) return null;
+	if (medianTotal == null || !Number.isFinite(medianTotal)) {
+		return null;
+	}
 
 	let selected: { round: number; distance: number } | null = null;
 	for (const sample of samples) {
 		const total = sample.phases.afterGc.heapSnapshot?.categories?.total;
-		if (total == null || !Number.isFinite(total)) continue;
+		if (total == null || !Number.isFinite(total)) {
+			continue;
+		}
 
 		const distance = Math.abs(total - medianTotal);
 		if (
@@ -228,7 +246,9 @@ function selectRepresentativeHeadHeapSnapshotRound(samples: MemoryReport['sample
 
 async function saveRepresentativeHeadHeapSnapshot(samples: MemoryReport['samples'], summary: MemoryReport['summary']) {
 	const round = selectRepresentativeHeadHeapSnapshotRound(samples, summary);
-	if (round == null) return;
+	if (round == null) {
+		return;
+	}
 
 	await copyFile(headHeapSnapshotPath(round), HEAD_HEAP_SNAPSHOT_OUTPUT_PATH);
 	process.stderr.write(`Selected head heap snapshot round ${round} for artifact\n`);

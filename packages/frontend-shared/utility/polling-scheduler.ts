@@ -19,13 +19,17 @@ export class PollingScheduler {
 	) {}
 
 	#clearTimer(): void {
-		if (this.#timerId == null) return;
+		if (this.#timerId == null) {
+			return;
+		}
 		window.clearTimeout(this.#timerId);
 		this.#timerId = null;
 	}
 
 	#schedule(): void {
-		if (!this.#active || this.#disposed || this.#running || window.document.hidden || this.#timerId != null) return;
+		if (!this.#active || this.#disposed || this.#running || window.document.hidden || this.#timerId != null) {
+			return;
+		}
 		this.#timerId = window.setTimeout(() => {
 			void this.#run();
 		}, this.interval);
@@ -33,7 +37,9 @@ export class PollingScheduler {
 
 	async #run(): Promise<void> {
 		this.#timerId = null;
-		if (!this.#active || this.#disposed || this.#running || window.document.hidden) return;
+		if (!this.#active || this.#disposed || this.#running || window.document.hidden) {
+			return;
+		}
 		this.#running = true;
 		try {
 			await this.task();
@@ -52,7 +58,9 @@ export class PollingScheduler {
 	};
 
 	start(immediate = false): void {
-		if (this.#disposed) return;
+		if (this.#disposed) {
+			return;
+		}
 		if (!this.#active) {
 			this.#active = true;
 			window.document.addEventListener('visibilitychange', this.#onVisibilityChange);
@@ -66,14 +74,18 @@ export class PollingScheduler {
 	}
 
 	stop(): void {
-		if (!this.#active) return;
+		if (!this.#active) {
+			return;
+		}
 		this.#active = false;
 		this.#clearTimer();
 		window.document.removeEventListener('visibilitychange', this.#onVisibilityChange);
 	}
 
 	dispose(): void {
-		if (this.#disposed) return;
+		if (this.#disposed) {
+			return;
+		}
 		this.stop();
 		this.#disposed = true;
 	}

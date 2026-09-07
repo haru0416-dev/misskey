@@ -58,13 +58,16 @@ import { genId } from '@/utility/id.js';
 const cssAnchorSupported = CSS.supports('position-anchor', '--anchor-name');
 const tabAnchorName = `--${genId()}-currentTab`;
 
-const props = withDefaults(defineProps<{
-	tabs?: Tab[];
-	tab?: string;
-	rootEl?: HTMLElement | null;
-}>(), {
-	tabs: () => ([] as Tab[]),
-});
+const props = withDefaults(
+	defineProps<{
+		tabs?: Tab[];
+		tab?: string;
+		rootEl?: HTMLElement | null;
+	}>(),
+	{
+		tabs: () => [] as Tab[],
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'update:tab', key: string): void;
@@ -76,14 +79,15 @@ const tabHighlightEl = useTemplateRef('tabHighlightEl');
 const tabRefs: Record<string, HTMLElement | null> = {};
 
 function getTabStyle(t: Tab) {
-	if (!cssAnchorSupported) return {};
+	if (!cssAnchorSupported) {
+		return {};
+	}
 	if (t.key === props.tab) {
 		return {
 			anchorName: tabAnchorName,
 		};
-	} else {
-		return {};
 	}
+	return {};
 }
 
 function onTabMousedown(tab: Tab, ev: MouseEvent): void {
@@ -108,7 +112,9 @@ function onTabClick(t: Tab, ev: PointerEvent): void {
 }
 
 function renderTab() {
-	if (cssAnchorSupported) return;
+	if (cssAnchorSupported) {
+		return;
+	}
 
 	const tabEl = props.tab ? tabRefs[props.tab] : undefined;
 	if (tabEl && tabHighlightEl.value && tabHighlightEl.value.parentElement) {
@@ -117,7 +123,8 @@ function renderTab() {
 		const parentRect = tabHighlightEl.value.parentElement.getBoundingClientRect();
 		const rect = tabEl.getBoundingClientRect();
 		tabHighlightEl.value.style.width = rect.width + 'px';
-		tabHighlightEl.value.style.left = (rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft) + 'px';
+		tabHighlightEl.value.style.left =
+			rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft + 'px';
 	}
 }
 
@@ -136,7 +143,9 @@ function onTabWheel(ev: WheelEvent) {
 let entering = false;
 
 async function enter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	entering = true;
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = '0';
@@ -152,11 +161,15 @@ async function enter(el: Element) {
 }
 
 function afterEnter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 }
 
 async function leave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
@@ -166,7 +179,9 @@ async function leave(el: Element) {
 }
 
 function afterLeave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	el.style.width = '';
 }
 
@@ -175,7 +190,9 @@ let ro2: ResizeObserver | null;
 // タブがオーバーフローしているとき、アクティブタブを可視域中央へスクロールする
 function scrollActiveTabIntoView() {
 	const tabEl = props.tab ? tabRefs[props.tab] : null;
-	if (!tabEl || !el.value || el.value.scrollWidth <= el.value.clientWidth) return;
+	if (!tabEl || !el.value || el.value.scrollWidth <= el.value.clientWidth) {
+		return;
+	}
 	const rect = tabEl.getBoundingClientRect();
 	const parentRect = el.value.getBoundingClientRect();
 	el.value.scrollTo({
@@ -186,20 +203,30 @@ function scrollActiveTabIntoView() {
 
 onMounted(() => {
 	// tabsは非同期に到着するため props.tabs も監視する。ラベル展開Transition(150ms)後に座標が確定するため遅延補正も行う
-	watch([() => props.tab, () => props.tabs], () => {
-		nextTick(() => scrollActiveTabIntoView());
-		window.setTimeout(scrollActiveTabIntoView, 170);
-	}, { immediate: true });
+	watch(
+		[() => props.tab, () => props.tabs],
+		() => {
+			nextTick(() => scrollActiveTabIntoView());
+			window.setTimeout(scrollActiveTabIntoView, 170);
+		},
+		{ immediate: true },
+	);
 
 	if (!cssAnchorSupported) {
-		watch([() => props.tab, () => props.tabs], () => {
-			nextTick(() => {
-				if (entering) return;
-				renderTab();
-			});
-		}, {
-			immediate: true,
-		});
+		watch(
+			[() => props.tab, () => props.tabs],
+			() => {
+				nextTick(() => {
+					if (entering) {
+						return;
+					}
+					renderTab();
+				});
+			},
+			{
+				immediate: true,
+			},
+		);
 
 		if (props.rootEl) {
 			ro2 = new ResizeObserver(() => {
@@ -213,7 +240,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	if (ro2) ro2.disconnect();
+	if (ro2) {
+		ro2.disconnect();
+	}
 });
 </script>
 

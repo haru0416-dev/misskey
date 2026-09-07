@@ -11,14 +11,16 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleQueueDeleteAccount, type QueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';
+import { handleQueueDeleteAccount } from '@/queue/handlers/delete-account.js';
+import type { QueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
 
 function fakeJob(data: DbUserDeleteJobData, id?: string): Bull.Job<DbUserDeleteJobData> {

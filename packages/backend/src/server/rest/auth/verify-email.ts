@@ -12,7 +12,8 @@ import {
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../error.js';
 import type { ApiMainStreamPublisher } from '../notification/notification.js';
-import { packMeDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiVerifyEmailDependencies = UserPackingDependencies & {

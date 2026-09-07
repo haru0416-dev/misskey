@@ -77,16 +77,15 @@ import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js'
 import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { xaddApiNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { xaddApiNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import { ApiError, invalidParamError } from '../error.js';
 import type { ApiChatRoomStreamPublisher, ApiChatUserStreamPublisher, ApiMainStreamPublisher } from '../events.js';
-import {
-	packDriveFileForApi,
-	packDriveFileManyByIdsForApi,
-	type ApiDriveFileDependencies,
-} from '../drive/drive-file.js';
+import { packDriveFileForApi, packDriveFileManyByIdsForApi } from '../drive/drive-file.js';
+import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import { getApiRolePolicies, isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { pushSwNotificationForApi } from '../notification/push-notification.js';
 
@@ -107,10 +106,9 @@ function normalizeEmojiStringForApi(x: string): string {
 	if (match) {
 		const unicode = match[0];
 
-		return unicode.match('\u200d') ? unicode : unicode.replaceAll(/\ufe0f/g, '');
-	} else {
-		throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
+		return unicode.match('\u200D') ? unicode : unicode.replaceAll(/\uFE0F/g, '');
 	}
+	throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 }
 
 type ChatRoomInvitationPackable = ChatRoomInvitationRow & {
@@ -137,7 +135,9 @@ async function packChatMessageUsersForApi(
 
 	for (const message of messages) {
 		for (const src of [message.fromUser ?? message.fromUserId, message.toUser ?? message.toUserId]) {
-			if (src == null) continue;
+			if (src == null) {
+				continue;
+			}
 			if (typeof src === 'object') {
 				explicitUsers.set(src.id, src);
 				missingUserIds.delete(src.id);
@@ -164,9 +164,13 @@ async function packChatMessageUsersForApi(
 		deps,
 		[...userById.values()].filter((user) => !packedUsers.has(user.id)),
 	);
-	for (const user of newlyPackedUsers) packedUsers.set(user.id, user);
+	for (const user of newlyPackedUsers) {
+		packedUsers.set(user.id, user);
+	}
 	for (const userId of reactionUserIds) {
-		if (!packedUsers.has(userId)) missingUserIds.add(userId);
+		if (!packedUsers.has(userId)) {
+			missingUserIds.add(userId);
+		}
 	}
 	return { packedUsers, missingUserIds };
 }
@@ -232,7 +236,9 @@ export async function packChatMessagesDetailedForApi(
 	messages: MiChatMessage[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatMessage'>[]> {
-	if (messages.length === 0) return [];
+	if (messages.length === 0) {
+		return [];
+	}
 
 	const [packedUserData, packedFiles, packedRooms] = await Promise.all([
 		packChatMessageUsersForApi(deps, messages),
@@ -286,7 +292,9 @@ async function packChatMessagesLiteFor1on1ForApi(
 	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
-	if (messages.length === 0) return [];
+	if (messages.length === 0) {
+		return [];
+	}
 
 	const packedFiles = await packDriveFileManyByIdsForApi(
 		deps,
@@ -341,7 +349,9 @@ async function packChatMessagesLiteForRoomForApi(
 	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
-	if (messages.length === 0) return [];
+	if (messages.length === 0) {
+		return [];
+	}
 
 	const users = messages.map((x) => x.fromUser ?? x.fromUserId) as (MiUser | string)[];
 	const userIdSet = new Set(users.map((x) => (typeof x === 'string' ? x : x.id)));
@@ -413,7 +423,9 @@ async function packChatRoomsForApi(
 	rooms: (MiChatRoom | MiChatRoom['id'])[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoom'>[]> {
-	if (rooms.length === 0) return [];
+	if (rooms.length === 0) {
+		return [];
+	}
 
 	const explicitRooms = rooms.filter((room): room is MiChatRoom => typeof room !== 'string');
 	const _rooms =
@@ -489,7 +501,9 @@ export async function packChatRoomInvitationsForApi(
 	invitations: ChatRoomInvitationPackable[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
-	if (invitations.length === 0) return [];
+	if (invitations.length === 0) {
+		return [];
+	}
 
 	const [packedRooms, packedUsers] = await Promise.all([
 		packChatRoomsForApi(
@@ -548,7 +562,9 @@ async function packChatRoomMembershipsForApi(
 	me: { id: MiUser['id'] },
 	options: { populateUser?: boolean; populateRoom?: boolean } = {},
 ): Promise<Packed<'ChatRoomMembership'>[]> {
-	if (memberships.length === 0) return [];
+	if (memberships.length === 0) {
+		return [];
+	}
 
 	const [packedUsers, packedRooms] = await Promise.all([
 		options.populateUser
@@ -628,28 +644,42 @@ async function createChatRoomInvitationNotificationForApi(
 	invitationId: string,
 	notifierId: MiUser['id'],
 ): Promise<void> {
-	if (notifieeId === notifierId) return;
+	if (notifieeId === notifierId) {
+		return;
+	}
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, notifieeId);
 	const receiveConfig = (profile?.notificationRecieveConfig ?? {}).chatRoomInvitationReceived;
-	if (receiveConfig?.type === 'never') return;
+	if (receiveConfig?.type === 'never') {
+		return;
+	}
 
 	const muted = await mutingExistsInDatabase(deps.db, notifieeId, notifierId);
-	if (muted) return;
+	if (muted) {
+		return;
+	}
 
 	if (receiveConfig?.type === 'following') {
-		if (!(await followingExistsInDatabase(deps.db, notifieeId, notifierId))) return;
+		if (!(await followingExistsInDatabase(deps.db, notifieeId, notifierId))) {
+			return;
+		}
 	} else if (receiveConfig?.type === 'follower') {
-		if (!(await followingExistsInDatabase(deps.db, notifierId, notifieeId))) return;
+		if (!(await followingExistsInDatabase(deps.db, notifierId, notifieeId))) {
+			return;
+		}
 	} else if (receiveConfig?.type === 'mutualFollow') {
 		const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, notifieeId, notifierId);
-		if (count !== 2) return;
+		if (count !== 2) {
+			return;
+		}
 	} else if (receiveConfig?.type === 'followingOrFollower') {
 		const [isFollowing, isFollower] = await Promise.all([
 			followingExistsInDatabase(deps.db, notifieeId, notifierId),
 			followingExistsInDatabase(deps.db, notifierId, notifieeId),
 		]);
-		if (!isFollowing && !isFollower) return;
+		if (!isFollowing && !isFollower) {
+			return;
+		}
 	}
 
 	const notification = {
@@ -683,12 +713,18 @@ async function createChatMessageToUserForApi(
 		if (toUser.chatScope === 'none') {
 			throw chatNotAvailableError();
 		} else if (toUser.chatScope === 'followers') {
-			if (!(await followingExistsInDatabase(deps.db, fromUser.id, toUser.id))) throw chatNotAvailableError();
+			if (!(await followingExistsInDatabase(deps.db, fromUser.id, toUser.id))) {
+				throw chatNotAvailableError();
+			}
 		} else if (toUser.chatScope === 'following') {
-			if (!(await followingExistsInDatabase(deps.db, toUser.id, fromUser.id))) throw chatNotAvailableError();
+			if (!(await followingExistsInDatabase(deps.db, toUser.id, fromUser.id))) {
+				throw chatNotAvailableError();
+			}
 		} else if (toUser.chatScope === 'mutual') {
 			const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, fromUser.id, toUser.id);
-			if (count !== 2) throw chatNotAvailableError();
+			if (count !== 2) {
+				throw chatNotAvailableError();
+			}
 		}
 	}
 
@@ -746,7 +782,9 @@ async function createChatMessageToUserForApi(
 	if (toUser.host == null) {
 		setTimeout(async () => {
 			const marker = await deps.redis.get(`newUserChatMessageExists:${toUser.id}:${fromUser.id}`);
-			if (marker == null) return;
+			if (marker == null) {
+				return;
+			}
 
 			const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted, toUser);
 			deps.publishMainStream?.(toUser.id, 'newChatMessage', packedMessageForTo);
@@ -793,7 +831,9 @@ async function createChatMessageToRoomForApi(
 
 	const writePipeline = deps.redis.pipeline();
 	for (const membership of membershipsOtherThanMe) {
-		if (membership.isMuted) continue;
+		if (membership.isMuted) {
+			continue;
+		}
 		writePipeline.set(`newRoomChatMessageExists:${membership.userId}:${toRoom.id}`, message.id);
 		writePipeline.sadd(`newChatMessagesExists:${membership.userId}`, `room:${toRoom.id}`);
 	}
@@ -805,15 +845,21 @@ async function createChatMessageToRoomForApi(
 			readPipeline.get(`newRoomChatMessageExists:${membership.userId}:${toRoom.id}`);
 		}
 		const markers = await readPipeline.exec();
-		if (markers == null) throw new Error('redis error');
+		if (markers == null) {
+			throw new Error('redis error');
+		}
 
-		if (markers.every((marker) => marker[1] == null)) return;
+		if (markers.every((marker) => marker[1] == null)) {
+			return;
+		}
 
 		const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted);
 
 		for (let i = 0; i < membershipsOtherThanMe.length; i++) {
 			const marker = markers[i]![1];
-			if (marker == null) continue;
+			if (marker == null) {
+				continue;
+			}
 
 			deps.publishMainStream?.(membershipsOtherThanMe[i]!.userId, 'newChatMessage', packedMessageForTo);
 			void pushChatNotificationForApi(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
@@ -856,7 +902,9 @@ export async function hasPermissionToViewRoomTimelineForApi(
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (await isChatRoomMemberForApi(deps, room, meId)) return true;
+	if (await isChatRoomMemberForApi(deps, room, meId)) {
+		return true;
+	}
 	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
@@ -869,9 +917,12 @@ async function deleteChatMessageForApi(deps: ApiChatDependencies, message: MiCha
 			fetchUserByIdOrFailFromDatabase(deps.db, message.toUserId),
 		]);
 
-		if (fromUser.host == null)
+		if (fromUser.host == null) {
 			deps.publishChatUserStream?.(message.fromUserId, message.toUserId, 'deleted', message.id);
-		if (toUser.host == null) deps.publishChatUserStream?.(message.toUserId, message.fromUserId, 'deleted', message.id);
+		}
+		if (toUser.host == null) {
+			deps.publishChatUserStream?.(message.toUserId, message.fromUserId, 'deleted', message.id);
+		}
 	} else if (message.toRoomId) {
 		deps.publishChatRoomStream?.(message.toRoomId, 'deleted', message.id);
 	}
@@ -932,7 +983,9 @@ async function getUserChatReadStateMapForApi(
 		pipeline.get(`newUserChatMessageExists:${userId}:${otherId}`);
 	}
 	const markers = await pipeline.exec();
-	if (markers == null) throw new Error('redis error');
+	if (markers == null) {
+		throw new Error('redis error');
+	}
 
 	for (let i = 0; i < otherIds.length; i++) {
 		readStateMap[otherIds[i]!] = markers[i]![1] == null;
@@ -953,7 +1006,9 @@ async function getRoomChatReadStateMapForApi(
 		pipeline.get(`newRoomChatMessageExists:${userId}:${roomId}`);
 	}
 	const markers = await pipeline.exec();
-	if (markers == null) throw new Error('redis error');
+	if (markers == null) {
+		throw new Error('redis error');
+	}
 
 	for (let i = 0; i < roomIds.length; i++) {
 		readStateMap[roomIds[i]!] = markers[i]![1] == null;
@@ -980,9 +1035,15 @@ async function hasPermissionToViewRoomInfoForApi(
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (room.ownerId === meId) return true;
-	if (await isChatRoomMemberForApi(deps, room, meId)) return true;
-	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, meId)) return true;
+	if (room.ownerId === meId) {
+		return true;
+	}
+	if (await isChatRoomMemberForApi(deps, room, meId)) {
+		return true;
+	}
+	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, meId)) {
+		return true;
+	}
 	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
@@ -991,7 +1052,9 @@ async function hasPermissionToDeleteRoomForApi(
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (room.ownerId === meId) return true;
+	if (room.ownerId === meId) {
+		return true;
+	}
 	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
@@ -1036,7 +1099,9 @@ async function isChatRoomMemberForApi(
 	room: MiChatRoom,
 	userId: MiUser['id'],
 ): Promise<boolean> {
-	if (room.ownerId === userId) return true;
+	if (room.ownerId === userId) {
+		return true;
+	}
 	return (await fetchChatRoomMembershipFromDatabase(deps.db, room.id, userId)) != null;
 }
 
@@ -1066,8 +1131,9 @@ async function createChatRoomInvitationForApi(
 			error instanceof ChatRoomCapacityExceededError ||
 			error instanceof ChatRoomInvitationConflictError ||
 			isDuplicateKeyValueDatabaseError(error)
-		)
+		) {
 			throw cannotCreateChatRoomInvitationError();
+		}
 		throw error;
 	});
 
@@ -1122,7 +1188,9 @@ async function joinToChatRoomForApi(
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
 	const invitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, userId);
-	if (invitation == null) throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
+	if (invitation == null) {
+		throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
+	}
 
 	await joinChatRoomFromInvitationInDatabase(
 		deps.db,
@@ -1134,7 +1202,9 @@ async function joinToChatRoomForApi(
 		invitation.id,
 		MAX_ROOM_MEMBERS,
 	).catch((error) => {
-		if (error instanceof ChatRoomCapacityExceededError) throw cannotJoinChatRoomError();
+		if (error instanceof ChatRoomCapacityExceededError) {
+			throw cannotJoinChatRoomError();
+		}
 		if (error instanceof ChatRoomInvitationNotFoundError || isDuplicateKeyValueDatabaseError(error)) {
 			throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
 		}
@@ -1148,7 +1218,9 @@ async function ignoreChatRoomInvitationForApi(
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
 	const invitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, userId);
-	if (invitation == null) throw noSuchRoomError('5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
+	if (invitation == null) {
+		throw noSuchRoomError('5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
+	}
 	await updateChatRoomInvitationIgnoredFromDatabase(deps.db, invitation.id, true);
 }
 
@@ -1158,7 +1230,9 @@ async function leaveChatRoomForApi(
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
 	const membership = await fetchChatRoomMembershipFromDatabase(deps.db, roomId, userId);
-	if (membership == null) throw noSuchRoomError('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
+	if (membership == null) {
+		throw noSuchRoomError('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
+	}
 	await deleteChatRoomMembershipByIdFromDatabase(deps.db, membership.id);
 
 	await deps.redis
@@ -1175,7 +1249,9 @@ async function muteChatRoomForApi(
 	mute: boolean,
 ): Promise<void> {
 	const membership = await fetchChatRoomMembershipFromDatabase(deps.db, roomId, userId);
-	if (membership == null) throw noSuchRoomError('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
+	if (membership == null) {
+		throw noSuchRoomError('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
+	}
 	await updateChatRoomMembershipMuteFromDatabase(deps.db, membership.id, mute);
 }
 
@@ -1219,14 +1295,13 @@ async function resolveChatReactionForApi(
 
 	if (custom == null) {
 		return normalizeEmojiStringForApi(reactionInput);
-	} else {
-		const name = custom[1]!;
-		if (requireExists) {
-			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
-			if (emoji == null) throw invalidParamError({ param: 'reaction', reason: 'no such emoji' });
-		}
-		return `:${name}:`;
 	}
+	const name = custom[1]!;
+	if (requireExists) {
+		const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
+		if (emoji == null) throw invalidParamError({ param: 'reaction', reason: 'no such emoji' });
+	}
+	return `:${name}:`;
 }
 
 async function reactToChatMessageForApi(
@@ -1238,7 +1313,9 @@ async function reactToChatMessageForApi(
 	const reaction = await resolveChatReactionForApi(deps, reactionInput, true);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
-	if (message == null) throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
+	if (message == null) {
+		throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
+	}
 
 	if (message.fromUserId === userId) {
 		throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
@@ -1283,7 +1360,9 @@ async function unreactToChatMessageForApi(
 	const reaction = await resolveChatReactionForApi(deps, reactionInput, false);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
-	if (message == null) throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
+	if (message == null) {
+		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
+	}
 	if (message.fromUserId === userId || (message.toRoomId === null && message.toUserId !== userId)) {
 		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
 	}
@@ -1369,7 +1448,9 @@ function cannotJoinChatRoomError(): ApiError {
 
 async function getUserForApiChat(deps: ApiChatDependencies, userId: string): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
+	if (user == null) {
+		throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
+	}
 	return user;
 }
 
@@ -1438,13 +1519,14 @@ export async function handleApiChatMessagesCreateToUser(
 	let file = null;
 	if (params.fileId != null) {
 		file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
-		if (file == null)
+		if (file == null) {
 			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
 				id: '4372b8e2-185d-4146-8749-2f68864a3e5f',
 			});
+		}
 	}
 
 	if (params.text == null && file == null) {
@@ -1485,18 +1567,21 @@ export async function handleApiChatMessagesCreateToRoom(
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForApi(deps, params.toRoomId);
-	if (room == null) throw noSuchRoomError('8098520d-2da5-4e8f-8ee1-df78b55a4ec6');
+	if (room == null) {
+		throw noSuchRoomError('8098520d-2da5-4e8f-8ee1-df78b55a4ec6');
+	}
 
 	let file = null;
 	if (params.fileId != null) {
 		file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
-		if (file == null)
+		if (file == null) {
 			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
 				id: 'b6accbd3-1d7b-4d9f-bdb7-eb185bac06db',
 			});
+		}
 	}
 
 	if (params.text == null && file == null) {
@@ -1524,7 +1609,9 @@ export async function handleApiChatMessagesDelete(
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const message = await fetchChatMessageByIdAndFromUserIdFromDatabase(deps.db, params.messageId, me.id);
-	if (message == null) throw noSuchMessageError('36b67f0e-66a6-414b-83df-992a55294f17');
+	if (message == null) {
+		throw noSuchMessageError('36b67f0e-66a6-414b-83df-992a55294f17');
+	}
 
 	await deleteChatMessageForApi(deps, message);
 }
@@ -1577,7 +1664,9 @@ export async function handleApiChatMessagesRoomTimeline(
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
-	if (room == null) throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
+	if (room == null) {
+		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
+	}
 
 	if (!(await hasPermissionToViewRoomTimelineForApi(deps, me.id, room))) {
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
@@ -1607,9 +1696,12 @@ export async function handleApiChatMessagesSearch(
 
 	if (params.roomId != null) {
 		const room = await findChatRoomByIdForApi(deps, params.roomId);
-		if (room == null) throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
-		if (!(await isChatRoomMemberForApi(deps, room, me.id)))
+		if (room == null) {
 			throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
+		}
+		if (!(await isChatRoomMemberForApi(deps, room, me.id))) {
+			throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
+		}
 	}
 
 	const messages = await searchChatMessagesForApi(
@@ -1636,7 +1728,9 @@ export async function handleApiChatMessagesShow(
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, params.messageId);
-	if (message == null) throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
+	if (message == null) {
+		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
+	}
 	if (message.fromUserId !== me.id && message.toUserId !== me.id && !(await isApiModerator(deps, me))) {
 		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
 	}
@@ -1700,10 +1794,13 @@ export async function handleApiChatRoomsDelete(
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
-	if (room == null) throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
-
-	if (!(await hasPermissionToDeleteRoomForApi(deps, me.id, room)))
+	if (room == null) {
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
+	}
+
+	if (!(await hasPermissionToDeleteRoomForApi(deps, me.id, room))) {
+		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
+	}
 
 	await deleteChatRoomForApi(deps, room, me);
 }
@@ -1723,7 +1820,9 @@ export async function handleApiChatRoomsUpdate(
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
-	if (room == null) throw noSuchRoomError('fcdb0f92-bda6-47f9-bd05-343e0e020932');
+	if (room == null) {
+		throw noSuchRoomError('fcdb0f92-bda6-47f9-bd05-343e0e020932');
+	}
 
 	const updated = await updateChatRoomForApi(
 		deps,
@@ -1746,10 +1845,13 @@ export async function handleApiChatRoomsShow(
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
-	if (room == null) throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
-
-	if (!(await hasPermissionToViewRoomInfoForApi(deps, me.id, room)))
+	if (room == null) {
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
+	}
+
+	if (!(await hasPermissionToViewRoomInfoForApi(deps, me.id, room))) {
+		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
+	}
 
 	return await packChatRoomForApi(deps, room, me);
 }
@@ -1840,9 +1942,13 @@ export async function handleApiChatRoomsMembers(
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
-	if (room == null) throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
+	if (room == null) {
+		throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
+	}
 
-	if (!(await isChatRoomMemberForApi(deps, room, me.id))) throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
+	if (!(await isChatRoomMemberForApi(deps, room, me.id))) {
+		throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
+	}
 
 	const memberships = await getRoomChatMembershipsWithPaginationForApi(deps, room.id, params.limit, sinceId, untilId);
 	return await packChatRoomMembershipsForApi(deps, memberships, me, { populateUser: true, populateRoom: false });
@@ -1877,7 +1983,9 @@ export async function handleApiChatRoomsInvitationsCreate(
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
-	if (room == null) throw noSuchRoomError('916f9507-49ba-4e90-b57f-1fd4deaa47a5');
+	if (room == null) {
+		throw noSuchRoomError('916f9507-49ba-4e90-b57f-1fd4deaa47a5');
+	}
 
 	const invitation = await createChatRoomInvitationForApi(deps, me.id, room.id, params.userId);
 	return await packChatRoomInvitationForApi(deps, invitation, me);
@@ -1941,7 +2049,9 @@ export async function handleApiChatRoomsInvitationsOutbox(
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
-	if (room == null) throw noSuchRoomError('a3c6b309-9717-4316-ae94-a69b53437237');
+	if (room == null) {
+		throw noSuchRoomError('a3c6b309-9717-4316-ae94-a69b53437237');
+	}
 
 	const invitations = await getSentChatRoomInvitationsWithPaginationForApi(
 		deps,

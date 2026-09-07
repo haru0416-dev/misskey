@@ -85,7 +85,9 @@ describe('WidgetUnixClock', () => {
 			return id;
 		});
 		vi.spyOn(window, 'clearTimeout').mockImplementation((id) => {
-			if (id != null) timers.delete(id as TimerId);
+			if (id != null) {
+				timers.delete(id as TimerId);
+			}
 		});
 
 		const result = render(WidgetUnixClock);

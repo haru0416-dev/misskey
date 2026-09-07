@@ -14,10 +14,14 @@ const traceFd = traceFile == null ? null : openSync(traceFile, 'a');
 const jsExtensions = new Set(['.js', '.mjs', '.cjs']);
 
 function recordLoadedFile(kind, filePath, request) {
-	if (traceFd == null || typeof filePath !== 'string') return;
+	if (traceFd == null || typeof filePath !== 'string') {
+		return;
+	}
 
 	const extension = extname(filePath);
-	if (!jsExtensions.has(extension) && extension !== '.node') return;
+	if (!jsExtensions.has(extension) && extension !== '.node') {
+		return;
+	}
 
 	let size = null;
 	try {

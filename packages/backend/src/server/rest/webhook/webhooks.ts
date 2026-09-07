@@ -24,10 +24,12 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import { MiNote } from '@/models/Note.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { MiUser } from '@/models/User.js';
-import { webhookEventTypes, type MiWebhook, type WebhookEventTypes } from '@/models/Webhook.js';
+import { webhookEventTypes } from '@/models/Webhook.js';
+import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { ApiError } from '../error.js';
-import { populateEmojis, type ApiEmojiPopulateDependencies } from '../note/note.js';
+import { populateEmojis } from '../note/note.js';
+import type { ApiEmojiPopulateDependencies } from '../note/note.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiWebhookDependencies = {
@@ -344,7 +346,7 @@ const webhookTestDummyUser3 = generateWebhookTestDummyUser({
 	name: 'DummyUser3',
 	followersCount: 60,
 	followingCount: 70,
-	notesCount: 15900,
+	notesCount: 15_900,
 });
 
 async function toWebhookTestPackedUserLite(

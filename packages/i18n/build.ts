@@ -108,25 +108,32 @@ async function buildSrc(): Promise<void> {
 
 function buildDts(): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const child = spawn('bun', [
-			'run',
-			'--bun',
-			fileURLToPath(new URL('../../scripts/tsc-native.mjs', import.meta.url)),
-			'--project',
-			'tsconfig.json',
-			'--rootDir',
-			'src',
-			'--outDir',
-			'built',
-			'--declaration',
-			'true',
-			'--emitDeclarationOnly',
-			'true',
-		], { stdio: 'inherit' });
+		const child = spawn(
+			'bun',
+			[
+				'run',
+				'--bun',
+				fileURLToPath(new URL('../../scripts/tsc-native.mjs', import.meta.url)),
+				'--project',
+				'tsconfig.json',
+				'--rootDir',
+				'src',
+				'--outDir',
+				'built',
+				'--declaration',
+				'true',
+				'--emitDeclarationOnly',
+				'true',
+			],
+			{ stdio: 'inherit' },
+		);
 		child.once('error', reject);
 		child.once('exit', (code, signal) => {
-			if (code === 0) resolve();
-			else reject(new Error(`型定義の生成が失敗しました: ${signal ? `signal ${signal}` : `code ${code}`}`));
+			if (code === 0) {
+				resolve();
+			} else {
+				reject(new Error(`型定義の生成が失敗しました: ${signal ? `signal ${signal}` : `code ${code}`}`));
+			}
 		});
 	});
 }
@@ -138,15 +145,21 @@ async function watchSrc(): Promise<void> {
 	let localeBuildQueue = Promise.resolve();
 	localesWatcher.on('all', (event, path) => {
 		const file = basename(path);
-		if (!localeFiles.has(file)) return;
-		localeBuildQueue = localeBuildQueue.then(async () => {
-			console.log(`[${_package.name}] locales changed: ${event} ${path}`);
-			writeLocales();
-			await writeFrontendLocalesJson();
-			if (file === 'ja-JP.yml') await generateLocaleInterface(_localesDir);
-		}).catch((error) => {
-			console.error(`[${_package.name}] locale rebuild failed:`, error);
-		});
+		if (!localeFiles.has(file)) {
+			return;
+		}
+		localeBuildQueue = localeBuildQueue
+			.then(async () => {
+				console.log(`[${_package.name}] locales changed: ${event} ${path}`);
+				writeLocales();
+				await writeFrontendLocalesJson();
+				if (file === 'ja-JP.yml') {
+					await generateLocaleInterface(_localesDir);
+				}
+			})
+			.catch((error) => {
+				console.error(`[${_package.name}] locale rebuild failed:`, error);
+			});
 	});
 
 	const plugins: Plugin[] = [

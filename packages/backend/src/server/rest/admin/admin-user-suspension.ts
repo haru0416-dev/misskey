@@ -68,7 +68,9 @@ async function enqueueSharedInboxDelete(
 	transitionedAt: string,
 	transitionId: string,
 ): Promise<void> {
-	if (user.host !== null) return;
+	if (user.host !== null) {
+		return;
+	}
 
 	const localUser = user as MiUser & { host: null };
 	const content = addActivityContext(
@@ -79,7 +81,9 @@ async function enqueueSharedInboxDelete(
 
 	for (const inbox of inboxes) {
 		const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
-		if (job == null) continue;
+		if (job == null) {
+			continue;
+		}
 		await deps.deliverQueue.add(
 			job.name,
 			{
@@ -97,7 +101,9 @@ async function enqueueSharedInboxUndoDelete(
 	transitionedAt: string,
 	transitionId: string,
 ): Promise<void> {
-	if (user.host !== null) return;
+	if (user.host !== null) {
+		return;
+	}
 
 	const localUser = user as MiUser & { host: null };
 	const content = addActivityContext(
@@ -112,7 +118,9 @@ async function enqueueSharedInboxUndoDelete(
 
 	for (const inbox of inboxes) {
 		const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
-		if (job == null) continue;
+		if (job == null) {
+			continue;
+		}
 		await deps.deliverQueue.add(
 			job.name,
 			{

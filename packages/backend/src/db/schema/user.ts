@@ -15,8 +15,8 @@ import {
 	timestamp,
 	uniqueIndex,
 	varchar,
-	type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
 import { driveFile } from './drive-file.js';
 

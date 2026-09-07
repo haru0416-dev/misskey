@@ -4,14 +4,17 @@
  */
 
 import { init } from 'slacc';
-import { loadConfig, type Config } from '@/config.js';
+import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import type { QueueShellDependencies } from '@/queue/worker.js';
 
 let slaccInitialized = false;
 
 export function initExtraThreadPool(config: Config) {
-	if (slaccInitialized) return;
+	if (slaccInitialized) {
+		return;
+	}
 
 	const threadPoolSize = Math.max(config.server.process.computationThreadsPerWorker ?? 1, 1);
 
@@ -88,7 +91,9 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	return {
 		close: async () => {
 			await workers.stop();
-			if (dependencies == null) await deps.dispose();
+			if (dependencies == null) {
+				await deps.dispose();
+			}
 		},
 	};
 }

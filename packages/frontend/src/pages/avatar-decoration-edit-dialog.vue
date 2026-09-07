@@ -81,13 +81,13 @@ import { ensureSignin } from '@/i.js';
 const $i = ensureSignin();
 
 const props = defineProps<{
-	avatarDecoration?: Misskey.entities.AdminAvatarDecorationsListResponse[number],
-	categories?: string[],
+	avatarDecoration?: Misskey.entities.AdminAvatarDecorationsListResponse[number];
+	categories?: string[];
 }>();
 
 const emit = defineEmits<{
-	(ev: 'done', v: { deleted?: boolean; updated?: any; created?: any }): void,
-	(ev: 'closed'): void
+	(ev: 'done', v: { deleted?: boolean; updated?: any; created?: any }): void;
+	(ev: 'closed'): void;
 }>();
 
 const windowEl = useTemplateRef('windowEl');
@@ -95,33 +95,46 @@ const url = ref<string>(props.avatarDecoration ? props.avatarDecoration.url : ''
 const name = ref<string>(props.avatarDecoration ? props.avatarDecoration.name : '');
 const category = ref<string>(props.avatarDecoration?.category ? props.avatarDecoration.category : '');
 const description = ref<string>(props.avatarDecoration ? props.avatarDecoration.description : '');
-const roleIdsThatCanBeUsedThisDecoration = ref(props.avatarDecoration ? props.avatarDecoration.roleIdsThatCanBeUsedThisDecoration : []);
+const roleIdsThatCanBeUsedThisDecoration = ref(
+	props.avatarDecoration ? props.avatarDecoration.roleIdsThatCanBeUsedThisDecoration : [],
+);
 const rolesThatCanBeUsedThisDecoration = ref<Misskey.entities.Role[]>([]);
 
-watch(roleIdsThatCanBeUsedThisDecoration, async () => {
-	// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
-	// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
-	const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
-	if (allRoles == null) return;
-	rolesThatCanBeUsedThisDecoration.value = roleIdsThatCanBeUsedThisDecoration.value
-		.map((id) => allRoles.find((role) => role.id === id))
-		.filter(x => x != null);
-}, { immediate: true });
+watch(
+	roleIdsThatCanBeUsedThisDecoration,
+	async () => {
+		// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
+		// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
+		const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
+		if (allRoles == null) {
+			return;
+		}
+		rolesThatCanBeUsedThisDecoration.value = roleIdsThatCanBeUsedThisDecoration.value
+			.map((id) => allRoles.find((role) => role.id === id))
+			.filter((x) => x != null);
+	},
+	{ immediate: true },
+);
 
 async function addRole() {
 	const roles = await misskeyApi('admin/roles/list');
-	const currentRoleIds = rolesThatCanBeUsedThisDecoration.value.map(x => x.id);
+	const currentRoleIds = rolesThatCanBeUsedThisDecoration.value.map((x) => x.id);
 
 	const { canceled, result: roleId } = await os.select({
-		items: roles.filter(r => r.isPublic).filter(r => !currentRoleIds.includes(r.id)).map(r => ({ label: r.name, value: r.id })),
+		items: roles
+			.filter((r) => r.isPublic)
+			.filter((r) => !currentRoleIds.includes(r.id))
+			.map((r) => ({ label: r.name, value: r.id })),
 	});
-	if (canceled || roleId == null) return;
+	if (canceled || roleId == null) {
+		return;
+	}
 
-	rolesThatCanBeUsedThisDecoration.value.push(roles.find(r => r.id === roleId)!);
+	rolesThatCanBeUsedThisDecoration.value.push(roles.find((r) => r.id === roleId)!);
 }
 
 async function removeRole(role: Misskey.entities.Role, ev: PointerEvent) {
-	rolesThatCanBeUsedThisDecoration.value = rolesThatCanBeUsedThisDecoration.value.filter(x => x.id !== role.id);
+	rolesThatCanBeUsedThisDecoration.value = rolesThatCanBeUsedThisDecoration.value.filter((x) => x.id !== role.id);
 }
 
 async function done() {
@@ -130,7 +143,7 @@ async function done() {
 		name: name.value,
 		description: description.value,
 		category: category.value,
-		roleIdsThatCanBeUsedThisDecoration: rolesThatCanBeUsedThisDecoration.value.map(x => x.id),
+		roleIdsThatCanBeUsedThisDecoration: rolesThatCanBeUsedThisDecoration.value.map((x) => x.id),
 	};
 
 	if (props.avatarDecoration) {
@@ -159,13 +172,17 @@ async function done() {
 }
 
 async function del() {
-	if (props.avatarDecoration == null) return;
+	if (props.avatarDecoration == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: name.value }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	misskeyApi('admin/avatar-decorations/delete', {
 		id: props.avatarDecoration.id,

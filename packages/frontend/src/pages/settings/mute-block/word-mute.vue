@@ -30,13 +30,15 @@ const emit = defineEmits<{
 	(ev: 'save', value: (string[] | string)[]): void;
 }>();
 
-const render = (mutedWords: (string | string[])[]) => mutedWords.map(x => {
-	if (Array.isArray(x)) {
-		return x.join(' ');
-	} else {
-		return x;
-	}
-}).join('\n');
+const render = (mutedWords: (string | string[])[]) =>
+	mutedWords
+		.map((x) => {
+			if (Array.isArray(x)) {
+				return x.join(' ');
+			}
+			return x;
+		})
+		.join('\n');
 
 const mutedWords = ref(render(props.muted));
 const changed = ref(false);
@@ -47,7 +49,11 @@ watch(mutedWords, () => {
 
 async function save() {
 	const parseMutes = (mutes: string) => {
-		let lines = mutes.trim().split('\n').map(line => line.trim()).filter(line => line !== '') as (string | string[])[];
+		let lines = mutes
+			.trim()
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line !== '') as (string | string[])[];
 
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i] as string;

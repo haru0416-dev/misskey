@@ -35,30 +35,39 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'updatePreset', preset: ImageFramePreset): void,
-	(ev: 'del'): void,
+	(ev: 'updatePreset', preset: ImageFramePreset): void;
+	(ev: 'del'): void;
 }>();
 
 async function edit() {
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/image-editor/components/MkImageFrameEditorDialog.vue')), {
-		presetEditMode: true,
-		preset: deepClone(props.preset),
-		params: deepClone(props.preset.params),
-	}, {
-		presetOk: (preset) => {
-			emit('updatePreset', preset);
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/features/image-editor/components/MkImageFrameEditorDialog.vue')),
+		{
+			presetEditMode: true,
+			preset: deepClone(props.preset),
+			params: deepClone(props.preset.params),
 		},
-		closed: () => dispose(),
-	});
+		{
+			presetOk: (preset) => {
+				emit('updatePreset', preset);
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function del(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.delete,
-		action: () => {
-			emit('del');
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.delete,
+				action: () => {
+					emit('del');
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 const canvasEl = useTemplateRef('canvasEl');
@@ -70,20 +79,26 @@ let renderer: ImageFrameRenderer | null = null;
 
 onMounted(() => {
 	sampleImage.onload = async () => {
-		watch(canvasEl, async () => {
-			if (canvasEl.value == null) return;
+		watch(
+			canvasEl,
+			async () => {
+				if (canvasEl.value == null) {
+					return;
+				}
 
-			renderer = new ImageFrameRenderer({
-				canvas: canvasEl.value,
-				image: sampleImage,
-				exif: null,
-				caption: 'Example caption',
-				filename: 'example_file_name.jpg',
-				renderAsPreview: true,
-			});
+				renderer = new ImageFrameRenderer({
+					canvas: canvasEl.value,
+					image: sampleImage,
+					exif: null,
+					caption: 'Example caption',
+					filename: 'example_file_name.jpg',
+					renderAsPreview: true,
+				});
 
-			await renderer.render(props.preset.params);
-		}, { immediate: true });
+				await renderer.render(props.preset.params);
+			},
+			{ immediate: true },
+		);
 	};
 });
 
@@ -94,11 +109,15 @@ onUnmounted(() => {
 	}
 });
 
-watch(() => props.preset, async () => {
-	if (renderer != null) {
-		await renderer.render(props.preset.params);
-	}
-}, { deep: true });
+watch(
+	() => props.preset,
+	async () => {
+		if (renderer != null) {
+			await renderer.render(props.preset.params);
+		}
+	},
+	{ deep: true },
+);
 </script>
 
 <style lang="scss" module>

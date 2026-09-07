@@ -41,8 +41,10 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import { ApiError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiUserListStreamPublisher } from '../events.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from './user.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from './user.js';
+import type { UserPackingDependencies } from './user.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiUsersListsDependencies = UserPackingDependencies &
@@ -124,7 +126,9 @@ export async function addUserListMemberForApi(
 		},
 		policies.userEachUserListsLimit,
 	);
-	if (!created) throw new TooManyUsersError();
+	if (!created) {
+		throw new TooManyUsersError();
+	}
 
 	deps.publishInternalEvent?.('userListMemberAdded', { userListId: list.id, memberId: target.id });
 	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForApi(deps, target));
@@ -174,7 +178,9 @@ async function getUserForApi(
 	noSuchUserErrorId: string,
 ): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw noSuchUserError(noSuchUserErrorId);
+	if (user == null) {
+		throw noSuchUserError(noSuchUserErrorId);
+	}
 	return user;
 }
 
@@ -199,13 +205,14 @@ export async function handleApiUsersListsCreate(
 		},
 		policies.userListLimit,
 	);
-	if (!userList)
+	if (!userList) {
 		throw new ApiError({
 			status: 400,
 			message: 'You cannot create user list any more.',
 			code: 'TOO_MANY_USERLISTS',
 			id: '0cf21a28-7715-4f39-a20d-777bfdb8d138',
 		});
+	}
 
 	return await packUserListByRowForApi(deps, userList);
 }
@@ -225,7 +232,9 @@ export async function handleApiUsersListsCreateFromPublic(
 		const db = transaction as typeof deps.db;
 		const ownerExists = await lockUserListOwnerForCreationInDatabase(db, me.id);
 		const sourceList = await fetchPublicUserListByIdForShareFromDatabase(db, params.listId);
-		if (sourceList == null) throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
+		if (sourceList == null) {
+			throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
+		}
 
 		const policies = await getApiRolePolicies({ ...deps, db }, me);
 		if (!ownerExists || (await countUserListsByUserIdFromDatabase(db, me.id)) >= policies.userListLimit) {
@@ -261,7 +270,9 @@ export async function handleApiUsersListsCreateFromPublic(
 		const userById = new Map(fetchedUserBatches.flat().map((user) => [user.id, user]));
 		const users = userIds.map((userId) => {
 			const user = userById.get(userId);
-			if (user == null) throw noSuchUserError('13c457db-a8cb-4d88-b70a-211ceeeabb5f');
+			if (user == null) {
+				throw noSuchUserError('13c457db-a8cb-4d88-b70a-211ceeeabb5f');
+			}
 			return user;
 		});
 		if (blockerIds.length > 0) {
@@ -296,20 +307,22 @@ export async function handleApiUsersListsCreateFromPublic(
 				members: policies.userEachUserListsLimit,
 			},
 		);
-		if (result.status === 'tooManyLists')
+		if (result.status === 'tooManyLists') {
 			throw new ApiError({
 				status: 400,
 				message: 'You cannot create user list any more.',
 				code: 'TOO_MANY_USERLISTS',
 				id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f',
 			});
-		if (result.status === 'tooManyMembers')
+		}
+		if (result.status === 'tooManyMembers') {
 			throw new ApiError({
 				status: 400,
 				message: 'You can not push users any more.',
 				code: 'TOO_MANY_USERS',
 				id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7',
 			});
+		}
 		return { userList: result.userList, userIds, users, packedUsers };
 	});
 	const { userList, userIds, users, packedUsers } = copied;
@@ -319,7 +332,9 @@ export async function handleApiUsersListsCreateFromPublic(
 	for (const user of users) {
 		deps.publishInternalEvent?.('userListMemberAdded', { userListId: userList.id, memberId: user.id });
 		const packedUser = packedUserById.get(user.id);
-		if (packedUser != null) deps.publishUserListStream?.(userList.id, 'userAdded', packedUser);
+		if (packedUser != null) {
+			deps.publishUserListStream?.(userList.id, 'userAdded', packedUser);
+		}
 	}
 	if (remoteUsers.length > 0) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
@@ -351,7 +366,9 @@ export async function handleApiUsersListsPull(
 	const params = parseApiParams(pullParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
-	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+	if (userList == null) {
+		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+	}
 
 	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
@@ -371,7 +388,9 @@ export async function handleApiUsersListsPush(
 	const params = parseApiParams(pushParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
-	if (userList == null) throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
+	if (userList == null) {
+		throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
+	}
 
 	const user = await getUserForApi(deps, params.userId, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
 
@@ -431,7 +450,9 @@ export async function handleApiUsersListsGetMemberships(
 			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
 			: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
 
-	if (userList == null) throw noSuchListError('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+	if (userList == null) {
+		throw noSuchListError('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+	}
 
 	const pagination = resolveUserListMembershipPagination({ gen: (time) => genId(time) }, params);
 	const memberships = await listUserListMembershipsByUserListIdWithPaginationFromDatabase(deps.db, userList.id, {
@@ -458,7 +479,9 @@ export async function handleApiUsersListsUpdateMembership(
 	const params = parseApiParams(updateMembershipParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
-	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+	if (userList == null) {
+		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+	}
 
 	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 

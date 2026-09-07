@@ -4,13 +4,10 @@
  */
 
 import { readRequestBodyWithLimit } from '../body-limit.js';
-import { Hono, type Context } from 'hono';
-import {
-	parseUrlEncodedParameters,
-	toRequestParameters,
-	type OAuthProviderRuntime,
-	type OAuthRequestParameters,
-} from './OAuthProviderRuntime.js';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
+import { parseUrlEncodedParameters, toRequestParameters } from './OAuthProviderRuntime.js';
+import type { OAuthProviderRuntime, OAuthRequestParameters } from './OAuthProviderRuntime.js';
 
 export type OAuthDependencies = {
 	runtime: OAuthProviderRuntime;
@@ -32,7 +29,9 @@ async function bodyParameters(c: Context): Promise<OAuthRequestParameters> {
 	try {
 		raw = await readRequestBodyWithLimit(c.req.raw, OAUTH_BODY_LIMIT, () => new BodyLimitExceeded());
 	} catch (err) {
-		if (err instanceof BodyLimitExceeded) return toRequestParameters(null);
+		if (err instanceof BodyLimitExceeded) {
+			return toRequestParameters(null);
+		}
 		throw err;
 	}
 

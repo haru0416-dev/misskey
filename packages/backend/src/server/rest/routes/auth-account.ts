@@ -19,7 +19,8 @@ import { handleApiAppCreate, handleApiAppShow } from '../auth/app.js';
 import { handleApiSigninFlow } from '../auth/signin.js';
 import { handleApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
 import { signupPendingWithApi, signupWithApi } from '../auth/signup.js';
-import { assertApiRateLimit, type ApiEndpointRateLimit } from '../rate-limit.js';
+import { assertApiRateLimit } from '../rate-limit.js';
+import type { ApiEndpointRateLimit } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -170,7 +171,9 @@ export function getSignupRateLimit(meta: ApiShellDependencies['meta']): ApiEndpo
 		meta.signupRateLimitMinIntervalSeconds > 0 ? meta.signupRateLimitMinIntervalSeconds * 1000 : undefined;
 	const max = meta.signupRateLimitMaxPerHour > 0 ? meta.signupRateLimitMaxPerHour : undefined;
 
-	if (minInterval == null && max == null) return null;
+	if (minInterval == null && max == null) {
+		return null;
+	}
 
 	return {
 		...(minInterval === undefined ? {} : { minInterval }),

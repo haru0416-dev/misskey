@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
-import { webhook, deserializeWebhook, type WebhookInsert } from '@/db/schema/webhook.js';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { webhook, deserializeWebhook } from '@/db/schema/webhook.js';
+import type { WebhookInsert } from '@/db/schema/webhook.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
@@ -13,37 +16,6 @@ import type { MiUser } from '@/models/User.js';
 type WebhookUpdate = Partial<
 	Pick<WebhookInsert, 'name' | 'url' | 'secret' | 'on' | 'active' | 'latestSentAt' | 'latestStatus'>
 >;
-
-function webhookFilterCondition(options: {
-	ids?: MiWebhook['id'][];
-	userId?: MiUser['id'];
-	isActive?: MiWebhook['active'];
-	on?: WebhookEventTypes[];
-}): SQL | undefined {
-	const conditions: SQL[] = [];
-
-	if (options.ids != null && options.ids.length > 0) {
-		conditions.push(inArray(webhook.id, options.ids));
-	}
-	if (options.userId != null) {
-		conditions.push(eq(webhook.userId, options.userId));
-	}
-
-	if (options.isActive !== undefined) {
-		conditions.push(eq(webhook.active, options.isActive));
-	}
-
-	if (options.on != null && options.on.length > 0) {
-		conditions.push(
-			sql`ARRAY[${sql.join(
-				options.on.map((type) => sql`${type}`),
-				sql`, `,
-			)}]::varchar[] <@ ${webhook.on}`,
-		);
-	}
-
-	return conditions.length > 0 ? and(...conditions) : undefined;
-}
 
 export async function fetchWebhookByIdAndUserIdFromDatabase(
 	db: MiDrizzleDatabase,
@@ -60,19 +32,28 @@ export async function fetchWebhookByIdAndUserIdFromDatabase(
 }
 
 /**
- * UserWebhookService.getActiveWebhooks / fetchWebhooks 向け。
- * ids/userId/isActive/on によるフィルタを掛けて一覧を返す (フィルタなしなら全件)。
+ * イベント発火時の配信先取得 (ノート投稿・フォロー等の都度呼ばれる) 向け。
+ * userId・active・on を全部条件にする固定形。
  */
-export async function listWebhooksFromDatabase(
+export async function listActiveWebhooksByUserIdAndEventFromDatabase(
 	db: MiDrizzleDatabase,
-	options: {
-		ids?: MiWebhook['id'][];
-		userId?: MiUser['id'];
-		isActive?: MiWebhook['active'];
-		on?: WebhookEventTypes[];
-	} = {},
+	userId: MiUser['id'],
+	event: WebhookEventTypes,
 ): Promise<MiWebhook[]> {
-	const rows = await db.select().from(webhook).where(webhookFilterCondition(options));
+	const statement = preparedQueryFor(db, 'webhook:activeByUserIdAndEvent', () =>
+		db
+			.select()
+			.from(webhook)
+			.where(
+				and(
+					eq(webhook.userId, sql.placeholder('userId')),
+					eq(webhook.active, true),
+					sql`ARRAY[${sql.placeholder('event')}]::varchar[] <@ ${webhook.on}`,
+				),
+			)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const rows = await statement.execute({ userId, event });
 
 	return rows.map((row) => deserializeWebhook(row));
 }
@@ -109,10 +90,14 @@ export async function createWebhookWithinLimitInDatabase(
 ): Promise<MiWebhook | null> {
 	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'webhook-limit', data.userId);
-		if ((await countWebhooksByUserIdFromDatabase(tx, data.userId)) >= limit) return null;
+		if ((await countWebhooksByUserIdFromDatabase(tx, data.userId)) >= limit) {
+			return null;
+		}
 
 		const [row] = await tx.insert(webhook).values(data).returning();
-		if (row == null) throw new Error('Failed to create webhook');
+		if (row == null) {
+			throw new Error('Failed to create webhook');
+		}
 		return deserializeWebhook(row);
 	});
 }

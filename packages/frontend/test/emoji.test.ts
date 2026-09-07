@@ -4,7 +4,8 @@
  */
 
 import { describe, test, assert, afterEach } from 'vitest';
-import { render, cleanup, type RenderResult } from '@testing-library/vue';
+import { render, cleanup } from '@testing-library/vue';
+import type { RenderResult } from '@testing-library/vue';
 import { preferState } from './init.js';
 import { getEmojiName } from '@shared/utility/emojilist.js';
 import { components } from '@/components/index.js';

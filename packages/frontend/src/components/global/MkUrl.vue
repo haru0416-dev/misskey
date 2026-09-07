@@ -42,30 +42,39 @@ function safeURIDecode(str: string): string {
 	}
 }
 
-const props = withDefaults(defineProps<{
-	url: string;
-	rel?: string;
-	showUrlPreview?: boolean;
-	navigationBehavior?: MkABehavior;
-}>(), {
-	showUrlPreview: true,
-});
+const props = withDefaults(
+	defineProps<{
+		url: string;
+		rel?: string;
+		showUrlPreview?: boolean;
+		navigationBehavior?: MkABehavior;
+	}>(),
+	{
+		showUrlPreview: true,
+	},
+);
 
 const maybeRelativeUrl = maybeMakeRelative(props.url, local);
 const self = maybeRelativeUrl !== props.url;
 const url = new URL(props.url);
-if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid url');
+if (!['http:', 'https:'].includes(url.protocol)) {
+	throw new Error('invalid url');
+}
 const el = ref();
 
 if (props.showUrlPreview && isEnabledUrlPreview.value) {
 	useTooltip(el, (showing) => {
-		const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/link-preview/components/MkUrlPreviewPopup.vue')), {
-			showing,
-			url: props.url,
-			anchorElement: el.value instanceof HTMLElement ? el.value : el.value?.$el,
-		}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = os.popup(
+			defineAsyncComponent(() => import('@/features/link-preview/components/MkUrlPreviewPopup.vue')),
+			{
+				showing,
+				url: props.url,
+				anchorElement: el.value instanceof HTMLElement ? el.value : el.value?.$el,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	});
 }
 

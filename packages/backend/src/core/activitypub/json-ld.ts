@@ -57,14 +57,30 @@ function isSafeNQuadLiteral(value: string): boolean {
  */
 export function canonicalizeSignatureOptions(options: Record<string, unknown>): string | null {
 	const { '@context': context, creator, nonce, created, domain, ...rest } = options;
-	if (context !== 'https://w3id.org/identity/v1') return null;
-	if (typeof creator !== 'string' || typeof nonce !== 'string' || typeof created !== 'string') return null;
-	if (domain !== undefined && typeof domain !== 'string') return null;
-	if (Object.keys(rest).length > 0) return null;
-	if (!SAFE_CREATOR_IRI.test(creator)) return null;
-	if (!SAFE_DATE_TIME.test(created)) return null;
-	if (!isSafeNQuadLiteral(nonce)) return null;
-	if (domain !== undefined && !isSafeNQuadLiteral(domain)) return null;
+	if (context !== 'https://w3id.org/identity/v1') {
+		return null;
+	}
+	if (typeof creator !== 'string' || typeof nonce !== 'string' || typeof created !== 'string') {
+		return null;
+	}
+	if (domain !== undefined && typeof domain !== 'string') {
+		return null;
+	}
+	if (Object.keys(rest).length > 0) {
+		return null;
+	}
+	if (!SAFE_CREATOR_IRI.test(creator)) {
+		return null;
+	}
+	if (!SAFE_DATE_TIME.test(created)) {
+		return null;
+	}
+	if (!isSafeNQuadLiteral(nonce)) {
+		return null;
+	}
+	if (domain !== undefined && !isSafeNQuadLiteral(domain)) {
+		return null;
+	}
 
 	const lines = [
 		`_:c14n0 <http://purl.org/dc/terms/created> "${escapeNQuadLiteral(created)}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .`,
@@ -179,7 +195,9 @@ export class JsonLd {
 		const transformedData: Record<string, unknown> = { ...(data as Record<string, unknown>) };
 		delete transformedData['signature'];
 		const cannonizedData = await this.normalize(transformedData as unknown as JsonLdDocument);
-		if (this.debug) console.debug(`cannonizedData: ${cannonizedData}`);
+		if (this.debug) {
+			console.debug(`cannonizedData: ${cannonizedData}`);
+		}
 		const documentHash = this.sha256(cannonizedData.toString());
 		const verifyData = `${optionsHash}${documentHash}`;
 		return verifyData;
@@ -213,7 +231,9 @@ export class JsonLd {
 	public checkForForbiddenDirectives(value: unknown): void {
 		if (typeof value === 'object' && value !== null) {
 			if (Array.isArray(value)) {
-				for (const item of value) this.checkForForbiddenDirectives(item);
+				for (const item of value) {
+					this.checkForForbiddenDirectives(item);
+				}
 			} else {
 				const object = value;
 				for (const [key, value] of Object.entries(object)) {
@@ -232,13 +252,19 @@ export class JsonLd {
 	@bindThis
 	private getLoader() {
 		return async (url: string): Promise<RemoteDocument> => {
-			if (!/^https?:\/\//.test(url)) throw new Error(`Invalid URL ${url}`);
+			if (!/^https?:\/\//.test(url)) {
+				throw new Error(`Invalid URL ${url}`);
+			}
 
 			if (this.preLoad) {
 				if (url in PRELOADED_CONTEXTS) {
 					const document = PRELOADED_CONTEXTS[url];
-					if (document == null) throw new Error(`Preloaded JSON-LD context is missing for ${url}`);
-					if (this.debug) console.debug(`HIT: ${url}`);
+					if (document == null) {
+						throw new Error(`Preloaded JSON-LD context is missing for ${url}`);
+					}
+					if (this.debug) {
+						console.debug(`HIT: ${url}`);
+					}
 					return {
 						contextUrl: undefined,
 						document,
@@ -249,13 +275,19 @@ export class JsonLd {
 
 			const cached = this.cache.get(url);
 			if (cached) {
-				if (this.debug) console.debug(`HIT: ${url}`);
+				if (this.debug) {
+					console.debug(`HIT: ${url}`);
+				}
 				return cached;
 			}
 
-			if (this.debug) console.debug(`MISS: ${url}`);
+			if (this.debug) {
+				console.debug(`MISS: ${url}`);
+			}
 
-			if (this.frozen) throw new JsonLdCacheFrozenError();
+			if (this.frozen) {
+				throw new JsonLdCacheFrozenError();
+			}
 
 			const document = await this.fetchDocument(url);
 			this.checkForForbiddenDirectives(document);
@@ -266,7 +298,9 @@ export class JsonLd {
 				documentUrl: url,
 			};
 			this.cache.set(url, remoteDocument);
-			if (this.cache.size > 256) throw new JsonLdCacheOverflowError();
+			if (this.cache.size > 256) {
+				throw new JsonLdCacheOverflowError();
+			}
 			return remoteDocument;
 		};
 	}

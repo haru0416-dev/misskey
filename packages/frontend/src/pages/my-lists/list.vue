@@ -81,17 +81,19 @@ const props = defineProps<{
 const list = ref<Misskey.entities.UserList | null>(null);
 const isPublic = ref(false);
 const name = ref('');
-const membershipsPaginator = markRaw(new Paginator('users/lists/get-memberships', {
-	limit: 30,
-	computedParams: computed(() => ({
-		listId: props.listId,
-	})),
-}));
+const membershipsPaginator = markRaw(
+	new Paginator('users/lists/get-memberships', {
+		limit: 30,
+		computedParams: computed(() => ({
+			listId: props.listId,
+		})),
+	}),
+);
 
 function fetchList() {
 	misskeyApi('users/lists/show', {
 		listId: props.listId,
-	}).then(_list => {
+	}).then((_list) => {
 		list.value = _list;
 		name.value = list.value.name;
 		isPublic.value = list.value.isPublic;
@@ -99,8 +101,10 @@ function fetchList() {
 }
 
 function addUser() {
-	os.selectUser({ includeSelf: true }).then(user => {
-		if (!list.value) return;
+	os.selectUser({ includeSelf: true }).then((user) => {
+		if (!list.value) {
+			return;
+		}
 		os.apiWithDialog('users/lists/push', {
 			listId: list.value.id,
 			userId: user.id,
@@ -111,33 +115,45 @@ function addUser() {
 }
 
 async function removeUser(item: Misskey.entities.UsersListsGetMembershipsResponse[number], ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.remove,
-		icon: 'ti ti-x',
-		danger: true,
-		action: async () => {
-			if (!list.value) return;
-			misskeyApi('users/lists/pull', {
-				listId: list.value.id,
-				userId: item.userId,
-			}).then(() => {
-				membershipsPaginator.removeItem(item.id);
-			});
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.remove,
+				icon: 'ti ti-x',
+				danger: true,
+				action: async () => {
+					if (!list.value) {
+						return;
+					}
+					misskeyApi('users/lists/pull', {
+						listId: list.value.id,
+						userId: item.userId,
+					}).then(() => {
+						membershipsPaginator.removeItem(item.id);
+					});
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function showMembershipMenu(item: Misskey.entities.UsersListsGetMembershipsResponse[number], ev: PointerEvent) {
 	const withRepliesRef = ref(item.withReplies);
 
-	os.popupMenu([{
-		type: 'switch',
-		text: i18n.ts.showRepliesToOthersInTimeline,
-		icon: 'ti ti-messages',
-		ref: withRepliesRef,
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				type: 'switch',
+				text: i18n.ts.showRepliesToOthersInTimeline,
+				icon: 'ti ti-messages',
+				ref: withRepliesRef,
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 
-	watch(withRepliesRef, withReplies => {
+	watch(withRepliesRef, (withReplies) => {
 		misskeyApi('users/lists/update-membership', {
 			listId: list.value!.id,
 			userId: item.userId,
@@ -152,12 +168,16 @@ async function showMembershipMenu(item: Misskey.entities.UsersListsGetMembership
 }
 
 async function deleteList() {
-	if (!list.value) return;
+	if (!list.value) {
+		return;
+	}
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: list.value.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('users/lists/delete', {
 		listId: list.value.id,
@@ -167,7 +187,9 @@ async function deleteList() {
 }
 
 async function updateSettings() {
-	if (!list.value) return;
+	if (!list.value) {
+		return;
+	}
 	await os.apiWithDialog('users/lists/update', {
 		listId: list.value.id,
 		name: name.value,
@@ -182,17 +204,23 @@ async function updateSettings() {
 
 watch(() => props.listId, fetchList, { immediate: true });
 
-const headerActions = computed(() => list.value ? [{
-	icon: 'ti ti-timeline',
-	text: i18n.ts.timeline,
-	handler: () => {
-		router.push('/timeline/list/:listId', {
-			params: {
-				listId: list.value!.id,
-			},
-		});
-	},
-}] : []);
+const headerActions = computed(() =>
+	list.value
+		? [
+				{
+					icon: 'ti ti-timeline',
+					text: i18n.ts.timeline,
+					handler: () => {
+						router.push('/timeline/list/:listId', {
+							params: {
+								listId: list.value!.id,
+							},
+						});
+					},
+				},
+			]
+		: [],
+);
 
 const headerTabs = computed(() => []);
 

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { expect, type APIResponse, type Page } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { APIResponse, Page } from '@playwright/test';
 
 export type TestUser = {
 	id: string;
@@ -69,7 +70,7 @@ export async function login(page: Page, username: string, password: string): Pro
 	});
 
 	await page.locator('[data-cy-signin]').click();
-	await expect(page.locator('[data-cy-signin-page-input]')).toBeVisible({ timeout: 1_000 });
+	await expect(page.locator('[data-cy-signin-page-input]')).toBeVisible({ timeout: 1000 });
 	await page.locator('[data-cy-signin-username] input').fill(username);
 	await page.locator('[data-cy-signin-username] input').press('Enter');
 	await expect(page.locator('[data-cy-signin-page-password]')).toBeVisible({ timeout: 10_000 });
@@ -83,7 +84,9 @@ export async function closeInitialUserSetup(page: Page): Promise<void> {
 	const close = page.locator('[data-cy-user-setup] [data-cy-modal-window-close]');
 	await expect(close).toBeVisible({ timeout: 30_000 });
 	const persisted = page.waitForResponse((response) => {
-		if (!response.url().includes('/api/i/registry/set') || response.request().method() !== 'POST') return false;
+		if (!response.url().includes('/api/i/registry/set') || response.request().method() !== 'POST') {
+			return false;
+		}
 		const body = response.request().postDataJSON() as { scope?: unknown; key?: unknown; value?: unknown };
 		return (
 			Array.isArray(body.scope) &&
@@ -95,7 +98,9 @@ export async function closeInitialUserSetup(page: Page): Promise<void> {
 	await close.click();
 	await page.locator('[data-cy-modal-dialog-ok]').click();
 	const response = await persisted;
-	if (!response.ok()) throw new Error(`${response.url()} failed: ${response.status()}`);
+	if (!response.ok()) {
+		throw new Error(`${response.url()} failed: ${response.status()}`);
+	}
 	await expect(page.locator('[data-cy-user-setup]')).toBeHidden();
 }
 

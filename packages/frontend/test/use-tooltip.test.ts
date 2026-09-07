@@ -19,7 +19,9 @@ describe('useTooltip', () => {
 	test('cleans up reactively without polling when the source element disappears', async () => {
 		const setInterval = vi.spyOn(window, 'setInterval');
 		vi.spyOn(window, 'setTimeout').mockImplementation((handler) => {
-			if (typeof handler === 'function') handler();
+			if (typeof handler === 'function') {
+				handler();
+			}
 			return 1 as unknown as ReturnType<typeof window.setTimeout>;
 		});
 		const sourceVisible = ref(true);

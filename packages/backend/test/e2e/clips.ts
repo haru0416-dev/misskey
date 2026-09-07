@@ -11,8 +11,8 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	genId,
 	openTestDatabase,
-	type TestDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import { api, ApiRequest, failedApiCall, hiddenNote, post, signup, successfulApiCall } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 

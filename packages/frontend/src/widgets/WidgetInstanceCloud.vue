@@ -46,11 +46,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const cloud = useTemplateRef('cloud');
 const activeInstances = shallowRef<Misskey.entities.FederationInstance[] | null>(null);
@@ -59,21 +55,31 @@ function onInstanceClick(i: Misskey.entities.FederationInstance) {
 	os.pageWindow(`/instance-info/${i.host}`);
 }
 
-useInterval(() => {
-	misskeyApi('federation/instances', {
-		sort: '+latestRequestReceivedAt',
-		limit: 25,
-	}).then(res => {
-		activeInstances.value = res;
-		if (cloud.value) cloud.value.update();
-	});
-}, 1000 * 60 * 3, {
-	immediate: true,
-	afterMounted: true,
-});
+useInterval(
+	() => {
+		misskeyApi('federation/instances', {
+			sort: '+latestRequestReceivedAt',
+			limit: 25,
+		}).then((res) => {
+			activeInstances.value = res;
+			if (cloud.value) {
+				cloud.value.update();
+			}
+		});
+	},
+	1000 * 60 * 3,
+	{
+		immediate: true,
+		afterMounted: true,
+	},
+);
 
 function getInstanceIcon(instance: Misskey.entities.FederationInstance): string {
-	return getProxiedImageUrlNullable(instance.iconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ?? '/client-assets/dummy.png';
+	return (
+		getProxiedImageUrlNullable(instance.iconUrl, 'preview') ??
+		getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ??
+		'/client-assets/dummy.png'
+	);
 }
 
 defineExpose<WidgetComponentExpose>({

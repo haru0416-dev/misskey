@@ -4,7 +4,8 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import * as Bull from 'bullmq';
@@ -113,7 +114,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -121,6 +121,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -135,7 +136,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt, getDefined } from '../endpoints-context.js';
+import { createEndpointsContext, getAt, getDefined } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -180,7 +182,9 @@ describe('Endpoints', () => {
 			});
 
 			expect(res.status).toBe(200);
-			if (res.body == null) expect.unreachable('endpoint metadata is missing');
+			if (res.body == null) {
+				expect.unreachable('endpoint metadata is missing');
+			}
 			assert.ok(Array.isArray(res.body.params));
 			assert.ok(res.body.params.some((param) => param.name === 'name' && param.type === 'String'));
 
@@ -213,7 +217,9 @@ describe('Endpoints', () => {
 
 			expect(detailed.status).toBe(200);
 			expect(detailedBody.uri).toBe(origin);
-			if (detailedBody.features == null) expect.unreachable('detailed meta features are missing');
+			if (detailedBody.features == null) {
+				expect.unreachable('detailed meta features are missing');
+			}
 			expect(detailedBody.features.miauth).toBe(true);
 			expect(typeof detailedBody.proxyAccountName).toBe('string');
 		});

@@ -51,7 +51,12 @@ import MkCustomEmojiDetailedDialog from '@/features/custom-emojis/components/MkC
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
-import { makeEmojiMuteKey, mute as muteEmoji, unmute as unmuteEmoji, checkMuted as checkEmojiMuted } from '@/features/custom-emojis/emoji-mute.js';
+import {
+	makeEmojiMuteKey,
+	mute as muteEmoji,
+	unmute as unmuteEmoji,
+	checkMuted as checkEmojiMuted,
+} from '@/features/custom-emojis/emoji-mute.js';
 import { addToEmojiPalette } from '@/features/emoji-picker/emoji-palette.js';
 
 const props = defineProps<{
@@ -69,8 +74,12 @@ const props = defineProps<{
 
 const react = inject(DI.mfmEmojiReactCallback);
 
-const customEmojiName = computed(() => (props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''));
-const isLocal = computed(() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')));
+const customEmojiName = computed(() =>
+	(props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''),
+);
+const isLocal = computed(
+	() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')),
+);
 const emojiCodeToMute = makeEmojiMuteKey({
 	name: props.name,
 	...(props.host === undefined ? {} : { host: props.host }),
@@ -89,20 +98,15 @@ const rawUrl = computed(() => {
 });
 
 const url = computed(() => {
-	if (rawUrl.value == null) return undefined;
+	if (rawUrl.value == null) {
+		return undefined;
+	}
 
 	const proxied =
-		(rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value))
+		rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value)
 			? rawUrl.value
-			: getProxiedImageUrl(
-				rawUrl.value,
-				props.useOriginalSize ? undefined : 'emoji',
-				false,
-				true,
-			);
-	return prefer.disableShowingAnimatedImages
-		? getStaticImageUrl(proxied)
-		: proxied;
+			: getProxiedImageUrl(rawUrl.value, props.useOriginalSize ? undefined : 'emoji', false, true);
+	return prefer.disableShowingAnimatedImages ? getStaticImageUrl(proxied) : proxied;
 });
 
 const alt = computed(() => `:${customEmojiName.value}:`);
@@ -138,21 +142,28 @@ function onClick(ev: PointerEvent) {
 		}
 
 		if (isLocal.value) {
-			menuItems.push({
-				type: 'divider',
-			}, {
-				text: i18n.ts.info,
-				icon: 'ti ti-info-circle',
-				action: async () => {
-					const { dispose } = os.popup(MkCustomEmojiDetailedDialog, {
-						emoji: await misskeyApiGet('emoji', {
-							name: customEmojiName.value,
-						}),
-					}, {
-						closed: () => dispose(),
-					});
+			menuItems.push(
+				{
+					type: 'divider',
 				},
-			});
+				{
+					text: i18n.ts.info,
+					icon: 'ti ti-info-circle',
+					action: async () => {
+						const { dispose } = os.popup(
+							MkCustomEmojiDetailedDialog,
+							{
+								emoji: await misskeyApiGet('emoji', {
+									name: customEmojiName.value,
+								}),
+							},
+							{
+								closed: () => dispose(),
+							},
+						);
+					},
+				},
+			);
 		}
 
 		if (isMuted.value) {
@@ -184,15 +195,18 @@ function onClick(ev: PointerEvent) {
 		}
 
 		if (($i?.isModerator ?? $i?.isAdmin) && isLocal.value) {
-			menuItems.push({
-				type: 'divider',
-			}, {
-				text: i18n.ts.edit,
-				icon: 'ti ti-pencil',
-				action: async () => {
-					await edit(props.name);
+			menuItems.push(
+				{
+					type: 'divider',
 				},
-			});
+				{
+					text: i18n.ts.edit,
+					icon: 'ti ti-pencil',
+					action: async () => {
+						await edit(props.name);
+					},
+				},
+			);
 		}
 
 		os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
@@ -203,17 +217,19 @@ async function edit(name: string) {
 	const emoji = await misskeyApi('emoji', {
 		name: name,
 	});
-	const { dispose } = await os.popupAsyncWithDialog(import('@/pages/emoji-edit-dialog.vue').then(x => x.default), {
-		emoji: emoji,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/pages/emoji-edit-dialog.vue').then((x) => x.default),
+		{
+			emoji: emoji,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function mute() {
-	const titleEmojiName = isLocal.value
-		? `:${customEmojiName.value}:`
-		: emojiCodeToMute;
+	const titleEmojiName = isLocal.value ? `:${customEmojiName.value}:` : emojiCodeToMute;
 	os.confirm({
 		type: 'question',
 		title: i18n.tsx.muteX({ x: titleEmojiName }),
@@ -226,9 +242,7 @@ function mute() {
 }
 
 function unmute() {
-	const titleEmojiName = isLocal.value
-		? `:${customEmojiName.value}:`
-		: emojiCodeToMute;
+	const titleEmojiName = isLocal.value ? `:${customEmojiName.value}:` : emojiCodeToMute;
 	os.confirm({
 		type: 'question',
 		title: i18n.tsx.unmuteX({ x: titleEmojiName }),
@@ -239,7 +253,6 @@ function unmute() {
 		unmuteEmoji(emojiCodeToMute);
 	});
 }
-
 </script>
 
 <style lang="scss" module>

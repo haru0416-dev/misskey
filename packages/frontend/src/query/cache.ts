@@ -20,7 +20,9 @@ export class QueryBackedCache<T> {
 		this.value.value = queryClient.getQueryData<T>(this.queryKey);
 		const queryHash = hashKey(this.queryKey);
 		queryClient.getQueryCache().subscribe((event) => {
-			if (event.query.queryHash !== queryHash) return;
+			if (event.query.queryHash !== queryHash) {
+				return;
+			}
 			this.value.value = event.query.state.data as T | undefined;
 		});
 	}

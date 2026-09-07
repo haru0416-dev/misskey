@@ -4,7 +4,8 @@
  */
 
 import { and, eq, inArray } from 'drizzle-orm';
-import { noteThreadMuting, type NoteThreadMutingInsert } from '@/db/schema/note-thread-muting.js';
+import { noteThreadMuting } from '@/db/schema/note-thread-muting.js';
+import type { NoteThreadMutingInsert } from '@/db/schema/note-thread-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -18,7 +19,9 @@ export async function listNoteThreadMutedUserIdsFromDatabase(
 	threadId: string,
 	userIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (userIds.length === 0) return [];
+	if (userIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ userId: noteThreadMuting.userId })

@@ -26,7 +26,9 @@ export const animDirective = {
 
 	unmounted(src) {
 		const timer = timers.get(src);
-		if (timer == null) return;
+		if (timer == null) {
+			return;
+		}
 		window.clearTimeout(timer);
 		timers.delete(src);
 	},

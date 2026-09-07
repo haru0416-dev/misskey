@@ -13,18 +13,27 @@ function isFalsyIdentifier(identifier: Extract<ESTree.Node, { type: 'Identifier'
 }
 
 function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): string | null {
-	if (tree.type === 'Identifier') return isFalsyIdentifier(tree) ? '' : null;
-	if (tree.type === 'Literal') return typeof tree.value === 'string' ? tree.value : '';
+	if (tree.type === 'Identifier') {
+		return isFalsyIdentifier(tree) ? '' : null;
+	}
+	if (tree.type === 'Literal') {
+		return typeof tree.value === 'string' ? tree.value : '';
+	}
 	if (tree.type === 'BinaryExpression') {
-		if (tree.operator !== '+') return null;
+		if (tree.operator !== '+') {
+			return null;
+		}
 		const left = normalizeClassWalker(tree.left, stack);
 		const right = normalizeClassWalker(tree.right, stack);
-		if (left === null || right === null) return null;
+		if (left === null || right === null) {
+			return null;
+		}
 		return `${left}${right}`;
 	}
 	if (tree.type === 'TemplateLiteral') {
-		if (tree.expressions.some((x) => x.type !== 'Literal' && (x.type !== 'Identifier' || !isFalsyIdentifier(x))))
+		if (tree.expressions.some((x) => x.type !== 'Literal' && (x.type !== 'Identifier' || !isFalsyIdentifier(x)))) {
 			return null;
+		}
 		return tree.quasis.reduce((a, c, i) => {
 			const v =
 				i === tree.quasis.length - 1
@@ -35,16 +44,24 @@ function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): str
 	}
 	if (tree.type === 'ArrayExpression') {
 		const values = tree.elements.map((treeNode) => {
-			if (treeNode === null) return '';
-			if (treeNode.type === 'SpreadElement') return normalizeClassWalker(treeNode.argument, stack);
+			if (treeNode === null) {
+				return '';
+			}
+			if (treeNode.type === 'SpreadElement') {
+				return normalizeClassWalker(treeNode.argument, stack);
+			}
 			return normalizeClassWalker(treeNode, stack);
 		});
-		if (values.some((x) => x === null)) return null;
+		if (values.some((x) => x === null)) {
+			return null;
+		}
 		return values.join(' ');
 	}
 	if (tree.type === 'ObjectExpression') {
 		const values = tree.properties.map((treeNode) => {
-			if (treeNode.type === 'SpreadElement') return normalizeClassWalker(treeNode.argument, stack);
+			if (treeNode.type === 'SpreadElement') {
+				return normalizeClassWalker(treeNode.argument, stack);
+			}
 			let x = treeNode.value;
 			let inveted = false;
 			while (x.type === 'UnaryExpression' && x.operator === '!') {
@@ -60,20 +77,20 @@ function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): str
 						: treeNode.key.type === 'Literal'
 							? treeNode.key.value
 							: '';
-				} else {
-					return '';
 				}
+				return '';
 			}
 			if (x.type === 'Identifier') {
 				if (inveted !== isFalsyIdentifier(x)) {
 					return '';
-				} else {
-					return null;
 				}
+				return null;
 			}
 			return null;
 		});
-		if (values.some((x) => x === null)) return null;
+		if (values.some((x) => x === null)) {
+			return null;
+		}
 		return values.join(' ');
 	}
 	if (
@@ -94,58 +111,94 @@ export function normalizeClass(tree: ESTree.Node, stack?: string): string | null
 }
 
 function getPropertyName(node: ESTree.Node, computed: boolean): string | null {
-	if (node.type === 'Identifier') return computed ? null : node.name;
-	if (node.type === 'Literal' && typeof node.value === 'string') return node.value;
+	if (node.type === 'Identifier') {
+		return computed ? null : node.name;
+	}
+	if (node.type === 'Literal' && typeof node.value === 'string') {
+		return node.value;
+	}
 	return null;
 }
 
 function getMemberPropertyName(node: ESTree.MemberExpression['property'], computed: boolean): string | null {
-	if (node.type === 'Identifier') return computed ? null : node.name;
-	if (node.type === 'Literal' && typeof node.value === 'string') return node.value;
+	if (node.type === 'Identifier') {
+		return computed ? null : node.name;
+	}
+	if (node.type === 'Literal' && typeof node.value === 'string') {
+		return node.value;
+	}
 	return null;
 }
 
 function findVariableDeclaration(program: ESTree.Program, name: string): ESTree.VariableDeclaration | null {
 	return program.body.find((x) => {
-		if (x.type !== 'VariableDeclaration') return false;
-		if (x.declarations.length !== 1) return false;
-		if (x.declarations[0].id.type !== 'Identifier') return false;
+		if (x.type !== 'VariableDeclaration') {
+			return false;
+		}
+		if (x.declarations.length !== 1) {
+			return false;
+		}
+		if (x.declarations[0].id.type !== 'Identifier') {
+			return false;
+		}
 		return x.declarations[0].id.name === name;
 	}) as ESTree.VariableDeclaration | null;
 }
 
 function resolveObjectExpression(program: ESTree.Program, tree: ESTree.Expression): ESTree.ObjectExpression | null {
-	if (tree.type === 'ObjectExpression') return tree;
-	if (tree.type !== 'Identifier') return null;
+	if (tree.type === 'ObjectExpression') {
+		return tree;
+	}
+	if (tree.type !== 'Identifier') {
+		return null;
+	}
 	const declaration = findVariableDeclaration(program, tree.name);
-	if (declaration?.declarations[0].init?.type !== 'ObjectExpression') return null;
+	if (declaration?.declarations[0].init?.type !== 'ObjectExpression') {
+		return null;
+	}
 	return declaration.declarations[0].init;
 }
 
 function resolveComponentOptions(program: ESTree.Program, tree: ESTree.Expression): ESTree.ObjectExpression | null {
 	const target =
 		tree.type === 'Identifier' ? (findVariableDeclaration(program, tree.name)?.declarations[0].init ?? null) : tree;
-	if (target?.type === 'ObjectExpression') return target;
-	if (target?.type !== 'CallExpression') return null;
-	if (target.arguments.length !== 1) return null;
-	if (target.arguments[0].type !== 'ObjectExpression') return null;
+	if (target?.type === 'ObjectExpression') {
+		return target;
+	}
+	if (target?.type !== 'CallExpression') {
+		return null;
+	}
+	if (target.arguments.length !== 1) {
+		return null;
+	}
+	if (target.arguments[0].type !== 'ObjectExpression') {
+		return null;
+	}
 	return target.arguments[0];
 }
 
 function resolveModuleTree(program: ESTree.Program, tree: ESTree.Expression): Map<string, string> | null {
 	const objectExpression = resolveObjectExpression(program, tree);
-	if (objectExpression === null) return null;
+	if (objectExpression === null) {
+		return null;
+	}
 	return new Map(
 		objectExpression.properties.flatMap((property) => {
-			if (property.type !== 'Property') return [];
+			if (property.type !== 'Property') {
+				return [];
+			}
 			const actualKey = getPropertyName(property.key, property.computed);
-			if (actualKey === null) return [];
+			if (actualKey === null) {
+				return [];
+			}
 			if (property.value.type === 'Literal') {
 				return typeof property.value.value === 'string' ? [[actualKey, property.value.value]] : [];
 			}
 			if (property.value.type === 'Identifier') {
 				const actualValue = findVariableDeclaration(program, property.value.name);
-				if (actualValue?.declarations[0].init?.type !== 'Literal') return [];
+				if (actualValue?.declarations[0].init?.type !== 'Literal') {
+					return [];
+				}
 				return typeof actualValue.declarations[0].init.value === 'string'
 					? [[actualKey, actualValue.declarations[0].init.value]]
 					: [];
@@ -160,12 +213,18 @@ function resolveModuleForest(
 	tree: ESTree.Expression,
 ): Map<string, Map<string, string>> | null {
 	const objectExpression = resolveObjectExpression(program, tree);
-	if (objectExpression === null) return null;
+	if (objectExpression === null) {
+		return null;
+	}
 	return new Map(
 		objectExpression.properties.flatMap((property) => {
-			if (property.type !== 'Property') return [];
+			if (property.type !== 'Property') {
+				return [];
+			}
 			const actualKey = getPropertyName(property.key, property.computed);
-			if (actualKey === null) return [];
+			if (actualKey === null) {
+				return [];
+			}
 			const moduleTree = resolveModuleTree(program, property.value);
 			return moduleTree === null ? [] : [[actualKey, moduleTree]];
 		}),
@@ -176,14 +235,24 @@ function findRenderArrow(
 	options: ESTree.ObjectExpression,
 ): Extract<ESTree.Node, { type: 'ArrowFunctionExpression' }> | null {
 	const setup = options.properties.find((x) => {
-		if (x.type !== 'Property') return false;
+		if (x.type !== 'Property') {
+			return false;
+		}
 		return getPropertyName(x.key, x.computed) === 'setup';
 	}) as Extract<ESTree.Node, { type: 'Property' }> | undefined;
-	if (setup?.value.type !== 'FunctionExpression' && setup?.value.type !== 'ArrowFunctionExpression') return null;
-	if (setup.value.body == null) return null;
-	if (setup.value.body.type !== 'BlockStatement') return null;
+	if (setup?.value.type !== 'FunctionExpression' && setup?.value.type !== 'ArrowFunctionExpression') {
+		return null;
+	}
+	if (setup.value.body == null) {
+		return null;
+	}
+	if (setup.value.body.type !== 'BlockStatement') {
+		return null;
+	}
 	const render = setup.value.body.body.find((x) => x.type === 'ReturnStatement');
-	if (render?.type !== 'ReturnStatement') return null;
+	if (render?.type !== 'ReturnStatement') {
+		return null;
+	}
 	return render.argument?.type === 'ArrowFunctionExpression' ? render.argument : null;
 }
 
@@ -192,10 +261,18 @@ function isCssModuleAccess(
 	ctxName: string,
 	key: string,
 ): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
-	if (node.type !== 'MemberExpression') return false;
-	if (node.object.type !== 'MemberExpression') return false;
-	if (node.object.object.type !== 'Identifier') return false;
-	if (node.object.object.name !== ctxName) return false;
+	if (node.type !== 'MemberExpression') {
+		return false;
+	}
+	if (node.object.type !== 'MemberExpression') {
+		return false;
+	}
+	if (node.object.object.type !== 'Identifier') {
+		return false;
+	}
+	if (node.object.object.name !== ctxName) {
+		return false;
+	}
 	return getMemberPropertyName(node.object.property, node.object.computed) === key;
 }
 
@@ -204,7 +281,9 @@ function isCssModuleReference(
 	ctxName: string,
 	key: string,
 ): node is Extract<ESTree.Node, { type: 'MemberExpression' }> {
-	if (!isCssModuleAccess(node, ctxName, key)) return false;
+	if (!isCssModuleAccess(node, ctxName, key)) {
+		return false;
+	}
 	return getMemberPropertyName(node.property, node.computed) !== null;
 }
 
@@ -215,51 +294,98 @@ function isClassProperty(node: ESTree.Node | null): node is Extract<ESTree.Node,
 export function unwindCssModuleClassName(ast: ESTree.Node, magicString: RolldownMagicString): void {
 	walk(ast, {
 		enter(node: ESTree.Node, parent: ESTree.Node | null): void {
-			if (parent?.type !== 'Program') return;
-			if (ast.type !== 'Program') return;
-			if (node.type !== 'VariableDeclaration') return;
-			if (node.declarations.length !== 1) return;
-			if (node.declarations[0].id.type !== 'Identifier') return;
+			if (parent?.type !== 'Program') {
+				return;
+			}
+			if (ast.type !== 'Program') {
+				return;
+			}
+			if (node.type !== 'VariableDeclaration') {
+				return;
+			}
+			if (node.declarations.length !== 1) {
+				return;
+			}
+			if (node.declarations[0].id.type !== 'Identifier') {
+				return;
+			}
 			const name = node.declarations[0].id.name;
-			if (node.declarations[0].init?.type !== 'CallExpression') return;
-			if (node.declarations[0].init.arguments.length !== 2) return;
+			if (node.declarations[0].init?.type !== 'CallExpression') {
+				return;
+			}
+			if (node.declarations[0].init.arguments.length !== 2) {
+				return;
+			}
 			const componentNode = node.declarations[0].init.arguments[0];
 			if (
 				componentNode.type !== 'Identifier' &&
 				componentNode.type !== 'CallExpression' &&
 				componentNode.type !== 'ObjectExpression'
-			)
+			) {
 				return;
-			if (node.declarations[0].init.arguments[1].type !== 'ArrayExpression') return;
-			if (node.declarations[0].init.arguments[1].elements.length === 0) return;
+			}
+			if (node.declarations[0].init.arguments[1].type !== 'ArrayExpression') {
+				return;
+			}
+			if (node.declarations[0].init.arguments[1].elements.length === 0) {
+				return;
+			}
 			const cssModulesEntry = node.declarations[0].init.arguments[1].elements.find((x) => {
-				if (x?.type !== 'ArrayExpression') return false;
-				if (x.elements.length !== 2) return false;
-				if (x.elements[0]?.type !== 'Literal') return false;
-				if (x.elements[0].value !== '__cssModules') return false;
+				if (x?.type !== 'ArrayExpression') {
+					return false;
+				}
+				if (x.elements.length !== 2) {
+					return false;
+				}
+				if (x.elements[0]?.type !== 'Literal') {
+					return false;
+				}
+				if (x.elements[0].value !== '__cssModules') {
+					return false;
+				}
 				return true;
 			}) as ESTree.ArrayExpression | undefined;
 			const __cssModulesIndex = node.declarations[0].init.arguments[1].elements.indexOf(cssModulesEntry ?? null);
-			if (cssModulesEntry === undefined || __cssModulesIndex < 0) return;
+			if (cssModulesEntry === undefined || __cssModulesIndex < 0) {
+				return;
+			}
 			const cssModuleForest = cssModulesEntry.elements[1];
-			if (cssModuleForest?.type !== 'Identifier' && cssModuleForest?.type !== 'ObjectExpression') return;
+			if (cssModuleForest?.type !== 'Identifier' && cssModuleForest?.type !== 'ObjectExpression') {
+				return;
+			}
 			const moduleForest = resolveModuleForest(ast, cssModuleForest);
-			if (moduleForest === null) return;
+			if (moduleForest === null) {
+				return;
+			}
 			const options = resolveComponentOptions(ast, componentNode);
-			if (options === null) return;
+			if (options === null) {
+				return;
+			}
 			const render = findRenderArrow(options);
-			if (render === null) return;
-			if (render.params.length !== 2) return;
+			if (render === null) {
+				return;
+			}
+			if (render.params.length !== 2) {
+				return;
+			}
 			const ctx = render.params[0];
-			if (ctx.type !== 'Identifier') return;
+			if (ctx.type !== 'Identifier') {
+				return;
+			}
 			for (const [key, moduleTree] of moduleForest) {
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleReference(childNode, ctx.name, key)) return;
+						if (!isCssModuleReference(childNode, ctx.name, key)) {
+							return;
+						}
 						const actualKey = getMemberPropertyName(childNode.property, childNode.computed);
-						if (actualKey === null) return;
+						if (actualKey === null) {
+							return;
+						}
 						const actualValue = moduleTree.get(actualKey);
-						if (actualValue === undefined) return;
+						if (actualValue === undefined) {
+							return;
+						}
 						magicString.overwrite(childNode.start, childNode.end, JSON.stringify(actualValue));
 						this.replace({
 							type: 'Literal',
@@ -272,26 +398,39 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				});
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleReference(childNode, ctx.name, key)) return;
+						if (!isCssModuleReference(childNode, ctx.name, key)) {
+							return;
+						}
 						const actualKey = getMemberPropertyName(childNode.property, childNode.computed);
-						if (actualKey === null) return;
+						if (actualKey === null) {
+							return;
+						}
 						console.error(`Undefined style detected: ${key}.${actualKey} (in ${name})`);
 						magicString.overwrite(childNode.start, childNode.end, 'undefined');
 					},
 				});
 				walk(render.body, {
 					enter(childNode: ESTree.Node, childParent: ESTree.Node | null) {
-						if (childNode.type !== 'CallExpression') return;
-						if (childNode.arguments.length !== 1) return;
+						if (childNode.type !== 'CallExpression') {
+							return;
+						}
+						if (childNode.arguments.length !== 1) {
+							return;
+						}
 						if (
 							childNode.callee.type === 'Identifier' &&
 							childNode.callee.name !== 'normalizeClass' &&
 							!isClassProperty(childParent)
-						)
+						) {
 							return;
-						if (childNode.callee.type !== 'Identifier' && !isClassProperty(childParent)) return;
+						}
+						if (childNode.callee.type !== 'Identifier' && !isClassProperty(childParent)) {
+							return;
+						}
 						const normalized = normalizeClass(childNode.arguments[0], name);
-						if (normalized === null) return;
+						if (normalized === null) {
+							return;
+						}
 						magicString.overwrite(childNode.start, childNode.end, JSON.stringify(normalized));
 					},
 				});
@@ -300,20 +439,28 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				let found = false;
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleAccess(childNode, ctx.name, key)) return;
+						if (!isCssModuleAccess(childNode, ctx.name, key)) {
+							return;
+						}
 						found = true;
 						this.skip();
 					},
 				});
 				return found;
 			});
-			if (hasRemainingCssModuleReference) return;
+			if (hasRemainingCssModuleReference) {
+				return;
+			}
 			if (node.declarations[0].init.arguments[1].elements.length === 1) {
 				if (componentNode.type === 'Identifier') {
 					walk(ast, {
 						enter(childNode: ESTree.Node) {
-							if (childNode.type !== 'Identifier') return;
-							if (childNode.name !== componentNode.name) return;
+							if (childNode.type !== 'Identifier') {
+								return;
+							}
+							if (childNode.name !== componentNode.name) {
+								return;
+							}
 							magicString.overwrite(childNode.start, childNode.end, name);
 						},
 					});

@@ -79,22 +79,49 @@ type SearchQueryCandidate = Record<string, unknown> & {
 };
 
 function isSearchQuery(value: unknown): value is SearchQuery {
-	if (!isJsonObject(value)) return false;
+	if (!isJsonObject(value)) {
+		return false;
+	}
 	const query = value as SearchQueryCandidate;
-	if (query.sort !== undefined && query.sort !== '-createdAt' && query.sort !== '+createdAt' && query.sort !== '-updatedAt' && query.sort !== '+updatedAt') return false;
-	if (query.state !== undefined && query.state !== 'all' && query.state !== 'available' && query.state !== 'admin' && query.state !== 'moderator' && query.state !== 'suspended') return false;
-	if (query.origin !== undefined && query.origin !== 'combined' && query.origin !== 'local' && query.origin !== 'remote') return false;
-	if (query.username !== undefined && typeof query.username !== 'string') return false;
-	if (query.hostname !== undefined && typeof query.hostname !== 'string') return false;
+	if (
+		query.sort !== undefined &&
+		query.sort !== '-createdAt' &&
+		query.sort !== '+createdAt' &&
+		query.sort !== '-updatedAt' &&
+		query.sort !== '+updatedAt'
+	) {
+		return false;
+	}
+	if (
+		query.state !== undefined &&
+		query.state !== 'all' &&
+		query.state !== 'available' &&
+		query.state !== 'admin' &&
+		query.state !== 'moderator' &&
+		query.state !== 'suspended'
+	) {
+		return false;
+	}
+	if (
+		query.origin !== undefined &&
+		query.origin !== 'combined' &&
+		query.origin !== 'local' &&
+		query.origin !== 'remote'
+	) {
+		return false;
+	}
+	if (query.username !== undefined && typeof query.username !== 'string') {
+		return false;
+	}
+	if (query.hostname !== undefined && typeof query.hostname !== 'string') {
+		return false;
+	}
 	return true;
 }
 
 const storedQuery = defaultMemoryStorage.getItem('admin-users-query', isSearchQuery) ?? {};
 
-const {
-	model: sort,
-	def: sortDef,
-} = useMkSelect({
+const { model: sort, def: sortDef } = useMkSelect({
 	items: [
 		{ label: `${i18n.ts.registeredDate} (${i18n.ts.ascendingOrder})`, value: '-createdAt' },
 		{ label: `${i18n.ts.registeredDate} (${i18n.ts.descendingOrder})`, value: '+createdAt' },
@@ -103,10 +130,7 @@ const {
 	],
 	initialValue: storedQuery.sort ?? '+createdAt',
 });
-const {
-	model: state,
-	def: stateDef,
-} = useMkSelect({
+const { model: state, def: stateDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.all, value: 'all' },
 		{ label: i18n.ts.normal, value: 'available' },
@@ -116,10 +140,7 @@ const {
 	],
 	initialValue: storedQuery.state ?? 'all',
 });
-const {
-	model: origin,
-	def: originDef,
-} = useMkSelect({
+const { model: origin, def: originDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.all, value: 'combined' },
 		{ label: i18n.ts.local, value: 'local' },
@@ -129,20 +150,22 @@ const {
 });
 const searchUsername = ref(storedQuery.username ?? '');
 const searchHost = ref(storedQuery.hostname ?? '');
-const paginator = markRaw(new Paginator('admin/show-users', {
-	limit: 10,
-	computedParams: computed(() => ({
-		sort: sort.value,
-		state: state.value,
-		origin: origin.value,
-		username: searchUsername.value,
-		hostname: searchHost.value,
-	})),
-	offsetMode: true,
-}));
+const paginator = markRaw(
+	new Paginator('admin/show-users', {
+		limit: 10,
+		computedParams: computed(() => ({
+			sort: sort.value,
+			state: state.value,
+			origin: origin.value,
+			username: searchUsername.value,
+			hostname: searchHost.value,
+		})),
+		offsetMode: true,
+	}),
+);
 
 function searchUser() {
-	os.selectUser({ includeSelf: true }).then(user => {
+	os.selectUser({ includeSelf: true }).then((user) => {
 		show(user);
 	});
 }
@@ -151,18 +174,22 @@ async function addUser() {
 	const { canceled: canceled1, result: username } = await os.inputText({
 		title: i18n.ts.username,
 	});
-	if (canceled1 || username == null) return;
+	if (canceled1 || username == null) {
+		return;
+	}
 
 	const { canceled: canceled2, result: password } = await os.inputText({
 		title: i18n.ts.password,
 		type: 'password',
 	});
-	if (canceled2 || password == null) return;
+	if (canceled2 || password == null) {
+		return;
+	}
 
 	os.apiWithDialog('admin/accounts/create', {
 		username: username,
 		password: password,
-	}).then(res => {
+	}).then((res) => {
 		paginator.reload();
 	});
 }
@@ -179,21 +206,25 @@ function resetQuery() {
 	searchHost.value = '';
 }
 
-const headerActions = computed(() => [{
-	icon: 'ti ti-search',
-	text: i18n.ts.search,
-	handler: searchUser,
-}, {
-	asFullButton: true,
-	icon: 'ti ti-plus',
-	text: i18n.ts.addUser,
-	handler: addUser,
-}, {
-	asFullButton: true,
-	icon: 'ti ti-search',
-	text: i18n.ts.lookup,
-	handler: lookupUser,
-}]);
+const headerActions = computed(() => [
+	{
+		icon: 'ti ti-search',
+		text: i18n.ts.search,
+		handler: searchUser,
+	},
+	{
+		asFullButton: true,
+		icon: 'ti ti-plus',
+		text: i18n.ts.addUser,
+		handler: addUser,
+	},
+	{
+		asFullButton: true,
+		icon: 'ti ti-search',
+		text: i18n.ts.lookup,
+		handler: lookupUser,
+	},
+]);
 
 const headerTabs = computed(() => []);
 

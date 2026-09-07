@@ -10,7 +10,7 @@ import type { KeyOf, Schema } from '@/misc/json-schema.js';
 import { endpointMetas } from './endpoint-metas.js';
 
 interface IEndpointMetaBase {
-	readonly tags?: ReadonlyArray<string>;
+	readonly tags?: readonly string[];
 
 	readonly errors?: {
 		readonly [key: string]: {

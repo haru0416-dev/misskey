@@ -160,12 +160,16 @@ let restoringPage = false;
 // 各ステップの遷移完了後、入ったページのルート (tabindex=-1) へフォーカスを移し、
 // スクリーンリーダーの読み上げ位置とキーボード操作の起点をステップ先頭へ復帰させる
 function onAfterEnter(el: Element) {
-	if (closing.value || savingPage.value) return;
+	if (closing.value || savingPage.value) {
+		return;
+	}
 	(el as HTMLElement).focus({ preventScroll: true });
 }
 
 watch(page, async (value, previousValue) => {
-	if (closing.value || restoringPage) return;
+	if (closing.value || restoringPage) {
+		return;
+	}
 	savingPage.value = true;
 	try {
 		await store.set('accountSetupWizard', value);
@@ -173,7 +177,7 @@ watch(page, async (value, previousValue) => {
 		restoringPage = true;
 		page.value = previousValue;
 		store.$patch({ accountSetupWizard: previousValue });
-		await store.$persistFlush().catch(rollbackError => console.error(rollbackError));
+		await store.$persistFlush().catch((rollbackError) => console.error(rollbackError));
 		await nextTick();
 		restoringPage = false;
 		console.error(error);
@@ -187,7 +191,9 @@ watch(page, async (value, previousValue) => {
 });
 
 async function close(skip: boolean) {
-	if (closing.value || savingPage.value) return;
+	if (closing.value || savingPage.value) {
+		return;
+	}
 	closing.value = true;
 	if (skip) {
 		const { canceled } = await os.confirm({
@@ -204,24 +210,34 @@ async function close(skip: boolean) {
 }
 
 async function setupComplete(): Promise<boolean> {
-	if (closing.value || savingPage.value) return false;
+	if (closing.value || savingPage.value) {
+		return false;
+	}
 	closing.value = true;
 	return persistAndClose(-1);
 }
 
 async function launchTutorial() {
-	if (!await setupComplete()) return;
+	if (!(await setupComplete())) {
+		return;
+	}
 	nextTick(async () => {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/features/onboarding/components/MkTutorialDialog.vue').then(x => x.default), {
-			initialPage: 1,
-		}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = await os.popupAsyncWithDialog(
+			import('@/features/onboarding/components/MkTutorialDialog.vue').then((x) => x.default),
+			{
+				initialPage: 1,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	});
 }
 
 async function later(defer: boolean) {
-	if (closing.value || savingPage.value) return;
+	if (closing.value || savingPage.value) {
+		return;
+	}
 	closing.value = true;
 	if (defer) {
 		const { canceled } = await os.confirm({
@@ -244,7 +260,7 @@ async function persistAndClose(value: number): Promise<boolean> {
 		return true;
 	} catch (error) {
 		store.$patch({ accountSetupWizard: page.value });
-		await store.$persistFlush().catch(rollbackError => console.error(rollbackError));
+		await store.$persistFlush().catch((rollbackError) => console.error(rollbackError));
 		closing.value = false;
 		console.error(error);
 		await os.alert({

@@ -9,11 +9,12 @@ import { resolve } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { loadConfig } from './config.js';
-import { createDrizzlePool, type MiDrizzlePool } from './drizzle.js';
+import { createDrizzlePool } from './drizzle.js';
+import type { MiDrizzlePool } from './drizzle.js';
 
 type MigrationQueryable = Pick<MiDrizzlePool, 'query'>;
 
-const MIGRATION_ADVISORY_LOCK_ID = 0x4d495353;
+const MIGRATION_ADVISORY_LOCK_ID = 0x4d_49_53_53;
 const MIGRATION_LOCK_TIMEOUT = '60s';
 
 type JournalEntry = {
@@ -94,16 +95,21 @@ export async function runMigrations(
 		throw error;
 	} finally {
 		try {
-			if (locked) await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_ADVISORY_LOCK_ID]);
-			if (statementTimeout != null)
+			if (locked) {
+				await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_ADVISORY_LOCK_ID]);
+			}
+			if (statementTimeout != null) {
 				await client.query("SELECT set_config('statement_timeout', $1, false)", [statementTimeout]);
+			}
 		} catch (error) {
 			cleanupError = error instanceof Error ? error : new Error(String(error));
 		} finally {
 			client.release(cleanupError);
 		}
 	}
-	if (operationError == null && cleanupError != null) throw cleanupError;
+	if (operationError == null && cleanupError != null) {
+		throw cleanupError;
+	}
 	return migrated;
 }
 
@@ -130,7 +136,9 @@ async function main(): Promise<void> {
 				for (const migration of migrations) {
 					console.log(`Migrated: ${migration.tag}`);
 				}
-				if (migrations.length === 0) console.log('No migrations are pending.');
+				if (migrations.length === 0) {
+					console.log('No migrations are pending.');
+				}
 				break;
 			}
 			case 'check': {

@@ -20,11 +20,9 @@ import {
 	isMention,
 	isQuestion,
 	validPost,
-	type ApObject,
-	type IApMention,
-	type IObject,
-	type IPost,
 } from '@/core/activitypub/type.js';
+import type { ApObject, IApMention, IObject, IPost } from '@/core/activitypub/type.js';
+import { resolveIncomingReply } from '@/core/activitypub/interop/reply.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
 import {
@@ -50,17 +48,13 @@ import {
 	isSelfHost,
 	parseLocalApUri,
 	resolveApObjectForApi,
-	type ApiApResolveDependencies,
 } from './ap-resolve.js';
-import {
-	extractEmojisForApi,
-	fetchPersonForApi,
-	resolveImageForApi,
-	resolvePersonForApi,
-	type ApiApPersonDependencies,
-} from './ap-person.js';
+import type { ApiApResolveDependencies } from './ap-resolve.js';
+import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePersonForApi } from './ap-person.js';
+import type { ApiApPersonDependencies } from './ap-person.js';
 import { deliverQuestionUpdateForApi } from './notes-ap.js';
-import { createNoteForApi, type CreateNoteData, type ApiNotesCreateDependencies } from '../note/notes-create.js';
+import { createNoteForApi } from '../note/notes-create.js';
+import type { CreateNoteData, ApiNotesCreateDependencies } from '../note/notes-create.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 
 export type ApiApNoteDependencies = ApiApPersonDependencies &
@@ -132,9 +126,13 @@ export async function parseAudienceForApi(
 	const group = (ids: string[]) => {
 		const groups: { public: string[]; followers: string[]; other: string[] } = { public: [], followers: [], other: [] };
 		for (const id of ids) {
-			if (isPublic(id)) groups.public.push(id);
-			else if (isFollowers(id)) groups.followers.push(id);
-			else groups.other.push(id);
+			if (isPublic(id)) {
+				groups.public.push(id);
+			} else if (isFollowers(id)) {
+				groups.followers.push(id);
+			} else {
+				groups.other.push(id);
+			}
 		}
 		groups.other = unique(groups.other);
 		return groups;
@@ -149,16 +147,23 @@ export async function parseAudienceForApi(
 		await Promise.all(others.map((id) => limit(() => resolvePersonForApi(deps, id, history).catch(() => null))))
 	).filter((x): x is MiUser => x != null);
 
-	if (toGroups.public.length > 0) return { visibility: 'public', visibleUsers: [] };
-	if (ccGroups.public.length > 0) return { visibility: 'home', visibleUsers: [] };
-	if (toGroups.followers.length > 0 || ccGroups.followers.length > 0)
+	if (toGroups.public.length > 0) {
+		return { visibility: 'public', visibleUsers: [] };
+	}
+	if (ccGroups.public.length > 0) {
+		return { visibility: 'home', visibleUsers: [] };
+	}
+	if (toGroups.followers.length > 0 || ccGroups.followers.length > 0) {
 		return { visibility: 'followers', visibleUsers: [] };
+	}
 
 	return { visibility: 'specified', visibleUsers: mentionedUsers };
 }
 
 function extractApMentionObjectsForApi(tags: IObject | IObject[] | null | undefined): IApMention[] {
-	if (tags == null) return [];
+	if (tags == null) {
+		return [];
+	}
 	return toArray(tags).filter(isMention);
 }
 
@@ -184,10 +189,14 @@ async function extractPollFromQuestionForApi(
 	history: Set<string>,
 ): Promise<IPoll> {
 	const question = await resolveApObjectForApi(deps, source, FetchAllowSoftFailMask.Strict, history);
-	if (!isQuestion(question)) throw new Error('invalid type');
+	if (!isQuestion(question)) {
+		throw new Error('invalid type');
+	}
 
 	const multiple = question.oneOf === undefined;
-	if (multiple && question.anyOf === undefined) throw new Error('invalid question');
+	if (multiple && question.anyOf === undefined) {
+		throw new Error('invalid question');
+	}
 
 	const expiresAt = question.endTime ? new Date(question.endTime) : question.closed ? new Date(question.closed) : null;
 
@@ -212,21 +221,33 @@ export async function updateQuestionFromApForApi(
 	history: Set<string> = new Set(),
 ): Promise<boolean> {
 	const uri = typeof value === 'string' ? value : value.id;
-	if (uri == null) throw new Error('uri is null');
+	if (uri == null) {
+		throw new Error('uri is null');
+	}
 
-	if (isSelfHost(deps.config, extractDbHost(uri))) throw new Error('uri points local');
+	if (isSelfHost(deps.config, extractDbHost(uri))) {
+		throw new Error('uri points local');
+	}
 
 	const note = await fetchNoteByUriFromDatabase(deps.db, uri);
-	if (note == null) throw new Error('Question is not registered');
+	if (note == null) {
+		throw new Error('Question is not registered');
+	}
 
 	const poll = await fetchPollByNoteIdFromDatabase(deps.db, note.id);
-	if (poll == null) throw new Error('Question is not registered');
+	if (poll == null) {
+		throw new Error('Question is not registered');
+	}
 
 	const user = await fetchUserByIdFromDatabase(deps.db, poll.userId);
-	if (user == null) throw new Error('Question is not registered');
+	if (user == null) {
+		throw new Error('Question is not registered');
+	}
 
 	const question = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
-	if (!isQuestion(question)) throw new Error('object is not a Question');
+	if (!isQuestion(question)) {
+		throw new Error('object is not a Question');
+	}
 
 	const attribution = question.attributedTo ? getOneApId(question.attributedTo as ApObject) : user.uri;
 	const attributionMatchesExisting = attribution === user.uri;
@@ -237,7 +258,9 @@ export async function updateQuestionFromApForApi(
 	}
 
 	const apChoices = question.oneOf ?? question.anyOf;
-	if (apChoices == null) throw new Error('invalid apChoices: ' + apChoices);
+	if (apChoices == null) {
+		throw new Error('invalid apChoices: ' + apChoices);
+	}
 
 	let changed = false;
 
@@ -245,8 +268,9 @@ export async function updateQuestionFromApForApi(
 	for (const [index, choice] of poll.choices.entries()) {
 		const oldCount = poll.votes[index];
 		const newCount = apChoices.find((ap) => ap.name === choice)?.replies?.totalItems;
-		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0))
+		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0)) {
 			throw new Error('invalid newCount: ' + newCount);
+		}
 
 		if (oldCount !== newCount) {
 			changed = true;
@@ -267,11 +291,15 @@ async function voteFromApForApi(
 	choice: number,
 ): Promise<void> {
 	const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
-	if (poll.choices[choice] == null) throw new Error('invalid choice param');
+	if (poll.choices[choice] == null) {
+		throw new Error('invalid choice param');
+	}
 
 	const exist = await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, actor.id);
 	if (poll.multiple) {
-		if (exist.some((x) => x.choice === choice)) throw new Error('already voted');
+		if (exist.some((x) => x.choice === choice)) {
+			throw new Error('already voted');
+		}
 	} else if (exist.length !== 0) {
 		throw new Error('already voted');
 	}
@@ -300,17 +328,27 @@ export async function createNoteFromApForApi(
 
 	const entryUri = getApId(value);
 	const err = validateNoteForApi(object, entryUri, actor);
-	if (err) throw err;
+	if (err) {
+		throw err;
+	}
 
 	const note = object as IPost;
 
-	if (note.id == null) throw new Error('Refusing to create note without id');
-	if (!checkHttps(note.id)) throw new Error('unexpected schema of note.id: ' + note.id);
+	if (note.id == null) {
+		throw new Error('Refusing to create note without id');
+	}
+	if (!checkHttps(note.id)) {
+		throw new Error('unexpected schema of note.id: ' + note.id);
+	}
 
 	const url = getOneApHrefNullable(note.url);
-	if (url && !checkHttps(url)) throw new Error('unexpected schema of note url: ' + url);
+	if (url && !checkHttps(url)) {
+		throw new Error('unexpected schema of note url: ' + url);
+	}
 
-	if (note.attributedTo == null) throw new Error('invalid note.attributedTo: ' + note.attributedTo);
+	if (note.attributedTo == null) {
+		throw new Error('invalid note.attributedTo: ' + note.attributedTo);
+	}
 	const uri = getOneApId(note.attributedTo as ApObject);
 
 	actor ??= (await fetchPersonForApi(deps, uri)) as MiRemoteUser | undefined;
@@ -361,20 +399,19 @@ export async function createNoteFromApForApi(
 	for (const attach of attachments) {
 		const attachment = attach as { sensitive?: boolean };
 		const sensitive = (note as { sensitive?: boolean }).sensitive;
-		if (attachment.sensitive == null && sensitive !== undefined) attachment.sensitive = sensitive;
+		if (attachment.sensitive == null && sensitive !== undefined) {
+			attachment.sensitive = sensitive;
+		}
 	}
 	const resolvedFiles = await Promise.all(attachments.map((attach) => resolveImageForApi(deps, actor, attach)));
 	const files = resolvedFiles.filter((file) => file != null);
 
-	const reply = note.inReplyTo
-		? await resolveNoteForApi(deps, note.inReplyTo as string | IObject, {
-				sentFrom: new URL(actor.uri),
-				resolver: history,
-			}).then((x) => {
-				if (x == null) throw new Error('inReplyTo not found');
-				return x;
-			})
-		: null;
+	const reply = await resolveIncomingReply(note.inReplyTo, (target) =>
+		resolveNoteForApi(deps, target, {
+			sentFrom: new URL(actor.uri),
+			resolver: history,
+		}),
+	);
 
 	let quote: MiNote | undefined | null = null;
 	const quoteUri =
@@ -383,10 +420,14 @@ export async function createNoteFromApForApi(
 		const tryResolveNote = async (
 			u: string,
 		): Promise<{ status: 'ok'; res: MiNote } | { status: 'permerror' | 'temperror' }> => {
-			if (!/^https?:/.test(u)) return { status: 'permerror' };
+			if (!/^https?:/.test(u)) {
+				return { status: 'permerror' };
+			}
 			try {
 				const res = await resolveNoteForApi(deps, u);
-				if (res == null) return { status: 'permerror' };
+				if (res == null) {
+					return { status: 'permerror' };
+				}
 				return { status: 'ok', res };
 			} catch (e) {
 				return { status: e instanceof StatusError && !e.isRetryable ? 'permerror' : 'temperror' };
@@ -452,10 +493,11 @@ export async function createNoteFromApForApi(
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
 			const duplicate = await getNoteFromApIdForApi(deps, value);
-			if (!duplicate)
+			if (!duplicate) {
 				throw new Error('The note creation failed with duplication error even when there is no duplication', {
 					cause: err,
 				});
+			}
 			return duplicate;
 		}
 		throw err;
@@ -476,7 +518,9 @@ export async function resolveNoteForApi(
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
 		const exist = await getNoteFromApIdForApi(deps, uri);
-		if (exist) return exist;
+		if (exist) {
+			return exist;
+		}
 
 		if (parseLocalApUri(deps.config, uri).local) {
 			throw new StatusError('cannot resolve local note', 400, 'cannot resolve local note');

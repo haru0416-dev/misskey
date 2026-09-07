@@ -8,15 +8,11 @@
  */
 
 import * as assert from 'assert';
-import { createServer, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server, ServerResponse } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import {
-	AuthorizationCode,
-	type AuthorizationTokenConfig,
-	ClientCredentials,
-	ModuleOptions,
-	ResourceOwnerPassword,
-} from 'simple-oauth2';
+import { AuthorizationCode, ClientCredentials, ModuleOptions, ResourceOwnerPassword } from 'simple-oauth2';
+import type { AuthorizationTokenConfig } from 'simple-oauth2';
 import * as htmlParser from 'node-html-parser';
 import { api, oauthClientPort, resolveTargetUrl, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -52,7 +48,9 @@ function createClientMetadataReply(res: ServerResponse): ClientMetadataReply {
 		},
 
 		send(body) {
-			if (res.writableEnded) return;
+			if (res.writableEnded) {
+				return;
+			}
 
 			if (body == null) {
 				res.end();
@@ -85,7 +83,9 @@ async function listen(server: Server, port: number): Promise<void> {
 }
 
 async function close(server: Server): Promise<void> {
-	if (!server.listening) return;
+	if (!server.listening) {
+		return;
+	}
 
 	await new Promise<void>((resolve, reject) => {
 		server.close((err) => (err ? reject(err) : resolve()));
@@ -611,7 +611,9 @@ describe('OAuth', () => {
 			}
 
 			for (const result of results) {
-				if (result.status !== 'fulfilled') continue;
+				if (result.status !== 'fulfilled') {
+					continue;
+				}
 				const createResult = await api(
 					'notes/create',
 					{ text: 'test' },

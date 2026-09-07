@@ -26,7 +26,9 @@ function escapeForRegExp(value: string): string {
 
 /** 同じハッシュタグのミュート行かどうか。旧形式 (語の配列) も外せるように見る。 */
 export function isSameMute(entry: string | string[], hashtag: string): boolean {
-	if (Array.isArray(entry)) return entry.length === 1 && entry[0] === `#${hashtag}`;
+	if (Array.isArray(entry)) {
+		return entry.length === 1 && entry[0] === `#${hashtag}`;
+	}
 	return entry === toHashtagMute(hashtag);
 }
 
@@ -49,7 +51,9 @@ export function getHashtagMenu(hashtag: string): MenuItem[] {
 	];
 
 	const me = $i;
-	if (me == null) return menu;
+	if (me == null) {
+		return menu;
+	}
 
 	const muted = me.mutedWords.some((entry) => isSameMute(entry, hashtag));
 

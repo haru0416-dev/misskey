@@ -14,15 +14,15 @@ import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isVisibleForMeForApi, type ApiNoteDependencies } from './note.js';
+import { isVisibleForMeForApi } from './note.js';
+import type { ApiNoteDependencies } from './note.js';
 import {
 	addActivityContext,
 	deliverQuestionUpdateForApi,
 	deliverSingleActivityForApi,
 	renderVoteForApi,
-	type ApiNoteApDependencies,
-	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
 
@@ -94,22 +94,34 @@ export async function handleApiNotesPollsVote(
 	const params = parseApiParams(notesPollsVoteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw pollsVoteNoSuchNoteError();
-	if (!(await isVisibleForMeForApi(deps, note, me.id))) throw pollsVoteNoSuchNoteError();
+	if (note == null) {
+		throw pollsVoteNoSuchNoteError();
+	}
+	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
+		throw pollsVoteNoSuchNoteError();
+	}
 
-	if (!note.hasPoll) throw pollsVoteNoPollError();
+	if (!note.hasPoll) {
+		throw pollsVoteNoPollError();
+	}
 
 	if (note.userId !== me.id) {
 		const blocked = await blockingExistsInDatabase(deps.db, note.userId, me.id);
-		if (blocked) throw pollsVoteYouHaveBeenBlockedError();
+		if (blocked) {
+			throw pollsVoteYouHaveBeenBlockedError();
+		}
 	}
 
 	const { vote, poll } = await deps.db.transaction(async (transaction) => {
 		await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${note.id}), hashtext(${me.id}))`);
 		const poll = await fetchPollByNoteIdOrFailFromDatabase(transaction as typeof deps.db, note.id);
 		const createdAt = new Date();
-		if (poll.expiresAt && poll.expiresAt < createdAt) throw pollsVoteAlreadyExpiredError();
-		if (poll.choices[params.choice] == null) throw pollsVoteInvalidChoiceError();
+		if (poll.expiresAt && poll.expiresAt < createdAt) {
+			throw pollsVoteAlreadyExpiredError();
+		}
+		if (poll.choices[params.choice] == null) {
+			throw pollsVoteInvalidChoiceError();
+		}
 
 		const exist = await listPollVotesByNoteAndUserFromDatabase(transaction as typeof deps.db, note.id, me.id);
 		if (exist.length > 0 && (!poll.multiple || exist.some((x) => x.choice === params.choice))) {

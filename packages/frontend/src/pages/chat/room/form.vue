@@ -84,7 +84,9 @@ type ChatDraftDataCandidate = Record<string, unknown> & {
 watch([text, file], saveDraft);
 
 async function onPaste(ev: ClipboardEvent) {
-	if (!ev.clipboardData) return;
+	if (!ev.clipboardData) {
+		return;
+	}
 
 	const pastedFileName = 'yyyy-MM-dd HH-mm-ss [{{number}}]';
 
@@ -95,14 +97,19 @@ async function onPaste(ev: ClipboardEvent) {
 		const item = items[0];
 		if (item?.kind === 'file') {
 			const pastedFile = item.getAsFile();
-			if (!pastedFile) return;
+			if (!pastedFile) {
+				return;
+			}
 			const lio = pastedFile.name.lastIndexOf('.');
 			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
-			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll(/{{number}}/g, '1') + ext;
+			const formattedName =
+				formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll(/{{number}}/g, '1') + ext;
 			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
-			os.launchUploader([renamedFile], { multiple: false }).then(driveFiles => {
+			os.launchUploader([renamedFile], { multiple: false }).then((driveFiles) => {
 				const driveFile = driveFiles[0];
-				if (driveFile != null) file.value = driveFile;
+				if (driveFile != null) {
+					file.value = driveFile;
+				}
 			});
 		}
 	} else {
@@ -116,7 +123,9 @@ async function onPaste(ev: ClipboardEvent) {
 }
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
@@ -141,13 +150,17 @@ function onDragover(ev: DragEvent) {
 }
 
 function onDrop(ev: DragEvent): void {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// ファイルだったら
 	if (ev.dataTransfer.files.length === 1) {
 		ev.preventDefault();
 		const droppedFile = ev.dataTransfer.files[0];
-		if (droppedFile != null) os.launchUploader([droppedFile], { multiple: false });
+		if (droppedFile != null) {
+			os.launchUploader([droppedFile], { multiple: false });
+		}
 		return;
 	} else if (ev.dataTransfer.files.length > 1) {
 		ev.preventDefault();
@@ -163,7 +176,9 @@ function onDrop(ev: DragEvent): void {
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
 			const droppedFile = droppedData[0];
-			if (droppedFile != null) file.value = droppedFile;
+			if (droppedFile != null) {
+				file.value = droppedFile;
+			}
 			ev.preventDefault();
 		}
 	}
@@ -171,7 +186,9 @@ function onDrop(ev: DragEvent): void {
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
+	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) {
+		return;
+	}
 
 	if (ev.key === 'Enter') {
 		if (prefer['chat.sendOnEnter']) {
@@ -179,7 +196,7 @@ function onKeydown(ev: KeyboardEvent) {
 				send();
 			}
 		} else {
-			if ((ev.ctrlKey || ev.metaKey)) {
+			if (ev.ctrlKey || ev.metaKey) {
 				send();
 			}
 		}
@@ -191,24 +208,30 @@ function chooseFile(ev: PointerEvent) {
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
 		label: i18n.ts.selectFile,
-	}).then(selectedFile => {
+	}).then((selectedFile) => {
 		file.value = selectedFile;
 	});
 }
 
 function onChangeFile() {
-	if (fileEl.value == null || fileEl.value.files == null) return;
+	if (fileEl.value == null || fileEl.value.files == null) {
+		return;
+	}
 
 	if (fileEl.value.files[0]) {
-		os.launchUploader(Array.from(fileEl.value.files), { multiple: false }).then(driveFiles => {
+		os.launchUploader(Array.from(fileEl.value.files), { multiple: false }).then((driveFiles) => {
 			const driveFile = driveFiles[0];
-			if (driveFile != null) file.value = driveFile;
+			if (driveFile != null) {
+				file.value = driveFile;
+			}
 		});
 	}
 }
 
 function send() {
-	if (!canSend.value) return;
+	if (!canSend.value) {
+		return;
+	}
 
 	sending.value = true;
 
@@ -217,25 +240,31 @@ function send() {
 			toUserId: props.user.id,
 			...(text.value ? { text: text.value } : {}),
 			...(file.value ? { fileId: file.value.id } : {}),
-		}).then(message => {
-			clear();
-		}).catch(err => {
-			console.error(err);
-		}).then(() => {
-			sending.value = false;
-		});
+		})
+			.then((message) => {
+				clear();
+			})
+			.catch((err) => {
+				console.error(err);
+			})
+			.then(() => {
+				sending.value = false;
+			});
 	} else if (props.room) {
 		misskeyApi('chat/messages/create-to-room', {
 			toRoomId: props.room.id,
 			...(text.value ? { text: text.value } : {}),
 			...(file.value ? { fileId: file.value.id } : {}),
-		}).then(message => {
-			clear();
-		}).catch(err => {
-			console.error(err);
-		}).then(() => {
-			sending.value = false;
-		});
+		})
+			.then((message) => {
+				clear();
+			})
+			.catch((err) => {
+				console.error(err);
+			})
+			.then(() => {
+				sending.value = false;
+			});
 	}
 }
 
@@ -270,7 +299,9 @@ function deleteDraft() {
 async function insertEmoji(ev: MouseEvent) {
 	textareaReadOnly.value = true;
 	const target = ev.currentTarget ?? ev.target;
-	if (target == null) return;
+	if (target == null) {
+		return;
+	}
 
 	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
 	// focustrapをかけているとinsertTextAtCursorが効かない
@@ -282,7 +313,7 @@ async function insertEmoji(ev: MouseEvent) {
 	let posEnd = textareaEl.value?.selectionEnd ?? text.value.length;
 	emojiPicker.show(
 		target as HTMLElement,
-		emoji => {
+		(emoji) => {
 			const textBefore = text.value.substring(0, pos);
 			const textAfter = text.value.substring(posEnd);
 			text.value = textBefore + emoji + textAfter;
@@ -307,8 +338,12 @@ onMounted(() => {
 		const candidate = draft as ChatDraftCandidate;
 		if (isJsonObject(candidate.data)) {
 			const data = candidate.data as ChatDraftDataCandidate;
-			if (typeof data.text === 'string') text.value = data.text;
-			if (data.file === null || isJsonObject(data.file)) file.value = data.file as Misskey.entities.DriveFile | null;
+			if (typeof data.text === 'string') {
+				text.value = data.text;
+			}
+			if (data.file === null || isJsonObject(data.file)) {
+				file.value = data.file as Misskey.entities.DriveFile | null;
+			}
 		}
 	}
 });

@@ -95,15 +95,19 @@ function fetchFlash() {
 	flash.value = null;
 	misskeyApi('flash/show', {
 		flashId: props.id,
-	}).then(_flash => {
-		flash.value = _flash;
-	}).catch(err => {
-		error.value = err;
-	});
+	})
+		.then((_flash) => {
+			flash.value = _flash;
+		})
+		.catch((err) => {
+			error.value = err;
+		});
 }
 
 function share(ev: PointerEvent) {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	const menuItems: MenuItem[] = [];
 
@@ -125,13 +129,17 @@ function share(ev: PointerEvent) {
 }
 
 function copyLink() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	copyToClipboard(`${url}/play/${flash.value.id}`);
 }
 
 function shareWithNavigator() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	navigator.share({
 		title: flash.value.title,
@@ -141,7 +149,9 @@ function shareWithNavigator() {
 }
 
 function shareWithNote() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	os.post({
 		initialText: `${flash.value.title}\n${url}/play/${flash.value.id}`,
@@ -150,10 +160,14 @@ function shareWithNote() {
 }
 
 async function like() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin();
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	os.apiWithDialog('flash/like', {
 		flashId: flash.value.id,
@@ -164,16 +178,22 @@ async function like() {
 }
 
 async function unlike() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin();
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	const confirm = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.unlikeConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	os.apiWithDialog('flash/unlike', {
 		flashId: flash.value.id,
 	}).then(() => {
@@ -195,31 +215,38 @@ function start() {
 }
 
 async function run() {
-	if (aiscript.value) aiscript.value.abort();
-	if (!flash.value) return;
+	if (aiscript.value) {
+		aiscript.value.abort();
+	}
+	if (!flash.value) {
+		return;
+	}
 
 	const parser = new Parser();
 
 	components.value = [];
 
-	const interpreter = new Interpreter({
-		...createAiScriptEnv({
-			storageKey: 'flash:' + flash.value.id,
-		}),
-		...registerAsUiLib(components.value, (_root) => {
-			root.value = _root.value;
-		}),
-		THIS_ID: values.STR(flash.value.id),
-		THIS_URL: values.STR(`${url}/play/${flash.value.id}`),
-	}, {
-		in: aiScriptReadline,
-		out: () => {
-			// nop
+	const interpreter = new Interpreter(
+		{
+			...createAiScriptEnv({
+				storageKey: 'flash:' + flash.value.id,
+			}),
+			...registerAsUiLib(components.value, (_root) => {
+				root.value = _root.value;
+			}),
+			THIS_ID: values.STR(flash.value.id),
+			THIS_URL: values.STR(`${url}/play/${flash.value.id}`),
 		},
-		log: () => {
-			// nop
+		{
+			in: aiScriptReadline,
+			out: () => {
+				// nop
+			},
+			log: () => {
+				// nop
+			},
 		},
-	});
+	);
 
 	aiscript.value = interpreter;
 
@@ -245,54 +272,73 @@ async function run() {
 }
 
 async function reportAbuse() {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	const pageUrl = `${url}/play/${flash.value.id}`;
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
-		user: flash.value.user,
-		initialComment: `Play: ${pageUrl}\n-----\n`,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
+		{
+			user: flash.value.user,
+			initialComment: `Play: ${pageUrl}\n-----\n`,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function showMenu(ev: PointerEvent) {
-	if (!flash.value) return;
+	if (!flash.value) {
+		return;
+	}
 
 	const menu: MenuItem[] = [
-		...($i && $i.id !== flash.value.userId ? [
-			{
-				icon: 'ti ti-exclamation-circle',
-				text: i18n.ts.reportAbuse,
-				action: reportAbuse,
-			},
-			...($i.isModerator || $i.isAdmin ? [
-				{
-					type: 'divider' as const,
-				},
-				{
-					icon: 'ti ti-trash',
-					text: i18n.ts.delete,
-					danger: true,
-					action: () => os.confirm({
-						type: 'warning',
-						text: i18n.ts.deleteConfirm,
-					}).then(({ canceled }) => {
-						if (canceled || !flash.value) return;
+		...($i && $i.id !== flash.value.userId
+			? [
+					{
+						icon: 'ti ti-exclamation-circle',
+						text: i18n.ts.reportAbuse,
+						action: reportAbuse,
+					},
+					...($i.isModerator || $i.isAdmin
+						? [
+								{
+									type: 'divider' as const,
+								},
+								{
+									icon: 'ti ti-trash',
+									text: i18n.ts.delete,
+									danger: true,
+									action: () =>
+										os
+											.confirm({
+												type: 'warning',
+												text: i18n.ts.deleteConfirm,
+											})
+											.then(({ canceled }) => {
+												if (canceled || !flash.value) {
+													return;
+												}
 
-						os.apiWithDialog('flash/delete', { flashId: flash.value.id });
-					}),
-				},
-			] : []),
-		] : []),
+												os.apiWithDialog('flash/delete', { flashId: flash.value.id });
+											}),
+								},
+							]
+						: []),
+				]
+			: []),
 	];
 
 	os.popupMenu(menu, ev.currentTarget ?? ev.target);
 }
 
 function reset() {
-	if (aiscript.value) aiscript.value.abort();
+	if (aiscript.value) {
+		aiscript.value.abort();
+	}
 	started.value = false;
 }
 
@@ -310,14 +356,16 @@ const headerTabs = computed(() => []);
 
 definePage(() => ({
 	title: flash.value ? flash.value.title : 'Play',
-	...flash.value ? {
-		avatar: flash.value.user,
-		path: `/play/${flash.value.id}`,
-		share: {
-			title: flash.value.title,
-			text: flash.value.summary,
-		},
-	} : {},
+	...(flash.value
+		? {
+				avatar: flash.value.user,
+				path: `/play/${flash.value.id}`,
+				share: {
+					title: flash.value.title,
+					text: flash.value.summary,
+				},
+			}
+		: {}),
 }));
 </script>
 

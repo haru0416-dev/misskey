@@ -66,11 +66,7 @@ import type { DroppedFile } from '@/features/drive/file-drop.js';
 import type { GridSetting } from '@/components/grid/grid.js';
 import type { GridRow } from '@/components/grid/row.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import {
-	emptyStrToEmptyArray,
-	emptyStrToNull,
-	roleIdsParser,
-} from '@/pages/admin/custom-emojis-manager2/impl.js';
+import { emptyStrToEmptyArray, emptyStrToNull, roleIdsParser } from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
 import MkSelect from '@/components/form/MkSelect.vue';
@@ -104,7 +100,7 @@ type GridItem = {
 	license: string;
 	isSensitive: boolean;
 	localOnly: boolean;
-	roleIdsThatCanBeUsedThisEmojiAsReaction: { id: string, name: string }[];
+	roleIdsThatCanBeUsedThisEmojiAsReaction: { id: string; name: string }[];
 	type: string | null;
 };
 
@@ -116,7 +112,7 @@ function setupGrid(): GridSetting {
 	const unique = validators.unique();
 
 	function removeRows(rows: GridRow[]) {
-		const idxes = [...new Set(rows.map(it => it.index))];
+		const idxes = [...new Set(rows.map((it) => it.index))];
 		gridItems.value = gridItems.value.filter((_, i) => !idxes.includes(i));
 	}
 
@@ -128,7 +124,7 @@ function setupGrid(): GridSetting {
 			styleRules: [
 				{
 					// 1つでもバリデーションエラーがあれば行全体をエラー表示する
-					condition: ({ cells }) => cells.some(it => !it.violation.valid),
+					condition: ({ cells }) => cells.some((it) => !it.violation.valid),
 					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
@@ -158,7 +154,11 @@ function setupGrid(): GridSetting {
 		cols: [
 			{ bindTo: 'url', icon: 'ti-icons', type: 'image', editable: false, width: 'auto', validators: [required] },
 			{
-				bindTo: 'name', title: 'name', type: 'text', editable: true, width: 140,
+				bindTo: 'name',
+				title: 'name',
+				type: 'text',
+				editable: true,
+				width: 140,
 				validators: [required, regex, unique],
 			},
 			{ bindTo: 'category', title: 'category', type: 'text', editable: true, width: 140 },
@@ -167,7 +167,11 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
 			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
 			{
-				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: 'role', type: 'text', editable: true, width: 140,
+				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction',
+				title: 'role',
+				type: 'text',
+				editable: true,
+				width: 140,
 				valueTransformer: (row) => {
 					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
 					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
@@ -177,10 +181,12 @@ function setupGrid(): GridSetting {
 				customValueEditor: async (row) => {
 					// ID直記入は体験的に最悪なのでモーダルを使って入力する
 					const item = gridItems.value[row.index];
-					if (item == null) return [];
+					if (item == null) {
+						return [];
+					}
 					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
 					const result = await os.selectRole({
-						initialRoleIds: current.map(it => it.id),
+						initialRoleIds: current.map((it) => it.id),
 						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
 						infoMessage: i18n.ts.rolesThatCanBeUsedThisEmojiAsReactionEmptyDescription,
 						publicOnly: true,
@@ -189,7 +195,7 @@ function setupGrid(): GridSetting {
 						return current;
 					}
 
-					const transform = result.result.map(it => ({ id: it.id, name: it.name }));
+					const transform = result.result.map((it) => ({ id: it.id, name: it.name }));
 					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
 
 					return transform;
@@ -199,7 +205,9 @@ function setupGrid(): GridSetting {
 					delete(cell) {
 						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
 						const item = gridItems.value[cell.row.index];
-						if (item != null) item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						if (item != null) {
+							item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						}
 					},
 				},
 			},
@@ -219,7 +227,7 @@ function setupGrid(): GridSetting {
 						type: 'button',
 						text: i18n.ts._customEmojisManager._gridCommon.deleteSelectionRanges,
 						icon: 'ti ti-trash',
-						action: () => removeRows(context.rangedCells.map(it => it.row)),
+						action: () => removeRows(context.rangedCells.map((it) => it.row)),
 					},
 				];
 			},
@@ -229,11 +237,8 @@ function setupGrid(): GridSetting {
 
 const uploadFolders = ref<FolderItem[]>([]);
 const gridItems = ref<GridItem[]>([]);
-const {
-	model: selectedFolderId,
-	def: selectedFolderIdDef,
-} = useMkSelect({
-	items: computed(() => uploadFolders.value.map(folder => ({ label: folder.name, value: folder.id || '' }))),
+const { model: selectedFolderId, def: selectedFolderIdDef } = useMkSelect({
+	items: computed(() => uploadFolders.value.map((folder) => ({ label: folder.name, value: folder.id || '' }))),
 	initialValue: prefer.uploadFolder,
 });
 const directoryToCategory = ref<boolean>(false);
@@ -244,7 +249,9 @@ const isDragOver = ref<boolean>(false);
 async function onRegistryClicked() {
 	const dialogSelection = await os.confirm({
 		type: 'info',
-		text: i18n.tsx._customEmojisManager._local._register.confirmRegisterEmojisDescription({ count: MAXIMUM_EMOJI_REGISTER_COUNT }),
+		text: i18n.tsx._customEmojisManager._local._register.confirmRegisterEmojisDescription({
+			count: MAXIMUM_EMOJI_REGISTER_COUNT,
+		}),
 	});
 
 	if (dialogSelection.canceled) {
@@ -253,26 +260,24 @@ async function onRegistryClicked() {
 
 	const items = gridItems.value;
 	const upload = () => {
-		return items.slice(0, MAXIMUM_EMOJI_REGISTER_COUNT)
-			.map(item =>
-				misskeyApi(
-					'admin/emoji/add', {
-						name: item.name,
-						category: emptyStrToNull(item.category),
-						aliases: emptyStrToEmptyArray(item.aliases),
-						license: emptyStrToNull(item.license),
-						isSensitive: item.isSensitive,
-						localOnly: item.localOnly,
-						roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map(it => it.id),
-						fileId: item.fileId!,
-					})
-					.then(() => ({ item, success: true, err: undefined }))
-					.catch(err => ({ item, success: false, err })),
-			);
+		return items.slice(0, MAXIMUM_EMOJI_REGISTER_COUNT).map((item) =>
+			misskeyApi('admin/emoji/add', {
+				name: item.name,
+				category: emptyStrToNull(item.category),
+				aliases: emptyStrToEmptyArray(item.aliases),
+				license: emptyStrToNull(item.license),
+				isSensitive: item.isSensitive,
+				localOnly: item.localOnly,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
+				fileId: item.fileId!,
+			})
+				.then(() => ({ item, success: true, err: undefined }))
+				.catch((err) => ({ item, success: false, err })),
+		);
 	};
 
 	const result = await os.promiseDialog(Promise.all(upload()));
-	const failedItems = result.filter(it => !it.success);
+	const failedItems = result.filter((it) => !it.success);
 
 	if (failedItems.length > 0) {
 		await os.alert({
@@ -282,7 +287,7 @@ async function onRegistryClicked() {
 		});
 	}
 
-	requestLogs.value = result.map(it => ({
+	requestLogs.value = result.map((it) => ({
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
@@ -290,8 +295,8 @@ async function onRegistryClicked() {
 	}));
 
 	// 登録に成功したものは一覧から除く
-	const successItems = result.filter(it => it.success).map(it => it.item);
-	gridItems.value = gridItems.value.filter(it => !successItems.includes(it));
+	const successItems = result.filter((it) => it.success).map((it) => it.item);
+	gridItems.value = gridItems.value.filter((it) => !successItems.includes(it));
 }
 
 async function onClearClicked() {
@@ -333,7 +338,7 @@ function onGridEvent(event: GridEvent) {
 }
 
 function onGridCellValidation(event: GridCellValidationEvent) {
-	registerButtonDisabled.value = event.all.filter(it => !it.valid).length > 0;
+	registerButtonDisabled.value = event.all.filter((it) => !it.valid).length > 0;
 }
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
@@ -348,7 +353,10 @@ function fromDriveFile(it: Misskey.entities.DriveFile): GridItem {
 	return {
 		fileId: it.id,
 		url: it.url,
-		name: it.name.replace(/(\.[a-zA-Z0-9]+)+$/, '').replaceAll('-', '_').replaceAll(' ', '_'),
+		name: it.name
+			.replace(/(\.[a-zA-Z0-9]+)+$/, '')
+			.replaceAll('-', '_')
+			.replaceAll(' ', '_'),
 		host: '',
 		category: '',
 		aliases: '',

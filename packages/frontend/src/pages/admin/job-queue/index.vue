@@ -264,7 +264,7 @@ type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
 	};
 };
 
-const tab = ref<typeof Misskey.queueTypes[number] | '-' | 'outbox'>('-');
+const tab = ref<(typeof Misskey.queueTypes)[number] | '-' | 'outbox'>('-');
 const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait'>('all');
 const jobs = ref<QueueJob[]>([]);
 const jobsFetching = ref(true);
@@ -280,26 +280,32 @@ const deadLettersCanFetchMore = ref(false);
 const deadLettersFetchingMore = ref(false);
 
 // tab はキュー名以外 (概要 / デッドレター) も取りうるので、キュー指定APIにはこちらを渡す
-const currentQueue = computed<typeof Misskey.queueTypes[number] | null>(() => {
-	const queue = Misskey.queueTypes.find(q => q === tab.value);
+const currentQueue = computed<(typeof Misskey.queueTypes)[number] | null>(() => {
+	const queue = Misskey.queueTypes.find((q) => q === tab.value);
 	return queue ?? null;
 });
 
 async function fetchQueues() {
-	if (tab.value !== '-') return;
+	if (tab.value !== '-') {
+		return;
+	}
 	queueInfos.value = await misskeyApi('admin/queue/queues');
 }
 
 async function fetchCurrentQueue() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 	queueInfo.value = await misskeyApi('admin/queue/queue-stats', { queue });
 }
 
 // 「もっと見る」で広げた表示範囲は10秒ごとの自動更新でも維持する必要があるため、
 // 読み込み済みのページ数だけカーソルを辿り直す (先頭50件だけを取り直すと展開した分が毎回消える)
 async function fetchDeadLetters() {
-	if (deadLettersFetchingMore.value) return;
+	if (deadLettersFetchingMore.value) {
+		return;
+	}
 
 	const pages = Math.max(1, Math.ceil(deadLetters.value.length / DEAD_LETTERS_FETCH_LIMIT));
 	const rows: Misskey.entities.AdminQueueOutboxDeadLettersResponse = [];
@@ -311,7 +317,9 @@ async function fetchDeadLetters() {
 		});
 		rows.push(...page);
 		hasMore = page.length === DEAD_LETTERS_FETCH_LIMIT;
-		if (!hasMore) break;
+		if (!hasMore) {
+			break;
+		}
 	}
 
 	deadLetters.value = rows;
@@ -321,7 +329,9 @@ async function fetchDeadLetters() {
 
 async function fetchMoreDeadLetters() {
 	const oldest = deadLetters.value.at(-1);
-	if (oldest == null || deadLettersFetchingMore.value) return;
+	if (oldest == null || deadLettersFetchingMore.value) {
+		return;
+	}
 
 	deadLettersFetchingMore.value = true;
 	try {
@@ -338,36 +348,47 @@ async function fetchMoreDeadLetters() {
 
 async function fetchJobs() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 	jobsFetching.value = true;
 	const state = jobState.value;
 	jobs.value = await misskeyApi('admin/queue/jobs', {
 		queue,
-		state: state === 'all' ? ['completed', 'failed', 'active', 'delayed', 'wait'] : state === 'latest' ? ['completed', 'failed'] : [state],
+		state:
+			state === 'all'
+				? ['completed', 'failed', 'active', 'delayed', 'wait']
+				: state === 'latest'
+					? ['completed', 'failed']
+					: [state],
 		...(searchQuery.value.trim() === '' ? {} : { search: searchQuery.value }),
 	}).then((res: Misskey.entities.AdminQueueJobsResponse) => {
 		if (state === 'all') {
-			res.sort((a, b) => (a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1);
+			res.sort((a, b) => ((a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1));
 		} else if (state === 'latest') {
-			res.sort((a, b) => a.processedOn! > b.processedOn! ? -1 : 1);
+			res.sort((a, b) => (a.processedOn! > b.processedOn! ? -1 : 1));
 		} else if (state === 'delayed') {
-			res.sort((a, b) => (a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1);
+			res.sort((a, b) => ((a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1));
 		}
 		return res;
 	});
 	jobsFetching.value = false;
 }
 
-watch([tab], async () => {
-	if (tab.value === '-') {
-		fetchQueues();
-	} else if (tab.value === 'outbox') {
-		fetchDeadLetters();
-	} else {
-		fetchCurrentQueue();
-		fetchJobs();
-	}
-}, { immediate: true });
+watch(
+	[tab],
+	async () => {
+		if (tab.value === '-') {
+			fetchQueues();
+		} else if (tab.value === 'outbox') {
+			fetchDeadLetters();
+		} else {
+			fetchCurrentQueue();
+			fetchJobs();
+		}
+	},
+	{ immediate: true },
+);
 
 watch([jobState], () => {
 	fetchJobs();
@@ -381,28 +402,36 @@ watch([searchQuery], () => {
 	search();
 });
 
-useInterval(() => {
-	if (tab.value === '-') {
-		fetchQueues();
-	} else if (tab.value === 'outbox') {
-		fetchDeadLetters();
-	} else {
-		fetchCurrentQueue();
-	}
-}, 1000 * 10, {
-	immediate: false,
-	afterMounted: true,
-});
+useInterval(
+	() => {
+		if (tab.value === '-') {
+			fetchQueues();
+		} else if (tab.value === 'outbox') {
+			fetchDeadLetters();
+		} else {
+			fetchCurrentQueue();
+		}
+	},
+	1000 * 10,
+	{
+		immediate: false,
+		afterMounted: true,
+	},
+);
 
 async function clearQueue() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('admin/queue/clear', { queue, state: '*' });
 
@@ -412,13 +441,17 @@ async function clearQueue() {
 
 async function promoteAllJobs() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('admin/queue/promote-jobs', { queue });
 
@@ -428,13 +461,17 @@ async function promoteAllJobs() {
 
 async function pauseQueue() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('admin/queue/pause', { queue });
 
@@ -444,7 +481,9 @@ async function pauseQueue() {
 
 async function resumeQueue() {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 
 	await os.apiWithDialog('admin/queue/resume', { queue });
 
@@ -454,13 +493,17 @@ async function resumeQueue() {
 
 async function removeJobs() {
 	const queue = currentQueue.value;
-	if (queue == null || jobState.value === 'latest') return;
+	if (queue == null || jobState.value === 'latest') {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('admin/queue/clear', { queue, state: jobState.value === 'all' ? '*' : jobState.value });
 
@@ -470,7 +513,9 @@ async function removeJobs() {
 
 async function refreshJob(jobId: string) {
 	const queue = currentQueue.value;
-	if (queue == null) return;
+	if (queue == null) {
+		return;
+	}
 	const newJob = await misskeyApi('admin/queue/show-job', { queue, jobId });
 	const index = jobs.value.findIndex((job) => job.id === jobId);
 	if (index !== -1) {
@@ -480,22 +525,28 @@ async function refreshJob(jobId: string) {
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed<{
-	key: string;
-	title: string;
-	icon?: string;
-}[]>(() => [{
-	key: '-',
-	title: i18n.ts.jobQueue,
-	icon: 'ti ti-list-check',
-}, {
-	key: 'outbox',
-	title: i18n.ts._queueOutbox.deadLetters,
-	icon: 'ti ti-alert-triangle',
-}, ...Misskey.queueTypes.map((q) => ({
-	key: q,
-	title: q,
-}))]);
+const headerTabs = computed<
+	{
+		key: string;
+		title: string;
+		icon?: string;
+	}[]
+>(() => [
+	{
+		key: '-',
+		title: i18n.ts.jobQueue,
+		icon: 'ti ti-list-check',
+	},
+	{
+		key: 'outbox',
+		title: i18n.ts._queueOutbox.deadLetters,
+		icon: 'ti ti-alert-triangle',
+	},
+	...Misskey.queueTypes.map((q) => ({
+		key: q,
+		title: q,
+	})),
+]);
 
 definePage(() => ({
 	title: i18n.ts.jobQueue,

@@ -190,7 +190,7 @@ function setupGrid(): GridSetting {
 						text: i18n.ts._customEmojisManager._remote.importSelectionRows,
 						icon: 'ti ti-download',
 						action: async () => {
-							const targets = context.rangedRows.flatMap(it => {
+							const targets = context.rangedRows.flatMap((it) => {
 								const item = gridItems.value[it.index];
 								return item == null ? [] : [item];
 							});
@@ -218,23 +218,29 @@ function setupGrid(): GridSetting {
 						icon: 'ti ti-info-circle',
 						action: async () => {
 							const target = customEmojis.value[row.index];
-							if (target == null) return;
-							const { dispose } = os.popup(MkRemoteEmojiEditDialog, {
-								emoji: {
-									id: target.id,
-									name: target.name,
-									host: target.host ?? '',
-									license: target.license,
-									url: target.publicUrl,
+							if (target == null) {
+								return;
+							}
+							const { dispose } = os.popup(
+								MkRemoteEmojiEditDialog,
+								{
+									emoji: {
+										id: target.id,
+										name: target.name,
+										host: target.host ?? '',
+										license: target.license,
+										url: target.publicUrl,
+									},
 								},
-							}, {
-								done: () => {
-									dispose();
+								{
+									done: () => {
+										dispose();
+									},
+									closed: () => {
+										dispose();
+									},
 								},
-								closed: () => {
-									dispose();
-								},
-							});
+							);
 						},
 					},
 					{
@@ -242,7 +248,7 @@ function setupGrid(): GridSetting {
 						text: i18n.ts._customEmojisManager._remote.importSelectionRangesRows,
 						icon: 'ti ti-download',
 						action: async () => {
-							const targets = context.rangedCells.flatMap(it => {
+							const targets = context.rangedCells.flatMap((it) => {
 								const item = gridItems.value[it.row.index];
 								return item == null ? [] : [item];
 							});
@@ -274,7 +280,7 @@ const requestLogs = ref<RequestLogItem[]>([]);
 const gridItems = ref<GridItem[]>([]);
 
 const spMode = computed(() => ['smartphone', 'tablet'].includes(deviceKind));
-const checkedItemsCount = computed(() => gridItems.value.filter(it => it.checked).length);
+const checkedItemsCount = computed(() => gridItems.value.filter((it) => it.checked).length);
 
 function onSortOrderUpdate(_sortOrders: SortOrder<GridSortOrderKey>[]) {
 	sortOrders.value = _sortOrders;
@@ -298,7 +304,7 @@ async function onPageChanged(pageNumber: number) {
 }
 
 async function onImportClicked() {
-	const targets = gridItems.value.filter(it => it.checked);
+	const targets = gridItems.value.filter((it) => it.checked);
 	await importEmojis(targets);
 }
 
@@ -331,18 +337,16 @@ async function importEmojis(targets: GridItem[]) {
 
 	const result = await os.promiseDialog(
 		Promise.all(
-			targets.map(item =>
-				misskeyApi(
-					'admin/emoji/copy',
-					{
-						emojiId: item.id!,
-					})
+			targets.map((item) =>
+				misskeyApi('admin/emoji/copy', {
+					emojiId: item.id!,
+				})
 					.then(() => ({ item, success: true, err: undefined }))
-					.catch(err => ({ item, success: false, err })),
+					.catch((err) => ({ item, success: false, err })),
 			),
 		),
 	);
-	const failedItems = result.filter(it => !it.success);
+	const failedItems = result.filter((it) => !it.success);
 
 	if (failedItems.length > 0) {
 		await os.alert({
@@ -352,7 +356,7 @@ async function importEmojis(targets: GridItem[]) {
 		});
 	}
 
-	requestLogs.value = result.map(it => ({
+	requestLogs.value = result.map((it) => ({
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
@@ -381,17 +385,19 @@ async function refreshCustomEmojis() {
 		currentPage.value = 1;
 	}
 
-	const result = await loadingHandler.scope(() => misskeyApi('v2/admin/emoji/list', {
-		limit: queryLimit.value,
-		query: query,
-		page: currentPage.value,
-		sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}`) as never[],
-	}));
+	const result = await loadingHandler.scope(() =>
+		misskeyApi('v2/admin/emoji/list', {
+			limit: queryLimit.value,
+			query: query,
+			page: currentPage.value,
+			sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}`) as never[],
+		}),
+	);
 
 	customEmojis.value = result.emojis;
 	allPages.value = result.allPages;
 	previousQuery.value = JSON.stringify(query);
-	gridItems.value = customEmojis.value.map(it => ({
+	gridItems.value = customEmojis.value.map((it) => ({
 		checked: false,
 		id: it.id,
 		url: it.publicUrl,

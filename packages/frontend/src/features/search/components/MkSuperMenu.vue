@@ -68,29 +68,33 @@ import type { Awaitable } from '@/types/misc.js';
 
 export type SuperMenuDef = {
 	title?: string;
-	items: ({
-		type: 'a';
-		href: string;
-		target?: string;
-		icon?: string;
-		text: string;
-		danger?: boolean;
-		active?: boolean;
-	} | {
-		type: 'button';
-		icon?: string;
-		text: string;
-		danger?: boolean;
-		active?: boolean;
-		action: (ev: PointerEvent) => Awaitable<void>;
-	} | {
-		type?: 'link';
-		to: string;
-		icon?: string;
-		text: string;
-		danger?: boolean;
-		active?: boolean;
-	})[];
+	items: (
+		| {
+				type: 'a';
+				href: string;
+				target?: string;
+				icon?: string;
+				text: string;
+				danger?: boolean;
+				active?: boolean;
+		  }
+		| {
+				type: 'button';
+				icon?: string;
+				text: string;
+				danger?: boolean;
+				active?: boolean;
+				action: (ev: PointerEvent) => Awaitable<void>;
+		  }
+		| {
+				type?: 'link';
+				to: string;
+				icon?: string;
+				text: string;
+				danger?: boolean;
+				active?: boolean;
+		  }
+	)[];
 };
 </script>
 
@@ -118,15 +122,19 @@ const searchQuery = ref('');
 const rawSearchQuery = ref('');
 
 const searchSelectedIndex = ref<null | number>(null);
-const searchResult = ref<{
-	id: string;
-	path: string;
-	label: string;
-	icon?: string;
-	isRoot: boolean;
-	parentLabels: string[];
-}[]>([]);
-const searchIndexItemByIdComputed = computed(() => props.searchIndex && new Map<string, SearchIndexItem>(props.searchIndex.map(i => [i.id, i])));
+const searchResult = ref<
+	{
+		id: string;
+		path: string;
+		label: string;
+		icon?: string;
+		isRoot: boolean;
+		parentLabels: string[];
+	}[]
+>([]);
+const searchIndexItemByIdComputed = computed(
+	() => props.searchIndex && new Map<string, SearchIndexItem>(props.searchIndex.map((i) => [i.id, i])),
+);
 
 watch(searchQuery, (value) => {
 	rawSearchQuery.value = value;
@@ -147,15 +155,19 @@ watch(rawSearchQuery, (value) => {
 			let icon: string | undefined = item.icon;
 			const parentLabels: string[] = [];
 
-			for (let current = searchIndexItemById.get(item.parentId ?? '');
+			for (
+				let current = searchIndexItemById.get(item.parentId ?? '');
 				current != null;
-				current = searchIndexItemById.get(current.parentId ?? '')) {
+				current = searchIndexItemById.get(current.parentId ?? '')
+			) {
 				path ??= current.path;
 				icon ??= current.icon;
 				parentLabels.push(current.label);
 			}
 
-			if (_DEV_ && path == null) throw new Error('path is null for ' + item.id);
+			if (_DEV_ && path == null) {
+				throw new Error('path is null for ' + item.id);
+			}
 
 			searchResult.value.push({
 				id: item.id,
@@ -174,21 +186,21 @@ watch(rawSearchQuery, (value) => {
 		for (const item of items) {
 			if (compareStringIncludes(item.label, value)) {
 				addSearchResult(item);
-				items = items.filter(i => i.id !== item.id);
+				items = items.filter((i) => i.id !== item.id);
 			}
 		}
 
 		for (const item of items) {
 			if (item.keywords.some((x) => compareStringIncludes(x, value))) {
 				addSearchResult(item);
-				items = items.filter(i => i.id !== item.id);
+				items = items.filter((i) => i.id !== item.id);
 			}
 		}
 
 		for (const item of items) {
 			if (item.texts.some((x) => compareStringIncludes(x, value))) {
 				addSearchResult(item);
-				items = items.filter(i => i.id !== item.id);
+				items = items.filter((i) => i.id !== item.id);
 			}
 		}
 	}
@@ -200,12 +212,16 @@ function searchOnInput(ev: InputEvent) {
 }
 
 function searchOnKeyDown(ev: KeyboardEvent) {
-	if (ev.isComposing) return;
+	if (ev.isComposing) {
+		return;
+	}
 
 	if (ev.key === 'Enter' && searchSelectedIndex.value != null) {
 		ev.preventDefault();
 		const selected = searchResult.value[searchSelectedIndex.value];
-		if (selected == null) return;
+		if (selected == null) {
+			return;
+		}
 		router.pushByPath(selected.path + '#' + selected.id);
 	} else if (ev.key === 'ArrowDown') {
 		ev.preventDefault();
@@ -219,11 +235,15 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 
 	if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
 		nextTick(() => {
-			if (!rootEl.value) return;
+			if (!rootEl.value) {
+				return;
+			}
 			const selectedEl = rootEl.value.querySelector<HTMLElement>('.searchResultItem.selected');
 			if (selectedEl != null) {
 				const scrollContainer = getScrollContainer(selectedEl);
-				if (!scrollContainer) return;
+				if (!scrollContainer) {
+					return;
+				}
 				scrollContainer.scrollTo({
 					top: selectedEl.offsetTop - scrollContainer.clientHeight / 2 + selectedEl.clientHeight / 2,
 					behavior: 'instant',

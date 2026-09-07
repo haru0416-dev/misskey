@@ -43,15 +43,27 @@ async function listFanoutTimelineNotesByIds(
 	const channelIds = new Set<MiChannel['id']>();
 	for (const note of notes) {
 		userIds.add(note.userId);
-		if (note.replyId != null) relationIds.add(note.replyId);
-		if (note.renoteId != null) relationIds.add(note.renoteId);
-		if (note.replyUserId != null) userIds.add(note.replyUserId);
-		if (note.renoteUserId != null) userIds.add(note.renoteUserId);
+		if (note.replyId != null) {
+			relationIds.add(note.replyId);
+		}
+		if (note.renoteId != null) {
+			relationIds.add(note.renoteId);
+		}
+		if (note.replyUserId != null) {
+			userIds.add(note.replyUserId);
+		}
+		if (note.renoteUserId != null) {
+			userIds.add(note.renoteUserId);
+		}
 		if (hydrateChannels) {
 			// renoteChannelId は note 作成時に renote 先の channelId を非正規化したもの。
 			// リノート経由でチャンネルの素性を判定する側は relations を待たずにここで引ける
-			if (note.channelId != null) channelIds.add(note.channelId);
-			if (note.renoteChannelId != null) channelIds.add(note.renoteChannelId);
+			if (note.channelId != null) {
+				channelIds.add(note.channelId);
+			}
+			if (note.renoteChannelId != null) {
+				channelIds.add(note.renoteChannelId);
+			}
 		}
 	}
 
@@ -68,17 +80,24 @@ async function listFanoutTimelineNotesByIds(
 
 	return notes.flatMap((note) => {
 		const user = userById.get(note.userId);
-		if (user == null) return [];
+		if (user == null) {
+			return [];
+		}
 
 		note.user = user;
-		if (hydrateChannels) note.channel = note.channelId == null ? null : (channelById.get(note.channelId) ?? null);
+		if (hydrateChannels) {
+			note.channel = note.channelId == null ? null : (channelById.get(note.channelId) ?? null);
+		}
 		note.reply = note.replyId == null ? null : (relationById.get(note.replyId) ?? null);
 		note.renote = note.renoteId == null ? null : (relationById.get(note.renoteId) ?? null);
-		if (note.reply != null) note.reply.user = userById.get(note.reply.userId) ?? null;
+		if (note.reply != null) {
+			note.reply.user = userById.get(note.reply.userId) ?? null;
+		}
 		if (note.renote != null) {
 			note.renote.user = userById.get(note.renote.userId) ?? null;
-			if (hydrateChannels)
+			if (hydrateChannels) {
 				note.renote.channel = note.renote.channelId == null ? null : (channelById.get(note.renote.channelId) ?? null);
+			}
 		}
 		return [note];
 	});
@@ -118,7 +137,9 @@ export type FanoutTimelineReadOptions = {
 };
 
 function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-	if (host == null) return false;
+	if (host == null) {
+		return false;
+	}
 	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
@@ -133,7 +154,9 @@ async function getMultiFromRedis(
 		pipeline.lrange('list:' + name, 0, -1);
 	}
 	const res = await pipeline.exec();
-	if (res == null) return [];
+	if (res == null) {
+		return [];
+	}
 	const tls = res.map((r) => r[1] as string[]);
 	return tls.map((ids) =>
 		untilId && sinceId
@@ -205,14 +228,32 @@ export async function getFanoutTimelineNotesForApi(
 
 			const parentFilter = filter;
 			filter = (note) => {
-				if (isUserRelated(note, userIdsWhoBlockingMe, ps.ignoreAuthorFromBlock)) return false;
-				if (isUserRelated(note, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) return false;
-				if (isUserRelated(note.renote, userIdsWhoBlockingMe, ps.ignoreAuthorFromBlock)) return false;
-				if (isUserRelated(note.renote, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) return false;
-				if (!ps.ignoreAuthorFromMute && isRenote(note) && !isQuote(note) && userIdsWhoMeMutingRenotes.has(note.userId))
+				if (isUserRelated(note, userIdsWhoBlockingMe, ps.ignoreAuthorFromBlock)) {
 					return false;
-				if (isInstanceMuted(note, userMutedInstances)) return false;
-				if (isChannelRelated(note, userMutedChannels, ps.ignoreAuthorChannelFromMute)) return false;
+				}
+				if (isUserRelated(note, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) {
+					return false;
+				}
+				if (isUserRelated(note.renote, userIdsWhoBlockingMe, ps.ignoreAuthorFromBlock)) {
+					return false;
+				}
+				if (isUserRelated(note.renote, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) {
+					return false;
+				}
+				if (
+					!ps.ignoreAuthorFromMute &&
+					isRenote(note) &&
+					!isQuote(note) &&
+					userIdsWhoMeMutingRenotes.has(note.userId)
+				) {
+					return false;
+				}
+				if (isInstanceMuted(note, userMutedInstances)) {
+					return false;
+				}
+				if (isChannelRelated(note, userMutedChannels, ps.ignoreAuthorChannelFromMute)) {
+					return false;
+				}
 
 				return parentFilter(note);
 			};
@@ -222,11 +263,16 @@ export async function getFanoutTimelineNotesForApi(
 			const parentFilter = filter;
 			filter = (note) => {
 				if (!ps.ignoreAuthorFromInstanceBlock) {
-					if (isBlockedHost(deps.meta.blockedHosts, note.userHost)) return false;
+					if (isBlockedHost(deps.meta.blockedHosts, note.userHost)) {
+						return false;
+					}
 				}
-				if (note.userId !== note.renoteUserId && isBlockedHost(deps.meta.blockedHosts, note.renoteUserHost))
+				if (note.userId !== note.renoteUserId && isBlockedHost(deps.meta.blockedHosts, note.renoteUserHost)) {
 					return false;
-				if (note.userId !== note.replyUserId && isBlockedHost(deps.meta.blockedHosts, note.replyUserHost)) return false;
+				}
+				if (note.userId !== note.replyUserId && isBlockedHost(deps.meta.blockedHosts, note.replyUserHost)) {
+					return false;
+				}
 
 				return parentFilter(note);
 			};
@@ -236,10 +282,16 @@ export async function getFanoutTimelineNotesForApi(
 			const parentFilter = filter;
 			filter = (note) => {
 				if (!ps.ignoreAuthorFromUserSuspension) {
-					if (note.user!.isSuspended) return false;
+					if (note.user!.isSuspended) {
+						return false;
+					}
 				}
-				if (note.userId !== note.renoteUserId && note.renote?.user?.isSuspended) return false;
-				if (note.userId !== note.replyUserId && note.reply?.user?.isSuspended) return false;
+				if (note.userId !== note.renoteUserId && note.renote?.user?.isSuspended) {
+					return false;
+				}
+				if (note.userId !== note.replyUserId && note.reply?.user?.isSuspended) {
+					return false;
+				}
 
 				return parentFilter(note);
 			};

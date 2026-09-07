@@ -89,15 +89,12 @@ const initialAntenna = deepMerge<PartialAllowedAntenna>(props.antenna ?? {}, {
 });
 
 const emit = defineEmits<{
-	(ev: 'created', newAntenna: Misskey.entities.Antenna): void,
-	(ev: 'updated', editedAntenna: Misskey.entities.Antenna): void,
-	(ev: 'deleted'): void,
+	(ev: 'created', newAntenna: Misskey.entities.Antenna): void;
+	(ev: 'updated', editedAntenna: Misskey.entities.Antenna): void;
+	(ev: 'deleted'): void;
 }>();
 
-const {
-	model: src,
-	def: antennaSourcesSelectDef,
-} = useMkSelect({
+const { model: src, def: antennaSourcesSelectDef } = useMkSelect({
 	items: [
 		{ value: 'all', label: i18n.ts._antennaSources.all },
 		{ value: 'home', label: i18n.ts._antennaSources.homeTimeline },
@@ -108,13 +105,12 @@ const {
 	initialValue: initialAntenna.src,
 });
 
-const {
-	model: userListId,
-	def: userListsSelectDef,
-} = useMkSelect({
+const { model: userListId, def: userListsSelectDef } = useMkSelect({
 	items: computed(() => {
-		if (userLists.value == null) return [];
-		return userLists.value.map(list => ({
+		if (userLists.value == null) {
+			return [];
+		}
+		return userLists.value.map((list) => ({
 			value: list.id,
 			label: list.name,
 		}));
@@ -124,8 +120,8 @@ const {
 
 const name = ref<string>(initialAntenna.name);
 const users = ref<string>(initialAntenna.users.join('\n'));
-const keywords = ref<string>(initialAntenna.keywords.map(x => x.join(' ')).join('\n'));
-const excludeKeywords = ref<string>(initialAntenna.excludeKeywords.map(x => x.join(' ')).join('\n'));
+const keywords = ref<string>(initialAntenna.keywords.map((x) => x.join(' ')).join('\n'));
+const excludeKeywords = ref<string>(initialAntenna.excludeKeywords.map((x) => x.join(' ')).join('\n'));
 const caseSensitive = ref<boolean>(initialAntenna.caseSensitive);
 const localOnly = ref<boolean>(initialAntenna.localOnly);
 const excludeBots = ref<boolean>(initialAntenna.excludeBots);
@@ -136,11 +132,15 @@ const userLists = ref<Misskey.entities.UserList[] | null>(null);
 
 // immediate 必須: 既存の src === 'list' アンテナを開いた場合、src は変化しないので
 // immediate を外すとリスト選択肢が空のまま (現在のリスト名も出ず変更もできない) になる
-watch(() => src.value, async () => {
-	if (src.value === 'list' && userLists.value === null) {
-		userLists.value = await misskeyApi('users/lists/list');
-	}
-}, { immediate: true });
+watch(
+	() => src.value,
+	async () => {
+		if (src.value === 'list' && userLists.value === null) {
+			userLists.value = await misskeyApi('users/lists/list');
+		}
+	},
+	{ immediate: true },
+);
 
 async function saveAntenna() {
 	// リストを持たない src === 'list' のアンテナは何にもマッチしないのでサーバー側でも弾かれる
@@ -162,9 +162,18 @@ async function saveAntenna() {
 		excludeNotesInSensitiveChannel: excludeNotesInSensitiveChannel.value,
 		caseSensitive: caseSensitive.value,
 		localOnly: localOnly.value,
-		users: users.value.trim().split('\n').map(x => x.trim()),
-		keywords: keywords.value.trim().split('\n').map(x => x.trim().split(' ')),
-		excludeKeywords: excludeKeywords.value.trim().split('\n').map(x => x.trim().split(' ')),
+		users: users.value
+			.trim()
+			.split('\n')
+			.map((x) => x.trim()),
+		keywords: keywords.value
+			.trim()
+			.split('\n')
+			.map((x) => x.trim().split(' ')),
+		excludeKeywords: excludeKeywords.value
+			.trim()
+			.split('\n')
+			.map((x) => x.trim().split(' ')),
 	};
 
 	if (initialAntenna.id == null) {
@@ -177,13 +186,17 @@ async function saveAntenna() {
 }
 
 async function deleteAntenna() {
-	if (initialAntenna.id == null) return;
+	if (initialAntenna.id == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: initialAntenna.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await misskeyApi('antennas/delete', {
 		antennaId: initialAntenna.id,
@@ -194,7 +207,7 @@ async function deleteAntenna() {
 }
 
 function addUser() {
-	os.selectUser({ includeSelf: true }).then(user => {
+	os.selectUser({ includeSelf: true }).then((user) => {
 		users.value = users.value.trim();
 		users.value += '\n@' + Misskey.acct.toString(user);
 		users.value = users.value.trim();

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { type SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import { Packed } from '@/misc/json-schema.js';
 import { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
 

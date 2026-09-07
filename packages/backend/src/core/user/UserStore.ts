@@ -3,11 +3,32 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { user as userTable, type UserInsert, type UserRow } from '@/db/schema/user.js';
-import { userProfile, type UserProfileInsert } from '@/db/schema/user-profile.js';
-import { userPublickey, type UserPublickeyInsert } from '@/db/schema/user-publickey.js';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	getTableColumns,
+	gt,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	ne,
+	or,
+	sql,
+} from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { cacheVersion } from '@/db/schema/cache-version.js';
+import { executePreparedStatement, preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { user as userTable } from '@/db/schema/user.js';
+import type { UserInsert, UserRow } from '@/db/schema/user.js';
+import { userProfile } from '@/db/schema/user-profile.js';
+import type { UserProfileInsert } from '@/db/schema/user-profile.js';
+import { userPublickey } from '@/db/schema/user-publickey.js';
+import type { UserPublickeyInsert } from '@/db/schema/user-publickey.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { genUuidv7 } from '@/misc/id/uuidv7.js';
@@ -28,8 +49,12 @@ export type AdminUserListState =
 	| 'suspended';
 
 function deserializeNullableDate(value: Date | string | null): Date | null {
-	if (value == null) return null;
-	if (value instanceof Date) return value;
+	if (value == null) {
+		return null;
+	}
+	if (value instanceof Date) {
+		return value;
+	}
 	return new Date(value);
 }
 
@@ -165,7 +190,9 @@ export async function listUsersByUsernamesAndHostsFromDatabase(
 	db: MiDrizzleDatabase,
 	queries: readonly { username: string; host: MiUser['host'] }[],
 ): Promise<MiUser[]> {
-	if (queries.length === 0) return [];
+	if (queries.length === 0) {
+		return [];
+	}
 
 	const usernamesByHost = new Map<MiUser['host'], Set<string>>();
 	for (const query of queries) {
@@ -216,6 +243,34 @@ export async function fetchLocalUserByNativeTokenFromDatabase(
 	const [row] = await statement.execute({ token });
 
 	return row ? (deserializeUser(row) as MiLocalUser) : null;
+}
+
+/**
+ * 認証と同じ往復でロールキャッシュの世代番号も取る。認証後は必ずロール解決が続くので、
+ * 別に 1 本読むより副問い合わせ (1 行の表の主キー参照) で同乗させるほうが安い。
+ */
+export async function fetchLocalUserByNativeTokenWithRolesVersionFromDatabase(
+	db: MiDrizzleDatabase,
+	token: NonNullable<MiLocalUser['token']>,
+): Promise<{ user: MiLocalUser; rolesVersion: number } | null> {
+	const statement = preparedQueryFor(db, 'user:byNativeTokenWithRolesVersion', () =>
+		db
+			.select({
+				...getTableColumns(userTable),
+				rolesVersion: sql<number>`(select ${cacheVersion.version} from ${cacheVersion} where ${cacheVersion.key} = 'roles')`,
+			})
+			.from(userTable)
+			.where(eq(userTable.token, sql.placeholder('token')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const [row] = await statement.execute({ token });
+	if (row == null) {
+		return null;
+	}
+
+	const { rolesVersion, ...userRow } = row;
+	return { user: deserializeUser(userRow) as MiLocalUser, rolesVersion: rolesVersion ?? 0 };
 }
 
 export async function fetchRemoteUserByIdFromDatabase(
@@ -288,7 +343,9 @@ export async function listUsersByIdsFromDatabase(
 		includeSuspended: boolean;
 	},
 ): Promise<MiUser[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
@@ -314,7 +371,9 @@ export async function listUsersByIdsForKeyShareFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiUser['id'][],
 ): Promise<MiUser[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()
@@ -343,7 +402,9 @@ export async function listUsersByUrisOrIdsFromDatabase(
 		conditions.push(inArray(userTable.id, options.ids));
 	}
 
-	if (conditions.length === 0) return [];
+	if (conditions.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()
@@ -750,13 +811,19 @@ export async function incrementUserNotesCountAndUpdatedAtInDatabase(
 	id: MiUser['id'],
 	updatedAt: Date,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({
-			updatedAt,
-			notesCount: sql`${userTable.notesCount} + 1`,
-		})
-		.where(eq(userTable.id, id));
+	await executePreparedStatement(
+		db,
+		'user:incrementNotesCountAndUpdatedAt',
+		() =>
+			db
+				.update(userTable)
+				.set({
+					updatedAt: sql.placeholder('updatedAt') as unknown as Date,
+					notesCount: sql`${userTable.notesCount} + 1`,
+				})
+				.where(eq(userTable.id, sql.placeholder('id'))),
+		{ id, updatedAt },
+	);
 }
 
 async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
@@ -764,7 +831,9 @@ async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
 	ids: MiUser['id'][],
 	before: Date,
 ): Promise<MiUser['id'][]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ id: userTable.id })
@@ -779,7 +848,9 @@ async function updateUsersHibernatedStateInDatabase(
 	ids: MiUser['id'][],
 	isHibernated: boolean,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db.update(userTable).set({ isHibernated }).where(inArray(userTable.id, ids));
 }
@@ -789,7 +860,9 @@ export async function decrementUsersFollowingCountInDatabase(
 	ids: MiUser['id'][],
 	amount: number,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db
 		.update(userTable)
@@ -802,7 +875,9 @@ export async function decrementUsersFollowersCountInDatabase(
 	ids: MiUser['id'][],
 	amount: number,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db
 		.update(userTable)

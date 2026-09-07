@@ -31,38 +31,58 @@ import XWidgets from '@/widgets/components/MkWidgets.vue';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 
-const props = withDefaults(defineProps<{
-	// null = 全てのウィジェットを表示
-	// left = place: leftだけを表示
-	// right = rightとnullを表示
-	place?: 'left' | null | 'right';
-}>(), {
-	place: null,
-});
+const props = withDefaults(
+	defineProps<{
+		// null = 全てのウィジェットを表示
+		// left = place: leftだけを表示
+		// right = rightとnullを表示
+		place?: 'left' | null | 'right';
+	}>(),
+	{
+		place: null,
+	},
+);
 
 const widgets = computed(() => {
-	if (props.place === null) return prefer.widgets;
-	if (props.place === 'left') return prefer.widgets.filter(w => w.place === 'left');
-	return prefer.widgets.filter(w => w.place !== 'left');
+	if (props.place === null) {
+		return prefer.widgets;
+	}
+	if (props.place === 'left') {
+		return prefer.widgets.filter((w) => w.place === 'left');
+	}
+	return prefer.widgets.filter((w) => w.place !== 'left');
 });
 
 function addWidget(widget: Widget) {
-	prefer.commit('widgets', [{
-		...widget,
-		place: props.place,
-	}, ...prefer.widgets]);
+	prefer.commit('widgets', [
+		{
+			...widget,
+			place: props.place,
+		},
+		...prefer.widgets,
+	]);
 }
 
 function removeWidget(widget: Widget) {
-	prefer.commit('widgets', prefer.widgets.filter(w => w.id !== widget.id));
+	prefer.commit(
+		'widgets',
+		prefer.widgets.filter((w) => w.id !== widget.id),
+	);
 }
 
-function updateWidget(widget: { id: Widget['id']; data: Widget['data']; }) {
-	prefer.commit('widgets', prefer.widgets.map(w => w.id === widget.id ? {
-		...w,
-		data: widget.data,
-		place: props.place,
-	} : w));
+function updateWidget(widget: { id: Widget['id']; data: Widget['data'] }) {
+	prefer.commit(
+		'widgets',
+		prefer.widgets.map((w) =>
+			w.id === widget.id
+				? {
+						...w,
+						data: widget.data,
+						place: props.place,
+					}
+				: w,
+		),
+	);
 }
 
 function updateWidgets(thisWidgets: Widget[]) {
@@ -73,15 +93,15 @@ function updateWidgets(thisWidgets: Widget[]) {
 
 	if (props.place === 'left') {
 		prefer.commit('widgets', [
-			...thisWidgets.map(w => ({ ...w, place: 'left' })),
-			...prefer.widgets.filter(w => w.place !== 'left' && !thisWidgets.some(t => w.id === t.id)),
+			...thisWidgets.map((w) => ({ ...w, place: 'left' })),
+			...prefer.widgets.filter((w) => w.place !== 'left' && !thisWidgets.some((t) => w.id === t.id)),
 		]);
 		return;
 	}
 
 	prefer.commit('widgets', [
-		...prefer.widgets.filter(w => w.place === 'left' && !thisWidgets.some(t => w.id === t.id)),
-		...thisWidgets.map(w => ({ ...w, place: 'right' })),
+		...prefer.widgets.filter((w) => w.place === 'left' && !thisWidgets.some((t) => w.id === t.id)),
+		...thisWidgets.map((w) => ({ ...w, place: 'right' })),
 	]);
 }
 </script>

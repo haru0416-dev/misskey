@@ -165,15 +165,18 @@ import type { MkRadiosOption } from '@/components/form/MkRadios.vue';
 import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
-const props = withDefaults(defineProps<{
-	query?: string;
-	userId?: string;
-	username?: string;
-	host?: string | null;
-}>(), {
-	query: '',
-	host: '',
-});
+const props = withDefaults(
+	defineProps<{
+		query?: string;
+		userId?: string;
+		username?: string;
+		host?: string | null;
+	}>(),
+	{
+		query: '',
+		host: '',
+	},
+);
 
 const router = useRouter();
 
@@ -236,12 +239,20 @@ if (fetchedUser != null) {
 }
 //#endregion
 
-const searchScope = ref<'all' | 'local' | 'server' | 'user'>((() => {
-	if (user.value != null) return 'user';
-	if (noteSearchableScope === 'local') return 'local';
-	if (hostInput.value) return 'server';
-	return 'all';
-})());
+const searchScope = ref<'all' | 'local' | 'server' | 'user'>(
+	(() => {
+		if (user.value != null) {
+			return 'user';
+		}
+		if (noteSearchableScope === 'local') {
+			return 'local';
+		}
+		if (hostInput.value) {
+			return 'server';
+		}
+		return 'all';
+	})(),
+);
 
 const searchScopeDef = computed<MkRadiosOption[]>(() => {
 	const options: MkRadiosOption[] = [];
@@ -250,7 +261,10 @@ const searchScopeDef = computed<MkRadiosOption[]>(() => {
 		options.push({ value: 'all', label: i18n.ts._search.searchScopeAll });
 	}
 
-	options.push({ value: 'local', label: instance.federation === 'none' ? i18n.ts._search.searchScopeAll : i18n.ts._search.searchScopeLocal });
+	options.push({
+		value: 'local',
+		label: instance.federation === 'none' ? i18n.ts._search.searchScopeAll : i18n.ts._search.searchScopeLocal,
+	});
 
 	if (instance.federation !== 'none' && noteSearchableScope === 'global') {
 		options.push({ value: 'server', label: i18n.ts._search.searchScopeServer });
@@ -276,7 +290,9 @@ type SearchParams = {
 };
 
 const fixHostIfLocal = (target: string | null | undefined) => {
-	if (!target || target === localHost) return '.';
+	if (!target || target === localHost) {
+		return '.';
+	}
 	return target;
 };
 
@@ -287,7 +303,7 @@ const searchRange = () => {
 	};
 };
 
-const toBooleanFilter = (value: BooleanFilter): boolean | null => value === 'all' ? null : value === 'include';
+const toBooleanFilter = (value: BooleanFilter): boolean | null => (value === 'all' ? null : value === 'include');
 
 const contentFilters = () => ({
 	withFiles: toBooleanFilter(filesFilter.value),
@@ -300,10 +316,14 @@ const contentFilters = () => ({
 
 const searchParams = computed<SearchParams | null>(() => {
 	const trimmedQuery = searchQuery.value.trim();
-	if (!trimmedQuery) return null;
+	if (!trimmedQuery) {
+		return null;
+	}
 
 	if (searchScope.value === 'user') {
-		if (user.value == null) return null;
+		if (user.value == null) {
+			return null;
+		}
 		return {
 			query: trimmedQuery,
 			host: fixHostIfLocal(user.value.host),
@@ -315,11 +335,15 @@ const searchParams = computed<SearchParams | null>(() => {
 
 	if (instance.federation !== 'none' && searchScope.value === 'server') {
 		let trimmedHost = hostInput.value?.trim();
-		if (!trimmedHost) return null;
+		if (!trimmedHost) {
+			return null;
+		}
 		if (trimmedHost.startsWith('https://') || trimmedHost.startsWith('http://')) {
 			try {
 				trimmedHost = new URL(trimmedHost).host;
-			} catch (err) { /* URL として解釈できない場合は入力値をそのまま扱う。 */ }
+			} catch (err) {
+				/* URL として解釈できない場合は入力値をそのまま扱う。 */
+			}
 		}
 		return {
 			query: trimmedQuery,
@@ -349,7 +373,7 @@ function selectUser() {
 	os.selectUser({
 		includeSelf: true,
 		localOnly: instance.noteSearchableScope === 'local',
-	}).then(_user => {
+	}).then((_user) => {
 		user.value = _user;
 	});
 }
@@ -363,7 +387,9 @@ function removeUser() {
 }
 
 async function search() {
-	if (searchParams.value == null) return;
+	if (searchParams.value == null) {
+		return;
+	}
 
 	//#region AP lookup
 	if (searchParams.value.query.startsWith('https://') && !searchParams.value.query.includes(' ')) {
@@ -421,12 +447,14 @@ async function search() {
 		}
 	}
 
-	paginator.value = markRaw(new Paginator('notes/search', {
-		limit: 10,
-		params: {
-			...searchParams.value,
-		},
-	}));
+	paginator.value = markRaw(
+		new Paginator('notes/search', {
+			limit: 10,
+			params: {
+				...searchParams.value,
+			},
+		}),
+	);
 
 	key.value++;
 }

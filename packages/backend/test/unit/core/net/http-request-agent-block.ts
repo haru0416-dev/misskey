@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createServer, get, type Server } from 'node:http';
+import { createServer, get } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
@@ -59,7 +60,7 @@ describe('core:net:HttpRequestService の agent 経路', () => {
 				res.on('end', () => resolve(`ok:${body}`));
 			});
 			req.on('error', (err) => resolve(`error:${err.message}`));
-			req.setTimeout(5_000, () => resolve('timeout'));
+			req.setTimeout(5000, () => resolve('timeout'));
 		});
 
 	test('private アドレスへの接続は socket ごと落とす', async () => {

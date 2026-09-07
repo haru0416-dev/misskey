@@ -33,10 +33,9 @@ export const useLoading = (props?: {
 		const result = fn();
 		if (result instanceof Promise) {
 			return result.finally(() => close());
-		} else {
-			close();
-			return result;
 		}
+		close();
+		return result;
 	};
 
 	const showing = computed(() => showingCnt.value > 0);

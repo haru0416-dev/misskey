@@ -13,7 +13,9 @@ function getDateText(dateInstance: Date) {
 }
 
 export function isSeparatorNeeded(prev: string | null, next: string | null) {
-	if (prev == null || next == null) return false;
+	if (prev == null || next == null) {
+		return false;
+	}
 	const prevDate = new Date(prev);
 	const nextDate = new Date(next);
 	return (
@@ -24,7 +26,9 @@ export function isSeparatorNeeded(prev: string | null, next: string | null) {
 }
 
 export function getSeparatorInfo(prev: string | null, next: string | null) {
-	if (prev == null || next == null) return null;
+	if (prev == null || next == null) {
+		return null;
+	}
 	const prevDate = new Date(prev);
 	const nextDate = new Date(next);
 	return {

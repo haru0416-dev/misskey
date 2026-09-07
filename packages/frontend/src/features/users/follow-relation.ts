@@ -15,7 +15,11 @@ export function getFollowRelationBadge(
 	me: { id: string } | null | undefined,
 	user: Pick<Misskey.entities.UserDetailed, 'id'> & { isFollowing?: boolean; isFollowed?: boolean },
 ): FollowRelationBadge {
-	if (me == null || me.id === user.id) return null;
-	if (!user.isFollowed) return null;
+	if (me == null || me.id === user.id) {
+		return null;
+	}
+	if (!user.isFollowed) {
+		return null;
+	}
 	return user.isFollowing ? 'mutual' : 'followsYou';
 }

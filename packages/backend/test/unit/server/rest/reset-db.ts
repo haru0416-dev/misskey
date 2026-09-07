@@ -7,7 +7,8 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import type * as Redis from 'ioredis';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
-import { createApiShellApp, type ApiShellDependencies } from '@/server/rest/shell.js';
+import { createApiShellApp } from '@/server/rest/shell.js';
+import type { ApiShellDependencies } from '@/server/rest/shell.js';
 import { handleApiResetDb } from '@/server/rest/admin/reset-db.js';
 
 const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({

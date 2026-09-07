@@ -24,10 +24,8 @@ import {
 	resumeQueue,
 	retryQueueJob,
 	retryQueueOutboxDeadLetter,
-	type AdminQueueDependencies,
-	type QueueClearState,
-	type QueueType,
 } from '@/core/queue/QueueAdminLogic.js';
+import type { AdminQueueDependencies, QueueClearState, QueueType } from '@/core/queue/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -148,7 +146,9 @@ export async function handleApiAdminQueueRetryOutboxDeadLetter(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
-	if (!(await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
+	if (!(await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) {
+		throw outboxStateChangedError();
+	}
 }
 
 export async function handleApiAdminQueueAbandonOutboxDeadLetter(
@@ -156,7 +156,9 @@ export async function handleApiAdminQueueAbandonOutboxDeadLetter(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
-	if (!(await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
+	if (!(await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) {
+		throw outboxStateChangedError();
+	}
 }
 
 export async function handleApiAdminQueueShowJob(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {

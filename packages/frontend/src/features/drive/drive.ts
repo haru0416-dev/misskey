@@ -49,8 +49,9 @@ function parseUploadResponse(value: unknown): UploadResponse | null {
 }
 
 function getUploadError(value: UploadResponse | null): UploadError | null {
-	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error))
+	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error)) {
 		return null;
+	}
 	return value.error as UploadError;
 }
 
@@ -81,7 +82,9 @@ export function uploadFile(
 	const { signal } = abortController;
 
 	const filePromise = new Promise<Misskey.entities.DriveFile>((resolve, reject) => {
-		if ($i == null) return reject(new Error('not signed in'));
+		if ($i == null) {
+			return reject(new Error('not signed in'));
+		}
 
 		// こっち側で検出するMIME typeとサーバーで検出するMIME typeは異なる場合があるため、こっち側ではやらないことにする
 		// https://github.com/misskey-dev/misskey/issues/16091
@@ -185,8 +188,12 @@ export function uploadFile(
 		formData.append('file', file);
 		formData.append('name', options.name ?? (file instanceof File ? file.name : 'untitled'));
 		formData.append('isSensitive', options.isSensitive ? 'true' : 'false');
-		if (options.caption != null) formData.append('comment', options.caption);
-		if (options.folderId) formData.append('folderId', options.folderId);
+		if (options.caption != null) {
+			formData.append('comment', options.caption);
+		}
+		if (options.folderId) {
+			formData.append('folderId', options.folderId);
+		}
 
 		xhr.send(formData);
 	});
@@ -208,7 +215,9 @@ export function chooseFileFromPcAndUpload(
 ): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
 		os.chooseFileFromPc(options.multiple === undefined ? {} : { multiple: options.multiple }).then((files) => {
-			if (files.length === 0) return;
+			if (files.length === 0) {
+				return;
+			}
 			os.launchUploader(files, {
 				...(options.folderId === undefined ? {} : { folderId: options.folderId }),
 				...(options.features === undefined ? {} : { features: options.features }),
@@ -250,7 +259,9 @@ function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 			type: 'url',
 			placeholder: i18n.ts.uploadFromUrlDescription,
 		}).then(({ canceled, result: url }) => {
-			if (canceled || url == null) return;
+			if (canceled || url == null) {
+				return;
+			}
 
 			const marker = genId();
 

@@ -30,15 +30,18 @@ import MkSignin from '@/features/auth/components/MkSignin.vue';
 import MkModal from '@/components/overlay/MkModal.vue';
 import { i18n } from '@/i18n.js';
 
-withDefaults(defineProps<{
-	autoSet?: boolean;
-	message?: string,
-	openOnRemote?: OpenOnRemoteOptions,
-	initialUsername?: string;
-}>(), {
-	autoSet: false,
-	message: '',
-});
+withDefaults(
+	defineProps<{
+		autoSet?: boolean;
+		message?: string;
+		openOnRemote?: OpenOnRemoteOptions;
+		initialUsername?: string;
+	}>(),
+	{
+		autoSet: false,
+		message: '',
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'done', v: Misskey.entities.SigninFlowResponse & { finished: true }): void;
@@ -50,12 +53,16 @@ const modal = useTemplateRef('modal');
 
 function onClose() {
 	emit('cancelled');
-	if (modal.value) modal.value.close();
+	if (modal.value) {
+		modal.value.close();
+	}
 }
 
 function onLogin(res: Misskey.entities.SigninFlowResponse & { finished: true }) {
 	emit('done', res);
-	if (modal.value) modal.value.close();
+	if (modal.value) {
+		modal.value.close();
+	}
 }
 </script>
 

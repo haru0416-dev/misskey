@@ -115,45 +115,58 @@ const favorited = ref(false);
 const searchQuery = ref('');
 const searchPaginator = shallowRef();
 const searchKey = ref('');
-const featuredPaginator = markRaw(new Paginator('notes/featured', {
-	limit: 10,
-	computedParams: computed(() => ({
-		channelId: props.channelId,
-	})),
-}));
+const featuredPaginator = markRaw(
+	new Paginator('notes/featured', {
+		limit: 10,
+		computedParams: computed(() => ({
+			channelId: props.channelId,
+		})),
+	}),
+);
 
-useInterval(() => {
-	if (channel.value == null) return;
-	miLocalStorage.setItemAsJson(`channelLastReadedAt:${channel.value.id}`, Date.now());
-}, 3000, {
-	immediate: true,
-	afterMounted: true,
-});
-
-watch(() => props.channelId, async () => {
-	const _channel = await misskeyApi('channels/show', {
-		channelId: props.channelId,
-	});
-
-	favorited.value = _channel.isFavorited ?? false;
-	if (favorited.value || _channel.isFollowing) {
-		tab.value = 'timeline';
-	}
-
-	if ((favorited.value || _channel.isFollowing) && _channel.lastNotedAt) {
-		const lastReadedAt = miLocalStorage.getItemAsJson(
-			`channelLastReadedAt:${_channel.id}`,
-			(value): value is number => typeof value === 'number' && Number.isFinite(value),
-		) ?? 0;
-		const lastNotedAt = Date.parse(_channel.lastNotedAt);
-
-		if (lastNotedAt > lastReadedAt) {
-			miLocalStorage.setItemAsJson(`channelLastReadedAt:${_channel.id}`, lastNotedAt);
+useInterval(
+	() => {
+		if (channel.value == null) {
+			return;
 		}
-	}
+		miLocalStorage.setItemAsJson(`channelLastReadedAt:${channel.value.id}`, Date.now());
+	},
+	3000,
+	{
+		immediate: true,
+		afterMounted: true,
+	},
+);
 
-	channel.value = _channel;
-}, { immediate: true });
+watch(
+	() => props.channelId,
+	async () => {
+		const _channel = await misskeyApi('channels/show', {
+			channelId: props.channelId,
+		});
+
+		favorited.value = _channel.isFavorited ?? false;
+		if (favorited.value || _channel.isFollowing) {
+			tab.value = 'timeline';
+		}
+
+		if ((favorited.value || _channel.isFollowing) && _channel.lastNotedAt) {
+			const lastReadedAt =
+				miLocalStorage.getItemAsJson(
+					`channelLastReadedAt:${_channel.id}`,
+					(value): value is number => typeof value === 'number' && Number.isFinite(value),
+				) ?? 0;
+			const lastNotedAt = Date.parse(_channel.lastNotedAt);
+
+			if (lastNotedAt > lastReadedAt) {
+				miLocalStorage.setItemAsJson(`channelLastReadedAt:${_channel.id}`, lastNotedAt);
+			}
+		}
+
+		channel.value = _channel;
+	},
+	{ immediate: true },
+);
 
 function edit() {
 	router.push('/channels/:channelId/edit', {
@@ -170,7 +183,9 @@ function openPostForm() {
 }
 
 function favorite() {
-	if (!channel.value) return;
+	if (!channel.value) {
+		return;
+	}
 
 	os.apiWithDialog('channels/favorite', {
 		channelId: channel.value.id,
@@ -181,13 +196,17 @@ function favorite() {
 }
 
 async function unfavorite() {
-	if (!channel.value) return;
+	if (!channel.value) {
+		return;
+	}
 
 	const confirm = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.unfavoriteConfirm,
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 	os.apiWithDialog('channels/unfavorite', {
 		channelId: channel.value.id,
 	}).then(() => {
@@ -197,32 +216,53 @@ async function unfavorite() {
 }
 
 async function mute() {
-	if (!channel.value) return;
+	if (!channel.value) {
+		return;
+	}
 	const _channel = channel.value;
 
 	const { canceled, result: period } = await os.select({
 		title: i18n.ts.mutePeriod,
-		items: [{
-			value: 'indefinitely', label: i18n.ts.indefinitely,
-		}, {
-			value: 'tenMinutes', label: i18n.ts.tenMinutes,
-		}, {
-			value: 'oneHour', label: i18n.ts.oneHour,
-		}, {
-			value: 'oneDay', label: i18n.ts.oneDay,
-		}, {
-			value: 'oneWeek', label: i18n.ts.oneWeek,
-		}],
+		items: [
+			{
+				value: 'indefinitely',
+				label: i18n.ts.indefinitely,
+			},
+			{
+				value: 'tenMinutes',
+				label: i18n.ts.tenMinutes,
+			},
+			{
+				value: 'oneHour',
+				label: i18n.ts.oneHour,
+			},
+			{
+				value: 'oneDay',
+				label: i18n.ts.oneDay,
+			},
+			{
+				value: 'oneWeek',
+				label: i18n.ts.oneWeek,
+			},
+		],
 		default: 'indefinitely',
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
-	const expiresAt = period === 'indefinitely' ? null
-		: period === 'tenMinutes' ? Date.now() + (1000 * 60 * 10)
-		: period === 'oneHour' ? Date.now() + (1000 * 60 * 60)
-		: period === 'oneDay' ? Date.now() + (1000 * 60 * 60 * 24)
-		: period === 'oneWeek' ? Date.now() + (1000 * 60 * 60 * 24 * 7)
-		: null;
+	const expiresAt =
+		period === 'indefinitely'
+			? null
+			: period === 'tenMinutes'
+				? Date.now() + 1000 * 60 * 10
+				: period === 'oneHour'
+					? Date.now() + 1000 * 60 * 60
+					: period === 'oneDay'
+						? Date.now() + 1000 * 60 * 60 * 24
+						: period === 'oneWeek'
+							? Date.now() + 1000 * 60 * 60 * 24 * 7
+							: null;
 
 	os.apiWithDialog('channels/mute/create', {
 		channelId: _channel.id,
@@ -233,7 +273,9 @@ async function mute() {
 }
 
 async function unmute() {
-	if (!channel.value) return;
+	if (!channel.value) {
+		return;
+	}
 	const _channel = channel.value;
 
 	os.apiWithDialog('channels/mute/delete', {
@@ -244,19 +286,25 @@ async function unmute() {
 }
 
 async function search() {
-	if (!channel.value) return;
+	if (!channel.value) {
+		return;
+	}
 
 	const query = searchQuery.value.toString().trim();
 
-	if (query == null) return;
+	if (query == null) {
+		return;
+	}
 
-	searchPaginator.value = markRaw(new Paginator('notes/search', {
-		limit: 10,
-		params: {
-			query: query,
-			channelId: channel.value.id,
-		},
-	}));
+	searchPaginator.value = markRaw(
+		new Paginator('notes/search', {
+			limit: 10,
+			params: {
+				query: query,
+				channelId: channel.value.id,
+			},
+		}),
+	);
 
 	searchKey.value = query;
 }
@@ -323,28 +371,32 @@ const headerActions = computed(() => {
 		}
 
 		return headerItems.length > 0 ? headerItems : null;
-	} else {
-		return null;
 	}
+	return null;
 });
 
-const headerTabs = computed(() => [{
-	key: 'overview',
-	title: i18n.ts.overview,
-	icon: 'ti ti-info-circle',
-}, {
-	key: 'timeline',
-	title: i18n.ts.timeline,
-	icon: 'ti ti-home',
-}, {
-	key: 'featured',
-	title: i18n.ts.featured,
-	icon: 'ti ti-bolt',
-}, {
-	key: 'search',
-	title: i18n.ts.search,
-	icon: 'ti ti-search',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'overview',
+		title: i18n.ts.overview,
+		icon: 'ti ti-info-circle',
+	},
+	{
+		key: 'timeline',
+		title: i18n.ts.timeline,
+		icon: 'ti ti-home',
+	},
+	{
+		key: 'featured',
+		title: i18n.ts.featured,
+		icon: 'ti ti-bolt',
+	},
+	{
+		key: 'search',
+		title: i18n.ts.search,
+		icon: 'ti ti-search',
+	},
+]);
 
 definePage(() => ({
 	title: channel.value ? channel.value.name : i18n.ts.channel,

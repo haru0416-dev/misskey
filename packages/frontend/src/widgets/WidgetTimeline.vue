@@ -46,11 +46,17 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
 import { i18n } from '@/i18n.js';
-import { availableBasicTimelines, isAvailableBasicTimeline, isBasicTimeline, basicTimelineIconClass, basicTimelineTypes } from '@/timelines.js';
+import {
+	availableBasicTimelines,
+	isAvailableBasicTimeline,
+	isBasicTimeline,
+	basicTimelineIconClass,
+	basicTimelineTypes,
+} from '@/timelines.js';
 
 const name = 'timeline';
 
-type TlSrc = typeof basicTimelineTypes[number] | 'list' | 'antenna';
+type TlSrc = (typeof basicTimelineTypes)[number] | 'list' | 'antenna';
 
 const widgetPropsDef = {
 	showHeader: {
@@ -83,11 +89,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure, save } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure, save } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const menuOpened = ref(false);
 
@@ -96,9 +98,8 @@ const headerTitle = computed<string>(() => {
 		return widgetProps.list != null ? widgetProps.list.name : '?';
 	} else if (widgetProps.src === 'antenna') {
 		return widgetProps.antenna != null ? widgetProps.antenna.name : '?';
-	} else {
-		return i18n.ts._timelines[widgetProps.src] ?? '?';
 	}
+	return i18n.ts._timelines[widgetProps.src] ?? '?';
 });
 
 const setSrc = (src: TlSrc) => {
@@ -110,15 +111,12 @@ const choose = async (ev: PointerEvent) => {
 	let antennas: Misskey.entities.Antenna[];
 	let lists: Misskey.entities.UserList[];
 	try {
-		[antennas, lists] = await Promise.all([
-			misskeyApi('antennas/list'),
-			misskeyApi('users/lists/list'),
-		]);
+		[antennas, lists] = await Promise.all([misskeyApi('antennas/list'), misskeyApi('users/lists/list')]);
 	} catch {
 		menuOpened.value = false;
 		return;
 	}
-	const antennaItems = antennas.map(antenna => ({
+	const antennaItems = antennas.map((antenna) => ({
 		text: antenna.name,
 		icon: 'ti ti-antenna',
 		action: () => {
@@ -126,7 +124,7 @@ const choose = async (ev: PointerEvent) => {
 			setSrc('antenna');
 		},
 	}));
-	const listItems = lists.map(list => ({
+	const listItems = lists.map((list) => ({
 		text: list.name,
 		icon: 'ti ti-list',
 		action: () => {
@@ -137,11 +135,15 @@ const choose = async (ev: PointerEvent) => {
 
 	const menuItems: MenuItem[] = [];
 
-	menuItems.push(...availableBasicTimelines().map(tl => ({
-		text: i18n.ts._timelines[tl],
-		icon: basicTimelineIconClass(tl),
-		action: () => { setSrc(tl); },
-	})));
+	menuItems.push(
+		...availableBasicTimelines().map((tl) => ({
+			text: i18n.ts._timelines[tl],
+			icon: basicTimelineIconClass(tl),
+			action: () => {
+				setSrc(tl);
+			},
+		})),
+	);
 
 	if (antennaItems.length > 0) {
 		menuItems.push({ type: 'divider' });

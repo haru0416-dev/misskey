@@ -68,19 +68,22 @@ const slots = defineSlots<{
 	footer(): any;
 }>();
 
-const props = withDefaults(defineProps<{
-	modelValue: T[];
-	direction: 'horizontal' | 'vertical';
-	group?: string | null;
-	manualDragStart?: boolean;
-	withGaps?: boolean;
-	canNest?: boolean;
-}>(), {
-	group: null,
-	manualDragStart: false,
-	withGaps: false,
-	canNest: false,
-});
+const props = withDefaults(
+	defineProps<{
+		modelValue: T[];
+		direction: 'horizontal' | 'vertical';
+		group?: string | null;
+		manualDragStart?: boolean;
+		withGaps?: boolean;
+		canNest?: boolean;
+	}>(),
+	{
+		group: null,
+		manualDragStart: false,
+		withGaps: false,
+		canNest: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'update:modelValue', value: T[]): void;
@@ -91,19 +94,27 @@ const instanceId = genId();
 const group = props.group ?? instanceId;
 
 function onDragstart(ev: DragEvent, item: T) {
-	if (ev.dataTransfer == null) return;
+	if (ev.dataTransfer == null) {
+		return;
+	}
 	ev.dataTransfer.effectAllowed = 'move';
 	setDragData(ev, 'MkDraggable', { item, instanceId, group });
 
 	const target = ev.target as HTMLElement;
-	target.addEventListener('dragend', (ev) => {
-		dragging.value = false;
-		dropReadyArea.value = [null, null];
-	}, { once: true });
+	target.addEventListener(
+		'dragend',
+		(ev) => {
+			dragging.value = false;
+			dropReadyArea.value = [null, null];
+		},
+		{ once: true },
+	);
 
 	dropCallback = (targetInstanceId) => {
-		if (targetInstanceId === instanceId) return;
-		const newValue = props.modelValue.filter(x => x.id !== item.id);
+		if (targetInstanceId === instanceId) {
+			return;
+		}
+		const newValue = props.modelValue.filter((x) => x.id !== item.id);
 		emit('update:modelValue', newValue);
 	};
 
@@ -128,15 +139,21 @@ function onDragleave(ev: DragEvent, item: T) {
 function onDrop(ev: DragEvent, item: T, backward: boolean) {
 	const dragged = getDragData(ev, 'MkDraggable');
 	dropReadyArea.value = [null, null];
-	if (dragged == null || dragged.group !== group || dragged.item.id === item.id) return;
+	if (dragged == null || dragged.group !== group || dragged.item.id === item.id) {
+		return;
+	}
 	dropCallback?.(instanceId);
 
-	const fromIndex = props.modelValue.findIndex(x => x.id === dragged.item.id);
+	const fromIndex = props.modelValue.findIndex((x) => x.id === dragged.item.id);
 
 	const newValue = [...props.modelValue];
-	if (fromIndex > -1) newValue.splice(fromIndex, 1);
-	let toIndex = newValue.findIndex(x => x.id === item.id);
-	if (backward) toIndex += 1;
+	if (fromIndex > -1) {
+		newValue.splice(fromIndex, 1);
+	}
+	let toIndex = newValue.findIndex((x) => x.id === item.id);
+	if (backward) {
+		toIndex += 1;
+	}
 	newValue.splice(toIndex, 0, dragged.item as T);
 
 	emit('update:modelValue', newValue);
@@ -144,7 +161,9 @@ function onDrop(ev: DragEvent, item: T, backward: boolean) {
 
 function onEmptyDrop(ev: DragEvent) {
 	const dragged = getDragData(ev, 'MkDraggable');
-	if (dragged == null) return;
+	if (dragged == null) {
+		return;
+	}
 	dropCallback?.(instanceId);
 
 	emit('update:modelValue', [dragged.item as T]);

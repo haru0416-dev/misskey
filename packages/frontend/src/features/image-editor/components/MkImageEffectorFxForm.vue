@@ -63,21 +63,25 @@ defineProps<{
 const params = defineModel<Record<string, any>>({ required: true });
 
 function getHex(c: ImageEffectorRGB) {
-	return `#${c.map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+	return `#${c
+		.map((x) =>
+			Math.round(x * 255)
+				.toString(16)
+				.padStart(2, '0'),
+		)
+		.join('')}`;
 }
 
 function getRgb(hex: string | number): ImageEffectorRGB | null {
-	if (
-		typeof hex === 'number' ||
-		typeof hex !== 'string' ||
-		!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)
-	) {
+	if (typeof hex === 'number' || typeof hex !== 'string' || !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)) {
 		return null;
 	}
 
 	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
-	if (m == null) return [0, 0, 0];
-	return m.map(x => Number.parseInt(x, 16) / 255) as ImageEffectorRGB;
+	if (m == null) {
+		return [0, 0, 0];
+	}
+	return m.map((x) => Number.parseInt(x, 16) / 255) as ImageEffectorRGB;
 }
 </script>
 

@@ -17,8 +17,10 @@ import type { Packed } from '@/misc/json-schema.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import { packDriveFolderForApi, packDriveFoldersManyForApi, type ApiDriveDependencies } from './drive.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { packDriveFolderForApi, packDriveFoldersManyForApi } from './drive.js';
+import type { ApiDriveDependencies } from './drive.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 
 export type ApiDriveFileDependencies = ApiDriveDependencies & UserPackingDependencies;
 
@@ -29,7 +31,9 @@ type DriveFilePackOptions = {
 };
 
 function getExternalVideoThumbnailUrl(config: Config, url: string): string | null {
-	if (config.media.videoThumbnailGeneratorUrl == null) return null;
+	if (config.media.videoThumbnailGeneratorUrl == null) {
+		return null;
+	}
 
 	return appendQuery(
 		`${config.media.videoThumbnailGeneratorUrl}/thumbnail.webp`,
@@ -46,10 +50,16 @@ function getPublicProperties(file: MiDriveFile): MiDriveFile['properties'] {
 		if (file.properties.orientation >= 5) {
 			const width = properties.width;
 			const height = properties.height;
-			if (height === undefined) delete properties.width;
-			else properties.width = height;
-			if (width === undefined) delete properties.height;
-			else properties.height = width;
+			if (height === undefined) {
+				delete properties.width;
+			} else {
+				properties.width = height;
+			}
+			if (width === undefined) {
+				delete properties.height;
+			} else {
+				properties.height = width;
+			}
 		}
 		delete properties.orientation;
 		return properties;
@@ -60,7 +70,9 @@ function getPublicProperties(file: MiDriveFile): MiDriveFile['properties'] {
 
 function getThumbnailUrl(deps: ApiDriveFileDependencies, file: MiDriveFile): string | null {
 	if (file.type.startsWith('video')) {
-		if (file.thumbnailUrl) return file.thumbnailUrl;
+		if (file.thumbnailUrl) {
+			return file.thumbnailUrl;
+		}
 
 		return getExternalVideoThumbnailUrl(deps.config, file.webpublicUrl ?? file.url);
 	} else if (file.uri != null && file.userHost != null && deps.config.media.externalProxyEnabled) {
@@ -94,7 +106,9 @@ export async function packDriveFileForApi(
 	);
 
 	const file = typeof src === 'object' ? src : await fetchDriveFileByIdFromDatabase(deps.db, src);
-	if (file == null) return null;
+	if (file == null) {
+		return null;
+	}
 
 	const folder =
 		opts.detail && file.folderId
@@ -130,7 +144,9 @@ export async function packDriveFileOrFailForApi(
 ): Promise<Packed<'DriveFile'>> {
 	const file = typeof src === 'object' ? src : await fetchDriveFileByIdOrFailFromDatabase(deps.db, src);
 	const packed = await packDriveFileForApi(deps, file, options);
-	if (packed == null) throw new Error(`DriveFile not found: ${typeof src === 'object' ? src.id : src}`);
+	if (packed == null) {
+		throw new Error(`DriveFile not found: ${typeof src === 'object' ? src.id : src}`);
+	}
 	return packed;
 }
 
@@ -180,7 +196,9 @@ export async function packDriveFileManyByIdsForApi(
 	fileIds: MiDriveFile['id'][],
 	options?: DriveFilePackOptions,
 ): Promise<Packed<'DriveFile'>[]> {
-	if (fileIds.length === 0) return [];
+	if (fileIds.length === 0) {
+		return [];
+	}
 	const files = await listDriveFilesByIdsFromDatabase(deps.db, fileIds);
 	const packedById = new Map((await packDriveFileManyForApi(deps, files, options)).map((f) => [f.id, f]));
 	return fileIds.map((id) => packedById.get(id)).filter((f): f is Packed<'DriveFile'> => f != null);

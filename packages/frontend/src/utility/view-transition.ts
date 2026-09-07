@@ -9,7 +9,9 @@ export function runViewTransition(
 ): ViewTransition | null {
 	let updateStarted = false;
 	const updateOnce = () => {
-		if (updateStarted) return;
+		if (updateStarted) {
+			return;
+		}
 		updateStarted = true;
 		return update();
 	};

@@ -10,7 +10,9 @@ import { misskeyApi, misskeyApiGet } from '@/misskey-api.js';
 
 function get(key: string): unknown {
 	const value = localStorage.getItem(key);
-	if (value === null) return null;
+	if (value === null) {
+		return null;
+	}
 	try {
 		return JSON.parse(value);
 	} catch {
@@ -24,7 +26,9 @@ function set(key: string, value: unknown): void {
 }
 
 const storageCache = get('emojis');
-if (storageCache !== null && !isEmojiSimpleArray(storageCache)) localStorage.removeItem('emojis');
+if (storageCache !== null && !isEmojiSimpleArray(storageCache)) {
+	localStorage.removeItem('emojis');
+}
 const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
@@ -47,7 +51,9 @@ export async function fetchCustomEmojis(force = false) {
 		res = await misskeyApi('emojis', {});
 	} else {
 		const lastFetchedAt = get('lastEmojisFetchedAt');
-		if (typeof lastFetchedAt === 'number' && Number.isFinite(lastFetchedAt) && now - lastFetchedAt < 1000 * 60 * 60) return;
+		if (typeof lastFetchedAt === 'number' && Number.isFinite(lastFetchedAt) && now - lastFetchedAt < 1000 * 60 * 60) {
+			return;
+		}
 		res = await misskeyApiGet('emojis', {});
 	}
 

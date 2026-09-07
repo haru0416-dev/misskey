@@ -29,11 +29,15 @@ async function main() {
 	let matches: RegExpExecArray | null;
 	while ((matches = cssRegex.exec(css)) !== null) {
 		const [, icon, unicode] = matches;
-		if (icon !== undefined && unicode !== undefined) rgMap.set(icon, unicode);
+		if (icon !== undefined && unicode !== undefined) {
+			rgMap.set(icon, unicode);
+		}
 	}
 
 	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)?.[0];
-	if (classTiBaseRule === undefined) throw new Error('Tabler Icons base CSS rule was not found.');
+	if (classTiBaseRule === undefined) {
+		throw new Error('Tabler Icons base CSS rule was not found.');
+	}
 
 	const fontPath = 'node_modules/@tabler/icons-webfont/dist/fonts/';
 	await fsp.copyFile(fontPath + 'tabler-icons.woff2', './built/tabler-icons.woff2');
@@ -65,48 +69,57 @@ async function main() {
 
 	const subsettedFonts = await generateSubsettedFont(fontPath + 'tabler-icons.ttf', unicodeRangeValues);
 
-	await runWriteTasks(Array.from(subsettedFonts.entries()).map(([key, buffer]) => async () => {
-		const unicodeValues = unicodeRangeValues.get(key);
-		if (unicodeValues === undefined) throw new Error(`Unicode values for ${key} were not found.`);
+	await runWriteTasks(
+		Array.from(subsettedFonts.entries()).map(([key, buffer]) => async () => {
+			const unicodeValues = unicodeRangeValues.get(key);
+			if (unicodeValues === undefined) {
+				throw new Error(`Unicode values for ${key} were not found.`);
+			}
 
-		const cssRules = [`@font-face {
+			const cssRules = [
+				`@font-face {
 	font-family: "tabler-icons";
 	font-style: normal;
 	font-weight: 400;
 	font-display: swap;
 	src: url("./tabler-icons.woff2") format("woff2");
-}`];
+}`,
+			];
 
-		if (unicodeValues.length > 0) {
-			await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
+			if (unicodeValues.length > 0) {
+				await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
 
-			const unicodeRangeString = (() => {
-				const values = unicodeValues.toSorted((a, b) => a - b);
-				const ranges = [];
+				const unicodeRangeString = (() => {
+					const values = unicodeValues.toSorted((a, b) => a - b);
+					const ranges = [];
 
-				for (let i = 0; i < values.length; i++) {
-					const start = values[i];
-					if (start === undefined) continue;
-					let end = start;
-					while (true) {
-						const next = values[i + 1];
-						if (next !== end + 1) break;
-						end = next;
-						i++;
+					for (let i = 0; i < values.length; i++) {
+						const start = values[i];
+						if (start === undefined) {
+							continue;
+						}
+						let end = start;
+						while (true) {
+							const next = values[i + 1];
+							if (next !== end + 1) {
+								break;
+							}
+							end = next;
+							i++;
+						}
+						if (start === end) {
+							ranges.push(`U+${start.toString(16)}`);
+						} else if (start + 1 === end) {
+							ranges.push(`U+${start.toString(16)}`, `U+${end.toString(16)}`);
+						} else {
+							ranges.push(`U+${start.toString(16)}-${end.toString(16)}`);
+						}
 					}
-					if (start === end) {
-						ranges.push(`U+${start.toString(16)}`);
-					} else if (start + 1 === end) {
-						ranges.push(`U+${start.toString(16)}`, `U+${end.toString(16)}`);
-					} else {
-						ranges.push(`U+${start.toString(16)}-${end.toString(16)}`);
-					}
-				}
 
-				return ranges.join(', ');
-			})();
+					return ranges.join(', ');
+				})();
 
-			cssRules.push(`@font-face {
+				cssRules.push(`@font-face {
 	font-family: "tabler-icons";
 	font-style: normal;
 	font-weight: 400;
@@ -115,20 +128,25 @@ async function main() {
 	unicode-range: ${unicodeRangeString};
 }`);
 
-			cssRules.push(classTiBaseRule);
+				cssRules.push(classTiBaseRule);
 
-			for (const icon of unicodeValues) {
-				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => Number.parseInt(unicode, 16) === icon);
-				if (iconClasses.length > 1) {
-					console.warn(`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`);
+				for (const icon of unicodeValues) {
+					const iconClasses = Array.from(rgMap.entries()).filter(
+						([_, unicode]) => Number.parseInt(unicode, 16) === icon,
+					);
+					if (iconClasses.length > 1) {
+						console.warn(
+							`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`,
+						);
+					}
+					const iconSelector = iconClasses.map(([className]) => `.${className}::before`).join(', ');
+					cssRules.push(`${iconSelector} { content: "\\${icon.toString(16)}"; }`);
 				}
-				const iconSelector = iconClasses.map(([className]) => `.${className}::before`).join(', ');
-				cssRules.push(`${iconSelector} { content: "\\${icon.toString(16)}"; }`);
 			}
-		}
 
-		await fsp.writeFile(`./built/tabler-icons-${key}.css`, cssRules.join('\n') + '\n');
-	}));
+			await fsp.writeFile(`./built/tabler-icons-${key}.css`, cssRules.join('\n') + '\n');
+		}),
+	);
 
 	const end = performance.now();
 	console.log(`Done in ${Math.round((end - start) * 100) / 100}ms`);

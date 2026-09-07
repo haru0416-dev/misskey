@@ -18,7 +18,11 @@ const VARIATION_SELECTOR_16 = /️/g;
  */
 export function toStoredAnnouncementReaction(reaction: string): string {
 	const withoutHost = reaction.replace('@.:', ':');
-	if (withoutHost.startsWith(':')) return withoutHost;
-	if (withoutHost.includes(ZERO_WIDTH_JOINER)) return withoutHost;
+	if (withoutHost.startsWith(':')) {
+		return withoutHost;
+	}
+	if (withoutHost.includes(ZERO_WIDTH_JOINER)) {
+		return withoutHost;
+	}
 	return withoutHost.replaceAll(VARIATION_SELECTOR_16, '');
 }

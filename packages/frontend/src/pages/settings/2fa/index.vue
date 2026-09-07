@@ -101,47 +101,60 @@ const $i = ensureSignin();
 
 // 各エンドポイントが meUpdated を発行するため、refreshAccount は呼び出さない。
 
-withDefaults(defineProps<{
-	first?: boolean;
-}>(), {
-	first: false,
-});
+withDefaults(
+	defineProps<{
+		first?: boolean;
+	}>(),
+	{
+		first: false,
+	},
+);
 
 const usePasswordLessLogin = computed(() => $i.usePasswordLessLogin ?? false);
 
 async function registerTOTP(): Promise<void> {
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	const twoFactorData = await os.apiWithDialog('i/2fa/register', {
 		password: auth.result.password,
 		token: auth.result.token,
 	});
 
-	const { dispose } = await os.popupAsyncWithDialog(import('./qrdialog.vue').then(x => x.default), {
-		twoFactorData,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('./qrdialog.vue').then((x) => x.default),
+		{
+			twoFactorData,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 async function unregisterTOTP(): Promise<void> {
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	os.apiWithDialog('i/2fa/unregister', {
 		password: auth.result.password,
 		token: auth.result.token,
-	}).then(res => {
-		updateCurrentAccountPartial({
-			twoFactorEnabled: false,
+	})
+		.then((res) => {
+			updateCurrentAccountPartial({
+				twoFactorEnabled: false,
+			});
+		})
+		.catch((error) => {
+			os.alert({
+				type: 'error',
+				text: error,
+			});
 		});
-	}).catch(error => {
-		os.alert({
-			type: 'error',
-			text: error,
-		});
-	});
 }
 
 function renewTOTP(): void {
@@ -152,7 +165,9 @@ function renewTOTP(): void {
 		okText: i18n.ts._2fa.renewTOTPOk,
 		cancelText: i18n.ts._2fa.renewTOTPCancel,
 	}).then(({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		registerTOTP();
 	});
 }
@@ -163,10 +178,14 @@ async function unregisterKey(key: NonNullable<Misskey.entities.MeDetailedOnly['s
 		title: i18n.ts._2fa.removeKey,
 		text: i18n.tsx._2fa.removeKeyConfirm({ name: key.name }),
 	});
-	if (confirm.canceled) return;
+	if (confirm.canceled) {
+		return;
+	}
 
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('i/2fa/remove-key', {
 		password: auth.result.password,
@@ -184,7 +203,9 @@ async function renameKey(key: NonNullable<Misskey.entities.MeDetailedOnly['secur
 		minLength: 1,
 		maxLength: 30,
 	});
-	if (name.canceled) return;
+	if (name.canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('i/2fa/update-key', {
 		name: name.result,
@@ -194,7 +215,9 @@ async function renameKey(key: NonNullable<Misskey.entities.MeDetailedOnly['secur
 
 async function addSecurityKey() {
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	const registrationOptions = await os.apiWithDialog('i/2fa/register-key', {
 		password: auth.result.password,
@@ -208,7 +231,9 @@ async function addSecurityKey() {
 		minLength: 1,
 		maxLength: 30,
 	});
-	if (name.canceled) return;
+	if (name.canceled) {
+		return;
+	}
 
 	const credential = await os.promiseDialog(
 		startRegistration({ optionsJSON: registrationOptions }),
@@ -216,10 +241,14 @@ async function addSecurityKey() {
 		() => {}, // ユーザーのキャンセルはrejectなのでエラーダイアログを出さない
 		i18n.ts._2fa.tapSecurityKey,
 	);
-	if (!credential) return;
+	if (!credential) {
+		return;
+	}
 
 	const auth2 = await os.authenticateDialog();
-	if (auth2.canceled) return;
+	if (auth2.canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('i/2fa/key-done', {
 		password: auth2.result.password,

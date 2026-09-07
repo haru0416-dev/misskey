@@ -70,20 +70,25 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
-const props = withDefaults(defineProps<{
-	component: AsUiComponent;
-	components: Ref<AsUiComponent>[];
-	size?: 'small' | 'medium' | 'large';
-	align?: 'left' | 'center' | 'right';
-}>(), {
-	size: 'medium',
-	align: 'left',
-});
+const props = withDefaults(
+	defineProps<{
+		component: AsUiComponent;
+		components: Ref<AsUiComponent>[];
+		size?: 'small' | 'medium' | 'large';
+		align?: 'left' | 'center' | 'right';
+	}>(),
+	{
+		size: 'medium',
+		align: 'left',
+	},
+);
 
 const c = props.component;
 
 const embeddedPostFormProps = computed(() => {
-	if (c.type !== 'postForm') return {};
+	if (c.type !== 'postForm') {
+		return {};
+	}
 
 	return {
 		fixed: true,
@@ -104,8 +109,10 @@ function getButtonProps(button: AsUiButton | AsUiPostFormButton) {
 }
 
 function g(id: string) {
-	const v = props.components.find(x => x.value.id === id)?.value;
-	if (v) return v;
+	const v = props.components.find((x) => x.value.id === id)?.value;
+	if (v) {
+		return v;
+	}
 
 	return {
 		id: 'dummy',
@@ -115,17 +122,21 @@ function g(id: string) {
 }
 
 const containerStyle = computed(() => {
-	if (c.type !== 'container') return undefined;
+	if (c.type !== 'container') {
+		return undefined;
+	}
 
 	// 枠線の一部だけ指定された場合も、ブラウザの初期値に依存せず表示できるようにする。
 	// radius単独の指定は枠線を必要としないため判定対象から除外する。
 	const isBordered = c.borderWidth ?? c.borderColor ?? c.borderStyle;
 
-	const border = isBordered ? {
-		borderWidth: `${c.borderWidth ?? 1}px`,
-		borderColor: c.borderColor ?? 'var(--MI_THEME-divider)',
-		borderStyle: c.borderStyle ?? 'solid',
-	} : undefined;
+	const border = isBordered
+		? {
+				borderWidth: `${c.borderWidth ?? 1}px`,
+				borderColor: c.borderColor ?? 'var(--MI_THEME-divider)',
+				borderStyle: c.borderStyle ?? 'solid',
+			}
+		: undefined;
 
 	return {
 		textAlign: c.align,
@@ -146,18 +157,17 @@ function onSwitchUpdate(v: boolean) {
 	}
 }
 
-const {
-	model: valueForSelect,
-	def: selectDef,
-} = useMkSelect({
+const { model: valueForSelect, def: selectDef } = useMkSelect({
 	items: computed(() => {
-		if (c.type !== 'select') return [];
-		return (c.items ?? []).map(item => ({
+		if (c.type !== 'select') {
+			return [];
+		}
+		return (c.items ?? []).map((item) => ({
 			value: item.value,
 			label: item.text,
 		}));
 	}),
-	initialValue: (c.type === 'select' && 'default' in c && typeof c.default !== 'boolean') ? c.default ?? null : null,
+	initialValue: c.type === 'select' && 'default' in c && typeof c.default !== 'boolean' ? (c.default ?? null) : null,
 });
 
 function onSelectUpdate(v: string | null) {
@@ -169,7 +179,9 @@ function onSelectUpdate(v: string | null) {
 
 function openPostForm() {
 	const form = (c as AsUiPostFormButton).form;
-	if (!form) return;
+	if (!form) {
+		return;
+	}
 
 	os.post({
 		initialText: form.text,

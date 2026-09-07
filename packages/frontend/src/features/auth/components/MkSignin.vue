@@ -85,15 +85,18 @@ const emit = defineEmits<{
 	(ev: 'login', v: Misskey.entities.SigninFlowResponse & { finished: true }): void;
 }>();
 
-const props = withDefaults(defineProps<{
-	autoSet?: boolean;
-	message?: string,
-	openOnRemote?: OpenOnRemoteOptions,
-	initialUsername?: string;
-}>(), {
-	autoSet: false,
-	message: '',
-});
+const props = withDefaults(
+	defineProps<{
+		autoSet?: boolean;
+		message?: string;
+		openOnRemote?: OpenOnRemoteOptions;
+		initialUsername?: string;
+	}>(),
+	{
+		autoSet: false,
+		message: '',
+	},
+);
 
 const page = ref<'input' | 'password' | 'totp' | 'passkey'>('input');
 const waiting = ref(false);
@@ -132,14 +135,16 @@ function onPasskeyDone(credential: AuthenticationResponseJSON): void {
 		misskeyApi('signin-with-passkey', {
 			credential: credential,
 			context: passkeyContext.value,
-		}).then((res) => {
-			if (res.signinResponse == null) {
-				onSigninApiError();
-				return;
-			}
-			emit('login', res.signinResponse);
-			onLoginSucceeded(res.signinResponse);
-		}).catch(onSigninApiError);
+		})
+			.then((res) => {
+				if (res.signinResponse == null) {
+					onSigninApiError();
+					return;
+				}
+				emit('login', res.signinResponse);
+				onLoginSucceeded(res.signinResponse);
+			})
+			.catch(onSigninApiError);
 	} else if (userInfo.value != null) {
 		tryLogin({
 			username: userInfo.value.username,
@@ -178,17 +183,16 @@ async function onPasswordSubmitted(pw: PwResponse) {
 		});
 		waiting.value = false;
 		return;
-	} else {
-		await tryLogin({
-			username: userInfo.value.username,
-			password: pw.password,
-			'hcaptcha-response': pw.captcha.hCaptchaResponse,
-			'm-captcha-response': pw.captcha.mCaptchaResponse,
-			'g-recaptcha-response': pw.captcha.reCaptchaResponse,
-			'turnstile-response': pw.captcha.turnstileResponse,
-			'testcaptcha-response': pw.captcha.testcaptchaResponse,
-		});
 	}
+	await tryLogin({
+		username: userInfo.value.username,
+		password: pw.password,
+		'hcaptcha-response': pw.captcha.hCaptchaResponse,
+		'm-captcha-response': pw.captcha.mCaptchaResponse,
+		'g-recaptcha-response': pw.captcha.reCaptchaResponse,
+		'turnstile-response': pw.captcha.turnstileResponse,
+		'testcaptcha-response': pw.captcha.testcaptchaResponse,
+	});
 }
 
 async function onTotpSubmitted(token: string) {
@@ -202,23 +206,26 @@ async function onTotpSubmitted(token: string) {
 		});
 		waiting.value = false;
 		return;
-	} else {
-		await tryLogin({
-			username: userInfo.value.username,
-			password: password.value,
-			token,
-		});
 	}
+	await tryLogin({
+		username: userInfo.value.username,
+		password: password.value,
+		token,
+	});
 }
 
-async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promise<Misskey.entities.SigninFlowResponse> {
+async function tryLogin(
+	req: Partial<Misskey.entities.SigninFlowRequest>,
+): Promise<Misskey.entities.SigninFlowResponse> {
 	const username = req.username ?? userInfo.value?.username;
 	const _req = {
 		...req,
 		...(username === undefined ? {} : { username }),
 	};
 
-	function assertIsSigninFlowRequest(x: Partial<Misskey.entities.SigninFlowRequest>): x is Misskey.entities.SigninFlowRequest {
+	function assertIsSigninFlowRequest(
+		x: Partial<Misskey.entities.SigninFlowRequest>,
+	): x is Misskey.entities.SigninFlowRequest {
 		return x.username != null;
 	}
 
@@ -226,52 +233,54 @@ async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promi
 		throw new Error('Invalid request');
 	}
 
-	return await misskeyApi('signin-flow', _req).then(async (res) => {
-		if (res.finished) {
-			emit('login', res);
-			await onLoginSucceeded(res);
-		} else {
-			switch (res.next) {
-				case 'captcha': {
-					needCaptcha.value = true;
-					page.value = 'password';
-					break;
-				}
-				case 'password': {
-					needCaptcha.value = false;
-					page.value = 'password';
-					break;
-				}
-				case 'totp': {
-					page.value = 'totp';
-					break;
-				}
-				case 'passkey': {
-					if (browserSupportsWebAuthn()) {
-						credentialRequest.value = res.authRequest;
-						page.value = 'passkey';
-					} else {
-						page.value = 'totp';
+	return await misskeyApi('signin-flow', _req)
+		.then(async (res) => {
+			if (res.finished) {
+				emit('login', res);
+				await onLoginSucceeded(res);
+			} else {
+				switch (res.next) {
+					case 'captcha': {
+						needCaptcha.value = true;
+						page.value = 'password';
+						break;
 					}
-					break;
+					case 'password': {
+						needCaptcha.value = false;
+						page.value = 'password';
+						break;
+					}
+					case 'totp': {
+						page.value = 'totp';
+						break;
+					}
+					case 'passkey': {
+						if (browserSupportsWebAuthn()) {
+							credentialRequest.value = res.authRequest;
+							page.value = 'passkey';
+						} else {
+							page.value = 'totp';
+						}
+						break;
+					}
 				}
-			}
 
-			if (doingPasskeyFromInputPage.value === true) {
-				doingPasskeyFromInputPage.value = false;
-				page.value = 'input';
-				password.value = '';
+				if (doingPasskeyFromInputPage.value === true) {
+					doingPasskeyFromInputPage.value = false;
+					page.value = 'input';
+					password.value = '';
+				}
+				passwordPageEl.value?.resetCaptcha();
+				nextTick(() => {
+					waiting.value = false;
+				});
 			}
-			passwordPageEl.value?.resetCaptcha();
-			nextTick(() => {
-				waiting.value = false;
-			});
-		}
-		return res;
-	}).catch((err) => {
-		onSigninApiError(err);
-		return Promise.reject(err);
-	});
+			return res;
+		})
+		.catch((err) => {
+			onSigninApiError(err);
+			return Promise.reject(err);
+		});
 }
 
 async function onLoginSucceeded(res: Misskey.entities.SigninFlowResponse & { finished: true }) {

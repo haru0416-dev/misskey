@@ -11,7 +11,9 @@ export const isEnabledUrlPreview = computed(() => instance.enableUrlPreview && !
 
 export function transformPlayerUrl(url: string): string {
 	const urlObj = new URL(url);
-	if (!['https:', 'http:'].includes(urlObj.protocol)) throw new Error('Invalid protocol');
+	if (!['https:', 'http:'].includes(urlObj.protocol)) {
+		throw new Error('Invalid protocol');
+	}
 
 	const urlParams = new URLSearchParams(urlObj.search);
 

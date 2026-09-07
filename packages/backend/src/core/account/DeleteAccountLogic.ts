@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { createDeliverJob } from '@/core/queue/DeliverQueue.js';
 import { listSharedInboxesFromFollowingsInDatabase } from '@/core/user/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { type DbQueue, type DeliverQueue } from '@/core/queue/queues.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/user/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import {
@@ -86,7 +86,9 @@ export async function deleteAccountWithSideEffects(
 	user: DeleteAccountTarget,
 	moderator?: Pick<MiUser, 'id'>,
 ): Promise<void> {
-	if (deps.meta.rootUserId === user.id) throw new Error('cannot delete a root account');
+	if (deps.meta.rootUserId === user.id) {
+		throw new Error('cannot delete a root account');
+	}
 
 	const fullUser = await fetchUserByIdOrFailFromDatabase(deps.db, user.id);
 

@@ -4,6 +4,7 @@
  */
 
 import type { Hono } from 'hono';
+import { resolveUserForApi } from '../activitypub/ap-person.js';
 import {
 	assertCredential,
 	assertProhibitMoved,
@@ -90,10 +91,14 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/miauth/*', async (c, next) => {
 		// c.req.path はマウントプレフィックス (/api) 込みのフルパスなので末尾側でマッチする
 		const match = /\/miauth\/([^/]+)\/check$/.exec(c.req.path);
-		if (match == null) return await next();
+		if (match == null) {
+			return await next();
+		}
 
 		let session = match[1];
-		if (session == null) return await next();
+		if (session == null) {
+			return await next();
+		}
 		try {
 			session = decodeURIComponent(session);
 		} catch {
@@ -157,7 +162,15 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			const auth = await authenticateOptionalRequest(deps, c, body);
 			const ip = getRequestIp(c, deps.config);
 
-			return jsonResponse(c, await handleApiUsersShow(deps, auth.user, body, ip));
+			return jsonResponse(
+				c,
+				await handleApiUsersShow(
+					{ ...deps, resolveUser: (username, host) => resolveUserForApi(deps, username, host) },
+					auth.user,
+					body,
+					ip,
+				),
+			);
 		});
 	});
 

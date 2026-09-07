@@ -47,11 +47,23 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-type SupportedTypes = 'text' | 'password' | 'email' | 'url' | 'tel' | 'number' | 'search' | 'date' | 'time' | 'datetime-local' | 'color';
-type ModelValueType<T extends SupportedTypes> =
-	T extends 'number' ? number :
-	T extends 'text' | 'password' | 'email' | 'url' | 'tel' | 'search' | 'date' | 'time' | 'datetime-local' | 'color' ? string :
-	never;
+type SupportedTypes =
+	| 'text'
+	| 'password'
+	| 'email'
+	| 'url'
+	| 'tel'
+	| 'number'
+	| 'search'
+	| 'date'
+	| 'time'
+	| 'datetime-local'
+	| 'color';
+type ModelValueType<T extends SupportedTypes> = T extends 'number'
+	? number
+	: T extends 'text' | 'password' | 'email' | 'url' | 'tel' | 'search' | 'date' | 'time' | 'datetime-local' | 'color'
+		? string
+		: never;
 </script>
 
 <script lang="ts" setup generic="T extends SupportedTypes = 'text'">
@@ -75,7 +87,7 @@ const props = defineProps<{
 	placeholder?: string;
 	autofocus?: boolean;
 	autocomplete?: string;
-	mfmAutocomplete?: boolean | SuggestionType[],
+	mfmAutocomplete?: boolean | SuggestionType[];
 	autocapitalize?: string;
 	spellcheck?: boolean;
 	inputmode?: InputHTMLAttributes['inputmode'];
@@ -120,10 +132,7 @@ const inputId = `${id}-input`;
 const labelId = `${id}-label`;
 const captionId = `${id}-caption`;
 const datalistId = `${id}-datalist`;
-const height =
-	props.small ? 33 :
-	props.large ? 39 :
-	36;
+const height = props.small ? 33 : props.large ? 39 : 36;
 let autocompleteWorker: Autocomplete | null = null;
 
 const focus = () => inputEl.value?.focus();
@@ -132,7 +141,9 @@ const onInput = (event: InputEvent) => {
 	emit('change', event);
 };
 const onKeydown = (ev: KeyboardEvent) => {
-	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
+	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) {
+		return;
+	}
 
 	emit('keydown', ev);
 
@@ -144,7 +155,12 @@ const onKeydown = (ev: KeyboardEvent) => {
 const updated = () => {
 	changed.value = false;
 	if (props.type === 'number') {
-		emit('update:modelValue', typeof v.value === 'number' ? v.value as ModelValueType<T> : Number.parseFloat(v.value ?? '0') as ModelValueType<T>);
+		emit(
+			'update:modelValue',
+			typeof v.value === 'number'
+				? (v.value as ModelValueType<T>)
+				: (Number.parseFloat(v.value ?? '0') as ModelValueType<T>),
+		);
 	} else {
 		emit('update:modelValue', v.value ?? '');
 	}
@@ -153,7 +169,7 @@ const updated = () => {
 const throttledUpdated = throttle(typeof props.throttle === 'number' ? props.throttle : 1000, updated);
 const debouncedUpdated = debounce(typeof props.debounce === 'number' ? props.debounce : 1000, updated);
 
-watch(modelValue, newValue => {
+watch(modelValue, (newValue) => {
 	v.value = newValue;
 });
 
@@ -171,9 +187,13 @@ watch(v, () => {
 	invalid.value = inputEl.value?.validity.badInput ?? true;
 });
 
-watch([changed, invalid], ([newChanged, newInvalid]) => {
-	emit('savingStateChange', newChanged, newInvalid);
-}, { immediate: true });
+watch(
+	[changed, invalid],
+	([newChanged, newInvalid]) => {
+		emit('savingStateChange', newChanged, newInvalid);
+	},
+	{ immediate: true },
+);
 
 useFormControlPadding(inputEl, prefixEl, suffixEl);
 
@@ -185,7 +205,11 @@ onMounted(() => {
 	});
 
 	if (props.mfmAutocomplete && inputEl.value) {
-		autocompleteWorker = new Autocomplete(inputEl.value, v, props.mfmAutocomplete === true ? undefined : props.mfmAutocomplete);
+		autocompleteWorker = new Autocomplete(
+			inputEl.value,
+			v,
+			props.mfmAutocomplete === true ? undefined : props.mfmAutocomplete,
+		);
 	}
 });
 

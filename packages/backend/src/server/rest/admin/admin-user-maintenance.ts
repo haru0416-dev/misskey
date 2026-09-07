@@ -69,7 +69,9 @@ async function assertCanTakeOverUser(
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
-	if (me.id !== user.id && (await isApiAdministrator(deps, user))) throw accessDeniedError();
+	if (me.id !== user.id && (await isApiAdministrator(deps, user))) {
+		throw accessDeniedError();
+	}
 }
 
 export async function handleApiAdminResetPassword(
@@ -79,7 +81,9 @@ export async function handleApiAdminResetPassword(
 ): Promise<ResetPasswordResponse> {
 	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw noSuchUserError();
+	if (user == null) {
+		throw noSuchUserError();
+	}
 	await assertCanTakeOverUser(deps, me, user);
 
 	const passwd = secureRndstr(8);
@@ -103,7 +107,9 @@ export async function handleApiAdminUnsetMfa(
 ): Promise<void> {
 	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw noSuchUserError();
+	if (user == null) {
+		throw noSuchUserError();
+	}
 	await assertCanTakeOverUser(deps, me, user);
 
 	await unsetUserMfaInDatabase(deps.db, user.id);
@@ -121,8 +127,12 @@ export async function handleApiAdminUnsetUserAvatar(
 ): Promise<void> {
 	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw new Error('user not found');
-	if (user.avatarId == null) return;
+	if (user == null) {
+		throw new Error('user not found');
+	}
+	if (user.avatarId == null) {
+		return;
+	}
 
 	await updateUserInDatabase(deps.db, user.id, {
 		avatarId: null,
@@ -145,8 +155,12 @@ export async function handleApiAdminUnsetUserBanner(
 ): Promise<void> {
 	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw new Error('user not found');
-	if (user.bannerId == null) return;
+	if (user == null) {
+		throw new Error('user not found');
+	}
+	if (user.bannerId == null) {
+		return;
+	}
 
 	await updateUserInDatabase(deps.db, user.id, {
 		bannerId: null,
@@ -169,7 +183,9 @@ export async function handleApiAdminUpdateUserNote(
 ): Promise<void> {
 	const params = parseApiParams(adminUpdateUserNoteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw new Error('user not found');
+	if (user == null) {
+		throw new Error('user not found');
+	}
 
 	const currentProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	await updateUserProfileInDatabase(deps.db, user.id, {

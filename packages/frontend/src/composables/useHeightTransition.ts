@@ -18,7 +18,9 @@ export type HeightTransitionOptions = {
  */
 export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	function enter(el: Element) {
-		if (!(el instanceof HTMLElement)) return;
+		if (!(el instanceof HTMLElement)) {
+			return;
+		}
 
 		// 中断されたleaveが残したインラインheightを除去してから自然高さを測る。
 		// 残ったheightを測ると、折りたたまれた高さを自然高さとして扱ってしまう。
@@ -31,13 +33,17 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	}
 
 	function afterEnter(el: Element) {
-		if (!(el instanceof HTMLElement)) return;
+		if (!(el instanceof HTMLElement)) {
+			return;
+		}
 
 		el.style.height = '';
 	}
 
 	function leave(el: Element) {
-		if (!(el instanceof HTMLElement)) return;
+		if (!(el instanceof HTMLElement)) {
+			return;
+		}
 
 		const elementHeight = el.getBoundingClientRect().height;
 		el.style.height = `${elementHeight}px`;
@@ -46,7 +52,9 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	}
 
 	function afterLeave(el: Element) {
-		if (!(el instanceof HTMLElement)) return;
+		if (!(el instanceof HTMLElement)) {
+			return;
+		}
 
 		el.style.height = '';
 	}

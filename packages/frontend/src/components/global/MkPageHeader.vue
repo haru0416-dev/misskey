@@ -69,7 +69,7 @@ import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<PageHeaderProps>(), {
-	tabs: () => ([] as Tab[]),
+	tabs: () => [] as Tab[],
 });
 
 const emit = defineEmits<{
@@ -79,7 +79,9 @@ const emit = defineEmits<{
 const injectedPageMetadata = inject(DI.pageMetadata, ref(null));
 const pageMetadata = computed(() => props.overridePageMetadata ?? injectedPageMetadata.value);
 
-const hideTitle = computed(() => inject('shouldOmitHeaderTitle', false) || props.hideTitle || (props.canOmitTitle && props.tabs.length > 0));
+const hideTitle = computed(
+	() => inject('shouldOmitHeaderTitle', false) || props.hideTitle || (props.canOmitTitle && props.tabs.length > 0),
+);
 const thin_ = props.thin || inject('shouldHeaderThin', false);
 
 const el = useTemplateRef('el');
@@ -127,7 +129,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	if (ro) ro.disconnect();
+	if (ro) {
+		ro.disconnect();
+	}
 });
 </script>
 

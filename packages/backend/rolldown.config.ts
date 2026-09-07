@@ -16,12 +16,18 @@ function backendDevServerPlugin(): Plugin {
 			stderr: 'inherit',
 		});
 		const exitCode = await buildAssets.exited;
-		if (exitCode !== 0) throw new Error(`build-assets exited with code ${exitCode}`);
+		if (exitCode !== 0) {
+			throw new Error(`build-assets exited with code ${exitCode}`);
+		}
 	}
 
 	async function killBackendProcess() {
-		if (backendShutdownPromise) return backendShutdownPromise;
-		if (!backendProcess) return;
+		if (backendShutdownPromise) {
+			return backendShutdownPromise;
+		}
+		if (!backendProcess) {
+			return;
+		}
 
 		const processToKill = backendProcess;
 		backendProcess = null;
@@ -32,7 +38,9 @@ function backendDevServerPlugin(): Plugin {
 					stdout: 'ignore',
 					stderr: 'ignore',
 				});
-				if ((await taskkill.exited) !== 0) processToKill.kill();
+				if ((await taskkill.exited) !== 0) {
+					processToKill.kill();
+				}
 			} else {
 				processToKill.kill();
 			}
@@ -60,7 +68,9 @@ function backendDevServerPlugin(): Plugin {
 			});
 			backendProcess = startedProcess;
 			void startedProcess.exited.then((exitCode) => {
-				if (backendProcess !== startedProcess) return;
+				if (backendProcess !== startedProcess) {
+					return;
+				}
 				backendProcess = null;
 				console.error(`backend exited with code ${exitCode}`);
 				process.exit(exitCode === 0 ? 1 : exitCode);
@@ -118,37 +128,36 @@ export default defineConfig((args) => {
 			},
 			external: externalModules,
 		};
-	} else {
-		return {
-			input: [
-				'./src/boot/entry.ts',
-				'./src/boot/cli.ts',
-				'./src/config.ts',
-				'./src/config-schema.ts',
-				'./src/drizzle.ts',
-				'./src/migration-runner.ts',
-				'./src/server/api/openapi/gen-spec.ts',
-			],
-			platform: 'node',
-			tsconfig: true,
-			plugins: [isWatchMode ? backendDevServerPlugin() : undefined],
-			transform: {
-				define,
-			},
-			output: {
-				keepNames: true,
-				minify: !isWatchMode,
-				sourcemap: isWatchMode,
-				dir: './built',
-				cleanDir: !isWatchMode,
-				format: 'esm',
-			},
-			watch: {
-				include: ['src/**/*.{ts,js,mjs,cjs,tsx,json}'],
-				clearScreen: false,
-			},
-			// watch 時は依存を外部化して再ビルド時間を短縮する。
-			external: isWatchMode ? /^(?!@\/)[^.\/](?!:[\/\\])/ : externalModules,
-		};
 	}
+	return {
+		input: [
+			'./src/boot/entry.ts',
+			'./src/boot/cli.ts',
+			'./src/config.ts',
+			'./src/config-schema.ts',
+			'./src/drizzle.ts',
+			'./src/migration-runner.ts',
+			'./src/server/api/openapi/gen-spec.ts',
+		],
+		platform: 'node',
+		tsconfig: true,
+		plugins: [isWatchMode ? backendDevServerPlugin() : undefined],
+		transform: {
+			define,
+		},
+		output: {
+			keepNames: true,
+			minify: !isWatchMode,
+			sourcemap: isWatchMode,
+			dir: './built',
+			cleanDir: !isWatchMode,
+			format: 'esm',
+		},
+		watch: {
+			include: ['src/**/*.{ts,js,mjs,cjs,tsx,json}'],
+			clearScreen: false,
+		},
+		// watch 時は依存を外部化して再ビルド時間を短縮する。
+		external: isWatchMode ? /^(?!@\/)[^.\/](?!:[\/\\])/ : externalModules,
+	};
 });

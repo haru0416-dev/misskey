@@ -12,7 +12,9 @@ export async function lookupUser() {
 	const { canceled, result } = await os.inputText({
 		title: i18n.ts.usernameOrUserId,
 	});
-	if (canceled || result == null) return;
+	if (canceled || result == null) {
+		return;
+	}
 
 	const show = (user: Misskey.entities.UserDetailed) => {
 		os.pageWindow(`/admin/user/${user.id}`);
@@ -46,7 +48,9 @@ export async function lookupUserByEmail() {
 		title: i18n.ts.emailAddress,
 		type: 'email',
 	});
-	if (canceled || result == null) return;
+	if (canceled || result == null) {
+		return;
+	}
 
 	try {
 		const user = await os.apiWithDialog('admin/accounts/find-by-email', { email: result });
@@ -69,7 +73,9 @@ export async function lookupFile() {
 		title: i18n.ts.fileIdOrUrl,
 		minLength: 1,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	misskeyApi(
 		'admin/drive/show-file',

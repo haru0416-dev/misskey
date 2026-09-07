@@ -4,7 +4,8 @@
  */
 
 import { and, asc, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
-import { accessToken, type AccessTokenInsert, type AccessTokenRow } from '@/db/schema/access-token.js';
+import { accessToken } from '@/db/schema/access-token.js';
+import type { AccessTokenInsert, AccessTokenRow } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAccessToken } from '@/models/AccessToken.js';
@@ -92,7 +93,9 @@ export async function listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(
 	userId: MiUser['id'],
 	appIds: MiApp['id'][],
 ): Promise<MiApp['id'][]> {
-	if (appIds.length === 0) return [];
+	if (appIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ appId: accessToken.appId })

@@ -38,9 +38,11 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { packDriveFileManyByIdsForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { packDriveFileManyByIdsForApi } from '../drive/drive-file.js';
+import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
 import { ApiError } from '../error.js';
-import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
@@ -88,13 +90,17 @@ async function getGalleryPostsRanking(deps: ApiGalleryDependencies, threshold: n
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
 		const id = currentRankingResult[i];
 		const score = currentRankingResult[i + 1];
-		if (id == null || score == null) continue;
+		if (id == null || score == null) {
+			continue;
+		}
 		ranking.set(id, Number.parseInt(score, 10));
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
 		const id = previousRankingResult[i];
 		const scoreValue = previousRankingResult[i + 1];
-		if (id == null || scoreValue == null) continue;
+		if (id == null || scoreValue == null) {
+			continue;
+		}
 		const score = Number.parseInt(scoreValue, 10);
 		const exist = ranking.get(id);
 		ranking.set(id, exist != null ? (exist + score) / 2 : score);
@@ -253,7 +259,9 @@ async function packGalleryPostsManyForApi(
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>[]> {
-	if (posts.length === 0) return [];
+	if (posts.length === 0) {
+		return [];
+	}
 
 	const userIds = [...new Set(posts.map((post) => post.userId))];
 	const fileIds = [...new Set(posts.flatMap((post) => post.fileIds))];
@@ -310,7 +318,9 @@ export async function handleApiGalleryFeatured(
 	}
 	postIds = postIds.slice(0, params.limit);
 
-	if (postIds.length === 0) return [];
+	if (postIds.length === 0) {
+		return [];
+	}
 
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
 	return await packGalleryPostsManyForApi(deps, posts, me);
@@ -350,7 +360,9 @@ export async function handleApiGalleryPostsShow(
 ): Promise<Packed<'GalleryPost'>> {
 	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
-	if (post == null) throw galleryPostsShowNoSuchPostError();
+	if (post == null) {
+		throw galleryPostsShowNoSuchPostError();
+	}
 
 	return await packGalleryPostForApi(deps, post, me);
 }
@@ -362,7 +374,9 @@ export async function handleApiGalleryPostsCreate(
 ): Promise<Packed<'GalleryPost'>> {
 	const params = parseApiParams(galleryPostsCreateParamDef, body);
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
-	if (files.length === 0) throw new Error();
+	if (files.length === 0) {
+		throw new Error();
+	}
 
 	const post = await createGalleryPostInDatabase(deps.db, {
 		id: genId(),
@@ -387,7 +401,9 @@ export async function handleApiGalleryPostsUpdate(
 	let files;
 	if (params.fileIds) {
 		files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
-		if (files.length === 0) throw new Error();
+		if (files.length === 0) {
+			throw new Error();
+		}
 	}
 
 	await updateGalleryPostByIdAndUserIdInDatabase(
@@ -414,7 +430,9 @@ export async function handleApiGalleryPostsDelete(
 ): Promise<void> {
 	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
-	if (post == null) throw galleryPostsDeleteNoSuchPostError();
+	if (post == null) {
+		throw galleryPostsDeleteNoSuchPostError();
+	}
 
 	if (!(await isApiModerator(deps, me)) && post.userId !== me.id) {
 		throw galleryPostsDeleteAccessDeniedError();
@@ -440,11 +458,17 @@ export async function handleApiGalleryPostsLike(
 ): Promise<void> {
 	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
-	if (post == null) throw galleryPostsLikeNoSuchPostError();
-	if (post.userId === me.id) throw galleryPostsLikeYourPostError();
+	if (post == null) {
+		throw galleryPostsLikeNoSuchPostError();
+	}
+	if (post.userId === me.id) {
+		throw galleryPostsLikeYourPostError();
+	}
 
 	const exist = await galleryLikeExistsInDatabase(deps.db, me.id, post.id);
-	if (exist) throw galleryPostsLikeAlreadyLikedError();
+	if (exist) {
+		throw galleryPostsLikeAlreadyLikedError();
+	}
 
 	try {
 		await createGalleryLikeInDatabase(deps.db, {
@@ -473,10 +497,14 @@ export async function handleApiGalleryPostsUnlike(
 ): Promise<void> {
 	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
-	if (post == null) throw galleryPostsUnlikeNoSuchPostError();
+	if (post == null) {
+		throw galleryPostsUnlikeNoSuchPostError();
+	}
 
 	const exist = await fetchGalleryLikeFromDatabase(deps.db, me.id, post.id);
-	if (exist == null) throw galleryPostsUnlikeNotLikedError();
+	if (exist == null) {
+		throw galleryPostsUnlikeNotLikedError();
+	}
 
 	await deleteGalleryLikeByIdFromDatabase(deps.db, exist.id);
 
@@ -530,7 +558,9 @@ export async function handleApiIGalleryLikes(
 		untilId: pagination.untilId,
 	});
 
-	if (likes.length === 0) return [];
+	if (likes.length === 0) {
+		return [];
+	}
 
 	const postIds = likes.map((like) => like.postId);
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);

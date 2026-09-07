@@ -66,68 +66,85 @@ const loading = ref(true);
 const avatarDecorations = ref<Misskey.entities.GetAvatarDecorationsResponse>([]);
 const groupedDecorations = computed(() => groupAvatarDecorations(avatarDecorations.value));
 
-misskeyApi('get-avatar-decorations').then(_avatarDecorations => {
+misskeyApi('get-avatar-decorations').then((_avatarDecorations) => {
 	avatarDecorations.value = _avatarDecorations;
 	loading.value = false;
 });
 
 function openAttachedDecoration(index: number) {
 	const attachedDecoration = $i.avatarDecorations[index];
-	if (attachedDecoration == null) return;
-	openDecoration(avatarDecorations.value.find(d => d.id === attachedDecoration.id) ?? { id: '', url: '', name: '?', roleIdsThatCanBeUsedThisDecoration: [] }, index);
+	if (attachedDecoration == null) {
+		return;
+	}
+	openDecoration(
+		avatarDecorations.value.find((d) => d.id === attachedDecoration.id) ?? {
+			id: '',
+			url: '',
+			name: '?',
+			roleIdsThatCanBeUsedThisDecoration: [],
+		},
+		index,
+	);
 }
 
-async function openDecoration(avatarDecoration: {
-	id: string;
-	url: string;
-	name: string;
-	roleIdsThatCanBeUsedThisDecoration: string[];
-}, index?: number) {
-	const { dispose } = os.popup(XDialog, {
-		decoration: avatarDecoration,
-		usingIndex: index ?? null,
-	}, {
-		'attach': async (payload) => {
-			const decoration = {
-				id: avatarDecoration.id,
-				url: avatarDecoration.url,
-				angle: payload.angle,
-				flipH: payload.flipH,
-				offsetX: payload.offsetX,
-				offsetY: payload.offsetY,
-			};
-			const update = [...$i.avatarDecorations, decoration];
-			await os.apiWithDialog('i/update', {
-				avatarDecorations: update,
-			});
-			$i.avatarDecorations = update;
+async function openDecoration(
+	avatarDecoration: {
+		id: string;
+		url: string;
+		name: string;
+		roleIdsThatCanBeUsedThisDecoration: string[];
+	},
+	index?: number,
+) {
+	const { dispose } = os.popup(
+		XDialog,
+		{
+			decoration: avatarDecoration,
+			usingIndex: index ?? null,
 		},
-		'update': async (payload) => {
-			const decoration = {
-				id: avatarDecoration.id,
-				url: avatarDecoration.url,
-				angle: payload.angle,
-				flipH: payload.flipH,
-				offsetX: payload.offsetX,
-				offsetY: payload.offsetY,
-			};
-			const update = [...$i.avatarDecorations];
-			update[index!] = decoration;
-			await os.apiWithDialog('i/update', {
-				avatarDecorations: update,
-			});
-			$i.avatarDecorations = update;
+		{
+			attach: async (payload) => {
+				const decoration = {
+					id: avatarDecoration.id,
+					url: avatarDecoration.url,
+					angle: payload.angle,
+					flipH: payload.flipH,
+					offsetX: payload.offsetX,
+					offsetY: payload.offsetY,
+				};
+				const update = [...$i.avatarDecorations, decoration];
+				await os.apiWithDialog('i/update', {
+					avatarDecorations: update,
+				});
+				$i.avatarDecorations = update;
+			},
+			update: async (payload) => {
+				const decoration = {
+					id: avatarDecoration.id,
+					url: avatarDecoration.url,
+					angle: payload.angle,
+					flipH: payload.flipH,
+					offsetX: payload.offsetX,
+					offsetY: payload.offsetY,
+				};
+				const update = [...$i.avatarDecorations];
+				update[index!] = decoration;
+				await os.apiWithDialog('i/update', {
+					avatarDecorations: update,
+				});
+				$i.avatarDecorations = update;
+			},
+			detach: async () => {
+				const update = [...$i.avatarDecorations];
+				update.splice(index!, 1);
+				await os.apiWithDialog('i/update', {
+					avatarDecorations: update,
+				});
+				$i.avatarDecorations = update;
+			},
+			closed: () => dispose(),
 		},
-		'detach': async () => {
-			const update = [...$i.avatarDecorations];
-			update.splice(index!, 1);
-			await os.apiWithDialog('i/update', {
-				avatarDecorations: update,
-			});
-			$i.avatarDecorations = update;
-		},
-		closed: () => dispose(),
-	});
+	);
 }
 
 function detachAllDecorations() {
@@ -135,7 +152,9 @@ function detachAllDecorations() {
 		type: 'warning',
 		text: i18n.ts.areYouSure,
 	}).then(async ({ canceled }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		await os.apiWithDialog('i/update', {
 			avatarDecorations: [],
 		});

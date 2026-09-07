@@ -9,7 +9,8 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiMainStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
-import { packUserDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { packUserDetailedForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiPagePushDependencies = UserPackingDependencies & {

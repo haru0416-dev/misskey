@@ -41,11 +41,8 @@ import {
 } from '../role/role-policy.js';
 import { packApiRoles } from '../role/roles.js';
 import { packApiSignin } from '../account/i.js';
-import {
-	packUserDetailedNotMeManyForApi,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminUsersDependencies = UserPackingDependencies & {
@@ -339,17 +336,23 @@ export async function handleApiAdminShowUsers(
 	switch (params.state) {
 		case 'admin': {
 			roleUserIds = await getAdministratorIds(deps);
-			if (roleUserIds.length === 0) return [];
+			if (roleUserIds.length === 0) {
+				return [];
+			}
 			break;
 		}
 		case 'moderator': {
 			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: false });
-			if (roleUserIds.length === 0) return [];
+			if (roleUserIds.length === 0) {
+				return [];
+			}
 			break;
 		}
 		case 'adminOrModerator': {
 			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: true });
-			if (roleUserIds.length === 0) return [];
+			if (roleUserIds.length === 0) {
+				return [];
+			}
 			break;
 		}
 	}

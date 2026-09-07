@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, type SQL } from 'drizzle-orm';
-import { noteDraft, type NoteDraftInsert, type NoteDraftRow } from '@/db/schema/note-draft.js';
+import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { noteDraft } from '@/db/schema/note-draft.js';
+import type { NoteDraftInsert, NoteDraftRow } from '@/db/schema/note-draft.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';

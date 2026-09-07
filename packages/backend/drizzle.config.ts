@@ -27,7 +27,9 @@ function resolvePassword(passwordConfig: { fromEnvironment: string } | { plainTe
 	const environmentVariable = 'fromEnvironment' in passwordConfig ? passwordConfig.fromEnvironment : undefined;
 	const password: string | null | undefined =
 		'plainText' in passwordConfig ? passwordConfig.plainText : process.env[passwordConfig.fromEnvironment];
-	if (password == null) throw new Error(`Environment variable ${environmentVariable} is required.`);
+	if (password == null) {
+		throw new Error(`Environment variable ${environmentVariable} is required.`);
+	}
 	return password;
 }
 

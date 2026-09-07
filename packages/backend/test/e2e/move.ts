@@ -11,26 +11,14 @@
 import * as assert from 'assert';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import {
-	fetchUserByIdOrFailFromDatabase,
-	openTestDatabase,
-	type TestDatabase,
-	updateUserInDatabase,
-} from '../fixtures.js';
-import {
-	api,
-	castAsError,
-	origin,
-	signup,
-	startJobQueue,
-	successfulApiCall,
-	type TestJobQueueRuntime,
-	uploadFile,
-} from '../utils.js';
+import { fetchUserByIdOrFailFromDatabase, openTestDatabase, updateUserInDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
+import { api, castAsError, origin, signup, startJobQueue, successfulApiCall, uploadFile } from '../utils.js';
+import type { TestJobQueueRuntime } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 const waitForMoveJobOptions = { timeout: 5000, interval: 50 };
-const waitForDelayedUnfollowJobOptions = { timeout: 15000, interval: 100 };
+const waitForDelayedUnfollowJobOptions = { timeout: 15_000, interval: 100 };
 
 describe('Account Move', () => {
 	let jq: TestJobQueueRuntime;
@@ -531,6 +519,15 @@ describe('Account Move', () => {
 			const newCarol = await fetchUserByIdOrFailFromDatabase(db, carol.id);
 			let newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
 			expect(newAlice.movedToUri).toBe(`${url.origin}/users/${bob.id}`);
+			const self = await api('i', {}, alice);
+			expect(self.status).toBe(200);
+			expect(self.body.movedTo).toBe(bob.id);
+			const moved = await api('users/show', { userId: alice.id }, eve);
+			expect(moved.status).toBe(200);
+			expect(moved.body.movedTo).toBe(bob.id);
+			const destination = await api('users/show', { userId: moved.body.movedTo! }, eve);
+			expect(destination.status).toBe(200);
+			expect(destination.body.id).toBe(bob.id);
 			expect(newAlice.followingCount).toBe(0);
 			expect(newAlice.followersCount).toBe(0);
 			expect(newCarol.followingCount).toBe(1);

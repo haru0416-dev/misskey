@@ -12,12 +12,18 @@ const DAMP = 700;
 const INITIAL_BIAS = 72;
 const INITIAL_N = 128;
 const DELIMITER = '-';
-const MAX_CODE_POINT = 0x10ffff;
+const MAX_CODE_POINT = 0x10_ff_ff;
 
 function digitOf(codePoint: number): number {
-	if (codePoint >= 0x30 && codePoint <= 0x39) return codePoint - 0x30 + 26; // 0-9
-	if (codePoint >= 0x41 && codePoint <= 0x5a) return codePoint - 0x41; // A-Z
-	if (codePoint >= 0x61 && codePoint <= 0x7a) return codePoint - 0x61; // a-z
+	if (codePoint >= 0x30 && codePoint <= 0x39) {
+		return codePoint - 0x30 + 26;
+	} // 0-9
+	if (codePoint >= 0x41 && codePoint <= 0x5a) {
+		return codePoint - 0x41;
+	} // A-Z
+	if (codePoint >= 0x61 && codePoint <= 0x7a) {
+		return codePoint - 0x61;
+	} // a-z
 	return BASE;
 }
 
@@ -46,7 +52,9 @@ export function decodePunycodeLabel(input: string): string | null {
 	if (delimiterIndex > 0) {
 		for (let i = 0; i < delimiterIndex; i++) {
 			const code = input.charCodeAt(i);
-			if (code >= 0x80) return null;
+			if (code >= 0x80) {
+				return null;
+			}
 			output.push(code);
 		}
 	}
@@ -59,28 +67,42 @@ export function decodePunycodeLabel(input: string): string | null {
 		const oldI = i;
 
 		for (let w = 1, k = BASE; ; k += BASE) {
-			if (index >= input.length) return null;
+			if (index >= input.length) {
+				return null;
+			}
 
 			const digit = digitOf(input.charCodeAt(index++));
-			if (digit >= BASE) return null;
-			if (digit > Math.floor((Number.MAX_SAFE_INTEGER - i) / w)) return null;
+			if (digit >= BASE) {
+				return null;
+			}
+			if (digit > Math.floor((Number.MAX_SAFE_INTEGER - i) / w)) {
+				return null;
+			}
 
 			i += digit * w;
 			const t = k <= bias ? T_MIN : k >= bias + T_MAX ? T_MAX : k - bias;
-			if (digit < t) break;
+			if (digit < t) {
+				break;
+			}
 
-			if (w > Math.floor(Number.MAX_SAFE_INTEGER / (BASE - t))) return null;
+			if (w > Math.floor(Number.MAX_SAFE_INTEGER / (BASE - t))) {
+				return null;
+			}
 			w *= BASE - t;
 		}
 
 		const out = output.length + 1;
 		bias = adaptBias(i - oldI, out, oldI === 0);
 
-		if (Math.floor(i / out) > Number.MAX_SAFE_INTEGER - n) return null;
+		if (Math.floor(i / out) > Number.MAX_SAFE_INTEGER - n) {
+			return null;
+		}
 		n += Math.floor(i / out);
 		i %= out;
 
-		if (n > MAX_CODE_POINT || (n >= 0xd800 && n <= 0xdfff)) return null;
+		if (n > MAX_CODE_POINT || (n >= 0xd8_00 && n <= 0xdf_ff)) {
+			return null;
+		}
 		output.splice(i++, 0, n);
 	}
 
@@ -95,7 +117,9 @@ export function encodePunycodeLabel(input: string): string | null {
 	const basicLength = handled;
 
 	let output = basic.map((c) => String.fromCharCode(c)).join('');
-	if (basicLength > 0) output += DELIMITER;
+	if (basicLength > 0) {
+		output += DELIMITER;
+	}
 
 	let n = INITIAL_N;
 	let bias = INITIAL_BIAS;
@@ -104,21 +128,31 @@ export function encodePunycodeLabel(input: string): string | null {
 	while (handled < codePoints.length) {
 		let m = MAX_CODE_POINT;
 		for (const c of codePoints) {
-			if (c >= n && c < m) m = c;
+			if (c >= n && c < m) {
+				m = c;
+			}
 		}
 
-		if (m - n > Math.floor((Number.MAX_SAFE_INTEGER - delta) / (handled + 1))) return null;
+		if (m - n > Math.floor((Number.MAX_SAFE_INTEGER - delta) / (handled + 1))) {
+			return null;
+		}
 		delta += (m - n) * (handled + 1);
 		n = m;
 
 		for (const c of codePoints) {
-			if (c < n && ++delta > Number.MAX_SAFE_INTEGER) return null;
-			if (c !== n) continue;
+			if (c < n && ++delta > Number.MAX_SAFE_INTEGER) {
+				return null;
+			}
+			if (c !== n) {
+				continue;
+			}
 
 			let q = delta;
 			for (let k = BASE; ; k += BASE) {
 				const t = k <= bias ? T_MIN : k >= bias + T_MAX ? T_MAX : k - bias;
-				if (q < t) break;
+				if (q < t) {
+					break;
+				}
 				output += charOf(t + ((q - t) % (BASE - t)));
 				q = Math.floor((q - t) / (BASE - t));
 			}
@@ -178,10 +212,14 @@ const NEUTRAL = /[\p{Script=Common}\p{Script=Inherited}]/u;
 function scriptsOf(label: string): Set<string> | null {
 	const found = new Set<string>();
 	for (const char of label) {
-		if (NEUTRAL.test(char)) continue;
+		if (NEUTRAL.test(char)) {
+			continue;
+		}
 		const match = SCRIPT_PATTERNS.find(([, pattern]) => pattern.test(char));
 		// 表に無い script が 1 文字でもあれば判定できない。
-		if (match == null) return null;
+		if (match == null) {
+			return null;
+		}
 		found.add(match[0]);
 	}
 	return found;
@@ -197,13 +235,17 @@ function allowedScriptsFor(locales: readonly string[]): Set<string> {
 		} catch {
 			continue;
 		}
-		for (const script of (iso == null ? undefined : SCRIPTS_OF_ISO15924[iso]) ?? []) allowed.add(script);
+		for (const script of (iso == null ? undefined : SCRIPTS_OF_ISO15924[iso]) ?? []) {
+			allowed.add(script);
+		}
 	}
 	return allowed;
 }
 
 function defaultLocales(): readonly string[] {
-	if (typeof navigator === 'undefined') return ['en'];
+	if (typeof navigator === 'undefined') {
+		return ['en'];
+	}
 	return navigator.languages.length > 0 ? navigator.languages : [navigator.language];
 }
 
@@ -221,7 +263,9 @@ function defaultLocales(): readonly string[] {
  * DNS のラベルは大小を区別しないため、判定も出力も小文字化した形で行う。
  */
 export function toUnicodeHost(host: string, locales: readonly string[] = defaultLocales()): string {
-	if (!host.includes(PREFIX)) return host;
+	if (!host.includes(PREFIX)) {
+		return host;
+	}
 
 	const allowed = allowedScriptsFor(locales);
 
@@ -229,14 +273,22 @@ export function toUnicodeHost(host: string, locales: readonly string[] = default
 		.split('.')
 		.map((label) => {
 			const lower = label.toLowerCase();
-			if (!lower.startsWith(PREFIX)) return label;
+			if (!lower.startsWith(PREFIX)) {
+				return label;
+			}
 
 			const decoded = decodePunycodeLabel(lower.slice(PREFIX.length));
-			if (decoded == null || decoded === '') return label;
-			if (encodePunycodeLabel(decoded) !== lower.slice(PREFIX.length)) return label;
+			if (decoded == null || decoded === '') {
+				return label;
+			}
+			if (encodePunycodeLabel(decoded) !== lower.slice(PREFIX.length)) {
+				return label;
+			}
 
 			const scripts = scriptsOf(decoded);
-			if (scripts == null || scripts.size !== 1) return label;
+			if (scripts == null || scripts.size !== 1) {
+				return label;
+			}
 
 			const [script] = scripts;
 			return script != null && allowed.has(script) ? decoded : label;

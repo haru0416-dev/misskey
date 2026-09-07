@@ -24,7 +24,8 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
-import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountSecurityDependencies = UserPackingDependencies & {
@@ -61,7 +62,9 @@ async function assertApiTwoFactorIfEnabled(
 	token: string | null | undefined,
 	errorId: string,
 ): Promise<void> {
-	if (!profile.twoFactorEnabled) return;
+	if (!profile.twoFactorEnabled) {
+		return;
+	}
 
 	if (token == null) {
 		throw twoFactorAuthenticationFailedError(errorId);
@@ -148,7 +151,9 @@ export async function handleApiIDeleteAccount(
 	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '05b2bab3-0825-4a3e-a13d-8793701af4de');
 
 	const userDetailed = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
-	if (userDetailed.isDeleted) return;
+	if (userDetailed.isDeleted) {
+		return;
+	}
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) {
@@ -200,11 +205,15 @@ export async function handleApiIUpdateEmail(
 	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '624fde07-67a7-4da7-b27d-086e529666b6');
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
-	if (!passwordMatched) throw iUpdateEmailIncorrectPasswordError();
+	if (!passwordMatched) {
+		throw iUpdateEmailIncorrectPasswordError();
+	}
 
 	if (params.email != null) {
 		const res = await deps.emailService.validateEmailForAccount(params.email);
-		if (!res.available) throw iUpdateEmailUnavailableError();
+		if (!res.available) {
+			throw iUpdateEmailUnavailableError();
+		}
 	} else if (deps.meta.emailRequiredForSignup) {
 		throw iUpdateEmailRequiredError();
 	}

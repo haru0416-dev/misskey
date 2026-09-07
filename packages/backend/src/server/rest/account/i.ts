@@ -6,7 +6,8 @@
 import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
-import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/account/SigninStore.js';
+import { listSigninHistoryFromDatabase } from '@/core/account/SigninStore.js';
+import type { SigninHistoryOrder } from '@/core/account/SigninStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -15,7 +16,8 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { userDeletedError } from '../error.js';
-import { packMeDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiIDependencies = UserPackingDependencies & {

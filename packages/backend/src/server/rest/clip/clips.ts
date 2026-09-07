@@ -40,9 +40,12 @@ import type { MiClip } from '@/models/Clip.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiClipDependencies = UserPackingDependencies & ApiRolePolicyDependencies;
@@ -63,7 +66,9 @@ function getDatabaseErrorCode(error: unknown): unknown {
 			driverError?: unknown;
 		};
 
-		if (candidate.code != null) return candidate.code;
+		if (candidate.code != null) {
+			return candidate.code;
+		}
 		current = candidate.driverError ?? candidate.cause;
 	}
 
@@ -299,8 +304,12 @@ export async function handleApiClipsShow(
 ): Promise<Packed<'Clip'>> {
 	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
-	if (clip == null) throw clipsShowNoSuchClipError();
-	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsShowNoSuchClipError();
+	if (clip == null) {
+		throw clipsShowNoSuchClipError();
+	}
+	if (!clip.isPublic && (me == null || clip.userId !== me.id)) {
+		throw clipsShowNoSuchClipError();
+	}
 
 	return await packClipForApi(deps, clip, me);
 }
@@ -312,7 +321,9 @@ export async function handleApiClipsMyFavorites(
 ): Promise<Packed<'Clip'>[]> {
 	parseApiParams(emptyParamDef, body);
 	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
-	if (clipIds.length === 0) return [];
+	if (clipIds.length === 0) {
+		return [];
+	}
 
 	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map((clip) => [clip.id, clip]));
 	const clips = clipIds.map((id) => clipById.get(id)).filter((clip): clip is MiClip => clip != null);
@@ -338,7 +349,9 @@ export async function handleApiClipsCreate(
 		},
 		(await getApiRolePolicies(deps, me)).clipLimit,
 	);
-	if (clip == null) throw clipsCreateTooManyClipsError();
+	if (clip == null) {
+		throw clipsCreateTooManyClipsError();
+	}
 
 	return await packClipForApi(deps, clip, me);
 }
@@ -350,7 +363,9 @@ export async function handleApiClipsUpdate(
 ): Promise<Packed<'Clip'>> {
 	const params = parseApiParams(clipsUpdateParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
-	if (clip == null) throw clipsUpdateNoSuchClipError();
+	if (clip == null) {
+		throw clipsUpdateNoSuchClipError();
+	}
 
 	await updateClipInDatabase(
 		deps.db,
@@ -372,7 +387,9 @@ export async function handleApiClipsDelete(
 ): Promise<void> {
 	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
-	if (clip == null) throw clipsDeleteNoSuchClipError();
+	if (clip == null) {
+		throw clipsDeleteNoSuchClipError();
+	}
 
 	await deleteClipInDatabase(deps.db, clip.id);
 }
@@ -384,7 +401,9 @@ export async function handleApiClipsAddNote(
 ): Promise<void> {
 	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
-	if (clip == null) throw clipsAddNoteNoSuchClipError();
+	if (clip == null) {
+		throw clipsAddNoteNoSuchClipError();
+	}
 
 	try {
 		const result = await createClipNoteWithinLimitInDatabase(
@@ -396,12 +415,22 @@ export async function handleApiClipsAddNote(
 			},
 			(await getApiRolePolicies(deps, me)).noteEachClipsLimit,
 		);
-		if (result === 'tooManyClipNotes') throw clipsAddNoteTooManyClipNotesError();
-		if (result === 'noSuchNote') throw clipsAddNoteNoSuchNoteError();
+		if (result === 'tooManyClipNotes') {
+			throw clipsAddNoteTooManyClipNotesError();
+		}
+		if (result === 'noSuchNote') {
+			throw clipsAddNoteNoSuchNoteError();
+		}
 	} catch (e: unknown) {
-		if (e instanceof ApiError) throw e;
-		if (isDuplicateKeyValueDatabaseError(e)) throw clipsAddNoteAlreadyClippedError();
-		if (getDatabaseErrorCode(e) === '23503') throw clipsAddNoteNoSuchNoteError();
+		if (e instanceof ApiError) {
+			throw e;
+		}
+		if (isDuplicateKeyValueDatabaseError(e)) {
+			throw clipsAddNoteAlreadyClippedError();
+		}
+		if (getDatabaseErrorCode(e) === '23503') {
+			throw clipsAddNoteNoSuchNoteError();
+		}
 		throw e;
 	}
 }
@@ -413,10 +442,14 @@ export async function handleApiClipsRemoveNote(
 ): Promise<void> {
 	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
-	if (clip == null) throw clipsRemoveNoteNoSuchClipError();
+	if (clip == null) {
+		throw clipsRemoveNoteNoSuchClipError();
+	}
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw clipsRemoveNoteNoSuchNoteError();
+	if (note == null) {
+		throw clipsRemoveNoteNoSuchNoteError();
+	}
 
 	await deleteClipNoteAndDecrementNoteClippedCountInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 }
@@ -437,14 +470,22 @@ export async function handleApiClipsNotes(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(clipNotesParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
-	if (clip == null) throw clipsNotesNoSuchClipError();
-	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsNotesNoSuchClipError();
+	if (clip == null) {
+		throw clipsNotesNoSuchClipError();
+	}
+	if (!clip.isPublic && (me == null || clip.userId !== me.id)) {
+		throw clipsNotesNoSuchClipError();
+	}
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) sinceId = genId(params.sinceDate);
-		if (params.untilDate) untilId = genId(params.untilDate);
+		if (params.sinceDate) {
+			sinceId = genId(params.sinceDate);
+		}
+		if (params.untilDate) {
+			untilId = genId(params.untilDate);
+		}
 	}
 
 	const notes = await listClipNotesFromDatabase(

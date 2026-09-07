@@ -72,49 +72,67 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import * as os from '@/os.js';
 
 const props = defineProps<{
-	excludeTypes?: typeof notificationTypes[number][] | null;
+	excludeTypes?: (typeof notificationTypes)[number][] | null;
 }>();
 
 const rootEl = useTemplateRef('rootEl');
 
-const paginator = prefer.useGroupedNotifications ? markRaw(new Paginator('i/notifications-grouped', {
-	limit: 20,
-	computedParams: computed(() => ({
-		...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
-	})),
-})) : markRaw(new Paginator('i/notifications', {
-	limit: 20,
-	computedParams: computed(() => ({
-		...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
-	})),
-}));
+const paginator = prefer.useGroupedNotifications
+	? markRaw(
+			new Paginator('i/notifications-grouped', {
+				limit: 20,
+				computedParams: computed(() => ({
+					...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
+				})),
+			}),
+		)
+	: markRaw(
+			new Paginator('i/notifications', {
+				limit: 20,
+				computedParams: computed(() => ({
+					...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
+				})),
+			}),
+		);
 
 function getNotificationSeparator(notifications: { createdAt: string }[], index: number, createdAt: string) {
 	const previousNotification = notifications[index - 1];
-	if (previousNotification == null || !isSeparatorNeeded(previousNotification.createdAt, createdAt)) return null;
+	if (previousNotification == null || !isSeparatorNeeded(previousNotification.createdAt, createdAt)) {
+		return null;
+	}
 	return getSeparatorInfo(previousNotification.createdAt, createdAt);
 }
 
 const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =
-	prefer.pollingInterval === 1 ? MIN_POLLING_INTERVAL * 1.5 * 1.5 :
-	prefer.pollingInterval === 2 ? MIN_POLLING_INTERVAL * 1.5 :
-	MIN_POLLING_INTERVAL;
+	prefer.pollingInterval === 1
+		? MIN_POLLING_INTERVAL * 1.5 * 1.5
+		: prefer.pollingInterval === 2
+			? MIN_POLLING_INTERVAL * 1.5
+			: MIN_POLLING_INTERVAL;
 
 if (!store.realtimeMode) {
-	useInterval(async () => {
-		paginator.fetchNewer({
-			toQueue: false,
-		});
-	}, POLLING_INTERVAL, {
-		immediate: false,
-		afterMounted: true,
-	});
+	useInterval(
+		async () => {
+			paginator.fetchNewer({
+				toQueue: false,
+			});
+		},
+		POLLING_INTERVAL,
+		{
+			immediate: false,
+			afterMounted: true,
+		},
+	);
 }
 
 function isTop() {
-	if (scrollContainer == null) return true;
-	if (rootEl.value == null) return true;
+	if (scrollContainer == null) {
+		return true;
+	}
+	if (rootEl.value == null) {
+		return true;
+	}
 	const scrollTop = scrollContainer.scrollTop;
 	const tlTop = rootEl.value.offsetTop - scrollContainer.offsetTop;
 	return scrollTop <= tlTop;
@@ -133,13 +151,19 @@ function onScrollContainerScroll() {
 	}
 }
 
-watch(rootEl, (el) => {
-	if (el && scrollContainer == null) {
-		scrollContainer = getScrollContainer(el);
-		if (scrollContainer == null) return;
-		scrollContainer.addEventListener('scroll', onScrollContainerScroll, { passive: true }); // ほんとはscrollendにしたいけどiosが非対応
-	}
-}, { immediate: true });
+watch(
+	rootEl,
+	(el) => {
+		if (el && scrollContainer == null) {
+			scrollContainer = getScrollContainer(el);
+			if (scrollContainer == null) {
+				return;
+			}
+			scrollContainer.addEventListener('scroll', onScrollContainerScroll, { passive: true }); // ほんとはscrollendにしたいけどiosが非対応
+		}
+	},
+	{ immediate: true },
+);
 
 const visibility = useDocumentVisibility();
 let isPausingUpdate = false;
@@ -147,7 +171,8 @@ let isPausingUpdate = false;
 watch(visibility, () => {
 	if (visibility.value === 'hidden') {
 		isPausingUpdate = true;
-	} else { // 'visible'
+	} else {
+		// 'visible'
 		isPausingUpdate = false;
 		if (isTop()) {
 			releaseQueue();
@@ -156,7 +181,9 @@ watch(visibility, () => {
 });
 
 function onNotification(notification: Misskey.entities.Notification) {
-	const isMuted = props.excludeTypes ? props.excludeTypes.includes(notification.type as typeof notificationTypes[number]) : false;
+	const isMuted = props.excludeTypes
+		? props.excludeTypes.includes(notification.type as (typeof notificationTypes)[number])
+		: false;
 	if (isMuted || window.document.visibilityState === 'visible') {
 		if (store.realtimeMode) {
 			useStream().send('readNotification');
@@ -182,7 +209,7 @@ async function dismissNotification(notification: Misskey.entities.Notification) 
 			notificationId: notification.id,
 			grouped: prefer.useGroupedNotifications,
 		});
-		paginator.items.value = paginator.items.value.filter(item => item.id !== notification.id);
+		paginator.items.value = paginator.items.value.filter((item) => item.id !== notification.id);
 	} catch {
 		await os.alert({
 			type: 'error',
@@ -197,9 +224,13 @@ onMounted(() => {
 	paginator.init();
 
 	if (paginator.computedParams) {
-		watch(paginator.computedParams, () => {
-			paginator.reload();
-		}, { immediate: false, deep: true });
+		watch(
+			paginator.computedParams,
+			() => {
+				paginator.reload();
+			},
+			{ immediate: false, deep: true },
+		);
 	}
 
 	if (store.realtimeMode) {
@@ -210,7 +241,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	if (connection) connection.dispose();
+	if (connection) {
+		connection.dispose();
+	}
 	if (scrollContainer != null) {
 		scrollContainer.removeEventListener('scroll', onScrollContainerScroll);
 	}

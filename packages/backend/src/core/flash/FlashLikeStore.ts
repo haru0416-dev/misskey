@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { flash } from '@/db/schema/flash.js';
-import { flashLike, type FlashLikeInsert, type FlashLikeRow } from '@/db/schema/flash-like.js';
+import { flashLike } from '@/db/schema/flash-like.js';
+import type { FlashLikeInsert, FlashLikeRow } from '@/db/schema/flash-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiFlash } from '@/models/Flash.js';
@@ -106,7 +108,9 @@ export async function listLikedFlashIdsByUserIdAndFlashIdsFromDatabase(
 	userId: MiUser['id'],
 	flashIds: MiFlash['id'][],
 ): Promise<MiFlash['id'][]> {
-	if (flashIds.length === 0) return [];
+	if (flashIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ flashId: flashLike.flashId })

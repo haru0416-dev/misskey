@@ -71,8 +71,11 @@ describe('core:net:dns-cache', () => {
 
 			const result = await new Promise<[string, number]>((resolve, reject) => {
 				resolver.lookup('example.com', {}, (err, address, family) => {
-					if (err) reject(err);
-					else resolve([address as string, family as number]);
+					if (err) {
+						reject(err);
+					} else {
+						resolve([address as string, family as number]);
+					}
 				});
 			});
 			expect(result).toStrictEqual(['1.2.3.4', 4]);
@@ -87,8 +90,11 @@ describe('core:net:dns-cache', () => {
 
 			const result = await new Promise<unknown>((resolve, reject) => {
 				resolver.lookup('example.com', { all: true }, (err, addresses) => {
-					if (err) reject(err);
-					else resolve(addresses);
+					if (err) {
+						reject(err);
+					} else {
+						resolve(addresses);
+					}
 				});
 			});
 			expect(result).toStrictEqual([
@@ -106,8 +112,11 @@ describe('core:net:dns-cache', () => {
 
 			const result = await new Promise<[string, number]>((resolve, reject) => {
 				resolver.lookup('example.com', { family: 6 }, (err, address, family) => {
-					if (err) reject(err);
-					else resolve([address as string, family as number]);
+					if (err) {
+						reject(err);
+					} else {
+						resolve([address as string, family as number]);
+					}
 				});
 			});
 			expect(result).toStrictEqual(['::1', 6]);

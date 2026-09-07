@@ -38,8 +38,12 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 
 	const payload = { ...data } as Record<string, unknown> & { i?: string | null };
 	if (method === 'POST') {
-		if ($i) payload.i = $i.token;
-		if (token !== undefined) payload.i = token;
+		if ($i) {
+			payload.i = $i.token;
+		}
+		if (token !== undefined) {
+			payload.i = token;
+		}
 	}
 	const query = new URLSearchParams(payload as Record<string, string>);
 
@@ -55,8 +59,12 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 		.then(async (res) => {
 			const body = res.status === 204 ? null : await res.json();
 
-			if (res.status === 200) return body as _ResT;
-			if (res.status === 204) return body as _ResT;
+			if (res.status === 200) {
+				return body as _ResT;
+			}
+			if (res.status === 204) {
+				return body as _ResT;
+			}
 			throw body.error;
 		});
 
@@ -82,7 +90,9 @@ export function misskeyApi<
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(endpoint: E, ...args: ApiRequestArgs<E, P>): Promise<_ResT> {
-	if (endpoint.includes('://')) throw new Error('invalid endpoint');
+	if (endpoint.includes('://')) {
+		throw new Error('invalid endpoint');
+	}
 	const [data = {} as ApiRequestData<E, P>, token, signal] = args;
 
 	if (token === undefined && data.i === undefined && signal == null && isCachedEndpoint(endpoint)) {
@@ -128,7 +138,9 @@ export function misskeyApiGet<
 		? [data?: ApiRequestData<E, P>]
 		: [data: ApiRequestData<E, P>]
 ): Promise<_ResT> {
-	if (endpoint.includes('://')) throw new Error('invalid endpoint');
+	if (endpoint.includes('://')) {
+		throw new Error('invalid endpoint');
+	}
 	const [data = {} as ApiRequestData<E, P>] = args;
 	if (isCachedEndpoint(endpoint)) {
 		return fetchMisskeyQuery({

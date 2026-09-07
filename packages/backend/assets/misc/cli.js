@@ -11,7 +11,9 @@ window.onload = async () => {
 
 	const api = (endpoint, data = {}) => {
 		const promise = new Promise((resolve, reject) => {
-			if (i) data.i = i;
+			if (i) {
+				data.i = i;
+			}
 
 			fetch(endpoint.indexOf('://') > -1 ? endpoint : `/api/${endpoint}`, {
 				headers: {

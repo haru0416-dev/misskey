@@ -58,7 +58,7 @@ import {
 import { isApiModerator } from '../role/role-policy.js';
 import { fetchOrRegisterFederatedInstance } from '../activitypub/federation.js';
 import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
-import { listWebhooksFromDatabase } from '@/core/webhook/WebhookStore.js';
+import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
@@ -88,9 +88,8 @@ import {
 	packUserLiteForApi,
 	packUserLiteManyForApi,
 	resolveAlsoKnownAsForApi,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
 } from './user.js';
+import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from './user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFollowingDependencies = UserPackingDependencies & {
@@ -288,7 +287,9 @@ async function getTargetUserOrThrow(
 	errorFactory: () => ApiError = followingCreateNoSuchUserError,
 ): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (user == null) throw errorFactory();
+	if (user == null) {
+		throw errorFactory();
+	}
 
 	return user;
 }
@@ -299,13 +300,19 @@ async function isNotificationAllowed(
 	type: FollowingNotificationType,
 	notifierId: MiUser['id'],
 ): Promise<boolean> {
-	if (notifieeId === notifierId) return false;
+	if (notifieeId === notifierId) {
+		return false;
+	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, notifieeId);
 	const receiveConfig = (profile.notificationRecieveConfig ?? {})[type];
-	if (receiveConfig?.type === 'never') return false;
+	if (receiveConfig?.type === 'never') {
+		return false;
+	}
 
-	if (await mutingExistsInDatabase(deps.db, notifieeId, notifierId)) return false;
+	if (await mutingExistsInDatabase(deps.db, notifieeId, notifierId)) {
+		return false;
+	}
 
 	switch (receiveConfig?.type) {
 		case 'following':
@@ -342,7 +349,9 @@ async function createFollowingNotification(
 		message?: string | null;
 	} = {},
 ): Promise<void> {
-	if (!(await isNotificationAllowed(deps, notifieeId, type, notifier.id))) return;
+	if (!(await isNotificationAllowed(deps, notifieeId, type, notifier.id))) {
+		return;
+	}
 
 	const notification: FollowingNotification = {
 		id: genId(),
@@ -366,7 +375,9 @@ async function createFollowingNotification(
 		delay(2000, undefined, { ref: false })
 			.then(async () => {
 				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
-				if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+				if (latestReadNotificationId && latestReadNotificationId >= redisId) {
+					return;
+				}
 				deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
 			})
 			.catch(() => {}),
@@ -387,11 +398,7 @@ async function enqueueUserWebhook(
 	type: 'follow' | 'followed' | 'unfollow',
 	user: Packed<'UserDetailedNotMe'> | Packed<'UserLite'>,
 ): Promise<void> {
-	const webhooks = await listWebhooksFromDatabase(deps.db, {
-		userId,
-		isActive: true,
-		on: [type],
-	});
+	const webhooks = await listActiveWebhooksByUserIdAndEventFromDatabase(deps.db, userId, type);
 
 	await Promise.all(
 		webhooks.map((webhook) => {
@@ -422,7 +429,9 @@ async function publishFollowToLocalFollower(
 	follower: MiUser,
 	followee: MiUser,
 ): Promise<void> {
-	if (!isLocalUser(follower)) return;
+	if (!isLocalUser(follower)) {
+		return;
+	}
 
 	const packedFollowee = (await packUserDetailedNotMeForApi(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'follow', packedFollowee);
@@ -435,7 +444,9 @@ async function publishFollowedToLocalFollowee(
 	follower: MiUser,
 	awaitNotification = false,
 ): Promise<void> {
-	if (!isLocalUser(followee)) return;
+	if (!isLocalUser(followee)) {
+		return;
+	}
 
 	const packedFollower = await packUserLiteForApi(deps, follower);
 	deps.publishMainStream?.(followee.id, 'followed', packedFollower);
@@ -453,7 +464,9 @@ export async function publishUnfollowToLocalFollower(
 	follower: MiUser,
 	followee: MiUser,
 ): Promise<void> {
-	if (!isLocalUser(follower)) return;
+	if (!isLocalUser(follower)) {
+		return;
+	}
 
 	const packedFollowee = (await packUserDetailedNotMeForApi(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
@@ -466,7 +479,9 @@ async function deliverFollowActivity(
 	followee: MiUser,
 	requestId?: string | null,
 ): Promise<void> {
-	if (!isLocalUser(follower) || !isRemoteUser(followee)) return;
+	if (!isLocalUser(follower) || !isRemoteUser(followee)) {
+		return;
+	}
 
 	const content = addActivityContext(deps.config, renderFollow(deps.config, follower, followee, requestId));
 	enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
@@ -540,7 +555,9 @@ async function incrementFollowing(
 	}
 
 	for (const user of [follower, followee]) {
-		if (user.movedToUri) continue;
+		if (user.movedToUri) {
+			continue;
+		}
 
 		const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
 			countNonMovedFolloweesByFollowerIdFromDatabase(deps.db, user.id),
@@ -582,7 +599,9 @@ async function deleteFollowingWithSideEffects(
 		follower.id,
 		followee.id,
 	);
-	if (!deleted) return false;
+	if (!deleted) {
+		return false;
+	}
 
 	await decrementFollowing(deps, follower, followee);
 	await publishUnfollowToLocalFollower(deps, follower, followee);
@@ -660,14 +679,20 @@ async function checkAutoAcceptIfMovedForApi(
 	followee: MiUser,
 ): Promise<boolean> {
 	const oldSelfIds = await resolveAlsoKnownAsForApi(deps, follower.alsoKnownAs);
-	if (!oldSelfIds || oldSelfIds.length === 0) return false;
+	if (!oldSelfIds || oldSelfIds.length === 0) {
+		return false;
+	}
 
 	const followerUri = getUserUri(deps.config, follower);
 	const oldSelfs = await listUsersByIdsFromDatabase(deps.db, oldSelfIds, { includeSuspended: true });
 
 	for (const oldSelf of oldSelfs) {
-		if (oldSelf.movedToUri !== followerUri) continue;
-		if (await followingExistsInDatabase(deps.db, oldSelf.id, followee.id)) return true;
+		if (oldSelf.movedToUri !== followerUri) {
+			continue;
+		}
+		if (await followingExistsInDatabase(deps.db, oldSelf.id, followee.id)) {
+			return true;
+		}
 	}
 
 	return false;
@@ -691,8 +716,12 @@ export async function handleApiFollowingCreate(
 		blockingExistsInDatabase(deps.db, followee.id, follower.id),
 	]);
 
-	if (blocking) throw clientError('You are blocking that user.', 'BLOCKING', '4e2206ec-aa4f-4960-b865-6c23ac38e2d9');
-	if (blocked) throw clientError('You are blocked by that user.', 'BLOCKED', 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
+	if (blocking) {
+		throw clientError('You are blocking that user.', 'BLOCKING', '4e2206ec-aa4f-4960-b865-6c23ac38e2d9');
+	}
+	if (blocked) {
+		throw clientError('You are blocked by that user.', 'BLOCKED', 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
+	}
 
 	if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
 		throw clientError(
@@ -892,7 +921,9 @@ export async function acceptAllFollowRequestsForApi(
 	followee: MiLocalUser,
 ): Promise<void> {
 	const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(deps.db, followee.id);
-	if (requests.length === 0) return;
+	if (requests.length === 0) {
+		return;
+	}
 
 	const followerIds = [...new Set(requests.map((request) => request.followerId))];
 	const [followeeProfile, followers] = await Promise.all([
@@ -908,7 +939,9 @@ export async function acceptAllFollowRequestsForApi(
 			limit(async () => {
 				try {
 					const currentRequest = await fetchFollowRequestFromDatabase(deps.db, request.followerId, followee.id);
-					if (currentRequest == null) return;
+					if (currentRequest == null) {
+						return;
+					}
 					const follower =
 						followerById.get(request.followerId) ??
 						(await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId));
@@ -1086,7 +1119,9 @@ export async function packFollowingsForApi(
 
 	return followings.map((following, index) => {
 		const followee = packedFollowees[index];
-		if (followee == null) throw new Error(`Packed followee is missing at index ${index}`);
+		if (followee == null) {
+			throw new Error(`Packed followee is missing at index ${index}`);
+		}
 		return {
 			id: following.id,
 			createdAt: parseId(following.id).date.toISOString(),
@@ -1134,7 +1169,9 @@ async function packFollowersForApi(
 
 	return followings.map((following, index) => {
 		const follower = packedFollowers[index];
-		if (follower == null) throw new Error(`Packed follower is missing at index ${index}`);
+		if (follower == null) {
+			throw new Error(`Packed follower is missing at index ${index}`);
+		}
 		return {
 			id: following.id,
 			createdAt: parseId(following.id).date.toISOString(),
@@ -1180,7 +1217,9 @@ const birthdayFilterSchema = z
 	.refine(
 		(value) => {
 			const [, month, day] = value.split('-').map((part) => Number.parseInt(part, 10));
-			if (month == null || day == null || month < 1 || month > 12 || day < 1) return false;
+			if (month == null || day == null || month < 1 || month > 12 || day < 1) {
+				return false;
+			}
 			return day <= MAX_DAY_OF_MONTH[month - 1]!;
 		},
 		{ message: 'must be an existing month and day' },
@@ -1239,18 +1278,26 @@ export async function handleApiUsersFollowers(
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
 			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullable(params.host));
-	if (user == null) throw usersFollowersNoSuchUserError();
+	if (user == null) {
+		throw usersFollowersNoSuchUserError();
+	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
 	if (profile.followersVisibility !== 'public' && !(await isApiModerator(deps, me))) {
 		if (profile.followersVisibility === 'private') {
-			if (me == null || me.id !== user.id) throw usersFollowersForbiddenError();
+			if (me == null || me.id !== user.id) {
+				throw usersFollowersForbiddenError();
+			}
 		} else if (profile.followersVisibility === 'followers') {
-			if (me == null) throw usersFollowersForbiddenError();
+			if (me == null) {
+				throw usersFollowersForbiddenError();
+			}
 			if (me.id !== user.id) {
 				const isFollowing = await followingExistsInDatabase(deps.db, me.id, user.id);
-				if (!isFollowing) throw usersFollowersForbiddenError();
+				if (!isFollowing) {
+					throw usersFollowersForbiddenError();
+				}
 			}
 		}
 	}
@@ -1276,18 +1323,26 @@ export async function handleApiUsersFollowing(
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
 			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullable(params.host));
-	if (user == null) throw usersFollowingNoSuchUserError();
+	if (user == null) {
+		throw usersFollowingNoSuchUserError();
+	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
 	if (profile.followingVisibility !== 'public' && !(await isApiModerator(deps, me))) {
 		if (profile.followingVisibility === 'private') {
-			if (me == null || me.id !== user.id) throw usersFollowingForbiddenError();
+			if (me == null || me.id !== user.id) {
+				throw usersFollowingForbiddenError();
+			}
 		} else if (profile.followingVisibility === 'followers') {
-			if (me == null) throw usersFollowingForbiddenError();
+			if (me == null) {
+				throw usersFollowingForbiddenError();
+			}
 			if (me.id !== user.id) {
 				const isFollowing = await followingExistsInDatabase(deps.db, me.id, user.id);
-				if (!isFollowing) throw usersFollowingForbiddenError();
+				if (!isFollowing) {
+					throw usersFollowingForbiddenError();
+				}
 			}
 		}
 	}

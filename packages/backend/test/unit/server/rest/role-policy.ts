@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
-import { getApiRolePolicies } from '@/server/rest/role/role-policy.js';
+import { getApiRolePolicies, getApiUserProfilePolicies } from '@/server/rest/role/role-policy.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
@@ -88,5 +88,62 @@ describe('getApiRolePolicies', () => {
 
 		expect(policies.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(policies.driveCapacityMb).toBe(DEFAULT_POLICIES.driveCapacityMb);
+	});
+
+	test('プロフィール用の2項目は優先度・既定値・不正値を全ポリシー取得と同じ条件で解決する', async () => {
+		const cases = [
+			{ meta: {}, roles: [], expected: { canPublicNote: true, chatAvailability: 'available' } },
+			{
+				meta: { canPublicNote: false, chatAvailability: 'unavailable' },
+				roles: [],
+				expected: { canPublicNote: false, chatAvailability: 'unavailable' },
+			},
+			{
+				meta: { canPublicNote: 'false', chatAvailability: null },
+				roles: [],
+				expected: { canPublicNote: true, chatAvailability: 'available' },
+			},
+			{
+				meta: {},
+				roles: [
+					role({ canPublicNote: { priority: 1, value: false }, chatAvailability: { priority: 1, value: 'readonly' } }),
+				],
+				expected: { canPublicNote: false, chatAvailability: 'readonly' },
+			},
+			{
+				meta: {},
+				roles: [
+					role({ canPublicNote: { priority: 1, value: true }, chatAvailability: { priority: 1, value: 'available' } }),
+					role({
+						canPublicNote: { priority: 2, value: false },
+						chatAvailability: { priority: 2, value: 'unavailable' },
+					}),
+				],
+				expected: { canPublicNote: false, chatAvailability: 'unavailable' },
+			},
+			{
+				meta: {},
+				roles: [
+					role({ canPublicNote: { priority: 2, value: false }, chatAvailability: { priority: 2, value: 'readonly' } }),
+					role({
+						canPublicNote: { priority: 2, useDefault: true },
+						chatAvailability: { priority: 2, value: 'available' },
+					}),
+				],
+				expected: { canPublicNote: true, chatAvailability: 'available' },
+			},
+			{
+				meta: {},
+				roles: [role({ canPublicNote: { priority: 1, value: 'false' }, chatAvailability: null })],
+				expected: { canPublicNote: true, chatAvailability: 'available' },
+			},
+		];
+		for (const entry of cases) {
+			const dependencies = deps(entry.meta);
+			const profile = getApiUserProfilePolicies(dependencies, entry.roles);
+			expect(profile).toEqual(entry.expected);
+			const all = await getApiRolePolicies(dependencies, null, entry.roles);
+			expect(profile).toEqual({ canPublicNote: all.canPublicNote, chatAvailability: all.chatAvailability });
+		}
 	});
 });

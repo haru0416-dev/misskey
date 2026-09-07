@@ -164,33 +164,33 @@ type StringDefToType<T extends TypeStringef> = T extends 'null'
 				: T extends 'string'
 					? string | Date
 					: T extends 'array'
-						? ReadonlyArray<unknown>
+						? readonly unknown[]
 						: T extends 'object'
 							? Record<string, unknown>
 							: any;
 
 // https://swagger.io/specification/?sbsearch=optional#schema-object
 type OfSchema = {
-	readonly anyOf?: ReadonlyArray<Schema>;
-	readonly oneOf?: ReadonlyArray<Schema>;
-	readonly allOf?: ReadonlyArray<Schema>;
+	readonly anyOf?: readonly Schema[];
+	readonly oneOf?: readonly Schema[];
+	readonly allOf?: readonly Schema[];
 };
 
 export interface Schema extends OfSchema {
 	readonly type?: TypeStringef;
 	readonly nullable?: boolean;
 	readonly optional?: boolean;
-	readonly prefixItems?: ReadonlyArray<Schema>;
+	readonly prefixItems?: readonly Schema[];
 	readonly items?: Schema;
 	readonly unevaluatedItems?: Schema | boolean;
 	readonly properties?: Obj;
-	readonly required?: ReadonlyArray<Extract<keyof NonNullable<this['properties']>, string>>;
+	readonly required?: readonly Extract<keyof NonNullable<this['properties']>, string>[];
 	readonly description?: string;
 	readonly example?: unknown;
 	readonly format?: string;
 	readonly ref?: keyof typeof refs;
 	readonly selfRef?: boolean;
-	readonly enum?: ReadonlyArray<string | null>;
+	readonly enum?: readonly (string | null)[];
 	readonly default?: (this['type'] extends TypeStringef ? StringDefToType<this['type']> : unknown) | null;
 	readonly maxLength?: number;
 	readonly minLength?: number;
@@ -212,7 +212,7 @@ type Obj = Record<string, Schema>;
 
 // https://github.com/misskey-dev/misskey/issues/8535
 // TypeScript のスタック深度超過を避けるため、UnionToIntersection (正確には内部の `infer` 式) で型推論させる。
-type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> = UnionToIntersection<
+type ObjType<s extends Obj, RequiredProps extends readonly (keyof s)[]> = UnionToIntersection<
 	{ -readonly [R in RequiredPropertyNames<s>]-?: SchemaType<s[R]> } & {
 		-readonly [R in RequiredProps[number]]-?: SchemaType<s[R]>;
 	} & { -readonly [P in keyof s]?: SchemaType<s[P]> }
@@ -228,9 +228,9 @@ type NullOrUndefined<p extends Schema, T> =
 // `U extends unknown` (`any` ではない) は、U の union 分配と intersection の推論を両立する any-free の定石。
 type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
-type ArrayToIntersection<T extends ReadonlyArray<Schema>> = T extends readonly [infer Head, ...infer Tail]
+type ArrayToIntersection<T extends readonly Schema[]> = T extends readonly [infer Head, ...infer Tail]
 	? Head extends Schema
-		? Tail extends ReadonlyArray<Schema>
+		? Tail extends readonly Schema[]
 			? Tail extends []
 				? SchemaType<Head>
 				: SchemaType<Head> & ArrayToIntersection<Tail>
@@ -248,23 +248,23 @@ type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X
 type UnionObjType<
 	s extends Obj,
 	a extends readonly any[],
-	X extends ReadonlyArray<keyof s> = a[number],
+	X extends readonly (keyof s)[] = a[number],
 > = X extends unknown ? ObjType<s, X> : never;
-type ArrayUnion<T> = T extends unknown ? Array<T> : never;
-type ArrayToTuple<X extends ReadonlyArray<Schema>> = { [K in keyof X]: SchemaType<X[K]> };
+type ArrayUnion<T> = T extends unknown ? T[] : never;
+type ArrayToTuple<X extends readonly Schema[]> = { [K in keyof X]: SchemaType<X[K]> };
 
 type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
 	? Packed<p['ref']>
 	: p['properties'] extends NonNullable<Obj>
-		? p['anyOf'] extends ReadonlyArray<Schema>
-			? p['anyOf'][number]['required'] extends ReadonlyArray<keyof p['properties']>
+		? p['anyOf'] extends readonly Schema[]
+			? p['anyOf'][number]['required'] extends readonly (keyof p['properties'])[]
 				? UnionObjType<p['properties'], NonNullable<p['anyOf'][number]['required']>> &
 						ObjType<p['properties'], NonNullable<p['required']>>
 				: never
 			: ObjType<p['properties'], NonNullable<p['required']>>
-		: p['anyOf'] extends ReadonlyArray<Schema>
+		: p['anyOf'] extends readonly Schema[]
 			? UnionSchemaType<p['anyOf']>
-			: p['allOf'] extends ReadonlyArray<Schema>
+			: p['allOf'] extends readonly Schema[]
 				? ArrayToIntersection<p['allOf']>
 				: // この分岐の型を持つフィールドには、外部ライブラリの具体的な設定オブジェクトを代入する。
 					// Record<string, unknown> に狭めると構造的代入が壊れるため、any を使用する。
@@ -296,14 +296,14 @@ type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 						? ObjectSchemaTypeDef<p>
 						: p['type'] extends 'array'
 							? p['items'] extends OfSchema
-								? p['items']['anyOf'] extends ReadonlyArray<Schema>
+								? p['items']['anyOf'] extends readonly Schema[]
 									? UnionSchemaType<NonNullable<p['items']['anyOf']>>[]
-									: p['items']['oneOf'] extends ReadonlyArray<Schema>
+									: p['items']['oneOf'] extends readonly Schema[]
 										? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>>
-										: p['items']['allOf'] extends ReadonlyArray<Schema>
+										: p['items']['allOf'] extends readonly Schema[]
 											? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[]
 											: never
-								: p['prefixItems'] extends ReadonlyArray<Schema>
+								: p['prefixItems'] extends readonly Schema[]
 									? p['items'] extends NonNullable<Schema>
 										? [...ArrayToTuple<p['prefixItems']>, ...SchemaType<p['items']>[]]
 										: p['items'] extends false
@@ -314,11 +314,11 @@ type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 									: p['items'] extends NonNullable<Schema>
 										? SchemaType<p['items']>[]
 										: any[]
-							: p['anyOf'] extends ReadonlyArray<Schema>
+							: p['anyOf'] extends readonly Schema[]
 								? UnionSchemaType<p['anyOf']>
-								: p['allOf'] extends ReadonlyArray<Schema>
+								: p['allOf'] extends readonly Schema[]
 									? ArrayToIntersection<p['allOf']>
-									: p['oneOf'] extends ReadonlyArray<Schema>
+									: p['oneOf'] extends readonly Schema[]
 										? UnionSchemaType<p['oneOf']>
 										: any;
 

@@ -36,9 +36,14 @@ afterEach(() => {
 
 test('closes the notification and resolves waitUntil when focus fails', async () => {
 	let notificationClick: ((event: unknown) => void) | undefined;
-	vi.stubGlobal('addEventListener', vi.fn((type: string, listener: (event: unknown) => void) => {
-		if (type === 'notificationclick') notificationClick = listener;
-	}));
+	vi.stubGlobal(
+		'addEventListener',
+		vi.fn((type: string, listener: (event: unknown) => void) => {
+			if (type === 'notificationclick') {
+				notificationClick = listener;
+			}
+		}),
+	);
 	const focus = vi.fn().mockRejectedValue(new Error('focus failed'));
 	openClient.mockResolvedValue({ focus });
 	await import('@/sw.js');

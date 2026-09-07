@@ -4045,7 +4045,7 @@ export type components = {
             url: string | null;
             /** Format: uri */
             uri: string | null;
-            /** Format: uri */
+            /** Format: id */
             movedTo: string | null;
             alsoKnownAs: string[] | null;
             /** Format: date-time */

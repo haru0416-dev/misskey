@@ -239,8 +239,31 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-import { computed, defineAsyncComponent, inject, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, unref, watch, shallowRef, reactive, isRef } from 'vue';
-import type { MenuItem, InnerMenuItem, MenuPending, MenuAction, MenuSwitch, MenuRadio, MenuRadioOption, MenuParent } from '@/types/menu.js';
+import {
+	computed,
+	defineAsyncComponent,
+	inject,
+	nextTick,
+	onBeforeUnmount,
+	onMounted,
+	ref,
+	useTemplateRef,
+	unref,
+	watch,
+	shallowRef,
+	reactive,
+	isRef,
+} from 'vue';
+import type {
+	MenuItem,
+	InnerMenuItem,
+	MenuPending,
+	MenuAction,
+	MenuSwitch,
+	MenuRadio,
+	MenuRadioOption,
+	MenuParent,
+} from '@/types/menu.js';
 import type { Keymap } from '@/utility/hotkey.js';
 import MkSwitchButton from '@/components/form/MkSwitch.Button.vue';
 import * as os from '@/os.js';
@@ -289,7 +312,7 @@ const keymap = {
 		allowRepeat: true,
 		callback: () => focusDown(),
 	},
-	'esc': {
+	esc: {
 		allowRepeat: true,
 		callback: () => close(false),
 	},
@@ -299,25 +322,33 @@ const childShowingItem = ref<MenuItem | null>();
 
 let preferClick = isTouchUsing || props.asDrawer;
 
-watch(() => props.items, () => {
-	const items = [...props.items].filter(item => item !== undefined) as (NonNullable<MenuItem> | MenuPending)[];
+watch(
+	() => props.items,
+	() => {
+		const items = [...props.items].filter((item) => item !== undefined) as (NonNullable<MenuItem> | MenuPending)[];
 
-	for (let i = 0; i < items.length; i++) {
-		const item = items[i];
-		if (item == null) continue;
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			if (item == null) {
+				continue;
+			}
 
-		if ('then' in item) {
-			items[i] = { type: 'pending' };
-			item.then(actualItem => {
-				if (items2.value?.[i]) items2.value[i] = actualItem;
-			});
+			if ('then' in item) {
+				items[i] = { type: 'pending' };
+				item.then((actualItem) => {
+					if (items2.value?.[i]) {
+						items2.value[i] = actualItem;
+					}
+				});
+			}
 		}
-	}
 
-	items2.value = items as InnerMenuItem[];
-}, {
-	immediate: true,
-});
+		items2.value = items as InnerMenuItem[];
+	},
+	{
+		immediate: true,
+	},
+);
 
 const childMenu = ref<MenuItem[] | null>();
 const childMenuKey = ref(0);
@@ -342,11 +373,13 @@ function onItemMouseEnter() {
 }
 
 function onItemMouseLeave() {
-	if (childCloseTimer) window.clearTimeout(childCloseTimer);
+	if (childCloseTimer) {
+		window.clearTimeout(childCloseTimer);
+	}
 }
 
 async function showRadioOptions(item: MenuRadio, ev: MouseEvent | PointerEvent | KeyboardEvent) {
-	const children: MenuItem[] = item.options.map<MenuRadioOption>(def => {
+	const children: MenuItem[] = item.options.map<MenuRadioOption>((def) => {
 		return {
 			type: 'radioOption',
 			text: def.label,
@@ -361,9 +394,8 @@ async function showRadioOptions(item: MenuRadio, ev: MouseEvent | PointerEvent |
 			active: computed(() => {
 				if (isRef(item.ref)) {
 					return item.ref.value === def.value;
-				} else {
-					return item.ref === def.value;
 				}
+				return item.ref === def.value;
 			}),
 		};
 	});
@@ -387,12 +419,11 @@ async function showChildren(item: MenuParent, ev: MouseEvent | PointerEvent | Ke
 	const children: MenuItem[] = await (async () => {
 		if (childrenCache.has(item)) {
 			return childrenCache.get(item)!;
+		}
+		if (typeof item.children === 'function') {
+			return Promise.resolve(item.children());
 		} else {
-			if (typeof item.children === 'function') {
-				return Promise.resolve(item.children());
-			} else {
-				return item.children;
-			}
+			return item.children;
 		}
 	})();
 
@@ -414,7 +445,9 @@ async function showChildren(item: MenuParent, ev: MouseEvent | PointerEvent | Ke
 function clicked(fn: MenuAction, ev: PointerEvent, doClose = true) {
 	fn(ev);
 
-	if (!doClose) return;
+	if (!doClose) {
+		return;
+	}
 	close(true);
 }
 
@@ -427,7 +460,9 @@ function close(actioned = false) {
 }
 
 function switchItem(item: MenuSwitch) {
-	if (item.disabled !== undefined && (typeof item.disabled === 'boolean' ? item.disabled : item.disabled.value)) return;
+	if (item.disabled !== undefined && (typeof item.disabled === 'boolean' ? item.disabled : item.disabled.value)) {
+		return;
+	}
 	if (isRef(item.ref)) {
 		item.ref.value = !item.ref.value;
 	} else {
@@ -437,32 +472,44 @@ function switchItem(item: MenuSwitch) {
 }
 
 function focusUp() {
-	if (disposed) return;
-	if (!itemsEl.value?.contains(window.document.activeElement)) return;
+	if (disposed) {
+		return;
+	}
+	if (!itemsEl.value?.contains(window.document.activeElement)) {
+		return;
+	}
 
 	const focusableElements = Array.from(itemsEl.value.children).filter(isFocusable);
-	const activeIndex = focusableElements.findIndex(el => el === window.document.activeElement);
-	const targetIndex = (activeIndex !== -1 && activeIndex !== 0) ? (activeIndex - 1) : (focusableElements.length - 1);
+	const activeIndex = focusableElements.findIndex((el) => el === window.document.activeElement);
+	const targetIndex = activeIndex !== -1 && activeIndex !== 0 ? activeIndex - 1 : focusableElements.length - 1;
 	const targetElement = focusableElements.at(targetIndex) ?? itemsEl.value;
 
 	targetElement.focus();
 }
 
 function focusDown() {
-	if (disposed) return;
-	if (!itemsEl.value?.contains(window.document.activeElement)) return;
+	if (disposed) {
+		return;
+	}
+	if (!itemsEl.value?.contains(window.document.activeElement)) {
+		return;
+	}
 
 	const focusableElements = Array.from(itemsEl.value.children).filter(isFocusable);
-	const activeIndex = focusableElements.findIndex(el => el === window.document.activeElement);
-	const targetIndex = (activeIndex !== -1 && activeIndex !== (focusableElements.length - 1)) ? (activeIndex + 1) : 0;
+	const activeIndex = focusableElements.findIndex((el) => el === window.document.activeElement);
+	const targetIndex = activeIndex !== -1 && activeIndex !== focusableElements.length - 1 ? activeIndex + 1 : 0;
 	const targetElement = focusableElements.at(targetIndex) ?? itemsEl.value;
 
 	targetElement.focus();
 }
 
 const onGlobalFocusin = (ev: FocusEvent) => {
-	if (disposed) return;
-	if (itemsEl.value?.parentElement?.contains(getNodeOrNull(ev.target))) return;
+	if (disposed) {
+		return;
+	}
+	if (itemsEl.value?.parentElement?.contains(getNodeOrNull(ev.target))) {
+		return;
+	}
 	nextTick(() => {
 		if (itemsEl.value != null && isFocusable(itemsEl.value)) {
 			itemsEl.value.focus({ preventScroll: true });
@@ -472,9 +519,15 @@ const onGlobalFocusin = (ev: FocusEvent) => {
 };
 
 const onGlobalMousedown = (ev: MouseEvent) => {
-	if (disposed) return;
-	if (childTarget.value?.contains(getNodeOrNull(ev.target))) return;
-	if (child.value?.checkHit(ev)) return;
+	if (disposed) {
+		return;
+	}
+	if (childTarget.value?.contains(getNodeOrNull(ev.target))) {
+		return;
+	}
+	if (child.value?.checkHit(ev)) {
+		return;
+	}
 	closeChild();
 };
 
@@ -526,9 +579,15 @@ const guardPolygon = computed(() =>
 );
 
 function parentMouseMove(ev: MouseEvent) {
-	if (props.debugDisablePredictionCone) return;
-	if (isTouchUsing) return;
-	if (child.value == null || child.value.rootElement == null) return;
+	if (props.debugDisablePredictionCone) {
+		return;
+	}
+	if (isTouchUsing) {
+		return;
+	}
+	if (child.value == null || child.value.rootElement == null) {
+		return;
+	}
 
 	ev.stopPropagation();
 
@@ -543,16 +602,18 @@ function parentMouseMove(ev: MouseEvent) {
 	const SCALE_FACTOR_COMPUTE_DISTANCE = 300; // コーンの広さが最大になる距離(px)
 	const localMouseX = ev.clientX - itemBounding.left;
 	const localMouseY = ev.clientY - rootBounding.top;
-	const scaleFactor = isChildRight ? Math.min((itemBounding.width - localMouseX), SCALE_FACTOR_COMPUTE_DISTANCE) / SCALE_FACTOR_COMPUTE_DISTANCE : Math.min(localMouseX, SCALE_FACTOR_COMPUTE_DISTANCE) / SCALE_FACTOR_COMPUTE_DISTANCE;
+	const scaleFactor = isChildRight
+		? Math.min(itemBounding.width - localMouseX, SCALE_FACTOR_COMPUTE_DISTANCE) / SCALE_FACTOR_COMPUTE_DISTANCE
+		: Math.min(localMouseX, SCALE_FACTOR_COMPUTE_DISTANCE) / SCALE_FACTOR_COMPUTE_DISTANCE;
 	const cursorSideXPadding = isChildRight ? CURSOR_SIDE_X_PADDING : -CURSOR_SIDE_X_PADDING;
-	const childSideYPadding = CHILD_SIDE_Y_PADDING_BASE + (CHILD_SIDE_Y_PADDING_EXTEND * scaleFactor);
+	const childSideYPadding = CHILD_SIDE_Y_PADDING_BASE + CHILD_SIDE_Y_PADDING_EXTEND * scaleFactor;
 
 	guard.enabled = true;
 	guard.top = itemsEl.value!.scrollTop;
 	guard.cursorSideX = localMouseX - cursorSideXPadding;
 	guard.cursorSideY = localMouseY;
-	guard.childSideTopY = (childBounding.top - rootBounding.top) - childSideYPadding;
-	guard.childSideBottomY = (childBounding.bottom - rootBounding.top) + childSideYPadding;
+	guard.childSideTopY = childBounding.top - rootBounding.top - childSideYPadding;
+	guard.childSideBottomY = childBounding.bottom - rootBounding.top + childSideYPadding;
 	guard.direction = isChildRight ? 'toRight' : 'toLeft';
 }
 

@@ -7,7 +7,8 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
 import mime from 'mime-types';
 import sharp from 'sharp';
 import type { Config } from '@/config.js';
@@ -35,11 +36,15 @@ function safeResolve(root: string, path: string): string | null {
 		return null;
 	}
 
-	if (decoded.includes('\0')) return null;
+	if (decoded.includes('\0')) {
+		return null;
+	}
 
 	const fullPath = resolve(root, decoded);
 	const rootPrefix = root.endsWith(sep) ? root : `${root}${sep}`;
-	if (fullPath !== root && !fullPath.startsWith(rootPrefix)) return null;
+	if (fullPath !== root && !fullPath.startsWith(rootPrefix)) {
+		return null;
+	}
 
 	return fullPath;
 }
@@ -83,7 +88,9 @@ function registerStaticMount(app: Hono, mount: StaticMount): void {
 	const path = `${mount.prefix}*`;
 	const handler = async (c: Context) => {
 		const filePath = safeResolve(mount.root, pathAfter(c.req.url, mount.prefix));
-		if (filePath == null) return c.body(null, 404);
+		if (filePath == null) {
+			return c.body(null, 404);
+		}
 
 		return await serveFile(c, filePath, mount.cacheControl);
 	};
@@ -109,7 +116,9 @@ function registerViteDevProxy(app: Hono, opts: { prefix: string; upstream: strin
 			},
 			redirect: 'manual',
 		}).catch(() => null);
-		if (res == null) return c.body(null, 502);
+		if (res == null) {
+			return c.body(null, 502);
+		}
 
 		const headers = new Headers(res.headers);
 		// fetch がボディを展開済みのため、エンコーディング/長さ系ヘッダは付け直さない
@@ -200,27 +209,37 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	);
 	app.get('/fluent-emoji/*', async (c) => {
 		const path = emojiPath(c, '/fluent-emoji/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) return c.body(null, 404);
+		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+			return c.body(null, 404);
+		}
 		return await serveFile(c, resolve(fluentEmojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.on('HEAD', '/fluent-emoji/*', async (c) => {
 		const path = emojiPath(c, '/fluent-emoji/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) return c.body(null, 404);
+		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+			return c.body(null, 404);
+		}
 		return await serveFile(c, resolve(fluentEmojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.get('/twemoji/*', async (c) => {
 		const path = emojiPath(c, '/twemoji/');
-		if (!path.match(/^[0-9a-f-]+\.svg$/)) return c.body(null, 404);
+		if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+			return c.body(null, 404);
+		}
 		return await serveFile(c, resolve(twemojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.on('HEAD', '/twemoji/*', async (c) => {
 		const path = emojiPath(c, '/twemoji/');
-		if (!path.match(/^[0-9a-f-]+\.svg$/)) return c.body(null, 404);
+		if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+			return c.body(null, 404);
+		}
 		return await serveFile(c, resolve(twemojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.get('/twemoji-badge/*', async (c) => {
 		const path = emojiPath(c, '/twemoji-badge/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) return c.body(null, 404);
+		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+			return c.body(null, 404);
+		}
 
 		const mask = await sharp(resolve(twemojiDir, `${path.replace('.png', '')}.svg`), { density: 1000 })
 			.resize(488, 488)

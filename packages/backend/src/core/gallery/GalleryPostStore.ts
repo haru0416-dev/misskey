@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
-import { galleryPost, type GalleryPostInsert, type GalleryPostRow } from '@/db/schema/gallery-post.js';
+import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { galleryPost } from '@/db/schema/gallery-post.js';
+import type { GalleryPostInsert, GalleryPostRow } from '@/db/schema/gallery-post.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -126,7 +128,9 @@ export async function listGalleryPostsByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiGalleryPost['id'][],
 ): Promise<MiGalleryPost[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db.select().from(galleryPost).where(inArray(galleryPost.id, ids));
 

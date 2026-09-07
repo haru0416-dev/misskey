@@ -140,7 +140,7 @@ import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 const emojiPaletteForReaction = prefer.model('emojiPaletteForReaction');
 const emojiPaletteForReactionDef = computed<MkSelectItem[]>(() => [
 	{ label: `(${i18n.ts.auto})`, value: null },
-	...prefer.emojiPalettes.map(palette => ({
+	...prefer.emojiPalettes.map((palette) => ({
 		label: palette.name === '' ? `(${i18n.ts.noName})` : palette.name,
 		value: palette.id,
 	})),
@@ -148,7 +148,7 @@ const emojiPaletteForReactionDef = computed<MkSelectItem[]>(() => [
 const emojiPaletteForMain = prefer.model('emojiPaletteForMain');
 const emojiPaletteForMainDef = computed<MkSelectItem[]>(() => [
 	{ label: `(${i18n.ts.auto})`, value: null },
-	...prefer.emojiPalettes.map(palette => ({
+	...prefer.emojiPalettes.map((palette) => ({
 		label: palette.name === '' ? `(${i18n.ts.noName})` : palette.name,
 		value: palette.id,
 	})),
@@ -186,8 +186,12 @@ const palettesSyncEnabled = ref(prefer.isSyncEnabled('emojiPalettes'));
 function changePalettesSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('emojiPalettes').then((res) => {
-			if (res == null) return;
-			if (res.enabled) palettesSyncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				palettesSyncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('emojiPalettes');
@@ -207,36 +211,43 @@ function addPalette() {
 }
 
 function updatePaletteEmojis(id: string, emojis: string[]) {
-	prefer.commit('emojiPalettes', prefer.emojiPalettes.map(palette => {
-		if (palette.id === id) {
-			return {
-				...palette,
-				emojis,
-			};
-		} else {
+	prefer.commit(
+		'emojiPalettes',
+		prefer.emojiPalettes.map((palette) => {
+			if (palette.id === id) {
+				return {
+					...palette,
+					emojis,
+				};
+			}
 			return palette;
-		}
-	}));
+		}),
+	);
 }
 
 function updatePaletteName(id: string, name: string) {
-	prefer.commit('emojiPalettes', prefer.emojiPalettes.map(palette => {
-		if (palette.id === id) {
-			return {
-				...palette,
-				name,
-			};
-		} else {
+	prefer.commit(
+		'emojiPalettes',
+		prefer.emojiPalettes.map((palette) => {
+			if (palette.id === id) {
+				return {
+					...palette,
+					name,
+				};
+			}
 			return palette;
-		}
-	}));
+		}),
+	);
 }
 
 function delPalette(id: string) {
 	if (prefer.emojiPalettes.length === 1) {
 		addPalette();
 	}
-	prefer.commit('emojiPalettes', prefer.emojiPalettes.filter(palette => palette.id !== id));
+	prefer.commit(
+		'emojiPalettes',
+		prefer.emojiPalettes.filter((palette) => palette.id !== id),
+	);
 	if (prefer.emojiPaletteForMain === id) {
 		prefer.commit('emojiPaletteForMain', null);
 	}

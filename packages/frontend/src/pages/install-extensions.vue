@@ -201,11 +201,15 @@ async function _fetch_() {
 }
 
 async function install() {
-	if (!data.value) return;
+	if (!data.value) {
+		return;
+	}
 
 	switch (data.value.type) {
 		case 'plugin':
-			if (!data.value.meta) return;
+			if (!data.value.meta) {
+				return;
+			}
 			try {
 				await installPlugin(data.value.raw, data.value.meta as AiScriptPluginMeta);
 				os.success();
@@ -222,7 +226,9 @@ async function install() {
 			}
 			break;
 		case 'theme':
-			if (!data.value.meta) return;
+			if (!data.value.meta) {
+				return;
+			}
 			await installTheme(data.value.raw);
 			os.success();
 			window.setTimeout(() => {

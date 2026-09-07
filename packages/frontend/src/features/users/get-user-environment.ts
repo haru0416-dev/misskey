@@ -38,13 +38,17 @@ type UserAgentBrandCandidate = Record<string, unknown> & {
 };
 
 function isUserAgentHighEntropyData(value: unknown): value is UserAgentHighEntropyData {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
 	const data = value as UserAgentHighEntropyDataCandidate;
 	return (
 		typeof data.platformVersion === 'string' &&
 		Array.isArray(data.fullVersionList) &&
 		data.fullVersionList.every((item) => {
-			if (typeof item !== 'object' || item === null) return false;
+			if (typeof item !== 'object' || item === null) {
+				return false;
+			}
 			const brand = item as UserAgentBrandCandidate;
 			return typeof brand.brand === 'string' && typeof brand.version === 'string';
 		})
@@ -58,7 +62,9 @@ export async function getUserEnvironment(): Promise<UserEnvironment> {
 				'fullVersionList',
 				'platformVersion',
 			]);
-			if (!isUserAgentHighEntropyData(uaData)) return getViaUa();
+			if (!isUserAgentHighEntropyData(uaData)) {
+				return getViaUa();
+			}
 			const platform = navigator.userAgentData.platform;
 
 			let osVersion = 'v' + uaData.platformVersion;

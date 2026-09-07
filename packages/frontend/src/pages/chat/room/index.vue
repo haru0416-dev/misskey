@@ -140,7 +140,11 @@ const messages = ref<NormalizedChatMessage[]>([]);
 const canFetchMore = ref(false);
 const user = ref<Misskey.entities.UserDetailed | null>(null);
 const room = ref<Misskey.entities.ChatRoom | null>(null);
-const connection = ref<Misskey.IChannelConnection<Misskey.Channels['chatUser']> | Misskey.IChannelConnection<Misskey.Channels['chatRoom']> | null>(null);
+const connection = ref<
+	| Misskey.IChannelConnection<Misskey.Channels['chatUser']>
+	| Misskey.IChannelConnection<Misskey.Channels['chatRoom']>
+	| null
+>(null);
 const showIndicator = ref(false);
 const timelineEl = useTemplateRef('timelineEl');
 const timeline = makeDateSeparatedTimelineComputedRef(messages);
@@ -162,26 +166,32 @@ const SCROLL_HEAD_THRESHOLD = 200;
 
 // column-reverseなので本来はスクロール位置の最下部への追従は不要なはずだが、おそらくブラウザのバグにより、最下部にスクロールした状態でも追従されない場合がある(スクロール位置が少数になることがあるのが関わっていそう)
 // そのため補助としてMutationObserverを使って追従を行う
-useMutationObserver(timelineEl, {
-	subtree: true,
-	childList: true,
-	attributes: false,
-}, () => {
-	const scrollContainer = getScrollContainer(timelineEl.value)!;
-	// column-reverseなのでscrollTopは負になる
-	if (-scrollContainer.scrollTop < SCROLL_HEAD_THRESHOLD) {
-		scrollContainer.scrollTo({
-			top: 0,
-			behavior: 'instant',
-		});
-	}
-});
+useMutationObserver(
+	timelineEl,
+	{
+		subtree: true,
+		childList: true,
+		attributes: false,
+	},
+	() => {
+		const scrollContainer = getScrollContainer(timelineEl.value)!;
+		// column-reverseなのでscrollTopは負になる
+		if (-scrollContainer.scrollTop < SCROLL_HEAD_THRESHOLD) {
+			scrollContainer.scrollTo({
+				top: 0,
+				behavior: 'instant',
+			});
+		}
+	},
+);
 
-function normalizeMessage(message: Misskey.entities.ChatMessageLite | Misskey.entities.ChatMessage): NormalizedChatMessage {
+function normalizeMessage(
+	message: Misskey.entities.ChatMessageLite | Misskey.entities.ChatMessage,
+): NormalizedChatMessage {
 	return {
 		...message,
 		fromUser: message.fromUser ?? (message.fromUserId === $i.id ? $i : user.value!),
-		reactions: message.reactions.map(record => ({
+		reactions: message.reactions.map((record) => ({
 			...record,
 			user: record.user ?? (message.fromUserId === $i.id ? user.value! : $i),
 		})),
@@ -191,7 +201,9 @@ function normalizeMessage(message: Misskey.entities.ChatMessageLite | Misskey.en
 async function initialize() {
 	const LIMIT = 20;
 
-	if (initializing.value) return;
+	if (initializing.value) {
+		return;
+	}
 
 	initializing.value = true;
 	initialized.value = false;
@@ -203,7 +215,7 @@ async function initialize() {
 		]);
 
 		user.value = u;
-		messages.value = m.map(x => normalizeMessage(x));
+		messages.value = m.map((x) => normalizeMessage(x));
 
 		if (messages.value.length === LIMIT) {
 			canFetchMore.value = true;
@@ -243,18 +255,18 @@ async function initialize() {
 				initializing.value = false;
 				router.push('/chat');
 				return;
-			} else {
-				await os.apiWithDialog('chat/rooms/join', { roomId: r.id });
-				initializing.value = false;
-				initialize();
-				return;
 			}
+			await os.apiWithDialog('chat/rooms/join', { roomId: r.id });
+			initializing.value = false;
+			initialize();
+			return;
 		}
 
-		const m = mResult.status === 'fulfilled' ? mResult.value as Misskey.entities.ChatMessagesRoomTimelineResponse : [];
+		const m =
+			mResult.status === 'fulfilled' ? (mResult.value as Misskey.entities.ChatMessagesRoomTimelineResponse) : [];
 
 		room.value = r;
-		messages.value = m.map(x => normalizeMessage(x));
+		messages.value = m.map((x) => normalizeMessage(x));
 
 		if (messages.value.length === LIMIT) {
 			canFetchMore.value = true;
@@ -295,17 +307,22 @@ async function fetchMore() {
 		return;
 	}
 
-	const newMessages = props.userId && user.value != null ? await misskeyApi('chat/messages/user-timeline', {
-		userId: user.value.id,
-		limit: LIMIT,
-		untilId: lastMessage.id,
-	}) : room.value != null ? await misskeyApi('chat/messages/room-timeline', {
-		roomId: room.value.id,
-		limit: LIMIT,
-		untilId: lastMessage.id,
-	}) : [];
+	const newMessages =
+		props.userId && user.value != null
+			? await misskeyApi('chat/messages/user-timeline', {
+					userId: user.value.id,
+					limit: LIMIT,
+					untilId: lastMessage.id,
+				})
+			: room.value != null
+				? await misskeyApi('chat/messages/room-timeline', {
+						roomId: room.value.id,
+						limit: LIMIT,
+						untilId: lastMessage.id,
+					})
+				: [];
 
-	messages.value.push(...newMessages.map(x => normalizeMessage(x)));
+	messages.value.push(...newMessages.map((x) => normalizeMessage(x)));
 
 	canFetchMore.value = newMessages.length === LIMIT;
 	moreFetching.value = false;
@@ -334,16 +351,21 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 }
 
 function onDeleted(id: string) {
-	const index = messages.value.findIndex(m => m.id === id);
+	const index = messages.value.findIndex((m) => m.id === id);
 	if (index !== -1) {
 		messages.value.splice(index, 1);
 	}
 }
 
-function onReact(ctx: Parameters<Misskey.Channels['chatUser']['events']['react']>[0] | Parameters<Misskey.Channels['chatRoom']['events']['react']>[0]) {
-	const message = messages.value.find(m => m.id === ctx.messageId);
+function onReact(
+	ctx:
+		| Parameters<Misskey.Channels['chatUser']['events']['react']>[0]
+		| Parameters<Misskey.Channels['chatRoom']['events']['react']>[0],
+) {
+	const message = messages.value.find((m) => m.id === ctx.messageId);
 	if (message) {
-		if (room.value == null) { // 1on1の時はuserは省略される
+		if (room.value == null) {
+			// 1on1の時はuserは省略される
 			message.reactions.push({
 				reaction: ctx.reaction,
 				user: message.fromUserId === $i.id ? user.value! : $i,
@@ -357,10 +379,14 @@ function onReact(ctx: Parameters<Misskey.Channels['chatUser']['events']['react']
 	}
 }
 
-function onUnreact(ctx: Parameters<Misskey.Channels['chatUser']['events']['unreact']>[0] | Parameters<Misskey.Channels['chatRoom']['events']['unreact']>[0]) {
-	const message = messages.value.find(m => m.id === ctx.messageId);
+function onUnreact(
+	ctx:
+		| Parameters<Misskey.Channels['chatUser']['events']['unreact']>[0]
+		| Parameters<Misskey.Channels['chatRoom']['events']['unreact']>[0],
+) {
+	const message = messages.value.find((m) => m.id === ctx.messageId);
 	if (message) {
-		const index = message.reactions.findIndex(r => r.reaction === ctx.reaction && r.user.id === ctx.user!.id);
+		const index = message.reactions.findIndex((r) => r.reaction === ctx.reaction && r.user.id === ctx.user!.id);
 		if (index !== -1) {
 			message.reactions.splice(index, 1);
 		}
@@ -379,7 +405,9 @@ function notifyNewMessage() {
 }
 
 function onVisibilitychange() {
-	if (window.document.hidden) return;
+	if (window.document.hidden) {
+		return;
+	}
 }
 
 onMounted(() => {
@@ -398,7 +426,9 @@ onBeforeUnmount(() => {
 });
 
 async function inviteUser() {
-	if (room.value == null) return;
+	if (room.value == null) {
+		return;
+	}
 
 	const invitee = await os.selectUser({ includeSelf: false, localOnly: true });
 	os.apiWithDialog('chat/rooms/invitations/create', {
@@ -408,13 +438,17 @@ async function inviteUser() {
 }
 
 async function leaveRoom() {
-	if (room.value == null) return;
+	if (room.value == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	misskeyApi('chat/rooms/leave', {
 		roomId: room.value.id,
@@ -450,61 +484,76 @@ function showMenu(ev: PointerEvent) {
 
 const tab = ref('chat');
 
-const headerTabs = computed(() => room.value ? [{
-	key: 'chat',
-	title: i18n.ts._chat.messages,
-	icon: 'ti ti-messages',
-}, {
-	key: 'members',
-	title: i18n.ts._chat.members,
-	icon: 'ti ti-users',
-}, {
-	key: 'search',
-	title: i18n.ts.search,
-	icon: 'ti ti-search',
-}, {
-	key: 'info',
-	title: i18n.ts.info,
-	icon: 'ti ti-info-circle',
-}] : [{
-	key: 'chat',
-	title: i18n.ts._chat.messages,
-	icon: 'ti ti-messages',
-}, {
-	key: 'search',
-	title: i18n.ts.search,
-	icon: 'ti ti-search',
-}]);
+const headerTabs = computed(() =>
+	room.value
+		? [
+				{
+					key: 'chat',
+					title: i18n.ts._chat.messages,
+					icon: 'ti ti-messages',
+				},
+				{
+					key: 'members',
+					title: i18n.ts._chat.members,
+					icon: 'ti ti-users',
+				},
+				{
+					key: 'search',
+					title: i18n.ts.search,
+					icon: 'ti ti-search',
+				},
+				{
+					key: 'info',
+					title: i18n.ts.info,
+					icon: 'ti ti-info-circle',
+				},
+			]
+		: [
+				{
+					key: 'chat',
+					title: i18n.ts._chat.messages,
+					icon: 'ti ti-messages',
+				},
+				{
+					key: 'search',
+					title: i18n.ts.search,
+					icon: 'ti ti-search',
+				},
+			],
+);
 
-const headerActions = computed<PageHeaderItem[]>(() => [{
-	icon: 'ti ti-dots',
-	handler: showMenu,
-}]);
+const headerActions = computed<PageHeaderItem[]>(() => [
+	{
+		icon: 'ti ti-dots',
+		handler: showMenu,
+	},
+]);
 
-definePage(computed(() => {
-	if (initialized.value) {
-		if (user.value) {
+definePage(
+	computed(() => {
+		if (initialized.value) {
+			if (user.value) {
+				return {
+					userName: user.value,
+					title: user.value.name ?? user.value.username,
+					avatar: user.value,
+				};
+			} else if (room.value) {
+				return {
+					title: room.value.name,
+					icon: 'ti ti-users',
+				};
+			}
 			return {
-				userName: user.value,
-				title: user.value.name ?? user.value.username,
-				avatar: user.value,
-			};
-		} else if (room.value) {
-			return {
-				title: room.value.name,
-				icon: 'ti ti-users',
+				title: i18n.ts.directMessage,
 			};
 		} else {
 			return {
 				title: i18n.ts.directMessage,
 			};
 		}
-	} else {
-		return {
-			title: i18n.ts.directMessage,
-		};
-	}
-}));
+	}),
+);
 </script>
 
 <style lang="scss" module>

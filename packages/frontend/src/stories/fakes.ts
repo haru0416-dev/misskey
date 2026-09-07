@@ -140,7 +140,7 @@ export function file(isSensitive = false): entities.DriveFile {
 		name: 'somefile.jpg',
 		type: 'image/jpeg',
 		md5: 'f6fc51c73dc21b1fb85ead2cdf57530a',
-		size: 77752,
+		size: 77_752,
 		isSensitive,
 		blurhash: 'eQAmoa^-MH8w9ZIvNLSvo^$*MwRPbwtSxutRozjEiwR.RjWBoeozog',
 		properties: {
@@ -314,7 +314,7 @@ export function userDetailed(
 		isSuspended: false,
 		lang: 'en',
 		location: 'Fediverse',
-		notesCount: 65536,
+		notesCount: 65_536,
 		pinnedNoteIds: [],
 		pinnedNotes: [],
 		pinnedPage: null,

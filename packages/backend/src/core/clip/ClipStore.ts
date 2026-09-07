@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
-import { clip, type ClipInsert, type ClipRow } from '@/db/schema/clip.js';
+import { and, asc, count, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { clip } from '@/db/schema/clip.js';
+import type { ClipInsert, ClipRow } from '@/db/schema/clip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -71,10 +73,14 @@ export async function createClipWithinLimitInDatabase(
 ): Promise<MiClip | null> {
 	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-limit', data.userId);
-		if ((await countClipsByUserIdFromDatabase(tx, data.userId)) >= limit) return null;
+		if ((await countClipsByUserIdFromDatabase(tx, data.userId)) >= limit) {
+			return null;
+		}
 
 		const [row] = await tx.insert(clip).values(data).returning();
-		if (row == null) throw new Error('Failed to create clip');
+		if (row == null) {
+			throw new Error('Failed to create clip');
+		}
 		return deserializeClip(row);
 	});
 }
@@ -128,7 +134,9 @@ export async function listClipsByIdsFromDatabase(
 		isPublic?: boolean;
 	} = {},
 ): Promise<MiClip[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const conditions = [inArray(clip.id, ids)];
 	if (options.isPublic != null) {

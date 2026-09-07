@@ -55,7 +55,9 @@ function assertHttpsUrl(url: string): void {
 			throw invalidUrlError();
 		}
 	} catch (err) {
-		if (err instanceof ApiError) throw err;
+		if (err instanceof ApiError) {
+			throw err;
+		}
 		throw invalidUrlError();
 	}
 }

@@ -153,10 +153,7 @@ const props = defineProps<{
 
 const tab = ref('overview');
 
-const {
-	model: chartSrc,
-	def: chartSrcDef,
-} = useMkSelect({
+const { model: chartSrc, def: chartSrcDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts._instanceCharts.requests, value: 'instance-requests' },
 		{ label: i18n.ts._instanceCharts.users, value: 'instance-users' },
@@ -174,35 +171,48 @@ const {
 });
 const meta = ref<Misskey.entities.AdminMetaResponse | null>(null);
 const instance = ref<Misskey.entities.FederationInstance | null>(null);
-const suspensionState = ref<'none' | 'manuallySuspended' | 'goneSuspended' | 'autoSuspendedForNotResponding' | 'softwareSuspended'>('none');
+const suspensionState = ref<
+	'none' | 'manuallySuspended' | 'goneSuspended' | 'autoSuspendedForNotResponding' | 'softwareSuspended'
+>('none');
 const isBlocked = ref(false);
 const isSilenced = ref(false);
 const isMediaSilenced = ref(false);
 const faviconUrl = ref<string | null>(null);
 const moderationNote = ref('');
 
-const usersPaginator = iAmModerator ? markRaw(new Paginator('admin/show-users', {
-	limit: 10,
-	params: {
-		sort: '+updatedAt',
-		state: 'all',
-		hostname: props.host,
-	},
-	offsetMode: true,
-})) : markRaw(new Paginator('users', {
-	limit: 10,
-	params: {
-		sort: '+updatedAt',
-		state: 'all',
-		hostname: props.host,
-	},
-	offsetMode: true,
-}));
+const usersPaginator = iAmModerator
+	? markRaw(
+			new Paginator('admin/show-users', {
+				limit: 10,
+				params: {
+					sort: '+updatedAt',
+					state: 'all',
+					hostname: props.host,
+				},
+				offsetMode: true,
+			}),
+		)
+	: markRaw(
+			new Paginator('users', {
+				limit: 10,
+				params: {
+					sort: '+updatedAt',
+					state: 'all',
+					hostname: props.host,
+				},
+				offsetMode: true,
+			}),
+		);
 
 if (iAmModerator) {
 	watch(moderationNote, async () => {
-		if (instance.value == null) return;
-		await misskeyApi('admin/federation/update-instance', { host: instance.value.host, moderationNote: moderationNote.value });
+		if (instance.value == null) {
+			return;
+		}
+		await misskeyApi('admin/federation/update-instance', {
+			host: instance.value.host,
+			moderationNote: moderationNote.value,
+		});
 	});
 }
 
@@ -217,45 +227,73 @@ async function _fetch_(): Promise<void> {
 	isBlocked.value = instance.value?.isBlocked ?? false;
 	isSilenced.value = instance.value?.isSilenced ?? false;
 	isMediaSilenced.value = instance.value?.isMediaSilenced ?? false;
-	faviconUrl.value = getProxiedImageUrlNullable(instance.value?.faviconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.value?.iconUrl, 'preview');
+	faviconUrl.value =
+		getProxiedImageUrlNullable(instance.value?.faviconUrl, 'preview') ??
+		getProxiedImageUrlNullable(instance.value?.iconUrl, 'preview');
 	moderationNote.value = instance.value?.moderationNote ?? '';
 }
 
 async function toggleBlock(): Promise<void> {
-	if (!iAmAdmin) return;
-	if (!meta.value) throw new Error('No meta?');
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmAdmin) {
+		return;
+	}
+	if (!meta.value) {
+		throw new Error('No meta?');
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	const { host } = instance.value;
 	await misskeyApi('admin/update-meta', {
-		blockedHosts: isBlocked.value ? meta.value.blockedHosts.concat([host]) : meta.value.blockedHosts.filter(x => x !== host),
+		blockedHosts: isBlocked.value
+			? meta.value.blockedHosts.concat([host])
+			: meta.value.blockedHosts.filter((x) => x !== host),
 	});
 }
 
 async function toggleSilenced(): Promise<void> {
-	if (!iAmAdmin) return;
-	if (!meta.value) throw new Error('No meta?');
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmAdmin) {
+		return;
+	}
+	if (!meta.value) {
+		throw new Error('No meta?');
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	const { host } = instance.value;
 	const silencedHosts = meta.value.silencedHosts ?? [];
 	await misskeyApi('admin/update-meta', {
-		silencedHosts: isSilenced.value ? silencedHosts.concat([host]) : silencedHosts.filter(x => x !== host),
+		silencedHosts: isSilenced.value ? silencedHosts.concat([host]) : silencedHosts.filter((x) => x !== host),
 	});
 }
 
 async function toggleMediaSilenced(): Promise<void> {
-	if (!iAmAdmin) return;
-	if (!meta.value) throw new Error('No meta?');
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmAdmin) {
+		return;
+	}
+	if (!meta.value) {
+		throw new Error('No meta?');
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	const { host } = instance.value;
 	const mediaSilencedHosts = meta.value.mediaSilencedHosts ?? [];
 	await misskeyApi('admin/update-meta', {
-		mediaSilencedHosts: isMediaSilenced.value ? mediaSilencedHosts.concat([host]) : mediaSilencedHosts.filter(x => x !== host),
+		mediaSilencedHosts: isMediaSilenced.value
+			? mediaSilencedHosts.concat([host])
+			: mediaSilencedHosts.filter((x) => x !== host),
 	});
 }
 
 async function stopDelivery(): Promise<void> {
-	if (!iAmModerator) return;
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmModerator) {
+		return;
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	suspensionState.value = 'manuallySuspended';
 	await misskeyApi('admin/federation/update-instance', {
 		host: instance.value.host,
@@ -264,8 +302,12 @@ async function stopDelivery(): Promise<void> {
 }
 
 async function resumeDelivery(): Promise<void> {
-	if (!iAmModerator) return;
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmModerator) {
+		return;
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	suspensionState.value = 'none';
 	await misskeyApi('admin/federation/update-instance', {
 		host: instance.value.host,
@@ -274,8 +316,12 @@ async function resumeDelivery(): Promise<void> {
 }
 
 function refreshMetadata(): void {
-	if (!iAmModerator) return;
-	if (!instance.value) throw new Error('No instance?');
+	if (!iAmModerator) {
+		return;
+	}
+	if (!instance.value) {
+		throw new Error('No instance?');
+	}
 	misskeyApi('admin/federation/refresh-remote-instance-metadata', {
 		host: instance.value.host,
 	});
@@ -286,31 +332,42 @@ function refreshMetadata(): void {
 
 _fetch_();
 
-const headerActions = computed(() => [{
-	text: `https://${props.host}`,
-	icon: 'ti ti-external-link',
-	handler: () => {
-		window.open(`https://${props.host}`, '_blank', 'noopener');
+const headerActions = computed(() => [
+	{
+		text: `https://${props.host}`,
+		icon: 'ti ti-external-link',
+		handler: () => {
+			window.open(`https://${props.host}`, '_blank', 'noopener');
+		},
 	},
-}]);
+]);
 
-const headerTabs = computed(() => [{
-	key: 'overview',
-	title: i18n.ts.overview,
-	icon: 'ti ti-info-circle',
-}, ...(iAmModerator ? [{
-	key: 'chart',
-	title: i18n.ts.charts,
-	icon: 'ti ti-chart-line',
-}, {
-	key: 'users',
-	title: i18n.ts.users,
-	icon: 'ti ti-users',
-}] : []), {
-	key: 'raw',
-	title: 'Raw',
-	icon: 'ti ti-code',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'overview',
+		title: i18n.ts.overview,
+		icon: 'ti ti-info-circle',
+	},
+	...(iAmModerator
+		? [
+				{
+					key: 'chart',
+					title: i18n.ts.charts,
+					icon: 'ti ti-chart-line',
+				},
+				{
+					key: 'users',
+					title: i18n.ts.users,
+					icon: 'ti ti-users',
+				},
+			]
+		: []),
+	{
+		key: 'raw',
+		title: 'Raw',
+		icon: 'ti ti-code',
+	},
+]);
 
 definePage(() => ({
 	title: props.host,

@@ -70,9 +70,11 @@ import { definePage } from '@/page.js';
 import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
 
-const paginator = markRaw(new Paginator('i/signin-history', {
-	limit: 5,
-}));
+const paginator = markRaw(
+	new Paginator('i/signin-history', {
+		limit: 5,
+	}),
+);
 
 async function change() {
 	const { canceled: canceled2, result: newPassword } = await os.inputText({
@@ -80,14 +82,18 @@ async function change() {
 		type: 'password',
 		autocomplete: 'new-password',
 	});
-	if (canceled2 || newPassword == null) return;
+	if (canceled2 || newPassword == null) {
+		return;
+	}
 
 	const { canceled: canceled3, result: newPassword2 } = await os.inputText({
 		title: i18n.ts.newPasswordRetype,
 		type: 'password',
 		autocomplete: 'new-password',
 	});
-	if (canceled3 || newPassword2 == null) return;
+	if (canceled3 || newPassword2 == null) {
+		return;
+	}
 
 	if (newPassword !== newPassword2) {
 		os.alert({
@@ -98,7 +104,9 @@ async function change() {
 	}
 
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	os.apiWithDialog('i/change-password', {
 		currentPassword: auth.result.password,
@@ -109,7 +117,9 @@ async function change() {
 
 async function regenerateToken() {
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	misskeyApi('i/regenerate-token', {
 		password: auth.result.password,

@@ -5,12 +5,14 @@
 
 // ランダムな文字列が生成できればなんでも良い(時系列でソートできるなら尚良)が、とりあえずaidの実装を拝借
 
-const TIME2000 = 946684800000;
-let counter = Math.floor(Math.random() * 10000);
+const TIME2000 = 946_684_800_000;
+let counter = Math.floor(Math.random() * 10_000);
 
 function getTime(time: number): string {
 	time = time - TIME2000;
-	if (time < 0) time = 0;
+	if (time < 0) {
+		time = 0;
+	}
 
 	return time.toString(36).padStart(8, '0');
 }

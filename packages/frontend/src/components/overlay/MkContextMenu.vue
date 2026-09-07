@@ -47,12 +47,12 @@ onMounted(() => {
 	const width = rootEl.value!.offsetWidth;
 	const height = rootEl.value!.offsetHeight;
 
-	if (left + width - window.scrollX >= (window.innerWidth - SCROLLBAR_THICKNESS)) {
-		left = (window.innerWidth - SCROLLBAR_THICKNESS) - width + window.scrollX;
+	if (left + width - window.scrollX >= window.innerWidth - SCROLLBAR_THICKNESS) {
+		left = window.innerWidth - SCROLLBAR_THICKNESS - width + window.scrollX;
 	}
 
-	if (top + height - window.scrollY >= (window.innerHeight - SCROLLBAR_THICKNESS)) {
-		top = (window.innerHeight - SCROLLBAR_THICKNESS) - height + window.scrollY;
+	if (top + height - window.scrollY >= window.innerHeight - SCROLLBAR_THICKNESS) {
+		top = window.innerHeight - SCROLLBAR_THICKNESS - height + window.scrollY;
 	}
 
 	if (top < 0) {
@@ -76,7 +76,9 @@ onBeforeUnmount(() => {
 });
 
 function onMousedown(evt: MouseEvent) {
-	if (!elementContains(rootEl.value, evt.target as Element) && (rootEl.value !== evt.target)) emit('closed');
+	if (!elementContains(rootEl.value, evt.target as Element) && rootEl.value !== evt.target) {
+		emit('closed');
+	}
 }
 </script>
 

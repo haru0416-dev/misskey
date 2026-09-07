@@ -68,16 +68,25 @@ defineProps<{
 const registration = ref<ServiceWorkerRegistration | undefined>();
 const supported = ref(false);
 const pushSubscription = ref<PushSubscription | null>(null);
-const pushRegistrationInServer = ref<{ state?: string; key?: string; userId: string; endpoint: string; sendReadMessage: boolean; } | undefined>();
+const pushRegistrationInServer = ref<
+	{ state?: string; key?: string; userId: string; endpoint: string; sendReadMessage: boolean } | undefined
+>();
 
 async function subscribe() {
-	if (!registration.value || !supported.value || !instance.swPublickey) return;
+	if (!registration.value || !supported.value || !instance.swPublickey) {
+		return;
+	}
 
 	if ('Notification' in window) {
 		let permission = Notification.permission;
 
 		if (Notification.permission === 'default') {
-			permission = await promiseDialog(Notification.requestPermission(), null, null, i18n.ts.pleaseAllowPushNotification);
+			permission = await promiseDialog(
+				Notification.requestPermission(),
+				null,
+				null,
+				i18n.ts.pleaseAllowPushNotification,
+			);
 		}
 
 		if (permission !== 'granted') {
@@ -91,34 +100,44 @@ async function subscribe() {
 	}
 
 	// https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe#Parameters
-	await promiseDialog(registration.value.pushManager.subscribe({
-		userVisibleOnly: true,
-		applicationServerKey: urlBase64ToUint8Array(instance.swPublickey),
-	})
-		.then(async subscription => {
-			pushSubscription.value = subscription;
+	await promiseDialog(
+		registration.value.pushManager
+			.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: urlBase64ToUint8Array(instance.swPublickey),
+			})
+			.then(
+				async (subscription) => {
+					pushSubscription.value = subscription;
 
-			pushRegistrationInServer.value = await misskeyApi('sw/register', {
-				endpoint: subscription.endpoint,
-				auth: encode(subscription.getKey('auth')),
-				publickey: encode(subscription.getKey('p256dh')),
-			});
-		}, async err => {
-			// 通知が許可されていなかったとき
-			if (err?.name === 'NotAllowedError') {
-				console.info('User denied the notification permission request.');
-				return;
-			}
+					pushRegistrationInServer.value = await misskeyApi('sw/register', {
+						endpoint: subscription.endpoint,
+						auth: encode(subscription.getKey('auth')),
+						publickey: encode(subscription.getKey('p256dh')),
+					});
+				},
+				async (err) => {
+					// 通知が許可されていなかったとき
+					if (err?.name === 'NotAllowedError') {
+						console.info('User denied the notification permission request.');
+						return;
+					}
 
-			// 違うapplicationServerKey (または gcm_sender_id)のサブスクリプションが
-			// 既に存在していることが原因でエラーになった可能性があるので、
-			// そのサブスクリプションを解除しておく
-			await unsubscribe();
-		}), null, null);
+					// 違うapplicationServerKey (または gcm_sender_id)のサブスクリプションが
+					// 既に存在していることが原因でエラーになった可能性があるので、
+					// そのサブスクリプションを解除しておく
+					await unsubscribe();
+				},
+			),
+		null,
+		null,
+	);
 }
 
 async function unsubscribe() {
-	if (!pushSubscription.value) return;
+	if (!pushSubscription.value) {
+		return;
+	}
 
 	const endpoint = pushSubscription.value.endpoint;
 	const accounts = await getAccounts();
@@ -126,14 +145,22 @@ async function unsubscribe() {
 	pushRegistrationInServer.value = undefined;
 
 	if ($i && accounts.length >= 2) {
-		apiWithDialog('sw/unregister', {
-			endpoint,
-		}, $i.token);
+		apiWithDialog(
+			'sw/unregister',
+			{
+				endpoint,
+			},
+			$i.token,
+		);
 	} else {
 		pushSubscription.value.unsubscribe();
-		apiWithDialog('sw/unregister', {
-			endpoint,
-		}, null);
+		apiWithDialog(
+			'sw/unregister',
+			{
+				endpoint,
+			},
+			null,
+		);
 		pushSubscription.value = null;
 	}
 }
@@ -143,10 +170,8 @@ function encode(buffer: ArrayBuffer | null) {
 }
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
-	const padding = '='.repeat((4 - base64String.length % 4) % 4);
-	const base64 = (base64String + padding)
-		.replaceAll(/-/g, '+')
-		.replaceAll(/_/g, '/');
+	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+	const base64 = (base64String + padding).replaceAll(/-/g, '+').replaceAll(/_/g, '/');
 
 	const rawData = window.atob(base64);
 	const outputArray = new Uint8Array(rawData.length);
@@ -160,12 +185,12 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
 if (navigator.serviceWorker == null) {
 	// Service Worker非対応時はsupportedの初期値falseを維持する
 } else {
-	navigator.serviceWorker.ready.then(async swr => {
+	navigator.serviceWorker.ready.then(async (swr) => {
 		registration.value = swr;
 
 		pushSubscription.value = await registration.value.pushManager.getSubscription();
 
-		if (instance.swPublickey && ('PushManager' in window) && $i && $i.token) {
+		if (instance.swPublickey && 'PushManager' in window && $i && $i.token) {
 			supported.value = true;
 
 			if (pushSubscription.value) {

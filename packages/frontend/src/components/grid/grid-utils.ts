@@ -138,17 +138,16 @@ export async function pasteToGridFromClipboard(
 	function parseValue(value: string, setting: GridColumnSetting): CellValue {
 		if (setting.events?.paste) {
 			return setting.events.paste(value);
-		} else {
-			switch (setting.type) {
-				case 'number': {
-					return Number(value);
-				}
-				case 'boolean': {
-					return value === 'true';
-				}
-				default: {
-					return value;
-				}
+		}
+		switch (setting.type) {
+			case 'number': {
+				return Number(value);
+			}
+			case 'boolean': {
+				return value === 'true';
+			}
+			default: {
+				return value;
 			}
 		}
 	}
@@ -187,7 +186,9 @@ export async function pasteToGridFromClipboard(
 			}
 
 			const items = lines[rowIdx];
-			if (items == null) break;
+			if (items == null) {
+				break;
+			}
 			for (let col = bounds.leftTop.col; col <= bounds.rightBottom.col; col++) {
 				const colIdx = col - offsetCol;
 				if (items.length <= colIdx) {

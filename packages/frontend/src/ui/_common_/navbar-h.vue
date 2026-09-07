@@ -69,22 +69,32 @@ const settingsWindowed = ref(window.innerWidth > WINDOW_THRESHOLD);
 const menu = ref(prefer.menu);
 const otherNavItemIndicated = computed<boolean>(() => {
 	for (const [key, def] of Object.entries(navbarItemDef)) {
-		if (menu.value.includes(key)) continue;
-		if (def.indicated) return true;
+		if (menu.value.includes(key)) {
+			continue;
+		}
+		if (def.indicated) {
+			return true;
+		}
 	}
 	return false;
 });
 
 async function more(ev: PointerEvent) {
 	const target = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
-	if (!target) return;
+	if (!target) {
+		return;
+	}
 
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/overlay/MkLaunchPad.vue').then(x => x.default), {
-		anchorElement: target,
-		anchor: { x: 'center', y: 'bottom' },
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/components/overlay/MkLaunchPad.vue').then((x) => x.default),
+		{
+			anchorElement: target,
+			anchor: { x: 'center', y: 'bottom' },
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 async function openAccountMenu(ev: PointerEvent) {
@@ -96,11 +106,14 @@ async function openAccountMenu(ev: PointerEvent) {
 }
 
 onMounted(() => {
-	window.addEventListener('resize', () => {
-		settingsWindowed.value = (window.innerWidth >= WINDOW_THRESHOLD);
-	}, { passive: true });
+	window.addEventListener(
+		'resize',
+		() => {
+			settingsWindowed.value = window.innerWidth >= WINDOW_THRESHOLD;
+		},
+		{ passive: true },
+	);
 });
-
 </script>
 
 <style lang="scss" module>

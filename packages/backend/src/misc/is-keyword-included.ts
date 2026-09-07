@@ -15,7 +15,9 @@ const regexpPattern = /^\/(.+)\/(.*)$/;
  * 破滅的バックトラックを起こすパターンを置くと未認証の入力からサーバーを止められる。
  */
 export function isKeywordIncluded(text: string, keywords: string[]): boolean {
-	if (keywords.length === 0 || text === '') return false;
+	if (keywords.length === 0 || text === '') {
+		return false;
+	}
 
 	return keywords.some((filter) => {
 		const regexp = filter.match(regexpPattern);
@@ -25,7 +27,9 @@ export function isKeywordIncluded(text: string, keywords: string[]): boolean {
 
 		try {
 			const [, pattern, flags] = regexp;
-			if (pattern == null || flags == null) return false;
+			if (pattern == null || flags == null) {
+				return false;
+			}
 			return new RegExp(pattern, flags).test(text);
 		} catch {
 			return false;

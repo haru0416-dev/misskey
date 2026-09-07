@@ -68,7 +68,9 @@ if (props.id) {
 }
 
 async function save() {
-	if (data.value === null) return;
+	if (data.value === null) {
+		return;
+	}
 	rolesCache.delete();
 	if (role.value) {
 		os.apiWithDialog('admin/roles/update', {

@@ -77,42 +77,62 @@ let releaseFocusTrap: (() => void) | null = null;
 let closeRequested = false;
 let historyEntryActive = false;
 
-watch(currentIndex, (newIndex, oldIndex) => {
-	activatedIndexes.value.add(newIndex);
-	void nextTick(() => {
-		if (oldIndex != null) items.get(oldIndex)?.onDeactive();
-		items.get(newIndex)?.onActive();
-	});
-}, { immediate: true });
+watch(
+	currentIndex,
+	(newIndex, oldIndex) => {
+		activatedIndexes.value.add(newIndex);
+		void nextTick(() => {
+			if (oldIndex != null) {
+				items.get(oldIndex)?.onDeactive();
+			}
+			items.get(newIndex)?.onActive();
+		});
+	},
+	{ immediate: true },
+);
 
-watch(currentIndex, newIndex => {
-	for (const [i, content] of props.contents.entries()) {
-		const source = content.sourceElement;
-		if (source != null) source.style.visibility = i === newIndex ? 'hidden' : '';
-	}
-}, { immediate: true });
+watch(
+	currentIndex,
+	(newIndex) => {
+		for (const [i, content] of props.contents.entries()) {
+			const source = content.sourceElement;
+			if (source != null) {
+				source.style.visibility = i === newIndex ? 'hidden' : '';
+			}
+		}
+	},
+	{ immediate: true },
+);
 
 function scrollToCurrentIndex() {
 	const targetOffset = currentIndex.value * -screenWidth.value;
 	currentScrollLeft = targetOffset;
-	if (!prefer.animation || contentsOffset.value === targetOffset) enableSlideTransition.value = false;
-	else enableSlideTransition.value = true;
+	if (!prefer.animation || contentsOffset.value === targetOffset) {
+		enableSlideTransition.value = false;
+	} else {
+		enableSlideTransition.value = true;
+	}
 	contentsOffset.value = targetOffset;
 }
 
 function onHorizontalSwipe(offset: number) {
-	const atEdge = (currentIndex.value === 0 && offset > 0) || (currentIndex.value === props.contents.length - 1 && offset < 0);
+	const atEdge =
+		(currentIndex.value === 0 && offset > 0) || (currentIndex.value === props.contents.length - 1 && offset < 0);
 	contentsOffset.value = currentScrollLeft + (atEdge ? offset / 3 : offset);
 }
 
 function onNext() {
-	if (currentIndex.value < props.contents.length - 1) currentIndex.value++;
+	if (currentIndex.value < props.contents.length - 1) {
+		currentIndex.value++;
+	}
 	scrollToCurrentIndex();
 	refocusRootIfNeeded();
 }
 
 function onPrev() {
-	if (currentIndex.value > 0) currentIndex.value--;
+	if (currentIndex.value > 0) {
+		currentIndex.value--;
+	}
 	scrollToCurrentIndex();
 	refocusRootIfNeeded();
 }
@@ -122,13 +142,16 @@ function refocusRootIfNeeded() {
 		const root = rootEl.value;
 		const activeElement = window.document.activeElement;
 		const focusIsInert = activeElement instanceof Element && activeElement.closest('[inert]') != null;
-		if (root != null && (!root.contains(activeElement) || focusIsInert)) root.focus({ preventScroll: true });
+		if (root != null && (!root.contains(activeElement) || focusIsInert)) {
+			root.focus({ preventScroll: true });
+		}
 	});
 }
 
-
 function closeGallery(fromPopState = false) {
-	if (!showing.value) return;
+	if (!showing.value) {
+		return;
+	}
 	showing.value = false;
 	if (!fromPopState && historyEntryActive && window.location.hash === '#pswp') {
 		historyEntryActive = false;
@@ -137,15 +160,22 @@ function closeGallery(fromPopState = false) {
 }
 
 function close() {
-	if (closeRequested || !showing.value) return;
+	if (closeRequested || !showing.value) {
+		return;
+	}
 	closeRequested = true;
 	const item = items.get(currentIndex.value);
-	if (item != null) item.closeThis();
-	else closeGallery();
+	if (item != null) {
+		item.closeThis();
+	} else {
+		closeGallery();
+	}
 }
 
 function onAfterLeave() {
-	for (const content of props.contents) if (content.sourceElement != null) content.sourceElement.style.visibility = '';
+	for (const content of props.contents) {
+		if (content.sourceElement != null) content.sourceElement.style.visibility = '';
+	}
 	releaseFocusTrap?.();
 	releaseFocusTrap = null;
 	activeEl?.focus({ preventScroll: true });
@@ -153,7 +183,9 @@ function onAfterLeave() {
 }
 
 function onSlideTransitionFinished(ev: TransitionEvent) {
-	if (ev.propertyName === 'translate') enableSlideTransition.value = false;
+	if (ev.propertyName === 'translate') {
+		enableSlideTransition.value = false;
+	}
 }
 
 function onResize() {
@@ -168,7 +200,9 @@ function onPopState() {
 }
 
 function onKeydownCapture(ev: KeyboardEvent) {
-	if (ev.key !== 'Escape') return;
+	if (ev.key !== 'Escape') {
+		return;
+	}
 	ev.preventDefault();
 	ev.stopPropagation();
 	close();
@@ -197,7 +231,9 @@ onBeforeUnmount(() => {
 	releaseFocusTrap = null;
 	window.removeEventListener('resize', onResize);
 	window.removeEventListener('popstate', onPopState);
-	for (const content of props.contents) if (content.sourceElement != null) content.sourceElement.style.visibility = '';
+	for (const content of props.contents) {
+		if (content.sourceElement != null) content.sourceElement.style.visibility = '';
+	}
 });
 
 defineExpose({ close });

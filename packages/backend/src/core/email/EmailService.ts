@@ -53,7 +53,9 @@ export function createEmailService(
 	const logger = loggerService.getLogger('email');
 
 	async function sendEmail(to: string, subject: string, html: string, text: string) {
-		if (!meta.enableEmail) return;
+		if (!meta.enableEmail) {
+			return;
+		}
 
 		const iconUrl = `${config.instance.url}/static-assets/mi-white.png`;
 		const emailSettingUrl = `${config.instance.url}/settings/email`;

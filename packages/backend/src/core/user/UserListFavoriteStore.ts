@@ -4,11 +4,8 @@
  */
 
 import { and, count, eq } from 'drizzle-orm';
-import {
-	userListFavorite,
-	type UserListFavoriteInsert,
-	type UserListFavoriteRow,
-} from '@/db/schema/user-list-favorite.js';
+import { userListFavorite } from '@/db/schema/user-list-favorite.js';
+import type { UserListFavoriteInsert, UserListFavoriteRow } from '@/db/schema/user-list-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';

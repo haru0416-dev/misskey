@@ -117,7 +117,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, nextTick, onMounted, defineAsyncComponent, provide, shallowRef, ref, computed, toRef, useTemplateRef, onUnmounted, onBeforeUnmount } from 'vue';
+import {
+	watch,
+	nextTick,
+	onMounted,
+	defineAsyncComponent,
+	provide,
+	shallowRef,
+	ref,
+	computed,
+	toRef,
+	useTemplateRef,
+	onUnmounted,
+	onBeforeUnmount,
+} from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { host, url } from '@shared/utility/config.js';
@@ -158,7 +171,9 @@ import MkServerRulesDialog from '@/components/overlay/MkServerRulesDialog.vue';
 
 const MkUploaderItems = defineAsyncComponent(() => import('@/features/drive/components/MkUploaderItems.vue'));
 const MkNotePreview = defineAsyncComponent(() => import('@/features/post-composer/components/MkNotePreview.vue'));
-const XPostFormAttaches = defineAsyncComponent(() => import('@/features/post-composer/components/MkPostFormAttaches.vue'));
+const XPostFormAttaches = defineAsyncComponent(
+	() => import('@/features/post-composer/components/MkPostFormAttaches.vue'),
+);
 const MkPollEditor = defineAsyncComponent(() => import('@/features/post-composer/components/MkPollEditor.vue'));
 
 const $i = ensureSignin();
@@ -169,12 +184,14 @@ const {
 	autofocus = true,
 	mock = false,
 	...props
-} = defineProps<PostFormProps & {
-	fixed?: boolean;
-	autofocus?: boolean;
-	freezeAfterPosted?: boolean;
-	mock?: boolean;
-}>();
+} = defineProps<
+	PostFormProps & {
+		fixed?: boolean;
+		autofocus?: boolean;
+		freezeAfterPosted?: boolean;
+		mock?: boolean;
+	}
+>();
 
 provide(DI.mock, mock);
 
@@ -207,10 +224,14 @@ watch(showPreview, () => store.set('showPreview', showPreview.value));
 const showAddMfmFunction = ref(prefer.enableQuickAddMfmFunction);
 watch(showAddMfmFunction, () => prefer.commit('enableQuickAddMfmFunction', showAddMfmFunction.value));
 const cw = ref<string | null>(props.initialCw ?? null);
-const localOnly = ref(initialLocalOnly ?? (prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly));
-const visibility = ref(props.initialVisibility ?? (prefer.rememberNoteVisibility ? store.visibility : prefer.defaultNoteVisibility));
+const localOnly = ref(
+	initialLocalOnly ?? (prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly),
+);
+const visibility = ref(
+	props.initialVisibility ?? (prefer.rememberNoteVisibility ? store.visibility : prefer.defaultNoteVisibility),
+);
 const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
-initialVisibleUsers.forEach(u => pushVisibleUser(u));
+initialVisibleUsers.forEach((u) => pushVisibleUser(u));
 const reactionAcceptance = ref(store.reactionAcceptance);
 const scheduledAt = ref<number | null>(null);
 const draghover = ref(false);
@@ -221,10 +242,9 @@ const hasNotSpecifiedMentions = ref(false);
  * ルールに触れやすいのは CW を付けるときとファイルを添付するときなので、その 2 つに限って出す。
  * 常時出すと投稿のたびに読み飛ばされるだけになる。
  */
-const showServerRulesNotice = computed(() =>
-	instance.serverRules.length > 0 &&
-	!store.tips.postFormServerRules &&
-	(useCw.value || files.value.length > 0));
+const showServerRulesNotice = computed(
+	() => instance.serverRules.length > 0 && !store.tips.postFormServerRules && (useCw.value || files.value.length > 0),
+);
 
 function showServerRules() {
 	const { dispose } = os.popup(MkServerRulesDialog, {}, { closed: () => dispose() });
@@ -253,7 +273,7 @@ onUnmounted(() => {
 	uploader.dispose();
 });
 
-uploader.events.on('itemUploaded', ctx => {
+uploader.events.on('itemUploaded', (ctx) => {
 	files.value.push(ctx.item.uploaded!);
 	uploader.removeItem(ctx.item);
 });
@@ -279,17 +299,16 @@ const placeholder = computed((): string => {
 		return i18n.ts._postForm.replyPlaceholder;
 	} else if (targetChannel.value) {
 		return i18n.ts._postForm.channelPlaceholder;
-	} else {
-		const xs = [
-			i18n.ts._postForm._placeholders.a,
-			i18n.ts._postForm._placeholders.b,
-			i18n.ts._postForm._placeholders.c,
-			i18n.ts._postForm._placeholders.d,
-			i18n.ts._postForm._placeholders.e,
-			i18n.ts._postForm._placeholders.f,
-		];
-		return xs[Math.floor(Math.random() * xs.length)] ?? i18n.ts._postForm._placeholders.a;
 	}
+	const xs = [
+		i18n.ts._postForm._placeholders.a,
+		i18n.ts._postForm._placeholders.b,
+		i18n.ts._postForm._placeholders.c,
+		i18n.ts._postForm._placeholders.d,
+		i18n.ts._postForm._placeholders.e,
+		i18n.ts._postForm._placeholders.f,
+	];
+	return xs[Math.floor(Math.random() * xs.length)] ?? i18n.ts._postForm._placeholders.a;
 });
 
 const submitText = computed((): string => {
@@ -303,7 +322,15 @@ const submitText = computed((): string => {
 });
 
 const submitIcon = computed((): string => {
-	return posted.value ? 'ti ti-check' : scheduledAt.value != null ? 'ti ti-calendar-time' : replyTargetNote.value ? 'ti ti-arrow-back-up' : renoteTargetNote.value ? 'ti ti-quote' : 'ti ti-send';
+	return posted.value
+		? 'ti ti-check'
+		: scheduledAt.value != null
+			? 'ti ti-calendar-time'
+			: replyTargetNote.value
+				? 'ti ti-arrow-back-up'
+				: renoteTargetNote.value
+					? 'ti ti-quote'
+					: 'ti ti-send';
 });
 
 const textLength = computed((): number => {
@@ -321,25 +348,23 @@ const cwTextLength = computed((): number => {
 const maxCwTextLength = 100;
 
 const canPost = computed((): boolean => {
-	return !mock && !posting.value && !posted.value && !uploader.uploading.value && (uploader.items.value.length === 0 || uploader.readyForUpload.value) &&
-		(
-			1 <= textLength.value ||
+	return (
+		!mock &&
+		!posting.value &&
+		!posted.value &&
+		!uploader.uploading.value &&
+		(uploader.items.value.length === 0 || uploader.readyForUpload.value) &&
+		(1 <= textLength.value ||
 			1 <= files.value.length ||
 			1 <= uploader.items.value.length ||
 			poll.value != null ||
 			renoteTargetNote.value != null ||
-			quoteId.value != null
-		) &&
-		(textLength.value <= maxTextLength.value) &&
-		(
-			useCw.value ?
-				(
-					cw.value != null && cw.value.trim() !== '' &&
-					cwTextLength.value <= maxCwTextLength
-				) : true
-		) &&
-		(files.value.length <= 16) &&
-		(!poll.value || poll.value.choices.length >= 2);
+			quoteId.value != null) &&
+		textLength.value <= maxTextLength.value &&
+		(useCw.value ? cw.value != null && cw.value.trim() !== '' && cwTextLength.value <= maxCwTextLength : true) &&
+		files.value.length <= 16 &&
+		(!poll.value || poll.value.choices.length >= 2)
+	);
 });
 
 // cannot save pure renote as draft
@@ -350,26 +375,42 @@ const canSaveAsServerDraft = computed((): boolean => {
 const withHashtags = toRef(store, 'postFormWithHashtags');
 const hashtags = toRef(store, 'postFormHashtags');
 
-watch(text, () => {
-	checkMissingMention();
-}, { immediate: true });
+watch(
+	text,
+	() => {
+		checkMissingMention();
+	},
+	{ immediate: true },
+);
 
-watch(visibility, () => {
-	checkMissingMention();
-}, { immediate: true });
+watch(
+	visibility,
+	() => {
+		checkMissingMention();
+	},
+	{ immediate: true },
+);
 
-watch(visibleUsers, () => {
-	checkMissingMention();
-}, {
-	deep: true,
-});
+watch(
+	visibleUsers,
+	() => {
+		checkMissingMention();
+	},
+	{
+		deep: true,
+	},
+);
 
 if (props.mention) {
 	text.value = props.mention.host ? `@${props.mention.username}@${props.mention.host}` : `@${props.mention.username}`;
 	text.value += ' ';
 }
 
-if (replyTargetNote.value && (replyTargetNote.value.user.username !== $i.username || (replyTargetNote.value.user.host != null && replyTargetNote.value.user.host !== host))) {
+if (
+	replyTargetNote.value &&
+	(replyTargetNote.value.user.username !== $i.username ||
+		(replyTargetNote.value.user.host != null && replyTargetNote.value.user.host !== host))
+) {
 	text.value = `@${replyTargetNote.value.user.username}${replyTargetNote.value.user.host != null ? '@' + replyTargetNote.value.user.host : ''} `;
 }
 
@@ -378,17 +419,21 @@ if (replyTargetNote.value && replyTargetNote.value.text != null) {
 	const otherHost = replyTargetNote.value.user.host;
 
 	for (const x of mfm.extractMentions(ast)) {
-		const mention = x.host ?
-			`@${x.username}@${x.host}` :
-			(otherHost == null || otherHost === host) ?
-				`@${x.username}` :
-				`@${x.username}@${otherHost}`;
+		const mention = x.host
+			? `@${x.username}@${x.host}`
+			: otherHost == null || otherHost === host
+				? `@${x.username}`
+				: `@${x.username}@${otherHost}`;
 
 		// 自分は除外
-		if ($i.username === x.username && (x.host == null || x.host === host)) continue;
+		if ($i.username === x.username && (x.host == null || x.host === host)) {
+			continue;
+		}
 
 		// 重複は除外
-		if (text.value.includes(`${mention} `)) continue;
+		if (text.value.includes(`${mention} `)) {
+			continue;
+		}
 
 		text.value += `${mention} `;
 	}
@@ -416,14 +461,16 @@ if (replyTargetNote.value && ['home', 'followers', 'specified'].includes(replyTa
 	if (visibility.value === 'specified') {
 		if (replyTargetNote.value.visibleUserIds) {
 			misskeyApi('users/show', {
-				userIds: replyTargetNote.value.visibleUserIds.filter(uid => uid !== $i.id && uid !== replyTargetNote.value?.userId),
-			}).then(users => {
-				users.forEach(u => pushVisibleUser(u));
+				userIds: replyTargetNote.value.visibleUserIds.filter(
+					(uid) => uid !== $i.id && uid !== replyTargetNote.value?.userId,
+				),
+			}).then((users) => {
+				users.forEach((u) => pushVisibleUser(u));
 			});
 		}
 
 		if (replyTargetNote.value.userId !== $i.id) {
-			misskeyApi('users/show', { userId: replyTargetNote.value.userId }).then(user => {
+			misskeyApi('users/show', { userId: replyTargetNote.value.userId }).then((user) => {
 				pushVisibleUser(user);
 			});
 		}
@@ -461,7 +508,11 @@ function checkMissingMention() {
 		for (const x of mfm.extractMentions(ast)) {
 			// ローカルユーザーは宛先では host === null だが、本文では `@user@example.com` と
 			// 自ホスト付きで書かれうる。同一視しないと宛先に居るのに未指定扱いになる
-			if (!visibleUsers.value.some(u => (u.username === x.username) && ((u.host === x.host) || (x.host === host && u.host == null)))) {
+			if (
+				!visibleUsers.value.some(
+					(u) => u.username === x.username && (u.host === x.host || (x.host === host && u.host == null)),
+				)
+			) {
 				hasNotSpecifiedMentions.value = true;
 				return;
 			}
@@ -474,8 +525,8 @@ function addMissingMention() {
 	const ast = mfm.parse(text.value);
 
 	for (const x of mfm.extractMentions(ast)) {
-		if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
-			misskeyApi('users/show', { username: x.username, host: x.host }).then(user => {
+		if (!visibleUsers.value.some((u) => u.username === x.username && u.host === x.host)) {
+			misskeyApi('users/show', { username: x.username, host: x.host }).then((user) => {
 				pushVisibleUser(user);
 			});
 		}
@@ -496,7 +547,9 @@ function togglePoll() {
 }
 
 function addTag(tag: string) {
-	if (textareaEl.value == null) return;
+	if (textareaEl.value == null) {
+		return;
+	}
 	insertTextAtCursor(textareaEl.value, ` #${tag} `);
 }
 
@@ -508,38 +561,48 @@ function focus() {
 }
 
 function chooseFileFromPc(ev: PointerEvent) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
-	os.chooseFileFromPc({ multiple: true }).then(files => {
-		if (files.length === 0) return;
+	os.chooseFileFromPc({ multiple: true }).then((files) => {
+		if (files.length === 0) {
+			return;
+		}
 		uploader.addFiles(files);
 	});
 }
 
 function chooseFileFromDrive(ev: PointerEvent) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
-	chooseDriveFile({ multiple: true }).then(driveFiles => {
+	chooseDriveFile({ multiple: true }).then((driveFiles) => {
 		files.value.push(...driveFiles);
 	});
 }
 
 function detachFile(id: Misskey.entities.DriveFile['id']) {
-	files.value = files.value.filter(x => x.id !== id);
+	files.value = files.value.filter((x) => x.id !== id);
 }
 
 function updateFileSensitive(file: Misskey.entities.DriveFile, isSensitive: boolean) {
 	if (mock) {
 		emit('fileChangeSensitive', file.id, isSensitive);
 	}
-	const target = files.value.find(x => x.id === file.id);
-	if (target == null) return;
+	const target = files.value.find((x) => x.id === file.id);
+	if (target == null) {
+		return;
+	}
 	target.isSensitive = isSensitive;
 }
 
 function updateFileName(file: Misskey.entities.DriveFile, name: Misskey.entities.DriveFile['name']) {
-	const target = files.value.find(x => x.id === file.id);
-	if (target == null) return;
+	const target = files.value.find((x) => x.id === file.id);
+	if (target == null) {
+		return;
+	}
 	target.name = name;
 }
 
@@ -550,20 +613,26 @@ function setVisibility() {
 		return;
 	}
 
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/post-composer/components/MkVisibilityPicker.vue')), {
-		currentVisibility: visibility.value,
-		isSilenced: $i.isSilenced,
-		anchorElement: visibilityButton.value,
-		...(replyTargetNote.value ? { isReplyVisibilitySpecified: replyTargetNote.value.visibility === 'specified' } : {}),
-	}, {
-		changeVisibility: v => {
-			visibility.value = v;
-			if (prefer.rememberNoteVisibility) {
-				store.set('visibility', visibility.value);
-			}
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/features/post-composer/components/MkVisibilityPicker.vue')),
+		{
+			currentVisibility: visibility.value,
+			isSilenced: $i.isSilenced,
+			anchorElement: visibilityButton.value,
+			...(replyTargetNote.value
+				? { isReplyVisibilitySpecified: replyTargetNote.value.visibility === 'specified' }
+				: {}),
 		},
-		closed: () => dispose(),
-	});
+		{
+			changeVisibility: (v) => {
+				visibility.value = v;
+				if (prefer.rememberNoteVisibility) {
+					store.set('visibility', visibility.value);
+				}
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 async function toggleLocalOnly() {
@@ -597,8 +666,12 @@ async function toggleLocalOnly() {
 				},
 			],
 		});
-		if (confirm.canceled) return;
-		if (confirm.result === 'no') return;
+		if (confirm.canceled) {
+			return;
+		}
+		if (confirm.result === 'no') {
+			return;
+		}
 
 		if (confirm.result === 'neverShow') {
 			miLocalStorage.setItem('neverShowLocalOnlyInfo', 'true');
@@ -618,12 +691,17 @@ async function toggleReactionAcceptance() {
 			{ value: null, label: i18n.ts.all },
 			{ value: 'likeOnlyForRemote' as const, label: i18n.ts.likeOnlyForRemote },
 			{ value: 'nonSensitiveOnly' as const, label: i18n.ts.nonSensitiveOnly },
-			{ value: 'nonSensitiveOnlyForLocalLikeOnlyForRemote' as const, label: i18n.ts.nonSensitiveOnlyForLocalLikeOnlyForRemote },
+			{
+				value: 'nonSensitiveOnlyForLocalLikeOnlyForRemote' as const,
+				label: i18n.ts.nonSensitiveOnlyForLocalLikeOnlyForRemote,
+			},
 			{ value: 'likeOnly' as const, label: i18n.ts.likeOnly },
 		],
 		default: reactionAcceptance.value,
 	});
-	if (select.canceled) return;
+	if (select.canceled) {
+		return;
+	}
 	reactionAcceptance.value = select.result;
 }
 
@@ -656,70 +734,88 @@ function showOtherSettings() {
 			break;
 	}
 
-	const menuItems = [{
-		type: 'component',
-		component: XTextCounter,
-		props: {
-			textLength: textLength,
+	const menuItems = [
+		{
+			type: 'component',
+			component: XTextCounter,
+			props: {
+				textLength: textLength,
+			},
 		},
-	}, { type: 'divider' }, {
-		icon: reactionAcceptanceIcon,
-		text: i18n.ts.reactionAcceptance,
-		caption: reactionAcceptanceCaption,
-		action: () => {
-			toggleReactionAcceptance();
+		{ type: 'divider' },
+		{
+			icon: reactionAcceptanceIcon,
+			text: i18n.ts.reactionAcceptance,
+			caption: reactionAcceptanceCaption,
+			action: () => {
+				toggleReactionAcceptance();
+			},
 		},
-	}, { type: 'divider' }, {
-		type: 'button',
-		text: i18n.ts._drafts.saveToDraft,
-		icon: 'ti ti-cloud-upload',
-		action: async () => {
-			if (!canSaveAsServerDraft.value) {
-				return os.alert({
-					type: 'error',
-					text: i18n.ts._drafts.cannotCreateDraft,
+		{ type: 'divider' },
+		{
+			type: 'button',
+			text: i18n.ts._drafts.saveToDraft,
+			icon: 'ti ti-cloud-upload',
+			action: async () => {
+				if (!canSaveAsServerDraft.value) {
+					return os.alert({
+						type: 'error',
+						text: i18n.ts._drafts.cannotCreateDraft,
+					});
+				}
+				saveServerDraft();
+			},
+		},
+		...($i.policies.scheduledNoteLimit > 0
+			? [
+					{
+						icon: 'ti ti-calendar-time',
+						text: i18n.ts.schedulePost + '...',
+						action: () => {
+							schedule();
+						},
+					},
+				]
+			: []),
+		{ type: 'divider' },
+		{
+			type: 'switch',
+			icon: 'ti ti-eye',
+			text: i18n.ts.preview,
+			ref: showPreview,
+		},
+		{
+			icon: 'ti ti-trash',
+			text: i18n.ts.reset,
+			danger: true,
+			action: async () => {
+				if (mock) {
+					return;
+				}
+				const { canceled } = await os.confirm({
+					type: 'question',
+					text: i18n.ts.resetAreYouSure,
 				});
-			}
-			saveServerDraft();
+				if (canceled) {
+					return;
+				}
+				clear();
+			},
 		},
-	}, ...($i.policies.scheduledNoteLimit > 0 ? [{
-		icon: 'ti ti-calendar-time',
-		text: i18n.ts.schedulePost + '...',
-		action: () => {
-			schedule();
-		},
-	}] : []), { type: 'divider' }, {
-		type: 'switch',
-		icon: 'ti ti-eye',
-		text: i18n.ts.preview,
-		ref: showPreview,
-	}, {
-		icon: 'ti ti-trash',
-		text: i18n.ts.reset,
-		danger: true,
-		action: async () => {
-			if (mock) return;
-			const { canceled } = await os.confirm({
-				type: 'question',
-				text: i18n.ts.resetAreYouSure,
-			});
-			if (canceled) return;
-			clear();
-		},
-	}] satisfies MenuItem[];
+	] satisfies MenuItem[];
 
 	os.popupMenu(menuItems, otherSettingsButton.value);
 }
 //#endregion
 
 function pushVisibleUser(user: Misskey.entities.UserDetailed) {
-	if (!visibleUsers.value.some(u => u.username === user.username && u.host === user.host)) {
+	if (!visibleUsers.value.some((u) => u.username === user.username && u.host === user.host)) {
 		visibleUsers.value.push(user);
 	}
 }
 
 function addVisibleUser() {
-	os.selectUser().then(user => {
+	os.selectUser().then((user) => {
 		pushVisibleUser(user);
 
 		if (!text.value.toLowerCase().includes(`@${user.username.toLowerCase()}`)) {
@@ -729,7 +825,7 @@ function addVisibleUser() {
 }
 
 function removeVisibleUser(id: string) {
-	visibleUsers.value = visibleUsers.value.filter(u => u.id !== id);
+	visibleUsers.value = visibleUsers.value.filter((u) => u.id !== id);
 }
 
 function clear() {
@@ -743,11 +839,15 @@ function clear() {
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && canPost.value) post();
+	if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && canPost.value) {
+		post();
+	}
 
 	// justEndedComposition.value is for Safari, which keyDown occurs after compositionend.
 	// ev.isComposing is for another browsers.
-	if (ev.key === 'Escape' && !justEndedComposition.value && !ev.isComposing) emit('esc');
+	if (ev.key === 'Escape' && !justEndedComposition.value && !ev.isComposing) {
+		emit('esc');
+	}
 }
 
 function onKeyup(ev: KeyboardEvent) {
@@ -766,15 +866,23 @@ function onCompositionEnd(ev: CompositionEvent) {
 const pastedFileName = 'yyyy-MM-dd HH-mm-ss [{{number}}]';
 
 async function onPaste(ev: ClipboardEvent) {
-	if (mock) return;
-	if (ev.clipboardData == null) return;
-	if (textareaEl.value == null) return;
+	if (mock) {
+		return;
+	}
+	if (ev.clipboardData == null) {
+		return;
+	}
+	if (textareaEl.value == null) {
+		return;
+	}
 
 	let pastedFiles: File[] = [];
 	for (const { item, i } of Array.from(ev.clipboardData.items, (data, x) => ({ item: data, i: x }))) {
 		if (item.kind === 'file') {
 			const file = item.getAsFile();
-			if (!file) continue;
+			if (!file) {
+				continue;
+			}
 			const lio = file.name.lastIndexOf('.');
 			const ext = lio >= 0 ? file.name.slice(lio) : '';
 			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll(/{{number}}/g, `${i + 1}`)}${ext}`;
@@ -826,8 +934,12 @@ async function onPaste(ev: ClipboardEvent) {
 }
 
 function onDragover(ev: DragEvent) {
-	if (ev.dataTransfer == null) return;
-	if (ev.dataTransfer.items[0] == null) return;
+	if (ev.dataTransfer == null) {
+		return;
+	}
+	if (ev.dataTransfer.items[0] == null) {
+		return;
+	}
 
 	const isFile = ev.dataTransfer.items[0].kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
@@ -893,7 +1005,12 @@ type StoredDraft = {
 		poll: PollEditorModelValue | null;
 		visibleUserIds?: string[];
 		quoteId: string | null;
-		reactionAcceptance: 'likeOnly' | 'likeOnlyForRemote' | 'nonSensitiveOnly' | 'nonSensitiveOnlyForLocalLikeOnlyForRemote' | null;
+		reactionAcceptance:
+			| 'likeOnly'
+			| 'likeOnlyForRemote'
+			| 'nonSensitiveOnly'
+			| 'nonSensitiveOnlyForLocalLikeOnlyForRemote'
+			| null;
 		scheduledAt: number | null;
 	};
 };
@@ -921,7 +1038,9 @@ function getStoredDrafts(): Record<string, unknown> {
 }
 
 function saveDraft() {
-	if (props.instant || mock) return;
+	if (props.instant || mock) {
+		return;
+	}
 
 	const draftsData = getStoredDrafts();
 
@@ -935,7 +1054,7 @@ function saveDraft() {
 			localOnly: localOnly.value,
 			files: files.value,
 			poll: poll.value,
-			...( visibleUsers.value.length > 0 ? { visibleUserIds: visibleUsers.value.map(x => x.id) } : {}),
+			...(visibleUsers.value.length > 0 ? { visibleUserIds: visibleUsers.value.map((x) => x.id) } : {}),
 			quoteId: quoteId.value,
 			reactionAcceptance: reactionAcceptance.value,
 			scheduledAt: scheduledAt.value,
@@ -954,9 +1073,11 @@ function deleteDraft() {
 	miLocalStorage.setItemAsJson('drafts', draftsData);
 }
 
-async function saveServerDraft(options: {
-	isActuallyScheduled?: boolean;
-} = {}) {
+async function saveServerDraft(
+	options: {
+		isActuallyScheduled?: boolean;
+	} = {},
+) {
 	return await os.apiWithDialog(serverDraftId.value == null ? 'notes/drafts/create' : 'notes/drafts/update', {
 		...(serverDraftId.value == null ? {} : { draftId: serverDraftId.value }),
 		text: text.value,
@@ -964,9 +1085,9 @@ async function saveServerDraft(options: {
 		visibility: visibility.value,
 		localOnly: localOnly.value,
 		hashtag: hashtags.value,
-		fileIds: files.value.map(f => f.id),
+		fileIds: files.value.map((f) => f.id),
 		poll: poll.value,
-		visibleUserIds: visibleUsers.value.map(x => x.id),
+		visibleUserIds: visibleUsers.value.map((x) => x.id),
 		renoteId: renoteTargetNote.value ? renoteTargetNote.value.id : quoteId.value ? quoteId.value : null,
 		replyId: replyTargetNote.value ? replyTargetNote.value.id : null,
 		channelId: targetChannel.value ? targetChannel.value.id : null,
@@ -977,17 +1098,19 @@ async function saveServerDraft(options: {
 }
 
 function isAnnoying(text: string): boolean {
-	return text.includes('$[x2') ||
+	return (
+		text.includes('$[x2') ||
 		text.includes('$[x3') ||
 		text.includes('$[x4') ||
 		text.includes('$[scale') ||
-		text.includes('$[position');
+		text.includes('$[position')
+	);
 }
 
 async function uploadFiles() {
 	await uploader.upload();
 
-	for (const uploadedItem of uploader.items.value.filter(x => x.uploaded != null)) {
+	for (const uploadedItem of uploader.items.value.filter((x) => x.uploaded != null)) {
 		files.value.push(uploadedItem.uploaded!);
 		uploader.removeItem(uploadedItem);
 	}
@@ -999,20 +1122,24 @@ async function post(ev?: PointerEvent) {
 
 		if (el && prefer.animation) {
 			const rect = el.getBoundingClientRect();
-			const x = rect.left + (el.offsetWidth / 2);
-			const y = rect.top + (el.offsetHeight / 2);
-			const { dispose } = os.popup(MkRippleEffect, { x, y }, {
-				end: () => dispose(),
-			});
+			const x = rect.left + el.offsetWidth / 2;
+			const y = rect.top + el.offsetHeight / 2;
+			const { dispose } = os.popup(
+				MkRippleEffect,
+				{ x, y },
+				{
+					end: () => dispose(),
+				},
+			);
 		}
 	}
 
 	if (scheduledAt.value != null) {
-		if (uploader.items.value.some(x => x.uploaded == null)) {
+		if (uploader.items.value.some((x) => x.uploaded == null)) {
 			await uploadFiles();
 
 			// アップロード失敗したものがあったら中止
-			if (uploader.items.value.some(x => x.uploaded == null)) {
+			if (uploader.items.value.some((x) => x.uploaded == null)) {
 				return;
 			}
 		}
@@ -1022,60 +1149,82 @@ async function post(ev?: PointerEvent) {
 		return;
 	}
 
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
-	if (visibility.value === 'public' && (
-		(useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) || // CWが迷惑になる場合
-		((!useCw.value || cw.value == null || cw.value.trim() === '') && text.value != null && text.value.trim() !== '' && isAnnoying(text.value)) // CWが無い かつ 本文が迷惑になる場合
-	)) {
+	if (
+		visibility.value === 'public' &&
+		((useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) || // CWが迷惑になる場合
+			((!useCw.value || cw.value == null || cw.value.trim() === '') &&
+				text.value != null &&
+				text.value.trim() !== '' &&
+				isAnnoying(text.value))) // CWが無い かつ 本文が迷惑になる場合
+	) {
 		const { canceled, result } = await os.actions({
 			type: 'warning',
 			text: i18n.ts.thisPostMayBeAnnoying,
-			actions: [{
-				value: 'home',
-				text: i18n.ts.thisPostMayBeAnnoyingHome,
-				primary: true,
-			}, {
-				value: 'cancel',
-				text: i18n.ts.thisPostMayBeAnnoyingCancel,
-			}, {
-				value: 'ignore',
-				text: i18n.ts.thisPostMayBeAnnoyingIgnore,
-			}],
+			actions: [
+				{
+					value: 'home',
+					text: i18n.ts.thisPostMayBeAnnoyingHome,
+					primary: true,
+				},
+				{
+					value: 'cancel',
+					text: i18n.ts.thisPostMayBeAnnoyingCancel,
+				},
+				{
+					value: 'ignore',
+					text: i18n.ts.thisPostMayBeAnnoyingIgnore,
+				},
+			],
 		});
 
-		if (canceled) return;
-		if (result === 'cancel') return;
+		if (canceled) {
+			return;
+		}
+		if (result === 'cancel') {
+			return;
+		}
 		if (result === 'home') {
 			visibility.value = 'home';
 		}
 	}
 
-	if (uploader.items.value.some(x => x.uploaded == null)) {
+	if (uploader.items.value.some((x) => x.uploaded == null)) {
 		await uploadFiles();
 
 		// アップロード失敗したものがあったら中止
-		if (uploader.items.value.some(x => x.uploaded == null)) {
+		if (uploader.items.value.some((x) => x.uploaded == null)) {
 			return;
 		}
 	}
 
 	let postData: Misskey.entities.NotesCreateRequest = {
 		text: text.value === '' ? null : text.value,
-		...(files.value.length > 0 ? { fileIds: files.value.map(f => f.id) } : {}),
+		...(files.value.length > 0 ? { fileIds: files.value.map((f) => f.id) } : {}),
 		...(replyTargetNote.value ? { replyId: replyTargetNote.value.id } : {}),
-		...(renoteTargetNote.value ? { renoteId: renoteTargetNote.value.id } : quoteId.value ? { renoteId: quoteId.value } : {}),
+		...(renoteTargetNote.value
+			? { renoteId: renoteTargetNote.value.id }
+			: quoteId.value
+				? { renoteId: quoteId.value }
+				: {}),
 		...(targetChannel.value ? { channelId: targetChannel.value.id } : {}),
 		poll: poll.value,
-		cw: useCw.value ? cw.value ?? '' : null,
+		cw: useCw.value ? (cw.value ?? '') : null,
 		localOnly: visibility.value === 'specified' ? false : localOnly.value,
 		visibility: visibility.value,
-		...(visibility.value === 'specified' ? { visibleUserIds: visibleUsers.value.map(u => u.id) } : {}),
+		...(visibility.value === 'specified' ? { visibleUserIds: visibleUsers.value.map((u) => u.id) } : {}),
 		reactionAcceptance: reactionAcceptance.value,
 	};
 
 	if (withHashtags.value && hashtags.value && hashtags.value.trim() !== '') {
-		const hashtags_ = hashtags.value.trim().split(' ').map(x => x.startsWith('#') ? x : '#' + x).join(' ');
+		const hashtags_ = hashtags.value
+			.trim()
+			.split(' ')
+			.map((x) => (x.startsWith('#') ? x : '#' + x))
+			.join(' ');
 		if (!postData.text) {
 			postData.text = hashtags_;
 		} else {
@@ -1096,7 +1245,7 @@ async function post(ev?: PointerEvent) {
 	if (notePostInterruptors.length > 0) {
 		for (const interruptor of notePostInterruptors) {
 			try {
-				postData = await interruptor.handler(deepClone(postData)) as typeof postData;
+				postData = (await interruptor.handler(deepClone(postData))) as typeof postData;
 			} catch (err) {
 				console.error(err);
 			}
@@ -1107,7 +1256,7 @@ async function post(ev?: PointerEvent) {
 
 	if (postAccount.value) {
 		const storedAccounts = await getAccounts();
-		const storedAccount = storedAccounts.find(x => x.id === postAccount.value?.id);
+		const storedAccount = storedAccounts.find((x) => x.id === postAccount.value?.id);
 		if (storedAccount && storedAccount.token != null) {
 			token = storedAccount.token;
 		} else {
@@ -1120,83 +1269,95 @@ async function post(ev?: PointerEvent) {
 	}
 
 	posting.value = true;
-	misskeyApi('notes/create', postData, token).then((res) => {
-		if (props.freezeAfterPosted) {
-			posted.value = true;
-		} else {
-			clear();
-		}
-
-		globalEvents.emit('notePosted', res.createdNote);
-
-		nextTick(() => {
-			deleteDraft();
-			emit('posted');
-			if (postData.text && postData.text !== '') {
-				const hashtags_ = mfm.parse(postData.text).map(x => x.type === 'hashtag' && x.props.hashtag).filter(x => x) as string[];
-				const history = miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? [];
-				miLocalStorage.setItemAsJson('hashtags', unique(hashtags_.concat(history)));
+	misskeyApi('notes/create', postData, token)
+		.then((res) => {
+			if (props.freezeAfterPosted) {
+				posted.value = true;
+			} else {
+				clear();
 			}
+
+			globalEvents.emit('notePosted', res.createdNote);
+
+			nextTick(() => {
+				deleteDraft();
+				emit('posted');
+				if (postData.text && postData.text !== '') {
+					const hashtags_ = mfm
+						.parse(postData.text)
+						.map((x) => x.type === 'hashtag' && x.props.hashtag)
+						.filter((x) => x) as string[];
+					const history = miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? [];
+					miLocalStorage.setItemAsJson('hashtags', unique(hashtags_.concat(history)));
+				}
+				posting.value = false;
+				postAccount.value = null;
+
+				incNotesCount();
+				if (notesCount === 1) {
+					claimAchievement('notes1');
+				}
+
+				const text = postData.text ?? '';
+				const lowerCase = text.toLowerCase();
+				if (
+					(lowerCase.includes('love') || lowerCase.includes('❤')) &&
+					(lowerCase.includes('erebia') || lowerCase.includes('misskey'))
+				) {
+					claimAchievement('iLoveMisskey');
+				}
+				if (
+					[
+						'https://youtu.be/Efrlqw8ytg4',
+						'https://www.youtube.com/watch?v=Efrlqw8ytg4',
+						'https://m.youtube.com/watch?v=Efrlqw8ytg4',
+
+						'https://youtu.be/XVCwzwxdHuA',
+						'https://www.youtube.com/watch?v=XVCwzwxdHuA',
+						'https://m.youtube.com/watch?v=XVCwzwxdHuA',
+
+						'https://open.spotify.com/track/3Cuj0mZrlLoXx9nydNi7RB',
+						'https://open.spotify.com/track/7anfcaNPQWlWCwyCHmZqNy',
+						'https://open.spotify.com/track/5Odr16TvEN4my22K9nbH7l',
+						'https://open.spotify.com/album/5bOlxyl4igOrp2DwVQxBco',
+					].some((url) => text.includes(url))
+				) {
+					claimAchievement('brainDiver');
+				}
+
+				if (renoteTargetNote.value && renoteTargetNote.value.userId === $i.id && text.length > 0) {
+					claimAchievement('selfQuote');
+				}
+
+				const date = new Date();
+				const h = date.getHours();
+				const m = date.getMinutes();
+				const s = date.getSeconds();
+				if (h >= 0 && h <= 3) {
+					claimAchievement('postedAtLateNight');
+				}
+				if (m === 0 && s === 0) {
+					claimAchievement('postedAt0min0sec');
+				}
+
+				if (serverDraftId.value != null) {
+					misskeyApi('notes/drafts/delete', { draftId: serverDraftId.value });
+				}
+			});
+		})
+		.catch((err) => {
 			posting.value = false;
-			postAccount.value = null;
-
-			incNotesCount();
-			if (notesCount === 1) {
-				claimAchievement('notes1');
-			}
-
-			const text = postData.text ?? '';
-			const lowerCase = text.toLowerCase();
-			if ((lowerCase.includes('love') || lowerCase.includes('❤')) && (lowerCase.includes('erebia') || lowerCase.includes('misskey'))) {
-				claimAchievement('iLoveMisskey');
-			}
-			if ([
-				'https://youtu.be/Efrlqw8ytg4',
-				'https://www.youtube.com/watch?v=Efrlqw8ytg4',
-				'https://m.youtube.com/watch?v=Efrlqw8ytg4',
-
-				'https://youtu.be/XVCwzwxdHuA',
-				'https://www.youtube.com/watch?v=XVCwzwxdHuA',
-				'https://m.youtube.com/watch?v=XVCwzwxdHuA',
-
-				'https://open.spotify.com/track/3Cuj0mZrlLoXx9nydNi7RB',
-				'https://open.spotify.com/track/7anfcaNPQWlWCwyCHmZqNy',
-				'https://open.spotify.com/track/5Odr16TvEN4my22K9nbH7l',
-				'https://open.spotify.com/album/5bOlxyl4igOrp2DwVQxBco',
-			].some(url => text.includes(url))) {
-				claimAchievement('brainDiver');
-			}
-
-			if (renoteTargetNote.value && (renoteTargetNote.value.userId === $i.id) && text.length > 0) {
-				claimAchievement('selfQuote');
-			}
-
-			const date = new Date();
-			const h = date.getHours();
-			const m = date.getMinutes();
-			const s = date.getSeconds();
-			if (h >= 0 && h <= 3) {
-				claimAchievement('postedAtLateNight');
-			}
-			if (m === 0 && s === 0) {
-				claimAchievement('postedAt0min0sec');
-			}
-
-			if (serverDraftId.value != null) {
-				misskeyApi('notes/drafts/delete', { draftId: serverDraftId.value });
-			}
+			os.alert({
+				type: 'error',
+				text: err.message + '\n' + (err as any).id,
+			});
 		});
-	}).catch(err => {
-		posting.value = false;
-		os.alert({
-			type: 'error',
-			text: err.message + '\n' + (err as any).id,
-		});
-	});
 }
 
 async function postAsScheduled() {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
 	await saveServerDraft({
 		isActuallyScheduled: true,
@@ -1208,13 +1369,15 @@ function cancel() {
 }
 
 function insertMention() {
-	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then(user => {
+	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then((user) => {
 		insertTextAtCursor(textareaEl.value, '@' + Misskey.acct.toString(user) + ' ');
 	});
 }
 
 function insertTextAtCursor(textarea: HTMLTextAreaElement | null, value: string) {
-	if (textarea == null) return;
+	if (textarea == null) {
+		return;
+	}
 	const start = textarea.selectionStart ?? textarea.value.length;
 	const end = textarea.selectionEnd ?? start;
 	textarea.setRangeText(value, start, end, 'end');
@@ -1224,7 +1387,9 @@ function insertTextAtCursor(textarea: HTMLTextAreaElement | null, value: string)
 async function insertEmoji(ev: PointerEvent) {
 	textAreaReadOnly.value = true;
 	const target = ev.currentTarget ?? ev.target;
-	if (target == null) return;
+	if (target == null) {
+		return;
+	}
 
 	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
 	// focustrapをかけているとinsertTextAtCursorが効かない
@@ -1236,7 +1401,7 @@ async function insertEmoji(ev: PointerEvent) {
 	let posEnd = textareaEl.value?.selectionEnd ?? text.value.length;
 	emojiPicker.show(
 		target as HTMLElement,
-		emoji => {
+		(emoji) => {
 			const textBefore = text.value.substring(0, pos);
 			const textAfter = text.value.substring(posEnd);
 			text.value = textBefore + emoji + textAfter;
@@ -1256,7 +1421,9 @@ async function insertEmoji(ev: PointerEvent) {
 }
 
 async function insertMfmFunction(ev: PointerEvent) {
-	if (textareaEl.value == null) return;
+	if (textareaEl.value == null) {
+		return;
+	}
 	let pos = textareaEl.value.selectionStart ?? 0;
 	let posEnd = textareaEl.value.selectionEnd ?? text.value.length;
 	mfmFunctionPicker(
@@ -1284,81 +1451,102 @@ async function insertMfmFunction(ev: PointerEvent) {
 }
 
 function showActions(ev: PointerEvent) {
-	os.popupMenu(postFormActions.map(action => ({
-		text: action.title,
-		action: () => {
-			action.handler({
-				text: text.value,
-				cw: cw.value,
-			}, (key, value) => {
-				if (typeof key !== 'string' || typeof value !== 'string') return;
-				if (key === 'text') { text.value = value; }
-				if (key === 'cw') { useCw.value = value !== null; cw.value = value; }
-			});
-		},
-	})), ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		postFormActions.map((action) => ({
+			text: action.title,
+			action: () => {
+				action.handler(
+					{
+						text: text.value,
+						cw: cw.value,
+					},
+					(key, value) => {
+						if (typeof key !== 'string' || typeof value !== 'string') {
+							return;
+						}
+						if (key === 'text') {
+							text.value = value;
+						}
+						if (key === 'cw') {
+							useCw.value = value !== null;
+							cw.value = value;
+						}
+					},
+				);
+			},
+		})),
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 const postAccount = ref<Misskey.entities.UserDetailed | null>(null);
 
 async function openAccountMenu(ev: PointerEvent) {
-	if (mock) return;
+	if (mock) {
+		return;
+	}
 
 	function showDraftsDialog(scheduled: boolean) {
-		const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/post-composer/components/MkNoteDraftsDialog.vue')), {
-			scheduled,
-		}, {
-			restore: async (draft: Misskey.entities.NoteDraft) => {
-				text.value = draft.text ?? '';
-				useCw.value = draft.cw != null;
-				cw.value = draft.cw ?? null;
-				visibility.value = draft.visibility;
-				localOnly.value = draft.localOnly ?? false;
-				files.value = draft.files ?? [];
-				hashtags.value = draft.hashtag ?? '';
-				if (draft.hashtag) withHashtags.value = true;
-				if (draft.poll) {
-					// 投票を一時的に空にしないと反映されないため
-					poll.value = null;
-					nextTick(() => {
-						poll.value = {
-							choices: draft.poll!.choices,
-							multiple: draft.poll!.multiple,
-							expiresAt: draft.poll!.expiresAt ? (new Date(draft.poll!.expiresAt)).getTime() : null,
-							expiredAfter: null,
-						};
-					});
-				}
-				if (draft.visibleUserIds) {
-					misskeyApi('users/show', { userIds: draft.visibleUserIds }).then(users => {
-						users.forEach(u => pushVisibleUser(u));
-					});
-				}
-				quoteId.value = draft.renoteId ?? null;
-				renoteTargetNote.value = draft.renote;
-				replyTargetNote.value = draft.reply;
-				reactionAcceptance.value = draft.reactionAcceptance;
-				scheduledAt.value = draft.scheduledAt ?? null;
-				if (draft.channel) targetChannel.value = draft.channel as unknown as Misskey.entities.Channel;
-
-				visibleUsers.value = [];
-				draft.visibleUserIds?.forEach(uid => {
-					if (!visibleUsers.value.some(u => u.id === uid)) {
-						misskeyApi('users/show', { userId: uid }).then(user => {
-							pushVisibleUser(user);
+		const { dispose } = os.popup(
+			defineAsyncComponent(() => import('@/features/post-composer/components/MkNoteDraftsDialog.vue')),
+			{
+				scheduled,
+			},
+			{
+				restore: async (draft: Misskey.entities.NoteDraft) => {
+					text.value = draft.text ?? '';
+					useCw.value = draft.cw != null;
+					cw.value = draft.cw ?? null;
+					visibility.value = draft.visibility;
+					localOnly.value = draft.localOnly ?? false;
+					files.value = draft.files ?? [];
+					hashtags.value = draft.hashtag ?? '';
+					if (draft.hashtag) {
+						withHashtags.value = true;
+					}
+					if (draft.poll) {
+						// 投票を一時的に空にしないと反映されないため
+						poll.value = null;
+						nextTick(() => {
+							poll.value = {
+								choices: draft.poll!.choices,
+								multiple: draft.poll!.multiple,
+								expiresAt: draft.poll!.expiresAt ? new Date(draft.poll!.expiresAt).getTime() : null,
+								expiredAfter: null,
+							};
 						});
 					}
-				});
+					if (draft.visibleUserIds) {
+						misskeyApi('users/show', { userIds: draft.visibleUserIds }).then((users) => {
+							users.forEach((u) => pushVisibleUser(u));
+						});
+					}
+					quoteId.value = draft.renoteId ?? null;
+					renoteTargetNote.value = draft.renote;
+					replyTargetNote.value = draft.reply;
+					reactionAcceptance.value = draft.reactionAcceptance;
+					scheduledAt.value = draft.scheduledAt ?? null;
+					if (draft.channel) {
+						targetChannel.value = draft.channel as unknown as Misskey.entities.Channel;
+					}
 
-				serverDraftId.value = draft.id;
-			},
-			cancel: () => {
+					visibleUsers.value = [];
+					draft.visibleUserIds?.forEach((uid) => {
+						if (!visibleUsers.value.some((u) => u.id === uid)) {
+							misskeyApi('users/show', { userId: uid }).then((user) => {
+								pushVisibleUser(user);
+							});
+						}
+					});
 
+					serverDraftId.value = draft.id;
+				},
+				cancel: () => {},
+				closed: () => {
+					dispose();
+				},
 			},
-			closed: () => {
-				dispose();
-			},
-		});
+		);
 	}
 
 	const items = await getAccountMenu({
@@ -1374,21 +1562,29 @@ async function openAccountMenu(ev: PointerEvent) {
 		},
 	});
 
-	os.popupMenu([{
-		type: 'button',
-		text: i18n.ts._drafts.listDrafts,
-		icon: 'ti ti-cloud-download',
-		action: () => {
-			showDraftsDialog(false);
-		},
-	}, {
-		type: 'button',
-		text: i18n.ts._drafts.listScheduledNotes,
-		icon: 'ti ti-clock-down',
-		action: () => {
-			showDraftsDialog(true);
-		},
-	}, { type: 'divider' }, ...items], (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
+	os.popupMenu(
+		[
+			{
+				type: 'button',
+				text: i18n.ts._drafts.listDrafts,
+				icon: 'ti ti-cloud-download',
+				action: () => {
+					showDraftsDialog(false);
+				},
+			},
+			{
+				type: 'button',
+				text: i18n.ts._drafts.listScheduledNotes,
+				icon: 'ti ti-clock-down',
+				action: () => {
+					showDraftsDialog(true);
+				},
+			},
+			{ type: 'divider' },
+			...items,
+		],
+		(ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined,
+	);
 }
 
 function showPerUploadItemMenu(item: UploaderItem, ev: PointerEvent) {
@@ -1405,8 +1601,12 @@ async function schedule() {
 	const { canceled, result } = await os.inputDatetime({
 		title: i18n.ts.schedulePost,
 	});
-	if (canceled) return;
-	if (result.getTime() <= Date.now()) return;
+	if (canceled) {
+		return;
+	}
+	if (result.getTime() <= Date.now()) {
+		return;
+	}
 
 	scheduledAt.value = result.getTime();
 }
@@ -1416,51 +1616,73 @@ function cancelSchedule() {
 }
 
 function showTour() {
-	if (textareaEl.value == null ||
+	if (
+		textareaEl.value == null ||
 		footerEl.value == null ||
 		accountMenuEl.value == null ||
 		visibilityButton.value == null ||
 		otherSettingsButton.value == null ||
-		submitButtonEl.value == null) {
+		submitButtonEl.value == null
+	) {
 		return;
 	}
 
-	startTour([{
-		element: textareaEl.value,
-		title: i18n.ts._postForm._howToUse.content_title,
-		description: i18n.ts._postForm._howToUse.content_description,
-	}, {
-		element: footerEl.value,
-		title: i18n.ts._postForm._howToUse.toolbar_title,
-		description: i18n.ts._postForm._howToUse.toolbar_description,
-	}, {
-		element: accountMenuEl.value,
-		title: i18n.ts._postForm._howToUse.account_title,
-		description: i18n.ts._postForm._howToUse.account_description,
-	}, {
-		element: visibilityButton.value,
-		title: i18n.ts._postForm._howToUse.visibility_title,
-		description: i18n.ts._postForm._howToUse.visibility_description,
-	}, {
-		element: otherSettingsButton.value,
-		title: i18n.ts._postForm._howToUse.menu_title,
-		description: i18n.ts._postForm._howToUse.menu_description,
-	}, {
-		element: submitButtonEl.value,
-		title: i18n.ts._postForm._howToUse.submit_title,
-		description: i18n.ts._postForm._howToUse.submit_description,
-	}]).then(() => {
+	startTour([
+		{
+			element: textareaEl.value,
+			title: i18n.ts._postForm._howToUse.content_title,
+			description: i18n.ts._postForm._howToUse.content_description,
+		},
+		{
+			element: footerEl.value,
+			title: i18n.ts._postForm._howToUse.toolbar_title,
+			description: i18n.ts._postForm._howToUse.toolbar_description,
+		},
+		{
+			element: accountMenuEl.value,
+			title: i18n.ts._postForm._howToUse.account_title,
+			description: i18n.ts._postForm._howToUse.account_description,
+		},
+		{
+			element: visibilityButton.value,
+			title: i18n.ts._postForm._howToUse.visibility_title,
+			description: i18n.ts._postForm._howToUse.visibility_description,
+		},
+		{
+			element: otherSettingsButton.value,
+			title: i18n.ts._postForm._howToUse.menu_title,
+			description: i18n.ts._postForm._howToUse.menu_description,
+		},
+		{
+			element: submitButtonEl.value,
+			title: i18n.ts._postForm._howToUse.submit_title,
+			description: i18n.ts._postForm._howToUse.submit_description,
+		},
+	]).then(() => {
 		closeTip('postForm');
 	});
 }
 
 async function restoreLocalDraft(): Promise<void> {
-	if (props.instant || props.mention || props.specified || mock || props.initialNote || prefer.draftRestoreMode === 'never') return;
+	if (
+		props.instant ||
+		props.mention ||
+		props.specified ||
+		mock ||
+		props.initialNote ||
+		prefer.draftRestoreMode === 'never'
+	) {
+		return;
+	}
 
 	const draft = getStoredDrafts()[draftKey.value];
-	if (!isJsonObject(draft)) return;
+	if (!isJsonObject(draft)) {
+		return;
+	}
 	const candidate = draft as StoredDraftCandidate;
-	if (!isJsonObject(candidate.data)) return;
+	if (!isJsonObject(candidate.data)) {
+		return;
+	}
 	const data = candidate.data as StoredDraftDataCandidate;
 
 	if (prefer.draftRestoreMode === 'ask') {
@@ -1470,24 +1692,57 @@ async function restoreLocalDraft(): Promise<void> {
 			text: i18n.ts._drafts.restoreLocalDraftConfirm,
 			okText: i18n.ts._drafts.restore,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
-	if (typeof data.text === 'string') text.value = data.text;
-	if (typeof data.useCw === 'boolean') useCw.value = data.useCw;
-	if (typeof data.cw === 'string' || data.cw === null) cw.value = data.cw;
-	if (data.visibility === 'public' || data.visibility === 'home' || data.visibility === 'followers' || data.visibility === 'specified') visibility.value = data.visibility;
-	if (typeof data.localOnly === 'boolean') localOnly.value = data.localOnly;
-	if (Array.isArray(data.files)) files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
-	if (isJsonObject(data.poll)) poll.value = data.poll as PollEditorModelValue;
+	if (typeof data.text === 'string') {
+		text.value = data.text;
+	}
+	if (typeof data.useCw === 'boolean') {
+		useCw.value = data.useCw;
+	}
+	if (typeof data.cw === 'string' || data.cw === null) {
+		cw.value = data.cw;
+	}
+	if (
+		data.visibility === 'public' ||
+		data.visibility === 'home' ||
+		data.visibility === 'followers' ||
+		data.visibility === 'specified'
+	) {
+		visibility.value = data.visibility;
+	}
+	if (typeof data.localOnly === 'boolean') {
+		localOnly.value = data.localOnly;
+	}
+	if (Array.isArray(data.files)) {
+		files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
+	}
+	if (isJsonObject(data.poll)) {
+		poll.value = data.poll as PollEditorModelValue;
+	}
 	if (isStringArray(data.visibleUserIds)) {
-		misskeyApi('users/show', { userIds: data.visibleUserIds }).then(users => {
-			users.forEach(u => pushVisibleUser(u));
+		misskeyApi('users/show', { userIds: data.visibleUserIds }).then((users) => {
+			users.forEach((u) => pushVisibleUser(u));
 		});
 	}
-	if (typeof data.quoteId === 'string' || data.quoteId === null) quoteId.value = data.quoteId;
-	if (data.reactionAcceptance === 'likeOnly' || data.reactionAcceptance === 'likeOnlyForRemote' || data.reactionAcceptance === 'nonSensitiveOnly' || data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' || data.reactionAcceptance === null) reactionAcceptance.value = data.reactionAcceptance;
-	if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) scheduledAt.value = data.scheduledAt;
+	if (typeof data.quoteId === 'string' || data.quoteId === null) {
+		quoteId.value = data.quoteId;
+	}
+	if (
+		data.reactionAcceptance === 'likeOnly' ||
+		data.reactionAcceptance === 'likeOnlyForRemote' ||
+		data.reactionAcceptance === 'nonSensitiveOnly' ||
+		data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' ||
+		data.reactionAcceptance === null
+	) {
+		reactionAcceptance.value = data.reactionAcceptance;
+	}
+	if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) {
+		scheduledAt.value = data.scheduledAt;
+	}
 }
 
 onMounted(() => {
@@ -1499,9 +1754,15 @@ onMounted(() => {
 		});
 	}
 
-	if (textareaEl.value) textAutocomplete = new Autocomplete(textareaEl.value, text);
-	if (cwInputEl.value) cwAutocomplete = new Autocomplete(cwInputEl.value, cw);
-	if (hashtagsInputEl.value) hashtagAutocomplete = new Autocomplete(hashtagsInputEl.value, hashtags);
+	if (textareaEl.value) {
+		textAutocomplete = new Autocomplete(textareaEl.value, text);
+	}
+	if (cwInputEl.value) {
+		cwAutocomplete = new Autocomplete(cwInputEl.value, cw);
+	}
+	if (hashtagsInputEl.value) {
+		hashtagAutocomplete = new Autocomplete(hashtagsInputEl.value, hashtags);
+	}
 
 	nextTick(async () => {
 		await restoreLocalDraft();
@@ -1517,15 +1778,15 @@ onMounted(() => {
 			files.value = init.files ?? [];
 			if (init.poll) {
 				poll.value = {
-					choices: init.poll.choices.map(x => x.text),
+					choices: init.poll.choices.map((x) => x.text),
 					multiple: init.poll.multiple,
-					expiresAt: init.poll.expiresAt ? (new Date(init.poll.expiresAt)).getTime() : null,
+					expiresAt: init.poll.expiresAt ? new Date(init.poll.expiresAt).getTime() : null,
 					expiredAfter: null,
 				};
 			}
 			if (init.visibleUserIds) {
-				misskeyApi('users/show', { userIds: init.visibleUserIds }).then(users => {
-					users.forEach(u => pushVisibleUser(u));
+				misskeyApi('users/show', { userIds: init.visibleUserIds }).then((users) => {
+					users.forEach((u) => pushVisibleUser(u));
 				});
 			}
 			quoteId.value = renoteTargetNote.value ? renoteTargetNote.value.id : null;
@@ -1557,7 +1818,9 @@ async function canClose() {
 			okText: i18n.ts.yes,
 			cancelText: i18n.ts.no,
 		});
-		if (canceled) return false;
+		if (canceled) {
+			return false;
+		}
 	}
 
 	return true;

@@ -59,18 +59,23 @@ const serverMetadata = inject(DI.serverMetadata)!;
 
 const embedParams = inject(DI.embedParams, defaultEmbedParams);
 
-const pagination = computed(() => ({
-	endpoint: 'notes/search-by-tag',
-	params: {
-		tag: props.tag,
-	},
-} as Paging));
+const pagination = computed(
+	() =>
+		({
+			endpoint: 'notes/search-by-tag',
+			params: {
+				tag: props.tag,
+			},
+		}) as Paging,
+);
 
 const notesEl = useTemplateRef('notesEl');
 
 function top(ev: PointerEvent) {
 	const target = ev.target as HTMLElement | null;
-	if (target && isLink(target)) return;
+	if (target && isLink(target)) {
+		return;
+	}
 
 	if (notesEl.value) {
 		scrollToTop(notesEl.value.$el as HTMLElement, { behavior: 'smooth' });

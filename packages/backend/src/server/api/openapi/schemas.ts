@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { deepClone, type Cloneable } from '@/misc/clone.js';
+import { deepClone } from '@/misc/clone.js';
+import type { Cloneable } from '@/misc/clone.js';
 import type { Schema } from '@/misc/json-schema.js';
 import { refs } from '@/misc/json-schema.js';
 
@@ -43,7 +44,9 @@ export function convertSchemaToOpenApiSchema(
 		res.properties ??= {};
 		for (const k of Object.keys(schema.properties)) {
 			const property = schema.properties[k];
-			if (property == null) throw new Error(`OpenAPI schema property is missing: ${k}`);
+			if (property == null) {
+				throw new Error(`OpenAPI schema property is missing: ${k}`);
+			}
 			res.properties[k] = convertSchemaToOpenApiSchema(property, type, includeSelfRef);
 		}
 	}
@@ -53,7 +56,9 @@ export function convertSchemaToOpenApiSchema(
 	}
 
 	for (const o of ['anyOf', 'oneOf', 'allOf'] as const) {
-		if (o in schema) res[o] = schema[o]!.map((schema) => convertSchemaToOpenApiSchema(schema, type, includeSelfRef));
+		if (o in schema) {
+			res[o] = schema[o]!.map((schema) => convertSchemaToOpenApiSchema(schema, type, includeSelfRef));
+		}
 	}
 
 	if (type === 'res' && schema.ref && (!schema.selfRef || includeSelfRef)) {

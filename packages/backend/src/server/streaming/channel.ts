@@ -43,16 +43,28 @@ export function isNoteVisibleForMeForStream(ctx: StreamChannelContext, note: Pac
 	const meId = ctx.user?.id ?? null;
 
 	if (note.visibility === 'specified') {
-		if (meId == null) return false;
-		if (meId === note.userId) return true;
+		if (meId == null) {
+			return false;
+		}
+		if (meId === note.userId) {
+			return true;
+		}
 		return note.visibleUserIds?.includes(meId) ?? false;
 	}
 
 	if (note.visibility === 'followers') {
-		if (meId == null) return false;
-		if (meId === note.userId) return true;
-		if (note.reply && meId === note.reply.userId) return true;
-		if (note.mentions && note.mentions.includes(meId)) return true;
+		if (meId == null) {
+			return false;
+		}
+		if (meId === note.userId) {
+			return true;
+		}
+		if (note.reply && meId === note.reply.userId) {
+			return true;
+		}
+		if (note.mentions && note.mentions.includes(meId)) {
+			return true;
+		}
 		return Object.hasOwn(ctx.following, note.userId);
 	}
 
@@ -60,11 +72,21 @@ export function isNoteVisibleForMeForStream(ctx: StreamChannelContext, note: Pac
 }
 
 export function isNoteMutedOrBlockedForStream(ctx: StreamChannelContext, note: Packed<'Note'>): boolean {
-	if (isInstanceMuted(note, ctx.userMutedInstances)) return true;
-	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) return true;
-	if (isUserRelated(note, ctx.userIdsWhoBlockingMe)) return true;
-	if (isRenotePacked(note) && !isQuotePacked(note) && ctx.userIdsWhoMeMutingRenotes.has(note.user.id)) return true;
-	if (isChannelRelated(note, ctx.mutingChannels)) return true;
+	if (isInstanceMuted(note, ctx.userMutedInstances)) {
+		return true;
+	}
+	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) {
+		return true;
+	}
+	if (isUserRelated(note, ctx.userIdsWhoBlockingMe)) {
+		return true;
+	}
+	if (isRenotePacked(note) && !isQuotePacked(note) && ctx.userIdsWhoMeMutingRenotes.has(note.user.id)) {
+		return true;
+	}
+	if (isChannelRelated(note, ctx.mutingChannels)) {
+		return true;
+	}
 	return false;
 }
 

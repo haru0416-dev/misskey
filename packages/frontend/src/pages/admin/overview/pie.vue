@@ -19,7 +19,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
-import { use, init, type ECharts } from 'echarts/core';
+import { use, init } from 'echarts/core';
+import type { ECharts } from 'echarts/core';
 import { PieChart } from 'echarts/charts';
 import { AriaComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
@@ -30,28 +31,61 @@ export type InstanceForPie = { name: string; color: string | null; value: number
 const props = defineProps<{ data: InstanceForPie[] }>();
 const chartEl = useTemplateRef('chartEl');
 const numberFormat = new Intl.NumberFormat();
-const ariaLabel = computed(() => `${i18n.ts.statistics}: ${props.data.map(item => `${item.name} ${numberFormat.format(item.value)}`).join(', ')}`);
+const ariaLabel = computed(
+	() =>
+		`${i18n.ts.statistics}: ${props.data.map((item) => `${item.name} ${numberFormat.format(item.value)}`).join(', ')}`,
+);
 let chart: ECharts | null = null;
 let observer: ResizeObserver | null = null;
 
 function render() {
-	if (chartEl.value == null) return;
+	if (chartEl.value == null) {
+		return;
+	}
 	chart ??= init(chartEl.value, undefined, { renderer: 'svg' });
-	chart.setOption({
-		animation: false,
-		aria: { enabled: true, description: ariaLabel.value },
-		tooltip: {
-			trigger: 'item',
-			appendTo: 'body',
+	chart.setOption(
+		{
+			animation: false,
+			aria: { enabled: true, description: ariaLabel.value },
+			tooltip: {
+				trigger: 'item',
+				appendTo: 'body',
+			},
+			series: [
+				{
+					type: 'pie',
+					radius: ['48%', '78%'],
+					avoidLabelOverlap: true,
+					label: { show: false },
+					data: props.data.map((item) => ({
+						name: item.name,
+						value: item.value,
+						itemStyle: { color: item.color ?? undefined },
+					})),
+				},
+			],
 		},
-		series: [{ type: 'pie', radius: ['48%', '78%'], avoidLabelOverlap: true, label: { show: false }, data: props.data.map(item => ({ name: item.name, value: item.value, itemStyle: { color: item.color ?? undefined } })) }],
-	}, { notMerge: true });
+		{ notMerge: true },
+	);
 	chart.off('click');
-	chart.on('click', event => props.data[event.dataIndex]?.onClick?.());
+	chart.on('click', (event) => props.data[event.dataIndex]?.onClick?.());
 }
-watch(() => props.data, () => nextTick(render), { deep: true });
-onMounted(() => { render(); if (chartEl.value) { observer = new ResizeObserver(() => chart?.resize()); observer.observe(chartEl.value); } });
-onBeforeUnmount(() => { observer?.disconnect(); chart?.dispose(); });
+watch(
+	() => props.data,
+	() => nextTick(render),
+	{ deep: true },
+);
+onMounted(() => {
+	render();
+	if (chartEl.value) {
+		observer = new ResizeObserver(() => chart?.resize());
+		observer.observe(chartEl.value);
+	}
+});
+onBeforeUnmount(() => {
+	observer?.disconnect();
+	chart?.dispose();
+});
 </script>
 
 <style lang="scss" module>

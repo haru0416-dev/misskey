@@ -35,7 +35,7 @@ import MkButton from '@/components/form/MkButton.vue';
 const scopesWithDomain = ref<Misskey.entities.IRegistryScopesWithDomainResponse | null>(null);
 
 function fetchScopes() {
-	misskeyApi('i/registry/scopes-with-domain').then(res => {
+	misskeyApi('i/registry/scopes-with-domain').then((res) => {
 		scopesWithDomain.value = res;
 	});
 }
@@ -57,7 +57,9 @@ async function createKey() {
 		},
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('i/registry/set', {
 		scope: result.scope.split('/'),

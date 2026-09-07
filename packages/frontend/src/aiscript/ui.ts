@@ -192,29 +192,53 @@ function getContainerOptions(def: values.Value | undefined): Options<AsUiContain
 	utils.assertObject(def);
 
 	const children = def.value.get('children');
-	if (children) utils.assertArray(children);
+	if (children) {
+		utils.assertArray(children);
+	}
 	const align = def.value.get('align');
-	if (align) assertStringAndIsIn(align, ALIGNS);
+	if (align) {
+		assertStringAndIsIn(align, ALIGNS);
+	}
 	const bgColor = def.value.get('bgColor');
-	if (bgColor) utils.assertString(bgColor);
+	if (bgColor) {
+		utils.assertString(bgColor);
+	}
 	const fgColor = def.value.get('fgColor');
-	if (fgColor) utils.assertString(fgColor);
+	if (fgColor) {
+		utils.assertString(fgColor);
+	}
 	const font = def.value.get('font');
-	if (font) assertStringAndIsIn(font, FONTS);
+	if (font) {
+		assertStringAndIsIn(font, FONTS);
+	}
 	const borderWidth = def.value.get('borderWidth');
-	if (borderWidth) utils.assertNumber(borderWidth);
+	if (borderWidth) {
+		utils.assertNumber(borderWidth);
+	}
 	const borderColor = def.value.get('borderColor');
-	if (borderColor) utils.assertString(borderColor);
+	if (borderColor) {
+		utils.assertString(borderColor);
+	}
 	const borderStyle = def.value.get('borderStyle');
-	if (borderStyle) assertStringAndIsIn(borderStyle, BORDER_STYLES);
+	if (borderStyle) {
+		assertStringAndIsIn(borderStyle, BORDER_STYLES);
+	}
 	const borderRadius = def.value.get('borderRadius');
-	if (borderRadius) utils.assertNumber(borderRadius);
+	if (borderRadius) {
+		utils.assertNumber(borderRadius);
+	}
 	const padding = def.value.get('padding');
-	if (padding) utils.assertNumber(padding);
+	if (padding) {
+		utils.assertNumber(padding);
+	}
 	const rounded = def.value.get('rounded');
-	if (rounded) utils.assertBoolean(rounded);
+	if (rounded) {
+		utils.assertBoolean(rounded);
+	}
 	const hidden = def.value.get('hidden');
-	if (hidden) utils.assertBoolean(hidden);
+	if (hidden) {
+		utils.assertBoolean(hidden);
+	}
 
 	return {
 		children: children
@@ -243,15 +267,25 @@ function getTextOptions(def: values.Value | undefined): Options<AsUiText> {
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
-	if (text) utils.assertString(text);
+	if (text) {
+		utils.assertString(text);
+	}
 	const size = def.value.get('size');
-	if (size) utils.assertNumber(size);
+	if (size) {
+		utils.assertNumber(size);
+	}
 	const bold = def.value.get('bold');
-	if (bold) utils.assertBoolean(bold);
+	if (bold) {
+		utils.assertBoolean(bold);
+	}
 	const color = def.value.get('color');
-	if (color) utils.assertString(color);
+	if (color) {
+		utils.assertString(color);
+	}
 	const font = def.value.get('font');
-	if (font) assertStringAndIsIn(font, FONTS);
+	if (font) {
+		assertStringAndIsIn(font, FONTS);
+	}
 
 	return {
 		text: text?.value,
@@ -269,17 +303,29 @@ function getMfmOptions(
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
-	if (text) utils.assertString(text);
+	if (text) {
+		utils.assertString(text);
+	}
 	const size = def.value.get('size');
-	if (size) utils.assertNumber(size);
+	if (size) {
+		utils.assertNumber(size);
+	}
 	const bold = def.value.get('bold');
-	if (bold) utils.assertBoolean(bold);
+	if (bold) {
+		utils.assertBoolean(bold);
+	}
 	const color = def.value.get('color');
-	if (color) utils.assertString(color);
+	if (color) {
+		utils.assertString(color);
+	}
 	const font = def.value.get('font');
-	if (font) assertStringAndIsIn(font, FONTS);
+	if (font) {
+		assertStringAndIsIn(font, FONTS);
+	}
 	const onClickEv = def.value.get('onClickEv');
-	if (onClickEv) utils.assertFunction(onClickEv);
+	if (onClickEv) {
+		utils.assertFunction(onClickEv);
+	}
 
 	return {
 		text: text?.value,
@@ -288,7 +334,9 @@ function getMfmOptions(
 		color: color?.value,
 		font: font?.value,
 		onClickEv: async (evId: string) => {
-			if (onClickEv) await call(onClickEv, [values.STR(evId)]);
+			if (onClickEv) {
+				await call(onClickEv, [values.STR(evId)]);
+			}
 		},
 	};
 }
@@ -300,17 +348,27 @@ function getTextInputOptions(
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
-	if (onInput) utils.assertFunction(onInput);
+	if (onInput) {
+		utils.assertFunction(onInput);
+	}
 	const defaultValue = def.value.get('default');
-	if (defaultValue) utils.assertString(defaultValue);
+	if (defaultValue) {
+		utils.assertString(defaultValue);
+	}
 	const label = def.value.get('label');
-	if (label) utils.assertString(label);
+	if (label) {
+		utils.assertString(label);
+	}
 	const caption = def.value.get('caption');
-	if (caption) utils.assertString(caption);
+	if (caption) {
+		utils.assertString(caption);
+	}
 
 	return {
 		onInput: async (v) => {
-			if (onInput) await call(onInput, [utils.jsToVal(v)]);
+			if (onInput) {
+				await call(onInput, [utils.jsToVal(v)]);
+			}
 		},
 		default: defaultValue?.value,
 		label: label?.value,
@@ -325,17 +383,27 @@ function getTextareaOptions(
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
-	if (onInput) utils.assertFunction(onInput);
+	if (onInput) {
+		utils.assertFunction(onInput);
+	}
 	const defaultValue = def.value.get('default');
-	if (defaultValue) utils.assertString(defaultValue);
+	if (defaultValue) {
+		utils.assertString(defaultValue);
+	}
 	const label = def.value.get('label');
-	if (label) utils.assertString(label);
+	if (label) {
+		utils.assertString(label);
+	}
 	const caption = def.value.get('caption');
-	if (caption) utils.assertString(caption);
+	if (caption) {
+		utils.assertString(caption);
+	}
 
 	return {
 		onInput: async (v) => {
-			if (onInput) await call(onInput, [utils.jsToVal(v)]);
+			if (onInput) {
+				await call(onInput, [utils.jsToVal(v)]);
+			}
 		},
 		default: defaultValue?.value,
 		label: label?.value,
@@ -350,17 +418,27 @@ function getNumberInputOptions(
 	utils.assertObject(def);
 
 	const onInput = def.value.get('onInput');
-	if (onInput) utils.assertFunction(onInput);
+	if (onInput) {
+		utils.assertFunction(onInput);
+	}
 	const defaultValue = def.value.get('default');
-	if (defaultValue) utils.assertNumber(defaultValue);
+	if (defaultValue) {
+		utils.assertNumber(defaultValue);
+	}
 	const label = def.value.get('label');
-	if (label) utils.assertString(label);
+	if (label) {
+		utils.assertString(label);
+	}
 	const caption = def.value.get('caption');
-	if (caption) utils.assertString(caption);
+	if (caption) {
+		utils.assertString(caption);
+	}
 
 	return {
 		onInput: async (v) => {
-			if (onInput) await call(onInput, [utils.jsToVal(v)]);
+			if (onInput) {
+				await call(onInput, [utils.jsToVal(v)]);
+			}
 		},
 		default: defaultValue?.value,
 		label: label?.value,
@@ -375,20 +453,32 @@ function getButtonOptions(
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
-	if (text) utils.assertString(text);
+	if (text) {
+		utils.assertString(text);
+	}
 	const onClick = def.value.get('onClick');
-	if (onClick) utils.assertFunction(onClick);
+	if (onClick) {
+		utils.assertFunction(onClick);
+	}
 	const primary = def.value.get('primary');
-	if (primary) utils.assertBoolean(primary);
+	if (primary) {
+		utils.assertBoolean(primary);
+	}
 	const rounded = def.value.get('rounded');
-	if (rounded) utils.assertBoolean(rounded);
+	if (rounded) {
+		utils.assertBoolean(rounded);
+	}
 	const disabled = def.value.get('disabled');
-	if (disabled) utils.assertBoolean(disabled);
+	if (disabled) {
+		utils.assertBoolean(disabled);
+	}
 
 	return {
 		text: text?.value,
 		onClick: async () => {
-			if (onClick) await call(onClick, []);
+			if (onClick) {
+				await call(onClick, []);
+			}
 		},
 		primary: primary?.value,
 		rounded: rounded?.value,
@@ -403,7 +493,9 @@ function getButtonsOptions(
 	utils.assertObject(def);
 
 	const buttons = def.value.get('buttons');
-	if (buttons) utils.assertArray(buttons);
+	if (buttons) {
+		utils.assertArray(buttons);
+	}
 
 	return {
 		buttons: buttons
@@ -414,11 +506,17 @@ function getButtonsOptions(
 					const onClick = button.value.get('onClick');
 					utils.assertFunction(onClick);
 					const primary = button.value.get('primary');
-					if (primary) utils.assertBoolean(primary);
+					if (primary) {
+						utils.assertBoolean(primary);
+					}
 					const rounded = button.value.get('rounded');
-					if (rounded) utils.assertBoolean(rounded);
+					if (rounded) {
+						utils.assertBoolean(rounded);
+					}
 					const disabled = button.value.get('disabled');
-					if (disabled) utils.assertBoolean(disabled);
+					if (disabled) {
+						utils.assertBoolean(disabled);
+					}
 
 					return {
 						text: text.value,
@@ -441,17 +539,27 @@ function getSwitchOptions(
 	utils.assertObject(def);
 
 	const onChange = def.value.get('onChange');
-	if (onChange) utils.assertFunction(onChange);
+	if (onChange) {
+		utils.assertFunction(onChange);
+	}
 	const defaultValue = def.value.get('default');
-	if (defaultValue) utils.assertBoolean(defaultValue);
+	if (defaultValue) {
+		utils.assertBoolean(defaultValue);
+	}
 	const label = def.value.get('label');
-	if (label) utils.assertString(label);
+	if (label) {
+		utils.assertString(label);
+	}
 	const caption = def.value.get('caption');
-	if (caption) utils.assertString(caption);
+	if (caption) {
+		utils.assertString(caption);
+	}
 
 	return {
 		onChange: async (v) => {
-			if (onChange) await call(onChange, [utils.jsToVal(v)]);
+			if (onChange) {
+				await call(onChange, [utils.jsToVal(v)]);
+			}
 		},
 		default: defaultValue?.value,
 		label: label?.value,
@@ -466,15 +574,25 @@ function getSelectOptions(
 	utils.assertObject(def);
 
 	const items = def.value.get('items');
-	if (items) utils.assertArray(items);
+	if (items) {
+		utils.assertArray(items);
+	}
 	const onChange = def.value.get('onChange');
-	if (onChange) utils.assertFunction(onChange);
+	if (onChange) {
+		utils.assertFunction(onChange);
+	}
 	const defaultValue = def.value.get('default');
-	if (defaultValue) utils.assertString(defaultValue);
+	if (defaultValue) {
+		utils.assertString(defaultValue);
+	}
 	const label = def.value.get('label');
-	if (label) utils.assertString(label);
+	if (label) {
+		utils.assertString(label);
+	}
 	const caption = def.value.get('caption');
-	if (caption) utils.assertString(caption);
+	if (caption) {
+		utils.assertString(caption);
+	}
 
 	return {
 		items: items
@@ -483,7 +601,9 @@ function getSelectOptions(
 					const text = item.value.get('text');
 					utils.assertString(text);
 					const value = item.value.get('value');
-					if (value) utils.assertString(value);
+					if (value) {
+						utils.assertString(value);
+					}
 					return {
 						text: text.value,
 						value: value ? value.value : text.value,
@@ -491,7 +611,9 @@ function getSelectOptions(
 				})
 			: [],
 		onChange: async (v) => {
-			if (onChange) await call(onChange, [utils.jsToVal(v)]);
+			if (onChange) {
+				await call(onChange, [utils.jsToVal(v)]);
+			}
 		},
 		default: defaultValue?.value,
 		label: label?.value,
@@ -503,11 +625,17 @@ function getFolderOptions(def: values.Value | undefined): Options<AsUiFolder> {
 	utils.assertObject(def);
 
 	const children = def.value.get('children');
-	if (children) utils.assertArray(children);
+	if (children) {
+		utils.assertArray(children);
+	}
 	const title = def.value.get('title');
-	if (title) utils.assertString(title);
+	if (title) {
+		utils.assertString(title);
+	}
 	const opened = def.value.get('opened');
-	if (opened) utils.assertBoolean(opened);
+	if (opened) {
+		utils.assertBoolean(opened);
+	}
 
 	return {
 		children: children
@@ -527,11 +655,17 @@ function getPostFormProps(form: values.VObj): PostFormPropsForAsUi {
 	const text = form.value.get('text');
 	utils.assertString(text);
 	const cw = form.value.get('cw');
-	if (cw) utils.assertString(cw);
+	if (cw) {
+		utils.assertString(cw);
+	}
 	const visibility = form.value.get('visibility');
-	if (visibility) utils.assertString(visibility);
+	if (visibility) {
+		utils.assertString(visibility);
+	}
 	const localOnly = form.value.get('localOnly');
-	if (localOnly) utils.assertBoolean(localOnly);
+	if (localOnly) {
+		utils.assertBoolean(localOnly);
+	}
 	const validatedVisibility =
 		visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
 			? (visibility.value as (typeof Misskey.noteVisibilities)[number])
@@ -552,13 +686,21 @@ function getPostFormButtonOptions(
 	utils.assertObject(def);
 
 	const text = def.value.get('text');
-	if (text) utils.assertString(text);
+	if (text) {
+		utils.assertString(text);
+	}
 	const primary = def.value.get('primary');
-	if (primary) utils.assertBoolean(primary);
+	if (primary) {
+		utils.assertBoolean(primary);
+	}
 	const rounded = def.value.get('rounded');
-	if (rounded) utils.assertBoolean(rounded);
+	if (rounded) {
+		utils.assertBoolean(rounded);
+	}
 	const form = def.value.get('form');
-	if (form) utils.assertObject(form);
+	if (form) {
+		utils.assertObject(form);
+	}
 
 	return {
 		text: text?.value,
@@ -579,7 +721,9 @@ function getPostFormOptions(
 	utils.assertObject(def);
 
 	const form = def.value.get('form');
-	if (form) utils.assertObject(form);
+	if (form) {
+		utils.assertObject(form);
+	}
 
 	return {
 		form: form
@@ -602,7 +746,9 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 		getOptions: OptionsConverter<T, C>,
 		call: C,
 	) {
-		if (id) utils.assertString(id);
+		if (id) {
+			utils.assertString(id);
+		}
 		const _id = id?.value ?? genId();
 		const component = ref({
 			...getOptions(def, call),
@@ -619,7 +765,9 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 						utils.assertObject(def);
 						const updates = getOptions(def, call);
 						for (const update of def.value.keys()) {
-							if (!Object.hasOwn(updates, update)) continue;
+							if (!Object.hasOwn(updates, update)) {
+								continue;
+							}
 							component.value[update] = updates[update as keyof Options<T>];
 						}
 					}),
@@ -653,9 +801,8 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 			const instance = instances[id.value];
 			if (instance) {
 				return instance;
-			} else {
-				return values.NULL;
 			}
+			return values.NULL;
 		}),
 
 		'Ui:render': values.FN_NATIVE(([children], opts) => {

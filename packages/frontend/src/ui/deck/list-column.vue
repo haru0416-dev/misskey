@@ -41,18 +41,19 @@ onMounted(() => {
 	if (props.column.listId == null) {
 		setList();
 	} else if (props.column.timelineNameCache == null) {
-		misskeyApi('users/lists/show', { listId: props.column.listId })
-			.then(value => updateColumn(props.column.id, { timelineNameCache: value.name }));
+		misskeyApi('users/lists/show', { listId: props.column.listId }).then((value) =>
+			updateColumn(props.column.id, { timelineNameCache: value.name }),
+		);
 	}
 });
 
-watch(withRenotes, v => {
+watch(withRenotes, (v) => {
 	updateColumn(props.column.id, {
 		withRenotes: v,
 	});
 });
 
-watch(soundSetting, v => {
+watch(soundSetting, (v) => {
 	updateColumn(props.column.id, { soundSetting: v });
 });
 
@@ -62,23 +63,30 @@ async function setList() {
 		title: i18n.ts.selectList,
 		items: [
 			{ value: '_CREATE_', label: i18n.ts.createNew },
-			(lists.length > 0 ? {
-				type: 'group' as const,
-				label: i18n.ts.createdLists,
-				items: lists.map(x => ({
-					value: x.id, label: x.name,
-				})),
-			} : undefined),
+			lists.length > 0
+				? {
+						type: 'group' as const,
+						label: i18n.ts.createdLists,
+						items: lists.map((x) => ({
+							value: x.id,
+							label: x.name,
+						})),
+					}
+				: undefined,
 		],
-		default: lists.find(x => x.id === props.column.listId)?.id ?? null,
+		default: lists.find((x) => x.id === props.column.listId)?.id ?? null,
 	});
-	if (canceled || listIdOrOperation == null) return;
+	if (canceled || listIdOrOperation == null) {
+		return;
+	}
 
 	if (listIdOrOperation === '_CREATE_') {
 		const { canceled, result: name } = await os.inputText({
 			title: i18n.ts.enterListName,
 		});
-		if (canceled || name == null || name === '') return;
+		if (canceled || name == null || name === '') {
+			return;
+		}
 
 		const res = await os.apiWithDialog('users/lists/create', { name: name });
 		userListsCache.delete();
@@ -88,7 +96,7 @@ async function setList() {
 			timelineNameCache: res.name,
 		});
 	} else {
-		const list = lists.find(x => x.id === listIdOrOperation)!;
+		const list = lists.find((x) => x.id === listIdOrOperation)!;
 
 		updateColumn(props.column.id, {
 			listId: list.id,

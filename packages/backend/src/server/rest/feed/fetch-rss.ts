@@ -120,7 +120,9 @@ export async function handleApiFetchRss(
 	const url = normalizeFetchRssUrl(params.url);
 
 	const inFlight = inFlightRequests.get(url);
-	if (inFlight != null) return await inFlight;
+	if (inFlight != null) {
+		return await inFlight;
+	}
 
 	if (inFlightRequests.size >= FETCH_RSS_MAX_CONCURRENCY) {
 		throw fetchRssUnavailableError();

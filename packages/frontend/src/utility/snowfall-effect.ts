@@ -40,13 +40,17 @@ export class SnowfallAnimationScheduler {
 	}
 
 	private schedule(): void {
-		if (!this.running || window.document.hidden || this.animationFrameId !== 0) return;
+		if (!this.running || window.document.hidden || this.animationFrameId !== 0) {
+			return;
+		}
 		this.animationFrameId = window.requestAnimationFrame(this.handleAnimationFrame);
 	}
 
 	private handleAnimationFrame(timestamp: number): void {
 		this.animationFrameId = 0;
-		if (!this.running || window.document.hidden) return;
+		if (!this.running || window.document.hidden) {
+			return;
+		}
 
 		const delta = this.previousTimestamp == null ? 0 : timestamp - this.previousTimestamp;
 		this.previousTimestamp = timestamp;
@@ -114,7 +118,7 @@ export class SnowfallEffect {
 	private depth = 100;
 	private count = 1000;
 	private gravity = 100;
-	private speed: number = 1 / 10000;
+	private speed: number = 1 / 10_000;
 	private color: number[] = [1, 1, 1];
 	private opacity = 1;
 	private size = 4;
@@ -158,7 +162,7 @@ export class SnowfallEffect {
 	private CAMERA = {
 		fov: 60,
 		near: 5,
-		far: 10000,
+		far: 10_000,
 		aspect: 1,
 		z: 100,
 	};
@@ -185,7 +189,9 @@ export class SnowfallEffect {
 
 		const canvas = this.initCanvas();
 		const gl = canvas.getContext('webgl2', { antialias: true });
-		if (gl == null) throw new Error('Failed to get WebGL context');
+		if (gl == null) {
+			throw new Error('Failed to get WebGL context');
+		}
 
 		window.document.body.append(canvas);
 
@@ -215,7 +221,7 @@ export class SnowfallEffect {
 			height: '100vh',
 			background: 'transparent',
 			'pointer-events': 'none',
-			'z-index': 2147483647,
+			'z-index': 2_147_483_647,
 		});
 
 		return canvas;
@@ -232,7 +238,9 @@ export class SnowfallEffect {
 	private initShader(type: number, source: string): WebGLShader {
 		const { gl } = this;
 		const shader = gl.createShader(type);
-		if (shader == null) throw new Error('Failed to create shader');
+		if (shader == null) {
+			throw new Error('Failed to create shader');
+		}
 
 		gl.shaderSource(shader, source);
 		gl.compileShader(shader);
@@ -298,7 +306,9 @@ export class SnowfallEffect {
 	private setBuffer(name: string, value?: number[] | undefined) {
 		const { gl, buffers } = this;
 		const buffer = buffers[name];
-		if (buffer == null) return;
+		if (buffer == null) {
+			return;
+		}
 
 		buffer.value = new Float32Array(value ?? buffer.value);
 
@@ -328,9 +338,13 @@ export class SnowfallEffect {
 	private setUniform(name: string, value?: number | number[] | Float32Array<ArrayBufferLike> | undefined) {
 		const { gl, uniforms } = this;
 		const uniform = uniforms[name];
-		if (uniform == null) return;
+		if (uniform == null) {
+			return;
+		}
 		const setter = this.UNIFORM_SETTERS[uniform.type as keyof typeof this.UNIFORM_SETTERS];
-		if (setter == null) return;
+		if (setter == null) {
+			return;
+		}
 		const isMatrix = /^mat[2-4]$/i.test(uniform.type);
 
 		uniform.value = value ?? uniform.value;
@@ -345,7 +359,9 @@ export class SnowfallEffect {
 	private initTexture() {
 		const { gl } = this;
 		const texture = gl.createTexture();
-		if (texture == null) throw new Error('Failed to create texture');
+		if (texture == null) {
+			throw new Error('Failed to create texture');
+		}
 		const image = new Image();
 
 		gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -473,7 +489,9 @@ export class SnowfallEffect {
 		const { gl, buffers, wind } = this;
 		const elapsed = activeElapsed * this.speed;
 		const positionBuffer = buffers['position'];
-		if (positionBuffer == null) return;
+		if (positionBuffer == null) {
+			return;
+		}
 
 		gl.clear(gl.COLOR_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, positionBuffer.value.length / positionBuffer.size);

@@ -60,7 +60,9 @@ export async function deleteFileSyncForApi(
 ): Promise<void> {
 	if (file.storedInternal) {
 		const promises: Promise<void>[] = [];
-		if (file.accessKey != null) promises.push(deps.internalStorageService.del(file.accessKey));
+		if (file.accessKey != null) {
+			promises.push(deps.internalStorageService.del(file.accessKey));
+		}
 
 		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
 			promises.push(deps.internalStorageService.del(file.thumbnailAccessKey));
@@ -74,7 +76,9 @@ export async function deleteFileSyncForApi(
 	} else if (!file.isLink) {
 		const promises: Promise<void>[] = [];
 
-		if (file.accessKey != null) promises.push(deleteObjectStorageFileForApi(deps, file.accessKey));
+		if (file.accessKey != null) {
+			promises.push(deleteObjectStorageFileForApi(deps, file.accessKey));
+		}
 
 		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
 			promises.push(deleteObjectStorageFileForApi(deps, file.thumbnailAccessKey));

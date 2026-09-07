@@ -266,14 +266,17 @@ function preloadNotePopupMenu(): void {
 	void import('@/features/notes/get-note-menu.js').catch(() => {});
 }
 
-const props = withDefaults(defineProps<{
-	note: Misskey.entities.Note;
-	pinned?: boolean;
-	mock?: boolean;
-	withHardMute?: boolean;
-}>(), {
-	mock: false,
-});
+const props = withDefaults(
+	defineProps<{
+		note: Misskey.entities.Note;
+		pinned?: boolean;
+		mock?: boolean;
+		withHardMute?: boolean;
+	}>(),
+	{
+		mock: false,
+	},
+);
 
 provide(DI.mock, props.mock);
 
@@ -323,10 +326,14 @@ const renoteTime = useTemplateRef('renoteTime');
 const reactButton = useTemplateRef('reactButton');
 const clipButton = useTemplateRef('clipButton');
 const galleryEl = useTemplateRef('galleryEl');
-const isMyRenote = $i && ($i.id === note.userId);
+const isMyRenote = $i && $i.id === note.userId;
 const showContent = ref(false);
-const parsed = computed(() => appearNote.text ? mfm.parse(appearNote.text) : null);
-const urls = computed(() => parsed.value ? extractUrlFromMfm(parsed.value).filter((url) => appearNote.renote?.url !== url && appearNote.renote?.uri !== url) : null);
+const parsed = computed(() => (appearNote.text ? mfm.parse(appearNote.text) : null));
+const urls = computed(() =>
+	parsed.value
+		? extractUrlFromMfm(parsed.value).filter((url) => appearNote.renote?.url !== url && appearNote.renote?.uri !== url)
+		: null,
+);
 const isLong = shouldCollapsed(appearNote, urls.value ?? []);
 const collapsed = ref(appearNote.cw == null && isLong);
 const muted = ref(checkMute(appearNote, $i?.mutedWords));
@@ -334,13 +341,18 @@ const hardMuted = ref(props.withHardMute && checkMute(appearNote, $i?.hardMutedW
 const showSoftWordMutedWord = computed(() => prefer.showSoftWordMutedWord);
 const translation = ref<Misskey.entities.NotesTranslateResponse | null>(null);
 const translating = ref(false);
-const showTicker = (prefer.instanceTicker === 'always') || (prefer.instanceTicker === 'remote' && appearNote.user.instance);
-const canRenote = computed(() => ['public', 'home'].includes(appearNote.visibility) || (appearNote.visibility === 'followers' && appearNote.userId === $i?.id));
+const showTicker =
+	prefer.instanceTicker === 'always' || (prefer.instanceTicker === 'remote' && appearNote.user.instance);
+const canRenote = computed(
+	() =>
+		['public', 'home'].includes(appearNote.visibility) ||
+		(appearNote.visibility === 'followers' && appearNote.userId === $i?.id),
+);
 const renoteCollapsed = ref(
-	prefer.collapseRenotes && isRenote && (
-		($i && ($i.id === note.userId || $i.id === appearNote.userId)) || // 自分のリノートまたは反応済みのリノートを折りたたむため、OR 条件を維持する。
-		($appearNote.myReaction != null)
-	),
+	prefer.collapseRenotes &&
+		isRenote &&
+		(($i && ($i.id === note.userId || $i.id === appearNote.userId)) || // 自分のリノートまたは反応済みのリノートを折りたたむため、OR 条件を維持する。
+			$appearNote.myReaction != null),
 );
 
 const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
@@ -349,28 +361,42 @@ const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 }));
 
 /** checkOnlyでは純粋なワードミュート結果をbooleanで返却する */
-function checkMute(noteToCheck: Misskey.entities.Note, mutedWords: Array<string | string[]> | undefined | null, checkOnly: true): boolean;
-function checkMute(noteToCheck: Misskey.entities.Note, mutedWords: Array<string | string[]> | undefined | null, checkOnly?: false): Array<string | string[]> | false | 'sensitiveMute';
+function checkMute(
+	noteToCheck: Misskey.entities.Note,
+	mutedWords: (string | string[])[] | undefined | null,
+	checkOnly: true,
+): boolean;
+function checkMute(
+	noteToCheck: Misskey.entities.Note,
+	mutedWords: (string | string[])[] | undefined | null,
+	checkOnly?: false,
+): (string | string[])[] | false | 'sensitiveMute';
 
-function checkMute(noteToCheck: Misskey.entities.Note, mutedWords: Array<string | string[]> | undefined | null, checkOnly = false): Array<string | string[]> | boolean | 'sensitiveMute' {
+function checkMute(
+	noteToCheck: Misskey.entities.Note,
+	mutedWords: (string | string[])[] | undefined | null,
+	checkOnly = false,
+): (string | string[])[] | boolean | 'sensitiveMute' {
 	if (mutedWords != null) {
 		const result = checkWordMute(noteToCheck, $i, mutedWords);
 		if (Array.isArray(result)) {
-			return checkOnly ? (result.length > 0) : result;
+			return checkOnly ? result.length > 0 : result;
 		}
 
 		const replyResult = noteToCheck.reply && checkWordMute(noteToCheck.reply, $i, mutedWords);
 		if (Array.isArray(replyResult)) {
-			return checkOnly ? (replyResult.length > 0) : replyResult;
+			return checkOnly ? replyResult.length > 0 : replyResult;
 		}
 
 		const renoteResult = noteToCheck.renote && checkWordMute(noteToCheck.renote, $i, mutedWords);
 		if (Array.isArray(renoteResult)) {
-			return checkOnly ? (renoteResult.length > 0) : renoteResult;
+			return checkOnly ? renoteResult.length > 0 : renoteResult;
 		}
 	}
 
-	if (checkOnly) return false;
+	if (checkOnly) {
+		return false;
+	}
 
 	if (inTimeline && tl_withSensitive.value === false && noteToCheck.files?.some((v) => v.isSensitive)) {
 		return 'sensitiveMute';
@@ -380,29 +406,43 @@ function checkMute(noteToCheck: Misskey.entities.Note, mutedWords: Array<string 
 }
 
 const keymap = {
-	'r': () => {
-		if (renoteCollapsed.value) return;
+	r: () => {
+		if (renoteCollapsed.value) {
+			return;
+		}
 		reply();
 	},
 	'e|a|plus': () => {
-		if (renoteCollapsed.value) return;
+		if (renoteCollapsed.value) {
+			return;
+		}
 		react();
 	},
-	'q': () => {
-		if (renoteCollapsed.value) return;
+	q: () => {
+		if (renoteCollapsed.value) {
+			return;
+		}
 		renote();
 	},
-	'm': () => {
-		if (renoteCollapsed.value) return;
+	m: () => {
+		if (renoteCollapsed.value) {
+			return;
+		}
 		showMenu();
 	},
-	'c': () => {
-		if (renoteCollapsed.value) return;
-		if (!prefer.showClipButtonInNoteFooter) return;
+	c: () => {
+		if (renoteCollapsed.value) {
+			return;
+		}
+		if (!prefer.showClipButtonInNoteFooter) {
+			return;
+		}
 		clip();
 	},
-	'o': () => {
-		if (renoteCollapsed.value) return;
+	o: () => {
+		if (renoteCollapsed.value) {
+			return;
+		}
 		galleryEl.value?.openGallery();
 	},
 	'v|enter': () => {
@@ -414,7 +454,7 @@ const keymap = {
 			collapsed.value = !collapsed.value;
 		}
 	},
-	'esc': {
+	esc: {
 		allowRepeat: true,
 		callback: () => blur(),
 	},
@@ -451,18 +491,24 @@ if (!props.mock) {
 			import('@/features/users/components/MkUsersTooltip.vue').then((x) => x.default),
 		]);
 
-		const users = renotes.map(x => x.user);
+		const users = renotes.map((x) => x.user);
 
-		if (users.length < 1 || renoteButton.value == null) return;
+		if (users.length < 1 || renoteButton.value == null) {
+			return;
+		}
 
-		const { dispose } = os.popup(MkUsersTooltip, {
-			showing,
-			users,
-			count: appearNote.renoteCount,
-			anchorElement: renoteButton.value,
-		}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = os.popup(
+			MkUsersTooltip,
+			{
+				showing,
+				users,
+				count: appearNote.renoteCount,
+				anchorElement: renoteButton.value,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	});
 
 	if (appearNote.reactionAcceptance === 'likeOnly') {
@@ -476,34 +522,46 @@ if (!props.mock) {
 				import('@/features/notes/components/MkReactionsViewer.Details.vue').then((x) => x.default),
 			]);
 
-			const users = reactions.map(x => x.user);
+			const users = reactions.map((x) => x.user);
 
-			if (users.length < 1) return;
+			if (users.length < 1) {
+				return;
+			}
 
-			const { dispose } = os.popup(MkReactionsViewerDetails, {
-				showing,
-				reaction: '❤️',
-				users,
-				count: $appearNote.reactionCount,
-				anchorElement: reactButton.value!,
-			}, {
-				closed: () => dispose(),
-			});
+			const { dispose } = os.popup(
+				MkReactionsViewerDetails,
+				{
+					showing,
+					reaction: '❤️',
+					users,
+					count: $appearNote.reactionCount,
+					anchorElement: reactButton.value!,
+				},
+				{
+					closed: () => dispose(),
+				},
+			);
 		});
 	}
 }
 
 async function renote() {
-	if (props.mock) return;
+	if (props.mock) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 
 	os.preloadPopupMenu();
 	const noteMenuModule = await loadNoteMenuModule();
-	if (noteMenuModule == null) return;
+	if (noteMenuModule == null) {
+		return;
+	}
 
 	const { menu } = noteMenuModule.getRenoteMenu({ note: note, renoteButton, mock: props.mock });
 	os.popupMenu(menu, renoteButton.value);
@@ -512,10 +570,14 @@ async function renote() {
 }
 
 async function reply() {
-	if (props.mock) return;
+	if (props.mock) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	os.post({
 		reply: appearNote,
@@ -527,7 +589,9 @@ async function reply() {
 
 async function react() {
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 	if (appearNote.reactionAcceptance === 'likeOnly') {
@@ -549,56 +613,73 @@ async function react() {
 		const el = reactButton.value;
 		if (el && prefer.animation) {
 			const rect = el.getBoundingClientRect();
-			const x = rect.left + (el.offsetWidth / 2);
-			const y = rect.top + (el.offsetHeight / 2);
-			const { dispose } = os.popup(MkRippleEffect, { x, y }, {
-				end: () => dispose(),
-			});
+			const x = rect.left + el.offsetWidth / 2;
+			const y = rect.top + el.offsetHeight / 2;
+			const { dispose } = os.popup(
+				MkRippleEffect,
+				{ x, y },
+				{
+					end: () => dispose(),
+				},
+			);
 		}
 	} else {
 		blur();
-		reactionPicker.show(reactButton.value ?? null, note, async (reaction) => {
-			if (prefer.confirmOnReact) {
-				const confirm = await os.confirm({
-					type: 'question',
-					text: i18n.tsx.reactAreYouSure({ emoji: reaction.replace('@.', '') }),
-				});
+		reactionPicker.show(
+			reactButton.value ?? null,
+			note,
+			async (reaction) => {
+				if (prefer.confirmOnReact) {
+					const confirm = await os.confirm({
+						type: 'question',
+						text: i18n.tsx.reactAreYouSure({ emoji: reaction.replace('@.', '') }),
+					});
 
-				if (confirm.canceled) return;
-			}
+					if (confirm.canceled) {
+						return;
+					}
+				}
 
-			sound.playMisskeySfx('reaction');
+				sound.playMisskeySfx('reaction');
 
-			if (props.mock) {
-				emit('reaction', reaction);
-				$appearNote.reactions[reaction] = 1;
-				$appearNote.reactionCount++;
-				$appearNote.myReaction = reaction;
-				return;
-			}
+				if (props.mock) {
+					emit('reaction', reaction);
+					$appearNote.reactions[reaction] = 1;
+					$appearNote.reactionCount++;
+					$appearNote.myReaction = reaction;
+					return;
+				}
 
-			misskeyApi('notes/reactions/create', {
-				noteId: appearNote.id,
-				reaction: reaction,
-			}).then(() => {
-				noteEvents.emit(`reacted:${appearNote.id}`, {
-					userId: $i!.id,
+				misskeyApi('notes/reactions/create', {
+					noteId: appearNote.id,
 					reaction: reaction,
+				}).then(() => {
+					noteEvents.emit(`reacted:${appearNote.id}`, {
+						userId: $i!.id,
+						reaction: reaction,
+					});
 				});
-			});
 
-			if (appearNote.text && appearNote.text.length > 100 && (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3)) {
-				claimAchievement('reactWithoutRead');
-			}
-		}, () => {
-			focus();
-		});
+				if (
+					appearNote.text &&
+					appearNote.text.length > 100 &&
+					Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3
+				) {
+					claimAchievement('reactWithoutRead');
+				}
+			},
+			() => {
+				focus();
+			},
+		);
 	}
 }
 
 function undoReact(): void {
 	const oldReaction = $appearNote.myReaction;
-	if (!oldReaction) return;
+	if (!oldReaction) {
+		return;
+	}
 
 	if (props.mock) {
 		emit('removeReaction', oldReaction);
@@ -628,19 +709,27 @@ async function onContextmenu(ev: PointerEvent): Promise<void> {
 		return;
 	}
 
-	if (ev.target && isLink(ev.target as HTMLElement)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (ev.target && isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
 	if (prefer.useReactionPickerForContextMenu) {
 		ev.preventDefault();
 		react();
 	} else {
-		if (prefer.contextMenu === 'native' || (prefer.contextMenu === 'appWithShift' && !ev.shiftKey)) return;
+		if (prefer.contextMenu === 'native' || (prefer.contextMenu === 'appWithShift' && !ev.shiftKey)) {
+			return;
+		}
 
 		ev.preventDefault();
 		os.preloadContextMenu();
 		const noteMenuModule = await loadNoteMenuModule();
-		if (noteMenuModule == null) return;
+		if (noteMenuModule == null) {
+			return;
+		}
 
 		const currentClipValue = currentClip?.value;
 		const currentAntennaValue = currentAntenna?.value;
@@ -662,7 +751,9 @@ async function showMenu(): Promise<void> {
 
 	os.preloadPopupMenu();
 	const noteMenuModule = await loadNoteMenuModule();
-	if (noteMenuModule == null) return;
+	if (noteMenuModule == null) {
+		return;
+	}
 
 	const currentClipValue = currentClip?.value;
 	const currentAntennaValue = currentAntenna?.value;
@@ -683,13 +774,18 @@ async function clip(): Promise<void> {
 
 	os.preloadPopupMenu();
 	const noteMenuModule = await loadNoteMenuModule();
-	if (noteMenuModule == null) return;
+	if (noteMenuModule == null) {
+		return;
+	}
 
 	const currentClipValue = currentClip?.value;
-	os.popupMenu(await noteMenuModule.getNoteClipMenu({
-		note,
-		...(currentClipValue === undefined ? {} : { currentClip: currentClipValue }),
-	}), clipButton.value).then(focus);
+	os.popupMenu(
+		await noteMenuModule.getNoteClipMenu({
+			note,
+			...(currentClipValue === undefined ? {} : { currentClip: currentClipValue }),
+		}),
+		clipButton.value,
+	).then(focus);
 }
 
 async function showRenoteMenu() {
@@ -697,11 +793,15 @@ async function showRenoteMenu() {
 		return;
 	}
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	os.preloadPopupMenu();
 	const noteMenuModule = await loadNoteMenuModule();
-	if (noteMenuModule == null) return;
+	if (noteMenuModule == null) {
+		return;
+	}
 	const { getAbuseNoteMenu, getCopyNoteLinkMenu } = noteMenuModule;
 
 	function getUnrenote(): MenuItem {
@@ -719,17 +819,16 @@ async function showRenoteMenu() {
 		};
 	}
 
-	const renoteDetailsMenu: MenuItem[] = [{
-		type: 'link',
-		text: i18n.ts.renoteDetails,
-		icon: 'ti ti-info-circle',
-		to: notePage(note),
-	}];
+	const renoteDetailsMenu: MenuItem[] = [
+		{
+			type: 'link',
+			text: i18n.ts.renoteDetails,
+			icon: 'ti ti-info-circle',
+			to: notePage(note),
+		},
+	];
 
-	if (
-		props.note.channelId != null &&
-		(inChannel == null || props.note.channelId !== inChannel.value)
-	) {
+	if (props.note.channelId != null && (inChannel == null || props.note.channelId !== inChannel.value)) {
 		renoteDetailsMenu.push({
 			type: 'link',
 			text: i18n.ts.viewRenotedChannel,
@@ -739,20 +838,21 @@ async function showRenoteMenu() {
 	}
 
 	if (isMyRenote) {
-		os.popupMenu([
-			...renoteDetailsMenu,
-			getCopyNoteLinkMenu(note, i18n.ts.copyLinkRenote),
-			{ type: 'divider' },
-			getUnrenote(),
-		], renoteTime.value);
+		os.popupMenu(
+			[...renoteDetailsMenu, getCopyNoteLinkMenu(note, i18n.ts.copyLinkRenote), { type: 'divider' }, getUnrenote()],
+			renoteTime.value,
+		);
 	} else {
-		os.popupMenu([
-			...renoteDetailsMenu,
-			getCopyNoteLinkMenu(note, i18n.ts.copyLinkRenote),
-			{ type: 'divider' },
-			getAbuseNoteMenu(note, i18n.ts.reportAbuseRenote),
-			...(($i?.isModerator || $i?.isAdmin) ? [getUnrenote()] : []),
-		], renoteTime.value);
+		os.popupMenu(
+			[
+				...renoteDetailsMenu,
+				getCopyNoteLinkMenu(note, i18n.ts.copyLinkRenote),
+				{ type: 'divider' },
+				getAbuseNoteMenu(note, i18n.ts.reportAbuseRenote),
+				...($i?.isModerator || $i?.isAdmin ? [getUnrenote()] : []),
+			],
+			renoteTime.value,
+		);
 	}
 }
 

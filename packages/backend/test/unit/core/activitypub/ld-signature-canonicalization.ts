@@ -124,7 +124,9 @@ describe('LD signature option canonicalization (property)', () => {
 
 					total++;
 					const shortcut = canonicalizeSignatureOptions(options);
-					if (shortcut === null) return;
+					if (shortcut === null) {
+						return;
+					}
 					fastPath++;
 
 					// 高速経路が受理した入力で normalize が例外になった場合も不一致とする。

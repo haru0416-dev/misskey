@@ -81,7 +81,9 @@ function addReaction(emoji: string) {
 }
 
 function doNotification(emoji: string): void {
-	if (!$i || !emoji) return;
+	if (!$i || !emoji) {
+		return;
+	}
 
 	const notification: Misskey.entities.Notification = {
 		id: genId(),

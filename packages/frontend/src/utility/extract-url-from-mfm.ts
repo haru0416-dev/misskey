@@ -19,10 +19,14 @@ export function extractUrlFromMfm(nodes: mfm.MfmNode[], respectSilentFlag = true
 	for (const {
 		props: { url },
 	} of urlNodes) {
-		if (seenUrls.has(url)) continue;
+		if (seenUrls.has(url)) {
+			continue;
+		}
 		seenUrls.add(url);
 		const urlWithoutHash = removeHash(url);
-		if (seenUrlsWithoutHash.has(urlWithoutHash)) continue;
+		if (seenUrlsWithoutHash.has(urlWithoutHash)) {
+			continue;
+		}
 		seenUrlsWithoutHash.add(urlWithoutHash);
 		urls.push(url);
 	}

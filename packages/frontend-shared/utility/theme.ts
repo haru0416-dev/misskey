@@ -141,7 +141,9 @@ export function compile(theme: Theme): CompiledTheme {
 	const props = {} as CompiledTheme;
 
 	for (const [k, v] of Object.entries(resolvedTheme.props)) {
-		if (k.startsWith('$')) continue;
+		if (k.startsWith('$')) {
+			continue;
+		}
 
 		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(resolvedTheme, v));
 	}
@@ -154,7 +156,9 @@ function genValue(c: tinycolor.Instance): string {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return false;
+	}
 	const prototype = Object.getPrototypeOf(value);
 	return prototype === Object.prototype || prototype === null;
 }
@@ -175,37 +179,66 @@ type ThemeCodeHighlighterCandidate = Record<string, unknown> & {
 };
 
 function isJsonValue(value: unknown, ancestors = new Set<object>()): value is ThemeCodeHighlighterValue {
-	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 		return true;
-	if (typeof value !== 'object') return false;
-	if (ancestors.has(value)) return false;
+	}
+	if (typeof value !== 'object') {
+		return false;
+	}
+	if (ancestors.has(value)) {
+		return false;
+	}
 
 	const nextAncestors = new Set(ancestors).add(value);
-	if (Array.isArray(value)) return value.every((item) => isJsonValue(item, nextAncestors));
-	if (!isRecord(value)) return false;
+	if (Array.isArray(value)) {
+		return value.every((item) => isJsonValue(item, nextAncestors));
+	}
+	if (!isRecord(value)) {
+		return false;
+	}
 	return Object.values(value).every((item) => isJsonValue(item, nextAncestors));
 }
 
 export function validateTheme(theme: unknown): theme is Theme {
-	if (!isRecord(theme)) return false;
-	const candidate = theme as ThemeCandidate;
-	if (typeof candidate.id !== 'string') return false;
-	if (typeof candidate.name !== 'string') return false;
-	if (typeof candidate.author !== 'string') return false;
-	if (candidate.desc !== undefined && typeof candidate.desc !== 'string') return false;
-	if (candidate.base !== 'light' && candidate.base !== 'dark') return false;
-	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string'))
+	if (!isRecord(theme)) {
 		return false;
+	}
+	const candidate = theme as ThemeCandidate;
+	if (typeof candidate.id !== 'string') {
+		return false;
+	}
+	if (typeof candidate.name !== 'string') {
+		return false;
+	}
+	if (typeof candidate.author !== 'string') {
+		return false;
+	}
+	if (candidate.desc !== undefined && typeof candidate.desc !== 'string') {
+		return false;
+	}
+	if (candidate.base !== 'light' && candidate.base !== 'dark') {
+		return false;
+	}
+	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string')) {
+		return false;
+	}
 	if (candidate.codeHighlighter !== undefined) {
-		if (!isRecord(candidate.codeHighlighter)) return false;
+		if (!isRecord(candidate.codeHighlighter)) {
+			return false;
+		}
 		const codeHighlighter = candidate.codeHighlighter as ThemeCodeHighlighterCandidate;
-		if (typeof codeHighlighter.base !== 'string') return false;
+		if (typeof codeHighlighter.base !== 'string') {
+			return false;
+		}
 		if (
 			codeHighlighter.overrides !== undefined &&
 			(!isRecord(codeHighlighter.overrides) || !isJsonValue(codeHighlighter.overrides))
-		)
+		) {
 			return false;
-		if (codeHighlighter.base === '_none_' && codeHighlighter.overrides === undefined) return false;
+		}
+		if (codeHighlighter.base === '_none_' && codeHighlighter.overrides === undefined) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -231,7 +264,9 @@ export function parseThemeCode(code: string): Theme {
 }
 
 export function parseThemeOrNull(code: string | null | undefined): Theme | null {
-	if (code == null) return null;
+	if (code == null) {
+		return null;
+	}
 
 	try {
 		return parseThemeCode(code);

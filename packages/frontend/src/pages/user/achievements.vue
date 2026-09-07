@@ -23,13 +23,15 @@ const props = defineProps<{
 let timer: number | null;
 
 function viewAchievements3min() {
-	if ($i && (props.user.id === $i.id)) {
+	if ($i && props.user.id === $i.id) {
 		claimAchievement('viewAchievements3min');
 	}
 }
 
 onMounted(() => {
-	if (timer == null) timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	if (timer == null) {
+		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	}
 });
 
 onUnmounted(() => {
@@ -40,7 +42,9 @@ onUnmounted(() => {
 });
 
 onActivated(() => {
-	if (timer == null) timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	if (timer == null) {
+		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	}
 });
 
 onDeactivated(() => {

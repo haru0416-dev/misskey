@@ -9,10 +9,8 @@ import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/PollVoteS
 import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { EndedPollNotificationJobData } from '@/queue/types.js';
-import {
-	createPollEndedNotification,
-	type ApiNotificationDependencies,
-} from '@/server/rest/notification/notification.js';
+import { createPollEndedNotification } from '@/server/rest/notification/notification.js';
+import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 
 export type QueueEndedPollNotificationDependencies = ApiNotificationDependencies & {
 	db: MiDrizzleDatabase;

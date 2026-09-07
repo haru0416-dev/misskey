@@ -1,6 +1,7 @@
 import path from 'path';
 import pluginVue from '@vitejs/plugin-vue';
-import { defineConfig, type UserConfig } from 'vite';
+import { defineConfig } from 'vite';
+import type { UserConfig } from 'vite';
 import { promises as fsp } from 'fs';
 import { parse } from 'yaml';
 
@@ -11,10 +12,11 @@ import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
-const url = process.env.NODE_ENV === 'development'
-	? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
-	: null;
-const host = url ? (new URL(url)).hostname : undefined;
+const url =
+	process.env.NODE_ENV === 'development'
+		? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+		: null;
+const host = url ? new URL(url).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
 
@@ -29,26 +31,24 @@ const externalPackages = [
 		match: /^shiki\/(?<subPkg>(langs|themes))$/,
 		path(id: string, pattern: RegExp): string {
 			const match = pattern.exec(id)?.groups;
-			return match
-				? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}`
-				: id;
+			return match ? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}` : id;
 		},
 	},
 ];
 
 const hash = (str: string, seed = 0): number => {
-	let h1 = 0xdeadbeef ^ seed,
-		h2 = 0x41c6ce57 ^ seed;
+	let h1 = 0xde_ad_be_ef ^ seed,
+		h2 = 0x41_c6_ce_57 ^ seed;
 	for (let i = 0, ch; i < str.length; i++) {
 		ch = str.charCodeAt(i);
-		h1 = Math.imul(h1 ^ ch, 2654435761);
-		h2 = Math.imul(h2 ^ ch, 1597334677);
+		h1 = Math.imul(h1 ^ ch, 2_654_435_761);
+		h2 = Math.imul(h2 ^ ch, 1_597_334_677);
 	}
 
-	h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-	h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+	h1 = Math.imul(h1 ^ (h1 >>> 16), 2_246_822_507) ^ Math.imul(h2 ^ (h2 >>> 13), 3_266_489_909);
+	h2 = Math.imul(h2 ^ (h2 >>> 16), 2_246_822_507) ^ Math.imul(h1 ^ (h1 >>> 13), 3_266_489_909);
 
-	return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+	return 4_294_967_296 * (2_097_151 & h2) + (h1 >>> 0);
 };
 
 const BASE62_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -87,11 +87,7 @@ export function getConfig(): UserConfig {
 			},
 		},
 
-		plugins: [
-			pluginVue(),
-			pluginRemoveUnrefI18n(),
-			pluginJson5(),
-		],
+		plugins: [pluginVue(), pluginRemoveUnrefI18n(), pluginJson5()],
 
 		resolve: {
 			extensions,
@@ -110,12 +106,13 @@ export function getConfig(): UserConfig {
 			},
 			modules: {
 				generateScopedName(name, filename, _css): string {
-					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name).replace(/[\\\/\.\?&=]/g, '-').replace(/(src-|vue-)/g, '');
+					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name)
+						.replace(/[\\\/\.\?&=]/g, '-')
+						.replace(/(src-|vue-)/g, '');
 					if (process.env.NODE_ENV === 'production') {
 						return 'x' + toBase62(hash(id)).substring(0, 4);
-					} else {
-						return id;
 					}
+					return id;
 				},
 			},
 		},
@@ -131,11 +128,7 @@ export function getConfig(): UserConfig {
 		},
 
 		build: {
-			target: [
-				'chrome130',
-				'firefox132',
-				'safari18.2',
-			],
+			target: ['chrome130', 'firefox132', 'safari18.2'],
 			manifest: 'manifest.json',
 			rolldownOptions: {
 				experimental: {
@@ -145,18 +138,21 @@ export function getConfig(): UserConfig {
 					i18n: './src/i18n.ts',
 					entry: './src/boot.ts',
 				},
-				external: externalPackages.map(p => p.match),
+				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',
 				output: {
 					codeSplitting: {
-						groups: [{
-							name: 'vue',
-							test: /node_modules[\\/]vue/,
-						}, {
-							name: 'i18n',
-							includeDependenciesRecursively: false,
-							test: /i18n\.ts|locale\.ts/,
-						}],
+						groups: [
+							{
+								name: 'vue',
+								test: /node_modules[\\/]vue/,
+							},
+							{
+								name: 'i18n',
+								includeDependenciesRecursively: false,
+								test: /i18n\.ts|locale\.ts/,
+							},
+						],
 					},
 					entryFileNames: `scripts/${localesHash}-[hash:8].js`,
 					chunkFileNames: `scripts/${localesHash}-[hash:8].js`,

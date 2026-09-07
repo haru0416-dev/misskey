@@ -44,18 +44,20 @@ const align = 'left';
 const SCROLLBAR_THICKNESS = 16;
 
 function setPosition() {
-	if (el.value == null) return;
+	if (el.value == null) {
+		return;
+	}
 	const rootRect = props.rootElement.getBoundingClientRect();
 	const parentRect = props.anchorElement.getBoundingClientRect();
 	const myRect = el.value.getBoundingClientRect();
 
 	let left = props.anchorElement.offsetWidth;
-	let top = (parentRect.top - rootRect.top) - 8;
-	if (rootRect.left + left + myRect.width >= (window.innerWidth - SCROLLBAR_THICKNESS)) {
+	let top = parentRect.top - rootRect.top - 8;
+	if (rootRect.left + left + myRect.width >= window.innerWidth - SCROLLBAR_THICKNESS) {
 		left = -myRect.width;
 	}
-	if (rootRect.top + top + myRect.height >= (window.innerHeight - SCROLLBAR_THICKNESS)) {
-		top = top - ((rootRect.top + top + myRect.height) - (window.innerHeight - SCROLLBAR_THICKNESS));
+	if (rootRect.top + top + myRect.height >= window.innerHeight - SCROLLBAR_THICKNESS) {
+		top = top - (rootRect.top + top + myRect.height - (window.innerHeight - SCROLLBAR_THICKNESS));
 	}
 	el.value.style.left = left + 'px';
 	el.value.style.top = top + 'px';
@@ -69,16 +71,21 @@ function onChildClosed(actioned?: boolean) {
 	}
 }
 
-watch(() => props.anchorElement, () => {
-	setPosition();
-});
+watch(
+	() => props.anchorElement,
+	() => {
+		setPosition();
+	},
+);
 
 const ro = new ResizeObserver((entries, observer) => {
 	setPosition();
 });
 
 onMounted(() => {
-	if (el.value) ro.observe(el.value);
+	if (el.value) {
+		ro.observe(el.value);
+	}
 	setPosition();
 	nextTick(() => {
 		setPosition();
@@ -92,7 +99,7 @@ onUnmounted(() => {
 defineExpose({
 	rootElement: el,
 	checkHit: (ev: MouseEvent) => {
-		return (ev.target === el.value || el.value?.contains(ev.target as Node));
+		return ev.target === el.value || el.value?.contains(ev.target as Node);
 	},
 });
 </script>

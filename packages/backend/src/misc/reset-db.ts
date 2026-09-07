@@ -14,12 +14,14 @@ export async function resetDb(pool: MiDrizzlePool) {
 			// drizzle スキーマ (適用済みマイグレーションの記帳) は消さない。テーブルや enum は
 			// 残るので、記帳だけ空にすると次回起動時のマイグレーションが
 			// 「type ... already exists」で失敗し、以後スキーマを作り直すまで起動できなくなる
+			// cache_version はロールの TRUNCATE トリガで世代を進めるため、削除対象に含めない。
 			const { rows: tables } = await client.query<{
 				schema: string;
 				table: string;
 			}>(`SELECT quote_ident(N.nspname) AS "schema", quote_ident(C.relname) AS "table"
 			FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
 			WHERE nspname NOT IN ('pg_catalog', 'information_schema', 'drizzle')
+				AND NOT (N.nspname = 'public' AND C.relname = 'cache_version')
 				AND C.relkind = 'r'
 				AND nspname !~ '^pg_toast';`);
 

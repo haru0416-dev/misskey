@@ -11,16 +11,24 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 export function median(values: number[]) {
-	if (values.length === 0) throw new Error('At least one sample is required');
+	if (values.length === 0) {
+		throw new Error('At least one sample is required');
+	}
 	const sorted = values.toSorted((a, b) => a - b);
 	const center = Math.floor(sorted.length / 2);
-	if (sorted.length % 2 === 1) return sorted[center];
+	if (sorted.length % 2 === 1) {
+		return sorted[center];
+	}
 	return Math.round((sorted[center - 1] + sorted[center]) / 2);
 }
 
 export function mad(values: number[]) {
-	if (values.length === 0) throw new Error('At least one sample is required to calculate MAD');
-	if (values.length === 1) return 0;
+	if (values.length === 0) {
+		throw new Error('At least one sample is required to calculate MAD');
+	}
+	if (values.length === 1) {
+		return 0;
+	}
 
 	const center = median(values);
 	return median(values.map((value) => Math.abs(value - center)));
@@ -29,7 +37,9 @@ export function mad(values: number[]) {
 function getSamplesByRound<T extends { round: number }[]>(samples: T) {
 	const samplesByRound = new Map<number, T[number]>();
 	for (const sample of samples) {
-		if (sample.round <= 0) continue;
+		if (sample.round <= 0) {
+			continue;
+		}
 		samplesByRound.set(sample.round, sample);
 	}
 	return samplesByRound;
@@ -46,16 +56,22 @@ export function pairedDeltaSummary<T extends { round: number }[]>(
 
 	for (const [round, baseSample] of baseSamplesByRound) {
 		const headSample = headSamplesByRound.get(round);
-		if (headSample == null) continue;
+		if (headSample == null) {
+			continue;
+		}
 
 		const baseValue = getValue(baseSample);
 		const headValue = getValue(headSample);
-		if (baseValue == null || headValue == null) continue;
+		if (baseValue == null || headValue == null) {
+			continue;
+		}
 
 		values.push(headValue - baseValue);
 	}
 
-	if (values.length === 0) return null;
+	if (values.length === 0) {
+		return null;
+	}
 
 	return {
 		median: median(values),
@@ -73,7 +89,7 @@ export async function resetTestServices(repoDir: string) {
 
 	const postgres = new pg.Client({
 		host: '127.0.0.1',
-		port: 54312,
+		port: 54_312,
 		database: 'postgres',
 		user: 'postgres',
 	});
@@ -86,7 +102,7 @@ export async function resetTestServices(repoDir: string) {
 		await postgres.end();
 	}
 
-	const redis = new Redis({ host: '127.0.0.1', port: 56312 });
+	const redis = new Redis({ host: '127.0.0.1', port: 56_312 });
 	try {
 		await redis.flushall();
 	} finally {
@@ -128,9 +144,13 @@ export function escapeLatex(text: string) {
 }
 
 export function formatColoredDelta(delta: number, text: (value: number) => string, colorThreshold = 0) {
-	if (delta === 0) return text(0);
+	if (delta === 0) {
+		return text(0);
+	}
 	const sign = delta > 0 ? '+' : '-';
-	if (Math.abs(delta) < colorThreshold) return `$\\text{${sign}${escapeLatex(text(Math.abs(delta)))}}$`;
+	if (Math.abs(delta) < colorThreshold) {
+		return `$\\text{${sign}${escapeLatex(text(Math.abs(delta)))}}$`;
+	}
 	const color = delta > 0 ? 'orange' : 'green';
 	return `$\\color{${color}}{\\text{${sign}${escapeLatex(text(Math.abs(delta)))}}}$`;
 }
@@ -144,7 +164,9 @@ export function formatNumber(value: number) {
 }
 
 export function formatBytes(value: number) {
-	if (value === 0) return '0 B';
+	if (value === 0) {
+		return '0 B';
+	}
 	const units = ['B', 'KB', 'MB', 'GB'];
 	let unitIndex = 0;
 	let size = value;
@@ -158,7 +180,9 @@ export function formatBytes(value: number) {
 }
 
 export function calcAndFormatDeltaNumber(before: number, after: number, colorThreshold = 0) {
-	if (before == null || after == null) return '-';
+	if (before == null || after == null) {
+		return '-';
+	}
 	const delta = after - before;
 	return formatColoredDelta(delta, (v) => formatNumber(v), colorThreshold);
 }
@@ -168,7 +192,9 @@ export function formatDeltaBytes(deltaBytes: number, colorThreshold = 0) {
 }
 
 export function calcAndFormatDeltaBytes(before: number, after: number, colorThreshold = 0) {
-	if (before == null || after == null) return '-';
+	if (before == null || after == null) {
+		return '-';
+	}
 	const delta = after - before;
 	return formatDeltaBytes(delta, colorThreshold);
 }
@@ -182,24 +208,36 @@ export function formatDeltaPercent(deltaPercent: number, colorThreshold = 0) {
 }
 
 export function calcAndFormatDeltaPercent(before: number, after: number, colorThreshold = 0) {
-	if (before == null || before === 0 || after == null || after === 0) return '-';
+	if (before == null || before === 0 || after == null || after === 0) {
+		return '-';
+	}
 	const delta = after - before;
 	return formatDeltaPercent((delta / before) * 100, colorThreshold);
 }
 
 export function commandName(command: string) {
-	if (process.platform !== 'win32') return command;
-	if (command === 'bun') return 'bun.exe';
+	if (process.platform !== 'win32') {
+		return command;
+	}
+	if (command === 'bun') {
+		return 'bun.exe';
+	}
 	return command;
 }
 
 export function readIntegerEnv(name: string, defaultValue: number, min: number) {
 	const rawValue = process.env[name];
-	if (rawValue == null || rawValue === '') return defaultValue;
-	if (!/^\d+$/.test(rawValue)) throw new Error(`${name} must be an integer`);
+	if (rawValue == null || rawValue === '') {
+		return defaultValue;
+	}
+	if (!/^\d+$/.test(rawValue)) {
+		throw new Error(`${name} must be an integer`);
+	}
 
 	const value = Number(rawValue);
-	if (!Number.isSafeInteger(value) || value < min) throw new Error(`${name} must be >= ${min}`);
+	if (!Number.isSafeInteger(value) || value < min) {
+		throw new Error(`${name} must be >= ${min}`);
+	}
 	return value;
 }
 
@@ -220,7 +258,9 @@ export function run(
 
 		child.stdout.on('data', (data) => {
 			stdout += data;
-			if (options.logStdout) process.stderr.write(data);
+			if (options.logStdout) {
+				process.stderr.write(data);
+			}
 		});
 
 		child.stderr.on('data', (data) => {

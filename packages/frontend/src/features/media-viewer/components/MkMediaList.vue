@@ -30,10 +30,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-export function singleFlight<TArgs extends unknown[]>(task: (...args: TArgs) => Promise<void>): (...args: TArgs) => Promise<void> {
+export function singleFlight<TArgs extends unknown[]>(
+	task: (...args: TArgs) => Promise<void>,
+): (...args: TArgs) => Promise<void> {
 	let pending: Promise<void> | null = null;
 	return (...args) => {
-		pending ??= task(...args).finally(() => { pending = null; });
+		pending ??= task(...args).finally(() => {
+			pending = null;
+		});
 		return pending;
 	};
 }
@@ -63,28 +67,42 @@ const previewableMedia = computed(() => props.mediaList.filter(previewable));
 const count = computed(() => previewableMedia.value.length);
 
 function previewable(file: Misskey.entities.DriveFile): boolean {
-	if (file.type === 'image/svg+xml') return true;
+	if (file.type === 'image/svg+xml') {
+		return true;
+	}
 	return (file.type.startsWith('video') || file.type.startsWith('image')) && FILE_TYPE_BROWSERSAFE.includes(file.type);
 }
 
 function calcAspectRatio() {
-	if (gallery.value == null) return;
+	if (gallery.value == null) {
+		return;
+	}
 	const media = previewableMedia.value[0];
 	if (previewableMedia.value.length !== 1 || media?.properties.width == null || media.properties.height == null) {
 		gallery.value.style.aspectRatio = '';
 		return;
 	}
-	const ratioMax = (ratio: number) => `${Math.max(ratio, media.properties.width! / media.properties.height!).toString()} / 1`;
+	const ratioMax = (ratio: number) =>
+		`${Math.max(ratio, media.properties.width! / media.properties.height!).toString()} / 1`;
 	switch (prefer.mediaListWithOneImageAppearance) {
-		case '16_9': gallery.value.style.aspectRatio = ratioMax(16 / 9); break;
-		case '1_1': gallery.value.style.aspectRatio = ratioMax(1); break;
-		case '2_3': gallery.value.style.aspectRatio = ratioMax(2 / 3); break;
-		default: gallery.value.style.aspectRatio = '';
+		case '16_9':
+			gallery.value.style.aspectRatio = ratioMax(16 / 9);
+			break;
+		case '1_1':
+			gallery.value.style.aspectRatio = ratioMax(1);
+			break;
+		case '2_3':
+			gallery.value.style.aspectRatio = ratioMax(2 / 3);
+			break;
+		default:
+			gallery.value.style.aspectRatio = '';
 	}
 }
 
 function onMediaClick(file: Misskey.entities.DriveFile, ev: Event) {
-	if (ev instanceof MouseEvent && (ev.button !== 0 || ev.metaKey || ev.altKey || ev.ctrlKey || ev.shiftKey)) return;
+	if (ev instanceof MouseEvent && (ev.button !== 0 || ev.metaKey || ev.altKey || ev.ctrlKey || ev.shiftKey)) {
+		return;
+	}
 	ev.preventDefault();
 	if (file.type.startsWith('image') && prefer.imageNewTab) {
 		window.open(file.url, '_blank', 'noopener');
@@ -98,13 +116,15 @@ let lightboxDispose: (() => void) | null = null;
 
 const openGallery = singleFlight(async (id?: string) => {
 	const first = previewableMedia.value[0];
-	if (first == null) return;
+	if (first == null) {
+		return;
+	}
 	const selectedId = id ?? first.id;
 	const getElementByMarker = (marker: string) => {
 		const found = gallery.value?.querySelector<HTMLElement>(`[data-marker="${marker}"]`) ?? null;
 		return found == null ? null : markRaw(found);
 	};
-	const contents = previewableMedia.value.map<LightboxContent>(media => {
+	const contents = previewableMedia.value.map<LightboxContent>((media) => {
 		const width = media.properties.width;
 		const height = media.properties.height;
 		return {
@@ -120,16 +140,32 @@ const openGallery = singleFlight(async (id?: string) => {
 		};
 	});
 	const lightbox = await import('@/features/media-viewer/components/MkLightbox.vue');
-	if (unmounted) return;
-	const { dispose } = await os.popupAsyncWithDialog(Promise.resolve(lightbox.default), {
-		defaultIndex: Math.max(0, contents.findIndex(content => content.id === selectedId)),
-		contents,
-	}, { closed: () => {
+	if (unmounted) {
+		return;
+	}
+	const { dispose } = await os.popupAsyncWithDialog(
+		Promise.resolve(lightbox.default),
+		{
+			defaultIndex: Math.max(
+				0,
+				contents.findIndex((content) => content.id === selectedId),
+			),
+			contents,
+		},
+		{
+			closed: () => {
+				dispose();
+				if (lightboxDispose === dispose) {
+					lightboxDispose = null;
+				}
+			},
+		},
+	);
+	if (unmounted) {
 		dispose();
-		if (lightboxDispose === dispose) lightboxDispose = null;
-	} });
-	if (unmounted) dispose();
-	else lightboxDispose = dispose;
+	} else {
+		lightboxDispose = dispose;
+	}
 });
 
 onMounted(calcAspectRatio);

@@ -35,30 +35,39 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'updatePreset', preset: WatermarkPreset): void,
-	(ev: 'del'): void,
+	(ev: 'updatePreset', preset: WatermarkPreset): void;
+	(ev: 'del'): void;
 }>();
 
 async function edit() {
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/image-editor/components/MkWatermarkEditorDialog.vue')), {
-		presetEditMode: true,
-		preset: deepClone(props.preset),
-		layers: deepClone(props.preset.layers),
-	}, {
-		presetOk: (preset) => {
-			emit('updatePreset', preset);
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/features/image-editor/components/MkWatermarkEditorDialog.vue')),
+		{
+			presetEditMode: true,
+			preset: deepClone(props.preset),
+			layers: deepClone(props.preset.layers),
 		},
-		closed: () => dispose(),
-	});
+		{
+			presetOk: (preset) => {
+				emit('updatePreset', preset);
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function del(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.delete,
-		action: () => {
-			emit('del');
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts.delete,
+				action: () => {
+					emit('del');
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 const canvasEl = useTemplateRef('canvasEl');
@@ -70,18 +79,24 @@ let renderer: WatermarkRenderer | null = null;
 
 onMounted(() => {
 	sampleImage.onload = async () => {
-		watch(canvasEl, async () => {
-			if (canvasEl.value == null) return;
+		watch(
+			canvasEl,
+			async () => {
+				if (canvasEl.value == null) {
+					return;
+				}
 
-			renderer = new WatermarkRenderer({
-				canvas: canvasEl.value,
-				renderWidth: 1500,
-				renderHeight: 1000,
-				image: sampleImage,
-			});
+				renderer = new WatermarkRenderer({
+					canvas: canvasEl.value,
+					renderWidth: 1500,
+					renderHeight: 1000,
+					image: sampleImage,
+				});
 
-			await renderer.render(props.preset.layers);
-		}, { immediate: true });
+				await renderer.render(props.preset.layers);
+			},
+			{ immediate: true },
+		);
 	};
 });
 
@@ -92,11 +107,15 @@ onUnmounted(() => {
 	}
 });
 
-watch(() => props.preset, async () => {
-	if (renderer != null) {
-		await renderer.render(props.preset.layers);
-	}
-}, { deep: true });
+watch(
+	() => props.preset,
+	async () => {
+		if (renderer != null) {
+			await renderer.render(props.preset.layers);
+		}
+	},
+	{ deep: true },
+);
 </script>
 
 <style lang="scss" module>

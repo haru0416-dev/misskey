@@ -49,26 +49,30 @@ import { i18n } from '@/i18n.js';
 
 const modal = useTemplateRef('modal');
 
-const props = withDefaults(defineProps<{
-	currentVisibility: typeof Misskey.noteVisibilities[number];
-	isSilenced: boolean;
-	anchorElement?: HTMLElement | null;
-	isReplyVisibilitySpecified?: boolean;
-}>(), {
-});
+const props = withDefaults(
+	defineProps<{
+		currentVisibility: (typeof Misskey.noteVisibilities)[number];
+		isSilenced: boolean;
+		anchorElement?: HTMLElement | null;
+		isReplyVisibilitySpecified?: boolean;
+	}>(),
+	{},
+);
 
 const emit = defineEmits<{
-	(ev: 'changeVisibility', v: typeof Misskey.noteVisibilities[number]): void;
+	(ev: 'changeVisibility', v: (typeof Misskey.noteVisibilities)[number]): void;
 	(ev: 'closed'): void;
 }>();
 
 const v = ref(props.currentVisibility);
 
-function choose(visibility: typeof Misskey.noteVisibilities[number]): void {
+function choose(visibility: (typeof Misskey.noteVisibilities)[number]): void {
 	v.value = visibility;
 	emit('changeVisibility', visibility);
 	nextTick(() => {
-		if (modal.value) modal.value.close();
+		if (modal.value) {
+			modal.value.close();
+		}
 	});
 }
 </script>

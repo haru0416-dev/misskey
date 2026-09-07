@@ -96,7 +96,9 @@ for (const language of overrides.languages) {
 	});
 	const activeNow = new Set(current.rules.map((r) => r.key));
 	for (const rule of sonarWayRules.rules) {
-		if (disabledKeys.has(rule.key) || activeNow.has(rule.key)) continue;
+		if (disabledKeys.has(rule.key) || activeNow.has(rule.key)) {
+			continue;
+		}
 		await api('/api/qualityprofiles/activate_rule', { key: profile.key, rule: rule.key }, 'POST');
 		console.log(`  re-enabled ${rule.key}`);
 		restored++;

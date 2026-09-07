@@ -84,10 +84,12 @@ const props = defineProps<{
 }>();
 
 const isMe = computed(() => props.message.fromUserId === $i.id);
-const urls = computed(() => props.message.text ? extractUrlFromMfm(mfm.parse(props.message.text)) : []);
+const urls = computed(() => (props.message.text ? extractUrlFromMfm(mfm.parse(props.message.text)) : []));
 
 provide(DI.mfmEmojiReactCallback, (reaction) => {
-	if ($i.policies.chatAvailability !== 'available') return;
+	if ($i.policies.chatAvailability !== 'available') {
+		return;
+	}
 
 	sound.playMisskeySfx('reaction');
 	misskeyApi('chat/messages/react', {
@@ -97,10 +99,14 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 });
 
 function react(ev: PointerEvent) {
-	if ($i.policies.chatAvailability !== 'available') return;
+	if ($i.policies.chatAvailability !== 'available') {
+		return;
+	}
 
 	const targetEl = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
-	if (!targetEl) return;
+	if (!targetEl) {
+		return;
+	}
 
 	reactionPicker.show(targetEl, null, async (reaction) => {
 		sound.playMisskeySfx('reaction');
@@ -112,7 +118,9 @@ function react(ev: PointerEvent) {
 }
 
 function onReactionClick(record: Misskey.entities.ChatMessage['reactions'][0]) {
-	if ($i.policies.chatAvailability !== 'available') return;
+	if ($i.policies.chatAvailability !== 'available') {
+		return;
+	}
 
 	if (record.user.id === $i.id) {
 		misskeyApi('chat/messages/unreact', {
@@ -120,7 +128,7 @@ function onReactionClick(record: Misskey.entities.ChatMessage['reactions'][0]) {
 			reaction: record.reaction,
 		});
 	} else {
-		if (!props.message.reactions.some(r => r.user.id === $i.id && r.reaction === record.reaction)) {
+		if (!props.message.reactions.some((r) => r.user.id === $i.id && r.reaction === record.reaction)) {
 			sound.playMisskeySfx('reaction');
 			misskeyApi('chat/messages/react', {
 				messageId: props.message.id,
@@ -131,8 +139,12 @@ function onReactionClick(record: Misskey.entities.ChatMessage['reactions'][0]) {
 }
 
 function onContextmenu(ev: PointerEvent) {
-	if (ev.target && isLink(ev.target as HTMLElement)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (ev.target && isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
 	showMenu(ev, true);
 }
@@ -185,12 +197,16 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 			icon: 'ti ti-exclamation-circle',
 			action: async () => {
 				const localUrl = `${url}/chat/messages/${props.message.id}`;
-				const { dispose } = await os.popupAsyncWithDialog(import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then(x => x.default), {
-					user: props.message.fromUser!,
-					initialComment: `${localUrl}\n-----\n`,
-				}, {
-					closed: () => dispose(),
-				});
+				const { dispose } = await os.popupAsyncWithDialog(
+					import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
+					{
+						user: props.message.fromUser!,
+						initialComment: `${localUrl}\n-----\n`,
+					},
+					{
+						closed: () => dispose(),
+					},
+				);
 			},
 		});
 	}

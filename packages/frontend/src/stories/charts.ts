@@ -37,12 +37,18 @@ export function getChartResolver(
 		for (const field of fields) {
 			const layers = field.split('.');
 			const leafKey = layers.pop();
-			if (leafKey == null) continue;
+			if (leafKey == null) {
+				continue;
+			}
 			let current = res as any;
 			while (layers.length > 0) {
 				const currentKey = layers.shift();
-				if (currentKey == null) break;
-				if (current[currentKey] == null) current[currentKey] = {};
+				if (currentKey == null) {
+					break;
+				}
+				if (current[currentKey] == null) {
+					current[currentKey] = {};
+				}
 				current = current[currentKey];
 			}
 			current[leafKey] = getChartArray(field, limit, {

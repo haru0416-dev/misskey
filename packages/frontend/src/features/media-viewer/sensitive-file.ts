@@ -26,7 +26,9 @@ export async function canRevealFile(file: Misskey.entities.DriveFile): Promise<b
 			type: 'question',
 			text: i18n.ts.sensitiveMediaRevealConfirm,
 		});
-		if (canceled) return false;
+		if (canceled) {
+			return false;
+		}
 	}
 
 	return true;

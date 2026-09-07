@@ -11,20 +11,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, h } from 'vue';
 import type { ParameterizedString } from 'i18n';
 
-const props = withDefaults(defineProps<{
-	src: T;
-	tag?: string;
-	textTag?: string;
-}>(), {
-	tag: 'span',
-});
+const props = withDefaults(
+	defineProps<{
+		src: T;
+		tag?: string;
+		textTag?: string;
+	}>(),
+	{
+		tag: 'span',
+	},
+);
 
-const slots = defineSlots<T extends ParameterizedString<infer R> ? { [K in R]: () => unknown } : NonNullable<unknown>>();
+const slots =
+	defineSlots<T extends ParameterizedString<infer R> ? { [K in R]: () => unknown } : NonNullable<unknown>>();
 
 const parsed = computed(() => {
 	let str = props.src as string;
-	const value: (string | { arg: string; })[] = [];
-	for (; ;) {
+	const value: (string | { arg: string })[] = [];
+	for (;;) {
 		const nextBracketOpen = str.indexOf('{');
 		const nextBracketClose = str.indexOf('}');
 
@@ -32,7 +36,9 @@ const parsed = computed(() => {
 			value.push(str);
 			break;
 		} else {
-			if (nextBracketOpen > 0) value.push(str.substring(0, nextBracketOpen));
+			if (nextBracketOpen > 0) {
+				value.push(str.substring(0, nextBracketOpen));
+			}
 			value.push({
 				arg: str.substring(nextBracketOpen + 1, nextBracketClose),
 			});
@@ -45,6 +51,11 @@ const parsed = computed(() => {
 });
 
 const render = () => {
-	return h(props.tag, parsed.value.map(x => typeof x === 'string' ? (props.textTag ? h(props.textTag, x) : x) : (slots as any)[x.arg]()));
+	return h(
+		props.tag,
+		parsed.value.map((x) =>
+			typeof x === 'string' ? (props.textTag ? h(props.textTag, x) : x) : (slots as any)[x.arg](),
+		),
+	);
 };
 </script>

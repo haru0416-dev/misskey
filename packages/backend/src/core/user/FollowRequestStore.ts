@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, type Placeholder, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { Placeholder, SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { followRequest, type FollowRequestInsert, type FollowRequestRow } from '@/db/schema/follow-request.js';
+import { followRequest } from '@/db/schema/follow-request.js';
+import type { FollowRequestInsert, FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiFollowRequest } from '@/models/FollowRequest.js';
@@ -156,7 +158,9 @@ export async function listFollowRequestsByFollowerIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	followerIds: MiUser['id'][],
 ): Promise<FollowRequestRow[]> {
-	if (followerIds.length === 0) return [];
+	if (followerIds.length === 0) {
+		return [];
+	}
 
 	return await db.select().from(followRequest).where(inArray(followRequest.followerId, followerIds));
 }
@@ -178,7 +182,9 @@ export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFrom
 	followerId: MiUser['id'],
 	followeeIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (followeeIds.length === 0) return [];
+	if (followeeIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ followeeId: followRequest.followeeId })
@@ -207,7 +213,9 @@ export async function listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFrom
 	followeeId: MiUser['id'],
 	followerIds: MiUser['id'][],
 ): Promise<MiUser['id'][]> {
-	if (followerIds.length === 0) return [];
+	if (followerIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ followerId: followRequest.followerId })

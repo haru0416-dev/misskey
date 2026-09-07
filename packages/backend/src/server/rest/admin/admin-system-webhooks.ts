@@ -24,7 +24,8 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
-import { systemWebhookEventTypes, type SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
+import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { ApiError } from '../error.js';
@@ -174,7 +175,9 @@ export async function handleApiAdminSystemWebhookShow(
 ): Promise<Packed<'SystemWebhook'>> {
 	const params = parseApiParams(adminSystemWebhookShowParamDef, body);
 	const webhook = await fetchSystemWebhookByIdFromDatabase(deps.db, params.id);
-	if (webhook == null) throw noSuchSystemWebhookError();
+	if (webhook == null) {
+		throw noSuchSystemWebhookError();
+	}
 
 	return packApiSystemWebhook(webhook);
 }

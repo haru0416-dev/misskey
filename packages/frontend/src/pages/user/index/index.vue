@@ -50,12 +50,15 @@ const XRaw = defineAsyncComponent(() => import('../raw.vue'));
 // contextは非ログイン状態の情報しかないためログイン時は利用できない
 const CTX_USER = !$i && assertServerContext(serverContext, 'user') ? serverContext.user : null;
 
-const props = withDefaults(defineProps<{
-	acct: string;
-	page?: string;
-}>(), {
-	page: 'home',
-});
+const props = withDefaults(
+	defineProps<{
+		acct: string;
+		page?: string;
+	}>(),
+	{
+		page: 'home',
+	},
+);
 
 const tab = ref(props.page);
 
@@ -63,7 +66,9 @@ const user = ref<null | Misskey.entities.UserDetailed>(CTX_USER);
 const error = ref<unknown>(null);
 
 function fetchUser(): void {
-	if (props.acct == null) return;
+	if (props.acct == null) {
+		return;
+	}
 
 	const { username, host } = Misskey.acct.parse(props.acct);
 
@@ -76,11 +81,13 @@ function fetchUser(): void {
 	misskeyApi('users/show', {
 		username,
 		host,
-	}).then(u => {
-		user.value = u;
-	}).catch(err => {
-		error.value = err;
-	});
+	})
+		.then((u) => {
+			user.value = u;
+		})
+		.catch((err) => {
+			error.value = err;
+		});
 }
 
 watch(() => props.acct, fetchUser, {
@@ -89,75 +96,102 @@ watch(() => props.acct, fetchUser, {
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => user.value ? [{
-	key: 'home',
-	title: i18n.ts.overview,
-	icon: 'ti ti-home',
-}, {
-	key: 'notes',
-	title: i18n.ts.notes,
-	icon: 'ti ti-pencil',
-}, {
-	key: 'files',
-	title: i18n.ts.files,
-	icon: 'ti ti-photo',
-}, {
-	key: 'activity',
-	title: i18n.ts.activity,
-	icon: 'ti ti-chart-line',
-}, ...(user.value.host == null ? [{
-	key: 'achievements',
-	title: i18n.ts.achievements,
-	icon: 'ti ti-medal',
-}] : []), ...($i && ($i.id === user.value.id || $i.isAdmin || $i.isModerator)) || user.value.publicReactions ? [{
-	key: 'reactions',
-	title: i18n.ts.reaction,
-	icon: 'ti ti-mood-happy',
-	iconOnly: true,
-}] : [], {
-	key: 'clips',
-	title: i18n.ts.clips,
-	icon: 'ti ti-paperclip',
-	iconOnly: true,
-}, {
-	key: 'lists',
-	title: i18n.ts.lists,
-	icon: 'ti ti-list',
-	iconOnly: true,
-}, {
-	key: 'pages',
-	title: i18n.ts.pages,
-	icon: 'ti ti-news',
-	iconOnly: true,
-}, {
-	key: 'flashs',
-	title: 'Play',
-	icon: 'ti ti-player-play',
-	iconOnly: true,
-}, {
-	key: 'gallery',
-	title: i18n.ts.gallery,
-	icon: 'ti ti-icons',
-	iconOnly: true,
-}, {
-	key: 'raw',
-	title: 'Raw',
-	icon: 'ti ti-code',
-	iconOnly: true,
-}] : []);
+const headerTabs = computed(() =>
+	user.value
+		? [
+				{
+					key: 'home',
+					title: i18n.ts.overview,
+					icon: 'ti ti-home',
+				},
+				{
+					key: 'notes',
+					title: i18n.ts.notes,
+					icon: 'ti ti-pencil',
+				},
+				{
+					key: 'files',
+					title: i18n.ts.files,
+					icon: 'ti ti-photo',
+				},
+				{
+					key: 'activity',
+					title: i18n.ts.activity,
+					icon: 'ti ti-chart-line',
+				},
+				...(user.value.host == null
+					? [
+							{
+								key: 'achievements',
+								title: i18n.ts.achievements,
+								icon: 'ti ti-medal',
+							},
+						]
+					: []),
+				...(($i && ($i.id === user.value.id || $i.isAdmin || $i.isModerator)) || user.value.publicReactions
+					? [
+							{
+								key: 'reactions',
+								title: i18n.ts.reaction,
+								icon: 'ti ti-mood-happy',
+								iconOnly: true,
+							},
+						]
+					: []),
+				{
+					key: 'clips',
+					title: i18n.ts.clips,
+					icon: 'ti ti-paperclip',
+					iconOnly: true,
+				},
+				{
+					key: 'lists',
+					title: i18n.ts.lists,
+					icon: 'ti ti-list',
+					iconOnly: true,
+				},
+				{
+					key: 'pages',
+					title: i18n.ts.pages,
+					icon: 'ti ti-news',
+					iconOnly: true,
+				},
+				{
+					key: 'flashs',
+					title: 'Play',
+					icon: 'ti ti-player-play',
+					iconOnly: true,
+				},
+				{
+					key: 'gallery',
+					title: i18n.ts.gallery,
+					icon: 'ti ti-icons',
+					iconOnly: true,
+				},
+				{
+					key: 'raw',
+					title: 'Raw',
+					icon: 'ti ti-code',
+					iconOnly: true,
+				},
+			]
+		: [],
+);
 
 definePage(() => ({
 	title: i18n.ts.user,
 	icon: 'ti ti-user',
-	...user.value ? {
-		title: user.value.name ? `${user.value.name} (@${user.value.username})` : `@${user.value.username}`,
-		subtitle: `@${getAcct(user.value)}`,
-		userName: user.value,
-		avatar: user.value,
-		path: `/@${user.value.username}`,
-		share: {
-			title: user.value.name,
-		},
-	} : {},
+	...(user.value
+		? {
+				title: user.value.name ? `${user.value.name} (@${user.value.username})` : `@${user.value.username}`,
+				subtitle: `@${getAcct(user.value)}`,
+				userName: user.value,
+				avatar: user.value,
+				path: `/@${user.value.username}`,
+				share: {
+					title: user.value.name,
+				},
+			}
+		: {}),
 }));
 </script>

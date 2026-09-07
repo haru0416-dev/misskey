@@ -25,6 +25,7 @@ const {
 vi.mock('@/server/rest/role/role-policy.js', () => ({
 	computeApiUserRoles: vi.fn(),
 	getApiRolePolicies: getApiRolePoliciesMock,
+	getApiUserProfilePolicies: vi.fn(),
 	getApiUserRoles: getApiUserRolesMock,
 	isApiAdministrator: isApiAdministratorMock,
 	isApiModerator: isApiModeratorMock,

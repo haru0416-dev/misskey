@@ -63,7 +63,9 @@ export function applyWithLocale(
 					let lastIndex = 0;
 					for (const match of format.matchAll(/\{(.+?)}/g)) {
 						const [fullMatch, paramName] = match;
-						if (paramName == null) continue;
+						if (paramName == null) {
+							continue;
+						}
 						if (lastIndex < match.index) {
 							components.push(JSON.stringify(format.slice(lastIndex, match.index)));
 						}
@@ -75,7 +77,9 @@ export function applyWithLocale(
 
 					const paramList = Array.from(params).join(',');
 					let body = components.filter((x) => x !== '""').join('+');
-					if (body === '') body = '""';
+					if (body === '') {
+						body = '""';
+					}
 					return `(({${paramList}})=>(${body}))`;
 				}
 			}
@@ -105,14 +109,18 @@ export function applyWithLocale(
 }
 
 function getPropertyByPath(localeJson: ILocale, localizationKey: string[]): string | object | null {
-	if (localizationKey.length === 0) return localeJson;
+	if (localizationKey.length === 0) {
+		return localeJson;
+	}
 	let current: ILocale | string = localeJson;
 	for (const key of localizationKey) {
 		if (typeof current !== 'object' || !(key in current)) {
 			return null;
 		}
 		const next: string | ILocale | undefined = current[key];
-		if (next == null) return null;
+		if (next == null) {
+			return null;
+		}
 		current = next;
 	}
 	return current;

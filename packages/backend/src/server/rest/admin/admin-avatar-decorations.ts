@@ -8,8 +8,10 @@ import {
 	createAvatarDecorationWithSideEffects,
 	deleteAvatarDecorationWithSideEffects,
 	updateAvatarDecorationWithSideEffects,
-	type AvatarDecorationCreateOptions,
-	type AvatarDecorationUpdateOptions,
+} from '@/core/avatar-decoration/AvatarDecorationLogic.js';
+import type {
+	AvatarDecorationCreateOptions,
+	AvatarDecorationUpdateOptions,
 } from '@/core/avatar-decoration/AvatarDecorationLogic.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';

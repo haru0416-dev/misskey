@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, ne, sql, type SQL } from 'drizzle-orm';
-import { page, type PageInsert, type PageRow } from '@/db/schema/page.js';
+import { and, asc, desc, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { page } from '@/db/schema/page.js';
+import type { PageInsert, PageRow } from '@/db/schema/page.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -229,7 +231,9 @@ export async function decrementPageLikedCountInDatabase(db: MiDrizzleDatabase, i
 }
 
 export async function listPagesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiPage['id'][]): Promise<MiPage[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db.select().from(page).where(inArray(page.id, ids));
 

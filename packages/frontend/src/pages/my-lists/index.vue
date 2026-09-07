@@ -50,21 +50,25 @@ async function create() {
 	const { canceled, result: name } = await os.inputText({
 		title: i18n.ts.enterListName,
 	});
-	if (canceled || name == null) return;
+	if (canceled || name == null) {
+		return;
+	}
 	await os.apiWithDialog('users/lists/create', { name: name });
 	userListsCache.delete();
 	_fetch_();
 }
 
-const headerActions = computed(() => [{
-	asFullButton: true,
-	icon: 'ti ti-refresh',
-	text: i18n.ts.reload,
-	handler: () => {
-		userListsCache.delete();
-		_fetch_();
+const headerActions = computed(() => [
+	{
+		asFullButton: true,
+		icon: 'ti ti-refresh',
+		text: i18n.ts.reload,
+		handler: () => {
+			userListsCache.delete();
+			_fetch_();
+		},
 	},
-}]);
+]);
 
 const headerTabs = computed(() => []);
 

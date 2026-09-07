@@ -23,10 +23,11 @@ import {
 	deliverToRelaysForApi,
 	renderNoteDeleteOrUndoAnnounceActivityForApi,
 	resolveMentionedAndInvolvedRemoteUsersForApi,
-	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import { fetchOrRegisterInstanceForApi } from './notes-create.js';
-import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
 
@@ -120,7 +121,9 @@ export async function handleApiNotesDelete(
 	const params = parseApiParams(notesDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesDeleteNoSuchNoteError();
+	if (note == null) {
+		throw notesDeleteNoSuchNoteError();
+	}
 
 	if (!(await isApiModerator(deps, me)) && note.userId !== me.id) {
 		throw notesDeleteAccessDeniedError();
@@ -158,7 +161,9 @@ export async function handleApiNotesUnrenote(
 	const params = parseApiParams(notesUnrenoteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw notesUnrenoteNoSuchNoteError();
+	if (note == null) {
+		throw notesUnrenoteNoSuchNoteError();
+	}
 
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);

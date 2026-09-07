@@ -54,7 +54,9 @@ export async function pleaseLogin(
 		openOnRemote?: OpenOnRemoteOptions;
 	} = {},
 ): Promise<boolean> {
-	if ($i != null) return true;
+	if ($i != null) {
+		return true;
+	}
 
 	let _openOnRemote: OpenOnRemoteOptions | undefined = undefined;
 

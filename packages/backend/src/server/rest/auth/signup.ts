@@ -35,12 +35,8 @@ import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.
 import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import { ApiError, signupValidationError } from '../error.js';
-import {
-	completeApiSignin,
-	type ApiSigninDependencies,
-	type ApiSigninFlowResult,
-	type ApiSigninRequest,
-} from './signin.js';
+import { completeApiSignin } from './signin.js';
+import type { ApiSigninDependencies, ApiSigninFlowResult, ApiSigninRequest } from './signin.js';
 import { packMeDetailedForApi, packUserLiteForApi } from '../user/user.js';
 
 type SignupBody = {
@@ -79,26 +75,47 @@ function validatePassword(password: unknown): asserts password is string {
 }
 
 function normalizeHost(host: unknown): string | null {
-	if (host == null) return null;
-	if (typeof host !== 'string') throw signupValidationError('INVALID_HOST');
+	if (host == null) {
+		return null;
+	}
+	if (typeof host !== 'string') {
+		throw signupValidationError('INVALID_HOST');
+	}
 
 	const normalized = toPuny(host);
-	if (normalized === '') throw signupValidationError('INVALID_HOST');
+	if (normalized === '') {
+		throw signupValidationError('INVALID_HOST');
+	}
 
 	return normalized;
 }
 
 function assertSignupGateOpen(meta: MiMeta): void {
-	if (process.env['NODE_ENV'] === 'test') return;
+	if (process.env['NODE_ENV'] === 'test') {
+		return;
+	}
 
-	if (meta.enableHcaptcha && meta.hcaptchaSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl)
+	if (meta.enableHcaptcha && meta.hcaptchaSecretKey) {
 		throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.enableRecaptcha && meta.recaptchaSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.enableTurnstile && meta.turnstileSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.enableTestcaptcha) throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.emailRequiredForSignup) throw signupValidationError('EMAIL_REQUIRED_FOR_SIGNUP');
-	if (meta.disableRegistration) throw signupValidationError('INVITATION_REQUIRED');
+	}
+	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl) {
+		throw signupValidationError('CAPTCHA_REQUIRED');
+	}
+	if (meta.enableRecaptcha && meta.recaptchaSecretKey) {
+		throw signupValidationError('CAPTCHA_REQUIRED');
+	}
+	if (meta.enableTurnstile && meta.turnstileSecretKey) {
+		throw signupValidationError('CAPTCHA_REQUIRED');
+	}
+	if (meta.enableTestcaptcha) {
+		throw signupValidationError('CAPTCHA_REQUIRED');
+	}
+	if (meta.emailRequiredForSignup) {
+		throw signupValidationError('EMAIL_REQUIRED_FOR_SIGNUP');
+	}
+	if (meta.disableRegistration) {
+		throw signupValidationError('INVITATION_REQUIRED');
+	}
 }
 
 function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string): void {
@@ -161,8 +178,12 @@ export async function createLocalSignupAccount(
 			claimRoot,
 		});
 	const handleCreationError = (error: unknown): never => {
-		if (error instanceof DuplicatedUsernameError) throw signupValidationError('DUPLICATED_USERNAME');
-		if (error instanceof UsedUsernameError) throw signupValidationError('USED_USERNAME');
+		if (error instanceof DuplicatedUsernameError) {
+			throw signupValidationError('DUPLICATED_USERNAME');
+		}
+		if (error instanceof UsedUsernameError) {
+			throw signupValidationError('USED_USERNAME');
+		}
 		throw error;
 	};
 
@@ -172,12 +193,18 @@ export async function createLocalSignupAccount(
 	try {
 		created = await createAccount(shouldClaimRoot);
 	} catch (error) {
-		if (!(error instanceof RootUserAlreadyAssignedError)) handleCreationError(error);
+		if (!(error instanceof RootUserAlreadyAssignedError)) {
+			handleCreationError(error);
+		}
 		// rootClaim を明示指定した呼び出し元 (管理者によるアカウント作成) は root 競合を自分で扱う。
-		if (rootClaim !== 'auto') throw error;
+		if (rootClaim !== 'auto') {
+			throw error;
+		}
 		// 別のリクエストが先に root を取っていた場合は、通常ユーザーとして作り直す。
 		const currentMeta = await fetchMetaFromDatabase(deps.db);
-		if (!params.ignorePreservedUsernames) assertUsernameAvailableForNonRoot(currentMeta, usernameLower);
+		if (!params.ignorePreservedUsernames) {
+			assertUsernameAvailableForNonRoot(currentMeta, usernameLower);
+		}
 		created = await createAccount(false).catch(handleCreationError);
 	}
 	const { account, rootClaimed } = created;
@@ -193,7 +220,9 @@ export async function createLocalSignupAccount(
 		const queue = deps.systemWebhookDeliverQueue;
 		void (async () => {
 			const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: ['userCreated'] });
-			if (webhooks.length === 0) return;
+			if (webhooks.length === 0) {
+				return;
+			}
 			const packed = await packUserLiteForApi(deps, account);
 			await Promise.all(
 				webhooks.map((webhook) => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)),

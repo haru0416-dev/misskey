@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
-import { systemWebhook, deserializeSystemWebhook, type SystemWebhookInsert } from '@/db/schema/system-webhook.js';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { systemWebhook, deserializeSystemWebhook } from '@/db/schema/system-webhook.js';
+import type { SystemWebhookInsert } from '@/db/schema/system-webhook.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 

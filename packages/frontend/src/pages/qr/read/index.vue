@@ -95,7 +95,7 @@ const results = ref(new Set<string>());
 // 末尾ほど新しい URI。
 const uris = ref<string[]>([]);
 const sources = new Map<string, ApShowResponse | null>();
-const users = ref<(misskey.entities.UserDetailed)[]>([]);
+const users = ref<misskey.entities.UserDetailed[]>([]);
 const usersCount = ref(0);
 const notes = ref<misskey.entities.Note[]>([]);
 const notesCount = ref(0);
@@ -103,10 +103,16 @@ const notesCount = ref(0);
 const timer = ref<number | null>(null);
 
 function updateLists() {
-	const responses = uris.value.map(uri => sources.get(uri)).filter((r): r is ApShowResponse => !!r);
-	users.value = responses.filter(r => r.type === 'User').map(r => r.object).filter((u): u is misskey.entities.UserDetailed => !!u);
+	const responses = uris.value.map((uri) => sources.get(uri)).filter((r): r is ApShowResponse => !!r);
+	users.value = responses
+		.filter((r) => r.type === 'User')
+		.map((r) => r.object)
+		.filter((u): u is misskey.entities.UserDetailed => !!u);
 	usersCount.value = users.value.length;
-	notes.value = responses.filter(r => r.type === 'Note').map(r => r.object).filter((n): n is misskey.entities.Note => !!n);
+	notes.value = responses
+		.filter((r) => r.type === 'Note')
+		.map((r) => r.object)
+		.filter((n): n is misskey.entities.Note => !!n);
 	notesCount.value = notes.value.length;
 	updateRequired.value = false;
 }
@@ -138,10 +144,14 @@ watch(tab, () => {
 });
 
 async function processResult(result: QrScanner.ScanResult) {
-	if (!result) return;
+	if (!result) {
+		return;
+	}
 	const trimmed = result.data.trim();
 
-	if (!trimmed) return;
+	if (!trimmed) {
+		return;
+	}
 
 	const haveExisted = results.value.has(trimmed);
 	results.value.add(trimmed);
@@ -158,14 +168,16 @@ async function processResult(result: QrScanner.ScanResult) {
 
 	if (uris.value[0] !== trimmed) {
 		// 並べ替え
-		uris.value = [trimmed, ...uris.value.slice(0, 29).filter(u => u !== trimmed)];
+		uris.value = [trimmed, ...uris.value.slice(0, 29).filter((u) => u !== trimmed)];
 	}
 
-	if (sources.has(trimmed)) return;
+	if (sources.has(trimmed)) {
+		return;
+	}
 	sources.set(trimmed, null);
 
 	await misskeyApi('ap/show', { uri: trimmed })
-		.then(data => {
+		.then((data) => {
 			if (data.type === 'User') {
 				sources.set(trimmed, data);
 				tab.value = 'users';
@@ -175,7 +187,7 @@ async function processResult(result: QrScanner.ScanResult) {
 			}
 			updateLists();
 		})
-		.catch(err => {
+		.catch((err) => {
 			tab.value = 'all';
 			throw err;
 		});
@@ -186,14 +198,16 @@ const flashCanToggle = ref(false);
 const flash = ref(false);
 
 async function upload() {
-	os.chooseFileFromPc({ multiple: true }).then(files => {
-		if (files.length === 0) return;
+	os.chooseFileFromPc({ multiple: true }).then((files) => {
+		if (files.length === 0) {
+			return;
+		}
 		for (const file of files) {
 			QrScanner.scanImage(file, { returnDetailedScanResult: true })
-				.then(result => {
+				.then((result) => {
 					processResult(result);
 				})
-				.catch(err => {
+				.catch((err) => {
 					if (err.toString().includes('No QR code found')) {
 						os.alert({
 							type: 'info',
@@ -212,7 +226,9 @@ async function upload() {
 }
 
 async function chooseCamera() {
-	if (!scannerInstance.value) return;
+	if (!scannerInstance.value) {
+		return;
+	}
 	const cameras = await QrScanner.listCameras(true);
 	if (cameras.length === 0) {
 		os.alert({
@@ -223,13 +239,17 @@ async function chooseCamera() {
 
 	const select = await os.select({
 		title: i18n.ts._qr.chooseCamera,
-		items: cameras.map(camera => ({
+		items: cameras.map((camera) => ({
 			label: camera.label,
 			value: camera.id,
 		})),
 	});
-	if (select.canceled) return;
-	if (select.result == null) return;
+	if (select.canceled) {
+		return;
+	}
+	if (select.result == null) {
+		return;
+	}
 
 	await scannerInstance.value.setCamera(select.result);
 	flashCanToggle.value = await scannerInstance.value.hasFlash();
@@ -237,7 +257,9 @@ async function chooseCamera() {
 }
 
 async function toggleFlash(to = false) {
-	if (!scannerInstance.value) return;
+	if (!scannerInstance.value) {
+		return;
+	}
 
 	flash.value = to;
 	if (flash.value) {
@@ -252,21 +274,32 @@ async function toggleFlash(to = false) {
 let initializeId = 0;
 
 function startQr() {
-	if (!scannerInstance.value) return;
+	if (!scannerInstance.value) {
+		return;
+	}
 	const currentInitializeId = ++initializeId;
 	qrStarted.value = false;
-	scannerInstance.value.start()
+	scannerInstance.value
+		.start()
 		.then(async () => {
-			if (currentInitializeId !== initializeId) return;
+			if (currentInitializeId !== initializeId) {
+				return;
+			}
 			qrStarted.value = true;
-			if (!scannerInstance.value) return;
+			if (!scannerInstance.value) {
+				return;
+			}
 			const hasFlash = await scannerInstance.value.hasFlash();
-			if (currentInitializeId !== initializeId) return;
+			if (currentInitializeId !== initializeId) {
+				return;
+			}
 			flashCanToggle.value = hasFlash;
 			flash.value = scannerInstance.value.isFlashOn();
 		})
-		.catch(err => {
-			if (currentInitializeId !== initializeId) return;
+		.catch((err) => {
+			if (currentInitializeId !== initializeId) {
+				return;
+			}
 			qrStarted.value = false;
 			os.alert({
 				type: 'error',
@@ -278,7 +311,9 @@ function startQr() {
 
 function stopQr() {
 	initializeId++;
-	if (!scannerInstance.value) return;
+	if (!scannerInstance.value) {
+		return;
+	}
 	scannerInstance.value.stop();
 	qrStarted.value = false;
 }
@@ -302,38 +337,40 @@ onMounted(() => {
 		return;
 	}
 
-	scannerInstance.value = new QrScanner(
-		videoEl.value,
-		processResult,
-		{
-			highlightScanRegion: true,
-			highlightCodeOutline: true,
-			overlay: overlayEl.value,
-			calculateScanRegion(video: HTMLVideoElement): QrScanner.ScanRegion {
-				const aspectRatio = video.videoWidth / video.videoHeight;
-				const SHORT_SIDE_SIZE_DOWNSCALED = 360;
-				return {
-					x: 0,
-					y: 0,
-					width: video.videoWidth,
-					height: video.videoHeight,
-					downScaledWidth: aspectRatio > 1 ? Math.round(SHORT_SIDE_SIZE_DOWNSCALED * aspectRatio) : SHORT_SIDE_SIZE_DOWNSCALED,
-					downScaledHeight: aspectRatio > 1 ? SHORT_SIDE_SIZE_DOWNSCALED : Math.round(SHORT_SIDE_SIZE_DOWNSCALED / aspectRatio),
-				};
-			},
-			onDecodeError(err) {
-				if (err.toString().includes('No QR code found')) return;
-				if (alertLock.value) return;
-				alertLock.value = true;
-				os.alert({
-					type: 'error',
-					text: err.toString(),
-				}).finally(() => {
-					alertLock.value = false;
-				});
-			},
+	scannerInstance.value = new QrScanner(videoEl.value, processResult, {
+		highlightScanRegion: true,
+		highlightCodeOutline: true,
+		overlay: overlayEl.value,
+		calculateScanRegion(video: HTMLVideoElement): QrScanner.ScanRegion {
+			const aspectRatio = video.videoWidth / video.videoHeight;
+			const SHORT_SIDE_SIZE_DOWNSCALED = 360;
+			return {
+				x: 0,
+				y: 0,
+				width: video.videoWidth,
+				height: video.videoHeight,
+				downScaledWidth:
+					aspectRatio > 1 ? Math.round(SHORT_SIDE_SIZE_DOWNSCALED * aspectRatio) : SHORT_SIDE_SIZE_DOWNSCALED,
+				downScaledHeight:
+					aspectRatio > 1 ? SHORT_SIDE_SIZE_DOWNSCALED : Math.round(SHORT_SIDE_SIZE_DOWNSCALED / aspectRatio),
+			};
 		},
-	);
+		onDecodeError(err) {
+			if (err.toString().includes('No QR code found')) {
+				return;
+			}
+			if (alertLock.value) {
+				return;
+			}
+			alertLock.value = true;
+			os.alert({
+				type: 'error',
+				text: err.toString(),
+			}).finally(() => {
+				alertLock.value = false;
+			});
+		},
+	});
 
 	startQr();
 });

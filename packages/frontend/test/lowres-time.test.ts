@@ -13,14 +13,14 @@ describe('lowres time', () => {
 
 	test('pauses updates while the document is hidden and refreshes on return', async () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(1_000);
+		vi.setSystemTime(1000);
 
 		let visibilityState: DocumentVisibilityState = 'visible';
 		vi.spyOn(window.document, 'visibilityState', 'get').mockImplementation(() => visibilityState);
 		vi.resetModules();
 
 		const { lowresTime, TIME_UPDATE_INTERVAL } = await import('@/composables/useLowresTime.js');
-		expect(lowresTime.value).toBe(1_000);
+		expect(lowresTime.value).toBe(1000);
 
 		vi.advanceTimersByTime(TIME_UPDATE_INTERVAL);
 		expect(lowresTime.value).toBe(11_000);

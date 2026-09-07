@@ -4,12 +4,8 @@
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import {
-	createUserWithProfileAndPublickeyInDatabase,
-	genId,
-	openTestDatabase,
-	type TestDatabase,
-} from '../fixtures.js';
+import { createUserWithProfileAndPublickeyInDatabase, genId, openTestDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, uploadFile } from '../utils.js';
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';

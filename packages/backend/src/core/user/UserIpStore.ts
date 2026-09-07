@@ -4,7 +4,8 @@
  */
 
 import { desc, eq, lt } from 'drizzle-orm';
-import { userIp, type UserIpInsert, type UserIpRow } from '@/db/schema/user-ip.js';
+import { userIp } from '@/db/schema/user-ip.js';
+import type { UserIpInsert, UserIpRow } from '@/db/schema/user-ip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 

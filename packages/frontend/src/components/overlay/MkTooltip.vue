@@ -29,35 +29,42 @@ import * as os from '@/os.js';
 import { calcPopupPosition } from '@/utility/popup-position.js';
 import { prefer } from '@/preferences.js';
 
-const props = withDefaults(defineProps<{
-	showing: boolean;
-	id?: string;
-	anchorElement?: HTMLElement;
-	x?: number;
-	y?: number;
-	text?: string;
-	asMfm?: boolean;
-	maxWidth?: number;
-	direction?: 'top' | 'bottom' | 'right' | 'left';
-	innerMargin?: number;
-}>(), {
-	maxWidth: 250,
-	direction: 'top',
-	innerMargin: 0,
-});
+const props = withDefaults(
+	defineProps<{
+		showing: boolean;
+		id?: string;
+		anchorElement?: HTMLElement;
+		x?: number;
+		y?: number;
+		text?: string;
+		asMfm?: boolean;
+		maxWidth?: number;
+		direction?: 'top' | 'bottom' | 'right' | 'left';
+		innerMargin?: number;
+	}>(),
+	{
+		maxWidth: 250,
+		direction: 'top',
+		innerMargin: 0,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
 // タイミングによっては最初から showing = false な場合があり、その場合に closed 扱いにしないと永久にDOMに残ることになる
-if (!props.showing) emit('closed');
+if (!props.showing) {
+	emit('closed');
+}
 
 const el = useTemplateRef('el');
 const zIndex = os.claimZIndex('high');
 
 function setPosition() {
-	if (el.value == null) return;
+	if (el.value == null) {
+		return;
+	}
 	const data = calcPopupPosition(el.value, {
 		...(props.anchorElement === undefined ? {} : { anchorElement: props.anchorElement }),
 		direction: props.direction,
@@ -76,7 +83,9 @@ let loopHandler: number | null = null;
 let mounted = false;
 
 function stopLoop() {
-	if (loopHandler == null) return;
+	if (loopHandler == null) {
+		return;
+	}
 	window.cancelAnimationFrame(loopHandler);
 	loopHandler = null;
 }
@@ -92,7 +101,9 @@ function loop() {
 }
 
 function startLoop() {
-	if (!mounted || !props.showing || window.document.visibilityState === 'hidden' || loopHandler != null) return;
+	if (!mounted || !props.showing || window.document.visibilityState === 'hidden' || loopHandler != null) {
+		return;
+	}
 	setPosition();
 	loopHandler = window.requestAnimationFrame(loop);
 }
@@ -105,13 +116,16 @@ function onVisibilityChange() {
 	}
 }
 
-watch(() => props.showing, (showing) => {
-	if (showing) {
-		nextTick(startLoop);
-	} else {
-		stopLoop();
-	}
-});
+watch(
+	() => props.showing,
+	(showing) => {
+		if (showing) {
+			nextTick(startLoop);
+		} else {
+			stopLoop();
+		}
+	},
+);
 
 onMounted(() => {
 	mounted = true;

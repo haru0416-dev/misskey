@@ -53,10 +53,14 @@ export async function resetPopups(): Promise<void> {
 
 /** story 間で IndexedDB の残留が漏れないようにする。 */
 export async function resetIndexedDb(): Promise<void> {
-	if (globalThis.indexedDB?.databases == null) return;
+	if (globalThis.indexedDB?.databases == null) {
+		return;
+	}
 	try {
 		for (const db of await indexedDB.databases()) {
-			if (db.name != null) indexedDB.deleteDatabase(db.name);
+			if (db.name != null) {
+				indexedDB.deleteDatabase(db.name);
+			}
 		}
 	} catch {
 		// プライベートモード等で列挙できない環境は諦める。
@@ -89,13 +93,17 @@ export function startMockServiceWorker(): Promise<SetupWorker> {
 export function applyStoryHandlers(worker: SetupWorker, parameter: unknown): void {
 	// fallback は必ず最後。story の独自ハンドラは use() で前に積まれるので先に一致する。
 	worker.resetHandlers(...commonHandlers, apiFallbackHandler);
-	if (parameter == null) return;
+	if (parameter == null) {
+		return;
+	}
 
 	const handlers = Array.isArray(parameter)
 		? parameter
 		: Object.values((parameter as { handlers?: unknown }).handlers ?? {}).flat();
 
-	if (handlers.length > 0) worker.use(...(handlers as Parameters<SetupWorker['use']>));
+	if (handlers.length > 0) {
+		worker.use(...(handlers as Parameters<SetupWorker['use']>));
+	}
 }
 
 export type MisskeyOs = typeof import('@/os.js');

@@ -20,9 +20,13 @@ export const FN_frame = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params, textures }) => {
-		if (params.image == null) return;
+		if (params.image == null) {
+			return;
+		}
 		const image = textures.get(params.image);
-		if (image == null) return;
+		if (image == null) {
+			return;
+		}
 
 		gl.activeTexture(gl.TEXTURE1);
 		gl.bindTexture(gl.TEXTURE_2D, image.texture);

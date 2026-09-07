@@ -4,7 +4,8 @@
  */
 
 import { describe, test, assert, afterEach } from 'vitest';
-import { render, cleanup, type RenderResult } from '@testing-library/vue';
+import { render, cleanup } from '@testing-library/vue';
+import type { RenderResult } from '@testing-library/vue';
 import './init';
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { components } from '@/components/index.js';
@@ -55,7 +56,9 @@ describe('MkUrlPreview', () => {
 		const mkUrlPreview = await renderPreviewBy(summary);
 		const buttons = mkUrlPreview.getAllByRole('button');
 		const button = buttons[0];
-		if (button == null) throw new Error('URL preview button was not found');
+		if (button == null) {
+			throw new Error('URL preview button was not found');
+		}
 		button.click();
 		await Promise.resolve();
 

@@ -39,10 +39,11 @@ jobs:
         run: |
           sudo apt install -y ffmpeg
       - name: Build Misskey
-        # fed コンテナがマウントするのは built/ (backend) + misskey-js/built + i18n/built のみで、
+        # fed コンテナは backend と依存パッケージの成果物をマウントするため、
         # フロントエンドの vite ビルドは不要 (test-backend.yml と同じ絞り込み)。
         run: |
           bun install --frozen-lockfile
+          bun run --filter slacc build
           bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Setup
         run: |

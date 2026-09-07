@@ -58,7 +58,9 @@ function parseSignatureHeader(header: string): Record<string, string> {
 /** 署名ヘッダを読み、検証に必要な形へ組み立てる。妥当でなければ例外。 */
 export function parseRequestSignature(request: SignatureTargetRequest): ParsedSignature {
 	const header = request.headers['signature'];
-	if (header == null || header === '') throw new HttpSignatureError('no signature header');
+	if (header == null || header === '') {
+		throw new HttpSignatureError('no signature header');
+	}
 
 	const params = parseSignatureHeader(header);
 	const keyId = params['keyid'];
@@ -76,7 +78,9 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
 		.toLowerCase()
 		.split(/\s+/)
 		.filter((name) => name !== '');
-	if (headers.length === 0) throw new HttpSignatureError('no signed headers');
+	if (headers.length === 0) {
+		throw new HttpSignatureError('no signed headers');
+	}
 
 	const lines: string[] = [];
 	for (const name of headers) {
@@ -94,13 +98,17 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
 		}
 		if (name === '(created)' || name === '(expires)' || name === '(opaque)') {
 			const value = params[name.slice(1, -1)];
-			if (value == null) throw new HttpSignatureError(`${name} was not in the signature header`);
+			if (value == null) {
+				throw new HttpSignatureError(`${name} was not in the signature header`);
+			}
 			lines.push(`${name}: ${value}`);
 			continue;
 		}
 
 		const value = request.headers[name];
-		if (value === undefined) throw new HttpSignatureError(`${name} was not in the request`);
+		if (value === undefined) {
+			throw new HttpSignatureError(`${name} was not in the request`);
+		}
 		lines.push(`${name}: ${value}`);
 	}
 
@@ -113,8 +121,12 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
  */
 function suiteOf(publicKeyPem: string): SignatureAlgorithm {
 	const type = crypto.createPublicKey(publicKeyPem).asymmetricKeyType;
-	if (type === 'rsa') return 'Rsa2048_8192' as SignatureAlgorithm;
-	if (type === 'ed25519') return 'Eddsa' as SignatureAlgorithm;
+	if (type === 'rsa') {
+		return 'Rsa2048_8192' as SignatureAlgorithm;
+	}
+	if (type === 'ed25519') {
+		return 'Eddsa' as SignatureAlgorithm;
+	}
 	throw new HttpSignatureError(`unsupported key type: ${type ?? 'unknown'}`);
 }
 
@@ -124,13 +136,17 @@ const verifierCache = new Map<string, Verifier>();
 
 function getCachedVerifier(publicKeyPem: string): Verifier {
 	const cached = verifierCache.get(publicKeyPem);
-	if (cached != null) return cached;
+	if (cached != null) {
+		return cached;
+	}
 
 	const verifier = Verifier.fromSpkiPem(suiteOf(publicKeyPem), publicKeyPem);
 
 	if (verifierCache.size >= MAX_VERIFIER_CACHE_SIZE) {
 		const oldest = verifierCache.keys().next().value;
-		if (oldest !== undefined) verifierCache.delete(oldest);
+		if (oldest !== undefined) {
+			verifierCache.delete(oldest);
+		}
 	}
 	verifierCache.set(publicKeyPem, verifier);
 

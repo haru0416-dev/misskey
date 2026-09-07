@@ -64,7 +64,7 @@ const SWIPE_DIRECTION_ANGLE_THRESHOLD = 50;
 let startScreenX: number | null = null;
 let startScreenY: number | null = null;
 
-const currentTabIndex = computed(() => props.tabs.findIndex(tab => tab.key === tabModel.value));
+const currentTabIndex = computed(() => props.tabs.findIndex((tab) => tab.key === tabModel.value));
 
 const pullDistance = ref(0);
 const isSwipingForClass = ref(false);
@@ -72,32 +72,52 @@ let swipeAborted = false;
 let swipeDirectionLocked: 'horizontal' | 'vertical' | null = null;
 
 function touchStart(event: TouchEvent) {
-	if (!prefer.enableHorizontalSwipe) return;
+	if (!prefer.enableHorizontalSwipe) {
+		return;
+	}
 
-	if (event.touches.length !== 1) return;
+	if (event.touches.length !== 1) {
+		return;
+	}
 
-	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
+	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) {
+		return;
+	}
 
 	const touch = event.touches[0];
-	if (touch == null) return;
+	if (touch == null) {
+		return;
+	}
 	startScreenX = touch.screenX;
 	startScreenY = touch.screenY;
 	swipeDirectionLocked = null;
 }
 
 function touchMove(event: TouchEvent) {
-	if (!prefer.enableHorizontalSwipe) return;
+	if (!prefer.enableHorizontalSwipe) {
+		return;
+	}
 
-	if (event.touches.length !== 1) return;
+	if (event.touches.length !== 1) {
+		return;
+	}
 
-	if (startScreenX == null || startScreenY == null) return;
+	if (startScreenX == null || startScreenY == null) {
+		return;
+	}
 
-	if (swipeAborted) return;
+	if (swipeAborted) {
+		return;
+	}
 
-	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
+	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) {
+		return;
+	}
 
 	const touch = event.touches[0];
-	if (touch == null) return;
+	if (touch == null) {
+		return;
+	}
 	let distanceX = touch.screenX - startScreenX;
 	let distanceY = touch.screenY - startScreenY;
 
@@ -120,8 +140,12 @@ function touchMove(event: TouchEvent) {
 		return;
 	}
 
-	if (Math.abs(distanceX) < MIN_SWIPE_DISTANCE) return;
-	if (Math.abs(distanceX) > MAX_SWIPE_DISTANCE) return;
+	if (Math.abs(distanceX) < MIN_SWIPE_DISTANCE) {
+		return;
+	}
+	if (Math.abs(distanceX) > MAX_SWIPE_DISTANCE) {
+		return;
+	}
 
 	const previousTab = props.tabs[currentTabIndex.value - 1];
 	const nextTab = props.tabs[currentTabIndex.value + 1];
@@ -131,13 +155,17 @@ function touchMove(event: TouchEvent) {
 	if (currentTabIndex.value === props.tabs.length - 1 || nextTab?.onClick) {
 		distanceX = Math.max(distanceX, 0);
 	}
-	if (distanceX === 0) return;
+	if (distanceX === 0) {
+		return;
+	}
 
 	isSwiping.value = true;
 	isSwipingForClass.value = true;
 	nextTick(() => {
 		// 1.5px 未満の差では再描画しない。
-		if (Math.abs(distanceX - pullDistance.value) < 1.5) return;
+		if (Math.abs(distanceX - pullDistance.value) < 1.5) {
+			return;
+		}
 		pullDistance.value = distanceX;
 	});
 }
@@ -148,18 +176,30 @@ function touchEnd(event: TouchEvent) {
 		return;
 	}
 
-	if (!prefer.enableHorizontalSwipe) return;
+	if (!prefer.enableHorizontalSwipe) {
+		return;
+	}
 
-	if (event.touches.length !== 0) return;
+	if (event.touches.length !== 0) {
+		return;
+	}
 
-	if (startScreenX == null) return;
+	if (startScreenX == null) {
+		return;
+	}
 
-	if (!isSwiping.value) return;
+	if (!isSwiping.value) {
+		return;
+	}
 
-	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) return;
+	if (hasSomethingToDoWithXSwipe(event.target as HTMLElement)) {
+		return;
+	}
 
 	const changedTouch = event.changedTouches[0];
-	if (changedTouch == null) return;
+	if (changedTouch == null) {
+		return;
+	}
 	const distance = changedTouch.screenX - startScreenX;
 
 	if (Math.abs(distance) > SWIPE_DISTANCE_THRESHOLD) {
@@ -188,27 +228,38 @@ function touchEnd(event: TouchEvent) {
 }
 
 function hasSomethingToDoWithXSwipe(el: HTMLElement) {
-	if (['INPUT', 'TEXTAREA'].includes(el.tagName)) return true;
-	if (el.isContentEditable) return true;
-	if (el.scrollWidth > el.clientWidth) return true;
+	if (['INPUT', 'TEXTAREA'].includes(el.tagName)) {
+		return true;
+	}
+	if (el.isContentEditable) {
+		return true;
+	}
+	if (el.scrollWidth > el.clientWidth) {
+		return true;
+	}
 
 	const style = window.getComputedStyle(el);
-	if (['absolute', 'fixed', 'sticky'].includes(style.position)) return true;
-	if (['scroll', 'auto'].includes(style.overflowX)) return true;
-	if (style.touchAction === 'pan-x') return true;
+	if (['absolute', 'fixed', 'sticky'].includes(style.position)) {
+		return true;
+	}
+	if (['scroll', 'auto'].includes(style.overflowX)) {
+		return true;
+	}
+	if (style.touchAction === 'pan-x') {
+		return true;
+	}
 
 	if (el.parentElement && el.parentElement !== rootEl.value) {
 		return hasSomethingToDoWithXSwipe(el.parentElement);
-	} else {
-		return false;
 	}
+	return false;
 }
 
 const transitionName = ref<'swipeAnimationLeft' | 'swipeAnimationRight' | undefined>(undefined);
 
 watch(tabModel, (newTab, oldTab) => {
-	const newIndex = props.tabs.findIndex(tab => tab.key === newTab);
-	const oldIndex = props.tabs.findIndex(tab => tab.key === oldTab);
+	const newIndex = props.tabs.findIndex((tab) => tab.key === newTab);
+	const oldIndex = props.tabs.findIndex((tab) => tab.key === oldTab);
 
 	if (oldIndex >= 0 && newIndex >= 0 && oldIndex < newIndex) {
 		transitionName.value = 'swipeAnimationLeft';

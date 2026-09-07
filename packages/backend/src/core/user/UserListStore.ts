@@ -4,8 +4,10 @@
  */
 
 import { and, count, eq, sql } from 'drizzle-orm';
-import { userListMembership, type UserListMembershipInsert } from '@/db/schema/user-list-membership.js';
-import { userList, type UserListInsert, type UserListRow } from '@/db/schema/user-list.js';
+import { userListMembership } from '@/db/schema/user-list-membership.js';
+import type { UserListMembershipInsert } from '@/db/schema/user-list-membership.js';
+import { userList } from '@/db/schema/user-list.js';
+import type { UserListInsert, UserListRow } from '@/db/schema/user-list.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -171,10 +173,14 @@ export async function createUserListWithinLimitInDatabase(
 			.where(eq(user.id, values.userId))
 			.limit(1)
 			.for('key share');
-		if (!existingUser) return null;
+		if (!existingUser) {
+			return null;
+		}
 
 		const [row] = await tx.select({ value: count() }).from(userList).where(eq(userList.userId, values.userId));
-		if ((row?.value ?? 0) >= limit) return null;
+		if ((row?.value ?? 0) >= limit) {
+			return null;
+		}
 
 		const [created] = await tx.insert(userList).values(values).returning();
 		return created ? deserializeUserList(created) : null;
@@ -213,14 +219,22 @@ export async function createUserListWithMembershipsWithinLimitsInDatabase(
 			.where(eq(user.id, values.userId))
 			.limit(1)
 			.for('key share');
-		if (!existingUser) return { status: 'tooManyLists' } as const;
+		if (!existingUser) {
+			return { status: 'tooManyLists' } as const;
+		}
 
 		const [row] = await tx.select({ value: count() }).from(userList).where(eq(userList.userId, values.userId));
-		if ((row?.value ?? 0) >= limits.lists) return { status: 'tooManyLists' } as const;
-		if (memberships.length > limits.members) return { status: 'tooManyMembers' } as const;
+		if ((row?.value ?? 0) >= limits.lists) {
+			return { status: 'tooManyLists' } as const;
+		}
+		if (memberships.length > limits.members) {
+			return { status: 'tooManyMembers' } as const;
+		}
 
 		const [created] = await tx.insert(userList).values(values).returning();
-		if (created == null) throw new Error('Failed to create user list');
+		if (created == null) {
+			throw new Error('Failed to create user list');
+		}
 
 		const membershipRows: UserListMembershipInsert[] = memberships.map((membership) => ({
 			...membership,
@@ -231,7 +245,9 @@ export async function createUserListWithMembershipsWithinLimitsInDatabase(
 		const batchSize = 10_000;
 		const insertBatch = async (offset: number): Promise<void> => {
 			const batch = membershipRows.slice(offset, offset + batchSize);
-			if (batch.length === 0) return;
+			if (batch.length === 0) {
+				return;
+			}
 
 			await tx.insert(userListMembership).values(batch);
 			await insertBatch(offset + batchSize);

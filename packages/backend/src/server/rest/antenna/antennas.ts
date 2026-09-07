@@ -44,8 +44,11 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import { ApiError } from '../error.js';
 import type { ApiAntennaStreamPublisher, ApiInternalEventPublisher } from '../events.js';
-import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
+import { FanoutTimelinePush } from '../note/fanout-timeline-push.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAntennaDependencies = ApiNoteDependencies &
@@ -91,10 +94,18 @@ function passesAntennaPreconditions(
 	note: MiNote,
 	noteUser: { host: string | null; isBot: boolean },
 ): boolean {
-	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) return false;
-	if (antenna.excludeBots && noteUser.isBot) return false;
-	if (antenna.localOnly && noteUser.host != null) return false;
-	if (!antenna.withReplies && note.replyId != null) return false;
+	if (antenna.excludeNotesInSensitiveChannel && note.channel?.isSensitive) {
+		return false;
+	}
+	if (antenna.excludeBots && noteUser.isBot) {
+		return false;
+	}
+	if (antenna.localOnly && noteUser.host != null) {
+		return false;
+	}
+	if (!antenna.withReplies && note.replyId != null) {
+		return false;
+	}
 	return true;
 }
 
@@ -108,12 +119,18 @@ export async function checkHitAntennaForApi(
 		followerIds?: Set<MiUser['id']>;
 	},
 ): Promise<boolean> {
-	if (!passesAntennaPreconditions(antenna, note, noteUser)) return false;
+	if (!passesAntennaPreconditions(antenna, note, noteUser)) {
+		return false;
+	}
 
 	if (note.visibility === 'specified') {
 		if (note.userId !== antenna.userId) {
-			if (note.visibleUserIds == null) return false;
-			if (!note.visibleUserIds.includes(antenna.userId)) return false;
+			if (note.visibleUserIds == null) {
+				return false;
+			}
+			if (!note.visibleUserIds.includes(antenna.userId)) {
+				return false;
+			}
 		}
 	}
 
@@ -122,7 +139,9 @@ export async function checkHitAntennaForApi(
 			hint?.followerIds != null
 				? hint.followerIds.has(antenna.userId)
 				: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
-		if (!isFollowing && antenna.userId !== note.userId) return false;
+		if (!isFollowing && antenna.userId !== note.userId) {
+			return false;
+		}
 	}
 
 	if (antenna.src === 'home') {
@@ -133,24 +152,36 @@ export async function checkHitAntennaForApi(
 				hint?.followerIds != null
 					? hint.followerIds.has(antenna.userId)
 					: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
-			if (!isFollowing) return false;
+			if (!isFollowing) {
+				return false;
+			}
 		}
 	} else if (antenna.src === 'list') {
-		if (antenna.userListId == null) return false;
+		if (antenna.userListId == null) {
+			return false;
+		}
 		const exists = hint
 			? hint.listMembershipUserListIds.has(antenna.userListId)
 			: await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
-		if (!exists) return false;
+		if (!exists) {
+			return false;
+		}
 	} else if (antenna.src === 'users') {
-		if (!antennaUsersIncludes(deps.config, antenna.users, noteUser)) return false;
+		if (!antennaUsersIncludes(deps.config, antenna.users, noteUser)) {
+			return false;
+		}
 	} else if (antenna.src === 'users_blacklist') {
-		if (antennaUsersIncludes(deps.config, antenna.users, noteUser)) return false;
+		if (antennaUsersIncludes(deps.config, antenna.users, noteUser)) {
+			return false;
+		}
 	}
 
 	const keywords = antenna.keywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
 
 	if (keywords.length > 0) {
-		if (note.text == null && note.cw == null) return false;
+		if (note.text == null && note.cw == null) {
+			return false;
+		}
 
 		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
 
@@ -160,13 +191,17 @@ export async function checkHitAntennaForApi(
 			),
 		);
 
-		if (!matched) return false;
+		if (!matched) {
+			return false;
+		}
 	}
 
 	const excludeKeywords = antenna.excludeKeywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
 
 	if (excludeKeywords.length > 0) {
-		if (note.text == null && note.cw == null) return false;
+		if (note.text == null && note.cw == null) {
+			return false;
+		}
 
 		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
 
@@ -176,11 +211,15 @@ export async function checkHitAntennaForApi(
 			),
 		);
 
-		if (matched) return false;
+		if (matched) {
+			return false;
+		}
 	}
 
 	if (antenna.withFile) {
-		if (note.fileIds?.length === 0) return false;
+		if (note.fileIds?.length === 0) {
+			return false;
+		}
 	}
 
 	return true;
@@ -208,7 +247,9 @@ export async function onMoveAccountForApi(
 		});
 	});
 
-	if (antennasToMigrate.length === 0) return;
+	if (antennasToMigrate.length === 0) {
+		return;
+	}
 
 	const antennaIds = antennasToMigrate.map((x) => x.id);
 
@@ -277,29 +318,11 @@ export async function addNoteToAntennasForApi(
 	}
 	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
 
-	const redisPipeline = deps.redisForTimelines.pipeline();
-
+	const push = new FanoutTimelinePush(note.id);
 	for (const antenna of matchedAntennas) {
-		const tl = `antennaTimeline:${antenna.id}`;
-		if (parseId(note.id).date.getTime() > Date.now() - 1000 * 60 * 3) {
-			redisPipeline.lrem('list:' + tl, 0, note.id);
-			redisPipeline.lpush('list:' + tl, note.id);
-			if (Math.random() < 0.1) {
-				redisPipeline.ltrim('list:' + tl, 0, 200 - 1);
-			}
-		} else {
-			const lastId = await deps.redisForTimelines.lindex('list:' + tl, -1);
-			if (lastId == null || parseId(note.id).date.getTime() > parseId(lastId).date.getTime()) {
-				await deps.redisForTimelines
-					.multi()
-					.lrem('list:' + tl, 0, note.id)
-					.lpush('list:' + tl, note.id)
-					.exec();
-			}
-		}
+		push.add(`antennaTimeline:${antenna.id}`, 200);
 	}
-
-	await redisPipeline.exec();
+	await push.flush(deps.redisForTimelines);
 	for (const antenna of matchedAntennas) {
 		deps.publishAntennaStream?.(antenna.id, 'note', note);
 	}
@@ -391,9 +414,13 @@ export async function handleApiAntennasCreate(
 	// いずれにもマッチしないアンテナになる)。DB 側にも CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST がある。
 	let userListId: MiUserList['id'] | null = null;
 	if (params.src === 'list') {
-		if (params.userListId == null) throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		if (params.userListId == null) {
+			throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		}
 		const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
-		if (userList == null) throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		if (userList == null) {
+			throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		}
 		userListId = userList.id;
 	}
 
@@ -421,7 +448,9 @@ export async function handleApiAntennasCreate(
 		],
 		async (tx) => {
 			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
-			if (currentUser == null) throw new Error('Authenticated user no longer exists');
+			if (currentUser == null) {
+				throw new Error('Authenticated user no longer exists');
+			}
 			return (await getApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
 		},
 	);
@@ -435,7 +464,9 @@ export async function handleApiAntennasCreate(
 	}
 
 	const antenna = result.antennas[0];
-	if (antenna == null) throw new Error('Failed to create antenna');
+	if (antenna == null) {
+		throw new Error('Failed to create antenna');
+	}
 	deps.publishInternalEvent?.('antennaCreated', antenna);
 
 	return await packAntennaForApi(deps, antenna);
@@ -481,13 +512,17 @@ export async function handleApiAntennasUpdate(
 	}
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
-	if (antenna == null) throw noSuchAntennaError('10c673ac-8852-48eb-aa1f-f5b67f069290');
+	if (antenna == null) {
+		throw noSuchAntennaError('10c673ac-8852-48eb-aa1f-f5b67f069290');
+	}
 
 	// undefined は変更なしを表す。
 	let userListIdUpdate: MiUserList['id'] | null | undefined = undefined;
 	if (params.userListId != null) {
 		const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
-		if (userList == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+		if (userList == null) {
+			throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+		}
 		userListIdUpdate = userList.id;
 	} else if (params.userListId === null) {
 		userListIdUpdate = null;
@@ -497,7 +532,9 @@ export async function handleApiAntennasUpdate(
 	if (nextSrc === 'list') {
 		// list アンテナは userListId を必須とする。
 		const nextUserListId = userListIdUpdate !== undefined ? userListIdUpdate : antenna.userListId;
-		if (nextUserListId == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+		if (nextUserListId == null) {
+			throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+		}
 	} else if (userListIdUpdate != null || antenna.userListId != null) {
 		// list 以外では userListId を保持しない。
 		userListIdUpdate = null;
@@ -541,7 +578,9 @@ export async function handleApiAntennasDelete(
 	const params = parseApiParams(antennasDeleteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
-	if (antenna == null) throw noSuchAntennaError('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+	if (antenna == null) {
+		throw noSuchAntennaError('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+	}
 
 	await deleteAntennaFromDatabase(deps.db, antenna.id);
 
@@ -574,7 +613,9 @@ export async function handleApiAntennasShow(
 	const params = parseApiParams(antennasShowParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
-	if (antenna == null) throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
+	if (antenna == null) {
+		throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
+	}
 
 	return await packAntennaForApi(deps, antenna);
 }
@@ -592,7 +633,9 @@ export async function handleApiAntennasRemoveNote(
 	const params = parseApiParams(antennasRemoveNoteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
-	if (antenna == null) throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+	if (antenna == null) {
+		throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+	}
 
 	await deps.redis.lrem(`list:antennaTimeline:${antenna.id}`, 1, params.noteId);
 }
@@ -613,7 +656,9 @@ export async function handleApiAntennasNotes(
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
-	if (antenna == null) throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+	if (antenna == null) {
+		throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+	}
 
 	const needPublishEvent = !antenna.isActive;
 	antenna.isActive = true;
@@ -640,7 +685,9 @@ export async function handleApiAntennasNotes(
 					: rawIds.toSorted((a, b) => (a > b ? -1 : 1));
 	noteIds = noteIds.slice(0, params.limit);
 
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 

@@ -50,26 +50,34 @@ const props = defineProps<{
 
 const now = useLowresTime();
 
-const expiresAtTime = computed(() => props.expiresAt ? new Date(props.expiresAt).getTime() : null);
+const expiresAtTime = computed(() => (props.expiresAt ? new Date(props.expiresAt).getTime() : null));
 
 const remaining = computed(() => {
-	if (expiresAtTime.value == null) return -1;
+	if (expiresAtTime.value == null) {
+		return -1;
+	}
 	return Math.floor(Math.max(expiresAtTime.value - now.value, 0) / 1000);
 });
 
-const total = computed(() => sum(props.choices.map(x => x.votes)));
+const total = computed(() => sum(props.choices.map((x) => x.votes)));
 const closed = computed(() => props.expiresAt != null && remaining.value <= 0);
-const isVoted = computed(() => !props.multiple && props.choices.some(c => c.isVoted));
-const timer = computed(() => i18n.tsx._poll[
-	remaining.value >= 86400 ? 'remainingDays' :
-	remaining.value >= 3600 ? 'remainingHours' :
-	remaining.value >= 60 ? 'remainingMinutes' : 'remainingSeconds'
-]({
-	s: Math.floor(remaining.value % 60),
-	m: Math.floor(remaining.value / 60) % 60,
-	h: Math.floor(remaining.value / 3600) % 24,
-	d: Math.floor(remaining.value / 86400),
-}));
+const isVoted = computed(() => !props.multiple && props.choices.some((c) => c.isVoted));
+const timer = computed(() =>
+	i18n.tsx._poll[
+		remaining.value >= 86_400
+			? 'remainingDays'
+			: remaining.value >= 3600
+				? 'remainingHours'
+				: remaining.value >= 60
+					? 'remainingMinutes'
+					: 'remainingSeconds'
+	]({
+		s: Math.floor(remaining.value % 60),
+		m: Math.floor(remaining.value / 60) % 60,
+		h: Math.floor(remaining.value / 3600) % 24,
+		d: Math.floor(remaining.value / 86_400),
+	}),
+);
 
 const showResult = ref(props.readOnly || isVoted.value || closed.value);
 
@@ -88,24 +96,34 @@ const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 }));
 
 const vote = async (id: number) => {
-	if (props.readOnly || closed.value || isVoted.value) return;
+	if (props.readOnly || closed.value || isVoted.value) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 	const choice = props.choices[id];
-	if (choice == null) return;
+	if (choice == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'question',
 		text: i18n.tsx.voteConfirm({ choice: choice.text }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await misskeyApi('notes/polls/vote', {
 		noteId: props.noteId,
 		choice: id,
 	});
-	if (!showResult.value) showResult.value = !props.multiple;
+	if (!showResult.value) {
+		showResult.value = !props.multiple;
+	}
 };
 </script>
 

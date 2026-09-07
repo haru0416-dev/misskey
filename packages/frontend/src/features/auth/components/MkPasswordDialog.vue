@@ -49,7 +49,7 @@ import { ensureSignin } from '@/i.js';
 const $i = ensureSignin();
 
 const emit = defineEmits<{
-	(ev: 'done', v: { password: string; token: string | null; }): void;
+	(ev: 'done', v: { password: string; token: string | null }): void;
 	(ev: 'closed'): void;
 	(ev: 'cancelled'): void;
 }>();
@@ -62,15 +62,21 @@ const token = ref<string | null>(null);
 
 function onClose() {
 	emit('cancelled');
-	if (dialog.value) dialog.value.close();
+	if (dialog.value) {
+		dialog.value.close();
+	}
 }
 
 function done() {
 	emit('done', { password: password.value, token: token.value });
-	if (dialog.value) dialog.value.close();
+	if (dialog.value) {
+		dialog.value.close();
+	}
 }
 
 onMounted(() => {
-	if (passwordInput.value) passwordInput.value.focus();
+	if (passwordInput.value) {
+		passwordInput.value.focus();
+	}
 });
 </script>

@@ -127,7 +127,9 @@ export class MiUserProfile {
 	public userHost: string | null;
 
 	constructor(data: Partial<MiUserProfile>) {
-		if (data == null) return;
+		if (data == null) {
+			return;
+		}
 
 		for (const [k, v] of Object.entries(data)) {
 			(this as Record<string, unknown>)[k] = v;

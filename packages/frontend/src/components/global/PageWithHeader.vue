@@ -36,13 +36,18 @@ import { useRouter } from '@/router.js';
 import { prefer } from '@/preferences.js';
 import MkTabs from '@/components/layout/MkTabs.vue';
 
-const props = withDefaults(defineProps<PageHeaderProps & {
-	reversed?: boolean;
-	swipable?: boolean;
-}>(), {
-	reversed: false,
-	swipable: true,
-});
+const props = withDefaults(
+	defineProps<
+		PageHeaderProps & {
+			reversed?: boolean;
+			swipable?: boolean;
+		}
+	>(),
+	{
+		reversed: false,
+		swipable: true,
+	},
+);
 
 const pageHeaderProps = computed(() => {
 	const { reversed, tab, ...rest } = props;
@@ -66,7 +71,9 @@ router.useListener('same', () => {
 });
 
 function scrollToTop() {
-	if (rootEl.value) scrollInContainer(rootEl.value, { top: 0, behavior: 'smooth' });
+	if (rootEl.value) {
+		scrollInContainer(rootEl.value, { top: 0, behavior: 'smooth' });
+	}
 }
 
 defineExpose({

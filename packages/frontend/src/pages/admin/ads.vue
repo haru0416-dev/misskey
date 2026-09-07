@@ -113,11 +113,16 @@ const ads = ref<Ad[]>([]);
 // ISO形式はTZがUTCになってしまうので、TZ分ずらして時間を初期化
 const localTime = new Date();
 const localTimeDiff = localTime.getTimezoneOffset() * 60 * 1000;
-const daysOfWeek: string[] = [i18n.ts._weekday.sunday, i18n.ts._weekday.monday, i18n.ts._weekday.tuesday, i18n.ts._weekday.wednesday, i18n.ts._weekday.thursday, i18n.ts._weekday.friday, i18n.ts._weekday.saturday];
-const {
-	model: filterType,
-	def: filterTypeDef,
-} = useMkSelect({
+const daysOfWeek: string[] = [
+	i18n.ts._weekday.sunday,
+	i18n.ts._weekday.monday,
+	i18n.ts._weekday.tuesday,
+	i18n.ts._weekday.wednesday,
+	i18n.ts._weekday.thursday,
+	i18n.ts._weekday.friday,
+	i18n.ts._weekday.saturday,
+];
+const { model: filterType, def: filterTypeDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.all, value: 'all' },
 		{ label: i18n.ts.publishing, value: 'publishing' },
@@ -127,9 +132,9 @@ const {
 });
 let publishing: boolean | null = null;
 
-misskeyApi('admin/ad/list', { publishing: publishing }).then(adsResponse => {
+misskeyApi('admin/ad/list', { publishing: publishing }).then((adsResponse) => {
 	if (adsResponse != null) {
-		ads.value = adsResponse.map(r => {
+		ads.value = adsResponse.map((r) => {
 			const exdate = new Date(r.expiresAt);
 			const stdate = new Date(r.startsAt);
 			exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
@@ -181,9 +186,13 @@ function remove(ad: Misskey.entities.Ad) {
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: ad.url }),
 	}).then(({ canceled }) => {
-		if (canceled) return;
-		ads.value = ads.value.filter(x => x !== ad);
-		if (ad.id === '') return;
+		if (canceled) {
+			return;
+		}
+		ads.value = ads.value.filter((x) => x !== ad);
+		if (ad.id === '') {
+			return;
+		}
 		os.apiWithDialog('admin/ad/delete', {
 			id: ad.id,
 		}).then(() => {
@@ -198,58 +207,71 @@ function save(ad: Misskey.entities.Ad) {
 			...ad,
 			expiresAt: new Date(ad.expiresAt).getTime(),
 			startsAt: new Date(ad.startsAt).getTime(),
-		}).then(() => {
-			os.alert({
-				type: 'success',
-				text: i18n.ts.saved,
+		})
+			.then(() => {
+				os.alert({
+					type: 'success',
+					text: i18n.ts.saved,
+				});
+				refresh();
+			})
+			.catch((err) => {
+				os.alert({
+					type: 'error',
+					text: err,
+				});
 			});
-			refresh();
-		}).catch(err => {
-			os.alert({
-				type: 'error',
-				text: err,
-			});
-		});
 	} else {
 		misskeyApi('admin/ad/update', {
 			...ad,
 			expiresAt: new Date(ad.expiresAt).getTime(),
 			startsAt: new Date(ad.startsAt).getTime(),
-		}).then(() => {
-			os.alert({
-				type: 'success',
-				text: i18n.ts.saved,
+		})
+			.then(() => {
+				os.alert({
+					type: 'success',
+					text: i18n.ts.saved,
+				});
+			})
+			.catch((err) => {
+				os.alert({
+					type: 'error',
+					text: err,
+				});
 			});
-		}).catch(err => {
-			os.alert({
-				type: 'error',
-				text: err,
-			});
-		});
 	}
 }
 
 function more() {
-	misskeyApi('admin/ad/list', { untilId: ads.value.reduce((acc, ad) => ad.id !== '' ? ad : acc).id, publishing: publishing }).then(adsResponse => {
-		if (adsResponse == null) return;
-		ads.value = ads.value.concat(adsResponse.map(r => {
-			const exdate = new Date(r.expiresAt);
-			const stdate = new Date(r.startsAt);
-			exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
-			stdate.setMilliseconds(stdate.getMilliseconds() - localTimeDiff);
-			return {
-				...(r as Ad),
-				expiresAt: exdate.toISOString().slice(0, 16),
-				startsAt: stdate.toISOString().slice(0, 16),
-			};
-		}));
+	misskeyApi('admin/ad/list', {
+		untilId: ads.value.reduce((acc, ad) => (ad.id !== '' ? ad : acc)).id,
+		publishing: publishing,
+	}).then((adsResponse) => {
+		if (adsResponse == null) {
+			return;
+		}
+		ads.value = ads.value.concat(
+			adsResponse.map((r) => {
+				const exdate = new Date(r.expiresAt);
+				const stdate = new Date(r.startsAt);
+				exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
+				stdate.setMilliseconds(stdate.getMilliseconds() - localTimeDiff);
+				return {
+					...(r as Ad),
+					expiresAt: exdate.toISOString().slice(0, 16),
+					startsAt: stdate.toISOString().slice(0, 16),
+				};
+			}),
+		);
 	});
 }
 
 function refresh() {
-	misskeyApi('admin/ad/list', { publishing: publishing }).then(adsResponse => {
-		if (adsResponse == null) return;
-		ads.value = adsResponse.map(r => {
+	misskeyApi('admin/ad/list', { publishing: publishing }).then((adsResponse) => {
+		if (adsResponse == null) {
+			return;
+		}
+		ads.value = adsResponse.map((r) => {
 			const exdate = new Date(r.expiresAt);
 			const stdate = new Date(r.startsAt);
 			exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
@@ -265,12 +287,14 @@ function refresh() {
 
 refresh();
 
-const headerActions = computed(() => [{
-	asFullButton: true,
-	icon: 'ti ti-plus',
-	text: i18n.ts.add,
-	handler: add,
-}]);
+const headerActions = computed(() => [
+	{
+		asFullButton: true,
+		icon: 'ti ti-plus',
+		text: i18n.ts.add,
+		handler: add,
+	},
+]);
 
 const headerTabs = computed(() => []);
 

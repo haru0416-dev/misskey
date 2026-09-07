@@ -23,6 +23,8 @@ export type FileServerReply = {
 
 export function getFileServerHeader(headers: FileServerHeaders, name: string): string | undefined {
 	const value = headers[name.toLowerCase()] ?? headers[name];
-	if (Array.isArray(value)) return value[0];
+	if (Array.isArray(value)) {
+		return value[0];
+	}
 	return value;
 }

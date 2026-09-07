@@ -60,7 +60,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 				],
 				default: 'indefinitely',
 			});
-			if (canceled) return;
+			if (canceled) {
+				return;
+			}
 
 			const expiresAt =
 				period === 'indefinitely'
@@ -93,7 +95,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	}
 
 	async function toggleBlock() {
-		if (!(await getConfirmed(user.isBlocking ? i18n.ts.unblockConfirm : i18n.ts.blockConfirm))) return;
+		if (!(await getConfirmed(user.isBlocking ? i18n.ts.unblockConfirm : i18n.ts.blockConfirm))) {
+			return;
+		}
 
 		os.apiWithDialog(user.isBlocking ? 'blocking/delete' : 'blocking/create', {
 			userId: user.id,
@@ -140,7 +144,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	}
 
 	async function invalidateFollow() {
-		if (!(await getConfirmed(i18n.ts.breakFollowConfirm))) return;
+		if (!(await getConfirmed(i18n.ts.breakFollowConfirm))) {
+			return;
+		}
 
 		os.apiWithDialog('following/invalidate', {
 			userId: user.id,
@@ -164,7 +170,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			},
 		});
 
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		os.apiWithDialog('users/update-memo', {
 			memo: result.memo,
@@ -221,7 +229,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			icon: 'ti ti-external-link',
 			text: i18n.ts.showOnRemote,
 			action: () => {
-				if (user.url == null) return;
+				if (user.url == null) {
+					return;
+				}
 				window.open(user.url, '_blank', 'noopener');
 			},
 		});
@@ -387,7 +397,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 									],
 									default: 'indefinitely',
 								});
-								if (canceled) return;
+								if (canceled) {
+									return;
+								}
 
 								const expiresAt =
 									period === 'indefinitely'
@@ -547,7 +559,9 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 	return {
 		menu: menuItems,
 		cleanup: () => {
-			if (_DEV_) console.log('user menu cleanup', cleanups);
+			if (_DEV_) {
+				console.log('user menu cleanup', cleanups);
+			}
 			for (const cl of cleanups) {
 				cl();
 			}

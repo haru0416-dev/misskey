@@ -3,12 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
-import {
-	registrationTicket,
-	type RegistrationTicketInsert,
-	type RegistrationTicketRow,
-} from '@/db/schema/registration-ticket.js';
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { registrationTicket } from '@/db/schema/registration-ticket.js';
+import type { RegistrationTicketInsert, RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -102,10 +100,14 @@ export async function createRegistrationTicketWithinLimitInDatabase(
 			createdById: data.createdById,
 			sinceId: options.sinceId,
 		});
-		if (count >= options.limit) return null;
+		if (count >= options.limit) {
+			return null;
+		}
 
 		const [row] = await tx.insert(registrationTicket).values(data).returning();
-		if (row == null) throw new Error('Failed to create registration ticket');
+		if (row == null) {
+			throw new Error('Failed to create registration ticket');
+		}
 		return row;
 	});
 }
@@ -114,7 +116,9 @@ export async function createRegistrationTicketsInDatabase(
 	db: MiDrizzleDatabase,
 	data: RegistrationTicketInsert[],
 ): Promise<RegistrationTicketRow[]> {
-	if (data.length === 0) return [];
+	if (data.length === 0) {
+		return [];
+	}
 
 	const rows = await db.insert(registrationTicket).values(data).returning();
 	const rowById = new Map(rows.map((row) => [row.id, row]));

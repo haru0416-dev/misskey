@@ -17,7 +17,9 @@ export function generateInviteCode(): string {
 	while (true) {
 		uniqueId.push(CHARS[n % CHARS.length]);
 		const t = Math.floor(n / CHARS.length);
-		if (!t) break;
+		if (!t) {
+			break;
+		}
 		n = t;
 	}
 

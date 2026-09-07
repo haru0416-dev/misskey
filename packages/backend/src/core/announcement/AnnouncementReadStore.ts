@@ -4,11 +4,8 @@
  */
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import {
-	announcementRead,
-	type AnnouncementReadInsert,
-	type AnnouncementReadRow,
-} from '@/db/schema/announcement-read.js';
+import { announcementRead } from '@/db/schema/announcement-read.js';
+import type { AnnouncementReadInsert, AnnouncementReadRow } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
@@ -43,7 +40,9 @@ export async function listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatab
 	userId: MiUser['id'],
 	announcementIds: MiAnnouncement['id'][],
 ): Promise<MiAnnouncement['id'][]> {
-	if (announcementIds.length === 0) return [];
+	if (announcementIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ announcementId: announcementRead.announcementId })

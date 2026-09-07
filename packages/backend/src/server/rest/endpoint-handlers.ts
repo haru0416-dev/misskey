@@ -14,10 +14,11 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateApiToken,
-	type ApiAuthenticated,
 } from './auth/auth.js';
+import type { ApiAuthenticated } from './auth/auth.js';
 import { assertApiAdmin, assertApiModerator, jsonBody, runApiEndpoint, tokenFromRequest } from './shell-helpers.js';
-import { assertApiRateLimitForUser, type ApiEndpointRateLimit } from './rate-limit.js';
+import { assertApiRateLimitForUser } from './rate-limit.js';
+import type { ApiEndpointRateLimit } from './rate-limit.js';
 import { rolePermissionDeniedError } from './error.js';
 import { hasApiRolePolicyOrIsRoot } from './role/role-policy.js';
 

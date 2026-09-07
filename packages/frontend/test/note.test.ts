@@ -4,7 +4,8 @@
  */
 
 import { describe, test, assert, afterEach, expect } from 'vitest';
-import { render, cleanup, type RenderResult } from '@testing-library/vue';
+import { render, cleanup } from '@testing-library/vue';
+import type { RenderResult } from '@testing-library/vue';
 import './init';
 import * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';

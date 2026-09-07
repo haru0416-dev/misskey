@@ -56,7 +56,8 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { packNoteForApi, packNoteManyForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFavoriteDependencies = {

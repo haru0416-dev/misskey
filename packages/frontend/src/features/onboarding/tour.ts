@@ -26,7 +26,9 @@ export function startTour(steps: TourStep[]) {
 
 		watch(currentStepIndex, (newIndex) => {
 			const step = steps[newIndex];
-			if (step == null) return;
+			if (step == null) {
+				return;
+			}
 			titleRef.value = step.title;
 			descriptionRef.value = step.description;
 			anchorElementRef.value = step.element;

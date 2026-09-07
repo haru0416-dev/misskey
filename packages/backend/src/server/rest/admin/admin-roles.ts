@@ -10,9 +10,8 @@ import {
 	RoleNotAssignedError,
 	updateRoleWithSideEffects,
 	unassignRoleWithSideEffects,
-	type RoleCreateOptions,
-	type RoleUpdateOptions,
 } from '@/core/role/RoleLogic.js';
+import type { RoleCreateOptions, RoleUpdateOptions } from '@/core/role/RoleLogic.js';
 import {
 	listActiveRoleAssignmentsByRoleIdFromDatabase,
 	resolveRoleAssignmentPagination,
@@ -37,7 +36,8 @@ import { createRoleAssignedNotification } from '../notification/notification.js'
 import { isApiAdministrator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { packApiRole, packApiRoles } from '../role/roles.js';
-import { packUserDetailedNotMeManyForApi, type UserDetailedNotMeApiResponse } from '../user/user.js';
+import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 
 export type ApiAdminRoleDependencies = {
 	config: Config;
@@ -177,14 +177,18 @@ export async function handleApiAdminRolesAssign(
 ): Promise<void> {
 	const params = parseApiParams(adminRolesAssignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
+	if (role == null) {
+		throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
+	}
 
 	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
 		throw accessDeniedError('25b5bc31-dc79-4ebd-9bd2-c84978fd052c');
 	}
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw noSuchUserError('558ea170-f653-4700-94d0-5a818371d0df');
+	if (user == null) {
+		throw noSuchUserError('558ea170-f653-4700-94d0-5a818371d0df');
+	}
 
 	if (params.expiresAt && params.expiresAt <= Date.now()) {
 		return;
@@ -259,7 +263,9 @@ export async function handleApiAdminRolesDelete(
 ): Promise<void> {
 	const params = parseApiParams(adminRolesDeleteParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('de0d6ecd-8e0a-4253-88ff-74bc89ae3d45');
+	if (role == null) {
+		throw noSuchRoleError('de0d6ecd-8e0a-4253-88ff-74bc89ae3d45');
+	}
 
 	await deleteRoleWithSideEffects(
 		{
@@ -278,7 +284,9 @@ export async function handleApiAdminRolesShow(
 ): Promise<Packed<'Role'>> {
 	const params = parseApiParams(adminRolesShowParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
+	if (role == null) {
+		throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
+	}
 
 	return await packApiRole(deps, role);
 }
@@ -290,14 +298,18 @@ export async function handleApiAdminRolesUnassign(
 ): Promise<void> {
 	const params = parseApiParams(adminRolesUnassignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
+	if (role == null) {
+		throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
+	}
 
 	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
 		throw accessDeniedError('24636eee-e8c1-493e-94b2-e16ad401e262');
 	}
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw noSuchUserError('2b730f78-1179-461b-88ad-d24c9af1a5ce');
+	if (user == null) {
+		throw noSuchUserError('2b730f78-1179-461b-88ad-d24c9af1a5ce');
+	}
 
 	try {
 		await unassignRoleWithSideEffects(
@@ -313,7 +325,9 @@ export async function handleApiAdminRolesUnassign(
 			me,
 		);
 	} catch (err) {
-		if (err instanceof RoleNotAssignedError) throw notAssignedError();
+		if (err instanceof RoleNotAssignedError) {
+			throw notAssignedError();
+		}
 		throw err;
 	}
 }
@@ -325,7 +339,9 @@ export async function handleApiAdminRolesUpdate(
 ): Promise<void> {
 	const params = parseApiParams(adminRolesUpdateParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('cd23ef55-09ad-428a-ac61-95a45e124b32');
+	if (role == null) {
+		throw noSuchRoleError('cd23ef55-09ad-428a-ac61-95a45e124b32');
+	}
 
 	await updateRoleWithSideEffects(
 		{
@@ -386,7 +402,9 @@ export async function handleApiAdminRolesUsers(
 ): Promise<AdminRoleUser[]> {
 	const params = parseApiParams(adminRolesUsersParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
-	if (role == null) throw noSuchRoleError('224eff5e-2488-4b18-b3e7-f50d94421648');
+	if (role == null) {
+		throw noSuchRoleError('224eff5e-2488-4b18-b3e7-f50d94421648');
+	}
 
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,

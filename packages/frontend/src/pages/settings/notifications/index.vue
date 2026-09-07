@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label><SearchLabel>{{ i18n.ts.notifyUsers }}</SearchLabel></template>
 					<MkPagination v-slot="{items}" :paginator="notifyUserPaginator" withControl>
 						<div class="_gaps_s">
-							<div v-for="item in items" :key="item.id" :class="[$style['userItem']]">
+							<div v-for="item in items" :key="item.id">
 								<div :class="$style.userItemMain">
 									<MkA :class="$style.userItemMainBody" :to="userPage(item.followee!)">
 										<MkUserCardMini :user="item.followee!"/>
@@ -111,32 +111,56 @@ import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
 const $i = ensureSignin();
 
 async function showNotifyMenu(user: Misskey.entities.UserDetailed, ev: PointerEvent) {
-	os.popupMenu([{
-		text: (user.notify === 'normal') ? i18n.ts.unnotifyNotes : i18n.ts.notifyNotes,
-		icon: (user.notify === 'normal') ? 'ti ti-x' : 'ti ti-plus',
-		action: async () => {
-			await os.apiWithDialog('following/update', {
-				userId: user.id,
-				notify: user.notify === 'normal' ? 'none' : 'normal',
-			}).then(() => {
-				user.notify = user.notify === 'normal' ? 'none' : 'normal';
-			});
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: user.notify === 'normal' ? i18n.ts.unnotifyNotes : i18n.ts.notifyNotes,
+				icon: user.notify === 'normal' ? 'ti ti-x' : 'ti ti-plus',
+				action: async () => {
+					await os
+						.apiWithDialog('following/update', {
+							userId: user.id,
+							notify: user.notify === 'normal' ? 'none' : 'normal',
+						})
+						.then(() => {
+							user.notify = user.notify === 'normal' ? 'none' : 'normal';
+						});
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
-const notifyUserPaginator = markRaw(new Paginator('following/list', {
-	limit: 10,
-	params: {
-		notification: true,
-	},
-}));
+const notifyUserPaginator = markRaw(
+	new Paginator('following/list', {
+		limit: 10,
+		params: {
+			notification: true,
+		},
+	}),
+);
 
-const nonConfigurableNotificationTypes = ['note', 'roleAssigned', 'followRequestAccepted', 'test', 'exportCompleted'] as const satisfies (typeof notificationTypes[number])[];
+const nonConfigurableNotificationTypes = [
+	'note',
+	'roleAssigned',
+	'followRequestAccepted',
+	'test',
+	'exportCompleted',
+] as const satisfies (typeof notificationTypes)[number][];
 
-const configurableNotificationTypes = notificationTypes.filter(type => !nonConfigurableNotificationTypes.includes(type as any)) as Exclude<typeof notificationTypes[number], typeof nonConfigurableNotificationTypes[number]>[];
+const configurableNotificationTypes = notificationTypes.filter(
+	(type) => !nonConfigurableNotificationTypes.includes(type as any),
+) as Exclude<(typeof notificationTypes)[number], (typeof nonConfigurableNotificationTypes)[number]>[];
 
-const onlyOnOrOffNotificationTypes = ['app', 'achievementEarned', 'login', 'createToken', 'scheduledNotePosted', 'scheduledNotePostFailed'] as const satisfies (typeof notificationTypes[number])[];
+const onlyOnOrOffNotificationTypes = [
+	'app',
+	'achievementEarned',
+	'login',
+	'createToken',
+	'scheduledNotePosted',
+	'scheduledNotePostFailed',
+] as const satisfies (typeof notificationTypes)[number][];
 
 const allowButton = useTemplateRef('allowButton');
 const pushRegistrationInServer = computed(() => allowButton.value?.pushRegistrationInServer);
@@ -147,25 +171,31 @@ async function readAllNotifications() {
 	await os.apiWithDialog('notifications/mark-all-as-read', {});
 }
 
-async function updateReceiveConfig(type: typeof notificationTypes[number], value: NotificationConfig) {
-	await os.apiWithDialog('i/update', {
-		notificationRecieveConfig: {
-			...$i.notificationRecieveConfig,
-			[type]: value,
-		},
-	}).then(i => {
-		$i.notificationRecieveConfig = i.notificationRecieveConfig;
-	});
+async function updateReceiveConfig(type: (typeof notificationTypes)[number], value: NotificationConfig) {
+	await os
+		.apiWithDialog('i/update', {
+			notificationRecieveConfig: {
+				...$i.notificationRecieveConfig,
+				[type]: value,
+			},
+		})
+		.then((i) => {
+			$i.notificationRecieveConfig = i.notificationRecieveConfig;
+		});
 }
 
 function onChangeSendReadMessage(v: boolean) {
-	if (!pushRegistrationInServer.value) return;
+	if (!pushRegistrationInServer.value) {
+		return;
+	}
 
 	os.apiWithDialog('sw/update-registration', {
 		endpoint: pushRegistrationInServer.value.endpoint,
 		sendReadMessage: v,
-	}).then(res => {
-		if (!allowButton.value)	return;
+	}).then((res) => {
+		if (!allowButton.value) {
+			return;
+		}
 		allowButton.value.pushRegistrationInServer = res;
 	});
 }
@@ -180,7 +210,9 @@ async function flushNotification() {
 		text: i18n.ts.resetAreYouSure,
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('notifications/flush', {});
 }

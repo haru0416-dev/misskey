@@ -4,7 +4,9 @@
  */
 
 import { and, count, eq, inArray, lt, sql } from 'drizzle-orm';
-import { antenna, type AntennaInsert, type AntennaRow } from '@/db/schema/antenna.js';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { antenna } from '@/db/schema/antenna.js';
+import type { AntennaInsert, AntennaRow } from '@/db/schema/antenna.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -79,7 +81,9 @@ export async function createAntennasWithinLimitInDatabase(
 			.insert(antenna)
 			.values(values.map((value) => ({ ...value, userId })))
 			.returning();
-		if (rows.length !== values.length) throw new Error('Failed to create all antennas');
+		if (rows.length !== values.length) {
+			throw new Error('Failed to create all antennas');
+		}
 
 		return {
 			status: 'created',
@@ -166,7 +170,10 @@ export async function listAntennasByUserIdFromDatabase(
  * ノート配信時のマッチ判定で使われるホットパスなので、フィルタ条件・全件取得の挙動を変えないこと。
  */
 export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
-	const rows = await db.select().from(antenna).where(eq(antenna.isActive, true));
+	const statement = preparedQueryFor(db, 'antenna:active', () =>
+		db.select().from(antenna).where(eq(antenna.isActive, true)).prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const rows = await statement.execute();
 
 	return rows.map(deserializeAntenna);
 }
@@ -175,7 +182,9 @@ export async function listAntennasByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiAntenna['id'][],
 ): Promise<MiAntenna[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db.select().from(antenna).where(inArray(antenna.id, ids));
 
@@ -191,7 +200,9 @@ export async function appendUserToAntennasInDatabase(
 	ids: MiAntenna['id'][],
 	acct: string,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db
 		.update(antenna)

@@ -9,9 +9,8 @@ import {
 	createAnnouncementWithSideEffects,
 	deleteAnnouncementWithModerationLog,
 	updateAnnouncementWithModerationLog,
-	type AnnouncementCreateValues,
-	type AnnouncementUpdateValues,
 } from '@/core/announcement/AnnouncementLogic.js';
+import type { AnnouncementCreateValues, AnnouncementUpdateValues } from '@/core/announcement/AnnouncementLogic.js';
 import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/announcement/AnnouncementReadStore.js';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -184,7 +183,9 @@ export async function handleApiAdminAnnouncementsDelete(
 	const params = parseApiParams(adminAnnouncementsDeleteParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
-	if (announcement == null) throw noSuchAnnouncementError('ecad8040-a276-4e85-bda9-015a708d291e');
+	if (announcement == null) {
+		throw noSuchAnnouncementError('ecad8040-a276-4e85-bda9-015a708d291e');
+	}
 
 	await deleteAnnouncementWithModerationLog(
 		{
@@ -228,7 +229,9 @@ export async function handleApiAdminAnnouncementsUpdate(
 	const params = parseApiParams(adminAnnouncementsUpdateParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
-	if (announcement == null) throw noSuchAnnouncementError('d3aae5a7-6372-4cb4-b61c-f511ffc2d7cc');
+	if (announcement == null) {
+		throw noSuchAnnouncementError('d3aae5a7-6372-4cb4-b61c-f511ffc2d7cc');
+	}
 
 	await updateAnnouncementWithModerationLog(
 		{

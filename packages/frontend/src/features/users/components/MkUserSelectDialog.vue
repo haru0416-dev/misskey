@@ -79,13 +79,16 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const props = withDefaults(defineProps<{
-	includeSelf?: boolean;
-	localOnly?: boolean;
-}>(), {
-	includeSelf: false,
-	localOnly: false,
-});
+const props = withDefaults(
+	defineProps<{
+		includeSelf?: boolean;
+		localOnly?: boolean;
+	}>(),
+	{
+		includeSelf: false,
+		localOnly: false,
+	},
+);
 
 const computedLocalOnly = computed(() => props.localOnly || instance.federation === 'none');
 
@@ -106,19 +109,20 @@ function search() {
 		host: computedLocalOnly.value ? '.' : host.value,
 		limit: 10,
 		detail: false,
-	}).then(_users => {
+	}).then((_users) => {
 		users.value = _users.filter((u) => {
 			if (props.includeSelf) {
 				return true;
-			} else {
-				return u.id !== $i?.id;
 			}
+			return u.id !== $i?.id;
 		});
 	});
 }
 
 async function ok() {
-	if (selected.value == null) return;
+	if (selected.value == null) {
+		return;
+	}
 
 	const user = await misskeyApi('users/show', {
 		userId: selected.value.id,
@@ -129,7 +133,7 @@ async function ok() {
 
 	// 最近使ったユーザー更新
 	let recents = store.recentlyUsedUsers;
-	recents = recents.filter(x => x !== selected.value?.id);
+	recents = recents.filter((x) => x !== selected.value?.id);
 	recents.unshift(selected.value.id);
 	store.set('recentlyUsedUsers', recents.splice(0, 16));
 }
@@ -142,21 +146,19 @@ function cancel() {
 onMounted(() => {
 	misskeyApi('users/show', {
 		userIds: store.recentlyUsedUsers,
-	}).then(foundUsers => {
+	}).then((foundUsers) => {
 		let _users = foundUsers;
 		_users = _users.filter((u) => {
 			if (computedLocalOnly.value) {
 				return u.host == null;
-			} else {
-				return true;
 			}
+			return true;
 		});
 		_users = _users.filter((u) => {
 			if (props.includeSelf) {
 				return true;
-			} else {
-				return u.id !== $i?.id;
 			}
+			return u.id !== $i?.id;
 		});
 		recentUsers.value = _users;
 	});

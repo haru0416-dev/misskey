@@ -85,7 +85,7 @@ export const meta = pgTable('meta', {
 	enableSensitiveMediaDetectionForVideos: boolean().default(false).notNull(),
 	sensitiveMediaDetectionApiUrl: varchar({ length: 1024 }),
 	sensitiveMediaDetectionApiKey: varchar({ length: 1024 }),
-	sensitiveMediaDetectionTimeout: integer().default(60000).notNull(),
+	sensitiveMediaDetectionTimeout: integer().default(60_000).notNull(),
 	sensitiveMediaDetectionMaxImagesPerRequest: integer().default(4).notNull(),
 	enableEmail: boolean().default(false).notNull(),
 	email: varchar({ length: 1024 }),
@@ -197,7 +197,7 @@ export const meta = pgTable('meta', {
 	notesPerOneAd: integer().default(0).notNull(),
 	urlPreviewEnabled: boolean().default(true).notNull(),
 	urlPreviewAllowRedirect: boolean().default(true).notNull(),
-	urlPreviewTimeout: integer().default(10000).notNull(),
+	urlPreviewTimeout: integer().default(10_000).notNull(),
 	urlPreviewMaximumContentLength: bigint({ mode: 'number' })
 		.default(1024 * 1024 * 10)
 		.notNull(),

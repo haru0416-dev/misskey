@@ -4,7 +4,8 @@
  */
 
 import { and, eq, inArray } from 'drizzle-orm';
-import { channelFavorite, type ChannelFavoriteInsert } from '@/db/schema/channel-favorite.js';
+import { channelFavorite } from '@/db/schema/channel-favorite.js';
+import type { ChannelFavoriteInsert } from '@/db/schema/channel-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';

@@ -4,7 +4,8 @@
  */
 
 import type { JsonValue } from '@/misc/json-value.js';
-import { readUserChatMessageForApi, type ApiChatDependencies } from '@/server/rest/chat/chat.js';
+import { readUserChatMessageForApi } from '@/server/rest/chat/chat.js';
+import type { ApiChatDependencies } from '@/server/rest/chat/chat.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelChatUser: StreamChannelDefinition<ApiChatDependencies> = {
@@ -12,9 +13,15 @@ export const honoStreamChannelChatUser: StreamChannelDefinition<ApiChatDependenc
 	requireCredential: true,
 	kind: 'read:chat',
 	init: async (deps, ctx, params) => {
-		if (typeof params['otherId'] !== 'string') return false;
-		if (!ctx.user) return false;
-		if (params['otherId'] === ctx.user.id) return false;
+		if (typeof params['otherId'] !== 'string') {
+			return false;
+		}
+		if (!ctx.user) {
+			return false;
+		}
+		if (params['otherId'] === ctx.user.id) {
+			return false;
+		}
 
 		const user = ctx.user;
 		const otherId = params['otherId'];

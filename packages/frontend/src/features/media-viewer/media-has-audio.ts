@@ -11,7 +11,9 @@ export default async function hasAudio(media: HTMLMediaElement) {
 		const played = await new Promise<boolean>((resolve) => {
 			let settled = false;
 			const finish = (result: boolean) => {
-				if (settled) return;
+				if (settled) {
+					return;
+				}
 				settled = true;
 				cloned.removeEventListener('playing', onPlaying);
 				cloned.removeEventListener('error', onError);
@@ -27,7 +29,9 @@ export default async function hasAudio(media: HTMLMediaElement) {
 				onError();
 			}
 		});
-		if (!played) return false;
+		if (!played) {
+			return false;
+		}
 		return (
 			!!(cloned as typeof cloned & { audioTracks?: unknown[] }).audioTracks?.length ||
 			(cloned as typeof cloned & { mozHasAudio?: boolean }).mozHasAudio === true ||
@@ -36,7 +40,9 @@ export default async function hasAudio(media: HTMLMediaElement) {
 	} finally {
 		cloned.pause();
 		cloned.removeAttribute('src');
-		for (const source of cloned.querySelectorAll('source')) source.removeAttribute('src');
+		for (const source of cloned.querySelectorAll('source')) {
+			source.removeAttribute('src');
+		}
 		cloned.load();
 		cloned.remove();
 	}

@@ -6,15 +6,14 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, createNoteWithPollInDatabase } from '@/core/note/NoteStore.js';
 import { createPollVoteInDatabase } from '@/core/note/PollVoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleQueueEndedPollNotification,
-	type QueueEndedPollNotificationDependencies,
-} from '@/queue/handlers/ended-poll-notification.js';
+import { handleQueueEndedPollNotification } from '@/queue/handlers/ended-poll-notification.js';
+import type { QueueEndedPollNotificationDependencies } from '@/queue/handlers/ended-poll-notification.js';
 import type { EndedPollNotificationJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
 
@@ -106,7 +105,7 @@ describe('hono-queue-ended-poll-notification', () => {
 				);
 				expect(publishedNotifications.filter((n) => n.userId === voterId && n.type === 'notification')).toHaveLength(1);
 			},
-			{ timeout: 5_000, interval: 100 },
+			{ timeout: 5000, interval: 100 },
 		);
 	});
 

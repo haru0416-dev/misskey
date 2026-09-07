@@ -8,11 +8,13 @@
 // 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	fetchUserByIdOrFailFromDatabase,
@@ -20,8 +22,12 @@ import {
 } from '@/core/user/UserStore.js';
 import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updatePersonForApi, type ApiUpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { updatePersonForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiUpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { MiRemoteUser } from '@/models/User.js';
+import { packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '@/server/rest/user/user.js';
+import { listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/user/UserMemoStore.js';
+import { countDatabaseQueries } from '../../../query-counter.js';
 
 /**
  * `person`のJSONを固定で返すローカルHTTPフィクスチャ。`getPerson`は遅延評価するクロージャで、
@@ -72,6 +78,131 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 		});
 		return { id };
 	}
+
+	test('一覧のメモは表示対象と閲覧者を限定し、更新・欠損・重複順序を維持する', async () => {
+		const viewer = await createLocalUser('memoviewer');
+		const otherViewer = await createLocalUser('othermemoviewer');
+		const target = await createLocalUser('memotarget');
+		const unrelated = await createLocalUser('memounrelated');
+		const absent = await createLocalUser('memoabsent');
+		const memoId = genId();
+		await upsertUserMemoInDatabase(deps.db, {
+			id: memoId,
+			userId: viewer.id,
+			targetUserId: target.id,
+			memo: '日本語メモ',
+		});
+		await upsertUserMemoInDatabase(deps.db, {
+			id: genId(),
+			userId: viewer.id,
+			targetUserId: unrelated.id,
+			memo: '一覧外',
+		});
+		await upsertUserMemoInDatabase(deps.db, {
+			id: genId(),
+			userId: otherViewer.id,
+			targetUserId: target.id,
+			memo: '別の閲覧者',
+		});
+		expect(await listUserMemoTextsByUserIdFromDatabase(deps.db, viewer.id, [target.id, absent.id, target.id])).toEqual(
+			new Map([[target.id, '日本語メモ']]),
+		);
+		const counter = countDatabaseQueries(deps.db);
+		try {
+			expect(await listUserMemoTextsByUserIdFromDatabase(deps.db, viewer.id, [])).toEqual(new Map());
+			expect(counter.count()).toBe(0);
+		} finally {
+			counter.restore();
+		}
+		const ids = [absent.id, target.id, target.id];
+		const packed = await packUserDetailedNotMeManyForApi(deps, ids, viewer);
+		expect(packed.map((item) => ({ id: item.id, memo: item['memo'] }))).toEqual([
+			{ id: absent.id, memo: null },
+			{ id: target.id, memo: '日本語メモ' },
+			{ id: target.id, memo: '日本語メモ' },
+		]);
+		await upsertUserMemoInDatabase(deps.db, { id: memoId, userId: viewer.id, targetUserId: target.id, memo: '' });
+		expect(await packUserDetailedNotMeManyForApi(deps, [target.id], viewer)).toMatchObject([{ memo: '' }]);
+	});
+
+	test('移行先と別名の一覧取得は件数・順序・欠損を維持し、人数分のDB照会を行わない', async () => {
+		const local = await createLocalUser('batchlocal');
+		const localUri = `${deps.config.instance.url}/users/${local.id}`;
+		const remoteId = genId();
+		const remoteUri = `https://migration.example/users/${remoteId}`;
+		await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+			user: {
+				id: remoteId,
+				username: `target${remoteId}`,
+				usernameLower: `target${remoteId}`,
+				host: 'migration.example',
+				uri: remoteUri,
+			},
+			profile: { userId: remoteId },
+		});
+		const missingUri = `https://migration.example/users/${genId()}`;
+		const sources = await Promise.all(
+			Array.from({ length: 20 }, async (_, index) => {
+				const id = genId();
+				return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+					user: {
+						id,
+						username: `source${id}`,
+						usernameLower: `source${id}`,
+						movedToUri: [remoteUri, localUri, missingUri, null][index % 4]!,
+						alsoKnownAs:
+							index % 3 === 0 ? null : index % 3 === 1 ? '' : [remoteUri, localUri, remoteUri, missingUri].join(','),
+					},
+					profile: { userId: id },
+				});
+			}),
+		);
+		const input = [...sources].reverse().concat(sources[0]!);
+		const expected = await Promise.all(input.map((source) => packUserDetailedNotMeForApi(deps, source)));
+		await packUserDetailedNotMeManyForApi(deps, [sources[0]!]);
+		const queries = countDatabaseQueries(deps.db);
+		try {
+			await packUserDetailedNotMeManyForApi(deps, [sources[0]!]);
+			const singleCount = queries.count();
+			queries.reset();
+			const packed = await packUserDetailedNotMeManyForApi(deps, input);
+			expect(packed).toEqual(expected);
+			expect(packed.map((entry) => entry.id)).toEqual(input.map((entry) => entry.id));
+			expect(queries.count()).toBe(singleCount);
+		} finally {
+			queries.restore();
+		}
+	});
+
+	test('一覧取得の後で登録された移行先と別名を次の取得で解決する', async () => {
+		const sourceId = genId();
+		const targetId = genId();
+		const uri = `https://migration.example/users/${targetId}`;
+		const source = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+			user: {
+				id: sourceId,
+				username: `late${sourceId}`,
+				usernameLower: `late${sourceId}`,
+				movedToUri: uri,
+				alsoKnownAs: uri,
+			},
+			profile: { userId: sourceId },
+		});
+		expect(await packUserDetailedNotMeManyForApi(deps, [source])).toMatchObject([{ movedTo: null, alsoKnownAs: [] }]);
+		await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+			user: {
+				id: targetId,
+				username: `target${targetId}`,
+				usernameLower: `target${targetId}`,
+				host: 'migration.example',
+				uri,
+			},
+			profile: { userId: targetId },
+		});
+		expect(await packUserDetailedNotMeManyForApi(deps, [source])).toMatchObject([
+			{ movedTo: targetId, alsoKnownAs: [targetId] },
+		]);
+	});
 
 	test('movedToが新規に検知され、dstがsrcをalsoKnownAsで承認していれば、未知のdstを新規作成しフォロワーの移行ジョブを積む', async () => {
 		// dst (移行先、まだこのインスタンスには知られていない新規リモートユーザー) のフィクスチャ

@@ -72,7 +72,8 @@ export type DataChartSeries = {
 
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
-import { use, init, type ECharts, type EChartsCoreOption } from 'echarts/core';
+import { use, init } from 'echarts/core';
+import type { ECharts, EChartsCoreOption } from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { AriaComponent, DataZoomComponent, GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
@@ -80,25 +81,37 @@ import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
 import { chartText } from '@/features/charts/chart-i18n.js';
 
-use([BarChart, LineChart, AriaComponent, DataZoomComponent, GridComponent, LegendComponent, TooltipComponent, SVGRenderer]);
+use([
+	BarChart,
+	LineChart,
+	AriaComponent,
+	DataZoomComponent,
+	GridComponent,
+	LegendComponent,
+	TooltipComponent,
+	SVGRenderer,
+]);
 
-const props = withDefaults(defineProps<{
-	series: DataChartSeries[];
-	ariaLabel: string;
-	height?: number;
-	loading?: boolean;
-	stacked?: boolean;
-	detailed?: boolean;
-	bytes?: boolean;
-	xAxisType?: 'time' | 'value';
-}>(), {
-	height: 280,
-	loading: false,
-	stacked: false,
-	detailed: true,
-	bytes: false,
-	xAxisType: 'time',
-});
+const props = withDefaults(
+	defineProps<{
+		series: DataChartSeries[];
+		ariaLabel: string;
+		height?: number;
+		loading?: boolean;
+		stacked?: boolean;
+		detailed?: boolean;
+		bytes?: boolean;
+		xAxisType?: 'time' | 'value';
+	}>(),
+	{
+		height: 280,
+		loading: false,
+		stacked: false,
+		detailed: true,
+		bytes: false,
+		xAxisType: 'time',
+	},
+);
 
 const chartEl = useTemplateRef('chartEl');
 let chart: ECharts | null = null;
@@ -107,40 +120,52 @@ let renderFrame: number | null = null;
 
 const hiddenIndexes = ref(new Set<number>());
 const palette = ref<string[]>([]);
-const normalizedSeries = computed(() => props.series.map(series => ({
-	...series,
-	hidden: series.hidden || hiddenIndexes.value.has(props.series.indexOf(series)),
-	data: [...series.data].sort((a, b) => a.x - b.x),
-})));
-const visibleSeries = computed(() => normalizedSeries.value.filter(series => !series.hidden));
-const hasData = computed(() => visibleSeries.value.some(series => series.data.length > 0));
-const seriesColors = computed(() => normalizedSeries.value.map((series, index) => series.color ?? palette.value[index % palette.value.length]));
-const summarySeries = computed(() => visibleSeries.value.slice(0, 5).map((series, index) => {
-	const values = series.data.map(point => point.y);
-	const latest = values.at(-1) ?? 0;
-	return {
-		name: series.name,
-		latest,
-		delta: latest - (values.at(-2) ?? latest),
-		peak: Math.max(0, ...values),
-		color: series.color ?? palette.value[index % palette.value.length],
-	};
-}));
+const normalizedSeries = computed(() =>
+	props.series.map((series) => ({
+		...series,
+		hidden: series.hidden || hiddenIndexes.value.has(props.series.indexOf(series)),
+		data: [...series.data].sort((a, b) => a.x - b.x),
+	})),
+);
+const visibleSeries = computed(() => normalizedSeries.value.filter((series) => !series.hidden));
+const hasData = computed(() => visibleSeries.value.some((series) => series.data.length > 0));
+const seriesColors = computed(() =>
+	normalizedSeries.value.map((series, index) => series.color ?? palette.value[index % palette.value.length]),
+);
+const summarySeries = computed(() =>
+	visibleSeries.value.slice(0, 5).map((series, index) => {
+		const values = series.data.map((point) => point.y);
+		const latest = values.at(-1) ?? 0;
+		return {
+			name: series.name,
+			latest,
+			delta: latest - (values.at(-2) ?? latest),
+			peak: Math.max(0, ...values),
+			color: series.color ?? palette.value[index % palette.value.length],
+		};
+	}),
+);
 const tableRows = computed(() => {
-	const times = [...new Set(visibleSeries.value.flatMap(series => series.data.map(point => point.x)))].sort((a, b) => b - a);
-	return times.map(time => ({
+	const times = [...new Set(visibleSeries.value.flatMap((series) => series.data.map((point) => point.x)))].sort(
+		(a, b) => b - a,
+	);
+	return times.map((time) => ({
 		time,
-		values: visibleSeries.value.map(series => series.data.find(point => point.x === time)?.y ?? 0),
+		values: visibleSeries.value.map((series) => series.data.find((point) => point.x === time)?.y ?? 0),
 	}));
 });
 
 function formatValue(value: number): string {
-	if (props.bytes) return `${new Intl.NumberFormat().format(value / 1000)} KB`;
+	if (props.bytes) {
+		return `${new Intl.NumberFormat().format(value / 1000)} KB`;
+	}
 	return new Intl.NumberFormat().format(value);
 }
 
 function formatTime(value: number): string {
-	if (props.xAxisType === 'value') return String(value);
+	if (props.xAxisType === 'value') {
+		return String(value);
+	}
 	return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value);
 }
 
@@ -150,19 +175,34 @@ function themeValue(name: string): string {
 
 function toggleSeries(index: number) {
 	const next = new Set(hiddenIndexes.value);
-	if (next.has(index)) next.delete(index);
-	else if (visibleSeries.value.length > 1) next.add(index);
+	if (next.has(index)) {
+		next.delete(index);
+	} else if (visibleSeries.value.length > 1) {
+		next.add(index);
+	}
 	hiddenIndexes.value = next;
 }
 
 function render() {
-	if (chartEl.value == null) return;
-	if (!chartEl.value.isConnected || chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) return;
+	if (chartEl.value == null) {
+		return;
+	}
+	if (!chartEl.value.isConnected || chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) {
+		return;
+	}
 	chart ??= init(chartEl.value, undefined, { renderer: 'svg' });
 	const fg = themeValue('--MI_THEME-fg');
 	const divider = themeValue('--MI_THEME-divider');
 	const panel = themeValue('--MI_THEME-panel');
-	palette.value = ['--MI_THEME-accent', '--MI_THEME-success', '--MI_THEME-warn', '--MI_THEME-error', '--MI_THEME-link', '--MI_THEME-renote', '--MI_THEME-hashtag'].map(themeValue);
+	palette.value = [
+		'--MI_THEME-accent',
+		'--MI_THEME-success',
+		'--MI_THEME-warn',
+		'--MI_THEME-error',
+		'--MI_THEME-link',
+		'--MI_THEME-renote',
+		'--MI_THEME-hashtag',
+	].map(themeValue);
 	const option: EChartsCoreOption = {
 		animation: false,
 		backgroundColor: 'transparent',
@@ -196,13 +236,20 @@ function render() {
 		series: normalizedSeries.value.map((series, index) => ({
 			name: series.name,
 			type: series.type === 'bar' ? 'bar' : 'line',
-			data: series.data.map(point => [point.x, point.y]),
+			data: series.data.map((point) => [point.x, point.y]),
 			stack: props.stacked ? (series.stack ?? 'total') : series.stack,
 			smooth: series.type !== 'bar' ? 0.25 : false,
 			showSymbol: false,
 			connectNulls: true,
-			lineStyle: { width: 2, type: series.dashed ? 'dashed' : 'solid', color: series.color ?? palette.value[index % palette.value.length] },
-			itemStyle: { color: series.color ?? palette.value[index % palette.value.length], borderRadius: series.type === 'bar' ? [3, 3, 0, 0] : 0 },
+			lineStyle: {
+				width: 2,
+				type: series.dashed ? 'dashed' : 'solid',
+				color: series.color ?? palette.value[index % palette.value.length],
+			},
+			itemStyle: {
+				color: series.color ?? palette.value[index % palette.value.length],
+				borderRadius: series.type === 'bar' ? [3, 3, 0, 0] : 0,
+			},
 			areaStyle: series.type === 'area' ? { opacity: 0.14 } : undefined,
 			barMaxWidth: 28,
 		})),
@@ -211,7 +258,9 @@ function render() {
 }
 
 function scheduleRender() {
-	if (renderFrame != null) cancelAnimationFrame(renderFrame);
+	if (renderFrame != null) {
+		cancelAnimationFrame(renderFrame);
+	}
 	renderFrame = requestAnimationFrame(() => {
 		renderFrame = null;
 		chart?.resize();
@@ -219,12 +268,18 @@ function scheduleRender() {
 	});
 }
 
-watch(() => [props.series, props.detailed, props.stacked, props.bytes, store.darkMode, hiddenIndexes.value], () => nextTick(scheduleRender), { deep: true });
+watch(
+	() => [props.series, props.detailed, props.stacked, props.bytes, store.darkMode, hiddenIndexes.value],
+	() => nextTick(scheduleRender),
+	{ deep: true },
+);
 
 onMounted(() => {
 	if (chartEl.value != null) {
-		resizeObserver = new ResizeObserver(entries => {
-			if (entries[0]?.contentRect.width === 0 || entries[0]?.contentRect.height === 0) return;
+		resizeObserver = new ResizeObserver((entries) => {
+			if (entries[0]?.contentRect.width === 0 || entries[0]?.contentRect.height === 0) {
+				return;
+			}
 			scheduleRender();
 		});
 		resizeObserver.observe(chartEl.value);
@@ -233,7 +288,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-	if (renderFrame != null) cancelAnimationFrame(renderFrame);
+	if (renderFrame != null) {
+		cancelAnimationFrame(renderFrame);
+	}
 	resizeObserver?.disconnect();
 	chart?.dispose();
 });

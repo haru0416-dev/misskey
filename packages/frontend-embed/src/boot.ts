@@ -34,7 +34,9 @@ console.log('Erebia Embed');
 //#region 埋め込みパラメータの取得・パース
 const params = new URLSearchParams(window.location.search);
 const embedParams = parseEmbedParams(params);
-if (_DEV_) console.log(embedParams);
+if (_DEV_) {
+	console.log(embedParams);
+}
 //#endregion
 
 //#region テーマ
@@ -78,11 +80,11 @@ window.addEventListener('message', setIframeIdHandler);
 
 try {
 	await fetchCustomEmojis();
-} catch (err) { /* 空のcatch */ }
+} catch (err) {
+	/* 空のcatch */
+}
 
-const app = createApp(
-	defineAsyncComponent(() => import('@/ui.vue')),
-);
+const app = createApp(defineAsyncComponent(() => import('@/ui.vue')));
 
 app.provide(DI.mediaProxy, new MediaProxy(serverMetadata, url));
 
@@ -128,16 +130,15 @@ console.log(
 	`%c${i18n.ts._selfXssPrevention.title}`,
 	'color: #f00; font-weight: 900; font-family: "Hiragino Sans W9", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 24px;',
 );
-console.log(
-	`%c${i18n.ts._selfXssPrevention.description1}`,
-	'font-size: 16px; font-weight: 700;',
-);
+console.log(`%c${i18n.ts._selfXssPrevention.description1}`, 'font-size: 16px; font-weight: 700;');
 console.log(
 	`%c${i18n.ts._selfXssPrevention.description2}`,
 	'font-size: 16px;',
 	'font-size: 20px; font-weight: 700; color: #f00;',
 );
-console.log(i18n.tsx._selfXssPrevention.description3({ link: 'https://misskey-hub.net/docs/for-users/resources/self-xss/' }));
+console.log(
+	i18n.tsx._selfXssPrevention.description3({ link: 'https://misskey-hub.net/docs/for-users/resources/self-xss/' }),
+);
 //#endregion
 
 function removeSplash() {

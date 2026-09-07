@@ -136,7 +136,9 @@ async function packInviteCodeForApi(
 	ticket: RegistrationTicketRow,
 ): Promise<Packed<'InviteCode'>> {
 	const packed = (await packInviteCodesForApi(deps, [ticket]))[0];
-	if (packed == null) throw new Error('Packed invite code is missing');
+	if (packed == null) {
+		throw new Error('Packed invite code is missing');
+	}
 	return packed;
 }
 
@@ -210,7 +212,9 @@ export async function handleApiInviteCreate(
 				limit: policies.inviteLimit,
 			})
 		: await createRegistrationTicketInDatabase(deps.db, ticketData);
-	if (ticket == null) throw inviteCreateExceededCreateLimitError();
+	if (ticket == null) {
+		throw inviteCreateExceededCreateLimitError();
+	}
 
 	return await packInviteCodeForApi(deps, ticket);
 }

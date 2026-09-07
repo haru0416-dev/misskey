@@ -53,11 +53,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 let animationFrameId: number | null = null;
 let secondTimerId: number | null = null;
@@ -70,7 +66,9 @@ let prevSec: string | null = null;
 
 watch(showColon, (v) => {
 	if (v) {
-		if (colonTimerId != null) window.clearTimeout(colonTimerId);
+		if (colonTimerId != null) {
+			window.clearTimeout(colonTimerId);
+		}
 		colonTimerId = window.setTimeout(() => {
 			colonTimerId = null;
 			showColon.value = false;
@@ -81,8 +79,12 @@ watch(showColon, (v) => {
 const tick = () => {
 	const now = Date.now();
 	ss.value = Math.floor(now / 1000).toString();
-	ms.value = Math.floor(now % 1000 / 10).toString().padStart(2, '0');
-	if (ss.value !== prevSec) showColon.value = true;
+	ms.value = Math.floor((now % 1000) / 10)
+		.toString()
+		.padStart(2, '0');
+	if (ss.value !== prevSec) {
+		showColon.value = true;
+	}
 	prevSec = ss.value;
 };
 
@@ -104,21 +106,27 @@ function scheduleSecondTick() {
 
 function onAnimationFrame() {
 	animationFrameId = null;
-	if (!mounted || window.document.hidden || !widgetProps.showMs) return;
+	if (!mounted || window.document.hidden || !widgetProps.showMs) {
+		return;
+	}
 	tick();
 	animationFrameId = window.requestAnimationFrame(onAnimationFrame);
 }
 
 function onSecondTick() {
 	secondTimerId = null;
-	if (!mounted || window.document.hidden || widgetProps.showMs) return;
+	if (!mounted || window.document.hidden || widgetProps.showMs) {
+		return;
+	}
 	tick();
 	scheduleSecondTick();
 }
 
 function scheduleUpdates() {
 	clearUpdateTimer();
-	if (!mounted || window.document.hidden) return;
+	if (!mounted || window.document.hidden) {
+		return;
+	}
 	if (widgetProps.showMs) {
 		animationFrameId = window.requestAnimationFrame(onAnimationFrame);
 	} else {
@@ -144,9 +152,14 @@ function onVisibilityChange() {
 	}
 }
 
-watch(() => widgetProps.showMs, () => {
-	if (mounted) restartUpdates();
-});
+watch(
+	() => widgetProps.showMs,
+	() => {
+		if (mounted) {
+			restartUpdates();
+		}
+	},
+);
 
 tick();
 

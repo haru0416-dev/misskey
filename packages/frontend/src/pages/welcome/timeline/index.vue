@@ -31,7 +31,7 @@ const isScrolling = ref(false);
 const scrollState = ref<null | 'intro' | 'loop'>(null);
 const notesMainContainerEl = useTemplateRef('notesMainContainerEl');
 
-misskeyApiGet('notes/featured').then(_notes => {
+misskeyApiGet('notes/featured').then((_notes) => {
 	notes.value = _notes;
 });
 
@@ -42,7 +42,9 @@ function changeScrollState() {
 }
 
 onUpdated(() => {
-	if (!notesMainContainerEl.value) return;
+	if (!notesMainContainerEl.value) {
+		return;
+	}
 	const container = getScrollContainer(notesMainContainerEl.value);
 	const containerHeight = container ? container.clientHeight : window.innerHeight;
 	if (notesMainContainerEl.value.offsetHeight > containerHeight) {

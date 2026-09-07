@@ -46,7 +46,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onBeforeUnmount, onMounted, provide, watch, useTemplateRef, ref, computed } from 'vue';
 import type { Column } from '@/deck.js';
 import type { MenuItem } from '@/types/menu.js';
-import { deckGlobalEvents, updateColumn, swapLeftColumn, swapRightColumn, swapUpColumn, swapDownColumn, stackLeftColumn, popRightColumn, removeColumn, swapColumn } from '@/deck.js';
+import {
+	deckGlobalEvents,
+	updateColumn,
+	swapLeftColumn,
+	swapRightColumn,
+	swapUpColumn,
+	swapDownColumn,
+	stackLeftColumn,
+	popRightColumn,
+	removeColumn,
+	swapColumn,
+} from '@/deck.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
@@ -57,18 +68,21 @@ provide('shouldOmitHeaderTitle', true);
 
 const withWallpaper = prefer['deck.wallpaper'] != null;
 
-const props = withDefaults(defineProps<{
-	column: Column;
-	isStacked?: boolean;
-	naked?: boolean;
-	handleScrollToTop?: boolean;
-	menu?: MenuItem[];
-	refresher?: () => Promise<void>;
-}>(), {
-	isStacked: false,
-	naked: false,
-	handleScrollToTop: true,
-});
+const props = withDefaults(
+	defineProps<{
+		column: Column;
+		isStacked?: boolean;
+		naked?: boolean;
+		handleScrollToTop?: boolean;
+		menu?: MenuItem[];
+		refresher?: () => Promise<void>;
+	}>(),
+	{
+		isStacked: false,
+		naked: false,
+		handleScrollToTop: true,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'headerWheel', ctx: WheelEvent): void;
@@ -78,7 +92,7 @@ const emit = defineEmits<{
 const body = useTemplateRef('body');
 
 const dragging = ref(false);
-watch(dragging, v => deckGlobalEvents.emit(v ? 'column.dragStart' : 'column.dragEnd'));
+watch(dragging, (v) => deckGlobalEvents.emit(v ? 'column.dragStart' : 'column.dragEnd'));
 
 const draghover = ref(false);
 const dropready = ref(false);
@@ -105,7 +119,9 @@ function onOtherDragEnd() {
 }
 
 function toggleActive() {
-	if (!props.isStacked) return;
+	if (!props.isStacked) {
+		return;
+	}
 	updateColumn(props.column.id, {
 		active: props.column.active == null ? false : !props.column.active,
 	});
@@ -159,14 +175,16 @@ function getMenu() {
 					default: props.column.flexible ?? null,
 				},
 			});
-			if (canceled) return;
+			if (canceled) {
+				return;
+			}
 			updateColumn(props.column.id, result);
 		},
 	});
 
 	const flexibleRef = ref(props.column.flexible ?? false);
 
-	watch(flexibleRef, flexible => {
+	watch(flexibleRef, (flexible) => {
 		updateColumn(props.column.id, {
 			flexible,
 		});
@@ -181,48 +199,57 @@ function getMenu() {
 
 	const moveToMenuItems: MenuItem[] = [];
 
-	moveToMenuItems.push({
-		icon: 'ti ti-arrow-left',
-		text: i18n.ts._deck.swapLeft,
-		action: () => {
-			swapLeftColumn(props.column.id);
+	moveToMenuItems.push(
+		{
+			icon: 'ti ti-arrow-left',
+			text: i18n.ts._deck.swapLeft,
+			action: () => {
+				swapLeftColumn(props.column.id);
+			},
 		},
-	}, {
-		icon: 'ti ti-arrow-right',
-		text: i18n.ts._deck.swapRight,
-		action: () => {
-			swapRightColumn(props.column.id);
+		{
+			icon: 'ti ti-arrow-right',
+			text: i18n.ts._deck.swapRight,
+			action: () => {
+				swapRightColumn(props.column.id);
+			},
 		},
-	});
+	);
 
 	if (props.isStacked) {
-		moveToMenuItems.push({
-			icon: 'ti ti-arrow-up',
-			text: i18n.ts._deck.swapUp,
-			action: () => {
-				swapUpColumn(props.column.id);
+		moveToMenuItems.push(
+			{
+				icon: 'ti ti-arrow-up',
+				text: i18n.ts._deck.swapUp,
+				action: () => {
+					swapUpColumn(props.column.id);
+				},
 			},
-		}, {
-			icon: 'ti ti-arrow-down',
-			text: i18n.ts._deck.swapDown,
-			action: () => {
-				swapDownColumn(props.column.id);
+			{
+				icon: 'ti ti-arrow-down',
+				text: i18n.ts._deck.swapDown,
+				action: () => {
+					swapDownColumn(props.column.id);
+				},
 			},
-		});
+		);
 	}
 
-	menuItems.push({
-		type: 'parent',
-		text: i18n.ts.move + '...',
-		icon: 'ti ti-arrows-move',
-		children: moveToMenuItems,
-	}, {
-		icon: 'ti ti-stack-2',
-		text: i18n.ts._deck.stackLeft,
-		action: () => {
-			stackLeftColumn(props.column.id);
+	menuItems.push(
+		{
+			type: 'parent',
+			text: i18n.ts.move + '...',
+			icon: 'ti ti-arrows-move',
+			children: moveToMenuItems,
 		},
-	});
+		{
+			icon: 'ti ti-stack-2',
+			text: i18n.ts._deck.stackLeft,
+			action: () => {
+				stackLeftColumn(props.column.id);
+			},
+		},
+	);
 
 	if (props.isStacked) {
 		menuItems.push({
@@ -234,14 +261,17 @@ function getMenu() {
 		});
 	}
 
-	menuItems.push({ type: 'divider' }, {
-		icon: 'ti ti-trash',
-		text: i18n.ts.remove,
-		danger: true,
-		action: () => {
-			removeColumn(props.column.id);
+	menuItems.push(
+		{ type: 'divider' },
+		{
+			icon: 'ti ti-trash',
+			text: i18n.ts.remove,
+			danger: true,
+			action: () => {
+				removeColumn(props.column.id);
+			},
 		},
-	});
+	);
 
 	return menuItems;
 }
@@ -256,7 +286,9 @@ function onContextmenu(ev: PointerEvent) {
 
 function goTop(ev: PointerEvent) {
 	emit('headerClick', ev);
-	if (!props.handleScrollToTop) return;
+	if (!props.handleScrollToTop) {
+		return;
+	}
 
 	if (body.value) {
 		body.value.scrollTo({
@@ -267,7 +299,9 @@ function goTop(ev: PointerEvent) {
 }
 
 function onDragstart(ev: DragEvent) {
-	if (ev.dataTransfer == null) return;
+	if (ev.dataTransfer == null) {
+		return;
+	}
 
 	ev.dataTransfer.effectAllowed = 'move';
 	setDragData(ev, 'deckColumn', props.column.id);
@@ -284,7 +318,9 @@ function onDragend(ev: DragEvent) {
 }
 
 function onDragover(ev: DragEvent) {
-	if (ev.dataTransfer == null) return;
+	if (ev.dataTransfer == null) {
+		return;
+	}
 
 	// 自分自身がドラッグされている場合
 	if (dragging.value) {
@@ -295,7 +331,9 @@ function onDragover(ev: DragEvent) {
 
 		ev.dataTransfer.dropEffect = isDeckColumn ? 'move' : 'none';
 
-		if (isDeckColumn) draghover.value = true;
+		if (isDeckColumn) {
+			draghover.value = true;
+		}
 	}
 }
 

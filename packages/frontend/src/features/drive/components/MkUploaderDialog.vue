@@ -64,14 +64,17 @@ import MkUploaderItems from '@/features/drive/components/MkUploaderItems.vue';
 
 const $i = ensureSignin();
 
-const props = withDefaults(defineProps<{
-	files: File[];
-	folderId?: string | null;
-	multiple?: boolean;
-	features?: UploaderFeatures;
-}>(), {
-	multiple: true,
-});
+const props = withDefaults(
+	defineProps<{
+		files: File[];
+		folderId?: string | null;
+		multiple?: boolean;
+		features?: UploaderFeatures;
+	}>(),
+	{
+		multiple: true,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'done', driveFiles: Misskey.entities.DriveFile[]): void;
@@ -95,30 +98,43 @@ const items = uploader.items;
 
 const firstUploadAttempted = ref(false);
 const canRetry = computed(() => firstUploadAttempted.value && uploader.readyForUpload.value);
-const canDone = computed(() => items.value.some(item => item.uploaded != null));
+const canDone = computed(() => items.value.some((item) => item.uploaded != null));
 const overallProgress = computed(() => {
 	const max = items.value.length;
-	if (max === 0) return 0;
+	if (max === 0) {
+		return 0;
+	}
 	const v = items.value.reduce((acc, item) => {
-		if (item.uploaded) return acc + 1;
-		if (item.progress) return acc + (item.progress.value / item.progress.max);
+		if (item.uploaded) {
+			return acc + 1;
+		}
+		if (item.progress) {
+			return acc + item.progress.value / item.progress.max;
+		}
 		return acc;
 	}, 0);
 	return Math.round((v / max) * 100);
 });
 
-watch(items, () => {
-	if (items.value.length === 0) {
-		emit('canceled');
-		dialog.value?.close();
-		return;
-	}
+watch(
+	items,
+	() => {
+		if (items.value.length === 0) {
+			emit('canceled');
+			dialog.value?.close();
+			return;
+		}
 
-	if (items.value.every(item => item.uploaded)) {
-		emit('done', items.value.map(item => item.uploaded!));
-		dialog.value?.close();
-	}
-}, { deep: true });
+		if (items.value.every((item) => item.uploaded)) {
+			emit(
+				'done',
+				items.value.map((item) => item.uploaded!),
+			);
+			dialog.value?.close();
+		}
+	},
+	{ deep: true },
+);
 
 async function cancel() {
 	const { canceled } = await os.confirm({
@@ -127,7 +143,9 @@ async function cancel() {
 		okText: i18n.ts.yes,
 		cancelText: i18n.ts.no,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	uploader.abortAll();
 	emit('canceled');
@@ -146,7 +164,9 @@ async function abortWithConfirm() {
 		okText: i18n.ts.yes,
 		cancelText: i18n.ts.no,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	uploader.abortAll();
 }
@@ -159,10 +179,15 @@ async function done() {
 			okText: i18n.ts.yes,
 			cancelText: i18n.ts.no,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
-	emit('done', items.value.filter(item => item.uploaded != null).map(item => item.uploaded!));
+	emit(
+		'done',
+		items.value.filter((item) => item.uploaded != null).map((item) => item.uploaded!),
+	);
 	dialog.value?.close();
 }
 

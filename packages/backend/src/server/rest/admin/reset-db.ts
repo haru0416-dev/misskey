@@ -28,7 +28,9 @@ export const resetDbParamDef = z.object({});
 export async function handleApiResetDb(deps: ApiResetDbDependencies, body: Record<string, unknown>): Promise<void> {
 	parseApiParams(resetDbParamDef, body);
 
-	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
+	if (process.env['NODE_ENV'] !== 'test') {
+		throw new Error('NODE_ENV is not a test');
+	}
 
 	deps.logger.info('---- Resetting database...');
 

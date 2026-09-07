@@ -258,7 +258,7 @@ export const packedUserDetailedNotMeOnlySchema = {
 		},
 		movedTo: {
 			type: 'string',
-			format: 'uri',
+			format: 'id',
 			nullable: true,
 			optional: false,
 		},

@@ -58,11 +58,15 @@ function pollingEnqueue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 
 function pollingDequeue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 	const data = pollingQueue.get(note.id);
-	if (data == null) return;
+	if (data == null) {
+		return;
+	}
 
 	if (data.referenceCount === 1) {
 		pollingQueue.delete(note.id);
-		if (pollingQueue.size === 0) pollingScheduler.stop();
+		if (pollingQueue.size === 0) {
+			pollingScheduler.stop();
+		}
 	} else {
 		data.referenceCount--;
 	}
@@ -107,7 +111,9 @@ function pollingSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cre
 	function onFetched(data: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis'>): void {
 		$note.reactions = data.reactions;
 		let reactionCount = 0;
-		for (const reaction in data.reactions) reactionCount += data.reactions[reaction] ?? 0;
+		for (const reaction in data.reactions) {
+			reactionCount += data.reactions[reaction] ?? 0;
+		}
 		$note.reactionCount = reactionCount;
 		$note.reactionEmojis = data.reactionEmojis;
 	}
@@ -128,7 +134,9 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 	function onStreamNoteUpdated(noteData: NoteUpdatedEvent): void {
 		const { type, id, body } = noteData;
 
-		if (id !== note.id) return;
+		if (id !== note.id) {
+			return;
+		}
 
 		switch (type) {
 			case 'reacted': {
@@ -165,12 +173,16 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 
 	function capture(withHandler = false): void {
 		connection.send('sr', { id: note.id });
-		if (withHandler) connection.on('noteUpdated', onStreamNoteUpdated);
+		if (withHandler) {
+			connection.on('noteUpdated', onStreamNoteUpdated);
+		}
 	}
 
 	function decapture(withHandler = false): void {
 		connection.send('un', { id: note.id });
-		if (withHandler) connection.off('noteUpdated', onStreamNoteUpdated);
+		if (withHandler) {
+			connection.off('noteUpdated', onStreamNoteUpdated);
+		}
 	}
 
 	function onStreamConnected() {
@@ -234,8 +246,10 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
-		if (reactionUserMap.get(ctx.userId) === normalizedName) return;
+		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll(/\uFE0F/g, '');
+		if (reactionUserMap.get(ctx.userId) === normalizedName) {
+			return;
+		}
 		reactionUserMap.set(ctx.userId, normalizedName);
 
 		if (ctx.emoji && !(ctx.emoji.name in $note.reactionEmojis)) {
@@ -258,17 +272,21 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll(/\uFE0F/g, '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
-		if (reactionUserMap.get(ctx.userId) === noReaction) return;
+		if (reactionUserMap.get(ctx.userId) === noReaction) {
+			return;
+		}
 		reactionUserMap.set(ctx.userId, noReaction);
 
 		const currentCount = $note.reactions[normalizedName] || 0;
 
 		$note.reactions[normalizedName] = Math.max(0, currentCount - 1);
 		$note.reactionCount = Math.max(0, $note.reactionCount - 1);
-		if ($note.reactions[normalizedName] === 0) delete $note.reactions[normalizedName];
+		if ($note.reactions[normalizedName] === 0) {
+			delete $note.reactions[normalizedName];
+		}
 
 		if ($i && ctx.userId === $i.id) {
 			$note.myReaction = null;
@@ -277,12 +295,16 @@ export function useNoteCapture(props: {
 
 	function onPollVoted(ctx: { userId: Misskey.entities.User['id']; choice: number }): void {
 		const newPollVotedKey = `${ctx.userId}:${ctx.choice}`;
-		if (newPollVotedKey === latestPollVotedKey) return;
+		if (newPollVotedKey === latestPollVotedKey) {
+			return;
+		}
 		latestPollVotedKey = newPollVotedKey;
 
 		const choices = [...$note.pollChoices];
 		const choice = choices[ctx.choice];
-		if (choice == null) return;
+		if (choice == null) {
+			return;
+		}
 		choices[ctx.choice] = {
 			...choice,
 			votes: choice.votes + 1,

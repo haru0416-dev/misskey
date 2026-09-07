@@ -22,7 +22,7 @@ describe('calculateBlurhashDimensions', () => {
 	});
 
 	test('bounds extreme aspect ratios', () => {
-		expect(calculateBlurhashDimensions(16383, 1)).toMatchObject({ canvasWidth: 4096, canvasHeight: 64 });
-		expect(calculateBlurhashDimensions(1, 16383)).toMatchObject({ canvasWidth: 64, canvasHeight: 4096 });
+		expect(calculateBlurhashDimensions(16_383, 1)).toMatchObject({ canvasWidth: 4096, canvasHeight: 64 });
+		expect(calculateBlurhashDimensions(1, 16_383)).toMatchObject({ canvasWidth: 64, canvasHeight: 4096 });
 	});
 });

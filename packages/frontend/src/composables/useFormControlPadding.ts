@@ -14,7 +14,9 @@ export function useFormControlPadding(
 	let resizeObserver: ResizeObserver | null = null;
 
 	function updatePadding(): void {
-		if (inputEl.value == null) return;
+		if (inputEl.value == null) {
+			return;
+		}
 		const prefixWidth = prefixEl.value?.offsetWidth ?? 0;
 		const suffixWidth = suffixEl.value?.offsetWidth ?? 0;
 		inputEl.value.style.paddingLeft = prefixWidth > 0 ? `${prefixWidth}px` : '';
@@ -23,8 +25,12 @@ export function useFormControlPadding(
 
 	onMounted(() => {
 		resizeObserver = new ResizeObserver(updatePadding);
-		if (prefixEl.value) resizeObserver.observe(prefixEl.value);
-		if (suffixEl.value) resizeObserver.observe(suffixEl.value);
+		if (prefixEl.value) {
+			resizeObserver.observe(prefixEl.value);
+		}
+		if (suffixEl.value) {
+			resizeObserver.observe(suffixEl.value);
+		}
 		updatePadding();
 	});
 

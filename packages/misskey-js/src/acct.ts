@@ -5,7 +5,9 @@ export type Acct = {
 
 export function parse(_acct: string): Acct {
 	let acct = _acct;
-	if (acct.startsWith('@')) acct = acct.substring(1);
+	if (acct.startsWith('@')) {
+		acct = acct.substring(1);
+	}
 	const [username = '', host] = acct.split('@', 2);
 	return { username, host: host || null };
 }

@@ -43,17 +43,21 @@ import {
 	deliverNoteActivityForApi,
 	deliverToRelaysForApi,
 	renderUpdateForApi,
-	type ApiNoteApDependencies,
-	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import { onMoveAccountForApi } from '../antenna/antennas.js';
-import { renderPersonForApi, type ApiAccountUpdateDependencies } from './account-update.js';
-import { createRoleAssignedNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { renderPersonForApi } from './account-update.js';
+import type { ApiAccountUpdateDependencies } from './account-update.js';
+import { createRoleAssignedNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
-import { genLocalUserUri, type ApiFollowingDependencies } from '../user/following.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
+import { genLocalUserUri } from '../user/following.js';
+import type { ApiFollowingDependencies } from '../user/following.js';
 import { parseApiParams } from '../validation.js';
-import { resolveUserForApi, type ApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { resolveUserForApi } from '../activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
 const accountMoveLogger = new Logger('account-move', 'yellow');
 
@@ -148,7 +152,9 @@ async function enqueueRelationshipJobForApi(
 	rels: { from: ThinUser; to: ThinUser }[],
 	opts: { delay?: number } = {},
 ): Promise<unknown> {
-	if (rels.length === 0) return;
+	if (rels.length === 0) {
+		return;
+	}
 
 	const jobs = rels.map((rel) => ({
 		name,
@@ -174,7 +180,9 @@ async function copyBlockingForApi(deps: ApiAccountMoveDependencies, src: ThinUse
 
 	const blockJobs: { from: ThinUser; to: ThinUser }[] = [];
 	for (const blockerId of srcBlockerIds) {
-		if (dstBlockerIdSet.has(blockerId)) continue;
+		if (dstBlockerIdSet.has(blockerId)) {
+			continue;
+		}
 		blockJobs.push({ from: { id: blockerId }, to: { id: dst.id } });
 	}
 	await enqueueRelationshipJobForApi(deps, 'block', blockJobs);
@@ -182,7 +190,9 @@ async function copyBlockingForApi(deps: ApiAccountMoveDependencies, src: ThinUse
 
 async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
 	const oldMutings = await listActiveMutingsByMuteeIdFromDatabase(deps.db, src.id, new Date());
-	if (oldMutings.length === 0) return;
+	if (oldMutings.length === 0) {
+		return;
+	}
 
 	const existingMutingsMuterUserIds = await listPermanentMuterIdsByMuteeIdFromDatabase(deps.db, dst.id);
 	const existingMutingsMuterUserIdSet = new Set(existingMutingsMuterUserIds);
@@ -196,7 +206,9 @@ async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser
 		return id;
 	};
 	for (const muting of oldMutings) {
-		if (existingMutingsMuterUserIdSet.has(muting.muterId)) continue;
+		if (existingMutingsMuterUserIdSet.has(muting.muterId)) {
+			continue;
+		}
 		newMutings.set(nextId(), {
 			muterId: muting.muterId,
 			muteeId: dst.id,
@@ -215,18 +227,26 @@ async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser
 
 async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldRoleAssignments = await listRoleAssignmentsByUserIdFromDatabase(deps.db, src.id);
-	if (oldRoleAssignments.length === 0) return;
+	if (oldRoleAssignments.length === 0) {
+		return;
+	}
 
 	const now = Date.now();
 	const activeOldRoleAssignments = oldRoleAssignments.filter((a) => a.expiresAt == null || a.expiresAt.getTime() > now);
-	if (activeOldRoleAssignments.length === 0) return;
+	if (activeOldRoleAssignments.length === 0) {
+		return;
+	}
 
 	const roles = await listRolesFromDatabase(deps.db);
 	const roleById = new Map(roles.map((role) => [role.id, role]));
 	for (const oldRoleAssignment of activeOldRoleAssignments) {
 		const role = roleById.get(oldRoleAssignment.roleId);
-		if (role == null) continue;
-		if (!role.preserveAssignmentOnMoveAccount) continue;
+		if (role == null) {
+			continue;
+		}
+		if (!role.preserveAssignmentOnMoveAccount) {
+			continue;
+		}
 
 		try {
 			await assignRoleWithSideEffects(
@@ -244,7 +264,9 @@ async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, 
 				},
 			);
 		} catch (e) {
-			if (e instanceof RoleAlreadyAssignedError) continue;
+			if (e instanceof RoleAlreadyAssignedError) {
+				continue;
+			}
 			throw e;
 		}
 	}
@@ -252,7 +274,9 @@ async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, 
 
 async function updateListsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldMemberships = await listUserListMembershipsByUserIdFromDatabase(deps.db, src.id);
-	if (oldMemberships.length === 0) return;
+	if (oldMemberships.length === 0) {
+		return;
+	}
 
 	const existingUserListIds = (await listUserListMembershipsByUserIdFromDatabase(deps.db, dst.id)).map(
 		(m) => m.userListId,
@@ -268,7 +292,9 @@ async function updateListsForApi(deps: ApiAccountMoveDependencies, src: ThinUser
 		return id;
 	};
 	for (const membership of oldMemberships) {
-		if (existingUserListIdSet.has(membership.userListId)) continue;
+		if (existingUserListIdSet.has(membership.userListId)) {
+			continue;
+		}
 		newMemberships.set(nextId(), {
 			userId: dst.id,
 			userListId: membership.userListId,
@@ -292,7 +318,9 @@ async function adjustFollowingCountsForApi(
 	localFollowerIds: string[],
 	oldAccount: MiUser,
 ): Promise<void> {
-	if (localFollowerIds.length === 0) return;
+	if (localFollowerIds.length === 0) {
+		return;
+	}
 
 	await updateUserInDatabase(deps.db, oldAccount.id, { followersCount: 0, followingCount: 0 });
 	await decrementUsersFollowingCountInDatabase(deps.db, localFollowerIds, 1);
@@ -316,7 +344,9 @@ async function moveFromLocalForApi(
 	dst: MiUser,
 ): Promise<MeDetailedApiResponse> {
 	const dstUri = getUserUriForApi(deps.config, dst);
-	if (dstUri == null) throw iMoveUriNullError();
+	if (dstUri == null) {
+		throw iMoveUriNullError();
+	}
 
 	const alsoKnownAs = src.alsoKnownAs?.includes(dstUri)
 		? src.alsoKnownAs
@@ -351,7 +381,7 @@ async function moveFromLocalForApi(
 			from: { id: updatedSrc.id },
 			to: { id: f.followeeId },
 		})),
-		{ delay: process.env['NODE_ENV'] === 'test' ? 10000 : 1000 * 60 * 60 * 24 },
+		{ delay: process.env['NODE_ENV'] === 'test' ? 10_000 : 1000 * 60 * 60 * 24 },
 	).catch(() => {});
 
 	await postMoveProcessForApi(deps, updatedSrc, dst);
@@ -405,9 +435,15 @@ export async function handleApiIMove(
 ): Promise<MeDetailedApiResponse> {
 	const ps = parseApiParams(iMoveParamDef, body);
 
-	if (!ps.moveToAccount) throw iMoveNoSuchUserError();
-	if (deps.meta.rootUserId === me.id) throw iMoveRootForbiddenError();
-	if (me.movedToUri) throw iMoveAlreadyMovedError();
+	if (!ps.moveToAccount) {
+		throw iMoveNoSuchUserError();
+	}
+	if (deps.meta.rootUserId === me.id) {
+		throw iMoveRootForbiddenError();
+	}
+	if (me.movedToUri) {
+		throw iMoveAlreadyMovedError();
+	}
 
 	let moveTo = await resolveMoveDestinationUserForApi(deps, ps.moveToAccount);
 	const destination = await fetchUserByIdOrFailFromDatabase(deps.db, moveTo.id);
@@ -424,7 +460,9 @@ export async function handleApiIMove(
 		}
 	}
 
-	if (!allowed || moveTo.movedToUri) throw iMoveDestinationAccountForbidsError();
+	if (!allowed || moveTo.movedToUri) {
+		throw iMoveDestinationAccountForbidsError();
+	}
 
 	return await moveFromLocalForApi(deps, me, moveTo);
 }

@@ -11,7 +11,8 @@ import {
 	setRegistryItemInDatabase,
 } from '@/core/registry/RegistryItemStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 describe('RegistryItemStore', () => {

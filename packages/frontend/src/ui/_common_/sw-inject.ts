@@ -39,31 +39,45 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isSafeUrl(value: unknown): value is string {
-	if (typeof value !== 'string' || !value.startsWith('/')) return false;
+	if (typeof value !== 'string' || !value.startsWith('/')) {
+		return false;
+	}
 	return new URL(value, window.location.origin).origin === window.location.origin;
 }
 
 function isPostOptions(value: unknown): value is PostOptions {
-	if (!isRecord(value)) return false;
-	if (value['initialText'] !== undefined && typeof value['initialText'] !== 'string') return false;
+	if (!isRecord(value)) {
+		return false;
+	}
+	if (value['initialText'] !== undefined && typeof value['initialText'] !== 'string') {
+		return false;
+	}
 	for (const key of ['reply', 'renote']) {
 		const note = value[key];
-		if (note !== undefined && (!isRecord(note) || typeof note['id'] !== 'string' || note['id'].length === 0))
+		if (note !== undefined && (!isRecord(note) || typeof note['id'] !== 'string' || note['id'].length === 0)) {
 			return false;
+		}
 	}
 	return true;
 }
 
 function isOrderMessage(data: unknown): data is OrderMessage {
-	if (!isRecord(data) || data['type'] !== 'order' || !isSafeUrl(data['url'])) return false;
-	if (data['loginId'] !== undefined && (typeof data['loginId'] !== 'string' || data['loginId'].length === 0))
+	if (!isRecord(data) || data['type'] !== 'order' || !isSafeUrl(data['url'])) {
 		return false;
-	if (data['order'] === 'push') return true;
+	}
+	if (data['loginId'] !== undefined && (typeof data['loginId'] !== 'string' || data['loginId'].length === 0)) {
+		return false;
+	}
+	if (data['order'] === 'push') {
+		return true;
+	}
 	return data['order'] === 'post' && isPostOptions(data['options']);
 }
 
 export function swInject() {
-	if (injected) return;
+	if (injected) {
+		return;
+	}
 	injected = true;
 	navigator.serviceWorker.addEventListener('message', async (ev) => {
 		if (_DEV_) {
@@ -75,11 +89,15 @@ export function swInject() {
 			return;
 		}
 
-		if (!isOrderMessage(ev.data)) return;
+		if (!isOrderMessage(ev.data)) {
+			return;
+		}
 
 		if (ev.data.loginId && ev.data.loginId !== $i?.id) {
 			return getAccountFromId(ev.data.loginId).then((account) => {
-				if (!account) return;
+				if (!account) {
+					return;
+				}
 				return login(account.token, ev.data.url);
 			});
 		}

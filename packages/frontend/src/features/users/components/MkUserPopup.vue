@@ -87,13 +87,15 @@ const emit = defineEmits<{
 
 const zIndex = os.claimZIndex('middle');
 const user = ref<Misskey.entities.UserDetailed | null>(null);
-const followRelation = computed(() => user.value == null ? null : getFollowRelationBadge($i, user.value));
+const followRelation = computed(() => (user.value == null ? null : getFollowRelationBadge($i, user.value)));
 const top = ref(0);
 const left = ref(0);
 const error = ref(false);
 
 function showMenu(ev: PointerEvent) {
-	if (user.value == null) return;
+	if (user.value == null) {
+		return;
+	}
 	const { menu, cleanup } = getUserMenu(user.value);
 	os.popupMenu(menu, ev.currentTarget ?? ev.target).finally(cleanup);
 }
@@ -103,17 +105,22 @@ async function fetchUser() {
 		user.value = props.q;
 		error.value = false;
 	} else {
-		const query: Misskey.entities.UsersShowRequest = props.q.startsWith('@') ?
-			Misskey.acct.parse(props.q.substring(1)) :
-			{ userId: props.q };
+		const query: Misskey.entities.UsersShowRequest = props.q.startsWith('@')
+			? Misskey.acct.parse(props.q.substring(1))
+			: { userId: props.q };
 
-		misskeyApi('users/show', query).then(res => {
-			if (!props.showing) return;
-			user.value = res;
-			error.value = false;
-		}, () => {
-			error.value = true;
-		});
+		misskeyApi('users/show', query).then(
+			(res) => {
+				if (!props.showing) {
+					return;
+				}
+				user.value = res;
+				error.value = false;
+			},
+			() => {
+				error.value = true;
+			},
+		);
 	}
 }
 
@@ -121,7 +128,7 @@ onMounted(() => {
 	fetchUser();
 
 	const rect = props.source.getBoundingClientRect();
-	const x = ((rect.left + (props.source.offsetWidth / 2)) - (300 / 2)) + window.scrollX;
+	const x = rect.left + props.source.offsetWidth / 2 - 300 / 2 + window.scrollX;
 	const y = rect.top + props.source.offsetHeight + window.scrollY;
 
 	top.value = y;

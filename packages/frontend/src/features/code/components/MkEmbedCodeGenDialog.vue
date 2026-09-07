@@ -155,12 +155,9 @@ const embedPreviewUrl = computed(() => {
 
 const isEmbedWithScrollbar = computed(() => embedRouteWithScrollbar.includes(props.entity));
 const header = ref(props.params?.header ?? true);
-const maxHeight = ref(props.params?.maxHeight !== 0 ? props.params?.maxHeight ?? null : 500);
+const maxHeight = ref(props.params?.maxHeight !== 0 ? (props.params?.maxHeight ?? null) : 500);
 
-const {
-	model: colorMode,
-	def: colorModeDef,
-} = useMkSelect({
+const { model: colorMode, def: colorModeDef } = useMkSelect({
 	items: [
 		{ value: 'auto', label: i18n.ts.syncDeviceDarkMode },
 		{ value: 'light', label: i18n.ts.light },
@@ -248,7 +245,9 @@ function windowEventHandler(event: MessageEvent) {
 }
 
 function calcScale() {
-	if (!resizerRootEl.value) return;
+	if (!resizerRootEl.value) {
+		return;
+	}
 	const previewWidth = resizerRootEl.value.clientWidth - 40; // 左右の余白 20pxずつ
 	const previewHeight = resizerRootEl.value.clientHeight - 40; // 上下の余白 20pxずつ
 	const iframeWidth = 500;
@@ -258,7 +257,9 @@ function calcScale() {
 
 onMounted(() => {
 	window.addEventListener('message', windowEventHandler);
-	if (!resizerRootEl.value) return;
+	if (!resizerRootEl.value) {
+		return;
+	}
 	resizeObserver.observe(resizerRootEl.value);
 });
 

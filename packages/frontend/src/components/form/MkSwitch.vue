@@ -44,7 +44,9 @@ const emit = defineEmits<{
 
 const checked = toRefs(props).modelValue;
 const toggle = () => {
-	if (props.disabled) return;
+	if (props.disabled) {
+		return;
+	}
 	emit('update:modelValue', !checked.value);
 	emit('change', !checked.value);
 };

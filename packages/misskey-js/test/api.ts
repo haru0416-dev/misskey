@@ -3,22 +3,20 @@ import { APIClient, isAPIError } from '../src/api.js';
 
 describe('API', () => {
 	test('success', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async (url, options) => {
-				if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
-					if (options.body) {
-						const body = JSON.parse(options.body as string);
-						if (body.i === 'TOKEN') {
-							return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
-						}
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+			if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
+				if (options.body) {
+					const body = JSON.parse(options.body as string);
+					if (body.i === 'TOKEN') {
+						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
-
-					return new Response(null, { status: 400 });
 				}
 
-				return new Response(null, { status: 404 });
-			});
+				return new Response(null, { status: 400 });
+			}
+
+			return new Response(null, { status: 404 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -28,12 +26,12 @@ describe('API', () => {
 		const res = await cli.request('i');
 
 		expect(res).toEqual({
-			id: 'foo'
+			id: 'foo',
 		});
 
 		fetch('https://misskey.test/api/i', {
 			method: 'POST',
-		})
+		});
 
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/i', {
 			method: 'POST',
@@ -49,20 +47,18 @@ describe('API', () => {
 	});
 
 	test('with params', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async (url, options) => {
-				if (url === 'https://misskey.test/api/notes/show' && options?.method === 'POST') {
-					if (options.body) {
-						const body = JSON.parse(options.body as string);
-						if (body.i === 'TOKEN' && body.noteId === 'aaaaa') {
-							return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
-						}
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+			if (url === 'https://misskey.test/api/notes/show' && options?.method === 'POST') {
+				if (options.body) {
+					const body = JSON.parse(options.body as string);
+					if (body.i === 'TOKEN' && body.noteId === 'aaaaa') {
+						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
-					return new Response(null, { status: 400 });
 				}
-				return new Response(null, { status: 404 });
-			});
+				return new Response(null, { status: 400 });
+			}
+			return new Response(null, { status: 404 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -72,7 +68,7 @@ describe('API', () => {
 		const res = await cli.request('notes/show', { noteId: 'aaaaa' });
 
 		expect(res).toEqual({
-			id: 'foo'
+			id: 'foo',
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/notes/show', {
@@ -89,20 +85,18 @@ describe('API', () => {
 	});
 
 	test('multipart/form-data', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async (url, options) => {
-				if (url === 'https://misskey.test/api/drive/files/create' && options?.method === 'POST') {
-					if (options.body instanceof FormData) {
-						const file = options.body.get('file');
-						if (file instanceof File && file.name === 'foo.txt') {
-							return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
-						}
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+			if (url === 'https://misskey.test/api/drive/files/create' && options?.method === 'POST') {
+				if (options.body instanceof FormData) {
+					const file = options.body.get('file');
+					if (file instanceof File && file.name === 'foo.txt') {
+						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
-					return new Response(null, { status: 400 });
 				}
-				return new Response(null, { status: 404 });
-			});
+				return new Response(null, { status: 400 });
+			}
+			return new Response(null, { status: 404 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -117,7 +111,7 @@ describe('API', () => {
 		});
 
 		expect(res).toEqual({
-			id: 'foo'
+			id: 'foo',
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/drive/files/create', {
@@ -132,14 +126,12 @@ describe('API', () => {
 	});
 
 	test('204 No Content で null が返る', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async (url, options) => {
-				if (url === 'https://misskey.test/api/reset-password' && options?.method === 'POST') {
-					return new Response(null, { status: 204 });
-				}
-				return new Response(null, { status: 404 });
-			});
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+			if (url === 'https://misskey.test/api/reset-password' && options?.method === 'POST') {
+				return new Response(null, { status: 204 });
+			}
+			return new Response(null, { status: 404 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -164,29 +156,29 @@ describe('API', () => {
 	});
 
 	test('インスタンスの credential が指定されていても引数で credential が null ならば null としてリクエストされる', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async (url, options) => {
-				if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
-					if (options.body) {
-						const body = JSON.parse(options.body as string);
-						if (typeof body.i === 'string') {
-							return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
-						} else {
-							return new Response(JSON.stringify({
-								error: {
-									message: 'Credential required.',
-									code: 'CREDENTIAL_REQUIRED',
-									id: '1384574d-a912-4b81-8601-c7b1c4085df1',
-									kind: 'client',
-								}
-							}), { status: 401 });
-						}
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+			if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
+				if (options.body) {
+					const body = JSON.parse(options.body as string);
+					if (typeof body.i === 'string') {
+						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
-					return new Response(null, { status: 400 });
+					return new Response(
+						JSON.stringify({
+							error: {
+								message: 'Credential required.',
+								code: 'CREDENTIAL_REQUIRED',
+								id: '1384574d-a912-4b81-8601-c7b1c4085df1',
+								kind: 'client',
+							},
+						}),
+						{ status: 401 },
+					);
 				}
-				return new Response(null, { status: 404 });
-			});
+				return new Response(null, { status: 400 });
+			}
+			return new Response(null, { status: 404 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -194,7 +186,7 @@ describe('API', () => {
 		});
 		const error = await cli.request('i', {}, null).then(
 			() => null,
-			reason => reason,
+			(reason) => reason,
 		);
 
 		expect(error).not.toBeNull();
@@ -204,18 +196,19 @@ describe('API', () => {
 	});
 
 	test('api error', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async () => {
-				return new Response(JSON.stringify({
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+			return new Response(
+				JSON.stringify({
 					error: {
 						message: 'Internal error occurred. Please contact us if the error persists.',
 						code: 'INTERNAL_ERROR',
 						id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
 						kind: 'server',
 					},
-				}), { status: 500 });
-			});
+				}),
+				{ status: 500 },
+			);
+		});
 
 		try {
 			const cli = new APIClient({
@@ -239,7 +232,7 @@ describe('API', () => {
 		});
 		const reason = await cli.request('i').then(
 			() => undefined,
-			error => error,
+			(error) => error,
 		);
 
 		expect(reason).toBeNull();
@@ -247,11 +240,9 @@ describe('API', () => {
 	});
 
 	test('network error', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async () => {
-				throw new Error('Network error');
-			});
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+			throw new Error('Network error');
+		});
 
 		try {
 			const cli = new APIClient({
@@ -268,11 +259,9 @@ describe('API', () => {
 	});
 
 	test('json parse error', async () => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async () => {
-				return new Response('<html>I AM NOT JSON</html>', { status: 500 });
-			});
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+			return new Response('<html>I AM NOT JSON</html>', { status: 500 });
+		});
 
 		try {
 			const cli = new APIClient({
@@ -288,13 +277,11 @@ describe('API', () => {
 		}
 	});
 
-	test('admin/roles/create の型が合う', async() => {
-		const fetchMock = vi
-			.spyOn(globalThis, 'fetch')
-			.mockImplementation(async () => {
-				// レスポンスの型検証はこのテストの対象外のため、空のオブジェクトを返す。
-				return new Response('{}', { status: 200 });
-			});
+	test('admin/roles/create の型が合う', async () => {
+		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+			// レスポンスの型検証はこのテストの対象外のため、空のオブジェクトを返す。
+			return new Response('{}', { status: 200 });
+		});
 
 		const cli = new APIClient({
 			origin: 'https://misskey.test',
@@ -324,5 +311,5 @@ describe('API', () => {
 		});
 
 		fetchMock.mockRestore();
-	})
+	});
 });

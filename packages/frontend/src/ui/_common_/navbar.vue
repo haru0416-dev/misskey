@@ -108,13 +108,17 @@ const emit = defineEmits<{
 
 const forceIconOnly = ref(!props.asDrawer && window.innerWidth <= 1279);
 const iconOnly = computed(() => {
-	return !props.asDrawer && (forceIconOnly.value || (store.menuDisplay === 'sideIcon'));
+	return !props.asDrawer && (forceIconOnly.value || store.menuDisplay === 'sideIcon');
 });
 
 const otherMenuItemIndicated = computed(() => {
 	for (const [key, def] of Object.entries(navbarItemDef)) {
-		if (prefer.menu.includes(key)) continue;
-		if (def.indicated) return true;
+		if (prefer.menu.includes(key)) {
+			continue;
+		}
+		if (def.indicated) {
+			return true;
+		}
 	}
 	return false;
 });
@@ -128,9 +132,12 @@ onUnmounted(() => {
 	window.removeEventListener('resize', calcViewState);
 });
 
-watch(() => store.menuDisplay, () => {
-	calcViewState();
-});
+watch(
+	() => store.menuDisplay,
+	() => {
+		calcViewState();
+	},
+);
 
 function toggleIconOnly() {
 	if (prefer.animation) {
@@ -143,17 +150,23 @@ function toggleIconOnly() {
 }
 
 function toggleRealtimeMode(ev: PointerEvent) {
-	os.popupMenu([{
-		type: 'label',
-		text: i18n.ts.realtimeMode,
-	}, {
-		text: store.realtimeMode ? i18n.ts.turnItOff : i18n.ts.turnItOn,
-		icon: store.realtimeMode ? 'ti ti-bolt-off' : 'ti ti-bolt',
-		action: () => {
-			store.set('realtimeMode', !store.realtimeMode);
-			window.location.reload();
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				type: 'label',
+				text: i18n.ts.realtimeMode,
+			},
+			{
+				text: store.realtimeMode ? i18n.ts.turnItOff : i18n.ts.turnItOn,
+				icon: store.realtimeMode ? 'ti ti-bolt-off' : 'ti ti-bolt',
+				action: () => {
+					store.set('realtimeMode', !store.realtimeMode);
+					window.location.reload();
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 async function openAccountMenu(ev: PointerEvent) {
@@ -166,12 +179,18 @@ async function openAccountMenu(ev: PointerEvent) {
 
 async function more(ev: PointerEvent) {
 	const target = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
-	if (!target) return;
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/overlay/MkLaunchPad.vue').then(x => x.default), {
-		anchorElement: target,
-	}, {
-		closed: () => dispose(),
-	});
+	if (!target) {
+		return;
+	}
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/components/overlay/MkLaunchPad.vue').then((x) => x.default),
+		{
+			anchorElement: target,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function menuEdit() {

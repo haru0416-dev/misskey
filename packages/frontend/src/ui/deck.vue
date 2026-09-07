@@ -121,7 +121,14 @@ import XRoleTimelineColumn from '@/ui/deck/role-timeline-column.vue';
 import XChatColumn from '@/ui/deck/chat-column.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { mainRouter } from '@/router.js';
-import { columns, layout, columnTypes, switchProfileMenu, addColumn as addColumnToStore, deleteProfile as deleteProfile_ } from '@/deck.js';
+import {
+	columns,
+	layout,
+	columnTypes,
+	switchProfileMenu,
+	addColumn as addColumnToStore,
+	deleteProfile as deleteProfile_,
+} from '@/deck.js';
 import { shouldSuggestRestoreBackup } from '@/preferences/utility.js';
 import { shouldSuggestReload } from '@/ui/_common_/reload-suggest.js';
 import { startTour } from '@/features/onboarding/tour.js';
@@ -145,8 +152,10 @@ const columnComponents = {
 };
 
 mainRouter.navHook = (path, flag): boolean => {
-	if (flag === 'forcePage') return false;
-	const noMainColumn = !columns.value.some(x => x.type === 'main');
+	if (flag === 'forcePage') {
+		return false;
+	}
+	const noMainColumn = !columns.value.some((x) => x.type === 'main');
 	if (prefer['deck.navWindow'] || noMainColumn) {
 		os.pageWindow(path);
 		return true;
@@ -178,11 +187,16 @@ const swicthProfileButtonEl = useTemplateRef('swicthProfileButtonEl');
 async function addColumn(ev: PointerEvent) {
 	const { canceled, result: column } = await os.select({
 		title: i18n.ts._deck.addColumn,
-		items: columnTypes.filter(column => column !== 'chat' || $i == null || $i.policies.chatAvailability !== 'unavailable').map(column => ({
-			value: column, label: i18n.ts._deck._columns[column],
-		})),
+		items: columnTypes
+			.filter((column) => column !== 'chat' || $i == null || $i.policies.chatAvailability !== 'unavailable')
+			.map((column) => ({
+				value: column,
+				label: i18n.ts._deck._columns[column],
+			})),
 	});
-	if (canceled || column == null) return;
+	if (canceled || column == null) {
+		return;
+	}
 
 	addColumnToStore({
 		type: column,
@@ -194,10 +208,15 @@ async function addColumn(ev: PointerEvent) {
 }
 
 function onContextmenu(ev: PointerEvent) {
-	os.contextMenu([{
-		text: i18n.ts._deck.addColumn,
-		action: addColumn,
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				text: i18n.ts._deck.addColumn,
+				action: addColumn,
+			},
+		],
+		ev,
+	);
 }
 
 // タッチでスクロールしてるときはスナップスクロールを有効にする
@@ -216,13 +235,17 @@ function onWheel(ev: WheelEvent) {
 }
 
 async function deleteProfile() {
-	if (prefer['deck.profile'] == null) return;
+	if (prefer['deck.profile'] == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: prefer['deck.profile'] }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await deleteProfile_(prefer['deck.profile']);
 
@@ -230,25 +253,27 @@ async function deleteProfile() {
 }
 
 function showTour() {
-	if (addColumnButtonEl.value == null ||
-		settingsButtonEl.value == null ||
-		swicthProfileButtonEl.value == null) {
+	if (addColumnButtonEl.value == null || settingsButtonEl.value == null || swicthProfileButtonEl.value == null) {
 		return;
 	}
 
-	startTour([{
-		element: addColumnButtonEl.value,
-		title: i18n.ts._deck._howToUse.addColumn_title,
-		description: i18n.ts._deck._howToUse.addColumn_description,
-	}, {
-		element: settingsButtonEl.value,
-		title: i18n.ts._deck._howToUse.settings_title,
-		description: i18n.ts._deck._howToUse.settings_description,
-	}, {
-		element: swicthProfileButtonEl.value,
-		title: i18n.ts._deck._howToUse.switchProfile_title,
-		description: i18n.ts._deck._howToUse.switchProfile_description,
-	}]).then(() => {
+	startTour([
+		{
+			element: addColumnButtonEl.value,
+			title: i18n.ts._deck._howToUse.addColumn_title,
+			description: i18n.ts._deck._howToUse.addColumn_description,
+		},
+		{
+			element: settingsButtonEl.value,
+			title: i18n.ts._deck._howToUse.settings_title,
+			description: i18n.ts._deck._howToUse.settings_description,
+		},
+		{
+			element: swicthProfileButtonEl.value,
+			title: i18n.ts._deck._howToUse.switchProfile_title,
+			description: i18n.ts._deck._howToUse.switchProfile_description,
+		},
+	]).then(() => {
 		closeTip('deck');
 	});
 }

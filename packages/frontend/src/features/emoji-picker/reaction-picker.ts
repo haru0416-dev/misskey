@@ -49,10 +49,14 @@ class ReactionPicker {
 			},
 			{
 				done: (reaction: string) => {
-					if (onChosen) onChosen(reaction);
+					if (onChosen) {
+						onChosen(reaction);
+					}
 				},
 				closed: () => {
-					if (onClosed) onClosed();
+					if (onClosed) {
+						onClosed();
+					}
 					dispose();
 				},
 			},

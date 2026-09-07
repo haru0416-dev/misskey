@@ -4,7 +4,8 @@
  */
 
 import { and, eq, isNull } from 'drizzle-orm';
-import { registryItem, type RegistryItemRow } from '@/db/schema/registry-item.js';
+import { registryItem } from '@/db/schema/registry-item.js';
+import type { RegistryItemRow } from '@/db/schema/registry-item.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiRegistryItem } from '@/models/RegistryItem.js';
 import type { MiUser } from '@/models/User.js';

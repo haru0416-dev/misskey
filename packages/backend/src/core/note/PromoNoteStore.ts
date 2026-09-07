@@ -4,7 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { promoNote, type PromoNoteInsert } from '@/db/schema/promo-note.js';
+import { promoNote } from '@/db/schema/promo-note.js';
+import type { PromoNoteInsert } from '@/db/schema/promo-note.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
 

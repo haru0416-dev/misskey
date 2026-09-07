@@ -41,7 +41,9 @@ export interface IObject {
 }
 
 export function getApIds(value: ApObject | undefined): string[] {
-	if (value == null) return [];
+	if (value == null) {
+		return [];
+	}
 	const array = Array.isArray(value) ? value : [value];
 	return array.map((x) => getApId(x));
 }
@@ -52,8 +54,12 @@ export function getOneApId(value: ApObject): string {
 }
 
 export function getApId(value: string | IObject | undefined): string {
-	if (typeof value === 'string') return value;
-	if (value != null && typeof value.id === 'string') return value.id;
+	if (typeof value === 'string') {
+		return value;
+	}
+	if (value != null && typeof value.id === 'string') {
+		return value.id;
+	}
 	throw new Error('cannot determine id');
 }
 
@@ -62,8 +68,12 @@ export function getApId(value: string | IObject | undefined): string {
  * 詳細: https://github.com/misskey-dev/misskey/issues/14239
  */
 export function getApType(value: IObject): string | null {
-	if (typeof value.type === 'string') return value.type;
-	if (Array.isArray(value.type) && typeof value.type[0] === 'string') return value.type[0];
+	if (typeof value.type === 'string') {
+		return value.type;
+	}
+	if (Array.isArray(value.type) && typeof value.type[0] === 'string') {
+		return value.type[0];
+	}
 	return null;
 }
 
@@ -73,8 +83,12 @@ export function getOneApHrefNullable(value: ApObject | undefined): string | unde
 }
 
 export function getApHrefNullable(value: string | IObject | undefined): string | undefined {
-	if (typeof value === 'string') return value;
-	if (typeof value?.href === 'string') return value.href;
+	if (typeof value === 'string') {
+		return value;
+	}
+	if (typeof value?.href === 'string') {
+		return value.href;
+	}
 	return undefined;
 }
 

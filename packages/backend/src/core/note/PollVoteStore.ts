@@ -4,7 +4,8 @@
  */
 
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { pollVote, type PollVoteInsert, type PollVoteRow } from '@/db/schema/poll-vote.js';
+import { pollVote } from '@/db/schema/poll-vote.js';
+import type { PollVoteInsert, PollVoteRow } from '@/db/schema/poll-vote.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
@@ -47,7 +48,9 @@ export async function listPollVotesByNoteIdsAndUserFromDatabase(
 	noteIds: MiNote['id'][],
 	userId: MiUser['id'],
 ): Promise<MiPollVote[]> {
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()
@@ -62,7 +65,9 @@ export async function listPollVotesByNoteIdsAndUserIdsFromDatabase(
 	noteIds: MiNote['id'][],
 	userIds: MiUser['id'][],
 ): Promise<MiPollVote[]> {
-	if (noteIds.length === 0 || userIds.length === 0) return [];
+	if (noteIds.length === 0 || userIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select()

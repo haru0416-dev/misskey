@@ -6,7 +6,8 @@
 import * as assert from 'assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
-import { fetchNoteByIdFromDatabase, openTestDatabase, type TestDatabase } from '../fixtures.js';
+import { fetchNoteByIdFromDatabase, openTestDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import { api, castAsError, initTestDb, POLL, post, role, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 

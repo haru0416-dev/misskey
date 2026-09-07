@@ -45,35 +45,39 @@ import { prefer } from '@/preferences';
 
 const { themes: installedThemes } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);
-getBuiltinThemes().then(themes => {
+getBuiltinThemes().then((themes) => {
 	builtinThemes.value = themes;
 });
 
-const {
-	model: selectedThemeId,
-	def: selectedThemeIdDef,
-} = useMkSelect({
-	items: computed<MkSelectItem<string | null>[]>(() => [{
-		type: 'group',
-		label: i18n.ts._theme.installedThemes,
-		items: installedThemes.value.map(x => ({ label: x.name, value: x.id })),
-	}, {
-		type: 'group',
-		label: i18n.ts._theme.builtinThemes,
-		items: builtinThemes.value.map(x => ({ label: x.name, value: x.id })),
-	}]),
+const { model: selectedThemeId, def: selectedThemeIdDef } = useMkSelect({
+	items: computed<MkSelectItem<string | null>[]>(() => [
+		{
+			type: 'group',
+			label: i18n.ts._theme.installedThemes,
+			items: installedThemes.value.map((x) => ({ label: x.name, value: x.id })),
+		},
+		{
+			type: 'group',
+			label: i18n.ts._theme.builtinThemes,
+			items: builtinThemes.value.map((x) => ({ label: x.name, value: x.id })),
+		},
+	]),
 	initialValue: null,
 });
 
 const themes = computed(() => [...installedThemes.value, ...builtinThemes.value]);
 
 const selectedTheme = computed(() => {
-	if (selectedThemeId.value == null) return null;
-	return themes.value.find(x => x.id === selectedThemeId.value);
+	if (selectedThemeId.value == null) {
+		return null;
+	}
+	return themes.value.find((x) => x.id === selectedThemeId.value);
 });
 
 const selectedThemeCode = computed(() => {
-	if (selectedTheme.value == null) return null;
+	if (selectedTheme.value == null) {
+		return null;
+	}
 	return JSON5.stringify(selectedTheme.value, null, '\t');
 });
 
@@ -83,7 +87,7 @@ function copyThemeCode() {
 
 function uninstall() {
 	removeTheme(selectedTheme.value as Theme);
-	installedThemes.value = installedThemes.value.filter(t => t.id !== selectedThemeId.value);
+	installedThemes.value = installedThemes.value.filter((t) => t.id !== selectedThemeId.value);
 	selectedThemeId.value = null;
 	os.success();
 }

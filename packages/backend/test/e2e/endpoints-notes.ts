@@ -100,7 +100,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -108,6 +107,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -122,7 +122,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt } from '../endpoints-context.js';
+import { createEndpointsContext, getAt } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -161,15 +162,15 @@ describe('Endpoints', () => {
 					id: genId(now),
 					name: primary,
 					mentionedUserIds: [alice.id, bob.id],
-					mentionedUsersCount: 1000002,
+					mentionedUsersCount: 1_000_002,
 					mentionedLocalUserIds: [alice.id, bob.id],
-					mentionedLocalUsersCount: 1000002,
+					mentionedLocalUsersCount: 1_000_002,
 					mentionedRemoteUserIds: [],
 					mentionedRemoteUsersCount: 0,
 					attachedUserIds: [alice.id],
-					attachedUsersCount: 1000001,
+					attachedUsersCount: 1_000_001,
 					attachedLocalUserIds: [alice.id],
-					attachedLocalUsersCount: 1000001,
+					attachedLocalUsersCount: 1_000_001,
 					attachedRemoteUserIds: [],
 					attachedRemoteUsersCount: 0,
 				},
@@ -177,9 +178,9 @@ describe('Endpoints', () => {
 					id: genId(now + 1),
 					name: secondary,
 					mentionedUserIds: [alice.id],
-					mentionedUsersCount: 1000001,
+					mentionedUsersCount: 1_000_001,
 					mentionedLocalUserIds: [alice.id],
-					mentionedLocalUsersCount: 1000001,
+					mentionedLocalUsersCount: 1_000_001,
 					mentionedRemoteUserIds: [],
 					mentionedRemoteUsersCount: 0,
 					attachedUserIds: [],
@@ -197,8 +198,8 @@ describe('Endpoints', () => {
 			});
 			expect(list.status).toBe(200);
 			expect(getAt(list.body, 0).tag).toBe(primary);
-			expect(getAt(list.body, 0).mentionedUsersCount).toBe(1000002);
-			expect(getAt(list.body, 0).attachedLocalUsersCount).toBe(1000001);
+			expect(getAt(list.body, 0).mentionedUsersCount).toBe(1_000_002);
+			expect(getAt(list.body, 0).attachedLocalUsersCount).toBe(1_000_001);
 
 			const search = await api('hashtags/search', {
 				query: `hono_hashtag_`,
@@ -213,7 +214,7 @@ describe('Endpoints', () => {
 			});
 			expect(shown.status).toBe(200);
 			expect(shown.body.tag).toBe(primary);
-			expect(shown.body.mentionedLocalUsersCount).toBe(1000002);
+			expect(shown.body.mentionedLocalUsersCount).toBe(1_000_002);
 
 			const missing = await api('hashtags/show', {
 				tag: `missing_${primary}`,
@@ -2035,7 +2036,7 @@ describe('Endpoints', () => {
 				'notes/create',
 				{
 					text: 'expired poll',
-					poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10000 },
+					poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10_000 },
 				},
 				alice,
 			);

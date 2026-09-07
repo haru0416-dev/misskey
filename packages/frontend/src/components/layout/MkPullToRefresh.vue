@@ -48,42 +48,52 @@ let releaseAnimationResolve: (() => void) | null = null;
 const rootEl = useTemplateRef('rootEl');
 let scrollEl: HTMLElement | null = null;
 
-const props = withDefaults(defineProps<{
-	refresher: () => Promise<void>;
-}>(), {
-	refresher: () => Promise.resolve(),
-});
+const props = withDefaults(
+	defineProps<{
+		refresher: () => Promise<void>;
+	}>(),
+	{
+		refresher: () => Promise.resolve(),
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'refresh'): void;
 }>();
 
 function getScreenY(event: TouchEvent | MouseEvent | PointerEvent): number {
-	if (('touches' in event) && event.touches[0] && event.touches[0].screenY != null) {
+	if ('touches' in event && event.touches[0] && event.touches[0].screenY != null) {
 		return event.touches[0].screenY;
 	} else if ('screenY' in event) {
 		return event.screenY;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
 // ページ上端では縦方向の overscroll を無効にし、passive touch listener に処理を渡す。
 function lockDownScroll() {
-	if (scrollEl == null) return;
+	if (scrollEl == null) {
+		return;
+	}
 	scrollEl.style.touchAction = 'pan-x pan-down pinch-zoom';
 	scrollEl.style.overscrollBehavior = 'auto none';
 }
 
 function unlockDownScroll() {
-	if (scrollEl == null) return;
+	if (scrollEl == null) {
+		return;
+	}
 	scrollEl.style.touchAction = 'auto';
 	scrollEl.style.overscrollBehavior = 'auto contain';
 }
 
 function moveStartByMouse(event: MouseEvent) {
-	if (event.button !== 1) return;
-	if (isRefreshing.value) return;
+	if (event.button !== 1) {
+		return;
+	}
+	if (isRefreshing.value) {
+		return;
+	}
 
 	const scrollPos = scrollEl!.scrollTop;
 	if (scrollPos !== 0) {
@@ -104,7 +114,9 @@ function moveStartByMouse(event: MouseEvent) {
 }
 
 function moveStartByTouch(event: TouchEvent) {
-	if (isRefreshing.value) return;
+	if (isRefreshing.value) {
+		return;
+	}
 
 	const scrollPos = scrollEl!.scrollTop;
 	if (scrollPos !== 0) {
@@ -136,7 +148,7 @@ function cancelReleaseAnimation() {
 }
 
 function moveBySystem(to: number): Promise<void> {
-	return new Promise(r => {
+	return new Promise((r) => {
 		cancelReleaseAnimation();
 		const startHeight = pullDistance.value;
 		const overHeight = pullDistance.value - to;
@@ -158,7 +170,9 @@ function moveBySystem(to: number): Promise<void> {
 				return;
 			}
 			const nextHeight = startHeight - (overHeight / RELEASE_TRANSITION_DURATION) * time;
-			if (pullDistance.value >= nextHeight) pullDistance.value = nextHeight;
+			if (pullDistance.value >= nextHeight) {
+				pullDistance.value = nextHeight;
+			}
 			releaseAnimationFrameId = window.requestAnimationFrame(animate);
 		};
 		releaseAnimationFrameId = window.requestAnimationFrame(animate);
@@ -194,7 +208,7 @@ function onPullRelease() {
 			});
 		});
 	} else {
-		closeContent().then(() => isPulling.value = false);
+		closeContent().then(() => (isPulling.value = false));
 	}
 }
 
@@ -254,7 +268,9 @@ function refreshFinished() {
 }
 
 onMounted(() => {
-	if (rootEl.value == null) return;
+	if (rootEl.value == null) {
+		return;
+	}
 	scrollEl = getScrollContainer(rootEl.value);
 	lockDownScroll();
 	rootEl.value.addEventListener('mousedown', moveStartByMouse, { passive: false }); // preventDefaultするため
@@ -271,9 +287,15 @@ onUnmounted(() => {
 	window.removeEventListener('touchcancel', onTouchEnd);
 	scheduleMoving.cancel();
 	cancelReleaseAnimation();
-	if (rootEl.value) rootEl.value.removeEventListener('mousedown', moveStartByMouse);
-	if (rootEl.value) rootEl.value.removeEventListener('touchstart', moveStartByTouch);
-	if (rootEl.value) rootEl.value.removeEventListener('touchend', toggleScrollLockOnTouchEnd);
+	if (rootEl.value) {
+		rootEl.value.removeEventListener('mousedown', moveStartByMouse);
+	}
+	if (rootEl.value) {
+		rootEl.value.removeEventListener('touchstart', moveStartByTouch);
+	}
+	if (rootEl.value) {
+		rootEl.value.removeEventListener('touchend', toggleScrollLockOnTouchEnd);
+	}
 });
 </script>
 

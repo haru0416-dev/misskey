@@ -126,9 +126,13 @@ export class WatermarkRenderer {
 				const textureKey = `text:${layer.text}`;
 				unused.delete(textureKey);
 				if (!this.compositor.hasTexture(textureKey)) {
-					if (_DEV_) console.log(`Baking text texture of <${textureKey}>...`);
+					if (_DEV_) {
+						console.log(`Baking text texture of <${textureKey}>...`);
+					}
 					const image = await createTextureFromText(layer.text);
-					if (image != null) this.compositor.registerTexture(textureKey, image);
+					if (image != null) {
+						this.compositor.registerTexture(textureKey, image);
+					}
 				}
 
 				compositorLayers.push({
@@ -149,9 +153,13 @@ export class WatermarkRenderer {
 				const textureKey = `url:${layer.imageUrl}`;
 				unused.delete(textureKey);
 				if (!this.compositor.hasTexture(textureKey)) {
-					if (_DEV_) console.log(`Baking url image texture of <${textureKey}>...`);
+					if (_DEV_) {
+						console.log(`Baking url image texture of <${textureKey}>...`);
+					}
 					const image = await createTextureFromUrl(layer.imageUrl);
-					if (image != null) this.compositor.registerTexture(textureKey, image);
+					if (image != null) {
+						this.compositor.registerTexture(textureKey, image);
+					}
 				}
 
 				compositorLayers.push({
@@ -172,7 +180,9 @@ export class WatermarkRenderer {
 				const textureKey = `qr:${layer.data}`;
 				unused.delete(textureKey);
 				if (!this.compositor.hasTexture(textureKey)) {
-					if (_DEV_) console.log(`Baking qr texture of <${textureKey}>...`);
+					if (_DEV_) {
+						console.log(`Baking qr texture of <${textureKey}>...`);
+					}
 					const image = await createTextureFromQr({ data: layer.data });
 					if (image != null) {
 						try {
@@ -241,7 +251,9 @@ export class WatermarkRenderer {
 		}
 
 		for (const k of unused) {
-			if (_DEV_) console.log(`Dispose unused texture <${k}>...`);
+			if (_DEV_) {
+				console.log(`Dispose unused texture <${k}>...`);
+			}
 			this.compositor.unregisterTexture(k);
 		}
 
@@ -261,7 +273,9 @@ export class WatermarkRenderer {
 }
 
 async function createTextureFromUrl(imageUrl: string | null) {
-	if (imageUrl == null || imageUrl.trim() === '') return null;
+	if (imageUrl == null || imageUrl.trim() === '') {
+		return null;
+	}
 
 	const image = await new Promise<HTMLImageElement>((resolve, reject) => {
 		const img = new Image();
@@ -270,13 +284,17 @@ async function createTextureFromUrl(imageUrl: string | null) {
 		img.src = getProxiedImageUrl(imageUrl); // CORS対策
 	}).catch(() => null);
 
-	if (image == null) return null;
+	if (image == null) {
+		return null;
+	}
 
 	return image;
 }
 
 async function createTextureFromText(text: string | null, resolution = 2048) {
-	if (text == null || text.trim() === '') return null;
+	if (text == null || text.trim() === '') {
+		return null;
+	}
 
 	const ctx = window.document.createElement('canvas').getContext('2d')!;
 	ctx.canvas.width = resolution;
@@ -336,7 +354,9 @@ async function createTextureFromQr(options: { data: string | null }, resolution 
 	});
 
 	const blob = (await qrCodeInstance.getRawData('png')) as Blob | null;
-	if (blob == null) return null;
+	if (blob == null) {
+		return null;
+	}
 
 	const image = await window.createImageBitmap(blob);
 

@@ -3,12 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { toPuny } from '@/misc/to-puny.js';
 import * as Bull from 'bullmq';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
-import { listSuspendedInstancesFromDatabase } from '@/core/instance/InstanceStore.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { MemorySingleCache } from '@/misc/cache.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -44,10 +41,6 @@ export type QueueDeliverDependencies = {
 	chartWriters: Pick<ChartWriters, 'instanceChart' | 'apRequestChart' | 'federationChart'>;
 };
 
-// キュー処理関数はプロセスごとに1つだけ生成されるため、停止ホストキャッシュをモジュールスコープで共有する。
-// Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
-const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60);
-
 // 配送後のインスタンス情報更新は非同期のため、失敗を unhandled rejection にしない。
 const logger = new MisskeyLogger('queue').createSubLogger('deliver');
 const logBackgroundInstanceUpdateError = (error: unknown): void => {
@@ -75,18 +68,13 @@ export async function handleQueueDeliver(
 		return 'skip (blocked)';
 	}
 
-	let suspendedHosts = suspendedHostsCache.get();
-	if (suspendedHosts == null) {
-		suspendedHosts = new Set((await listSuspendedInstancesFromDatabase(deps.db)).map((x) => x.host));
-		suspendedHostsCache.set(suspendedHosts);
-	}
-	if (suspendedHosts.has(toPuny(host))) {
-		return 'skip (suspended)';
-	}
-
 	const i = await (deps.meta.enableStatsForFederatedInstances
 		? fetchOrRegisterFederatedInstance(deps, host)
 		: fetchFederatedInstance(deps, host));
+
+	if (i != null && i.suspensionState !== 'none') {
+		return 'skip (suspended)';
+	}
 
 	if (i != null && isDeliverSuspendedSoftware(deps.meta, i)) {
 		return 'skip (software suspended)';
@@ -101,7 +89,9 @@ export async function handleQueueDeliver(
 		process.nextTick(
 			() =>
 				void (async () => {
-					if (i == null) return;
+					if (i == null) {
+						return;
+					}
 
 					if (i.isNotResponding) {
 						await updateFederatedInstance(deps, i.id, {

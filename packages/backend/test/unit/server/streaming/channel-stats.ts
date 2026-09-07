@@ -12,8 +12,10 @@ import { EventEmitter } from 'node:events';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { StreamConnection, type StreamConnectionDependencies } from '@/server/streaming/connection.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import { StreamConnection } from '@/server/streaming/connection.js';
+import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
 
 function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 	const raw: string[] = [];

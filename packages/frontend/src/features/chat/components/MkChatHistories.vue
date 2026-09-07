@@ -42,18 +42,22 @@ import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
 
-const history = ref<{
-	id: string;
-	message: Misskey.entities.ChatMessage;
-	other: Misskey.entities.ChatMessage['fromUser'] | Misskey.entities.ChatMessage['toUser'] | null;
-	isMe: boolean;
-}[]>([]);
+const history = ref<
+	{
+		id: string;
+		message: Misskey.entities.ChatMessage;
+		other: Misskey.entities.ChatMessage['fromUser'] | Misskey.entities.ChatMessage['toUser'] | null;
+		isMe: boolean;
+	}[]
+>([]);
 
 const initializing = ref(true);
 const fetching = ref(false);
 
 async function fetchHistory() {
-	if (fetching.value) return;
+	if (fetching.value) {
+		return;
+	}
 
 	fetching.value = true;
 
@@ -64,10 +68,10 @@ async function fetchHistory() {
 
 	history.value = [...userMessages, ...roomMessages]
 		.toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-		.map(m => ({
+		.map((m) => ({
 			id: m.id,
 			message: m,
-			other: (!('room' in m) || m.room == null) ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
+			other: !('room' in m) || m.room == null ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
 			isMe: m.fromUserId === $i.id,
 		}));
 
@@ -85,14 +89,18 @@ onDeactivated(() => {
 	isActivated = false;
 });
 
-useInterval(() => {
-	if (!window.document.hidden && isActivated) {
-		fetchHistory();
-	}
-}, 1000 * 10, {
-	immediate: false,
-	afterMounted: true,
-});
+useInterval(
+	() => {
+		if (!window.document.hidden && isActivated) {
+			fetchHistory();
+		}
+	},
+	1000 * 10,
+	{
+		immediate: false,
+		afterMounted: true,
+	},
+);
 
 onActivated(() => {
 	fetchHistory();

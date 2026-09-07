@@ -92,18 +92,23 @@ if (user.value?.host != null) {
 	prohibited.value = true;
 }
 
-const pagination = computed(() => ({
-	endpoint: 'users/notes',
-	params: {
-		userId: user.value?.id,
-	},
-} as Paging));
+const pagination = computed(
+	() =>
+		({
+			endpoint: 'users/notes',
+			params: {
+				userId: user.value?.id,
+			},
+		}) as Paging,
+);
 
 const notesEl = useTemplateRef('notesEl');
 
 function top(ev: PointerEvent) {
 	const target = ev.target as HTMLElement | null;
-	if (target && isLink(target)) return;
+	if (target && isLink(target)) {
+		return;
+	}
 
 	if (notesEl.value) {
 		scrollToTop(notesEl.value.$el as HTMLElement, { behavior: 'smooth' });

@@ -54,7 +54,12 @@ import { enableAutoBackup, getPreferencesProfileMenu } from '@/preferences/utili
 import { store } from '@/store.js';
 import { signout } from '@/signout.js';
 import { genSearchIndexes } from '@/features/search/inapp-search.js';
-import { enableStoragePersistence, getStoragePersistenceStatusRef, storagePersistenceSupported, skipStoragePersistence } from '@/utility/storage.js';
+import {
+	enableStoragePersistence,
+	getStoragePersistenceStatusRef,
+	storagePersistenceSupported,
+	skipStoragePersistence,
+} from '@/utility/storage.js';
 
 const searchIndex = await import('search-index:settings').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));
 
@@ -78,7 +83,9 @@ const currentPage = computed(() => router.currentRef.value.child);
 
 const ro = new ResizeObserver((entries, observer) => {
 	const borderBox = entries[0]?.borderBoxSize[0];
-	if (borderBox == null) return;
+	if (borderBox == null) {
+		return;
+	}
 	narrow.value = borderBox.inlineSize < NARROW_THRESHOLD;
 });
 
@@ -86,121 +93,152 @@ function skipAutoBackup() {
 	store.set('showPreferencesAutoCloudBackupSuggestion', false);
 }
 
-const menuDef = computed<SuperMenuDef[]>(() => [{
-	items: [{
-		icon: 'ti ti-user',
-		text: i18n.ts.profile,
-		to: '/settings/profile',
-		active: currentPage.value?.route.name === 'profile',
-	}, {
-		icon: 'ti ti-lock-open',
-		text: i18n.ts.privacy,
-		to: '/settings/privacy',
-		active: currentPage.value?.route.name === 'privacy',
-	}, {
-		icon: 'ti ti-bell',
-		text: i18n.ts.notifications,
-		to: '/settings/notifications',
-		active: currentPage.value?.route.name === 'notifications',
-	}, {
-		icon: 'ti ti-mail',
-		text: i18n.ts.email,
-		to: '/settings/email',
-		active: currentPage.value?.route.name === 'email',
-	}, {
-		icon: 'ti ti-lock',
-		text: i18n.ts.security,
-		to: '/settings/security',
-		active: currentPage.value?.route.name === 'security',
-	}],
-}, {
-	items: [{
-		icon: 'ti ti-adjustments',
-		text: i18n.ts.preferences,
-		to: '/settings/preferences',
-		active: currentPage.value?.route.name === 'preferences',
-	}, {
-		icon: 'ti ti-palette',
-		text: i18n.ts.theme,
-		to: '/settings/theme',
-		active: currentPage.value?.route.name === 'theme',
-	}, {
-		icon: 'ti ti-mood-happy',
-		text: i18n.ts.emojiPalette,
-		to: '/settings/emoji-palette',
-		active: currentPage.value?.route.name === 'emoji-palette',
-	}, {
-		icon: 'ti ti-music',
-		text: i18n.ts.sounds,
-		to: '/settings/sounds',
-		active: currentPage.value?.route.name === 'sounds',
-	}, {
-		icon: 'ti ti-plug',
-		text: i18n.ts.plugins,
-		to: '/settings/plugin',
-		active: currentPage.value?.route.name === 'plugin',
-	}],
-}, {
-	items: [{
-		icon: 'ti ti-cloud',
-		text: i18n.ts.drive,
-		to: '/settings/drive',
-		active: currentPage.value?.route.name === 'drive',
-	}, {
-		icon: 'ti ti-ban',
-		text: i18n.ts.muteAndBlock,
-		to: '/settings/mute-block',
-		active: currentPage.value?.route.name === 'mute-block',
-	}, {
-		icon: 'ti ti-link',
-		text: i18n.ts._settings.serviceConnection,
-		to: '/settings/connect',
-		active: currentPage.value?.route.name === 'connect',
-	}, {
-		icon: 'ti ti-package',
-		text: i18n.ts._settings.accountData,
-		to: '/settings/account-data',
-		active: currentPage.value?.route.name === 'account-data',
-	}, {
-		icon: 'ti ti-dots',
-		text: i18n.ts.other,
-		to: '/settings/other',
-		active: currentPage.value?.route.name === 'other',
-	}],
-}, {
-	items: [{
-		type: 'button',
-		icon: 'ti ti-settings-2',
-		text: i18n.ts.preferencesProfile,
-		action: async (ev) => {
-			os.popupMenu(getPreferencesProfileMenu(), ev.currentTarget ?? ev.target);
-		},
-	}, {
-		type: 'button',
-		icon: 'ti ti-trash',
-		text: i18n.ts.clearCache,
-		action: async () => {
-			await clearCache();
-		},
-	}, {
-		type: 'button',
-		icon: 'ti ti-power',
-		text: i18n.ts.logout,
-		action: async () => {
-			const { canceled } = await os.confirm({
-				type: 'warning',
-				title: i18n.ts.logoutConfirm,
-				text: i18n.ts.logoutWillClearClientData,
-			});
-			if (canceled) return;
-			signout();
-		},
-		danger: true,
-	}],
-}]);
+const menuDef = computed<SuperMenuDef[]>(() => [
+	{
+		items: [
+			{
+				icon: 'ti ti-user',
+				text: i18n.ts.profile,
+				to: '/settings/profile',
+				active: currentPage.value?.route.name === 'profile',
+			},
+			{
+				icon: 'ti ti-lock-open',
+				text: i18n.ts.privacy,
+				to: '/settings/privacy',
+				active: currentPage.value?.route.name === 'privacy',
+			},
+			{
+				icon: 'ti ti-bell',
+				text: i18n.ts.notifications,
+				to: '/settings/notifications',
+				active: currentPage.value?.route.name === 'notifications',
+			},
+			{
+				icon: 'ti ti-mail',
+				text: i18n.ts.email,
+				to: '/settings/email',
+				active: currentPage.value?.route.name === 'email',
+			},
+			{
+				icon: 'ti ti-lock',
+				text: i18n.ts.security,
+				to: '/settings/security',
+				active: currentPage.value?.route.name === 'security',
+			},
+		],
+	},
+	{
+		items: [
+			{
+				icon: 'ti ti-adjustments',
+				text: i18n.ts.preferences,
+				to: '/settings/preferences',
+				active: currentPage.value?.route.name === 'preferences',
+			},
+			{
+				icon: 'ti ti-palette',
+				text: i18n.ts.theme,
+				to: '/settings/theme',
+				active: currentPage.value?.route.name === 'theme',
+			},
+			{
+				icon: 'ti ti-mood-happy',
+				text: i18n.ts.emojiPalette,
+				to: '/settings/emoji-palette',
+				active: currentPage.value?.route.name === 'emoji-palette',
+			},
+			{
+				icon: 'ti ti-music',
+				text: i18n.ts.sounds,
+				to: '/settings/sounds',
+				active: currentPage.value?.route.name === 'sounds',
+			},
+			{
+				icon: 'ti ti-plug',
+				text: i18n.ts.plugins,
+				to: '/settings/plugin',
+				active: currentPage.value?.route.name === 'plugin',
+			},
+		],
+	},
+	{
+		items: [
+			{
+				icon: 'ti ti-cloud',
+				text: i18n.ts.drive,
+				to: '/settings/drive',
+				active: currentPage.value?.route.name === 'drive',
+			},
+			{
+				icon: 'ti ti-ban',
+				text: i18n.ts.muteAndBlock,
+				to: '/settings/mute-block',
+				active: currentPage.value?.route.name === 'mute-block',
+			},
+			{
+				icon: 'ti ti-link',
+				text: i18n.ts._settings.serviceConnection,
+				to: '/settings/connect',
+				active: currentPage.value?.route.name === 'connect',
+			},
+			{
+				icon: 'ti ti-package',
+				text: i18n.ts._settings.accountData,
+				to: '/settings/account-data',
+				active: currentPage.value?.route.name === 'account-data',
+			},
+			{
+				icon: 'ti ti-dots',
+				text: i18n.ts.other,
+				to: '/settings/other',
+				active: currentPage.value?.route.name === 'other',
+			},
+		],
+	},
+	{
+		items: [
+			{
+				type: 'button',
+				icon: 'ti ti-settings-2',
+				text: i18n.ts.preferencesProfile,
+				action: async (ev) => {
+					os.popupMenu(getPreferencesProfileMenu(), ev.currentTarget ?? ev.target);
+				},
+			},
+			{
+				type: 'button',
+				icon: 'ti ti-trash',
+				text: i18n.ts.clearCache,
+				action: async () => {
+					await clearCache();
+				},
+			},
+			{
+				type: 'button',
+				icon: 'ti ti-power',
+				text: i18n.ts.logout,
+				action: async () => {
+					const { canceled } = await os.confirm({
+						type: 'warning',
+						title: i18n.ts.logoutConfirm,
+						text: i18n.ts.logoutWillClearClientData,
+					});
+					if (canceled) {
+						return;
+					}
+					signout();
+				},
+				danger: true,
+			},
+		],
+	},
+]);
 
 onMounted(() => {
-	if (el.value == null) return;
+	if (el.value == null) {
+		return;
+	}
 
 	ro.observe(el.value);
 
@@ -212,7 +250,9 @@ onMounted(() => {
 });
 
 onActivated(() => {
-	if (el.value == null) return;
+	if (el.value == null) {
+		return;
+	}
 
 	narrow.value = el.value.offsetWidth < NARROW_THRESHOLD;
 
@@ -233,10 +273,11 @@ watch(router.currentRef, (to) => {
 
 const emailNotConfigured = computed(() => $i && instance.enableEmail && ($i.email == null || !$i.emailVerified));
 
-const showSuggestionBanners = computed(() =>
-	emailNotConfigured.value
-	|| (storagePersistenceSupported && !storagePersisted.value && store.showStoragePersistenceSuggestion)
-	|| (!store.enablePreferencesAutoCloudBackup && store.showPreferencesAutoCloudBackupSuggestion),
+const showSuggestionBanners = computed(
+	() =>
+		emailNotConfigured.value ||
+		(storagePersistenceSupported && !storagePersisted.value && store.showStoragePersistenceSuggestion) ||
+		(!store.enablePreferencesAutoCloudBackup && store.showPreferencesAutoCloudBackupSuggestion),
 );
 
 provideMetadataReceiver((metadataGetter) => {

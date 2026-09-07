@@ -8,7 +8,12 @@ import {
 	updateAccessTokenLastUsedAtInDatabase,
 } from '@/core/app/AccessTokenStore.js';
 import { fetchAppByIdOrFailFromDatabase } from '@/core/app/AppStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchLocalUserByNativeTokenFromDatabase } from '@/core/user/UserStore.js';
+import {
+	fetchLocalUserByIdFromDatabase,
+	fetchLocalUserByNativeTokenWithRolesVersionFromDatabase,
+} from '@/core/user/UserStore.js';
+import { memoizeInRequest } from '@/misc/request-scope.js';
+import { ROLES_VERSION_MEMO_KEY } from '@/server/rest/role/role-policy.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { isNativeUserToken } from '@/misc/token.js';
@@ -41,19 +46,28 @@ export async function authenticateApiToken(
 	}
 
 	if (isNativeUserToken(token)) {
-		const user = await fetchLocalUserByNativeTokenFromDatabase(deps.db, token);
-		if (user == null) throw authenticationFailedError();
+		const found = await fetchLocalUserByNativeTokenWithRolesVersionFromDatabase(deps.db, token);
+		if (found == null) {
+			throw authenticationFailedError();
+		}
 
-		return { user, token: null };
+		// 認証と同じ往復で取った世代番号をリクエスト内に置き、続くロール解決の DB 読みを省く
+		void memoizeInRequest(ROLES_VERSION_MEMO_KEY, () => Promise.resolve(found.rolesVersion));
+
+		return { user: found.user, token: null };
 	}
 
 	const accessToken = await fetchAccessTokenByHashOrTokenFromDatabase(deps.db, token.toLowerCase(), token);
-	if (accessToken == null) throw authenticationFailedError();
+	if (accessToken == null) {
+		throw authenticationFailedError();
+	}
 
 	void updateAccessTokenLastUsedAtInDatabase(deps.db, accessToken.id, new Date());
 
 	const user = await fetchLocalUserByIdFromDatabase(deps.db, accessToken.userId);
-	if (user == null) throw authenticationFailedError();
+	if (user == null) {
+		throw authenticationFailedError();
+	}
 
 	if (accessToken.appId != null) {
 		const app = await fetchAppByIdOrFailFromDatabase(deps.db, accessToken.appId);
@@ -78,12 +92,18 @@ export function assertCredential(auth: ApiAuthenticated): asserts auth is {
 	user: MiLocalUser;
 	token: MiAccessToken | null;
 } {
-	if (auth.user == null) throw credentialRequiredError();
-	if (auth.user.isSuspended) throw userSuspendedError();
+	if (auth.user == null) {
+		throw credentialRequiredError();
+	}
+	if (auth.user.isSuspended) {
+		throw userSuspendedError();
+	}
 }
 
 export function assertOptionalCredential(auth: ApiAuthenticated): void {
-	if (auth.user?.isSuspended) throw userSuspendedError();
+	if (auth.user?.isSuspended) {
+		throw userSuspendedError();
+	}
 }
 
 export function assertTokenPermission(auth: { token: MiAccessToken | null }, permission: string): void {
@@ -93,9 +113,13 @@ export function assertTokenPermission(auth: { token: MiAccessToken | null }, per
 }
 
 export function assertSecureCredential(auth: { user: MiLocalUser; token: MiAccessToken | null }): void {
-	if (auth.token != null) throw accessDeniedError();
+	if (auth.token != null) {
+		throw accessDeniedError();
+	}
 }
 
 export function assertProhibitMoved(user: MiLocalUser): void {
-	if (user.movedToUri != null) throw accountMovedError();
+	if (user.movedToUri != null) {
+		throw accountMovedError();
+	}
 }

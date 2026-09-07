@@ -19,14 +19,18 @@ function calc(src: Element) {
 	const height = src.clientHeight;
 	const width = src.clientWidth;
 
-	if (!info) return;
+	if (!info) {
+		return;
+	}
 
 	// アクティベート前などでsrcが描画されていない場合
 	if (!height) {
 		// IntersectionObserverで表示検出する
 		if (!info.intersection) {
 			info.intersection = new IntersectionObserver((entries) => {
-				if (entries.some((entry) => entry.isIntersecting)) calc(src);
+				if (entries.some((entry) => entry.isIntersecting)) {
+					calc(src);
+				}
 			});
 		}
 		info.intersection.observe(src);
@@ -56,9 +60,13 @@ export const getSizeDirective = {
 	unmounted(src, binding) {
 		binding.value(0, 0);
 		const info = mountings.get(src);
-		if (!info) return;
+		if (!info) {
+			return;
+		}
 		info.resize.disconnect();
-		if (info.intersection) info.intersection.disconnect();
+		if (info.intersection) {
+			info.intersection.disconnect();
+		}
 		mountings.delete(src);
 	},
 } as Directive<Element, SizeCallback>;

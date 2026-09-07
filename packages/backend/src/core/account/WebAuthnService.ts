@@ -4,13 +4,7 @@
  */
 
 import * as Redis from 'ioredis';
-import {
-	generateAuthenticationOptions,
-	generateRegistrationOptions,
-	verifyAuthenticationResponse,
-	verifyRegistrationResponse,
-} from '@simplewebauthn/server';
-import { AttestationFormat, isoCBOR, isoUint8Array } from '@simplewebauthn/server/helpers';
+import type { AttestationFormat } from '@simplewebauthn/server/helpers';
 import type { MiMeta } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { MiUser } from '@/models/_.js';
@@ -33,6 +27,13 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 
+/*
+ * @simplewebauthn/server は読み込むだけで RSS が 8MB 増える (2026-09-03 実測) が、
+ * 使うのはパスキーの登録・認証時だけなので、最初の要求まで読み込まない。
+ */
+const loadWebAuthn = () => import('@simplewebauthn/server');
+const loadWebAuthnHelpers = () => import('@simplewebauthn/server/helpers');
+
 export function createWebAuthnService(config: Config, meta: MiMeta, redisClient: Redis.Redis, db: MiDrizzleDatabase) {
 	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string } {
 		return {
@@ -51,10 +52,12 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		const relyingParty = getRelyingParty();
 		const keys = await listUserSecurityKeysByUserIdFromDatabase(db, userId);
 
-		const registrationOptions = await generateRegistrationOptions({
+		const registrationOptions = await (
+			await loadWebAuthn()
+		).generateRegistrationOptions({
 			rpName: relyingParty.rpName,
 			rpID: relyingParty.rpId,
-			userID: isoUint8Array.fromUTF8String(userId),
+			userID: (await loadWebAuthnHelpers()).isoUint8Array.fromUTF8String(userId),
 			userName: userName,
 			...(userDisplayName === undefined ? {} : { userDisplayName }),
 			excludeCredentials: keys.map(
@@ -101,7 +104,9 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 
 		let verification;
 		try {
-			verification = await verifyRegistrationResponse({
+			verification = await (
+				await loadWebAuthn()
+			).verifyRegistrationResponse({
 				response: response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,
@@ -142,7 +147,9 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			throw new IdentifiableError('f27fd449-9af4-4841-9249-1f989b9fa4a4', 'no keys found');
 		}
 
-		const authenticationOptions = await generateAuthenticationOptions({
+		const authenticationOptions = await (
+			await loadWebAuthn()
+		).generateAuthenticationOptions({
 			rpID: relyingParty.rpId,
 			allowCredentials: keys.map(
 				(key) =>
@@ -167,7 +174,9 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 	): Promise<PublicKeyCredentialRequestOptionsJSON> {
 		const relyingParty = getRelyingParty();
 
-		const authenticationOptions = await generateAuthenticationOptions({
+		const authenticationOptions = await (
+			await loadWebAuthn()
+		).generateAuthenticationOptions({
 			rpID: relyingParty.rpId,
 			userVerification: 'preferred',
 		});
@@ -201,7 +210,9 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 
 		let verification;
 		try {
-			verification = await verifyAuthenticationResponse({
+			verification = await (
+				await loadWebAuthn()
+			).verifyAuthenticationResponse({
 				response: response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,
@@ -261,7 +272,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 				cborMap.set(-2, cert.slice(1, halfLength + 1)); // x
 				cborMap.set(-3, cert.slice(halfLength + 1)); // y
 
-				const cborPubKey = Buffer.from(isoCBOR.encode(cborMap)).toString('base64url');
+				const cborPubKey = Buffer.from((await loadWebAuthnHelpers()).isoCBOR.encode(cborMap)).toString('base64url');
 				await updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(db, response.id, userId, cborPubKey);
 				key.publicKey = cborPubKey;
 			}
@@ -271,7 +282,9 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 
 		let verification;
 		try {
-			verification = await verifyAuthenticationResponse({
+			verification = await (
+				await loadWebAuthn()
+			).verifyAuthenticationResponse({
 				response: response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,

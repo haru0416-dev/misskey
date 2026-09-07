@@ -36,7 +36,9 @@ const emit = defineEmits<{
 const draghover = ref(false);
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// このフォルダがルートかつカレントディレクトリならドロップ禁止
 	if (props.folder == null && props.parentFolder == null) {
@@ -69,17 +71,23 @@ function onDragover(ev: DragEvent) {
 }
 
 function onDragenter() {
-	if (props.folder || props.parentFolder) draghover.value = true;
+	if (props.folder || props.parentFolder) {
+		draghover.value = true;
+	}
 }
 
 function onDragleave() {
-	if (props.folder || props.parentFolder) draghover.value = false;
+	if (props.folder || props.parentFolder) {
+		draghover.value = false;
+	}
 }
 
 function onDrop(ev: DragEvent) {
 	draghover.value = false;
 
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// ファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
@@ -92,14 +100,17 @@ function onDrop(ev: DragEvent) {
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
 			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map(f => f.id),
+				fileIds: droppedData.map((f) => f.id),
 				folderId: props.folder ? props.folder.id : null,
 			}).then(() => {
-				globalEvents.emit('driveFilesUpdated', droppedData.map(x => ({
-					...x,
-					folderId: props.folder ? props.folder.id : null,
-					folder: props.folder ?? null,
-				})));
+				globalEvents.emit(
+					'driveFilesUpdated',
+					droppedData.map((x) => ({
+						...x,
+						folderId: props.folder ? props.folder.id : null,
+						folder: props.folder ?? null,
+					})),
+				);
 			});
 		}
 	}
@@ -110,18 +121,25 @@ function onDrop(ev: DragEvent) {
 		const droppedData = getDragData(ev, 'driveFolders');
 		if (droppedData != null) {
 			const droppedFolder = droppedData[0];
-			if (droppedFolder == null) return;
+			if (droppedFolder == null) {
+				return;
+			}
 			// 移動先が自分自身ならreject
-			if (props.folder && droppedFolder.id === props.folder.id) return;
+			if (props.folder && droppedFolder.id === props.folder.id) {
+				return;
+			}
 			misskeyApi('drive/folders/update', {
 				folderId: droppedFolder.id,
 				parentId: props.folder ? props.folder.id : null,
 			}).then(() => {
-				globalEvents.emit('driveFoldersUpdated', [droppedFolder].map(x => ({
-					...x,
-					parentId: props.folder ? props.folder.id : null,
-					parent: props.folder ?? null,
-				})));
+				globalEvents.emit(
+					'driveFoldersUpdated',
+					[droppedFolder].map((x) => ({
+						...x,
+						parentId: props.folder ? props.folder.id : null,
+						parent: props.folder ?? null,
+					})),
+				);
 			});
 		}
 	}
