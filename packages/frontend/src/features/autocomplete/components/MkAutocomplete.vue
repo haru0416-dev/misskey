@@ -66,41 +66,41 @@ export type CompleteInfo = {
 	user: {
 		payload: Misskey.entities.User;
 		query: string | null;
-	},
+	};
 	hashtag: {
 		payload: string;
 		query: string;
-	},
+	};
 	// `:emo` から `:emoji:` または Unicode 絵文字を補完する。
 	emoji: {
 		payload: string;
 		query: string;
-	},
+	};
 	// `:emoji:` から Unicode 絵文字を補完する。
 	emojiComplete: {
 		payload: string;
 		query: string;
-	},
+	};
 	mfmTag: {
 		payload: string;
 		query: string;
-	},
+	};
 	mfmParam: {
 		payload: string;
 		query: {
 			tag: string;
 			params: string[];
 		};
-	},
+	};
 };
 
-const lib = emojilist.filter(x => x.category !== 'flags');
+const lib = emojilist.filter((x) => x.category !== 'flags');
 
 const unicodeEmojiDB = computed(() => {
 	//#region Unicode Emoji
 	const char2path = prefer.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
 
-	const unicodeEmojiDB: EmojiDef[] = lib.map(x => ({
+	const unicodeEmojiDB: EmojiDef[] = lib.map((x) => ({
 		emoji: x.char,
 		name: x.name,
 		url: char2path(x.char),
@@ -174,7 +174,14 @@ type PropsType<T extends keyof CompleteInfo> = {
 };
 
 // https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html#discriminated-unions
-const props = defineProps<PropsType<'user'> | PropsType<'hashtag'> | PropsType<'emoji'> | PropsType<'emojiComplete'> | PropsType<'mfmTag'> | PropsType<'mfmParam'>>();
+const props = defineProps<
+	| PropsType<'user'>
+	| PropsType<'hashtag'>
+	| PropsType<'emoji'>
+	| PropsType<'emojiComplete'>
+	| PropsType<'mfmTag'>
+	| PropsType<'mfmParam'>
+>();
 
 const emit = defineEmits<{
 	<T extends keyof CompleteInfo>(event: 'done', value: { type: T; value: CompleteInfo[T]['payload'] }): void;
@@ -195,15 +202,22 @@ const select = ref(-1);
 const zIndex = os.claimZIndex('high');
 
 function isUserArray(value: unknown): value is Misskey.entities.User[] {
-	return Array.isArray(value) && value.every(user => {
-		if (!isJsonObject(user)) return false;
-		const candidate = user as Record<string, unknown> & { id?: unknown; username?: unknown };
-		return typeof candidate.id === 'string' && typeof candidate.username === 'string';
-	});
+	return (
+		Array.isArray(value) &&
+		value.every((user) => {
+			if (!isJsonObject(user)) {
+				return false;
+			}
+			const candidate = user as Record<string, unknown> & { id?: unknown; username?: unknown };
+			return typeof candidate.id === 'string' && typeof candidate.username === 'string';
+		})
+	);
 }
 
 function completeMfmParam(param: string) {
-	if (props.type !== 'mfmParam') throw new Error('Invalid type');
+	if (props.type !== 'mfmParam') {
+		throw new Error('Invalid type');
+	}
 	complete('mfmParam', props.q.params.toSpliced(-1, 1, param).join(','));
 }
 
@@ -219,14 +233,16 @@ function complete<T extends keyof CompleteInfo>(type: T, value: CompleteInfo[T][
 }
 
 function setPosition() {
-	if (!rootEl.value) return;
+	if (!rootEl.value) {
+		return;
+	}
 	if (props.x + rootEl.value.offsetWidth > window.innerWidth) {
-		rootEl.value.style.left = (window.innerWidth - rootEl.value.offsetWidth) + 'px';
+		rootEl.value.style.left = window.innerWidth - rootEl.value.offsetWidth + 'px';
 	} else {
 		rootEl.value.style.left = `${props.x}px`;
 	}
 	if (props.y + rootEl.value.offsetHeight > window.innerHeight) {
-		rootEl.value.style.top = (props.y - rootEl.value.offsetHeight) + 'px';
+		rootEl.value.style.top = props.y - rootEl.value.offsetHeight + 'px';
 		rootEl.value.style.marginTop = '0';
 	} else {
 		rootEl.value.style.top = props.y + 'px';
@@ -256,13 +272,15 @@ function exec() {
 			fetching.value = false;
 		} else {
 			const [username, host] = props.q.toString().split('@');
-			if (username == null) return;
+			if (username == null) {
+				return;
+			}
 			misskeyApi('users/search-by-username-and-host', {
 				username: username,
 				host: host,
 				limit: 10,
 				detail: false,
-			}).then(searchedUsers => {
+			}).then((searchedUsers) => {
 				users.value = searchedUsers;
 				fetching.value = false;
 				// キャッシュ
@@ -283,7 +301,7 @@ function exec() {
 				misskeyApi('hashtags/search', {
 					query: props.q,
 					limit: 30,
-				}).then(searchedHashtags => {
+				}).then((searchedHashtags) => {
 					hashtags.value = searchedHashtags;
 					fetching.value = false;
 					// キャッシュ
@@ -294,7 +312,9 @@ function exec() {
 	} else if (props.type === 'emoji') {
 		if (!props.q || props.q === '') {
 			// 最近使った絵文字をサジェスト
-			emojis.value = store.recentlyUsedEmojis.map(emoji => emojiDb.value.find(dbEmoji => dbEmoji.emoji === emoji)).filter(x => x) as EmojiDef[];
+			emojis.value = store.recentlyUsedEmojis
+				.map((emoji) => emojiDb.value.find((dbEmoji) => dbEmoji.emoji === emoji))
+				.filter((x) => x) as EmojiDef[];
 			return;
 		}
 
@@ -307,19 +327,21 @@ function exec() {
 			return;
 		}
 
-		mfmTags.value = MFM_TAGS.filter(tag => tag.startsWith(props.q ?? ''));
+		mfmTags.value = MFM_TAGS.filter((tag) => tag.startsWith(props.q ?? ''));
 	} else if (props.type === 'mfmParam') {
 		if (props.q.params.at(-1) === '') {
 			mfmParams.value = MFM_PARAMS[props.q.tag] ?? [];
 			return;
 		}
 
-		mfmParams.value = (MFM_PARAMS[props.q.tag] ?? []).filter(param => param.startsWith(props.q.params.at(-1) ?? ''));
+		mfmParams.value = (MFM_PARAMS[props.q.tag] ?? []).filter((param) => param.startsWith(props.q.params.at(-1) ?? ''));
 	}
 }
 
 function onMousedown(event: MouseEvent) {
-	if (!elementContains(rootEl.value, event.target as Element) && (rootEl.value !== event.target)) props.close();
+	if (!elementContains(rootEl.value, event.target as Element) && rootEl.value !== event.target) {
+		props.close();
+	}
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -333,7 +355,9 @@ function onKeydown(event: KeyboardEvent) {
 			if (select.value !== -1) {
 				cancel();
 				const item = items.value[select.value];
-				if (item instanceof HTMLElement) item.click();
+				if (item instanceof HTMLElement) {
+					item.click();
+				}
 			} else {
 				props.close();
 			}
@@ -379,13 +403,19 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 function selectNext() {
-	if (++select.value >= items.value.length) select.value = 0;
-	if (items.value.length === 0) select.value = -1;
+	if (++select.value >= items.value.length) {
+		select.value = 0;
+	}
+	if (items.value.length === 0) {
+		select.value = -1;
+	}
 	applySelect();
 }
 
 function selectPrev() {
-	if (--select.value < 0) select.value = items.value.length - 1;
+	if (--select.value < 0) {
+		select.value = items.value.length - 1;
+	}
 	applySelect();
 }
 
@@ -396,15 +426,19 @@ function applySelect() {
 
 	if (select.value !== -1) {
 		const item = items.value[select.value];
-		if (item == null) return;
+		if (item == null) {
+			return;
+		}
 		item.setAttribute('data-selected', 'true');
-		if (item instanceof HTMLElement) item.focus();
+		if (item instanceof HTMLElement) {
+			item.focus();
+		}
 	}
 }
 
 function chooseUser() {
 	props.close();
-	os.selectUser({ includeSelf: true }).then(user => {
+	os.selectUser({ includeSelf: true }).then((user) => {
 		complete('user', user);
 		props.textarea.focus();
 	});
@@ -425,11 +459,14 @@ onMounted(() => {
 	nextTick(() => {
 		exec();
 
-		watch(() => props.q, () => {
-			nextTick(() => {
-				exec();
-			});
-		});
+		watch(
+			() => props.q,
+			() => {
+				nextTick(() => {
+					exec();
+				});
+			},
+		);
 	});
 });
 

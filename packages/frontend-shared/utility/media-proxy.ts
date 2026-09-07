@@ -43,7 +43,9 @@ export class MediaProxy {
 	}
 
 	public getProxiedImageUrlNullable(imageUrl: string | null | undefined, type?: 'preview'): string | null {
-		if (imageUrl == null) return null;
+		if (imageUrl == null) {
+			return null;
+		}
 		return this.getProxiedImageUrl(imageUrl, type);
 	}
 

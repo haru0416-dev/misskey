@@ -38,22 +38,30 @@ const dragDataValidators = {
 // DataTransfer の形式名は大文字小文字を区別しないため、読み書きで小文字に統一する。
 
 export function setDragData<T extends keyof DragDataMap>(event: DragEvent, type: T, data: DragDataMap[T]) {
-	if (event.dataTransfer == null) return;
+	if (event.dataTransfer == null) {
+		return;
+	}
 
 	event.dataTransfer.setData(`misskey/${type}`.toLowerCase(), JSON.stringify(data));
 }
 
 export function setPlainDragData(event: DragEvent, data: string) {
-	if (event.dataTransfer == null) return;
+	if (event.dataTransfer == null) {
+		return;
+	}
 
 	event.dataTransfer.setData('text/plain', data);
 }
 
 export function getDragData<T extends keyof DragDataMap>(event: DragEvent, type: T): DragDataMap[T] | null {
-	if (event.dataTransfer == null) return null;
+	if (event.dataTransfer == null) {
+		return null;
+	}
 
 	const data = event.dataTransfer.getData(`misskey/${type}`.toLowerCase());
-	if (data == null || data === '') return null;
+	if (data == null || data === '') {
+		return null;
+	}
 
 	try {
 		const parsed: unknown = JSON.parse(data);
@@ -65,16 +73,22 @@ export function getDragData<T extends keyof DragDataMap>(event: DragEvent, type:
 }
 
 export function getPlainDragData(event: DragEvent): string | null {
-	if (event.dataTransfer == null) return null;
+	if (event.dataTransfer == null) {
+		return null;
+	}
 
 	const data = event.dataTransfer.getData('text/plain');
-	if (data == null || data === '') return null;
+	if (data == null || data === '') {
+		return null;
+	}
 
 	return data;
 }
 
 export function checkDragDataType(event: DragEvent, types: (keyof DragDataMap)[]): boolean {
-	if (event.dataTransfer == null) return false;
+	if (event.dataTransfer == null) {
+		return false;
+	}
 
 	const availableTypes = Array.from(event.dataTransfer.types, (type) => type.toLowerCase());
 	return types.some((type) => availableTypes.includes(`misskey/${type}`.toLowerCase()));

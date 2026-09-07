@@ -7,6 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
+import { shouldOmitOutgoingReplyReference } from '@/core/activitypub/interop/reply.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
@@ -30,7 +31,7 @@ import {
 	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/user/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
-import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { listFollowersForNoteDeliveryForRequest } from '@/core/user/FollowingStore.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createMfmService } from '@/core/mfm/MfmService.js';
 import type { Config } from '@/config.js';
@@ -123,13 +124,14 @@ export async function renderNoteForApi(
 	if (note.replyId) {
 		const inReplyToNote = note.reply ?? (await fetchNoteByIdFromDatabase(deps.db, note.replyId));
 		if (inReplyToNote) {
-			if (inReplyToNote.uri) {
+			if (shouldOmitOutgoingReplyReference(note, inReplyToNote)) {
+				inReplyTo = null;
+			} else if (inReplyToNote.uri) {
 				inReplyTo = inReplyToNote.uri;
-			} else if (note.visibility === 'specified' && inReplyToNote.visibility === 'specified') {
+			} else if (dive && (inReplyToNote.visibility === 'public' || inReplyToNote.visibility === 'home')) {
 				inReplyTo = await renderNoteForApi(deps, inReplyToNote, false);
-			} else if (dive) {
-				inReplyTo = JSON.stringify(await renderNoteForApi(deps, inReplyToNote, false));
 			} else {
+				// 返信の宛先が返信元を閲覧できるとは限らないため、非公開の本文は埋め込まない。
 				inReplyTo = `${deps.config.instance.url}/notes/${inReplyToNote.id}`;
 			}
 		}
@@ -267,8 +269,12 @@ export function renderCreateForApi(
 		published: parseId(note.id).date.toISOString(),
 		object,
 	};
-	if (object['to']) activity['to'] = object['to'];
-	if (object['cc']) activity['cc'] = object['cc'];
+	if (object['to']) {
+		activity['to'] = object['to'];
+	}
+	if (object['cc']) {
+		activity['cc'] = object['cc'];
+	}
 	return activity;
 }
 
@@ -312,7 +318,9 @@ export async function renderNoteOrRenoteActivityForApi(
 	data: { localOnly: boolean; renote: Pick<MiNote, 'id' | 'uri'> | null; isQuote: boolean },
 	note: MiNote,
 ): Promise<Record<string, unknown> | null> {
-	if (data.localOnly) return null;
+	if (data.localOnly) {
+		return null;
+	}
 
 	const content =
 		data.renote != null && !data.isQuote
@@ -336,26 +344,39 @@ export async function deliverNoteActivityForApi(
 		jobIdPrefix?: string;
 	},
 ): Promise<void> {
-	if (activity == null) return;
+	if (activity == null) {
+		return;
+	}
 
 	const inboxes = new Map<string, boolean>();
 
 	if (options.deliverToFollowers) {
-		const followerInboxes = await listFollowerInboxesByFolloweeIdFromDatabase(deps.db, author.id);
-		for (const f of followerInboxes) {
+		const followers = await listFollowersForNoteDeliveryForRequest(deps.db, author.id);
+		for (const f of followers) {
+			if (f.followerHost == null) {
+				continue;
+			}
 			const inbox = f.followerSharedInbox ?? f.followerInbox;
-			if (inbox == null) continue;
+			if (inbox == null) {
+				continue;
+			}
 			inboxes.set(inbox, f.followerSharedInbox != null);
 		}
 	}
 
 	for (const to of options.directRecipients) {
-		if (to.sharedInbox != null && inboxes.has(to.sharedInbox)) continue;
-		if (to.inbox == null) continue;
+		if (to.sharedInbox != null && inboxes.has(to.sharedInbox)) {
+			continue;
+		}
+		if (to.inbox == null) {
+			continue;
+		}
 		inboxes.set(to.inbox, false);
 	}
 
-	if (inboxes.size === 0) return;
+	if (inboxes.size === 0) {
+		return;
+	}
 
 	// JSON.stringify + digest はフォロワー数に比例するホットパスのため、
 	// inbox ごとの投入を避けて addBulk で一括投入する。
@@ -388,7 +409,9 @@ export async function resolveRemoteRecipientForApi(
 	userId: MiUser['id'],
 ): Promise<MiUser | null> {
 	const u = await fetchUserByIdFromDatabase(deps.db, userId);
-	if (u == null || !isRemoteUser(u)) return null;
+	if (u == null || !isRemoteUser(u)) {
+		return null;
+	}
 	return u;
 }
 
@@ -549,20 +572,37 @@ export async function deliverQuestionUpdateForApi(
 	noteId: MiNote['id'],
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
-	if (note == null) throw new Error('note not found');
-	if (note.localOnly) return;
+	if (note == null) {
+		throw new Error('note not found');
+	}
+	if (note.localOnly) {
+		return;
+	}
 
 	const user = await fetchUserByIdFromDatabase(deps.db, note.userId);
-	if (user == null) throw new Error('note not found');
+	if (user == null) {
+		throw new Error('note not found');
+	}
 
 	if (!isRemoteUser(user)) {
-		const content = addActivityContext(
-			deps.config,
-			renderUpdateForApi(deps.config, await renderNoteForApi(deps, note, false), user),
-		);
-		await deliverNoteActivityForApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
-		// リレー配信は fire-and-forget とし、アンケート更新を待たせない。
-		void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
+		const object = await renderNoteForApi(deps, note, false);
+		const content = addActivityContext(deps.config, {
+			...renderUpdateForApi(deps.config, object, user),
+			to: object['to'],
+			cc: object['cc'],
+		});
+		const recipientIds =
+			note.visibility === 'specified'
+				? note.visibleUserIds
+				: [...note.mentions, ...[note.replyUserId, note.renoteUserId].filter((id) => id != null)];
+		const directRecipients = await listUsersByIdsFromDatabase(deps.db, recipientIds, { includeSuspended: true });
+		await deliverNoteActivityForApi(deps, user, content, {
+			directRecipients,
+			deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
+		});
+		if (note.visibility === 'public') {
+			void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
+		}
 	}
 }
 
@@ -589,31 +629,36 @@ export async function deliverToRelaysForApi(
 	activity: Record<string, unknown> | null,
 	jobIdPrefix?: string,
 ): Promise<void> {
-	if (activity == null) return;
-
-	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
-	if (relays.length === 0) return;
-
-	const copy = deepClone(activity as Parameters<typeof deepClone>[0]) as Record<string, unknown> & { to?: unknown };
-	if (!copy.to) copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
-
-	const signed = await attachLdSignatureForApi(deps, copy, user);
-
-	if (jobIdPrefix == null) {
-		for (const relay of relays) {
-			void enqueueDeliverJob(deps.deliverQueue, deps.config, user, signed as unknown as IActivity, relay.inbox, false);
-		}
+	if (activity == null) {
 		return;
 	}
 
-	await Promise.all(
-		relays.map(async (relay) => {
-			const job = createDeliverJob(deps.config, user, signed as unknown as IActivity, relay.inbox, false);
-			if (job == null) return;
-			await deps.deliverQueue.add(job.name, job.data, {
-				...job.opts,
-				jobId: `${jobIdPrefix}-${createHash('sha256').update(relay.inbox).digest('hex').slice(0, 24)}`,
-			});
-		}),
-	);
+	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
+	if (relays.length === 0) {
+		return;
+	}
+
+	const copy = deepClone(activity as Parameters<typeof deepClone>[0]) as Record<string, unknown> & { to?: unknown };
+	if (!copy.to) {
+		copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
+	}
+
+	const signed = await attachLdSignatureForApi(deps, copy, user);
+
+	const firstJob = createDeliverJob(deps.config, user, signed as unknown as IActivity, relays[0]!.inbox, false)!;
+	const jobs = relays.map((relay) => ({
+		name: relay.inbox.replace('https://', '').replace('/inbox', ''),
+		data: { ...firstJob.data, to: relay.inbox },
+		opts: {
+			...firstJob.opts,
+			...(jobIdPrefix == null
+				? {}
+				: { jobId: `${jobIdPrefix}-${createHash('sha256').update(relay.inbox).digest('hex').slice(0, 24)}` }),
+		},
+	}));
+	if (jobIdPrefix == null) {
+		void deps.deliverQueue.addBulk(jobs);
+		return;
+	}
+	await deps.deliverQueue.addBulk(jobs);
 }

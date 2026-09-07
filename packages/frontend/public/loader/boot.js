@@ -32,7 +32,9 @@
 		} else {
 			lang = supportedLangs.find((x) => x.split('-')[0] === navigator.language);
 
-			if (lang == null) lang = 'en-US';
+			if (lang == null) {
+				lang = 'en-US';
+			}
 		}
 	}
 
@@ -47,7 +49,9 @@
 
 	//#region Script
 	for (const file of [CLIENT_ENTRY, ...CLIENT_PRELOADS]) {
-		if (file == null) continue;
+		if (file == null) {
+			continue;
+		}
 		const link = document.createElement('link');
 		link.rel = 'modulepreload';
 		link.href = `/vite/${file.replace('scripts', lang)}`;
@@ -157,7 +161,9 @@
 				};
 			}
 		}
-		if (!messages) messages = {};
+		if (!messages) {
+			messages = {};
+		}
 
 		messages = Object.assign(
 			{

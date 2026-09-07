@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MetricsTime, type JobType } from 'bullmq';
+import { MetricsTime } from 'bullmq';
+import type { JobType } from 'bullmq';
 import type { Packed } from '@/misc/json-schema.js';
 import type {
 	DbQueue,
@@ -66,32 +67,44 @@ function parseRedisInfo(infoText: string): Record<string, string> {
 	const result: Record<string, string> = {};
 	for (const line of lines) {
 		const separator = line.indexOf(':');
-		if (separator === -1) continue;
+		if (separator === -1) {
+			continue;
+		}
 		result[line.slice(0, separator)] = line.slice(separator + 1);
 	}
 	return result;
 }
 
 function parseRedisInfoInteger(value: string | undefined, field: string): number {
-	if (value == null) throw new Error(`Redis INFO response is missing ${field}`);
+	if (value == null) {
+		throw new Error(`Redis INFO response is missing ${field}`);
+	}
 	const parsed = Number.parseInt(value, 10);
-	if (!Number.isFinite(parsed)) throw new Error(`Redis INFO response has invalid ${field}`);
+	if (!Number.isFinite(parsed)) {
+		throw new Error(`Redis INFO response has invalid ${field}`);
+	}
 	return parsed;
 }
 
 function parseOptionalRedisInfoNumber(value: string | undefined, fallback: number): number {
-	if (value == null) return fallback;
+	if (value == null) {
+		return fallback;
+	}
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function requireRedisInfoString(value: string | undefined, field: string): string {
-	if (value == null || value === '') throw new Error(`Redis INFO response is missing ${field}`);
+	if (value == null || value === '') {
+		throw new Error(`Redis INFO response is missing ${field}`);
+	}
 	return value;
 }
 
 function parseRedisMode(value: string | undefined): 'cluster' | 'standalone' | 'sentinel' {
-	if (value === 'cluster' || value === 'standalone' || value === 'sentinel') return value;
+	if (value === 'cluster' || value === 'standalone' || value === 'sentinel') {
+		return value;
+	}
 	throw new Error('Redis INFO response has invalid server mode');
 }
 
@@ -232,7 +245,9 @@ export async function retryQueueOutboxDeadLetter(
 	revision: number,
 ): Promise<boolean> {
 	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
-	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
+	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) {
+		return false;
+	}
 	if (outbox.queue === 'deliver') {
 		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
 	}
@@ -245,7 +260,9 @@ export async function abandonQueueOutboxDeadLetter(
 	revision: number,
 ): Promise<boolean> {
 	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
-	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
+	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) {
+		return false;
+	}
 	if (outbox.queue === 'deliver') {
 		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
 	}
@@ -284,9 +301,8 @@ export async function getQueueJob(
 	const job = await queue.getJob(jobId);
 	if (job != null) {
 		return packQueueJob(job);
-	} else {
-		throw new Error(`Job not found: ${jobId}`);
 	}
+	throw new Error(`Job not found: ${jobId}`);
 }
 
 export async function getQueueJobLogs(

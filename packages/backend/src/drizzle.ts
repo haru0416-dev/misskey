@@ -4,8 +4,10 @@
  */
 
 // クエリ層が int8 を number として扱うため、pg の既定文字列変換を上書きする。
-import pg, { type Pool, type PoolConfig } from 'pg';
-import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+import type { Pool, PoolConfig } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';
 import type { Config } from '@/config.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
@@ -31,9 +33,8 @@ function truncateSql(sql: string, maximumLength: number): string {
 function stringifyParameter(param: unknown): unknown {
 	if (param instanceof Date) {
 		return param.toISOString();
-	} else {
-		return param;
 	}
+	return param;
 }
 
 class MyDrizzleLogger implements DrizzleLogger {

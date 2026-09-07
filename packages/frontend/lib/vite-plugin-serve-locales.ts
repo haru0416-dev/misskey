@@ -16,7 +16,9 @@ export function serveLocales(): Plugin {
 		configureServer(server) {
 			server.middlewares.use((req, res, next) => {
 				const match = /^\/assets\/locales\/([a-zA-Z-]+)\./.exec(req.url ?? '');
-				if (match == null) return next();
+				if (match == null) {
+					return next();
+				}
 
 				const lang = match[1] as keyof typeof locales;
 				res.setHeader('content-type', 'application/json; charset=utf-8');

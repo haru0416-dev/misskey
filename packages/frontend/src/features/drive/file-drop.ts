@@ -24,30 +24,31 @@ export async function extractDroppedItems(ev: DragEvent): Promise<DroppedItem[]>
 	}
 
 	const apiTestItem = dropItems[0];
-	if (apiTestItem == null) return [];
+	if (apiTestItem == null) {
+		return [];
+	}
 	if ('webkitGetAsEntry' in apiTestItem) {
 		return readDataTransferItems(dropItems);
-	} else {
-		// webkitGetAsEntryに対応していない場合はfilesから取得する（ディレクトリのサポートは出来ない）
-		const dropFiles = ev.dataTransfer.files;
-		if (dropFiles.length === 0) {
-			return [];
-		}
-
-		const droppedFiles = Array.of<DroppedFile>();
-		for (let i = 0; i < dropFiles.length; i++) {
-			const file = dropFiles.item(i);
-			if (file) {
-				droppedFiles.push({
-					isFile: true,
-					path: file.name,
-					file,
-				});
-			}
-		}
-
-		return droppedFiles;
 	}
+	// webkitGetAsEntryに対応していない場合はfilesから取得する（ディレクトリのサポートは出来ない）
+	const dropFiles = ev.dataTransfer.files;
+	if (dropFiles.length === 0) {
+		return [];
+	}
+
+	const droppedFiles = Array.of<DroppedFile>();
+	for (let i = 0; i < dropFiles.length; i++) {
+		const file = dropFiles.item(i);
+		if (file) {
+			droppedFiles.push({
+				isFile: true,
+				path: file.name,
+				file,
+			});
+		}
+	}
+
+	return droppedFiles;
 }
 
 /**
@@ -61,13 +62,12 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 				path: entry.fullPath,
 				file: await readFile(entry as FileSystemFileEntry),
 			};
-		} else {
-			return {
-				isFile: false,
-				path: entry.fullPath,
-				children: await readDirectory(entry as FileSystemDirectoryEntry),
-			};
 		}
+		return {
+			isFile: false,
+			path: entry.fullPath,
+			children: await readDirectory(entry as FileSystemDirectoryEntry),
+		};
 	}
 
 	function readFile(fileSystemFileEntry: FileSystemFileEntry): Promise<File> {
@@ -94,7 +94,9 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 	const items = Array.of<DataTransferItem>();
 	for (let i = 0; i < itemList.length; i++) {
 		const item = itemList[i];
-		if (item != null) items.push(item);
+		if (item != null) {
+			items.push(item);
+		}
 	}
 
 	return Promise.all(

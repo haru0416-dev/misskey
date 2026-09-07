@@ -39,13 +39,15 @@ import {
 	renderLikeForApi,
 	renderUndoForApi,
 	resolveRemoteRecipientForApi,
-	type ApiNoteApDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
 import { createNoteNotificationForApi } from './notes-create.js';
-import { isVisibleForMeForApi, type ApiNoteDependencies } from './note.js';
+import { isVisibleForMeForApi } from './note.js';
+import type { ApiNoteDependencies } from './note.js';
 import { packUserLiteManyForApi } from '../user/user.js';
 import type { ApiNotificationDependencies } from '../notification/notification.js';
-import { getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiUserRoles } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
@@ -80,13 +82,17 @@ const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 /** Unicode 絵文字とレガシー名を、保存できる 1 つの絵文字へ寄せる。該当しなければフォールバック。 */
 export function normalizeReactionForApi(reaction: string | null): string {
-	if (reaction == null) return FALLBACK;
-	if (Object.hasOwn(legacies, reaction)) return legacies[reaction]!;
+	if (reaction == null) {
+		return FALLBACK;
+	}
+	if (Object.hasOwn(legacies, reaction)) {
+		return legacies[reaction]!;
+	}
 
 	const match = emojiRegex.exec(reaction);
 	if (match) {
 		const unicode = match[0];
-		return unicode.match('\u200d') ? unicode : unicode.replaceAll(/\ufe0f/g, '');
+		return unicode.match('\u200D') ? unicode : unicode.replaceAll(/\uFE0F/g, '');
 	}
 
 	return FALLBACK;
@@ -167,7 +173,9 @@ export async function createNoteReactionForApi(
 ): Promise<void> {
 	if (note.userId !== user.id) {
 		const blocked = await blockingExistsInDatabase(deps.db, note.userId, user.id);
-		if (blocked) throw new IdentifiableError('e70412a4-7197-4726-8e74-f3e0deb92aa7');
+		if (blocked) {
+			throw new IdentifiableError('e70412a4-7197-4726-8e74-f3e0deb92aa7');
+		}
 	}
 
 	if (!(await isVisibleForMeForApi(deps, note, user.id))) {
@@ -294,7 +302,9 @@ export async function createNoteReactionForApi(
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
 				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
-				if (reactee) directRecipients.push(reactee);
+				if (reactee) {
+					directRecipients.push(reactee);
+				}
 			}
 
 			let deliverToFollowers = false;
@@ -302,7 +312,9 @@ export async function createNoteReactionForApi(
 				deliverToFollowers = true;
 			} else if (note.visibility === 'specified') {
 				const visibleUsers = await listUsersByIdsFromDatabase(deps.db, note.visibleUserIds, { includeSuspended: true });
-				for (const u of visibleUsers.filter((u) => u.host != null)) directRecipients.push(u);
+				for (const u of visibleUsers.filter((u) => u.host != null)) {
+					directRecipients.push(u);
+				}
 			}
 
 			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers });
@@ -316,11 +328,15 @@ export async function deleteNoteReactionForApi(
 	note: MiNote,
 ): Promise<void> {
 	const exist = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, user.id, note.id);
-	if (exist == null) throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
+	if (exist == null) {
+		throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
+	}
 
 	await deps.db.transaction(async (transaction) => {
 		const result = await deleteNoteReactionByIdFromDatabase(transaction as typeof deps.db, exist.id);
-		if (result.affected !== 1) throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
+		if (result.affected !== 1) {
+			throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
+		}
 		await decrementNoteReactionInDatabase(
 			transaction as typeof deps.db,
 			note.id,
@@ -343,7 +359,9 @@ export async function deleteNoteReactionForApi(
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
 				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
-				if (reactee) directRecipients.push(reactee);
+				if (reactee) {
+					directRecipients.push(reactee);
+				}
 			}
 
 			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers: true });
@@ -364,15 +382,23 @@ export async function handleApiNotesReactionsCreate(
 	const params = parseApiParams(reactionsCreateParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw reactionNoSuchNoteError();
+	if (note == null) {
+		throw reactionNoSuchNoteError();
+	}
 
 	try {
 		await createNoteReactionForApi(deps, me, note, params.reaction);
 	} catch (err) {
 		if (err instanceof IdentifiableError) {
-			if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') throw reactionAlreadyReactedError();
-			if (err.id === 'e70412a4-7197-4726-8e74-f3e0deb92aa7') throw reactionYouHaveBeenBlockedError();
-			if (err.id === '12c35529-3c79-4327-b1cc-e2cf63a71925') throw reactionCannotReactToRenoteError();
+			if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') {
+				throw reactionAlreadyReactedError();
+			}
+			if (err.id === 'e70412a4-7197-4726-8e74-f3e0deb92aa7') {
+				throw reactionYouHaveBeenBlockedError();
+			}
+			if (err.id === '12c35529-3c79-4327-b1cc-e2cf63a71925') {
+				throw reactionCannotReactToRenoteError();
+			}
 		}
 		throw err;
 	}
@@ -390,7 +416,9 @@ export async function handleApiNotesReactionsDelete(
 	const params = parseApiParams(reactionsDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw unreactionNoSuchNoteError();
+	if (note == null) {
+		throw unreactionNoSuchNoteError();
+	}
 
 	try {
 		await deleteNoteReactionForApi(deps, me, note);
@@ -419,7 +447,7 @@ export async function handleApiNotesReactions(
 	deps: ApiNotesReactionsDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
-): Promise<Array<{ id: string; createdAt: string; user: unknown; type: string }>> {
+): Promise<{ id: string; createdAt: string; user: unknown; type: string }[]> {
 	const params = parseApiParams(notesReactionsParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null || !(await isVisibleForMeForApi(deps, note, me?.id ?? null))) {

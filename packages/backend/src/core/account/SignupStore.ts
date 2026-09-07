@@ -57,7 +57,9 @@ export async function createSignupAccountInDatabase(
 			.from(usedUsername)
 			.where(eq(usedUsername.username, data.usernameLower))
 			.limit(1);
-		if (used) throw new UsedUsernameError();
+		if (used) {
+			throw new UsedUsernameError();
+		}
 
 		const [account] = await tx
 			.insert(userTable)
@@ -102,7 +104,9 @@ export async function createSignupAccountInDatabase(
 				.set({ rootUserId: account.id })
 				.where(and(eq(metaTable.id, 'x'), isNull(metaTable.rootUserId)))
 				.returning({ id: metaTable.id });
-			if (updatedMeta == null) throw new RootUserAlreadyAssignedError();
+			if (updatedMeta == null) {
+				throw new RootUserAlreadyAssignedError();
+			}
 			rootClaimed = true;
 		}
 

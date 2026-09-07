@@ -147,7 +147,11 @@ import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import FormSlot from '@/components/form/slot.vue';
 import * as os from '@/os.js';
-import { enableStoragePersistence, getStoragePersistenceStatusRef, storagePersistenceSupported } from '@/utility/storage.js';
+import {
+	enableStoragePersistence,
+	getStoragePersistenceStatusRef,
+	storagePersistenceSupported,
+} from '@/utility/storage.js';
 import { ensureSignin } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -181,11 +185,15 @@ async function deleteAccount() {
 			type: 'warning',
 			text: i18n.ts.deleteAccountConfirm,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('i/delete-account', {
 		password: auth.result.password,

@@ -9,7 +9,9 @@ const ignoreElements = new Set(['script', 'style']);
 
 function containsFocusTrappedElements(el: HTMLElement): boolean {
 	for (const focusTrapElement of focusTrapElements) {
-		if (el.contains(focusTrapElement)) return true;
+		if (el.contains(focusTrapElement)) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -53,7 +55,9 @@ function releaseFocusTrap(el: HTMLElement): void {
 	if (el.parentElement != null && el !== window.document.body) {
 		el.parentElement.childNodes.forEach((siblingNode) => {
 			const siblingEl = getHTMLElementOrNull(siblingNode);
-			if (!siblingEl) return;
+			if (!siblingEl) {
+				return;
+			}
 			if (
 				siblingEl !== el &&
 				(highestZIndexElement == null ||
@@ -112,7 +116,9 @@ export function focusTrap(
 	if (el.parentElement != null && el !== window.document.body) {
 		el.parentElement.childNodes.forEach((siblingNode) => {
 			const siblingEl = getHTMLElementOrNull(siblingNode);
-			if (!siblingEl) return;
+			if (!siblingEl) {
+				return;
+			}
 			if (
 				siblingEl !== el &&
 				(hasInteractionWithOtherFocusTrappedEls === false ||

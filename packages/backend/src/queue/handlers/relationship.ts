@@ -19,12 +19,8 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
-import {
-	blockForApi,
-	unblockForApi,
-	unfollow,
-	type ApiAccountBlockingDependencies,
-} from '@/server/rest/account/account-blocking.js';
+import { blockForApi, unblockForApi, unfollow } from '@/server/rest/account/account-blocking.js';
+import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
@@ -34,16 +30,19 @@ import {
 	renderAccept,
 	renderFollow,
 	renderReject,
-	type ApiFollowingDependencies,
 } from '@/server/rest/user/following.js';
-import { validateAlsoKnownAsForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
+import { validateAlsoKnownAsForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 export type QueueRelationshipDependencies = ApiAccountBlockingDependencies &
 	ApiFollowingDependencies &
 	ApiApPersonDependencies;
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) return false;
+	if (!silencedHosts || host == null) {
+		return false;
+	}
 	return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
@@ -53,7 +52,9 @@ async function deliverAcceptFollowActivity(
 	followee: MiUser,
 	requestId?: string,
 ): Promise<void> {
-	if (!isRemoteUser(follower) || !isLocalUser(followee)) return;
+	if (!isRemoteUser(follower) || !isLocalUser(followee)) {
+		return;
+	}
 
 	const content = addActivityContext(
 		deps.config,
@@ -79,20 +80,24 @@ export async function followWithSideEffectsForApi(
 		blockingExistsInDatabase(deps.db, followee.id, follower.id),
 	]);
 
-	if (isRemoteUser(follower) && isLocalUser(followee) && blocked) {
-		// ブロック中のリモートフォローにはエラーではなく Reject を返す。
+	if (isRemoteUser(follower) && isLocalUser(followee) && (blocked || followee.isSuspended)) {
+		// リモート側にアクターが残っていても、凍結中・ブロック中のフォロー要求は承認しない。
 		const content = addActivityContext(
 			deps.config,
 			renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
 		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
-		return 'rejected: blocked';
+		return followee.isSuspended ? 'rejected: suspended' : 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
 		// 相手側のブロック解除に合わせ、残っている自分側のブロックも解除する。
 		await unblockForApi(deps, followee, follower);
 	} else {
-		if (blocking) throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
-		if (blocked) throw new IdentifiableError('3338392a-f764-498d-8855-db939dcf8c48', 'blocked');
+		if (blocking) {
+			throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
+		}
+		if (blocked) {
+			throw new IdentifiableError('3338392a-f764-498d-8855-db939dcf8c48', 'blocked');
+		}
 	}
 
 	if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {

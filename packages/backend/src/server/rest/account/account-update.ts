@@ -26,9 +26,10 @@ import {
 	appendVerifiedLinkToUserProfileInDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
-	type UserProfileUpdate,
 } from '@/core/user/UserProfileStore.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/user/UserStore.js';
+import type { UserProfileUpdate } from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import type { UserUpdate } from '@/core/user/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -55,26 +56,25 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import { acceptAllFollowRequestsForApi, genLocalUserUri, type ApiFollowingDependencies } from '../user/following.js';
+import { acceptAllFollowRequestsForApi, genLocalUserUri } from '../user/following.js';
+import type { ApiFollowingDependencies } from '../user/following.js';
 import { ApiError } from '../error.js';
 import {
 	addActivityContext,
 	deliverNoteActivityForApi,
 	renderEmoji,
 	renderUpdateForApi,
-	type ApiNoteApDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
 import { updateHashtagsRankingsForApi } from '../note/notes-create.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import {
-	getApiRolePolicies,
-	getApiUserRoles,
-	isApiModerator,
-	type ApiRolePolicyDependencies,
-} from '../role/role-policy.js';
-import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { getApiRolePolicies, getApiUserRoles, isApiModerator } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-import { resolveUserForApi, type ApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { resolveUserForApi } from '../activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
 export type ApiAccountUpdateDependencies = ApiRolePolicyDependencies &
 	ApiFollowingDependencies &
@@ -292,19 +292,27 @@ function checkMuteWordCount(mutedWords: (string[] | string)[], limit: number): v
 		}
 		return length;
 	};
-	if (count(mutedWords) > limit) throw iUpdateTooManyMutedWordsError();
+	if (count(mutedWords) > limit) {
+		throw iUpdateTooManyMutedWordsError();
+	}
 }
 
 function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 	for (const mutedWord of mutedWords) {
-		if (typeof mutedWord !== 'string') continue;
+		if (typeof mutedWord !== 'string') {
+			continue;
+		}
 
 		const regexp = mutedWord.match(/^\/(.+)\/(.*)$/);
-		if (!regexp) throw iUpdateInvalidRegexpError();
+		if (!regexp) {
+			throw iUpdateInvalidRegexpError();
+		}
 
 		try {
 			const [, pattern, flags] = regexp;
-			if (pattern == null || flags == null) throw iUpdateInvalidRegexpError();
+			if (pattern == null || flags == null) {
+				throw iUpdateInvalidRegexpError();
+			}
 			// 正規表現として妥当かどうかだけを見る (不正なら throw する)。
 			// ミュートを実際に適用するのはクライアントなので、そちらと同じエンジンで検査する。
 			void new RegExp(pattern, flags);
@@ -319,7 +327,9 @@ function tryRewriteUrl(maybeUrl: string): string {
 		/^(?:http[s]?:\/\/.)?(?:www\.)?[-a-zA-Z0-9@%._+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_+.~#?&/=]*)/;
 	try {
 		const match = maybeUrl.match(urlSafeRegex);
-		if (!match) return maybeUrl;
+		if (!match) {
+			return maybeUrl;
+		}
 
 		const urlPart = match[0];
 		const urlPartParsed = new URL(urlPart);
@@ -445,10 +455,18 @@ export async function renderPersonForApi(
 		attachment: attachment.length ? attachment : undefined,
 	};
 
-	if (user.movedToUri) person.movedTo = user.movedToUri;
-	if (user.alsoKnownAs) person.alsoKnownAs = user.alsoKnownAs;
-	if (profile.birthday) person['vcard:bday'] = profile.birthday;
-	if (profile.location) person['vcard:Address'] = profile.location;
+	if (user.movedToUri) {
+		person.movedTo = user.movedToUri;
+	}
+	if (user.alsoKnownAs) {
+		person.alsoKnownAs = user.alsoKnownAs;
+	}
+	if (profile.birthday) {
+		person['vcard:bday'] = profile.birthday;
+	}
+	if (profile.location) {
+		person['vcard:Address'] = profile.location;
+	}
 
 	return person;
 }
@@ -458,7 +476,9 @@ async function publishAccountUpdateToFollowersForApi(
 	userId: MiUser['id'],
 ): Promise<void> {
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, userId);
-	if (user.host != null) return;
+	if (user.host != null) {
+		return;
+	}
 
 	const localUser = user as MiLocalUser;
 	const person = await renderPersonForApi(deps, localUser);
@@ -513,7 +533,9 @@ export async function updateUsertagsForApi(
 }
 
 async function verifyLinkForApi(deps: ApiAccountUpdateDependencies, url: string, user: MiLocalUser): Promise<void> {
-	if (!safeForSql(url)) return;
+	if (!safeForSql(url)) {
+		return;
+	}
 
 	try {
 		const html = await deps.httpRequestService.getHtml(url);
@@ -560,14 +582,30 @@ export async function handleApiIUpdate(
 			updates.name = trimmedName === '' ? null : trimmedName;
 		}
 	}
-	if (ps.description !== undefined) profileUpdates.description = ps.description;
-	if (ps.followedMessage !== undefined) profileUpdates.followedMessage = ps.followedMessage;
-	if (ps.lang !== undefined) profileUpdates.lang = ps.lang;
-	if (ps.location !== undefined) profileUpdates.location = ps.location;
-	if (ps.birthday !== undefined) profileUpdates.birthday = ps.birthday;
-	if (ps.followingVisibility !== undefined) profileUpdates.followingVisibility = ps.followingVisibility;
-	if (ps.followersVisibility !== undefined) profileUpdates.followersVisibility = ps.followersVisibility;
-	if (ps.chatScope !== undefined) updates.chatScope = ps.chatScope;
+	if (ps.description !== undefined) {
+		profileUpdates.description = ps.description;
+	}
+	if (ps.followedMessage !== undefined) {
+		profileUpdates.followedMessage = ps.followedMessage;
+	}
+	if (ps.lang !== undefined) {
+		profileUpdates.lang = ps.lang;
+	}
+	if (ps.location !== undefined) {
+		profileUpdates.location = ps.location;
+	}
+	if (ps.birthday !== undefined) {
+		profileUpdates.birthday = ps.birthday;
+	}
+	if (ps.followingVisibility !== undefined) {
+		profileUpdates.followingVisibility = ps.followingVisibility;
+	}
+	if (ps.followersVisibility !== undefined) {
+		profileUpdates.followersVisibility = ps.followersVisibility;
+	}
+	if (ps.chatScope !== undefined) {
+		updates.chatScope = ps.chatScope;
+	}
 
 	if (ps.mutedWords !== undefined) {
 		policies ??= await getApiRolePolicies(deps, user);
@@ -583,44 +621,85 @@ export async function handleApiIUpdate(
 		validateMuteWordRegex(ps.hardMutedWords);
 		profileUpdates.hardMutedWords = ps.hardMutedWords;
 	}
-	if (ps.mutedInstances !== undefined) profileUpdates.mutedInstances = ps.mutedInstances;
-	if (ps.notificationRecieveConfig !== undefined)
+	if (ps.mutedInstances !== undefined) {
+		profileUpdates.mutedInstances = ps.mutedInstances;
+	}
+	if (ps.notificationRecieveConfig !== undefined) {
 		profileUpdates.notificationRecieveConfig = omitUndefined(ps.notificationRecieveConfig);
-	if (typeof ps.isLocked === 'boolean') updates.isLocked = ps.isLocked;
-	if (typeof ps.isExplorable === 'boolean') updates.isExplorable = ps.isExplorable;
-	if (typeof ps.hideOnlineStatus === 'boolean') updates.hideOnlineStatus = ps.hideOnlineStatus;
-	if (typeof ps.publicReactions === 'boolean') profileUpdates.publicReactions = ps.publicReactions;
-	if (typeof ps.isBot === 'boolean') updates.isBot = ps.isBot;
-	if (typeof ps.carefulBot === 'boolean') profileUpdates.carefulBot = ps.carefulBot;
-	if (typeof ps.autoAcceptFollowed === 'boolean') profileUpdates.autoAcceptFollowed = ps.autoAcceptFollowed;
-	if (typeof ps.noCrawle === 'boolean') profileUpdates.noCrawle = ps.noCrawle;
-	if (typeof ps.preventAiLearning === 'boolean') profileUpdates.preventAiLearning = ps.preventAiLearning;
-	if (typeof ps.requireSigninToViewContents === 'boolean')
+	}
+	if (typeof ps.isLocked === 'boolean') {
+		updates.isLocked = ps.isLocked;
+	}
+	if (typeof ps.isExplorable === 'boolean') {
+		updates.isExplorable = ps.isExplorable;
+	}
+	if (typeof ps.hideOnlineStatus === 'boolean') {
+		updates.hideOnlineStatus = ps.hideOnlineStatus;
+	}
+	if (typeof ps.publicReactions === 'boolean') {
+		profileUpdates.publicReactions = ps.publicReactions;
+	}
+	if (typeof ps.isBot === 'boolean') {
+		updates.isBot = ps.isBot;
+	}
+	if (typeof ps.carefulBot === 'boolean') {
+		profileUpdates.carefulBot = ps.carefulBot;
+	}
+	if (typeof ps.autoAcceptFollowed === 'boolean') {
+		profileUpdates.autoAcceptFollowed = ps.autoAcceptFollowed;
+	}
+	if (typeof ps.noCrawle === 'boolean') {
+		profileUpdates.noCrawle = ps.noCrawle;
+	}
+	if (typeof ps.preventAiLearning === 'boolean') {
+		profileUpdates.preventAiLearning = ps.preventAiLearning;
+	}
+	if (typeof ps.requireSigninToViewContents === 'boolean') {
 		updates.requireSigninToViewContents = ps.requireSigninToViewContents;
-	if (typeof ps.makeNotesFollowersOnlyBefore === 'number' || ps.makeNotesFollowersOnlyBefore === null)
+	}
+	if (typeof ps.makeNotesFollowersOnlyBefore === 'number' || ps.makeNotesFollowersOnlyBefore === null) {
 		updates.makeNotesFollowersOnlyBefore = ps.makeNotesFollowersOnlyBefore;
-	if (typeof ps.makeNotesHiddenBefore === 'number' || ps.makeNotesHiddenBefore === null)
+	}
+	if (typeof ps.makeNotesHiddenBefore === 'number' || ps.makeNotesHiddenBefore === null) {
 		updates.makeNotesHiddenBefore = ps.makeNotesHiddenBefore;
-	if (typeof ps.isCat === 'boolean') updates.isCat = ps.isCat;
-	if (typeof ps.injectFeaturedNote === 'boolean') profileUpdates.injectFeaturedNote = ps.injectFeaturedNote;
-	if (typeof ps.receiveAnnouncementEmail === 'boolean')
+	}
+	if (typeof ps.isCat === 'boolean') {
+		updates.isCat = ps.isCat;
+	}
+	if (typeof ps.injectFeaturedNote === 'boolean') {
+		profileUpdates.injectFeaturedNote = ps.injectFeaturedNote;
+	}
+	if (typeof ps.receiveAnnouncementEmail === 'boolean') {
 		profileUpdates.receiveAnnouncementEmail = ps.receiveAnnouncementEmail;
+	}
 	if (typeof ps.alwaysMarkNsfw === 'boolean') {
 		policies ??= await getApiRolePolicies(deps, user);
-		if (policies.alwaysMarkNsfw) throw iUpdateRestrictedByRoleError();
+		if (policies.alwaysMarkNsfw) {
+			throw iUpdateRestrictedByRoleError();
+		}
 		profileUpdates.alwaysMarkNsfw = ps.alwaysMarkNsfw;
 	}
-	if (typeof ps.autoSensitive === 'boolean') profileUpdates.autoSensitive = ps.autoSensitive;
-	if (ps.emailNotificationTypes !== undefined) profileUpdates.emailNotificationTypes = ps.emailNotificationTypes;
+	if (typeof ps.autoSensitive === 'boolean') {
+		profileUpdates.autoSensitive = ps.autoSensitive;
+	}
+	if (ps.emailNotificationTypes !== undefined) {
+		profileUpdates.emailNotificationTypes = ps.emailNotificationTypes;
+	}
 
 	if (ps.avatarId) {
 		policies ??= await getApiRolePolicies(deps, user);
-		if (!policies.canUpdateBioMedia) throw iUpdateRestrictedByRoleError();
+		if (!policies.canUpdateBioMedia) {
+			throw iUpdateRestrictedByRoleError();
+		}
 
 		const avatar = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.avatarId, user.id);
 
-		if (avatar == null) throw iUpdateNoSuchAvatarError();
-		if (!avatar.type.startsWith('image/')) throw iUpdateAvatarNotAnImageError();
+		if (avatar == null) {
+			throw iUpdateNoSuchAvatarError();
+		}
+		if (!avatar.type.startsWith('image/')) {
+			throw iUpdateAvatarNotAnImageError();
+		}
 
 		updates.avatarId = avatar.id;
 		updates.avatarUrl = getDriveFilePublicUrl(avatar, {
@@ -637,12 +716,18 @@ export async function handleApiIUpdate(
 
 	if (ps.bannerId) {
 		policies ??= await getApiRolePolicies(deps, user);
-		if (!policies.canUpdateBioMedia) throw iUpdateRestrictedByRoleError();
+		if (!policies.canUpdateBioMedia) {
+			throw iUpdateRestrictedByRoleError();
+		}
 
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.bannerId, user.id);
 
-		if (banner == null) throw iUpdateNoSuchBannerError();
-		if (!banner.type.startsWith('image/')) throw iUpdateBannerNotAnImageError();
+		if (banner == null) {
+			throw iUpdateNoSuchBannerError();
+		}
+		if (!banner.type.startsWith('image/')) {
+			throw iUpdateBannerNotAnImageError();
+		}
 
 		updates.bannerId = banner.id;
 		updates.bannerUrl = getDriveFilePublicUrl(banner, { config: deps.config as Config, meta: deps.meta as MiMeta });
@@ -671,7 +756,9 @@ export async function handleApiIUpdate(
 			.map((d) => d.id);
 		const decorationIdSet = new Set(decorationIds);
 
-		if (ps.avatarDecorations.length > policies.avatarDecorationLimit) throw iUpdateRestrictedByRoleError();
+		if (ps.avatarDecorations.length > policies.avatarDecorationLimit) {
+			throw iUpdateRestrictedByRoleError();
+		}
 
 		updates.avatarDecorations = ps.avatarDecorations
 			.filter((d) => decorationIdSet.has(d.id))
@@ -687,7 +774,9 @@ export async function handleApiIUpdate(
 	if (ps.pinnedPageId) {
 		const page = await fetchPageByIdFromDatabase(deps.db, ps.pinnedPageId);
 
-		if (page == null || page.userId !== user.id) throw iUpdateNoSuchPageError();
+		if (page == null || page.userId !== user.id) {
+			throw iUpdateNoSuchPageError();
+		}
 
 		profileUpdates.pinnedPageId = page.id;
 	} else if (ps.pinnedPageId === null) {
@@ -704,17 +793,25 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.alsoKnownAs) {
-		if (me.movedToUri) throw iUpdateYourAccountMovedError();
+		if (me.movedToUri) {
+			throw iUpdateYourAccountMovedError();
+		}
 
 		const newAlsoKnownAs = new Set<string>();
 		for (const line of ps.alsoKnownAs) {
-			if (!line) throw iUpdateNoSuchUserError();
+			if (!line) {
+				throw iUpdateNoSuchUserError();
+			}
 
 			const knownAs = await resolveAlsoKnownAsUserForApi(deps, line);
-			if (knownAs.id === me.id) throw iUpdateForbiddenToSetYourselfError();
+			if (knownAs.id === me.id) {
+				throw iUpdateForbiddenToSetYourselfError();
+			}
 
 			const toUrl = getUserUriForApi(deps.config, knownAs);
-			if (!toUrl) throw iUpdateUriNullError();
+			if (!toUrl) {
+				throw iUpdateUriNullError();
+			}
 
 			newAlsoKnownAs.add(toUrl);
 		}
@@ -736,7 +833,9 @@ export async function handleApiIUpdate(
 		if (!(await isApiModerator(deps, user))) {
 			hasProhibitedWords = isKeywordIncluded(newName, deps.meta.prohibitedWordsForNameOfUser);
 		}
-		if (hasProhibitedWords) throw iUpdateNameContainsProhibitedWordsError();
+		if (hasProhibitedWords) {
+			throw iUpdateNameContainsProhibitedWordsError();
+		}
 
 		const tokens = mfm.parseSimple(newName);
 		emojis.push(...extractCustomEmojisFromMfm(tokens));

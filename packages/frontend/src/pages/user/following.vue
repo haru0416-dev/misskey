@@ -25,22 +25,28 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 
-const props = withDefaults(defineProps<{
-	acct: string;
-}>(), {
-});
+const props = withDefaults(
+	defineProps<{
+		acct: string;
+	}>(),
+	{},
+);
 
 const user = ref<null | Misskey.entities.UserDetailed>(null);
 const error = ref<unknown>(null);
 
 function fetchUser(): void {
-	if (props.acct == null) return;
+	if (props.acct == null) {
+		return;
+	}
 	user.value = null;
-	misskeyApi('users/show', Misskey.acct.parse(props.acct)).then(u => {
-		user.value = u;
-	}).catch(err => {
-		error.value = err;
-	});
+	misskeyApi('users/show', Misskey.acct.parse(props.acct))
+		.then((u) => {
+			user.value = u;
+		})
+		.catch((err) => {
+			error.value = err;
+		});
 }
 
 watch(() => props.acct, fetchUser, {
@@ -54,11 +60,13 @@ const headerTabs = computed(() => []);
 definePage(() => ({
 	title: i18n.ts.user,
 	icon: 'ti ti-user',
-	...user.value ? {
-		title: user.value.name ? `${user.value.name} (@${user.value.username})` : `@${user.value.username}`,
-		subtitle: i18n.ts.following,
-		userName: user.value,
-		avatar: user.value,
-	} : {},
+	...(user.value
+		? {
+				title: user.value.name ? `${user.value.name} (@${user.value.username})` : `@${user.value.username}`,
+				subtitle: i18n.ts.following,
+				userName: user.value,
+				avatar: user.value,
+			}
+		: {}),
 }));
 </script>

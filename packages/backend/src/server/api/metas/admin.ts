@@ -927,7 +927,7 @@ export const endpointMetas = {
 						type: 'number',
 						optional: false,
 						nullable: false,
-						example: 51469,
+						example: 51_469,
 					},
 					comment: {
 						type: 'string',
@@ -1166,7 +1166,7 @@ export const endpointMetas = {
 				example: {
 					migrations: {
 						count: 66,
-						size: 32768,
+						size: 32_768,
 					},
 				},
 			},

@@ -21,19 +21,25 @@ const cache = new MemoryKVCache<readonly mfm.MfmNode[]>(1000 * 60 * 5, 1000);
 
 function deepFreeze(node: unknown): void {
 	if (Array.isArray(node)) {
-		for (const child of node) deepFreeze(child);
+		for (const child of node) {
+			deepFreeze(child);
+		}
 		Object.freeze(node);
 		return;
 	}
 	if (node != null && typeof node === 'object') {
-		for (const value of Object.values(node)) deepFreeze(value);
+		for (const value of Object.values(node)) {
+			deepFreeze(value);
+		}
 		Object.freeze(node);
 	}
 }
 
 export function parseMfmCached(text: string): readonly mfm.MfmNode[] {
 	const cached = cache.get(text);
-	if (cached != null) return cached;
+	if (cached != null) {
+		return cached;
+	}
 
 	const parsed = mfm.parse(text);
 	deepFreeze(parsed);

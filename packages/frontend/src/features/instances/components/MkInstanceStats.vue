@@ -70,25 +70,20 @@ import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkRetentionHeatmap from '@/features/charts/components/MkRetentionHeatmap.vue';
 import MkRetentionLineChart from '@/features/charts/components/MkRetentionLineChart.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import MkPieChart, { type InstanceForPie } from '@/pages/admin/overview/pie.vue';
+import MkPieChart from '@/pages/admin/overview/pie.vue';
+import type { InstanceForPie } from '@/pages/admin/overview/pie.vue';
 
 const shouldShowFederation = computed(() => instance.federation !== 'none' || $i?.isModerator);
 
 const chartLimit = 500;
-const {
-	model: chartSpan,
-	def: chartSpanDef,
-} = useMkSelect({
+const { model: chartSpan, def: chartSpanDef } = useMkSelect({
 	items: [
 		{ value: 'hour', label: i18n.ts.perHour },
 		{ value: 'day', label: i18n.ts.perDay },
 	],
 	initialValue: 'hour',
 });
-const {
-	model: chartSrc,
-	def: chartSrcDef,
-} = useMkSelect({
+const { model: chartSrc, def: chartSrcDef } = useMkSelect({
 	items: computed<MkSelectItem<ChartSrc>[]>(() => {
 		const items: MkSelectItem<ChartSrc>[] = [];
 
@@ -118,11 +113,11 @@ const {
 			{ value: 'local-notes', label: i18n.ts._charts.localNotesIncDec },
 		];
 
-		if (shouldShowFederation.value) notesItems.push({ value: 'remote-notes', label: i18n.ts._charts.remoteNotesIncDec });
+		if (shouldShowFederation.value) {
+			notesItems.push({ value: 'remote-notes', label: i18n.ts._charts.remoteNotesIncDec });
+		}
 
-		notesItems.push(
-			{ value: 'notes-total', label: i18n.ts._charts.notesTotal },
-		);
+		notesItems.push({ value: 'notes-total', label: i18n.ts._charts.notesTotal });
 
 		items.push({
 			type: 'group',
@@ -143,18 +138,17 @@ const {
 	}),
 	initialValue: 'active-users',
 });
-const {
-	model: heatmapSrc,
-	def: heatmapSrcDef,
-} = useMkSelect({
+const { model: heatmapSrc, def: heatmapSrcDef } = useMkSelect({
 	items: computed(() => [
 		{ value: 'active-users' as const, label: 'Active Users' },
 		{ value: 'notes' as const, label: 'Notes' },
-		...(shouldShowFederation.value ? [
-			{ value: 'ap-requests-inbox-received' as const, label: 'AP Requests: inboxReceived' },
-			{ value: 'ap-requests-deliver-succeeded' as const, label: 'AP Requests: deliverSucceeded' },
-			{ value: 'ap-requests-deliver-failed' as const, label: 'AP Requests: deliverFailed' },
-		] : []),
+		...(shouldShowFederation.value
+			? [
+					{ value: 'ap-requests-inbox-received' as const, label: 'AP Requests: inboxReceived' },
+					{ value: 'ap-requests-deliver-succeeded' as const, label: 'AP Requests: deliverSucceeded' },
+					{ value: 'ap-requests-deliver-failed' as const, label: 'AP Requests: deliverFailed' },
+				]
+			: []),
 	]),
 	initialValue: 'active-users',
 });
@@ -162,8 +156,8 @@ const subs = ref<InstanceForPie[]>([]);
 const pubs = ref<InstanceForPie[]>([]);
 
 onMounted(() => {
-	misskeyApiGet('federation/stats', { limit: 30 }).then(fedStats => {
-		subs.value = fedStats.topSubInstances.map(x => ({
+	misskeyApiGet('federation/stats', { limit: 30 }).then((fedStats) => {
+		subs.value = fedStats.topSubInstances.map((x) => ({
 			name: x.host,
 			color: x.themeColor ?? '#888888',
 			value: x.followersCount,
@@ -178,7 +172,7 @@ onMounted(() => {
 			value: fedStats.otherFollowersCount,
 		});
 
-		pubs.value = fedStats.topPubInstances.map(x => ({
+		pubs.value = fedStats.topPubInstances.map((x) => ({
 			name: x.host,
 			color: x.themeColor ?? '#888888',
 			value: x.followingCount,

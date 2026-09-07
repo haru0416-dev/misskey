@@ -28,7 +28,9 @@ export async function fetchOrCreateSystemAccount(
 	type: SystemAccountType,
 ): Promise<MiLocalUser> {
 	const existing = await fetchSystemAccountUserFromDatabase(db, type);
-	if (existing != null) return existing;
+	if (existing != null) {
+		return existing;
+	}
 
 	const username: MiUser['username'] = `system.${type}`;
 	const password = randomUUID();

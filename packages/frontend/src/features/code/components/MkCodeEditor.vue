@@ -38,17 +38,20 @@ import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import XCode from '@/features/code/components/MkCode.Core.vue';
 
-const props = withDefaults(defineProps<{
-	modelValue: string | null;
-	lang?: string;
-	required?: boolean;
-	readonly?: boolean;
-	disabled?: boolean;
-	debounce?: boolean;
-	manualSave?: boolean;
-}>(), {
-	lang: 'js',
-});
+const props = withDefaults(
+	defineProps<{
+		modelValue: string | null;
+		lang?: string;
+		required?: boolean;
+		readonly?: boolean;
+		disabled?: boolean;
+		debounce?: boolean;
+		manualSave?: boolean;
+	}>(),
+	{
+		lang: 'js',
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'change', _ev: InputEvent): void;
@@ -68,13 +71,15 @@ function focus() {
 }
 
 function onInput(ev: InputEvent) {
-	v.value = (inputEl.value?.value) ?? '';
+	v.value = inputEl.value?.value ?? '';
 	changed.value = true;
 	emit('change', ev);
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
+	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) {
+		return;
+	}
 
 	emit('keydown', ev);
 
@@ -113,11 +118,11 @@ function updated() {
 
 const debouncedUpdated = debounce(1000, updated);
 
-watch(modelValue, newValue => {
+watch(modelValue, (newValue) => {
 	v.value = newValue ?? '';
 });
 
-watch(v, newValue => {
+watch(v, (newValue) => {
 	if (!props.manualSave) {
 		if (props.debounce) {
 			debouncedUpdated();

@@ -51,7 +51,9 @@ async function startApplication() {
 }
 
 async function stopApplication() {
-	if (!runtime) return;
+	if (!runtime) {
+		return;
+	}
 
 	await runtime.dispose();
 	runtime = undefined;
@@ -124,7 +126,9 @@ async function startControllerEndpoints(
 }
 
 async function stopControllerEndpoints() {
-	if (!controllerServer) return;
+	if (!controllerServer) {
+		return;
+	}
 
 	await new Promise<void>((resolve, reject) => {
 		controllerServer!.close((err) => (err ? reject(err) : resolve()));

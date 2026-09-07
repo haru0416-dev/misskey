@@ -7,7 +7,8 @@ import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { api, initTestDb, post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -15,7 +16,7 @@ const deleteBlockers = {
 	note: {
 		functionName: 'test_block_note_delete',
 		triggerName: 'test_block_note_delete',
-		advisoryLockKey: 71001,
+		advisoryLockKey: 71_001,
 		queryPattern: 'delete from "note"%',
 	},
 } as const;
@@ -37,7 +38,9 @@ async function waitForBlockedStatements(
 		`,
 			[queryPattern, waitEventType],
 		);
-		if (result.rows[0]?.count === 2) return;
+		if (result.rows[0]?.count === 2) {
+			return;
+		}
 		await new Promise<void>((resolve) => setImmediate(resolve));
 	}
 
@@ -79,7 +82,9 @@ async function runAfterBothDeletesStart<T>(
 
 		return await Promise.all(pending);
 	} finally {
-		if (lockHeld) await lockClient.query('ROLLBACK');
+		if (lockHeld) {
+			await lockClient.query('ROLLBACK');
+		}
 		lockClient.release();
 		await pool.query(`DROP TRIGGER IF EXISTS "${blocker.triggerName}" ON "${table}"`);
 		await pool.query(`DROP FUNCTION IF EXISTS "${blocker.functionName}"()`);
@@ -113,7 +118,9 @@ async function runAfterBothBlockOnNoteRowLock<T>(
 
 		return await Promise.all(pending);
 	} finally {
-		if (lockHeld) await lockClient.query('ROLLBACK');
+		if (lockHeld) {
+			await lockClient.query('ROLLBACK');
+		}
 		lockClient.release();
 	}
 }

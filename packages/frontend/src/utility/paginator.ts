@@ -22,7 +22,7 @@ type AbsEndpointType = {
 };
 
 type FilterByEpRes<E extends Record<string, AbsEndpointType>> = {
-	[K in keyof E]: E[K]['res'] extends Array<{ id: string }> ? K : never;
+	[K in keyof E]: E[K]['res'] extends { id: string }[] ? K : never;
 }[keyof E];
 export type PaginatorCompatibleEndpointPaths = FilterByEpRes<Misskey.Endpoints>;
 export type PaginatorCompatibleEndpoints = {
@@ -191,7 +191,9 @@ export class Paginator<
 		let result: string | undefined;
 		for (const item of items) {
 			const id = item.id;
-			if (result == null || (direction === 'newest' ? id > result : id < result)) result = id;
+			if (result == null || (direction === 'newest' ? id > result : id < result)) {
+				result = id;
+			}
 		}
 		return result;
 	}
@@ -200,7 +202,9 @@ export class Paginator<
 		const ids = new Set(existingItems.map((item) => item.id));
 		const uniqueItems: T[] = [];
 		for (const item of items) {
-			if (ids.has(item.id)) continue;
+			if (ids.has(item.id)) {
+				continue;
+			}
 			ids.add(item.id);
 			uniqueItems.push(item);
 		}
@@ -255,7 +259,9 @@ export class Paginator<
 		try {
 			apiRes = (await misskeyApi(this.endpoint, data, undefined, abortController.signal)) as T[];
 		} catch {
-			if (!abortController.signal.aborted) this.error.value = true;
+			if (!abortController.signal.aborted) {
+				this.error.value = true;
+			}
 			return;
 		} finally {
 			if (this.initAbortController === abortController) {
@@ -263,7 +269,9 @@ export class Paginator<
 				this.fetching.value = false;
 			}
 		}
-		if (abortController.signal.aborted) return;
+		if (abortController.signal.aborted) {
+			return;
+		}
 
 		// 逆順で返ってくるので
 		if ((this.initialId || this.initialDate) && this.initialDirection === 'newer') {
@@ -271,7 +279,9 @@ export class Paginator<
 		}
 
 		const fourthItem = apiRes[3];
-		if (fourthItem != null) fourthItem._shouldInsertAd_ = true;
+		if (fourthItem != null) {
+			fourthItem._shouldInsertAd_ = true;
+		}
 
 		this.pushItems(apiRes);
 
@@ -297,8 +307,9 @@ export class Paginator<
 	}
 
 	public async fetchOlder(): Promise<void> {
-		if (!this.canFetchOlder.value || this.fetching.value || this.fetchingOlder.value || this.items.value.length === 0)
+		if (!this.canFetchOlder.value || this.fetching.value || this.fetchingOlder.value || this.items.value.length === 0) {
 			return;
+		}
 		const abortController = new AbortController();
 		this.olderAbortController = abortController;
 		this.fetchingOlder.value = true;
@@ -330,10 +341,14 @@ export class Paginator<
 				this.fetchingOlder.value = false;
 			}
 		}
-		if (abortController.signal.aborted) return;
+		if (abortController.signal.aborted) {
+			return;
+		}
 
 		const eleventhItem = apiRes[10];
-		if (eleventhItem != null) eleventhItem._shouldInsertAd_ = true;
+		if (eleventhItem != null) {
+			eleventhItem._shouldInsertAd_ = true;
+		}
 
 		if (this.order.value === 'oldest') {
 			this.unshiftItems(apiRes.toReversed(), false);
@@ -361,7 +376,9 @@ export class Paginator<
 			toQueue?: boolean;
 		} = {},
 	): Promise<void> {
-		if (this.fetching.value || this.fetchingNewer.value || this.items.value.length === 0) return;
+		if (this.fetching.value || this.fetchingNewer.value || this.items.value.length === 0) {
+			return;
+		}
 		const abortController = new AbortController();
 		this.newerAbortController = abortController;
 		this.fetchingNewer.value = true;
@@ -393,7 +410,9 @@ export class Paginator<
 				this.fetchingNewer.value = false;
 			}
 		}
-		if (abortController.signal.aborted) return;
+		if (abortController.signal.aborted) {
+			return;
+		}
 
 		if (apiRes.length === 0) {
 			this.canFetchNewer.value = false;
@@ -425,41 +444,63 @@ export class Paginator<
 	}
 
 	public trim(_trigger = true): void {
-		if (this.items.value.length >= MAX_ITEMS) this.canFetchOlder.value = true;
-		if (this.items.value.length > MAX_ITEMS) this.items.value = this.items.value.slice(0, MAX_ITEMS);
+		if (this.items.value.length >= MAX_ITEMS) {
+			this.canFetchOlder.value = true;
+		}
+		if (this.items.value.length > MAX_ITEMS) {
+			this.items.value = this.items.value.slice(0, MAX_ITEMS);
+		}
 	}
 
 	public unshiftItems(newItems: T[], trim = true): void {
 		const uniqueItems = this.getUniqueItems(newItems, this.items.value);
-		if (uniqueItems.length === 0) return;
+		if (uniqueItems.length === 0) {
+			return;
+		}
 		let items = [...uniqueItems, ...this.items.value];
-		if (trim && items.length >= MAX_ITEMS) this.canFetchOlder.value = true;
-		if (trim && items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+		if (trim && items.length >= MAX_ITEMS) {
+			this.canFetchOlder.value = true;
+		}
+		if (trim && items.length > MAX_ITEMS) {
+			items = items.slice(0, MAX_ITEMS);
+		}
 		this.items.value = items;
 	}
 
 	public pushItems(oldItems: T[]): void {
 		const uniqueItems = this.getUniqueItems(oldItems, this.items.value);
-		if (uniqueItems.length === 0) return;
+		if (uniqueItems.length === 0) {
+			return;
+		}
 		this.items.value = [...this.items.value, ...uniqueItems];
 	}
 
 	public prepend(item: T): void {
-		if (this.items.value.some((x) => x.id === item.id)) return;
+		if (this.items.value.some((x) => x.id === item.id)) {
+			return;
+		}
 		const items = [item, ...this.items.value];
-		if (items.length >= MAX_ITEMS) this.canFetchOlder.value = true;
+		if (items.length >= MAX_ITEMS) {
+			this.canFetchOlder.value = true;
+		}
 		this.items.value = items.length > MAX_ITEMS ? items.slice(0, MAX_ITEMS) : items;
 	}
 
 	public enqueue(item: T): void {
-		if (this.aheadQueue.some((queuedItem) => queuedItem.id === item.id)) return;
-		if (this.items.value.some((currentItem) => currentItem.id === item.id)) return;
+		if (this.aheadQueue.some((queuedItem) => queuedItem.id === item.id)) {
+			return;
+		}
+		if (this.items.value.some((currentItem) => currentItem.id === item.id)) {
+			return;
+		}
 		this.aheadQueue = [item, ...this.aheadQueue].slice(0, MAX_QUEUE_ITEMS);
 		this.queuedAheadItemsCount.value = this.aheadQueue.length;
 	}
 
 	public releaseQueue(): void {
-		if (this.aheadQueue.length === 0) return;
+		if (this.aheadQueue.length === 0) {
+			return;
+		}
 		const queuedItems = this.aheadQueue;
 		this.aheadQueue = [];
 		this.queuedAheadItemsCount.value = 0;
@@ -468,7 +509,9 @@ export class Paginator<
 
 	public removeItem(id: string): void {
 		const items = this.items.value.filter((item) => item.id !== id);
-		if (items.length !== this.items.value.length) this.items.value = items;
+		if (items.length !== this.items.value.length) {
+			this.items.value = items;
+		}
 
 		const queuedItems = this.aheadQueue.filter((item) => item.id !== id);
 		if (queuedItems.length !== this.aheadQueue.length) {

@@ -85,7 +85,9 @@ export async function handleApiRegistryGet(
 		params.scope,
 		params.key,
 	);
-	if (item == null) throw noSuchGetKeyError();
+	if (item == null) {
+		throw noSuchGetKeyError();
+	}
 
 	return item.value;
 }
@@ -129,7 +131,9 @@ export async function handleApiRegistryGetDetail(
 		params.scope,
 		params.key,
 	);
-	if (item == null) throw noSuchGetDetailKeyError();
+	if (item == null) {
+		throw noSuchGetDetailKeyError();
+	}
 
 	return {
 		updatedAt: item.updatedAt.toISOString(),
@@ -229,7 +233,9 @@ export async function handleApiRegistryScopesWithDomain(
 
 		const scopeKey = item.scope.join('.');
 		const scopeKeys = scopeKeysByDomain.get(item.domain)!;
-		if (scopeKeys.has(scopeKey)) continue;
+		if (scopeKeys.has(scopeKey)) {
+			continue;
+		}
 		scopeKeys.add(scopeKey);
 		target.scopes.push(item.scope);
 	}

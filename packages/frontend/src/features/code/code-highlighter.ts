@@ -36,8 +36,9 @@ export async function getTheme(
 
 	if (theme.base) {
 		const base = [lightTheme, darkTheme].find((x) => x.id === theme.base);
-		if (base && base.codeHighlighter)
+		if (base && base.codeHighlighter) {
 			theme.codeHighlighter = Object.assign({}, base.codeHighlighter, theme.codeHighlighter);
+		}
 	}
 
 	if (theme.codeHighlighter) {
@@ -69,7 +70,9 @@ export async function getTheme(
 }
 
 export function getHighlighter(): Promise<HighlighterCore> {
-	if (_highlighter) return Promise.resolve(_highlighter);
+	if (_highlighter) {
+		return Promise.resolve(_highlighter);
+	}
 
 	_highlighterPromise ??= initHighlighter().catch((error: unknown) => {
 		_highlighterPromise = null;

@@ -33,10 +33,14 @@ function chooseEmojiPalette() {
 export async function addToEmojiPalette(emoji: string) {
 	const res = await chooseEmojiPalette();
 
-	if (res.canceled || res.result == null) return;
+	if (res.canceled || res.result == null) {
+		return;
+	}
 
 	const palette = prefer.emojiPalettes.find((p) => p.id === res.result);
-	if (!palette) return;
+	if (!palette) {
+		return;
+	}
 	let emojis = [...palette.emojis];
 
 	if (!emojis.includes(emoji)) {
@@ -49,9 +53,8 @@ export async function addToEmojiPalette(emoji: string) {
 						...p,
 						emojis,
 					};
-				} else {
-					return p;
 				}
+				return p;
 			}),
 		);
 		os.success();
@@ -75,7 +78,9 @@ export async function addToEmojiPalette(emoji: string) {
 			],
 		});
 
-		if (res.canceled || res.result === 'doNothing') return;
+		if (res.canceled || res.result === 'doNothing') {
+			return;
+		}
 
 		emojis = emojis.filter((e) => e !== emoji);
 
@@ -93,9 +98,8 @@ export async function addToEmojiPalette(emoji: string) {
 						...p,
 						emojis,
 					};
-				} else {
-					return p;
 				}
+				return p;
 			}),
 		);
 

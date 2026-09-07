@@ -69,14 +69,17 @@ function add(ev: PointerEvent) {
 }
 
 function onEmojiClick(ev: PointerEvent, emoji: string) {
-	const menuItems : MenuItem[] = [{
-		type: 'label',
-		text: emoji,
-	}, {
-		text: i18n.ts.emojiUnmute,
-		icon: 'ti ti-mood-off',
-		action: () => unmute(emoji),
-	}];
+	const menuItems: MenuItem[] = [
+		{
+			type: 'label',
+			text: emoji,
+		},
+		{
+			text: i18n.ts.emojiUnmute,
+			icon: 'ti ti-mood-off',
+			action: () => unmute(emoji),
+		},
+	];
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
 
@@ -97,15 +100,18 @@ const syncEnabled = ref(prefer.isSyncEnabled('mutingEmojis'));
 function changeSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('mutingEmojis').then((res) => {
-			if (res == null) return;
-			if (res.enabled) syncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				syncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('mutingEmojis');
 		syncEnabled.value = false;
 	}
 }
-
 </script>
 
 <style module>

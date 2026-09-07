@@ -84,11 +84,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure } = useWidgetPropsManager(name,
-	widgetPropsDef,
-	props,
-	emit,
-);
+const { widgetProps, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
 
 const connection = useStream().useChannel('queueStats');
 const current = reactive({
@@ -110,8 +106,10 @@ const jammedAudioBuffer = ref<AudioBuffer | null>(null);
 const jammedSoundNodePlaying = ref<boolean>(false);
 
 if (prefer['sound.masterVolume']) {
-	sound.loadAudio('/client-assets/sounds/syuilo/queue-jammed.mp3').then(buf => {
-		if (!buf) throw new Error('[WidgetJobQueue] Failed to initialize AudioBuffer');
+	sound.loadAudio('/client-assets/sounds/syuilo/queue-jammed.mp3').then((buf) => {
+		if (!buf) {
+			throw new Error('[WidgetJobQueue] Failed to initialize AudioBuffer');
+		}
 		jammedAudioBuffer.value = buf;
 	});
 }
@@ -134,7 +132,7 @@ const onStats = (stats: Misskey.entities.QueueStats) => {
 			const soundNode = sound.createSourceNode(jammedAudioBuffer.value, {}).soundSource;
 			if (soundNode != null) {
 				jammedSoundNodePlaying.value = true;
-				soundNode.onended = () => jammedSoundNodePlaying.value = false;
+				soundNode.onended = () => (jammedSoundNodePlaying.value = false);
 				soundNode.start();
 			}
 		}

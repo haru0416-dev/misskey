@@ -69,7 +69,8 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queue/queues.js';
+import { addDbJobs } from '@/core/queue/queues.js';
+import type { DbJobBulkInput, DbQueue, RelationshipQueue } from '@/core/queue/queues.js';
 import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type {
 	DBExportAntennasData,
@@ -81,22 +82,20 @@ import type {
 	RelationshipJobData,
 } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
+import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import { packDriveFileManyByIdsForApi } from '@/server/rest/drive/drive-file.js';
 import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
-import { resolveUserForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUserForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
-import {
-	createExportCompletedNotification,
-	type ApiNotificationDependencies,
-} from '@/server/rest/notification/notification.js';
-import { addUserListMemberForApi, type ApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
+import { createExportCompletedNotification } from '@/server/rest/notification/notification.js';
+import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import { addUserListMemberForApi } from '@/server/rest/user/users-lists.js';
+import type { ApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
 import { isApiModerator } from '@/server/rest/role/role-policy.js';
-import {
-	deleteFileSyncForApi,
-	deleteObjectStorageFileForApi,
-	type QueueObjectStorageDependencies,
-} from './object-storage.js';
+import { deleteFileSyncForApi, deleteObjectStorageFileForApi } from './object-storage.js';
+import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDbDependencies = QueueObjectStorageDependencies &
 	ApiDriveFileUploadDependencies &
@@ -221,7 +220,9 @@ export async function handleQueueExportMuting(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -282,7 +283,9 @@ export async function handleQueueExportBlocking(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -343,7 +346,9 @@ export async function handleQueueExportUserLists(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const lists = await listUserListsByUserIdFromDatabase(deps.db, user.id);
 
@@ -384,7 +389,9 @@ export async function handleQueueExportAntennas(
 	job: Bull.Job<DBExportAntennasData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -438,7 +445,9 @@ export async function handleQueueExportFollowing(
 	job: Bull.Job<DbExportFollowingData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -502,7 +511,9 @@ async function resolveImportTargetUserForApi(
 	acct: string,
 ): Promise<import('@/models/User.js').MiUser | null> {
 	const { username, host } = Acct.parse(acct);
-	if (!host) return null;
+	if (!host) {
+		return null;
+	}
 
 	let target = await fetchUserByUsernameAndHostFromDatabase(
 		deps.db,
@@ -522,24 +533,32 @@ export async function handleQueueImportMuting(
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	const csv = await deps.downloadService.downloadTextFile(file.url);
 
 	for (const line of csv.trim().split('\n')) {
 		try {
 			const acct = line.split(',', 1)[0]?.trim();
-			if (!acct) continue;
+			if (!acct) {
+				continue;
+			}
 			const target = await resolveImportTargetUserForApi(deps, acct);
 
 			if (target == null) {
 				throw new Error(`cannot resolve user: ${acct}`);
 			}
 
-			if (target.id === job.data.user.id) continue;
+			if (target.id === job.data.user.id) {
+				continue;
+			}
 
 			await createMutingInDatabase(deps.db, {
 				id: genId(),
@@ -559,10 +578,14 @@ export async function handleQueueImportUserLists(
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	const csv = await deps.downloadService.downloadTextFile(file.url);
 
@@ -570,7 +593,9 @@ export async function handleQueueImportUserLists(
 		try {
 			const parts = line.split(',');
 			const [listNamePart, acctPart] = parts;
-			if (listNamePart == null || acctPart == null) continue;
+			if (listNamePart == null || acctPart == null) {
+				continue;
+			}
 			const listName = listNamePart.trim();
 			const { username, host } = Acct.parse(acctPart.trim());
 			let withReplies = false;
@@ -604,7 +629,9 @@ export async function handleQueueImportUserLists(
 				target = await resolveUserForApi(deps, username, host);
 			}
 
-			if (await userListMembershipExistsInDatabase(deps.db, target.id, list.id)) continue;
+			if (await userListMembershipExistsInDatabase(deps.db, target.id, list.id)) {
+				continue;
+			}
 
 			await addUserListMemberForApi(deps, target, list, user, { withReplies });
 		} catch {
@@ -625,14 +652,18 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 		let jobs: DbJobBulkInput<K>[] = [];
 		let lineIndex = 0;
 		for await (const line of lines) {
-			if (line.trim() === '') continue;
+			if (line.trim() === '') {
+				continue;
+			}
 			jobs.push(createJob(line, lineIndex++));
 			if (jobs.length >= 500) {
 				await addDbJobs(deps.dbQueue, jobs);
 				jobs = [];
 			}
 		}
-		if (jobs.length > 0) await addDbJobs(deps.dbQueue, jobs);
+		if (jobs.length > 0) {
+			await addDbJobs(deps.dbQueue, jobs);
+		}
 	} finally {
 		cleanup();
 	}
@@ -643,10 +674,14 @@ export async function handleQueueImportBlocking(
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	await enqueueImportLines(deps, file.url, (target, index) => ({
 		name: 'importBlockingToDb',
@@ -664,14 +699,18 @@ export async function handleQueueImportBlockingToDb(
 
 	try {
 		const acct = line.split(',', 1)[0]?.trim();
-		if (!acct) return;
+		if (!acct) {
+			return;
+		}
 		const target = await resolveImportTargetUserForApi(deps, acct);
 
 		if (target == null) {
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		if (target.id === job.data.user.id) return;
+		if (target.id === job.data.user.id) {
+			return;
+		}
 
 		await deps.relationshipQueue.addBulk([
 			toRelationshipJobForApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
@@ -686,10 +725,14 @@ export async function handleQueueImportFollowing(
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
-	if (file == null) return;
+	if (file == null) {
+		return;
+	}
 
 	await enqueueImportLines(deps, file.url, (target, index) => ({
 		name: 'importFollowingToDb',
@@ -712,7 +755,9 @@ export async function handleQueueImportFollowingToDb(
 	try {
 		const parts = line.split(',');
 		const acct = parts[0]?.trim();
-		if (!acct) return;
+		if (!acct) {
+			return;
+		}
 		let withReplies: boolean | null = null;
 
 		for (const keyValue of parts.slice(2)) {
@@ -730,7 +775,9 @@ export async function handleQueueImportFollowingToDb(
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		if (target.id === job.data.user.id) return;
+		if (target.id === job.data.user.id) {
+			return;
+		}
 
 		await deps.relationshipQueue.addBulk([
 			toRelationshipJobForApi(
@@ -788,7 +835,9 @@ export async function handleQueueExportFavorites(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -888,7 +937,9 @@ export async function handleQueueExportNotes(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 
@@ -1009,7 +1060,9 @@ async function processClipNotesForApi(
 			limit: 100,
 		});
 
-		if (clipNotes.length === 0) break;
+		if (clipNotes.length === 0) {
+			break;
+		}
 
 		cursor = clipNotes.at(-1)?.id ?? null;
 		const noteIds = clipNotes.map((clipNote) => clipNote.noteId);
@@ -1023,10 +1076,14 @@ async function processClipNotesForApi(
 
 		for (const clipNote of clipNotes) {
 			const note = noteMap.get(clipNote.noteId);
-			if (note == null) continue;
+			if (note == null) {
+				continue;
+			}
 
 			const noteCreatedAt = parseId(note.id).date;
-			if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) continue;
+			if (shouldHideNoteByTime(note.user.makeNotesHiddenBefore, noteCreatedAt)) {
+				continue;
+			}
 
 			const poll = pollMap.get(note.id);
 			const content = JSON.stringify(serializeClipNoteForApi(deps, { ...clipNote, note }, poll));
@@ -1083,7 +1140,9 @@ export async function handleQueueExportClips(
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const [path, cleanup] = await createTemp();
 

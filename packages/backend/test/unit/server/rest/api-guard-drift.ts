@@ -46,15 +46,20 @@ function extractRegistrations(source: string, file: string): Registration[] {
 			if (escaped) {
 				escaped = false;
 			} else if (quote != null) {
-				if (char === '\\') escaped = true;
-				else if (char === quote) quote = null;
+				if (char === '\\') {
+					escaped = true;
+				} else if (char === quote) {
+					quote = null;
+				}
 			} else if (char === '"' || char === "'" || char === '`') {
 				quote = char;
 			} else if (char === '(') {
 				depth++;
 			} else if (char === ')') {
 				depth--;
-				if (depth === 0) break;
+				if (depth === 0) {
+					break;
+				}
 			}
 		}
 
@@ -96,7 +101,9 @@ type GuardMeta = {
 };
 
 function guardMetaOf(name: string): GuardMeta | null {
-	if (!Object.hasOwn(endpointMetas, name)) return null;
+	if (!Object.hasOwn(endpointMetas, name)) {
+		return null;
+	}
 	return endpointMetas[name as keyof typeof endpointMetas].meta as GuardMeta;
 }
 
@@ -108,10 +115,18 @@ function requiresCredential(meta: GuardMeta): boolean {
 function expectedGuards(meta: GuardMeta): { label: string; accepts: string[] }[] {
 	const expected: { label: string; accepts: string[] }[] = [];
 
-	if (requiresCredential(meta)) expected.push({ label: 'requireCredential', accepts: ['assertCredential'] });
-	if (meta.secure === true) expected.push({ label: 'secure', accepts: ['assertSecureCredential'] });
-	if (meta.kind != null && meta.kind !== 'server') expected.push({ label: 'kind', accepts: ['assertTokenPermission'] });
-	if (meta.prohibitMoved === true) expected.push({ label: 'prohibitMoved', accepts: ['assertProhibitMoved'] });
+	if (requiresCredential(meta)) {
+		expected.push({ label: 'requireCredential', accepts: ['assertCredential'] });
+	}
+	if (meta.secure === true) {
+		expected.push({ label: 'secure', accepts: ['assertSecureCredential'] });
+	}
+	if (meta.kind != null && meta.kind !== 'server') {
+		expected.push({ label: 'kind', accepts: ['assertTokenPermission'] });
+	}
+	if (meta.prohibitMoved === true) {
+		expected.push({ label: 'prohibitMoved', accepts: ['assertProhibitMoved'] });
+	}
 	if (meta.requireRolePolicy != null) {
 		expected.push({ label: 'requireRolePolicy', accepts: ['hasApiRolePolicyOrIsRoot'] });
 	}
@@ -139,7 +154,9 @@ describe('API guard drift', () => {
 		const errors: string[] = [];
 
 		for (const registration of registrations) {
-			if (registration.helper == null) continue;
+			if (registration.helper == null) {
+				continue;
+			}
 			const name = registration.path.slice(1);
 			const meta = guardMetaOf(name);
 			if (meta == null) {
@@ -162,10 +179,14 @@ describe('API guard drift', () => {
 		const errors: string[] = [];
 
 		for (const registration of registrations) {
-			if (registration.helper != null) continue;
+			if (registration.helper != null) {
+				continue;
+			}
 			const name = registration.path.slice(1);
 			const meta = guardMetaOf(name);
-			if (meta == null) continue;
+			if (meta == null) {
+				continue;
+			}
 
 			const declared = new Set(expectedGuards(meta).flatMap((guard) => guard.accepts));
 			for (const match of registration.body.matchAll(GUARD_CALL)) {
@@ -183,10 +204,14 @@ describe('API guard drift', () => {
 		const errors: string[] = [];
 
 		for (const registration of registrations) {
-			if (registration.helper != null) continue;
+			if (registration.helper != null) {
+				continue;
+			}
 			const name = registration.path.slice(1);
 			const meta = guardMetaOf(name);
-			if (meta == null) continue; // メタ情報を持たない経路 (signup-flow 等) は契約テストの管轄。
+			if (meta == null) {
+				continue;
+			} // メタ情報を持たない経路 (signup-flow 等) は契約テストの管轄。
 
 			for (const guard of expectedGuards(meta)) {
 				if (!guard.accepts.some((fn) => new RegExp(`\\b${fn}\\b`).test(registration.body))) {

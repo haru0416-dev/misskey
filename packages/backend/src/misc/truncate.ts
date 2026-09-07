@@ -15,7 +15,9 @@ export function truncate(input: string | undefined, size: number): string | unde
 	let result = '';
 	let count = 0;
 	for (const { segment } of segmenter.segment(input)) {
-		if (count >= size) break;
+		if (count >= size) {
+			break;
+		}
 		count++;
 		result += segment;
 	}

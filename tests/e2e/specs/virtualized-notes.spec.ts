@@ -238,8 +238,9 @@ async function scrollTimeline(list: Locator, fraction: number): Promise<void> {
 		while (scrollElement && !['auto', 'scroll'].includes(getComputedStyle(scrollElement).overflowY)) {
 			scrollElement = scrollElement.parentElement;
 		}
-		if (scrollElement)
+		if (scrollElement) {
 			scrollElement.scrollTop = (scrollElement.scrollHeight - scrollElement.clientHeight) * scrollFraction;
+		}
 	}, fraction);
 }
 

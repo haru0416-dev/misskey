@@ -56,26 +56,35 @@ const windowRouter = createRouter(props.initialPath);
 
 const pageMetadata = ref<null | PageMetadata>(null);
 const windowEl = useTemplateRef('windowEl');
-const _history_ = ref<{ path: string; }[]>([{
-	path: windowRouter.getCurrentFullPath(),
-}]);
+const _history_ = ref<{ path: string }[]>([
+	{
+		path: windowRouter.getCurrentFullPath(),
+	},
+]);
 const buttonsLeft = computed(() => {
-	return _history_.value.length > 1 ? [{
-		icon: 'ti ti-arrow-left',
-		title: i18n.ts.goBack,
-		onClick: back,
-	}] : [];
+	return _history_.value.length > 1
+		? [
+				{
+					icon: 'ti ti-arrow-left',
+					title: i18n.ts.goBack,
+					onClick: back,
+				},
+			]
+		: [];
 });
 const buttonsRight = computed(() => {
-	const buttons = [{
-		icon: 'ti ti-reload',
-		title: i18n.ts.reload,
-		onClick: reload,
-	}, {
-		icon: 'ti ti-player-eject',
-		title: i18n.ts.showInPage,
-		onClick: expand,
-	}];
+	const buttons = [
+		{
+			icon: 'ti ti-reload',
+			title: i18n.ts.reload,
+			onClick: reload,
+		},
+		{
+			icon: 'ti ti-player-eject',
+			title: i18n.ts.showInPage,
+			onClick: expand,
+		},
+	];
 
 	return buttons;
 });
@@ -83,22 +92,24 @@ const reloadCount = ref(0);
 
 function getSearchMarker(path: string) {
 	const hash = path.split('#')[1];
-	if (hash == null) return null;
+	if (hash == null) {
+		return null;
+	}
 	return hash;
 }
 
 const searchMarkerId = ref<string | null>(getSearchMarker(props.initialPath));
 
-windowRouter.addListener('push', ctx => {
+windowRouter.addListener('push', (ctx) => {
 	_history_.value.push({ path: ctx.fullPath });
 });
 
-windowRouter.addListener('replace', ctx => {
+windowRouter.addListener('replace', (ctx) => {
 	_history_.value.pop();
 	_history_.value.push({ path: ctx.fullPath });
 });
 
-windowRouter.addListener('forcePush', ctx => {
+windowRouter.addListener('forcePush', (ctx) => {
 	window.open(url + ctx.fullPath, '_blank', 'noopener');
 	if (ctx.onInit) {
 		nextTick(() => {
@@ -107,7 +118,7 @@ windowRouter.addListener('forcePush', ctx => {
 	}
 });
 
-windowRouter.addListener('forceReplace', ctx => {
+windowRouter.addListener('forceReplace', (ctx) => {
 	window.open(url + ctx.fullPath, '_blank', 'noopener');
 	if (ctx.onInit) {
 		nextTick(() => {
@@ -116,8 +127,10 @@ windowRouter.addListener('forceReplace', ctx => {
 	}
 });
 
-windowRouter.addListener('change', ctx => {
-	if (_DEV_) console.log('windowRouter: change', ctx.fullPath);
+windowRouter.addListener('change', (ctx) => {
+	if (_DEV_) {
+		console.log('windowRouter: change', ctx.fullPath);
+	}
 	searchMarkerId.value = getSearchMarker(ctx.fullPath);
 	analytics.page({
 		path: ctx.fullPath,
@@ -137,28 +150,33 @@ provideReactiveMetadata(pageMetadata);
 provide('shouldOmitHeaderTitle', true);
 provide('shouldHeaderThin', true);
 
-const contextmenu = computed(() => ([{
-	icon: 'ti ti-player-eject',
-	text: i18n.ts.showInPage,
-	action: expand,
-}, {
-	icon: 'ti ti-window-maximize',
-	text: i18n.ts.popout,
-	action: popout,
-}, {
-	icon: 'ti ti-external-link',
-	text: i18n.ts.openInNewTab,
-	action: () => {
-		window.open(url + windowRouter.getCurrentFullPath(), '_blank', 'noopener');
-		windowEl.value?.close();
+const contextmenu = computed(() => [
+	{
+		icon: 'ti ti-player-eject',
+		text: i18n.ts.showInPage,
+		action: expand,
 	},
-}, {
-	icon: 'ti ti-link',
-	text: i18n.ts.copyLink,
-	action: () => {
-		copyToClipboard(url + windowRouter.getCurrentFullPath());
+	{
+		icon: 'ti ti-window-maximize',
+		text: i18n.ts.popout,
+		action: popout,
 	},
-}]));
+	{
+		icon: 'ti ti-external-link',
+		text: i18n.ts.openInNewTab,
+		action: () => {
+			window.open(url + windowRouter.getCurrentFullPath(), '_blank', 'noopener');
+			windowEl.value?.close();
+		},
+	},
+	{
+		icon: 'ti ti-link',
+		text: i18n.ts.copyLink,
+		action: () => {
+			copyToClipboard(url + windowRouter.getCurrentFullPath());
+		},
+	},
+]);
 
 function back() {
 	_history_.value.pop();

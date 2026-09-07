@@ -159,7 +159,9 @@ export async function fetchViewerRelationSnapshotFromDatabase(
 	kinds: readonly ViewerRelationKind[],
 ): Promise<ViewerRelationSnapshot> {
 	const snapshot = emptyViewerRelationSnapshot(kinds);
-	if (snapshot.kinds.size === 0) return snapshot;
+	if (snapshot.kinds.size === 0) {
+		return snapshot;
+	}
 
 	const orderedKinds = kindOrder.filter((kind) => snapshot.kinds.has(kind));
 	const statement = preparedQueryFor(db, `viewerRelation:${orderedKinds.join('+')}`, () =>

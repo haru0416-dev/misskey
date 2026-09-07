@@ -8,7 +8,9 @@ import { isHashtag } from '../type.js';
 import type { IObject, IApHashtag } from '../type.js';
 
 export function extractApHashtags(tags: IObject | IObject[] | null | undefined): string[] {
-	if (tags == null) return [];
+	if (tags == null) {
+		return [];
+	}
 
 	const hashtags = extractApHashtagObjects(tags);
 
@@ -21,6 +23,8 @@ export function extractApHashtags(tags: IObject | IObject[] | null | undefined):
 }
 
 export function extractApHashtagObjects(tags: IObject | IObject[] | null | undefined): IApHashtag[] {
-	if (tags == null) return [];
+	if (tags == null) {
+		return [];
+	}
 	return toArray(tags).filter(isHashtag);
 }

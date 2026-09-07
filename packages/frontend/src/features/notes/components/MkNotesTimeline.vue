@@ -72,53 +72,69 @@ import { i18n } from '@/i18n.js';
 import { useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';
 
-const props = withDefaults(defineProps<MkPaginationOptions & {
-	paginator: T;
-	noGap?: boolean;
-}>(), {
-	autoLoad: true,
-	direction: 'down',
-	pullToRefresh: true,
-	withControl: true,
-	forceDisableInfiniteScroll: false,
-});
+const props = withDefaults(
+	defineProps<
+		MkPaginationOptions & {
+			paginator: T;
+			noGap?: boolean;
+		}
+	>(),
+	{
+		autoLoad: true,
+		direction: 'down',
+		pullToRefresh: true,
+		withControl: true,
+		forceDisableInfiniteScroll: false,
+	},
+);
 
 const rootEl = useTemplateRef('rootEl');
 const scrollElement = shallowRef<HTMLElement | null>(null);
 const scrollMargin = ref(0);
 const canVirtualize = computed(() => scrollElement.value != null);
 
-const virtualizer = useVirtualizer(computed(() => ({
-	count: props.paginator.items.value.length,
-	getScrollElement: () => scrollElement.value,
-	estimateSize: () => 220,
-	getItemKey: (index) => props.paginator.items.value[index]?.id ?? index,
-	overscan: 5,
-	scrollMargin: scrollMargin.value,
-	useScrollendEvent: true,
-	// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
-	// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
-	useAnimationFrameWithResizeObserver: false,
-})));
+const virtualizer = useVirtualizer(
+	computed(() => ({
+		count: props.paginator.items.value.length,
+		getScrollElement: () => scrollElement.value,
+		estimateSize: () => 220,
+		getItemKey: (index) => props.paginator.items.value[index]?.id ?? index,
+		overscan: 5,
+		scrollMargin: scrollMargin.value,
+		useScrollendEvent: true,
+		// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
+		// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
+		useAnimationFrameWithResizeObserver: false,
+	})),
+);
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
-	const note = props.paginator.items.value[virtualItem.index];
-	if (note == null) return [];
-	const previousNote = props.paginator.items.value[virtualItem.index - 1];
-	const separatorInfo = previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
-		? getSeparatorInfo(previousNote.createdAt, note.createdAt)
-		: null;
-	return [{
-		index: virtualItem.index,
-		start: virtualItem.start,
-		note,
-		separatorInfo,
-	}];
-}));
+const virtualRows = computed(() =>
+	virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
+		const note = props.paginator.items.value[virtualItem.index];
+		if (note == null) {
+			return [];
+		}
+		const previousNote = props.paginator.items.value[virtualItem.index - 1];
+		const separatorInfo =
+			previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
+				? getSeparatorInfo(previousNote.createdAt, note.createdAt)
+				: null;
+		return [
+			{
+				index: virtualItem.index,
+				start: virtualItem.start,
+				note,
+				separatorInfo,
+			},
+		];
+	}),
+);
 
 function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
 	const previousNote = notes[index - 1];
-	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) return null;
+	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) {
+		return null;
+	}
 	return getSeparatorInfo(previousNote.createdAt, createdAt);
 }
 
@@ -132,60 +148,82 @@ let layoutVerifyTimer: number | null = null;
 // 非仮想フォールバック中は検査せず即確定扱いにする代わりに、仮想化が有効になった時点で
 // ラッチをリセットして検査をやり直す (フォールバック中の確定が仮想初回レンダーを素通しさせない)
 watch(canVirtualize, (active, prev) => {
-	if (active && !prev) virtualLayoutVerified.value = false;
+	if (active && !prev) {
+		virtualLayoutVerified.value = false;
+	}
 });
 
 function isVirtualLayoutSane(len: number): boolean {
-	if (!canVirtualize.value) return true; // 非仮想フォールバックは通常フローなので対象外
-	if (len <= 1) return true; // 1件以下なら重なりようがない
+	if (!canVirtualize.value) {
+		return true;
+	} // 非仮想フォールバックは通常フローなので対象外
+	if (len <= 1) {
+		return true;
+	} // 1件以下なら重なりようがない
 	const container = rootEl.value;
 	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
 	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
-	if (container == null) return false;
+	if (container == null) {
+		return false;
+	}
 	const rowEls = [...container.children] as HTMLElement[];
-	if (rowEls.length < 2) return false;
+	if (rowEls.length < 2) {
+		return false;
+	}
 	// 隣接行の重なり検査 (詳細は MkStreamingNotesTimeline の同名ロジック参照)。
 	// 高さ0の行 (ハードミュート等) は top 同値でも重ならないので誤検出しない
 	for (let i = 1; i < rowEls.length; i++) {
 		const prev = rowEls[i - 1]!;
-		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) return false;
+		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) {
+			return false;
+		}
 	}
 	return true;
 }
 
-watch([virtualRows, () => props.paginator.items.value.length], ([, len]) => {
-	if (len === 0) {
-		virtualLayoutVerified.value = false;
-		if (layoutVerifyTimer != null) {
-			window.clearTimeout(layoutVerifyTimer);
-			layoutVerifyTimer = null;
+watch(
+	[virtualRows, () => props.paginator.items.value.length],
+	([, len]) => {
+		if (len === 0) {
+			virtualLayoutVerified.value = false;
+			if (layoutVerifyTimer != null) {
+				window.clearTimeout(layoutVerifyTimer);
+				layoutVerifyTimer = null;
+			}
+			return;
 		}
-		return;
-	}
-	if (virtualLayoutVerified.value) return;
-	if (isVirtualLayoutSane(len)) {
-		virtualLayoutVerified.value = true;
-		if (layoutVerifyTimer != null) {
-			window.clearTimeout(layoutVerifyTimer);
-			layoutVerifyTimer = null;
+		if (virtualLayoutVerified.value) {
+			return;
 		}
-	} else {
-		// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
-		layoutVerifyTimer ??= window.setTimeout(() => {
-			layoutVerifyTimer = null;
+		if (isVirtualLayoutSane(len)) {
 			virtualLayoutVerified.value = true;
-		}, 300);
-	}
-}, { immediate: true, flush: 'post' });
+			if (layoutVerifyTimer != null) {
+				window.clearTimeout(layoutVerifyTimer);
+				layoutVerifyTimer = null;
+			}
+		} else {
+			// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
+			layoutVerifyTimer ??= window.setTimeout(() => {
+				layoutVerifyTimer = null;
+				virtualLayoutVerified.value = true;
+			}, 300);
+		}
+	},
+	{ immediate: true, flush: 'post' },
+);
 
 const virtualLayoutPending = computed(() => props.paginator.items.value.length > 0 && !virtualLayoutVerified.value);
 
 function measureElement(node: Element | ComponentPublicInstance | null) {
-	if (node instanceof Element) virtualizer.value.measureElement(node);
+	if (node instanceof Element) {
+		virtualizer.value.measureElement(node);
+	}
 }
 
 function updateScrollMargin() {
-	if (!rootEl.value || !scrollElement.value) return;
+	if (!rootEl.value || !scrollElement.value) {
+		return;
+	}
 	const rootRect = rootEl.value.getBoundingClientRect();
 	const scrollRect = scrollElement.value.getBoundingClientRect();
 	scrollMargin.value = rootRect.top - scrollRect.top + scrollElement.value.scrollTop;
@@ -193,7 +231,9 @@ function updateScrollMargin() {
 
 let scrollMarginFrame: number | null = null;
 function scheduleScrollMarginUpdate() {
-	if (scrollMarginFrame != null) return;
+	if (scrollMarginFrame != null) {
+		return;
+	}
 	scrollMarginFrame = window.requestAnimationFrame(() => {
 		scrollMarginFrame = null;
 		updateScrollMargin();
@@ -205,24 +245,33 @@ const paginationEl = useTemplateRef<ComponentPublicInstance>('paginationEl');
 function attachScrollElement(el: HTMLElement | null) {
 	const next = getScrollContainer(el);
 	// 一度解決したスクロールコンテナは維持 (リロードで rootEl が消えても仮想化を落とさない)
-	if (next == null || next === scrollElement.value) return;
+	if (next == null || next === scrollElement.value) {
+		return;
+	}
 	scrollElement.value = next;
 	nextTick(scheduleScrollMarginUpdate);
 }
 
 // ローディング中から存在する MkPagination のルートでスクロールコンテナを先に解決する。
 // rootEl (アイテム描画後にしか存在しない) だけだと初回表示が非仮想→仮想の二重マウントになる
-watch(paginationEl, (comp) => {
-	attachScrollElement(comp?.$el instanceof HTMLElement ? comp.$el : null);
-}, { immediate: true });
+watch(
+	paginationEl,
+	(comp) => {
+		attachScrollElement(comp?.$el instanceof HTMLElement ? comp.$el : null);
+	},
+	{ immediate: true },
+);
 watch(rootEl, (el) => {
 	attachScrollElement(el);
 	nextTick(scheduleScrollMarginUpdate);
 });
 
-watch(() => props.paginator.items.value.length, () => {
-	nextTick(scheduleScrollMarginUpdate);
-});
+watch(
+	() => props.paginator.items.value.length,
+	() => {
+		nextTick(scheduleScrollMarginUpdate);
+	},
+);
 
 onMounted(() => {
 	window.addEventListener('resize', scheduleScrollMarginUpdate, { passive: true });
@@ -230,8 +279,12 @@ onMounted(() => {
 
 onUnmounted(() => {
 	window.removeEventListener('resize', scheduleScrollMarginUpdate);
-	if (scrollMarginFrame != null) window.cancelAnimationFrame(scrollMarginFrame);
-	if (layoutVerifyTimer != null) window.clearTimeout(layoutVerifyTimer);
+	if (scrollMarginFrame != null) {
+		window.cancelAnimationFrame(scrollMarginFrame);
+	}
+	if (layoutVerifyTimer != null) {
+		window.clearTimeout(layoutVerifyTimer);
+	}
 });
 
 useGlobalEvent('noteDeleted', (noteId) => {

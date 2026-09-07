@@ -95,8 +95,11 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	}
 
 	reloadChannel.addEventListener('message', (ev: MessageEvent<string | null>) => {
-		if (ev.data !== null) window.location.href = ev.data;
-		else window.location.reload();
+		if (ev.data !== null) {
+			window.location.href = ev.data;
+		} else {
+			window.location.reload();
+		}
 	});
 
 	//#region lang 属性の設定
@@ -145,11 +148,15 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	if (!isSafeMode) {
 		if (prefer.lightTheme == null) {
 			const instanceLightTheme = parseThemeOrNull(instance.defaultLightTheme);
-			if (instanceLightTheme != null) prefer.commit('lightTheme', instanceLightTheme);
+			if (instanceLightTheme != null) {
+				prefer.commit('lightTheme', instanceLightTheme);
+			}
 		}
 		if (prefer.darkTheme == null) {
 			const instanceDarkTheme = parseThemeOrNull(instance.defaultDarkTheme);
-			if (instanceDarkTheme != null) prefer.commit('darkTheme', instanceDarkTheme);
+			if (instanceDarkTheme != null) {
+				prefer.commit('darkTheme', instanceDarkTheme);
+			}
 		}
 	}
 
@@ -161,9 +168,8 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 			const theme = (() => {
 				if (darkMode) {
 					return isSafeMode ? defaultDarkTheme : (prefer.darkTheme ?? defaultDarkTheme);
-				} else {
-					return isSafeMode ? defaultLightTheme : (prefer.lightTheme ?? defaultLightTheme);
 				}
+				return isSafeMode ? defaultLightTheme : (prefer.lightTheme ?? defaultLightTheme);
 			})();
 
 			themeManager.updateTheme(theme);
@@ -228,7 +234,9 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		let waitingForActivation = false;
 
 		const requestWakeLock = async (): Promise<void> => {
-			if (wakeLock != null || requestingWakeLock || window.document.visibilityState !== 'visible') return;
+			if (wakeLock != null || requestingWakeLock || window.document.visibilityState !== 'visible') {
+				return;
+			}
 			requestingWakeLock = true;
 			try {
 				wakeLock = await navigator.wakeLock.request('screen');
@@ -240,7 +248,9 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 					{ once: true },
 				);
 			} catch {
-				if (waitingForActivation) return;
+				if (waitingForActivation) {
+					return;
+				}
 				waitingForActivation = true;
 				// WebKit系ではユーザー操作後でないと要求できない場合がある。
 				window.document.addEventListener(
@@ -257,7 +267,9 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		};
 
 		window.document.addEventListener('visibilitychange', () => {
-			if (window.document.visibilityState === 'visible') void requestWakeLock();
+			if (window.document.visibilityState === 'visible') {
+				void requestWakeLock();
+			}
 		});
 		void requestWakeLock();
 	}

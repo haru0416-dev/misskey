@@ -99,7 +99,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -107,6 +106,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -121,7 +121,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt } from '../endpoints-context.js';
+import { createEndpointsContext, getAt } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -772,7 +773,9 @@ describe('Endpoints', () => {
 		} | null = null;
 
 		async function ensureChannelSearchFixture() {
-			if (channelSearchFixture != null) return channelSearchFixture;
+			if (channelSearchFixture != null) {
+				return channelSearchFixture;
+			}
 
 			const config = fixtureConfig;
 			const prefix = `hono-search-${Date.now().toString(36)}`;

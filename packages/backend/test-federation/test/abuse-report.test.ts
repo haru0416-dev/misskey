@@ -1,7 +1,8 @@
 import { describe, test, beforeAll } from 'vitest';
 import { rejects, strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { createAccount, createModerator, resolveRemoteUser, sleep, type LoginUser } from './utils.js';
+import { createAccount, createModerator, resolveRemoteUser, sleep } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 describe('Abuse report', () => {
 	describe('Forwarding report', () => {
@@ -24,13 +25,17 @@ describe('Abuse report', () => {
 			await alice.client.request('users/report-abuse', { userId: bobInA.id, comment });
 			const reports = await aModerator.client.request('admin/abuse-user-reports', {});
 			const report = reports.find((report) => report.comment === comment);
-			if (report == null) throw new Error('Forwarded abuse report was not found in a.test');
+			if (report == null) {
+				throw new Error('Forwarded abuse report was not found in a.test');
+			}
 			await aModerator.client.request('admin/forward-abuse-user-report', { reportId: report.id });
 			await sleep();
 
 			const reportsInB = await bModerator.client.request('admin/abuse-user-reports', {});
 			const reportInB = reportsInB.find((report) => report.comment.includes(comment));
-			if (reportInB == null) throw new Error('Forwarded abuse report was not found in b.test');
+			if (reportInB == null) {
+				throw new Error('Forwarded abuse report was not found in b.test');
+			}
 			// reporter は Alice ではなく、A の moderator でもない。
 			strictEqual(reportInB.reporter.url, 'https://a.test/@system.actor');
 			strictEqual(reportInB.targetUserId, bob.id);

@@ -27,7 +27,9 @@ function isFuncName(value: string): value is FuncName {
 }
 
 export const fromThemeString = (str?: string): ThemeValue => {
-	if (!str) return null;
+	if (!str) {
+		return null;
+	}
 	if (str.startsWith(':')) {
 		const parts = str.slice(1).split('<');
 		const name = parts[0];
@@ -60,13 +62,14 @@ export const fromThemeString = (str?: string): ThemeValue => {
 			type: 'css',
 			value: str.substring(1).trim(),
 		};
-	} else {
-		return str;
 	}
+	return str;
 };
 
 export const toThemeString = (value: Color | Func | RefProp | RefConst | Css) => {
-	if (typeof value === 'string') return value;
+	if (typeof value === 'string') {
+		return value;
+	}
 	switch (value.type) {
 		case 'func':
 			return `:${value.name}<${value.arg}<@${value.value}`;
@@ -88,7 +91,9 @@ const convertToMisskeyTheme = (
 ): Theme => {
 	const props = {} as { [key: string]: string };
 	for (const [key, value] of vm) {
-		if (value === null) continue;
+		if (value === null) {
+			continue;
+		}
 		props[key] = toThemeString(value);
 	}
 

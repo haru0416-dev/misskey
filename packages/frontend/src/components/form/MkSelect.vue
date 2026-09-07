@@ -103,11 +103,10 @@ const slots = defineSlots<{
 	prefix?: () => void;
 }>();
 
-type ModelTChecked = MODELT & (
-	MODELT extends GetMkSelectValueTypesFromDef<ITEMS>
+type ModelTChecked = MODELT &
+	(MODELT extends GetMkSelectValueTypesFromDef<ITEMS>
 		? unknown
-		: 'Error: The type of model does not match the type of items.'
-);
+		: 'Error: The type of model does not match the type of items.');
 
 const model = defineModel<ModelTChecked>({ required: true });
 
@@ -124,10 +123,7 @@ const selectId = `${id}-select`;
 const labelId = `${id}-label`;
 const valueId = `${id}-value`;
 const captionId = `${id}-caption`;
-const height =
-	props.small ? 33 :
-	props.large ? 39 :
-	36;
+const height = props.small ? 33 : props.large ? 39 : 36;
 
 const focus = () => container.value?.focus();
 
@@ -141,33 +137,41 @@ onMounted(() => {
 	});
 });
 
-watch([model, () => props.items], () => {
-	let found: ItemOption | null = null;
-	for (const item of props.items) {
-		if (item.type === 'group') {
-			for (const option of item.items) {
-				if (option.value === model.value) {
-					found = option;
+watch(
+	[model, () => props.items],
+	() => {
+		let found: ItemOption | null = null;
+		for (const item of props.items) {
+			if (item.type === 'group') {
+				for (const option of item.items) {
+					if (option.value === model.value) {
+						found = option;
+						break;
+					}
+				}
+			} else {
+				if (item.value === model.value) {
+					found = item;
 					break;
 				}
 			}
-		} else {
-			if (item.value === model.value) {
-				found = item;
-				break;
-			}
 		}
-	}
-	if (found) {
-		currentValueText.value = found.label;
-	}
-}, { immediate: true, deep: true });
+		if (found) {
+			currentValueText.value = found.label;
+		}
+	},
+	{ immediate: true, deep: true },
+);
 
 function show() {
-	if (opening.value || props.disabled || props.readonly) return;
+	if (opening.value || props.disabled || props.readonly) {
+		return;
+	}
 	focus();
 	const containerEl = container.value;
-	if (containerEl == null) return;
+	if (containerEl == null) {
+		return;
+	}
 
 	opening.value = true;
 

@@ -359,11 +359,21 @@ export async function fetchInstanceMetadataWithSideEffects(
 			) as MiInstance['maintainerEmail'];
 		}
 
-		if (name) updates.name = name;
-		if (description) updates.description = description;
-		if (icon ?? favicon) updates.iconUrl = icon && !icon.includes('data:image/png;base64') ? icon : favicon;
-		if (favicon) updates.faviconUrl = favicon;
-		if (themeColor) updates.themeColor = themeColor;
+		if (name) {
+			updates.name = name;
+		}
+		if (description) {
+			updates.description = description;
+		}
+		if (icon ?? favicon) {
+			updates.iconUrl = icon && !icon.includes('data:image/png;base64') ? icon : favicon;
+		}
+		if (favicon) {
+			updates.faviconUrl = favicon;
+		}
+		if (themeColor) {
+			updates.themeColor = themeColor;
+		}
 
 		await deps.updateInstance(instance.id, updates);
 

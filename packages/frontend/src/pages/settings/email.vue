@@ -84,7 +84,9 @@ function onChangeReceiveAnnouncementEmail(v: boolean) {
 
 async function saveEmailAddress() {
 	const auth = await os.authenticateDialog();
-	if (auth.canceled) return;
+	if (auth.canceled) {
+		return;
+	}
 
 	os.apiWithDialog('i/update-email', {
 		password: auth.result.password,
@@ -107,13 +109,22 @@ const saveNotificationSettings = () => {
 			emailNotification_quote.value ? 'quote' : null,
 			emailNotification_follow.value ? 'follow' : null,
 			emailNotification_receiveFollowRequest.value ? 'receiveFollowRequest' : null,
-		].filter(x => x != null),
+		].filter((x) => x != null),
 	});
 };
 
-watch([emailNotification_mention, emailNotification_reply, emailNotification_quote, emailNotification_follow, emailNotification_receiveFollowRequest], () => {
-	saveNotificationSettings();
-});
+watch(
+	[
+		emailNotification_mention,
+		emailNotification_reply,
+		emailNotification_quote,
+		emailNotification_follow,
+		emailNotification_receiveFollowRequest,
+	],
+	() => {
+		saveNotificationSettings();
+	},
+);
 
 onMounted(() => {
 	watch(emailAddress, () => {

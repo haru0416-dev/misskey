@@ -4,7 +4,8 @@
  */
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { announcementReaction, type AnnouncementReactionInsert } from '@/db/schema/announcement-reaction.js';
+import { announcementReaction } from '@/db/schema/announcement-reaction.js';
+import type { AnnouncementReactionInsert } from '@/db/schema/announcement-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
@@ -42,7 +43,9 @@ export async function countAnnouncementReactionsByAnnouncementIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	announcementIds: MiAnnouncement['id'][],
 ): Promise<Map<MiAnnouncement['id'], Record<string, number>>> {
-	if (announcementIds.length === 0) return new Map();
+	if (announcementIds.length === 0) {
+		return new Map();
+	}
 
 	const rows = await db
 		.select({
@@ -69,7 +72,9 @@ export async function listMyAnnouncementReactionsFromDatabase(
 	userId: MiUser['id'],
 	announcementIds: MiAnnouncement['id'][],
 ): Promise<Map<MiAnnouncement['id'], string>> {
-	if (announcementIds.length === 0) return new Map();
+	if (announcementIds.length === 0) {
+		return new Map();
+	}
 
 	const rows = await db
 		.select({

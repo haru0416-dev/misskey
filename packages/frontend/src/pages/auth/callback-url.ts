@@ -20,7 +20,9 @@ const DISALLOWED_CALLBACK_PROTOCOLS = new Set([
 
 export function setAuthCallbackUrlParameter(callbackUrl: string, name: string, value: string): string {
 	const url = new URL(callbackUrl);
-	if (DISALLOWED_CALLBACK_PROTOCOLS.has(url.protocol)) throw new Error('invalid url');
+	if (DISALLOWED_CALLBACK_PROTOCOLS.has(url.protocol)) {
+		throw new Error('invalid url');
+	}
 	url.searchParams.set(name, value);
 	return url.toString();
 }

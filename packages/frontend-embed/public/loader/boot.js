@@ -38,10 +38,12 @@
 		if (supportedLangs.includes(navigator.language)) {
 			lang = navigator.language;
 		} else {
-			lang = supportedLangs.find(x => x.split('-')[0] === navigator.language);
+			lang = supportedLangs.find((x) => x.split('-')[0] === navigator.language);
 
 			// 一致する言語がない場合は英語にする
-			if (lang == null) lang = 'en-US';
+			if (lang == null) {
+				lang = 'en-US';
+			}
 		}
 	}
 
@@ -54,7 +56,9 @@
 
 	//#region スクリプト
 	for (const file of [CLIENT_ENTRY, ...CLIENT_PRELOADS]) {
-		if (file == null) continue;
+		if (file == null) {
+			continue;
+		}
 		const link = document.createElement('link');
 		link.rel = 'modulepreload';
 		link.href = `/embed_vite/${file.replace('scripts', lang)}`;
@@ -62,11 +66,12 @@
 	}
 
 	async function importAppScript() {
-		await import(CLIENT_ENTRY ? `/embed_vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/embed_vite/src/boot.ts')
-			.catch(async e => {
-				console.error(e);
-				renderError('APP_IMPORT');
-			});
+		await import(
+			CLIENT_ENTRY ? `/embed_vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/embed_vite/src/boot.ts'
+		).catch(async (e) => {
+			console.error(e);
+			renderError('APP_IMPORT');
+		});
 	}
 
 	// タイミングによっては、この時点でDOMの構築が済んでいる場合とそうでない場合とがある
@@ -90,7 +95,7 @@
 	async function renderError(code) {
 		// DOM構築前は本文を書き換えられないため、構築完了を待つ
 		if (document.readyState === 'loading') {
-			await new Promise(resolve => window.addEventListener('DOMContentLoaded', resolve));
+			await new Promise((resolve) => window.addEventListener('DOMContentLoaded', resolve));
 		}
 
 		let messages = null;
@@ -109,7 +114,9 @@
 				};
 			}
 		}
-		if (!messages) messages = {};
+		if (!messages) {
+			messages = {};
+		}
 
 		const title = messages?.title || 'Failed to initialize Erebia';
 		const reload = messages?.reload || 'Reload';

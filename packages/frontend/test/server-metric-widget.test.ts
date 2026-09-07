@@ -17,7 +17,9 @@ function createConnection() {
 	const sent: { type: string; payload: unknown }[] = [];
 	const connection = {
 		on: (type: string, listener: (payload: never) => void) => {
-			if (!listeners.has(type)) listeners.set(type, new Set());
+			if (!listeners.has(type)) {
+				listeners.set(type, new Set());
+			}
 			listeners.get(type)!.add(listener);
 		},
 		off: (type: string, listener: (payload: never) => void) => {
@@ -28,7 +30,9 @@ function createConnection() {
 		},
 	} as unknown as Connection;
 	const emit = (type: string, payload: unknown) => {
-		for (const listener of listeners.get(type) ?? []) (listener as (payload: unknown) => void)(payload);
+		for (const listener of listeners.get(type) ?? []) {
+			(listener as (payload: unknown) => void)(payload);
+		}
 	};
 	const listenerCount = (type: string) => listeners.get(type)?.size ?? 0;
 	return { connection, sent, emit, listenerCount };

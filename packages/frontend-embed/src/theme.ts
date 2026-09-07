@@ -9,7 +9,9 @@ import type { Theme } from '@shared/utility/theme.js';
 let timeout: number | null = null;
 
 export function applyTheme(theme: Theme) {
-	if (timeout) window.clearTimeout(timeout);
+	if (timeout) {
+		window.clearTimeout(timeout);
+	}
 
 	window.document.documentElement.classList.add('_themeChanging_');
 
@@ -26,7 +28,9 @@ export function applyTheme(theme: Theme) {
 	for (const tag of window.document.head.children) {
 		if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {
 			const htmlThemeColor = props['htmlThemeColor'];
-			if (htmlThemeColor !== undefined) tag.setAttribute('content', htmlThemeColor);
+			if (htmlThemeColor !== undefined) {
+				tag.setAttribute('content', htmlThemeColor);
+			}
 			break;
 		}
 	}

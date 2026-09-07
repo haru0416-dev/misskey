@@ -40,21 +40,28 @@ const antenna = ref<Misskey.entities.Antenna | null>(null);
 
 provide('currentAntenna', antenna);
 
-watch(() => props.column.antennaId, async (antennaId) => {
-	if (antennaId == null) return;
-	antenna.value = await misskeyApi('antennas/show', { antennaId });
-}, { immediate: true });
+watch(
+	() => props.column.antennaId,
+	async (antennaId) => {
+		if (antennaId == null) {
+			return;
+		}
+		antenna.value = await misskeyApi('antennas/show', { antennaId });
+	},
+	{ immediate: true },
+);
 
 onMounted(() => {
 	if (props.column.antennaId == null) {
 		setAntenna();
 	} else if (props.column.timelineNameCache == null) {
-		misskeyApi('antennas/show', { antennaId: props.column.antennaId })
-			.then(value => updateColumn(props.column.id, { timelineNameCache: value.name }));
+		misskeyApi('antennas/show', { antennaId: props.column.antennaId }).then((value) =>
+			updateColumn(props.column.id, { timelineNameCache: value.name }),
+		);
 	}
 });
 
-watch(soundSetting, v => {
+watch(soundSetting, (v) => {
 	updateColumn(props.column.id, { soundSetting: v });
 });
 
@@ -64,37 +71,48 @@ async function setAntenna() {
 		title: i18n.ts.selectAntenna,
 		items: [
 			{ value: '_CREATE_', label: i18n.ts.createNew },
-			(antennas.length > 0 ? {
-				type: 'group' as const,
-				label: i18n.ts.createdAntennas,
-				items: antennas.map(x => ({
-					value: x.id, label: x.name,
-				})),
-			} : undefined),
+			antennas.length > 0
+				? {
+						type: 'group' as const,
+						label: i18n.ts.createdAntennas,
+						items: antennas.map((x) => ({
+							value: x.id,
+							label: x.name,
+						})),
+					}
+				: undefined,
 		],
-		default: antennas.find(x => x.id === props.column.antennaId)?.id ?? null,
+		default: antennas.find((x) => x.id === props.column.antennaId)?.id ?? null,
 	});
 
-	if (canceled || antennaIdOrOperation == null) return;
-
-	if (antennaIdOrOperation === '_CREATE_') {
-		const { dispose } = await os.popupAsyncWithDialog(import('@/features/antennas/components/MkAntennaEditorDialog.vue').then(x => x.default), {}, {
-			created: (newAntenna: MisskeyEntities.Antenna) => {
-				antennasCache.delete();
-				updateColumn(props.column.id, {
-					antennaId: newAntenna.id,
-					timelineNameCache: newAntenna.name,
-				});
-			},
-			closed: () => {
-				dispose();
-			},
-		});
+	if (canceled || antennaIdOrOperation == null) {
 		return;
 	}
 
-	const selectedAntenna = antennas.find(x => x.id === antennaIdOrOperation);
-	if (selectedAntenna == null) return;
+	if (antennaIdOrOperation === '_CREATE_') {
+		const { dispose } = await os.popupAsyncWithDialog(
+			import('@/features/antennas/components/MkAntennaEditorDialog.vue').then((x) => x.default),
+			{},
+			{
+				created: (newAntenna: MisskeyEntities.Antenna) => {
+					antennasCache.delete();
+					updateColumn(props.column.id, {
+						antennaId: newAntenna.id,
+						timelineNameCache: newAntenna.name,
+					});
+				},
+				closed: () => {
+					dispose();
+				},
+			},
+		);
+		return;
+	}
+
+	const selectedAntenna = antennas.find((x) => x.id === antennaIdOrOperation);
+	if (selectedAntenna == null) {
+		return;
+	}
 
 	updateColumn(props.column.id, {
 		antennaId: selectedAntenna.id,

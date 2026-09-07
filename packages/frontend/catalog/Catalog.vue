@@ -52,10 +52,12 @@ import type { Component } from 'vue';
 import type { SetupWorker } from 'msw/browser';
 import StoryFrame from './StoryFrame.vue';
 import PopupHost from '@/stories/PopupHost.vue';
-import { loadStories, type StoryEntry } from './registry.js';
+import { loadStories } from './registry.js';
+import type { StoryEntry } from './registry.js';
 import { buildStoryComponent, createStoryContext } from '@/stories/render.js';
 import { applyStoryHandlers, resetIndexedDb, resetLocalStorage, resetPopups, themeIds } from '@/stories/environment.js';
-import { onAction, type ActionRecord } from '@/stories/action.js';
+import { onAction } from '@/stories/action.js';
+import type { ActionRecord } from '@/stories/action.js';
 
 const props = defineProps<{
 	worker: SetupWorker;
@@ -79,8 +81,11 @@ const groups = computed(() => {
 	const byTitle = new Map<string, StoryEntry[]>();
 	for (const entry of matched) {
 		const list = byTitle.get(entry.title);
-		if (list == null) byTitle.set(entry.title, [entry]);
-		else list.push(entry);
+		if (list == null) {
+			byTitle.set(entry.title, [entry]);
+		} else {
+			list.push(entry);
+		}
 	}
 	return [...byTitle].map(([title, list]) => ({ title, entries: list }));
 });
@@ -99,7 +104,9 @@ let selectionToken = 0;
 
 async function select(id: string): Promise<void> {
 	const entry = entries.value.find((e) => e.id === id);
-	if (entry == null) return;
+	if (entry == null) {
+		return;
+	}
 
 	const token = ++selectionToken;
 	selectedId.value = id;
@@ -114,7 +121,9 @@ async function select(id: string): Promise<void> {
 	resetLocalStorage();
 
 	const story = await entry.load();
-	if (token !== selectionToken) return;
+	if (token !== selectionToken) {
+		return;
+	}
 
 	applyStoryHandlers(props.worker, story.parameters?.msw);
 	layout.value = story.parameters?.layout ?? 'padded';
@@ -130,7 +139,9 @@ let stopAction = (): void => {};
 
 function onHashChange(): void {
 	const id = decodeURIComponent(window.location.hash.slice(1));
-	if (id !== '' && id !== selectedId.value) void select(id);
+	if (id !== '' && id !== selectedId.value) {
+		void select(id);
+	}
 }
 
 onMounted(async () => {
@@ -142,7 +153,9 @@ onMounted(async () => {
 
 	const fromHash = decodeURIComponent(window.location.hash.slice(1));
 	const initial = entries.value.find((e) => e.id === fromHash) ?? entries.value[0];
-	if (initial != null) await select(initial.id);
+	if (initial != null) {
+		await select(initial.id);
+	}
 
 	window.addEventListener('hashchange', onHashChange);
 });

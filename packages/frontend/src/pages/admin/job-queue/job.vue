@@ -186,11 +186,17 @@ type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
 };
 
 function msSMH(v: number | null) {
-	if (v == null) return 'N/A';
-	if (v === 0) return '0';
+	if (v == null) {
+		return 'N/A';
+	}
+	if (v === 0) {
+		return '0';
+	}
 	const suffixes = ['ms', 's', 'm', 'h'];
 	const isMinus = v < 0;
-	if (isMinus) v = -v;
+	if (isMinus) {
+		v = -v;
+	}
 	const i = Math.floor(Math.log(v) / Math.log(1000));
 	const value = v / Math.pow(1000, i);
 	const suffix = suffixes[i];
@@ -199,7 +205,7 @@ function msSMH(v: number | null) {
 
 const props = defineProps<{
 	job: QueueJob;
-	queueType: typeof Misskey.queueTypes[number];
+	queueType: (typeof Misskey.queueTypes)[number];
 }>();
 
 const emit = defineEmits<{
@@ -211,21 +217,26 @@ const editData = ref(JSON5.stringify(props.job.data, null, '\t'));
 const canEdit = true;
 const logs = ref<string[]>([]);
 
-type TlType = TlEvent<{
-	type: 'created' | 'processed' | 'finished';
-} | {
-	type: 'attempt';
-	attempt: number;
-}>;
+type TlType = TlEvent<
+	| {
+			type: 'created' | 'processed' | 'finished';
+	  }
+	| {
+			type: 'attempt';
+			attempt: number;
+	  }
+>;
 
 const timeline = computed(() => {
-	const events: TlType[] = [{
-		id: 'created',
-		timestamp: props.job.timestamp,
-		data: {
-			type: 'created',
+	const events: TlType[] = [
+		{
+			id: 'created',
+			timestamp: props.job.timestamp,
+			data: {
+				type: 'created',
+			},
 		},
-	}];
+	];
 
 	if (props.job.attempts > 1) {
 		for (let i = 1; i < props.job.attempts; i++) {
@@ -265,7 +276,9 @@ async function promoteJob() {
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('admin/queue/retry-job', { queue: props.queueType, jobId: props.job.id });
 }
@@ -275,7 +288,9 @@ async function removeJob() {
 		type: 'warning',
 		title: i18n.ts.areYouSure,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('admin/queue/remove-job', { queue: props.queueType, jobId: props.job.id });
 }

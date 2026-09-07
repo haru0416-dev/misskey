@@ -65,8 +65,12 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const parsed = await readApiMultipartRequest(c, deps.config);
-			if (parsed.status === 'missing-file') throw invalidParamError({ param: 'file', reason: 'required' });
-			if (parsed.status === 'too-large') throw payloadTooLargeError();
+			if (parsed.status === 'missing-file') {
+				throw invalidParamError({ param: 'file', reason: 'required' });
+			}
+			if (parsed.status === 'too-large') {
+				throw payloadTooLargeError();
+			}
 
 			const { file, cleanup, fields } = parsed;
 			try {

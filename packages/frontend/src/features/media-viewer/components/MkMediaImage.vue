@@ -82,18 +82,21 @@ import { prefer } from '@/preferences.js';
 import { shouldHideFileByDefault, canRevealFile } from '@/features/media-viewer/sensitive-file.js';
 import { getFileMenu } from '@/features/media-viewer/get-file-menu.js';
 
-const props = withDefaults(defineProps<{
-	image: Misskey.entities.DriveFile;
-	raw?: boolean;
-	cover?: boolean;
-	disableImageLink?: boolean;
-	controls?: boolean;
-	marker?: string;
-}>(), {
-	cover: false,
-	disableImageLink: false,
-	controls: true,
-});
+const props = withDefaults(
+	defineProps<{
+		image: Misskey.entities.DriveFile;
+		raw?: boolean;
+		cover?: boolean;
+		disableImageLink?: boolean;
+		controls?: boolean;
+		marker?: string;
+	}>(),
+	{
+		cover: false,
+		disableImageLink: false,
+		controls: true,
+	},
+);
 
 const emit = defineEmits<{
 	(event: 'mediaClick', ev: Event): void;
@@ -101,11 +104,12 @@ const emit = defineEmits<{
 
 const hide = ref(true);
 
-const url = computed(() => (props.raw || prefer.loadRawImages)
-	? props.image.url
-	: prefer.disableShowingAnimatedImages
-		? getStaticImageUrl(props.image.url)
-		: props.image.thumbnailUrl!,
+const url = computed(() =>
+	props.raw || prefer.loadRawImages
+		? props.image.url
+		: prefer.disableShowingAnimatedImages
+			? getStaticImageUrl(props.image.url)
+			: props.image.thumbnailUrl!,
 );
 
 async function onClick(ev: Event) {
@@ -127,24 +131,40 @@ async function onClick(ev: Event) {
 }
 
 function onKeyboardOpen(ev: KeyboardEvent) {
-	if (!props.disableImageLink) return;
+	if (!props.disableImageLink) {
+		return;
+	}
 	void onClick(ev);
 }
 
 // Plugin:register_note_view_interruptor を使って書き換えられる可能性があるためwatchする
-watch(() => props.image, (newImage) => {
-	hide.value = shouldHideFileByDefault(newImage);
-}, {
-	deep: true,
-	immediate: true,
-});
+watch(
+	() => props.image,
+	(newImage) => {
+		hide.value = shouldHideFileByDefault(newImage);
+	},
+	{
+		deep: true,
+		immediate: true,
+	},
+);
 
 function showMenu(ev: PointerEvent) {
-	os.popupMenu(getFileMenu(props.image, value => { hide.value = value; }), (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
+	os.popupMenu(
+		getFileMenu(props.image, (value) => {
+			hide.value = value;
+		}),
+		(ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined,
+	);
 }
 
 function onContextmenu(ev: PointerEvent) {
-	os.contextMenu(getFileMenu(props.image, value => { hide.value = value; }), ev);
+	os.contextMenu(
+		getFileMenu(props.image, (value) => {
+			hide.value = value;
+		}),
+		ev,
+	);
 }
 </script>
 

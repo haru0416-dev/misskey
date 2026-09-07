@@ -69,7 +69,9 @@ fetchMocker.mockIf(/^\/assets\/locales\/.*\.json$/, async () => {
 
 const { updateI18n } = await import('@/i18n.js');
 const enUsLocale = locales['en-US'];
-if (enUsLocale == null) throw new Error('en-US locale is required for frontend tests');
+if (enUsLocale == null) {
+	throw new Error('en-US locale is required for frontend tests');
+}
 updateI18n(enUsLocale);
 
 export type TestPreferenceState = Record<string, unknown> & {
@@ -105,25 +107,39 @@ const prefer = new Proxy(
 	{
 		commit(key: string, value: unknown) {
 			preferState[key] = value;
-			if (preferReactive[key] == null) preferReactive[key] = ref(value);
-			else preferReactive[key].value = value;
+			if (preferReactive[key] == null) {
+				preferReactive[key] = ref(value);
+			} else {
+				preferReactive[key].value = value;
+			}
 		},
 		model(key: string) {
-			if (preferReactive[key] == null) preferReactive[key] = ref(preferState[key]);
+			if (preferReactive[key] == null) {
+				preferReactive[key] = ref(preferState[key]);
+			}
 			return preferReactive[key];
 		},
 	},
 	{
 		get(target, key, receiver) {
-			if (typeof key === 'string' && preferReactive[key] != null) return preferReactive[key].value;
-			if (typeof key === 'string' && Object.hasOwn(preferState, key)) return preferState[key];
+			if (typeof key === 'string' && preferReactive[key] != null) {
+				return preferReactive[key].value;
+			}
+			if (typeof key === 'string' && Object.hasOwn(preferState, key)) {
+				return preferState[key];
+			}
 			return Reflect.get(target, key, receiver);
 		},
 		set(_target, key, value) {
-			if (typeof key !== 'string') return false;
+			if (typeof key !== 'string') {
+				return false;
+			}
 			preferState[key] = value;
-			if (preferReactive[key] == null) preferReactive[key] = ref(value);
-			else preferReactive[key].value = value;
+			if (preferReactive[key] == null) {
+				preferReactive[key] = ref(value);
+			} else {
+				preferReactive[key].value = value;
+			}
 			return true;
 		},
 	},

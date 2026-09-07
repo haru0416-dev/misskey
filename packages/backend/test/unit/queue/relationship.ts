@@ -11,7 +11,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import {
 	createFollowingInDatabase,
@@ -29,8 +30,8 @@ import {
 	handleQueueRelationshipFollow,
 	handleQueueRelationshipUnblock,
 	handleQueueRelationshipUnfollow,
-	type QueueRelationshipDependencies,
 } from '@/queue/handlers/relationship.js';
+import type { QueueRelationshipDependencies } from '@/queue/handlers/relationship.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 

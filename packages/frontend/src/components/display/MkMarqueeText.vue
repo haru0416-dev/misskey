@@ -22,22 +22,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, useTemplateRef, watch } from 'vue';
 
-const props = withDefaults(defineProps<{
-	duration?: number;
-	repeat?: number;
-	paused?: boolean;
-	reverse?: boolean;
-}>(), {
-	duration: 15,
-	repeat: 2,
-	paused: false,
-	reverse: false,
-});
+const props = withDefaults(
+	defineProps<{
+		duration?: number;
+		repeat?: number;
+		paused?: boolean;
+		reverse?: boolean;
+	}>(),
+	{
+		duration: 15,
+		repeat: 2,
+		paused: false,
+		reverse: false,
+	},
+);
 
 const contentEl = useTemplateRef('contentEl');
 
 function calcDuration() {
-	if (contentEl.value == null) return;
+	if (contentEl.value == null) {
+		return;
+	}
 	const eachLength = contentEl.value.offsetWidth / props.repeat;
 	const factor = 3000;
 	const duration = props.duration / ((1 / eachLength) * factor);

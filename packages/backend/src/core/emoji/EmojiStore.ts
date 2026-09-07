@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
-import { emoji, type EmojiInsert } from '@/db/schema/emoji.js';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { emoji } from '@/db/schema/emoji.js';
+import type { EmojiInsert } from '@/db/schema/emoji.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -155,7 +157,9 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 	db: MiDrizzleDatabase,
 	queries: readonly { name: MiEmoji['name']; host: MiEmoji['host'] }[],
 ): Promise<(MiEmoji | null)[]> {
-	if (queries.length === 0) return [];
+	if (queries.length === 0) {
+		return [];
+	}
 
 	const now = Date.now();
 	const resultByKey = new Map<string, MiEmoji | null>();
@@ -206,7 +210,9 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 }
 
 async function listEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	return await db.select().from(emoji).where(inArray(emoji.id, ids));
 }
@@ -216,7 +222,9 @@ export async function listEmojisByHostAndNamesFromDatabase(
 	host: NonNullable<MiEmoji['host']>,
 	names: MiEmoji['name'][],
 ): Promise<MiEmoji[]> {
-	if (names.length === 0) return [];
+	if (names.length === 0) {
+		return [];
+	}
 
 	return await db
 		.select()
@@ -266,7 +274,9 @@ async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
 	db: MiDrizzleDatabase,
 	queries: { names: string[]; host: string }[],
 ): Promise<Pick<MiEmoji, 'name' | 'host' | 'originalUrl' | 'publicUrl'>[]> {
-	if (queries.length === 0) return [];
+	if (queries.length === 0) {
+		return [];
+	}
 
 	return await db
 		.select({
@@ -314,7 +324,9 @@ export async function updateEmojisByIdsReturningFromDatabase(
 	ids: MiEmoji['id'][],
 	values: Partial<EmojiInsert>,
 ): Promise<MiEmoji[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db.update(emoji).set(values).where(inArray(emoji.id, ids)).returning();
 
@@ -327,7 +339,9 @@ export async function addAliasesToEmojisByIdsInDatabase(
 	aliases: MiEmoji['aliases'],
 	updatedAt: Date,
 ): Promise<MiEmoji[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.update(emoji)
@@ -352,7 +366,9 @@ export async function removeAliasesFromEmojisByIdsInDatabase(
 	aliases: MiEmoji['aliases'],
 	updatedAt: Date,
 ): Promise<MiEmoji[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.update(emoji)
@@ -402,7 +418,9 @@ export async function deleteEmojiByIdFromDatabase(db: MiDrizzleDatabase, id: MiE
 }
 
 export async function deleteEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db.delete(emoji).where(inArray(emoji.id, ids)).returning();
 
@@ -437,8 +455,12 @@ export async function listLocalEmojisPageFromDatabase(
 ): Promise<MiEmoji[]> {
 	const conditions: SQL[] = [isNull(emoji.host)];
 
-	if (options.sinceId) conditions.push(gt(emoji.id, options.sinceId));
-	if (options.untilId) conditions.push(lt(emoji.id, options.untilId));
+	if (options.sinceId) {
+		conditions.push(gt(emoji.id, options.sinceId));
+	}
+	if (options.untilId) {
+		conditions.push(lt(emoji.id, options.untilId));
+	}
 
 	let query = db
 		.select()
@@ -469,8 +491,12 @@ export async function listRemoteEmojisPageFromDatabase(
 ): Promise<MiEmoji[]> {
 	const conditions: SQL[] = [options.host == null ? isNotNull(emoji.host) : eq(emoji.host, options.host)];
 
-	if (options.sinceId) conditions.push(gt(emoji.id, options.sinceId));
-	if (options.untilId) conditions.push(lt(emoji.id, options.untilId));
+	if (options.sinceId) {
+		conditions.push(gt(emoji.id, options.sinceId));
+	}
+	if (options.untilId) {
+		conditions.push(lt(emoji.id, options.untilId));
+	}
 	if (options.query) {
 		conditions.push(sql`${emoji.name} like ${'%' + sqlLikeEscape(options.query) + '%'}`);
 	}

@@ -43,41 +43,46 @@ import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 import { prefer } from '@/preferences.js';
 import MkBlurhash from '@/features/media-viewer/components/MkBlurhash.vue';
 
-const props = withDefaults(defineProps<{
-	transition?: {
-		duration?: number | { enter: number; leave: number; };
-		enterActiveClass?: string;
-		leaveActiveClass?: string;
-		enterFromClass?: string;
-		leaveToClass?: string;
-		enterToClass?: string;
-		leaveFromClass?: string;
-	} | null;
-	src?: string | null;
-	hash?: string | null;
-	alt?: string | null;
-	title?: string | null;
-	height?: number;
-	width?: number;
-	cover?: boolean;
-	forceBlurhash?: boolean;
-	onlyAvgColor?: boolean; // 軽量化のためにBlurhashを使わずに平均色だけを描画
-	marker?: string;
-}>(), {
-	transition: null,
-	src: null,
-	alt: '',
-	title: null,
-	height: 64,
-	width: 64,
-	cover: true,
-	forceBlurhash: false,
-	onlyAvgColor: false,
-});
+const props = withDefaults(
+	defineProps<{
+		transition?: {
+			duration?: number | { enter: number; leave: number };
+			enterActiveClass?: string;
+			leaveActiveClass?: string;
+			enterFromClass?: string;
+			leaveToClass?: string;
+			enterToClass?: string;
+			leaveFromClass?: string;
+		} | null;
+		src?: string | null;
+		hash?: string | null;
+		alt?: string | null;
+		title?: string | null;
+		height?: number;
+		width?: number;
+		cover?: boolean;
+		forceBlurhash?: boolean;
+		onlyAvgColor?: boolean; // 軽量化のためにBlurhashを使わずに平均色だけを描画
+		marker?: string;
+	}>(),
+	{
+		transition: null,
+		src: null,
+		alt: '',
+		title: null,
+		height: 64,
+		width: 64,
+		cover: true,
+		forceBlurhash: false,
+		onlyAvgColor: false,
+	},
+);
 
 const style = useCssModule();
 const transitionGroupProps = computed(() => {
-	if (!prefer.animation) return {};
+	if (!prefer.animation) {
+		return {};
+	}
 
 	const leaveActiveClass = props.transition?.leaveActiveClass ?? style.transition_leaveActive;
 	return {
@@ -105,14 +110,17 @@ const hide = computed(() => !loaded.value || props.forceBlurhash);
 const shouldLoad = ref(false);
 let intersectionObserver: IntersectionObserver | null = null;
 
-const imgSrc = computed(() => (shouldLoad.value && props.src != null && props.src !== '') ? props.src : undefined);
+const imgSrc = computed(() => (shouldLoad.value && props.src != null && props.src !== '' ? props.src : undefined));
 
 function onLoad() {
-	img.value?.decode().then(() => {
-		loaded.value = true;
-	}, error => {
-		console.log('Error occurred during decoding image', img.value, error);
-	});
+	img.value?.decode().then(
+		() => {
+			loaded.value = true;
+		},
+		(error) => {
+			console.log('Error occurred during decoding image', img.value, error);
+		},
+	);
 }
 
 function checkAlreadyLoaded() {
@@ -122,36 +130,47 @@ function checkAlreadyLoaded() {
 	}
 }
 
-watch([() => props.width, () => props.height, root], () => {
-	const dimensions = calculateBlurhashDimensions(props.width, props.height);
-	const clientWidth = root.value?.clientWidth ?? 300;
-	imgWidth.value = clientWidth;
-	imgHeight.value = Math.max(1, Math.round(clientWidth / dimensions.ratio));
-}, {
-	immediate: true,
-});
+watch(
+	[() => props.width, () => props.height, root],
+	() => {
+		const dimensions = calculateBlurhashDimensions(props.width, props.height);
+		const clientWidth = root.value?.clientWidth ?? 300;
+		imgWidth.value = clientWidth;
+		imgHeight.value = Math.max(1, Math.round(clientWidth / dimensions.ratio));
+	},
+	{
+		immediate: true,
+	},
+);
 
-watch(imgSrc, (newSrc) => {
-	// srcが結びついていない場合はonLoadが発火しないため、ここでblurhash表示に戻す
-	if (newSrc == null) {
-		loaded.value = false;
-	} else {
-		checkAlreadyLoaded();
-	}
-}, {
-	flush: 'post',
-});
+watch(
+	imgSrc,
+	(newSrc) => {
+		// srcが結びついていない場合はonLoadが発火しないため、ここでblurhash表示に戻す
+		if (newSrc == null) {
+			loaded.value = false;
+		} else {
+			checkAlreadyLoaded();
+		}
+	},
+	{
+		flush: 'post',
+	},
+);
 
 onMounted(() => {
-	intersectionObserver = new IntersectionObserver((entries) => {
-		if (entries.some(entry => entry.isIntersecting)) {
-			shouldLoad.value = true;
-			intersectionObserver?.disconnect();
-			intersectionObserver = null;
-		}
-	}, {
-		rootMargin: '300px',
-	});
+	intersectionObserver = new IntersectionObserver(
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				shouldLoad.value = true;
+				intersectionObserver?.disconnect();
+				intersectionObserver = null;
+			}
+		},
+		{
+			rootMargin: '300px',
+		},
+	);
 	if (root.value) {
 		intersectionObserver.observe(root.value);
 	}

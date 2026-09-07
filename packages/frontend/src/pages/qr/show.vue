@@ -55,7 +55,9 @@ const qrColor = computed(() => tinycolor(instance.themeColor ?? '#5c62d8'));
 const qrHsl = computed(() => qrColor.value.toHsl());
 
 function share() {
-	if (!canShare.value) return;
+	if (!canShare.value) {
+		return;
+	}
 	return navigator.share(shareData.value);
 }
 
@@ -100,8 +102,9 @@ onMounted(() => {
 
 //#region flip
 const THRESHOLD = -3;
-// @ts-expect-error TS(2339)
-const deviceMotionPermissionNeeded = window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === 'function';
+const deviceMotionPermissionNeeded =
+	// @ts-expect-error TS(2339)
+	window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === 'function';
 const flipEls: Set<Element> = new Set();
 const flip = ref(false);
 
@@ -111,13 +114,15 @@ function handleOrientationChange(event: DeviceOrientationEvent) {
 }
 
 watch(flip, (newState) => {
-	flipEls.forEach(el => {
+	flipEls.forEach((el) => {
 		el.classList.toggle('_qrShowFlipFliped', newState);
 	});
 });
 
 function requestDeviceMotion() {
-	if (!deviceMotionPermissionNeeded) return;
+	if (!deviceMotionPermissionNeeded) {
+		return;
+	}
 	// @ts-expect-error TS(2339)
 	window.DeviceMotionEvent.requestPermission()
 		.then((response: string) => {

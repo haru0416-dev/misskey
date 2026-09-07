@@ -41,7 +41,9 @@ cluster.on('exit', (worker) => {
 	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
 	const assignment = assignmentByWorkerId.get(worker.id);
 	assignmentByWorkerId.delete(worker.id);
-	if (shuttingDown) return;
+	if (shuttingDown) {
+		return;
+	}
 
 	// 素の cluster.fork() で復帰させると役割 (HTTP / キュー / デーモン担当) が失われるので、
 	// master が割り当てたものと同じ役割で fork し直す。
@@ -129,12 +131,16 @@ process.on('message', (msg) => {
 			for (let i = 0; i < 3; i++) {
 				global.gc();
 			}
-			if (process.send != null) process.send('gc ok');
+			if (process.send != null) {
+				process.send('gc ok');
+			}
 		} else {
 			logger.warn(
 				'Manual GC requested but gc is not available. Start the process with --expose-gc to enable this feature.',
 			);
-			if (process.send != null) process.send('gc unavailable');
+			if (process.send != null) {
+				process.send('gc unavailable');
+			}
 		}
 	} else if (msg === 'memory usage') {
 		if (process.send != null) {

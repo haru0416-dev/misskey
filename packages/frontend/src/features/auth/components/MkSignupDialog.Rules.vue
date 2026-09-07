@@ -82,7 +82,11 @@ const agreeTosAndPrivacyPolicy = ref(false);
 const agreeNote = ref(false);
 
 const agreed = computed(() => {
-	return (!availableServerRules || agreeServerRules.value) && ((!availableTos && !availablePrivacyPolicy) || agreeTosAndPrivacyPolicy.value) && agreeNote.value;
+	return (
+		(!availableServerRules || agreeServerRules.value) &&
+		((!availableTos && !availablePrivacyPolicy) || agreeTosAndPrivacyPolicy.value) &&
+		agreeNote.value
+	);
 });
 
 const emit = defineEmits<{
@@ -97,9 +101,8 @@ const tosPrivacyPolicyLabel = computed(() => {
 		return i18n.ts.termsOfService;
 	} else if (availablePrivacyPolicy) {
 		return i18n.ts.privacyPolicy;
-	} else {
-		return '';
 	}
+	return '';
 });
 
 async function updateAgreeServerRules(v: boolean) {
@@ -109,7 +112,9 @@ async function updateAgreeServerRules(v: boolean) {
 			title: i18n.ts.doYouAgree,
 			text: i18n.tsx.iHaveReadXCarefullyAndAgree({ x: i18n.ts.serverRules }),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 		agreeServerRules.value = true;
 	} else {
 		agreeServerRules.value = false;
@@ -125,7 +130,9 @@ async function updateAgreeTosAndPrivacyPolicy(v: boolean) {
 				x: tosPrivacyPolicyLabel.value,
 			}),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 		agreeTosAndPrivacyPolicy.value = true;
 	} else {
 		agreeTosAndPrivacyPolicy.value = false;
@@ -139,7 +146,9 @@ async function updateAgreeNote(v: boolean) {
 			title: i18n.ts.doYouAgree,
 			text: i18n.tsx.iHaveReadXCarefullyAndAgree({ x: i18n.ts.basicNotesBeforeCreateAccount }),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 		agreeNote.value = true;
 	} else {
 		agreeNote.value = false;

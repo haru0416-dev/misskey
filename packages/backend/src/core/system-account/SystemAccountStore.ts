@@ -99,7 +99,9 @@ export async function createOrFetchSystemAccountInDatabase(
 					name: data.name,
 				})
 				.returning();
-			if (created == null) throw new Error('User row was not created');
+			if (created == null) {
+				throw new Error('User row was not created');
+			}
 			account = created;
 		}
 

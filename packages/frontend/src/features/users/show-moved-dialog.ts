@@ -8,8 +8,12 @@ import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 
 export function showMovedDialog() {
-	if (!$i) return;
-	if (!$i.movedTo) return;
+	if (!$i) {
+		return;
+	}
+	if (!$i.movedTo) {
+		return;
+	}
 
 	os.alert({
 		type: 'error',

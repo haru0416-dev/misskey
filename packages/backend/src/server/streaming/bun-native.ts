@@ -21,7 +21,9 @@ type WsData = {
 };
 
 function resolveStreamingToken(authHeader: string | null, url: URL): string | null {
-	if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
+	if (authHeader?.startsWith('Bearer ')) {
+		return authHeader.slice(7);
+	}
 	return url.searchParams.get('i');
 }
 
@@ -88,7 +90,9 @@ export function createBunNativeStreamRuntime(deps: StreamServerDependencies, str
 		try {
 			authenticated = await authenticateApiToken(deps, token);
 		} catch (err) {
-			if (err instanceof ApiError) return errorResponse(err);
+			if (err instanceof ApiError) {
+				return errorResponse(err);
+			}
 			return new Response('Internal error', { status: 500 });
 		}
 
@@ -150,7 +154,9 @@ export function createBunNativeStreamRuntime(deps: StreamServerDependencies, str
 				activeConnections.delete(connection);
 				connection.dispose();
 				connections.delete(ws);
-				if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);
+				if (lastActiveIntervalId) {
+					clearInterval(lastActiveIntervalId);
+				}
 			};
 		},
 		message(ws, message) {

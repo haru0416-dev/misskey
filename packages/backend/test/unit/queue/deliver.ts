@@ -11,12 +11,18 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/instance/InstanceStore.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import {
+	createInstanceInDatabase,
+	fetchInstanceByHostFromDatabase,
+	updateInstanceInDatabase,
+} from '@/core/instance/InstanceStore.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
-import { handleQueueDeliver, type QueueDeliverDependencies } from '@/queue/handlers/deliver.js';
+import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
+import type { QueueDeliverDependencies } from '@/queue/handlers/deliver.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 
@@ -51,30 +57,36 @@ describe('hono-queue-deliver', () => {
 		await runtime.dispose();
 	});
 
-	// suspendedHostsCache はモジュールスコープの1hシングルトンキャッシュのため、
-	// 一度警告(warm)されると他のテストの新規サスペンドが反映されなくなる。
-	// このテストを最初に実行してキャッシュを一度だけ警告する。
-	test('サスペンド済みインスタンス宛はskip (suspended)を返す', async () => {
+	test('配送開始後の停止と再開を次のジョブから反映する', async () => {
 		const host = `honoqueuedeliver-suspended-${genId()}.example.com`;
-		await createInstanceInDatabase(runtime.db, {
+		const instance = await createInstanceInDatabase(runtime.db, {
 			id: genId(),
 			host,
 			firstRetrievedAt: new Date(),
-			suspensionState: 'manuallySuspended',
+			suspensionState: 'none',
 		});
-
-		const result = await handleQueueDeliver(
-			federatedDeps,
-			fakeJob({
-				user: { id: actor.id },
-				content: '{}',
-				digest: 'SHA-256=dummy',
-				to: `https://${host}/inbox`,
-				isSharedInbox: false,
-			}),
-		);
-
-		expect(result).toBe('skip (suspended)');
+		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+		const deps: QueueDeliverDependencies = {
+			...federatedDeps,
+			httpRequestService: { ...federatedDeps.httpRequestService, send },
+		};
+		const job = fakeJob({
+			user: { id: actor.id },
+			content: '{}',
+			digest: 'SHA-256=dummy',
+			to: `https://${host}/inbox`,
+			isSharedInbox: false,
+		});
+		expect(await handleQueueDeliver(deps, job)).toBe('Success');
+		for (const suspensionState of ['manuallySuspended', 'autoSuspendedForNotResponding', 'goneSuspended'] as const) {
+			send.mockClear();
+			await updateInstanceInDatabase(runtime.db, instance.id, { suspensionState });
+			expect(await handleQueueDeliver(deps, job)).toBe('skip (suspended)');
+			expect(send).not.toHaveBeenCalled();
+			await updateInstanceInDatabase(runtime.db, instance.id, { suspensionState: 'none' });
+			expect(await handleQueueDeliver(deps, job)).toBe('Success');
+			expect(send).toHaveBeenCalledOnce();
+		}
 	});
 
 	test("meta.federationが'none'の場合はskip (blocked)を返す", async () => {
@@ -160,7 +172,7 @@ describe('hono-queue-deliver', () => {
 		// インスタンス情報更新は非同期なので、DB破棄前に isNotResponding=true の書き込み完了を待つ。
 		await expect
 			.poll(async () => (await fetchInstanceByHostFromDatabase(runtime.db, host))?.isNotResponding, {
-				timeout: 10000,
+				timeout: 10_000,
 			})
 			.toBe(true);
 	});

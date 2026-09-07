@@ -21,16 +21,22 @@ function acceptsOf(field: z.ZodType): Accepts {
 		switch (def?.type) {
 			case 'nullable':
 				accepts.null = true;
-				if (def.innerType) visit(def.innerType);
+				if (def.innerType) {
+					visit(def.innerType);
+				}
 				return;
 			case 'optional':
 			case 'default':
 			case 'prefault':
 			case 'nonoptional':
-				if (def.innerType) visit(def.innerType);
+				if (def.innerType) {
+					visit(def.innerType);
+				}
 				return;
 			case 'union':
-				for (const option of def.options ?? []) visit(option);
+				for (const option of def.options ?? []) {
+					visit(option);
+				}
 				return;
 			case 'null':
 				accepts.null = true;
@@ -94,13 +100,19 @@ export function castMultipartFields(schema: z.ZodObject, fields: Record<string, 
 	const shape = schema.shape as Record<string, z.ZodType | undefined>;
 
 	for (const [key, value] of Object.entries(fields)) {
-		if (typeof value !== 'string') continue;
+		if (typeof value !== 'string') {
+			continue;
+		}
 
 		const field = shape[key];
-		if (field === undefined) continue;
+		if (field === undefined) {
+			continue;
+		}
 
 		const accepts = acceptsOf(field);
-		if (!accepts.number && !accepts.boolean) continue;
+		if (!accepts.number && !accepts.boolean) {
+			continue;
+		}
 
 		try {
 			fields[key] = JSON.parse(value);

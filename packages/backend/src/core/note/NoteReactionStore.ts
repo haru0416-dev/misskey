@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { noteReaction, type NoteReactionInsert, type NoteReactionRow } from '@/db/schema/note-reaction.js';
+import { noteReaction } from '@/db/schema/note-reaction.js';
+import type { NoteReactionInsert, NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -91,7 +93,9 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 	userId: MiUser['id'],
 	noteIds: MiNote['id'][],
 ): Promise<NoteReactionRow[]> {
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
@@ -116,7 +120,9 @@ export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
 	noteIds: MiNote['id'][],
 	userIds: MiUser['id'][],
 ): Promise<NoteReactionRow[]> {
-	if (noteIds.length === 0 || userIds.length === 0) return [];
+	if (noteIds.length === 0 || userIds.length === 0) {
+		return [];
+	}
 
 	const statement = preparedQueryFor(db, 'noteReaction:byNoteIdsAndUserIds', () =>
 		db

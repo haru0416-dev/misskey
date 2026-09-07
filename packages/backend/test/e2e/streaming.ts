@@ -6,24 +6,10 @@
 import * as assert from 'assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WebSocket } from 'ws';
-import {
-	createFollowingInDatabase,
-	findHashtagsByName,
-	genId,
-	openTestDatabase,
-	type TestDatabase,
-} from '../fixtures.js';
-import {
-	api,
-	createAppToken,
-	initTestDb,
-	post,
-	resolveStreamingUrl,
-	signup,
-	waitFire,
-	type StreamMessage,
-	type UserToken,
-} from '../utils.js';
+import { createFollowingInDatabase, findHashtagsByName, genId, openTestDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
+import { api, createAppToken, initTestDb, post, resolveStreamingUrl, signup, waitFire } from '../utils.js';
+import type { StreamMessage, UserToken } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Streaming', () => {

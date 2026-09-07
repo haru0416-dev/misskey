@@ -17,7 +17,8 @@ import {
 	getSafeContentType,
 } from './FileServerUtils.js';
 import type { FileServerFileResolver } from './FileServerFileResolver.js';
-import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
+import { getFileServerHeader } from './FileServerTypes.js';
+import type { FileServerReply, FileServerRequest } from './FileServerTypes.js';
 
 export class FileServerDriveHandler {
 	constructor(
@@ -102,12 +103,13 @@ export class FileServerDriveHandler {
 
 				setFileResponseHeaders(reply, { mime: file.mime, filename });
 				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
-			} else {
-				setFileResponseHeaders(reply, { mime: file.file.type, filename: file.filename, size: file.file.size });
-				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 			}
+			setFileResponseHeaders(reply, { mime: file.file.type, filename: file.filename, size: file.file.size });
+			return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 		} catch (e) {
-			if (file.kind === 'remote') file.cleanup();
+			if (file.kind === 'remote') {
+				file.cleanup();
+			}
 			throw e;
 		}
 	}

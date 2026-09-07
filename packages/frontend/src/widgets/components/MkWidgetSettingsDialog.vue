@@ -79,7 +79,9 @@ function onCanSaveStateChanged(newCanSave: boolean) {
 }
 
 function save() {
-	if (!canSave.value) return;
+	if (!canSave.value) {
+		return;
+	}
 	emit('saved', deepClone(settings.value));
 	dialog.value?.close();
 }
@@ -106,7 +108,9 @@ const ro2 = new ResizeObserver(() => {
 });
 
 function calcScale() {
-	if (!resizerRootEl.value) return;
+	if (!resizerRootEl.value) {
+		return;
+	}
 	const previewWidth = resizerRootEl.value.clientWidth - 40; // 左右の余白 20pxずつ
 	const previewHeight = resizerRootEl.value.clientHeight - 40; // 上下の余白 20pxずつ
 	const widgetWidth = resizerEl.value?.offsetWidth ?? 280;

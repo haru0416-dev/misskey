@@ -11,8 +11,12 @@ export function checkReactionPermissions(
 	note: Misskey.entities.Note,
 	emoji: Misskey.entities.EmojiSimple | UnicodeEmojiDef | string,
 ): boolean {
-	if (typeof emoji === 'string') return true; // UnicodeEmojiDefにも無い絵文字であれば文字列で来る。Unicode絵文字であることには変わりないので常にリアクション可能とする;
-	if ('char' in emoji) return true; // UnicodeEmojiDefなら常にリアクション可能
+	if (typeof emoji === 'string') {
+		return true;
+	} // UnicodeEmojiDefにも無い絵文字であれば文字列で来る。Unicode絵文字であることには変わりないので常にリアクション可能とする;
+	if ('char' in emoji) {
+		return true;
+	} // UnicodeEmojiDefなら常にリアクション可能
 
 	const roleIdsThatCanBeUsedThisEmojiAsReaction = emoji.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [];
 	return (

@@ -116,7 +116,9 @@ async function renameProfile() {
 		placeholder: prefer.profile.name || null,
 		default: prefer.profile.name || null,
 	});
-	if (canceled || name == null || name.trim() === '') return;
+	if (canceled || name == null || name.trim() === '') {
+		return;
+	}
 
 	prefer.renameProfile(name);
 }
@@ -135,10 +137,14 @@ function importProfile() {
 	input.type = 'file';
 	input.accept = '.misskeypreferences';
 	input.onchange = async () => {
-		if (input.files == null || input.files.length === 0) return;
+		if (input.files == null || input.files.length === 0) {
+			return;
+		}
 
 		const file = input.files[0];
-		if (file == null) return;
+		if (file == null) {
+			return;
+		}
 		const txt = await file.text();
 		let profile: unknown;
 		try {
@@ -162,7 +168,9 @@ function importProfile() {
 }
 
 export async function cloudBackup() {
-	if ($i == null) return;
+	if ($i == null) {
+		return;
+	}
 	if (!canAutoBackup()) {
 		throw new Error('cannot auto backup for this profile');
 	}
@@ -192,7 +200,9 @@ export async function deleteCloudBackup(key: string) {
 }
 
 export async function restoreFromCloudBackup() {
-	if ($i == null) return;
+	if ($i == null) {
+		return;
+	}
 
 	const backups = await listCloudBackups();
 
@@ -217,15 +227,21 @@ export async function restoreFromCloudBackup() {
 			value: backup.name,
 		})),
 	});
-	if (select.canceled) return;
-	if (select.result == null) return;
+	if (select.canceled) {
+		return;
+	}
+	if (select.result == null) {
+		return;
+	}
 
 	const profile = await misskeyApi('i/registry/get', {
 		scope: ['client', 'preferences', 'backups'],
 		key: select.result,
 	});
 
-	if (_DEV_) console.log(profile);
+	if (_DEV_) {
+		console.log(profile);
+	}
 	if (!isPossiblyNonNormalizedPreferencesProfile(profile)) {
 		await os.alert({ type: 'error', text: i18n.ts.invalidValue });
 		return;

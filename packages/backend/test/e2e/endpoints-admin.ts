@@ -112,7 +112,6 @@ import {
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
-	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
 	updateUserInDatabase,
@@ -120,6 +119,7 @@ import {
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -134,7 +134,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { createEndpointsContext, type EndpointsContext, getAt, getDefined } from '../endpoints-context.js';
+import { createEndpointsContext, getAt, getDefined } from '../endpoints-context.js';
+import type { EndpointsContext } from '../endpoints-context.js';
 
 /*
  * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
@@ -1649,7 +1650,9 @@ describe('Endpoints', () => {
 						type,
 						search: assignableRole.body.id,
 					});
-					if (logs.length > 0) assignmentLogged.add(type);
+					if (logs.length > 0) {
+						assignmentLogged.add(type);
+					}
 				}
 				expect(assignmentLogged.size).toBe(assignmentLogTypes.length);
 			}, POLL);
@@ -1680,7 +1683,9 @@ describe('Endpoints', () => {
 						type,
 						search: created.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -1834,7 +1839,9 @@ describe('Endpoints', () => {
 						type,
 						search: created.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -2045,7 +2052,9 @@ describe('Endpoints', () => {
 						type,
 						search: createdWebhookRecipient.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -2916,7 +2925,9 @@ describe('Endpoints', () => {
 						type,
 						search: target.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -3116,7 +3127,9 @@ describe('Endpoints', () => {
 						type,
 						search: target.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(2);
 			}, POLL);
@@ -3968,7 +3981,9 @@ describe('Endpoints', () => {
 						type,
 						search: created.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -4089,7 +4104,9 @@ describe('Endpoints', () => {
 						type,
 						search: created.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);
@@ -4181,7 +4198,9 @@ describe('Endpoints', () => {
 						type,
 						search: created.body.id,
 					});
-					if (logs.length > 0) logged.add(type);
+					if (logs.length > 0) {
+						logged.add(type);
+					}
 				}
 				expect(logged.size).toBe(logTypes.length);
 			}, POLL);

@@ -28,10 +28,14 @@ export function runInRequestScope<T>(fn: () => T): T {
  */
 export function memoizeInRequest<T>(key: string, compute: () => Promise<T>): Promise<T> {
 	const store = storage.getStore();
-	if (store == null) return compute();
+	if (store == null) {
+		return compute();
+	}
 
 	const cached = store.get(key);
-	if (cached != null) return cached as Promise<T>;
+	if (cached != null) {
+		return cached as Promise<T>;
+	}
 
 	const promise = compute();
 	store.set(key, promise);

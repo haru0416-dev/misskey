@@ -62,13 +62,13 @@ function chooseFile(evt: MouseEvent) {
 	selectFile({
 		anchorElement: evt.currentTarget ?? evt.target,
 		multiple: true,
-	}).then(selected => {
+	}).then((selected) => {
 		files.value = files.value.concat(selected);
 	});
 }
 
 function remove(file: NonNullable<Misskey.entities.GalleryPost['files']>[number]) {
-	files.value = files.value.filter(f => f.id !== file.id);
+	files.value = files.value.filter((f) => f.id !== file.id);
 }
 
 async function save() {
@@ -77,7 +77,7 @@ async function save() {
 			postId: props.post.id,
 			title: title.value,
 			description: description.value,
-			fileIds: files.value.map(file => file.id),
+			fileIds: files.value.map((file) => file.id),
 			isSensitive: isSensitive.value,
 		});
 		router.push('/gallery/:postId', {
@@ -89,7 +89,7 @@ async function save() {
 		const created = await os.apiWithDialog('gallery/posts/create', {
 			title: title.value,
 			description: description.value,
-			fileIds: files.value.map(file => file.id),
+			fileIds: files.value.map((file) => file.id),
 			isSensitive: isSensitive.value,
 		});
 		router.push('/gallery/:postId', {
@@ -101,12 +101,16 @@ async function save() {
 }
 
 async function del() {
-	if (props.post == null) return;
+	if (props.post == null) {
+		return;
+	}
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.ts.deleteConfirm,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 	await os.apiWithDialog('gallery/posts/delete', {
 		postId: props.post.id,
 	});

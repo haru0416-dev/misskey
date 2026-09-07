@@ -29,8 +29,12 @@ export function shouldPropagateTraceContext(target: string | URL, configuredTarg
 
 	return configuredTargets.some((configuredTarget) => {
 		const allowedUrl = new URL(configuredTarget);
-		if (targetUrl.origin !== allowedUrl.origin) return false;
-		if (allowedUrl.pathname === '/' && allowedUrl.search === '') return true;
+		if (targetUrl.origin !== allowedUrl.origin) {
+			return false;
+		}
+		if (allowedUrl.pathname === '/' && allowedUrl.search === '') {
+			return true;
+		}
 		return targetUrl.href.startsWith(allowedUrl.href);
 	});
 }
@@ -47,7 +51,9 @@ export function getClientRequestTarget(request: {
 
 export async function initializeTelemetry(config: Config): Promise<void> {
 	const telemetry = config.observability.telemetry.backend;
-	if (telemetry == null) return;
+	if (telemetry == null) {
+		return;
+	}
 
 	const candidates: TelemetryProvider[] = [];
 	try {
@@ -84,8 +90,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			if (
 				shouldPropagateTraceContext(target, propagationTargets) &&
 				!shouldPropagateTraceContext(target, [telemetry.endpoint])
-			)
+			) {
 				standardPropagator.inject(context, carrier, setter);
+			}
 		};
 		const instrumentationConfig: InstrumentationConfigMap = {
 			'@opentelemetry/instrumentation-dns': { enabled: false },
@@ -93,7 +100,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			'@opentelemetry/instrumentation-net': { enabled: false },
 			'@opentelemetry/instrumentation-http': {
 				requestHook: (span, request) => {
-					if (!isClientRequest(request)) return;
+					if (!isClientRequest(request)) {
+						return;
+					}
 					const target = getClientRequestTarget(request);
 					injectIfAllowed(target, api.trace.setSpan(api.context.active(), span), request, {
 						set: (carrier: ClientRequest, key, value) => carrier.setHeader(key, value),
@@ -113,7 +122,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 				},
 			},
 		};
-		for (const name of telemetry.disabledInstrumentations ?? []) disableInstrumentation(instrumentationConfig, name);
+		for (const name of telemetry.disabledInstrumentations ?? []) {
+			disableInstrumentation(instrumentationConfig, name);
+		}
 		const candidate = new sdkNode.NodeSDK({
 			resource,
 			sampler: new traceBase.TraceIdRatioBasedSampler(telemetry.tracesSampleRatio ?? DEFAULT_TRACE_SAMPLE_RATIO),
@@ -157,7 +168,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 					try {
 						const response = await handler();
 						span.setAttribute('http.response.status_code', response.status);
-						if (response.status >= 500) span.setStatus({ code: api.SpanStatusCode.ERROR });
+						if (response.status >= 500) {
+							span.setStatus({ code: api.SpanStatusCode.ERROR });
+						}
 						return response;
 					} catch (error) {
 						span.recordException(error instanceof Error ? error : String(error));
@@ -171,7 +184,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			);
 	} catch (error) {
 		console.error('Failed to initialize OpenTelemetry; Erebia will continue without telemetry.', error);
-		if (candidates.length > 0) await shutdownWithTimeout(candidates);
+		if (candidates.length > 0) {
+			await shutdownWithTimeout(candidates);
+		}
 	}
 }
 
@@ -199,13 +214,17 @@ export function traceHttpRequest(
 }
 
 export async function shutdownTelemetry(): Promise<void> {
-	if (shutdownPromise != null) return shutdownPromise;
+	if (shutdownPromise != null) {
+		return shutdownPromise;
+	}
 
 	const activeProviders = providers;
 	providers = [];
 	recordExceptionImpl = () => {};
 	traceHttpRequestImpl = (_request, handler) => handler();
-	if (activeProviders.length === 0) return;
+	if (activeProviders.length === 0) {
+		return;
+	}
 
 	shutdownPromise = shutdownWithTimeout(activeProviders);
 	return shutdownPromise;
@@ -216,8 +235,9 @@ async function shutdownWithTimeout(activeProviders: TelemetryProvider[]): Promis
 	try {
 		const shutdownAll = Promise.allSettled(activeProviders.map((provider) => provider.shutdown())).then((results) => {
 			for (const result of results) {
-				if (result.status === 'rejected')
+				if (result.status === 'rejected') {
 					console.error('Failed to shut down an OpenTelemetry provider cleanly.', result.reason);
+				}
 			}
 		});
 		await Promise.race([
@@ -233,6 +253,8 @@ async function shutdownWithTimeout(activeProviders: TelemetryProvider[]): Promis
 	} catch (error) {
 		console.error('Failed to shut down OpenTelemetry cleanly.', error);
 	} finally {
-		if (timeout != null) clearTimeout(timeout);
+		if (timeout != null) {
+			clearTimeout(timeout);
+		}
 	}
 }

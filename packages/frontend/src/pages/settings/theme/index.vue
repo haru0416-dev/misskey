@@ -233,17 +233,24 @@ import { checkDragDataType, getDragData, getPlainDragData, setDragData, setPlain
 
 const { themes: installedThemes, darkTheme, lightTheme } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);
-getBuiltinThemes().then(themes => {
+getBuiltinThemes().then((themes) => {
 	builtinThemes.value = themes;
 });
 
 const instanceDarkTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultDarkTheme));
-const installedDarkThemes = computed(() => installedThemes.value.filter(t => t.base === 'dark'));
-const builtinDarkThemes = computed(() => builtinThemes.value.filter(t => t.base === 'dark'));
+const installedDarkThemes = computed(() => installedThemes.value.filter((t) => t.base === 'dark'));
+const builtinDarkThemes = computed(() => builtinThemes.value.filter((t) => t.base === 'dark'));
 const instanceLightTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultLightTheme));
-const installedLightThemes = computed(() => installedThemes.value.filter(t => t.base === 'light'));
-const builtinLightThemes = computed(() => builtinThemes.value.filter(t => t.base === 'light'));
-const themes = computed(() => uniqueBy([instanceDarkTheme.value, instanceLightTheme.value, ...builtinThemes.value, ...installedThemes.value].filter(x => x != null), theme => theme.id));
+const installedLightThemes = computed(() => installedThemes.value.filter((t) => t.base === 'light'));
+const builtinLightThemes = computed(() => builtinThemes.value.filter((t) => t.base === 'light'));
+const themes = computed(() =>
+	uniqueBy(
+		[instanceDarkTheme.value, instanceLightTheme.value, ...builtinThemes.value, ...installedThemes.value].filter(
+			(x) => x != null,
+		),
+		(theme) => theme.id,
+	),
+);
 
 const darkThemeName = computed(() => darkTheme.value?.name ?? defaultDarkTheme.name);
 const darkThemeId = computed({
@@ -251,8 +258,9 @@ const darkThemeId = computed({
 		return darkTheme.value ? darkTheme.value.id : defaultDarkTheme.id;
 	},
 	set(id) {
-		const t = themes.value.find(x => x.id === id);
-		if (t) { // テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
+		const t = themes.value.find((x) => x.id === id);
+		if (t) {
+			// テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
 			prefer.commit('darkTheme', t);
 		}
 	},
@@ -263,8 +271,9 @@ const lightThemeId = computed({
 		return lightTheme.value ? lightTheme.value.id : defaultLightTheme.id;
 	},
 	set(id) {
-		const t = themes.value.find(x => x.id === id);
-		if (t) { // テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
+		const t = themes.value.find((x) => x.id === id);
+		if (t) {
+			// テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
 			prefer.commit('lightTheme', t);
 		}
 	},
@@ -286,7 +295,9 @@ async function toggleDarkMode() {
 			type: 'question',
 			text: i18n.tsx.switchDarkModeManuallyWhenSyncEnabledConfirm({ x: i18n.ts.syncDeviceDarkMode }),
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		syncDeviceDarkMode.value = false;
 		store.set('darkMode', value);
@@ -300,8 +311,12 @@ const themesSyncEnabled = ref(prefer.isSyncEnabled('themes'));
 function changeThemesSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('themes').then((res) => {
-			if (res == null) return;
-			if (res.enabled) themesSyncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				themesSyncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('themes');
@@ -310,34 +325,45 @@ function changeThemesSyncEnabled(value: boolean) {
 }
 
 function onThemeContextmenu(theme: Theme, ev: PointerEvent) {
-	os.contextMenu([{
-		type: 'label',
-		text: theme.name,
-	}, {
-		icon: 'ti ti-clipboard',
-		text: i18n.ts._theme.copyThemeCode,
-		action: () => {
-			copyToClipboard(JSON5.stringify(theme, null, '\t'));
-		},
-	}, {
-		icon: 'ti ti-trash',
-		text: i18n.ts.delete,
-		danger: true,
-		action: () => {
-			removeTheme(theme);
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				type: 'label',
+				text: theme.name,
+			},
+			{
+				icon: 'ti ti-clipboard',
+				text: i18n.ts._theme.copyThemeCode,
+				action: () => {
+					copyToClipboard(JSON5.stringify(theme, null, '\t'));
+				},
+			},
+			{
+				icon: 'ti ti-trash',
+				text: i18n.ts.delete,
+				danger: true,
+				action: () => {
+					removeTheme(theme);
+				},
+			},
+		],
+		ev,
+	);
 }
 
 function onThemeDragstart(ev: DragEvent, theme: Theme) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	ev.dataTransfer.effectAllowed = 'copy';
 	setPlainDragData(ev, JSON5.stringify(theme, null, '\t'));
 }
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	if (ev.dataTransfer.types[0] === 'text/plain') {
 		ev.dataTransfer.dropEffect = 'copy';
@@ -349,7 +375,9 @@ function onDragover(ev: DragEvent) {
 }
 
 async function onDrop(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	const code = getPlainDragData(ev);
 	if (code != null) {

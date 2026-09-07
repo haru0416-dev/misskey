@@ -71,7 +71,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			premultipliedAlpha: false,
 		});
 
-		if (gl == null) throw new Error('Failed to initialize WebGL2 context');
+		if (gl == null) {
+			throw new Error('Failed to initialize WebGL2 context');
+		}
 
 		this.gl = gl;
 
@@ -79,7 +81,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		const VERTICES = new Float32Array([-1, -1, -1, 1, 1, 1, -1, -1, 1, 1, 1, -1]);
 		const vertexBuffer = gl.createBuffer();
-		if (vertexBuffer == null) throw new Error('Failed to create vertex buffer');
+		if (vertexBuffer == null) {
+			throw new Error('Failed to create vertex buffer');
+		}
 		this.vertexBuffer = vertexBuffer;
 		gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, VERTICES, gl.STATIC_DRAW);
@@ -147,7 +151,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		let match;
 		while ((match = uniformRegex.exec(shader)) !== null) {
 			const name = match[1];
-			if (name != null) uniforms.push(name.replace(/^u_/, ''));
+			if (name != null) {
+				uniforms.push(name.replace(/^u_/, ''));
+			}
 		}
 		return uniforms;
 	}
@@ -158,7 +164,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			locations = new Map();
 			this.uniformLocationCache.set(program, locations);
 		}
-		if (locations.has(name)) return locations.get(name) ?? null;
+		if (locations.has(name)) {
+			return locations.get(name) ?? null;
+		}
 		const location = this.gl.getUniformLocation(program, name);
 		locations.set(name, location);
 		return location;
@@ -168,7 +176,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		const gl = this.gl;
 
 		const fn = this.registeredFunctions.get(layer.functionId);
-		if (fn == null) return;
+		if (fn == null) {
+			return;
+		}
 
 		const cachedShader = this.shaderCache.get(fn.id);
 		const shaderProgram =
@@ -230,12 +240,16 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		const gl = this.gl;
 		const intermediateLayerIds = new Set(layers.slice(0, -1).map((layer) => layer.id));
 		for (const [id, texture] of this.perLayerResultTextures) {
-			if (intermediateLayerIds.has(id)) continue;
+			if (intermediateLayerIds.has(id)) {
+				continue;
+			}
 			gl.deleteTexture(texture);
 			this.perLayerResultTextures.delete(id);
 		}
 		for (const [id, framebuffer] of this.perLayerResultFrameBuffers) {
-			if (intermediateLayerIds.has(id)) continue;
+			if (intermediateLayerIds.has(id)) {
+				continue;
+			}
 			gl.deleteFramebuffer(framebuffer);
 			this.perLayerResultFrameBuffers.delete(id);
 		}
@@ -273,7 +287,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 			const cachedResultFrameBuffer = this.perLayerResultFrameBuffers.get(layer.id);
 			const resultFrameBuffer = cachedResultFrameBuffer ?? gl.createFramebuffer();
-			if (resultFrameBuffer == null) throw new Error('Failed to create framebuffer');
+			if (resultFrameBuffer == null) {
+				throw new Error('Failed to create framebuffer');
+			}
 			if (cachedResultFrameBuffer == null) {
 				this.perLayerResultFrameBuffers.set(layer.id, resultFrameBuffer);
 			}
@@ -327,7 +343,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 	}
 
 	public changeResolution(width: number, height: number) {
-		if (this.renderWidth === width && this.renderHeight === height) return;
+		if (this.renderWidth === width && this.renderHeight === height) {
+			return;
+		}
 
 		this.renderWidth = width;
 		this.renderHeight = height;
@@ -369,7 +387,9 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		if (disposeCanvas) {
 			const loseContextExt = this.gl.getExtension('WEBGL_lose_context');
-			if (loseContextExt) loseContextExt.loseContext();
+			if (loseContextExt) {
+				loseContextExt.loseContext();
+			}
 		}
 	}
 }

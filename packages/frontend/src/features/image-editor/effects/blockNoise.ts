@@ -25,9 +25,13 @@ function getLocation(
 	name: string,
 ): WebGLUniformLocation {
 	const cached = locations[index];
-	if (cached !== undefined) return cached;
+	if (cached !== undefined) {
+		return cached;
+	}
 	const location = gl.getUniformLocation(program, name);
-	if (location == null) throw new Error(`Uniform "${name}" is unavailable in block noise compositor function`);
+	if (location == null) {
+		throw new Error(`Uniform "${name}" is unavailable in block noise compositor function`);
+	}
 	locations[index] = location;
 	return location;
 }

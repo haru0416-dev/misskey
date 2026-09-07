@@ -3,21 +3,29 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createCanvas } from '@napi-rs/canvas';
+/*
+ * @napi-rs/canvas は読み込むだけで RSS が 29MB 増え、システムフォントの走査に約 0.5 秒かかる
+ * (2026-09-03 実測)。使うのは identicon 生成だけなので、最初の要求まで読み込まない。
+ */
+let canvasModule: Promise<typeof import('@napi-rs/canvas')> | undefined;
+function loadCanvas(): Promise<typeof import('@napi-rs/canvas')> {
+	canvasModule ??= import('@napi-rs/canvas');
+	return canvasModule;
+}
 
 // xmur3 hash + mulberry32 による決定的 PRNG を使う。
 function createSeededRandom(seed: string): (max: number) => number {
-	let h = 1779033703 ^ seed.length;
+	let h = 1_779_033_703 ^ seed.length;
 	for (let i = 0; i < seed.length; i++) {
-		h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+		h = Math.imul(h ^ seed.charCodeAt(i), 3_432_918_353);
 		h = (h << 13) | (h >>> 19);
 	}
 	let a = h;
 	return (max: number) => {
-		a = (a + 0x6d2b79f5) | 0;
+		a = (a + 0x6d_2b_79_f5) | 0;
 		let t = Math.imul(a ^ (a >>> 15), 1 | a);
 		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-		return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * max);
+		return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4_294_967_296) * max);
 	};
 }
 
@@ -53,11 +61,14 @@ const sideN = Math.floor(n / 2);
 
 export async function genIdenticon(seed: string): Promise<Buffer> {
 	const rand = createSeededRandom(seed);
+	const { createCanvas } = await loadCanvas();
 	const canvas = createCanvas(size, size);
 	const ctx = canvas.getContext('2d');
 
 	const bgColors = colors[rand(colors.length)];
-	if (bgColors == null) throw new Error('Identicon color palette is empty');
+	if (bgColors == null) {
+		throw new Error('Identicon color palette is empty');
+	}
 
 	const bg = ctx.createLinearGradient(0, 0, size, size);
 	bg.addColorStop(0, bgColors[0]);
@@ -79,7 +90,9 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 	// eslint:disable-next-line:prefer-for-of
 	for (let x = 0; x < side.length; x++) {
 		const column = side[x];
-		if (column == null) continue;
+		if (column == null) {
+			continue;
+		}
 		for (let y = 0; y < column.length; y++) {
 			column[y] = rand(3) === 0;
 		}
@@ -92,13 +105,19 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 	for (let x = 0; x < n; x++) {
 		for (let y = 0; y < n; y++) {
 			const isXCenter = x === (n - 1) / 2;
-			if (isXCenter && !center[y]) continue;
+			if (isXCenter && !center[y]) {
+				continue;
+			}
 
 			const isLeftSide = x < (n - 1) / 2;
-			if (isLeftSide && !side[x]?.[y]) continue;
+			if (isLeftSide && !side[x]?.[y]) {
+				continue;
+			}
 
 			const isRightSide = x > (n - 1) / 2;
-			if (isRightSide && !side[sideN - (x - sideN)]?.[y]) continue;
+			if (isRightSide && !side[sideN - (x - sideN)]?.[y]) {
+				continue;
+			}
 
 			const actualX = margin + cellSize * x;
 			const actualY = margin + cellSize * y;

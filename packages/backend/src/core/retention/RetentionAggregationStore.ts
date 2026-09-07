@@ -4,11 +4,8 @@
  */
 
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
-import {
-	retentionAggregation,
-	type RetentionAggregationInsert,
-	type RetentionAggregationRow,
-} from '@/db/schema/retention-aggregation.js';
+import { retentionAggregation } from '@/db/schema/retention-aggregation.js';
+import type { RetentionAggregationInsert, RetentionAggregationRow } from '@/db/schema/retention-aggregation.js';
 import { user as userTable } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';

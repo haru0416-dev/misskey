@@ -12,13 +12,17 @@ import {
 	listChildNotesFromDatabase,
 	listGlobalTimelineNotesFromDatabase,
 	listHybridTimelineNotesFromDatabase,
+	listHydratedNotesByIdsFromDatabase,
 	listLocalTimelineNotesFromDatabase,
 	listUserTimelineNotesFromDatabase,
 } from '@/core/note/NoteStore.js';
 import { createRenoteMutingInDatabase } from '@/core/user/RenoteMutingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import { channel } from '@/db/schema/channel.js';
+import { countDatabaseQueries } from '../../query-counter.js';
 
 describe('NoteStore renote filtering', () => {
 	let runtime: RuntimeDependencies;
@@ -227,5 +231,90 @@ describe('NoteStore renote filtering', () => {
 		expect(timelineIds.has(replyQuoteId)).toBe(true);
 		expect(timelineIds.has(fileQuoteId)).toBe(true);
 		expect(timelineIds.has(pollQuoteId)).toBe(true);
+	});
+});
+
+describe('NoteStore hydrated note lookup', () => {
+	let runtime: RuntimeDependencies;
+	let userId: string;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+		userId = genId();
+		await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: userId, username: `hydrate${userId}`, usernameLower: `hydrate${userId}` },
+			profile: { userId },
+		});
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('loads joined records and uses the current IDs on repeated calls', async () => {
+		const parentId = genId();
+		const childId = genId();
+		const channelId = genId();
+		await runtime.db.insert(channel).values({ id: channelId, userId, name: 'hydrated channel' });
+		await createNoteInDatabase(runtime.db, {
+			id: parentId,
+			userId,
+			text: 'parent',
+			visibility: 'followers',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: childId,
+			userId,
+			text: 'child',
+			visibility: 'public',
+			replyId: parentId,
+			replyUserId: userId,
+			renoteId: parentId,
+			renoteUserId: userId,
+			channelId,
+			tags: ['test'],
+			reactions: { '👍': 2 },
+		});
+
+		const queries = countDatabaseQueries(runtime.db);
+		try {
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [])).toEqual([]);
+			expect(queries.count()).toBe(0);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [childId, childId, genId()])).toMatchObject([
+				{
+					id: childId,
+					text: 'child',
+					tags: ['test'],
+					reactions: { '👍': 2 },
+					user: { id: userId },
+					reply: { id: parentId, visibility: 'followers', user: { id: userId } },
+					renote: { id: parentId, visibility: 'followers', user: { id: userId } },
+					channel: { id: channelId, name: 'hydrated channel' },
+				},
+			]);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [parentId])).toMatchObject([
+				{ id: parentId, reply: null, renote: null, channel: null, user: { id: userId } },
+			]);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [genId()])).toEqual([]);
+			expect(queries.count()).toBe(3);
+		} finally {
+			queries.restore();
+		}
+	});
+
+	test('reads uncommitted notes through the transaction and respects rollback', async () => {
+		const noteId = genId();
+		const rollback = new Error('rollback hydration fixture');
+		expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [noteId])).toEqual([]);
+		await expect(
+			runtime.db.transaction(async (tx) => {
+				await createNoteInDatabase(tx, { id: noteId, userId, text: 'uncommitted', visibility: 'public' });
+				expect(await listHydratedNotesByIdsFromDatabase(tx, [noteId])).toMatchObject([
+					{ id: noteId, text: 'uncommitted', user: { id: userId } },
+				]);
+				throw rollback;
+			}),
+		).rejects.toBe(rollback);
+		expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [noteId])).toEqual([]);
 	});
 });

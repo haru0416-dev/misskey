@@ -5,7 +5,8 @@
 
 import { DAY } from '@/const.js';
 import { z } from 'zod';
-import { sql, type SQL } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
@@ -28,13 +29,13 @@ import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
 } from '@/core/user/UserProfileStore.js';
-import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role/role-policies.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
+import type { RolePolicies } from '@/core/role/role-policies.js';
 import {
 	deserializeUser,
 	fetchLocalUserByUsernameFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
-	fetchUserByUsernameAndHostFromDatabase,
 	listExplorableUsersFromDatabase,
 	listRecommendedUsersFromDatabase,
 	listUsersByIdsFromDatabase,
@@ -82,15 +83,17 @@ import type { MiUser } from '@/models/User.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi, populateEmojis, populateEmojisMany, type ApiNoteDependencies } from '../note/note.js';
+import { packNoteManyForApi, populateEmojis, populateEmojisMany } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import {
 	computeApiUserRoles,
 	getApiRolePolicies,
 	getApiUserRoles,
+	getApiUserProfilePolicies,
 	isApiModerator,
-	type ApiRolePolicyDependencies,
 } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type MeDetailedApiResponse = Record<string, unknown>;
@@ -159,7 +162,9 @@ async function buildApiAvatarDecorations(
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], ApiAvatarDecorationLite[]>> {
 	const usersWithDecorations = users.filter((user) => user.avatarDecorations.length > 0);
-	if (usersWithDecorations.length === 0) return new Map();
+	if (usersWithDecorations.length === 0) {
+		return new Map();
+	}
 
 	const decorations = await listAvatarDecorationsFromDatabaseCached(deps.db);
 	const decorationById = new Map(decorations.map((decoration) => [decoration.id, decoration]));
@@ -170,7 +175,9 @@ async function buildApiAvatarDecorations(
 			user.id,
 			user.avatarDecorations.flatMap((userDecoration) => {
 				const decoration = decorationById.get(userDecoration.id);
-				if (decoration == null) return [];
+				if (decoration == null) {
+					return [];
+				}
 				return [
 					{
 						id: userDecoration.id,
@@ -283,7 +290,7 @@ async function buildUserDetailedExtrasForApi(
 		relation?: UserRelationForPack | null;
 		/** 一覧pack用の事前計算値。ユーザー毎の roles(2クエリ)/pins(1クエリ) を回避する */
 		userRoles?: MiRole[];
-		policies?: RolePolicies;
+		policies?: Pick<RolePolicies, 'canPublicNote' | 'chatAvailability'>;
 		pins?: MiUserNotePining[];
 		pinnedNotes?: Packed<'Note'>[];
 		hasSecurityKey?: boolean;
@@ -297,7 +304,7 @@ async function buildUserDetailedExtrasForApi(
 	}
 
 	const userRoles = hint?.userRoles ?? (await getApiUserRoles(deps, user));
-	const policies = hint?.policies ?? (await getApiRolePolicies(deps, user, userRoles));
+	const policies = hint?.policies ?? getApiUserProfilePolicies(deps, userRoles);
 
 	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
 	const pinnedNoteIds = pins.map((pin) => pin.noteId);
@@ -382,7 +389,7 @@ export async function packUserDetailedNotMeManyForApi(
 	const userIds = [...new Set(users.map((user) => user.id))];
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, userIds);
 	const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
-	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
+	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id, userIds) : null;
 
 	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
 	const iAmModerator = meUser != null && (await isApiModerator(deps, meUser));
@@ -402,7 +409,7 @@ export async function packUserDetailedNotMeManyForApi(
 		listRoleAssignmentsByUserIdsFromDatabase(deps.db, userIds),
 		listUserNotePiningsByUserIdsFromDatabase(deps.db, userIds, { order: 'desc' }),
 	]);
-	const [securityKeyUserIds, alsoKnownAsByUserId, emojisByUserId] = await Promise.all([
+	const [securityKeyUserIds, migrationIdsByUserId, emojisByUserId] = await Promise.all([
 		me != null
 			? listUserIdsWithSecurityKeysFromDatabase(
 					deps.db,
@@ -411,7 +418,7 @@ export async function packUserDetailedNotMeManyForApi(
 						.map((user) => user.id),
 				)
 			: Promise.resolve([]),
-		resolveAlsoKnownAsManyForApi(deps, users),
+		resolveMigrationIdsManyForApi(deps, users),
 		populateUserEmojisManyForApi(deps, users),
 	]);
 	const securityKeyUserIdSet = new Set(securityKeyUserIds);
@@ -480,7 +487,7 @@ export async function packUserDetailedNotMeManyForApi(
 				memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
 				extras,
 				omitUndefined({
-					alsoKnownAs: alsoKnownAsByUserId.get(user.id),
+					...migrationIdsByUserId.get(user.id),
 					emojis: emojisByUserId.get(user.id),
 				}),
 			);
@@ -492,7 +499,9 @@ export async function resolveAlsoKnownAsForApi(
 	deps: UserPackingDependencies,
 	alsoKnownAs: string[] | null,
 ): Promise<string[] | null> {
-	if (alsoKnownAs == null || alsoKnownAs.length === 0) return null;
+	if (alsoKnownAs == null || alsoKnownAs.length === 0) {
+		return null;
+	}
 
 	const localPrefix = `${deps.config.instance.url}/users/`;
 	const remoteUris = alsoKnownAs.filter((uri) => !uri.startsWith(localPrefix));
@@ -505,33 +514,39 @@ export async function resolveAlsoKnownAsForApi(
 		.filter((id): id is string => id != null);
 }
 
-async function resolveAlsoKnownAsManyForApi(
+type UserMigrationIds = {
+	alsoKnownAs: string[] | null;
+	movedTo: string | null;
+};
+
+async function resolveMigrationIdsManyForApi(
 	deps: UserPackingDependencies,
 	users: MiUser[],
-): Promise<Map<MiUser['id'], string[] | null>> {
+): Promise<Map<MiUser['id'], UserMigrationIds>> {
 	const localPrefix = `${deps.config.instance.url}/users/`;
 	const remoteUris = [
-		...new Set(users.flatMap((user) => user.alsoKnownAs ?? []).filter((uri) => !uri.startsWith(localPrefix))),
+		...new Set(
+			users
+				.flatMap((user) => [...(user.alsoKnownAs ?? []), ...(user.movedToUri == null ? [] : [user.movedToUri])])
+				.filter((uri) => !uri.startsWith(localPrefix)),
+		),
 	];
 	const remoteUsers =
 		remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
 	const remoteIdByUri = new Map(
 		remoteUsers.filter((user): user is MiUser & { uri: string } => user.uri != null).map((user) => [user.uri, user.id]),
 	);
+	const resolveUri = (uri: string): string | null =>
+		uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null);
 
-	const resolvedByUserId = new Map<MiUser['id'], string[] | null>();
+	const resolvedByUserId = new Map<MiUser['id'], UserMigrationIds>();
 	for (const user of users) {
-		if (user.alsoKnownAs == null || user.alsoKnownAs.length === 0) {
-			resolvedByUserId.set(user.id, null);
-			continue;
-		}
-
-		resolvedByUserId.set(
-			user.id,
-			user.alsoKnownAs
-				.map((uri) => (uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null)))
-				.filter((id): id is string => id != null),
-		);
+		resolvedByUserId.set(user.id, {
+			alsoKnownAs: user.alsoKnownAs?.length
+				? user.alsoKnownAs.map(resolveUri).filter((id): id is string => id != null)
+				: null,
+			movedTo: user.movedToUri == null ? null : resolveUri(user.movedToUri),
+		});
 	}
 
 	return resolvedByUserId;
@@ -545,6 +560,7 @@ async function packUserDetailedNotMeCoreForApi(
 	extras: UserDetailedExtras,
 	hint?: {
 		alsoKnownAs?: string[] | null;
+		movedTo?: string | null;
 		emojis?: Record<string, string>;
 	},
 ): Promise<UserDetailedNotMeApiResponse> {
@@ -571,7 +587,10 @@ async function packUserDetailedNotMeCoreForApi(
 		badgeRoles: extras.badgeRoles,
 		url: profile.url,
 		uri: user.uri,
-		movedTo: null,
+		movedTo:
+			hint?.movedTo !== undefined
+				? hint.movedTo
+				: ((await resolveAlsoKnownAsForApi(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null),
 		alsoKnownAs,
 		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
@@ -622,8 +641,12 @@ async function packUserDetailedNotMeCoreForApi(
 }
 
 function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offline' {
-	if (user.hideOnlineStatus) return 'unknown';
-	if (user.lastActiveDate == null) return 'unknown';
+	if (user.hideOnlineStatus) {
+		return 'unknown';
+	}
+	if (user.lastActiveDate == null) {
+		return 'unknown';
+	}
 
 	const elapsed = Date.now() - user.lastActiveDate.getTime();
 
@@ -632,7 +655,9 @@ function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offli
 
 function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
 	const count = profile.twoFactorBackupSecret?.length ?? 0;
-	if (count === 5) return 'full';
+	if (count === 5) {
+		return 'full';
+	}
 	return count > 0 ? 'partial' : 'none';
 }
 
@@ -681,7 +706,7 @@ export async function packMeDetailedForApi(
 		badgeRoles: extras.badgeRoles,
 		url: profile.url,
 		uri: user.uri,
-		movedTo: null,
+		movedTo: (await resolveAlsoKnownAsForApi(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null,
 		alsoKnownAs,
 		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
@@ -790,7 +815,9 @@ export async function packUserDetailedManyForApi(
 	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
 	const packedOthers = await packUserDetailedNotMeManyForApi(deps, others, me);
 
-	if (meIndex === -1) return packedOthers;
+	if (meIndex === -1) {
+		return packedOthers;
+	}
 
 	const packedMe = await packMeDetailedForApi(deps, users[meIndex]!, { includeSecrets: false });
 	const result: (MeDetailedApiResponse | UserDetailedNotMeApiResponse)[] = [];
@@ -823,6 +850,7 @@ export async function handleApiPinnedUsers(
 export type ApiUsersShowDependencies = UserPackingDependencies &
 	ApiRolePolicyDependencies & {
 		chartWriters: ChartWriters;
+		resolveUser: (username: string, host: string) => Promise<MiUser>;
 	};
 
 function usersShowFailedToResolveRemoteUserError(): ApiError {
@@ -878,7 +906,9 @@ export async function handleApiUsersShow(
 	}
 
 	if ('userIds' in params) {
-		if (params.userIds.length === 0) return [];
+		if (params.userIds.length === 0) {
+			return [];
+		}
 
 		const users = await listUsersByIdsFromDatabase(deps.db, params.userIds, { includeSuspended: isModerator });
 		const userById = new Map(users.map((user) => [user.id, user]));
@@ -886,7 +916,9 @@ export async function handleApiUsersShow(
 		const ordered: MiUser[] = [];
 		for (const id of params.userIds) {
 			const user = userById.get(id);
-			if (user != null) ordered.push(user);
+			if (user != null) {
+				ordered.push(user);
+			}
 		}
 
 		const packedMap = new Map(
@@ -902,10 +934,9 @@ export async function handleApiUsersShow(
 			throw usersShowNoSuchUserError();
 		}
 
-		user = await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username, params.host).catch(() => {
+		user = await deps.resolveUser(params.username, params.host).catch(() => {
 			throw usersShowFailedToResolveRemoteUserError();
 		});
-		if (user == null) throw usersShowFailedToResolveRemoteUserError();
 	} else if ('userId' in params) {
 		user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	} else {
@@ -976,7 +1007,9 @@ async function getUserRelationForApi(deps: ApiUsersRelationDependencies, me: MiU
 
 async function getUserRelationsForApi(deps: ApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
 	const targetIds = [...new Set(targets)];
-	if (targetIds.length === 0) return new Map();
+	if (targetIds.length === 0) {
+		return new Map();
+	}
 
 	const [followers, followees, followersRequests, followeesRequests, blockers, blockees, muters, renoteMuters] =
 		await Promise.all([
@@ -1209,7 +1242,9 @@ async function selectSearchUserIdsForApi(
 	conditions: SQL[],
 	limit: number,
 ): Promise<MiUser['id'][]> {
-	if (limit <= 0) return [];
+	if (limit <= 0) {
+		return [];
+	}
 
 	const result = await deps.db.execute<{ id: MiUser['id'] }>(sql`
 		SELECT "user"."id" AS "id"
@@ -1256,7 +1291,9 @@ export async function handleApiUsersSearchByUsernameAndHost(
 	for (const conditions of queries) {
 		const ids = await selectSearchUserIdsForApi(deps, conditions, limit - resultSet.size);
 		resultSet = new Set([...resultSet, ...ids]);
-		if (resultSet.size >= limit) break;
+		if (resultSet.size >= limit) {
+			break;
+		}
 	}
 
 	const ids = [...resultSet].slice(0, limit);
@@ -1305,10 +1342,14 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 	const params = parseApiParams(usersGetFrequentlyRepliedUsersParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (user == null) throw usersGetFrequentlyRepliedUsersNoSuchUserError();
+	if (user == null) {
+		throw usersGetFrequentlyRepliedUsersNoSuchUserError();
+	}
 
 	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit);
-	if (repliedUsers.length === 0) return [];
+	if (repliedUsers.length === 0) {
+		return [];
+	}
 
 	const peak = maximum(repliedUsers.map((row) => row.count));
 	const topRepliedUserIds = repliedUsers.map((row) => row.userId);
@@ -1382,7 +1423,9 @@ export async function handleApiUsersUpdateMemo(
 	const params = parseApiParams(usersUpdateMemoParamDef, body);
 
 	const target = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	if (target == null) throw usersUpdateMemoNoSuchUserError();
+	if (target == null) {
+		throw usersUpdateMemoNoSuchUserError();
+	}
 
 	if (params.memo === '' || params.memo == null) {
 		await deleteUserMemoFromDatabase(deps.db, me.id, target.id);

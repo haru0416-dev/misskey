@@ -18,7 +18,9 @@ export const iAmModerator = $i != null && ($i.isAdmin === true || $i.isModerator
 export const iAmAdmin = $i != null && $i.isAdmin;
 
 export function ensureSignin() {
-	if ($i == null) throw new Error('signin required');
+	if ($i == null) {
+		throw new Error('signin required');
+	}
 	return $i;
 }
 

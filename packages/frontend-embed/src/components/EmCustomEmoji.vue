@@ -42,8 +42,12 @@ const props = defineProps<{
 	fallbackToImage?: boolean;
 }>();
 
-const customEmojiName = computed(() => (props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''));
-const isLocal = computed(() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')));
+const customEmojiName = computed(() =>
+	(props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''),
+);
+const isLocal = computed(
+	() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')),
+);
 
 const rawUrl = computed(() => {
 	if (props.url) {
@@ -56,17 +60,14 @@ const rawUrl = computed(() => {
 });
 
 const url = computed(() => {
-	if (rawUrl.value == null) return undefined;
+	if (rawUrl.value == null) {
+		return undefined;
+	}
 
 	const proxied =
-		(rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value))
+		rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value)
 			? rawUrl.value
-			: mediaProxy.getProxiedImageUrl(
-				rawUrl.value,
-				props.useOriginalSize ? undefined : 'emoji',
-				false,
-				true,
-			);
+			: mediaProxy.getProxiedImageUrl(rawUrl.value, props.useOriginalSize ? undefined : 'emoji', false, true);
 	return proxied;
 });
 

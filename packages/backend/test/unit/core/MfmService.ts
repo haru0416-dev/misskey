@@ -7,7 +7,8 @@ import * as mfm from 'mfm-js';
 import { beforeAll, describe, expect, test } from 'vitest';
 
 import { loadConfig } from '@/config.js';
-import { createMfmService, type MfmService } from '@/core/mfm/MfmService.js';
+import { createMfmService } from '@/core/mfm/MfmService.js';
+import type { MfmService } from '@/core/mfm/MfmService.js';
 
 describe('MfmService', () => {
 	let mfmService: MfmService;

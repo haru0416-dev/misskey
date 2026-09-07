@@ -2,27 +2,28 @@ import { endpointReqTypes } from './autogen/endpoint.js';
 import type { components } from './autogen/types.js';
 import type { SwitchCaseResponseType, Endpoints } from './api.types.js';
 
-export type {
-	SwitchCaseResponseType,
-} from './api.types.js';
+export type { SwitchCaseResponseType } from './api.types.js';
 
 const MK_API_ERROR = Symbol();
 
 export type APIError = components['schemas']['Error']['error'];
 
 export function isAPIError(reason: unknown): reason is APIError {
-	return reason !== null
-		&& typeof reason === 'object'
-		&& (reason as Record<PropertyKey, unknown>)[MK_API_ERROR] === true;
+	return (
+		reason !== null && typeof reason === 'object' && (reason as Record<PropertyKey, unknown>)[MK_API_ERROR] === true
+	);
 }
 
-export type FetchLike = (input: string, init?: {
-	method?: string;
-	body?: Blob | FormData | string;
-	credentials?: RequestCredentials;
-	cache?: RequestCache;
-	headers: { [key in string]: string }
-}) => Promise<{
+export type FetchLike = (
+	input: string,
+	init?: {
+		method?: string;
+		body?: Blob | FormData | string;
+		credentials?: RequestCredentials;
+		cache?: RequestCache;
+		headers: { [key in string]: string };
+	},
+) => Promise<{
 	status: number;
 	json(): Promise<unknown>;
 }>;
@@ -49,11 +50,13 @@ export class APIClient {
 	}
 
 	private assertIsAPIError(obj: unknown): obj is APIError {
-		return this.assertIsRecord(obj)
-			&& typeof obj['code'] === 'string'
-			&& typeof obj['message'] === 'string'
-			&& typeof obj['id'] === 'string'
-			&& (obj['kind'] === 'client' || obj['kind'] === 'server' || obj['kind'] === 'permission');
+		return (
+			this.assertIsRecord(obj) &&
+			typeof obj['code'] === 'string' &&
+			typeof obj['message'] === 'string' &&
+			typeof obj['id'] === 'string' &&
+			(obj['kind'] === 'client' || obj['kind'] === 'server' || obj['kind'] === 'permission')
+		);
 	}
 
 	private assertSpecialEpReqType(ep: keyof Endpoints): ep is keyof typeof endpointReqTypes {
@@ -66,7 +69,7 @@ export class APIClient {
 			? [params?: P, credential?: string | null]
 			: [params: P, credential?: string | null]
 	): Promise<SwitchCaseResponseType<E, P>> {
-		const params = args[0] ?? {} as P;
+		const params = args[0] ?? ({} as P);
 		const credential = args[1];
 		return new Promise((resolve, reject) => {
 			let mediaType = 'application/json';
@@ -92,7 +95,9 @@ export class APIClient {
 					for (const key in params) {
 						const value = params[key];
 
-						if (value == null) continue;
+						if (value == null) {
+							continue;
+						}
 
 						if (value instanceof File || value instanceof Blob) {
 							payload.append(key, value);
@@ -108,26 +113,35 @@ export class APIClient {
 			this.fetch(`${this.origin}/api/${endpoint}`, {
 				method: 'POST',
 				body: payload,
-				headers: mediaType === 'multipart/form-data' ? {} : {
-					'Content-Type': mediaType,
-				},
+				headers:
+					mediaType === 'multipart/form-data'
+						? {}
+						: {
+								'Content-Type': mediaType,
+							},
 				credentials: 'omit',
 				cache: 'no-cache',
-			}).then(async (res) => {
-				const body = res.status === 204 ? null : await res.json();
+			})
+				.then(async (res) => {
+					const body = res.status === 204 ? null : await res.json();
 
-				if (res.status === 200 || res.status === 204) {
-					// エンドポイントごとのレスポンス型はautogenのスキーマ経由でしか静的に表現できないため、
-					// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
-					resolve(body as SwitchCaseResponseType<E, P>);
-				} else {
-					const error = this.assertIsRecord(body) ? body['error'] : undefined;
-					reject(this.assertIsAPIError(error) ? {
-						[MK_API_ERROR]: true,
-						...error,
-					} : body);
-				}
-			}).catch(reject);
+					if (res.status === 200 || res.status === 204) {
+						// エンドポイントごとのレスポンス型はautogenのスキーマ経由でしか静的に表現できないため、
+						// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
+						resolve(body as SwitchCaseResponseType<E, P>);
+					} else {
+						const error = this.assertIsRecord(body) ? body['error'] : undefined;
+						reject(
+							this.assertIsAPIError(error)
+								? {
+										[MK_API_ERROR]: true,
+										...error,
+									}
+								: body,
+						);
+					}
+				})
+				.catch(reject);
 		});
 	}
 }

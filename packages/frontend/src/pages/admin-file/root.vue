@@ -98,8 +98,8 @@ import { iAmAdmin, iAmModerator } from '@/i.js';
 import MkTabs from '@/components/layout/MkTabs.vue';
 
 const props = defineProps<{
-	file: Misskey.entities.DriveFile,
-	info: Misskey.entities.AdminDriveShowFileResponse,
+	file: Misskey.entities.DriveFile;
+	info: Misskey.entities.AdminDriveShowFileResponse;
 }>();
 
 const tab = ref('overview');
@@ -113,7 +113,9 @@ async function del() {
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: props.file.name }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('drive/files/delete', {
 		fileId: props.file.id,
@@ -126,7 +128,9 @@ async function toggleSensitive() {
 		text: isSensitive.value ? i18n.ts.unmarkAsSensitiveConfirm : i18n.ts.markAsSensitiveConfirm,
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 	isSensitive.value = !isSensitive.value;
 
 	os.apiWithDialog('drive/files/update', {
@@ -135,31 +139,44 @@ async function toggleSensitive() {
 	});
 }
 
-const headerActions = computed(() => [{
-	text: i18n.ts.openInNewTab,
-	icon: 'ti ti-external-link',
-	handler: () => {
-		window.open(props.file.url, '_blank', 'noopener');
+const headerActions = computed(() => [
+	{
+		text: i18n.ts.openInNewTab,
+		icon: 'ti ti-external-link',
+		handler: () => {
+			window.open(props.file.url, '_blank', 'noopener');
+		},
 	},
-}]);
+]);
 
-const headerTabs = computed(() => [{
-	key: 'overview',
-	title: i18n.ts.overview,
-	icon: 'ti ti-info-circle',
-}, iAmModerator ? {
-	key: 'usage',
-	title: i18n.ts._fileViewer.usage,
-	icon: 'ti ti-plus',
-} : null, iAmModerator ? {
-	key: 'ip',
-	title: 'IP',
-	icon: 'ti ti-password',
-} : null, {
-	key: 'raw',
-	title: 'Raw data',
-	icon: 'ti ti-code',
-}].filter(x => x != null));
+const headerTabs = computed(() =>
+	[
+		{
+			key: 'overview',
+			title: i18n.ts.overview,
+			icon: 'ti ti-info-circle',
+		},
+		iAmModerator
+			? {
+					key: 'usage',
+					title: i18n.ts._fileViewer.usage,
+					icon: 'ti ti-plus',
+				}
+			: null,
+		iAmModerator
+			? {
+					key: 'ip',
+					title: 'IP',
+					icon: 'ti ti-password',
+				}
+			: null,
+		{
+			key: 'raw',
+			title: 'Raw data',
+			icon: 'ti ti-code',
+		},
+	].filter((x) => x != null),
+);
 </script>
 
 <style lang="scss" scoped>

@@ -38,7 +38,9 @@ function targetsInLine(line) {
 function resolveTarget(target, mdPath) {
 	// アンカー・クエリを落とす。パス部分が空ならページ内リンクなので検査対象外
 	const path = decodeURIComponent(target.split('#')[0].split('?')[0]);
-	if (path === '') return null;
+	if (path === '') {
+		return null;
+	}
 	return path.startsWith('/') ? resolve(path.slice(1)) : resolve(dirname(mdPath), path);
 }
 
@@ -55,10 +57,14 @@ for (const file of files) {
 			inCodeFence = !inCodeFence;
 			continue;
 		}
-		if (inCodeFence) continue;
+		if (inCodeFence) {
+			continue;
+		}
 
 		for (const target of targetsInLine(line)) {
-			if (skippedSchemes.test(target) || target.startsWith('#')) continue;
+			if (skippedSchemes.test(target) || target.startsWith('#')) {
+				continue;
+			}
 			const resolved = resolveTarget(target, file);
 			if (resolved !== null && !existsSync(resolved)) {
 				broken.push(`${file}:${index + 1}\t${target}`);
@@ -69,7 +75,9 @@ for (const file of files) {
 
 if (broken.length > 0) {
 	console.error(`ドキュメントのリンク切れ: ${broken.length} 件`);
-	for (const entry of broken) console.error(`  ${entry}`);
+	for (const entry of broken) {
+		console.error(`  ${entry}`);
+	}
 	process.exit(1);
 }
 

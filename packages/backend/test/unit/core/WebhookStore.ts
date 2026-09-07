@@ -8,7 +8,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { countWebhooksByUserIdFromDatabase, createWebhookWithinLimitInDatabase } from '@/core/webhook/WebhookStore.js';
 import { user } from '@/db/schema/user.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 
 describe('WebhookStore', () => {
 	const userId = 'webhook-limit-user';
@@ -22,7 +23,9 @@ describe('WebhookStore', () => {
 		const waiting = await blocker.query<{ count: string }>(
 			`SELECT count(*)::text AS count FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`,
 		);
-		if (Number(waiting.rows[0]?.count ?? 0) >= 2) return;
+		if (Number(waiting.rows[0]?.count ?? 0) >= 2) {
+			return;
+		}
 		await new Promise<void>((resolve) => setImmediate(resolve));
 		return await waitForTwoAdvisoryLockWaiters(blocker);
 	}

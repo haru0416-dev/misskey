@@ -192,36 +192,44 @@ async function cancel() {
 			type: 'question',
 			text: i18n.ts._watermarkEditor.quitWithoutSaveConfirm,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	emit('cancel');
 	dialog.value?.close();
 }
 
-watch(layers, async (newValue, oldValue) => {
-	if (renderer != null) {
-		renderer.render(layers);
-	}
-}, { deep: true });
+watch(
+	layers,
+	async (newValue, oldValue) => {
+		if (renderer != null) {
+			renderer.render(layers);
+		}
+	},
+	{ deep: true },
+);
 
 const canvasEl = useTemplateRef('canvasEl');
 
 const sampleImage_3_2 = new Image();
 sampleImage_3_2.src = '/client-assets/sample/3-2.jpg';
-const sampleImage_3_2_loading = new Promise<void>(resolve => {
+const sampleImage_3_2_loading = new Promise<void>((resolve) => {
 	sampleImage_3_2.onload = () => resolve();
 });
 
 const sampleImage_2_3 = new Image();
 sampleImage_2_3.src = '/client-assets/sample/2-3.jpg';
-const sampleImage_2_3_loading = new Promise<void>(resolve => {
+const sampleImage_2_3_loading = new Promise<void>((resolve) => {
 	sampleImage_2_3.onload = () => resolve();
 });
 
 const sampleImageType = ref(props.image != null ? 'provided' : '3_2');
 watch(sampleImageType, async () => {
-	if (sampleImageType.value === 'provided') return;
+	if (sampleImageType.value === 'provided') {
+		return;
+	}
 	if (renderer != null) {
 		renderer.destroy(false);
 		renderer = null;
@@ -233,7 +241,9 @@ let imageFile = props.image;
 
 async function choiceImage() {
 	const files = await os.chooseFileFromPc({ multiple: false });
-	if (files.length === 0) return;
+	if (files.length === 0) {
+		return;
+	}
 	imageFile = files[0];
 	sampleImageType.value = 'provided';
 	if (renderer != null) {
@@ -247,7 +257,9 @@ let renderer: WatermarkRenderer | null = null;
 let imageBitmap: ImageBitmap | null = null;
 
 async function initRenderer() {
-	if (canvasEl.value == null) return;
+	if (canvasEl.value == null) {
+		return;
+	}
 
 	if (sampleImageType.value === '3_2') {
 		renderer = new WatermarkRenderer({
@@ -326,7 +338,9 @@ async function save() {
 			title: i18n.ts.name,
 			default: preset.name,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 
 		preset.name = name || '';
 
@@ -352,63 +366,77 @@ async function save() {
 }
 
 function addLayer(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts._watermarkEditor.text,
-		action: () => {
-			layers.push(createTextLayer());
-		},
-	}, {
-		text: i18n.ts._watermarkEditor.image,
-		action: () => {
-			layers.push(createImageLayer());
-		},
-	}, {
-		text: i18n.ts._watermarkEditor.qr,
-		action: () => {
-			layers.push(createQrLayer());
-		},
-	}, {
-		text: i18n.ts._watermarkEditor.stripe,
-		action: () => {
-			layers.push(createStripeLayer());
-		},
-	}, {
-		text: i18n.ts._watermarkEditor.polkadot,
-		action: () => {
-			layers.push(createPolkadotLayer());
-		},
-	}, {
-		text: i18n.ts._watermarkEditor.checker,
-		action: () => {
-			layers.push(createCheckerLayer());
-		},
-	}], ev.currentTarget ?? ev.target);
+	os.popupMenu(
+		[
+			{
+				text: i18n.ts._watermarkEditor.text,
+				action: () => {
+					layers.push(createTextLayer());
+				},
+			},
+			{
+				text: i18n.ts._watermarkEditor.image,
+				action: () => {
+					layers.push(createImageLayer());
+				},
+			},
+			{
+				text: i18n.ts._watermarkEditor.qr,
+				action: () => {
+					layers.push(createQrLayer());
+				},
+			},
+			{
+				text: i18n.ts._watermarkEditor.stripe,
+				action: () => {
+					layers.push(createStripeLayer());
+				},
+			},
+			{
+				text: i18n.ts._watermarkEditor.polkadot,
+				action: () => {
+					layers.push(createPolkadotLayer());
+				},
+			},
+			{
+				text: i18n.ts._watermarkEditor.checker,
+				action: () => {
+					layers.push(createCheckerLayer());
+				},
+			},
+		],
+		ev.currentTarget ?? ev.target,
+	);
 }
 
 function swapUpLayer(layer: WatermarkPreset['layers'][number]) {
-	const index = layers.findIndex(l => l.id === layer.id);
+	const index = layers.findIndex((l) => l.id === layer.id);
 	if (index > 0) {
 		const tmp = layers[index - 1];
 		const current = layers[index];
-		if (tmp == null || current == null) return;
+		if (tmp == null || current == null) {
+			return;
+		}
 		layers[index - 1] = current;
 		layers[index] = tmp;
 	}
 }
 
 function swapDownLayer(layer: WatermarkPreset['layers'][number]) {
-	const index = layers.findIndex(l => l.id === layer.id);
+	const index = layers.findIndex((l) => l.id === layer.id);
 	if (index < layers.length - 1) {
 		const tmp = layers[index + 1];
 		const current = layers[index];
-		if (tmp == null || current == null) return;
+		if (tmp == null || current == null) {
+			return;
+		}
 		layers[index + 1] = current;
 		layers[index] = tmp;
 	}
 }
 
 function removeLayer(layer: WatermarkPreset['layers'][number]) {
-	const index = layers.findIndex(l => l.id === layer.id);
+	const index = layers.findIndex((l) => l.id === layer.id);
 	if (index !== -1) {
 		layers.splice(index, 1);
 	}

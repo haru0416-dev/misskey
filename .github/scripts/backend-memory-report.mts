@@ -63,7 +63,9 @@ const memoryReportPhases = [
 const metrics = ['HeapUsed', 'Pss', 'Private_Dirty', 'VmRSS', 'External'] as const;
 
 function formatMemoryMb(valueKiB: number | null | undefined) {
-	if (valueKiB == null) return '-';
+	if (valueKiB == null) {
+		return '-';
+	}
 	return `${util.formatNumber(valueKiB / 1000)} MB`;
 }
 
@@ -89,7 +91,9 @@ function getSampleSpread(
 	metric: (typeof metrics)[number],
 ) {
 	const values = report.samples.map((sample) => getMemoryValueFromSample(sample, phase, metric));
-	if (values.length < 2) return null;
+	if (values.length < 2) {
+		return null;
+	}
 
 	const center = util.median(values);
 	return util.median(values.map((value) => Math.abs(value - center)));
@@ -150,12 +154,16 @@ function renderHeapSnapshotSection(base: MemoryReport, head: MemoryReport) {
 	};
 
 	const table = heapSnapshotUtil.renderHeapSnapshotTable(baseHeapSnapshotReport, headHeapSnapshotReport);
-	if (table == null) return null;
+	if (table == null) {
+		return null;
+	}
 
 	const lines = ['### V8 Heap Snapshot Statistics', '', table, ''];
 
 	for (const graph of [heapSnapshotUtil.renderHeapSnapshotSankey(headHeapSnapshotReport, 'Head')]) {
-		if (graph == null) continue;
+		if (graph == null) {
+			continue;
+		}
 		lines.push(graph);
 		lines.push('');
 	}
@@ -190,7 +198,9 @@ function renderJsFootprintMetricTable(base: RuntimeLoadedJsFootprintReport, head
 	for (const [title, key, formatter] of metricRows) {
 		const baseValue = getJsFootprintValue(base, 'afterRequest', key);
 		const headValue = getJsFootprintValue(head, 'afterRequest', key);
-		if (baseValue == null || headValue == null) continue;
+		if (baseValue == null || headValue == null) {
+			continue;
+		}
 
 		lines.push(
 			`| **${title}** | ${formatter(baseValue)} | ${formatter(headValue)} | ${util.formatColoredDelta(headValue - baseValue, (v) => formatter(v))} | ${util.calcAndFormatDeltaPercent(baseValue, headValue).replaceAll('\\%', '\\\\%')} |`,
@@ -203,14 +213,18 @@ function renderJsFootprintMetricTable(base: RuntimeLoadedJsFootprintReport, head
 function packageMap(report: RuntimeLoadedJsFootprintReport) {
 	const map = new Map();
 	for (const packageSummary of report.phases.afterRequest.packages) {
-		if (packageSummary?.category !== 'external' || typeof packageSummary.name !== 'string') continue;
+		if (packageSummary?.category !== 'external' || typeof packageSummary.name !== 'string') {
+			continue;
+		}
 		map.set(packageSummary.name, packageSummary);
 	}
 	return map;
 }
 
 function packageDisplayName(packageSummary: { name: string; version?: string | null }) {
-	if (packageSummary.version == null) return packageSummary.name;
+	if (packageSummary.version == null) {
+		return packageSummary.name;
+	}
 	return `${packageSummary.name} ${packageSummary.version}`;
 }
 
@@ -222,7 +236,9 @@ function renderNewExternalPackages(base: RuntimeLoadedJsFootprintReport, head: R
 		.toSorted((a, b) => b.sourceBytes - a.sourceBytes)
 		.slice(0, 10);
 
-	if (newPackages.length === 0) return null;
+	if (newPackages.length === 0) {
+		return null;
+	}
 
 	const lines = [
 		'#### Newly Loaded External Packages',
@@ -259,7 +275,9 @@ function renderLargestPackageIncreases(base: RuntimeLoadedJsFootprintReport, hea
 		.toSorted((a, b) => b.sourceDiff - a.sourceDiff)
 		.slice(0, 10);
 
-	if (increases.length === 0) return null;
+	if (increases.length === 0) {
+		return null;
+	}
 
 	const lines = [
 		'#### Largest Package Increases',
@@ -281,7 +299,9 @@ function renderNewLoadedModules(base: RuntimeLoadedJsFootprintReport, head: Runt
 	function moduleMap(report: RuntimeLoadedJsFootprintReport) {
 		const map = new Map();
 		for (const moduleSummary of report.phases.afterRequest.modules) {
-			if (typeof moduleSummary.path !== 'string') continue;
+			if (typeof moduleSummary.path !== 'string') {
+				continue;
+			}
 			map.set(moduleSummary.path, moduleSummary);
 		}
 		return map;
@@ -294,7 +314,9 @@ function renderNewLoadedModules(base: RuntimeLoadedJsFootprintReport, head: Runt
 		.toSorted((a, b) => b.sourceBytes - a.sourceBytes)
 		.slice(0, 10);
 
-	if (newModules.length === 0) return null;
+	if (newModules.length === 0) {
+		return null;
+	}
 
 	const lines = ['#### Largest Newly Loaded Modules', '', '| Module | Package | Loaded JS |', '| --- | --- | ---: |'];
 
@@ -322,7 +344,9 @@ function renderJsFootprintSection(base: RuntimeLoadedJsFootprintReport, head: Ru
 		renderLargestPackageIncreases(base, head),
 		renderNewLoadedModules(base, head),
 	]) {
-		if (block == null) continue;
+		if (block == null) {
+			continue;
+		}
 		lines.push(block);
 		lines.push('');
 	}
@@ -381,7 +405,9 @@ function getDiffPercent(
 ) {
 	const baseValue = getMemoryValue(baseReport, phase, metric);
 	const headValue = getMemoryValue(headReport, phase, metric);
-	if (baseValue == null || headValue == null || baseValue <= 0) return null;
+	if (baseValue == null || headValue == null || baseValue <= 0) {
+		return null;
+	}
 
 	return ((headValue - baseValue) * 100) / baseValue;
 }
@@ -394,14 +420,20 @@ function isBeyondSampleNoise(
 ) {
 	const baseValue = getMemoryValue(baseReport, phase, metric);
 	const headValue = getMemoryValue(headReport, phase, metric);
-	if (baseValue == null || headValue == null) return false;
+	if (baseValue == null || headValue == null) {
+		return false;
+	}
 
 	const delta = headValue - baseValue;
-	if (delta <= 0) return false;
+	if (delta <= 0) {
+		return false;
+	}
 
 	const baseSpread = getSampleSpread(baseReport, phase, metric);
 	const headSpread = getSampleSpread(headReport, phase, metric);
-	if (baseSpread == null || headSpread == null) return true;
+	if (baseSpread == null || headSpread == null) {
+		return true;
+	}
 
 	const combinedSpread = Math.hypot(baseSpread, headSpread);
 	return delta > combinedSpread * 3;

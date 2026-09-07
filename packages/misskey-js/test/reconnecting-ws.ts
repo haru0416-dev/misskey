@@ -16,7 +16,9 @@ class FakeWebSocket {
 	}
 
 	public send(data: string): void {
-		if (this.readyState !== 1) throw new Error(`send while socket state is ${this.readyState}`);
+		if (this.readyState !== 1) {
+			throw new Error(`send while socket state is ${this.readyState}`);
+		}
 		this.sent.push(data);
 	}
 
@@ -36,7 +38,9 @@ describe('ReconnectingWebSocket', () => {
 		const socket = new ReconnectingWebSocket('wss://example.test', undefined, { WebSocket: FakeWebSocket });
 		const ws = FakeWebSocket.instances[0]!;
 
-		for (let i = 0; i <= MAX_OFFLINE_MESSAGE_COUNT; i++) socket.send(String(i));
+		for (let i = 0; i <= MAX_OFFLINE_MESSAGE_COUNT; i++) {
+			socket.send(String(i));
+		}
 		ws.open();
 
 		expect(ws.sent).toHaveLength(MAX_OFFLINE_MESSAGE_COUNT);

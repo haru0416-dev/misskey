@@ -44,12 +44,13 @@ function initialAssetState(): ClientAssetState {
 
 function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 	const entryFile = Object.values(manifest).find((chunk) => chunk.isEntry);
-	if (!entryFile)
+	if (!entryFile) {
 		return {
 			entryJs: null,
 			css: [],
 			modulePreloads: [],
 		};
+	}
 
 	const seenChunkIds = new Set<string>();
 	const cssFiles = new Set<string>();
@@ -62,11 +63,15 @@ function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 	if (entryFile.imports != null && Array.isArray(entryFile.imports)) {
 		function collectImports(imports: string[], recursive = false) {
 			for (const importId of imports) {
-				if (seenChunkIds.has(importId)) continue;
+				if (seenChunkIds.has(importId)) {
+					continue;
+				}
 				seenChunkIds.add(importId);
 
 				const importedChunk = manifest[importId];
-				if (!importedChunk) return;
+				if (!importedChunk) {
+					return;
+				}
 
 				if (importedChunk.css) {
 					importedChunk.css.forEach((css) => cssFiles.add(css));
@@ -93,7 +98,9 @@ function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 }
 
 async function prepareFrontendAssets(deps: ClientCommonDataDependencies, state: ClientAssetState): Promise<void> {
-	if (state.frontendAssetsFetched) return;
+	if (state.frontendAssetsFetched) {
+		return;
+	}
 	state.frontendAssetsFetched = true;
 
 	const frontendViteBuilt = resolve(deps.config.runtime.rootDir, 'built/_frontend_vite_');

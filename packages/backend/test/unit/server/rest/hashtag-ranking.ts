@@ -6,7 +6,8 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Redis from 'ioredis';
-import { loadConfig, type Config } from '@/config.js';
+import { loadConfig } from '@/config.js';
+import type { Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updateHashtagsRankingForApi, updateHashtagsRankingsForApi } from '@/server/rest/note/notes-create.js';
@@ -34,7 +35,9 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		const key = `featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`;
 		for (let i = 0; i < 20; i++) {
 			const score = await redis.zscore(key, tag);
-			if (score != null) return Number(score);
+			if (score != null) {
+				return Number(score);
+			}
 			await sleep(100);
 		}
 		return null;
@@ -81,7 +84,9 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 
 		await updateHashtagsRankingForApi(deps, tag, genId());
 		for (let i = 0; i < 20; i++) {
-			if ((await pollFeaturedScore(tag)) === 2) break;
+			if ((await pollFeaturedScore(tag)) === 2) {
+				break;
+			}
 			await sleep(100);
 		}
 		expect(await pollFeaturedScore(tag)).toBe(2);
@@ -90,7 +95,9 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 	test('複数タグを一括更新し、重複入力は1回だけ加算する', async () => {
 		const tags = [uniqueTag(), uniqueTag()];
 		const [firstTag, secondTag] = tags;
-		if (firstTag == null || secondTag == null) throw new Error('Failed to create hashtag fixtures');
+		if (firstTag == null || secondTag == null) {
+			throw new Error('Failed to create hashtag fixtures');
+		}
 		const userId = genId();
 
 		await updateHashtagsRankingsForApi(

@@ -24,9 +24,13 @@ import MkA from '@/components/global/MkA.vue';
 import { prefer } from '@/preferences.js';
 
 function safeParseFloat(str: unknown): number | null {
-	if (typeof str !== 'string' || str === '') return null;
+	if (typeof str !== 'string' || str === '') {
+		return null;
+	}
 	const num = Number(str);
-	if (!Number.isFinite(num)) return null;
+	if (!Number.isFinite(num)) {
+		return null;
+	}
 	return num;
 }
 
@@ -67,18 +71,26 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	const isNote = props.isNote ?? true;
 	const shouldNyaize = props.nyaize ? (props.nyaize === 'respect' ? props.author?.isCat : false) : false;
 
-	if (props.text == null || props.text === '') return;
+	if (props.text == null || props.text === '') {
+		return;
+	}
 
 	const rootAst = props.parsedNodes ?? (props.plain ? mfm.parseSimple : mfm.parse)(props.text);
 
 	const validTime = (t: string | boolean | null | undefined) => {
-		if (t == null) return null;
-		if (typeof t === 'boolean') return null;
+		if (t == null) {
+			return null;
+		}
+		if (typeof t === 'boolean') {
+			return null;
+		}
 		return /^-?(?:\d+(?:\.\d+)?|\.\d+)s$/.test(t) ? t : null;
 	};
 
 	const validColor = (c: unknown): string | null => {
-		if (typeof c !== 'string') return null;
+		if (typeof c !== 'string') {
+			return null;
+		}
 		return /^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? c : null;
 	};
 
@@ -104,9 +116,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							}
 							res.shift();
 							return res;
-						} else {
-							return [text.replaceAll(/\n/g, ' ')];
 						}
+						return [text.replaceAll(/\n/g, ' ')];
 					}
 
 					case 'bold': {
@@ -246,7 +257,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 													: token.props.args['math']
 														? 'math'
 														: null;
-								if (family) style = { fontFamily: family };
+								if (family) {
+									style = { fontFamily: family };
+								}
 								break;
 							}
 							case 'blur': {
@@ -285,7 +298,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								break;
 							}
 							case 'position': {
-								if (!prefer.advancedMfm) break;
+								if (!prefer.advancedMfm) {
+									break;
+								}
 								const x = safeParseFloat(token.props.args['x']) ?? 0;
 								const y = safeParseFloat(token.props.args['y']) ?? 0;
 								style = { transform: `translateX(${x}em) translateY(${y}em)` };
@@ -323,8 +338,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									!['hidden', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'].includes(
 										b_style,
 									)
-								)
+								) {
 									b_style = 'solid';
+								}
 								const width = safeParseFloat(token.props.args['width']) ?? 1;
 								const radius = safeParseFloat(token.props.args['radius']) ?? 0;
 								style = {
@@ -339,20 +355,21 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							case 'ruby': {
 								if (token.children.length === 1) {
 									const child = token.children[0];
-									if (child == null) return [];
+									if (child == null) {
+										return [];
+									}
 									let text = child.type === 'text' ? child.props.text : '';
 									if (!disableNyaize && shouldNyaize) {
 										text = Misskey.nyaize(text);
 									}
 									return h('ruby', {}, [text.split(' ')[0], h('rt', text.split(' ')[1])]);
-								} else {
-									const rt = token.children.at(-1)!;
-									let text = rt.type === 'text' ? rt.props.text : '';
-									if (!disableNyaize && shouldNyaize) {
-										text = Misskey.nyaize(text);
-									}
-									return h('ruby', {}, [...genEl(token.children.slice(0, -1), scale), h('rt', text.trim())]);
 								}
+								const rt = token.children.at(-1)!;
+								let text = rt.type === 'text' ? rt.props.text : '';
+								if (!disableNyaize && shouldNyaize) {
+									text = Misskey.nyaize(text);
+								}
+								return h('ruby', {}, [...genEl(token.children.slice(0, -1), scale), h('rt', text.trim())]);
 							}
 							case 'unixtime': {
 								const child = token.children[0];
@@ -393,15 +410,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						}
 						if (style === undefined) {
 							return h('span', {}, ['$[', token.props.name, ' ', ...genEl(token.children, scale), ']']);
-						} else {
-							return h(
-								'span',
-								{
-									style: { display: 'inline-block', ...style },
-								},
-								genEl(token.children, scale),
-							);
 						}
+						return h(
+							'span',
+							{
+								style: { display: 'inline-block', ...style },
+							},
+							genEl(token.children, scale),
+						);
 					}
 
 					case 'small': {
@@ -522,17 +538,16 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									genEl(token.children, scale, true),
 								),
 							];
-						} else {
-							return [
-								h(
-									'span',
-									{
-										style: QUOTE_STYLE,
-									},
-									genEl(token.children, scale, true),
-								),
-							];
 						}
+						return [
+							h(
+								'span',
+								{
+									style: QUOTE_STYLE,
+								},
+								genEl(token.children, scale, true),
+							),
+						];
 					}
 
 					case 'emojiCode': {
@@ -551,25 +566,24 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									fallbackToImage: false,
 								}),
 							];
+						}
+						if (props.emojiUrls && props.emojiUrls[token.props.name] == null) {
+							return [h('span', `:${token.props.name}:`)];
 						} else {
-							if (props.emojiUrls && props.emojiUrls[token.props.name] == null) {
-								return [h('span', `:${token.props.name}:`)];
-							} else {
-								return [
-									h(MkCustomEmoji, {
-										key: nextKey(),
-										name: token.props.name,
-										...(props.emojiUrls?.[token.props.name] === undefined
-											? {}
-											: { url: props.emojiUrls[token.props.name] }),
-										...(props.plain === undefined ? {} : { normal: props.plain }),
-										host: props.author.host,
-										useOriginalSize: scale >= 2.5,
-										...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
-										menuReaction: false,
-									}),
-								];
-							}
+							return [
+								h(MkCustomEmoji, {
+									key: nextKey(),
+									name: token.props.name,
+									...(props.emojiUrls?.[token.props.name] === undefined
+										? {}
+										: { url: props.emojiUrls[token.props.name] }),
+									...(props.plain === undefined ? {} : { normal: props.plain }),
+									host: props.author.host,
+									useOriginalSize: scale >= 2.5,
+									...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
+									menuReaction: false,
+								}),
+							];
 						}
 					}
 

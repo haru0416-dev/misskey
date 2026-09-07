@@ -63,7 +63,7 @@ export type EmojiSearchQuery = {
 	updatedAtTo: string | null;
 	sensitive: string | null;
 	localOnly: string | null;
-	roles: { id: string, name: string }[];
+	roles: { id: string; name: string }[];
 	sortOrders: SortOrder<GridSortOrderKey>[];
 	limit: number;
 };
@@ -103,7 +103,7 @@ type GridItem = {
 	license: string;
 	isSensitive: boolean;
 	localOnly: boolean;
-	roleIdsThatCanBeUsedThisEmojiAsReaction: { id: string, name: string }[];
+	roleIdsThatCanBeUsedThisEmojiAsReaction: { id: string; name: string }[];
 	fileId?: string;
 	updatedAt: string | null;
 	publicUrl?: string | null;
@@ -131,12 +131,13 @@ function setupGrid(): GridSetting {
 			styleRules: [
 				{
 					// 初期値から変わっていたら背景色を変更
-					condition: ({ row }) => JSON.stringify(gridItems.value[row.index]) !== JSON.stringify(originGridItems.value[row.index]),
+					condition: ({ row }) =>
+						JSON.stringify(gridItems.value[row.index]) !== JSON.stringify(originGridItems.value[row.index]),
 					applyStyle: { className: $style['changedRow'] ?? '' },
 				},
 				{
 					// バリデーションに引っかかっていたら背景色を変更
-					condition: ({ cells }) => cells.some(it => !it.violation.valid),
+					condition: ({ cells }) => cells.some((it) => !it.violation.valid),
 					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
@@ -156,7 +157,9 @@ function setupGrid(): GridSetting {
 						action: () => {
 							for (const rangedRow of context.rangedRows) {
 								const item = gridItems.value[rangedRow.index];
-								if (item != null) item.checked = true;
+								if (item != null) {
+									item.checked = true;
+								}
 							}
 						},
 					},
@@ -167,7 +170,9 @@ function setupGrid(): GridSetting {
 					// 行削除時は元データの行を消さず、削除対象としてマークするのみにする
 					for (const row of rows) {
 						const item = gridItems.value[row.index];
-						if (item != null) item.checked = true;
+						if (item != null) {
+							item.checked = true;
+						}
 					}
 				},
 			},
@@ -175,14 +180,21 @@ function setupGrid(): GridSetting {
 		cols: [
 			{ bindTo: 'checked', icon: 'ti-trash', type: 'boolean', editable: true, width: 34 },
 			{
-				bindTo: 'url', icon: 'ti-icons', type: 'image', editable: true, width: 'auto', validators: [required],
+				bindTo: 'url',
+				icon: 'ti-icons',
+				type: 'image',
+				editable: true,
+				width: 'auto',
+				validators: [required],
 				async customValueEditor(row, col, value, cellElement) {
 					const file = await selectFile({
 						anchorElement: cellElement,
 						multiple: false,
 					});
 					const item = gridItems.value[row.index];
-					if (item == null) return value;
+					if (item == null) {
+						return value;
+					}
 					item.url = file.url;
 					item.fileId = file.id;
 
@@ -190,7 +202,11 @@ function setupGrid(): GridSetting {
 				},
 			},
 			{
-				bindTo: 'name', title: 'name', type: 'text', editable: true, width: 140,
+				bindTo: 'name',
+				title: 'name',
+				type: 'text',
+				editable: true,
+				width: 140,
 				validators: [required, regex, unique],
 			},
 			{ bindTo: 'category', title: 'category', type: 'text', editable: true, width: 140 },
@@ -199,7 +215,11 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
 			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
 			{
-				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: 'role', type: 'text', editable: true, width: 140,
+				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction',
+				title: 'role',
+				type: 'text',
+				editable: true,
+				width: 140,
 				valueTransformer(row) {
 					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
 					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
@@ -209,10 +229,12 @@ function setupGrid(): GridSetting {
 				async customValueEditor(row) {
 					// ID直記入は体験的に最悪なのでモーダルを使って入力する
 					const item = gridItems.value[row.index];
-					if (item == null) return [];
+					if (item == null) {
+						return [];
+					}
 					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
 					const result = await os.selectRole({
-						initialRoleIds: current.map(it => it.id),
+						initialRoleIds: current.map((it) => it.id),
 						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
 						infoMessage: i18n.ts.rolesThatCanBeUsedThisEmojiAsReactionEmptyDescription,
 						publicOnly: true,
@@ -221,7 +243,7 @@ function setupGrid(): GridSetting {
 						return current;
 					}
 
-					const transform = result.result.map(it => ({ id: it.id, name: it.name }));
+					const transform = result.result.map((it) => ({ id: it.id, name: it.name }));
 					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
 
 					return transform;
@@ -231,7 +253,9 @@ function setupGrid(): GridSetting {
 					delete(cell) {
 						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
 						const item = gridItems.value[cell.row.index];
-						if (item != null) item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						if (item != null) {
+							item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						}
 					},
 				},
 			},
@@ -266,10 +290,12 @@ function setupGrid(): GridSetting {
 						type: 'button',
 						text: i18n.ts._customEmojisManager._local._list.markAsDeleteTargetRanges,
 						icon: 'ti ti-trash',
-							action: () => {
-								for (const rowIdx of new Set(context.rangedCells.map(it => it.row.index))) {
-									const item = gridItems.value[rowIdx];
-									if (item != null) item.checked = true;
+						action: () => {
+							for (const rowIdx of new Set(context.rangedCells.map((it) => it.row.index))) {
+								const item = gridItems.value[rowIdx];
+								if (item != null) {
+									item.checked = true;
+								}
 							}
 						},
 					},
@@ -310,9 +336,11 @@ const originGridItems = ref<GridItem[]>([]);
 const updateButtonDisabled = ref<boolean>(false);
 
 const updatedItemsCount = computed(() => {
-	return gridItems.value.filter((it, idx) => !it.checked && JSON.stringify(it) !== JSON.stringify(originGridItems.value[idx])).length;
+	return gridItems.value.filter(
+		(it, idx) => !it.checked && JSON.stringify(it) !== JSON.stringify(originGridItems.value[idx]),
+	).length;
 });
-const deleteItemsCount = computed(() => gridItems.value.filter(it => it.checked).length);
+const deleteItemsCount = computed(() => gridItems.value.filter((it) => it.checked).length);
 
 async function onUpdateButtonClicked() {
 	const _items = gridItems.value;
@@ -321,7 +349,9 @@ async function onUpdateButtonClicked() {
 		throw new Error('The number of items has been changed. Please refresh the page and try again.');
 	}
 
-	const updatedItems = _items.filter((it, idx) => !it.checked && JSON.stringify(it) !== JSON.stringify(_originItems[idx]));
+	const updatedItems = _items.filter(
+		(it, idx) => !it.checked && JSON.stringify(it) !== JSON.stringify(_originItems[idx]),
+	);
 	if (updatedItems.length === 0) {
 		await os.alert({
 			type: 'info',
@@ -339,27 +369,25 @@ async function onUpdateButtonClicked() {
 	}
 
 	const action = () => {
-		return updatedItems.map(item =>
-			misskeyApi(
-				'admin/emoji/update',
-				{
-					id: item.id!,
-					name: item.name,
-					category: emptyStrToNull(item.category),
-					aliases: emptyStrToEmptyArray(item.aliases),
-					license: emptyStrToNull(item.license),
-					isSensitive: item.isSensitive,
-					localOnly: item.localOnly,
-					roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map(it => it.id),
-					...(item.fileId === undefined ? {} : { fileId: item.fileId }),
-				})
+		return updatedItems.map((item) =>
+			misskeyApi('admin/emoji/update', {
+				id: item.id!,
+				name: item.name,
+				category: emptyStrToNull(item.category),
+				aliases: emptyStrToEmptyArray(item.aliases),
+				license: emptyStrToNull(item.license),
+				isSensitive: item.isSensitive,
+				localOnly: item.localOnly,
+				roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
+				...(item.fileId === undefined ? {} : { fileId: item.fileId }),
+			})
 				.then(() => ({ item, success: true, err: undefined }))
-				.catch(err => ({ item, success: false, err })),
+				.catch((err) => ({ item, success: false, err })),
 		);
 	};
 
 	const result = await os.promiseDialog(Promise.all(action()));
-	const failedItems = result.filter(it => !it.success);
+	const failedItems = result.filter((it) => !it.success);
 
 	if (failedItems.length > 0) {
 		await os.alert({
@@ -369,7 +397,7 @@ async function onUpdateButtonClicked() {
 		});
 	}
 
-	requestLogs.value = result.map(it => ({
+	requestLogs.value = result.map((it) => ({
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
@@ -404,13 +432,11 @@ async function onDeleteButtonClicked() {
 	}
 
 	async function action() {
-		const deleteIds = deleteItems.map(it => it.id!);
+		const deleteIds = deleteItems.map((it) => it.id!);
 		await misskeyApi('admin/emoji/delete-bulk', { ids: deleteIds });
 	}
 
-	await os.promiseDialog(
-		action(),
-	);
+	await os.promiseDialog(action());
 }
 
 async function onGridResetButtonClicked() {
@@ -420,7 +446,9 @@ async function onGridResetButtonClicked() {
 		text: i18n.ts._customEmojisManager._local._list.confirmResetDescription,
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	refreshGridItems();
 }
@@ -436,7 +464,9 @@ async function onPageChanged(pageNumber: number) {
 			title: i18n.ts._customEmojisManager._local._list.confirmMovePage,
 			text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
 		});
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 	}
 
 	currentPage.value = pageNumber;
@@ -456,7 +486,7 @@ function onGridEvent(event: GridEvent) {
 }
 
 function onGridCellValidation(event: GridCellValidationEvent) {
-	updateButtonDisabled.value = event.all.filter(it => !it.valid).length > 0;
+	updateButtonDisabled.value = event.all.filter((it) => !it.valid).length > 0;
 }
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
@@ -487,7 +517,7 @@ async function refreshCustomEmojis() {
 		...(searchQuery.value.localOnly == null ? {} : { localOnly: Boolean(searchQuery.value.localOnly).valueOf() }),
 		...(updatedAtFrom === undefined ? {} : { updatedAtFrom }),
 		...(updatedAtTo === undefined ? {} : { updatedAtTo }),
-		roleIds: searchQuery.value.roles.map(it => it.id),
+		roleIds: searchQuery.value.roles.map((it) => it.id),
 		hostType: 'local',
 	};
 
@@ -495,12 +525,14 @@ async function refreshCustomEmojis() {
 		currentPage.value = 1;
 	}
 
-	const result = await loadingHandler.scope(() => misskeyApi('v2/admin/emoji/list', {
-		query: query,
-		limit: limit,
-		page: currentPage.value,
-		sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}` as any),
-	}));
+	const result = await loadingHandler.scope(() =>
+		misskeyApi('v2/admin/emoji/list', {
+			query: query,
+			limit: limit,
+			page: currentPage.value,
+			sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}` as any),
+		}),
+	);
 
 	customEmojis.value = result.emojis;
 	allPages.value = result.allPages;
@@ -511,7 +543,7 @@ async function refreshCustomEmojis() {
 }
 
 function refreshGridItems() {
-	gridItems.value = customEmojis.value.map(it => ({
+	gridItems.value = customEmojis.value.map((it) => ({
 		checked: false,
 		id: it.id,
 		url: it.publicUrl,
@@ -540,78 +572,101 @@ const headerPageMetadata = computed(() => ({
 	icon: 'ti ti-icons',
 }));
 
-const headerActions = computed<PageHeaderItem[]>(() => [{
-	icon: 'ti ti-search',
-	text: i18n.ts.search,
-	handler: async () => {
-		if (searchWindowOpening) return;
-		searchWindowOpening = true;
-		const { dispose } = await os.popupAsyncWithDialog(import('./search.vue').then(x => x.default), {
-			query: searchQuery.value,
-		}, {
-			queryUpdated: (query: EmojiSearchQuery) => {
-				searchQuery.value = query;
-			},
-			sortOrderUpdated: (orders: SortOrder<GridSortOrderKey>[]) => {
-				sortOrders.value = orders;
-			},
-			search: () => {
-				onSearchRequest();
-			},
-			closed: () => {
-				dispose();
-				searchWindowOpening = false;
-			},
-		});
+const headerActions = computed<PageHeaderItem[]>(() => [
+	{
+		icon: 'ti ti-search',
+		text: i18n.ts.search,
+		handler: async () => {
+			if (searchWindowOpening) {
+				return;
+			}
+			searchWindowOpening = true;
+			const { dispose } = await os.popupAsyncWithDialog(
+				import('./search.vue').then((x) => x.default),
+				{
+					query: searchQuery.value,
+				},
+				{
+					queryUpdated: (query: EmojiSearchQuery) => {
+						searchQuery.value = query;
+					},
+					sortOrderUpdated: (orders: SortOrder<GridSortOrderKey>[]) => {
+						sortOrders.value = orders;
+					},
+					search: () => {
+						onSearchRequest();
+					},
+					closed: () => {
+						dispose();
+						searchWindowOpening = false;
+					},
+				},
+			);
+		},
 	},
-}, {
-	icon: 'ti ti-list-numbers',
-	text: i18n.ts._customEmojisManager._gridCommon.searchLimit,
-	handler: (ev) => {
-		async function changeSearchLimit(to: number) {
-			if (updatedItemsCount.value > 0) {
-				const { canceled } = await os.confirm({
-					type: 'warning',
-					title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
-					text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
-				});
-				if (canceled) return;
+	{
+		icon: 'ti ti-list-numbers',
+		text: i18n.ts._customEmojisManager._gridCommon.searchLimit,
+		handler: (ev) => {
+			async function changeSearchLimit(to: number) {
+				if (updatedItemsCount.value > 0) {
+					const { canceled } = await os.confirm({
+						type: 'warning',
+						title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
+						text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
+					});
+					if (canceled) {
+						return;
+					}
+				}
+
+				searchQuery.value.limit = to;
+				refreshCustomEmojis();
 			}
 
-			searchQuery.value.limit = to;
-			refreshCustomEmojis();
-		}
-
-		os.popupMenu([{
-			type: 'radioOption',
-			text: '25',
-			active: computed(() => searchQuery.value.limit === 25),
-			action: () => changeSearchLimit(25),
-		}, {
-			type: 'radioOption',
-			text: '50',
-			active: computed(() => searchQuery.value.limit === 50),
-			action: () => changeSearchLimit(50),
-		}, {
-			type: 'radioOption',
-			text: '100',
-			active: computed(() => searchQuery.value.limit === 100),
-			action: () => changeSearchLimit(100),
-		}], ev.currentTarget ?? ev.target);
+			os.popupMenu(
+				[
+					{
+						type: 'radioOption',
+						text: '25',
+						active: computed(() => searchQuery.value.limit === 25),
+						action: () => changeSearchLimit(25),
+					},
+					{
+						type: 'radioOption',
+						text: '50',
+						active: computed(() => searchQuery.value.limit === 50),
+						action: () => changeSearchLimit(50),
+					},
+					{
+						type: 'radioOption',
+						text: '100',
+						active: computed(() => searchQuery.value.limit === 100),
+						action: () => changeSearchLimit(100),
+					},
+				],
+				ev.currentTarget ?? ev.target,
+			);
+		},
 	},
-}, {
-	icon: 'ti ti-notes',
-	text: i18n.ts._customEmojisManager._gridCommon.registrationLogs,
-	handler: async () => {
-		const { dispose } = await os.popupAsyncWithDialog(import('./logs.vue').then(x => x.default), {
-			logs: requestLogs.value,
-		}, {
-			closed: () => {
-				dispose();
-			},
-		});
+	{
+		icon: 'ti ti-notes',
+		text: i18n.ts._customEmojisManager._gridCommon.registrationLogs,
+		handler: async () => {
+			const { dispose } = await os.popupAsyncWithDialog(
+				import('./logs.vue').then((x) => x.default),
+				{
+					logs: requestLogs.value,
+				},
+				{
+					closed: () => {
+						dispose();
+					},
+				},
+			);
+		},
 	},
-}]);
+]);
 </script>
 
 <style module lang="scss">

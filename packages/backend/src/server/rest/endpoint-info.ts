@@ -21,7 +21,9 @@ export const endpointParamDef = z.object({
 function apiParamTypeLabel(value: unknown): string {
 	if (value != null && typeof value === 'object' && 'type' in value) {
 		const type = (value as { type?: unknown }).type;
-		if (typeof type === 'string') return type.charAt(0).toUpperCase() + type.slice(1);
+		if (typeof type === 'string') {
+			return type.charAt(0).toUpperCase() + type.slice(1);
+		}
 	}
 
 	// Zod の `.nullable()` は標準 JSON Schema では `anyOf: [{type: X}, {type: 'null'}]` になり、
@@ -37,7 +39,9 @@ function apiParamTypeLabel(value: unknown): string {
 		const nonNullBranch = branches.find(
 			(branch) => branch != null && typeof branch === 'object' && (branch as { type?: unknown }).type !== 'null',
 		);
-		if (nonNullBranch != null) return apiParamTypeLabel(nonNullBranch);
+		if (nonNullBranch != null) {
+			return apiParamTypeLabel(nonNullBranch);
+		}
 	}
 
 	return 'string';
@@ -70,7 +74,9 @@ export async function handleApiEndpoint(body: Record<string, unknown>): Promise<
 	const params = parseApiParams(endpointParamDef, body);
 	const endpoints = await getEndpoints();
 	const endpoint = endpoints.find((item) => item.name === params.endpoint);
-	if (endpoint == null) return null;
+	if (endpoint == null) {
+		return null;
+	}
 
 	return {
 		params: Object.entries(paramProperties(endpoint.params)).map(([name, value]) => ({

@@ -134,7 +134,9 @@ async function retry() {
 		title: i18n.ts.areYouSure,
 		text: i18n.ts._queueOutbox.retryConfirm,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	// revision を添えることで、一覧を取得してから状態が変わっていた場合はサーバー側で弾かれる
 	await request('admin/queue/retry-outbox-dead-letter');
@@ -146,7 +148,9 @@ async function abandon() {
 		title: i18n.ts.areYouSure,
 		text: i18n.ts._queueOutbox.abandonConfirm,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await request('admin/queue/abandon-outbox-dead-letter');
 }

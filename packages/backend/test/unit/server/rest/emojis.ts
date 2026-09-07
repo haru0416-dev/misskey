@@ -18,7 +18,8 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
 	handleApiAdminEmojiAddAliasesBulk,
 	handleApiAdminEmojiDeleteBulk,
@@ -26,8 +27,8 @@ import {
 	handleApiAdminEmojiSetAliasesBulk,
 	handleApiAdminEmojiSetCategoryBulk,
 	handleApiAdminEmojiSetLicenseBulk,
-	type ApiEmojiDependencies,
 } from '@/server/rest/emoji/emojis.js';
+import type { ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
 
 describe('emoji bulk operations', () => {
 	let runtime: RuntimeDependencies;

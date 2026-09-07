@@ -35,7 +35,9 @@ export function getFileMenu(
 					type: 'warning',
 					text: file.isSensitive ? i18n.ts.unmarkAsSensitiveConfirm : i18n.ts.markAsSensitiveConfirm,
 				});
-				if (canceled) return;
+				if (canceled) {
+					return;
+				}
 				os.apiWithDialog('drive/files/update', {
 					fileId: file.id,
 					isSensitive: !file.isSensitive,
@@ -61,7 +63,9 @@ export function getFileMenu(
 			to: `/admin/file/${file.id}`,
 		});
 	}
-	if (details.length > 0) menuItems.push({ type: 'divider' }, ...details);
+	if (details.length > 0) {
+		menuItems.push({ type: 'divider' }, ...details);
+	}
 
 	if (prefer.devMode) {
 		menuItems.push(

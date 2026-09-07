@@ -66,13 +66,16 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 
-const props = withDefaults(defineProps<{
-	message?: string,
-	openOnRemote?: OpenOnRemoteOptions,
-	initialUsername?: string;
-}>(), {
-	message: '',
-});
+const props = withDefaults(
+	defineProps<{
+		message?: string;
+		openOnRemote?: OpenOnRemoteOptions;
+		initialUsername?: string;
+	}>(),
+	{
+		message: '',
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'usernameSubmitted', v: string): void;
@@ -121,7 +124,9 @@ async function specifyHostAndOpenRemote(options: OpenOnRemoteOptions): Promise<v
 		placeholder: 'misskey.example.com',
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	let targetHost: string | null = hostTemp ?? null;
 

@@ -50,7 +50,9 @@ describe('misc:zod-params', () => {
 				const json = z.toJSONSchema(schema, { io: 'input' }) as {
 					properties?: Record<string, Record<string, unknown>>;
 				};
-				for (const property of Object.values(json.properties ?? {})) delete property['description'];
+				for (const property of Object.values(json.properties ?? {})) {
+					delete property['description'];
+				}
 				// キー順まで一致していないと api.json が変わる。
 				return JSON.stringify(json);
 			};

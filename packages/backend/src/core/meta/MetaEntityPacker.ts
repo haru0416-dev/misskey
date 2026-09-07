@@ -22,7 +22,9 @@ export type MetaEntityPackerDependencies = {
 };
 
 export function parseTheme(theme: string | null): string | null {
-	if (theme == null) return null;
+	if (theme == null) {
+		return null;
+	}
 
 	try {
 		// 実行環境は bun 固定 (backend の engines)。Bun の型だけ undefined を許しているので潰す。

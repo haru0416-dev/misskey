@@ -4,7 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { userPending, type UserPendingInsert, type UserPendingRow } from '@/db/schema/user-pending.js';
+import { userPending } from '@/db/schema/user-pending.js';
+import type { UserPendingInsert, UserPendingRow } from '@/db/schema/user-pending.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUserPending } from '@/models/UserPending.js';
 

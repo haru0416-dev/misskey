@@ -4,7 +4,8 @@
  */
 
 import { and, eq } from 'drizzle-orm';
-import { authSession, type AuthSessionInsert, type AuthSessionRow } from '@/db/schema/auth-session.js';
+import { authSession } from '@/db/schema/auth-session.js';
+import type { AuthSessionInsert, AuthSessionRow } from '@/db/schema/auth-session.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { SpanStatusCode, type Span } from '@opentelemetry/api';
+import { SpanStatusCode } from '@opentelemetry/api';
+import type { Span } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
@@ -106,8 +107,11 @@ export function initializeFrontendTelemetry(
 	const previousErrorHandler = app.config.errorHandler;
 	app.config.errorHandler = (error, instance, info) => {
 		reportException(error, `Vue error: ${info}`);
-		if (previousErrorHandler != null) previousErrorHandler(error, instance, info);
-		else console.error(error);
+		if (previousErrorHandler != null) {
+			previousErrorHandler(error, instance, info);
+		} else {
+			console.error(error);
+		}
 	};
 	window.addEventListener('error', (event) => reportException(event.error ?? event.message, 'Unhandled browser error'));
 	window.addEventListener('unhandledrejection', (event) =>

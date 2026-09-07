@@ -107,10 +107,7 @@ import MkTextarea from '@/components/form/MkTextarea.vue';
 import { genId } from '@/utility/id.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
-const {
-	model: announcementsStatus,
-	def: announcementsStatusDef,
-} = useMkSelect({
+const { model: announcementsStatus, def: announcementsStatusDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.active, value: 'active' },
 		{ label: i18n.ts.archived, value: 'archived' },
@@ -121,22 +118,31 @@ const {
 const loading = ref(true);
 const loadingMore = ref(false);
 
-const announcements = ref<(Omit<Misskey.entities.AdminAnnouncementsListResponse[number], 'id' | 'createdAt' | 'updatedAt' | 'reads' | 'isActive'> & {
-	id: string | null;
-	_id?: string;
-	isActive?: Misskey.entities.AdminAnnouncementsListResponse[number]['isActive'];
-	reads?: Misskey.entities.AdminAnnouncementsListResponse[number]['reads'];
-})[]>([]);
+const announcements = ref<
+	(Omit<
+		Misskey.entities.AdminAnnouncementsListResponse[number],
+		'id' | 'createdAt' | 'updatedAt' | 'reads' | 'isActive'
+	> & {
+		id: string | null;
+		_id?: string;
+		isActive?: Misskey.entities.AdminAnnouncementsListResponse[number]['isActive'];
+		reads?: Misskey.entities.AdminAnnouncementsListResponse[number]['reads'];
+	})[]
+>([]);
 
-watch(announcementsStatus, (to) => {
-	loading.value = true;
-	misskeyApi('admin/announcements/list', {
-		status: to,
-	}).then(announcementResponse => {
-		announcements.value = announcementResponse;
-		loading.value = false;
-	});
-}, { immediate: true });
+watch(
+	announcementsStatus,
+	(to) => {
+		loading.value = true;
+		misskeyApi('admin/announcements/list', {
+			status: to,
+		}).then((announcementResponse) => {
+			announcements.value = announcementResponse;
+			loading.value = false;
+		});
+	},
+	{ immediate: true },
+);
 
 function add() {
 	announcements.value.unshift({
@@ -155,20 +161,26 @@ function add() {
 }
 
 async function del(announcement: (typeof announcements)['value'][number]) {
-	if (announcement.id == null) return;
+	if (announcement.id == null) {
+		return;
+	}
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: announcement.title }),
 	});
-	if (canceled) return;
-	announcements.value = announcements.value.filter(x => x !== announcement);
+	if (canceled) {
+		return;
+	}
+	announcements.value = announcements.value.filter((x) => x !== announcement);
 	misskeyApi('admin/announcements/delete', {
 		id: announcement.id,
 	});
 }
 
 async function archive(announcement: (typeof announcements)['value'][number]) {
-	if (announcement.id == null) return;
+	if (announcement.id == null) {
+		return;
+	}
 	const { _id, ...data } = announcement;
 	await os.apiWithDialog('admin/announcements/update', {
 		...data,
@@ -179,7 +191,9 @@ async function archive(announcement: (typeof announcements)['value'][number]) {
 }
 
 async function unarchive(announcement: (typeof announcements)['value'][number]) {
-	if (announcement.id == null) return;
+	if (announcement.id == null) {
+		return;
+	}
 	const { _id, ...data } = announcement;
 	await os.apiWithDialog('admin/announcements/update', {
 		...data,
@@ -206,8 +220,8 @@ function more() {
 	loadingMore.value = true;
 	misskeyApi('admin/announcements/list', {
 		status: announcementsStatus.value,
-		untilId: announcements.value.reduce((acc, announcement) => announcement.id != null ? announcement : acc).id!,
-	}).then(announcementResponse => {
+		untilId: announcements.value.reduce((acc, announcement) => (announcement.id != null ? announcement : acc)).id!,
+	}).then((announcementResponse) => {
 		announcements.value = announcements.value.concat(announcementResponse);
 		loadingMore.value = false;
 	});
@@ -217,19 +231,21 @@ function refresh() {
 	loading.value = true;
 	misskeyApi('admin/announcements/list', {
 		status: announcementsStatus.value,
-	}).then(announcementResponse => {
+	}).then((announcementResponse) => {
 		announcements.value = announcementResponse;
 		loading.value = false;
 	});
 }
 
-const headerActions = computed(() => [{
-	asFullButton: true,
-	icon: 'ti ti-plus',
-	text: i18n.ts.add,
-	handler: add,
-	disabled: announcementsStatus.value === 'archived',
-}]);
+const headerActions = computed(() => [
+	{
+		asFullButton: true,
+		icon: 'ti ti-plus',
+		text: i18n.ts.add,
+		handler: add,
+		disabled: announcementsStatus.value === 'archived',
+	},
+]);
 
 const headerTabs = computed(() => []);
 

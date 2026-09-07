@@ -88,18 +88,23 @@ export function createUrlPreviewService(
 						? await fetchSummaryFromProxy(url, meta, normalizedLang)
 						: await fetchSummary(url, meta, normalizedLang);
 
-					if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
+					if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) {
+						return undefined;
+					}
 					if (
 						result.player.url &&
 						!(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))
-					)
+					) {
 						return undefined;
+					}
 
 					return result;
 				}),
 			);
 
-			if (summary == null) throw new Error('Invalid summary');
+			if (summary == null) {
+				throw new Error('Invalid summary');
+			}
 
 			logger.succ(`Got preview of ${url}: ${summary.title}`);
 

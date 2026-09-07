@@ -25,7 +25,8 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';
-import { createLoginNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { createLoginNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import { isApiRateLimited } from '../rate-limit.js';
 import type { ApiErrorBody, ApiErrorKind } from '../error.js';
 
@@ -252,7 +253,9 @@ function verifyTestcaptcha(response: string | null | undefined): void {
 }
 
 async function verifyEnabledCaptchas(deps: ApiSigninDependencies, body: Record<string, unknown>): Promise<void> {
-	if (process.env['NODE_ENV'] === 'test') return;
+	if (process.env['NODE_ENV'] === 'test') {
+		return;
+	}
 
 	if (deps.meta.enableHcaptcha && deps.meta.hcaptchaSecretKey) {
 		await verifyHcaptcha(deps, deps.meta.hcaptchaSecretKey, body['hcaptcha-response'] as string | null | undefined);

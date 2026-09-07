@@ -72,11 +72,13 @@ import { prefer } from '@/preferences.js';
 import { getInitialPrefValue } from '@/preferences/store.js';
 import { genId } from '@/utility/id.js';
 
-const items = ref(prefer.menu.map(x => ({
-	id: genId(),
-	type: x,
-})));
-const itemTypeValues = computed(() => items.value.map(x => x.type));
+const items = ref(
+	prefer.menu.map((x) => ({
+		id: genId(),
+		type: x,
+	})),
+);
+const itemTypeValues = computed(() => items.value.map((x) => x.type));
 
 const menuDisplay = toRef(store, 'menuDisplay');
 const showNavbarSubButtons = prefer.model('showNavbarSubButtons');
@@ -85,21 +87,31 @@ async function addItem() {
 	const menu = Object.entries(navbarItemDef).filter(([key]) => !itemTypeValues.value.includes(key));
 	const { canceled, result: item } = await os.select({
 		title: i18n.ts.addItem,
-		items: [...menu.map(([key, definition]) => ({
-			value: key, label: definition.title,
-		})), {
-			value: '-', label: i18n.ts.divider,
-		}],
+		items: [
+			...menu.map(([key, definition]) => ({
+				value: key,
+				label: definition.title,
+			})),
+			{
+				value: '-',
+				label: i18n.ts.divider,
+			},
+		],
 	});
-	if (canceled || item == null) return;
-	items.value = [...items.value, {
-		id: genId(),
-		type: item,
-	}];
+	if (canceled || item == null) {
+		return;
+	}
+	items.value = [
+		...items.value,
+		{
+			id: genId(),
+			type: item,
+		},
+	];
 }
 
 function removeItem(itemId: string) {
-	items.value = items.value.filter(i => i.id !== itemId);
+	items.value = items.value.filter((i) => i.id !== itemId);
 }
 
 function save() {
@@ -108,7 +120,7 @@ function save() {
 }
 
 function reset() {
-	items.value = getInitialPrefValue('menu').map(x => ({
+	items.value = getInitialPrefValue('menu').map((x) => ({
 		id: genId(),
 		type: x,
 	}));

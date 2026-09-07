@@ -26,29 +26,31 @@ import type { CSSProperties } from 'vue';
 import { instance as localInstance } from '@/instance.js';
 import { getProxiedImageUrlNullable } from '@/utility/media-proxy.js';
 
-const props = withDefaults(defineProps<{
-	host: string | null;
-	instance?: {
-		faviconUrl?: string | null
-		name?: string | null
-		themeColor?: string | null
-	};
-	displayMode?: 'normal' | 'compact' | 'icon';
-}>(), {
-	displayMode: 'normal',
-});
+const props = withDefaults(
+	defineProps<{
+		host: string | null;
+		instance?: {
+			faviconUrl?: string | null;
+			name?: string | null;
+			themeColor?: string | null;
+		};
+		displayMode?: 'normal' | 'compact' | 'icon';
+	}>(),
+	{
+		displayMode: 'normal',
+	},
+);
 
 // instance がない場合はローカルインスタンスを表示する。
-const instanceName = computed(() => props.host == null ? localInstanceName : props.instance?.name ?? props.host);
+const instanceName = computed(() => (props.host == null ? localInstanceName : (props.instance?.name ?? props.host)));
 
 const faviconUrl = computed(() => {
 	let imageSrc: string | null = null;
 	if (props.host == null) {
 		if (localInstance.iconUrl == null) {
 			return '/client-assets/erebia-icon.svg';
-		} else {
-			imageSrc = localInstance.iconUrl;
 		}
+		imageSrc = localInstance.iconUrl;
 	} else {
 		imageSrc = props.instance?.faviconUrl ?? null;
 	}

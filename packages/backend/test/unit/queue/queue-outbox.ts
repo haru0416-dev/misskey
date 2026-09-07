@@ -21,7 +21,8 @@ import {
 	runInlineDbOutboxJob,
 } from '@/core/queue/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { baseWorkerOptions, QUEUE } from '@/queue/const.js';
 

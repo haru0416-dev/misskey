@@ -11,7 +11,8 @@ import type * as Redis from 'ioredis';
 import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { ApiError } from '../rest/error.js';
 import { authenticateApiToken } from '@/server/rest/auth/auth.js';
-import { StreamConnection, refreshStreamConnections, type StreamConnectionDependencies } from './connection.js';
+import { StreamConnection, refreshStreamConnections } from './connection.js';
+import type { StreamConnectionDependencies } from './connection.js';
 
 export type StreamServerDependencies = StreamConnectionDependencies & {
 	redisForSub: Redis.Redis;
@@ -47,7 +48,9 @@ async function authenticateStreamingRequest(
 	try {
 		authenticated = await authenticateApiToken(deps, token);
 	} catch (err) {
-		if (err instanceof ApiError) return err;
+		if (err instanceof ApiError) {
+			return err;
+		}
 		return new ApiError({
 			status: 500,
 			message: 'Internal error',
@@ -90,10 +93,14 @@ export function emitStreamRedisMessage(globalEv: EventEmitter, data: string): vo
 	} catch {
 		return;
 	}
-	if (typeof parsed !== 'object' || parsed === null) return;
+	if (typeof parsed !== 'object' || parsed === null) {
+		return;
+	}
 
 	const { channel, message } = parsed as { channel?: unknown; message?: unknown };
-	if (typeof channel !== 'string' || channel === '' || channel === 'error') return;
+	if (typeof channel !== 'string' || channel === '' || channel === 'error') {
+		return;
+	}
 
 	globalEv.emit(channel, message);
 }
@@ -148,10 +155,14 @@ export function attachStreamServer(
 		}
 
 		const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
-		if (url.pathname !== streamingPath) return;
+		if (url.pathname !== streamingPath) {
+			return;
+		}
 
 		const authenticated = await authenticateStreamingRequest(deps, request, url);
-		if (socketClosed) return;
+		if (socketClosed) {
+			return;
+		}
 		if (authenticated instanceof ApiError) {
 			writeRawHttpError(socket, authenticated);
 			return;
@@ -201,7 +212,9 @@ export function attachStreamServer(
 			activeConnections.delete(connection);
 			connection.dispose();
 			connections.delete(ws);
-			if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);
+			if (lastActiveIntervalId) {
+				clearInterval(lastActiveIntervalId);
+			}
 		});
 
 		ws.on('pong', () => {
@@ -225,7 +238,9 @@ export function attachStreamServer(
 			clearInterval(reaperIntervalId);
 			deps.redisForSub.off('message', onRedisMessage);
 			deps.redisForSub.off('ready', onRedisReady);
-			for (const ws of connections.keys()) ws.terminate();
+			for (const ws of connections.keys()) {
+				ws.terminate();
+			}
 			await new Promise<void>((resolve, reject) => {
 				wss.close((err) => (err ? reject(err) : resolve()));
 			});

@@ -18,7 +18,9 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 	private finalizationRegistry: FinalizationRegistry<symbol>;
 
 	constructor(workerConstructor: () => Worker, concurrency: number, getUseWorkerNumber = defaultUseWorkerNumber) {
-		if (concurrency < 1) throw new RangeError('concurrency must be at least 1');
+		if (concurrency < 1) {
+			throw new RangeError('concurrency must be at least 1');
+		}
 		this.getUseWorkerNumber = getUseWorkerNumber;
 		for (let i = 0; i < concurrency; i++) {
 			this.workers.push(workerConstructor());
@@ -29,7 +31,9 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		});
 		this.finalizationRegistry.register(this, this.symbol);
 
-		if (_DEV_) console.log('WorkerMultiDispatch: Created', this);
+		if (_DEV_) {
+			console.log('WorkerMultiDispatch: Created', this);
+		}
 	}
 
 	public postMessage(
@@ -40,7 +44,9 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		let workerNumber = useWorkerNumber(this.prevWorkerNumber, this.workers.length);
 		workerNumber = Math.abs(Math.round(workerNumber)) % this.workers.length;
 		const worker = this.workers[workerNumber];
-		if (worker === undefined) throw new Error('Worker selection failed');
+		if (worker === undefined) {
+			throw new Error('Worker selection failed');
+		}
 		this.prevWorkerNumber = workerNumber;
 
 		// union型をオーバーロードの引数型に直接渡せないため分岐する。
@@ -74,7 +80,9 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 
 	public terminate() {
 		this.terminated = true;
-		if (_DEV_) console.log('WorkerMultiDispatch: Terminating', this);
+		if (_DEV_) {
+			console.log('WorkerMultiDispatch: Terminating', this);
+		}
 		this.workers.forEach((worker) => {
 			worker.terminate();
 		});

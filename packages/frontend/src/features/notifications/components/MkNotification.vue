@@ -180,14 +180,17 @@ import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
 
-const props = withDefaults(defineProps<{
-	notification: Misskey.entities.Notification;
-	withTime?: boolean;
-	full?: boolean;
-}>(), {
-	withTime: false,
-	full: false,
-});
+const props = withDefaults(
+	defineProps<{
+		notification: Misskey.entities.Notification;
+		withTime?: boolean;
+		full?: boolean;
+	}>(),
+	{
+		withTime: false,
+		full: false,
+	},
+);
 
 type ExportCompletedNotification = Misskey.entities.Notification & { type: 'exportCompleted' };
 
@@ -206,19 +209,25 @@ const exportEntityName = {
 const followRequestDone = ref(false);
 
 const acceptFollowRequest = () => {
-	if (!('user' in props.notification)) return;
+	if (!('user' in props.notification)) {
+		return;
+	}
 	followRequestDone.value = true;
 	misskeyApi('following/requests/accept', { userId: props.notification.user.id });
 };
 
 const rejectFollowRequest = () => {
-	if (!('user' in props.notification)) return;
+	if (!('user' in props.notification)) {
+		return;
+	}
 	followRequestDone.value = true;
 	misskeyApi('following/requests/reject', { userId: props.notification.user.id });
 };
 
 function getActualReactedUsersCount(notification: Misskey.entities.Notification) {
-	if (notification.type !== 'reaction:grouped') return 0;
+	if (notification.type !== 'reaction:grouped') {
+		return 0;
+	}
 	return new Set(notification.reactions.map((reaction) => reaction.user.id)).size;
 }
 </script>

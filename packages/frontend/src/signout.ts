@@ -13,7 +13,9 @@ import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
 
 export async function signout() {
-	if (!$i) return;
+	if (!$i) {
+		return;
+	}
 
 	waiting();
 

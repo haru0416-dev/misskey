@@ -24,7 +24,7 @@ export const baseConfig = defineConfig({
 			exclude: ['src/**/*.test.ts'],
 		},
 		restoreMocks: true,
-		testTimeout: 60000,
+		testTimeout: 60_000,
 		maxWorkers: 1,
 		logHeapUsage: true,
 		vmMemoryLimit: 1024,

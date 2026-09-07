@@ -17,7 +17,9 @@ function createApp(limit: number): Hono {
 			const body = await readRequestBodyWithLimit(c.req.raw, limit, () => new BodyLimitExceeded());
 			return c.text(textDecoder.decode(body));
 		} catch (error) {
-			if (error instanceof BodyLimitExceeded) return c.body(null, 413);
+			if (error instanceof BodyLimitExceeded) {
+				return c.body(null, 413);
+			}
 			throw error;
 		}
 	});
@@ -31,7 +33,9 @@ function streamedRequest(chunks: string[], headers: Record<string, string> = {})
 		headers,
 		body: new ReadableStream({
 			start(controller) {
-				for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+				for (const chunk of chunks) {
+					controller.enqueue(encoder.encode(chunk));
+				}
 				controller.close();
 			},
 		}),

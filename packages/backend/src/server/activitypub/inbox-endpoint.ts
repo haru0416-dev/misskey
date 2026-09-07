@@ -4,7 +4,8 @@
  */
 
 import * as crypto from 'node:crypto';
-import { parseRequestSignature, type ParsedSignature } from '@/core/activitypub/http-signature.js';
+import { parseRequestSignature } from '@/core/activitypub/http-signature.js';
+import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 import type { IncomingMessage } from 'node:http';
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
@@ -57,7 +58,9 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 	try {
 		rawBody = await readRequestBodyWithLimit(request, INBOX_BODY_LIMIT_BYTES, () => new InboxBodyLimitExceeded());
 	} catch (error) {
-		if (error instanceof InboxBodyLimitExceeded) return rawStatus(413);
+		if (error instanceof InboxBodyLimitExceeded) {
+			return rawStatus(413);
+		}
 		throw error;
 	}
 	const headers = Object.fromEntries(request.headers.entries());
@@ -72,7 +75,9 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		});
 		// 署名対象に (request-target) / host / date が含まれることを要求する。
 		for (const required of ['(request-target)', 'host', 'date']) {
-			if (!signature.headers.includes(required)) return rawStatus(401);
+			if (!signature.headers.includes(required)) {
+				return rawStatus(401);
+			}
 		}
 	} catch {
 		return rawStatus(401);

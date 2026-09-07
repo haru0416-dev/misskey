@@ -49,7 +49,7 @@ const props = defineProps<{
 	domain: string;
 }>();
 
-const scope = computed(() => props.path ? props.path.split('/') : []);
+const scope = computed(() => (props.path ? props.path.split('/') : []));
 
 const keys = ref<[string, string][]>([]);
 
@@ -57,7 +57,7 @@ function fetchKeys() {
 	misskeyApi('i/registry/keys-with-type', {
 		scope: scope.value,
 		domain: props.domain === '@' ? null : props.domain,
-	}).then(res => {
+	}).then((res) => {
 		keys.value = Object.entries(res).sort((a, b) => a[0].localeCompare(b[0]));
 	});
 }
@@ -80,7 +80,9 @@ async function createKey() {
 		},
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	os.apiWithDialog('i/registry/set', {
 		scope: result.scope.split('/'),

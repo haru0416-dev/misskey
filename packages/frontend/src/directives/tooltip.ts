@@ -58,16 +58,24 @@ export const tooltipDirective = {
 
 		self.close = () => {
 			removeDescription();
-			if (self.closePopup == null) return;
+			if (self.closePopup == null) {
+				return;
+			}
 			const closePopup = self.closePopup;
 			self.closePopup = null;
 			closePopup();
 		};
 
 		self.show = () => {
-			if (!window.document.body.contains(el)) return;
-			if (self.closePopup) return;
-			if (self.text == null) return;
+			if (!window.document.body.contains(el)) {
+				return;
+			}
+			if (self.closePopup) {
+				return;
+			}
+			if (self.text == null) {
+				return;
+			}
 
 			const showing = ref(true);
 			addDescription();
@@ -100,12 +108,16 @@ export const tooltipDirective = {
 		};
 
 		const clearShowTimer = () => {
-			if (self.showTimer == null) return;
+			if (self.showTimer == null) {
+				return;
+			}
 			window.clearTimeout(self.showTimer);
 			self.showTimer = null;
 		};
 		const clearHideTimer = () => {
-			if (self.hideTimer == null) return;
+			if (self.hideTimer == null) {
+				return;
+			}
 			window.clearTimeout(self.hideTimer);
 			self.hideTimer = null;
 		};
@@ -131,11 +143,15 @@ export const tooltipDirective = {
 			}
 		};
 		const endTooltipIfUninterested = () => {
-			if (isMouseHovering || isTouching || isFocused) return;
+			if (isMouseHovering || isTouching || isFocused) {
+				return;
+			}
 			endTooltip();
 		};
 		const onMouseenter = () => {
-			if (Date.now() < self.ignoreMouseenterUntil) return;
+			if (Date.now() < self.ignoreMouseenterUntil) {
+				return;
+			}
 			isMouseHovering = true;
 			startTooltip();
 		};
@@ -167,7 +183,9 @@ export const tooltipDirective = {
 		const onClick = (ev: MouseEvent) => {
 			clearShowTimer();
 			self.close();
-			if (binding.arg !== 'dialog' || self.text == null) return;
+			if (binding.arg !== 'dialog' || self.text == null) {
+				return;
+			}
 			ev.preventDefault();
 			ev.stopPropagation();
 			void alert({
@@ -176,7 +194,9 @@ export const tooltipDirective = {
 			});
 		};
 		const onKeydown = (ev: KeyboardEvent) => {
-			if (ev.key !== 'Escape') return;
+			if (ev.key !== 'Escape') {
+				return;
+			}
 			clearShowTimer();
 			clearHideTimer();
 			self.close();
@@ -214,15 +234,21 @@ export const tooltipDirective = {
 
 	updated(el, binding) {
 		const self = tooltipStates.get(el);
-		if (self == null) return;
-		if (self.text === binding.value) return;
+		if (self == null) {
+			return;
+		}
+		if (self.text === binding.value) {
+			return;
+		}
 		self.text = binding.value;
 		self.close();
 	},
 
 	unmounted(el) {
 		const self = tooltipStates.get(el);
-		if (self == null) return;
+		if (self == null) {
+			return;
+		}
 		self.cleanup();
 		tooltipStates.delete(el);
 	},

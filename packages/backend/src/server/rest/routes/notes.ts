@@ -303,7 +303,9 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertTokenPermission(auth, 'read:account');
 
 			const result = await handleApiNotesTranslate(deps, auth.user, body);
-			if (result === undefined) return emptyResponse(c);
+			if (result === undefined) {
+				return emptyResponse(c);
+			}
 			return jsonResponse(c, result);
 		});
 	});

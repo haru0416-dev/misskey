@@ -3,15 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { note, type NoteInsert, type NoteRow } from '@/db/schema/note.js';
+import { executePreparedStatement, preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { note } from '@/db/schema/note.js';
+import type { NoteInsert, NoteRow } from '@/db/schema/note.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
 import { driveFile } from '@/db/schema/drive-file.js';
-import { poll, type PollInsert } from '@/db/schema/poll.js';
+import { poll } from '@/db/schema/poll.js';
+import type { PollInsert } from '@/db/schema/poll.js';
 import { user as userTable } from '@/db/schema/user.js';
-import { channel as channelTable, type ChannelRow } from '@/db/schema/channel.js';
+import { channel as channelTable } from '@/db/schema/channel.js';
+import type { ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiNote } from '@/models/Note.js';
@@ -361,7 +365,21 @@ function notePaginationOrder(options: { sinceId?: MiNote['id'] | null; untilId?:
 	return options.sinceId && !options.untilId ? sql.raw('ASC') : sql.raw('DESC');
 }
 
+const noteColumnKeys = Object.keys(getTableColumns(note)) as (keyof NoteInsert)[];
+const noteInsertPlaceholders = Object.fromEntries(
+	noteColumnKeys.map((key) => [key, sql.placeholder(key)]),
+) as unknown as NoteInsert;
+
+/**
+ * 全列が揃っているときは固定形の INSERT を使い回す (notes/create はトランザクション内で挿入するため
+ * `preparedQueryFor` では毎回組み立て直しになる)。列が欠けると DEFAULT に任せる必要があり
+ * SQL の形が変わるので、その場合だけ従来どおり組み立てる。
+ */
 export async function createNoteInDatabase(db: MiDrizzleDatabase, values: NoteInsert): Promise<void> {
+	if (noteColumnKeys.every((key) => values[key] !== undefined)) {
+		await executePreparedStatement(db, 'note:insert', () => db.insert(note).values(noteInsertPlaceholders), values);
+		return;
+	}
 	await db.insert(note).values(values);
 }
 
@@ -371,7 +389,7 @@ export async function createNoteWithPollInDatabase(
 	pollValues: PollInsert,
 ): Promise<void> {
 	await db.transaction(async (tx) => {
-		await tx.insert(note).values(noteValues);
+		await createNoteInDatabase(tx, noteValues);
 
 		await tx.insert(poll).values(pollValues);
 	});
@@ -416,7 +434,9 @@ export async function fetchNoteByIdOrFailFromDatabase(db: MiDrizzleDatabase, id:
 }
 
 export async function listNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiNote['id'][]): Promise<MiNote[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
@@ -507,7 +527,9 @@ export async function listNotesByUserIdWithPaginationFromDatabase(
 }
 
 export async function deleteNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiNote['id'][]): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db.delete(note).where(inArray(note.id, ids));
 }
@@ -523,7 +545,9 @@ export async function deleteNoteAndDecrementParentRepliesCountInDatabase(
 			.where(and(eq(note.id, id), eq(note.userId, userId)))
 			.returning({ replyId: note.replyId });
 
-		if (deleted?.replyId == null) return;
+		if (deleted?.replyId == null) {
+			return;
+		}
 
 		await tx
 			.update(note)
@@ -587,7 +611,9 @@ export async function decrementNoteReactionInDatabase(
 export async function rebuildNoteReactionsInDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<void> {
 	await db.transaction(async (transaction) => {
 		const [target] = await transaction.select({ id: note.id }).from(note).where(eq(note.id, id)).for('update').limit(1);
-		if (target == null) return;
+		if (target == null) {
+			return;
+		}
 
 		const counts = await transaction
 			.select({ reaction: noteReaction.reaction, count: count() })
@@ -948,7 +974,9 @@ export async function listFeaturedNotesByIdsFromDatabase(
 	ids: MiNote['id'][],
 	blockedHosts: string[],
 ): Promise<MiNote[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
@@ -975,7 +1003,9 @@ export async function listVisibleNotesByIdsFromDatabase(
 		blockedHosts: string[];
 	},
 ): Promise<MiNote[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
@@ -1000,7 +1030,9 @@ export async function listVisibleNotesWithUsersByIdsFromDatabase(
 	ids: MiNote['id'][],
 	me: { id: MiUser['id'] } | null,
 ): Promise<(MiNote & { user: MiUser })[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({
@@ -1021,31 +1053,37 @@ export async function listHydratedNotesByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiNote['id'][],
 ): Promise<MiNote[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
-	const replyNote = alias(note, 'reply');
-	const renoteNote = alias(note, 'renote');
-	const replyUser = alias(userTable, 'replyUser');
-	const renoteUser = alias(userTable, 'renoteUser');
+	const statement = preparedQueryFor(db, 'note:hydratedByIds', () => {
+		const replyNote = alias(note, 'reply');
+		const renoteNote = alias(note, 'renote');
+		const replyUser = alias(userTable, 'replyUser');
+		const renoteUser = alias(userTable, 'renoteUser');
 
-	const rows = await db
-		.select({
-			note,
-			user: userTable,
-			reply: replyNote,
-			renote: renoteNote,
-			replyUser,
-			renoteUser,
-			channel: channelTable,
-		})
-		.from(note)
-		.innerJoin(userTable, eq(userTable.id, note.userId))
-		.leftJoin(replyNote, eq(replyNote.id, note.replyId))
-		.leftJoin(renoteNote, eq(renoteNote.id, note.renoteId))
-		.leftJoin(replyUser, eq(replyUser.id, note.replyUserId))
-		.leftJoin(renoteUser, eq(renoteUser.id, note.renoteUserId))
-		.leftJoin(channelTable, eq(channelTable.id, note.channelId))
-		.where(inArray(note.id, ids));
+		return db
+			.select({
+				note,
+				user: userTable,
+				reply: replyNote,
+				renote: renoteNote,
+				replyUser,
+				renoteUser,
+				channel: channelTable,
+			})
+			.from(note)
+			.innerJoin(userTable, eq(userTable.id, note.userId))
+			.leftJoin(replyNote, eq(replyNote.id, note.replyId))
+			.leftJoin(renoteNote, eq(renoteNote.id, note.renoteId))
+			.leftJoin(replyUser, eq(replyUser.id, note.replyUserId))
+			.leftJoin(renoteUser, eq(renoteUser.id, note.renoteUserId))
+			.leftJoin(channelTable, eq(channelTable.id, note.channelId))
+			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT);
+	});
+	const rows = await statement.execute({ ids });
 
 	return rows.map((row) => {
 		const hydrated = deserializeNote(row.note);
@@ -1195,7 +1233,9 @@ export async function listFilteredTimelineNotesByIdsFromDatabase(
 		mutingChannelIds?: string[];
 	},
 ): Promise<MiNote[]> {
-	if (options.ids.length === 0) return [];
+	if (options.ids.length === 0) {
+		return [];
+	}
 
 	const conditions: SQL[] = [
 		sql`"note"."id" IN (${sql.join(
@@ -1269,7 +1309,9 @@ export async function listNotesByTagSearchFromDatabase(
 		conditions.push(options.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
 	}
 
-	if (options.withFiles) conditions.push(hasFilesCondition());
+	if (options.withFiles) {
+		conditions.push(hasFilesCondition());
+	}
 
 	if (options.poll != null) {
 		conditions.push(eq(note.hasPoll, options.poll));
@@ -1343,7 +1385,9 @@ export async function listGlobalTimelineNotesFromDatabase(
 		conditions.push(mutedUserRenotesCondition(options.me));
 	}
 
-	if (options.withFiles) conditions.push(hasFilesCondition());
+	if (options.withFiles) {
+		conditions.push(hasFilesCondition());
+	}
 
 	if (!options.withRenotes) {
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
@@ -1389,7 +1433,9 @@ export async function listLocalTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (options.withFiles) conditions.push(hasFilesCondition());
+	if (options.withFiles) {
+		conditions.push(hasFilesCondition());
+	}
 
 	if (!options.withReplies) {
 		conditions.push(sql`(
@@ -1504,7 +1550,9 @@ export async function listUserTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (options.withFiles) conditions.push(hasFilesCondition());
+	if (options.withFiles) {
+		conditions.push(hasFilesCondition());
+	}
 
 	if (!options.withRenotes) {
 		conditions.push(sql`(
@@ -1573,7 +1621,9 @@ function renoteAndFileConditions(options: {
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
-	if (options.withFiles) conditions.push(hasFilesCondition());
+	if (options.withFiles) {
+		conditions.push(hasFilesCondition());
+	}
 
 	return conditions;
 }
@@ -1817,7 +1867,9 @@ export async function adjustNotesPageCountInDatabase(
 	ids: MiNote['id'][],
 	delta: number,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	if (ids.length === 0) {
+		return;
+	}
 
 	await db.execute(sql`
 		UPDATE "note"

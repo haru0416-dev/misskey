@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { channel, type ChannelInsert, type ChannelRow } from '@/db/schema/channel.js';
+import { channel } from '@/db/schema/channel.js';
+import type { ChannelInsert, ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -54,7 +56,9 @@ export async function listChannelsByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiChannel['id'][],
 ): Promise<MiChannel[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す

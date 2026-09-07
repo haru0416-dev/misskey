@@ -379,11 +379,13 @@ onMounted(async () => {
 	if (layer.value.type === 'image' && layer.value.imageId != null) {
 		await misskeyApi('drive/files/show', {
 			fileId: layer.value.imageId,
-		}).then((res) => {
-			driveFile.value = res;
-		}).catch((err) => {
-			driveFileError.value = true;
-		});
+		})
+			.then((res) => {
+				driveFile.value = res;
+			})
+			.catch((err) => {
+				driveFileError.value = true;
+			});
 	}
 });
 
@@ -396,7 +398,9 @@ function chooseFile(ev: PointerEvent) {
 			watermark: false,
 		},
 	}).then((file) => {
-		if (layer.value.type !== 'image') return;
+		if (layer.value.type !== 'image') {
+			return;
+		}
 		if (!file.type.startsWith('image')) {
 			os.alert({
 				type: 'warning',

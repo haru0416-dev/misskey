@@ -476,9 +476,15 @@ export const claimedAchievements: (typeof ACHIEVEMENT_TYPES)[number][] = $i?.ach
 const claimingQueue = new Set<string>();
 
 export async function claimAchievement(type: (typeof ACHIEVEMENT_TYPES)[number]) {
-	if ($i == null) return;
-	if ($i.movedTo) return;
-	if (claimedAchievements.includes(type)) return;
+	if ($i == null) {
+		return;
+	}
+	if ($i.movedTo) {
+		return;
+	}
+	if (claimedAchievements.includes(type)) {
+		return;
+	}
 	claimingQueue.add(type);
 	claimedAchievements.push(type);
 	await new Promise((resolve) => window.setTimeout(resolve, (claimingQueue.size - 1) * 500));

@@ -26,7 +26,9 @@ export default function json5(options: Json5PluginOptions = {}): Plugin {
 		name: 'json5',
 
 		transform(json, id) {
-			if (id.slice(-6) !== '.json5' || !filter(id)) return null;
+			if (id.slice(-6) !== '.json5' || !filter(id)) {
+				return null;
+			}
 
 			try {
 				const parsed = JSON5.parse(json);

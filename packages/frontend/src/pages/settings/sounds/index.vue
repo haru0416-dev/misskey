@@ -102,23 +102,29 @@ function getSoundTypeName(f: SoundType): string {
 	}
 }
 
-async function updated(type: keyof typeof sounds.value, sound: { type: SoundType; fileId?: string; fileUrl?: string; volume: number; }) {
-	const v: SoundStore = sound.type === '_driveFile_' ? {
-		type: sound.type,
-		fileId: sound.fileId!,
-		fileUrl: sound.fileUrl!,
-		volume: sound.volume,
-	} : {
-		type: sound.type,
-		volume: sound.volume,
-	};
+async function updated(
+	type: keyof typeof sounds.value,
+	sound: { type: SoundType; fileId?: string; fileUrl?: string; volume: number },
+) {
+	const v: SoundStore =
+		sound.type === '_driveFile_'
+			? {
+					type: sound.type,
+					fileId: sound.fileId!,
+					fileUrl: sound.fileUrl!,
+					volume: sound.volume,
+				}
+			: {
+					type: sound.type,
+					volume: sound.volume,
+				};
 
 	prefer.commit(`sound.on.${type}`, v);
 	sounds.value[type] = v;
 }
 
 function reset() {
-	for (const sound of Object.keys(sounds.value) as Array<keyof typeof sounds.value>) {
+	for (const sound of Object.keys(sounds.value) as (keyof typeof sounds.value)[]) {
 		const v = getInitialPrefValue(`sound.on.${sound}`);
 		prefer.commit(`sound.on.${sound}`, v);
 		sounds.value[sound] = v;

@@ -41,20 +41,30 @@ import { $i } from '@/i.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const currentInviteLimit = ref<null | number>(null);
-const inviteLimit = (($i != null && $i.policies.inviteLimit) || (($i == null && instance.policies.inviteLimit))) as number;
-const inviteLimitCycle = (($i != null && $i.policies.inviteLimitCycle) || ($i == null && instance.policies.inviteLimitCycle)) as number;
+const inviteLimit = (($i != null && $i.policies.inviteLimit) ||
+	($i == null && instance.policies.inviteLimit)) as number;
+const inviteLimitCycle = (($i != null && $i.policies.inviteLimitCycle) ||
+	($i == null && instance.policies.inviteLimitCycle)) as number;
 
-const paginator = markRaw(new Paginator('invite/list', {
-	limit: 10,
-}));
+const paginator = markRaw(
+	new Paginator('invite/list', {
+		limit: 10,
+	}),
+);
 
 const resetCycle = computed<null | string>(() => {
-	if (!inviteLimitCycle) return null;
+	if (!inviteLimitCycle) {
+		return null;
+	}
 
 	const minutes = inviteLimitCycle;
-	if (minutes < 60) return minutes + i18n.ts._time.minute;
+	if (minutes < 60) {
+		return minutes + i18n.ts._time.minute;
+	}
 	const hours = Math.floor(minutes / 60);
-	if (hours < 24) return hours + i18n.ts._time.hour;
+	if (hours < 24) {
+		return hours + i18n.ts._time.hour;
+	}
 	return Math.floor(hours / 24) + i18n.ts._time.day;
 });
 

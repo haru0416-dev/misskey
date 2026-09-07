@@ -7,12 +7,10 @@ import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import {
-	filterNoteForStreamingHidingForApi,
-	populateMyReactionForApi,
-	type ApiNoteDependencies,
-} from '@/server/rest/note/note.js';
-import { isNoteMutedOrBlockedForStream, type StreamChannelDefinition } from '../channel.js';
+import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
+import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { isNoteMutedOrBlockedForStream } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
 async function isRoleExplorableForStream(deps: { db: ApiNoteDependencies['db'] }, roleId: string): Promise<boolean> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, roleId);
@@ -24,34 +22,47 @@ export const honoStreamChannelRoleTimeline: StreamChannelDefinition<ApiNoteDepen
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (typeof params['roleId'] !== 'string') return;
+		if (typeof params['roleId'] !== 'string') {
+			return;
+		}
 		const roleId = params['roleId'];
 
 		const handler = async (data: { type: string; body: JsonValue }) => {
 			if (data.type === 'note') {
 				const note = data.body as unknown as Packed<'Note'>;
 
-				if (!(await isRoleExplorableForStream(deps, roleId))) return;
-				if (note.visibility !== 'public') return;
-				if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
+				if (!(await isRoleExplorableForStream(deps, roleId))) {
 					return;
+				}
+				if (note.visibility !== 'public') {
+					return;
+				}
+				if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) {
+					return;
+				}
 				if (
 					note.renote &&
 					(note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
 					ctx.user == null
-				)
+				) {
 					return;
+				}
 				if (
 					note.reply &&
 					(note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
 					ctx.user == null
-				)
+				) {
 					return;
+				}
 
-				if (isNoteMutedOrBlockedForStream(ctx, note)) return;
+				if (isNoteMutedOrBlockedForStream(ctx, note)) {
+					return;
+				}
 
 				const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
-				if (!filtered) return;
+				if (!filtered) {
+					return;
+				}
 
 				if (ctx.user) {
 					if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {

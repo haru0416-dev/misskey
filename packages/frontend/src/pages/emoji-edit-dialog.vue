@@ -95,12 +95,15 @@ import { selectFile } from '@/features/drive/drive.js';
 import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
 
 const props = defineProps<{
-	emoji?: Misskey.entities.EmojiDetailed,
+	emoji?: Misskey.entities.EmojiDetailed;
 }>();
 
 const emit = defineEmits<{
-	(ev: 'done', v: { deleted?: boolean; updated?: Misskey.entities.EmojiDetailed; created?: Misskey.entities.EmojiDetailed }): void,
-	(ev: 'closed'): void
+	(
+		ev: 'done',
+		v: { deleted?: boolean; updated?: Misskey.entities.EmojiDetailed; created?: Misskey.entities.EmojiDetailed },
+	): void;
+	(ev: 'closed'): void;
 }>();
 
 const windowEl = useTemplateRef('windowEl');
@@ -110,21 +113,29 @@ const aliases = ref<string>(props.emoji ? props.emoji.aliases.join(' ') : '');
 const license = ref<string>(props.emoji?.license ? props.emoji.license : '');
 const isSensitive = ref(props.emoji ? props.emoji.isSensitive : false);
 const localOnly = ref(props.emoji ? props.emoji.localOnly : false);
-const roleIdsThatCanBeUsedThisEmojiAsReaction = ref(props.emoji ? props.emoji.roleIdsThatCanBeUsedThisEmojiAsReaction : []);
+const roleIdsThatCanBeUsedThisEmojiAsReaction = ref(
+	props.emoji ? props.emoji.roleIdsThatCanBeUsedThisEmojiAsReaction : [],
+);
 const rolesThatCanBeUsedThisEmojiAsReaction = ref<Misskey.entities.Role[]>([]);
 const file = ref<Misskey.entities.DriveFile>();
 
-watch(roleIdsThatCanBeUsedThisEmojiAsReaction, async () => {
-	// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
-	// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
-	const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
-	if (allRoles == null) return;
-	rolesThatCanBeUsedThisEmojiAsReaction.value = roleIdsThatCanBeUsedThisEmojiAsReaction.value
-		.map((id) => allRoles.find((role) => role.id === id))
-		.filter(x => x != null);
-}, { immediate: true });
+watch(
+	roleIdsThatCanBeUsedThisEmojiAsReaction,
+	async () => {
+		// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
+		// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
+		const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
+		if (allRoles == null) {
+			return;
+		}
+		rolesThatCanBeUsedThisEmojiAsReaction.value = roleIdsThatCanBeUsedThisEmojiAsReaction.value
+			.map((id) => allRoles.find((role) => role.id === id))
+			.filter((x) => x != null);
+	},
+	{ immediate: true },
+);
 
-const imgUrl = computed(() => file.value ? file.value.url : props.emoji ? props.emoji.url : null);
+const imgUrl = computed(() => (file.value ? file.value.url : props.emoji ? props.emoji.url : null));
 
 async function changeImage(ev: PointerEvent) {
 	file.value = await selectFile({
@@ -139,29 +150,36 @@ async function changeImage(ev: PointerEvent) {
 
 async function addRole() {
 	const roles = await misskeyApi('admin/roles/list');
-	const currentRoleIds = rolesThatCanBeUsedThisEmojiAsReaction.value.map(x => x.id);
+	const currentRoleIds = rolesThatCanBeUsedThisEmojiAsReaction.value.map((x) => x.id);
 
 	const { canceled, result: roleId } = await os.select({
-		items: roles.filter(r => r.isPublic).filter(r => !currentRoleIds.includes(r.id)).map(r => ({ label: r.name, value: r.id })),
+		items: roles
+			.filter((r) => r.isPublic)
+			.filter((r) => !currentRoleIds.includes(r.id))
+			.map((r) => ({ label: r.name, value: r.id })),
 	});
-	if (canceled || roleId == null) return;
+	if (canceled || roleId == null) {
+		return;
+	}
 
-	rolesThatCanBeUsedThisEmojiAsReaction.value.push(roles.find(r => r.id === roleId)!);
+	rolesThatCanBeUsedThisEmojiAsReaction.value.push(roles.find((r) => r.id === roleId)!);
 }
 
 async function removeRole(role: Misskey.entities.RoleLite) {
-	rolesThatCanBeUsedThisEmojiAsReaction.value = rolesThatCanBeUsedThisEmojiAsReaction.value.filter(x => x.id !== role.id);
+	rolesThatCanBeUsedThisEmojiAsReaction.value = rolesThatCanBeUsedThisEmojiAsReaction.value.filter(
+		(x) => x.id !== role.id,
+	);
 }
 
 async function done() {
 	const params = {
 		name: name.value,
 		category: category.value === '' ? null : category.value,
-		aliases: aliases.value.split(' ').filter(x => x !== ''),
+		aliases: aliases.value.split(' ').filter((x) => x !== ''),
 		license: license.value === '' ? null : license.value,
 		isSensitive: isSensitive.value,
 		localOnly: localOnly.value,
-		roleIdsThatCanBeUsedThisEmojiAsReaction: rolesThatCanBeUsedThisEmojiAsReaction.value.map(x => x.id),
+		roleIdsThatCanBeUsedThisEmojiAsReaction: rolesThatCanBeUsedThisEmojiAsReaction.value.map((x) => x.id),
 		...(file.value ? { fileId: file.value.id } : {}),
 	} satisfies Misskey.entities.AdminEmojiUpdateRequest;
 
@@ -190,7 +208,9 @@ async function done() {
 
 		windowEl.value?.close();
 	} else {
-		if (params.fileId == null) return;
+		if (params.fileId == null) {
+			return;
+		}
 
 		const created = await os.apiWithDialog('admin/emoji/add', {
 			...params,
@@ -206,12 +226,16 @@ async function done() {
 }
 
 async function del() {
-	if (!props.emoji) return;
+	if (!props.emoji) {
+		return;
+	}
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: name.value }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	misskeyApi('admin/emoji/delete', {
 		id: props.emoji.id,

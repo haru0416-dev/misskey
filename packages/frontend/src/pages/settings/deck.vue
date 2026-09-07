@@ -129,7 +129,7 @@ function setWallpaper(ev: PointerEvent) {
 	selectFile({
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
-	}).then(file => {
+	}).then((file) => {
 		wallpaper.value = file.url;
 	});
 }
@@ -139,8 +139,12 @@ const profilesSyncEnabled = ref(prefer.isSyncEnabled('deck.profiles'));
 function changeProfilesSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('deck.profiles').then((res) => {
-			if (res == null) return;
-			if (res.enabled) profilesSyncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				profilesSyncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('deck.profiles');

@@ -237,11 +237,13 @@ const alwaysMarkNsfw = ref($i.alwaysMarkNsfw);
 const autoSensitive = ref($i.autoSensitive);
 
 const meterStyle = computed(() => {
-	if (!capacity.value || !usage.value) return {};
+	if (!capacity.value || !usage.value) {
+		return {};
+	}
 	return {
-		width: `${usage.value / capacity.value * 100}%`,
+		width: `${(usage.value / capacity.value) * 100}%`,
 		background: tinycolor({
-			h: 180 - (usage.value / capacity.value * 180),
+			h: 180 - (usage.value / capacity.value) * 180,
 			s: 0.7,
 			l: 0.5,
 		}).toHslString(),
@@ -258,8 +260,12 @@ const watermarkPresetsSyncEnabled = ref(prefer.isSyncEnabled('watermarkPresets')
 function changeWatermarkPresetsSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('watermarkPresets').then((res) => {
-			if (res == null) return;
-			if (res.enabled) watermarkPresetsSyncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				watermarkPresetsSyncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('watermarkPresets');
@@ -272,8 +278,12 @@ const imageFramePresetsSyncEnabled = ref(prefer.isSyncEnabled('imageFramePresets
 function changeImageFramePresetsSyncEnabled(value: boolean) {
 	if (value) {
 		prefer.enableSync('imageFramePresets').then((res) => {
-			if (res == null) return;
-			if (res.enabled) imageFramePresetsSyncEnabled.value = true;
+			if (res == null) {
+				return;
+			}
+			if (res.enabled) {
+				imageFramePresetsSyncEnabled.value = true;
+			}
 		});
 	} else {
 		prefer.disableSync('imageFramePresets');
@@ -281,7 +291,7 @@ function changeImageFramePresetsSyncEnabled(value: boolean) {
 	}
 }
 
-misskeyApi('drive').then(info => {
+misskeyApi('drive').then((info) => {
 	capacity.value = info.capacity;
 	usage.value = info.usage;
 	fetching.value = false;
@@ -290,14 +300,16 @@ misskeyApi('drive').then(info => {
 if (prefer.uploadFolder) {
 	misskeyApi('drive/folders/show', {
 		folderId: prefer.uploadFolder,
-	}).then(response => {
+	}).then((response) => {
 		uploadFolder.value = response;
 	});
 }
 
 function chooseUploadFolder() {
 	selectDriveFolder(null).then(async ({ canceled, folders }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		prefer.commit('uploadFolder', folders[0] ? folders[0].id : null);
 		os.success();
 		if (prefer.uploadFolder) {
@@ -311,20 +323,24 @@ function chooseUploadFolder() {
 }
 
 async function addWatermarkPreset() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/image-editor/components/MkWatermarkEditorDialog.vue').then(x => x.default), {
-		presetEditMode: true,
-		preset: null,
-		layers: [],
-	}, {
-		presetOk: (preset) => {
-			prefer.commit('watermarkPresets', [...prefer.watermarkPresets, preset]);
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/image-editor/components/MkWatermarkEditorDialog.vue').then((x) => x.default),
+		{
+			presetEditMode: true,
+			preset: null,
+			layers: [],
 		},
-		closed: () => dispose(),
-	});
+		{
+			presetOk: (preset) => {
+				prefer.commit('watermarkPresets', [...prefer.watermarkPresets, preset]);
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function onUpdateWatermarkPreset(id: string, preset: WatermarkPreset) {
-	const index = prefer.watermarkPresets.findIndex(p => p.id === id);
+	const index = prefer.watermarkPresets.findIndex((p) => p.id === id);
 	if (index !== -1) {
 		prefer.commit('watermarkPresets', [
 			...prefer.watermarkPresets.slice(0, index),
@@ -335,7 +351,7 @@ function onUpdateWatermarkPreset(id: string, preset: WatermarkPreset) {
 }
 
 function onDeleteWatermarkPreset(id: string) {
-	const index = prefer.watermarkPresets.findIndex(p => p.id === id);
+	const index = prefer.watermarkPresets.findIndex((p) => p.id === id);
 	if (index !== -1) {
 		prefer.commit('watermarkPresets', [
 			...prefer.watermarkPresets.slice(0, index),
@@ -349,7 +365,7 @@ function onDeleteWatermarkPreset(id: string) {
 }
 
 function onUpdateImageFramePreset(id: string, preset: ImageFramePreset) {
-	const index = prefer.imageFramePresets.findIndex(p => p.id === id);
+	const index = prefer.imageFramePresets.findIndex((p) => p.id === id);
 	if (index !== -1) {
 		prefer.commit('imageFramePresets', [
 			...prefer.imageFramePresets.slice(0, index),
@@ -360,7 +376,7 @@ function onUpdateImageFramePreset(id: string, preset: ImageFramePreset) {
 }
 
 function onDeleteImageFramePreset(id: string) {
-	const index = prefer.imageFramePresets.findIndex(p => p.id === id);
+	const index = prefer.imageFramePresets.findIndex((p) => p.id === id);
 	if (index !== -1) {
 		prefer.commit('imageFramePresets', [
 			...prefer.imageFramePresets.slice(0, index),
@@ -370,23 +386,27 @@ function onDeleteImageFramePreset(id: string) {
 }
 
 async function addImageFramePreset() {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/image-editor/components/MkImageFrameEditorDialog.vue').then(x => x.default), {
-		presetEditMode: true,
-		preset: null,
-		params: null,
-	}, {
-		presetOk: (preset) => {
-			prefer.commit('imageFramePresets', [...prefer.imageFramePresets, preset]);
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/image-editor/components/MkImageFrameEditorDialog.vue').then((x) => x.default),
+		{
+			presetEditMode: true,
+			preset: null,
+			params: null,
 		},
-		closed: () => dispose(),
-	});
+		{
+			presetOk: (preset) => {
+				prefer.commit('imageFramePresets', [...prefer.imageFramePresets, preset]);
+			},
+			closed: () => dispose(),
+		},
+	);
 }
 
 function saveProfile() {
 	misskeyApi('i/update', {
 		alwaysMarkNsfw: !!alwaysMarkNsfw.value,
 		autoSensitive: !!autoSensitive.value,
-	}).catch(err => {
+	}).catch((err) => {
 		os.alert({
 			type: 'error',
 			title: i18n.ts.error,

@@ -36,7 +36,9 @@ function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
 	type: T,
 	body: PushNotificationsTypes[T],
 ): PushNotificationsTypes[T] {
-	if (typeof body !== 'object' || body == null) return body;
+	if (typeof body !== 'object' || body == null) {
+		return body;
+	}
 
 	return {
 		...body,
@@ -69,7 +71,9 @@ export async function pushSwNotificationForApi<T extends keyof PushNotifications
 	type: T,
 	body: PushNotificationsTypes[T],
 ): Promise<void> {
-	if (!deps.meta.enableServiceWorker || deps.meta.swPublicKey == null || deps.meta.swPrivateKey == null) return;
+	if (!deps.meta.enableServiceWorker || deps.meta.swPublicKey == null || deps.meta.swPrivateKey == null) {
+		return;
+	}
 
 	push.setVapidDetails(deps.config.instance.url, deps.meta.swPublicKey, deps.meta.swPrivateKey);
 
@@ -77,7 +81,9 @@ export async function pushSwNotificationForApi<T extends keyof PushNotifications
 
 	for (const subscription of subscriptions) {
 		// 「通知が既読になったことを送信する」をオフにしている購読には readAllNotifications を送らない
-		if (type === 'readAllNotifications' && !subscription.sendReadMessage) continue;
+		if (type === 'readAllNotifications' && !subscription.sendReadMessage) {
+			continue;
+		}
 
 		const pushSubscription = {
 			endpoint: subscription.endpoint,

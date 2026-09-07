@@ -10,8 +10,8 @@ import {
 	HttpSignatureError,
 	parseRequestSignature,
 	verifyRequestSignature,
-	type SignatureTargetRequest,
 } from '@/core/activitypub/http-signature.js';
+import type { SignatureTargetRequest } from '@/core/activitypub/http-signature.js';
 
 const SIGNING_TARGET = '(request-target) host date digest';
 

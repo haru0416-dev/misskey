@@ -4,7 +4,8 @@
  */
 
 import { createHash } from 'node:crypto';
-import { sql, type SQL } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { dateUTC, isTimeSame, isTimeBefore, subtractTime, addTime } from '@/misc/prelude/time.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
@@ -22,7 +23,7 @@ type Schema = Record<
 	{
 		uniqueIncrement?: boolean;
 
-		intersection?: string[] | ReadonlyArray<string>;
+		intersection?: string[] | readonly string[];
 
 		range?: 'big' | 'small' | 'medium';
 
@@ -143,7 +144,9 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 		const key = keys.shift();
 		const nextKey = keys[0];
 
-		if (key == null) return;
+		if (key == null) {
+			return;
+		}
 
 		parent.properties ??= {};
 		if (parent.properties[key] == null) {
@@ -161,7 +164,9 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 					};
 		}
 
-		if (nextKey) unflatten(keys.join('.'), parent.properties[key]);
+		if (nextKey) {
+			unflatten(keys.join('.'), parent.properties[key]);
+		}
 	};
 
 	const jsonSchema: JsonSchemaBuilderNode = {
@@ -395,7 +400,9 @@ export default abstract class Chart<T extends Schema> {
 		executor: ChartQueryExecutor = this.chartDb,
 	): Promise<void> {
 		const entries = Object.entries(values);
-		if (entries.length === 0) return;
+		if (entries.length === 0) {
+			return;
+		}
 
 		await executor.execute(sql`
 			UPDATE ${identifierSql(this.getTable(span))}
@@ -414,7 +421,9 @@ export default abstract class Chart<T extends Schema> {
 		values: Record<string, unknown[]>,
 	): Promise<void> {
 		const entries = Object.entries(values);
-		if (entries.length === 0) return;
+		if (entries.length === 0) {
+			return;
+		}
 
 		await this.chartDb.execute(sql`
 			UPDATE ${identifierSql(this.getTable(span))}
@@ -499,7 +508,9 @@ export default abstract class Chart<T extends Schema> {
 			// 同じ区間を重複作成しないため、ロック取得後に再確認する。
 			const currentLog = await this.getLogByDate(group, span, date);
 
-			if (currentLog != null) return currentLog;
+			if (currentLog != null) {
+				return currentLog;
+			}
 
 			const columns = {} as Record<string, number | unknown[]>;
 			for (const [k, v] of Object.entries(data)) {
@@ -523,7 +534,9 @@ export default abstract class Chart<T extends Schema> {
 
 	protected commit(diff: Commit<T>, group: string | null = null): void {
 		for (const [k, v] of Object.entries(diff)) {
-			if (v == null || v === 0 || (Array.isArray(v) && v.length === 0)) delete diff[k];
+			if (v == null || v === 0 || (Array.isArray(v) && v.length === 0)) {
+				delete diff[k];
+			}
 		}
 		this.buffer.push({
 			diff,
@@ -570,27 +583,39 @@ export default abstract class Chart<T extends Schema> {
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (typeof v === 'number') {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string & keyof Columns<T>;
-					if (v > 0) queryForHour[name] = sql`${identifierSql(name)} + ${v}`;
-					if (v < 0) queryForHour[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
-					if (v > 0) queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
-					if (v < 0) queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
+					if (v > 0) {
+						queryForHour[name] = sql`${identifierSql(name)} + ${v}`;
+					}
+					if (v < 0) {
+						queryForHour[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
+					}
+					if (v > 0) {
+						queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
+					}
+					if (v < 0) {
+						queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
+					}
 				} else if (Array.isArray(v) && v.length > 0) {
 					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string &
 						keyof TempColumnsForUnique<T>;
 					const itemsForHour = v.filter((item) => !(logHour[tempColumnName] as unknown as string[]).includes(item));
 					const itemsForDay = v.filter((item) => !(logDay[tempColumnName] as unknown as string[]).includes(item));
-					if (itemsForHour.length > 0)
+					if (itemsForHour.length > 0) {
 						queryForHour[tempColumnName] =
 							sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForHour)})`;
-					if (itemsForDay.length > 0)
+					}
+					if (itemsForDay.length > 0) {
 						queryForDay[tempColumnName] =
 							sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForDay)})`;
+					}
 				}
 			}
 
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				const schema = this.schema[k];
-				if (schema == null) throw new Error(`Unknown chart field: ${k}`);
+				if (schema == null) {
+					throw new Error(`Unknown chart field: ${k}`);
+				}
 				if (schema.uniqueIncrement) {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
 					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX +
@@ -610,7 +635,9 @@ export default abstract class Chart<T extends Schema> {
 				if (intersection) {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
 					const [firstKey, ...remainingKeys] = intersection;
-					if (firstKey == null) continue;
+					if (firstKey == null) {
+						continue;
+					}
 					const firstTempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX +
 						firstKey.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
 					const firstValues = finalDiffs[firstKey] as string[] | undefined;
@@ -635,10 +662,14 @@ export default abstract class Chart<T extends Schema> {
 							...(logDay[targetTempColumnName] as unknown as string[]),
 						]);
 						currentValuesForHour.forEach((v) => {
-							if (!targetValuesForHour.has(v)) currentValuesForHour.delete(v);
+							if (!targetValuesForHour.has(v)) {
+								currentValuesForHour.delete(v);
+							}
 						});
 						currentValuesForDay.forEach((v) => {
-							if (!targetValuesForDay.has(v)) currentValuesForDay.delete(v);
+							if (!targetValuesForDay.has(v)) {
+								currentValuesForDay.delete(v);
+							}
 						});
 					}
 					queryForHour[name] = currentValuesForHour.size;

@@ -11,7 +11,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createMutingInDatabase } from '@/core/user/MutingStore.js';
 import { createBlockingInDatabase } from '@/core/user/BlockingStore.js';
@@ -27,8 +28,8 @@ import {
 	handleQueueExportFollowing,
 	handleQueueExportMuting,
 	handleQueueExportUserLists,
-	type QueueDbDependencies,
 } from '@/queue/handlers/db.js';
+import type { QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 

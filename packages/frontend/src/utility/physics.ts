@@ -124,7 +124,9 @@ export function physics(container: HTMLElement) {
 	function update() {
 		for (const [i, objEl] of objEls.entries()) {
 			const obj = objs[i];
-			if (obj == null) continue;
+			if (obj == null) {
+				continue;
+			}
 			const x = obj.position.x - objEl.offsetWidth / 2;
 			const y = obj.position.y - objEl.offsetHeight / 2;
 			const angle = obj.angle;
@@ -139,13 +141,17 @@ export function physics(container: HTMLElement) {
 	// 奈落に落ちたオブジェクトは消す
 	const intervalId = window.setInterval(() => {
 		for (const obj of objs) {
-			if (obj.position.y > containerHeight + 1024) Matter.World.remove(world, obj);
+			if (obj.position.y > containerHeight + 1024) {
+				Matter.World.remove(world, obj);
+			}
 		}
 	}, 1000 * 10);
 
 	return {
 		stop: () => {
-			if (stop) return;
+			if (stop) {
+				return;
+			}
 			stop = true;
 			window.cancelAnimationFrame(animationFrameId);
 			Matter.Render.stop(render);

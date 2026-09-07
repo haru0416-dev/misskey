@@ -94,10 +94,7 @@ const summary = ref<string | null>(null);
 const name = ref(Date.now().toString());
 const eyeCatchingImage = ref<Misskey.entities.DriveFile | null>(null);
 const eyeCatchingImageId = ref<string | null>(null);
-const {
-	model: font,
-	def: fontDef,
-} = useMkSelect({
+const { model: font, def: fontDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts._pages.fontSansSerif, value: 'sans-serif' },
 		{ label: i18n.ts._pages.fontSerif, value: 'serif' },
@@ -171,14 +168,18 @@ async function save() {
 }
 
 async function del() {
-	if (!pageId.value) return;
+	if (!pageId.value) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		text: i18n.tsx.removeAreYouSure({ x: title.value.trim() }),
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('pages/delete', {
 		pageId: pageId.value,
@@ -213,7 +214,9 @@ async function add() {
 		title: i18n.ts._pages.chooseBlock,
 		items: getPageBlockList(),
 	});
-	if (canceled || type == null) return;
+	if (canceled || type == null) {
+		return;
+	}
 
 	const id = genId();
 
@@ -250,7 +253,7 @@ function setEyeCatchingImage(ev: PointerEvent) {
 	selectFile({
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
-	}).then(file => {
+	}).then((file) => {
 		eyeCatchingImageId.value = file.id;
 	});
 }
@@ -286,11 +289,13 @@ async function init() {
 		eyeCatchingImageId.value = page.value.eyeCatchingImageId;
 	} else {
 		const id = genId();
-		content.value = [{
-			id,
-			type: 'text',
-			text: 'Hello World!',
-		}];
+		content.value = [
+			{
+				id,
+				type: 'text',
+				text: 'Hello World!',
+			},
+		];
 	}
 }
 
@@ -298,20 +303,25 @@ init();
 
 const headerActions = computed(() => []);
 
-const headerTabs = computed(() => [{
-	key: 'settings',
-	title: i18n.ts._pages.pageSetting,
-	icon: 'ti ti-settings',
-}, {
-	key: 'contents',
-	title: i18n.ts._pages.contents,
-	icon: 'ti ti-note',
-}]);
+const headerTabs = computed(() => [
+	{
+		key: 'settings',
+		title: i18n.ts._pages.pageSetting,
+		icon: 'ti ti-settings',
+	},
+	{
+		key: 'contents',
+		title: i18n.ts._pages.contents,
+		icon: 'ti ti-note',
+	},
+]);
 
 definePage(() => ({
-	title: props.initPageId ? i18n.ts._pages.editPage
-	: props.initPageName && props.initUser ? i18n.ts._pages.readPage
-	: i18n.ts._pages.newPage,
+	title: props.initPageId
+		? i18n.ts._pages.editPage
+		: props.initPageName && props.initUser
+			? i18n.ts._pages.readPage
+			: i18n.ts._pages.newPage,
 	icon: 'ti ti-pencil',
 }));
 </script>

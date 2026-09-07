@@ -47,17 +47,20 @@ import { pleaseLogin } from '@/features/auth/please-login.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 
-const props = withDefaults(defineProps<{
-	user: Misskey.entities.UserDetailed,
-	full?: boolean,
-	large?: boolean,
-}>(), {
-	full: false,
-	large: false,
-});
+const props = withDefaults(
+	defineProps<{
+		user: Misskey.entities.UserDetailed;
+		full?: boolean;
+		large?: boolean;
+	}>(),
+	{
+		full: false,
+		large: false,
+	},
+);
 
 const emit = defineEmits<{
-	(_: 'update:user', value: Misskey.entities.UserDetailed): void
+	(_: 'update:user', value: Misskey.entities.UserDetailed): void;
 }>();
 
 const isFollowing = ref(props.user.isFollowing);
@@ -68,8 +71,7 @@ const connection = useStream().useChannel('main');
 if (props.user.isFollowing == null && $i) {
 	misskeyApi('users/show', {
 		userId: props.user.id,
-	})
-		.then(onFollowChange);
+	}).then(onFollowChange);
 }
 
 function onFollowChange(user: Misskey.entities.UserDetailed) {
@@ -86,7 +88,9 @@ async function onClick() {
 			path: `/@${props.user.username}@${props.user.host ?? host}`,
 		},
 	});
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	wait.value = true;
 

@@ -9,8 +9,8 @@ import type { MiMeta } from '@/models/Meta.js';
 
 export const adminUpdateMetaParamDef = z.object({
 	disableRegistration: z.boolean().nullable().optional(),
-	signupRateLimitMinIntervalSeconds: z.int().min(0).max(86400).optional(),
-	signupRateLimitMaxPerHour: z.int().min(0).max(100000).optional(),
+	signupRateLimitMinIntervalSeconds: z.int().min(0).max(86_400).optional(),
+	signupRateLimitMaxPerHour: z.int().min(0).max(100_000).optional(),
 	pinnedUsers: z.array(z.string()).nullable().optional(),
 	hiddenTags: z.array(z.string()).nullable().optional(),
 	blockedHosts: z.array(z.string()).nullable().optional(),
@@ -172,8 +172,8 @@ export const adminUpdateMetaJsonSchema = {
 	type: 'object',
 	properties: {
 		disableRegistration: { type: 'boolean', nullable: true },
-		signupRateLimitMinIntervalSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
-		signupRateLimitMaxPerHour: { type: 'integer', minimum: 0, maximum: 100000 },
+		signupRateLimitMinIntervalSeconds: { type: 'integer', minimum: 0, maximum: 86_400 },
+		signupRateLimitMaxPerHour: { type: 'integer', minimum: 0, maximum: 100_000 },
 		pinnedUsers: {
 			type: 'array',
 			nullable: true,

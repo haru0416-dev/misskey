@@ -100,18 +100,25 @@ const isSensitive = ref(false);
 const allowRenoteToExternal = ref(true);
 const pinnedNoteIds = ref<Misskey.entities.Note['id'][]>([]);
 
-watch(() => bannerId.value, async () => {
-	if (bannerId.value == null) {
-		bannerUrl.value = null;
-	} else {
-		bannerUrl.value = (await misskeyApi('drive/files/show', {
-			fileId: bannerId.value,
-		})).url;
-	}
-});
+watch(
+	() => bannerId.value,
+	async () => {
+		if (bannerId.value == null) {
+			bannerUrl.value = null;
+		} else {
+			bannerUrl.value = (
+				await misskeyApi('drive/files/show', {
+					fileId: bannerId.value,
+				})
+			).url;
+		}
+	},
+);
 
 async function fetchChannel() {
-	if (props.channelId == null) return;
+	if (props.channelId == null) {
+		return;
+	}
 
 	const result = await misskeyApi('channels/show', {
 		channelId: props.channelId,
@@ -135,7 +142,9 @@ async function addPinnedNote() {
 	const { canceled, result: value } = await os.inputText({
 		title: i18n.ts.noteIdOrUrl,
 	});
-	if (canceled || value == null) return;
+	if (canceled || value == null) {
+		return;
+	}
 	const fromUrl = value.includes('/') ? value.split('/').pop() : null;
 	const note = await os.apiWithDialog('notes/show', {
 		noteId: fromUrl ?? value,
@@ -144,7 +153,7 @@ async function addPinnedNote() {
 }
 
 function removePinnedNote(id: string) {
-	pinnedNoteIds.value = pinnedNoteIds.value.filter(x => x !== id);
+	pinnedNoteIds.value = pinnedNoteIds.value.filter((x) => x !== id);
 }
 
 function save() {
@@ -164,7 +173,7 @@ function save() {
 			pinnedNoteIds: pinnedNoteIds.value,
 		});
 	} else {
-		os.apiWithDialog('channels/create', params).then(created => {
+		os.apiWithDialog('channels/create', params).then((created) => {
 			router.push('/channels/:channelId', {
 				params: {
 					channelId: created.id,
@@ -175,14 +184,18 @@ function save() {
 }
 
 async function archive() {
-	if (props.channelId == null) return;
+	if (props.channelId == null) {
+		return;
+	}
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
 		title: i18n.tsx.channelArchiveConfirmTitle({ name: name.value }),
 		text: i18n.ts.channelArchiveConfirmDescription,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	misskeyApi('channels/update', {
 		channelId: props.channelId,
@@ -196,7 +209,7 @@ function setBannerImage(evt: PointerEvent) {
 	selectFile({
 		anchorElement: evt.currentTarget ?? evt.target,
 		multiple: false,
-	}).then(file => {
+	}).then((file) => {
 		bannerId.value = file.id;
 	});
 }

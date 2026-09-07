@@ -15,14 +15,12 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { ApiError } from '../error.js';
 import { genLocalUserUri } from '../user/following.js';
-import {
-	addActivityContext,
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
-	type ApiRelayDeliverDependencies,
-} from '../activitypub/notes-ap.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { addActivityContext, deliverNoteActivityForApi, deliverToRelaysForApi } from '../activitypub/notes-ap.js';
+import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountPinDependencies = ApiRolePolicyDependencies &
@@ -108,7 +106,9 @@ export async function addPinnedForApi(
 	noteId: string,
 ): Promise<void> {
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
-	if (note == null) throw iPinNoSuchNoteError();
+	if (note == null) {
+		throw iPinNoSuchNoteError();
+	}
 
 	const policies = await getApiRolePolicies(deps, user as MiUser);
 	const result = await createUserNotePiningWithinLimitInDatabase(
@@ -120,8 +120,12 @@ export async function addPinnedForApi(
 		},
 		policies.pinLimit,
 	);
-	if (result === 'limitExceeded') throw iPinLimitExceededError();
-	if (result === 'alreadyPinned') throw iPinAlreadyPinnedError();
+	if (result === 'limitExceeded') {
+		throw iPinLimitExceededError();
+	}
+	if (result === 'alreadyPinned') {
+		throw iPinAlreadyPinnedError();
+	}
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
 		void deliverPinnedChangeForApi(deps, user as MiLocalUser, note.id, true).catch(() => {});
@@ -134,7 +138,9 @@ export async function removePinnedForApi(
 	noteId: string,
 ): Promise<void> {
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
-	if (note == null) throw iUnpinNoSuchNoteError();
+	if (note == null) {
+		throw iUnpinNoSuchNoteError();
+	}
 
 	await deleteUserNotePiningFromDatabase(deps.db, { userId: user.id, noteId: note.id });
 

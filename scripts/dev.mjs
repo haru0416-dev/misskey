@@ -44,7 +44,9 @@ async function runBun(args) {
 	const childProcess = spawnBun(args);
 	try {
 		const exitCode = await childProcess.exited;
-		if (exitCode !== 0) throw new Error(`${args.join(' ')} exited with code ${exitCode}`);
+		if (exitCode !== 0) {
+			throw new Error(`${args.join(' ')} exited with code ${exitCode}`);
+		}
 	} finally {
 		childProcesses.delete(childProcess);
 	}
@@ -55,7 +57,9 @@ function startBun(args) {
 	void childProcess.exited.then((exitCode) => {
 		childProcesses.delete(childProcess);
 		if (!shuttingDown) {
-			if (exitCode !== 0) console.error(`${args.join(' ')} exited with code ${exitCode}`);
+			if (exitCode !== 0) {
+				console.error(`${args.join(' ')} exited with code ${exitCode}`);
+			}
 			void shutdown(1);
 		}
 	});
@@ -67,7 +71,9 @@ async function stopChildProcess(childProcess) {
 			stdout: 'ignore',
 			stderr: 'ignore',
 		});
-		if ((await taskkill.exited) !== 0) childProcess.kill();
+		if ((await taskkill.exited) !== 0) {
+			childProcess.kill();
+		}
 	} else {
 		childProcess.kill();
 	}
@@ -76,7 +82,9 @@ async function stopChildProcess(childProcess) {
 }
 
 function shutdown(exitCode) {
-	if (shutdownPromise != null) return shutdownPromise;
+	if (shutdownPromise != null) {
+		return shutdownPromise;
+	}
 
 	shuttingDown = true;
 	shutdownPromise = (async () => {

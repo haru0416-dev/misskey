@@ -8,17 +8,20 @@
 // 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleQueueImportMuting, type QueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueImportMuting } from '@/queue/handlers/db.js';
+import type { QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -53,7 +56,9 @@ describe('hono-queue-db (importMuting)', () => {
 	});
 
 	afterEach(() => {
-		for (const server of servers) server.close();
+		for (const server of servers) {
+			server.close();
+		}
 		servers = [];
 	});
 

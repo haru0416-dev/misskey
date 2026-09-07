@@ -66,26 +66,29 @@ const choseAd = (): Ad | null => {
 		return props.specify;
 	}
 
-	const allAds = instance.ads.map(ad => store.mutedAds.includes(ad.id) ? {
-		...ad,
-		ratio: 0,
-	} : ad);
+	const allAds = instance.ads.map((ad) =>
+		store.mutedAds.includes(ad.id)
+			? {
+					...ad,
+					ratio: 0,
+				}
+			: ad,
+	);
 
-	let ads = props.preferForms ? allAds.filter(ad => props.preferForms!.includes(ad.place)) : allAds;
+	let ads = props.preferForms ? allAds.filter((ad) => props.preferForms!.includes(ad.place)) : allAds;
 
 	if (ads.length === 0) {
-		ads = allAds.filter(ad => ad.place === 'square');
+		ads = allAds.filter((ad) => ad.place === 'square');
 	}
 
-	const lowPriorityAds = ads.filter(ad => ad.ratio === 0);
-	ads = ads.filter(ad => ad.ratio !== 0);
+	const lowPriorityAds = ads.filter((ad) => ad.ratio === 0);
+	ads = ads.filter((ad) => ad.ratio !== 0);
 
 	if (ads.length === 0) {
 		if (lowPriorityAds.length !== 0) {
 			return lowPriorityAds[Math.floor(Math.random() * lowPriorityAds.length)] ?? null;
-		} else {
-			return null;
 		}
+		return null;
 	}
 
 	const totalFactor = ads.reduce((a, b) => a + b.ratio, 0);
@@ -95,9 +98,8 @@ const choseAd = (): Ad | null => {
 	for (const ad of ads) {
 		if (r >= stackedFactor && r <= stackedFactor + ad.ratio) {
 			return ad;
-		} else {
-			stackedFactor += ad.ratio;
 		}
+		stackedFactor += ad.ratio;
 	}
 
 	return null;
@@ -107,11 +109,15 @@ const chosen = ref(choseAd());
 
 const self = computed(() => chosen.value?.url.startsWith(local));
 
-const shouldHide = ref(!prefer.forceShowAds && $i && $i.policies.canHideAds && (props.specify == null));
+const shouldHide = ref(!prefer.forceShowAds && $i && $i.policies.canHideAds && props.specify == null);
 
 function reduceFrequency(): void {
-	if (chosen.value == null) return;
-	if (store.mutedAds.includes(chosen.value.id)) return;
+	if (chosen.value == null) {
+		return;
+	}
+	if (store.mutedAds.includes(chosen.value.id)) {
+		return;
+	}
 	store.set('mutedAds', [...store.mutedAds, chosen.value.id]);
 	os.success();
 	chosen.value = choseAd();

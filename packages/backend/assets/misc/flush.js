@@ -46,7 +46,7 @@
 			console.error(e);
 			setTimeout(() => {
 				location = '/';
-			}, 10000);
+			}, 10_000);
 		}
 	}
 

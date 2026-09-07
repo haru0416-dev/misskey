@@ -39,11 +39,8 @@ import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { getFanoutTimelineNotesForApi } from '@/server/rest/note/fanout-timeline.js';
-import {
-	renderKeyForApi,
-	renderPersonForApi,
-	type ApiAccountUpdateDependencies,
-} from '@/server/rest/account/account-update.js';
+import { renderKeyForApi, renderPersonForApi } from '@/server/rest/account/account-update.js';
+import type { ApiAccountUpdateDependencies } from '@/server/rest/account/account-update.js';
 import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
 import { renderNoteForApi, renderNoteOrRenoteActivityForApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
@@ -89,12 +86,16 @@ function apJson(c: Context, body: Record<string, unknown>, cacheControl = 'publi
 
 function apError(status: number, cacheControl?: string): Response {
 	const headers = new Headers({ Vary: 'Accept' });
-	if (cacheControl) headers.set('Cache-Control', cacheControl);
+	if (cacheControl) {
+		headers.set('Cache-Control', cacheControl);
+	}
 	return new Response(null, { status, headers });
 }
 
 function isSelfHost(configHost: string, host: string | null): boolean {
-	if (host == null) return true;
+	if (host == null) {
+		return true;
+	}
 	return toPuny(configHost) === toPuny(host);
 }
 
@@ -117,7 +118,9 @@ async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Pro
 }
 
 async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user: MiUser | null): Promise<Response> {
-	if (user == null) return apError(404);
+	if (user == null) {
+		return apError(404);
+	}
 
 	if (isRemoteUser(user)) {
 		if (user.uri == null || isSelfHost(deps.config.runtime.host, user.host)) {
@@ -142,7 +145,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return;
 		}
 
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
 		if (note == null || !['public', 'home'].includes(note.visibility) || note.localOnly) {
@@ -160,7 +165,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	});
 
 	app.get('/notes/:note/activity', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
 		if (note == null || note.userHost != null || !['public', 'home'].includes(note.visibility) || note.localOnly) {
@@ -168,23 +175,31 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		}
 
 		const activity = await packActivity(deps, note);
-		if (activity == null) return apError(404);
+		if (activity == null) {
+			return apError(404);
+		}
 
 		return apJson(c, withApContext(activity));
 	});
 
 	app.get('/users/:user/outbox', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const userId = c.req.param('user');
 		const sinceId = c.req.query('since_id') ?? null;
 		const untilId = c.req.query('until_id') ?? null;
 		const page = c.req.query('page') === 'true';
 
-		if (sinceId != null && untilId != null) return apError(400);
+		if (sinceId != null && untilId != null) {
+			return apError(400);
+		}
 
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, userId);
-		if (user == null) return apError(404);
+		if (user == null) {
+			return apError(404);
+		}
 
 		const limit = 20;
 		const partOf = `${deps.config.instance.url}/users/${userId}/outbox`;
@@ -211,8 +226,12 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 							ignoreAuthorFromMute: true,
 							excludePureRenotes: false,
 							noteFilter: (note) => {
-								if (note.visibility !== 'home' && note.visibility !== 'public') return false;
-								if (note.localOnly) return false;
+								if (note.visibility !== 'home' && note.visibility !== 'public') {
+									return false;
+								}
+								if (note.localOnly) {
+									return false;
+								}
 								return true;
 							},
 							dbFallback: getFromDb,
@@ -220,7 +239,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 					)
 				: await getFromDb(untilId, sinceId, limit);
 
-			if (sinceId) notes.reverse();
+			if (sinceId) {
+				notes.reverse();
+			}
 
 			const activities = (await Promise.all(notes.map((note) => packActivity(deps, note)))).filter(
 				(x): x is Record<string, unknown> => x != null,
@@ -253,14 +274,18 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	});
 
 	const renderFollowRelationCollection = async (c: Context, kind: 'followers' | 'following'): Promise<Response> => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const userId = c.req.param('user') ?? '';
 		const cursor = c.req.query('cursor') ?? null;
 		const page = c.req.query('page') === 'true';
 
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, userId);
-		if (user == null) return apError(404);
+		if (user == null) {
+			return apError(404);
+		}
 
 		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 		const visibility = kind === 'followers' ? profile.followersVisibility : profile.followingVisibility;
@@ -287,7 +312,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 						});
 
 			const inStock = followings.length === limit + 1;
-			if (inStock) followings.pop();
+			if (inStock) {
+				followings.pop();
+			}
 
 			const targetIds = followings.map((following) =>
 				kind === 'followers' ? following.followerId : following.followeeId,
@@ -331,10 +358,14 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	app.get('/users/:user/following', (c) => renderFollowRelationCollection(c, 'following'));
 
 	app.get('/users/:user/collections/featured', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
-		if (user == null) return apError(404);
+		if (user == null) {
+			return apError(404);
+		}
 
 		const pinings = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
 		const notes =
@@ -364,10 +395,14 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	});
 
 	app.get('/users/:user/publickey', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
-		if (user == null) return apError(404);
+		if (user == null) {
+			return apError(404);
+		}
 
 		const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
@@ -380,7 +415,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return;
 		}
 
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
 		return await renderUserInfo(deps, c, user?.isSuspended ? null : user);
@@ -390,35 +427,49 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
 	// このルートが無いと SPA フォールバックに落ちて HTML を返し、リモートが uri を解決できなくなる。
 	app.get('/emojis/:emoji', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, c.req.param('emoji'), null);
-		if (emoji == null || emoji.localOnly) return apError(404);
+		if (emoji == null || emoji.localOnly) {
+			return apError(404);
+		}
 
 		return apJson(c, withApContext(renderEmoji(deps.config, emoji)));
 	});
 
 	app.get('/likes/:like', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const reaction = await fetchNoteReactionByIdFromDatabase(deps.db, c.req.param('like'));
-		if (reaction == null) return apError(404);
+		if (reaction == null) {
+			return apError(404);
+		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, reaction.noteId);
-		if (note == null) return apError(404);
+		if (note == null) {
+			return apError(404);
+		}
 
 		return apJson(c, withApContext(await renderLikeForApi(deps, reaction, note)));
 	});
 
 	// フォロー成立前にも参照されるため、following の存在は確認しない。
 	app.get('/follows/:follower/:followee', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const [follower, followee] = await Promise.all([
 			fetchLocalUserByIdFromDatabase(deps.db, c.req.param('follower')),
 			fetchRemoteUserByIdFromDatabase(deps.db, c.req.param('followee')),
 		]);
-		if (follower == null || followee == null) return apError(404);
+		if (follower == null || followee == null) {
+			return apError(404);
+		}
 
 		return apJson(
 			c,
@@ -427,16 +478,22 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 	});
 
 	app.get('/follows/:followRequest', async (c) => {
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, c.req.param('followRequest'));
-		if (followRequest == null) return apError(404);
+		if (followRequest == null) {
+			return apError(404);
+		}
 
 		const [follower, followee] = await Promise.all([
 			fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
 			fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),
 		]);
-		if (follower == null || followee == null) return apError(404);
+		if (follower == null || followee == null) {
+			return apError(404);
+		}
 
 		return apJson(
 			c,
@@ -460,7 +517,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return;
 		}
 
-		if (deps.meta.federation === 'none') return apError(403);
+		if (deps.meta.federation === 'none') {
+			return apError(403);
+		}
 
 		const acct = Acct.parse(rest);
 		const host = isSelfHost(deps.config.runtime.host, acct.host) ? null : acct.host;

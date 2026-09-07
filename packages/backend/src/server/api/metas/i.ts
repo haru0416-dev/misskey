@@ -831,7 +831,7 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			limit: {
-				duration: 30000,
+				duration: 30_000,
 				max: 30,
 			},
 
@@ -859,7 +859,7 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			limit: {
-				duration: 30000,
+				duration: 30_000,
 				max: 30,
 			},
 

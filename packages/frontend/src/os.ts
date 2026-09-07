@@ -177,10 +177,10 @@ export const popups = ref<
 >([]);
 
 const zIndexes = {
-	veryLow: 500000,
-	low: 1000000,
-	middle: 2000000,
-	high: 3000000,
+	veryLow: 500_000,
+	low: 1_000_000,
+	middle: 2_000_000,
+	high: 3_000_000,
 };
 export function claimZIndex(priority: keyof typeof zIndexes = 'low'): number {
 	zIndexes[priority] += 100;
@@ -214,7 +214,9 @@ export function popup<T extends Component>(
 	const id = ++popupIdCount;
 	let disposed = false;
 	const dispose = () => {
-		if (disposed) return;
+		if (disposed) {
+			return;
+		}
 		disposed = true;
 		nextTick(() => {
 			popups.value = popups.value.filter((p) => p.id !== id);
@@ -865,7 +867,9 @@ export async function post(props: PostFormProps = {}): Promise<void> {
 				}
 			: {},
 	);
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 	return new Promise((resolve) => {
@@ -919,7 +923,9 @@ export function chooseFileFromPc(
 		input.type = 'file';
 		input.multiple = options.multiple ?? false;
 		input.onchange = () => {
-			if (!input.files) return res([]);
+			if (!input.files) {
+				return res([]);
+			}
 
 			res(Array.from(input.files));
 
@@ -944,7 +950,9 @@ export async function launchUploader(
 	},
 ): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
-		if (files.length === 0) return rej(new Error('no file selected'));
+		if (files.length === 0) {
+			return rej(new Error('no file selected'));
+		}
 		let dispose: () => void;
 		popupAsyncWithDialog(
 			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
@@ -956,7 +964,9 @@ export async function launchUploader(
 			},
 			{
 				done: (driveFiles) => {
-					if (driveFiles.length === 0) return rej(new Error('no file selected'));
+					if (driveFiles.length === 0) {
+						return rej(new Error('no file selected'));
+					}
 					res(driveFiles);
 				},
 				closed: () => dispose(),

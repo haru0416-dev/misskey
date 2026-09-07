@@ -25,7 +25,8 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
 import type { ApiMainStreamPublisher } from '../events.js';
-import { packMeDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { packMeDetailedForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiI2faDependencies = UserPackingDependencies & {
@@ -39,8 +40,12 @@ async function assertTwoFactorAuthenticatedForApi(
 	profile: MiUserProfile,
 	token: string | null | undefined,
 ): Promise<void> {
-	if (!profile.twoFactorEnabled) return;
-	if (token == null) throw new Error('authentication failed');
+	if (!profile.twoFactorEnabled) {
+		return;
+	}
+	if (token == null) {
+		throw new Error('authentication failed');
+	}
 
 	try {
 		await deps.userAuthService.twoFactorAuthenticate(profile, token);
@@ -55,7 +60,9 @@ function incorrectPasswordError(id: string): ApiError {
 
 async function assertPasswordMatchedForApi(profile: MiUserProfile, password: string, errorId: string): Promise<void> {
 	const passwordMatched = await comparePassword(password, profile.password ?? '');
-	if (!passwordMatched) throw incorrectPasswordError(errorId);
+	if (!passwordMatched) {
+		throw incorrectPasswordError(errorId);
+	}
 }
 
 async function publishMeUpdatedForApi(deps: ApiI2faDependencies, me: MiLocalUser): Promise<void> {
@@ -160,12 +167,16 @@ export async function handleApiI2faRegisterKey(
 	const params = parseApiParams(i2faRegisterKeyParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, me.id);
-	if (profile == null) throw userNotFoundError();
+	if (profile == null) {
+		throw userNotFoundError();
+	}
 
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '38769596-efe2-4faf-9bec-abbb3f2cd9ba');
 
-	if (!profile.twoFactorEnabled) throw twoFactorNotEnabledError('bf32b864-449b-47b8-974e-f9a5468546f1');
+	if (!profile.twoFactorEnabled) {
+		throw twoFactorNotEnabledError('bf32b864-449b-47b8-974e-f9a5468546f1');
+	}
 
 	return await deps.webAuthnService.initiateRegistration(me.id, me.username, me.name ?? undefined);
 }
@@ -188,7 +199,9 @@ export async function handleApiI2faKeyDone(
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
 
-	if (!profile.twoFactorEnabled) throw twoFactorNotEnabledError('798d6847-b1ed-4f9c-b1f9-163c42655995');
+	if (!profile.twoFactorEnabled) {
+		throw twoFactorNotEnabledError('798d6847-b1ed-4f9c-b1f9-163c42655995');
+	}
 
 	const keyInfo = await deps.webAuthnService.verifyRegistration(
 		me.id,

@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
-import { galleryLike, type GalleryLikeInsert, type GalleryLikeRow } from '@/db/schema/gallery-like.js';
+import { and, asc, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { galleryLike } from '@/db/schema/gallery-like.js';
+import type { GalleryLikeInsert, GalleryLikeRow } from '@/db/schema/gallery-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiUser } from '@/models/User.js';
@@ -83,7 +85,9 @@ export async function listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(
 	userId: MiUser['id'],
 	postIds: MiGalleryPost['id'][],
 ): Promise<MiGalleryPost['id'][]> {
-	if (postIds.length === 0) return [];
+	if (postIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ postId: galleryLike.postId })

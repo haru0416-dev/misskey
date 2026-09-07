@@ -150,7 +150,9 @@ const step = ref(0);
 let token: string | null = null;
 
 function createAccount() {
-	if (accountCreating.value) return;
+	if (accountCreating.value) {
+		return;
+	}
 	accountCreating.value = true;
 
 	const _close = os.waiting();
@@ -159,31 +161,34 @@ function createAccount() {
 		username: username.value,
 		password: password.value,
 		setupPassword: setupPassword.value === '' ? null : setupPassword.value,
-	}).then(res => {
-		token = res.token;
-		accountCreated.value = true;
-	}).catch((err) => {
-		accountCreating.value = false;
+	})
+		.then((res) => {
+			token = res.token;
+			accountCreated.value = true;
+		})
+		.catch((err) => {
+			accountCreating.value = false;
 
-		let title = i18n.ts.somethingHappened;
-		let text = err.message + '\n' + err.id;
+			let title = i18n.ts.somethingHappened;
+			let text = err.message + '\n' + err.id;
 
-		if (err.code === 'ACCESS_DENIED') {
-			title = i18n.ts.permissionDeniedError;
-			text = i18n.ts.operationForbidden;
-		} else if (err.code === 'INCORRECT_INITIAL_PASSWORD') {
-			title = i18n.ts.permissionDeniedError;
-			text = i18n.ts.incorrectPassword;
-		}
+			if (err.code === 'ACCESS_DENIED') {
+				title = i18n.ts.permissionDeniedError;
+				text = i18n.ts.operationForbidden;
+			} else if (err.code === 'INCORRECT_INITIAL_PASSWORD') {
+				title = i18n.ts.permissionDeniedError;
+				text = i18n.ts.incorrectPassword;
+			}
 
-		os.alert({
-			type: 'error',
-			title,
-			text,
+			os.alert({
+				type: 'error',
+				title,
+				text,
+			});
+		})
+		.finally(() => {
+			_close();
 		});
-	}).finally(() => {
-		_close();
-	});
 }
 
 function onWizardFinished() {
@@ -195,7 +200,9 @@ function skipSettings() {
 }
 
 function finish() {
-	if (token == null) return;
+	if (token == null) {
+		return;
+	}
 	login(token);
 }
 </script>

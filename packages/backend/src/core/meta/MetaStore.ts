@@ -4,7 +4,8 @@
  */
 
 import { desc, eq } from 'drizzle-orm';
-import { meta as metaTable, type MetaInsert, type MetaRow } from '@/db/schema/meta.js';
+import { meta as metaTable } from '@/db/schema/meta.js';
+import type { MetaInsert, MetaRow } from '@/db/schema/meta.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 

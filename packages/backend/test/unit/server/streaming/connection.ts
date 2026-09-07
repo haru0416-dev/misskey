@@ -11,15 +11,13 @@
 import { EventEmitter } from 'node:events';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createChatRoomInDatabase } from '@/core/chat/ChatRoomStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	StreamConnection,
-	refreshStreamConnections,
-	type StreamConnectionDependencies,
-} from '@/server/streaming/connection.js';
+import { StreamConnection, refreshStreamConnections } from '@/server/streaming/connection.js';
+import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: StreamConnectionDependencies, prefix: string): Promise<MiUser> {

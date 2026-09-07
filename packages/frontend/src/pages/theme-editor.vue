@@ -144,12 +144,16 @@ function showPreview() {
 	os.pageWindow('/preview');
 }
 
-function setBgColor(color: typeof bgColors[number]) {
+function setBgColor(color: (typeof bgColors)[number]) {
 	if (theme.value.base !== color.kind) {
 		const base = color.kind === 'dark' ? darkTheme : lightTheme;
 		for (const prop of Object.keys(base.props)) {
-			if (prop === 'accent') continue;
-			if (prop === 'fg') continue;
+			if (prop === 'accent') {
+				continue;
+			}
+			if (prop === 'fg') {
+				continue;
+			}
 			theme.value.props[prop] = base.props[prop];
 		}
 	}
@@ -157,8 +161,14 @@ function setBgColor(color: typeof bgColors[number]) {
 	theme.value.props['bg'] = color.color;
 
 	if (theme.value.props['fg']) {
-		const matchedFgColor = fgColors.find(x => [tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(tinycolor(theme.value.props['fg']).toRgbString()));
-		if (matchedFgColor) setFgColor(matchedFgColor);
+		const matchedFgColor = fgColors.find((x) =>
+			[tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(
+				tinycolor(theme.value.props['fg']).toRgbString(),
+			),
+		);
+		if (matchedFgColor) {
+			setFgColor(matchedFgColor);
+		}
 	}
 }
 
@@ -166,7 +176,7 @@ function setAccentColor(color: string) {
 	theme.value.props['accent'] = color;
 }
 
-function setFgColor(color: typeof fgColors[number]) {
+function setFgColor(color: (typeof fgColors)[number]) {
 	theme.value.props['fg'] = theme.value.base === 'light' ? color.forLight : color.forDark;
 }
 
@@ -192,11 +202,15 @@ async function saveAs() {
 		title: i18n.ts.name,
 		minLength: 1,
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	theme.value.id = genId();
 	theme.value.name = name;
-	if (description.value) theme.value.desc = description.value;
+	if (description.value) {
+		theme.value.desc = description.value;
+	}
 	await addTheme(theme.value);
 	themeManager.updateTheme(theme.value);
 	if (store.darkMode) {
@@ -213,17 +227,20 @@ async function saveAs() {
 
 watch(theme, apply, { deep: true });
 
-const headerActions = computed(() => [{
-	asFullButton: true,
-	icon: 'ti ti-eye',
-	text: i18n.ts.preview,
-	handler: showPreview,
-}, {
-	asFullButton: true,
-	icon: 'ti ti-check',
-	text: i18n.ts.saveAs,
-	handler: saveAs,
-}]);
+const headerActions = computed(() => [
+	{
+		asFullButton: true,
+		icon: 'ti ti-eye',
+		text: i18n.ts.preview,
+		handler: showPreview,
+	},
+	{
+		asFullButton: true,
+		icon: 'ti ti-check',
+		text: i18n.ts.saveAs,
+		handler: saveAs,
+	},
+]);
 
 const headerTabs = computed(() => []);
 

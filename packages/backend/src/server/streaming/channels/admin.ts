@@ -11,7 +11,9 @@ export const honoStreamChannelAdmin: StreamChannelDefinition<unknown> = {
 	requireCredential: true,
 	kind: 'read:admin:stream',
 	init: async (_deps, ctx) => {
-		if (!ctx.user) return false;
+		if (!ctx.user) {
+			return false;
+		}
 
 		const handler = (data: { type: string; body: JsonValue }) => {
 			ctx.send(data.type, data.body);

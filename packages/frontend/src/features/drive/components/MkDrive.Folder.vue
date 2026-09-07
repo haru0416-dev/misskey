@@ -45,14 +45,17 @@ import { globalEvents } from '@/events.js';
 import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
 import { selectDriveFolder } from '@/features/drive/drive.js';
 
-const props = withDefaults(defineProps<{
-	folder: Misskey.entities.DriveFolder;
-	isSelected?: boolean;
-	selectMode?: boolean;
-}>(), {
-	isSelected: false,
-	selectMode: false,
-});
+const props = withDefaults(
+	defineProps<{
+		folder: Misskey.entities.DriveFolder;
+		isSelected?: boolean;
+		selectMode?: boolean;
+	}>(),
+	{
+		isSelected: false,
+		selectMode: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'chosen', v: Misskey.entities.DriveFolder): void;
@@ -85,7 +88,9 @@ function onMouseout() {
 }
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// 自分自身がドラッグされている場合
 	if (isDragging.value) {
@@ -118,7 +123,9 @@ function onDragover(ev: DragEvent) {
 }
 
 function onDragenter() {
-	if (!isDragging.value) draghover.value = true;
+	if (!isDragging.value) {
+		draghover.value = true;
+	}
 }
 
 function onDragleave() {
@@ -128,7 +135,9 @@ function onDragleave() {
 function onDrop(ev: DragEvent) {
 	draghover.value = false;
 
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	// ファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
@@ -141,14 +150,17 @@ function onDrop(ev: DragEvent) {
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
 			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map(f => f.id),
+				fileIds: droppedData.map((f) => f.id),
 				folderId: props.folder.id,
 			}).then(() => {
-				globalEvents.emit('driveFilesUpdated', droppedData.map(x => ({
-					...x,
-					folderId: props.folder.id,
-					folder: props.folder,
-				})));
+				globalEvents.emit(
+					'driveFilesUpdated',
+					droppedData.map((x) => ({
+						...x,
+						folderId: props.folder.id,
+						folder: props.folder,
+					})),
+				);
 			});
 		}
 	}
@@ -159,44 +171,55 @@ function onDrop(ev: DragEvent) {
 		const droppedData = getDragData(ev, 'driveFolders');
 		if (droppedData != null) {
 			const droppedFolder = droppedData[0];
-			if (droppedFolder == null) return;
+			if (droppedFolder == null) {
+				return;
+			}
 
 			// 移動先が自分自身ならreject
-			if (droppedFolder.id === props.folder.id) return;
+			if (droppedFolder.id === props.folder.id) {
+				return;
+			}
 
 			misskeyApi('drive/folders/update', {
 				folderId: droppedFolder.id,
 				parentId: props.folder.id,
-			}).then(() => {
-				globalEvents.emit('driveFoldersUpdated', [droppedFolder].map(x => ({
-					...x,
-					parentId: props.folder.id,
-					parent: props.folder,
-				})));
-			}).catch(err => {
-				switch (err.code) {
-					case 'RECURSIVE_NESTING':
-						claimAchievement('driveFolderCircularReference');
-						os.alert({
-							type: 'error',
-							title: i18n.ts.unableToProcess,
-							text: i18n.ts.circularReferenceFolder,
-						});
-						break;
-					default:
-						os.alert({
-							type: 'error',
-							text: i18n.ts.somethingHappened,
-						});
-				}
-			});
+			})
+				.then(() => {
+					globalEvents.emit(
+						'driveFoldersUpdated',
+						[droppedFolder].map((x) => ({
+							...x,
+							parentId: props.folder.id,
+							parent: props.folder,
+						})),
+					);
+				})
+				.catch((err) => {
+					switch (err.code) {
+						case 'RECURSIVE_NESTING':
+							claimAchievement('driveFolderCircularReference');
+							os.alert({
+								type: 'error',
+								title: i18n.ts.unableToProcess,
+								text: i18n.ts.circularReferenceFolder,
+							});
+							break;
+						default:
+							os.alert({
+								type: 'error',
+								text: i18n.ts.somethingHappened,
+							});
+					}
+				});
 		}
 	}
 	//#endregion
 }
 
 function onDragstart(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer) {
+		return;
+	}
 
 	ev.dataTransfer.effectAllowed = 'move';
 	setDragData(ev, 'driveFolders', [props.folder]);
@@ -218,32 +241,40 @@ function rename() {
 		placeholder: i18n.ts.inputNewFolderName,
 		default: props.folder.name,
 	}).then(({ canceled, result: name }) => {
-		if (canceled) return;
+		if (canceled) {
+			return;
+		}
 		misskeyApi('drive/folders/update', {
 			folderId: props.folder.id,
 			name: name,
 		}).then(() => {
-			globalEvents.emit('driveFoldersUpdated', [{
-				...props.folder,
-				name: name,
-			}]);
+			globalEvents.emit('driveFoldersUpdated', [
+				{
+					...props.folder,
+					name: name,
+				},
+			]);
 		});
 	});
 }
 
 function move() {
 	selectDriveFolder(null).then(({ canceled, folders }) => {
-		if (canceled || (folders[0] && folders[0].id === props.folder.id)) return;
+		if (canceled || (folders[0] && folders[0].id === props.folder.id)) {
+			return;
+		}
 
 		misskeyApi('drive/folders/update', {
 			folderId: props.folder.id,
 			parentId: folders[0] ? folders[0].id : null,
 		}).then(() => {
-			globalEvents.emit('driveFoldersUpdated', [{
-				...props.folder,
-				parentId: folders[0] ? folders[0].id : null,
-				parent: folders[0] ?? null,
-			}]);
+			globalEvents.emit('driveFoldersUpdated', [
+				{
+					...props.folder,
+					parentId: folders[0] ? folders[0].id : null,
+					parent: folders[0] ?? null,
+				},
+			]);
 		});
 	});
 }
@@ -251,27 +282,29 @@ function move() {
 function deleteFolder() {
 	misskeyApi('drive/folders/delete', {
 		folderId: props.folder.id,
-	}).then(() => {
-		if (prefer.uploadFolder === props.folder.id) {
-			prefer.commit('uploadFolder', null);
-		}
-		globalEvents.emit('driveFoldersDeleted', [props.folder]);
-	}).catch(err => {
-		switch (err.id) {
-			case 'b0fc8a17-963c-405d-bfbc-859a487295e1':
-				os.alert({
-					type: 'error',
-					title: i18n.ts.unableToDelete,
-					text: i18n.ts.hasChildFilesOrFolders,
-				});
-				break;
-			default:
-				os.alert({
-					type: 'error',
-					text: i18n.ts.unableToDelete,
-				});
-		}
-	});
+	})
+		.then(() => {
+			if (prefer.uploadFolder === props.folder.id) {
+				prefer.commit('uploadFolder', null);
+			}
+			globalEvents.emit('driveFoldersDeleted', [props.folder]);
+		})
+		.catch((err) => {
+			switch (err.id) {
+				case 'b0fc8a17-963c-405d-bfbc-859a487295e1':
+					os.alert({
+						type: 'error',
+						title: i18n.ts.unableToDelete,
+						text: i18n.ts.hasChildFilesOrFolders,
+					});
+					break;
+				default:
+					os.alert({
+						type: 'error',
+						text: i18n.ts.unableToDelete,
+					});
+			}
+		});
 }
 
 function setAsUploadFolder() {
@@ -280,38 +313,52 @@ function setAsUploadFolder() {
 
 function onContextmenu(ev: PointerEvent) {
 	let menu: MenuItem[];
-	menu = [{
-		text: i18n.ts.openInWindow,
-		icon: 'ti ti-app-window',
-		action: async () => {
-			const { dispose } = await os.popupAsyncWithDialog(import('@/features/drive/components/MkDriveWindow.vue').then(x => x.default), {
-				initialFolder: props.folder,
-			}, {
-				closed: () => dispose(),
-			});
-		},
-	}, { type: 'divider' }, {
-		text: i18n.ts.rename,
-		icon: 'ti ti-forms',
-		action: rename,
-	}, {
-		text: i18n.ts.move,
-		icon: 'ti ti ti-folder-symlink',
-		action: move,
-	}, { type: 'divider' }, {
-		text: i18n.ts.delete,
-		icon: 'ti ti-trash',
-		danger: true,
-		action: deleteFolder,
-	}];
-	if (prefer.devMode) {
-		menu = menu.concat([{ type: 'divider' }, {
-			icon: 'ti ti-hash',
-			text: i18n.ts.copyFolderId,
-			action: () => {
-				copyToClipboard(props.folder.id);
+	menu = [
+		{
+			text: i18n.ts.openInWindow,
+			icon: 'ti ti-app-window',
+			action: async () => {
+				const { dispose } = await os.popupAsyncWithDialog(
+					import('@/features/drive/components/MkDriveWindow.vue').then((x) => x.default),
+					{
+						initialFolder: props.folder,
+					},
+					{
+						closed: () => dispose(),
+					},
+				);
 			},
-		}]);
+		},
+		{ type: 'divider' },
+		{
+			text: i18n.ts.rename,
+			icon: 'ti ti-forms',
+			action: rename,
+		},
+		{
+			text: i18n.ts.move,
+			icon: 'ti ti ti-folder-symlink',
+			action: move,
+		},
+		{ type: 'divider' },
+		{
+			text: i18n.ts.delete,
+			icon: 'ti ti-trash',
+			danger: true,
+			action: deleteFolder,
+		},
+	];
+	if (prefer.devMode) {
+		menu = menu.concat([
+			{ type: 'divider' },
+			{
+				icon: 'ti ti-hash',
+				text: i18n.ts.copyFolderId,
+				action: () => {
+					copyToClipboard(props.folder.id);
+				},
+			},
+		]);
 	}
 	os.contextMenu(menu, ev);
 }

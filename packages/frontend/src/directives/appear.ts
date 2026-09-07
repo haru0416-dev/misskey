@@ -15,7 +15,9 @@ interface HTMLElementWithObserver extends HTMLElement {
 export const appearDirective = {
 	mounted(src, binding) {
 		const fn = binding.value;
-		if (fn == null) return;
+		if (fn == null) {
+			return;
+		}
 
 		const check = throttle<IntersectionObserverCallback>(500, (entries) => {
 			if (entries.some((entry) => entry.isIntersecting)) {
@@ -32,7 +34,9 @@ export const appearDirective = {
 	},
 
 	unmounted(src) {
-		if (src._observer_) src._observer_.disconnect();
+		if (src._observer_) {
+			src._observer_.disconnect();
+		}
 		src._cancelThrottle_?.();
 	},
 } as Directive<HTMLElementWithObserver, (() => Awaitable<void>) | null | undefined>;

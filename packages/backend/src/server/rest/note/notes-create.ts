@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { toPuny } from '@/misc/to-puny.js';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
+import { FanoutTimelinePush } from './fanout-timeline-push.js';
 import { z } from 'zod';
 import { DB_MAX_NOTE_CW_LENGTH, DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
@@ -46,10 +47,9 @@ import {
 import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
 import {
-	listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase,
+	listFollowersForNoteDeliveryForRequest,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-	listNotificationFollowerIdsByFolloweeIdFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
 import {
@@ -88,7 +88,7 @@ import type { DbQueue, EndedPollNotificationQueue, UserWebhookDeliverQueue } fro
 import type { DbNotePostCreateJobData, DbNotePostCreateStage, UserWebhookDeliverJobData } from '@/queue/types.js';
 import type * as Bull from 'bullmq';
 import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
-import { listWebhooksFromDatabase } from '@/core/webhook/WebhookStore.js';
+import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { addNoteToAntennasForApi } from '../antenna/antennas.js';
 import { ApiError } from '../error.js';
@@ -98,22 +98,24 @@ import {
 	deliverToRelaysForApi,
 	renderNoteOrRenoteActivityForApi,
 	resolveRemoteRecipientForApi,
-	type ApiNoteApDependencies,
-	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
+import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import {
 	createPackNoteHintsForUsersForApi,
 	createPackNoteStaticHintForApi,
 	packNoteForApi,
 	isVisibleForMeForApi,
-	type ApiNoteDependencies,
 } from './note.js';
+import type { ApiNoteDependencies } from './note.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
-import { getApiRolePolicies, getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiRolePolicies, getApiUserRoles } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { pushSwNotificationForApi } from '../notification/push-notification.js';
-import { packNotificationForApi, type ApiNotificationsListDependencies } from '../notification/notifications-list.js';
-import { xaddApiNotifications, type ApiNotificationDependencies } from '../notification/notification.js';
+import { packNotificationForApi } from '../notification/notifications-list.js';
+import type { ApiNotificationsListDependencies } from '../notification/notifications-list.js';
+import { xaddApiNotifications } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import { packUserLiteForApi } from '../user/user.js';
 import type {
 	ApiAntennaStreamPublisher,
@@ -145,13 +147,17 @@ export type ApiNotesCreateDependencies = ApiNoteDependencies &
 	};
 
 function isSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) return false;
+	if (!silencedHosts || host == null) {
+		return false;
+	}
 	const lowerHost = host.toLowerCase();
 	return silencedHosts.some((target) => `.${lowerHost}`.endsWith(`.${target}`));
 }
 
 function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) return false;
+	if (!silencedHosts || host == null) {
+		return false;
+	}
 	return silencedHosts.includes(host.toLowerCase());
 }
 
@@ -174,21 +180,31 @@ export async function updateHashtagsRankingsForApi(
 	const candidates = [...new Set(hashtags)].filter(
 		(hashtag) => !hiddenTags.has(hashtag) && !isKeywordIncluded(hashtag, deps.meta.sensitiveWords),
 	);
-	if (candidates.length === 0) return;
+	if (candidates.length === 0) {
+		return;
+	}
 
 	const checkPipeline = deps.redis.pipeline();
 	for (const hashtag of candidates) {
 		checkPipeline.sismember(`hashtagUsers:${hashtag}`, userId);
 	}
 	const checkResults = await checkPipeline.exec();
-	if (checkResults == null) throw new Error('Failed to check hashtag ranking users');
+	if (checkResults == null) {
+		throw new Error('Failed to check hashtag ranking users');
+	}
 	const hashtagsToUpdate: string[] = [];
 	for (let i = 0; i < checkResults.length; i++) {
 		const [error, exists] = checkResults[i]!;
-		if (error != null) throw error;
-		if (exists !== 1) hashtagsToUpdate.push(candidates[i]!);
+		if (error != null) {
+			throw error;
+		}
+		if (exists !== 1) {
+			hashtagsToUpdate.push(candidates[i]!);
+		}
 	}
-	if (hashtagsToUpdate.length === 0) return;
+	if (hashtagsToUpdate.length === 0) {
+		return;
+	}
 
 	// YYYYMMDDHHmm (10分間隔)
 	const now = new Date();
@@ -333,7 +349,9 @@ async function extractMentionedUsersForApi(
 	user: { host: MiUser['host'] },
 	tokens: mfm.MfmNode[],
 ): Promise<MiUser[]> {
-	if (tokens == null) return [];
+	if (tokens == null) {
+		return [];
+	}
 	const mentions = mfm.extractMentions(tokens);
 	const accounts = mentions.map((mention) => {
 		const host = mention.host ?? user.host;
@@ -350,37 +368,13 @@ async function extractMentionedUsersForApi(
 	const resolvedUsers: MiUser[] = [];
 	for (const account of accounts) {
 		const resolved = userByAccount.get(`${account.username}@${account.host ?? ''}`);
-		if (resolved == null || seenUserIds.has(resolved.id)) continue;
+		if (resolved == null || seenUserIds.has(resolved.id)) {
+			continue;
+		}
 		seenUserIds.add(resolved.id);
 		resolvedUsers.push(resolved);
 	}
 	return resolvedUsers;
-}
-
-async function pushFanoutTimelineForApi(
-	deps: ApiNotesCreateDependencies,
-	tl: string,
-	id: string,
-	maxlen: number,
-	pipeline: Redis.ChainableCommander,
-): Promise<void> {
-	const date = parseId(id).date;
-	if (date.getTime() > Date.now() - 1000 * 60 * 3) {
-		pipeline.lrem('list:' + tl, 0, id);
-		pipeline.lpush('list:' + tl, id);
-		if (Math.random() < 0.1) {
-			pipeline.ltrim('list:' + tl, 0, maxlen - 1);
-		}
-	} else {
-		const lastId = await deps.redisForTimelines.lindex('list:' + tl, -1);
-		if (lastId == null || date.getTime() > parseId(lastId).date.getTime()) {
-			await deps.redisForTimelines
-				.multi()
-				.lrem('list:' + tl, 0, id)
-				.lpush('list:' + tl, id)
-				.exec();
-		}
-	}
 }
 
 type NoteNotificationType = 'mention' | 'reply' | 'renote' | 'quote' | 'note' | 'reaction';
@@ -393,7 +387,9 @@ type NoteNotificationRequest = {
 };
 
 function deterministicUuidv7(sourceId: string, key: string): string {
-	if (!/^[0-9a-f]{32}$/.test(sourceId)) throw new Error(`Invalid UUIDv7 source: ${sourceId}`);
+	if (!/^[0-9a-f]{32}$/.test(sourceId)) {
+		throw new Error(`Invalid UUIDv7 source: ${sourceId}`);
+	}
 	const hash = createHash('sha256').update(key).digest('hex');
 	const variant = ((Number.parseInt(hash[3]!, 16) & 0x3) | 0x8).toString(16);
 	return `${sourceId.slice(0, 12)}7${hash.slice(0, 3)}${variant}${hash.slice(4, 19)}`;
@@ -407,7 +403,9 @@ async function hydrateNotificationNoteRelationsForApi(
 	const noteById = new Map<MiNote['id'], MiNote>(roots.map((note) => [note.id, note]));
 	const register = (note: MiNote): MiNote => {
 		const existing = noteById.get(note.id);
-		if (existing != null) return existing;
+		if (existing != null) {
+			return existing;
+		}
 		const cloned = { ...note } as MiNote;
 		noteById.set(cloned.id, cloned);
 		return cloned;
@@ -416,11 +414,17 @@ async function hydrateNotificationNoteRelationsForApi(
 	let detailFrontier = roots;
 	while (detailFrontier.length > 0) {
 		const current = detailFrontier.filter((note) => !expanded.has(note.id));
-		if (current.length === 0) break;
+		if (current.length === 0) {
+			break;
+		}
 		for (const note of current) {
 			expanded.add(note.id);
-			if (note.reply) note.reply = register(note.reply);
-			if (note.renote) note.renote = register(note.renote);
+			if (note.reply) {
+				note.reply = register(note.reply);
+			}
+			if (note.renote) {
+				note.renote = register(note.renote);
+			}
 		}
 
 		const missingIds = [
@@ -436,10 +440,14 @@ async function hydrateNotificationNoteRelationsForApi(
 
 		const nextFrontier: MiNote[] = [];
 		for (const note of current) {
-			if (note.replyId) note.reply = noteById.get(note.replyId) ?? null;
+			if (note.replyId) {
+				note.reply = noteById.get(note.replyId) ?? null;
+			}
 			if (note.renoteId) {
 				note.renote = noteById.get(note.renoteId) ?? null;
-				if (note.renote != null) nextFrontier.push(note.renote);
+				if (note.renote != null) {
+					nextFrontier.push(note.renote);
+				}
 			}
 		}
 		detailFrontier = nextFrontier;
@@ -454,7 +462,9 @@ async function createNoteNotificationsForApi(
 	requests: readonly NoteNotificationRequest[],
 ): Promise<void> {
 	const pending = requests.filter((request) => request.notifieeId !== notifierId);
-	if (pending.length === 0) return;
+	if (pending.length === 0) {
+		return;
+	}
 
 	const notifieeIds = [...new Set(pending.map((request) => request.notifieeId))];
 	const [profiles, muterIds] = await Promise.all([
@@ -473,7 +483,9 @@ async function createNoteNotificationsForApi(
 			};
 		})
 		.filter((candidate) => candidate.receiveConfig?.type !== 'never' && !muterIdSet.has(candidate.request.notifieeId));
-	if (candidates.length === 0) return;
+	if (candidates.length === 0) {
+		return;
+	}
 
 	const notifieeFollowingCandidateIds = [
 		...new Set(
@@ -517,16 +529,26 @@ async function createNoteNotificationsForApi(
 	const accepted = candidates.filter((candidate) => {
 		const config = candidate.receiveConfig;
 		const notifieeId = candidate.request.notifieeId;
-		if (config?.type === 'following') return notifieeFollowingNotifierIdSet.has(notifieeId);
-		if (config?.type === 'follower') return notifierFollowingNotifieeIdSet.has(notifieeId);
-		if (config?.type === 'mutualFollow')
+		if (config?.type === 'following') {
+			return notifieeFollowingNotifierIdSet.has(notifieeId);
+		}
+		if (config?.type === 'follower') {
+			return notifierFollowingNotifieeIdSet.has(notifieeId);
+		}
+		if (config?.type === 'mutualFollow') {
 			return notifieeFollowingNotifierIdSet.has(notifieeId) && notifierFollowingNotifieeIdSet.has(notifieeId);
-		if (config?.type === 'followingOrFollower')
+		}
+		if (config?.type === 'followingOrFollower') {
 			return notifieeFollowingNotifierIdSet.has(notifieeId) || notifierFollowingNotifieeIdSet.has(notifieeId);
-		if (config?.type === 'list') return memberUserListIds.has(config.userListId);
+		}
+		if (config?.type === 'list') {
+			return memberUserListIds.has(config.userListId);
+		}
 		return true;
 	});
-	if (accepted.length === 0) return;
+	if (accepted.length === 0) {
+		return;
+	}
 
 	const stored = accepted.map((candidate) => {
 		const notificationId =
@@ -556,11 +578,15 @@ async function createNoteNotificationsForApi(
 	);
 
 	const notifier = await fetchUserByIdFromDatabase(deps.db, notifierId);
-	if (notifier == null || notifier.isSuspended) return;
+	if (notifier == null || notifier.isSuspended) {
+		return;
+	}
 	const publishable = stored.filter(
 		(item) => notifier.host == null || !item.profile?.mutedInstances.includes(notifier.host),
 	);
-	if (publishable.length === 0) return;
+	if (publishable.length === 0) {
+		return;
+	}
 
 	const noteIds = [
 		...new Set(
@@ -570,12 +596,16 @@ async function createNoteNotificationsForApi(
 		),
 	];
 	const fetchedNotes = await listNotesByIdsFromDatabase(deps.db, noteIds);
-	if (fetchedNotes.length === 0) return;
+	if (fetchedNotes.length === 0) {
+		return;
+	}
 	const notes = await hydrateNotificationNoteRelationsForApi(deps, fetchedNotes);
 	const notePackHint = await createPackNoteStaticHintForApi(deps, notes);
 	const packedNotifier =
 		notePackHint.packedUsers.get(notifier.id) ?? (await packUserLiteForApi(deps, notifier).catch(() => null));
-	if (packedNotifier == null) return;
+	if (packedNotifier == null) {
+		return;
+	}
 	const packedUsers = new Map([[notifier.id, packedNotifier]]);
 	const noteSources = new Map(notes.map((note) => [note.id, note]));
 
@@ -631,17 +661,23 @@ class NotificationManager {
 	) {}
 
 	push(notifiee: MiUser['id'], reason: NotificationType): void {
-		if (this.notifier.id === notifiee) return;
+		if (this.notifier.id === notifiee) {
+			return;
+		}
 		const exist = this.queue.get(notifiee);
 		if (exist) {
-			if (reason !== 'mention') exist.reason = reason;
+			if (reason !== 'mention') {
+				exist.reason = reason;
+			}
 		} else {
 			this.queue.set(notifiee, { reason, target: notifiee });
 		}
 	}
 
 	async notify(deps: ApiNotesCreateDependencies): Promise<void> {
-		if (this.queue.size === 0) return;
+		if (this.queue.size === 0) {
+			return;
+		}
 
 		let visibleUserIds: Set<MiUser['id']> | null;
 		switch (this.note.visibility) {
@@ -661,7 +697,9 @@ class NotificationManager {
 		const requests: NoteNotificationRequest[] = [];
 		for (const x of this.queue.values()) {
 			const isVisibleToTarget = visibleUserIds === null || visibleUserIds.has(x.target);
-			if (!isVisibleToTarget) continue;
+			if (!isVisibleToTarget) {
+				continue;
+			}
 
 			if (x.reason === 'renote') {
 				requests.push({
@@ -689,7 +727,9 @@ export async function fetchOrRegisterInstanceForApi(
 ): Promise<{ id: string; host: string }> {
 	const puny = toPuny(host);
 	const existing = await fetchInstanceByHostFromDatabase(deps.db, puny);
-	if (existing != null) return existing;
+	if (existing != null) {
+		return existing;
+	}
 
 	return await createInstanceIfNotExistsInDatabase(deps.db, {
 		id: genId(),
@@ -705,7 +745,7 @@ async function enqueueUserWebhookForApi(
 	note: unknown,
 	idempotencyKey?: string,
 ): Promise<void> {
-	const webhooks = await listWebhooksFromDatabase(deps.db, { userId, isActive: true, on: [type] });
+	const webhooks = await listActiveWebhooksByUserIdAndEventFromDatabase(deps.db, userId, type);
 
 	await Promise.all(
 		webhooks.map((webhook) => {
@@ -786,7 +826,9 @@ function isNoopPostCreateStage(
 		case 'followerNotifications':
 			return data.reply != null || data.visibility === 'specified';
 		case 'notifications': {
-			if (silent) return true;
+			if (silent) {
+				return true;
+			}
 			const hasLocalMention = mentionedUsers.some((u) => u.host == null);
 			const hasLocalReplyTarget = data.reply != null && data.reply.userHost === null;
 			const hasLocalRenoteTarget = data.renote != null && data.renote.userHost === null;
@@ -929,7 +971,9 @@ async function insertNoteForApi(
 			}
 
 			await incrementUserNotesCountAndUpdatedAtInDatabase(tx, user.id, new Date());
-			if (data.reply) await incrementNoteRepliesCountInDatabase(tx, data.reply.id, 1);
+			if (data.reply) {
+				await incrementNoteRepliesCountInDatabase(tx, data.reply.id, 1);
+			}
 			if (data.renote && data.renote.userId !== user.id && !user.isBot) {
 				await incrementNoteRenoteCountInDatabase(tx, data.renote.id, 1);
 			}
@@ -951,7 +995,9 @@ async function insertNoteForApi(
 			if (data.channel) {
 				await incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(tx, data.channel.id, new Date());
 				const count = await countNotesByUserIdAndChannelIdFromDatabase(tx, user.id, data.channel.id);
-				if (count === 1) await incrementChannelUsersCountInDatabase(tx, data.channel.id);
+				if (count === 1) {
+					await incrementChannelUsersCountInDatabase(tx, data.channel.id);
+				}
 			}
 
 			const note = { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
@@ -1045,7 +1091,9 @@ async function postNoteCreatedForApi(
 	}
 
 	if (stage === 'followerNotifications' && data.reply == null) {
-		const followerIds = await listNotificationFollowerIdsByFolloweeIdFromDatabase(deps.db, user.id);
+		const followerIds = (await listFollowersForNoteDeliveryForRequest(deps.db, user.id))
+			.filter((follower) => follower.notify === 'normal')
+			.map((follower) => follower.followerId);
 		if (note.visibility !== 'specified') {
 			const isPureRenote = isRenoteData(data) && !isQuoteData(data);
 			const renoteMuterIds = isPureRenote
@@ -1078,7 +1126,7 @@ async function postNoteCreatedForApi(
 
 	if (!silent && stage === 'streamsAndRole') {
 		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
-		await addNoteToRoleTimelinesForApi(deps, noteObj);
+		await addNoteToRoleTimelinesForApi(deps, noteObj, note.user);
 		deps.publishNotesStream?.(noteObj);
 	}
 
@@ -1129,7 +1177,9 @@ async function postNoteCreatedForApi(
 		}
 
 		await nm.notify(deps);
-		for (const publish of publishMainStreamEvents) publish();
+		for (const publish of publishMainStreamEvents) {
+			publish();
+		}
 	}
 
 	if (!silent && stage === 'webhooks') {
@@ -1186,11 +1236,15 @@ async function postNoteCreatedForApi(
 
 		if (data.reply && data.reply.userHost !== null) {
 			const u = await resolveRemoteRecipientForApi(deps, data.reply.userId);
-			if (u) directRecipients.push(u);
+			if (u) {
+				directRecipients.push(u);
+			}
 		}
 		if (data.renote && data.renote.userHost !== null) {
 			const u = await resolveRemoteRecipientForApi(deps, data.renote.userId);
-			if (u) directRecipients.push(u);
+			if (u) {
+				directRecipients.push(u);
+			}
 		}
 
 		await deliverNoteActivityForApi(deps, user, activity, {
@@ -1210,7 +1264,9 @@ export async function handleQueueNotePostCreate(
 	job: Bull.Job<DbNotePostCreateJobData>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, job.data.noteId);
-	if (note == null) return;
+	if (note == null) {
+		return;
+	}
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 	const [mentionedUsers, files, reply, renote, channel, poll, visibleUsers] = await Promise.all([
 		listUsersByIdsFromDatabase(deps.db, job.data.mentionedUserIds, { includeSuspended: true }),
@@ -1255,17 +1311,23 @@ export async function handleQueueNotePostCreate(
 	);
 }
 
-async function addNoteToRoleTimelinesForApi(deps: ApiNotesCreateDependencies, noteObj: Packed<'Note'>): Promise<void> {
-	// コンディショナルロール評価には full MiUser が必要 (呼び出し元は部分型しか持たない) のためここでフェッチする。
-	const user = await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId);
+async function addNoteToRoleTimelinesForApi(
+	deps: ApiNotesCreateDependencies,
+	noteObj: Packed<'Note'>,
+	author: MiUser | null,
+): Promise<void> {
+	// コンディショナルロールの評価には full MiUser が要る。投稿経路では note.user に載っている。
+	const user = author ?? (await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId));
 	const roles = await getApiUserRoles(deps, user);
-	if (roles.length === 0) return;
-
-	const r = deps.redisForTimelines.pipeline();
-	for (const role of roles) {
-		await pushFanoutTimelineForApi(deps, `roleTimeline:${role.id}`, noteObj.id, 1000, r);
+	if (roles.length === 0) {
+		return;
 	}
-	await r.exec();
+
+	const r = new FanoutTimelinePush(noteObj.id);
+	for (const role of roles) {
+		r.add(`roleTimeline:${role.id}`, 1000);
+	}
+	await r.flush(deps.redisForTimelines);
 	for (const role of roles) {
 		deps.publishRoleTimelineStream?.(role.id, 'note', noteObj);
 	}
@@ -1276,46 +1338,27 @@ async function pushNoteToFanoutTimelinesForApi(
 	note: MiNote,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 ): Promise<void> {
-	const r = deps.redisForTimelines.pipeline();
+	const r = new FanoutTimelinePush(note.id);
 
 	if (note.channelId) {
-		await pushFanoutTimelineForApi(
-			deps,
-			`channelTimeline:${note.channelId}`,
-			note.id,
-			deps.config.limits.channelTimelineNotes,
-			r,
-		);
-		await pushFanoutTimelineForApi(
-			deps,
+		r.add(`channelTimeline:${note.channelId}`, deps.config.limits.channelTimelineNotes);
+		r.add(
 			`userTimelineWithChannel:${user.id}`,
-			note.id,
 			note.userHost == null ? deps.meta.perLocalUserUserTimelineCacheMax : deps.meta.perRemoteUserUserTimelineCacheMax,
-			r,
 		);
 
 		const channelFollowerIds = await listFollowerUserIdsByChannelIdFromDatabase(deps.db, note.channelId);
 		for (const followerId of channelFollowerIds) {
-			await pushFanoutTimelineForApi(
-				deps,
-				`homeTimeline:${followerId}`,
-				note.id,
-				deps.meta.perUserHomeTimelineCacheMax,
-				r,
-			);
+			r.add(`homeTimeline:${followerId}`, deps.meta.perUserHomeTimelineCacheMax);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForApi(
-					deps,
-					`homeTimelineWithFiles:${followerId}`,
-					note.id,
-					deps.meta.perUserHomeTimelineCacheMax / 2,
-					r,
-				);
+				r.add(`homeTimelineWithFiles:${followerId}`, deps.meta.perUserHomeTimelineCacheMax / 2);
 			}
 		}
 	} else {
 		let [followings, userListMemberships] = await Promise.all([
-			listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase(deps.db, user.id),
+			listFollowersForNoteDeliveryForRequest(deps.db, user.id).then((followers) =>
+				followers.filter((follower) => follower.followerHost == null && !follower.isFollowerHibernated),
+			),
 			listUserListMembershipsForFanoutByUserIdFromDatabase(deps.db, user.id),
 		]);
 		const followerIdSet = new Set(followings.map((following) => following.followerId));
@@ -1328,24 +1371,16 @@ async function pushNoteToFanoutTimelinesForApi(
 		}
 
 		for (const following of followings) {
-			if (note.visibility === 'specified' && !visibleUserIdSet.has(following.followerId)) continue;
-			if (isReply(note, following.followerId) && !following.withReplies) continue;
+			if (note.visibility === 'specified' && !visibleUserIdSet.has(following.followerId)) {
+				continue;
+			}
+			if (isReply(note, following.followerId) && !following.withReplies) {
+				continue;
+			}
 
-			await pushFanoutTimelineForApi(
-				deps,
-				`homeTimeline:${following.followerId}`,
-				note.id,
-				deps.meta.perUserHomeTimelineCacheMax,
-				r,
-			);
+			r.add(`homeTimeline:${following.followerId}`, deps.meta.perUserHomeTimelineCacheMax);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForApi(
-					deps,
-					`homeTimelineWithFiles:${following.followerId}`,
-					note.id,
-					deps.meta.perUserHomeTimelineCacheMax / 2,
-					r,
-				);
+				r.add(`homeTimelineWithFiles:${following.followerId}`, deps.meta.perUserHomeTimelineCacheMax / 2);
 			}
 		}
 
@@ -1354,96 +1389,66 @@ async function pushNoteToFanoutTimelinesForApi(
 				note.visibility === 'specified' &&
 				note.userId !== membership.userListUserId &&
 				!visibleUserIdSet.has(membership.userListUserId)
-			)
+			) {
 				continue;
-			if (isReply(note, membership.userListUserId) && !membership.withReplies) continue;
+			}
+			if (isReply(note, membership.userListUserId) && !membership.withReplies) {
+				continue;
+			}
 
-			await pushFanoutTimelineForApi(
-				deps,
-				`userListTimeline:${membership.userListId}`,
-				note.id,
-				deps.meta.perUserListTimelineCacheMax,
-				r,
-			);
+			r.add(`userListTimeline:${membership.userListId}`, deps.meta.perUserListTimelineCacheMax);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForApi(
-					deps,
-					`userListTimelineWithFiles:${membership.userListId}`,
-					note.id,
-					deps.meta.perUserListTimelineCacheMax / 2,
-					r,
-				);
+				r.add(`userListTimelineWithFiles:${membership.userListId}`, deps.meta.perUserListTimelineCacheMax / 2);
 			}
 		}
 
 		if (note.userHost == null) {
 			if (note.visibility !== 'specified' || !visibleUserIdSet.has(user.id)) {
-				await pushFanoutTimelineForApi(
-					deps,
-					`homeTimeline:${user.id}`,
-					note.id,
-					deps.meta.perUserHomeTimelineCacheMax,
-					r,
-				);
+				r.add(`homeTimeline:${user.id}`, deps.meta.perUserHomeTimelineCacheMax);
 				if (note.fileIds.length > 0) {
-					await pushFanoutTimelineForApi(
-						deps,
-						`homeTimelineWithFiles:${user.id}`,
-						note.id,
-						deps.meta.perUserHomeTimelineCacheMax / 2,
-						r,
-					);
+					r.add(`homeTimelineWithFiles:${user.id}`, deps.meta.perUserHomeTimelineCacheMax / 2);
 				}
 			}
 		}
 
 		if (isReply(note)) {
-			await pushFanoutTimelineForApi(
-				deps,
+			r.add(
 				`userTimelineWithReplies:${user.id}`,
-				note.id,
 				note.userHost == null
 					? deps.meta.perLocalUserUserTimelineCacheMax
 					: deps.meta.perRemoteUserUserTimelineCacheMax,
-				r,
 			);
 			if (note.visibility === 'public' && note.userHost == null) {
-				await pushFanoutTimelineForApi(deps, 'localTimelineWithReplies', note.id, 300, r);
+				r.add('localTimelineWithReplies', 300);
 				if (note.replyUserHost == null) {
-					await pushFanoutTimelineForApi(deps, `localTimelineWithReplyTo:${note.replyUserId}`, note.id, 300 / 10, r);
+					r.add(`localTimelineWithReplyTo:${note.replyUserId}`, 300 / 10);
 				}
 			}
 		} else {
-			await pushFanoutTimelineForApi(
-				deps,
+			r.add(
 				`userTimeline:${user.id}`,
-				note.id,
 				note.userHost == null
 					? deps.meta.perLocalUserUserTimelineCacheMax
 					: deps.meta.perRemoteUserUserTimelineCacheMax,
-				r,
 			);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForApi(
-					deps,
+				r.add(
 					`userTimelineWithFiles:${user.id}`,
-					note.id,
 					note.userHost == null
 						? deps.meta.perLocalUserUserTimelineCacheMax / 2
 						: deps.meta.perRemoteUserUserTimelineCacheMax / 2,
-					r,
 				);
 			}
 			if (note.visibility === 'public' && note.userHost == null) {
-				await pushFanoutTimelineForApi(deps, 'localTimeline', note.id, 1000, r);
+				r.add('localTimeline', 1000);
 				if (note.fileIds.length > 0) {
-					await pushFanoutTimelineForApi(deps, 'localTimelineWithFiles', note.id, 500, r);
+					r.add('localTimelineWithFiles', 500);
 				}
 			}
 		}
 	}
 
-	await r.exec();
+	await r.flush(deps.redisForTimelines);
 }
 
 export async function createNoteForApi(
@@ -1498,11 +1503,17 @@ export async function createNoteForApi(
 			case 'public':
 				break;
 			case 'home':
-				if (data.visibility === 'public') data.visibility = 'home';
+				if (data.visibility === 'public') {
+					data.visibility = 'home';
+				}
 				break;
 			case 'followers':
-				if (data.renote.userId !== user.id) throw new Error('Renote target is not public or home');
-				if (data.visibility === 'public' || data.visibility === 'home') data.visibility = 'followers';
+				if (data.renote.userId !== user.id) {
+					throw new Error('Renote target is not public or home');
+				}
+				if (data.visibility === 'public' || data.visibility === 'home') {
+					data.visibility = 'followers';
+				}
 				break;
 			case 'specified':
 				throw new Error('Renote target is not public or home');
@@ -1512,7 +1523,9 @@ export async function createNoteForApi(
 	if (isRenoteData(data) && !isQuoteData(data)) {
 		if (data.renote.userHost === null && data.renote.userId !== user.id) {
 			const blocked = await blockingExistsInDatabase(deps.db, data.renote.userId, user.id);
-			if (blocked) throw new Error('blocked');
+			if (blocked) {
+				throw new Error('blocked');
+			}
 		}
 	}
 
@@ -1529,13 +1542,21 @@ export async function createNoteForApi(
 		}
 	}
 
-	if (data.renote && data.renote.localOnly && data.channel == null) data.localOnly = true;
-	if (data.reply && data.reply.localOnly && data.channel == null) data.localOnly = true;
+	if (data.renote && data.renote.localOnly && data.channel == null) {
+		data.localOnly = true;
+	}
+	if (data.reply && data.reply.localOnly && data.channel == null) {
+		data.localOnly = true;
+	}
 
 	if (data.text) {
-		if (data.text.length > DB_MAX_NOTE_TEXT_LENGTH) data.text = data.text.slice(0, DB_MAX_NOTE_TEXT_LENGTH);
+		if (data.text.length > DB_MAX_NOTE_TEXT_LENGTH) {
+			data.text = data.text.slice(0, DB_MAX_NOTE_TEXT_LENGTH);
+		}
 		data.text = data.text.trim();
-		if (data.text === '') data.text = null;
+		if (data.text === '') {
+			data.text = null;
+		}
 	} else {
 		data.text = null;
 	}
@@ -1561,7 +1582,9 @@ export async function createNoteForApi(
 		mentionedUsers = data.apMentions ?? (await extractMentionedUsersForApi(deps, user, combined));
 	}
 
-	if (isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) emojis = [];
+	if (isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) {
+		emojis = [];
+	}
 
 	tags = tags.filter((tag) => Array.from(tag).length <= 128).splice(0, 32);
 
@@ -1577,7 +1600,9 @@ export async function createNoteForApi(
 	}
 
 	if (data.visibility === 'specified') {
-		if (data.visibleUsers == null) throw new Error('invalid param');
+		if (data.visibleUsers == null) {
+			throw new Error('invalid param');
+		}
 		const visibleUserIds = new Set(data.visibleUsers.map((user) => user.id));
 		if (data.reply && !visibleUserIds.has(data.reply.userId)) {
 			const replyUser = replyUserForVisibility ?? (await fetchUserByIdOrFailFromDatabase(deps.db, data.reply.userId));
@@ -1604,6 +1629,9 @@ export async function createNoteForApi(
 	const persisted = await persist((db) =>
 		insertNoteForApi(deps, user, data, tags, emojis, finalMentionedUsers, silent, db),
 	);
+	// 各ステージの pack (ストリーム配信・webhook・応答) と条件付きロールの評価が同じ投稿者を別々に
+	// 読み直していた (1 投稿で 4 回)。挿入後の行を 1 回だけ読み、note.user として共有する。
+	persisted.note.user = await fetchUserByIdOrFailFromDatabase(deps.db, user.id);
 	// 行はステージ毎に独立しているが、成功経路では claim もステージ毎のトランザクションも
 	// 張らず、完了した行をまとめて1本の DELETE で消す。落ちた場合は未完了の行が残り、
 	// リース失効後にキューワーカーが該当ステージだけを再実行する。
@@ -1706,18 +1734,26 @@ export async function fetchAndCreateNoteForApi(
 		const found = await listDriveFilesByIdsFromDatabase(deps.db, data.fileIds);
 		const map = new Map(found.filter((f) => f.userId === user.id).map((f) => [f.id, f]));
 		files = data.fileIds.map((id) => map.get(id)).filter((f): f is MiDriveFile => f != null);
-		if (files.length !== data.fileIds.length) throw noSuchFileError();
+		if (files.length !== data.fileIds.length) {
+			throw noSuchFileError();
+		}
 	}
 
 	let renote: MiNote | null = null;
 	if (data.renoteId != null) {
 		renote = await fetchNoteByIdFromDatabase(deps.db, data.renoteId);
-		if (renote == null) throw noSuchRenoteTargetError();
-		if (isRenote(renote) && !isQuote(renote)) throw cannotReRenoteError();
+		if (renote == null) {
+			throw noSuchRenoteTargetError();
+		}
+		if (isRenote(renote) && !isQuote(renote)) {
+			throw cannotReRenoteError();
+		}
 
 		if (renote.userId !== user.id) {
 			const blocked = await blockingExistsInDatabase(deps.db, renote.userId, user.id);
-			if (blocked) throw youHaveBeenBlockedError();
+			if (blocked) {
+				throw youHaveBeenBlockedError();
+			}
 		}
 
 		if ((renote.visibility === 'followers' && renote.userId !== user.id) || renote.visibility === 'specified') {
@@ -1726,23 +1762,36 @@ export async function fetchAndCreateNoteForApi(
 
 		if (renote.channelId && renote.channelId !== data.channelId) {
 			const renoteChannel = await fetchChannelByIdFromDatabase(deps.db, renote.channelId);
-			if (renoteChannel == null) throw noSuchChannelError();
-			if (!renoteChannel.allowRenoteToExternal) throw cannotRenoteOutsideOfChannelError();
+			if (renoteChannel == null) {
+				throw noSuchChannelError();
+			}
+			if (!renoteChannel.allowRenoteToExternal) {
+				throw cannotRenoteOutsideOfChannelError();
+			}
 		}
 	}
 
 	let reply: MiNote | null = null;
 	if (data.replyId != null) {
 		reply = await fetchNoteByIdFromDatabase(deps.db, data.replyId);
-		if (reply == null) throw noSuchReplyTargetError();
-		if (isRenote(reply) && !isQuote(reply)) throw cannotReplyToPureRenoteError();
-		if (!(await isVisibleForMeForApi(deps, reply, user.id))) throw cannotReplyToInvisibleNoteError();
-		if (reply.visibility === 'specified' && data.visibility !== 'specified')
+		if (reply == null) {
+			throw noSuchReplyTargetError();
+		}
+		if (isRenote(reply) && !isQuote(reply)) {
+			throw cannotReplyToPureRenoteError();
+		}
+		if (!(await isVisibleForMeForApi(deps, reply, user.id))) {
+			throw cannotReplyToInvisibleNoteError();
+		}
+		if (reply.visibility === 'specified' && data.visibility !== 'specified') {
 			throw cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibilityError();
+		}
 
 		if (reply.userId !== user.id) {
 			const blocked = await blockingExistsInDatabase(deps.db, reply.userId, user.id);
-			if (blocked) throw youHaveBeenBlockedError();
+			if (blocked) {
+				throw youHaveBeenBlockedError();
+			}
 		}
 	}
 
@@ -1753,7 +1802,9 @@ export async function fetchAndCreateNoteForApi(
 	let channel: MiChannel | null = null;
 	if (data.channelId != null) {
 		channel = await fetchChannelByIdFromDatabase(deps.db, data.channelId);
-		if (channel == null || channel.isArchived) throw noSuchChannelError();
+		if (channel == null || channel.isArchived) {
+			throw noSuchChannelError();
+		}
 	}
 
 	return await createNoteForApi(
@@ -1867,10 +1918,16 @@ export async function handleApiNotesCreate(
 
 		return { createdNote: await packNoteForApi(deps, note, me) };
 	} catch (err) {
-		if (err instanceof ApiError) throw err;
+		if (err instanceof ApiError) {
+			throw err;
+		}
 		if (err instanceof IdentifiableError) {
-			if (err.id === '689ee33f-f97c-479a-ac49-1b9f8140af99') throw containsProhibitedWordsError();
-			if (err.id === '9f466dab-c856-48cd-9e65-ff90ff750580') throw containsTooManyMentionsError();
+			if (err.id === '689ee33f-f97c-479a-ac49-1b9f8140af99') {
+				throw containsProhibitedWordsError();
+			}
+			if (err.id === '9f466dab-c856-48cd-9e65-ff90ff750580') {
+				throw containsTooManyMentionsError();
+			}
 		}
 		throw err;
 	}

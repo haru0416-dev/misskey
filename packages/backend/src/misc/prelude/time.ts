@@ -4,15 +4,17 @@
  */
 
 const dateTimeIntervals = {
-	day: 86400000,
-	hour: 3600000,
+	day: 86_400_000,
+	hour: 3_600_000,
 	ms: 1,
 };
 
 export function dateUTC(time: number[]): Date {
 	const getPart = (index: number): number => {
 		const part = time[index];
-		if (part == null) throw new Error('wrong number of arguments');
+		if (part == null) {
+			throw new Error('wrong number of arguments');
+		}
 		return part;
 	};
 
@@ -40,7 +42,9 @@ export function dateUTC(time: number[]): Date {
 			throw new Error('wrong number of arguments');
 	}
 
-	if (Number.isNaN(d)) throw new Error('wrong number of arguments');
+	if (Number.isNaN(d)) {
+		throw new Error('wrong number of arguments');
+	}
 
 	return new Date(d);
 }

@@ -58,7 +58,9 @@ export function assertApiRouteContract(app: Pick<Hono, 'routes'>): void {
 
 	for (const route of routes as ApiRoute[]) {
 		const routeKey = `${route.method} ${route.path}`;
-		if (metadataFreeRoutes.has(routeKey)) continue;
+		if (metadataFreeRoutes.has(routeKey)) {
+			continue;
+		}
 		if (route.method !== 'GET' && route.method !== 'POST' && route.method !== 'QUERY') {
 			errors.push(`Unexpected API route method: ${routeKey}`);
 			continue;

@@ -86,7 +86,9 @@ if (prefer['deck.profile'] == null) {
 
 function forceSaveCurrentDeckProfile() {
 	const currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
-	if (currentProfile == null) return;
+	if (currentProfile == null) {
+		return;
+	}
 
 	const newProfile = deepClone(currentProfile);
 	newProfile.columns = columns.value;
@@ -110,8 +112,12 @@ function switchProfile(profile: DeckProfile) {
 }
 
 function addProfile(name: string) {
-	if (name.trim() === '') return;
-	if (prefer['deck.profiles'].find((p) => p.name === name)) return;
+	if (name.trim() === '') {
+		return;
+	}
+	if (prefer['deck.profiles'].find((p) => p.name === name)) {
+		return;
+	}
 
 	const newProfile: DeckProfile = {
 		id: genId(),
@@ -135,12 +141,16 @@ export function deleteProfile(name: string): void {
 		createFirstProfile();
 	} else {
 		const firstProfile = prefer['deck.profiles'][0];
-		if (firstProfile != null) switchProfile(firstProfile);
+		if (firstProfile != null) {
+			switchProfile(firstProfile);
+		}
 	}
 }
 
 export function addColumn(column: Column) {
-	if (column.name === undefined) column.name = null;
+	if (column.name === undefined) {
+		column.name = null;
+	}
 	columns.value.push(column);
 	layout.value.push([column.id]);
 	saveCurrentDeckProfile();
@@ -157,14 +167,20 @@ export function swapColumn(a: Column['id'], b: Column['id']) {
 	const bX = layout.value.findIndex((ids) => ids.includes(b));
 	const aRow = layout.value[aX];
 	const bRow = layout.value[bX];
-	if (aRow == null || bRow == null) return;
+	if (aRow == null || bRow == null) {
+		return;
+	}
 	const aY = aRow.findIndex((id) => id === a);
 	const bY = bRow.findIndex((id) => id === b);
-	if (aY < 0 || bY < 0) return;
+	if (aY < 0 || bY < 0) {
+		return;
+	}
 	const newLayout = deepClone(layout.value);
 	const newARow = newLayout[aX];
 	const newBRow = newLayout[bX];
-	if (newARow == null || newBRow == null) return;
+	if (newARow == null || newBRow == null) {
+		return;
+	}
 	newARow[aY] = b;
 	newBRow[bY] = a;
 	layout.value = newLayout;
@@ -211,7 +227,9 @@ export function swapUpColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
 	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
 	const sourceIds = layout.value[idsIndex];
-	if (sourceIds == null) return;
+	if (sourceIds == null) {
+		return;
+	}
 	const ids = deepClone(sourceIds);
 	ids.some((x, i) => {
 		if (x === id) {
@@ -234,7 +252,9 @@ export function swapDownColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
 	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
 	const sourceIds = layout.value[idsIndex];
-	if (sourceIds == null) return;
+	if (sourceIds == null) {
+		return;
+	}
 	const ids = deepClone(sourceIds);
 	ids.some((x, i) => {
 		if (x === id) {
@@ -256,10 +276,14 @@ export function swapDownColumn(id: Column['id']) {
 export function stackLeftColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
 	const i = layout.value.findIndex((ids) => ids.includes(id));
-	if (i <= 0) return;
+	if (i <= 0) {
+		return;
+	}
 	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
 	const left = newLayout[i - 1];
-	if (left == null) return;
+	if (left == null) {
+		return;
+	}
 	left.push(id);
 	newLayout = newLayout.filter((ids) => ids.length > 0);
 	layout.value = newLayout;
@@ -270,7 +294,9 @@ export function popRightColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
 	const i = layout.value.findIndex((ids) => ids.includes(id));
 	const affected = newLayout[i];
-	if (affected == null) return;
+	if (affected == null) {
+		return;
+	}
 	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
 	newLayout.splice(i + 1, 0, [id]);
 	newLayout = newLayout.filter((ids) => ids.length > 0);
@@ -291,8 +317,12 @@ export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
-	if (column == null) return;
-	if (column.widgets == null) column.widgets = [];
+	if (column == null) {
+		return;
+	}
+	if (column.widgets == null) {
+		column.widgets = [];
+	}
 	column.widgets.unshift(widget);
 	newColumns[columnIndex] = column;
 	columns.value = newColumns;
@@ -303,8 +333,12 @@ export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
-	if (column == null) return;
-	if (column.widgets == null) column.widgets = [];
+	if (column == null) {
+		return;
+	}
+	if (column.widgets == null) {
+		column.widgets = [];
+	}
 	column.widgets = column.widgets.filter((w) => w.id !== widget.id);
 	newColumns[columnIndex] = column;
 	columns.value = newColumns;
@@ -315,7 +349,9 @@ export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
-	if (column == null) return;
+	if (column == null) {
+		return;
+	}
 	column.widgets = widgets;
 	newColumns[columnIndex] = column;
 	columns.value = newColumns;
@@ -326,8 +362,12 @@ export function updateColumnWidget(id: Column['id'], widgetId: string, widgetDat
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
-	if (column == null) return;
-	if (column.widgets == null) column.widgets = [];
+	if (column == null) {
+		return;
+	}
+	if (column.widgets == null) {
+		column.widgets = [];
+	}
 	column.widgets = column.widgets.map((w) =>
 		w.id === widgetId
 			? {
@@ -345,7 +385,9 @@ export function updateColumn(id: Column['id'], column: Partial<Column>) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const currentColumn = newColumns[columnIndex];
-	if (currentColumn == null) return;
+	if (currentColumn == null) {
+		return;
+	}
 	for (const [k, v] of Object.entries(column)) {
 		(currentColumn[k as keyof typeof column] as any) = v;
 	}
@@ -386,7 +428,9 @@ export function switchProfileMenu(ev: PointerEvent) {
 					minLength: 1,
 				});
 
-				if (canceled || name == null || name.trim() === '') return;
+				if (canceled || name == null || name.trim() === '') {
+					return;
+				}
 
 				addProfile(name);
 			},

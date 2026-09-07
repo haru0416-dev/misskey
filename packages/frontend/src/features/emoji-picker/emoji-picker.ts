@@ -48,10 +48,14 @@ class EmojiPicker {
 			},
 			{
 				done: (emoji: string) => {
-					if (onChosen) onChosen(emoji);
+					if (onChosen) {
+						onChosen(emoji);
+					}
 				},
 				closed: () => {
-					if (onClosed) onClosed();
+					if (onClosed) {
+						onClosed();
+					}
 					dispose();
 				},
 			},

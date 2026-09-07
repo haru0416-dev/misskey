@@ -4,7 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { userPublickey, type UserPublickeyInsert, type UserPublickeyRow } from '@/db/schema/user-publickey.js';
+import { userPublickey } from '@/db/schema/user-publickey.js';
+import type { UserPublickeyInsert, UserPublickeyRow } from '@/db/schema/user-publickey.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';

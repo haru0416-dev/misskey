@@ -59,14 +59,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
 import { genId } from '@/utility/id.js';
 
-const particles = ref<{
-	id: string,
-	x: number,
-	y: number,
-	size: number,
-	dur: number,
-	color: string
-}[]>([]);
+const particles = ref<
+	{
+		id: string;
+		x: number;
+		y: number;
+		size: number;
+		dur: number;
+		color: string;
+	}[]
+>([]);
 const el = useTemplateRef('el');
 const width = ref(0);
 const height = ref(0);
@@ -76,38 +78,49 @@ let ro: ResizeObserver | undefined;
 
 onMounted(() => {
 	ro = new ResizeObserver((entries, observer) => {
-		if (el.value == null) return;
+		if (el.value == null) {
+			return;
+		}
 		width.value = el.value.offsetWidth + 64;
 		height.value = el.value.offsetHeight + 64;
 	});
-	if (el.value) ro.observe(el.value);
+	if (el.value) {
+		ro.observe(el.value);
+	}
 	const add = () => {
-		if (stop) return;
-		const x = (Math.random() * (width.value - 64));
-		const y = (Math.random() * (height.value - 64));
+		if (stop) {
+			return;
+		}
+		const x = Math.random() * (width.value - 64);
+		const y = Math.random() * (height.value - 64);
 		const sizeFactor = Math.random();
 		const particle = {
 			id: genId(),
 			x,
 			y,
-			size: 0.2 + ((sizeFactor / 10) * 3),
-			dur: 1000 + (sizeFactor * 1000),
+			size: 0.2 + (sizeFactor / 10) * 3,
+			dur: 1000 + sizeFactor * 1000,
 			color: colors[Math.floor(Math.random() * colors.length)] ?? '#FFE202',
 		};
 		particles.value.push(particle);
 		window.setTimeout(() => {
-			particles.value = particles.value.filter(x => x.id !== particle.id);
+			particles.value = particles.value.filter((x) => x.id !== particle.id);
 		}, particle.dur - 100);
 
-		window.setTimeout(() => {
-			add();
-		}, 500 + (Math.random() * 500));
+		window.setTimeout(
+			() => {
+				add();
+			},
+			500 + Math.random() * 500,
+		);
 	};
 	add();
 });
 
 onUnmounted(() => {
-	if (ro) ro.disconnect();
+	if (ro) {
+		ro.disconnect();
+	}
 	stop = true;
 });
 </script>

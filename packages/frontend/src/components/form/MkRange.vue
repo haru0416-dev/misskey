@@ -51,25 +51,38 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, onMounted, onUnmounted, onBeforeUnmount, ref, useId, useTemplateRef, watch } from 'vue';
+import {
+	computed,
+	defineAsyncComponent,
+	onMounted,
+	onUnmounted,
+	onBeforeUnmount,
+	ref,
+	useId,
+	useTemplateRef,
+	watch,
+} from 'vue';
 import { isTouchUsing } from '@/utility/touch.js';
 import * as os from '@/os.js';
 
-const props = withDefaults(defineProps<{
-	modelValue: number;
-	disabled?: boolean;
-	min: number;
-	max: number;
-	step?: number;
-	textConverter?: (value: number) => string,
-	showTicks?: boolean;
-	easing?: boolean;
-	continuousUpdate?: boolean;
-}>(), {
-	step: 1,
-	textConverter: (v: number) => (Math.round(v * 1000) / 1000).toString(),
-	easing: false,
-});
+const props = withDefaults(
+	defineProps<{
+		modelValue: number;
+		disabled?: boolean;
+		min: number;
+		max: number;
+		step?: number;
+		textConverter?: (value: number) => string;
+		showTicks?: boolean;
+		easing?: boolean;
+		continuousUpdate?: boolean;
+	}>(),
+	{
+		step: 1,
+		textConverter: (v: number) => (Math.round(v * 1000) / 1000).toString(),
+		easing: false,
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'update:modelValue', value: number): void;
@@ -94,7 +107,7 @@ const rightTrackPosition = computed(() => {
 	return (Math.abs(Math.min(0, props.min)) / (props.max + Math.abs(Math.min(0, props.min)))) * 100 + '%';
 });
 const leftTrackPosition = computed(() => {
-	return (Math.min(minRatio.value, steppedRawValue.value) * 100) + '%';
+	return Math.min(minRatio.value, steppedRawValue.value) * 100 + '%';
 });
 
 const calcRawValue = (value: number) => {
@@ -105,21 +118,21 @@ const rawValue = ref(calcRawValue(props.modelValue));
 const steppedRawValue = computed(() => {
 	if (props.step) {
 		const step = props.step / (props.max - props.min);
-		return (step * Math.round(rawValue.value / step));
-	} else {
-		return rawValue.value;
+		return step * Math.round(rawValue.value / step);
 	}
+	return rawValue.value;
 });
 const finalValue = computed(() => {
 	if (Number.isInteger(props.step)) {
-		return Math.round((steppedRawValue.value * (props.max - props.min)) + props.min);
-	} else {
-		return (steppedRawValue.value * (props.max - props.min)) + props.min;
+		return Math.round(steppedRawValue.value * (props.max - props.min) + props.min);
 	}
+	return steppedRawValue.value * (props.max - props.min) + props.min;
 });
 
 const getThumbWidth = () => {
-	if (thumbEl.value == null) return 0;
+	if (thumbEl.value == null) {
+		return 0;
+	}
 	return thumbEl.value!.offsetWidth;
 };
 const thumbPosition = ref(0);
@@ -131,11 +144,16 @@ const calcThumbPosition = () => {
 	}
 };
 watch([steppedRawValue, containerEl], calcThumbPosition);
-watch(() => props.modelValue, (newVal) => {
-	const newRawValue = calcRawValue(newVal);
-	if (rawValue.value === newRawValue) return;
-	rawValue.value = newRawValue;
-});
+watch(
+	() => props.modelValue,
+	(newVal) => {
+		const newRawValue = calcRawValue(newVal);
+		if (rawValue.value === newRawValue) {
+			return;
+		}
+		rawValue.value = newRawValue;
+	},
+);
 
 let ro: ResizeObserver | undefined;
 
@@ -143,19 +161,22 @@ onMounted(() => {
 	ro = new ResizeObserver((entries, observer) => {
 		calcThumbPosition();
 	});
-	if (containerEl.value) ro.observe(containerEl.value);
+	if (containerEl.value) {
+		ro.observe(containerEl.value);
+	}
 });
 
 onUnmounted(() => {
-	if (ro) ro.disconnect();
+	if (ro) {
+		ro.disconnect();
+	}
 });
 
 const steps = computed(() => {
 	if (props.step) {
 		return (props.max - props.min) / props.step;
-	} else {
-		return 0;
 	}
+	return 0;
 });
 
 const tooltipForDragShowing = ref(false);
@@ -168,50 +189,72 @@ onBeforeUnmount(() => {
 });
 
 function onMouseenter() {
-	if (isTouchUsing) return;
+	if (isTouchUsing) {
+		return;
+	}
 
 	tooltipForHoverShowing.value = true;
 	const anchorElement = thumbEl.value;
-	if (anchorElement == null) return;
+	if (anchorElement == null) {
+		return;
+	}
 
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')), {
-		showing: computed(() => tooltipForHoverShowing.value && !tooltipForDragShowing.value),
-		text: computed(() => {
-			return props.textConverter(finalValue.value);
-		}),
-		anchorElement,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')),
+		{
+			showing: computed(() => tooltipForHoverShowing.value && !tooltipForDragShowing.value),
+			text: computed(() => {
+				return props.textConverter(finalValue.value);
+			}),
+			anchorElement,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 
-	thumbEl.value!.addEventListener('mouseleave', () => {
-		tooltipForHoverShowing.value = false;
-	}, { once: true, passive: true });
+	thumbEl.value!.addEventListener(
+		'mouseleave',
+		() => {
+			tooltipForHoverShowing.value = false;
+		},
+		{ once: true, passive: true },
+	);
 }
 
 let lastClickTime: number | null = null;
 
 function onMousedown(ev: MouseEvent | TouchEvent) {
-	if (props.disabled) return;
+	if (props.disabled) {
+		return;
+	}
 
 	ev.preventDefault();
 
 	tooltipForDragShowing.value = true;
 	const anchorElement = thumbEl.value;
-	if (anchorElement == null) return;
+	if (anchorElement == null) {
+		return;
+	}
 
-	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')), {
-		showing: tooltipForDragShowing,
-		text: computed(() => {
-			return props.textConverter(finalValue.value);
-		}),
-		anchorElement,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = os.popup(
+		defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')),
+		{
+			showing: tooltipForDragShowing,
+			text: computed(() => {
+				return props.textConverter(finalValue.value);
+			}),
+			anchorElement,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 
 	const style = window.document.createElement('style');
-	style.appendChild(window.document.createTextNode('* { cursor: grabbing !important; } body * { pointer-events: none !important; }'));
+	style.appendChild(
+		window.document.createTextNode('* { cursor: grabbing !important; } body * { pointer-events: none !important; }'),
+	);
 	window.document.head.appendChild(style);
 
 	const thumbWidth = getThumbWidth();
@@ -220,9 +263,13 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		ev.preventDefault();
 		let beforeValue = finalValue.value;
 		const containerRect = containerEl.value!.getBoundingClientRect();
-		const pointerX = 'touches' in ev && ev.touches.length > 0 ? (ev.touches.item(0)?.clientX ?? 0) : 'clientX' in ev ? ev.clientX : 0;
-		const pointerPositionOnContainer = pointerX - (containerRect.left + (thumbWidth / 2));
-		rawValue.value = Math.min(1, Math.max(0, pointerPositionOnContainer / (containerEl.value!.offsetWidth - thumbWidth)));
+		const pointerX =
+			'touches' in ev && ev.touches.length > 0 ? (ev.touches.item(0)?.clientX ?? 0) : 'clientX' in ev ? ev.clientX : 0;
+		const pointerPositionOnContainer = pointerX - (containerRect.left + thumbWidth / 2);
+		rawValue.value = Math.min(
+			1,
+			Math.max(0, pointerPositionOnContainer / (containerEl.value!.offsetWidth - thumbWidth)),
+		);
 
 		if (props.continuousUpdate && beforeValue !== finalValue.value) {
 			emit('update:modelValue', finalValue.value);
@@ -254,20 +301,22 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 	if (lastClickTime == null) {
 		lastClickTime = Date.now();
 		return;
+	}
+	const now = Date.now();
+	if (now - lastClickTime < 300) {
+		// 300ms以内のクリックはダブルクリックとみなす
+		lastClickTime = null;
+		emit('thumbDoubleClicked');
+		return;
 	} else {
-		const now = Date.now();
-		if (now - lastClickTime < 300) { // 300ms以内のクリックはダブルクリックとみなす
-			lastClickTime = null;
-			emit('thumbDoubleClicked');
-			return;
-		} else {
-			lastClickTime = now;
-		}
+		lastClickTime = now;
 	}
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (props.disabled) return;
+	if (props.disabled) {
+		return;
+	}
 
 	let newValue: number | null = null;
 	switch (ev.key) {
@@ -286,12 +335,16 @@ function onKeydown(ev: KeyboardEvent) {
 			newValue = props.max;
 			break;
 	}
-	if (newValue == null) return;
+	if (newValue == null) {
+		return;
+	}
 
 	ev.preventDefault();
 	const beforeValue = finalValue.value;
 	rawValue.value = calcRawValue(newValue);
-	if (finalValue.value === beforeValue) return; // ステップ吸着で値が変わらなければ通知しない
+	if (finalValue.value === beforeValue) {
+		return;
+	} // ステップ吸着で値が変わらなければ通知しない
 
 	emit('update:modelValue', finalValue.value);
 	emit('dragEnded', finalValue.value);

@@ -16,15 +16,18 @@ import { prefer } from '@/preferences.js';
 
 const canvasEl = useTemplateRef('canvasEl');
 
-const props = withDefaults(defineProps<{
-	scale?: number;
-	focus?: number;
-}>(), {
-	scale: 1.0,
-	focus: 1.0,
-});
+const props = withDefaults(
+	defineProps<{
+		scale?: number;
+		focus?: number;
+	}>(),
+	{
+		scale: 1.0,
+		focus: 1.0,
+	},
+);
 
-let handle: ReturnType<typeof window['requestAnimationFrame']> | null = null;
+let handle: ReturnType<(typeof window)['requestAnimationFrame']> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let intersectionObserver: IntersectionObserver | null = null;
 let stopAnimationWatch: (() => void) | null = null;
@@ -40,7 +43,9 @@ onMounted(() => {
 	canvas.height = height;
 
 	const maybeGl = canvas.getContext('webgl2', { premultipliedAlpha: true });
-	if (maybeGl == null) return;
+	if (maybeGl == null) {
+		return;
+	}
 
 	const gl = maybeGl;
 
@@ -51,7 +56,9 @@ onMounted(() => {
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
 	const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
-	if (shaderProgram == null) return;
+	if (shaderProgram == null) {
+		return;
+	}
 
 	gl.useProgram(shaderProgram);
 	const u_resolution = gl.getUniformLocation(shaderProgram, 'u_resolution');
@@ -88,27 +95,35 @@ onMounted(() => {
 	}
 
 	function stop() {
-		if (handle == null) return;
+		if (handle == null) {
+			return;
+		}
 		window.cancelAnimationFrame(handle);
 		handle = null;
 	}
 
 	function render(timeStamp: number) {
 		handle = null;
-		if (!shouldAnimate()) return;
+		if (!shouldAnimate()) {
+			return;
+		}
 		draw(timeStamp);
 		handle = window.requestAnimationFrame(render);
 	}
 
 	function start() {
-		if (handle != null || !shouldAnimate()) return;
+		if (handle != null || !shouldAnimate()) {
+			return;
+		}
 		handle = window.requestAnimationFrame(render);
 	}
 
 	function updateSize() {
 		const nextWidth = canvas.offsetWidth;
 		const nextHeight = canvas.offsetHeight;
-		if (Math.abs(height - nextHeight) <= 2 && Math.abs(width - nextWidth) <= 2) return;
+		if (Math.abs(height - nextHeight) <= 2 && Math.abs(width - nextWidth) <= 2) {
+			return;
+		}
 
 		width = nextWidth;
 		height = nextHeight;
@@ -116,7 +131,9 @@ onMounted(() => {
 		canvas.height = height;
 		gl.uniform2fv(u_resolution, [width, height]);
 		gl.viewport(0, 0, width, height);
-		if (!shouldAnimate()) draw(lastTimeStamp);
+		if (!shouldAnimate()) {
+			draw(lastTimeStamp);
+		}
 	}
 
 	draw(0);
@@ -125,24 +142,39 @@ onMounted(() => {
 	resizeObserver.observe(canvas);
 	intersectionObserver = new IntersectionObserver(([entry]) => {
 		isVisible = entry?.isIntersecting ?? false;
-		if (isVisible) start();
-		else stop();
+		if (isVisible) {
+			start();
+		} else {
+			stop();
+		}
 	});
 	intersectionObserver.observe(canvas);
-	stopAnimationWatch = watch(() => prefer.animation, (animation) => {
-		if (animation) start();
-		else stop();
-	}, { immediate: true });
+	stopAnimationWatch = watch(
+		() => prefer.animation,
+		(animation) => {
+			if (animation) {
+				start();
+			} else {
+				stop();
+			}
+		},
+		{ immediate: true },
+	);
 	const onVisibilityChange = () => {
-		if (window.document.visibilityState === 'visible') start();
-		else stop();
+		if (window.document.visibilityState === 'visible') {
+			start();
+		} else {
+			stop();
+		}
 	};
 	window.document.addEventListener('visibilitychange', onVisibilityChange, { passive: true });
 	removeVisibilityListener = () => window.document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
 onUnmounted(() => {
-	if (handle != null) window.cancelAnimationFrame(handle);
+	if (handle != null) {
+		window.cancelAnimationFrame(handle);
+	}
 	handle = null;
 	resizeObserver?.disconnect();
 	resizeObserver = null;
@@ -152,6 +184,5 @@ onUnmounted(() => {
 	stopAnimationWatch = null;
 	removeVisibilityListener?.();
 	removeVisibilityListener = null;
-
 });
 </script>

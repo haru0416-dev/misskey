@@ -17,6 +17,8 @@ export function toPuny(host: string): string {
 }
 
 export function toPunyNullable(host: string | null | undefined): string | null {
-	if (host == null) return null;
+	if (host == null) {
+		return null;
+	}
 	return toPuny(host);
 }

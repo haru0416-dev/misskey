@@ -8,7 +8,8 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
-import { getApiRolePolicies, type ApiRolePolicyDependencies } from './role/role-policy.js';
+import { getApiRolePolicies } from './role/role-policy.js';
+import type { ApiRolePolicyDependencies } from './role/role-policy.js';
 
 export type ApiRateLimitDependencies = {
 	config: Config;
@@ -62,9 +63,13 @@ async function checkLimiter(options: {
 		.pexpire(key, options.duration)
 		.exec();
 
-	if (res == null) throw new Error('rate limiter transaction failed');
+	if (res == null) {
+		throw new Error('rate limiter transaction failed');
+	}
 	const zcard = res[1];
-	if (zcard?.[0] != null) throw zcard[0];
+	if (zcard?.[0] != null) {
+		throw zcard[0];
+	}
 	const count = Number(zcard?.[1] ?? 0);
 
 	return { remaining: count < options.max ? options.max - count : 0 };
@@ -94,8 +99,12 @@ export async function isApiRateLimitedForUser(
 	}
 
 	const minInterval = limitation.minInterval == null ? null : limitation.minInterval * factor;
-	if (minInterval != null) durationToMicroseconds(minInterval);
-	if (limitation.duration != null && limitation.max != null) durationToMicroseconds(limitation.duration);
+	if (minInterval != null) {
+		durationToMicroseconds(minInterval);
+	}
+	if (limitation.duration != null && limitation.max != null) {
+		durationToMicroseconds(limitation.duration);
+	}
 
 	if (minInterval != null) {
 		const info = await checkLimiter({
@@ -159,7 +168,9 @@ export async function assertApiRateLimitForUser(
 	user: MiUser,
 ): Promise<void> {
 	const factor = (await getApiRolePolicies(deps, user)).rateLimitFactor;
-	if (factor <= 0) return;
+	if (factor <= 0) {
+		return;
+	}
 
 	if (
 		await isApiRateLimitedForUser(

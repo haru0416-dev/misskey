@@ -34,7 +34,9 @@ describe('UserPreview', () => {
 	test('uses lifecycle cleanup instead of polling for a detached source element', () => {
 		const setInterval = vi.spyOn(window, 'setInterval');
 		vi.spyOn(window, 'setTimeout').mockImplementation((handler) => {
-			if (typeof handler === 'function') handler();
+			if (typeof handler === 'function') {
+				handler();
+			}
 			return 1 as unknown as ReturnType<typeof window.setTimeout>;
 		});
 		const source = document.createElement('a');

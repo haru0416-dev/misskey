@@ -11,12 +11,14 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase } from '@/core/note/NoteStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleQueueExportNotes, type QueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueExportNotes } from '@/queue/handlers/db.js';
+import type { QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
 
 function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {

@@ -19,8 +19,8 @@ import {
 	getAuthUserFromKeyIdForApi,
 	getUserFromApIdForApi,
 	isFederationAllowedHost,
-	type ApiAuthUser,
 } from '@/server/rest/activitypub/ap-resolve.js';
+import type { ApiAuthUser } from '@/server/rest/activitypub/ap-resolve.js';
 import { getAuthUserFromApIdForApi, resolvePersonForApi } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
@@ -29,7 +29,8 @@ import {
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
 } from '@/server/rest/activitypub/federation.js';
-import { performActivityForApi, type ApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
+import { performActivityForApi } from '../../server/activitypub/inbox-dispatch.js';
+import type { ApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
 export type QueueInboxDependencies = ApiInboxDependencies;
 
@@ -241,7 +242,9 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.J
 	}
 
 	const verified = await verifyAndResolveAuthUser(deps, job);
-	if (typeof verified === 'string') return verified;
+	if (typeof verified === 'string') {
+		return verified;
+	}
 	const { authUser, activity } = verified;
 
 	void deps.chartWriters.apRequestChart.inbox();
@@ -252,7 +255,9 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.J
 			? await fetchOrRegisterFederatedInstance(deps, authUser.user.host!)
 			: await fetchFederatedInstance(deps, authUser.user.host!);
 
-		if (i == null) return;
+		if (i == null) {
+			return;
+		}
 
 		getUpdateInstanceQueue(deps).enqueue(i.id, {
 			latestRequestReceivedAt: new Date(),

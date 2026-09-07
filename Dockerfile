@@ -12,7 +12,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
 	&& apt-get update \
 	&& apt-get install -yqq --no-install-recommends \
-	build-essential
+	build-essential curl \
+	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
 
 WORKDIR /misskey
 
@@ -38,7 +39,10 @@ RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 
 COPY --link . ./
 
-RUN bun run build \
+# napi の型定義置換が既存レイヤーのファイルを ESTALE と判定するため、同じ RUN 内で書き込みレイヤーへ移す。
+RUN . "$HOME/.cargo/env" \
+	&& touch packages/slacc/index.d.ts \
+	&& bun run build \
 	&& hardlink built/_frontend_vite_
 RUN rm -rf .git/
 
@@ -81,10 +85,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY --link ["packages/slacc", "./packages/slacc/"]
 
+# 型定義を先に書き込みレイヤーへ移し、napi の置換時の ESTALE を避ける。
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 	--mount=type=cache,target=/misskey/packages/slacc/target,sharing=locked \
 	. "$HOME/.cargo/env" \
 	&& bun install --frozen-lockfile --filter slacc \
+	&& touch packages/slacc/index.d.ts \
 	&& bun run --filter slacc build
 
 FROM oven/bun:${BUN_VERSION}-slim AS runner

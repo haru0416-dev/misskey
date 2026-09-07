@@ -38,7 +38,9 @@ class GlobalEventBus extends EventEmitter {
 		// worker では master からブリッジされた envelope が親プロセス経由で届く。
 		// (master は通常親を持たないためこのリスナーは発火しない)
 		process.on('message', (message) => {
-			if (isBusEnvelope(message)) this.deliverLocally(message);
+			if (isBusEnvelope(message)) {
+				this.deliverLocally(message);
+			}
 		});
 	}
 
@@ -61,7 +63,9 @@ class GlobalEventBus extends EventEmitter {
 
 		if (cluster.isPrimary) {
 			this.deliverLocally(envelope);
-			if (this.mounted) this.broadcastToWorkers(envelope);
+			if (this.mounted) {
+				this.broadcastToWorkers(envelope);
+			}
 		} else {
 			process.send?.(envelope);
 		}
@@ -77,10 +81,14 @@ class GlobalEventBus extends EventEmitter {
 		if (cluster.isWorker) {
 			throw new Error('globalEventBus.mount() must be called in the primary process');
 		}
-		if (this.mounted) return;
+		if (this.mounted) {
+			return;
+		}
 
 		cluster.on('message', (_worker, message) => {
-			if (!isBusEnvelope(message)) return;
+			if (!isBusEnvelope(message)) {
+				return;
+			}
 			this.deliverLocally(message);
 			this.broadcastToWorkers(message);
 		});

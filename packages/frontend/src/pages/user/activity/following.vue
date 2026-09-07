@@ -15,7 +15,8 @@ import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { toChartSeries } from '@/features/charts/chart-helpers.js';
-import MkDataChart, { type DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
+import MkDataChart from '@/features/charts/components/MkDataChart.vue';
+import type { DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
 
 const props = defineProps<{ user: Misskey.entities.User }>();
 const series = ref<DataChartSeries[]>([]);
@@ -25,10 +26,28 @@ onMounted(async () => {
 	const raw = await misskeyApi('charts/user/following', { userId: props.user.id, limit: 30, span: 'day' });
 	const now = new Date();
 	series.value = [
-		{ name: `${i18n.ts.following} (${i18n.ts.local})`, type: 'area', data: toChartSeries(now, raw.local.followings.total) },
-		{ name: `${i18n.ts.following} (${i18n.ts.remote})`, type: 'line', dashed: true, data: toChartSeries(now, raw.remote.followings.total) },
-		{ name: `${i18n.ts.followers} (${i18n.ts.local})`, type: 'area', data: toChartSeries(now, raw.local.followers.total) },
-		{ name: `${i18n.ts.followers} (${i18n.ts.remote})`, type: 'line', dashed: true, data: toChartSeries(now, raw.remote.followers.total) },
+		{
+			name: `${i18n.ts.following} (${i18n.ts.local})`,
+			type: 'area',
+			data: toChartSeries(now, raw.local.followings.total),
+		},
+		{
+			name: `${i18n.ts.following} (${i18n.ts.remote})`,
+			type: 'line',
+			dashed: true,
+			data: toChartSeries(now, raw.remote.followings.total),
+		},
+		{
+			name: `${i18n.ts.followers} (${i18n.ts.local})`,
+			type: 'area',
+			data: toChartSeries(now, raw.local.followers.total),
+		},
+		{
+			name: `${i18n.ts.followers} (${i18n.ts.remote})`,
+			type: 'line',
+			dashed: true,
+			data: toChartSeries(now, raw.remote.followers.total),
+		},
 	];
 	loading.value = false;
 });

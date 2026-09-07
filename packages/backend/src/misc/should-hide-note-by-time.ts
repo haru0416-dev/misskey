@@ -21,8 +21,7 @@ export function shouldHideNoteByTime(hiddenBefore: number | null | undefined, cr
 		const elapsedSeconds = (Date.now() - createdAtTime) / 1000;
 		const hideAfterSeconds = Math.abs(hiddenBefore);
 		return elapsedSeconds >= hideAfterSeconds;
-	} else {
-		const createdAtSeconds = createdAtTime / 1000;
-		return createdAtSeconds <= hiddenBefore;
 	}
+	const createdAtSeconds = createdAtTime / 1000;
+	return createdAtSeconds <= hiddenBefore;
 }

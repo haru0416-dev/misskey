@@ -8,11 +8,7 @@ import type { OpenAPI3, OperationObject, PathItemObject } from 'openapi-typescri
 import ts from 'typescript';
 import { removeNeverPropertiesFromAST } from './ast-transformer.js';
 
-async function generateBaseTypes(
-	openApiDocs: OpenAPIV3_1.Document,
-	openApiJsonPath: string,
-	typeFileName: string,
-) {
+async function generateBaseTypes(openApiDocs: OpenAPIV3_1.Document, openApiJsonPath: string, typeFileName: string) {
 	const lines: string[] = [];
 
 	// GETとPOSTでoperationIdを揃え、型定義の重複を防ぐ。
@@ -36,9 +32,8 @@ async function generateBaseTypes(
 			if ('format' in schemaObject && schemaObject.format === 'binary') {
 				if (schemaObject.nullable) {
 					return ts.factory.createUnionTypeNode([tsBlobNode, tsNullNode]);
-				} else {
-					return tsBlobNode;
 				}
+				return tsBlobNode;
 			}
 		},
 	});
@@ -52,11 +47,7 @@ async function generateBaseTypes(
 	await writeFile(typeFileName, lines.join('\n'));
 }
 
-async function generateSchemaEntities(
-	openApiDocs: OpenAPIV3_1.Document,
-	typeFileName: string,
-	outputPath: string,
-) {
+async function generateSchemaEntities(openApiDocs: OpenAPIV3_1.Document, typeFileName: string, outputPath: string) {
 	if (!openApiDocs.components?.schemas) {
 		return;
 	}
@@ -66,9 +57,7 @@ async function generateSchemaEntities(
 	const typeAliasLines: string[] = [];
 
 	typeAliasLines.push(`import { components } from '${toImportPath(typeFileName)}';`);
-	typeAliasLines.push(
-		...schemaNames.map(it => `export type ${it} = components['schemas']['${it}'];`),
-	);
+	typeAliasLines.push(...schemaNames.map((it) => `export type ${it} = components['schemas']['${it}'];`));
 	typeAliasLines.push('');
 
 	await writeFile(outputPath, typeAliasLines.join('\n'));
@@ -87,7 +76,7 @@ async function generateEndpoints(
 	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
-		.map(it => ({
+		.map((it) => ({
 			_path_: it.replace(/^\//, ''),
 			...paths[it]?.post,
 		}))
@@ -147,10 +136,8 @@ async function generateEndpoints(
 	entitiesOutputLine.push(new EmptyTypeAlias(OperationsAliasType.RESPONSE).toLine());
 	entitiesOutputLine.push('');
 
-	const entities = endpoints
-		.flatMap(it => [it.request, it.response].filter(i => i))
-		.filter(filterUndefined);
-	entitiesOutputLine.push(...entities.map(it => it.toLine()));
+	const entities = endpoints.flatMap((it) => [it.request, it.response].filter((i) => i)).filter(filterUndefined);
+	entitiesOutputLine.push(...entities.map((it) => it.toLine()));
 	entitiesOutputLine.push('');
 
 	await writeFile(entitiesOutputPath, entitiesOutputLine.join('\n'));
@@ -158,16 +145,12 @@ async function generateEndpoints(
 	const endpointOutputLine: string[] = [];
 
 	endpointOutputLine.push('import type {');
-	endpointOutputLine.push(
-		...[emptyRequest, emptyResponse, ...entities].map(it => '\t' + it.generateName() + ','),
-	);
+	endpointOutputLine.push(...[emptyRequest, emptyResponse, ...entities].map((it) => '\t' + it.generateName() + ','));
 	endpointOutputLine.push(`} from '${toImportPath(entitiesOutputPath)}';`);
 	endpointOutputLine.push('');
 
 	endpointOutputLine.push('export type Endpoints = {');
-	endpointOutputLine.push(
-		...endpoints.map(it => '\t' + it.toLine()),
-	);
+	endpointOutputLine.push(...endpoints.map((it) => '\t' + it.toLine()));
 	endpointOutputLine.push('};');
 	endpointOutputLine.push('');
 
@@ -180,9 +163,7 @@ async function generateEndpoints(
 	 */`);
 	endpointOutputLine.push('export const endpointReqTypes = {');
 
-	endpointOutputLine.push(
-		...endpointReqMediaTypes.map(it => '\t' + it.toLine()),
-	);
+	endpointOutputLine.push(...endpointReqMediaTypes.map((it) => '\t' + it.toLine()));
 
 	endpointOutputLine.push(`} as const satisfies ${generateEndpointReqMediaTypesType()};`);
 	endpointOutputLine.push('');
@@ -205,7 +186,7 @@ async function generateApiClientJSDoc(
 	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
-		.map(it => ({
+		.map((it) => ({
 			_path_: it.replace(/^\//, ''),
 			...paths[it]?.post,
 		}))
@@ -285,16 +266,16 @@ function toImportPath(fileName: string, fromPath = '/built/autogen', toPath = ''
 
 enum OperationsAliasType {
 	REQUEST = 'Request',
-	RESPONSE = 'Response'
+	RESPONSE = 'Response',
 }
 
 interface IOperationTypeAlias {
-	readonly type: OperationsAliasType
-	readonly requestBodyOptional: boolean
+	readonly type: OperationsAliasType;
+	readonly requestBodyOptional: boolean;
 
-	generateName(): string
+	generateName(): string;
 
-	toLine(): string
+	toLine(): string;
 }
 
 class OperationTypeAlias implements IOperationTypeAlias {
@@ -404,7 +385,7 @@ async function main() {
 	await mkdir(generatePath, { recursive: true });
 
 	const openApiJsonPath = './api.json';
-	const openApiDocs = await parse(openApiJsonPath) as OpenAPIV3_1.Document;
+	const openApiDocs = (await parse(openApiJsonPath)) as OpenAPIV3_1.Document;
 
 	const typeFileName = './built/autogen/types.ts';
 	await generateBaseTypes(openApiDocs, openApiJsonPath, typeFileName);

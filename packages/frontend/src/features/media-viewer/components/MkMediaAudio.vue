@@ -106,7 +106,7 @@ const props = defineProps<{
 }>();
 
 const keymap = {
-	'up': {
+	up: {
 		allowRepeat: true,
 		callback: () => {
 			if (hasFocus() && audioEl.value) {
@@ -114,7 +114,7 @@ const keymap = {
 			}
 		},
 	},
-	'down': {
+	down: {
 		allowRepeat: true,
 		callback: () => {
 			if (hasFocus() && audioEl.value) {
@@ -122,7 +122,7 @@ const keymap = {
 			}
 		},
 	},
-	'left': {
+	left: {
 		allowRepeat: true,
 		callback: () => {
 			if (hasFocus() && audioEl.value) {
@@ -130,7 +130,7 @@ const keymap = {
 			}
 		},
 	},
-	'right': {
+	right: {
 		allowRepeat: true,
 		callback: () => {
 			if (hasFocus() && audioEl.value) {
@@ -138,7 +138,7 @@ const keymap = {
 			}
 		},
 	},
-	'space': () => {
+	space: () => {
 		if (hasFocus()) {
 			togglePlayPause();
 		}
@@ -147,7 +147,9 @@ const keymap = {
 
 // PlayerElもしくはその子要素にフォーカスがあるかどうか
 function hasFocus() {
-	if (!playerEl.value) return false;
+	if (!playerEl.value) {
+		return false;
+	}
 	return playerEl.value === window.document.activeElement || playerEl.value.contains(window.document.activeElement);
 }
 
@@ -179,31 +181,41 @@ function showMenu(ev: MouseEvent) {
 			text: i18n.ts._mediaControls.playbackRate,
 			icon: 'ti ti-clock-play',
 			ref: speed,
-			options: [{
-				label: '0.25x',
-				value: 0.25,
-			}, {
-				label: '0.5x',
-				value: 0.5,
-			}, {
-				label: '0.75x',
-				value: 0.75,
-			}, {
-				label: '1.0x',
-				value: 1,
-			}, {
-				label: '1.25x',
-				value: 1.25,
-			}, {
-				label: '1.5x',
-				value: 1.5,
-			}, {
-				label: '2.0x',
-				value: 2,
-			}],
+			options: [
+				{
+					label: '0.25x',
+					value: 0.25,
+				},
+				{
+					label: '0.5x',
+					value: 0.5,
+				},
+				{
+					label: '0.75x',
+					value: 0.75,
+				},
+				{
+					label: '1.0x',
+					value: 1,
+				},
+				{
+					label: '1.25x',
+					value: 1.25,
+				},
+				{
+					label: '1.5x',
+					value: 1.5,
+				},
+				{
+					label: '2.0x',
+					value: 2,
+				},
+			],
 		},
 		{ type: 'divider' },
-		...getFileMenu(props.audio, value => { hide.value = value; }),
+		...getFileMenu(props.audio, (value) => {
+			hide.value = value;
+		}),
 	];
 
 	menuShowing.value = true;
@@ -221,26 +233,32 @@ const elapsedTimeMs = ref(0);
 const durationMs = ref(0);
 const rangePercent = computed({
 	get: () => {
-		return (elapsedTimeMs.value / durationMs.value) || 0;
+		return elapsedTimeMs.value / durationMs.value || 0;
 	},
 	set: (to) => {
-		if (!audioEl.value) return;
-		const currentTime = to * durationMs.value / 1000;
+		if (!audioEl.value) {
+			return;
+		}
+		const currentTime = (to * durationMs.value) / 1000;
 		audioEl.value.currentTime = currentTime;
 		elapsedTimeMs.value = currentTime * 1000;
 	},
 });
-const volume = ref(.25);
+const volume = ref(0.25);
 const speed = ref(1);
 const loop = ref(false);
 const bufferedEnd = ref(0);
 const bufferedDataRatio = computed(() => {
-	if (!audioEl.value || !Number.isFinite(audioEl.value.duration) || audioEl.value.duration <= 0) return 0;
+	if (!audioEl.value || !Number.isFinite(audioEl.value.duration) || audioEl.value.duration <= 0) {
+		return 0;
+	}
 	return bufferedEnd.value / audioEl.value.duration;
 });
 
 function togglePlayPause() {
-	if (!isReady.value || !audioEl.value) return;
+	if (!isReady.value || !audioEl.value) {
+		return;
+	}
 
 	if (isPlaying.value) {
 		audioEl.value.pause();
@@ -249,14 +267,16 @@ function togglePlayPause() {
 		const audio = audioEl.value;
 		isPlaying.value = true;
 		void audio.play().catch(() => {
-			if (audioEl.value === audio) isPlaying.value = false;
+			if (audioEl.value === audio) {
+				isPlaying.value = false;
+			}
 		});
 	}
 }
 
 function toggleMute() {
 	if (volume.value === 0) {
-		volume.value = .25;
+		volume.value = 0.25;
 	} else {
 		volume.value = 0;
 	}
@@ -283,7 +303,9 @@ function updateBufferedData(audio: HTMLAudioElement) {
 }
 
 function stopMediaTick() {
-	if (mediaTickFrameId == null) return;
+	if (mediaTickFrameId == null) {
+		return;
+	}
 	window.cancelAnimationFrame(mediaTickFrameId);
 	mediaTickFrameId = null;
 }
@@ -300,9 +322,13 @@ function updateMediaTick() {
 }
 
 function startMediaTick() {
-	if (mediaTickFrameId != null) return;
+	if (mediaTickFrameId != null) {
+		return;
+	}
 	const audio = audioEl.value;
-	if (audio == null || audio.paused || audio.ended) return;
+	if (audio == null || audio.paused || audio.ended) {
+		return;
+	}
 
 	updateElapsedTime(audio);
 	mediaTickFrameId = window.requestAnimationFrame(updateMediaTick);
@@ -316,70 +342,100 @@ function teardown() {
 }
 
 function init() {
-	if (onceInit) return;
+	if (onceInit) {
+		return;
+	}
 	onceInit = true;
 
-	stopAudioElWatch = watch(audioEl, (audio, _oldAudio, onCleanup) => {
-		stopMediaTick();
-		if (audio == null) {
-			isReady.value = false;
-			return;
-		}
+	stopAudioElWatch = watch(
+		audioEl,
+		(audio, _oldAudio, onCleanup) => {
+			stopMediaTick();
+			if (audio == null) {
+				isReady.value = false;
+				return;
+			}
 
-		const abortController = new AbortController();
-		onCleanup(() => {
-			abortController.abort();
-			stopMediaTick();
-		});
+			const abortController = new AbortController();
+			onCleanup(() => {
+				abortController.abort();
+				stopMediaTick();
+			});
 
-		const eventOptions = { signal: abortController.signal };
-		audio.addEventListener('play', () => {
-			isPlaying.value = true;
-			startMediaTick();
-		}, eventOptions);
-		audio.addEventListener('pause', () => {
-			isPlaying.value = false;
-			updateElapsedTime(audio);
-			stopMediaTick();
-		}, eventOptions);
-		audio.addEventListener('ended', () => {
-			isPlaying.value = false;
-			updateElapsedTime(audio);
-			stopMediaTick();
-		}, eventOptions);
-		audio.addEventListener('timeupdate', () => updateElapsedTime(audio), eventOptions);
-		audio.addEventListener('durationchange', () => updateDuration(audio), eventOptions);
-		audio.addEventListener('progress', () => updateBufferedData(audio), eventOptions);
-		audio.addEventListener('loadedmetadata', () => {
+			const eventOptions = { signal: abortController.signal };
+			audio.addEventListener(
+				'play',
+				() => {
+					isPlaying.value = true;
+					startMediaTick();
+				},
+				eventOptions,
+			);
+			audio.addEventListener(
+				'pause',
+				() => {
+					isPlaying.value = false;
+					updateElapsedTime(audio);
+					stopMediaTick();
+				},
+				eventOptions,
+			);
+			audio.addEventListener(
+				'ended',
+				() => {
+					isPlaying.value = false;
+					updateElapsedTime(audio);
+					stopMediaTick();
+				},
+				eventOptions,
+			);
+			audio.addEventListener('timeupdate', () => updateElapsedTime(audio), eventOptions);
+			audio.addEventListener('durationchange', () => updateDuration(audio), eventOptions);
+			audio.addEventListener('progress', () => updateBufferedData(audio), eventOptions);
+			audio.addEventListener(
+				'loadedmetadata',
+				() => {
+					updateElapsedTime(audio);
+					updateDuration(audio);
+					updateBufferedData(audio);
+				},
+				eventOptions,
+			);
+
+			isReady.value = true;
+			isPlaying.value = !audio.paused && !audio.ended;
 			updateElapsedTime(audio);
 			updateDuration(audio);
 			updateBufferedData(audio);
-		}, eventOptions);
-
-		isReady.value = true;
-		isPlaying.value = !audio.paused && !audio.ended;
-		updateElapsedTime(audio);
-		updateDuration(audio);
-		updateBufferedData(audio);
-		audio.volume = volume.value;
-		audio.playbackRate = speed.value;
-		audio.loop = loop.value;
-		if (isPlaying.value) startMediaTick();
-	}, {
-		immediate: true,
-	});
+			audio.volume = volume.value;
+			audio.playbackRate = speed.value;
+			audio.loop = loop.value;
+			if (isPlaying.value) {
+				startMediaTick();
+			}
+		},
+		{
+			immediate: true,
+		},
+	);
 }
 
 watch(volume, (to) => {
-	if (audioEl.value) audioEl.value.volume = to;
+	if (audioEl.value) {
+		audioEl.value.volume = to;
+	}
 });
 
 watch(speed, (to) => {
-	if (audioEl.value) audioEl.value.playbackRate = to;
+	if (audioEl.value) {
+		audioEl.value.playbackRate = to;
+	}
 });
 
 watch(loop, (to) => {
-	if (audioEl.value) audioEl.value.loop = to;
+	if (audioEl.value) {
+		audioEl.value.loop = to;
+	}
 });
 
 onMounted(() => {
@@ -397,7 +453,8 @@ onDeactivated(() => {
 	elapsedTimeMs.value = 0;
 	durationMs.value = 0;
 	bufferedEnd.value = 0;
-	hide.value = (prefer.nsfw === 'force' || prefer.dataSaver.media) ? true : (props.audio.isSensitive && prefer.nsfw !== 'ignore');
+	hide.value =
+		prefer.nsfw === 'force' || prefer.dataSaver.media ? true : props.audio.isSensitive && prefer.nsfw !== 'ignore';
 });
 
 onUnmounted(teardown);

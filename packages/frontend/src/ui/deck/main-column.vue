@@ -54,26 +54,45 @@ provideMetadataReceiver((metadataGetter) => {
 provideReactiveMetadata(pageMetadata);
 
 function onContextmenu(ev: PointerEvent) {
-	if (!ev.target) return;
+	if (!ev.target) {
+		return;
+	}
 
-	if (isLink(ev.target as HTMLElement)) return;
-	if (['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes((ev.target as HTMLElement).tagName) || (ev.target as HTMLElement).attributes.getNamedItem('contenteditable') != null) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (
+		['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes((ev.target as HTMLElement).tagName) ||
+		(ev.target as HTMLElement).attributes.getNamedItem('contenteditable') != null
+	) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 	const path = mainRouter.currentRoute.value.path;
-	os.contextMenu([{
-		type: 'label',
-		text: path,
-	}, {
-		icon: 'ti ti-window-maximize',
-		text: i18n.ts.openInWindow,
-		action: () => {
-			os.pageWindow(path);
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				type: 'label',
+				text: path,
+			},
+			{
+				icon: 'ti ti-window-maximize',
+				text: i18n.ts.openInWindow,
+				action: () => {
+					os.pageWindow(path);
+				},
+			},
+		],
+		ev,
+	);
 }
 
 function onHeaderClick() {
-	if (!rootEl.value) return;
+	if (!rootEl.value) {
+		return;
+	}
 	const scrollEl = rootEl.value.querySelector<HTMLElement>('._pageScrollable,._pageScrollableReversed');
 	if (scrollEl) {
 		scrollEl.scrollTo({

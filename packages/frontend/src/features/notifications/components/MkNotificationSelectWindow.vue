@@ -39,30 +39,39 @@ import type { Ref } from 'vue';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { i18n } from '@/i18n.js';
 
-type TypesMap = Record<typeof notificationTypes[number], Ref<boolean>>;
+type TypesMap = Record<(typeof notificationTypes)[number], Ref<boolean>>;
 
 const emit = defineEmits<{
-	(ev: 'done', v: { excludeTypes: typeof notificationTypes[number][] }): void,
-	(ev: 'closed'): void,
+	(ev: 'done', v: { excludeTypes: (typeof notificationTypes)[number][] }): void;
+	(ev: 'closed'): void;
 }>();
 
-const props = withDefaults(defineProps<{
-	excludeTypes?: typeof notificationTypes[number][];
-}>(), {
-	excludeTypes: () => [],
-});
+const props = withDefaults(
+	defineProps<{
+		excludeTypes?: (typeof notificationTypes)[number][];
+	}>(),
+	{
+		excludeTypes: () => [],
+	},
+);
 
 const dialog = useTemplateRef('dialog');
 
-const typesMap = notificationTypes.reduce((p, t) => ({ ...p, [t]: ref<boolean>(!props.excludeTypes.includes(t)) }), {} as TypesMap);
+const typesMap = notificationTypes.reduce(
+	(p, t) => ({ ...p, [t]: ref<boolean>(!props.excludeTypes.includes(t)) }),
+	{} as TypesMap,
+);
 
 function ok() {
 	emit('done', {
-		excludeTypes: (Object.keys(typesMap) as typeof notificationTypes[number][])
-			.filter(type => !typesMap[type].value),
+		excludeTypes: (Object.keys(typesMap) as (typeof notificationTypes)[number][]).filter(
+			(type) => !typesMap[type].value,
+		),
 	});
 
-	if (dialog.value) dialog.value.close();
+	if (dialog.value) {
+		dialog.value.close();
+	}
 }
 
 function disableAll() {

@@ -145,7 +145,9 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 }
 
 function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
-	if (!$i) return;
+	if (!$i) {
+		return;
+	}
 	const token = $i.token;
 	for (const key of Object.keys($i)) {
 		delete $i[key as keyof typeof $i];
@@ -160,7 +162,9 @@ function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
 }
 
 export function updateCurrentAccountPartial(accountData: Partial<Misskey.entities.MeDetailed>) {
-	if (!$i) return;
+	if (!$i) {
+		return;
+	}
 	for (const [key, value] of Object.entries(accountData)) {
 		($i[key as keyof typeof accountData] as any) = value;
 	}
@@ -172,7 +176,9 @@ export function updateCurrentAccountPartial(accountData: Partial<Misskey.entitie
 }
 
 export async function refreshCurrentAccount() {
-	if (!$i) return;
+	if (!$i) {
+		return;
+	}
 	const me = $i;
 	return fetchAccount($i.token, $i.id)
 		.then(updateCurrentAccount)
@@ -253,7 +259,9 @@ export async function getAccountMenu(opts: {
 	active?: Misskey.entities.User['id'];
 	onChoose?: (account: Misskey.entities.MeDetailed) => void;
 }) {
-	if ($i == null) throw new Error('No current account');
+	if ($i == null) {
+		throw new Error('No current account');
+	}
 	const me = $i;
 
 	const callback = opts.onChoose;
@@ -293,38 +301,37 @@ export async function getAccountMenu(opts: {
 					}
 				},
 			};
-		} else {
-			// プロファイルにトークンや詳細情報がない場合は、ここでサインインを要求する。
-			return {
-				type: 'button' as const,
-				text: username,
-				active: opts.active != null ? opts.active === id : false,
-				action: async () => {
-					const { dispose } = popup(
-						MkSigninDialog,
-						{
-							initialUsername: username,
-						},
-						{
-							done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-								store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
-
-								if (callback) {
-									fetchAccount(res.i, id).then((account) => {
-										callback(account);
-									});
-								} else {
-									switchAccount(host, id);
-								}
-							},
-							closed: () => {
-								dispose();
-							},
-						},
-					);
-				},
-			};
 		}
+		// プロファイルにトークンや詳細情報がない場合は、ここでサインインを要求する。
+		return {
+			type: 'button' as const,
+			text: username,
+			active: opts.active != null ? opts.active === id : false,
+			action: async () => {
+				const { dispose } = popup(
+					MkSigninDialog,
+					{
+						initialUsername: username,
+					},
+					{
+						done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
+							store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
+
+							if (callback) {
+								fetchAccount(res.i, id).then((account) => {
+									callback(account);
+								});
+							} else {
+								switchAccount(host, id);
+							}
+						},
+						closed: () => {
+							dispose();
+						},
+					},
+				);
+			},
+		};
 	}
 
 	const menuItems: MenuItem[] = [];

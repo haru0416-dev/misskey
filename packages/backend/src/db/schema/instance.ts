@@ -38,7 +38,7 @@ export const instance = pgTable(
 		faviconUrl: varchar({ length: 256 }),
 		themeColor: varchar({ length: 64 }),
 		infoUpdatedAt: timestamp({ withTimezone: true }),
-		moderationNote: varchar({ length: 16384 }).default('').notNull(),
+		moderationNote: varchar({ length: 16_384 }).default('').notNull(),
 	},
 	(table) => [
 		index('IDX_INSTANCE_FIRST_RETRIEVED_AT').on(table.firstRetrievedAt),

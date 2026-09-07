@@ -26,7 +26,9 @@ export const honoStreamChannelServerStats: StreamChannelDefinition<unknown> = {
 			},
 			onMessage: (type: string, body: JsonValue) => {
 				if (type === 'requestLog') {
-					if (!isJsonObject(body)) return;
+					if (!isJsonObject(body)) {
+						return;
+					}
 					ev.once(`serverStatsLog:${body['id']}`, (statsLog) => {
 						ctx.send('statsLog', statsLog as JsonValue);
 					});

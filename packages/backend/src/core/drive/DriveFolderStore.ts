@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNull, lt, type SQL } from 'drizzle-orm';
-import { driveFolder, type DriveFolderInsert, type DriveFolderRow } from '@/db/schema/drive-folder.js';
+import { and, asc, count, desc, eq, gt, inArray, isNull, lt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { driveFolder } from '@/db/schema/drive-folder.js';
+import type { DriveFolderInsert, DriveFolderRow } from '@/db/schema/drive-folder.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -106,7 +108,9 @@ export async function listDriveFoldersByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: DriveFolderRow['id'][],
 ): Promise<DriveFolderRow[]> {
-	if (ids.length === 0) return [];
+	if (ids.length === 0) {
+		return [];
+	}
 
 	return await db.select().from(driveFolder).where(inArray(driveFolder.id, ids));
 }
@@ -128,7 +132,9 @@ export async function countChildDriveFoldersGroupedByParentIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	parentIds: DriveFolderRow['id'][],
 ): Promise<DriveFolderChildFolderCount[]> {
-	if (parentIds.length === 0) return [];
+	if (parentIds.length === 0) {
+		return [];
+	}
 
 	const rows = await db
 		.select({ parentId: driveFolder.parentId, count: count() })

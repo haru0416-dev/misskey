@@ -21,35 +21,37 @@ import type { BundledLanguage } from 'shiki/langs';
 import { getHighlighter, getTheme } from '@/features/code/code-highlighter.js';
 import { store } from '@/store.js';
 
-const props = withDefaults(defineProps<{
-	code: string;
-	lang?: string;
-	codeEditor?: boolean;
-	withOuterStyle?: boolean;
-}>(), {
-	codeEditor: false,
-	withOuterStyle: true,
-});
+const props = withDefaults(
+	defineProps<{
+		code: string;
+		lang?: string;
+		codeEditor?: boolean;
+		withOuterStyle?: boolean;
+	}>(),
+	{
+		codeEditor: false,
+		withOuterStyle: true,
+	},
+);
 
 const highlighter = await getHighlighter();
 const darkMode = toRef(store, 'darkMode');
 const codeLang = ref<BundledLanguage | 'aiscript'>('js');
 
-const [lightThemeName, darkThemeName] = await Promise.all([
-	getTheme('light', true),
-	getTheme('dark', true),
-]);
+const [lightThemeName, darkThemeName] = await Promise.all([getTheme('light', true), getTheme('dark', true)]);
 
-const html = computed(() => highlighter.codeToHtml(props.code, {
-	lang: codeLang.value,
-	themes: {
-		fallback: 'dark-plus',
-		light: lightThemeName,
-		dark: darkThemeName,
-	},
-	defaultColor: false,
-	cssVariablePrefix: '--shiki-',
-}));
+const html = computed(() =>
+	highlighter.codeToHtml(props.code, {
+		lang: codeLang.value,
+		themes: {
+			fallback: 'dark-plus',
+			light: lightThemeName,
+			dark: darkThemeName,
+		},
+		defaultColor: false,
+		cssVariablePrefix: '--shiki-',
+	}),
+);
 
 async function fetchLanguage(to: string): Promise<void> {
 	const language = to as BundledLanguage;
@@ -61,7 +63,9 @@ async function fetchLanguage(to: string): Promise<void> {
 		});
 		const bundle = bundles[0];
 		if (bundle != null) {
-			if (_DEV_) console.log(`Loading language: ${language}`);
+			if (_DEV_) {
+				console.log(`Loading language: ${language}`);
+			}
 			await highlighter.loadLanguage(bundle.import);
 			codeLang.value = language;
 		} else {
@@ -72,12 +76,18 @@ async function fetchLanguage(to: string): Promise<void> {
 	}
 }
 
-watch(() => props.lang, (to) => {
-	if (codeLang.value === to || !to) return;
-	return new Promise((resolve) => {
-		fetchLanguage(to).then(() => resolve);
-	});
-}, { immediate: true });
+watch(
+	() => props.lang,
+	(to) => {
+		if (codeLang.value === to || !to) {
+			return;
+		}
+		return new Promise((resolve) => {
+			fetchLanguage(to).then(() => resolve);
+		});
+	},
+	{ immediate: true },
+);
 </script>
 
 <style module lang="scss">

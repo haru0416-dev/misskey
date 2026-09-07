@@ -9,36 +9,49 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import * as fs from 'node:fs/promises';
-import { heapSnapshotCategory, type HeapSnapshotData } from '../../../.github/scripts/heap-snapshot-util.mts';
+import { heapSnapshotCategory } from '../../../.github/scripts/heap-snapshot-util.mts';
+import type { HeapSnapshotData } from '../../../.github/scripts/heap-snapshot-util.mts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 function readIntegerEnv(name, defaultValue, min) {
 	const rawValue = process.env[name];
-	if (rawValue == null || rawValue === '') return defaultValue;
-	if (!/^\d+$/.test(rawValue)) throw new Error(`${name} must be an integer`);
+	if (rawValue == null || rawValue === '') {
+		return defaultValue;
+	}
+	if (!/^\d+$/.test(rawValue)) {
+		throw new Error(`${name} must be an integer`);
+	}
 
 	const value = Number(rawValue);
-	if (!Number.isSafeInteger(value) || value < min) throw new Error(`${name} must be >= ${min}`);
+	if (!Number.isSafeInteger(value) || value < min) {
+		throw new Error(`${name} must be >= ${min}`);
+	}
 	return value;
 }
 
 function readBooleanEnv(name, defaultValue) {
 	const rawValue = process.env[name];
-	if (rawValue == null || rawValue === '') return defaultValue;
-	if (rawValue === '1' || rawValue === 'true') return true;
-	if (rawValue === '0' || rawValue === 'false') return false;
+	if (rawValue == null || rawValue === '') {
+		return defaultValue;
+	}
+	if (rawValue === '1' || rawValue === 'true') {
+		return true;
+	}
+	if (rawValue === '0' || rawValue === 'false') {
+		return false;
+	}
 	throw new Error(`${name} must be one of: 1, 0, true, false`);
 }
 
 const SAMPLE_COUNT = readIntegerEnv('MK_MEMORY_SAMPLE_COUNT', 3, 1);
-const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120000, 1);
-const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10000, 0);
-const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30000, 1);
+const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120_000, 1);
+const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10_000, 0);
+const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30_000, 1);
 const REQUEST_COUNT = readIntegerEnv('MK_MEMORY_REQUEST_COUNT', 10, 0);
 const HEAP_SNAPSHOT = readBooleanEnv('MK_MEMORY_HEAP_SNAPSHOT', false);
-const HEAP_SNAPSHOT_TIMEOUT = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_TIMEOUT_MS', 120000, 1);
+const HEAP_SNAPSHOT_TIMEOUT = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_TIMEOUT_MS', 120_000, 1);
 const HEAP_SNAPSHOT_BREAKDOWN_TOP_N = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_BREAKDOWN_TOP_N', 6, 1);
 const HEAP_SNAPSHOT_SAVE_PATH = process.env.MK_MEMORY_HEAP_SNAPSHOT_SAVE_PATH;
 
@@ -106,48 +119,78 @@ function sanitizeHeapSnapshotBreakdownLabel(value, fallback = 'unknown') {
 	const label = String(value ?? '')
 		.replace(/\s+/g, ' ')
 		.trim();
-	if (label === '') return fallback;
-	if (label.length <= 80) return label;
+	if (label === '') {
+		return fallback;
+	}
+	if (label.length <= 80) {
+		return label;
+	}
 	return `${label.slice(0, 77)}...`;
 }
 
 function classifyHeapSnapshotBreakdown(category: keyof typeof heapSnapshotCategory, type, name) {
-	if (category === 'strings') return type;
+	if (category === 'strings') {
+		return type;
+	}
 
 	if (category === 'jsArrays') {
-		if (type === 'array elements') return 'Array elements';
-		if (type === 'object' && name === 'Array') return 'Array objects';
+		if (type === 'array elements') {
+			return 'Array elements';
+		}
+		if (type === 'object' && name === 'Array') {
+			return 'Array objects';
+		}
 		return sanitizeHeapSnapshotBreakdownLabel(`${type}: ${name}`);
 	}
 
 	if (category === 'typedArrays') {
-		if (name === 'system / JSArrayBufferData') return 'ArrayBuffer data';
+		if (name === 'system / JSArrayBufferData') {
+			return 'ArrayBuffer data';
+		}
 		return sanitizeHeapSnapshotBreakdownLabel(`${type}: ${name}`);
 	}
 
 	if (category === 'systemObjects') {
-		if (name.startsWith('system /')) return sanitizeHeapSnapshotBreakdownLabel(name);
-		if (name.startsWith('(system ')) return sanitizeHeapSnapshotBreakdownLabel(name);
+		if (name.startsWith('system /')) {
+			return sanitizeHeapSnapshotBreakdownLabel(name);
+		}
+		if (name.startsWith('(system ')) {
+			return sanitizeHeapSnapshotBreakdownLabel(name);
+		}
 		return sanitizeHeapSnapshotBreakdownLabel(`${type}: ${name}`, type);
 	}
 
 	if (category === 'otherJsObjects') {
-		if (type === 'object') return sanitizeHeapSnapshotBreakdownLabel(`object: ${name}`, 'object: unknown');
+		if (type === 'object') {
+			return sanitizeHeapSnapshotBreakdownLabel(`object: ${name}`, 'object: unknown');
+		}
 		return type;
 	}
 
 	if (category === 'otherNonJsObjects') {
-		if (type === 'extra native bytes') return 'Extra native bytes';
-		if (type === 'native') return sanitizeHeapSnapshotBreakdownLabel(`native: ${name}`, 'native: unknown');
+		if (type === 'extra native bytes') {
+			return 'Extra native bytes';
+		}
+		if (type === 'native') {
+			return sanitizeHeapSnapshotBreakdownLabel(`native: ${name}`, 'native: unknown');
+		}
 		return sanitizeHeapSnapshotBreakdownLabel(`${type}: ${name}`, type);
 	}
 
 	if (category === 'code') {
 		const lowerName = name.toLowerCase();
-		if (lowerName.includes('bytecode')) return 'bytecode';
-		if (lowerName.includes('builtin')) return 'builtins';
-		if (lowerName.includes('regexp')) return 'regexp code';
-		if (lowerName.includes('stub')) return 'stubs';
+		if (lowerName.includes('bytecode')) {
+			return 'bytecode';
+		}
+		if (lowerName.includes('builtin')) {
+			return 'builtins';
+		}
+		if (lowerName.includes('regexp')) {
+			return 'regexp code';
+		}
+		if (lowerName.includes('stub')) {
+			return 'stubs';
+		}
 		return sanitizeHeapSnapshotBreakdownLabel(`code: ${name}`, 'code: unknown');
 	}
 
@@ -166,8 +209,12 @@ function collapseHeapSnapshotBreakdown(breakdowns: Record<string, Record<string,
 		const otherValue = entries.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N).reduce((sum, [, value]) => sum + value, 0);
 
 		const categoryBreakdown = Object.fromEntries(topEntries);
-		if (otherValue > 0) categoryBreakdown.Other = otherValue;
-		if (Object.keys(categoryBreakdown).length > 0) collapsed[category] = categoryBreakdown;
+		if (otherValue > 0) {
+			categoryBreakdown.Other = otherValue;
+		}
+		if (Object.keys(categoryBreakdown).length > 0) {
+			collapsed[category] = categoryBreakdown;
+		}
 	}
 
 	return collapsed;
@@ -184,9 +231,13 @@ function analyzeHeapSnapshot(snapshot) {
 	}
 
 	const nodeFields = meta.node_fields;
-	if (!Array.isArray(nodeFields)) throw new Error('Invalid heap snapshot node fields');
+	if (!Array.isArray(nodeFields)) {
+		throw new Error('Invalid heap snapshot node fields');
+	}
 	const edgeFields = meta.edge_fields;
-	if (!Array.isArray(edgeFields)) throw new Error('Invalid heap snapshot edge fields');
+	if (!Array.isArray(edgeFields)) {
+		throw new Error('Invalid heap snapshot edge fields');
+	}
 
 	const typeOffset = nodeFields.indexOf('type');
 	const nameOffset = nodeFields.indexOf('name');
@@ -203,9 +254,13 @@ function analyzeHeapSnapshot(snapshot) {
 	}
 
 	const nodeTypeNames = meta.node_types?.[typeOffset];
-	if (!Array.isArray(nodeTypeNames)) throw new Error('Invalid heap snapshot node types');
+	if (!Array.isArray(nodeTypeNames)) {
+		throw new Error('Invalid heap snapshot node types');
+	}
 	const edgeTypeNames = meta.edge_types?.[edgeTypeOffset];
-	if (!Array.isArray(edgeTypeNames)) throw new Error('Invalid heap snapshot edge types');
+	if (!Array.isArray(edgeTypeNames)) {
+		throw new Error('Invalid heap snapshot edge types');
+	}
 
 	function createEmptyHeapSnapshotCategoryMap() {
 		return Object.fromEntries(Object.keys(heapSnapshotCategory).map((category) => [category, 0])) as Record<
@@ -261,10 +316,14 @@ function analyzeHeapSnapshot(snapshot) {
 		name: string,
 		nodeIndex: number | null = null,
 	) {
-		if (value <= 0) return;
+		if (value <= 0) {
+			return;
+		}
 		categories[category] += value;
 		addValue(breakdowns[category], classifyHeapSnapshotBreakdown(category, type, name), value);
-		if (nodeIndex != null) nodeCounts[category]++;
+		if (nodeIndex != null) {
+			nodeCounts[category]++;
+		}
 	}
 
 	function addJsArrayElementSize(nodeIndex: number) {
@@ -272,10 +331,14 @@ function analyzeHeapSnapshot(snapshot) {
 		const edgeCount = nodes[nodeIndex + edgeCountOffset] ?? 0;
 		for (let i = 0, currentEdgeIndex = beginEdgeIndex; i < edgeCount; i++, currentEdgeIndex += edgeFieldCount) {
 			const edgeType = edges[currentEdgeIndex + edgeTypeOffset];
-			if (edgeType !== internalEdgeType) continue;
+			if (edgeType !== internalEdgeType) {
+				continue;
+			}
 
 			const edgeName = strings[edges[currentEdgeIndex + edgeNameOffset]];
-			if (edgeName !== 'elements') continue;
+			if (edgeName !== 'elements') {
+				continue;
+			}
 
 			const elementsNodeIndex = edges[currentEdgeIndex + edgeToNodeOffset];
 			if ((retainerCounts.get(elementsNodeIndex) ?? 0) === 1) {
@@ -333,13 +396,19 @@ function analyzeHeapSnapshot(snapshot) {
 	categories.total += extraNativeBytes;
 
 	for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += nodeFieldCount) {
-		if (jsArrayElementNodeIndexes.has(nodeIndex)) continue;
+		if (jsArrayElementNodeIndexes.has(nodeIndex)) {
+			continue;
+		}
 
 		const typeId = nodes[nodeIndex + typeOffset];
-		if (typeId === hiddenType || typeId === nativeType || typeId === codeType || stringTypes.has(typeId)) continue;
+		if (typeId === hiddenType || typeId === nativeType || typeId === codeType || stringTypes.has(typeId)) {
+			continue;
+		}
 
 		const name = strings[nodes[nodeIndex + nameOffset]] ?? '';
-		if (name === 'Array') continue;
+		if (name === 'Array') {
+			continue;
+		}
 
 		const type = nodeTypeNames[typeId] ?? 'unknown';
 		const selfSize = nodes[nodeIndex + selfSizeOffset] ?? 0;
@@ -378,8 +447,12 @@ function isRuntimeMemoryUsageMessage(message: unknown): message is RuntimeMemory
 }
 
 function isHeapSnapshotResponseMessage(message: unknown): message is HeapSnapshotResponseMessage {
-	if (!isRecord(message)) return false;
-	if (message.type === 'heap snapshot') return true;
+	if (!isRecord(message)) {
+		return false;
+	}
+	if (message.type === 'heap snapshot') {
+		return true;
+	}
 	return message.type === 'heap snapshot error' && typeof message.message === 'string';
 }
 
@@ -396,7 +469,9 @@ function waitForMessage<T>(
 		}, timeout);
 
 		const onMessage = (message: unknown) => {
-			if (!predicate(message)) return;
+			if (!predicate(message)) {
+				return;
+			}
 			globalThis.clearTimeout(timer);
 			serverProcess.off('message', onMessage);
 			resolve(message);
@@ -423,7 +498,9 @@ async function getRuntimeMemoryUsage(serverProcess: ChildProcess) {
 }
 
 async function getHeapSnapshotStatistics(serverProcess: ChildProcess): Promise<HeapSnapshotData | null> {
-	if (!HEAP_SNAPSHOT) return null;
+	if (!HEAP_SNAPSHOT) {
+		return null;
+	}
 
 	const snapshotPath = join(
 		tmpdir(),
@@ -545,7 +622,7 @@ async function measureMemory() {
 			resolve(undefined);
 		});
 		// 終了イベントが届かない異常時に計測処理が待ち続けないよう、10秒で強制終了する。
-		setTimeout(10000).then(() => {
+		setTimeout(10_000).then(() => {
 			if (!exited) {
 				serverProcess.kill('SIGKILL');
 			}

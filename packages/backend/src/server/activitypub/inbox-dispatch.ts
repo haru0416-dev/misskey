@@ -36,22 +36,24 @@ import {
 	isUpdate,
 	validActor,
 	validPost,
-	type IAccept,
-	type IAdd,
-	type IAnnounce,
-	type IBlock,
-	type ICreate,
-	type IDelete,
-	type IFlag,
-	type IFollow,
-	type ILike,
-	type IMove,
-	type IObject,
-	type IPost,
-	type IReject,
-	type IRemove,
-	type IUndo,
-	type IUpdate,
+} from '@/core/activitypub/type.js';
+import type {
+	IAccept,
+	IAdd,
+	IAnnounce,
+	IBlock,
+	ICreate,
+	IDelete,
+	IFlag,
+	IFollow,
+	ILike,
+	IMove,
+	IObject,
+	IPost,
+	IReject,
+	IRemove,
+	IUndo,
+	IUpdate,
 } from '@/core/activitypub/type.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
@@ -59,7 +61,7 @@ import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
 import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
 import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { type DbQueue } from '@/core/queue/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
@@ -69,27 +71,23 @@ import {
 	getUserFromApIdForApi,
 	isFederationAllowedUri,
 	resolveApObjectForApi,
-	type ApiApResolveDependencies,
 } from '@/server/rest/activitypub/ap-resolve.js';
-import {
-	extractEmojisForApi,
-	updatePersonForApi,
-	type ApiApPersonDependencies,
-} from '@/server/rest/activitypub/ap-person.js';
+import type { ApiApResolveDependencies } from '@/server/rest/activitypub/ap-resolve.js';
+import { extractEmojisForApi, updatePersonForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import {
 	createNoteFromApForApi,
 	parseAudienceForApi,
 	resolveNoteForApi,
 	updateQuestionFromApForApi,
-	type ApiApNoteDependencies,
 } from '@/server/rest/activitypub/ap-note.js';
-import { createNoteForApi, type CreateNoteData } from '@/server/rest/note/notes-create.js';
-import { deleteNoteForApi, type ApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
-import {
-	createNoteReactionForApi,
-	deleteNoteReactionForApi,
-	type ApiNotesReactionsDependencies,
-} from '@/server/rest/note/notes-reactions.js';
+import type { ApiApNoteDependencies } from '@/server/rest/activitypub/ap-note.js';
+import { createNoteForApi } from '@/server/rest/note/notes-create.js';
+import type { CreateNoteData } from '@/server/rest/note/notes-create.js';
+import { deleteNoteForApi } from '@/server/rest/note/notes-delete.js';
+import type { ApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
+import { createNoteReactionForApi, deleteNoteReactionForApi } from '@/server/rest/note/notes-reactions.js';
+import type { ApiNotesReactionsDependencies } from '@/server/rest/note/notes-reactions.js';
 import { isVisibleForMeForApi, packNoteForApi } from '@/server/rest/note/note.js';
 import {
 	blockForApi,
@@ -97,22 +95,18 @@ import {
 	remoteRejectForApi,
 	unblockForApi,
 	unfollow,
-	type ApiAccountBlockingDependencies,
 } from '@/server/rest/account/account-blocking.js';
-import { followWithSideEffectsForApi, type QueueRelationshipDependencies } from '../../queue/handlers/relationship.js';
-import { acceptFollowRequestForApi, type ApiFollowingDependencies } from '@/server/rest/user/following.js';
-import {
-	addPinnedForApi,
-	removePinnedForApi,
-	type ApiAccountPinDependencies,
-} from '@/server/rest/account/account-pin.js';
-import {
-	isRelayActorForApi,
-	relayAcceptedForApi,
-	relayRejectedForApi,
-	type ApiAdminRelaysDependencies,
-} from '@/server/rest/admin/admin-relays.js';
-import { reportAbuseForApi, type ApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
+import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
+import { followWithSideEffectsForApi } from '../../queue/handlers/relationship.js';
+import type { QueueRelationshipDependencies } from '../../queue/handlers/relationship.js';
+import { acceptFollowRequestForApi } from '@/server/rest/user/following.js';
+import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
+import { addPinnedForApi, removePinnedForApi } from '@/server/rest/account/account-pin.js';
+import type { ApiAccountPinDependencies } from '@/server/rest/account/account-pin.js';
+import { isRelayActorForApi, relayAcceptedForApi, relayRejectedForApi } from '@/server/rest/admin/admin-relays.js';
+import type { ApiAdminRelaysDependencies } from '@/server/rest/admin/admin-relays.js';
+import { reportAbuseForApi } from '@/server/rest/admin/admin-abuse-reports.js';
+import type { ApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
 import type { ApiInternalEventPublisher, ApiNotesStreamPublisher, ApiNoteStreamPublisher } from '../rest/events.js';
 import type { ChartWriters } from '../chart-runtime.js';
 
@@ -189,30 +183,64 @@ export async function performOneActivityForApi(
 	activity: IObject,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (actor.isSuspended) return;
+	if (actor.isSuspended) {
+		return;
+	}
 
-	if (isCreate(activity)) return await createFromApForApi(deps, actor, activity, history);
-	if (isDelete(activity)) return await deleteFromApForApi(deps, actor, activity);
-	if (isUpdate(activity)) return await updateFromApForApi(deps, actor, activity, history);
-	if (isFollow(activity)) return await followFromApForApi(deps, actor, activity);
-	if (isAccept(activity)) return await acceptFromApForApi(deps, actor, activity, history);
-	if (isReject(activity)) return await rejectFromApForApi(deps, actor, activity, history);
-	if (isAdd(activity)) return await addFromApForApi(deps, actor, activity, history);
-	if (isRemove(activity)) return await removeFromApForApi(deps, actor, activity, history);
-	if (isAnnounce(activity)) return await announceFromApForApi(deps, actor, activity, history);
-	if (isLike(activity)) return await likeFromApForApi(deps, actor, activity);
-	if (isUndo(activity)) return await undoFromApForApi(deps, actor, activity, history);
-	if (isBlock(activity)) return await blockFromApForApi(deps, actor, activity);
-	if (isFlag(activity)) return await flagFromApForApi(deps, actor, activity);
-	if (isMove(activity)) return await moveFromApForApi(deps, actor, activity, history);
+	if (isCreate(activity)) {
+		return await createFromApForApi(deps, actor, activity, history);
+	}
+	if (isDelete(activity)) {
+		return await deleteFromApForApi(deps, actor, activity);
+	}
+	if (isUpdate(activity)) {
+		return await updateFromApForApi(deps, actor, activity, history);
+	}
+	if (isFollow(activity)) {
+		return await followFromApForApi(deps, actor, activity);
+	}
+	if (isAccept(activity)) {
+		return await acceptFromApForApi(deps, actor, activity, history);
+	}
+	if (isReject(activity)) {
+		return await rejectFromApForApi(deps, actor, activity, history);
+	}
+	if (isAdd(activity)) {
+		return await addFromApForApi(deps, actor, activity, history);
+	}
+	if (isRemove(activity)) {
+		return await removeFromApForApi(deps, actor, activity, history);
+	}
+	if (isAnnounce(activity)) {
+		return await announceFromApForApi(deps, actor, activity, history);
+	}
+	if (isLike(activity)) {
+		return await likeFromApForApi(deps, actor, activity);
+	}
+	if (isUndo(activity)) {
+		return await undoFromApForApi(deps, actor, activity, history);
+	}
+	if (isBlock(activity)) {
+		return await blockFromApForApi(deps, actor, activity);
+	}
+	if (isFlag(activity)) {
+		return await flagFromApForApi(deps, actor, activity);
+	}
+	if (isMove(activity)) {
+		return await moveFromApForApi(deps, actor, activity, history);
+	}
 
 	return `unrecognized activity type: ${activity.type}`;
 }
 
 async function followFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IFollow): Promise<string> {
 	const followee = await getUserFromApIdForApi(deps, activity.object);
-	if (followee == null) return 'skip: followee not found';
-	if (followee.host != null) return 'skip: フォローしようとしているユーザーはローカルユーザーではありません';
+	if (followee == null) {
+		return 'skip: followee not found';
+	}
+	if (followee.host != null) {
+		return 'skip: フォローしようとしているユーザーはローカルユーザーではありません';
+	}
 
 	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	await followWithSideEffectsForApi(deps, actor, followee, activity.id === undefined ? {} : { requestId: activity.id });
@@ -223,7 +251,9 @@ async function likeFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser,
 	const targetUri = getApId(activity.object);
 
 	const note = await getNoteFromApIdForApi(deps, targetUri);
-	if (!note) return `skip: target note not found ${targetUri}`;
+	if (!note) {
+		return `skip: target note not found ${targetUri}`;
+	}
 
 	await extractEmojisForApi(deps, activity.tag ?? [], actor.host ?? '').catch(() => null);
 
@@ -246,7 +276,9 @@ async function acceptFromApForApi(
 ): Promise<string> {
 	const object = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
-	if (isFollow(object)) return await acceptFollowFromApForApi(deps, actor, object);
+	if (isFollow(object)) {
+		return await acceptFollowFromApForApi(deps, actor, object);
+	}
 
 	return `skip: Unknown Accept type: ${getApType(object)}`;
 }
@@ -258,11 +290,17 @@ async function acceptFollowFromApForApi(
 ): Promise<string> {
 	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
-	if (follower == null) return 'skip: follower not found';
-	if (follower.host != null) return 'skip: follower is not a local user';
+	if (follower == null) {
+		return 'skip: follower not found';
+	}
+	if (follower.host != null) {
+		return 'skip: follower is not a local user';
+	}
 
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
-	if (match) return await relayAcceptedForApi(deps, match[1]!);
+	if (match) {
+		return await relayAcceptedForApi(deps, match[1]!);
+	}
 
 	await acceptFollowRequestForApi(deps, actor, follower);
 	return 'ok';
@@ -274,12 +312,18 @@ async function addFromApForApi(
 	activity: IAdd,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
-	if (activity.target == null) return 'target is null';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'invalid actor';
+	}
+	if (activity.target == null) {
+		return 'target is null';
+	}
 
 	if (activity.target === actor.featured) {
 		const note = await resolveNoteForApi(deps, activity.object, { resolver: history });
-		if (note == null) return 'note not found';
+		if (note == null) {
+			return 'note not found';
+		}
 		await addPinnedForApi(deps, actor, note.id);
 		return;
 	}
@@ -293,13 +337,19 @@ async function announceFromApForApi(
 	activity: IAnnounce,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (!activity.object) return 'skip: activity has no object property';
+	if (!activity.object) {
+		return 'skip: activity has no object property';
+	}
 	const targetUri = getApId(activity.object);
-	if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
+	if (targetUri.startsWith('bear:')) {
+		return 'skip: bearcaps url not supported.';
+	}
 
 	const target = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
-	if (isPost(target)) return await announceNoteFromApForApi(deps, actor, activity, target, history);
+	if (isPost(target)) {
+		return await announceNoteFromApForApi(deps, actor, activity, target, history);
+	}
 
 	return `skip: unknown object type ${getApType(target)}`;
 }
@@ -311,24 +361,32 @@ async function announceNoteFromApForApi(
 	target: IPost,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (actor.isSuspended) return;
+	if (actor.isSuspended) {
+		return;
+	}
 
 	const fromRelay = await isRelayActorForApi(deps, actor);
 	const uri = getApId(fromRelay ? target : activity);
 
-	if (!isFederationAllowedUri(deps.config, deps.meta, uri)) return;
+	if (!isFederationAllowedUri(deps.config, deps.meta, uri)) {
+		return;
+	}
 
 	const activityUri = getApId(activity);
 	const unlock = await acquireApObjectLock(deps.redis, activityUri);
 
 	try {
 		const exist = await getNoteFromApIdForApi(deps, uri);
-		if (exist) return;
+		if (exist) {
+			return;
+		}
 
 		let renote;
 		try {
 			renote = await resolveNoteForApi(deps, target, { resolver: history });
-			if (renote == null) return 'announce target is null';
+			if (renote == null) {
+				return 'announce target is null';
+			}
 		} catch (err) {
 			if (err instanceof StatusError) {
 				if (!err.isRetryable) {
@@ -390,8 +448,12 @@ async function announceNoteFromApForApi(
 async function blockFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IBlock): Promise<string> {
 	// Block の対象は既存のローカルユーザーに限る。
 	const blockee = await getUserFromApIdForApi(deps, activity.object);
-	if (blockee == null) return 'skip: blockee not found';
-	if (blockee.host != null) return 'skip: ブロックしようとしているユーザーはローカルユーザーではありません';
+	if (blockee == null) {
+		return 'skip: blockee not found';
+	}
+	if (blockee.host != null) {
+		return 'skip: ブロックしようとしているユーザーはローカルユーザーではありません';
+	}
 
 	await blockForApi(deps, actor, blockee);
 	return 'ok';
@@ -403,9 +465,13 @@ async function createFromApForApi(
 	activity: ICreate,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (!activity.object) return 'skip: activity has no object property';
+	if (!activity.object) {
+		return 'skip: activity has no object property';
+	}
 	const targetUri = getApId(activity.object);
-	if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
+	if (targetUri.startsWith('bear:')) {
+		return 'skip: bearcaps url not supported.';
+	}
 
 	if (typeof activity.object === 'object') {
 		const to = unique(concat([toArray(activity.to), toArray(activity.object.to)]));
@@ -440,10 +506,14 @@ async function createNoteWithLockFromApForApi(
 	const uri = getApId(note);
 
 	if (typeof note === 'object') {
-		if (actor.uri !== note.attributedTo) return 'skip: actor.uri !== note.attributedTo';
+		if (actor.uri !== note.attributedTo) {
+			return 'skip: actor.uri !== note.attributedTo';
+		}
 
 		if (typeof note.id === 'string') {
-			if (extractDbHost(actor.uri) !== extractDbHost(note.id)) return 'skip: host in actor.uri !== note.id';
+			if (extractDbHost(actor.uri) !== extractDbHost(note.id)) {
+				return 'skip: host in actor.uri !== note.id';
+			}
 		} else {
 			return 'skip: note.id is not a string';
 		}
@@ -452,7 +522,9 @@ async function createNoteWithLockFromApForApi(
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
 		const exist = await getNoteFromApIdForApi(deps, note);
-		if (exist) return 'skip: note exists';
+		if (exist) {
+			return 'skip: note exists';
+		}
 
 		await createNoteFromApForApi(deps, note, actor, history, silent);
 		return 'ok';
@@ -467,7 +539,9 @@ async function createNoteWithLockFromApForApi(
 }
 
 async function deleteFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IDelete): Promise<string> {
-	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'invalid actor';
+	}
 
 	let formerType: string | undefined;
 
@@ -481,22 +555,33 @@ async function deleteFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUse
 	const uri = getApId(activity.object);
 
 	// type が無くても actor 自身の削除なら Person と判定する。
-	if (!formerType && actor.uri === uri) formerType = 'Person';
+	if (!formerType && actor.uri === uri) {
+		formerType = 'Person';
+	}
 
 	// type 不明の他オブジェクトは Note として扱う。
-	if (!formerType) formerType = 'Note';
+	if (!formerType) {
+		formerType = 'Note';
+	}
 
-	if (validPost.includes(formerType)) return await deleteNoteFromApForApi(deps, actor, uri);
-	if (validActor.includes(formerType)) return await deleteActorFromApForApi(deps, actor, uri);
+	if (validPost.includes(formerType)) {
+		return await deleteNoteFromApForApi(deps, actor, uri);
+	}
+	if (validActor.includes(formerType)) {
+		return await deleteActorFromApForApi(deps, actor, uri);
+	}
 	return `Unknown type ${formerType}`;
 }
 
 async function deleteActorFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, uri: string): Promise<string> {
-	if (actor.uri !== uri) return `skip: delete actor ${actor.uri} !== ${uri}`;
+	if (actor.uri !== uri) {
+		return `skip: delete actor ${actor.uri} !== ${uri}`;
+	}
 
 	const outboxId = await deps.db.transaction(async (transaction) => {
-		if (!(await updateUserDeletedStateIfNotDeletedInDatabase(transaction as MiDrizzleDatabase, actor.id, true)))
+		if (!(await updateUserDeletedStateIfNotDeletedInDatabase(transaction as MiDrizzleDatabase, actor.id, true))) {
 			return null;
+		}
 
 		return await enqueueDbJobInOutbox(
 			transaction as MiDrizzleDatabase,
@@ -526,8 +611,12 @@ async function deleteNoteFromApForApi(deps: ApiInboxDependencies, actor: MiRemot
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
 		const note = await getNoteFromApIdForApi(deps, uri);
-		if (note == null) return 'message not found';
-		if (note.userId !== actor.id) return '投稿を削除しようとしているユーザーは投稿の作成者ではありません';
+		if (note == null) {
+			return 'message not found';
+		}
+		if (note.userId !== actor.id) {
+			return '投稿を削除しようとしているユーザーは投稿の作成者ではありません';
+		}
 
 		await deleteNoteForApi(deps, actor, note);
 		return 'ok: note deleted';
@@ -545,7 +634,9 @@ async function flagFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser,
 		.map((uri) => uri.split('/').at(-1))
 		.filter((x): x is string => x != null);
 	const users = await listUsersByIdsFromDatabase(deps.db, userIds, { includeSuspended: true });
-	if (users.length < 1) return 'skip';
+	if (users.length < 1) {
+		return 'skip';
+	}
 
 	await reportAbuseForApi(deps, [
 		{
@@ -568,9 +659,16 @@ async function moveFromApForApi(
 	history: Set<string>,
 ): Promise<string> {
 	const targetUri = getApHrefNullable(activity.target);
-	if (!targetUri) return 'skip: invalid activity target';
+	if (!targetUri) {
+		return 'skip: invalid activity target';
+	}
 
-	await updatePersonForApi(deps, actor.uri, actor);
+	// Person の取得結果は中間キャッシュで古い場合があるため、移行先は受信した Move を優先する。
+	const person = {
+		...(await resolveApObjectForApi(deps, actor.uri, FetchAllowSoftFailMask.Strict, history)),
+		movedTo: targetUri,
+	};
+	await updatePersonForApi(deps, actor.uri, actor, [], person);
 	return 'ok';
 }
 
@@ -582,7 +680,9 @@ async function rejectFromApForApi(
 ): Promise<string> {
 	const object = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
-	if (isFollow(object)) return await rejectFollowFromApForApi(deps, actor, object);
+	if (isFollow(object)) {
+		return await rejectFollowFromApForApi(deps, actor, object);
+	}
 
 	return `skip: Unknown Reject type: ${getApType(object)}`;
 }
@@ -594,11 +694,17 @@ async function rejectFollowFromApForApi(
 ): Promise<string> {
 	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
-	if (follower == null) return 'skip: follower not found';
-	if (follower.host != null) return 'skip: follower is not a local user';
+	if (follower == null) {
+		return 'skip: follower not found';
+	}
+	if (follower.host != null) {
+		return 'skip: follower is not a local user';
+	}
 
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
-	if (match) return await relayRejectedForApi(deps, match[1]!);
+	if (match) {
+		return await relayRejectedForApi(deps, match[1]!);
+	}
 
 	await remoteRejectForApi(deps, actor, follower);
 	return 'ok';
@@ -610,12 +716,18 @@ async function removeFromApForApi(
 	activity: IRemove,
 	history: Set<string>,
 ): Promise<string | void> {
-	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
-	if (activity.target == null) return 'target is null';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'invalid actor';
+	}
+	if (activity.target == null) {
+		return 'target is null';
+	}
 
 	if (activity.target === actor.featured) {
 		const note = await resolveNoteForApi(deps, activity.object, { resolver: history });
-		if (note == null) return 'note not found';
+		if (note == null) {
+			return 'note not found';
+		}
 		await removePinnedForApi(deps, actor, note.id);
 		return;
 	}
@@ -629,7 +741,9 @@ async function updateFromApForApi(
 	activity: IUpdate,
 	history: Set<string>,
 ): Promise<string> {
-	if (actor.uri !== getApId(activity.actor)) return 'skip: invalid actor';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'skip: invalid actor';
+	}
 
 	const object = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
@@ -641,9 +755,8 @@ async function updateFromApForApi(
 	} else if (getApType(object) === 'Question') {
 		await updateQuestionFromApForApi(deps, object, actor, history).catch((err) => console.error(err));
 		return 'ok: Question updated';
-	} else {
-		return `skip: Unknown type: ${getApType(object)}`;
 	}
+	return `skip: Unknown type: ${getApType(object)}`;
 }
 
 async function undoFromApForApi(
@@ -652,16 +765,28 @@ async function undoFromApForApi(
 	activity: IUndo,
 	history: Set<string>,
 ): Promise<string> {
-	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'invalid actor';
+	}
 
 	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	const object = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
-	if (isFollow(object)) return await undoFollowFromApForApi(deps, actor, object);
-	if (isBlock(object)) return await undoBlockFromApForApi(deps, actor, object);
-	if (isLike(object)) return await undoLikeFromApForApi(deps, actor, object);
-	if (isAnnounce(object)) return await undoAnnounceFromApForApi(deps, actor, object);
-	if (isAccept(object)) return await undoAcceptFromApForApi(deps, actor, object, history);
+	if (isFollow(object)) {
+		return await undoFollowFromApForApi(deps, actor, object);
+	}
+	if (isBlock(object)) {
+		return await undoBlockFromApForApi(deps, actor, object);
+	}
+	if (isLike(object)) {
+		return await undoLikeFromApForApi(deps, actor, object);
+	}
+	if (isAnnounce(object)) {
+		return await undoAnnounceFromApForApi(deps, actor, object);
+	}
+	if (isAccept(object)) {
+		return await undoAcceptFromApForApi(deps, actor, object, history);
+	}
 
 	return `skip: unknown object type ${getApType(object)}`;
 }
@@ -672,15 +797,25 @@ async function undoAcceptFromApForApi(
 	activity: IAccept,
 	history: Set<string>,
 ): Promise<string> {
-	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
+	if (actor.uri !== getApId(activity.actor)) {
+		return 'invalid actor';
+	}
 
 	const follow = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
-	if (!isFollow(follow)) return 'skip: Accept object is not a Follow';
-	if (getApId(follow.object) !== actor.uri) return 'invalid followee';
+	if (!isFollow(follow)) {
+		return 'skip: Accept object is not a Follow';
+	}
+	if (getApId(follow.object) !== actor.uri) {
+		return 'invalid followee';
+	}
 
 	const follower = await getUserFromApIdForApi(deps, follow.actor);
-	if (follower == null) return 'skip: follower not found';
-	if (follower.host != null) return 'skip: follower is not a local user';
+	if (follower == null) {
+		return 'skip: follower not found';
+	}
+	if (follower.host != null) {
+		return 'skip: follower is not a local user';
+	}
 
 	const isFollowing = await followingExistsInDatabase(deps.db, follower.id, actor.id);
 	if (isFollowing) {
@@ -699,7 +834,9 @@ async function undoAnnounceFromApForApi(
 	const uri = getApId(activity);
 
 	const note = await fetchNoteByUriAndUserIdFromDatabase(deps.db, uri, actor.id);
-	if (!note) return 'skip: no such Announce';
+	if (!note) {
+		return 'skip: no such Announce';
+	}
 
 	await deleteNoteForApi(deps, actor, note);
 	return 'ok: deleted';
@@ -711,8 +848,12 @@ async function undoBlockFromApForApi(
 	activity: IBlock,
 ): Promise<string> {
 	const blockee = await getUserFromApIdForApi(deps, activity.object);
-	if (blockee == null) return 'skip: blockee not found';
-	if (blockee.host != null) return 'skip: ブロック解除しようとしているユーザーはローカルユーザーではありません';
+	if (blockee == null) {
+		return 'skip: blockee not found';
+	}
+	if (blockee.host != null) {
+		return 'skip: ブロック解除しようとしているユーザーはローカルユーザーではありません';
+	}
 
 	await unblockForApi(deps, actor, blockee);
 	return 'ok';
@@ -724,8 +865,12 @@ async function undoFollowFromApForApi(
 	activity: IFollow,
 ): Promise<string> {
 	const followee = await getUserFromApIdForApi(deps, activity.object);
-	if (followee == null) return 'skip: followee not found';
-	if (followee.host != null) return 'skip: フォロー解除しようとしているユーザーはローカルユーザーではありません';
+	if (followee == null) {
+		return 'skip: followee not found';
+	}
+	if (followee.host != null) {
+		return 'skip: フォロー解除しようとしているユーザーはローカルユーザーではありません';
+	}
 
 	const requestExist = await followRequestExistsInDatabase(deps.db, actor.id, followee.id);
 	const isFollowing = await followingExistsInDatabase(deps.db, actor.id, followee.id);
@@ -747,10 +892,14 @@ async function undoLikeFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteU
 	const targetUri = getApId(activity.object);
 
 	const note = await getNoteFromApIdForApi(deps, targetUri);
-	if (!note) return `skip: target note not found ${targetUri}`;
+	if (!note) {
+		return `skip: target note not found ${targetUri}`;
+	}
 
 	await deleteNoteReactionForApi(deps, actor, note).catch((e: unknown) => {
-		if (e instanceof IdentifiableError && e.id === '60527ec9-b4cb-4a88-a6bd-32d3ad26817d') return;
+		if (e instanceof IdentifiableError && e.id === '60527ec9-b4cb-4a88-a6bd-32d3ad26817d') {
+			return;
+		}
 		throw e;
 	});
 

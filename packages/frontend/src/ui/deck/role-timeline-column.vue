@@ -38,39 +38,46 @@ onMounted(() => {
 	if (props.column.roleId == null) {
 		setRole();
 	} else if (props.column.timelineNameCache == null) {
-		misskeyApi('roles/show', { roleId: props.column.roleId })
-			.then(value => updateColumn(props.column.id, { timelineNameCache: value.name }));
+		misskeyApi('roles/show', { roleId: props.column.roleId }).then((value) =>
+			updateColumn(props.column.id, { timelineNameCache: value.name }),
+		);
 	}
 });
 
-watch(soundSetting, v => {
+watch(soundSetting, (v) => {
 	updateColumn(props.column.id, { soundSetting: v });
 });
 
 async function setRole() {
-	const roles = (await misskeyApi('roles/list')).filter(x => x.isExplorable);
+	const roles = (await misskeyApi('roles/list')).filter((x) => x.isExplorable);
 	const { canceled, result: roleId } = await os.select({
 		title: i18n.ts.role,
-		items: roles.map(x => ({
-			value: x.id, label: x.name,
+		items: roles.map((x) => ({
+			value: x.id,
+			label: x.name,
 		})),
-		default: roles.find(x => x.id === props.column.roleId)?.id ?? null,
+		default: roles.find((x) => x.id === props.column.roleId)?.id ?? null,
 	});
-	if (canceled || roleId == null) return;
-	const role = roles.find(x => x.id === roleId)!;
+	if (canceled || roleId == null) {
+		return;
+	}
+	const role = roles.find((x) => x.id === roleId)!;
 	updateColumn(props.column.id, {
 		roleId: role.id,
 		timelineNameCache: role.name,
 	});
 }
 
-const menu: MenuItem[] = [{
-	icon: 'ti ti-pencil',
-	text: i18n.ts.role,
-	action: setRole,
-}, {
-	icon: 'ti ti-bell',
-	text: i18n.ts._deck.newNoteNotificationSettings,
-	action: () => soundSettingsButton(soundSetting),
-}];
+const menu: MenuItem[] = [
+	{
+		icon: 'ti ti-pencil',
+		text: i18n.ts.role,
+		action: setRole,
+	},
+	{
+		icon: 'ti ti-bell',
+		text: i18n.ts._deck.newNoteNotificationSettings,
+		action: () => soundSettingsButton(soundSetting),
+	},
+];
 </script>

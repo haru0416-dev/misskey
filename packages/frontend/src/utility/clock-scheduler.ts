@@ -25,13 +25,17 @@ export class ClockScheduler {
 	}
 
 	public resume(): void {
-		if (!this.running) return;
+		if (!this.running) {
+			return;
+		}
 		this.paused = false;
 		this.run();
 	}
 
 	public stop(): void {
-		if (!this.running) return;
+		if (!this.running) {
+			return;
+		}
 		this.running = false;
 		this.paused = false;
 		this.clearTimer();
@@ -40,7 +44,9 @@ export class ClockScheduler {
 
 	private run = (): void => {
 		this.clearTimer();
-		if (!this.running || this.paused || window.document.hidden) return;
+		if (!this.running || this.paused || window.document.hidden) {
+			return;
+		}
 
 		const delay = this.tick();
 		if (delay == null) {
@@ -51,7 +57,9 @@ export class ClockScheduler {
 	};
 
 	private clearTimer(): void {
-		if (this.timerId == null) return;
+		if (this.timerId == null) {
+			return;
+		}
 		window.clearTimeout(this.timerId);
 		this.timerId = null;
 	}

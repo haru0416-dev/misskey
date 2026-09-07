@@ -62,25 +62,33 @@ const isNotifications = computed(() => mainRouter.currentRoute.value.path === '/
 
 const menuIndicated = computed(() => {
 	for (const [key, def] of Object.entries(navbarItemDef)) {
-		if (key === 'notifications') continue; // 通知は下にボタンとして表示されてるから
-		if (def.indicated) return true;
+		if (key === 'notifications') {
+			continue;
+		} // 通知は下にボタンとして表示されてるから
+		if (def.indicated) {
+			return true;
+		}
 	}
 	return false;
 });
 
 const rootElHeight = ref(0);
 
-watch(rootEl, () => {
-	if (rootEl.value) {
-		rootElHeight.value = rootEl.value.offsetHeight;
-		window.document.body.style.setProperty('--MI-minBottomSpacing', 'var(--MI-minBottomSpacingMobile)');
-	} else {
-		rootElHeight.value = 0;
-		window.document.body.style.setProperty('--MI-minBottomSpacing', '0px');
-	}
-}, {
-	immediate: true,
-});
+watch(
+	rootEl,
+	() => {
+		if (rootEl.value) {
+			rootElHeight.value = rootEl.value.offsetHeight;
+			window.document.body.style.setProperty('--MI-minBottomSpacing', 'var(--MI-minBottomSpacingMobile)');
+		} else {
+			rootElHeight.value = 0;
+			window.document.body.style.setProperty('--MI-minBottomSpacing', '0px');
+		}
+	},
+	{
+		immediate: true,
+	},
+);
 </script>
 
 <style lang="scss" module>

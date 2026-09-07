@@ -10,13 +10,8 @@ import type { RedisOptions } from 'ioredis';
 import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
 import { PRODUCT_NAME } from '@/const.js';
 import { optionalProperty } from '@/misc/optional-property.js';
-import {
-	compiledConfigEnvelopeSchema,
-	parseByteSize,
-	parseDuration,
-	type CompiledConfigV2,
-	type SecretSource,
-} from './config-schema.js';
+import { compiledConfigEnvelopeSchema, parseByteSize, parseDuration } from './config-schema.js';
+import type { CompiledConfigV2, SecretSource } from './config-schema.js';
 
 export type TelemetryInstrumentationName = keyof InstrumentationConfigMap;
 
@@ -225,7 +220,9 @@ const _dirname = dirname(_filename);
 let rootDir = _dirname;
 while (!fs.existsSync(resolve(rootDir, 'packages'))) {
 	const parentDir = dirname(rootDir);
-	if (parentDir === rootDir) throw new Error('Cannot find root directory');
+	if (parentDir === rootDir) {
+		throw new Error('Cannot find root directory');
+	}
 	rootDir = parentDir;
 }
 
@@ -237,9 +234,13 @@ export const compiledConfigFilePath = fs.existsSync(compiledConfigFilePathForTes
 	: resolve(projectBuiltDir, '.config.json');
 
 function resolveSecret(secret: SecretSource, path: string): string {
-	if ('plainText' in secret) return secret.plainText;
+	if ('plainText' in secret) {
+		return secret.plainText;
+	}
 	const value = process.env[secret.fromEnvironment];
-	if (value == null) throw new Error(`${path} requires environment variable ${secret.fromEnvironment}.`);
+	if (value == null) {
+		throw new Error(`${path} requires environment variable ${secret.fromEnvironment}.`);
+	}
 	return value;
 }
 
@@ -249,7 +250,9 @@ function normalizeUrl(value: string): string {
 
 function resolveValkeyConnection(config: CompiledConfigV2, name: string, host: string): RuntimeValkeyConnection {
 	const source = config.valkey.connections[name];
-	if (source == null) throw new Error(`Unknown Valkey connection: ${name}`);
+	if (source == null) {
+		throw new Error(`Unknown Valkey connection: ${name}`);
+	}
 	const prefix = source.keyPrefix ?? host;
 	return {
 		host: source.host,
@@ -281,7 +284,9 @@ function resolveTelemetryInstrumentations(
 function resolveTelemetryBackend(
 	backend: CompiledConfigV2['observability']['telemetry']['backend'],
 ): Config['observability']['telemetry']['backend'] {
-	if (backend == null) return undefined;
+	if (backend == null) {
+		return undefined;
+	}
 	return {
 		endpoint: backend.endpoint,
 		...optionalProperty('serviceName', backend.serviceName),
@@ -305,7 +310,9 @@ function resolveTelemetryBackend(
 function resolveTelemetryFrontend(
 	frontend: CompiledConfigV2['observability']['telemetry']['frontend'],
 ): Config['observability']['telemetry']['frontend'] {
-	if (frontend == null) return undefined;
+	if (frontend == null) {
+		return undefined;
+	}
 	return {
 		endpoint: frontend.endpoint,
 		...optionalProperty('serviceName', frontend.serviceName),
@@ -361,7 +368,9 @@ function resolveQueues(queues: CompiledConfigV2['queues']): Config['queues'] {
 }
 
 function resolveListen(listen: CompiledConfigV2['server']['listen']): Config['server']['listen'] {
-	if ('tcp' in listen) return listen;
+	if ('tcp' in listen) {
+		return listen;
+	}
 	return {
 		unixSocket: {
 			path: listen.unixSocket.path,
@@ -521,13 +530,17 @@ const REDACTED = '***';
 
 /** URL に埋め込まれた資格情報とクエリ文字列を伏せる。 */
 function redactUrlSecrets(value: string | undefined): string | undefined {
-	if (value == null) return undefined;
+	if (value == null) {
+		return undefined;
+	}
 	const url = new URL(value);
 	if (url.username !== '' || url.password !== '') {
 		url.username = REDACTED;
 		url.password = REDACTED;
 	}
-	if (url.search !== '') url.search = `?${REDACTED}`;
+	if (url.search !== '') {
+		url.search = `?${REDACTED}`;
+	}
 	return url.toString();
 }
 
@@ -541,14 +554,18 @@ function redactValkey(valkey: Config['valkey']): Config['valkey'] {
 }
 
 function redactSearch(search: Config['search']): Config['search'] {
-	if (search.meilisearch == null) return search;
+	if (search.meilisearch == null) {
+		return search;
+	}
 	return { ...search, meilisearch: { ...search.meilisearch, apiKey: REDACTED } };
 }
 
 function redactTelemetryBackend(
 	backend: Config['observability']['telemetry']['backend'],
 ): Config['observability']['telemetry']['backend'] {
-	if (backend == null) return undefined;
+	if (backend == null) {
+		return undefined;
+	}
 	return {
 		...backend,
 		endpoint: redactUrlSecrets(backend.endpoint)!,

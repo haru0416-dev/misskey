@@ -71,9 +71,15 @@ function goHome() {
 
 onMounted(() => {
 	if (!isDesktop.value) {
-		window.addEventListener('resize', () => {
-			if (window.innerWidth >= DESKTOP_THRESHOLD) isDesktop.value = true;
-		}, { passive: true });
+		window.addEventListener(
+			'resize',
+			() => {
+				if (window.innerWidth >= DESKTOP_THRESHOLD) {
+					isDesktop.value = true;
+				}
+			},
+			{ passive: true },
+		);
 	}
 });
 </script>

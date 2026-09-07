@@ -20,7 +20,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-
 import { onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
@@ -44,7 +43,9 @@ const file = ref<Misskey.entities.DriveFile | null>(null);
 async function choose() {
 	chooseDriveFile({ multiple: false }).then((fileResponse) => {
 		const selectedFile = fileResponse[0];
-		if (selectedFile == null) return;
+		if (selectedFile == null) {
+			return;
+		}
 		file.value = selectedFile;
 		emit('update:modelValue', {
 			...props.modelValue,
@@ -59,7 +60,7 @@ onMounted(async () => {
 	} else {
 		misskeyApi('drive/files/show', {
 			fileId: props.modelValue.fileId,
-		}).then(fileResponse => {
+		}).then((fileResponse) => {
 			file.value = fileResponse;
 		});
 	}

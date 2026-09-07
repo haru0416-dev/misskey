@@ -8,7 +8,8 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { deleteAccountWithSideEffects, type DeleteAccountDependencies } from '@/core/account/DeleteAccountLogic.js';
+import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
+import type { DeleteAccountDependencies } from '@/core/account/DeleteAccountLogic.js';
 import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import {
@@ -17,10 +18,12 @@ import {
 	fetchUserByIdOrFailFromDatabase,
 } from '@/core/user/UserStore.js';
 import { following } from '@/db/schema/following.js';
-import { queueOutbox, type QueueOutboxRow } from '@/db/schema/queue-outbox.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import type { QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { QUEUE } from '@/queue/const.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 
 function isDeleteAccountOutboxForUser(row: QueueOutboxRow, userId: string): boolean {
 	const data = row.data as { user?: { id?: unknown } };
@@ -147,7 +150,9 @@ describe('DeleteAccountLogic', () => {
 			const outboxIds = (await runtime.db.select().from(queueOutbox))
 				.filter((row) => isDeleteAccountOutboxForUser(row, target.id) || isDeliverOutboxForUser(row, target.id))
 				.map((row) => row.id);
-			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			if (outboxIds.length > 0) {
+				await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			}
 			await deleteUserByIdFromDatabase(runtime.db, target.id);
 			await deleteUserByIdFromDatabase(runtime.db, remote.id);
 		}
@@ -197,7 +202,9 @@ describe('DeleteAccountLogic', () => {
 			const outboxIds = (await runtime.db.select().from(queueOutbox))
 				.filter((row) => isDeleteAccountOutboxForUser(row, target.id))
 				.map((row) => row.id);
-			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			if (outboxIds.length > 0) {
+				await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			}
 			await deleteUserByIdFromDatabase(runtime.db, target.id);
 			await deleteUserByIdFromDatabase(runtime.db, moderator.id);
 		}

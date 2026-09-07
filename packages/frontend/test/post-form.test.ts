@@ -78,15 +78,23 @@ function isBooleanPropCandidate(value: unknown): value is BooleanPropCandidate {
 
 function expectUndefinedBooleanDefault(component: unknown) {
 	expect(isComponentCandidate(component)).toBe(true);
-	if (!isComponentCandidate(component)) return;
+	if (!isComponentCandidate(component)) {
+		return;
+	}
 	expect(isPropsCandidate(component.props)).toBe(true);
-	if (!isPropsCandidate(component.props)) return;
+	if (!isPropsCandidate(component.props)) {
+		return;
+	}
 	const option = component.props.initialLocalOnly;
 	expect(isBooleanPropCandidate(option)).toBe(true);
-	if (!isBooleanPropCandidate(option)) return;
+	if (!isBooleanPropCandidate(option)) {
+		return;
+	}
 	expect(option.type).toBe(Boolean);
 	expect(option.default).toBeTypeOf('function');
-	if (typeof option.default !== 'function') return;
+	if (typeof option.default !== 'function') {
+		return;
+	}
 	expect(option.default()).toBeUndefined();
 }
 
@@ -102,7 +110,9 @@ describe('post form defaults', () => {
 
 		const popup = popups.value[0];
 		expect(popup).toBeDefined();
-		if (popup == null) return;
+		if (popup == null) {
+			return;
+		}
 		expect(Object.hasOwn(popup.props, 'initialLocalOnly')).toBe(false);
 
 		let forwardedProps: Record<string, unknown> | undefined;

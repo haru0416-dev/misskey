@@ -67,19 +67,18 @@ const props = defineProps<{
 
 const _widgetDefs = computed(() => {
 	if (instance.federation === 'none') {
-		return widgetDefs.filter(x => !federationWidgets.includes(x as any));
-	} else {
-		return widgetDefs;
+		return widgetDefs.filter((x) => !federationWidgets.includes(x as any));
 	}
+	return widgetDefs;
 });
 
-const _widgets = computed(() => props.widgets.filter(x => _widgetDefs.value.includes(x.name as any)));
+const _widgets = computed(() => props.widgets.filter((x) => _widgetDefs.value.includes(x.name as any)));
 
 const emit = defineEmits<{
 	(ev: 'updateWidgets', widgets: Widget[]): void;
 	(ev: 'addWidget', widget: Widget): void;
 	(ev: 'removeWidget', widget: Widget): void;
-	(ev: 'updateWidget', widget: { id: Widget['id']; data: Widget['data']; }): void;
+	(ev: 'updateWidget', widget: { id: Widget['id']; data: Widget['data'] }): void;
 	(ev: 'exit'): void;
 }>();
 
@@ -89,16 +88,18 @@ function configWidget(id: string) {
 	widgetRefs[id]?.configure();
 }
 
-const {
-	model: widgetAdderSelected,
-	def: widgetAdderSelectedDef,
-} = useMkSelect({
-	items: computed(() => [{ label: i18n.ts.none, value: null }, ..._widgetDefs.value.map(x => ({ label: i18n.ts._widgets[x], value: x }))]),
+const { model: widgetAdderSelected, def: widgetAdderSelectedDef } = useMkSelect({
+	items: computed(() => [
+		{ label: i18n.ts.none, value: null },
+		..._widgetDefs.value.map((x) => ({ label: i18n.ts._widgets[x], value: x })),
+	]),
 	initialValue: null,
 });
 
 function addWidget() {
-	if (widgetAdderSelected.value == null) return;
+	if (widgetAdderSelected.value == null) {
+		return;
+	}
 
 	emit('addWidget', {
 		name: widgetAdderSelected.value,
@@ -119,20 +120,36 @@ function updateWidget(id: Widget['id'], data: Widget['data']) {
 
 function onContextmenu(widget: Widget, ev: PointerEvent) {
 	const element = ev.target as HTMLElement | null;
-	if (element && isLink(element)) return;
-	if (element && (['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes(element.tagName) || element.attributes.getNamedItem('contenteditable') != null)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (element && isLink(element)) {
+		return;
+	}
+	if (
+		element &&
+		(['INPUT', 'TEXTAREA', 'IMG', 'VIDEO', 'CANVAS'].includes(element.tagName) ||
+			element.attributes.getNamedItem('contenteditable') != null)
+	) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
-	os.contextMenu([{
-		type: 'label',
-		text: i18n.ts._widgets[widget.name as typeof widgetDefs[number]],
-	}, {
-		icon: 'ti ti-settings',
-		text: i18n.ts.settings,
-		action: () => {
-			configWidget(widget.id);
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				type: 'label',
+				text: i18n.ts._widgets[widget.name as (typeof widgetDefs)[number]],
+			},
+			{
+				icon: 'ti ti-settings',
+				text: i18n.ts.settings,
+				action: () => {
+					configWidget(widget.id);
+				},
+			},
+		],
+		ev,
+	);
 }
 </script>
 

@@ -16,7 +16,9 @@ function createClient(url: string, loginId: string | null): MockClient {
 	return {
 		url,
 		postMessage: vi.fn((message: unknown, transfer?: Transferable[]) => {
-			if ((message as { type?: string }).type !== 'requestClientAccount') return;
+			if ((message as { type?: string }).type !== 'requestClientAccount') {
+				return;
+			}
 			const port = transfer?.[0] as MessagePort | undefined;
 			port?.postMessage({ loginId });
 		}),

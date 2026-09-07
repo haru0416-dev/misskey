@@ -4,15 +4,19 @@
  */
 
 import type { Config } from '@/config.js';
-import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
-import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role/role-policies.js';
+import { listRoleAssignmentsByUserIdFromDatabaseCachedByVersion } from '@/core/role/RoleAssignmentStore.js';
+import { fetchRolesCacheVersionFromDatabase, listRolesFromDatabaseCachedByVersion } from '@/core/role/RoleStore.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
+import type { RolePolicies } from '@/core/role/role-policies.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
 import type { RoleCondFormulaValue } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
+
+/** リクエスト内 memo のキー。認証が世代番号を置き、ロール解決が読む。 */
+export const ROLES_VERSION_MEMO_KEY = 'roles:version';
 
 export type ApiRolePolicyDependencies = {
 	config: Config;
@@ -96,16 +100,20 @@ export function computeApiUserRoles(
 }
 
 export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
-	if (user == null) return [];
+	if (user == null) {
+		return [];
+	}
 
 	// 同一リクエスト内で複数箇所から呼ばれる (notes/create と users/show でそれぞれ3回)。
 	// ロール定義は全員で共通、割り当てはユーザーごとなので、キーを分けて memo する。
+	// 世代番号は認証クエリが同乗させて memo 済み。無い経路 (アクセストークン認証・スコープ外) は 1 本読む。
+	const version = await memoizeInRequest(ROLES_VERSION_MEMO_KEY, () => fetchRolesCacheVersionFromDatabase(deps.db));
 	const [roles, assignments] = await Promise.all([
-		memoizeInRequest('role:all', () => listRolesFromDatabase(deps.db)),
-		memoizeInRequest(`roleAssignment:${user.id}`, () => listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id)),
+		listRolesFromDatabaseCachedByVersion(deps.db, version),
+		listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(deps.db, user.id, version),
 	]);
 
-	return computeApiUserRoles(deps, user, roles, assignments);
+	return computeApiUserRoles(deps, user, [...roles], [...assignments]);
 }
 
 /**
@@ -117,32 +125,35 @@ export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiU
  */
 function isValidPolicyValue<T extends keyof RolePolicies>(name: T, value: unknown): value is RolePolicies[T] {
 	const defaultValue = DEFAULT_POLICIES[name];
-	if (Array.isArray(defaultValue)) return Array.isArray(value) && value.every((item) => typeof item === 'string');
-	if (typeof defaultValue === 'number') return typeof value === 'number' && Number.isFinite(value);
+	if (Array.isArray(defaultValue)) {
+		return Array.isArray(value) && value.every((item) => typeof item === 'string');
+	}
+	if (typeof defaultValue === 'number') {
+		return typeof value === 'number' && Number.isFinite(value);
+	}
 	return typeof value === typeof defaultValue;
 }
 
 function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): RolePolicies['chatAvailability'] {
-	if (values.includes('available')) return 'available';
-	if (values.includes('readonly')) return 'readonly';
+	if (values.includes('available')) {
+		return 'available';
+	}
+	if (values.includes('readonly')) {
+		return 'readonly';
+	}
 	return 'unavailable';
 }
 
-export async function getApiRolePolicies(
-	deps: ApiRolePolicyDependencies,
-	user: MiUser | null,
-	precomputedRoles?: MiRole[],
-): Promise<RolePolicies> {
-	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
-	const roles = precomputedRoles ?? (await getApiUserRoles(deps, user));
-
-	function calc<T extends keyof RolePolicies>(
+function createPolicyCalculator(basePolicies: RolePolicies, roles: MiRole[]) {
+	return function calc<T extends keyof RolePolicies>(
 		name: T,
 		aggregate: (values: RolePolicies[T][]) => RolePolicies[T],
 	): RolePolicies[T] {
 		// meta.policies 側も検証を通っていないので、インスタンス既定値も同様に形を確かめる
 		const baseValue = isValidPolicyValue(name, basePolicies[name]) ? basePolicies[name] : DEFAULT_POLICIES[name];
-		if (roles.length === 0) return aggregate([baseValue]);
+		if (roles.length === 0) {
+			return aggregate([baseValue]);
+		}
 
 		// policies は jsonb なので、壊れた形で保存された値が入っていることがある。
 		// ここで例外を投げるとそのロールを持つユーザーの全APIが500になるため、既定値へフォールバックする。
@@ -155,14 +166,38 @@ export async function getApiRolePolicies(
 		const resolve = (policy: (typeof policies)[number]): RolePolicies[T] =>
 			policy.useDefault || !isValidPolicyValue(name, policy.value) ? baseValue : policy.value;
 		const p2 = policies.filter((policy) => policy.priority === 2);
-		if (p2.length > 0) return aggregate(p2.map(resolve));
+		if (p2.length > 0) {
+			return aggregate(p2.map(resolve));
+		}
 
 		const p1 = policies.filter((policy) => policy.priority === 1);
-		if (p1.length > 0) return aggregate(p1.map(resolve));
+		if (p1.length > 0) {
+			return aggregate(p1.map(resolve));
+		}
 
 		return aggregate(policies.map(resolve));
-	}
+	};
+}
 
+export function getApiUserProfilePolicies(
+	deps: ApiRolePolicyDependencies,
+	roles: MiRole[],
+): Pick<RolePolicies, 'canPublicNote' | 'chatAvailability'> {
+	const calc = createPolicyCalculator({ ...DEFAULT_POLICIES, ...deps.meta.policies }, roles);
+	return {
+		canPublicNote: calc('canPublicNote', (values) => values.includes(true)),
+		chatAvailability: calc('chatAvailability', aggregateChatAvailability),
+	};
+}
+
+export async function getApiRolePolicies(
+	deps: ApiRolePolicyDependencies,
+	user: MiUser | null,
+	precomputedRoles?: MiRole[],
+): Promise<RolePolicies> {
+	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
+	const roles = precomputedRoles ?? (await getApiUserRoles(deps, user));
+	const calc = createPolicyCalculator(basePolicies, roles);
 	const serverMaxFileSizeMb = Math.floor(deps.config.limits.maximumFileSizeBytes / (1024 * 1024));
 
 	return {
@@ -205,7 +240,9 @@ export async function getApiRolePolicies(
 			const set = new Set<string>();
 			for (const value of values) {
 				for (const type of value) {
-					if (type.trim() === '') continue;
+					if (type.trim() === '') {
+						continue;
+					}
 					set.add(type.trim());
 				}
 			}
@@ -218,16 +255,24 @@ export async function getApiRolePolicies(
 }
 
 export async function isApiModerator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
-	if (user == null) return false;
-	if (deps.meta.rootUserId === user.id) return true;
+	if (user == null) {
+		return false;
+	}
+	if (deps.meta.rootUserId === user.id) {
+		return true;
+	}
 
 	const roles = await getApiUserRoles(deps, user);
 	return roles.some((role) => role.isModerator || role.isAdministrator);
 }
 
 export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
-	if (user == null) return false;
-	if (deps.meta.rootUserId === user.id) return true;
+	if (user == null) {
+		return false;
+	}
+	if (deps.meta.rootUserId === user.id) {
+		return true;
+	}
 
 	const roles = await getApiUserRoles(deps, user);
 	return roles.some((role) => role.isAdministrator);
@@ -239,6 +284,8 @@ export async function hasApiRolePolicyOrIsRoot(
 	user: MiUser,
 	policy: keyof RolePolicies,
 ): Promise<boolean> {
-	if (deps.meta.rootUserId === user.id) return true;
+	if (deps.meta.rootUserId === user.id) {
+		return true;
+	}
 	return !!(await getApiRolePolicies(deps, user))[policy];
 }

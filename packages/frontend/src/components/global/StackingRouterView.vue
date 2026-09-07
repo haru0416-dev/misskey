@@ -61,36 +61,50 @@ if (router == null) {
 const currentDepth = inject(DI.routerCurrentDepth, 0);
 provide(DI.routerCurrentDepth, currentDepth + 1);
 
-const tabs = shallowRef([{
-	fullPath: router.getCurrentFullPath(),
-	routePath: router.current.route.path,
-	component: 'component' in router.current.route ? router.current.route.component : MkLoadingPage,
-	props: router.current.props,
-}]);
+const tabs = shallowRef([
+	{
+		fullPath: router.getCurrentFullPath(),
+		routePath: router.current.route.path,
+		component: 'component' in router.current.route ? router.current.route.component : MkLoadingPage,
+		props: router.current.props,
+	},
+]);
 
 function mount() {
 	const currentTab = tabs.value.at(-1);
-	if (currentTab == null) return;
+	if (currentTab == null) {
+		return;
+	}
 	tabs.value = [currentTab];
 }
 
 function back() {
-	if (tabs.value.length <= 1) return; // transitionの関係でタブが1つの状態でbackが呼ばれることがある
+	if (tabs.value.length <= 1) {
+		return;
+	} // transitionの関係でタブが1つの状態でbackが呼ばれることがある
 	const prev = tabs.value.at(-2);
-	if (prev == null) return;
+	if (prev == null) {
+		return;
+	}
 	tabs.value = tabs.value.slice(0, -1);
 	router?.replaceByPath(prev.fullPath);
 }
 
 router.useListener('change', ({ resolved }) => {
-	if (resolved == null || 'redirect' in resolved.route) return;
+	if (resolved == null || 'redirect' in resolved.route) {
+		return;
+	}
 	const currentTab = tabs.value.at(-1);
-	if (currentTab == null) return;
+	if (currentTab == null) {
+		return;
+	}
 	const routePath = resolved.route.path;
-	if (resolved.route.path === currentTab.routePath && deepEqual(resolved.props, currentTab.props)) return;
+	if (resolved.route.path === currentTab.routePath && deepEqual(resolved.props, currentTab.props)) {
+		return;
+	}
 	const fullPath = router.getCurrentFullPath();
 
-	if (tabs.value.some(tab => tab.routePath === routePath && deepEqual(resolved.props, tab.props))) {
+	if (tabs.value.some((tab) => tab.routePath === routePath && deepEqual(resolved.props, tab.props))) {
 		const newTabs = [] as typeof tabs.value;
 		for (const tab of tabs.value) {
 			newTabs.push(tab);
@@ -103,25 +117,33 @@ router.useListener('change', ({ resolved }) => {
 		return;
 	}
 
-	tabs.value = tabs.value.length >= prefer.numberOfPageCache ? [
-		...tabs.value.slice(1),
-		{
-			fullPath: fullPath,
-			routePath,
-			component: resolved.route.component,
-			props: resolved.props,
-		},
-	] : [...tabs.value, {
-		fullPath: fullPath,
-		routePath,
-		component: resolved.route.component,
-		props: resolved.props,
-	}];
+	tabs.value =
+		tabs.value.length >= prefer.numberOfPageCache
+			? [
+					...tabs.value.slice(1),
+					{
+						fullPath: fullPath,
+						routePath,
+						component: resolved.route.component,
+						props: resolved.props,
+					},
+				]
+			: [
+					...tabs.value,
+					{
+						fullPath: fullPath,
+						routePath,
+						component: resolved.route.component,
+						props: resolved.props,
+					},
+				];
 });
 
 router.useListener('replace', ({ fullPath }) => {
 	const currentTab = tabs.value.at(-1);
-	if (currentTab == null) return;
+	if (currentTab == null) {
+		return;
+	}
 	currentTab.fullPath = fullPath;
 	tabs.value = [...tabs.value.slice(0, -1), currentTab];
 });

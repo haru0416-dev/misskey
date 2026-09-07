@@ -4,11 +4,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import {
-	passwordResetRequest,
-	type PasswordResetRequestInsert,
-	type PasswordResetRequestRow,
-} from '@/db/schema/password-reset-request.js';
+import { passwordResetRequest } from '@/db/schema/password-reset-request.js';
+import type { PasswordResetRequestInsert, PasswordResetRequestRow } from '@/db/schema/password-reset-request.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -46,9 +43,13 @@ export async function consumePasswordResetRequestInDatabase(
 	return await db.transaction(async (tx) => {
 		const [request] = await tx.delete(passwordResetRequest).where(eq(passwordResetRequest.token, token)).returning();
 
-		if (!request) return 'notFound';
+		if (!request) {
+			return 'notFound';
+		}
 		// 期限切れのトークンは二度と使えないので、消えたままで構わない
-		if (isPasswordResetRequestExpired(request)) return 'expired';
+		if (isPasswordResetRequestExpired(request)) {
+			return 'expired';
+		}
 
 		await tx.update(userProfile).set({ password: passwordHash }).where(eq(userProfile.userId, request.userId));
 

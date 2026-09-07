@@ -27,13 +27,17 @@ const DEFAULT_PART_SIZE = 8 * 1024 * 1024;
 
 function bucketOf(meta: MiMeta): string {
 	const bucket = meta.objectStorageBucket;
-	if (bucket == null || bucket === '') throw new Error('Object storage bucket is not configured');
+	if (bucket == null || bucket === '') {
+		throw new Error('Object storage bucket is not configured');
+	}
 	return bucket;
 }
 
 export function createS3Service() {
 	function getS3Client(meta: MiMeta) {
-		if (typeof Bun === 'undefined') throw new Error('Object storage requires the bun runtime');
+		if (typeof Bun === 'undefined') {
+			throw new Error('Object storage requires the bun runtime');
+		}
 
 		const bucket = bucketOf(meta);
 		const scheme = meta.objectStorageUseSSL ? 'https' : 'http';

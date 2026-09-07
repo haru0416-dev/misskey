@@ -137,12 +137,16 @@ describe('toUnicodeHost: 入力を壊さないこと', () => {
 		fc.assert(
 			fc.property(singleScriptLabel(['Latin', 'Hiragana', 'Han']), (unicodeLabel) => {
 				const encoded = encodePunycodeLabel(unicodeLabel);
-				if (encoded == null) return;
+				if (encoded == null) {
+					return;
+				}
 
 				// DNS のラベルは大小を区別しないので、判定は小文字化した形で行われる。
 				const original = `${PREFIX}${encoded}`.toLowerCase();
 				const [shown] = toUnicodeHost(`${original}.example`, locales).split('.');
-				if (shown === original) return; // 安全でないと判断されたものは対象外
+				if (shown === original) {
+					return;
+				} // 安全でないと判断されたものは対象外
 
 				expect(`${PREFIX}${encodePunycodeLabel(shown as string)}`).toBe(original);
 				rewritten++;

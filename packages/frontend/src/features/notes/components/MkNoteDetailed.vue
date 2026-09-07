@@ -297,12 +297,15 @@ import { DI } from '@/di.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const props = withDefaults(defineProps<{
-	note: Misskey.entities.Note;
-	initialTab?: string;
-}>(), {
-	initialTab: 'replies',
-});
+const props = withDefaults(
+	defineProps<{
+		note: Misskey.entities.Note;
+		initialTab?: string;
+	}>(),
+	{
+		initialTab: 'replies',
+	},
+);
 
 const inChannel = inject(DI.inChannel, null);
 
@@ -340,15 +343,18 @@ const renoteTime = useTemplateRef('renoteTime');
 const reactButton = useTemplateRef('reactButton');
 const clipButton = useTemplateRef('clipButton');
 const galleryEl = useTemplateRef('galleryEl');
-const isMyRenote = $i && ($i.id === note.userId);
+const isMyRenote = $i && $i.id === note.userId;
 const showContent = ref(false);
 const isDeleted = ref(false);
 const muted = ref($i ? checkWordMute(appearNote, $i, $i.mutedWords) : false);
 const translation = ref<Misskey.entities.NotesTranslateResponse | null>(null);
 const translating = ref(false);
 const parsed = appearNote.text ? mfm.parse(appearNote.text) : null;
-const urls = parsed ? extractUrlFromMfm(parsed).filter((url) => appearNote.renote?.url !== url && appearNote.renote?.uri !== url) : null;
-const showTicker = (prefer.instanceTicker === 'always') || (prefer.instanceTicker === 'remote' && appearNote.user.instance);
+const urls = parsed
+	? extractUrlFromMfm(parsed).filter((url) => appearNote.renote?.url !== url && appearNote.renote?.uri !== url)
+	: null;
+const showTicker =
+	prefer.instanceTicker === 'always' || (prefer.instanceTicker === 'remote' && appearNote.user.instance);
 const conversation = ref<Misskey.entities.Note[]>([]);
 const replies = ref<Misskey.entities.Note[]>([]);
 const canRenote = computed(() => ['public', 'home'].includes(appearNote.visibility) || appearNote.userId === $i?.id);
@@ -365,15 +371,17 @@ const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 }));
 
 const keymap = {
-	'r': () => reply(),
+	r: () => reply(),
 	'e|a|plus': () => react(),
-	'q': () => renote(),
-	'm': () => showMenu(),
-	'c': () => {
-		if (!prefer.showClipButtonInNoteFooter) return;
+	q: () => renote(),
+	m: () => showMenu(),
+	c: () => {
+		if (!prefer.showClipButtonInNoteFooter) {
+			return;
+		}
 		clip();
 	},
-	'o': () => {
+	o: () => {
 		galleryEl.value?.openGallery();
 	},
 	'v|enter': () => {
@@ -381,7 +389,7 @@ const keymap = {
 			showContent.value = !showContent.value;
 		}
 	},
-	'esc': {
+	esc: {
 		allowRepeat: true,
 		callback: () => blur(),
 	},
@@ -403,42 +411,54 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 const tab = ref(props.initialTab);
 const reactionTabType = ref<string | null>(null);
 
-const renotesPaginator = markRaw(new Paginator('notes/renotes', {
-	limit: 10,
-	params: {
-		noteId: appearNote.id,
-	},
-}));
+const renotesPaginator = markRaw(
+	new Paginator('notes/renotes', {
+		limit: 10,
+		params: {
+			noteId: appearNote.id,
+		},
+	}),
+);
 
-const reactionsPaginator = markRaw(new Paginator('notes/reactions', {
-	limit: 10,
-	computedParams: computed(() => ({
-		noteId: appearNote.id,
-		type: reactionTabType.value,
-	})),
-}));
+const reactionsPaginator = markRaw(
+	new Paginator('notes/reactions', {
+		limit: 10,
+		computedParams: computed(() => ({
+			noteId: appearNote.id,
+			type: reactionTabType.value,
+		})),
+	}),
+);
 
 useTooltip(renoteButton, async (showing) => {
 	const anchorElement = renoteButton.value;
-	if (anchorElement == null) return;
+	if (anchorElement == null) {
+		return;
+	}
 
 	const renotes = await misskeyApi('notes/renotes', {
 		noteId: appearNote.id,
 		limit: 11,
 	});
 
-	const users = renotes.map(x => x.user);
+	const users = renotes.map((x) => x.user);
 
-	if (users.length < 1) return;
+	if (users.length < 1) {
+		return;
+	}
 
-	const { dispose } = os.popup(MkUsersTooltip, {
-		showing,
-		users,
-		count: appearNote.renoteCount,
-		anchorElement: anchorElement,
-	}, {
-		closed: () => dispose(),
-	});
+	const { dispose } = os.popup(
+		MkUsersTooltip,
+		{
+			showing,
+			users,
+			count: appearNote.renoteCount,
+			anchorElement: anchorElement,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 });
 
 if (appearNote.reactionAcceptance === 'likeOnly') {
@@ -449,25 +469,33 @@ if (appearNote.reactionAcceptance === 'likeOnly') {
 			_cacheKey_: $appearNote.reactionCount,
 		});
 
-		const users = reactions.map(x => x.user);
+		const users = reactions.map((x) => x.user);
 
-		if (users.length < 1) return;
+		if (users.length < 1) {
+			return;
+		}
 
-		const { dispose } = os.popup(MkReactionsViewerDetails, {
-			showing,
-			reaction: '❤️',
-			users,
-			count: $appearNote.reactionCount,
-			anchorElement: reactButton.value!,
-		}, {
-			closed: () => dispose(),
-		});
+		const { dispose } = os.popup(
+			MkReactionsViewerDetails,
+			{
+				showing,
+				reaction: '❤️',
+				users,
+				count: $appearNote.reactionCount,
+				anchorElement: reactButton.value!,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	});
 }
 
 async function renote() {
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 
@@ -480,7 +508,9 @@ async function renote() {
 
 async function reply() {
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 	os.post({
@@ -493,7 +523,9 @@ async function reply() {
 
 async function react() {
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	showMovedDialog();
 	if (appearNote.reactionAcceptance === 'likeOnly') {
@@ -511,47 +543,64 @@ async function react() {
 		const el = reactButton.value;
 		if (el && prefer.animation) {
 			const rect = el.getBoundingClientRect();
-			const x = rect.left + (el.offsetWidth / 2);
-			const y = rect.top + (el.offsetHeight / 2);
-			const { dispose } = os.popup(MkRippleEffect, { x, y }, {
-				end: () => dispose(),
-			});
+			const x = rect.left + el.offsetWidth / 2;
+			const y = rect.top + el.offsetHeight / 2;
+			const { dispose } = os.popup(
+				MkRippleEffect,
+				{ x, y },
+				{
+					end: () => dispose(),
+				},
+			);
 		}
 	} else {
 		blur();
-		reactionPicker.show(reactButton.value ?? null, note, async (reaction) => {
-			if (prefer.confirmOnReact) {
-				const confirm = await os.confirm({
-					type: 'question',
-					text: i18n.tsx.reactAreYouSure({ emoji: reaction.replace('@.', '') }),
-				});
+		reactionPicker.show(
+			reactButton.value ?? null,
+			note,
+			async (reaction) => {
+				if (prefer.confirmOnReact) {
+					const confirm = await os.confirm({
+						type: 'question',
+						text: i18n.tsx.reactAreYouSure({ emoji: reaction.replace('@.', '') }),
+					});
 
-				if (confirm.canceled) return;
-			}
+					if (confirm.canceled) {
+						return;
+					}
+				}
 
-			sound.playMisskeySfx('reaction');
+				sound.playMisskeySfx('reaction');
 
-			misskeyApi('notes/reactions/create', {
-				noteId: appearNote.id,
-				reaction: reaction,
-			}).then(() => {
-				noteEvents.emit(`reacted:${appearNote.id}`, {
-					userId: $i!.id,
+				misskeyApi('notes/reactions/create', {
+					noteId: appearNote.id,
 					reaction: reaction,
+				}).then(() => {
+					noteEvents.emit(`reacted:${appearNote.id}`, {
+						userId: $i!.id,
+						reaction: reaction,
+					});
 				});
-			});
-			if (appearNote.text && appearNote.text.length > 100 && (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3)) {
-				claimAchievement('reactWithoutRead');
-			}
-		}, () => {
-			focus();
-		});
+				if (
+					appearNote.text &&
+					appearNote.text.length > 100 &&
+					Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3
+				) {
+					claimAchievement('reactWithoutRead');
+				}
+			},
+			() => {
+				focus();
+			},
+		);
 	}
 }
 
 function undoReact(targetNote: Misskey.entities.Note): void {
 	const oldReaction = targetNote.myReaction;
-	if (!oldReaction) return;
+	if (!oldReaction) {
+		return;
+	}
 	misskeyApi('notes/reactions/delete', {
 		noteId: targetNote.id,
 	}).then(() => {
@@ -571,8 +620,12 @@ function toggleReact() {
 }
 
 function onContextmenu(ev: PointerEvent): void {
-	if (ev.target && isLink(ev.target as HTMLElement)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (ev.target && isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
 	if (prefer.useReactionPickerForContextMenu) {
 		ev.preventDefault();
@@ -593,10 +646,14 @@ async function clip(): Promise<void> {
 }
 
 async function showRenoteMenu() {
-	if (!isMyRenote) return;
+	if (!isMyRenote) {
+		return;
+	}
 
 	const isLoggedIn = await pleaseLogin({ openOnRemote: pleaseLoginContext.value });
-	if (!isLoggedIn) return;
+	if (!isLoggedIn) {
+		return;
+	}
 
 	const menu: MenuItem[] = [];
 
@@ -615,10 +672,7 @@ async function showRenoteMenu() {
 		});
 	}
 
-	if (
-		props.note.channelId != null &&
-		(inChannel == null || props.note.channelId !== inChannel.value)
-	) {
+	if (props.note.channelId != null && (inChannel == null || props.note.channelId !== inChannel.value)) {
 		menu.push({
 			type: 'link',
 			text: i18n.ts.viewRenotedChannel,
@@ -645,7 +699,7 @@ function loadReplies() {
 	misskeyApi('notes/children', {
 		noteId: appearNote.id,
 		limit: 30,
-	}).then(res => {
+	}).then((res) => {
 		replies.value = res;
 	});
 }
@@ -659,10 +713,12 @@ function onParentNotesToggle(event: Event) {
 
 function loadConversation() {
 	conversationLoaded.value = true;
-	if (appearNote.replyId == null) return;
+	if (appearNote.replyId == null) {
+		return;
+	}
 	misskeyApi('notes/conversation', {
 		noteId: appearNote.replyId,
-	}).then(res => {
+	}).then((res) => {
 		conversation.value = res.reverse();
 	});
 }

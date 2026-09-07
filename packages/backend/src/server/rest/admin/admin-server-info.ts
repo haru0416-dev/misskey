@@ -54,14 +54,22 @@ export async function handleApiAdminServerInfo(
 		redisServerInfo.match(new RegExp('^valkey_version:(.*)', 'm'))?.[1] ??
 		redisServerInfo.match(new RegExp('^redis_version:(.*)', 'm'))?.[1]
 	)?.trim();
-	if (redisVersion == null) throw new Error('Redis server version is missing');
+	if (redisVersion == null) {
+		throw new Error('Redis server version is missing');
+	}
 	const psqlResult = await deps.db.execute<{ server_version: string }>(sql`SHOW server_version`);
 	const psqlVersion = psqlResult.rows[0]?.server_version;
-	if (psqlVersion == null) throw new Error('PostgreSQL server version is missing');
+	if (psqlVersion == null) {
+		throw new Error('PostgreSQL server version is missing');
+	}
 	const cpu = os.cpus()[0];
-	if (cpu == null) throw new Error('CPU information is unavailable');
+	if (cpu == null) {
+		throw new Error('CPU information is unavailable');
+	}
 	const fs = fsStats[0];
-	if (fs == null) throw new Error('Filesystem information is unavailable');
+	if (fs == null) {
+		throw new Error('Filesystem information is unavailable');
+	}
 
 	return {
 		machine: os.hostname(),

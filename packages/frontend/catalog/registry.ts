@@ -39,9 +39,13 @@ export async function loadStories(): Promise<StoryEntry[]> {
 
 			for (const [name, value] of Object.entries(module)) {
 				// 既定 story を持たないスタブや、型だけの export を弾く。
-				if (value == null || typeof value !== 'object') continue;
+				if (value == null || typeof value !== 'object') {
+					continue;
+				}
 				const story = value as StoryObj;
-				if (story.render == null && story.args == null) continue;
+				if (story.render == null && story.args == null) {
+					continue;
+				}
 
 				entries.push({
 					id: `${title}--${name}`,

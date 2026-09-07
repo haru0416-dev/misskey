@@ -23,12 +23,14 @@ import { useTooltip } from '@/composables/useTooltip.js';
 import * as os from '@/os.js';
 import { isEnabledUrlPreview } from '@/features/link-preview/url-preview.js';
 
-const props = withDefaults(defineProps<{
-	url: string;
-	rel?: null | string;
-	navigationBehavior?: MkABehavior;
-}>(), {
-});
+const props = withDefaults(
+	defineProps<{
+		url: string;
+		rel?: null | string;
+		navigationBehavior?: MkABehavior;
+	}>(),
+	{},
+);
 
 const maybeRelativeUrl = maybeMakeRelative(props.url, local);
 const self = maybeRelativeUrl !== props.url;
@@ -40,14 +42,20 @@ const el = ref<HTMLElement | { $el: HTMLElement }>();
 if (isEnabledUrlPreview.value) {
 	useTooltip(el, (showing) => {
 		const anchorElement = el.value instanceof HTMLElement ? el.value : el.value?.$el;
-		if (anchorElement == null) return;
-		const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/link-preview/components/MkUrlPreviewPopup.vue')), {
-			showing,
-			url: props.url,
-			anchorElement: anchorElement,
-		}, {
-			closed: () => dispose(),
-		});
+		if (anchorElement == null) {
+			return;
+		}
+		const { dispose } = os.popup(
+			defineAsyncComponent(() => import('@/features/link-preview/components/MkUrlPreviewPopup.vue')),
+			{
+				showing,
+				url: props.url,
+				anchorElement: anchorElement,
+			},
+			{
+				closed: () => dispose(),
+			},
+		);
 	});
 }
 </script>

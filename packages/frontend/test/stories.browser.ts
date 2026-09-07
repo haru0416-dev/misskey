@@ -33,7 +33,9 @@ async function settle(): Promise<void> {
 }
 
 function isStory(value: unknown): value is StoryObj {
-	if (value == null || typeof value !== 'object') return false;
+	if (value == null || typeof value !== 'object') {
+		return false;
+	}
 	const story = value as StoryObj;
 	return story.render != null || story.args != null;
 }
@@ -49,7 +51,9 @@ for (const [path, load] of Object.entries(modules)) {
 	const module = await load();
 	const stories = Object.entries(module).filter(([, value]) => isStory(value)) as [string, StoryObj][];
 
-	if (stories.length === 0) continue;
+	if (stories.length === 0) {
+		continue;
+	}
 
 	describe(title, () => {
 		for (const [name, story] of stories) {

@@ -16,7 +16,9 @@ let timeoutHeartBeat: number | null = null;
 let lastHeartbeatCall = 0;
 
 function clearHeartbeatTimer(): void {
-	if (timeoutHeartBeat == null) return;
+	if (timeoutHeartBeat == null) {
+		return;
+	}
 	window.clearTimeout(timeoutHeartBeat);
 	timeoutHeartBeat = null;
 }
@@ -27,7 +29,9 @@ function scheduleHeartbeat(delay = HEART_BEAT_INTERVAL): void {
 }
 
 export function useStream(): Misskey.IStream {
-	if (stream) return stream;
+	if (stream) {
+		return stream;
+	}
 
 	stream = markRaw(
 		new Misskey.Stream(
@@ -44,7 +48,9 @@ export function useStream(): Misskey.IStream {
 
 	// 前回の送信から間隔以上経過していれば、表示復帰時にすぐ送信する。
 	window.document.addEventListener('visibilitychange', () => {
-		if (!stream) return;
+		if (!stream) {
+			return;
+		}
 		if (window.document.visibilityState !== 'visible') {
 			clearHeartbeatTimer();
 			return;

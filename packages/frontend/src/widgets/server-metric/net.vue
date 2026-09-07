@@ -49,8 +49,8 @@ import { useServerStats } from './use-server-stats.js';
 import bytes from '@/filters/bytes.js';
 
 const props = defineProps<{
-	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>,
-	meta: Misskey.entities.ServerInfoResponse
+	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>;
+	meta: Misskey.entities.ServerInfoResponse;
 }>();
 
 const viewBoxX = ref<number>(50);
@@ -69,15 +69,23 @@ const outRecent = ref<number>(0);
 
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
-	if (stats.value.length > 50) stats.value.shift();
+	if (stats.value.length > 50) {
+		stats.value.shift();
+	}
 
-	const inPeak = Math.max(1024 * 64, Math.max(...stats.value.map(s => s.net.rx)));
-	const outPeak = Math.max(1024 * 64, Math.max(...stats.value.map(s => s.net.tx)));
+	const inPeak = Math.max(1024 * 64, Math.max(...stats.value.map((s) => s.net.rx)));
+	const outPeak = Math.max(1024 * 64, Math.max(...stats.value.map((s) => s.net.tx)));
 
-	let inPolylinePointsStats = stats.value.map((s, i) => [viewBoxX.value - ((stats.value.length - 1) - i), (1 - (s.net.rx / inPeak)) * viewBoxY.value]);
-	let outPolylinePointsStats = stats.value.map((s, i) => [viewBoxX.value - ((stats.value.length - 1) - i), (1 - (s.net.tx / outPeak)) * viewBoxY.value]);
-	inPolylinePoints.value = inPolylinePointsStats.map(xy => `${xy[0]},${xy[1]}`).join(' ');
-	outPolylinePoints.value = outPolylinePointsStats.map(xy => `${xy[0]},${xy[1]}`).join(' ');
+	let inPolylinePointsStats = stats.value.map((s, i) => [
+		viewBoxX.value - (stats.value.length - 1 - i),
+		(1 - s.net.rx / inPeak) * viewBoxY.value,
+	]);
+	let outPolylinePointsStats = stats.value.map((s, i) => [
+		viewBoxX.value - (stats.value.length - 1 - i),
+		(1 - s.net.tx / outPeak) * viewBoxY.value,
+	]);
+	inPolylinePoints.value = inPolylinePointsStats.map((xy) => `${xy[0]},${xy[1]}`).join(' ');
+	outPolylinePoints.value = outPolylinePointsStats.map((xy) => `${xy[0]},${xy[1]}`).join(' ');
 
 	inPolygonPoints.value = `${viewBoxX.value - (stats.value.length - 1)},${viewBoxY.value} ${inPolylinePoints.value} ${viewBoxX.value},${viewBoxY.value}`;
 	outPolygonPoints.value = `${viewBoxX.value - (stats.value.length - 1)},${viewBoxY.value} ${outPolylinePoints.value} ${viewBoxX.value},${viewBoxY.value}`;

@@ -7,7 +7,8 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
 import mime from 'mime-types';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
@@ -99,7 +100,9 @@ function createFileServerRequest<Params extends Record<string, string>, Query ex
 
 function createRedirectToOmitSearch(c: Context, reply: FileReply): Response | null {
 	const url = new URL(c.req.url);
-	if (url.search === '') return null;
+	if (url.search === '') {
+		return null;
+	}
 
 	reply.redirect(url.pathname, 301);
 	return new Response(null, {
@@ -215,7 +218,9 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 	app.get('/files/:key', async (c) => {
 		const reply = new FileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
-		if (redirect) return redirect;
+		if (redirect) {
+			return redirect;
+		}
 
 		// static ルートと :param ルートを同じセグメント位置に置くと RegExpRouter 非対応のため、
 		// app-default.jpg をこのルートで処理してアプリ全体の TrieRouter フォールバックを避ける。
@@ -235,7 +240,9 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 	app.get('/files/:key/*', async (c) => {
 		const reply = new FileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
-		if (redirect) return redirect;
+		if (redirect) {
+			return redirect;
+		}
 
 		reply.redirect(`${deps.config.instance.url}/files/${c.req.param('key')}`, 301);
 		return await toResponse(null, reply, c.req.method);

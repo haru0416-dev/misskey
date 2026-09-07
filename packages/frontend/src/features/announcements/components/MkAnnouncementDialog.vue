@@ -59,29 +59,38 @@ async function ok() {
 			title: i18n.ts._announcement.readConfirmTitle,
 			text: i18n.tsx._announcement.readConfirmText({ title: props.announcement.title }),
 		});
-		if (confirm.canceled) return;
+		if (confirm.canceled) {
+			return;
+		}
 	}
 
 	modal.value?.close();
 	misskeyApi('i/read-announcement', { announcementId: props.announcement.id });
 	updateCurrentAccountPartial({
-		unreadAnnouncements: $i!.unreadAnnouncements.filter(a => a.id !== props.announcement.id),
+		unreadAnnouncements: $i!.unreadAnnouncements.filter((a) => a.id !== props.announcement.id),
 	});
 }
 
 function onBgClick() {
-	rootEl.value?.animate([{
-		offset: 0,
-		transform: 'scale(1)',
-	}, {
-		offset: 0.5,
-		transform: 'scale(1.1)',
-	}, {
-		offset: 1,
-		transform: 'scale(1)',
-	}], {
-		duration: 100,
-	});
+	rootEl.value?.animate(
+		[
+			{
+				offset: 0,
+				transform: 'scale(1)',
+			},
+			{
+				offset: 0.5,
+				transform: 'scale(1.1)',
+			},
+			{
+				offset: 1,
+				transform: 'scale(1)',
+			},
+		],
+		{
+			duration: 100,
+		},
+	);
 }
 
 const hasReachedBottom = ref(false);
@@ -92,23 +101,26 @@ onMounted(() => {
 		const rootElRect = rootEl.value.getBoundingClientRect();
 		if (
 			bottomElRect.top >= rootElRect.top &&
-			bottomElRect.top <= (rootElRect.bottom - 66) // 66 ≒ 75 * 0.9 (modalのアニメーション分)
+			bottomElRect.top <= rootElRect.bottom - 66 // 66 ≒ 75 * 0.9 (modalのアニメーション分)
 		) {
 			hasReachedBottom.value = true;
 			return;
 		}
 
-		const observer = new IntersectionObserver(entries => {
-			for (const entry of entries) {
-				if (entry.isIntersecting) {
-					hasReachedBottom.value = true;
-					observer.disconnect();
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (entry.isIntersecting) {
+						hasReachedBottom.value = true;
+						observer.disconnect();
+					}
 				}
-			}
-		}, {
-			root: rootEl.value,
-			rootMargin: '0px 0px -75px 0px',
-		});
+			},
+			{
+				root: rootEl.value,
+				rootMargin: '0px 0px -75px 0px',
+			},
+		);
 
 		observer.observe(bottomEl.value);
 	}

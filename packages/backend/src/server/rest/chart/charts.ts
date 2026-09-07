@@ -5,7 +5,8 @@
 
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import Chart, { type KVs } from '@/core/chart/core.js';
+import Chart from '@/core/chart/core.js';
+import type { KVs } from '@/core/chart/core.js';
 import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
 import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
@@ -49,7 +50,7 @@ type ChartSchema = Record<
 	string,
 	{
 		uniqueIncrement?: boolean;
-		intersection?: string[] | ReadonlyArray<string>;
+		intersection?: string[] | readonly string[];
 		range?: 'big' | 'small' | 'medium';
 		accumulate?: boolean;
 	}

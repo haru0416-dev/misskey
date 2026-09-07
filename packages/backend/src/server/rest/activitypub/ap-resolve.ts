@@ -11,12 +11,8 @@ import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import {
-	isCollectionOrOrderedCollection,
-	type ICollection,
-	type IObject,
-	type IOrderedCollection,
-} from '@/core/activitypub/type.js';
+import { isCollectionOrOrderedCollection } from '@/core/activitypub/type.js';
+import type { ICollection, IObject, IOrderedCollection } from '@/core/activitypub/type.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
 import {
@@ -42,7 +38,8 @@ import { getApId } from '@/core/activitypub/type.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { addActivityContext, renderCreateForApi, renderLikeForApi, renderNoteForApi } from './notes-ap.js';
-import { renderPersonForApi, type ApiAccountUpdateDependencies } from '../account/account-update.js';
+import { renderPersonForApi } from '../account/account-update.js';
+import type { ApiAccountUpdateDependencies } from '../account/account-update.js';
 
 export type ApiApResolveDependencies = ApiAccountUpdateDependencies & {
 	httpRequestService: HttpRequestService;
@@ -71,12 +68,16 @@ function punyHost(url: string): string {
 }
 
 export function isSelfHost(config: Pick<Config, 'runtime'>, host: string | null): boolean {
-	if (host == null) return true;
+	if (host == null) {
+		return true;
+	}
 	return toPuny(config.runtime.host) === toPuny(host);
 }
 
 function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-	if (host == null) return false;
+	if (host == null) {
+		return false;
+	}
 	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
@@ -85,11 +86,21 @@ export function isFederationAllowedHost(
 	meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
 	host: string,
 ): boolean {
-	if (isSelfHost(config, host)) return true;
-	if (meta.federation === 'none') return false;
-	if (meta.federation === 'specified' && !meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`)))
+	if (isSelfHost(config, host)) {
+		return true;
+	}
+	if (meta.federation === 'none') {
 		return false;
-	if (isBlockedHost(meta.blockedHosts, host)) return false;
+	}
+	if (
+		meta.federation === 'specified' &&
+		!meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`))
+	) {
+		return false;
+	}
+	if (isBlockedHost(meta.blockedHosts, host)) {
+		return false;
+	}
 	return true;
 }
 
@@ -126,7 +137,9 @@ export async function getNoteFromApIdForApi(
 ): Promise<MiNote | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
-		if (parsed.type !== 'notes' || parsed.id == null) return null;
+		if (parsed.type !== 'notes' || parsed.id == null) {
+			return null;
+		}
 		return await fetchNoteByIdFromDatabase(deps.db, parsed.id);
 	}
 	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
@@ -139,7 +152,9 @@ export async function getUserFromApIdForApi(
 ): Promise<MiLocalUser | MiRemoteUser | null> {
 	const parsed = parseLocalApUri(deps.config, getApId(value));
 	if (parsed.local) {
-		if (parsed.type !== 'users' || parsed.id == null) return null;
+		if (parsed.type !== 'users' || parsed.id == null) {
+			return null;
+		}
 		const user = await fetchUserByIdFromDatabase(deps.db, parsed.id);
 		return user == null || user.isDeleted ? null : (user as MiLocalUser);
 	}
@@ -158,10 +173,14 @@ export async function getAuthUserFromKeyIdForApi(
 	keyId: string,
 ): Promise<ApiAuthUser | null> {
 	const key = await fetchUserPublickeyByKeyIdFromDatabase(deps.db, keyId);
-	if (key == null) return null;
+	if (key == null) {
+		return null;
+	}
 
 	const user = await fetchUserByIdFromDatabase(deps.db, key.userId);
-	if (user == null || user.isDeleted) return null;
+	if (user == null || user.isDeleted) {
+		return null;
+	}
 
 	return { user: user as MiRemoteUser, key };
 }
@@ -206,7 +225,9 @@ function renderFollowForApi(
 
 async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: string): Promise<IObject> {
 	const parsed = parseLocalApUri(deps.config, url);
-	if (!parsed.local) throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
+	if (!parsed.local) {
+		throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
+	}
 	if (parsed.id == null) {
 		throw new IdentifiableError('7a5d2fc0-94bc-4db6-b8b8-1bf24a2e23d0', `resolveLocal: type ${parsed.type} unhandled`);
 	}
@@ -238,8 +259,9 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 		}
 		case 'follows': {
 			const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, parsed.id);
-			if (followRequest == null)
+			if (followRequest == null) {
 				throw new IdentifiableError('a9d946e5-d276-47f8-95fb-f04230289bb0', 'resolveLocal: invalid follow request ID');
+			}
 			const [follower, followee] = await Promise.all([
 				fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
 				fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),

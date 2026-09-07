@@ -11,15 +11,8 @@ import { fetchLocalUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
-import {
-	completeApiSignin,
-	failApiSignin,
-	honoApiSigninError,
-	type ApiSigninDependencies,
-	type ApiSigninErrorBody,
-	type ApiSigninRequest,
-	tooManyAuthenticationFailures,
-} from './signin.js';
+import { completeApiSignin, failApiSignin, honoApiSigninError, tooManyAuthenticationFailures } from './signin.js';
+import type { ApiSigninDependencies, ApiSigninErrorBody, ApiSigninRequest } from './signin.js';
 import { isApiRateLimited } from '../rate-limit.js';
 
 export type ApiSigninWithPasskeyResult = {

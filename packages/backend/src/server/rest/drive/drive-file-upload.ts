@@ -54,12 +54,10 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError, invalidParamError } from '../error.js';
 import { castMultipartFields } from '../string-params.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { packDriveFileOrFailForApi, type ApiDriveFileDependencies } from './drive-file.js';
-import {
-	buildDriveFileDeletionDependencies,
-	validateApiDriveFileName,
-	type ApiDriveFilesDependencies,
-} from './drive-files.js';
+import { packDriveFileOrFailForApi } from './drive-file.js';
+import type { ApiDriveFileDependencies } from './drive-file.js';
+import { buildDriveFileDeletionDependencies, validateApiDriveFileName } from './drive-files.js';
+import type { ApiDriveFilesDependencies } from './drive-files.js';
 import type { ApiDriveStreamPublisher, ApiMainStreamPublisher } from '../events.js';
 import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
@@ -97,7 +95,9 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 			() => new BodyLimitExceeded(),
 		);
 	} catch (err) {
-		if (err instanceof BodyLimitExceeded) return { status: 'too-large' };
+		if (err instanceof BodyLimitExceeded) {
+			return { status: 'too-large' };
+		}
 		throw err;
 	}
 
@@ -115,14 +115,20 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 
 	for (const [key, value] of formData.entries()) {
 		if (value instanceof File) {
-			if (key === 'file' && fileValue == null) fileValue = value;
+			if (key === 'file' && fileValue == null) {
+				fileValue = value;
+			}
 		} else {
 			fields[key] = value;
 		}
 	}
 
-	if (fileValue == null) return { status: 'missing-file' };
-	if (fileValue.size > config.limits.maximumFileSizeBytes) return { status: 'too-large' };
+	if (fileValue == null) {
+		return { status: 'missing-file' };
+	}
+	if (fileValue.size > config.limits.maximumFileSizeBytes) {
+		return { status: 'too-large' };
+	}
 
 	const [path] = await createTemp();
 	try {
@@ -147,7 +153,9 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 }
 
 function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) return false;
+	if (!silencedHosts || host == null) {
+		return false;
+	}
 	return silencedHosts.includes(host.toLowerCase());
 }
 
@@ -248,8 +256,12 @@ async function uploadDriveFileToObjectStorageForApi(
 	filename: string | undefined,
 ): Promise<void> {
 	let contentType = type;
-	if (contentType === 'image/apng') contentType = 'image/png';
-	if (!FILE_TYPE_BROWSERSAFE.includes(contentType)) contentType = 'application/octet-stream';
+	if (contentType === 'image/apng') {
+		contentType = 'image/png';
+	}
+	if (!FILE_TYPE_BROWSERSAFE.includes(contentType)) {
+		contentType = 'application/octet-stream';
+	}
 
 	const object: S3PutObject = {
 		key,
@@ -300,12 +312,24 @@ async function saveDriveFileForApi(
 		let resolvedExt = ext;
 
 		if (resolvedExt === '') {
-			if (type === 'image/jpeg') resolvedExt = '.jpg';
-			if (type === 'image/png') resolvedExt = '.png';
-			if (type === 'image/webp') resolvedExt = '.webp';
-			if (type === 'image/avif') resolvedExt = '.avif';
-			if (type === 'image/apng') resolvedExt = '.apng';
-			if (type === 'image/vnd.mozilla.apng') resolvedExt = '.apng';
+			if (type === 'image/jpeg') {
+				resolvedExt = '.jpg';
+			}
+			if (type === 'image/png') {
+				resolvedExt = '.png';
+			}
+			if (type === 'image/webp') {
+				resolvedExt = '.webp';
+			}
+			if (type === 'image/avif') {
+				resolvedExt = '.avif';
+			}
+			if (type === 'image/apng') {
+				resolvedExt = '.apng';
+			}
+			if (type === 'image/vnd.mozilla.apng') {
+				resolvedExt = '.apng';
+			}
 		}
 
 		if (!FILE_TYPE_BROWSERSAFE.includes(type)) {
@@ -384,57 +408,56 @@ async function saveDriveFileForApi(
 			file,
 			cleanup: () => deleteDriveFileObjectsForApi(deps, keys),
 		};
-	} else {
-		const accessKey = randomUUID();
-		const thumbnailAccessKey = 'thumbnail-' + randomUUID();
-		const webpublicAccessKey = 'webpublic-' + randomUUID();
-
-		const url = deps.internalStorageService.saveFromPath(accessKey, path);
-
-		let thumbnailUrl: string | null = null;
-		let webpublicUrl: string | null = null;
-
-		if (alts.thumbnail) {
-			thumbnailUrl = deps.internalStorageService.saveFromBuffer(thumbnailAccessKey, alts.thumbnail.data);
-		}
-
-		if (alts.webpublic) {
-			webpublicUrl = deps.internalStorageService.saveFromBuffer(webpublicAccessKey, alts.webpublic.data);
-		}
-
-		file.storedInternal = true;
-		file.url = url;
-		file.thumbnailUrl = thumbnailUrl;
-		file.webpublicUrl = webpublicUrl;
-		file.accessKey = accessKey;
-		file.thumbnailAccessKey = thumbnailAccessKey;
-		file.webpublicAccessKey = webpublicAccessKey;
-		file.webpublicType = alts.webpublic?.type ?? null;
-		file.name = name;
-		file.type = type;
-		file.md5 = hash;
-		file.size = size;
-
-		const keys = [
-			accessKey,
-			alts.thumbnail ? thumbnailAccessKey : null,
-			alts.webpublic ? webpublicAccessKey : null,
-		].filter((value): value is string => value != null);
-		return {
-			file,
-			cleanup: async () => {
-				await Promise.all(
-					keys.map(async (accessKey) => {
-						try {
-							await deps.internalStorageService.del(accessKey);
-						} catch (err) {
-							deps.logger.error(`Failed to clean up uploaded file: key = ${accessKey}`, err as Error);
-						}
-					}),
-				);
-			},
-		};
 	}
+	const accessKey = randomUUID();
+	const thumbnailAccessKey = 'thumbnail-' + randomUUID();
+	const webpublicAccessKey = 'webpublic-' + randomUUID();
+
+	const url = deps.internalStorageService.saveFromPath(accessKey, path);
+
+	let thumbnailUrl: string | null = null;
+	let webpublicUrl: string | null = null;
+
+	if (alts.thumbnail) {
+		thumbnailUrl = deps.internalStorageService.saveFromBuffer(thumbnailAccessKey, alts.thumbnail.data);
+	}
+
+	if (alts.webpublic) {
+		webpublicUrl = deps.internalStorageService.saveFromBuffer(webpublicAccessKey, alts.webpublic.data);
+	}
+
+	file.storedInternal = true;
+	file.url = url;
+	file.thumbnailUrl = thumbnailUrl;
+	file.webpublicUrl = webpublicUrl;
+	file.accessKey = accessKey;
+	file.thumbnailAccessKey = thumbnailAccessKey;
+	file.webpublicAccessKey = webpublicAccessKey;
+	file.webpublicType = alts.webpublic?.type ?? null;
+	file.name = name;
+	file.type = type;
+	file.md5 = hash;
+	file.size = size;
+
+	const keys = [
+		accessKey,
+		alts.thumbnail ? thumbnailAccessKey : null,
+		alts.webpublic ? webpublicAccessKey : null,
+	].filter((value): value is string => value != null);
+	return {
+		file,
+		cleanup: async () => {
+			await Promise.all(
+				keys.map(async (accessKey) => {
+					try {
+						await deps.internalStorageService.del(accessKey);
+					} catch (err) {
+						deps.logger.error(`Failed to clean up uploaded file: key = ${accessKey}`, err as Error);
+					}
+				}),
+			);
+		},
+	};
 }
 
 async function persistStoredDriveFileForApi(
@@ -501,7 +524,9 @@ async function persistStoredDriveFileForApi(
 			return { file, inserted: true, expiredFileDeletions };
 		});
 
-		if (!result.inserted) await stored.cleanup();
+		if (!result.inserted) {
+			await stored.cleanup();
+		}
 		for (const deletion of result.expiredFileDeletions) {
 			publishEnqueuedDriveFileDeletion(deps, deletion);
 		}
@@ -566,9 +591,15 @@ export async function addDriveFileForApi(
 ): Promise<MiDriveFile> {
 	const userRoleNSFW = user != null && (await getApiRolePolicies(deps, user)).alwaysMarkNsfw;
 	let skipNsfwCheck = user == null || userRoleNSFW;
-	if (deps.meta.sensitiveMediaDetection === 'none') skipNsfwCheck = true;
-	if (user != null && deps.meta.sensitiveMediaDetection === 'local' && user.host != null) skipNsfwCheck = true;
-	if (user != null && deps.meta.sensitiveMediaDetection === 'remote' && user.host == null) skipNsfwCheck = true;
+	if (deps.meta.sensitiveMediaDetection === 'none') {
+		skipNsfwCheck = true;
+	}
+	if (user != null && deps.meta.sensitiveMediaDetection === 'local' && user.host != null) {
+		skipNsfwCheck = true;
+	}
+	if (user != null && deps.meta.sensitiveMediaDetection === 'remote' && user.host == null) {
+		skipNsfwCheck = true;
+	}
 
 	const info = await deps.fileInfoService.getFileInfo(path, {
 		fileName: name,
@@ -612,8 +643,12 @@ export async function addDriveFileForApi(
 
 			const allowedMimeTypes = policies.uploadableFileTypes;
 			const isAllowed = allowedMimeTypes.some((mimeType) => {
-				if (mimeType === '*' || mimeType === '*/*') return true;
-				if (mimeType.endsWith('/*')) return info.type.mime.startsWith(mimeType.slice(0, -1));
+				if (mimeType === '*' || mimeType === '*/*') {
+					return true;
+				}
+				if (mimeType.endsWith('/*')) {
+					return info.type.mime.startsWith(mimeType.slice(0, -1));
+				}
 				return info.type.mime === mimeType;
 			});
 			if (!isAllowed) {
@@ -645,7 +680,9 @@ export async function addDriveFileForApi(
 	}
 
 	const fetchFolder = async () => {
-		if (!folderId) return null;
+		if (!folderId) {
+			return null;
+		}
 
 		const driveFolder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, folderId, user ? user.id : null);
 		if (driveFolder == null) {
@@ -664,7 +701,9 @@ export async function addDriveFileForApi(
 
 	if (info.width) {
 		properties.width = info.width;
-		if (info.height !== undefined) properties.height = info.height;
+		if (info.height !== undefined) {
+			properties.height = info.height;
+		}
 	}
 	if (info.orientation != null) {
 		properties.orientation = info.orientation;
@@ -691,10 +730,18 @@ export async function addDriveFileForApi(
 		isSensitive: user ? (user.host == null && profile!.alwaysMarkNsfw ? true : (sensitive ?? false)) : false,
 	} as MiDriveFile;
 
-	if (user != null && isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) file.isSensitive = true;
-	if (info.sensitive && profile!.autoSensitive) file.isSensitive = true;
-	if (info.sensitive && deps.meta.setSensitiveFlagAutomatically) file.isSensitive = true;
-	if (userRoleNSFW) file.isSensitive = true;
+	if (user != null && isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) {
+		file.isSensitive = true;
+	}
+	if (info.sensitive && profile!.autoSensitive) {
+		file.isSensitive = true;
+	}
+	if (info.sensitive && deps.meta.setSensitiveFlagAutomatically) {
+		file.isSensitive = true;
+	}
+	if (userRoleNSFW) {
+		file.isSensitive = true;
+	}
 
 	if (url !== null) {
 		file.src = url;
@@ -735,7 +782,9 @@ export async function addDriveFileForApi(
 	} else {
 		const stored = await saveDriveFileForApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
 		const persisted = await persistStoredDriveFileForApi(deps, stored, user, force, sensitive);
-		if (!persisted.inserted) return persisted.file;
+		if (!persisted.inserted) {
+			return persisted.file;
+		}
 		file = persisted.file;
 	}
 
@@ -812,7 +861,9 @@ export async function handleApiDriveFilesCreate(
 		});
 		return await packDriveFileOrFailForApi(deps, driveFile, { self: true });
 	} catch (err) {
-		if (err instanceof ApiError) throw err;
+		if (err instanceof ApiError) {
+			throw err;
+		}
 		if (err instanceof Error || typeof err === 'string') {
 			deps.logger.error(String(err));
 		}

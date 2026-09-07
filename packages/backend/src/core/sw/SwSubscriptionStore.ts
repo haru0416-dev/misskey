@@ -4,7 +4,8 @@
  */
 
 import { and, eq } from 'drizzle-orm';
-import { swSubscription, type SwSubscriptionInsert, type SwSubscriptionRow } from '@/db/schema/sw-subscription.js';
+import { swSubscription } from '@/db/schema/sw-subscription.js';
+import type { SwSubscriptionInsert, SwSubscriptionRow } from '@/db/schema/sw-subscription.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiSwSubscription } from '@/models/SwSubscription.js';
 import type { MiUser } from '@/models/User.js';

@@ -62,31 +62,32 @@ const exampleNote = reactive<Misskey.entities.Note>({
 	reactions: {},
 	reactionEmojis: {},
 	fileIds: ['0000000002'],
-	files: [{
-		id: '0000000002',
-		createdAt: '2019-04-14T17:30:49.181Z',
-		name: 'natto_failed.webp',
-		type: 'image/webp',
-		md5: 'c44286cf152d0740be0ce5ad45ea85c3',
-		size: 827532,
-		isSensitive: false,
-		blurhash: 'LXNA3TD*XAIA%1%M%gt7.TofRioz',
-		properties: {
-			width: 256,
-			height: 256,
+	files: [
+		{
+			id: '0000000002',
+			createdAt: '2019-04-14T17:30:49.181Z',
+			name: 'natto_failed.webp',
+			type: 'image/webp',
+			md5: 'c44286cf152d0740be0ce5ad45ea85c3',
+			size: 827_532,
+			isSensitive: false,
+			blurhash: 'LXNA3TD*XAIA%1%M%gt7.TofRioz',
+			properties: {
+				width: 256,
+				height: 256,
+			},
+			url: '/client-assets/tutorial/natto_failed.webp',
+			thumbnailUrl: '/client-assets/tutorial/natto_failed.webp',
+			comment: null,
+			folderId: null,
+			folder: null,
+			userId: null,
+			user: null,
 		},
-		url: '/client-assets/tutorial/natto_failed.webp',
-		thumbnailUrl: '/client-assets/tutorial/natto_failed.webp',
-		comment: null,
-		folderId: null,
-		folder: null,
-		userId: null,
-		user: null,
-	}],
+	],
 	replyId: null,
 	renoteId: null,
 });
-
 </script>
 
 <style lang="scss" module>

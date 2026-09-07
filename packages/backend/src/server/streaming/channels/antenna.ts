@@ -10,36 +10,45 @@ import {
 	filterNoteForStreamingHidingForApi,
 	packNoteForApi,
 	populateMyReactionForApi,
-	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
-import {
-	isNoteMutedOrBlockedForStream,
-	isNoteVisibleForMeForStream,
-	type StreamChannelDefinition,
-} from '../channel.js';
+import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:account',
 	init: async (deps, ctx, params) => {
-		if (typeof params['antennaId'] !== 'string') return false;
-		if (!ctx.user) return false;
+		if (typeof params['antennaId'] !== 'string') {
+			return false;
+		}
+		if (!ctx.user) {
+			return false;
+		}
 		const user = ctx.user;
 		const antennaId = params['antennaId'];
 
 		const antennaExists = await antennaExistsForUserFromDatabase(deps.db, antennaId, user.id);
-		if (!antennaExists) return false;
+		if (!antennaExists) {
+			return false;
+		}
 
 		const handler = async (data: { type: string; body: JsonValue & { id?: string } }) => {
 			if (data.type === 'note' && typeof data.body.id === 'string') {
 				const note = await packNoteForApi(deps, data.body.id, user, { detail: true });
 
-				if (!isNoteVisibleForMeForStream(ctx, note)) return;
-				if (isNoteMutedOrBlockedForStream(ctx, note)) return;
+				if (!isNoteVisibleForMeForStream(ctx, note)) {
+					return;
+				}
+				if (isNoteMutedOrBlockedForStream(ctx, note)) {
+					return;
+				}
 
 				const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
-				if (!filtered) return;
+				if (!filtered) {
+					return;
+				}
 
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {

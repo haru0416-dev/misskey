@@ -54,7 +54,9 @@ export async function waitFor(
 ): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	do {
-		if (await condition()) return;
+		if (await condition()) {
+			return;
+		}
 		await sleep(intervalMs);
 	} while (Date.now() < deadline);
 
@@ -68,7 +70,9 @@ async function signin(host: Host, params: Misskey.entities.SigninFlowRequest): P
 	return await (new Misskey.api.APIClient({ origin: `https://${host}` }).request as Request)('signin-flow', params)
 		.then((res) => {
 			strictEqual(res.finished, true);
-			if (params.username === ADMIN_PARAMS.username) ADMIN_CACHE.set(host, res);
+			if (params.username === ADMIN_PARAMS.username) {
+				ADMIN_CACHE.set(host, res);
+			}
 			return res;
 		})
 		.then(({ id, i }) => ({ id, i }))
@@ -113,7 +117,9 @@ async function createAdmin(host: Host): Promise<Misskey.entities.SignupResponse 
 			return res;
 		})
 		.catch((err) => {
-			if (err.code === 'ACCESS_DENIED') return undefined;
+			if (err.code === 'ACCESS_DENIED') {
+				return undefined;
+			}
 			throw err;
 		});
 }
@@ -287,7 +293,9 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 				}),
 			]);
 		} finally {
-			if (timeout != null) clearTimeout(timeout);
+			if (timeout != null) {
+				clearTimeout(timeout);
+			}
 		}
 	} finally {
 		stream.close();
@@ -327,7 +335,9 @@ export async function isNoteUpdatedEventFired(
 				}),
 			]);
 		} finally {
-			if (timeout != null) clearTimeout(timeout);
+			if (timeout != null) {
+				clearTimeout(timeout);
+			}
 		}
 	} finally {
 		stream.close();

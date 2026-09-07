@@ -270,12 +270,12 @@ describe('AiScript common API', () => {
 				expect(endpoint).toBe('ping');
 				expect(data).toStrictEqual({});
 				expect(token).toBeNull();
-				return { pong: 1735657200000 };
+				return { pong: 1_735_657_200_000 };
 			});
 			const [res] = await exe(`
 				<: Mk:api('ping', {})
 			`);
-			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1735657200000)]])));
+			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1_735_657_200_000)]])));
 			expect(misskeyApiMock).toHaveBeenCalledOnce();
 		});
 
@@ -284,12 +284,12 @@ describe('AiScript common API', () => {
 				expect(endpoint).toBe('ping');
 				expect(data).toStrictEqual({});
 				expect(token).toStrictEqual('xxxxxxxx');
-				return { pong: 1735657200000 };
+				return { pong: 1_735_657_200_000 };
 			});
 			const [res] = await exe(`
 				<: Mk:api('ping', {}, 'xxxxxxxx')
 			`);
-			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1735657200000)]])));
+			expect(res).toStrictEqual(values.OBJ(new Map([['pong', values.NUM(1_735_657_200_000)]])));
 			expect(misskeyApiMock).toHaveBeenCalledOnce();
 		});
 

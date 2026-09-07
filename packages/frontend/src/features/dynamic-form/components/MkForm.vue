@@ -83,11 +83,10 @@ const canSave = computed(() => {
 	for (const key in inputSavingStates.value) {
 		const state = inputSavingStates.value[key];
 		const formItem = props.form[key];
-		if (state == null || formItem == null) continue;
-		if (
-			('manualSave' in formItem && formItem.manualSave && state.changed) ||
-			state.invalid
-	 	) {
+		if (state == null || formItem == null) {
+			continue;
+		}
+		if (('manualSave' in formItem && formItem.manualSave && state.changed) || state.invalid) {
 			return false;
 		}
 		if ('required' in formItem && formItem.required) {
@@ -100,17 +99,20 @@ const canSave = computed(() => {
 	return true;
 });
 
-watch(canSave, (newCanSave) => {
-	emit('canSaveStateChange', newCanSave);
-}, { immediate: true });
+watch(
+	canSave,
+	(newCanSave) => {
+		emit('canSaveStateChange', newCanSave);
+	},
+	{ immediate: true },
+);
 
 function getMkSelectDef(def: EnumFormItem): MkSelectItem[] {
 	return def.enum.map((v) => {
 		if (typeof v === 'string') {
 			return { value: v, label: v };
-		} else {
-			return { value: v.value, label: v.label };
 		}
+		return { value: v.value, label: v.label };
 	});
 }
 
@@ -118,9 +120,8 @@ function getRadioOptionsDef(def: RadioFormItem): MkRadiosOption[] {
 	return def.options.map<MkRadiosOption>((v) => {
 		if (typeof v === 'string') {
 			return { value: v, label: v };
-		} else {
-			return { value: v.value, label: v.label };
 		}
+		return { value: v.value, label: v.label };
 	});
 }
 </script>

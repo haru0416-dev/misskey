@@ -86,7 +86,9 @@ async function detectImageSize(
 		try {
 			const header = Buffer.alloc(26);
 			await fd.read(header, 0, 26, 0);
-			if (header.toString('latin1', 0, 4) !== '8BPS') throw new Error('invalid PSD header');
+			if (header.toString('latin1', 0, 4) !== '8BPS') {
+				throw new Error('invalid PSD header');
+			}
 			return {
 				width: header.readUInt32BE(18),
 				height: header.readUInt32BE(14),
@@ -100,7 +102,9 @@ async function detectImageSize(
 
 	// 寸法はヘッダから読むだけでデコードしないため、pixel 上限は外す (上限判定は呼び出し側で行う)
 	const metadata = await (await sharpBmp(path, mime, { limitInputPixels: false })).metadata();
-	if (metadata.width == null || metadata.height == null) throw new Error('cannot detect image dimensions');
+	if (metadata.width == null || metadata.height == null) {
+		throw new Error('cannot detect image dimensions');
+	}
 	return {
 		width: metadata.width,
 		height: metadata.height,
@@ -124,7 +128,9 @@ async function getBlurhash(path: string, type: string): Promise<string> {
 async function checkSvg(path: string): Promise<boolean> {
 	try {
 		const size = await getFileSize(path);
-		if (size > 1 * 1024 * 1024) return false;
+		if (size > 1 * 1024 * 1024) {
+			return false;
+		}
 		const buffer = await fs.promises.readFile(path);
 		return isSvg(buffer.toString());
 	} catch {
@@ -203,7 +209,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 				height = imageSize.height;
 				orientation = imageSize.orientation;
 
-				if (imageSize.width > 16383 || imageSize.height > 16383) {
+				if (imageSize.width > 16_383 || imageSize.height > 16_383) {
 					warnings.push('image dimensions exceeds limits');
 					type = TYPE_OCTET_STREAM;
 				}
@@ -273,11 +279,19 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 			let sensitive = false;
 			let porn = false;
 
-			if ((result.find((x) => x.className === 'Sexy')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
-			if ((result.find((x) => x.className === 'Hentai')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
-			if ((result.find((x) => x.className === 'Porn')?.probability ?? 0) > sensitiveThreshold) sensitive = true;
+			if ((result.find((x) => x.className === 'Sexy')?.probability ?? 0) > sensitiveThreshold) {
+				sensitive = true;
+			}
+			if ((result.find((x) => x.className === 'Hentai')?.probability ?? 0) > sensitiveThreshold) {
+				sensitive = true;
+			}
+			if ((result.find((x) => x.className === 'Porn')?.probability ?? 0) > sensitiveThreshold) {
+				sensitive = true;
+			}
 
-			if ((result.find((x) => x.className === 'Porn')?.probability ?? 0) > sensitiveThresholdForPorn) porn = true;
+			if ((result.find((x) => x.className === 'Porn')?.probability ?? 0) > sensitiveThresholdForPorn) {
+				porn = true;
+			}
 
 			return [sensitive, porn];
 		}

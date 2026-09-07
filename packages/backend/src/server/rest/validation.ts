@@ -4,7 +4,8 @@
  */
 
 import { z } from 'zod';
-import { omitUndefined, type OmitUndefinedProperties } from '@/misc/clone.js';
+import { omitUndefined } from '@/misc/clone.js';
+import type { OmitUndefinedProperties } from '@/misc/clone.js';
 import { invalidParamError } from './error.js';
 
 type ExactOptionalProperties<T> = T extends Record<string, unknown> ? OmitUndefinedProperties<T> : T;

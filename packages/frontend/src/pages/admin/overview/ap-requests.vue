@@ -18,7 +18,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import MkDataChart, { type DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
+import MkDataChart from '@/features/charts/components/MkDataChart.vue';
+import type { DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { toChartSeries } from '@/features/charts/chart-helpers.js';
 import { chartText } from '@/features/charts/chart-i18n.js';

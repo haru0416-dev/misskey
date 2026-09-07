@@ -25,7 +25,9 @@ import _emojilist from '@misskey-dev/emoji-data/emojilist.json';
 
 export const emojilist: UnicodeEmojiDef[] = _emojilist.map((x) => {
 	const category = unicodeEmojiCategories[x[2] as number];
-	if (category == null) throw new Error(`Unknown emoji category: ${x[2]}`);
+	if (category == null) {
+		throw new Error(`Unknown emoji category: ${x[2]}`);
+	}
 	return {
 		name: x[1] as string,
 		char: x[0] as string,
@@ -75,9 +77,8 @@ export function getEmojiName(char: string): string {
 	if (idx === undefined) {
 		// 絵文字情報がjsonに無い場合は名前の取得が出来ないのでそのまま返すしか無い
 		return char;
-	} else {
-		return emojilist[idx]?.name ?? char;
 	}
+	return emojilist[idx]?.name ?? char;
 }
 
 /**
@@ -98,10 +99,9 @@ function forceColorizeEmoji(char: string) {
 	const chars = Array.from(char);
 	if (chars.includes('\uFE0F')) {
 		return char;
-	} else {
-		chars.splice(1, 0, '\uFE0F');
-		return chars.join('');
 	}
+	chars.splice(1, 0, '\uFE0F');
+	return chars.join('');
 }
 
 export interface CustomEmojiFolderTree {

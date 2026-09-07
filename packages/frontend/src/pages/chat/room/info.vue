@@ -64,7 +64,9 @@ async function del() {
 		type: 'warning',
 		text: i18n.tsx.deleteAreYouSure({ x: name_.value }),
 	});
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	await os.apiWithDialog('chat/rooms/delete', {
 		roomId: props.room.id,

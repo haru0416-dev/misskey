@@ -28,7 +28,9 @@ function viewAchievements3min() {
 }
 
 onMounted(() => {
-	if (timer == null) timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	if (timer == null) {
+		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	}
 });
 
 onUnmounted(() => {
@@ -39,7 +41,9 @@ onUnmounted(() => {
 });
 
 onActivated(() => {
-	if (timer == null) timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	if (timer == null) {
+		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
+	}
 });
 
 onDeactivated(() => {

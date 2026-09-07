@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, desc, eq, gt, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
-import { poll, type PollInsert, type PollRow } from '@/db/schema/poll.js';
+import { poll } from '@/db/schema/poll.js';
+import type { PollInsert, PollRow } from '@/db/schema/poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiPoll } from '@/models/Poll.js';
@@ -34,7 +36,9 @@ export async function listPollsByNoteIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	noteIds: MiNote['id'][],
 ): Promise<MiPoll[]> {
-	if (noteIds.length === 0) return [];
+	if (noteIds.length === 0) {
+		return [];
+	}
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す

@@ -74,11 +74,17 @@ export async function handleApiRequestResetPassword(
 	}
 
 	const user = await fetchLocalUserByUsernameFromDatabase(deps.db, params.username);
-	if (user == null) return;
+	if (user == null) {
+		return;
+	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	if (profile.email !== params.email) return;
-	if (!profile.emailVerified) return;
+	if (profile.email !== params.email) {
+		return;
+	}
+	if (!profile.emailVerified) {
+		return;
+	}
 
 	const token = secureRndstr(64, { chars: L_CHARS });
 

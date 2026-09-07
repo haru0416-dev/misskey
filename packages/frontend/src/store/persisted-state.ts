@@ -114,18 +114,32 @@ function isSameValue(a: unknown, b: unknown): boolean {
 }
 
 function compareStamp(a: PersistedStamp, b: PersistedStamp): number {
-	if (a.time !== b.time) return a.time - b.time;
+	if (a.time !== b.time) {
+		return a.time - b.time;
+	}
 	return a.sourceId.localeCompare(b.sourceId);
 }
 
 function isChannelMessage(value: unknown): value is PersistedStateChannelMessage {
-	if (!isRecord(value)) return false;
+	if (!isRecord(value)) {
+		return false;
+	}
 	const message = value as PersistedStateChannelMessageCandidate;
-	if (message.version !== 1) return false;
-	if (typeof message.sourceId !== 'string') return false;
-	if (message.where !== 'device' && message.where !== 'deviceAccount') return false;
-	if (typeof message.key !== 'string') return false;
-	if (!isRecord(message.stamp)) return false;
+	if (message.version !== 1) {
+		return false;
+	}
+	if (typeof message.sourceId !== 'string') {
+		return false;
+	}
+	if (message.where !== 'device' && message.where !== 'deviceAccount') {
+		return false;
+	}
+	if (typeof message.key !== 'string') {
+		return false;
+	}
+	if (!isRecord(message.stamp)) {
+		return false;
+	}
 	const stamp = message.stamp as PersistedStampCandidate;
 	return typeof stamp.time === 'number' && typeof stamp.sourceId === 'string';
 }
@@ -196,7 +210,9 @@ class PersistedStateController {
 		const patch: StateTree = {};
 
 		for (const [key, property] of Object.entries(this.definition.properties)) {
-			if (property == null) continue;
+			if (property == null) {
+				continue;
+			}
 			const source =
 				property.where === 'device'
 					? deviceState
@@ -212,7 +228,9 @@ class PersistedStateController {
 		this.channel?.addEventListener('message', this.channelListener);
 		this.stopSubscription = this.store.$subscribe(
 			(mutation) => {
-				if (this.applyingExternalState || this.disposed) return;
+				if (this.applyingExternalState || this.disposed) {
+					return;
+				}
 				this.captureChanges(mutation.type === MutationType.patchObject ? Object.keys(mutation.payload) : undefined);
 			},
 			{ detached: true, flush: 'sync' },
@@ -220,14 +238,20 @@ class PersistedStateController {
 	}
 
 	private async loadAccountState(): Promise<void> {
-		if (this.io.currentAccountId() == null) return;
+		if (this.io.currentAccountId() == null) {
+			return;
+		}
 		const values = await this.io.loadAccount(this.definition.namespace);
 		const patch: StateTree = {};
 		const cache: Record<string, unknown> = {};
 
 		for (const [key, property] of Object.entries(this.definition.properties)) {
-			if (property == null) continue;
-			if (property.where !== 'account') continue;
+			if (property == null) {
+				continue;
+			}
+			if (property.where !== 'account') {
+				continue;
+			}
 			if (this.dirtyAccountKeys.has(key)) {
 				cache[key] = cloneValue(this.store.$state[key]);
 				continue;
@@ -248,20 +272,30 @@ class PersistedStateController {
 		const keys = candidateKeys ?? Object.keys(this.definition.properties);
 		for (const key of keys) {
 			const property = this.definition.properties[key];
-			if (property == null) continue;
+			if (property == null) {
+				continue;
+			}
 			const value = this.store.$state[key];
-			if (isSameValue(value, this.snapshots.get(key))) continue;
+			if (isSameValue(value, this.snapshots.get(key))) {
+				continue;
+			}
 			const cloned = cloneValue(value);
 			this.snapshots.set(key, cloned);
 			this.pendingWrites.set(key, cloned);
-			if (property.where === 'account') this.dirtyAccountKeys.add(key);
+			if (property.where === 'account') {
+				this.dirtyAccountKeys.add(key);
+			}
 		}
-		if (this.pendingWrites.size > 0) this.scheduleFlush();
+		if (this.pendingWrites.size > 0) {
+			this.scheduleFlush();
+		}
 	}
 
 	// 同一tickの変更をまとめ、非同期batchをcurrentJobで直列化して古い書き込みの後勝ちを防ぐ。
 	private scheduleFlush(): Promise<void> {
-		if (this.scheduledFlush != null) return this.scheduledFlush;
+		if (this.scheduledFlush != null) {
+			return this.scheduledFlush;
+		}
 
 		this.scheduledFlush = Promise.resolve().then(async () => {
 			const writes = this.pendingWrites;
@@ -272,7 +306,9 @@ class PersistedStateController {
 				await job;
 			} finally {
 				this.scheduledFlush = null;
-				if (this.pendingWrites.size > 0) this.scheduleFlush();
+				if (this.pendingWrites.size > 0) {
+					this.scheduleFlush();
+				}
 			}
 		});
 
@@ -280,16 +316,24 @@ class PersistedStateController {
 	}
 
 	private async persistBatch(writes: Map<string, unknown>): Promise<void> {
-		if (writes.size === 0) return;
+		if (writes.size === 0) {
+			return;
+		}
 		const deviceWrites = new Map<string, unknown>();
 		const deviceAccountWrites = new Map<string, unknown>();
 		const accountWrites = new Map<string, unknown>();
 
 		for (const [key, value] of writes) {
 			const property = this.definition.properties[key];
-			if (property?.where === 'device') deviceWrites.set(key, value);
-			if (property?.where === 'deviceAccount') deviceAccountWrites.set(key, value);
-			if (property?.where === 'account') accountWrites.set(key, value);
+			if (property?.where === 'device') {
+				deviceWrites.set(key, value);
+			}
+			if (property?.where === 'deviceAccount') {
+				deviceAccountWrites.set(key, value);
+			}
+			if (property?.where === 'account') {
+				accountWrites.set(key, value);
+			}
 		}
 
 		await Promise.all([
@@ -306,10 +350,14 @@ class PersistedStateController {
 		storageKey: string,
 		writes: Map<string, unknown>,
 	): Promise<void> {
-		if (writes.size === 0) return;
+		if (writes.size === 0) {
+			return;
+		}
 		await this.io.update(storageKey, (current) => {
 			const state = toRecord(current);
-			for (const [key, value] of writes) state[key] = cloneValue(value);
+			for (const [key, value] of writes) {
+				state[key] = cloneValue(value);
+			}
 			return state;
 		});
 
@@ -330,10 +378,14 @@ class PersistedStateController {
 	}
 
 	private async persistAccountBatch(writes: Map<string, unknown>): Promise<void> {
-		if (writes.size === 0 || this.io.currentAccountId() == null) return;
+		if (writes.size === 0 || this.io.currentAccountId() == null) {
+			return;
+		}
 		await this.io.update(this.registryCacheKeyName, (current) => {
 			const cache = toRecord(current);
-			for (const [key, value] of writes) cache[key] = cloneValue(value);
+			for (const [key, value] of writes) {
+				cache[key] = cloneValue(value);
+			}
 			return cache;
 		});
 		await Promise.all(Array.from(writes, ([key, value]) => this.io.saveAccount(this.definition.namespace, key, value)));
@@ -352,20 +404,32 @@ class PersistedStateController {
 	}
 
 	private receiveChannelMessage(data: unknown): void {
-		if (!isChannelMessage(data)) return;
-		if (data.sourceId === this.io.sourceId) return;
+		if (!isChannelMessage(data)) {
+			return;
+		}
+		if (data.sourceId === this.io.sourceId) {
+			return;
+		}
 		const property = this.definition.properties[data.key];
-		if (property?.where !== data.where) return;
-		if (data.where === 'deviceAccount' && data.accountId !== this.io.currentAccountId()) return;
+		if (property?.where !== data.where) {
+			return;
+		}
+		if (data.where === 'deviceAccount' && data.accountId !== this.io.currentAccountId()) {
+			return;
+		}
 		const lastStamp = this.lastStamps.get(data.key);
-		if (lastStamp != null && compareStamp(data.stamp, lastStamp) <= 0) return;
+		if (lastStamp != null && compareStamp(data.stamp, lastStamp) <= 0) {
+			return;
+		}
 
 		this.lastStamps.set(data.key, data.stamp);
 		this.applyPatch({ [data.key]: cloneValue(data.value) });
 	}
 
 	private applyPatch(patch: StateTree): void {
-		if (Object.keys(patch).length === 0) return;
+		if (Object.keys(patch).length === 0) {
+			return;
+		}
 		this.applyingExternalState = true;
 		try {
 			this.store.$patch(patch);
@@ -385,7 +449,9 @@ class PersistedStateController {
 	}
 
 	public dispose(): void {
-		if (this.disposed) return;
+		if (this.disposed) {
+			return;
+		}
 		this.disposed = true;
 		this.stopSubscription?.();
 		this.stopSubscription = null;
@@ -428,7 +494,9 @@ const noPersistenceApi: PersistedStateApi = {
 
 export function createPersistedStatePlugin(io: PersistedStateIo): PiniaPlugin {
 	return ({ store, options }) => {
-		if (options.persist == null) return noPersistenceApi;
+		if (options.persist == null) {
+			return noPersistenceApi;
+		}
 		return attachPersistedState(store, options.persist, io);
 	};
 }

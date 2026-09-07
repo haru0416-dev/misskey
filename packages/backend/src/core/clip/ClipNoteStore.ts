@@ -4,7 +4,8 @@
  */
 
 import { and, asc, count, eq, gt, inArray, sql } from 'drizzle-orm';
-import { clipNote, type ClipNoteInsert, type ClipNoteRow } from '@/db/schema/clip-note.js';
+import { clipNote } from '@/db/schema/clip-note.js';
+import type { ClipNoteInsert, ClipNoteRow } from '@/db/schema/clip-note.js';
 import { clip } from '@/db/schema/clip.js';
 import { note } from '@/db/schema/note.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -97,7 +98,9 @@ export async function createClipNoteWithinLimitInDatabase(
 ): Promise<'created' | 'tooManyClipNotes' | 'noSuchNote'> {
 	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-note-limit', data.clipId);
-		if ((await countClipNotesByClipIdFromDatabase(tx, data.clipId)) >= limit) return 'tooManyClipNotes';
+		if ((await countClipNotesByClipIdFromDatabase(tx, data.clipId)) >= limit) {
+			return 'tooManyClipNotes';
+		}
 
 		// ノート削除は note から clip_note の順にロックするため、同じ順序にしてデッドロックを避ける。
 		const [lockedNote] = await tx
@@ -106,7 +109,9 @@ export async function createClipNoteWithinLimitInDatabase(
 			.where(eq(note.id, data.noteId))
 			.for('update')
 			.limit(1);
-		if (lockedNote == null) return 'noSuchNote';
+		if (lockedNote == null) {
+			return 'noSuchNote';
+		}
 
 		await tx.insert(clipNote).values(data);
 		await tx.update(clip).set({ lastClippedAt: new Date() }).where(eq(clip.id, data.clipId));
@@ -133,14 +138,18 @@ export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(
 			.where(eq(note.id, data.noteId))
 			.for('update')
 			.limit(1);
-		if (lockedNote == null) return;
+		if (lockedNote == null) {
+			return;
+		}
 
 		const [deleted] = await tx
 			.delete(clipNote)
 			.where(and(eq(clipNote.clipId, data.clipId), eq(clipNote.noteId, data.noteId)))
 			.returning({ noteId: clipNote.noteId });
 
-		if (deleted == null) return;
+		if (deleted == null) {
+			return;
+		}
 
 		await tx
 			.update(note)

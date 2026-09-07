@@ -52,8 +52,12 @@ const useDefaultModel = computed<boolean>({
 	get: () => props.policyMeta?.useDefault ?? false,
 	set: (value) => {
 		const current = props.policyMeta;
-		if (current == null) return;
-		if (current.useDefault === value) return;
+		if (current == null) {
+			return;
+		}
+		if (current.useDefault === value) {
+			return;
+		}
 		emit('update:policyMeta', { ...current, useDefault: value });
 	},
 });
@@ -62,22 +66,36 @@ const priorityModel = computed<number>({
 	get: () => props.policyMeta?.priority ?? 0,
 	set: (value) => {
 		const current = props.policyMeta;
-		if (current == null) return;
-		if (current.priority === value) return;
+		if (current == null) {
+			return;
+		}
+		if (current.priority === value) {
+			return;
+		}
 		emit('update:policyMeta', { ...current, priority: value });
 	},
 });
 
 function getPriorityIcon(priority: number): string {
-	if (priority === 2) return 'ti ti-arrows-up';
-	if (priority === 1) return 'ti ti-arrow-narrow-up';
+	if (priority === 2) {
+		return 'ti ti-arrows-up';
+	}
+	if (priority === 1) {
+		return 'ti ti-arrow-narrow-up';
+	}
 	return 'ti ti-point';
 }
 
 function priroityRangeTextConverter(v: number): string {
-	if (v === 0) return i18n.ts._role._priority.low;
-	if (v === 1) return i18n.ts._role._priority.middle;
-	if (v === 2) return i18n.ts._role._priority.high;
+	if (v === 0) {
+		return i18n.ts._role._priority.low;
+	}
+	if (v === 1) {
+		return i18n.ts._role._priority.middle;
+	}
+	if (v === 2) {
+		return i18n.ts._role._priority.high;
+	}
 	return '';
 }
 </script>

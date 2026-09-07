@@ -9,32 +9,34 @@ describe('Streaming', () => {
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const mainChannelReceived: any[] = [];
 		const main = stream.useChannel('main');
-		main.on('meUpdated', payload => {
+		main.on('meUpdated', (payload) => {
 			mainChannelReceived.push(payload);
 		});
 
 		const ws = await server.connected;
 		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
 
-		const msg = JSON.parse(await server.nextMessage as string);
+		const msg = JSON.parse((await server.nextMessage) as string);
 		const mainChannelId = msg.body.id;
 		expect(msg.type).toEqual('connect');
 		expect(msg.body.channel).toEqual('main');
 		expect(mainChannelId != null).toEqual(true);
 
-		server.send(JSON.stringify({
-			type: 'channel',
-			body: {
-				id: mainChannelId,
-				type: 'meUpdated',
+		server.send(
+			JSON.stringify({
+				type: 'channel',
 				body: {
-					id: 'foo'
-				}
-			}
-		}));
+					id: mainChannelId,
+					type: 'meUpdated',
+					body: {
+						id: 'foo',
+					},
+				},
+			}),
+		);
 
 		expect(mainChannelReceived[0]).toEqual({
-			id: 'foo'
+			id: 'foo',
 		});
 
 		stream.close();
@@ -46,33 +48,35 @@ describe('Streaming', () => {
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const chatChannelReceived: any[] = [];
 		const chat = stream.useChannel('chat', { other: 'aaa' });
-		chat.on('message', payload => {
+		chat.on('message', (payload) => {
 			chatChannelReceived.push(payload);
 		});
 
 		const ws = await server.connected;
 		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
 
-		const msg = JSON.parse(await server.nextMessage as string);
+		const msg = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId = msg.body.id;
 		expect(msg.type).toEqual('connect');
 		expect(msg.body.channel).toEqual('chat');
 		expect(msg.body.params).toEqual({ other: 'aaa' });
 		expect(chatChannelId != null).toEqual(true);
 
-		server.send(JSON.stringify({
-			type: 'channel',
-			body: {
-				id: chatChannelId,
-				type: 'message',
+		server.send(
+			JSON.stringify({
+				type: 'channel',
 				body: {
-					id: 'foo'
-				}
-			}
-		}));
+					id: chatChannelId,
+					type: 'message',
+					body: {
+						id: 'foo',
+					},
+				},
+			}),
+		);
 
 		expect(chatChannelReceived[0]).toEqual({
-			id: 'foo'
+			id: 'foo',
 		});
 
 		stream.close();
@@ -89,9 +93,9 @@ describe('Streaming', () => {
 		const ws = await server.connected;
 		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
 
-		const msg = JSON.parse(await server.nextMessage as string);
+		const msg = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId = msg.body.id;
-		const msg2 = JSON.parse(await server.nextMessage as string);
+		const msg2 = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId2 = msg2.body.id;
 
 		expect(chatChannelId != null).toEqual(true);
@@ -112,9 +116,9 @@ describe('Streaming', () => {
 		const ws = await server.connected;
 		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
 
-		const connectMsg = JSON.parse(await server.nextMessage as string);
+		const connectMsg = JSON.parse((await server.nextMessage) as string);
 		const channelId = connectMsg.body.id;
-		const msg = JSON.parse(await server.nextMessage as string);
+		const msg = JSON.parse((await server.nextMessage) as string);
 
 		expect(msg.type).toEqual('ch');
 		expect(msg.body.id).toEqual(channelId);
@@ -130,30 +134,32 @@ describe('Streaming', () => {
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const mainChannelReceived: any[] = [];
 		const main = stream.useChannel('main');
-		main.on('meUpdated', payload => {
+		main.on('meUpdated', (payload) => {
 			mainChannelReceived.push(payload);
 		});
 
 		const ws = await server.connected;
 		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
 
-		const msg = JSON.parse(await server.nextMessage as string);
+		const msg = JSON.parse((await server.nextMessage) as string);
 		const mainChannelId = msg.body.id;
 		expect(msg.type).toEqual('connect');
 		expect(msg.body.channel).toEqual('main');
 		expect(mainChannelId != null).toEqual(true);
 		main.dispose();
 
-		server.send(JSON.stringify({
-			type: 'channel',
-			body: {
-				id: mainChannelId,
-				type: 'meUpdated',
+		server.send(
+			JSON.stringify({
+				type: 'channel',
 				body: {
-					id: 'foo'
-				}
-			}
-		}));
+					id: mainChannelId,
+					type: 'meUpdated',
+					body: {
+						id: 'foo',
+					},
+				},
+			}),
+		);
 
 		expect(mainChannelReceived.length).toEqual(0);
 
@@ -169,7 +175,7 @@ describe('Streaming', () => {
 		stream.useChannel('main');
 
 		await server.connected;
-		const first = JSON.parse(await server.nextMessage as string);
+		const first = JSON.parse((await server.nextMessage) as string);
 		expect(first.type).toEqual('connect');
 		expect(first.body.channel).toEqual('main');
 
@@ -177,7 +183,7 @@ describe('Streaming', () => {
 		server = new WS('wss://misskey.test/streaming');
 
 		await server.connected;
-		const resub = JSON.parse(await server.nextMessage as string);
+		const resub = JSON.parse((await server.nextMessage) as string);
 		expect(resub.type).toEqual('connect');
 		expect(resub.body.channel).toEqual('main');
 		expect(resub.body.id).toEqual(first.body.id);
@@ -194,12 +200,14 @@ describe('Streaming', () => {
 		let connectedCount = 0;
 		stream.on('_connected_', () => {
 			connectedCount++;
-			if (connectedCount === 2) chat.send('read', { id: 'from-connected-listener' });
+			if (connectedCount === 2) {
+				chat.send('read', { id: 'from-connected-listener' });
+			}
 		});
 
 		try {
 			await server.connected;
-			const initialConnect = await server.nextMessage as { type: string; body: { id: string; }; };
+			const initialConnect = (await server.nextMessage) as { type: string; body: { id: string } };
 			server.close();
 
 			stream.send('generic', { order: 1 });
@@ -265,10 +273,7 @@ describe('Streaming', () => {
 	test('通常キューのバイト上限を超えても複数チャンネルの再購読を破棄しない', async () => {
 		let server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
-		const channels = [
-			stream.useChannel('chat', { other: 'aaa' }),
-			stream.useChannel('chat', { other: 'bbb' }),
-		];
+		const channels = [stream.useChannel('chat', { other: 'aaa' }), stream.useChannel('chat', { other: 'bbb' })];
 		const data = 'a'.repeat(MAX_OFFLINE_MESSAGE_BYTES / 2);
 
 		try {
@@ -299,7 +304,7 @@ describe('Streaming', () => {
 		const server = new WS('wss://misskey.test/streaming');
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const errors: Error[] = [];
-		stream.on('_error_', error => errors.push(error));
+		stream.on('_error_', (error) => errors.push(error));
 
 		try {
 			await server.connected;
@@ -307,7 +312,7 @@ describe('Streaming', () => {
 			server.send(JSON.stringify([]));
 			server.send(JSON.stringify({ type: 'channel', body: { id: 1, type: 'event' } }));
 
-			expect(errors.map(error => error.message)).toEqual([
+			expect(errors.map((error) => error.message)).toEqual([
 				'Failed to parse streaming message as JSON',
 				'Invalid streaming message envelope',
 				'Invalid streaming channel message',
@@ -323,7 +328,7 @@ describe('Streaming', () => {
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const errors: Error[] = [];
 		let connected = 0;
-		stream.on('_error_', error => errors.push(error));
+		stream.on('_error_', (error) => errors.push(error));
 		stream.on('_connected_', () => connected++);
 
 		try {
@@ -335,8 +340,8 @@ describe('Streaming', () => {
 
 			expect(connected).toBe(1);
 			expect(errors).toHaveLength(2);
-			expect(errors.every(error => error instanceof Error)).toBe(true);
-			expect(errors.map(error => error.message)).toEqual([
+			expect(errors.every((error) => error instanceof Error)).toBe(true);
+			expect(errors.map((error) => error.message)).toEqual([
 				'Reserved streaming event type received: _error_',
 				'Reserved streaming event type received: _connected_',
 			]);
@@ -351,7 +356,7 @@ describe('Streaming', () => {
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const received: unknown[] = [];
 		const on = stream.on as unknown as (event: string, listener: (payload: unknown) => void) => Stream;
-		on.call(stream, 'futureEvent', payload => received.push(payload));
+		on.call(stream, 'futureEvent', (payload) => received.push(payload));
 
 		try {
 			await server.connected;
@@ -375,7 +380,7 @@ describe('Streaming', () => {
 			server.send({ type: 'connected', body: { id: '2' } });
 
 			const chat = stream.useChannel('chat', { other: 'aaa' });
-			const connect = await server.nextMessage as { type: string; body: { id: string; }; };
+			const connect = (await server.nextMessage) as { type: string; body: { id: string } };
 			let ready = false;
 			void chat.ready.then(() => {
 				ready = true;
@@ -412,7 +417,7 @@ describe('Streaming', () => {
 
 		try {
 			await server.connected;
-			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			const connect = (await server.nextMessage) as { type: string; body: { id: string; channel: string } };
 			expect(connect.type).toBe('connect');
 
 			vi.useFakeTimers();
@@ -422,10 +427,7 @@ describe('Streaming', () => {
 
 			await vi.advanceTimersByTimeAsync(1);
 			await vi.advanceTimersByTimeAsync(10);
-			expect(server).toHaveReceivedMessages([
-				connect,
-				{ type: 'disconnect', body: { id: connect.body.id } },
-			]);
+			expect(server).toHaveReceivedMessages([connect, { type: 'disconnect', body: { id: connect.body.id } }]);
 		} finally {
 			vi.useRealTimers();
 			stream.close();
@@ -440,12 +442,12 @@ describe('Streaming', () => {
 		const receivedBySecond: unknown[] = [];
 		const first = stream.useChannel('main');
 		const second = stream.useChannel('main');
-		first.on('meUpdated', payload => receivedByFirst.push(payload));
-		second.on('meUpdated', payload => receivedBySecond.push(payload));
+		first.on('meUpdated', (payload) => receivedByFirst.push(payload));
+		second.on('meUpdated', (payload) => receivedBySecond.push(payload));
 
 		try {
 			await server.connected;
-			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			const connect = (await server.nextMessage) as { type: string; body: { id: string; channel: string } };
 			expect(connect.type).toBe('connect');
 			expect(connect.body.channel).toBe('main');
 			expect(first.id).toBe(connect.body.id);
@@ -479,7 +481,7 @@ describe('Streaming', () => {
 
 		try {
 			await server.connected;
-			const connect = await server.nextMessage as { type: string; body: { id: string; channel: string; }; };
+			const connect = (await server.nextMessage) as { type: string; body: { id: string; channel: string } };
 			vi.useFakeTimers();
 
 			first.dispose();
@@ -493,10 +495,7 @@ describe('Streaming', () => {
 
 			reused.dispose();
 			await vi.advanceTimersByTimeAsync(3010);
-			expect(server).toHaveReceivedMessages([
-				connect,
-				{ type: 'disconnect', body: { id: connect.body.id } },
-			]);
+			expect(server).toHaveReceivedMessages([connect, { type: 'disconnect', body: { id: connect.body.id } }]);
 		} finally {
 			vi.useRealTimers();
 			reused?.dispose();

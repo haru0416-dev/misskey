@@ -58,24 +58,31 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { ACHIEVEMENT_TYPES, ACHIEVEMENT_BADGES, claimAchievement } from '@/features/achievements/achievements.js';
 
-const props = withDefaults(defineProps<{
-	user: Misskey.entities.User;
-	withLocked?: boolean;
-	withDescription?: boolean;
-}>(), {
-	withLocked: true,
-	withDescription: true,
-});
+const props = withDefaults(
+	defineProps<{
+		user: Misskey.entities.User;
+		withLocked?: boolean;
+		withDescription?: boolean;
+	}>(),
+	{
+		withLocked: true,
+		withDescription: true,
+	},
+);
 
 const achievements = ref<Misskey.entities.UsersAchievementsResponse | null>(null);
-const lockedAchievements = computed(() => ACHIEVEMENT_TYPES.filter(x => !(achievements.value ?? []).some(a => a.name === x)));
+const lockedAchievements = computed(() =>
+	ACHIEVEMENT_TYPES.filter((x) => !(achievements.value ?? []).some((a) => a.name === x)),
+);
 
 function _fetch_() {
-	misskeyApi('users/achievements', { userId: props.user.id }).then(res => {
+	misskeyApi('users/achievements', { userId: props.user.id }).then((res) => {
 		achievements.value = [];
 		for (const t of ACHIEVEMENT_TYPES) {
-			const a = res.find(x => x.name === t);
-			if (a) achievements.value.push(a);
+			const a = res.find((x) => x.name === t);
+			if (a) {
+				achievements.value.push(a);
+			}
 		}
 	});
 }

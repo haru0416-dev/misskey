@@ -4,12 +4,12 @@ import * as Misskey from 'misskey-js';
 import {
 	assertNotificationReceived,
 	createAccount,
-	type LoginUser,
 	resolveRemoteNote,
 	resolveRemoteUser,
 	sleep,
 	waitFor,
 } from './utils.js';
+import type { LoginUser } from './utils.js';
 
 describe('Block', () => {
 	describe('Check follow', () => {

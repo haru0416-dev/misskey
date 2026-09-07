@@ -86,7 +86,9 @@ export async function previewUploaderItem(items: UploaderItem[], target: Uploade
 		filename: getUploadName(item),
 	}));
 	const defaultIndex = contents.findIndex((content) => content.id === target.id);
-	if (defaultIndex === -1) return;
+	if (defaultIndex === -1) {
+		return;
+	}
 
 	const { dispose } = await os.popupAsyncWithDialog(
 		import('@/features/media-viewer/components/MkLightbox.vue').then((x) => x.default),
@@ -116,9 +118,8 @@ function getCompressionSettings(level: 0 | 1 | 2 | 3) {
 			maxWidth: 2000 * 0.75 * 0.75,
 			maxHeight: 2000 * 0.75 * 0.75,
 		};
-	} else {
-		return null;
 	}
+	return null;
 }
 
 export function useUploader(
@@ -191,7 +192,9 @@ export function useUploader(
 
 	/** thumbnail は objectUrl と同じ URL を指していることがあるので、重複して revoke しない */
 	function revokeItemObjectUrls(item: UploaderItem) {
-		if (item.thumbnail != null && item.thumbnail !== item.objectUrl) URL.revokeObjectURL(item.thumbnail);
+		if (item.thumbnail != null && item.thumbnail !== item.objectUrl) {
+			URL.revokeObjectURL(item.thumbnail);
+		}
 		URL.revokeObjectURL(item.objectUrl);
 	}
 
@@ -207,7 +210,9 @@ export function useUploader(
 
 	function removeItem(item: UploaderItem) {
 		const index = items.value.indexOf(item);
-		if (index === -1) return;
+		if (index === -1) {
+			return;
+		}
 		revokeItemObjectUrls(item);
 		items.value.splice(index, 1);
 	}
@@ -227,8 +232,12 @@ export function useUploader(
 							placeholder: item.name,
 							default: item.name,
 						});
-						if (canceled) return;
-						if (result.trim() === '') return;
+						if (canceled) {
+							return;
+						}
+						if (result.trim() === '') {
+							return;
+						}
 
 						item.name = result;
 					},

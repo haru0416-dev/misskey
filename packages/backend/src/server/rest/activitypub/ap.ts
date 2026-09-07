@@ -4,7 +4,8 @@
  */
 
 import { z } from 'zod';
-import { getApId, isActor, isPost, type IObject } from '@/core/activitypub/type.js';
+import { getApId, isActor, isPost } from '@/core/activitypub/type.js';
+import type { IObject } from '@/core/activitypub/type.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -17,12 +18,16 @@ import {
 	isFederationAllowedUri,
 	isSelfHost,
 	resolveApObjectForApi,
-	type ApiApResolveDependencies,
 } from './ap-resolve.js';
-import { createNoteFromApForApi, type ApiApNoteDependencies } from './ap-note.js';
-import { createPersonForApi, type ApiApPersonDependencies } from './ap-person.js';
-import { packUserDetailedNotMeForApi, type UserPackingDependencies } from '../user/user.js';
-import { packNoteForApi, type ApiNoteDependencies } from '../note/note.js';
+import type { ApiApResolveDependencies } from './ap-resolve.js';
+import { createNoteFromApForApi } from './ap-note.js';
+import type { ApiApNoteDependencies } from './ap-note.js';
+import { createPersonForApi } from './ap-person.js';
+import type { ApiApPersonDependencies } from './ap-person.js';
+import { packUserDetailedNotMeForApi } from '../user/user.js';
+import type { UserPackingDependencies } from '../user/user.js';
+import { packNoteForApi } from '../note/note.js';
+import type { ApiNoteDependencies } from '../note/note.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 
 export const apGetParamDef = z.object({
@@ -127,11 +132,15 @@ async function fetchAnyForApi(
 		me,
 		...(await Promise.all([getUserFromApIdForApi(deps, uri), getNoteFromApIdForApi(deps, uri)])),
 	);
-	if (local != null) return local;
+	if (local != null) {
+		return local;
+	}
 
 	const host = extractDbHost(uri);
 
-	if (isSelfHost(deps.config, host)) return null;
+	if (isSelfHost(deps.config, host)) {
+		return null;
+	}
 
 	const history = new Set<string>();
 	const object = await resolveApObjectForApi(
@@ -174,7 +183,9 @@ async function fetchAnyForApi(
 			me,
 			...(await Promise.all([getUserFromApIdForApi(deps, object.id), getNoteFromApIdForApi(deps, object.id)])),
 		);
-		if (local != null) return local;
+		if (local != null) {
+			return local;
+		}
 	}
 
 	return await mergePackForApi(

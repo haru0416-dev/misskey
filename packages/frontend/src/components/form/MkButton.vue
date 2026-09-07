@@ -62,13 +62,21 @@ const el = useTemplateRef('el');
 const ripples = useTemplateRef('ripples');
 
 const component = computed(() => {
-	if (props.type === 'a') return 'a';
-	if (props.type === 'routerLink') return MkA;
+	if (props.type === 'a') {
+		return 'a';
+	}
+	if (props.type === 'routerLink') {
+		return MkA;
+	}
 	return 'button';
 });
 const cProps = computed(() => {
-	if (props.type === 'a') return { href: props.href ?? '#', target: props.target, rel: props.rel };
-	if (props.type === 'routerLink') return { to: props.to!, behavior: props.linkBehavior };
+	if (props.type === 'a') {
+		return { href: props.href ?? '#', target: props.target, rel: props.rel };
+	}
+	if (props.type === 'routerLink') {
+		return { to: props.to!, behavior: props.linkBehavior };
+	}
 	return {
 		type: props.type ?? 'button',
 		name: props.name,
@@ -115,14 +123,16 @@ function onMousedown(evt: MouseEvent): void {
 	const scale = calcCircleScale(target.clientWidth, target.clientHeight, circleCenterX, circleCenterY);
 
 	window.setTimeout(() => {
-		ripple.style.transform = 'scale(' + (scale / 2) + ')';
+		ripple.style.transform = 'scale(' + scale / 2 + ')';
 	}, 1);
 	window.setTimeout(() => {
 		ripple.style.transition = 'all 1s ease';
 		ripple.style.opacity = '0';
 	}, 1000);
 	window.setTimeout(() => {
-		if (ripples.value) ripples.value.removeChild(ripple);
+		if (ripples.value) {
+			ripples.value.removeChild(ripple);
+		}
 	}, 2000);
 }
 </script>

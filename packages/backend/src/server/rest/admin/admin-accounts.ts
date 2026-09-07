@@ -22,19 +22,10 @@ import { ApiError } from '../error.js';
 import type { ApiAuthenticated } from '../auth/auth.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { isApiAdministrator } from '../role/role-policy.js';
-import {
-	createLocalSignupAccount,
-	packSignupUser,
-	type SignupDependencies,
-	type SignupResponse,
-} from '../auth/signup.js';
-import {
-	packMeDetailedForApi,
-	packUserDetailedNotMeForApi,
-	type MeDetailedApiResponse,
-	type UserDetailedNotMeApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
+import { createLocalSignupAccount, packSignupUser } from '../auth/signup.js';
+import type { SignupDependencies, SignupResponse } from '../auth/signup.js';
+import { packMeDetailedForApi, packUserDetailedNotMeForApi } from '../user/user.js';
+import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAccountsDependencies = UserPackingDependencies &
@@ -133,7 +124,9 @@ export async function handleApiAdminAccountsCreate(
 			rootClaim: rootUserId == null ? 'required' : 'skip',
 		});
 	} catch (error) {
-		if (error instanceof RootUserAlreadyAssignedError) throw adminAccountCreateAccessDeniedError();
+		if (error instanceof RootUserAlreadyAssignedError) {
+			throw adminAccountCreateAccessDeniedError();
+		}
 		throw error;
 	}
 

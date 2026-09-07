@@ -74,33 +74,47 @@ import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
 import MkPaginationControl from '@/components/layout/MkPaginationControl.vue';
 import * as os from '@/os.js';
 
-const props = withDefaults(defineProps<MkPaginationOptions & {
-	paginator: T;
-}>(), {
-	autoLoad: true,
-	direction: 'down',
-	pullToRefresh: true,
-	withControl: false,
-	forceDisableInfiniteScroll: false,
-});
+const props = withDefaults(
+	defineProps<
+		MkPaginationOptions & {
+			paginator: T;
+		}
+	>(),
+	{
+		autoLoad: true,
+		direction: 'down',
+		pullToRefresh: true,
+		withControl: false,
+		forceDisableInfiniteScroll: false,
+	},
+);
 
-const transitionProps = computed(() => prefer.animation ? { mode: 'out-in' as const } : {});
+const transitionProps = computed(() => (prefer.animation ? { mode: 'out-in' as const } : {}));
 
 const shouldEnableInfiniteScroll = computed(() => {
 	return prefer.enableInfiniteScroll && !props.forceDisableInfiniteScroll;
 });
 
 function onContextmenu(ev: PointerEvent) {
-	if (ev.target && isLink(ev.target as HTMLElement)) return;
-	if (window.getSelection()?.toString() !== '') return;
+	if (ev.target && isLink(ev.target as HTMLElement)) {
+		return;
+	}
+	if (window.getSelection()?.toString() !== '') {
+		return;
+	}
 
-	os.contextMenu([{
-		icon: 'ti ti-refresh',
-		text: i18n.ts.reload,
-		action: () => {
-			props.paginator.reload();
-		},
-	}], ev);
+	os.contextMenu(
+		[
+			{
+				icon: 'ti ti-refresh',
+				text: i18n.ts.reload,
+				action: () => {
+					props.paginator.reload();
+				},
+			},
+		],
+		ev,
+	);
 }
 
 function getValue(v: IPaginator['items']) {
@@ -114,16 +128,24 @@ if (props.autoLoad) {
 }
 
 if (props.paginator.computedParams) {
-	watch(props.paginator.computedParams, () => {
-		props.paginator.reload();
-	}, { immediate: false, deep: true });
+	watch(
+		props.paginator.computedParams,
+		() => {
+			props.paginator.reload();
+		},
+		{ immediate: false, deep: true },
+	);
 }
 
 const upButtonVisible = computed(() => {
-	return props.paginator.order.value === 'oldest' ? props.paginator.canFetchOlder.value : props.paginator.canFetchNewer.value;
+	return props.paginator.order.value === 'oldest'
+		? props.paginator.canFetchOlder.value
+		: props.paginator.canFetchNewer.value;
 });
 const upButtonLoading = computed(() => {
-	return props.paginator.order.value === 'oldest' ? props.paginator.fetchingOlder.value : props.paginator.fetchingNewer.value;
+	return props.paginator.order.value === 'oldest'
+		? props.paginator.fetchingOlder.value
+		: props.paginator.fetchingNewer.value;
 });
 
 function upButtonClick() {
@@ -135,10 +157,14 @@ function upButtonClick() {
 }
 
 const downButtonVisible = computed(() => {
-	return props.paginator.order.value === 'oldest' ? props.paginator.canFetchNewer.value : props.paginator.canFetchOlder.value;
+	return props.paginator.order.value === 'oldest'
+		? props.paginator.canFetchNewer.value
+		: props.paginator.canFetchOlder.value;
 });
 const downButtonLoading = computed(() => {
-	return props.paginator.order.value === 'oldest' ? props.paginator.fetchingNewer.value : props.paginator.fetchingOlder.value;
+	return props.paginator.order.value === 'oldest'
+		? props.paginator.fetchingNewer.value
+		: props.paginator.fetchingOlder.value;
 });
 
 function downButtonClick() {
@@ -151,7 +177,7 @@ function downButtonClick() {
 
 defineSlots<{
 	empty: () => void;
-	default: (props: { items: UnwrapRef<T['items']>, fetching: boolean }) => void;
+	default: (props: { items: UnwrapRef<T['items']>; fetching: boolean }) => void;
 }>();
 </script>
 

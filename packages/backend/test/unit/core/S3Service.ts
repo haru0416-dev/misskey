@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { createS3Service, type S3Service } from '@/core/drive/S3Service.js';
+import { createS3Service } from '@/core/drive/S3Service.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
 import { MiMeta } from '@/models/_.js';
 
 type CapturedRequest = { method: string; url: string; headers: Record<string, string>; body: string };

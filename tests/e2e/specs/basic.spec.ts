@@ -9,10 +9,10 @@ import {
 	login,
 	registerUser,
 	resetState,
-	type TestUser,
 	visitHome,
 	waitForPageCarryoverGuard,
 } from '../support/helpers';
+import type { TestUser } from '../support/helpers';
 
 test.describe('Before setup instance', () => {
 	test.beforeEach(async ({ page }) => {
@@ -21,10 +21,6 @@ test.describe('Before setup instance', () => {
 
 	test.afterEach(async ({ page }) => {
 		await waitForPageCarryoverGuard(page);
-	});
-
-	test('successfully loads', async ({ page }) => {
-		await visitHome(page);
 	});
 
 	test('setup instance', async ({ page }) => {
@@ -40,7 +36,7 @@ test.describe('Before setup instance', () => {
 			(response) => response.url().includes('/api/admin/accounts/create') && response.request().method() === 'POST',
 		);
 		await page.locator('[data-cy-admin-ok]').click();
-		await signup;
+		expect((await signup).status()).toBe(200);
 
 		const updateMeta = page.waitForResponse(
 			(response) => response.url().includes('/api/admin/update-meta') && response.request().method() === 'POST',
@@ -48,7 +44,10 @@ test.describe('Before setup instance', () => {
 		await page.locator('[data-cy-next]').click();
 		await page.locator('[data-cy-server-name] input').fill('Testskey');
 		await page.locator('[data-cy-server-setup-wizard-apply]').click();
-		await updateMeta;
+		expect((await updateMeta).status()).toBe(204);
+		const meta = await page.request.post('/api/meta', { data: {} });
+		expect(meta.status()).toBe(200);
+		expect(await meta.json()).toMatchObject({ name: 'Testskey' });
 	});
 });
 
@@ -60,10 +59,6 @@ test.describe('After setup instance', () => {
 
 	test.afterEach(async ({ page }) => {
 		await waitForPageCarryoverGuard(page);
-	});
-
-	test('successfully loads', async ({ page }) => {
-		await visitHome(page);
 	});
 
 	test('signup', async ({ page }) => {
@@ -90,7 +85,8 @@ test.describe('After setup instance', () => {
 			(response) => response.url().includes('/api/signup') && response.request().method() === 'POST',
 		);
 		await page.locator('[data-cy-signup-submit]').click();
-		await signup;
+		expect((await signup).status()).toBe(200);
+		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
 	});
 
 	test('signup with duplicated username', async ({ page }) => {
@@ -108,7 +104,11 @@ test.describe('After setup instance', () => {
 		await page.locator('[data-cy-signup-username] input').fill('alice');
 		await page.locator('[data-cy-signup-password] input').fill('alice1234');
 		await page.locator('[data-cy-signup-password-retype] input').fill('alice1234');
+		await page.locator('[data-cy-signup-invitation-code] input').fill('test-invitation-code');
+		await expect(page.locator('[data-cy-signup-username]')).toContainText('利用できません');
 		await expect(page.locator('[data-cy-signup-submit]')).toBeDisabled();
+		await page.locator('[data-cy-signup-username] input').fill('bob');
+		await expect(page.locator('[data-cy-signup-submit]')).toBeEnabled();
 	});
 });
 
@@ -126,12 +126,11 @@ test.describe('After user signup', () => {
 		await waitForPageCarryoverGuard(page);
 	});
 
-	test('successfully loads', async ({ page }) => {
-		await visitHome(page);
-	});
-
 	test('signin', async ({ page }) => {
 		await login(page, 'alice', 'alice1234');
+		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
+		await page.reload();
+		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
 	});
 
 	test('suspend', async ({ page }) => {
@@ -144,7 +143,7 @@ test.describe('After user signup', () => {
 
 		await visitHome(page);
 		await page.locator('[data-cy-signin]').click();
-		await expect(page.locator('[data-cy-signin-page-input]')).toBeVisible({ timeout: 1_000 });
+		await expect(page.locator('[data-cy-signin-page-input]')).toBeVisible({ timeout: 1000 });
 		await page.locator('[data-cy-signin-username] input').fill('alice');
 		await page.locator('[data-cy-signin-username] input').press('Enter');
 

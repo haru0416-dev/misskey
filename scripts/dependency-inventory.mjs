@@ -85,7 +85,9 @@ const bunNativeCandidates = {
 
 export function parseResolvedPackage(resolved) {
 	const separator = resolved.startsWith('@') ? resolved.indexOf('@', resolved.indexOf('/') + 1) : resolved.indexOf('@');
-	if (separator < 0) return { name: resolved, version: 'unknown' };
+	if (separator < 0) {
+		return { name: resolved, version: 'unknown' };
+	}
 	return {
 		name: resolved.slice(0, separator),
 		version: resolved.slice(separator + 1),
@@ -107,7 +109,9 @@ function packageNameFromSpecifier(specifier) {
 
 function trackedSourceFiles(root) {
 	const result = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
-	if (result.status !== 0) throw new Error(result.stderr || 'git ls-files failed');
+	if (result.status !== 0) {
+		throw new Error(result.stderr || 'git ls-files failed');
+	}
 	return result.stdout
 		.split('\0')
 		.filter((file) => sourceExtensions.has(extname(file)) && existsSync(`${root}/${file}`));
@@ -125,8 +129,12 @@ function collectSourceUsage(root) {
 		for (const pattern of importPatterns) {
 			for (const match of source.matchAll(pattern)) {
 				const packageName = packageNameFromSpecifier(match[1]);
-				if (packageName == null) continue;
-				if (!usage.has(packageName)) usage.set(packageName, new Set());
+				if (packageName == null) {
+					continue;
+				}
+				if (!usage.has(packageName)) {
+					usage.set(packageName, new Set());
+				}
 				usage.get(packageName).add(file);
 			}
 		}
@@ -145,7 +153,9 @@ function collectScriptUsage(workspaces) {
 				) {
 					continue;
 				}
-				if (!usage.has(packageName)) usage.set(packageName, new Set());
+				if (!usage.has(packageName)) {
+					usage.set(packageName, new Set());
+				}
 				usage.get(packageName).add(`${workspacePath || '.'}:script:${scriptName}`);
 			}
 		}
@@ -156,8 +166,12 @@ function collectScriptUsage(workspaces) {
 function mergeUsage(sourceUsage, scriptUsage) {
 	const result = new Map(sourceUsage);
 	for (const [packageName, locations] of scriptUsage) {
-		if (!result.has(packageName)) result.set(packageName, new Set());
-		for (const location of locations) result.get(packageName).add(location);
+		if (!result.has(packageName)) {
+			result.set(packageName, new Set());
+		}
+		for (const location of locations) {
+			result.get(packageName).add(location);
+		}
 	}
 	return result;
 }
@@ -170,15 +184,21 @@ function buildNameGraph(packages) {
 
 	for (const tuple of Object.values(packages)) {
 		const { name, version } = parseResolvedPackage(tuple[0]);
-		if (!graph.has(name)) graph.set(name, new Set());
-		if (!versions.has(name)) versions.set(name, new Set());
+		if (!graph.has(name)) {
+			graph.set(name, new Set());
+		}
+		if (!versions.has(name)) {
+			versions.set(name, new Set());
+		}
 		versions.get(name).add(version);
 
 		const metadata = tuple[2] ?? {};
 		for (const group of ['dependencies', 'optionalDependencies']) {
 			for (const dependencyName of Object.keys(metadata[group] ?? {})) {
 				graph.get(name).add(dependencyName);
-				if (!reverse.has(dependencyName)) reverse.set(dependencyName, new Set());
+				if (!reverse.has(dependencyName)) {
+					reverse.set(dependencyName, new Set());
+				}
 				reverse.get(dependencyName).add(name);
 			}
 		}
@@ -192,9 +212,13 @@ export function dependencyClosure(graph, rootName) {
 	const pending = [rootName];
 	while (pending.length > 0) {
 		const name = pending.pop();
-		if (visited.has(name)) continue;
+		if (visited.has(name)) {
+			continue;
+		}
 		visited.add(name);
-		for (const dependency of graph.get(name) ?? []) pending.push(dependency);
+		for (const dependency of graph.get(name) ?? []) {
+			pending.push(dependency);
+		}
 	}
 	return visited;
 }
@@ -204,7 +228,9 @@ function workspaceDirectDependencies(workspaces) {
 	for (const [workspacePath, workspace] of Object.entries(workspaces)) {
 		for (const group of dependencyGroups) {
 			for (const [name, requested] of Object.entries(workspace[group] ?? {})) {
-				if (!result.has(name)) result.set(name, []);
+				if (!result.has(name)) {
+					result.set(name, []);
+				}
 				result.get(name).push({ workspace: workspacePath || '.', group, requested });
 			}
 		}
@@ -377,9 +403,13 @@ function parseArgs(args) {
 	let json = false;
 	let packageName = null;
 	for (let index = 0; index < args.length; index++) {
-		if (args[index] === '--json') json = true;
-		else if (args[index] === '--package' && args[index + 1] != null) packageName = args[++index];
-		else throw new Error(`Unknown or incomplete argument: ${args[index]}`);
+		if (args[index] === '--json') {
+			json = true;
+		} else if (args[index] === '--package' && args[index + 1] != null) {
+			packageName = args[++index];
+		} else {
+			throw new Error(`Unknown or incomplete argument: ${args[index]}`);
+		}
 	}
 	return { json, packageName };
 }

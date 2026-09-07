@@ -32,7 +32,8 @@ import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
 import { normalizeReactionForApi } from '../note/notes-reactions.js';
-import { getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getApiUserRoles } from '../role/role-policy.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { ApiError } from '../error.js';
 import type { ApiMainStreamPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
@@ -178,8 +179,12 @@ export async function handleApiAnnouncementShow(
 ): Promise<Packed<'Announcement'>> {
 	const params = parseApiParams(announcementShowParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
-	if (announcement == null) throw noSuchAnnouncementError();
-	if (announcement.userId != null && announcement.userId !== user?.id) throw noSuchAnnouncementError();
+	if (announcement == null) {
+		throw noSuchAnnouncementError();
+	}
+	if (announcement.userId != null && announcement.userId !== user?.id) {
+		throw noSuchAnnouncementError();
+	}
 
 	return await packApiAnnouncement(deps, announcement, user);
 }
@@ -196,7 +201,9 @@ export async function handleApiIReadAnnouncement(
 		announcementId: params.announcementId,
 		userId: me.id,
 	});
-	if (!created) return;
+	if (!created) {
+		return;
+	}
 
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
 	if (announcement != null && announcement.userId === me.id) {
@@ -259,16 +266,22 @@ async function normalizeAnnouncementReaction(
 	requested: string,
 ): Promise<string> {
 	const custom = requested.match(isCustomEmojiReaction);
-	if (custom == null) return normalizeReactionForApi(requested);
+	if (custom == null) {
+		return normalizeReactionForApi(requested);
+	}
 
 	const name = custom[1]!;
 	const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
-	if (emoji == null) return normalizeReactionForApi(null);
+	if (emoji == null) {
+		return normalizeReactionForApi(null);
+	}
 
 	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
 		const roles = await getApiUserRoles(deps, me);
 		const allowed = roles.some((role) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(role.id));
-		if (!allowed) return normalizeReactionForApi(null);
+		if (!allowed) {
+			return normalizeReactionForApi(null);
+		}
 	}
 
 	return `:${name}:`;
@@ -280,11 +293,17 @@ async function fetchReactableAnnouncement(
 	announcementId: MiAnnouncement['id'],
 ): Promise<MiAnnouncement> {
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, announcementId);
-	if (announcement == null) throw reactAnnouncementNotFoundError();
+	if (announcement == null) {
+		throw reactAnnouncementNotFoundError();
+	}
 	// 個人宛のお知らせは宛先本人にしか見えない。
-	if (announcement.userId != null && announcement.userId !== me.id) throw reactAnnouncementNotFoundError();
+	if (announcement.userId != null && announcement.userId !== me.id) {
+		throw reactAnnouncementNotFoundError();
+	}
 	// 終了したお知らせは読むだけ。件数は見えるが付け外しはできない。
-	if (!announcement.isActive) throw announcementNotActiveError();
+	if (!announcement.isActive) {
+		throw announcementNotActiveError();
+	}
 	return announcement;
 }
 
@@ -303,7 +322,9 @@ export async function handleApiAnnouncementReact(
 		userId: me.id,
 		reaction,
 	});
-	if (!created) throw alreadyReactedError();
+	if (!created) {
+		throw alreadyReactedError();
+	}
 }
 
 export async function handleApiAnnouncementUnreact(
@@ -315,5 +336,7 @@ export async function handleApiAnnouncementUnreact(
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
 	const deleted = await deleteAnnouncementReactionInDatabase(deps.db, me.id, params.announcementId);
-	if (!deleted) throw notReactedError();
+	if (!deleted) {
+		throw notReactedError();
+	}
 }

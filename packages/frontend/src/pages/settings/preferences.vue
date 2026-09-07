@@ -992,7 +992,11 @@ const chatShowSenderName = prefer.model('chat.showSenderName');
 const chatSendOnEnter = prefer.model('chat.sendOnEnter');
 const useStickyIcons = prefer.model('useStickyIcons');
 const enableHighQualityImagePlaceholders = prefer.model('enableHighQualityImagePlaceholders');
-const reduceAnimation = prefer.model('animation', v => !v, v => !v);
+const reduceAnimation = prefer.model(
+	'animation',
+	(v) => !v,
+	(v) => !v,
+);
 const animatedMfm = prefer.model('animatedMfm');
 const disableShowingAnimatedImages = prefer.model('disableShowingAnimatedImages');
 const keepScreenOn = prefer.model('keepScreenOn');
@@ -1027,69 +1031,77 @@ watch(useSystemFont, () => {
 	}
 });
 
-watch([
-	hemisphere,
-	lang,
-	realtimeMode,
-	pollingInterval,
-	enableInfiniteScroll,
-	showNoteActionsOnlyHover,
-	overridedDeviceKind,
-	alwaysConfirmFollow,
-	confirmWhenRevealingSensitiveMedia,
-	mediaListWithOneImageAppearance,
-	reactionsDisplaySize,
-	limitWidthOfReaction,
-	mediaListWithOneImageAppearance,
-	limitWidthOfReaction,
-	instanceTicker,
-	squareAvatars,
-	highlightSensitiveMedia,
-	enableSeasonalScreenEffect,
-	chatShowSenderName,
-	useStickyIcons,
-	enableHighQualityImagePlaceholders,
-	disableShowingAnimatedImages,
-	keepScreenOn,
-	contextMenu,
-	fontSize,
-	useSystemFont,
-	makeEveryTextElementsSelectable,
-	enableHorizontalSwipe,
-	showPageTabBarBottom,
-	enablePullToRefresh,
-	reduceAnimation,
-	showAvailableReactionsFirstInNote,
-	animatedMfm,
-	advancedMfm,
-], () => {
-	suggestReload();
-});
+watch(
+	[
+		hemisphere,
+		lang,
+		realtimeMode,
+		pollingInterval,
+		enableInfiniteScroll,
+		showNoteActionsOnlyHover,
+		overridedDeviceKind,
+		alwaysConfirmFollow,
+		confirmWhenRevealingSensitiveMedia,
+		mediaListWithOneImageAppearance,
+		reactionsDisplaySize,
+		limitWidthOfReaction,
+		mediaListWithOneImageAppearance,
+		limitWidthOfReaction,
+		instanceTicker,
+		squareAvatars,
+		highlightSensitiveMedia,
+		enableSeasonalScreenEffect,
+		chatShowSenderName,
+		useStickyIcons,
+		enableHighQualityImagePlaceholders,
+		disableShowingAnimatedImages,
+		keepScreenOn,
+		contextMenu,
+		fontSize,
+		useSystemFont,
+		makeEveryTextElementsSelectable,
+		enableHorizontalSwipe,
+		showPageTabBarBottom,
+		enablePullToRefresh,
+		reduceAnimation,
+		showAvailableReactionsFirstInNote,
+		animatedMfm,
+		advancedMfm,
+	],
+	() => {
+		suggestReload();
+	},
+);
 
 const emojiIndexLangs = ['en-US', 'ja-JP', 'ja-JP_hira'] as const;
 
-function getEmojiIndexLangName(targetLang: typeof emojiIndexLangs[number]) {
-	if (langs.find(x => x[0] === targetLang)) {
-		return langs.find(x => x[0] === targetLang)![1];
-	} else {
-		// 絵文字辞書限定の言語定義
-		switch (targetLang) {
-			case 'ja-JP_hira': return 'ひらがな';
-			default: return targetLang;
-		}
+function getEmojiIndexLangName(targetLang: (typeof emojiIndexLangs)[number]) {
+	if (langs.find((x) => x[0] === targetLang)) {
+		return langs.find((x) => x[0] === targetLang)![1];
+	}
+	// 絵文字辞書限定の言語定義
+	switch (targetLang) {
+		case 'ja-JP_hira':
+			return 'ひらがな';
+		default:
+			return targetLang;
 	}
 }
 
-function downloadEmojiIndex(lang: typeof emojiIndexLangs[number]) {
+function downloadEmojiIndex(lang: (typeof emojiIndexLangs)[number]) {
 	async function main() {
 		const currentIndexes = store.additionalUnicodeEmojiIndexes;
 
 		function download() {
 			switch (lang) {
-				case 'en-US': return import('@misskey-dev/emoji-data/indexes/en-US.json').then(x => x.default);
-				case 'ja-JP': return import('@misskey-dev/emoji-data/indexes/ja-JP.json').then(x => x.default);
-				case 'ja-JP_hira': return import('@misskey-dev/emoji-data/indexes/ja-JP_hira.json').then(x => x.default);
-				default: throw new Error('unrecognized lang: ' + lang);
+				case 'en-US':
+					return import('@misskey-dev/emoji-data/indexes/en-US.json').then((x) => x.default);
+				case 'ja-JP':
+					return import('@misskey-dev/emoji-data/indexes/ja-JP.json').then((x) => x.default);
+				case 'ja-JP_hira':
+					return import('@misskey-dev/emoji-data/indexes/ja-JP_hira.json').then((x) => x.default);
+				default:
+					throw new Error('unrecognized lang: ' + lang);
 			}
 		}
 
@@ -1114,11 +1126,14 @@ async function setPinnedList() {
 	const lists = await misskeyApi('users/lists/list');
 	const { canceled, result: listId } = await os.select({
 		title: i18n.ts.selectList,
-		items: lists.map(x => ({
-			value: x.id, label: x.name,
+		items: lists.map((x) => ({
+			value: x.id,
+			label: x.name,
 		})),
 	});
-	if (canceled || listId == null) return;
+	if (canceled || listId == null) {
+		return;
+	}
 
 	prefer.commit('pinnedUserLists', [lists.find((x) => x.id === listId)!]);
 }
@@ -1130,7 +1145,9 @@ function removePinnedList() {
 function enableAllDataSaver() {
 	const g = { ...prefer.dataSaver };
 
-	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => { g[key] = true; });
+	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => {
+		g[key] = true;
+	});
 
 	dataSaver.value = g;
 }
@@ -1138,16 +1155,22 @@ function enableAllDataSaver() {
 function disableAllDataSaver() {
 	const g = { ...prefer.dataSaver };
 
-	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => { g[key] = false; });
+	(Object.keys(g) as (keyof typeof g)[]).forEach((key) => {
+		g[key] = false;
+	});
 
 	dataSaver.value = g;
 }
 
-watch(dataSaver, (to) => {
-	prefer.commit('dataSaver', to);
-}, {
-	deep: true,
-});
+watch(
+	dataSaver,
+	(to) => {
+		prefer.commit('dataSaver', to);
+	},
+	{
+		deep: true,
+	},
+);
 
 let smashCount = 0;
 let smashTimer: number | null = null;

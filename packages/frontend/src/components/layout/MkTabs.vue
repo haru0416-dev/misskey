@@ -65,13 +65,16 @@ import { genId } from '@/utility/id.js';
 const cssAnchorSupported = CSS.supports('position-anchor', '--anchor-name');
 const tabAnchorName = `--${genId()}-currentTab`;
 
-const props = withDefaults(defineProps<{
-	tabs?: T[];
-	centered?: boolean;
-	tabHighlightUpper?: boolean;
-}>(), {
-	tabs: () => ([] as T[]),
-});
+const props = withDefaults(
+	defineProps<{
+		tabs?: T[];
+		centered?: boolean;
+		tabHighlightUpper?: boolean;
+	}>(),
+	{
+		tabs: () => [] as T[],
+	},
+);
 
 const emit = defineEmits<{
 	(ev: 'tabClick', key: string): void;
@@ -83,14 +86,15 @@ const tabHighlightEl = useTemplateRef('tabHighlightEl');
 const tabRefs: Record<string, HTMLElement | null> = {};
 
 function getTabStyle(t: Tab): Record<string, string> {
-	if (!cssAnchorSupported) return {};
+	if (!cssAnchorSupported) {
+		return {};
+	}
 	if (t.key === tab.value) {
 		return {
 			anchorName: tabAnchorName,
 		};
-	} else {
-		return {};
 	}
+	return {};
 }
 
 function onTabMousedown(selectedTab: Tab, ev: MouseEvent): void {
@@ -115,7 +119,9 @@ function onTabClick(t: Tab, ev: PointerEvent): void {
 }
 
 function renderTab() {
-	if (cssAnchorSupported) return;
+	if (cssAnchorSupported) {
+		return;
+	}
 
 	const tabEl = tab.value ? tabRefs[tab.value] : undefined;
 	if (tabEl && tabHighlightEl.value && tabHighlightEl.value.parentElement) {
@@ -124,19 +130,22 @@ function renderTab() {
 		const parentRect = tabHighlightEl.value.parentElement.getBoundingClientRect();
 		const rect = tabEl.getBoundingClientRect();
 		tabHighlightEl.value.style.width = rect.width + 'px';
-		tabHighlightEl.value.style.left = (rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft) + 'px';
+		tabHighlightEl.value.style.left =
+			rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft + 'px';
 	}
 }
 
 let entering = false;
 
 async function enter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	entering = true;
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = '0';
 	el.style.paddingLeft = '0';
-		el.offsetWidth; // スタイル変更を反映するため reflow を発生させる。
+	el.offsetWidth; // スタイル変更を反映するため reflow を発生させる。
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
 	nextTick(() => {
@@ -147,11 +156,15 @@ async function enter(el: Element) {
 }
 
 function afterEnter(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 }
 
 async function leave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
@@ -161,23 +174,30 @@ async function leave(el: Element) {
 }
 
 function afterLeave(el: Element) {
-	if (!(el instanceof HTMLElement)) return;
+	if (!(el instanceof HTMLElement)) {
+		return;
+	}
 	el.style.width = '';
 }
 
 onMounted(() => {
 	if (!cssAnchorSupported) {
-		watch([tab, () => props.tabs], () => {
-			nextTick(() => {
-				if (entering) return;
-				renderTab();
-			});
-		}, { immediate: true });
+		watch(
+			[tab, () => props.tabs],
+			() => {
+				nextTick(() => {
+					if (entering) {
+						return;
+					}
+					renderTab();
+				});
+			},
+			{ immediate: true },
+		);
 	}
 });
 
-onUnmounted(() => {
-});
+onUnmounted(() => {});
 </script>
 
 <style lang="scss" module>

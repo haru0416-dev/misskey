@@ -42,7 +42,7 @@ export const host = testTarget.instanceUrl.host;
 export const oauthClientPort = testTarget.oauthClientPort;
 
 export const WEBHOOK_HOST = 'http://localhost:15080';
-export const WEBHOOK_PORT = 15080;
+export const WEBHOOK_PORT = 15_080;
 
 export type ApiRequest<
 	E extends keyof misskey.Endpoints,
@@ -58,7 +58,7 @@ export type ApiRequest<
  * N × (100ms + 1回分の問い合わせ時間) で、時間ベースへ移すにあたり問い合わせ時間ぶんの
  * 余裕を含めてある。待ちが長い対象は timeout だけ上書きする。
  */
-export const POLL = { timeout: 5_000, interval: 100 } as const;
+export const POLL = { timeout: 5000, interval: 100 } as const;
 
 export const successfulApiCall = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
 	request: ApiRequest<E, P>,
@@ -524,7 +524,9 @@ export function connectStream<C extends keyof misskey.Channels>(
 				} catch {
 					return;
 				}
-				if (!isRecord(msg) || typeof msg['type'] !== 'string' || !isRecord(msg['body'])) return;
+				if (!isRecord(msg) || typeof msg['type'] !== 'string' || !isRecord(msg['body'])) {
+					return;
+				}
 
 				if (msg['type'] === 'channel' && msg['body']['id'] === 'a' && isStreamMessage(msg['body'])) {
 					listener(msg['body']);
@@ -579,8 +581,12 @@ export const waitFire = async <C extends keyof misskey.Channels>(
 			}),
 		]);
 	} finally {
-		if (timer) clearTimeout(timer);
-		if (ws) ws.terminate();
+		if (timer) {
+			clearTimeout(timer);
+		}
+		if (ws) {
+			ws.terminate();
+		}
 	}
 };
 
@@ -604,7 +610,9 @@ export function makeStreamCatcher<T>(
 	const p = new Promise<T>((resolve, reject) => {
 		void connectStream(user, channel, (msg) => {
 			try {
-				if (cond(msg)) resolve(extractor(msg));
+				if (cond(msg)) {
+					resolve(extractor(msg));
+				}
 			} catch (error) {
 				reject(error);
 			}
@@ -687,11 +695,10 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 	const rangeToParam = (p: { limit?: number; until?: Entity; since?: Entity }): object => {
 		if (offsetBy === 'id') {
 			return omitUndefined({ limit: p.limit, sinceId: p.since?.id, untilId: p.until?.id });
-		} else {
-			const sinceDate = p.since?.createdAt !== undefined ? new Date(p.since.createdAt).getTime() : undefined;
-			const untilDate = p.until?.createdAt !== undefined ? new Date(p.until.createdAt).getTime() : undefined;
-			return omitUndefined({ limit: p.limit, sinceDate, untilDate });
 		}
+		const sinceDate = p.since?.createdAt !== undefined ? new Date(p.since.createdAt).getTime() : undefined;
+		const untilDate = p.until?.createdAt !== undefined ? new Date(p.until.createdAt).getTime() : undefined;
+		return omitUndefined({ limit: p.limit, sinceDate, untilDate });
 	};
 
 	for (const limit of [1, 5, 10, 100, undefined]) {
@@ -724,7 +731,9 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 }
 
 export async function initTestDb(justBorrow = false, _initEntities?: unknown[]) {
-	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
+	if (process.env['NODE_ENV'] !== 'test') {
+		throw new Error('NODE_ENV is not a test');
+	}
 
 	if (!justBorrow) {
 		const { resetTestDatabase } = await import('./fixtures.js');
@@ -789,9 +798,7 @@ export async function captureWebhook<T = SystemWebhookPayload>(
 
 			res.statusCode = 200;
 			res.end('ok');
-			void close().then(() => {
-				resolveResult(Buffer.concat(chunks).toString('utf8'));
-			});
+			resolveResult(Buffer.concat(chunks).toString('utf8'));
 		});
 	});
 
@@ -800,39 +807,31 @@ export async function captureWebhook<T = SystemWebhookPayload>(
 	let resolveResult: (value: string) => void = () => {};
 
 	const close = async () => {
-		if (!listening) return;
+		if (!listening) {
+			return;
+		}
 		listening = false;
 		await new Promise<void>((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
 	};
 
-	const result = await new Promise<string>(async (resolve, reject) => {
-		resolveResult = resolve;
-
-		await new Promise<void>((resolveListen, rejectListen) => {
-			server.once('error', rejectListen);
+	try {
+		const result = await new Promise<string>((resolve, reject) => {
+			resolveResult = resolve;
+			server.once('error', reject);
 			server.listen(port, () => {
-				server.off('error', rejectListen);
 				listening = true;
-				resolveListen();
+				timeoutHandle = setTimeout(() => reject(new Error('timeout')), 3000);
+				void Promise.resolve().then(postAction).catch(reject);
 			});
 		});
 
-		timeoutHandle = setTimeout(async () => {
-			await close();
-			reject(new Error('timeout'));
-		}, 3000);
-
-		try {
-			await postAction();
-		} catch (e) {
-			await close();
-			reject(e);
+		return JSON.parse(result) as T;
+	} finally {
+		if (timeoutHandle) {
+			clearTimeout(timeoutHandle);
 		}
-	});
-
-	await close();
-
-	return JSON.parse(result) as T;
+		await close();
+	}
 }

@@ -81,12 +81,7 @@ describe('addNoteToAntennasForApi', () => {
 		const authorAntenna = createAntenna('author-antenna', authorId);
 		listActiveAntennasFromDatabaseMock.mockResolvedValue([followerAntenna, strangerAntenna, authorAntenna]);
 		const publishAntennaStream = vi.fn();
-		const pipeline = {
-			lrem: vi.fn(),
-			lpush: vi.fn(),
-			ltrim: vi.fn(),
-			exec: vi.fn(async () => []),
-		};
+		const pushFanoutTimelines = vi.fn(async () => 0);
 		const note = {
 			id: genId(),
 			userId: authorId,
@@ -104,7 +99,8 @@ describe('addNoteToAntennasForApi', () => {
 				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForApi>[0]['config'],
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
-					pipeline: vi.fn(() => pipeline),
+					defineCommand: vi.fn(),
+					erebiaPushFanoutTimelines: pushFanoutTimelines,
 				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 				publishAntennaStream,
 			},
@@ -122,18 +118,23 @@ describe('addNoteToAntennasForApi', () => {
 		expect(publishAntennaStream).toHaveBeenCalledTimes(2);
 		expect(publishAntennaStream).toHaveBeenCalledWith(followerAntenna.id, 'note', note);
 		expect(publishAntennaStream).toHaveBeenCalledWith(authorAntenna.id, 'note', note);
+		expect(pushFanoutTimelines).toHaveBeenCalledOnce();
+		expect(pushFanoutTimelines).toHaveBeenCalledWith(
+			2,
+			`list:antennaTimeline:${followerAntenna.id}`,
+			`list:antennaTimeline:${authorAntenna.id}`,
+			note.id,
+			'1',
+			200,
+			200,
+		);
 	});
 
 	test('skips the followers query when every candidate fails an earlier condition', async () => {
 		const antenna = createAntenna('bot-excluding-antenna', followerId);
 		antenna.excludeBots = true;
 		listActiveAntennasFromDatabaseMock.mockResolvedValue([antenna]);
-		const pipeline = {
-			lrem: vi.fn(),
-			lpush: vi.fn(),
-			ltrim: vi.fn(),
-			exec: vi.fn(async () => []),
-		};
+		const pushFanoutTimelines = vi.fn(async () => 0);
 		const note = {
 			id: genId(),
 			userId: authorId,
@@ -151,7 +152,8 @@ describe('addNoteToAntennasForApi', () => {
 				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForApi>[0]['config'],
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
-					pipeline: vi.fn(() => pipeline),
+					defineCommand: vi.fn(),
+					erebiaPushFanoutTimelines: pushFanoutTimelines,
 				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 			},
 			note,
@@ -160,7 +162,7 @@ describe('addNoteToAntennasForApi', () => {
 
 		expect(listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabaseMock).not.toHaveBeenCalled();
 		expect(followingExistsInDatabaseMock).not.toHaveBeenCalled();
-		expect(pipeline.lpush).not.toHaveBeenCalled();
+		expect(pushFanoutTimelines).not.toHaveBeenCalled();
 	});
 
 	test('falls back to an individual following check without a followers hint', async () => {

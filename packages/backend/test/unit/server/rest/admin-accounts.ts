@@ -10,7 +10,8 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { handleApiAdminAccountsCreate, type ApiAdminAccountsDependencies } from '@/server/rest/admin/admin-accounts.js';
+import { handleApiAdminAccountsCreate } from '@/server/rest/admin/admin-accounts.js';
+import type { ApiAdminAccountsDependencies } from '@/server/rest/admin/admin-accounts.js';
 import type { SignupResponse } from '@/server/rest/auth/signup.js';
 
 const {
@@ -34,11 +35,14 @@ vi.mock('@/core/meta/MetaStore.js', () => ({
 }));
 
 vi.mock('@/core/role/RoleStore.js', () => ({
+	fetchRolesCacheVersionFromDatabase: vi.fn(async () => 0),
 	listRolesFromDatabase: listRolesFromDatabaseMock,
+	listRolesFromDatabaseCachedByVersion: listRolesFromDatabaseMock,
 }));
 
 vi.mock('@/core/role/RoleAssignmentStore.js', () => ({
 	listRoleAssignmentsByUserIdFromDatabase: listRoleAssignmentsByUserIdFromDatabaseMock,
+	listRoleAssignmentsByUserIdFromDatabaseCachedByVersion: listRoleAssignmentsByUserIdFromDatabaseMock,
 }));
 
 vi.mock('@/misc/password.js', () => ({

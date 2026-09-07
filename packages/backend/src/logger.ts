@@ -31,7 +31,9 @@ export function configureLogger(config: Config): void {
 }
 
 function shouldLog(level: Level): boolean {
-	if (envOption.verbose) return true;
+	if (envOption.verbose) {
+		return true;
+	}
 	const severity = { debug: 10, info: 20, success: 20, warning: 30, error: 40 } as const;
 	return severity[level] >= severity[loggingConfig.level];
 }
@@ -75,7 +77,9 @@ export default class Logger {
 	): void {
 		// NODE_ENV=test は暗黙に quiet になるが、MK_VERBOSE を明示した時だけはそれより優先させる
 		// (e2e で発生したサーバー側例外を追うにはログを出せる手段が要る)。
-		if ((envOption.quiet && !envOption.verbose) || !shouldLog(level)) return;
+		if ((envOption.quiet && !envOption.verbose) || !shouldLog(level)) {
+			return;
+		}
 
 		if (this.parentLogger) {
 			this.parentLogger.log(level, message, data, important, [this.context].concat(subContexts));
@@ -131,7 +135,9 @@ export default class Logger {
 								: null;
 
 		let log = `${l} ${worker}\t[${contexts.join(' ')}]\t${m}`;
-		if (envOption.withLogTime || loggingConfig.includeTimestamp) log = chalk.gray(time) + ' ' + log;
+		if (envOption.withLogTime || loggingConfig.includeTimestamp) {
+			log = chalk.gray(time) + ' ' + log;
+		}
 
 		const args: unknown[] = [important ? chalk.bold(log) : log];
 		if (data != null) {

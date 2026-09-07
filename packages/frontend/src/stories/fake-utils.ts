@@ -165,7 +165,9 @@ export function boolean(seed?: string): boolean {
 }
 
 export function choose<T>(array: T[], seed?: string): T {
-	if (array.length === 0) throw new Error('Cannot choose from an empty array');
+	if (array.length === 0) {
+		throw new Error('Cannot choose from an empty array');
+	}
 	const rand = seed ? seedrandom(seed)() : Math.random();
 	return array[Math.floor(rand * array.length)]!;
 }
@@ -182,12 +184,14 @@ export function country(seed?: string): string {
 	return choose(countryDict, seed);
 }
 
-const TIME2000 = 946684800000;
+const TIME2000 = 946_684_800_000;
 export function fakeId(seed?: string): string {
 	let time = new Date().getTime();
 
 	time = time - TIME2000;
-	if (time < 0) time = 0;
+	if (time < 0) {
+		time = 0;
+	}
 
 	const timeStr = time.toString(36).padStart(8, '0');
 	const noiseStr = text(2, seed);

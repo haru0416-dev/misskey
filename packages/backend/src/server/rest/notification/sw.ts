@@ -106,7 +106,9 @@ export async function handleApiSwRegister(
 			sendReadMessage: params.sendReadMessage,
 		});
 	} catch (err) {
-		if (!isDuplicateKeyValueDatabaseError(err)) throw err;
+		if (!isDuplicateKeyValueDatabaseError(err)) {
+			throw err;
+		}
 
 		await updateSwSubscriptionByUserAndEndpointInDatabase(deps.db, me.id, params.endpoint, {
 			auth: params.auth,

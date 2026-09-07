@@ -28,16 +28,19 @@ import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
 
-const props = withDefaults(defineProps<{
-	title: string;
-	description: string;
-	anchorElement?: HTMLElement;
-	direction?: 'top' | 'bottom' | 'right' | 'left';
-	hasPrev: boolean;
-	hasNext: boolean;
-}>(), {
-	direction: 'top',
-});
+const props = withDefaults(
+	defineProps<{
+		title: string;
+		description: string;
+		anchorElement?: HTMLElement;
+		direction?: 'top' | 'bottom' | 'right' | 'left';
+		hasPrev: boolean;
+		hasNext: boolean;
+	}>(),
+	{
+		direction: 'top',
+	},
+);
 
 const emit = defineEmits<{
 	(prev: 'prev'): void;
@@ -60,8 +63,12 @@ const spotWidth = ref(0);
 const spotHeight = ref(0);
 
 function setPosition() {
-	if (bodyEl.value == null) return;
-	if (props.anchorElement == null) return;
+	if (bodyEl.value == null) {
+		return;
+	}
+	if (props.anchorElement == null) {
+		return;
+	}
 
 	const rect = props.anchorElement.getBoundingClientRect();
 	spotX.value = rect.left;
@@ -84,18 +91,30 @@ function setPosition() {
 const schedulePosition = throttleByAnimationFrame(setPosition);
 let resizeObserver: ResizeObserver | null = null;
 
-watch(() => props.anchorElement, (newAnchor, oldAnchor) => {
-	if (oldAnchor != null) resizeObserver?.unobserve(oldAnchor);
-	if (newAnchor != null) resizeObserver?.observe(newAnchor);
-	schedulePosition();
-}, { flush: 'post' });
+watch(
+	() => props.anchorElement,
+	(newAnchor, oldAnchor) => {
+		if (oldAnchor != null) {
+			resizeObserver?.unobserve(oldAnchor);
+		}
+		if (newAnchor != null) {
+			resizeObserver?.observe(newAnchor);
+		}
+		schedulePosition();
+	},
+	{ flush: 'post' },
+);
 
 watch(() => props.direction, schedulePosition, { flush: 'post' });
 
 onMounted(() => {
 	resizeObserver = new ResizeObserver(schedulePosition);
-	if (props.anchorElement != null) resizeObserver.observe(props.anchorElement);
-	if (bodyEl.value != null) resizeObserver.observe(bodyEl.value);
+	if (props.anchorElement != null) {
+		resizeObserver.observe(props.anchorElement);
+	}
+	if (bodyEl.value != null) {
+		resizeObserver.observe(bodyEl.value);
+	}
 	window.addEventListener('resize', schedulePosition, { passive: true });
 	window.addEventListener('scroll', schedulePosition, { passive: true, capture: true });
 	nextTick(schedulePosition);

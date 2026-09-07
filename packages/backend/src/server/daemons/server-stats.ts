@@ -90,7 +90,9 @@ export function startServerStatsDaemon(deps: DaemonServerStatsDependencies): { d
 		};
 		ev.emit('serverStats', stats);
 		log.unshift(stats);
-		if (log.length > 200) log.pop();
+		if (log.length > 200) {
+			log.pop();
+		}
 	};
 
 	void tick();

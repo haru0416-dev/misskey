@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { BiosPage } from './web/views/bios.js';
@@ -48,7 +49,9 @@ function htmlResponse(
 }
 
 function shouldSendFlushHeader(origin: string | undefined, configUrl: URL): boolean {
-	if (origin == null) return true;
+	if (origin == null) {
+		return true;
+	}
 
 	const originUrl = new URL(origin);
 	return originUrl.protocol === 'https:' && originUrl.host === configUrl.host;

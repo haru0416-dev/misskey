@@ -28,18 +28,25 @@ export function detectI18nFacadeChunk(sourceCode: string, fileName: string, file
 	}
 
 	// import と export だけからなるモジュールを facade として扱う。
-	if (programNode.body.length !== 2) return null;
+	if (programNode.body.length !== 2) {
+		return null;
+	}
 	const [importDecl, exportDecl] = programNode.body;
-	if (importDecl?.type !== 'ImportDeclaration') return null;
-	if (exportDecl?.type !== 'ExportNamedDeclaration') return null;
+	if (importDecl?.type !== 'ImportDeclaration') {
+		return null;
+	}
+	if (exportDecl?.type !== 'ExportNamedDeclaration') {
+		return null;
+	}
 
 	const sourcePath = importDecl.source.value;
 	const sourceName = path.posix.basename(sourcePath);
 
 	const importNameMap = Object.fromEntries(
 		importDecl.specifiers.map((specifier) => {
-			if (specifier.type !== 'ImportSpecifier')
+			if (specifier.type !== 'ImportSpecifier') {
 				throw new Error(`${fileName}: Unexpected import specifier in facade module: ${specifier.type}`);
+			}
 			const exportName = getExportName(specifier.imported);
 			const localName = specifier.local.name;
 			return [localName, exportName];

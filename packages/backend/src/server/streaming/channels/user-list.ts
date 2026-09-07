@@ -7,16 +7,10 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
 import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
-import {
-	filterNoteForStreamingHidingForApi,
-	populateMyReactionForApi,
-	type ApiNoteDependencies,
-} from '@/server/rest/note/note.js';
-import {
-	isNoteMutedOrBlockedForStream,
-	isNoteVisibleForMeForStream,
-	type StreamChannelDefinition,
-} from '../channel.js';
+import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
+import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
 type MembershipCacheEntry = {
 	// メンバーシップ取得クエリは withReplies を選択しないため、常に undefined になる。
@@ -28,7 +22,9 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (typeof params['listId'] !== 'string') return false;
+		if (typeof params['listId'] !== 'string') {
+			return false;
+		}
 		const listId = params['listId'];
 		const withFiles = !!(params['withFiles'] ?? false);
 		const withRenotes = !!(params['withRenotes'] ?? true);
@@ -37,7 +33,9 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 		const user = ctx.user!;
 
 		const listExist = await userListExistsByIdAndUserIdFromDatabase(deps.db, listId, user.id);
-		if (!listExist) return false;
+		if (!listExist) {
+			return false;
+		}
 
 		let membershipsMap: Record<string, MembershipCacheEntry | undefined> = {};
 
@@ -57,31 +55,49 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 		const onNote = async (note: Packed<'Note'>) => {
 			const isMe = user.id === note.userId;
 
-			if (note.channelId) return;
+			if (note.channelId) {
+				return;
+			}
 
-			if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
+			if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) {
+				return;
+			}
 
-			if (!Object.hasOwn(membershipsMap, note.userId)) return;
+			if (!Object.hasOwn(membershipsMap, note.userId)) {
+				return;
+			}
 
-			if (!isNoteVisibleForMeForStream(ctx, note)) return;
+			if (!isNoteVisibleForMeForStream(ctx, note)) {
+				return;
+			}
 
 			if (note.reply) {
 				const reply = note.reply;
 				if (membershipsMap[note.userId]?.withReplies) {
 					// withReplies で返信を含めても、返信先の followers 公開範囲は越えない。
-					if (reply.visibility === 'followers' && !Object.hasOwn(ctx.following, reply.userId)) return;
+					if (reply.visibility === 'followers' && !Object.hasOwn(ctx.following, reply.userId)) {
+						return;
+					}
 				} else {
 					// withReplies 無効時も、自分宛て・自分の返信・投稿者の自己返信は含める。
-					if (reply.userId !== user.id && !isMe && reply.userId !== note.userId) return;
+					if (reply.userId !== user.id && !isMe && reply.userId !== note.userId) {
+						return;
+					}
 				}
 			}
 
-			if (isRenotePacked(note) && !isQuotePacked(note) && !withRenotes) return;
+			if (isRenotePacked(note) && !isQuotePacked(note) && !withRenotes) {
+				return;
+			}
 
-			if (isNoteMutedOrBlockedForStream(ctx, note)) return;
+			if (isNoteMutedOrBlockedForStream(ctx, note)) {
+				return;
+			}
 
 			const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
-			if (!filtered) return;
+			if (!filtered) {
+				return;
+			}
 
 			if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 				if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {

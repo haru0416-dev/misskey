@@ -11,9 +11,13 @@ export function makeDoubleTapDetector(onDoubletap: (event: TouchEvent) => void) 
 	let lastTapPosition = { x: 0, y: 0 };
 
 	function onTouchstart(ev: TouchEvent) {
-		if (ev.touches.length !== 1) return;
+		if (ev.touches.length !== 1) {
+			return;
+		}
 		const touch = ev.touches[0];
-		if (touch == null) return;
+		if (touch == null) {
+			return;
+		}
 
 		const currentTime = Date.now();
 		const tapLength = currentTime - lastTapTime;
@@ -36,14 +40,20 @@ export function makeDoubleTapDetector(onDoubletap: (event: TouchEvent) => void) 
 	}
 
 	function onTouchmove(ev: TouchEvent) {
-		if (ev.touches.length === 0) return;
+		if (ev.touches.length === 0) {
+			return;
+		}
 		const touch = ev.touches[0];
-		if (touch == null) return;
+		if (touch == null) {
+			return;
+		}
 		const positionDelta = Math.max(
 			Math.abs(touch.clientX - lastTapPosition.x),
 			Math.abs(touch.clientY - lastTapPosition.y),
 		);
-		if (positionDelta > positionThreshold) lastTapTime = 0;
+		if (positionDelta > positionThreshold) {
+			lastTapTime = 0;
+		}
 	}
 
 	function reset() {

@@ -38,7 +38,9 @@ describe('Chart', () => {
 	let testIntersectionChart: TestIntersectionChart;
 
 	beforeEach(async () => {
-		if (drizzlePool) await drizzlePool.end();
+		if (drizzlePool) {
+			await drizzlePool.end();
+		}
 
 		drizzlePool = createDrizzlePool(config);
 		await resetDatabase(drizzlePool);

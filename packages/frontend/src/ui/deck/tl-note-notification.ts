@@ -57,7 +57,9 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 						okText: i18n.ts.continue,
 						cancelText: i18n.ts.cancel,
 					});
-					if (canceled) return false;
+					if (canceled) {
+						return false;
+					}
 				}
 
 				return true;
@@ -77,16 +79,22 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 			content: i18n.ts.listen,
 			action: (_, v) => {
 				const sound = buildSoundStore(v);
-				if (!sound) return;
+				if (!sound) {
+					return;
+				}
 				playMisskeySfxFile(sound);
 			},
 		},
 	});
 
-	if (canceled) return;
+	if (canceled) {
+		return;
+	}
 
 	const res = buildSoundStore(result);
-	if (res) soundSetting.value = res;
+	if (res) {
+		soundSetting.value = res;
+	}
 
 	function buildSoundStore(r: NonNullable<typeof result>): SoundStore | null {
 		const type = r.type === 'none' ? null : r.type;
@@ -105,8 +113,7 @@ export async function soundSettingsButton(soundSetting: Ref<SoundStore>): Promis
 				return null;
 			}
 			return { type, volume, fileId, fileUrl };
-		} else {
-			return { type, volume };
 		}
+		return { type, volume };
 	}
 }

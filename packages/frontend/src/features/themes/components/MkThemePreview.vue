@@ -80,26 +80,32 @@ const themeVariables = ref<{
 	error: 'var(--MI_THEME-error)',
 });
 
-watch(() => props.theme, (theme) => {
-	if (theme == null) return;
+watch(
+	() => props.theme,
+	(theme) => {
+		if (theme == null) {
+			return;
+		}
 
-	const compiled = compile(theme);
+		const compiled = compile(theme);
 
-	themeVariables.value = {
-		bg: compiled['bg'] ?? 'var(--MI_THEME-bg)',
-		panel: compiled['panel'] ?? 'var(--MI_THEME-panel)',
-		fg: compiled['fg'] ?? 'var(--MI_THEME-fg)',
-		mention: compiled['mention'] ?? 'var(--MI_THEME-mention)',
-		hashtag: compiled['hashtag'] ?? 'var(--MI_THEME-hashtag)',
-		link: compiled['link'] ?? 'var(--MI_THEME-link)',
-		divider: compiled['divider'] ?? 'var(--MI_THEME-divider)',
-		accent: compiled['accent'] ?? 'var(--MI_THEME-accent)',
-		accentedBg: compiled['accentedBg'] ?? 'var(--MI_THEME-accentedBg)',
-		navBg: compiled['navBg'] ?? 'var(--MI_THEME-navBg)',
-		pageHeaderBg: compiled['pageHeaderBg'] ?? 'var(--MI_THEME-pageHeaderBg)',
-		success: compiled['success'] ?? 'var(--MI_THEME-success)',
-		warn: compiled['warn'] ?? 'var(--MI_THEME-warn)',
-		error: compiled['error'] ?? 'var(--MI_THEME-error)',
-	};
-}, { immediate: true });
+		themeVariables.value = {
+			bg: compiled['bg'] ?? 'var(--MI_THEME-bg)',
+			panel: compiled['panel'] ?? 'var(--MI_THEME-panel)',
+			fg: compiled['fg'] ?? 'var(--MI_THEME-fg)',
+			mention: compiled['mention'] ?? 'var(--MI_THEME-mention)',
+			hashtag: compiled['hashtag'] ?? 'var(--MI_THEME-hashtag)',
+			link: compiled['link'] ?? 'var(--MI_THEME-link)',
+			divider: compiled['divider'] ?? 'var(--MI_THEME-divider)',
+			accent: compiled['accent'] ?? 'var(--MI_THEME-accent)',
+			accentedBg: compiled['accentedBg'] ?? 'var(--MI_THEME-accentedBg)',
+			navBg: compiled['navBg'] ?? 'var(--MI_THEME-navBg)',
+			pageHeaderBg: compiled['pageHeaderBg'] ?? 'var(--MI_THEME-pageHeaderBg)',
+			success: compiled['success'] ?? 'var(--MI_THEME-success)',
+			warn: compiled['warn'] ?? 'var(--MI_THEME-warn)',
+			error: compiled['error'] ?? 'var(--MI_THEME-error)',
+		};
+	},
+	{ immediate: true },
+);
 </script>

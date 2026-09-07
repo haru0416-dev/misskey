@@ -72,7 +72,7 @@ export function getCaretCoordinates(element: HTMLInputElement | HTMLTextAreaElem
 	}
 
 	mirror.textContent = isInput
-		? element.value.slice(0, position).replaceAll(/\s/g, '\u00a0')
+		? element.value.slice(0, position).replaceAll(/\s/g, '\u00A0')
 		: element.value.slice(0, position);
 
 	const marker = document.createElement('span');

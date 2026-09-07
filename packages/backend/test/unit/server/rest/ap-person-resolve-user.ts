@@ -10,10 +10,12 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { resolveUserForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUserForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 describe('resolveUserForApi', () => {
 	let runtime: RuntimeDependencies;
