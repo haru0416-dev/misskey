@@ -120,6 +120,7 @@ COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/
 # ビルドしたネイティブモジュール (index.cjs / index.mjs / *.node)。
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/slacc ./packages/slacc
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/icons-subsetter/vendor/tabler-icons/LICENSE ./licenses/tabler-icons.txt
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/built ./packages/i18n/built

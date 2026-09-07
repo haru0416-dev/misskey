@@ -60,7 +60,7 @@
 			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"]
 		},
 		"packages/icons-subsetter": {
-			"ignoreDependencies": ["harfbuzzjs", "@tabler/icons-webfont"]
+			"ignoreDependencies": ["harfbuzzjs"]
 		},
 		"packages/mfm-js": {
 			"ignoreDependencies": ["@microsoft/api-extractor"]

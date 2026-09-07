@@ -7,15 +7,12 @@ import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { RedisOptions } from 'ioredis';
-import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
 import { PRODUCT_NAME } from '@/const.js';
 import { optionalProperty } from '@/misc/optional-property.js';
 import { compiledConfigEnvelopeSchema, parseByteSize, parseDuration } from './config-schema.js';
 import type { CompiledConfigV2, SecretSource } from './config-schema.js';
 
-export type TelemetryInstrumentationName = keyof InstrumentationConfigMap;
-
-const TELEMETRY_INSTRUMENTATION_NAMES = new Set<string>([
+const telemetryInstrumentationNames = [
 	'@opentelemetry/instrumentation-amqplib',
 	'@opentelemetry/instrumentation-aws-lambda',
 	'@opentelemetry/instrumentation-aws-sdk',
@@ -57,7 +54,10 @@ const TELEMETRY_INSTRUMENTATION_NAMES = new Set<string>([
 	'@opentelemetry/instrumentation-tedious',
 	'@opentelemetry/instrumentation-undici',
 	'@opentelemetry/instrumentation-winston',
-]);
+] as const;
+
+export type TelemetryInstrumentationName = (typeof telemetryInstrumentationNames)[number];
+const TELEMETRY_INSTRUMENTATION_NAMES = new Set<string>(telemetryInstrumentationNames);
 
 export type TelemetryConfig = {
 	endpoint: string;

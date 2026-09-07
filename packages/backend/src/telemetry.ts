@@ -5,7 +5,8 @@
 
 import type { ClientRequest } from 'node:http';
 import type { Context, TextMapPropagator, TextMapSetter } from '@opentelemetry/api';
-import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
+import type { HttpInstrumentationConfig } from '@opentelemetry/instrumentation-http';
+import type { UndiciInstrumentationConfig } from '@opentelemetry/instrumentation-undici';
 import type { Config, TelemetryInstrumentationName } from '@/config.js';
 
 const DEFAULT_TRACE_SAMPLE_RATIO = 0.1;
@@ -57,17 +58,33 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 
 	const candidates: TelemetryProvider[] = [];
 	try {
-		const [api, autoInstrumentations, exporter, resources, sdkNode, traceBase, semanticConventions] = await Promise.all(
-			[
-				import('@opentelemetry/api'),
-				import('@opentelemetry/auto-instrumentations-node'),
-				import('@opentelemetry/exporter-trace-otlp-http'),
-				import('@opentelemetry/resources'),
-				import('@opentelemetry/sdk-node'),
-				import('@opentelemetry/sdk-trace-base'),
-				import('@opentelemetry/semantic-conventions'),
-			],
-		);
+		const [
+			api,
+			http,
+			undici,
+			ioredis,
+			pg,
+			runtimeNode,
+			hostMetrics,
+			exporter,
+			resources,
+			sdkNode,
+			traceBase,
+			semanticConventions,
+		] = await Promise.all([
+			import('@opentelemetry/api'),
+			import('@opentelemetry/instrumentation-http'),
+			import('@opentelemetry/instrumentation-undici'),
+			import('@opentelemetry/instrumentation-ioredis'),
+			import('@opentelemetry/instrumentation-pg'),
+			import('@opentelemetry/instrumentation-runtime-node'),
+			import('@opentelemetry/instrumentation-host-metrics'),
+			import('@opentelemetry/exporter-trace-otlp-http'),
+			import('@opentelemetry/resources'),
+			import('@opentelemetry/sdk-node'),
+			import('@opentelemetry/sdk-trace-base'),
+			import('@opentelemetry/semantic-conventions'),
+		]);
 		const resource = resources.resourceFromAttributes({
 			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'erebia-backend',
 			[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
@@ -94,10 +111,10 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 				standardPropagator.inject(context, carrier, setter);
 			}
 		};
-		const instrumentationConfig: InstrumentationConfigMap = {
-			'@opentelemetry/instrumentation-dns': { enabled: false },
-			'@opentelemetry/instrumentation-fs': { enabled: false },
-			'@opentelemetry/instrumentation-net': { enabled: false },
+		const instrumentationConfig: {
+			'@opentelemetry/instrumentation-http': HttpInstrumentationConfig;
+			'@opentelemetry/instrumentation-undici': UndiciInstrumentationConfig;
+		} = {
 			'@opentelemetry/instrumentation-http': {
 				requestHook: (span, request) => {
 					if (!isClientRequest(request)) {
@@ -122,15 +139,34 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 				},
 			},
 		};
-		for (const name of telemetry.disabledInstrumentations ?? []) {
-			disableInstrumentation(instrumentationConfig, name);
-		}
+		const instrumentationFactories = {
+			'@opentelemetry/instrumentation-http': () =>
+				new http.HttpInstrumentation(instrumentationConfig['@opentelemetry/instrumentation-http']),
+			'@opentelemetry/instrumentation-undici': () =>
+				new undici.UndiciInstrumentation(instrumentationConfig['@opentelemetry/instrumentation-undici']),
+			'@opentelemetry/instrumentation-ioredis': () => new ioredis.IORedisInstrumentation(),
+			'@opentelemetry/instrumentation-pg': () => new pg.PgInstrumentation(),
+			'@opentelemetry/instrumentation-runtime-node': () => new runtimeNode.RuntimeNodeInstrumentation(),
+			'@opentelemetry/instrumentation-host-metrics': () => new hostMetrics.HostMetricsInstrumentation(),
+		};
+		const instrumentations = Object.entries(instrumentationFactories)
+			.filter(([name]) =>
+				isInstrumentationEnabled(name as TelemetryInstrumentationName, telemetry.disabledInstrumentations ?? []),
+			)
+			.flatMap(([, create]) => {
+				try {
+					return [create()];
+				} catch (error) {
+					api.diag.error('Failed to initialize an OpenTelemetry instrumentation.', error);
+					return [];
+				}
+			});
 		const candidate = new sdkNode.NodeSDK({
 			resource,
 			sampler: new traceBase.TraceIdRatioBasedSampler(telemetry.tracesSampleRatio ?? DEFAULT_TRACE_SAMPLE_RATIO),
 			traceExporter: new exporter.OTLPTraceExporter(exporterOptions),
 			textMapPropagator: extractionOnlyPropagator,
-			instrumentations: [autoInstrumentations.getNodeAutoInstrumentations(instrumentationConfig)],
+			instrumentations,
 		});
 		candidates.push(candidate);
 		const errorProvider = new traceBase.BasicTracerProvider({
@@ -194,8 +230,25 @@ function isClientRequest(request: ClientRequest | import('node:http').IncomingMe
 	return 'setHeader' in request && 'path' in request && 'protocol' in request && 'host' in request;
 }
 
-function disableInstrumentation(config: InstrumentationConfigMap, name: TelemetryInstrumentationName): void {
-	config[name] = { enabled: false };
+function isInstrumentationEnabled(
+	name: TelemetryInstrumentationName,
+	disabled: readonly TelemetryInstrumentationName[],
+): boolean {
+	const shortName = name.replace('@opentelemetry/instrumentation-', '');
+	const disabledByEnvironment = (process.env['OTEL_NODE_DISABLED_INSTRUMENTATIONS'] ?? '')
+		.split(',')
+		.map((value) => value.trim());
+	if (disabled.includes(name) || disabledByEnvironment.includes(shortName)) {
+		return false;
+	}
+	const enabledByEnvironment = process.env['OTEL_NODE_ENABLED_INSTRUMENTATIONS'];
+	if (enabledByEnvironment) {
+		return enabledByEnvironment
+			.split(',')
+			.map((value) => value.trim())
+			.includes(shortName);
+	}
+	return name !== '@opentelemetry/instrumentation-host-metrics';
 }
 
 export function recordException(error: unknown): void {

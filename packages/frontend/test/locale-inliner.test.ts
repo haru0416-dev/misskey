@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import MagicString from 'magic-string';
+import { RolldownMagicString } from 'rolldown';
 import { describe, expect, test } from 'vitest';
 import { applyWithLocale } from '../builder/locale-inliner/apply-with-locale.js';
 import { collectModifications } from '../builder/locale-inliner/collect-modifications.js';
@@ -26,7 +26,7 @@ const locale = {
 } as unknown as Locale;
 
 function inline(source: string): string {
-	const output = new MagicString(source);
+	const output = new RolldownMagicString(source);
 	const modifications = collectModifications(source, 'chunk.js', blankLogger, inliner);
 	applyWithLocale(output, modifications, 'ja-JP', locale, blankLogger);
 	return output.toString();

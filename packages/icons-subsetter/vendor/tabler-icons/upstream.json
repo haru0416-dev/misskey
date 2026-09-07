@@ -1,0 +1,14 @@
+{
+	"package": "@tabler/icons-webfont",
+	"version": "3.46.0",
+	"source": "https://registry.npmjs.org/@tabler/icons-webfont/-/icons-webfont-3.46.0.tgz",
+	"license": "MIT",
+	"sha256": {
+		"LICENSE": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db",
+		"fonts/tabler-icons.ttf": "9920d9866628db84af956877d04ff185ee3472a9716b03a9bb958b529ae1a9da",
+		"fonts/tabler-icons.woff": "ed0c7bc91df578809986d98917281921c6c9e64e9a726a46caacc5b1a0967eb2",
+		"fonts/tabler-icons.woff2": "c9df3377cc2f7b2196c57a240ff01bad34d7039abbaf7380fcfb21f6d7d8eee7",
+		"tabler-icons.min.css": "40d8d8fdbd0dc3401cecfc069065e20268a38f58662ef64d648c7905d5033deb"
+	},
+	"integrity": "sha512-aQouIxJQb+F5cRsHo/FW5qSILDuU7pd7d86JjmSUCMgpJhBeRuyovnfJlQeyuug2gHz0jFaosl4GNYo3SLnjrQ=="
+}
