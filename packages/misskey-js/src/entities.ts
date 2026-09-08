@@ -121,7 +121,7 @@ export type SignupRequest = {
 	'hcaptcha-response'?: string | null;
 	'g-recaptcha-response'?: string | null;
 	'turnstile-response'?: string | null;
-	'm-captcha-response'?: string | null;
+	'cap-response'?: string | null;
 	'testcaptcha-response'?: string | null;
 };
 
@@ -146,7 +146,7 @@ export type SigninFlowRequest = {
 	'hcaptcha-response'?: string | null;
 	'g-recaptcha-response'?: string | null;
 	'turnstile-response'?: string | null;
-	'm-captcha-response'?: string | null;
+	'cap-response'?: string | null;
 	'testcaptcha-response'?: string | null;
 };
 

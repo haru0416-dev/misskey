@@ -73,7 +73,7 @@ const noBotProtection = computed(
 		!instance.enableHcaptcha &&
 		!instance.enableRecaptcha &&
 		!instance.enableTurnstile &&
-		!instance.enableMcaptcha,
+		!instance.enableCap,
 );
 const noEmailServer = computed(() => !instance.enableEmail);
 const noInquiryUrl = computed(() => isEmpty(instance.inquiryUrl));

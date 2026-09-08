@@ -5579,9 +5579,9 @@ export type components = {
             emailRequiredForSignup: boolean;
             enableHcaptcha: boolean;
             hcaptchaSiteKey: string | null;
-            enableMcaptcha: boolean;
-            mcaptchaSiteKey: string | null;
-            mcaptchaInstanceUrl: string | null;
+            enableCap: boolean;
+            capSiteKey: string | null;
+            capInstanceUrl: string | null;
             enableRecaptcha: boolean;
             recaptchaSiteKey: string | null;
             enableTurnstile: boolean;
@@ -7432,12 +7432,12 @@ export interface operations {
                 content: {
                     'application/json': {
                         /** @enum {string} */
-                        provider: 'none' | 'hcaptcha' | 'mcaptcha' | 'recaptcha' | 'turnstile' | 'testcaptcha';
+                        provider: 'none' | 'hcaptcha' | 'cap' | 'recaptcha' | 'turnstile' | 'testcaptcha';
                         hcaptcha: {
                             siteKey: string | null;
                             secretKey: string | null;
                         };
-                        mcaptcha: {
+                        cap: {
                             siteKey: string | null;
                             secretKey: string | null;
                             instanceUrl: string | null;
@@ -7505,7 +7505,7 @@ export interface operations {
             content: {
                 'application/json': {
                     /** @enum {string} */
-                    provider: 'none' | 'hcaptcha' | 'mcaptcha' | 'recaptcha' | 'turnstile' | 'testcaptcha';
+                    provider: 'none' | 'hcaptcha' | 'cap' | 'recaptcha' | 'turnstile' | 'testcaptcha';
                     captchaResult?: string | null;
                     sitekey?: string | null;
                     secret?: string | null;
@@ -9580,9 +9580,9 @@ export interface operations {
                         emailRequiredForSignup: boolean;
                         enableHcaptcha: boolean;
                         hcaptchaSiteKey: string | null;
-                        enableMcaptcha: boolean;
-                        mcaptchaSiteKey: string | null;
-                        mcaptchaInstanceUrl: string | null;
+                        enableCap: boolean;
+                        capSiteKey: string | null;
+                        capInstanceUrl: string | null;
                         enableRecaptcha: boolean;
                         recaptchaSiteKey: string | null;
                         enableTurnstile: boolean;
@@ -9613,7 +9613,7 @@ export interface operations {
                         bannedEmailDomains?: string[];
                         preservedUsernames: string[];
                         hcaptchaSecretKey: string | null;
-                        mcaptchaSecretKey: string | null;
+                        capSecretKey: string | null;
                         recaptchaSecretKey: string | null;
                         turnstileSecretKey: string | null;
                         /** @enum {string} */
@@ -13699,10 +13699,10 @@ export interface operations {
                     enableHcaptcha?: boolean;
                     hcaptchaSiteKey?: string | null;
                     hcaptchaSecretKey?: string | null;
-                    enableMcaptcha?: boolean;
-                    mcaptchaSiteKey?: string | null;
-                    mcaptchaInstanceUrl?: string | null;
-                    mcaptchaSecretKey?: string | null;
+                    enableCap?: boolean;
+                    capSiteKey?: string | null;
+                    capInstanceUrl?: string | null;
+                    capSecretKey?: string | null;
                     enableRecaptcha?: boolean;
                     recaptchaSiteKey?: string | null;
                     recaptchaSecretKey?: string | null;

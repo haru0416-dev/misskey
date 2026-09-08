@@ -188,7 +188,7 @@ async function onPasswordSubmitted(pw: PwResponse) {
 		username: userInfo.value.username,
 		password: pw.password,
 		'hcaptcha-response': pw.captcha.hCaptchaResponse,
-		'm-captcha-response': pw.captcha.mCaptchaResponse,
+		'cap-response': pw.captcha.capResponse,
 		'g-recaptcha-response': pw.captcha.reCaptchaResponse,
 		'turnstile-response': pw.captcha.turnstileResponse,
 		'testcaptcha-response': pw.captcha.testcaptchaResponse,
