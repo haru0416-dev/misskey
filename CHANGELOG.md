@@ -62,6 +62,8 @@
 - Fix: ビルド済みの slacc バイナリが残っている環境で Docker ビルドが失敗する問題を修正
 
 ### Client
+- Fix: 狭い画面でCapのウィジェットが入力欄の幅を超えて切れる問題を修正
+- Enhance: mCaptchaを外部サービスのCapに置き換え（Capサーバーとサイトキーの設定が必要）
 - Change: BlurHash の描画実装 (buraha) をリポジトリに取り込み (misskey-dev/buraha の MIT 実装を移植。出力がビット単位で同一であることを確認済み。frontend / frontend-embed から依存パッケージが1つ減る)
 - Fix: お知らせに ❤️ のような異体字セレクタ付きの絵文字でリアクションすると、同じ絵文字が 2 行に分かれ、取り消しが付け替えになっていたのを修正
 - Fix: ハッシュタグのミュートが大文字小文字を区別し、かつ前方一致だったのを修正 (`#Misskey` のミュートで `#misskey` も消え、`#cat` のミュートが `#cats` を巻き込まなくなる)
@@ -218,6 +220,7 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Fix: hCaptcha・reCAPTCHA・Turnstile・テスト用CAPTCHAが有効な場合の新規登録で、解答を検証せず拒否していた問題を修正
 - Enhance: ネットワーク設定を維持してURLプレビュー取得を本体に統合し、summaly・got・cheerio・fastifyへの依存を削除
 - Enhance: メールの固定装飾をインラインCSSにしてjuiceへの依存を削除（`admin/send-email` の本文に含まれる任意CSSの自動インライン化は終了）
 - Fix: アカウント移行通知の受信時に、キャッシュされた古いプロフィールで移行先情報が消える問題を修正

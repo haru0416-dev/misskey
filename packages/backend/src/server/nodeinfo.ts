@@ -110,7 +110,7 @@ async function createNodeinfoDocument(
 			emailRequiredForSignup: meta.emailRequiredForSignup,
 			enableHcaptcha: meta.enableHcaptcha,
 			enableRecaptcha: meta.enableRecaptcha,
-			enableMcaptcha: meta.enableMcaptcha,
+			enableCap: meta.enableCap,
 			enableTurnstile: meta.enableTurnstile,
 			maxNoteTextLength: MAX_NOTE_TEXT_LENGTH,
 			enableEmail: meta.enableEmail,

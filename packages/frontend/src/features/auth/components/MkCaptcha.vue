@@ -6,15 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div>
 	<span v-if="!available">Loading<MkEllipsis/></span>
-	<div v-if="props.provider == 'mcaptcha'">
-		<iframe
-			v-if="mCaptchaIframeUrl != null"
-			ref="mCaptchaIframe"
-			:src="mCaptchaIframeUrl"
-			title="mCaptcha"
-			style="border: none; max-width: 320px; width: 100%; height: 100%; max-height: 80px;"
-		></iframe>
-	</div>
+	<MkCapCaptcha v-if="props.provider === 'cap'" ref="capWidget" :sitekey="props.sitekey" :instanceUrl="props.instanceUrl ?? null" :secretKey="props.secretKey ?? null" @update:modelValue="emit('update:modelValue', $event)"/>
 	<div v-if="props.provider == 'testcaptcha'" style="background: #eee; border: solid 1px #888; padding: 8px; color: #000; max-width: 320px; display: flex; gap: 10px; align-items: center; box-shadow: 2px 2px 6px #0004; border-radius: 4px;">
 		<img src="/client-assets/testcaptcha.png" style="width: 60px; height: 60px; " alt=""/>
 		<div v-if="testcaptchaPassed">
@@ -31,8 +23,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, useTemplateRef, computed, onMounted, onBeforeUnmount, watch, onUnmounted, nextTick } from 'vue';
-import type Reciever_typeReferenceOnly from '@mcaptcha/core-glue';
+import { ref, useTemplateRef, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import MkCapCaptcha from './MkCapCaptcha.vue';
 import { store } from '@/store.js';
 
 // 各 CAPTCHA サービスが提供する API。
@@ -64,7 +56,7 @@ export type Captcha = {
 	getResponse(id: string): string;
 };
 
-export type CaptchaProvider = 'hcaptcha' | 'recaptcha' | 'turnstile' | 'mcaptcha' | 'testcaptcha';
+export type CaptchaProvider = 'hcaptcha' | 'recaptcha' | 'turnstile' | 'cap' | 'testcaptcha';
 
 type CaptchaContainer = {
 	readonly [_ in CaptchaProvider]?: Captcha;
@@ -92,17 +84,7 @@ const available = ref(false);
 const captchaEl = useTemplateRef('captchaEl');
 const captchaWidgetId = ref<string | undefined>(undefined);
 
-let mCaptchaReciever: Reciever_typeReferenceOnly | null = null;
-const mCaptchaIframe = useTemplateRef('mCaptchaIframe');
-const mCaptchaRemoveState = ref(false);
-const mCaptchaIframeUrl = computed(() => {
-	if (props.provider === 'mcaptcha' && !mCaptchaRemoveState.value && props.instanceUrl && props.sitekey) {
-		const url = new URL('/widget', props.instanceUrl);
-		url.searchParams.set('sitekey', props.sitekey);
-		return url.toString();
-	}
-	return null;
-});
+const capWidget = useTemplateRef('capWidget');
 
 const testcaptchaInput = ref('');
 const testcaptchaPassed = ref(false);
@@ -115,8 +97,8 @@ const variable = computed(() => {
 			return 'grecaptcha';
 		case 'turnstile':
 			return 'turnstile';
-		case 'mcaptcha':
-			return 'mcaptcha';
+		case 'cap':
+			return 'cap';
 		case 'testcaptcha':
 			return 'testcaptcha';
 	}
@@ -132,7 +114,7 @@ const src = computed(() => {
 			return 'https://www.recaptcha.net/recaptcha/api.js?render=explicit';
 		case 'turnstile':
 			return 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-		case 'mcaptcha':
+		case 'cap':
 			return null;
 		case 'testcaptcha':
 			return null;
@@ -155,7 +137,7 @@ watch(
 	},
 );
 
-if (loaded || props.provider === 'mcaptcha' || props.provider === 'testcaptcha') {
+if (loaded || props.provider === 'cap' || props.provider === 'testcaptcha') {
 	available.value = true;
 } else if (src.value !== null) {
 	(
@@ -171,6 +153,7 @@ if (loaded || props.provider === 'mcaptcha' || props.provider === 'testcaptcha')
 }
 
 function reset() {
+	capWidget.value?.reset();
 	if (captcha.value.reset && captchaWidgetId.value !== undefined) {
 		try {
 			captcha.value.reset(captchaWidgetId.value);
@@ -184,11 +167,6 @@ function reset() {
 
 	testcaptchaPassed.value = false;
 	testcaptchaInput.value = '';
-
-	if (mCaptchaReciever != null) {
-		mCaptchaReciever.destroy();
-		mCaptchaReciever = null;
-	}
 }
 
 function remove() {
@@ -206,9 +184,6 @@ function remove() {
 		}
 	}
 
-	if (props.provider === 'mcaptcha') {
-		mCaptchaRemoveState.value = true;
-	}
 }
 
 async function requestRender() {
@@ -225,21 +200,8 @@ async function requestRender() {
 			'expired-callback': () => callback(undefined),
 			'error-callback': () => callback(undefined),
 		});
-	} else if (props.provider === 'mcaptcha' && props.instanceUrl && props.sitekey) {
-		const { default: Reciever } = await import('@mcaptcha/core-glue');
-		mCaptchaReciever = new Reciever(
-			{
-				siteKey: {
-					key: props.sitekey,
-					instanceUrl: new URL(props.instanceUrl),
-				},
-			},
-			(token: string) => {
-				callback(token);
-			},
-		);
-		mCaptchaReciever.listen();
-		mCaptchaRemoveState.value = false;
+	} else if (props.provider === 'cap') {
+		return;
 	} else {
 		window.setTimeout(requestRender, 50);
 	}
@@ -259,14 +221,6 @@ function callback(response?: string) {
 	emit('update:modelValue', typeof response === 'string' ? response : null);
 }
 
-function onReceivedMessage(message: MessageEvent) {
-	if (message.data.token) {
-		if (props.instanceUrl && new URL(message.origin).host === new URL(props.instanceUrl).host) {
-			callback(message.data.token);
-		}
-	}
-}
-
 function testcaptchaSubmit() {
 	testcaptchaPassed.value = testcaptchaInput.value === 'ai-chan-kawaii';
 	callback(testcaptchaPassed.value ? 'testcaptcha-passed' : undefined);
@@ -277,15 +231,10 @@ function testcaptchaSubmit() {
 
 onMounted(() => {
 	if (available.value) {
-		window.addEventListener('message', onReceivedMessage);
 		requestRender();
 	} else {
 		watch(available, requestRender);
 	}
-});
-
-onUnmounted(() => {
-	window.removeEventListener('message', onReceivedMessage);
 });
 
 onBeforeUnmount(() => {

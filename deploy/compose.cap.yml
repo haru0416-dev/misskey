@@ -1,0 +1,30 @@
+services:
+  cap:
+    image: tiago2/cap:3.1.11
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:7493:3000'
+    environment:
+      ADMIN_KEY: ${CAP_ADMIN_KEY:?CAP_ADMIN_KEY must be set}
+      REDIS_URL: redis://cap-valkey:6379
+      ENABLE_ASSETS_SERVER: 'true'
+      WIDGET_VERSION: '0.1.57'
+      WASM_VERSION: '0.0.7'
+    depends_on:
+      cap-valkey:
+        condition: service_healthy
+
+  cap-valkey:
+    image: valkey/valkey:9-alpine
+    restart: unless-stopped
+    command: ['valkey-server', '--save', '60', '1', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    volumes:
+      - cap-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  cap-data:

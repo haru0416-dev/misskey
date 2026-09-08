@@ -46,10 +46,10 @@ export const adminUpdateMetaParamDef = z.object({
 	enableHcaptcha: z.boolean().optional(),
 	hcaptchaSiteKey: z.string().nullable().optional(),
 	hcaptchaSecretKey: z.string().nullable().optional(),
-	enableMcaptcha: z.boolean().optional(),
-	mcaptchaSiteKey: z.string().nullable().optional(),
-	mcaptchaInstanceUrl: z.string().nullable().optional(),
-	mcaptchaSecretKey: z.string().nullable().optional(),
+	enableCap: z.boolean().optional(),
+	capSiteKey: z.string().nullable().optional(),
+	capInstanceUrl: z.string().nullable().optional(),
+	capSecretKey: z.string().nullable().optional(),
 	enableRecaptcha: z.boolean().optional(),
 	recaptchaSiteKey: z.string().nullable().optional(),
 	recaptchaSecretKey: z.string().nullable().optional(),
@@ -247,10 +247,10 @@ export const adminUpdateMetaJsonSchema = {
 		enableHcaptcha: { type: 'boolean' },
 		hcaptchaSiteKey: { type: 'string', nullable: true },
 		hcaptchaSecretKey: { type: 'string', nullable: true },
-		enableMcaptcha: { type: 'boolean' },
-		mcaptchaSiteKey: { type: 'string', nullable: true },
-		mcaptchaInstanceUrl: { type: 'string', nullable: true },
-		mcaptchaSecretKey: { type: 'string', nullable: true },
+		enableCap: { type: 'boolean' },
+		capSiteKey: { type: 'string', nullable: true },
+		capInstanceUrl: { type: 'string', nullable: true },
+		capSecretKey: { type: 'string', nullable: true },
 		enableRecaptcha: { type: 'boolean' },
 		recaptchaSiteKey: { type: 'string', nullable: true },
 		recaptchaSecretKey: { type: 'string', nullable: true },
@@ -423,9 +423,9 @@ const directAdminUpdateMetaFields = [
 	'enableHcaptcha',
 	'hcaptchaSiteKey',
 	'hcaptchaSecretKey',
-	'enableMcaptcha',
-	'mcaptchaInstanceUrl',
-	'mcaptchaSecretKey',
+	'enableCap',
+	'capInstanceUrl',
+	'capSecretKey',
 	'enableRecaptcha',
 	'recaptchaSiteKey',
 	'recaptchaSecretKey',
@@ -593,8 +593,8 @@ export function buildAdminUpdateMetaPatch(serverSettings: MiMeta, params: AdminU
 		};
 	}
 
-	if (params.mcaptchaSiteKey !== undefined) {
-		set.mcaptchaSitekey = params.mcaptchaSiteKey;
+	if (params.capSiteKey !== undefined) {
+		set.capSiteKey = params.capSiteKey;
 	}
 
 	if (params.googleAnalyticsMeasurementId !== undefined) {

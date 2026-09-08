@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { verifyCap } from '@/core/captcha/CaptchaLogic.js';
 import { comparePassword } from '@/misc/password.js';
 import type * as Misskey from 'misskey-js';
 import type * as Redis from 'ioredis';
@@ -192,44 +193,6 @@ async function verifyHcaptcha(
 	}
 }
 
-async function verifyMcaptcha(
-	deps: ApiSigninDependencies,
-	secret: string,
-	siteKey: string,
-	instanceHost: string,
-	response: string | null | undefined,
-): Promise<void> {
-	if (response == null) {
-		throw new Error('mcaptcha response missing');
-	}
-
-	const endpointUrl = new URL('/api/v1/pow/siteverify', instanceHost);
-	const result = await deps.httpRequestService.send(
-		endpointUrl.toString(),
-		{
-			method: 'POST',
-			body: JSON.stringify({
-				key: siteKey,
-				secret,
-				token: response,
-			}),
-			headers: {
-				'Content-Type': 'application/json',
-			},
-		},
-		{ throwErrorWhenResponseNotOk: false },
-	);
-
-	if (result.status !== 200) {
-		throw new Error('mcaptcha did not return 200 OK');
-	}
-
-	const resp = (await result.json()) as { valid: boolean };
-	if (!resp.valid) {
-		throw new Error('mcaptcha failed');
-	}
-}
-
 async function verifyTurnstile(
 	deps: ApiSigninDependencies,
 	secret: string,
@@ -261,18 +224,16 @@ async function verifyEnabledCaptchas(deps: ApiSigninDependencies, body: Record<s
 		await verifyHcaptcha(deps, deps.meta.hcaptchaSecretKey, body['hcaptcha-response'] as string | null | undefined);
 	}
 
-	if (
-		deps.meta.enableMcaptcha &&
-		deps.meta.mcaptchaSecretKey &&
-		deps.meta.mcaptchaSitekey &&
-		deps.meta.mcaptchaInstanceUrl
-	) {
-		await verifyMcaptcha(
-			deps,
-			deps.meta.mcaptchaSecretKey,
-			deps.meta.mcaptchaSitekey,
-			deps.meta.mcaptchaInstanceUrl,
-			body['m-captcha-response'] as string | null | undefined,
+	if (deps.meta.enableCap) {
+		if (!deps.meta.capSecretKey || !deps.meta.capSiteKey || !deps.meta.capInstanceUrl) {
+			throw new Error('Cap is not configured');
+		}
+		await verifyCap(
+			deps.httpRequestService,
+			deps.meta.capSecretKey,
+			deps.meta.capSiteKey,
+			deps.meta.capInstanceUrl,
+			body['cap-response'] as string | null | undefined,
 		);
 	}
 

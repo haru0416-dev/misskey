@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			<div v-if="needCaptcha">
 				<MkCaptcha v-if="instance.enableHcaptcha" ref="hcaptcha" v-model="hCaptchaResponse" provider="hcaptcha" :sitekey="instance.hcaptchaSiteKey"/>
-				<MkCaptcha v-if="instance.enableMcaptcha" ref="mcaptcha" v-model="mCaptchaResponse" provider="mcaptcha" :sitekey="instance.mcaptchaSiteKey" :instanceUrl="instance.mcaptchaInstanceUrl"/>
+				<MkCaptcha v-if="instance.enableCap" ref="cap" v-model="capResponse" provider="cap" :sitekey="instance.capSiteKey" :instanceUrl="instance.capInstanceUrl"/>
 				<MkCaptcha v-if="instance.enableRecaptcha" ref="recaptcha" v-model="reCaptchaResponse" provider="recaptcha" :sitekey="instance.recaptchaSiteKey"/>
 				<MkCaptcha v-if="instance.enableTurnstile" ref="turnstile" v-model="turnstileResponse" provider="turnstile" :sitekey="instance.turnstileSiteKey"/>
 				<MkCaptcha v-if="instance.enableTestcaptcha" ref="testcaptcha" v-model="testcaptchaResponse" provider="testcaptcha" :sitekey="null"/>
@@ -42,7 +42,7 @@ export type PwResponse = {
 	password: string;
 	captcha: {
 		hCaptchaResponse: string | null;
-		mCaptchaResponse: string | null;
+		capResponse: string | null;
 		reCaptchaResponse: string | null;
 		turnstileResponse: string | null;
 		testcaptchaResponse: string | null;
@@ -74,13 +74,13 @@ const emit = defineEmits<{
 const password = ref('');
 
 const hCaptcha = useTemplateRef('hcaptcha');
-const mCaptcha = useTemplateRef('mcaptcha');
+const cap = useTemplateRef('cap');
 const reCaptcha = useTemplateRef('recaptcha');
 const turnstile = useTemplateRef('turnstile');
 const testcaptcha = useTemplateRef('testcaptcha');
 
 const hCaptchaResponse = ref<string | null>(null);
-const mCaptchaResponse = ref<string | null>(null);
+const capResponse = ref<string | null>(null);
 const reCaptchaResponse = ref<string | null>(null);
 const turnstileResponse = ref<string | null>(null);
 const testcaptchaResponse = ref<string | null>(null);
@@ -88,7 +88,7 @@ const testcaptchaResponse = ref<string | null>(null);
 const captchaFailed = computed((): boolean => {
 	return (
 		(instance.enableHcaptcha && !hCaptchaResponse.value) ||
-		(instance.enableMcaptcha && !mCaptchaResponse.value) ||
+		(instance.enableCap && !capResponse.value) ||
 		(instance.enableRecaptcha && !reCaptchaResponse.value) ||
 		(instance.enableTurnstile && !turnstileResponse.value) ||
 		(instance.enableTestcaptcha && !testcaptchaResponse.value)
@@ -106,7 +106,7 @@ function onSubmit() {
 		password: password.value,
 		captcha: {
 			hCaptchaResponse: hCaptchaResponse.value,
-			mCaptchaResponse: mCaptchaResponse.value,
+			capResponse: capResponse.value,
 			reCaptchaResponse: reCaptchaResponse.value,
 			turnstileResponse: turnstileResponse.value,
 			testcaptchaResponse: testcaptchaResponse.value,
@@ -116,7 +116,7 @@ function onSubmit() {
 
 function resetCaptcha() {
 	hCaptcha.value?.reset();
-	mCaptcha.value?.reset();
+	cap.value?.reset();
 	reCaptcha.value?.reset();
 	turnstile.value?.reset();
 	testcaptcha.value?.reset();

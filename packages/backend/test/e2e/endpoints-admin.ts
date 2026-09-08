@@ -246,7 +246,7 @@ describe('Endpoints', () => {
 						silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
 						mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
 						langs: ['ja-JP', ''],
-						mcaptchaSiteKey: `mcaptcha-${now}`,
+						capSiteKey: `cap-${now}`,
 						googleAnalyticsMeasurementId: '',
 						sensitiveMediaDetectionApiUrl: '',
 						deeplAuthKey: '',
@@ -279,7 +279,7 @@ describe('Endpoints', () => {
 				expect(after.silencedHosts).toStrictEqual(['Blocked.Example', 'aaa.example', 'zzz.example']);
 				expect(after.mediaSilencedHosts).toStrictEqual(['Blocked.Example', 'media.example']);
 				expect(after.langs).toStrictEqual(['ja-JP']);
-				expect(after.mcaptchaSitekey).toBe(`mcaptcha-${now}`);
+				expect(after.capSiteKey).toBe(`cap-${now}`);
 				expect(after.googleAnalyticsMeasurementId).toBe(null);
 				expect(after.sensitiveMediaDetectionApiUrl).toBe(null);
 				expect(after.deeplAuthKey).toBe(null);
@@ -320,7 +320,7 @@ describe('Endpoints', () => {
 						silencedHosts: before.silencedHosts,
 						mediaSilencedHosts: before.mediaSilencedHosts,
 						langs: before.langs,
-						mcaptchaSiteKey: before.mcaptchaSitekey,
+						capSiteKey: before.capSiteKey,
 						googleAnalyticsMeasurementId: before.googleAnalyticsMeasurementId,
 						sensitiveMediaDetectionApiUrl: before.sensitiveMediaDetectionApiUrl,
 						deeplAuthKey: before.deeplAuthKey,
@@ -3845,7 +3845,7 @@ describe('Endpoints', () => {
 			expect(initial.status).toBe(200);
 			expect(typeof initial.body.provider).toBe('string');
 			assert.ok(initial.body.hcaptcha);
-			assert.ok(initial.body.mcaptcha);
+			assert.ok(initial.body.cap);
 			assert.ok(initial.body.recaptcha);
 			assert.ok(initial.body.turnstile);
 

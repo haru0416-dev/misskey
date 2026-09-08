@@ -1719,25 +1719,25 @@ export interface Locale extends ILocale {
      */
     "hcaptchaSecretKey": string;
     /**
-     * mCaptcha
+     * Cap
      */
-    "mcaptcha": string;
+    "cap": string;
     /**
-     * mCaptchaを有効にする
+     * Capを有効にする
      */
-    "enableMcaptcha": string;
+    "enableCap": string;
     /**
      * サイトキー
      */
-    "mcaptchaSiteKey": string;
+    "capSiteKey": string;
     /**
      * シークレットキー
      */
-    "mcaptchaSecretKey": string;
+    "capSecretKey": string;
     /**
-     * mCaptchaのインスタンスのURL
+     * CapサーバーのURL
      */
-    "mcaptchaInstanceUrl": string;
+    "capInstanceUrl": string;
     /**
      * reCAPTCHA
      */

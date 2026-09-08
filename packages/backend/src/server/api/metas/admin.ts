@@ -717,7 +717,7 @@ export const endpointMetas = {
 							secretKey: { type: 'string', nullable: true },
 						},
 					},
-					mcaptcha: {
+					cap: {
 						type: 'object',
 						properties: {
 							siteKey: { type: 'string', nullable: true },
@@ -1295,17 +1295,17 @@ export const endpointMetas = {
 						optional: false,
 						nullable: true,
 					},
-					enableMcaptcha: {
+					enableCap: {
 						type: 'boolean',
 						optional: false,
 						nullable: false,
 					},
-					mcaptchaSiteKey: {
+					capSiteKey: {
 						type: 'string',
 						optional: false,
 						nullable: true,
 					},
-					mcaptchaInstanceUrl: {
+					capInstanceUrl: {
 						type: 'string',
 						optional: false,
 						nullable: true,
@@ -1492,7 +1492,7 @@ export const endpointMetas = {
 						optional: false,
 						nullable: true,
 					},
-					mcaptchaSecretKey: {
+					capSecretKey: {
 						type: 'string',
 						optional: false,
 						nullable: true,

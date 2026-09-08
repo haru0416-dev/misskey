@@ -4,12 +4,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<SearchMarker markerId="botProtection" :keywords="['bot', 'protection', 'captcha', 'hcaptcha', 'mcaptcha', 'recaptcha', 'turnstile']">
+<SearchMarker markerId="botProtection" :keywords="['bot', 'protection', 'captcha', 'hcaptcha', 'cap', 'recaptcha', 'turnstile']">
 	<MkFolder>
 		<template #icon><SearchIcon><i class="ti ti-shield"></i></SearchIcon></template>
 		<template #label><SearchLabel>{{ i18n.ts.botProtection }}</SearchLabel></template>
 		<template v-if="botProtectionForm.savedState.provider === 'hcaptcha'" #suffix>hCaptcha</template>
-		<template v-else-if="botProtectionForm.savedState.provider === 'mcaptcha'" #suffix>mCaptcha</template>
+		<template v-else-if="botProtectionForm.savedState.provider === 'cap'" #suffix>Cap</template>
 		<template v-else-if="botProtectionForm.savedState.provider === 'recaptcha'" #suffix>reCAPTCHA</template>
 		<template v-else-if="botProtectionForm.savedState.provider === 'turnstile'" #suffix>Turnstile</template>
 		<template v-else-if="botProtectionForm.savedState.provider === 'testcaptcha'" #suffix>testCaptcha</template>
@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:options="[
 					{ value: 'none', label: `${i18n.ts.none} (${i18n.ts.notRecommended})` },
 					{ value: 'hcaptcha', label: 'hCaptcha' },
-					{ value: 'mcaptcha', label: 'mCaptcha' },
+					{ value: 'cap', label: 'Cap' },
 					{ value: 'recaptcha', label: 'reCAPTCHA' },
 					{ value: 'turnstile', label: 'Turnstile' },
 					{ value: 'testcaptcha', label: 'testCaptcha' },
@@ -60,27 +60,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkInfo>
 			</template>
 
-			<template v-else-if="botProtectionForm.state.provider === 'mcaptcha'">
-				<MkInput v-model="botProtectionForm.state.mcaptchaSiteKey" debounce>
+			<template v-else-if="botProtectionForm.state.provider === 'cap'">
+				<MkInput v-model="botProtectionForm.state.capSiteKey" debounce>
 					<template #prefix><i class="ti ti-key"></i></template>
-					<template #label>{{ i18n.ts.mcaptchaSiteKey }}</template>
+					<template #label>{{ i18n.ts.capSiteKey }}</template>
 				</MkInput>
-				<MkInput v-model="botProtectionForm.state.mcaptchaSecretKey" debounce>
+				<MkInput v-model="botProtectionForm.state.capSecretKey" debounce>
 					<template #prefix><i class="ti ti-key"></i></template>
-					<template #label>{{ i18n.ts.mcaptchaSecretKey }}</template>
+					<template #label>{{ i18n.ts.capSecretKey }}</template>
 				</MkInput>
-				<MkInput v-model="botProtectionForm.state.mcaptchaInstanceUrl" debounce>
+				<MkInput v-model="botProtectionForm.state.capInstanceUrl" debounce>
 					<template #prefix><i class="ti ti-link"></i></template>
-					<template #label>{{ i18n.ts.mcaptchaInstanceUrl }}</template>
+					<template #label>{{ i18n.ts.capInstanceUrl }}</template>
 				</MkInput>
-				<FormSlot v-if="botProtectionForm.state.mcaptchaSiteKey && botProtectionForm.state.mcaptchaInstanceUrl">
+				<FormSlot v-if="botProtectionForm.state.capSiteKey && botProtectionForm.state.capInstanceUrl">
 					<template #label>{{ i18n.ts._captcha.verify }}</template>
 					<MkCaptcha
 						v-model="captchaResult"
-						provider="mcaptcha"
-						:sitekey="botProtectionForm.state.mcaptchaSiteKey"
-						:secretKey="botProtectionForm.state.mcaptchaSecretKey"
-						:instanceUrl="botProtectionForm.state.mcaptchaInstanceUrl"
+						provider="cap"
+						:sitekey="botProtectionForm.state.capSiteKey"
+						:secretKey="botProtectionForm.state.capSecretKey"
+						:instanceUrl="botProtectionForm.state.capInstanceUrl"
 					/>
 				</FormSlot>
 			</template>
@@ -202,9 +202,9 @@ const botProtectionForm = useForm({
 	provider: meta.provider,
 	hcaptchaSiteKey: meta.hcaptcha.siteKey,
 	hcaptchaSecretKey: meta.hcaptcha.secretKey,
-	mcaptchaSiteKey: meta.mcaptcha.siteKey,
-	mcaptchaSecretKey: meta.mcaptcha.secretKey,
-	mcaptchaInstanceUrl: meta.mcaptcha.instanceUrl,
+	capSiteKey: meta.cap.siteKey,
+	capSecretKey: meta.cap.secretKey,
+	capInstanceUrl: meta.cap.instanceUrl,
 	recaptchaSiteKey: meta.recaptcha.siteKey,
 	recaptchaSecretKey: meta.recaptcha.secretKey,
 	turnstileSiteKey: meta.turnstile.siteKey,
@@ -221,8 +221,8 @@ const botProtectionForm = useForm({
 	} else {
 		const sitekey = provider === 'hcaptcha'
 			? state.hcaptchaSiteKey
-			: provider === 'mcaptcha'
-				? state.mcaptchaSiteKey
+			: provider === 'cap'
+				? state.capSiteKey
 				: provider === 'recaptcha'
 					? state.recaptchaSiteKey
 					: provider === 'turnstile'
@@ -230,8 +230,8 @@ const botProtectionForm = useForm({
 						: null;
 		const secret = provider === 'hcaptcha'
 			? state.hcaptchaSecretKey
-			: provider === 'mcaptcha'
-				? state.mcaptchaSecretKey
+			: provider === 'cap'
+				? state.capSecretKey
 				: provider === 'recaptcha'
 					? state.recaptchaSecretKey
 					: provider === 'turnstile'
@@ -244,7 +244,7 @@ const botProtectionForm = useForm({
 				provider: provider as Misskey.entities.AdminCaptchaSaveRequest['provider'],
 				sitekey: sitekey,
 				secret: secret,
-				instanceUrl: state.mcaptchaInstanceUrl,
+				instanceUrl: state.capInstanceUrl,
 				captchaResult: captchaResult.value,
 			},
 			undefined,
@@ -262,7 +262,7 @@ watch(botProtectionForm.state, () => {
 const canSaving = computed((): boolean => {
 	return (botProtectionForm.state.provider === 'none') ||
 		(botProtectionForm.state.provider === 'hcaptcha' && !!captchaResult.value) ||
-		(botProtectionForm.state.provider === 'mcaptcha' && !!captchaResult.value) ||
+		(botProtectionForm.state.provider === 'cap' && !!captchaResult.value) ||
 		(botProtectionForm.state.provider === 'recaptcha' && !!captchaResult.value) ||
 		(botProtectionForm.state.provider === 'turnstile' && !!captchaResult.value) ||
 		(botProtectionForm.state.provider === 'testcaptcha' && !!captchaResult.value);
