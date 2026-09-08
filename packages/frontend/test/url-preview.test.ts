@@ -7,13 +7,13 @@ import { describe, test, assert, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/vue';
 import type { RenderResult } from '@testing-library/vue';
 import './init';
-import type { SummalyResult } from '@misskey-dev/summaly';
+import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkUrlPreview from '@/features/link-preview/components/MkUrlPreview.vue';
 
 describe('MkUrlPreview', () => {
-	const renderPreviewBy = async (summary: Partial<SummalyResult>): Promise<RenderResult> => {
+	const renderPreviewBy = async (summary: Partial<UrlPreviewSummary>): Promise<RenderResult> => {
 		if (!summary.player) {
 			summary.player = {
 				url: null,
@@ -52,7 +52,7 @@ describe('MkUrlPreview', () => {
 		return result;
 	};
 
-	const renderAndOpenPreview = async (summary: Partial<SummalyResult>): Promise<HTMLIFrameElement | null> => {
+	const renderAndOpenPreview = async (summary: Partial<UrlPreviewSummary>): Promise<HTMLIFrameElement | null> => {
 		const mkUrlPreview = await renderPreviewBy(summary);
 		const buttons = mkUrlPreview.getAllByRole('button');
 		const button = buttons[0];

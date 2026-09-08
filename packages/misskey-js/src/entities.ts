@@ -192,3 +192,22 @@ export type I2faKeyDoneRequest = {
 type Values<T extends Record<PropertyKey, unknown>> = T[keyof T];
 
 export type PartialRolePolicyOverride = Partial<{ [k in keyof RolePolicies]: Omit<Values<Role['policies']>, 'value'> & { value: RolePolicies[k] } }>;
+
+export type UrlPreviewSummary = {
+	url: string;
+	title: string | null;
+	description: string | null;
+	icon: string | null;
+	thumbnail: string | null;
+	thumbnailStyle?: 'summary' | 'summary_large_image' | null;
+	sitename: string | null;
+	sensitive?: boolean;
+	activityPub: string | null;
+	fediverseCreator: string | null;
+	player: {
+		url: string | null;
+		width: number | null;
+		height: number | null;
+		allow: string[];
+	};
+};

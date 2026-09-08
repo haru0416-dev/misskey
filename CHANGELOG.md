@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Fix: 間接依存の既知脆弱性を解消（@xmldom/xmldom・fast-uriを修正版へ更新）
 - Enhance: identicon生成・トレース計装・管理ログの差分表示・Google Analytics・型生成の依存を整理し、Tablerの使用資産を同梱
 - Change: 依存パッケージを更新 (`vite` 8.2.2 / `shiki` 4.4.3 / `pg` 8.23.0 / `nodemailer` 9.0.5 / OpenTelemetry 一式ほか計35件。`feed` 6 / `chalk` 6 / `content-disposition` 3 / `node-html-parser` 9 のメジャー更新を含む)
 - Fix: Service Worker の型定義を最新へ更新 (`@types/serviceworker` 0.0.74 → 0.0.200。通知のアクションボタンと再通知は Chromium 独自で標準の型から外れたため、別途型を補って挙動は維持)
@@ -217,6 +218,7 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Enhance: ネットワーク設定を維持してURLプレビュー取得を本体に統合し、summaly・got・cheerio・fastifyへの依存を削除
 - Enhance: メールの固定装飾をインラインCSSにしてjuiceへの依存を削除（`admin/send-email` の本文に含まれる任意CSSの自動インライン化は終了）
 - Fix: アカウント移行通知の受信時に、キャッシュされた古いプロフィールで移行先情報が消える問題を修正
 - Fix: 宛先が閲覧できない指定公開ノートへの返信を連合先が受信できるようにし、凍結中のアカウントへのリモートフォローを拒否

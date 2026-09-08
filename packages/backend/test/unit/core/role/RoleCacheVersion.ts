@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import {

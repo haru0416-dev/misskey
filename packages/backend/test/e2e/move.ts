@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// jobQueue() が呼ぶ createRuntimeDependencies() は UrlPreviewService を構築する。同サービスは
-// rolldown の `define` で注入される _SUMMALY_VERSION_ を参照するが、このファイルは jobQueue() を
-// (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
-(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
-
 import * as assert from 'assert';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
