@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
-// _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しない。
-(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
-
 import { createHash, createVerify } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';

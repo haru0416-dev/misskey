@@ -1,5 +1,4 @@
 import { defineConfig } from 'rolldown';
-import { version as summalyVersion } from '@misskey-dev/summaly';
 import type { Plugin, ExternalOption } from 'rolldown';
 
 /**
@@ -107,18 +106,11 @@ export default defineConfig((args) => {
 		'file-type',
 	];
 
-	const define: Record<string, string> = {
-		_SUMMALY_VERSION_: JSON.stringify(summalyVersion),
-	};
-
 	if (isE2E) {
 		return {
 			input: './test-server/entry.ts',
 			platform: 'node',
 			tsconfig: './test-server/tsconfig.json',
-			transform: {
-				define,
-			},
 			output: {
 				keepNames: true,
 				sourcemap: true,
@@ -142,9 +134,6 @@ export default defineConfig((args) => {
 		platform: 'node',
 		tsconfig: true,
 		plugins: [isWatchMode ? backendDevServerPlugin() : undefined],
-		transform: {
-			define,
-		},
 		output: {
 			keepNames: true,
 			minify: !isWatchMode,

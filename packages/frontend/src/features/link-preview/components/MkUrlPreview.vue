@@ -88,7 +88,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, onDeactivated, onUnmounted, ref } from 'vue';
 import { url as local } from '@shared/utility/config.js';
 import { versatileLang } from '@shared/utility/intl-const.js';
-import type { SummalyResult } from '@misskey-dev/summaly';
+import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { deviceKind } from '@/utility/device-kind.js';
@@ -120,7 +120,7 @@ const self = maybeRelativeUrl !== props.url;
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 const fetching = ref(true);
-const summalyResult = ref<SummalyResult | null>(null);
+const summalyResult = ref<UrlPreviewSummary | null>(null);
 const title = computed(() => summalyResult.value?.title ?? null);
 const description = computed(() => summalyResult.value?.description ?? null);
 const thumbnail = computed(() => summalyResult.value?.thumbnail ?? null);
@@ -174,7 +174,7 @@ window
 
 		return res.json();
 	})
-	.then((info: SummalyResult | null) => {
+	.then((info: UrlPreviewSummary | null) => {
 		if (!info || info.url == null) {
 			fetching.value = false;
 			unknownUrl.value = true;

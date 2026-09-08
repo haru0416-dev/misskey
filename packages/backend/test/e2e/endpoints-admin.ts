@@ -360,13 +360,21 @@ describe('Endpoints', () => {
 				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, updated.body.id);
 				expect(profile.description).toBe(description);
 
-				const logs = await listModerationLogsFromDatabase(db, {
-					limit: 5,
-					order: 'desc',
-					type: 'updateProxyAccountDescription',
-					userId: alice.id,
-				});
-				assert.ok(logs.some((log) => (log.info as { after?: string | null }).after === description));
+				// 管理ログの書き込み完了はAPI応答より後になることがある。
+				await expect
+					.poll(
+						async () => {
+							const logs = await listModerationLogsFromDatabase(db, {
+								limit: 5,
+								order: 'desc',
+								type: 'updateProxyAccountDescription',
+								userId: alice.id,
+							});
+							return logs.some((log) => (log.info as { after?: string | null }).after === description);
+						},
+						{ timeout: 5000 },
+					)
+					.toBe(true);
 			} finally {
 				await api('admin/update-proxy-account', { description: null }, alice);
 			}

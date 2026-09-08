@@ -32,10 +32,10 @@ import { ref } from 'vue';
 import { versatileLang } from '@shared/utility/intl-const.js';
 import MkWindow from '@/components/overlay/MkWindow.vue';
 import { transformPlayerUrl } from '@/features/link-preview/url-preview.js';
-import type { SummalyResult } from '@misskey-dev/summaly';
+import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 
 const props = defineProps<{
-	urlOrSummalyResult: string | SummalyResult;
+	urlOrSummalyResult: string | UrlPreviewSummary;
 }>();
 
 const emit = defineEmits<{
@@ -45,7 +45,7 @@ const emit = defineEmits<{
 const fetching = ref(true);
 const iframeLoaded = ref(false);
 const title = ref<string | null>(null);
-const player = ref<SummalyResult['player'] | null>(null);
+const player = ref<UrlPreviewSummary['player'] | null>(null);
 
 async function ytFetch() {
 	title.value = null;
@@ -53,7 +53,7 @@ async function ytFetch() {
 	fetching.value = true;
 	iframeLoaded.value = false;
 
-	let info: SummalyResult;
+	let info: UrlPreviewSummary;
 
 	if (typeof props.urlOrSummalyResult === 'string') {
 		const requestUrl = new URL(props.urlOrSummalyResult, window.location.href);
@@ -63,7 +63,7 @@ async function ytFetch() {
 		}
 
 		const res = await window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`);
-		info = await res.json() as SummalyResult;
+		info = await res.json() as UrlPreviewSummary;
 	} else {
 		info = props.urlOrSummalyResult;
 	}
