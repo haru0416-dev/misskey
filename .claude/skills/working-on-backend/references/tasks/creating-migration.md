@@ -1,61 +1,31 @@
 # DB migration を作成する
 
-`db/schema/*.ts` の変更から `packages/backend/migration/` へ新規 migration を追加するための手順。**2026-07-09 に drizzle-kit を導入し、schema.ts の差分から migration SQL を自動生成できるようになった**(それ以前は手書きJSだった。旧形式は `migration/_legacy/` に歴史的参照として残っているのみで実行系からは外れている)。
+履歴・データ・接続先の安全条件は [AGENTS.md](../../../../../AGENTS.md)。migration は forward-only で、取り消しも新しい migration として行う。逆方向の DDL で消失済みデータが復元できるとは限らない。
 
-## 大前提 (絶対 NG)
+## 生成するもの
 
-- **既にマージ済み (develop / master) の migration ファイル (`packages/backend/migration/*.sql`) を編集しない** ([AGENTS.md](../../../../../AGENTS.md))。本番履歴の改変は深刻なデータ不整合を引き起こす。スキーマ変更は **常に新規のmigrationファイル** を作る(`db:generate`が連番で自動的に新しい番号を振る)
-- `migration/meta/_journal.json` / `migration/meta/{N}_snapshot.json` も手で編集しない(`db:generate`が管理する)
-- forward-only — down migrationの概念が無い。変更を戻したい場合は「戻すDDLを持つ新しいmigration」を追加する
+[drizzle.config.ts](../../../../../packages/backend/drizzle.config.ts) は `src/db/schema/*.ts` を入力、`migration/` を出力にする。
 
----
+- 通常の schema 変更は `packages/backend/src/db/schema/` と利用するモデル・クエリを更新し、ルートから `bun run --filter backend db:generate` を実行する。
+- 拡張機能・関数・生成で表現できない index 定義・データ補正などは `bun run --filter backend db:generate:custom` で空の SQL を生成して実装する。対応範囲は導入済み drizzle-kit と生成結果に照合する。
+- SQL と、生成された `migration/meta/_journal.json`・snapshot を一緒に扱う。journal や snapshot の手修正で生成漏れ・適用済み判定を取り繕わない。
+- 生成 SQL を読み、列 rename が drop/add に化けていないか、既存行の NOT NULL・enum・外部キーを満たすか、削除対象・ロック・バックフィル量を確認する。[DB と migration](../knowledge/db-models-and-migrations.md) に判断点を示す。
 
-## 手順
+## 隔離 DB で確認する
 
-1. `packages/backend/src/db/schema/*.ts` を編集する(カラム追加/削除、index、外部キー`.references()`など)。書き方は [knowledge/db-models-and-migrations.md](../knowledge/db-models-and-migrations.md) を参照
-2. ルートから `bun run --filter backend db:generate` を実行する — `packages/backend/migration/` に新しい連番の `.sql` ファイルが生成される
-3. **生成されたSQLの中身を必ず目視確認する。** 特にenum変更・列リネームは対話プロンプトでの確認判定に依存するため、意図通りのSQLになっているか確認すること(詳細は[knowledge/db-models-and-migrations.md](../knowledge/db-models-and-migrations.md)の該当節)
-4. schema.tsの変更が **drizzle-kitで表現できない特殊DDL** (拡張機能・関数・`INCLUDE`句・ストレージパラメータの事後変更など) を伴う場合は、`bun run --filter backend db:generate:custom` で空の`.sql`ファイルを作り、生SQLを手書きする。どのDDLが該当するかは[knowledge/db-models-and-migrations.md §drizzle-kitで自動生成できないDDL](../knowledge/db-models-and-migrations.md)を参照
-5. 「検証」セクションのコマンドで確認する
+使用する設定と接続先を確定し、テスト用なら各コマンドに `NODE_ENV=test` を設定する。現在のソースに対応する backend build を用意してから実行する。`migrate` と `check-migrations` は生成 SQL ではなく built の runner を使う。
 
----
+| ルートからのコマンド | 観測するもの |
+| --- | --- |
+| `bun run migrate` | 未適用 migration の実適用。接続先の DB を変更する |
+| `bun run --bun --filter backend check-migrations` | 接続先 DB に journal 上の未適用 migration がないこと |
 
-## SPDXヘッダーは不要
+`check-migrations` は [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) の `check`。journal の `when` を DB の最新 `created_at` と比較する。schema 定義と実 DB の差分、DDL の生成漏れ、既存 SQL の改変を検査するものではない。管理 schema/table がなければ `CREATE` するため、完全な読み取り専用でもない。
 
-生成される `.sql` ファイルにSPDXヘッダーは付けない(AGENTS.mdのSPDX対象拡張子リストに`.sql`は含まれない。`db:generate:custom`で作る手書きファイルも同様)。
+新規 DB と、影響を受ける既存データがある DB の適用結果を確認する。未適用件数ゼロだけでデータ移行の正しさを結論しない。失敗時の transaction・接続解放や再実行結果まで、今回触った境界に必要な観測を選ぶ。
 
----
+## 実行方式の制約
 
-## 検証
+runner は一つの接続で advisory lock、pending 判定、migration、unlock を行う。別セッションで取った lock や pool の別接続へ分割しない。接続・timeout の所有者を維持する。
 
-ルートから実行:
-
-```bash
-# 未適用の migration ファイルが無いか (実行し忘れの検出)
-bun run --bun --filter backend check-migrations
-
-# ローカル DB に適用
-bun run migrate
-```
-
-`check-migrations` の実体は [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) の `check` コマンド。`drizzle.__drizzle_migrations` テーブル(drizzle標準のブックキーピング)と `packages/backend/migration/meta/_journal.json` を突き合わせ、**まだ適用されていない migration ファイルが無いか**を検査する。「schema.tsとDBの実スキーマが同期しているか」の検査ではない — 純粋に「migrationファイルを生成したのに `bun run migrate` し忘れていないか」のチェック(CIは新規migrationに対して`migrate`→`check`の順で走らせて検証する)。
-
-forward-onlyのため`revert`コマンドは存在しない。ロールバックしたい場合は新規migrationとして逆方向のDDLを追加し、`db:generate`→検証の手順を繰り返す。
-
----
-
-## CHANGELOG (ユーザー影響がある場合)
-
-スキーマ変更がユーザーに見える挙動を生む場合のみ、`CHANGELOG.md` に追記する。内部リファクタや純粋なインデックス追加は不要。詳細は [shipping-misskey-change スキル](../../../shipping-misskey-change/SKILL.md) で確認。
-
----
-
-## 提出前セルフレビューチェックリスト
-
-完了前に以下を上から確認する (各項目を TodoWrite 化してよい):
-
-- [ ] 既にマージ済みの migration ファイル (`.sql`) は一切編集していない (大前提)
-- [ ] schema.tsの変更は `db:generate`(通常のDDL)または `db:generate:custom`(拡張機能/関数/INCLUDE等)のいずれかで生成したものである
-- [ ] 生成されたSQLの中身を目視確認した(特にenum変更・列リネームが意図通りか)
-- [ ] `bun run --bun --filter backend check-migrations` が **0 件 (未適用 migration なし)** で通る (事前に `bun run migrate` を実行しておくこと)
-- [ ] ユーザーに見える変更なら CHANGELOG 追記 → [shipping-misskey-change](../../../shipping-misskey-change/SKILL.md)
+標準 migrator は transaction 内で実行するため `CREATE INDEX CONCURRENTLY` をそのまま投入できない。手動作成後に同一 index の `CREATE` を通常 migration に残す手順も採らない。オンライン DDL が必要なら、適用済みの識別、既存 index の定義と有効性、失敗回復、再実行、journal との整合を定めた運用設計が必要であり、通常手順の延長で実行しない。

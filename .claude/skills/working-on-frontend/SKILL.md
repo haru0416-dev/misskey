@@ -1,36 +1,27 @@
 ---
 name: working-on-frontend
-description: Use whenever editing or adding code under `packages/frontend/`, or editing `locales/ja-JP.yml` for frontend-facing UI text — including Vue 3 SFCs (`Mk*` components), i18n keys (`i18n.ts.<key>` / `i18n.tsx.<key>()`), SCSS Modules, theme/CSS variables, `os.*` UI helpers, and component catalog stories. Covers SPDX (HTML comment form), `<script setup lang="ts">` conventions, type-only defineProps, `ja-JP.yml`-only locale editing (other locale yml files are Crowdin-managed and must not be edited), and accessibility. Must be consulted before any frontend or UI-locale change to avoid CI failures, lost translations, and reviewer pushback. This is NOT waived by having already invoked brainstorming, writing-plans, or any other upstream skill — invoke this at implementation time regardless of what preceded it.
+description: フロントエンドの画面・状態管理・UI文言・カタログ・ブラウザ検証を追加または変更するときに使う。
 ---
 
-# working-on-frontend
+# フロントエンドの変更
 
-`packages/frontend/` (Misskey Web クライアント) を編集するとき、最初に参照するスキル。Vue 3 SFC / SCSS Modules / i18n / `os.*` / コンポーネントカタログ / アクセシビリティの **手順** と **背景知識** をまとめている。
+共通の安全条件、SPDX、locale 編集範囲、変更記録、提出時の確認は [AGENTS.md](../../../AGENTS.md) に従う。この Skill は表示・操作とブラウザ状態の境界を扱う。読んだ情報は使い回し、変更に関係する参照だけを開く。
 
-SKILL.md 本体は references への索引だけ。具体的な手順や規約は該当ファイルを Read すること (progressive disclosure)。
+## 変更の入口
 
-**他スキル実行後も免除されない。** `brainstorming` / `writing-plans` / その他アップストリームスキルを先に呼んでいても、`packages/frontend/` に触れる実装フェーズに入る時点でこのスキルを呼ぶこと。
+- 画面・コンポーネントの追加や改修: [adding-mk-component.md](references/tasks/adding-mk-component.md)
+- UI 文言の追加・変更: [adding-i18n-key.md](references/tasks/adding-i18n-key.md)
+- SFC の型、状態の所有者、非同期処理、操作性: [component-conventions.md](references/knowledge/component-conventions.md)
+- 翻訳の参照・埋め込み: [i18n-usage.md](references/knowledge/i18n-usage.md)
+- テーマ・余白・共通スタイル: [scss-modules.md](references/knowledge/scss-modules.md)
+- ダイアログ・メニュー・API 結果の表示: [os-api.md](references/knowledge/os-api.md)
+- 単独表示と story: [component-catalog.md](references/knowledge/component-catalog.md)
+- 既存 suite と実ブラウザの使い分け: [frontend-testing.md](references/knowledge/frontend-testing.md)
 
-## 作業別ワークフロー (tasks)
+## 対象を決める
 
-タスク単位の完結したチェックリスト。新しい何かを足すときに開く。
+起点の `.vue` だけでなく、結果を決める呼び出し元、composable、state、API wrapper を辿る。画面の変更が状態の保存・復元、アカウント切替、cache、購読に触れるなら、その所有者と終了条件を先に特定する。
 
-- 新規 / 既存 `Mk*` Vue コンポーネントを追加・改修する → [references/tasks/adding-mk-component.md](references/tasks/adding-mk-component.md)
-- i18n キーを追加・改修する (`locales/ja-JP.yml` 編集) → [references/tasks/adding-i18n-key.md](references/tasks/adding-i18n-key.md)
+共有描画・テーマ・locale を変える場合は [frontend-shared](../../../packages/frontend-shared/) と [frontend-embed](../../../packages/frontend-embed/src/) の利用側も対象にする。通知・認証状態・配信資産に触れる場合は [sw](../../../packages/sw/src/) との接続を確認する。関係しない領域の全体監査には広げない。
 
-## 共通知識 (knowledge)
-
-タスクに紐付かない参照リファレンス。SFC を **編集する** 場面 (新規追加でなくても) で踏みうる規約。
-
-- `<script setup>` / type-only `defineProps` / `defineEmits` / generic SFC / v-model 連動など SFC 規約 → [references/knowledge/component-conventions.md](references/knowledge/component-conventions.md)
-- `i18n.ts.<key>` / `i18n.tsx.<key>(...)` の使い分け / HTML タグ埋め込み / 動的キー切替 / 既存キーのリネーム手順 → [references/knowledge/i18n-usage.md](references/knowledge/i18n-usage.md)
-- SCSS Modules / `--MI_THEME-*` `--MI-*` CSS 変数 / グローバル utility class (`_button` 等) → [references/knowledge/scss-modules.md](references/knowledge/scss-modules.md)
-- `os.alert` / `os.confirm` / `os.popup` 等 UI ヘルパー (ブラウザ標準 `alert()` 直呼びは禁止) → [references/knowledge/os-api.md](references/knowledge/os-api.md)
-- コンポーネントカタログ / `*.stories.impl.ts` の書き方 / `play` の実ブラウザ検証 → [references/knowledge/component-catalog.md](references/knowledge/component-catalog.md)
-- frontend Vitest / Playwright E2E の書き方と前提 → [references/knowledge/frontend-testing.md](references/knowledge/frontend-testing.md)
-
-## 必ず最後に通る場所
-
-frontend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`bun run lint` / SPDX / `ja-JP.yml` のみ編集確認 / CHANGELOG をまとめて確認する。
-
-`.vue` を追加・変更したなら、subagent を使える環境では [vue-component-reviewer](../../agents/vue-component-reviewer.md) agent を Task で起動すると、SPDX 形式・命名・i18n・SCSS 変数・a11y・カタログ story 併設の逸脱を取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。
+レビューを分担する必要があれば [vue-component-reviewer](../../agents/vue-component-reviewer.md) に対象差分、守る挙動、実行結果を渡す。別のチェックリストを複製せず、この Skill の該当参照を共有する。
