@@ -1459,6 +1459,7 @@ declare namespace entities {
         I2faRegisterKeyResponse_2 as I2faRegisterKeyResponse,
         I2faKeyDoneRequest_2 as I2faKeyDoneRequest,
         PartialRolePolicyOverride,
+        UrlPreviewSummary,
         EmptyRequest,
         EmptyResponse,
         AdminAbuseReportNotificationRecipientCreateRequest,
@@ -3455,6 +3456,26 @@ type TestResponse = operations['test']['responses']['200']['content']['applicati
 function toString_2(acct: Acct): string;
 
 // @public (undocumented)
+type UrlPreviewSummary = {
+    url: string;
+    title: string | null;
+    description: string | null;
+    icon: string | null;
+    thumbnail: string | null;
+    thumbnailStyle?: 'summary' | 'summary_large_image' | null;
+    sitename: string | null;
+    sensitive?: boolean;
+    activityPub: string | null;
+    fediverseCreator: string | null;
+    player: {
+        url: string | null;
+        width: number | null;
+        height: number | null;
+        allow: string[];
+    };
+};
+
+// @public (undocumented)
 type User = components['schemas']['User'];
 
 // @public (undocumented)
@@ -3660,8 +3681,8 @@ type VerifyEmailRequest = NonNullable<operations['verify-email']['requestBody']>
 
 // Warnings were encountered during analysis:
 //
-// src/streaming.ts:54:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:55:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:62:4 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:63:4 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:222:3 - (ae-forgotten-export) The symbol "ChatEvents" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:223:3 - (ae-forgotten-export) The symbol "ChatReceives" needs to be exported by the entry point index.d.ts
 

@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
-// _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義を避けるため、テスト用の固定値を注入する。
-(globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
-
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';

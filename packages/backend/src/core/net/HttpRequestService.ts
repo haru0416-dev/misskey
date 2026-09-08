@@ -3,24 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as http from 'node:http';
-import * as https from 'node:https';
-import * as net from 'node:net';
-import * as stream from 'node:stream';
 import ipaddr from 'ipaddr.js';
+import { createAgentHttpClient } from '@/core/net/AgentHttpClient.js';
 import { createCachedResolver } from '@/core/net/dns-cache.js';
-import { HttpProxyAgent, HttpsProxyAgent } from 'hpagent';
 import type { Config } from '@/config.js';
 import { StatusError } from '@/misc/status-error.js';
-import { bindThis } from '@/decorators.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import { assertActivityMatchesUrl, FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import type { IObject } from '@/core/activitypub/type.js';
 import { URL } from 'node:url';
 
 /**
- * `send()` の戻り値。Bun ネイティブ fetch の `Response` から、呼び出し側が実際に使う表面
- * (ok/status/statusText/url/headers と json()/text()) だけを取り出したラッパー。
+ * `send()` の戻り値。通信経路の `Response` から、呼び出し側が実際に使う表面
+ * (ok/status/statusText/url/headers と json()/text()/bytes()) だけを取り出したラッパー。
  * ボディは size 上限付きで読み切った上でメモリに保持しているため json()/text() は同期的に解決する。
  */
 export type HttpRequestSendResponse = {
@@ -31,6 +26,7 @@ export type HttpRequestSendResponse = {
 	headers: Headers;
 	json: () => Promise<unknown>;
 	text: () => Promise<string>;
+	bytes: () => Promise<Uint8Array>;
 };
 
 export type HttpRequestSendOptions = {
@@ -53,7 +49,7 @@ function deleteHeaderCaseInsensitive(headers: Record<string, string>, name: stri
 
 /**
  * ip が private / non-unicast かどうか。allowedPrivateNetworks に含まれる CIDR は許可 (= private ではない扱い)。
- * Agent の createConnection と send() の事前 DNS チェックで共有する。
+ * send() とストリーミングダウンロードの事前 DNS チェックで使う。
  */
 function isPrivateIp(ip: string, allowedPrivateNetworks: string[] | undefined): boolean {
 	const parsedIp = ipaddr.parse(ip);
@@ -131,135 +127,22 @@ function buildSendResponse(res: Response, body: Uint8Array): HttpRequestSendResp
 		headers: res.headers,
 		json: async () => JSON.parse(decode()),
 		text: async () => decode(),
+		bytes: async () => body,
 	};
 }
 
-class HttpRequestServiceAgent extends http.Agent {
-	constructor(
-		private config: Config,
-		options?: http.AgentOptions,
-	) {
-		super(options);
-	}
-
-	@bindThis
-	public override createConnection(
-		options: http.ClientRequestArgs,
-		callback?: (err: Error | null, stream: stream.Duplex) => void,
-	): stream.Duplex {
-		const socket = super.createConnection(options, callback);
-
-		if (socket == null) {
-			throw new Error('Failed to create socket');
-		}
-
-		socket.on('connect', () => {
-			if (socket instanceof net.Socket && process.env['NODE_ENV'] === 'production') {
-				const address = socket.remoteAddress;
-				if (address && ipaddr.isValid(address)) {
-					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
-						socket.destroy(new Error(`Blocked address: ${address}`));
-					}
-				}
-			}
-		});
-
-		return socket;
-	}
-}
-
-class HttpsRequestServiceAgent extends https.Agent {
-	constructor(
-		private config: Config,
-		options?: https.AgentOptions,
-	) {
-		super(options);
-	}
-
-	@bindThis
-	public override createConnection(
-		options: http.ClientRequestArgs,
-		callback?: (err: Error | null, stream: stream.Duplex) => void,
-	): stream.Duplex {
-		const socket = super.createConnection(options, callback);
-
-		if (socket == null) {
-			throw new Error('Failed to create socket');
-		}
-
-		socket.on('connect', () => {
-			if (socket instanceof net.Socket && process.env['NODE_ENV'] === 'production') {
-				const address = socket.remoteAddress;
-				if (address && ipaddr.isValid(address)) {
-					if (isPrivateIp(address, this.config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
-						socket.destroy(new Error(`Blocked address: ${address}`));
-					}
-				}
-			}
-		});
-
-		return socket;
-	}
-}
-
-export function createHttpRequestService(config: Config) {
+export function createHttpRequestService(config: Config, useAgent = false) {
+	const agentClient = useAgent ? createAgentHttpClient(config) : undefined;
 	// SSRF検査で見た IP へそのまま接続するため、解決結果を呼び出し側へ返せるリゾルバを使う。
 	const dnsCache = createCachedResolver({
 		successTtlMs: config.outboundNetwork.dnsCache.successTtlSeconds * 1000,
 		failureTtlMs: config.outboundNetwork.dnsCache.failureTtlSeconds * 1000,
 	});
 
-	const agentOption = {
-		keepAlive: true,
-		keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
-		maxSockets: config.outboundNetwork.http.maximumSockets,
-		maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
-		timeout: config.outboundNetwork.http.connectionTimeoutMs,
-		lookup: dnsCache.lookup,
-		localAddress: config.outboundNetwork.bindAddress,
-		family:
-			config.outboundNetwork.addressFamily === 'ipv4' ? 4 : config.outboundNetwork.addressFamily === 'ipv6' ? 6 : 0,
-	};
-
-	const httpNative: http.Agent = new http.Agent(agentOption);
-
-	const httpsNative: https.Agent = new https.Agent(agentOption);
-
-	const httpNonProxyAgent: http.Agent = new HttpRequestServiceAgent(config, agentOption);
-
-	const httpsNonProxyAgent: https.Agent = new HttpsRequestServiceAgent(config, agentOption);
-
-	const httpAgent: http.Agent = config.outboundNetwork.proxy.url
-		? new HttpProxyAgent({
-				keepAlive: true,
-				keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
-				maxSockets: config.outboundNetwork.http.maximumSockets,
-				maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
-				scheduling: 'lifo',
-				proxy: config.outboundNetwork.proxy.url,
-				localAddress: config.outboundNetwork.bindAddress,
-			})
-		: httpNonProxyAgent;
-
-	const httpsAgent: https.Agent = config.outboundNetwork.proxy.url
-		? new HttpsProxyAgent({
-				keepAlive: true,
-				keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
-				maxSockets: config.outboundNetwork.http.maximumSockets,
-				maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
-				scheduling: 'lifo',
-				proxy: config.outboundNetwork.proxy.url,
-				localAddress: config.outboundNetwork.bindAddress,
-			})
-		: httpsNonProxyAgent;
-
 	/**
 	 * 宛先が private / non-unicast でないことを確かめ、検査した IP を返す。
 	 * 返した IP へそのまま接続することで、検査と接続の間に名前解決が差し替わる
 	 * (DNS rebinding) 余地を無くす。検査しない場合は null。
-	 *
-	 * fetch() は node の Agent を受け取らないので、agent 経路 (URL プレビュー) の
-	 * socket レベル遮断はここには効かない。fetch 経路の遮断はこの事前検査が担う。
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<string[] | null> {
 		if (isLocalAddressAllowed) {
@@ -374,7 +257,7 @@ export function createHttpRequestService(config: Config) {
 	}
 
 	/**
-	 * グローバル fetch でリダイレクトを手動追跡し、各ホップの宛先を assertUrlAllowed で検査する。
+	 * リダイレクトを手動追跡し、各ホップの宛先を assertUrlAllowed で検査する。
 	 *
 	 * fetch の `redirect: 'follow'` に任せると、リダイレクト先が assertUrlAllowed を通らず、Bun では
 	 * Agent の socket レベル遮断も効かないため、`302 -> http://169.254.169.254/` 等で private アドレスへ
@@ -385,6 +268,7 @@ export function createHttpRequestService(config: Config) {
 		initialUrl: string,
 		baseInit: { method: string; headers: Record<string, string>; body: RequestInit['body']; signal: AbortSignal },
 		isLocalAddressAllowed: boolean,
+		followRedirects = true,
 	): Promise<Response> {
 		let currentUrl = new URL(initialUrl);
 		let method = baseInit.method;
@@ -392,12 +276,20 @@ export function createHttpRequestService(config: Config) {
 		const headers = { ...baseInit.headers };
 
 		for (let redirects = 0; ; redirects++) {
-			const allowedAddresses = await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
+			if (currentUrl.protocol !== 'http:' && currentUrl.protocol !== 'https:') {
+				throw new StatusError('Unsupported URL protocol', 400, 'Bad Request');
+			}
+			let allowedAddresses = await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
 			const proxyUrl = config.outboundNetwork.proxy.url;
 			const useProxy =
 				proxyUrl != null && !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
+			if (agentClient && !useProxy && allowedAddresses && config.outboundNetwork.addressFamily !== 'dualStack') {
+				const kind = config.outboundNetwork.addressFamily;
+				allowedAddresses = allowedAddresses.filter((address) => ipaddr.parse(address).kind() === kind);
+				if (allowedAddresses.length === 0) throw new Error(`No ${kind} address for ${currentUrl.hostname}`);
+			}
 
 			// proxy 経由では宛先解決を proxy が行うので、IP 固定はしない (できない)。
 			const pinned =
@@ -418,10 +310,12 @@ export function createHttpRequestService(config: Config) {
 				init.proxy = proxyUrl;
 			}
 
-			const res = await fetch(pinned?.url ?? currentUrl, init);
+			const res = agentClient
+				? await agentClient.request(pinned?.url ?? currentUrl, init, useProxy)
+				: await fetch(pinned?.url ?? currentUrl, init);
 
 			const location = res.headers.get('location');
-			if (!REDIRECT_STATUSES.has(res.status) || location == null) {
+			if (!followRedirects || !REDIRECT_STATUSES.has(res.status) || location == null) {
 				if (pinned != null) {
 					// ActivityPub の ID 照合には接続用 IP ではなく、最終取得先のホスト名が必要。
 					const responseUrl = new URL(currentUrl);
@@ -468,6 +362,7 @@ export function createHttpRequestService(config: Config) {
 			timeout?: number;
 			size?: number;
 			isLocalAddressAllowed?: boolean;
+			followRedirects?: boolean;
 		} = {},
 		extra: HttpRequestSendOptions = {
 			throwErrorWhenResponseNotOk: true,
@@ -495,6 +390,7 @@ export function createHttpRequestService(config: Config) {
 					signal: controller.signal,
 				},
 				isLocalAddressAllowed,
+				args.followRedirects,
 			);
 			body = await readBodyWithLimit(res, args.size ?? config.outboundNetwork.http.maximumResponseSizeBytes);
 		} finally {
@@ -517,8 +413,7 @@ export function createHttpRequestService(config: Config) {
 	}
 
 	return {
-		httpAgent,
-		httpsAgent,
+		dispose: () => agentClient?.dispose(),
 		assertUrlAllowed,
 		fetchFollowingRedirects,
 		getActivityJson,

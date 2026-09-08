@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { SummalyResult } from '@misskey-dev/summaly';
+import { fetchUrlPreview } from './UrlPreviewFetcher.js';
+import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createHttpRequestService, HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
@@ -33,8 +34,9 @@ export function createUrlPreviewService(
 	loggerService: LoggerService,
 ) {
 	const logger = loggerService.getLogger('url-preview');
-	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.instance.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
-	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1時間、最大100件
+	let previewHttp: HttpRequestService | undefined;
+	const defaultUserAgent = config.runtime.userAgent;
+	const summaryCache = new MemoryKVCache<UrlPreviewSummary>(1000 * 60 * 60, 100); // 1時間、最大100件
 
 	function wrap(url?: string | null): string | null {
 		return url != null
@@ -134,40 +136,42 @@ export function createUrlPreviewService(
 		}
 	}
 
-	async function fetchSummary(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
-		const { summaly } = await import('@misskey-dev/summaly');
-
-		return summaly(url, {
+	async function fetchSummary(url: string, meta: MiMeta, lang?: string): Promise<UrlPreviewSummary> {
+		// 送信元IPと接続プール設定を適用するため、BunのHTTP Agent経路を使う。
+		previewHttp ??= createHttpRequestService(config, true);
+		return fetchUrlPreview(previewHttp, url, {
 			followRedirects: meta.urlPreviewAllowRedirect,
 			lang: lang ?? 'ja-JP',
-			agent: {
-				http: httpRequestService.httpAgent,
-				https: httpRequestService.httpsAgent,
-			},
-			userAgent: meta.urlPreviewUserAgent ?? summalyDefaultUserAgent,
+			userAgent: meta.urlPreviewUserAgent ?? defaultUserAgent,
 			operationTimeout: meta.urlPreviewTimeout,
 			contentLengthLimit: meta.urlPreviewMaximumContentLength,
 			contentLengthRequired: meta.urlPreviewRequireContentLength,
 		});
 	}
 
-	function fetchSummaryFromProxy(url: string, meta: MiMeta, lang?: string): Promise<SummalyResult> {
+	function fetchSummaryFromProxy(url: string, meta: MiMeta, lang?: string): Promise<UrlPreviewSummary> {
 		const proxy = meta.urlPreviewSummaryProxyUrl!;
 		const queryStr = query({
 			url: url,
 			lang: lang ?? 'ja-JP',
 			followRedirects: meta.urlPreviewAllowRedirect,
-			userAgent: meta.urlPreviewUserAgent ?? summalyDefaultUserAgent,
+			userAgent: meta.urlPreviewUserAgent ?? defaultUserAgent,
 			operationTimeout: meta.urlPreviewTimeout,
 			contentLengthLimit: meta.urlPreviewMaximumContentLength,
 			contentLengthRequired: meta.urlPreviewRequireContentLength,
 		});
 
-		return httpRequestService.getJson<SummalyResult>(`${proxy}?${queryStr}`, 'application/json, */*', undefined, true);
+		return httpRequestService.getJson<UrlPreviewSummary>(
+			`${proxy}?${queryStr}`,
+			'application/json, */*',
+			undefined,
+			true,
+		);
 	}
 
 	function dispose(): void {
 		summaryCache.dispose();
+		previewHttp?.dispose();
 	}
 
 	return { handle, dispose };
