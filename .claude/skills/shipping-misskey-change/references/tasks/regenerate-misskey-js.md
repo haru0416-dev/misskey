@@ -1,78 +1,28 @@
-# misskey-js の自動生成型を再生成する
+# 公開 API の生成型を更新する
 
-backend の API endpoint やスキーマ (`meta` / `paramDef` / `res`) を変更した後、`packages/misskey-js/src/autogen/` の自動生成型を最新化するための手順。
+API の追加・削除、`meta`・`paramDef`・`res`、公開 schema、OpenAPI または型 generator の出力契約を変えた場合に使う。API ディレクトリ内の内部処理・コメントだけの変更や、調査・文書変更だけでは実行しない。
 
-**忘れると CI の `check-misskey-js-autogen` で必ず落ちる**。最頻ミスのひとつ。
+生成入力は [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts)、[OpenAPI generator](../../../../../packages/backend/src/server/api/openapi/gen-spec.ts)、[schema 変換](../../../../../packages/backend/src/server/api/openapi/schemas.ts) から追う。ファイルの配置だけでは適用可否を決めない。
 
-## いつ実行するか
+## 実行
 
-以下のいずれかに該当する変更を加えたとき:
-
-- 新規エンドポイント追加 (`packages/backend/src/server/api/endpoints/<category>/<name>.ts`)
-- 既存エンドポイントの `meta` (errors / res / kind / requireCredential 等) を変更
-- 既存エンドポイントの `paramDef` (入力 schema) を変更
-- packed entity (`packages/backend/src/models/json-schema/*.ts`) を変更
-
-実質「`packages/backend/src/server/api/` 配下を触ったら必ず」と考えてよい。
-
-## 実行コマンド
+リポジトリルートから:
 
 ```bash
-# リポジトリルートから実行する
 bun run build-misskey-js-with-types
 ```
 
-内部で以下が一括実行される:
+[package.json](../../../../../package.json) の script が依存・backend をビルドし、`packages/backend/built/api.json` を生成、`packages/misskey-js/generator/api.json` へ渡し、`packages/misskey-js/src/autogen/` を更新して misskey-js のビルドと API extractor を実行する。
 
-1. backend ビルド (`bun run --bun --filter backend build`)
-2. OpenAPI spec 生成 (`packages/backend/built/api.json`)
-3. misskey-js 用 schema 生成 (`packages/misskey-js/generator/api.json`)
-4. misskey-js の TypeScript 型再生成 (`packages/misskey-js/src/autogen/{types,entities,endpoint,models,apiClientJSDoc}.ts`)
-5. misskey-js ビルド + API extractor
+設定コンパイルに必要な開発・検証用設定を確認する。既存の設定を上書きせず、秘密情報は [AGENTS.md](../../../../../AGENTS.md) の条件に従って除外する。実行時間や成功をキャッシュの有無から断定しない。
 
-実行時間は 1-3 分程度。タイムアウト警告が出る場合は `--timeout=600000` 相当の長めの設定を使う。
+## 生成後
 
-## 実行後の確認
+- 終了結果を確認し、生成型が変更した API 契約と一致するかを見る。失敗した場合、途中まで更新された生成物を完了扱いにしない。
+- `packages/misskey-js/src/autogen/` の差分を成果物に含める。手編集で生成結果を合わせない。生成処理はこのディレクトリを置き換えるため、既存の利用者の編集があれば先に区別する。
+- 入力を変更したのに差分がない場合は、公開型に影響しない変更なのか、生成対象への登録が漏れているのかを入力と出力から確認する。差分なしだけで正常と判断しない。
+- 自動生成型の一致は runtime の入力検証・認可・応答の正しさの証明ではない。利用側の挙動は変更した境界で別に検証する。
 
-```bash
-# 何が変わったかを軽く確認
-git status --short -- packages/misskey-js/
-git diff --stat -- packages/misskey-js/src/autogen/
+[autogen CI](../../../../../.github/workflows/check-misskey-js-autogen.yml) は生成結果と追跡された `src/autogen/` を比較する。中間生成物や意図しない変更をまとめて commit しない。ライセンスは misskey-js の MIT 管轄を維持し、AGPL ヘッダーを一律追加しない。
 
-# 内容を見たい場合
-git diff -- packages/misskey-js/src/autogen/
-```
-
-## 差分のパターン
-
-- **差分なし** → backend の変更は misskey-js の公開型に影響していない (内部リファクタなど)。追加コミット不要
-- **差分あり** → `packages/misskey-js/src/autogen/` 配下のファイルを **必ず commit に含める**
-
-  ```bash
-  git add packages/misskey-js/src/autogen/
-  ```
-
-  `api.json` の差分が大きい場合は、API endpoint 側の `meta` / `paramDef` / `res` 定義が想定通りか確認する。
-
-## 注意
-
-- このコマンドは **backend 編集後の確認** が目的。backend を変更していないのに走らせるとビルドキャッシュ次第で no-op になる
-- 実行中は `packages/backend/built/` や `packages/misskey-js/built/` などの中間生成物が更新されるが、これらは `.gitignore` 対象
-- 生成物以外 (`packages/misskey-js/src/` のうち `autogen/` 以外) に予期せぬ差分が出た場合は、ローカルの編集が混入している可能性があるため、一旦中止して原因を調査する
-- `packages/misskey-js/` 配下は **MIT ライセンスのサブパッケージ** なので、`autogen/` ファイルには AGPL の SPDX ヘッダーを付けない / 不要
-
-## CI で落ちた場合のメッセージ例
-
-```
-CI: check-misskey-js-autogen
-> Please regenerate misskey-js by running:
->   bun run build-misskey-js-with-types
-> and commit the changes under packages/misskey-js/src/autogen/.
-```
-
-ローカルでもう一度上記コマンドを実行 → 差分を commit → push し直す。
-
-## 関連
-
-- API endpoint 追加の全手順 → [working-on-backend/references/tasks/adding-api-endpoint.md](../../../working-on-backend/references/tasks/adding-api-endpoint.md)
-- `meta` / `paramDef` / `res` の規約 → [working-on-backend/references/knowledge/api-meta-paramdef.md](../../../working-on-backend/references/knowledge/api-meta-paramdef.md)
+登録方法を確認する必要がある場合だけ [API 追加手順](../../../working-on-backend/references/tasks/adding-api-endpoint.md) を参照する。

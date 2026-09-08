@@ -1,103 +1,29 @@
-# コンポーネントカタログ (`*.stories.impl.ts`)
+# コンポーネントカタログ
 
-`packages/frontend/catalog` はコンポーネントを一覧・確認するための小さな Vite アプリ。
-Storybook は 2026-08-26 に撤去した (実行時にストーリーが一つも描画できない状態が続いていたため)。
+[packages/frontend/catalog](../../../../../packages/frontend/catalog/) は単独部品の状態を確認する Vite アプリ。部品の見た目や操作を継続して再現したい場合は、隣に `*.stories.impl.ts` を置く。新しい `.vue` という理由だけで story や play を必須にしない。既存 story がある変更では契約の変化を反映する。
 
-## 起動と検証
+## 書く場所と API
 
-| 用途 | コマンド |
+[MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts) の配置と [StoryObj](../../../../../packages/frontend/src/stories/types.ts) に合わせる。`render` は Vue component を返し、`args`、`decorators`、`parameters`、`play` を必要に応じて使う。部品本体の SFC 規約を、文字列 template を返す story の component options にまで適用しない。
+
+イベント記録は [action.ts](../../../../../packages/frontend/src/stories/action.ts)、fixture は [fakes.ts](../../../../../packages/frontend/src/stories/fakes.ts)、操作と assertion は [test.ts](../../../../../packages/frontend/src/stories/test.ts) の既存入口を使う。`parameters.msw` は共通 API handler に重ねる。実データと誤認される token や account は使わず、既存の story fixture を利用する。
+
+## 実行先
+
+| 用途 | リポジトリルートから実行 |
 | --- | --- |
-| カタログを開く (http://127.0.0.1:6006/) | `bun run --bun --filter frontend catalog` |
-| 静的ビルド (CI が実行) | `bun run --filter frontend catalog:build` |
-| すべての story を mount + `play` を実ブラウザで検証 | `bun run --bun --filter frontend test:stories` |
+| 表示・操作の確認 | `bun run --bun --filter frontend catalog` |
+| 配信物の build | `bun run --filter frontend catalog:build` |
+| Chromium で mount と play を実行 | `bun run --bun --filter frontend test:stories` |
 
-## story の置き方
+[設定](../../../../../packages/frontend/vite.catalog.config.ts) の既定は `127.0.0.1:6006`。ポートが使用中なら変わるため、起動ログの URL を使う。依存 package とブラウザの準備は [frontend-testing.md](frontend-testing.md) を参照する。
 
-`MyComponent.vue` の隣に `MyComponent.stories.impl.ts` を置く。`render` は Vue の
-コンポーネントオプションを返す。
+## ハーネスの境界
 
-```ts
-import type { StoryObj } from '@/stories/types.js';
-import MyComponent from './MyComponent.vue';
+[stories.browser.ts](../../../../../packages/frontend/test/stories.browser.ts) は検出した全 story を mount し、ある場合だけ play を実行する。カタログ本体は play を実行しないので、画面を開いたことと play 成功を区別する。
 
-export const Default = {
-	render: (args) => ({
-		components: { MyComponent },
-		setup: () => ({ args }),
-		template: '<MyComponent v-bind="args" />',
-	}),
-	args: {},
-} satisfies StoryObj<typeof MyComponent>;
-```
+[environment.ts](../../../../../packages/frontend/src/stories/environment.ts) と [seed-account.ts](../../../../../packages/frontend/src/stories/seed-account.ts) が mock、account、instance、popup の初期化を担う。module import 時の初期化順を崩さない。ログイン済み fixture の成功を、匿名や別 account での非漏洩の証拠にしない。
 
-- 使えるキー: `args` / `render` / `decorators` / `parameters` / `play`
-- `parameters.layout`: `centered` / `fullscreen` / `padded`
-- `parameters.msw`: msw のハンドラ。共通ハンドラ (`@/stories/mocks.js`) の上に重なる
-- `decorators`: `(story, context) => ({ template: '<div ...><story/></div>' })`。先頭ほど内側
-- イベント記録は `@/stories/action.js` の `action()`。カタログ下部の一覧に出る
-- fixture は `@/stories/fakes.js` / `fake-utils.js` / `charts.js`
+popup は play の `canvasElement` 内に mount される。検索範囲を canvas に限定し、確認 UI が必要な操作では実際に確定・取消する。非同期表示は出現や操作可能な状態を待ち、固定 sleep だけで合わせない。
 
-## `play` を書くとき
-
-`play` を持つ story だけが `test:stories` で実行される。`expect` / `within` /
-`userEvent` / `waitFor` は **`@/stories/test.js`** から import する (vitest + Testing Library)。
-
-```ts
-async play({ canvasElement }) {
-	const canvas = within(canvasElement);
-	await expect(canvas.getByRole('button')).toBeInTheDocument();
-}
-```
-
-**罠**: `os.popup` / `os.popupMenu` が開く要素は `canvasElement` の内側に描画される。
-`document.body` を直接探さないこと。story 間で popup が残ると `getByRole` が複数一致して
-落ちるため、ハーネスが story ごとに `popups` を空にしている。
-
-## テストが見ているもの
-
-`test:stories` は **全 story を mount** し、`play` を持つものはそれも走らせる。mount 中の例外は
-`app.config.errorHandler` で拾って落とすので、play を書かない story でも
-「既定の args で描画できる」ことは守られる。
-
-`nextTick` だけでは、モックした API の応答が解決した後に投げる例外を取り逃す。
-ハーネスはマクロタスクを数回回してから判定している。
-
-**story のハーネスは実運用の初期状態を再現する**。localStorage に account (token 込み) と
-instance の meta を入れてある。どちらも欠けると `$i` が null になったり
-`instance.serverRules.length` が落ちたりして、実運用では起きない失敗が出る。
-`@/i.ts` と `@/instance.ts` は **import された瞬間**に localStorage を読むので、
-seed は `@/stories/seed-account.js` を最初の import に置くことで行う (import 巻き上げに負けるため)。
-
-## `play` を書くときの罠 (実測)
-
-- **`os.confirm` / `os.contextMenu` を挟む操作は答えるまで進まない。** 同意スイッチ等は
-  クリックしただけでは値が立たない。確認ダイアログの OK (`i18n.ts.ok`) を押すこと
-- **開いた直後のダイアログは `pointer-events: none`。** フェードイン中なので
-  `await waitFor(() => userEvent.click(ok))` で押せるまで待つ
-- **`os.contextMenu` は component を動的 import する。** `getByRole('menu')` では取れないので
-  `findByRole` を使う
-- **装飾画像 (`alt=""`) は `getByRole('img')` で引けない。** role は `presentation` になる。
-  リンクの唯一の中身が装飾画像だとリンク名が無くなるので、その場合はコンポーネント側が誤り
-- **汎用の `MkInput` は `textbox`。** autocomplete を付けても `combobox` にはならない
-- **「在ること」だけを見ない。** `getByRole('list')` は中身が空でも通る。`getBy*` は
-  見つからなければ throw するので、直後の `toBeInTheDocument()` は何も足さない。
-  モックが返した実データが出るところまで見る
-- **時刻に依存する story は `origin` を明示する。** 相対表示は基準時刻を渡さないと実時刻になり、
-  書いた当時は未来だった日付が過去になって落ちる
-
-## バリエーションは story として表に出す
-
-「スナップショット時だけ静止させる」ような隠れた条件分岐は置かない (Chromatic 撤去で
-`isChromatic()` が恒久的に死に、story が実時刻基準になって落ちた前例がある)。
-見せたい状態が複数あるなら **別の story として export する**。
-
-```ts
-export const Default = { /* アニメーションあり */ } satisfies StoryObj<typeof MkLoading>;
-
-export const Static = {
-	...Default,
-	args: { ...Default.args, static: true },
-} satisfies StoryObj<typeof MkLoading>;
-```
-
-時刻に依存するコンポーネントも同様に、実時刻の `Default` と固定時刻の `FixedTime` を並べる。
+play は見つかった要素の存在だけでなく、入力後の結果や取消時の非変更など、守りたい契約を確認する。時刻や乱数に依存する状態は fixture・基準時刻で再現し、比較用の隠れた分岐を入れない。mock での mount 成功は、本体の API・権限・保存や実レイアウトの確認を代替しない。

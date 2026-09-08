@@ -46,7 +46,7 @@ function resolveTarget(target, mdPath) {
 
 const files = execFileSync('git', ['ls-files', '*.md'], { encoding: 'utf8' })
 	.split('\n')
-	.filter((f) => f !== '' && !excludedPrefixes.some((p) => f.startsWith(p)));
+	.filter((f) => f !== '' && !excludedPrefixes.some((p) => f.startsWith(p)) && existsSync(f));
 
 const broken = [];
 for (const file of files) {
