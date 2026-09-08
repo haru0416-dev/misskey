@@ -1,32 +1,45 @@
 ---
 name: shipping-misskey-change
-description: "Use at every finish moment of this Misskey fork change — immediately before committing, pushing, opening a PR, or handing work back. Runs the Bun-era pre-ship checklist: `bun run lint` (oxlint + typecheck), `bun run build-misskey-js-with-types` when backend API schemas changed, `bun run --bun --filter backend check-migrations` when entities or migrations changed, SPDX verification for new files, locale safety, and `CHANGELOG.md` Unreleased entries for user-visible changes."
+description: Misskey の変更を利用者へ返す前、コミット・プッシュ・PR 作成前の検証を行う。
 ---
 
-# shipping-misskey-change
+# 変更を返す前の確認
 
-Misskey の変更の **finish 局面** (commit / PR / merge する直前、またはコミットせずユーザーに作業を返す直前) に必ず走らせる最終チェックリスト。
+共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) を正本とする。この Skill は変更境界に応じた実行先を選ぶための手順であり、送信や DB 操作の許可を与えない。既に読んだ規則や、同じ変更状態で得た検証結果は使い回す。
 
-CI で落ちやすい / レビュアーから指摘されやすいポイントを 1 箇所に集めている。後で references を辿る余裕を作らないため、チェックリストは SKILL.md 本体に直書きする。
+## 変更と証拠を対応させる
 
-**他スキル実行後も免除されない。** `brainstorming` / `writing-plans` / その他アップストリームスキルを先に呼んでいても、作業を返す直前・commit 直前のタイミングでこのスキルを呼ぶこと。
+要求された利用側の結果、変更した境界、その処理を共有する経路を確認し、各境界に必要な証拠を揃える。
 
-## 最終チェックリスト
+- 不具合修正は、報告された失敗に対する修正確認を行う。既存テストの検出能力を維持し、期待値の緩和・skip・対象縮小で失敗を隠さない。
+- API・DB・queue は、応答だけでなく保存状態と失敗・競合・再実行時の副作用を確認する。HTTP・WebSocket・連合を変更した場合は実際の通信境界を通す。
+- UI は実ブラウザで対象操作を確認する。実行環境が無い場合は代替確認と未確認の表示・操作を分けて報告する。
+- smoke は変更した経路の証拠であり、既存の認証・公開範囲・データ整合性・連合互換性の検証を一本で置き換えるものではない。
+- 文書・設定は参照先と現行実装を照合する。調査だけで変更が無い場合は調査結果を証拠とし、DB や生成型のコマンドを実行しない。
 
-このリストを TodoWrite に展開して 1 項目ずつ確認すること。**該当しない項目は飛ばして良いが、判断は明示する**。
+## 実行先
 
-- [ ] lint が通る — 標準は `bun run lint` (oxlint + Playwright 型検査 + 全 package typecheck)。軽量な追加確認が要る場合は [/quality-gate](../../commands/quality-gate.md) も参照してよい
-- [ ] backend で `meta` / `paramDef` / `res` を変更した → `bun run build-misskey-js-with-types` を実行して `packages/misskey-js/src/autogen/` の差分も commit に含めた → 詳細手順は [references/tasks/regenerate-misskey-js.md](references/tasks/regenerate-misskey-js.md)
-- [ ] エンティティ (`packages/backend/src/models/*.ts` の `@Column` / `@Entity` / `@Index`) を変更した → `bun run --bun --filter backend check-migrations` が pending DDL 0 件で通る
-- [ ] migration ファイルを追加した → `db/schema/*.ts` の変更を `bun run --filter backend db:generate`(特殊DDLのみ`db:generate:custom`)で生成したものである / 生成SQLの中身を目視確認した / 既存のマージ済 migration は一切触っていない
-- [ ] 新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.vue` / `.scss` / `.html` ファイルを追加した → SPDX ヘッダーを付けた (`.vue` / `.html` は HTML コメント形式、その他は TS コメント形式)
-- [ ] `locales/` を編集した → **`ja-JP.yml` だけ** を変更しており、他言語 yml の diff は出ていない (`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空)
-- [ ] ユーザーから見える変更 (機能追加 / 既存挙動変更) → `CHANGELOG.md` の `## Unreleased` 直下の該当サブセクション (General / Client / Server) に 1 行追記した → 詳細書式は [references/tasks/changelog-update.md](references/tasks/changelog-update.md)
-- [ ] backend API endpoint を追加・変更した → Claude Code 等で subagent が使える環境なら [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) を起動する。Codex など subagent 起動が制限される環境では、同等の観点 (endpoint-list 登録 / misskey-js 再生成 / meta・UUID / SPDX) を自分で確認する
-- [ ] frontend の `.vue` を追加・変更した → subagent が使える環境なら [vue-component-reviewer](../../agents/vue-component-reviewer.md) を起動する。使えない環境では、同等の観点 (SPDX 形式 / 命名 / i18n / SCSS 変数 / os.* / a11y / コンポーネントカタログ 併設) を自分で確認する
+コマンドはリポジトリルートから実行する。対象は [root scripts](../../../package.json) と [backend scripts](../../../packages/backend/package.json) に照合する。
 
-## 何のためのスキルか
+| 変更対象 | 必要な確認 |
+| --- | --- |
+| 変更全体 | 最終状態で `bun run lint`。個別 typecheck や smoke の成功で代用しない |
+| エージェント規則・入口 | `bun run lint:agent-instructions`。正本を更新した場合は `bun run sync:agent-instructions` で入口を生成してから検査する |
+| API の `meta`・`paramDef`・`res`、公開 schema、型生成への入力 | [型再生成手順](references/tasks/regenerate-misskey-js.md) |
+| `packages/backend/src/db/schema/`・migration | 下記の DB 確認 |
+| 新規ファイル・locale・利用者影響 | AGENTS.md の SPDX・locale・CHANGELOG 条件を差分に適用する。CHANGELOG の編集先は [追記手順](references/tasks/changelog-update.md) |
 
-これは「**作業中に何を作るか**」を決めるスキルではなく、「**作り終わった後に CI を通す**」スキル。`working-on-backend` / `working-on-frontend` から始まった作業の **出口** として機能する。
+`bun run lint` の対象は package script を正本とする。失敗時には失敗した検査と原因を記録し、関係ない期待値や設定を緩めない。
 
-該当する変更がある場合は各 references/tasks/ を Read して詳細手順を踏むこと。`bun run lint` は references を読まずに直接走らせて良い。
+挙動の確認は変更に近い既存テストから選び、通信・連合・実ランタイムが契約なら対応する E2E まで含める。backend の `test` / `test:e2e` / `test:e2e:bun` / `test:fed` は `bun run --bun --filter backend <script>` で実行する。`.config/test.yml` が無い場合だけ `.github/misskey/test.yml` をコピーし、専用 DB 等の依存先を確認する。各 script が設定をコンパイルする。参照先は [backend CI](../../../.github/workflows/test-backend.yml) と [連合 CI](../../../.github/workflows/test-federation.yml)。
+
+## DB 変更時だけ行うこと
+
+- schema 変更は `bun run --filter backend db:generate`、自動検出できない DDL は `bun run --filter backend db:generate:custom` で生成し、SQL と journal を確認する。マージ済 migration は変更せず、forward-only の新規 migration とする。
+- 接続先を隔離した検証 DB に固定し、最新の backend build を使って migration の適用と対象データ・制約を検証する。本番 DB へ接続したまま確認しない。
+- 適用後、同じ検証 DB を指定して `bun run --bun --filter backend check-migrations` が未適用 migration 0 件で終わることを確認する。
+- この check は [migration-runner.ts](../../../packages/backend/src/migration-runner.ts) の journal と DB の適用時刻の比較であり、schema 差分・SQL の正しさ・履歴改変を検出する検査ではない。管理 schema/table が無ければ作成するため、読み取り専用の調査コマンドとして使わない。
+
+## 返す内容
+
+成果物と要求への対応、実行した検証と結果、適用外の項目と理由、未実行の検証と不足する前提を返す。必要なら [API reviewer](../../agents/misskey-api-reviewer.md) または [Vue reviewer](../../agents/vue-component-reviewer.md) に対象差分・契約・証拠を渡すが、レビューは実行検証の代わりにはならない。性能・費用・品質の改善は、比較実測が無ければ未実証とする。

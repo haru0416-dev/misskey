@@ -1,197 +1,23 @@
-# 新規 / 既存 `Mk*` Vue コンポーネントを追加・改修する
+# 画面・コンポーネントを追加・改修する
 
-`packages/frontend/src/components/` 配下に新規の共有 Vue 3 SFC を追加する、または既存コンポーネントを大きく改修する時の手順。同じ規約をレビュー側からチェックする agent が [.claude/agents/vue-component-reviewer.md](../../../../agents/vue-component-reviewer.md)。
+## 配置と利用側
 
-## 大前提 (事故直結 / Critical)
+[現行の配置と依存方向](../../../../../packages/frontend/src/README.md) に合わせる。共通部品は `components/<category>/`、機能を知る部品は `features/<feature>/components/`、ルート画面は `pages/` に置く。共有・機能部品の `Mk*` 命名を維持し、ページや widget まで一律に付け替えない。`components/` 直下に部品を増やさず、global 登録は [components/index.ts](../../../../../packages/frontend/src/components/index.ts) の責務とする。
 
-1. **SPDX ヘッダー** — `.vue` は HTML コメント形式 `<!-- ... -->`、`.stories.impl.ts` は TS コメント形式 `/* ... */`。欠落すると CI (`spdx` ジョブ) が落ちる
-2. **`Mk` プレフィックス必須** — 共有コンポーネントは `MkButton.vue` / `global/MkAvatar.vue` のように `Mk` で始める。ページ固有 UI は `Mk` を付けず `pages/` 側に置く
-3. **`locales/ja-JP.yml` のみ編集可** — i18n キー追加時に他言語 (`en-US.yml` 等) を手で触ってはいけない。Crowdin の自動配信で上書きされて失われる。詳細は [tasks/adding-i18n-key.md](adding-i18n-key.md) を参照
-4. **文字列リテラルの直書き禁止** — テンプレート / JS どちらでも、ユーザーに見せる文言は必ず `i18n.ts.<key>` か `i18n.tsx.<key>(...)` 経由 → [knowledge/i18n-usage.md](../knowledge/i18n-usage.md)
-5. **ブラウザ標準 UI を直接呼ばない** — `alert()` / `confirm()` / `window.prompt()` は禁止、必ず `os.alert` / `os.confirm` / `os.popup` 経由 → [knowledge/os-api.md](../knowledge/os-api.md)
+近い既存部品とその利用側を読み、props・emits・slots・v-model の契約を確定する。変更する公開型や配置は全利用側を移し、旧 import や不要な re-export を残さない。単独表示か、画面全体の状態遷移かを区別して確認経路を選ぶ。
 
-## ファイル配置
+## 実装で判断すること
 
-`components/` 直下にファイルは置かない (global 登録の entrypoint である `index.ts` のみ)。共通 UI は責務別のサブディレクトリへ置く。
+- SFC の型と操作性は [component-conventions.md](../knowledge/component-conventions.md) に合わせる。ローカル state、永続設定、query cache、Paginator のどこが値を所有するかを決め、同じデータの別管理を増やさない。
+- ユーザーに見せる文言は [i18n-usage.md](../knowledge/i18n-usage.md)、キー変更は [adding-i18n-key.md](adding-i18n-key.md) を使う。
+- 見た目は [scss-modules.md](../knowledge/scss-modules.md) の既存トークンと部品を使う。単独部品だけでなく配置先の幅・overflow・スクロールも確認する。
+- 確認・入力・メニューは [os-api.md](../knowledge/os-api.md) を使い、取消と成功を区別する。
+- 共有描画を変えたら embed、通知に影響する変更なら service worker の対応する利用側まで追う。接続先は [Skill 入口](../../SKILL.md) を参照する。
 
-| 配置先 | 用途 | 命名 |
-|---|---|---|
-| `packages/frontend/src/components/<category>/Mk<Name>.vue` | 機能名を知らなくても使える共通 UI 部品。`<category>` は `form` / `overlay` / `layout` / `display` / `effects` / `grid` | `Mk<Name>.vue` (サブディレクトリ内でも `Mk` prefix 必須) |
-| `packages/frontend/src/components/global/Mk<Name>.vue` | `components/index.ts` で Vue グローバルコンポーネント登録 (`app.component`) され、import 無しで全テンプレートから使える基本部品 (`MkA` / `MkAvatar` / `MkAcct` 等) | 同上 |
-| `packages/frontend/src/features/<feature>/components/Mk<Name>.vue` | 特定のユーザー機能を知っている UI (例: `features/notes/components/MkPoll.vue`) | 同上 |
-| `packages/frontend/src/pages/<Name>.vue` | 単一ページ専用の UI (再利用しない) | `Mk` prefix **不要** |
+## 利用経路で確かめる
 
-判定は「その機能の名前を知らなくても使えるか」→ Yes なら `components/<category>/`、特定機能に属するなら `features/<feature>/components/`、
-単一ページからしか使わないなら `pages/`。各 category の責務と依存方向は
-[packages/frontend/src/README.md](../../../../../packages/frontend/src/README.md) が正典。
+[frontend-testing.md](../knowledge/frontend-testing.md) から、既存テストと実ブラウザで対象挙動を確認する。新しい部品だからという理由だけで新テストや framework を追加しない。[カタログ](../knowledge/component-catalog.md) で継続して再現する価値がある状態は隣接する story に置く。既存 story の props やイベントを壊した場合は同じ変更で更新する。
 
-ストーリーが必要 (= ほぼ常に必要) なら、同階層に `Mk<Name>.stories.impl.ts` も作る → [knowledge/component-catalog.md](../knowledge/component-catalog.md)。
+画面では、変更に関係する入力・確定・取消・再表示を実行する。取得や保存を変えた場合は待機・失敗・再取得、条件変更直後の古い応答、アカウント切替時の非漏洩を確認する。レイアウト変更では狭い画面、長い文言、テーマ、keyboard・フォーカス・スクロールを実際に見る。型検査や mount 成功を、この確認の代わりにしない。
 
-## SPDX ヘッダー
-
-### `.vue` ファイル (HTML コメント)
-
-```html
-<!--
-SPDX-FileCopyrightText: syuilo and misskey-project
-SPDX-License-Identifier: AGPL-3.0-only
--->
-```
-
-`/* ... */` (TS / JS 形式) は **使わない**。既存の `.vue` ファイルがすべて HTML コメント形式を採用しており、SFC 先頭として自然な形式に統一するため。
-
-### `.stories.impl.ts` ファイル (TS コメント)
-
-```ts
-/*
- * SPDX-FileCopyrightText: syuilo and misskey-project
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-```
-
-## 最小テンプレート
-
-シンプルな表示コンポーネントの最小形を示す**合成例** (特定ファイルの写しではない)。実在する単純コンポーネントの例は [MkInfo.vue](../../../../../packages/frontend/src/components/display/MkInfo.vue) 等を参照:
-
-```vue
-<!--
-SPDX-FileCopyrightText: syuilo and misskey-project
-SPDX-License-Identifier: AGPL-3.0-only
--->
-
-<template>
-<div :class="[$style.root, $style[`variant_${variant}`]]">
-	<slot></slot>
-	<button
-		v-if="closable"
-		class="_button"
-		:class="$style.close"
-		:aria-label="i18n.ts.close"
-		@click="emit('close')"
-	>
-		<i class="ti ti-x"></i>
-	</button>
-</div>
-</template>
-
-<script lang="ts" setup>
-import { i18n } from '@/i18n.js';
-
-const props = withDefaults(defineProps<{
-	variant?: 'info' | 'warn' | 'danger';
-	closable?: boolean;
-}>(), {
-	variant: 'info',
-});
-
-const emit = defineEmits<{
-	(ev: 'close'): void;
-}>();
-</script>
-
-<style lang="scss" module>
-.root {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 12px 14px;
-	border-radius: var(--MI-radius);
-}
-
-.variant_info {
-	background: var(--MI_THEME-infoBg);
-	color: var(--MI_THEME-infoFg);
-}
-
-.variant_warn {
-	background: var(--MI_THEME-infoWarnBg);
-	color: var(--MI_THEME-infoWarnFg);
-}
-
-.variant_danger {
-	background: var(--MI_THEME-error);
-	color: var(--MI_THEME-fgOnAccent);
-}
-
-.close {
-	margin-left: auto;
-}
-</style>
-```
-
-より複雑なケース (型ジェネリック / 2 ブロック script / `v-model` 連動 / 名前付き slot) は → [knowledge/component-conventions.md §テンプレート集](../knowledge/component-conventions.md)。
-
-## `<script>` / `<style>` 規約サマリ
-
-| 項目 | 規約 | 新規不可 |
-|---|---|---|
-| `<script>` 開始タグ | `<script lang="ts" setup>` または `<script setup lang="ts">` | `<script>` (lang 無し) / Options API |
-| Props 定義 | `defineProps<{ ... }>()` (type-only) | runtime object 形式 |
-| Emits 定義 | `defineEmits<{ (ev: 'click'): void }>()` (type-only) | runtime array 形式 |
-| `<style>` 開始タグ | `<style lang="scss" module>`、参照は `:class="$style.foo"` | `<style scoped>` (module なし) |
-| CSS 値 | `var(--MI_THEME-...)` / `var(--MI-...)` | `#fff` / `rgb(...)` のハードコード |
-| グローバル class | `_button` / `_panel` / `_selectable` 等を活用 | — |
-| アイコン | Tabler icons クラス `<i class="ti ti-info-circle">` | インライン SVG / 別アイコンセット |
-
-詳細・テンプレート集は → [knowledge/component-conventions.md](../knowledge/component-conventions.md) / [knowledge/scss-modules.md](../knowledge/scss-modules.md)。
-
-## i18n の使い分け
-
-引数なし → `i18n.ts.<key>` / 引数あり → `i18n.tsx.<key>(...)`。詳細は → [knowledge/i18n-usage.md](../knowledge/i18n-usage.md)。
-
-新キー追加が必要なら → [tasks/adding-i18n-key.md](adding-i18n-key.md)。
-
-## `os.*` ヘルパー
-
-`os.alert` / `os.confirm` / `os.popup` / `os.toast` / `os.popupMenu` 等。詳細は → [knowledge/os-api.md](../knowledge/os-api.md)。
-
-## アクセシビリティ最低ライン
-
-1. **クリック可能要素は `<button class="_button">` を第一選択**。やむを得ず `<div @click>` なら `role="button"` + `tabindex="0"` + `@keydown.enter` / `@keydown.space.prevent` の 4 点セット必須
-2. **フォーム要素 (`<input>` / `<select>` / `<textarea>`) は `<label>` 接続もしくは `aria-label`**
-3. **`:disabled` バインドと `aria-disabled` を一致**させる。ハンドラ側でも早期 return
-4. **キーボードのみで完結**できるか確認 (Tab で focus 移動できる / Enter で確定できる)
-5. ARIA 属性は最小限
-
-詳細チェックリストと既存例 (`MkButton.vue` / `MkSwitch.vue`) は → [knowledge/component-conventions.md §a11y](../knowledge/component-conventions.md)。
-
-## カタログ story の併設
-
-共有 `Mk*` コンポーネントには `Mk<Name>.stories.impl.ts` を **同階層** に併設する (サブディレクトリ含む)。詳細は → [knowledge/component-catalog.md](../knowledge/component-catalog.md)。
-
-## 検証フロー
-
-```bash
-# 型チェック (vue-tsc-bun)
-bun run --bun --filter frontend typecheck
-
-# 全体 lint (oxlint + typecheck)
-bun run lint
-
-# カタログで目視確認
-bun run --bun --filter frontend catalog          # 127.0.0.1:6006
-
-# Vitest unit test (component spec があれば)
-bun run --bun --filter frontend test
-```
-
-## CHANGELOG エントリ
-
-ユーザーから見える変更 (新規コンポーネントが新しい UI として露出する、既存 UI の挙動を変える) なら、`CHANGELOG.md` に追記する。判定方法と書式は [shipping-misskey-change スキル](../../../shipping-misskey-change/SKILL.md) で確認。
-
-## 既存コンポーネントとの整合性
-
-- 似た用途の既存 `Mk*` を 1-2 個読んで、props 命名 (`primary` / `danger` / `small` 等の形容詞、`onClose` ではなく `emit('close')` 等) を揃える
-- グローバル utility class (`_button` / `_panel` / `_selectable` / `_gaps_m`) を使えば独自スタイルを書かずに済む → [knowledge/scss-modules.md](../knowledge/scss-modules.md)
-- 大きな機能ならカタログで各バリエーション (variant / size / disabled / loading) を網羅する
-
-## 参照コード
-
-- [MkInfo.vue](../../../../../packages/frontend/src/components/display/MkInfo.vue) — simple SFC 例
-- [MkButton.vue](../../../../../packages/frontend/src/components/form/MkButton.vue) — 汎用ボタン (a11y / `_button` global class)
-- [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) — generic + 2 ブロック script 例
-- [MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue) — `defineModel` + 名前付き slot 例
-- [MkSwitch.vue](../../../../../packages/frontend/src/components/form/MkSwitch.vue) — a11y 込みカスタム UI
-- [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — 複数 story の雛形
-- [packages/frontend/src/os.ts](../../../../../packages/frontend/src/os.ts) — UI 操作 API 一覧
-- [packages/frontend/src/i18n.ts](../../../../../packages/frontend/src/i18n.ts) — `i18n.ts` / `i18n.tsx` 実装
+共通の提出条件は [AGENTS.md](../../../../../AGENTS.md) を使う。確認した画面・操作・結果と、未確認の条件を分けて報告する。

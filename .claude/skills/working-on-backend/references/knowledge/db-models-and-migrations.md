@@ -1,129 +1,36 @@
-# drizzle-orm モデル / migration パターン
+# DB 定義と migration の判断
 
-Misskey backend は 2026-07-07 に TypeORM を全廃し、drizzle-orm + PostgreSQL 構成になった。`@Entity` / `@Column` / `@Index` デコレータは存在しない。テーブル定義・アプリ内モデル・migration DDL は **3 つの別ファイル** に分かれている。
+## 定義・アプリ型・適用履歴を分ける
 
-2026-07-09 に drizzle-kit を導入し、`db/schema/*.ts` の変更から migration SQL を自動生成できるようになった(それ以前は migration も手書きJSだった)。
+| 対象 | 現行の入口 |
+| --- | --- |
+| drizzle のテーブル・列・index・外部キー | [src/db/schema](../../../../../packages/backend/src/db/schema/) |
+| アプリ内のモデル | [src/models](../../../../../packages/backend/src/models/) |
+| 生成する SQL・journal・snapshot | [migration](../../../../../packages/backend/migration/) と [drizzle.config.ts](../../../../../packages/backend/drizzle.config.ts) |
+| 適用と未適用検査 | [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) |
 
-## 3 つの場所
+[access-token.ts](../../../../../packages/backend/src/db/schema/access-token.ts) は `pgTable`、型付き列、外部キー、index、`$inferSelect`・`$inferInsert`、モデルへの変換の実例。モデルのフィールド追加だけでは DB は変わらず、schema の変更だけでは既存 DB は更新されない。関連する deserialize・packing・API schema への波及も確認する。
 
-| 役割 | 場所 | 形式 |
-|---|---|---|
-| クエリ用のテーブル定義 (drizzle-orm) | `packages/backend/src/db/schema/<name>.ts` | `pgTable('<table>', { ... })` |
-| アプリ内で扱う型付きオブジェクト | `packages/backend/src/models/<Name>.ts` | プレーンクラス (`export class MiXxx { public field: T; constructor(data: Partial<MiXxx>) {...} }`) |
-| 本番 DB に反映する DDL | `packages/backend/migration/{0000,0001,...}_{name}.sql` | drizzle-kit生成のSQL (+ `meta/_journal.json`) |
+外部キーの削除時挙動、null の意味、既定値、時刻・ID の型を既存定義に合わせる。循環・自己参照の列は近い schema の `AnyPgColumn` 注釈を使う。既存データを保持すべき rename を drop/add に置換しない。
 
-**`db/schema/*.ts` を変更したら `bun run --filter backend db:generate` を実行して migration を生成する** — 詳細手順は [tasks/creating-migration.md](../tasks/creating-migration.md) を参照。
+## 生成結果で判断する
 
-### `db/schema/*.ts` の例 (FK込み)
+通常の DDL は `bun run --filter backend db:generate`、生成で表せない拡張機能・関数・index 詳細・データ補正は `bun run --filter backend db:generate:custom` を使う。生成コマンドは [backend package.json](../../../../../packages/backend/package.json) にある。journal・snapshot と SQL の対応を維持し、同じ DDL を通常生成と custom の両方へ重ねない。
 
-```ts
-import { sql } from 'drizzle-orm';
-import { boolean, index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
-import { user } from './user.js';
+| 変更 | 確認すること |
+| --- | --- |
+| NOT NULL 列追加 | 既存行を埋める値と、その値が契約上正しいこと。必要なら nullable 追加・backfill・制約追加を設計する |
+| 列・型の rename | データを維持する SQL になっていること。生成時の rename 判定を未確認で採用しない |
+| enum 変更 | 既存値の変換、依存列、同じ transaction での新しい値の使用可否を実適用で確認する |
+| 外部キー・unique 制約 | 既存行の違反、削除の連鎖、並行書込みとの関係 |
+| backfill・index | 対象行数、ロック時間、transaction の大きさ、失敗後の再実行と回復方法 |
 
-export const accessToken = pgTable('access_token', {
-	id: varchar({ length: 32 }).primaryKey().notNull(),
-	userId: varchar({ length: 32 }).notNull().$type<MiUser['id']>().references(() => user.id, { onDelete: 'cascade' }),
-	permission: varchar({ length: 64 }).array().default(sql`'{}'::character varying[]`).notNull().$type<string[]>(),
-	fetched: boolean().default(false).notNull(),
-}, table => [
-	index('IDX_9949557d0e1b2c19e5344c171e').on(table.userId),
-]);
+大量データを扱う変更は、一括更新でよいか、段階的なデータ移行と制約確定が必要かを決める。消したデータが逆 DDL だけで戻るという説明をしない。
 
-export type AccessTokenRow = typeof accessToken.$inferSelect;
-export type AccessTokenInsert = typeof accessToken.$inferInsert;
-```
+## runner の保証と限界
 
-`$type<T>()` で TypeORM 時代の型 (`MiUser['id']` 等) をそのまま引き継げる。既存 index 名 (`IDX_...`) は TypeORM が生成していたものをそのまま踏襲しているファイルが多い。
+runner は `pool.connect()` で確保した同一 client 上で advisory lock、pending 判定、drizzle の migrate、unlock、timeout 復元を行い、最後に release する。ロック取得と DDL を別セッションへ分ける最適化はこの保証を失う。セッション状態を戻せない接続を正常なものとして pool に返さない。
 
-**外部キー**: `.references(() => 対象テーブル.対象カラム, { onDelete: 'cascade' | 'set null' | 'restrict' | 'no action' | 'set default' })` で宣言する。2ファイル間で相互参照(循環import)になる場合(例: `user.ts` の avatarId が `drive-file.ts` を参照し、`drive-file.ts` の userId が `user.ts` を参照する)は、TypeScriptの型推論が循環するため片方(または両方)で明示的な戻り値型アノテーションを使う:
+標準 migrator の transaction では `CREATE INDEX CONCURRENTLY` は使えない。手動の concurrent 作成と通常 migration の同一 `CREATE` を併記する方式を手順化しない。オンライン DDL が必要なら適用識別・index 有効性・再実行・失敗回復・journal 整合の運用設計を先に確定する。
 
-```ts
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-
-avatarId: varchar({ length: 32 }).references((): AnyPgColumn => driveFile.id, { onDelete: 'set null' }),
-```
-
-同一テーブルの自己参照(例: `drive_folder.parentId -> drive_folder.id`)も同じ `AnyPgColumn` パターンが必要。
-
-1つのカラムに複数のFKを持たせたい場合(稀)は、column-levelの`.references()`に加えてテーブル配列側で`foreignKey({ columns: [table.col], foreignColumns: [other.col] }).onDelete('cascade')` を追加する。
-
-### `models/<Name>.ts` の例
-
-```ts
-export class MiUser {
-	public id: string;
-	public username: string;
-	// ... フィールド列挙
-
-	constructor(data: Partial<MiUser>) {
-		if (data == null) return;
-		for (const [k, v] of Object.entries(data)) {
-			(this as Record<string, unknown>)[k] = v;
-		}
-	}
-}
-```
-
-デコレータは一切無い。zod スキーマ (`localUsernameSchema` 等のバリデーション用定数) が同じファイルに併記されることもある。
-
-## migrationファイルの構造 (drizzle-kit生成)
-
-`packages/backend/migration/` 配下は `{0000,0001,...}_{name}.sql` の連番ファイル + `meta/_journal.json`(適用順とタイムスタンプの記録) + `meta/{N}_snapshot.json`(その時点のスキーマ全体のスナップショット、次回generateの差分基準)。
-
-- `0000_baseline.sql` : drizzle-kit移行時のベースライン(当時のschema.ts全体を再現)
-- `0001_chart_tables_and_manual_ddl.sql` : drizzle-kitが検出できない特殊DDL(チャート集計テーブル・関数・拡張機能等、後述)をまとめた手書きファイル
-- それ以降は通常 `bun run --filter backend db:generate` で1個ずつ増えていく
-
-`packages/backend/src/migration-runner.ts` が `drizzle-orm/node-postgres/migrator` の `migrate()` に委譲し、`drizzle.__drizzle_migrations` テーブル(drizzle標準のブックキーピング、`created_at`とjournalの`when`を比較するだけで適用済み判定する)で管理する。**マージ済 migration の編集は絶対禁止**。
-
-**forward-only** — drizzle-kitはdown migrationを生成しない。変更を取り消したい場合は「取り消すDDLを持つ新しいmigration」を追加する(例: 追加した列を消したいなら新規migrationで`ALTER TABLE ... DROP COLUMN`)。
-
-`packages/backend/migration/_legacy/` に旧TypeORM/手書きJS時代のmigration 10本を歴史的参照として保持しているが、実行系(migration-runner.ts)からは完全に外れている。
-
-## drizzle-kitで自動生成できないDDL
-
-以下は `db/schema/*.ts` の宣言的定義では表現できないため、`bun run --filter backend db:generate --custom` で空ファイルを作り、生SQLを手書きする対象:
-
-- **拡張機能** (`CREATE EXTENSION IF NOT EXISTS pg_trgm` 等) — drizzle-kitに対応する概念が無い
-- **関数** (`CREATE OR REPLACE FUNCTION ...`) とそれを使う関数インデックス — ストアドプロシージャの概念が無い
-- **`INCLUDE` 句を持つカバリングインデックス** — `IndexConfig` 型に`INCLUDE`フィールドが無い
-- **既存インデックスへの事後 `ALTER INDEX ... SET (fastupdate = off)`** — ただし**新規作成時**なら `index(...).with({ fastupdate: false })` で表現可能(`note.ts`のGINインデックス群を参照)
-- **`gin_clean_pending_list()` のようなワンショットのメンテナンス関数呼び出し**
-- **同一カラムへの複数インデックス共存**(例: 通常btree + `varchar_pattern_ops`付きbtree)で、drizzle-kitの差分検出の安定性が未検証なもの — この場合、`--custom`側で直接管理し `db/schema/*.ts` には載せない判断もあり得る(実例: `user.usernameLower` への `IDX_USER_USERNAME_LOWER_PATTERN`)
-- **重複行削除のDML・環境変数分岐による実行方法の切替・`COMMENT ON INDEX`ベースの出所トラッキング**等の手続き型ロジック
-
-それ以外(カラム追加/削除、単純index、通常の外部キー、enum追加)は`db:generate`で自動生成される。
-
-## CONCURRENTLY (CREATE INDEX CONCURRENTLY) の扱い — 標準ワークフローでは使用不可
-
-`drizzle-orm/node-postgres/migrator`の`migrate()`は**pending migration全体を1つのtransactionにまとめて実行する**(`pg-core/dialect.js`の`PgDialect.migrate`を参照)。PostgreSQLは`CREATE INDEX CONCURRENTLY`をtransaction内で実行できないため、**標準の`db:generate`/`db:generate:custom`ワークフローではCONCURRENTLYは使えない**。
-
-大規模テーブルへのインデックス追加でCONCURRENTLYがどうしても必要な場合は、通常のmigrationフローに乗せず、運用者が手動で個別に`psql`等から直接`CREATE INDEX CONCURRENTLY`を実行し、その後 `bun run --bun --filter backend check-migrations` が指す通常の`db:generate`生成物(CONCURRENTLYなしの同等DDL)をmigration履歴としても残す、といった特別対応が必要になる。日常的な変更では基本的に発生しないはずなので、直面したらPRで相談すること。
-
-(旧TypeORM時代は `transaction = false` を指定した個別migrationとして書けたが、drizzle-kit移行後この仕組みは廃止された。`migration/_legacy/1782863440578-AddDatabaseTuningIndexes.js` 等に当時のパターンが歴史的参照として残っている。)
-
-## schema.ts作成時に踏み外しやすいパターン
-
-### 1. NOT NULL 列の追加
-
-**なぜ危険か**: 既存行があるテーブルに `NOT NULL` 列を `DEFAULT` 無しで足すと、既存行を埋められず生成されたSQLの実行が失敗する。
-
-- **既定値で良い場合** — schema.tsに `.default(...).notNull()` を付ければ、生成されるSQLに `DEFAULT` 句が入り1文で済む。これが最も多い
-- **行ごとに計算した値で埋めたい場合** — `db:generate`が作る素直な`ADD COLUMN NOT NULL DEFAULT ...`では対応できないため、`db:generate:custom`で「nullable追加→UPDATEでバックフィル→`ALTER COLUMN SET NOT NULL`」の3段に手書きする。この場合、schema.ts側は最終形(NOT NULL)を宣言し、生成された素朴なSQLを手動で3段に書き換える
-
-### 2. enum 型の値の追加・変更
-
-**なぜ危険か**: PostgreSQL の enum は **値を削除できない** (`ALTER TYPE ... DROP VALUE` は存在しない)。drizzle-kitは`pgEnum(...)`配列の要素追加・削除を検出すると自動でSQLを生成するが、生成される内容を確認すること — 単純な値追加なら`ALTER TYPE ... ADD VALUE`で足りるが、削除や複数変更が絡む場合は「旧型をrename→新型をCREATE→列をALTER (USINGキャスト)→旧型をDROP」という手順になり、`db:generate`が意図通りに出さないことがある。**enum名を変更した場合、drizzle-kitはrename(既存型の維持)かdrop+create(データ非互換)かを対話的に確認してくる** — 非対話環境で実行すると誤判定されるリスクがあるため、enum変更を伴うmigrationは生成後に必ず内容を目視確認すること。
-
-### 3. データ移行 (UPDATE バックフィル)
-
-**なぜ危険か**: migration内の`UPDATE`は本番の全行を触る可能性がある。大量行では長時間ロック・トランザクション肥大を招く。これは`db:generate`では生成されないため、必要なら`db:generate:custom`で手書きする。
-
-- 既定値を入れるだけなら `UPDATE ... WHERE col IS NULL` で冪等に書く
-- 巨大テーブルの全行更新は避けるのが基本。どうしても必要ならバッチ分割や別運用を検討し、PR で相談する
-- forward-onlyなので「取り消せないデータ移行をした」場合、取り消したければ別の新規migrationで復元用のUPDATEを書く(コメントで「完全には戻せない」旨を明示)
-
-### 4. 列リネーム
-
-「DROP 旧列 + ADD 新列」で書くと**データが消える**。schema.ts上でカラム名を変えて`db:generate`を実行すると、drizzle-kitが「これはrenameか、drop+addか」を対話的に確認してくる。非対話実行では誤判定される可能性があるため、リネームを意図した変更は生成後に必ずSQL内容を確認し、`ALTER TABLE "t" RENAME COLUMN "old" TO "new"`になっているか確かめること。
+forward-only の適用履歴を保ち、訂正は新しい migration にする。`migration/_legacy/` は実行手順の見本にしない。`check-migrations` は journal と DB 最新適用時刻の比較であり、schema 差分や SQL 改変の検査ではない。管理 schema/table の作成も起こり得る。生成・適用・検査の具体的な順序は [migration 作業](../tasks/creating-migration.md) にまとめる。

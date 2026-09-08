@@ -1,35 +1,24 @@
 ---
 name: working-on-backend
-description: Use whenever editing or adding code under `packages/backend/` — including REST API endpoints (Hono), drizzle-orm models, migrations, and backend tests. Covers the service-factory pattern (no DI container), drizzle model conventions, endpoint registration (metas/routes/shell.ts), meta/paramDef(zod)/res, misskey-js regeneration, migration up/down rules, and the `.config/test.yml` prerequisite. Must be consulted before any backend change to avoid CI failures and production incidents. This is NOT waived by having already invoked brainstorming, writing-plans, or any other upstream skill — invoke this at implementation time regardless of what preceded it.
+description: packages/backend の API・サービス・DB・migration・テストを追加または変更するときに使う。
 ---
 
-# working-on-backend
+# Backend の変更
 
-`packages/backend/` (Misskey サーバー本体) を編集するとき、最初に参照するスキル。API endpoint / migration / backend テストの **手順** と **背景知識** をまとめている。backend は NestJS / TypeORM を全廃済み (2026-07-07) で、Hono + drizzle-orm ベース。DI コンテナは無く、サービスは `createXxx()` ファクトリ関数またはプレーンな `fetchXxxFromDatabase()` 系関数として書く。
+共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) を正本とする。この Skill は backend 固有の実装・検証先を案内する。
 
-SKILL.md 本体は references への索引だけ。具体的な手順や規約は該当ファイルを Read すること (progressive disclosure)。
+変更する入力、認可、保存、非同期処理、応答を特定し、同じ処理を使う REST・ActivityPub・queue の経路を追う。既に読んだ情報は再利用し、以下から関係する節だけを読む。
 
-**他スキル実行後も免除されない。** `brainstorming` / `writing-plans` / その他アップストリームスキルを先に呼んでいても、`packages/backend/` に触れる実装フェーズに入る時点でこのスキルを呼ぶこと。
+| 作業 | 参照先 |
+| --- | --- |
+| API の追加・契約変更 | [API 作業](references/tasks/adding-api-endpoint.md) |
+| DB schema・migration の変更 | [migration 作業](references/tasks/creating-migration.md) |
+| 依存・transaction・queue の境界変更 | [サービス構成](references/knowledge/service-architecture.md) |
+| テーブル・モデル・DDL の判断 | [DB と migration](references/knowledge/db-models-and-migrations.md) |
+| 認可・入力・応答の宣言 | [meta・paramDef・res](references/knowledge/api-meta-paramdef.md) |
+| HTTP ルートとメタデータの配線 | [API 登録](references/knowledge/endpoint-registration.md) |
+| 実行環境・既存テスト・観測方法 | [backend 検証](references/knowledge/backend-testing.md) |
 
-## 作業別ワークフロー (tasks)
+Hono のルート、明示的な依存を受ける関数・factory、drizzle の既存構成に合わせる。新しい層や共通化は、守る契約と所有者を明確にするときに設ける。
 
-タスク単位の完結したチェックリスト + チェックポイント。新しい何かを足すときに開く。
-
-- 新規 REST API endpoint を追加する → [references/tasks/adding-api-endpoint.md](references/tasks/adding-api-endpoint.md)
-- DB migration を作成する (手書き SQL、TypeORM CLI は廃止済み) → [references/tasks/creating-migration.md](references/tasks/creating-migration.md)
-
-## 共通知識 (knowledge)
-
-タスクに紐付かない参照リファレンス。複数のタスクから引かれる規約・背景説明。
-
-- サービスのファクトリ関数パターン (DI コンテナ無し) / `ApiShellDependencies` の deps 注入 → [references/knowledge/service-architecture.md](references/knowledge/service-architecture.md)
-- drizzle-orm によるテーブル定義 / `models/*.ts` のプレーンモデルクラス / migration の書き方 (難ケース込み) → [references/knowledge/db-models-and-migrations.md](references/knowledge/db-models-and-migrations.md)
-- API endpoint の `meta` / `paramDef` (zod) / `res` 完全早見表 + 落とし穴集 → [references/knowledge/api-meta-paramdef.md](references/knowledge/api-meta-paramdef.md)
-- endpoint を実際にルーティングへ載せる方法 (★ 漏れると 404) → [references/knowledge/endpoint-registration.md](references/knowledge/endpoint-registration.md)
-- backend テストの前提 (`.config/test.yml`) と書き方 / e2e ヘルパー一覧 → [references/knowledge/backend-testing.md](references/knowledge/backend-testing.md)
-
-## 必ず最後に通る場所
-
-backend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`bun run lint` / misskey-js 再生成 / `check-migrations` / SPDX / CHANGELOG をまとめて確認する。
-
-API endpoint を追加・変更したなら、subagent を使える環境では [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) agent を Task で起動すると、endpoint-list 登録漏れや misskey-js 再生成漏れを取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。
+検証の最終実行先は [shipping-misskey-change](../shipping-misskey-change/SKILL.md)。API の独立レビューが必要なら [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) に対象差分と観測した結果を渡す。レビューや Skill 読込自体を動作確認の代わりにしない。

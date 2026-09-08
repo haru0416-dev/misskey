@@ -1,124 +1,23 @@
-# i18n キーを追加・改修する
+# UI 文言を追加・変更する
 
-UI 文言の追加・変更を行う際の手順。**手動編集して良いのは `locales/ja-JP.yml` のみ**。
+編集元は [locales/ja-JP.yml](../../../../../locales/ja-JP.yml)。他言語 YAML は手動編集しない。編集範囲の共通契約は [AGENTS.md](../../../../../AGENTS.md)、配信設定は [crowdin.yml](../../../../../crowdin.yml) にある。
 
-## 大前提 (絶対 NG)
+## キーと表示契約
 
-- **`locales/<lang>.yml` (ja-JP.yml 以外) の編集は禁止**。これらは Crowdin の自動配信先で、手動編集すると次の同期で上書き喪失する ([locales/README.md](../../../../../locales/README.md), [crowdin.yml](../../../../../crowdin.yml))
-- 文字列リテラルを SFC に直書きしない (`<span>こんにちは</span>` 等)。必ず `i18n.ts.<key>` を経由する
-- 既存キーの破壊的リネームは Crowdin 翻訳資産を失わせる。**追加 → 移行 → 旧キー削除** の 3 段階に分割する。詳細手順と誤編集の復旧は [knowledge/i18n-usage.md §Crowdin 安全策](../knowledge/i18n-usage.md)
+既存キーは意味と引数が合う場合に再利用する。新しいキーは周辺の意味グループに置き、単純キーの lowerCamelCase、カテゴリの `_` 接頭辞、既存の YAML インデントと引用形式に合わせる。`_lang_` は言語自身の表記用なので別用途に使わない。
 
-## ステップ 1: ja-JP.yml にキーを追加
+引数は `{name}` のような単純置換として設計する。ICU の plural/select 構文を持ち込まない。キーや引数名を変えるときは frontend だけでなく embed、shared、sw を含む実際の参照先を更新する。表示用の参照方法は [i18n-usage.md](../knowledge/i18n-usage.md) に従う。
 
-[locales/ja-JP.yml](../../../../../locales/ja-JP.yml) を編集する。YAML の階層構造を維持し、関連するセクションに配置する:
+キーの改名は翻訳側で別キーになり得るため、名前の整理だけでは行わない。要求上必要なら、利用側の移行と翻訳への影響を明示して source 側を変更する。翻訳管理のために必要な別作業は条件として報告し、架空の承認状態や同期日程を前提にしない。他人の変更を戻す復旧コマンドを一律に実行しない。
 
-```yaml
-# トップレベル単純キー
-save: "保存"
+## 生成物と確認
 
-# ネストしたカテゴリ (アンダースコア接頭辞は内部カテゴリ)
-_settings:
-  general: "全般"
-  appearance: "外観"
+[生成スクリプト](../../../../../packages/i18n/scripts/generateLocaleInterface.ts) が source から `packages/i18n/src/autogen/locale.ts` を生成する。生成物を手で修正しない。
 
-# パラメータ付き (単純なプレースホルダ置換)
-# 受け付けるのは {name} 形式のみ。ICU MessageFormat (plural/select) は非対応
-greeting: "こんにちは、{name}さん"
-```
+- 型だけを再生成する: `bun run --bun --filter i18n generate`
+- 配信 JSON と package の型を含めて更新する: `bun run --bun --filter i18n build`
+- 参照側の型確認: `bun run --bun --filter frontend typecheck`
 
-### 命名のお作法
+コマンドの正本は [i18n/package.json](../../../../../packages/i18n/package.json) と [build.ts](../../../../../packages/i18n/build.ts)。`generate` と配信資産の build は別なので、新しいキーが型検査に現れたことだけで画面への反映を判断しない。開発時は既に動いている i18n watcher の結果を利用する。
 
-- 単純キー: lowerCamelCase (例: `saveChanges`, `confirmDelete`)
-- カテゴリ: アンダースコア接頭辞 (例: `_settings`, `_abuseUserReport`)
-- 既存セクション内に追加する場合は **周辺の既存配置・意味グループに合わせる** (例えば `_settings` は機能ブロック順に並んでおりアルファベット順ではない)。新セクション全体を末尾に追加するのは可
-- **HTML タグ (`<b>` `<br>` `<strong>` 等) や `:` `'` `&` を含む値は必ずダブルクォートで囲む** (未クォートだと YAML パース失敗)
-
-**詳細:** ICU 非対応の代替戦略・予約キー `_lang_`・カタログでの挙動は → [knowledge/i18n-usage.md §制約と補足](../knowledge/i18n-usage.md)
-
-## ステップ 2: 型定義の自動再生成
-
-`packages/i18n/build.ts` が `ja-JP.yml` を解析し、TypeScript インターフェースを [packages/i18n/src/autogen/locale.ts](../../../../../packages/i18n/src/autogen/locale.ts) に出力する。
-
-### 自動 (推奨)
-
-`bun run dev` 実行中なら、`packages/i18n` の watch スクリプト (`bun ./build.ts --watch`) が yml の変更を検知して自動再生成する。
-
-### 手動
-
-```bash
-bun run --bun --filter i18n generate
-```
-
-実体は `bun scripts/generateLocaleInterface.ts`。
-
-### 失敗パターン
-
-これを実行せずに frontend 側で `i18n.ts.<newKey>` を参照すると、`Locale` インターフェースに追加されていないため typecheck で `Property '<newKey>' does not exist on type 'Locale'` というエラーになる (`bun run --bun --filter frontend lint` で発覚)。型エラー・実行時警告 (`Unexpected locale key`, `Missing locale parameters`) と対処は → [knowledge/i18n-usage.md §トラブルシュート](../knowledge/i18n-usage.md)。
-
-## ステップ 3: frontend での参照
-
-```ts
-import { i18n } from '@/i18n.js';
-```
-
-| 用途 | 書き方 |
-|---|---|
-| 単純文字列 | `i18n.ts.save` |
-| ネスト | `i18n.ts._settings.general` |
-| パラメータ付き | `i18n.tsx.greeting({ name: userName })` |
-| Vue テンプレート内 | `{{ i18n.ts.save }}` / `{{ i18n.tsx.greeting({ name }) }}` |
-
-`i18n.ts` は型付き文字列、`i18n.tsx` は `{name}` プレースホルダを埋め込む関数 (パラメータ付きキーのみ存在。ICU MessageFormat ではなく単純な文字列置換)。
-
-**詳細:** HTML タグ埋め込み・computed によるリアクティブ参照・動的キー切替・ブラケット記法 (`i18n.ts['2fa']`) などの実装パターンは → [knowledge/i18n-usage.md §実装パターン](../knowledge/i18n-usage.md)
-
-## ステップ 4: 検証
-
-```bash
-# i18n の型再生成 → typecheck (lint は generate を呼ばないので順番が必須)
-bun run --bun --filter i18n generate
-bun run --bun --filter i18n lint
-
-# frontend で新キー参照箇所の型チェック
-bun run --bun --filter frontend lint
-
-# 他言語 yml に diff が出ていないことを確認 (出力が空であれば OK)
-git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'
-```
-
-**注意:** `grep -v 'ja-JP.yml'` を **diff 本文** に当てると ja-JP.yml 単体の変更でも `+追加行` が素通りして必ず非空になる。`--name-only` でファイル名だけに絞ってから完全一致で除外するのが正しい。
-
-ユーザー影響のある UI 変更を伴う場合は [shipping-misskey-change スキル](../../../shipping-misskey-change/SKILL.md) で CHANGELOG エントリの判定をする。
-
-## 例: 「ノートを削除しますか？」確認ダイアログを追加する
-
-1. `locales/ja-JP.yml`:
-   ```yaml
-   _notes:
-     deleteConfirm: "このノートを削除しますか？"
-   ```
-2. `bun run --bun --filter i18n generate` (または `bun run dev` で watch 中)
-3. SFC:
-   ```vue
-   <script setup lang="ts">
-   import { i18n } from '@/i18n.js';
-   import * as os from '@/os.js';
-
-   async function onDelete() {
-     const { canceled } = await os.confirm({
-       type: 'warning',
-       text: i18n.ts._notes.deleteConfirm,
-     });
-     if (canceled) return;
-     // 削除処理
-   }
-   </script>
-   ```
-
-## 参照ファイル
-
-- [locales/README.md (★ 編集ポリシー根拠)](../../../../../locales/README.md)
-- [locales/ja-JP.yml](../../../../../locales/ja-JP.yml)
-- [packages/i18n/build.ts](../../../../../packages/i18n/build.ts)
-- [packages/i18n/src/autogen/locale.ts (生成物)](../../../../../packages/i18n/src/autogen/locale.ts)
-- [packages/frontend/src/i18n.ts](../../../../../packages/frontend/src/i18n.ts)
+対象画面で文言、補間結果、改行、長さによるレイアウト、アクセシブル名を確認する。型エラーはキー・引数・生成物のどこが不一致かを直し、型 assertion で隠さない。最終的な locale 差分確認と変更記録は共通契約に従う。

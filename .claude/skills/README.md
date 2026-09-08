@@ -1,32 +1,13 @@
-# `.claude/skills/` — プロジェクト固有のカスタムスキル
+# 作業別の指示
 
-Misskey 固有の繰り返しタスクを Claude にスムーズに実行させるための **カスタムスキル** を `.claude/skills/<name>/SKILL.md` 形式で配置する。
+共通の判断と保護条件は [AGENTS.md](../../AGENTS.md)、配置と評価の仕様は [開発エージェント運用仕様](../../docs/agent-workflow-spec.md) を参照する。
 
-frontmatter (`name` + `description`) は、Claude が **自動でスキルを呼び出すか判断する** 唯一の手がかりになる。`description` には用途を具体的かつ網羅的に書き、pushy なトリガー語 (例: "Use whenever ...", "Must be consulted before any ...") で発見されやすくする。
+`.claude/skills/<name>/SKILL.md` が作業別の正本。description は対象操作を短く表し、本文は今回読むべき参照と固有の判断を案内する。細部は実装・設定・検証へのリンクを持つ参照文書に置く。共通規則の全文や、モデルごとの未検証な推奨は再掲しない。
 
-実装済スキルの一覧は本ファイルでは管理しない (腐敗するため)。各サブディレクトリの `SKILL.md` の frontmatter が自己説明として機能する。
+配置しただけで自動適用されたとは扱わない。共通指針の対象表または明示呼び出しから必要な Skill を読み、評価時は実際に渡された内容を確認する。同じ変更内で既読の未変更文書を繰り返し開く必要はない。
 
-## 構成方針
+Codex の `.agents/skills/` は同じ name/description と正本への参照を生成した入口。正本の更新後は `bun run sync:agent-instructions`、差分検査は `bun run lint:agent-instructions` を実行する。新しい Skill を追加するときは同期スクリプトの対象も更新する。
 
-Anthropic 公式の [Agent Skills ベストプラクティス](https://platform.claude.com/docs/ja/agents-and-tools/agent-skills/best-practices) に従い、以下の構造を採用する:
+規則の変更では目的、現行実装との整合、検証方法を確認する。文書が短くなったことと、エージェントの品質・費用が改善したことは別に評価する。[harness-audit](../commands/harness-audit.md) はこの照合の手動入口であり、効果を自動で保証しない。
 
-- **SKILL.md 本体は 500 行以下** (理想は 30-80 行の索引)
-- 詳細は `references/tasks/` (手順) と `references/knowledge/` (規約・背景知識) に分離 (progressive disclosure)
-- リンクは原則 **references への 1 段リンク** に留める (例外: 他 skill / agent への導線は可)
-- ファイルシステム上の references は読まれるまでゼロコンテキストコスト
-
-ECC (everything-claude-code) 由来の MIT スキルが含まれる場合は、ファイル冒頭の SPDX ヘッダー + [.claude/THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md) §1 に出典を記載する。
-
-## 新規スキルを追加する場合
-
-- `.claude/skills/<name>/SKILL.md` に YAML frontmatter (`name` + `description`) と本文 Markdown を書く
-- description は **三人称の "Use when ..." 形式** で、主要キーワード網羅。pushy なトリガー語 ("Must be consulted before ...") を入れる
-- `disable-model-invocation: true` は付けない (auto-invoke させたいため)
-- 主要参照ファイルへのリンクは、各 markdown ファイルからの相対パスで貼る (`../../../../packages/backend/...` のような形)。絶対パスは contributor のホームディレクトリ依存になるので使わない
-- 詳細を分ける場合は `references/tasks/` (手順) / `references/knowledge/` (知識) の二分に従う
-- スキル作成は `/skill-creator` (公式の skill-creator スキル) のガイドを経由するのが推奨
-
-## 関連
-
-- 各スキルの description で自動索引される設計のため、実装済スキルの手書き索引 (一覧表) は本ファイルにも `AGENTS.md` にも持たない方針 (手書き索引は腐敗するため、frontmatter の description を唯一の索引とする)
-- スキルそのものの健全性検査は [/harness-audit](../commands/harness-audit.md) で採点できる
+外部の文面・例・評価構成を新しい運用規則へ移植しない。

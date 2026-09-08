@@ -1,18 +1,8 @@
-# `.claude/commands/` — プロジェクト固有のスラッシュコマンド
+# 明示実行の入口
 
-Misskey 開発で繰り返し使うワークフローを `/command-name` で呼び出せるよう、`.claude/commands/<name>.md` 形式で配置している。
+- [quality-gate](quality-gate.md): 指定した変更範囲の検証を、出荷 Skill の条件に従って実行する。
+- [harness-audit](harness-audit.md): 規則の正本、参照、適用経路、現行実装との不一致を調べる。
 
-実装済コマンドの一覧は本ファイルでは管理しない (腐敗するため)。各 `<name>.md` の frontmatter (`description`) が自己説明として機能する。
+共通方針は [AGENTS.md](../../AGENTS.md)、作業別の正本は [Skills](../skills/README.md)。コマンド独自の別パイプラインや、検証を代替する主観的な合計点を設けない。
 
-現状残っているのは ECC ([everything-claude-code](https://github.com/affaan-m/everything-claude-code)) 由来の MIT ライセンスコマンドのみで、Misskey 固有のスラッシュコマンドは廃止して `.claude/skills/` 配下のスキルに統合した。MIT 出典は [.claude/THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md) を参照。
-
-## 設計方針
-
-- Misskey 固有のワークフローは原則 `.claude/skills/` に統合する (description で自動索引されるため。コマンドはユーザーが `/name` でタイプしないと起動しない)
-- 既存の `superpowers` / `pr-review-toolkit` などのプラグイン提供スラッシュコマンドで足りる場合は新規追加しない
-
-## 新規コマンドを追加する場合 (どうしてもスキルでは表現できない時のみ)
-
-- frontmatter には最低限 `description` を指定する。引数を取るなら `argument-hint`、可能なら `allowed-tools` も指定する (permission prompt を最小化するため)
-- 長時間ビルド (2 分超) を伴うコマンドはインライン `` !`<cmd>` `` を使わず、本文で `Bash` ツール呼び出し時の `timeout` を指示する
-- 主要参照ファイルへのリンクは、各コマンド markdown からの相対パスで貼る。絶対パスは contributor のホームディレクトリ依存になるので使わない
+コマンドは利用者の明示呼び出しから始める。引数で対象を指定し、外部送信や DB 変更はその許可と専用環境を確認する。実行済みの同じ検査を理由なく繰り返さず、実結果と未確認を分けて返す。

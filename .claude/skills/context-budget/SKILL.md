@@ -1,148 +1,32 @@
 ---
 name: context-budget
-description: Claude Code セッションのコンテキスト窓消費を agents/skills/MCP/rules/CLAUDE.md ごとに見える化し、肥大化と冗長コンポーネントを検出して節約候補を提示する。"コンテキスト消費を見せて"、"context budget"、"context audit"、"トークン内訳"、"これ以上 MCP 入る？" 等の発話で起動する。
+description: セッションへ渡された指示やツール情報のコンテキスト消費と重複を調査する。
 ---
 
-<!--
-SPDX-License-Identifier: MIT
-SPDX-FileCopyrightText: 2026 Affaan Mustafa and everything-claude-code contributors
+# コンテキスト消費を調べる
 
-出典 (upstream): https://github.com/affaan-m/everything-claude-code (v2.0.0-rc.1)
-upstream path: skills/context-budget/SKILL.md
-upstream origin frontmatter: ECC
-upstream license: MIT — https://github.com/affaan-m/everything-claude-code/blob/main/LICENSE
-project-level notice: see .claude/THIRD_PARTY_LICENSES.md (Misskey 内サードパーティ一覧 + MIT 全文)
+調査対象は利用者が指定したセッションと構成に限定する。共通条件は [AGENTS.md](../../../AGENTS.md) に従う。配置されたファイル一覧と、実際にモデルへ渡された情報を別に扱う。
 
-Imported into Misskey .claude/ on 2026-05-10 as a standalone copy (no dependency on the ECC plugin runtime). description was rewritten in Japanese and a "Misskey 固有メモ" section was appended; body content remains MIT-licensed.
+## 確認する資料
 
-note: Misskey の skills/agents 数は少ないので、MCP / CLAUDE.md / プラグイン由来の overhead が支配的になりやすい点に留意。
--->
+まず利用できる読込記録、harness の利用量表示、渡された指示本文・ツール schema を確認する。既に渡された情報を再読込して調査対象を増やさない。必要なファイルは既知の入口から参照し、個人設定や他セッションの内容を無断で収集しない。
 
-# Context Budget
+記録には対象セッション・harness・測定時点、読込経路、ファイルの範囲または返された本文を対応させる。要約・部分読込・切詰めがある場合は、元ファイル全体を読んだ扱いにしない。
 
-セッション内に読み込まれるコンポーネント (agents / skills / rules / MCP servers / CLAUDE.md) の token overhead を分析し、空き context を回復する具体策を提示する。
+## 値を混同しない
 
-## 使う場面
+| 区分 | 報告するもの |
+| --- | --- |
+| 観測値 | 実際に渡された本文、読込回数、文字数・byte 数、harness が公開した token 使用量とその集計範囲 |
+| 推定値 | 対象本文を tokenizer で数えた値。使用した tokenizer・版・対象範囲を併記し、harness の実使用量とは区別する |
+| 不明 | 非公開の system 指示、渡されたか確認できない description や schema、圧縮後の保持範囲、利用上限・残量 |
 
-- セッションが重い・出力品質が落ちてきた感覚がある
-- 直近で skills / agents / MCP server を多数追加した
-- 残りの context headroom を知りたい
-- 追加コンポーネントを入れる前に空きを確認したい
-- 「context-budget」「token 内訳」等のキーワードでユーザーが明示的に要請した時 (Misskey リポジトリにはこの名前のスラッシュコマンドは登録していない — 本 skill は名前 / description マッチで auto-invoke される想定。実装済の slash command 一覧は [.claude/commands/](../../commands/) を参照)
+ファイル数・行数は配置の情報であり、token 消費や品質の指標ではない。文字数を固定係数で token に換算せず、tool 一個あたりの定数費用も置かない。モデル名だけから窓の上限を決めず、会話・ツール結果等の全量が見えなければ残量や空き比率を算出しない。
 
-## 仕組み
+同じ本文が複数回渡された場合、内容の重複と実際の入力回数を分けて示す。キャッシュ、遅延読込、動的な一覧挿入は記録で確認できる範囲だけを扱い、課金額や読込頻度を配置から推定しない。
 
-### Phase 1: Inventory
+## 結果と変更候補
 
-各コンポーネントを走査して token を推定する。
+対象範囲、観測値、推定の条件、不明な領域、具体的な重複箇所を返す。削減候補には、その情報を必要とする作業と、正本への導線・安全条件を維持する方法を添える。短いファイルへの分割だけでは消費が減ったと判断しない。
 
-**Agents** (`.claude/agents/*.md`)
-- 行数とトークン数 (`words × 1.3`) を計算
-- frontmatter `description` の長さを抽出
-- フラグ: 200 行超 (重い)、description 30 word 超 (frontmatter 肥大)
-
-**Skills** (`.claude/skills/*/SKILL.md`)
-- SKILL.md ごとに token を計算
-- フラグ: 400 行超
-- `.agents/skills/` 等の重複コピーは除外
-
-**Rules** (リポジトリルートの `AGENTS.md` + `.claude/` から `@-import` されるファイル)
-- ファイル単位で token 計算
-- フラグ: 100 行超
-- 同一言語モジュール内の内容重複を検出
-
-**MCP Servers** (`.mcp.json` または有効 MCP 設定)
-- server 数と総 tool 数
-- schema overhead をツールあたり ~500 token で見積もる
-- フラグ: 20 tool 超のサーバー、`gh` / `git` / `npm` 等の CLI を単純ラップしただけのサーバー
-
-**CLAUDE.md** (project + user-level)
-- ファイルごとに token を計算
-- フラグ: 合計 300 行超
-
-### Phase 2: Classify
-
-| バケット           | 判定基準                                                    | 行動                              |
-|--------------------|-------------------------------------------------------------|-----------------------------------|
-| **Always needed**  | CLAUDE.md から参照されている / 有効コマンドの裏 / 現プロジェクトと一致 | 維持                              |
-| **Sometimes needed** | ドメイン依存 (例: 言語パターン)、CLAUDE.md 参照なし          | オンデマンド有効化を検討          |
-| **Rarely needed**  | コマンド参照なし、内容重複、明確な用途なし                  | 削除または lazy-load              |
-
-### Phase 3: Detect Issues
-
-- **Bloated agent description** — frontmatter description が 30 word 超だと、Task ツール起動のたびに毎回ロードされる
-- **Heavy agents** — 200 行超は Task ツールの context を毎回膨らませる
-- **Redundant components** — agent ロジックを重複する skill、CLAUDE.md と重複する rule
-- **MCP over-subscription** — 10 server 超、または CLI 代用可能なサーバー
-- **CLAUDE.md bloat** — 冗長説明、古いセクション、rule に移すべき指示
-
-### Phase 4: Report
-
-```
-Context Budget Report
-═══════════════════════════════════════
-
-Total estimated overhead: ~XX,XXX tokens
-Context model: <現在モデル名> (<window>K window)   ← 例: Claude Opus 4.7 (1M), Claude Sonnet (200K)
-Effective available context: ~XXX,XXX tokens (XX%)
-
-Component Breakdown:
-┌─────────────────┬────────┬───────────┐
-│ Component       │ Count  │ Tokens    │
-├─────────────────┼────────┼───────────┤
-│ Agents          │ N      │ ~X,XXX    │
-│ Skills          │ N      │ ~X,XXX    │
-│ Rules           │ N      │ ~X,XXX    │
-│ MCP tools       │ N      │ ~XX,XXX   │
-│ CLAUDE.md       │ N      │ ~X,XXX    │
-└─────────────────┴────────┴───────────┘
-
-WARNING: Issues Found (N):
-[token 節約量の降順]
-
-Top 3 Optimizations:
-1. [action] → save ~X,XXX tokens
-2. [action] → save ~X,XXX tokens
-3. [action] → save ~X,XXX tokens
-
-Potential savings: ~XX,XXX tokens (XX% of current overhead)
-```
-
-verbose mode ではさらにファイルごとの token 内訳、最重ファイルの行単位ブレークダウン、重複行の対比、MCP tool 一覧 + tool ごとの schema サイズ推定を出す。
-
-## 例
-
-**基本監査**
-```
-User: コンテキスト消費を見せて
-Skill: 16 agents (12,400 tokens), 28 skills (6,200), 87 MCP tools (43,500), 2 CLAUDE.md (1,200)
-       Flags: 重い agent 3 個、CLI 代用可能な MCP 3 個
-       Top saving: MCP 3 個削除 → -27,500 tokens (overhead の 47% 削減)
-```
-
-**Verbose**
-```
-User: トークン内訳をファイル単位で
-Skill: 上記レポートに加えて、planner.md (213 lines, 1,840 tokens) のような
-       per-file 行内訳、MCP tool ごとのサイズ、rule の重複行を side-by-side で表示
-```
-
-**追加前チェック**
-```
-User: MCP server を 5 個追加したいが、空きある？
-Skill: 現状 33% → 5 server (≈ 50 tools) 追加で +25,000 tokens → 45% に到達
-       推奨: CLI 代用可能な server 2 個を先に外して 40% 以下を維持
-```
-
-## ベストプラクティス
-
-- **トークン推定**: prose は `words × 1.3`、code 主体は `chars / 4`
-- **MCP は最大のレバー**: tool あたり ~500 token、30-tool server ひとつで全 skill より大きい
-- **agent description は常時ロード**: 呼ばれない agent でも description は毎 Task 投入
-- **verbose は debug 用**: 普段は使わない
-- **変更後は監査**: agent/skill/MCP 追加直後に走らせて creep を早期発見
-
-## Misskey 固有メモ
-
-- Misskey は MCP server をプロジェクトで明示登録していないため (`.mcp.json` 不在)、現状 overhead の支配項は CLAUDE.md と公式プラグイン群の skills / agents description である。
-- ECC プラグインがユーザースコープで `installed_plugins.json` に存在するため、プロジェクトで `enabledPlugins` に追加していなくても system reminder に 200+ skill が現れる。これらは description が短いので個別 overhead は小さいが、合計値の確認に本 skill を使う。
+変更前後を比べる場合は同じ課題・harness・読込条件で実際に渡された内容を比較する。入力が減ったこと、費用・時間が減ったこと、要求充足と保護する契約が維持されたことは別に検証する。比較記録が無い候補は提案として示し、節約量や品質向上を成果として報告しない。

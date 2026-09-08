@@ -1,66 +1,33 @@
-# Frontend テスト (Vitest / Playwright)
+# フロントエンドの検証経路
 
-Misskey frontend のテスト構成。
+変更した契約に最も近い既存 suite と実挙動を使う。新機能に一律の E2E、新 framework、テスト数の目標を課さない。既存の検出能力は維持し、恒久テストを足すのは現実的な回帰を検出する場合に限る。共通の最終確認は [AGENTS.md](../../../../../AGENTS.md) に従う。
 
-## Vitest (unit)
+## 既存 suite
 
-```bash
-bun run --bun --filter frontend test                # 1 回実行
-bun run --bun --filter frontend test-and-coverage   # カバレッジ付き
-```
+| 対象 | 入口 |
+| --- | --- |
+| ロジック・composable・state | [frontend/test](../../../../../packages/frontend/test/) と実装に隣接する `*.test.ts`。`bun run --bun --filter frontend test` |
+| 一覧の取得・取消・queue | [paginator.test.ts](../../../../../packages/frontend/test/paginator.test.ts) |
+| cache・認証付き取得 | [query.test.ts](../../../../../packages/frontend/test/query.test.ts) |
+| 設定と永続化 | [preferences-store.test.ts](../../../../../packages/frontend/test/preferences-store.test.ts)、[persisted-state.test.ts](../../../../../packages/frontend/test/persisted-state.test.ts) |
+| フォーム操作 | [form-controls-accessibility.test.ts](../../../../../packages/frontend/test/form-controls-accessibility.test.ts) |
+| 単独部品の browser 検証 | [component-catalog.md](component-catalog.md)。`bun run --bun --filter frontend test:stories` |
+| サーバーを通る画面操作 | [tests/e2e/specs](../../../../../tests/e2e/specs/) と [playwright.config.ts](../../../../../tests/e2e/playwright.config.ts)。`bun run pw:run`、対話実行は `bun run pw:open` |
 
-### 配置
+対象を絞るときは既存 runner のファイル・テスト名指定を使い、指定した対象と結果を記録する。suite を狭めた成功を全体成功と報告しない。
 
-- 主な配置: `packages/frontend/test/*.test.ts` (例: `i18n.test.ts`, `theme.test.ts`, `is-birthday.test.ts`)
-- ビルドツール周りなど対象コードと隣接させた方が分かりやすいテストは、コードと同じディレクトリに `*.test.ts` として置く (例: [packages/frontend/lib/rollup-plugin-unwind-css-module-class-name.test.ts](../../../../../packages/frontend/lib/rollup-plugin-unwind-css-module-class-name.test.ts))
-- 共有コンポーネント (`MkX.vue`) のユニットテストは現状少なく、`*.spec.ts` / `__tests__/` 形式は採用していない (カタログ + Playwright でカバー)
+## 起動の前提
 
-## Playwright E2E
+コマンドは [frontend/package.json](../../../../../packages/frontend/package.json)、[root package.json](../../../../../package.json)、準備順は [test-frontend.yml](../../../../../.github/workflows/test-frontend.yml) を照合する。
 
-Playwright は **起動済みのテストサーバー** に対して走るため、unit より前提が多い。[.github/workflows/test-frontend.yml](../../../../../.github/workflows/test-frontend.yml) の `e2e` ジョブと同じ手順をローカルで踏む:
+unit と catalog は通常 backend に接続しない。未準備なら CI 同様に `bun run build-pre` と `bun run build:frontend-deps` で依存を準備する。catalog の browser 検証には `bun run playwright:install` も必要。
 
-```bash
-# 1. テスト用 DB / Redis を起動 (テスト用ポート。開発用の deploy/compose.local-db.yml ではない)
-docker compose -f packages/backend/test/compose.yml up -d
+E2E はテスト用 DB・Valkey と全体 build が必要。[packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml) のテスト用構成を使い、開発・本番データへ接続しない。Playwright の webServer は既定で `bun run start:test` を起動する。この script はテスト設定を `.config/test.yml` に配置し、migration を適用して起動するため、既存設定と接続先を確認してから実行する。
 
-# 2. テスト設定を配置 (未作成なら。例示なので、cpコマンドは環境にあったコマンドに適宜読み替えること)
-cp .github/misskey/test.yml .config/test.yml
+既定の接続先は `http://localhost:61812`。`MISSKEY_TEST_BASE_URL` と `MISSKEY_TEST_START_COMMAND` で変更でき、ローカルでは既存サーバーを再利用する設定なので、対象がテスト用か確認する。
 
-# 3. 全体ビルド
-bun run build
+## 実ブラウザで残す証拠
 
-# 4. ブラウザを用意して Playwright 実行 (webServer が bun run start:test を起動する)
-bun run playwright:install
-bun run pw:run
+対象画面で変更した操作を行い、表示結果と副作用を確認する。状態管理を変えるなら再表示・復元・条件変更・account 切替、timeline なら順序・重複・欠落・新着 queue・スクロール、非同期処理なら失敗・取消・離脱後の更新を選んで確認する。未許可の投稿や別 account の情報が一瞬でも出ないことも対象にする。
 
-# 対話的に見る場合
-bun run pw:open
-```
-
-- 設定: [tests/e2e/playwright.config.ts](../../../../../tests/e2e/playwright.config.ts)
-- テスト本体は [tests/e2e/specs/](../../../../../tests/e2e/specs/) 配下
-- start コマンドを変えたい場合は `MISSKEY_TEST_START_COMMAND`、接続先を変えたい場合は `MISSKEY_TEST_BASE_URL` を使う
-
-新規 frontend 機能の E2E は Playwright に書くのが基本。ただし対象は主要 UI フロー (login / post / drive etc) に限定し、細かい単位テストは Vitest またはコンポーネントカタログで代替する慣習。
-
-## コンポーネントカタログ (視覚確認 + play の実ブラウザ検証)
-
-詳細は → [component-catalog.md](component-catalog.md)。
-
-```bash
-bun run --bun --filter frontend catalog       # http://127.0.0.1:6006
-bun run --filter frontend catalog:build       # 静的ビルド (CI が実行)
-bun run --bun --filter frontend test:stories  # play を Chromium で実行
-```
-
-各コンポーネント横に `*.stories.impl.ts` を併設する慣習 (例: `MkButton.stories.impl.ts`)。
-Storybook と Chromatic は 2026-08-26 に撤去済み。
-
-## ローカル DB / Redis
-
-frontend のテスト種別で DB / Redis の要否が違う:
-
-- **Vitest (unit)** — DB 不要。ロジック / コンポーネント単体のテストで backend に繋がない (CI の `vitest` ジョブにも `services:` は無い)
-- **Playwright (E2E)** — テストサーバー (`bun run start:test`) 経由で backend に繋ぐため DB / Redis が必要。**テスト用ポートの [packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml)** を使う (上記 Playwright E2E の手順を参照)
-
-開発用の `deploy/compose.local-db.yml` (db `5432` / redis `6379`) は **テストには使わない**。テスト用の `packages/backend/test/compose.yml` (`54312` / `56312`) とはポートが異なり、混同すると接続できない。
+UI 変更はレイアウト、keyboard、フォーカス、入力、狭い画面やテーマなど影響する条件を実際に観測する。型検査、mock の成功、スクリーンショットだけでは操作成功を主張しない。環境不足で実画面を開けない場合は、代わりに実行した確認と未確認の操作・前提を明記する。

@@ -1,71 +1,31 @@
-# サービスのファクトリ関数パターン (DI コンテナ無し)
+# サービス・依存・副作用の境界
 
-Misskey backend は 2026-07-07 に NestJS を全廃した。`@nestjs/*` / `reflect-metadata` / `@/di-symbols.js` の `DI` トークン / `@Injectable()` は存在しない。DI コンテナ・Repository パターンの代わりに、**プレーン関数** と **`createXxx()` ファクトリ関数** の 2 パターンで構成される。
+## 依存の所有者を追う
 
-## パターン 1: プレーンな `fetchXxxFromDatabase` / `xxxInDatabase` 系関数
+backend は DI コンテナではなく、明示的な引数と factory で依存を渡す。
 
-状態を持たず、第 1 引数に `db` (`MiDrizzleDatabase`) を取るだけの関数。呼び出し元が import して直接呼ぶ。
+- DB 操作の例は [UserStore.ts](../../../../../packages/backend/src/core/user/UserStore.ts)。呼び出し元の `db` を受け取り、必要な transaction を同じ接続経路に渡す。
+- 設定や状態を閉じ込める例は [MfmService.ts](../../../../../packages/backend/src/core/mfm/MfmService.ts) の `createMfmService` と `ReturnType`。
+- API ハンドラは必要な依存を `deps` 第一引数で受ける。[shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) の `ApiShellDependencies` と、その実体を組む [runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts)・[boot/server.ts](../../../../../packages/backend/src/boot/server.ts) までつなぐ。型にフィールドを足すだけでは実体は供給されない。
 
-```ts
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+既存の関数・factory を使うかは、認可、保存、失敗、資源解放の契約が合うかで判断する。状態を持たない処理に管理層を増やさず、逆に transaction や資源所有を表す境界を行数のために潰さない。
 
-const user = await fetchUserByIdOrFailFromDatabase(deps.db, userId);
-```
+## DB 接続と transaction
 
-`*Store.ts` (`UserStore.ts` / `UserProfileStore.ts` / `RoleStore.ts` / `RoleAssignmentStore.ts` / `AccessTokenStore.ts` / `AppStore.ts` / `SigninStore.ts` 等) がこの形式の代表。CRUD の薄いラッパーで、DI もクラスも無い。
+[runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts) は Bun の有無、`MK_DB_DRIVER`、解決済みの接続予算から DB 実装を選ぶ。Bun 上でも `pg` 指定または予算が 2 未満なら [drizzle.ts](../../../../../packages/backend/src/drizzle.ts) 側となり、それ以外の Bun 経路は [db/bun-sql.ts](../../../../../packages/backend/src/db/bun-sql.ts) を使う。型名や起動コマンドだけから実ドライバを断定しない。
 
-## パターン 2: `createXxx(config)` ファクトリ関数
+transaction 内の操作を通常の `deps.db` に戻すと原子性を失う。変更する store、ネストした処理、outbox への書込みまで渡す DB を追う。接続予算・セッション状態・dispose の責務は composition root と各ドライバを確認する。
 
-設定値など「呼び出し毎に変わらない依存」をクロージャで閉じ込めたいときに使う。ファクトリはメソッド群を持つオブジェクトを返す。
+## 投稿と予約投稿
 
-```ts
-// packages/backend/src/core/MfmService.ts
-export function createMfmService(config: Config) {
-	function fromHtml(html: string, hashtagNames?: string[]): string { /* ... */ }
-	function toHtml(nodes: mfm.MfmNode[] | null, ...): string { /* ... */ }
+[notes-create.ts](../../../../../packages/backend/src/server/rest/note/notes-create.ts) の保存処理は note・poll、関連集計、post-create outbox を transaction にまとめる。投稿処理の利用側を変えるときは REST、ActivityPub、予約投稿の共有範囲を確認する。
 
-	return { fromHtml, toHtml };
-}
+[post-scheduled-note.ts](../../../../../packages/backend/src/queue/handlers/post-scheduled-note.ts) は draft を `FOR UPDATE` でロックし、現在の fingerprint を再検証し、投稿と draft 削除を同じ transaction で確定する。ロック前の読取結果だけで投稿したり、削除を別 transaction に分けたりしない。編集済み draft、並行 job、失敗後の再実行で二重投稿・消失がないことを観測する。
 
-export type MfmService = ReturnType<typeof createMfmService>;
-```
+## 永続的な後処理
 
-呼び出し元は都度 `createMfmService(config)` して使うか、起動時に 1 回だけ生成して deps に積んで使い回す。**グローバルな DI コンテナは無い**ので、「誰がいつ生成するか」は呼び出し元のコードを直接読んで確認すること (`grep -rn "createMfmService("` などで実例を探すのが早い)。
+[QueueOutboxStore.ts](../../../../../packages/backend/src/core/queue/QueueOutboxStore.ts) と各 queue handler で、永続化、queue 投入、実処理、完了記録を区別する。job ID だけで外部副作用が一度になるとはみなさない。リース失効や途中失敗の後で再実行されても、配送先・削除対象・最終状態が契約を満たすことを確認する。
 
-## API endpoint 層での依存の受け渡し: `deps` オブジェクト
+投稿の outbox 対象ステージと analytics は同じ完了保証ではない。後処理を移す場合は、加算の二重計上、未処理の喪失、応答後の無制限な並行書込みを確認する。成功応答が外部配送完了まで保証するという説明を加えない。
 
-REST API のハンドラ関数 (`server/rest/*.ts`) は、必要な依存を **1 個の `deps` オブジェクト** の第一引数として受け取る。各ファイルが必要な依存だけを型で宣言し、それらは `ApiShellDependencies` ([server/rest/shell.ts](../../../../../packages/backend/src/server/rest/shell.ts)) に集約される。
-
-```ts
-// packages/backend/src/server/rest/account/i.ts
-export type ApiIDependencies = UserPackingDependencies & {
-	db: MiDrizzleDatabase;
-};
-
-export async function handleApiI(
-	deps: ApiIDependencies,
-	user: MiLocalUser,
-	token: MiAccessToken | null,
-): Promise<Record<string, unknown>> {
-	// deps.db 等を直接使う
-}
-```
-
-`ApiShellDependencies` は `config` / `db` / `dbPool` / `meta` / `redis` 系 / 各種 `*Service` (Pick で必要なメソッドだけ絞ったもの) / `chartWriters` / `logger` / `publishXxxStream` などをまとめて持つ大きな型。**新しい依存が必要なハンドラを書くときは、`ApiShellDependencies` にフィールドを追加し、実体は `server/rest/shell.ts` を呼び出す起動コード側 (bootstrap) で組み立てる**。
-
-## 新規 Service を追加する場合
-
-NestJS 時代のような「module の `providers` 配列に登録」は不要。以下のいずれかで完結する:
-
-- 状態を持たないなら `packages/backend/src/core/<Name>Service.ts` に `export function create<Name>Service(...)` を書き、呼び出し元 (endpoint ハンドラや起動コード) から直接 import して呼ぶ
-- DB アクセスだけなら `packages/backend/src/core/<Name>Store.ts` に `export async function fetchXxxFromDatabase(db, ...)` 系のプレーン関数を並べる
-
-**登録の一元管理ファイルは存在しない** — 呼び出し元が import すればそれだけで使える。逆に言うと、「どこからも import されていない `createXxx()` は単なるデッドコード」なので、新規追加時は必ず利用箇所を作ること。
-
-## 既存例
-
-- [core/MfmService.ts](../../../../../packages/backend/src/core/mfm/MfmService.ts) — `createXxx(config)` ファクトリの典型
-- [core/UserStore.ts](../../../../../packages/backend/src/core/user/UserStore.ts) — プレーン関数群の典型
-- [server/rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) — `deps` 経由での依存受け渡しの典型
-- [server/rest/shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) — `ApiShellDependencies` の全体像
+公開範囲を変える処理では、配送先だけでなく取得・packing・cache・streaming からの漏洩も対象にする。検証先は [backend 検証](backend-testing.md)。
