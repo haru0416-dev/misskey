@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import {
+	verifyCap,
+	verifyHcaptcha,
+	verifyRecaptcha,
+	verifyTurnstile,
+	verifyTestcaptcha,
+} from '@/core/captcha/CaptchaLogic.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
@@ -40,6 +47,11 @@ import type { ApiSigninDependencies, ApiSigninFlowResult, ApiSigninRequest } fro
 import { packMeDetailedForApi, packUserLiteForApi } from '../user/user.js';
 
 type SignupBody = {
+	'cap-response'?: unknown;
+	'hcaptcha-response'?: unknown;
+	'g-recaptcha-response'?: unknown;
+	'turnstile-response'?: unknown;
+	'testcaptcha-response'?: unknown;
 	username?: unknown;
 	password?: unknown;
 	host?: unknown;
@@ -95,21 +107,6 @@ function assertSignupGateOpen(meta: MiMeta): void {
 		return;
 	}
 
-	if (meta.enableHcaptcha && meta.hcaptchaSecretKey) {
-		throw signupValidationError('CAPTCHA_REQUIRED');
-	}
-	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl) {
-		throw signupValidationError('CAPTCHA_REQUIRED');
-	}
-	if (meta.enableRecaptcha && meta.recaptchaSecretKey) {
-		throw signupValidationError('CAPTCHA_REQUIRED');
-	}
-	if (meta.enableTurnstile && meta.turnstileSecretKey) {
-		throw signupValidationError('CAPTCHA_REQUIRED');
-	}
-	if (meta.enableTestcaptcha) {
-		throw signupValidationError('CAPTCHA_REQUIRED');
-	}
 	if (meta.emailRequiredForSignup) {
 		throw signupValidationError('EMAIL_REQUIRED_FOR_SIGNUP');
 	}
@@ -233,10 +230,72 @@ export async function createLocalSignupAccount(
 	return { account, token };
 }
 
-export async function signupWithApi(deps: SignupDependencies, body: SignupBody): Promise<SignupResponse> {
+export async function signupWithApi(
+	deps: SignupDependencies & Pick<ApiSigninDependencies, 'httpRequestService'>,
+	body: SignupBody,
+): Promise<SignupResponse> {
 	assertSignupGateOpen(deps.meta);
 	validateUsername(body.username);
 	validatePassword(body.password);
+	if (deps.meta.enableCap) {
+		if (!deps.meta.capSecretKey || !deps.meta.capSiteKey || !deps.meta.capInstanceUrl) {
+			throw signupValidationError('CAPTCHA_REQUIRED');
+		}
+		try {
+			await verifyCap(
+				deps.httpRequestService,
+				deps.meta.capSecretKey,
+				deps.meta.capSiteKey,
+				deps.meta.capInstanceUrl,
+				body['cap-response'] as string | null | undefined,
+			);
+		} catch {
+			throw signupValidationError('CAPTCHA_FAILED');
+		}
+	}
+
+	const captchas = [
+		{
+			enabled: deps.meta.enableHcaptcha,
+			secret: deps.meta.hcaptchaSecretKey,
+			response: body['hcaptcha-response'],
+			verify: verifyHcaptcha,
+		},
+		{
+			enabled: deps.meta.enableRecaptcha,
+			secret: deps.meta.recaptchaSecretKey,
+			response: body['g-recaptcha-response'],
+			verify: verifyRecaptcha,
+		},
+		{
+			enabled: deps.meta.enableTurnstile,
+			secret: deps.meta.turnstileSecretKey,
+			response: body['turnstile-response'],
+			verify: verifyTurnstile,
+		},
+	];
+	for (const captcha of captchas) {
+		if (!captcha.enabled) continue;
+		if (!captcha.secret) throw signupValidationError('CAPTCHA_REQUIRED');
+		try {
+			await captcha.verify(
+				deps.httpRequestService,
+				captcha.secret,
+				typeof captcha.response === 'string' ? captcha.response : undefined,
+			);
+		} catch {
+			throw signupValidationError('CAPTCHA_FAILED');
+		}
+	}
+	if (deps.meta.enableTestcaptcha) {
+		try {
+			await verifyTestcaptcha(
+				typeof body['testcaptcha-response'] === 'string' ? body['testcaptcha-response'] : undefined,
+			);
+		} catch {
+			throw signupValidationError('CAPTCHA_FAILED');
+		}
+	}
 
 	const username = body.username;
 	const normalizedHost = process.env['NODE_ENV'] === 'test' ? normalizeHost(body.host) : null;

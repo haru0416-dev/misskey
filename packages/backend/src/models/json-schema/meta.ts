@@ -110,17 +110,17 @@ export const packedMetaLiteSchema = {
 			optional: false,
 			nullable: true,
 		},
-		enableMcaptcha: {
+		enableCap: {
 			type: 'boolean',
 			optional: false,
 			nullable: false,
 		},
-		mcaptchaSiteKey: {
+		capSiteKey: {
 			type: 'string',
 			optional: false,
 			nullable: true,
 		},
-		mcaptchaInstanceUrl: {
+		capInstanceUrl: {
 			type: 'string',
 			optional: false,
 			nullable: true,

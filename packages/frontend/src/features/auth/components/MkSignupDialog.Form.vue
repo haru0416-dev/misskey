@@ -64,7 +64,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</template>
 			</MkInput>
 			<MkCaptcha v-if="instance.enableHcaptcha" ref="hcaptcha" v-model="hCaptchaResponse" :class="$style.captcha" provider="hcaptcha" :sitekey="instance.hcaptchaSiteKey"/>
-			<MkCaptcha v-if="instance.enableMcaptcha" ref="mcaptcha" v-model="mCaptchaResponse" :class="$style.captcha" provider="mcaptcha" :sitekey="instance.mcaptchaSiteKey" :instanceUrl="instance.mcaptchaInstanceUrl"/>
+			<MkCaptcha v-if="instance.enableCap" ref="cap" v-model="capResponse" :class="$style.captcha" provider="cap" :sitekey="instance.capSiteKey" :instanceUrl="instance.capInstanceUrl"/>
 			<MkCaptcha v-if="instance.enableRecaptcha" ref="recaptcha" v-model="reCaptchaResponse" :class="$style.captcha" provider="recaptcha" :sitekey="instance.recaptchaSiteKey"/>
 			<MkCaptcha v-if="instance.enableTurnstile" ref="turnstile" v-model="turnstileResponse" :class="$style.captcha" provider="turnstile" :sitekey="instance.turnstileSiteKey"/>
 			<MkCaptcha v-if="instance.enableTestcaptcha" ref="testcaptcha" v-model="testcaptchaResponse" :class="$style.captcha" provider="testcaptcha" :sitekey="null"/>
@@ -111,7 +111,7 @@ const emit = defineEmits<{
 const host = toUnicode(config.host);
 
 const hcaptcha = ref<Captcha | undefined>();
-const mcaptcha = ref<Captcha | undefined>();
+const cap = ref<Captcha | undefined>();
 const recaptcha = ref<Captcha | undefined>();
 const turnstile = ref<Captcha | undefined>();
 const testcaptcha = ref<Captcha | undefined>();
@@ -141,7 +141,7 @@ const passwordStrength = ref<'' | 'low' | 'medium' | 'high'>('');
 const passwordRetypeState = ref<null | 'match' | 'not-match'>(null);
 const submitting = ref<boolean>(false);
 const hCaptchaResponse = ref<string | null>(null);
-const mCaptchaResponse = ref<string | null>(null);
+const capResponse = ref<string | null>(null);
 const reCaptchaResponse = ref<string | null>(null);
 const turnstileResponse = ref<string | null>(null);
 const testcaptchaResponse = ref<string | null>(null);
@@ -152,7 +152,7 @@ const shouldDisableSubmitting = computed((): boolean => {
 	return (
 		submitting.value ||
 		(instance.enableHcaptcha && !hCaptchaResponse.value) ||
-		(instance.enableMcaptcha && !mCaptchaResponse.value) ||
+		(instance.enableCap && !capResponse.value) ||
 		(instance.enableRecaptcha && !reCaptchaResponse.value) ||
 		(instance.enableTurnstile && !turnstileResponse.value) ||
 		(instance.enableTestcaptcha && !testcaptchaResponse.value) ||
@@ -307,7 +307,7 @@ async function onSubmit(): Promise<void> {
 		emailAddress: email.value,
 		invitationCode: invitationCode.value,
 		'hcaptcha-response': hCaptchaResponse.value,
-		'm-captcha-response': mCaptchaResponse.value,
+		'cap-response': capResponse.value,
 		'g-recaptcha-response': reCaptchaResponse.value,
 		'turnstile-response': turnstileResponse.value,
 		'testcaptcha-response': testcaptchaResponse.value,
@@ -356,7 +356,7 @@ async function onSubmit(): Promise<void> {
 function onSignupApiError() {
 	submitting.value = false;
 	hcaptcha.value?.reset?.();
-	mcaptcha.value?.reset?.();
+	cap.value?.reset?.();
 	recaptcha.value?.reset?.();
 	turnstile.value?.reset?.();
 	testcaptcha.value?.reset?.();

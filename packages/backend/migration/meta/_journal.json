@@ -120,6 +120,13 @@
       "when": 1788379573401,
       "tag": "0016_naive_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788832180518,
+      "tag": "0017_fair_famine",
+      "breakpoints": true
     }
   ]
 }

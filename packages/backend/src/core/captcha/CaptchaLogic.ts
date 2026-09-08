@@ -6,14 +6,7 @@
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { MiMeta } from '@/models/Meta.js';
 
-export const supportedCaptchaProviders = [
-	'none',
-	'hcaptcha',
-	'mcaptcha',
-	'recaptcha',
-	'turnstile',
-	'testcaptcha',
-] as const;
+export const supportedCaptchaProviders = ['none', 'hcaptcha', 'cap', 'recaptcha', 'turnstile', 'testcaptcha'] as const;
 type CaptchaProvider = (typeof supportedCaptchaProviders)[number];
 
 export const captchaErrorCodes = {
@@ -32,7 +25,7 @@ export type CaptchaSetting = {
 		siteKey: string | null;
 		secretKey: string | null;
 	};
-	mcaptcha: {
+	cap: {
 		siteKey: string | null;
 		secretKey: string | null;
 		instanceUrl: string | null;
@@ -84,7 +77,7 @@ type CaptchaMetaUpdate = Partial<
 	Pick<
 		MiMeta,
 		| ('enableHcaptcha' | 'hcaptchaSiteKey' | 'hcaptchaSecretKey')
-		| ('enableMcaptcha' | 'mcaptchaSitekey' | 'mcaptchaSecretKey' | 'mcaptchaInstanceUrl')
+		| ('enableCap' | 'capSiteKey' | 'capSecretKey' | 'capInstanceUrl')
 		| ('enableRecaptcha' | 'recaptchaSiteKey' | 'recaptchaSecretKey')
 		| ('enableTurnstile' | 'turnstileSiteKey' | 'turnstileSecretKey')
 		| 'enableTestcaptcha'
@@ -125,7 +118,7 @@ async function getCaptchaResponse(
 	return (await res.json()) as CaptchaResponse;
 }
 
-async function verifyRecaptcha(
+export async function verifyRecaptcha(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -149,7 +142,7 @@ async function verifyRecaptcha(
 	}
 }
 
-async function verifyHcaptcha(
+export async function verifyHcaptcha(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -173,26 +166,25 @@ async function verifyHcaptcha(
 	}
 }
 
-async function verifyMcaptcha(
+export async function verifyCap(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	siteKey: string,
 	instanceHost: string,
 	response: string | null | undefined,
 ): Promise<void> {
-	if (response == null) {
-		throw new CaptchaError(captchaErrorCodes.noResponseProvided, 'mcaptcha-failed: no response provided');
+	if (typeof response !== 'string' || response.length === 0) {
+		throw new CaptchaError(captchaErrorCodes.noResponseProvided, 'cap-failed: no response provided');
 	}
 
-	const endpointUrl = new URL('/api/v1/pow/siteverify', instanceHost);
+	const endpointUrl = new URL(`${encodeURIComponent(siteKey)}/siteverify`, `${instanceHost.replace(/\/$/, '')}/`);
 	const result = await httpRequestService.send(
 		endpointUrl.toString(),
 		{
 			method: 'POST',
 			body: JSON.stringify({
-				key: siteKey,
 				secret: secret,
-				token: response,
+				response: response,
 			}),
 			headers: {
 				'Content-Type': 'application/json',
@@ -202,17 +194,17 @@ async function verifyMcaptcha(
 	);
 
 	if (result.status !== 200) {
-		throw new CaptchaError(captchaErrorCodes.requestFailed, "mcaptcha-failed: mcaptcha didn't return 200 OK");
+		throw new CaptchaError(captchaErrorCodes.requestFailed, "cap-failed: cap didn't return 200 OK");
 	}
 
-	const resp = (await result.json()) as { valid: boolean };
+	const resp = (await result.json()) as { success: boolean };
 
-	if (!resp.valid) {
-		throw new CaptchaError(captchaErrorCodes.verificationFailed, 'mcaptcha-request-failed');
+	if (resp.success !== true) {
+		throw new CaptchaError(captchaErrorCodes.verificationFailed, 'cap-request-failed');
 	}
 }
 
-async function verifyTurnstile(
+export async function verifyTurnstile(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -236,7 +228,7 @@ async function verifyTurnstile(
 	}
 }
 
-async function verifyTestcaptcha(response: string | null | undefined): Promise<void> {
+export async function verifyTestcaptcha(response: string | null | undefined): Promise<void> {
 	if (response == null) {
 		throw new CaptchaError(captchaErrorCodes.noResponseProvided, 'testcaptcha-failed: no response provided');
 	}
@@ -252,8 +244,8 @@ export function getCaptchaSetting(meta: MiMeta): CaptchaSetting {
 		case meta.enableHcaptcha:
 			provider = 'hcaptcha';
 			break;
-		case meta.enableMcaptcha:
-			provider = 'mcaptcha';
+		case meta.enableCap:
+			provider = 'cap';
 			break;
 		case meta.enableRecaptcha:
 			provider = 'recaptcha';
@@ -275,10 +267,10 @@ export function getCaptchaSetting(meta: MiMeta): CaptchaSetting {
 			siteKey: meta.hcaptchaSiteKey,
 			secretKey: meta.hcaptchaSecretKey,
 		},
-		mcaptcha: {
-			siteKey: meta.mcaptchaSitekey,
-			secretKey: meta.mcaptchaSecretKey,
-			instanceUrl: meta.mcaptchaInstanceUrl,
+		cap: {
+			siteKey: meta.capSiteKey,
+			secretKey: meta.capSecretKey,
+			instanceUrl: meta.capInstanceUrl,
 		},
 		recaptcha: {
 			siteKey: meta.recaptchaSiteKey,
@@ -294,7 +286,7 @@ export function getCaptchaSetting(meta: MiMeta): CaptchaSetting {
 function buildCaptchaMetaUpdate(provider: CaptchaProvider, params?: CaptchaSaveParams): CaptchaMetaUpdate {
 	const metaPartial: CaptchaMetaUpdate = {
 		enableHcaptcha: provider === 'hcaptcha',
-		enableMcaptcha: provider === 'mcaptcha',
+		enableCap: provider === 'cap',
 		enableRecaptcha: provider === 'recaptcha',
 		enableTurnstile: provider === 'turnstile',
 		enableTestcaptcha: provider === 'testcaptcha',
@@ -311,10 +303,10 @@ function buildCaptchaMetaUpdate(provider: CaptchaProvider, params?: CaptchaSaveP
 			updateIfNotUndefined('hcaptchaSiteKey', params?.sitekey);
 			updateIfNotUndefined('hcaptchaSecretKey', params?.secret);
 			break;
-		case 'mcaptcha':
-			updateIfNotUndefined('mcaptchaSitekey', params?.sitekey);
-			updateIfNotUndefined('mcaptchaSecretKey', params?.secret);
-			updateIfNotUndefined('mcaptchaInstanceUrl', params?.instanceUrl);
+		case 'cap':
+			updateIfNotUndefined('capSiteKey', params?.sitekey);
+			updateIfNotUndefined('capSecretKey', params?.secret);
+			updateIfNotUndefined('capInstanceUrl', params?.instanceUrl);
 			break;
 		case 'recaptcha':
 			updateIfNotUndefined('recaptchaSiteKey', params?.sitekey);
@@ -360,21 +352,15 @@ export async function saveCaptchaSetting(
 			await verifyHcaptcha(deps.httpRequestService, params.secret, params.captchaResult);
 			await deps.updateMeta(buildCaptchaMetaUpdate(provider, params));
 		},
-		mcaptcha: async () => {
+		cap: async () => {
 			if (!params?.secret || !params.sitekey || !params.instanceUrl || !params.captchaResult) {
 				throw new CaptchaError(
 					captchaErrorCodes.invalidParameters,
-					'mcaptcha-failed: secret, sitekey, instanceUrl and captureResult are required',
+					'cap-failed: secret, sitekey, instanceUrl and captureResult are required',
 				);
 			}
 
-			await verifyMcaptcha(
-				deps.httpRequestService,
-				params.secret,
-				params.sitekey,
-				params.instanceUrl,
-				params.captchaResult,
-			);
+			await verifyCap(deps.httpRequestService, params.secret, params.sitekey, params.instanceUrl, params.captchaResult);
 			await deps.updateMeta(buildCaptchaMetaUpdate(provider, params));
 		},
 		recaptcha: async () => {

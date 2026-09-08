@@ -87,13 +87,13 @@ export class MiMeta {
 
 	public hcaptchaSecretKey: string | null;
 
-	public enableMcaptcha: boolean;
+	public enableCap: boolean;
 
-	public mcaptchaSitekey: string | null;
+	public capSiteKey: string | null;
 
-	public mcaptchaSecretKey: string | null;
+	public capSecretKey: string | null;
 
-	public mcaptchaInstanceUrl: string | null;
+	public capInstanceUrl: string | null;
 
 	public enableRecaptcha: boolean;
 
