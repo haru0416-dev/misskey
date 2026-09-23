@@ -636,6 +636,14 @@ Bun 1.4.0の`process.hrtime.bigint()`は、同じtime namespaceでも別process�
 
 出荷ソース（`c11c114371`時点のbackend）の連合matrixは、fork同士が168成功・0失敗・10 pendingで前回と一致した。公式固定版セルは利用者判断で途中停止し、出荷ソースでのupstream互換は未確認のまま残す（最後の完走はcompound版）。前回の公式セルは約98分のうち既知失敗23件の待ちが4,042秒を占めており、既知失敗をtimeoutまで待たずに落とす改善が必要。初回の起動はcompose.matrix.ymlの自動割当ネットワークが`172.20.0.0/16`を先取りして失敗したため、全ネットワークにサブネットを明示した。D2/D3のチェックボックスは更新しない。
 
+### 連合matrixの既知失敗の待ち時間短縮（2026-09-24）
+
+公式セルの約98分のうち、既知失敗23件の待ちが4,042秒を占めていた。原因は二つ。公式版のinbox処理失敗（重複Acceptの`No follow request.`等）がbackoff付き再試行でdelayedに残り、`deliveryBarrier`が最大360秒待ったため、原因のテストだけでなく同じファイル・後続ファイルのテストとbeforeAllも180秒timeoutで連鎖失敗・skipしていた。もう一つは、公式版のdeliver backoff（60秒・180秒）を障害回復テストがそのまま待っていたこと。
+
+barrierは失敗理由付きでdelayedになったinboxジョブを即座に失敗として報告し、報告済みと、テストファイル読込前に作られたジョブは以後待たない。fork同士のセルではinboxジョブが一度もdelayedに入らない（異常系はUnrecoverableErrorで即failed）ことを実行ログで確認した上での条件。障害回復テストは再試行待ちの間、送信側のdelayed deliverを`admin/queue/promote-jobs`で繰り上げる。再試行されるのは同じジョブで、再送経路と冪等性の検査は残る。
+
+結果（`556022711e`＋本変更、Bun 1.4.0）: 公式セルは約98分→4分35秒、161成功・7失敗・10 pending（前回108・23・47）。残る7件はMove 2件、ブロック解除後のFollow/Reaction 2件、応答喪失時の重複Accept 1件、凍結解除後の復旧2件で、すべて上表の既知失敗。新規失敗は0件。失敗→成功16件と、skip→成功37件は連鎖の巻き添えだったもので、公式互換の保証範囲がその分広がった。fork同士のセルは約50分→2分15秒、168成功・0失敗・10 pendingで、直前のfork実行と全178件の個別statusが一致した。以後の公式セルの比較基準はこの7失敗とする。
+
 ### 出荷後の原因調査：局所投稿のABBA比較（2026-09-24）
 
 重い24-run環境（専用containerは削除済みで復元が必要）の代わりに、単一host上の専用PostgreSQL 18（`fsync`・`synchronous_commit`は既定のon）とValkeyで、A=`1dba6556aa`とB=出荷版（backend/srcはmapperと型宣言1ファイル以外同一）を同じ設定・同じseed（投稿者20・読者20・follow 400）から毎回作り直して比較した。1 runは暖機30投稿、アイドル10秒、直列200投稿、並行4で400投稿、各段のqueue_outbox完了待ち。順序はABBA×3の12 run・6組、Bun 1.4.0、クラスタ構成はhttp 1 / queue 1。仮説・記録キー・判定は計測前に`~/dev/misskey-rootcause/PROTOCOL.md`へ固定し、組数の数え違いだけデータ取得前に訂正した。

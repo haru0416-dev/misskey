@@ -459,12 +459,56 @@ async function peerQuery(host: Host, text: string, values: unknown[] = []) {
 	}
 }
 
+/**
+ * 送信側の delayed ジョブを即時実行へ繰り上げる。再試行するのは同じジョブなので再送経路と冪等性は検査に残り、
+ * 省くのは backoff の待ちだけ。公式版の deliver backoff は 60 秒・180 秒…と伸び、1 試験で数分かかっていた。
+ */
+export async function promoteDelayed(host: Host, queue: 'deliver' | 'inbox'): Promise<void> {
+	const admin = await fetchAdmin(host);
+	await admin.client.request('admin/queue/promote-jobs', { queue });
+}
+
+/** 受信処理が失敗して再試行に入った inbox ジョブ。報告済みのものは以後のバリアで待たない。 */
+const reportedInboxRetries = new Set<string>();
+// vitest はテストファイルごとにこのモジュールを読み直すので、報告済みの記録はファイルをまたがない。
+// 読み込み前に作られたジョブは前のファイルで報告済みとみなし、後続ファイルの失敗として数えない。
+// ジョブの timestamp は各 peer コンテナの時計だが、同一ホストのカーネル時計を共有している。
+const moduleLoadedAt = Date.now();
+
+export class InboxRetryFailure extends Error {}
+
+// inbox の処理失敗は backoff 付きで再試行され、公式版では数分〜数時間 delayed に残る。
+// fork セルでは inbox ジョブが delayed に入らない (異常系は UnrecoverableError で即 failed) ため、
+// 失敗理由付きの delayed を「受信側の処理失敗」として即座に失敗させ、360 秒の待機を避ける。
+async function detectInboxRetries(host: Host, admin: LoginUser, delayed: number): Promise<number> {
+	if (delayed === 0) return 0;
+	const jobs = await admin.client.request('admin/queue/jobs', { queue: 'inbox', state: ['delayed'] });
+	const retrying = jobs.filter((job) => job.failedReason);
+	const fresh = retrying.filter(
+		(job) => job.timestamp >= moduleLoadedAt && !reportedInboxRetries.has(`${host}:${job.id}`),
+	);
+	for (const job of retrying) reportedInboxRetries.add(`${host}:${job.id}`);
+	if (fresh.length > 0) {
+		const detail = fresh.map((job) => ({
+			id: job.id,
+			attempts: job.attempts,
+			activity: (job.data as { activity?: { type?: unknown; id?: unknown } }).activity?.type,
+			activityId: (job.data as { activity?: { id?: unknown } }).activity?.id,
+			failedReason: job.failedReason.slice(0, 300),
+		}));
+		throw new InboxRetryFailure(`${host}: inbox processing failed and is retrying: ${JSON.stringify(detail)}`);
+	}
+	return retrying.length;
+}
+
 export async function deliveryBarrier(senderHost: Host): Promise<void> {
 	const receiverHost = senderHost === 'a.test' ? 'b.test' : 'a.test';
 	let lastState: unknown;
 	const idle = async (host: Host) => {
 		const admin = await fetchAdmin(host);
 		const stats = await admin.client.request('admin/queue/stats', {});
+		const reportedDelayed = await detectInboxRetries(host, admin, stats.inbox.delayed);
+		stats.inbox.delayed -= reportedDelayed;
 		const relationship = await admin.client.request('admin/queue/queue-stats', { queue: 'relationship' });
 		let pendingOutbox = 0;
 		if (hostKind(host) === 'fork') {
@@ -497,6 +541,7 @@ export async function deliveryBarrier(senderHost: Host): Promise<void> {
 			100,
 		);
 	} catch (error) {
+		if (error instanceof InboxRetryFailure) throw error;
 		throw new Error(`Federation did not settle: ${JSON.stringify(lastState)}`, { cause: error });
 	}
 }
