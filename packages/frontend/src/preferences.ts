@@ -20,6 +20,7 @@ import { DeferredTaskScheduler } from '@/utility/deferred-task-scheduler.js';
 import { pinia } from '@/store/pinia.js';
 
 const syncGroup = 'default';
+const account = $i == null ? null : { id: $i.id, token: $i.token };
 
 function isNoSuchKeyError(err: unknown): boolean {
 	return typeof err === 'object' && err !== null && 'code' in err && (err as { code: unknown }).code === 'NO_SUCH_KEY';
@@ -36,10 +37,14 @@ const io: StorageProvider = {
 
 	cloudGet: async <K extends keyof PREF>(ctx: { key: K; scope: Scope }) => {
 		try {
-			const cloudData = (await misskeyApi('i/registry/get', {
-				scope: ['client', 'preferences', 'sync'],
-				key: syncGroup + ':' + ctx.key,
-			})) as [Scope, unknown][];
+			const cloudData = (await misskeyApi(
+				'i/registry/get',
+				{
+					scope: ['client', 'preferences', 'sync'],
+					key: syncGroup + ':' + ctx.key,
+				},
+				account?.token ?? null,
+			)) as [Scope, unknown][];
 			const target = cloudData.find(([scope]) => isSameScope(scope, ctx.scope));
 			if (target == null) {
 				return null;
@@ -59,10 +64,14 @@ const io: StorageProvider = {
 	cloudSet: async (ctx) => {
 		let cloudData: [Scope, unknown][] = [];
 		try {
-			cloudData = (await misskeyApi('i/registry/get', {
-				scope: ['client', 'preferences', 'sync'],
-				key: syncGroup + ':' + ctx.key,
-			})) as [Scope, unknown][];
+			cloudData = (await misskeyApi(
+				'i/registry/get',
+				{
+					scope: ['client', 'preferences', 'sync'],
+					key: syncGroup + ':' + ctx.key,
+				},
+				account?.token ?? null,
+			)) as [Scope, unknown][];
 		} catch (err) {
 			if (isNoSuchKeyError(err)) {
 				cloudData = [];
@@ -79,11 +88,15 @@ const io: StorageProvider = {
 			cloudData[i] = [ctx.scope, ctx.value];
 		}
 
-		await misskeyApi('i/registry/set', {
-			scope: ['client', 'preferences', 'sync'],
-			key: syncGroup + ':' + ctx.key,
-			value: cloudData,
-		});
+		await misskeyApi(
+			'i/registry/set',
+			{
+				scope: ['client', 'preferences', 'sync'],
+				key: syncGroup + ':' + ctx.key,
+				value: cloudData,
+			},
+			account?.token ?? null,
+		);
 	},
 
 	cloudGetBulk: async <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope }[] }) => {
@@ -101,7 +114,7 @@ const io: StorageProvider = {
 	},
 };
 
-export const prefer = createPreferencesStore(io, $i, pinia);
+export const prefer = createPreferencesStore(io, account, pinia);
 
 //#region タブ間同期
 let latestPreferencesUpdate: {

@@ -3,36 +3,52 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { shallowRef } from 'vue';
+import { shallowRef, shallowReadonly } from 'vue';
 import { hashKey } from '@tanstack/vue-query';
 import type { QueryKey } from '@tanstack/vue-query';
 import { queryClient } from '@/query/client.js';
 
-/** QueryCacheの購読を保持し続けるため、page lifetimeのsingletonとして使用する。 */
-export class QueryBackedCache<T> {
-	public readonly value = shallowRef<T>();
+type QueryCacheOptions<T> = {
+	initialData?: T;
+	updatedAt?: number;
+	onUpdate?: (value: T | undefined, updatedAt: number) => void;
+};
+
+/** 購読の所有者はdisposeする。ページ全体のcacheもHMRによる置換時には解放する。 */
+export class QueryCacheView<T> {
+	private readonly data = shallowRef<T>();
+	public readonly value = shallowReadonly(this.data);
+	private readonly unsubscribe: () => void;
 
 	constructor(
-		private readonly queryKey: QueryKey,
-		private readonly queryFn: (signal: AbortSignal) => Promise<T>,
-		private readonly staleTime: number,
+		protected readonly queryKey: QueryKey,
+		options: QueryCacheOptions<T> = {},
 	) {
-		this.value.value = queryClient.getQueryData<T>(this.queryKey);
+		// 表示中のsingletonをGCして別の正本を必要としないよう、所有者の寿命まで保持する。
+		queryClient.setQueryDefaults(this.queryKey, { gcTime: Infinity });
+		const current = queryClient.getQueryState(this.queryKey);
+		if (
+			options.initialData !== undefined &&
+			(current?.data === undefined || (options.updatedAt ?? 0) > current.dataUpdatedAt)
+		) {
+			queryClient.setQueryData(this.queryKey, options.initialData, { updatedAt: options.updatedAt ?? 0 });
+		}
+		this.data.value = queryClient.getQueryData<T>(this.queryKey);
 		const queryHash = hashKey(this.queryKey);
-		queryClient.getQueryCache().subscribe((event) => {
-			if (event.query.queryHash !== queryHash) {
-				return;
+		this.unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+			if (event.query.queryHash !== queryHash) return;
+			if (event.type === 'removed') {
+				this.data.value = undefined;
+				options.onUpdate?.(undefined, 0);
+			} else if (event.type === 'updated' && event.action.type === 'success') {
+				const value = event.query.state.data as T;
+				this.data.value = value;
+				options.onUpdate?.(value, event.query.state.dataUpdatedAt);
 			}
-			this.value.value = event.query.state.data as T | undefined;
 		});
-	}
-
-	public fetch(): Promise<T> {
-		return queryClient.fetchQuery({
-			queryKey: this.queryKey,
-			queryFn: ({ signal }) => this.queryFn(signal),
-			staleTime: this.staleTime,
-		});
+		if (this.data.value !== undefined) {
+			options.onUpdate?.(this.data.value, queryClient.getQueryState(this.queryKey)?.dataUpdatedAt ?? 0);
+		}
 	}
 
 	public set(value: T): void {
@@ -41,5 +57,28 @@ export class QueryBackedCache<T> {
 
 	public delete(): void {
 		void queryClient.invalidateQueries({ queryKey: this.queryKey, exact: true });
+	}
+
+	public dispose(): void {
+		this.unsubscribe();
+	}
+}
+
+export class QueryBackedCache<T> extends QueryCacheView<T> {
+	constructor(
+		queryKey: QueryKey,
+		private readonly queryFn: (signal: AbortSignal) => Promise<T>,
+		private readonly staleTime: number,
+		options: QueryCacheOptions<T> = {},
+	) {
+		super(queryKey, options);
+	}
+
+	public fetch(): Promise<T> {
+		return queryClient.fetchQuery({
+			queryKey: this.queryKey,
+			queryFn: ({ signal }) => this.queryFn(signal),
+			staleTime: this.staleTime,
+		});
 	}
 }

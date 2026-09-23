@@ -262,6 +262,32 @@ describe('Pinia persisted state plugin', () => {
 		).toHaveLength(0);
 	});
 
+	test('keeps queued persistence and broadcasts bound to the originating account', async () => {
+		const options: TestIoOptions = { sourceId: 'tab-a', accountId: 'account-a' };
+		const fixture = createTestIo(options);
+		const persist = {
+			namespace: 'switch-pending',
+			properties: { value: { where: 'deviceAccount' } },
+		} as const;
+		const first = createStore('switch-first', () => ({ value: 0 }), persist, fixture.io);
+		const secondFixture = createTestIo({
+			sourceId: 'tab-b',
+			accountId: 'account-a',
+			hub: fixture.hub,
+			storage: fixture.storage,
+		});
+		const second = createStore('switch-second', () => ({ value: 0 }), persist, secondFixture.io);
+		await Promise.all([first.$persistReady, second.$persistReady]);
+		first.value = 42;
+		options.accountId = 'account-b';
+		await first.$persistFlush();
+		expect(fixture.storage.get('pinia::switch-pending::device-account::account-a')).toEqual({ value: 42 });
+		expect(fixture.storage.has('pinia::switch-pending::device-account::account-b')).toBe(false);
+		expect(second.value).toBe(42);
+		first.$persistDispose();
+		second.$persistDispose();
+	});
+
 	test('orders a local update after the latest remote update even when clocks are equal', async () => {
 		vi.spyOn(Date, 'now').mockReturnValue(1000);
 		const hub = new ChannelHub();

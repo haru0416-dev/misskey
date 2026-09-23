@@ -109,32 +109,24 @@ import {
 	onMounted,
 	shallowRef,
 	ref,
-	markRaw,
 	nextTick,
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import * as Misskey from 'misskey-js';
-import { useInterval } from '@shared/utility/use-interval.js';
-import { useDocumentVisibility } from '@shared/utility/use-document-visibility.js';
 import { getScrollContainer, scrollToTop } from '@shared/utility/scroll.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import type { SoundStore } from '@/preferences/def.js';
-import type { IPaginator, MisskeyEntity } from '@/utility/paginator.js';
 import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
-import { useStream } from '@/stream.js';
 import * as sound from '@/features/sound/sound.js';
 import { $i } from '@/i.js';
-import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';
-import { store } from '@/store.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { DI } from '@/di.js';
-import { globalEvents, useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';
-import { Paginator } from '@/utility/paginator.js';
+import { useStreamingNotesTimeline } from '@/features/notes/useStreamingNotesTimeline.js';
 import { notePage } from '@/filters/note.js';
 
 const props = withDefaults(
@@ -173,123 +165,25 @@ provide(
 	computed(() => (props.src === 'channel' ? (props.channel ?? null) : null)),
 );
 
-let paginator: IPaginator<Misskey.entities.Note>;
-
-function getWithFilesParam(): { withFiles?: true } {
-	return props.onlyFiles ? { withFiles: true } : {};
-}
-
-if (props.src === 'antenna') {
-	paginator = markRaw(
-		new Paginator('antennas/notes', {
-			computedParams: computed(() => ({
-				antennaId: props.antenna!,
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'home') {
-	paginator = markRaw(
-		new Paginator('notes/timeline', {
-			computedParams: computed(() => ({
-				withRenotes: props.withRenotes,
-				...getWithFilesParam(),
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'local') {
-	paginator = markRaw(
-		new Paginator('notes/local-timeline', {
-			computedParams: computed(() => ({
-				withRenotes: props.withRenotes,
-				withReplies: props.withReplies,
-				...getWithFilesParam(),
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'social') {
-	paginator = markRaw(
-		new Paginator('notes/hybrid-timeline', {
-			computedParams: computed(() => ({
-				withRenotes: props.withRenotes,
-				withReplies: props.withReplies,
-				...getWithFilesParam(),
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'global') {
-	paginator = markRaw(
-		new Paginator('notes/global-timeline', {
-			computedParams: computed(() => ({
-				withRenotes: props.withRenotes,
-				...getWithFilesParam(),
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'mentions') {
-	paginator = markRaw(
-		new Paginator('notes/mentions', {
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'directs') {
-	paginator = markRaw(
-		new Paginator('notes/mentions', {
-			params: {
-				visibility: 'specified',
-			},
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'list') {
-	paginator = markRaw(
-		new Paginator('notes/user-list-timeline', {
-			computedParams: computed(() => ({
-				withRenotes: props.withRenotes,
-				...getWithFilesParam(),
-				listId: props.list!,
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'channel') {
-	paginator = markRaw(
-		new Paginator('channels/timeline', {
-			computedParams: computed(() => ({
-				channelId: props.channel!,
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else if (props.src === 'role') {
-	paginator = markRaw(
-		new Paginator('roles/notes', {
-			computedParams: computed(() => ({
-				roleId: props.role!,
-			})),
-			useShallowRef: true,
-		}),
-	);
-} else {
-	throw new Error('Unrecognized timeline type: ' + props.src);
-}
-
-onMounted(() => {
-	paginator.init();
-
-	if (paginator.computedParams) {
-		watch(
-			paginator.computedParams,
-			() => {
-				paginator.reload();
-			},
-			{ immediate: false, deep: true },
-		);
-	}
+const {
+	paginator,
+	reloadTimeline,
+	releaseQueue,
+	onViewportChanged: onScrollContainerScroll,
+} = useStreamingNotesTimeline(props, {
+	isAtTop: isTop,
+	onBeforePrepend: markNoteEntering,
+	onNote: (note) => {
+		if (props.sound) {
+			if (props.customSound) {
+				sound.playMisskeySfxFile(props.customSound);
+			} else {
+				sound.playMisskeySfx($i && note.userId === $i.id ? 'noteMy' : 'note');
+			}
+		}
+	},
+	onRemove: removeItem,
+	onQueueReleased: () => scrollToTop(rootEl.value!),
 });
 
 function isTop() {
@@ -309,7 +203,7 @@ const canVirtualize = computed(() => props.viewMode === 'notes' && scrollElement
 const mediaFiles = (note: Misskey.entities.Note) =>
 	(note.files ?? []).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
 const mediaNotes = computed(() =>
-	paginator.items.value.filter((note) => {
+	paginator.value.items.value.filter((note) => {
 		const files = mediaFiles(note);
 		return files.length > 0 && (props.withSensitive || files.every((file) => !file.isSensitive));
 	}),
@@ -317,10 +211,10 @@ const mediaNotes = computed(() =>
 
 const virtualizer = useVirtualizer(
 	computed(() => ({
-		count: paginator.items.value.length,
+		count: paginator.value.items.value.length,
 		getScrollElement: () => scrollElement.value,
 		estimateSize: () => 220,
-		getItemKey: (index) => paginator.items.value[index]?.id ?? index,
+		getItemKey: (index) => paginator.value.items.value[index]?.id ?? index,
 		overscan: 5,
 		scrollMargin: scrollMargin.value,
 		useScrollendEvent: true,
@@ -332,11 +226,11 @@ const virtualizer = useVirtualizer(
 
 const virtualRows = computed(() =>
 	virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
-		const note = paginator.items.value[virtualItem.index];
+		const note = paginator.value.items.value[virtualItem.index];
 		if (note == null) {
 			return [];
 		}
-		const previousNote = paginator.items.value[virtualItem.index - 1];
+		const previousNote = paginator.value.items.value[virtualItem.index - 1];
 		const separatorInfo =
 			previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
 				? getSeparatorInfo(previousNote.createdAt, note.createdAt)
@@ -401,7 +295,7 @@ function isVirtualLayoutSane(len: number): boolean {
 }
 
 watch(
-	[virtualRows, () => paginator.items.value.length],
+	[virtualRows, () => paginator.value.items.value.length],
 	([, len]) => {
 		if (len === 0) {
 			virtualLayoutVerified.value = false;
@@ -431,7 +325,7 @@ watch(
 	{ immediate: true, flush: 'post' },
 );
 
-const virtualLayoutPending = computed(() => paginator.items.value.length > 0 && !virtualLayoutVerified.value);
+const virtualLayoutPending = computed(() => paginator.value.items.value.length > 0 && !virtualLayoutVerified.value);
 
 function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
 	const previousNote = notes[index - 1];
@@ -496,8 +390,9 @@ function markNoteEntering(noteId: string) {
 }
 
 function removeItem(noteId: string) {
-	if (!prefer.animation || !canVirtualize.value || !paginator.items.value.some((note) => note.id === noteId)) {
-		paginator.removeItem(noteId);
+	const notePaginator = paginator.value;
+	if (!prefer.animation || !canVirtualize.value || !notePaginator.items.value.some((note) => note.id === noteId)) {
+		notePaginator.removeItem(noteId);
 		return;
 	}
 	if (leavingNoteIds.value.has(noteId)) {
@@ -508,19 +403,13 @@ function removeItem(noteId: string) {
 	animationTimers.set(
 		timerKey,
 		window.setTimeout(() => {
-			paginator.removeItem(noteId);
+			notePaginator.removeItem(noteId);
 			const ids = new Set(leavingNoteIds.value);
 			ids.delete(noteId);
 			leavingNoteIds.value = ids;
 			animationTimers.delete(timerKey);
 		}, 200),
 	);
-}
-
-function onScrollContainerScroll() {
-	if (isTop()) {
-		paginator.releaseQueue();
-	}
 }
 
 const rootEl = useTemplateRef('rootEl');
@@ -564,7 +453,7 @@ watch(
 
 watch(notesEl, () => nextTick(scheduleScrollMarginUpdate));
 watch(
-	() => paginator.queuedAheadItemsCount.value,
+	() => paginator.value.queuedAheadItemsCount.value,
 	async () => {
 		const previousNotesTop = notesEl.value?.getBoundingClientRect().top;
 		await nextTick();
@@ -594,221 +483,6 @@ onUnmounted(() => {
 	}
 	animationTimers.clear();
 });
-
-const visibility = useDocumentVisibility();
-let isPausingUpdate = false;
-
-watch(visibility, () => {
-	if (visibility.value === 'hidden') {
-		isPausingUpdate = true;
-	} else {
-		// 'visible'
-		isPausingUpdate = false;
-		if (isTop()) {
-			releaseQueue();
-		}
-	}
-});
-
-let adInsertionCounter = 0;
-
-const MIN_POLLING_INTERVAL = 1000 * 10;
-const POLLING_INTERVAL =
-	prefer.pollingInterval === 1
-		? MIN_POLLING_INTERVAL * 1.5 * 1.5
-		: prefer.pollingInterval === 2
-			? MIN_POLLING_INTERVAL * 1.5
-			: MIN_POLLING_INTERVAL;
-
-if (!store.realtimeMode) {
-	useInterval(
-		async () => {
-			paginator.fetchNewer({
-				toQueue: !isTop() || isPausingUpdate,
-			});
-		},
-		POLLING_INTERVAL,
-		{
-			immediate: false,
-			afterMounted: true,
-		},
-	);
-
-	useGlobalEvent('notePosted', (note) => {
-		paginator.fetchNewer({
-			toQueue: !isTop() || isPausingUpdate,
-		});
-	});
-}
-
-useGlobalEvent('noteDeleted', (noteId) => {
-	removeItem(noteId);
-});
-
-useGlobalEvent('noteRemovedFromAntenna', (antennaId, noteId) => {
-	if (props.src === 'antenna' && props.antenna === antennaId) {
-		removeItem(noteId);
-	}
-});
-
-function releaseQueue() {
-	paginator.releaseQueue();
-	scrollToTop(rootEl.value!);
-}
-
-function prepend(note: Misskey.entities.Note & MisskeyEntity) {
-	adInsertionCounter++;
-
-	if (instance.notesPerOneAd > 0 && adInsertionCounter % instance.notesPerOneAd === 0) {
-		note._shouldInsertAd_ = true;
-	}
-
-	if (isTop() && !isPausingUpdate) {
-		markNoteEntering(note.id);
-		paginator.prepend(note);
-	} else {
-		paginator.enqueue(note);
-	}
-
-	if (props.sound) {
-		if (props.customSound) {
-			sound.playMisskeySfxFile(props.customSound);
-		} else {
-			sound.playMisskeySfx($i && note.userId === $i.id ? 'noteMy' : 'note');
-		}
-	}
-}
-
-const stream = store.realtimeMode ? useStream() : null;
-
-const connections = {
-	antenna: null as Misskey.IChannelConnection<Misskey.Channels['antenna']> | null,
-	homeTimeline: null as Misskey.IChannelConnection<Misskey.Channels['homeTimeline']> | null,
-	localTimeline: null as Misskey.IChannelConnection<Misskey.Channels['localTimeline']> | null,
-	hybridTimeline: null as Misskey.IChannelConnection<Misskey.Channels['hybridTimeline']> | null,
-	globalTimeline: null as Misskey.IChannelConnection<Misskey.Channels['globalTimeline']> | null,
-	main: null as Misskey.IChannelConnection<Misskey.Channels['main']> | null,
-	userList: null as Misskey.IChannelConnection<Misskey.Channels['userList']> | null,
-	channel: null as Misskey.IChannelConnection<Misskey.Channels['channel']> | null,
-	roleTimeline: null as Misskey.IChannelConnection<Misskey.Channels['roleTimeline']> | null,
-};
-
-function connectChannel() {
-	if (stream == null) {
-		return;
-	}
-	if (props.src === 'antenna') {
-		if (props.antenna == null) {
-			return;
-		}
-		connections.antenna = stream.useChannel('antenna', {
-			antennaId: props.antenna,
-		});
-		connections.antenna.on('note', prepend);
-	} else if (props.src === 'home') {
-		connections.homeTimeline = stream.useChannel('homeTimeline', {
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-		});
-		connections.main = stream.useChannel('main');
-		connections.homeTimeline.on('note', prepend);
-	} else if (props.src === 'local') {
-		connections.localTimeline = stream.useChannel('localTimeline', {
-			withRenotes: props.withRenotes,
-			withReplies: props.withReplies,
-			...getWithFilesParam(),
-		});
-		connections.localTimeline.on('note', prepend);
-	} else if (props.src === 'social') {
-		connections.hybridTimeline = stream.useChannel('hybridTimeline', {
-			withRenotes: props.withRenotes,
-			withReplies: props.withReplies,
-			...getWithFilesParam(),
-		});
-		connections.hybridTimeline.on('note', prepend);
-	} else if (props.src === 'global') {
-		connections.globalTimeline = stream.useChannel('globalTimeline', {
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-		});
-		connections.globalTimeline.on('note', prepend);
-	} else if (props.src === 'mentions') {
-		connections.main = stream.useChannel('main');
-		connections.main.on('mention', prepend);
-	} else if (props.src === 'directs') {
-		connections.main = stream.useChannel('main');
-		connections.main.on('mention', (note) => {
-			if (note.visibility === 'specified') {
-				prepend(note);
-			}
-		});
-	} else if (props.src === 'list') {
-		if (props.list == null) {
-			return;
-		}
-		connections.userList = stream.useChannel('userList', {
-			withRenotes: props.withRenotes,
-			...getWithFilesParam(),
-			listId: props.list,
-		});
-		connections.userList.on('note', prepend);
-	} else if (props.src === 'channel') {
-		if (props.channel == null) {
-			return;
-		}
-		connections.channel = stream.useChannel('channel', {
-			channelId: props.channel,
-		});
-		connections.channel.on('note', prepend);
-	} else if (props.src === 'role') {
-		if (props.role == null) {
-			return;
-		}
-		connections.roleTimeline = stream.useChannel('roleTimeline', {
-			roleId: props.role,
-		});
-		connections.roleTimeline.on('note', prepend);
-	}
-}
-
-function disconnectChannel() {
-	for (const key in connections) {
-		const conn = connections[key as keyof typeof connections];
-		if (conn != null) {
-			conn.dispose();
-			connections[key as keyof typeof connections] = null;
-		}
-	}
-}
-
-if (store.realtimeMode) {
-	connectChannel();
-}
-
-watch(
-	() => [props.list, props.antenna, props.channel, props.role, props.withRenotes],
-	() => {
-		if (store.realtimeMode) {
-			disconnectChannel();
-			connectChannel();
-		}
-	},
-);
-watch(() => props.withSensitive, reloadTimeline);
-
-onUnmounted(() => {
-	disconnectChannel();
-});
-
-function reloadTimeline() {
-	return new Promise<void>((res) => {
-		adInsertionCounter = 0;
-
-		paginator.reload().then(() => {
-			res();
-		});
-	});
-}
 
 defineExpose({
 	reloadTimeline,

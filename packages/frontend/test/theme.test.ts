@@ -202,39 +202,42 @@ describe('ThemeManager', () => {
 		]);
 	});
 
-	test('View Transitionの非同期失敗時もテーマを適用して一時クラスを解放する', async () => {
-		let rejectFinished: (reason?: unknown) => void = () => {};
-		const finished = new Promise<void>((_resolve, reject) => {
-			rejectFinished = reject;
-		});
-		const startViewTransition = vi.fn((update: () => void | Promise<void>) => {
-			void update();
-			return {
-				finished,
-				ready: Promise.resolve(),
-				updateCallbackDone: Promise.resolve(),
-				skipTransition: vi.fn(),
-			};
-		});
-		Object.defineProperty(document, 'startViewTransition', {
-			configurable: true,
-			value: startViewTransition,
-		});
-		const error = new Error('transition failed');
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const { themeManager } = await loadThemeModule();
-		const themeChanged = vi.fn();
-		themeManager.on('themeChanged', themeChanged);
+	test.each(['ready', 'finished'] as const)(
+		'View Transitionの%s拒否でもテーマ適用を完了し一時クラスを解放する',
+		async (stage) => {
+			let rejectTransition: (reason?: unknown) => void = () => {};
+			const rejected = new Promise<void>((_resolve, reject) => {
+				rejectTransition = reject;
+			});
+			const startViewTransition = vi.fn((update: () => void | Promise<void>) => {
+				void update();
+				return {
+					finished: stage === 'finished' ? rejected : Promise.resolve(),
+					ready: stage === 'ready' ? rejected : Promise.resolve(),
+					updateCallbackDone: Promise.resolve(),
+					skipTransition: vi.fn(),
+				};
+			});
+			Object.defineProperty(document, 'startViewTransition', {
+				configurable: true,
+				value: startViewTransition,
+			});
+			const error = new Error('transition failed');
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const { themeManager } = await loadThemeModule();
+			const themeChanged = vi.fn();
+			themeManager.on('themeChanged', themeChanged);
 
-		themeManager.updateTheme(primaryTheme);
-		expect(document.documentElement.classList.contains('_themeChanging_')).toBe(true);
-		rejectFinished(error);
-		await vi.waitFor(() => expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false));
+			themeManager.updateTheme(primaryTheme);
+			expect(document.documentElement.classList.contains('_themeChanging_')).toBe(true);
+			rejectTransition(error);
+			await vi.waitFor(() => expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false));
 
-		expect(document.documentElement.dataset['colorScheme']).toBe('light');
-		expect(themeChanged).toHaveBeenCalledTimes(1);
-		expect(consoleError).toHaveBeenCalledWith(error);
-	});
+			expect(document.documentElement.dataset['colorScheme']).toBe('light');
+			expect(themeChanged).toHaveBeenCalledTimes(1);
+			expect(consoleError).toHaveBeenCalledWith(error);
+		},
+	);
 
 	test('View Transitionの同期例外時もテーマを適用して一時クラスを解放する', async () => {
 		const error = new Error('start failed');

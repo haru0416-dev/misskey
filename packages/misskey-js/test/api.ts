@@ -1,5 +1,5 @@
 import { vi, describe, test, expect } from 'vitest';
-import { APIClient, isAPIError } from '../src/api.js';
+import { APIClient, isAPIError, requestAPI } from '../src/api.js';
 
 describe('API', () => {
 	test('success', async () => {
@@ -27,10 +27,6 @@ describe('API', () => {
 
 		expect(res).toEqual({
 			id: 'foo',
-		});
-
-		fetch('https://misskey.test/api/i', {
-			method: 'POST',
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/i', {
@@ -89,7 +85,11 @@ describe('API', () => {
 			if (url === 'https://misskey.test/api/drive/files/create' && options?.method === 'POST') {
 				if (options.body instanceof FormData) {
 					const file = options.body.get('file');
-					if (file instanceof File && file.name === 'foo.txt') {
+					if (file instanceof File && file.name === 'foo.txt' &&
+						options.body.get('i') === 'TOKEN' &&
+						!options.body.has('name') &&
+						options.body.get('isSensitive') === 'false' &&
+						new Headers(options.headers).get('Content-Type') === null) {
 						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
 				}
@@ -108,6 +108,7 @@ describe('API', () => {
 		const res = await cli.request('drive/files/create', {
 			file: testFile,
 			name: null, // nullのパラメータは消える
+			isSensitive: false,
 		});
 
 		expect(res).toEqual({
@@ -196,33 +197,19 @@ describe('API', () => {
 	});
 
 	test('api error', async () => {
-		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
-			return new Response(
-				JSON.stringify({
-					error: {
-						message: 'Internal error occurred. Please contact us if the error persists.',
-						code: 'INTERNAL_ERROR',
-						id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
-						kind: 'server',
-					},
-				}),
-				{ status: 500 },
-			);
+		const error = {
+			message: 'Internal error occurred. Please contact us if the error persists.',
+			code: 'INTERNAL_ERROR',
+			id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+			kind: 'server',
+		};
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response(JSON.stringify({ error }), { status: 500 }),
 		});
-
-		try {
-			const cli = new APIClient({
-				origin: 'https://misskey.test',
-				credential: 'TOKEN',
-			});
-
-			await cli.request('i');
-		} catch (e: any) {
-			expect(isAPIError(e)).toEqual(true);
-			expect(e.id).toEqual('5d37dbcb-891e-41ca-a3d6-e690c97775ac');
-		} finally {
-			fetchMock.mockRestore();
-		}
+		await expect(cli.request('i')).rejects.toMatchObject(error);
+		const reason = await cli.request('i').catch((value) => value);
+		expect(isAPIError(reason)).toBe(true);
 	});
 
 	test('non-object error response is not treated as an API error', async () => {
@@ -240,41 +227,74 @@ describe('API', () => {
 	});
 
 	test('network error', async () => {
-		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
-			throw new Error('Network error');
+		const error = new Error('Network error');
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => { throw error; },
 		});
-
-		try {
-			const cli = new APIClient({
-				origin: 'https://misskey.test',
-				credential: 'TOKEN',
-			});
-
-			await cli.request('i');
-		} catch (e) {
-			expect(isAPIError(e)).toEqual(false);
-		} finally {
-			fetchMock.mockRestore();
-		}
+		await expect(cli.request('i')).rejects.toBe(error);
+		expect(isAPIError(error)).toBe(false);
 	});
 
 	test('json parse error', async () => {
-		const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
-			return new Response('<html>I AM NOT JSON</html>', { status: 500 });
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response('<html>I AM NOT JSON</html>', { status: 500 }),
 		});
+		await expect(cli.request('i')).rejects.toBeInstanceOf(SyntaxError);
+	});
 
-		try {
-			const cli = new APIClient({
-				origin: 'https://misskey.test',
-				credential: 'TOKEN',
-			});
+	test('malformed structured errors retain the response body', async () => {
+		const body = { error: { code: 'INVALID', message: 'Missing error identity' } };
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response(JSON.stringify(body), { status: 400 }),
+		});
+		await expect(cli.request('i')).rejects.toEqual(body);
+	});
 
-			await cli.request('i');
-		} catch (e) {
-			expect(isAPIError(e)).toEqual(false);
-		} finally {
-			fetchMock.mockRestore();
-		}
+	test('other successful HTTP statuses are not API successes', async () => {
+		const body = { id: 'unexpected' };
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response(JSON.stringify(body), { status: 201 }),
+		});
+		await expect(cli.request('i')).rejects.toEqual(body);
+	});
+
+	test('cancellation reaches custom fetch without API error branding', async () => {
+		const controller = new AbortController();
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: (_url, init) => {
+				const { promise, reject } = Promise.withResolvers<Response>();
+				const signal = init?.signal;
+				signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+				return promise;
+			},
+		});
+		const request = cli.request('i', {}, undefined, controller.signal);
+		const reason = new DOMException('Cancelled', 'AbortError');
+		controller.abort(reason);
+		await expect(request).rejects.toBe(reason);
+		expect(isAPIError(reason)).toBe(false);
+	});
+
+	test('GET transport serializes query values without a body', async () => {
+		const result = await requestAPI({
+			apiUrl: 'https://misskey.test/api',
+			endpoint: 'notes/local-timeline',
+			method: 'GET',
+			data: { limit: 0, withFiles: false, untilId: null, sinceId: undefined, ids: ['a', 'b'], text: 'a b&c' },
+			fetch: async (url, init) => {
+				const request = new Request(url, init);
+				expect(request.method).toBe('GET');
+				expect(request.body).toBeNull();
+				expect(new URL(url).searchParams.toString()).toBe('limit=0&withFiles=false&untilId=null&sinceId=undefined&ids=a%2Cb&text=a+b%26c');
+				return new Response(null, { status: 204 });
+			},
+		});
+		expect(result).toEqual({ status: 204, body: null });
 	});
 
 	test('admin/roles/create の型が合う', async () => {

@@ -106,6 +106,7 @@ export class Paginator<
 	private initAbortController: AbortController | null = null;
 	private olderAbortController: AbortController | null = null;
 	private newerAbortController: AbortController | null = null;
+	private disposed = false;
 
 	// 配列内の要素をどのような順序で並べるか
 	// newest: 新しいものが先頭 (default)
@@ -220,7 +221,22 @@ export class Paginator<
 		this.fetchingNewer.value = false;
 	}
 
+	public cancelRequests(): void {
+		this.initAbortController?.abort();
+		this.initAbortController = null;
+		this.abortPageRequests();
+		this.fetching.value = false;
+	}
+
+	public dispose(): void {
+		this.disposed = true;
+		this.cancelRequests();
+	}
+
 	public async init(): Promise<void> {
+		if (this.disposed) {
+			return;
+		}
 		this.initAbortController?.abort();
 		this.abortPageRequests();
 		const abortController = new AbortController();
@@ -307,7 +323,13 @@ export class Paginator<
 	}
 
 	public async fetchOlder(): Promise<void> {
-		if (!this.canFetchOlder.value || this.fetching.value || this.fetchingOlder.value || this.items.value.length === 0) {
+		if (
+			this.disposed ||
+			!this.canFetchOlder.value ||
+			this.fetching.value ||
+			this.fetchingOlder.value ||
+			this.items.value.length === 0
+		) {
 			return;
 		}
 		const abortController = new AbortController();
@@ -376,7 +398,7 @@ export class Paginator<
 			toQueue?: boolean;
 		} = {},
 	): Promise<void> {
-		if (this.fetching.value || this.fetchingNewer.value || this.items.value.length === 0) {
+		if (this.disposed || this.fetching.value || this.fetchingNewer.value || this.items.value.length === 0) {
 			return;
 		}
 		const abortController = new AbortController();

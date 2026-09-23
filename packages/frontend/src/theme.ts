@@ -123,6 +123,8 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 					this.updateAttributes();
 					await nextTick();
 				});
+				// 開始後にタブが非表示になると ready だけが拒否される。属性更新の完了は finished で扱う。
+				void transition.ready.catch((err) => console.error(err));
 				void transition.finished.then(finish, fallback);
 			} catch (err) {
 				// 様々な理由により startViewTransition は失敗することがある
