@@ -56,18 +56,6 @@ describe('FanoutTimelinePush', () => {
 		expect(await list(withFiles)).toEqual([...ids].reverse());
 	});
 
-	test('re-pushing the same note (outbox retry) does not duplicate it', async () => {
-		const home = timeline('home');
-		const id = genId();
-		for (let i = 0; i < 3; i++) {
-			const push = new FanoutTimelinePush(id);
-			push.add(home, 100);
-			await push.flush(runtime.redisForTimelines);
-		}
-
-		expect(await list(home)).toEqual([id]);
-	});
-
 	test('a stale note is inserted only when it is newer than the tail', async () => {
 		const home = timeline('home');
 		const tail = genId(Date.now() - 1000 * 60 * 60);

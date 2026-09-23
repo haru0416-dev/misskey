@@ -13,7 +13,10 @@ import { parseId } from '@/misc/id/parse-id.js';
  * その組み立て (引数の文字列化と Command オブジェクト生成) だけで notes/create の CPU の 10% を
  * 占めていた (2026-09-03 実測)。スクリプトなら送るのは鍵と上限の一覧だけで、ループはサーバー側で回る。
  *
- * lrem は outbox の再試行で同じ投稿を二重に入れないためのガードで、スクリプト内でも維持する。
+ * outbox の再試行で同じ投稿を二重に入れるのは許容し、重複は読み取り側で除く。以前の lrem ガードは
+ * 見つからない場合も list を末尾まで走査し、長さ 300 の list で 1 回 4.75µs (lpush の約 10 倍) と
+ * スクリプト時間の 55% を占め、フォロワー数に比例して Valkey の単一スレッドを塞いでいた (2026-09-24 実測)。
+ * 二重になるのは配布後・完了記録前に失敗した再試行だけで、そのとき list の枠を 1 つ使うに留まる。
  * 切り詰めは確率 1/10 ではなく LLEN で判定するので、list が上限を超えたまま残ることは無い。
  *
  * 作成から時間が経った投稿 (リモートからの遅延配信など) は list 末尾より新しいときだけ入れる。
@@ -32,7 +35,6 @@ for i, key in ipairs(KEYS) do
     end
   end
   if push then
-    redis.call('LREM', key, 0, id)
     redis.call('LPUSH', key, id)
     local maxlen = tonumber(ARGV[i + 2])
     if redis.call('LLEN', key) > maxlen then

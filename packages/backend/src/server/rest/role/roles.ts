@@ -212,7 +212,8 @@ export async function handleApiRolesNotes(
 		return [];
 	}
 
-	const rawIds = await deps.redis.lrange(`list:roleTimeline:${role.id}`, 0, -1);
+	// 配布の再試行で同じ ID が二重に入り得る (fanout-timeline-push.ts)。重複は枠を食わないよう先に除く。
+	const rawIds = [...new Set(await deps.redis.lrange(`list:roleTimeline:${role.id}`, 0, -1))];
 	let noteIds =
 		untilId && sinceId
 			? rawIds.filter((id) => id < untilId && id > sinceId).sort((a, b) => (a > b ? -1 : 1))

@@ -637,7 +637,8 @@ export async function handleApiAntennasRemoveNote(
 		throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
 	}
 
-	await deps.redis.lrem(`list:antennaTimeline:${antenna.id}`, 1, params.noteId);
+	// 配布の再試行で二重に入った ID も残さないよう、件数 0 (全件) で消す。
+	await deps.redis.lrem(`list:antennaTimeline:${antenna.id}`, 0, params.noteId);
 }
 
 export const antennasNotesParamDef = z.object({
@@ -674,7 +675,8 @@ export async function handleApiAntennasNotes(
 		deps.publishInternalEvent?.('antennaUpdated', antenna);
 	}
 
-	const rawIds = await deps.redis.lrange(`list:antennaTimeline:${antenna.id}`, 0, -1);
+	// 配布の再試行で同じ ID が二重に入り得る (fanout-timeline-push.ts)。重複は枠を食わないよう先に除く。
+	const rawIds = [...new Set(await deps.redis.lrange(`list:antennaTimeline:${antenna.id}`, 0, -1))];
 	let noteIds =
 		untilId && sinceId
 			? rawIds.filter((id) => id < untilId && id > sinceId).sort((a, b) => (a > b ? -1 : 1))
