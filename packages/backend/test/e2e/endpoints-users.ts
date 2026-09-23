@@ -929,6 +929,20 @@ describe('Endpoints', () => {
 				expect(notes.status).toBe(200);
 				expect((notes.body as any[]).some((n) => n.id === noteId)).toBe(true);
 
+				// 配布の再試行で list に同じ ID が二重に入っても、1 回だけ返し limit の枠を食わない。
+				const olderNoteId = genId(Date.now() - 60_000);
+				await createNoteInDatabase(db, {
+					id: olderNoteId,
+					userId: alice.id,
+					text: 'older antenna timeline note',
+					visibility: 'public',
+				});
+				await redis.lpush(`list:antennaTimeline:${antennaId}`, noteId);
+				await redis.rpush(`list:antennaTimeline:${antennaId}`, olderNoteId);
+				const deduplicated = await api('antennas/notes', { antennaId, limit: 2 }, alice);
+				expect(deduplicated.status).toBe(200);
+				expect((deduplicated.body as any[]).map((n) => n.id)).toEqual([noteId, olderNoteId]);
+
 				const removed = await api('antennas/remove-note', { antennaId, noteId }, alice);
 				expect(removed.status).toBe(204);
 
