@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { shallowRef, computed, markRaw, watch } from 'vue';
+import { computed, markRaw, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
@@ -11,19 +11,21 @@ import { get, set } from '@/utility/idb-proxy.js';
 import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
 import { updateEmojiQueries } from '@/query/streaming.js';
+import { QueryCacheView } from '@/query/cache.js';
 
 const [storageCache, lastEmojisFetchedAt] = await Promise.all([get('emojis'), get('lastEmojisFetchedAt')]);
-export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(
-	isEmojiSimpleArray(storageCache) ? storageCache : [],
-);
+const emptyEmojis: Misskey.entities.EmojiSimple[] = [];
 const emojisQueryKey = queryKeys.endpoint(null, 'emojis', {});
-if (isEmojiSimpleArray(storageCache)) {
-	queryClient.setQueryData(
-		emojisQueryKey,
-		{ emojis: storageCache },
-		{ updatedAt: typeof lastEmojisFetchedAt === 'number' ? lastEmojisFetchedAt : 0 },
-	);
-}
+const emojisCache = new QueryCacheView<{ emojis: Misskey.entities.EmojiSimple[] }>(emojisQueryKey, {
+	initialData: { emojis: isEmojiSimpleArray(storageCache) ? storageCache : emptyEmojis },
+	updatedAt: isEmojiSimpleArray(storageCache) && typeof lastEmojisFetchedAt === 'number' ? lastEmojisFetchedAt : 0,
+	onUpdate: (value, updatedAt) => {
+		if (value == null) return;
+		void set('emojis', value.emojis);
+		void set('lastEmojisFetchedAt', updatedAt);
+	},
+});
+export const customEmojis = computed(() => emojisCache.value.value?.emojis ?? emptyEmojis);
 export const customEmojiCategories = computed<[...string[], null]>(() => {
 	const categories = new Set<string>();
 	for (const emoji of customEmojis.value) {
@@ -35,7 +37,7 @@ export const customEmojiCategories = computed<[...string[], null]>(() => {
 });
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
-watch(
+const stopEmojiMap = watch(
 	customEmojis,
 	(emojis) => {
 		customEmojisMap.clear();
@@ -43,38 +45,31 @@ watch(
 			customEmojisMap.set(emoji.name, emoji);
 		}
 	},
-	{ immediate: true },
+	{ immediate: true, flush: 'sync' },
 );
 
 export function addCustomEmoji(emoji: Misskey.entities.EmojiSimple) {
-	customEmojis.value = [emoji, ...customEmojis.value];
 	updateEmojiQueries({ type: 'add', emoji });
-	set('emojis', customEmojis.value);
 }
 
 export function updateCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
-	const updatesByName = new Map(emojis.map((emoji) => [emoji.name, emoji]));
-	customEmojis.value = customEmojis.value.map((item) => updatesByName.get(item.name) ?? item);
 	updateEmojiQueries({ type: 'update', emojis });
-	set('emojis', customEmojis.value);
 }
 
 export function removeCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
-	const removedNames = new Set(emojis.map((emoji) => emoji.name));
-	customEmojis.value = customEmojis.value.filter((item) => !removedNames.has(item.name));
 	updateEmojiQueries({ type: 'delete', emojis });
-	set('emojis', customEmojis.value);
 }
 
 export async function fetchCustomEmojis(force = false) {
-	const now = Date.now();
-
 	if (force) {
 		await queryClient.invalidateQueries({ queryKey: emojisQueryKey, exact: true, refetchType: 'none' });
 	}
-	const res = await misskeyApiGet('emojis', {});
+	await misskeyApiGet('emojis', {});
+}
 
-	customEmojis.value = res.emojis;
-	set('emojis', res.emojis);
-	set('lastEmojisFetchedAt', now);
+if (import.meta.hot) {
+	import.meta.hot.dispose(() => {
+		stopEmojiMap();
+		emojisCache.dispose();
+	});
 }

@@ -7,7 +7,7 @@ import { action } from '@/stories/action.js';
 import type { StoryObj } from '@/stories/types.js';
 import { onBeforeUnmount } from 'vue';
 import MkDonation from './MkDonation.vue';
-import { instance } from '@/instance.js';
+import { instance, updateInstance } from '@/instance.js';
 export const Default = {
 	render(args) {
 		return {
@@ -40,9 +40,9 @@ export const Default = {
 	decorators: [
 		(_, { args }) => ({
 			setup() {
-				// @ts-expect-error name is used for mocking instance
-				instance.name = args.name;
-				onBeforeUnmount(() => (instance.name = null));
+				const name = instance.name;
+				updateInstance({ name: args['name'] as string | null });
+				onBeforeUnmount(() => updateInstance({ name }));
 			},
 			template: '<story/>',
 		}),

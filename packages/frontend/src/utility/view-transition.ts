@@ -26,6 +26,8 @@ export function runViewTransition(
 
 	try {
 		const transition = document.startViewTransition(updateOnce);
+		// 非表示化などで描画だけが中止されても update は実行される。ready の拒否を未処理にしない。
+		void transition.ready.catch((err) => console.error(err));
 		void transition.finished.catch((err) => console.error(err));
 		return transition;
 	} catch (err) {

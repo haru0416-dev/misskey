@@ -22,11 +22,79 @@ export type FetchLike = (
 		credentials?: RequestCredentials;
 		cache?: RequestCache;
 		headers: { [key in string]: string };
+		signal?: AbortSignal;
 	},
 ) => Promise<{
 	status: number;
 	json(): Promise<unknown>;
 }>;
+
+export type APITransportRequest = {
+	apiUrl: string;
+	endpoint: string;
+	method: 'GET' | 'POST';
+	data?: unknown;
+	mediaType?: string;
+	credential?: string | null | undefined;
+	signal?: AbortSignal | undefined;
+	fetch?: FetchLike;
+};
+
+export type APITransportResponse = {
+	status: number;
+	body: unknown;
+};
+
+// 認証情報の選択、成功ステータスとエラーの解釈、query cacheは呼び出し側が所有する。
+export async function requestAPI(options: APITransportRequest): Promise<APITransportResponse> {
+	const { apiUrl, endpoint, method, data = {}, mediaType = 'application/json', signal } = options;
+	const params = data !== null && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : {};
+	let url = `${apiUrl}/${endpoint}`;
+	let body: FormData | string | undefined;
+	const headers: Record<string, string> = {};
+
+	if (method === 'GET') {
+		const query = new URLSearchParams(data as Record<string, string>);
+		url += `?${query}`;
+	} else if (mediaType === 'multipart/form-data') {
+		const form = new FormData();
+		if (options.credential != null) {
+			form.append('i', options.credential);
+		}
+		for (const key in params) {
+			const value = params[key];
+			if (value == null) continue;
+			if (value instanceof Blob) {
+				form.append(key, value);
+			} else if (typeof value === 'object') {
+				form.append(key, JSON.stringify(value));
+			} else {
+				form.append(key, String(value));
+			}
+		}
+		body = form;
+	} else {
+		headers['Content-Type'] = mediaType;
+		// SDKは明示的なundefinedでもdata.iを上書きする。匿名クライアントはcredentialを渡さない。
+		body = mediaType === 'application/json'
+			? JSON.stringify('credential' in options ? { ...params, i: options.credential } : data)
+			: '{}';
+	}
+
+	const init = {
+		method,
+		...(body === undefined ? {} : { body }),
+		headers,
+		credentials: 'omit' as const,
+		cache: method === 'POST' ? 'no-cache' as const : 'default' as const,
+		...(signal === undefined ? {} : { signal }),
+	};
+	const response = await (options.fetch ? options.fetch(url, init) : fetch(url, init));
+	return {
+		status: response.status,
+		body: response.status === 204 ? null : await response.json(),
+	};
+}
 
 export class APIClient {
 	public origin: string;
@@ -45,17 +113,13 @@ export class APIClient {
 		this.fetch = opts.fetch ?? ((...args) => fetch(...args));
 	}
 
-	private assertIsRecord<T>(obj: T): obj is T & Record<string, unknown> {
-		return obj !== null && typeof obj === 'object' && !Array.isArray(obj);
-	}
-
 	private assertIsAPIError(obj: unknown): obj is APIError {
 		return (
-			this.assertIsRecord(obj) &&
-			typeof obj['code'] === 'string' &&
-			typeof obj['message'] === 'string' &&
-			typeof obj['id'] === 'string' &&
-			(obj['kind'] === 'client' || obj['kind'] === 'server' || obj['kind'] === 'permission')
+			obj !== null && typeof obj === 'object' && !Array.isArray(obj) &&
+			'code' in obj && typeof obj.code === 'string' &&
+			'message' in obj && typeof obj.message === 'string' &&
+			'id' in obj && typeof obj.id === 'string' &&
+			'kind' in obj && (obj.kind === 'client' || obj.kind === 'server' || obj.kind === 'permission')
 		);
 	}
 
@@ -66,82 +130,36 @@ export class APIClient {
 	public request<E extends keyof Endpoints, P extends Endpoints[E]['req'] = never>(
 		endpoint: E,
 		...args: Endpoints[E] extends { reqOptional: true }
-			? [params?: P, credential?: string | null]
-			: [params: P, credential?: string | null]
+			? [params?: P, credential?: string | null, signal?: AbortSignal]
+			: [params: P, credential?: string | null, signal?: AbortSignal]
 	): Promise<SwitchCaseResponseType<E, P>> {
 		const params = args[0] ?? ({} as P);
 		const credential = args[1];
-		return new Promise((resolve, reject) => {
-			let mediaType = 'application/json';
-			// 生成定義にnullが含まれる場合は、デフォルト値を維持する。
-			if (this.assertSpecialEpReqType(endpoint) && endpointReqTypes[endpoint] != null) {
-				mediaType = endpointReqTypes[endpoint];
+		const signal = args[2];
+		// 生成定義にnullが含まれる場合は、デフォルト値を維持する。
+		const mediaType = this.assertSpecialEpReqType(endpoint) ? endpointReqTypes[endpoint] ?? 'application/json' : 'application/json';
+		return requestAPI({
+			apiUrl: `${this.origin}/api`,
+			endpoint,
+			method: 'POST',
+			data: params,
+			mediaType,
+			credential: credential !== undefined ? credential : this.credential,
+			signal,
+			fetch: this.fetch,
+		}).then(({ status, body }) => {
+			if (status === 200 || status === 204) {
+				// エンドポイントごとのレスポンス型はautogenのスキーマ経由でしか静的に表現できないため、
+				// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
+				return body as SwitchCaseResponseType<E, P>;
 			}
-
-			let payload: FormData | string = '{}';
-
-			if (mediaType === 'application/json') {
-				payload = JSON.stringify({
-					...(this.assertIsRecord(params) ? params : {}),
-					i: credential !== undefined ? credential : this.credential,
-				});
-			} else if (mediaType === 'multipart/form-data') {
-				payload = new FormData();
-				const i = credential !== undefined ? credential : this.credential;
-				if (i != null) {
-					payload.append('i', i);
-				}
-				if (this.assertIsRecord(params)) {
-					for (const key in params) {
-						const value = params[key];
-
-						if (value == null) {
-							continue;
-						}
-
-						if (value instanceof File || value instanceof Blob) {
-							payload.append(key, value);
-						} else if (typeof value === 'object') {
-							payload.append(key, JSON.stringify(value));
-						} else {
-							payload.append(key, String(value));
-						}
+			const error = body !== null && typeof body === 'object' && !Array.isArray(body) && 'error' in body ? body.error : undefined;
+			throw this.assertIsAPIError(error)
+				? {
+						[MK_API_ERROR]: true,
+						...error,
 					}
-				}
-			}
-
-			this.fetch(`${this.origin}/api/${endpoint}`, {
-				method: 'POST',
-				body: payload,
-				headers:
-					mediaType === 'multipart/form-data'
-						? {}
-						: {
-								'Content-Type': mediaType,
-							},
-				credentials: 'omit',
-				cache: 'no-cache',
-			})
-				.then(async (res) => {
-					const body = res.status === 204 ? null : await res.json();
-
-					if (res.status === 200 || res.status === 204) {
-						// エンドポイントごとのレスポンス型はautogenのスキーマ経由でしか静的に表現できないため、
-						// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
-						resolve(body as SwitchCaseResponseType<E, P>);
-					} else {
-						const error = this.assertIsRecord(body) ? body['error'] : undefined;
-						reject(
-							this.assertIsAPIError(error)
-								? {
-										[MK_API_ERROR]: true,
-										...error,
-									}
-								: body,
-						);
-					}
-				})
-				.catch(reject);
+				: body;
 		});
 	}
 }

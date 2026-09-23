@@ -8,6 +8,7 @@ import { ref } from 'vue';
 import { apiUrl } from '@shared/utility/config.js';
 import { $i } from '@/i.js';
 import { fetchMisskeyQuery, invalidateAfterMutation, isCachedEndpoint } from '@/query/api.js';
+import type { QueryAccountId } from '@/query/keys.js';
 export const pendingApiRequestsCount = ref(0);
 
 type ApiRequestData<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> = P & {
@@ -38,34 +39,23 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 
 	const payload = { ...data } as Record<string, unknown> & { i?: string | null };
 	if (method === 'POST') {
-		if ($i) {
-			payload.i = $i.token;
-		}
-		if (token !== undefined) {
-			payload.i = token;
-		}
+		if (token !== undefined) payload.i = token;
 	}
-	const query = new URLSearchParams(payload as Record<string, string>);
-
-	const promise = window
-		.fetch(method === 'POST' ? `${apiUrl}/${endpoint}` : `${apiUrl}/${endpoint}?${query}`, {
+	const promise = Misskey.api
+		.requestAPI({
+			apiUrl,
+			endpoint,
 			method,
-			...(method === 'POST' ? { body: JSON.stringify(payload) } : {}),
-			credentials: 'omit',
-			cache: method === 'POST' ? 'no-cache' : 'default',
-			...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' } } : {}),
-			...(signal === undefined ? {} : { signal }),
+			data: payload,
+			signal,
 		})
-		.then(async (res) => {
-			const body = res.status === 204 ? null : await res.json();
-
-			if (res.status === 200) {
+		.then(({ status, body }) => {
+			if (status === 200 || status === 204) {
 				return body as _ResT;
 			}
-			if (res.status === 204) {
-				return body as _ResT;
-			}
-			throw body.error;
+			// エラー本文の直接参照を維持し、不正なnull本文を成功や別のAPIエラーに変換しない。
+			const errorResponse = body as { error: unknown };
+			throw errorResponse.error;
 		});
 
 	promise.then(onFinally, onFinally);
@@ -90,24 +80,48 @@ export function misskeyApi<
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(endpoint: E, ...args: ApiRequestArgs<E, P>): Promise<_ResT> {
+	const [data = {} as ApiRequestData<E, P>, token, signal] = args;
+	return prepareMisskeyApiRequest<E, P, _ResT>(endpoint, data, token, signal).execute();
+}
+
+type PreparedApiRequest<T> = {
+	accountId: QueryAccountId | undefined;
+	execute: () => Promise<T>;
+};
+
+// 待機中にアカウントが変わっても、送信と完了時の無効化は開始時の所有者へ向ける。
+export function prepareMisskeyApiRequest<
+	E extends keyof Misskey.Endpoints,
+	P extends Misskey.Endpoints[E]['req'],
+	T = Misskey.api.SwitchCaseResponseType<E, P>,
+>(endpoint: E, data: ApiRequestData<E, P>, token?: string | null, signal?: AbortSignal): PreparedApiRequest<T> {
 	if (endpoint.includes('://')) {
 		throw new Error('invalid endpoint');
 	}
-	const [data = {} as ApiRequestData<E, P>, token, signal] = args;
-
+	const accountId = $i?.id ?? null;
+	const accountToken = $i?.token;
+	const requestToken = token !== undefined ? token : (accountToken ?? data.i);
+	const requestAccountId = requestToken == null ? null : requestToken === accountToken ? accountId : undefined;
 	if (token === undefined && data.i === undefined && signal == null && isCachedEndpoint(endpoint)) {
-		return fetchMisskeyQuery({
-			accountId: $i?.id ?? null,
-			endpoint,
-			params: data,
-			queryFn: (querySignal) => requestMisskeyApi<_ResT, E, P>('POST', endpoint, data, token, querySignal),
-		}) as Promise<_ResT>;
+		return {
+			accountId,
+			execute: () =>
+				fetchMisskeyQuery({
+					accountId,
+					endpoint,
+					params: data,
+					queryFn: (querySignal) => requestMisskeyApi<T, E, P>('POST', endpoint, data, requestToken, querySignal),
+				}),
+		};
 	}
-
-	return requestMisskeyApi<_ResT, E, P>('POST', endpoint, data, token, signal).then((response) => {
-		invalidateAfterMutation($i?.id ?? null, endpoint);
-		return response;
-	});
+	return {
+		accountId: requestAccountId,
+		execute: () =>
+			requestMisskeyApi<T, E, P>('POST', endpoint, data, requestToken, signal).then((response) => {
+				invalidateAfterMutation(requestAccountId, endpoint);
+				return response;
+			}),
+	};
 }
 
 // Implements Misskey.api.ApiClient.request
@@ -141,7 +155,8 @@ export function misskeyApiGet<
 	if (endpoint.includes('://')) {
 		throw new Error('invalid endpoint');
 	}
-	const [data = {} as ApiRequestData<E, P>] = args;
+	const data = { ...args[0] } as ApiRequestData<E, P>;
+	delete data.i;
 	if (isCachedEndpoint(endpoint)) {
 		return fetchMisskeyQuery({
 			accountId: null,

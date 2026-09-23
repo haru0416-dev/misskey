@@ -35,27 +35,32 @@ export function updateEmojiQueries(
 	const changedByName = change.type === 'update' ? new Map(change.emojis.map((emoji) => [emoji.name, emoji])) : null;
 	const deletedNames = change.type === 'delete' ? new Set(change.emojis.map((emoji) => emoji.name)) : null;
 
-	queryClient.setQueriesData<{ emojis: Misskey.entities.EmojiSimple[] }>(
-		{ predicate: (query) => isEndpointQuery(query.queryKey, 'emojis') },
-		(current) => {
-			if (current == null) {
-				return current;
-			}
-			if (change.type === 'add') {
-				return { ...current, emojis: [change.emoji, ...current.emojis] };
-			}
-			if (change.type === 'update') {
+	for (const query of queryClient
+		.getQueryCache()
+		.findAll({ predicate: (query) => isEndpointQuery(query.queryKey, 'emojis') })) {
+		queryClient.setQueryData<{ emojis: Misskey.entities.EmojiSimple[] }>(
+			query.queryKey,
+			(current) => {
+				if (current == null) {
+					return current;
+				}
+				if (change.type === 'add') {
+					return { ...current, emojis: [change.emoji, ...current.emojis] };
+				}
+				if (change.type === 'update') {
+					return {
+						...current,
+						emojis: current.emojis.map((item) => changedByName?.get(item.name) ?? item),
+					};
+				}
 				return {
 					...current,
-					emojis: current.emojis.map((item) => changedByName?.get(item.name) ?? item),
+					emojis: current.emojis.filter((item) => !deletedNames?.has(item.name)),
 				};
-			}
-			return {
-				...current,
-				emojis: current.emojis.filter((item) => !deletedNames?.has(item.name)),
-			};
-		},
-	);
+			},
+			{ updatedAt: query.state.dataUpdatedAt },
+		);
+	}
 
 	void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, 'emoji') });
 }

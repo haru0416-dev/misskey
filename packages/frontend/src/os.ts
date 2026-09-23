@@ -20,7 +20,7 @@ import type MkRoleSelectDialog_TypeReferenceOnly from '@/features/roles/componen
 import type MkEmojiPickerDialog_TypeReferenceOnly from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
 import type MkPopupMenu_TypeReferenceOnly from '@/components/overlay/MkPopupMenu.vue';
 import type MkContextMenu_TypeReferenceOnly from '@/components/overlay/MkContextMenu.vue';
-import { misskeyApi } from '@/utility/misskey-api.js';
+import { misskeyApi, prepareMisskeyApiRequest } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { executeMisskeyMutation } from '@/query/mutation.js';
 import { prefer } from '@/preferences.js';
@@ -53,10 +53,11 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 	token?: string | null | undefined,
 	customErrors?: ApiWithDialogCustomErrors,
 ) => {
+	const request = prepareMisskeyApiRequest(endpoint, data, token);
 	const promise = executeMisskeyMutation({
-		accountId: $i?.id ?? null,
+		accountId: request.accountId ?? null,
 		endpoint,
-		mutationFn: () => misskeyApi(endpoint, data, token),
+		mutationFn: request.execute,
 	});
 	promiseDialog(promise, null, async (err) => {
 		let title: string | undefined;

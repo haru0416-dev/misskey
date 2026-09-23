@@ -7,19 +7,19 @@ import { nextTick } from 'vue';
 import type { StoryObj } from '@/stories/types.js';
 import { expect, userEvent, waitFor, within } from '@/stories/test.js';
 import { i18n } from '@/i18n.js';
-import { instance } from '@/instance.js';
+import { instance, updateInstance } from '@/instance.js';
 import MkPostForm from './MkPostForm.vue';
 import { commonHandlers } from '@/stories/mocks.js';
 
-/** instance は全 story で共有される 1 つの reactive なので、触ったら必ず戻す。 */
+/** metadataのqueryは全storyで共有するため、変更した値を必ず戻す。 */
 async function withServerRules(run: () => Promise<void>): Promise<void> {
 	const original = instance.serverRules;
-	instance.serverRules = ['他人を尊重すること'];
+	updateInstance({ serverRules: ['他人を尊重すること'] });
 	try {
 		await nextTick();
 		await run();
 	} finally {
-		instance.serverRules = original;
+		updateInstance({ serverRules: original });
 	}
 }
 

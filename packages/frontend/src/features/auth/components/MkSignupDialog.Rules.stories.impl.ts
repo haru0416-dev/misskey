@@ -9,7 +9,7 @@ import type { StoryObj } from '@/stories/types.js';
 import { onBeforeUnmount } from 'vue';
 import MkSignupServerRules from './MkSignupDialog.Rules.vue';
 import { i18n } from '@/i18n.js';
-import { instance } from '@/instance.js';
+import { instance, updateInstance } from '@/instance.js';
 export const Empty = {
 	render(args) {
 		return {
@@ -62,14 +62,13 @@ export const Empty = {
 	decorators: [
 		(_, context) => ({
 			setup() {
-				// @ts-expect-error serverRules is for test
-				instance.serverRules = context.args.serverRules;
-				// @ts-expect-error tosUrl is for test
-				instance.tosUrl = context.args.tosUrl;
+				const original = { serverRules: instance.serverRules, tosUrl: instance.tosUrl };
+				updateInstance({
+					serverRules: context.args['serverRules'] as string[],
+					tosUrl: context.args['tosUrl'] as string | null,
+				});
 				onBeforeUnmount(() => {
-					// FIXME: 呼び出されない
-					instance.serverRules = [];
-					instance.tosUrl = null;
+					updateInstance(original);
 				});
 			},
 			template: '<story/>',

@@ -378,7 +378,8 @@ function createPreferencesStoreState(
 }
 
 // accountDependent な設定は、初期状態でもアカウントごとのスコープにレコードを作成する。サーバー同期に必要な不変条件。
-export function createPreferencesStore(io: StorageProvider, currentAccount: { id: string } | null, pinia: Pinia) {
+export function createPreferencesStore(io: StorageProvider, account: { id: string } | null, pinia: Pinia) {
+	const currentAccount = account == null ? null : { id: account.id };
 	const localRevisions = new Map<keyof PREF, number>();
 	const usePreferencesStore = defineStore('preferences', {
 		state: () => createPreferencesStoreState(io, currentAccount),
