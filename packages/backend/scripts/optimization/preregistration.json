@@ -1,0 +1,71 @@
+{
+	"schemaVersion": 1,
+	"purpose": "A5 and D1-D3 real-server comparison; no performance claim without independent correctness and complete measurements",
+	"methodRevision": 2,
+	"adoptionRevision": 3,
+	"rounds": 6,
+	"conditions": ["cold", "warm"],
+	"order": "Odd rounds before-after and cold-warm; even rounds after-before and warm-cold; equal label-first and condition-first counts; no overlapping host comparisons",
+	"resetPolicy": "Stop both revisions; restore the same dedicated DB and Valkey snapshot before every run; reset command must return snapshotSha256. No global statistics reset. No implicit reset endpoint or volume deletion.",
+	"coldPolicy": "Restore snapshot, create the common seeded and write-preconditioned fixture, drain, then restart application processes without restoring data. Verify fresh process identities; no scenario warmup after restart. Readiness-touched paths and OS/database/Valkey caches are NOT cold.",
+	"warmPolicy": "Same common fixture and drain, retaining the application processes, then 20 verified timeline requests. Preconditioning writes remain in all correctness and recovery expectations. This is fixed preconditioning, not a claim of steady state.",
+	"warmupRequests": 20,
+	"seedNotes": 20,
+	"preconditionPostRequests": 20,
+	"preconditionLoadRequests": 20,
+	"postRequests": 40,
+	"timelineRequests": 80,
+	"loadRequests": 80,
+	"loadConcurrency": 4,
+	"requestTimeoutMs": 15000,
+	"completionTimeoutMs": 120000,
+	"commandTimeoutMs": 180000,
+	"maximumResponseBytes": 262144,
+	"maximumBufferedJournalBytes": 33554432,
+	"recordingPolicy": "No per-request persistence admission waits. Encode bounded journal deltas during measurement and load without filesystem writes; flush before/after these phases and on error/finalization. Overflow rejects the run. Body receipt and JSON parsing remain inside measured HTTP latency.",
+	"sampleIntervalMs": 1000,
+	"drainedSamples": 3,
+	"adoption": {
+		"maximumLatencyRegressionFraction": 0.1,
+		"maximumResourceRegressionFraction": 0.1,
+		"maximumRssBytes": 2147483648,
+		"maximumDatabaseConnections": 32,
+		"maximumBacklog": 1000,
+		"maximumOldestPendingMs": 120000,
+		"maximumShutdownMs": 30000,
+		"requiredSuccessfulFraction": 1,
+		"requiredCorrectness": "All checks in all planned runs must pass, except the explicitly approved fixed-upstream recovery listing failure with complete storage and same-viewer direct-read evidence. Absent, pending, malformed and all other failed runs reject adoption. Known failures remain recorded and all their measurements remain included.",
+		"aggregation": "Median of paired per-run ratios by condition; every p50/p95/p99 and completion/resource constraint must pass. Improvement is not required."
+	},
+	"correctness": [
+		"stored-content-and-visibility",
+		"unauthorized-hidden",
+		"timeline-set-order-pagination",
+		"note-count",
+		"reaction-count-and-notification-no-duplicate",
+		"remote-push-storage-no-duplicate",
+		"remote-delete",
+		"load-shutdown-restart-no-loss",
+		"upstream-recovery-listing"
+	],
+	"knownUpstreamFailure": {
+		"id": "upstream-user-timeline-cache",
+		"check": "upstream-recovery-listing",
+		"peer": {
+			"kind": "upstream",
+			"version": "2026.9.0",
+			"commit": "bd9eb7c77942ef11749a04e7a5f24bee935d764b",
+			"image": "misskey/misskey:2026.9.0@sha256:13ea3b432adbe29bf3699da5c7c0bd54775a9c237339ea47c6ec220094dba59a"
+		},
+		"acceptance": "Only a persistent users/notes omission after the unchanged completion deadline is accepted: every expected permitted note exists exactly once with unchanged content and visibility, every note is directly readable by the same viewer, and omitted IDs are absent from the observed persistent userTimeline cache and newer than its oldest ID, including omissions newer than its newest ID. Preserve the failed listing, omitted IDs/count, and all measurements. Storage loss, duplicates, leakage, older-than-cache omissions, other peer identities, malformed evidence and all other failures remain disqualifying."
+	},
+	"unobserved": [
+		"WebSocket delivery",
+		"signature-negative and fault/retry scenarios (separate federation suite gate)",
+		"true OS/DB cold cache",
+		"per-request SQL attribution (server-side workload is sampled per run)",
+		"shutdown with guaranteed pending jobs (load acknowledgements precede graceful stop)",
+		"forced crash recovery (this harness exercises graceful shutdown and restart)"
+	],
+	"exclusions": "None automatically. Agent/startup/parser/correctness failures remain in the planned denominator. Environment failures also reject this comparison; reruns require a new experiment directory and preserved failed results."
+}
