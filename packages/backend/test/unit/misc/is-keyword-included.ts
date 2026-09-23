@@ -84,18 +84,31 @@ describe('isKeywordIncluded', () => {
 		});
 
 		test('正規表現形式の判定は RegExp と一致する', () => {
+			// ランダムな text と word だけでは一致が 500 件中 17〜53 件 (中央値 33) しか出ず、
+			// 下限 20 を約 1% の確率で割っていた。半分は word を text に埋め込み、一致側を構造的に確保する。
+			// 埋め込む語の半分は大文字にし、i フラグの有無で結果が変わる入力を作る。
+			const input = fc
+				.tuple(text, word, text, fc.boolean(), fc.boolean())
+				.map(([before, pattern, after, embed, upper]) => ({
+					input: embed ? before + (upper ? pattern.toUpperCase() : pattern) + after : before + after,
+					pattern,
+				}));
 			let matched = 0;
+			let unmatched = 0;
 			fc.assert(
-				fc.property(text, word, fc.constantFrom('', 'i', 'm', 's'), (input, pattern, flags) => {
+				fc.property(input, fc.constantFrom('', 'i', 'm', 's'), ({ input, pattern }, flags) => {
 					const expected = new RegExp(pattern, flags).test(input);
 					expect(isKeywordIncluded(input, [`/${pattern}/${flags}`])).toBe(expected);
 					if (expected) {
 						matched++;
+					} else {
+						unmatched++;
 					}
 				}),
 				{ numRuns: 500 },
 			);
-			expect(matched).toBeGreaterThan(20);
+			expect(matched).toBeGreaterThan(100);
+			expect(unmatched).toBeGreaterThan(100);
 		});
 
 		test('壊れたパターンは例外にせず該当なしとして扱う', () => {
