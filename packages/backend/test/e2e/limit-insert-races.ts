@@ -26,8 +26,9 @@ import {
 	createUserNotePiningWithinLimitInDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
 } from '@/core/user/UserNotePiningStore.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -40,35 +41,37 @@ const barrierKeys = {
 } as const;
 
 describe('count-check-insert limits', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let user: Misskey.entities.SignupResponse;
 
 	async function runBehindInsertBarrier<T>(key: number, action: () => Promise<T>): Promise<T> {
-		const blocker = await pool.connect();
+		const blocker = await pool.reserve();
 		try {
-			await blocker.query('BEGIN');
-			await blocker.query('SELECT pg_advisory_xact_lock($1)', [key]);
+			await blocker.unsafe('BEGIN');
+			await blocker.unsafe('SELECT pg_advisory_xact_lock($1)', [key]);
 			const result = action();
 
 			for (;;) {
-				const waiting = await pool.query<{ count: string }>(
-					`
+				const [[count] = []] = await pool
+					.unsafe(
+						`
 					SELECT count(*)::text AS count
 					FROM pg_locks
 					WHERE locktype = 'advisory'
 						AND objid = $1
 						AND NOT granted
 				`,
-					[key],
-				);
-				if (Number(waiting.rows[0]?.count ?? 0) > 0) {
+						[key],
+					)
+					.values();
+				if (Number(count ?? 0) > 0) {
 					break;
 				}
 				await new Promise<void>((resolve) => setImmediate(resolve));
 			}
 
-			await blocker.query('COMMIT');
+			await blocker.unsafe('COMMIT');
 			return await result;
 		} finally {
 			blocker.release();
@@ -77,11 +80,11 @@ describe('count-check-insert limits', () => {
 
 	beforeAll(async () => {
 		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		user = await signup({ username: 'limit_insert_races' });
 
-		await pool.query(`
+		await pool.unsafe(`
 			CREATE OR REPLACE FUNCTION test_limit_insert_barrier() RETURNS trigger AS $$
 			BEGIN
 				IF NEW.id LIKE 'limit-race-%' THEN
@@ -98,7 +101,7 @@ describe('count-check-insert limits', () => {
 			['clip_note', barrierKeys.clipNote],
 			['registration_ticket', barrierKeys.invitation],
 		] as const) {
-			await pool.query(`
+			await pool.unsafe(`
 				CREATE TRIGGER test_limit_insert_barrier
 				BEFORE INSERT ON "${table}"
 				FOR EACH ROW EXECUTE FUNCTION test_limit_insert_barrier('${key}')
@@ -108,10 +111,10 @@ describe('count-check-insert limits', () => {
 
 	afterAll(async () => {
 		for (const table of ['user_note_pining', 'antenna', 'clip', 'clip_note', 'registration_ticket']) {
-			await pool.query(`DROP TRIGGER IF EXISTS test_limit_insert_barrier ON "${table}"`);
+			await pool.unsafe(`DROP TRIGGER IF EXISTS test_limit_insert_barrier ON "${table}"`);
 		}
-		await pool.query('DROP FUNCTION IF EXISTS test_limit_insert_barrier()');
-		await pool.end();
+		await pool.unsafe('DROP FUNCTION IF EXISTS test_limit_insert_barrier()');
+		await pool.close();
 	});
 
 	test('account pin limit serializes concurrent inserts', async () => {

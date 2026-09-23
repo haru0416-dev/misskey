@@ -5,7 +5,7 @@
 
 import * as Redis from 'ioredis';
 import { createRedactedConfig, loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
 import { createEventPublishers } from '@/server/rest/events.js';
@@ -27,10 +27,10 @@ function showConfig(): void {
 
 async function diagnoseConfig(): Promise<void> {
 	const config = loadConfig();
-	const pool = createDrizzlePool(config);
+	const pool = createBunSqlClient(config);
 	const connections = Array.from(new Set(Object.values(config.valkey)));
 	try {
-		await pool.query('SELECT 1');
+		await pool.unsafe('SELECT 1');
 		console.log('PostgreSQL: ok');
 		for (const [index, options] of connections.entries()) {
 			const redis = new Redis.Redis({ ...options, lazyConnect: true });
@@ -43,14 +43,14 @@ async function diagnoseConfig(): Promise<void> {
 			}
 		}
 	} finally {
-		await pool.end();
+		await pool.close();
 	}
 }
 
 async function resetCaptcha(): Promise<void> {
 	const config = loadConfig();
-	const pool = createDrizzlePool(config);
-	const db = createDrizzleDatabase(pool, config);
+	const pool = createBunSqlClient(config);
+	const db = createBunSqlDatabase(pool, config);
 	const redisForPub = createRedisForPub(config);
 
 	try {
@@ -80,7 +80,7 @@ async function resetCaptcha(): Promise<void> {
 			after,
 		});
 	} finally {
-		await pool.end();
+		await pool.close();
 		redisForPub.disconnect();
 	}
 }

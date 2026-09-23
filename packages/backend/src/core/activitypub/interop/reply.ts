@@ -9,11 +9,17 @@ import { StatusError } from '@/misc/status-error.js';
 import type { MiNote } from '@/models/Note.js';
 
 export function shouldOmitOutgoingReplyReference(
-	note: Pick<MiNote, 'visibility' | 'visibleUserIds'>,
+	note: Pick<MiNote, 'visibility' | 'visibleUserIds' | 'userId'>,
 	reply: Pick<MiNote, 'visibility' | 'visibleUserIds' | 'userId'>,
 ): boolean {
 	// 返信元の取得失敗で返信全体を拒否する連合先にも配送するため、閲覧不可の参照は省く。
 	// 同じ Note を全宛先に送るため、一部の宛先だけが閲覧可能な場合も参照を省く。
+	if (reply.visibility === 'followers') {
+		if (note.visibility === 'followers') {
+			return note.userId !== reply.userId;
+		}
+		return note.visibility !== 'specified' || note.visibleUserIds.some((id) => id !== reply.userId);
+	}
 	return (
 		reply.visibility === 'specified' &&
 		(note.visibility !== 'specified' ||

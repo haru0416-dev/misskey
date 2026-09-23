@@ -7,8 +7,9 @@ import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { api, initTestDb, post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -22,23 +23,25 @@ const deleteBlockers = {
 } as const;
 
 async function waitForBlockedStatements(
-	pool: MiDrizzlePool,
+	pool: NativeSqlClient,
 	queryPattern: string,
 	waitEventType: string,
 ): Promise<void> {
 	const deadline = Date.now() + 10_000;
 	while (Date.now() < deadline) {
-		const result = await pool.query<{ count: number }>(
-			`
+		const [[count] = []] = await pool
+			.unsafe(
+				`
 			SELECT count(*)::int AS count
 			FROM pg_stat_activity
 			WHERE datname = current_database()
 				AND wait_event_type = $2
 				AND query LIKE $1
 		`,
-			[queryPattern, waitEventType],
-		);
-		if (result.rows[0]?.count === 2) {
+				[queryPattern, waitEventType],
+			)
+			.values();
+		if (count === 2) {
 			return;
 		}
 		await new Promise<void>((resolve) => setImmediate(resolve));
@@ -48,15 +51,15 @@ async function waitForBlockedStatements(
 }
 
 async function runAfterBothDeletesStart<T>(
-	pool: MiDrizzlePool,
+	pool: NativeSqlClient,
 	table: keyof typeof deleteBlockers,
 	actions: readonly [() => Promise<T>, () => Promise<T>],
 ): Promise<[T, T]> {
 	const blocker = deleteBlockers[table];
-	const lockClient = await pool.connect();
+	const lockClient = await pool.reserve();
 	let lockHeld = false;
 
-	await pool.query(`
+	await pool.unsafe(`
 		CREATE OR REPLACE FUNCTION "${blocker.functionName}"() RETURNS trigger AS $$
 		BEGIN
 			PERFORM pg_advisory_xact_lock(${blocker.advisoryLockKey});
@@ -64,30 +67,30 @@ async function runAfterBothDeletesStart<T>(
 		END;
 		$$ LANGUAGE plpgsql
 	`);
-	await pool.query(`
+	await pool.unsafe(`
 		CREATE TRIGGER "${blocker.triggerName}"
 		BEFORE DELETE ON "${table}"
 		FOR EACH STATEMENT EXECUTE FUNCTION "${blocker.functionName}"()
 	`);
 
 	try {
-		await lockClient.query('BEGIN');
-		await lockClient.query('SELECT pg_advisory_xact_lock($1)', [blocker.advisoryLockKey]);
+		await lockClient.unsafe('BEGIN');
+		await lockClient.unsafe('SELECT pg_advisory_xact_lock($1)', [blocker.advisoryLockKey]);
 		lockHeld = true;
 
 		const pending = actions.map((action) => action()) as [Promise<T>, Promise<T>];
 		await waitForBlockedStatements(pool, blocker.queryPattern, 'Lock');
-		await lockClient.query('COMMIT');
+		await lockClient.unsafe('COMMIT');
 		lockHeld = false;
 
 		return await Promise.all(pending);
 	} finally {
 		if (lockHeld) {
-			await lockClient.query('ROLLBACK');
+			await lockClient.unsafe('ROLLBACK');
 		}
 		lockClient.release();
-		await pool.query(`DROP TRIGGER IF EXISTS "${blocker.triggerName}" ON "${table}"`);
-		await pool.query(`DROP FUNCTION IF EXISTS "${blocker.functionName}"()`);
+		await pool.unsafe(`DROP TRIGGER IF EXISTS "${blocker.triggerName}" ON "${table}"`);
+		await pool.unsafe(`DROP FUNCTION IF EXISTS "${blocker.functionName}"()`);
 	}
 }
 
@@ -98,28 +101,28 @@ async function runAfterBothDeletesStart<T>(
  * ここを塞いで両リクエストを待たせてから解放することで、同時実行の交錯を再現する。
  */
 async function runAfterBothBlockOnNoteRowLock<T>(
-	pool: MiDrizzlePool,
+	pool: NativeSqlClient,
 	noteId: string,
 	actions: readonly [() => Promise<T>, () => Promise<T>],
 ): Promise<[T, T]> {
-	const lockClient = await pool.connect();
+	const lockClient = await pool.reserve();
 	let lockHeld = false;
 
 	try {
-		await lockClient.query('BEGIN');
-		await lockClient.query('SELECT "id" FROM "note" WHERE "id" = $1 FOR UPDATE', [noteId]);
+		await lockClient.unsafe('BEGIN');
+		await lockClient.unsafe('SELECT "id" FROM "note" WHERE "id" = $1 FOR UPDATE', [noteId]);
 		lockHeld = true;
 
 		const pending = actions.map((action) => action()) as [Promise<T>, Promise<T>];
 		// 2人目の待機者は transactionid ではなく tuple ロックで待つため、wait_event ではなく種別で数える
 		await waitForBlockedStatements(pool, 'select "id" from "note"%for update%', 'Lock');
-		await lockClient.query('COMMIT');
+		await lockClient.unsafe('COMMIT');
 		lockHeld = false;
 
 		return await Promise.all(pending);
 	} finally {
 		if (lockHeld) {
-			await lockClient.query('ROLLBACK');
+			await lockClient.unsafe('ROLLBACK');
 		}
 		lockClient.release();
 	}
@@ -127,19 +130,19 @@ async function runAfterBothBlockOnNoteRowLock<T>(
 
 describe('counter integrity under concurrent deletion', () => {
 	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let owner: Misskey.entities.SignupResponse;
 
 	beforeAll(async () => {
 		const config = loadConfig();
 		await initTestDb(true);
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		owner = await signup({ username: 'counter_integrity' });
 	}, 120_000);
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	test('concurrent deletion of the same reply decrements repliesCount once', async () => {

@@ -7,7 +7,6 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -18,12 +17,7 @@ import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembersh
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueImportUserLists } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob(data: DbUserImportJobData): Bull.Job<DbUserImportJobData> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<DbUserImportJobData>;
-}
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {
 	const server: Server = createServer((_req, res) => {
@@ -93,7 +87,7 @@ describe('hono-queue-db (importUserLists)', () => {
 			userHost: null,
 		});
 
-		await handleQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId }));
+		await handleQueueImportUserLists(deps, { user: { id: owner.id }, fileId });
 
 		const list = await fetchUserListByNameAndUserIdFromDatabase(runtime.db, listName, owner.id);
 		expect(list).not.toBeNull();
@@ -103,7 +97,7 @@ describe('hono-queue-db (importUserLists)', () => {
 	test('存在しないfileIdは何もしない', async () => {
 		const owner = await createTestUser('honoqueueimpulnofile');
 		await expect(
-			handleQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() })),
+			handleQueueImportUserLists(deps, { user: { id: owner.id }, fileId: genId() }),
 		).resolves.toBeUndefined();
 	});
 });

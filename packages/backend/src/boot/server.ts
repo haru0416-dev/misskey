@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Server } from 'node:http';
+import { serve } from 'bun';
 import * as fs from 'node:fs';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
@@ -11,11 +11,9 @@ import { envOption } from '@/env.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyApp } from '@/server/app.js';
-import { createNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
-import { attachStreamServer } from '@/server/streaming/server.js';
-import type { StreamServerDependencies } from '@/server/streaming/server.js';
+import type { StreamServerDependencies } from '@/server/streaming/runtime.js';
 import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
 import { traceHttpRequest } from '@/telemetry.js';
 import { startQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
@@ -23,66 +21,26 @@ import { startServerStatsDaemon } from '@/server/daemons/server-stats.js';
 import { createEventPublishers } from '@/server/rest/events.js';
 
 export type ServerRuntime = {
-	server: Server | Bun.Server;
+	server: Bun.Server;
 	dispose: () => Promise<void>;
 };
-
-async function listen(server: Server, config: Config, logger: Logger): Promise<void> {
-	if ('unixSocket' in config.server.listen) {
-		const socket = config.server.listen.unixSocket;
-		if (fs.existsSync(socket.path)) {
-			fs.unlinkSync(socket.path);
-		}
-		await new Promise<void>((resolve, reject) => {
-			server.once('error', reject);
-			server.listen(socket.path, () => {
-				server.off('error', reject);
-				resolve();
-			});
-		});
-		if (socket.permissions) {
-			fs.chmodSync(socket.path, socket.permissions);
-		}
-		logger.info(`Listening on ${socket.path}`);
-	} else {
-		const tcp = config.server.listen.tcp;
-		await new Promise<void>((resolve, reject) => {
-			server.once('error', reject);
-			server.listen(tcp.port, tcp.address, () => {
-				server.off('error', reject);
-				resolve();
-			});
-		});
-		logger.info(`Listening on ${tcp.address}:${tcp.port}`);
-	}
-}
-
-async function closeServer(server: Server): Promise<void> {
-	if (!server.listening) {
-		return;
-	}
-
-	await new Promise<void>((resolve, reject) => {
-		server.close((err) => (err ? reject(err) : resolve()));
-	});
-}
 
 type RuntimeDisposer = () => void | Promise<void>;
 
 async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void> {
 	const pending = disposers.splice(0).reverse();
-	let firstError: unknown;
+	const errors: unknown[] = [];
 	for (const dispose of pending) {
 		try {
 			// 解放順序は重要だが、各 disposer の実行は省略しない。
 			// eslint-disable-next-line no-await-in-loop
 			await dispose();
 		} catch (error) {
-			firstError ??= error;
+			errors.push(error);
 		}
 	}
-	if (firstError != null) {
-		throw firstError;
+	if (errors.length > 0) {
+		throw new AggregateError(errors, 'Server shutdown failed', { cause: errors[0] });
 	}
 }
 
@@ -139,7 +97,6 @@ async function launchServerWithDependencies(
 		apiShell: {
 			config,
 			db: deps.db,
-			dbPool: deps.drizzlePool,
 			meta: deps.meta,
 			redis: deps.redis,
 			redisForTimelines: deps.redisForTimelines,
@@ -155,6 +112,7 @@ async function launchServerWithDependencies(
 			webAuthnService: deps.webAuthnService,
 			emailService: deps.emailService,
 			chartWriters: deps.chartWriters,
+			notePostProcessing: deps.notePostProcessing,
 			systemQueue: deps.systemQueue,
 			endedPollNotificationQueue: deps.endedPollNotificationQueue,
 			postScheduledNoteQueue: deps.postScheduledNoteQueue,
@@ -283,62 +241,54 @@ async function launchServerWithDependencies(
 		disposers.push(() => serverStatsDaemon.dispose());
 	}
 
-	// Bun 1.3.14 の node:http compat 層では、DB pool など別のソケット接続がある状態の
-	// WebSocket upgrade が永久にハングした。Bun.serve() は compat 層を経由しないため採用する。
-	if (typeof Bun !== 'undefined') {
-		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
-		disposers.push(() => streamRuntime.dispose());
-		const listen = config.server.listen;
-		const bunServer = Bun.serve({
-			...('unixSocket' in listen
-				? { unix: listen.unixSocket.path }
-				: { port: listen.tcp.port, hostname: listen.tcp.address }),
-			// Bun のデフォルト上限は 128 MiB で、maxFileSize がそれを超える設定だとアップロードが
-			// アプリ層に届く前に拒否される。ファイル本体 + multipart オーバーヘッドぶんを許容する
-			// (エンドポイント毎の細かい上限は body-limit.ts が実バイト数で守る)。
-			maxRequestBodySize: config.server.http.maximumRequestBodySizeBytes,
-			fetch: (request, bunServerInstance) => {
-				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
-					const url = new URL(request.url);
-					if (url.pathname === streamRuntime.streamingPath) {
-						return streamRuntime.tryUpgrade(request, url, bunServerInstance);
-					}
+	const streamRuntime = createBunNativeStreamRuntime(streamDeps);
+	disposers.push(() => streamRuntime.dispose());
+	const listen = config.server.listen;
+	const server = serve({
+		...('unixSocket' in listen
+			? { unix: listen.unixSocket.path }
+			: { port: listen.tcp.port, hostname: listen.tcp.address }),
+		// Bun のデフォルト上限は 128 MiB で、maxFileSize がそれを超える設定だとアップロードが
+		// アプリ層に届く前に拒否される。ファイル本体 + multipart オーバーヘッドぶんを許容する
+		// (エンドポイント毎の細かい上限は body-limit.ts が実バイト数で守る)。
+		maxRequestBodySize: config.server.http.maximumRequestBodySizeBytes,
+		fetch: (request, bunServerInstance) => {
+			if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+				const url = new URL(request.url);
+				if (url.pathname === streamRuntime.streamingPath) {
+					return streamRuntime.tryUpgrade(request, url, bunServerInstance);
 				}
+			}
 
-				// CPUプロファイル上は requestIP() が全体の 6.4% を占めるが、これを遅延化 (server を env で
-				// 渡し getRequestIp() 側で解決) しても rps / CPU per req はどちらも変わらなかった。
-				// 実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
-				const remoteAddress = bunServerInstance.requestIP(request)?.address;
-				if (remoteAddress != null) {
-					request.headers.set('x-misskey-remote-address', remoteAddress);
-				}
-				return traceHttpRequest(request, () => app.fetch(request));
-			},
-			websocket: streamRuntime.websocket,
-		});
-		disposers.push(() => bunServer.stop(true));
-
-		if ('unixSocket' in listen && listen.unixSocket.permissions) {
-			fs.chmodSync(listen.unixSocket.path, listen.unixSocket.permissions);
+			// CPUプロファイル上は requestIP() が全体の 6.4% を占めるが、これを遅延化 (server を env で
+			// 渡し getRequestIp() 側で解決) しても rps / CPU per req はどちらも変わらなかった。
+			// 実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
+			const remoteAddress = bunServerInstance.requestIP(request)?.address;
+			if (remoteAddress != null) {
+				request.headers.set('x-misskey-remote-address', remoteAddress);
+			}
+			return traceHttpRequest(request, () => app.fetch(request));
+		},
+		websocket: streamRuntime.websocket,
+	});
+	disposers.push(async () => {
+		const stopping = server.stop(false);
+		try {
+			// WS は終了し、HTTP の処理と応答が完了するまでは DB などの依存を保持する。
+			streamRuntime.dispose();
+		} finally {
+			await stopping;
 		}
-		logger.info(
-			'unixSocket' in listen
-				? `Listening on ${listen.unixSocket.path}`
-				: `Listening on ${listen.tcp.address}:${listen.tcp.port}`,
-		);
+	});
 
-		return {
-			server: bunServer,
-			dispose: () => disposeServerRuntime(disposers),
-		};
+	if ('unixSocket' in listen && listen.unixSocket.permissions) {
+		fs.chmodSync(listen.unixSocket.path, listen.unixSocket.permissions);
 	}
-
-	const server = createNodeServer({ app });
-	disposers.push(() => closeServer(server));
-	const streamServer = attachStreamServer(server, streamDeps);
-	disposers.push(() => streamServer.detach());
-
-	await listen(server, config, logger);
+	logger.info(
+		'unixSocket' in listen
+			? `Listening on ${listen.unixSocket.path}`
+			: `Listening on ${listen.tcp.address}:${listen.tcp.port}`,
+	);
 
 	return {
 		server,

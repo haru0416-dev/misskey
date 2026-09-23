@@ -44,7 +44,6 @@ const telemetryInstrumentationNames = [
 	'@opentelemetry/instrumentation-net',
 	'@opentelemetry/instrumentation-openai',
 	'@opentelemetry/instrumentation-oracledb',
-	'@opentelemetry/instrumentation-pg',
 	'@opentelemetry/instrumentation-pino',
 	'@opentelemetry/instrumentation-redis',
 	'@opentelemetry/instrumentation-restify',
@@ -82,6 +81,8 @@ export type FrontendTelemetryConfig = {
 export type RuntimeValkeyConnection = Omit<RedisOptions, 'replyMapping'> & {
 	host: string;
 	port: number;
+	connectTimeout: number;
+	commandTimeout: number;
 	prefix: string;
 	keyPrefix: string;
 };

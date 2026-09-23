@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Bull from 'bullmq';
 import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/PollVoteStore.js';
 import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
@@ -22,9 +21,9 @@ export type QueueEndedPollNotificationDependencies = ApiNotificationDependencies
  */
 export async function handleQueueEndedPollNotification(
 	deps: QueueEndedPollNotificationDependencies,
-	job: Bull.Job<EndedPollNotificationJobData>,
+	data: EndedPollNotificationJobData,
 ): Promise<void> {
-	const note = await fetchNoteByIdFromDatabase(deps.db, job.data.noteId);
+	const note = await fetchNoteByIdFromDatabase(deps.db, data.noteId);
 	if (note == null || !note.hasPoll) {
 		return;
 	}

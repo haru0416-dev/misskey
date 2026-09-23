@@ -6,7 +6,14 @@
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { index, integer, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 
-export const queueOutboxStates = ['ready', 'publishing', 'published', 'reconciling', 'deadLetter'] as const;
+export const queueOutboxStates = [
+	'ready',
+	'publishing',
+	'published',
+	'reconciling',
+	'completed',
+	'deadLetter',
+] as const;
 export type QueueOutboxState = (typeof queueOutboxStates)[number];
 
 export const queueOutboxKinds = ['job', 'accountDeleteCoordinator'] as const;

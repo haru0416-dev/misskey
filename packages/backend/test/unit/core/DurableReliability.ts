@@ -4,10 +4,14 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import type * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
+import { z } from 'zod';
 import { loadConfig } from '@/config.js';
 import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { note as noteTable } from '@/db/schema/note.js';
+import { FanoutTimelinePush } from '@/server/rest/note/fanout-timeline-push.js';
+import { createNotePostProcessing } from '@/core/note/NotePostProcessing.js';
+import { createAntennaInDatabase, deleteAntennaFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
 import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import {
@@ -17,6 +21,8 @@ import {
 	updateUserInDatabase,
 } from '@/core/user/UserStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { following } from '@/db/schema/following.js';
+import { runInRequestScope } from '@/misc/request-scope.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
@@ -29,11 +35,11 @@ import {
 	handleQueueUserSuspensionPostEffects,
 } from '@/server/rest/admin/admin-user-suspension.js';
 import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
-import { createNoteForApi } from '@/server/rest/note/notes-create.js';
-import type { ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { createNote } from '@/core/note/NoteCreationService.js';
+import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
+import { handleApiNotesCreate } from '@/server/rest/note/notes-create.js';
 import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
-import type { DeliverJobData, RelationshipJobData } from '@/queue/types.js';
 import {
 	resolveNotificationStreamId,
 	toXListId,
@@ -95,51 +101,37 @@ describe('durable reliability boundaries', () => {
 			await updateUserInDatabase(runtime.db, target.id, { updatedAt: new Date(Date.now() + 1000) });
 			publishInternalEvent.mockClear();
 			await handleQueueUserSuspensionPostEffects(deps, {
-				data: {
-					userId: target.id,
-					isSuspended: false,
-					transitionedAt: new Date().toISOString(),
-					transitionId: unsuspendLog!.id,
-				},
-			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
+				userId: target.id,
+				isSuspended: false,
+				transitionedAt: new Date().toISOString(),
+				transitionId: unsuspendLog!.id,
+			});
 			expect(publishInternalEvent).toHaveBeenCalledWith('userChangeSuspendedState', {
 				id: target.id,
 				isSuspended: false,
 			});
 			publishInternalEvent.mockClear();
 
-			await handleQueueUserSuspensionPostEffects(deps, {
-				data: suspendOutbox!.data as DbUserSuspensionPostEffectsJobData,
-			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
+			await handleQueueUserSuspensionPostEffects(deps, suspendOutbox!.data as DbUserSuspensionPostEffectsJobData);
 			expect(publishInternalEvent).not.toHaveBeenCalled();
 
 			const guard = suspendOutbox!.data as DbUserSuspensionPostEffectsJobData;
 			await expect(
-				handleQueueDeliver(
-					deps as unknown as Parameters<typeof handleQueueDeliver>[0],
-					{
-						data: {
-							user: { id: target.id },
-							content: '{}',
-							digest: 'test',
-							to: 'https://remote.example.test/inbox',
-							isSharedInbox: true,
-							userStateGuard: guard,
-						},
-					} as Bull.Job<DeliverJobData>,
-				),
+				handleQueueDeliver(deps as unknown as Parameters<typeof handleQueueDeliver>[0], {
+					user: { id: target.id },
+					content: '{}',
+					digest: 'test',
+					to: 'https://remote.example.test/inbox',
+					isSharedInbox: true,
+					userStateGuard: guard,
+				}),
 			).resolves.toBe('skip (stale user state)');
 			await expect(
-				handleQueueRelationshipUnfollow(
-					deps as unknown as Parameters<typeof handleQueueRelationshipUnfollow>[0],
-					{
-						data: {
-							from: { id: target.id },
-							to: { id: moderator.id },
-							userStateGuard: guard,
-						},
-					} as Bull.Job<RelationshipJobData>,
-				),
+				handleQueueRelationshipUnfollow(deps as unknown as Parameters<typeof handleQueueRelationshipUnfollow>[0], {
+					from: { id: target.id },
+					to: { id: moderator.id },
+					userStateGuard: guard,
+				}),
 			).resolves.toBe('skip (stale user state)');
 		} finally {
 			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.name, 'userSuspensionPostEffects'));
@@ -163,11 +155,11 @@ describe('durable reliability boundaries', () => {
 		const deps = {
 			...runtime,
 			dbQueue: { addBulk } as unknown as DbQueue,
-		} as unknown as ApiNotesCreateDependencies;
+		} as unknown as NoteCreationDependencies;
 		let noteId: string | undefined;
 
 		try {
-			const note = await createNoteForApi(
+			const note = await createNote(
 				deps,
 				user,
 				{
@@ -209,6 +201,150 @@ describe('durable reliability boundaries', () => {
 			}
 			await runtime.redis.del(`notificationTimeline:${follower.id}`);
 			await deleteUserByIdFromDatabase(runtime.db, follower.id);
+			await deleteUserByIdFromDatabase(runtime.db, user.id);
+		}
+	});
+
+	test('HTTP creation commits timelines and antennas before responding while shutdown owns pending analytics', async () => {
+		const user = await createLocalUser('durablehttppost');
+		const antennaId = genId();
+		await createAntennaInDatabase(runtime.db, {
+			id: antennaId,
+			lastUsedAt: new Date(),
+			userId: user.id,
+			name: `durable${antennaId}`,
+			src: 'users',
+			users: [`@${user.username}`],
+			withFile: false,
+			isActive: true,
+		});
+		const analytics = Promise.withResolvers<void>();
+		const analyticsStarted = Promise.withResolvers<void>();
+		const update = vi.spyOn(runtime.chartWriters.notesChart, 'update').mockImplementation(async () => {
+			analyticsStarted.resolve();
+			await analytics.promise;
+		});
+		const errors: unknown[] = [];
+		const notePostProcessing = createNotePostProcessing((error) => errors.push(error));
+		let noteId: string | undefined;
+		let closed = false;
+		const jobData = z.object({ noteId: z.string(), stage: z.string() });
+		try {
+			const response = await handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
+				text: 'HTTP post lifecycle',
+				localOnly: true,
+				visibility: 'home',
+			});
+			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
+			await analyticsStarted.promise;
+			expect(await runtime.redisForTimelines.lrange(`list:userTimeline:${user.id}`, 0, -1)).toContain(noteId);
+			expect(await runtime.redisForTimelines.lrange(`list:antennaTimeline:${antennaId}`, 0, -1)).toContain(noteId);
+			const rows = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'notePostCreate'));
+			const pendingStages = rows
+				.map((row) => jobData.parse(row.data))
+				.filter((data) => data.noteId === noteId)
+				.map((data) => data.stage);
+			expect(pendingStages).not.toContain('fanout');
+			expect(pendingStages).not.toContain('antennas');
+			expect(pendingStages).not.toContain('analytics');
+			const closing = notePostProcessing.close().then(() => {
+				closed = true;
+			});
+			await Promise.resolve();
+			expect(closed).toBe(false);
+			analytics.resolve();
+			await closing;
+			expect(errors).toEqual([]);
+		} finally {
+			analytics.resolve();
+			await notePostProcessing.close();
+			update.mockRestore();
+			const rows = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'notePostCreate'));
+			const ids = rows.filter((row) => jobData.parse(row.data).noteId === noteId).map((row) => row.id);
+			if (ids.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, ids));
+			if (noteId != null) await deleteNotesByIdsFromDatabase(runtime.db, [noteId]);
+			await runtime.redisForTimelines.del(`list:userTimeline:${user.id}`, `list:antennaTimeline:${antennaId}`);
+			await deleteAntennaFromDatabase(runtime.db, antennaId);
+			await deleteUserByIdFromDatabase(runtime.db, user.id);
+		}
+	});
+
+	test('deferred notifications do not reuse the HTTP follower memo after unfollow', async () => {
+		const user = await createLocalUser('scopedauthor');
+		const follower = await createLocalUser('scopedfollower');
+		const followingId = genId();
+		await createFollowingInDatabase(runtime.db, {
+			id: followingId,
+			followeeId: user.id,
+			followerId: follower.id,
+			followeeHost: null,
+			followerHost: null,
+			notify: 'normal',
+		});
+		const analytics = Promise.withResolvers<void>();
+		const started = Promise.withResolvers<void>();
+		const update = vi.spyOn(runtime.chartWriters.notesChart, 'update').mockImplementation(async () => {
+			started.resolve();
+			await analytics.promise;
+		});
+		const errors: unknown[] = [];
+		const notePostProcessing = createNotePostProcessing((error) => errors.push(error));
+		let noteId: string | undefined;
+		try {
+			const response = await runInRequestScope(() =>
+				handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
+					text: 'operation scoped notification',
+					localOnly: true,
+					visibility: 'public',
+				}),
+			);
+			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
+			await started.promise;
+			await runtime.db.delete(following).where(eq(following.id, followingId));
+			analytics.resolve();
+			await notePostProcessing.close();
+			expect(await runtime.redis.xlen(`notificationTimeline:${follower.id}`)).toBe(0);
+			expect(errors).toEqual([]);
+		} finally {
+			analytics.resolve();
+			await notePostProcessing.close();
+			update.mockRestore();
+			if (noteId != null) await deleteNotesByIdsFromDatabase(runtime.db, [noteId]);
+			await runtime.redis.del(`notificationTimeline:${follower.id}`);
+			await runtime.redisForTimelines.del(`list:userTimeline:${user.id}`, `list:homeTimeline:${follower.id}`);
+			await deleteUserByIdFromDatabase(runtime.db, follower.id);
+			await deleteUserByIdFromDatabase(runtime.db, user.id);
+		}
+	});
+
+	test('a committed creation still attempts analytics once when its required effect fails', async () => {
+		const user = await createLocalUser('failedrequired');
+		const failure = new Error('required fanout failed');
+		const fanout = vi.spyOn(FanoutTimelinePush.prototype, 'flush').mockRejectedValueOnce(failure);
+		const analytics = vi.spyOn(runtime.chartWriters.notesChart, 'update');
+		const notePostProcessing = createNotePostProcessing(() => {});
+		const jobData = z.object({ noteId: z.string() });
+		try {
+			await expect(
+				handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
+					text: 'committed creation',
+					visibility: 'home',
+					localOnly: true,
+				}),
+			).rejects.toBe(failure);
+			await notePostProcessing.close();
+			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, user.id)).notesCount).toBe(1);
+			expect(analytics).toHaveBeenCalledTimes(1);
+		} finally {
+			await notePostProcessing.close();
+			fanout.mockRestore();
+			analytics.mockRestore();
+			const notes = await runtime.db.select({ id: noteTable.id }).from(noteTable).where(eq(noteTable.userId, user.id));
+			const ids = notes.map((note) => note.id);
+			const rows = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'notePostCreate'));
+			const outboxIds = rows.filter((row) => ids.includes(jobData.parse(row.data).noteId)).map((row) => row.id);
+			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			if (ids.length > 0) await deleteNotesByIdsFromDatabase(runtime.db, ids);
 			await deleteUserByIdFromDatabase(runtime.db, user.id);
 		}
 	});

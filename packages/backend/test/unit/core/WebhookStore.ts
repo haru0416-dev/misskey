@@ -3,27 +3,27 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { PoolClient } from 'pg';
+import type { SQL as NativeSqlClient, ReservedSQL } from 'bun';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { countWebhooksByUserIdFromDatabase, createWebhookWithinLimitInDatabase } from '@/core/webhook/WebhookStore.js';
 import { user } from '@/db/schema/user.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 describe('WebhookStore', () => {
 	const userId = 'webhook-limit-user';
-	let blockerPool: MiDrizzlePool;
-	let firstPool: MiDrizzlePool;
-	let secondPool: MiDrizzlePool;
+	let blockerPool: NativeSqlClient;
+	let firstPool: NativeSqlClient;
+	let secondPool: NativeSqlClient;
 	let firstDb: MiDrizzleDatabase;
 	let secondDb: MiDrizzleDatabase;
 
-	async function waitForTwoAdvisoryLockWaiters(blocker: PoolClient): Promise<void> {
-		const waiting = await blocker.query<{ count: string }>(
-			`SELECT count(*)::text AS count FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`,
-		);
-		if (Number(waiting.rows[0]?.count ?? 0) >= 2) {
+	async function waitForTwoAdvisoryLockWaiters(blocker: ReservedSQL): Promise<void> {
+		const [[count] = []] = await blocker
+			.unsafe(`SELECT count(*)::text AS count FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`)
+			.values();
+		if (Number(count ?? 0) >= 2) {
 			return;
 		}
 		await new Promise<void>((resolve) => setImmediate(resolve));
@@ -32,11 +32,11 @@ describe('WebhookStore', () => {
 
 	beforeAll(async () => {
 		const config = loadConfig();
-		blockerPool = createDrizzlePool(config);
-		firstPool = createDrizzlePool(config);
-		secondPool = createDrizzlePool(config);
-		firstDb = createDrizzleDatabase(firstPool, config);
-		secondDb = createDrizzleDatabase(secondPool, config);
+		blockerPool = createBunSqlClient(config);
+		firstPool = createBunSqlClient(config);
+		secondPool = createBunSqlClient(config);
+		firstDb = createBunSqlDatabase(firstPool, config);
+		secondDb = createBunSqlDatabase(secondPool, config);
 		await firstDb.insert(user).values({
 			id: userId,
 			username: 'webhook_limit_user',
@@ -45,14 +45,14 @@ describe('WebhookStore', () => {
 	});
 
 	afterAll(async () => {
-		await Promise.all([blockerPool.end(), firstPool.end(), secondPool.end()]);
+		await Promise.all([blockerPool.close(), firstPool.close(), secondPool.close()]);
 	});
 
 	test('two concurrent creates at the limit cannot both succeed', async () => {
-		const blocker = await blockerPool.connect();
+		const blocker = await blockerPool.reserve();
 		try {
-			await blocker.query('BEGIN');
-			await blocker.query("SELECT pg_advisory_xact_lock(hashtext('webhook-limit'), hashtext($1))", [userId]);
+			await blocker.unsafe('BEGIN');
+			await blocker.unsafe("SELECT pg_advisory_xact_lock(hashtext('webhook-limit'), hashtext($1))", [userId]);
 
 			const resultsPromise = Promise.all(
 				[firstDb, secondDb].map((db, index) =>
@@ -72,7 +72,7 @@ describe('WebhookStore', () => {
 			);
 
 			await waitForTwoAdvisoryLockWaiters(blocker);
-			await blocker.query('COMMIT');
+			await blocker.unsafe('COMMIT');
 			const results = await resultsPromise;
 			expect(results.filter((result) => result != null).length).toBe(1);
 			expect(await countWebhooksByUserIdFromDatabase(firstDb, userId)).toBe(1);

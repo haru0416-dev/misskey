@@ -167,6 +167,14 @@ export const endpointMetas = {
 			},
 
 			errors: {
+				postProcessingUnavailable: {
+					message: 'Post processing is temporarily unavailable. No note was created.',
+					code: 'POST_PROCESSING_UNAVAILABLE',
+					id: '12c03e69-0e54-4b4a-971f-24633604a7f9',
+					kind: 'server',
+					httpStatusCode: 503,
+				},
+
 				noSuchRenoteTarget: {
 					message: 'No such renote target.',
 					code: 'NO_SUCH_RENOTE_TARGET',

@@ -6,8 +6,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
 import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
@@ -46,7 +47,7 @@ import type { QueueSystemDependencies } from '@/queue/handlers/system.js';
 import type { Config } from '@/config.js';
 
 describe('hono-queue-system', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let redis: Redis.Redis;
 	let redisForReactions: Redis.Redis;
@@ -56,8 +57,8 @@ describe('hono-queue-system', () => {
 
 	beforeAll(async () => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		redis = new Redis.Redis(config.valkey.primary);
 		redisForReactions = new Redis.Redis(config.valkey.reactions);
 		const meta = await fetchMetaFromDatabase(db);
@@ -68,7 +69,7 @@ describe('hono-queue-system', () => {
 	afterAll(async () => {
 		redis.disconnect();
 		redisForReactions.disconnect();
-		await pool.end();
+		await pool.close();
 	});
 
 	describe('handleQueueClean', () => {

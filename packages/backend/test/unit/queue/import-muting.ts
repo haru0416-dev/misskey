@@ -7,7 +7,6 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -17,12 +16,7 @@ import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueImportMuting } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob(data: DbUserImportJobData): Bull.Job<DbUserImportJobData> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<DbUserImportJobData>;
-}
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {
 	const server: Server = createServer((_req, res) => {
@@ -89,7 +83,7 @@ describe('hono-queue-db (importMuting)', () => {
 			userHost: null,
 		});
 
-		await handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
+		await handleQueueImportMuting(deps, { user: { id: muter.id }, fileId });
 
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, target.id)).toBe(true);
 	});
@@ -113,15 +107,13 @@ describe('hono-queue-db (importMuting)', () => {
 			userHost: null,
 		});
 
-		await handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
+		await handleQueueImportMuting(deps, { user: { id: muter.id }, fileId });
 
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, muter.id)).toBe(false);
 	});
 
 	test('存在しないfileIdは何もしない', async () => {
 		const muter = await createTestUser('honoqueueimpmutenofile');
-		await expect(
-			handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() })),
-		).resolves.toBeUndefined();
+		await expect(handleQueueImportMuting(deps, { user: { id: muter.id }, fileId: genId() })).resolves.toBeUndefined();
 	});
 });

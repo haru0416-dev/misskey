@@ -15,7 +15,7 @@ import type { RoleCondFormulaValue } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
 
-/** リクエスト内 memo のキー。認証が世代番号を置き、ロール解決が読む。 */
+/** 認証・後処理snapshotとロール解決が共有する、実行scope内の世代番号。 */
 export const ROLES_VERSION_MEMO_KEY = 'roles:version';
 
 export type ApiRolePolicyDependencies = {
@@ -106,7 +106,7 @@ export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiU
 
 	// 同一リクエスト内で複数箇所から呼ばれる (notes/create と users/show でそれぞれ3回)。
 	// ロール定義は全員で共通、割り当てはユーザーごとなので、キーを分けて memo する。
-	// 世代番号は認証クエリが同乗させて memo 済み。無い経路 (アクセストークン認証・スコープ外) は 1 本読む。
+	// 同じsnapshotで取得済みならmemoを使い、世代番号をまだ読んでいない経路だけ問い合わせる。
 	const version = await memoizeInRequest(ROLES_VERSION_MEMO_KEY, () => fetchRolesCacheVersionFromDatabase(deps.db));
 	const [roles, assignments] = await Promise.all([
 		listRolesFromDatabaseCachedByVersion(deps.db, version),

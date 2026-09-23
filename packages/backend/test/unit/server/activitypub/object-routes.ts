@@ -114,6 +114,40 @@ describe('ActivityPub object routes', () => {
 		}
 	});
 
+	test.each([false, true])('フォロワー限定の返信は作者が同じ=%s のときだけ親を参照する', async (sameAuthor) => {
+		const parentAuthorId = genId();
+		const replyAuthorId = sameAuthor ? parentAuthorId : genId();
+		for (const id of sameAuthor ? [parentAuthorId] : [parentAuthorId, replyAuthorId]) {
+			await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+				user: { id, username: `author${id}`, usernameLower: `author${id}` },
+				profile: { userId: id },
+			});
+		}
+		const parentId = genId();
+		const replyId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: parentId,
+			userId: parentAuthorId,
+			userHost: null,
+			text: 'private parent body',
+			visibility: 'followers',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: replyId,
+			userId: replyAuthorId,
+			userHost: null,
+			text: 'reply body',
+			visibility: 'followers',
+			replyId: parentId,
+		});
+		const reply = await fetchNoteByIdOrFailFromDatabase(runtime.db, replyId);
+		for (const dive of [false, true]) {
+			const rendered = await renderNoteForApi(runtime, reply, dive);
+			expect(rendered['inReplyTo']).toBe(sameAuthor ? `${runtime.config.instance.url}/notes/${parentId}` : null);
+			expect(JSON.stringify(rendered)).not.toContain('private parent body');
+		}
+	});
+
 	test.each(['public', 'home', 'followers', 'specified'] as const)(
 		'%s のアンケート更新を閲覧対象の宛先へ配送する',
 		async (visibility) => {

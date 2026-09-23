@@ -19,10 +19,11 @@ import {
 	ne,
 	or,
 	sql,
+	getTableName,
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { cacheVersion } from '@/db/schema/cache-version.js';
-import { executePreparedStatement, preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { user as userTable } from '@/db/schema/user.js';
 import type { UserInsert, UserRow } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
@@ -227,23 +228,44 @@ export async function fetchLocalUserByIdFromDatabase(
 	return user?.host == null ? (user as MiLocalUser) : null;
 }
 
+const userByNativeTokenPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(userTable);
+	return {
+		query: db
+			.select(selection)
+			.from(userTable)
+			.where(eq(userTable.token, sql.placeholder('token')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userTable)] },
+	};
+});
+
 export async function fetchLocalUserByNativeTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: NonNullable<MiLocalUser['token']>,
 ): Promise<MiLocalUser | null> {
 	// 認証で全リクエストが通る。user は42列あり毎回の組み立てが 167µs かかっていた
-	const statement = preparedQueryFor(db, 'user:byNativeToken', () =>
-		db
-			.select()
-			.from(userTable)
-			.where(eq(userTable.token, sql.placeholder('token')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ token });
+	const [row] = await userByNativeTokenPlan.execute(db, { token });
 
 	return row ? (deserializeUser(row) as MiLocalUser) : null;
 }
+
+const userByNativeTokenWithRolesVersionPlan = defineQueryPlan((db) => {
+	const selection = {
+		...getTableColumns(userTable),
+		rolesVersion: sql<number>`(select ${cacheVersion.version} from ${cacheVersion} where ${cacheVersion.key} = 'roles')`,
+	};
+	return {
+		query: db
+			.select(selection)
+			.from(userTable)
+			.where(eq(userTable.token, sql.placeholder('token')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userTable)] },
+	};
+});
 
 /**
  * 認証と同じ往復でロールキャッシュの世代番号も取る。認証後は必ずロール解決が続くので、
@@ -253,18 +275,7 @@ export async function fetchLocalUserByNativeTokenWithRolesVersionFromDatabase(
 	db: MiDrizzleDatabase,
 	token: NonNullable<MiLocalUser['token']>,
 ): Promise<{ user: MiLocalUser; rolesVersion: number } | null> {
-	const statement = preparedQueryFor(db, 'user:byNativeTokenWithRolesVersion', () =>
-		db
-			.select({
-				...getTableColumns(userTable),
-				rolesVersion: sql<number>`(select ${cacheVersion.version} from ${cacheVersion} where ${cacheVersion.key} = 'roles')`,
-			})
-			.from(userTable)
-			.where(eq(userTable.token, sql.placeholder('token')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ token });
+	const [row] = await userByNativeTokenWithRolesVersionPlan.execute(db, { token });
 	if (row == null) {
 		return null;
 	}
@@ -282,16 +293,21 @@ export async function fetchRemoteUserByIdFromDatabase(
 	return user?.host != null ? (user as MiRemoteUser) : null;
 }
 
-export async function fetchUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiUser | null> {
-	const statement = preparedQueryFor(db, 'user:byId', () =>
-		db
-			.select()
+const userByIdPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(userTable);
+	return {
+		query: db
+			.select(selection)
 			.from(userTable)
 			.where(eq(userTable.id, sql.placeholder('id')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ id });
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userTable)] },
+	};
+});
+
+export async function fetchUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiUser | null> {
+	const [row] = await userByIdPlan.execute(db, { id });
 
 	return row ? deserializeUser(row) : null;
 }
@@ -336,6 +352,24 @@ export async function countUsersByHostNotNullFromDatabase(db: MiDrizzleDatabase)
 	return row?.value ?? 0;
 }
 
+const usersByIdsPlans = [false, true].map((includeSuspended) =>
+	defineQueryPlan((db) => {
+		const conditions: SQL[] = [sql`${userTable.id} = ANY(${sql.placeholder('ids')})`];
+		if (!includeSuspended) {
+			conditions.push(eq(userTable.isSuspended, false));
+		}
+		const selection = getTableColumns(userTable);
+		return {
+			query: db
+				.select(selection)
+				.from(userTable)
+				.where(and(...conditions)),
+			selection,
+			metadata: { type: 'select', tables: [getTableName(userTable)] },
+		};
+	}),
+);
+
 export async function listUsersByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiUser['id'][],
@@ -349,20 +383,8 @@ export async function listUsersByIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, `user:byIds:${options.includeSuspended}`, () => {
-		const conditions: SQL[] = [sql`${userTable.id} = ANY(${sql.placeholder('ids')})`];
-
-		if (!options.includeSuspended) {
-			conditions.push(eq(userTable.isSuspended, false));
-		}
-
-		return db
-			.select()
-			.from(userTable)
-			.where(and(...conditions))
-			.prepare(UNNAMED_PREPARED_STATEMENT);
-	});
-	const rows = await statement.execute({ ids });
+	const plan = usersByIdsPlans[options.includeSuspended ? 1 : 0]!;
+	const rows = await plan.execute(db, { ids });
 
 	return rows.map((row) => deserializeUser(row));
 }
@@ -804,26 +826,6 @@ export async function updateUserIfNotDeletedInDatabase(
 		.returning({ id: userTable.id });
 
 	return rows.length > 0;
-}
-
-export async function incrementUserNotesCountAndUpdatedAtInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUser['id'],
-	updatedAt: Date,
-): Promise<void> {
-	await executePreparedStatement(
-		db,
-		'user:incrementNotesCountAndUpdatedAt',
-		() =>
-			db
-				.update(userTable)
-				.set({
-					updatedAt: sql.placeholder('updatedAt') as unknown as Date,
-					notesCount: sql`${userTable.notesCount} + 1`,
-				})
-				.where(eq(userTable.id, sql.placeholder('id'))),
-		{ id, updatedAt },
-	);
 }
 
 async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(

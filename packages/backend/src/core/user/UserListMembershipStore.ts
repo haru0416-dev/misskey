@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { userListMembership } from '@/db/schema/user-list-membership.js';
 import type { UserListMembershipInsert, UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import { userList } from '@/db/schema/user-list.js';
@@ -121,6 +121,22 @@ export async function fetchUserListMembershipByUserIdAndUserListIdFromDatabase(
 	return row ?? null;
 }
 
+const userListMembershipForFanoutByUserIdPlan = defineQueryPlan((db) => {
+	const selection = {
+		userListId: userListMembership.userListId,
+		userListUserId: userListMembership.userListUserId,
+		withReplies: userListMembership.withReplies,
+	};
+	return {
+		query: db
+			.select(selection)
+			.from(userListMembership)
+			.where(eq(userListMembership.userId, sql.placeholder('userId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userListMembership)] },
+	};
+});
+
 /**
  * ノート投稿時のファンアウト配信先判定 (NoteCreateService) 向け。
  * userListId / userListUserId (リストオーナーの非正規化ID) / withReplies のみを取得する。
@@ -129,19 +145,7 @@ export async function listUserListMembershipsForFanoutByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<Pick<UserListMembershipRow, 'userListId' | 'userListUserId' | 'withReplies'>[]> {
-	const statement = preparedQueryFor(db, 'userListMembership:forFanoutByUserId', () =>
-		db
-			.select({
-				userListId: userListMembership.userListId,
-				userListUserId: userListMembership.userListUserId,
-				withReplies: userListMembership.withReplies,
-			})
-			.from(userListMembership)
-			.where(eq(userListMembership.userId, sql.placeholder('userId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-
-	return await statement.execute({ userId });
+	return await userListMembershipForFanoutByUserIdPlan.execute(db, { userId });
 }
 
 export async function listUserListMembershipsByUserIdFromDatabase(

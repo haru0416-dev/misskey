@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { followRequest } from '@/db/schema/follow-request.js';
 import type { FollowRequestInsert, FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -66,20 +66,25 @@ export async function fetchFollowRequestFromDatabase(
 	return row ?? null;
 }
 
+const followRequestExistsPlan = defineQueryPlan((db) => {
+	const selection = { id: followRequest.id };
+	return {
+		query: db
+			.select(selection)
+			.from(followRequest)
+			.where(followRequestCondition(sql.placeholder('followerId'), sql.placeholder('followeeId')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(followRequest)] },
+	};
+});
+
 export async function followRequestExistsInDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	const statement = preparedQueryFor(db, 'followRequest:exists', () =>
-		db
-			.select({ id: followRequest.id })
-			.from(followRequest)
-			.where(followRequestCondition(sql.placeholder('followerId'), sql.placeholder('followeeId')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ followerId, followeeId });
+	const [row] = await followRequestExistsPlan.execute(db, { followerId, followeeId });
 
 	return row != null;
 }

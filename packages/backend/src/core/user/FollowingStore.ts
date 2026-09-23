@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { following } from '@/db/schema/following.js';
 import type { FollowingInsert, FollowingRow } from '@/db/schema/following.js';
 import { user as userTable } from '@/db/schema/user.js';
@@ -324,6 +324,25 @@ export type FollowerForNoteDelivery = Pick<
 	| 'followerInbox'
 >;
 
+export const followerForNoteDeliverySelection = {
+	followerId: following.followerId,
+	followerHost: following.followerHost,
+	isFollowerHibernated: following.isFollowerHibernated,
+	withReplies: following.withReplies,
+	notify: following.notify,
+	followerSharedInbox: following.followerSharedInbox,
+	followerInbox: following.followerInbox,
+} as const;
+
+const followingForNoteDeliveryByFolloweeIdPlan = defineQueryPlan((db) => ({
+	query: db
+		.select(followerForNoteDeliverySelection)
+		.from(following)
+		.where(eq(following.followeeId, sql.placeholder('followeeId'))),
+	selection: followerForNoteDeliverySelection,
+	metadata: { type: 'select', tables: [getTableName(following)] },
+}));
+
 /**
  * 投稿 1 件の配送に要るフォロワー情報を 1 回で読む。fanout (ローカル・休眠でない)、通知 (notify)、
  * 連合配送 (リモートの inbox) はそれぞれ同じ followee の following を別条件で読んでいたが、
@@ -334,23 +353,11 @@ async function listFollowersForNoteDeliveryFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<FollowerForNoteDelivery[]> {
-	const statement = preparedQueryFor(db, 'following:forNoteDeliveryByFolloweeId', () =>
-		db
-			.select({
-				followerId: following.followerId,
-				followerHost: following.followerHost,
-				isFollowerHibernated: following.isFollowerHibernated,
-				withReplies: following.withReplies,
-				notify: following.notify,
-				followerSharedInbox: following.followerSharedInbox,
-				followerInbox: following.followerInbox,
-			})
-			.from(following)
-			.where(eq(following.followeeId, sql.placeholder('followeeId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
+	return await followingForNoteDeliveryByFolloweeIdPlan.execute(db, { followeeId });
+}
 
-	return await statement.execute({ followeeId });
+export function followersForNoteDeliveryMemoKey(followeeId: MiUser['id']): string {
+	return `followersForNoteDelivery:${followeeId}`;
 }
 
 /** 投稿の各ステージ (fanout / 通知 / 連合配送) が同じリクエスト内で同じフォロワー一覧を共有する。 */
@@ -358,7 +365,7 @@ export function listFollowersForNoteDeliveryForRequest(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<FollowerForNoteDelivery[]> {
-	return memoizeInRequest(`followersForNoteDelivery:${followeeId}`, () =>
+	return memoizeInRequest(followersForNoteDeliveryMemoKey(followeeId), () =>
 		listFollowersForNoteDeliveryFromDatabase(db, followeeId),
 	);
 }
@@ -482,14 +489,11 @@ async function fetchFollowingByIdOrFailFromDatabase(
 	return deserializeFollowing(row);
 }
 
-export async function followingExistsInDatabase(
-	db: MiDrizzleDatabase,
-	followerId: MiUser['id'],
-	followeeId: MiUser['id'],
-): Promise<boolean> {
-	const statement = preparedQueryFor(db, 'following:exists', () =>
-		db
-			.select({ id: following.id })
+const followingExistsPlan = defineQueryPlan((db) => {
+	const selection = { id: following.id };
+	return {
+		query: db
+			.select(selection)
 			.from(following)
 			.where(
 				and(
@@ -497,10 +501,18 @@ export async function followingExistsInDatabase(
 					eq(following.followeeId, sql.placeholder('followeeId')),
 				),
 			)
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ followerId, followeeId });
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(following)] },
+	};
+});
+
+export async function followingExistsInDatabase(
+	db: MiDrizzleDatabase,
+	followerId: MiUser['id'],
+	followeeId: MiUser['id'],
+): Promise<boolean> {
+	const [row] = await followingExistsPlan.execute(db, { followerId, followeeId });
 
 	return row != null;
 }

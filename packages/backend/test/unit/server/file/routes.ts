@@ -24,8 +24,9 @@ import { createVideoProcessingService } from '@/core/drive/VideoProcessingServic
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { createFileServerApp } from '@/server/file/routes.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import type { DriveFileInsert } from '@/db/schema/drive-file.js';
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
@@ -133,7 +134,7 @@ async function inject(app: Hono, options: InjectOptions) {
 }
 
 describe('createFileServerApp', () => {
-	let drizzlePool: MiDrizzlePool;
+	let drizzlePool: NativeSqlClient;
 	let drizzle: MiDrizzleDatabase;
 	let app: Hono;
 	let externalApp: Hono;
@@ -202,8 +203,8 @@ describe('createFileServerApp', () => {
 	beforeAll(async () => {
 		config = loadConfig();
 		await initTestDb(false);
-		drizzlePool = createDrizzlePool(config);
-		drizzle = createDrizzleDatabase(drizzlePool, config);
+		drizzlePool = createBunSqlClient(config);
+		drizzle = createBunSqlDatabase(drizzlePool, config);
 
 		const loggerService = createLoggerService();
 		const aiService = {
@@ -275,7 +276,7 @@ describe('createFileServerApp', () => {
 
 	afterAll(async () => {
 		await close(remoteServer);
-		await drizzlePool.end();
+		await drizzlePool.close();
 		if (createdFallbackAssets) {
 			fs.rmSync(fallbackAssetsDir, { recursive: true, force: true });
 		}

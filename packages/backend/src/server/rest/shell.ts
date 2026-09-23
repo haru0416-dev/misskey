@@ -6,7 +6,8 @@
 import { Hono } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { FileInfoService } from '@/core/drive/FileInfoService.js';
@@ -57,7 +58,6 @@ import { registerUsersRoutes } from './routes/users.js';
 export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	dbPool: MiDrizzlePool;
 	meta: MiMeta;
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
@@ -81,6 +81,7 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	chartWriters: ChartWriters;
+	notePostProcessing: NotePostProcessing;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: ApiInternalEventPublisher;
 	publishBroadcastStream?: ApiBroadcastStreamPublisher;

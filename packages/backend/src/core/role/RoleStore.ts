@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { and, desc, eq, inArray, getTableColumns, getTableName } from 'drizzle-orm';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { cacheVersion } from '@/db/schema/cache-version.js';
 import { role } from '@/db/schema/role.js';
 import type { RoleInsert, RoleRow } from '@/db/schema/role.js';
@@ -19,12 +19,29 @@ function deserializeRole(row: RoleRow): MiRole {
 	return row as MiRole;
 }
 
+const roleAllPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(role);
+	return {
+		query: db.select(selection).from(role),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(role)] },
+	};
+});
+
 export async function listRolesFromDatabase(db: MiDrizzleDatabase): Promise<MiRole[]> {
-	const statement = preparedQueryFor(db, 'role:all', () => db.select().from(role).prepare(UNNAMED_PREPARED_STATEMENT));
-	const rows = await statement.execute();
+	const rows = await roleAllPlan.execute(db);
 
 	return rows.map((row) => deserializeRole(row));
 }
+
+const cacheVersionRolesPlan = defineQueryPlan((db) => {
+	const selection = { version: cacheVersion.version };
+	return {
+		query: db.select(selection).from(cacheVersion).where(eq(cacheVersion.key, 'roles')),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(cacheVersion)] },
+	};
+});
 
 /**
  * role / role_assignment の世代番号。両テーブルのトリガが書き込みのたびに進める (migration 0016)。
@@ -33,14 +50,7 @@ export async function listRolesFromDatabase(db: MiDrizzleDatabase): Promise<MiRo
  * この関数は呼ばれない。
  */
 export async function fetchRolesCacheVersionFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const statement = preparedQueryFor(db, 'cacheVersion:roles', () =>
-		db
-			.select({ version: cacheVersion.version })
-			.from(cacheVersion)
-			.where(eq(cacheVersion.key, 'roles'))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute();
+	const [row] = await cacheVersionRolesPlan.execute(db);
 	return row?.version ?? 0;
 }
 

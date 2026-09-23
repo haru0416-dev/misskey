@@ -4,34 +4,35 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueCleanRemoteNotes } from '@/queue/handlers/clean-remote-notes.js';
 import type { QueueCleanRemoteNotesDependencies } from '@/queue/handlers/clean-remote-notes.js';
 import type { Config } from '@/config.js';
+import type { QueueMaintenanceReporter } from '@/queue/types.js';
 
-function fakeJob(): Bull.Job<Record<string, unknown>> {
+function createReporter(): QueueMaintenanceReporter {
 	return {
 		log: async () => 0,
 		updateProgress: async () => {},
-	} as unknown as Bull.Job<Record<string, unknown>>;
+	};
 }
 
 describe('hono-queue-clean-remote-notes', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let config: Config;
 	let deps: QueueCleanRemoteNotesDependencies;
 
 	beforeAll(() => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		deps = {
 			db,
 			meta: {
@@ -43,11 +44,11 @@ describe('hono-queue-clean-remote-notes', () => {
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	test('enableRemoteNotesCleaningがfalseの場合はskippedを返す', async () => {
-		const result = await handleQueueCleanRemoteNotes(deps, fakeJob());
+		const result = await handleQueueCleanRemoteNotes(deps, createReporter());
 		expect(result).toEqual({ deletedCount: 0, oldest: null, newest: null, skipped: true, transientErrors: 0 });
 	});
 
@@ -79,7 +80,7 @@ describe('hono-queue-clean-remote-notes', () => {
 				...deps,
 				meta: { ...deps.meta, enableRemoteNotesCleaning: true, remoteNotesCleaningMaxProcessingDurationInMinutes: 0.1 },
 			},
-			fakeJob(),
+			createReporter(),
 		);
 
 		expect(result.skipped).toBe(false);

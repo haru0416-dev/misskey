@@ -528,7 +528,7 @@ async function persistStoredDriveFileForApi(
 			await stored.cleanup();
 		}
 		for (const deletion of result.expiredFileDeletions) {
-			publishEnqueuedDriveFileDeletion(deps, deletion);
+			await publishEnqueuedDriveFileDeletion(deps, deletion);
 		}
 		return { file: result.file, inserted: result.inserted };
 	} catch (err) {

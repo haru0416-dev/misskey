@@ -3,10 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, getTableColumns, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	getTableColumns,
+	gt,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	or,
+	sql,
+	getTableName,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { executePreparedStatement, preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { note } from '@/db/schema/note.js';
 import type { NoteInsert, NoteRow } from '@/db/schema/note.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
@@ -14,6 +29,18 @@ import { driveFile } from '@/db/schema/drive-file.js';
 import { poll } from '@/db/schema/poll.js';
 import type { PollInsert } from '@/db/schema/poll.js';
 import { user as userTable } from '@/db/schema/user.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import {
+	createInlineDbOutboxInsert,
+	MAX_PREPARED_INLINE_JOB_ROWS,
+	prepareInlineDbOutboxJobs,
+} from '@/core/queue/QueueOutboxStore.js';
+import type { InlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
+import type { DbNotePostCreateJobData } from '@/queue/types.js';
+import { following } from '@/db/schema/following.js';
+import { cacheVersion } from '@/db/schema/cache-version.js';
+import { followerForNoteDeliverySelection } from '@/core/user/FollowingStore.js';
+import type { FollowerForNoteDelivery } from '@/core/user/FollowingStore.js';
 import { channel as channelTable } from '@/db/schema/channel.js';
 import type { ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -370,17 +397,70 @@ const noteInsertPlaceholders = Object.fromEntries(
 	noteColumnKeys.map((key) => [key, sql.placeholder(key)]),
 ) as unknown as NoteInsert;
 
-/**
- * 全列が揃っているときは固定形の INSERT を使い回す (notes/create はトランザクション内で挿入するため
- * `preparedQueryFor` では毎回組み立て直しになる)。列が欠けると DEFAULT に任せる必要があり
- * SQL の形が変わるので、その場合だけ従来どおり組み立てる。
- */
+const noteInsertPlan = defineQueryPlan((db) => ({
+	query: db.insert(note).values(noteInsertPlaceholders),
+	metadata: { type: 'insert', tables: [getTableName(note)] },
+	mutationTables: [note],
+}));
+
+/** 全列が揃う場合だけ固定形を使い、欠けた列の DEFAULT は通常の builder に任せる。 */
 export async function createNoteInDatabase(db: MiDrizzleDatabase, values: NoteInsert): Promise<void> {
 	if (noteColumnKeys.every((key) => values[key] !== undefined)) {
-		await executePreparedStatement(db, 'note:insert', () => db.insert(note).values(noteInsertPlaceholders), values);
+		await noteInsertPlan.execute(db, values);
 		return;
 	}
 	await db.insert(note).values(values);
+}
+
+const noteCreationPlaceholders = Object.fromEntries(
+	noteColumnKeys.map((key) => [key, sql.placeholder(`note_${key}`)]),
+) as unknown as NoteInsert;
+
+function noteCreationPlan(rowCount: number) {
+	return defineQueryPlan((db) => {
+		// FK確認を伴うnote挿入を先行させ、著者行の更新とのロック順を維持する。
+		const insertedNote = db
+			.$with('inserted_note')
+			.as(db.insert(note).values(noteCreationPlaceholders).returning({ userId: note.userId }));
+		const writes =
+			rowCount > 0
+				? [insertedNote, db.$with('enqueued_jobs').as(createInlineDbOutboxInsert(db, rowCount))]
+				: [insertedNote];
+		const selection = getTableColumns(userTable);
+		return {
+			query: db
+				.with(...writes)
+				.update(userTable)
+				.set({
+					updatedAt: sql`${sql.param(sql.placeholder('updatedAt'), userTable.updatedAt)}`,
+					notesCount: sql`${userTable.notesCount} + 1`,
+				})
+				.where(eq(userTable.id, sql`(select ${insertedNote.userId} from ${insertedNote})`))
+				.returning(selection),
+			selection,
+			metadata: { type: 'insert', tables: [getTableName(note), getTableName(userTable), getTableName(queueOutbox)] },
+			mutationTables: [note, userTable, queueOutbox],
+		};
+	});
+}
+
+const noteCreationPlans = Array.from({ length: MAX_PREPARED_INLINE_JOB_ROWS + 1 }, (_, rowCount) =>
+	noteCreationPlan(rowCount),
+);
+
+/** 追加の集計・poll等は呼び出し元のtransactionに残し、基本3書き込みの往復だけをまとめる。 */
+export async function createNoteWithAuthorAndInlineJobsInDatabase(
+	db: MiDrizzleDatabase,
+	noteValues: Required<NoteInsert>,
+	dataList: DbNotePostCreateJobData[],
+	opts: Parameters<typeof prepareInlineDbOutboxJobs>[2],
+): Promise<{ author: MiUser; jobs: InlineDbOutboxJob[] }> {
+	const { jobs, values } = prepareInlineDbOutboxJobs('notePostCreate', dataList, opts);
+	for (const key of noteColumnKeys) values[`note_${key}`] = noteValues[key];
+	const plan = noteCreationPlans[dataList.length] ?? noteCreationPlan(dataList.length);
+	const [author] = await plan.execute(db, values);
+	if (author == null) throw new EntityNotFoundError('MiUser', { id: noteValues.userId });
+	return { author: deserializeUser(author), jobs };
 }
 
 export async function createNoteWithPollInDatabase(
@@ -395,18 +475,69 @@ export async function createNoteWithPollInDatabase(
 	});
 }
 
-export async function fetchNoteByIdFromDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<MiNote | null> {
-	const statement = preparedQueryFor(db, 'note:byId', () =>
-		db
-			.select()
+const noteByIdPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(note);
+	return {
+		query: db
+			.select(selection)
 			.from(note)
 			.where(eq(note.id, sql.placeholder('id')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ id });
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(note)] },
+	};
+});
+
+export async function fetchNoteByIdFromDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<MiNote | null> {
+	const [row] = await noteByIdPlan.execute(db, { id });
 
 	return row ? deserializeNote(row) : null;
+}
+
+const notePostCreateSnapshotPlan = defineQueryPlan((db) => {
+	const followerFields = Object.entries(followerForNoteDeliverySelection).flatMap(([key, column]) => [
+		sql`${key}::text`,
+		sql`${column}`,
+	]);
+	const selection = {
+		note: getTableColumns(note),
+		user: getTableColumns(userTable),
+		rolesVersion: sql<number>`coalesce(${cacheVersion.version}, 0)`,
+		// 本文や著者行をフォロワー人数ぶん複製せず、同じsnapshotで配送先を取得する。
+		followers: sql<FollowerForNoteDelivery[]>`(
+			select coalesce(jsonb_agg(jsonb_build_object(${sql.join(followerFields, sql`, `)})), '[]'::jsonb)
+			from ${following} where ${following.followeeId} = ${note.userId}
+		)`,
+	};
+	return {
+		query: db
+			.select(selection)
+			.from(note)
+			.innerJoin(userTable, eq(userTable.id, note.userId))
+			.leftJoin(cacheVersion, eq(cacheVersion.key, 'roles'))
+			.where(eq(note.id, sql.placeholder('id')))
+			.limit(1),
+		selection,
+		metadata: {
+			type: 'select',
+			tables: [getTableName(note), getTableName(userTable), getTableName(following), getTableName(cacheVersion)],
+		},
+	};
+});
+
+export async function fetchNotePostCreateSnapshotFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiNote['id'],
+): Promise<{ note: MiNote; user: MiUser; followers: FollowerForNoteDelivery[]; rolesVersion: number } | null> {
+	const [row] = await notePostCreateSnapshotPlan.execute(db, { id });
+	if (row == null) return null;
+	const user = deserializeUser(row.user);
+	return {
+		note: deserializeNote(row.note),
+		user,
+		followers: row.followers,
+		rolesVersion: row.rolesVersion,
+	};
 }
 
 export async function fetchNoteByIdAndUserIdFromDatabase(
@@ -433,6 +564,18 @@ export async function fetchNoteByIdOrFailFromDatabase(db: MiDrizzleDatabase, id:
 	return found;
 }
 
+const noteByIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(note);
+	return {
+		query: db
+			.select(selection)
+			.from(note)
+			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(note)] },
+	};
+});
+
 export async function listNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiNote['id'][]): Promise<MiNote[]> {
 	if (ids.length === 0) {
 		return [];
@@ -440,14 +583,7 @@ export async function listNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiN
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'note:byIds', () =>
-		db
-			.select()
-			.from(note)
-			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ ids });
+	const rows = await noteByIdsPlan.execute(db, { ids });
 
 	return rows.map((row) => deserializeNote(row));
 }
@@ -880,6 +1016,59 @@ function fileCountCondition(withFiles: boolean): SQL {
 	return withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`;
 }
 
+function flagIndex(flag: boolean | undefined): number {
+	return flag === undefined ? 0 : flag ? 2 : 1;
+}
+
+function createPublicNotesPlan(shape: {
+	hasSinceId: boolean;
+	hasUntilId: boolean;
+	local: boolean;
+	reply: boolean | undefined;
+	renote: boolean | undefined;
+	withFiles: boolean | undefined;
+	poll: boolean | undefined;
+}) {
+	return defineQueryPlan((db) => {
+		const conditions: SQL[] = [eq(note.visibility, 'public'), eq(note.localOnly, false)];
+		if (shape.hasSinceId) {
+			conditions.push(gt(note.id, sql.placeholder('sinceId')));
+		}
+		if (shape.hasUntilId) {
+			conditions.push(lt(note.id, sql.placeholder('untilId')));
+		}
+		if (shape.local) {
+			conditions.push(isNull(note.userHost));
+		}
+		if (shape.reply !== undefined) {
+			conditions.push(shape.reply ? isNotNull(note.replyId) : isNull(note.replyId));
+		}
+		if (shape.renote !== undefined) {
+			conditions.push(shape.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
+		}
+		if (shape.withFiles !== undefined) {
+			conditions.push(fileCountCondition(shape.withFiles));
+		}
+		if (shape.poll !== undefined) {
+			conditions.push(eq(note.hasPoll, shape.poll));
+		}
+		const selection = getTableColumns(note);
+		return {
+			query: db
+				.select(selection)
+				.from(note)
+				.where(and(...conditions))
+				.orderBy(shape.hasSinceId && !shape.hasUntilId ? asc(note.id) : desc(note.id))
+				.limit(sql.placeholder('limit')),
+			selection,
+			metadata: { type: 'select', tables: [getTableName(note)] },
+		};
+	});
+}
+
+// 2^3 × 3^4 = 648 形状に限る。ID・limit・認証状態はこの Map に保持しない。
+const publicNotesPlans = new Map<number, ReturnType<typeof createPublicNotesPlan>>();
+
 export async function listPublicNotesFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
@@ -893,55 +1082,33 @@ export async function listPublicNotesFromDatabase(
 		poll?: boolean;
 	},
 ): Promise<MiNote[]> {
-	// note は34列あり、組み立て直しに実測 227µs/回かかる。フィルタの有無で SQL の形が変わるので、
-	// 形を決める値 (絞り込みフラグと since/until の有無) をそのまま key にして組み立て済みを使い回す。
-	// 形に影響しない値 (limit と since/until の中身) だけ placeholder で渡す。
+	// SQL の形状だけを有限の key にし、limit と since/until の値は実行時に渡す。
 	const hasSinceId = options.sinceId != null;
 	const hasUntilId = options.untilId != null;
 	const key =
-		`note:public:${hasSinceId}:${hasUntilId}:${options.local === true}` +
-		`:${options.reply}:${options.renote}:${options.withFiles}:${options.poll}`;
+		Number(hasSinceId) +
+		2 * Number(hasUntilId) +
+		4 * Number(options.local === true) +
+		8 *
+			(flagIndex(options.reply) +
+				3 * flagIndex(options.renote) +
+				9 * flagIndex(options.withFiles) +
+				27 * flagIndex(options.poll));
 
-	const statement = preparedQueryFor(db, key, () => {
-		const conditions: SQL[] = [eq(note.visibility, 'public'), eq(note.localOnly, false)];
-
-		if (hasSinceId) {
-			conditions.push(gt(note.id, sql.placeholder('sinceId')));
-		}
-
-		if (hasUntilId) {
-			conditions.push(lt(note.id, sql.placeholder('untilId')));
-		}
-
-		if (options.local) {
-			conditions.push(isNull(note.userHost));
-		}
-
-		if (options.reply !== undefined) {
-			conditions.push(options.reply ? isNotNull(note.replyId) : isNull(note.replyId));
-		}
-
-		if (options.renote !== undefined) {
-			conditions.push(options.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
-		}
-
-		if (options.withFiles !== undefined) {
-			conditions.push(fileCountCondition(options.withFiles));
-		}
-
-		if (options.poll !== undefined) {
-			conditions.push(eq(note.hasPoll, options.poll));
-		}
-
-		return db
-			.select()
-			.from(note)
-			.where(and(...conditions))
-			.orderBy(hasSinceId && !hasUntilId ? asc(note.id) : desc(note.id))
-			.limit(sql.placeholder('limit'))
-			.prepare(UNNAMED_PREPARED_STATEMENT);
-	});
-	const rows = await statement.execute({
+	let plan = publicNotesPlans.get(key);
+	if (plan === undefined) {
+		plan = createPublicNotesPlan({
+			hasSinceId,
+			hasUntilId,
+			local: options.local === true,
+			reply: options.reply,
+			renote: options.renote,
+			withFiles: options.withFiles,
+			poll: options.poll,
+		});
+		publicNotesPlans.set(key, plan);
+	}
+	const rows = await plan.execute(db, {
 		limit: options.limit,
 		sinceId: options.sinceId,
 		untilId: options.untilId,
@@ -1049,6 +1216,45 @@ export async function listVisibleNotesWithUsersByIdsFromDatabase(
 	}));
 }
 
+const noteHydratedByIdsPlan = defineQueryPlan((db) => {
+	const replyNote = alias(note, 'reply');
+	const renoteNote = alias(note, 'renote');
+	const replyUser = alias(userTable, 'replyUser');
+	const renoteUser = alias(userTable, 'renoteUser');
+	const selection = {
+		note,
+		user: userTable,
+		reply: replyNote,
+		renote: renoteNote,
+		replyUser,
+		renoteUser,
+		channel: channelTable,
+	};
+	return {
+		query: db
+			.select(selection)
+			.from(note)
+			.innerJoin(userTable, eq(userTable.id, note.userId))
+			.leftJoin(replyNote, eq(replyNote.id, note.replyId))
+			.leftJoin(renoteNote, eq(renoteNote.id, note.renoteId))
+			.leftJoin(replyUser, eq(replyUser.id, note.replyUserId))
+			.leftJoin(renoteUser, eq(renoteUser.id, note.renoteUserId))
+			.leftJoin(channelTable, eq(channelTable.id, note.channelId))
+			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(note), getTableName(userTable), getTableName(channelTable)] },
+		joinsNotNullableMap: {
+			[getTableName(note)]: true,
+			[getTableName(channelTable)]: false,
+			[getTableName(renoteUser)]: false,
+			[getTableName(replyUser)]: false,
+			[getTableName(renoteNote)]: false,
+			[getTableName(replyNote)]: false,
+			[getTableName(userTable)]: true,
+		},
+	};
+});
+
 export async function listHydratedNotesByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiNote['id'][],
@@ -1057,33 +1263,7 @@ export async function listHydratedNotesByIdsFromDatabase(
 		return [];
 	}
 
-	const statement = preparedQueryFor(db, 'note:hydratedByIds', () => {
-		const replyNote = alias(note, 'reply');
-		const renoteNote = alias(note, 'renote');
-		const replyUser = alias(userTable, 'replyUser');
-		const renoteUser = alias(userTable, 'renoteUser');
-
-		return db
-			.select({
-				note,
-				user: userTable,
-				reply: replyNote,
-				renote: renoteNote,
-				replyUser,
-				renoteUser,
-				channel: channelTable,
-			})
-			.from(note)
-			.innerJoin(userTable, eq(userTable.id, note.userId))
-			.leftJoin(replyNote, eq(replyNote.id, note.replyId))
-			.leftJoin(renoteNote, eq(renoteNote.id, note.renoteId))
-			.leftJoin(replyUser, eq(replyUser.id, note.replyUserId))
-			.leftJoin(renoteUser, eq(renoteUser.id, note.renoteUserId))
-			.leftJoin(channelTable, eq(channelTable.id, note.channelId))
-			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT);
-	});
-	const rows = await statement.execute({ ids });
+	const rows = await noteHydratedByIdsPlan.execute(db, { ids });
 
 	return rows.map((row) => {
 		const hydrated = deserializeNote(row.note);
@@ -1661,7 +1841,7 @@ export async function listHomeTimelineNotesFromDatabase(
 	];
 
 	// フォロー数が多いユーザーで IN ($1,...,$N) のプレースホルダ展開が数万個に膨らむのを避けるため、
-	// 配列1パラメータの = ANY() で渡す (node-postgres がJS配列をPostgreSQL配列にシリアライズする)。
+	// 配列1パラメータの = ANY() で渡す。DB driver が PostgreSQL 配列リテラルへ変換する。
 	const meOrFolloweeIds = [options.me.id, ...options.followeeIds];
 
 	if (options.followeeIds.length > 0 && options.followingChannelIds.length > 0) {

@@ -47,12 +47,9 @@ const logBackgroundInstanceUpdateError = (error: unknown): void => {
 	logger.error('background federated-instance update failed', { error });
 };
 
-export async function handleQueueDeliver(
-	deps: QueueDeliverDependencies,
-	job: Bull.Job<DeliverJobData>,
-): Promise<string> {
-	if (job.data.userStateGuard != null) {
-		const guard = job.data.userStateGuard;
+export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: DeliverJobData): Promise<string> {
+	if (data.userStateGuard != null) {
+		const guard = data.userStateGuard;
 		const guardedUser = await fetchUserByIdFromDatabase(deps.db, guard.userId);
 		if (
 			guardedUser == null ||
@@ -62,9 +59,9 @@ export async function handleQueueDeliver(
 			return 'skip (stale user state)';
 		}
 	}
-	const { host } = new URL(job.data.to);
+	const { host } = new URL(data.to);
 
-	if (!isFederationAllowedUri(deps.config, deps.meta, job.data.to)) {
+	if (!isFederationAllowedUri(deps.config, deps.meta, data.to)) {
 		return 'skip (blocked)';
 	}
 
@@ -81,7 +78,7 @@ export async function handleQueueDeliver(
 	}
 
 	try {
-		await signedPostForApi(deps, job.data.user, job.data.to, job.data.content, job.data.digest);
+		await signedPostForApi(deps, data.user, data.to, data.content, data.digest);
 
 		void deps.chartWriters.apRequestChart.deliverSucc();
 		void deps.chartWriters.federationChart.deliverd(host, true);
@@ -157,7 +154,7 @@ export async function handleQueueDeliver(
 		if (res instanceof StatusError) {
 			if (!res.isRetryable) {
 				// 410 は配送先の閉鎖を示すため、共有 inbox への配送を停止する。
-				if (job.data.isSharedInbox && res.statusCode === 410) {
+				if (data.isSharedInbox && res.statusCode === 410) {
 					fetchOrRegisterFederatedInstance(deps, host)
 						.then((i2) =>
 							updateFederatedInstance(deps, i2.id, {

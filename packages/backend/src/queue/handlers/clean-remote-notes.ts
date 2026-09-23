@@ -5,7 +5,7 @@
 
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'drizzle-orm';
-import type * as Bull from 'bullmq';
+import type { QueueMaintenanceReporter } from '@/queue/types.js';
 import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -172,7 +172,7 @@ async function listRemoteRootNoteIdsWindow(
 
 export async function handleQueueCleanRemoteNotes(
 	deps: QueueCleanRemoteNotesDependencies,
-	job: Bull.Job<Record<string, unknown>>,
+	reporter: QueueMaintenanceReporter,
 ): Promise<CleanRemoteNotesResult> {
 	const computeProgress = (minId: string, maxId: string, cursorLeft: string): number => {
 		const minTs = parseId(minId).date.getTime();
@@ -240,21 +240,21 @@ export async function handleQueueCleanRemoteNotes(
 		const progress = computeProgress(minId, newestLimit, cursorLeft > minId ? cursorLeft : minId);
 
 		if (elapsed >= maxDuration) {
-			job.log(
+			reporter.log(
 				`Reached maximum duration of ${maxDuration}ms, stopping... (last cursor: ${cursorLeft}, final progress ${progress}%)`,
 			);
-			job.updateProgress(100);
+			reporter.updateProgress(100);
 			break;
 		}
 
 		const wallClockUsage = elapsed / maxDuration;
 		if (wallClockUsage > 0.5 && progress < 50 && !lowThroughputWarned) {
-			job.log(
+			reporter.log(
 				`Not projected to finish in time! (wall clock usage ${wallClockUsage * 100}% at ${progress}%, current limit ${currentLimit})`,
 			);
 			lowThroughputWarned = true;
 		}
-		job.updateProgress(progress);
+		reporter.updateProgress(progress);
 
 		const queryBegin = performance.now();
 		let noteIds = null;
@@ -268,7 +268,7 @@ export async function handleQueueCleanRemoteNotes(
 		} catch (e) {
 			if (getDatabaseErrorCode(e) === '57014') {
 				if (currentLimit <= minimumLimit) {
-					job.log('Local note tree complexity is too high, finding next root note...');
+					reporter.log('Local note tree complexity is too high, finding next root note...');
 
 					const idWindow = await listRemoteRootNoteIdsWindow(deps.db, {
 						cursorLeft,
@@ -276,12 +276,12 @@ export async function handleQueueCleanRemoteNotes(
 						limit: minimumLimit + 1,
 					});
 
-					job.log(`Skipped note IDs: ${idWindow.slice(0, minimumLimit).join(', ')}`);
+					reporter.log(`Skipped note IDs: ${idWindow.slice(0, minimumLimit).join(', ')}`);
 
 					const lastId = idWindow.at(minimumLimit);
 
 					if (!lastId) {
-						job.log('No more notes to clean.');
+						reporter.log('No more notes to clean.');
 						break;
 					}
 
@@ -295,7 +295,7 @@ export async function handleQueueCleanRemoteNotes(
 		}
 
 		if (noteIds.length === 0) {
-			job.log('No more notes to clean.');
+			reporter.log('No more notes to clean.');
 			break;
 		}
 
@@ -326,7 +326,7 @@ export async function handleQueueCleanRemoteNotes(
 			} catch (e) {
 				if (getDatabaseErrorCode(e)?.startsWith('23')) {
 					transientErrors++;
-					job.log(`Error deleting notes: ${e} (transient race condition?)`);
+					reporter.log(`Error deleting notes: ${e} (transient race condition?)`);
 				} else {
 					throw e;
 				}
@@ -335,7 +335,7 @@ export async function handleQueueCleanRemoteNotes(
 
 		cursorLeft = noteIds.filter((result) => result.isBase).reduce((max, { id }) => (id > max ? id : max), cursorLeft);
 
-		job.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);
+		reporter.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);
 
 		if (process.env['NODE_ENV'] !== 'test') {
 			await setTimeout(Math.min(1000 * 5, queryDuration));

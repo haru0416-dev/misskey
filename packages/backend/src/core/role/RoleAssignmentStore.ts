@@ -3,9 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	or,
+	sql,
+	getTableColumns,
+	getTableName,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { roleAssignment } from '@/db/schema/role-assignment.js';
 import type { RoleAssignmentInsert, RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -117,21 +132,38 @@ export async function listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(
 	return assignments;
 }
 
+const roleAssignmentByUserIdPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(roleAssignment);
+	return {
+		query: db
+			.select(selection)
+			.from(roleAssignment)
+			.where(eq(roleAssignment.userId, sql.placeholder('userId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(roleAssignment)] },
+	};
+});
+
 export async function listRoleAssignmentsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiRoleAssignment[]> {
-	const statement = preparedQueryFor(db, 'roleAssignment:byUserId', () =>
-		db
-			.select()
-			.from(roleAssignment)
-			.where(eq(roleAssignment.userId, sql.placeholder('userId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId });
+	const rows = await roleAssignmentByUserIdPlan.execute(db, { userId });
 
 	return rows.map((row) => deserializeRoleAssignment(row));
 }
+
+const roleAssignmentByUserIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(roleAssignment);
+	return {
+		query: db
+			.select(selection)
+			.from(roleAssignment)
+			.where(sql`${roleAssignment.userId} = ANY(${sql.placeholder('userIds')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(roleAssignment)] },
+	};
+});
 
 /** ユーザー一覧のpack用: 複数ユーザーのロールアサインを1クエリで取得する。 */
 export async function listRoleAssignmentsByUserIdsFromDatabase(
@@ -142,14 +174,7 @@ export async function listRoleAssignmentsByUserIdsFromDatabase(
 		return [];
 	}
 
-	const statement = preparedQueryFor(db, 'roleAssignment:byUserIds', () =>
-		db
-			.select()
-			.from(roleAssignment)
-			.where(sql`${roleAssignment.userId} = ANY(${sql.placeholder('userIds')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userIds });
+	const rows = await roleAssignmentByUserIdsPlan.execute(db, { userIds });
 
 	return rows.map((row) => deserializeRoleAssignment(row));
 }

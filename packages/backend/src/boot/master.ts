@@ -94,8 +94,16 @@ export async function masterMain(config: Config) {
 				const startedServerRuntime = (serverRuntime = await server(config, dependencies, { daemons: true }));
 				const queueRuntime = await jobQueue(config, dependencies);
 				disposers.push(async () => {
-					await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
-					await dependencies.dispose();
+					const results = await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
+					const errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+					try {
+						await dependencies.dispose();
+					} catch (error) {
+						errors.push(error);
+					}
+					if (errors.length > 0) {
+						throw new AggregateError(errors, 'Shared runtime shutdown failed', { cause: errors[0] });
+					}
 				});
 			} catch (error) {
 				try {
@@ -140,7 +148,11 @@ export async function masterMain(config: Config) {
 					),
 			);
 		}
-		await Promise.allSettled(disposers.map((dispose) => dispose()));
+		const results = await Promise.allSettled(disposers.map((dispose) => dispose()));
+		const errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+		if (errors.length > 0) {
+			throw new AggregateError(errors, 'Master shutdown failed', { cause: errors[0] });
+		}
 	};
 }
 

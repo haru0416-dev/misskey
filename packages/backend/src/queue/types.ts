@@ -13,6 +13,13 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { UserWebhookPayload } from '@/core/webhook/user-webhook-types.js';
 
+export type QueueProgressReporter = (progress: number) => Promise<void>;
+
+export type QueueMaintenanceReporter = {
+	log: (message: string) => Promise<number>;
+	updateProgress: QueueProgressReporter;
+};
+
 export type DeliverJobData = {
 	user: ThinUser;
 	content: string;
@@ -144,7 +151,6 @@ export type DbNotePostCreateJobData = {
 };
 
 export type DbNotePostCreateStage =
-	| 'analytics'
 	| 'fanout'
 	| 'antennas'
 	| 'followerNotifications'

@@ -3,81 +3,137 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Query } from 'drizzle-orm';
+import { getTableColumns, getTableName, is, SQL, Subquery } from 'drizzle-orm';
+import type { DriverValueDecoder, Query } from 'drizzle-orm';
+import { PgColumn, PgTable } from 'drizzle-orm/pg-core';
+import type { SelectedFields, SelectedFieldsOrdered } from 'drizzle-orm/pg-core';
+import type { WithCacheConfig } from 'drizzle-orm/cache/core/types';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
-/**
- * drizzle のクエリビルダは `execute()` のたびに SQL 文字列を組み立て直す。
- * このコストは選択列数にほぼ比例し、実測で `db.select().from(user)` (42列) が 167µs/回、
- * `db.select().from(note)` (34列) が 227µs/回。DB 往復そのもの (無負荷で約 180µs) と
- * 同程度の CPU を毎リクエスト焼いており、CPUプロファイル上は
- * notes/timeline の総CPU 7.49ms/req のうち 39.6% がこの組み立てだった。
- *
- * 組み立て済みの prepared query は `db` インスタンスに紐づくので、
- * トランザクション用の db (別インスタンス) と混ざらないよう WeakMap で分けて保持する。
- * トランザクションの db は短命だが、WeakMap なので放置してよい。
- */
-const preparedQueriesByDatabase = new WeakMap<object, Map<string, unknown>>();
+type QueryRecipe<T> = {
+	query: { toSQL(): Query; then: PromiseLike<T>['then'] };
+	joinsNotNullableMap?: Record<string, boolean>;
+	cacheConfig?: WithCacheConfig;
+} & (
+	| { selection: SelectedFields; metadata: { type: 'select'; tables: string[] }; mutationTables?: never }
+	| {
+			selection?: SelectedFields;
+			metadata: { type: 'insert' | 'update' | 'delete'; tables: string[] };
+			/** 書込み対象の実行時 default / onUpdate を初回値で固定しない。 */
+			mutationTables: PgTable[];
+	  }
+);
 
-/**
- * `.prepare(name)` に渡し、SQL の組み立て結果だけを再利用しつつ PostgreSQL では無名文として実行させる。
- * 名前付き文はホームタイムラインの `= ANY($n)` でジェネリックプランを選び得て、
- * 実測で 1.37 ms から 146.6 ms へ悪化する。
- */
-export const UNNAMED_PREPARED_STATEMENT = undefined as unknown as string;
+type CompiledQuery = Readonly<{
+	query: Query;
+	mapRows: ((rows: unknown[][]) => Record<string, unknown>[]) | undefined;
+	metadata: QueryRecipe<unknown>['metadata'];
+	cacheConfig: WithCacheConfig | undefined;
+}>;
 
-/**
- * `key` ごとに一度だけ `build()` を呼び、以後は組み立て済みのものを返す。
- * `key` は SQL の形ごとに一意にすること (条件の有無で形が変わるなら key にも含める)。
- */
-export function preparedQueryFor<T>(db: MiDrizzleDatabase, key: string, build: () => T): T {
-	let queries = preparedQueriesByDatabase.get(db);
+export type QueryPlan<T> = {
+	execute(db: MiDrizzleDatabase, values?: Record<string, unknown>): Promise<T>;
+};
 
-	if (queries === undefined) {
-		queries = new Map<string, unknown>();
-		preparedQueriesByDatabase.set(db, queries);
+/** Drizzle と同じ列順・path を使い、decoder 自体は schema / SQL のものを保持する。 */
+function orderSelection(selection: SelectedFields, prefix: string[] = []): SelectedFieldsOrdered {
+	const ordered: SelectedFieldsOrdered = [];
+	for (const [name, field] of Object.entries(selection)) {
+		const path = [...prefix, name];
+		if (is(field, PgColumn) || is(field, SQL) || is(field, SQL.Aliased) || is(field, Subquery)) {
+			ordered.push({ path, field });
+		} else {
+			ordered.push(...orderSelection(is(field, PgTable) ? getTableColumns(field) : (field as SelectedFields), path));
+		}
 	}
+	return ordered;
+}
 
-	const cached = queries.get(key);
-	if (cached !== undefined) {
-		return cached as T;
+function compileRowMapper(
+	fields: SelectedFieldsOrdered,
+	joinsNotNullableMap: Record<string, boolean> | undefined,
+): (rows: unknown[][]) => Record<string, unknown>[] {
+	const columns = fields.map(({ path, field }) => {
+		if (is(field, PgColumn)) return { path, decoder: field };
+		const expression = is(field, SQL) ? field : is(field, Subquery) ? field._.sql : (field as SQL.Aliased).sql;
+		// SQL.decoderは実装に存在するが、Drizzleの公開型には含まれない。
+		const decoder = (expression as SQL & { decoder: DriverValueDecoder<unknown, unknown> }).decoder;
+		return { path, decoder };
+	});
+	const nullable: Record<string, { key: string; table: string } | false> = {};
+	if (joinsNotNullableMap !== undefined) {
+		for (const { path, field } of fields) {
+			if (path.length !== 2 || !is(field, PgColumn)) continue;
+			const name = path[0]!;
+			const table = getTableName(field.table);
+			if (!(name in nullable)) nullable[name] = { key: path[1]!, table };
+			else if (nullable[name] && nullable[name].table !== table) nullable[name] = false;
+		}
 	}
-
-	const built = build();
-	queries.set(key, built);
-
-	return built;
+	const nullableObjects = Object.entries(nullable).flatMap(([name, group]) =>
+		group && !joinsNotNullableMap?.[group.table] ? [{ name, key: group.key }] : [],
+	);
+	return (rows) =>
+		rows.map((row) => {
+			const result: Record<string, unknown> = {};
+			for (let index = 0; index < columns.length; index++) {
+				const { path, decoder } = columns[index]!;
+				let target = result;
+				for (let depth = 0; depth < path.length - 1; depth++) {
+					const key = path[depth]!;
+					if (!(key in target)) target[key] = {};
+					target = target[key] as Record<string, unknown>;
+				}
+				const value = row[index];
+				target[path[path.length - 1]!] = value === null ? null : decoder.mapFromDriverValue(value);
+			}
+			// Drizzle同様、同じtableの列だけで構成した直下のJOIN objectを判定する。
+			for (const { name, key } of nullableObjects) {
+				if ((result[name] as Record<string, unknown>)[key] === null) result[name] = null;
+			}
+			return result;
+		});
 }
 
 /**
- * 書き込み (insert / update / delete) の組み立て結果。SQL 文字列と placeholder の並びは
- * 接続に依存しないので db インスタンスではなく key だけで保持する。
+ * 宣言は静的な query 形状だけを閉じ込め、実行値・接続・認証状態は保持しない。
+ * selection は同じ recipe 内で select / returning にも渡す。任意の prepared object の抽出や
+ * all() の raw row 実行は扱わない。SQL と mapping の再利用と、session の寿命を分離する。
  */
-const preparedStatementQueriesByKey = new Map<string, Query>();
-
-/**
- * トランザクション内でも組み立て結果を使い回す書き込み用。
- *
- * `preparedQueryFor` は db インスタンスごとに保持するが、`db.transaction()` の tx は毎回別インスタンスなので、
- * トランザクション内の insert / update / delete は毎回組み立て直しになっていた (notes/create の note 挿入・
- * user 更新・outbox 挿入がこれに当たる)。ここでは `toSQL()` の結果を key 単位で保持し、実行時にその db の
- * session へ結び付け直す。名前無しなので PostgreSQL 側に prepared statement は残らない。
- *
- * 結果行のマッピング (fields) を通さないため、行を読む select には使わない。
- * placeholder に対応する値が `values` に無いと drizzle が例外を投げる。
- */
-export async function executePreparedStatement(
-	db: MiDrizzleDatabase,
-	key: string,
-	build: () => { toSQL(): Query },
-	values: Record<string, unknown>,
-): Promise<void> {
-	let query = preparedStatementQueriesByKey.get(key);
-
-	if (query === undefined) {
-		query = build().toSQL();
-		preparedStatementQueriesByKey.set(key, query);
-	}
-
-	await db._.session.prepareQuery(query, undefined, UNNAMED_PREPARED_STATEMENT, false).execute(values);
+export function defineQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>): QueryPlan<T> {
+	let compiled: CompiledQuery | undefined;
+	return Object.freeze({
+		async execute(db: MiDrizzleDatabase, values?: Record<string, unknown>): Promise<T> {
+			let plan = compiled;
+			if (plan === undefined) {
+				const definition = recipe(db);
+				plan = Object.freeze({
+					query: definition.query.toSQL(),
+					mapRows:
+						definition.selection === undefined
+							? undefined
+							: compileRowMapper(orderSelection(definition.selection), definition.joinsNotNullableMap),
+					metadata: definition.metadata,
+					cacheConfig: definition.cacheConfig,
+				});
+				const dynamicDefaults = definition.mutationTables?.some((table) =>
+					Object.values(getTableColumns(table)).some(
+						(column) => column.defaultFn !== undefined || column.onUpdateFn !== undefined,
+					),
+				);
+				if (!dynamicDefaults) compiled = plan;
+			}
+			// 無名文を現在の transaction / savepoint の session にだけ結び付ける。
+			const prepared = db._.session.prepareQuery<{ execute: T; all: unknown; values: unknown }>(
+				plan.query,
+				undefined,
+				undefined,
+				plan.mapRows !== undefined,
+				plan.mapRows as ((rows: unknown[][]) => T) | undefined,
+				plan.metadata,
+				plan.cacheConfig,
+			);
+			return await prepared.execute(values);
+		},
+	});
 }

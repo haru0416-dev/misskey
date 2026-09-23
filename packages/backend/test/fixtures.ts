@@ -64,7 +64,7 @@ import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type { QueueOutboxInsert } from '@/db/schema/queue-outbox.js';
 import { userIp } from '@/db/schema/user-ip.js';
 import type { UserIpInsert } from '@/db/schema/user-ip.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import { createLocalSignupAccount as createLocalSignupAccountImpl } from '@/server/rest/auth/signup.js';
@@ -90,23 +90,18 @@ function bindDatabaseOperation<Args extends unknown[], Result>(
 }
 
 export function openTestDatabase(): TestDatabase {
-	const pool = createDrizzlePool(config);
+	const pool = createBunSqlClient(config);
 	return {
-		[testDatabase]: createDrizzleDatabase(pool, config),
+		[testDatabase]: createBunSqlDatabase(pool, config),
 		close: async () => {
-			await pool.end();
+			await pool.close();
 		},
 	};
 }
 
 export async function resetTestDatabase(): Promise<void> {
-	const pool = createDrizzlePool(config);
-	try {
-		await resetDatabase(pool);
-		await runMigrations(pool);
-	} finally {
-		await pool.end();
-	}
+	await resetDatabase(config);
+	await runMigrations(config);
 }
 
 export async function insertHashtags(database: TestDatabase, values: HashtagInsert[]): Promise<void> {

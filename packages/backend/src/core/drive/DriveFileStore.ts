@@ -3,9 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, like, lt, or, sql, sum } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	isNull,
+	like,
+	lt,
+	or,
+	sql,
+	sum,
+	getTableColumns,
+	getTableName,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import type { DriveFileInsert, DriveFileRow } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -128,6 +145,18 @@ export async function fetchDriveFileByAccessKeyFromDatabase(
 	return row ? deserializeDriveFile(row) : null;
 }
 
+const driveFileByIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(driveFile);
+	return {
+		query: db
+			.select(selection)
+			.from(driveFile)
+			.where(sql`${driveFile.id} = ANY(${sql.placeholder('ids')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(driveFile)] },
+	};
+});
+
 export async function listDriveFilesByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiDriveFile['id'][],
@@ -138,14 +167,7 @@ export async function listDriveFilesByIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'driveFile:byIds', () =>
-		db
-			.select()
-			.from(driveFile)
-			.where(sql`${driveFile.id} = ANY(${sql.placeholder('ids')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ ids });
+	const rows = await driveFileByIdsPlan.execute(db, { ids });
 
 	return rows.map((row) => deserializeDriveFile(row));
 }

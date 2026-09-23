@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { muting } from '@/db/schema/muting.js';
 import type { MutingInsert, MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -160,18 +160,23 @@ export async function listMutingsByMuterIdWithPaginationFromDatabase(
 	return rows.map((row) => deserializeMuting(row));
 }
 
+const mutingMuteeIdsByMuterIdPlan = defineQueryPlan((db) => {
+	const selection = { muteeId: muting.muteeId };
+	return {
+		query: db
+			.select(selection)
+			.from(muting)
+			.where(eq(muting.muterId, sql.placeholder('muterId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(muting)] },
+	};
+});
+
 export async function listMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'muting:muteeIdsByMuterId', () =>
-		db
-			.select({ muteeId: muting.muteeId })
-			.from(muting)
-			.where(eq(muting.muterId, sql.placeholder('muterId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ muterId });
+	const rows = await mutingMuteeIdsByMuterIdPlan.execute(db, { muterId });
 
 	return rows.map((row) => row.muteeId);
 }

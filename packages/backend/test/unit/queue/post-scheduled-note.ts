@@ -4,7 +4,6 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -12,11 +11,6 @@ import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueuePostScheduledNote } from '@/queue/handlers/post-scheduled-note.js';
-import type { PostScheduledNoteJobData } from '@/queue/types.js';
-
-function fakeJob(data: PostScheduledNoteJobData): Bull.Job<PostScheduledNoteJobData> {
-	return { data } as Bull.Job<PostScheduledNoteJobData>;
-}
 
 describe('hono-queue-post-scheduled-note', () => {
 	let runtime: RuntimeDependencies;
@@ -50,10 +44,11 @@ describe('hono-queue-post-scheduled-note', () => {
 
 		await handleQueuePostScheduledNote(
 			runtime,
-			fakeJob({
+			{
 				noteDraftId: draftId,
 				scheduledAt: (await fetchNoteDraftByIdFromDatabase(runtime.db, draftId))!.scheduledAt!.getTime(),
-			}),
+			},
+			true,
 		);
 
 		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
@@ -78,7 +73,7 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: false,
 		});
 
-		await handleQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: 0 }));
+		await handleQueuePostScheduledNote(runtime, { noteDraftId: draftId, scheduledAt: 0 }, true);
 
 		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
 		expect(draftAfter).not.toBeNull();
@@ -86,7 +81,7 @@ describe('hono-queue-post-scheduled-note', () => {
 
 	test('存在しないnoteDraftIdは何もしない', async () => {
 		await expect(
-			handleQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() })),
+			handleQueuePostScheduledNote(runtime, { noteDraftId: genId(), scheduledAt: Date.now() }, true),
 		).resolves.toBeUndefined();
 	});
 });

@@ -4,7 +4,6 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -13,11 +12,6 @@ import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/cor
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueDeleteDriveFiles } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DbJobDataWithUser } from '@/queue/types.js';
-
-function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<DbJobDataWithUser>;
-}
 
 describe('hono-queue-db', () => {
 	let runtime: RuntimeDependencies;
@@ -56,7 +50,7 @@ describe('hono-queue-db', () => {
 			});
 		}
 
-		await handleQueueDeleteDriveFiles(deps, fakeJob({ user: { id: userId } }));
+		await handleQueueDeleteDriveFiles(deps, { user: { id: userId } }, async () => {});
 
 		for (const fileId of fileIds) {
 			expect(await fetchDriveFileByIdFromDatabase(runtime.db, fileId)).toBeNull();
@@ -64,6 +58,6 @@ describe('hono-queue-db', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleQueueDeleteDriveFiles(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueDeleteDriveFiles(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
 	});
 });

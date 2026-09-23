@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
 import type { NoteReactionInsert, NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -88,6 +88,23 @@ export async function fetchNoteReactionByUserAndNoteFromDatabase(
 	return row ?? null;
 }
 
+const noteReactionByUserIdAndNoteIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(noteReaction);
+	return {
+		query: db
+			.select(selection)
+			.from(noteReaction)
+			.where(
+				and(
+					eq(noteReaction.userId, sql.placeholder('userId')),
+					sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+				),
+			),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(noteReaction)] },
+	};
+});
+
 export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -99,21 +116,26 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () =>
-		db
-			.select()
+
+	return await noteReactionByUserIdAndNoteIdsPlan.execute(db, { userId, noteIds });
+}
+
+const noteReactionByNoteIdsAndUserIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(noteReaction);
+	return {
+		query: db
+			.select(selection)
 			.from(noteReaction)
 			.where(
 				and(
-					eq(noteReaction.userId, sql.placeholder('userId')),
 					sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+					sql`${noteReaction.userId} = ANY(${sql.placeholder('userIds')})`,
 				),
-			)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-
-	return await statement.execute({ userId, noteIds });
-}
+			),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(noteReaction)] },
+	};
+});
 
 export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
 	db: MiDrizzleDatabase,
@@ -124,20 +146,7 @@ export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
 		return [];
 	}
 
-	const statement = preparedQueryFor(db, 'noteReaction:byNoteIdsAndUserIds', () =>
-		db
-			.select()
-			.from(noteReaction)
-			.where(
-				and(
-					sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
-					sql`${noteReaction.userId} = ANY(${sql.placeholder('userIds')})`,
-				),
-			)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-
-	return await statement.execute({ noteIds, userIds });
+	return await noteReactionByNoteIdsAndUserIdsPlan.execute(db, { noteIds, userIds });
 }
 
 export async function fetchNoteReactionByUserAndNoteOrFailFromDatabase(

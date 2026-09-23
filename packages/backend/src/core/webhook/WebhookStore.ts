@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { webhook, deserializeWebhook } from '@/db/schema/webhook.js';
 import type { WebhookInsert } from '@/db/schema/webhook.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -31,6 +31,24 @@ export async function fetchWebhookByIdAndUserIdFromDatabase(
 	return row == null ? null : deserializeWebhook(row);
 }
 
+const webhookActiveByUserIdAndEventPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(webhook);
+	return {
+		query: db
+			.select(selection)
+			.from(webhook)
+			.where(
+				and(
+					eq(webhook.userId, sql.placeholder('userId')),
+					eq(webhook.active, true),
+					sql`ARRAY[${sql.placeholder('event')}]::varchar[] <@ ${webhook.on}`,
+				),
+			),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(webhook)] },
+	};
+});
+
 /**
  * イベント発火時の配信先取得 (ノート投稿・フォロー等の都度呼ばれる) 向け。
  * userId・active・on を全部条件にする固定形。
@@ -40,20 +58,7 @@ export async function listActiveWebhooksByUserIdAndEventFromDatabase(
 	userId: MiUser['id'],
 	event: WebhookEventTypes,
 ): Promise<MiWebhook[]> {
-	const statement = preparedQueryFor(db, 'webhook:activeByUserIdAndEvent', () =>
-		db
-			.select()
-			.from(webhook)
-			.where(
-				and(
-					eq(webhook.userId, sql.placeholder('userId')),
-					eq(webhook.active, true),
-					sql`ARRAY[${sql.placeholder('event')}]::varchar[] <@ ${webhook.on}`,
-				),
-			)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId, event });
+	const rows = await webhookActiveByUserIdAndEventPlan.execute(db, { userId, event });
 
 	return rows.map((row) => deserializeWebhook(row));
 }

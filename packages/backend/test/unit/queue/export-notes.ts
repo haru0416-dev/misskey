@@ -4,7 +4,6 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -14,11 +13,6 @@ import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/D
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueExportNotes } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DbJobDataWithUser } from '@/queue/types.js';
-
-function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<DbJobDataWithUser>;
-}
 
 describe('hono-queue-db (exportNotes)', () => {
 	let runtime: RuntimeDependencies;
@@ -48,13 +42,13 @@ describe('hono-queue-db (exportNotes)', () => {
 			visibility: 'public',
 		});
 
-		await handleQueueExportNotes(deps, fakeJob({ user: { id: user.id } }));
+		await handleQueueExportNotes(deps, { user: { id: user.id } }, async () => {});
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleQueueExportNotes(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportNotes(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
 	});
 });

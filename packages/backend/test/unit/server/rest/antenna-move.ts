@@ -6,8 +6,9 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import {
 	createAntennaInDatabase,
 	deleteAntennaFromDatabase,
@@ -20,15 +21,15 @@ import type { MiUser } from '@/models/User.js';
 
 describe('onMoveAccountForApi (AntennaService#onMoveAccount 相当)', () => {
 	let config: Config;
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let owner: MiUser;
 	const createdAntennaIds: string[] = [];
 
 	beforeAll(async () => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 
 		const id = genId();
 		owner = await createUserInDatabase(db, {
@@ -43,7 +44,7 @@ describe('onMoveAccountForApi (AntennaService#onMoveAccount 相当)', () => {
 		for (const antennaId of createdAntennaIds.splice(0)) {
 			await deleteAntennaFromDatabase(db, antennaId);
 		}
-		await pool.end();
+		await pool.close();
 	});
 
 	function fabricateUser(username: string, host: string | null): MiUser {

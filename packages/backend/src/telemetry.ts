@@ -63,7 +63,6 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			http,
 			undici,
 			ioredis,
-			pg,
 			runtimeNode,
 			hostMetrics,
 			exporter,
@@ -76,7 +75,6 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			import('@opentelemetry/instrumentation-http'),
 			import('@opentelemetry/instrumentation-undici'),
 			import('@opentelemetry/instrumentation-ioredis'),
-			import('@opentelemetry/instrumentation-pg'),
 			import('@opentelemetry/instrumentation-runtime-node'),
 			import('@opentelemetry/instrumentation-host-metrics'),
 			import('@opentelemetry/exporter-trace-otlp-http'),
@@ -145,7 +143,6 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			'@opentelemetry/instrumentation-undici': () =>
 				new undici.UndiciInstrumentation(instrumentationConfig['@opentelemetry/instrumentation-undici']),
 			'@opentelemetry/instrumentation-ioredis': () => new ioredis.IORedisInstrumentation(),
-			'@opentelemetry/instrumentation-pg': () => new pg.PgInstrumentation(),
 			'@opentelemetry/instrumentation-runtime-node': () => new runtimeNode.RuntimeNodeInstrumentation(),
 			'@opentelemetry/instrumentation-host-metrics': () => new hostMetrics.HostMetricsInstrumentation(),
 		};

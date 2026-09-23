@@ -5,17 +5,7 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-/**
- * 1リクエストの間だけ生きる memo。
- *
- * 同じリクエストの中で同じ問い合わせを何度も投げている箇所がある (例: ロールの解決は
- * users/show と notes/create でそれぞれ3回)。SQL 1本には行数によらない固定CPU
- * (プール貸出、RowDescription 処理、結果オブジェクトの構築) がかかるので、
- * 本数を減らすこと自体に効果がある。
- *
- * リクエストをまたがないので陳腐化しない。DB を直接書き換えるテストとも競合しない
- * (プロセスをまたぐキャッシュはこのリポジトリのe2e構成では成立しない)。
- */
+// HTTP リクエストまたは background task / queue attempt ごとに独立した memo。
 const storage = new AsyncLocalStorage<Map<string, Promise<unknown>>>();
 
 export function runInRequestScope<T>(fn: () => T): T {
@@ -23,8 +13,17 @@ export function runInRequestScope<T>(fn: () => T): T {
 }
 
 /**
- * `key` につき1回だけ `compute()` を走らせ、同一リクエスト内では結果を使い回す。
- * スコープの外 (キューワーカー等) では素通しで毎回計算する。
+ * runtime の構築時に作り、呼出元の HTTP context ではなく runtime 側で task を実行する。
+ * snapshot に既存 memo を保持させず、同じ runner の各実行にも新しい memo を割り当てる。
+ */
+export function createBackgroundExecutionScope(): <T>(task: () => T) => T {
+	const runInRuntimeScope = storage.exit(() => AsyncLocalStorage.snapshot());
+	return <T>(task: () => T): T => runInRuntimeScope(runInRequestScope, task);
+}
+
+/**
+ * `key` につき1回だけ `compute()` を走らせ、同一スコープ内では結果を使い回す。
+ * スコープの外では素通しで毎回計算する。
  */
 export function memoizeInRequest<T>(key: string, compute: () => Promise<T>): Promise<T> {
 	const store = storage.getStore();

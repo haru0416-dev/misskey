@@ -18,12 +18,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import type { QueueDeliverDependencies } from '@/queue/handlers/deliver.js';
-import type { DeliverJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
-
-function fakeJob(data: DeliverJobData): Bull.Job<DeliverJobData> {
-	return { data } as Bull.Job<DeliverJobData>;
-}
 
 describe('hono-queue-deliver', () => {
 	let runtime: RuntimeDependencies;
@@ -65,13 +60,13 @@ describe('hono-queue-deliver', () => {
 			...federatedDeps,
 			httpRequestService: { ...federatedDeps.httpRequestService, send },
 		};
-		const job = fakeJob({
+		const job = {
 			user: { id: actor.id },
 			content: '{}',
 			digest: 'SHA-256=dummy',
 			to: `https://${host}/inbox`,
 			isSharedInbox: false,
-		});
+		};
 		expect(await handleQueueDeliver(deps, job)).toBe('Success');
 		for (const suspensionState of ['manuallySuspended', 'autoSuspendedForNotResponding', 'goneSuspended'] as const) {
 			send.mockClear();
@@ -87,16 +82,13 @@ describe('hono-queue-deliver', () => {
 	test("meta.federationが'none'の場合はskip (blocked)を返す", async () => {
 		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 
-		const result = await handleQueueDeliver(
-			runtime,
-			fakeJob({
-				user: { id: actor.id },
-				content: '{}',
-				digest: 'SHA-256=dummy',
-				to: `https://${host}/inbox`,
-				isSharedInbox: false,
-			}),
-		);
+		const result = await handleQueueDeliver(runtime, {
+			user: { id: actor.id },
+			content: '{}',
+			digest: 'SHA-256=dummy',
+			to: `https://${host}/inbox`,
+			isSharedInbox: false,
+		});
 
 		expect(result).toBe('skip (blocked)');
 	});
@@ -106,13 +98,13 @@ describe('hono-queue-deliver', () => {
 
 		const result = await handleQueueDeliver(
 			{ ...federatedDeps, meta: { ...federatedDeps.meta, blockedHosts: [...federatedDeps.meta.blockedHosts, host] } },
-			fakeJob({
+			{
 				user: { id: actor.id },
 				content: '{}',
 				digest: 'SHA-256=dummy',
 				to: `https://${host}/inbox`,
 				isSharedInbox: false,
-			}),
+			},
 		);
 
 		expect(result).toBe('skip (blocked)');
@@ -127,16 +119,13 @@ describe('hono-queue-deliver', () => {
 			httpRequestService: { ...federatedDeps.httpRequestService, send },
 		};
 
-		const result = await handleQueueDeliver(
-			deps,
-			fakeJob({
-				user: { id: actor.id },
-				content: '{}',
-				digest: 'SHA-256=dummy',
-				to: `https://${host}/inbox`,
-				isSharedInbox: false,
-			}),
-		);
+		const result = await handleQueueDeliver(deps, {
+			user: { id: actor.id },
+			content: '{}',
+			digest: 'SHA-256=dummy',
+			to: `https://${host}/inbox`,
+			isSharedInbox: false,
+		});
 
 		expect(result).toBe('Success');
 		expect(send).toHaveBeenCalledOnce();
@@ -152,16 +141,13 @@ describe('hono-queue-deliver', () => {
 		};
 
 		await expect(
-			handleQueueDeliver(
-				deps,
-				fakeJob({
-					user: { id: actor.id },
-					content: '{}',
-					digest: 'SHA-256=dummy',
-					to: `https://${host}/inbox`,
-					isSharedInbox: false,
-				}),
-			),
+			handleQueueDeliver(deps, {
+				user: { id: actor.id },
+				content: '{}',
+				digest: 'SHA-256=dummy',
+				to: `https://${host}/inbox`,
+				isSharedInbox: false,
+			}),
 		).rejects.toBeInstanceOf(Bull.UnrecoverableError);
 
 		// インスタンス情報更新は非同期なので、DB破棄前に isNotResponding=true の書き込み完了を待つ。

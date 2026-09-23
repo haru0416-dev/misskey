@@ -8,7 +8,6 @@ import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
-import type * as Bull from 'bullmq';
 import {
 	deleteEmojiByNameAndHostFromDatabase,
 	listLocalEmojisOrderedByIdFromDatabase,
@@ -45,9 +44,9 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 
 export async function handleQueueExportCustomEmojis(
 	deps: QueueEmojisDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -134,9 +133,9 @@ type ExportedEmojiMetaRecord = {
 
 export async function handleQueueImportCustomEmojis(
 	deps: QueueEmojisDependencies,
-	job: Bull.Job<DbUserImportJobData>,
+	data: DbUserImportJobData,
 ): Promise<void> {
-	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, data.fileId);
 	if (file == null) {
 		return;
 	}

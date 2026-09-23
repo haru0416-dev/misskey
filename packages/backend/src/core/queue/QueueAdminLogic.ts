@@ -200,7 +200,10 @@ export async function resumeQueue(deps: AdminQueueDependencies, queueType: Queue
 
 export async function retryQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {
 	const queue = getQueue(deps, queueType);
-	const outboxId = queueType === 'deliver' && jobId.startsWith('outbox-') ? jobId.slice('outbox-'.length) : null;
+	const outboxId =
+		(queueType === 'deliver' || queueType === 'db') && jobId.startsWith('outbox-')
+			? jobId.slice('outbox-'.length)
+			: null;
 	if (outboxId != null && outboxId.length > 0) {
 		const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, outboxId);
 		if (outbox?.state === 'deadLetter') {
@@ -251,6 +254,9 @@ export async function retryQueueOutboxDeadLetter(
 	if (outbox.queue === 'deliver') {
 		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
 	}
+	if (outbox.queue === 'db') {
+		await (await deps.dbQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
+	}
 	return await retryDeadLetterOutboxInDatabase(deps.db, id, revision);
 }
 
@@ -265,6 +271,9 @@ export async function abandonQueueOutboxDeadLetter(
 	}
 	if (outbox.queue === 'deliver') {
 		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
+	}
+	if (outbox.queue === 'db') {
+		await (await deps.dbQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
 	}
 	return await abandonDeadLetterOutboxInDatabase(deps.db, id, revision);
 }

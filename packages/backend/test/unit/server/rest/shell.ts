@@ -96,7 +96,6 @@ describe('通知一覧のユーザー取得', () => {
 		await runtime.db.insert(muting).values({ id: genId(), muterId: viewerId, muteeId: users[1]!.id });
 		const app = createApiShellApp({
 			...runtime,
-			dbPool: runtime.drizzlePool,
 			logger: runtime.loggerService.getLogger('test-notifications'),
 		});
 		const stream = `notificationTimeline:${viewerId}`;

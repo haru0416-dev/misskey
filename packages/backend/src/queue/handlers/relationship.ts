@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Bull from 'bullmq';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import {
@@ -176,11 +175,11 @@ export async function followWithSideEffectsForApi(
 
 export async function handleQueueRelationshipFollow(
 	deps: QueueRelationshipDependencies,
-	job: Bull.Job<RelationshipJobData>,
+	data: RelationshipJobData,
 ): Promise<string> {
 	const [follower, followee] = (await Promise.all([
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	])) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
 	return followWithSideEffectsForApi(
@@ -188,55 +187,55 @@ export async function handleQueueRelationshipFollow(
 		follower,
 		followee,
 		omitUndefined({
-			requestId: job.data.requestId,
-			silent: job.data.silent,
-			withReplies: job.data.withReplies,
+			requestId: data.requestId,
+			silent: data.silent,
+			withReplies: data.withReplies,
 		}),
 	);
 }
 
 export async function handleQueueRelationshipUnfollow(
 	deps: QueueRelationshipDependencies,
-	job: Bull.Job<RelationshipJobData>,
+	data: RelationshipJobData,
 ): Promise<string> {
-	if (job.data.userStateGuard != null) {
-		const guard = job.data.userStateGuard;
+	if (data.userStateGuard != null) {
+		const guard = data.userStateGuard;
 		const guardedUser = await fetchUserByIdOrFailFromDatabase(deps.db, guard.userId);
 		if (guardedUser.isSuspended !== guard.isSuspended || guardedUser.suspensionTransitionId !== guard.transitionId) {
 			return 'skip (stale user state)';
 		}
 	}
 	const [follower, followee] = await Promise.all([
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	]);
 
-	await unfollow(deps, follower, followee, job.data.silent);
+	await unfollow(deps, follower, followee, data.silent);
 
 	return 'ok';
 }
 
 export async function handleQueueRelationshipBlock(
 	deps: QueueRelationshipDependencies,
-	job: Bull.Job<RelationshipJobData>,
+	data: RelationshipJobData,
 ): Promise<string> {
 	const [blocker, blockee] = await Promise.all([
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	]);
 
-	await blockForApi(deps, blocker, blockee, job.data.silent);
+	await blockForApi(deps, blocker, blockee, data.silent);
 
 	return 'ok';
 }
 
 export async function handleQueueRelationshipUnblock(
 	deps: QueueRelationshipDependencies,
-	job: Bull.Job<RelationshipJobData>,
+	data: RelationshipJobData,
 ): Promise<string> {
 	const [blocker, blockee] = await Promise.all([
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
-		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.from.id),
+		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	]);
 
 	const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id);

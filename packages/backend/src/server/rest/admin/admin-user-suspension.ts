@@ -5,9 +5,8 @@
 
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import type * as Bull from 'bullmq';
 import { createDeliverJob } from '@/core/queue/DeliverQueue.js';
-import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
+import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJobs } from '@/core/queue/QueueOutboxStore.js';
 import {
 	deleteFollowRequestsByFolloweeIdFromDatabase,
 	deleteFollowRequestsByFollowerIdFromDatabase,
@@ -195,22 +194,18 @@ async function findSuspensionTarget(
 
 export async function handleQueueUserSuspensionPostEffects(
 	deps: ApiAdminUserSuspensionDependencies,
-	job: Bull.Job<DbUserSuspensionPostEffectsJobData>,
+	data: DbUserSuspensionPostEffectsJobData,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.userId);
-	if (
-		user == null ||
-		user.isSuspended !== job.data.isSuspended ||
-		user.suspensionTransitionId !== job.data.transitionId
-	) {
+	const user = await fetchUserByIdFromDatabase(deps.db, data.userId);
+	if (user == null || user.isSuspended !== data.isSuspended || user.suspensionTransitionId !== data.transitionId) {
 		return;
 	}
 
-	if (job.data.isSuspended) {
-		await postSuspend(deps, user, job.data.transitionedAt, job.data.transitionId);
-		await enqueueUnfollowAllJobs(deps, user, job.data.transitionedAt, job.data.transitionId);
+	if (data.isSuspended) {
+		await postSuspend(deps, user, data.transitionedAt, data.transitionId);
+		await enqueueUnfollowAllJobs(deps, user, data.transitionedAt, data.transitionId);
 	} else {
-		await postUnsuspend(deps, user, job.data.transitionedAt, job.data.transitionId);
+		await postUnsuspend(deps, user, data.transitionedAt, data.transitionId);
 	}
 }
 
@@ -250,10 +245,8 @@ async function changeSuspensionState(
 	});
 
 	try {
-		await runInlineDbOutboxJob(deps.db, result, async (db) => {
-			await handleQueueUserSuspensionPostEffects({ ...deps, db }, {
-				data: result.data,
-			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
+		await runInlineDbOutboxJobs(deps.db, [result], async (db) => {
+			await handleQueueUserSuspensionPostEffects({ ...deps, db }, result.data);
 		});
 	} catch {
 		// 解放済みの outbox 行は次回のポーリングで再処理される。

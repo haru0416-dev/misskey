@@ -256,7 +256,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 					expect(
 						await handleQueueDeliver(
 							{ ...runtime, meta: { ...runtime.meta, federation: 'all', enableStatsForFederatedInstances: false } },
-							job,
+							job.data,
 						),
 					).toBe('Success');
 				}
