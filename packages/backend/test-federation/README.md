@@ -32,8 +32,12 @@ No performance or successful interoperability result is asserted by these files.
 
 Use the exact Bun version in the root `.bun-version`, Docker Engine and Docker
 Compose with `include`/`extends` support (Compose 2.20 or newer), OpenSSL and FFmpeg.
-The current topology reserves the Docker subnet `172.20.0.0/16`; do not run the two
+The current topology reserves the Docker subnets `172.20.0.0/16` (federation) and
+`10.231.0.0/22` (database, internet and default networks); do not run the two
 matrix cells concurrently on one Docker daemon. CI puts them on separate runners.
+Every matrix network has an explicit subnet because Compose creates networks
+concurrently, and an automatically assigned network can otherwise take
+`172.20.0.0/16` from Docker's default pool first.
 No host application/database ports are published.
 
 From the repository root, after preserving the starting-revision baseline:
