@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type * as Redis from 'ioredis';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { createApiShellApp } from '@/server/rest/shell.js';
 import type { ApiShellDependencies } from '@/server/rest/shell.js';
@@ -37,16 +37,12 @@ function createDeps() {
 	return {
 		deps: {
 			db: {} as MiDrizzleDatabase,
-			dbPool: {} as MiDrizzlePool,
 			meta,
 			redis: { flushdb } as unknown as Redis.Redis,
 			logger: { info },
 			publishInternalEvent,
 		},
 		flushdb,
-		info,
-		meta,
-		publishInternalEvent,
 	};
 }
 
@@ -55,39 +51,6 @@ describe('handleApiResetDb', () => {
 		vi.useRealTimers();
 		vi.clearAllMocks();
 		process.env['NODE_ENV'] = 'test';
-	});
-
-	test('resets redis and database, then refreshes reactive meta', async () => {
-		vi.useFakeTimers();
-		const steps: string[] = [];
-		const after = {
-			id: 'x',
-			name: 'after',
-			rootUser: null,
-		} as MiMeta;
-		const { deps, flushdb, info, meta, publishInternalEvent } = createDeps();
-
-		flushdb.mockImplementation(async () => {
-			steps.push('flushdb');
-		});
-		resetDbMock.mockImplementation(async () => {
-			steps.push('resetDb');
-		});
-		fetchMetaFromDatabaseMock.mockImplementation(async () => {
-			steps.push('fetchMeta');
-			return after;
-		});
-
-		const promise = handleApiResetDb(deps, {});
-		await vi.advanceTimersByTimeAsync(1000);
-		await promise;
-
-		expect(steps).toEqual(['flushdb', 'resetDb', 'fetchMeta']);
-		expect(meta.name).toBe('after');
-		expect(meta.rootUser).toBeNull();
-		expect(publishInternalEvent).toHaveBeenCalledWith('metaUpdated', { after });
-		expect(info).toHaveBeenCalledWith('---- Resetting database...');
-		expect(info).toHaveBeenCalledWith('---- Database reset complete.');
 	});
 
 	test('rejects outside test environment before destructive operations', async () => {

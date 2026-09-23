@@ -7,7 +7,6 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -18,10 +17,6 @@ import { handleQueueImportFollowing, handleQueueImportFollowingToDb } from '@/qu
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob<T>(data: T): Bull.Job<T> {
-	return { id: genId(), data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
-}
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {
 	const server: Server = createServer((_req, res) => {
@@ -90,7 +85,8 @@ describe('hono-queue-db (importFollowing)', () => {
 
 		await handleQueueImportFollowing(
 			deps,
-			fakeJob<DbUserImportJobData>({ user: { id: follower.id }, fileId, withReplies: false }),
+			{ user: { id: follower.id }, fileId, withReplies: false } satisfies DbUserImportJobData,
+			genId(),
 		);
 
 		const waiting = await runtime.dbQueue.getJobs(['waiting', 'delayed']);
@@ -106,15 +102,12 @@ describe('hono-queue-db (importFollowing)', () => {
 		const followee = await createTestUser('honoqueueimpfollowdbtarget');
 
 		// following import の行は `acct,withReplies=true` の2カラムで、withReplies は index 1 にある。
-		// 処理では job.data.withReplies (ジョブ全体で1つ) のみを使うため、行ごとの指定は反映されない。
-		await handleQueueImportFollowingToDb(
-			deps,
-			fakeJob<DbUserImportToDbJobData>({
-				user: { id: follower.id },
-				target: `${followee.username}@${runtime.config.runtime.host},withReplies=true`,
-				withReplies: false,
-			}),
-		);
+		// 処理では data.withReplies (インポート全体で1つ) のみを使うため、行ごとの指定は反映されない。
+		await handleQueueImportFollowingToDb(deps, {
+			user: { id: follower.id },
+			target: `${followee.username}@${runtime.config.runtime.host},withReplies=true`,
+			withReplies: false,
+		} satisfies DbUserImportToDbJobData);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(
@@ -128,14 +121,11 @@ describe('hono-queue-db (importFollowing)', () => {
 	test('handleQueueImportFollowingToDb: 自分自身はスキップされジョブを積まない', async () => {
 		const follower = await createTestUser('honoqueueimpfollowdbself');
 
-		await handleQueueImportFollowingToDb(
-			deps,
-			fakeJob<DbUserImportToDbJobData>({
-				user: { id: follower.id },
-				target: `${follower.username}@${runtime.config.runtime.host}`,
-				withReplies: false,
-			}),
-		);
+		await handleQueueImportFollowingToDb(deps, {
+			user: { id: follower.id },
+			target: `${follower.username}@${runtime.config.runtime.host}`,
+			withReplies: false,
+		} satisfies DbUserImportToDbJobData);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(

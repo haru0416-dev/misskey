@@ -10,7 +10,7 @@ import {
 	enqueueDbJobInOutbox,
 	enqueueInlineDbJobInOutbox,
 	publishDbOutboxRowEagerly,
-	runInlineDbOutboxJob,
+	runInlineDbOutboxJobs,
 } from '@/core/queue/QueueOutboxStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import type { DbQueue } from '@/core/queue/queues.js';
@@ -54,13 +54,6 @@ export type DriveFileDeletionDependencies = DriveFileDeletionFinalizationDepende
 
 export type EnqueuedDriveFileDeletion = {
 	outboxId: string;
-	data: DbDeleteDriveFileJobData;
-	opts: {
-		attempts: 12;
-		backoff: { type: 'exponential'; delay: 1000 };
-		removeOnComplete: true;
-		removeOnFail: false;
-	};
 };
 
 async function postProcessDriveFileDeletion(
@@ -220,18 +213,14 @@ export async function enqueueDriveFileDeletion(
 		removeOnFail: false,
 	} as const;
 	const outboxId = await enqueueDbJobInOutbox(db, 'deleteDriveFile', data, opts);
-	return { outboxId, data, opts };
+	return { outboxId };
 }
 
-export function publishEnqueuedDriveFileDeletion(
+export async function publishEnqueuedDriveFileDeletion(
 	deps: Pick<DriveFileDeletionDependencies, 'db' | 'dbQueue'>,
 	deletion: EnqueuedDriveFileDeletion,
-): void {
-	void publishDbOutboxRowEagerly(deps.db, deps.dbQueue, deletion.outboxId, {
-		name: 'deleteDriveFile',
-		data: deletion.data,
-		opts: deletion.opts,
-	});
+): Promise<void> {
+	await publishDbOutboxRowEagerly(deps.db, deps.dbQueue, deletion.outboxId);
 }
 
 export async function startDriveFileDeletion(
@@ -247,9 +236,9 @@ export async function startDriveFileDeletion(
 		removeOnComplete: true,
 		removeOnFail: false,
 	} as const;
-	const deletion = { ...(await enqueueInlineDbJobInOutbox(deps.db, 'deleteDriveFile', data, opts)), data, opts };
+	const deletion = await enqueueInlineDbJobInOutbox(deps.db, 'deleteDriveFile', data, opts);
 	try {
-		await runInlineDbOutboxJob(deps.db, deletion, async (db) => {
+		await runInlineDbOutboxJobs(deps.db, [deletion], async (db) => {
 			const txDeps = { ...deps, db };
 			await deleteDriveFileStorage(txDeps, data.file);
 			await postProcessDriveFileDeletion(txDeps, data, deleter);

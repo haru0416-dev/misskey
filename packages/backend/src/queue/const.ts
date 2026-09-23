@@ -21,6 +21,17 @@ export const QUEUE = {
 };
 
 export function baseQueueOptions(config: Config, queueName: (typeof QUEUE)[keyof typeof QUEUE]) {
+	for (const [name, timeout] of Object.entries({
+		connectionTimeout: config.valkey.jobQueue.connectTimeout,
+		commandTimeout: config.valkey.jobQueue.commandTimeout,
+	})) {
+		if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > 2_147_483_647) {
+			throw new Error(`valkey.jobQueue.${name} must be a positive duration within the timer range`);
+		}
+	}
+	if (config.valkey.jobQueue.connectTimeout + config.valkey.jobQueue.commandTimeout > 2_147_483_647) {
+		throw new Error('valkey.jobQueue connection and command timeout sum exceeds the timer range');
+	}
 	return {
 		connection: {
 			host: config.valkey.jobQueue.host,
@@ -28,6 +39,10 @@ export function baseQueueOptions(config: Config, queueName: (typeof QUEUE)[keyof
 			family: config.valkey.jobQueue.family,
 			connectTimeout: config.valkey.jobQueue.connectTimeout,
 			commandTimeout: config.valkey.jobQueue.commandTimeout,
+			// producer の失敗は呼出元へ返し、outbox は永続行から回復する。期限切れ要求は再送しない。
+			enableOfflineQueue: false,
+			autoResendUnfulfilledCommands: false,
+			maxRetriesPerRequest: 0,
 			...(config.valkey.jobQueue.username == null ? {} : { username: config.valkey.jobQueue.username }),
 			...(config.valkey.jobQueue.password == null ? {} : { password: config.valkey.jobQueue.password }),
 			...(config.valkey.jobQueue.db == null ? {} : { db: config.valkey.jobQueue.db }),
@@ -48,6 +63,8 @@ function baseBlockingQueueOptions(config: Config, queueName: (typeof QUEUE)[keyo
 		connection: {
 			...connection,
 			maxRetriesPerRequest: null,
+			enableOfflineQueue: true,
+			autoResendUnfulfilledCommands: true,
 		},
 	};
 }

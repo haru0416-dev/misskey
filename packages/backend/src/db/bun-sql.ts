@@ -11,9 +11,6 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
 
-// bun ランタイム限定のDBドライバ。`import { SQL } from 'bun'` を含むため、node で動かす経路
-// (unit / e2e テストランナー) から静的に読まれてはならない。呼び出しは動的 import 経由に限る。
-
 const logger = new MisskeyLogger('db').createSubLogger('bun-sql', 'gray');
 
 export type BunSqlRuntime = {
@@ -89,7 +86,7 @@ function withNodePostgresResultShape(rows: unknown): unknown {
 
 // Bun.sql の PostgresError は SQLSTATE を `errno` に入れ、`code` には `ERR_POSTGRES_SERVER_ERROR` を入れる。
 // 一意制約違反 (23505) やタイムアウト (57014) を `code` で判定している呼び出し側のために node-postgres へ寄せる。
-function normalizeDatabaseError(error: unknown): unknown {
+export function normalizeDatabaseError(error: unknown): unknown {
 	if (error == null || typeof error !== 'object') {
 		return error;
 	}
@@ -101,7 +98,7 @@ function normalizeDatabaseError(error: unknown): unknown {
 	return error;
 }
 
-function wrapBunSqlClient(client: SQL, transactionClient = client): DrizzleBunSqlClient {
+function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
 	return {
 		unsafe: (queryText, params) => {
 			// Bun.sql のクエリオブジェクトは遅延実行。`.values()` と await のどちらが先に来るか
@@ -126,7 +123,7 @@ function wrapBunSqlClient(client: SQL, transactionClient = client): DrizzleBunSq
 			};
 		},
 		begin: (callback) =>
-			(transactionClient.begin((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
+			(client.begin((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
 				(error: unknown) => {
 					throw normalizeDatabaseError(error);
 				},
@@ -150,50 +147,32 @@ function buildConnectionUrl(config: Config): string {
 	return url.toString();
 }
 
-export function createBunSqlRuntime(config: Config): BunSqlRuntime {
-	// Bun.sql は node-postgres と違って起動時に max ぶんの接続を一気に張るので、
-	// この値がそのままこのプロセスのPostgreSQL接続数になる。
-	const maxConnections = resolveDatabasePoolSize(config);
-	const connectionUrl = buildConnectionUrl(config);
-	const sqlOptions = {
+export function createBunSqlClient(config: Config, maxConnections = resolveDatabasePoolSize(config)): SQL {
+	return new SQL(buildConnectionUrl(config), {
+		max: maxConnections,
 		idleTimeout: Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
-		// 名前付きprepared statementはタイムライン系の `= ANY($n)` でgeneric planに落ちて
-		// 107倍遅くなる実測がある (src/db/prepared.ts 参照) ため、既定のprepareは切る。
+		// 名前付き prepared statement の generic plan による劣化を避ける (db/prepared.ts)。
 		prepare: false,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
-	};
-	const transactionConnections = Math.floor(maxConnections / 2);
-	const client = new SQL(connectionUrl, {
-		...sqlOptions,
-		max: maxConnections - transactionConnections,
 	});
-	// Bun 1.3.14 は begin() が予約中の接続を通常クエリへ再配布するため、高並行時に
-	// transaction abort状態が別リクエストへ漏れる。接続数予算を増やさずpoolを分離する。
-	const transactionClient =
-		transactionConnections === 0
-			? client
-			: new SQL(connectionUrl, {
-					...sqlOptions,
-					max: transactionConnections,
-				});
+}
+
+export function createBunSqlDatabase(client: SQL, config: Config): MiDrizzleDatabase {
 	const queryLogger = createDrizzleQueryLogger(config);
 	const db = drizzle({
-		client: wrapBunSqlClient(client, transactionClient) as unknown as SQL,
+		client: wrapBunSqlClient(client) as unknown as SQL,
 		...(queryLogger === undefined ? {} : { logger: queryLogger }),
 	});
 
+	return db as unknown as MiDrizzleDatabase;
+}
+
+export function createBunSqlRuntime(config: Config): BunSqlRuntime {
+	const maxConnections = resolveDatabasePoolSize(config);
+	const client = createBunSqlClient(config, maxConnections);
+	const db = createBunSqlDatabase(client, config);
 	logger.info(`Using Bun.sql driver (max: ${maxConnections} connections)`);
 
-	return {
-		// 結果の型マッピングは node-postgres 経路と一致することを実データで確認済 (timestamp / 配列 /
-		// jsonb / bytea)。`rows` の形もラッパで揃えているため、呼び出し側の型は共通のものを使う。
-		db: db as unknown as MiDrizzleDatabase,
-		close: async () => {
-			await client.close();
-			if (transactionClient !== client) {
-				await transactionClient.close();
-			}
-		},
-	};
+	return { db, close: () => client.close() };
 }

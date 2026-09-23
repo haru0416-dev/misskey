@@ -41,7 +41,7 @@ import {
 	resolveRemoteRecipientForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
-import { createNoteNotificationForApi } from './notes-create.js';
+import { createNoteNotification } from '@/core/note/NoteCreationService.js';
 import { isVisibleForMeForApi } from './note.js';
 import type { ApiNoteDependencies } from './note.js';
 import { packUserLiteManyForApi } from '../user/user.js';
@@ -291,7 +291,7 @@ export async function createNoteReactionForApi(
 	});
 
 	if (note.userHost === null) {
-		void createNoteNotificationForApi(deps, note.userId, user.id, 'reaction', { noteId: note.id, reaction });
+		void createNoteNotification(deps, note.userId, user.id, 'reaction', { noteId: note.id, reaction });
 	}
 
 	if (user.host == null && !note.localOnly) {

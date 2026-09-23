@@ -76,7 +76,7 @@ import type { ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.
 import { updateUsertagsForApi } from '../account/account-update.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
-import { fetchOrRegisterInstanceForApi } from '../note/notes-create.js';
+import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 
 export type ApiApPersonDependencies = ApiApResolveDependencies &
@@ -732,7 +732,7 @@ export async function createPersonForApi(
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances) {
-		fetchOrRegisterInstanceForApi(deps, host)
+		fetchOrRegisterInstance(deps, host)
 			.then(async (i) => {
 				await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
 			})

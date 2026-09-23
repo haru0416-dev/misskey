@@ -66,7 +66,7 @@ import {
 	renderUpdateForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
-import { updateHashtagsRankingsForApi } from '../note/notes-create.js';
+import { updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { getApiRolePolicies, getApiUserRoles, isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
@@ -81,7 +81,7 @@ export type ApiAccountUpdateDependencies = ApiRolePolicyDependencies &
 	UserPackingDependencies &
 	ApiNoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
-		/** hashtag ランキング (updateHashtagsRankingsForApi) 用。 */
+		/** hashtag ランキング (updateHashtagsRankings) 用。 */
 		redis: Redis.Redis;
 	};
 
@@ -513,7 +513,7 @@ export async function updateUsertagsForApi(
 		...new Set(user.tags.filter((tag) => !tags.includes(tag)).map((tag) => normalizeForSearch(tag))),
 	];
 	// ランキング更新は fire-and-forget とし、タグ更新処理を待たせない。
-	void updateHashtagsRankingsForApi(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
+	void updateHashtagsRankings(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
 	await recordHashtagUsagesInDatabase(deps.db, {
 		entries: attachedNames.map((name) => ({ id: genId(), name })),
 		userId: user.id,

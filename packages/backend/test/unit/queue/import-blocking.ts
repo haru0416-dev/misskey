@@ -7,7 +7,6 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -18,10 +17,6 @@ import { handleQueueImportBlocking, handleQueueImportBlockingToDb } from '@/queu
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob<T>(data: T): Bull.Job<T> {
-	return { id: genId(), data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
-}
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {
 	const server: Server = createServer((_req, res) => {
@@ -88,7 +83,7 @@ describe('hono-queue-db (importBlocking)', () => {
 			userHost: null,
 		});
 
-		await handleQueueImportBlocking(deps, fakeJob<DbUserImportJobData>({ user: { id: blocker.id }, fileId }));
+		await handleQueueImportBlocking(deps, { user: { id: blocker.id }, fileId } satisfies DbUserImportJobData, genId());
 
 		const waiting = await runtime.dbQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(
@@ -102,13 +97,10 @@ describe('hono-queue-db (importBlocking)', () => {
 		const blocker = await createTestUser('honoqueueimpblockdbme');
 		const target = await createTestUser('honoqueueimpblockdbtarget');
 
-		await handleQueueImportBlockingToDb(
-			deps,
-			fakeJob<DbUserImportToDbJobData>({
-				user: { id: blocker.id },
-				target: `${target.username}@${runtime.config.runtime.host}`,
-			}),
-		);
+		await handleQueueImportBlockingToDb(deps, {
+			user: { id: blocker.id },
+			target: `${target.username}@${runtime.config.runtime.host}`,
+		} satisfies DbUserImportToDbJobData);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(
@@ -121,13 +113,10 @@ describe('hono-queue-db (importBlocking)', () => {
 	test('handleQueueImportBlockingToDb: 自分自身はスキップされジョブを積まない', async () => {
 		const blocker = await createTestUser('honoqueueimpblockdbself');
 
-		await handleQueueImportBlockingToDb(
-			deps,
-			fakeJob<DbUserImportToDbJobData>({
-				user: { id: blocker.id },
-				target: `${blocker.username}@${runtime.config.runtime.host}`,
-			}),
-		);
+		await handleQueueImportBlockingToDb(deps, {
+			user: { id: blocker.id },
+			target: `${blocker.username}@${runtime.config.runtime.host}`,
+		} satisfies DbUserImportToDbJobData);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(

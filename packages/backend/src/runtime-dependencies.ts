@@ -8,9 +8,8 @@ import { Meilisearch } from 'meilisearch';
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
-import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
+import { createBunSqlRuntime } from '@/db/bun-sql.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
 import { createAiService } from '@/core/ai/AiService.js';
@@ -65,10 +64,11 @@ import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/server/chart-runtime.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
+import { createNotePostProcessing } from '@/core/note/NotePostProcessing.js';
+import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
 
 export type RuntimeDependencies = {
 	config: Config;
-	drizzlePool: MiDrizzlePool;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	meilisearch: Meilisearch | null;
@@ -100,12 +100,12 @@ export type RuntimeDependencies = {
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
 	chartWriters: ChartWriters;
+	notePostProcessing: NotePostProcessing;
 	dispose: () => Promise<void>;
 };
 
 type RuntimeResources = {
-	drizzlePool?: MiDrizzlePool;
-	bunSqlClose?: () => Promise<void>;
+	databaseClose?: () => Promise<void>;
 	redis?: Redis.Redis;
 	redisForPub?: Redis.Redis;
 	redisForSub?: Redis.Redis;
@@ -204,7 +204,7 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
 	resources.urlPreviewService?.dispose();
 	await allSettled();
-	await Promise.all([
+	const results = await Promise.allSettled([
 		resources.systemQueue?.close(),
 		resources.endedPollNotificationQueue?.close(),
 		resources.postScheduledNoteQueue?.close(),
@@ -215,56 +215,27 @@ async function disposeRuntimeResources(resources: RuntimeResources): Promise<voi
 		resources.objectStorageQueue?.close(),
 		resources.userWebhookDeliverQueue?.close(),
 		resources.systemWebhookDeliverQueue?.close(),
-		resources.drizzlePool?.end(),
-		resources.bunSqlClose?.(),
+		resources.databaseClose?.(),
 		resources.redis ? closeRedisConnection(resources.redis) : undefined,
 		resources.redisForPub ? closeRedisConnection(resources.redisForPub) : undefined,
 		resources.redisForSub ? closeRedisConnection(resources.redisForSub) : undefined,
 		resources.redisForTimelines ? closeRedisConnection(resources.redisForTimelines) : undefined,
 		resources.redisForReactions ? closeRedisConnection(resources.redisForReactions) : undefined,
 	]);
-}
-
-/**
- * 本番は bun で起動するため、DBドライバの既定は Bun.sql (node-postgres 比で実エンドポイントの
- * p50 −5〜−18% / rps +4〜+23%)。node で動く経路 (unit / e2e のローカルモード) は Bun.sql を
- * 持たないので自動的に node-postgres へ落ちる。`MK_DB_DRIVER=pg` で明示的に固定できる。
- */
-function shouldUseBunSql(): boolean {
-	const driver = process.env['MK_DB_DRIVER'];
-	if (driver != null && driver !== '' && driver !== 'pg' && driver !== 'bun-sql') {
-		throw new Error(`Unknown MK_DB_DRIVER: ${driver} (expected 'pg' or 'bun-sql')`);
-	}
-	if (driver === 'pg') {
-		return false;
-	}
-	if (typeof Bun === 'undefined') {
-		if (driver === 'bun-sql') {
-			throw new Error('MK_DB_DRIVER=bun-sql requires the bun runtime');
-		}
-		return false;
-	}
-	return true;
+	const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+	if (errors.length > 0)
+		throw new AggregateError(
+			errors.map((result) => result.reason),
+			'Failed to dispose runtime resources',
+		);
 }
 
 export async function createRuntimeDependencies(config: Config): Promise<RuntimeDependencies> {
 	const resources: RuntimeResources = {};
 	try {
-		// Bun.sql 経路でもプールは作る。`reset-db` (テスト専用エンドポイント) が pg の Pool を要求するため。
-		// minimumConnections の既定は0で、クエリを流さない限り接続は張られない。
-		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
-		// bun 限定モジュールなので、node で動くテスト経路から読まれないよう動的 import にしている。
-		// Bun 1.3.14 のtransaction接続リークを避けるには通常クエリ用とtransaction用の
-		// 2 poolが必要。接続予算1では分離できないため、その構成だけpgへフォールバックする。
-		const db =
-			shouldUseBunSql() && resolveDatabasePoolSize(config) >= 2
-				? await (async () => {
-						const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
-						const runtime = createBunSqlRuntime(config);
-						resources.bunSqlClose = runtime.close;
-						return runtime.db;
-					})()
-				: createDrizzleDatabase(drizzlePool, config);
+		const runtime = createBunSqlRuntime(config);
+		resources.databaseClose = runtime.close;
+		const db = runtime.db;
 		const redis = (resources.redis = createRedisClient(config));
 		const redisForPub = (resources.redisForPub = createRedisForPub(config));
 		const redisForSub = (resources.redisForSub = await createRedisForSub(config));
@@ -281,6 +252,33 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const objectStorageQueue = (resources.objectStorageQueue = createObjectStorageQueue(config));
 		const userWebhookDeliverQueue = (resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config));
 		const systemWebhookDeliverQueue = (resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config));
+		// Bull の初回 ready 待ちは commandTimeout の対象外。公開前に期限を設け、
+		// 失敗時は catch でこの runtime が作った接続だけを閉じて ready 待ちも解除する。
+		let queueReadyTimer: NodeJS.Timeout | undefined;
+		try {
+			await Promise.race([
+				Promise.all([
+					systemQueue.waitUntilReady(),
+					endedPollNotificationQueue.waitUntilReady(),
+					postScheduledNoteQueue.waitUntilReady(),
+					deliverQueue.waitUntilReady(),
+					inboxQueue.waitUntilReady(),
+					dbQueue.waitUntilReady(),
+					relationshipQueue.waitUntilReady(),
+					objectStorageQueue.waitUntilReady(),
+					userWebhookDeliverQueue.waitUntilReady(),
+					systemWebhookDeliverQueue.waitUntilReady(),
+				]),
+				new Promise<never>((_, reject) => {
+					queueReadyTimer = setTimeout(
+						() => reject(new Error('Queue producer initialization timed out')),
+						config.valkey.jobQueue.connectTimeout + config.valkey.jobQueue.commandTimeout,
+					);
+				}),
+			]);
+		} finally {
+			clearTimeout(queueReadyTimer);
+		}
 		const meilisearch = createMeilisearchClient(config);
 		const meta = await fetchReactiveMeta(db, redisForSub);
 		const loggerService = createLoggerService();
@@ -303,12 +301,14 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const userAuthService = createUserAuthService(redis, db);
 		const webAuthnService = createWebAuthnService(config, meta, redis, db);
 		const chartWriters = createChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
+		const notePostProcessing = createNotePostProcessing((error) => {
+			loggerService.getLogger('note-post-processing').error('Failed to drain post-create stages', { e: error });
+		});
 		const chartWriterSaveIntervalId = startChartWriterSaveInterval(chartWriters);
-		let disposed = false;
+		let disposePromise: Promise<void> | undefined;
 
 		return {
 			config,
-			drizzlePool,
 			db,
 			meta,
 			meilisearch,
@@ -340,23 +340,44 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 			redisForTimelines,
 			redisForReactions,
 			chartWriters,
-			dispose: async () => {
-				if (disposed) {
-					return;
-				}
-				disposed = true;
-				clearInterval(chartWriterSaveIntervalId);
-				try {
-					if (process.env['NODE_ENV'] !== 'test') {
-						await saveChartWriters(chartWriters);
+			notePostProcessing,
+			dispose: () => {
+				if (disposePromise != null) return disposePromise;
+				disposePromise = (async () => {
+					clearInterval(chartWriterSaveIntervalId);
+					const errors: unknown[] = [];
+					try {
+						await notePostProcessing.close();
+					} catch (error) {
+						errors.push(error);
 					}
-				} finally {
-					await disposeRuntimeResources(resources);
-				}
+					try {
+						if (process.env['NODE_ENV'] !== 'test') {
+							await saveChartWriters(chartWriters);
+						}
+					} catch (error) {
+						errors.push(error);
+					}
+					try {
+						await disposeRuntimeResources(resources);
+					} catch (error) {
+						errors.push(error);
+					}
+					if (errors.length > 0) {
+						throw new AggregateError(errors, 'Runtime shutdown failed', { cause: errors[0] });
+					}
+				})();
+				return disposePromise;
 			},
 		};
 	} catch (error) {
-		await disposeRuntimeResources(resources);
+		try {
+			await disposeRuntimeResources(resources);
+		} catch (disposeError) {
+			throw new AggregateError([error, disposeError], 'Runtime initialization and cleanup failed', {
+				cause: disposeError,
+			});
+		}
 		throw error;
 	}
 }

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, inArray, lt, sql } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { and, count, eq, inArray, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { antenna } from '@/db/schema/antenna.js';
 import type { AntennaInsert, AntennaRow } from '@/db/schema/antenna.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -165,15 +165,21 @@ export async function listAntennasByUserIdFromDatabase(
 	return rows.map(deserializeAntenna);
 }
 
+const antennaActivePlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(antenna);
+	return {
+		query: db.select(selection).from(antenna).where(eq(antenna.isActive, true)),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(antenna)] },
+	};
+});
+
 /**
  * AntennaService のインメモリキャッシュ向け。isActive な Antenna を全件取得する。
  * ノート配信時のマッチ判定で使われるホットパスなので、フィルタ条件・全件取得の挙動を変えないこと。
  */
 export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
-	const statement = preparedQueryFor(db, 'antenna:active', () =>
-		db.select().from(antenna).where(eq(antenna.isActive, true)).prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute();
+	const rows = await antennaActivePlan.execute(db);
 
 	return rows.map(deserializeAntenna);
 }

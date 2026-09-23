@@ -87,10 +87,10 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、verifyRequestSignature
 	 * が実際のバイト列に対して動作する状態を作る。
 	 */
-	async function createSignedInboxJob(
+	async function createSignedInboxPayload(
 		host: string,
 		activityOverrides: ActivityOverrides = {},
-	): Promise<{ user: MiUser; job: Bull.Job<InboxJobData>; activity: IActivity }> {
+	): Promise<{ user: MiUser; data: InboxJobData; activity: IActivity }> {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
 
@@ -140,8 +140,8 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 			headers: captured.headers,
 		});
 
-		const job = { data: { activity, signature } } as unknown as Bull.Job<InboxJobData>;
-		return { user, job, activity };
+		const data: InboxJobData = { activity, signature };
+		return { user, data, activity };
 	}
 
 	async function createTestLocalUser(prefix: string): Promise<MiUser> {
@@ -163,11 +163,11 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	test('正しい署名のFollowアクティビティはperformActivityForApiまで到達しFollowRequestを作成する', async () => {
 		const host = `hono-queue-inbox-ok-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxee');
-		const { user: actor, job } = await createSignedInboxJob(host, {
+		const { user: actor, data } = await createSignedInboxPayload(host, {
 			object: `${deps.config.instance.url}/users/${followee.id}`,
 		});
 
-		const result = await handleQueueInbox(deps, job);
+		const result = await handleQueueInbox(deps, data);
 		expect(result).toBe('ok');
 
 		// followee は isLocked ではないため即時Followingが作られる (承認制ならFollowRequestになる)
@@ -178,61 +178,63 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	test('署名を改竄した場合はHTTP-Signature検証に失敗しLD-Signatureも無いためUnrecoverableErrorになる', async () => {
 		const host = `hono-queue-inbox-tampered-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxtamperee');
-		const { job } = await createSignedInboxJob(host, { object: `${deps.config.instance.url}/users/${followee.id}` });
+		const { data } = await createSignedInboxPayload(host, {
+			object: `${deps.config.instance.url}/users/${followee.id}`,
+		});
 
-		job.data.signature.signature = tamperBase64Signature(job.data.signature.signature);
+		data.signature.signature = tamperBase64Signature(data.signature.signature);
 
-		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, data)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.actorが署名者と異なる場合は拒否する', async () => {
 		const host = `hono-queue-inbox-actor-mismatch-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host, {
+		const { data } = await createSignedInboxPayload(host, {
 			actor: `http://${host}/users/${genId()}`,
 		});
 
-		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, data)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.idのホストが署名者と異なる場合は拒否する', async () => {
 		const host = `hono-queue-inbox-id-mismatch-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host, {
+		const { data } = await createSignedInboxPayload(host, {
 			id: `http://other-${genId()}.example.com/activities/${genId()}`,
 		});
 
-		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, data)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.idが無い場合は拒否する', async () => {
 		const host = `hono-queue-inbox-missing-id-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host, { id: undefined });
+		const { data } = await createSignedInboxPayload(host, { id: undefined });
 
-		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, data)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	// actor はリモートが送ってくる値で、欠けていても不思議ではない。UnrecoverableError にしないと
 	// 「壊れた activity が再試行され続ける」形になる。
 	test('activity.actor が無い場合は再試行せずスキップする', async () => {
 		const host = `hono-queue-inbox-noactor-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host);
+		const { data } = await createSignedInboxPayload(host);
 
 		// keyId から引けない状況にして、actor を見に行く経路へ入れる。
-		job.data.signature.keyId = `http://${host}/users/unknown#main-key`;
-		delete (job.data.activity as { actor?: unknown }).actor;
+		data.signature.keyId = `http://${host}/users/unknown#main-key`;
+		delete (data.activity as { actor?: unknown }).actor;
 
-		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, data)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('federationでブロックされたホストからのリクエストはBlocked requestを返す', async () => {
 		const host = `hono-queue-inbox-blocked-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host);
+		const { data } = await createSignedInboxPayload(host);
 
 		const originalFederation = runtime.meta.federation;
 		const originalFederationHosts = runtime.meta.federationHosts;
 		runtime.meta.federation = 'specified';
 		runtime.meta.federationHosts = [];
 		try {
-			const result = await handleQueueInbox(deps, job);
+			const result = await handleQueueInbox(deps, data);
 			expect(result).toContain('Blocked request');
 		} finally {
 			runtime.meta.federation = originalFederation;
@@ -242,11 +244,11 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 
 	test('acct:形式の古いkeyIdはサポート対象外としてスキップされる', async () => {
 		const host = `hono-queue-inbox-oldkeyid-${genId()}.example.com`;
-		const { job } = await createSignedInboxJob(host);
+		const { data } = await createSignedInboxPayload(host);
 
-		job.data.signature.keyId = `acct:someone@${host}`;
+		data.signature.keyId = `acct:someone@${host}`;
 
-		const result = await handleQueueInbox(deps, job);
+		const result = await handleQueueInbox(deps, data);
 		expect(result).toContain('Old keyId is no longer supported');
 	});
 });

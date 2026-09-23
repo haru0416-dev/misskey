@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { channel } from '@/db/schema/channel.js';
 import type { ChannelInsert, ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -52,6 +52,18 @@ export function resolveChannelPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
+const channelByIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(channel);
+	return {
+		query: db
+			.select(selection)
+			.from(channel)
+			.where(sql`${channel.id} = ANY(${sql.placeholder('ids')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(channel)] },
+	};
+});
+
 export async function listChannelsByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiChannel['id'][],
@@ -62,14 +74,7 @@ export async function listChannelsByIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'channel:byIds', () =>
-		db
-			.select()
-			.from(channel)
-			.where(sql`${channel.id} = ANY(${sql.placeholder('ids')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ ids });
+	const rows = await channelByIdsPlan.execute(db, { ids });
 
 	return rows.map((row) => deserializeChannel(row));
 }

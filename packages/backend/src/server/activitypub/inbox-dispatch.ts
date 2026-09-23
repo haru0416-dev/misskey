@@ -82,8 +82,8 @@ import {
 	updateQuestionFromApForApi,
 } from '@/server/rest/activitypub/ap-note.js';
 import type { ApiApNoteDependencies } from '@/server/rest/activitypub/ap-note.js';
-import { createNoteForApi } from '@/server/rest/note/notes-create.js';
-import type { CreateNoteData } from '@/server/rest/note/notes-create.js';
+import { createNote } from '@/core/note/NoteCreationService.js';
+import type { CreateNoteData } from '@/core/note/NoteCreationService.js';
 import { deleteNoteForApi } from '@/server/rest/note/notes-delete.js';
 import type { ApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
 import { createNoteReactionForApi, deleteNoteReactionForApi } from '@/server/rest/note/notes-reactions.js';
@@ -100,6 +100,7 @@ import type { ApiAccountBlockingDependencies } from '@/server/rest/account/accou
 import { followWithSideEffectsForApi } from '../../queue/handlers/relationship.js';
 import type { QueueRelationshipDependencies } from '../../queue/handlers/relationship.js';
 import { acceptFollowRequestForApi } from '@/server/rest/user/following.js';
+import { ApiError } from '@/server/rest/error.js';
 import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
 import { addPinnedForApi, removePinnedForApi } from '@/server/rest/account/account-pin.js';
 import type { ApiAccountPinDependencies } from '@/server/rest/account/account-pin.js';
@@ -302,7 +303,18 @@ async function acceptFollowFromApForApi(
 		return await relayAcceptedForApi(deps, match[1]!);
 	}
 
-	await acceptFollowRequestForApi(deps, actor, follower);
+	try {
+		await acceptFollowRequestForApi(deps, actor, follower);
+	} catch (error) {
+		// 承認済みの再配送だけを冪等に扱い、未申請・解除済みは拒否する。
+		if (
+			!(error instanceof ApiError) ||
+			error.code !== 'NO_FOLLOW_REQUEST' ||
+			!(await followingExistsInDatabase(deps.db, follower.id, actor.id))
+		) {
+			throw error;
+		}
+	}
 	return 'ok';
 }
 
@@ -439,7 +451,7 @@ async function announceNoteFromApForApi(
 			url: null,
 		};
 
-		await createNoteForApi(deps, actor, data, false);
+		await createNote(deps, actor, data, false);
 	} finally {
 		unlock();
 	}
@@ -597,11 +609,7 @@ async function deleteActorFromApForApi(deps: ApiInboxDependencies, actor: MiRemo
 		return 'skip: already deleted or actor not found';
 	}
 
-	void publishDbOutboxRowEagerly(deps.db, deps.dbQueue, outboxId, {
-		name: 'deleteAccount',
-		data: { user: { id: actor.id } },
-		opts: queueRetentionOptions(deps.config),
-	});
+	await publishDbOutboxRowEagerly(deps.db, deps.dbQueue, outboxId);
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: actor.id });
 
 	return `ok: queued deleteAccount outbox-${outboxId}`;

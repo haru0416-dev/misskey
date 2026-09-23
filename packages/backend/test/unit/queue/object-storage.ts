@@ -4,10 +4,10 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
@@ -20,12 +20,8 @@ import type { ObjectStorageFileJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 
-function fakeJob(data: Record<string, unknown> = {}): Bull.Job<Record<string, unknown>> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<Record<string, unknown>>;
-}
-
 describe('hono-queue-object-storage', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let config: Config;
 	let deleteMock: ReturnType<typeof vi.fn>;
@@ -33,12 +29,12 @@ describe('hono-queue-object-storage', () => {
 
 	beforeAll(() => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	beforeAll(() => {
@@ -67,10 +63,7 @@ describe('hono-queue-object-storage', () => {
 
 	test('handleQueueDeleteFile: object storageからキーを削除する', async () => {
 		deleteMock.mockClear();
-		const result = await handleQueueDeleteFile(
-			deps,
-			fakeJob({ key: 'some-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>,
-		);
+		const result = await handleQueueDeleteFile(deps, { key: 'some-key' } satisfies ObjectStorageFileJobData);
 		expect(result).toBe('Success');
 		expect(deleteMock).toHaveBeenCalledOnce();
 	});
@@ -78,9 +71,9 @@ describe('hono-queue-object-storage', () => {
 	test('handleQueueDeleteFile: NoSuchKeyエラーは握りつぶす', async () => {
 		deleteMock.mockClear();
 		deleteMock.mockRejectedValueOnce(Object.assign(new Error('no such key'), { name: 'NoSuchKey' }));
-		await expect(
-			handleQueueDeleteFile(deps, fakeJob({ key: 'missing-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>),
-		).resolves.toBe('Success');
+		await expect(handleQueueDeleteFile(deps, { key: 'missing-key' } satisfies ObjectStorageFileJobData)).resolves.toBe(
+			'Success',
+		);
 	});
 
 	test('deleteFileSyncForApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
@@ -215,7 +208,7 @@ describe('hono-queue-object-storage', () => {
 			userHost: 'remote.example.com',
 		});
 
-		await handleQueueCleanRemoteFiles(deps, fakeJob());
+		await handleQueueCleanRemoteFiles(deps, async () => {});
 
 		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(after).toBeNull();

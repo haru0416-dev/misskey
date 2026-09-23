@@ -210,6 +210,9 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 		// リクエスト内 memo のスコープ。同じ問い合わせを1リクエストで何度も投げている箇所を畳む。
 		return await runInRequestScope(handler);
 	} catch (err) {
+		if (c.req.raw.signal.aborted && err === c.req.raw.signal.reason) {
+			return new Response(null, { status: 499 });
+		}
 		if (err instanceof ApiError) {
 			return apiErrorResponse(c, err);
 		}

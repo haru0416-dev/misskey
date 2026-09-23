@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
-import { executePreparedStatement } from '@/db/prepared.js';
+import { and, desc, eq, getTableName, inArray, lt, or, sql } from 'drizzle-orm';
+import { defineQueryPlan } from '@/db/prepared.js';
 import type * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
 import { addDbJobs, addDeliverJobs } from '@/core/queue/queues.js';
@@ -31,11 +31,22 @@ const CLAIM_LEASE_MS = 30_000;
 const MAX_POLL_INTERVAL_MS = 30_000;
 const READY_BATCH_SIZE = 500;
 const RECONCILE_BATCH_SIZE = 500;
+// 待機元が終了した場合も実行結果を蓄積し続けない。期限切れは成功ではなく結果不明とする。
+const EXECUTION_OUTCOME_TTL_MS = 60 * 60 * 1000;
 
 type OutboxDbJobName = 'deleteAccount' | 'deleteDriveFile' | 'userSuspensionPostEffects' | 'notePostCreate';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function awaitsDbExecution(row: Pick<QueueOutboxRow, 'queue' | 'name' | 'data'>): boolean {
+	return (
+		row.queue === QUEUE.DB &&
+		row.name === 'notePostCreate' &&
+		isRecord(row.data) &&
+		(row.data['stage'] === 'fanout' || row.data['stage'] === 'antennas')
+	);
 }
 
 type SerializedKeepJobs = Record<string, unknown> & {
@@ -178,7 +189,6 @@ function parseDbJobData(name: OutboxDbJobName, value: SerializedDbJobData): DbJo
 						(value['renote']['userHost'] === null || typeof value['renote']['userHost'] === 'string') &&
 						(value['renote']['uri'] === null || typeof value['renote']['uri'] === 'string'))) &&
 				[
-					'analytics',
 					'fanout',
 					'antennas',
 					'followerNotifications',
@@ -421,7 +431,7 @@ export type InlineDbOutboxJob = {
  * 行数ごとに INSERT の形が変わるので、行数を key に含めて固定形を持つ。notePostCreate のステージ数
  * (数行) を想定した上限で、超える場合は従来どおり組み立てる。
  */
-const MAX_PREPARED_INLINE_JOB_ROWS = 16;
+export const MAX_PREPARED_INLINE_JOB_ROWS = 16;
 
 function inlineJobInsertPlaceholders(rowCount: number): QueueOutboxInsert[] {
 	const placeholder = (name: string) => sql.placeholder(name) as unknown as string;
@@ -440,6 +450,41 @@ function inlineJobInsertPlaceholders(rowCount: number): QueueOutboxInsert[] {
 	}));
 }
 
+export function createInlineDbOutboxInsert(db: MiDrizzleDatabase, rowCount: number) {
+	return db.insert(queueOutbox).values(inlineJobInsertPlaceholders(rowCount));
+}
+
+const inlineJobInsertPlans = Array.from({ length: MAX_PREPARED_INLINE_JOB_ROWS }, (_, index) =>
+	defineQueryPlan((db) => ({
+		query: createInlineDbOutboxInsert(db, index + 1),
+		metadata: { type: 'insert', tables: [getTableName(queueOutbox)] },
+		mutationTables: [queueOutbox],
+	})),
+);
+
+export function prepareInlineDbOutboxJobs<K extends OutboxDbJobName>(
+	name: K,
+	dataList: DbJobMap[K][],
+	opts: Bull.BulkJobOptions,
+) {
+	const now = new Date();
+	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
+	const jobs = dataList.map(() => ({ outboxId: genId(), leaseToken: genId() }));
+	const values: Record<string, unknown> & { leaseExpiresAt: Date; updatedAt: Date } = {
+		name,
+		opts,
+		leaseExpiresAt,
+		updatedAt: now,
+	};
+	dataList.forEach((data, index) => {
+		values[`id${index}`] = jobs[index]!.outboxId;
+		values[`data${index}`] = data;
+		values[`externalJobId${index}`] = `outbox-${jobs[index]!.outboxId}`;
+		values[`leaseToken${index}`] = jobs[index]!.leaseToken;
+	});
+	return { jobs, values };
+}
+
 export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
 	name: K,
@@ -450,24 +495,10 @@ export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
 		return [];
 	}
 
-	const now = new Date();
-	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
-	const jobs = dataList.map(() => ({ outboxId: genId(), leaseToken: genId() }));
+	const { jobs, values } = prepareInlineDbOutboxJobs(name, dataList, opts);
 
 	if (dataList.length <= MAX_PREPARED_INLINE_JOB_ROWS) {
-		const values: Record<string, unknown> = { name, opts, leaseExpiresAt, updatedAt: now };
-		dataList.forEach((data, index) => {
-			values[`id${index}`] = jobs[index]!.outboxId;
-			values[`data${index}`] = data;
-			values[`externalJobId${index}`] = `outbox-${jobs[index]!.outboxId}`;
-			values[`leaseToken${index}`] = jobs[index]!.leaseToken;
-		});
-		await executePreparedStatement(
-			db,
-			`queueOutbox:enqueueInline:${dataList.length}`,
-			() => db.insert(queueOutbox).values(inlineJobInsertPlaceholders(dataList.length)),
-			values,
-		);
+		await inlineJobInsertPlans[dataList.length - 1]!.execute(db, values);
 		return jobs;
 	}
 
@@ -482,8 +513,8 @@ export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
 			opts,
 			externalJobId: `outbox-${jobs[index]!.outboxId}`,
 			leaseToken: jobs[index]!.leaseToken,
-			leaseExpiresAt,
-			updatedAt: now,
+			leaseExpiresAt: values.leaseExpiresAt,
+			updatedAt: values.updatedAt,
 		})),
 	);
 
@@ -500,113 +531,173 @@ export async function enqueueInlineDbJobInOutbox<K extends OutboxDbJobName>(
 	return job!;
 }
 
-/**
- * リースを握っているプロセス自身が、claim を挟まずに outbox 行をまとめて完了させる。
- *
- * 行を書いたのは同一プロセスの直前のトランザクションで、リース期限内は他のワーカーが
- * 拾わない。よって所有権の再確認 (SELECT ... FOR UPDATE) は成功経路では常に自明に真になる。
- * leaseToken 付きの条件 DELETE 1本で、所有権の確認と完了を同時に行う。
- */
-export async function completeInlineDbOutboxJobs(db: MiDrizzleDatabase, jobs: InlineDbOutboxJob[]): Promise<void> {
-	if (jobs.length === 0) {
-		return;
-	}
-	await executePreparedStatement(
-		db,
-		'queueOutbox:completeInline',
-		() =>
-			db
-				.delete(queueOutbox)
-				.where(
-					and(
-						sql`${queueOutbox.id} = ANY(${sql.placeholder('ids')})`,
-						eq(queueOutbox.state, 'publishing'),
-						sql`${queueOutbox.leaseToken} = ANY(${sql.placeholder('leaseTokens')})`,
-					),
-				),
-		{ ids: jobs.map((job) => job.outboxId), leaseTokens: jobs.map((job) => job.leaseToken) },
-	);
-}
-
-/**
- * インライン実行が失敗したとき、未完了の行を再試行可能な状態へ戻す。行はステージ毎に
- * 独立しているので、失敗したステージ以降だけが再試行される。
- */
-export async function releaseInlineDbOutboxJobs(
+/** 失敗・inline 辞退のどちらも、現在の所有者の行だけを再試行可能に戻す。 */
+export async function releaseDbOutboxJobs(
 	db: MiDrizzleDatabase,
 	jobs: InlineDbOutboxJob[],
-	error: unknown,
+	error?: unknown,
+	delayMs = 0,
 ): Promise<void> {
 	if (jobs.length === 0) {
 		return;
+	}
+	const idsByToken = new Map<string, string[]>();
+	for (const job of jobs) {
+		const ids = idsByToken.get(job.leaseToken);
+		if (ids == null) idsByToken.set(job.leaseToken, [job.outboxId]);
+		else ids.push(job.outboxId);
 	}
 	await db
 		.update(queueOutbox)
 		.set({
 			state: 'ready',
-			availableAt: new Date(),
+			availableAt: new Date(Date.now() + delayMs),
 			leaseToken: null,
 			leaseExpiresAt: null,
-			lastError: errorDetails(error),
+			lastError: error === undefined ? null : errorDetails(error),
 			updatedAt: new Date(),
 			revision: sql`${queueOutbox.revision} + 1`,
 		})
-		.where(
-			and(
-				inArray(
-					queueOutbox.id,
-					jobs.map((job) => job.outboxId),
-				),
-				eq(queueOutbox.state, 'publishing'),
-			),
-		);
+		.where(or(...Array.from(idsByToken, ([token, ids]) => claimedWhere(ids, 'publishing', token))));
 }
 
-export async function runInlineDbOutboxJob(
+const inlineJobDeletionPlans = Array.from({ length: MAX_PREPARED_INLINE_JOB_ROWS }, (_, index) =>
+	defineQueryPlan((db) => {
+		const selection = { id: queueOutbox.id };
+		return {
+			query: db
+				.delete(queueOutbox)
+				.where(
+					and(
+						eq(queueOutbox.state, 'publishing'),
+						or(
+							...Array.from({ length: index + 1 }, (_, row) =>
+								and(
+									eq(queueOutbox.id, sql.placeholder(`id${row}`)),
+									eq(queueOutbox.leaseToken, sql.placeholder(`leaseToken${row}`)),
+								),
+							),
+						),
+					),
+				)
+				.returning(selection),
+			selection,
+			metadata: { type: 'delete', tables: [getTableName(queueOutbox)] },
+			mutationTables: [queueOutbox],
+		};
+	}),
+);
+
+/**
+ * DELETE が持つ行ロックを callback の SQL と同じ transaction で保持する。
+ * 期限超過でも引継ぎを許さず、失敗・強制停止では削除と副作用を一緒に rollback する。
+ */
+export async function runInlineDbOutboxJobs(
 	db: MiDrizzleDatabase,
-	job: InlineDbOutboxJob,
-	task: (db: MiDrizzleDatabase) => Promise<void>,
-): Promise<boolean> {
+	jobs: InlineDbOutboxJob[],
+	task: (db: MiDrizzleDatabase, ownedIds: ReadonlySet<string>) => Promise<void>,
+): Promise<ReadonlySet<string>> {
+	if (jobs.length === 0) return new Set<string>();
 	try {
 		return await db.transaction(async (transaction) => {
 			const tx = transaction as MiDrizzleDatabase;
-			const [owned] = await tx
-				.select({ id: queueOutbox.id })
-				.from(queueOutbox)
-				.where(
-					and(
-						eq(queueOutbox.id, job.outboxId),
-						eq(queueOutbox.state, 'publishing'),
-						eq(queueOutbox.leaseToken, job.leaseToken),
-					),
-				)
-				.for('update')
-				.limit(1);
-			if (owned == null) {
-				return false;
+			let deleted: { id: string }[];
+			if (jobs.length <= MAX_PREPARED_INLINE_JOB_ROWS) {
+				const values: Record<string, unknown> = {};
+				for (let index = 0; index < jobs.length; index++) {
+					values[`id${index}`] = jobs[index]!.outboxId;
+					values[`leaseToken${index}`] = jobs[index]!.leaseToken;
+				}
+				deleted = await inlineJobDeletionPlans[jobs.length - 1]!.execute(tx, values);
+			} else {
+				deleted = await tx
+					.delete(queueOutbox)
+					.where(or(...jobs.map((job) => claimedWhere([job.outboxId], 'publishing', job.leaseToken))))
+					.returning({ id: queueOutbox.id });
 			}
+			const ownedIds = new Set(deleted.map((row) => row.id));
+			if (ownedIds.size > 0) await task(tx, ownedIds);
+			return ownedIds;
+		});
+	} catch (error) {
+		try {
+			await releaseDbOutboxJobs(db, jobs, error);
+		} catch (releaseError) {
+			throw new AggregateError([error, releaseError], 'Outbox execution and claim release failed', {
+				cause: releaseError,
+			});
+		}
+		throw error;
+	}
+}
 
+/** inline の引継ぎ後も、fanout/antenna は queue 受理ではなく処理終了まで待つ。 */
+export async function waitForDbOutboxJob(db: MiDrizzleDatabase, dbQueue: DbQueue, outboxId: string): Promise<void> {
+	for (;;) {
+		const row = await fetchQueueOutboxByIdFromDatabase(db, outboxId);
+		if (row == null) throw new Error(`Queue outbox execution outcome is unavailable: ${outboxId}`);
+		if (row.state === 'deadLetter') {
+			throw new Error(row.lastError?.message ?? 'Queue outbox job is dead-lettered');
+		}
+		if (row.state === 'completed') {
+			await db.delete(queueOutbox).where(and(eq(queueOutbox.id, outboxId), eq(queueOutbox.state, 'completed')));
+			return;
+		}
+		const job = await dbQueue.getJob(row.externalJobId ?? `outbox-${outboxId}`);
+		if ((await job?.getState()) === 'failed') throw new Error(job?.failedReason ?? 'Queue outbox job failed');
+		await new Promise<void>((resolve) => setTimeout(resolve, 25));
+	}
+}
+
+/** SQL の実行結果は Bull の retention・管理操作とは独立に確定する。 */
+export async function runQueuedDbOutboxJob(
+	db: MiDrizzleDatabase,
+	jobId: string,
+	task: (db: MiDrizzleDatabase) => Promise<void>,
+	finalAttempt: boolean,
+): Promise<void> {
+	const outboxId = jobId.slice('outbox-'.length);
+	try {
+		await db.transaction(async (transaction) => {
+			const tx = transaction as MiDrizzleDatabase;
+			const [row] = await tx.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId)).for('update');
+			if (row == null || row.state === 'completed') return;
+			if (!awaitsDbExecution(row)) throw new Error('Queue outbox execution payload does not match');
+			if (row.state === 'deadLetter') throw new Error(row.lastError?.message ?? 'Queue outbox job is dead-lettered');
 			await task(tx);
-			await tx.delete(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
-			return true;
+			await tx
+				.update(queueOutbox)
+				.set({
+					state: 'completed',
+					availableAt: new Date(Date.now() + EXECUTION_OUTCOME_TTL_MS),
+					leaseToken: null,
+					leaseExpiresAt: null,
+					lastError: null,
+					updatedAt: new Date(),
+					revision: sql`${queueOutbox.revision} + 1`,
+				})
+				.where(eq(queueOutbox.id, outboxId));
 		});
 	} catch (error) {
 		await db
 			.update(queueOutbox)
 			.set({
-				state: 'ready',
-				availableAt: new Date(),
-				leaseToken: null,
-				leaseExpiresAt: null,
+				...(finalAttempt
+					? {
+							state: 'deadLetter' as const,
+							deadLetterReason: 'deliveryFailed' as const,
+							leaseToken: null,
+							leaseExpiresAt: null,
+						}
+					: {}),
 				lastError: errorDetails(error),
 				updatedAt: new Date(),
 				revision: sql`${queueOutbox.revision} + 1`,
 			})
 			.where(
 				and(
-					eq(queueOutbox.id, job.outboxId),
-					eq(queueOutbox.state, 'publishing'),
-					eq(queueOutbox.leaseToken, job.leaseToken),
+					eq(queueOutbox.id, outboxId),
+					inArray(queueOutbox.state, ['ready', 'publishing', 'published', 'reconciling']),
 				),
 			);
 		throw error;
@@ -674,28 +765,18 @@ export async function enqueueAccountDeleteCoordinatorInOutbox(
 	return id;
 }
 
-/**
- * outbox に積んだ DB ジョブを、ディスパッチャのポーリング (最大1秒) を待たずに発行する低遅延経路。
- *
- * 発行に成功したら outbox 行をここで消す。行を残したままにすると、ジョブが完了して Valkey から
- * 消えた後 (removeOnComplete は既定で completedMaximumCount=30 なので大量削除時はすぐ溢れる) に
- * ディスパッチャが同じ jobId を再作成してしまい、アカウント削除ジョブが二重実行され得る。
- * 発行に失敗した場合は行を残すので、そのままディスパッチャの再送に委ねられる。
- */
-export function publishDbOutboxRowEagerly<K extends OutboxDbJobName>(
+export async function publishDbOutboxRowEagerly(
 	db: MiDrizzleDatabase,
 	dbQueue: DbQueue,
 	outboxId: string,
-	job: Omit<DbJobBulkInput<K>, 'opts'> & { opts: Bull.BulkJobOptions },
 ): Promise<void> {
-	return (async () => {
-		await addDbJobs(dbQueue, [
-			{ name: job.name, data: job.data, opts: { ...job.opts, jobId: `outbox-${outboxId}` } } as DbJobBulkInput<K>,
-		]);
-		await db.delete(queueOutbox).where(and(eq(queueOutbox.id, outboxId), eq(queueOutbox.state, 'ready')));
-	})().catch(() => {
-		// 発行できなかった行はそのまま残るので、ディスパッチャが次のポーリングで再送する
-	});
+	try {
+		const { rows, leaseToken } = await claimReadyRows(db, outboxId);
+		await publishClaimedDbRows(db, dbQueue, rows, leaseToken);
+	} catch (error) {
+		// 投稿・削除の transaction は確定済み。SQL に残る行はポーリングで回復する。
+		console.error(`Failed to eagerly publish outbox ${outboxId}`, error);
+	}
 }
 
 type ClaimedRows = {
@@ -703,16 +784,19 @@ type ClaimedRows = {
 	leaseToken: string;
 };
 
-async function claimReadyRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
+async function claimReadyRows(db: MiDrizzleDatabase, outboxId?: string): Promise<ClaimedRows> {
 	const now = new Date();
 	const leaseToken = genId();
-	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
-	const rows = await db.transaction(async (tx) => {
-		const claimed = await tx
+	const candidates = db.$with('ready_candidates').as(
+		db
 			.select()
 			.from(queueOutbox)
-			.where(sql`(
-			(${queueOutbox.state} = 'ready' AND ${queueOutbox.availableAt} <= ${now})
+			// availableAt の既定値と同じ DB 時計で判定し、JS のミリ秒丸めや時計差で即時発行を遅らせない。
+			.where(
+				and(
+					outboxId == null ? undefined : eq(queueOutbox.id, outboxId),
+					sql`(
+			(${queueOutbox.state} = 'ready' AND ${queueOutbox.availableAt} <= CURRENT_TIMESTAMP)
 			OR (${queueOutbox.state} = 'publishing' AND ${queueOutbox.leaseExpiresAt} <= ${now})
 		) AND (
 			${queueOutbox.kind} <> 'accountDeleteCoordinator'
@@ -720,44 +804,45 @@ async function claimReadyRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
 				SELECT 1 FROM "queue_outbox" AS child
 				WHERE child."coordinatorId" = ${queueOutbox.id}
 			)
-		)`)
+		)`,
+				),
+			)
 			.orderBy(queueOutbox.createdAt)
 			.limit(READY_BATCH_SIZE)
-			.for('update', { skipLocked: true });
-		if (claimed.length === 0) {
-			return [];
-		}
-
-		await tx
+			.for('update', { skipLocked: true }),
+	);
+	const claimed = db.$with('ready_claimed').as(
+		db
 			.update(queueOutbox)
 			.set({
 				state: 'publishing',
 				leaseToken,
-				leaseExpiresAt,
+				leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
 				updatedAt: now,
 				revision: sql`${queueOutbox.revision} + 1`,
 			})
-			.where(
-				inArray(
-					queueOutbox.id,
-					claimed.map((row) => row.id),
-				),
-			);
-		return claimed;
-	});
+			.where(inArray(queueOutbox.id, db.select({ id: candidates.id }).from(candidates)))
+			.returning({ id: queueOutbox.id }),
+	);
+	// ロック付き候補 CTE は更新完了まで保持される。返す payload は更新前の候補から取り、再取得しない。
+	const rows = await db
+		.with(candidates, claimed)
+		.select()
+		.from(candidates)
+		.where(inArray(candidates.id, db.select({ id: claimed.id }).from(claimed)))
+		.orderBy(candidates.createdAt);
 	return { rows, leaseToken };
 }
 
 async function claimPublishedRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
 	const now = new Date();
 	const leaseToken = genId();
-	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
-	const rows = await db.transaction(async (tx) => {
-		const claimed = await tx
+	const selectCandidates = (queue: string) =>
+		db
 			.select()
 			.from(queueOutbox)
 			.where(sql`
-			${queueOutbox.queue} = ${QUEUE.DELIVER} AND (
+			${queueOutbox.queue} = ${queue} AND (
 				(${queueOutbox.state} = 'published' AND ${queueOutbox.availableAt} <= ${now})
 				OR (${queueOutbox.state} = 'reconciling' AND ${queueOutbox.leaseExpiresAt} <= ${now})
 			)
@@ -765,32 +850,123 @@ async function claimPublishedRows(db: MiDrizzleDatabase): Promise<ClaimedRows> {
 			.orderBy(queueOutbox.availableAt, queueOutbox.createdAt)
 			.limit(RECONCILE_BATCH_SIZE)
 			.for('update', { skipLocked: true });
-		if (claimed.length === 0) {
-			return [];
-		}
-
-		await tx
+	// 各 queue の上限を独立に適用し、一方の滞留で他方の再調停を飢餓状態にしない。
+	const deliveryCandidates = db.$with('delivery_candidates').as(selectCandidates(QUEUE.DELIVER));
+	const dbCandidates = db.$with('db_candidates').as(selectCandidates(QUEUE.DB));
+	const candidates = db
+		.$with('published_candidates')
+		.as(db.select().from(deliveryCandidates).unionAll(db.select().from(dbCandidates)));
+	const claimed = db.$with('published_claimed').as(
+		db
 			.update(queueOutbox)
 			.set({
 				state: 'reconciling',
 				leaseToken,
-				leaseExpiresAt,
+				leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
 				updatedAt: now,
 				revision: sql`${queueOutbox.revision} + 1`,
 			})
-			.where(
-				inArray(
-					queueOutbox.id,
-					claimed.map((row) => row.id),
-				),
-			);
-		return claimed;
-	});
+			.where(inArray(queueOutbox.id, db.select({ id: candidates.id }).from(candidates)))
+			.returning({ id: queueOutbox.id }),
+	);
+	// データ変更 CTE は参照されなくても完走する。completed の削除と claim の対象状態は交差しない。
+	const expired = db
+		.$with('expired_outcomes')
+		.as(db.delete(queueOutbox).where(and(eq(queueOutbox.state, 'completed'), lt(queueOutbox.availableAt, now))));
+	const rows = await db
+		.with(deliveryCandidates, dbCandidates, candidates, claimed, expired)
+		.select()
+		.from(candidates)
+		.where(inArray(candidates.id, db.select({ id: claimed.id }).from(claimed)))
+		.orderBy(candidates.availableAt, candidates.createdAt);
 	return { rows, leaseToken };
 }
 
 function claimedWhere(ids: string[], state: 'publishing' | 'reconciling', leaseToken: string) {
 	return and(inArray(queueOutbox.id, ids), eq(queueOutbox.state, state), eq(queueOutbox.leaseToken, leaseToken));
+}
+
+/**
+ * リース期限は他の実行者が取得できる時刻であり、実行中の排他は行ロックが担う。
+ * 待機後は必ず token/state を再確認する。同じ token の期限超過はロック取得で再取得し、
+ * 引継ぎ済みの古い実行者には副作用も完了更新も許さない。強制停止では SQL が rollback される。
+ */
+async function withOutboxClaim(
+	db: MiDrizzleDatabase,
+	ids: string[],
+	state: 'publishing' | 'reconciling',
+	leaseToken: string,
+	task: (tx: MiDrizzleDatabase, rows: QueueOutboxRow[]) => Promise<void>,
+): Promise<number> {
+	if (ids.length === 0) return 0;
+	return await db.transaction(async (transaction) => {
+		const tx = transaction as MiDrizzleDatabase;
+		const rows = await tx
+			.select()
+			.from(queueOutbox)
+			.where(claimedWhere(ids, state, leaseToken))
+			.orderBy(queueOutbox.id)
+			.for('update');
+		if (rows.length === 0) return 0;
+		await task(tx, rows);
+		return rows.length;
+	});
+}
+
+async function publishClaimedDbRows(
+	db: MiDrizzleDatabase,
+	dbQueue: DbQueue,
+	rows: QueueOutboxRow[],
+	leaseToken: string,
+): Promise<number> {
+	const ids = rows.map((row) => row.id);
+	try {
+		return await withOutboxClaim(db, ids, 'publishing', leaseToken, async (tx, owned) => {
+			const jobs: DbJobBulkInput[] = [];
+			const validIds: string[] = [];
+			const executionIds: string[] = [];
+			const invalidIds: string[] = [];
+			for (const row of owned) {
+				const job = parseDbOutboxJob(row);
+				if (job == null) {
+					invalidIds.push(row.id);
+				} else {
+					jobs.push(job);
+					if (awaitsDbExecution(row)) executionIds.push(row.id);
+					else validIds.push(row.id);
+				}
+			}
+			await markDeadLetter(tx, invalidIds, 'publishing', leaseToken, 'invalidPayload', {
+				message: 'Queue outbox payload is invalid',
+			});
+			if (jobs.length === 0) return;
+			await addDbJobs(dbQueue, jobs);
+			// 通常の DB job は受理まで。応答が待つステージだけは実行確認まで SQL を保持する。
+			if (validIds.length > 0) await tx.delete(queueOutbox).where(claimedWhere(validIds, 'publishing', leaseToken));
+			if (executionIds.length > 0) {
+				await tx
+					.update(queueOutbox)
+					.set({
+						state: 'published',
+						availableAt: new Date(Date.now() + 1000),
+						leaseToken: null,
+						leaseExpiresAt: null,
+						lastError: null,
+						updatedAt: new Date(),
+						revision: sql`${queueOutbox.revision} + 1`,
+					})
+					.where(claimedWhere(executionIds, 'publishing', leaseToken));
+			}
+		});
+	} catch (error) {
+		await releaseDbOutboxJobs(
+			db,
+			ids.map((outboxId) => ({ outboxId, leaseToken })),
+			error,
+			1000,
+		);
+		return 0;
+	}
 }
 
 async function markDeadLetter(
@@ -816,29 +992,6 @@ async function markDeadLetter(
 			revision: sql`${queueOutbox.revision} + 1`,
 		})
 		.where(claimedWhere(ids, claimedState, leaseToken));
-}
-
-async function releaseReadyClaims(
-	db: MiDrizzleDatabase,
-	ids: string[],
-	leaseToken: string,
-	error: unknown,
-): Promise<void> {
-	if (ids.length === 0) {
-		return;
-	}
-	await db
-		.update(queueOutbox)
-		.set({
-			state: 'ready',
-			availableAt: new Date(Date.now() + 1000),
-			leaseToken: null,
-			leaseExpiresAt: null,
-			lastError: errorDetails(error),
-			updatedAt: new Date(),
-			revision: sql`${queueOutbox.revision} + 1`,
-		})
-		.where(claimedWhere(ids, 'publishing', leaseToken));
 }
 
 async function dispatchReadyOutbox(
@@ -869,42 +1022,47 @@ async function dispatchReadyOutbox(
 	if (deliverRows.length > 0) {
 		const ids = deliverRows.map(({ row }) => row.id);
 		try {
-			await addDeliverJobs(
-				deliverQueue,
-				deliverRows.map(({ job }) => job),
-			);
-			await db
-				.update(queueOutbox)
-				.set({
-					state: 'published',
-					availableAt: new Date(Date.now() + 1000),
-					pollIntervalMs: 1000,
-					leaseToken: null,
-					leaseExpiresAt: null,
-					lastError: null,
-					updatedAt: new Date(),
-					revision: sql`${queueOutbox.revision} + 1`,
-				})
-				.where(claimedWhere(ids, 'publishing', leaseToken));
-			dispatched += ids.length;
+			dispatched += await withOutboxClaim(db, ids, 'publishing', leaseToken, async (tx, owned) => {
+				await addDeliverJobs(
+					deliverQueue,
+					owned.map((row) => parseDeliverOutboxJob(row)!),
+				);
+				await tx
+					.update(queueOutbox)
+					.set({
+						state: 'published',
+						availableAt: new Date(Date.now() + 1000),
+						pollIntervalMs: 1000,
+						leaseToken: null,
+						leaseExpiresAt: null,
+						lastError: null,
+						updatedAt: new Date(),
+						revision: sql`${queueOutbox.revision} + 1`,
+					})
+					.where(
+						claimedWhere(
+							owned.map((row) => row.id),
+							'publishing',
+							leaseToken,
+						),
+					);
+			});
 		} catch (error) {
-			await releaseReadyClaims(db, ids, leaseToken, error);
+			await releaseDbOutboxJobs(
+				db,
+				ids.map((outboxId) => ({ outboxId, leaseToken })),
+				error,
+				1000,
+			);
 		}
 	}
 
-	if (dbRows.length > 0) {
-		const ids = dbRows.map(({ row }) => row.id);
-		try {
-			await addDbJobs(
-				dbQueue,
-				dbRows.map(({ job }) => job),
-			);
-			await db.delete(queueOutbox).where(claimedWhere(ids, 'publishing', leaseToken));
-			dispatched += ids.length;
-		} catch (error) {
-			await releaseReadyClaims(db, ids, leaseToken, error);
-		}
-	}
+	dispatched += await publishClaimedDbRows(
+		db,
+		dbQueue,
+		dbRows.map(({ row }) => row),
+		leaseToken,
+	);
 
 	return dispatched;
 }
@@ -931,72 +1089,127 @@ async function restorePublishedRows(db: MiDrizzleDatabase, rows: QueueOutboxRow[
 	}
 }
 
-async function reconcilePublishedDeliveries(db: MiDrizzleDatabase, deliverQueue: DeliverQueue): Promise<void> {
-	const { rows, leaseToken } = await claimPublishedRows(db);
+async function reconcilePublishedDeliveries(
+	db: MiDrizzleDatabase,
+	deliverQueue: DeliverQueue,
+	{ rows, leaseToken }: ClaimedRows,
+): Promise<void> {
 	if (rows.length === 0) {
 		return;
 	}
 
-	const validRows = rows.filter((row) => parseDeliverOutboxJob(row) != null);
-	const invalidIds = rows.filter((row) => parseDeliverOutboxJob(row) == null).map((row) => row.id);
-	await markDeadLetter(db, invalidIds, 'reconciling', leaseToken, 'invalidPayload', {
-		message: 'Queue outbox payload is invalid',
-	});
+	await withOutboxClaim(
+		db,
+		rows.map((row) => row.id),
+		'reconciling',
+		leaseToken,
+		async (db, rows) => {
+			const validRows = rows.filter((row) => parseDeliverOutboxJob(row) != null);
+			const invalidIds = rows.filter((row) => parseDeliverOutboxJob(row) == null).map((row) => row.id);
+			await markDeadLetter(db, invalidIds, 'reconciling', leaseToken, 'invalidPayload', {
+				message: 'Queue outbox payload is invalid',
+			});
 
-	const states = await resolveDeliverJobStates(
-		deliverQueue,
-		validRows.map((row) => outboxJobId(row)),
-	);
-	const byState = (target: DeliverJobState) => validRows.filter((row) => states.get(outboxJobId(row)) === target);
-	const completed = byState('completed');
-	const failed = byState('failed');
-	const unknown = byState('unknown');
-	const waiting = validRows.filter((row) => {
-		const state = states.get(outboxJobId(row));
-		return state !== 'completed' && state !== 'failed' && state !== 'unknown';
-	});
-
-	await Promise.all(completed.map((row) => deliverQueue.remove(outboxJobId(row))));
-	if (completed.length > 0) {
-		await db.delete(queueOutbox).where(
-			claimedWhere(
-				completed.map((row) => row.id),
-				'reconciling',
-				leaseToken,
-			),
-		);
-	}
-
-	for (const row of failed) {
-		const job = await deliverQueue.getJob(outboxJobId(row));
-		await markDeadLetter(db, [row.id], 'reconciling', leaseToken, 'deliveryFailed', {
-			message: job?.failedReason ?? 'Delivery job failed',
-			...(job == null ? {} : { attemptsMade: job.attemptsMade }),
-			...(job?.stacktrace == null ? {} : { stacktrace: job.stacktrace }),
-		});
-	}
-
-	if (unknown.length > 0) {
-		await db
-			.update(queueOutbox)
-			.set({
-				state: 'ready',
-				availableAt: new Date(),
-				pollIntervalMs: 1000,
-				leaseToken: null,
-				leaseExpiresAt: null,
-				updatedAt: new Date(),
-				revision: sql`${queueOutbox.revision} + 1`,
-			})
-			.where(
-				claimedWhere(
-					unknown.map((row) => row.id),
-					'reconciling',
-					leaseToken,
-				),
+			const states = await resolveDeliverJobStates(
+				deliverQueue,
+				validRows.map((row) => outboxJobId(row)),
 			);
-	}
-	await restorePublishedRows(db, waiting, leaseToken);
+			const byState = (target: DeliverJobState) => validRows.filter((row) => states.get(outboxJobId(row)) === target);
+			const completed = byState('completed');
+			const failed = byState('failed');
+			const unknown = byState('unknown');
+			const waiting = validRows.filter((row) => {
+				const state = states.get(outboxJobId(row));
+				return state !== 'completed' && state !== 'failed' && state !== 'unknown';
+			});
+
+			await Promise.all(completed.map((row) => deliverQueue.remove(outboxJobId(row))));
+			if (completed.length > 0) {
+				await db.delete(queueOutbox).where(
+					claimedWhere(
+						completed.map((row) => row.id),
+						'reconciling',
+						leaseToken,
+					),
+				);
+			}
+
+			for (const row of failed) {
+				const job = await deliverQueue.getJob(outboxJobId(row));
+				await markDeadLetter(db, [row.id], 'reconciling', leaseToken, 'deliveryFailed', {
+					message: job?.failedReason ?? 'Delivery job failed',
+					...(job == null ? {} : { attemptsMade: job.attemptsMade }),
+					...(job?.stacktrace == null ? {} : { stacktrace: job.stacktrace }),
+				});
+			}
+
+			if (unknown.length > 0) {
+				await db
+					.update(queueOutbox)
+					.set({
+						state: 'ready',
+						availableAt: new Date(),
+						pollIntervalMs: 1000,
+						leaseToken: null,
+						leaseExpiresAt: null,
+						updatedAt: new Date(),
+						revision: sql`${queueOutbox.revision} + 1`,
+					})
+					.where(
+						claimedWhere(
+							unknown.map((row) => row.id),
+							'reconciling',
+							leaseToken,
+						),
+					);
+			}
+			await restorePublishedRows(db, waiting, leaseToken);
+		},
+	);
+}
+
+async function reconcilePublishedDbExecutions(
+	db: MiDrizzleDatabase,
+	dbQueue: DbQueue,
+	{ rows, leaseToken }: ClaimedRows,
+): Promise<void> {
+	await withOutboxClaim(
+		db,
+		rows.map((row) => row.id),
+		'reconciling',
+		leaseToken,
+		async (tx, owned) => {
+			const waiting: QueueOutboxRow[] = [];
+			for (const row of owned) {
+				const job = await dbQueue.getJob(outboxJobId(row));
+				const state = await job?.getState();
+				if (job != null && state === 'failed') {
+					await markDeadLetter(tx, [row.id], 'reconciling', leaseToken, 'deliveryFailed', {
+						message: job.failedReason || 'DB stage failed',
+						attemptsMade: job.attemptsMade,
+					});
+				} else if (job == null || state === 'unknown' || state === 'completed') {
+					// Bull の消失・完了だけでは実行を認めない。SQL 完了がなければ元の payload で再発行する。
+					if (state === 'completed') await job?.remove();
+					await tx
+						.update(queueOutbox)
+						.set({
+							state: 'ready',
+							availableAt: new Date(),
+							leaseToken: null,
+							leaseExpiresAt: null,
+							pollIntervalMs: 1000,
+							updatedAt: new Date(),
+							revision: sql`${queueOutbox.revision} + 1`,
+						})
+						.where(claimedWhere([row.id], 'reconciling', leaseToken));
+				} else {
+					waiting.push(row);
+				}
+			}
+			await restorePublishedRows(tx, waiting, leaseToken);
+		},
+	);
 }
 
 export async function dispatchQueueOutbox(
@@ -1004,7 +1217,15 @@ export async function dispatchQueueOutbox(
 	dbQueue: DbQueue,
 	deliverQueue: DeliverQueue,
 ): Promise<number> {
-	await reconcilePublishedDeliveries(db, deliverQueue);
+	const { rows, leaseToken } = await claimPublishedRows(db);
+	await reconcilePublishedDeliveries(db, deliverQueue, {
+		rows: rows.filter((row) => row.queue === QUEUE.DELIVER),
+		leaseToken,
+	});
+	await reconcilePublishedDbExecutions(db, dbQueue, {
+		rows: rows.filter((row) => row.queue === QUEUE.DB),
+		leaseToken,
+	});
 	return await dispatchReadyOutbox(db, dbQueue, deliverQueue);
 }
 
@@ -1017,7 +1238,7 @@ export async function getQueueOutboxStats(db: MiDrizzleDatabase): Promise<{
 }> {
 	const [stats] = await db
 		.select({
-			pending: sql<number>`count(*) FILTER (WHERE ${queueOutbox.state} <> 'deadLetter')::integer`,
+			pending: sql<number>`count(*) FILTER (WHERE ${queueOutbox.state} NOT IN ('deadLetter', 'completed'))::integer`,
 			deadLetter: sql<number>`count(*) FILTER (WHERE ${queueOutbox.state} = 'deadLetter')::integer`,
 			deliveryFailed: sql<number>`count(*) FILTER (WHERE ${queueOutbox.deadLetterReason} = 'deliveryFailed')::integer`,
 			invalidPayload: sql<number>`count(*) FILTER (WHERE ${queueOutbox.deadLetterReason} = 'invalidPayload')::integer`,
@@ -1025,7 +1246,7 @@ export async function getQueueOutboxStats(db: MiDrizzleDatabase): Promise<{
 			// 経過時間の計算自体を SQL 側で済ませて double precision (= pg が number にパースする型) で受ける。
 			oldestPendingAgeMs: sql<
 				number | null
-			>`(extract(epoch from (now() - min(${queueOutbox.createdAt}) FILTER (WHERE ${queueOutbox.state} <> 'deadLetter'))) * 1000)::double precision`,
+			>`(extract(epoch from (now() - min(${queueOutbox.createdAt}) FILTER (WHERE ${queueOutbox.state} NOT IN ('deadLetter', 'completed')))) * 1000)::double precision`,
 		})
 		.from(queueOutbox);
 	if (stats == null) {

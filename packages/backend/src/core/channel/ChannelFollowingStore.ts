@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { channelFollowing } from '@/db/schema/channel-following.js';
 import type { ChannelFollowingInsert, ChannelFollowingRow } from '@/db/schema/channel-following.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -33,20 +33,25 @@ function applyChannelFollowingPaginationCondition(
 	}
 }
 
+const channelFollowingExistsPlan = defineQueryPlan((db) => {
+	const selection = { id: channelFollowing.id };
+	return {
+		query: db
+			.select(selection)
+			.from(channelFollowing)
+			.where(channelFollowingCondition(sql.placeholder('userId'), sql.placeholder('channelId')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(channelFollowing)] },
+	};
+});
+
 export async function channelFollowingExistsInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	channelId: MiChannel['id'],
 ): Promise<boolean> {
-	const statement = preparedQueryFor(db, 'channelFollowing:exists', () =>
-		db
-			.select({ id: channelFollowing.id })
-			.from(channelFollowing)
-			.where(channelFollowingCondition(sql.placeholder('userId'), sql.placeholder('channelId')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ userId, channelId });
+	const [row] = await channelFollowingExistsPlan.execute(db, { userId, channelId });
 
 	return row != null;
 }
@@ -66,18 +71,23 @@ export async function deleteChannelFollowingFromDatabase(
 	await db.delete(channelFollowing).where(channelFollowingCondition(userId, channelId));
 }
 
+const channelFollowingFollowedChannelIdsByUserIdPlan = defineQueryPlan((db) => {
+	const selection = { followeeId: channelFollowing.followeeId };
+	return {
+		query: db
+			.select(selection)
+			.from(channelFollowing)
+			.where(eq(channelFollowing.followerId, sql.placeholder('userId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(channelFollowing)] },
+	};
+});
+
 export async function listFollowedChannelIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiChannel['id'][]> {
-	const statement = preparedQueryFor(db, 'channelFollowing:followedChannelIdsByUserId', () =>
-		db
-			.select({ followeeId: channelFollowing.followeeId })
-			.from(channelFollowing)
-			.where(eq(channelFollowing.followerId, sql.placeholder('userId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId });
+	const rows = await channelFollowingFollowedChannelIdsByUserIdPlan.execute(db, { userId });
 
 	return rows.map((row) => row.followeeId);
 }

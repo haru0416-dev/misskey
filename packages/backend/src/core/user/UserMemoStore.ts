@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, sql } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { and, eq, sql, getTableName } from 'drizzle-orm';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { userMemo } from '@/db/schema/user-memo.js';
 import type { UserMemoInsert } from '@/db/schema/user-memo.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -30,25 +30,50 @@ export async function upsertUserMemoInDatabase(db: MiDrizzleDatabase, data: User
 		});
 }
 
+const userMemoTextByUserIdAndTargetUserIdPlan = defineQueryPlan((db) => {
+	const selection = { memo: userMemo.memo };
+	return {
+		query: db
+			.select(selection)
+			.from(userMemo)
+			.where(
+				and(eq(userMemo.userId, sql.placeholder('userId')), eq(userMemo.targetUserId, sql.placeholder('targetUserId'))),
+			)
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userMemo)] },
+	};
+});
+
 export async function fetchUserMemoTextFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	targetUserId: MiUser['id'],
 ): Promise<string | null> {
-	const statement = preparedQueryFor(db, 'userMemo:textByUserIdAndTargetUserId', () =>
-		db
-			.select({ memo: userMemo.memo })
-			.from(userMemo)
-			.where(
-				and(eq(userMemo.userId, sql.placeholder('userId')), eq(userMemo.targetUserId, sql.placeholder('targetUserId'))),
-			)
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ userId, targetUserId });
+	const [row] = await userMemoTextByUserIdAndTargetUserIdPlan.execute(db, { userId, targetUserId });
 
 	return row?.memo ?? null;
 }
+
+const userMemoTextsByUserIdPlan = defineQueryPlan((db) => {
+	const selection = {
+		targetUserId: userMemo.targetUserId,
+		memo: userMemo.memo,
+	};
+	return {
+		query: db
+			.select(selection)
+			.from(userMemo)
+			.where(
+				and(
+					eq(userMemo.userId, sql.placeholder('userId')),
+					sql`${userMemo.targetUserId} = ANY(${sql.placeholder('targetUserIds')})`,
+				),
+			),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userMemo)] },
+	};
+});
 
 export async function listUserMemoTextsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
@@ -59,22 +84,7 @@ export async function listUserMemoTextsByUserIdFromDatabase(
 		return new Map();
 	}
 
-	const statement = preparedQueryFor(db, 'userMemo:textsByUserId', () =>
-		db
-			.select({
-				targetUserId: userMemo.targetUserId,
-				memo: userMemo.memo,
-			})
-			.from(userMemo)
-			.where(
-				and(
-					eq(userMemo.userId, sql.placeholder('userId')),
-					sql`${userMemo.targetUserId} = ANY(${sql.placeholder('targetUserIds')})`,
-				),
-			)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId, targetUserIds });
+	const rows = await userMemoTextsByUserIdPlan.execute(db, { userId, targetUserIds });
 
 	return new Map(rows.map((row) => [row.targetUserId, row.memo]));
 }

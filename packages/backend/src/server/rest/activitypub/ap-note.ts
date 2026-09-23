@@ -53,13 +53,13 @@ import type { ApiApResolveDependencies } from './ap-resolve.js';
 import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePersonForApi } from './ap-person.js';
 import type { ApiApPersonDependencies } from './ap-person.js';
 import { deliverQuestionUpdateForApi } from './notes-ap.js';
-import { createNoteForApi } from '../note/notes-create.js';
-import type { CreateNoteData, ApiNotesCreateDependencies } from '../note/notes-create.js';
+import { createNote } from '@/core/note/NoteCreationService.js';
+import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 
 export type ApiApNoteDependencies = ApiApPersonDependencies &
 	ApiApResolveDependencies &
-	ApiNotesCreateDependencies & {
+	NoteCreationDependencies & {
 		redis: Redis.Redis;
 		publishNoteStream?: ApiNoteStreamPublisher;
 	};
@@ -316,7 +316,7 @@ async function voteFromApForApi(
 	deps.publishNoteStream?.(note, 'pollVoted', { choice, userId: actor.id });
 }
 
-/** 禁止ワードは actor 解決後、ノート作成前に createNoteForApi 内で必ず検査する。 */
+/** 禁止ワードは actor 解決後、ノート作成前に createNote 内で必ず検査する。 */
 export async function createNoteFromApForApi(
 	deps: ApiApNoteDependencies,
 	value: string | IObject,
@@ -489,7 +489,7 @@ export async function createNoteFromApForApi(
 	});
 
 	try {
-		return await createNoteForApi(deps, actor, data, silent);
+		return await createNote(deps, actor, data, silent);
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
 			const duplicate = await getNoteFromApIdForApi(deps, value);

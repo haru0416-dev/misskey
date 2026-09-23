@@ -55,13 +55,13 @@ async function unindexNoteForApi(
 
 export async function handleQueueDeleteAccount(
 	deps: QueueDeleteAccountDependencies,
-	job: Bull.Job<DbUserDeleteJobData>,
+	data: DbUserDeleteJobData,
 ): Promise<string | void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
-	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
+	if (user.host == null && !data.soft && data.accountDeleteCoordinatorId == null) {
 		throw new Bull.UnrecoverableError('Local account deletion requires an outbox coordinator');
 	}
 
@@ -147,8 +147,8 @@ export async function handleQueueDeleteAccount(
 		}
 	}
 
-	if (!job.data.soft) {
-		await deleteUserByIdFromDatabase(deps.db, job.data.user.id);
+	if (!data.soft) {
+		await deleteUserByIdFromDatabase(deps.db, data.user.id);
 	}
 
 	return 'Account deleted';

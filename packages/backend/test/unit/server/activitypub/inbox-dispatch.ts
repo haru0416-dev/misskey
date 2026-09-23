@@ -24,8 +24,9 @@ import { genId } from '@/misc/id/gen-id.js';
 import { performOneActivityForApi } from '@/server/activitypub/inbox-dispatch.js';
 import type { ApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
-import type { IFollow, IMove, IObject } from '@/core/activitypub/type.js';
+import type { IAccept, IFollow, IMove, IObject } from '@/core/activitypub/type.js';
 import { createNoteFromApForApi } from '@/server/rest/activitypub/ap-note.js';
+import { unfollow } from '@/server/rest/account/account-blocking.js';
 import { StatusError } from '@/misc/status-error.js';
 
 function asRemote(user: MiUser): MiRemoteUser {
@@ -313,6 +314,57 @@ describe('hono-ap-inbox performOneActivityForApi', () => {
 
 		const request = await fetchFollowRequestFromDatabase(deps.db, actor.id, followee.id);
 		expect(request).not.toBeNull();
+	});
+
+	test('Accept(Follow): 承認の再配送で関係と集計を重複させず、解除後は復活させない', async () => {
+		const actor = await createTestRemoteUser(deps, 'repeataccept', 'repeat-accept.example.com');
+		const follower = await createTestLocalUser(deps, 'acceptfollower');
+		const requestId = genId();
+		await createFollowRequestInDatabase(deps.db, {
+			id: requestId,
+			followerId: follower.id,
+			followeeId: actor.id,
+		});
+		const follow: IFollow = {
+			type: 'Follow',
+			id: `${deps.config.instance.url}/follows/${requestId}`,
+			actor: localUserUri(deps, follower),
+			object: actor.uri!,
+		};
+		const activity: IAccept = {
+			type: 'Accept',
+			id: `https://${actor.host}/accepts/${genId()}`,
+			actor: actor.uri!,
+			object: follow,
+		};
+
+		await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
+		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, actor.id);
+		expect(following).not.toBeNull();
+		expect(await fetchFollowRequestFromDatabase(deps.db, follower.id, actor.id)).toBeNull();
+		await Promise.all(
+			Array.from({ length: 3 }, () =>
+				performOneActivityForApi(
+					deps,
+					asRemote(actor),
+					{ ...activity, id: `https://${actor.host}/accepts/${genId()}` },
+					new Set(),
+				),
+			),
+		);
+		expect((await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, actor.id))?.id).toBe(
+			following!.id,
+		);
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, follower.id)).followingCount).toBe(1);
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, actor.id)).followersCount).toBe(1);
+
+		await unfollow(deps, follower, actor);
+		await expect(performOneActivityForApi(deps, asRemote(actor), activity, new Set())).rejects.toMatchObject({
+			code: 'NO_FOLLOW_REQUEST',
+		});
+		expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, actor.id)).toBeNull();
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, follower.id)).followingCount).toBe(0);
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, actor.id)).followersCount).toBe(0);
 	});
 
 	test('Undo(Follow): 既存のフォローリクエストを取り消す', async () => {

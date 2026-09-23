@@ -10,8 +10,9 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
@@ -25,7 +26,7 @@ import type { DbQueue } from '@/core/queue/queues.js';
 
 describe('addDriveFileForApi quota serialization', () => {
 	let config: Config;
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let meta: MiMeta;
 	let user: MiUser;
@@ -33,8 +34,8 @@ describe('addDriveFileForApi quota serialization', () => {
 
 	beforeAll(async () => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		meta = {
 			...(await fetchMetaFromDatabase(db)),
 			useObjectStorage: true,
@@ -60,7 +61,7 @@ describe('addDriveFileForApi quota serialization', () => {
 
 	afterAll(async () => {
 		await deleteUserByIdFromDatabase(db, user.id);
-		await pool.end();
+		await pool.close();
 		await fs.rm(tempDir, { recursive: true, force: true });
 	});
 

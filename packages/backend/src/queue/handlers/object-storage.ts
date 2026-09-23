@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Bull from 'bullmq';
+import type { QueueProgressReporter } from '@/queue/types.js';
 import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	countRemoteCachedDriveFilesFromDatabase,
@@ -112,7 +112,7 @@ export async function deleteFileSyncForApi(
 
 export async function handleQueueCleanRemoteFiles(
 	deps: QueueObjectStorageDependencies,
-	job: Bull.Job<Record<string, unknown>>,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
 	let deletedCount = 0;
 	let cursor: MiDriveFile['id'] | null = null;
@@ -126,7 +126,7 @@ export async function handleQueueCleanRemoteFiles(
 		});
 
 		if (files.length === 0) {
-			job.updateProgress(100);
+			updateProgress(100);
 			break;
 		}
 
@@ -136,14 +136,14 @@ export async function handleQueueCleanRemoteFiles(
 
 		deletedCount += 8;
 
-		job.updateProgress((deletedCount * total) / 100);
+		updateProgress((deletedCount * total) / 100);
 	}
 }
 
 export async function handleQueueDeleteFile(
 	deps: QueueObjectStorageDependencies,
-	job: Bull.Job<ObjectStorageFileJobData>,
+	data: ObjectStorageFileJobData,
 ): Promise<string> {
-	await deleteObjectStorageFileForApi(deps, job.data.key);
+	await deleteObjectStorageFileForApi(deps, data.key);
 	return 'Success';
 }

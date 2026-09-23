@@ -8,7 +8,7 @@ import { bindThis } from '@/decorators.js';
 export class MemoryKVCache<T> {
 	private readonly cache = new Map<string, { date: number; value: T }>();
 	private readonly pendingFetches = new Map<string, Promise<T | undefined>>();
-	private readonly gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3);
+	private readonly gcIntervalHandle: NodeJS.Timeout;
 	private readonly limit: number;
 
 	constructor(
@@ -19,6 +19,8 @@ export class MemoryKVCache<T> {
 			throw new TypeError('limit must be a positive finite integer');
 		}
 		this.limit = limit ?? Infinity;
+		// 期限は get でも検査するため、メモリ回収だけのタイマーでプロセスを生存させない。
+		this.gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3).unref();
 	}
 
 	@bindThis

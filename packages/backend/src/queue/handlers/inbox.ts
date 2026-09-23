@@ -84,10 +84,10 @@ export async function flushQueueInboxUpdateInstanceQueue(): Promise<void> {
 
 async function verifyAndResolveAuthUser(
 	deps: QueueInboxDependencies,
-	job: Bull.Job<InboxJobData>,
+	data: InboxJobData,
 ): Promise<{ authUser: ApiAuthUser; activity: IActivity } | string> {
-	const signature = job.data.signature;
-	let activity = job.data.activity;
+	const signature = data.signature;
+	let activity = data.activity;
 
 	// actor はリモート入力なので欠ける場合がある。ここで拒否しないと以降の
 	// getApId() が「cannot determine id」を投げ、UnrecoverableError ではないため
@@ -230,18 +230,18 @@ async function verifyAndResolveAuthUser(
 	return { authUser, activity };
 }
 
-export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.Job<InboxJobData>): Promise<string> {
-	const host = toPuny(new URL(job.data.signature.keyId).hostname);
+export async function handleQueueInbox(deps: QueueInboxDependencies, data: InboxJobData): Promise<string> {
+	const host = toPuny(new URL(data.signature.keyId).hostname);
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
 		return `Blocked request: ${host}`;
 	}
 
-	const keyIdLower = job.data.signature.keyId.toLowerCase();
+	const keyIdLower = data.signature.keyId.toLowerCase();
 	if (keyIdLower.startsWith('acct:')) {
 		return `Old keyId is no longer supported. ${keyIdLower}`;
 	}
 
-	const verified = await verifyAndResolveAuthUser(deps, job);
+	const verified = await verifyAndResolveAuthUser(deps, data);
 	if (typeof verified === 'string') {
 		return verified;
 	}

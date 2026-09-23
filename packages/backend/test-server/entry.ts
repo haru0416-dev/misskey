@@ -1,20 +1,20 @@
-import type { Server } from 'node:http';
+import { serve } from 'bun';
 import { Hono } from 'hono';
 import { Redis } from 'ioredis';
 import { loadConfig } from '@/config.js';
-import { createDrizzlePool } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
-import { createNodeServer } from '@/server/node-server.js';
 import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
 import type { ServerRuntime } from '@/boot/server.js';
+
+if (process.env['NODE_ENV'] !== 'test') {
+	throw new Error('The test controller is only available in the test environment.');
+}
 
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
-process.env['NODE_ENV'] = 'test';
-
 let runtime: ServerRuntime | undefined;
-let controllerServer: Server | undefined;
+let controllerServer: Bun.Server | undefined;
 let controllerOperation = Promise.resolve();
 
 async function runControllerOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -37,8 +37,11 @@ export async function setup() {
 }
 
 export async function teardown() {
-	await stopApplication();
-	await stopControllerEndpoints();
+	try {
+		await stopControllerEndpoints();
+	} finally {
+		await stopApplication();
+	}
 }
 
 async function startApplication() {
@@ -91,13 +94,8 @@ async function startControllerEndpoints(
 				await stopApplication();
 				process.env = JSON.parse(originEnv);
 
-				const pool = createDrizzlePool(config);
-				try {
-					await resetDatabase(pool);
-					await runMigrations(pool);
-				} finally {
-					await pool.end();
-				}
+				await resetDatabase(config);
+				await runMigrations(config);
 
 				const redis = new Redis(config.valkey.primary);
 				try {
@@ -115,13 +113,10 @@ async function startControllerEndpoints(
 		});
 	});
 
-	controllerServer = createNodeServer({ app: controller });
-	await new Promise<void>((resolve, reject) => {
-		controllerServer!.once('error', reject);
-		controllerServer!.listen(port, 'localhost', () => {
-			controllerServer!.off('error', reject);
-			resolve();
-		});
+	controllerServer = serve({
+		hostname: 'localhost',
+		port,
+		fetch: (request) => controller.fetch(request),
 	});
 }
 
@@ -130,8 +125,8 @@ async function stopControllerEndpoints() {
 		return;
 	}
 
-	await new Promise<void>((resolve, reject) => {
-		controllerServer!.close((err) => (err ? reject(err) : resolve()));
-	});
+	// 受理済みの reset が終了してから application を止め、停止後の再起動を防ぐ。
+	await controllerServer.stop();
+	await controllerOperation;
 	controllerServer = undefined;
 }

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, gt, lt, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { renoteMuting } from '@/db/schema/renote-muting.js';
 import type { RenoteMutingInsert, RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -97,18 +97,23 @@ export async function deleteRenoteMutingsByIdsFromDatabase(
 	await db.delete(renoteMuting).where(inArray(renoteMuting.id, ids));
 }
 
+const renoteMutingMuteeIdsByMuterIdPlan = defineQueryPlan((db) => {
+	const selection = { muteeId: renoteMuting.muteeId };
+	return {
+		query: db
+			.select(selection)
+			.from(renoteMuting)
+			.where(eq(renoteMuting.muterId, sql.placeholder('muterId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(renoteMuting)] },
+	};
+});
+
 export async function listRenoteMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'renoteMuting:muteeIdsByMuterId', () =>
-		db
-			.select({ muteeId: renoteMuting.muteeId })
-			.from(renoteMuting)
-			.where(eq(renoteMuting.muterId, sql.placeholder('muterId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ muterId });
+	const rows = await renoteMutingMuteeIdsByMuterIdPlan.execute(db, { muterId });
 
 	return rows.map((row) => row.muteeId);
 }
