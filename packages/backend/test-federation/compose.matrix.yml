@@ -104,14 +104,27 @@ services:
       - modules-sdk-dev:/misskey/packages/misskey-js/node_modules
       - ./results:/misskey/packages/backend/test-federation/results
 
+# federation の 172.20.0.0/16 は Docker 既定プール内にある。compose はネットワークを並行作成するため、
+# 未指定のネットワークが先に 172.20 を自動割当されると federation が作れない。全ネットワークを明示する。
 networks:
+  default:
+    ipam:
+      config: [{ subnet: 10.231.3.0/24 }]
   federation:
     internal: true
     ipam:
       config: [{ subnet: 172.20.0.0/16 }]
-  database-a: { internal: true }
-  database-b: { internal: true }
+  database-a:
+    internal: true
+    ipam:
+      config: [{ subnet: 10.231.0.0/24 }]
+  database-b:
+    internal: true
+    ipam:
+      config: [{ subnet: 10.231.1.0/24 }]
   internet:
+    ipam:
+      config: [{ subnet: 10.231.2.0/24 }]
 
 volumes:
   modules:
