@@ -119,7 +119,15 @@ visibility, Fedify parsing and all other scenarios remain in place.
 `deliveryBarrier()` observes both peers' actual deliver/inbox/db/relationship
 queue counts (including delayed work), fork durable outbox states and proxy
 in-flight requests, then rechecks the sender after receiver processing. Unexpected
-fork dead-letter entries fail the barrier. Receiver-state assertions follow the
+fork dead-letter entries fail the barrier. A delayed inbox job with a failure
+reason (receiver processing failed and is being retried) fails the barrier at once
+with the job's activity and reason instead of waiting for backoff; the fork cell
+never retries inbox jobs, so this only fires on real receiver failures. Jobs created
+before the current test file loaded were reported by an earlier file and are not
+waited on again. Resilience tests promote the sender's delayed deliver jobs
+(`admin/queue/promote-jobs`) while waiting for a retry: the same job is retried, so
+redelivery and idempotency stay under test, and only the backoff delay is skipped.
+Receiver-state assertions follow the
 barrier; HTTP 202 alone never proves a final effect. Polling intervals are not
 absence proofs. Existing permanent-failure/dead-letter/account-delete coordinator
 regressions remain in `test/unit/queue/{deliver,queue-outbox,delete-account}.ts` and
