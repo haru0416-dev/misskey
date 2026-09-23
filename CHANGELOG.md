@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Enhance: MFMのパースを高速化（構文を始め得ない文字は候補を試さずに読み進め、検索構文は行末で判定。出力は従来と同一で、日本語189字で約27倍・1400字で約66倍）
 - Fix: 間接依存の既知脆弱性を解消（@xmldom/xmldom・fast-uriを修正版へ更新）
 - Enhance: identicon生成・トレース計装・管理ログの差分表示・Google Analytics・型生成の依存を整理し、Tablerの使用資産を同梱
 - Change: 依存パッケージを更新 (`vite` 8.2.2 / `shiki` 4.4.3 / `pg` 8.23.0 / `nodemailer` 9.0.5 / OpenTelemetry 一式ほか計35件。`feed` 6 / `chalk` 6 / `content-disposition` 3 / `node-html-parser` 9 のメジャー更新を含む)
