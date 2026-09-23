@@ -3,11 +3,11 @@ import assert, { strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
 import {
 	createAccount,
-	deepStrictEqualWithExcludedFields,
+	assertAttachment,
+	deliveryBarrier,
 	fetchAdmin,
 	resolveRemoteNote,
 	resolveRemoteUser,
-	sleep,
 	uploadFile,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
@@ -37,14 +37,7 @@ describe('Drive', () => {
 			});
 
 			test('Check consistency of DriveFile', () => {
-				deepStrictEqualWithExcludedFields(image, imageInB, [
-					'id',
-					'createdAt',
-					'size',
-					'url',
-					'thumbnailUrl',
-					'userId',
-				]);
+				assertAttachment(imageInB, image);
 			});
 		});
 
@@ -107,14 +100,14 @@ describe('Drive', () => {
 				]);
 
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 			});
 
 			test('Alice uploads sensitive image and it is shown as sensitive from Bob', async () => {
 				const file = await uploadFile('a.test', alice);
 				await alice.client.request('drive/files/update', { fileId: file.id, isSensitive: true });
 				await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id] });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const notes = await bob.client.request('notes/timeline', {});
 				strictEqual(notes.length, 1);
@@ -163,7 +156,7 @@ describe('Drive', () => {
 				const note = (
 					await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id], replyId: bobNoteInA.id })
 				).createdNote;
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				assert(noteInB.files != null);

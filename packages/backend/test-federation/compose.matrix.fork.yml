@@ -1,0 +1,23 @@
+services:
+  misskey.b.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: misskey
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      db.b.test: { condition: service_healthy }
+      valkey.test: { condition: service_healthy }
+    networks: [federation, database-b, internet]
+    volumes:
+      - ./.config/b.test.config.json:/misskey/built/._config_.json:ro
+      - modules:/misskey/node_modules
+      - modules-backend:/misskey/packages/backend/node_modules
+      - modules-sdk:/misskey/packages/misskey-js/node_modules
+      - files-b:/misskey/files
+
+  db.b.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: db
+    networks: [database-b]
+    volumes: [database-b:/var/lib/postgresql]

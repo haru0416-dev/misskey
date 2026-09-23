@@ -2,24 +2,39 @@ name: Test (federation)
 
 on:
   push:
-    branches:
-      - master
-      - develop
-    paths:
+    branches: [master, develop]
+    paths: &federation-paths
       - packages/backend/**
       - packages/misskey-js/**
+      - packages/slacc/**
+      - packages/mfm-js/**
+      - packages/i18n/**
+      - bun.lock
+      - .gitmodules
+      - bunfig.toml
+      - .bun-version
+      - package.json
+      - Dockerfile
+      - patches/**
+      - scripts/**
+      - deploy/healthcheck.sh
       - .github/workflows/test-federation.yml
   pull_request:
-    paths:
-      - packages/backend/**
-      - packages/misskey-js/**
-      - .github/workflows/test-federation.yml
+    paths: *federation-paths
   workflow_dispatch:
 
 jobs:
   test:
-    name: Federation test
+    name: Federation fork ↔ ${{ matrix.peer }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        peer: [fork, upstream]
+    env:
+      FEDERATION_PEER_B_KIND: ${{ matrix.peer }}
+      COMPOSE_FILE: compose.matrix.yml
+      COMPOSE_PROJECT_NAME: federation-${{ matrix.peer }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -36,45 +51,43 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - name: Install FFmpeg
-        run: |
-          sudo apt install -y ffmpeg
+        run: sudo apt install -y ffmpeg
       - name: Build Misskey
-        # fed コンテナは backend と依存パッケージの成果物をマウントするため、
-        # フロントエンドの vite ビルドは不要 (test-backend.yml と同じ絞り込み)。
         run: |
           bun install --frozen-lockfile
           bun run --filter slacc build
           bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Setup
         run: |
-          echo "BUN_VERSION=$(cat .bun-version)" >> $GITHUB_ENV
+          echo "BUN_VERSION=$(cat .bun-version)" >> "$GITHUB_ENV"
           cd packages/backend/test-federation
           bash ./setup.sh
           sudo chmod 644 ./certificates/*.test.key
-      - name: Start servers
-        id: start_servers
-        continue-on-error: true
-        # https://github.com/docker/compose/issues/1294#issuecomment-374847206
+      - name: Start isolated peers
+        working-directory: packages/backend/test-federation
+        run: docker compose up -d --wait --wait-timeout 240 --scale tester=0
+      - name: Record resolved peers
+        working-directory: packages/backend/test-federation
         run: |
-          cd packages/backend/test-federation
-          docker compose up -d --scale tester=0
-      - name: Print start_servers error
-        if: ${{ steps.start_servers.outcome == 'failure' }}
-        run: |
-          cd packages/backend/test-federation
-          docker compose logs | tail -n 300
-          exit 1
-      - name: Test
-        run: |
-          cd packages/backend/test-federation
-          docker compose run --no-deps tester
-      - name: Log
+          git rev-parse HEAD > results/fork-revision.txt
+          docker compose config > results/compose.yml
+          docker compose images --format json > results/images.json
+          cp upstream.json results/upstream.json
+      - name: Test both sender directions
+        working-directory: packages/backend/test-federation
+        run: docker compose run --no-deps --rm tester
+      - name: Collect peer logs
         if: always()
+        working-directory: packages/backend/test-federation
         run: |
-          cd packages/backend/test-federation
-          docker compose logs
-      - name: Stop servers
+          mkdir -p results
+          docker compose logs --no-color > results/peers.log 2>&1
+      - uses: actions/upload-artifact@v4
         if: always()
-        run: |
-          cd packages/backend/test-federation
-          docker compose down
+        with:
+          name: federation-${{ matrix.peer }}-${{ github.sha }}
+          path: packages/backend/test-federation/results/
+      - name: Stop isolated peers
+        if: always()
+        working-directory: packages/backend/test-federation
+        run: docker compose down --volumes

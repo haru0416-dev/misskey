@@ -1,0 +1,17 @@
+{
+	"repository": "https://github.com/misskey-dev/misskey",
+	"release": "2026.9.0",
+	"commit": "bd9eb7c77942ef11749a04e7a5f24bee935d764b",
+	"image": "misskey/misskey:2026.9.0@sha256:13ea3b432adbe29bf3699da5c7c0bd54775a9c237339ea47c6ec220094dba59a",
+	"linuxAmd64Manifest": "sha256:21b135b771e7c9ed8f566939e34593db6654aa39e1deb8fb317aabc1b43810fd",
+	"linuxArm64Manifest": "sha256:a195d46d6d58898185815be43a20ca92a6cd7ba9032f690756215f7273f3dc3a",
+	"linuxAmd64Config": "sha256:0c1f5cd6502d8b7b59fbdac144d3e54209cb64a6a03900ea4bb67a891b7960b4",
+	"ociRevisionLabel": "bd9eb7c77942ef11749a04e7a5f24bee935d764b",
+	"resolvedAt": "2026-09-09",
+	"sources": [
+		"https://api.github.com/repos/misskey-dev/misskey/releases/tags/2026.9.0",
+		"https://api.github.com/repos/misskey-dev/misskey/git/ref/tags/2026.9.0",
+		"https://registry-1.docker.io/v2/misskey/misskey/manifests/2026.9.0"
+	],
+	"verification": "GitHub release ref, registry Docker-Content-Digest and linux/amd64 image org.opencontainers.image.revision label resolved independently and agree. This records identity provenance; runtime interoperability outcomes are recorded separately in docs/optimization-plan.md."
+}

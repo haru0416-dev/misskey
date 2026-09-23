@@ -4,12 +4,12 @@ import { Person } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
 import {
 	createAccount,
-	deepStrictEqualWithExcludedFields,
+	assertUserProfile,
+	deliveryBarrier,
 	fetchActivityPubObject,
 	fetchAdmin,
 	resolveRemoteNote,
 	resolveRemoteUser,
-	sleep,
 	waitFor,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
@@ -51,19 +51,7 @@ describe('User', () => {
 				const resolved = await resolveRemoteUser('a.test', aliceInA.id, aliceWatcherInB);
 				const aliceInB = await aliceWatcherInB.client.request('users/show', { userId: resolved.id });
 
-				deepStrictEqualWithExcludedFields(aliceInA, aliceInB, [
-					'id',
-					'host',
-					'avatarUrl',
-					'avatarBlurhash',
-					'instance',
-					'badgeRoles',
-					'url',
-					'uri',
-					'createdAt',
-					'lastFetchedAt',
-					'publicReactions',
-				]);
+				assertUserProfile(aliceInB, aliceInA);
 			});
 
 			test('Fedify can parse the actor document', async () => {
@@ -104,7 +92,7 @@ describe('User', () => {
 					alice.client.request('following/create', { userId: bobInA.id }),
 					bob.client.request('following/create', { userId: aliceInB.id }),
 				]);
-				await sleep();
+				await deliveryBarrier('a.test');
 			});
 
 			test('Visibility set public by default', async () => {
@@ -123,7 +111,7 @@ describe('User', () => {
 					alice.client.request('i/update', { followersVisibility: 'private' }),
 					bob.client.request('i/update', { followersVisibility: 'private' }),
 				]);
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				for (const user of await Promise.all([
 					alice.client.request('users/show', { userId: bobInA.id }),
@@ -139,7 +127,7 @@ describe('User', () => {
 					alice.client.request('i/update', { followingVisibility: 'private' }),
 					bob.client.request('i/update', { followingVisibility: 'private' }),
 				]);
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				for (const user of await Promise.all([
 					alice.client.request('users/show', { userId: bobInA.id }),
@@ -188,12 +176,13 @@ describe('User', () => {
 				aliceInB = await resolveRemoteUser('a.test', alice.id, bob);
 
 				await bob.client.request('following/create', { userId: aliceInB.id });
+				await deliveryBarrier('b.test');
 			});
 
 			test('Pinning localOnly Note is not delivered', async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a', localOnly: true })).createdNote;
 				await alice.client.request('i/pin', { noteId: note.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
 				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
@@ -202,7 +191,7 @@ describe('User', () => {
 			test('Pinning followers-only Note is not delivered', async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a', visibility: 'followers' })).createdNote;
 				await alice.client.request('i/pin', { noteId: note.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
 				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
@@ -213,7 +202,7 @@ describe('User', () => {
 			test('Pinning normal Note is delivered', async () => {
 				pinnedNote = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 				await alice.client.request('i/pin', { noteId: pinnedNote.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
 				strictEqual(_aliceInB.pinnedNoteIds.length, 1);
@@ -223,7 +212,7 @@ describe('User', () => {
 
 			test('Unpinning normal Note is delivered', async () => {
 				await alice.client.request('i/unpin', { noteId: pinnedNote.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
 				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
@@ -248,7 +237,7 @@ describe('User', () => {
 			beforeAll(async () => {
 				await alice.client.request('following/create', { userId: bobInA.id });
 
-				await sleep();
+				await deliveryBarrier('a.test');
 			});
 
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
@@ -271,7 +260,7 @@ describe('User', () => {
 			beforeAll(async () => {
 				await alice.client.request('following/delete', { userId: bobInA.id });
 
-				await sleep();
+				await deliveryBarrier('a.test');
 			});
 
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
@@ -310,7 +299,7 @@ describe('User', () => {
 			describe('Bob sends follow request to Alice', () => {
 				beforeAll(async () => {
 					await bob.client.request('following/create', { userId: aliceInB.id });
-					await sleep();
+					await deliveryBarrier('b.test');
 				});
 
 				test('Alice should have a request', async () => {
@@ -324,7 +313,7 @@ describe('User', () => {
 			describe('Alice cancels it', () => {
 				beforeAll(async () => {
 					await bob.client.request('following/requests/cancel', { userId: aliceInB.id });
-					await sleep();
+					await deliveryBarrier('b.test');
 				});
 
 				test('Alice should have no requests', async () => {
@@ -337,10 +326,10 @@ describe('User', () => {
 		describe('Send follow request from Bob to Alice and reject', () => {
 			beforeAll(async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				await alice.client.request('following/requests/reject', { userId: bobInA.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 			});
 
 			test('Bob should have no requests', async () => {
@@ -362,10 +351,10 @@ describe('User', () => {
 		describe('Send follow request from Bob to Alice and accept', () => {
 			beforeAll(async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				await alice.client.request('following/requests/accept', { userId: bobInA.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 			});
 
 			test('Bob follows Alice', async () => {
@@ -393,7 +382,7 @@ describe('User', () => {
 
 			test('Bob follows Alice, and Alice deleted themself', async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
 				strictEqual(followers.length, 1);
@@ -429,17 +418,16 @@ describe('User', () => {
 
 			test('Bob follows Alice, then Alice gets deleted in B server', async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
 				strictEqual(followers.length, 1);
 
 				await bAdmin.client.request('admin/delete-account', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
-				/** リモートアカウントが削除されない。@see https://github.com/misskey-dev/misskey/issues/14728 */
 				const deletedAlice = await bob.client.request('users/show', { userId: aliceInB.id });
-				assert(deletedAlice.id, aliceInB.id);
+				strictEqual(deletedAlice.id, aliceInB.id);
 
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 1);
@@ -454,7 +442,7 @@ describe('User', () => {
 
 			test('Alice tries to follow Bob, but it is not processed', async () => {
 				await alice.client.request('following/create', { userId: bobInA.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const following = await alice.client.request('users/following', { userId: alice.id });
 				strictEqual(following.length, 0);
@@ -481,13 +469,13 @@ describe('User', () => {
 
 			test('Bob follows Alice, and Alice gets suspended, there is no following relation, and Bob fails to follow again', async () => {
 				await bob.client.request('following/create', { userId: aliceInB.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
 				strictEqual(followers.length, 1);
 
 				await aAdmin.client.request('admin/suspend-user', { userId: alice.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 0);
@@ -503,7 +491,7 @@ describe('User', () => {
 
 			test('Alice gets unsuspended, Bob succeeds in following Alice', async () => {
 				await aAdmin.client.request('admin/unsuspend-user', { userId: alice.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				// 削除済みマークが残った行への following/create は拒否される。
 				await rejects(
@@ -519,7 +507,7 @@ describe('User', () => {
 				strictEqual(resolved.username, aliceInB.username);
 
 				await bob.client.request('following/create', { userId: resolved.id });
-				await sleep();
+				await deliveryBarrier('b.test');
 
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 1);
@@ -528,7 +516,7 @@ describe('User', () => {
 			/** Alice からのフォローでリモートユーザーの存在を再確認する。 */
 			test('Alice can follow Bob', async () => {
 				await alice.client.request('following/create', { userId: bobInA.id });
-				await sleep();
+				await deliveryBarrier('a.test');
 
 				const bobFollowers = await bob.client.request('users/followers', { userId: bob.id });
 				strictEqual(bobFollowers.length, 1);

@@ -1,7 +1,7 @@
 import { describe, test, beforeAll } from 'vitest';
 import { rejects, strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { createAccount, createModerator, resolveRemoteUser, sleep } from './utils.js';
+import { createAccount, createModerator, deliveryBarrier, resolveRemoteUser } from './utils.js';
 import type { LoginUser } from './utils.js';
 
 describe('Abuse report', () => {
@@ -29,7 +29,7 @@ describe('Abuse report', () => {
 				throw new Error('Forwarded abuse report was not found in a.test');
 			}
 			await aModerator.client.request('admin/forward-abuse-user-report', { reportId: report.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const reportsInB = await bModerator.client.request('admin/abuse-user-reports', {});
 			const reportInB = reportsInB.find((report) => report.comment.includes(comment));

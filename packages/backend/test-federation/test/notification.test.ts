@@ -1,6 +1,12 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
 import * as Misskey from 'misskey-js';
-import { assertNotificationReceived, createAccount, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import {
+	assertNotificationReceived,
+	createAccount,
+	deliveryBarrier,
+	resolveRemoteNote,
+	resolveRemoteUser,
+} from './utils.js';
 import type { LoginUser } from './utils.js';
 
 describe('Notification', () => {
@@ -27,7 +33,7 @@ describe('Notification', () => {
 			);
 
 			await bob.client.request('following/delete', { userId: aliceInB.id });
-			await sleep();
+			await deliveryBarrier('b.test');
 		});
 
 		test('Get notification when get followed', async () => {
@@ -41,17 +47,10 @@ describe('Notification', () => {
 		});
 
 		afterAll(async () => {
-			// リモートフォローは Accept の往復が完了するまで following 行が現れない。
-			// 反映前に following/delete すると 'You are not following that user' で
-			// フックごと失敗するため、反映を待ってから解除する
-			for (let i = 0; i < 40; i++) {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				if (following.length > 0) {
-					break;
-				}
-				await sleep();
-			}
-			await bob.client.request('following/delete', { userId: aliceInB.id }).catch(() => {});
+			// 次の通知シナリオに未処理の Follow / Undo を残さない。
+			await deliveryBarrier('b.test');
+			await bob.client.request('following/delete', { userId: aliceInB.id });
+			await deliveryBarrier('b.test');
 		});
 	});
 
