@@ -3,6 +3,7 @@ import { strictEqual } from 'assert';
 import * as Misskey from 'misskey-js';
 import {
 	createAccount,
+	deliveryBarrier,
 	fetchAdmin,
 	isNoteUpdatedEventFired,
 	isFired,
@@ -28,7 +29,7 @@ describe('Timeline', () => {
 		]);
 
 		await bob.client.request('following/create', { userId: aliceInB.id });
-		await sleep();
+		await deliveryBarrier('b.test');
 	});
 
 	type TimelineChannel = keyof Misskey.Channels & (`${string}Timeline` | 'antenna' | 'userList' | 'hashtag');
@@ -249,7 +250,7 @@ describe('Timeline', () => {
 		beforeAll(async () => {
 			list = await bob.client.request('users/lists/create', { name: "Bob's List" });
 			await bob.client.request('users/lists/push', { listId: list.id, userId: aliceInB.id });
-			await sleep();
+			await deliveryBarrier('b.test');
 		});
 
 		describe("Check reception of remote followee's Note", () => {
@@ -321,7 +322,7 @@ describe('Timeline', () => {
 					type: 'isRemote' as never,
 				},
 			});
-			await sleep();
+			await deliveryBarrier('b.test');
 		});
 
 		describe("Check reception of remote followee's Note", () => {

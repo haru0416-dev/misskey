@@ -1,0 +1,44 @@
+x-upstream-image: &upstream-image misskey/misskey:2026.9.0@sha256:13ea3b432adbe29bf3699da5c7c0bd54775a9c237339ea47c6ec220094dba59a
+
+services:
+  upstream-files-init:
+    image: *upstream-image
+    user: '0:0'
+    network_mode: none
+    entrypoint: ['chown']
+    command: ['misskey:misskey', '/misskey/files']
+    volumes: [files-b:/misskey/files]
+
+  misskey.b.test:
+    image: *upstream-image
+    environment:
+      NODE_ENV: production
+      NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/rootCA.crt
+    depends_on:
+      db.b.test: { condition: service_healthy }
+      valkey.b.test: { condition: service_healthy }
+      upstream-files-init: { condition: service_completed_successfully }
+    networks: [federation, database-b, internet]
+    volumes:
+      - ./upstream.config.yml:/misskey/.config/default.yml:ro
+      - ./certificates/rootCA.crt:/usr/local/share/ca-certificates/rootCA.crt:ro
+      - files-b:/misskey/files
+
+  db.b.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: db
+    networks: [database-b]
+    volumes: [database-b:/var/lib/postgresql]
+
+  valkey.b.test:
+    image: valkey/valkey:8-alpine
+    networks: [database-b]
+    volumes: [valkey-upstream:/data]
+    healthcheck:
+      test: valkey-cli ping
+      interval: 5s
+      retries: 20
+
+volumes:
+  valkey-upstream:

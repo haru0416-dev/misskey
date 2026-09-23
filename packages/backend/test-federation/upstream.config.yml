@@ -1,0 +1,19 @@
+url: https://b.test/
+port: 3000
+bind: 0.0.0.0
+setupPassword: federation-upstream-setup
+id: aidx
+db:
+  host: db.b.test
+  port: 5432
+  db: misskey
+  user: postgres
+  pass: postgres
+redis:
+  host: valkey.b.test
+  port: 6379
+  prefix: b.test
+allowedPrivateNetworks:
+  - 172.20.0.0/16
+clusterLimit: 1
+enableIpRateLimit: false
