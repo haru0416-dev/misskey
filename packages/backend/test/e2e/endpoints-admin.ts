@@ -1222,6 +1222,22 @@ describe('Endpoints', () => {
 				expect(notes.status).toBe(200);
 				expect(notes.body.length).toBe(1);
 				expect(getAt(notes.body, 0).id).toBe(publicNoteId);
+
+				// 配布の再試行で list に同じ ID が二重に入っても、1 回だけ返し limit の枠を食わない。
+				// 公開範囲の絞り込みは切り出しの後なので、重複が枠を食うと上位 3 件に olderPublicNoteId が入らない。
+				const olderPublicNoteId = genId(now - 3000);
+				await createNoteInDatabase(db, {
+					id: olderPublicNoteId,
+					text: 'roles/notes older public note',
+					userId: author.id,
+					userHost: null,
+					visibility: 'public',
+				});
+				await redis.lpush(`list:roleTimeline:${explorableRole.id}`, publicNoteId);
+				await redis.rpush(`list:roleTimeline:${explorableRole.id}`, olderPublicNoteId);
+				const deduplicated = await api('roles/notes', { roleId: explorableRole.id, limit: 3 }, author);
+				expect(deduplicated.status).toBe(200);
+				expect(deduplicated.body.map((note) => note.id)).toEqual([publicNoteId, olderPublicNoteId]);
 			} finally {
 				await redis.del(`list:roleTimeline:${explorableRole.id}`);
 				await closeRedisConnection(redis);
