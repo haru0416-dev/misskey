@@ -4,9 +4,9 @@ import * as Misskey from 'misskey-js';
 import {
 	assertNotificationReceived,
 	createAccount,
+	deliveryBarrier,
 	resolveRemoteNote,
 	resolveRemoteUser,
-	sleep,
 	waitFor,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
@@ -27,7 +27,7 @@ describe('Block', () => {
 
 		test('Cannot follow if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 			await rejects(
 				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
 				(err: any) => {
@@ -44,7 +44,7 @@ describe('Block', () => {
 
 		test.skip('Cannot follow even if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			await rejects(
 				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
@@ -57,10 +57,10 @@ describe('Block', () => {
 
 		test('Can follow if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			await bob.client.request('following/create', { userId: aliceInB.id });
-			await sleep();
+			await deliveryBarrier('b.test');
 
 			const following = await bob.client.request('users/following', { userId: bob.id });
 			strictEqual(following.length, 1);
@@ -111,7 +111,7 @@ describe('Block', () => {
 
 		test('Cannot reply if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
@@ -126,7 +126,7 @@ describe('Block', () => {
 
 		test('Can reply if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
@@ -151,7 +151,7 @@ describe('Block', () => {
 
 		test('Cannot reaction if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
@@ -166,7 +166,7 @@ describe('Block', () => {
 
 		test.skip('Cannot reaction even if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
@@ -182,12 +182,12 @@ describe('Block', () => {
 
 		test('Can reaction if unblocked', async () => {
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 			await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' });
-			await sleep();
+			await deliveryBarrier('b.test');
 
 			const _note = await alice.client.request('notes/show', { noteId: note.id });
 			deepStrictEqual(_note.reactions, { '😅': 1 });
@@ -210,7 +210,7 @@ describe('Block', () => {
 		/** 通知の受信を止めるため、対象ユーザーをミュートする。 */
 		test('Can mention and notified even if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
-			await sleep();
+			await deliveryBarrier('a.test');
 
 			const text = `@${alice.username}@a.test plz unblock me!`;
 			await assertNotificationReceived(

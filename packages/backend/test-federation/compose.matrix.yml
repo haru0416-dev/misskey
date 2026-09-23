@@ -1,0 +1,127 @@
+include:
+  - ./compose.matrix.${FEDERATION_PEER_B_KIND:?Set FEDERATION_PEER_B_KIND to fork or upstream}.yml
+
+services:
+  setup:
+    extends:
+      file: ./compose.tpl.yml
+      service: misskey
+    command: bun install --frozen-lockfile
+    volumes:
+      - modules:/misskey/node_modules
+      - modules-backend:/misskey/packages/backend/node_modules
+      - modules-sdk:/misskey/packages/misskey-js/node_modules
+
+  misskey.a.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: misskey
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      db.a.test: { condition: service_healthy }
+      valkey.test: { condition: service_healthy }
+    networks: [federation, database-a, internet]
+    volumes:
+      - ./.config/a.test.config.json:/misskey/built/._config_.json:ro
+      - modules:/misskey/node_modules
+      - modules-backend:/misskey/packages/backend/node_modules
+      - modules-sdk:/misskey/packages/misskey-js/node_modules
+      - files-a:/misskey/files
+
+  db.a.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: db
+    networks: [database-a]
+    volumes:
+      - database-a:/var/lib/postgresql
+
+  a.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: nginx
+    depends_on:
+      misskey.a.test: { condition: service_healthy }
+      fault-proxy: { condition: service_started }
+    networks: [federation]
+    volumes:
+      - ./.config/a.test.matrix.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certificates/a.test.crt:/etc/nginx/certificates/a.test.crt:ro
+      - ./certificates/a.test.key:/etc/nginx/certificates/a.test.key:ro
+
+  b.test:
+    extends:
+      file: ./compose.tpl.yml
+      service: nginx
+    depends_on:
+      misskey.b.test: { condition: service_healthy }
+      fault-proxy: { condition: service_started }
+    networks: [federation]
+    volumes:
+      - ./.config/b.test.matrix.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certificates/b.test.crt:/etc/nginx/certificates/b.test.crt:ro
+      - ./certificates/b.test.key:/etc/nginx/certificates/b.test.key:ro
+
+  valkey.test:
+    image: valkey/valkey:8-alpine
+    networks: [database-a, database-b]
+    volumes: [valkey-fork:/data]
+    healthcheck:
+      test: valkey-cli ping
+      interval: 5s
+      retries: 20
+
+  fault-proxy:
+    image: oven/bun:${BUN_VERSION:?Set BUN_VERSION from .bun-version}-debian
+    command: bun /proxy/fault-proxy.ts
+    volumes: [./fault-proxy.ts:/proxy/fault-proxy.ts:ro]
+    networks: [federation]
+
+  daemon:
+    extends:
+      file: ./compose.yml
+      service: daemon
+    networks: [database-a, database-b, internet]
+    volumes:
+      - modules-dev:/misskey/node_modules
+      - modules-backend-dev:/misskey/packages/backend/node_modules
+
+  tester:
+    extends:
+      file: ./compose.yml
+      service: tester
+    environment:
+      FEDERATION_PEER_B_KIND: ${FEDERATION_PEER_B_KIND}
+      FEDERATION_FAULT_URL: http://fault-proxy:8081
+    networks:
+      federation: { ipv4_address: 172.20.1.1 }
+      database-a:
+      database-b:
+      internet:
+    volumes:
+      - modules-dev:/misskey/node_modules
+      - modules-backend-dev:/misskey/packages/backend/node_modules
+      - modules-sdk-dev:/misskey/packages/misskey-js/node_modules
+      - ./results:/misskey/packages/backend/test-federation/results
+
+networks:
+  federation:
+    internal: true
+    ipam:
+      config: [{ subnet: 172.20.0.0/16 }]
+  database-a: { internal: true }
+  database-b: { internal: true }
+  internet:
+
+volumes:
+  modules:
+  modules-backend:
+  modules-sdk:
+  modules-dev:
+  modules-backend-dev:
+  modules-sdk-dev:
+  database-a:
+  database-b:
+  files-a:
+  files-b:
+  valkey-fork:
