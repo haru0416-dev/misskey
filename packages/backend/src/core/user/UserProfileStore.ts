@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import type { UserProfileInsert, UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
@@ -34,19 +34,24 @@ async function createUserProfileInDatabase(db: MiDrizzleDatabase, data: UserProf
 	return deserializeUserProfile(row);
 }
 
+const userProfileByUserIdPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(userProfile);
+	return {
+		query: db
+			.select(selection)
+			.from(userProfile)
+			.where(eq(userProfile.userId, sql.placeholder('userId')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userProfile)] },
+	};
+});
+
 export async function fetchUserProfileByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiUserProfile | null> {
-	const statement = preparedQueryFor(db, 'userProfile:byUserId', () =>
-		db
-			.select()
-			.from(userProfile)
-			.where(eq(userProfile.userId, sql.placeholder('userId')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ userId });
+	const [row] = await userProfileByUserIdPlan.execute(db, { userId });
 
 	return row ? deserializeUserProfile(row) : null;
 }
@@ -94,6 +99,18 @@ export async function fetchUserProfileByEmailVerifyCodeFromDatabase(
 	return row ? deserializeUserProfile(row) : null;
 }
 
+const userProfileByUserIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(userProfile);
+	return {
+		query: db
+			.select(selection)
+			.from(userProfile)
+			.where(sql`${userProfile.userId} = ANY(${sql.placeholder('userIds')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(userProfile)] },
+	};
+});
+
 export async function listUserProfilesByUserIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userIds: MiUser['id'][],
@@ -102,14 +119,7 @@ export async function listUserProfilesByUserIdsFromDatabase(
 		return [];
 	}
 
-	const statement = preparedQueryFor(db, 'userProfile:byUserIds', () =>
-		db
-			.select()
-			.from(userProfile)
-			.where(sql`${userProfile.userId} = ANY(${sql.placeholder('userIds')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userIds });
+	const rows = await userProfileByUserIdsPlan.execute(db, { userIds });
 
 	return rows.map((row) => deserializeUserProfile(row));
 }

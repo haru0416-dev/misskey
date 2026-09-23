@@ -915,18 +915,21 @@ describe('クリップ', () => {
 			);
 		});
 
-		// 200 件のノート作成を伴うため約 17 秒かかる。
 		test('をポリシーで定められた上限いっぱい(200)を超えて追加はできない。', async () => {
 			const noteLimit = DEFAULT_POLICIES.noteEachClipsLimit;
-			const noteList = (await Promise.all(
-				[...Array(noteLimit)].map(
-					(_, i) =>
-						post(alice, {
-							text: `test ${i}`,
-						}) as unknown,
+			// 投稿受付の混雑ではなく、クリップへの追加上限を検証する。
+			const noteIds = Array.from({ length: noteLimit }, () => genId());
+			await Promise.all(
+				noteIds.map((id, i) =>
+					createNoteInDatabase(database, {
+						id,
+						userId: alice.id,
+						text: `test ${i}`,
+						visibility: 'public',
+					}),
 				),
-			)) as Misskey.entities.Note[];
-			await Promise.all(noteList.map((s) => addNote({ clipId: aliceClip.id, noteId: s.id })));
+			);
+			await Promise.all(noteIds.map((noteId) => addNote({ clipId: aliceClip.id, noteId })));
 
 			await failedApiCall(
 				{

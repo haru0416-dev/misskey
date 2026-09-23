@@ -5,7 +5,7 @@
 
 import { EventEmitter } from 'node:events';
 import { describe, expect, test, vi } from 'vitest';
-import { emitStreamRedisMessage } from '@/server/streaming/server.js';
+import { emitStreamRedisMessage } from '@/server/streaming/runtime.js';
 
 // この関数は ioredis の 'message' リスナーとして同期的に呼ばれるため、
 // 投げた例外は誰も捕捉できずストリーミングサーバーのプロセスごと落とす

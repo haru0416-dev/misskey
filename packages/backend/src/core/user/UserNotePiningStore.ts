@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { and, asc, desc, eq, inArray, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { userNotePining } from '@/db/schema/user-note-pining.js';
 import type { UserNotePiningInsert, UserNotePiningRow } from '@/db/schema/user-note-pining.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -23,6 +23,21 @@ function userNotePiningCondition(userId: MiUser['id'], noteId: MiNote['id']) {
 	return and(eq(userNotePining.userId, userId), eq(userNotePining.noteId, noteId));
 }
 
+const userNotePiningsByUserIdPlans = (['asc', 'desc'] as const).map((order) =>
+	defineQueryPlan((db) => {
+		const selection = getTableColumns(userNotePining);
+		return {
+			query: db
+				.select(selection)
+				.from(userNotePining)
+				.where(eq(userNotePining.userId, sql.placeholder('userId')))
+				.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id)),
+			selection,
+			metadata: { type: 'select', tables: [getTableName(userNotePining)] },
+		};
+	}),
+);
+
 export async function listUserNotePiningsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -31,18 +46,26 @@ export async function listUserNotePiningsByUserIdFromDatabase(
 	} = {},
 ): Promise<MiUserNotePining[]> {
 	const order = options.order ?? 'asc';
-	const statement = preparedQueryFor(db, `userNotePining:byUserId:${order}`, () =>
-		db
-			.select()
-			.from(userNotePining)
-			.where(eq(userNotePining.userId, sql.placeholder('userId')))
-			.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId });
+	const plan = userNotePiningsByUserIdPlans[order === 'desc' ? 1 : 0]!;
+	const rows = await plan.execute(db, { userId });
 
 	return rows.map((row) => deserializeUserNotePining(row));
 }
+
+const userNotePiningsByUserIdsPlans = (['asc', 'desc'] as const).map((order) =>
+	defineQueryPlan((db) => {
+		const selection = getTableColumns(userNotePining);
+		return {
+			query: db
+				.select(selection)
+				.from(userNotePining)
+				.where(sql`${userNotePining.userId} = ANY(${sql.placeholder('userIds')})`)
+				.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id)),
+			selection,
+			metadata: { type: 'select', tables: [getTableName(userNotePining)] },
+		};
+	}),
+);
 
 export async function listUserNotePiningsByUserIdsFromDatabase(
 	db: MiDrizzleDatabase,
@@ -58,15 +81,8 @@ export async function listUserNotePiningsByUserIdsFromDatabase(
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
 	const order = options.order ?? 'asc';
-	const statement = preparedQueryFor(db, `userNotePining:byUserIds:${order}`, () =>
-		db
-			.select()
-			.from(userNotePining)
-			.where(sql`${userNotePining.userId} = ANY(${sql.placeholder('userIds')})`)
-			.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userIds });
+	const plan = userNotePiningsByUserIdsPlans[order === 'desc' ? 1 : 0]!;
+	const rows = await plan.execute(db, { userIds });
 
 	return rows.map((row) => deserializeUserNotePining(row));
 }

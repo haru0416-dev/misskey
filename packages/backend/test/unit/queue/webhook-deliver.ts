@@ -9,8 +9,9 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/webhook/WebhookStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
@@ -22,23 +23,19 @@ import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from '@/queue/handlers/webhook-deliver.js';
 import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/queue/types.js';
 
-function fakeJob<T>(data: T): Bull.Job<T> {
-	return { data } as Bull.Job<T>;
-}
-
 describe('hono-queue-webhook-deliver', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	const config = loadConfig();
 	const httpRequestService = createHttpRequestService(config);
 
 	beforeAll(() => {
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	test('handleQueueUserWebhookDeliver は成功時にlatestSentAt/latestStatusを更新する', async () => {
@@ -92,7 +89,7 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			const result = await handleQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
+			const result = await handleQueueUserWebhookDeliver({ config, db, httpRequestService }, data);
 			expect(result).toBe('Success');
 
 			expect(received?.headers['x-misskey-hook-id']).toBe(webhook.id);
@@ -153,7 +150,7 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			const result = await handleQueueSystemWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
+			const result = await handleQueueSystemWebhookDeliver({ config, db, httpRequestService }, data);
 			expect(result).toBe('Success');
 
 			expect(received?.headers['x-misskey-hook-id']).toBe(webhook.id);
@@ -213,7 +210,7 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			await expect(handleQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data))).rejects.toThrow(
+			await expect(handleQueueUserWebhookDeliver({ config, db, httpRequestService }, data)).rejects.toThrow(
 				Bull.UnrecoverableError,
 			);
 

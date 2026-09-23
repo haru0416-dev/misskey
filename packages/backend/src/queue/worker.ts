@@ -8,6 +8,7 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import { isDebugLoggingEnabled } from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
+import { createBackgroundExecutionScope } from '@/misc/request-scope.js';
 import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from './handlers/webhook-deliver.js';
 import type { QueueWebhookDeliverDependencies } from './handlers/webhook-deliver.js';
 import {
@@ -65,10 +66,10 @@ import type { QueueEmojisDependencies } from './handlers/emojis.js';
 import { handleQueueDeleteAccount } from './handlers/delete-account.js';
 import type { QueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
-import { dispatchQueueOutbox } from '@/core/queue/QueueOutboxStore.js';
+import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
 import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
-import { handleQueueNotePostCreate } from '@/server/rest/note/notes-create.js';
+import { handleQueueNotePostCreate } from '@/core/note/NoteCreationService.js';
 
 export type QueueShellDependencies = QueueWebhookDeliverDependencies &
 	QueueRelationshipDependencies &
@@ -149,29 +150,31 @@ function renderError(e?: Error): unknown {
  * 本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
  */
 export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
+	const runInBackgroundScope = createBackgroundExecutionScope();
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');
 	let outboxTimer: ReturnType<typeof setInterval> | undefined;
-	let isDispatchingOutbox = false;
-	const dispatchOutbox = async (): Promise<void> => {
-		if (isDispatchingOutbox) {
-			return;
-		}
-		isDispatchingOutbox = true;
-		try {
-			await dispatchQueueOutbox(deps.db, deps.dbQueue, deps.deliverQueue);
-		} catch (error) {
-			outboxLogger.error('Failed to dispatch queue outbox', {
-				e: renderError(error instanceof Error ? error : new Error(String(error))),
+	let stopping = false;
+	let publicationStopped = false;
+	let outboxDispatch: Promise<void> | undefined;
+	let stopPromise: Promise<void> | undefined;
+	const dispatchOutbox = (): Promise<void> => {
+		if (publicationStopped) return Promise.resolve();
+		if (outboxDispatch != null) return outboxDispatch;
+		outboxDispatch = dispatchQueueOutbox(deps.db, deps.dbQueue, deps.deliverQueue)
+			.then(() => {})
+			.catch((error) => {
+				outboxLogger.error('Failed to dispatch queue outbox', {
+					e: renderError(error instanceof Error ? error : new Error(String(error))),
+				});
+			})
+			.finally(() => {
+				outboxDispatch = undefined;
 			});
-		} finally {
-			isDispatchingOutbox = false;
-		}
+		return outboxDispatch;
 	};
 	const userWebhookDeliverQueueWorker = new Bull.Worker(
 		QUEUE.USER_WEBHOOK_DELIVER,
-		(job) => {
-			return handleQueueUserWebhookDeliver(deps, job);
-		},
+		(job) => runInBackgroundScope(() => handleQueueUserWebhookDeliver(deps, job.data)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.USER_WEBHOOK_DELIVER),
 			autorun: false,
@@ -208,9 +211,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const systemWebhookDeliverQueueWorker = new Bull.Worker(
 		QUEUE.SYSTEM_WEBHOOK_DELIVER,
-		(job) => {
-			return handleQueueSystemWebhookDeliver(deps, job);
-		},
+		(job) => runInBackgroundScope(() => handleQueueSystemWebhookDeliver(deps, job.data)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
 			autorun: false,
@@ -247,20 +248,21 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const relationshipQueueWorker = new Bull.Worker(
 		QUEUE.RELATIONSHIP,
-		(job) => {
-			switch (job.name) {
-				case 'follow':
-					return handleQueueRelationshipFollow(deps, job);
-				case 'unfollow':
-					return handleQueueRelationshipUnfollow(deps, job);
-				case 'block':
-					return handleQueueRelationshipBlock(deps, job);
-				case 'unblock':
-					return handleQueueRelationshipUnblock(deps, job);
-				default:
-					throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for relationship`);
-			}
-		},
+		(job) =>
+			runInBackgroundScope(() => {
+				switch (job.name) {
+					case 'follow':
+						return handleQueueRelationshipFollow(deps, job.data);
+					case 'unfollow':
+						return handleQueueRelationshipUnfollow(deps, job.data);
+					case 'block':
+						return handleQueueRelationshipBlock(deps, job.data);
+					case 'unblock':
+						return handleQueueRelationshipUnblock(deps, job.data);
+					default:
+						throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for relationship`);
+				}
+			}),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.RELATIONSHIP),
 			autorun: false,
@@ -286,9 +288,10 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const postScheduledNoteQueueWorker = new Bull.Worker(
 		QUEUE.POST_SCHEDULED_NOTE,
-		(job) => {
-			return handleQueuePostScheduledNote(deps, job);
-		},
+		(job) =>
+			runInBackgroundScope(() =>
+				handleQueuePostScheduledNote(deps, job.data, job.attemptsMade + 1 >= (job.opts.attempts ?? 1)),
+			),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.POST_SCHEDULED_NOTE),
 			autorun: false,
@@ -303,18 +306,23 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		cleanCharts: () => handleQueueCleanCharts(deps),
 		checkExpiredMutings: () => handleQueueCheckExpiredMutings(deps),
 		bakeBufferedReactions: () => handleQueueBakeBufferedReactions(deps),
-		cleanRemoteNotes: (job) => handleQueueCleanRemoteNotes(deps, job),
+		cleanRemoteNotes: (job) =>
+			handleQueueCleanRemoteNotes(deps, {
+				log: (message) => job.log(message),
+				updateProgress: (progress) => job.updateProgress(progress),
+			}),
 		checkModeratorsActivity: () => handleQueueCheckModeratorsActivity(deps),
 	} satisfies Record<SystemJobName, (job: Bull.Job) => Promise<unknown>>;
 	const systemQueueWorker = new Bull.Worker(
 		QUEUE.SYSTEM,
-		(job) => {
-			const handler = systemJobHandlers[job.name as SystemJobName];
-			if (handler == null) {
-				throw new Error(`unrecognized job type ${job.name} for system`);
-			}
-			return handler(job);
-		},
+		(job) =>
+			runInBackgroundScope(() => {
+				const handler = systemJobHandlers[job.name as SystemJobName];
+				if (handler == null) {
+					throw new Error(`unrecognized job type ${job.name} for system`);
+				}
+				return handler(job);
+			}),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.SYSTEM),
 			autorun: false,
@@ -336,9 +344,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const deliverQueueWorker = new Bull.Worker(
 		QUEUE.DELIVER,
-		(job) => {
-			return handleQueueDeliver(deps, job);
-		},
+		(job) => runInBackgroundScope(() => handleQueueDeliver(deps, job.data)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.DELIVER),
 			autorun: false,
@@ -375,9 +381,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const inboxQueueWorker = new Bull.Worker(
 		QUEUE.INBOX,
-		(job) => {
-			return handleQueueInbox(deps, job);
-		},
+		(job) => runInBackgroundScope(() => handleQueueInbox(deps, job.data)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.INBOX),
 			autorun: false,
@@ -417,9 +421,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const endedPollNotificationQueueWorker = new Bull.Worker(
 		QUEUE.ENDED_POLL_NOTIFICATION,
-		(job) => {
-			return handleQueueEndedPollNotification(deps, job);
-		},
+		(job) => runInBackgroundScope(() => handleQueueEndedPollNotification(deps, job.data)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.ENDED_POLL_NOTIFICATION),
 			autorun: false,
@@ -428,16 +430,17 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 
 	const objectStorageQueueWorker = new Bull.Worker(
 		QUEUE.OBJECT_STORAGE,
-		(job) => {
-			switch (job.name) {
-				case 'deleteFile':
-					return handleQueueDeleteFile(deps, job);
-				case 'cleanRemoteFiles':
-					return handleQueueCleanRemoteFiles(deps, job);
-				default:
-					throw new Error(`unrecognized job type ${job.name} for objectStorage`);
-			}
-		},
+		(job) =>
+			runInBackgroundScope(() => {
+				switch (job.name) {
+					case 'deleteFile':
+						return handleQueueDeleteFile(deps, job.data);
+					case 'cleanRemoteFiles':
+						return handleQueueCleanRemoteFiles(deps, (progress) => job.updateProgress(progress));
+					default:
+						throw new Error(`unrecognized job type ${job.name} for objectStorage`);
+				}
+			}),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.OBJECT_STORAGE),
 			autorun: false,
@@ -458,27 +461,37 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	}
 
 	const dbJobHandlers = {
-		deleteDriveFile: (job) => handleQueueDeleteDriveFile(deps, job),
-		deleteDriveFiles: (job) => handleQueueDeleteDriveFiles(deps, job),
-		exportMuting: (job) => handleQueueExportMuting(deps, job),
-		exportBlocking: (job) => handleQueueExportBlocking(deps, job),
-		exportUserLists: (job) => handleQueueExportUserLists(deps, job),
-		exportAntennas: (job) => handleQueueExportAntennas(deps, job),
-		exportFollowing: (job) => handleQueueExportFollowing(deps, job),
-		importMuting: (job) => handleQueueImportMuting(deps, job),
-		importUserLists: (job) => handleQueueImportUserLists(deps, job),
-		importBlocking: (job) => handleQueueImportBlocking(deps, job),
-		importBlockingToDb: (job) => handleQueueImportBlockingToDb(deps, job),
-		importFollowing: (job) => handleQueueImportFollowing(deps, job),
-		importFollowingToDb: (job) => handleQueueImportFollowingToDb(deps, job),
-		exportFavorites: (job) => handleQueueExportFavorites(deps, job),
-		exportNotes: (job) => handleQueueExportNotes(deps, job),
-		exportClips: (job) => handleQueueExportClips(deps, job),
-		exportCustomEmojis: (job) => handleQueueExportCustomEmojis(deps, job),
-		importCustomEmojis: (job) => handleQueueImportCustomEmojis(deps, job),
-		deleteAccount: (job) => handleQueueDeleteAccount(deps, job),
-		userSuspensionPostEffects: (job) => handleQueueUserSuspensionPostEffects(deps, job),
-		notePostCreate: (job) => handleQueueNotePostCreate(deps, job),
+		deleteDriveFile: (job) => handleQueueDeleteDriveFile(deps, job.data),
+		deleteDriveFiles: (job) => handleQueueDeleteDriveFiles(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportMuting: (job) => handleQueueExportMuting(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportBlocking: (job) => handleQueueExportBlocking(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportUserLists: (job) => handleQueueExportUserLists(deps, job.data),
+		exportAntennas: (job) => handleQueueExportAntennas(deps, job.data),
+		exportFollowing: (job) => handleQueueExportFollowing(deps, job.data),
+		importMuting: (job) => handleQueueImportMuting(deps, job.data),
+		importUserLists: (job) => handleQueueImportUserLists(deps, job.data),
+		importBlocking: (job) => handleQueueImportBlocking(deps, job.data, job.id),
+		importBlockingToDb: (job) => handleQueueImportBlockingToDb(deps, job.data),
+		importFollowing: (job) => handleQueueImportFollowing(deps, job.data, job.id),
+		importFollowingToDb: (job) => handleQueueImportFollowingToDb(deps, job.data),
+		exportFavorites: (job) => handleQueueExportFavorites(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportNotes: (job) => handleQueueExportNotes(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportClips: (job) => handleQueueExportClips(deps, job.data, (progress) => job.updateProgress(progress)),
+		exportCustomEmojis: (job) => handleQueueExportCustomEmojis(deps, job.data),
+		importCustomEmojis: (job) => handleQueueImportCustomEmojis(deps, job.data),
+		deleteAccount: (job) => handleQueueDeleteAccount(deps, job.data),
+		userSuspensionPostEffects: (job) => handleQueueUserSuspensionPostEffects(deps, job.data),
+		notePostCreate: (job) => {
+			if (job.id?.startsWith('outbox-') && (job.data.stage === 'fanout' || job.data.stage === 'antennas')) {
+				return runQueuedDbOutboxJob(
+					deps.db,
+					job.id,
+					(db) => handleQueueNotePostCreate({ ...deps, db }, job.data, deps),
+					job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
+				);
+			}
+			return handleQueueNotePostCreate(deps, job.data);
+		},
 	} satisfies DbJobHandlerMap;
 	const dispatchDbJob = <K extends DbJobName>(job: Bull.Job<DbJobData<K>, unknown, K>): Promise<unknown> => {
 		if (!Object.hasOwn(dbJobHandlers, job.name)) {
@@ -492,9 +505,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	};
 	const dbQueueWorker = new Bull.Worker<DbJobData<DbJobName>, unknown, DbJobName>(
 		QUEUE.DB,
-		(job) => {
-			return dispatchDbJob(job);
-		},
+		(job) => runInBackgroundScope(() => dispatchDbJob(job)),
 		{
 			...baseWorkerOptions(deps.config, QUEUE.DB),
 			autorun: false,
@@ -527,6 +538,7 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		dbQueueWorker,
 		start: async () => {
 			await dispatchOutbox();
+			if (stopping) return;
 			outboxTimer = setInterval(() => void dispatchOutbox(), 1000);
 			await Promise.all([
 				userWebhookDeliverQueueWorker.run(),
@@ -541,22 +553,36 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 				dbQueueWorker.run(),
 			]);
 		},
-		stop: async () => {
-			if (outboxTimer != null) {
-				clearInterval(outboxTimer);
-			}
-			await Promise.all([
-				userWebhookDeliverQueueWorker.close(),
-				systemWebhookDeliverQueueWorker.close(),
-				relationshipQueueWorker.close(),
-				postScheduledNoteQueueWorker.close(),
-				systemQueueWorker.close(),
-				deliverQueueWorker.close(),
-				inboxQueueWorker.close(),
-				objectStorageQueueWorker.close(),
-				endedPollNotificationQueueWorker.close(),
-				dbQueueWorker.close(),
-			]);
+		stop: () => {
+			if (stopPromise != null) return stopPromise;
+			stopping = true;
+			stopPromise = (async () => {
+				// 投稿を作る handler は DB stage を待ち得るため、dispatcher と DB consumer を先に止めない。
+				const results = await Promise.allSettled([
+					userWebhookDeliverQueueWorker.close(),
+					systemWebhookDeliverQueueWorker.close(),
+					relationshipQueueWorker.close(),
+					postScheduledNoteQueueWorker.close(),
+					systemQueueWorker.close(),
+					inboxQueueWorker.close(),
+					objectStorageQueueWorker.close(),
+					endedPollNotificationQueueWorker.close(),
+				]);
+				publicationStopped = true;
+				if (outboxTimer != null) {
+					clearInterval(outboxTimer);
+					outboxTimer = undefined;
+				}
+				results.push(...(await Promise.allSettled([outboxDispatch])));
+				results.push(...(await Promise.allSettled([dbQueueWorker.close(), deliverQueueWorker.close()])));
+				const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+				if (errors.length > 0)
+					throw new AggregateError(
+						errors.map((result) => result.reason),
+						'Failed to stop queue workers',
+					);
+			})();
+			return stopPromise;
 		},
 	};
 }

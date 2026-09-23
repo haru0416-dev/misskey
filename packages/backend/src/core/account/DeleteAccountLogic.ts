@@ -134,16 +134,7 @@ export async function deleteAccountWithSideEffects(
 	// Delete アクティビティの配送待ちがある場合だけディスパッチャに任せる (配送完了後に発行される)。
 	// 待つものが無い行は即時発行してよく、そうしないとポーリング1周期ぶんの遅延がそのまま削除の遅延になる。
 	if (!outbox.waitsForDeliveries) {
-		void publishDbOutboxRowEagerly(deps.db, deps.dbQueue, outbox.dbJobId, {
-			name: 'deleteAccount',
-			data: {
-				user: { id: user.id },
-				soft: user.host !== null,
-				// ローカルアカウントの完全削除はコーディネータ由来であることをハンドラ側で要求している
-				...(user.host === null ? { accountDeleteCoordinatorId: outbox.dbJobId } : {}),
-			},
-			opts: queueRetentionOptions(deps.config),
-		});
+		await publishDbOutboxRowEagerly(deps.db, deps.dbQueue, outbox.dbJobId);
 	}
 
 	deps.publishInternalEvent?.('userChangeDeletedState', { id: user.id, isDeleted: true });

@@ -3,20 +3,27 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { removeQueueJob, retryQueueJob } from '@/core/queue/QueueAdminLogic.js';
+import { memoizeInRequest, runInRequestScope } from '@/misc/request-scope.js';
+import { clearQueue, removeQueueJob, retryQueueJob, retryQueueOutboxDeadLetter } from '@/core/queue/QueueAdminLogic.js';
+import { createNotePostProcessing, NotePostProcessingUnavailableError } from '@/core/note/NotePostProcessing.js';
 import {
 	dispatchQueueOutbox,
 	enqueueAccountDeleteCoordinatorInOutbox,
 	enqueueDbJobInOutbox,
 	enqueueDeliverJobInOutbox,
 	enqueueInlineDbJobInOutbox,
+	enqueueInlineDbJobsInOutbox,
 	getQueueOutboxStats,
 	publishDbOutboxRowEagerly,
-	runInlineDbOutboxJob,
+	releaseDbOutboxJobs,
+	runInlineDbOutboxJobs,
+	runQueuedDbOutboxJob,
+	waitForDbOutboxJob,
 } from '@/core/queue/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
@@ -101,7 +108,7 @@ describe('queue outbox', () => {
 		const started = new Promise<void>((resolve) => {
 			taskStarted = resolve;
 		});
-		const running = runInlineDbOutboxJob(runtime.db, inlineJob, async () => {
+		const running = runInlineDbOutboxJobs(runtime.db, [inlineJob], async () => {
 			taskStarted();
 			await taskFinished;
 		});
@@ -110,11 +117,459 @@ describe('queue outbox', () => {
 		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
 		expect(await runtime.dbQueue.getJob(`outbox-${inlineJob.outboxId}`)).toBeUndefined();
 		finishTask();
-		await expect(running).resolves.toBe(true);
+		await expect(running).resolves.toEqual(new Set([inlineJob.outboxId]));
 		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, inlineJob.outboxId))).toHaveLength(0);
 	});
 
-	test('publishes delivery outside the claim transaction and keeps its row', async () => {
+	test('a stale inline owner cannot execute or release a replacement lease', async () => {
+		const original = await enqueueInlineDbJobInOutbox(
+			runtime.db,
+			'deleteAccount',
+			{ user: { id: 'queue-outbox-stale-owner' }, soft: true },
+			{ removeOnComplete: true },
+		);
+		const replacement = { ...original, leaseToken: genId() };
+		await runtime.db
+			.update(queueOutbox)
+			.set({
+				leaseToken: replacement.leaseToken,
+				leaseExpiresAt: new Date(0),
+			})
+			.where(eq(queueOutbox.id, original.outboxId));
+		let executions = 0;
+		try {
+			expect(
+				await runInlineDbOutboxJobs(runtime.db, [original], async () => {
+					executions++;
+				}),
+			).toEqual(new Set());
+			await releaseDbOutboxJobs(runtime.db, [original], new Error('stale failure'));
+			const [owned] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, original.outboxId));
+			expect(owned).toMatchObject({ state: 'publishing', leaseToken: replacement.leaseToken, lastError: null });
+			expect(
+				await runInlineDbOutboxJobs(runtime.db, [replacement], async () => {
+					executions++;
+				}),
+			).toEqual(new Set([replacement.outboxId]));
+			expect(executions).toBe(1);
+		} finally {
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, original.outboxId));
+		}
+	});
+
+	test('later inline failure rolls back earlier SQL and releases every owned job for recovery', async () => {
+		const jobs = await enqueueInlineDbJobsInOutbox(
+			runtime.db,
+			'deleteAccount',
+			[
+				{ user: { id: 'queue-outbox-inline-failure-first' }, soft: true },
+				{ user: { id: 'queue-outbox-inline-failure-second' }, soft: true },
+			],
+			{ removeOnComplete: true },
+		);
+		let childId: string | undefined;
+		try {
+			await expect(
+				runInlineDbOutboxJobs(runtime.db, jobs, async (db, ownedIds) => {
+					for (const job of jobs) {
+						if (!ownedIds.has(job.outboxId)) continue;
+						if (childId != null) throw new Error('expected inline failure');
+						childId = await enqueueDbJobInOutbox(
+							db,
+							'deleteAccount',
+							{ user: { id: 'queue-outbox-rolled-back-child' }, soft: true },
+							{ removeOnComplete: true },
+						);
+					}
+				}),
+			).rejects.toThrow('expected inline failure');
+			expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, childId!))).toEqual([]);
+			for (const job of jobs) {
+				const [released] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
+				expect(released).toMatchObject({
+					state: 'ready',
+					leaseToken: null,
+					leaseExpiresAt: null,
+					lastError: { message: 'expected inline failure' },
+					revision: 1,
+				});
+			}
+			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(2);
+			for (const [index, job] of jobs.entries()) {
+				expect((await runtime.dbQueue.getJob(`outbox-${job.outboxId}`))?.data).toEqual({
+					user: { id: `queue-outbox-inline-failure-${index === 0 ? 'first' : 'second'}` },
+					soft: true,
+				});
+			}
+		} finally {
+			for (const job of jobs) await (await runtime.dbQueue.getJob(`outbox-${job.outboxId}`))?.remove();
+			await runtime.db.delete(queueOutbox).where(
+				inArray(
+					queueOutbox.id,
+					jobs.map((job) => job.outboxId),
+				),
+			);
+		}
+	});
+
+	test('a mixed-owner batch executes only owned inputs in their requested order', async () => {
+		const jobs = await Promise.all(
+			['first', 'second', 'third'].map(
+				async (suffix) =>
+					await enqueueInlineDbJobInOutbox(
+						runtime.db,
+						'deleteAccount',
+						{ user: { id: `queue-outbox-mixed-${suffix}` }, soft: true },
+						{ removeOnComplete: true },
+					),
+			),
+		);
+		const replacement = { ...jobs[1]!, leaseToken: jobs[0]!.leaseToken };
+		await runtime.db
+			.update(queueOutbox)
+			.set({ leaseToken: replacement.leaseToken })
+			.where(eq(queueOutbox.id, replacement.outboxId));
+		const inputs = [jobs[2]!, jobs[1]!, jobs[0]!];
+		const executions: string[] = [];
+		try {
+			const owned = await runInlineDbOutboxJobs(runtime.db, inputs, async (_db, ownedIds) => {
+				for (const job of inputs) {
+					if (ownedIds.has(job.outboxId)) executions.push(job.outboxId);
+				}
+			});
+			expect(executions).toEqual([jobs[2]!.outboxId, jobs[0]!.outboxId]);
+			expect(owned).toEqual(new Set(executions));
+			await releaseDbOutboxJobs(runtime.db, jobs, new Error('stale batch failure'));
+			const remaining = await runtime.db
+				.select()
+				.from(queueOutbox)
+				.where(
+					inArray(
+						queueOutbox.id,
+						jobs.map((job) => job.outboxId),
+					),
+				);
+			expect(remaining).toMatchObject([
+				{ id: replacement.outboxId, state: 'publishing', leaseToken: replacement.leaseToken, lastError: null },
+			]);
+		} finally {
+			await runtime.db.delete(queueOutbox).where(
+				inArray(
+					queueOutbox.id,
+					jobs.map((job) => job.outboxId),
+				),
+			);
+		}
+	});
+
+	test('inline execution and release failures both survive while SQL deletion rolls back', async () => {
+		const job = await enqueueInlineDbJobInOutbox(
+			runtime.db,
+			'deleteAccount',
+			{ user: { id: 'queue-outbox-release-failure' }, soft: true },
+			{ removeOnComplete: true },
+		);
+		const executionError = new Error('inline callback failed');
+		const releaseError = new Error('release connection failed');
+		const release = vi.spyOn(runtime.db, 'update').mockImplementationOnce(() => {
+			throw releaseError;
+		});
+		try {
+			const error = await runInlineDbOutboxJobs(runtime.db, [job], async () => {
+				throw executionError;
+			}).catch((error: unknown) => error);
+			expect(error).toBeInstanceOf(AggregateError);
+			expect((error as AggregateError).errors).toEqual([executionError, releaseError]);
+			expect((error as AggregateError).cause).toBe(releaseError);
+			const [remaining] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
+			expect(remaining).toMatchObject({ state: 'publishing', leaseToken: job.leaseToken, lastError: null });
+		} finally {
+			release.mockRestore();
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
+		}
+	});
+
+	test('removed accepted fanout is recovered, and a waiter only succeeds after execution', async () => {
+		const data = {
+			noteId: genId(),
+			stage: 'fanout' as const,
+			silent: false,
+			mentionedUserIds: [],
+			reply: null,
+			renote: null,
+		};
+		const outboxId = await enqueueDbJobInOutbox(runtime.db, 'notePostCreate', data, { removeOnComplete: true });
+		const marker = `outbox-executed:${outboxId}`;
+		let worker: Bull.Worker | undefined;
+		try {
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			await removeQueueJob(runtime, 'db', `outbox-${outboxId}`);
+			let settled = false;
+			const waiting = waitForDbOutboxJob(runtime.db, runtime.dbQueue, outboxId).finally(() => {
+				settled = true;
+			});
+			await delay(75);
+			expect(settled).toBe(false);
+			expect(await runtime.redis.get(marker)).toBeNull();
+			await runtime.db
+				.update(queueOutbox)
+				.set({ availableAt: new Date(0) })
+				.where(eq(queueOutbox.id, outboxId));
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			worker = new Bull.Worker(
+				QUEUE.DB,
+				async (job) => {
+					await runQueuedDbOutboxJob(
+						runtime.db,
+						job.id!,
+						async () => {
+							await runtime.redis.set(marker, 'executed');
+						},
+						true,
+					);
+				},
+				baseWorkerOptions(runtime.config, QUEUE.DB),
+			);
+			await waiting;
+			expect(await runtime.redis.get(marker)).toBe('executed');
+		} finally {
+			await worker?.close();
+			await (await runtime.dbQueue.getJob(`outbox-${outboxId}`))?.remove();
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
+			await runtime.redis.del(marker);
+		}
+	});
+
+	test('failed retention and admin clean cannot erase the failure or its retry payload', async () => {
+		const data = {
+			noteId: genId(),
+			stage: 'antennas' as const,
+			silent: false,
+			mentionedUserIds: [],
+			reply: null,
+			renote: null,
+		};
+		const outboxId = await enqueueDbJobInOutbox(runtime.db, 'notePostCreate', data, {
+			removeOnComplete: true,
+			removeOnFail: true,
+		});
+		let worker = new Bull.Worker(
+			QUEUE.DB,
+			async (job) => {
+				await runQueuedDbOutboxJob(
+					runtime.db,
+					job.id!,
+					async () => {
+						throw new Error('antenna execution failed');
+					},
+					true,
+				);
+			},
+			baseWorkerOptions(runtime.config, QUEUE.DB),
+		);
+		try {
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			await vi.waitFor(async () => {
+				const [row] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId));
+				expect(row?.state).toBe('deadLetter');
+			});
+			await worker.close();
+			await clearQueue(runtime, 'db', 'failed');
+			await expect(waitForDbOutboxJob(runtime.db, runtime.dbQueue, outboxId)).rejects.toThrow(
+				'antenna execution failed',
+			);
+			const [failed] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId));
+			expect(failed?.data).toEqual(data);
+			expect(await retryQueueOutboxDeadLetter(runtime, outboxId, failed!.revision)).toBe(true);
+			let executedNote: string | undefined;
+			worker = new Bull.Worker(
+				QUEUE.DB,
+				async (job) => {
+					await runQueuedDbOutboxJob(
+						runtime.db,
+						job.id!,
+						async () => {
+							executedNote = job.data.noteId;
+						},
+						true,
+					);
+				},
+				baseWorkerOptions(runtime.config, QUEUE.DB),
+			);
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			await waitForDbOutboxJob(runtime.db, runtime.dbQueue, outboxId);
+			expect(executedNote).toBe(data.noteId);
+		} finally {
+			await worker.close();
+			await (await runtime.dbQueue.getJob(`outbox-${outboxId}`))?.remove();
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
+		}
+	});
+
+	test('a missing or expired execution outcome is never acknowledged as success', async () => {
+		await expect(waitForDbOutboxJob(runtime.db, runtime.dbQueue, genId())).rejects.toThrow(
+			'execution outcome is unavailable',
+		);
+		const outboxId = await enqueueDbJobInOutbox(
+			runtime.db,
+			'notePostCreate',
+			{ noteId: genId(), stage: 'fanout', silent: false, mentionedUserIds: [], reply: null, renote: null },
+			{ removeOnComplete: true },
+		);
+		try {
+			await runQueuedDbOutboxJob(runtime.db, `outbox-${outboxId}`, async () => {}, true);
+			await runtime.db
+				.update(queueOutbox)
+				.set({ availableAt: new Date(0) })
+				.where(eq(queueOutbox.id, outboxId));
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			await expect(waitForDbOutboxJob(runtime.db, runtime.dbQueue, outboxId)).rejects.toThrow(
+				'execution outcome is unavailable',
+			);
+		} finally {
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
+		}
+	});
+
+	test('bounded reservations cancel waiting producers and drain accepted work after failure', async () => {
+		const blocked = Promise.withResolvers<void>();
+		const started = Promise.withResolvers<void>();
+		const abort = new AbortController();
+		const errors: unknown[] = [];
+		const lifecycle = createNotePostProcessing((error) => errors.push(error));
+		const completed: number[] = [];
+		const failure = new Error('accepted task failed');
+		let active = 0;
+		let peakActive = 0;
+		let closed = false;
+		let cancelledProducerRan = false;
+		try {
+			for (let index = 0; index < 64; index++) {
+				await lifecycle.runProducer(async (reservation) => {
+					reservation.submit(async () => {
+						active++;
+						peakActive = Math.max(peakActive, active);
+						if (index < 2) {
+							await memoizeInRequest('parallel-post-scope', async () => index);
+							if (index === 1) started.resolve();
+							await blocked.promise;
+							expect(await memoizeInRequest('parallel-post-scope', async () => -1)).toBe(index);
+						}
+						completed.push(index);
+						active--;
+						if (index === 0) throw failure;
+					});
+				});
+			}
+			await started.promise;
+			const waiting = Array.from({ length: 64 }, () =>
+				lifecycle.runProducer(async () => {
+					cancelledProducerRan = true;
+				}, abort.signal),
+			);
+			const cancelled = Promise.allSettled(waiting);
+			await expect(
+				lifecycle.runProducer(async () => {
+					cancelledProducerRan = true;
+				}),
+			).rejects.toMatchObject({ reason: 'overloaded' });
+			expect(completed).toEqual([]);
+			expect(cancelledProducerRan).toBe(false);
+			const cancellation = new Error('caller cancelled');
+			abort.abort(cancellation);
+			expect(await cancelled).toEqual(Array.from({ length: 64 }, () => ({ status: 'rejected', reason: cancellation })));
+			const closing = lifecycle.close().then(() => {
+				closed = true;
+			});
+			await Promise.resolve();
+			expect(closed).toBe(false);
+			await expect(
+				lifecycle.runProducer(async () => {
+					cancelledProducerRan = true;
+				}),
+			).rejects.toBeInstanceOf(NotePostProcessingUnavailableError);
+			blocked.resolve();
+			await closing;
+			expect(completed.toSorted((a, b) => a - b)).toEqual(Array.from({ length: 64 }, (_, index) => index));
+			expect(peakActive).toBe(2);
+			expect(errors).toEqual([failure]);
+			expect(cancelledProducerRan).toBe(false);
+		} finally {
+			abort.abort();
+			blocked.resolve();
+			await lifecycle.close();
+		}
+	});
+
+	test('shutdown waits for a reserved producer to submit or fail before releasing dependencies', async () => {
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		const lifecycle = createNotePostProcessing(() => {});
+		let completed = false;
+		let closed = false;
+		const producer = lifecycle.runProducer(async (reservation) => {
+			entered.resolve();
+			await release.promise;
+			reservation.submit(async () => {
+				completed = true;
+			});
+		});
+		await entered.promise;
+		const closing = lifecycle.close().then(() => {
+			closed = true;
+		});
+		try {
+			await Promise.resolve();
+			expect(closed).toBe(false);
+		} finally {
+			release.resolve();
+			await producer;
+			await closing;
+		}
+		expect(completed).toBe(true);
+		const failed = createNotePostProcessing(() => {});
+		const validationError = new Error('producer validation failed');
+		await expect(
+			failed.runProducer(async () => {
+				throw validationError;
+			}),
+		).rejects.toBe(validationError);
+		await failed.close();
+	});
+
+	test('error-reporting failure stops admission but still drains accepted work', async () => {
+		const taskError = new Error('task failed');
+		const reportError = new Error('reporting failed');
+		let reportedScope: Promise<string> | undefined;
+		const lifecycle = createNotePostProcessing(() => {
+			reportedScope = memoizeInRequest('post-processing-error-scope', async () => 'runtime-context');
+			throw reportError;
+		});
+		let completed = false;
+		await runInRequestScope(async () => {
+			await memoizeInRequest('post-processing-error-scope', async () => 'http-context');
+			await Promise.all([
+				lifecycle.runProducer(async (reservation) => {
+					reservation.submit(async () => {
+						throw taskError;
+					});
+				}),
+				lifecycle.runProducer(async (reservation) => {
+					reservation.submit(async () => {
+						completed = true;
+					});
+				}),
+			]);
+		});
+		const error = await lifecycle.close().catch((error: unknown) => error);
+		expect(completed).toBe(true);
+		expect(await reportedScope).toBe('runtime-context');
+		expect(error).toBeInstanceOf(AggregateError);
+		expect(((error as AggregateError).errors[0] as AggregateError).errors).toEqual([taskError, reportError]);
+		await expect(lifecycle.runProducer(async () => {})).rejects.toBeInstanceOf(NotePostProcessingUnavailableError);
+	});
+
+	test('retains delivery until queue completion is reconciled', async () => {
 		const outboxId = await enqueueDeliverJobInOutbox(runtime.db, deliveryInput('queue-outbox-deliver-user'));
 		try {
 			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
@@ -317,11 +772,13 @@ describe('queue outbox', () => {
 		);
 		const jobId = `outbox-${outboxId}`;
 
-		await publishDbOutboxRowEagerly(runtime.db, runtime.dbQueue, outboxId, {
-			name: 'deleteAccount',
-			data: { user: { id: 'queue-outbox-eager-user' }, soft: true },
-			opts: { removeOnComplete: true },
-		});
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(Date.now() - 1000);
+		try {
+			await publishDbOutboxRowEagerly(runtime.db, runtime.dbQueue, outboxId);
+		} finally {
+			vi.useRealTimers();
+		}
 
 		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId))).toHaveLength(0);
 		const job = await runtime.dbQueue.getJob(jobId);

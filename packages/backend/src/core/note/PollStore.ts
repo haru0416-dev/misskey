@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, ne, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { poll } from '@/db/schema/poll.js';
 import type { PollInsert, PollRow } from '@/db/schema/poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -32,6 +32,18 @@ export async function fetchPollByNoteIdFromDatabase(
 	return row == null ? null : deserializePoll(row);
 }
 
+const pollByNoteIdsPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(poll);
+	return {
+		query: db
+			.select(selection)
+			.from(poll)
+			.where(sql`${poll.noteId} = ANY(${sql.placeholder('noteIds')})`),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(poll)] },
+	};
+});
+
 export async function listPollsByNoteIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	noteIds: MiNote['id'][],
@@ -42,14 +54,7 @@ export async function listPollsByNoteIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'poll:byNoteIds', () =>
-		db
-			.select()
-			.from(poll)
-			.where(sql`${poll.noteId} = ANY(${sql.placeholder('noteIds')})`)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ noteIds });
+	const rows = await pollByNoteIdsPlan.execute(db, { noteIds });
 
 	return rows.map((row) => deserializePoll(row));
 }

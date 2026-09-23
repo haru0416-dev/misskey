@@ -70,7 +70,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/create',
 		endpointHandler(deps, 'notes/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiNotesCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesCreate(deps, auth.user, body, c.req.raw.signal)),
 		),
 	);
 

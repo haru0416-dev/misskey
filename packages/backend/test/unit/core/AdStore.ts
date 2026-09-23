@@ -5,7 +5,7 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import { ad } from '@/db/schema/ad.js';
 import {
 	createAdInDatabase,
@@ -15,21 +15,22 @@ import {
 	listAdsFromDatabase,
 	updateAdInDatabase,
 } from '@/core/ad/AdStore.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 describe('AdStore', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 
 	beforeAll(() => {
 		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	beforeEach(async () => {

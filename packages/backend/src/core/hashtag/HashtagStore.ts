@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
-import { executePreparedStatement } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { hashtag } from '@/db/schema/hashtag.js';
 import type { HashtagInsert, HashtagRow } from '@/db/schema/hashtag.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -169,6 +169,31 @@ export async function searchHashtagNamesFromDatabase(
 	return rows.map((row) => row.name);
 }
 
+function createHashtagUsagePlan(rows: number, flags: HashtagUsageFlags) {
+	return defineQueryPlan((db) => ({
+		query: db
+			.insert(hashtag)
+			.values(
+				Array.from({ length: rows }, (_, index) =>
+					hashtagUsageInsertRow(
+						sql.placeholder(`id${index}`) as unknown as string,
+						sql.placeholder(`name${index}`) as unknown as string,
+						sql.placeholder('userIdArray') as unknown as MiUser['id'][],
+						flags,
+					),
+				),
+			)
+			.onConflictDoUpdate({
+				target: hashtag.name,
+				set: hashtagUsageIncrementSet(sql.placeholder('userId'), flags),
+			}),
+		metadata: { type: 'insert', tables: [getTableName(hashtag)] },
+		mutationTables: [hashtag],
+	}));
+}
+
+const hashtagUsagePlans = new Map<number, ReturnType<typeof createHashtagUsagePlan>>();
+
 export async function recordHashtagUsagesInDatabase(
 	db: MiDrizzleDatabase,
 	data: {
@@ -235,29 +260,17 @@ export async function recordHashtagUsagesInDatabase(
 			values[`id${index}`] = entry.id;
 			values[`name${index}`] = entry.name;
 		});
-		const flagsKey = `${data.isUserAttached ? 'a' : 'm'}${data.isLocalUser ? 'l' : ''}${data.isRemoteUser ? 'r' : ''}`;
-		await executePreparedStatement(
-			db,
-			`hashtag:recordUsages:${flagsKey}:${entries.length}`,
-			() =>
-				db
-					.insert(hashtag)
-					.values(
-						entries.map((_, index) =>
-							hashtagUsageInsertRow(
-								sql.placeholder(`id${index}`) as unknown as string,
-								sql.placeholder(`name${index}`) as unknown as string,
-								sql.placeholder('userIdArray') as unknown as MiUser['id'][],
-								flags,
-							),
-						),
-					)
-					.onConflictDoUpdate({
-						target: hashtag.name,
-						set: hashtagUsageIncrementSet(sql.placeholder('userId'), flags),
-					}),
-			values,
-		);
+		const shape =
+			(entries.length - 1) * 8 +
+			Number(flags.isUserAttached) +
+			2 * Number(flags.isLocalUser) +
+			4 * Number(flags.isRemoteUser);
+		let plan = hashtagUsagePlans.get(shape);
+		if (plan === undefined) {
+			plan = createHashtagUsagePlan(entries.length, flags);
+			hashtagUsagePlans.set(shape, plan);
+		}
+		await plan.execute(db, values);
 		return;
 	}
 

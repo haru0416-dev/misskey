@@ -9,7 +9,6 @@ import type { AddressInfo } from 'node:net';
 import * as fs from 'node:fs';
 import { ZipArchive } from 'archiver';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -29,10 +28,6 @@ import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import type { RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob<T>(data: T): Bull.Job<T> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
-}
 
 // カスタム絵文字export/importはDriveService.addFileのuploadableFileTypesチェックに
 // application/zipが含まれないため、モデレーターでない限り常に失敗する
@@ -114,7 +109,7 @@ describe('hono-queue-emojis', () => {
 			type: 'image/png',
 		});
 
-		await handleQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: user.id } }));
+		await handleQueueExportCustomEmojis(deps, { user: { id: user.id } } satisfies DbJobDataWithUser);
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'))).toBe(true);
@@ -122,7 +117,7 @@ describe('hono-queue-emojis', () => {
 
 	test('存在しないuserIdは何もしない (export)', async () => {
 		await expect(
-			handleQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } })),
+			handleQueueExportCustomEmojis(deps, { user: { id: genId() } } satisfies DbJobDataWithUser),
 		).resolves.toBeUndefined();
 	});
 
@@ -183,7 +178,7 @@ describe('hono-queue-emojis', () => {
 				userHost: null,
 			});
 
-			await handleQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id: user.id }, fileId }));
+			await handleQueueImportCustomEmojis(deps, { user: { id: user.id }, fileId } satisfies DbUserImportJobData);
 
 			const imported = await fetchEmojiByNameAndHostFromDatabase(runtime.db, emojiName, null);
 			expect(imported).not.toBeNull();
@@ -195,7 +190,7 @@ describe('hono-queue-emojis', () => {
 	test('存在しないfileIdは何もしない (import)', async () => {
 		const id = genId();
 		await expect(
-			handleQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() })),
+			handleQueueImportCustomEmojis(deps, { user: { id }, fileId: genId() } satisfies DbUserImportJobData),
 		).resolves.toBeUndefined();
 	});
 });

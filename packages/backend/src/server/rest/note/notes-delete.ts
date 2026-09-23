@@ -25,7 +25,7 @@ import {
 	resolveMentionedAndInvolvedRemoteUsersForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
-import { fetchOrRegisterInstanceForApi } from './notes-create.js';
+import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
 import { isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
@@ -89,7 +89,7 @@ export async function deleteNoteForApi(
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
-		fetchOrRegisterInstanceForApi(deps, user.host)
+		fetchOrRegisterInstance(deps, user.host)
 			.then(async (i) => {
 				await adjustInstanceNotesCountFromDatabase(deps.db, i.id, -1);
 				if (deps.meta.enableChartsForFederatedInstances) {

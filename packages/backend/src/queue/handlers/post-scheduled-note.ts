@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Bull from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
 import { noteDraft } from '@/db/schema/note-draft.js';
@@ -11,15 +10,15 @@ import type { NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
-import { fetchAndCreateNoteForApi } from '@/server/rest/note/notes-create.js';
-import type { ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { fetchAndCreateNote } from '@/core/note/NoteCreationService.js';
+import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,
 } from '@/server/rest/notification/notification.js';
 import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 
-export type QueuePostScheduledNoteDependencies = ApiNotesCreateDependencies & ApiNotificationDependencies;
+export type QueuePostScheduledNoteDependencies = NoteCreationDependencies & ApiNotificationDependencies;
 
 class ScheduledNoteDraftUnavailableError extends Error {}
 
@@ -48,22 +47,23 @@ function scheduledNoteDraftFingerprint(draft: MiNoteDraft | NoteDraftRow): strin
 
 export async function handleQueuePostScheduledNote(
 	deps: QueuePostScheduledNoteDependencies,
-	job: Bull.Job<PostScheduledNoteJobData>,
+	data: PostScheduledNoteJobData,
+	isFinalAttempt: boolean,
 ): Promise<void> {
-	const draft = await fetchNoteDraftWithUserByIdFromDatabase(deps.db, job.data.noteDraftId);
+	const draft = await fetchNoteDraftWithUserByIdFromDatabase(deps.db, data.noteDraftId);
 	if (
 		draft == null ||
 		draft.user == null ||
 		draft.scheduledAt == null ||
 		draft.scheduledAt.getTime() > Date.now() ||
-		(job.data.scheduledAt != null && draft.scheduledAt.getTime() !== job.data.scheduledAt) ||
+		(data.scheduledAt != null && draft.scheduledAt.getTime() !== data.scheduledAt) ||
 		!draft.isActuallyScheduled
 	) {
 		return;
 	}
 
 	try {
-		const note = await fetchAndCreateNoteForApi(
+		const note = await fetchAndCreateNote(
 			deps,
 			draft.user,
 			{
@@ -119,7 +119,7 @@ export async function handleQueuePostScheduledNote(
 		if (error instanceof ScheduledNoteDraftUnavailableError) {
 			return;
 		}
-		if (job.attemptsMade + 1 >= (job.opts.attempts ?? 1)) {
+		if (isFinalAttempt) {
 			createScheduledNotePostFailedNotification(deps, draft.userId, draft.id);
 		}
 		throw error;

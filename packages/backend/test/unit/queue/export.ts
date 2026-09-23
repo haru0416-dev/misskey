@@ -4,7 +4,6 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -25,12 +24,8 @@ import {
 	handleQueueExportUserLists,
 } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
+import type { DBExportAntennasData, DbExportFollowingData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
-
-function fakeJob<T>(data: T): Bull.Job<T> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<T>;
-}
 
 async function createTestUser(runtime: RuntimeDependencies, prefix: string): Promise<MiUser> {
 	const id = genId();
@@ -62,7 +57,7 @@ describe('hono-queue-db (export)', () => {
 		const mutee = await createTestUser(runtime, 'honoqueueexpmute');
 		await createMutingInDatabase(runtime.db, { id: genId(), muterId: muter.id, muteeId: mutee.id, expiresAt: null });
 
-		await handleQueueExportMuting(deps, fakeJob({ user: { id: muter.id } }));
+		await handleQueueExportMuting(deps, { user: { id: muter.id } }, async () => {});
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, muter.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('mute-') && f.name.endsWith('.csv'))).toBe(true);
@@ -73,7 +68,7 @@ describe('hono-queue-db (export)', () => {
 		const blockee = await createTestUser(runtime, 'honoqueueexpblock');
 		await createBlockingInDatabase(runtime.db, { id: genId(), blockerId: blocker.id, blockeeId: blockee.id });
 
-		await handleQueueExportBlocking(deps, fakeJob({ user: { id: blocker.id } }));
+		await handleQueueExportBlocking(deps, { user: { id: blocker.id } }, async () => {});
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, blocker.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('blocking-') && f.name.endsWith('.csv'))).toBe(true);
@@ -91,7 +86,7 @@ describe('hono-queue-db (export)', () => {
 			userListUserId: owner.id,
 		});
 
-		await handleQueueExportUserLists(deps, fakeJob({ user: { id: owner.id } }));
+		await handleQueueExportUserLists(deps, { user: { id: owner.id } });
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, owner.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('user-lists-') && f.name.endsWith('.csv'))).toBe(true);
@@ -108,7 +103,7 @@ describe('hono-queue-db (export)', () => {
 			lastUsedAt: new Date(),
 		});
 
-		await handleQueueExportAntennas(deps, fakeJob<DBExportAntennasData>({ user: { id: owner.id } }));
+		await handleQueueExportAntennas(deps, { user: { id: owner.id } } satisfies DBExportAntennasData);
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, owner.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('antennas-') && f.name.endsWith('.json'))).toBe(true);
@@ -123,20 +118,17 @@ describe('hono-queue-db (export)', () => {
 			followeeId: followee.id,
 		});
 
-		await handleQueueExportFollowing(
-			deps,
-			fakeJob<DbExportFollowingData>({
-				user: { id: follower.id },
-				excludeMuting: false,
-				excludeInactive: false,
-			}),
-		);
+		await handleQueueExportFollowing(deps, {
+			user: { id: follower.id },
+			excludeMuting: false,
+			excludeInactive: false,
+		} satisfies DbExportFollowingData);
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, follower.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('following-') && f.name.endsWith('.csv'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleQueueExportMuting(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportMuting(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
 	});
 });

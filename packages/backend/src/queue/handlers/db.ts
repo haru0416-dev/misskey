@@ -9,7 +9,7 @@ import { Writable } from 'node:stream';
 import { toPuny } from '@/misc/to-puny.js';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
-import type * as Bull from 'bullmq';
+import type { QueueProgressReporter } from '@/queue/types.js';
 import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
 import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
 import {
@@ -162,9 +162,10 @@ function writeToStream(stream: fs.WriteStream, content: string): Promise<void> {
 
 export async function handleQueueDeleteDriveFiles(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -181,7 +182,7 @@ export async function handleQueueDeleteDriveFiles(
 		});
 
 		if (files.length === 0) {
-			job.updateProgress(100);
+			updateProgress(100);
 			break;
 		}
 
@@ -192,15 +193,15 @@ export async function handleQueueDeleteDriveFiles(
 			deletedCount++;
 		}
 
-		job.updateProgress((deletedCount / total) * 100);
+		updateProgress((deletedCount / total) * 100);
 	}
 }
 
 export async function handleQueueDeleteDriveFile(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbDeleteDriveFileJobData>,
+	data: DbDeleteDriveFileJobData,
 ): Promise<void> {
-	const deleter = job.data.deleterId == null ? undefined : await fetchUserByIdFromDatabase(deps.db, job.data.deleterId);
+	const deleter = data.deleterId == null ? undefined : await fetchUserByIdFromDatabase(deps.db, data.deleterId);
 	await finishEnqueuedDriveFileDeletion(
 		{
 			...deps,
@@ -210,16 +211,17 @@ export async function handleQueueDeleteDriveFile(
 			logDriveFileDeletion: (db, moderator, logId, info) =>
 				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
 		},
-		job.data,
+		data,
 		deleter ?? undefined,
 	);
 }
 
 export async function handleQueueExportMuting(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -241,7 +243,7 @@ export async function handleQueueExportMuting(
 			});
 
 			if (mutes.length === 0) {
-				job.updateProgress(100);
+				updateProgress(100);
 				break;
 			}
 
@@ -264,7 +266,7 @@ export async function handleQueueExportMuting(
 				exportedCount++;
 			}
 
-			job.updateProgress((exportedCount / total) * 100);
+			updateProgress((exportedCount / total) * 100);
 		}
 
 		stream.end();
@@ -280,9 +282,10 @@ export async function handleQueueExportMuting(
 
 export async function handleQueueExportBlocking(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -304,7 +307,7 @@ export async function handleQueueExportBlocking(
 			});
 
 			if (blockings.length === 0) {
-				job.updateProgress(100);
+				updateProgress(100);
 				break;
 			}
 
@@ -327,7 +330,7 @@ export async function handleQueueExportBlocking(
 				exportedCount++;
 			}
 
-			job.updateProgress((exportedCount / total) * 100);
+			updateProgress((exportedCount / total) * 100);
 		}
 
 		stream.end();
@@ -341,11 +344,8 @@ export async function handleQueueExportBlocking(
 	}
 }
 
-export async function handleQueueExportUserLists(
-	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
-): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+export async function handleQueueExportUserLists(deps: QueueDbDependencies, data: DbJobDataWithUser): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -384,11 +384,8 @@ export async function handleQueueExportUserLists(
 	}
 }
 
-export async function handleQueueExportAntennas(
-	deps: QueueDbDependencies,
-	job: Bull.Job<DBExportAntennasData>,
-): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+export async function handleQueueExportAntennas(deps: QueueDbDependencies, data: DBExportAntennasData): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -398,7 +395,7 @@ export async function handleQueueExportAntennas(
 	try {
 		const stream = fs.createWriteStream(path, { flags: 'a' });
 
-		const antennas = await listAntennasByUserIdFromDatabase(deps.db, job.data.user.id);
+		const antennas = await listAntennasByUserIdFromDatabase(deps.db, data.user.id);
 		await writeToStream(stream, '[');
 		for (const [index, antenna] of antennas.entries()) {
 			let users: Awaited<ReturnType<typeof listUsersByIdsFromDatabase>> | undefined;
@@ -442,9 +439,9 @@ export async function handleQueueExportAntennas(
 
 export async function handleQueueExportFollowing(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbExportFollowingData>,
+	data: DbExportFollowingData,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -456,7 +453,7 @@ export async function handleQueueExportFollowing(
 
 		let cursor: MiFollowing['id'] | null = null;
 
-		const mutingUserIds = job.data.excludeMuting ? await listMuteeIdsByMuterIdFromDatabase(deps.db, user.id) : [];
+		const mutingUserIds = data.excludeMuting ? await listMuteeIdsByMuterIdFromDatabase(deps.db, user.id) : [];
 
 		for (;;) {
 			const followings = await listFollowingsByFollowerIdFromDatabase(deps.db, user.id, {
@@ -483,7 +480,7 @@ export async function handleQueueExportFollowing(
 					continue;
 				}
 
-				if (job.data.excludeInactive && u.updatedAt && Date.now() - u.updatedAt.getTime() > 1000 * 60 * 60 * 24 * 90) {
+				if (data.excludeInactive && u.updatedAt && Date.now() - u.updatedAt.getTime() > 1000 * 60 * 60 * 24 * 90) {
 					continue;
 				}
 
@@ -528,16 +525,13 @@ async function resolveImportTargetUserForApi(
 	return target;
 }
 
-export async function handleQueueImportMuting(
-	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportJobData>,
-): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+export async function handleQueueImportMuting(deps: QueueDbDependencies, data: DbUserImportJobData): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
 
-	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, data.fileId);
 	if (file == null) {
 		return;
 	}
@@ -556,7 +550,7 @@ export async function handleQueueImportMuting(
 				throw new Error(`cannot resolve user: ${acct}`);
 			}
 
-			if (target.id === job.data.user.id) {
+			if (target.id === data.user.id) {
 				continue;
 			}
 
@@ -573,16 +567,13 @@ export async function handleQueueImportMuting(
 	}
 }
 
-export async function handleQueueImportUserLists(
-	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportJobData>,
-): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+export async function handleQueueImportUserLists(deps: QueueDbDependencies, data: DbUserImportJobData): Promise<void> {
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
 
-	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, data.fileId);
 	if (file == null) {
 		return;
 	}
@@ -671,14 +662,15 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 
 export async function handleQueueImportBlocking(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportJobData>,
+	data: DbUserImportJobData,
+	importJobId: string | undefined,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
 
-	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, data.fileId);
 	if (file == null) {
 		return;
 	}
@@ -686,16 +678,16 @@ export async function handleQueueImportBlocking(
 	await enqueueImportLines(deps, file.url, (target, index) => ({
 		name: 'importBlockingToDb',
 		data: { user: { id: user.id }, target } satisfies DbUserImportToDbJobData,
-		opts: { ...importLineJobOptions, jobId: `import-blocking-${job.id}-${index}` },
+		opts: { ...importLineJobOptions, jobId: `import-blocking-${importJobId}-${index}` },
 	}));
 }
 
 export async function handleQueueImportBlockingToDb(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportToDbJobData>,
+	data: DbUserImportToDbJobData,
 ): Promise<void> {
-	const line = job.data.target;
-	const user = job.data.user;
+	const line = data.target;
+	const user = data.user;
 
 	try {
 		const acct = line.split(',', 1)[0]?.trim();
@@ -708,7 +700,7 @@ export async function handleQueueImportBlockingToDb(
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		if (target.id === job.data.user.id) {
+		if (target.id === data.user.id) {
 			return;
 		}
 
@@ -722,14 +714,15 @@ export async function handleQueueImportBlockingToDb(
 
 export async function handleQueueImportFollowing(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportJobData>,
+	data: DbUserImportJobData,
+	importJobId: string | undefined,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
 
-	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
+	const file = await fetchDriveFileByIdFromDatabase(deps.db, data.fileId);
 	if (file == null) {
 		return;
 	}
@@ -739,18 +732,18 @@ export async function handleQueueImportFollowing(
 		data: omitUndefined({
 			user: { id: user.id },
 			target,
-			withReplies: job.data.withReplies,
+			withReplies: data.withReplies,
 		}) satisfies DbUserImportToDbJobData,
-		opts: { ...importLineJobOptions, jobId: `import-following-${job.id}-${index}` },
+		opts: { ...importLineJobOptions, jobId: `import-following-${importJobId}-${index}` },
 	}));
 }
 
 export async function handleQueueImportFollowingToDb(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbUserImportToDbJobData>,
+	data: DbUserImportToDbJobData,
 ): Promise<void> {
-	const line = job.data.target;
-	const user = job.data.user;
+	const line = data.target;
+	const user = data.user;
 
 	try {
 		const parts = line.split(',');
@@ -775,7 +768,7 @@ export async function handleQueueImportFollowingToDb(
 			throw new Error(`Unable to resolve user: ${acct}`);
 		}
 
-		if (target.id === job.data.user.id) {
+		if (target.id === data.user.id) {
 			return;
 		}
 
@@ -787,7 +780,7 @@ export async function handleQueueImportFollowingToDb(
 					from: user,
 					to: { id: target.id },
 					silent: true,
-					withReplies: withReplies ?? job.data.withReplies,
+					withReplies: withReplies ?? data.withReplies,
 				}),
 			),
 		]);
@@ -832,9 +825,10 @@ function serializeFavoriteForApi(
 
 export async function handleQueueExportFavorites(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -859,7 +853,7 @@ export async function handleQueueExportFavorites(
 			});
 
 			if (favorites.length === 0) {
-				job.updateProgress(100);
+				updateProgress(100);
 				break;
 			}
 
@@ -891,7 +885,7 @@ export async function handleQueueExportFavorites(
 				exportedFavoritesCount++;
 			}
 
-			job.updateProgress((exportedFavoritesCount / total) * 100);
+			updateProgress((exportedFavoritesCount / total) * 100);
 		}
 
 		await writeToStream(stream, ']');
@@ -934,9 +928,10 @@ function serializeNoteForApi(
  */
 export async function handleQueueExportNotes(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -960,7 +955,7 @@ export async function handleQueueExportNotes(
 			});
 
 			if (notes.length === 0) {
-				job.updateProgress(100);
+				updateProgress(100);
 				break;
 			}
 
@@ -986,7 +981,7 @@ export async function handleQueueExportNotes(
 				exportedNotesCount++;
 			}
 
-			job.updateProgress((exportedNotesCount / total) * 100);
+			updateProgress((exportedNotesCount / total) * 100);
 		}
 
 		await writeToStream(stream, ']');
@@ -1099,7 +1094,7 @@ async function processClipsForApi(
 	deps: QueueDbDependencies,
 	writer: WritableStreamDefaultWriter,
 	user: MiUser,
-	job: Bull.Job<DbJobDataWithUser>,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
 	let exportedClipsCount = 0;
 	let cursor: MiClip['id'] | null = null;
@@ -1113,7 +1108,7 @@ async function processClipsForApi(
 		});
 
 		if (clips.length === 0) {
-			job.updateProgress(100);
+			updateProgress(100);
 			break;
 		}
 
@@ -1131,15 +1126,16 @@ async function processClipsForApi(
 			exportedClipsCount++;
 		}
 
-		job.updateProgress((exportedClipsCount / total) * 100);
+		updateProgress((exportedClipsCount / total) * 100);
 	}
 }
 
 export async function handleQueueExportClips(
 	deps: QueueDbDependencies,
-	job: Bull.Job<DbJobDataWithUser>,
+	data: DbJobDataWithUser,
+	updateProgress: QueueProgressReporter,
 ): Promise<void> {
-	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
+	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
 	}
@@ -1153,7 +1149,7 @@ export async function handleQueueExportClips(
 
 		await writer.write('[');
 
-		await processClipsForApi(deps, writer, user, job);
+		await processClipsForApi(deps, writer, user, updateProgress);
 
 		await writer.write(']');
 		await writer.close();

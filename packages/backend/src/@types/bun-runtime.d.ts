@@ -22,6 +22,8 @@ declare namespace Bun {
 	interface Subprocess {
 		readonly pid: number;
 		readonly exited: Promise<number>;
+		readonly stdout?: ReadableStream<Uint8Array>;
+		readonly stderr?: ReadableStream<Uint8Array>;
 		kill(signal?: number | NodeJS.Signals): void;
 	}
 
@@ -31,6 +33,7 @@ declare namespace Bun {
 		stdout?: 'inherit' | 'ignore' | 'pipe';
 		stderr?: 'inherit' | 'ignore' | 'pipe';
 		windowsVerbatimArguments?: boolean;
+		detached?: boolean;
 	}
 
 	interface ServerWebSocket<T = undefined> {
@@ -79,6 +82,8 @@ declare namespace Bun {
 
 // `drizzle-orm/bun-sql` が型解決に使う 'bun' モジュールも、必要な範囲だけ手書きで宣言する。
 declare module 'bun' {
+	function serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
+
 	interface SQLQuery extends Promise<unknown[]> {
 		values(): Promise<unknown[][]>;
 	}
@@ -123,12 +128,19 @@ declare module 'bun' {
 		unsafe(query: string, params?: unknown[]): SQLQuery;
 		begin<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
 		savepoint<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
-		close(): Promise<void>;
+		reserve(): Promise<ReservedSQL>;
+		close(options?: { timeout?: number }): Promise<void>;
+	}
+
+	interface ReservedSQL extends SQL {
+		release(): void;
 	}
 }
 
 declare const Bun:
 	| {
+			readonly argv: string[];
+			readonly version: string;
 			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
 			spawn(command: string[], options?: Bun.SpawnOptions): Bun.Subprocess;
 			file(path: string): Bun.BunFile;

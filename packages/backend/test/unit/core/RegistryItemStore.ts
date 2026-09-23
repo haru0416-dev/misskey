@@ -11,22 +11,23 @@ import {
 	setRegistryItemInDatabase,
 } from '@/core/registry/RegistryItemStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 describe('RegistryItemStore', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 
 	beforeAll(() => {
 		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	test('atomically upserts one row for a logical key with a null domain', async () => {

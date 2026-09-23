@@ -73,10 +73,10 @@ async function deliverWebhookForQueue(
 
 export async function handleQueueUserWebhookDeliver(
 	deps: QueueWebhookDeliverDependencies,
-	job: Bull.Job<UserWebhookDeliverJobData>,
+	data: UserWebhookDeliverJobData,
 ): Promise<string> {
-	return await deliverWebhookForQueue(deps, job.data, async (status) => {
-		await updateWebhookInDatabase(deps.db, job.data.webhookId, {
+	return await deliverWebhookForQueue(deps, data, async (status) => {
+		await updateWebhookInDatabase(deps.db, data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,
 		});
@@ -85,10 +85,10 @@ export async function handleQueueUserWebhookDeliver(
 
 export async function handleQueueSystemWebhookDeliver(
 	deps: QueueWebhookDeliverDependencies,
-	job: Bull.Job<SystemWebhookDeliverJobData>,
+	data: SystemWebhookDeliverJobData,
 ): Promise<string> {
-	return await deliverWebhookForQueue(deps, job.data, async (status) => {
-		await updateSystemWebhookInDatabase(deps.db, job.data.webhookId, {
+	return await deliverWebhookForQueue(deps, data, async (status) => {
+		await updateSystemWebhookInDatabase(deps.db, data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,
 		});

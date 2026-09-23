@@ -16,15 +16,16 @@ import { entity as TestGroupedChartEntity } from '../../chart-fixtures/entities/
 import { entity as TestUniqueChartEntity } from '../../chart-fixtures/entities/test-unique.js';
 import { entity as TestIntersectionChartEntity } from '../../chart-fixtures/entities/test-intersection.js';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import Logger from '@/logger.js';
 
 describe('Chart', () => {
 	const config = loadConfig();
 
-	let drizzlePool: MiDrizzlePool | undefined;
+	let drizzlePool: NativeSqlClient | undefined;
 	let drizzle: MiDrizzleDatabase | undefined;
 	let redisClient = {
 		set: () => Promise.resolve('OK'),
@@ -39,11 +40,11 @@ describe('Chart', () => {
 
 	beforeEach(async () => {
 		if (drizzlePool) {
-			await drizzlePool.end();
+			await drizzlePool.close();
 		}
 
-		drizzlePool = createDrizzlePool(config);
-		await resetDatabase(drizzlePool);
+		drizzlePool = createBunSqlClient(config);
+		await resetDatabase(config);
 		for (const entity of [
 			TestChartEntity.hour,
 			TestChartEntity.day,
@@ -55,10 +56,10 @@ describe('Chart', () => {
 			TestIntersectionChartEntity.day,
 		]) {
 			for (const statement of Chart.entityToCreateTableSql(entity)) {
-				await drizzlePool.query(statement);
+				await drizzlePool.unsafe(statement);
 			}
 		}
-		drizzle = createDrizzleDatabase(drizzlePool, config);
+		drizzle = createBunSqlDatabase(drizzlePool, config);
 
 		const logger = new Logger('chart');
 		testChart = new TestChart(drizzle, redisClient, logger);
@@ -78,9 +79,9 @@ describe('Chart', () => {
 
 	afterAll(async () => {
 		if (drizzlePool) {
-			await resetDatabase(drizzlePool);
-			await runMigrations(drizzlePool);
-			await drizzlePool.end();
+			await resetDatabase(config);
+			await runMigrations(config);
+			await drizzlePool.close();
 		}
 	});
 

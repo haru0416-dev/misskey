@@ -121,7 +121,7 @@ describe('role cache version', () => {
 		const beforeReset = await fetchRolesCacheVersionFromDatabase(db);
 		expect((await listRolesFromDatabaseCachedByVersion(db, beforeReset)).map((role) => role.id)).toContain(oldRoleId);
 
-		await resetDb(runtime.drizzlePool);
+		await resetDb(db);
 		const afterReset = await fetchRolesCacheVersionFromDatabase(db);
 		expect(afterReset).toBeGreaterThan(beforeReset);
 		expect(await listRolesFromDatabaseCachedByVersion(db, afterReset)).toEqual([]);

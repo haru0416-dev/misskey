@@ -4,7 +4,7 @@
  */
 
 import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { blocking } from '@/db/schema/blocking.js';
 import { channelFollowing } from '@/db/schema/channel-following.js';
 import { channelMuting } from '@/db/schema/channel-muting.js';
@@ -139,6 +139,28 @@ export function viewerRelationSnapshotCovers(
 	return snapshot != null && kinds.every((kind) => snapshot.kinds.has(kind));
 }
 
+function createViewerRelationPlan(mask: number) {
+	const orderedKinds = kindOrder.filter((_, index) => (mask & (1 << index)) !== 0);
+	return defineQueryPlan((db) => {
+		const selection = {
+			kind: sql<ViewerRelationKind>`"viewer_relation"."kind"`,
+			id: sql<string>`"viewer_relation"."id"`,
+		};
+		return {
+			query: db.select(selection).from(
+				sql`(${sql.join(
+					orderedKinds.map((kind) => branchByKind[kind]()),
+					sql` union all `,
+				)}) as "viewer_relation"`,
+			),
+			selection,
+			metadata: { type: 'select', tables: [] },
+		};
+	});
+}
+
+const viewerRelationPlans = new Map<number, ReturnType<typeof createViewerRelationPlan>>();
+
 /**
  * 閲覧者コンテキストを1往復で取る。
  *
@@ -163,22 +185,13 @@ export async function fetchViewerRelationSnapshotFromDatabase(
 		return snapshot;
 	}
 
-	const orderedKinds = kindOrder.filter((kind) => snapshot.kinds.has(kind));
-	const statement = preparedQueryFor(db, `viewerRelation:${orderedKinds.join('+')}`, () =>
-		db
-			.select({
-				kind: sql<ViewerRelationKind>`"viewer_relation"."kind"`,
-				id: sql<string>`"viewer_relation"."id"`,
-			})
-			.from(
-				sql`(${sql.join(
-					orderedKinds.map((kind) => branchByKind[kind]()),
-					sql` union all `,
-				)}) as "viewer_relation"`,
-			)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ userId, now });
+	const mask = kindOrder.reduce((value, kind, index) => value | (snapshot.kinds.has(kind) ? 1 << index : 0), 0);
+	let plan = viewerRelationPlans.get(mask);
+	if (plan === undefined) {
+		plan = createViewerRelationPlan(mask);
+		viewerRelationPlans.set(mask, plan);
+	}
+	const rows = await plan.execute(db, { userId, now });
 
 	for (const row of rows) {
 		switch (row.kind) {

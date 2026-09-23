@@ -10,14 +10,14 @@ import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updateHashtagsRankingForApi, updateHashtagsRankingsForApi } from '@/server/rest/note/notes-create.js';
+import { updateHashtagsRanking, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
 import {
 	formatHashtagUsersWindow,
 	getCurrentFeaturedWindow,
 	HASHTAG_RANKING_WINDOW,
 } from '@/server/rest/hashtag/hashtags.js';
 
-describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相当)', () => {
+describe('updateHashtagsRanking', () => {
 	let config: Config;
 	let redis: Redis.Redis;
 
@@ -55,7 +55,7 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
 		const window = formatHashtagUsersWindow(now);
 
-		await updateHashtagsRankingForApi({ meta: { hiddenTags: [], sensitiveWords: [] }, redis }, tag, userId);
+		await updateHashtagsRanking({ meta: { hiddenTags: [], sensitiveWords: [] }, redis }, tag, userId);
 
 		expect(await pollFeaturedScore(tag)).toBe(1);
 		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(1);
@@ -67,10 +67,10 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		const userId = genId();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
-		await updateHashtagsRankingForApi(deps, tag, userId);
+		await updateHashtagsRanking(deps, tag, userId);
 		expect(await pollFeaturedScore(tag)).toBe(1);
 
-		await updateHashtagsRankingForApi(deps, tag, userId);
+		await updateHashtagsRanking(deps, tag, userId);
 		await sleep(300);
 		expect(await pollFeaturedScore(tag)).toBe(1);
 	});
@@ -79,10 +79,10 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		const tag = uniqueTag();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
-		await updateHashtagsRankingForApi(deps, tag, genId());
+		await updateHashtagsRanking(deps, tag, genId());
 		expect(await pollFeaturedScore(tag)).toBe(1);
 
-		await updateHashtagsRankingForApi(deps, tag, genId());
+		await updateHashtagsRanking(deps, tag, genId());
 		for (let i = 0; i < 20; i++) {
 			if ((await pollFeaturedScore(tag)) === 2) {
 				break;
@@ -100,7 +100,7 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		}
 		const userId = genId();
 
-		await updateHashtagsRankingsForApi(
+		await updateHashtagsRankings(
 			{ meta: { hiddenTags: [], sensitiveWords: [] }, redis },
 			[firstTag, secondTag, firstTag],
 			userId,
@@ -116,7 +116,7 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		const tag = uniqueTag();
 		const userId = genId();
 
-		await updateHashtagsRankingForApi({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
+		await updateHashtagsRanking({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
 
 		await sleep(300);
 		expect(
@@ -129,7 +129,7 @@ describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相�
 		const tag = uniqueTag();
 		const userId = genId();
 
-		await updateHashtagsRankingForApi({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
+		await updateHashtagsRanking({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
 
 		await sleep(300);
 		expect(

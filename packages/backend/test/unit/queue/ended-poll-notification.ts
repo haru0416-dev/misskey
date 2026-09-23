@@ -4,25 +4,20 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
-import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
+import type { SQL as NativeSqlClient } from 'bun';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, createNoteWithPollInDatabase } from '@/core/note/NoteStore.js';
 import { createPollVoteInDatabase } from '@/core/note/PollVoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueEndedPollNotification } from '@/queue/handlers/ended-poll-notification.js';
 import type { QueueEndedPollNotificationDependencies } from '@/queue/handlers/ended-poll-notification.js';
-import type { EndedPollNotificationJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
 
-function fakeJob(data: EndedPollNotificationJobData): Bull.Job<EndedPollNotificationJobData> {
-	return { data } as Bull.Job<EndedPollNotificationJobData>;
-}
-
 describe('hono-queue-ended-poll-notification', () => {
-	let pool: MiDrizzlePool;
+	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let config: Config;
 	let deps: QueueEndedPollNotificationDependencies;
@@ -30,8 +25,8 @@ describe('hono-queue-ended-poll-notification', () => {
 
 	beforeAll(() => {
 		config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
+		pool = createBunSqlClient(config);
+		db = createBunSqlDatabase(pool, config);
 		deps = {
 			config,
 			db,
@@ -47,7 +42,7 @@ describe('hono-queue-ended-poll-notification', () => {
 	});
 
 	afterAll(async () => {
-		await pool.end();
+		await pool.close();
 	});
 
 	test('投稿者とローカル投票者にpollEnded通知を送る', async () => {
@@ -95,7 +90,7 @@ describe('hono-queue-ended-poll-notification', () => {
 		await createPollVoteInDatabase(db, { id: genId(), noteId, userId: voterId, choice: 0 });
 
 		publishedNotifications.length = 0;
-		await handleQueueEndedPollNotification(deps, fakeJob({ noteId }));
+		await handleQueueEndedPollNotification(deps, { noteId });
 
 		// trackPromise による fire-and-forget のため、publishMainStream の呼び出し完了を待つ。
 		await vi.waitFor(
@@ -127,14 +122,14 @@ describe('hono-queue-ended-poll-notification', () => {
 		});
 
 		publishedNotifications.length = 0;
-		await handleQueueEndedPollNotification(deps, fakeJob({ noteId }));
+		await handleQueueEndedPollNotification(deps, { noteId });
 
 		expect(publishedNotifications).toHaveLength(0);
 	});
 
 	test('存在しないnoteIdは何もしない', async () => {
 		publishedNotifications.length = 0;
-		await handleQueueEndedPollNotification(deps, fakeJob({ noteId: genId() }));
+		await handleQueueEndedPollNotification(deps, { noteId: genId() });
 		expect(publishedNotifications).toHaveLength(0);
 	});
 });

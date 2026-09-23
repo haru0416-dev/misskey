@@ -3,12 +3,27 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, like, ne, notInArray, or, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	like,
+	ne,
+	notInArray,
+	or,
+	sql,
+	getTableColumns,
+	getTableName,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { instance } from '@/db/schema/instance.js';
 import type { InstanceInsert, InstanceRow } from '@/db/schema/instance.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiInstance } from '@/models/Instance.js';
@@ -17,6 +32,19 @@ function deserializeInstance(row: InstanceRow): MiInstance {
 	return row as MiInstance;
 }
 
+const instanceByHostPlan = defineQueryPlan((db) => {
+	const selection = getTableColumns(instance);
+	return {
+		query: db
+			.select(selection)
+			.from(instance)
+			.where(eq(instance.host, sql.placeholder('host')))
+			.limit(1),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(instance)] },
+	};
+});
+
 export async function fetchInstanceByHostFromDatabase(
 	db: MiDrizzleDatabase,
 	host: MiInstance['host'],
@@ -24,15 +52,7 @@ export async function fetchInstanceByHostFromDatabase(
 	// 配送ジョブは宛先ごとにこの参照を行うため、同一ホストへ大量配送すると呼び出し回数が
 	// 配送件数に比例する (実測: 60投稿=12,060配送で 14,251回、発行クエリ全体の79%)。
 	// 23列の SELECT を毎回組み立て直すコストが無視できないので prepared query を使い回す。
-	const statement = preparedQueryFor(db, 'instance:byHost', () =>
-		db
-			.select()
-			.from(instance)
-			.where(eq(instance.host, sql.placeholder('host')))
-			.limit(1)
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const [row] = await statement.execute({ host });
+	const [row] = await instanceByHostPlan.execute(db, { host });
 
 	return row ? deserializeInstance(row) : null;
 }

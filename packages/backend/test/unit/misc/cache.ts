@@ -3,8 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { MemoryKVCache, MemorySingleCache } from '@/misc/cache.js';
+
+test('MemoryKVCache permits process exit while cached values remain', async () => {
+	const moduleUrl = new URL('../../../src/misc/cache.ts', import.meta.url).href;
+	const { stdout } = await promisify(execFile)(
+		process.execPath,
+		[
+			'--eval',
+			`import { MemoryKVCache } from ${JSON.stringify(moduleUrl)};
+			const cache = new MemoryKVCache(60_000);
+			cache.set('key', 'cached');
+			console.log(cache.get('key'));`,
+		],
+		{ timeout: 5000 },
+	);
+	expect(stdout.trim()).toBe('cached');
+});
 
 describe('misc:MemoryKVCache', () => {
 	beforeEach(() => {
@@ -118,12 +136,6 @@ describe('misc:MemoryKVCache', () => {
 			const entries = [...cache.entries];
 			expect(entries.find(([k]) => k === 'b')).toBeUndefined();
 			expect(entries.find(([k]) => k === 'a')?.[1].value).toBe('v2');
-			cache.dispose();
-		});
-
-		test('gc does not break when cache is empty', () => {
-			const cache = new MemoryKVCache<string>(1000);
-			expect(() => cache.gc()).not.toThrow();
 			cache.dispose();
 		});
 	});

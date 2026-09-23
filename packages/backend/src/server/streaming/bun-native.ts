@@ -3,17 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { EventEmitter } from 'node:events';
-import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { ApiError } from '../rest/error.js';
 import { authenticateApiToken } from '@/server/rest/auth/auth.js';
-import { StreamConnection, refreshStreamConnections } from './connection.js';
-import { emitStreamRedisMessage } from './server.js';
-import type { StreamServerDependencies } from './server.js';
+import { StreamConnection } from './connection.js';
+import { createStreamRuntime } from './runtime.js';
+import type { StreamServerDependencies } from './runtime.js';
 
 const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
 const REAP_INTERVAL_MS = 1000 * 60;
-const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
 	connection: StreamConnection;
@@ -34,41 +31,8 @@ function errorResponse(error: ApiError): Response {
 	});
 }
 
-/**
- * bun ランタイムの node:http compat 層は、'upgrade' イベントで生ソケットに直接書き込む
- * ws パッケージの handleUpgrade パターンだと、同一プロセス内に他のソケット接続 (DB pool や
- * ioredis 等) が1つでもあるとレスポンスがクライアントに届かず永久にハングするバグを踏む
- * (bun 1.3.14 で確認、ws パッケージを完全に迂回した手書き101レスポンスでも再現)。
- * 最小再現では bun 1.3.14 がハングし、1.4.0 は成功した。Bun.serve() は compat 層を経由しないため、
- * Bun 実行時はこちらを使い、Node 実行時は server.ts の node:http 実装を使う。
- */
 export function createBunNativeStreamRuntime(deps: StreamServerDependencies, streamingPath = '/streaming') {
-	const globalEv = new EventEmitter();
-	globalEv.setMaxListeners(0);
-	const onRedisMessage = (_channelName: string, data: string) => emitStreamRedisMessage(globalEv, data);
-	deps.redisForSub.on('message', onRedisMessage);
-	const activeConnections = new Map<StreamConnection, () => void>();
-	let reconnectRefreshPromise: Promise<void> | undefined;
-	let reconnectRefreshQueued = false;
-	const onRedisReady = () => {
-		if (reconnectRefreshPromise != null) {
-			reconnectRefreshQueued = true;
-			return;
-		}
-		reconnectRefreshPromise = (async () => {
-			do {
-				reconnectRefreshQueued = false;
-				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
-				// eslint-disable-next-line no-await-in-loop
-				await refreshStreamConnections(activeConnections);
-			} while (reconnectRefreshQueued);
-		})()
-			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
-			.finally(() => {
-				reconnectRefreshPromise = undefined;
-			});
-	};
-	deps.redisForSub.on('ready', onRedisReady);
+	const runtime = createStreamRuntime(deps);
 
 	const connections = new Map<Bun.ServerWebSocket<WsData>, number>();
 
@@ -119,14 +83,14 @@ export function createBunNativeStreamRuntime(deps: StreamServerDependencies, str
 
 		const connection = new StreamConnection(deps, authenticated.user, authenticated.token);
 		try {
-			await connection.init(globalEv);
+			await runtime.init(connection);
 		} catch {
 			return new Response('Stream initialization failed', { status: 503 });
 		}
 
 		const upgraded = server.upgrade<WsData>(request, { data: { connection } });
 		if (!upgraded) {
-			connection.dispose();
+			runtime.release(connection);
 			return new Response('WebSocket upgrade failed', { status: 400 });
 		}
 		return undefined;
@@ -135,28 +99,16 @@ export function createBunNativeStreamRuntime(deps: StreamServerDependencies, str
 	const websocket: Bun.WebSocketHandler<WsData> = {
 		open(ws) {
 			const { connection } = ws.data;
-			activeConnections.set(connection, () => ws.terminate());
 			connections.set(ws, Date.now());
 
-			connection.listen(globalEv, (raw) => {
-				ws.send(raw);
-			});
-
-			let lastActiveIntervalId: NodeJS.Timeout | undefined;
-			if (connection.user) {
-				void updateUserLastActiveDateInDatabase(deps.db, connection.user.id, new Date());
-				lastActiveIntervalId = setInterval(() => {
-					void updateUserLastActiveDateInDatabase(deps.db, connection.user!.id, new Date());
-				}, LAST_ACTIVE_UPDATE_INTERVAL_MS);
-			}
-
+			const cleanup = runtime.listen(
+				connection,
+				(raw) => ws.send(raw),
+				() => ws.terminate(),
+			);
 			ws.data.cleanup = () => {
-				activeConnections.delete(connection);
-				connection.dispose();
+				cleanup();
 				connections.delete(ws);
-				if (lastActiveIntervalId) {
-					clearInterval(lastActiveIntervalId);
-				}
 			};
 		},
 		message(ws, message) {
@@ -179,10 +131,10 @@ export function createBunNativeStreamRuntime(deps: StreamServerDependencies, str
 		streamingPath,
 		tryUpgrade,
 		websocket,
-		dispose: async () => {
+		dispose: () => {
 			clearInterval(reaperIntervalId);
-			deps.redisForSub.off('message', onRedisMessage);
-			deps.redisForSub.off('ready', onRedisReady);
+			runtime.dispose();
+			connections.clear();
 		},
 	};
 }

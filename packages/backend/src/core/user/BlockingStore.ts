@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
+import { defineQueryPlan } from '@/db/prepared.js';
 import { blocking } from '@/db/schema/blocking.js';
 import type { BlockingInsert, BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -177,18 +177,23 @@ export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
 	return rows.map((row) => row.blockeeId);
 }
 
+const blockingBlockerIdsByBlockeeIdPlan = defineQueryPlan((db) => {
+	const selection = { blockerId: blocking.blockerId };
+	return {
+		query: db
+			.select(selection)
+			.from(blocking)
+			.where(eq(blocking.blockeeId, sql.placeholder('blockeeId'))),
+		selection,
+		metadata: { type: 'select', tables: [getTableName(blocking)] },
+	};
+});
+
 export async function listBlockerIdsByBlockeeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockeeId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'blocking:blockerIdsByBlockeeId', () =>
-		db
-			.select({ blockerId: blocking.blockerId })
-			.from(blocking)
-			.where(eq(blocking.blockeeId, sql.placeholder('blockeeId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ blockeeId });
+	const rows = await blockingBlockerIdsByBlockeeIdPlan.execute(db, { blockeeId });
 
 	return rows.map((row) => row.blockerId);
 }
