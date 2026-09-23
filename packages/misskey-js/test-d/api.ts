@@ -54,11 +54,13 @@ describe('API', () => {
 
 		const meta = await cli.request('meta');
 		expectType<Misskey.entities.MetaResponse>(meta);
+		const cancellableMeta = await cli.request('meta', undefined, null, new AbortController().signal);
+		expectType<Misskey.entities.MetaResponse>(cancellableMeta);
 		const passkeyInit = await cli.request('signin-with-passkey');
 		expectType<Misskey.entities.SigninWithPasskeyInitResponse>(passkeyInit);
 		await cli.request('clear-browser-cache');
 
-		const translated = await cli.request('notes/translate', { noteId: 'xxxxxxxx', targetLang: 'en' });
+		const translated = await cli.request('notes/translate', { noteId: 'xxxxxxxx', targetLang: 'en' }, undefined, new AbortController().signal);
 		expectType<{ sourceLang: string; text: string } | null>(translated);
 
 		const deleted = await cli.request('admin/emoji/delete', { id: 'xxxxxxxx' });

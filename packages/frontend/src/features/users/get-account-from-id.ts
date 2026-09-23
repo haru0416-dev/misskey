@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { get } from '@/utility/idb-proxy.js';
+import { host } from '@shared/utility/config.js';
+import { store } from '@/store.js';
 
 export async function getAccountFromId(id: string) {
-	const accounts = (await get('accounts')) as { token: string; id: string }[];
-	return accounts.find((account) => account.id === id);
+	await store.$persistReady;
+	const token = store.accountTokens[`${host}/${id}`];
+	return token ? { id, token } : undefined;
 }

@@ -23,6 +23,34 @@ type OptionalEndpoint = {
 	[E in keyof Misskey.Endpoints]: Misskey.Endpoints[E] extends { reqOptional: true } ? E : never;
 }[keyof Misskey.Endpoints];
 
+function requestMisskeyApi<T>(
+	method: 'GET' | 'POST',
+	endpoint: keyof Misskey.Endpoints,
+	data: unknown,
+	signal?: AbortSignal,
+): Promise<T> {
+	pendingApiRequestsCount.value++;
+	const onFinally = () => {
+		pendingApiRequestsCount.value--;
+	};
+	const promise = Misskey.api.requestAPI({
+		apiUrl,
+		endpoint,
+		method,
+		data: data ?? {},
+		signal,
+	}).then(({ status, body }) => {
+		if (status === 200 || status === 204) {
+			return body as T;
+		}
+		// エラー本文の直接参照を維持し、不正なnull本文を成功や別のAPIエラーに変換しない。
+		const errorResponse = body as { error: unknown };
+		throw errorResponse.error;
+	});
+	promise.then(onFinally, onFinally);
+	return promise;
+}
+
 export function misskeyApi<
 	ResT = void,
 	E extends OptionalEndpoint = OptionalEndpoint,
@@ -43,41 +71,7 @@ export function misskeyApi<
 	if (endpoint.includes('://')) {
 		throw new Error('invalid endpoint');
 	}
-	pendingApiRequestsCount.value++;
-
-	const onFinally = () => {
-		pendingApiRequestsCount.value--;
-	};
-
-	const promise = new Promise<_ResT>((resolve, reject) => {
-		window
-			.fetch(`${apiUrl}/${endpoint}`, {
-				method: 'POST',
-				body: JSON.stringify(data ?? {}),
-				credentials: 'omit',
-				cache: 'no-cache',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				...(signal === undefined ? {} : { signal }),
-			})
-			.then(async (res) => {
-				const body = res.status === 204 ? null : await res.json();
-
-				if (res.status === 200) {
-					resolve(body);
-				} else if (res.status === 204) {
-					resolve(body);
-				} else {
-					reject(body.error);
-				}
-			})
-			.catch(reject);
-	});
-
-	promise.then(onFinally, onFinally);
-
-	return promise;
+	return requestMisskeyApi<_ResT>('POST', endpoint, data, signal);
 }
 
 export function misskeyApiGet<
@@ -97,38 +91,5 @@ export function misskeyApiGet<
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(endpoint: E, ...[data]: ApiGetRequestArgs<E, P>): Promise<_ResT> {
-	pendingApiRequestsCount.value++;
-
-	const onFinally = () => {
-		pendingApiRequestsCount.value--;
-	};
-
-	const query = new URLSearchParams(
-		Object.entries(data ?? {}).map(([key, value]): [string, string] => [key, String(value)]),
-	);
-
-	const promise = new Promise<_ResT>((resolve, reject) => {
-		window
-			.fetch(`${apiUrl}/${endpoint}?${query}`, {
-				method: 'GET',
-				credentials: 'omit',
-				cache: 'default',
-			})
-			.then(async (res) => {
-				const body = res.status === 204 ? null : await res.json();
-
-				if (res.status === 200) {
-					resolve(body);
-				} else if (res.status === 204) {
-					resolve(body);
-				} else {
-					reject(body.error);
-				}
-			})
-			.catch(reject);
-	});
-
-	promise.then(onFinally, onFinally);
-
-	return promise;
+	return requestMisskeyApi<_ResT>('GET', endpoint, data);
 }

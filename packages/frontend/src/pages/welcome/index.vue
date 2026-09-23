@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div v-if="instance">
+<div v-if="loaded">
 	<XSetup v-if="instance.requireSetup"/>
 	<XEntranceClassic v-else-if="(instance.clientOptions.entrancePageStyle ?? 'classic') === 'classic'"/>
 	<XEntranceSimple v-else/>
@@ -13,18 +13,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
-import * as Misskey from 'misskey-js';
 import { instanceName } from '@shared/utility/config.js';
 import XSetup from './setup.vue';
 import XEntranceClassic from './entrance/classic.vue';
 import XEntranceSimple from './entrance/simple.vue';
 import { definePage } from '@/page.js';
-import { fetchInstance } from '@/instance.js';
+import { instance, fetchInstance } from '@/instance.js';
 
-const instance = ref<Misskey.entities.MetaDetailed | null>(null);
+const loaded = ref(false);
 
-fetchInstance(true).then((res) => {
-	instance.value = res;
+fetchInstance(true).then(() => {
+	loaded.value = true;
 });
 
 const headerActions = computed(() => []);

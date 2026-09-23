@@ -91,8 +91,12 @@ const ANTENNA_MUTATIONS = new Set<string>([
 	'antennas/update',
 ]);
 
-export function invalidateAfterMutation(accountId: QueryAccountId, endpoint: keyof Misskey.Endpoints): void {
+export function invalidateAfterMutation(
+	accountId: QueryAccountId | undefined,
+	endpoint: keyof Misskey.Endpoints,
+): void {
 	const invalidateEndpoint = <E extends keyof Misskey.Endpoints>(target: E) => {
+		if (accountId === undefined) return;
 		void queryClient.invalidateQueries({ queryKey: queryKeys.endpointRoot(accountId, target) });
 	};
 	const invalidateEndpointForAllAccounts = <E extends keyof Misskey.Endpoints>(target: E) => {

@@ -158,6 +158,7 @@ class PersistedStateController {
 	private applyingExternalState = false;
 	private lastLocalStampTime = 0;
 	private disposed = false;
+	private readonly accountId: string | null;
 
 	public readonly ready: Promise<void>;
 	public readonly loaded: Promise<void>;
@@ -167,6 +168,7 @@ class PersistedStateController {
 		private readonly definition: PersistedStateDefinition<StateTree>,
 		private readonly io: PersistedStateIo,
 	) {
+		this.accountId = io.currentAccountId();
 		for (const key of Object.keys(this.definition.properties)) {
 			this.defaults.set(key, cloneValue(this.store.$state[key]));
 			this.snapshots.set(key, cloneValue(this.store.$state[key]));
@@ -188,22 +190,23 @@ class PersistedStateController {
 	}
 
 	private get deviceAccountStateKeyName(): string {
-		const accountId = this.io.currentAccountId();
+		const accountId = this.accountId;
 		return accountId == null ? '' : `pinia::${this.definition.namespace}::device-account::${accountId}`;
 	}
 
 	private get registryCacheKeyName(): string {
-		const accountId = this.io.currentAccountId();
+		const accountId = this.accountId;
 		return accountId == null ? '' : `pinia::${this.definition.namespace}::account-cache::${accountId}`;
 	}
 
 	private async initialize(): Promise<void> {
-		const accountId = this.io.currentAccountId();
+		const accountId = this.accountId;
 		const [deviceStateRaw, deviceAccountStateRaw, registryCacheRaw] = await Promise.all([
 			this.io.get(this.deviceStateKeyName),
 			accountId == null ? Promise.resolve({}) : this.io.get(this.deviceAccountStateKeyName),
 			accountId == null ? Promise.resolve({}) : this.io.get(this.registryCacheKeyName),
 		]);
+		if (this.disposed) return;
 		const deviceState = toRecord(deviceStateRaw);
 		const deviceAccountState = toRecord(deviceAccountStateRaw);
 		const registryCache = toRecord(registryCacheRaw);
@@ -238,10 +241,11 @@ class PersistedStateController {
 	}
 
 	private async loadAccountState(): Promise<void> {
-		if (this.io.currentAccountId() == null) {
+		if (this.disposed || this.accountId == null) {
 			return;
 		}
 		const values = await this.io.loadAccount(this.definition.namespace);
+		if (this.disposed) return;
 		const patch: StateTree = {};
 		const cache: Record<string, unknown> = {};
 
@@ -338,7 +342,7 @@ class PersistedStateController {
 
 		await Promise.all([
 			this.persistLocalBatch('device', this.deviceStateKeyName, deviceWrites),
-			this.io.currentAccountId() == null
+			this.accountId == null
 				? Promise.resolve()
 				: this.persistLocalBatch('deviceAccount', this.deviceAccountStateKeyName, deviceAccountWrites),
 			this.persistAccountBatch(accountWrites),
@@ -363,7 +367,7 @@ class PersistedStateController {
 
 		for (const [key, value] of writes) {
 			const stamp = this.nextLocalStamp(key);
-			const accountId = this.io.currentAccountId();
+			const accountId = this.accountId;
 			this.lastStamps.set(key, stamp);
 			this.channel?.postMessage({
 				version: 1,
@@ -378,7 +382,7 @@ class PersistedStateController {
 	}
 
 	private async persistAccountBatch(writes: Map<string, unknown>): Promise<void> {
-		if (writes.size === 0 || this.io.currentAccountId() == null) {
+		if (writes.size === 0 || this.accountId == null) {
 			return;
 		}
 		await this.io.update(this.registryCacheKeyName, (current) => {
@@ -414,7 +418,7 @@ class PersistedStateController {
 		if (property?.where !== data.where) {
 			return;
 		}
-		if (data.where === 'deviceAccount' && data.accountId !== this.io.currentAccountId()) {
+		if (data.where === 'deviceAccount' && data.accountId !== this.accountId) {
 			return;
 		}
 		const lastStamp = this.lastStamps.get(data.key);

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { reactive } from 'vue';
+import { shallowReactive, shallowReadonly } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { miLocalStorage } from '@/local-storage.js';
@@ -11,6 +11,7 @@ import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
 import { resolveInitialInstanceMeta } from '@/features/instances/instance-cache.js';
+import { QueryBackedCache } from '@/query/cache.js';
 
 //#region loader
 const providedMetaEl = window.document.getElementById('misskey_meta');
@@ -20,10 +21,7 @@ const initialMeta = resolveInitialInstanceMeta({
 	providedMeta: providedMetaEl?.textContent ?? null,
 	providedAt: providedMetaEl?.dataset['generatedAt'] ?? null,
 });
-if (initialMeta.cacheAction === 'store') {
-	miLocalStorage.setItem('instance', JSON.stringify(initialMeta.meta));
-	miLocalStorage.setItem('instanceCachedAt', initialMeta.cachedAt.toString());
-} else if (initialMeta.cacheAction === 'clear') {
+if (initialMeta.cacheAction === 'clear') {
 	miLocalStorage.removeItem('instance');
 	miLocalStorage.removeItem('instanceCachedAt');
 }
@@ -31,12 +29,44 @@ const cachedMeta = initialMeta.meta as Misskey.entities.MetaDetailed | null;
 const cachedAt = initialMeta.cachedAt;
 //#endregion
 
-export const instance = reactive(cachedMeta ?? {}) as Misskey.entities.MetaDetailed;
+const instanceView = shallowReactive({}) as Misskey.entities.MetaDetailed;
+export const instance = shallowReadonly(instanceView);
 
 const metaParams = { detail: true } as const;
+const accountToken = $i?.token ?? null;
 const metaQueryKey = queryKeys.endpoint($i?.id ?? null, 'meta', metaParams);
-if (cachedMeta != null) {
-	queryClient.setQueryData(metaQueryKey, cachedMeta, { updatedAt: cachedAt });
+const metaCache = new QueryBackedCache<Misskey.entities.MetaDetailed>(
+	metaQueryKey,
+	(signal) => misskeyApi('meta', metaParams, accountToken, signal),
+	1000 * 60 * 60,
+	{
+		...(cachedMeta == null ? {} : { initialData: cachedMeta }),
+		updatedAt: cachedAt,
+		onUpdate: (meta, updatedAt) => {
+			if (meta == null) {
+				for (const key of Object.keys(instanceView)) Reflect.deleteProperty(instanceView, key);
+				return;
+			}
+			for (const key of Object.keys(instanceView)) {
+				if (!Object.hasOwn(meta, key)) Reflect.deleteProperty(instanceView, key);
+			}
+			Object.assign(instanceView, meta);
+			miLocalStorage.setItem('instance', JSON.stringify(meta));
+			miLocalStorage.setItem('instanceCachedAt', updatedAt.toString());
+		},
+	},
+);
+
+export function updateInstance(meta: Partial<Misskey.entities.MetaDetailed>): void {
+	metaCache.set({ ...metaCache.value.value, ...meta } as Misskey.entities.MetaDetailed);
+}
+
+if (import.meta.hot) import.meta.hot.dispose(() => metaCache.dispose());
+
+export async function clearInstanceCache(): Promise<void> {
+	await queryClient.invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
+	miLocalStorage.removeItem('instance');
+	miLocalStorage.removeItem('instanceCachedAt');
 }
 
 export async function fetchInstance(force = false): Promise<Misskey.entities.MetaDetailed> {
@@ -44,12 +74,5 @@ export async function fetchInstance(force = false): Promise<Misskey.entities.Met
 		await queryClient.invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
 	}
 
-	const meta = await misskeyApi('meta', metaParams);
-
-	Object.assign(instance, meta);
-
-	miLocalStorage.setItem('instance', JSON.stringify(instance));
-	miLocalStorage.setItem('instanceCachedAt', Date.now().toString());
-
-	return instance;
+	return metaCache.fetch();
 }

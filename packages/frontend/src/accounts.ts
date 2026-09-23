@@ -18,6 +18,7 @@ import { $i } from '@/i.js';
 import type { AccountWithToken } from '@/i.js';
 import { signout } from '@/signout.js';
 import { updateUserQueries } from '@/query/streaming.js';
+import { isAccountWithToken } from '@/features/auth/account-data.js';
 
 const MkWaitingDialog = defineAsyncComponent(() => import('@/components/overlay/MkWaitingDialog.vue'));
 const MkSigninDialog = defineAsyncComponent(() => import('@/features/auth/components/MkSigninDialog.vue'));
@@ -144,8 +145,13 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 	});
 }
 
+function isSelectedAccount(id: string, token: string): boolean {
+	const selected = miLocalStorage.getItemAsJson('account', isAccountWithToken);
+	return selected?.id === id && selected.token === token;
+}
+
 function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
-	if (!$i) {
+	if (!$i || !isSelectedAccount($i.id, $i.token)) {
 		return;
 	}
 	const token = $i.token;
@@ -162,7 +168,7 @@ function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
 }
 
 export function updateCurrentAccountPartial(accountData: Partial<Misskey.entities.MeDetailed>) {
-	if (!$i) {
+	if (!$i || !isSelectedAccount($i.id, $i.token)) {
 		return;
 	}
 	for (const [key, value] of Object.entries(accountData)) {
@@ -179,11 +185,13 @@ export async function refreshCurrentAccount() {
 	if (!$i) {
 		return;
 	}
-	const me = $i;
-	return fetchAccount($i.token, $i.id)
-		.then(updateCurrentAccount)
+	const me = { id: $i.id, token: $i.token };
+	return fetchAccount(me.token, me.id)
+		.then((account) => {
+			if ($i?.id === me.id && $i.token === me.token) updateCurrentAccount(account);
+		})
 		.catch((reason) => {
-			if (reason === isAccountDeleted) {
+			if (reason === isAccountDeleted && isSelectedAccount(me.id, me.token)) {
 				removeAccount(host, me.id);
 				const remainingToken = Object.values(store.accountTokens)[0];
 				if (remainingToken != null) {

@@ -541,9 +541,12 @@ type ApGetResponse = operations['ap___get']['responses']['200']['content']['appl
 declare namespace api {
     export {
         isAPIError,
+        requestAPI,
         SwitchCaseResponseType,
         APIError,
         FetchLike,
+        APITransportRequest,
+        APITransportResponse,
         APIClient
     }
 }
@@ -565,11 +568,29 @@ class APIClient {
     // (undocumented)
     request<E extends keyof Endpoints, P extends Endpoints[E]['req'] = never>(endpoint: E, ...args: Endpoints[E] extends {
         reqOptional: true;
-    } ? [params?: P, credential?: string | null] : [params: P, credential?: string | null]): Promise<SwitchCaseResponseType<E, P>>;
+    } ? [params?: P, credential?: string | null, signal?: AbortSignal] : [params: P, credential?: string | null, signal?: AbortSignal]): Promise<SwitchCaseResponseType<E, P>>;
 }
 
 // @public (undocumented)
 type APIError = components['schemas']['Error']['error'];
+
+// @public (undocumented)
+type APITransportRequest = {
+    apiUrl: string;
+    endpoint: string;
+    method: 'GET' | 'POST';
+    data?: unknown;
+    mediaType?: string;
+    credential?: string | null | undefined;
+    signal?: AbortSignal | undefined;
+    fetch?: FetchLike;
+};
+
+// @public (undocumented)
+type APITransportResponse = {
+    status: number;
+    body: unknown;
+};
 
 // @public (undocumented)
 type App = components['schemas']['App'];
@@ -2251,6 +2272,7 @@ type FetchLike = (input: string, init?: {
     headers: {
         [key in string]: string;
     };
+    signal?: AbortSignal;
 }) => Promise<{
     status: number;
     json(): Promise<unknown>;
@@ -3199,6 +3221,9 @@ type RenoteMuteListResponse = operations['renote-mute___list']['responses']['200
 
 // @public (undocumented)
 type RenoteMuting = components['schemas']['RenoteMuting'];
+
+// @public (undocumented)
+function requestAPI(options: APITransportRequest): Promise<APITransportResponse>;
 
 // @public (undocumented)
 type RequestResetPasswordRequest = NonNullable<operations['request-reset-password']['requestBody']>['content']['application/json'];
