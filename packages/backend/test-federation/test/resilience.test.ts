@@ -12,6 +12,7 @@ import {
 	faultStats,
 	hostKind,
 	observeDeliverySuccess,
+	promoteDelayed,
 	resolveRemoteNote,
 	resolveRemoteUser,
 	signedRequest,
@@ -27,7 +28,8 @@ const directions: [Host, Host][] = [
 	['a.test', 'b.test'],
 	['b.test', 'a.test'],
 ];
-// upstream の配送 backoff は 60 秒・180 秒と各最大 20% jitter を維持する。
+// upstream の配送 backoff は 60 秒・180 秒 (各最大 20% jitter)。再試行待ちは promoteDelayed で繰り上げるが、
+// 繰り上げが効かない経路 (受信側での再処理等) のために上限は backoff を待つ場合に合わせて残す。
 const timeout = 480_000;
 const reaction = '\u2764';
 
@@ -311,9 +313,14 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 					} else {
 						// 同じ activity の応答喪失を繰り返し、別配送の成功で再送判定を満たさない。
 						await waitFor(
-							async () =>
-								(await attempts()).filter((item) => item.id === activityId && item.outcome === 'lost').length >= 2,
+							async () => {
+								if ((await attempts()).filter((item) => item.id === activityId && item.outcome === 'lost').length >= 2)
+									return true;
+								await promoteDelayed(senderHost, 'deliver');
+								return false;
+							},
 							timeout,
+							1000,
 						);
 						await waitFor(scenario.hasEffect, timeout);
 					}
@@ -321,15 +328,19 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 					const recoverySequence = (await faultStats(receiverHost, Number.MAX_SAFE_INTEGER)).lastSequence;
 					await fault(receiverHost, 'pass');
 					await waitFor(
-						async () =>
-							(await attempts()).some(
+						async () => {
+							const recovered = (await attempts()).some(
 								(item) =>
 									item.id === activityId &&
 									item.sequence > recoverySequence &&
 									item.mode === 'pass' &&
 									item.outcome === 'acknowledged',
-							),
+							);
+							if (!recovered) await promoteDelayed(senderHost, 'deliver');
+							return recovered;
+						},
 						timeout,
+						1000,
 					);
 					await senderCompletion.waitForSuccess();
 					await waitFor(scenario.hasEffect, timeout);
