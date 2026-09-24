@@ -10,7 +10,11 @@ import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { memoizeInRequest, runInRequestScope } from '@/misc/request-scope.js';
 import { clearQueue, removeQueueJob, retryQueueJob, retryQueueOutboxDeadLetter } from '@/core/queue/QueueAdminLogic.js';
-import { createNotePostProcessing, NotePostProcessingUnavailableError } from '@/core/note/NotePostProcessing.js';
+import {
+	createNotePostProcessing,
+	NotePostProcessingUnavailableError,
+	notePostProcessingConcurrency,
+} from '@/core/note/NotePostProcessing.js';
 import {
 	dispatchQueueOutbox,
 	enqueueAccountDeleteCoordinatorInOutbox,
@@ -436,7 +440,7 @@ describe('queue outbox', () => {
 		const started = Promise.withResolvers<void>();
 		const abort = new AbortController();
 		const errors: unknown[] = [];
-		const lifecycle = createNotePostProcessing((error) => errors.push(error));
+		const lifecycle = createNotePostProcessing((error) => errors.push(error), 2);
 		const completed: number[] = [];
 		const failure = new Error('accepted task failed');
 		let active = 0;
@@ -501,10 +505,36 @@ describe('queue outbox', () => {
 		}
 	});
 
+	test('post-processing runs at most the configured number of tasks at once', async () => {
+		const lifecycle = createNotePostProcessing(() => {}, 5);
+		const blocked = Promise.withResolvers<void>();
+		let active = 0;
+		let peakActive = 0;
+		const producers = Array.from({ length: 12 }, () =>
+			lifecycle.runProducer(async (reservation) => {
+				reservation.submit(async () => {
+					active++;
+					peakActive = Math.max(peakActive, active);
+					await blocked.promise;
+					active--;
+				});
+			}),
+		);
+		await Promise.all(producers);
+		await vi.waitFor(() => expect(active).toBe(5));
+		blocked.resolve();
+		await lifecycle.close();
+		expect(peakActive).toBe(5);
+	});
+
+	test('post-processing concurrency takes a quarter of the database pool within 2 to 8', () => {
+		expect([1, 11, 12, 16, 30, 32, 60].map(notePostProcessingConcurrency)).toStrictEqual([2, 2, 3, 4, 7, 8, 8]);
+	});
+
 	test('shutdown waits for a reserved producer to submit or fail before releasing dependencies', async () => {
 		const entered = Promise.withResolvers<void>();
 		const release = Promise.withResolvers<void>();
-		const lifecycle = createNotePostProcessing(() => {});
+		const lifecycle = createNotePostProcessing(() => {}, 2);
 		let completed = false;
 		let closed = false;
 		const producer = lifecycle.runProducer(async (reservation) => {
@@ -527,7 +557,7 @@ describe('queue outbox', () => {
 			await closing;
 		}
 		expect(completed).toBe(true);
-		const failed = createNotePostProcessing(() => {});
+		const failed = createNotePostProcessing(() => {}, 2);
 		const validationError = new Error('producer validation failed');
 		await expect(
 			failed.runProducer(async () => {
@@ -544,7 +574,7 @@ describe('queue outbox', () => {
 		const lifecycle = createNotePostProcessing(() => {
 			reportedScope = memoizeInRequest('post-processing-error-scope', async () => 'runtime-context');
 			throw reportError;
-		});
+		}, 2);
 		let completed = false;
 		await runInRequestScope(async () => {
 			await memoizeInRequest('post-processing-error-scope', async () => 'http-context');

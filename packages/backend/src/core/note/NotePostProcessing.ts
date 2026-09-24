@@ -25,7 +25,6 @@ export class NotePostProcessingUnavailableError extends Error {
 
 const MAX_RETAINED_POSTS = 64;
 const MAX_WAITING_PRODUCERS = 64;
-const MAX_ACTIVE_POSTS = 2;
 type Reservation = NotePostProcessingReservation & { release(): void; waited: boolean };
 type WaitingProducer = {
 	resolve: (reservation: Reservation) => void;
@@ -34,8 +33,20 @@ type WaitingProducer = {
 	abort: () => void;
 };
 
+/**
+ * 同時に実行する後処理の数。1 件は約 9 ms で、その大半は BEGIN/DELETE・文脈の読み込み・ステージ・COMMIT の
+ * DB 往復待ちなので、並行数に比例して処理能力が伸びる。実行中は DB 接続を 1 本ずつ持つため、HTTP 要求の分を
+ * 残すようプールの 1/4 までとし、従来の 2 を下限、8 を上限にする。
+ */
+export function notePostProcessingConcurrency(databasePoolSize: number): number {
+	return Math.min(8, Math.max(2, Math.floor(databasePoolSize / 4)));
+}
+
 /** 受付予約・待機・実行を分け、保存前の待機中には DB 資源を保持しない。 */
-export function createNotePostProcessing(onError: (error: unknown) => void): NotePostProcessing {
+export function createNotePostProcessing(
+	onError: (error: unknown) => void,
+	maxActivePosts: number,
+): NotePostProcessing {
 	const runTask = createBackgroundExecutionScope();
 	const tasks = new Array<(() => Promise<void>) | undefined>(MAX_RETAINED_POSTS);
 	const waiting = new Set<WaitingProducer>();
@@ -138,7 +149,7 @@ export function createNotePostProcessing(onError: (error: unknown) => void): Not
 	}
 
 	function startWorkers(): void {
-		while (running < MAX_ACTIVE_POSTS && queued > 0) {
+		while (running < maxActivePosts && queued > 0) {
 			const task = takeTask();
 			running++;
 			void runTask(() => Promise.resolve().then(() => drain(task)));

@@ -225,7 +225,7 @@ describe('durable reliability boundaries', () => {
 			await analytics.promise;
 		});
 		const errors: unknown[] = [];
-		const notePostProcessing = createNotePostProcessing((error) => errors.push(error));
+		const notePostProcessing = createNotePostProcessing((error) => errors.push(error), 2);
 		let noteId: string | undefined;
 		let closed = false;
 		const jobData = z.object({ noteId: z.string(), stage: z.string() });
@@ -288,7 +288,7 @@ describe('durable reliability boundaries', () => {
 			await analytics.promise;
 		});
 		const errors: unknown[] = [];
-		const notePostProcessing = createNotePostProcessing((error) => errors.push(error));
+		const notePostProcessing = createNotePostProcessing((error) => errors.push(error), 2);
 		let noteId: string | undefined;
 		try {
 			const response = await runInRequestScope(() =>
@@ -322,7 +322,7 @@ describe('durable reliability boundaries', () => {
 		const failure = new Error('required fanout failed');
 		const fanout = vi.spyOn(FanoutTimelinePush.prototype, 'flush').mockRejectedValueOnce(failure);
 		const analytics = vi.spyOn(runtime.chartWriters.notesChart, 'update');
-		const notePostProcessing = createNotePostProcessing(() => {});
+		const notePostProcessing = createNotePostProcessing(() => {}, 2);
 		const jobData = z.object({ noteId: z.string() });
 		try {
 			await expect(
