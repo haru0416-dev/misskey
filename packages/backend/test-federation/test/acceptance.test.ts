@@ -15,6 +15,8 @@ import {
 	signedRequest,
 	uploadFile,
 	waitFor,
+	errorMessageMatches,
+	knownUpstreamFailure,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
 
@@ -342,44 +344,49 @@ describe.each<[Host, Host]>([
 
 	test(
 		'Move honors destination alias and transfers local and remote followers',
-		async () => {
-			const [source, destination, sourceFollower, destinationFollower] = await Promise.all([
-				createAccount(sourceHost),
-				createAccount(peerHost),
-				createAccount(sourceHost),
-				createAccount(peerHost),
-			]);
-			await sourceFollower.client.request('following/create', { userId: source.id });
-			const sourceOnPeer = await follow(sourceHost, source, destinationFollower);
-			await destination.client.request('i/update', { alsoKnownAs: [`@${source.username}@${sourceHost}`] });
-			const destinationOnSource = await resolveRemoteUser(peerHost, destination.id, source);
-			const destinationActor = await document(await unsignedRequest(peerHost, `/users/${destination.id}`));
-			expect(destinationActor['alsoKnownAs']).toContain(`https://${sourceHost}/users/${source.id}`);
-			await source.client.request('i/move', { moveToAccount: `@${destination.username}@${peerHost}` });
-			await waitFor(async () => {
-				const [localFollowing, remoteFollowing] = await Promise.all([
-					sourceFollower.client.request('users/following', { userId: sourceFollower.id }),
-					destinationFollower.client.request('users/following', { userId: destinationFollower.id }),
+		// 公式版がローカル移行先を uri で探す不具合で、公式版側のフォロワーが引き継がれない (a.test 発の Move のみ)。
+		knownUpstreamFailure(
+			sourceHost === 'a.test',
+			errorMessageMatches(/^Condition was not met within 120000ms$/),
+			async () => {
+				const [source, destination, sourceFollower, destinationFollower] = await Promise.all([
+					createAccount(sourceHost),
+					createAccount(peerHost),
+					createAccount(sourceHost),
+					createAccount(peerHost),
 				]);
-				return (
-					localFollowing.some((relation) => relation.followeeId === destinationOnSource.id) &&
-					remoteFollowing.some((relation) => relation.followeeId === destination.id)
+				await sourceFollower.client.request('following/create', { userId: source.id });
+				const sourceOnPeer = await follow(sourceHost, source, destinationFollower);
+				await destination.client.request('i/update', { alsoKnownAs: [`@${source.username}@${sourceHost}`] });
+				const destinationOnSource = await resolveRemoteUser(peerHost, destination.id, source);
+				const destinationActor = await document(await unsignedRequest(peerHost, `/users/${destination.id}`));
+				expect(destinationActor['alsoKnownAs']).toContain(`https://${sourceHost}/users/${source.id}`);
+				await source.client.request('i/move', { moveToAccount: `@${destination.username}@${peerHost}` });
+				await waitFor(async () => {
+					const [localFollowing, remoteFollowing] = await Promise.all([
+						sourceFollower.client.request('users/following', { userId: sourceFollower.id }),
+						destinationFollower.client.request('users/following', { userId: destinationFollower.id }),
+					]);
+					return (
+						localFollowing.some((relation) => relation.followeeId === destinationOnSource.id) &&
+						remoteFollowing.some((relation) => relation.followeeId === destination.id)
+					);
+				}, convergenceTimeout);
+				await deliveryBarrier(sourceHost);
+				const sourceFollowerOnPeer = await resolveRemoteUser(sourceHost, sourceFollower.id, destination);
+				expect(
+					(await destination.client.request('users/followers', { userId: destination.id }))
+						.map((relation) => relation.followerId)
+						.sort(),
+				).toEqual([sourceFollowerOnPeer.id, destinationFollower.id].sort());
+				expect((await source.client.request('i', {})).movedTo).toBe(destinationOnSource.id);
+				expect((await destinationFollower.client.request('users/show', { userId: sourceOnPeer.id })).movedTo).toBe(
+					destination.id,
 				);
-			}, convergenceTimeout);
-			await deliveryBarrier(sourceHost);
-			const sourceFollowerOnPeer = await resolveRemoteUser(sourceHost, sourceFollower.id, destination);
-			expect(
-				(await destination.client.request('users/followers', { userId: destination.id }))
-					.map((relation) => relation.followerId)
-					.sort(),
-			).toEqual([sourceFollowerOnPeer.id, destinationFollower.id].sort());
-			expect((await source.client.request('i', {})).movedTo).toBe(destinationOnSource.id);
-			expect((await destinationFollower.client.request('users/show', { userId: sourceOnPeer.id })).movedTo).toBe(
-				destination.id,
-			);
-			const movedActor = await document(await unsignedRequest(sourceHost, `/users/${source.id}`));
-			expect(movedActor['movedTo']).toBe(`https://${peerHost}/users/${destination.id}`);
-		},
+				const movedActor = await document(await unsignedRequest(sourceHost, `/users/${source.id}`));
+				expect(movedActor['movedTo']).toBe(`https://${peerHost}/users/${destination.id}`);
+			},
+		),
 		testTimeout,
 	);
 

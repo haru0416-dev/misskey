@@ -17,6 +17,8 @@ import {
 	resolveRemoteUser,
 	signedRequest,
 	waitFor,
+	errorMessageMatches,
+	knownUpstreamFailure,
 } from './utils.js';
 import type { DeliveryCompletion, LoginUser } from './utils.js';
 
@@ -280,78 +282,88 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 	describe.each<FaultMode>(['outage', 'response-loss'])('%s', (mode) => {
 		test.each<Operation>(['Note', 'Follow', 'Reaction', 'Delete'])(
 			'%s converges without duplicate effects',
-			async (operation) => {
-				const scenario = await prepareDelivery(senderHost, receiverHost, operation);
-				await deliveryBarrier(senderHost);
-				await scenario.assertBefore();
-				await fault(receiverHost, mode, scenario.activityType);
-				let senderCompletion: DeliveryCompletion | undefined;
-				try {
-					const baseline = await faultStats(receiverHost);
-					await scenario.send();
-					const attempts = async () =>
-						(await faultStats(receiverHost, baseline.lastSequence)).observations.filter(
-							(item) =>
-								item.type === scenario.activityType &&
-								item.actor === scenario.actorUri &&
-								item.objectUri === scenario.objectUri(),
-						);
-					await waitFor(async () => (await attempts()).length > 0, timeout);
-					const firstAttempt = (await attempts())[0];
-					assert(firstAttempt?.id);
-					const activityId = firstAttempt.id;
-					if (mode === 'outage') {
-						await waitFor(
-							async () =>
-								(await attempts()).some(
-									(item) => item.id === activityId && item.outcome === 'rejected' && item.status === 503,
-								),
-							timeout,
-						);
-						expect((await attempts()).every((item) => item.mode === 'outage')).toBe(true);
+			async (operation) =>
+				// 公式版は応答喪失で再送された Follow への 2 通目の Accept を「No follow request.」で失敗させ、再試行し続ける。
+				await knownUpstreamFailure(
+					senderHost === 'b.test' && mode === 'response-loss' && operation === 'Follow',
+					errorMessageMatches(
+						/^b\.test: inbox processing failed and is retrying: .*"activity":"Accept".*"failedReason":"No follow request\."/,
+					),
+					async () => {
+						const scenario = await prepareDelivery(senderHost, receiverHost, operation);
+						await deliveryBarrier(senderHost);
 						await scenario.assertBefore();
-					} else {
-						// 同じ activity の応答喪失を繰り返し、別配送の成功で再送判定を満たさない。
-						await waitFor(
-							async () => {
-								if ((await attempts()).filter((item) => item.id === activityId && item.outcome === 'lost').length >= 2)
-									return true;
-								await promoteDelayed(senderHost, 'deliver');
-								return false;
-							},
-							timeout,
-							1000,
-						);
-						await waitFor(scenario.hasEffect, timeout);
-					}
-					senderCompletion = await observeDeliverySuccess(senderHost, receiverHost, activityId);
-					const recoverySequence = (await faultStats(receiverHost, Number.MAX_SAFE_INTEGER)).lastSequence;
-					await fault(receiverHost, 'pass');
-					await waitFor(
-						async () => {
-							const recovered = (await attempts()).some(
-								(item) =>
-									item.id === activityId &&
-									item.sequence > recoverySequence &&
-									item.mode === 'pass' &&
-									item.outcome === 'acknowledged',
+						await fault(receiverHost, mode, scenario.activityType);
+						let senderCompletion: DeliveryCompletion | undefined;
+						try {
+							const baseline = await faultStats(receiverHost);
+							await scenario.send();
+							const attempts = async () =>
+								(await faultStats(receiverHost, baseline.lastSequence)).observations.filter(
+									(item) =>
+										item.type === scenario.activityType &&
+										item.actor === scenario.actorUri &&
+										item.objectUri === scenario.objectUri(),
+								);
+							await waitFor(async () => (await attempts()).length > 0, timeout);
+							const firstAttempt = (await attempts())[0];
+							assert(firstAttempt?.id);
+							const activityId = firstAttempt.id;
+							if (mode === 'outage') {
+								await waitFor(
+									async () =>
+										(await attempts()).some(
+											(item) => item.id === activityId && item.outcome === 'rejected' && item.status === 503,
+										),
+									timeout,
+								);
+								expect((await attempts()).every((item) => item.mode === 'outage')).toBe(true);
+								await scenario.assertBefore();
+							} else {
+								// 同じ activity の応答喪失を繰り返し、別配送の成功で再送判定を満たさない。
+								await waitFor(
+									async () => {
+										if (
+											(await attempts()).filter((item) => item.id === activityId && item.outcome === 'lost').length >= 2
+										)
+											return true;
+										await promoteDelayed(senderHost, 'deliver');
+										return false;
+									},
+									timeout,
+									1000,
+								);
+								await waitFor(scenario.hasEffect, timeout);
+							}
+							senderCompletion = await observeDeliverySuccess(senderHost, receiverHost, activityId);
+							const recoverySequence = (await faultStats(receiverHost, Number.MAX_SAFE_INTEGER)).lastSequence;
+							await fault(receiverHost, 'pass');
+							await waitFor(
+								async () => {
+									const recovered = (await attempts()).some(
+										(item) =>
+											item.id === activityId &&
+											item.sequence > recoverySequence &&
+											item.mode === 'pass' &&
+											item.outcome === 'acknowledged',
+									);
+									if (!recovered) await promoteDelayed(senderHost, 'deliver');
+									return recovered;
+								},
+								timeout,
+								1000,
 							);
-							if (!recovered) await promoteDelayed(senderHost, 'deliver');
-							return recovered;
-						},
-						timeout,
-						1000,
-					);
-					await senderCompletion.waitForSuccess();
-					await waitFor(scenario.hasEffect, timeout);
-					await deliveryBarrier(senderHost);
-					await scenario.assertFinal();
-				} finally {
-					await fault(receiverHost, 'pass');
-					senderCompletion?.close();
-					await deliveryBarrier(senderHost);
-				}
-			},
+							await senderCompletion.waitForSuccess();
+							await waitFor(scenario.hasEffect, timeout);
+							await deliveryBarrier(senderHost);
+							await scenario.assertFinal();
+						} finally {
+							await fault(receiverHost, 'pass');
+							senderCompletion?.close();
+							await deliveryBarrier(senderHost);
+						}
+					},
+				)(),
 			timeout,
 		);
 	});

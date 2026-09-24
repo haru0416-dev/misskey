@@ -644,6 +644,8 @@ barrierは失敗理由付きでdelayedになったinboxジョブを即座に失�
 
 結果（`556022711e`＋本変更、Bun 1.4.0）: 公式セルは約98分→4分35秒、161成功・7失敗・10 pending（前回108・23・47）。残る7件はMove 2件、ブロック解除後のFollow/Reaction 2件、応答喪失時の重複Accept 1件、凍結解除後の復旧2件で、すべて上表の既知失敗。新規失敗は0件。失敗→成功16件と、skip→成功37件は連鎖の巻き添えだったもので、公式互換の保証範囲がその分広がった。fork同士のセルは約50分→2分15秒、168成功・0失敗・10 pendingで、直前のfork実行と全178件の個別statusが一致した。以後の公式セルの比較基準はこの7失敗とする。
 
+2026-09-25、この7件を公式版と組むときだけ`knownUpstreamFailure`（`test-federation/test/utils.ts`）で包み、記録どおりの形で失敗することを確かめる検査へ変えた。手順と条件は削らず毎回実行し、失敗の照合は各テストのエラー内容で行う（ブロック解除後は公式版APIの拒否文言、凍結解除後は公式版の内部エラーのうち`EntityNotFoundError`で`MiUserProfile`が見つからないもの、Moveは引き継ぎ条件の不成立、重複Acceptは公式版inboxの`No follow request.`再試行）。別の形で失敗すれば従来どおり落ち、成功すれば「既知失敗が再現しない」で落ちるので、公式版側の修正も検知できる。凍結解除後の内部エラーは両テストとも公式版（TypeORMの`EntityNotFoundError`、公式版形式のID）から返っていることを診断ログで確認した。以後の比較基準は公式セル・forkセルとも168成功・0失敗・10 pending（公式セル262秒、forkセル117秒）。
+
 ### 出荷後の原因調査：局所投稿のABBA比較（2026-09-24）
 
 重い24-run環境（専用containerは削除済みで復元が必要）の代わりに、単一host上の専用PostgreSQL 18（`fsync`・`synchronous_commit`は既定のon）とValkeyで、A=`1dba6556aa`とB=出荷版（backend/srcはmapperと型宣言1ファイル以外同一）を同じ設定・同じseed（投稿者20・読者20・follow 400）から毎回作り直して比較した。1 runは暖機30投稿、アイドル10秒、直列200投稿、並行4で400投稿、各段のqueue_outbox完了待ち。順序はABBA×3の12 run・6組、Bun 1.4.0、クラスタ構成はhttp 1 / queue 1。仮説・記録キー・判定は計測前に`~/dev/misskey-rootcause/PROTOCOL.md`へ固定し、組数の数え違いだけデータ取得前に訂正した。
