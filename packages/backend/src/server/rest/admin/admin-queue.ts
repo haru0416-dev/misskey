@@ -52,7 +52,8 @@ export const adminQueueJobsParamDef = z.object({
 	// bullmq v6 で JobType から 'paused' が外れた。キューの一時停止はキュー単位の状態になり、
 	// 個別ジョブが paused として並ぶことはなくなったため一覧の絞り込みからも除く。
 	// clean は v6 でも 'paused' を受けるので adminQueueClearParamDef 側には残している。
-	state: z.array(z.enum(['active', 'wait', 'delayed', 'completed', 'failed'])),
+	// 配送キューの処理待ちは全件に優先度が付くため wait ではなく prioritized に並ぶ。
+	state: z.array(z.enum(['active', 'wait', 'prioritized', 'delayed', 'completed', 'failed'])),
 	search: z.string().optional(),
 });
 

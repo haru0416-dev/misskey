@@ -6,6 +6,7 @@
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
 import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
+import { getQueueJobCounts } from '@/core/queue/queues.js';
 import type { DeliverQueue, InboxQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 
@@ -44,8 +45,8 @@ export function startQueueStatsDaemon(deps: DaemonQueueStatsDependencies): { dis
 
 	const tick = async () => {
 		const [deliverJobCounts, inboxJobCounts] = await Promise.all([
-			deps.deliverQueue.getJobCounts(),
-			deps.inboxQueue.getJobCounts(),
+			getQueueJobCounts(deps.deliverQueue),
+			getQueueJobCounts(deps.inboxQueue),
 		]);
 
 		const stats = {
