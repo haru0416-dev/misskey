@@ -97,7 +97,13 @@ describe('Note', () => {
 
 			await deliveryBarrier('b.test');
 
-			const resolvedReplyedNote = await bob.client.request('notes/show', { noteId: resolvedNote.replyId });
+			// 公式版は返信数の加算を保存後の setImmediate で行い完了も待たないため、queue を見る barrier では追えない。
+			const replyId = resolvedNote.replyId;
+			await waitFor(
+				async () => (await bob.client.request('notes/show', { noteId: replyId })).repliesCount === 1,
+				10_000,
+			);
+			const resolvedReplyedNote = await bob.client.request('notes/show', { noteId: replyId });
 			strictEqual(resolvedReplyedNote.repliesCount, 1);
 		});
 
