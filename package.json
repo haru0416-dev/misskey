@@ -6,7 +6,7 @@
 		"type": "git",
 		"url": "https://github.com/haru0416-dev/misskey.git"
 	},
-	"packageManager": "bun@1.4.0",
+	"packageManager": "bun@1.4.2",
 	"workspaces": [
 		"packages/slacc",
 		"packages/backend",
@@ -24,7 +24,7 @@
 	],
 	"private": true,
 	"engines": {
-		"bun": "^1.4.0"
+		"bun": "^1.4.2"
 	},
 	"scripts": {
 		"compile-config": "cd packages/backend && bun run compile-config",
