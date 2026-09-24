@@ -5,7 +5,7 @@
 	"workspaceFolder": "/workspace",
 	"features": {
 		"ghcr.io/devcontainers-extra/features/bun:1": {
-			"version": "1.4.0"
+			"version": "1.4.2"
 		}
 	},
 	"forwardPorts": [3000],
