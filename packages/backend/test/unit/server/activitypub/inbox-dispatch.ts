@@ -367,6 +367,48 @@ describe('hono-ap-inbox performOneActivityForApi', () => {
 		expect((await fetchUserByIdOrFailFromDatabase(deps.db, actor.id)).followersCount).toBe(0);
 	});
 
+	test('Accept(Follow): 同時に届いた承認で他方が先に関係を作っていても成功として扱い、集計を重複させない', async () => {
+		// 応答喪失の再送で Accept が 2 通同時に処理されると、両方がリクエストを見つけて INSERT し、
+		// 後着側が一意制約違反になる。その後着側の状態 (リクエストは残り、関係は既にある) を再現する。
+		const actor = await createTestRemoteUser(deps, 'raceaccept', 'race-accept.example.com');
+		const follower = await createTestLocalUser(deps, 'raceacceptfollower');
+		const requestId = genId();
+		await createFollowRequestInDatabase(deps.db, {
+			id: requestId,
+			followerId: follower.id,
+			followeeId: actor.id,
+		});
+		const existingId = genId();
+		await createFollowingInDatabase(deps.db, {
+			id: existingId,
+			followerId: follower.id,
+			followeeId: actor.id,
+			followeeHost: actor.host,
+			followeeInbox: actor.inbox,
+			followeeSharedInbox: actor.sharedInbox,
+		});
+		const follow: IFollow = {
+			type: 'Follow',
+			id: `${deps.config.instance.url}/follows/${requestId}`,
+			actor: localUserUri(deps, follower),
+			object: actor.uri!,
+		};
+		const activity: IAccept = {
+			type: 'Accept',
+			id: `https://${actor.host}/accepts/${genId()}`,
+			actor: actor.uri!,
+			object: follow,
+		};
+
+		await expect(performOneActivityForApi(deps, asRemote(actor), activity, new Set())).resolves.toBe('ok');
+		expect((await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, actor.id))?.id).toBe(
+			existingId,
+		);
+		// 集計は先に INSERT した側が行う。後着側は副作用を持たない。
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, follower.id)).followingCount).toBe(0);
+		expect((await fetchUserByIdOrFailFromDatabase(deps.db, actor.id)).followersCount).toBe(0);
+	});
+
 	test('Undo(Follow): 既存のフォローリクエストを取り消す', async () => {
 		const actor = await createTestRemoteUser(deps, 'honoinboxundofollow', 'hono-inbox-undo-follow.example.com');
 		const followee = await createTestLocalUser(deps, 'honoinboxundofollowee');
