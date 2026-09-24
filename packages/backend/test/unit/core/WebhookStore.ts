@@ -74,7 +74,7 @@ describe('WebhookStore', () => {
 			await waitForTwoAdvisoryLockWaiters(blocker);
 			await blocker.unsafe('COMMIT');
 			const results = await resultsPromise;
-			expect(results.filter((result) => result != null).length).toBe(1);
+			expect(results.filter((result) => result != null)).toHaveLength(1);
 			expect(await countWebhooksByUserIdFromDatabase(firstDb, userId)).toBe(1);
 		} finally {
 			blocker.release();

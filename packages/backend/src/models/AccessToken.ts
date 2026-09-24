@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiApp } from './App.js';
+import type { MiUser } from './User.js';
+import type { MiApp } from './App.js';
 
 export class MiAccessToken {
 	public id: string;

@@ -135,7 +135,7 @@ async function search() {
 			limit: 10,
 			params: {
 				query: searchQuery.value,
-				type: type,
+				type,
 			},
 		}),
 	);

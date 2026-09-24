@@ -149,7 +149,7 @@ function collectScriptUsage(workspaces) {
 		for (const [scriptName, script] of Object.entries(workspace.scripts ?? {})) {
 			for (const packageName of Object.keys(bunNativeCandidates)) {
 				if (
-					!new RegExp(`(^|[^\\w@/-])${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\w@/-]|$)`).test(script)
+					!new RegExp(`(^|[^\\w@/-])${packageName.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\w@/-]|$)`).test(script)
 				) {
 					continue;
 				}

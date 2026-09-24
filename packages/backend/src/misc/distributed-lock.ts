@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Redis from 'ioredis';
+import type * as Redis from 'ioredis';
 import { randomUUID } from 'node:crypto';
 
 const releaseLockScript = `

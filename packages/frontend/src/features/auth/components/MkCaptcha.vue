@@ -64,6 +64,7 @@ type CaptchaContainer = {
 
 declare global {
 	// Window を拡張してるため、空ではない
+	// oxlint-disable-next-line typescript/no-empty-interface -- グローバルの Window へ宣言マージで型を足す。type 別名ではマージできない。
 	interface Window extends CaptchaContainer {}
 }
 
@@ -196,7 +197,7 @@ async function requestRender() {
 		captchaWidgetId.value = captcha.value.render(elem, {
 			sitekey: props.sitekey,
 			theme: store.darkMode ? 'dark' : 'light',
-			callback: callback,
+			callback,
 			'expired-callback': () => callback(undefined),
 			'error-callback': () => callback(undefined),
 		});

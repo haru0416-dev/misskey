@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Predicate } from './relation.js';
+import type { Predicate } from './relation.js';
 
 function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	return xs.filter(f).length;

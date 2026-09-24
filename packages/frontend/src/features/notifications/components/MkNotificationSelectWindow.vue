@@ -57,10 +57,9 @@ const props = withDefaults(
 
 const dialog = useTemplateRef('dialog');
 
-const typesMap = notificationTypes.reduce(
-	(p, t) => ({ ...p, [t]: ref<boolean>(!props.excludeTypes.includes(t)) }),
-	{} as TypesMap,
-);
+const typesMap = Object.fromEntries(
+	notificationTypes.map((t) => [t, ref<boolean>(!props.excludeTypes.includes(t))]),
+) as TypesMap;
 
 function ok() {
 	emit('done', {

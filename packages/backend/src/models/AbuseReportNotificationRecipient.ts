@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiSystemWebhook } from '@/models/SystemWebhook.js';
-import { MiUserProfile } from '@/models/UserProfile.js';
-import { MiUser } from './User.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
+import type { MiUserProfile } from '@/models/UserProfile.js';
+import type { MiUser } from './User.js';
 
 export type RecipientMethod = 'email' | 'webhook';
 

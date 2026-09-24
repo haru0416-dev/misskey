@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { WebhookEventTypes } from '@/models/Webhook.js';
+import type { WebhookEventTypes } from '@/models/Webhook.js';
 import type { Packed } from '@/misc/json-schema.js';
 
 export type UserWebhookPayload<T extends WebhookEventTypes> = T extends 'note' | 'reply' | 'renote' | 'mention'

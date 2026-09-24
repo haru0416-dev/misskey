@@ -1,5 +1,5 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import {
 	assertNotificationReceived,
 	createAccount,
@@ -23,6 +23,13 @@ describe('Notification', () => {
 	});
 
 	describe('Follow', () => {
+		afterAll(async () => {
+			// 次の通知シナリオに未処理の Follow / Undo を残さない。
+			await deliveryBarrier('b.test');
+			await bob.client.request('following/delete', { userId: aliceInB.id });
+			await deliveryBarrier('b.test');
+		});
+
 		test('Get notification when follow', async () => {
 			await assertNotificationReceived(
 				'b.test',
@@ -44,13 +51,6 @@ describe('Notification', () => {
 				(notification) => notification.type === 'follow' && notification.userId === bobInA.id,
 				true,
 			);
-		});
-
-		afterAll(async () => {
-			// 次の通知シナリオに未処理の Follow / Undo を残さない。
-			await deliveryBarrier('b.test');
-			await bob.client.request('following/delete', { userId: aliceInB.id });
-			await deliveryBarrier('b.test');
 		});
 	});
 

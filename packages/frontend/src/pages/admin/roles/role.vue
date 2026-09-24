@@ -178,7 +178,7 @@ async function unassign(userId: Misskey.entities.User['id'], ev: PointerEvent) {
 				icon: 'ti ti-x',
 				danger: true,
 				action: async () => {
-					await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId: userId });
+					await os.apiWithDialog('admin/roles/unassign', { roleId: role.id, userId });
 					usersPaginator.reload();
 				},
 			},

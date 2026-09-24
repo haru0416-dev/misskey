@@ -7,12 +7,12 @@
  * OAuth ライブラリが Misskey に正しく統合され、依存関係の更新や実装変更で退行しないことを確認する。
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { createServer } from 'node:http';
 import type { Server, ServerResponse } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { AuthorizationCode, ClientCredentials, ModuleOptions, ResourceOwnerPassword } from 'simple-oauth2';
-import type { AuthorizationTokenConfig } from 'simple-oauth2';
+import { AuthorizationCode, ClientCredentials, ResourceOwnerPassword } from 'simple-oauth2';
+import type { AuthorizationTokenConfig, ModuleOptions } from 'simple-oauth2';
 import * as htmlParser from 'node-html-parser';
 import { api, oauthClientPort, resolveTargetUrl, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -1361,7 +1361,7 @@ describe('OAuth', () => {
 				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
 				expect(meta.clientName).toBe('Misklient');
-				expect(meta.clientLogo).toBe(undefined);
+				expect(meta.clientLogo).toBeUndefined();
 			});
 
 			test('Mismatching URL in h-app', async () => {

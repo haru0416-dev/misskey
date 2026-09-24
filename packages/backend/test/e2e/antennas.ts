@@ -284,7 +284,7 @@ describe('アンテナ', () => {
 			user: alice,
 		});
 		expect(response.src).toBe('all');
-		expect(response.userListId).toBe(null);
+		expect(response.userListId).toBeNull();
 	});
 
 	const antennaParamPattern = [
@@ -436,7 +436,7 @@ describe('アンテナ', () => {
 			parameters: { antennaId: antenna.id },
 			user: alice,
 		});
-		expect(response).toStrictEqual(null);
+		expect(response).toBeNull();
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
 		expect(list).toStrictEqual([]);
 	});
@@ -455,7 +455,7 @@ describe('アンテナ', () => {
 			},
 		);
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
-		expect(list.map((a) => a.id).includes(antenna.id)).toStrictEqual(true);
+		expect(list.map((a) => a.id).includes(antenna.id)).toBe(true);
 	});
 
 	describe('のノート', () => {

@@ -461,7 +461,7 @@ const fetchInstanceRequestsChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -492,7 +492,7 @@ const fetchInstanceUsersChart = async (total: boolean): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -511,7 +511,7 @@ const fetchInstanceNotesChart = async (total: boolean): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -530,7 +530,7 @@ const fetchInstanceFfChart = async (total: boolean): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -555,7 +555,7 @@ const fetchInstanceDriveUsageChart = async (total: boolean): Promise<ChartData> 
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		bytes: true,
 		series: [
@@ -575,7 +575,7 @@ const fetchInstanceDriveFilesChart = async (total: boolean): Promise<ChartData> 
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/instance', { host: host, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/instance', { host, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -594,7 +594,7 @@ const fetchPerUserNotesChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/user/notes', { userId: userId, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/user/notes', { userId, limit: props.limit, span: props.span });
 	return {
 		series: [
 			...(props.args?.withoutAll
@@ -641,7 +641,7 @@ const fetchPerUserPvChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/user/pv', { userId: userId, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/user/pv', { userId, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -678,7 +678,7 @@ const fetchPerUserFollowingChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/user/following', { userId: userId, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/user/following', { userId, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -701,7 +701,7 @@ const fetchPerUserFollowersChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/user/following', { userId: userId, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/user/following', { userId, limit: props.limit, span: props.span });
 	return {
 		series: [
 			{
@@ -724,7 +724,7 @@ const fetchPerUserDriveChart = async (): Promise<ChartData> => {
 		return { series: [] };
 	}
 
-	const raw = await misskeyApiGet('charts/user/drive', { userId: userId, limit: props.limit, span: props.span });
+	const raw = await misskeyApiGet('charts/user/drive', { userId, limit: props.limit, span: props.span });
 	return {
 		bytes: true,
 		series: [

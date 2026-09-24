@@ -5,12 +5,12 @@
 
 import { describe, expect, test } from 'vitest';
 import policy from '../../scripts/optimization/preregistration.json' with { type: 'json' };
-import {
-	acceptedRecoveryListingFailure,
-	type CorrectnessCheck,
-	type Peer,
-	type RecoveryListingEvidence,
-	type RecoverySnapshot,
+import { acceptedRecoveryListingFailure } from '../../scripts/optimization/scenarios.mjs';
+import type {
+	CorrectnessCheck,
+	Peer,
+	RecoveryListingEvidence,
+	RecoverySnapshot,
 } from '../../scripts/optimization/scenarios.mjs';
 
 const peer: Peer = { url: 'https://b.test', kind: 'upstream', adminTokenEnv: 'UNUSED' };

@@ -15,7 +15,7 @@ const builtins = import.meta.glob<Theme>('../../frontend-shared/themes/*.json5',
 describe('組み込みテーマ', () => {
 	test('23 テーマすべてが json5 から読める', () => {
 		// glob の取りこぼしに気付けるよう件数を明示する。
-		expect(Object.keys(builtins).length).toBe(23);
+		expect(Object.keys(builtins)).toHaveLength(23);
 	});
 
 	for (const [path, theme] of Object.entries(builtins)) {

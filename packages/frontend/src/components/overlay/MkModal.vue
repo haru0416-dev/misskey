@@ -207,6 +207,7 @@ const align = () => {
 	if (props.anchor.x === 'center') {
 		left = x + props.anchorElement.offsetWidth / 2 - width / 2;
 	} else if (props.anchor.x === 'left') {
+		// 左寄せは未対応で、基準位置のまま置く。
 	} else if (props.anchor.x === 'right') {
 		left = x + props.anchorElement.offsetWidth;
 	}
@@ -214,6 +215,7 @@ const align = () => {
 	if (props.anchor.y === 'center') {
 		top = y - height / 2;
 	} else if (props.anchor.y === 'top') {
+		// 上寄せは未対応で、基準位置のまま置く。
 	} else if (props.anchor.y === 'bottom') {
 		top = y + props.anchorElement.offsetHeight;
 	}
@@ -300,7 +302,7 @@ const align = () => {
 const onOpened = () => {
 	emit('opened');
 
-	nextTick(() => {
+	nextTick().then(() => {
 		if (content.value == null) {
 			return;
 		}
@@ -372,7 +374,7 @@ onMounted(() => {
 		{ immediate: true },
 	);
 
-	nextTick(() => {
+	nextTick().then(() => {
 		if (content.value) {
 			alignObserver.observe(content.value);
 		}

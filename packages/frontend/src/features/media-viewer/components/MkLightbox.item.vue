@@ -608,7 +608,7 @@ function animateFromSource() {
 	sourceAnimationStarted = true;
 	enableTransition.value = true;
 	transform.value = { x: 0, y: 0, scale: 1 };
-	void nextTick(() => {
+	void nextTick().then(() => {
 		if (props.content.sourceElement != null) {
 			props.content.sourceElement.style.visibility = 'hidden';
 		}

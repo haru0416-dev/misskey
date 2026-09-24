@@ -4,7 +4,7 @@
  */
 
 import { markRaw, ref, defineAsyncComponent, nextTick } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import type { Component } from 'vue';
 import type { ComponentEmit } from 'vue-component-type-helpers';
 import type { Form, GetFormResultType } from '@/utility/form.js';
@@ -155,8 +155,8 @@ export function promiseDialog<T extends Promise<unknown>>(
 	const { dispose } = popup(
 		MkWaitingDialog,
 		{
-			success: success,
-			showing: showing,
+			success,
+			showing,
 			...(text === undefined ? {} : { text }),
 		},
 		{
@@ -582,7 +582,7 @@ export function success(): Promise<void> {
 			MkWaitingDialog,
 			{
 				success: true,
-				showing: showing,
+				showing,
 			},
 			{
 				done: () => resolve(),
@@ -614,7 +614,7 @@ export function waiting(options: { text?: string } = {}) {
 		MkWaitingDialog,
 		{
 			success: isSuccess,
-			showing: showing,
+			showing,
 			...(options.text === undefined ? {} : { text: options.text }),
 		},
 		{
@@ -713,7 +713,7 @@ export async function cropImageFile<F extends File | Blob>(
 		const { dispose } = popup(
 			MkCropperDialog,
 			{
-				imageFile: imageFile,
+				imageFile,
 				aspectRatio: options.aspectRatio,
 			},
 			{

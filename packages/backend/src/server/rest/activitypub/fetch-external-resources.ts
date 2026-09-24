@@ -77,7 +77,7 @@ export async function handleApiFetchExternalResources(
 		throw clientError(invalidSchema);
 	}
 
-	const resHash = createHash('sha512').update(res.data.replaceAll(/\r\n/g, '\n')).digest('hex');
+	const resHash = createHash('sha512').update(res.data.replaceAll('\r\n', '\n')).digest('hex');
 	if (resHash !== params.hash) {
 		throw clientError(hashUnmatched);
 	}

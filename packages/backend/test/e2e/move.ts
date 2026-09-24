@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { fetchUserByIdOrFailFromDatabase, openTestDatabase, updateUserInDatabase } from '../fixtures.js';
@@ -402,7 +402,7 @@ describe('Account Move', () => {
 					alice,
 				);
 				expect(aliceFollowings.status).toBe(200);
-				expect(aliceFollowings.body.length).toBe(3);
+				expect(aliceFollowings.body).toHaveLength(3);
 			}, waitForMoveJobOptions);
 
 			await vi.waitFor(async () => {
@@ -414,7 +414,7 @@ describe('Account Move', () => {
 					carol,
 				);
 				expect(carolFollowings.status).toBe(200);
-				expect(carolFollowings.body.length).toBe(2);
+				expect(carolFollowings.body).toHaveLength(2);
 				expect(carolFollowings.body[0]?.followeeId).toBe(bob.id);
 				expect(carolFollowings.body[1]?.followeeId).toBe(alice.id);
 			}, waitForMoveJobOptions);
@@ -422,7 +422,7 @@ describe('Account Move', () => {
 			await vi.waitFor(async () => {
 				const blockings = await api('blocking/list', {}, dave);
 				expect(blockings.status).toBe(200);
-				expect(blockings.body.length).toBe(2);
+				expect(blockings.body).toHaveLength(2);
 				expect(blockings.body[0]?.blockeeId).toBe(bob.id);
 				expect(blockings.body[1]?.blockeeId).toBe(alice.id);
 			}, waitForMoveJobOptions);
@@ -430,7 +430,7 @@ describe('Account Move', () => {
 			await vi.waitFor(async () => {
 				const mutings = await api('mute/list', {}, dave);
 				expect(mutings.status).toBe(200);
-				expect(mutings.body.length).toBe(2);
+				expect(mutings.body).toHaveLength(2);
 				expect(mutings.body[0]?.muteeId).toBe(bob.id);
 				expect(mutings.body[1]?.muteeId).toBe(alice.id);
 			}, waitForMoveJobOptions);
@@ -440,7 +440,7 @@ describe('Account Move', () => {
 				expect(rootLists.status).toBe(200);
 				const userIds = rootLists.body[0]?.userIds;
 				assert.ok(userIds);
-				expect(userIds.length).toBe(2);
+				expect(userIds).toHaveLength(2);
 				assert.ok(userIds.includes(bob.id));
 				assert.ok(userIds.includes(alice.id));
 			}, waitForMoveJobOptions);
@@ -469,7 +469,7 @@ describe('Account Move', () => {
 			);
 
 			expect(followers.status).toBe(200);
-			expect(followers.body.length).toBe(2);
+			expect(followers.body).toHaveLength(2);
 			expect(followers.body[0]?.followerId).toBe(bob.id);
 		});
 
@@ -484,7 +484,7 @@ describe('Account Move', () => {
 				);
 
 				expect(following.status).toBe(200);
-				expect(following.body.length).toBe(0);
+				expect(following.body).toHaveLength(0);
 			}, waitForDelayedUnfollowJobOptions);
 		});
 

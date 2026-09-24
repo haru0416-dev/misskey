@@ -46,9 +46,9 @@ function recordLoadedFile(kind, filePath, request) {
 const originalLoad = Module._load;
 const originalResolveFilename = Module._resolveFilename;
 
-Module._load = function load(request, parent, isMain) {
+Module._load = function load(request, parent, isMain, ...rest) {
 	const resolved = originalResolveFilename.call(this, request, parent, isMain);
-	const result = originalLoad.apply(this, arguments);
+	const result = originalLoad.call(this, request, parent, isMain, ...rest);
 	recordLoadedFile('cjs', resolved, request);
 	return result;
 };

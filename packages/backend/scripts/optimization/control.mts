@@ -19,7 +19,8 @@ import {
 	summarizeRun,
 	validateConfig,
 } from './compare.mjs';
-import { openRunRecording, readRunRecording, runRecord, type Run, type RunRecord } from './recording.mjs';
+import { openRunRecording, readRunRecording, runRecord } from './recording.mjs';
+import type { Run, RunRecord } from './recording.mjs';
 
 type Config = Parameters<typeof runOne>[0];
 type Control = {

@@ -46,7 +46,7 @@ function createMembers(record: LocaleRecord): ts.TypeElement[] {
 				node,
 				ts.SyntaxKind.MultiLineCommentTrivia,
 				`*
- * ${v.replace(/\n/g, '\n * ')}
+ * ${v.replaceAll('\n', '\n * ')}
  `,
 				true,
 			);

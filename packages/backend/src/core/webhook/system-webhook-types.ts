@@ -4,8 +4,8 @@
  */
 
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import { Packed } from '@/misc/json-schema.js';
-import { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
+import type { Packed } from '@/misc/json-schema.js';
+import type { AbuseReportResolveType } from '@/models/AbuseUserReport.js';
 
 export type AbuseReportPayload = {
 	id: string;

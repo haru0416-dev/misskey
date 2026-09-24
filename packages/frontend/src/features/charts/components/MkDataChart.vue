@@ -270,7 +270,7 @@ function scheduleRender() {
 
 watch(
 	() => [props.series, props.detailed, props.stacked, props.bytes, store.darkMode, hiddenIndexes.value],
-	() => nextTick(scheduleRender),
+	() => nextTick().then(scheduleRender),
 	{ deep: true },
 );
 

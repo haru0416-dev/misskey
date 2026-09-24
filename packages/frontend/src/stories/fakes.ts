@@ -396,8 +396,8 @@ export function role(
 		isModerator: params.isModerator ?? false,
 		isAdministrator: params.isAdministrator ?? false,
 		displayOrder: params.displayOrder ?? 0,
-		createdAt: createdAt,
-		updatedAt: updatedAt,
+		createdAt,
+		updatedAt,
 		target: params.target ?? 'manual',
 		isPublic: params.isPublic ?? true,
 		isExplorable: params.isExplorable ?? true,
@@ -441,8 +441,8 @@ export function emoji(
 	const image = imageDataUrl({}, _seed);
 
 	return {
-		id: id,
-		name: name,
+		id,
+		name,
 		host: params?.host ?? null,
 		uri: params?.uri ?? null,
 		publicUrl: params?.publicUrl ?? image,
@@ -454,7 +454,7 @@ export function emoji(
 		isSensitive: params?.isSensitive ?? false,
 		localOnly: params?.localOnly ?? false,
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [],
-		updatedAt: updatedAt,
+		updatedAt,
 	};
 }
 

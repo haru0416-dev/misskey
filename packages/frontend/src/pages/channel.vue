@@ -300,7 +300,7 @@ async function search() {
 		new Paginator('notes/search', {
 			limit: 10,
 			params: {
-				query: query,
+				query,
 				channelId: channel.value.id,
 			},
 		}),

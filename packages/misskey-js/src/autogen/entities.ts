@@ -1,4 +1,4 @@
-import { operations } from './types.js';
+import type { operations } from './types.js';
 
 export type EmptyRequest = Record<string, unknown>;
 export type EmptyResponse = null;

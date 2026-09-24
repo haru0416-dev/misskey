@@ -1,6 +1,6 @@
 import { describe, test, beforeAll } from 'vitest';
 import { rejects, strictEqual } from 'node:assert';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { createAccount, createModerator, deliveryBarrier, resolveRemoteUser } from './utils.js';
 import type { LoginUser } from './utils.js';
 

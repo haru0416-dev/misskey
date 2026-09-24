@@ -112,7 +112,7 @@ windowRouter.addListener('replace', (ctx) => {
 windowRouter.addListener('forcePush', (ctx) => {
 	window.open(url + ctx.fullPath, '_blank', 'noopener');
 	if (ctx.onInit) {
-		nextTick(() => {
+		nextTick().then(() => {
 			windowEl.value?.close();
 		});
 	}
@@ -121,7 +121,7 @@ windowRouter.addListener('forcePush', (ctx) => {
 windowRouter.addListener('forceReplace', (ctx) => {
 	window.open(url + ctx.fullPath, '_blank', 'noopener');
 	if (ctx.onInit) {
-		nextTick(() => {
+		nextTick().then(() => {
 			windowEl.value?.close();
 		});
 	}

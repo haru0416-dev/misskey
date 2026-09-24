@@ -84,7 +84,7 @@ async function save() {
 	let parsed;
 	try {
 		parsed = parseMutes(mutedWords.value);
-	} catch (err) {
+	} catch {
 		// parseMutes 側でエラーを表示済みのため、ここでは保存だけを中止する。
 		return;
 	}

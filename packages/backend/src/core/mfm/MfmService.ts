@@ -49,9 +49,9 @@ function anchorToMfm(
 		return txt;
 	}
 	if (!txt || txt === href) {
-		return href.match(urlRegexFull) ? href : `<${href}>`;
+		return urlRegexFull.test(href) ? href : `<${href}>`;
 	}
-	return href.match(urlRegex) && !href.match(urlRegexFull) ? `[${txt}](<${href}>)` : `[${txt}](${href})`;
+	return href.match(urlRegex) && !urlRegexFull.test(href) ? `[${txt}](<${href}>)` : `[${txt}](${href})`;
 }
 
 /** ノード配下のテキストを、br だけ改行に置き換えて連結する。 */
@@ -114,7 +114,7 @@ function parseRubyPairs(node: htmlParser.HTMLElement): [string, string][] | null
 export function createMfmService(config: Config) {
 	function fromHtml(html: string, hashtagNames?: string[]): string {
 		// Pixelfed など一部の AP サーバーは改行だけでなく br タグも使う。
-		html = html.replace(/<br\s?\/?>\r?\n/gi, '\n');
+		html = html.replaceAll(/<br\s?\/?>\r?\n/gi, '\n');
 
 		const normalizedHashtagNames =
 			hashtagNames == null ? undefined : new Set<string>(hashtagNames.map((x) => normalizeForSearch(x)));

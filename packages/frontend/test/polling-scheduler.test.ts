@@ -79,11 +79,10 @@ describe('PollingScheduler', () => {
 	test('can stop itself after a poll and becomes inert after disposal', async () => {
 		vi.spyOn(window.document, 'hidden', 'get').mockReturnValue(false);
 		const { timers, runNext } = createTimers();
-		let scheduler: PollingScheduler;
 		const task = vi.fn(() => {
 			scheduler.stop();
 		});
-		scheduler = new PollingScheduler(task, 10_000);
+		const scheduler = new PollingScheduler(task, 10_000);
 
 		scheduler.start();
 		runNext();

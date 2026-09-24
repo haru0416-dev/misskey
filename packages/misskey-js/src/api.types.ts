@@ -1,6 +1,6 @@
-import { Endpoints as Gen } from './autogen/endpoint.js';
-import { UserDetailed } from './autogen/models.js';
-import {
+import type { Endpoints as Gen } from './autogen/endpoint.js';
+import type { UserDetailed } from './autogen/models.js';
+import type {
 	AdminRolesCreateRequest,
 	AdminRolesCreateResponse,
 	EmptyRequest,
@@ -9,7 +9,7 @@ import {
 	I2faKeyDoneResponse,
 	UsersShowRequest,
 } from './autogen/entities.js';
-import {
+import type {
 	PartialRolePolicyOverride,
 	SigninFlowRequest,
 	SigninFlowResponse,

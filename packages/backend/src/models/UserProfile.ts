@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { followingVisibilities, followersVisibilities, notificationTypes } from '@/types.js';
-import { MiUser } from './User.js';
-import { MiPage } from './Page.js';
-import { MiUserList } from './UserList.js';
+import type { followingVisibilities, followersVisibilities, notificationTypes } from '@/types.js';
+import type { MiUser } from './User.js';
+import type { MiPage } from './Page.js';
+import type { MiUserList } from './UserList.js';
 
 export class MiUserProfile {
 	public userId: MiUser['id'];

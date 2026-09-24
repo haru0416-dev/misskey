@@ -61,7 +61,7 @@ function addActivityContext<T extends IObject>(
 		activity.id = id ?? `${config.instance.url}/${randomUUID()}`;
 	}
 
-	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
+	return { '@context': CONTEXT, ...(activity as T & { id: string }) };
 }
 
 async function enqueueDeleteAccountJob(

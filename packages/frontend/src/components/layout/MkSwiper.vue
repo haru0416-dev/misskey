@@ -161,7 +161,7 @@ function touchMove(event: TouchEvent) {
 
 	isSwiping.value = true;
 	isSwipingForClass.value = true;
-	nextTick(() => {
+	nextTick().then(() => {
 		// 1.5px 未満の差では再描画しない。
 		if (Math.abs(distanceX - pullDistance.value) < 1.5) {
 			return;
@@ -261,7 +261,7 @@ watch(tabModel, (newTab, oldTab) => {
 	const newIndex = props.tabs.findIndex((tab) => tab.key === newTab);
 	const oldIndex = props.tabs.findIndex((tab) => tab.key === oldTab);
 
-	if (oldIndex >= 0 && newIndex >= 0 && oldIndex < newIndex) {
+	if (oldIndex !== -1 && newIndex !== -1 && oldIndex < newIndex) {
 		transitionName.value = 'swipeAnimationLeft';
 	} else {
 		transitionName.value = 'swipeAnimationRight';

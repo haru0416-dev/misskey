@@ -4,7 +4,7 @@
  */
 
 declare module '@shared/themes/*.json5' {
-	import { Theme } from '@shared/utility/theme.js';
+	import type { Theme } from '@shared/utility/theme.js';
 
 	const theme: Theme;
 

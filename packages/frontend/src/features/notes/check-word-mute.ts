@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 
 type CompiledMute = { source: string[]; keywords: string[] } | { source: string; regexp: RegExp };
 
@@ -34,7 +34,7 @@ function compileMutes(mutedWords: (string | string[])[]): CompiledMute[] {
 		}
 		try {
 			compiled.push({ source: filter, regexp: new RegExp(source, regexp[2] ?? '') });
-		} catch (_) {}
+		} catch {}
 	}
 
 	compiledMutesCache.set(mutedWords, compiled);

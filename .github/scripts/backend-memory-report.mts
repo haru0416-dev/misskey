@@ -264,12 +264,13 @@ function renderLargestPackageIncreases(base: RuntimeLoadedJsFootprintReport, hea
 			const basePackage = basePackages.get(headPackage.name);
 			const baseSourceBytes = basePackage?.sourceBytes ?? 0;
 			const baseModules = basePackage?.modules ?? 0;
-			return Object.assign({}, headPackage, {
+			return {
+				...headPackage,
 				baseSourceBytes,
 				baseModules,
 				sourceDiff: headPackage.sourceBytes - baseSourceBytes,
 				moduleDiff: headPackage.modules - baseModules,
-			});
+			};
 		})
 		.filter((packageSummary) => packageSummary.sourceDiff > 0)
 		.toSorted((a, b) => b.sourceDiff - a.sourceDiff)

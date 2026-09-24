@@ -955,7 +955,7 @@ function emitCellValue(sender: GridCell | CellAddress, newValue: CellValue) {
 		column: cell.column,
 		row: cell.row,
 		oldValue: cell.value,
-		newValue: newValue,
+		newValue,
 	});
 
 	if (_DEV_) {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { fetchNoteByIdFromDatabase, openTestDatabase } from '../fixtures.js';
@@ -230,7 +230,7 @@ describe('Note', () => {
 		);
 
 		expect(res.status).toBe(200);
-		expect(res.body.createdNote.text).toBe(null);
+		expect(res.body.createdNote.text).toBeNull();
 	});
 
 	test('visibility: followersでrenoteできる', async () => {
@@ -512,7 +512,7 @@ describe('Note', () => {
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			assert.ok(res.body.createdNote.files);
-			expect(res.body.createdNote.files.length).toBe(1);
+			expect(res.body.createdNote.files).toHaveLength(1);
 			expect(res.body.createdNote.files[0]?.id).toBe(file.body!.id);
 		});
 
@@ -541,7 +541,7 @@ describe('Note', () => {
 			const myNote = res.body.find((note) => note.id === createdNote.body.createdNote.id);
 			assert.ok(myNote);
 			assert.ok(myNote.files);
-			expect(myNote.files.length).toBe(1);
+			expect(myNote.files).toHaveLength(1);
 			expect(myNote.files[0]?.id).toBe(file.body!.id);
 		});
 
@@ -580,7 +580,7 @@ describe('Note', () => {
 			assert.ok(myNote);
 			assert.ok(myNote.renote);
 			assert.ok(myNote.renote.files);
-			expect(myNote.renote.files.length).toBe(1);
+			expect(myNote.renote.files).toHaveLength(1);
 			expect(myNote.renote.files[0]?.id).toBe(file.body!.id);
 		});
 
@@ -620,7 +620,7 @@ describe('Note', () => {
 			assert.ok(myNote);
 			assert.ok(myNote.reply);
 			assert.ok(myNote.reply.files);
-			expect(myNote.reply.files.length).toBe(1);
+			expect(myNote.reply.files).toHaveLength(1);
 			expect(myNote.reply.files[0]?.id).toBe(file.body!.id);
 		});
 
@@ -670,7 +670,7 @@ describe('Note', () => {
 			assert.ok(myNote.renote);
 			assert.ok(myNote.renote.reply);
 			assert.ok(myNote.renote.reply.files);
-			expect(myNote.renote.reply.files.length).toBe(1);
+			expect(myNote.renote.reply.files).toHaveLength(1);
 			expect(myNote.renote.reply.files[0]?.id).toBe(file.body!.id);
 		});
 
@@ -1442,6 +1442,10 @@ describe('Note', () => {
 				await api('admin/roles/assign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
 			});
 
+			afterAll(async () => {
+				await api('admin/roles/unassign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
+			});
+
 			test('翻訳機能の利用が許可されていない場合翻訳できない', async () => {
 				const aliceNote = await post(alice, { text: 'Hello' });
 				const res = await api(
@@ -1456,10 +1460,6 @@ describe('Note', () => {
 				expect(res.status).toBe(400);
 				assert.ok(res.body);
 				expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');
-			});
-
-			afterAll(async () => {
-				await api('admin/roles/unassign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
 			});
 		});
 

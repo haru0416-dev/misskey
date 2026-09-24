@@ -46,7 +46,7 @@ describe('physics', () => {
 
 	test('releases animation and Matter.js resources when stopped', async () => {
 		const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(42);
-		const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+		const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockReturnValue(undefined);
 		const container = window.document.createElement('div');
 		const child = window.document.createElement('div');
 		child.classList.add('_physics_circle_');

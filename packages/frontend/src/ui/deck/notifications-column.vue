@@ -34,7 +34,7 @@ async function func() {
 		done: async (res) => {
 			const { excludeTypes } = res;
 			updateColumn(props.column.id, {
-				excludeTypes: excludeTypes,
+				excludeTypes,
 			});
 		},
 		closed: () => dispose(),

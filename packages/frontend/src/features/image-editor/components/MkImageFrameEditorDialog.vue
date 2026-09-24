@@ -330,7 +330,7 @@ async function initRenderer() {
 		renderer = new ImageFrameRenderer({
 			canvas: canvasEl.value,
 			image: imageBitmap,
-			exif: exif,
+			exif,
 			caption: props.imageCaption ?? null,
 			filename: props.imageFilename ?? null,
 			renderAsPreview: true,

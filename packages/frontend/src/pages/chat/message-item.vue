@@ -94,7 +94,7 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 	sound.playMisskeySfx('reaction');
 	misskeyApi('chat/messages/react', {
 		messageId: props.message.id,
-		reaction: reaction,
+		reaction,
 	});
 });
 
@@ -112,7 +112,7 @@ function react(ev: PointerEvent) {
 		sound.playMisskeySfx('reaction');
 		misskeyApi('chat/messages/react', {
 			messageId: props.message.id,
-			reaction: reaction,
+			reaction,
 		});
 	});
 }

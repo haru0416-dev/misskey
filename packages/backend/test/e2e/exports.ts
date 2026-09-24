@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
@@ -96,7 +96,7 @@ describe('export-clips', () => {
 		const exported = await pollFirstDriveFile();
 		expect(exported[0].name).toBe('foo');
 		expect(exported[0].description).toBe('bar');
-		expect(exported[0].clipNotes.length).toBe(0);
+		expect(exported[0].clipNotes).toHaveLength(0);
 	});
 
 	test('export with notes', async () => {
@@ -140,10 +140,10 @@ describe('export-clips', () => {
 		const exported = await pollFirstDriveFile();
 		expect(exported[0].name).toBe('foo');
 		expect(exported[0].description).toBe('bar');
-		expect(exported[0].clipNotes.length).toBe(2);
+		expect(exported[0].clipNotes).toHaveLength(2);
 		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
 		expect(exported[0].clipNotes[1].note.text).toBe('baz2');
-		expect(exported[0].clipNotes[1].note.poll.choices[0]).toStrictEqual('sakura');
+		expect(exported[0].clipNotes[1].note.poll.choices[0]).toBe('sakura');
 	});
 
 	test('multiple clips', async () => {
@@ -208,10 +208,10 @@ describe('export-clips', () => {
 
 		const exported = await pollFirstDriveFile();
 		expect(exported[0].name).toBe('kawaii');
-		expect(exported[0].clipNotes.length).toBe(1);
+		expect(exported[0].clipNotes).toHaveLength(1);
 		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
 		expect(exported[1].name).toBe('yuri');
-		expect(exported[1].clipNotes.length).toBe(1);
+		expect(exported[1].clipNotes).toHaveLength(1);
 		expect(exported[1].clipNotes[0].note.text).toBe('baz2');
 	});
 
@@ -246,7 +246,7 @@ describe('export-clips', () => {
 		expect(res3.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		expect(exported[0].clipNotes.length).toBe(0);
+		expect(exported[0].clipNotes).toHaveLength(0);
 	});
 
 	test("Clipping other user's note (followers only notes are included when following)", async () => {
@@ -283,7 +283,7 @@ describe('export-clips', () => {
 
 		const exported = await pollFirstDriveFile();
 		expect(exported[0].name).toBe('kawaii');
-		expect(exported[0].clipNotes.length).toBe(1);
+		expect(exported[0].clipNotes).toHaveLength(1);
 		expect(exported[0].clipNotes[0].note.text).toBe('baz');
 		expect(exported[0].clipNotes[0].note.user.username).toBe('bob');
 	});
@@ -315,10 +315,10 @@ describe('export-clips', () => {
 		expect(exportRes.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		expect(exported.length).toBe(2);
+		expect(exported).toHaveLength(2);
 		expect(exported[0].note.text).toBe('favorite1');
 		expect(exported[1].note.text).toBe('favorite2');
-		expect(exported[1].note.poll.choices[0]).toStrictEqual('sakura');
+		expect(exported[1].note.poll.choices[0]).toBe('sakura');
 	});
 
 	test("export notes includes only the requesting user's notes", async () => {
@@ -376,7 +376,7 @@ describe('export-clips', () => {
 				assert.ok(blocking);
 				expect(blocking.blockerId).toBe(importer.id);
 				expect(blocking.blockeeId).toBe(target.id);
-				expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, importer.id)).toBe(null);
+				expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, importer.id)).toBeNull();
 			},
 			{ timeout: 30_000, interval: 250 },
 		);

@@ -1,7 +1,7 @@
 import { describe, test, beforeAll, expect } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Person } from '@fedify/vocab';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import {
 	createAccount,
 	assertUserProfile,

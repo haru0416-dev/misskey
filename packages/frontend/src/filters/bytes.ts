@@ -20,7 +20,7 @@ export default (v: number | null, digits = 0) => {
 	const i = Math.floor(Math.log(v) / LOG_1024);
 	return (
 		(isMinus ? '-' : '') +
-		(v / Math.pow(1024, i))
+		(v / 1024 ** i)
 			.toFixed(digits)
 			.replace(/(\.[1-9]*)0+$/, '$1')
 			.replace(/\.$/, '') +

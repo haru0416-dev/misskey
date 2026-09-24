@@ -116,7 +116,7 @@ export async function handleApiI2faDone(
 	body: Record<string, unknown>,
 ): Promise<{ backupCodes: string[] }> {
 	const params = parseApiParams(i2faDoneParamDef, body);
-	const token = params.token.replace(/\s/g, '');
+	const token = params.token.replaceAll(/\s/g, '');
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 

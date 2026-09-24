@@ -214,7 +214,7 @@ function isServerDependentKey<K extends keyof PREF>(key: K): boolean {
 function createEmptyProfile(): PossiblyNonNormalizedPreferencesProfile {
 	return {
 		id: genId(),
-		version: version,
+		version,
 		type: 'main',
 		modifiedAt: Date.now(),
 		name: '',
@@ -588,7 +588,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 
 			async enableSync<K extends keyof PREF>(key: K): Promise<{ enabled: boolean } | null> {
 				if (this.isSyncEnabled(key)) {
-					return Promise.resolve(null);
+					return null;
 				}
 
 				// undefined ... cancel
@@ -599,7 +599,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 						if (merge != null) {
 							mergedValue = merge(local, remote) as ValueOf<K> | undefined;
 						}
-					} catch (_) {
+					} catch {
 						// nop
 					}
 					const { canceled, result: choice } = await os.select({

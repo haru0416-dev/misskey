@@ -168,7 +168,7 @@ function buildFullPath(args: {
 			const replaceRegex = new RegExp(`:${key}(\\?)?`, 'g');
 			fullPath = fullPath.replace(replaceRegex, value ? encodeURIComponent(value) : '');
 		}
-		fullPath = fullPath.replace(/\/:\w+\?(?=\/|$)/g, '');
+		fullPath = fullPath.replaceAll(/\/:\w+\?(?=\/|$)/g, '');
 	}
 
 	if (args.query) {
@@ -361,9 +361,8 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 							child,
 							_parsedRoute,
 						};
-					} else {
-						continue forEachRouteLoop;
 					}
+					continue forEachRouteLoop;
 				} else {
 					continue forEachRouteLoop;
 				}

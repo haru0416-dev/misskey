@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { QueueProgressReporter } from '@/queue/types.js';
+import type { QueueProgressReporter, ObjectStorageFileJobData } from '@/queue/types.js';
 import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	countRemoteCachedDriveFilesFromDatabase,
@@ -15,7 +15,6 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
-import type { ObjectStorageFileJobData } from '@/queue/types.js';
 import type { ChartWriters } from '../../server/chart-runtime.js';
 
 export type QueueObjectStorageDependencies = {

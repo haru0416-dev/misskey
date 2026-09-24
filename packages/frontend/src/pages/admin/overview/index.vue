@@ -163,7 +163,7 @@ onMounted(async () => {
 		activeInstances.value = res;
 	});
 
-	nextTick(() => {
+	nextTick().then(() => {
 		queueStatsConnection.send('requestLog', {
 			id: genId(),
 			length: 100,

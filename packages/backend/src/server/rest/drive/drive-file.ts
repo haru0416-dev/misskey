@@ -97,13 +97,11 @@ export async function packDriveFileForApi(
 		packedFolder?: Packed<'DriveFolder'>;
 	},
 ): Promise<Packed<'DriveFile'> | null> {
-	const opts = Object.assign(
-		{
-			detail: false,
-			self: false,
-		},
-		options,
-	);
+	const opts = {
+		detail: false,
+		self: false,
+		...options,
+	};
 
 	const file = typeof src === 'object' ? src : await fetchDriveFileByIdFromDatabase(deps.db, src);
 	if (file == null) {

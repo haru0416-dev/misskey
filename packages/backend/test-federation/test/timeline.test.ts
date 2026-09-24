@@ -1,6 +1,6 @@
 import { describe, test, beforeAll, afterAll } from 'vitest';
-import { strictEqual } from 'assert';
-import * as Misskey from 'misskey-js';
+import { strictEqual } from 'node:assert';
+import type * as Misskey from 'misskey-js';
 import {
 	createAccount,
 	deliveryBarrier,

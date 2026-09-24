@@ -214,7 +214,7 @@ async function loadingScope<T>(fn: () => Promise<T>): Promise<T> {
 
 async function test(type: Misskey.entities.SystemWebhook['on'][number]): Promise<void> {
 	if (!id.value) {
-		return Promise.resolve();
+		return;
 	}
 
 	await os.apiWithDialog('admin/system-webhook/test', {

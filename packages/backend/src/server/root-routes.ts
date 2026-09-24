@@ -65,7 +65,7 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const headers = cacheHeaders();
 		setCacheHeader(c);
 
-		if (!path.match(/^[a-zA-Z0-9\-_@.]+?\.webp$/)) {
+		if (!/^[a-zA-Z0-9\-_@.]+?\.webp$/.test(path)) {
 			return c.body(null, 404, headers);
 		}
 

@@ -246,12 +246,12 @@ function rename() {
 		}
 		misskeyApi('drive/folders/update', {
 			folderId: props.folder.id,
-			name: name,
+			name,
 		}).then(() => {
 			globalEvents.emit('driveFoldersUpdated', [
 				{
 					...props.folder,
-					name: name,
+					name,
 				},
 			]);
 		});

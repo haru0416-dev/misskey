@@ -5,7 +5,7 @@
 
 import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
-import * as Redis from 'ioredis';
+import type * as Redis from 'ioredis';
 import Chart from '@/core/chart/core.js';
 import TestChart from '../../chart-fixtures/test.js';
 import TestGroupedChart from '../../chart-fixtures/test-grouped.js';
@@ -27,7 +27,7 @@ describe('Chart', () => {
 
 	let drizzlePool: NativeSqlClient | undefined;
 	let drizzle: MiDrizzleDatabase | undefined;
-	let redisClient = {
+	const redisClient = {
 		set: () => Promise.resolve('OK'),
 		get: () => Promise.resolve(null),
 		eval: () => Promise.resolve(1),

@@ -69,11 +69,7 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 	const center: boolean[] = new Array(n).fill(false);
 
 	// eslint:disable-next-line:prefer-for-of
-	for (let x = 0; x < side.length; x++) {
-		const column = side[x];
-		if (column == null) {
-			continue;
-		}
+	for (const column of side) {
 		for (let y = 0; y < column.length; y++) {
 			column[y] = rand(3) === 0;
 		}

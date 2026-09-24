@@ -20,10 +20,10 @@ export type ThemeValue = Color | Func | RefProp | RefConst | Css | Default;
 
 type ThemeViewModel = [string, ThemeValue][];
 
-const supportedFunctions: FuncName[] = ['alpha', 'darken', 'hue', 'lighten', 'saturate'];
+const supportedFunctions: ReadonlySet<FuncName> = new Set(['alpha', 'darken', 'hue', 'lighten', 'saturate']);
 
 function isFuncName(value: string): value is FuncName {
-	return supportedFunctions.includes(value as FuncName);
+	return supportedFunctions.has(value as FuncName);
 }
 
 export const fromThemeString = (str?: string): ThemeValue => {

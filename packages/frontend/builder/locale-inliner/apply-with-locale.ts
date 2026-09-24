@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { RolldownMagicString } from 'rolldown';
+import type { RolldownMagicString } from 'rolldown';
 import { assertNever } from '../utils.js';
 import type { ILocale, Locale } from 'i18n';
 import type { TextModification } from '../locale-inliner.js';

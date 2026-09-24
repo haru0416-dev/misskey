@@ -117,7 +117,7 @@ function onKeydown(ev: KeyboardEvent) {
 		const pos = inputEl.value?.selectionStart ?? 0;
 		const posEnd = inputEl.value?.selectionEnd ?? v.value.length;
 		v.value = v.value.slice(0, pos) + '\t' + v.value.slice(posEnd);
-		nextTick(() => {
+		nextTick().then(() => {
 			inputEl.value?.setSelectionRange(pos + 1, pos + 1);
 		});
 		ev.preventDefault();
@@ -156,7 +156,7 @@ watch(
 );
 
 onMounted(() => {
-	nextTick(() => {
+	nextTick().then(() => {
 		if (autofocus.value) {
 			focus();
 		}

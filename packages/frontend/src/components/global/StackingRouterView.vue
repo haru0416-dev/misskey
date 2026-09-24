@@ -122,7 +122,7 @@ router.useListener('change', ({ resolved }) => {
 			? [
 					...tabs.value.slice(1),
 					{
-						fullPath: fullPath,
+						fullPath,
 						routePath,
 						component: resolved.route.component,
 						props: resolved.props,
@@ -131,7 +131,7 @@ router.useListener('change', ({ resolved }) => {
 			: [
 					...tabs.value,
 					{
-						fullPath: fullPath,
+						fullPath,
 						routePath,
 						component: resolved.route.component,
 						props: resolved.props,

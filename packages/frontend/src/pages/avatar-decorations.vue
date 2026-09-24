@@ -66,7 +66,7 @@ async function add(ev: PointerEvent) {
 
 async function edit(avatarDecoration: Misskey.entities.AdminAvatarDecorationsListResponse[number]) {
 	const { dispose } = await os.popupAsyncWithDialog(import('./avatar-decoration-edit-dialog.vue').then(x => x.default), {
-		avatarDecoration: avatarDecoration,
+		avatarDecoration,
 		categories: Object.keys(groupedDecorations.value),
 	}, {
 		done: result => {

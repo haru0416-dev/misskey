@@ -20,7 +20,7 @@ export default (v: number | null, fractionDigits = 0) => {
 	const i = Math.floor(Math.log(v) / LOG_1000);
 	return (
 		(isMinus ? '-' : '') +
-		(v / Math.pow(1000, i))
+		(v / 1000 ** i)
 			.toFixed(fractionDigits)
 			.replace(/(\.[1-9]*)0+$/, '$1')
 			.replace(/\.$/, '') +

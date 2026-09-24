@@ -62,7 +62,7 @@ const text = computed(() => {
 
 watch(column, () => {
 	// 中身がセットされた直後はサイズが分からないので、次のタイミングで更新する
-	nextTick(emitContentSizeChanged);
+	nextTick().then(emitContentSizeChanged);
 }, { immediate: true });
 
 function onHandleDoubleClick(ev: MouseEvent) {

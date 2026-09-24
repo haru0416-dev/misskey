@@ -13,7 +13,7 @@ import PageTimeline from '@/pages/timeline.vue';
 
 export const page = (loader: AsyncComponentLoader) =>
 	defineAsyncComponent({
-		loader: loader,
+		loader,
 		loadingComponent: MkLoading,
 		errorComponent: MkError,
 	});

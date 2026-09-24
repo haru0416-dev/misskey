@@ -138,7 +138,7 @@ async function search() {
 			limit: 10,
 			offsetMode: true,
 			params: {
-				query: query,
+				query,
 				origin: instance.federation === 'none' ? 'local' : searchOrigin.value,
 			},
 		}),

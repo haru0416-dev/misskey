@@ -541,7 +541,7 @@ describe('AiScript UI API', () => {
 				type: 'buttons',
 				id: 'id',
 			});
-			expect(buttons!.length).toBe(2);
+			expect(buttons!).toHaveLength(2);
 			const buttonAWithHandler = buttons?.[0];
 			const buttonBWithHandler = buttons?.[1];
 			if (buttonAWithHandler == null || buttonBWithHandler == null) {

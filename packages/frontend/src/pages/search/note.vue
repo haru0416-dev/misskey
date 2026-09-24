@@ -341,7 +341,7 @@ const searchParams = computed<SearchParams | null>(() => {
 		if (trimmedHost.startsWith('https://') || trimmedHost.startsWith('http://')) {
 			try {
 				trimmedHost = new URL(trimmedHost).host;
-			} catch (err) {
+			} catch {
 				/* URL として解釈できない場合は入力値をそのまま扱う。 */
 			}
 		}

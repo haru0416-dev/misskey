@@ -51,7 +51,7 @@ interface MarkerRelation {
 	node: ElementNode;
 }
 
-let logger = {
+const logger = {
 	info: (msg: string, options?: LogOptions) => {},
 	warn: (msg: string, options?: LogOptions) => {},
 	error: (msg: string, options?: LogErrorOptions) => {},
@@ -249,13 +249,14 @@ function extractSugarTags(
 
 				label = extractElementText(node, id);
 				return;
-			case 'SearchText':
+			case 'SearchText': {
 				const content = extractElementText(node, id);
 				if (content) {
 					texts.push(content);
 				}
 				return;
-			case 'SearchIcon':
+			}
+			case 'SearchIcon': {
 				if (icon !== undefined) {
 					logger.warn(`Duplicate SearchIcon found, ignoring the second one at ${id}:${node.loc.start.line}`);
 					break;
@@ -273,6 +274,7 @@ function extractSugarTags(
 				}
 				icon = getStringProp(findAttribute(iconNode.props, 'class'), id);
 				return;
+			}
 		}
 
 		return;
@@ -289,7 +291,7 @@ function getStringProp(attr: AttributeNode | DirectiveNode | null, id: string): 
 			return null;
 		case NodeTypes.ATTRIBUTE:
 			return attr.value?.content ?? null;
-		case NodeTypes.DIRECTIVE:
+		case NodeTypes.DIRECTIVE: {
 			if (attr.exp == null) {
 				return null;
 			}
@@ -302,6 +304,7 @@ function getStringProp(attr: AttributeNode | DirectiveNode | null, id: string): 
 				return null;
 			}
 			return value;
+		}
 	}
 }
 
@@ -313,7 +316,7 @@ function getStringArrayProp(attr: AttributeNode | DirectiveNode | null, id: stri
 		case NodeTypes.ATTRIBUTE:
 			logger.error(`Expected directive, got attribute at ${id}:${attr.loc.start.line}`);
 			return null;
-		case NodeTypes.DIRECTIVE:
+		case NodeTypes.DIRECTIVE: {
 			if (attr.exp == null) {
 				return null;
 			}
@@ -326,6 +329,7 @@ function getStringArrayProp(attr: AttributeNode | DirectiveNode | null, id: stri
 				return null;
 			}
 			return value;
+		}
 	}
 }
 
@@ -425,6 +429,7 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
  * i18n の Proxy をビルド時に実値へ解決せず、プロパティパスを文字列として結果に残すために式を評価する。
  */
 function evalExpression(expr: string): unknown {
+	// oxlint-disable-next-line no-new-func -- ビルド時に Vue テンプレートの式を i18n Proxy 付きで評価する。
 	const rarResult = Function('i18n', `return ${expr}`)(i18nProxy);
 	// Proxy が保持する i18n のプロパティパスを実行時コードへ渡すため、評価結果を JSON 経由で文字列化する。
 	return JSON.parse(JSON.stringify(rarResult));
@@ -454,7 +459,7 @@ const propertyAccessProxyHandler: ProxyHandler<AccessProxy> = {
 
 function propertyAccessProxyToJSON(this: AccessProxy, hint: string) {
 	const expression = this[propertyAccessProxySymbol].reduce((prev, current) => {
-		if (current.match(/^[a-z][0-9a-z]*$/i)) {
+		if (/^[a-z][0-9a-z]*$/i.test(current)) {
 			return `${prev}.${current}`;
 		}
 		return `${prev}['${current}']`;
@@ -498,7 +503,7 @@ export function collectFileMarkers(id: string, code: string | RolldownMagicStrin
 
 		return extractUsageInfoFromTemplateAst(descriptor.template?.ast, id);
 	} catch (error) {
-		let _error = error instanceof Error ? error : new Error(String(error));
+		const _error = error instanceof Error ? error : new Error(String(error));
 		logger.error(`Error analyzing file ${id}:`, { error: _error });
 	}
 
@@ -565,7 +570,7 @@ export class MarkerIdAssigner {
 				nodeMarkerId = markerIdProp.value.content;
 			} else {
 				// 実行環境による差を避けるため、正規化したファイルパスと行番号からハッシュ値を生成する。
-				const idKey = id.replace(/\\/g, '/').split('packages/frontend/')[1];
+				const idKey = id.replaceAll('\\', '/').split('packages/frontend/')[1];
 				const generatedMarkerId = toBase62(hash(`${idKey}:${node.loc.start.line}`));
 
 				const endOfStartTag = findEndOfStartTagAttributes(node);
@@ -580,7 +585,7 @@ export class MarkerIdAssigner {
 			markerRelations.push({
 				parentId: parentId ?? undefined,
 				markerId: nodeMarkerId,
-				node: node,
+				node,
 			});
 
 			return nodeMarkerId;
@@ -623,12 +628,12 @@ export class MarkerIdAssigner {
 					}
 				}
 
-				const expression = JSON.stringify(newValue).replaceAll(/"/g, "'");
+				const expression = JSON.stringify(newValue).replaceAll('"', "'");
 				s.overwrite(childrenProp.exp!.loc.start.offset, childrenProp.exp!.loc.end.offset, expression);
 				logger.info(`Added ${childIds.length} child markerIds to existing :children in ${id}`);
 			} else {
 				const endOfParentStartTag = findEndOfStartTagAttributes(parentNode);
-				s.appendRight(endOfParentStartTag, ` :children="${JSON5.stringify(childIds).replace(/"/g, "'")}"`);
+				s.appendRight(endOfParentStartTag, ` :children="${JSON5.stringify(childIds).replaceAll('"', "'")}"`);
 				logger.info(`Created new :children attribute with ${childIds.length} markerIds in ${id}`);
 			}
 		}
@@ -730,13 +735,13 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 
 		async load(id) {
 			if (id == '\0' + allSearchIndexFile) {
-				const files = options.targetFilePaths.map((filePathPattern) => fs.globSync(filePathPattern)).flat();
+				const files = options.targetFilePaths.flatMap((filePathPattern) => fs.globSync(filePathPattern));
 				let generatedFile = '';
 				let arrayElements = '';
-				for (let file of files) {
+				for (const file of files) {
 					const normalizedRelative = normalizePath(file);
 					const absoluteId = normalizePath(path.join(process.cwd(), normalizedRelative)) + searchIndexSuffix;
-					const variableName = normalizedRelative.replace(/[\/.-]/g, '_');
+					const variableName = normalizedRelative.replaceAll(/[\/.-]/g, '_');
 					generatedFile += `import { searchIndexes as ${variableName} } from '${searchIndexPrefix}${absoluteId}';\n`;
 					arrayElements += `  ...${variableName},\n`;
 				}

@@ -242,8 +242,8 @@ const botProtectionForm = useForm({
 			'admin/captcha/save',
 			{
 				provider: provider as Misskey.entities.AdminCaptchaSaveRequest['provider'],
-				sitekey: sitekey,
-				secret: secret,
+				sitekey,
+				secret,
 				instanceUrl: state.capInstanceUrl,
 				captchaResult: captchaResult.value,
 			},

@@ -63,7 +63,7 @@ function validateClientId(raw: string): URL {
 		throw new InvalidRequestError('client_id must not contain a username or a password');
 	}
 
-	if (!url.hostname.match(/\.\w+$/) && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+	if (!/\.\w+$/.test(url.hostname) && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
 		throw new InvalidRequestError('client_id must have a domain name as a host name');
 	}
 
@@ -662,7 +662,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 	}
 
 	function finalizeAuthorizationRequest(seed: AuthorizationRequestSeed): AuthorizationRequest {
-		const scopes = [...new Set(seed.requestedScope)].filter((scope) => (<readonly string[]>kinds).includes(scope));
+		const scopes = [...new Set(seed.requestedScope)].filter((scope) => (kinds as readonly string[]).includes(scope));
 		if (!seed.requestedScope.length || !scopes.length) {
 			throw new InvalidScopeError('`scope` parameter has no known scope', seed.requestedScope.join(' '));
 		}

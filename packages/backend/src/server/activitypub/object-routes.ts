@@ -25,8 +25,13 @@ import {
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 } from '@/core/user/UserStore.js';
-import { renderEmoji, renderLikeForApi } from '@/server/rest/activitypub/notes-ap.js';
-import { renderFollow } from '@/server/rest/user/following.js';
+import {
+	renderEmoji,
+	renderLikeForApi,
+	renderNoteForApi,
+	renderNoteOrRenoteActivityForApi,
+} from '@/server/rest/activitypub/notes-ap.js';
+import { getUserUri, isRemoteUser, renderFollow } from '@/server/rest/user/following.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
 import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
@@ -41,8 +46,6 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { getFanoutTimelineNotesForApi } from '@/server/rest/note/fanout-timeline.js';
 import { renderKeyForApi, renderPersonForApi } from '@/server/rest/account/account-update.js';
 import type { ApiAccountUpdateDependencies } from '@/server/rest/account/account-update.js';
-import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
-import { renderNoteForApi, renderNoteOrRenoteActivityForApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
 export type ApObjectRoutesDependencies = ApiAccountUpdateDependencies & {

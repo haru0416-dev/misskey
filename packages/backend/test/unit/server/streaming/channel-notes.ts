@@ -99,7 +99,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		const messages = channelMessages(raw);
-		expect(messages.length).toBe(1);
+		expect(messages).toHaveLength(1);
 	});
 
 	test('hashtag: マッチしないタグのノートは受け取らない', async () => {
@@ -126,7 +126,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', packed);
 		await shortDelay();
 
-		expect(channelMessages(raw).length).toBe(0);
+		expect(channelMessages(raw)).toHaveLength(0);
 	});
 
 	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ受け取る', async () => {
@@ -155,7 +155,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', packed);
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('channel (misskeyチャンネル): 異なるchannelIdのノートは受け取らない', async () => {
@@ -186,7 +186,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', packed);
 		await shortDelay();
 
-		expect(channelMessages(raw).length).toBe(0);
+		expect(channelMessages(raw)).toHaveLength(0);
 	});
 
 	test('userList: リストメンバーの投稿のみ受け取る', async () => {
@@ -233,7 +233,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		const messages = channelMessages(raw);
-		expect(messages.length).toBe(1);
+		expect(messages).toHaveLength(1);
 	});
 
 	test('localTimeline: ローカル公開ノートを受け取り、リモートノートは受け取らない', async () => {
@@ -269,7 +269,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', await packNoteForApi(deps, remoteNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('globalTimeline: 公開ノートを受け取り、チャンネル投稿は受け取らない', async () => {
@@ -307,7 +307,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', await packNoteForApi(deps, channelNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('homeTimeline: フォロー中ユーザーの投稿のみ受け取る', async () => {
@@ -344,7 +344,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit('notesStream', await packNoteForApi(deps, strangerNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('hybridTimeline: フォロー中ユーザー・ローカル公開ノートを受け取り、無関係リモートノートは受け取らない', async () => {
@@ -381,7 +381,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		// ローカル公開ノートは無関係でも受信、リモート無関係ノートは受信しない
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('roleTimeline: isExplorableなロールの公開ノートを受け取る', async () => {
@@ -417,7 +417,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit(`roleTimelineStream:${roleId}`, { type: 'note', body: packed });
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('roleTimeline: isExplorableでないロールの投稿は受け取らない', async () => {
@@ -453,7 +453,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit(`roleTimelineStream:${roleId}`, { type: 'note', body: packed });
 		await shortDelay();
 
-		expect(channelMessages(raw).length).toBe(0);
+		expect(channelMessages(raw)).toHaveLength(0);
 	});
 
 	test('antenna: アンテナ所有者は登録済みアンテナのノートを受け取る', async () => {
@@ -490,7 +490,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		subscriber.emit(`antennaStream:${antennaId}`, { type: 'note', body: { id: noteId } });
 		await waitUntil(() => channelMessages(raw).length > 0);
 
-		expect(channelMessages(raw).length).toBe(1);
+		expect(channelMessages(raw)).toHaveLength(1);
 	});
 
 	test('antenna: 他人のアンテナには接続できない', async () => {
@@ -512,6 +512,6 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(new EventEmitter(), send);
 
 		await connection.connectChannel('conn1', { antennaId }, 'antenna', true);
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 });
