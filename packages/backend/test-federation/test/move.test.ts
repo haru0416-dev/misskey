@@ -1,6 +1,13 @@
 import { describe, test, beforeAll, expect } from 'vitest';
 import assert, { strictEqual } from 'node:assert';
-import { createAccount, resolveRemoteUser, sleep, waitFor } from './utils.js';
+import {
+	createAccount,
+	errorMessageMatches,
+	knownUpstreamFailure,
+	resolveRemoteUser,
+	sleep,
+	waitFor,
+} from './utils.js';
 import type { LoginUser } from './utils.js';
 
 describe('Move', () => {
@@ -14,26 +21,30 @@ describe('Move', () => {
 		expect(moved.movedTo).toBe(destinationInA.id);
 	});
 
-	test('移行先サーバーにいるフォロワーをローカル移行先へ引き継ぐ', async () => {
-		const [source, destination, follower] = await Promise.all([
-			createAccount('a.test'),
-			createAccount('b.test'),
-			createAccount('b.test'),
-		]);
-		const sourceInB = await resolveRemoteUser('a.test', source.id, follower);
-		await follower.client.request('following/create', { userId: sourceInB.id });
-		await waitFor(async () => (await source.client.request('users/followers', { userId: source.id })).length === 1);
-		await destination.client.request('i/update', { alsoKnownAs: [`@${source.username}@a.test`] });
-		await source.client.request('i/move', { moveToAccount: `@${destination.username}@b.test` });
-		await waitFor(async () => {
-			const following = await follower.client.request('users/following', { userId: follower.id });
-			return following.some(({ followee }) => followee?.id === destination.id);
-		}, 20_000);
-		const followers = await destination.client.request('users/followers', { userId: destination.id });
-		expect(followers.map(({ follower: user }) => user?.id)).toContain(follower.id);
-		const moved = await follower.client.request('users/show', { userId: sourceInB.id });
-		expect(moved.movedTo).toBe(destination.id);
-	});
+	test(
+		'移行先サーバーにいるフォロワーをローカル移行先へ引き継ぐ',
+		// 公式版は移行先のローカルユーザーを uri で探し、ローカルでは uri が null なので引き継ぎが成立しない。
+		knownUpstreamFailure(true, errorMessageMatches(/^Condition was not met within 20000ms$/), async () => {
+			const [source, destination, follower] = await Promise.all([
+				createAccount('a.test'),
+				createAccount('b.test'),
+				createAccount('b.test'),
+			]);
+			const sourceInB = await resolveRemoteUser('a.test', source.id, follower);
+			await follower.client.request('following/create', { userId: sourceInB.id });
+			await waitFor(async () => (await source.client.request('users/followers', { userId: source.id })).length === 1);
+			await destination.client.request('i/update', { alsoKnownAs: [`@${source.username}@a.test`] });
+			await source.client.request('i/move', { moveToAccount: `@${destination.username}@b.test` });
+			await waitFor(async () => {
+				const following = await follower.client.request('users/following', { userId: follower.id });
+				return following.some(({ followee }) => followee?.id === destination.id);
+			}, 20_000);
+			const followers = await destination.client.request('users/followers', { userId: destination.id });
+			expect(followers.map(({ follower: user }) => user?.id)).toContain(follower.id);
+			const moved = await follower.client.request('users/show', { userId: sourceInB.id });
+			expect(moved.movedTo).toBe(destination.id);
+		}),
+	);
 
 	/** @see https://github.com/misskey-dev/misskey/issues/11320 */
 	describe('Following relation is transferred after move', () => {

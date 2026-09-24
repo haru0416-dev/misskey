@@ -46,6 +46,36 @@ export function hostKind(host: Host): 'fork' | 'upstream' {
 	return host === 'b.test' ? kind : 'fork';
 }
 
+/**
+ * 公式固定版 (b.test) と組んだときに、公式版側の不具合で再現する既知失敗。条件と手順はそのまま実行し、
+ * 記録した形で失敗することを確かめる。別の形で失敗したら、または成功したら (公式版が直った等) 落とす。
+ * 原因の記録は docs/optimization-plan.md「公式固定版の既知失敗と未対応部分」。
+ */
+export function knownUpstreamFailure(
+	applies: boolean,
+	matches: (error: unknown) => boolean,
+	body: () => Promise<void>,
+): () => Promise<void> {
+	if (!applies || hostKind('b.test') !== 'upstream') return body;
+	return async () => {
+		try {
+			await body();
+		} catch (error) {
+			if (matches(error)) return;
+			throw error;
+		}
+		throw new Error('The known upstream failure no longer reproduces; remove knownUpstreamFailure from this test.');
+	};
+}
+
+/** knownUpstreamFailure の matches に渡す、エラーの message を照合する判定。 */
+export function errorMessageMatches(pattern: RegExp): (error: unknown) => boolean {
+	return (error) => {
+		const message = typeof error === 'object' && error != null ? (error as { message?: unknown }).message : undefined;
+		return typeof message === 'string' && pattern.test(message);
+	};
+}
+
 export async function fetchActivityPubObject(uri: string): Promise<FedifyObject> {
 	const response = await fetch(uri, {
 		headers: {

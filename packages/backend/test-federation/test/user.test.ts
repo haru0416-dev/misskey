@@ -11,6 +11,8 @@ import {
 	resolveRemoteNote,
 	resolveRemoteUser,
 	waitFor,
+	errorMessageMatches,
+	knownUpstreamFailure,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
 
@@ -20,6 +22,17 @@ function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
 	assert(value);
 	return value;
+}
+
+/** 公式版が凍結解除後に削除済みの旧ユーザー行を引き、プロフィールが無く内部エラーになる既知失敗。 */
+function upstreamMissingUserProfile(error: unknown): boolean {
+	const cause = (error as { info?: { e?: { code?: unknown; message?: unknown } } } | null)?.info?.e;
+	return (
+		errorMessageMatches(/^Internal error occurred/)(error) &&
+		cause?.code === 'EntityNotFoundError' &&
+		typeof cause.message === 'string' &&
+		cause.message.includes('MiUserProfile')
+	);
 }
 
 describe('User', () => {
@@ -489,45 +502,51 @@ describe('User', () => {
 				);
 			});
 
-			test('Alice gets unsuspended, Bob succeeds in following Alice', async () => {
-				await aAdmin.client.request('admin/unsuspend-user', { userId: alice.id });
-				await deliveryBarrier('a.test');
+			test(
+				'Alice gets unsuspended, Bob succeeds in following Alice',
+				knownUpstreamFailure(true, upstreamMissingUserProfile, async () => {
+					await aAdmin.client.request('admin/unsuspend-user', { userId: alice.id });
+					await deliveryBarrier('a.test');
 
-				// 削除済みマークが残った行への following/create は拒否される。
-				await rejects(
-					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
-					(err: any) => {
-						strictEqual(err.code, 'NO_SUCH_USER');
-						return true;
-					},
-				);
+					// 削除済みマークが残った行への following/create は拒否される。
+					await rejects(
+						async () => await bob.client.request('following/create', { userId: aliceInB.id }),
+						(err: any) => {
+							strictEqual(err.code, 'NO_SUCH_USER');
+							return true;
+						},
+					);
 
-				// 凍結解除後は再解決に成功し、解決したユーザーへのフォローも可能になる。
-				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
-				strictEqual(resolved.username, aliceInB.username);
+					// 凍結解除後は再解決に成功し、解決したユーザーへのフォローも可能になる。
+					const resolved = await resolveRemoteUser('a.test', alice.id, bob);
+					strictEqual(resolved.username, aliceInB.username);
 
-				await bob.client.request('following/create', { userId: resolved.id });
-				await deliveryBarrier('b.test');
+					await bob.client.request('following/create', { userId: resolved.id });
+					await deliveryBarrier('b.test');
 
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 1);
-			});
+					const following = await bob.client.request('users/following', { userId: bob.id });
+					strictEqual(following.length, 1);
+				}),
+			);
 
 			/** Alice からのフォローでリモートユーザーの存在を再確認する。 */
-			test('Alice can follow Bob', async () => {
-				await alice.client.request('following/create', { userId: bobInA.id });
-				await deliveryBarrier('a.test');
+			test(
+				'Alice can follow Bob',
+				knownUpstreamFailure(true, upstreamMissingUserProfile, async () => {
+					await alice.client.request('following/create', { userId: bobInA.id });
+					await deliveryBarrier('a.test');
 
-				const bobFollowers = await bob.client.request('users/followers', { userId: bob.id });
-				strictEqual(bobFollowers.length, 1);
-				const renewedaliceInB = getAt(bobFollowers, 0).follower;
-				assert(renewedaliceInB != null);
-				assert(aliceInB.username === renewedaliceInB.username);
-				assert(aliceInB.host === renewedaliceInB.host);
+					const bobFollowers = await bob.client.request('users/followers', { userId: bob.id });
+					strictEqual(bobFollowers.length, 1);
+					const renewedaliceInB = getAt(bobFollowers, 0).follower;
+					assert(renewedaliceInB != null);
+					assert(aliceInB.username === renewedaliceInB.username);
+					assert(aliceInB.host === renewedaliceInB.host);
 
-				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
-				strictEqual(resolved.id, renewedaliceInB.id);
-			});
+					const resolved = await resolveRemoteUser('a.test', alice.id, bob);
+					strictEqual(resolved.id, renewedaliceInB.id);
+				}),
+			);
 		});
 	});
 });
