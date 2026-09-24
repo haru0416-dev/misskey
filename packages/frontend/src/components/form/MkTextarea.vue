@@ -40,7 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, nextTick, ref, watch, computed, toRefs, useTemplateRef } from 'vue';
-import { debounce } from 'throttle-debounce';
+import { debounce as createDebounced } from 'throttle-debounce';
 import type { SuggestionType } from '@/features/autocomplete/autocomplete.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
@@ -129,7 +129,7 @@ function updated() {
 	emit('update:modelValue', v.value ?? '');
 }
 
-const debouncedUpdated = debounce(1000, updated);
+const debouncedUpdated = createDebounced(1000, updated);
 
 watch(modelValue, (newValue) => {
 	v.value = newValue ?? '';

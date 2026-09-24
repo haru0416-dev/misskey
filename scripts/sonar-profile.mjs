@@ -29,7 +29,7 @@ async function api(path, params = {}, method = 'GET') {
 			Authorization: auth,
 			...(method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
 		},
-		body: method === 'POST' ? query : undefined,
+		...(method === 'POST' ? { body: query } : {}),
 	});
 	if (!res.ok) {
 		throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
