@@ -1905,6 +1905,38 @@ describe('Endpoints', () => {
 			expect(withoutFiles.has(sensitiveFile.id)).toBe(false);
 			expect(withoutFiles.has(original.id)).toBe(true);
 		});
+
+		test('notes/search は trigram の取れない短い語も大文字小文字を区別せず字義どおりに探しページングできる', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hnss${suffix}` });
+			const searchRole = await role(alice, {}, { canSearchNotes: { priority: 1, useDefault: false, value: true } });
+			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
+
+			// 2 文字の語は trigram が取れず、窓付きの走査になる。
+			const oldest = await post(author, { text: `𠀋Q ${suffix} oldest` });
+			const middle = await post(author, { text: `${suffix} 𠀋q middle` });
+			const newest = await post(author, { text: `${suffix} newest 𠀋Q` });
+			await post(author, { text: `${suffix} 𠀋 Q unrelated` });
+			const percent = await post(author, { text: `${suffix} 7% off` });
+			await post(author, { text: `${suffix} 70 off` });
+
+			const searchIds = async (params: { query: string } & Record<string, unknown>) => {
+				const result = await api('notes/search', params, author);
+				expect(result.status).toBe(200);
+				return result.body.map((note) => note.id);
+			};
+
+			expect(await searchIds({ query: '𠀋q', limit: 2 })).toStrictEqual([newest.id, middle.id]);
+			expect(await searchIds({ query: '𠀋q', limit: 2, untilId: middle.id })).toStrictEqual([oldest.id]);
+			expect(await searchIds({ query: '𠀋Q', limit: 10, sinceId: oldest.id })).toStrictEqual([middle.id, newest.id]);
+			expect(await searchIds({ query: '𠀋q', limit: 10, userId: author.id })).toStrictEqual([
+				newest.id,
+				middle.id,
+				oldest.id,
+			]);
+			// LIKE のワイルドカードとして解釈しない。
+			expect(await searchIds({ query: '7%', limit: 10 })).toStrictEqual([percent.id]);
+		});
 	});
 
 	describe('page-push', () => {

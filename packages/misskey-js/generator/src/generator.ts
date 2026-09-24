@@ -55,7 +55,7 @@ async function generateSchemaEntities(openApiDocs: OpenAPIV3_1.Document, typeFil
 	const schemaNames = Object.keys(schemas);
 	const typeAliasLines: string[] = [];
 
-	typeAliasLines.push(`import { components } from '${toImportPath(typeFileName)}';`);
+	typeAliasLines.push(`import type { components } from '${toImportPath(typeFileName)}';`);
 	typeAliasLines.push(...schemaNames.map((it) => `export type ${it} = components['schemas']['${it}'];`));
 	typeAliasLines.push('');
 
@@ -128,7 +128,7 @@ async function generateEndpoints(
 
 	const entitiesOutputLine: string[] = [];
 
-	entitiesOutputLine.push(`import { operations } from '${toImportPath(typeFileName)}';`);
+	entitiesOutputLine.push(`import type { operations } from '${toImportPath(typeFileName)}';`);
 	entitiesOutputLine.push('');
 
 	entitiesOutputLine.push(new EmptyTypeAlias(OperationsAliasType.REQUEST).toLine());
