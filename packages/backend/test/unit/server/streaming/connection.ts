@@ -50,7 +50,7 @@ describe('hono-stream-connection', () => {
 
 		await connection.connectChannel('conn1', {}, 'admin', true);
 		// requireCredential のため 'connected' 応答は送られない
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 
 	test('admin channel: 接続してadminStreamイベントを受け取れる', async () => {
@@ -68,7 +68,7 @@ describe('hono-stream-connection', () => {
 		subscriber.emit(`adminStream:${user.id}`, { type: 'test', body: { hello: 'world' } });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
-		expect(channelMessages.length).toBe(1);
+		expect(channelMessages).toHaveLength(1);
 		expect(channelMessages[0].body.id).toBe('conn1');
 		expect(channelMessages[0].body.type).toBe('test');
 		expect(channelMessages[0].body.body).toEqual({ hello: 'world' });
@@ -89,7 +89,7 @@ describe('hono-stream-connection', () => {
 		subscriber.emit(`driveStream:${user.id}`, { type: 'test', body: {} });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
-		expect(channelMessages.length).toBe(0);
+		expect(channelMessages).toHaveLength(0);
 	});
 
 	test('存在しないチャンネル名を要求すると例外になる', async () => {
@@ -119,7 +119,7 @@ describe('hono-stream-connection', () => {
 			body: { id: 'note1', userId: author.id, visibility: 'followers', body: { text: 'secret' } },
 		});
 
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 
 	test('noteStream 購読: 公開範囲がpublicなら配信される', async () => {
@@ -140,7 +140,7 @@ describe('hono-stream-connection', () => {
 		});
 
 		const noteUpdated = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'noteUpdated');
-		expect(noteUpdated.length).toBe(1);
+		expect(noteUpdated).toHaveLength(1);
 		expect(noteUpdated[0].body.id).toBe('note2');
 	});
 
@@ -162,7 +162,7 @@ describe('hono-stream-connection', () => {
 			body: { id: 'note3', userId: author.id, visibility: 'public', body: {} },
 		});
 
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 
 	test('broadcast イベントはそのままクライアントへ送られる', async () => {
@@ -175,7 +175,7 @@ describe('hono-stream-connection', () => {
 
 		subscriber.emit('broadcast', { type: 'emojiAdded', body: { foo: 'bar' } });
 
-		expect(raw.length).toBe(1);
+		expect(raw).toHaveLength(1);
 		const parsed = JSON.parse(raw[0]!);
 		expect(parsed.type).toBe('emojiAdded');
 		expect(parsed.body).toEqual({ foo: 'bar' });
@@ -279,7 +279,7 @@ describe('hono-stream-connection', () => {
 		subscriber.emit(`adminStream:${user.id}`, { type: 'test', body: {} });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
-		expect(channelMessages.length).toBe(0);
+		expect(channelMessages).toHaveLength(0);
 	});
 
 	test('チャンネル初期化中にdisposeしてもlistenerを残さない', async () => {

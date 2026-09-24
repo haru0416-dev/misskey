@@ -51,6 +51,6 @@
 	}
 
 	function message(text) {
-		msg.insertAdjacentHTML('beforeend', `<p>[${new Date().toString()}] ${text.replace(/\n/g, '<br>')}</p>`);
+		msg.insertAdjacentHTML('beforeend', `<p>[${new Date().toString()}] ${text.replaceAll('\n', '<br>')}</p>`);
 	}
 })();

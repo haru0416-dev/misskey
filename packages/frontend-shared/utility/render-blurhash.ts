@@ -15,8 +15,8 @@ const BASE83_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrs
 
 function base83decode(source: string): number {
 	let result = 0;
-	for (let i = 0; i < source.length; i++) {
-		result = result * 83 + BASE83_ALPHABET.indexOf(source[i]!);
+	for (const char of source) {
+		result = result * 83 + BASE83_ALPHABET.indexOf(char);
 	}
 	return result;
 }

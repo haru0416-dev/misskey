@@ -66,6 +66,7 @@ export function initAnalytics(instance: Pick<Misskey.entities.MetaDetailed, 'goo
 	const target = window as AnalyticsWindow;
 	target.ga4DataLayer ??= [];
 	target.gtag ??= function () {
+		// oxlint-disable-next-line prefer-rest-params -- gtag.js は配列ではなく arguments オブジェクトそのものを dataLayer に積む前提。
 		target.ga4DataLayer!.push(arguments);
 	};
 	gtag = target.gtag;

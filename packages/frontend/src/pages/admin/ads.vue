@@ -132,7 +132,7 @@ const { model: filterType, def: filterTypeDef } = useMkSelect({
 });
 let publishing: boolean | null = null;
 
-misskeyApi('admin/ad/list', { publishing: publishing }).then((adsResponse) => {
+misskeyApi('admin/ad/list', { publishing }).then((adsResponse) => {
 	if (adsResponse != null) {
 		ads.value = adsResponse.map((r) => {
 			const exdate = new Date(r.expiresAt);
@@ -245,7 +245,7 @@ function save(ad: Misskey.entities.Ad) {
 function more() {
 	misskeyApi('admin/ad/list', {
 		untilId: ads.value.reduce((acc, ad) => (ad.id !== '' ? ad : acc)).id,
-		publishing: publishing,
+		publishing,
 	}).then((adsResponse) => {
 		if (adsResponse == null) {
 			return;
@@ -267,7 +267,7 @@ function more() {
 }
 
 function refresh() {
-	misskeyApi('admin/ad/list', { publishing: publishing }).then((adsResponse) => {
+	misskeyApi('admin/ad/list', { publishing }).then((adsResponse) => {
 		if (adsResponse == null) {
 			return;
 		}

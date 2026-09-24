@@ -7,11 +7,11 @@ import { promises as dns } from 'node:dns';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { isDisposableEmailDomain } from 'disposable-email-domains-js';
-import { UtilityService } from '@/core/net/UtilityService.js';
+import type { UtilityService } from '@/core/net/UtilityService.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
@@ -131,9 +131,9 @@ export function createEmailService(
 							address: meta.email!,
 						}
 					: meta.email!,
-				to: to,
-				subject: subject,
-				text: text,
+				to,
+				subject,
+				text,
 				html: htmlContent,
 			});
 
@@ -349,7 +349,7 @@ export function createEmailService(
 				valid: true,
 				reason: null,
 			};
-		} catch (_) {
+		} catch {
 			return {
 				valid: false,
 				reason: 'network',

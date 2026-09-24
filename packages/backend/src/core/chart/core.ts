@@ -70,7 +70,7 @@ type RawRecord<S extends Schema> = {
 	Columns<S>;
 
 const camelToSnake = (str: string): string => {
-	return str.replace(/([A-Z])/g, (s) => '_' + s.charAt(0).toLowerCase());
+	return str.replaceAll(/([A-Z])/g, (s) => '_' + s.charAt(0).toLowerCase());
 };
 
 const removeDuplicates = <T>(array: T[]) => Array.from(new Set(array));
@@ -519,8 +519,8 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			log = await this.insertLog(span, {
-				date: date,
-				...(group ? { group: group } : {}),
+				date,
+				...(group ? { group } : {}),
 				...columns,
 			});
 

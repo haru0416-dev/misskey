@@ -86,7 +86,7 @@ function attribute(root: HTMLElement, selectors: string[], name = 'content'): st
 }
 
 function dimension(value: string | undefined): number | null {
-	const number = Number.parseInt(value ?? '');
+	const number = Number.parseInt(value ?? '', 10);
 	return Number.isNaN(number) ? null : number;
 }
 
@@ -221,7 +221,7 @@ export async function fetchUrlPreview(
 	const siteName = decode(
 		attribute(root, ['meta[property="og:site_name"]', 'meta[name="application-name"]']) || url.host,
 	);
-	const escapedSiteName = siteName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const escapedSiteName = siteName.trim().replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	title = new RegExp(`^(.+?)\\s?[\\-\\|:・]\\s?${escapedSiteName}$`).exec(title.trim())?.[1] ?? title.trim();
 	if (!title) title = siteName;
 	const image =

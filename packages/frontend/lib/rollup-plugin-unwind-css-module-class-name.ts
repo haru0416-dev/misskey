@@ -107,7 +107,7 @@ function normalizeClassWalker(tree: ESTree.Node, stack: string | undefined): str
 
 export function normalizeClass(tree: ESTree.Node, stack?: string): string | null {
 	const walked = normalizeClassWalker(tree, stack);
-	return walked && walked.replace(/^\s+|\s+(?=\s)|\s+$/g, '');
+	return walked && walked.replaceAll(/^\s+|\s+(?=\s)|\s+$/g, '');
 }
 
 function getPropertyName(node: ESTree.Node, computed: boolean): string | null {
@@ -346,7 +346,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				return true;
 			}) as ESTree.ArrayExpression | undefined;
 			const __cssModulesIndex = node.declarations[0].init.arguments[1].elements.indexOf(cssModulesEntry ?? null);
-			if (cssModulesEntry === undefined || __cssModulesIndex < 0) {
+			if (cssModulesEntry === undefined || __cssModulesIndex === -1) {
 				return;
 			}
 			const cssModuleForest = cssModulesEntry.elements[1];

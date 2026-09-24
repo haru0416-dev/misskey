@@ -57,7 +57,7 @@ describe('hono-stream-connection: chat channels', () => {
 		subscriber.emit(`chatUserStream:${me.id}-${other.id}`, { type: 'message', body: { text: 'hi' } });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
-		expect(channelMessages.length).toBe(1);
+		expect(channelMessages).toHaveLength(1);
 		expect(channelMessages[0].body.body).toEqual({ text: 'hi' });
 	});
 
@@ -70,7 +70,7 @@ describe('hono-stream-connection: chat channels', () => {
 		connection.listen(new EventEmitter(), send);
 
 		await connection.connectChannel('conn1', { otherId: me.id }, 'chatUser', true);
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 
 	test('chatRoom: ルームオーナーは接続してchatRoomStreamイベントを受け取れる', async () => {
@@ -89,7 +89,7 @@ describe('hono-stream-connection: chat channels', () => {
 		subscriber.emit(`chatRoomStream:${room.id}`, { type: 'message', body: { text: 'hello room' } });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
-		expect(channelMessages.length).toBe(1);
+		expect(channelMessages).toHaveLength(1);
 		expect(channelMessages[0].body.body).toEqual({ text: 'hello room' });
 	});
 
@@ -105,7 +105,7 @@ describe('hono-stream-connection: chat channels', () => {
 		connection.listen(new EventEmitter(), send);
 
 		await connection.connectChannel('conn1', { roomId: room.id }, 'chatRoom', true);
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 
 	test('chatRoom: 存在しないルームIDでは接続できない', async () => {
@@ -117,6 +117,6 @@ describe('hono-stream-connection: chat channels', () => {
 		connection.listen(new EventEmitter(), send);
 
 		await connection.connectChannel('conn1', { roomId: genId() }, 'chatRoom', true);
-		expect(raw.length).toBe(0);
+		expect(raw).toHaveLength(0);
 	});
 });

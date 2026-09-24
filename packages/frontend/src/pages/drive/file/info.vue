@@ -193,7 +193,7 @@ function rename() {
 		}
 		os.apiWithDialog('drive/files/update', {
 			fileId: f.id,
-			name: name,
+			name,
 		}).then(async () => {
 			await _fetch_();
 		});

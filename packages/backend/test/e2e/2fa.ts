@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import * as crypto from 'node:crypto';
 import { encode as encodeToCbor } from 'cbor2';
 import * as OTPAuth from 'otpauth';
@@ -131,10 +131,10 @@ describe('2要素認証', () => {
 			password,
 			token: param.token,
 			name: param.keyName,
-			credential: <RegistrationResponseJSON>{
+			credential: {
 				id: credentialIdBase64url,
 				rawId: credentialIdBase64url,
-				response: <AuthenticatorAttestationResponseJSON>{
+				response: {
 					clientDataJSON: Buffer.from(
 						JSON.stringify({
 							type: 'webauthn.create',
@@ -151,10 +151,10 @@ describe('2要素認証', () => {
 							authData: new Uint8Array(authData),
 						}),
 					).toString('base64url'),
-				},
+				} satisfies AuthenticatorAttestationResponseJSON,
 				clientExtensionResults: {},
 				type: 'public-key',
-			},
+			} as RegistrationResponseJSON,
 		};
 	};
 
@@ -205,17 +205,17 @@ describe('2要素認証', () => {
 		return {
 			username,
 			password,
-			credential: <AuthenticationResponseJSON>{
+			credential: {
 				id: param.credentialId.toString('base64url'),
 				rawId: param.credentialId.toString('base64url'),
-				response: <AuthenticatorAssertionResponseJSON>{
+				response: {
 					clientDataJSON: clientDataJSONBuffer.toString('base64url'),
 					authenticatorData: authenticatorData.toString('base64url'),
 					signature: signature.toString('base64url'),
-				},
+				} satisfies AuthenticatorAssertionResponseJSON,
 				clientExtensionResults: {},
 				type: 'public-key',
-			},
+			} as AuthenticationResponseJSON,
 			'g-recaptcha-response': null,
 			'hcaptcha-response': null,
 		};
@@ -629,7 +629,7 @@ describe('2要素認証', () => {
 		const securityKeys = iResponse.body.securityKeysList.filter(
 			(s: { id: string }) => s.id === credentialId.toString('base64url'),
 		);
-		expect(securityKeys.length).toBe(1);
+		expect(securityKeys).toHaveLength(1);
 		const securityKey = securityKeys[0];
 		assert.ok(securityKey);
 		expect(securityKey.name).toBe(renamedKey);

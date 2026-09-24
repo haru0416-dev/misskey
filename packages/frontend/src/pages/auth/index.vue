@@ -89,7 +89,7 @@ onMounted(async () => {
 		} else {
 			state.value = 'waiting';
 		}
-	} catch (err) {
+	} catch {
 		state.value = 'fetch-session-error';
 	}
 });

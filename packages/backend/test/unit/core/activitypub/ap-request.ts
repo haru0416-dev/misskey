@@ -10,7 +10,7 @@ import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { assertActivityMatchesUrl, FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
-import { IObject } from '@/core/activitypub/type.js';
+import type { IObject } from '@/core/activitypub/type.js';
 
 export const buildParsedSignature = (signingString: string, signature: string, algorithm: string): ParsedSignature => {
 	return {
@@ -42,7 +42,7 @@ describe('ap-request', () => {
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
 		const result = await verifyRequestSignature(parsed, keypair.publicKey);
-		expect(result).toStrictEqual(true);
+		expect(result).toBe(true);
 		expect(req.signingString).toMatch(/^\(request-target\): post \/inbox\?sharedInbox=true$/m);
 	});
 
@@ -59,7 +59,7 @@ describe('ap-request', () => {
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
 		const result = await verifyRequestSignature(parsed, keypair.publicKey);
-		expect(result).toStrictEqual(true);
+		expect(result).toBe(true);
 		expect(req.signingString).toMatch(/^\(request-target\): get \/outbox\?page=true$/m);
 	});
 

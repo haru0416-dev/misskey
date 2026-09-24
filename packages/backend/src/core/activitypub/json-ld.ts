@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 
 // slacc の SignatureAlgorithm は ambient const enum のため isolatedModules 下では値として import できない。
 // 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { bindThis } from '@/decorators.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getCachedSigner } from './signer-cache.js';
@@ -21,7 +21,7 @@ import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.
 
 /** N-Quads のリテラルとして出せない文字を退避する。 */
 function escapeNQuadLiteral(value: string): string {
-	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+	return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n').replaceAll('\r', '\\r');
 }
 
 /*
@@ -118,7 +118,7 @@ export class JsonLd {
 	private static forbiddenDirectives = new Set(['@included', '@graph', '@reverse']);
 
 	private frozen = false;
-	private cache: Map<string, RemoteDocument> = new Map();
+	private cache = new Map<string, RemoteDocument>();
 
 	public debug = false;
 	public preLoad = true;
@@ -294,7 +294,7 @@ export class JsonLd {
 
 			const remoteDocument = {
 				contextUrl: undefined,
-				document: document,
+				document,
 				documentUrl: url,
 			};
 			this.cache.set(url, remoteDocument);

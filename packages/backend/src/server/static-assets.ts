@@ -209,35 +209,35 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 	);
 	app.get('/fluent-emoji/*', async (c) => {
 		const path = emojiPath(c, '/fluent-emoji/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+		if (!/^[0-9a-f-]+\.png$/.test(path)) {
 			return c.body(null, 404);
 		}
 		return await serveFile(c, resolve(fluentEmojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.on('HEAD', '/fluent-emoji/*', async (c) => {
 		const path = emojiPath(c, '/fluent-emoji/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+		if (!/^[0-9a-f-]+\.png$/.test(path)) {
 			return c.body(null, 404);
 		}
 		return await serveFile(c, resolve(fluentEmojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.get('/twemoji/*', async (c) => {
 		const path = emojiPath(c, '/twemoji/');
-		if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+		if (!/^[0-9a-f-]+\.svg$/.test(path)) {
 			return c.body(null, 404);
 		}
 		return await serveFile(c, resolve(twemojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.on('HEAD', '/twemoji/*', async (c) => {
 		const path = emojiPath(c, '/twemoji/');
-		if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+		if (!/^[0-9a-f-]+\.svg$/.test(path)) {
 			return c.body(null, 404);
 		}
 		return await serveFile(c, resolve(twemojiDir, path), 'public, max-age=2592000', emojiSecurityHeaders());
 	});
 	app.get('/twemoji-badge/*', async (c) => {
 		const path = emojiPath(c, '/twemoji-badge/');
-		if (!path.match(/^[0-9a-f-]+\.png$/)) {
+		if (!/^[0-9a-f-]+\.png$/.test(path)) {
 			return c.body(null, 404);
 		}
 

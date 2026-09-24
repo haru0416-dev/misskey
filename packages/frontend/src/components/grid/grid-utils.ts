@@ -159,7 +159,7 @@ export async function pasteToGridFromClipboard(
 
 	const bounds = context.randedBounds;
 	const lines = clipBoardText
-		.replaceAll(/\r/g, '')
+		.replaceAll('\r', '')
 		.split('\n')
 		.map((it) => it.split('\t'));
 

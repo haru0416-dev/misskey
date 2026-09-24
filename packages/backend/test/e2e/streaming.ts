@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WebSocket } from 'ws';
 import { createFollowingInDatabase, findHashtagsByName, genId, openTestDatabase } from '../fixtures.js';
@@ -832,7 +832,7 @@ describe('Streaming', () => {
 				await Promise.all([post(ayano, { text: `#${tag}` }), post(chitose, { text: `#${tag}` })]);
 
 				const rows = await findHashtagsByName(db, tag);
-				expect(rows.length).toBe(1);
+				expect(rows).toHaveLength(1);
 				const row = rows[0];
 				assert.ok(row);
 				expect(row.mentionedUserIds.toSorted()).toStrictEqual([ayano.id, chitose.id].toSorted());

@@ -4,8 +4,8 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import * as assert from 'assert';
-import * as Bull from 'bullmq';
+import * as assert from 'node:assert';
+import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { DbQueue } from '@/core/queue/queues.js';
@@ -280,12 +280,12 @@ describe('Endpoints', () => {
 				expect(after.mediaSilencedHosts).toStrictEqual(['Blocked.Example', 'media.example']);
 				expect(after.langs).toStrictEqual(['ja-JP']);
 				expect(after.capSiteKey).toBe(`cap-${now}`);
-				expect(after.googleAnalyticsMeasurementId).toBe(null);
-				expect(after.sensitiveMediaDetectionApiUrl).toBe(null);
-				expect(after.deeplAuthKey).toBe(null);
-				expect(after.truemailInstance).toBe(null);
+				expect(after.googleAnalyticsMeasurementId).toBeNull();
+				expect(after.sensitiveMediaDetectionApiUrl).toBeNull();
+				expect(after.deeplAuthKey).toBeNull();
+				expect(after.truemailInstance).toBeNull();
 				expect(after.termsOfServiceUrl).toBe(`https://example.com/tos-${now}`);
-				expect(after.repositoryUrl).toBe(null);
+				expect(after.repositoryUrl).toBeNull();
 				expect(after.urlPreviewSummaryProxyUrl).toBe(`https://example.com/summary-${now}`);
 				expect(after.urlPreviewSensitiveList).toStrictEqual([`example.com ${now}`, `/preview-${now}/`]);
 				const adminMeta = await api('admin/meta', {}, alice);
@@ -399,7 +399,12 @@ describe('Endpoints', () => {
 			const accountTokenTarget = await signup({ username: `haat${suffix}` });
 			const deleteAccountTarget = await signup({ username: `hada${suffix}` });
 			const untouchedTarget = await signup({ username: `haua${suffix}` });
-			const targetIds = [accountDeleteTarget.id, accountTokenTarget.id, deleteAccountTarget.id, untouchedTarget.id];
+			const targetIds = new Set([
+				accountDeleteTarget.id,
+				accountTokenTarget.id,
+				deleteAccountTarget.id,
+				untouchedTarget.id,
+			]);
 			const getDeleteAccountJobs = async (userId: string) => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				return jobs.filter((job) => job.name === 'deleteAccount' && job.data.user.id === userId);
@@ -418,7 +423,7 @@ describe('Endpoints', () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				await Promise.all(
 					jobs
-						.filter((job) => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
+						.filter((job) => job.name === 'deleteAccount' && targetIds.has(job.data.user.id))
 						.map((job) => job.remove()),
 				);
 			};
@@ -454,7 +459,7 @@ describe('Endpoints', () => {
 
 				const alreadyDeleted = await api('admin/delete-account', { userId: deleteAccountTarget.id }, alice);
 				expect(alreadyDeleted.status).toBe(204);
-				expect((await getDeleteAccountJobs(deleteAccountTarget.id)).length).toBe(1);
+				expect(await getDeleteAccountJobs(deleteAccountTarget.id)).toHaveLength(1);
 
 				const wrongAccountScope = await createAppToken(alice, ['read:admin:account']);
 				const accountScopeDenied = await api(
@@ -505,7 +510,7 @@ describe('Endpoints', () => {
 
 			const user = await fetchUserByIdOrFailFromDatabase(db, created.body.id);
 			expect(user.username).toBe(`hacreate${suffix}`);
-			expect(user.host).toBe(null);
+			expect(user.host).toBeNull();
 
 			const token = await createAppToken(alice, ['write:admin:account']);
 			const appDenied = await api(
@@ -543,8 +548,8 @@ describe('Endpoints', () => {
 			const successful = results.filter((result) => result.status === 200);
 			const duplicated = results.filter((result) => result.status === 400);
 
-			expect(successful.length).toBe(1);
-			expect(duplicated.length).toBe(1);
+			expect(successful).toHaveLength(1);
+			expect(duplicated).toHaveLength(1);
 			expect(castAsError(duplicated[0]!.body as any).error.code).toBe('DUPLICATED_USERNAME');
 		});
 	});
@@ -659,7 +664,7 @@ describe('Endpoints', () => {
 			expect(localFiles[0].md5).toBe(firstMd5);
 			expect(localFiles[0].size).toBe(101);
 			expect(localFiles[0].isSensitive).toBe(false);
-			expect(localFiles[0].blurhash).toBe(null);
+			expect(localFiles[0].blurhash).toBeNull();
 			expect(localFiles[0].properties).toStrictEqual({ width: 30, height: 40, orientation: 6 });
 			expect(localFiles[0].url).toBe(firstLocal.url);
 			expect(localFiles[0].thumbnailUrl).toBe(firstLocal.thumbnailUrl);
@@ -697,8 +702,8 @@ describe('Endpoints', () => {
 			);
 			expect(remoteFiles.status).toBe(200);
 			expect((remoteFiles.body as any[]).map((file) => file.id)).toStrictEqual([remote.id]);
-			expect((remoteFiles.body as any[])[0].userId).toBe(null);
-			expect((remoteFiles.body as any[])[0].user).toBe(null);
+			expect((remoteFiles.body as any[])[0].userId).toBeNull();
+			expect((remoteFiles.body as any[])[0].user).toBeNull();
 
 			const token = await createAppToken(alice, ['read:admin:drive']);
 			const listedByToken = await api(
@@ -803,7 +808,7 @@ describe('Endpoints', () => {
 			const ownedByModerator = await api('admin/drive/show-file', { fileId: aliceFile.id }, alice);
 			expect(ownedByModerator.status).toBe(200);
 			expect(ownedByModerator.body.requestIp).toBe('192.0.2.11');
-			expect(ownedByModerator.body.requestHeaders).toBe(null);
+			expect(ownedByModerator.body.requestHeaders).toBeNull();
 
 			const token = await createAppToken(alice, ['read:admin:drive']);
 			const shownByToken = await api('admin/drive/show-file', { fileId: bobFile.id }, { token });
@@ -1155,7 +1160,7 @@ describe('Endpoints', () => {
 
 			const users = await api('roles/users', { roleId: explorableRole.id }, member);
 			expect(users.status).toBe(200);
-			expect(users.body.length).toBe(1);
+			expect(users.body).toHaveLength(1);
 			expect(getAt(users.body, 0).user.id).toBe(member.id);
 			expect(getAt(users.body, 0).user.username).toBe(member.username);
 
@@ -1220,7 +1225,7 @@ describe('Endpoints', () => {
 
 				const notes = await api('roles/notes', { roleId: explorableRole.id }, author);
 				expect(notes.status).toBe(200);
-				expect(notes.body.length).toBe(1);
+				expect(notes.body).toHaveLength(1);
 				expect(getAt(notes.body, 0).id).toBe(publicNoteId);
 
 				// 配布の再試行で list に同じ ID が二重に入っても、1 回だけ返し limit の枠を食わない。
@@ -1402,7 +1407,7 @@ describe('Endpoints', () => {
 			expect(afterUpdate.status).toBe(200);
 			expect(afterUpdate.body.name).toBe(`admin role updated ${now}`);
 			expect(afterUpdate.body.description).toBe('updated role description');
-			expect(afterUpdate.body.color).toBe(null);
+			expect(afterUpdate.body.color).toBeNull();
 			expect(afterUpdate.body.isPublic).toBe(false);
 			expect(afterUpdate.body.displayOrder).toBe(314);
 			expect(getDefined(afterUpdate.body.policies['canInvite']).value).toBe(false);
@@ -1437,7 +1442,7 @@ describe('Endpoints', () => {
 				{ token: readToken },
 			);
 			expect(users.status).toBe(200);
-			expect(users.body.length).toBe(1);
+			expect(users.body).toHaveLength(1);
 			expect(getAt(users.body, 0).id).toBe(carolRoleAssignment.id);
 			expect(getAt(users.body, 0).user.id).toBe(carol.id);
 			expect(getAt(users.body, 0).user.username).toBe(carol.username);
@@ -1581,9 +1586,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(unassigned.status).toBe(204);
-			expect(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id)).toBe(
-				null,
-			);
+			expect(
+				await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id),
+			).toBeNull();
 
 			const unassignedAgain = await api(
 				'admin/roles/unassign',
@@ -1848,7 +1853,7 @@ describe('Endpoints', () => {
 
 			const deleted = await api('admin/system-webhook/delete', { id: created.body.id }, alice);
 			expect(deleted.status).toBe(204);
-			expect(await fetchSystemWebhookByIdFromDatabase(db, created.body.id)).toBe(null);
+			expect(await fetchSystemWebhookByIdFromDatabase(db, created.body.id)).toBeNull();
 
 			const deletedInactive = await api('admin/system-webhook/delete', { id: createdInactive.body.id }, alice);
 			expect(deletedInactive.status).toBe(204);
@@ -1988,7 +1993,7 @@ describe('Endpoints', () => {
 			expect(updated.body.name).toBe(`${name} updated`);
 			expect(updated.body.method).toBe('email');
 			expect(updated.body.userId).toBe(emailUser.id);
-			expect(updated.body.systemWebhookId).toBe(undefined);
+			expect(updated.body.systemWebhookId).toBeUndefined();
 
 			const missingEmailUser = await api(
 				'admin/abuse-report/notification-recipient/create',
@@ -2298,7 +2303,7 @@ describe('Endpoints', () => {
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
 			expect(after.resolved).toBe(true);
 			expect(after.assigneeId).toBe(alice.id);
-			expect(after.resolvedAs).toBe(null);
+			expect(after.resolvedAs).toBeNull();
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api(
@@ -2569,7 +2574,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(firstPage.status).toBe(200);
-			expect(firstPage.body.length).toBe(3);
+			expect(firstPage.body).toHaveLength(3);
 
 			const listed = await api(
 				'admin/show-users',
@@ -2792,7 +2797,7 @@ describe('Endpoints', () => {
 				// 本人の操作は乗っ取りにならないので通す
 				const resetRootBySelf = await api('admin/reset-password', { userId: alice.id }, alice);
 				expect(resetRootBySelf.status).toBe(200);
-				expect(resetRootBySelf.body.password.length).toBe(8);
+				expect(resetRootBySelf.body.password).toHaveLength(8);
 			} finally {
 				await updateUserProfileInDatabase(db, alice.id, {
 					password: originalRootProfile.password,
@@ -2815,7 +2820,7 @@ describe('Endpoints', () => {
 
 			const resetOrdinaryByModerator = await api('admin/reset-password', { userId: ordinaryTarget.id }, moderator);
 			expect(resetOrdinaryByModerator.status).toBe(200);
-			expect(resetOrdinaryByModerator.body.password.length).toBe(8);
+			expect(resetOrdinaryByModerator.body.password).toHaveLength(8);
 			const unsetOrdinaryMfaByModerator = await api('admin/unset-mfa', { userId: ordinaryTarget.id }, moderator);
 			expect(unsetOrdinaryMfaByModerator.status).toBe(204);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, ordinaryTarget.id);
@@ -2882,14 +2887,14 @@ describe('Endpoints', () => {
 
 			const reset = await api('admin/reset-password', { userId: target.id }, alice);
 			expect(reset.status).toBe(200);
-			expect(reset.body.password.length).toBe(8);
+			expect(reset.body.password).toHaveLength(8);
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
 			expect(await bunPassword.verify(reset.body.password, profile.password!, 'bcrypt')).toBe(true);
 
 			const resetToken = await createAppToken(alice, ['write:admin:reset-password']);
 			const resetByToken = await api('admin/reset-password', { userId: target.id }, { token: resetToken });
 			expect(resetByToken.status).toBe(200);
-			expect(resetByToken.body.password.length).toBe(8);
+			expect(resetByToken.body.password).toHaveLength(8);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
 			expect(await bunPassword.verify(resetByToken.body.password, profile.password!, 'bcrypt')).toBe(true);
 
@@ -2910,8 +2915,8 @@ describe('Endpoints', () => {
 			const unsetMfa = await api('admin/unset-mfa', { userId: target.id }, alice);
 			expect(unsetMfa.status).toBe(204);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			expect(profile.twoFactorSecret).toBe(null);
-			expect(profile.twoFactorBackupSecret).toBe(null);
+			expect(profile.twoFactorSecret).toBeNull();
+			expect(profile.twoFactorBackupSecret).toBeNull();
 			expect(profile.twoFactorEnabled).toBe(false);
 			expect(profile.usePasswordLessLogin).toBe(false);
 
@@ -2922,9 +2927,9 @@ describe('Endpoints', () => {
 			const unsetAvatar = await api('admin/unset-user-avatar', { userId: target.id }, alice);
 			expect(unsetAvatar.status).toBe(204);
 			let user = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			expect(user.avatarId).toBe(null);
-			expect(user.avatarUrl).toBe(null);
-			expect(user.avatarBlurhash).toBe(null);
+			expect(user.avatarId).toBeNull();
+			expect(user.avatarUrl).toBeNull();
+			expect(user.avatarBlurhash).toBeNull();
 
 			const unsetAvatarAgain = await api('admin/unset-user-avatar', { userId: target.id }, alice);
 			expect(unsetAvatarAgain.status).toBe(204);
@@ -2932,9 +2937,9 @@ describe('Endpoints', () => {
 			const unsetBanner = await api('admin/unset-user-banner', { userId: target.id }, alice);
 			expect(unsetBanner.status).toBe(204);
 			user = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			expect(user.bannerId).toBe(null);
-			expect(user.bannerUrl).toBe(null);
-			expect(user.bannerBlurhash).toBe(null);
+			expect(user.bannerId).toBeNull();
+			expect(user.bannerUrl).toBeNull();
+			expect(user.bannerBlurhash).toBeNull();
 
 			const unsetBannerAgain = await api('admin/unset-user-banner', { userId: target.id }, alice);
 			expect(unsetBannerAgain.status).toBe(204);
@@ -3384,7 +3389,7 @@ describe('Endpoints', () => {
 
 			const removed = await api('admin/relays/remove', { inbox }, alice);
 			expect(removed.status).toBe(204);
-			expect(await fetchRelayByInboxFromDatabase(db, inbox)).toBe(null);
+			expect(await fetchRelayByInboxFromDatabase(db, inbox)).toBeNull();
 
 			const undoJob = await findDeliverJob(inbox, 'Undo');
 			expect(undoJob.data.to).toBe(inbox);
@@ -3606,11 +3611,11 @@ describe('Endpoints', () => {
 
 				const removed = await api('admin/queue/remove-job', { queue: 'deliver', jobId: removeJob.id }, alice);
 				expect(removed.status).toBe(204);
-				expect(await deliverQueue!.getJob(removeJob.id)).toBe(undefined);
+				expect(await deliverQueue!.getJob(removeJob.id)).toBeUndefined();
 
 				const cleared = await api('admin/queue/clear', { queue: 'deliver', state: 'wait' }, alice);
 				expect(cleared.status).toBe(204);
-				expect(await deliverQueue!.getJob(clearJob.id)).toBe(undefined);
+				expect(await deliverQueue!.getJob(clearJob.id)).toBeUndefined();
 				await expectModerationLog('clearQueue');
 
 				const writeToken = await createAppToken(alice, ['write:admin:queue']);
@@ -3701,7 +3706,7 @@ describe('Endpoints', () => {
 				assert.ok(listedIds.indexOf(dbOutboxId) < listedIds.indexOf(deliverOutboxId));
 				const firstPage = await api('admin/queue/outbox-dead-letters', { limit: 1 }, alice);
 				expect(firstPage.status).toBe(200);
-				expect(firstPage.body.length).toBe(1);
+				expect(firstPage.body).toHaveLength(1);
 				const nextPage = await api('admin/queue/outbox-dead-letters', { untilId: dbOutboxId }, alice);
 				expect(nextPage.status).toBe(200);
 				assert.ok(!nextPage.body.some((row) => row.id === dbOutboxId));
@@ -3749,13 +3754,13 @@ describe('Endpoints', () => {
 				const retriedRow = await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId);
 				assert.ok(retriedRow);
 				expect(retriedRow.state).toBe('ready');
-				expect(retriedRow.deadLetterReason).toBe(null);
-				expect(retriedRow.lastError).toBe(null);
-				expect(retriedRow.leaseToken).toBe(null);
-				expect(retriedRow.leaseExpiresAt).toBe(null);
+				expect(retriedRow.deadLetterReason).toBeNull();
+				expect(retriedRow.lastError).toBeNull();
+				expect(retriedRow.leaseToken).toBeNull();
+				expect(retriedRow.leaseExpiresAt).toBeNull();
 				expect(retriedRow.revision).toBe(4);
 				// 再試行で改めて publish されるので、古い BullMQ ジョブは残していると二重配送になる
-				expect(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`)).toBe(undefined);
+				expect(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`)).toBeUndefined();
 
 				const abandoned = await api(
 					'admin/queue/abandon-outbox-dead-letter',
@@ -3763,7 +3768,7 @@ describe('Endpoints', () => {
 					alice,
 				);
 				expect(abandoned.status).toBe(204);
-				expect(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId)).toBe(null);
+				expect(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId)).toBeNull();
 
 				const afterList = await api('admin/queue/outbox-dead-letters', {}, alice);
 				expect(afterList.status).toBe(200);
@@ -3834,7 +3839,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(list.status).toBe(200);
-			expect(list.body.length).toBe(1);
+			expect(list.body).toHaveLength(1);
 			expect(getAt(list.body, 0).id).toBe(id);
 			expect(getAt(list.body, 0).createdAt).toBe(new Date(now).toISOString());
 			expect(getAt(list.body, 0).type).toBe('updateUserNote');
@@ -3926,7 +3931,7 @@ describe('Endpoints', () => {
 			);
 			expect(created.status).toBe(200);
 			expect(created.body.title).toBe(title);
-			expect(created.body.imageUrl).toBe(null);
+			expect(created.body.imageUrl).toBeNull();
 			expect((created.body as any).needConfirmationToRead).toBe(true);
 
 			const list = await api('admin/announcements/list', { limit: 20, status: 'active' }, alice);
@@ -3956,7 +3961,7 @@ describe('Endpoints', () => {
 			assert.ok(updatedAnnouncement);
 			expect(updatedAnnouncement.title).toBe(`${title}-updated`);
 			expect(updatedAnnouncement.text).toBe('updated body');
-			expect(updatedAnnouncement.imageUrl).toBe(null);
+			expect(updatedAnnouncement.imageUrl).toBeNull();
 			expect(updatedAnnouncement.isActive).toBe(false);
 
 			const noSuch = await api(
@@ -4091,7 +4096,7 @@ describe('Endpoints', () => {
 			assert.ok(updatedDecoration);
 			expect(updatedDecoration.name).toBe(`hono-avatar-${now}-updated`);
 			expect(updatedDecoration.description).toBe('updated body');
-			expect(updatedDecoration.category).toBe(null);
+			expect(updatedDecoration.category).toBeNull();
 
 			const readToken = await createAppToken(manager, ['read:admin:avatar-decorations']);
 			const scopeDenied = await api(

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { noteVisibilities, noteReactionAcceptances } from '@/types.js';
-import { MiUser } from './User.js';
-import { MiChannel } from './Channel.js';
-import { MiNote } from './Note.js';
+import type { noteVisibilities, noteReactionAcceptances } from '@/types.js';
+import type { MiUser } from './User.js';
+import type { MiChannel } from './Channel.js';
+import type { MiNote } from './Note.js';
 import type { MiDriveFile } from './DriveFile.js';
 
 export class MiNoteDraft {

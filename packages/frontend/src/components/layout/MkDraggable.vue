@@ -127,7 +127,7 @@ function onDragstart(ev: DragEvent, item: T) {
 }
 
 function onDragover(ev: DragEvent, item: T, backward: boolean) {
-	nextTick(() => {
+	nextTick().then(() => {
 		dropReadyArea.value = [item.id, backward ? 'backward' : 'forward'];
 	});
 }
@@ -147,7 +147,7 @@ function onDrop(ev: DragEvent, item: T, backward: boolean) {
 	const fromIndex = props.modelValue.findIndex((x) => x.id === dragged.item.id);
 
 	const newValue = [...props.modelValue];
-	if (fromIndex > -1) {
+	if (fromIndex !== -1) {
 		newValue.splice(fromIndex, 1);
 	}
 	let toIndex = newValue.findIndex((x) => x.id === item.id);

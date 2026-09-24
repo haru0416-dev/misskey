@@ -4,7 +4,8 @@
  */
 
 import { beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { UserToken, api, post, signup } from '../utils.js';
+import type { UserToken } from '../utils.js';
+import { api, post, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('API visibility', () => {
@@ -378,7 +379,7 @@ describe('API visibility', () => {
 			const res = await api('notes/timeline', { limit: 100 }, other);
 			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === pub.id);
-			expect(notes.length).toBe(0);
+			expect(notes).toHaveLength(0);
 		});
 
 		test('[HTL] followers-post が フォロワーから見れる', async () => {
@@ -399,7 +400,7 @@ describe('API visibility', () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, other);
 			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folR.id);
-			expect(notes.length).toBe(0);
+			expect(notes).toHaveLength(0);
 		});
 
 		test('[replies] followers-reply が 非フォロワー (リプライ先である) から見れる', async () => {

@@ -11,23 +11,12 @@ import { join, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { inspect } from 'node:util';
 import policy from './preregistration.json' with { type: 'json' };
-import { observer, pending, type ObserverConfig } from './observe.mjs';
-import {
-	acceptedRecoveryListingFailure,
-	scenarios,
-	type Peer,
-	type RecoveryProbe,
-	type RecoverySnapshot,
-} from './scenarios.mjs';
-import {
-	openRunRecording,
-	readRunRecording,
-	runRecord,
-	type Identity,
-	type Run,
-	type RecordedSample,
-	type RunRecord,
-} from './recording.mjs';
+import { observer, pending } from './observe.mjs';
+import type { ObserverConfig } from './observe.mjs';
+import { acceptedRecoveryListingFailure, scenarios } from './scenarios.mjs';
+import type { Peer, RecoveryProbe, RecoverySnapshot } from './scenarios.mjs';
+import { openRunRecording, readRunRecording, runRecord } from './recording.mjs';
+import type { Identity, Run, RecordedSample, RunRecord } from './recording.mjs';
 
 type Command = { argv: string[]; cwd: string };
 type Deployment = {
@@ -663,7 +652,7 @@ export function summarizeRun(run: Run, correctness: ReturnType<typeof assessCorr
 	const initialQueues = run.samples[0]!.queues;
 	assert.ok(initialQueues.available);
 	for (const [key, events] of queueEvents) {
-		const initialIds: Set<string> = new Set(
+		const initialIds: Set<string> = new Set<string>(
 			initialQueues.value.queues.find((queue) => queue.key === key)?.events.map(([id]) => id),
 		);
 		const firstId: string | undefined = initialIds.values().next().value;

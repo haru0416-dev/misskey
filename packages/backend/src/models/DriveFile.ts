@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiDriveFolder } from './DriveFolder.js';
+import type { MiUser } from './User.js';
+import type { MiDriveFolder } from './DriveFolder.js';
 
 export class MiDriveFile {
 	public id: string;

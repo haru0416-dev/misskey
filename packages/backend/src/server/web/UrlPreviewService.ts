@@ -6,14 +6,15 @@
 import { fetchUrlPreview } from './UrlPreviewFetcher.js';
 import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import type { Config } from '@/config.js';
-import { createHttpRequestService, HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { query } from '@/misc/prelude/url.js';
-import { LoggerService } from '@/core/LoggerService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
 import type { ApiErrorBody } from '@/server/rest/error.js';
-import { MiMeta } from '@/models/Meta.js';
+import type { MiMeta } from '@/models/Meta.js';
 
 export type UrlPreviewRequest = {
 	query: {
@@ -152,7 +153,7 @@ export function createUrlPreviewService(
 	function fetchSummaryFromProxy(url: string, meta: MiMeta, lang?: string): Promise<UrlPreviewSummary> {
 		const proxy = meta.urlPreviewSummaryProxyUrl!;
 		const queryStr = query({
-			url: url,
+			url,
 			lang: lang ?? 'ja-JP',
 			followRedirects: meta.urlPreviewAllowRedirect,
 			userAgent: meta.urlPreviewUserAgent ?? defaultUserAgent,

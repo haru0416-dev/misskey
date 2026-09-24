@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import type { Ref, ShallowRef } from 'vue';

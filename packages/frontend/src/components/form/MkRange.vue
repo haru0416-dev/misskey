@@ -308,9 +308,9 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		lastClickTime = null;
 		emit('thumbDoubleClicked');
 		return;
-	} else {
-		lastClickTime = now;
 	}
+		lastClickTime = now;
+	
 }
 
 function onKeydown(ev: KeyboardEvent) {

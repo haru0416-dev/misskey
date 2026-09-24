@@ -4,7 +4,7 @@
  */
 
 import { defineAsyncComponent, ref } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { apiUrl, host } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import { showSuspendedDialog } from '@/features/users/show-suspended-dialog.js';
@@ -209,7 +209,7 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 		MkWaitingDialog,
 		{
 			success: false,
-			showing: showing,
+			showing,
 		},
 		{
 			closed: () => dispose(),

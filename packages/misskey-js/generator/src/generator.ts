@@ -1,5 +1,5 @@
-import assert from 'assert';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import assert from 'node:assert';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { OpenAPIV3_1 } from 'openapi-types';
 import { toPascal } from 'ts-case-convert';
 import openapiTS, { astToString } from 'openapi-typescript';
@@ -196,7 +196,7 @@ async function generateApiClientJSDoc(
 
 		if (operation.description) {
 			endpoints.push({
-				operationId: operationId,
+				operationId,
 				path: operation._path_,
 				description: operation.description,
 			});
@@ -302,7 +302,7 @@ class OperationTypeAlias implements IOperationTypeAlias {
 	}
 
 	generateName(): string {
-		const nameBase = this.path.replace(/\//g, '-');
+		const nameBase = this.path.replaceAll('/', '-');
 		return toPascal(nameBase + this.type);
 	}
 

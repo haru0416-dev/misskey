@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiNote } from './Note.js';
+import type { MiUser } from './User.js';
+import type { MiNote } from './Note.js';
 
 export class MiPollVote {
 	public id: string;

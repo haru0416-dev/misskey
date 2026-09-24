@@ -60,14 +60,14 @@ const emit = defineEmits<{
 
 const buttonEl = useTemplateRef('buttonEl');
 
-const emojiName = computed(() => props.reaction.replaceAll(/:/g, '').replace(/@\./, ''));
+const emojiName = computed(() => props.reaction.replaceAll(':', '').replace(/@\./, ''));
 
 const canToggle = computed(() => {
 	const emoji = customEmojisMap.get(emojiName.value) ?? getUnicodeEmojiOrNull(props.reaction);
 
 	return props.reaction.match(/@\w/) == null && $i != null && emoji != null;
 });
-const canGetInfo = computed(() => !props.reaction.match(/@\w/) && props.reaction.includes(':'));
+const canGetInfo = computed(() => !/@\w/.test(props.reaction) && props.reaction.includes(':'));
 const isLocalCustomEmoji = props.reaction[0] === ':' && props.reaction.includes('@.');
 
 async function toggleReaction() {
@@ -172,7 +172,7 @@ async function menu(ev: PointerEvent) {
 					MkCustomEmojiDetailedDialog,
 					{
 						emoji: await misskeyApiGet('emoji', {
-							name: props.reaction.replaceAll(/:/g, '').replace(/@\./, ''),
+							name: props.reaction.replaceAll(':', '').replace(/@\./, ''),
 						}),
 					},
 					{

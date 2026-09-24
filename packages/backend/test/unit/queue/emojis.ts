@@ -11,7 +11,7 @@ import { ZipArchive } from 'archiver';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
-import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies, RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import {
@@ -26,7 +26,6 @@ import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from '@/queue/handlers/emojis.js';
 import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
-import type { RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import type { MiUser } from '@/models/User.js';
 
 // カスタム絵文字export/importはDriveService.addFileのuploadableFileTypesチェックに

@@ -118,7 +118,7 @@ async function done() {
 		const created = await os.apiWithDialog('admin/announcements/create', params);
 
 		emit('done', {
-			created: created,
+			created,
 		});
 
 		dialog.value?.close();

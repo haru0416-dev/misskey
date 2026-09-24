@@ -143,19 +143,19 @@ async function changeImage(ev: PointerEvent) {
 		multiple: false,
 	});
 	const candidate = file.value.name.replace(/\.(.+)$/, '');
-	if (candidate.match(/^[a-z0-9_]+$/)) {
+	if (/^[a-z0-9_]+$/.test(candidate)) {
 		name.value = candidate;
 	}
 }
 
 async function addRole() {
 	const roles = await misskeyApi('admin/roles/list');
-	const currentRoleIds = rolesThatCanBeUsedThisEmojiAsReaction.value.map((x) => x.id);
+	const currentRoleIds = new Set(rolesThatCanBeUsedThisEmojiAsReaction.value.map((x) => x.id));
 
 	const { canceled, result: roleId } = await os.select({
 		items: roles
 			.filter((r) => r.isPublic)
-			.filter((r) => !currentRoleIds.includes(r.id))
+			.filter((r) => !currentRoleIds.has(r.id))
 			.map((r) => ({ label: r.name, value: r.id })),
 	});
 	if (canceled || roleId == null) {
@@ -218,7 +218,7 @@ async function done() {
 		});
 
 		emit('done', {
-			created: created,
+			created,
 		});
 
 		windowEl.value?.close();

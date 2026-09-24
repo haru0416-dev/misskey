@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiDriveFile } from './DriveFile.js';
+import type { MiUser } from './User.js';
+import type { MiDriveFile } from './DriveFile.js';
 
 /**
  * Pages のコンテンツブロック。ブロック種別 (text/image/input/section 等) ごとにプロパティが異なる

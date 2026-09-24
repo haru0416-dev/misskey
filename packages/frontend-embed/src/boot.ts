@@ -80,7 +80,7 @@ window.addEventListener('message', setIframeIdHandler);
 
 try {
 	await fetchCustomEmojis();
-} catch (err) {
+} catch {
 	/* 空のcatch */
 }
 

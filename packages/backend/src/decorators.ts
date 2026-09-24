@@ -15,7 +15,7 @@ export function bindThis(target: any, key: string, descriptor: any) {
 	return {
 		configurable: true,
 		get() {
-			if (this === target.prototype || this.hasOwnProperty(key)) {
+			if (this === target.prototype || Object.hasOwn(this, key)) {
 				return fn;
 			}
 

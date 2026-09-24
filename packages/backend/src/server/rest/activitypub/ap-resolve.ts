@@ -11,7 +11,7 @@ import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import { isCollectionOrOrderedCollection } from '@/core/activitypub/type.js';
+import { isCollectionOrOrderedCollection, getApId } from '@/core/activitypub/type.js';
 import type { ICollection, IObject, IOrderedCollection } from '@/core/activitypub/type.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
@@ -34,7 +34,6 @@ import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/user/UserPublickey
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
-import { getApId } from '@/core/activitypub/type.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { addActivityContext, renderCreateForApi, renderLikeForApi, renderNoteForApi } from './notes-ap.js';
@@ -328,7 +327,7 @@ async function signedGetForApi(
 					return await signedGetForApi(deps, href, user, allowSoftfail, false);
 				}
 			}
-		} catch (_) {
+		} catch {
 			// HTML の解析に失敗したため、全体を無視する。
 		}
 	}
@@ -384,7 +383,7 @@ export async function resolveApObjectForApi(
 	deps: ApiApResolveDependencies,
 	value: string | IObject,
 	allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 ): Promise<IObject> {
 	if (typeof value !== 'string') {
 		return value;
@@ -433,7 +432,7 @@ export async function resolveApObjectForApi(
 export async function resolveCollectionForApi(
 	deps: ApiApResolveDependencies,
 	value: string | IObject,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 ): Promise<ICollection | IOrderedCollection> {
 	const collection =
 		typeof value === 'string'

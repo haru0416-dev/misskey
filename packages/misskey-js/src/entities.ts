@@ -1,5 +1,5 @@
-import { ModerationLogPayloads } from './consts.js';
-import {
+import type { ModerationLogPayloads } from './consts.js';
+import type {
 	Announcement,
 	EmojiDetailed,
 	MeDetailed,

@@ -106,7 +106,7 @@ async function create() {
 	if (canceled || name == null) {
 		return;
 	}
-	await os.apiWithDialog('users/lists/create-from-public', { name: name, listId: list.value.id });
+	await os.apiWithDialog('users/lists/create-from-public', { name, listId: list.value.id });
 }
 
 watch(() => props.listId, fetchList, { immediate: true });

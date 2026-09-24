@@ -486,7 +486,7 @@ function onGridEvent(event: GridEvent) {
 }
 
 function onGridCellValidation(event: GridCellValidationEvent) {
-	updateButtonDisabled.value = event.all.filter((it) => !it.valid).length > 0;
+	updateButtonDisabled.value = event.all.some((it) => !it.valid);
 }
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
@@ -527,8 +527,8 @@ async function refreshCustomEmojis() {
 
 	const result = await loadingHandler.scope(() =>
 		misskeyApi('v2/admin/emoji/list', {
-			query: query,
-			limit: limit,
+			query,
+			limit,
 			page: currentPage.value,
 			sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}` as any),
 		}),

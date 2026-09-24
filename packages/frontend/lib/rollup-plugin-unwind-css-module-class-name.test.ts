@@ -39,7 +39,9 @@ describe(normalizeClass.name, () => {
 		expect(normalizeClass(parseExpression('["from", ...[Utopia]]'))).toBeNull();
 	});
 	it('should normalize recursively template literal', () => {
+		// oxlint-disable-next-line no-template-curly-in-string -- テンプレート文字列を含むソースを解析するテストの入力。
 		expect(normalizeClass(parseExpression('`name ${"shiho"} code ${33}`'))).toBe('name shiho code');
+		// oxlint-disable-next-line no-template-curly-in-string -- テンプレート文字列を含むソースを解析するテストの入力。
 		expect(normalizeClass(parseExpression('`name ${shiho.name} code ${33}`'))).toBeNull();
 	});
 	it('should normalize recursively binary expression', () => {

@@ -87,7 +87,7 @@ async function run() {
 	let ast;
 	try {
 		ast = parser.parse(widgetProps.script);
-	} catch (err) {
+	} catch {
 		isSyntaxError.value = true;
 		return;
 	}

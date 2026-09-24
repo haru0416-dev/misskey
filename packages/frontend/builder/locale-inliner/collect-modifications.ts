@@ -334,7 +334,7 @@ function declsOfPattern(
 					case 'RestElement':
 						return declsOfPattern(prop.argument);
 					default:
-						assertNever(prop);
+						return assertNever(prop);
 				}
 			});
 		case 'ArrayPattern':

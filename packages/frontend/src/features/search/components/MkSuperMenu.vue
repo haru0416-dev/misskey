@@ -234,7 +234,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 	}
 
 	if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-		nextTick(() => {
+		nextTick().then(() => {
 			if (!rootEl.value) {
 				return;
 			}

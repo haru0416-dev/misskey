@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
 import * as http from 'node:http';
 import * as https from 'node:https';
@@ -111,7 +111,7 @@ describe('API', () => {
 				nullableDefault: null,
 			});
 			expect(res.status).toBe(200);
-			expect(res.body.nullableDefault).toBe(null);
+			expect(res.body.nullableDefault).toBeNull();
 		});
 
 		test('cannot set undefined if it has default value', async () => {

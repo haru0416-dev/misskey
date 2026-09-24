@@ -5,7 +5,7 @@
 
 import { defineAsyncComponent, markRaw } from 'vue';
 import { ui } from '@shared/utility/config.js';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { common } from './common.js';
 import type { App, Component } from 'vue';
 import type { Keymap } from '@/utility/hotkey.js';

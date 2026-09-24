@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	DEFAULT_POLICIES,
@@ -13,7 +13,8 @@ import {
 	openTestDatabase,
 } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import { api, ApiRequest, failedApiCall, hiddenNote, post, signup, successfulApiCall } from '../utils.js';
+import type { ApiRequest } from '../utils.js';
+import { api, failedApiCall, hiddenNote, post, signup, successfulApiCall } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
@@ -194,9 +195,9 @@ describe('クリップ', () => {
 	test('の作成ができる', async () => {
 		const res = await create();
 		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
-		expect(res.lastClippedAt).toBe(null);
+		expect(res.lastClippedAt).toBeNull();
 		expect(res.name).toBe('test');
-		expect(res.description).toBe(null);
+		expect(res.description).toBeNull();
 		expect(res.isPublic).toBe(false);
 		expect(res.favoritedCount).toBe(0);
 		expect(res.isFavorited).toBe(false);
@@ -284,7 +285,7 @@ describe('クリップ', () => {
 		});
 
 		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
-		expect(res.lastClippedAt).toBe(null);
+		expect(res.lastClippedAt).toBeNull();
 		expect(res.name).toBe('updated');
 		expect(res.description).toBe('new description');
 		expect(res.isPublic).toBe(true);
@@ -583,7 +584,7 @@ describe('クリップ', () => {
 		async ({ endpoint }) =>
 			await failedApiCall(
 				{
-					endpoint: endpoint,
+					endpoint,
 					parameters: {},
 					user: undefined,
 				},
@@ -692,7 +693,7 @@ describe('クリップ', () => {
 			}
 
 			const favorited = await myFavorites();
-			expect(favorited.length).toBe(clips.length);
+			expect(favorited).toHaveLength(clips.length);
 			for (const clip of favorited) {
 				expect(clip.favoritedCount).toBe(1);
 				expect(clip.isFavorited).toBe(true);

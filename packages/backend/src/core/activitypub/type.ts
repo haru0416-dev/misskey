@@ -261,7 +261,7 @@ interface IKey extends IObject {
 	publicKeyPem: string | Buffer;
 }
 
-const validDocumentTypes = ['Audio', 'Document', 'Image', 'Page', 'Video'];
+const validDocumentTypes = new Set(['Audio', 'Document', 'Image', 'Page', 'Video']);
 
 export interface IApDocument extends IObject {
 	type: 'Audio' | 'Document' | 'Image' | 'Page' | 'Video';
@@ -269,7 +269,7 @@ export interface IApDocument extends IObject {
 
 export const isDocument = (object: IObject): object is IApDocument => {
 	const type = getApType(object);
-	return type != null && validDocumentTypes.includes(type);
+	return type != null && validDocumentTypes.has(type);
 };
 
 interface IApImage extends IApDocument {

@@ -1,11 +1,11 @@
 /// <reference types="vitest/config" />
-import path from 'path';
+import path from 'node:path';
 import pluginVue from '@vitejs/plugin-vue';
 import pluginGlsl from 'vite-plugin-glsl';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { PluginOption, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
-import { promises as fsp } from 'fs';
+import { promises as fsp } from 'node:fs';
 import { parse } from 'yaml';
 
 import locales from 'i18n';
@@ -134,10 +134,10 @@ export function getConfig(): UserConfig {
 		resolve: {
 			extensions,
 			alias: {
-				'@/': __dirname + '/src/',
-				'@shared/': __dirname + '/../frontend-shared/',
-				'/client-assets/': __dirname + '/assets/',
-				'/static-assets/': __dirname + '/../backend/assets/',
+				'@/': `${path.join(__dirname, 'src')}/`,
+				'@shared/': `${path.join(__dirname, '../frontend-shared')}/`,
+				'/client-assets/': `${path.join(__dirname, 'assets')}/`,
+				'/static-assets/': `${path.join(__dirname, '../backend/assets')}/`,
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',
 			},
 		},
@@ -149,8 +149,8 @@ export function getConfig(): UserConfig {
 			modules: {
 				generateScopedName(name, filename, _css): string {
 					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name)
-						.replace(/[\\\/\.\?&=]/g, '-')
-						.replace(/(src-|vue-)/g, '');
+						.replaceAll(/[\\\/\.\?&=]/g, '-')
+						.replaceAll(/(src-|vue-)/g, '');
 					if (process.env.NODE_ENV === 'production') {
 						return 'x' + toBase62(hash(id)).substring(0, 4);
 					}
@@ -218,7 +218,7 @@ export function getConfig(): UserConfig {
 				},
 			},
 			cssCodeSplit: true,
-			outDir: __dirname + '/../../built/_frontend_vite_',
+			outDir: path.join(__dirname, '../../built/_frontend_vite_'),
 			assetsDir: '.',
 			emptyOutDir: false,
 			sourcemap: process.env.NODE_ENV === 'development',

@@ -154,7 +154,7 @@ const edit = async (emoji: Misskey.entities.EmojiDetailed) => {
 	const { dispose } = await os.popupAsyncWithDialog(
 		import('./emoji-edit-dialog.vue').then((x) => x.default),
 		{
-			emoji: emoji,
+			emoji,
 		},
 		{
 			done: (result) => {
@@ -176,7 +176,7 @@ const detailRemoteEmoji = (emoji: { id: string; name: string; host: string; lice
 	const { dispose } = os.popup(
 		MkRemoteEmojiEditDialog,
 		{
-			emoji: emoji,
+			emoji,
 		},
 		{
 			done: () => {
@@ -191,7 +191,7 @@ const detailRemoteEmoji = (emoji: { id: string; name: string; host: string; lice
 
 const importEmoji = (emojiId: string) => {
 	os.apiWithDialog('admin/emoji/copy', {
-		emojiId: emojiId,
+		emojiId,
 	});
 };
 

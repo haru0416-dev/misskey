@@ -10,7 +10,7 @@ type Job<V> = {
 
 // プロセス内限定の固定時間coalescing queue。再起動時には未処理分が失われ、worker間では集約されない。
 export class CollapsedQueue<K, V> {
-	private jobs: Map<K, Job<V>> = new Map();
+	private jobs = new Map<K, Job<V>>();
 
 	constructor(
 		private timeout: number,

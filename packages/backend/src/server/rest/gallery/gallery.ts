@@ -55,7 +55,7 @@ const GALLERY_POSTS_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
 function getCurrentFeaturedWindow(windowRange: number): number {
-	const passed = new Date().getTime() - featuredEpoc;
+	const passed = Date.now() - featuredEpoc;
 	return Math.floor(passed / windowRange);
 }
 

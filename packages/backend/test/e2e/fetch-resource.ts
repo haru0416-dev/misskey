@@ -252,7 +252,7 @@ describe('Webリソース', () => {
 					accept,
 					type: HTML,
 				});
-				expect(res.location).toBe(null);
+				expect(res.location).toBeNull();
 			});
 		});
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { notificationTypes } from 'misskey-js';
+import type { notificationTypes } from 'misskey-js';
 import { ref } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { i18n } from './i18n.js';
@@ -115,7 +115,7 @@ function addProfile(name: string) {
 	if (name.trim() === '') {
 		return;
 	}
-	if (prefer['deck.profiles'].find((p) => p.name === name)) {
+	if (prefer['deck.profiles'].some((p) => p.name === name)) {
 		return;
 	}
 
@@ -172,7 +172,7 @@ export function swapColumn(a: Column['id'], b: Column['id']) {
 	}
 	const aY = aRow.findIndex((id) => id === a);
 	const bY = bRow.findIndex((id) => id === b);
-	if (aY < 0 || bY < 0) {
+	if (aY === -1 || bY === -1) {
 		return;
 	}
 	const newLayout = deepClone(layout.value);

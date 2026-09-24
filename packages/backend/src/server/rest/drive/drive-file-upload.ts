@@ -32,8 +32,7 @@ import {
 	startDriveFileDeletion,
 } from '@/core/drive/DriveFileDeletionLogic.js';
 import type { FileInfoService } from '@/core/drive/FileInfoService.js';
-import type { IImage } from '@/core/drive/ImageProcessingService.js';
-import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { IImage, ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import type { S3PutObject, S3Service } from '@/core/drive/S3Service.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';

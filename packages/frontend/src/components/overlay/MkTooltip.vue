@@ -112,7 +112,7 @@ function onVisibilityChange() {
 	if (window.document.visibilityState === 'hidden') {
 		stopLoop();
 	} else {
-		nextTick(startLoop);
+		nextTick().then(startLoop);
 	}
 }
 
@@ -120,7 +120,7 @@ watch(
 	() => props.showing,
 	(showing) => {
 		if (showing) {
-			nextTick(startLoop);
+			nextTick().then(startLoop);
 		} else {
 			stopLoop();
 		}
@@ -130,7 +130,7 @@ watch(
 onMounted(() => {
 	mounted = true;
 	window.document.addEventListener('visibilitychange', onVisibilityChange);
-	nextTick(startLoop);
+	nextTick().then(startLoop);
 });
 
 onUnmounted(() => {

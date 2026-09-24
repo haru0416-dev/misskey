@@ -59,7 +59,7 @@ describe('hono-stream-connection: stats channels', () => {
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		const messages = channelMessages(raw);
-		expect(messages.length).toBe(1);
+		expect(messages).toHaveLength(1);
 		expect((messages[0] as { type: string }).type).toBe('stats');
 	});
 
@@ -89,7 +89,7 @@ describe('hono-stream-connection: stats channels', () => {
 			await waitUntil(() => channelMessages(raw).some((m) => (m as { type: string }).type === 'statsLog'));
 
 			const statsLog = channelMessages(raw).find((m) => (m as { type: string }).type === 'statsLog');
-			expect(statsLog).not.toBeUndefined();
+			expect(statsLog).toBeDefined();
 		} finally {
 			testEv.off('requestQueueStatsLog', onRequest);
 		}
@@ -108,7 +108,7 @@ describe('hono-stream-connection: stats channels', () => {
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		const messages = channelMessages(raw);
-		expect(messages.length).toBe(1);
+		expect(messages).toHaveLength(1);
 		expect((messages[0] as { type: string }).type).toBe('stats');
 	});
 
@@ -126,6 +126,6 @@ describe('hono-stream-connection: stats channels', () => {
 		// 「届かないこと」を見るので、届くだけの猶予を置いてから確認する
 		await new Promise((resolve) => setTimeout(resolve, 100));
 
-		expect(channelMessages(raw).length).toBe(0);
+		expect(channelMessages(raw)).toHaveLength(0);
 	});
 });

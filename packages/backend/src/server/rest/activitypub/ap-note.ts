@@ -218,7 +218,7 @@ export async function updateQuestionFromApForApi(
 	deps: ApiApNoteDependencies,
 	value: string | IObject,
 	actor?: MiRemoteUser,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 ): Promise<boolean> {
 	const uri = typeof value === 'string' ? value : value.id;
 	if (uri == null) {
@@ -321,7 +321,7 @@ export async function createNoteFromApForApi(
 	deps: ApiApNoteDependencies,
 	value: string | IObject,
 	actor: MiRemoteUser | undefined,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 	silent = false,
 ): Promise<MiNote | null> {
 	const object = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
@@ -455,7 +455,7 @@ export async function createNoteFromApForApi(
 			const index = replyPoll.choices.findIndex((x) => x === note.name);
 			if (replyPoll.expiresAt && Date.now() > new Date(replyPoll.expiresAt).getTime()) {
 				return null;
-			} else if (index >= 0) {
+			} else if (index !== -1) {
 				await voteFromApForApi(deps, actor, reply, index);
 				void deliverQuestionUpdateForApi(deps, reply.id).catch(() => {});
 			}

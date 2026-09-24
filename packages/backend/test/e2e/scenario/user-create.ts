@@ -4,19 +4,10 @@
  */
 
 import { setTimeout } from 'node:timers/promises';
-import { entities } from 'misskey-js';
+import type { entities } from 'misskey-js';
 import { beforeEach, describe, test, beforeAll, afterAll, expect } from 'vitest';
-import {
-	api,
-	captureWebhook,
-	randomString,
-	role,
-	signup,
-	startJobQueue,
-	UserToken,
-	WEBHOOK_HOST,
-} from '../../utils.js';
-import type { TestJobQueueRuntime } from '../../utils.js';
+import { api, captureWebhook, randomString, role, signup, startJobQueue, WEBHOOK_HOST } from '../../utils.js';
+import type { TestJobQueueRuntime, UserToken } from '../../utils.js';
 
 describe('[シナリオ] ユーザ作成', () => {
 	let queue: TestJobQueueRuntime;

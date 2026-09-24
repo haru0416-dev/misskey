@@ -43,13 +43,13 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 	private renderHeight: number;
 	private baseTexture: WebGLTexture;
 	private vertexBuffer: WebGLBuffer;
-	private shaderCache: Map<string, WebGLProgram> = new Map();
+	private shaderCache = new Map<string, WebGLProgram>();
 	private uniformLocationCache = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
-	private perLayerResultTextures: Map<string, WebGLTexture> = new Map();
-	private perLayerResultFrameBuffers: Map<string, WebGLFramebuffer> = new Map();
+	private perLayerResultTextures = new Map<string, WebGLTexture>();
+	private perLayerResultFrameBuffers = new Map<string, WebGLFramebuffer>();
 	private nopProgram: WebGLProgram;
-	private registeredTextures: Map<string, { texture: WebGLTexture; width: number; height: number }> = new Map();
-	private registeredFunctions: Map<string, ImageCompositorFunction & { id: string; uniforms: string[] }> = new Map();
+	private registeredTextures = new Map<string, { texture: WebGLTexture; width: number; height: number }>();
+	private registeredFunctions = new Map<string, ImageCompositorFunction & { id: string; uniforms: string[] }>();
 
 	constructor(options: {
 		canvas: HTMLCanvasElement;
@@ -215,7 +215,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		gl.uniform1i(in_texture, 0);
 
 		fn.main({
-			gl: gl,
+			gl,
 			program: shaderProgram,
 			params: layer.params,
 			u: (name) => {
@@ -318,7 +318,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		gl.bindTexture(gl.TEXTURE_2D, null);
 
 		this.registeredTextures.set(key, {
-			texture: texture,
+			texture,
 			width: image.width,
 			height: image.height,
 		});

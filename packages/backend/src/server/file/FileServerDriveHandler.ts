@@ -9,7 +9,7 @@ import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import {
 	attachStreamCleanup,
 	handleRangeRequest,

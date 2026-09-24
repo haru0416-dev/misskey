@@ -128,14 +128,11 @@ function get(): PollEditorModelValue {
 	};
 
 	const calcAfter = () => {
-		let base = Number.parseInt(after.value.toString());
+		const base = Number.parseInt(after.value.toString(), 10);
 		switch (unit.value) {
-			// @ts-expect-error fallthrough
-			case 'day': base *= 24;
-			// @ts-expect-error fallthrough
-			case 'hour': base *= 60;
-			// @ts-expect-error fallthrough
-			case 'minute': base *= 60;
+			case 'day': return base * 24 * 60 * 60 * 1000;
+			case 'hour': return base * 60 * 60 * 1000;
+			case 'minute': return base * 60 * 1000;
 			case 'second': return base * 1000;
 			default: return null;
 		}

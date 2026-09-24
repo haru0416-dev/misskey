@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as fs from 'fs/promises';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { RolldownMagicString } from 'rolldown';
 import { collectModifications } from './locale-inliner/collect-modifications.js';

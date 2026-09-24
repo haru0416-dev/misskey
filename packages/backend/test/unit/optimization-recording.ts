@@ -8,7 +8,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { openRunRecording, readRunRecording, runRecord, type Run } from '../../scripts/optimization/recording.mjs';
+import { openRunRecording, readRunRecording, runRecord } from '../../scripts/optimization/recording.mjs';
+import type { Run } from '../../scripts/optimization/recording.mjs';
 import policy from '../../scripts/optimization/preregistration.json' with { type: 'json' };
 
 function sample(at: string): Run['samples'][number] {

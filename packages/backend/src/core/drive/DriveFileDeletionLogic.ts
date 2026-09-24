@@ -155,9 +155,9 @@ async function deleteDriveFileStorage(
 	].filter((key): key is string => key != null);
 
 	if (file.storedInternal) {
-		await Promise.all(keys.map((key) => Promise.resolve(deps.deleteInternalFile(key))));
+		await Promise.all(keys.map(async (key) => deps.deleteInternalFile(key)));
 	} else if (!file.isLink) {
-		await Promise.all(keys.map((key) => Promise.resolve(deps.enqueueDeleteObjectStorageFile(key))));
+		await Promise.all(keys.map(async (key) => deps.enqueueDeleteObjectStorageFile(key)));
 	}
 }
 

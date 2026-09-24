@@ -198,7 +198,7 @@ watch(
 useFormControlPadding(inputEl, prefixEl, suffixEl);
 
 onMounted(() => {
-	nextTick(() => {
+	nextTick().then(() => {
 		if (props.autofocus) {
 			focus();
 		}

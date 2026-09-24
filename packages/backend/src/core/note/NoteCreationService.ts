@@ -992,7 +992,7 @@ async function postNoteCreated(
 	data: PostCreateNoteData,
 	tags: string[],
 	mentionedUsers: MiUser[],
-	silent = false,
+	silent: boolean,
 	stage: DbNotePostCreateStage,
 	pushDeps: ApiPushNotificationDependencies = deps,
 ): Promise<void> {

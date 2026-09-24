@@ -183,8 +183,8 @@ export async function verifyCap(
 		{
 			method: 'POST',
 			body: JSON.stringify({
-				secret: secret,
-				response: response,
+				secret,
+				response,
 			}),
 			headers: {
 				'Content-Type': 'application/json',

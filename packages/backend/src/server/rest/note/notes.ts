@@ -806,7 +806,7 @@ const GLOBAL_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
 const notesFeaturedEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
 function getCurrentNotesFeaturedWindow(windowRange: number): number {
-	const passed = new Date().getTime() - notesFeaturedEpoc;
+	const passed = Date.now() - notesFeaturedEpoc;
 	return Math.floor(passed / windowRange);
 }
 

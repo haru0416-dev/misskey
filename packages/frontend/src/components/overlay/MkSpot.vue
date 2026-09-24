@@ -117,7 +117,7 @@ onMounted(() => {
 	}
 	window.addEventListener('resize', schedulePosition, { passive: true });
 	window.addEventListener('scroll', schedulePosition, { passive: true, capture: true });
-	nextTick(schedulePosition);
+	nextTick().then(schedulePosition);
 });
 
 onUnmounted(() => {

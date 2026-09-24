@@ -121,7 +121,7 @@ describe('hono-queue-system', () => {
 			await handleQueueClean(deps);
 
 			const ipsAfter = await listUserIpsFromDatabase(db, userId, 10);
-			expect(ipsAfter.length).toBe(0);
+			expect(ipsAfter).toHaveLength(0);
 		});
 
 		test('deactivateAntennaThresholdが0の場合はアンテナを停止しない', async () => {

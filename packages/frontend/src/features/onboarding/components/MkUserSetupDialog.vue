@@ -221,7 +221,7 @@ async function launchTutorial() {
 	if (!(await setupComplete())) {
 		return;
 	}
-	nextTick(async () => {
+	nextTick().then(async () => {
 		const { dispose } = await os.popupAsyncWithDialog(
 			import('@/features/onboarding/components/MkTutorialDialog.vue').then((x) => x.default),
 			{
