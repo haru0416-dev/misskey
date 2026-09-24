@@ -15,7 +15,12 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { ApiError } from '../error.js';
 import { genLocalUserUri } from '../user/following.js';
-import { addActivityContext, deliverNoteActivityForApi, deliverToRelaysForApi } from '../activitypub/notes-ap.js';
+import {
+	addActivityContext,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	renderOnce,
+} from '../activitypub/notes-ap.js';
 import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
@@ -90,9 +95,13 @@ async function deliverPinnedChangeForApi(
 ): Promise<void> {
 	const target = `${deps.config.instance.url}/users/${user.id}/collections/featured`;
 	const item = `${deps.config.instance.url}/notes/${noteId}`;
-	const content = addActivityContext(
-		deps.config,
-		isAddition ? renderAddForApi(deps.config, user, target, item) : renderRemoveForApi(deps.config, user, target, item),
+	const content = renderOnce(() =>
+		addActivityContext(
+			deps.config,
+			isAddition
+				? renderAddForApi(deps.config, user, target, item)
+				: renderRemoveForApi(deps.config, user, target, item),
+		),
 	);
 
 	await deliverNoteActivityForApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });

@@ -18,7 +18,12 @@ import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import { attachLdSignatureForApi, deliverToRelaysForApi } from '@/server/rest/activitypub/notes-ap.js';
+import {
+	attachLdSignatureForApi,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	renderOnce,
+} from '@/server/rest/activitypub/notes-ap.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -62,7 +67,10 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 			object: { type: 'Note' },
 		};
 
-		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity);
+		const render = vi.fn(async () => activity);
+		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, render);
+		// 配送先が無いときは activity を組み立てない。
+		expect(render).not.toHaveBeenCalled();
 
 		// 共有 redis 上の deliver キューには他テストの残骸ジョブが混在し得るため、
 		// JSON.parse せず content 文字列に自分のアクティビティ id が含まれるかだけを見る。
@@ -119,7 +127,11 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 			object: { type: 'Note' },
 		};
 
-		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity);
+		await deliverToRelaysForApi(
+			runtime,
+			{ id: user.id, host: null },
+			renderOnce(() => activity),
+		);
 
 		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
 		const relayJob = jobs.find((j) => (j.data as DeliverJobData).to === inbox);
@@ -164,7 +176,12 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 			const bulk = vi.spyOn(runtime.deliverQueue, 'addBulk');
 			const single = vi.spyOn(runtime.deliverQueue, 'add');
 			try {
-				await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity, prefix);
+				await deliverToRelaysForApi(
+					runtime,
+					{ id: user.id, host: null },
+					renderOnce(() => activity),
+					prefix,
+				);
 				expect(digests).toHaveBeenCalledTimes(1);
 				expect(bulk).toHaveBeenCalledTimes(1);
 				expect(single).not.toHaveBeenCalled();
@@ -191,7 +208,12 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 						expect(job.id).toBe(`${prefix}-${createHash('sha256').update(job.data.to).digest('hex').slice(0, 24)}`);
 				}
 				if (prefix != null) {
-					await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity, prefix);
+					await deliverToRelaysForApi(
+						runtime,
+						{ id: user.id, host: null },
+						renderOnce(() => activity),
+						prefix,
+					);
 					expect((await findJobs()).map((job) => job.id).sort()).toEqual(jobs.map((job) => job.id).sort());
 				}
 				await Promise.all(jobs.map((job) => job.remove()));
@@ -245,7 +267,12 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 				const relay = await createRelayInDatabase(runtime.db, { id: genId(), inbox, status: 'accepted' });
 				relayIds.push(relay.id);
 			}
-			await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity, genId());
+			await deliverToRelaysForApi(
+				runtime,
+				{ id: user.id, host: null },
+				renderOnce(() => activity),
+				genId(),
+			);
 			const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'delayed'])).filter((job) =>
 				job.data.content?.includes(activity.id),
 			);
@@ -276,5 +303,43 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 			await Promise.all(relayIds.map((id) => deleteRelayFromDatabase(runtime.db, id)));
 			await new Promise<void>((resolve) => server.close(() => resolve()));
 		}
+	});
+
+	test('deliverNoteActivity: リモートのフォロワーも宛先も無ければ activity を組み立てない', async () => {
+		const render = vi.fn(async () => ({ id: `${runtime.config.instance.url}/test-activity/${genId()}` }));
+
+		await deliverNoteActivityForApi(runtime, user, render, { directRecipients: [], deliverToFollowers: true });
+
+		expect(render).not.toHaveBeenCalled();
+	});
+
+	test('deliverNoteActivity: 配送先があれば activity を 1 度だけ組み立て、以後の配送で共有する', async () => {
+		const activity = {
+			'@context': 'https://www.w3.org/ns/activitystreams',
+			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
+			type: 'Create',
+			actor: `${runtime.config.instance.url}/users/${user.id}`,
+			object: { type: 'Note' },
+		};
+		const build = vi.fn(async () => activity);
+		const render = renderOnce(build);
+		const recipient = { inbox: `https://render-once-${genId()}.example/inbox`, sharedInbox: null } as MiUser;
+
+		await deliverNoteActivityForApi(runtime, user, render, {
+			directRecipients: [recipient],
+			deliverToFollowers: false,
+		});
+		await deliverNoteActivityForApi(runtime, user, render, {
+			directRecipients: [recipient],
+			deliverToFollowers: false,
+		});
+
+		expect(build).toHaveBeenCalledOnce();
+		const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'delayed'])).filter(
+			(job) => (job?.data as DeliverJobData | undefined)?.to === recipient.inbox,
+		);
+		expect(jobs).toHaveLength(2);
+		expect(jobs.every((job) => (job.data as DeliverJobData).content.includes(activity.id))).toBe(true);
+		await Promise.all(jobs.map((job) => job.remove()));
 	});
 });
