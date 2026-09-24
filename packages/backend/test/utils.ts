@@ -549,13 +549,19 @@ export function connectStream<C extends keyof misskey.Channels>(
 	});
 }
 
+/**
+ * 流れないことを確かめるときの待ち時間。trgr の完了から数える。流れる場合の到着は trgr の完了から
+ * 最大 9.4 ms だった (streaming・mute・api の 74 回)。
+ */
+const STREAM_ABSENCE_WAIT_MS = 500;
+
 export const waitFire = async <C extends keyof misskey.Channels>(
 	user: UserToken,
 	channel: C,
 	trgr: () => any,
 	cond: (msg: StreamMessage) => boolean,
 	params?: misskey.Channels[C]['params'],
-	timeout = 3000,
+	timeout = STREAM_ABSENCE_WAIT_MS,
 ) => {
 	let ws: WebSocket | undefined;
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -775,10 +781,21 @@ export function castAsError(obj: unknown): ApiErrorBody {
 	return obj as ApiErrorBody;
 }
 
+/**
+ * 送出されないことを確かめるときの待ち時間。操作の完了から数える。送出される場合の到着は
+ * 操作の開始から最大 132 ms だった (scenario の 18 回)。
+ */
+const WEBHOOK_ABSENCE_WAIT_MS = 1000;
+
+/** postAction の完了と webhook の受信を両方待つ。完了後 WEBHOOK_ABSENCE_WAIT_MS 以内に届かなければ 'timeout' で失敗する。 */
 export async function captureWebhook<T = SystemWebhookPayload>(
 	postAction: () => Promise<void>,
 	port = WEBHOOK_PORT,
 ): Promise<T> {
+	let resolveBody: (value: string) => void = () => {};
+	const received = new Promise<string>((resolve) => {
+		resolveBody = resolve;
+	});
 	const server = createServer((req, res) => {
 		if (req.url !== '/') {
 			res.statusCode = 404;
@@ -791,46 +808,30 @@ export async function captureWebhook<T = SystemWebhookPayload>(
 			chunks.push(Buffer.from(chunk));
 		});
 		req.on('end', () => {
-			if (timeoutHandle) {
-				clearTimeout(timeoutHandle);
-			}
-
 			res.statusCode = 200;
 			res.end('ok');
-			resolveResult(Buffer.concat(chunks).toString('utf8'));
+			resolveBody(Buffer.concat(chunks).toString('utf8'));
 		});
 	});
 
-	let timeoutHandle: NodeJS.Timeout | null = null;
-	let listening = false;
-	let resolveResult: (value: string) => void = () => {};
-
-	const close = async () => {
-		if (!listening) {
-			return;
-		}
-		listening = false;
+	await new Promise<void>((resolve, reject) => {
+		server.once('error', reject);
+		server.listen(port, resolve);
+	});
+	let timeoutHandle: NodeJS.Timeout | undefined;
+	try {
+		await postAction();
+		const result = await Promise.race([
+			received,
+			new Promise<never>((_, reject) => {
+				timeoutHandle = setTimeout(() => reject(new Error('timeout')), WEBHOOK_ABSENCE_WAIT_MS);
+			}),
+		]);
+		return JSON.parse(result) as T;
+	} finally {
+		clearTimeout(timeoutHandle);
 		await new Promise<void>((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
-	};
-
-	try {
-		const result = await new Promise<string>((resolve, reject) => {
-			resolveResult = resolve;
-			server.once('error', reject);
-			server.listen(port, () => {
-				listening = true;
-				timeoutHandle = setTimeout(() => reject(new Error('timeout')), 3000);
-				void Promise.resolve().then(postAction).catch(reject);
-			});
-		});
-
-		return JSON.parse(result) as T;
-	} finally {
-		if (timeoutHandle) {
-			clearTimeout(timeoutHandle);
-		}
-		await close();
 	}
 }

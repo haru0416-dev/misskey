@@ -5,7 +5,6 @@
 
 import { randomUUID } from 'node:crypto';
 import { toPunyNullable } from '@/misc/to-puny.js';
-import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
@@ -70,7 +69,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import { promiseLimit } from '@/misc/promise-limit.js';
-import { trackPromise } from '@/misc/promise-tracker.js';
+import { trackPromise, unrefDelay } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
 import { birthdaySchema } from '@/models/User.js';
@@ -372,7 +371,7 @@ async function createFollowingNotification(
 
 	deps.publishMainStream?.(notifieeId, 'notification', packed);
 	trackPromise(
-		delay(2000, undefined, { ref: false })
+		unrefDelay(2000)
 			.then(async () => {
 				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
 				if (latestReadNotificationId && latestReadNotificationId >= redisId) {

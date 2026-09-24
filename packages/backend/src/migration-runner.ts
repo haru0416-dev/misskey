@@ -161,6 +161,47 @@ export async function resetDatabase(config: Config): Promise<void> {
 	});
 }
 
+/** migration 直後に行が入っているテーブルの内容 (migration が入れる初期データ)。 */
+export type DatabaseSeed = { table: string; rows: string }[];
+
+const listPublicTablesQuery =
+	"SELECT format('%I', tablename) AS name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename";
+
+export async function captureDatabaseSeed(config: Config): Promise<DatabaseSeed> {
+	return await withMigrationSession(config, async (client) => {
+		const tables = (await client.unsafe(listPublicTablesQuery)) as { name: string }[];
+		const seed: DatabaseSeed = [];
+		for (const { name } of tables) {
+			// eslint-disable-next-line no-await-in-loop
+			const [row] = (await client.unsafe(`SELECT json_agg(t)::text AS rows FROM ${name} AS t`)) as {
+				rows: string | null;
+			}[];
+			if (row?.rows != null) seed.push({ table: name, rows: row.rows });
+		}
+		return seed;
+	});
+}
+
+/**
+ * スキーマを作り直さずに全テーブルを空にし、初期データを戻す。migration 済みの同じスキーマでの初期化に限る。
+ * 作り直し (DROP + migration) は 1 回約 0.5 秒、こちらは約 0.1 秒だった。
+ */
+export async function truncateDatabase(config: Config, seed: DatabaseSeed): Promise<void> {
+	if (process.env['NODE_ENV'] !== 'test') {
+		throw new Error('Database reset is only allowed in the test environment.');
+	}
+	await withMigrationSession(config, async (client) => {
+		const tables = (await client.unsafe(listPublicTablesQuery)) as { name: string }[];
+		await client.unsafe(`TRUNCATE ${tables.map(({ name }) => name).join(', ')} RESTART IDENTITY CASCADE`);
+		for (const { table, rows } of seed) {
+			// eslint-disable-next-line no-await-in-loop
+			await client.unsafe(`INSERT INTO ${table} SELECT * FROM json_populate_recordset(NULL::${table}, $1::json)`, [
+				rows,
+			]);
+		}
+	});
+}
+
 async function main(): Promise<void> {
 	const command = process.argv[2] ?? 'up';
 	const config = loadConfig();
