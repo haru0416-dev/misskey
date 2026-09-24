@@ -56,6 +56,7 @@ import type {
 	IUpdate,
 } from '@/core/activitypub/type.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
 import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
 import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
@@ -307,11 +308,11 @@ async function acceptFollowFromApForApi(
 		await acceptFollowRequestForApi(deps, actor, follower);
 	} catch (error) {
 		// 承認済みの再配送だけを冪等に扱い、未申請・解除済みは拒否する。
-		if (
-			!(error instanceof ApiError) ||
-			error.code !== 'NO_FOLLOW_REQUEST' ||
-			!(await followingExistsInDatabase(deps.db, follower.id, actor.id))
-		) {
+		// 応答喪失の再送で Accept が同時に処理されると、両方がリクエストを見つけて INSERT し、後着側は
+		// 一意制約違反になる。INSERT は副作用の最初なので、後着側は集計・通知を何も行っていない。
+		const alreadyAccepted =
+			(error instanceof ApiError && error.code === 'NO_FOLLOW_REQUEST') || isDuplicateKeyValueDatabaseError(error);
+		if (!alreadyAccepted || !(await followingExistsInDatabase(deps.db, follower.id, actor.id))) {
 			throw error;
 		}
 	}
