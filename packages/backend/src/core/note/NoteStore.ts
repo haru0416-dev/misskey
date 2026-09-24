@@ -1291,20 +1291,31 @@ const TRIGRAM_RUN = /[\p{L}\p{N}]{3}/u;
 export const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
 
 /**
- * ページの起点から並び順に UNTRIGRAMMABLE_SEARCH_WINDOW 件を読む副問い合わせ。窓の外は次のページの
- * 起点から探す。境界の id を先に数えると一致の多い語でも毎回窓全体を読むため、外側の LIMIT で
- * 読み取りを止められる並び順付きの副問い合わせにする。
+ * trigram の取れる語でも、一致件数の見積もりは統計の標本次第で大きく外れる。1 万件前後に一致する語を
+ * 約 25 件と見積もると、一致全件のヒープ読みと結合・可視性判定の後に並べ替え、100 万件で 115〜136 ms
+ * かかった。先にこの件数 × 1 ページの件数だけ新しい順に読んで探し、1 ページ分そろえばそれを返す。
+ * そろわない語は一致がまばら (約 0.2% 未満) なので、trigram index を使う通常の検索へ回す。
  */
-function untrigrammableSearchWindow(options: {
-	sinceId?: MiNote['id'] | null;
-	untilId?: MiNote['id'] | null;
-	rangeStartId?: MiNote['id'] | null;
-	rangeEndId?: MiNote['id'] | null;
-}): SQL {
+const DENSE_TERM_WINDOW_PER_RESULT = 500;
+
+/**
+ * ページの起点から並び順に size 件を読む副問い合わせ。窓の外は次のページの起点から探す。境界の id を
+ * 先に数えると一致の多い語でも毎回窓全体を読むため、外側の LIMIT で読み取りを止められる並び順付きの
+ * 副問い合わせにする。
+ */
+function noteSearchWindow(
+	options: {
+		sinceId?: MiNote['id'] | null;
+		untilId?: MiNote['id'] | null;
+		rangeStartId?: MiNote['id'] | null;
+		rangeEndId?: MiNote['id'] | null;
+	},
+	size: number,
+): SQL {
 	const bounds = [notePaginationCondition(options)];
 	if (options.rangeStartId) bounds.push(sql`"id" > ${options.rangeStartId}`);
 	if (options.rangeEndId) bounds.push(sql`"id" < ${options.rangeEndId}`);
-	return sql`(SELECT * FROM "note" WHERE ${sql.join(bounds, sql` AND `)} ORDER BY "id" ${notePaginationOrder(options)} LIMIT ${UNTRIGRAMMABLE_SEARCH_WINDOW})`;
+	return sql`(SELECT * FROM "note" WHERE ${sql.join(bounds, sql` AND `)} ORDER BY "id" ${notePaginationOrder(options)} LIMIT ${size})`;
 }
 
 export async function searchNotesByTextFromDatabase(
@@ -1343,17 +1354,24 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	let source = sql`"note"`;
+	let denseTermWindow: SQL | undefined;
 	if (options.usePgroonga) {
 		conditions.push(sql`"note"."text" &@~ ${options.query}`);
 	} else {
 		if (TRIGRAM_RUN.test(options.query)) {
 			conditions.push(sql`LOWER("note"."text") LIKE ${`%${sqlLikeEscape(options.query.toLowerCase())}%`}`);
+			if (options.userId == null && options.channelId == null) {
+				denseTermWindow = noteSearchWindow(
+					options,
+					Math.min(options.limit * DENSE_TERM_WINDOW_PER_RESULT, UNTRIGRAMMABLE_SEARCH_WINDOW),
+				);
+			}
 		} else {
 			// LIKE のままだとプランナーが trigram index の全件読みを約 100 行と見積もって選び、窓が
 			// 走査範囲にならない。index に掛からない strpos にして主キーの範囲走査へ寄せる。
 			conditions.push(sql`STRPOS(LOWER("note"."text"), ${options.query.toLowerCase()}) > 0`);
 			if (options.userId == null && options.channelId == null) {
-				source = untrigrammableSearchWindow(options);
+				source = noteSearchWindow(options, UNTRIGRAMMABLE_SEARCH_WINDOW);
 			}
 		}
 	}
@@ -1408,6 +1426,11 @@ export async function searchNotesByTextFromDatabase(
 		conditions.push(sql`"note"."visibility" = ${options.visibility}`);
 	}
 
+	if (denseTermWindow != null) {
+		// 窓の中で 1 ページ分そろえば、それが起点から最新の一致そのもの。
+		const recent = await executeTimelineNoteQuery(db, conditions, options, denseTermWindow);
+		if (recent.length >= options.limit) return recent;
+	}
 	return await executeTimelineNoteQuery(db, conditions, options, source);
 }
 
