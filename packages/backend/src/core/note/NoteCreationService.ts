@@ -94,6 +94,7 @@ import {
 	deliverNoteActivityForApi,
 	deliverToRelaysForApi,
 	renderNoteOrRenoteActivityForApi,
+	renderOnce,
 	resolveRemoteRecipientForApi,
 } from '@/server/rest/activitypub/notes-ap.js';
 import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '@/server/rest/activitypub/notes-ap.js';
@@ -1131,14 +1132,16 @@ async function postNoteCreated(
 	}
 
 	if (!silent && stage === 'federation' && !data.localOnly && user.host == null) {
-		const activity = await renderNoteOrRenoteActivityForApi(
-			deps,
-			{
-				localOnly: data.localOnly,
-				renote: data.renote,
-				isQuote: isRenoteData(data) && isQuoteData(data),
-			},
-			note,
+		const activity = renderOnce(() =>
+			renderNoteOrRenoteActivityForApi(
+				deps,
+				{
+					localOnly: data.localOnly,
+					renote: data.renote,
+					isQuote: isRenoteData(data) && isQuoteData(data),
+				},
+				note,
+			),
 		);
 
 		const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;

@@ -63,6 +63,7 @@ import {
 	addActivityContext,
 	deliverNoteActivityForApi,
 	renderEmoji,
+	renderOnce,
 	renderUpdateForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
@@ -481,8 +482,12 @@ async function publishAccountUpdateToFollowersForApi(
 	}
 
 	const localUser = user as MiLocalUser;
-	const person = await renderPersonForApi(deps, localUser);
-	const content = addActivityContext(deps.config, renderUpdateForApi(deps.config, person, localUser));
+	const content = renderOnce(async () =>
+		addActivityContext(
+			deps.config,
+			renderUpdateForApi(deps.config, await renderPersonForApi(deps, localUser), localUser),
+		),
+	);
 
 	// リレー配送には LD-signature が必要なため、署名しないこの経路ではフォロワー配送だけを行う。
 	await deliverNoteActivityForApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });

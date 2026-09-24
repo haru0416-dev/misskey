@@ -22,6 +22,7 @@ import {
 	deliverNoteActivityForApi,
 	deliverToRelaysForApi,
 	renderNoteDeleteOrUndoAnnounceActivityForApi,
+	renderOnce,
 	resolveMentionedAndInvolvedRemoteUsersForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
@@ -71,7 +72,8 @@ export async function deleteNoteForApi(
 
 	if (user.host == null && !note.localOnly) {
 		// アクティビティ生成の失敗は削除を失敗させ、ネットワーク配送だけをバックグラウンドで行う。
-		const activity = await renderNoteDeleteOrUndoAnnounceActivityForApi(deps, note, user);
+		const rendered = await renderNoteDeleteOrUndoAnnounceActivityForApi(deps, note, user);
+		const activity = renderOnce(() => rendered);
 		(async () => {
 			const directRecipients = await resolveMentionedAndInvolvedRemoteUsersForApi(deps, note);
 			await deliverNoteActivityForApi(deps, user, activity, {

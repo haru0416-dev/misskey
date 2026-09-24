@@ -334,20 +334,30 @@ export async function renderNoteOrRenoteActivityForApi(
 	return addActivityContext(deps.config, content);
 }
 
+export type ActivityRenderer = () => Promise<Record<string, unknown> | null>;
+
+/**
+ * 配送先があるときだけ activity を組み立てる。組み立て (Note の HTML 化や Person の取得) は配送先の数に
+ * よらない固定コストで、リモートのフォロワーもリレーも無い投稿では丸ごと不要だった。
+ * フォロワー向けとリレー向けの配送で結果を共有するため、組み立ては 1 度だけ行う。
+ */
+export function renderOnce(
+	render: () => Record<string, unknown> | null | Promise<Record<string, unknown> | null>,
+): ActivityRenderer {
+	let rendered: Promise<Record<string, unknown> | null> | undefined;
+	return () => (rendered ??= Promise.resolve().then(render));
+}
+
 export async function deliverNoteActivityForApi(
 	deps: ApiNoteApDependencies,
 	author: { id: MiUser['id'] },
-	activity: Record<string, unknown> | null,
+	render: ActivityRenderer,
 	options: {
 		directRecipients: MiUser[];
 		deliverToFollowers: boolean;
 		jobIdPrefix?: string;
 	},
 ): Promise<void> {
-	if (activity == null) {
-		return;
-	}
-
 	const inboxes = new Map<string, boolean>();
 
 	if (options.deliverToFollowers) {
@@ -375,6 +385,10 @@ export async function deliverNoteActivityForApi(
 	}
 
 	if (inboxes.size === 0) {
+		return;
+	}
+	const activity = await render();
+	if (activity == null) {
 		return;
 	}
 
@@ -585,11 +599,13 @@ export async function deliverQuestionUpdateForApi(
 	}
 
 	if (!isRemoteUser(user)) {
-		const object = await renderNoteForApi(deps, note, false);
-		const content = addActivityContext(deps.config, {
-			...renderUpdateForApi(deps.config, object, user),
-			to: object['to'],
-			cc: object['cc'],
+		const content = renderOnce(async () => {
+			const object = await renderNoteForApi(deps, note, false);
+			return addActivityContext(deps.config, {
+				...renderUpdateForApi(deps.config, object, user),
+				to: object['to'],
+				cc: object['cc'],
+			});
 		});
 		const recipientIds =
 			note.visibility === 'specified'
@@ -626,15 +642,15 @@ export async function attachLdSignatureForApi(
 export async function deliverToRelaysForApi(
 	deps: ApiRelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },
-	activity: Record<string, unknown> | null,
+	render: ActivityRenderer,
 	jobIdPrefix?: string,
 ): Promise<void> {
-	if (activity == null) {
-		return;
-	}
-
 	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
 	if (relays.length === 0) {
+		return;
+	}
+	const activity = await render();
+	if (activity == null) {
 		return;
 	}
 

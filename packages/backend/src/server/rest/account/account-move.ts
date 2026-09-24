@@ -42,6 +42,7 @@ import {
 	addActivityContext,
 	deliverNoteActivityForApi,
 	deliverToRelaysForApi,
+	renderOnce,
 	renderUpdateForApi,
 } from '../activitypub/notes-ap.js';
 import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
@@ -361,13 +362,17 @@ async function moveFromLocalForApi(
 
 	deps.publishInternalEvent?.('localUserUpdated', updatedSrc);
 
-	const srcPerson = await renderPersonForApi(deps, updatedSrc);
-	const updateAct = addActivityContext(deps.config, renderUpdateForApi(deps.config, srcPerson, updatedSrc));
+	const updateAct = renderOnce(async () =>
+		addActivityContext(
+			deps.config,
+			renderUpdateForApi(deps.config, await renderPersonForApi(deps, updatedSrc), updatedSrc),
+		),
+	);
 	await deliverNoteActivityForApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、アカウント移行の完了を待たせない。
 	void deliverToRelaysForApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
-	const moveAct = addActivityContext(deps.config, renderMoveForApi(deps.config, updatedSrc, dst));
+	const moveAct = renderOnce(() => addActivityContext(deps.config, renderMoveForApi(deps.config, updatedSrc, dst)));
 	await deliverNoteActivityForApi(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
 
 	const iObj = await packMeDetailedForApi(deps, updatedSrc, { includeSecrets: true });

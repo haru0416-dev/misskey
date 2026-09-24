@@ -35,43 +35,62 @@ function durationToMicroseconds(duration: number): number {
 	return durationMicroseconds;
 }
 
-/**
+/*
  * sliding-window-log 方式と `limit:{id}` の zset キー形式を使う。
  * 窓内エントリ数を数えてから今回分を必ず追加し、制限超過中のリクエストも窓を延長する。
+ *
+ * 時刻は Valkey の TIME を使い、窓の掃除・計数・追加・期限設定まで 1 スクリプトで行う。
+ * TIME と MULTI を別に送ると 1 リクエストで 2 往復になり、レート制限付きの全 API に乗っていた。
+ * マイクロ秒の時刻は 16 桁だが 2^53 未満なので double で誤差なく表せ、redis.call は数値を丸めずに渡す
+ * (Lua の tostring は 14 桁に丸めるので、文字列化して渡さない)。
  */
+const LIMIT_SCRIPT = `
+local time = redis.call('TIME')
+local now = tonumber(time[1]) * 1000000 + tonumber(time[2])
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - tonumber(ARGV[1]))
+local count = redis.call('ZCARD', KEYS[1])
+redis.call('ZADD', KEYS[1], now, ARGV[2])
+redis.call('PEXPIRE', KEYS[1], ARGV[3])
+return count
+`;
+
+const COMMAND_NAME = 'erebiaCheckRateLimit';
+
+type LimitCommander = {
+	[COMMAND_NAME]: (
+		key: string,
+		durationMicroseconds: number,
+		member: string,
+		durationMilliseconds: number,
+	) => Promise<number>;
+};
+
+const definedClients = new WeakSet<Redis.Redis>();
+
+/** ioredis の defineCommand は EVALSHA を試して NOSCRIPT なら EVAL に切り替える。接続ごとに 1 度だけ登録する。 */
+function commander(redis: Redis.Redis): LimitCommander {
+	if (!definedClients.has(redis)) {
+		redis.defineCommand(COMMAND_NAME, { numberOfKeys: 1, lua: LIMIT_SCRIPT });
+		definedClients.add(redis);
+	}
+	return redis as unknown as LimitCommander;
+}
+
 async function checkLimiter(options: {
 	id: string;
 	duration: number;
 	max: number;
 	db: Redis.Redis;
 }): Promise<{ remaining: number }> {
-	const key = `limit:${options.id}`;
 	const durationMicroseconds = durationToMicroseconds(options.duration);
-
-	const [seconds, microseconds] = await options.db.time();
-	const now = Number(seconds) * 1_000_000 + Number(microseconds);
-	if (!Number.isFinite(now)) {
-		throw new TypeError('rate limiter received invalid server time');
-	}
-	const start = now - durationMicroseconds;
-
-	const res = await options.db
-		.multi()
-		.zremrangebyscore(key, 0, start)
-		.zcard(key)
-		.zadd(key, now, randomUUID())
-		.pexpire(key, options.duration)
-		.exec();
-
-	if (res == null) {
-		throw new Error('rate limiter transaction failed');
-	}
-	const zcard = res[1];
-	if (zcard?.[0] != null) {
-		throw zcard[0];
-	}
-	const count = Number(zcard?.[1] ?? 0);
-
+	const count = Number(
+		await commander(options.db)[COMMAND_NAME](
+			`limit:${options.id}`,
+			durationMicroseconds,
+			randomUUID(),
+			options.duration,
+		),
+	);
 	return { remaining: count < options.max ? options.max - count : 0 };
 }
 
