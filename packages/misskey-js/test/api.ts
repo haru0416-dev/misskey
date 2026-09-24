@@ -330,6 +330,7 @@ describe('API', () => {
 			target: 'manual',
 		});
 
+		expect(fetchMock).toHaveBeenCalledOnce();
 		fetchMock.mockRestore();
 	});
 });
