@@ -474,6 +474,10 @@ describe('Account Move', () => {
 		});
 
 		test('Unfollowed after 10 sec (24 hours in production).', async () => {
+			// 遅延は直前までのテストでフォローが残っていることで確かめている。ここでは遅延ジョブが
+			// フォロー解除を行うことだけを見るので、10 秒待たずに繰り上げる。
+			const promoted = await api('admin/queue/promote-jobs', { queue: 'relationship' }, root);
+			expect(promoted.status).toBe(204);
 			await vi.waitFor(async () => {
 				const following = await api(
 					'users/following',

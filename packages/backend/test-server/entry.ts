@@ -2,7 +2,8 @@ import { serve } from 'bun';
 import { Hono } from 'hono';
 import { Redis } from 'ioredis';
 import { loadConfig } from '@/config.js';
-import { resetDatabase, runMigrations } from '@/migration-runner.js';
+import { captureDatabaseSeed, resetDatabase, runMigrations, truncateDatabase } from '@/migration-runner.js';
+import type { DatabaseSeed } from '@/migration-runner.js';
 import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
 import type { ServerRuntime } from '@/boot/server.js';
 
@@ -14,6 +15,8 @@ const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
 let runtime: ServerRuntime | undefined;
+// 最初の reset で作り直した後の初期データ。以降の reset は同じスキーマを空にしてこれを戻す。
+let databaseSeed: DatabaseSeed | undefined;
 let controllerServer: Bun.Server | undefined;
 let controllerOperation = Promise.resolve();
 
@@ -94,8 +97,13 @@ async function startControllerEndpoints(
 				await stopApplication();
 				process.env = JSON.parse(originEnv);
 
-				await resetDatabase(config);
-				await runMigrations(config);
+				if (databaseSeed == null) {
+					await resetDatabase(config);
+					await runMigrations(config);
+					databaseSeed = await captureDatabaseSeed(config);
+				} else {
+					await truncateDatabase(config, databaseSeed);
+				}
 
 				const redis = new Redis(config.valkey.primary);
 				try {

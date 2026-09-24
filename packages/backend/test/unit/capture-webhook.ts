@@ -83,6 +83,30 @@ describe('captureWebhook', () => {
 		await listen(port);
 	}, 5000);
 
+	test('returns only after the action finishes even when the webhook arrives first', async () => {
+		await close();
+		let finished = false;
+		await captureWebhook(async () => {
+			const response = await fetch(`http://localhost:${port}/`, { method: 'POST', body: '{}' });
+			await response.text();
+			await new Promise((resolve) => setTimeout(resolve, 200));
+			finished = true;
+		}, port);
+		expect(finished).toBe(true);
+		await listen(port);
+	});
+
+	test('counts the absence wait from the end of a slow action', async () => {
+		await close();
+		const result = await captureWebhook(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 1200));
+			// 操作の完了後に届く webhook も待ち時間内なら受け取る。
+			setTimeout(() => void fetch(`http://localhost:${port}/`, { method: 'POST', body: '{"late":true}' }), 100);
+		}, port);
+		expect(result).toEqual({ late: true });
+		await listen(port);
+	}, 5000);
+
 	test('releases the port when the payload is invalid JSON', async () => {
 		await close();
 		await expect(

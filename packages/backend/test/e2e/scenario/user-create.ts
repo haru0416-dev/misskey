@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { setTimeout } from 'node:timers/promises';
 import type { entities } from 'misskey-js';
 import { beforeEach, describe, test, beforeAll, afterAll, expect } from 'vitest';
 import { api, captureWebhook, randomString, role, signup, startJobQueue, WEBHOOK_HOST } from '../../utils.js';
@@ -64,9 +63,6 @@ describe('[シナリオ] ユーザ作成', () => {
 			const webhookBody = await captureWebhook(async () => {
 				alice = await signup({ username: 'alice' });
 			});
-
-			// webhookの送出後にいろいろやってるのでちょっと待つ必要がある
-			await setTimeout(2000);
 
 			console.log(alice);
 			console.log(JSON.stringify(webhookBody, null, 2));

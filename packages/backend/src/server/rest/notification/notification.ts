@@ -5,7 +5,6 @@
 
 import { ReplyError } from 'ioredis';
 import type { Redis } from 'ioredis';
-import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
@@ -13,7 +12,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { parseUuidv7Full } from '@/misc/id/uuidv7.js';
-import { trackPromise } from '@/misc/promise-tracker.js';
+import { trackPromise, unrefDelay } from '@/misc/promise-tracker.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiRole } from '@/models/Role.js';
@@ -321,7 +320,7 @@ function createSimpleNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -373,7 +372,7 @@ export function createRoleAssignedNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', packed);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -411,7 +410,7 @@ export function createScheduledNotePostedNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -449,7 +448,7 @@ export function createScheduledNotePostFailedNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -486,7 +485,7 @@ export async function createPollEndedNotification(
 	void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 	trackPromise(
-		delay(2000, undefined, { ref: false })
+		unrefDelay(2000)
 			.then(async () => {
 				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 				if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -524,7 +523,7 @@ export function createExportCompletedNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -578,7 +577,7 @@ function createAppNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', packed);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
@@ -643,7 +642,7 @@ function createAchievementEarnedNotification(
 			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
-				delay(2000, undefined, { ref: false })
+				unrefDelay(2000)
 					.then(async () => {
 						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 						if (latestReadNotificationId && latestReadNotificationId >= redisId) {
