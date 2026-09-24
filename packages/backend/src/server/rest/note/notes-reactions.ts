@@ -37,6 +37,7 @@ import {
 	addActivityContext,
 	deliverNoteActivityForApi,
 	renderLikeForApi,
+	renderOnce,
 	renderUndoForApi,
 	resolveRemoteRecipientForApi,
 } from '../activitypub/notes-ap.js';
@@ -296,8 +297,9 @@ export async function createNoteReactionForApi(
 
 	if (user.host == null && !note.localOnly) {
 		(async () => {
-			const activity = await renderLikeForApi(deps, record, note);
-			const content = addActivityContext(deps.config, activity);
+			const content = renderOnce(async () =>
+				addActivityContext(deps.config, await renderLikeForApi(deps, record, note)),
+			);
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
@@ -352,9 +354,9 @@ export async function deleteNoteReactionForApi(
 
 	if (user.host == null && !note.localOnly) {
 		(async () => {
-			const like = await renderLikeForApi(deps, exist, note);
-			const undo = renderUndoForApi(deps.config, like, user);
-			const content = addActivityContext(deps.config, undo);
+			const content = renderOnce(async () =>
+				addActivityContext(deps.config, renderUndoForApi(deps.config, await renderLikeForApi(deps, exist, note), user)),
+			);
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
