@@ -144,7 +144,7 @@ export function randomString(chars = 'abcdefghijklmnopqrstuvwxyz0123456789', len
 }
 
 /**
- * @brief プロミスにタイムアウト追加
+ * プロミスにタイムアウトを追加する。
  * @param p 待ち対象プロミス
  * @param timeout 待機ミリ秒
  */
@@ -591,7 +591,7 @@ export const waitFire = async <C extends keyof misskey.Channels>(
 };
 
 /**
- * @brief WebSocketストリームから特定条件の通知を拾うプロミスを生成
+ * WebSocketストリームから特定条件の通知を拾うプロミスを生成する。
  * @param user ユーザー認証情報
  * @param channel チャンネル
  * @param cond 条件

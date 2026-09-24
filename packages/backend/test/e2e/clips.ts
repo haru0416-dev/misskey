@@ -230,7 +230,7 @@ describe('クリップ', () => {
 		{ label: 'descriptionが最大長', parameters: { description: 'a'.repeat(2048) } },
 	];
 	test.each(createClipAllowedPattern)('の作成は$labelでもできる', async ({ parameters }) => {
-		await create(parameters);
+		expect((await create(parameters)).id).toBeTypeOf('string');
 	});
 
 	const createClipDenyPattern = [
@@ -293,11 +293,12 @@ describe('クリップ', () => {
 	});
 
 	test.each(createClipAllowedPattern)('の更新は$labelでもできる', async ({ parameters }) => {
-		await update({
+		const clip = await update({
 			clipId: (await create()).id,
 			name: 'updated',
 			...parameters,
 		});
+		expect(clip).toMatchObject({ name: 'updated', ...parameters });
 	});
 
 	test.each([

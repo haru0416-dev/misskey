@@ -30,7 +30,7 @@ import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
 import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
-import { shuffle } from '@/utility/shuffle.js';
+import { shuffle as shuffleInPlace } from '@/utility/shuffle.js';
 import { filterSafeRssItems } from '@/widgets/use-rss-feed.js';
 
 const props = defineProps<{
@@ -51,7 +51,7 @@ const tick = () => {
 	window.fetch(`/api/fetch-rss?url=${encodeURIComponent(props.url)}`, {}).then(res => {
 		res.json().then((feed: Misskey.entities.FetchRssResponse) => {
 			if (props.shuffle) {
-				shuffle(feed.items);
+				shuffleInPlace(feed.items);
 			}
 			items.value = filterSafeRssItems(feed.items);
 			fetching.value = false;

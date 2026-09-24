@@ -68,7 +68,7 @@ type ModelValueType<T extends SupportedTypes> = T extends 'number'
 
 <script lang="ts" setup generic="T extends SupportedTypes = 'text'">
 import { onMounted, onUnmounted, nextTick, ref, useTemplateRef, watch, computed, toRefs } from 'vue';
-import { throttle, debounce } from 'throttle-debounce';
+import { throttle as createThrottled, debounce as createDebounced } from 'throttle-debounce';
 import type { InputHTMLAttributes } from 'vue';
 import type { SuggestionType } from '@/features/autocomplete/autocomplete.js';
 import MkButton from '@/components/form/MkButton.vue';
@@ -166,8 +166,8 @@ const updated = () => {
 	}
 };
 
-const throttledUpdated = throttle(typeof props.throttle === 'number' ? props.throttle : 1000, updated);
-const debouncedUpdated = debounce(typeof props.debounce === 'number' ? props.debounce : 1000, updated);
+const throttledUpdated = createThrottled(typeof props.throttle === 'number' ? props.throttle : 1000, updated);
+const debouncedUpdated = createDebounced(typeof props.debounce === 'number' ? props.debounce : 1000, updated);
 
 watch(modelValue, (newValue) => {
 	v.value = newValue;

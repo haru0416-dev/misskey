@@ -206,9 +206,7 @@ describe('Webリソース', () => {
 				const _body: unknown = content.body;
 				const body: string = typeof _body === 'object' ? JSON.stringify(_body) : (_body as string);
 
-				if (body.includes('**a**')) {
-					throw new Error("MFM shouldn't be included");
-				}
+				expect(body).not.toContain('**a**');
 			});
 		});
 	});

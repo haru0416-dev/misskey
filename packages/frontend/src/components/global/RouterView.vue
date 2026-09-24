@@ -36,7 +36,7 @@ if (_router == null) {
 	throw new Error('no router provided');
 }
 
-const router = _router;
+const currentRouter = _router;
 
 const viewId = randomId();
 provide(DI.viewId, viewId);
@@ -44,13 +44,13 @@ provide(DI.viewId, viewId);
 const currentDepth = inject(DI.routerCurrentDepth, 0);
 provide(DI.routerCurrentDepth, currentDepth + 1);
 
-const current = router.current;
+const current = currentRouter.current;
 const currentPageComponent = shallowRef('component' in current.route ? current.route.component : MkLoadingPage);
 const currentPageProps = ref(current.props);
 let currentRoutePath = current.route.path;
-const key = ref(router.getCurrentFullPath());
+const key = ref(currentRouter.getCurrentFullPath());
 
-router.useListener('change', ({ resolved }) => {
+currentRouter.useListener('change', ({ resolved }) => {
 	if (resolved == null || 'redirect' in resolved.route) {
 		return;
 	}
@@ -60,7 +60,7 @@ router.useListener('change', ({ resolved }) => {
 
 	currentPageComponent.value = resolved.route.component;
 	currentPageProps.value = resolved.props;
-	key.value = router.getCurrentFullPath();
+	key.value = currentRouter.getCurrentFullPath();
 	currentRoutePath = resolved.route.path;
 });
 </script>

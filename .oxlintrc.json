@@ -1,12 +1,77 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": ["typescript", "oxc"],
+	"plugins": ["typescript", "oxc", "unicorn", "import", "jsdoc", "node", "promise", "vue", "vitest"],
 	"categories": {
 		"correctness": "error",
 		"suspicious": "warn",
 		"perf": "warn"
 	},
 	"rules": {
+		// 追加プラグインのルールは指摘を 1 件ずつ確認し、誤検出が大半のものと好みの書き方だけのものを外している。
+		// vitest は expect の第 2 引数にメッセージを取る。
+		"vitest/valid-expect": ["error", { "maxArgs": 2 }],
+		// 内部で expect / assert する補助関数。aiscript は取り込んだパッケージで next 等の汎用名を使うため overrides で外す。
+		"vitest/expect-expect": [
+			"error",
+			{
+				"assertFunctionNames": [
+					"expect",
+					"expect*",
+					"assert",
+					"assert*",
+					"assert.*",
+					"*.rejects",
+					"*.getBy*",
+					"strictEqual",
+					"deepStrictEqual",
+					"eq",
+					"successfulApiCall",
+					"failedApiCall",
+					"testPaginationConsistency",
+					"ok",
+					"notOk",
+					"notFound",
+					"postAndCheckReception",
+					"rejectMutation",
+					"waitFor",
+					"resolveRemoteNote"
+				]
+			}
+		],
+		// パラメータ化テストの分岐と、property テストで例外の型だけを確かめる try/catch が大半 (55 件)。
+		"vitest/no-conditional-expect": "off",
+		// 変数で渡すタイトルを「文字列でない」と誤検出する。
+		"vitest/valid-title": "off",
+		// 連合テストの意図した skip。消さずに一覧で見えるよう警告に留める。
+		"vitest/no-disabled-tests": "warn",
+		"vitest/require-mock-type-parameters": "off",
+		"vitest/require-to-throw-message": "off",
+		// noImplicitReturns が網羅 switch を含めて型で検査している。
+		"vue/return-in-computed-property": "off",
+		// Vite の ?worker import と、Node のコールバック API へ結果を返す箇所の誤検出。
+		"import/default": "off",
+		"promise/no-callback-in-promise": "off",
+		// 再帰描画する Vue コンポーネントの自己 import と、Vite の public 資産の絶対パス import。
+		"import/no-self-import": "off",
+		"import/no-absolute-path": "off",
+		// 意図した thenable (db/bun-sql.ts) と aiscript の AST の then フィールド。
+		"unicorn/no-thenable": "off",
+		// 条件付きプロパティの spread や文字列の分解まで不要と判定する。
+		"unicorn/no-useless-spread": "off",
+		// 書き方の好みで不具合を示さないもの。
+		"unicorn/no-new-array": "off",
+		"unicorn/no-single-promise-in-promise-methods": "off",
+		"unicorn/no-useless-fallback-in-spread": "off",
+		"unicorn/consistent-function-scoping": "off",
+		"unicorn/prefer-add-event-listener": "off",
+		"unicorn/require-module-specifiers": "off",
+		// BroadcastChannel.postMessage も対象にする誤検出。
+		"unicorn/require-post-message-target-origin": "off",
+		"promise/always-return": "off",
+		"promise/no-promise-in-callback": "off",
+		"import/no-named-as-default-member": "off",
+		"import/no-named-as-default": "off",
+		"import/no-unassigned-import": "off",
 		"no-async-promise-executor": "off",
 		"no-constant-condition": "off",
 		"no-control-regex": "off",
@@ -45,5 +110,13 @@
 		"packages/frontend/js-built/**",
 		"packages/frontend/src/**/*.stories.ts",
 		"packages/frontend/src/**/*.stories.impl.ts"
+	],
+	"overrides": [
+		{
+			"files": ["packages/aiscript/**"],
+			"rules": {
+				"vitest/expect-expect": "off"
+			}
+		}
 	]
 }

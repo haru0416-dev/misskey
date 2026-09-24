@@ -117,7 +117,7 @@ import { getScrollContainer, scrollToTop } from '@shared/utility/scroll.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import type { SoundStore } from '@/preferences/def.js';
 import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
-import * as sound from '@/features/sound/sound.js';
+import * as sfx from '@/features/sound/sound.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
@@ -176,9 +176,9 @@ const {
 	onNote: (note) => {
 		if (props.sound) {
 			if (props.customSound) {
-				sound.playMisskeySfxFile(props.customSound);
+				sfx.playMisskeySfxFile(props.customSound);
 			} else {
-				sound.playMisskeySfx($i && note.userId === $i.id ? 'noteMy' : 'note');
+				sfx.playMisskeySfx($i && note.userId === $i.id ? 'noteMy' : 'note');
 			}
 		}
 	},

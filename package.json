@@ -47,7 +47,6 @@
 		"lint": "bun run lint:ox && bun run format:ox:check && bun run lint:vue-templates && bun run lint:doc-links && bun run lint:agent-instructions && bun run typecheck:playwright && bun run --bun --filter '*' --if-present typecheck",
 		"lint:ox": "oxlint . --config .oxlintrc.json --quiet",
 		"lint:ox:report": "oxlint . --config .oxlintrc.json",
-		"lint:ultracite": "ultracite check --config=oxlint.ultracite.config.mts",
 		"lint:vue-templates": "bun scripts/check-vue-templates.mjs",
 		"lint:doc-links": "bun scripts/check-doc-links.mjs",
 		"lint:agent-instructions": "bun scripts/sync-agent-instructions.mjs --check",
@@ -85,8 +84,7 @@
 		"oxlint": "1.79.0",
 		"tar": "7.5.21",
 		"typescript": "6.0.3",
-		"typescript-native": "npm:typescript@7.0.2",
-		"ultracite": "7.10.7"
+		"typescript-native": "npm:typescript@7.0.2"
 	},
 	"trustedDependencies": [
 		"@parcel/watcher",
