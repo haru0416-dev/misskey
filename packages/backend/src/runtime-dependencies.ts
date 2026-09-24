@@ -64,7 +64,8 @@ import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/server/chart-runtime.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
-import { createNotePostProcessing } from '@/core/note/NotePostProcessing.js';
+import { createNotePostProcessing, notePostProcessingConcurrency } from '@/core/note/NotePostProcessing.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
 
 export type RuntimeDependencies = {
@@ -301,9 +302,12 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const userAuthService = createUserAuthService(redis, db);
 		const webAuthnService = createWebAuthnService(config, meta, redis, db);
 		const chartWriters = createChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
-		const notePostProcessing = createNotePostProcessing((error) => {
-			loggerService.getLogger('note-post-processing').error('Failed to drain post-create stages', { e: error });
-		});
+		const notePostProcessing = createNotePostProcessing(
+			(error) => {
+				loggerService.getLogger('note-post-processing').error('Failed to drain post-create stages', { e: error });
+			},
+			notePostProcessingConcurrency(resolveDatabasePoolSize(config)),
+		);
 		const chartWriterSaveIntervalId = startChartWriterSaveInterval(chartWriters);
 		let disposePromise: Promise<void> | undefined;
 
