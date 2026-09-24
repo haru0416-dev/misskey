@@ -1281,6 +1281,32 @@ export async function listHydratedNotesByIdsFromDatabase(
 	});
 }
 
+/**
+ * pg_trgm は LIKE パターン中の 3 文字以上続く英数字からしか trigram を取れない。取れない語は
+ * IDX_NOTE_TEXT_TRGM が使えず主キーの全件走査になり、100 万件・一致なしで 1.45 秒かかった。
+ */
+const TRIGRAM_RUN = /[\p{L}\p{N}]{3}/u;
+
+/** trigram の取れない検索が 1 ページで走査する投稿数。100 万件・一致なしで 1 ページ約 0.1 秒だった。 */
+export const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
+
+/**
+ * ページの起点から並び順に UNTRIGRAMMABLE_SEARCH_WINDOW 件を読む副問い合わせ。窓の外は次のページの
+ * 起点から探す。境界の id を先に数えると一致の多い語でも毎回窓全体を読むため、外側の LIMIT で
+ * 読み取りを止められる並び順付きの副問い合わせにする。
+ */
+function untrigrammableSearchWindow(options: {
+	sinceId?: MiNote['id'] | null;
+	untilId?: MiNote['id'] | null;
+	rangeStartId?: MiNote['id'] | null;
+	rangeEndId?: MiNote['id'] | null;
+}): SQL {
+	const bounds = [notePaginationCondition(options)];
+	if (options.rangeStartId) bounds.push(sql`"id" > ${options.rangeStartId}`);
+	if (options.rangeEndId) bounds.push(sql`"id" < ${options.rangeEndId}`);
+	return sql`(SELECT * FROM "note" WHERE ${sql.join(bounds, sql` AND `)} ORDER BY "id" ${notePaginationOrder(options)} LIMIT ${UNTRIGRAMMABLE_SEARCH_WINDOW})`;
+}
+
 export async function searchNotesByTextFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
@@ -1316,10 +1342,20 @@ export async function searchNotesByTextFromDatabase(
 		conditions.push(sql`"note"."channelId" = ${options.channelId}`);
 	}
 
+	let source = sql`"note"`;
 	if (options.usePgroonga) {
 		conditions.push(sql`"note"."text" &@~ ${options.query}`);
 	} else {
-		conditions.push(sql`LOWER("note"."text") LIKE ${`%${sqlLikeEscape(options.query.toLowerCase())}%`}`);
+		if (TRIGRAM_RUN.test(options.query)) {
+			conditions.push(sql`LOWER("note"."text") LIKE ${`%${sqlLikeEscape(options.query.toLowerCase())}%`}`);
+		} else {
+			// LIKE のままだとプランナーが trigram index の全件読みを約 100 行と見積もって選び、窓が
+			// 走査範囲にならない。index に掛からない strpos にして主キーの範囲走査へ寄せる。
+			conditions.push(sql`STRPOS(LOWER("note"."text"), ${options.query.toLowerCase()}) > 0`);
+			if (options.userId == null && options.channelId == null) {
+				source = untrigrammableSearchWindow(options);
+			}
+		}
 	}
 
 	if (options.host) {
@@ -1372,22 +1408,24 @@ export async function searchNotesByTextFromDatabase(
 		conditions.push(sql`"note"."visibility" = ${options.visibility}`);
 	}
 
-	return await executeTimelineNoteQuery(db, conditions, options);
+	return await executeTimelineNoteQuery(db, conditions, options, source);
 }
 
 /**
  * タイムライン系クエリで共通の SELECT + JOIN + WHERE + ORDER + LIMIT。
  * 展開前と生成 SQL が完全に同一であることを前提にした集約なので、
  * 結合順・別名・ORDER BY の形をここで変えないこと (クエリプランが変わる)。
+ * source は読み取り範囲を副問い合わせで限る検索だけが差し替える。
  */
 async function executeTimelineNoteQuery(
 	db: MiDrizzleDatabase,
 	conditions: SQL[],
 	options: { sinceId?: MiNote['id'] | null; untilId?: MiNote['id'] | null; limit: number },
+	source: SQL = sql`"note"`,
 ): Promise<MiNote[]> {
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
-		FROM "note" AS "note"
+		FROM ${source} AS "note"
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
