@@ -234,6 +234,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 
 		const messages = channelMessages(raw);
 		expect(messages).toHaveLength(1);
+		// メンバーを周期的に読み直すタイマーを止める。残すと DB を閉じた後も読み続ける。
+		connection.dispose();
 	});
 
 	test('localTimeline: ローカル公開ノートを受け取り、リモートノートは受け取らない', async () => {

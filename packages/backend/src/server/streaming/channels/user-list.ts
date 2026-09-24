@@ -120,7 +120,14 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 		ctx.subscriber.on('notesStream', onNote);
 
 		await updateListUsers();
-		const listUsersClock = setInterval(() => void updateListUsers(), 5000);
+		// 読み直しに失敗しても前回のメンバーのまま配信を続け、次の周期で読み直す。
+		const listUsersClock = setInterval(
+			() =>
+				void updateListUsers().catch((error) =>
+					console.error(`Failed to refresh the members of user list ${listId}.`, error),
+				),
+			5000,
+		);
 
 		return {
 			dispose: () => {
