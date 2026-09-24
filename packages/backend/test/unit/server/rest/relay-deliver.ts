@@ -74,7 +74,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 
 		// 共有 redis 上の deliver キューには他テストの残骸ジョブが混在し得るため、
 		// JSON.parse せず content 文字列に自分のアクティビティ id が含まれるかだけを見る。
-		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
+		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
 		const contentId = activity.id;
 		expect(
 			jobs.find(
@@ -133,7 +133,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 			renderOnce(() => activity),
 		);
 
-		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
+		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
 		const relayJob = jobs.find((j) => (j.data as DeliverJobData).to === inbox);
 		expect(relayJob).toBeDefined();
 
@@ -186,7 +186,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 				expect(bulk).toHaveBeenCalledTimes(1);
 				expect(single).not.toHaveBeenCalled();
 				const findJobs = async () =>
-					(await runtime.deliverQueue.getJobs(['waiting', 'delayed'])).filter((job) =>
+					(await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed'])).filter((job) =>
 						job.data.content?.includes(activity.id),
 					);
 				await expect.poll(async () => (await findJobs()).length).toBe(3);
@@ -273,7 +273,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 				renderOnce(() => activity),
 				genId(),
 			);
-			const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'delayed'])).filter((job) =>
+			const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed'])).filter((job) =>
 				job.data.content?.includes(activity.id),
 			);
 			try {
@@ -335,7 +335,7 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 		});
 
 		expect(build).toHaveBeenCalledOnce();
-		const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'delayed'])).filter(
+		const jobs = (await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed'])).filter(
 			(job) => (job?.data as DeliverJobData | undefined)?.to === recipient.inbox,
 		);
 		expect(jobs).toHaveLength(2);

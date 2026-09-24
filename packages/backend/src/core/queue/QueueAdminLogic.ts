@@ -18,6 +18,7 @@ import type {
 	SystemWebhookDeliverQueue,
 	UserWebhookDeliverQueue,
 } from '@/core/queue/queues.js';
+import { getQueueJobCounts } from '@/core/queue/queues.js';
 import type * as Bull from 'bullmq';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import {
@@ -359,7 +360,7 @@ export async function getQueues(deps: AdminQueueDependencies) {
 	const fetchings = QUEUE_TYPES.map(async (type) => {
 		const queue = getQueue(deps, type);
 
-		const counts = await queue.getJobCounts();
+		const counts = await getQueueJobCounts(queue);
 		const isPaused = await queue.isPaused();
 		const metricsCompleted = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
 		const metricsFailed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
@@ -381,7 +382,7 @@ export async function getQueues(deps: AdminQueueDependencies) {
 
 export async function getQueueStats(deps: AdminQueueDependencies, queueType: QueueType) {
 	const queue = getQueue(deps, queueType);
-	const counts = await queue.getJobCounts();
+	const counts = await getQueueJobCounts(queue);
 	const isPaused = await queue.isPaused();
 	const metricsCompleted = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
 	const metricsFailed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
@@ -404,10 +405,10 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 export async function getLegacyQueueCounts(
 	deps: Pick<AdminQueueDependencies, 'deliverQueue' | 'inboxQueue' | 'dbQueue' | 'objectStorageQueue'>,
 ) {
-	const deliverJobCounts = await deps.deliverQueue.getJobCounts();
-	const inboxJobCounts = await deps.inboxQueue.getJobCounts();
-	const dbJobCounts = await deps.dbQueue.getJobCounts();
-	const objectStorageJobCounts = await deps.objectStorageQueue.getJobCounts();
+	const deliverJobCounts = await getQueueJobCounts(deps.deliverQueue);
+	const inboxJobCounts = await getQueueJobCounts(deps.inboxQueue);
+	const dbJobCounts = await getQueueJobCounts(deps.dbQueue);
+	const objectStorageJobCounts = await getQueueJobCounts(deps.objectStorageQueue);
 
 	return {
 		deliver: deliverJobCounts,

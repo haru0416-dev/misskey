@@ -672,9 +672,5 @@ export async function deliverToRelaysForApi(
 				: { jobId: `${jobIdPrefix}-${createHash('sha256').update(relay.inbox).digest('hex').slice(0, 24)}` }),
 		},
 	}));
-	if (jobIdPrefix == null) {
-		void deps.deliverQueue.addBulk(jobs);
-		return;
-	}
 	await deps.deliverQueue.addBulk(jobs);
 }

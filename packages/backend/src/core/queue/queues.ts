@@ -5,6 +5,7 @@
 
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
+import { HostFairDeliverQueue } from '@/core/queue/deliver-priority.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import type {
 	DbJobData,
@@ -47,6 +48,17 @@ export type ObjectStorageQueue = Bull.Queue;
 export type UserWebhookDeliverQueue = Bull.Queue<UserWebhookDeliverJobData>;
 export type SystemWebhookDeliverQueue = Bull.Queue<SystemWebhookDeliverJobData>;
 
+/**
+ * 配送キューは宛先ホストの公平化のため全ジョブに優先度を付け、未処理のジョブは BullMQ の wait ではなく
+ * prioritized に入る。管理画面の「待機」は処理待ちの総数として両方を合算する。
+ */
+export async function getQueueJobCounts(queue: {
+	getJobCounts: () => Promise<Record<string, number>>;
+}): Promise<Record<string, number>> {
+	const counts = await queue.getJobCounts();
+	return { ...counts, waiting: (counts['waiting'] ?? 0) + (counts['prioritized'] ?? 0) };
+}
+
 export async function addDbJob(queue: DbQueue, job: DbJobInput): Promise<void> {
 	await (queue as RawDbQueue).add(job.name, job.data, job.opts);
 }
@@ -76,7 +88,7 @@ export function createPostScheduledNoteQueue(config: Config): PostScheduledNoteQ
 }
 
 export function createDeliverQueue(config: Config): DeliverQueue {
-	return new Bull.Queue(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
+	return new HostFairDeliverQueue(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
 }
 
 export function createInboxQueue(config: Config): InboxQueue {

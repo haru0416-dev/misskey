@@ -2125,7 +2125,7 @@ describe('Endpoints', () => {
 
 		async function findDeliverJob(inbox: string, type: 'Flag'): Promise<Bull.Job<DeliverJobData>> {
 			return await vi.waitFor(async () => {
-				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
+				const jobs = await deliverQueue!.getJobs(['waiting', 'prioritized', 'delayed'], 0, 100, false);
 				const found = jobs.find(
 					(job) => job.data.to === inbox && (JSON.parse(job.data.content) as { type?: unknown }).type === type,
 				);
@@ -3272,7 +3272,7 @@ describe('Endpoints', () => {
 	describe('admin/relays', () => {
 		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
 			return await vi.waitFor(async () => {
-				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
+				const jobs = await deliverQueue!.getJobs(['waiting', 'prioritized', 'delayed'], 0, 100, false);
 				const found = jobs.find(
 					(job) => job.data.to === inbox && (JSON.parse(job.data.content) as { type?: unknown }).type === type,
 				);
