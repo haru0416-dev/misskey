@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Fix: 依存パッケージの既知脆弱性13件（high 5・moderate 6・low 2）を修正（hono 4.13.8 / sharp 0.35.4 / nodemailer 9.1.1 / exifreader 4.45.0 に更新し、間接依存の joi 17.13.8 / js-yaml 4.3.2 / smol-toml 1.8.0 と sharp を overrides で固定。`bun audit` の指摘をゼロに）
 - Enhance: MFMのパースを高速化（構文を始め得ない文字は候補を試さずに読み進め、検索構文は行末で判定。出力は従来と同一で、日本語189字で約27倍・1400字で約66倍）
 - Fix: 間接依存の既知脆弱性を解消（@xmldom/xmldom・fast-uriを修正版へ更新）
 - Enhance: identicon生成・トレース計装・管理ログの差分表示・Google Analytics・型生成の依存を整理し、Tablerの使用資産を同梱

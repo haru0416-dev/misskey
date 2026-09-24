@@ -33,7 +33,7 @@
 		"diff": "8.0.4",
 		"echarts": "6.1.0",
 		"eventemitter3": "5.0.4",
-		"exifreader": "4.41.0",
+		"exifreader": "4.45.0",
 		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
