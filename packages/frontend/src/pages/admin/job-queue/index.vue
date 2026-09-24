@@ -357,10 +357,12 @@ async function fetchJobs() {
 		queue,
 		state:
 			state === 'all'
-				? ['completed', 'failed', 'active', 'delayed', 'wait']
+				? ['completed', 'failed', 'active', 'delayed', 'wait', 'prioritized']
 				: state === 'latest'
 					? ['completed', 'failed']
-					: [state],
+					: state === 'wait'
+						? ['wait', 'prioritized']
+						: [state],
 		...(searchQuery.value.trim() === '' ? {} : { search: searchQuery.value }),
 	}).then((res: Misskey.entities.AdminQueueJobsResponse) => {
 		if (state === 'all') {

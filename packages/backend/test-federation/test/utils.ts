@@ -562,7 +562,11 @@ export async function observeDeliverySuccess(
 	const stats = await admin.client.request('admin/queue/queue-stats', { queue: 'deliver' });
 	const jobs = await admin.client.request('admin/queue/jobs', {
 		queue: 'deliver',
-		state: ['active', 'wait', 'delayed', 'completed', 'failed'],
+		// fork は配送の未処理ジョブを優先度付きで積む。公式版の API は prioritized を受け付けず、配送に優先度も付けない。
+		state:
+			hostKind(senderHost) === 'fork'
+				? ['active', 'wait', 'prioritized', 'delayed', 'completed', 'failed']
+				: ['active', 'wait', 'delayed', 'completed', 'failed'],
 		search: activityId,
 	});
 	const jobIds = jobs
