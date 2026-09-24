@@ -106,7 +106,7 @@ describe('toUnicodeHost: 入力を壊さないこと', () => {
 				),
 				(labels) => {
 					const host = labels.join('.');
-					expect(toUnicodeHost(host, locales).split('.').length).toBe(labels.length);
+					expect(toUnicodeHost(host, locales).split('.')).toHaveLength(labels.length);
 				},
 			),
 			{ numRuns: 300 },

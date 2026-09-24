@@ -5,8 +5,7 @@
 
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { UrlPreviewService } from './UrlPreviewService.js';
-import type { UrlPreviewReply, UrlPreviewRequest } from './UrlPreviewService.js';
+import type { UrlPreviewReply, UrlPreviewRequest, UrlPreviewService } from './UrlPreviewService.js';
 
 export type UrlPreviewDependencies = {
 	urlPreviewService: UrlPreviewService;

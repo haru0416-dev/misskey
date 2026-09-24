@@ -509,7 +509,7 @@ function iconLoaded() {
 		});
 	}
 
-	nextTick(() => {
+	nextTick().then(() => {
 		easterEggReady = true;
 	});
 }

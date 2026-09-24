@@ -13,6 +13,6 @@ describe('url', () => {
 			bar: 'b a r',
 			baz: undefined,
 		});
-		expect(s).toStrictEqual('foo=%E3%81%B5%E3%81%85&bar=b%20a%20r');
+		expect(s).toBe('foo=%E3%81%B5%E3%81%85&bar=b%20a%20r');
 	});
 });

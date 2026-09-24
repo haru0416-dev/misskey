@@ -152,7 +152,7 @@ async function fetchStreamConnectionSnapshot(
 		userIdsWhoMeMuting: new Set(muteeIds),
 		userIdsWhoBlockingMe: new Set(blockerIds),
 		userIdsWhoMeMutingRenotes: new Set(renoteMuteeIds),
-		userMutedInstances: new Set(userProfile?.mutedInstances ?? []),
+		userMutedInstances: new Set(userProfile?.mutedInstances),
 	};
 }
 
@@ -181,18 +181,18 @@ export class StreamConnection {
 	public readonly token?: MiAccessToken;
 	private subscriber?: EventEmitter;
 	private sendToClient?: (raw: string) => void;
-	private readonly channels: Map<string, { channelName: string; handle: StreamChannelHandle }> = new Map();
-	private readonly pendingChannels: Map<string, StreamChannelSubscriberScope> = new Map();
-	private readonly pendingChannelScopes: Set<StreamChannelSubscriberScope> = new Set();
+	private readonly channels = new Map<string, { channelName: string; handle: StreamChannelHandle }>();
+	private readonly pendingChannels = new Map<string, StreamChannelSubscriberScope>();
+	private readonly pendingChannelScopes = new Set<StreamChannelSubscriberScope>();
 	private readonly subscribingNotes: Partial<Record<string, number>> = {};
 	private userProfile: MiUserProfile | null = null;
 	private following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
-	private followingChannels: Set<string> = new Set();
-	private mutingChannels: Set<string> = new Set();
-	private userIdsWhoMeMuting: Set<string> = new Set();
-	private userIdsWhoBlockingMe: Set<string> = new Set();
-	private userIdsWhoMeMutingRenotes: Set<string> = new Set();
-	private userMutedInstances: Set<string> = new Set();
+	private followingChannels = new Set<string>();
+	private mutingChannels = new Set<string>();
+	private userIdsWhoMeMuting = new Set<string>();
+	private userIdsWhoBlockingMe = new Set<string>();
+	private userIdsWhoMeMutingRenotes = new Set<string>();
+	private userMutedInstances = new Set<string>();
 	private pendingInternalEvents: GlobalEvents['internal']['payload'][] | null = null;
 	private refreshPromise: Promise<void> | undefined;
 	private disposed = false;

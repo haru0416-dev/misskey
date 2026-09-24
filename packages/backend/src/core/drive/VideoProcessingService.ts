@@ -6,8 +6,7 @@
 import { join } from 'node:path';
 import { ffprobe, runFfmpeg } from '@/misc/ffmpeg.js';
 import type { Config } from '@/config.js';
-import { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import type { IImage } from '@/core/drive/ImageProcessingService.js';
+import type { IImage, ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import { createTempDir } from '@/misc/create-temp.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 

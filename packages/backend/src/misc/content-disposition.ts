@@ -6,6 +6,6 @@
 import { create } from 'content-disposition';
 
 export function contentDisposition(type: 'inline' | 'attachment', filename: string): string {
-	const fallback = filename.replace(/[^\w.-]/g, '_');
+	const fallback = filename.replaceAll(/[^\w.-]/g, '_');
 	return create(filename, { type, fallback });
 }

@@ -14,10 +14,9 @@ import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { encodeBlurhash } from '@/core/drive/blurhash-encode.js';
 import { createTempDir } from '@/misc/create-temp.js';
 import { ffprobe, spawnFfmpeg } from '@/misc/ffmpeg.js';
-import { AiService } from '@/core/ai/AiService.js';
-import { LoggerService } from '@/core/LoggerService.js';
+import type { AiService, Prediction } from '@/core/ai/AiService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import type { Prediction } from '@/core/ai/AiService.js';
 
 export type FileInfo = {
 	size: number;

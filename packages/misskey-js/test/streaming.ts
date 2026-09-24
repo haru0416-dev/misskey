@@ -14,13 +14,13 @@ describe('Streaming', () => {
 		});
 
 		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
+		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 
 		const msg = JSON.parse((await server.nextMessage) as string);
 		const mainChannelId = msg.body.id;
-		expect(msg.type).toEqual('connect');
-		expect(msg.body.channel).toEqual('main');
-		expect(mainChannelId != null).toEqual(true);
+		expect(msg.type).toBe('connect');
+		expect(msg.body.channel).toBe('main');
+		expect(mainChannelId != null).toBe(true);
 
 		server.send(
 			JSON.stringify({
@@ -53,14 +53,14 @@ describe('Streaming', () => {
 		});
 
 		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
+		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 
 		const msg = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId = msg.body.id;
-		expect(msg.type).toEqual('connect');
-		expect(msg.body.channel).toEqual('chat');
+		expect(msg.type).toBe('connect');
+		expect(msg.body.channel).toBe('chat');
 		expect(msg.body.params).toEqual({ other: 'aaa' });
-		expect(chatChannelId != null).toEqual(true);
+		expect(chatChannelId != null).toBe(true);
 
 		server.send(
 			JSON.stringify({
@@ -91,15 +91,15 @@ describe('Streaming', () => {
 		stream.useChannel('chat', { other: 'bbb' });
 
 		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
+		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 
 		const msg = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId = msg.body.id;
 		const msg2 = JSON.parse((await server.nextMessage) as string);
 		const chatChannelId2 = msg2.body.id;
 
-		expect(chatChannelId != null).toEqual(true);
-		expect(chatChannelId2 != null).toEqual(true);
+		expect(chatChannelId != null).toBe(true);
+		expect(chatChannelId2 != null).toBe(true);
 		expect(chatChannelId).not.toEqual(chatChannelId2);
 
 		stream.close();
@@ -114,15 +114,15 @@ describe('Streaming', () => {
 		chat.send('read', { id: 'aaa' });
 
 		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
+		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 
 		const connectMsg = JSON.parse((await server.nextMessage) as string);
 		const channelId = connectMsg.body.id;
 		const msg = JSON.parse((await server.nextMessage) as string);
 
-		expect(msg.type).toEqual('ch');
+		expect(msg.type).toBe('ch');
 		expect(msg.body.id).toEqual(channelId);
-		expect(msg.body.type).toEqual('read');
+		expect(msg.body.type).toBe('read');
 		expect(msg.body.body).toEqual({ id: 'aaa' });
 
 		stream.close();
@@ -139,13 +139,13 @@ describe('Streaming', () => {
 		});
 
 		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toEqual('TOKEN');
+		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 
 		const msg = JSON.parse((await server.nextMessage) as string);
 		const mainChannelId = msg.body.id;
-		expect(msg.type).toEqual('connect');
-		expect(msg.body.channel).toEqual('main');
-		expect(mainChannelId != null).toEqual(true);
+		expect(msg.type).toBe('connect');
+		expect(msg.body.channel).toBe('main');
+		expect(mainChannelId != null).toBe(true);
 		main.dispose();
 
 		server.send(
@@ -161,7 +161,7 @@ describe('Streaming', () => {
 			}),
 		);
 
-		expect(mainChannelReceived.length).toEqual(0);
+		expect(mainChannelReceived).toHaveLength(0);
 
 		stream.close();
 		server.close();
@@ -176,18 +176,18 @@ describe('Streaming', () => {
 
 		await server.connected;
 		const first = JSON.parse((await server.nextMessage) as string);
-		expect(first.type).toEqual('connect');
-		expect(first.body.channel).toEqual('main');
+		expect(first.type).toBe('connect');
+		expect(first.body.channel).toBe('main');
 
 		server.close();
 		server = new WS('wss://misskey.test/streaming');
 
 		await server.connected;
 		const resub = JSON.parse((await server.nextMessage) as string);
-		expect(resub.type).toEqual('connect');
-		expect(resub.body.channel).toEqual('main');
+		expect(resub.type).toBe('connect');
+		expect(resub.body.channel).toBe('main');
 		expect(resub.body.id).toEqual(first.body.id);
-		expect(connected.length).toEqual(2);
+		expect(connected).toHaveLength(2);
 
 		stream.close();
 		server.close();

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { LoggerService } from '@/core/LoggerService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
 import type { MiMeta } from '@/models/_.js';
 
 /**

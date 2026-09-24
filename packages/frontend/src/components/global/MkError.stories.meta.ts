@@ -4,7 +4,7 @@
  */
 
 import type { Meta } from '@/stories/types.js';
-import MkError from './MkError.vue';
+import type MkError from './MkError.vue';
 
 export const argTypes = {
 	onRetry: {

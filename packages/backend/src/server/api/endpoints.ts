@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { permissions } from 'misskey-js';
+import type { permissions } from 'misskey-js';
 import type { z } from 'zod';
 import type { KeyOf, Schema } from '@/misc/json-schema.js';
 
@@ -152,7 +152,7 @@ export interface IEndpoint {
 
 const endpoints: IEndpoint[] = Object.entries(endpointMetas).map(([name, ep]) => {
 	return {
-		name: name,
+		name,
 		get meta() {
 			return ep.meta ?? {};
 		},

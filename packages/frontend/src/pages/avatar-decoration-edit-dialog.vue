@@ -118,12 +118,12 @@ watch(
 
 async function addRole() {
 	const roles = await misskeyApi('admin/roles/list');
-	const currentRoleIds = rolesThatCanBeUsedThisDecoration.value.map((x) => x.id);
+	const currentRoleIds = new Set(rolesThatCanBeUsedThisDecoration.value.map((x) => x.id));
 
 	const { canceled, result: roleId } = await os.select({
 		items: roles
 			.filter((r) => r.isPublic)
-			.filter((r) => !currentRoleIds.includes(r.id))
+			.filter((r) => !currentRoleIds.has(r.id))
 			.map((r) => ({ label: r.name, value: r.id })),
 	});
 	if (canceled || roleId == null) {
@@ -164,7 +164,7 @@ async function done() {
 		const created = await os.apiWithDialog('admin/avatar-decorations/create', params);
 
 		emit('done', {
-			created: created,
+			created,
 		});
 
 		windowEl.value?.close();

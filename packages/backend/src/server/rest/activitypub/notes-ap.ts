@@ -74,7 +74,7 @@ export function addActivityContext<T extends Record<string, unknown>>(
 	if (activity['id'] == null) {
 		Object.assign(activity, { id: `${config.instance.url}/${randomUUID()}` });
 	}
-	return Object.assign({ '@context': CONTEXT }, activity) as T & { '@context': typeof CONTEXT; id: string };
+	return { '@context': CONTEXT, ...activity } as T & { '@context': typeof CONTEXT; id: string };
 }
 
 function renderMention(

@@ -87,7 +87,7 @@ onMounted(() => {
 		ro.observe(el.value);
 	}
 	setPosition();
-	nextTick(() => {
+	nextTick().then(() => {
 		setPosition();
 	});
 });

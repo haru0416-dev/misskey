@@ -20,7 +20,7 @@ export function getIpHash(ip: string): string {
 		// IPv4 ではアドレス全体が対象になる。
 		const prefix = ipPrefixBits(ip, 64);
 		return 'ip-' + BigInt('0b' + prefix).toString(36);
-	} catch (_) {
+	} catch {
 		const prefix = ipPrefixBits(ip.replace(/:[0-9]+$/, ''), 64);
 		return 'ip-' + BigInt('0b' + prefix).toString(36);
 	}

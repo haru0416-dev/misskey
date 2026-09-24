@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiDriveFile } from './DriveFile.js';
+import type { MiUser } from './User.js';
+import type { MiDriveFile } from './DriveFile.js';
 
 export class MiChannel {
 	public id: string;

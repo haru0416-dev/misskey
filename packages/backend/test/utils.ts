@@ -9,7 +9,8 @@ import { readFile } from 'node:fs/promises';
 import { basename, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { inspect } from 'node:util';
-import WebSocket, { ClientOptions } from 'ws';
+import type { ClientOptions } from 'ws';
+import WebSocket from 'ws';
 import * as htmlParser from 'node-html-parser';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
@@ -162,13 +163,11 @@ function timeoutPromise<T>(p: Promise<T>, timeout: number): Promise<T> {
 export const signup = async (
 	params?: Partial<misskey.Endpoints['signup']['req']>,
 ): Promise<NonNullable<misskey.Endpoints['signup']['res']>> => {
-	const q = Object.assign(
-		{
-			username: randomString(),
-			password: 'test',
-		},
-		params,
-	);
+	const q = {
+		username: randomString(),
+		password: 'test',
+		...params,
+	};
 
 	const res = await api('signup', q);
 
@@ -219,7 +218,7 @@ export const react = async (user: UserToken, note: misskey.entities.Note, reacti
 		'notes/reactions/create',
 		{
 			noteId: note.id,
-			reaction: reaction,
+			reaction,
 		},
 		user,
 	);
@@ -539,10 +538,10 @@ export function connectStream<C extends keyof misskey.Channels>(
 				JSON.stringify({
 					type: 'connect',
 					body: {
-						channel: channel,
+						channel,
 						id: 'a',
 						pong: true,
-						params: params,
+						params,
 					},
 				}),
 			);

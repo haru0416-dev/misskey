@@ -112,8 +112,8 @@ function setupGrid(): GridSetting {
 	const unique = validators.unique();
 
 	function removeRows(rows: GridRow[]) {
-		const idxes = [...new Set(rows.map((it) => it.index))];
-		gridItems.value = gridItems.value.filter((_, i) => !idxes.includes(i));
+		const idxes = new Set(rows.map((it) => it.index));
+		gridItems.value = gridItems.value.filter((_, i) => !idxes.has(i));
 	}
 
 	return {
@@ -295,8 +295,8 @@ async function onRegistryClicked() {
 	}));
 
 	// 登録に成功したものは一覧から除く
-	const successItems = result.filter((it) => it.success).map((it) => it.item);
-	gridItems.value = gridItems.value.filter((it) => !successItems.includes(it));
+	const successItems = new Set(result.filter((it) => it.success).map((it) => it.item));
+	gridItems.value = gridItems.value.filter((it) => !successItems.has(it));
 }
 
 async function onClearClicked() {
@@ -338,7 +338,7 @@ function onGridEvent(event: GridEvent) {
 }
 
 function onGridCellValidation(event: GridCellValidationEvent) {
-	registerButtonDisabled.value = event.all.filter((it) => !it.valid).length > 0;
+	registerButtonDisabled.value = event.all.some((it) => !it.valid);
 }
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {

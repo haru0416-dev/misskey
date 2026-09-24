@@ -53,7 +53,7 @@ async function create() {
 	if (canceled || name == null) {
 		return;
 	}
-	await os.apiWithDialog('users/lists/create', { name: name });
+	await os.apiWithDialog('users/lists/create', { name });
 	userListsCache.delete();
 	_fetch_();
 }

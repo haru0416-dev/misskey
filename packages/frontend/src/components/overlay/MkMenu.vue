@@ -421,10 +421,10 @@ async function showChildren(item: MenuParent, ev: MouseEvent | PointerEvent | Ke
 			return childrenCache.get(item)!;
 		}
 		if (typeof item.children === 'function') {
-			return Promise.resolve(item.children());
-		} else {
-			return item.children;
+			return item.children();
 		}
+			return item.children;
+		
 	})();
 
 	childrenCache.set(item, children);

@@ -283,7 +283,7 @@ describe('AiScript common API', () => {
 			misskeyApiMock.mockImplementationOnce(async (endpoint, data, token) => {
 				expect(endpoint).toBe('ping');
 				expect(data).toStrictEqual({});
-				expect(token).toStrictEqual('xxxxxxxx');
+				expect(token).toBe('xxxxxxxx');
 				return { pong: 1_735_657_200_000 };
 			});
 			const [res] = await exe(`
@@ -322,10 +322,6 @@ describe('AiScript common API', () => {
 	});
 
 	describe('save and load', () => {
-		beforeEach(() => {
-			miLocalStorage.removeItem('aiscript:widget:key');
-		});
-
 		beforeEach(() => {
 			miLocalStorage.removeItem('aiscript:widget:key');
 		});

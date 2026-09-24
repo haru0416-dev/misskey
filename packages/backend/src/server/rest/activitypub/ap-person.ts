@@ -607,7 +607,7 @@ export async function updatePersonForApi(
 export async function createPersonForApi(
 	deps: ApiApPersonDependencies,
 	uri: string,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 ): Promise<MiRemoteUser> {
 	const host = punyHostForApi(uri);
 	if (host === toPuny(deps.config.runtime.host)) {
@@ -772,7 +772,7 @@ export async function fetchPersonForApi(
 export async function resolvePersonForApi(
 	deps: ApiApPersonDependencies,
 	uri: string,
-	history: Set<string> = new Set(),
+	history = new Set<string>(),
 ): Promise<MiLocalUser | MiRemoteUser> {
 	const exist = await fetchPersonForApi(deps, uri);
 	if (exist) {

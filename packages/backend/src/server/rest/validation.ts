@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { OmitUndefinedProperties } from '@/misc/clone.js';
 import { invalidParamError } from './error.js';

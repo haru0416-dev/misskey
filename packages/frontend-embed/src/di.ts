@@ -4,8 +4,8 @@
  */
 
 import type { InjectionKey } from 'vue';
-import * as Misskey from 'misskey-js';
-import { MediaProxy } from '@shared/utility/media-proxy.js';
+import type * as Misskey from 'misskey-js';
+import type { MediaProxy } from '@shared/utility/media-proxy.js';
 import type { ParsedEmbedParams } from '@shared/utility/embed-page.js';
 import type { ServerContext } from '@/server-context.js';
 

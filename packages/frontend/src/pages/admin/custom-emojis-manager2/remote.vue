@@ -388,7 +388,7 @@ async function refreshCustomEmojis() {
 	const result = await loadingHandler.scope(() =>
 		misskeyApi('v2/admin/emoji/list', {
 			limit: queryLimit.value,
-			query: query,
+			query,
 			page: currentPage.value,
 			sortKeys: sortOrders.value.map(({ key, direction }) => `${direction}${key}`) as never[],
 		}),

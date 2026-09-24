@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { hemisphere } from '@shared/utility/intl-const.js';
 import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
 import { prefersReducedMotion } from '@shared/utility/config.js';

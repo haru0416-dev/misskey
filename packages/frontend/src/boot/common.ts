@@ -60,7 +60,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 			if (lastVersion != null && compareVersions(version, lastVersion) === 1) {
 				isClientUpdated = true;
 			}
-		} catch (err) {
+		} catch {
 			/* empty */
 		}
 	}
@@ -290,7 +290,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 
 	try {
 		await fetchCustomEmojis();
-	} catch (err) {
+	} catch {
 		/* empty */
 	}
 

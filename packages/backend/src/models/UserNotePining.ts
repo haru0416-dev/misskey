@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiNote } from './Note.js';
-import { MiUser } from './User.js';
+import type { MiNote } from './Note.js';
+import type { MiUser } from './User.js';
 
 export class MiUserNotePining {
 	public id: string;

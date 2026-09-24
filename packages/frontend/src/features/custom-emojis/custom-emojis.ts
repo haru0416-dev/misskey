@@ -4,7 +4,7 @@
  */
 
 import { computed, markRaw, watch } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { get, set } from '@/utility/idb-proxy.js';

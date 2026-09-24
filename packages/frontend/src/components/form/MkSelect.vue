@@ -130,7 +130,7 @@ const focus = () => container.value?.focus();
 useFormControlPadding(inputEl, prefixEl, suffixEl);
 
 onMounted(() => {
-	nextTick(() => {
+	nextTick().then(() => {
 		if (autofocus.value) {
 			focus();
 		}

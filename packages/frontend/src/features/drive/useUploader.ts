@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { EventEmitter } from 'eventemitter3';
 import { computed, markRaw, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
@@ -24,7 +24,7 @@ export type UploaderFeatures = {
 	watermark?: boolean;
 };
 
-const THUMBNAIL_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
+const THUMBNAIL_SUPPORTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif']);
 
 const IMAGE_EDITING_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -160,7 +160,7 @@ export function useUploader(
 			name: prefer.keepOriginalFilename ? filename : id + extension,
 			suffix: '',
 			progress: null,
-			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? objectUrl : null,
+			thumbnail: THUMBNAIL_SUPPORTED_TYPES.has(file.type) ? objectUrl : null,
 			objectUrl,
 			preprocessing: false,
 			preprocessProgress: null,
@@ -204,7 +204,7 @@ export function useUploader(
 		const objectUrl = window.URL.createObjectURL(file);
 		return {
 			objectUrl,
-			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? objectUrl : null,
+			thumbnail: THUMBNAIL_SUPPORTED_TYPES.has(file.type) ? objectUrl : null,
 		};
 	}
 
@@ -751,7 +751,7 @@ export function useUploader(
 				(x) => x.WatermarkRenderer,
 			);
 			const renderer = new WatermarkRenderer({
-				canvas: canvas,
+				canvas,
 				renderWidth: imageBitmap.width,
 				renderHeight: imageBitmap.height,
 				image: imageBitmap,
@@ -775,7 +775,7 @@ export function useUploader(
 				(x) => x.ImageFrameRenderer,
 			);
 			const frameRenderer = new ImageFrameRenderer({
-				canvas: canvas,
+				canvas,
 				image: await window.createImageBitmap(preprocessedFile),
 				exif,
 				caption: item.caption ?? null,

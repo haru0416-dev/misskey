@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import type { StateTree } from 'pinia';
 import type { Cloneable } from '@/utility/clone.js';
 import type { TIPS } from '@/tips.js';

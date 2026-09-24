@@ -423,11 +423,11 @@ class FederationChartWriter extends Chart<typeof federationChartSchema> {
 		]);
 
 		return {
-			sub: sub,
-			pub: pub,
-			pubsub: pubsub,
-			subActive: subActive,
-			pubActive: pubActive,
+			sub,
+			pub,
+			pubsub,
+			subActive,
+			pubActive,
 		};
 	}
 

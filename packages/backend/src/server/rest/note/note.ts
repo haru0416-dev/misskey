@@ -578,14 +578,12 @@ export async function packNoteForApi(
 		hint?: PackNoteBatchHint;
 	},
 ): Promise<Packed<'Note'>> {
-	const opts = Object.assign(
-		{
-			detail: true,
-			skipHide: false,
-			withReactionAndUserPairCache: false,
-		},
-		options,
-	);
+	const opts = {
+		detail: true,
+		skipHide: false,
+		withReactionAndUserPairCache: false,
+		...options,
+	};
 
 	const meId = me ? me.id : null;
 	const note = typeof src === 'object' ? src : await fetchNoteByIdOrFailFromDatabase(deps.db, src);
@@ -1111,7 +1109,7 @@ const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
 const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
 
 function getFeaturedRankingCurrentWindowForApi(windowRange: number): number {
-	const passed = new Date().getTime() - FEATURED_EPOCH;
+	const passed = Date.now() - FEATURED_EPOCH;
 	return Math.floor(passed / windowRange);
 }
 

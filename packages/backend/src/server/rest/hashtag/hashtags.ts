@@ -64,7 +64,7 @@ export const hashtagsShowParamDef = z.object({
 });
 
 export function getCurrentFeaturedWindow(windowRange: number): number {
-	const passed = new Date().getTime() - featuredEpoc;
+	const passed = Date.now() - featuredEpoc;
 	return Math.floor(passed / windowRange);
 }
 

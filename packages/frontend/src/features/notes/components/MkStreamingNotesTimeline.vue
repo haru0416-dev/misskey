@@ -428,7 +428,7 @@ function attachScrollElement(el: HTMLElement | null) {
 	scrollElement.value = nextScrollElement;
 	// 先頭へ戻った瞬間にキューを開放するため、スクロール中も軽量な位置判定だけを行う。
 	scrollElement.value.addEventListener('scroll', onScrollContainerScroll, { passive: true });
-	nextTick(scheduleScrollMarginUpdate);
+	nextTick().then(scheduleScrollMarginUpdate);
 }
 
 // ローディング中から存在するコンポーネントルートでスクロールコンテナを先に解決しておく。
@@ -451,7 +451,7 @@ watch(
 	{ immediate: true },
 );
 
-watch(notesEl, () => nextTick(scheduleScrollMarginUpdate));
+watch(notesEl, () => nextTick().then(scheduleScrollMarginUpdate));
 watch(
 	() => paginator.value.queuedAheadItemsCount.value,
 	async () => {

@@ -254,7 +254,7 @@ async function addSecurityKey() {
 		password: auth2.result.password,
 		token: auth2.result.token,
 		name: name.result,
-		credential: credential,
+		credential,
 	});
 }
 

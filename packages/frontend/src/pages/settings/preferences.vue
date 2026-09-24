@@ -1076,7 +1076,7 @@ watch(
 const emojiIndexLangs = ['en-US', 'ja-JP', 'ja-JP_hira'] as const;
 
 function getEmojiIndexLangName(targetLang: (typeof emojiIndexLangs)[number]) {
-	if (langs.find((x) => x[0] === targetLang)) {
+	if (langs.some((x) => x[0] === targetLang)) {
 		return langs.find((x) => x[0] === targetLang)![1];
 	}
 	// 絵文字辞書限定の言語定義

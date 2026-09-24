@@ -215,12 +215,12 @@ function onClick(ev: PointerEvent) {
 
 async function edit(name: string) {
 	const emoji = await misskeyApi('emoji', {
-		name: name,
+		name,
 	});
 	const { dispose } = await os.popupAsyncWithDialog(
 		import('@/pages/emoji-edit-dialog.vue').then((x) => x.default),
 		{
-			emoji: emoji,
+			emoji,
 		},
 		{
 			closed: () => dispose(),

@@ -6,7 +6,7 @@
 import { ref } from 'vue';
 import { compareVersions } from 'compare-versions';
 import { isSafeMode } from '@shared/utility/config.js';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import type { Parser, Interpreter, values, utils as utils_TypeReferenceOnly } from '@syuilo/aiscript';
 import type { FormWithDefault } from '@/utility/form.js';
 import { genId } from '@/utility/id.js';
@@ -49,7 +49,7 @@ async function getParser(): Promise<Parser> {
 function isSupportedAiScriptVersion(version: string): boolean {
 	try {
 		return compareVersions(version, '0.12.0') >= 0;
-	} catch (_) {
+	} catch {
 		return false;
 	}
 }
@@ -125,7 +125,7 @@ async function authorizePlugin(plugin: Plugin) {
 					const { name, permissions } = result;
 					const { token } = await misskeyApi('miauth/gen-token', {
 						session: null,
-						name: name,
+						name,
 						permission: permissions,
 					});
 					res(token);
@@ -265,11 +265,11 @@ function addPluginHandler<K extends keyof HandlerDef>(
 
 export function launchPlugins() {
 	return Promise.all(
-		prefer.plugins.map((plugin) => {
+		prefer.plugins.map(async (plugin) => {
 			if (plugin.active) {
 				return launchPlugin(plugin.installId);
 			}
-			return Promise.resolve();
+			return undefined;
 		}),
 	);
 }
@@ -308,7 +308,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 
 	const aiscript = new Interpreter(
 		await createPluginEnv({
-			plugin: plugin,
+			plugin,
 			storageKey: 'plugins:' + plugin.installId,
 		}),
 		{

@@ -171,7 +171,7 @@ function encode(buffer: ArrayBuffer | null) {
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
 	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-	const base64 = (base64String + padding).replaceAll(/-/g, '+').replaceAll(/_/g, '/');
+	const base64 = (base64String + padding).replaceAll('-', '+').replaceAll('_', '/');
 
 	const rawData = window.atob(base64);
 	const outputArray = new Uint8Array(rawData.length);
@@ -207,6 +207,6 @@ if (navigator.serviceWorker == null) {
 }
 
 defineExpose({
-	pushRegistrationInServer: pushRegistrationInServer,
+	pushRegistrationInServer,
 });
 </script>

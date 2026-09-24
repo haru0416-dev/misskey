@@ -153,7 +153,7 @@ async function enter(el: Element) {
 	el.offsetWidth; // reflow
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
-	nextTick(() => {
+	nextTick().then(() => {
 		entering = false;
 	});
 
@@ -206,7 +206,7 @@ onMounted(() => {
 	watch(
 		[() => props.tab, () => props.tabs],
 		() => {
-			nextTick(() => scrollActiveTabIntoView());
+			nextTick().then(() => scrollActiveTabIntoView());
 			window.setTimeout(scrollActiveTabIntoView, 170);
 		},
 		{ immediate: true },
@@ -216,7 +216,7 @@ onMounted(() => {
 		watch(
 			[() => props.tab, () => props.tabs],
 			() => {
-				nextTick(() => {
+				nextTick().then(() => {
 					if (entering) {
 						return;
 					}
@@ -231,7 +231,7 @@ onMounted(() => {
 		if (props.rootEl) {
 			ro2 = new ResizeObserver(() => {
 				if (window.document.body.contains(el.value as HTMLElement)) {
-					nextTick(() => renderTab());
+					nextTick().then(() => renderTab());
 				}
 			});
 			ro2.observe(props.rootEl);

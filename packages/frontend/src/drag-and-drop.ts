@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 
 type DragDataMap = {
 	driveFiles: Misskey.entities.DriveFile[];
@@ -90,6 +90,6 @@ export function checkDragDataType(event: DragEvent, types: (keyof DragDataMap)[]
 		return false;
 	}
 
-	const availableTypes = Array.from(event.dataTransfer.types, (type) => type.toLowerCase());
-	return types.some((type) => availableTypes.includes(`misskey/${type}`.toLowerCase()));
+	const availableTypes = new Set(Array.from(event.dataTransfer.types, (type) => type.toLowerCase()));
+	return types.some((type) => availableTypes.has(`misskey/${type}`.toLowerCase()));
 }

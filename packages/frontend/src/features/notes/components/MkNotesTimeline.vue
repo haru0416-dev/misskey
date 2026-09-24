@@ -249,7 +249,7 @@ function attachScrollElement(el: HTMLElement | null) {
 		return;
 	}
 	scrollElement.value = next;
-	nextTick(scheduleScrollMarginUpdate);
+	nextTick().then(scheduleScrollMarginUpdate);
 }
 
 // ローディング中から存在する MkPagination のルートでスクロールコンテナを先に解決する。
@@ -263,13 +263,13 @@ watch(
 );
 watch(rootEl, (el) => {
 	attachScrollElement(el);
-	nextTick(scheduleScrollMarginUpdate);
+	nextTick().then(scheduleScrollMarginUpdate);
 });
 
 watch(
 	() => props.paginator.items.value.length,
 	() => {
-		nextTick(scheduleScrollMarginUpdate);
+		nextTick().then(scheduleScrollMarginUpdate);
 	},
 );
 

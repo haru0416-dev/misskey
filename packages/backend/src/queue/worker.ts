@@ -111,7 +111,7 @@ type DbJobHandlerMap = {
 function httpRelatedBackoff(config: Config, attemptsMade: number): number {
 	const baseDelay = config.queues.backoff.initialDelayMs;
 	const maxBackoff = config.queues.backoff.maximumDelayMs;
-	let backoff = (Math.pow(2, attemptsMade) - 1) * baseDelay;
+	let backoff = (2 ** attemptsMade - 1) * baseDelay;
 	backoff = Math.min(backoff, maxBackoff);
 	backoff += Math.round(backoff * Math.random() * config.queues.backoff.jitterRatio);
 	return backoff;

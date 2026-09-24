@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ChildProcess, fork } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
+import { fork } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -117,7 +118,7 @@ function bytesToKiB(value: number) {
 
 function sanitizeHeapSnapshotBreakdownLabel(value, fallback = 'unknown') {
 	const label = String(value ?? '')
-		.replace(/\s+/g, ' ')
+		.replaceAll(/\s+/g, ' ')
 		.trim();
 	if (label === '') {
 		return fallback;
@@ -243,13 +244,13 @@ function analyzeHeapSnapshot(snapshot) {
 	const nameOffset = nodeFields.indexOf('name');
 	const selfSizeOffset = nodeFields.indexOf('self_size');
 	const edgeCountOffset = nodeFields.indexOf('edge_count');
-	if (typeOffset < 0 || nameOffset < 0 || selfSizeOffset < 0 || edgeCountOffset < 0) {
+	if (typeOffset === -1 || nameOffset === -1 || selfSizeOffset === -1 || edgeCountOffset === -1) {
 		throw new Error('Heap snapshot is missing required node fields');
 	}
 	const edgeTypeOffset = edgeFields.indexOf('type');
 	const edgeNameOffset = edgeFields.indexOf('name_or_index');
 	const edgeToNodeOffset = edgeFields.indexOf('to_node');
-	if (edgeTypeOffset < 0 || edgeNameOffset < 0 || edgeToNodeOffset < 0) {
+	if (edgeTypeOffset === -1 || edgeNameOffset === -1 || edgeToNodeOffset === -1) {
 		throw new Error('Heap snapshot is missing required edge fields');
 	}
 

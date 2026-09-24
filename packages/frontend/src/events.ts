@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { onBeforeUnmount } from 'vue';
 
 type Events = {

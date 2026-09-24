@@ -87,7 +87,7 @@ const cProps = computed(() => {
 
 onMounted(() => {
 	if (props.autofocus) {
-		nextTick(() => {
+		nextTick().then(() => {
 			el.value!.focus();
 		});
 	}

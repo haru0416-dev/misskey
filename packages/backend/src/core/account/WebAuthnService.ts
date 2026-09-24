@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Redis from 'ioredis';
+import type * as Redis from 'ioredis';
 import type { AttestationFormat } from '@simplewebauthn/server/helpers';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta, MiUser } from '@/models/_.js';
 import type { Config } from '@/config.js';
-import { MiUser } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import {
@@ -58,14 +57,14 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			rpName: relyingParty.rpName,
 			rpID: relyingParty.rpId,
 			userID: (await loadWebAuthnHelpers()).isoUint8Array.fromUTF8String(userId),
-			userName: userName,
+			userName,
 			...(userDisplayName === undefined ? {} : { userDisplayName }),
 			excludeCredentials: keys.map(
 				(key) =>
-					<{ id: string; transports?: AuthenticatorTransportFuture[] }>{
+					({
 						id: key.id,
 						...(key.transports == null ? {} : { transports: key.transports }),
-					},
+					}) as { id: string; transports?: AuthenticatorTransportFuture[] },
 			),
 			authenticatorSelection: {
 				residentKey: 'required',
@@ -107,7 +106,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			verification = await (
 				await loadWebAuthn()
 			).verifyRegistrationResponse({
-				response: response,
+				response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,
 				expectedRPID: relyingParty.rpId,
@@ -153,10 +152,10 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			rpID: relyingParty.rpId,
 			allowCredentials: keys.map(
 				(key) =>
-					<{ id: string; transports?: AuthenticatorTransportFuture[] }>{
+					({
 						id: key.id,
 						transports: key.transports ?? undefined,
-					},
+					}) as { id: string; transports?: AuthenticatorTransportFuture[] },
 			),
 			userVerification: 'preferred',
 		});
@@ -213,7 +212,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			verification = await (
 				await loadWebAuthn()
 			).verifyAuthenticationResponse({
-				response: response,
+				response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,
 				expectedRPID: relyingParty.rpId,
@@ -285,7 +284,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			verification = await (
 				await loadWebAuthn()
 			).verifyAuthenticationResponse({
-				response: response,
+				response,
 				expectedChallenge: challenge,
 				expectedOrigin: relyingParty.origin,
 				expectedRPID: relyingParty.rpId,

@@ -54,9 +54,11 @@ import {
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
-import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import {
+	followingExistsInDatabase,
+	countMutualFollowingsBetweenUsersFromDatabase,
+} from '@/core/user/FollowingStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
-import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/user/FollowingStore.js';
 import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import {
@@ -106,7 +108,7 @@ function normalizeEmojiStringForApi(x: string): string {
 	if (match) {
 		const unicode = match[0];
 
-		return unicode.match('\u200D') ? unicode : unicode.replaceAll(/\uFE0F/g, '');
+		return unicode.match('\u200D') ? unicode : unicode.replaceAll('️', '');
 	}
 	throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 }

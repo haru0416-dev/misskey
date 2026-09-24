@@ -131,7 +131,7 @@ async function filterValidNotifiersForApi<T extends MiNotification | MiGroupedNo
 		listMuteeIdsByMuterIdFromDatabase(deps.db, meId),
 		fetchUserProfileByUserIdFromDatabase(deps.db, meId),
 	]);
-	const userMutedInstances = new Set(profile?.mutedInstances ?? []);
+	const userMutedInstances = new Set(profile?.mutedInstances);
 	const mutingSet = new Set(userIdsWhoMeMuting);
 
 	const notifierIds = [

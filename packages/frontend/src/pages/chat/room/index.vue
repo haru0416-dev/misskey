@@ -547,11 +547,11 @@ definePage(
 			return {
 				title: i18n.ts.directMessage,
 			};
-		} else {
+		}
 			return {
 				title: i18n.ts.directMessage,
 			};
-		}
+		
 	}),
 );
 </script>

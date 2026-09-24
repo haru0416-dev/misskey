@@ -4,7 +4,7 @@
  */
 
 import { shallowReactive, shallowReadonly } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { $i } from '@/i.js';

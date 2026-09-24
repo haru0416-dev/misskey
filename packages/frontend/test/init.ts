@@ -95,7 +95,7 @@ export const preferState: TestPreferenceState = {
 	mutingEmojis: [],
 };
 
-export let preferReactive: TestPreferenceReactive = {};
+export const preferReactive: TestPreferenceReactive = {};
 
 for (const key in preferState) {
 	if (preferState[key] !== undefined) {

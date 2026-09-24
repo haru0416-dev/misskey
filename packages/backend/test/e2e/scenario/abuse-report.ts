@@ -3,19 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { entities } from 'misskey-js';
+import type { entities } from 'misskey-js';
 import { beforeEach, beforeAll, afterAll, describe, expect, test } from 'vitest';
-import {
-	api,
-	captureWebhook,
-	randomString,
-	role,
-	signup,
-	startJobQueue,
-	UserToken,
-	WEBHOOK_HOST,
-} from '../../utils.js';
-import type { TestJobQueueRuntime } from '../../utils.js';
+import { api, captureWebhook, randomString, role, signup, startJobQueue, WEBHOOK_HOST } from '../../utils.js';
+import type { TestJobQueueRuntime, UserToken } from '../../utils.js';
 
 function first<T>(values: readonly T[]): T {
 	const value = values[0];

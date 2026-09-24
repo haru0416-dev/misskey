@@ -6,8 +6,7 @@
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiUser } from '@/models/User.js';
-import type { ModerationLogPayloads } from '@/types.js';
-import { moderationLogTypes } from '@/types.js';
+import type { ModerationLogPayloads, moderationLogTypes } from '@/types.js';
 import {
 	createModerationLogIfNotExistsInDatabase,
 	createModerationLogInDatabase,

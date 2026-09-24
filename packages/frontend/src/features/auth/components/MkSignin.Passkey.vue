@@ -46,7 +46,7 @@ async function queryKey() {
 	queryingKey.value = true;
 	await startAuthentication({ optionsJSON: props.credentialRequest })
 		.catch(() => {
-			return Promise.reject(null);
+			throw null;
 		})
 		.then((credential) => {
 			emit('done', credential);

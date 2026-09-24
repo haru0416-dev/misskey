@@ -92,11 +92,8 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 
 	// 扱いにくいので配列に変換
 	const items = Array.of<DataTransferItem>();
-	for (let i = 0; i < itemList.length; i++) {
-		const item = itemList[i];
-		if (item != null) {
-			items.push(item);
-		}
+	for (const item of itemList) {
+		items.push(item);
 	}
 
 	return Promise.all(

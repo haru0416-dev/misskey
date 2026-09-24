@@ -274,7 +274,7 @@ function menu(ev: PointerEvent) {
 
 function showMemoTextarea() {
 	isEditingMemo.value = true;
-	nextTick(() => {
+	nextTick().then(() => {
 		memoTextareaEl.value?.focus();
 	});
 }
@@ -358,7 +358,7 @@ onMounted(() => {
 		});
 	}
 
-	nextTick(() => {
+	nextTick().then(() => {
 		calcBannerParallax();
 		adjustMemoTextarea();
 	});

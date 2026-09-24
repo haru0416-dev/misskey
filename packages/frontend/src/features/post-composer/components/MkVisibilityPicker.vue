@@ -69,7 +69,7 @@ const v = ref(props.currentVisibility);
 function choose(visibility: (typeof Misskey.noteVisibilities)[number]): void {
 	v.value = visibility;
 	emit('changeVisibility', visibility);
-	nextTick(() => {
+	nextTick().then(() => {
 		if (modal.value) {
 			modal.value.close();
 		}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { describe, test, expect } from 'vitest';
 import { isBirthday } from '@/features/users/is-birthday.js';
 

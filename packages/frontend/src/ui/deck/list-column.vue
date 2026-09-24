@@ -88,7 +88,7 @@ async function setList() {
 			return;
 		}
 
-		const res = await os.apiWithDialog('users/lists/create', { name: name });
+		const res = await os.apiWithDialog('users/lists/create', { name });
 		userListsCache.delete();
 
 		updateColumn(props.column.id, {

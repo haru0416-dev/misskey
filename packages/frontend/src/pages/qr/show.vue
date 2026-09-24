@@ -105,7 +105,7 @@ const THRESHOLD = -3;
 const deviceMotionPermissionNeeded =
 	// @ts-expect-error TS(2339)
 	window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === 'function';
-const flipEls: Set<Element> = new Set();
+const flipEls = new Set<Element>();
 const flip = ref(false);
 
 function handleOrientationChange(event: DeviceOrientationEvent) {

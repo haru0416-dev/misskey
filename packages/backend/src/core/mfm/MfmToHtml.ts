@@ -149,7 +149,7 @@ export function mfmToHtml(
 		},
 
 		text: (node) => {
-			if (!node.props.text.match(/[\r\n]/)) {
+			if (!/[\r\n]/.test(node.props.text)) {
 				return escapeHtml(node.props.text);
 			}
 

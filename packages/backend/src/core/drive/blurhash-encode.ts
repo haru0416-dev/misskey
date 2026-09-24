@@ -15,24 +15,22 @@ const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$
 const SRGB_TO_LINEAR = new Float64Array(256);
 for (let i = 0; i < 256; i++) {
 	const v = i / 255;
-	SRGB_TO_LINEAR[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+	SRGB_TO_LINEAR[i] = v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
 function linearToSrgb(value: number): number {
 	const v = Math.max(0, Math.min(1, value));
-	return v <= 0.0031308
-		? Math.trunc(v * 12.92 * 255 + 0.5)
-		: Math.trunc((1.055 * Math.pow(v, 1 / 2.4) - 0.055) * 255 + 0.5);
+	return v <= 0.0031308 ? Math.trunc(v * 12.92 * 255 + 0.5) : Math.trunc((1.055 * v ** (1 / 2.4) - 0.055) * 255 + 0.5);
 }
 
 function signPow(value: number, exp: number): number {
-	return (value < 0 ? -1 : 1) * Math.pow(Math.abs(value), exp);
+	return (value < 0 ? -1 : 1) * Math.abs(value) ** exp;
 }
 
 function encode83(value: number, length: number): string {
 	let result = '';
 	for (let i = 1; i <= length; i++) {
-		const digit = (Math.floor(value) / Math.pow(83, length - i)) % 83;
+		const digit = (Math.floor(value) / 83 ** (length - i)) % 83;
 		result += DIGITS[Math.floor(digit)];
 	}
 	return result;

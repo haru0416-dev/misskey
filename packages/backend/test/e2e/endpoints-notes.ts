@@ -4,7 +4,7 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import {
@@ -313,9 +313,9 @@ describe('Endpoints', () => {
 
 			const all = await api('drive/stream', { limit: 100 }, user);
 			expect(all.status).toBe(200);
-			expect(all.body.length).toBe(2);
+			expect(all.body).toHaveLength(2);
 			assert.ok(!all.body.some((f: any) => f.id === otherFile.id));
-			expect(getAt(all.body, 0).user).toBe(null);
+			expect(getAt(all.body, 0).user).toBeNull();
 
 			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
 			expect(imagesOnly.status).toBe(200);
@@ -525,7 +525,7 @@ describe('Endpoints', () => {
 
 			const movedBack = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: null }, alice);
 			expect(movedBack.status).toBe(204);
-			expect((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId).toBe(null);
+			expect((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId).toBeNull();
 
 			const missingFolder = await api(
 				'drive/files/move-bulk',
@@ -634,7 +634,7 @@ describe('Endpoints', () => {
 
 			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
 			expect(shownAfterReact.status).toBe(200);
-			expect(shownAfterReact.body.reactions.length).toBe(1);
+			expect(shownAfterReact.body.reactions).toHaveLength(1);
 			expect(getAt(shownAfterReact.body.reactions, 0).reaction).toBe('👍');
 
 			const unreacted = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, recipient);
@@ -743,7 +743,7 @@ describe('Endpoints', () => {
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 			]);
-			expect(parallelInvitations.filter((result) => result.status === 200).length).toBe(1);
+			expect(parallelInvitations.filter((result) => result.status === 200)).toHaveLength(1);
 			const parallelDuplicate = parallelInvitations.find((result) => result.status === 400);
 			assert.ok(parallelDuplicate);
 			expect(castAsError(parallelDuplicate.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
@@ -890,7 +890,7 @@ describe('Endpoints', () => {
 				sort: '+follower',
 			});
 			expect(notFound.status).toBe(200);
-			expect((notFound.body as any[]).length).toBe(0);
+			expect(notFound.body as any[]).toHaveLength(0);
 
 			// 負の offset は SQL の OFFSET へ渡ると Postgres がエラーにするので、その前に弾く。
 			const negativeOffset = await api('hashtags/users', {
@@ -920,7 +920,7 @@ describe('Endpoints', () => {
 				expect(trend.status).toBe(200);
 				const ranked = trend.body.find((item) => item.tag === tag);
 				assert.ok(ranked);
-				expect(ranked.chart.length).toBe(20);
+				expect(ranked.chart).toHaveLength(20);
 				assert.ok(ranked.usersCount >= 1);
 			} finally {
 				await redis.zrem(`featuredHashtagsRanking:${rankingWindow}`, tag);
@@ -977,11 +977,11 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hntn${suffix}` });
 			const file = await uploadFile(author);
 			const textlessNote = await post(author, { fileIds: [file.body!.id], visibility: 'public' });
-			expect(textlessNote.text).toBe(null);
+			expect(textlessNote.text).toBeNull();
 
 			const res = await api('notes/translate', { noteId: textlessNote.id, targetLang: 'en' }, author);
 			expect(res.status).toBe(204);
-			expect(res.body).toBe(null);
+			expect(res.body).toBeNull();
 		});
 	});
 
@@ -1102,11 +1102,11 @@ describe('Endpoints', () => {
 			const hiddenFromStranger = await api('notes/show', { noteId: specifiedNoteId }, stranger);
 			expect(hiddenFromStranger.status).toBe(200);
 			expect(hiddenFromStranger.body.isHidden).toBe(true);
-			expect(hiddenFromStranger.body.text).toBe(null);
+			expect(hiddenFromStranger.body.text).toBeNull();
 
 			const visibleToAddressee = await api('notes/show', { noteId: specifiedNoteId }, addressee);
 			expect(visibleToAddressee.status).toBe(200);
-			expect(visibleToAddressee.body.isHidden).toBe(undefined);
+			expect(visibleToAddressee.body.isHidden).toBeUndefined();
 			expect(visibleToAddressee.body.text).toBe('specified note');
 
 			const followersNoteId = genId();
@@ -1122,7 +1122,7 @@ describe('Endpoints', () => {
 			expect(hiddenFromNonFollower.body.isHidden).toBe(true);
 
 			const visibleToFollower = await api('notes/show', { noteId: followersNoteId }, follower);
-			expect(visibleToFollower.body.isHidden).toBe(undefined);
+			expect(visibleToFollower.body.isHidden).toBeUndefined();
 			expect(visibleToFollower.body.text).toBe('followers only note');
 
 			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
@@ -1177,7 +1177,7 @@ describe('Endpoints', () => {
 				userId: author.id,
 				userHost: null,
 				visibility: 'public',
-				replyId: replyId,
+				replyId,
 			});
 			const renoteId = genId();
 			await createNoteInDatabase(db, {
@@ -1206,12 +1206,12 @@ describe('Endpoints', () => {
 
 			const replies = await api('notes/replies', { noteId: rootId });
 			expect(replies.status).toBe(200);
-			expect(replies.body.length).toBe(1);
+			expect(replies.body).toHaveLength(1);
 			expect(getAt(replies.body, 0).id).toBe(replyId);
 
 			const renotes = await api('notes/renotes', { noteId: rootId });
 			expect(renotes.status).toBe(200);
-			expect(renotes.body.length).toBe(1);
+			expect(renotes.body).toHaveLength(1);
 			expect(getAt(renotes.body, 0).id).toBe(renoteId);
 
 			const missingRenotes = await api('notes/renotes', { noteId: genId() });
@@ -1566,7 +1566,7 @@ describe('Endpoints', () => {
 			expect(asReactor.status).toBe(200);
 			const packed = asReactor.body.find((n: any) => n.id === noteId);
 			assert.ok(packed);
-			expect(packed.myReaction).toBe(undefined);
+			expect(packed.myReaction).toBeUndefined();
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
@@ -1631,7 +1631,7 @@ describe('Endpoints', () => {
 
 			const clips = await api('notes/clips', { noteId });
 			expect(clips.status).toBe(200);
-			expect(clips.body.length).toBe(1);
+			expect(clips.body).toHaveLength(1);
 			expect(getAt(clips.body, 0).id).toBe(publicClip.body.id);
 
 			const missing = await api('notes/clips', { noteId: genId() });
@@ -1684,7 +1684,7 @@ describe('Endpoints', () => {
 
 			const res = await api('notes/show-partial-bulk', { noteIds: [noteId] });
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(noteId);
 			expect(getAt(res.body, 0).reactions['👍']).toBe(3);
 		});
@@ -2030,7 +2030,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(res.status).toBe(200);
-			expect(res.body.createdNote.poll!.choices.length).toBe(2);
+			expect(res.body.createdNote.poll!.choices).toHaveLength(2);
 
 			const expired = await api(
 				'notes/create',
@@ -2278,7 +2278,7 @@ describe('Endpoints', () => {
 				noteId: bobNote.id,
 			});
 
-			expect(reaction.body.length).toBe(1);
+			expect(reaction.body).toHaveLength(1);
 			expect(getAt(reaction.body, 0).type).toBe('\u2764');
 		});
 
@@ -2300,7 +2300,7 @@ describe('Endpoints', () => {
 				noteId: bobNote.id,
 			});
 
-			expect(reaction.body.length).toBe(1);
+			expect(reaction.body).toHaveLength(1);
 			expect(getAt(reaction.body, 0).type).toBe('\u2764');
 		});
 
@@ -2358,7 +2358,7 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(204);
 
 			const reactions = await api('notes/reactions', { noteId: bobNote.id });
-			expect(reactions.body.length).toBe(0);
+			expect(reactions.body).toHaveLength(0);
 		});
 
 		test('リアクションしていないと怒られる', async () => {
@@ -2457,7 +2457,7 @@ describe('Endpoints', () => {
 
 			const votes = await listPollVotesByNoteAndUserFromDatabase(db, noteId, alice.id);
 			const poll = await fetchPollByNoteIdOrFailFromDatabase(db, noteId);
-			expect(votes.length).toBe(1);
+			expect(votes).toHaveLength(1);
 			expect(poll.votes.reduce((sum, count) => sum + count, 0)).toBe(1);
 			expect(poll.votes[votes[0]!.choice]).toBe(1);
 		});
@@ -2737,7 +2737,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(0);
+			expect(res.body).toHaveLength(0);
 		});
 	});
 
@@ -2760,7 +2760,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(carolPost.id);
 		});
 	});

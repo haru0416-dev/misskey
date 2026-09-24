@@ -112,6 +112,7 @@ export function calcPopupPosition(
 					top += props.alignOffset;
 				}
 			} else if (props.align === 'bottom') {
+				// 下寄せは未対応で、基準位置のまま置く。
 			} else {
 				top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;
 				top -= el.offsetHeight / 2;

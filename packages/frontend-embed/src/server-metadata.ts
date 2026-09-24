@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { readServerContext } from '@shared/utility/server-context.js';
 import { misskeyApi } from '@/misskey-api.js';
 

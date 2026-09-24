@@ -198,7 +198,7 @@ function msSMH(v: number | null) {
 		v = -v;
 	}
 	const i = Math.floor(Math.log(v) / Math.log(1000));
-	const value = v / Math.pow(1000, i);
+	const value = v / 1000 ** i;
 	const suffix = suffixes[i];
 	return `${isMinus ? '-' : ''}${value.toFixed(1)}${suffix}`;
 }

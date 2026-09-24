@@ -58,6 +58,7 @@ describe('runApiEndpoint', () => {
 
 	test('returns the JSON error contract for non-Error throws', async () => {
 		const app = new Hono();
+		// oxlint-disable-next-line prefer-promise-reject-errors -- Error 以外で reject された場合の応答を確かめる。
 		app.get('/', (c) => runApiEndpoint(c, () => Promise.reject('unexpected')));
 
 		const response = await app.request('/');

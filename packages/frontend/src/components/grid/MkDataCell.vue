@@ -136,7 +136,7 @@ const needsContentCentering = computed(() => {
 
 watch(() => [cell.value.value], () => {
 	// 中身がセットされた直後はサイズが分からないので、次のタイミングで更新する
-	nextTick(emitContentSizeChanged);
+	nextTick().then(emitContentSizeChanged);
 }, { immediate: true });
 
 watch(() => cell.value.selected, () => {
@@ -235,7 +235,7 @@ async function beginEditing(target: HTMLElement) {
 				registerOutsideMouseDown();
 				emit('operation:beginEdit', cell.value);
 
-				await nextTick(() => {
+				await nextTick().then(() => {
 					// inputの展開後にフォーカスを当てたい
 					if (inputAreaEl.value) {
 						(inputAreaEl.value.querySelector('*') as HTMLElement).focus();
@@ -275,7 +275,7 @@ function endEditing(applyValue: boolean, requireFocus: boolean) {
 }
 
 function requestFocus() {
-	nextTick(() => {
+	nextTick().then(() => {
 		rootEl.value?.focus();
 	});
 }

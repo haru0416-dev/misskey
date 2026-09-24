@@ -4,10 +4,9 @@
  */
 
 import { inject } from 'vue';
-import { page } from '@/router.definition.js';
+import { page, ROUTE_DEF } from '@/router.definition.js';
 import { $i } from '@/i.js';
 import { Nirax } from '@/lib/nirax.js';
-import { ROUTE_DEF } from '@/router.definition.js';
 import { analytics } from '@/analytics.js';
 import { DI } from '@/di.js';
 

@@ -4,7 +4,7 @@
  */
 
 import { shallowRef, watch } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
 import { misskeyApi, misskeyApiGet } from '@/misskey-api.js';
 

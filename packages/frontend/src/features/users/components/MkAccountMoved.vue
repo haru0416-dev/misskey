@@ -25,7 +25,7 @@ const props = defineProps<{
 	movedTo: string;
 }>();
 
-misskeyApi('users/show', { userId: props.movedTo }).then(u => user.value = u);
+misskeyApi('users/show', { userId: props.movedTo }).then(u => { user.value = u; });
 </script>
 
 <style lang="scss" module>

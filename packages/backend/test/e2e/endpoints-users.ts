@@ -7,8 +7,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import * as assert from 'assert';
-import * as Bull from 'bullmq';
+import * as assert from 'node:assert';
+import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type {
 	DbJobData,
@@ -272,7 +272,7 @@ describe('Endpoints', () => {
 			expect(showParent.status).toBe(200);
 			const shownParent = showParent.body as any;
 			expect(shownParent.id).toBe(parent.id);
-			expect(shownParent.parentId).toBe(null);
+			expect(shownParent.parentId).toBeNull();
 			expect(shownParent.foldersCount).toBe(1);
 			expect(shownParent.filesCount).toBe(1);
 			expect(typeof shownParent.createdAt).toBe('string');
@@ -594,7 +594,7 @@ describe('Endpoints', () => {
 			expect(deleted.status).toBe(204);
 
 			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
-			expect(afterDelete).toBe(null);
+			expect(afterDelete).toBeNull();
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			expect(jobs.some((job) => job.data.noteDraftId === draft.id)).toBe(false);
@@ -625,27 +625,27 @@ describe('Endpoints', () => {
 
 			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);
 			expect(scheduledOnly.status).toBe(200);
-			const scheduledIds = (scheduledOnly.body as any[]).map((d) => d.id);
-			expect(scheduledIds.includes(scheduledDraft.id)).toBe(true);
-			expect(scheduledIds.includes(plainDraft.id)).toBe(false);
+			const scheduledIds = new Set((scheduledOnly.body as any[]).map((d) => d.id));
+			expect(scheduledIds.has(scheduledDraft.id)).toBe(true);
+			expect(scheduledIds.has(plainDraft.id)).toBe(false);
 
 			const unscheduledOnly = await api('notes/drafts/list', { scheduled: false }, alice);
 			expect(unscheduledOnly.status).toBe(200);
-			const unscheduledIds = (unscheduledOnly.body as any[]).map((d) => d.id);
-			expect(unscheduledIds.includes(plainDraft.id)).toBe(true);
-			expect(unscheduledIds.includes(scheduledDraft.id)).toBe(false);
+			const unscheduledIds = new Set((unscheduledOnly.body as any[]).map((d) => d.id));
+			expect(unscheduledIds.has(plainDraft.id)).toBe(true);
+			expect(unscheduledIds.has(scheduledDraft.id)).toBe(false);
 
 			const limited = await api('notes/drafts/list', { limit: 1, untilId: plainDraft.id }, alice);
 			expect(limited.status).toBe(200);
-			expect((limited.body as any[]).length).toBe(1);
+			expect(limited.body as any[]).toHaveLength(1);
 		});
 
 		test('charts/notes returns a chart shaped array of the requested length', async () => {
 			const res = await api('charts/notes', { span: 'day', limit: 5 });
 			expect(res.status).toBe(200);
 			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
-			expect(body.local.total.length).toBe(5);
-			expect(body.remote.total.length).toBe(5);
+			expect(body.local.total).toHaveLength(5);
+			expect(body.remote.total).toHaveLength(5);
 			expect(body.local.total.every((v) => typeof v === 'number')).toBe(true);
 		});
 
@@ -654,7 +654,7 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
 			const body = (await res.json()) as { local: { total: number[] } };
-			expect(body.local.total.length).toBe(3);
+			expect(body.local.total).toHaveLength(3);
 		});
 
 		test('charts/instance groups results by the given host', async () => {
@@ -669,22 +669,22 @@ describe('Endpoints', () => {
 			const res = await api('charts/instance', { span: 'day', limit: 5, host });
 			expect(res.status).toBe(200);
 			const body = res.body as { notes: { total: number[] } };
-			expect(body.notes.total.length).toBe(5);
+			expect(body.notes.total).toHaveLength(5);
 		});
 
 		test('charts/user/notes returns a per-user chart scoped to the given userId', async () => {
 			const res = await api('charts/user/notes', { span: 'day', limit: 5, userId: alice.id });
 			expect(res.status).toBe(200);
 			const body = res.body as { total: number[] };
-			expect(body.total.length).toBe(5);
+			expect(body.total).toHaveLength(5);
 		});
 
 		test('charts/user/drive returns a per-user drive chart scoped to the given userId', async () => {
 			const res = await api('charts/user/drive', { span: 'day', limit: 5, userId: alice.id });
 			expect(res.status).toBe(200);
 			const body = res.body as { totalCount: number[]; totalSize: number[] };
-			expect(body.totalCount.length).toBe(5);
-			expect(body.totalSize.length).toBe(5);
+			expect(body.totalCount).toHaveLength(5);
+			expect(body.totalSize).toHaveLength(5);
 		});
 
 		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
@@ -977,7 +977,7 @@ describe('Endpoints', () => {
 			// テスト環境では MISSKEY_TEST_CHECK_DUPLICATED_TOTP 未設定時に任意の TOTP トークンが受理される。
 			const done = await api('i/2fa/done', { token: '000000' }, user);
 			expect(done.status).toBe(200);
-			expect((done.body as any).backupCodes.length).toBe(5);
+			expect((done.body as any).backupCodes).toHaveLength(5);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 			expect(profile.twoFactorEnabled).toBe(true);
@@ -1568,7 +1568,7 @@ describe('Endpoints', () => {
 				);
 				expect(blocked.status).toBe(400);
 				expect(castAsError(blocked.body as any).error.id).toBe('a2497f2a-2389-439c-8626-5298540530f4');
-				expect(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id)).toBe(null);
+				expect(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id)).toBeNull();
 			} finally {
 				await deleteBlockingByIdFromDatabase(db, blocking.id);
 			}
@@ -1706,7 +1706,7 @@ describe('Endpoints', () => {
 
 			const deleted = await api('i/webhooks/delete', { webhookId: webhook.id }, alice);
 			expect(deleted.status).toBe(204);
-			expect(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id)).toBe(null);
+			expect(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id)).toBeNull();
 		});
 
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
@@ -1721,11 +1721,11 @@ describe('Endpoints', () => {
 			const otherUser = await api('users/lists/delete', { listId: userList.id }, bob);
 			expect(otherUser.status).toBe(400);
 			expect(castAsError(otherUser.body as any).error.id).toBe('78436795-db79-42f5-b1e2-55ea2cf19166');
-			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).not.toBe(null);
+			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).not.toBeNull();
 
 			const deleted = await api('users/lists/delete', { listId: userList.id }, alice);
 			expect(deleted.status).toBe(204);
-			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).toBe(null);
+			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).toBeNull();
 
 			const missing = await api('users/lists/delete', { listId: userList.id }, alice);
 			expect(missing.status).toBe(400);
@@ -1865,7 +1865,7 @@ describe('Endpoints', () => {
 			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
 			expect(again.status).toBe(204);
 			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profileAfter.achievements.filter((a) => a.name === 'notes1').length).toBe(1);
+			expect(profileAfter.achievements.filter((a) => a.name === 'notes1')).toHaveLength(1);
 		});
 	});
 
@@ -2175,7 +2175,7 @@ describe('Endpoints', () => {
 			const single = await api('users/relation', { userId: stranger.id }, me);
 			expect(single.status).toBe(200);
 			assert.ok(Array.isArray(single.body));
-			expect(single.body.length).toBe(1);
+			expect(single.body).toHaveLength(1);
 			expect(getAt(single.body, 0).id).toBe(stranger.id);
 			expect(getAt(single.body, 0).isFollowing).toBe(false);
 			expect(getAt(single.body, 0).isBlocking).toBe(false);
@@ -2191,7 +2191,7 @@ describe('Endpoints', () => {
 			);
 			expect(batch.status).toBe(200);
 			assert.ok(Array.isArray(batch.body));
-			expect(batch.body.length).toBe(5);
+			expect(batch.body).toHaveLength(5);
 			const byId = new Map(batch.body.map((r: any) => [r.id, r]));
 			expect(byId.get(followee.id).isFollowing).toBe(true);
 			expect(byId.get(blockee.id).isBlocking).toBe(true);
@@ -2254,7 +2254,7 @@ describe('Endpoints', () => {
 			expect(listed.status).toBe(200);
 			assert.ok(listed.body.some((f: any) => f.id === pub.body.id));
 			assert.ok(!listed.body.some((f: any) => f.id === priv.body.id));
-			expect(listed.body.find((f: any) => f.id === pub.body.id)!.isLiked).toBe(undefined);
+			expect(listed.body.find((f: any) => f.id === pub.body.id)!.isLiked).toBeUndefined();
 		});
 
 		test('users/gallery/posts はページングして投稿を返す', async () => {
@@ -2342,11 +2342,11 @@ describe('Endpoints', () => {
 
 			const detailed = await api('users/search', { query: `@hussrch${suffix}`, detail: true });
 			expect(detailed.status).toBe(200);
-			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+			assert.ok(Object.hasOwn(getAt(detailed.body, 0), 'isLocked'));
 
 			const lite = await api('users/search', { query: `@hussrch${suffix}`, detail: false });
 			expect(lite.status).toBe(200);
-			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+			assert.ok(!Object.hasOwn(getAt(lite.body, 0), 'isLocked'));
 		});
 	});
 
@@ -2478,11 +2478,11 @@ describe('Endpoints', () => {
 
 			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
 			expect(detailed.status).toBe(200);
-			assert.ok(Object.prototype.hasOwnProperty.call(getAt(detailed.body, 0), 'isLocked'));
+			assert.ok(Object.hasOwn(getAt(detailed.body, 0), 'isLocked'));
 
 			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
 			expect(lite.status).toBe(200);
-			assert.ok(!Object.prototype.hasOwnProperty.call(getAt(lite.body, 0), 'isLocked'));
+			assert.ok(!Object.hasOwn(getAt(lite.body, 0), 'isLocked'));
 		});
 	});
 
@@ -2509,7 +2509,7 @@ describe('Endpoints', () => {
 				me,
 			);
 			expect(single.status).toBe(200);
-			expect(single.body.length).toBe(1);
+			expect(single.body).toHaveLength(1);
 			expect(getAt(single.body, 0).id).toBe(followee1.id);
 			expect(getAt(single.body, 0).user.id).toBe(followee1.id);
 
@@ -2567,15 +2567,15 @@ describe('Endpoints', () => {
 
 			const res = await api('users/recommendation', { limit: 100 }, me);
 			expect(res.status).toBe(200);
-			const ids = res.body.map((u: any) => u.id);
-			assert.ok(ids.includes(candidate.id));
-			assert.ok(!ids.includes(lockedUser.id));
-			assert.ok(!ids.includes(notExplorable.id));
-			assert.ok(!ids.includes(suspendedUser.id));
-			assert.ok(!ids.includes(deletedUser.id));
-			assert.ok(!ids.includes(alreadyFollowed.id));
-			assert.ok(!ids.includes(remoteId));
-			assert.ok(!ids.includes(me.id));
+			const ids = new Set(res.body.map((u: any) => u.id));
+			assert.ok(ids.has(candidate.id));
+			assert.ok(!ids.has(lockedUser.id));
+			assert.ok(!ids.has(notExplorable.id));
+			assert.ok(!ids.has(suspendedUser.id));
+			assert.ok(!ids.has(deletedUser.id));
+			assert.ok(!ids.has(alreadyFollowed.id));
+			assert.ok(!ids.has(remoteId));
+			assert.ok(!ids.has(me.id));
 
 			const unauthorized = await api('users/recommendation', {});
 			expect(unauthorized.status).toBe(401);
@@ -2627,7 +2627,7 @@ describe('Endpoints', () => {
 
 			const strangerSeesPublic = await api('users/reactions', { userId: owner.id }, stranger);
 			expect(strangerSeesPublic.status).toBe(200);
-			expect(strangerSeesPublic.body.length).toBe(1);
+			expect(strangerSeesPublic.body).toHaveLength(1);
 			expect(getAt(strangerSeesPublic.body, 0).note.id).toBe(note.id);
 			expect(getAt(strangerSeesPublic.body, 0).user.id).toBe(owner.id);
 
@@ -2639,7 +2639,7 @@ describe('Endpoints', () => {
 
 			const ownerSeesSelf = await api('users/reactions', { userId: owner.id }, owner);
 			expect(ownerSeesSelf.status).toBe(200);
-			expect(ownerSeesSelf.body.length).toBe(1);
+			expect(ownerSeesSelf.body).toHaveLength(1);
 
 			const moderatorRole = await role(alice, { name: `hono users/reactions moderator ${suffix}`, isModerator: true });
 			await createRoleAssignmentInDatabase(db, {
@@ -2650,7 +2650,7 @@ describe('Endpoints', () => {
 			});
 			const moderatorSees = await api('users/reactions', { userId: owner.id }, stranger);
 			expect(moderatorSees.status).toBe(200);
-			expect(moderatorSees.body.length).toBe(1);
+			expect(moderatorSees.body).toHaveLength(1);
 
 			const remoteHost = `hono-reactions-${suffix}.example`;
 			const remoteId = genId();
@@ -2681,7 +2681,7 @@ describe('Endpoints', () => {
 			const blockedViewer = await signup({ username: `hurxbv${suffix}` });
 			const nonBlockedView = await api('users/reactions', { userId: blocker.id }, blockedViewer);
 			expect(nonBlockedView.status).toBe(200);
-			expect(nonBlockedView.body.length).toBe(1);
+			expect(nonBlockedView.body).toHaveLength(1);
 			await api('blocking/create', { userId: blockedViewer.id }, blocker);
 			const blockedResult = await api('users/reactions', { userId: blocker.id }, blockedViewer);
 			expect(blockedResult.status).toBe(200);
@@ -2950,7 +2950,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(res.status).toBe(200);
-			expect(res.body.name).toBe(null);
+			expect(res.body.name).toBeNull();
 		});
 
 		test('名前の前後に空白（ホワイトスペース）を入れてもトリムされる', async () => {
@@ -2985,7 +2985,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.birthday).toBe(null);
+			expect(res.body.birthday).toBeNull();
 		});
 
 		test('不正な誕生日の形式で怒られる', async () => {
@@ -3040,7 +3040,7 @@ describe('Endpoints', () => {
 			const res = await api('users/followers', { userId: followee.id }, followee);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).followerId).toBe(follower.id);
 		});
 
@@ -3061,7 +3061,7 @@ describe('Endpoints', () => {
 			const res = await api('users/following', { userId: follower.id }, follower);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).followeeId).toBe(followee.id);
 		});
 
@@ -3110,7 +3110,7 @@ describe('Endpoints', () => {
 			const res = await api('users/following', { userId: follower.id, birthday: '2024-06-15' }, follower);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).followeeId).toBe(matchingFollowee.id);
 		});
 
@@ -3153,7 +3153,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			expect(pinings.length).toBe(1);
+			expect(pinings).toHaveLength(1);
 			expect(getAt(pinings, 0).noteId).toBe(note.id);
 		});
 
@@ -3189,7 +3189,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			expect(pinings.length).toBe(0);
+			expect(pinings).toHaveLength(0);
 		});
 	});
 
@@ -3202,7 +3202,7 @@ describe('Endpoints', () => {
 			const res = await vi.waitFor(async () => {
 				const found = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 				expect(found.status).toBe(200);
-				expect(found.body.length).toBe(1);
+				expect(found.body).toHaveLength(1);
 				return found;
 			}, POLL);
 
@@ -3217,13 +3217,13 @@ describe('Endpoints', () => {
 			// 通知作成前に読むと除外と未作成を区別できず、偽陽性になる。
 			await vi.waitFor(async () => {
 				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
-				expect(created.body.length).toBe(1);
+				expect(created.body).toHaveLength(1);
 			}, POLL);
 
 			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(0);
+			expect(res.body).toHaveLength(0);
 		});
 
 		test('includeTypesが空配列の場合、空配列が返る', async () => {
@@ -3234,13 +3234,13 @@ describe('Endpoints', () => {
 			// 通知作成前に読むと空配列指定の反映と未作成を区別できず、偽陽性になる。
 			await vi.waitFor(async () => {
 				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
-				expect(created.body.length).toBe(1);
+				expect(created.body).toHaveLength(1);
 			}, POLL);
 
 			const res = await api('i/notifications', { includeTypes: [] }, followee);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(0);
+			expect(res.body).toHaveLength(0);
 		});
 	});
 
@@ -3257,14 +3257,14 @@ describe('Endpoints', () => {
 				const res = await api('i/notifications-grouped', {}, author);
 				expect(res.status).toBe(200);
 				const found = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
-				expect(found.length).toBe(1);
-				expect(found[0].reactions.length).toBe(2);
+				expect(found).toHaveLength(1);
+				expect(found[0].reactions).toHaveLength(2);
 				return found;
 			}, POLL);
 
-			const userIds = grouped[0].reactions.map((r: any) => r.user.id);
-			assert.ok(userIds.includes(reactor1.id));
-			assert.ok(userIds.includes(reactor2.id));
+			const userIds = new Set(grouped[0].reactions.map((r: any) => r.user.id));
+			assert.ok(userIds.has(reactor1.id));
+			assert.ok(userIds.has(reactor2.id));
 		});
 
 		test('同じノートへの複数のリノート通知がまとめられる', async () => {
@@ -3279,14 +3279,14 @@ describe('Endpoints', () => {
 				const res = await api('i/notifications-grouped', {}, author);
 				expect(res.status).toBe(200);
 				const found = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
-				expect(found.length).toBe(1);
-				expect(found[0].users.length).toBe(2);
+				expect(found).toHaveLength(1);
+				expect(found[0].users).toHaveLength(2);
 				return found;
 			}, POLL);
 
-			const userIds = grouped[0].users.map((u: any) => u.id);
-			assert.ok(userIds.includes(renoter1.id));
-			assert.ok(userIds.includes(renoter2.id));
+			const userIds = new Set(grouped[0].users.map((u: any) => u.id));
+			assert.ok(userIds.has(renoter1.id));
+			assert.ok(userIds.has(renoter2.id));
 		});
 	});
 
@@ -3300,7 +3300,7 @@ describe('Endpoints', () => {
 			const res = await api('i/favorites', {}, user);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).noteId).toBe(note.id);
 			expect(getAt(res.body, 0).note.id).toBe(note.id);
 		});

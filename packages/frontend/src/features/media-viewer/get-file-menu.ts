@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { $i, iAmModerator } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';

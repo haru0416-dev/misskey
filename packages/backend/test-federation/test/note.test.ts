@@ -1,7 +1,7 @@
 import { describe, test, beforeAll, expect, afterAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import {
 	addCustomEmoji,
 	createAccount,
@@ -209,6 +209,11 @@ describe('Note', () => {
 					await deliveryBarrier('a.test');
 				});
 
+				afterAll(async () => {
+					await carol.client.request('following/delete', { userId: bobInA.id });
+					await deliveryBarrier('a.test');
+				});
+
 				test('Check', async () => {
 					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, carol);
@@ -222,11 +227,6 @@ describe('Note', () => {
 							return true;
 						},
 					);
-				});
-
-				afterAll(async () => {
-					await carol.client.request('following/delete', { userId: bobInA.id });
-					await deliveryBarrier('a.test');
 				});
 			});
 

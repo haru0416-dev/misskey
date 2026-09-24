@@ -147,7 +147,7 @@ const paramsForPreview = ref<EmbedParams>(props.params ?? {});
 const embedPreviewUrl = computed(() => {
 	const paramClass = new URLSearchParams(normalizeEmbedParams(paramsForPreview.value));
 	if (paramClass.has('maxHeight')) {
-		const maxHeight = Number.parseInt(paramClass.get('maxHeight')!);
+		const maxHeight = Number.parseInt(paramClass.get('maxHeight')!, 10);
 		paramClass.set('maxHeight', maxHeight === 0 ? '500' : Math.min(maxHeight, 700).toString()); // プレビューであまりにも縮小されると見づらいため、700pxまでに制限
 	}
 	return `${url}/embed/${props.entity}/${props.id}${paramClass.toString() ? '?' + paramClass.toString() : ''}`;
@@ -180,7 +180,7 @@ function applyToPreview() {
 		border: border.value,
 	};
 
-	nextTick(() => {
+	nextTick().then(() => {
 		if (currentPreviewUrl === embedPreviewUrl.value) {
 			// URLが変わらなくてもリロード
 			iframeEl.value?.contentWindow?.window.location.reload();
@@ -216,7 +216,7 @@ const resizeObserver = new ResizeObserver(() => {
 function iframeOnLoad() {
 	iframeEl.value?.contentWindow?.addEventListener('beforeunload', () => {
 		iframeLoading.value = true;
-		nextTick(() => {
+		nextTick().then(() => {
 			iframeHeight.value = 0;
 			iframeScale.value = 1;
 		});
@@ -237,7 +237,7 @@ function windowEventHandler(event: MessageEvent) {
 	}
 	if (event.data.type === 'misskey:embed:changeHeight') {
 		iframeHeight.value = event.data.payload.height;
-		nextTick(() => {
+		nextTick().then(() => {
 			calcScale();
 			iframeLoading.value = false; // 初回の高さ変更まで待つ
 		});

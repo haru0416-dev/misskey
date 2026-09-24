@@ -133,7 +133,7 @@ function onPasskeyDone(credential: AuthenticationResponseJSON): void {
 
 	if (doingPasskeyFromInputPage.value) {
 		misskeyApi('signin-with-passkey', {
-			credential: credential,
+			credential,
 			context: passkeyContext.value,
 		})
 			.then((res) => {
@@ -149,7 +149,7 @@ function onPasskeyDone(credential: AuthenticationResponseJSON): void {
 		tryLogin({
 			username: userInfo.value.username,
 			password: password.value,
-			credential: credential,
+			credential,
 		});
 	}
 }
@@ -271,7 +271,7 @@ async function tryLogin(
 					password.value = '';
 				}
 				passwordPageEl.value?.resetCaptcha();
-				nextTick(() => {
+				nextTick().then(() => {
 					waiting.value = false;
 				});
 			}
@@ -279,7 +279,7 @@ async function tryLogin(
 		})
 		.catch((err) => {
 			onSigninApiError(err);
-			return Promise.reject(err);
+			throw err;
 		});
 }
 
@@ -370,7 +370,7 @@ function onSigninApiError(err?: any): void {
 		password.value = '';
 	}
 	passwordPageEl.value?.resetCaptcha();
-	nextTick(() => {
+	nextTick().then(() => {
 		waiting.value = false;
 	});
 }

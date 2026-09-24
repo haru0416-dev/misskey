@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
 	announcementReadExistsInDatabase,
@@ -197,7 +197,7 @@ describe('Endpoints', () => {
 				host: 'remote.example.com',
 			};
 			const results = await Promise.all([api('signup', params), api('signup', params)]);
-			expect(results.filter((result) => result.status === 200).length).toBe(1);
+			expect(results.filter((result) => result.status === 200)).toHaveLength(1);
 			const duplicated = results.find((result) => result.status === 400);
 			assert.ok(duplicated);
 			expect(castAsError(duplicated.body as any).error.code).toBe('DUPLICATED_USERNAME');
@@ -209,7 +209,7 @@ describe('Endpoints', () => {
 				api('signup', { username, password: 'test', host: 'remote-a.example.com' }),
 				api('signup', { username, password: 'test', host: 'remote-b.example.com' }),
 			]);
-			expect(results.filter((result) => result.status === 200).length).toBe(1);
+			expect(results.filter((result) => result.status === 200)).toHaveLength(1);
 			const used = results.find((result) => result.status === 400);
 			assert.ok(used);
 			expect(castAsError(used.body as any).error.code).toBe('USED_USERNAME');
@@ -229,7 +229,7 @@ describe('Endpoints', () => {
 					rootClaim: 'required',
 				}),
 			).rejects.toSatisfy((error) => error instanceof RootUserAlreadyAssignedError);
-			expect(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername)).toBe(null);
+			expect(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername)).toBeNull();
 
 			const result = await createLocalSignupAccount(db, staleMeta, {
 				username: `staleroot${suffix}`,
@@ -353,8 +353,8 @@ describe('Endpoints', () => {
 			expect(history.status).toBe(200);
 			const newerIndex = history.body.findIndex((item) => item.id === newer.id);
 			const olderIndex = history.body.findIndex((item) => item.id === older.id);
-			assert.ok(newerIndex >= 0);
-			assert.ok(olderIndex >= 0);
+			assert.ok(newerIndex !== -1);
+			assert.ok(olderIndex !== -1);
 			assert.ok(newerIndex < olderIndex);
 			expect(getAt(history.body, newerIndex).createdAt).toBe(new Date(now - 1000).toISOString());
 			expect(getAt(history.body, newerIndex).ip).toBe(newer.ip);
@@ -542,7 +542,7 @@ describe('Endpoints', () => {
 
 			const missing = await api('sw/show-registration', { endpoint }, bob);
 			expect(missing.status).toBe(200);
-			expect(missing.body).toBe(null);
+			expect(missing.body).toBeNull();
 
 			const appToken = await createAppToken(alice, ['read:account']);
 			const appDenied = await api('sw/show-registration', { endpoint }, { token: appToken });
@@ -609,11 +609,11 @@ describe('Endpoints', () => {
 
 			const unregistered = await api('sw/unregister', { endpoint }, alice);
 			expect(unregistered.status).toBe(204);
-			expect(unregistered.body).toBe(null);
+			expect(unregistered.body).toBeNull();
 
 			const afterUnregister = await api('sw/show-registration', { endpoint }, alice);
 			expect(afterUnregister.status).toBe(200);
-			expect(afterUnregister.body).toBe(null);
+			expect(afterUnregister.body).toBeNull();
 		});
 
 		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
@@ -650,7 +650,7 @@ describe('Endpoints', () => {
 
 			const afterAnonymousUnregister = await api('sw/show-registration', { endpoint }, alice);
 			expect(afterAnonymousUnregister.status).toBe(200);
-			expect(afterAnonymousUnregister.body).toBe(null);
+			expect(afterAnonymousUnregister.body).toBeNull();
 		});
 	});
 
@@ -661,7 +661,7 @@ describe('Endpoints', () => {
 				email: 'missing-reset-user@example.test',
 			});
 			expect(accepted.status).toBe(204);
-			expect(accepted.body).toBe(null);
+			expect(accepted.body).toBeNull();
 
 			const invalid = await api('request-reset-password', {
 				username: 'missing_reset_user',
@@ -685,7 +685,7 @@ describe('Endpoints', () => {
 				password: 'new-reset-password',
 			});
 			expect(reset.status).toBe(204);
-			expect(reset.body).toBe(null);
+			expect(reset.body).toBeNull();
 
 			// 使用済み・存在しない・期限切れのトークンは利用者側の事情なので、
 			// 500 INTERNAL_ERROR ではなく理由の分かるAPIエラーで返す
@@ -738,11 +738,11 @@ describe('Endpoints', () => {
 
 			const verified = await api('verify-email', { code });
 			expect(verified.status).toBe(204);
-			expect(verified.body).toBe(null);
+			expect(verified.body).toBeNull();
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, dave.id);
 			expect(profile.emailVerified).toBe(true);
-			expect(profile.emailVerifyCode).toBe(null);
+			expect(profile.emailVerifyCode).toBeNull();
 
 			const missing = await api('verify-email', { code: 'missing-code' });
 			expect(missing.status).toBe(400);
@@ -926,8 +926,8 @@ describe('Endpoints', () => {
 			expect(shown.status).toBe(200);
 			expect(shown.body.id).toBe(created.body.id);
 			expect(shown.body.name).toBe('test app');
-			expect(shown.body.callbackUrl).toBe(null);
-			expect(shown.body.secret).toBe(undefined);
+			expect(shown.body.callbackUrl).toBeNull();
+			expect(shown.body.secret).toBeUndefined();
 
 			const notFound = await api('app/show', { appId: '0000000000000000' });
 			expect(notFound.status).toBe(400);
@@ -1103,12 +1103,12 @@ describe('Endpoints', () => {
 			const created = await api('invite/create', {}, bob);
 			expect(created.status).toBe(200);
 			expect(created.body.used).toBe(false);
-			expect(created.body.usedAt).toBe(null);
+			expect(created.body.usedAt).toBeNull();
 			expect(created.body.createdBy?.id).toBe(bob.id);
 
 			const limit = await api('invite/limit', {}, bob);
 			expect(limit.status).toBe(200);
-			expect(limit.body.remaining).toBe(null);
+			expect(limit.body.remaining).toBeNull();
 
 			const list = await api('invite/list', {}, bob);
 			expect(list.status).toBe(200);
@@ -1130,10 +1130,10 @@ describe('Endpoints', () => {
 			const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
 			const created = await api('admin/invite/create', { count: 2, expiresAt }, alice);
 			expect(created.status).toBe(200);
-			expect(created.body.length).toBe(2);
+			expect(created.body).toHaveLength(2);
 			expect(getAt(created.body, 0).createdBy?.id).toBe(alice.id);
 			expect(getAt(created.body, 0).used).toBe(false);
-			expect(getAt(created.body, 0).usedAt).toBe(null);
+			expect(getAt(created.body, 0).usedAt).toBeNull();
 			expect(getAt(created.body, 0).expiresAt).toBe(expiresAt);
 
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);

@@ -516,7 +516,7 @@ async function urlUpload() {
 	}
 
 	await os.apiWithDialog('drive/files/upload-from-url', {
-		url: url,
+		url,
 		...(folder.value == null ? {} : { folderId: folder.value.id }),
 	});
 
@@ -536,7 +536,7 @@ async function createFolder() {
 	}
 
 	const createdFolder = await os.apiWithDialog('drive/folders/create', {
-		name: name,
+		name,
 		...(folder.value == null ? {} : { parentId: folder.value.id }),
 	});
 
@@ -555,7 +555,7 @@ async function renameFolder(folderToRename: Misskey.entities.DriveFolder) {
 
 	const updatedFolder = await os.apiWithDialog('drive/folders/update', {
 		folderId: folderToRename.id,
-		name: name,
+		name,
 	});
 
 	globalEvents.emit('driveFoldersUpdated', [updatedFolder]);

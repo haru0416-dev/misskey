@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import type { Component, ComputedRef, Ref } from 'vue';
 import type { OptionValue } from '@/types/option-value.js';
 import type { ComponentProps } from '@/utility/component-props.js';

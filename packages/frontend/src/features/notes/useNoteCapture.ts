@@ -4,7 +4,7 @@
  */
 
 import { onUnmounted, reactive } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { EventEmitter } from 'eventemitter3';
 import type { Reactive } from 'vue';
 import type { NoteUpdatedEvent } from 'misskey-js/streaming.types.js';
@@ -246,7 +246,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll(/\uFE0F/g, '');
+		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll('️', '');
 		if (reactionUserMap.get(ctx.userId) === normalizedName) {
 			return;
 		}
@@ -272,7 +272,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll(/\uFE0F/g, '');
+		normalizedName = normalizedName.includes('\u200D') ? normalizedName : normalizedName.replaceAll('️', '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
 		if (reactionUserMap.get(ctx.userId) === noReaction) {

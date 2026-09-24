@@ -104,7 +104,7 @@ describe('hono-queue-check-moderators-activity', () => {
 			status: 'all',
 			userId: moderator.id,
 		});
-		expect(announcements.length).toBe(0);
+		expect(announcements).toHaveLength(0);
 	});
 
 	test('モデレーターがアクティブなら招待制に切り替わらない', async () => {

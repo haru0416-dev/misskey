@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
 
 /**
@@ -31,15 +31,13 @@ export const getNoteSummary = (
 		showRenote?: boolean;
 	},
 ): string => {
-	const _opts = Object.assign(
-		{
-			showFiles: true,
-			showPoll: true,
-			showReply: true,
-			showRenote: true,
-		},
-		opts,
-	);
+	const _opts = {
+		showFiles: true,
+		showPoll: true,
+		showReply: true,
+		showRenote: true,
+		...opts,
+	};
 
 	if (note == null) {
 		return '';

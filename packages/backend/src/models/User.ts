@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { MiDriveFile } from './DriveFile.js';
+import type { MiDriveFile } from './DriveFile.js';
 
 export class MiUser {
 	public id: string;

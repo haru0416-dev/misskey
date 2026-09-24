@@ -104,7 +104,7 @@ export const countryDict = [
 	'Peru',
 ];
 
-export function text(length: number = 10, seed?: string): string {
+export function text(length = 10, seed?: string): string {
 	let result = '';
 
 	// シード指定時は同じ乱数値が続くが、テスト用文字列としての要件を満たす。
@@ -116,7 +116,7 @@ export function text(length: number = 10, seed?: string): string {
 	return result.substring(0, length);
 }
 
-export function integer(min: number = 0, max: number = 9999, seed?: string): number {
+export function integer(min = 0, max = 9999, seed?: string): number {
 	const rand = seed ? seedrandom(seed)() : Math.random();
 	return Math.floor(rand * (max - min)) + min;
 }
@@ -186,7 +186,7 @@ export function country(seed?: string): string {
 
 const TIME2000 = 946_684_800_000;
 export function fakeId(seed?: string): string {
-	let time = new Date().getTime();
+	let time = Date.now();
 
 	time = time - TIME2000;
 	if (time < 0) {

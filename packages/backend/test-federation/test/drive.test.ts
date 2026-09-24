@@ -1,6 +1,6 @@
 import { describe, test, beforeAll } from 'vitest';
 import assert, { strictEqual } from 'node:assert';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import {
 	createAccount,
 	assertAttachment,

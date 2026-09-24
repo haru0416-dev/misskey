@@ -31,13 +31,6 @@ describe('hono-queue-object-storage', () => {
 		config = loadConfig();
 		pool = createBunSqlClient(config);
 		db = createBunSqlDatabase(pool, config);
-	});
-
-	afterAll(async () => {
-		await pool.close();
-	});
-
-	beforeAll(() => {
 		deleteMock = vi.fn().mockResolvedValue(undefined);
 		deps = {
 			db,
@@ -59,6 +52,10 @@ describe('hono-queue-object-storage', () => {
 				} as unknown as QueueObjectStorageDependencies['chartWriters']['instanceChart'],
 			},
 		};
+	});
+
+	afterAll(async () => {
+		await pool.close();
 	});
 
 	test('handleQueueDeleteFile: object storageからキーを削除する', async () => {

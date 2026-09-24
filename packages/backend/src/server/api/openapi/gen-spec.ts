@@ -5,7 +5,8 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import endpoints, { IEndpoint } from '../endpoints.js';
+import type { IEndpoint } from '../endpoints.js';
+import endpoints from '../endpoints.js';
 import { errors as basicErrors } from './errors.js';
 import { getSchemas, convertSchemaToOpenApiSchema } from './schemas.js';
 import type { OpenApiSchemaObject } from './schemas.js';
@@ -89,7 +90,7 @@ function requestBodyKind(endpoint: IEndpoint, method: RequestMethod): RequestBod
 }
 
 function buildQueryParameters(schema: OpenApiSchemaObject): Record<string, unknown>[] {
-	const required = new Set(schema.required ?? []);
+	const required = new Set(schema.required);
 	return Object.entries(schema.properties ?? {}).map(([name, propertySchema]) => ({
 		name,
 		in: 'query',

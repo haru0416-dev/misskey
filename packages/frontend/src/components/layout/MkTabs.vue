@@ -148,7 +148,7 @@ async function enter(el: Element) {
 	el.offsetWidth; // スタイル変更を反映するため reflow を発生させる。
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
-	nextTick(() => {
+	nextTick().then(() => {
 		entering = false;
 	});
 
@@ -185,7 +185,7 @@ onMounted(() => {
 		watch(
 			[tab, () => props.tabs],
 			() => {
-				nextTick(() => {
+				nextTick().then(() => {
 					if (entering) {
 						return;
 					}

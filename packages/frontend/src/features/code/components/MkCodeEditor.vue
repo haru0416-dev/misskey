@@ -93,7 +93,7 @@ function onKeydown(ev: KeyboardEvent) {
 			const posDelta = currentLineSpaces ? currentLineSpaces[0].length : 0;
 			ev.preventDefault();
 			v.value = v.value.slice(0, pos) + '\n' + (currentLineSpaces ? currentLineSpaces[0] : '') + v.value.slice(pos);
-			nextTick(() => {
+			nextTick().then(() => {
 				inputEl.value?.setSelectionRange(pos + 1 + posDelta, pos + 1 + posDelta);
 			});
 		}
@@ -104,7 +104,7 @@ function onKeydown(ev: KeyboardEvent) {
 		const pos = inputEl.value?.selectionStart ?? 0;
 		const posEnd = inputEl.value?.selectionEnd ?? v.value.length;
 		v.value = v.value.slice(0, pos) + '\t' + v.value.slice(posEnd);
-		nextTick(() => {
+		nextTick().then(() => {
 			inputEl.value?.setSelectionRange(pos + 1, pos + 1);
 		});
 		ev.preventDefault();

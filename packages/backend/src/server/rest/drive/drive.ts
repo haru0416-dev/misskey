@@ -187,12 +187,10 @@ export async function packDriveFolderForApi(
 		detail: boolean;
 	},
 ): Promise<ApiPackedDriveFolder> {
-	const opts = Object.assign(
-		{
-			detail: false,
-		},
-		options,
-	);
+	const opts = {
+		detail: false,
+		...options,
+	};
 	const folder = typeof src === 'object' ? src : await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
 
 	const packed = packDriveFolderBaseForApi(folder);
@@ -224,12 +222,10 @@ export async function packDriveFoldersManyForApi(
 		detail: boolean;
 	},
 ): Promise<ApiPackedDriveFolder[]> {
-	const opts = Object.assign(
-		{
-			detail: false,
-		},
-		options,
-	);
+	const opts = {
+		detail: false,
+		...options,
+	};
 	const folders = await resolveDriveFoldersForApi(deps, srcs);
 
 	if (!opts.detail) {

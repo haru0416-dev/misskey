@@ -42,7 +42,7 @@ function verify(
 	trace?: string,
 ): void {
 	for (const key in expected) {
-		if (!Object.prototype.hasOwnProperty.call(actual, key)) {
+		if (! Object.hasOwn(actual, key)) {
 			continue;
 		}
 

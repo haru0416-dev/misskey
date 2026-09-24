@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
-import { MiNote } from '@/models/Note.js';
+import type { MiNote } from '@/models/Note.js';
 
 const base: MiNote = {
 	id: 'some-note-id',

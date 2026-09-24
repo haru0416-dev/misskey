@@ -73,7 +73,7 @@ const filteredRecipients = computed(() => {
 		if (method ?? text) {
 			if (text) {
 				const keywords = [it.name, it.systemWebhook?.name, it.user?.name, it.user?.username];
-				if (keywords.filter(k => k?.includes(text)).length !== 0) {
+				if (keywords.some(k => k?.includes(text))) {
 					return true;
 				}
 			}
@@ -105,7 +105,7 @@ async function onDeleteButtonClicked(id: string) {
 		title: i18n.ts._abuseReport._notificationRecipient.deleteConfirm,
 	});
 	if (!res.canceled) {
-		await misskeyApi('admin/abuse-report/notification-recipient/delete', { id: id });
+		await misskeyApi('admin/abuse-report/notification-recipient/delete', { id });
 		await fetchRecipients();
 	}
 }

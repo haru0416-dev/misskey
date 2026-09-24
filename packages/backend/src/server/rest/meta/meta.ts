@@ -47,7 +47,7 @@ export const testParamDef = z.object({
 type TestParams = z.infer<typeof testParamDef>;
 
 function currentFeaturedWindow(windowRange: number): number {
-	const passed = new Date().getTime() - featuredEpoc;
+	const passed = Date.now() - featuredEpoc;
 	return Math.floor(passed / windowRange);
 }
 

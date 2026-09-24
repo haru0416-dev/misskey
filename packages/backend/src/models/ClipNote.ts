@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiNote } from './Note.js';
-import { MiClip } from './Clip.js';
+import type { MiNote } from './Note.js';
+import type { MiClip } from './Clip.js';
 
 export class MiClipNote {
 	public id: string;

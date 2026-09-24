@@ -275,15 +275,16 @@ export async function xaddApiNotifications(
 		}
 
 		await Promise.all(
-			results.map(([error], index) => {
+			results.map(async ([error], index) => {
 				if (error == null) {
-					return Promise.resolve();
+					return;
 				}
 				if (error instanceof ReplyError) {
 					const item = batch[index]!;
-					return xaddApiNotification(deps, item.userId, item.notification).then(() => undefined);
+					await xaddApiNotification(deps, item.userId, item.notification);
+					return;
 				}
-				return Promise.reject(error);
+				throw error;
 			}),
 		);
 	}

@@ -4,7 +4,8 @@
  */
 
 import { expect, test } from 'vitest';
-import { pending, type Sample } from '../../scripts/optimization/observe.mjs';
+import { pending } from '../../scripts/optimization/observe.mjs';
+import type { Sample } from '../../scripts/optimization/observe.mjs';
 
 test('完了済みoutboxの保持はdrainを妨げず、未完了stageは残件として数える', () => {
 	const sample: Sample = {

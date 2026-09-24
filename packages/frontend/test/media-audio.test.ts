@@ -6,7 +6,7 @@
 import { afterEach, assert, describe, test, vi } from 'vitest';
 import { cleanup, render, waitFor } from '@testing-library/vue';
 import './init';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkMediaAudio from '@/features/media-viewer/components/MkMediaAudio.vue';

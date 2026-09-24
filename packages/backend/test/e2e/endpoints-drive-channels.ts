@@ -4,7 +4,7 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
 	announcementReadExistsInDatabase,
@@ -303,7 +303,7 @@ describe('Endpoints', () => {
 			expect(updated.status).toBe(200);
 			expect(updated.body.id).toBe(created.body.id);
 			expect(updated.body.name).toBe('hono channel updated');
-			expect(updated.body.description).toBe(null);
+			expect(updated.body.description).toBeNull();
 			expect(updated.body.bannerId).toBe(updatedBanner.id);
 			expect(updated.body.isArchived).toBe(true);
 			expect(updated.body.pinnedNoteIds).toStrictEqual([pinnedNoteId]);
@@ -821,10 +821,10 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			const ids = (res.body as any[]).map((channel) => channel.id);
-			expect(ids.includes(fixture.aaa.id)).toBe(true);
-			expect(ids.includes(fixture.ccc1.id)).toBe(true);
-			expect(ids.includes(fixture.ccc2.id)).toBe(true);
+			const ids = new Set((res.body as any[]).map((channel) => channel.id));
+			expect(ids.has(fixture.aaa.id)).toBe(true);
+			expect(ids.has(fixture.ccc1.id)).toBe(true);
+			expect(ids.has(fixture.ccc2.id)).toBe(true);
 		});
 		test('名前のみの検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -839,7 +839,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(fixture.aaa.id);
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
@@ -855,7 +855,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(2);
+			expect(res.body).toHaveLength(2);
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -870,7 +870,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(0);
+			expect(res.body).toHaveLength(0);
 		});
 		test('名前と説明の検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -884,7 +884,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(fixture.ccc1.id);
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
@@ -899,7 +899,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(fixture.ccc1.id);
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
@@ -914,7 +914,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(2);
+			expect(res.body).toHaveLength(2);
 		});
 		test('名前と説明での検索で説明を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -928,7 +928,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body.length).toBe(2);
+			expect(res.body).toHaveLength(2);
 		});
 	});
 
@@ -966,7 +966,7 @@ describe('Endpoints', () => {
 
 			const timeline = await api('channels/timeline', { channelId: channel.id });
 			expect(timeline.status).toBe(200);
-			expect(timeline.body.length).toBe(1);
+			expect(timeline.body).toHaveLength(1);
 			expect(getAt(timeline.body, 0).id).toBe(pinnedNoteId);
 			expect(getAt(timeline.body, 0).channelId).toBe(channel.id);
 
@@ -1326,7 +1326,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.folderId).toBe(null);
+			expect(res.body.folderId).toBeNull();
 		});
 
 		test('他人のフォルダには入れられない', async () => {
@@ -1461,7 +1461,7 @@ describe('Endpoints', () => {
 			);
 
 			expect(res.status).toBe(204);
-			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).toBe(null);
+			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).toBeNull();
 		});
 
 		test('他人のフォルダを削除できない', async () => {
@@ -1483,7 +1483,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(400);
 			expect(castAsError(res.body as any).error.id).toBe('1069098f-c281-440f-b085-f9932edbe091');
-			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).not.toBe(null);
+			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).not.toBeNull();
 		});
 
 		test('子フォルダがあるフォルダを削除できない', async () => {
@@ -1511,7 +1511,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(400);
 			expect(castAsError(res.body as any).error.id).toBe('b0fc8a17-963c-405d-bfbc-859a487295e1');
-			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBe(null);
+			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBeNull();
 		});
 
 		test('子ファイルがあるフォルダを削除できない', async () => {
@@ -1545,7 +1545,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(400);
 			expect(castAsError(res.body as any).error.id).toBe('b0fc8a17-963c-405d-bfbc-859a487295e1');
-			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBe(null);
+			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBeNull();
 		});
 	});
 
@@ -1671,7 +1671,7 @@ describe('Endpoints', () => {
 
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.parentId).toBe(null);
+			expect(res.body.parentId).toBeNull();
 		});
 
 		test('他人のフォルダを親フォルダに設定できない', async () => {

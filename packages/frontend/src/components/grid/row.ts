@@ -54,7 +54,7 @@ export function createRow(index: number, using: boolean, setting: GridRowSetting
 	return {
 		index,
 		ranged: false,
-		using: using,
+		using,
 		setting,
 		additionalStyles: [],
 	};

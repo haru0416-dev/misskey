@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { selectDriveFolder } from './drive.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
@@ -24,7 +24,7 @@ function rename(file: Misskey.entities.DriveFile) {
 		}
 		misskeyApi('drive/files/update', {
 			fileId: file.id,
-			name: name,
+			name,
 		}).then((updated) => {
 			globalEvents.emit('driveFilesUpdated', [updated]);
 		});
@@ -36,7 +36,7 @@ async function describe(file: Misskey.entities.DriveFile) {
 		import('@/features/drive/components/MkFileCaptionEditWindow.vue').then((x) => x.default),
 		{
 			default: file.comment ?? '',
-			file: file,
+			file,
 		},
 		{
 			done: (caption) => {

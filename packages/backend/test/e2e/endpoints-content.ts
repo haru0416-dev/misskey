@@ -7,8 +7,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import * as assert from 'assert';
-import * as Bull from 'bullmq';
+import * as assert from 'node:assert';
+import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { toXListId } from '@/server/rest/notification/notification.js';
 import type {
@@ -193,7 +193,7 @@ describe('Endpoints', () => {
 			});
 
 			expect(missing.status).toBe(200);
-			expect(missing.body).toBe(null);
+			expect(missing.body).toBeNull();
 		});
 	});
 
@@ -206,7 +206,7 @@ describe('Endpoints', () => {
 			expect(lite.status).toBe(200);
 			expect(lite.body.uri).toBe(origin);
 			expect(typeof lite.body.version).toBe('string');
-			expect((lite.body as Record<string, unknown>)['features']).toBe(undefined);
+			expect((lite.body as Record<string, unknown>)['features']).toBeUndefined();
 
 			const detailed = await api('meta', {});
 			const detailedBody = detailed.body as {
@@ -348,10 +348,10 @@ describe('Endpoints', () => {
 			assert.ok(blocking);
 			expect(blocking.blockerId).toBe(blocker.id);
 			expect(blocking.blockeeId).toBe(blockee.id);
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id)).toBe(null);
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id)).toBe(null);
-			expect(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id)).toBe(null);
-			expect(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id)).toBe(null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id)).toBeNull();
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id)).toBeNull();
+			expect(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id)).toBeNull();
+			expect(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id)).toBeNull();
 			expect(await userListMembershipExistsInDatabase(db, blocker.id, userList.id)).toBe(false);
 
 			const refreshedBlocker = await fetchUserByIdOrFailFromDatabase(db, blocker.id);
@@ -382,7 +382,7 @@ describe('Endpoints', () => {
 			const deleted = await api('blocking/delete', { userId: blockee.id }, blocker);
 			expect(deleted.status).toBe(200);
 			expect(deleted.body.id).toBe(blockee.id);
-			expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id)).toBe(null);
+			expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id)).toBeNull();
 
 			const notBlocking = await api('blocking/delete', { userId: blockee.id }, blocker);
 			expect(notBlocking.status).toBe(400);
@@ -423,7 +423,7 @@ describe('Endpoints', () => {
 			const pastMuteTarget = await signup({ username: `hpmute${suffix}` });
 			const pastMute = await api('mute/create', { userId: pastMuteTarget.id, expiresAt: Date.now() - 1000 }, muter);
 			expect(pastMute.status).toBe(204);
-			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id)).toBe(null);
+			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id)).toBeNull();
 
 			const readToken = await createAppToken(muter, ['read:mutes']);
 			const list = await api('mute/list', { limit: 10 }, { token: readToken });
@@ -441,7 +441,7 @@ describe('Endpoints', () => {
 
 			const deleted = await api('mute/delete', { userId: mutee.id }, muter);
 			expect(deleted.status).toBe(204);
-			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id)).toBe(null);
+			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id)).toBeNull();
 
 			const notMuting = await api('mute/delete', { userId: mutee.id }, muter);
 			expect(notMuting.status).toBe(400);
@@ -471,7 +471,7 @@ describe('Endpoints', () => {
 
 			const renoteDeleted = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
 			expect(renoteDeleted.status).toBe(204);
-			expect(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id)).toBe(null);
+			expect(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id)).toBeNull();
 
 			const renoteNotMuting = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
 			expect(renoteNotMuting.status).toBe(400);
@@ -505,7 +505,7 @@ describe('Endpoints', () => {
 			});
 			expect(available.status).toBe(200);
 			expect(available.body.available).toBe(true);
-			expect(available.body.reason).toBe(null);
+			expect(available.body.reason).toBeNull();
 
 			const invalid = await api('email-address/available', {
 				emailAddress: 'invalid-email',
@@ -935,7 +935,7 @@ describe('Endpoints', () => {
 
 			const read = await api('promo/read', { noteId }, bob);
 			expect(read.status).toBe(204);
-			expect(read.body).toBe(null);
+			expect(read.body).toBeNull();
 			expect(await isPromoReadExists(db, bob.id, noteId)).toBe(true);
 
 			const duplicate = await api('promo/read', { noteId }, bob);
@@ -1178,9 +1178,9 @@ describe('Endpoints', () => {
 			);
 			expect(requested.status).toBe(200);
 			expect(requested.body.id).toBe(lockedFollowee.id);
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id)).toBe(
-				null,
-			);
+			expect(
+				await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id),
+			).toBeNull();
 
 			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
 			assert.ok(followRequest);
@@ -1234,7 +1234,7 @@ describe('Endpoints', () => {
 			const clearedNotify = await api('following/update', { userId: followee.id, notify: 'none' }, follower);
 			expect(clearedNotify.status).toBe(200);
 			const refreshed = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
-			expect(refreshed?.notify).toBe(null);
+			expect(refreshed?.notify).toBeNull();
 			expect(refreshed?.withReplies).toBe(true);
 		});
 
@@ -1270,7 +1270,7 @@ describe('Endpoints', () => {
 			expect(deleted.status).toBe(200);
 			expect(deleted.body.id).toBe(followee.id);
 
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBe(null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBeNull();
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
@@ -1310,7 +1310,7 @@ describe('Endpoints', () => {
 			expect(invalidated.status).toBe(200);
 			expect(invalidated.body.id).toBe(follower.id);
 
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBe(null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBeNull();
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
@@ -1347,7 +1347,7 @@ describe('Endpoints', () => {
 			const accepted = await api('following/requests/accept', { userId: follower.id }, followee);
 			expect(accepted.status).toBe(204);
 
-			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBeNull();
 			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
 			assert.ok(following);
 			expect(following.withReplies).toBe(true);
@@ -1386,7 +1386,7 @@ describe('Endpoints', () => {
 			const cancelled = await api('following/requests/cancel', { userId: followee.id }, follower);
 			expect(cancelled.status).toBe(200);
 			expect(cancelled.body.id).toBe(followee.id);
-			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBeNull();
 		});
 
 		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
@@ -1411,7 +1411,7 @@ describe('Endpoints', () => {
 
 			const rejected = await api('following/requests/reject', { userId: follower.id }, followee);
 			expect(rejected.status).toBe(204);
-			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBeNull();
 
 			const rejectedAgain = await api('following/requests/reject', { userId: follower.id }, followee);
 			expect(rejectedAgain.status).toBe(204);
@@ -1429,20 +1429,20 @@ describe('Endpoints', () => {
 
 			const list = await api('following/requests/list', {}, followee);
 			expect(list.status).toBe(200);
-			expect(list.body.length).toBe(2);
+			expect(list.body).toHaveLength(2);
 			const listFollowerIds = list.body.map((r: any) => r.follower.id).sort();
 			expect(listFollowerIds).toStrictEqual([followerA.id, followerB.id].sort());
 			expect(getAt(list.body, 0).followee.id).toBe(followee.id);
 
 			const sentA = await api('following/requests/sent', {}, followerA);
 			expect(sentA.status).toBe(200);
-			expect(sentA.body.length).toBe(1);
+			expect(sentA.body).toHaveLength(1);
 			expect(getAt(sentA.body, 0).follower.id).toBe(followerA.id);
 			expect(getAt(sentA.body, 0).followee.id).toBe(followee.id);
 
 			const limited = await api('following/requests/list', { limit: 1 }, followee);
 			expect(limited.status).toBe(200);
-			expect(limited.body.length).toBe(1);
+			expect(limited.body).toHaveLength(1);
 		});
 
 		test('following/list はフォロー中一覧を followee 情報付きでページングする', async () => {
@@ -1456,20 +1456,20 @@ describe('Endpoints', () => {
 
 			const list = await api('following/list', {}, follower);
 			expect(list.status).toBe(200);
-			expect(list.body.length).toBe(2);
+			expect(list.body).toHaveLength(2);
 			const followeeIds = list.body.map((f: any) => f.followeeId).sort();
 			expect(followeeIds).toStrictEqual([followeeA.id, followeeB.id].sort());
 			expect(list.body[0]!.followerId).toBe(follower.id);
 			assert.ok(list.body[0]!.followee!.id);
-			expect(list.body[0]!.follower).toBe(undefined);
+			expect(list.body[0]!.follower).toBeUndefined();
 
 			const limited = await api('following/list', { limit: 1 }, follower);
 			expect(limited.status).toBe(200);
-			expect(limited.body.length).toBe(1);
+			expect(limited.body).toHaveLength(1);
 
 			const strangerList = await api('following/list', {}, followeeA);
 			expect(strangerList.status).toBe(200);
-			expect(strangerList.body.length).toBe(0);
+			expect(strangerList.body).toHaveLength(0);
 		});
 
 		test('following/update-all updates only the caller followings', async () => {
@@ -1515,9 +1515,9 @@ describe('Endpoints', () => {
 			const updaterToA = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetA.id);
 			const updaterToB = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetB.id);
 			const aToUpdater = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, targetA.id, updater.id);
-			expect(updaterToA?.notify).toBe(null);
+			expect(updaterToA?.notify).toBeNull();
 			expect(updaterToA?.withReplies).toBe(true);
-			expect(updaterToB?.notify).toBe(null);
+			expect(updaterToB?.notify).toBeNull();
 			expect(updaterToB?.withReplies).toBe(true);
 			expect(aToUpdater?.notify).toBe('normal');
 			expect(aToUpdater?.withReplies).toBe(false);
@@ -1927,8 +1927,8 @@ describe('Endpoints', () => {
 			expect(created.body.title).toBe(`gallery post ${suffix}`);
 			expect(created.body.userId).toBe(owner.id);
 			expect(created.body.user.id).toBe(owner.id);
-			expect(created.body.fileIds!.length).toBe(1);
-			expect(created.body.files!.length).toBe(1);
+			expect(created.body.fileIds!).toHaveLength(1);
+			expect(created.body.files!).toHaveLength(1);
 			expect(created.body.files![0]!.id).toBe(file.id);
 			expect(created.body.likedCount).toBe(0);
 			expect(created.body.isSensitive).toBe(false);
@@ -1961,7 +1961,7 @@ describe('Endpoints', () => {
 
 			const deletedByMod = await api('gallery/posts/delete', { postId: created.body.id }, alice);
 			expect(deletedByMod.status).toBe(204);
-			expect(await fetchGalleryPostByIdFromDatabase(db, created.body.id)).toBe(null);
+			expect(await fetchGalleryPostByIdFromDatabase(db, created.body.id)).toBeNull();
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find((l) => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
@@ -2182,7 +2182,7 @@ describe('Endpoints', () => {
 
 			const likes = await api('i/gallery/likes', {}, liker);
 			expect(likes.status).toBe(200);
-			expect(likes.body.length).toBe(1);
+			expect(likes.body).toHaveLength(1);
 			expect(getAt(likes.body, 0).post.id).toBe(post.body.id);
 
 			const unauthorized = await api('i/gallery/likes', {});
@@ -2232,7 +2232,7 @@ describe('Endpoints', () => {
 
 			const nowVisible = await api('clips/show', { clipId: created.body.id }, stranger);
 			expect(nowVisible.status).toBe(200);
-			expect(nowVisible.body.notesCount).toBe(undefined);
+			expect(nowVisible.body.notesCount).toBeUndefined();
 
 			const updateDenied = await api('clips/update', { clipId: created.body.id, name: 'nope' }, stranger);
 			expect(updateDenied.status).toBe(400);
@@ -2303,7 +2303,7 @@ describe('Endpoints', () => {
 
 			const myFavorites = await api('clips/my-favorites', {}, favoriter);
 			expect(myFavorites.status).toBe(200);
-			expect(myFavorites.body.length).toBe(1);
+			expect(myFavorites.body).toHaveLength(1);
 			expect(getAt(myFavorites.body, 0).id).toBe(clip.body.id);
 			expect(getAt(myFavorites.body, 0).isFavorited).toBe(true);
 		});
@@ -2331,14 +2331,14 @@ describe('Endpoints', () => {
 
 			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
 			expect(visibleForOwner.status).toBe(200);
-			expect(visibleForOwner.body.length).toBe(1);
+			expect(visibleForOwner.body).toHaveLength(1);
 			expect(getAt(visibleForOwner.body, 0).id).toBe(noteId);
 
 			const publicClip = await api('clips/create', { name: `clip notes public ${suffix}`, isPublic: true }, owner);
 			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
 			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
 			expect(visibleForAnyone.status).toBe(200);
-			expect(visibleForAnyone.body.length).toBe(1);
+			expect(visibleForAnyone.body).toHaveLength(1);
 
 			const missingClip = await api('clips/notes', { clipId: genId() });
 			expect(missingClip.status).toBe(400);
@@ -2411,7 +2411,7 @@ describe('Endpoints', () => {
 			const res = await api('flash/my', {}, user);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 		});
 
 		test('削除できる', async () => {
@@ -2472,7 +2472,7 @@ describe('Endpoints', () => {
 			const res = await api('flash/search', { query: `findme-${suffix}` });
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 		});
 
 		test('いいねしたFlash一覧を取得できる', async () => {
@@ -2494,7 +2494,7 @@ describe('Endpoints', () => {
 			const res = await api('flash/my-likes', {}, liker);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).flash.id).toBe(created.body.id);
 			expect(getAt(res.body, 0).flash.isLiked).toBe(true);
 		});
@@ -2563,7 +2563,7 @@ describe('Endpoints', () => {
 			const res = await api('flash/my', { sinceId: first.body.id }, user);
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
+			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(second.body.id);
 		});
 
@@ -2585,7 +2585,7 @@ describe('Endpoints', () => {
 			const res = await api('flash/search', { query: `private-${suffix}` });
 
 			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(0);
+			expect(res.body).toHaveLength(0);
 		});
 
 		test('人気のFlash一覧を取得できる', async () => {
@@ -2693,7 +2693,7 @@ describe('Endpoints', () => {
 			);
 
 			// memoには常に文字列かnullが入っている(5cac151)
-			expect((res.body as unknown as { memo: string | null }).memo).toBe(null);
+			expect((res.body as unknown as { memo: string | null }).memo).toBeNull();
 		});
 
 		test('メモは個人ごとに独立して保存される', async () => {

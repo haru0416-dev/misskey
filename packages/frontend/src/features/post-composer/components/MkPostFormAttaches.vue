@@ -148,14 +148,14 @@ async function describe(file: Misskey.entities.DriveFile) {
 		import('@/features/drive/components/MkFileCaptionEditWindow.vue').then((x) => x.default),
 		{
 			default: file.comment !== null ? file.comment : '',
-			file: file,
+			file,
 		},
 		{
 			done: (caption) => {
 				let comment = caption.length === 0 ? null : caption;
 				misskeyApi('drive/files/update', {
 					fileId: file.id,
-					comment: comment,
+					comment,
 				}).then(() => {
 					file.comment = comment;
 				});
@@ -206,7 +206,7 @@ function showFileMenu(file: Misskey.entities.DriveFile, ev: PointerEvent | Keybo
 				const { dispose } = await os.popupAsyncWithDialog(
 					import('@/features/media-viewer/components/MkImgPreviewDialog.vue').then((x) => x.default),
 					{
-						file: file,
+						file,
 					},
 					{
 						closed: () => dispose(),

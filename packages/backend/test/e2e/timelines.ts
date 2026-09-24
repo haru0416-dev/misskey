@@ -6,13 +6,14 @@
 // 実行方法:
 // bun run test:e2e -- e2e/timelines.ts
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { entities } from 'misskey-js';
+import type { entities } from 'misskey-js';
 import { Redis } from 'ioredis';
-import { SignupResponse, Note } from 'misskey-js/entities.js';
+import type { SignupResponse, Note } from 'misskey-js/entities.js';
 import { fixtureConfig } from '../fixtures.js';
-import { api, initTestDb, post, randomString, sendEnvUpdateRequest, signup, uploadFile, UserToken } from '../utils.js';
+import type { UserToken } from '../utils.js';
+import { api, initTestDb, post, randomString, sendEnvUpdateRequest, signup, uploadFile } from '../utils.js';
 
 function genHost() {
 	return randomString() + '.example.com';
@@ -48,7 +49,7 @@ async function createList(name: string, user: UserToken): Promise<entities.Users
 	return (await api('users/lists/create', { name }, user)).body;
 }
 
-async function pushList(listId: string, pushUserIds: string[] = [], user: UserToken) {
+async function pushList(listId: string, pushUserIds: string[], user: UserToken) {
 	for (const userId of pushUserIds) {
 		await api('users/lists/push', { listId, userId }, user);
 	}

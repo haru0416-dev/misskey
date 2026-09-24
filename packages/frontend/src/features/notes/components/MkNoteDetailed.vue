@@ -399,11 +399,11 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 	sound.playMisskeySfx('reaction');
 	misskeyApi('notes/reactions/create', {
 		noteId: appearNote.id,
-		reaction: reaction,
+		reaction,
 	}).then(() => {
 		noteEvents.emit(`reacted:${appearNote.id}`, {
 			userId: $i!.id,
-			reaction: reaction,
+			reaction,
 		});
 	});
 });
@@ -453,7 +453,7 @@ useTooltip(renoteButton, async (showing) => {
 			showing,
 			users,
 			count: appearNote.renoteCount,
-			anchorElement: anchorElement,
+			anchorElement,
 		},
 		{
 			closed: () => dispose(),
@@ -499,7 +499,7 @@ async function renote() {
 
 	showMovedDialog();
 
-	const { menu } = getRenoteMenu({ note: note, renoteButton });
+	const { menu } = getRenoteMenu({ note, renoteButton });
 	os.popupMenu(menu, renoteButton.value);
 
 	// リノート後は反応が来る可能性があるので手動で購読する
@@ -574,11 +574,11 @@ async function react() {
 
 				misskeyApi('notes/reactions/create', {
 					noteId: appearNote.id,
-					reaction: reaction,
+					reaction,
 				}).then(() => {
 					noteEvents.emit(`reacted:${appearNote.id}`, {
 						userId: $i!.id,
-						reaction: reaction,
+						reaction,
 					});
 				});
 				if (
@@ -631,18 +631,18 @@ function onContextmenu(ev: PointerEvent): void {
 		ev.preventDefault();
 		react();
 	} else {
-		const { menu, cleanup } = getNoteMenu({ note: note, translating, translation });
+		const { menu, cleanup } = getNoteMenu({ note, translating, translation });
 		os.contextMenu(menu, ev).then(focus).finally(cleanup);
 	}
 }
 
 function showMenu(): void {
-	const { menu, cleanup } = getNoteMenu({ note: note, translating, translation });
+	const { menu, cleanup } = getNoteMenu({ note, translating, translation });
 	os.popupMenu(menu, menuButton.value).then(focus).finally(cleanup);
 }
 
 async function clip(): Promise<void> {
-	os.popupMenu(await getNoteClipMenu({ note: note }), clipButton.value).then(focus);
+	os.popupMenu(await getNoteClipMenu({ note }), clipButton.value).then(focus);
 }
 
 async function showRenoteMenu() {

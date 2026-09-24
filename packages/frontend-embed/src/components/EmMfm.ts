@@ -88,7 +88,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 			.map((token): VNode | string | (VNode | string)[] => {
 				switch (token.type) {
 					case 'text': {
-						let text = token.props.text.replace(/(\r\n|\n|\r)/g, '\n');
+						let text = token.props.text.replaceAll(/(\r\n|\n|\r)/g, '\n');
 						if (!disableNyaize && shouldNyaize) {
 							text = Misskey.nyaize(text);
 						}
@@ -102,7 +102,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							res.shift();
 							return res;
 						}
-						return [text.replaceAll(/\n/g, ' ')];
+						return [text.replaceAll('\n', ' ')];
 					}
 
 					case 'bold': {
@@ -348,7 +348,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							}
 							case 'unixtime': {
 								const child = token.children[0];
-								const unixtime = Number.parseInt(child?.type === 'text' ? child.props.text : '');
+								const unixtime = Number.parseInt(child?.type === 'text' ? child.props.text : '', 10);
 								return h(
 									'span',
 									{
@@ -535,7 +535,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						}
 						if (props.emojiUrls && props.emojiUrls[token.props.name] == null) {
 							return [h('span', `:${token.props.name}:`)];
-						} else {
+						}
 							const emojiUrl = props.emojiUrls?.[token.props.name];
 							return [
 								h(EmCustomEmoji, {
@@ -547,7 +547,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									useOriginalSize: scale >= 2.5,
 								}),
 							];
-						}
+						
 					}
 
 					case 'unicodeEmoji': {

@@ -81,7 +81,7 @@ watch(
 	currentIndex,
 	(newIndex, oldIndex) => {
 		activatedIndexes.value.add(newIndex);
-		void nextTick(() => {
+		void nextTick().then(() => {
 			if (oldIndex != null) {
 				items.get(oldIndex)?.onDeactive();
 			}
@@ -138,7 +138,7 @@ function onPrev() {
 }
 
 function refocusRootIfNeeded() {
-	void nextTick(() => {
+	void nextTick().then(() => {
 		const root = rootEl.value;
 		const activeElement = window.document.activeElement;
 		const focusIsInert = activeElement instanceof Element && activeElement.closest('[inert]') != null;

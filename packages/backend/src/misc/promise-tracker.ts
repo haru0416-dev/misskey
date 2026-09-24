@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const promiseRefs: Set<WeakRef<Promise<unknown>>> = new Set();
+const promiseRefs = new Set<WeakRef<Promise<unknown>>>();
 
 /** 他モジュールが待機しない Promise を追跡し、サーバー終了前にすべて settle させる。 */
 export function trackPromise(promise: Promise<unknown>) {

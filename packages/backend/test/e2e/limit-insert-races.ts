@@ -138,7 +138,7 @@ describe('count-check-insert limits', () => {
 		);
 
 		expect(results.sort()).toStrictEqual(['created', 'limitExceeded']);
-		expect((await listUserNotePiningsByUserIdFromDatabase(db, user.id)).length).toBe(1);
+		expect(await listUserNotePiningsByUserIdFromDatabase(db, user.id)).toHaveLength(1);
 	});
 
 	test('antenna create limit serializes concurrent inserts', async () => {
@@ -229,7 +229,7 @@ describe('count-check-insert limits', () => {
 				),
 		);
 
-		expect(results.filter((result) => result != null).length).toBe(1);
+		expect(results.filter((result) => result != null)).toHaveLength(1);
 		expect(await countClipsByUserIdFromDatabase(db, user.id)).toBe(1);
 	});
 
@@ -287,7 +287,7 @@ describe('count-check-insert limits', () => {
 				),
 		);
 
-		expect(results.filter((result) => result != null).length).toBe(1);
+		expect(results.filter((result) => result != null)).toHaveLength(1);
 		expect(await countRegistrationTicketsCreatedSinceFromDatabase(db, { createdById: user.id, sinceId: '' })).toBe(1);
 	});
 });

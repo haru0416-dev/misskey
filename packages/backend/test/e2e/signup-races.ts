@@ -26,8 +26,8 @@ describe('Signup races', () => {
 		const success = responses.filter((response) => response.status === 200);
 		const denied = responses.filter((response) => response.status === 400);
 
-		expect(success.length).toBe(1);
-		expect(denied.length).toBe(1);
+		expect(success).toHaveLength(1);
+		expect(denied).toHaveLength(1);
 		expect(castAsError(denied[0]!.body as any).error.code).toBe('ACCESS_DENIED');
 	});
 
@@ -39,8 +39,8 @@ describe('Signup races', () => {
 		const success = responses.filter((response) => response.status === 200);
 		const rejected = responses.filter((response) => response.status === 400);
 
-		expect(success.length).toBe(1);
-		expect(rejected.length).toBe(1);
+		expect(success).toHaveLength(1);
+		expect(rejected).toHaveLength(1);
 		assert.ok(['DUPLICATED_USERNAME', 'USED_USERNAME'].includes(castAsError(rejected[0]!.body as any).error.code));
 	});
 });

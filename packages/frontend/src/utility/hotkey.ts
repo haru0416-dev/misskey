@@ -40,7 +40,7 @@ const KEY_ALIASES = {
 	plus: ['+', ';'],
 };
 
-const MODIFIER_KEYS = ['ctrl', 'alt', 'shift'];
+const MODIFIER_KEYS = new Set(['ctrl', 'alt', 'shift']);
 
 const IGNORE_ELEMENTS = ['input', 'textarea'];
 //#endregion
@@ -84,7 +84,7 @@ const parseKeymap = (keymap: Keymap) => {
 const parsePatterns = (rawPatterns: keyof Keymap) => {
 	return rawPatterns.split('|').map((part) => {
 		const keys = part.split('+').map(trimLower);
-		const which = parseKeyCode(keys.findLast((x) => !MODIFIER_KEYS.includes(x)));
+		const which = parseKeyCode(keys.findLast((x) => !MODIFIER_KEYS.has(x)));
 		const ctrl = keys.includes('ctrl');
 		const alt = keys.includes('alt');
 		const shift = keys.includes('shift');

@@ -472,11 +472,11 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 	sound.playMisskeySfx('reaction');
 	misskeyApi('notes/reactions/create', {
 		noteId: appearNote.id,
-		reaction: reaction,
+		reaction,
 	}).then(() => {
 		noteEvents.emit(`reacted:${appearNote.id}`, {
 			userId: $i!.id,
-			reaction: reaction,
+			reaction,
 		});
 	});
 });
@@ -563,7 +563,7 @@ async function renote() {
 		return;
 	}
 
-	const { menu } = noteMenuModule.getRenoteMenu({ note: note, renoteButton, mock: props.mock });
+	const { menu } = noteMenuModule.getRenoteMenu({ note, renoteButton, mock: props.mock });
 	os.popupMenu(menu, renoteButton.value);
 
 	subscribeManuallyToNoteCapture();
@@ -652,11 +652,11 @@ async function react() {
 
 				misskeyApi('notes/reactions/create', {
 					noteId: appearNote.id,
-					reaction: reaction,
+					reaction,
 				}).then(() => {
 					noteEvents.emit(`reacted:${appearNote.id}`, {
 						userId: $i!.id,
-						reaction: reaction,
+						reaction,
 					});
 				});
 

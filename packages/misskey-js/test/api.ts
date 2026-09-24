@@ -141,7 +141,7 @@ describe('API', () => {
 
 		const res = await cli.request('reset-password', { token: 'aaa', password: 'aaa' });
 
-		expect(res).toEqual(null);
+		expect(res).toBeNull();
 
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/reset-password', {
 			method: 'POST',
@@ -191,7 +191,7 @@ describe('API', () => {
 		);
 
 		expect(error).not.toBeNull();
-		expect(isAPIError(error)).toEqual(true);
+		expect(isAPIError(error)).toBe(true);
 		expect(error).toMatchObject({ code: 'CREDENTIAL_REQUIRED', kind: 'client' });
 		fetchMock.mockRestore();
 	});

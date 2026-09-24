@@ -7,8 +7,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import * as assert from 'assert';
-import * as Bull from 'bullmq';
+import * as assert from 'node:assert';
+import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type {
 	DbJobData,
@@ -207,7 +207,7 @@ describe('Endpoints', () => {
 			expect(detail.status).toBe(200);
 			expect(detail.body.id).toBe(emoji.id);
 			expect(detail.body.name).toBe(emoji.name);
-			expect(detail.body.host).toBe(null);
+			expect(detail.body.host).toBeNull();
 			expect(detail.body.url).toBe(emoji.publicUrl);
 			expect(detail.body.license).toBe(emoji.license);
 			expect(detail.body.localOnly).toBe(true);
@@ -707,9 +707,9 @@ describe('Endpoints', () => {
 
 				const after = await fetchEmojiByIdOrFailFromDatabase(db, added.body.id);
 				expect(after.name).toBe(`honoemoji_updated_${suffix}`);
-				expect(after.category).toBe(null);
+				expect(after.category).toBeNull();
 				expect(after.aliases).toStrictEqual([`updated_${suffix}`]);
-				expect(after.license).toBe(null);
+				expect(after.license).toBeNull();
 				expect(after.isSensitive).toBe(false);
 				expect(after.localOnly).toBe(false);
 				expect(after.originalUrl).toBe(updateFile.url);
@@ -823,7 +823,7 @@ describe('Endpoints', () => {
 				expect(copied.status).toBe(200);
 				const copiedBody = copied.body as any;
 				expect(copiedBody.name).toBe(remote.name);
-				expect(copiedBody.host).toBe(null);
+				expect(copiedBody.host).toBeNull();
 				expect(copiedBody.aliases).toStrictEqual([`copy_alias_${suffix}`]);
 				expect(copiedBody.category).toBe(`copy_category_${suffix}`);
 				expect(copiedBody.license).toBe(`copy license ${suffix}`);
@@ -831,7 +831,7 @@ describe('Endpoints', () => {
 				expect(copiedBody.localOnly).toBe(true);
 
 				const copiedEmoji = await fetchEmojiByIdOrFailFromDatabase(db, copiedBody.id);
-				expect(copiedEmoji.host).toBe(null);
+				expect(copiedEmoji.host).toBeNull();
 				expect(copiedEmoji.name).toBe(remote.name);
 				expect(copiedEmoji.originalUrl).not.toBe(remote.originalUrl);
 				expect(copiedEmoji.publicUrl).toBe(copiedEmoji.originalUrl);
@@ -839,8 +839,8 @@ describe('Endpoints', () => {
 
 				const driveFile = await fetchDriveFileByUrlFromDatabase(db, copiedEmoji.originalUrl);
 				assert.ok(driveFile);
-				expect(driveFile.userId).toBe(null);
-				expect(driveFile.userHost).toBe(null);
+				expect(driveFile.userId).toBeNull();
+				expect(driveFile.userHost).toBeNull();
 				expect(driveFile.src).toBe(imageUrl);
 				expect(driveFile.type).toBe('image/png');
 
@@ -939,7 +939,7 @@ describe('Endpoints', () => {
 				);
 				expect(missing.status).toBe(400);
 				expect(castAsError(missing.body as any).error.id).toBe('756e37b2-8e81-421c-9d18-740a6932d57f');
-				expect((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category).toBe(null);
+				expect((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category).toBeNull();
 
 				const addAliases = await api(
 					'admin/emoji/add-aliases-bulk',
@@ -1015,7 +1015,7 @@ describe('Endpoints', () => {
 				expect(afterFirst.category).toBe(`bulk_category_${suffix}`);
 				expect(afterSecond.category).toBe(`bulk_category_${suffix}`);
 				expect(afterFirst.license).toBe(`bulk license ${suffix}`);
-				expect(afterSecond.license).toBe(null);
+				expect(afterSecond.license).toBeNull();
 				assert.ok(afterFirst.updatedAt);
 				assert.ok(afterSecond.updatedAt);
 
@@ -1030,7 +1030,7 @@ describe('Endpoints', () => {
 				);
 				expect(tokenUpdated.status).toBe(204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
-				expect(afterFirst.category).toBe(null);
+				expect(afterFirst.category).toBeNull();
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
 				const scopeDenied = await api(
@@ -1139,7 +1139,7 @@ describe('Endpoints', () => {
 			try {
 				const deleted = await api('admin/emoji/delete', { id: single.id }, manager);
 				expect(deleted.status).toBe(204);
-				expect(await fetchEmojiByIdFromDatabase(db, single.id)).toBe(null);
+				expect(await fetchEmojiByIdFromDatabase(db, single.id)).toBeNull();
 				const deletedAgain = await api('admin/emoji/delete', { id: single.id }, manager);
 				expect(deletedAgain.status).toBe(400);
 				expect(castAsError(deletedAgain.body as any).error.id).toBe('be83669b-773a-44b7-b1f8-e5e5170ac3c2');
@@ -1152,8 +1152,8 @@ describe('Endpoints', () => {
 					manager,
 				);
 				expect(deletedBulk.status).toBe(204);
-				expect(await fetchEmojiByIdFromDatabase(db, bulkFirst.id)).toBe(null);
-				expect(await fetchEmojiByIdFromDatabase(db, bulkSecond.id)).toBe(null);
+				expect(await fetchEmojiByIdFromDatabase(db, bulkFirst.id)).toBeNull();
+				expect(await fetchEmojiByIdFromDatabase(db, bulkSecond.id)).toBeNull();
 
 				await vi.waitFor(async () => {
 					const logs = await listModerationLogsFromDatabase(db, {
@@ -1184,7 +1184,7 @@ describe('Endpoints', () => {
 				const token = await createAppToken(manager, ['write:admin:emoji']);
 				const deletedByToken = await api('admin/emoji/delete', { id: tokenTarget.id }, { token });
 				expect(deletedByToken.status).toBe(204);
-				expect(await fetchEmojiByIdFromDatabase(db, tokenTarget.id)).toBe(null);
+				expect(await fetchEmojiByIdFromDatabase(db, tokenTarget.id)).toBeNull();
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
 				const scopeDenied = await api(

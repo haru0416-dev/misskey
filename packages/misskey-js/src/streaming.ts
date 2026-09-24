@@ -424,8 +424,8 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 	public send<T extends keyof Channel['receives']>(type: T, body: Channel['receives'][T]): void {
 		this.stream.send('ch', {
 			id: this.id,
-			type: type,
-			body: body,
+			type,
+			body,
 		});
 
 		this.outCount++;

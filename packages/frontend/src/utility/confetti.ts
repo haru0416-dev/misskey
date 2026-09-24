@@ -34,11 +34,7 @@ export function confetti(options: { duration?: number } = {}) {
 
 		const particleCount = 50 * (timeLeft / duration);
 		// 粒子は落下するため、ランダム位置より少し上から開始する。
-		_confetti(
-			Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }),
-		);
-		_confetti(
-			Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }),
-		);
+		_confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+		_confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
 	}, 250);
 }

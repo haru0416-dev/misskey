@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
@@ -93,16 +93,16 @@ describe('Drive', () => {
 		const note1 = await post(alice, { fileIds: [fileId0, fileId1] });
 
 		const attached0 = await api('drive/files/attached-notes', { fileId: fileId0 }, alice);
-		expect(attached0.body.length).toBe(2);
+		expect(attached0.body).toHaveLength(2);
 		expect(attached0.body[0]?.id).toBe(note1.id);
 		expect(attached0.body[1]?.id).toBe(note0.id);
 
 		const attached1 = await api('drive/files/attached-notes', { fileId: fileId1 }, alice);
-		expect(attached1.body.length).toBe(1);
+		expect(attached1.body).toHaveLength(1);
 		expect(attached1.body[0]?.id).toBe(note1.id);
 
 		const attached2 = await api('drive/files/attached-notes', { fileId: fileId2 }, alice);
-		expect(attached2.body.length).toBe(0);
+		expect(attached2.body).toHaveLength(0);
 	});
 
 	test('添付ノート一覧は他の人から見えない', async () => {

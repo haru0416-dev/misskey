@@ -82,7 +82,7 @@ function fetchValue() {
 async function save() {
 	try {
 		JSON5.parse(valueForEditor.value);
-	} catch (err) {
+	} catch {
 		os.alert({
 			type: 'error',
 			text: i18n.ts.invalidValue,

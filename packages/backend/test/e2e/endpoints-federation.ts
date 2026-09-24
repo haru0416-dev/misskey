@@ -7,8 +7,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import * as assert from 'assert';
-import * as Bull from 'bullmq';
+import * as assert from 'node:assert';
+import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type {
 	DbJobData,
@@ -245,7 +245,7 @@ describe('Endpoints', () => {
 			expect(listedAlpha.softwareName).toBe(alpha.softwareName);
 			expect(listedAlpha.infoUpdatedAt).toBe(alpha.infoUpdatedAt?.toISOString());
 			expect(listedAlpha.latestRequestReceivedAt).toBe(alpha.latestRequestReceivedAt?.toISOString());
-			expect(listedAlpha.moderationNote).toBe(null);
+			expect(listedAlpha.moderationNote).toBeNull();
 
 			const shown = await api('federation/show-instance', { host: alpha.host.toUpperCase() });
 			expect(shown.status).toBe(200);
@@ -453,14 +453,14 @@ describe('Endpoints', () => {
 
 			const users = await api('federation/users', { host });
 			expect(users.status).toBe(200);
-			expect(users.body.length).toBe(1);
+			expect(users.body).toHaveLength(1);
 			expect(getAt(users.body, 0).id).toBe(remoteUser.id);
 			expect(getAt(users.body, 0).host).toBe(host);
 			expect('email' in getAt(users.body, 0)).toBe(false);
 
 			const empty = await api('federation/users', { host: `hono-fed-users-none-${suffix}.example` });
 			expect(empty.status).toBe(200);
-			expect(empty.body.length).toBe(0);
+			expect(empty.body).toHaveLength(0);
 		});
 
 		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
@@ -486,14 +486,14 @@ describe('Endpoints', () => {
 
 			const followers = await api('federation/followers', { host: remoteFolloweeHost });
 			expect(followers.status).toBe(200);
-			expect(followers.body.length).toBe(1);
+			expect(followers.body).toHaveLength(1);
 			expect(followers.body[0]!.followerId).toBe(follower.id);
 			expect(followers.body[0]!.followeeId).toBe(followee.id);
 			expect(followers.body[0]!.followee!.id).toBe(followee.id);
 
 			const following = await api('federation/following', { host: remoteFollowerHost });
 			expect(following.status).toBe(200);
-			expect(following.body.length).toBe(1);
+			expect(following.body).toHaveLength(1);
 			expect(following.body[0]!.followerId).toBe(followee.id);
 			expect(following.body[0]!.followeeId).toBe(follower.id);
 			expect(following.body[0]!.followee!.id).toBe(follower.id);
@@ -892,7 +892,7 @@ describe('Endpoints', () => {
 		});
 
 		test('fetches, validates, and returns hashed external resources', async () => {
-			const hash = createHash('sha512').update(data.replace(/\r\n/g, '\n')).digest('hex');
+			const hash = createHash('sha512').update(data.replaceAll('\r\n', '\n')).digest('hex');
 
 			const res = await api(
 				'fetch-external-resources',

@@ -92,7 +92,7 @@ export function normalizeReactionForApi(reaction: string | null): string {
 	const match = emojiRegex.exec(reaction);
 	if (match) {
 		const unicode = match[0];
-		return unicode.match('\u200D') ? unicode : unicode.replaceAll(/\uFE0F/g, '');
+		return unicode.match('\u200D') ? unicode : unicode.replaceAll('️', '');
 	}
 
 	return FALLBACK;

@@ -33,7 +33,8 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { ApiError, clientError } from '../error.js';
+import type { ApiError } from '../error.js';
+import { clientError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { fetchOrRegisterFederatedInstance } from '../activitypub/federation.js';
 import {

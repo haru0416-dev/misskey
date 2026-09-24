@@ -73,7 +73,7 @@ function addContext<T extends IObject>(config: Pick<Config, 'instance'>, x: T): 
 		x.id = `${config.instance.url}/${randomUUID()}`;
 	}
 
-	return Object.assign({ '@context': CONTEXT }, x as T & { id: string });
+	return { '@context': CONTEXT, ...(x as T & { id: string }) };
 }
 
 export async function addRelayWithSideEffects(deps: RelaySideEffectDependencies, inbox: string): Promise<MiRelay> {

@@ -253,7 +253,7 @@ async function run() {
 	let ast;
 	try {
 		ast = parser.parse(flash.value.script);
-	} catch (err) {
+	} catch {
 		os.alert({
 			type: 'error',
 			text: 'Syntax error :(',

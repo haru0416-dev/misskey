@@ -152,9 +152,6 @@ export async function handleApiSwUnregister(
 ): Promise<void> {
 	const params = parseApiParams(swShowRegistrationParamDef, body);
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
-
-	if (me != null) {
-	}
 }
 
 export async function handleApiSwUpdateRegistration(

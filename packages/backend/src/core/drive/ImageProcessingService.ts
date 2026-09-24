@@ -43,7 +43,7 @@ const avifDefault: AvifOptions = {
 	effort: 2,
 };
 
-import { Readable } from 'node:stream';
+import type { Readable } from 'node:stream';
 
 export function createImageProcessingService() {
 	async function convertToWebp(

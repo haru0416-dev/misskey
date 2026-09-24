@@ -74,11 +74,11 @@ import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
 import { birthdaySchema } from '@/models/User.js';
-import type { MiLocalUser } from '@/models/User.js';
-import type { MiUser } from '@/models/User.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { ApiError, clientError } from '../error.js';
+import type { ApiError } from '../error.js';
+import { clientError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { xaddApiNotification } from '../notification/notification.js';
 import {
@@ -278,7 +278,7 @@ export function addActivityContext<T extends IObject>(
 		activity.id = `${config.instance.url}/${randomUUID()}`;
 	}
 
-	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
+	return { '@context': CONTEXT, ...(activity as T & { id: string }) };
 }
 
 async function getTargetUserOrThrow(
@@ -1353,7 +1353,7 @@ export async function handleApiUsersFollowing(
 		try {
 			const parts = params.birthday.split('-');
 			parts.shift();
-			const birthdayNum = Number.parseInt(parts.join(''));
+			const birthdayNum = Number.parseInt(parts.join(''), 10);
 			followings = await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(
 				deps.db,
 				user.id,

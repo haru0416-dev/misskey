@@ -72,7 +72,7 @@ function render() {
 }
 watch(
 	() => props.data,
-	() => nextTick(render),
+	() => nextTick().then(render),
 	{ deep: true },
 );
 onMounted(() => {

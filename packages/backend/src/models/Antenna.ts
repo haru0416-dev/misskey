@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
-import { MiUserList } from './UserList.js';
+import type { MiUser } from './User.js';
+import type { MiUserList } from './UserList.js';
 
 export class MiAntenna {
 	public id: string;

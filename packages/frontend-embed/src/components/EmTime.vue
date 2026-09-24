@@ -36,7 +36,7 @@ function getDateSafe(n: Date | string | number) {
 			return n;
 		}
 		return new Date(n);
-	} catch (err) {
+	} catch {
 		return {
 			getTime: () => Number.NaN,
 		};

@@ -9,10 +9,10 @@ import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
 import { parse } from 'content-disposition';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { StatusError } from '@/misc/status-error.js';
-import { LoggerService } from '@/core/LoggerService.js';
+import type { LoggerService } from '@/core/LoggerService.js';
 
 export function createDownloadService(
 	config: Config,

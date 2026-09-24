@@ -110,7 +110,7 @@ const unicodeEmojiDB = computed(() => {
 		for (const [emoji, keywords] of Object.entries(index)) {
 			for (const k of keywords) {
 				unicodeEmojiDB.push({
-					emoji: emoji,
+					emoji,
 					name: k,
 					aliasOf: getEmojiName(emoji),
 					url: char2path(emoji),
@@ -276,8 +276,8 @@ function exec() {
 				return;
 			}
 			misskeyApi('users/search-by-username-and-host', {
-				username: username,
-				host: host,
+				username,
+				host,
 				limit: 10,
 				detail: false,
 			}).then((searchedUsers) => {

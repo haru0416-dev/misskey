@@ -32,7 +32,7 @@ const hasMoreReactions = ref(false);
 
 function onMockToggleReaction(emoji: string, count: number) {
 	const i = reactions.value.findIndex((item) => item[0] === emoji);
-	if (i < 0) {
+	if (i === -1) {
 		return;
 	}
 }
@@ -43,11 +43,7 @@ watch(
 		let newReactions: [string, number][] = [];
 		hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
-		for (let i = 0; i < reactions.value.length; i++) {
-			const current = reactions.value[i];
-			if (current === undefined) {
-				continue;
-			}
+		for (const current of reactions.value) {
 			const reaction = current[0];
 			const count = newSource[reaction];
 			if (count !== undefined && count !== 0) {
@@ -56,12 +52,12 @@ watch(
 			}
 		}
 
-		const newReactionsNames = newReactions.map(([x]) => x);
+		const newReactionsNames = new Set(newReactions.map(([x]) => x));
 		newReactions = [
 			...newReactions,
 			...Object.entries(newSource)
 				.sort(([, a], [, b]) => b - a)
-				.filter(([y], i) => i < maxNumber && !newReactionsNames.includes(y)),
+				.filter(([y], i) => i < maxNumber && !newReactionsNames.has(y)),
 		];
 
 		newReactions = newReactions.slice(0, props.maxNumber);

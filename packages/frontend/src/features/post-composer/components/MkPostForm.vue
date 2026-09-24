@@ -354,9 +354,9 @@ const canPost = computed((): boolean => {
 		!posted.value &&
 		!uploader.uploading.value &&
 		(uploader.items.value.length === 0 || uploader.readyForUpload.value) &&
-		(1 <= textLength.value ||
-			1 <= files.value.length ||
-			1 <= uploader.items.value.length ||
+		(textLength.value >= 1 ||
+			files.value.length >= 1 ||
+			uploader.items.value.length >= 1 ||
 			poll.value != null ||
 			renoteTargetNote.value != null ||
 			quoteId.value != null) &&
@@ -739,7 +739,7 @@ function showOtherSettings() {
 			type: 'component',
 			component: XTextCounter,
 			props: {
-				textLength: textLength,
+				textLength,
 			},
 		},
 		{ type: 'divider' },
@@ -884,8 +884,8 @@ async function onPaste(ev: ClipboardEvent) {
 				continue;
 			}
 			const lio = file.name.lastIndexOf('.');
-			const ext = lio >= 0 ? file.name.slice(lio) : '';
-			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll(/{{number}}/g, `${i + 1}`)}${ext}`;
+			const ext = lio !== -1 ? file.name.slice(lio) : '';
+			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll('{{number}}', `${i + 1}`)}${ext}`;
 			const renamedFile = new File([file], formattedName, { type: file.type });
 			pastedFiles.push(renamedFile);
 		}
@@ -927,7 +927,7 @@ async function onPaste(ev: ClipboardEvent) {
 			return;
 		}
 
-		const fileName = formatTimeString(new Date(), pastedFileName).replaceAll(/{{number}}/g, '0');
+		const fileName = formatTimeString(new Date(), pastedFileName).replaceAll('{{number}}', '0');
 		const file = new File([paste], `${fileName}.txt`, { type: 'text/plain' });
 		uploader.addFiles([file]);
 	}
@@ -1279,7 +1279,7 @@ async function post(ev?: PointerEvent) {
 
 			globalEvents.emit('notePosted', res.createdNote);
 
-			nextTick(() => {
+			nextTick().then(() => {
 				deleteDraft();
 				emit('posted');
 				if (postData.text && postData.text !== '') {
@@ -1410,7 +1410,7 @@ async function insertEmoji(ev: PointerEvent) {
 		},
 		() => {
 			textAreaReadOnly.value = false;
-			nextTick(() => {
+			nextTick().then(() => {
 				if (textareaEl.value) {
 					textareaEl.value.focus();
 					textareaEl.value.setSelectionRange(pos, posEnd);
@@ -1440,7 +1440,7 @@ async function insertMfmFunction(ev: PointerEvent) {
 			}
 		},
 		() => {
-			nextTick(() => {
+			nextTick().then(() => {
 				if (textareaEl.value) {
 					textareaEl.value.focus();
 					textareaEl.value.setSelectionRange(pos, posEnd);
@@ -1507,7 +1507,7 @@ async function openAccountMenu(ev: PointerEvent) {
 					if (draft.poll) {
 						// 投票を一時的に空にしないと反映されないため
 						poll.value = null;
-						nextTick(() => {
+						nextTick().then(() => {
 							poll.value = {
 								choices: draft.poll!.choices,
 								multiple: draft.poll!.multiple,
@@ -1749,7 +1749,7 @@ onMounted(() => {
 	if (autofocus) {
 		focus();
 
-		nextTick(() => {
+		nextTick().then(() => {
 			focus();
 		});
 	}
@@ -1764,7 +1764,7 @@ onMounted(() => {
 		hashtagAutocomplete = new Autocomplete(hashtagsInputEl.value, hashtags);
 	}
 
-	nextTick(async () => {
+	nextTick().then(async () => {
 		await restoreLocalDraft();
 
 		// 削除して編集
@@ -1793,7 +1793,7 @@ onMounted(() => {
 			reactionAcceptance.value = init.reactionAcceptance;
 		}
 
-		nextTick(() => watchForDraft());
+		nextTick().then(() => watchForDraft());
 	});
 });
 

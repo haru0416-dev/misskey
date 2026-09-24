@@ -187,8 +187,8 @@ async function addUser() {
 	}
 
 	os.apiWithDialog('admin/accounts/create', {
-		username: username,
-		password: password,
+		username,
+		password,
 	}).then((res) => {
 		paginator.reload();
 	});

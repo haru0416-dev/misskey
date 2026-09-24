@@ -174,7 +174,7 @@ async function toggle(ev: PointerEvent) {
 		openedAtLeastOnce.value = true;
 	}
 
-	nextTick(() => {
+	nextTick().then(() => {
 		opened.value = !opened.value;
 	});
 }

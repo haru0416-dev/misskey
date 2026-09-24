@@ -1,6 +1,6 @@
 import { describe, test, beforeAll } from 'vitest';
-import assert, { deepStrictEqual, strictEqual } from 'assert';
-import * as Misskey from 'misskey-js';
+import assert, { deepStrictEqual, strictEqual } from 'node:assert';
+import type * as Misskey from 'misskey-js';
 import { addCustomEmoji, createAccount, deliveryBarrier, resolveRemoteUser } from './utils.js';
 import type { LoginUser } from './utils.js';
 

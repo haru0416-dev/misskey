@@ -4,7 +4,7 @@
  */
 
 import type { RolePolicies } from '@/core/role/role-policies.js';
-import { MiUser } from './User.js';
+import type { MiUser } from './User.js';
 
 export class MiMeta {
 	public id: string;

@@ -7,8 +7,8 @@ import { URL } from 'node:url';
 import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
 import semver from 'semver';
 import type { Config } from '@/config.js';
-import { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
-import { MiInstance } from '@/models/Instance.js';
+import type { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
+import type { MiInstance } from '@/models/Instance.js';
 
 export function createUtilityService(config: Config, meta: MiMeta) {
 	function getFullApAccount(username: string, host: string | null): string {

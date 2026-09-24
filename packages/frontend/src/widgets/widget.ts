@@ -23,9 +23,7 @@ export type WidgetComponentProps<P extends Record<string, unknown>> = {
 	widget?: Widget<P>;
 };
 
-export type WidgetComponentEmits<P extends Record<string, unknown>> = {
-	(ev: 'updateProps', props: P): void;
-};
+export type WidgetComponentEmits<P extends Record<string, unknown>> = (ev: 'updateProps', props: P) => void;
 
 export type WidgetComponentExpose = {
 	name: string;
@@ -97,7 +95,7 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 				MkWidgetSettingsDialog,
 				{
 					widgetName: name,
-					form: form,
+					form,
 					currentSettings: widgetProps,
 				},
 				{

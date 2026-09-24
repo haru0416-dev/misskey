@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { inspect } from 'node:util';
 import { DEFAULT_POLICIES, createUserWithProfileAndPublickeyInDatabase, genId, openTestDatabase } from '../fixtures.js';
@@ -352,34 +352,34 @@ describe('ユーザー', () => {
 		expect(response.token).toMatch(/[a-zA-Z0-9]{16}/);
 
 		expect(response.id).toMatch(/[0-9a-z]{10}/);
-		expect(response.name).toBe(null);
+		expect(response.name).toBeNull();
 		expect(response.username).toBe('zoe');
-		expect(response.host).toBe(null);
+		expect(response.host).toBeNull();
 		response.avatarUrl && expect(response.avatarUrl).toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
-		expect(response.avatarBlurhash).toBe(null);
+		expect(response.avatarBlurhash).toBeNull();
 		expect(response.avatarDecorations).toStrictEqual([]);
 		expect(response.isBot).toBe(false);
 		expect(response.isCat).toBe(false);
-		expect(response.instance).toBe(undefined);
+		expect(response.instance).toBeUndefined();
 		expect(response.emojis).toStrictEqual({});
 		expect(response.onlineStatus).toBe('unknown');
 		expect(response.badgeRoles).toStrictEqual([]);
-		expect(response.url).toBe(null);
-		expect(response.uri).toBe(null);
-		expect(response.movedTo).toBe(null);
-		expect(response.alsoKnownAs).toBe(null);
+		expect(response.url).toBeNull();
+		expect(response.uri).toBeNull();
+		expect(response.movedTo).toBeNull();
+		expect(response.alsoKnownAs).toBeNull();
 		expect(response.createdAt).toBe(new Date(response.createdAt).toISOString());
-		expect(response.updatedAt).toBe(null);
-		expect(response.lastFetchedAt).toBe(null);
-		expect(response.bannerUrl).toBe(null);
-		expect(response.bannerBlurhash).toBe(null);
+		expect(response.updatedAt).toBeNull();
+		expect(response.lastFetchedAt).toBeNull();
+		expect(response.bannerUrl).toBeNull();
+		expect(response.bannerBlurhash).toBeNull();
 		expect(response.isLocked).toBe(false);
 		expect(response.isSilenced).toBe(false);
 		expect(response.isSuspended).toBe(false);
-		expect(response.description).toBe(null);
-		expect(response.location).toBe(null);
-		expect(response.birthday).toBe(null);
-		expect(response.lang).toBe(null);
+		expect(response.description).toBeNull();
+		expect(response.location).toBeNull();
+		expect(response.birthday).toBeNull();
+		expect(response.lang).toBeNull();
 		expect(response.fields).toStrictEqual([]);
 		expect(response.verifiedLinks).toStrictEqual([]);
 		expect(response.followersCount).toBe(0);
@@ -387,19 +387,19 @@ describe('ユーザー', () => {
 		expect(response.notesCount).toBe(0);
 		expect(response.pinnedNoteIds).toStrictEqual([]);
 		expect(response.pinnedNotes).toStrictEqual([]);
-		expect(response.pinnedPageId).toBe(null);
-		expect(response.pinnedPage).toBe(null);
+		expect(response.pinnedPageId).toBeNull();
+		expect(response.pinnedPage).toBeNull();
 		expect(response.publicReactions).toBe(true);
 		expect(response.followingVisibility).toBe('public');
 		expect(response.followersVisibility).toBe('public');
 		expect(response.chatScope).toBe('mutual');
 		expect(response.canChat).toBe(true);
 		expect(response.roles).toStrictEqual([]);
-		expect(response.memo).toBe(null);
+		expect(response.memo).toBeNull();
 
-		expect(response.avatarId).toBe(null);
-		expect(response.bannerId).toBe(null);
-		expect(response.followedMessage).toBe(null);
+		expect(response.avatarId).toBeNull();
+		expect(response.bannerId).toBeNull();
+		expect(response.followedMessage).toBeNull();
 		expect(response.isModerator).toBe(false);
 		expect(response.isAdmin).toBe(false);
 		expect(response.injectFeaturedNote).toBe(true);
@@ -431,12 +431,12 @@ describe('ユーザー', () => {
 		expect(response.notificationRecieveConfig).toStrictEqual({});
 		expect(response.emailNotificationTypes).toStrictEqual(['follow', 'receiveFollowRequest']);
 		expect(response.achievements).toStrictEqual([]);
-		expect(response.loggedInDays).toStrictEqual(0);
+		expect(response.loggedInDays).toBe(0);
 		expect(response.policies).toStrictEqual(DEFAULT_POLICIES);
 		expect(response.twoFactorEnabled).toBe(false);
 		expect(response.usePasswordLessLogin).toBe(false);
 		expect(response.securityKeys).toBe(false);
-		expect(response.email).not.toBe(undefined);
+		expect(response.email).toBeDefined();
 		expect(response.emailVerified).toBe(false);
 		expect(response.securityKeysList).toStrictEqual([]);
 	});
@@ -581,7 +581,7 @@ describe('ユーザー', () => {
 	test('を書き換えることができる(Avatar)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { avatarId: aliceFile!.id };
-		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters, user: alice });
+		const response = await successfulApiCall({ endpoint: 'i/update', parameters, user: alice });
 		expect(response.avatarUrl ?? '.').toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
 		expect(response.avatarBlurhash ?? '.').toMatch(/[ -~]{54}/);
 		const expected = {
@@ -606,7 +606,7 @@ describe('ユーザー', () => {
 	test('を書き換えることができる(Banner)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { bannerId: aliceFile!.id };
-		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters, user: alice });
+		const response = await successfulApiCall({ endpoint: 'i/update', parameters, user: alice });
 		expect(response.bannerUrl ?? '.').toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
 		expect(response.bannerBlurhash ?? '.').toMatch(/[ -~]{54}/);
 		const expected = {
@@ -1236,7 +1236,7 @@ describe('ユーザー', () => {
 	test('のオススメを取得することができる', async () => {
 		const parameters = {};
 		const response = await successfulApiCall({ endpoint: 'users/recommendation', parameters, user: alice });
-		expect(response.length).not.toBe(0);
+		expect(response).not.toHaveLength(0);
 		const expected = await Promise.all(response.map((u) => show(u.id, alice)));
 		expect(response).toStrictEqual(expected);
 	});
@@ -1260,7 +1260,7 @@ describe('ユーザー', () => {
 			parameters: { userId: user.id },
 			user: root,
 		});
-		expect(response.email).toBe(null);
+		expect(response.email).toBeNull();
 		expect(response.emailVerified).toBe(false);
 		expect(response.isModerator).toBe(false);
 		expect(response.isSilenced).toBe(false);

@@ -101,9 +101,9 @@ async function onPaste(ev: ClipboardEvent) {
 				return;
 			}
 			const lio = pastedFile.name.lastIndexOf('.');
-			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
+			const ext = lio !== -1 ? pastedFile.name.slice(lio) : '';
 			const formattedName =
-				formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll(/{{number}}/g, '1') + ext;
+				formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll('{{number}}', '1') + ext;
 			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
 			os.launchUploader([renamedFile], { multiple: false }).then((driveFiles) => {
 				const driveFile = driveFiles[0];
@@ -322,7 +322,7 @@ async function insertEmoji(ev: MouseEvent) {
 		},
 		() => {
 			textareaReadOnly.value = false;
-			nextTick(() => focus());
+			nextTick().then(() => focus());
 		},
 	);
 }

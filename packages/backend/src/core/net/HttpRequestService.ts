@@ -197,7 +197,7 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 				},
 				timeout: 5000,
 				size: 1024 * 256,
-				isLocalAddressAllowed: isLocalAddressAllowed,
+				isLocalAddressAllowed,
 			},
 			{
 				throwErrorWhenResponseNotOk: true,
@@ -221,15 +221,13 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 	): Promise<T> {
 		const res = await send(url, {
 			method: 'GET',
-			headers: Object.assign(
-				{
-					Accept: accept,
-				},
-				headers ?? {},
-			),
+			headers: {
+				Accept: accept,
+				...(headers ?? {}),
+			},
 			timeout: 5000,
 			size: 1024 * 256,
-			isLocalAddressAllowed: isLocalAddressAllowed,
+			isLocalAddressAllowed,
 		});
 
 		return (await res.json()) as T;
@@ -243,14 +241,12 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 	): Promise<string> {
 		const res = await send(url, {
 			method: 'GET',
-			headers: Object.assign(
-				{
-					Accept: accept,
-				},
-				headers ?? {},
-			),
+			headers: {
+				Accept: accept,
+				...(headers ?? {}),
+			},
 			timeout: 5000,
-			isLocalAddressAllowed: isLocalAddressAllowed,
+			isLocalAddressAllowed,
 		});
 
 		return await res.text();

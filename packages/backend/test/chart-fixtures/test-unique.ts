@@ -4,8 +4,8 @@
  */
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import * as Redis from 'ioredis';
-import Logger from '@/logger.js';
+import type * as Redis from 'ioredis';
+import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import Chart from '@/core/chart/core.js';

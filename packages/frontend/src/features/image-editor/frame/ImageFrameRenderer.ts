@@ -5,7 +5,7 @@
 
 import QRCodeStyling from 'qr-code-styling';
 import { url } from '@shared/utility/config.js';
-import ExifReader from 'exifreader';
+import type ExifReader from 'exifreader';
 import { FN_frame } from './frame.js';
 import { ImageCompositor } from '@/features/image-editor/core/ImageCompositor.js';
 import { ensureSignin } from '@/i.js';
@@ -273,7 +273,7 @@ export class ImageFrameRenderer {
 					qrSize,
 				);
 				qrImageBitmap.close();
-			} catch (_) {
+			} catch {
 				// nop
 			}
 		}

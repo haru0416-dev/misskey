@@ -30,11 +30,11 @@ describe('following/list', () => {
 
 		expect(res1.status).toBe(200);
 		expect(Array.isArray(res1.body)).toBe(true);
-		expect(res1.body.length).toBe(0);
+		expect(res1.body).toHaveLength(0);
 
 		expect(res2.status).toBe(200);
 		expect(Array.isArray(res2.body)).toBe(true);
-		expect(res2.body.length).toBe(1);
+		expect(res2.body).toHaveLength(1);
 		expect(res2.body[0]?.followeeId).toBe(bob.id);
 	});
 
@@ -45,7 +45,7 @@ describe('following/list', () => {
 		const res = await api('following/list', { notification: true }, alice);
 
 		expect(res.status).toBe(200);
-		expect(res.body.length).toBe(1);
+		expect(res.body).toHaveLength(1);
 		expect(res.body[0]?.followeeId).toBe(carol.id);
 	});
 
@@ -55,7 +55,7 @@ describe('following/list', () => {
 		const res = await api('following/list', { notification: true }, alice);
 
 		expect(res.status).toBe(200);
-		expect(res.body.length).toBe(2);
+		expect(res.body).toHaveLength(2);
 
 		const ids = res.body.map((u) => u.followeeId).sort();
 		expect(ids).toStrictEqual([bob.id, carol.id].sort());
@@ -68,11 +68,11 @@ describe('following/list', () => {
 		const res2 = await api('following/list', {}, alice);
 
 		expect(res1.status).toBe(200);
-		expect(res1.body.length).toBe(1);
+		expect(res1.body).toHaveLength(1);
 		expect(res1.body[0]?.followeeId).toBe(carol.id);
 
 		expect(res2.status).toBe(200);
-		expect(res2.body.length).toBe(2);
+		expect(res2.body).toHaveLength(2);
 		const ids = res2.body.map((u) => u.followeeId).sort();
 		expect(ids).toStrictEqual([bob.id, carol.id].sort());
 	});
@@ -86,7 +86,7 @@ describe('following/list', () => {
 		expect(aliceIds.includes(bob.id)).toBe(false);
 
 		const bobRes = await api('following/list', { notification: true }, bob);
-		expect(bobRes.body.length).toBe(1);
+		expect(bobRes.body).toHaveLength(1);
 		expect(bobRes.body[0]?.followeeId).toBe(carol.id);
 
 		await api('following/delete', { userId: carol.id }, bob);
@@ -114,7 +114,7 @@ describe('following/list', () => {
 				n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
 		);
 
-		expect(noteNotif.length, '投稿の通知が届かなかった').toBe(1);
+		expect(noteNotif).toHaveLength(1);
 
 		await api('following/update', { userId: bob.id, notify: 'none' }, alice);
 		await api('notifications/mark-all-as-read', {}, alice);
@@ -125,11 +125,11 @@ describe('following/list', () => {
 
 		const allRes = await api('following/list', { notification: true }, alice);
 		expect(allRes.status).toBe(200);
-		expect(allRes.body.length).toBe(2);
+		expect(allRes.body).toHaveLength(2);
 
 		const res = await api('following/list', { notification: true, limit: 1 }, alice);
 		expect(res.status).toBe(200);
-		expect(res.body.length).toBe(1);
+		expect(res.body).toHaveLength(1);
 	});
 
 	test('未認証の場合はエラー', async () => {

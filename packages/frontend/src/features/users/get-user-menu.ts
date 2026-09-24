@@ -5,7 +5,7 @@
 
 import { toUnicode } from '@/utility/punycode.js';
 import { ref, watch } from 'vue';
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { host, url } from '@shared/utility/config.js';
 import type { Router } from '@/router.js';
 import type { MenuItem } from '@/types/menu.js';
@@ -119,7 +119,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 		const { dispose } = await os.popupAsyncWithDialog(
 			import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
 			{
-				user: user,
+				user,
 			},
 			{
 				closed: () => dispose(),

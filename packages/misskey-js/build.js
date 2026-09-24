@@ -23,13 +23,13 @@ const options = {
 	sourcemap: 'linked',
 };
 
-const args = process.argv.slice(2).map((arg) => arg.toLowerCase());
+const args = new Set(process.argv.slice(2).map((arg) => arg.toLowerCase()));
 
-if (!args.includes('--no-clean')) {
+if (!args.has('--no-clean')) {
 	fs.rmSync('./built', { recursive: true, force: true });
 }
 
-if (args.includes('--watch')) {
+if (args.has('--watch')) {
 	await watchSrc();
 } else {
 	await buildSrc();

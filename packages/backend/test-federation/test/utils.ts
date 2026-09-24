@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { deepStrictEqual, strictEqual } from 'assert';
-import { readFile } from 'fs/promises';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { deepStrictEqual, strictEqual } from 'node:assert';
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash, sign } from 'node:crypto';
 import { request as httpsRequest } from 'node:https';
 import { Pool } from 'pg';

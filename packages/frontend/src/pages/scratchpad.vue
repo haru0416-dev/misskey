@@ -58,8 +58,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onDeactivated, onUnmounted, ref, watch, computed } from 'vue';
 import { Interpreter, Parser, utils } from '@syuilo/aiscript';
 import type { Ref } from 'vue';
-import type { AsUiComponent } from '@/aiscript/ui.js';
-import type { AsUiRoot } from '@/aiscript/ui.js';
+import type { AsUiComponent,AsUiRoot } from '@/aiscript/ui.js';
 import type { Value } from '@syuilo/aiscript/interpreter/value.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkButton from '@/components/form/MkButton.vue';

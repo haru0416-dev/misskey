@@ -15,7 +15,7 @@ window.onload = async () => {
 				data.i = i;
 			}
 
-			fetch(endpoint.indexOf('://') > -1 ? endpoint : `/api/${endpoint}`, {
+			fetch(endpoint.includes('://') ? endpoint : `/api/${endpoint}`, {
 				headers: {
 					'Content-Type': 'application/json',
 				},

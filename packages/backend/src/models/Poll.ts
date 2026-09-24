@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { noteVisibilities } from '@/types.js';
-import { MiNote } from './Note.js';
+import type { noteVisibilities } from '@/types.js';
+import type { MiNote } from './Note.js';
 import type { MiUser } from './User.js';
 import type { MiChannel } from '@/models/Channel.js';
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { MiUser } from './User.js';
+import type { MiUser } from './User.js';
 
 const flashVisibility = ['public', 'private'] as const;
 export type FlashVisibility = (typeof flashVisibility)[number];

@@ -16,7 +16,7 @@
 		renderError('SOMETHING_HAPPENED_IN_PROMISE', e.reason || e);
 	};
 
-	let forceError = localStorage.getItem('forceError');
+	const forceError = localStorage.getItem('forceError');
 	if (forceError != null) {
 		renderError('FORCED_ERROR', 'This error is forced by having forceError in local storage.');
 		return;
@@ -134,7 +134,7 @@
 	}
 
 	async function addStyle(styleText) {
-		let css = document.createElement('style');
+		const css = document.createElement('style');
 		css.appendChild(document.createTextNode(styleText));
 		document.head.appendChild(css);
 	}
@@ -165,23 +165,21 @@
 			messages = {};
 		}
 
-		messages = Object.assign(
-			{
-				title: 'Failed to initialize Erebia',
-				solution: 'The following actions may solve the problem.',
-				solution1: 'Update your os and browser',
-				solution2: 'Disable an adblocker',
-				solution3: 'Clear the browser cache',
-				solution4: '(Tor Browser) Set dom.webaudio.enabled to true',
-				otherOption: 'Other options',
-				otherOption1: 'Clear preferences and cache',
-				otherOption2: 'Start the simple client',
-				otherOption3: 'Start the repair tool',
-				otherOption4: 'Start Erebia in safe mode',
-				reload: 'Reload',
-			},
-			messages,
-		);
+		messages = {
+			title: 'Failed to initialize Erebia',
+			solution: 'The following actions may solve the problem.',
+			solution1: 'Update your os and browser',
+			solution2: 'Disable an adblocker',
+			solution3: 'Clear the browser cache',
+			solution4: '(Tor Browser) Set dom.webaudio.enabled to true',
+			otherOption: 'Other options',
+			otherOption1: 'Clear preferences and cache',
+			otherOption2: 'Start the simple client',
+			otherOption3: 'Start the repair tool',
+			otherOption4: 'Start Erebia in safe mode',
+			reload: 'Reload',
+			...messages,
+		};
 
 		const safeModeUrl = new URL(window.location.href);
 		safeModeUrl.searchParams.set('safemode', 'true');

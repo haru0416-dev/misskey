@@ -18,11 +18,11 @@ import type { MiPage } from '@/models/Page.js';
 import type { MiWebhook } from '@/models/Webhook.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import type { MiMeta } from '@/models/Meta.js';
-import { MiAvatarDecoration, MiChatMessage, MiRole } from '@/models/_.js';
+import type { MiAvatarDecoration, MiChatMessage, MiRole } from '@/models/_.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { Serialized } from '@/types.js';
+import type { Serialized } from '@/types.js';
 
 export interface BroadcastTypes {
 	emojiAdded: {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as Misskey from 'misskey-js';
+import type * as Misskey from 'misskey-js';
 import { apiUrl } from '@shared/utility/config.js';
 import { parseJsonObject } from '@shared/utility/server-context.js';
 import type { UploaderFeatures } from '@/features/drive/useUploader.js';
@@ -274,7 +274,7 @@ function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 			});
 
 			misskeyApi('drive/files/upload-from-url', {
-				url: url,
+				url,
 				folderId: prefer.uploadFolder,
 				marker,
 			});

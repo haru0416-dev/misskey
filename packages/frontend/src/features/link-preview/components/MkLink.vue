@@ -50,7 +50,7 @@ if (isEnabledUrlPreview.value) {
 			{
 				showing,
 				url: props.url,
-				anchorElement: anchorElement,
+				anchorElement,
 			},
 			{
 				closed: () => dispose(),

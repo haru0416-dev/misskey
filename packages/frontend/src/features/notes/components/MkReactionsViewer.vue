@@ -40,8 +40,7 @@ export function requireReactionCount(reactions: Record<string, number>, reaction
 
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
-import { inject, watch, ref } from 'vue';
-import { TransitionGroup } from 'vue';
+import { inject, watch, ref,TransitionGroup } from 'vue';
 import { isSupportedEmoji } from '@shared/utility/emojilist.js';
 import XReaction from '@/features/notes/components/MkReactionsViewer.Reaction.vue';
 import { $i } from '@/i.js';
@@ -83,7 +82,7 @@ function onMockToggleReaction(emoji: string, count: number) {
 	}
 
 	const i = _reactions.value.findIndex((item) => item[0] === emoji);
-	if (i < 0) {
+	if (i === -1) {
 		return;
 	}
 	const reaction = _reactions.value[i];
@@ -98,7 +97,7 @@ function canReact(reaction: string) {
 	if (!$i) {
 		return false;
 	}
-	return !reaction.match(/@\w/) && (customEmojisMap.has(reaction) || isSupportedEmoji(reaction));
+	return !/@\w/.test(reaction) && (customEmojisMap.has(reaction) || isSupportedEmoji(reaction));
 }
 
 watch(
@@ -107,11 +106,7 @@ watch(
 		let newReactions: [string, number][] = [];
 		hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
-		for (let i = 0; i < _reactions.value.length; i++) {
-			const current = _reactions.value[i];
-			if (current == null) {
-				continue;
-			}
+		for (const current of _reactions.value) {
 			const reaction = current[0];
 			const count = newSource[reaction];
 			if (count != null && count !== 0) {

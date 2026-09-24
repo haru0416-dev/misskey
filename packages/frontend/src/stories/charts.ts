@@ -32,7 +32,7 @@ export function getChartResolver(
 	return ({ request }) => {
 		action(`GET ${request.url}`)();
 		const limitParam = new URL(request.url).searchParams.get('limit');
-		const limit = limitParam ? parseInt(limitParam) : 30;
+		const limit = limitParam ? parseInt(limitParam, 10) : 30;
 		const res = {};
 		for (const field of fields) {
 			const layers = field.split('.');

@@ -39,9 +39,9 @@ function resolveNested(current: PathResolvedResult, d = 0): PathResolvedResult |
 	}
 	if (current.child) {
 		return resolveNested(current.child, d + 1);
-	} else {
-		return null;
 	}
+		return null;
+	
 }
 
 const current = resolveNested(router.current)!;
