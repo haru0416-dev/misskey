@@ -37,7 +37,7 @@ import {
 	notesTimelineParamDef,
 	notesUserListTimelineParamDef,
 } from '@/server/rest/note/notes.js';
-import { SECOND, HOUR } from '@/const.js';
+import { SECOND, MINUTE, HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	notes: {
@@ -1042,6 +1042,12 @@ export const endpointMetas = {
 			tags: ['notes'],
 
 			requireCredential: false,
+
+			// 匿名でも呼べ、trigram の取れない語は 1 ページで最大 UNTRIGRAMMABLE_SEARCH_WINDOW 件を走査する。
+			limit: {
+				duration: MINUTE,
+				max: 30,
+			},
 
 			res: {
 				type: 'array',

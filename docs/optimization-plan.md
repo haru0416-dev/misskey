@@ -11,16 +11,16 @@
 
 ## 変更可能な境界と保護する契約
 
-| 対象 | 方針 |
-| --- | --- |
-| 内部関数・型・ディレクトリ・設定形式 | 必要なら破壊的変更する。全利用箇所を移行し、旧 alias・shim・二重実装を残さない |
-| fork 内の REST API・SDK・UI | 必要なら同時変更する。型生成と全呼び出し元を揃え、意図した挙動変更を先に記録する |
-| ランタイム分岐・互換処理 | 現在の保持理由を確認し、実依存を移してから削除する |
-| 既存テスト | 守る挙動と検出能力を維持する。内部実装への依存は等価な利用者観測へ置き換え、削除や skip で回帰を隠さない |
-| ActivityPub と upstream 連合 | actor/object URI、署名、宛先、公開範囲、Follow/Undo/Delete/Move 等の意味を維持する |
-| 認証・認可・非漏洩 | 性能スコアから独立した採用条件とする。高速化のために検査を省略しない |
-| transaction・再配送 | 永続化の原子性、回復、冪等な最終状態を維持する。外部配送に exactly-once を約束しない |
-| 既存データ・migration | 未公開でもデータ削除や DB 初期化を暗黙に許可しない。マージ済 migration は変更せず、必要な schema 変更から新規 migration を生成する |
+| 対象                                 | 方針                                                                                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 内部関数・型・ディレクトリ・設定形式 | 必要なら破壊的変更する。全利用箇所を移行し、旧 alias・shim・二重実装を残さない                                                     |
+| fork 内の REST API・SDK・UI          | 必要なら同時変更する。型生成と全呼び出し元を揃え、意図した挙動変更を先に記録する                                                   |
+| ランタイム分岐・互換処理             | 現在の保持理由を確認し、実依存を移してから削除する                                                                                 |
+| 既存テスト                           | 守る挙動と検出能力を維持する。内部実装への依存は等価な利用者観測へ置き換え、削除や skip で回帰を隠さない                           |
+| ActivityPub と upstream 連合         | actor/object URI、署名、宛先、公開範囲、Follow/Undo/Delete/Move 等の意味を維持する                                                 |
+| 認証・認可・非漏洩                   | 性能スコアから独立した採用条件とする。高速化のために検査を省略しない                                                               |
+| transaction・再配送                  | 永続化の原子性、回復、冪等な最終状態を維持する。外部配送に exactly-once を約束しない                                               |
+| 既存データ・migration                | 未公開でもデータ削除や DB 初期化を暗黙に許可しない。マージ済 migration は変更せず、必要な schema 変更から新規 migration を生成する |
 
 内部互換を保護するための一時的な併存を最終状態にしない。ただし、HTTP 移行完了前にその依存を消すなど、検証不能な順序での削除もしない。
 
@@ -117,12 +117,12 @@ A の基準結果と既知失敗の範囲を固定した後、B と C の調査�
 
 測定と独立した観測:
 
-| 経路 | 記録する指標 | 性能指標とは別に確認する内容 |
-| --- | --- | --- |
-| 投稿 | p50/p95/p99、成功/失敗数、DB 待ち、後処理完了時間 | 本文、公開範囲、集計、通知、重複 |
-| timeline | 取得時間、DB 往復、CPU、メモリ | 投稿集合、順序、ページ境界、非漏洩 |
-| 連合 | queue 待ち、配送完了時間、再試行、最古未処理 age | 相手の保存結果、署名、重複収束、Delete |
-| 高負荷・終了 | RSS、CPU、接続数、滞留の増減、終了時間 | 取りこぼし、復旧、未完了処理 |
+| 経路         | 記録する指標                                      | 性能指標とは別に確認する内容           |
+| ------------ | ------------------------------------------------- | -------------------------------------- |
+| 投稿         | p50/p95/p99、成功/失敗数、DB 待ち、後処理完了時間 | 本文、公開範囲、集計、通知、重複       |
+| timeline     | 取得時間、DB 往復、CPU、メモリ                    | 投稿集合、順序、ページ境界、非漏洩     |
+| 連合         | queue 待ち、配送完了時間、再試行、最古未処理 age  | 相手の保存結果、署名、重複収束、Delete |
+| 高負荷・終了 | RSS、CPU、接続数、滞留の増減、終了時間            | 取りこぼし、復旧、未完了処理           |
 
 受け入れ条件:
 
@@ -183,17 +183,17 @@ A の基準結果と既知失敗の範囲を固定した後、B と C の調査�
 
 以下は開始 revision の基準結果であり、計画全体の変更後スイートの成功を意味しない。skip の「—」は、この集計記録に件数を残していないことを示す。
 
-| 検証 | 成功 | 失敗 | skip |
-| --- | ---: | ---: | ---: |
-| root scripts | 8 | 0 | — |
-| frontend | 582 | 0 | — |
-| misskey-js | 32 | 0 | — |
-| sw / i18n / icons-subsetter | 9 / 3 / 1 | 0 | — |
-| mfm-js / AiScript | 190 / 3812 | 0 | — |
-| backend unit | 814 | 0 | — |
-| backend local e2e | 1725 | 0 | 13 |
-| backend external e2e | 1725 | 0 | 13 |
-| 既存 fork ↔ fork 連合 | 102 | 0 | 10 |
+| 検証                        |       成功 | 失敗 | skip |
+| --------------------------- | ---------: | ---: | ---: |
+| root scripts                |          8 |    0 |    — |
+| frontend                    |        582 |    0 |    — |
+| misskey-js                  |         32 |    0 |    — |
+| sw / i18n / icons-subsetter |  9 / 3 / 1 |    0 |    — |
+| mfm-js / AiScript           | 190 / 3812 |    0 |    — |
+| backend unit                |        814 |    0 |    — |
+| backend local e2e           |       1725 |    0 |   13 |
+| backend external e2e        |       1725 |    0 |   13 |
+| 既存 fork ↔ fork 連合       |        102 |    0 |   10 |
 
 既存連合の取得前には、テスト証明書の制約・leaf key の読取権限と、同一 IP のサインイン制限に達して無制限再試行する fixture の失敗があった。失敗実行は保存し、アプリの制限や既存 assertion を緩めず、fixture を直してから上表の結果を取得した。
 
@@ -222,13 +222,13 @@ Accept 修正後の backend unit 全体は 120 ファイル・817 件成功。�
 
 ### 公式固定版の既知失敗と未対応部分
 
-| 条件 | 観測と判断 |
-| --- | --- |
-| Move / follower 引継ぎ | 既存機能の不具合。fork から upstream のローカルアカウントへの Move で、upstream が移行先を `uri` で検索して失敗した。ローカルユーザーの `uri` が null であることと、ローカル宛てを処理する分岐の検索条件を固定ソースで確認した |
-| ブロック解除後の Follow / Reaction | 解除受信は実装済み。Undo(Block) 到着後も拒否が残った。API と inbox プロセス間のメモリ cache 失効漏れが原因として有力 [INFERENCE]。個別 cache 内容は未採取、TTL 経過後の成功は未検証 |
-| 凍結解除後の actor 解決 / follow 復旧 | 通常の再解決処理の不具合疑い。canonical URI の明示再解決で、削除済み旧ユーザーの profile 取得エラーを観測。古い actor cache の利用が原因として有力 [INFERENCE]。旧 Follow 関係の自動復元を要求している試験ではない |
-| Undo(Delete) 受信 | 固定版は凍結解除時に Undo(Delete) を送るが、受信分岐は未実装で未知の型として無視する。これは付随して確認した未対応部分で、明示再解決の profile エラーとは別の問題 |
-| 署名・障害回復スイート全体 | fork ↔ fork の 32 件は成功。固定 upstream との 29 件は成功したが、重複 Accept が公式 inbox で再試行を続けるため Follow 応答喪失と後続 2 件は失敗。全体を保護済みとは扱わない |
+| 条件                                  | 観測と判断                                                                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Move / follower 引継ぎ                | 既存機能の不具合。fork から upstream のローカルアカウントへの Move で、upstream が移行先を `uri` で検索して失敗した。ローカルユーザーの `uri` が null であることと、ローカル宛てを処理する分岐の検索条件を固定ソースで確認した |
+| ブロック解除後の Follow / Reaction    | 解除受信は実装済み。Undo(Block) 到着後も拒否が残った。API と inbox プロセス間のメモリ cache 失効漏れが原因として有力 [INFERENCE]。個別 cache 内容は未採取、TTL 経過後の成功は未検証                                            |
+| 凍結解除後の actor 解決 / follow 復旧 | 通常の再解決処理の不具合疑い。canonical URI の明示再解決で、削除済み旧ユーザーの profile 取得エラーを観測。古い actor cache の利用が原因として有力 [INFERENCE]。旧 Follow 関係の自動復元を要求している試験ではない             |
+| Undo(Delete) 受信                     | 固定版は凍結解除時に Undo(Delete) を送るが、受信分岐は未実装で未知の型として無視する。これは付随して確認した未対応部分で、明示再解決の profile エラーとは別の問題                                                              |
+| 署名・障害回復スイート全体            | fork ↔ fork の 32 件は成功。固定 upstream との 29 件は成功したが、重複 Accept が公式 inbox で再試行を続けるため Follow 応答喪失と後続 2 件は失敗。全体を保護済みとは扱わない                                                   |
 
 upstream の確認先: [ApPersonService](https://github.com/misskey-dev/misskey/blob/bd9eb7c77942ef11749a04e7a5f24bee935d764b/packages/backend/src/core/activitypub/models/ApPersonService.ts)、[CacheService](https://github.com/misskey-dev/misskey/blob/bd9eb7c77942ef11749a04e7a5f24bee935d764b/packages/backend/src/core/CacheService.ts)、[ApInboxService](https://github.com/misskey-dev/misskey/blob/bd9eb7c77942ef11749a04e7a5f24bee935d764b/packages/backend/src/core/activitypub/ApInboxService.ts)、[UserFollowingService](https://github.com/misskey-dev/misskey/blob/bd9eb7c77942ef11749a04e7a5f24bee935d764b/packages/backend/src/core/UserFollowingService.ts)。
 
@@ -288,20 +288,20 @@ outbox の inline 実行は SQL 行の所有権を確認し、fanout/antennas �
 
 runtime の DB 接続は Bun SQL の共有 pool 一つへ統一した。Node HTTP adapter、pg fallback、query/transaction 用の pool 分離、テスト専用 pool 所有を削除。pg は独立した計測 observer と連合 fixture に用途が残るため devDependency に移し、実行されなくなった pg 用 telemetry instrumentation は除いた。Date・配列・SQLSTATE・rows/affected count の変換は保持する。型付き Drizzle の比較は一致したが、生 SQL では pg の timestamp が文字列・int8 が数値、Bun が Date・文字列になる差を確認したためである。
 
-| 境界 | 実行結果 |
-| --- | --- |
-| HTTP + worker と接続予算 | 予算1/2/3で実投稿・timeline・export worker と並行 transaction を実行。観測接続上限は各予算以内、commit/rollback の混線なし、終了後0接続。別の SQL probe では予算5も確認 |
-| DB 値と回復 | Date/timestamp、int8、配列、JSON、bytea、更新/削除件数、競合、savepoint/rollback を比較。予算1の transaction 接続を実際に切断し、未commit行の不在・pool再接続・次transactionのcommitを確認 |
-| migration | 同時 runner の適用件数18/0、journal 18件のhash一致・未適用0。失敗SQLSTATE 22012でDDL rollback・journal不変・lock解放、再試行一回だけ適用。production resetは破壊前拒否、test resetでschema/journal消去。`check-migrations` は成功 |
-| 実 HTTP / Unix socket | OAuth discovery/認可/code交換/Bearer投稿、status/body/header、multipart保存と取得、固定/stream本文上限、upload中断後の部分保存なし、Unix権限600・認証通信・終了時socket除去を確認 |
-| 実 WebSocket | 不正token拒否、認証購読、unsubscribe、再接続、payload超過1009、listener数復元、匿名へのspecified投稿非漏洩を確認 |
-| 処理中の正常終了 | 実transaction・投稿・export・WSがある状態で正常終了と再起動を実行。受理済投稿・durable exportの残存と再開を確認。強制crashの証拠とは扱わない |
-| 強制停止とlease | 本番のownership関数・実DB・Bullを使う別processを、30秒lease超過中とqueued実行中にSIGKILL。処理中の行は別publisherが奪わず、停止でSQL加算はrollback。期限切れclaimの再発行、古いtokenの実行/解放拒否、再実行2回でもcommit加算1回、SQL完了確認後のoutcome除去を確認 |
-| transport primitive | 2本のSet-Cookieを別々のraw headerとして取得。低速受信中にstream生成が64 chunkで停止し、受信切断でcancelを観測。製品routeは単一cookieの `/flush` を別に確認 |
-| SDK/main/embed HTTP | SDK 36件・型テスト成功。実ブラウザでGET/POST/multipartのcookie省略、token優先順位、明示匿名、AbortSignalを確認。実embed iframeのAPIにcookie/tokenなし、親windowとのready/iframeId/高さ通知を確認 |
-| main の状態と timeline | ログイン・端末内の全保存を消去するサインアウト・再ログイン・アカウント追加/切替、2タブとaccount別設定復元、offline時のエラーと復帰を確認。ページング36件・filter・新着保留とkeyboardでの解放・polling切替を実操作 |
-| KeepAlive の休止/再開 | 非表示routeへの移動で進行中fetchのAbortSignal発火とhomeTimelineのdisconnectを確認。共有channelの既存3秒猶予とmain購読は維持。休止中の投稿を復帰時に取得し、3投稿の画面内Y座標が変わらないことを確認 |
-| 通知のaccount境界 | SWとloginId遷移の旧IndexedDB `accounts` 読取りを廃止。Pinia deviceのaccountTokensを正本とし、同一hostだけを選ぶ。実Chromium workerでBobを選択中のAlice通知からAliceのrenoteを1件保存。実UIのloginId付き遷移でAliceへ切り替わり、対象投稿を表示 |
+| 境界                     | 実行結果                                                                                                                                                                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP + worker と接続予算 | 予算1/2/3で実投稿・timeline・export worker と並行 transaction を実行。観測接続上限は各予算以内、commit/rollback の混線なし、終了後0接続。別の SQL probe では予算5も確認                                                                                           |
+| DB 値と回復              | Date/timestamp、int8、配列、JSON、bytea、更新/削除件数、競合、savepoint/rollback を比較。予算1の transaction 接続を実際に切断し、未commit行の不在・pool再接続・次transactionのcommitを確認                                                                        |
+| migration                | 同時 runner の適用件数18/0、journal 18件のhash一致・未適用0。失敗SQLSTATE 22012でDDL rollback・journal不変・lock解放、再試行一回だけ適用。production resetは破壊前拒否、test resetでschema/journal消去。`check-migrations` は成功                                 |
+| 実 HTTP / Unix socket    | OAuth discovery/認可/code交換/Bearer投稿、status/body/header、multipart保存と取得、固定/stream本文上限、upload中断後の部分保存なし、Unix権限600・認証通信・終了時socket除去を確認                                                                                 |
+| 実 WebSocket             | 不正token拒否、認証購読、unsubscribe、再接続、payload超過1009、listener数復元、匿名へのspecified投稿非漏洩を確認                                                                                                                                                  |
+| 処理中の正常終了         | 実transaction・投稿・export・WSがある状態で正常終了と再起動を実行。受理済投稿・durable exportの残存と再開を確認。強制crashの証拠とは扱わない                                                                                                                      |
+| 強制停止とlease          | 本番のownership関数・実DB・Bullを使う別processを、30秒lease超過中とqueued実行中にSIGKILL。処理中の行は別publisherが奪わず、停止でSQL加算はrollback。期限切れclaimの再発行、古いtokenの実行/解放拒否、再実行2回でもcommit加算1回、SQL完了確認後のoutcome除去を確認 |
+| transport primitive      | 2本のSet-Cookieを別々のraw headerとして取得。低速受信中にstream生成が64 chunkで停止し、受信切断でcancelを観測。製品routeは単一cookieの `/flush` を別に確認                                                                                                        |
+| SDK/main/embed HTTP      | SDK 36件・型テスト成功。実ブラウザでGET/POST/multipartのcookie省略、token優先順位、明示匿名、AbortSignalを確認。実embed iframeのAPIにcookie/tokenなし、親windowとのready/iframeId/高さ通知を確認                                                                  |
+| main の状態と timeline   | ログイン・端末内の全保存を消去するサインアウト・再ログイン・アカウント追加/切替、2タブとaccount別設定復元、offline時のエラーと復帰を確認。ページング36件・filter・新着保留とkeyboardでの解放・polling切替を実操作                                                 |
+| KeepAlive の休止/再開    | 非表示routeへの移動で進行中fetchのAbortSignal発火とhomeTimelineのdisconnectを確認。共有channelの既存3秒猶予とmain購読は維持。休止中の投稿を復帰時に取得し、3投稿の画面内Y座標が変わらないことを確認                                                               |
+| 通知のaccount境界        | SWとloginId遷移の旧IndexedDB `accounts` 読取りを廃止。Pinia deviceのaccountTokensを正本とし、同一hostだけを選ぶ。実Chromium workerでBobを選択中のAlice通知からAliceのrenoteを1件保存。実UIのloginId付き遷移でAliceへ切り替わり、対象投稿を表示                    |
 
 通知のOSクリックはこの環境では操作できず、Chromiumに実通知を表示してscript生成のNotificationEventで操作した。このeventの`waitUntil`はブラウザが拒否するため、OSクリック時のworker寿命の証明ではない。workerの実HTTPと保存結果、アカウント別遷移は確認した。SWの保存先回帰・別hostへのtoken非流出・サインアウト後の旧token不使用は恒久テストでも検証した。
 
@@ -323,15 +323,15 @@ frontend全体は103ファイル・584件、SWは4ファイル・10件成功。f
 
 方向とactorの役割をURI・activity・保存関係で対応付け、次を照合した。ランダムなuser IDの一致や失敗数だけには依存していない。
 
-| 失敗群・方向 | 基準と最終で共通する保存状態・エラー |
-| --- | --- |
-| Move、A→Bのローカル移行先 | aliasとmovedToは保存。A側followerの移行は成立するが、B側followerは旧sourceをfollowしたまま。公式のlocal destination URI検索で同じ`EntityNotFoundError: MiUser`。legacy Moveでもdestination follower 0・旧source follower 1、完了jobの`skip: nothing to do`が一致 |
-| 凍結解除、A/B両方向の再解決 | Bは同じcanonical actorを新IDで再作成済みだが、`ap/show`が削除された旧IDのprofileをpackし、同じ`EntityNotFoundError: MiUserProfile`を2回返す。Aには双方向follow、BにはA→Bだけが残る。旧IDがpackへ渡る内部原因は未確定 |
-| 応答喪失Follow、B→A | 両peerに同じ関係が1件、pending requestなし。送信Followは3試行後にcompleted/Success。同じFollowを内包する異なるAcceptが2件、公式で`No follow request.`を繰り返す。Follow試験自体はtimeoutのままで、正確に中断したawaitは未確定 |
-| 応答喪失Reaction/Delete、B→A | 同じ先行Acceptによる準備barrier失敗。Reactionは元noteの両peer保存・reaction 0、Deleteは準備follow成立・削除対象note未作成。Like/Deleteを送信した後の失敗とは数えず、この方向の意図した障害操作は未検証のまま |
-| sensitive返信・abuse転送、A→B | 正しい親を持つ返信とJPEG1件のsensitive=true・同じmd5/寸法、正しい対象とsystem.actor reporterの転送reportをそれぞれ保存済み。試験はtimeoutであり、後続assertionを通ったとは扱わない |
-| 通知を起こすFollow/Like/返信/renote/quote/mention、B→A | 関係1件、reaction1件、正しい親・authorの投稿効果が保存済み。次のFollowは双方でalready-following。通知helperはtrigger後にbarrierを待つ。通知event自体の保存証拠はなく、通知成功には読み替えない |
-| Block/Undo、AがBをblock | 同じpairでBlock/Undoが処理され、解除済pairにはblock・follow・投稿効果がない。remove-followerの成功pairとmention用pairだけblockが両peerに残る。多くの失敗は操作前barrierを持つtimeoutで、許可・拒否APIまで到達したとは扱わない |
+| 失敗群・方向                                           | 基準と最終で共通する保存状態・エラー                                                                                                                                                                                                                             |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Move、A→Bのローカル移行先                              | aliasとmovedToは保存。A側followerの移行は成立するが、B側followerは旧sourceをfollowしたまま。公式のlocal destination URI検索で同じ`EntityNotFoundError: MiUser`。legacy Moveでもdestination follower 0・旧source follower 1、完了jobの`skip: nothing to do`が一致 |
+| 凍結解除、A/B両方向の再解決                            | Bは同じcanonical actorを新IDで再作成済みだが、`ap/show`が削除された旧IDのprofileをpackし、同じ`EntityNotFoundError: MiUserProfile`を2回返す。Aには双方向follow、BにはA→Bだけが残る。旧IDがpackへ渡る内部原因は未確定                                             |
+| 応答喪失Follow、B→A                                    | 両peerに同じ関係が1件、pending requestなし。送信Followは3試行後にcompleted/Success。同じFollowを内包する異なるAcceptが2件、公式で`No follow request.`を繰り返す。Follow試験自体はtimeoutのままで、正確に中断したawaitは未確定                                    |
+| 応答喪失Reaction/Delete、B→A                           | 同じ先行Acceptによる準備barrier失敗。Reactionは元noteの両peer保存・reaction 0、Deleteは準備follow成立・削除対象note未作成。Like/Deleteを送信した後の失敗とは数えず、この方向の意図した障害操作は未検証のまま                                                     |
+| sensitive返信・abuse転送、A→B                          | 正しい親を持つ返信とJPEG1件のsensitive=true・同じmd5/寸法、正しい対象とsystem.actor reporterの転送reportをそれぞれ保存済み。試験はtimeoutであり、後続assertionを通ったとは扱わない                                                                               |
+| 通知を起こすFollow/Like/返信/renote/quote/mention、B→A | 関係1件、reaction1件、正しい親・authorの投稿効果が保存済み。次のFollowは双方でalready-following。通知helperはtrigger後にbarrierを待つ。通知event自体の保存証拠はなく、通知成功には読み替えない                                                                   |
+| Block/Undo、AがBをblock                                | 同じpairでBlock/Undoが処理され、解除済pairにはblock・follow・投稿効果がない。remove-followerの成功pairとmention用pairだけblockが両peerに残る。多くの失敗は操作前barrierを持つtimeoutで、許可・拒否APIまで到達したとは扱わない                                    |
 
 失敗時reportのB inboxは双方ともdelayed 2・failed 3、Reaction/Delete時のproxy進行も一致した。遅い基準snapshotでは同じAccept2件が8試行後failed、最終直後では6試行後delayedであり、時点差による進行を性能差や悪化とは数えない。他の残留は、両方向の署名否定試験が作ったLike拒否、先行するremote-deletion試験が意図したFollow拒否、逆方向Moveのalready-followingで一致した。remote-deletionのFollowを凍結解除失敗へ誤って対応付けた初期分析は、実際の`ap/show` URIとprofile IDで訂正した。
 
@@ -403,10 +403,10 @@ identityの所有範囲もcontainer initとその子孫に限定した。実コ�
 
 `inline-ownership` と `bc-ownership` は各20本すべてで正しさを満たし、除外0・絶対資源上限内だった。ただし、どちらも相対ゲートに不合格だった。以下はconditionごとのpaired ratioであり、label別中央値同士の比ではない。
 
-| 比較 | cold posting p95 比 | warm posting p95 比 | 判定 |
-| --- | --- | --- | --- |
-| current → inline-claim | 0.542 | 0.701 | 連合応答・load・SQL実行時間・queue待ち等の副指標13件が退行し、不採用 |
-| approved → current | 1.571 | 1.511 | 主指標と複数の副指標が不合格。database.calls比もcold 1.975 / warm 1.974 |
+| 比較                   | cold posting p95 比 | warm posting p95 比 | 判定                                                                    |
+| ---------------------- | ------------------- | ------------------- | ----------------------------------------------------------------------- |
+| current → inline-claim | 0.542               | 0.701               | 連合応答・load・SQL実行時間・queue待ち等の副指標13件が退行し、不採用    |
+| approved → current     | 1.571               | 1.511               | 主指標と複数の副指標が不合格。database.calls比もcold 1.975 / warm 1.974 |
 
 一件ずつの`DELETE RETURNING`候補は撤回した。利用者はB/Cを性能例外として受け入れず、元の基準を維持した再設計を選択した。失敗した比較、閾値、snapshot、公式固定版は変更しない。
 
@@ -590,11 +590,11 @@ Bun 1.4.0の`process.hrtime.bigint()`は、同じtime namespaceでも別process�
 
 続いて通常のmapperでwarm 1本を実行し、PostgreSQLの全既存processと新しい子processの書込・同期syscallを観測した。正しさ確認は成功。WALの`fdatasync`は598回、最長306.240msだった。投稿40件のp95は78.517msで、遅い3件とWAL同期待ちの重なりは次のとおりだった。同期区間の合計では重複を除いている。
 
-|投稿のHTTP応答|その区間と重なったWAL同期|
-|---:|---:|
-|104.278ms|89.550ms|
-|92.047ms|72.114ms|
-|78.517ms|61.398ms|
+| 投稿のHTTP応答 | その区間と重なったWAL同期 |
+| -------------: | ------------------------: |
+|      104.278ms |                  89.550ms |
+|       92.047ms |                  72.114ms |
+|       78.517ms |                  61.398ms |
 
 この照合にはHTTPのISO時刻と`strace -ttt`の実時刻を使った。HTTP開始時刻の精度・記録位置、ptraceによる観測の影響が残る。どの要求が各DB接続を使ったかは追跡しておらず、重なった時間をその要求の待ち時間と同一視しない。syscallの時間にはスケジューリングも含まれる。以上は保存済み比較のwarm p95比1.296の原因証明でも、10%条件を満たす採用証拠でもない。
 
@@ -673,6 +673,14 @@ SQL文数は1投稿あたりA 20.1→B 22.0（+9.5%）。CPUは直列でほぼ�
 投稿p95のB/A比が1.10を超えた組は直列・並行とも0/6で「この条件では再現しない」。全件プール比は直列p95 0.722 [0.409, 1.683]、並行p95 0.580 [0.326, 1.957]、p50は1.002と0.938。1投稿あたりCPUの組比中央値は直列0.973、並行0.933。局所・tmpfs・連合配送ありのいずれでも1.296は再現せず、24-runのwarm投稿p95は少数標本とディスク揺れによるばらつきと判断する。D2/D3の採用判定は、この計画の条件（24-runの相対ゲート）のまま不成立として残し、再計測はしない。
 
 配送遅延（投稿応答から受け皿の最初の受信まで）は、直列p95 920→1035 ms（比1.125 [0.801, 1.510]、組判定は不確定）。分布は両版とも約55%が50 ms未満、約20%が0.5〜1.5 sで、版差ではない。原因はdeliver workerの起動レート上限（`queues.deliver.maximumStartsPerSecond`、既定128件/秒）で、計測負荷が直列で約200件/秒・並行でそれ以上の配送を生むため上限に達し、遅れた配送は1秒枠の明けに同時に届く（遅延が投稿順に線形に縮む）。federationステージは応答後の`NotePostProcessing`でinline実行されて`deliverQueue.addBulk`へ直接入り、1秒周期のoutbox配信は通らない。同じB版で上限だけを100000にした2 runでは、0.3 s以上の配送が直列194–197→0件・並行688→0件、配送遅延p95は直列968→9–11 ms・並行4.3–4.5 s→31–53 msになり、欠落・重複・署名欠落は0のまま。上限はリモートへの送出を抑える運用設定で、既定値は変えていない。生データは`results-fed-limit/`。生データは`~/dev/misskey-rootcause/results-fed/`、手順は同ディレクトリの`PROTOCOL.md`。
+
+### ノート検索の短い語の走査上限（2026-09-24）
+
+trigram index（`IDX_NOTE_TEXT_TRGM`）は既存で、3文字以上続く英数字を含む語はこれを使う。100万件の合成データ（`~/dev/misskey-rootcause` の `trgm_bench`、日本語語彙と英数字語を混在）で、そうした語はAPI応答5〜22 ms、古い投稿にだけ出る語も7 msだった。trigramを作れない語（2文字以下など）は主キーの全件走査になり、一致なしの「ゑゑ」で1.45 sかかった。LIKEのままでは、プランナーがtrigram indexの全件読み（実際は100万行）を約100行と見積もって選ぶため、走査範囲を条件で絞っても効かない。そこでtrigramを作れない語だけ `strpos` で判定し、ページ起点から並び順に10万件を読む副問い合わせを走査元にした。境界idを先に数える形は、一致の多い短い語でも毎回10万件を読み、「猫」6.8→37.5 ms・「kw」5.0→40.6 msと悪化したため採らなかった。利用者・チャンネル指定の検索は窓を掛けない。あわせて `notes/search` に30回/分のレート制限を付けた。
+
+計測は既存SQLのまま（前）と変更後を交互に起動し直して4回ずつ比べた（`search-abba/`）。「ゑゑ」1468→111 ms（0.08倍）、一致なしの3文字語やtrigram経路の語は変わらない。HEADのLua版レート制限の上乗せは、制限あり・なしの交互3回ずつで語ごとの中央値比0.92〜1.16（`search-head/`）。B tree（e41419a474より前、判定が複数往復）の同比較は1.09〜1.61で、制限判定1回化の効果が確認できる。e2eに短い語の大文字小文字・`%`の字義一致・前後ページングの検査を足し、比較の大小無視と未エスケープLIKEへの変異がそれぞれ落ちることを確かめた。窓の起点をカーソルから外す変異は、10万件未満のテストDBでは検出できない。
+
+未対応: 約1万件に一致する中頻度の語（`kw123`）は、プランナーが一致件数を約100と見積もってbitmap走査後に全件へ可視性判定を掛け、変更前後とも約220 msかかる。SQLは変えていないので本件の範囲外とした。
 
 ## 根拠となる入口
 
