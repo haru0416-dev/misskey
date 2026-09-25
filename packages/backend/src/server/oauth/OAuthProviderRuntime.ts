@@ -860,7 +860,6 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				lastUsedAt: now,
 				userId: granted.userId,
 				token: accessToken,
-				hash: accessToken,
 				name: granted.clientId,
 				permission: granted.scopes,
 			});

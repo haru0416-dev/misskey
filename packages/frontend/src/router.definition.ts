@@ -345,10 +345,6 @@ export const ROUTE_DEF = [
 		component: page(() => import('@/pages/preview.vue')),
 	},
 	{
-		path: '/auth/:token',
-		component: page(() => import('@/pages/auth/index.vue')),
-	},
-	{
 		path: '/miauth/:session',
 		component: page(() => import('@/pages/miauth.vue')),
 		query: {

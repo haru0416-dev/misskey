@@ -593,46 +593,10 @@ type APITransportResponse = {
 };
 
 // @public (undocumented)
-type App = components['schemas']['App'];
-
-// @public (undocumented)
-type AppCreateRequest = NonNullable<operations['app___create']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AppCreateResponse = operations['app___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AppShowRequest = NonNullable<operations['app___show']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AppShowResponse = operations['app___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 type ApShowRequest = NonNullable<operations['ap___show']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
 type ApShowResponse = operations['ap___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AuthAcceptRequest = NonNullable<operations['auth___accept']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionGenerateRequest = NonNullable<operations['auth___session___generate']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionGenerateResponse = operations['auth___session___generate']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionShowRequest = NonNullable<operations['auth___session___show']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionShowResponse = operations['auth___session___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionUserkeyRequest = NonNullable<operations['auth___session___userkey']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type AuthSessionUserkeyResponse = operations['auth___session___userkey']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type Blocking = components['schemas']['Blocking'];
@@ -1647,17 +1611,6 @@ declare namespace entities {
         ApGetResponse,
         ApShowRequest,
         ApShowResponse,
-        AppCreateRequest,
-        AppCreateResponse,
-        AppShowRequest,
-        AppShowResponse,
-        AuthAcceptRequest,
-        AuthSessionGenerateRequest,
-        AuthSessionGenerateResponse,
-        AuthSessionShowRequest,
-        AuthSessionShowResponse,
-        AuthSessionUserkeyRequest,
-        AuthSessionUserkeyResponse,
         BlockingCreateRequest,
         BlockingCreateResponse,
         BlockingDeleteRequest,
@@ -1902,8 +1855,6 @@ declare namespace entities {
         I2faUpdateKeyResponse,
         IAppsRequest,
         IAppsResponse,
-        IAuthorizedAppsRequest,
-        IAuthorizedAppsResponse,
         IChangePasswordRequest,
         IClaimAchievementRequest,
         IDeleteAccountRequest,
@@ -1976,8 +1927,6 @@ declare namespace entities {
         MuteDeleteRequest,
         MuteListRequest,
         MuteListResponse,
-        MyAppsRequest,
-        MyAppsResponse,
         NotesRequest,
         NotesResponse,
         NotesChildrenRequest,
@@ -2153,7 +2102,6 @@ declare namespace entities {
         AchievementName,
         Ad,
         Announcement,
-        App,
         Note,
         NoteDraft,
         NoteReaction,
@@ -2536,12 +2484,6 @@ type IAppsRequest = NonNullable<operations['i___apps']['requestBody']>['content'
 type IAppsResponse = operations['i___apps']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type IAuthorizedAppsRequest = NonNullable<operations['i___authorized-apps']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type IAuthorizedAppsResponse = operations['i___authorized-apps']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 type IChangePasswordRequest = NonNullable<operations['i___change-password']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
@@ -2867,12 +2809,6 @@ type MuteListResponse = operations['mute___list']['responses']['200']['content']
 
 // @public (undocumented)
 type Muting = components['schemas']['Muting'];
-
-// @public (undocumented)
-type MyAppsRequest = NonNullable<operations['my___apps']['requestBody']>['content']['application/json'];
-
-// @public (undocumented)
-type MyAppsResponse = operations['my___apps']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type Note = components['schemas']['Note'];

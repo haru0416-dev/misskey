@@ -11,7 +11,7 @@ import {
 	assertTokenPermission,
 	authenticateApiToken,
 } from '../auth/auth.js';
-import { handleApiIAuthorizedApps, handleApiIApps, handleApiIRevokeToken } from '../auth/app.js';
+import { handleApiIApps, handleApiIRevokeToken } from '../auth/access-tokens.js';
 import { handleApiIFavorites } from '../favorite/favorites.js';
 import {
 	handleApiIChangePassword,
@@ -213,14 +213,6 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		'/i/apps',
 		endpointHandler(deps, 'i/apps', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleApiIApps(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/i/authorized-apps',
-		endpointHandler(deps, 'i/authorized-apps', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiIAuthorizedApps(deps, auth.user, body)),
 		),
 	);
 

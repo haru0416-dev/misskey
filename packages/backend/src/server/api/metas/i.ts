@@ -14,7 +14,7 @@ import {
 } from '@/server/rest/account/account-security.js';
 import { iUpdateParamDef } from '@/server/rest/account/account-update.js';
 import { readAnnouncementParamDef } from '@/server/rest/announcement/announcements.js';
-import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/auth/app.js';
+import { iAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/auth/access-tokens.js';
 import { exportFollowingParamDef } from '@/server/rest/job/export-jobs.js';
 import { iFavoritesParamDef } from '@/server/rest/favorite/favorites.js';
 import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
@@ -328,50 +328,6 @@ export const endpointMetas = {
 			},
 		} as const,
 		paramDef: iAppsParamDef,
-	},
-	'i/authorized-apps': {
-		meta: {
-			allowQuery: true,
-			requireCredential: true,
-
-			secure: true,
-
-			res: {
-				type: 'array',
-				items: {
-					type: 'object',
-					properties: {
-						id: {
-							type: 'string',
-							format: 'misskey:id',
-							optional: false,
-						},
-						name: {
-							type: 'string',
-							optional: false,
-						},
-						callbackUrl: {
-							type: 'string',
-							optional: false,
-							nullable: true,
-						},
-						permission: {
-							type: 'array',
-							optional: false,
-							uniqueItems: true,
-							items: {
-								type: 'string',
-							},
-						},
-						isAuthorized: {
-							type: 'boolean',
-							optional: true,
-						},
-					},
-				},
-			},
-		} as const,
-		paramDef: iAuthorizedAppsParamDef,
 	},
 	'i/change-password': {
 		meta: {

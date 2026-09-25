@@ -1455,79 +1455,6 @@ declare module '../api.js' {
         /**
          * No description provided.
          *
-         * **Credential required**: *No*
-         */
-        request<E extends 'app/create', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'app/show', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
-         * **Credential required**: *Yes*
-         */
-        request<E extends 'auth/accept', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'auth/session/generate', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'auth/session/show', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *No*
-         */
-        request<E extends 'auth/session/userkey', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
          * **Credential required**: *Yes* / **Permission**: *write:blocks*
          */
         request<E extends 'blocking/create', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
@@ -3330,19 +3257,6 @@ declare module '../api.js' {
          * **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
          * **Credential required**: *Yes*
          */
-        request<E extends 'i/authorized-apps', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
-         * **Credential required**: *Yes*
-         */
         request<E extends 'i/change-password', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }
@@ -4014,18 +3928,6 @@ declare module '../api.js' {
          * **Credential required**: *Yes* / **Permission**: *read:mutes*
          */
         request<E extends 'mute/list', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
-            endpoint: E,
-            ...args: Endpoints[E] extends { reqOptional: true }
-                ? [params?: P, credential?: string | null]
-                : [params: P, credential?: string | null]
-        ): Promise<SwitchCaseResponseType<E, P>>;
-
-        /**
-         * No description provided.
-         *
-         * **Credential required**: *Yes* / **Permission**: *read:account*
-         */
-        request<E extends 'my/apps', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }
                 ? [params?: P, credential?: string | null]

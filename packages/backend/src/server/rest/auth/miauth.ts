@@ -59,7 +59,6 @@ export async function handleApiMiauthGenToken(
 		session: params.session,
 		userId: user.id,
 		token: accessToken,
-		hash: accessToken,
 		name: params.name,
 		description: params.description,
 		iconUrl: params.iconUrl,

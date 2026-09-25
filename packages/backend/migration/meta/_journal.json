@@ -127,6 +127,27 @@
       "when": 1788832180518,
       "tag": "0017_fair_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790314277541,
+      "tag": "0018_wide_raza",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790314291480,
+      "tag": "0019_hard_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790314292594,
+      "tag": "0020_skinny_karnak",
+      "breakpoints": true
     }
   ]
 }

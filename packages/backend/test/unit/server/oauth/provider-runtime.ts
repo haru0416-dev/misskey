@@ -139,11 +139,12 @@ describe('createOAuthProviderRuntime', () => {
 			{
 				userId: 'user-id',
 				token: tokenBody.access_token,
-				hash: tokenBody.access_token,
 				name: clientId,
 				permission: ['write:notes'],
 			},
 		]);
+		// 旧 3-legged 認可の hash 照合は廃止した。トークンは token 列だけで引く。
+		expect(createdTokens[0]).not.toHaveProperty('hash');
 
 		runtime.dispose();
 	});

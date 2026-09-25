@@ -3,21 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { accessToken } from '@/db/schema/access-token.js';
 import type { AccessTokenInsert, AccessTokenRow } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
-import { MiAccessToken } from '@/models/AccessToken.js';
-import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';
 
 export type AccessTokenOrderField = 'id' | 'lastUsedAt';
 export type AccessTokenOrderDirection = 'asc' | 'desc';
-
-function accessTokenByAppAndUserCondition(appId: MiApp['id'], userId: MiUser['id']) {
-	return and(eq(accessToken.appId, appId), eq(accessToken.userId, userId));
-}
 
 export async function fetchAccessTokenBySessionFromDatabase(
 	db: MiDrizzleDatabase,
@@ -28,86 +21,16 @@ export async function fetchAccessTokenBySessionFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchAccessTokenByHashOrTokenFromDatabase(
+export async function fetchAccessTokenByTokenFromDatabase(
 	db: MiDrizzleDatabase,
-	hash: AccessTokenRow['hash'],
 	token: AccessTokenRow['token'],
 ): Promise<AccessTokenRow | null> {
-	const [row] = await db
-		.select()
-		.from(accessToken)
-		.where(or(eq(accessToken.hash, hash), eq(accessToken.token, token)))
-		.limit(1);
+	const [row] = await db.select().from(accessToken).where(eq(accessToken.token, token)).limit(1);
 
 	return row ?? null;
 }
 
-export async function fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	appId: MiApp['id'],
-	userId: MiUser['id'],
-): Promise<AccessTokenRow> {
-	const [row] = await db.select().from(accessToken).where(accessTokenByAppAndUserCondition(appId, userId)).limit(1);
-
-	if (row == null) {
-		throw new EntityNotFoundError(MiAccessToken, { appId, userId });
-	}
-
-	return row;
-}
-
-export async function existsAccessTokenByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: AccessTokenRow['id'],
-): Promise<boolean> {
-	const [row] = await db.select({ id: accessToken.id }).from(accessToken).where(eq(accessToken.id, id)).limit(1);
-
-	return row != null;
-}
-
-export async function existsAccessTokenByTokenFromDatabase(
-	db: MiDrizzleDatabase,
-	token: AccessTokenRow['token'],
-): Promise<boolean> {
-	const [row] = await db.select({ id: accessToken.id }).from(accessToken).where(eq(accessToken.token, token)).limit(1);
-
-	return row != null;
-}
-
-export async function existsAccessTokenByAppIdAndUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	appId: MiApp['id'],
-	userId: MiUser['id'],
-): Promise<boolean> {
-	const [row] = await db
-		.select({ id: accessToken.id })
-		.from(accessToken)
-		.where(accessTokenByAppAndUserCondition(appId, userId))
-		.limit(1);
-
-	return row != null;
-}
-
-export async function listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-	appIds: MiApp['id'][],
-): Promise<MiApp['id'][]> {
-	if (appIds.length === 0) {
-		return [];
-	}
-
-	const rows = await db
-		.select({ appId: accessToken.appId })
-		.from(accessToken)
-		.where(and(eq(accessToken.userId, userId), inArray(accessToken.appId, appIds)));
-
-	return [...new Set(rows.map((row) => row.appId).filter((id): id is MiApp['id'] => id != null))];
-}
-
-/**
- * i/apps.ts (自分の API トークン一覧) 向け。app リレーションは呼び出し元でバッチ取得する。
- */
+/** i/apps (自分の API トークン一覧) 向け。 */
 export async function listAccessTokensByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -123,27 +46,6 @@ export async function listAccessTokensByUserIdFromDatabase(
 		.from(accessToken)
 		.where(eq(accessToken.userId, userId))
 		.orderBy(order.direction === 'asc' ? asc(orderByColumn) : desc(orderByColumn));
-}
-
-/**
- * i/authorized-apps.ts (連携アプリ一覧) 向け。appId が設定されているトークンのみ対象。
- */
-export async function listAccessTokensWithAppByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-	options: {
-		limit: number;
-		offset: number;
-		direction: AccessTokenOrderDirection;
-	},
-): Promise<AccessTokenRow[]> {
-	return await db
-		.select()
-		.from(accessToken)
-		.where(and(eq(accessToken.userId, userId), isNotNull(accessToken.appId)))
-		.orderBy(options.direction === 'asc' ? asc(accessToken.id) : desc(accessToken.id))
-		.limit(options.limit)
-		.offset(options.offset);
 }
 
 export async function createAccessTokenInDatabase(db: MiDrizzleDatabase, data: AccessTokenInsert): Promise<void> {

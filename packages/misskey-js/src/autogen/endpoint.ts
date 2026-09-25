@@ -165,17 +165,6 @@ import type {
     ApGetResponse,
     ApShowRequest,
     ApShowResponse,
-    AppCreateRequest,
-    AppCreateResponse,
-    AppShowRequest,
-    AppShowResponse,
-    AuthAcceptRequest,
-    AuthSessionGenerateRequest,
-    AuthSessionGenerateResponse,
-    AuthSessionShowRequest,
-    AuthSessionShowResponse,
-    AuthSessionUserkeyRequest,
-    AuthSessionUserkeyResponse,
     BlockingCreateRequest,
     BlockingCreateResponse,
     BlockingDeleteRequest,
@@ -422,8 +411,6 @@ import type {
     I2faUpdateKeyResponse,
     IAppsRequest,
     IAppsResponse,
-    IAuthorizedAppsRequest,
-    IAuthorizedAppsResponse,
     IChangePasswordRequest,
     IClaimAchievementRequest,
     IDeleteAccountRequest,
@@ -496,8 +483,6 @@ import type {
     MuteDeleteRequest,
     MuteListRequest,
     MuteListResponse,
-    MyAppsRequest,
-    MyAppsResponse,
     NotesRequest,
     NotesResponse,
     NotesChildrenRequest,
@@ -835,12 +820,6 @@ export type Endpoints = {
     'antennas/update': { req: AntennasUpdateRequest; res: AntennasUpdateResponse };
     'ap/get': { req: ApGetRequest; res: ApGetResponse };
     'ap/show': { req: ApShowRequest; res: ApShowResponse };
-    'app/create': { req: AppCreateRequest; res: AppCreateResponse };
-    'app/show': { req: AppShowRequest; res: AppShowResponse };
-    'auth/accept': { req: AuthAcceptRequest; res: EmptyResponse };
-    'auth/session/generate': { req: AuthSessionGenerateRequest; res: AuthSessionGenerateResponse };
-    'auth/session/show': { req: AuthSessionShowRequest; res: AuthSessionShowResponse };
-    'auth/session/userkey': { req: AuthSessionUserkeyRequest; res: AuthSessionUserkeyResponse };
     'blocking/create': { req: BlockingCreateRequest; res: BlockingCreateResponse };
     'blocking/delete': { req: BlockingDeleteRequest; res: BlockingDeleteResponse };
     'blocking/list': { req: BlockingListRequest; res: BlockingListResponse; reqOptional: true };
@@ -1011,7 +990,6 @@ export type Endpoints = {
     'i/2fa/unregister': { req: I2faUnregisterRequest; res: EmptyResponse };
     'i/2fa/update-key': { req: I2faUpdateKeyRequest; res: I2faUpdateKeyResponse };
     'i/apps': { req: IAppsRequest; res: IAppsResponse; reqOptional: true };
-    'i/authorized-apps': { req: IAuthorizedAppsRequest; res: IAuthorizedAppsResponse; reqOptional: true };
     'i/change-password': { req: IChangePasswordRequest; res: EmptyResponse };
     'i/claim-achievement': { req: IClaimAchievementRequest; res: EmptyResponse };
     'i/delete-account': { req: IDeleteAccountRequest; res: EmptyResponse };
@@ -1075,7 +1053,6 @@ export type Endpoints = {
     'mute/create': { req: MuteCreateRequest; res: EmptyResponse };
     'mute/delete': { req: MuteDeleteRequest; res: EmptyResponse };
     'mute/list': { req: MuteListRequest; res: MuteListResponse; reqOptional: true };
-    'my/apps': { req: MyAppsRequest; res: MyAppsResponse; reqOptional: true };
     notes: { req: NotesRequest; res: NotesResponse; reqOptional: true };
     'notes/children': { req: NotesChildrenRequest; res: NotesChildrenResponse };
     'notes/clips': { req: NotesClipsRequest; res: NotesClipsResponse };
