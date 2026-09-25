@@ -7,9 +7,8 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
 import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
-import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
 import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
-import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
+import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
 type MembershipCacheEntry = {
@@ -94,26 +93,7 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 				return;
 			}
 
-			const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
-			if (!filtered) {
-				return;
-			}
-
-			if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
-				if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-					filtered.renote.myReaction = await populateMyReactionForApi(
-						deps,
-						{
-							id: filtered.renote.id,
-							reactions: filtered.renote.reactions,
-							reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-						},
-						user.id,
-					);
-				}
-			}
-
-			ctx.send('note', filtered);
+			await sendNoteToStream(deps, ctx, note);
 		};
 
 		ctx.subscriber.on(`userListStream:${listId}`, onUserListStream);
