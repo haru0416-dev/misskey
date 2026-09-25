@@ -485,7 +485,8 @@ export async function isVisibleForMeForApi(
 		if (meId === note.userId) {
 			return true;
 		}
-		if (note.reply && meId === note.reply.userId) {
+		// 自分の投稿への返信。note.reply は呼び出し元が関連を読み込まないと入らないので、列の値を見る。
+		if (note.replyUserId != null && meId === note.replyUserId) {
 			return true;
 		}
 		if (note.mentions?.includes(meId)) {
@@ -516,7 +517,7 @@ export async function filterVisibleNotesForApi(
 					note.visibility === 'followers' &&
 					meId != null &&
 					note.userId !== meId &&
-					note.reply?.userId !== meId &&
+					note.replyUserId !== meId &&
 					!note.mentions?.includes(meId),
 			)
 			.map((note) => note.userId),

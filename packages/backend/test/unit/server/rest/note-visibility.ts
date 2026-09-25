@@ -114,4 +114,22 @@ describe('filterVisibleNotesForApi', () => {
 		expect(fetchUserByIdOrFailFromDatabaseMock).not.toHaveBeenCalled();
 		expect(followingExistsInDatabaseMock).not.toHaveBeenCalled();
 	});
+
+	// 返信先の作者を mentions に入れないリモートのノートでも、自分宛ての返信は見える。関連 (note.reply) を
+	// 読み込まない呼び出し元が多いので、列の replyUserId で判定する。
+	test('treats a followers-only reply to the viewer as visible without loading relations', async () => {
+		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabaseMock.mockResolvedValue([]);
+		const replyToViewer = createNote('reply', remoteId, 'followers', {
+			userHost: 'remote.example',
+			replyUserId: viewerId,
+		});
+
+		const visibleNotes = await filterVisibleNotesForApi(
+			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotesForApi>[0],
+			[replyToViewer],
+			viewerId,
+		);
+
+		expect(visibleNotes).toEqual([replyToViewer]);
+	});
 });
