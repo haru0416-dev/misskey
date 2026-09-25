@@ -10,6 +10,8 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
+import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
+import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
@@ -88,6 +90,41 @@ export function isNoteMutedOrBlockedForStream(ctx: StreamChannelContext, note: P
 		return true;
 	}
 	return false;
+}
+
+type SigninRequirement = { requireSigninToViewContents?: boolean };
+
+/** 未ログインの接続に、閲覧にサインインが必要な投稿者 (本体・リノート元・返信先) の投稿を流さない。 */
+export function requiresSigninForStream(ctx: StreamChannelContext, note: Packed<'Note'>): boolean {
+	if (ctx.user != null) return false;
+	return [note.user, note.renote?.user, note.reply?.user].some(
+		(user) => (user as SigninRequirement | undefined)?.requireSigninToViewContents === true,
+	);
+}
+
+/** 非表示の処理を通し、リノート元への自分のリアクションを埋めてから送る。 */
+export async function sendNoteToStream(
+	deps: ApiNoteDependencies,
+	ctx: StreamChannelContext,
+	note: Packed<'Note'>,
+): Promise<void> {
+	const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
+	if (!filtered) return;
+	const renote = filtered.renote;
+	if (
+		ctx.user &&
+		isRenotePacked(filtered) &&
+		!isQuotePacked(filtered) &&
+		renote &&
+		Object.keys(renote.reactions).length > 0
+	) {
+		renote.myReaction = await populateMyReactionForApi(
+			deps,
+			{ id: renote.id, reactions: renote.reactions, reactionAndUserPairCache: renote.reactionAndUserPairCache ?? [] },
+			ctx.user.id,
+		);
+	}
+	ctx.send('note', filtered);
 }
 
 export type StreamChannelHandle = {

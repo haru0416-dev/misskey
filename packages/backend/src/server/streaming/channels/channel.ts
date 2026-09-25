@@ -7,9 +7,8 @@ import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
 import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
-import { isNoteVisibleForMeForStream } from '../channel.js';
+import { isNoteVisibleForMeForStream, requiresSigninForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelContext, StreamChannelDefinition } from '../channel.js';
 
 function isNoteMutedOrBlockedForChannelChannel(
@@ -58,21 +57,7 @@ export const honoStreamChannelChannel: StreamChannelDefinition<ApiNoteDependenci
 				return;
 			}
 
-			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) {
-				return;
-			}
-			if (
-				note.renote &&
-				(note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
-				ctx.user == null
-			) {
-				return;
-			}
-			if (
-				note.reply &&
-				(note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
-				ctx.user == null
-			) {
+			if (requiresSigninForStream(ctx, note)) {
 				return;
 			}
 
@@ -83,28 +68,7 @@ export const honoStreamChannelChannel: StreamChannelDefinition<ApiNoteDependenci
 				return;
 			}
 
-			const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
-			if (!filtered) {
-				return;
-			}
-
-			if (ctx.user) {
-				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
-					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForApi(
-							deps,
-							{
-								id: filtered.renote.id,
-								reactions: filtered.renote.reactions,
-								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-							},
-							ctx.user.id,
-						);
-					}
-				}
-			}
-
-			ctx.send('note', filtered);
+			await sendNoteToStream(deps, ctx, note);
 		};
 
 		ctx.subscriber.on('notesStream', handler);

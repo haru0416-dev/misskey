@@ -4,7 +4,6 @@
  */
 
 import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
-import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import {
 	filterNoteForStreamingHidingForApi,
@@ -12,7 +11,7 @@ import {
 	populateMyReactionForApi,
 } from '@/server/rest/note/note.js';
 import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
-import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
+import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependencies> = {
@@ -45,26 +44,7 @@ export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependenci
 					return;
 				}
 
-				const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
-				if (!filtered) {
-					return;
-				}
-
-				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
-					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForApi(
-							deps,
-							{
-								id: filtered.renote.id,
-								reactions: filtered.renote.reactions,
-								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-							},
-							user.id,
-						);
-					}
-				}
-
-				ctx.send('note', filtered);
+				await sendNoteToStream(deps, ctx, note);
 			} else {
 				ctx.send(data.type, data.body);
 			}
