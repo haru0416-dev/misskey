@@ -629,10 +629,13 @@ async function enqueueUserWebhook(
 	deps: NoteCreationDependencies,
 	userId: MiUser['id'],
 	type: 'note' | 'reply' | 'renote' | 'mention',
-	note: unknown,
+	packNote: () => Promise<unknown>,
 	idempotencyKey?: string,
 ): Promise<void> {
 	const webhooks = await listActiveWebhooksByUserIdAndEventFromDatabase(deps.db, userId, type);
+	// 大半のユーザーは webhook を持たない。送り先があるときだけ pack する。
+	if (webhooks.length === 0) return;
+	const note = await packNote();
 
 	await Promise.all(
 		webhooks.map((webhook) => {
@@ -949,14 +952,9 @@ async function runNoteAnalytics(deps: NoteCreationDependencies, event: NoteAnaly
 		if (note.visibility !== 'specified' && (deps.meta.enableChartsForRemoteUser || userHost == null)) {
 			updates.push(Promise.resolve(deps.chartWriters.perUserNotesChart.update({ id: note.userId }, note, true)));
 		}
-		if (userHost != null) {
-			updates.push(
-				fetchOrRegisterInstance(deps, userHost).then(async (instance) => {
-					if (deps.meta.enableChartsForFederatedInstances) {
-						await deps.chartWriters.instanceChart.updateNote(instance.host, note, true);
-					}
-				}),
-			);
+		// チャートはホスト名で記録する。instance 行は受信時と投稿の保存時に登録済みで、ここで読み直さない。
+		if (userHost != null && deps.meta.enableChartsForFederatedInstances) {
+			updates.push(deps.chartWriters.instanceChart.updateNote(userHost, note, true));
 		}
 		if (note.visibility === 'public' || note.visibility === 'home') {
 			const names = [...new Set(tags.map((tag) => normalizeForSearch(tag)))];
@@ -1098,8 +1096,11 @@ async function postNoteCreated(
 	}
 
 	if (!silent && stage === 'webhooks') {
-		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
-		await enqueueUserWebhook(deps, user.id, 'note', noteObj, note.id);
+		let packed: Promise<Packed<'Note'>> | undefined;
+		const noteObj = () =>
+			(packed ??= packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true }));
+		// webhook はローカルユーザーだけが持つ。リモートの投稿者について毎回検索しない。
+		if (user.host == null) await enqueueUserWebhook(deps, user.id, 'note', noteObj, note.id);
 		const localMentionedUsers = mentionedUsers.filter((mentioned) => mentioned.host == null);
 		const threadMutedUserIds = new Set(
 			await listNoteThreadMutedUserIdsFromDatabase(
@@ -1112,8 +1113,13 @@ async function postNoteCreated(
 			localMentionedUsers
 				.filter((mentioned) => !threadMutedUserIds.has(mentioned.id))
 				.map(async (mentioned) => {
-					const detailPackedNote = await packNoteForApi(deps, note, mentioned, { detail: true });
-					await enqueueUserWebhook(deps, mentioned.id, 'mention', detailPackedNote, note.id);
+					await enqueueUserWebhook(
+						deps,
+						mentioned.id,
+						'mention',
+						() => packNoteForApi(deps, note, mentioned, { detail: true }),
+						note.id,
+					);
 				}),
 		);
 		if (data.reply?.userHost === null) {
