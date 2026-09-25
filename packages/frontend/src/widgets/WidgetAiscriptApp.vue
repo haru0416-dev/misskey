@@ -22,7 +22,7 @@ import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps 
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
 import * as os from '@/os.js';
-import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
+import { aiScriptReadline, alertAiScriptError, createAiScriptEnv } from '@/aiscript/api.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import MkAsUi from '@/aiscript/components/MkAsUi.vue';
@@ -76,6 +76,7 @@ async function run() {
 		}),
 	}, {
 		in: aiScriptReadline,
+		err: alertAiScriptError,
 		out: (value) => {
 			// ウィジェットでは標準出力を使用しない。
 		},
@@ -94,9 +95,10 @@ async function run() {
 	try {
 		await aiscript.exec(ast);
 	} catch (err) {
+		// 実行時のエラーは err で通知されるので、ここに来るのは AiScript 内部のエラーだけ。
 		os.alert({
 			type: 'error',
-			title: 'AiScript Error',
+			title: 'Internal Error',
 			text: err instanceof Error ? err.message : String(err),
 		});
 	}

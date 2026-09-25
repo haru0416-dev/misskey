@@ -16,7 +16,7 @@ import { Interpreter, Parser } from '@syuilo/aiscript';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import { aiScriptReadline, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
 import { $i } from '@/i.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
@@ -61,6 +61,7 @@ async function run() {
 		...($i?.token === undefined ? {} : { token: $i.token }),
 	}), {
 		in: aiScriptReadline,
+		err: alertAiScriptError,
 		out: (value) => {
 			// ウィジェットでは標準出力を使用しない。
 		},

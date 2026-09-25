@@ -75,7 +75,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkAsUi from '@/aiscript/components/MkAsUi.vue';
 import { registerAsUiLib } from '@/aiscript/ui.js';
-import { aiScriptReadline, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
@@ -208,6 +208,7 @@ async function run() {
 		},
 		{
 			in: aiScriptReadline,
+			err: alertAiScriptError,
 			out: () => {
 				// nop
 			},
@@ -219,7 +220,7 @@ async function run() {
 
 	aiscript.value = interpreter;
 
-	await execAiScriptWithAlert(interpreter, parser, flash.value.script, { errorTitle: 'AiScript Error' });
+	await execAiScriptWithAlert(interpreter, parser, flash.value.script);
 }
 
 function showMenu(ev: PointerEvent) {
