@@ -163,7 +163,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.post(
 		'/federation/update-remote-user',
-		endpointHandlerAnonymous(deps, 'federation/update-remote-user', async ({ body, auth, c }) => {
+		endpointHandler(deps, 'federation/update-remote-user', async ({ body, c }) => {
 			await handleApiFederationUpdateRemoteUser(deps, body);
 			return emptyResponse(c);
 		}),

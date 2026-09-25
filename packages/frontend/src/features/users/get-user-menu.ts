@@ -436,7 +436,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 		);
 	}
 
-	if (user.host !== null) {
+	if ($i != null && user.host !== null) {
 		menuItems.push(
 			{ type: 'divider' },
 			{

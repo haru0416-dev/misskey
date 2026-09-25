@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { HOUR } from '@/const.js';
 import { federationUpdateRemoteUserParamDef } from '@/server/rest/activitypub/ap-person.js';
 import {
 	federationHostFollowingParamDef,
@@ -141,7 +142,14 @@ export const endpointMetas = {
 		meta: {
 			tags: ['federation'],
 
-			requireCredential: false,
+			// 呼ぶたびにリモートへの取得が走るので、匿名では呼ばせず回数も絞る。
+			requireCredential: true,
+			kind: 'read:account',
+
+			limit: {
+				duration: HOUR,
+				max: 30,
+			},
 
 			errors: {
 				noSuchUser: {
