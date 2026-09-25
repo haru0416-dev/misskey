@@ -3,20 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatRecordHeaderProperties } from '@/models/json-schema/chat-room.js';
+
 export const packedChatRoomInvitationSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
+		...chatRecordHeaderProperties,
 		userId: {
 			type: 'string',
 			optional: false,

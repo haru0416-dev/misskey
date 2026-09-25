@@ -13,6 +13,38 @@ import {
 } from '@/server/rest/user/following.js';
 import { HOUR } from '@/const.js';
 
+// 受信・送信のどちらも同じフォローリクエスト行を返す。
+const followRequestListSchema = {
+	type: 'array',
+	optional: false,
+	nullable: false,
+	items: {
+		type: 'object',
+		optional: false,
+		nullable: false,
+		properties: {
+			id: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+				format: 'id',
+			},
+			follower: {
+				type: 'object',
+				optional: false,
+				nullable: false,
+				ref: 'UserLite',
+			},
+			followee: {
+				type: 'object',
+				optional: false,
+				nullable: false,
+				ref: 'UserLite',
+			},
+		},
+	},
+} as const;
+
 export const endpointMetas = {
 	'following/create': {
 		meta: {
@@ -240,36 +272,7 @@ export const endpointMetas = {
 
 			kind: 'read:following',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					properties: {
-						id: {
-							type: 'string',
-							optional: false,
-							nullable: false,
-							format: 'id',
-						},
-						follower: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							ref: 'UserLite',
-						},
-						followee: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							ref: 'UserLite',
-						},
-					},
-				},
-			},
+			res: followRequestListSchema,
 		} as const,
 		paramDef: followingRequestsListParamDef,
 	},
@@ -300,36 +303,7 @@ export const endpointMetas = {
 
 			kind: 'read:following',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					properties: {
-						id: {
-							type: 'string',
-							optional: false,
-							nullable: false,
-							format: 'id',
-						},
-						follower: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							ref: 'UserLite',
-						},
-						followee: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							ref: 'UserLite',
-						},
-					},
-				},
-			},
+			res: followRequestListSchema,
 		} as const,
 		paramDef: followingRequestsListParamDef,
 	},

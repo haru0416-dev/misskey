@@ -3,20 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// chat 系の行は id に format を付けずに公開している。
+export const chatRecordHeaderProperties = {
+	id: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+	},
+	createdAt: {
+		type: 'string',
+		format: 'date-time',
+		optional: false,
+		nullable: false,
+	},
+} as const;
+
 export const packedChatRoomSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
+		...chatRecordHeaderProperties,
 		ownerId: {
 			type: 'string',
 			optional: false,

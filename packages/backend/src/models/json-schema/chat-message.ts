@@ -3,25 +3,66 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { chatRecordHeaderProperties } from '@/models/json-schema/chat-room.js';
+
+const chatMessageHeaderProperties = {
+	...chatRecordHeaderProperties,
+	fromUserId: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+	},
+} as const;
+
+// 4 種の表現で同じ意味を持つ本文と添付。
+const chatMessageContentProperties = {
+	text: {
+		type: 'string',
+		optional: true,
+		nullable: true,
+	},
+	fileId: {
+		type: 'string',
+		optional: true,
+		nullable: true,
+	},
+	file: {
+		type: 'object',
+		optional: true,
+		nullable: true,
+		ref: 'DriveFile',
+	},
+} as const;
+
+// リアクションした利用者を必ず添える表現 (完全版とルーム向け) の reactions。
+const reactionsWithUserProperty = {
+	type: 'array',
+	optional: false,
+	nullable: false,
+	items: {
+		type: 'object',
+		optional: false,
+		nullable: false,
+		properties: {
+			reaction: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+			},
+			user: {
+				type: 'object',
+				optional: false,
+				nullable: false,
+				ref: 'UserLite',
+			},
+		},
+	},
+} as const;
+
 export const packedChatMessageSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
-		fromUserId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
+		...chatMessageHeaderProperties,
 		fromUser: {
 			type: 'object',
 			optional: false,
@@ -50,72 +91,20 @@ export const packedChatMessageSchema = {
 			nullable: true,
 			ref: 'ChatRoom',
 		},
-		text: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		fileId: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		file: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			ref: 'DriveFile',
-		},
+		...chatMessageContentProperties,
 		isRead: {
 			type: 'boolean',
 			optional: true,
 			nullable: false,
 		},
-		reactions: {
-			type: 'array',
-			optional: false,
-			nullable: false,
-			items: {
-				type: 'object',
-				optional: false,
-				nullable: false,
-				properties: {
-					reaction: {
-						type: 'string',
-						optional: false,
-						nullable: false,
-					},
-					user: {
-						type: 'object',
-						optional: false,
-						nullable: false,
-						ref: 'UserLite',
-					},
-				},
-			},
-		},
+		reactions: reactionsWithUserProperty,
 	},
 } as const;
 
 export const packedChatMessageLiteSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
-		fromUserId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
+		...chatMessageHeaderProperties,
 		fromUser: {
 			type: 'object',
 			optional: true,
@@ -132,22 +121,7 @@ export const packedChatMessageLiteSchema = {
 			optional: true,
 			nullable: true,
 		},
-		text: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		fileId: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		file: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			ref: 'DriveFile',
-		},
+		...chatMessageContentProperties,
 		reactions: {
 			type: 'array',
 			optional: false,
@@ -177,43 +151,13 @@ export const packedChatMessageLiteSchema = {
 export const packedChatMessageLiteFor1on1Schema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
-		fromUserId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
+		...chatMessageHeaderProperties,
 		toUserId: {
 			type: 'string',
 			optional: false,
 			nullable: false,
 		},
-		text: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		fileId: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		file: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			ref: 'DriveFile',
-		},
+		...chatMessageContentProperties,
 		reactions: {
 			type: 'array',
 			optional: false,
@@ -237,22 +181,7 @@ export const packedChatMessageLiteFor1on1Schema = {
 export const packedChatMessageLiteForRoomSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		createdAt: {
-			type: 'string',
-			format: 'date-time',
-			optional: false,
-			nullable: false,
-		},
-		fromUserId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
+		...chatMessageHeaderProperties,
 		fromUser: {
 			type: 'object',
 			optional: false,
@@ -264,44 +193,7 @@ export const packedChatMessageLiteForRoomSchema = {
 			optional: false,
 			nullable: false,
 		},
-		text: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		fileId: {
-			type: 'string',
-			optional: true,
-			nullable: true,
-		},
-		file: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			ref: 'DriveFile',
-		},
-		reactions: {
-			type: 'array',
-			optional: false,
-			nullable: false,
-			items: {
-				type: 'object',
-				optional: false,
-				nullable: false,
-				properties: {
-					reaction: {
-						type: 'string',
-						optional: false,
-						nullable: false,
-					},
-					user: {
-						type: 'object',
-						optional: false,
-						nullable: false,
-						ref: 'UserLite',
-					},
-				},
-			},
-		},
+		...chatMessageContentProperties,
+		reactions: reactionsWithUserProperty,
 	},
 } as const;

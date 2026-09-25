@@ -3,40 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { authorProperties, entityHeaderProperties } from '@/models/json-schema/common.js';
+
 export const packedClipSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
+		...entityHeaderProperties,
 		lastClippedAt: {
 			type: 'string',
 			optional: false,
 			nullable: true,
 			format: 'date-time',
 		},
-		userId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		user: {
-			type: 'object',
-			ref: 'UserLite',
-			optional: false,
-			nullable: false,
-		},
+		...authorProperties,
 		name: {
 			type: 'string',
 			optional: false,

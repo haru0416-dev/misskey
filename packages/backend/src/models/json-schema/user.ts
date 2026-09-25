@@ -6,6 +6,32 @@
 import { z } from 'zod';
 import { misskeyId } from '@/misc/zod-params.js';
 
+// 正規表現の行は素の文字列、通常の語の行は AND 条件の配列で入る。
+const mutedWordsProperty = {
+	type: 'array',
+	nullable: false,
+	optional: false,
+	items: {
+		oneOf: [
+			{
+				type: 'array',
+				nullable: false,
+				optional: false,
+				items: {
+					type: 'string',
+					nullable: false,
+					optional: false,
+				},
+			},
+			{
+				type: 'string',
+				nullable: false,
+				optional: false,
+			},
+		],
+	},
+} as const;
+
 // admin/show-user の res が OpenAPI/misskey-js 生成時に JSON Schema 版を参照するため、Zod 版と併存させる。
 export const notificationRecieveConfigZodSchema = z.union([
 	z.object({
@@ -693,56 +719,8 @@ export const packedMeDetailedOnlySchema = {
 			nullable: false,
 			optional: false,
 		},
-		mutedWords: {
-			type: 'array',
-			nullable: false,
-			optional: false,
-			items: {
-				// 正規表現の行は素の文字列、通常の語の行は AND 条件の配列で入る。
-				oneOf: [
-					{
-						type: 'array',
-						nullable: false,
-						optional: false,
-						items: {
-							type: 'string',
-							nullable: false,
-							optional: false,
-						},
-					},
-					{
-						type: 'string',
-						nullable: false,
-						optional: false,
-					},
-				],
-			},
-		},
-		hardMutedWords: {
-			type: 'array',
-			nullable: false,
-			optional: false,
-			items: {
-				// 正規表現の行は素の文字列、通常の語の行は AND 条件の配列で入る。
-				oneOf: [
-					{
-						type: 'array',
-						nullable: false,
-						optional: false,
-						items: {
-							type: 'string',
-							nullable: false,
-							optional: false,
-						},
-					},
-					{
-						type: 'string',
-						nullable: false,
-						optional: false,
-					},
-				],
-			},
-		},
+		mutedWords: mutedWordsProperty,
+		hardMutedWords: mutedWordsProperty,
 		mutedInstances: {
 			type: 'array',
 			nullable: false,

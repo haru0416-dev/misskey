@@ -3,22 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { authorProperties, entityHeaderProperties, noteChannelSummaryProperty } from '@/models/json-schema/common.js';
+
 export const packedNoteDraftSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
+		...entityHeaderProperties,
 		text: {
 			type: 'string',
 			optional: false,
@@ -29,18 +19,7 @@ export const packedNoteDraftSchema = {
 			optional: false,
 			nullable: true,
 		},
-		userId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		user: {
-			type: 'object',
-			ref: 'UserLite',
-			optional: false,
-			nullable: false,
-		},
+		...authorProperties,
 		replyId: {
 			type: 'string',
 			optional: false,
@@ -148,43 +127,7 @@ export const packedNoteDraftSchema = {
 			nullable: true,
 			format: 'id',
 		},
-		channel: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			properties: {
-				id: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				name: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				color: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				isSensitive: {
-					type: 'boolean',
-					optional: false,
-					nullable: false,
-				},
-				allowRenoteToExternal: {
-					type: 'boolean',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: true,
-				},
-			},
-		},
+		channel: noteChannelSummaryProperty,
 		localOnly: {
 			type: 'boolean',
 			optional: false,

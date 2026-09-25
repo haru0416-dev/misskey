@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { editableUserContentHeaderProperties } from '@/models/json-schema/common.js';
+
 const blockBaseSchema = {
 	type: 'object',
 	properties: {
@@ -116,37 +118,7 @@ export const packedPageBlockSchema = {
 export const packedPageSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
-		updatedAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
-		userId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		user: {
-			type: 'object',
-			ref: 'UserLite',
-			optional: false,
-			nullable: false,
-		},
+		...editableUserContentHeaderProperties,
 		content: {
 			type: 'array',
 			optional: false,
