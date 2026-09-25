@@ -293,7 +293,8 @@ export function moveDriveFolderToFolder(
 	});
 }
 
-export function alertDriveFolderMoveError(err: { code?: string }) {
+// ファイル・フォルダの移動に失敗したときの通知。循環参照はフォルダの移動でだけ起きる。
+export function alertDriveMoveError(err: { code?: string }) {
 	switch (err.code) {
 		case 'RECURSIVE_NESTING':
 			claimAchievement('driveFolderCircularReference');
