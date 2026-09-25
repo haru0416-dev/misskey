@@ -28,13 +28,24 @@ describe('hono-queue-clean-remote-notes', () => {
 	let db: MiDrizzleDatabase;
 	let config: Config;
 	let deps: QueueCleanRemoteNotesDependencies;
+	let redisStore: Map<string, string>;
 
 	beforeAll(() => {
 		config = loadConfig();
 		pool = createBunSqlClient(config);
 		db = createBunSqlDatabase(pool, config);
+		const store = new Map<string, string>();
+		redisStore = store;
 		deps = {
 			db,
+			redis: {
+				get: async (key: string) => store.get(key) ?? null,
+				set: async (key: string, value: string) => {
+					store.set(key, value);
+					return 'OK';
+				},
+				del: async (key: string) => (store.delete(key) ? 1 : 0),
+			} as unknown as QueueCleanRemoteNotesDependencies['redis'],
 			meta: {
 				enableRemoteNotesCleaning: false,
 				remoteNotesCleaningMaxProcessingDurationInMinutes: 60,
@@ -86,5 +97,33 @@ describe('hono-queue-clean-remote-notes', () => {
 
 		const noteAfter = await fetchNoteByIdFromDatabase(db, noteId);
 		expect(noteAfter).toBeNull();
+	});
+
+	test('前回の走査位置より前のノートは次の周回まで読み直さない', async () => {
+		const host = `honoqueuecrnc-${genId()}.example.com`;
+		const userId = genId();
+		await createUserInDatabase(db, {
+			id: userId,
+			username: `honoqueuecrnc${userId}`,
+			usernameLower: `honoqueuecrnc${userId}`.toLowerCase(),
+			host,
+		});
+		const day = 1000 * 60 * 60 * 24;
+		const noteId = genId(Date.now() - day * 120);
+		await createNoteInDatabase(db, { id: noteId, text: 'before cursor', userId, userHost: host, visibility: 'public' });
+
+		const enabled = {
+			...deps,
+			meta: { ...deps.meta, enableRemoteNotesCleaning: true, remoteNotesCleaningMaxProcessingDurationInMinutes: 0.1 },
+		};
+
+		redisStore.set('cleanRemoteNotes:cursor', genId(Date.now() - day * 110));
+		await handleQueueCleanRemoteNotes(enabled, createReporter());
+		expect(await fetchNoteByIdFromDatabase(db, noteId)).not.toBeNull();
+
+		// 周回を終えて位置が消えた後は先頭から読むので、残っていたノートも対象になる。
+		redisStore.delete('cleanRemoteNotes:cursor');
+		await handleQueueCleanRemoteNotes(enabled, createReporter());
+		expect(await fetchNoteByIdFromDatabase(db, noteId)).toBeNull();
 	});
 });
