@@ -188,7 +188,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-import { alertDriveFolderMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
+import { alertDriveMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
 import { store } from '@/store.js';
 import { makeDateGroupedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
@@ -418,7 +418,7 @@ function onDrop(ev: DragEvent): void | boolean {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			moveDriveFilesToFolder(droppedData, folder.value);
+			moveDriveFilesToFolder(droppedData, folder.value).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion
@@ -438,7 +438,7 @@ function onDrop(ev: DragEvent): void | boolean {
 			if (foldersPaginator.items.value.some((f) => f.id === droppedFolder.id)) {
 				return false;
 			}
-			moveDriveFolderToFolder(droppedFolder, folder.value).catch(alertDriveFolderMoveError);
+			moveDriveFolderToFolder(droppedFolder, folder.value).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion

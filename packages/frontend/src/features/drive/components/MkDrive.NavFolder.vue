@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
-import { moveDriveFilesToFolder, moveDriveFolderToFolder } from '@/features/drive/drive.js';
+import { alertDriveMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder } from '@/features/drive/drive.js';
 import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
 
 const props = defineProps<{
@@ -83,7 +83,7 @@ function onDrop(ev: DragEvent) {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			moveDriveFilesToFolder(droppedData, props.folder ?? null);
+			moveDriveFilesToFolder(droppedData, props.folder ?? null).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion
@@ -100,7 +100,7 @@ function onDrop(ev: DragEvent) {
 			if (props.folder && droppedFolder.id === props.folder.id) {
 				return;
 			}
-			moveDriveFolderToFolder(droppedFolder, props.folder ?? null);
+			moveDriveFolderToFolder(droppedFolder, props.folder ?? null).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion

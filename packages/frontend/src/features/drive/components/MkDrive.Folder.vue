@@ -42,7 +42,7 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
 import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/drag-and-drop.js';
-import { alertDriveFolderMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
+import { alertDriveMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -133,7 +133,7 @@ function onDrop(ev: DragEvent) {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			moveDriveFilesToFolder(droppedData, props.folder);
+			moveDriveFilesToFolder(droppedData, props.folder).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion
@@ -152,7 +152,7 @@ function onDrop(ev: DragEvent) {
 				return;
 			}
 
-			moveDriveFolderToFolder(droppedFolder, props.folder).catch(alertDriveFolderMoveError);
+			moveDriveFolderToFolder(droppedFolder, props.folder).catch(alertDriveMoveError);
 		}
 	}
 	//#endregion
