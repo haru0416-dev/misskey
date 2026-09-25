@@ -7,14 +7,16 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	deleteAccessTokenByIdAndUserIdFromDatabase,
-	deleteAccessTokenByTokenAndUserIdFromDatabase,
+	fetchAccessTokenByTokenFromDatabase,
 	listAccessTokensByUserIdFromDatabase,
 } from '@/core/app/AccessTokenStore.js';
 import type { AccessTokenOrderField } from '@/core/app/AccessTokenStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
+import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
+import { permissionDeniedError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccessTokenDependencies = {
@@ -66,17 +68,33 @@ export async function handleApiIApps(
 	);
 }
 
-/** 自分のトークンだけを消す。他人のトークンや存在しないトークンの指定は何もしない。 */
+/**
+ * 自分のトークンだけを消す。他人のトークンや存在しないトークンの指定は何もしない。
+ * アプリのトークンで呼ばれたときは、そのトークン自身だけを消せる (アプリがログアウト時に後始末できるように)。
+ */
 export async function handleApiIRevokeToken(
 	deps: ApiAccessTokenDependencies,
 	user: { id: MiUser['id'] },
+	token: { id: MiAccessToken['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(iRevokeTokenParamDef, body);
 
+	let target: { id: MiAccessToken['id'] } | null;
 	if ('tokenId' in params) {
-		await deleteAccessTokenByIdAndUserIdFromDatabase(deps.db, params.tokenId, user.id);
+		target = { id: params.tokenId };
 	} else if (params.token) {
-		await deleteAccessTokenByTokenAndUserIdFromDatabase(deps.db, params.token, user.id);
+		const found = await fetchAccessTokenByTokenFromDatabase(deps.db, params.token);
+		target = found != null && found.userId === user.id ? found : null;
+	} else {
+		return;
 	}
+	if (target == null) {
+		return;
+	}
+
+	if (token != null && token.id !== target.id) {
+		throw permissionDeniedError();
+	}
+	await deleteAccessTokenByIdAndUserIdFromDatabase(deps.db, target.id, user.id);
 }

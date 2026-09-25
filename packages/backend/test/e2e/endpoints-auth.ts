@@ -831,6 +831,28 @@ describe('Endpoints', () => {
 			expect(afterRevoke.body.some((item) => item.name === byIdName || item.name === byTokenName)).toBe(false);
 		});
 
+		test('アプリのトークンからは、そのトークン自身だけを i/revoke-token で失効できる', async () => {
+			const suffix = Date.now().toString(36);
+			const appToken = await issueToken(alice, `app self ${suffix}`);
+			const otherToken = await issueToken(alice, `app other ${suffix}`);
+			const list = await api('i/apps', { sort: '-createdAt' }, alice);
+			const otherItem = list.body.find((item) => item.name === `app other ${suffix}`);
+			assert.ok(otherItem);
+
+			const deniedById = await api('i/revoke-token', { tokenId: otherItem.id }, { token: appToken });
+			expect(deniedById.status).toBe(403);
+			expect(castAsError(deniedById.body as any).error.code).toBe('PERMISSION_DENIED');
+			const deniedByToken = await api('i/revoke-token', { token: otherToken }, { token: appToken });
+			expect(deniedByToken.status).toBe(403);
+			expect((await api('i', {}, { token: otherToken })).status).toBe(200);
+
+			expect((await api('i/revoke-token', { token: appToken }, { token: appToken })).status).toBe(204);
+			expect((await api('i', {}, { token: appToken })).status).toBe(401);
+			expect((await api('i', {}, { token: otherToken })).status).toBe(200);
+
+			await api('i/revoke-token', { token: otherToken }, alice);
+		});
+
 		test('旧 3-legged 認可のエンドポイントは廃止されている', async () => {
 			for (const endpoint of [
 				'app/create',
