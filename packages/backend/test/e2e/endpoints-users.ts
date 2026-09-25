@@ -2610,6 +2610,46 @@ describe('Endpoints', () => {
 			expect(noSuchUser.status).toBe(400);
 			expect(castAsError(noSuchUser.body as any).error.code).toBe('NO_SUCH_USER');
 		});
+
+		test('見る人から見えない返信は数えない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const author = await signup({ username: `hgfv${suffix}` });
+			const dmPartner = await signup({ username: `hgfvd${suffix}` });
+			const followersTarget = await signup({ username: `hgfvf${suffix}` });
+			const follower = await signup({ username: `hgfvw${suffix}` });
+			const stranger = await signup({ username: `hgfvs${suffix}` });
+			const followed = await api('following/create', { userId: author.id }, follower);
+			expect(followed.status).toBe(200);
+
+			// 返信の公開範囲が見えない人には、返信の相手が分からないようにする。
+			const partnerNote = await post(dmPartner, { text: 'public target' });
+			const dmReply = await post(author, {
+				text: 'dm reply',
+				replyId: partnerNote.id,
+				visibility: 'specified',
+				visibleUserIds: [dmPartner.id],
+			});
+			expect(dmReply.visibility).toBe('specified');
+			const followersNote = await post(followersTarget, { text: 'public target 2' });
+			const followersReply = await post(author, {
+				text: 'followers reply',
+				replyId: followersNote.id,
+				visibility: 'followers',
+			});
+			expect(followersReply.visibility).toBe('followers');
+
+			const ids = async (viewer?: typeof author) => {
+				const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 100 }, viewer);
+				expect(res.status).toBe(200);
+				return res.body.map((r: any) => r.user.id).sort();
+			};
+
+			expect(await ids()).toStrictEqual([]);
+			expect(await ids(stranger)).toStrictEqual([]);
+			expect(await ids(dmPartner)).toStrictEqual([dmPartner.id]);
+			expect(await ids(follower)).toStrictEqual([followersTarget.id]);
+			expect(await ids(author)).toStrictEqual([dmPartner.id, followersTarget.id].sort());
+		});
 	});
 
 	describe('users/reactions', () => {
