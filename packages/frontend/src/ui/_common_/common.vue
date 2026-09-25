@@ -209,13 +209,11 @@ if ($i) {
 .transition_notification_leaveActive {
 	transition: opacity 0.3s, transform 0.3s !important;
 }
-.transition_notification_enterFrom {
-	opacity: 0;
-	transform: translateX(250px);
-}
+/* 配置した側の画面端から入り、同じ側へ抜ける。左に置いたときの向きは .notifications が変数で渡す。 */
+.transition_notification_enterFrom,
 .transition_notification_leaveTo {
 	opacity: 0;
-	transform: translateX(-250px);
+	transform: translateX(var(--notificationSlideOffset, 250px));
 }
 
 .menuDrawerBg {
@@ -271,6 +269,7 @@ if ($i) {
 	&.notificationsPosition_leftTop {
 		top: var(--MI-margin);
 		left: 0;
+		--notificationSlideOffset: -250px;
 	}
 
 	&.notificationsPosition_rightTop {
@@ -281,6 +280,7 @@ if ($i) {
 	&.notificationsPosition_leftBottom {
 		bottom: calc(var(--MI-minBottomSpacing) + var(--MI-margin));
 		left: 0;
+		--notificationSlideOffset: -250px;
 	}
 
 	&.notificationsPosition_rightBottom {

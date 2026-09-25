@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="$style.root">
+<div :class="[$style.root, { [$style.contentVisibilityAuto]: contentVisibilityAuto }]">
 	<div :class="$style.head">
 		<MkAvatar v-if="['pollEnded', 'note'].includes(notification.type) && 'note' in notification" :class="$style.icon" :user="notification.note.user" link preview/>
 		<MkAvatar v-else-if="['roleAssigned', 'achievementEarned', 'exportCompleted', 'login', 'createToken', 'scheduledNotePosted', 'scheduledNotePostFailed'].includes(notification.type)" :class="$style.icon" :user="$i" link preview/>
@@ -185,10 +185,13 @@ const props = withDefaults(
 		notification: Misskey.entities.Notification;
 		withTime?: boolean;
 		full?: boolean;
+		/** 一覧では画面外の描画を省く。画面外から滑り込むトーストでは、省くと中身が遅れて現れるので切る。 */
+		contentVisibilityAuto?: boolean;
 	}>(),
 	{
 		withTime: false,
 		full: false,
+		contentVisibilityAuto: true,
 	},
 );
 
@@ -241,8 +244,6 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	overflow-wrap: break-word;
 	display: flex;
 	contain: content;
-	content-visibility: auto;
-	contain-intrinsic-size: 0 100px;
 
 	--eventFollow: var(--MI_THEME-link);
 	--eventRenote: var(--MI_THEME-renote);
@@ -252,6 +253,11 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	--eventAchievement: var(--MI_THEME-hashtag);
 	--eventLogin: var(--MI_THEME-accent);
 	--eventOther: color-mix(in oklab, var(--MI_THEME-fg) 45%, var(--MI_THEME-panel));
+}
+
+.contentVisibilityAuto {
+	content-visibility: auto;
+	contain-intrinsic-size: 0 100px;
 }
 
 .head {
