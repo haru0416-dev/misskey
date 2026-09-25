@@ -65,20 +65,31 @@ export function aiScriptReadline(q: string): Promise<string> {
 	});
 }
 
-// 構文エラーでは実行せず、どちらの失敗もダイアログで知らせる。
-export async function execAiScriptWithAlert(
-	interpreter: Interpreter,
-	parser: Parser,
-	script: string,
-	opts: { errorTitle?: string } = {},
-): Promise<void> {
+/**
+ * Interpreter の `err` に渡す。渡さないと、UI のボタンやタイマーから後で呼ばれた関数のエラーが
+ * 未処理の rejection になり、画面に何も出ない。
+ */
+export function alertAiScriptError(err: { toString(): string }): void {
+	os.alert({
+		type: 'error',
+		title: 'AiScript Error',
+		text: err.toString(),
+	});
+}
+
+/**
+ * 構文エラーでは実行せず、ダイアログで知らせる。Interpreter には `err: alertAiScriptError` を渡しておくこと。
+ * 実行時のエラーはそちらで通知されるので、ここで捕まえるのは AiScript 内部のエラーだけになる。
+ */
+export async function execAiScriptWithAlert(interpreter: Interpreter, parser: Parser, script: string): Promise<void> {
 	let ast;
 	try {
 		ast = parser.parse(script);
-	} catch {
+	} catch (err) {
 		os.alert({
 			type: 'error',
-			text: 'Syntax error :(',
+			title: 'Syntax Error',
+			text: String(err),
 		});
 		return;
 	}
@@ -87,7 +98,7 @@ export async function execAiScriptWithAlert(
 	} catch (err) {
 		os.alert({
 			type: 'error',
-			...(opts.errorTitle === undefined ? {} : { title: opts.errorTitle }),
+			title: 'Internal Error',
 			text: err instanceof Error ? err.message : String(err),
 		});
 	}

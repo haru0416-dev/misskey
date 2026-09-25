@@ -26,7 +26,7 @@ import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps 
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import type { Value } from '@syuilo/aiscript/interpreter/value.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
-import { aiScriptReadline, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { genId } from '@/utility/id.js';
@@ -74,6 +74,7 @@ const run = async () => {
 		...($i?.token === undefined ? {} : { token: $i.token }),
 	}), {
 		in: aiScriptReadline,
+		err: alertAiScriptError,
 		out: (value) => {
 			logs.value.push({
 				id: genId(),

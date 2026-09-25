@@ -64,7 +64,7 @@ import MkContainer from '@/components/layout/MkContainer.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
-import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
+import { aiScriptReadline, alertAiScriptError, createAiScriptEnv } from '@/aiscript/api.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
@@ -136,13 +136,7 @@ async function run() {
 					print: true,
 				});
 			},
-			err: (err) => {
-				os.alert({
-					type: 'error',
-					title: 'AiScript Error',
-					text: err.toString(),
-				});
-			},
+			err: alertAiScriptError,
 			log: (type, params) => {
 				switch (type) {
 					case 'end':
