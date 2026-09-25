@@ -986,6 +986,17 @@ describe('Endpoints', () => {
 			const res = await api('notes/translate', { noteId: textlessNote.id, targetLang: 'en' }, author);
 			expect(res.status).toBe(204);
 			expect(res.body).toBeNull();
+
+			// 本文が無くても CW があれば翻訳の対象にする。テスト環境は DeepL 未設定なので、翻訳しようとした結果が UNAVAILABLE になる。
+			const cwOnlyNote = await post(author, {
+				cw: 'hono translate cw',
+				fileIds: [file.body!.id],
+				visibility: 'public',
+			});
+			expect(cwOnlyNote.text).toBeNull();
+			const cwRes = await api('notes/translate', { noteId: cwOnlyNote.id, targetLang: 'en' }, author);
+			expect(cwRes.status).toBe(400);
+			expect(castAsError(cwRes.body as any).error.code).toBe('UNAVAILABLE');
 		});
 	});
 

@@ -346,12 +346,14 @@ export function getNoteMenu(props: {
 		if (props.translation.value != null) {
 			return;
 		}
-		if (prefer['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable && appearNote.text != null) {
+		// CW も訳す。区切り線はサーバー側の翻訳 (notes/translate) と同じ形にそろえる。
+		const text = appearNote.cw != null ? `${appearNote.cw}\n-----\n${appearNote.text ?? ''}` : (appearNote.text ?? '');
+		if (prefer['experimental.enableWebTranslatorApi'] && isInBrowserTranslationAvailable && text.trim() !== '') {
 			props.translating.value = true;
 			try {
 				// @ts-expect-error 実験的なAPIなので型定義がない
 				const detector = await LanguageDetector.create();
-				const langResult = await detector.detect(appearNote.text);
+				const langResult = await detector.detect(text);
 				let localStorageLang = miLocalStorage.getItem('lang');
 				if (localStorageLang != null) {
 					localStorageLang = localStorageLang.split('-')[0] ?? null;
@@ -364,7 +366,7 @@ export function getNoteMenu(props: {
 				) {
 					props.translation.value = {
 						sourceLang: langResult[0]?.detectedLanguage ?? 'unknown',
-						text: appearNote.text,
+						text,
 					};
 					return;
 				}
@@ -374,7 +376,7 @@ export function getNoteMenu(props: {
 					sourceLanguage: langResult[0]?.detectedLanguage,
 					targetLanguage: localStorageLang ?? navigator.language,
 				});
-				const translated = await translator.translate(appearNote.text);
+				const translated = await translator.translate(text);
 				props.translation.value = {
 					sourceLang: langResult[0]?.detectedLanguage ?? 'unknown',
 					text: translated,
