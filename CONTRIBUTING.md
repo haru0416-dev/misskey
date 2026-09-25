@@ -5,6 +5,7 @@ Issue / PR はこのリポジトリに対して出すこと (upstream の Issue�
 
 ここには開発環境の作り方と、コードを書くうえでの決まりごとをまとめている。
 AI コーディングエージェント向けの規約は [AGENTS.md](./AGENTS.md) にある。
+計画・調査記録・過去の履歴の入口は [docs/README.md](./docs/README.md) を参照。
 
 ## Issues
 
@@ -41,18 +42,25 @@ AI コーディングエージェント向けの規約は [AGENTS.md](./AGENTS.m
 詳細は [locales/README.md](locales/README.md)。
 
 ## Development
+
 ### Setup
-Before developing, you have to set up environment. Misskey requires Valkey, PostgreSQL, and FFmpeg.
 
-You would want to install Meilisearch to experiment related features. Technically, meilisearch is not strict requirement, but some features and tests require it.
-
-There are a few ways to proceed.
+Use the Bun version specified in [package.json](./package.json). Install dependencies with `bun install --frozen-lockfile`.
+The application needs PostgreSQL, Valkey, and FFmpeg. Meilisearch is optional for normal development, but some features and tests require it.
 
 #### Use system-wide software
-You could install them in system-wide (such as from package manager).
+
+Install PostgreSQL, Valkey, and FFmpeg locally, and configure `.config/default.yml` to use their actual addresses and credentials.
 
 #### Use `docker compose`
-You could obtain middleware container by typing `docker compose -f $PROJECT_ROOT/deploy/compose.local-db.yml up -d`.
+
+The local middleware compose file needs `.config/docker.env` (start from [docker_example.env](./.config/docker_example.env) if it does not exist):
+
+```sh
+docker compose -f deploy/compose.local-db.yml up -d
+```
+
+It binds PostgreSQL to `127.0.0.1:5432` and Valkey to `127.0.0.1:6379`. The checked-in `.config/default.yml` uses ports `55432` and `56379`; align its ports and database credentials with the compose environment before starting the app. This compose file does not run the application.
 
 #### Use Devcontainer
 Devcontainer also has necessary setting. This method can be done by connecting from VSCode.
@@ -80,11 +88,15 @@ HTTPSでしか動作しない機能を検証したい時や、スマホなど別
 > cloudflared (Cloudflare Tunnel) は region1.v2.argotunnel.com / region2.v2.argotunnel.com に QUIC/HTTP2 でアウトバウンド接続するのですが、WARP を有効化するとこのトラフィックが WARP 経由になってループ/切断します。これら 2 ホストを WARP のトンネル除外（split tunnel）に追加することで、cloudflared だけは WARP をバイパスして直接 Cloudflare エッジへ接続できるようになります。
 
 ### Start developing
-During development, it is useful to use the
+
+For a fresh local database (outside Devcontainer), build the application and apply migrations first:
+
+```sh
+bun run build
+bun run migrate
 ```
-bun run dev
-```
-command.
+
+Then run `bun run dev` to watch the backend, frontend, embed, service worker, and their dependencies.
 
 - Server-side source files and automatically builds them if they are modified. Automatically start the server process(es).
 - Service Worker is watched by esbuild.
@@ -108,9 +120,9 @@ There are three types of test codes for the backend:
 - Multiple-server E2E tests: [`/packages/backend/test-federation`](/packages/backend/test-federation)
 
 #### Running Unit Tests or Single-server E2E Tests
-1. Create a config file:
+1. If `.config/test.yml` does not exist, copy the dedicated test configuration. Do not overwrite an existing test configuration:
 ```sh
-cp .github/misskey/test.yml .config/
+test -e .config/test.yml || cp .github/misskey/test.yml .config/test.yml
 ```
 
 2. Start DB and Valkey servers for testing:
