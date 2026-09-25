@@ -50,27 +50,31 @@ export function getSafeContentType(mime: string): string {
 	return FILE_TYPE_BROWSERSAFE.includes(mime) ? mime : 'application/octet-stream';
 }
 
+/**
+ * ファイルの本文を返し、長さのヘッダもここで決める。Range があれば 206 と部分長、無ければ全体長にする。
+ * 呼び出し側で Content-Length を書き足すと、206 の部分長を全体長で上書きしてしまい動画の再生が始まらない。
+ */
 export function handleRangeRequest(
 	reply: FileServerReply,
 	rangeHeader: string | undefined,
 	size: number,
 	path: string,
 ): fs.ReadStream {
+	reply.header('Accept-Ranges', 'bytes');
 	if (rangeHeader && size > 0) {
 		const { stream, start, end, chunksize } = createRangeStream(rangeHeader, size, path);
 		reply.header('Content-Range', `bytes ${start}-${end}/${size}`);
-		reply.header('Accept-Ranges', 'bytes');
 		reply.header('Content-Length', chunksize);
 		reply.code(206);
 		return stream;
 	}
+	reply.header('Content-Length', size);
 	return fs.createReadStream(path);
 }
 
 export type FileResponseOptions = {
 	mime: string;
 	filename: string;
-	size?: number;
 	cacheControl?: string;
 };
 
@@ -78,9 +82,6 @@ export function setFileResponseHeaders(reply: FileServerReply, options: FileResp
 	reply.header('Content-Type', getSafeContentType(options.mime));
 	reply.header('Cache-Control', options.cacheControl ?? 'max-age=31536000, immutable');
 	reply.header('Content-Disposition', contentDisposition('inline', options.filename));
-	if (options.size !== undefined) {
-		reply.header('Content-Length', options.size);
-	}
 }
 
 export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(
