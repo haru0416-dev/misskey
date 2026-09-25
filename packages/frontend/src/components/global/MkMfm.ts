@@ -166,7 +166,10 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							if (!useAnim) {
 								return genEl(token.children, scale);
 							}
-							return h(MkSparkle, {}, { default: () => genEl(token.children, scale) });
+							// 子はここで 1 度だけ作る。slot の中で作ると、MkSparkle の再描画 (約 1 秒ごと) のたびに
+							// nextKey() が新しいキーを振り、中のカスタム絵文字が付け直されてアニメーションが先頭に戻る。
+							const sparkleChildren = genEl(token.children, scale);
+							return h(MkSparkle, {}, { default: () => sparkleChildren });
 						}
 						case 'ruby': {
 							if (token.children.length === 1) {
@@ -213,6 +216,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							return h(
 								'span',
 								{
+									// Play のボタン代わりに連打されるので、クリックのたびに文字が選択されないようにする。
+									style: 'user-select: none;',
 									onClick(ev: PointerEvent): void {
 										ev.stopPropagation();
 										ev.preventDefault();
@@ -281,6 +286,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 				}
 
 				case 'link': {
+					// sparkle と同じく、子は slot の外で 1 度だけ作る (MkLink の再描画で付け直さない)。
+					const linkChildren = genEl(token.children, scale, true);
 					return [
 						h(
 							MkLink,
@@ -292,7 +299,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									? {}
 									: { navigationBehavior: props.linkNavigationBehavior }),
 							},
-							{ default: () => genEl(token.children, scale, true) },
+							{ default: () => linkChildren },
 						),
 					];
 				}
