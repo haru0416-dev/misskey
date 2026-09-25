@@ -1357,7 +1357,9 @@ export async function handleApiNotesTranslate(
 		throw notesTranslateCannotTranslateInvisibleNoteError();
 	}
 
-	if (note.text == null) {
+	// CW も訳す。区切り線はクライアントのブラウザ内翻訳と同じ形にそろえる。
+	const text = note.cw != null ? `${note.cw}\n-----\n${note.text ?? ''}` : (note.text ?? '');
+	if (text.trim() === '') {
 		return undefined;
 	}
 
@@ -1366,7 +1368,7 @@ export async function handleApiNotesTranslate(
 		targetLang = targetLang.split('-')[0]!;
 	}
 
-	return await translateTextForApi(deps, note.text, targetLang);
+	return await translateTextForApi(deps, text, targetLang);
 }
 
 export const usersNotesParamDef = z.object({
