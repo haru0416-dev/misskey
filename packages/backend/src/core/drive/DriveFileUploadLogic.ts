@@ -18,6 +18,7 @@ import type { InternalStorageService } from '@/core/drive/InternalStorageService
 import type { S3PutObject, S3Service } from '@/core/drive/S3Service.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { createTemp } from '@/misc/create-temp.js';
@@ -40,14 +41,25 @@ export type DriveFileUploadDependencies = {
 	logger?: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-function validateDriveFileName(name: string): boolean {
-	return (
-		name.trim().length > 0 && name.length <= 200 && !name.includes('\\') && !name.includes('/') && !name.includes('..')
-	);
+type DriveFileAltsDependencies = Pick<
+	DriveFileUploadDependencies,
+	'config' | 'imageProcessingService' | 'videoProcessingService' | 'logger'
+>;
+
+export function driveSensitiveMediaThreshold(meta: Pick<MiMeta, 'sensitiveMediaDetectionSensitivity'>): number {
+	return meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
+		? 0.1
+		: meta.sensitiveMediaDetectionSensitivity === 'high'
+			? 0.3
+			: meta.sensitiveMediaDetectionSensitivity === 'low'
+				? 0.7
+				: meta.sensitiveMediaDetectionSensitivity === 'veryLow'
+					? 0.9
+					: 0.5;
 }
 
-async function generateDriveFileAlts(
-	deps: DriveFileUploadDependencies,
+export async function generateDriveFileAlts(
+	deps: DriveFileAltsDependencies,
 	path: string,
 	type: string,
 	generateWeb: boolean,
@@ -158,6 +170,84 @@ async function generateDriveFileAlts(
 	};
 }
 
+type ObjectStorageMeta = Pick<
+	MiMeta,
+	| 'objectStorageBaseUrl'
+	| 'objectStorageUseSSL'
+	| 'objectStorageEndpoint'
+	| 'objectStoragePort'
+	| 'objectStorageBucket'
+	| 'objectStoragePrefix'
+>;
+
+// 拡張子はブラウザで安全に開ける型のときだけ付ける。それ以外はオブジェクトストレージ上で拡張子なしにする。
+function resolveObjectStorageLocation(
+	meta: ObjectStorageMeta,
+	name: string,
+	type: string,
+): { baseUrl: string; prefix: string; key: string; url: string } {
+	let [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
+
+	if (ext === '') {
+		if (type === 'image/jpeg') {
+			ext = '.jpg';
+		}
+		if (type === 'image/png') {
+			ext = '.png';
+		}
+		if (type === 'image/webp') {
+			ext = '.webp';
+		}
+		if (type === 'image/avif') {
+			ext = '.avif';
+		}
+		if (type === 'image/apng') {
+			ext = '.apng';
+		}
+		if (type === 'image/vnd.mozilla.apng') {
+			ext = '.apng';
+		}
+	}
+
+	if (!FILE_TYPE_BROWSERSAFE.includes(type)) {
+		ext = '';
+	}
+
+	const baseUrl =
+		meta.objectStorageBaseUrl ??
+		`${meta.objectStorageUseSSL ? 'https' : 'http'}://${meta.objectStorageEndpoint}${meta.objectStoragePort ? `:${meta.objectStoragePort}` : ''}/${meta.objectStorageBucket}`;
+	const prefix = meta.objectStoragePrefix ? `${meta.objectStoragePrefix}/` : '';
+	const key = `${prefix}${randomUUID()}${ext}`;
+	return { baseUrl, prefix, key, url: `${baseUrl}/${key}` };
+}
+
+export function buildObjectStoragePutObject(
+	meta: Pick<MiMeta, 'objectStorageSetPublicRead'>,
+	key: string,
+	body: Blob | Uint8Array,
+	type: string,
+	ext: string | null | undefined,
+	filename: string | undefined,
+): S3PutObject {
+	let contentType = type;
+	if (contentType === 'image/apng') {
+		contentType = 'image/png';
+	}
+	if (!FILE_TYPE_BROWSERSAFE.includes(contentType)) {
+		contentType = 'application/octet-stream';
+	}
+
+	return {
+		key,
+		body,
+		contentType,
+		...(filename == null
+			? {}
+			: { contentDisposition: contentDisposition('inline', ext ? correctFilename(filename, ext) : filename) }),
+		publicRead: meta.objectStorageSetPublicRead,
+	};
+}
+
 async function uploadObjectStorageFile(
 	deps: DriveFileUploadDependencies,
 	key: string,
@@ -166,23 +256,7 @@ async function uploadObjectStorageFile(
 	ext?: string | null,
 	filename?: string,
 ): Promise<void> {
-	let uploadType = type;
-	if (uploadType === 'image/apng') {
-		uploadType = 'image/png';
-	}
-	if (!FILE_TYPE_BROWSERSAFE.includes(uploadType)) {
-		uploadType = 'application/octet-stream';
-	}
-
-	const object: S3PutObject = {
-		key,
-		body: stream,
-		contentType: uploadType,
-		...(filename == null
-			? {}
-			: { contentDisposition: contentDisposition('inline', ext ? correctFilename(filename, ext) : filename) }),
-		publicRead: deps.meta.objectStorageSetPublicRead,
-	};
+	const object = buildObjectStoragePutObject(deps.meta, key, stream, type, ext, filename);
 
 	try {
 		await deps.s3Service.upload(deps.meta, object);
@@ -190,6 +264,142 @@ async function uploadObjectStorageFile(
 	} catch (err) {
 		deps.logger?.error(`Upload Failed: key = ${key}, filename = ${filename}`, { e: err as Error });
 	}
+}
+
+type DriveFileStorageLocation = {
+	storedInternal: boolean;
+	url: string;
+	thumbnailUrl: string | null;
+	webpublicUrl: string | null;
+	accessKey: string;
+	thumbnailAccessKey: string | null;
+	webpublicAccessKey: string | null;
+};
+
+type ObjectStorageUpload = {
+	label: 'original' | 'webpublic' | 'thumbnail';
+	key: string;
+	body: Blob | Uint8Array;
+	type: string;
+	ext: string | null;
+	filename: string;
+};
+
+type DriveFileAlts = { webpublic: IImage | null; thumbnail: IImage | null };
+
+// キーと URL を決めるだけで送信はしない。送信失敗の扱いは呼び出し側で異なる。
+export function planObjectStorageUploads(
+	meta: ObjectStorageMeta,
+	path: string,
+	name: string,
+	type: string,
+	alts: DriveFileAlts,
+): { location: DriveFileStorageLocation; uploads: ObjectStorageUpload[] } {
+	const { baseUrl, prefix, key, url } = resolveObjectStorageLocation(meta, name, type);
+	const location: DriveFileStorageLocation = {
+		storedInternal: false,
+		url,
+		thumbnailUrl: null,
+		webpublicUrl: null,
+		accessKey: key,
+		thumbnailAccessKey: null,
+		webpublicAccessKey: null,
+	};
+	const uploads: ObjectStorageUpload[] = [
+		{ label: 'original', key, body: Bun!.file(path), type, ext: null, filename: name },
+	];
+
+	if (alts.webpublic) {
+		const webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
+		location.webpublicAccessKey = webpublicKey;
+		location.webpublicUrl = `${baseUrl}/${webpublicKey}`;
+		uploads.push({
+			label: 'webpublic',
+			key: webpublicKey,
+			body: alts.webpublic.data,
+			type: alts.webpublic.type,
+			ext: alts.webpublic.ext,
+			filename: name,
+		});
+	}
+
+	if (alts.thumbnail) {
+		const thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
+		location.thumbnailAccessKey = thumbnailKey;
+		location.thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
+		uploads.push({
+			label: 'thumbnail',
+			key: thumbnailKey,
+			body: alts.thumbnail.data,
+			type: alts.thumbnail.type,
+			ext: alts.thumbnail.ext,
+			filename: `${name}.thumbnail`,
+		});
+	}
+
+	return { location, uploads };
+}
+
+// 生成されなかった派生画像のアクセスキーも DriveFile には記録する (既存行と同じ形)。
+// savedKeys は実際に書き込んだキーだけを持ち、失敗時の後始末に使う。
+export function saveDriveFileToInternalStorage(
+	deps: Pick<DriveFileUploadDependencies, 'internalStorageService' | 'logger'>,
+	path: string,
+	alts: DriveFileAlts,
+): { location: DriveFileStorageLocation; savedKeys: string[] } {
+	const accessKey = randomUUID();
+	const thumbnailAccessKey = 'thumbnail-' + randomUUID();
+	const webpublicAccessKey = 'webpublic-' + randomUUID();
+	const url = deps.internalStorageService.saveFromPath(accessKey, path);
+	const savedKeys: string[] = [accessKey];
+
+	let thumbnailUrl: string | null = null;
+	let webpublicUrl: string | null = null;
+
+	if (alts.thumbnail) {
+		thumbnailUrl = deps.internalStorageService.saveFromBuffer(thumbnailAccessKey, alts.thumbnail.data);
+		savedKeys.push(thumbnailAccessKey);
+		deps.logger?.info(`thumbnail stored: ${thumbnailAccessKey}`);
+	}
+
+	if (alts.webpublic) {
+		webpublicUrl = deps.internalStorageService.saveFromBuffer(webpublicAccessKey, alts.webpublic.data);
+		savedKeys.push(webpublicAccessKey);
+		deps.logger?.info(`web stored: ${webpublicAccessKey}`);
+	}
+
+	return {
+		location: {
+			storedInternal: true,
+			url,
+			thumbnailUrl,
+			webpublicUrl,
+			accessKey,
+			thumbnailAccessKey,
+			webpublicAccessKey,
+		},
+		savedKeys,
+	};
+}
+
+export function applyDriveFileStorage(
+	file: MiDriveFile,
+	location: DriveFileStorageLocation,
+	alts: DriveFileAlts,
+	content: { name: string; type: string; md5: string; size: number },
+): void {
+	file.storedInternal = location.storedInternal;
+	file.url = location.url;
+	file.thumbnailUrl = location.thumbnailUrl;
+	file.webpublicUrl = location.webpublicUrl;
+	file.accessKey = location.accessKey;
+	file.thumbnailAccessKey = location.thumbnailAccessKey;
+	file.webpublicAccessKey = location.webpublicAccessKey;
+	file.webpublicType = alts.webpublic?.type ?? null;
+	file.name = content.name;
+	file.type = content.type;
+	file.md5 = content.md5;
+	file.size = content.size;
 }
 
 async function saveSystemDriveFile(
@@ -203,123 +413,22 @@ async function saveSystemDriveFile(
 ): Promise<MiDriveFile> {
 	const alts = await generateDriveFileAlts(deps, path, type, !file.uri);
 
+	const content = { name, type, md5: hash, size };
+
 	if (deps.meta.useObjectStorage) {
-		let [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
-
-		if (ext === '') {
-			if (type === 'image/jpeg') {
-				ext = '.jpg';
-			}
-			if (type === 'image/png') {
-				ext = '.png';
-			}
-			if (type === 'image/webp') {
-				ext = '.webp';
-			}
-			if (type === 'image/avif') {
-				ext = '.avif';
-			}
-			if (type === 'image/apng') {
-				ext = '.apng';
-			}
-			if (type === 'image/vnd.mozilla.apng') {
-				ext = '.apng';
-			}
-		}
-
-		if (!FILE_TYPE_BROWSERSAFE.includes(type)) {
-			ext = '';
-		}
-
-		const baseUrl =
-			deps.meta.objectStorageBaseUrl ??
-			`${deps.meta.objectStorageUseSSL ? 'https' : 'http'}://${deps.meta.objectStorageEndpoint}${deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : ''}/${deps.meta.objectStorageBucket}`;
-		const prefix = deps.meta.objectStoragePrefix ? `${deps.meta.objectStoragePrefix}/` : '';
-		const key = `${prefix}${randomUUID()}${ext}`;
-		const url = `${baseUrl}/${key}`;
-
-		let webpublicKey: string | null = null;
-		let webpublicUrl: string | null = null;
-		let thumbnailKey: string | null = null;
-		let thumbnailUrl: string | null = null;
-
-		deps.logger?.info(`uploading original: ${key}`);
-		const uploads = [uploadObjectStorageFile(deps, key, Bun!.file(path), type, null, name)];
-
-		if (alts.webpublic) {
-			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
-			webpublicUrl = `${baseUrl}/${webpublicKey}`;
-			deps.logger?.info(`uploading webpublic: ${webpublicKey}`);
-			uploads.push(
-				uploadObjectStorageFile(deps, webpublicKey, alts.webpublic.data, alts.webpublic.type, alts.webpublic.ext, name),
-			);
-		}
-
-		if (alts.thumbnail) {
-			thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
-			thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
-			deps.logger?.info(`uploading thumbnail: ${thumbnailKey}`);
-			uploads.push(
-				uploadObjectStorageFile(
-					deps,
-					thumbnailKey,
-					alts.thumbnail.data,
-					alts.thumbnail.type,
-					alts.thumbnail.ext,
-					`${name}.thumbnail`,
-				),
-			);
-		}
-
-		await Promise.all(uploads);
-
-		file.url = url;
-		file.thumbnailUrl = thumbnailUrl;
-		file.webpublicUrl = webpublicUrl;
-		file.accessKey = key;
-		file.thumbnailAccessKey = thumbnailKey;
-		file.webpublicAccessKey = webpublicKey;
-		file.webpublicType = alts.webpublic?.type ?? null;
-		file.name = name;
-		file.type = type;
-		file.md5 = hash;
-		file.size = size;
-		file.storedInternal = false;
-
+		const { location, uploads } = planObjectStorageUploads(deps.meta, path, name, type, alts);
+		await Promise.all(
+			uploads.map((upload) => {
+				deps.logger?.info(`uploading ${upload.label}: ${upload.key}`);
+				return uploadObjectStorageFile(deps, upload.key, upload.body, upload.type, upload.ext, upload.filename);
+			}),
+		);
+		applyDriveFileStorage(file, location, alts, content);
 		return await createDriveFileInDatabase(deps.db, file);
 	}
 
-	const accessKey = randomUUID();
-	const thumbnailAccessKey = 'thumbnail-' + randomUUID();
-	const webpublicAccessKey = 'webpublic-' + randomUUID();
-	const url = deps.internalStorageService.saveFromPath(accessKey, path);
-
-	let thumbnailUrl: string | null = null;
-	let webpublicUrl: string | null = null;
-
-	if (alts.thumbnail) {
-		thumbnailUrl = deps.internalStorageService.saveFromBuffer(thumbnailAccessKey, alts.thumbnail.data);
-		deps.logger?.info(`thumbnail stored: ${thumbnailAccessKey}`);
-	}
-
-	if (alts.webpublic) {
-		webpublicUrl = deps.internalStorageService.saveFromBuffer(webpublicAccessKey, alts.webpublic.data);
-		deps.logger?.info(`web stored: ${webpublicAccessKey}`);
-	}
-
-	file.storedInternal = true;
-	file.url = url;
-	file.thumbnailUrl = thumbnailUrl;
-	file.webpublicUrl = webpublicUrl;
-	file.accessKey = accessKey;
-	file.thumbnailAccessKey = thumbnailAccessKey;
-	file.webpublicAccessKey = webpublicAccessKey;
-	file.webpublicType = alts.webpublic?.type ?? null;
-	file.name = name;
-	file.type = type;
-	file.md5 = hash;
-	file.size = size;
-
+	const { location } = saveDriveFileToInternalStorage(deps, path, alts);
+	applyDriveFileStorage(file, location, alts, content);
 	return await createDriveFileInDatabase(deps.db, file);
 }
 
@@ -334,16 +443,7 @@ export async function uploadSystemDriveFileFromUrl(
 		const info = await deps.fileInfoService.getFileInfo(path, {
 			fileName: name,
 			skipSensitiveDetection: true,
-			sensitiveThreshold:
-				deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
-					? 0.1
-					: deps.meta.sensitiveMediaDetectionSensitivity === 'high'
-						? 0.3
-						: deps.meta.sensitiveMediaDetectionSensitivity === 'low'
-							? 0.7
-							: deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow'
-								? 0.9
-								: 0.5,
+			sensitiveThreshold: driveSensitiveMediaThreshold(deps.meta),
 			sensitiveThresholdForPorn: 0.75,
 			enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
 		});

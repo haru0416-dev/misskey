@@ -68,18 +68,18 @@ const notePollParamDef = z
 	})
 	.nullable();
 
+const noteDraftReactionAcceptanceParamDef = z.union([
+	z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+	z.null(),
+]);
+
 export const notesDraftsCreateParamDef = z.object({
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).default('public'),
 	visibleUserIds: uniqueItems(z.array(misskeyId())).optional(),
 	cw: z.string().min(1).max(100).nullable().optional(),
 	hashtag: z.string().max(200).nullable().optional(),
 	localOnly: z.boolean().default(false),
-	reactionAcceptance: z
-		.union([
-			z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
-			z.null(),
-		])
-		.default(null),
+	reactionAcceptance: noteDraftReactionAcceptanceParamDef.default(null),
 	replyId: misskeyId().nullable().optional(),
 	renoteId: misskeyId().nullable().optional(),
 	channelId: misskeyId().nullable().optional(),
@@ -97,12 +97,7 @@ export const notesDraftsUpdateParamDef = z.object({
 	cw: z.string().min(1).max(100).nullable().optional(),
 	hashtag: z.string().max(200).nullable().optional(),
 	localOnly: z.boolean().optional(),
-	reactionAcceptance: z
-		.union([
-			z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
-			z.null(),
-		])
-		.optional(),
+	reactionAcceptance: noteDraftReactionAcceptanceParamDef.optional(),
 	replyId: misskeyId().nullable().optional(),
 	renoteId: misskeyId().nullable().optional(),
 	channelId: misskeyId().nullable().optional(),
@@ -148,6 +143,72 @@ type DraftValidationErrorMap = {
 	cannotReplyToInvisibleNote: ApiError;
 	cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: ApiError;
 };
+
+type DraftValidationEndpointErrors = Pick<
+	DraftValidationErrorMap,
+	| 'scheduledAtRequired'
+	| 'scheduledAtMustBeInFuture'
+	| 'noSuchRenoteTarget'
+	| 'cannotReRenote'
+	| 'noSuchReplyTarget'
+	| 'cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility'
+>;
+
+// create と update で id・文言が一致する検証エラーだけをここに置く。
+// endpointErrors の各項目は公開済みの id・code がエンドポイントごとに異なるため呼び出し側が渡す。
+function draftValidationErrors(endpointErrors: DraftValidationEndpointErrors): DraftValidationErrorMap {
+	return {
+		...endpointErrors,
+		cannotCreateAlreadyExpiredPoll: new ApiError({
+			status: 400,
+			message: 'Poll is already expired.',
+			code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
+			id: '04da457d-b083-4055-9082-955525eda5a5',
+		}),
+		noSuchFile: new ApiError({
+			status: 400,
+			message: 'Some files are not found.',
+			code: 'NO_SUCH_FILE',
+			id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
+		}),
+		youHaveBeenBlocked: new ApiError({
+			status: 400,
+			message: 'You have been blocked by this user.',
+			code: 'YOU_HAVE_BEEN_BLOCKED',
+			id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
+		}),
+		cannotRenoteDueToVisibility: new ApiError({
+			status: 400,
+			message: 'You can not Renote due to target visibility.',
+			code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
+			id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
+		}),
+		noSuchChannel: new ApiError({
+			status: 400,
+			message: 'No such channel.',
+			code: 'NO_SUCH_CHANNEL',
+			id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
+		}),
+		cannotRenoteToExternal: new ApiError({
+			status: 400,
+			message: 'Cannot Renote to External.',
+			code: 'CANNOT_RENOTE_TO_EXTERNAL',
+			id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
+		}),
+		cannotReplyToPureRenote: new ApiError({
+			status: 400,
+			message: 'You can not reply to a pure Renote.',
+			code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
+			id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
+		}),
+		cannotReplyToInvisibleNote: new ApiError({
+			status: 400,
+			message: 'You cannot reply to an invisible Note.',
+			code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
+			id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
+		}),
+	};
+}
 
 async function validateNoteDraft(
 	deps: ApiNoteDraftDependencies,
@@ -488,7 +549,7 @@ export async function handleApiNotesDraftsCreate(
 			visibility: params.visibility,
 			channelId: params.channelId,
 		}),
-		{
+		draftValidationErrors({
 			scheduledAtRequired: new ApiError({
 				status: 400,
 				message: 'scheduledAt is required when isActuallyScheduled is true.',
@@ -500,18 +561,6 @@ export async function handleApiNotesDraftsCreate(
 				message: 'scheduledAt must be in the future.',
 				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
 				id: 'e4bed6c9-017e-4934-aed0-01c22cc60ec1',
-			}),
-			cannotCreateAlreadyExpiredPoll: new ApiError({
-				status: 400,
-				message: 'Poll is already expired.',
-				code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
-				id: '04da457d-b083-4055-9082-955525eda5a5',
-			}),
-			noSuchFile: new ApiError({
-				status: 400,
-				message: 'Some files are not found.',
-				code: 'NO_SUCH_FILE',
-				id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 			}),
 			noSuchRenoteTarget: new ApiError({
 				status: 400,
@@ -525,47 +574,11 @@ export async function handleApiNotesDraftsCreate(
 				code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
 				id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
 			}),
-			youHaveBeenBlocked: new ApiError({
-				status: 400,
-				message: 'You have been blocked by this user.',
-				code: 'YOU_HAVE_BEEN_BLOCKED',
-				id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
-			}),
-			cannotRenoteDueToVisibility: new ApiError({
-				status: 400,
-				message: 'You can not Renote due to target visibility.',
-				code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
-				id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
-			}),
-			noSuchChannel: new ApiError({
-				status: 400,
-				message: 'No such channel.',
-				code: 'NO_SUCH_CHANNEL',
-				id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
-			}),
-			cannotRenoteToExternal: new ApiError({
-				status: 400,
-				message: 'Cannot Renote to External.',
-				code: 'CANNOT_RENOTE_TO_EXTERNAL',
-				id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
-			}),
 			noSuchReplyTarget: new ApiError({
 				status: 400,
 				message: 'No such reply target.',
 				code: 'NO_SUCH_REPLY_TARGET',
 				id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
-			}),
-			cannotReplyToPureRenote: new ApiError({
-				status: 400,
-				message: 'You can not reply to a pure Renote.',
-				code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
-				id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
-			}),
-			cannotReplyToInvisibleNote: new ApiError({
-				status: 400,
-				message: 'You cannot reply to an invisible Note.',
-				code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
-				id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
 			}),
 			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new ApiError({
 				status: 400,
@@ -573,7 +586,7 @@ export async function handleApiNotesDraftsCreate(
 				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
 				id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 			}),
-		},
+		}),
 	);
 
 	const draft = await createNoteDraftInDatabase(deps.db, {
@@ -656,7 +669,7 @@ export async function handleApiNotesDraftsUpdate(
 			visibility: params.visibility,
 			channelId: params.channelId,
 		}),
-		{
+		draftValidationErrors({
 			scheduledAtRequired: new ApiError({
 				status: 400,
 				message: 'scheduledAt is required when isActuallyScheduled is true.',
@@ -668,18 +681,6 @@ export async function handleApiNotesDraftsUpdate(
 				message: 'scheduledAt must be in the future.',
 				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
 				id: 'ed1a6673-d0d1-4364-aaae-9bf3f139cbc5',
-			}),
-			cannotCreateAlreadyExpiredPoll: new ApiError({
-				status: 400,
-				message: 'Poll is already expired.',
-				code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
-				id: '04da457d-b083-4055-9082-955525eda5a5',
-			}),
-			noSuchFile: new ApiError({
-				status: 400,
-				message: 'Some files are not found.',
-				code: 'NO_SUCH_FILE',
-				id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 			}),
 			noSuchRenoteTarget: new ApiError({
 				status: 400,
@@ -693,47 +694,11 @@ export async function handleApiNotesDraftsUpdate(
 				code: 'CANNOT_RENOTE',
 				id: '76cc5583-5a14-4ad3-8717-0298507e32db',
 			}),
-			youHaveBeenBlocked: new ApiError({
-				status: 400,
-				message: 'You have been blocked by this user.',
-				code: 'YOU_HAVE_BEEN_BLOCKED',
-				id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
-			}),
-			cannotRenoteDueToVisibility: new ApiError({
-				status: 400,
-				message: 'You can not Renote due to target visibility.',
-				code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
-				id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
-			}),
-			noSuchChannel: new ApiError({
-				status: 400,
-				message: 'No such channel.',
-				code: 'NO_SUCH_CHANNEL',
-				id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
-			}),
-			cannotRenoteToExternal: new ApiError({
-				status: 400,
-				message: 'Cannot Renote to External.',
-				code: 'CANNOT_RENOTE_TO_EXTERNAL',
-				id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
-			}),
 			noSuchReplyTarget: new ApiError({
 				status: 400,
 				message: 'No such reply.',
 				code: 'NO_SUCH_REPLY',
 				id: 'c4721841-22fc-4bb7-ad3d-897ef1d375b5',
-			}),
-			cannotReplyToPureRenote: new ApiError({
-				status: 400,
-				message: 'You can not reply to a pure Renote.',
-				code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
-				id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
-			}),
-			cannotReplyToInvisibleNote: new ApiError({
-				status: 400,
-				message: 'You cannot reply to an invisible Note.',
-				code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
-				id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
 			}),
 			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new ApiError({
 				status: 400,
@@ -741,7 +706,7 @@ export async function handleApiNotesDraftsUpdate(
 				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
 				id: '215dbc76-336c-4d2a-9605-95766ba7dab0',
 			}),
-		},
+		}),
 	);
 
 	const updatedDraft = await updateNoteDraftInDatabase(deps.db, params.draftId, {

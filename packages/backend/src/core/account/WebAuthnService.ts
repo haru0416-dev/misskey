@@ -43,6 +43,36 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		};
 	}
 
+	// 失敗の報告形式はパスキーログインと二要素認証で異なるため、例外への変換は呼び出し側が決める。
+	async function verifyAuthenticationResponseWithKey(
+		response: AuthenticationResponseJSON,
+		challenge: string,
+		key: { id: string; publicKey: string; counter: number; transports: string[] | null },
+		toError: (error: unknown) => IdentifiableError,
+	) {
+		const relyingParty = getRelyingParty();
+
+		try {
+			return await (
+				await loadWebAuthn()
+			).verifyAuthenticationResponse({
+				response,
+				expectedChallenge: challenge,
+				expectedOrigin: relyingParty.origin,
+				expectedRPID: relyingParty.rpId,
+				credential: {
+					id: key.id,
+					publicKey: Buffer.from(key.publicKey, 'base64url'),
+					counter: key.counter,
+					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
+				},
+				requireUserVerification: true,
+			});
+		} catch (error) {
+			throw toError(error);
+		}
+	}
+
 	async function initiateRegistration(
 		userId: MiUser['id'],
 		userName: string,
@@ -202,28 +232,12 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'Unknown Webauthn key');
 		}
 
-		const relyingParty = getRelyingParty();
-
-		let verification;
-		try {
-			verification = await (
-				await loadWebAuthn()
-			).verifyAuthenticationResponse({
-				response,
-				expectedChallenge: challenge,
-				expectedOrigin: relyingParty.origin,
-				expectedRPID: relyingParty.rpId,
-				credential: {
-					id: key.id,
-					publicKey: Buffer.from(key.publicKey, 'base64url'),
-					counter: key.counter,
-					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
-				},
-				requireUserVerification: true,
-			});
-		} catch (error) {
-			throw new IdentifiableError('b18c89a7-5b5e-4cec-bb5b-0419f332d430', `verification failed: ${error}`);
-		}
+		const verification = await verifyAuthenticationResponseWithKey(
+			response,
+			challenge,
+			key,
+			(error) => new IdentifiableError('b18c89a7-5b5e-4cec-bb5b-0419f332d430', `verification failed: ${error}`),
+		);
 
 		const { verified, authenticationInfo } = verification;
 
@@ -274,29 +288,10 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			}
 		}
 
-		const relyingParty = getRelyingParty();
-
-		let verification;
-		try {
-			verification = await (
-				await loadWebAuthn()
-			).verifyAuthenticationResponse({
-				response,
-				expectedChallenge: challenge,
-				expectedOrigin: relyingParty.origin,
-				expectedRPID: relyingParty.rpId,
-				credential: {
-					id: key.id,
-					publicKey: Buffer.from(key.publicKey, 'base64url'),
-					counter: key.counter,
-					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
-				},
-				requireUserVerification: true,
-			});
-		} catch (error) {
+		const verification = await verifyAuthenticationResponseWithKey(response, challenge, key, (error) => {
 			console.error(error);
-			throw new IdentifiableError('b18c89a7-5b5e-4cec-bb5b-0419f332d430', 'verification failed');
-		}
+			return new IdentifiableError('b18c89a7-5b5e-4cec-bb5b-0419f332d430', 'verification failed');
+		});
 
 		const { verified, authenticationInfo } = verification;
 

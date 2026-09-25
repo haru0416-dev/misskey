@@ -33,6 +33,7 @@ import { isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFlashDependencies = ApiRolePolicyDependencies & UserPackingDependencies;
@@ -263,27 +264,7 @@ export async function handleApiFlashMyLikes(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(flashMyLikesParamDef, body);
 
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-	let order: 'asc' | 'desc' = 'desc';
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-		order = 'asc';
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(params.sinceDate);
-		untilId = genId(params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(params.untilDate);
-	}
+	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const likes = await listFlashLikesByUserIdFromDatabase(
 		deps.db,
