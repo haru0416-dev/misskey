@@ -109,6 +109,21 @@ describe('Chart', () => {
 		});
 	});
 
+	// 列の型を超える値を書くと UPDATE ごと失敗し、以後そのグループの差分が保存されないまま溜まり続けた。
+	test('列の範囲を超える差分は範囲に丸めて保存し、以後の保存も止まらない', async () => {
+		const commit = (diff: Record<string, number>) => (testChart as any).commit(diff);
+		commit({ 'foo.inc': 3_000_000_000, 'foo.total': -3_000_000_000 });
+		await testChart.save();
+		commit({ 'foo.inc': 1, 'foo.dec': 1 });
+		await testChart.save();
+
+		const chartHours = await testChart.getChart('hour', 1, null);
+		expect(chartHours).toStrictEqual({
+			foo: { dec: [1], inc: [2147483647], total: [-2147483648] },
+		});
+		expect((testChart as any).buffer).toHaveLength(0);
+	});
+
 	test('Can updates (dec)', async () => {
 		await testChart.decrement();
 		await testChart.save();

@@ -69,6 +69,22 @@ type RawRecord<S extends Schema> = {
 } & TempColumnsForUnique<S> &
 	Columns<S>;
 
+/**
+ * 列の型 (smallint / integer) の範囲。超える値を書くと UPDATE ごと失敗し、そのグループの記録が
+ * 以後ずっと止まる (instance の requests.* などは smallint で、日次の行は 32767 を超えうる)。
+ * bigint は実質超えないので範囲を持たない。
+ */
+function columnRange(range: Schema[string]['range']): { min: number; max: number } | null {
+	if (range === 'big') return null;
+	if (range === 'small') return { min: -32768, max: 32767 };
+	return { min: -2147483648, max: 2147483647 };
+}
+
+function clampToColumn(value: number, range: Schema[string]['range']): number {
+	const bounds = columnRange(range);
+	return bounds == null ? value : Math.min(Math.max(value, bounds.min), bounds.max);
+}
+
 const camelToSnake = (str: string): string => {
 	return str.replaceAll(/([A-Z])/g, (s) => '_' + s.charAt(0).toLowerCase());
 };
@@ -596,17 +612,21 @@ export default abstract class Chart<T extends Schema> {
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (typeof v === 'number') {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string & keyof Columns<T>;
-					if (v > 0) {
-						queryForHour[name] = sql`${identifierSql(name)} + ${v}`;
-					}
-					if (v < 0) {
-						queryForHour[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
-					}
-					if (v > 0) {
-						queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
-					}
-					if (v < 0) {
-						queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
+					const bounds = columnRange(this.schema[k]?.range);
+					// bigint で計算してから列の範囲に丸める。列の型のままだと丸める前に桁あふれで失敗する。
+					const delta =
+						v > 0
+							? bounds == null
+								? sql`${identifierSql(name)} + ${v}`
+								: sql`LEAST(${identifierSql(name)}::bigint + ${v}, ${bounds.max})`
+							: v < 0
+								? bounds == null
+									? sql`${identifierSql(name)} - ${Math.abs(v)}`
+									: sql`GREATEST(${identifierSql(name)}::bigint - ${Math.abs(v)}, ${bounds.min})`
+								: null;
+					if (delta != null) {
+						queryForHour[name] = delta;
+						queryForDay[name] = delta;
 					}
 				} else if (Array.isArray(v) && v.length > 0) {
 					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string &
@@ -639,8 +659,8 @@ export default abstract class Chart<T extends Schema> {
 						.size;
 					const cardinalityOfDay = new Set([...(v as string[]), ...(logDay[tempColumnName] as unknown as string[])])
 						.size;
-					queryForHour[name] = cardinalityOfHour;
-					queryForDay[name] = cardinalityOfDay;
+					queryForHour[name] = clampToColumn(cardinalityOfHour, schema.range);
+					queryForDay[name] = clampToColumn(cardinalityOfDay, schema.range);
 				}
 			}
 
@@ -687,8 +707,8 @@ export default abstract class Chart<T extends Schema> {
 							}
 						});
 					}
-					queryForHour[name] = currentValuesForHour.size;
-					queryForDay[name] = currentValuesForDay.size;
+					queryForHour[name] = clampToColumn(currentValuesForHour.size, v.range);
+					queryForDay[name] = clampToColumn(currentValuesForDay.size, v.range);
 				}
 			}
 
@@ -739,7 +759,7 @@ export default abstract class Chart<T extends Schema> {
 		const columns = {} as Record<keyof Columns<T>, number>;
 		for (const [k, v] of Object.entries(data) as [keyof typeof data, number][]) {
 			const name = (COLUMN_PREFIX + (k as string).replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
-			columns[name] = v;
+			columns[name] = clampToColumn(v, this.schema[k as string]?.range);
 		}
 
 		if (Object.keys(columns).length === 0) {
