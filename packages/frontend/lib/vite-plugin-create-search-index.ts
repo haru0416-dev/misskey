@@ -468,7 +468,7 @@ function propertyAccessProxyToJSON(this: AccessProxy, hint: string) {
 }
 
 /**
- * プロパティのアクセスを保持するための Proxy オブジェクトを作成します。
+ * プロパティのアクセスを保持するための Proxy オブジェクトを作成する。
  *
  * この関数で生成した proxy は JSON でシリアライズするか、`${}`のように string にすると、 ${property.path} のような形になる。
  */

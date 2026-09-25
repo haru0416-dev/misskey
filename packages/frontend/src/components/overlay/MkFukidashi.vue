@@ -34,8 +34,7 @@ withDefaults(defineProps<{
 </script>
 
 <style module lang="scss">
-// ドッキングコーナー吹き出し: テール装飾の代わりに発言者側の上角だけを鋭角にして向きを示す。
-// 鋭角UIトークン (radius-lg/radius-xs) に整合し、テールSVGだった頃の張り出し補正 padding は不要
+// テール装飾を持たず、発言者側の上角だけを鋭角 (radius-xs) にして向きを示す。
 .root {
 	--fukidashi-radius: var(--MI-radius-lg);
 	--fukidashi-dock-radius: var(--MI-radius-xs);

@@ -232,24 +232,14 @@ export async function listEmojisByHostAndNamesFromDatabase(
 		.where(and(eq(emoji.host, host), inArray(emoji.name, names)));
 }
 
-/**
- * CustomEmojiService の localEmojisCache (Redis) 向け。ローカル絵文字を全件取得する。
- * キャッシュのfetcherとして使われるホットパスなので、フィルタ条件を変えないこと。
- */
 export async function listLocalEmojisFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
 	return await db.select().from(emoji).where(isNull(emoji.host));
 }
 
-/**
- * emojis エンドポイント向け。ローカル絵文字を category, name の昇順で取得する。
- */
 export async function listLocalEmojisOrderedByCategoryAndNameFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
 	return await db.select().from(emoji).where(isNull(emoji.host)).orderBy(asc(emoji.category), asc(emoji.name));
 }
 
-/**
- * ExportCustomEmojisProcessorService 向け。ローカル絵文字を id の昇順で取得する。
- */
 export async function listLocalEmojisOrderedByIdFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
 	return await db.select().from(emoji).where(isNull(emoji.host)).orderBy(asc(emoji.id));
 }
@@ -267,9 +257,7 @@ export async function emojiExistsWithLocalNameInDatabase(
 	return row != null;
 }
 
-/**
- * CustomEmojiService.prefetchEmojis 向け。(host, name[]) の組ごとにOR条件で絵文字のURL情報のみ取得する。
- */
+/** (host, name[]) の組ごとの OR 条件で、絵文字の URL 情報だけを取得する。 */
 async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
 	db: MiDrizzleDatabase,
 	queries: { names: string[]; host: string }[],
@@ -391,10 +379,7 @@ export async function removeAliasesFromEmojisByIdsInDatabase(
 	return rows;
 }
 
-/**
- * ApNoteService.extractEmojis 向け。(host, name) で絵文字を更新し、更新後の行を返す。
- * host, name はunique indexなので高々1行のみ更新される。
- */
+/** 更新後の行を返す。(host, name) は unique index なので更新は高々 1 行。 */
 export async function updateEmojiByHostAndNameInDatabase(
 	db: MiDrizzleDatabase,
 	host: NonNullable<MiEmoji['host']>,
@@ -427,9 +412,7 @@ export async function deleteEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: 
 	return rows;
 }
 
-/**
- * ImportCustomEmojisProcessorService 向け。名前衝突している既存絵文字を(name, host)で削除する。
- */
+/** 絵文字インポートで名前が衝突した既存絵文字を消す。 */
 export async function deleteEmojiByNameAndHostFromDatabase(
 	db: MiDrizzleDatabase,
 	name: MiEmoji['name'],
@@ -510,7 +493,7 @@ export async function listRemoteEmojisPageFromDatabase(
 }
 
 /**
- * CustomEmojiService.fetchEmojis 向け。admin向け絵文字検索。
+ * admin 向け絵文字検索の条件。
  * LIKE ANY、aliases の部分一致、roleIds の overlap を同時に扱う。
  */
 type EmojiSearchQuery = NonNullable<NonNullable<Parameters<typeof fetchEmojisFromDatabase>[1]>['query']>;

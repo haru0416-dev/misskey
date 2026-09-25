@@ -49,9 +49,8 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const logger = deps.loggerService.getLogger('queue', 'orange');
 	await syncSystemJobSchedulers(deps.systemQueue, deps.config);
-	// publisher は AP 受信で作成されたノート・通知などを全ストリームへ配信するために必要。
-	// publisher を渡さないと、AP受信 (inbox) で作成されたノート・通知等のストリーム配信が
-	// optional チェーンで黙って無効化され、リモート発のイベントが一切WebSocketに流れなくなる
+	// publisher を渡さないと、inbox で作成したノート・通知のストリーム配信が optional チェーンで
+	// 黙って無効になり、リモート発のイベントが WebSocket に流れない。
 	const workerDeps = {
 		config,
 		db: deps.db,

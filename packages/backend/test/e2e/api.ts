@@ -149,14 +149,14 @@ describe('API', () => {
 		const application3 = await createAppToken(bob, []);
 		const application4 = await createAppToken(bob, ['read:admin:index-stats']);
 
-		// aliceは管理者、APIを使える
+		// alice は管理者なので使える
 		await successfulApiCall({
 			endpoint: 'admin/get-index-stats',
 			parameters: {},
 			user: alice,
 		});
 
-		// bobは一般ユーザーだからダメ
+		// 一般ユーザーは使えない
 		await failedApiCall(
 			{
 				endpoint: 'admin/get-index-stats',
@@ -170,7 +170,7 @@ describe('API', () => {
 			},
 		);
 
-		// publicアクセスももちろんダメ
+		// 未認証でも使えない
 		await failedApiCall(
 			{
 				endpoint: 'admin/get-index-stats',
@@ -184,7 +184,7 @@ describe('API', () => {
 			},
 		);
 
-		// ごまがしもダメ
+		// 存在しないトークンでも使えない
 		await failedApiCall(
 			{
 				endpoint: 'admin/get-index-stats',

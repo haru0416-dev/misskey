@@ -6,11 +6,13 @@
 import { Signer } from 'slacc';
 import type { SignatureAlgorithm } from 'slacc';
 
+// slacc の SignatureAlgorithm は ambient const enum のため isolatedModules 下では値として import できない。
+// 値は enum メンバー名と同じ文字列なので、型だけ import してリテラルを渡す。
 const RSA_2048_8192 = 'Rsa2048_8192' as SignatureAlgorithm;
 
-// 鍵素材 (privateKeyPem) をキーにパース済み Signer をキャッシュする。Signer 自体は鍵の保持のみで
-// 署名対象文字列に依存しないため使い回して問題ない。ローカルユーザー数程度のカーディナリティを
-// 想定し上限付きMapで運用する。HTTP署名とLD署名の双方が同じ鍵を使うので実体を共有する。
+// PEM の ASN.1 パースを deliver ジョブごとに繰り返すと CPU コストが無視できないため、鍵素材ごとに
+// パース済み Signer を使い回す。Signer は鍵だけを持ち署名対象に依存せず、HTTP 署名と LD 署名で共有する。
+// 上限はローカルユーザー数程度を想定する。
 const MAX_SIGNER_CACHE_SIZE = 1000;
 const signerCache = new Map<string, Signer>();
 

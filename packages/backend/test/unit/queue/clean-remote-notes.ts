@@ -71,10 +71,8 @@ describe('hono-queue-clean-remote-notes', () => {
 			visibility: 'public',
 		});
 
-		// テストDBには他テストが残した古いリモートノートが蓄積している可能性があるため、
-		// 処理時間の上限を短く抑えてテストの実行時間を有界にする
-		// (NODE_ENV=testではバッチ間のsetTimeoutはスキップされるが、CTEクエリ自体の
-		// 累積コストは残るため、maxDurationによる打ち切りを安全弁として使う)。
+		// テスト DB には他テストが残した古いリモートノートが溜まり得るので、maxDuration で打ち切って実行時間を有界にする
+		// (NODE_ENV=test ではバッチ間の setTimeout は飛ばすが、CTE クエリ自体の累積コストは残る)。
 		const result = await handleQueueCleanRemoteNotes(
 			{
 				...deps,

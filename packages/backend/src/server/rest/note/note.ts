@@ -876,7 +876,7 @@ export async function createPackNoteHintsForUsersForApi(
 	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForApi(deps, notes, { detail }));
 	const reactionLookupNoteIds: MiNote['id'][] = [];
 	// 利用者に依らない値は投稿ごとに 1 度だけ求める。利用者 (最大 1,000 人) ごとに求め直すと、
-	// 利用者数 × 投稿数 × リアクションの種類数になっていた。
+	// 利用者数 × 投稿数 × リアクションの種類数になる。
 	const reactionStates = new Map<MiNote['id'], { reactionsCount: number; pairCache: string[]; recent: boolean }>();
 	const now = Date.now();
 	for (const target of targets) {

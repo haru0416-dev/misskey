@@ -1120,10 +1120,7 @@ describe('Note', () => {
 			}, POLL);
 		});
 
-		/*
-		 * 禁止ユーザー名の判定は notes/create の禁止ワード判定と同じ関数を通る。
-		 * 両方で正規表現の解釈を一致させる。
-		 */
+		// 禁止ユーザー名の判定は notes/create の禁止ワード判定と同じ関数を通り、正規表現の解釈を一致させる。
 		test('禁止ワードに該当するユーザー名ではサインアップできない (正規表現)', async () => {
 			const updated = await api('admin/update-meta', { prohibitedWordsForNameOfUser: ['/^Bad/i'] }, root);
 			expect(updated.status).toBe(204);

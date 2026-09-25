@@ -454,8 +454,8 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			/**
-			 * 特定のキーの、簡易的なcomputed refを作ります
-			 * 主にvue上で設定コントロールのmodelとして使う用
+			 * 特定のキーの簡易的な computed ref を作る。
+			 * 主に Vue 上で設定コントロールの model として使う。
 			 */
 			model<K extends keyof PREF, V = ValueOf<K>>(
 				key: K,
@@ -591,7 +591,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					return null;
 				}
 
-				// undefined ... cancel
+				// undefined はキャンセルを表す。
 				async function resolveConflict(local: ValueOf<K>, remote: ValueOf<K>): Promise<ValueOf<K> | undefined> {
 					const merge = (PREF_DEF as PreferencesDefinition)[key]?.mergeStrategy;
 					let mergedValue: ValueOf<K> | undefined = undefined; // null と区別したいため

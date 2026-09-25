@@ -137,11 +137,8 @@ import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt, getDefined } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
 
-/*
- * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
- * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
- * 後続のプロパティアクセスが型エラーになる。
- */
+// 判別可能ユニオンの分岐を確定させる箇所だけ node:assert を使う。expect の matcher は `asserts` 述語を持たず、
+// 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
 const bunPassword = Bun!.password;
 
@@ -3081,8 +3078,8 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const target = await signup({ username: `hsus${suffix}` });
-			// 共有fixtureのbobをfolloweeにすると、suspend時のunfollowジョブがカウンタを負値に
-			// 共有 fixture のカウンタへ影響させないため、使い捨てユーザーを用いる。
+			// 共有 fixture の bob を followee にすると、suspend 時の unfollow ジョブが共有 fixture のカウンタを
+			// 負値にするため、使い捨てユーザーを用いる。
 			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
 			const config = fixtureConfig;
 			const following = await createFollowingInDatabase(db, {

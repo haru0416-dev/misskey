@@ -54,11 +54,7 @@ export type ApiRequest<
 	user: UserToken | undefined;
 };
 
-/**
- * ポーリングの既定値。元は「N 回ループして毎回 100ms 眠る」形だったので実質の上限は
- * N × (100ms + 1回分の問い合わせ時間) で、時間ベースへ移すにあたり問い合わせ時間ぶんの
- * 余裕を含めてある。待ちが長い対象は timeout だけ上書きする。
- */
+/** ポーリングの既定値。timeout は問い合わせ時間ぶんの余裕を含む。待ちが長い対象は timeout だけ上書きする。 */
 export const POLL = { timeout: 5000, interval: 100 } as const;
 
 export const successfulApiCall = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
@@ -144,11 +140,6 @@ export function randomString(chars = 'abcdefghijklmnopqrstuvwxyz0123456789', len
 	return randomString;
 }
 
-/**
- * プロミスにタイムアウトを追加する。
- * @param p 待ち対象プロミス
- * @param timeout 待機ミリ秒
- */
 function timeoutPromise<T>(p: Promise<T>, timeout: number): Promise<T> {
 	return Promise.race([
 		p,
@@ -677,7 +668,7 @@ export const simpleGet = async (
 };
 
 /**
- * あるAPIエンドポイントのPaginationが複数の条件で一貫した挙動であることをテストします。
+ * あるAPIエンドポイントのPaginationが複数の条件で一貫した挙動であることをテストする。
  * (sinceId, untilId, sinceDate, untilDate, offset, limit)
  * @param expected 期待値となるEntityの並び（例：Note[]）昇順降順が一致している必要がある
  * @param fetchEntities Entity[]を返却するテスト対象のAPIを呼び出す関数

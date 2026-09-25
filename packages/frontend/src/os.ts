@@ -900,20 +900,6 @@ export async function post(props: PostFormProps = {}): Promise<void> {
 	});
 }
 
-/*
-export function checkExistence(fileData: ArrayBuffer): Promise<any> {
-	return new Promise((resolve, reject) => {
-		const data = new FormData();
-		data.append('md5', getMD5(fileData));
-
-		api('drive/files/find-by-hash', {
-			md5: getMD5(fileData)
-		}).then(resp => {
-			resolve(resp.length > 0 ? resp[0] : null);
-		});
-	});
-}*/
-
 export function chooseFileFromPc(
 	options: {
 		multiple?: boolean;
@@ -930,7 +916,6 @@ export function chooseFileFromPc(
 
 			res(Array.from(input.files));
 
-			// 一応廃棄
 			Object.assign(window, { __misskey_input_ref__: null });
 		};
 

@@ -10,8 +10,7 @@ export const onUnhandledRequest = ((req, print) => {
 	const url = new URL(req.url);
 	if (
 		url.hostname !== 'localhost' ||
-		// `@vite/` 等は v2 の initialize() が内部で除外していたぶん。自前で setupWorker を
-		// 起動する以上こちらで持つ必要がある。
+		// setupWorker を直接起動するため、addon の initialize() が除外する `@vite/` 等をここで除外する。
 		/^\/(?:@|client-assets\/|fluent-emoji\/|iframe.html$|node_modules\/|src\/|sb-|static-assets\/|virtual:|vite\/)/.test(
 			url.pathname,
 		)
@@ -55,16 +54,14 @@ export const commonHandlers = [
 /**
  * どの story にも拾われなかった API 呼び出しの受け皿。
  *
- * 実サーバーへ抜けると 404 の空応答になり、misskeyApi の `res.json()` が未捕捉の
- * SyntaxError になってテスト全体が落ちる。個別に潰すと story を足すたび同じことが起きるので、
- * 空の配列で受け止める。モックを書き忘れた呼び出しはコンポーネントの一覧取得が大半で、
- * `{}` を返すと paginator が `items is not iterable` で落ちるため。
- * 実データやオブジェクトが要る story は自分で msw ハンドラを書くこと。
+ * 実サーバーへ抜けると 404 の空応答で misskeyApi の `res.json()` が未捕捉の SyntaxError になり、
+ * テスト全体が落ちる。書き忘れの大半は一覧取得で、`{}` だと paginator が `items is not iterable`
+ * で落ちるため空配列を返す。実データが要る story は自前の msw ハンドラを書く。
  *
- * パスは正規表現で書くこと。msw の `/api/*` は 1 セグメントしか一致せず、
- * `i/registry/keys` のような深いパスを取りこぼす (実測)。
+ * パスは正規表現で書く。msw の `/api/*` は 1 セグメントしか一致せず、`i/registry/keys` のような
+ * 深いパスを取りこぼす (実測)。
  *
- * **commonHandlers には入れないこと。** story は `[...commonHandlers, 独自のハンドラ]` と書くため、
- * commonHandlers の末尾に置くと独自ハンドラより先に一致してしまう。ハンドラ一覧の最後に置く。
+ * **commonHandlers には入れない。** story は `[...commonHandlers, 独自のハンドラ]` と書くため、
+ * 独自ハンドラより先に一致してしまう。ハンドラ一覧の最後に置く。
  */
 export const apiFallbackHandler = http.all(/\/api\//, () => HttpResponse.json([]));

@@ -10,13 +10,12 @@ export function physics(container: HTMLElement) {
 	const containerHeight = container.offsetHeight;
 	const containerCenterX = containerWidth / 2;
 
-	// サイズ固定化(要らないかも？)
+	// 子要素を absolute 配置にしても潰れないよう、現在のサイズで固定する。
 	container.style.position = 'relative';
 	container.style.boxSizing = 'border-box';
 	container.style.width = `${containerWidth}px`;
 	container.style.height = `${containerHeight}px`;
 
-	// create engine
 	const engine = Matter.Engine.create({
 		constraintIterations: 4,
 		positionIterations: 8,
@@ -25,21 +24,19 @@ export function physics(container: HTMLElement) {
 
 	const world = engine.world;
 
-	// create renderer
 	const render = Matter.Render.create({
 		engine,
 		options: {
 			width: containerWidth,
 			height: containerHeight,
-			background: 'transparent', // transparent to hide
-			wireframeBackground: 'transparent', // transparent to hide
+			background: 'transparent',
+			wireframeBackground: 'transparent',
 		},
 	});
 
-	// Disable to hide debug
+	// Matter.js 自身の描画 (デバッグ表示)。不要ならこの呼び出しを外す。
 	Matter.Render.run(render);
 
-	// create runner
 	const runner = Matter.Runner.create();
 	Matter.Runner.run(runner, engine);
 
@@ -93,8 +90,6 @@ export function physics(container: HTMLElement) {
 
 	Matter.World.add(engine.world, objs);
 
-	// Add mouse control
-
 	const mouse = Matter.Mouse.create(container);
 	const mouseConstraint = Matter.MouseConstraint.create(engine, {
 		mouse,
@@ -108,7 +103,7 @@ export function physics(container: HTMLElement) {
 
 	Matter.World.add(engine.world, mouseConstraint);
 
-	// keep the mouse in sync with rendering
+	// マウス座標を描画と同期させる。
 	render.mouse = mouse;
 
 	for (const objEl of objEls) {

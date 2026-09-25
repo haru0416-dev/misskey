@@ -46,7 +46,7 @@ describe('Move', () => {
 		}),
 	);
 
-	/** @see https://github.com/misskey-dev/misskey/issues/11320 */
+	// https://github.com/misskey-dev/misskey/issues/11320
 	describe('Following relation is transferred after move', () => {
 		let alice: LoginUser, bob: LoginUser, carol: LoginUser;
 

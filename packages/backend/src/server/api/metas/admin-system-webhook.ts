@@ -95,6 +95,7 @@ export const endpointMetas = {
 			secure: true,
 			kind: 'read:admin:system-webhook',
 
+			// 外部 URL への HTTP 配送をキューに積むので、無制限だと増幅送信の踏み台になる。
 			limit: {
 				duration: 15 * MINUTE,
 				max: 60,

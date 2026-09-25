@@ -72,14 +72,12 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 		appendUnique(matched, partials, max);
 	}
 
-	// 簡易あいまい検索（3文字以上）
+	// 簡易あいまい検索 (4 文字以上)
 	if (matched.size < max && query.length > 3) {
 		const queryChars = [...query];
 		const hitEmojis = new Map<string, EmojiScore>();
 
 		for (const x of emojiDb) {
-			// 文字列の位置を進めながら、クエリの文字を順番に探す
-
 			let pos = 0;
 			let hit = 0;
 			for (const c of queryChars) {
@@ -96,7 +94,7 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 			}
 		}
 
-		// ヒットしたものを全部追加すると雑多になるので、先頭の6件程度だけにしておく（6件＝オートコンプリートのポップアップのサイズ分）
+		// 全件追加すると雑多になるため、オートコンプリートのポップアップに収まる先頭 6 件程度に絞る。
 		[...hitEmojis.values()]
 			.sort((x, y) => y.score - x.score)
 			.slice(0, 6)

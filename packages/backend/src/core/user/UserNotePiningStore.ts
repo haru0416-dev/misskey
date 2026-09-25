@@ -78,9 +78,9 @@ export async function listUserNotePiningsByUserIdsFromDatabase(
 		return [];
 	}
 
+	const order = options.order ?? 'asc';
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const order = options.order ?? 'asc';
 	const plan = userNotePiningsByUserIdsPlans[order === 'desc' ? 1 : 0]!;
 	const rows = await plan.execute(db, { userIds });
 

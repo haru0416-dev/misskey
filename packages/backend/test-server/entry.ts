@@ -65,10 +65,7 @@ async function stopApplication() {
 	runtime = undefined;
 }
 
-/**
- * 別プロセスに切り離してしまったが故に出来なくなった環境変数の書き換え等を実現するためのエンドポイントを作る
- * @param port
- */
+// テストサーバーは別プロセスで動くため、環境変数の書き換え等をテスト側から行うエンドポイントを用意する。
 async function startControllerEndpoints(
 	port = ('tcp' in config.server.listen ? config.server.listen.tcp.port : 3000) + 1000,
 ) {

@@ -721,7 +721,7 @@ export const ROUTE_DEF = [
 		loginRequired: false,
 	},
 	{
-		// テスト用リダイレクト設定。ログイン中ユーザのプロフィールにリダイレクトする
+		// リダイレクト動作の確認用。ログイン中ユーザーのプロフィールへ飛ばす。
 		path: '/redirect-test',
 		redirect: $i ? `@${$i.username}` : '/',
 		loginRequired: true,

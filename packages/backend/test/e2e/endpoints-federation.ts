@@ -137,11 +137,8 @@ import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
 
-/*
- * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
- * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
- * 後続のプロパティアクセスが型エラーになる。
- */
+// 判別可能ユニオンの分岐を確定させる箇所だけ node:assert を使う。expect の matcher は `asserts` 述語を持たず、
+// 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
@@ -629,11 +626,8 @@ describe('Endpoints', () => {
 
 			let actorServer: Server | undefined;
 			let actorUri = '';
-			// このVPS環境では slacc (署名用ネイティブモジュール) が壊れており RsaKeyPair.sign が
-			// 常に失敗するため (Node単体で require('slacc') するだけで再現する環境固有の問題)、
-			// signToActivityPubGet を無効化して署名なしGETの経路を検証する。
-			// meta はプロセス内にキャッシュされているため、DB直接更新ではなく admin/update-meta 経由で
-			// 変更してキャッシュ無効化イベントを発行させる。
+			// 署名なし GET の経路を検証するため signToActivityPubGet を無効化する。meta はプロセス内に
+			// キャッシュされるので、DB 直接更新ではなく admin/update-meta で変更してキャッシュ無効化イベントを発行させる。
 			const originalMeta = await fetchMetaFromDatabase(db);
 			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
 			expect(disableSigning.status).toBe(204);

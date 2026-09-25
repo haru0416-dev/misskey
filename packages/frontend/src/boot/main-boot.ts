@@ -251,7 +251,6 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 
 			const main = markRaw(stream.useChannel('main', null, 'System'));
 
-			// 自分の情報が更新されたとき
 			main.on('meUpdated', (i) => {
 				updateCurrentAccountPartial(i);
 			});
@@ -280,7 +279,6 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 				updateCurrentAccountPartial({ hasUnreadAnnouncement: false });
 			});
 
-			// 個人宛てお知らせが発行されたとき
 			main.on('announcementCreated', onAnnouncementCreated);
 		}
 	}

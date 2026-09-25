@@ -25,28 +25,18 @@ interface IEndpointMetaBase {
 
 	readonly res?: Schema;
 
-	/**
-	 * このエンドポイントにリクエストするのにユーザー情報が必須か否か
-	 * 省略した場合は false として解釈されます。
-	 */
+	/** ユーザーの資格情報を必須とするか。省略時は false。 */
 	readonly requireCredential?: boolean;
 
-	/**
-	 * isModeratorなロールを必要とするか
-	 */
+	/** isModerator なロールを必要とするか。 */
 	readonly requireModerator?: boolean;
 
-	/**
-	 * isAdministratorなロールを必要とするか
-	 */
+	/** isAdministrator なロールを必要とするか。 */
 	readonly requireAdmin?: boolean;
 
 	readonly requiredRolePolicy?: KeyOf<'RolePolicies'>;
 
-	/**
-	 * 引っ越し済みのユーザーによるリクエストを禁止するか
-	 * 省略した場合は false として解釈されます。
-	 */
+	/** 引っ越し済みのユーザーによるリクエストを禁止するか。省略時は false。 */
 	readonly prohibitMoved?: boolean;
 
 	/**
@@ -55,57 +45,33 @@ interface IEndpointMetaBase {
 	 */
 	readonly requireRolePolicy?: string;
 
-	/**
-	 * エンドポイントのリミテーションに関するやつ
-	 * 省略した場合はリミテーションは無いものとして解釈されます。
-	 */
+	/** レート制限。省略時は制限なし。 */
 	readonly limit?: {
-		/**
-		 * 複数のエンドポイントでリミットを共有したい場合に指定するキー
-		 */
+		/** 複数のエンドポイントで制限を共有するときのキー。 */
 		readonly key?: string;
 
-		/**
-		 * リミットを適用する期間(ms)
-		 * このプロパティを設定する場合、max プロパティも設定する必要があります。
-		 */
+		/** 制限を適用する期間 (ms)。max と組で指定する。 */
 		readonly duration?: number;
 
-		/**
-		 * durationで指定した期間内にいくつまでリクエストできるのか
-		 * このプロパティを設定する場合、duration プロパティも設定する必要があります。
-		 */
+		/** duration の期間内に許すリクエスト数。duration と組で指定する。 */
 		readonly max?: number;
 
-		/**
-		 * 最低でもどれくらいの間隔を開けてリクエストしなければならないか(ms)
-		 */
+		/** リクエスト間に最低限空ける間隔 (ms)。 */
 		readonly minInterval?: number;
 	};
 
-	/**
-	 * ファイルの添付を必要とするか否か
-	 * 省略した場合は false として解釈されます。
-	 */
+	/** ファイルの添付を必須とするか。省略時は false。 */
 	readonly requireFile?: boolean;
 
-	/**
-	 * サードパーティアプリからはリクエストすることができないか否か
-	 * 省略した場合は false として解釈されます。
-	 */
+	/** サードパーティアプリからのリクエストを禁止するか。省略時は false。 */
 	readonly secure?: boolean;
 
-	/**
-	 * エンドポイントの種類
-	 * パーミッションの実現に利用されます。
-	 */
+	/** トークンの権限判定に使うエンドポイントの種類。 */
 	readonly kind?: string;
 
 	readonly description?: string;
 
-	/**
-	 * GETでのリクエストを許容するか否か
-	 */
+	/** GET でのリクエストを許すか。 */
 	readonly allowGet?: boolean;
 	/**
 	 * QUERY (RFC 10008) でも受け付けるか。safe かつ idempotent な読み取りにのみ付けること。
@@ -113,9 +79,7 @@ interface IEndpointMetaBase {
 	 */
 	readonly allowQuery?: boolean;
 
-	/**
-	 * 正常応答をキャッシュ (Cache-Control: public) する秒数
-	 */
+	/** 正常応答をキャッシュ (Cache-Control: public) する秒数。 */
 	readonly cacheSec?: number;
 }
 
@@ -144,9 +108,8 @@ export type IEndpointMeta =
 export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
-	// 429件中428件の paramDef が z.ZodType 化済み。残り1件 (admin/update-meta の
-	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) は JSON Schema 形式のため、
-	// Schema 側の型も受け付ける。
+	// admin/update-meta の paramDef (AdminUpdateMetaLogic.ts の adminUpdateMetaJsonSchema) だけが
+	// JSON Schema 形式なので Schema も受け付ける。
 	params: Schema | z.ZodType;
 }
 

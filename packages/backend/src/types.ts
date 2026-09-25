@@ -345,8 +345,8 @@ export type ModerationLogPayloads = {
 	};
 	deleteAbuseReportNotificationRecipient: {
 		recipientId: string;
-		// 呼び出し元(AbuseReportNotificationService.deleteRecipient / admin-abuse-report-notification-recipient.ts)が
-		// 削除前に listAbuseReportNotificationRecipientsFromDatabase({ ids: [id] }) の結果(配列)をそのまま渡している
+		// 呼び出し元 (admin-abuse-report-notification-recipient.ts) は削除前の
+		// listAbuseReportNotificationRecipientsFromDatabase({ ids: [id] }) の結果 (配列) をそのまま渡す。
 		recipient: MiAbuseReportNotificationRecipient[];
 	};
 	deleteAccount: {

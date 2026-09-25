@@ -205,7 +205,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<SearchMarker :keywords="['pinned', 'list']">
 								<MkFolder>
 									<template #label><SearchLabel>{{ i18n.ts.pinnedList }}</SearchLabel></template>
-									<!-- 複数ピン止め管理できるようにしたいけどめんどいので一旦ひとつのみ -->
+									<!-- ピン止めはひとつのみ対応する -->
 									<MkButton v-if="prefer.pinnedUserLists.length === 0" @click="setPinnedList()">{{ i18n.ts.add }}</MkButton>
 									<MkButton v-else danger @click="removePinnedList()"><i class="ti ti-trash"></i> {{ i18n.ts.remove }}</MkButton>
 								</MkFolder>

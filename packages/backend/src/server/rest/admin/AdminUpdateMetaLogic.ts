@@ -176,9 +176,8 @@ export const adminUpdateMetaParamDef = z.object({
 	showRoleBadgesOfRemoteUsers: z.boolean().optional(),
 });
 
-// server/api/metas/admin.ts の 'admin/update-meta' paramDef (docs/misskey-js生成専用) が
-// このJSON Schema版を参照する。全paramDef中これが最後の非Zod形式 (server/api/endpoints.ts
-// 参照)。Zodからこの形状を導出できるようになったら削除する。
+// server/api/metas/admin.ts の 'admin/update-meta' paramDef (docs/misskey-js 生成専用) が参照する。
+// 唯一の非 Zod 形式の paramDef で、Zod からこの形を導出できれば不要になる。
 export const adminUpdateMetaJsonSchema = {
 	type: 'object',
 	properties: {

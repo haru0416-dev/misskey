@@ -150,7 +150,7 @@ describe('core:activitypub:http-signature', () => {
 		});
 
 		test('記号の無い長い署名ヘッダも入力長に比例する時間で弾く', () => {
-			// 以前の非固定の正規表現は長さの 2 乗で、64 KB では約 4 秒かかった。
+			// 非固定の正規表現だと長さの 2 乗で伸び、64 KB で約 4 秒かかる。
 			for (const header of ['a'.repeat(65_536), `k="${'a,'.repeat(32_768)}`, 'a=b,'.repeat(16_384)]) {
 				const started = performance.now();
 				expect(() => parseRequestSignature(requestOf({ headers: { signature: header } }))).toThrow(HttpSignatureError);

@@ -40,9 +40,8 @@ export type ApiAccountSecurityDependencies = UserPackingDependencies & {
 	publishMainStream?: ApiMainStreamPublisher;
 };
 
-// パスワード誤入力も2FA失敗も利用者の入力ミスであってサーバー内部の異常ではない。
-// 生の Error を投げると 500 INTERNAL_ERROR になり、クライアントが原因を出し分けられないうえ
-// 予期しない例外としてサーバーログに残り続けるので、明示的なAPIエラーとして返す
+// パスワード誤入力も2FA失敗も利用者の入力ミスなので、明示的なAPIエラーとして返す。
+// 生の Error だと 500 INTERNAL_ERROR になり、クライアントが原因を出し分けられず、サーバーログにも残る。
 function incorrectPasswordError(id: string): ApiError {
 	return new ApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id });
 }

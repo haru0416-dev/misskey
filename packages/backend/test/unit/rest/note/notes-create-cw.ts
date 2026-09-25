@@ -14,11 +14,8 @@ import { createNote } from '@/core/note/NoteCreationService.js';
 import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import type { MiLocalUser } from '@/models/User.js';
 
-/**
- * note.cw は varchar(512)。ローカル API は paramDef で 100 文字に制限しているが、
- * ActivityPub 経由の summary には長さの保証が無い。切らずに挿入すると DB エラーになり、
- * inbox ジョブが再試行され続ける。
- */
+// note.cw は varchar(512)。ローカル API は paramDef で 100 文字に制限しているが、ActivityPub 経由の summary には
+// 長さの保証が無く、切らずに挿入すると DB エラーで inbox ジョブが再試行され続ける。
 describe('createNote の cw', () => {
 	let runtime: RuntimeDependencies;
 	let deps: NoteCreationDependencies;

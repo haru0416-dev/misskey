@@ -74,8 +74,8 @@ export type MisskeyAppDependencies = {
 };
 
 /**
- * Accept に ActivityPub の取得が含まれるか。メディア型ごとに見る。`ld+json.+activitystreams` の正規表現は
- * ld+json が現れるたびに末尾まで読み、ヘッダ長の 2 乗 (32 KB で 42 ms) になっていた。
+ * Accept に ActivityPub の取得が含まれるか。メディア型ごとに見る。`ld+json.+activitystreams` の正規表現だと
+ * ld+json が現れるたびに末尾まで読み、ヘッダ長の 2 乗 (32 KB で 42 ms) になる。
  */
 export function acceptsActivityPub(accept: string): boolean {
 	return accept
@@ -167,9 +167,8 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 export function createMisskeyApp(deps: MisskeyAppDependencies): Hono {
 	const app = new Hono();
 
-	// API シェルは runApiEndpoint が例外を捕捉するが、それ以外のルート (web SSR / file /
-	// well-known / oauth 等) の未捕捉例外は Hono デフォルトだとログ無しの 500 テキストになる。
-	// サーバーログに残るように onError で明示的にハンドリングする。
+	// API 以外のルート (web SSR / file / well-known / oauth 等) の未捕捉例外は、Hono の既定では
+	// ログ無しの 500 テキストになる。API は runApiEndpoint が捕捉する。
 	app.onError((err, c) => {
 		const errId = randomUUID();
 		recordException(err);

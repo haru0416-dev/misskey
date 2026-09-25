@@ -76,7 +76,7 @@ $height: 2ex;
 	overflow: clip;
 	color: #fff;
 
-	// text-shadowは重いから使うな
+	// text-shadow は描画が重いため使わない
 
 	mask-image: linear-gradient(90deg,
 		rgb(0,0,0),
@@ -98,7 +98,7 @@ $height: 2ex;
 	white-space: nowrap;
 	overflow: visible;
 
-	// text-shadowは重いから使うな
+	// text-shadow は描画が重いため使わない
 	color: var(--MI_THEME-fg);
 	-webkit-text-stroke: var(--MI_THEME-panel) .225em;
 	paint-order: stroke fill;

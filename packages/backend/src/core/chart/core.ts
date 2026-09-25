@@ -184,7 +184,7 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 
 /**
  * 保存間隔中に積んだ差分を 1 つにまとめる。数値は足し、一意集計の値は重複を除いて集める。
- * 配列を concat でつなぎ直すと件数の 2 乗の複写になり、差分 4 万件で約 450 ms かかっていた。
+ * 配列を concat でつなぎ直すと件数の 2 乗の複写になり、差分 4 万件で約 450 ms かかる。
  * 重複を除かないと、同じ値が保存済みの一時列へ繰り返し追記され、以後の保存も重くなる。
  */
 export function mergeChartDiffs(diffs: Iterable<Record<string, number | string[]>>): Record<string, number | string[]> {

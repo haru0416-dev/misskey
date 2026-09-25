@@ -32,7 +32,7 @@ export function isRenote(note: MiNote): note is Renote {
 }
 
 export function isQuote(note: Renote): note is Quote {
-	// 引用判定は NoteCreateService.isQuote と一致させる。
+	// 引用判定は NoteCreationService の isQuoteData と一致させる。
 	return note.text != null || note.cw != null || note.replyId != null || note.hasPoll || note.fileIds.length > 0;
 }
 

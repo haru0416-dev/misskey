@@ -812,7 +812,7 @@ describe('queue outbox', () => {
 	});
 
 	test('reports the age of the oldest pending row as a number', async () => {
-		// 生sqlでtimestamptzを受けると文字列で返り、統計を読むadmin/queueのendpointが500になっていた
+		// 生 sql で timestamptz を受けると文字列で返り、統計を読む admin/queue の endpoint が 500 になる。
 		const outboxId = await enqueueDeliverJobInOutbox(runtime.db, deliveryInput('queue-outbox-stats-user'));
 		try {
 			const stats = await getQueueOutboxStats(runtime.db);

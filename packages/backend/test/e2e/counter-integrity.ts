@@ -94,12 +94,9 @@ async function runAfterBothDeletesStart<T>(
 	}
 }
 
-/**
- * clip_note の削除は「note を FOR UPDATE で押さえてから clip_note を消す」順序で直列化されている
- * (note 削除の cascade と lock 順序を揃えて deadlock を避けるため)。
- * そのため DELETE 文自体は同時に走らず、両者がぶつかるのは note 行ロックの取得地点になる。
- * ここを塞いで両リクエストを待たせてから解放することで、同時実行の交錯を再現する。
- */
+// clip_note の削除は note を FOR UPDATE で押さえてから clip_note を消す順序で直列化されている (note 削除の
+// cascade と lock 順序を揃えて deadlock を避けるため)。両者がぶつかるのは note 行ロックの取得地点なので、
+// ここを塞いで両リクエストを待たせてから解放し、同時実行の交錯を再現する。
 async function runAfterBothBlockOnNoteRowLock<T>(
 	pool: NativeSqlClient,
 	noteId: string,

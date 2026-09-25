@@ -38,10 +38,8 @@ const options: BuildOptions = {
 	sourcemap: 'linked',
 };
 
-// コマンドライン引数を取得
 const args = new Set(process.argv.slice(2).map((arg) => arg.toLowerCase()));
 
-// built配下をすべて削除する
 if (!args.has('--no-clean')) {
 	fs.rmSync('./built', { recursive: true, force: true });
 }
@@ -52,9 +50,8 @@ if (args.has('--watch')) {
 	await buildSrc();
 }
 
-// `/locales` には Crowdin 経由で翻訳進捗70%未満の言語ファイルも同期されてくるが、
-// それらは const.ts の languages に載るまで build() から一切参照されない。
-// 未参照ファイルまでコピーするとビルド毎の無駄なI/Oと成果物肥大化になるので対象を絞る。
+// `/locales` には翻訳進捗70%未満の言語も Crowdin から同期されるが、const.ts の languages に無い言語は
+// build() から参照されないため、コピーするとビルド毎の I/O と成果物が無駄に増える。
 function writeLocales(): void {
 	const srcDir = _localesDir;
 	const destDir = resolve(_dirname, 'built/locales');
@@ -69,10 +66,7 @@ function writeLocales(): void {
 	console.log(`[${_package.name}] locales written (${files.length} files).`);
 }
 
-/**
- * フロントエンド用の locale JSON を書き出す
- * Service Worker が HTTP 経由で取得するために必要
- */
+// Service Worker が HTTP で取得するため、frontend 側へ locale JSON を書き出す。
 async function writeFrontendLocalesJson(useCachedLocales = false): Promise<void> {
 	// locale生成・コピー後の、今回ビルドしたモジュールを読む必要があるため動的importする。
 	const { locales, writeFrontendLocalesJson: write } = await import('./built/index.js');

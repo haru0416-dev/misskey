@@ -49,7 +49,7 @@ watch(name, () => {
 	os.apiWithDialog(
 		'i/update',
 		{
-			// 空文字列をnullにしたいので??は使うな
+			// 空文字列も null にするため ?? ではなく || を使う
 
 			name: name.value || null,
 		},
@@ -65,7 +65,7 @@ watch(name, () => {
 
 watch(description, () => {
 	os.apiWithDialog('i/update', {
-		// 空文字列をnullにしたいので??は使うな
+		// 空文字列も null にするため ?? ではなく || を使う
 
 		description: description.value || null,
 	});

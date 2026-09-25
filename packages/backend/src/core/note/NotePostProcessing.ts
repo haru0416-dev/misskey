@@ -36,7 +36,7 @@ type WaitingProducer = {
 /**
  * 同時に実行する後処理の数。1 件は約 9 ms で、その大半は BEGIN/DELETE・文脈の読み込み・ステージ・COMMIT の
  * DB 往復待ちなので、並行数に比例して処理能力が伸びる。実行中は DB 接続を 1 本ずつ持つため、HTTP 要求の分を
- * 残すようプールの 1/4 までとし、従来の 2 を下限、8 を上限にする。
+ * 残すようプールの 1/4 までとし、2 を下限、8 を上限にする。
  */
 export function notePostProcessingConcurrency(databasePoolSize: number): number {
 	return Math.min(8, Math.max(2, Math.floor(databasePoolSize / 4)));

@@ -180,9 +180,7 @@ export class MemorySingleCache<T> {
 		this.cachedAt = null;
 	}
 
-	/**
-	 * validatorがfalseを返した既存値は再利用しない。
-	 */
+	/** validator が false を返した既存値は再利用しない。 */
 	@bindThis
 	public async fetch(fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
 		const cachedValue = this.get();
@@ -201,9 +199,7 @@ export class MemorySingleCache<T> {
 		return value;
 	}
 
-	/**
-	 * validatorがfalseを返した既存値は再利用しない。
-	 */
+	/** validator が false を返した既存値は再利用しない。 */
 	@bindThis
 	public async fetchMaybe(
 		fetcher: () => Promise<T | undefined>,

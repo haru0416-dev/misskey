@@ -15,7 +15,7 @@ const emojis: Misskey.entities.EmojiSimple[] = Array.from({ length: 200 }, (_, i
 	url: '',
 }));
 
-// 以前のピッカーが使っていたフォルダごとの絞り込み。
+// 期待値: フォルダごとに全件を絞り込む素朴な実装。
 function topFolder(category: string) {
 	return emojis.filter((e) => (category === '' ? e.category === 'null' || !e.category : e.category === category));
 }

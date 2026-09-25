@@ -19,14 +19,8 @@ export class MiMeta {
 
 	public description: string | null;
 
-	/**
-	 * メンテナの名前
-	 */
 	public maintainerName: string | null;
 
-	/**
-	 * メンテナの連絡先
-	 */
 	public maintainerEmail: string | null;
 
 	public disableRegistration: boolean;

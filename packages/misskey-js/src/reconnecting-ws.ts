@@ -1,7 +1,4 @@
-/**
- * Misskeyのチャンネル購読は接続完了前にconnectメッセージを送るため、
- * このキューを破棄してはならない。
- */
+// Misskey のチャンネル購読は接続完了前に connect メッセージを送るため、未接続時の送信キューを破棄してはならない。
 
 type WebSocketEventMap = {
 	open: unknown;

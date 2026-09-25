@@ -82,7 +82,7 @@ export function getEmojiName(char: string): string {
 }
 
 /**
- * テキストスタイル絵文字（U+260Eなどの1文字で表現される絵文字）をカラースタイル絵文字に変換します（VS16:U+FE0Fを付与）。
+ * テキストスタイル絵文字（U+260Eなどの1文字で表現される絵文字）をカラースタイル絵文字に変換する（VS16:U+FE0Fを付与）。
  */
 export function colorizeEmoji(char: string) {
 	// <文字列>.length はコードポイント数ではなくUTF-16コードユニット数を返すため、サロゲートペアを含む絵文字で誤動作する。
@@ -91,7 +91,7 @@ export function colorizeEmoji(char: string) {
 }
 
 /**
- * 文字種にかかわらず、カラースタイル絵文字への変換を試みます（本ファイルにある検索プログラム用・フォールバックが必須）。
+ * 文字種にかかわらず、カラースタイル絵文字への変換を試みる（本ファイルにある検索プログラム用・フォールバックが必須）。
  */
 function forceColorizeEmoji(char: string) {
 	// <文字列>.length はコードポイント数ではなくUTF-16コードユニット数を返すため、サロゲートペアを含む絵文字で誤動作する。

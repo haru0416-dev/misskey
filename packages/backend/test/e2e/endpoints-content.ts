@@ -139,11 +139,8 @@ import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt, getDefined } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
 
-/*
- * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
- * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
- * 後続のプロパティアクセスが型エラーになる。
- */
+// 判別可能ユニオンの分岐を確定させる箇所だけ node:assert を使う。expect の matcher は `asserts` 述語を持たず、
+// 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
@@ -1474,8 +1471,8 @@ describe('Endpoints', () => {
 
 		test('following/update-all updates only the caller followings', async () => {
 			const config = fixtureConfig;
-			// 共有fixture (alice/bob) に直接DBのfollowing行を残すと、後続のblocking系テストの
-			// unfollow の副作用で共有 fixture のカウンタを負値にしないため、使い捨てユーザーで完結させる。
+			// 共有 fixture (alice/bob) に DB 直接の following 行を残すと、後続の blocking 系テストの unfollow が
+			// 共有 fixture のカウンタを負値にするため、使い捨てユーザーで完結させる。
 			const suffix = Date.now().toString(36).slice(-8);
 			const updater = await signup({ username: `hfua${suffix}` });
 			const targetA = await signup({ username: `hfub${suffix}` });
@@ -2692,7 +2689,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			// memoには常に文字列かnullが入っている(5cac151)
+			// memo には常に文字列か null が入る。
 			expect((res.body as unknown as { memo: string | null }).memo).toBeNull();
 		});
 

@@ -10,6 +10,5 @@
 const { setup } = await import('../built-test/entry.js');
 await setup();
 
-// コントローラの listen だけでプロセスは生存するが、明示的に待つことで
-// 「setup() が解決した = 準備完了」という意図をはっきりさせる
+// コントローラの listen だけでも生存するが、setup() の解決後は終了しないことを明示する。
 await new Promise(() => {});

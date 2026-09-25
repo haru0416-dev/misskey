@@ -143,7 +143,7 @@ describe('createOAuthProviderRuntime', () => {
 				permission: ['write:notes'],
 			},
 		]);
-		// 旧 3-legged 認可の hash 照合は廃止した。トークンは token 列だけで引く。
+		// トークンは token 列だけで引き、hash 列を持たない。
 		expect(createdTokens[0]).not.toHaveProperty('hash');
 
 		runtime.dispose();

@@ -112,7 +112,7 @@ describe('mention candidate', () => {
 		}
 	});
 
-	// 以前の非固定の正規表現は 3,000 字で 6.3 ms、6,000 字で 25 ms かかっていた。
+	// 非固定の正規表現では 3,000 字で 6.3 ms、6,000 字で 25 ms かかる (実測)。
 	test('行の長さに比例した時間で終わる', () => {
 		const text = 'a'.repeat(200_000) + ' ';
 		const start = performance.now();

@@ -63,7 +63,6 @@ type CaptchaContainer = {
 };
 
 declare global {
-	// Window を拡張してるため、空ではない
 	// oxlint-disable-next-line typescript/no-empty-interface -- グローバルの Window へ宣言マージで型を足す。type 別名ではマージできない。
 	interface Window extends CaptchaContainer {}
 }

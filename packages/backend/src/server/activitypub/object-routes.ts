@@ -426,9 +426,6 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		return await renderUserInfo(deps, c, user?.isSuspended ? null : user);
 	});
 
-	// Hono は /@:acct のようなセグメント内プレフィックス付きパラメータを解釈できないため、
-	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
-	// このルートが無いと SPA フォールバックに落ちて HTML を返し、リモートが uri を解決できなくなる。
 	app.get('/emojis/:emoji', async (c) => {
 		if (deps.meta.federation === 'none') {
 			return apError(403);
@@ -504,6 +501,9 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		);
 	});
 
+	// Hono は /@:acct のようなセグメント内プレフィックス付きパラメータを解釈できないため、
+	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
+	// このルートが無いと SPA フォールバックに落ちて HTML を返し、リモートが uri を解決できなくなる。
 	app.get('*', async (c, next) => {
 		const pathname = new URL(c.req.url).pathname;
 		if (!pathname.startsWith('/@')) {

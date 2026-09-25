@@ -491,7 +491,7 @@ async function peerQuery(host: Host, text: string, values: unknown[] = []) {
 
 /**
  * 送信側の delayed ジョブを即時実行へ繰り上げる。再試行するのは同じジョブなので再送経路と冪等性は検査に残り、
- * 省くのは backoff の待ちだけ。公式版の deliver backoff は 60 秒・180 秒…と伸び、1 試験で数分かかっていた。
+ * 省くのは backoff の待ちだけ。公式版の deliver backoff は 60 秒・180 秒…と伸び、待つと 1 試験で数分かかる。
  */
 export async function promoteDelayed(host: Host, queue: 'deliver' | 'inbox'): Promise<void> {
 	const admin = await fetchAdmin(host);

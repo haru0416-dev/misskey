@@ -3,12 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/*
- * 通知のアクションボタンと再通知は Chromium 系だけが実装しており、標準の
- * NotificationOptions には含まれない (@types/serviceworker は 0.0.75 以降
- * これらを落としている)。対応していないブラウザでは無視されるだけなので、
- * 型の上でだけ足す。
- */
+// 通知のアクションボタンと再通知は Chromium 系だけの実装で、標準の NotificationOptions に無い
+// (@types/serviceworker 0.0.75 以降は型からも消えている)。非対応ブラウザでは無視されるだけなので型の上でだけ足す。
 declare global {
 	interface NotificationOptions {
 		actions?: NotificationAction[];

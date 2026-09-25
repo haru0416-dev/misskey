@@ -224,10 +224,7 @@ $avatarSize: 58px;
 </style>
 
 <style lang="scss">
-/*
- * useCssModuleで$styleを読み込みたかったが、rollupでのunwindが壊れてしまうらしく失敗。
- * グローバルにクラスを定義することでお茶を濁す。
- */
+/* useCssModule 経由の $style は rollup の unwind 処理で壊れるため、グローバルなクラスで定義する。 */
 ._qrShowFlip {
 	transition: rotate .3s linear, scale .3s .15s step-start;
 }

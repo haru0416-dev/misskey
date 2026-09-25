@@ -246,7 +246,7 @@ export async function onMoveAccountForApi(
 
 /**
  * アクティブなアンテナ一覧を DB から取得し、評価を分割して実行する。
- * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
+ * fanout-timeline-push.ts と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
 export async function addNoteToAntennasForApi(
 	deps: ApiAntennaFanoutDependencies,

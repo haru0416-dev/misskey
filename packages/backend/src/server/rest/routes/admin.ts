@@ -489,7 +489,6 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		'/admin/system-webhook/test',
 		endpointHandler(deps, 'admin/system-webhook/test', async ({ body, auth, c }) => {
 			await assertApiModerator(deps, auth);
-			// 外部 URL への HTTP 配送をキューに積むので、無制限だと増幅送信の踏み台になる
 
 			await handleApiAdminSystemWebhookTest(deps, body);
 			return emptyResponse(c);

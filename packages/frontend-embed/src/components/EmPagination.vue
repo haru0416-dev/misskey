@@ -72,10 +72,7 @@ export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> 
 	limit: number;
 	params?: Misskey.Endpoints[E]['req'] | ComputedRef<Misskey.Endpoints[E]['req']>;
 
-	/**
-	 * 検索APIのような、ページング不可なエンドポイントを利用する場合
-	 * (そのようなAPIをこの関数で使うのは若干矛盾してるけど)
-	 */
+	/** 検索 API のような、ページング不可なエンドポイントを利用する場合に指定する。 */
 	noPaging?: boolean;
 
 	/**
@@ -215,7 +212,7 @@ watch([backed, rootEl], () => {
 	}
 });
 
-// パラメータに何らかの変更があった際、再読込したい（チャンネル等のIDが変わったなど）
+// チャンネル ID などのパラメータが変わったら再読込する。
 watch(() => [props.pagination.endpoint, props.pagination.params], init, { deep: true });
 
 watch(

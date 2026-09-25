@@ -286,7 +286,6 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		window.removeEventListener('mouseup', onMouseup);
 		window.removeEventListener('touchend', onMouseup);
 
-		// 値が変わってたら通知
 		if (beforeValue !== finalValue.value) {
 			emit('update:modelValue', finalValue.value);
 			emit('dragEnded', finalValue.value);

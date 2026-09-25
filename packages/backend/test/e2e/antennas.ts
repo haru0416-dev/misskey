@@ -530,8 +530,7 @@ describe('アンテナ', () => {
 			const remainingNote = await post(bob, { text: `test ${keyword} remaining` });
 			const removedNote = await post(bob, { text: `test ${keyword} removed` });
 
-			// 振り分け完了前に remove-note すると lrem が空振りした後から追加され直すため、
-			// remove-note 後の遅延追加を防ぐため、両ノートの到達を待ってから削除する。
+			// 振り分け完了前に remove-note すると lrem が空振りし、後から追加され直すため、両ノートの到達を待ってから削除する。
 			await waitForAntennaNotes(alice, antenna.id, 2);
 			await waitForAntennaNotes(bob, otherAntenna.id, 2);
 
@@ -930,10 +929,9 @@ describe('アンテナ', () => {
 			expect(response).toStrictEqual(expected);
 		});
 
-		// 日付指定のPaginationは検証しない:
-		// sinceDate/untilDate は genId(date) を境界 ID に変換するため、
-		// その時刻ちょうどに作成されたレコードの包含が下位ビットの乱数次第で非決定的になる。
-		// https://github.com/misskey-dev/misskey/issues/10476 系の既知の上流仕様。
+		// 日付指定の Pagination は検証しない。sinceDate/untilDate は genId(date) を境界 ID に変換するため、
+		// その時刻ちょうどに作成されたレコードの包含が下位ビットの乱数次第で非決定的になる (上流の既知仕様、
+		// https://github.com/misskey-dev/misskey/issues/10476 系)。
 		test.each([{ label: 'ID指定', offsetBy: 'id' }] as const)(
 			'が取得でき、$labelのPaginationに一貫性があること',
 			async ({ offsetBy }) => {

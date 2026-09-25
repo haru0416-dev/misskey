@@ -121,7 +121,7 @@ export class Autocomplete {
 				.split(/:[a-z0-9_+\-]+:/)
 				.pop()!
 				.includes(':');
-		// :ok:などを🆗にするたいおぷ
+		// `:ok:` のような入力を Unicode 絵文字 (🆗) へ補完するか。
 		const isEmojiCompleteToUnicode = !isEmoji && emojiIndex === text.length - 1;
 
 		let opened = false;
@@ -200,9 +200,6 @@ export class Autocomplete {
 		}
 	}
 
-	/**
-	 * サジェストを提示します。
-	 */
 	private async open<T extends keyof CompleteInfo>(type: T, q: CompleteInfo[T]['query']) {
 		if (type !== this.currentType) {
 			this.close();
@@ -261,9 +258,6 @@ export class Autocomplete {
 		}
 	}
 
-	/**
-	 * サジェストを閉じます。
-	 */
 	private close() {
 		if (this.suggestion == null) {
 			return;
@@ -275,9 +269,6 @@ export class Autocomplete {
 		this.textarea.focus();
 	}
 
-	/**
-	 * オートコンプリートする
-	 */
 	private complete<T extends keyof CompleteInfo>(props: CompleteProps<T>) {
 		this.close();
 
@@ -292,7 +283,6 @@ export class Autocomplete {
 
 			const acct = props.value.host === null ? props.value.username : `${props.value.username}@${props.value.host}`;
 
-			// 挿入
 			this.text = `${trimmedBefore}@${acct} ${after}`;
 
 			// キャレットを戻す
@@ -308,7 +298,6 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf('#'));
 			const after = source.substring(caret);
 
-			// 挿入
 			this.text = `${trimmedBefore}#${props.value} ${after}`;
 
 			// キャレットを戻す
@@ -324,7 +313,6 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf(':'));
 			const after = source.substring(caret);
 
-			// 挿入
 			this.text = trimmedBefore + props.value + after;
 
 			// キャレットを戻す
@@ -340,7 +328,6 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf(':', before.length - 2));
 			const after = source.substring(caret);
 
-			// 挿入
 			this.text = trimmedBefore + props.value + after;
 
 			// キャレットを戻す
@@ -356,7 +343,6 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf('$'));
 			const after = source.substring(caret);
 
-			// 挿入
 			this.text = `${trimmedBefore}$[${props.value} ]${after}`;
 
 			// キャレットを戻す
@@ -372,7 +358,6 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf('.'));
 			const after = source.substring(caret);
 
-			// 挿入
 			this.text = `${trimmedBefore}.${props.value}${after}`;
 
 			// キャレットを戻す

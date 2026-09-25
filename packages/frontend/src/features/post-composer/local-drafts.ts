@@ -8,7 +8,7 @@ import { isJsonObject, miLocalStorage } from '@/local-storage.js';
 /**
  * 端末に残す下書きの件数。下書きは返信先・引用元・チャンネルごとに別の鍵で残り、投稿せずに閉じた分は
  * 消えないので、上限が無いと増え続ける。保存は入力のたびに全件を読み書きするため、件数がそのまま
- * 1 打鍵の費用になり、localStorage の容量の上限を超えると以後の保存が例外で失敗していた。
+ * 1 打鍵の費用になり、localStorage の容量の上限を超えると以後の保存が例外で失敗する。
  */
 export const MAX_LOCAL_DRAFTS = 50;
 

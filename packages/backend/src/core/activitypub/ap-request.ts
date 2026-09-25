@@ -8,9 +8,6 @@ import { URL } from 'node:url';
 import { promisify } from 'node:util';
 import { getCachedSigner } from './signer-cache.js';
 
-// slacc の SignatureAlgorithm は ambient const enum のため isolatedModules 下では値として import できない。
-// 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
-
 type Request = {
 	url: string;
 	method: string;
@@ -29,7 +26,6 @@ type PrivateKey = {
 	keyId: string;
 };
 
-// PEM の ASN.1 パースは配送先ホスト毎に発生する deliver ジョブの数だけ繰り返されるとCPUコストが無視できないため、
 export class ApRequestCreator {
 	static async createSignedPost(args: {
 		key: PrivateKey;

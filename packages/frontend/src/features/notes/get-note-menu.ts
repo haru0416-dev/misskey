@@ -707,7 +707,7 @@ function smallerVisibility(a: Visibility, b: Visibility): Visibility {
 	if (a === 'home' || b === 'home') {
 		return 'home';
 	}
-	// if (a === 'public' || b === 'public')
+	// 残りは両方とも public
 	return 'public';
 }
 

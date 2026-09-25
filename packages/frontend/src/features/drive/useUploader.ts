@@ -316,12 +316,7 @@ export function useUploader(
 							});
 						},
 					},
-					/*{
-					icon: 'ti ti-resize',
-					text: i18n.ts.resize,
-					action: async () => {
-					},
-				},*/ {
+					{
 						icon: 'ti ti-sparkles',
 						text: i18n.ts._imageEffector.title,
 						action: async () => {
@@ -813,8 +808,7 @@ export function useUploader(
 			try {
 				const result = await compressionTools.readAndCompressImage(preprocessedFile, config);
 				if (result.size < preprocessedFile.size || preprocessedFile.type === 'image/webp') {
-					// The compression may not always reduce the file size
-					// (and WebP is not browser safe yet)
+					// 圧縮で小さくなるとは限らない。WebP はブラウザによって扱えないため常に変換後を使う。
 					preprocessedFile = result;
 					item.compressedSize = result.size;
 					item.suffix = '.' + mimeTypeMap[config.mimeType];
@@ -858,7 +852,6 @@ export function useUploader(
 				input,
 				output,
 				video: {
-					//width: 320, // Height will be deduced automatically to retain aspect ratio
 					bitrate:
 						item.compressionLevel === 1
 							? mediabunny.QUALITY_VERY_HIGH
@@ -867,8 +860,7 @@ export function useUploader(
 								: mediabunny.QUALITY_VERY_LOW,
 				},
 				audio: {
-					// Explicitly keep audio (don't discard) and copy it if possible
-					// without re-encoding to avoid WebCodecs limitations on iOS Safari
+					// 音声は捨てず、可能なら再エンコードせずにコピーする。iOS Safari の WebCodecs の制約を避けるため。
 					discard: false,
 				},
 			});

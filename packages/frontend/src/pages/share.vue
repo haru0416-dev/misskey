@@ -66,7 +66,7 @@ async function init() {
 
 		//#region add text to note text
 		if (text?.startsWith(title.value)) {
-			// For the Google app https://github.com/misskey-dev/misskey/issues/16224
+			// Google アプリは text の先頭に title を重ねて送るため、重複を除く: https://github.com/misskey-dev/misskey/issues/16224
 			noteText += text.replace(title.value, '').trimStart();
 		} else if (text) {
 			noteText += `${text}\n`;

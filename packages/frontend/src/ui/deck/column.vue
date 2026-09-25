@@ -322,9 +322,7 @@ function onDragover(ev: DragEvent) {
 		return;
 	}
 
-	// 自分自身がドラッグされている場合
 	if (dragging.value) {
-		// 自分自身にはドロップさせない
 		ev.dataTransfer.dropEffect = 'none';
 	} else {
 		const isDeckColumn = checkDragDataType(ev, ['deckColumn']);

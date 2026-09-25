@@ -93,10 +93,8 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 			minReconnectionDelay: 1, // https://github.com/pladaria/reconnecting-websocket/issues/91
 			WebSocket: options.WebSocket,
 		});
-		// reconnecting-websocket のデフォルト binaryType は 'blob' だが、Bun の ws 互換実装は
-		// 'blob' への代入で例外を投げ、RWS の _connect() が例外終了してリスナ登録に到達しない
-		// (接続は開くがイベントが一切届かなくなる)。Misskey のストリーミングはテキスト (JSON)
-		// のみで binaryType は実質未使用のため、全ランタイムで受理される 'arraybuffer' を既定にする。
+		// 既定の 'blob' は Bun の ws 互換実装で代入時に例外になり、RWS の _connect() がリスナ登録前に抜けて
+		// 接続は開くがイベントが届かなくなる。ストリーミングは JSON テキストのみなので、全ランタイムで受理される 'arraybuffer' にする。
 		this.stream.binaryType = options.binaryType ?? 'arraybuffer';
 		this.stream.addEventListener('open', this.onOpen);
 		this.stream.addEventListener('close', this.onClose);

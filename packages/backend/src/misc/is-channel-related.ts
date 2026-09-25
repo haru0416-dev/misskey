@@ -7,12 +7,9 @@ import type { MiNote } from '@/models/Note.js';
 import type { Packed } from '@/misc/json-schema.js';
 
 /**
- * {@link note}が{@link channelIds}のチャンネルに関連するかどうかを判定し、関連する場合はtrueを返します。
- * 関連するというのは、{@link channelIds}のチャンネルに向けての投稿であるか、またはそのチャンネルの投稿をリノート・引用リノートした投稿であるかを指します。
+ * note が channelIds のチャンネルへの投稿か、それらのチャンネルの投稿をリノート・引用した投稿かを判定する。
  *
- * @param note 確認対象のノート
- * @param channelIds 確認対象のチャンネルID一覧
- * @param ignoreAuthor trueの場合、ノートの所属チャンネルが{@link channelIds}に含まれていても無視します（デフォルトはfalse）
+ * @param ignoreAuthor true なら note 自身の所属チャンネルが channelIds に含まれていても無視する
  */
 export function isChannelRelated(
 	note: MiNote | Packed<'Note'>,

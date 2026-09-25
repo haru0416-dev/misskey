@@ -142,13 +142,7 @@ function renderError(e?: Error): unknown {
 	return { stack: e.stack, message: e.message, name: e.name };
 }
 
-/**
- * BullMQ の `Bull.Worker` を `deps` (プレーンオブジェクト) 付きのハンドラ関数にバインドする。
- *
- * system/db/deliver/inbox/userWebhookDeliver/systemWebhookDeliver/relationship/objectStorage/
- * endedPollNotification/postScheduledNote の10個の Worker をここで組み立てる。
- * 本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
- */
+/** 各キューの `Bull.Worker` を `deps` 付きのハンドラ関数にバインドする。本番の起動経路は `boot/common.ts` の `jobQueue()`。 */
 export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	const runInBackgroundScope = createBackgroundExecutionScope();
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');

@@ -8,7 +8,6 @@ import { markRaw } from 'vue';
 import { $i } from '@/i.js';
 import { wsOrigin } from '@shared/utility/config.js';
 
-// ハートビートの間隔（ミリ秒）。
 const HEART_BEAT_INTERVAL = 1000 * 60;
 
 let stream: Misskey.IStream | null = null;

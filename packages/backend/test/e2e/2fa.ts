@@ -20,11 +20,8 @@ import type {
 } from '@simplewebauthn/server';
 import type * as misskey from 'misskey-js';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-/*
- * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
- * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
- * 後続のプロパティアクセスが型エラーになる。
- */
+// 判別可能ユニオンの分岐を確定させる箇所だけ node:assert を使う。expect の matcher は `asserts` 述語を持たず、
+// 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
 describe('2要素認証', () => {
 	let alice: misskey.entities.SignupResponse;

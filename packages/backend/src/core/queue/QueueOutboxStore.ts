@@ -358,9 +358,9 @@ async function resolveDeliverJobStates(
 
 	let replies: [Error | null, unknown][] | null;
 	try {
-		// bullmq v6 は datastore を抽象化したため生クライアントは backend 側の脱出口に移った。
-		// IRedisClient 型は BullMQ 自身が使うコマンドしか宣言していないが、接続オプションから
-		// 生成される実体は ioredis クライアントの Proxy (createIORedisClient) なので ioredis として扱える。
+		// bullmq v6 の生クライアントは getBackend() からしか取れない。IRedisClient 型は BullMQ 自身が使う
+		// コマンドしか宣言していないが、実体は ioredis クライアントの Proxy (createIORedisClient) なので
+		// ioredis として扱える。
 		const client = (await deliverQueue.getBackend().client) as unknown as Redis.Redis;
 		const completedKey = deliverQueue.toKey('completed');
 		const failedKey = deliverQueue.toKey('failed');
@@ -429,7 +429,7 @@ export type InlineDbOutboxJob = {
 
 /**
  * 行数ごとに INSERT の形が変わるので、行数を key に含めて固定形を持つ。notePostCreate のステージ数
- * (数行) を想定した上限で、超える場合は従来どおり組み立てる。
+ * (数行) を想定した上限で、超える場合は毎回組み立てる。
  */
 export const MAX_PREPARED_INLINE_JOB_ROWS = 16;
 
@@ -562,7 +562,7 @@ export async function releaseDbOutboxJobs(
 }
 
 // id と lease token の組を配列で渡して照合する。行数ごとに OR を連ねると件数の分だけ SQL の形が増え、
-// 2 組で 0.14ms / 3 組で 0.18ms と組数に比例して重かった。unnest なら行数によらず 1 つの形になる。
+// 2 組で 0.14ms / 3 組で 0.18ms と組数に比例して重くなる。unnest なら行数によらず 1 つの形になる。
 const inlineJobDeletionPlan = defineQueryPlan((db) => {
 	const selection = { id: queueOutbox.id };
 	return {

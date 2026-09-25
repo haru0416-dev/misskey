@@ -90,7 +90,7 @@ export class FileServerFileResolver {
 			}
 			const result = await this.downloadAndDetectTypeFromUrl(file.uri);
 			const { kind: _kind, ...downloaded } = result;
-			file.size = (await fs.promises.stat(downloaded.path)).size; // DB file.sizeは正確とは限らないので
+			file.size = (await fs.promises.stat(downloaded.path)).size; // DB の file.size は正確とは限らない。
 			return {
 				kind: 'remote',
 				...downloaded,

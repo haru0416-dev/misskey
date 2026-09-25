@@ -12,13 +12,9 @@ import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-/**
- * 絵文字パックの書き出し (archiver) と取り込み (slacc の ZipReader) の噛み合わせ。
- *
- * ZipReader は展開に要る deflate だけを積んでおり、bzip2 や lzma といった方式は
- * 持たない。自前の書き出しと一般的な zip が読めること、持たない方式は黙って
- * 壊れず明示的に失敗することを見る。
- */
+// 絵文字パックの書き出し (archiver) と取り込み (slacc の ZipReader) の噛み合わせ。ZipReader は deflate だけを
+// 持ち bzip2 や lzma は持たないので、自前の書き出しと一般的な zip が読めることと、持たない方式が黙って壊れず
+// 明示的に失敗することを見る。
 describe('queue:emoji-zip', () => {
 	let dir = '';
 	const payload = Buffer.alloc(8192, 3);

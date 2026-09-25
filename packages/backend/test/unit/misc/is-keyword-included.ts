@@ -86,7 +86,7 @@ describe('isKeywordIncluded', () => {
 
 		test('正規表現形式の判定は RegExp と一致する', () => {
 			// ランダムな text と word だけでは一致が 500 件中 17〜53 件 (中央値 33) しか出ず、
-			// 下限 20 を約 1% の確率で割っていた。半分は word を text に埋め込み、一致側を構造的に確保する。
+			// 下限 20 を約 1% の確率で割る。半分は word を text に埋め込み、一致側を構造的に確保する。
 			// 埋め込む語の半分は大文字にし、i フラグの有無で結果が変わる入力を作る。
 			const input = fc
 				.tuple(text, word, text, fc.boolean(), fc.boolean())

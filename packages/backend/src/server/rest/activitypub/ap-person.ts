@@ -831,9 +831,10 @@ export async function validateAlsoKnownAsForApi(
 	for (const srcUri of dst.alsoKnownAs) {
 		try {
 			let src = await fetchPersonForApi(deps, srcUri);
+			// このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
 			if (!src) {
 				continue;
-			} // このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
+			}
 
 			if (dst.host != null && src.host != null) {
 				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {

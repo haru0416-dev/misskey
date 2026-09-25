@@ -139,7 +139,7 @@ describe('Drive', () => {
 			});
 		});
 
-		/** @see https://github.com/misskey-dev/misskey/issues/12208 */
+		// https://github.com/misskey-dev/misskey/issues/12208
 		describe('isSensitive is federated in replying', () => {
 			let alice: LoginUser, bob: LoginUser;
 

@@ -6,5 +6,5 @@
 import type { Component, MaybeRef } from 'vue';
 import type { ComponentProps as CP } from 'vue-component-type-helpers';
 
-// props に ref を許可するようにする
+// 各 prop に ref も渡せるようにする。
 export type ComponentProps<T extends Component> = { [K in keyof CP<T>]: MaybeRef<CP<T>[K]> };

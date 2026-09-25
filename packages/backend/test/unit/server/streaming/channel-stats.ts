@@ -64,7 +64,7 @@ describe('hono-stream-connection: stats channels', () => {
 	});
 
 	test('queueStats: requestLog要求に対しstatsLogを返す', async () => {
-		// 実際にはデーモン (hono-daemon-queue-stats.ts) が 'requestQueueStatsLog' を購読して
+		// 実際にはデーモン (server/daemons/queue-stats.ts) が 'requestQueueStatsLog' を購読して
 		// 'queueStatsLog:<id>' で応答する。ここではデーモンを起動しないため、その応答側を模擬する。
 		const onRequest = (x: { id: string; length?: number }) => {
 			testEv.emit(`queueStatsLog:${x.id}`, [{ deliver: {}, inbox: {} }]);

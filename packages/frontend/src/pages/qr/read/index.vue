@@ -167,7 +167,6 @@ async function processResult(result: QrScanner.ScanResult) {
 	}
 
 	if (uris.value[0] !== trimmed) {
-		// 並べ替え
 		uris.value = [trimmed, ...uris.value.slice(0, 29).filter((u) => u !== trimmed)];
 	}
 

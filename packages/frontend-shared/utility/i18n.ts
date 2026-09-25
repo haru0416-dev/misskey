@@ -105,10 +105,8 @@ export class I18n<T extends ILocale> {
 						return new Proxy(value, new Handler());
 					}
 
-					// パラメータ化された文字列 ({name} 等を含む) を .ts 経由で取得するのは
-					// <I18n :src="i18n.ts.xxx"> にそのまま渡してスロットで埋める正規の用法であり、
-					// この時点ではパラメータが充足されるかどうか判定できないので警告しない
-					// (実際に引数を渡して埋める .tsx/.t() 側でのみ充足チェックを行う)。
+					// パラメータ付きの文字列を .ts で取得して <I18n :src> のスロットで埋めるのは正規の用法。
+					// ここでは充足を判定できないため警告せず、引数を渡す .tsx/.t() 側で検査する。
 					if (typeof value === 'string') {
 						return value;
 					}

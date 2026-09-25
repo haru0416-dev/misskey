@@ -228,7 +228,6 @@ function onContextmenu(ev: PointerEvent) {
 
 .visible {
 	position: relative;
-	//box-shadow: 0 0 0 1px var(--MI_THEME-divider) inset;
 	background: var(--MI_THEME-bg);
 	background-size: 16px 16px;
 }

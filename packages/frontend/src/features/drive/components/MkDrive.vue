@@ -704,7 +704,6 @@ async function moveFilesBulk() {
 }
 
 function goRoot() {
-	// 既にrootにいるなら何もしない
 	if (folder.value == null) {
 		return;
 	}

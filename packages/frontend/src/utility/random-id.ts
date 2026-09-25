@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const CHARS = 'abcdefghijklmnopqrstuvwxyz'; // CSSの<custom-ident>などで使われることもあるのでa-z以外使うな
+const CHARS = 'abcdefghijklmnopqrstuvwxyz'; // CSS の <custom-ident> などにも使うため a-z 以外を含めない。
 
 export function randomId(length = 32, characters = CHARS) {
 	let result = '';

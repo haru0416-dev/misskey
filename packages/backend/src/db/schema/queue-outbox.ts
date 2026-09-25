@@ -54,7 +54,7 @@ export const queueOutbox = pgTable(
 		index('IDX_QUEUE_OUTBOX_STATE_AVAILABLE_AT').on(table.state, table.availableAt, table.createdAt),
 		index('IDX_QUEUE_OUTBOX_COORDINATOR_ID').on(table.coordinatorId),
 		// デッドレター一覧の `state = 'deadLetter' AND id < :cursor ORDER BY id DESC` 用。
-		// updatedAt 順の索引は retry/abandon で並びが変わりページングできないため使わなくなった
+		// updatedAt 順は retry/abandon で並びが変わり、ページングできない。
 		index('IDX_QUEUE_OUTBOX_STATE_ID').on(table.state, table.id),
 	],
 );
