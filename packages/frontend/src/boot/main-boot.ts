@@ -37,44 +37,51 @@ const MkSourceCodeAvailablePopup = defineAsyncComponent(
 	() => import('@/features/support/components/MkSourceCodeAvailablePopup.vue'),
 );
 
+function importRootComponent(): Promise<Component> {
+	let uiStyle = ui;
+	const searchParams = new URLSearchParams(window.location.search);
+
+	if (!$i) {
+		uiStyle = 'visitor';
+	}
+
+	if (searchParams.has('zen')) {
+		uiStyle = 'zen';
+	}
+	if (uiStyle === 'deck' && prefer['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/') {
+		uiStyle = 'zen';
+	}
+
+	if (searchParams.has('ui')) {
+		uiStyle = searchParams.get('ui');
+	}
+
+	switch (uiStyle) {
+		case 'zen':
+			return import('@/ui/zen.vue').then((x) => x.default);
+		case 'deck':
+			return import('@/ui/deck.vue').then((x) => x.default);
+		case 'visitor':
+			return import('@/ui/visitor.vue').then((x) => x.default);
+		default:
+			return import('@/ui/universal.vue').then((x) => x.default);
+	}
+}
+
 export async function mainBoot(app: App<Element>, setRootComponent: (component: Component) => void) {
-	const { isClientUpdated } = await common(app, async () => {
-		let uiStyle = ui;
-		const searchParams = new URLSearchParams(window.location.search);
-
-		if (!$i) {
-			uiStyle = 'visitor';
-		}
-
-		if (searchParams.has('zen')) {
-			uiStyle = 'zen';
-		}
-		if (uiStyle === 'deck' && prefer['deck.useSimpleUiForNonRootPages'] && window.location.pathname !== '/') {
-			uiStyle = 'zen';
-		}
-
-		if (searchParams.has('ui')) {
-			uiStyle = searchParams.get('ui');
-		}
-
-		let rootComponent: Component;
-		switch (uiStyle) {
-			case 'zen':
-				rootComponent = await import('@/ui/zen.vue').then((x) => x.default);
-				break;
-			case 'deck':
-				rootComponent = await import('@/ui/deck.vue').then((x) => x.default);
-				break;
-			case 'visitor':
-				rootComponent = await import('@/ui/visitor.vue').then((x) => x.default);
-				break;
-			default:
-				rootComponent = await import('@/ui/universal.vue').then((x) => x.default);
-				break;
-		}
-
-		setRootComponent(rootComponent);
-	});
+	let rootComponentPromise: Promise<Component> | null = null;
+	const { isClientUpdated } = await common(
+		app,
+		async () => {
+			const rootComponent = await (rootComponentPromise ?? importRootComponent());
+			setRootComponent(rootComponent);
+		},
+		() => {
+			rootComponentPromise = importRootComponent();
+			// 失敗は上で待つときに扱う。待つ前に未処理の reject として起動画面のエラーにしない。
+			rootComponentPromise.catch(() => {});
+		},
+	);
 
 	reactionPicker.init();
 	emojiPicker.init();

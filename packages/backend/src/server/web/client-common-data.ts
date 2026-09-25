@@ -42,7 +42,7 @@ function initialAssetState(): ClientAssetState {
 	};
 }
 
-function collectViteAssetFiles(manifest: Manifest): ViteFiles {
+export function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 	const entryFile = Object.values(manifest).find((chunk) => chunk.isEntry);
 	if (!entryFile) {
 		return {
@@ -61,7 +61,9 @@ function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 	}
 
 	if (entryFile.imports != null && Array.isArray(entryFile.imports)) {
-		function collectImports(imports: string[], recursive = false) {
+		// 静的 import は奥まで全部先読みに入れる。modulepreload は指定したファイルしか取らず依存を辿らないので、
+		// 直下だけだと依存が見つかるたびに往復 1 回ずつ待つ (往復 150 ms の回線で入口の後に 3 段、約 570 ms)。
+		function collectImports(imports: string[]) {
 			for (const importId of imports) {
 				if (seenChunkIds.has(importId)) {
 					continue;
@@ -70,7 +72,7 @@ function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 
 				const importedChunk = manifest[importId];
 				if (!importedChunk) {
-					return;
+					continue;
 				}
 
 				if (importedChunk.css) {
@@ -78,12 +80,10 @@ function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 				}
 
 				if (importedChunk.imports != null && Array.isArray(importedChunk.imports)) {
-					collectImports(importedChunk.imports, true);
+					collectImports(importedChunk.imports);
 				}
 
-				if (!recursive) {
-					modulePreloads.add(importedChunk.file);
-				}
+				modulePreloads.add(importedChunk.file);
 			}
 		}
 
@@ -144,9 +144,11 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 			icon: deps.meta.iconUrl,
 			appleTouchIcon: deps.meta.app512IconUrl,
 			themeColor: deps.meta.themeColor,
-			serverErrorImageUrl: deps.meta.serverErrorImageUrl ?? 'https://xn--931a.moe/assets/error.jpg',
-			infoImageUrl: deps.meta.infoImageUrl ?? 'https://xn--931a.moe/assets/info.jpg',
-			notFoundImageUrl: deps.meta.notFoundImageUrl ?? 'https://xn--931a.moe/assets/not-found.jpg',
+			// 設定された画像だけを先読みする。未設定ではクライアントも画像を出さないので、外部の既定画像
+			// (3 枚 73 KB) を先読みしても使われず、起動に要る読み込みと帯域を取り合うだけだった。
+			serverErrorImageUrl: deps.meta.serverErrorImageUrl,
+			infoImageUrl: deps.meta.infoImageUrl,
+			notFoundImageUrl: deps.meta.notFoundImageUrl,
 			instanceUrl: deps.config.instance.url,
 			metaJson: htmlSafeJsonStringify(
 				await packMetaDetailed(

@@ -4,9 +4,11 @@
  */
 
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { resolve, sep } from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
+import { extname, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
+import { promisify } from 'node:util';
+import { brotliCompress, constants as zlibConstants, gzip } from 'node:zlib';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import mime from 'mime-types';
@@ -49,6 +51,83 @@ function safeResolve(root: string, path: string): string | null {
 	return fullPath;
 }
 
+/*
+ * 文字の多い静的ファイルは、最初の要求で 1 度だけ圧縮して保持する。/vite/ の成果物はハッシュ付きで変わらず、
+ * 1 言語分の JS・CSS 5.2 MB は brotli で 30%・gzip で 32% になる。起動時の読み込み 868 KB がそのまま送られていた。
+ * ビルド時に全言語分 (186 MB) を作ると 1 言語 0.4〜0.6 秒 × 30 かかるので、要求された分だけにする。
+ */
+const COMPRESSIBLE_EXTENSIONS = new Set([
+	'.js',
+	'.mjs',
+	'.css',
+	'.json',
+	'.svg',
+	'.html',
+	'.txt',
+	'.map',
+	'.xml',
+	'.webmanifest',
+]);
+const MIN_COMPRESS_SIZE = 1024;
+const MAX_COMPRESSED_CACHE_BYTES = 64 * 1024 * 1024;
+const brotliCompressAsync = promisify(brotliCompress);
+const gzipAsync = promisify(gzip);
+type StaticEncoding = 'br' | 'gzip';
+const compressedCache = new Map<string, Promise<Uint8Array>>();
+const compressedSizes = new Map<string, number>();
+let compressedCacheBytes = 0;
+
+function acceptedStaticEncoding(header: string | undefined): StaticEncoding | null {
+	if (header == null) return null;
+	const accepted = new Set<string>();
+	for (const part of header.split(',')) {
+		const [name, ...params] = part.trim().toLowerCase().split(';');
+		const q = params.map((p) => p.trim()).find((p) => p.startsWith('q='));
+		if (name && (q == null || Number(q.slice(2)) > 0)) accepted.add(name);
+	}
+	if (accepted.has('br')) return 'br';
+	if (accepted.has('gzip')) return 'gzip';
+	return null;
+}
+
+function compressedFile(
+	filePath: string,
+	mtimeMs: number,
+	size: number,
+	encoding: StaticEncoding,
+): Promise<Uint8Array> {
+	const key = `${encoding}\0${filePath}\0${mtimeMs}\0${size}`;
+	const cached = compressedCache.get(key);
+	if (cached != null) return cached;
+	const pending = (async () => {
+		const raw = await readFile(filePath);
+		const compressed =
+			encoding === 'br'
+				? await brotliCompressAsync(raw, {
+						params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9, [zlibConstants.BROTLI_PARAM_SIZE_HINT]: raw.length },
+					})
+				: await gzipAsync(raw, { level: 9 });
+		return new Uint8Array(compressed.buffer, compressed.byteOffset, compressed.byteLength);
+	})();
+	compressedCache.set(key, pending);
+	pending.then(
+		(bytes) => {
+			if (compressedCache.get(key) !== pending) return;
+			compressedSizes.set(key, bytes.byteLength);
+			compressedCacheBytes += bytes.byteLength;
+			// 古いものから捨てる (Map は挿入順)。
+			for (const [oldKey, oldSize] of compressedSizes) {
+				if (compressedCacheBytes <= MAX_COMPRESSED_CACHE_BYTES) break;
+				compressedSizes.delete(oldKey);
+				compressedCache.delete(oldKey);
+				compressedCacheBytes -= oldSize;
+			}
+		},
+		() => compressedCache.delete(key),
+	);
+	return pending;
+}
+
 async function serveFile(
 	c: Context,
 	filePath: string,
@@ -69,6 +148,17 @@ async function serveFile(
 	const contentType = mime.lookup(filePath);
 	if (contentType) {
 		headers.set('Content-Type', contentType);
+	}
+
+	if (fileStat.size >= MIN_COMPRESS_SIZE && COMPRESSIBLE_EXTENSIONS.has(extname(filePath).toLowerCase())) {
+		headers.set('Vary', 'Accept-Encoding');
+		const encoding = acceptedStaticEncoding(c.req.header('Accept-Encoding'));
+		if (encoding != null) {
+			const body = await compressedFile(filePath, fileStat.mtimeMs, fileStat.size, encoding);
+			headers.set('Content-Encoding', encoding);
+			headers.set('Content-Length', String(body.byteLength));
+			return new Response(c.req.method === 'HEAD' ? null : body, { status: 200, headers });
+		}
 	}
 
 	if (c.req.method === 'HEAD') {
