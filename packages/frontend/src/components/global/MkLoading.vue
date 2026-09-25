@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<{
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/loading';
+@use '@shared/styles/_loading.scss' as loading;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .bg, .colored, .container, .em, .fg, .inline, .mini, .root, .spinner, .static {}

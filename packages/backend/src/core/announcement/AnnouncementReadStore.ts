@@ -5,20 +5,13 @@
 
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { announcementRead } from '@/db/schema/announcement-read.js';
-import type { AnnouncementReadInsert, AnnouncementReadRow } from '@/db/schema/announcement-read.js';
+import type { AnnouncementReadInsert } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
 
 function announcementReadCondition(userId: MiUser['id'], announcementId: MiAnnouncement['id']) {
 	return and(eq(announcementRead.userId, userId), eq(announcementRead.announcementId, announcementId));
-}
-
-async function listAnnouncementReadsByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<AnnouncementReadRow[]> {
-	return await db.select().from(announcementRead).where(eq(announcementRead.userId, userId));
 }
 
 export async function announcementReadExistsInDatabase(

@@ -12,7 +12,6 @@ import {
 } from '@/core/hashtag/HashtagStore.js';
 import type { HashtagSort } from '@/core/hashtag/HashtagStore.js';
 import { listUsersByTagFromDatabase } from '@/core/user/UserStore.js';
-import type { UserListOrigin, UserListSort, UserListState } from '@/core/user/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';

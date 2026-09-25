@@ -29,7 +29,6 @@ import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
 } from '@/core/user/UserProfileStore.js';
-import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
 import {
 	deserializeUser,
@@ -120,16 +119,6 @@ type PackMeDetailedOptions = {
 	includeSecrets: boolean;
 	profile?: MiUserProfile;
 };
-
-function getApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
-	const policies = { ...DEFAULT_POLICIES, ...meta.policies };
-	const serverMaxFileSizeMb = Math.floor(config.limits.maximumFileSizeBytes / (1024 * 1024));
-
-	return {
-		...policies,
-		maxFileSizeMb: Math.min(serverMaxFileSizeMb, policies.maxFileSizeMb),
-	};
-}
 
 function packUserLiteCoreForApi(
 	deps: UserPackingDependencies,
@@ -883,11 +872,6 @@ export const usersShowParamDef = z.union([
 	z.object({ userIds: uniqueItems(z.array(misskeyId())), host: usersShowHostSchema }),
 	z.object({ username: z.string(), host: usersShowHostSchema }),
 ]);
-
-type UsersShowParams =
-	| { userId: string; host?: string | null }
-	| { userIds: string[]; host?: string | null }
-	| { username: string; host?: string | null };
 
 export async function handleApiUsersShow(
 	deps: ApiUsersShowDependencies,

@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'notes';
 
 export const schema = {
@@ -23,5 +21,3 @@ export const schema = {
 	'remote.diffs.renote': {},
 	'remote.diffs.withFile': {},
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema);

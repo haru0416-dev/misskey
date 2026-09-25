@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';

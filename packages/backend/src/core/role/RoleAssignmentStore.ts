@@ -74,19 +74,6 @@ export function resolveRoleAssignmentPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-async function fetchRoleAssignmentByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRoleAssignment['id'],
-): Promise<MiRoleAssignment> {
-	const [row] = await db.select().from(roleAssignment).where(eq(roleAssignment.id, id)).limit(1);
-
-	if (row == null) {
-		throw new Error(`Role assignment ${id} not found`);
-	}
-
-	return deserializeRoleAssignment(row);
-}
-
 export async function fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -277,8 +264,4 @@ export async function deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(
 
 export async function deleteExpiredRoleAssignmentsFromDatabase(db: MiDrizzleDatabase, now: Date): Promise<void> {
 	await db.delete(roleAssignment).where(and(isNotNull(roleAssignment.expiresAt), lt(roleAssignment.expiresAt, now)));
-}
-
-async function deleteAllRoleAssignmentsFromDatabase(db: MiDrizzleDatabase): Promise<void> {
-	await db.delete(roleAssignment);
 }

@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq, inArray, sql, getTableColumns, getTableName } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import { and, count, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { webhook, deserializeWebhook } from '@/db/schema/webhook.js';
 import type { WebhookInsert } from '@/db/schema/webhook.js';

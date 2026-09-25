@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'apRequest';
 
 export const schema = {
@@ -12,5 +10,3 @@ export const schema = {
 	deliverSucceeded: {},
 	inboxReceived: {},
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema);

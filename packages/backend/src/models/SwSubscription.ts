@@ -5,8 +5,6 @@
 
 import type { MiUser } from './User.js';
 
-const manualUniqueIndex = { unique: true, synchronize: false } as const;
-
 export class MiSwSubscription {
 	public id: string;
 

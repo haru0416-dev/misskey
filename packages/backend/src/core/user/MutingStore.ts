@@ -10,7 +10,6 @@ import { muting } from '@/db/schema/muting.js';
 import type { MutingInsert, MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -86,16 +85,6 @@ export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
 		.where(and(eq(muting.muteeId, muteeId), sql`${muting.muterId} = ANY(${sql.param(muterIds)})`));
 
 	return rows.map((row) => row.muterId);
-}
-
-async function fetchMutingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiMuting['id']): Promise<MiMuting> {
-	const [row] = await db.select().from(muting).where(eq(muting.id, id)).limit(1);
-
-	if (row == null) {
-		throw new EntityNotFoundError('MiMuting', { id });
-	}
-
-	return deserializeMuting(row);
 }
 
 export async function fetchMutingByMuterIdAndMuteeIdFromDatabase(

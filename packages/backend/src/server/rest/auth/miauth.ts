@@ -28,14 +28,6 @@ export type ApiMiauthDependencies = ApiNotificationDependencies & {
 	meta: MiMeta;
 };
 
-type MiauthGenTokenBody = {
-	session: string | null;
-	name?: string | null;
-	description?: string | null;
-	iconUrl?: string | null;
-	permission: string[];
-};
-
 export const miauthGenTokenParamDef = z.object({
 	session: z.string().nullable(),
 	name: z.string().nullable().optional(),

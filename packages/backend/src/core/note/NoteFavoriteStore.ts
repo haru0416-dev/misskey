@@ -56,19 +56,6 @@ export async function fetchNoteFavoriteFromDatabase(
 	return row ?? null;
 }
 
-async function fetchNoteFavoriteByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: NoteFavoriteRow['id'],
-): Promise<NoteFavoriteRow> {
-	const [row] = await db.select().from(noteFavorite).where(eq(noteFavorite.id, id)).limit(1);
-
-	if (row == null) {
-		throw new Error(`Note favorite ${id} not found`);
-	}
-
-	return row;
-}
-
 export async function createNoteFavoriteInDatabase(db: MiDrizzleDatabase, data: NoteFavoriteInsert): Promise<void> {
 	await db.insert(noteFavorite).values(data);
 }

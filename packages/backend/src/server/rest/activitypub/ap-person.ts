@@ -58,7 +58,7 @@ import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
-import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
+import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import {
 	extractDbHost,
 	getUserFromApIdForApi,

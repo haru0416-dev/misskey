@@ -8,7 +8,7 @@ import type { MiUser } from '@/models/_.js';
 
 // system webhook とユーザー webhook のテスト送信で使うダミーデータ。
 
-export const webhookTestDayMillis = 24 * 60 * 60 * 1000;
+const webhookTestDayMillis = 24 * 60 * 60 * 1000;
 
 export type PopulateWebhookTestEmojis = (
 	emojiNames: string[],

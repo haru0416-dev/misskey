@@ -69,19 +69,6 @@ export async function createModerationLogsInDatabase(
 	await insertBatch(0);
 }
 
-async function fetchModerationLogByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiModerationLog['id'],
-): Promise<MiModerationLog> {
-	const [row] = await db.select().from(moderationLog).where(eq(moderationLog.id, id)).limit(1);
-
-	if (row == null) {
-		throw new Error(`Moderation log ${id} not found`);
-	}
-
-	return deserializeModerationLog(row);
-}
-
 export async function listModerationLogsFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {

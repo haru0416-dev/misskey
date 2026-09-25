@@ -20,7 +20,6 @@ import type { Packed } from '@/misc/json-schema.js';
 import {
 	generateWebhookTestDummyUser,
 	packWebhookTestUserLite,
-	webhookTestDayMillis,
 	webhookTestDummyUser1,
 	webhookTestDummyUser2,
 	webhookTestDummyUser3,

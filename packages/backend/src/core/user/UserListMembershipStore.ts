@@ -52,19 +52,6 @@ export function resolveUserListMembershipPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-/** 人数上限の検査用。 */
-async function countUserListMembershipsByUserListIdInDatabase(
-	db: MiDrizzleDatabase,
-	userListId: MiUserList['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(userListMembership)
-		.where(eq(userListMembership.userListId, userListId));
-
-	return row?.value ?? 0;
-}
-
 export async function userListMembershipExistsInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],

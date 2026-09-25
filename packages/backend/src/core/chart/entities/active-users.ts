@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'activeUsers';
 
 export const schema = {
@@ -18,5 +16,3 @@ export const schema = {
 	registeredOutsideMonth: { uniqueIncrement: true },
 	registeredOutsideYear: { uniqueIncrement: true },
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema);

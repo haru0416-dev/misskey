@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNotNull, isNull, lt } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { abuseUserReport } from '@/db/schema/abuse-user-report.js';
 import type { AbuseUserReportInsert, AbuseUserReportRow } from '@/db/schema/abuse-user-report.js';
@@ -74,19 +74,6 @@ export async function fetchAbuseUserReportByIdOrFailFromDatabase(
 	}
 
 	return report;
-}
-
-async function listAbuseUserReportsByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiAbuseUserReport['id'][],
-): Promise<MiAbuseUserReport[]> {
-	if (ids.length === 0) {
-		return [];
-	}
-
-	const rows = await db.select().from(abuseUserReport).where(inArray(abuseUserReport.id, ids));
-
-	return rows.map(deserializeAbuseUserReport);
 }
 
 export async function createAbuseUserReportInDatabase(

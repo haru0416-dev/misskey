@@ -11,7 +11,6 @@ import type { FollowingInsert, FollowingRow } from '@/db/schema/following.js';
 import { user as userTable } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
@@ -137,18 +136,6 @@ export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
 		})
 		.from(following)
 		.where(and(...conditions));
-}
-
-async function listFollowerIdsByFolloweeIdFromDatabase(
-	db: MiDrizzleDatabase,
-	followeeId: MiUser['id'],
-): Promise<MiUser['id'][]> {
-	const rows = await db
-		.select({ followerId: following.followerId })
-		.from(following)
-		.where(eq(following.followeeId, followeeId));
-
-	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
@@ -475,19 +462,6 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 	});
 }
 
-async function fetchFollowingByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFollowing['id'],
-): Promise<MiFollowing> {
-	const [row] = await db.select().from(following).where(eq(following.id, id)).limit(1);
-
-	if (row == null) {
-		throw new EntityNotFoundError('MiFollowing', { id });
-	}
-
-	return deserializeFollowing(row);
-}
-
 const followingExistsPlan = defineQueryPlan((db) => {
 	const selection = { id: following.id };
 	return {
@@ -635,42 +609,4 @@ export async function countFollowingsByFolloweeIdAndFollowerHostStateFromDatabas
 		);
 
 	return row?.value ?? 0;
-}
-
-async function countFollowingsByFollowerHostFromDatabase(
-	db: MiDrizzleDatabase,
-	followerHost: NonNullable<MiFollowing['followerHost']>,
-): Promise<number> {
-	const [row] = await db.select({ value: count() }).from(following).where(eq(following.followerHost, followerHost));
-
-	return row?.value ?? 0;
-}
-
-async function countFollowingsByFolloweeHostFromDatabase(
-	db: MiDrizzleDatabase,
-	followeeHost: NonNullable<MiFollowing['followeeHost']>,
-): Promise<number> {
-	const [row] = await db.select({ value: count() }).from(following).where(eq(following.followeeHost, followeeHost));
-
-	return row?.value ?? 0;
-}
-
-async function updateFollowerHibernatedStateByFollowerIdInDatabase(
-	db: MiDrizzleDatabase,
-	followerId: MiUser['id'],
-	isFollowerHibernated: boolean,
-): Promise<void> {
-	await db.update(following).set({ isFollowerHibernated }).where(eq(following.followerId, followerId));
-}
-
-async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
-	db: MiDrizzleDatabase,
-	followerIds: MiUser['id'][],
-	isFollowerHibernated: boolean,
-): Promise<void> {
-	if (followerIds.length === 0) {
-		return;
-	}
-
-	await db.update(following).set({ isFollowerHibernated }).where(inArray(following.followerId, followerIds));
 }

@@ -13,7 +13,6 @@ import { deserializeUser } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import type { MiSystemAccount } from '@/models/SystemAccount.js';
 
 type SystemAccountCreateData = {
 	id: MiUser['id'];
@@ -32,18 +31,6 @@ type SystemAccountProfileUpdateData = {
 	name?: MiUser['name'];
 	description?: MiUserProfile['description'];
 };
-
-async function listSystemAccountsFromDatabase(db: MiDrizzleDatabase): Promise<MiSystemAccount[]> {
-	const rows = await db.select().from(systemAccountTable);
-
-	return rows.map(
-		(row) =>
-			({
-				...row,
-				user: null,
-			}) as MiSystemAccount,
-	);
-}
 
 export async function fetchSystemAccountUserFromDatabase(
 	db: MiDrizzleDatabase,

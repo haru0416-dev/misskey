@@ -5,11 +5,7 @@
 
 import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import {
-	filterNoteForStreamingHidingForApi,
-	packNoteForApi,
-	populateMyReactionForApi,
-} from '@/server/rest/note/note.js';
+import { packNoteForApi } from '@/server/rest/note/note.js';
 import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';

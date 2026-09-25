@@ -4,7 +4,6 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import * as fs from 'node:fs';
 import sharp from 'sharp';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';

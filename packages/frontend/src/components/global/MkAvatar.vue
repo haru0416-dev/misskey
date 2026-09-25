@@ -131,7 +131,7 @@ watch(
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/avatar';
+@use '@shared/styles/_avatar.scss' as avatar;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .decoration, .indicator, .layer, .plot, .root {}

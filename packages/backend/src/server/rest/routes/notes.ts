@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
+import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiNotes,
 	handleApiNotesChildren,

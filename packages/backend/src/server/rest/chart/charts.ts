@@ -65,12 +65,6 @@ export const chartParamDef = z.object({
 	offset: z.int().nullable().default(null),
 });
 
-type ChartParams = {
-	span: 'day' | 'hour';
-	limit: number;
-	offset?: number | null;
-};
-
 export const perUserChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.int().min(1).max(500).default(30),

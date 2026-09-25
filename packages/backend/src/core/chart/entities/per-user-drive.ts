@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'perUserDrive';
 
 export const schema = {
@@ -15,5 +13,3 @@ export const schema = {
 	decCount: { range: 'small' },
 	decSize: {}, // キロバイト単位
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema, true);

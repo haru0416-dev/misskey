@@ -69,19 +69,6 @@ export async function fetchRenoteMutingFromDatabase(
 	return row ?? null;
 }
 
-async function fetchRenoteMutingByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: RenoteMutingRow['id'],
-): Promise<RenoteMutingRow> {
-	const [row] = await db.select().from(renoteMuting).where(eq(renoteMuting.id, id)).limit(1);
-
-	if (row == null) {
-		throw new Error(`Renote muting ${id} not found`);
-	}
-
-	return row;
-}
-
 export async function createRenoteMutingInDatabase(db: MiDrizzleDatabase, data: RenoteMutingInsert): Promise<void> {
 	await db.insert(renoteMuting).values(data);
 }

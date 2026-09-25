@@ -71,14 +71,6 @@ export const channelsListParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(5),
 });
 
-type ChannelsListParams = {
-	sinceId?: string | null;
-	untilId?: string | null;
-	sinceDate?: number | null;
-	untilDate?: number | null;
-	limit: number;
-};
-
 export const channelsSearchParamDef = z.object({
 	query: z.string(),
 	type: z.enum(['nameAndDescription', 'nameOnly']).optional().default('nameAndDescription'),

@@ -81,7 +81,7 @@ if (props.detail && props.note) {
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/note-sub';
+@use '@shared/styles/_note-sub.scss' as note-sub;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .avatar, .body, .children, .colorBar, .cw, .header, .main, .more, .muted, .reply, .root, .text {}

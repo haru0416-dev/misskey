@@ -293,7 +293,7 @@ if (!mock) {
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/reaction';
+@use '@shared/styles/_reaction.scss' as reaction;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .canToggle, .count, .large, .limitWidth, .reacted, .root, .small {}

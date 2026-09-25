@@ -159,17 +159,6 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 		.filter((x) => x != null);
 }
 
-async function listUserAbuseReportNotificationRecipientsFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiAbuseReportNotificationRecipient[]> {
-	const rows = await db
-		.select()
-		.from(abuseReportNotificationRecipient)
-		.where(isNotNull(abuseReportNotificationRecipient.userId));
-
-	return rows.map((row) => deserializeRecipient(row));
-}
-
 export async function createAbuseReportNotificationRecipientInDatabase(
 	db: MiDrizzleDatabase,
 	data: AbuseReportNotificationRecipientInsert,

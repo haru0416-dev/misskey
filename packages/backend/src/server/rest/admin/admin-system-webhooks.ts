@@ -23,7 +23,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher } from '../events.js';

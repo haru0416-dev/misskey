@@ -198,7 +198,7 @@ type Note = {
 	userId: string;
 	reactions?: Record<string, number>;
 };
-export type RequestOutcome = {
+type RequestOutcome = {
 	endpoint: string;
 	startedAt: string;
 	startedMonotonicMs: number;

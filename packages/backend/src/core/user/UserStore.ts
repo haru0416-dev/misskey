@@ -724,28 +724,6 @@ export async function updateUserLastActiveDateInDatabase(
 	await db.update(userTable).set({ lastActiveDate }).where(eq(userTable.id, id));
 }
 
-async function updateUserLastActiveDateReturningWasHibernatedInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUser['id'],
-	lastActiveDate: Date,
-): Promise<boolean> {
-	const [row] = await db
-		.update(userTable)
-		.set({ lastActiveDate })
-		.where(eq(userTable.id, id))
-		.returning({ isHibernated: userTable.isHibernated });
-
-	return row?.isHibernated ?? false;
-}
-
-async function updateUserHibernatedStateInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUser['id'],
-	isHibernated: boolean,
-): Promise<void> {
-	await db.update(userTable).set({ isHibernated }).where(eq(userTable.id, id));
-}
-
 export async function updateUserDeletedStateInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiUser['id'],
@@ -826,35 +804,6 @@ export async function updateUserIfNotDeletedInDatabase(
 		.returning({ id: userTable.id });
 
 	return rows.length > 0;
-}
-
-async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiUser['id'][],
-	before: Date,
-): Promise<MiUser['id'][]> {
-	if (ids.length === 0) {
-		return [];
-	}
-
-	const rows = await db
-		.select({ id: userTable.id })
-		.from(userTable)
-		.where(and(inArray(userTable.id, ids), lt(userTable.lastActiveDate, before)));
-
-	return rows.map((row) => row.id);
-}
-
-async function updateUsersHibernatedStateInDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiUser['id'][],
-	isHibernated: boolean,
-): Promise<void> {
-	if (ids.length === 0) {
-		return;
-	}
-
-	await db.update(userTable).set({ isHibernated }).where(inArray(userTable.id, ids));
 }
 
 export async function decrementUsersFollowingCountInDatabase(

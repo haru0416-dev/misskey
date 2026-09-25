@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'instance';
 
 export const schema = {
@@ -33,5 +31,3 @@ export const schema = {
 	'drive.incUsage': {}, // キロバイト単位
 	'drive.decUsage': {}, // キロバイト単位
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema, true);

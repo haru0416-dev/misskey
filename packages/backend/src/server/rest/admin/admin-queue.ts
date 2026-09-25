@@ -4,7 +4,6 @@
  */
 
 import { z } from 'zod';
-import type { JobType } from 'bullmq';
 import {
 	abandonQueueOutboxDeadLetter,
 	clearQueue,
@@ -25,7 +24,7 @@ import {
 	retryQueueJob,
 	retryQueueOutboxDeadLetter,
 } from '@/core/queue/QueueAdminLogic.js';
-import type { AdminQueueDependencies, QueueClearState, QueueType } from '@/core/queue/QueueAdminLogic.js';
+import type { AdminQueueDependencies } from '@/core/queue/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';

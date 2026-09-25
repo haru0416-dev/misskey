@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'perUserFollowing';
 
 export const schema = {
@@ -21,5 +19,3 @@ export const schema = {
 	'remote.followers.inc': { range: 'small' },
 	'remote.followers.dec': { range: 'small' },
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema, true);

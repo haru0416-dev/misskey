@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { userNotePining } from '@/db/schema/user-note-pining.js';
 import type { UserNotePiningInsert, UserNotePiningRow } from '@/db/schema/user-note-pining.js';
@@ -104,20 +104,6 @@ export async function createUserNotePiningWithinLimitInDatabase(
 
 		await tx.insert(userNotePining).values(data);
 		return 'created';
-	});
-}
-
-async function replaceUserNotePiningsInDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-	data: UserNotePiningInsert[],
-): Promise<void> {
-	await db.transaction(async (tx) => {
-		await tx.delete(userNotePining).where(eq(userNotePining.userId, userId));
-
-		if (data.length > 0) {
-			await tx.insert(userNotePining).values(data);
-		}
 	});
 }
 

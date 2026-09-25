@@ -69,8 +69,6 @@ export const notificationTypes = [
 	'test',
 ] as const;
 
-const groupedNotificationTypes = [...notificationTypes, 'reaction:grouped', 'renote:grouped'] as const;
-
 export const obsoleteNotificationTypes = ['pollVote', 'groupInvited'] as const;
 
 export const noteVisibilities = ['public', 'home', 'followers', 'specified'] as const;
@@ -82,8 +80,6 @@ export const noteReactionAcceptances = [
 	'nonSensitiveOnlyForLocalLikeOnlyForRemote',
 	null,
 ] as const;
-
-const mutedNoteReasons = ['word', 'manual', 'spam', 'other'] as const;
 
 export const followingVisibilities = ['public', 'followers', 'private'] as const;
 export const followersVisibilities = ['public', 'followers', 'private'] as const;
@@ -104,13 +100,6 @@ export const userExportableEntities = [
 	'note',
 	'userList',
 ] as const;
-
-/**
- * ユーザーがインポートできるものの種類
- *
- * （主にインポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
- */
-const userImportableEntities = ['antenna', 'blocking', 'customEmoji', 'following', 'muting', 'userList'] as const;
 
 export type ModerationLogPayloads = {
 	updateServerSettings: {
@@ -395,8 +384,5 @@ export type Serialized<T> = {
 						? Serialized<T[K]> | undefined
 						: T[K];
 };
-
-type FilterUnionByProperty<Union, Property extends string | number | symbol, Condition> =
-	Union extends Record<Property, Condition> ? Union : never;
 
 export type Awaitable<T> = T | Promise<T>;

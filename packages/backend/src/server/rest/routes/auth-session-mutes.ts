@@ -5,13 +5,6 @@
 
 import type { Hono } from 'hono';
 import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
-import {
 	handleApiBlockingCreate,
 	handleApiBlockingDelete,
 	handleApiBlockingList,
@@ -24,17 +17,9 @@ import {
 	handleApiRenoteMuteDelete,
 	handleApiRenoteMuteList,
 } from '../account/account-mutes.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	authenticateOptionalRequest,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post(

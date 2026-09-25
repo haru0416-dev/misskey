@@ -56,19 +56,6 @@ export async function fetchGalleryLikeFromDatabase(
 	return row ?? null;
 }
 
-async function fetchGalleryLikeByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: GalleryLikeRow['id'],
-): Promise<GalleryLikeRow> {
-	const [row] = await db.select().from(galleryLike).where(eq(galleryLike.id, id)).limit(1);
-
-	if (row == null) {
-		throw new Error(`Gallery like ${id} not found`);
-	}
-
-	return row;
-}
-
 export async function createGalleryLikeInDatabase(db: MiDrizzleDatabase, data: GalleryLikeInsert): Promise<void> {
 	await db.insert(galleryLike).values(data);
 }
