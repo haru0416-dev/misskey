@@ -547,6 +547,27 @@ describe('2要素認証', () => {
 
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
 
+			// パスワード後の 2FA で発行された challenge を、context にユーザー ID を入れてパスキー側で使わせない。
+			// 以前は両フローが同じキーに challenge を置いていたため、この組み合わせで検証まで進めた。
+			const twoFactorChallenge = await api('signin-flow', {
+				username: passkeyUser.username,
+				password,
+				'g-recaptcha-response': null,
+				'hcaptcha-response': null,
+			});
+			assert.strictEqual(twoFactorChallenge.body.finished, false);
+			assert.strictEqual(twoFactorChallenge.body.next, 'passkey');
+			const crossFlow = signinWithSecurityKeyParam({
+				keyName: 'dedicated-signin-key',
+				credentialId,
+				requestOptions: twoFactorChallenge.body.authRequest,
+				signCount: ++signCount,
+			});
+			assert.ok(crossFlow.credential);
+			const crossFlowResponse = await callPasskey({ context: passkeyUser.id, credential: crossFlow.credential });
+			expect(crossFlowResponse.status).toBe(400);
+			expect(castAsError(crossFlowResponse.body as any).error.id).toBe('1658cc2e-4495-461f-aee4-d403cdf073c1');
+
 			const completed = await callPasskey(await createCredential());
 			expect(completed.status).toBe(200);
 			const completedBody = completed.body as unknown as misskey.entities.SigninWithPasskeyResponse;

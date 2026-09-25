@@ -33,6 +33,14 @@ import type {
 const loadWebAuthn = () => import('@simplewebauthn/server');
 const loadWebAuthnHelpers = () => import('@simplewebauthn/server/helpers');
 
+/**
+ * challenge はフローごとに別のキーへ置く。同じキーを共有すると、あるフローで発行した challenge を
+ * 別のフローの検証で消費・流用できてしまう (パスキーの context はクライアントが送ってくる値)。
+ */
+function challengeKey(flow: 'registration' | 'authentication' | 'passkey', id: string): string {
+	return `webauthn:challenge:${flow}:${id}`;
+}
+
 export function createWebAuthnService(config: Config, meta: MiMeta, redisClient: Redis.Redis, db: MiDrizzleDatabase) {
 	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string } {
 		return {
@@ -102,7 +110,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			},
 		});
 
-		await redisClient.setex(`webauthn:challenge:${userId}`, 90, registrationOptions.challenge);
+		await redisClient.setex(challengeKey('registration', userId), 90, registrationOptions.challenge);
 
 		return registrationOptions;
 	}
@@ -121,13 +129,11 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		credentialBackedUp: boolean;
 		transports?: AuthenticatorTransportFuture[];
 	}> {
-		const challenge = await redisClient.get(`webauthn:challenge:${userId}`);
+		const challenge = await redisClient.getdel(challengeKey('registration', userId));
 
 		if (!challenge) {
 			throw new IdentifiableError('7dbfb66c-9216-4e2b-9c27-cef2ac8efb84', 'challenge not found');
 		}
-
-		await redisClient.del(`webauthn:challenge:${userId}`);
 
 		const relyingParty = getRelyingParty();
 
@@ -190,7 +196,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			userVerification: 'preferred',
 		});
 
-		await redisClient.setex(`webauthn:challenge:${userId}`, 90, authenticationOptions.challenge);
+		await redisClient.setex(challengeKey('authentication', userId), 90, authenticationOptions.challenge);
 
 		return authenticationOptions;
 	}
@@ -207,7 +213,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			userVerification: 'preferred',
 		});
 
-		await redisClient.setex(`webauthn:challenge:${context}`, 90, authenticationOptions.challenge);
+		await redisClient.setex(challengeKey('passkey', context), 90, authenticationOptions.challenge);
 
 		return authenticationOptions;
 	}
@@ -220,7 +226,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		context: string,
 		response: AuthenticationResponseJSON,
 	): Promise<MiUser['id'] | null> {
-		const challenge = await redisClient.getdel(`webauthn:challenge:${context}`);
+		const challenge = await redisClient.getdel(challengeKey('passkey', context));
 
 		if (!challenge) {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', `challenge '${context}' not found`);
@@ -256,7 +262,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 	}
 
 	async function verifyAuthentication(userId: MiUser['id'], response: AuthenticationResponseJSON): Promise<boolean> {
-		const challenge = await redisClient.getdel(`webauthn:challenge:${userId}`);
+		const challenge = await redisClient.getdel(challengeKey('authentication', userId));
 
 		if (!challenge) {
 			throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', 'challenge not found');
