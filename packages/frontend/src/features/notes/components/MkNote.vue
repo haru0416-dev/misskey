@@ -243,7 +243,7 @@ import { isEnabledUrlPreview } from '@/features/link-preview/url-preview.js';
 import { focusPrev, focusNext } from '@/utility/focus.js';
 import { getAppearNote } from '@/features/notes/get-appear-note.js';
 import { prefer } from '@/preferences.js';
-import { getPluginHandlers } from '@/plugin.js';
+import { applyNoteViewInterruptors, getPluginHandlers } from '@/plugin.js';
 import { DI } from '@/di.js';
 import { globalEvents } from '@/events.js';
 
@@ -293,21 +293,13 @@ const currentAntenna = inject<Ref<Misskey.entities.Antenna | null> | null>('curr
 
 let note = deepClone(props.note);
 
-const noteViewInterruptors = getPluginHandlers('note_view_interruptor');
 const hideByPlugin = ref(false);
-if (noteViewInterruptors.length > 0) {
-	let result: Misskey.entities.Note | null = deepClone(note);
-	for (const interruptor of noteViewInterruptors) {
-		try {
-			result = interruptor.handler(result!) as Misskey.entities.Note | null;
-		} catch (err) {
-			console.error(err);
-		}
-	}
+if (getPluginHandlers('note_view_interruptor').length > 0) {
+	const result = applyNoteViewInterruptors(deepClone(note));
 	if (result == null) {
 		hideByPlugin.value = true;
 	} else {
-		note = result as Misskey.entities.Note;
+		note = result;
 	}
 }
 
