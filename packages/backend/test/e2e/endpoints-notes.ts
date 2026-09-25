@@ -897,6 +897,13 @@ describe('Endpoints', () => {
 			});
 			expect(negativeOffset.status).toBe(400);
 			expect(castAsError(negativeOffset.body as any).error.code).toBe('INVALID_PARAM');
+
+			// タグはパラメータとして渡すので、% や ' を含んでもそのまま引ける (以前は 500 だった)。
+			const symbolTag = `50%_it's_${suffix}`;
+			await updateUserInDatabase(db, tagged.id, { tags: [symbolTag] });
+			const symbolFound = await api('hashtags/users', { tag: symbolTag, sort: '+follower' });
+			expect(symbolFound.status).toBe(200);
+			expect((symbolFound.body as any[]).map((u) => u.id)).toStrictEqual([tagged.id]);
 		});
 
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
@@ -1663,6 +1670,21 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
 			expect(res.body.some((n: any) => n.id === untaggedNoteId)).toBe(false);
+
+			// 以前は % を含むタグを黙って空配列にしていた。パラメータとして渡すので、そのまま引ける。
+			const symbolTag = `50%_${tag.toLowerCase()}`;
+			const symbolNoteId = genId();
+			await createNoteInDatabase(db, {
+				id: symbolNoteId,
+				text: `#${symbolTag}`,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				tags: [symbolTag],
+			});
+			const symbol = await api('notes/search-by-tag', { tag: symbolTag });
+			expect(symbol.status).toBe(200);
+			expect(symbol.body.map((n: any) => n.id)).toStrictEqual([symbolNoteId]);
 		});
 
 		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {

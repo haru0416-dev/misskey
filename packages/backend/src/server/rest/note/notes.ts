@@ -52,7 +52,6 @@ import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { safeForSql } from '@/misc/safe-for-sql.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -1076,51 +1075,30 @@ export async function handleApiNotesSearchByTag(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
 
-	try {
-		const { sinceId, untilId } = resolveApiDateIdPagination(params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
+	// タグはパラメータとして束縛するので、文字種で弾く必要はない。
+	const tagQuery: string[][] =
+		params.tag != null
+			? [[normalizeForSearch(params.tag)]]
+			: params.query!.map((tags) => tags.map((tag) => normalizeForSearch(tag)));
 
-		let tagQuery: string[][];
-		if (params.tag != null) {
-			const tag = normalizeForSearch(params.tag);
-			if (!safeForSql(tag)) {
-				throw new Error('Injection');
-			}
-			tagQuery = [[tag]];
-		} else {
-			tagQuery = params.query!.map((tags) =>
-				tags.map((tag) => {
-					const normalized = normalizeForSearch(tag);
-					if (!safeForSql(normalized)) {
-						throw new Error('Injection');
-					}
-					return normalized;
-				}),
-			);
-		}
+	const notes = await listNotesByTagSearchFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			sinceId,
+			untilId,
+			tagQuery,
+			reply: params.reply,
+			renote: params.renote,
+			withFiles: params.withFiles,
+			poll: params.poll,
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+		}),
+	);
 
-		const notes = await listNotesByTagSearchFromDatabase(
-			deps.db,
-			omitUndefined({
-				limit: params.limit,
-				sinceId,
-				untilId,
-				tagQuery,
-				reply: params.reply,
-				renote: params.renote,
-				withFiles: params.withFiles,
-				poll: params.poll,
-				me: me ?? null,
-				blockedHosts: deps.meta.blockedHosts,
-			}),
-		);
-
-		return await packNoteManyForApi(deps, notes, me);
-	} catch (e) {
-		if (e instanceof Error && e.message === 'Injection') {
-			return [];
-		}
-		throw e;
-	}
+	return await packNoteManyForApi(deps, notes, me);
 }
 
 export const notesShowPartialBulkParamDef = z.object({

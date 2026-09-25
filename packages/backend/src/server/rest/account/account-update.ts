@@ -38,7 +38,6 @@ import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mf
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { langmap } from 'misskey-js/langmap.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { safeForSql } from '@/misc/safe-for-sql.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
@@ -537,8 +536,12 @@ export async function updateUsertagsForApi(
 	});
 }
 
-async function verifyLinkForApi(deps: ApiAccountUpdateDependencies, url: string, user: MiLocalUser): Promise<void> {
-	if (!safeForSql(url)) {
+export async function verifyLinkForApi(
+	deps: ApiAccountUpdateDependencies,
+	url: string,
+	user: MiLocalUser,
+): Promise<void> {
+	if (!URL.canParse(url)) {
 		return;
 	}
 
