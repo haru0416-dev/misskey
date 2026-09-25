@@ -129,6 +129,57 @@ describe('hono-stream-connection: note filtering channels', () => {
 		expect(channelMessages(raw)).toHaveLength(0);
 	});
 
+	test('hashtag: 問い合わせは正規化して照合する', async () => {
+		const viewer = await createTestUser(deps, 'honostreamhashtagviewer3');
+		const author = await createTestUser(deps, 'honostreamhashtagauthor3');
+		const noteId = genId();
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: '#foo hello',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			tags: ['foo'],
+		});
+		const packed = await packNoteForApi(deps, noteId, viewer);
+
+		const connection = new StreamConnection(deps, viewer, null);
+		await connection.init();
+		const subscriber = new EventEmitter();
+		const { raw, send } = collectSentMessages();
+		connection.listen(subscriber, send);
+
+		// 全角・大文字の問い合わせも NFKC と小文字化で投稿のタグと一致する。
+		await connection.connectChannel('conn1', { q: [['ＦＯＯ']] }, 'hashtag', false);
+		subscriber.emit('notesStream', packed);
+		await waitUntil(() => channelMessages(raw).length > 0);
+		expect(channelMessages(raw)).toHaveLength(1);
+	});
+
+	test('hashtag: 大きすぎる問い合わせでは接続しない', async () => {
+		const viewer = await createTestUser(deps, 'honostreamhashtagviewer4');
+		for (const q of [
+			Array.from({ length: 101 }, () => ['a']),
+			[Array.from({ length: 11 }, () => 'a')],
+			[['a'.repeat(129)]],
+		]) {
+			const connection = new StreamConnection(deps, viewer, null);
+			await connection.init();
+			const { raw, send } = collectSentMessages();
+			connection.listen(new EventEmitter(), send);
+			await connection.connectChannel('conn1', { q }, 'hashtag', true);
+			expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(false);
+			connection.dispose();
+		}
+		const connection = new StreamConnection(deps, viewer, null);
+		await connection.init();
+		const { raw, send } = collectSentMessages();
+		connection.listen(new EventEmitter(), send);
+		await connection.connectChannel('conn1', { q: Array.from({ length: 100 }, () => ['a']) }, 'hashtag', true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
+		connection.dispose();
+	});
+
 	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamchannelviewer');
 		const author = await createTestUser(deps, 'honostreamchannelauthor');

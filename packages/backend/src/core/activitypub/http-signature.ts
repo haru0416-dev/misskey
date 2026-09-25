@@ -46,11 +46,40 @@ const SUPPORTED_ALGORITHMS = new Set(['rsa-sha256', 'hs2019', 'ed25519']);
  * 値はダブルクォートで囲まれる前提 (draft-cavage の記法)。
  */
 function parseSignatureHeader(header: string): Record<string, string> {
-	const params: Record<string, string> = {};
 	// `key="value"` の並び。value 中のダブルクォートはエスケープされない仕様なので単純に読む。
-	const pattern = /([a-zA-Z0-9_-]+)\s*=\s*"([^"]*)"/g;
-	for (let match = pattern.exec(header); match != null; match = pattern.exec(header)) {
-		params[match[1]!.toLowerCase()] = match[2]!;
+	// 署名の検証前に誰でも送れる値なので、読む位置は後ろへしか進めない。以前の非固定の正規表現は
+	// 記号の無い長い値で開始位置ごとに末尾まで読み、16 KB で 260 ms (長さの 2 乗) かかっていた。
+	const params: Record<string, string> = {};
+	const isSpace = (code: number) => code === 0x20 || code === 0x09;
+	const isKeyChar = (code: number) =>
+		(code >= 0x30 && code <= 0x39) ||
+		(code >= 0x41 && code <= 0x5a) ||
+		(code >= 0x61 && code <= 0x7a) ||
+		code === 0x5f ||
+		code === 0x2d;
+	const length = header.length;
+	let index = 0;
+	while (index < length) {
+		while (index < length && (header.charCodeAt(index) === 0x2c || isSpace(header.charCodeAt(index)))) index++;
+		const keyStart = index;
+		while (index < length && isKeyChar(header.charCodeAt(index))) index++;
+		const key = header.slice(keyStart, index);
+		while (index < length && isSpace(header.charCodeAt(index))) index++;
+		if (key !== '' && header.charCodeAt(index) === 0x3d) {
+			index++;
+			while (index < length && isSpace(header.charCodeAt(index))) index++;
+			if (header.charCodeAt(index) === 0x22) {
+				const end = header.indexOf('"', index + 1);
+				if (end === -1) break;
+				params[key.toLowerCase()] = header.slice(index + 1, end);
+				index = end + 1;
+				continue;
+			}
+		}
+		// 形の崩れた部分は次の区切りまで読み飛ばす。
+		const next = header.indexOf(',', index);
+		if (next === -1) break;
+		index = next + 1;
 	}
 	return params;
 }

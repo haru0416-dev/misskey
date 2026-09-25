@@ -182,6 +182,31 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 	return jsonSchema as ToJsonSchema<Unflatten<ChartResult<S>>>;
 }
 
+/**
+ * 保存間隔中に積んだ差分を 1 つにまとめる。数値は足し、一意集計の値は重複を除いて集める。
+ * 配列を concat でつなぎ直すと件数の 2 乗の複写になり、差分 4 万件で約 450 ms かかっていた。
+ * 重複を除かないと、同じ値が保存済みの一時列へ繰り返し追記され、以後の保存も重くなる。
+ */
+export function mergeChartDiffs(diffs: Iterable<Record<string, number | string[]>>): Record<string, number | string[]> {
+	const numbers = new Map<string, number>();
+	const uniques = new Map<string, Set<string>>();
+	for (const diff of diffs) {
+		for (const [k, v] of Object.entries(diff)) {
+			if (typeof v === 'number') {
+				numbers.set(k, (numbers.get(k) ?? 0) + v);
+				continue;
+			}
+			const values = uniques.get(k);
+			if (values == null) uniques.set(k, new Set(v));
+			else for (const item of v) values.add(item);
+		}
+	}
+	const merged: Record<string, number | string[]> = {};
+	for (const [k, v] of numbers) merged[k] = v;
+	for (const [k, v] of uniques) merged[k] = [...v];
+	return merged;
+}
+
 export default abstract class Chart<T extends Schema> {
 	private logger: Logger;
 
@@ -561,22 +586,10 @@ export default abstract class Chart<T extends Schema> {
 		const buffer = this.buffer.slice();
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
-			const finalDiffs = {} as Record<string, number | string[]>;
-
-			const bufferedDiffs = buffer.filter((q) => q.group == null || q.group === logHour.group);
-			for (const { diff } of bufferedDiffs) {
-				for (const [k, v] of Object.entries(diff)) {
-					if (finalDiffs[k] == null) {
-						finalDiffs[k] = v;
-					} else {
-						if (typeof finalDiffs[k] === 'number') {
-							(finalDiffs[k] as number) += v as number;
-						} else {
-							(finalDiffs[k] as string[]) = (finalDiffs[k] as string[]).concat(v);
-						}
-					}
-				}
-			}
+			const bufferedDiffs = [...ungrouped, ...(byGroup.get(logHour.group ?? null) ?? [])];
+			const finalDiffs = mergeChartDiffs(
+				bufferedDiffs.map(({ diff }) => diff as unknown as Record<string, number | string[]>),
+			);
 
 			const queryForHour: Record<string, number | SQL> = {};
 			const queryForDay: Record<string, number | SQL> = {};
@@ -598,8 +611,10 @@ export default abstract class Chart<T extends Schema> {
 				} else if (Array.isArray(v) && v.length > 0) {
 					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string &
 						keyof TempColumnsForUnique<T>;
-					const itemsForHour = v.filter((item) => !(logHour[tempColumnName] as unknown as string[]).includes(item));
-					const itemsForDay = v.filter((item) => !(logDay[tempColumnName] as unknown as string[]).includes(item));
+					const storedForHour = new Set(logHour[tempColumnName] as unknown as string[]);
+					const storedForDay = new Set(logDay[tempColumnName] as unknown as string[]);
+					const itemsForHour = v.filter((item) => !storedForHour.has(item));
+					const itemsForDay = v.filter((item) => !storedForDay.has(item));
 					if (itemsForHour.length > 0) {
 						queryForHour[tempColumnName] =
 							sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForHour)})`;
@@ -686,19 +701,35 @@ export default abstract class Chart<T extends Schema> {
 
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
-			const savedEntries = new Set(bufferedDiffs);
-			this.buffer = this.buffer.filter((q) => !savedEntries.has(q));
+			for (const entry of bufferedDiffs) savedEntries.add(entry);
 		};
 
+		// グループごとに buffer 全体を絞り込み直すと、グループ数 × 件数になる。1 度だけ振り分ける。
+		const ungrouped: typeof buffer = [];
+		const byGroup = new Map<string | null, typeof buffer>();
+		for (const entry of buffer) {
+			if (entry.group == null) {
+				ungrouped.push(entry);
+				continue;
+			}
+			const entries = byGroup.get(entry.group);
+			if (entries == null) byGroup.set(entry.group, [entry]);
+			else entries.push(entry);
+		}
 		const groups = removeDuplicates(buffer.map((log) => log.group));
 
-		await Promise.all(
+		// 保存できたグループの差分だけを最後に 1 度で buffer から除く。保存中に積まれた差分は残る。
+		const savedEntries = new Set<(typeof buffer)[number]>();
+		const results = await Promise.allSettled(
 			groups.map((group) =>
 				Promise.all([this.claimCurrentLog(group, 'hour'), this.claimCurrentLog(group, 'day')]).then(
 					([logHour, logDay]) => update(logHour, logDay),
 				),
 			),
 		);
+		this.buffer = this.buffer.filter((q) => !savedEntries.has(q));
+		const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+		if (failure != null) throw failure.reason;
 	}
 
 	@bindThis

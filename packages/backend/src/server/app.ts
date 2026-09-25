@@ -72,7 +72,20 @@ export type MisskeyAppDependencies = {
 	clientPages: ClientPagesDependencies;
 };
 
-const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
+/**
+ * Accept に ActivityPub の取得が含まれるか。メディア型ごとに見る。`ld+json.+activitystreams` の正規表現は
+ * ld+json が現れるたびに末尾まで読み、ヘッダ長の 2 乗 (32 KB で 42 ms) になっていた。
+ */
+export function acceptsActivityPub(accept: string): boolean {
+	return accept
+		.toLowerCase()
+		.split(',')
+		.some(
+			(range) =>
+				range.includes('application/activity+json') ||
+				(range.includes('application/ld+json') && range.includes('activitystreams')),
+		);
+}
 
 function isInternalActivityPubRedirect(location: string, config: Config): boolean {
 	const effectiveLocation =
@@ -131,7 +144,7 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 			if (c.res.status < 300 || c.res.status >= 400 || location == null) {
 				return;
 			}
-			if (!maybeApLookupRegex.test(c.req.header('accept') ?? '')) {
+			if (!acceptsActivityPub(c.req.header('accept') ?? '')) {
 				return;
 			}
 			if (isInternalActivityPubRedirect(location, deps.config)) {

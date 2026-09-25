@@ -134,6 +134,30 @@ describe('core:activitypub:http-signature', () => {
 			).toThrow(HttpSignatureError);
 		});
 
+		test('区切りの空白・引用符内のカンマ・キーの大文字小文字・崩れた部分を読み分ける', () => {
+			const parsed = parseRequestSignature(
+				requestOf({
+					headers: {
+						signature:
+							'garbage, KeyId = "https://remote.example/users/a,b#main-key" ,x=1,  Algorithm="RSA-SHA256", headers="date",signature="QUJD"',
+					},
+				}),
+			);
+			expect(parsed.keyId).toBe('https://remote.example/users/a,b#main-key');
+			expect(parsed.algorithm).toBe('rsa-sha256');
+			expect(parsed.headers).toStrictEqual(['date']);
+			expect(parsed.signature).toBe('QUJD');
+		});
+
+		test('記号の無い長い署名ヘッダも入力長に比例する時間で弾く', () => {
+			// 以前の非固定の正規表現は長さの 2 乗で、64 KB では約 4 秒かかった。
+			for (const header of ['a'.repeat(65_536), `k="${'a,'.repeat(32_768)}`, 'a=b,'.repeat(16_384)]) {
+				const started = performance.now();
+				expect(() => parseRequestSignature(requestOf({ headers: { signature: header } }))).toThrow(HttpSignatureError);
+				expect(performance.now() - started).toBeLessThan(100);
+			}
+		});
+
 		test('どんな署名ヘッダでも例外以外で壊れない', () => {
 			fc.assert(
 				fc.property(fc.string({ maxLength: 200 }), (header) => {

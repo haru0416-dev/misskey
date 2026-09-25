@@ -777,13 +777,21 @@ export async function listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
 ): Promise<MiRemoteUser[]> {
+	// 返信・リノート 1 件ごとではなく、投稿者 1 人につき 1 行にする (同じ人の多数の返信で行が膨らまない)。
 	const rows = await db
-		.select({ user: userTable })
-		.from(note)
-		.innerJoin(userTable, eq(userTable.id, note.userId))
-		.where(and(or(eq(note.renoteId, noteId), eq(note.replyId, noteId)), isNotNull(note.userHost)));
+		.select()
+		.from(userTable)
+		.where(
+			inArray(
+				userTable.id,
+				db
+					.selectDistinct({ id: note.userId })
+					.from(note)
+					.where(and(or(eq(note.renoteId, noteId), eq(note.replyId, noteId)), isNotNull(note.userHost))),
+			),
+		);
 
-	return rows.map((row) => deserializeUser(row.user) as MiRemoteUser);
+	return rows.map((row) => deserializeUser(row) as MiRemoteUser);
 }
 
 export async function fetchNoteByUriAndUserIdFromDatabase(
