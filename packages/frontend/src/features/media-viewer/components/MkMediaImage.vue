@@ -166,6 +166,11 @@ function onContextmenu(ev: PointerEvent) {
 		ev,
 	);
 }
+
+defineExpose({
+	/** 一覧でぼかしを外しているか。画像ビューワーを開くときに引き継ぐ。 */
+	isRevealed: () => !hide.value,
+});
 </script>
 
 <style lang="scss" module>

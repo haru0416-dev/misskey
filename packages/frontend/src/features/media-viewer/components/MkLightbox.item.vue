@@ -84,6 +84,8 @@ export type LightboxContent = {
 	filename?: string | null;
 	file?: Misskey.entities.DriveFile;
 	sourceElement?: HTMLElement | null;
+	/** 開く前の一覧でぼかしを外していたか。外していたものは「常にぼかす」設定でも隠し直さない。 */
+	revealed?: boolean;
 };
 
 export function calculateSourceTransform({
@@ -211,9 +213,7 @@ import { deviceKind } from '@/utility/device-kind.js';
 import { isTouchUsing } from '@/utility/touch.js';
 import { getFileMenu } from '@/features/media-viewer/get-file-menu.js';
 
-const props = withDefaults(defineProps<{ content: LightboxContent; activated: boolean; initiallyOpened?: boolean }>(), {
-	initiallyOpened: false,
-});
+const props = defineProps<{ content: LightboxContent; activated: boolean }>();
 const emit = defineEmits<{
 	(ev: 'close'): void;
 	(ev: 'horizontalSwipe', offset: number): void;
@@ -644,12 +644,7 @@ watch(
 		if (content.file == null) {
 			hide.value = false;
 		} else {
-			hide.value = shouldHideFileByDefault(content.file, true);
-			// 最初に開いた1枚はタイムライン側で既に明示的に表示させたものなので、
-			// 「常にぼかす」設定であってもここで隠し直さない
-			if (content.file.isSensitive && props.initiallyOpened) {
-				hide.value = false;
-			}
+			hide.value = content.revealed !== true && shouldHideFileByDefault(content.file, true);
 		}
 	},
 	{ deep: true, immediate: true },
@@ -708,12 +703,17 @@ function openMenu(ev: PointerEvent) {
 	const menu: MenuItem[] = [
 		{ type: 'component', component: markRaw(XFileInfo), props: { content: props.content } },
 		{ type: 'divider' },
-		{
-			type: 'switch',
-			text: i18n.ts.pixelatedZoom,
-			icon: 'ti ti-grain',
-			ref: pixelatedZoom,
-		},
+		// 画素を保ったまま拡大する指定は画像にしか効かない。
+		...(props.content.type === 'image'
+			? [
+					{
+						type: 'switch',
+						text: i18n.ts.pixelatedZoom,
+						icon: 'ti ti-grain',
+						ref: pixelatedZoom,
+					} satisfies MenuItem,
+				]
+			: []),
 		{
 			text: i18n.ts.hide,
 			icon: 'ti ti-eye-off',

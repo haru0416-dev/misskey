@@ -27,7 +27,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:ref="comp => { if (comp != null) items.set(i, comp as InstanceType<typeof XItem>); }"
 						v-model:pixelatedZoom="pixelatedZoom"
 						:content="content"
-						:initiallyOpened="i === (defaultIndex ?? 0)"
 						:activated="activatedIndexes.has(i)"
 						@close="closeGallery"
 						@horizontalSwipe="onHorizontalSwipe"
