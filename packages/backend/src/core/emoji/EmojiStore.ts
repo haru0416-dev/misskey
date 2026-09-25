@@ -101,20 +101,6 @@ export async function fetchEmojiByNameAndHostFromDatabase(
 	return row ?? null;
 }
 
-async function fetchEmojiByNameAndHostOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	name: MiEmoji['name'],
-	host: MiEmoji['host'],
-): Promise<MiEmoji> {
-	const row = await fetchEmojiByNameAndHostFromDatabase(db, name, host);
-
-	if (row == null) {
-		throw new EntityNotFoundError(MiEmoji, { name, host });
-	}
-
-	return row;
-}
-
 const EMOJI_CACHE_TTL_MS = 1000 * 60;
 const EMOJI_CACHE_MAX_ENTRIES = 5000;
 const emojiByNameAndHostCache = new Map<string, { row: MiEmoji | null; cachedAt: number }>();
@@ -257,26 +243,6 @@ export async function emojiExistsWithLocalNameInDatabase(
 	return row != null;
 }
 
-/** (host, name[]) の組ごとの OR 条件で、絵文字の URL 情報だけを取得する。 */
-async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
-	db: MiDrizzleDatabase,
-	queries: { names: string[]; host: string }[],
-): Promise<Pick<MiEmoji, 'name' | 'host' | 'originalUrl' | 'publicUrl'>[]> {
-	if (queries.length === 0) {
-		return [];
-	}
-
-	return await db
-		.select({
-			name: emoji.name,
-			host: emoji.host,
-			originalUrl: emoji.originalUrl,
-			publicUrl: emoji.publicUrl,
-		})
-		.from(emoji)
-		.where(or(...queries.map((q) => and(eq(emoji.host, q.host), inArray(emoji.name, q.names)))));
-}
-
 export async function insertEmojiInDatabase(db: MiDrizzleDatabase, data: EmojiInsert): Promise<MiEmoji> {
 	const [row] = await db.insert(emoji).values(data).returning();
 
@@ -295,15 +261,6 @@ export async function updateEmojiInDatabase(
 ): Promise<void> {
 	await db.update(emoji).set(values).where(eq(emoji.id, id));
 
-	invalidateEmojiCache();
-}
-
-async function updateEmojisByIdsInDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiEmoji['id'][],
-	values: Partial<EmojiInsert>,
-): Promise<void> {
-	await updateEmojisByIdsReturningFromDatabase(db, ids, values);
 	invalidateEmojiCache();
 }
 
