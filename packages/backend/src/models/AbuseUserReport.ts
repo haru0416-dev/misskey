@@ -7,8 +7,6 @@ import type { MiUser } from './User.js';
 
 export type AbuseReportResolveType = 'accept' | 'reject';
 
-const manualIndex = { unique: false, synchronize: false } as const;
-
 export class MiAbuseUserReport {
 	public id: string;
 

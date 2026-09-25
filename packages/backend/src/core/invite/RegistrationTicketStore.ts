@@ -23,28 +23,6 @@ export async function fetchRegistrationTicketByIdFromDatabase(
 	return row ?? null;
 }
 
-async function fetchRegistrationTicketByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: RegistrationTicketRow['id'],
-): Promise<RegistrationTicketRow> {
-	const row = await fetchRegistrationTicketByIdFromDatabase(db, id);
-
-	if (row == null) {
-		throw new Error(`RegistrationTicket ${id} not found`);
-	}
-
-	return row;
-}
-
-async function fetchRegistrationTicketByCodeFromDatabase(
-	db: MiDrizzleDatabase,
-	code: RegistrationTicketRow['code'],
-): Promise<RegistrationTicketRow | null> {
-	const [row] = await db.select().from(registrationTicket).where(eq(registrationTicket.code, code)).limit(1);
-
-	return row ?? null;
-}
-
 export async function fetchRegistrationTicketByPendingUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	pendingUserId: NonNullable<RegistrationTicketRow['pendingUserId']>,

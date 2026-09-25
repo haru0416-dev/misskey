@@ -50,7 +50,7 @@ const collapsed = ref(isLong);
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/note-content';
+@use '@shared/styles/_note-content.scss' as note-content;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .collapsed, .fade, .fadeLabel, .reply, .root, .rp, .showLess, .showLessLabel {}

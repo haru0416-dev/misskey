@@ -4,7 +4,6 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiAdminEmojiAdd,
 	handleApiAdminEmojiAddAliasesBulk,
@@ -23,14 +22,7 @@ import {
 	handleApiEmojis,
 	handleApiV2AdminEmojiList,
 } from '../emoji/emojis.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	assertApiCanManageCustomEmojis,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 

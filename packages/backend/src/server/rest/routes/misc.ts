@@ -4,13 +4,6 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
 import { handleApiGetAvatarDecorations } from '../avatar-decoration/avatar-decorations.js';
 import { handleApiGetOnlineUsersCount } from '../auth/availability.js';
 import { handleApiPagesLike, handleApiPagesUnlike } from '../favorite/favorites.js';
@@ -24,7 +17,6 @@ import {
 } from '../page/pages.js';
 import { handleApiRequestResetPassword, handleApiResetPassword } from '../auth/password-reset.js';
 import { handleApiPromoRead } from '../note/promo.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { handleApiResetDb } from '../admin/reset-db.js';
 import { handleApiRetention } from '../retention/retention.js';
 import { handleApiRolesList, handleApiRolesNotes, handleApiRolesShow, handleApiRolesUsers } from '../role/roles.js';
@@ -34,15 +26,7 @@ import {
 	handleApiSwUnregister,
 	handleApiSwUpdateRegistration,
 } from '../notification/sw.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	getRequestIp,
-	runApiEndpoint,
-	authenticateOptionalRequest,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse, jsonBody, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 

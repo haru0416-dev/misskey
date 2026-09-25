@@ -4,7 +4,6 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { shouldOmitOutgoingReplyReference } from '@/core/activitypub/interop/reply.js';

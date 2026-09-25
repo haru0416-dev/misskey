@@ -54,7 +54,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { ApiError, invalidParamError } from '../error.js';
+import { ApiError } from '../error.js';
 import { castMultipartFields } from '../string-params.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { packDriveFileOrFailForApi } from './drive-file.js';

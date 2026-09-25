@@ -4,7 +4,6 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiChatHistory,
 	handleApiChatMessagesCreateToRoom,
@@ -32,8 +31,7 @@ import {
 	handleApiChatRoomsShow,
 	handleApiChatRoomsUpdate,
 } from '../chat/chat.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
+import { jsonResponse, emptyResponse } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler } from '../endpoint-handlers.js';
 

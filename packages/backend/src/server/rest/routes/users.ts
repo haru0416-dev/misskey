@@ -5,16 +5,8 @@
 
 import type { Hono } from 'hono';
 import { resolveUserForApi } from '../activitypub/ap-person.js';
-import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
 import { handleApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
 import { handleApiUsernameAvailable } from '../auth/availability.js';
-import { rolePermissionDeniedError } from '../error.js';
 import { handleApiUsersGalleryPosts } from '../gallery/gallery.js';
 import { handleApiUsersListsFavorite, handleApiUsersListsUnfavorite } from '../favorite/favorites.js';
 import { handleApiUsersClips } from '../clip/clips.js';
@@ -44,8 +36,6 @@ import {
 } from '../note/note-drafts.js';
 import { handleApiUsersReactions } from '../user/user-reactions.js';
 import { handleApiUsersPages } from '../page/pages.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
 import {
 	handleApiUsersAchievements,
 	handleApiUsersListsDelete,
@@ -66,7 +56,6 @@ import {
 	jsonResponse,
 	emptyResponse,
 	jsonBody,
-	tokenFromRequest,
 	getRequestIp,
 	runApiEndpoint,
 	authenticateOptionalRequest,

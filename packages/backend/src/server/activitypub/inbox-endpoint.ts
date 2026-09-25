@@ -6,7 +6,6 @@
 import * as crypto from 'node:crypto';
 import { parseRequestSignature } from '@/core/activitypub/http-signature.js';
 import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
-import type { IncomingMessage } from 'node:http';
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';

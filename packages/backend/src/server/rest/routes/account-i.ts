@@ -4,13 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
+import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { handleApiIApps, handleApiIRevokeToken } from '../auth/access-tokens.js';
 import { handleApiIFavorites } from '../favorite/favorites.js';
 import {
@@ -35,7 +29,6 @@ import {
 	handleApiI2faUpdateKey,
 } from '../account/i-2fa.js';
 import { handleApiIPageLikes, handleApiIPages } from '../page/pages.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import {
 	handleApiRegistryGet,

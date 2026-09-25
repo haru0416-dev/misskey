@@ -5,8 +5,6 @@
 
 import type { MiUser } from './User.js';
 
-const manualIndex = { unique: false, synchronize: false } as const;
-
 export class MiModerationLog {
 	public id: string;
 

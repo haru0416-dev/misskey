@@ -242,19 +242,6 @@ export async function fetchChatRoomMembershipByIdOrFailFromDatabase(
 	return row;
 }
 
-async function fetchChatRoomMembershipOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	roomId: MiChatRoom['id'],
-	userId: MiUser['id'],
-): Promise<ChatRoomMembershipRow> {
-	const row = await fetchChatRoomMembershipFromDatabase(db, roomId, userId);
-	if (row == null) {
-		throw new Error(`Chat room membership for ${userId} in ${roomId} not found`);
-	}
-
-	return row;
-}
-
 export async function listChatRoomMembershipsByRoomIdFromDatabase(
 	db: MiDrizzleDatabase,
 	roomId: MiChatRoom['id'],
@@ -446,19 +433,6 @@ export async function listChatRoomInvitationsByIdsFromDatabase(
 	return ids.map((id) => invitationById.get(id)).filter((row): row is ChatRoomInvitationRow => row != null);
 }
 
-async function fetchChatRoomInvitationOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	roomId: MiChatRoom['id'],
-	userId: MiUser['id'],
-): Promise<ChatRoomInvitationRow> {
-	const row = await fetchChatRoomInvitationFromDatabase(db, roomId, userId);
-	if (row == null) {
-		throw new Error(`Chat room invitation for ${userId} in ${roomId} not found`);
-	}
-
-	return row;
-}
-
 export async function listChatRoomInvitationsByRoomIdFromDatabase(
 	db: MiDrizzleDatabase,
 	roomId: MiChatRoom['id'],
@@ -571,13 +545,6 @@ export async function createChatRoomInvitationInDatabase(
 
 		return row;
 	});
-}
-
-async function deleteChatRoomInvitationByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: ChatRoomInvitationRow['id'],
-): Promise<void> {
-	await db.delete(chatRoomInvitation).where(eq(chatRoomInvitation.id, id));
 }
 
 export async function updateChatRoomInvitationIgnoredFromDatabase(

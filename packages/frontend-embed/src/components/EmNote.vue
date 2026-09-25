@@ -156,7 +156,7 @@ const isDeleted = ref(false);
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/note-content';
+@use '@shared/styles/_note-content.scss' as note-content;
 
 .root {
 	position: relative;

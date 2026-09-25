@@ -4,7 +4,6 @@
  */
 
 export const fetchEmojisHostTypes = ['local', 'remote', 'all'] as const;
-type FetchEmojisHostTypes = (typeof fetchEmojisHostTypes)[number];
 export const fetchEmojisSortKeys = [
 	'+id',
 	'-id',
@@ -33,4 +32,3 @@ export const fetchEmojisSortKeys = [
 	'+roleIdsThatCanBeUsedThisEmojiAsReaction',
 	'-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
-type FetchEmojisSortKeys = (typeof fetchEmojisSortKeys)[number];

@@ -77,7 +77,7 @@ function getDecorationUrl(decoration: Omit<Misskey.entities.UserDetailed['avatar
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/avatar';
+@use '@shared/styles/_avatar.scss' as avatar;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .decoration, .earLeft, .earRight, .ears, .inner, .layer, .plot, .root {}

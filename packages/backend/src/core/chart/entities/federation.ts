@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../core.js';
-
 export const name = 'federation';
 
 export const schema = {
@@ -17,5 +15,3 @@ export const schema = {
 	subActive: { accumulate: true, range: 'small' },
 	pubActive: { accumulate: true, range: 'small' },
 } as const;
-
-const entity = Chart.schemaToEntity(name, schema);

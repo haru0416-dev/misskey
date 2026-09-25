@@ -7,7 +7,7 @@ import { and, count, eq, sql, getTableColumns, getTableName } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { userProfile } from '@/db/schema/user-profile.js';
-import type { UserProfileInsert, UserProfileRow } from '@/db/schema/user-profile.js';
+import type { UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -22,16 +22,6 @@ function deserializeUserProfile(row: UserProfileRow): MiUserProfile {
 		user: null,
 		pinnedPage: null,
 	} as MiUserProfile;
-}
-
-async function createUserProfileInDatabase(db: MiDrizzleDatabase, data: UserProfileInsert): Promise<MiUserProfile> {
-	const [row] = await db.insert(userProfile).values(data).returning();
-
-	if (row == null) {
-		throw new Error('Failed to create user profile');
-	}
-
-	return deserializeUserProfile(row);
 }
 
 const userProfileByUserIdPlan = defineQueryPlan((db) => {

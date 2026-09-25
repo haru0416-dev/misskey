@@ -4,7 +4,6 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiGalleryFeatured,
 	handleApiGalleryPopular,
@@ -42,15 +41,7 @@ import {
 	handleApiFollowingUpdate,
 	handleApiFollowingUpdateAll,
 } from '../user/following.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	authenticateOptionalRequest,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 

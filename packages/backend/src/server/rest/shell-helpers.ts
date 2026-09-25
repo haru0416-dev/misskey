@@ -13,7 +13,7 @@ import { assertOptionalCredential, authenticateApiToken } from './auth/auth.js';
 import type { ApiAuthenticated } from './auth/auth.js';
 import { ApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { hasApiRolePolicyOrIsRoot, isApiAdministrator, isApiModerator } from './role/role-policy.js';
+import { isApiAdministrator, isApiModerator } from './role/role-policy.js';
 import type { ApiSigninFlowResult } from './auth/signin.js';
 import type { ApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
@@ -54,17 +54,6 @@ export function emptyResponse(c: Context): Response {
 	setApiHeaders(c);
 	return new Response(null, {
 		status: 204,
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Cache-Control': 'private, max-age=0, must-revalidate',
-		},
-	});
-}
-
-function rawStatusResponse(c: Context, status: number): Response {
-	setApiHeaders(c);
-	return new Response(null, {
-		status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
@@ -276,24 +265,6 @@ export async function assertApiAdmin(
 	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
 	if (!(await isApiAdministrator(deps, auth.user))) {
-		throw rolePermissionDeniedError();
-	}
-}
-
-export async function assertApiCanManageAvatarDecorations(
-	deps: ApiShellDependencies,
-	auth: { user: NonNullable<ApiAuthenticated['user']> },
-): Promise<void> {
-	if (!(await hasApiRolePolicyOrIsRoot(deps, auth.user, 'canManageAvatarDecorations'))) {
-		throw rolePermissionDeniedError();
-	}
-}
-
-export async function assertApiCanManageCustomEmojis(
-	deps: ApiShellDependencies,
-	auth: { user: NonNullable<ApiAuthenticated['user']> },
-): Promise<void> {
-	if (!(await hasApiRolePolicyOrIsRoot(deps, auth.user, 'canManageCustomEmojis'))) {
 		throw rolePermissionDeniedError();
 	}
 }

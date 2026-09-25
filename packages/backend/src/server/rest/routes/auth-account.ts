@@ -5,7 +5,6 @@
 
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiAntennasCreate,
 	handleApiAntennasDelete,
@@ -26,13 +25,11 @@ import {
 	signinFlowResponse,
 	signinWithPasskeyResponse,
 	jsonBody,
-	tokenFromRequest,
 	getRequestIp,
 	runApiEndpoint,
-	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/v1/instance/peers', async (c) => {

@@ -9,8 +9,6 @@ import { defineQueryPlan } from '@/db/prepared.js';
 import { followRequest } from '@/db/schema/follow-request.js';
 import type { FollowRequestInsert, FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
-import { MiFollowRequest } from '@/models/FollowRequest.js';
 import type { MiUser } from '@/models/User.js';
 
 export type FollowRequestOrder = 'asc' | 'desc';
@@ -43,19 +41,6 @@ export async function fetchFollowRequestByIdFromDatabase(
 	return row ?? null;
 }
 
-async function fetchFollowRequestByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: FollowRequestRow['id'],
-): Promise<FollowRequestRow> {
-	const row = await fetchFollowRequestByIdFromDatabase(db, id);
-
-	if (row == null) {
-		throw new EntityNotFoundError(MiFollowRequest, { id });
-	}
-
-	return row;
-}
-
 export async function fetchFollowRequestFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
@@ -85,19 +70,6 @@ export async function followRequestExistsInDatabase(
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
 	const [row] = await followRequestExistsPlan.execute(db, { followerId, followeeId });
-
-	return row != null;
-}
-
-async function followRequestExistsByFolloweeIdInDatabase(
-	db: MiDrizzleDatabase,
-	followeeId: MiUser['id'],
-): Promise<boolean> {
-	const [row] = await db
-		.select({ id: followRequest.id })
-		.from(followRequest)
-		.where(eq(followRequest.followeeId, followeeId))
-		.limit(1);
 
 	return row != null;
 }
@@ -170,18 +142,6 @@ export async function listFollowRequestsByFollowerIdsFromDatabase(
 	return await db.select().from(followRequest).where(inArray(followRequest.followerId, followerIds));
 }
 
-async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
-	db: MiDrizzleDatabase,
-	followerId: MiUser['id'],
-): Promise<MiUser['id'][]> {
-	const rows = await db
-		.select({ followeeId: followRequest.followeeId })
-		.from(followRequest)
-		.where(eq(followRequest.followerId, followerId));
-
-	return rows.map((row) => row.followeeId);
-}
-
 export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
@@ -199,18 +159,6 @@ export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFrom
 		);
 
 	return rows.map((row) => row.followeeId);
-}
-
-async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
-	db: MiDrizzleDatabase,
-	followeeId: MiUser['id'],
-): Promise<MiUser['id'][]> {
-	const rows = await db
-		.select({ followerId: followRequest.followerId })
-		.from(followRequest)
-		.where(eq(followRequest.followeeId, followeeId));
-
-	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(

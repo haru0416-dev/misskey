@@ -4,13 +4,6 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
 import { handleApiEmailAddressAvailable } from '../auth/availability.js';
 import { handleApiPinnedUsers } from '../user/user.js';
 import {
@@ -22,14 +15,7 @@ import {
 } from '../announcement/announcements.js';
 import { handleApiIClaimAchievement } from '../notification/notification.js';
 import { handleApiPagePush } from '../page/page-push.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	authenticateOptionalRequest,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 

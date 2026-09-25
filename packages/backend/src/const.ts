@@ -11,7 +11,6 @@ export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
 
 export const USER_ONLINE_THRESHOLD = 1000 * 60 * 10;
-const USER_ACTIVE_THRESHOLD = 1000 * 60 * 60 * 24 * 3;
 
 export const PER_NOTE_REACTION_USER_PAIR_CACHE_MAX = 16;
 

@@ -127,19 +127,7 @@ export type MiLocalUser = MiUser & {
 	uri: null;
 };
 
-type MiPartialLocalUser = Partial<MiUser> & {
-	id: MiUser['id'];
-	host: null;
-	uri: null;
-};
-
 export type MiRemoteUser = MiUser & {
-	host: string;
-	uri: string;
-};
-
-type MiPartialRemoteUser = Partial<MiUser> & {
-	id: MiUser['id'];
 	host: string;
 	uri: string;
 };

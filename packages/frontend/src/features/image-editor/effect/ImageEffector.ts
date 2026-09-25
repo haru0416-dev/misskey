@@ -7,7 +7,7 @@ import { FXS } from './fxs.js';
 import type { ImageCompositorFunction } from '@/features/image-editor/core/ImageCompositor.js';
 import { ImageCompositor } from '@/features/image-editor/core/ImageCompositor.js';
 
-export type ImageEffectorRGB = [r: number, g: number, b: number];
+type ImageEffectorRGB = [r: number, g: number, b: number];
 
 interface CommonParamDef {
 	type: string;

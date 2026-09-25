@@ -87,20 +87,6 @@ export async function fetchDriveFolderByIdAndUserIdFromDatabase(
 	return row ?? null;
 }
 
-async function fetchDriveFolderByIdAndUserIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: DriveFolderRow['id'],
-	userId: MiUser['id'],
-): Promise<DriveFolderRow> {
-	const row = await fetchDriveFolderByIdAndUserIdFromDatabase(db, id, userId);
-
-	if (row == null) {
-		throw new EntityNotFoundError(MiDriveFolder, { id, userId });
-	}
-
-	return row;
-}
-
 /** フォルダ一覧の pack 向け。フォルダ本体と先祖フォルダをまとめて取得する。 */
 export async function listDriveFoldersByIdsFromDatabase(
 	db: MiDrizzleDatabase,

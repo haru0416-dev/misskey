@@ -42,7 +42,7 @@ defineProps<{
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/note-header';
+@use '@shared/styles/_note-header.scss' as note-header;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .badgeRole, .badgeRoles, .info, .isBot, .name, .root, .username {}

@@ -255,12 +255,6 @@ export interface IApEmoji extends IObject {
 export const isEmoji = (object: IObject): object is IApEmoji =>
 	getApType(object) === 'Emoji' && !Array.isArray(object.icon) && object.icon?.url != null;
 
-interface IKey extends IObject {
-	type: 'Key';
-	owner: string;
-	publicKeyPem: string | Buffer;
-}
-
 const validDocumentTypes = new Set(['Audio', 'Document', 'Image', 'Page', 'Video']);
 
 export interface IApDocument extends IObject {
@@ -272,10 +266,6 @@ export const isDocument = (object: IObject): object is IApDocument => {
 	return type != null && validDocumentTypes.has(type);
 };
 
-interface IApImage extends IApDocument {
-	type: 'Image';
-}
-
 export interface ICreate extends IActivity {
 	type: 'Create';
 }
@@ -286,10 +276,6 @@ export interface IDelete extends IActivity {
 
 export interface IUpdate extends IActivity {
 	type: 'Update';
-}
-
-interface IRead extends IActivity {
-	type: 'Read';
 }
 
 export interface IUndo extends IActivity {
@@ -341,7 +327,6 @@ export interface IMove extends IActivity {
 export const isCreate = (object: IObject): object is ICreate => getApType(object) === 'Create';
 export const isDelete = (object: IObject): object is IDelete => getApType(object) === 'Delete';
 export const isUpdate = (object: IObject): object is IUpdate => getApType(object) === 'Update';
-const isRead = (object: IObject): object is IRead => getApType(object) === 'Read';
 export const isUndo = (object: IObject): object is IUndo => getApType(object) === 'Undo';
 export const isFollow = (object: IObject): object is IFollow => getApType(object) === 'Follow';
 export const isAccept = (object: IObject): object is IAccept => getApType(object) === 'Accept';
@@ -356,4 +341,3 @@ export const isAnnounce = (object: IObject): object is IAnnounce => getApType(ob
 export const isBlock = (object: IObject): object is IBlock => getApType(object) === 'Block';
 export const isFlag = (object: IObject): object is IFlag => getApType(object) === 'Flag';
 export const isMove = (object: IObject): object is IMove => getApType(object) === 'Move';
-const isNote = (object: IObject): object is IPost => getApType(object) === 'Note';

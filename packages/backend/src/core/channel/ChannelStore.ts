@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNotNull, lt, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { channel } from '@/db/schema/channel.js';
 import type { ChannelInsert, ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -176,16 +175,6 @@ export async function fetchChannelByIdFromDatabase(
 	const [row] = await db.select().from(channel).where(eq(channel.id, id)).limit(1);
 
 	return row ? deserializeChannel(row) : null;
-}
-
-async function fetchChannelByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiChannel['id']): Promise<MiChannel> {
-	const channel = await fetchChannelByIdFromDatabase(db, id);
-
-	if (channel == null) {
-		throw new EntityNotFoundError('MiChannel', { id });
-	}
-
-	return channel;
 }
 
 export async function incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(

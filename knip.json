@@ -16,7 +16,7 @@
 		},
 		"packages/backend": {
 			"entry": [
-				"scripts/*.{js,mjs,mts,ts}",
+				"scripts/**/*.{js,mjs,mts,ts}",
 				"test/**/*.ts",
 				"test-server/**/*.ts",
 				"test-federation/**/*.ts",
@@ -25,6 +25,9 @@
 			"ignoreDependencies": ["@misskey-dev/emoji-assets", "@oxc-project/runtime"]
 		},
 		"packages/frontend": {
+			"paths": {
+				"@shared/*": ["../frontend-shared/*"]
+			},
 			"entry": [
 				"src/_boot_.ts",
 				"src/workers/*.ts",
@@ -40,6 +43,9 @@
 			"ignoreDependencies": ["frontend-shared", "@misskey-dev/emoji-assets", "vue-tsc", "search-index"]
 		},
 		"packages/frontend-embed": {
+			"paths": {
+				"@shared/*": ["../frontend-shared/*"]
+			},
 			"entry": ["src/boot.ts", "src/workers/*.ts"],
 			"ignoreDependencies": ["frontend-shared", "shiki", "frontend", "@misskey-dev/emoji-assets", "vue-tsc"]
 		},

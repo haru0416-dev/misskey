@@ -10,7 +10,6 @@ import { blocking } from '@/db/schema/blocking.js';
 import type { BlockingInsert, BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -100,16 +99,6 @@ export async function fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(
 
 export async function deleteBlockingByIdFromDatabase(db: MiDrizzleDatabase, id: MiBlocking['id']): Promise<void> {
 	await db.delete(blocking).where(eq(blocking.id, id));
-}
-
-async function fetchBlockingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiBlocking['id']): Promise<MiBlocking> {
-	const [row] = await db.select().from(blocking).where(eq(blocking.id, id)).limit(1);
-
-	if (row == null) {
-		throw new EntityNotFoundError('MiBlocking', { id });
-	}
-
-	return deserializeBlocking(row);
 }
 
 export async function listBlockingsByBlockerIdFromDatabase(

@@ -8,12 +8,10 @@ import type {
 	InactiveModeratorsWarningPayload,
 	SystemWebhookPayload,
 } from '@/core/webhook/system-webhook-types.js';
-import type { Packed } from '@/misc/json-schema.js';
-import type { MiAbuseUserReport, MiUser } from '@/models/_.js';
+import type { MiAbuseUserReport } from '@/models/_.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import {
 	packWebhookTestUserLite,
-	webhookTestDayMillis,
 	webhookTestDummyUser1,
 	webhookTestDummyUser2,
 	webhookTestDummyUser3,

@@ -4,13 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertOptionalCredential,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateApiToken,
-} from '../auth/auth.js';
+import { assertTokenPermission } from '../auth/auth.js';
 import {
 	handleApiAdminAbuseUserReports,
 	handleApiAdminForwardAbuseUserReport,
@@ -102,17 +96,7 @@ import { handleApiAdminInviteCreate, handleApiAdminInviteList } from '../invite/
 import { handleApiAdminMeta, handleApiAdminUpdateMeta } from '../meta/meta.js';
 import { handleApiAdminShowModerationLogs } from '../admin/moderation-log.js';
 import { handleApiAdminPromoCreate } from '../note/promo.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	assertApiModerator,
-	assertApiAdmin,
-	assertApiCanManageAvatarDecorations,
-} from '../shell-helpers.js';
+import { jsonResponse, emptyResponse, assertApiModerator, assertApiAdmin } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 

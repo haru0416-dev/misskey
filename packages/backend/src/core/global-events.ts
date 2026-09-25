@@ -279,5 +279,3 @@ export type GlobalEvents = {
 		payload: EventTypesToEventPayload<ChatEventTypes>;
 	};
 };
-
-type StreamChannels = GlobalEvents[keyof GlobalEvents]['name'];

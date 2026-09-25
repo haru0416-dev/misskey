@@ -619,12 +619,6 @@ export async function countNotesByUserHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-async function countNotesByUserHostNotNullFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db.select({ value: count() }).from(note).where(isNotNull(note.userHost));
-
-	return row?.value ?? 0;
-}
-
 export async function countNotesByUserIdAndChannelIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
@@ -1296,7 +1290,7 @@ export async function listHydratedNotesByIdsFromDatabase(
 const TRIGRAM_RUN = /[\p{L}\p{N}]{3}/u;
 
 /** trigram の取れない検索が 1 ページで走査する投稿数。100 万件・一致なしで 1 ページ約 0.1 秒だった。 */
-export const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
+const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
 
 /**
  * trigram の取れる語でも、一致件数の見積もりは統計の標本次第で大きく外れる。1 万件前後に一致する語を

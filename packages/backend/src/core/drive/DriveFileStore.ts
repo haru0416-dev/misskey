@@ -435,15 +435,6 @@ export async function updateDriveFilesFolderByIdsAndUserIdInDatabase(
 		.where(and(inArray(driveFile.id, ids), eq(driveFile.userId, userId)));
 }
 
-async function countDriveFilesByUserHostFromDatabase(
-	db: MiDrizzleDatabase,
-	userHost: NonNullable<MiDriveFile['userHost']>,
-): Promise<number> {
-	const [row] = await db.select({ value: count() }).from(driveFile).where(eq(driveFile.userHost, userHost));
-
-	return row?.value ?? 0;
-}
-
 export async function countDriveFilesByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiDriveFile['userId'],
@@ -548,36 +539,6 @@ export async function sumDriveFileSizeByUserIdFromDatabase(
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
 		.where(and(eq(driveFile.userId, userId), eq(driveFile.isLink, false)));
-
-	return Number(row?.value ?? 0);
-}
-
-async function sumDriveFileSizeByUserHostFromDatabase(
-	db: MiDrizzleDatabase,
-	userHost: NonNullable<MiDriveFile['userHost']>,
-): Promise<number> {
-	const [row] = await db
-		.select({ value: sum(driveFile.size) })
-		.from(driveFile)
-		.where(and(eq(driveFile.userHost, userHost), eq(driveFile.isLink, false)));
-
-	return Number(row?.value ?? 0);
-}
-
-async function sumLocalDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db
-		.select({ value: sum(driveFile.size) })
-		.from(driveFile)
-		.where(and(isNull(driveFile.userHost), eq(driveFile.isLink, false)));
-
-	return Number(row?.value ?? 0);
-}
-
-async function sumRemoteDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db
-		.select({ value: sum(driveFile.size) })
-		.from(driveFile)
-		.where(and(isNotNull(driveFile.userHost), eq(driveFile.isLink, false)));
 
 	return Number(row?.value ?? 0);
 }

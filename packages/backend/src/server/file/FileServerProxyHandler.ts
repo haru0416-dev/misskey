@@ -20,7 +20,6 @@ import { getFileServerHeader } from './FileServerTypes.js';
 import type { FileServerReply, FileServerRequest } from './FileServerTypes.js';
 
 type ProxySource = DownloadedFileResult | FileResolveResult;
-type CleanupableFile = ProxySource & { cleanup: () => void };
 type AvailableFile = Exclude<ProxySource, { kind: 'not-found' | 'unavailable' }>;
 type ProxyQuery = {
 	emoji?: string;

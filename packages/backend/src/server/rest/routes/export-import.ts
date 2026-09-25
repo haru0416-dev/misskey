@@ -4,8 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateApiToken } from '../auth/auth.js';
-import { rolePermissionDeniedError } from '../error.js';
+import { assertCredential, assertSecureCredential, authenticateApiToken } from '../auth/auth.js';
 import {
 	handleApiExportCustomEmojis,
 	handleApiIExportAntennas,
@@ -26,7 +25,6 @@ import {
 } from '../job/import-jobs.js';
 import { handleApiFetchRss } from '../feed/fetch-rss.js';
 import { assertApiRateLimit, assertApiRateLimitForUser } from '../rate-limit.js';
-import { hasApiRolePolicyOrIsRoot } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
