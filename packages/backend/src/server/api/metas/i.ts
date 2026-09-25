@@ -1095,9 +1095,20 @@ export const endpointMetas = {
 	},
 	'i/revoke-token': {
 		meta: {
-			requireCredential: true,
+			description:
+				'Revoke an access token of the authenticated user. When called with an app access token, only that token itself can be revoked.',
 
-			secure: true,
+			requireCredential: true,
+			// アプリのトークンで消せるのはそのトークン自身だけなので、多くのアプリが持つ最小の権限で足りる。
+			kind: 'read:account',
+
+			errors: {
+				permissionDenied: {
+					message: 'Your app does not have the necessary permissions to use this endpoint.',
+					code: 'PERMISSION_DENIED',
+					id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1838',
+				},
+			},
 		} as const,
 		paramDef: iRevokeTokenParamDef,
 	},

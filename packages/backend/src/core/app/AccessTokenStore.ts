@@ -72,14 +72,6 @@ export async function deleteAccessTokenByIdAndUserIdFromDatabase(
 	await db.delete(accessToken).where(and(eq(accessToken.id, id), eq(accessToken.userId, userId)));
 }
 
-export async function deleteAccessTokenByTokenAndUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	token: AccessTokenRow['token'],
-	userId: MiUser['id'],
-): Promise<void> {
-	await db.delete(accessToken).where(and(eq(accessToken.token, token), eq(accessToken.userId, userId)));
-}
-
 export async function deleteAccessTokenByTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: AccessTokenRow['token'],

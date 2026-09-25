@@ -3690,10 +3690,9 @@ declare module '../api.js' {
         ): Promise<SwitchCaseResponseType<E, P>>;
 
         /**
-         * No description provided.
+         * Revoke an access token of the authenticated user. When called with an app access token, only that token itself can be revoked.
          *
-         * **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
-         * **Credential required**: *Yes*
+         * **Credential required**: *Yes* / **Permission**: *read:account*
          */
         request<E extends 'i/revoke-token', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,

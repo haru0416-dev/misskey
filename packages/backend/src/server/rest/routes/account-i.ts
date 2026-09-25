@@ -212,7 +212,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 	app.post(
 		'/i/revoke-token',
 		endpointHandler(deps, 'i/revoke-token', async ({ body, auth, c }) => {
-			await handleApiIRevokeToken(deps, auth.user, body);
+			await handleApiIRevokeToken(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
 		}),
 	);
