@@ -30,12 +30,6 @@ import { basicTimelineIconClass, basicTimelineTypes } from '@/timelines.js';
 </script>
 
 <style lang="scss" module>
-.exampleNoteRoot {
-	border-radius: var(--MI-radius);
-	border: var(--MI_THEME-panelBorder);
-	background: var(--MI_THEME-panel);
-}
-
 .divider {
 	height: 1px;
 	background: var(--MI_THEME-divider);
@@ -44,43 +38,5 @@ import { basicTimelineIconClass, basicTimelineTypes } from '@/timelines.js';
 .image {
 	max-width: 300px;
 	margin: 0 auto;
-}
-
-.post {
-	position: relative;
-	display: block;
-	width: 100%;
-	height: 40px;
-	color: var(--MI_THEME-fgOnAccent);
-	font-weight: bold;
-	text-align: left;
-
-	&::before {
-		content: "";
-		display: block;
-		width: calc(100% - 38px);
-		height: 100%;
-		margin: auto;
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		border-radius: 999px;
-		background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
-	}
-
-}
-
-.postIcon {
-	position: relative;
-	margin-left: 30px;
-	margin-right: 8px;
-	width: 32px;
-}
-
-.postText {
-	position: relative;
-	line-height: 40px;
 }
 </style>

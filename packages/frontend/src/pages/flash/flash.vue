@@ -67,20 +67,20 @@ import { Interpreter, Parser, values } from '@syuilo/aiscript';
 import { url } from '@shared/utility/config.js';
 import type { Ref } from 'vue';
 import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
-import type { MenuItem } from '@/types/menu.js';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
+import { getOthersContentMenuItems } from '@/features/abuse-reports/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkAsUi from '@/aiscript/components/MkAsUi.vue';
 import { registerAsUiLib } from '@/aiscript/ui.js';
-import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
+import { aiScriptReadline, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
-import { isSupportShare } from '@/utility/navigator.js';
+import { popupShareMenu } from '@/utility/popup-share-menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
 
@@ -109,23 +109,15 @@ function share(ev: PointerEvent) {
 		return;
 	}
 
-	const menuItems: MenuItem[] = [];
-
-	menuItems.push({
-		text: i18n.ts.shareWithNote,
-		icon: 'ti ti-pencil',
-		action: shareWithNote,
+	const flashUrl = `${url}/play/${flash.value.id}`;
+	popupShareMenu(ev, {
+		noteText: `${flash.value.title}\n${flashUrl}`,
+		shareData: {
+			title: flash.value.title,
+			text: flash.value.summary,
+			url: flashUrl,
+		},
 	});
-
-	if (isSupportShare()) {
-		menuItems.push({
-			text: i18n.ts.share,
-			icon: 'ti ti-share',
-			action: shareWithNavigator,
-		});
-	}
-
-	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
 
 function copyLink() {
@@ -134,29 +126,6 @@ function copyLink() {
 	}
 
 	copyToClipboard(`${url}/play/${flash.value.id}`);
-}
-
-function shareWithNavigator() {
-	if (!flash.value) {
-		return;
-	}
-
-	navigator.share({
-		title: flash.value.title,
-		text: flash.value.summary,
-		url: `${url}/play/${flash.value.id}`,
-	});
-}
-
-function shareWithNote() {
-	if (!flash.value) {
-		return;
-	}
-
-	os.post({
-		initialText: `${flash.value.title}\n${url}/play/${flash.value.id}`,
-		instant: true,
-	});
 }
 
 async function like() {
@@ -250,44 +219,7 @@ async function run() {
 
 	aiscript.value = interpreter;
 
-	let ast;
-	try {
-		ast = parser.parse(flash.value.script);
-	} catch {
-		os.alert({
-			type: 'error',
-			text: 'Syntax error :(',
-		});
-		return;
-	}
-	try {
-		await interpreter.exec(ast);
-	} catch (err) {
-		os.alert({
-			type: 'error',
-			title: 'AiScript Error',
-			text: err instanceof Error ? err.message : String(err),
-		});
-	}
-}
-
-async function reportAbuse() {
-	if (!flash.value) {
-		return;
-	}
-
-	const pageUrl = `${url}/play/${flash.value.id}`;
-
-	const { dispose } = await os.popupAsyncWithDialog(
-		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
-		{
-			user: flash.value.user,
-			initialComment: `Play: ${pageUrl}\n-----\n`,
-		},
-		{
-			closed: () => dispose(),
-		},
-	);
+	await execAiScriptWithAlert(interpreter, parser, flash.value.script, { errorTitle: 'AiScript Error' });
 }
 
 function showMenu(ev: PointerEvent) {
@@ -295,42 +227,12 @@ function showMenu(ev: PointerEvent) {
 		return;
 	}
 
-	const menu: MenuItem[] = [
-		...($i && $i.id !== flash.value.userId
-			? [
-					{
-						icon: 'ti ti-exclamation-circle',
-						text: i18n.ts.reportAbuse,
-						action: reportAbuse,
-					},
-					...($i.isModerator || $i.isAdmin
-						? [
-								{
-									type: 'divider' as const,
-								},
-								{
-									icon: 'ti ti-trash',
-									text: i18n.ts.delete,
-									danger: true,
-									action: () =>
-										os
-											.confirm({
-												type: 'warning',
-												text: i18n.ts.deleteConfirm,
-											})
-											.then(({ canceled }) => {
-												if (canceled || !flash.value) {
-													return;
-												}
-
-												os.apiWithDialog('flash/delete', { flashId: flash.value.id });
-											}),
-								},
-							]
-						: []),
-				]
-			: []),
-	];
+	const flashId = flash.value.id;
+	const menu = getOthersContentMenuItems({
+		owner: flash.value.user,
+		reportComment: `Play: ${url}/play/${flashId}\n-----\n`,
+		onDelete: () => os.apiWithDialog('flash/delete', { flashId }),
+	});
 
 	os.popupMenu(menu, ev.currentTarget ?? ev.target);
 }

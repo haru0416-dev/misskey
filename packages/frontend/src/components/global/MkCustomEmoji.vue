@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <img
 	v-else
 	:class="[$style.root, { [$style.normal]: normal, [$style.noStyle]: noStyle }]"
-	:src="url"
+	:src="imageUrl"
 	:alt="alt"
 	:title="alt"
 	decoding="async"
@@ -41,6 +41,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, inject, ref } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
+import { useCustomEmojiUrl } from '@shared/utility/use-custom-emoji-url.js';
 import { getProxiedImageUrl, getStaticImageUrl } from '@/utility/media-proxy.js';
 import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import * as os from '@/os.js';
@@ -74,12 +75,15 @@ const props = defineProps<{
 
 const react = inject(DI.mfmEmojiReactCallback);
 
-const customEmojiName = computed(() =>
-	(props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''),
-);
-const isLocal = computed(
-	() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')),
-);
+const {
+	customEmojiName,
+	isLocal,
+	url: proxiedUrl,
+	alt,
+} = useCustomEmojiUrl(props, {
+	emojisMap: customEmojisMap,
+	getProxiedImageUrl,
+});
 const emojiCodeToMute = makeEmojiMuteKey({
 	name: props.name,
 	...(props.host === undefined ? {} : { host: props.host }),
@@ -87,30 +91,14 @@ const emojiCodeToMute = makeEmojiMuteKey({
 const isMuted = checkEmojiMuted(emojiCodeToMute);
 const shouldMute = computed(() => !props.ignoreMuted && isMuted.value);
 
-const rawUrl = computed(() => {
-	if (props.url) {
-		return props.url;
-	}
-	if (isLocal.value) {
-		return customEmojisMap.get(customEmojiName.value)?.url ?? null;
-	}
-	return props.host ? `/emoji/${customEmojiName.value}@${props.host}.webp` : `/emoji/${customEmojiName.value}.webp`;
-});
-
-const url = computed(() => {
-	if (rawUrl.value == null) {
+const imageUrl = computed(() => {
+	if (proxiedUrl.value == null) {
 		return undefined;
 	}
-
-	const proxied =
-		rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value)
-			? rawUrl.value
-			: getProxiedImageUrl(rawUrl.value, props.useOriginalSize ? undefined : 'emoji', false, true);
-	return prefer.disableShowingAnimatedImages ? getStaticImageUrl(proxied) : proxied;
+	return prefer.disableShowingAnimatedImages ? getStaticImageUrl(proxiedUrl.value) : proxiedUrl.value;
 });
 
-const alt = computed(() => `:${customEmojiName.value}:`);
-const errored = ref(url.value == null);
+const errored = ref(imageUrl.value == null);
 
 function onClick(ev: PointerEvent) {
 	if (props.menu) {

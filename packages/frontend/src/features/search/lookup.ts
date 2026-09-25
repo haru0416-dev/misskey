@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type * as Misskey from 'misskey-js';
 import type { Router } from '@/router.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -101,4 +102,66 @@ export async function apLookup(query: string) {
 	);
 
 	return await promise;
+}
+
+// ノート・ユーザー検索で、検索語が URL・@acct・#タグ のときは確認のうえ該当ページへ移動する。移動したら true。
+export async function openSearchShortcut(
+	router: Router,
+	query: string,
+	opts: {
+		fetchApObject: (uri: string) => Promise<Misskey.entities.ApShowResponse>;
+		openTag: (tag: string) => void;
+	},
+): Promise<boolean> {
+	if (query.startsWith('https://') && !query.includes(' ')) {
+		const confirm = await os.confirm({
+			type: 'info',
+			text: i18n.ts.lookupConfirm,
+		});
+		if (!confirm.canceled) {
+			const res = await opts.fetchApObject(query);
+
+			if (res.type === 'User') {
+				router.push('/@:acct/:page?', {
+					params: {
+						acct: `${res.object.username}@${res.object.host}`,
+					},
+				});
+			} else if (res.type === 'Note') {
+				router.push('/notes/:noteId/:initialTab?', {
+					params: {
+						noteId: res.object.id,
+					},
+				});
+			}
+
+			return true;
+		}
+	}
+
+	if (query.length > 1 && !query.includes(' ')) {
+		if (query.startsWith('@')) {
+			const confirm = await os.confirm({
+				type: 'info',
+				text: i18n.ts.lookupConfirm,
+			});
+			if (!confirm.canceled) {
+				router.pushByPath(`/${query}`);
+				return true;
+			}
+		}
+
+		if (query.startsWith('#')) {
+			const confirm = await os.confirm({
+				type: 'info',
+				text: i18n.ts.openTagPageConfirm,
+			});
+			if (!confirm.canceled) {
+				opts.openTag(query.substring(1));
+				return true;
+			}
+		}
+	}
+
+	return false;
 }

@@ -53,10 +53,7 @@ export type { Tab };
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, useTemplateRef, watch } from 'vue';
 import { prefer } from '@/preferences.js';
-import { genId } from '@/utility/id.js';
-
-const cssAnchorSupported = CSS.supports('position-anchor', '--anchor-name');
-const tabAnchorName = `--${genId()}-currentTab`;
+import { useTabHighlight } from '@/components/layout/tab-highlight.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -76,19 +73,22 @@ const emit = defineEmits<{
 
 const el = useTemplateRef('el');
 const tabHighlightEl = useTemplateRef('tabHighlightEl');
-const tabRefs: Record<string, HTMLElement | null> = {};
-
-function getTabStyle(t: Tab) {
-	if (!cssAnchorSupported) {
-		return {};
-	}
-	if (t.key === props.tab) {
-		return {
-			anchorName: tabAnchorName,
-		};
-	}
-	return {};
-}
+const {
+	cssAnchorSupported,
+	tabAnchorName,
+	tabRefs,
+	getTabStyle,
+	renderTab,
+	enter,
+	afterEnter,
+	leave,
+	afterLeave,
+	watchHighlight,
+} = useTabHighlight({
+	activeKey: () => props.tab,
+	tabs: () => props.tabs,
+	highlightEl: tabHighlightEl,
+});
 
 function onTabMousedown(tab: Tab, ev: MouseEvent): void {
 	// ユーザビリティの観点からmousedown時にはonClickは呼ばない
@@ -111,23 +111,6 @@ function onTabClick(t: Tab, ev: PointerEvent): void {
 	}
 }
 
-function renderTab() {
-	if (cssAnchorSupported) {
-		return;
-	}
-
-	const tabEl = props.tab ? tabRefs[props.tab] : undefined;
-	if (tabEl && tabHighlightEl.value && tabHighlightEl.value.parentElement) {
-		// offsetWidth や offsetLeft は少数を丸めてしまうため getBoundingClientRect を使う必要がある
-		// https://developer.mozilla.org/ja/docs/Web/API/HTMLElement/offsetWidth#%E5%80%A4
-		const parentRect = tabHighlightEl.value.parentElement.getBoundingClientRect();
-		const rect = tabEl.getBoundingClientRect();
-		tabHighlightEl.value.style.width = rect.width + 'px';
-		tabHighlightEl.value.style.left =
-			rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft + 'px';
-	}
-}
-
 function onTabWheel(ev: WheelEvent) {
 	if (ev.deltaY !== 0 && ev.deltaX === 0) {
 		ev.preventDefault();
@@ -138,51 +121,6 @@ function onTabWheel(ev: WheelEvent) {
 		});
 	}
 	return false;
-}
-
-let entering = false;
-
-async function enter(el: Element) {
-	if (!(el instanceof HTMLElement)) {
-		return;
-	}
-	entering = true;
-	const elementWidth = el.getBoundingClientRect().width;
-	el.style.width = '0';
-	el.style.paddingLeft = '0';
-	el.offsetWidth; // reflow
-	el.style.width = `${elementWidth}px`;
-	el.style.paddingLeft = '';
-	nextTick().then(() => {
-		entering = false;
-	});
-
-	window.setTimeout(renderTab, 170);
-}
-
-function afterEnter(el: Element) {
-	if (!(el instanceof HTMLElement)) {
-		return;
-	}
-}
-
-async function leave(el: Element) {
-	if (!(el instanceof HTMLElement)) {
-		return;
-	}
-	const elementWidth = el.getBoundingClientRect().width;
-	el.style.width = `${elementWidth}px`;
-	el.style.paddingLeft = '';
-	el.offsetWidth; // reflow
-	el.style.width = '0';
-	el.style.paddingLeft = '0';
-}
-
-function afterLeave(el: Element) {
-	if (!(el instanceof HTMLElement)) {
-		return;
-	}
-	el.style.width = '';
 }
 
 let ro2: ResizeObserver | null;
@@ -212,30 +150,15 @@ onMounted(() => {
 		{ immediate: true },
 	);
 
-	if (!cssAnchorSupported) {
-		watch(
-			[() => props.tab, () => props.tabs],
-			() => {
-				nextTick().then(() => {
-					if (entering) {
-						return;
-					}
-					renderTab();
-				});
-			},
-			{
-				immediate: true,
-			},
-		);
+	watchHighlight();
 
-		if (props.rootEl) {
-			ro2 = new ResizeObserver(() => {
-				if (window.document.body.contains(el.value as HTMLElement)) {
-					nextTick().then(() => renderTab());
-				}
-			});
-			ro2.observe(props.rootEl);
-		}
+	if (!cssAnchorSupported && props.rootEl) {
+		ro2 = new ResizeObserver(() => {
+			if (window.document.body.contains(el.value as HTMLElement)) {
+				nextTick().then(() => renderTab());
+			}
+		});
+		ro2.observe(props.rootEl);
 	}
 });
 

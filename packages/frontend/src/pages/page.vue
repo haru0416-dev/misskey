@@ -104,6 +104,7 @@ import type { MenuItem } from '@/types/menu.js';
 import XPage from '@/features/page-content/components/page.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
+import { getOthersContentMenuItems } from '@/features/abuse-reports/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
@@ -115,7 +116,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { deepClone } from '@/utility/clone.js';
 import { $i } from '@/i.js';
-import { isSupportShare } from '@/utility/navigator.js';
+import { popupShareMenu } from '@/utility/popup-share-menu.js';
 import { instance } from '@/instance.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
@@ -175,23 +176,15 @@ function share(ev: PointerEvent) {
 		return;
 	}
 
-	const menuItems: MenuItem[] = [];
-
-	menuItems.push({
-		text: i18n.ts.shareWithNote,
-		icon: 'ti ti-pencil',
-		action: shareWithNote,
+	const pageUrl = `${url}/@${page.value.user.username}/pages/${page.value.name}`;
+	popupShareMenu(ev, {
+		noteText: `${page.value.title || page.value.name}\n${pageUrl}`,
+		shareData: {
+			title: page.value.title ?? page.value.name,
+			...(page.value.summary == null ? {} : { text: page.value.summary }),
+			url: pageUrl,
+		},
 	});
-
-	if (isSupportShare()) {
-		menuItems.push({
-			text: i18n.ts.share,
-			icon: 'ti ti-share',
-			action: shareWithNavigator,
-		});
-	}
-
-	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
 
 function copyLink() {
@@ -200,29 +193,6 @@ function copyLink() {
 	}
 
 	copyToClipboard(`${url}/@${page.value.user.username}/pages/${page.value.name}`);
-}
-
-function shareWithNote() {
-	if (!page.value) {
-		return;
-	}
-
-	os.post({
-		initialText: `${page.value.title || page.value.name}\n${url}/@${page.value.user.username}/pages/${page.value.name}`,
-		instant: true,
-	});
-}
-
-function shareWithNavigator() {
-	if (!page.value) {
-		return;
-	}
-
-	navigator.share({
-		title: page.value.title ?? page.value.name,
-		...(page.value.summary == null ? {} : { text: page.value.summary }),
-		url: `${url}/@${page.value.user.username}/pages/${page.value.name}`,
-	});
 }
 
 function like() {
@@ -268,25 +238,6 @@ function pin(pin: boolean) {
 	});
 }
 
-async function reportAbuse() {
-	if (!page.value) {
-		return;
-	}
-
-	const pageUrl = `${url}/@${props.username}/pages/${props.pageName}`;
-
-	const { dispose } = await os.popupAsyncWithDialog(
-		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
-		{
-			user: page.value.user,
-			initialComment: `Page: ${pageUrl}\n-----\n`,
-		},
-		{
-			closed: () => dispose(),
-		},
-	);
-}
-
 function showMenu(ev: PointerEvent) {
 	if (!page.value) {
 		return;
@@ -319,38 +270,15 @@ function showMenu(ev: PointerEvent) {
 				action: () => pin(true),
 			});
 		}
-	} else if ($i && $i.id !== page.value.userId) {
-		menuItems.push({
-			icon: 'ti ti-exclamation-circle',
-			text: i18n.ts.reportAbuse,
-			action: reportAbuse,
-		});
-
-		if ($i.isModerator || $i.isAdmin) {
-			menuItems.push(
-				{
-					type: 'divider',
-				},
-				{
-					icon: 'ti ti-trash',
-					text: i18n.ts.delete,
-					danger: true,
-					action: () =>
-						os
-							.confirm({
-								type: 'warning',
-								text: i18n.ts.deleteConfirm,
-							})
-							.then(({ canceled }) => {
-								if (canceled || !page.value) {
-									return;
-								}
-
-								os.apiWithDialog('pages/delete', { pageId: page.value.id });
-							}),
-				},
-			);
-		}
+	} else {
+		const pageId = page.value.id;
+		menuItems.push(
+			...getOthersContentMenuItems({
+				owner: page.value.user,
+				reportComment: `Page: ${url}/@${props.username}/pages/${props.pageName}\n-----\n`,
+				onDelete: () => os.apiWithDialog('pages/delete', { pageId }),
+			}),
+		);
 	}
 
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);

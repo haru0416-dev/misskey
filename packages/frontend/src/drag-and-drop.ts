@@ -93,3 +93,20 @@ export function checkDragDataType(event: DragEvent, types: (keyof DragDataMap)[]
 	const availableTypes = new Set(Array.from(event.dataTransfer.types, (type) => type.toLowerCase()));
 	return types.some((type) => availableTypes.has(`misskey/${type}`.toLowerCase()));
 }
+
+// ドラッグ元が許可した操作のうちコピーを優先する。
+export function getDropEffect(effectAllowed: DataTransfer['effectAllowed']): DataTransfer['dropEffect'] {
+	switch (effectAllowed) {
+		case 'all':
+		case 'uninitialized':
+		case 'copy':
+		case 'copyLink':
+		case 'copyMove':
+			return 'copy';
+		case 'linkMove':
+		case 'move':
+			return 'move';
+		default:
+			return 'none';
+	}
+}

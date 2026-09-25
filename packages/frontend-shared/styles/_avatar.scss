@@ -1,0 +1,173 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// ヘッダーを `//` で書くのは、`/* */` だと `@use` した各 scoped style へそのまま出力されるため。
+//
+// frontend の MkAvatar と embed の EmAvatar で共有するスタイル。
+// CSS Modules のクラス名は `@include` した側のファイルで決まるので、テンプレートは各コンポーネントが
+// ここで使うクラス名 (root / inner / indicator / ears / earLeft / earRight / layer / plot / decoration) を付ける。
+// vue-tsc は `@include` 先のセレクタを読まないので、利用側はテンプレートで使うクラス名を空のルールで列挙する。
+
+@mixin base {
+	.root {
+		position: relative;
+		display: inline-block;
+		vertical-align: bottom;
+		flex-shrink: 0;
+		border-radius: 100%;
+		line-height: 16px;
+	}
+
+	.inner {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		top: 0;
+		border-radius: 100%;
+		z-index: 1;
+		overflow: clip;
+		object-fit: cover;
+		width: 100%;
+		height: 100%;
+	}
+
+	.indicator {
+		position: absolute;
+		z-index: 2;
+		bottom: 0;
+		left: 0;
+		width: 20%;
+		height: 20%;
+	}
+}
+
+// `.cat` の中で include する。
+@mixin cat-ears {
+	> .ears {
+		contain: strict;
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 100%;
+		height: 100%;
+		padding: 50%;
+		pointer-events: none;
+
+		> .earLeft,
+		> .earRight {
+			contain: strict;
+			display: inline-block;
+			height: 50%;
+			width: 50%;
+			background: currentColor;
+
+			&::after {
+				contain: strict;
+				content: '';
+				display: block;
+				width: 60%;
+				height: 60%;
+				margin: 20%;
+				background: #df548f;
+			}
+
+			> .layer {
+				contain: strict;
+				position: absolute;
+				top: 0;
+				width: 280%;
+				height: 280%;
+
+				> .plot {
+					contain: strict;
+					position: absolute;
+					width: 100%;
+					height: 100%;
+					clip-path: path('M0 0H1V1H0z');
+					transform: scale(32767);
+					transform-origin: 0 0;
+					opacity: 0.5;
+
+					&:first-child {
+						opacity: 1;
+					}
+
+					&:last-child {
+						opacity: calc(1 / 3);
+					}
+				}
+			}
+		}
+
+		> .earLeft {
+			transform: rotate(37.5deg) skew(30deg);
+
+			&, &::after {
+				border-radius: 25% 75% 75%;
+			}
+
+			> .layer {
+				left: 0;
+				transform:
+					skew(-30deg)
+					rotate(-37.5deg)
+					translate(-2.82842712475%, /* -2 * sqrt(2) */
+										-38.5857864376%); /* 40 - 2 * sqrt(2) */
+
+				> .plot {
+					background-position: 20% 10%; /* ~= 37.5deg */
+
+					&:first-child {
+						background-position-x: 21%;
+					}
+
+					&:last-child {
+						background-position-y: 11%;
+					}
+				}
+			}
+		}
+
+		> .earRight {
+			transform: rotate(-37.5deg) skew(-30deg);
+
+			&, &::after {
+				border-radius: 75% 25% 75% 75%;
+			}
+
+			> .layer {
+				right: 0;
+				transform:
+					skew(30deg)
+					rotate(37.5deg)
+					translate(2.82842712475%, /* 2 * sqrt(2) */
+										-38.5857864376%); /* 40 - 2 * sqrt(2) */
+
+				> .plot {
+					position: absolute;
+					background-position: 80% 10%; /* ~= 37.5deg */
+
+					&:first-child {
+						background-position-x: 79%;
+					}
+
+					&:last-child {
+						background-position-y: 11%;
+					}
+				}
+			}
+		}
+	}
+}
+
+@mixin decoration {
+	.decoration {
+		position: absolute;
+		z-index: 1;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		pointer-events: none;
+	}
+}

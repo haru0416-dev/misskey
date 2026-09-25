@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
-import { computed, markRaw, ref } from 'vue';
+import { computed } from 'vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
@@ -44,65 +44,18 @@ import MkInstanceCardMini from '@/features/instances/components/MkInstanceCardMi
 import FormSplit from '@/components/form/split.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useMkSelect } from '@/composables/useMkSelect.js';
-import { Paginator } from '@/utility/paginator.js';
+import { useFederationInstanceSearch } from '@/features/instances/federation-instance-search.js';
 
-const host = ref('');
-const { model: state, def: stateDef } = useMkSelect({
-	items: [
-		{ label: i18n.ts.all, value: 'all' },
-		{ label: i18n.ts.federating, value: 'federating' },
-		{ label: i18n.ts.subscribing, value: 'subscribing' },
-		{ label: i18n.ts.publishing, value: 'publishing' },
-		{ label: i18n.ts.suspended, value: 'suspended' },
-		{ label: i18n.ts.blocked, value: 'blocked' },
-		{ label: i18n.ts.silence, value: 'silenced' },
-		{ label: i18n.ts.notResponding, value: 'notResponding' },
-	],
-	initialValue: 'federating',
-});
-const { model: sort, def: sortDef } = useMkSelect({
-	items: [
-		{ label: `${i18n.ts.pubSub} (${i18n.ts.descendingOrder})`, value: '+pubSub' },
-		{ label: `${i18n.ts.pubSub} (${i18n.ts.ascendingOrder})`, value: '-pubSub' },
-		{ label: `${i18n.ts.notes} (${i18n.ts.descendingOrder})`, value: '+notes' },
-		{ label: `${i18n.ts.notes} (${i18n.ts.ascendingOrder})`, value: '-notes' },
-		{ label: `${i18n.ts.users} (${i18n.ts.descendingOrder})`, value: '+users' },
-		{ label: `${i18n.ts.users} (${i18n.ts.ascendingOrder})`, value: '-users' },
-		{ label: `${i18n.ts.following} (${i18n.ts.descendingOrder})`, value: '+following' },
-		{ label: `${i18n.ts.following} (${i18n.ts.ascendingOrder})`, value: '-following' },
-		{ label: `${i18n.ts.followers} (${i18n.ts.descendingOrder})`, value: '+followers' },
-		{ label: `${i18n.ts.followers} (${i18n.ts.ascendingOrder})`, value: '-followers' },
-		{ label: `${i18n.ts.registeredAt} (${i18n.ts.descendingOrder})`, value: '+firstRetrievedAt' },
-		{ label: `${i18n.ts.registeredAt} (${i18n.ts.ascendingOrder})`, value: '-firstRetrievedAt' },
-	],
-	initialValue: '+pubSub',
-});
-const paginator = markRaw(
-	new Paginator('federation/instances', {
-		limit: 10,
-		offsetMode: true,
-		computedParams: computed(() => ({
-			sort: sort.value,
-			host: host.value !== '' ? host.value : null,
-			...(state.value === 'federating'
-				? { federating: true, suspended: false, blocked: false }
-				: state.value === 'subscribing'
-					? { subscribing: true, suspended: false, blocked: false }
-					: state.value === 'publishing'
-						? { publishing: true, suspended: false, blocked: false }
-						: state.value === 'suspended'
-							? { suspended: true }
-							: state.value === 'blocked'
-								? { blocked: true }
-								: state.value === 'silenced'
-									? { silenced: true }
-									: state.value === 'notResponding'
-										? { notResponding: true }
-										: {}),
-		})),
-	}),
-);
+const { host, state, stateDef, sort, sortDef, paginator } = useFederationInstanceSearch([
+	{ label: i18n.ts.all, value: 'all' },
+	{ label: i18n.ts.federating, value: 'federating' },
+	{ label: i18n.ts.subscribing, value: 'subscribing' },
+	{ label: i18n.ts.publishing, value: 'publishing' },
+	{ label: i18n.ts.suspended, value: 'suspended' },
+	{ label: i18n.ts.blocked, value: 'blocked' },
+	{ label: i18n.ts.silence, value: 'silenced' },
+	{ label: i18n.ts.notResponding, value: 'notResponding' },
+]);
 
 function getStatus(instance: Misskey.entities.FederationInstance) {
 	switch (instance.suspensionState) {

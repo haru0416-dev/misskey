@@ -4,6 +4,7 @@
  */
 
 import { errors, utils, values } from '@syuilo/aiscript';
+import type { Interpreter, Parser } from '@syuilo/aiscript';
 import * as Misskey from 'misskey-js';
 import { url, lang } from '@shared/utility/config.js';
 import { assertStringAndIsIn } from './common.js';
@@ -15,6 +16,45 @@ import { customEmojis } from '@/features/custom-emojis/custom-emojis.js';
 
 const DIALOG_TYPES = ['error', 'info', 'success', 'warning', 'waiting', 'question'] as const;
 
+// Mk:dialog と Mk:confirm の引数。どれも省略または null を許す。
+function parseDialogArgs(
+	_title: values.Value | undefined,
+	_text: values.Value | undefined,
+	_type: values.Value | undefined,
+	defaultType: (typeof DIALOG_TYPES)[number],
+) {
+	let title: string | undefined = undefined;
+	let text: string | undefined = undefined;
+	let type: (typeof DIALOG_TYPES)[number] = defaultType;
+
+	if (_title != null) {
+		if (utils.isString(_title)) {
+			title = _title.value;
+		} else {
+			utils.assertNull(_title);
+		}
+	}
+
+	if (_text != null) {
+		if (utils.isString(_text)) {
+			text = _text.value;
+		} else {
+			utils.assertNull(_text);
+		}
+	}
+
+	if (_type != null) {
+		if (utils.isString(_type)) {
+			assertStringAndIsIn(_type, DIALOG_TYPES);
+			type = _type.value;
+		} else {
+			utils.assertNull(_type);
+		}
+	}
+
+	return { type, title, text };
+}
+
 export function aiScriptReadline(q: string): Promise<string> {
 	return new Promise((ok) => {
 		os.inputText({
@@ -23,6 +63,34 @@ export function aiScriptReadline(q: string): Promise<string> {
 			ok(a ?? '');
 		});
 	});
+}
+
+// 構文エラーでは実行せず、どちらの失敗もダイアログで知らせる。
+export async function execAiScriptWithAlert(
+	interpreter: Interpreter,
+	parser: Parser,
+	script: string,
+	opts: { errorTitle?: string } = {},
+): Promise<void> {
+	let ast;
+	try {
+		ast = parser.parse(script);
+	} catch {
+		os.alert({
+			type: 'error',
+			text: 'Syntax error :(',
+		});
+		return;
+	}
+	try {
+		await interpreter.exec(ast);
+	} catch (err) {
+		os.alert({
+			type: 'error',
+			...(opts.errorTitle === undefined ? {} : { title: opts.errorTitle }),
+			text: err instanceof Error ? err.message : String(err),
+		});
+	}
 }
 
 export function createAiScriptEnv(opts: { storageKey: string; token?: string }) {
@@ -34,34 +102,7 @@ export function createAiScriptEnv(opts: { storageKey: string; token?: string }) 
 		LOCALE: values.STR(lang),
 		SERVER_URL: values.STR(url),
 		'Mk:dialog': values.FN_NATIVE(async ([_title, _text, _type]) => {
-			let title: string | undefined = undefined;
-			let text: string | undefined = undefined;
-			let type: (typeof DIALOG_TYPES)[number] = 'info';
-
-			if (_title != null) {
-				if (utils.isString(_title)) {
-					title = _title.value;
-				} else {
-					utils.assertNull(_title);
-				}
-			}
-
-			if (_text != null) {
-				if (utils.isString(_text)) {
-					text = _text.value;
-				} else {
-					utils.assertNull(_text);
-				}
-			}
-
-			if (_type != null) {
-				if (utils.isString(_type)) {
-					assertStringAndIsIn(_type, DIALOG_TYPES);
-					type = _type.value;
-				} else {
-					utils.assertNull(_type);
-				}
-			}
+			const { type, title, text } = parseDialogArgs(_title, _text, _type, 'info');
 
 			await os.alert({
 				type,
@@ -71,34 +112,7 @@ export function createAiScriptEnv(opts: { storageKey: string; token?: string }) 
 			return values.NULL;
 		}),
 		'Mk:confirm': values.FN_NATIVE(async ([_title, _text, _type]) => {
-			let title: string | undefined = undefined;
-			let text: string | undefined = undefined;
-			let type: (typeof DIALOG_TYPES)[number] = 'question';
-
-			if (_title != null) {
-				if (utils.isString(_title)) {
-					title = _title.value;
-				} else {
-					utils.assertNull(_title);
-				}
-			}
-
-			if (_text != null) {
-				if (utils.isString(_text)) {
-					text = _text.value;
-				} else {
-					utils.assertNull(_text);
-				}
-			}
-
-			if (_type != null) {
-				if (utils.isString(_type)) {
-					assertStringAndIsIn(_type, DIALOG_TYPES);
-					type = _type.value;
-				} else {
-					utils.assertNull(_type);
-				}
-			}
+			const { type, title, text } = parseDialogArgs(_title, _text, _type, 'question');
 
 			const confirm = await os.confirm({
 				type,

@@ -110,9 +110,4 @@ function removeReaction(emoji: string) {
 	border: var(--MI_THEME-panelBorder);
 	background: var(--MI_THEME-panel);
 }
-
-.divider {
-	height: 1px;
-	background: var(--MI_THEME-divider);
-}
 </style>

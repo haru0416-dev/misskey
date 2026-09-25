@@ -46,6 +46,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { watch, ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
+import { getDecorationAngle, getDecorationOffset, getDecorationScale } from '@shared/utility/avatar-decoration.js';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
 import MkA from './MkA.vue';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
@@ -109,22 +110,6 @@ function getDecorationUrl(decoration: Decoration | DecorationEditorDecoration) {
 	return decoration.url;
 }
 
-function getDecorationAngle(decoration: Decoration | DecorationEditorDecoration) {
-	const angle = decoration.angle ?? 0;
-	return angle === 0 ? undefined : `${angle * 360}deg`;
-}
-
-function getDecorationScale(decoration: Decoration | DecorationEditorDecoration) {
-	const scaleX = decoration.flipH ? -1 : 1;
-	return scaleX === 1 ? undefined : `${scaleX} 1`;
-}
-
-function getDecorationOffset(decoration: Decoration | DecorationEditorDecoration) {
-	const offsetX = decoration.offsetX ?? 0;
-	const offsetY = decoration.offsetY ?? 0;
-	return offsetX === 0 && offsetY === 0 ? undefined : `${offsetX * 100}% ${offsetY * 100}%`;
-}
-
 function getDecorationIsBrink(decoration: Decoration | DecorationEditorDecoration) {
 	return 'blink' in decoration && decoration.blink === true;
 }
@@ -146,6 +131,11 @@ watch(
 </script>
 
 <style lang="scss" module>
+@use '@shared/styles/avatar';
+
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.decoration, .indicator, .layer, .plot, .root {}
+
 @keyframes earwiggleleft {
 	from { transform: rotate(37.6deg) skew(30deg); }
 	25% { transform: rotate(10deg) skew(30deg); }
@@ -174,37 +164,7 @@ watch(
 	to { transform: rotate(-37.6deg) skew(-30deg); }
 }
 
-.root {
-	position: relative;
-	display: inline-block;
-	vertical-align: bottom;
-	flex-shrink: 0;
-	border-radius: 100%;
-	line-height: 16px;
-}
-
-.inner {
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	top: 0;
-	border-radius: 100%;
-	z-index: 1;
-	overflow: clip;
-	object-fit: cover;
-	width: 100%;
-	height: 100%;
-}
-
-.indicator {
-	position: absolute;
-	z-index: 2;
-	bottom: 0;
-	left: 0;
-	width: 20%;
-	height: 20%;
-}
+@include avatar.base;
 
 .square {
 	border-radius: 20%;
@@ -215,121 +175,7 @@ watch(
 }
 
 .cat {
-	> .ears {
-		contain: strict;
-		position: absolute;
-		top: -50%;
-		left: -50%;
-		width: 100%;
-		height: 100%;
-		padding: 50%;
-		pointer-events: none;
-
-		> .earLeft,
-		> .earRight {
-			contain: strict;
-			display: inline-block;
-			height: 50%;
-			width: 50%;
-			background: currentColor;
-
-			&::after {
-				contain: strict;
-				content: '';
-				display: block;
-				width: 60%;
-				height: 60%;
-				margin: 20%;
-				background: #df548f;
-			}
-
-			> .layer {
-				contain: strict;
-				position: absolute;
-				top: 0;
-				width: 280%;
-				height: 280%;
-
-				> .plot {
-					contain: strict;
-					position: absolute;
-					width: 100%;
-					height: 100%;
-					clip-path: path('M0 0H1V1H0z');
-					transform: scale(32767);
-					transform-origin: 0 0;
-					opacity: 0.5;
-
-					&:first-child {
-						opacity: 1;
-					}
-
-					&:last-child {
-						opacity: calc(1 / 3);
-					}
-				}
-			}
-		}
-
-		> .earLeft {
-			transform: rotate(37.5deg) skew(30deg);
-
-			&, &::after {
-				border-radius: 25% 75% 75%;
-			}
-
-			> .layer {
-				left: 0;
-				transform:
-					skew(-30deg)
-					rotate(-37.5deg)
-					translate(-2.82842712475%, /* -2 * sqrt(2) */
-										-38.5857864376%); /* 40 - 2 * sqrt(2) */
-
-				> .plot {
-					background-position: 20% 10%; /* ~= 37.5deg */
-
-					&:first-child {
-						background-position-x: 21%;
-					}
-
-					&:last-child {
-						background-position-y: 11%;
-					}
-				}
-			}
-		}
-
-		> .earRight {
-			transform: rotate(-37.5deg) skew(-30deg);
-
-			&, &::after {
-				border-radius: 75% 25% 75% 75%;
-			}
-
-			> .layer {
-				right: 0;
-				transform:
-					skew(30deg)
-					rotate(37.5deg)
-					translate(2.82842712475%, /* 2 * sqrt(2) */
-										-38.5857864376%); /* 40 - 2 * sqrt(2) */
-
-				> .plot {
-					position: absolute;
-					background-position: 80% 10%; /* ~= 37.5deg */
-
-					&:first-child {
-						background-position-x: 79%;
-					}
-
-					&:last-child {
-						background-position-y: 11%;
-					}
-				}
-			}
-		}
-	}
+	@include avatar.cat-ears;
 
 	&.animation:hover {
 		> .ears {
@@ -344,14 +190,7 @@ watch(
 	}
 }
 
-.decoration {
-	position: absolute;
-	z-index: 1;
-	top: -50%;
-	left: -50%;
-	width: 200%;
-	pointer-events: none;
-}
+@include avatar.decoration;
 
 .decorationBlink {
 	animation: blink 1s infinite;

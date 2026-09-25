@@ -37,7 +37,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template v-if="v.caption != null" #caption>{{ v.caption }}</template>
 			</MkRange>
 		</div>
-		<MkInput v-else-if="v.type === 'color'" :modelValue="getHex(params[k])" type="color" @update:modelValue="v => { const c = getRgb(v); if (c != null) params[k] = c; }">
+		<MkInput v-else-if="v.type === 'color'" :modelValue="rgbToHex(params[k])" type="color" @update:modelValue="v => { const c = hexToRgb(v); if (c != null) params[k] = c; }">
 			<template #label>{{ v.label ?? k }}</template>
 			<template v-if="v.caption != null" #caption>{{ v.caption }}</template>
 		</MkInput>
@@ -49,12 +49,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import type { ImageEffectorRGB, ImageEffectorFxParamDefs } from '@/features/image-editor/effect/ImageEffector.js';
+import type { ImageEffectorFxParamDefs } from '@/features/image-editor/effect/ImageEffector.js';
 import MkInput from '@/components/form/MkInput.vue';
 import MkRadios from '@/components/form/MkRadios.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkRange from '@/components/form/MkRange.vue';
 import { i18n } from '@/i18n.js';
+import { hexToRgb, rgbToHex } from '@/features/image-editor/color.js';
 
 defineProps<{
 	paramDefs: ImageEffectorFxParamDefs;
@@ -62,27 +63,6 @@ defineProps<{
 
 const params = defineModel<Record<string, any>>({ required: true });
 
-function getHex(c: ImageEffectorRGB) {
-	return `#${c
-		.map((x) =>
-			Math.round(x * 255)
-				.toString(16)
-				.padStart(2, '0'),
-		)
-		.join('')}`;
-}
-
-function getRgb(hex: string | number): ImageEffectorRGB | null {
-	if (typeof hex === 'number' || typeof hex !== 'string' || !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)) {
-		return null;
-	}
-
-	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
-	if (m == null) {
-		return [0, 0, 0];
-	}
-	return m.map((x) => Number.parseInt(x, 16) / 255) as ImageEffectorRGB;
-}
 </script>
 
 <style module>

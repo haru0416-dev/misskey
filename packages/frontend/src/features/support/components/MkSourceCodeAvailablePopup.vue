@@ -60,53 +60,14 @@ function close() {
 </script>
 
 <style lang="scss" module>
+@use './bottom-notice-popup';
+
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.close, .icon, .main, .root, .text, .title {}
+
+@include bottom-notice-popup.styles;
+
 .root {
-	position: fixed;
 	z-index: v-bind(zIndex);
-	bottom: var(--MI-margin);
-	left: 0;
-	right: 0;
-	margin: auto;
-	box-sizing: border-box;
-	width: calc(100% - (var(--MI-margin) * 2));
-	max-width: 500px;
-	display: flex;
-}
-
-.icon {
-	text-align: center;
-	padding-top: 25px;
-	width: 100px;
-	color: var(--MI_THEME-accent);
-}
-@media (max-width: 500px) {
-	.icon {
-		width: 80px;
-	}
-}
-@media (max-width: 450px) {
-	.icon {
-		width: 70px;
-	}
-}
-
-.main {
-	padding: 25px 25px 25px 0;
-	flex: 1;
-}
-
-.close {
-	position: absolute;
-	top: 8px;
-	right: 8px;
-	padding: 8px;
-}
-
-.title {
-	font-weight: bold;
-}
-
-.text {
-	margin: 0.7em 0 1em 0;
 }
 </style>

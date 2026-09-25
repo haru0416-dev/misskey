@@ -186,6 +186,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { acct } from '@/filters/user.js';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
+import { selectExpiry } from '@/utility/select-expiry.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { ensureSignin, iAmAdmin, iAmModerator } from '@/i.js';
 import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
@@ -435,50 +436,12 @@ async function assignRole() {
 		return;
 	}
 
-	const { canceled: canceled2, result: period } = await os.select({
-		title: i18n.ts.period + ': ' + roles.find((r) => r.id === roleId)!.name,
-		items: [
-			{
-				value: 'indefinitely',
-				label: i18n.ts.indefinitely,
-			},
-			{
-				value: 'oneHour',
-				label: i18n.ts.oneHour,
-			},
-			{
-				value: 'oneDay',
-				label: i18n.ts.oneDay,
-			},
-			{
-				value: 'oneWeek',
-				label: i18n.ts.oneWeek,
-			},
-			{
-				value: 'oneMonth',
-				label: i18n.ts.oneMonth,
-			},
-		],
-		default: 'indefinitely',
-	});
-	if (canceled2) {
+	const expiry = await selectExpiry(i18n.ts.period + ': ' + roles.find((r) => r.id === roleId)!.name, ['oneHour', 'oneDay', 'oneWeek', 'oneMonth']);
+	if (expiry.canceled) {
 		return;
 	}
 
-	const expiresAt =
-		period === 'indefinitely'
-			? null
-			: period === 'oneHour'
-				? Date.now() + 1000 * 60 * 60
-				: period === 'oneDay'
-					? Date.now() + 1000 * 60 * 60 * 24
-					: period === 'oneWeek'
-						? Date.now() + 1000 * 60 * 60 * 24 * 7
-						: period === 'oneMonth'
-							? Date.now() + 1000 * 60 * 60 * 24 * 30
-							: null;
-
-	await os.apiWithDialog('admin/roles/assign', { roleId, userId: user.value.id, expiresAt });
+	await os.apiWithDialog('admin/roles/assign', { roleId, userId: user.value.id, expiresAt: expiry.expiresAt });
 	refreshUser();
 }
 

@@ -46,7 +46,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
-import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
 
 const props = defineProps<{
 	user?: Misskey.entities.UserDetailed | null;
@@ -130,22 +130,7 @@ function onDragover(ev: DragEvent) {
 	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
 		ev.preventDefault();
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
 	}
 }
 

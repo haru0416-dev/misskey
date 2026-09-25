@@ -26,73 +26,10 @@ const props = defineProps<{
 </script>
 
 <style lang="scss" module>
-.root {
-	display: inline-flex;
-	height: 42px;
-	margin: 2px;
-	padding: 0 6px;
-	font-size: 1.5em;
-	border-radius: 6px;
-	align-items: center;
-	justify-content: center;
+@use '@shared/styles/reaction';
 
-	&.canToggle {
-		background: var(--MI_THEME-buttonBg);
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.count, .limitWidth, .reacted, .root {}
 
-		&:hover {
-			background: rgba(0, 0, 0, 0.1);
-		}
-	}
-
-	&:not(.canToggle) {
-		cursor: default;
-	}
-
-	&.small {
-		height: 32px;
-		font-size: 1em;
-		border-radius: 4px;
-
-		> .count {
-			font-size: 0.9em;
-			line-height: 32px;
-		}
-	}
-
-	&.large {
-		height: 52px;
-		font-size: 2em;
-		border-radius: 8px;
-
-		> .count {
-			font-size: 0.6em;
-			line-height: 52px;
-		}
-	}
-
-	&.reacted, &.reacted:hover {
-		background: var(--MI_THEME-accentedBg);
-		color: var(--MI_THEME-accent);
-		box-shadow: 0 0 0 1px var(--MI_THEME-accent) inset;
-
-		> .count {
-			color: var(--MI_THEME-accent);
-		}
-
-		> .icon {
-			filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
-		}
-	}
-}
-
-.limitWidth {
-	max-width: 70px;
-	object-fit: contain;
-}
-
-.count {
-	font-size: 0.7em;
-	line-height: 42px;
-	margin: 0 0 0 4px;
-}
+@include reaction.base($margin: 2px);
 </style>

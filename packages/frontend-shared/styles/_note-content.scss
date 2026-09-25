@@ -1,0 +1,78 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// ヘッダーを `//` で書くのは、`/* */` だと `@use` した各 scoped style へそのまま出力されるため。
+//
+// ノート本文の折りたたみ表示を、frontend と embed の各ノートコンポーネントで同じ見た目にするためのスタイル。
+// CSS Modules のクラス名は `@include` した側のファイルで決まる。
+// vue-tsc は `@include` 先のセレクタを読まないので、利用側はテンプレートで使うクラス名を空のルールで列挙する。
+
+// 「もっと見る」「閉じる」ボタンの中の丸いラベル。
+@mixin collapse-label($background) {
+	display: inline-block;
+	background: $background;
+	padding: 6px 10px;
+	font-size: 0.8em;
+	border-radius: 999px;
+	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+// 展開後の「閉じる」ボタン。長い本文を読み進めても画面下端に残す。
+@mixin show-less {
+	width: 100%;
+	margin-top: 14px;
+	position: sticky;
+	bottom: calc(var(--MI-stickyBottom, 0px) + 14px);
+}
+
+// frontend の MkSubNoteContent と embed の EmSubNoteContent の全スタイル。
+@mixin sub-note-content {
+	.root {
+		overflow-wrap: break-word;
+
+		&.collapsed {
+			position: relative;
+			max-height: 9em;
+			overflow: clip;
+
+			> .fade {
+				display: block;
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				height: 64px;
+				background: linear-gradient(0deg, var(--MI_THEME-panel), color(from var(--MI_THEME-panel) srgb r g b / 0));
+
+				> .fadeLabel {
+					@include collapse-label(var(--MI_THEME-panel));
+				}
+
+				&:hover {
+					> .fadeLabel {
+						background: var(--MI_THEME-panelHighlight);
+					}
+				}
+			}
+		}
+	}
+
+	.reply {
+		margin-right: 6px;
+		color: var(--MI_THEME-accent);
+	}
+
+	.rp {
+		margin-left: 4px;
+		font-style: oblique;
+		color: var(--MI_THEME-renote);
+	}
+
+	.showLess {
+		@include show-less;
+	}
+
+	.showLessLabel {
+		@include collapse-label(var(--MI_THEME-popup));
+	}
+}

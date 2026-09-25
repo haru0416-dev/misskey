@@ -42,61 +42,10 @@ defineProps<{
 </script>
 
 <style lang="scss" module>
-.root {
-	display: flex;
-	align-items: baseline;
-	white-space: nowrap;
-}
+@use '@shared/styles/note-header';
 
-.name {
-	flex-shrink: 1;
-	display: block;
-	margin: 0 .5em 0 0;
-	padding: 0;
-	overflow: hidden;
-	font-size: 1em;
-	font-weight: bold;
-	text-decoration: none;
-	text-overflow: ellipsis;
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.badgeRole, .badgeRoles, .info, .isBot, .name, .root, .username {}
 
-	&:hover {
-		text-decoration: underline;
-	}
-}
-
-.isBot {
-	flex-shrink: 0;
-	align-self: center;
-	margin: 0 .5em 0 0;
-	padding: 1px 6px;
-	font-size: 80%;
-	border: solid 0.5px var(--MI_THEME-divider);
-	border-radius: 3px;
-}
-
-.username {
-	flex-shrink: 9999999;
-	margin: 0 .5em 0 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.info {
-	flex-shrink: 0;
-	margin-left: auto;
-	font-size: 0.9em;
-}
-
-.badgeRoles {
-	margin: 0 .5em 0 0;
-}
-
-.badgeRole {
-	height: 1.3em;
-	vertical-align: -20%;
-
-	& + .badgeRole {
-		margin-left: 0.2em;
-	}
-}
+@include note-header.base;
 </style>

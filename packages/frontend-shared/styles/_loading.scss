@@ -1,0 +1,81 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// ヘッダーを `//` で書くのは、`/* */` だと `@use` した各 scoped style へそのまま出力されるため。
+//
+// frontend の MkLoading と embed の EmLoading で共有するスタイル。
+// CSS Modules のクラス名とキーフレーム名は `@include` した側のファイルで決まる。
+// vue-tsc は `@include` 先のセレクタを読まないので、利用側はテンプレートで使うクラス名を空のルールで列挙する。
+
+@mixin base {
+	@keyframes spinner {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+
+	.root {
+		padding: 32px;
+		text-align: center;
+		cursor: wait;
+
+		--size: 38px;
+
+		&.colored {
+			color: var(--MI_THEME-accent);
+		}
+
+		&.inline {
+			display: inline;
+			padding: 0;
+			--size: 32px;
+		}
+
+		&.mini {
+			padding: 16px;
+			--size: 32px;
+		}
+
+		&.em {
+			display: inline-block;
+			vertical-align: middle;
+			padding: 0;
+			--size: 1em;
+		}
+	}
+
+	.container {
+		position: relative;
+		width: var(--size);
+		height: var(--size);
+		margin: 0 auto;
+	}
+
+	.spinner {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: var(--size);
+		height: var(--size);
+		fill-rule: evenodd;
+		clip-rule: evenodd;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-miterlimit: 1.5;
+	}
+
+	.bg {
+		opacity: 0.275;
+	}
+
+	.fg {
+		animation: spinner 0.5s linear infinite;
+
+		&.static {
+			animation-play-state: paused;
+		}
+	}
+}

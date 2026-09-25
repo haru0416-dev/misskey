@@ -1,0 +1,58 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// `//` (Sass の silent comment) を使うのは、`/* */` だと `@use` した各 style へ
+// このヘッダーがそのまま出力され、ビルド後の CSS に同じ文言が何度も混ざるため。
+//
+// 入力欄 2 つを横に並べた行を、並べ替えハンドルか削除ボタン付きで縦に積む編集リスト。
+
+@mixin styles {
+	.metadataRoot {
+		container-type: inline-size;
+	}
+
+	.fieldDragItem {
+		display: flex;
+		padding: 10px;
+		align-items: flex-end;
+		border-radius: 6px;
+
+		/* ドラッグボタン32px + 右余白8px + 入力欄200px×2 + 入力欄間12px = 452px */
+		@container (max-width: 452px) {
+			align-items: center;
+		}
+	}
+
+	.dragItemHandle {
+		cursor: grab;
+		width: 32px;
+		height: 32px;
+		margin: 0 8px 0 0;
+		opacity: 0.5;
+		flex-shrink: 0;
+
+		&:active {
+			cursor: grabbing;
+		}
+	}
+
+	.dragItemRemove {
+		@extend .dragItemHandle;
+
+		color: #ff2a2a;
+		opacity: 1;
+		cursor: pointer;
+
+		&:hover, &:focus {
+			opacity: .7;
+		}
+
+		&:active {
+			cursor: pointer;
+		}
+	}
+
+	.dragItemForm {
+		flex-grow: 1;
+	}
+}

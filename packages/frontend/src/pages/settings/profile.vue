@@ -173,7 +173,7 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import FormSlot from '@/components/form/slot.vue';
 import FormLink from '@/components/form/link.vue';
 import MkDraggable from '@/components/layout/MkDraggable.vue';
-import { chooseDriveFile } from '@/features/drive/drive.js';
+import { chooseDriveFile, chooseImageFromPcCropAndUpload } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
@@ -272,6 +272,64 @@ function save() {
 	}
 }
 
+// アイコンとバナーの変更メニュー。removeText が null のときは、設定済みの画像が無いので削除を出さない。
+function popupProfileImageMenu(
+	ev: PointerEvent,
+	opts: {
+		label: string;
+		aspectRatio: number;
+		removeText: string | null;
+		remove: () => void;
+		done: (driveFile: Misskey.entities.DriveFile) => void;
+	},
+) {
+	os.popupMenu(
+		[
+			{
+				text: opts.label,
+				type: 'label',
+			},
+			{
+				text: i18n.ts.upload,
+				icon: 'ti ti-upload',
+				action: async () => {
+					const driveFile = await chooseImageFromPcCropAndUpload(opts.aspectRatio);
+					if (driveFile == null) {
+						return;
+					}
+					opts.done(driveFile);
+				},
+			},
+			{
+				text: i18n.ts.fromDrive,
+				icon: 'ti ti-cloud',
+				action: () => {
+					chooseDriveFile({ multiple: false }).then((files) => {
+						const file = files[0];
+						if (file != null) {
+							opts.done(file);
+						}
+					});
+				},
+			},
+			...(opts.removeText != null
+				? [
+						{
+							type: 'divider' as const,
+						},
+						{
+							text: opts.removeText,
+							icon: 'ti ti-trash',
+							danger: true,
+							action: opts.remove,
+						},
+					]
+				: []),
+		],
+		ev.currentTarget ?? ev.target,
+	);
+}
+
 function changeAvatar(ev: PointerEvent) {
 	async function done(driveFile: Misskey.entities.DriveFile) {
 		const i = await os.apiWithDialog('i/update', {
@@ -282,72 +340,13 @@ function changeAvatar(ev: PointerEvent) {
 		claimAchievement('profileFilled');
 	}
 
-	os.popupMenu(
-		[
-			{
-				text: i18n.ts.avatar,
-				type: 'label',
-			},
-			{
-				text: i18n.ts.upload,
-				icon: 'ti ti-upload',
-				action: async () => {
-					const files = await os.chooseFileFromPc({ multiple: false });
-					const file = files[0];
-					if (file == null) {
-						return;
-					}
-
-					let originalOrCropped = file;
-
-					const { canceled } = await os.confirm({
-						type: 'question',
-						text: i18n.ts.cropImageAsk,
-						okText: i18n.ts.cropYes,
-						cancelText: i18n.ts.cropNo,
-					});
-
-					if (!canceled) {
-						originalOrCropped = await os.cropImageFile(file, {
-							aspectRatio: 1,
-						});
-					}
-
-					const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
-					if (driveFile == null) {
-						return;
-					}
-					done(driveFile);
-				},
-			},
-			{
-				text: i18n.ts.fromDrive,
-				icon: 'ti ti-cloud',
-				action: () => {
-					chooseDriveFile({ multiple: false }).then((files) => {
-						const file = files[0];
-						if (file != null) {
-							done(file);
-						}
-					});
-				},
-			},
-			...($i.avatarId != null
-				? [
-						{
-							type: 'divider' as const,
-						},
-						{
-							text: i18n.ts._profile.removeAvatar,
-							icon: 'ti ti-trash',
-							danger: true,
-							action: removeAvatar,
-						},
-					]
-				: []),
-		],
-		ev.currentTarget ?? ev.target,
-	);
+	popupProfileImageMenu(ev, {
+		label: i18n.ts.avatar,
+		aspectRatio: 1,
+		removeText: $i.avatarId != null ? i18n.ts._profile.removeAvatar : null,
+		remove: removeAvatar,
+		done,
+	});
 }
 
 async function removeAvatar() {
@@ -374,72 +373,13 @@ function changeBanner(ev: PointerEvent) {
 		$i.bannerUrl = i.bannerUrl;
 	}
 
-	os.popupMenu(
-		[
-			{
-				text: i18n.ts.banner,
-				type: 'label',
-			},
-			{
-				text: i18n.ts.upload,
-				icon: 'ti ti-upload',
-				action: async () => {
-					const files = await os.chooseFileFromPc({ multiple: false });
-					const file = files[0];
-					if (file == null) {
-						return;
-					}
-
-					let originalOrCropped = file;
-
-					const { canceled } = await os.confirm({
-						type: 'question',
-						text: i18n.ts.cropImageAsk,
-						okText: i18n.ts.cropYes,
-						cancelText: i18n.ts.cropNo,
-					});
-
-					if (!canceled) {
-						originalOrCropped = await os.cropImageFile(file, {
-							aspectRatio: 2,
-						});
-					}
-
-					const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
-					if (driveFile == null) {
-						return;
-					}
-					done(driveFile);
-				},
-			},
-			{
-				text: i18n.ts.fromDrive,
-				icon: 'ti ti-cloud',
-				action: () => {
-					chooseDriveFile({ multiple: false }).then((files) => {
-						const file = files[0];
-						if (file != null) {
-							done(file);
-						}
-					});
-				},
-			},
-			...($i.bannerId != null
-				? [
-						{
-							type: 'divider' as const,
-						},
-						{
-							text: i18n.ts._profile.removeBanner,
-							icon: 'ti ti-trash',
-							danger: true,
-							action: removeBanner,
-						},
-					]
-				: []),
-		],
-		ev.currentTarget ?? ev.target,
-	);
+	popupProfileImageMenu(ev, {
+		label: i18n.ts.banner,
+		aspectRatio: 2,
+		removeText: $i.bannerId != null ? i18n.ts._profile.removeBanner : null,
+		remove: removeBanner,
+		done,
+	});
 }
 
 async function removeBanner() {
@@ -468,6 +408,8 @@ definePage(() => ({
 </script>
 
 <style lang="scss" module>
+@use '@/components/form/field-pair-list';
+
 .banner {
 	position: relative;
 	height: 130px;
@@ -496,52 +438,8 @@ definePage(() => ({
 	right: 16px;
 }
 
-.metadataRoot {
-	container-type: inline-size;
-}
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.dragItemForm, .dragItemHandle, .dragItemRemove, .fieldDragItem, .metadataRoot {}
 
-.fieldDragItem {
-	display: flex;
-	padding: 10px;
-	align-items: flex-end;
-	border-radius: 6px;
-
-	/* ドラッグボタン32px + 右余白8px + 入力欄200px×2 + 入力欄間12px = 452px */
-	@container (max-width: 452px) {
-		align-items: center;
-	}
-}
-
-.dragItemHandle {
-	cursor: grab;
-	width: 32px;
-	height: 32px;
-	margin: 0 8px 0 0;
-	opacity: 0.5;
-	flex-shrink: 0;
-
-	&:active {
-		cursor: grabbing;
-	}
-}
-
-.dragItemRemove {
-	@extend .dragItemHandle;
-
-	color: #ff2a2a;
-	opacity: 1;
-	cursor: pointer;
-
-	&:hover, &:focus {
-		opacity: .7;
-	}
-
-	&:active {
-		cursor: pointer;
-	}
-}
-
-.dragItemForm {
-	flex-grow: 1;
-}
+@include field-pair-list.styles;
 </style>

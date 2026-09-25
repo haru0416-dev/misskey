@@ -19,10 +19,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { globalEvents } from '@/events.js';
-import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
+import { moveDriveFilesToFolder, moveDriveFolderToFolder } from '@/features/drive/drive.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
 
 const props = defineProps<{
 	folder?: Misskey.entities.DriveFolder;
@@ -47,22 +46,7 @@ function onDragover(ev: DragEvent) {
 
 	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles', 'driveFolders'])) {
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
 	} else {
 		ev.dataTransfer.dropEffect = 'none';
 	}
@@ -99,19 +83,7 @@ function onDrop(ev: DragEvent) {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map((f) => f.id),
-				folderId: props.folder ? props.folder.id : null,
-			}).then(() => {
-				globalEvents.emit(
-					'driveFilesUpdated',
-					droppedData.map((x) => ({
-						...x,
-						folderId: props.folder ? props.folder.id : null,
-						folder: props.folder ?? null,
-					})),
-				);
-			});
+			moveDriveFilesToFolder(droppedData, props.folder ?? null);
 		}
 	}
 	//#endregion
@@ -128,19 +100,7 @@ function onDrop(ev: DragEvent) {
 			if (props.folder && droppedFolder.id === props.folder.id) {
 				return;
 			}
-			misskeyApi('drive/folders/update', {
-				folderId: droppedFolder.id,
-				parentId: props.folder ? props.folder.id : null,
-			}).then(() => {
-				globalEvents.emit(
-					'driveFoldersUpdated',
-					[droppedFolder].map((x) => ({
-						...x,
-						parentId: props.folder ? props.folder.id : null,
-						parent: props.folder ?? null,
-					})),
-				);
-			});
+			moveDriveFolderToFolder(droppedFolder, props.folder ?? null);
 		}
 	}
 	//#endregion

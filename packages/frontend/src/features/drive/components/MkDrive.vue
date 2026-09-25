@@ -187,13 +187,12 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { prefer } from '@/preferences.js';
-import { chooseFileFromPcAndUpload, selectDriveFolder } from '@/features/drive/drive.js';
+import { alertDriveFolderMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
 import { store } from '@/store.js';
 import { makeDateGroupedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
-import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/drag-and-drop.js';
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
 import { Paginator } from '@/utility/paginator.js';
 
@@ -382,22 +381,7 @@ function onDragover(ev: DragEvent) {
 
 	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles', 'driveFolders'])) {
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
 	} else {
 		ev.dataTransfer.dropEffect = 'none';
 	}
@@ -434,19 +418,7 @@ function onDrop(ev: DragEvent): void | boolean {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map((f) => f.id),
-				folderId: folder.value ? folder.value.id : null,
-			}).then(() => {
-				globalEvents.emit(
-					'driveFilesUpdated',
-					droppedData.map((x) => ({
-						...x,
-						folderId: folder.value ? folder.value.id : null,
-						folder: folder.value,
-					})),
-				);
-			});
+			moveDriveFilesToFolder(droppedData, folder.value);
 		}
 	}
 	//#endregion
@@ -466,37 +438,7 @@ function onDrop(ev: DragEvent): void | boolean {
 			if (foldersPaginator.items.value.some((f) => f.id === droppedFolder.id)) {
 				return false;
 			}
-			misskeyApi('drive/folders/update', {
-				folderId: droppedFolder.id,
-				parentId: folder.value ? folder.value.id : null,
-			})
-				.then(() => {
-					globalEvents.emit(
-						'driveFoldersUpdated',
-						[droppedFolder].map((x) => ({
-							...x,
-							parentId: folder.value ? folder.value.id : null,
-							parent: folder.value,
-						})),
-					);
-				})
-				.catch((err) => {
-					switch (err.code) {
-						case 'RECURSIVE_NESTING':
-							claimAchievement('driveFolderCircularReference');
-							os.alert({
-								type: 'error',
-								title: i18n.ts.unableToProcess,
-								text: i18n.ts.circularReferenceFolder,
-							});
-							break;
-						default:
-							os.alert({
-								type: 'error',
-								text: i18n.ts.somethingHappened,
-							});
-					}
-				});
+			moveDriveFolderToFolder(droppedFolder, folder.value).catch(alertDriveFolderMoveError);
 		}
 	}
 	//#endregion

@@ -18,15 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<MkPreviewWithControls>
 		<template #preview>
-			<canvas ref="canvasEl" :class="$style.previewCanvas"></canvas>
-			<div :class="$style.previewContainer">
-				<div class="_acrylic" :class="$style.previewTitle">{{ i18n.ts.preview }}</div>
-				<div v-if="props.image == null" class="_acrylic" :class="$style.previewControls">
-					<button class="_button" :class="[$style.previewControlsButton, sampleImageType === '3_2' ? $style.active : null]" @click="sampleImageType = '3_2'"><i class="ti ti-crop-landscape"></i></button>
-					<button class="_button" :class="[$style.previewControlsButton, sampleImageType === '2_3' ? $style.active : null]" @click="sampleImageType = '2_3'"><i class="ti ti-crop-portrait"></i></button>
-					<button class="_button" :class="[$style.previewControlsButton]" @click="choiceImage"><i class="ti ti-upload"></i></button>
-				</div>
-			</div>
+			<MkSampleImagePreview ref="preview" v-model:sampleImageType="sampleImageType" :showSampleControls="props.image == null" @chooseImage="chooseImage"/>
 		</template>
 
 		<template #controls>
@@ -64,12 +56,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue';
+import { computed, useTemplateRef, watch, reactive } from 'vue';
 import type { WatermarkLayers, WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import { WatermarkRenderer } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import { i18n } from '@/i18n.js';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import MkPreviewWithControls from '@/features/ui-preview/components/MkPreviewWithControls.vue';
+import MkSampleImagePreview from '@/features/image-editor/components/MkSampleImagePreview.vue';
+import { useSampleImagePreview } from '@/features/image-editor/sample-image-preview.js';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
@@ -204,84 +198,31 @@ async function cancel() {
 watch(
 	layers,
 	async (newValue, oldValue) => {
-		if (renderer != null) {
-			renderer.render(layers);
-		}
+		getRenderer()?.render(layers);
 	},
 	{ deep: true },
 );
 
-const canvasEl = useTemplateRef('canvasEl');
+const preview = useTemplateRef<InstanceType<typeof MkSampleImagePreview>>('preview');
 
-const sampleImage_3_2 = new Image();
-sampleImage_3_2.src = '/client-assets/sample/3-2.jpg';
-const sampleImage_3_2_loading = new Promise<void>((resolve) => {
-	sampleImage_3_2.onload = () => resolve();
-});
-
-const sampleImage_2_3 = new Image();
-sampleImage_2_3.src = '/client-assets/sample/2-3.jpg';
-const sampleImage_2_3_loading = new Promise<void>((resolve) => {
-	sampleImage_2_3.onload = () => resolve();
-});
-
-const sampleImageType = ref(props.image != null ? 'provided' : '3_2');
-watch(sampleImageType, async () => {
-	if (sampleImageType.value === 'provided') {
-		return;
-	}
-	if (renderer != null) {
-		renderer.destroy(false);
-		renderer = null;
-		initRenderer();
-	}
-});
-
-let imageFile = props.image;
-
-async function choiceImage() {
-	const files = await os.chooseFileFromPc({ multiple: false });
-	if (files.length === 0) {
-		return;
-	}
-	imageFile = files[0];
-	sampleImageType.value = 'provided';
-	if (renderer != null) {
-		renderer.destroy(false);
-		renderer = null;
-		initRenderer();
-	}
-}
-
-let renderer: WatermarkRenderer | null = null;
-let imageBitmap: ImageBitmap | null = null;
-
-async function initRenderer() {
-	if (canvasEl.value == null) {
-		return;
-	}
-
-	if (sampleImageType.value === '3_2') {
-		renderer = new WatermarkRenderer({
-			canvas: canvasEl.value,
-			renderWidth: 1500,
-			renderHeight: 1000,
-			image: sampleImage_3_2,
-		});
-	} else if (sampleImageType.value === '2_3') {
-		renderer = new WatermarkRenderer({
-			canvas: canvasEl.value,
-			renderWidth: 1000,
-			renderHeight: 1500,
-			image: sampleImage_2_3,
-		});
-	} else if (imageFile != null) {
-		imageBitmap = await window.createImageBitmap(imageFile);
+const { sampleImageType, chooseImage, getRenderer, destroyRenderer } = useSampleImagePreview({
+	canvasEl: computed(() => preview.value?.canvasEl ?? null),
+	image: props.image,
+	createRenderer: (canvas, source) => {
+		if (source.type !== 'provided') {
+			const landscape = source.type === '3_2';
+			return new WatermarkRenderer({
+				canvas,
+				renderWidth: landscape ? 1500 : 1000,
+				renderHeight: landscape ? 1000 : 1500,
+				image: source.image,
+			});
+		}
 
 		const MAX_W = 1000;
 		const MAX_H = 1000;
-		let w = imageBitmap.width;
-		let h = imageBitmap.height;
+		let w = source.bitmap.width;
+		let h = source.bitmap.height;
 
 		if (w > MAX_W || h > MAX_H) {
 			const scale = Math.min(MAX_W / w, MAX_H / h);
@@ -289,47 +230,10 @@ async function initRenderer() {
 			h = Math.floor(h * scale);
 		}
 
-		renderer = new WatermarkRenderer({
-			canvas: canvasEl.value,
-			renderWidth: w,
-			renderHeight: h,
-			image: imageBitmap,
-		});
-	}
-
-	await renderer!.render(layers);
-}
-
-onMounted(async () => {
-	const closeWaiting = os.waiting();
-
-	await nextTick(); // waitingがレンダリングされるまで待つ
-
-	await sampleImage_3_2_loading;
-	await sampleImage_2_3_loading;
-
-	try {
-		await initRenderer();
-	} catch (err) {
-		console.error(err);
-		os.alert({
-			type: 'error',
-			text: i18n.ts._watermarkEditor.failedToLoadImage,
-		});
-	}
-
-	closeWaiting();
-});
-
-onUnmounted(() => {
-	if (renderer != null) {
-		renderer.destroy();
-		renderer = null;
-	}
-	if (imageBitmap != null) {
-		imageBitmap.close();
-		imageBitmap = null;
-	}
+		return new WatermarkRenderer({ canvas, renderWidth: w, renderHeight: h, image: source.bitmap });
+	},
+	render: (renderer) => renderer.render(layers),
+	failedToLoadImageText: i18n.ts._watermarkEditor.failedToLoadImage,
 });
 
 async function save() {
@@ -345,10 +249,7 @@ async function save() {
 		preset.name = name || '';
 
 		dialog.value?.close();
-		if (renderer != null) {
-			renderer.destroy();
-			renderer = null;
-		}
+		destroyRenderer();
 
 		emit('presetOk', {
 			...preset,
@@ -356,10 +257,7 @@ async function save() {
 		});
 	} else {
 		dialog.value?.close();
-		if (renderer != null) {
-			renderer.destroy();
-			renderer = null;
-		}
+		destroyRenderer();
 
 		emit('ok', layers);
 	}
@@ -442,52 +340,3 @@ function removeLayer(layer: WatermarkPreset['layers'][number]) {
 	}
 }
 </script>
-
-<style module>
-.previewContainer {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	user-select: none;
-	-webkit-user-drag: none;
-}
-
-.previewTitle {
-	position: absolute;
-	z-index: 100;
-	top: 8px;
-	left: 8px;
-	padding: 6px 10px;
-	border-radius: 6px;
-	font-size: 85%;
-}
-
-.previewControls {
-	position: absolute;
-	z-index: 100;
-	bottom: 8px;
-	right: 8px;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 6px 10px;
-	border-radius: 6px;
-}
-
-.previewControlsButton {
-	&.active {
-		color: var(--MI_THEME-accent);
-	}
-}
-
-.previewCanvas {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	padding: 20px;
-	box-sizing: border-box;
-	object-fit: contain;
-}
-</style>

@@ -25,9 +25,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, ref } from 'vue';
+import { inject, ref } from 'vue';
+import { useCustomEmojiUrl } from '@shared/utility/use-custom-emoji-url.js';
 import { customEmojisMap } from '@/custom-emojis.js';
-
 import { DI } from '@/di.js';
 
 const mediaProxy = inject(DI.mediaProxy)!;
@@ -42,36 +42,10 @@ const props = defineProps<{
 	fallbackToImage?: boolean;
 }>();
 
-const customEmojiName = computed(() =>
-	(props.name[0] === ':' ? props.name.substring(1, props.name.length - 1) : props.name).replace('@.', ''),
-);
-const isLocal = computed(
-	() => !props.host && (customEmojiName.value.endsWith('@.') || !customEmojiName.value.includes('@')),
-);
-
-const rawUrl = computed(() => {
-	if (props.url) {
-		return props.url;
-	}
-	if (isLocal.value) {
-		return customEmojisMap.get(customEmojiName.value)?.url ?? null;
-	}
-	return props.host ? `/emoji/${customEmojiName.value}@${props.host}.webp` : `/emoji/${customEmojiName.value}.webp`;
+const { customEmojiName, url, alt } = useCustomEmojiUrl(props, {
+	emojisMap: customEmojisMap,
+	getProxiedImageUrl: (...args) => mediaProxy.getProxiedImageUrl(...args),
 });
-
-const url = computed(() => {
-	if (rawUrl.value == null) {
-		return undefined;
-	}
-
-	const proxied =
-		rawUrl.value.startsWith('/emoji/') || (props.useOriginalSize && isLocal.value)
-			? rawUrl.value
-			: mediaProxy.getProxiedImageUrl(rawUrl.value, props.useOriginalSize ? undefined : 'emoji', false, true);
-	return proxied;
-});
-
-const alt = computed(() => `:${customEmojiName.value}:`);
 const errored = ref(url.value == null);
 </script>
 

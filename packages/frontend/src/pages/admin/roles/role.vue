@@ -61,6 +61,7 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
+import { selectExpiry } from '@/utility/select-expiry.js';
 import { definePage } from '@/page.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
@@ -123,50 +124,12 @@ async function del() {
 async function assign() {
 	const user = await os.selectUser({ includeSelf: true });
 
-	const { canceled: canceled2, result: period } = await os.select({
-		title: i18n.ts.period + ': ' + role.name,
-		items: [
-			{
-				value: 'indefinitely',
-				label: i18n.ts.indefinitely,
-			},
-			{
-				value: 'oneHour',
-				label: i18n.ts.oneHour,
-			},
-			{
-				value: 'oneDay',
-				label: i18n.ts.oneDay,
-			},
-			{
-				value: 'oneWeek',
-				label: i18n.ts.oneWeek,
-			},
-			{
-				value: 'oneMonth',
-				label: i18n.ts.oneMonth,
-			},
-		],
-		default: 'indefinitely',
-	});
-	if (canceled2) {
+	const expiry = await selectExpiry(i18n.ts.period + ': ' + role.name, ['oneHour', 'oneDay', 'oneWeek', 'oneMonth']);
+	if (expiry.canceled) {
 		return;
 	}
 
-	const expiresAt =
-		period === 'indefinitely'
-			? null
-			: period === 'oneHour'
-				? Date.now() + 1000 * 60 * 60
-				: period === 'oneDay'
-					? Date.now() + 1000 * 60 * 60 * 24
-					: period === 'oneWeek'
-						? Date.now() + 1000 * 60 * 60 * 24 * 7
-						: period === 'oneMonth'
-							? Date.now() + 1000 * 60 * 60 * 24 * 30
-							: null;
-
-	await os.apiWithDialog('admin/roles/assign', { roleId: role.id, userId: user.id, expiresAt });
+	await os.apiWithDialog('admin/roles/assign', { roleId: role.id, userId: user.id, expiresAt: expiry.expiresAt });
 	usersPaginator.reload();
 }
 

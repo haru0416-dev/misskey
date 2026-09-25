@@ -152,7 +152,12 @@ import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkGrid from '@/components/grid/MkGrid.vue';
-import { emptyStrToUndefined, gridSortOrderKeys } from '@/pages/admin/custom-emojis-manager2/impl.js';
+import {
+	emptyStrToUndefined,
+	gridSortOrderKeys,
+	settleEmojiRequest,
+	toRequestLogs,
+} from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import XRegisterLogs from '@/pages/admin/custom-emojis-manager2/logs.vue';
 import * as os from '@/os.js';
@@ -337,30 +342,16 @@ async function importEmojis(targets: GridItem[]) {
 	const result = await os.promiseDialog(
 		Promise.all(
 			targets.map((item) =>
-				misskeyApi('admin/emoji/copy', {
-					emojiId: item.id!,
-				})
-					.then(() => ({ item, success: true, err: undefined }))
-					.catch((err) => ({ item, success: false, err })),
+				settleEmojiRequest(
+					item,
+					misskeyApi('admin/emoji/copy', {
+						emojiId: item.id!,
+					}),
+				),
 			),
 		),
 	);
-	const failedItems = result.filter((it) => !it.success);
-
-	if (failedItems.length > 0) {
-		await os.alert({
-			type: 'error',
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts._customEmojisManager._gridCommon.alertEmojisRegisterFailedDescription,
-		});
-	}
-
-	requestLogs.value = result.map((it) => ({
-		failed: !it.success,
-		url: it.item.url,
-		name: it.item.name,
-		...(it.err ? { error: JSON.stringify(it.err) } : {}),
-	}));
+	requestLogs.value = await toRequestLogs(result);
 
 	await refreshCustomEmojis();
 }

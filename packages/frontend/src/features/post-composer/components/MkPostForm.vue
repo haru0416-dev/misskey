@@ -164,7 +164,7 @@ import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { DI } from '@/di.js';
 import { globalEvents } from '@/events.js';
-import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
 import { useUploader } from '@/features/drive/useUploader.js';
 import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
@@ -945,22 +945,7 @@ function onDragover(ev: DragEvent) {
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
 		ev.preventDefault();
 		draghover.value = true;
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
 	}
 }
 

@@ -24,32 +24,32 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div class="_gaps">
 			<div class="_gaps_s">
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_follow">{{ i18n.ts._webhookSettings._events.follow }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_follow)" @click="test('follow')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.follow">{{ i18n.ts._webhookSettings._events.follow }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.follow)" @click="test('follow')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_followed">{{ i18n.ts._webhookSettings._events.followed }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_followed)" @click="test('followed')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.followed">{{ i18n.ts._webhookSettings._events.followed }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.followed)" @click="test('followed')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_note">{{ i18n.ts._webhookSettings._events.note }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_note)" @click="test('note')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.note">{{ i18n.ts._webhookSettings._events.note }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.note)" @click="test('note')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_reply">{{ i18n.ts._webhookSettings._events.reply }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_reply)" @click="test('reply')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.reply">{{ i18n.ts._webhookSettings._events.reply }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.reply)" @click="test('reply')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_renote">{{ i18n.ts._webhookSettings._events.renote }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_renote)" @click="test('renote')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.renote">{{ i18n.ts._webhookSettings._events.renote }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.renote)" @click="test('renote')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_reaction" :disabled="true">{{ i18n.ts._webhookSettings._events.reaction }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_reaction)" @click="test('reaction')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.reaction" :disabled="true">{{ i18n.ts._webhookSettings._events.reaction }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.reaction)" @click="test('reaction')"><i class="ti ti-send"></i></MkButton>
 				</div>
 				<div :class="$style.switchBox">
-					<MkSwitch v-model="event_mention">{{ i18n.ts._webhookSettings._events.mention }}</MkSwitch>
-					<MkButton transparent :class="$style.testButton" :disabled="!(active && event_mention)" @click="test('mention')"><i class="ti ti-send"></i></MkButton>
+					<MkSwitch v-model="events.mention">{{ i18n.ts._webhookSettings._events.mention }}</MkSwitch>
+					<MkButton transparent :class="$style.testButton" :disabled="!(active && events.mention)" @click="test('mention')"><i class="ti ti-send"></i></MkButton>
 				</div>
 			</div>
 
@@ -79,6 +79,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
+import { useUserWebhookEventToggles } from '@/features/webhooks/user-webhook-events.js';
 import { useRouter } from '@/router.js';
 
 const router = useRouter();
@@ -96,44 +97,15 @@ const url = ref(webhook.url);
 const secret = ref(webhook.secret);
 const active = ref(webhook.active);
 
-const event_follow = ref(webhook.on.includes('follow'));
-const event_followed = ref(webhook.on.includes('followed'));
-const event_note = ref(webhook.on.includes('note'));
-const event_reply = ref(webhook.on.includes('reply'));
-const event_renote = ref(webhook.on.includes('renote'));
-const event_reaction = ref(webhook.on.includes('reaction'));
-const event_mention = ref(webhook.on.includes('mention'));
+const { events, selectedEvents } = useUserWebhookEventToggles((event) => webhook.on.includes(event));
 
 function save() {
-	const events: Misskey.entities.UserWebhook['on'] = [];
-	if (event_follow.value) {
-		events.push('follow');
-	}
-	if (event_followed.value) {
-		events.push('followed');
-	}
-	if (event_note.value) {
-		events.push('note');
-	}
-	if (event_reply.value) {
-		events.push('reply');
-	}
-	if (event_renote.value) {
-		events.push('renote');
-	}
-	if (event_reaction.value) {
-		events.push('reaction');
-	}
-	if (event_mention.value) {
-		events.push('mention');
-	}
-
 	os.apiWithDialog('i/webhooks/update', {
 		name: name.value,
 		url: url.value,
 		secret: secret.value,
 		webhookId: props.webhookId,
-		on: events,
+		on: selectedEvents(),
 		active: active.value,
 	});
 }
