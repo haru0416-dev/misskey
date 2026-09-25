@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="emoji"
 			:data-emoji="emoji"
 			class="_button item"
-			:disabled="disabledEmojis?.value.has(emoji)"
+			:disabled="disabledSet?.has(emoji)"
 			@pointerenter="computeButtonTitle"
 			@click="emit('chosen', emoji, $event)"
 		>
@@ -35,9 +35,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-for="child in customEmojiTree"
 			:key="`custom:${child.value}`"
 			:initialShown="initialShown"
-			:emojis="computed(() => (customEmojisByCategory.byCategory.get(child.category) ?? []).map(e => `:${e.name}:`))"
+			:emojis="(customEmojisByCategory.byCategory.get(child.category) ?? []).map(e => `:${e.name}:`)"
 			:hasChildSection="child.children.length !== 0"
 			:customEmojiTree="child.children"
+			:isDisabled="isDisabled"
 			@chosen="nestedChosen"
 		>
 			{{ child.value || i18n.ts.other }}
@@ -49,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="emoji"
 			:data-emoji="emoji"
 			class="_button item"
-			:disabled="disabledEmojis?.value.has(emoji)"
+			:disabled="disabledSet?.has(emoji)"
 			@pointerenter="computeButtonTitle"
 			@click="emit('chosen', emoji, $event)"
 		>
@@ -71,7 +72,12 @@ import MkEmojiPickerSection from '@/features/emoji-picker/components/MkEmojiPick
 
 const props = defineProps<{
 	emojis: string[] | Ref<string[]>;
-	disabledEmojis?: Ref<Set<string>>;
+	/**
+	 * リアクションできない絵文字か。開いたときに、このフォルダの絵文字にだけ使う。入れ子のフォルダにも渡す。
+	 * 以前はテンプレートで作った computed を渡していて、絵文字一覧の computed に購読が残り、ピッカーを閉じても
+	 * DOM ごと解放されなかった (開閉 1 回で約 1,300 ノード)。
+	 */
+	isDisabled?: ((emoji: string) => boolean) | undefined;
 	initialShown?: boolean;
 	hasChildSection?: boolean;
 	customEmojiTree?: CustomEmojiFolderTree[];
@@ -84,6 +90,10 @@ const emit = defineEmits<{
 const emojis = computed(() => Array.isArray(props.emojis) ? props.emojis : props.emojis.value);
 
 const shown = ref(!!props.initialShown);
+const disabledSet = computed(() => {
+	const isDisabled = props.isDisabled;
+	return shown.value && isDisabled ? new Set(emojis.value.filter((emoji) => isDisabled(emoji))) : null;
+});
 
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;

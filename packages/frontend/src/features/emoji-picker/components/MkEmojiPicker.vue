@@ -92,8 +92,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-for="child in customEmojiFolderRoot.children"
 				:key="`custom:${child.value}`"
 				:initialShown="false"
-				:emojis="computed(() => topFolderEmojis(child.value).map(e => `:${e.name}:`))"
-				:disabledEmojis="computed(() => new Set(topFolderEmojis(child.value).filter(e => !canReact(e)).map(e => `:${e.name}:`)))"
+				:emojis="topFolderEmojis(child.value).map(e => `:${e.name}:`)"
+				:isDisabled="isReactionDisabled"
 				:hasChildSection="child.children.length !== 0"
 				:customEmojiTree="child.children"
 				@chosen="chosen"
@@ -429,6 +429,10 @@ watch(q, () => {
 
 function canReact(emoji: Misskey.entities.EmojiSimple | UnicodeEmojiDef | string): boolean {
 	return !props.targetNote || checkReactionPermissions($i!, props.targetNote, emoji);
+}
+
+function isReactionDisabled(emoji: string): boolean {
+	return !canReact(getDef(emoji));
 }
 
 /** 最上位のフォルダの直下の絵文字。'' は未分類 (category が null・空・'null')。 */
