@@ -15,6 +15,7 @@ import type { MiNote } from '@/models/Note.js';
 
 export type QueueCleanRemoteNotesDependencies = {
 	db: MiDrizzleDatabase;
+	redis: Pick<import('ioredis').Redis, 'get' | 'set' | 'del'>;
 	meta: Pick<
 		MiMeta,
 		| 'enableRemoteNotesCleaning'
@@ -30,6 +31,12 @@ export type CleanRemoteNotesResult = {
 	skipped: boolean;
 	transientErrors: number;
 };
+
+/**
+ * 前回の走査位置。削除できないノート (ローカルから参照されているもの等) は毎回残るので、先頭から
+ * 走査し直すと大きなインスタンスでは時間切れのたびに同じ範囲を読み直し、後ろへ届かない。末尾まで届いたら消す。
+ */
+const CURSOR_KEY = 'cleanRemoteNotes:cursor';
 
 type CandidateNoteRow = {
 	id: MiNote['id'];
@@ -218,7 +225,9 @@ export async function handleQueueCleanRemoteNotes(
 	// 控えめな上限から始め、クエリ時間に応じて調整する。
 	const minimumLimit = 10;
 	let currentLimit = 100;
-	let cursorLeft = '0';
+	const savedCursor = await deps.redis.get(CURSOR_KEY);
+	// 保存期間の設定を縮めた場合など、再開位置が対象範囲の外なら先頭からやり直す。
+	let cursorLeft = savedCursor != null && savedCursor < initialConfig.newestLimit ? savedCursor : '0';
 
 	const stats = {
 		deletedCount: 0,
@@ -282,10 +291,12 @@ export async function handleQueueCleanRemoteNotes(
 
 					if (!lastId) {
 						reporter.log('No more notes to clean.');
+						await deps.redis.del(CURSOR_KEY);
 						break;
 					}
 
 					cursorLeft = lastId;
+					await deps.redis.set(CURSOR_KEY, cursorLeft);
 					continue;
 				}
 				currentLimit = Math.max(minimumLimit, Math.floor(currentLimit * 0.25));
@@ -296,6 +307,7 @@ export async function handleQueueCleanRemoteNotes(
 
 		if (noteIds.length === 0) {
 			reporter.log('No more notes to clean.');
+			await deps.redis.del(CURSOR_KEY);
 			break;
 		}
 
@@ -334,6 +346,7 @@ export async function handleQueueCleanRemoteNotes(
 		}
 
 		cursorLeft = noteIds.filter((result) => result.isBase).reduce((max, { id }) => (id > max ? id : max), cursorLeft);
+		await deps.redis.set(CURSOR_KEY, cursorLeft);
 
 		reporter.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);
 
