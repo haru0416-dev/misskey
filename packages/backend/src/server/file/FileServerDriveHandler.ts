@@ -90,7 +90,6 @@ export class FileServerDriveHandler {
 				attachStreamCleanup(image.data, file.cleanup);
 
 				reply.header('Content-Type', getSafeContentType(image.type));
-				reply.header('Content-Length', file.file.size);
 				reply.header('Cache-Control', 'max-age=31536000, immutable');
 				reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
 				return image.data;
@@ -104,7 +103,7 @@ export class FileServerDriveHandler {
 				setFileResponseHeaders(reply, { mime: file.mime, filename });
 				return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 			}
-			setFileResponseHeaders(reply, { mime: file.file.type, filename: file.filename, size: file.file.size });
+			setFileResponseHeaders(reply, { mime: file.file.type, filename: file.filename });
 			return handleRangeRequest(reply, getFileServerHeader(request.headers, 'range'), file.file.size, file.path);
 		} catch (e) {
 			if (file.kind === 'remote') {
