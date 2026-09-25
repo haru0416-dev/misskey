@@ -5,7 +5,8 @@
 
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
+import { isKeywordIncluded, isSupportedKeywordFilter } from '@/misc/is-keyword-included.js';
+import { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 
 // 正規表現形式 (/…/) と誤認されず、空白 AND 区切りとも衝突しない語だけを作る。
 const word = fc
@@ -126,5 +127,31 @@ describe('isKeywordIncluded', () => {
 			expect(isKeywordIncluded('spam here', ['/spam/g'])).toBe(true);
 		}
 		expect(isKeywordIncluded('clean', ['/spam/g'])).toBe(false);
+	});
+
+	test('破滅的なバックトラックを起こすパターンも入力長に比例する時間で照合する', () => {
+		// JS の RegExp では a が 24 個で 174 ms、2 個増えるごとに約 4 倍になるパターン。
+		const started = performance.now();
+		expect(isKeywordIncluded(`${'a'.repeat(4096)}b`, ['/(a+)+$/'])).toBe(false);
+		expect(performance.now() - started).toBeLessThan(100);
+	});
+
+	test('i・m・s フラグを照合に反映する', () => {
+		expect(isKeywordIncluded('SPAM', ['/spam/i'])).toBe(true);
+		expect(isKeywordIncluded('SPAM', ['/spam/'])).toBe(false);
+		expect(isKeywordIncluded('a\nspam', ['/^spam/m'])).toBe(true);
+		expect(isKeywordIncluded('a\nspam', ['/^spam/'])).toBe(false);
+		expect(isKeywordIncluded('a\nb', ['/a.b/s'])).toBe(true);
+		expect(isKeywordIncluded('a\nb', ['/a.b/'])).toBe(false);
+	});
+
+	test('RE2 で扱えない正規表現は設定として受け付けない', () => {
+		expect(isSupportedKeywordFilter('plain words')).toBe(true);
+		expect(isSupportedKeywordFilter('/spam\\d+/i')).toBe(true);
+		for (const filter of ['/(a)\\1/', '/foo(?=bar)/', '/x/v']) {
+			expect(isSupportedKeywordFilter(filter), filter).toBe(false);
+		}
+		expect(adminUpdateMetaParamDef.safeParse({ prohibitedWords: ['/(a)\\1/'] }).success).toBe(false);
+		expect(adminUpdateMetaParamDef.safeParse({ prohibitedWords: ['/spam/i', 'ng word'] }).success).toBe(true);
 	});
 });
