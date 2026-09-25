@@ -21,8 +21,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			]"
 		>
 			<template v-for="media in previewableMedia" :key="media.id">
-				<XVideo v-if="media.type.startsWith('video')" :class="$style.media" :video="media" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
-				<XImage v-else :class="$style.media" :image="media" :raw="raw" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
+				<XVideo v-if="media.type.startsWith('video')" :ref="(comp) => setMediaComponent(media.id, comp)" :class="$style.media" :video="media" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
+				<XImage v-else :ref="(comp) => setMediaComponent(media.id, comp)" :class="$style.media" :image="media" :raw="raw" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
 			</template>
 		</div>
 	</div>
@@ -63,6 +63,16 @@ const props = defineProps<{
 
 const gallery = useTemplateRef('gallery');
 const markerId = genId();
+
+// 各メディアがぼかしを外しているかを、画像ビューワーを開くときに問い合わせる。
+const mediaComponents = new Map<string, { isRevealed: () => boolean }>();
+function setMediaComponent(id: string, comp: unknown) {
+	if (comp == null) {
+		mediaComponents.delete(id);
+	} else {
+		mediaComponents.set(id, comp as { isRevealed: () => boolean });
+	}
+}
 const previewableMedia = computed(() => props.mediaList.filter(previewable));
 const count = computed(() => previewableMedia.value.length);
 
@@ -137,6 +147,7 @@ const openGallery = singleFlight(async (id?: string) => {
 			filename: media.name,
 			file: media,
 			sourceElement: getElementByMarker(`${markerId}:${media.id}`),
+			revealed: mediaComponents.get(media.id)?.isRevealed() === true,
 		};
 	});
 	const lightbox = await import('@/features/media-viewer/components/MkLightbox.vue');
