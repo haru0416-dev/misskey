@@ -16,8 +16,7 @@ import { Interpreter, Parser } from '@syuilo/aiscript';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import * as os from '@/os.js';
-import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
+import { aiScriptReadline, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
 import { $i } from '@/i.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
@@ -70,24 +69,7 @@ async function run() {
 		},
 	});
 
-	let ast;
-	try {
-		ast = parser.parse(widgetProps.script);
-	} catch {
-		os.alert({
-			type: 'error',
-			text: 'Syntax error :(',
-		});
-		return;
-	}
-	try {
-		await aiscript.exec(ast);
-	} catch (err) {
-		os.alert({
-			type: 'error',
-			text: err instanceof Error ? err.message : String(err),
-		});
-	}
+	await execAiScriptWithAlert(aiscript, parser, widgetProps.script);
 }
 
 defineExpose<WidgetComponentExpose>({

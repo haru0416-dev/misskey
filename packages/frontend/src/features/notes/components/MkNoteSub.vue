@@ -81,88 +81,12 @@ if (props.detail && props.note) {
 </script>
 
 <style lang="scss" module>
-.root {
-	padding: 16px 32px;
-	font-size: 0.9em;
-	position: relative;
+@use '@shared/styles/note-sub';
 
-	&.children {
-		padding: 10px 0 0 16px;
-		font-size: 1em;
-	}
-}
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.avatar, .body, .children, .colorBar, .cw, .header, .main, .more, .muted, .reply, .root, .text {}
 
-.main {
-	display: flex;
-}
-
-.colorBar {
-	position: absolute;
-	top: 8px;
-	left: 8px;
-	width: 5px;
-	height: calc(100% - 8px);
-	border-radius: 999px;
-	pointer-events: none;
-}
-
-.avatar {
-	flex-shrink: 0;
-	display: block;
-	margin: 0 8px 0 0;
-	width: 38px;
-	height: 38px;
-	border-radius: 8px;
-}
-
-.body {
-	flex: 1;
-	min-width: 0;
-}
-
-.header {
-	margin-bottom: 2px;
-}
-
-.cw {
-	cursor: default;
-	display: block;
-	margin: 0;
-	padding: 0;
-	overflow-wrap: break-word;
-}
-
-.text {
-	margin: 0;
-	padding: 0;
-}
-
-.reply, .more {
-	border-left: solid 0.5px var(--MI_THEME-divider);
-	margin-top: 10px;
-}
-
-.more {
-	padding: 10px 0 0 16px;
-}
-
-@container (max-width: 450px) {
-	.root {
-		padding: 14px 16px;
-
-		&.children {
-			padding: 10px 0 0 8px;
-		}
-	}
-}
-
-.muted {
-	text-align: center;
-	padding: 8px !important;
-	border: 1px solid var(--MI_THEME-divider);
-	margin: 8px 8px 0 8px;
-	border-radius: 8px;
-}
+@include note-sub.base;
 
 .deleted {
 	text-align: center;

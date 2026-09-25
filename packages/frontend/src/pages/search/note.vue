@@ -151,7 +151,7 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { apLookup } from '@/features/search/lookup.js';
+import { apLookup, openSearchShortcut } from '@/features/search/lookup.js';
 import { useRouter } from '@/router.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
@@ -391,60 +391,18 @@ async function search() {
 		return;
 	}
 
-	//#region AP lookup
-	if (searchParams.value.query.startsWith('https://') && !searchParams.value.query.includes(' ')) {
-		const confirm = await os.confirm({
-			type: 'info',
-			text: i18n.ts.lookupConfirm,
-		});
-		if (!confirm.canceled) {
-			const res = await apLookup(searchParams.value.query);
-
-			if (res.type === 'User') {
-				router.push('/@:acct/:page?', {
-					params: {
-						acct: `${res.object.username}@${res.object.host}`,
-					},
-				});
-			} else if (res.type === 'Note') {
-				router.push('/notes/:noteId/:initialTab?', {
-					params: {
-						noteId: res.object.id,
-					},
-				});
-			}
-
-			return;
-		}
-	}
-	//#endregion
-
-	if (searchParams.value.query.length > 1 && !searchParams.value.query.includes(' ')) {
-		if (searchParams.value.query.startsWith('@')) {
-			const confirm = await os.confirm({
-				type: 'info',
-				text: i18n.ts.lookupConfirm,
+	const opened = await openSearchShortcut(router, searchParams.value.query, {
+		fetchApObject: apLookup,
+		openTag: (tag) => {
+			router.push('/tags/:tag', {
+				params: {
+					tag,
+				},
 			});
-			if (!confirm.canceled) {
-				router.pushByPath(`/${searchParams.value.query}`);
-				return;
-			}
-		}
-
-		if (searchParams.value.query.startsWith('#')) {
-			const confirm = await os.confirm({
-				type: 'info',
-				text: i18n.ts.openTagPageConfirm,
-			});
-			if (!confirm.canceled) {
-				router.push('/tags/:tag', {
-					params: {
-						tag: searchParams.value.query.substring(1),
-					},
-				});
-				return;
-			}
-		}
+		},
+	});
+	if (opened) {
+		return;
 	}
 
 	paginator.value = markRaw(

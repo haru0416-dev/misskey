@@ -58,6 +58,7 @@ jobs:
             "packages/frontend/lib"
             "packages/frontend/public"
             "packages/frontend-shared/@types"
+            "packages/frontend-shared/styles"
             "packages/frontend-shared/utility"
             "packages/frontend/src"
             "packages/frontend/test"

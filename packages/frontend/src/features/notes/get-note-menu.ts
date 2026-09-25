@@ -393,6 +393,48 @@ export function getNoteMenu(props: {
 		}
 	}
 
+	function getNoteInfoMenuItems(): MenuItem[] {
+		const items: MenuItem[] = [
+			{
+				icon: 'ti ti-info-circle',
+				text: i18n.ts.details,
+				action: openDetail,
+			},
+			{
+				icon: 'ti ti-copy',
+				text: i18n.ts.copyContent,
+				action: copyContent,
+			},
+			getCopyNoteLinkMenu(appearNote, i18n.ts.copyLink),
+		];
+
+		if (link) {
+			items.push(
+				{
+					icon: 'ti ti-link',
+					text: i18n.ts.copyRemoteLink,
+					action: () => {
+						copyToClipboard(link);
+					},
+				},
+				{
+					icon: 'ti ti-external-link',
+					text: i18n.ts.showOnRemote,
+					action: () => {
+						window.open(link, '_blank', 'noopener');
+					},
+				},
+			);
+		} else {
+			const embedMenu = getNoteEmbedCodeMenu(appearNote, i18n.ts.embed);
+			if (embedMenu != null) {
+				items.push(embedMenu);
+			}
+		}
+
+		return items;
+	}
+
 	const menuItems: MenuItem[] = [];
 
 	if ($i) {
@@ -412,43 +454,7 @@ export function getNoteMenu(props: {
 			);
 		}
 
-		menuItems.push(
-			{
-				icon: 'ti ti-info-circle',
-				text: i18n.ts.details,
-				action: openDetail,
-			},
-			{
-				icon: 'ti ti-copy',
-				text: i18n.ts.copyContent,
-				action: copyContent,
-			},
-			getCopyNoteLinkMenu(appearNote, i18n.ts.copyLink),
-		);
-
-		if (link) {
-			menuItems.push(
-				{
-					icon: 'ti ti-link',
-					text: i18n.ts.copyRemoteLink,
-					action: () => {
-						copyToClipboard(link);
-					},
-				},
-				{
-					icon: 'ti ti-external-link',
-					text: i18n.ts.showOnRemote,
-					action: () => {
-						window.open(link, '_blank', 'noopener');
-					},
-				},
-			);
-		} else {
-			const embedMenu = getNoteEmbedCodeMenu(appearNote, i18n.ts.embed);
-			if (embedMenu != null) {
-				menuItems.push(embedMenu);
-			}
-		}
+		menuItems.push(...getNoteInfoMenuItems());
 
 		if (isSupportShare()) {
 			menuItems.push({
@@ -613,43 +619,7 @@ export function getNoteMenu(props: {
 			});
 		}
 	} else {
-		menuItems.push(
-			{
-				icon: 'ti ti-info-circle',
-				text: i18n.ts.details,
-				action: openDetail,
-			},
-			{
-				icon: 'ti ti-copy',
-				text: i18n.ts.copyContent,
-				action: copyContent,
-			},
-			getCopyNoteLinkMenu(appearNote, i18n.ts.copyLink),
-		);
-
-		if (link != null) {
-			menuItems.push(
-				{
-					icon: 'ti ti-link',
-					text: i18n.ts.copyRemoteLink,
-					action: () => {
-						copyToClipboard(link);
-					},
-				},
-				{
-					icon: 'ti ti-external-link',
-					text: i18n.ts.showOnRemote,
-					action: () => {
-						window.open(link, '_blank', 'noopener');
-					},
-				},
-			);
-		} else {
-			const embedMenu = getNoteEmbedCodeMenu(appearNote, i18n.ts.embed);
-			if (embedMenu != null) {
-				menuItems.push(embedMenu);
-			}
-		}
+		menuItems.push(...getNoteInfoMenuItems());
 	}
 
 	const noteActions = getPluginHandlers('note_action');

@@ -80,7 +80,9 @@ import {
 	emptyStrToEmptyArray,
 	emptyStrToNull,
 	emptyStrToUndefined,
-	roleIdsParser,
+	createRoleColumnSetting,
+	settleEmojiRequest,
+	toRequestLogs,
 } from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
@@ -213,51 +215,7 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'license', title: 'license', type: 'text', editable: true, width: 140 },
 			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
 			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
-			{
-				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction',
-				title: 'role',
-				type: 'text',
-				editable: true,
-				width: 140,
-				valueTransformer(row) {
-					// バックエンドからは ID と名前のペア配列で受け取るが、表示には名前だけを使う。
-					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
-						.map((it) => it.name)
-						.join(',');
-				},
-				async customValueEditor(row) {
-					// ID の直接入力は扱いづらいため、モーダルで選ばせる。
-					const item = gridItems.value[row.index];
-					if (item == null) {
-						return [];
-					}
-					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
-					const result = await os.selectRole({
-						initialRoleIds: current.map((it) => it.id),
-						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
-						infoMessage: i18n.ts.rolesThatCanBeUsedThisEmojiAsReactionEmptyDescription,
-						publicOnly: true,
-					});
-					if (result.canceled) {
-						return current;
-					}
-
-					const transform = result.result.map((it) => ({ id: it.id, name: it.name }));
-					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
-
-					return transform;
-				},
-				events: {
-					paste: roleIdsParser,
-					delete(cell) {
-						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
-						const item = gridItems.value[cell.row.index];
-						if (item != null) {
-							item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
-						}
-					},
-				},
-			},
+			createRoleColumnSetting(gridItems),
 			{ bindTo: 'type', type: 'text', editable: false, width: 90 },
 			{ bindTo: 'updatedAt', type: 'text', editable: false, width: 'auto' },
 			{ bindTo: 'publicUrl', type: 'text', editable: false, width: 180 },
@@ -369,39 +327,25 @@ async function onUpdateButtonClicked() {
 
 	const action = () => {
 		return updatedItems.map((item) =>
-			misskeyApi('admin/emoji/update', {
-				id: item.id!,
-				name: item.name,
-				category: emptyStrToNull(item.category),
-				aliases: emptyStrToEmptyArray(item.aliases),
-				license: emptyStrToNull(item.license),
-				isSensitive: item.isSensitive,
-				localOnly: item.localOnly,
-				roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
-				...(item.fileId === undefined ? {} : { fileId: item.fileId }),
-			})
-				.then(() => ({ item, success: true, err: undefined }))
-				.catch((err) => ({ item, success: false, err })),
+			settleEmojiRequest(
+				item,
+				misskeyApi('admin/emoji/update', {
+					id: item.id!,
+					name: item.name,
+					category: emptyStrToNull(item.category),
+					aliases: emptyStrToEmptyArray(item.aliases),
+					license: emptyStrToNull(item.license),
+					isSensitive: item.isSensitive,
+					localOnly: item.localOnly,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
+					...(item.fileId === undefined ? {} : { fileId: item.fileId }),
+				}),
+			),
 		);
 	};
 
 	const result = await os.promiseDialog(Promise.all(action()));
-	const failedItems = result.filter((it) => !it.success);
-
-	if (failedItems.length > 0) {
-		await os.alert({
-			type: 'error',
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts._customEmojisManager._gridCommon.alertEmojisRegisterFailedDescription,
-		});
-	}
-
-	requestLogs.value = result.map((it) => ({
-		failed: !it.success,
-		url: it.item.url,
-		name: it.item.name,
-		...(it.err ? { error: JSON.stringify(it.err) } : {}),
-	}));
+	requestLogs.value = await toRequestLogs(result);
 
 	await refreshCustomEmojis();
 }

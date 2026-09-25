@@ -1,0 +1,59 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// `//` (Sass の silent comment) を使うのは、`/* */` だと `@use` した各 style へ
+// このヘッダーがそのまま出力され、ビルド後の CSS に同じ文言が何度も混ざるため。
+//
+// 画面下部に浮かせる案内ポップアップ。z-index の v-bind は SFC の style 本文に書かないと
+// CSS 変数として束縛されないため、各コンポーネント側に置く。
+
+@mixin styles {
+	.root {
+		position: fixed;
+		bottom: var(--MI-margin);
+		left: 0;
+		right: 0;
+		margin: auto;
+		box-sizing: border-box;
+		width: calc(100% - (var(--MI-margin) * 2));
+		max-width: 500px;
+		display: flex;
+	}
+
+	.icon {
+		text-align: center;
+		padding-top: 25px;
+		width: 100px;
+		color: var(--MI_THEME-accent);
+	}
+	@media (max-width: 500px) {
+		.icon {
+			width: 80px;
+		}
+	}
+	@media (max-width: 450px) {
+		.icon {
+			width: 70px;
+		}
+	}
+
+	.main {
+		padding: 25px 25px 25px 0;
+		flex: 1;
+	}
+
+	.close {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		padding: 8px;
+	}
+
+	.title {
+		font-weight: bold;
+	}
+
+	.text {
+		margin: 0.7em 0 1em 0;
+	}
+}

@@ -1,0 +1,68 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// ヘッダーを `//` で書くのは、`/* */` だと `@use` した各 scoped style へそのまま出力されるため。
+//
+// frontend の MkNoteHeader と embed の EmNoteHeader で共有するスタイル。
+// CSS Modules のクラス名は `@include` した側のファイルで決まる。
+// vue-tsc は `@include` 先のセレクタを読まないので、利用側はテンプレートで使うクラス名を空のルールで列挙する。
+
+@mixin base {
+	.root {
+		display: flex;
+		align-items: baseline;
+		white-space: nowrap;
+	}
+
+	.name {
+		flex-shrink: 1;
+		display: block;
+		margin: 0 .5em 0 0;
+		padding: 0;
+		overflow: hidden;
+		font-size: 1em;
+		font-weight: bold;
+		text-decoration: none;
+		text-overflow: ellipsis;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	.isBot {
+		flex-shrink: 0;
+		align-self: center;
+		margin: 0 .5em 0 0;
+		padding: 1px 6px;
+		font-size: 80%;
+		border: solid 0.5px var(--MI_THEME-divider);
+		border-radius: 3px;
+	}
+
+	.username {
+		flex-shrink: 9999999;
+		margin: 0 .5em 0 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.info {
+		flex-shrink: 0;
+		margin-left: auto;
+		font-size: 0.9em;
+	}
+
+	.badgeRoles {
+		margin: 0 .5em 0 0;
+	}
+
+	.badgeRole {
+		height: 1.3em;
+		vertical-align: -20%;
+
+		& + .badgeRole {
+			margin-left: 0.2em;
+		}
+	}
+}

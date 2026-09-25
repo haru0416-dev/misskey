@@ -29,14 +29,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
+import { clockTimezonePropDef, useClockTimezone } from './use-clock-timezone.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkAnalogClock from '@/components/display/MkAnalogClock.vue';
 import MkDigitalClock from '@/components/display/MkDigitalClock.vue';
-import { timezones } from '@/utility/timezones.js';
 import { i18n } from '@/i18n.js';
 
 const name = 'clock';
@@ -135,18 +134,7 @@ const widgetPropsDef = {
 			label: i18n.ts._widgetOptions._clock.labelTimeAndTz,
 		}],
 	},
-	timezone: {
-		type: 'enum',
-		label: i18n.ts._widgetOptions._clock.timezone,
-		default: null,
-		enum: [...timezones.map((tz) => ({
-			label: tz.name,
-			value: tz.name.toLowerCase(),
-		})), {
-			label: i18n.ts.auto,
-			value: null,
-		}],
-	},
+	timezone: clockTimezonePropDef,
 } satisfies FormWithDefault;
 
 type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
@@ -160,15 +148,7 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-const tzAbbrev = computed(() => (widgetProps.timezone === null
-	? timezones.find((tz) => tz.name.toLowerCase() === Intl.DateTimeFormat().resolvedOptions().timeZone.toLowerCase())?.abbrev
-	: timezones.find((tz) => tz.name.toLowerCase() === widgetProps.timezone)?.abbrev) ?? '?');
-
-const tzOffset = computed(() => widgetProps.timezone === null
-	? 0 - new Date().getTimezoneOffset()
-	: timezones.find((tz) => tz.name.toLowerCase() === widgetProps.timezone)?.offset ?? 0);
-
-const tzOffsetLabel = computed(() => (tzOffset.value >= 0 ? '+' : '-') + Math.floor(tzOffset.value / 60).toString().padStart(2, '0') + ':' + (tzOffset.value % 60).toString().padStart(2, '0'));
+const { tzAbbrev, tzOffset, tzOffsetLabel } = useClockTimezone(() => widgetProps.timezone);
 
 defineExpose<WidgetComponentExpose>({
 	name,

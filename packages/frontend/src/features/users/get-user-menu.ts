@@ -10,6 +10,7 @@ import { host, url } from '@shared/utility/config.js';
 import type { Router } from '@/router.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
+import { selectExpiry } from '@/utility/select-expiry.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -34,52 +35,14 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 				user.isMuted = false;
 			});
 		} else {
-			const { canceled, result: period } = await os.select({
-				title: i18n.ts.mutePeriod,
-				items: [
-					{
-						value: 'indefinitely',
-						label: i18n.ts.indefinitely,
-					},
-					{
-						value: 'tenMinutes',
-						label: i18n.ts.tenMinutes,
-					},
-					{
-						value: 'oneHour',
-						label: i18n.ts.oneHour,
-					},
-					{
-						value: 'oneDay',
-						label: i18n.ts.oneDay,
-					},
-					{
-						value: 'oneWeek',
-						label: i18n.ts.oneWeek,
-					},
-				],
-				default: 'indefinitely',
-			});
-			if (canceled) {
+			const expiry = await selectExpiry(i18n.ts.mutePeriod, ['tenMinutes', 'oneHour', 'oneDay', 'oneWeek']);
+			if (expiry.canceled) {
 				return;
 			}
 
-			const expiresAt =
-				period === 'indefinitely'
-					? null
-					: period === 'tenMinutes'
-						? Date.now() + 1000 * 60 * 10
-						: period === 'oneHour'
-							? Date.now() + 1000 * 60 * 60
-							: period === 'oneDay'
-								? Date.now() + 1000 * 60 * 60 * 24
-								: period === 'oneWeek'
-									? Date.now() + 1000 * 60 * 60 * 24 * 7
-									: null;
-
 			os.apiWithDialog('mute/create', {
 				userId: user.id,
-				expiresAt,
+				expiresAt: expiry.expiresAt,
 			}).then(() => {
 				user.isMuted = true;
 			});
@@ -372,50 +335,17 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 						.map((r) => ({
 							text: r.name,
 							action: async () => {
-								const { canceled, result: period } = await os.select({
-									title: i18n.ts.period + ': ' + r.name,
-									items: [
-										{
-											value: 'indefinitely',
-											label: i18n.ts.indefinitely,
-										},
-										{
-											value: 'oneHour',
-											label: i18n.ts.oneHour,
-										},
-										{
-											value: 'oneDay',
-											label: i18n.ts.oneDay,
-										},
-										{
-											value: 'oneWeek',
-											label: i18n.ts.oneWeek,
-										},
-										{
-											value: 'oneMonth',
-											label: i18n.ts.oneMonth,
-										},
-									],
-									default: 'indefinitely',
-								});
-								if (canceled) {
+								const expiry = await selectExpiry(i18n.ts.period + ': ' + r.name, [
+									'oneHour',
+									'oneDay',
+									'oneWeek',
+									'oneMonth',
+								]);
+								if (expiry.canceled) {
 									return;
 								}
 
-								const expiresAt =
-									period === 'indefinitely'
-										? null
-										: period === 'oneHour'
-											? Date.now() + 1000 * 60 * 60
-											: period === 'oneDay'
-												? Date.now() + 1000 * 60 * 60 * 24
-												: period === 'oneWeek'
-													? Date.now() + 1000 * 60 * 60 * 24 * 7
-													: period === 'oneMonth'
-														? Date.now() + 1000 * 60 * 60 * 24 * 30
-														: null;
-
-								os.apiWithDialog('admin/roles/assign', { roleId: r.id, userId: user.id, expiresAt });
+								os.apiWithDialog('admin/roles/assign', { roleId: r.id, userId: user.id, expiresAt: expiry.expiresAt });
 							},
 						}));
 				},

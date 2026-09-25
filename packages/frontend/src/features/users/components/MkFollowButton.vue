@@ -185,65 +185,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" module>
-.root {
-	position: relative;
-	display: inline-block;
-	font-weight: bold;
-	color: var(--MI_THEME-fgOnWhite);
-	border: solid 1px var(--MI_THEME-accent);
-	padding: 0;
-	height: 31px;
+@use './follow-button';
+
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.active, .full, .root, .text, .wait {}
+
+@include follow-button.styles(var(--MI_THEME-fgOnWhite));
+
+.root.large {
 	font-size: 16px;
-	border-radius: 32px;
-	background: #fff;
-
-	&.full {
-		padding: 0 8px 0 12px;
-		font-size: 14px;
-	}
-
-	&.large {
-		font-size: 16px;
-		height: 38px;
-		padding: 0 12px 0 16px;
-	}
-
-	&:not(.full) {
-		width: 31px;
-	}
-
-	&:focus-visible {
-		outline-offset: 2px;
-	}
-
-	&:hover {
-	}
-
-	&:active {
-	}
-
-	&.active {
-		color: var(--MI_THEME-fgOnAccent);
-		background: var(--MI_THEME-accent);
-
-		&:hover {
-			background: hsl(from var(--MI_THEME-accent) h s calc(l + 10));
-			border-color: hsl(from var(--MI_THEME-accent) h s calc(l + 10));
-		}
-
-		&:active {
-			background: hsl(from var(--MI_THEME-accent) h s calc(l - 10));
-			border-color: hsl(from var(--MI_THEME-accent) h s calc(l - 10));
-		}
-	}
-
-	&.wait {
-		cursor: wait;
-		opacity: 0.7;
-	}
-}
-
-.text {
-	margin-right: 6px;
+	height: 38px;
+	padding: 0 12px 0 16px;
 }
 </style>

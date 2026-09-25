@@ -571,57 +571,15 @@ definePage(() => ({
 </script>
 
 <style lang="scss" module>
+@use '@/components/form/field-pair-list';
+
 .subCaption {
 	font-size: 0.85em;
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
 }
 
-.metadataRoot {
-	container-type: inline-size;
-}
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.dragItemForm, .dragItemHandle, .dragItemRemove, .fieldDragItem, .metadataRoot {}
 
-.fieldDragItem {
-	display: flex;
-	padding: 10px;
-	align-items: flex-end;
-	border-radius: 6px;
-
-	/* ドラッグボタン32px + 右余白8px + 入力欄200px×2 + 入力欄間12px = 452px */
-	@container (max-width: 452px) {
-		align-items: center;
-	}
-}
-
-.dragItemHandle {
-	cursor: grab;
-	width: 32px;
-	height: 32px;
-	margin: 0 8px 0 0;
-	opacity: 0.5;
-	flex-shrink: 0;
-
-	&:active {
-		cursor: grabbing;
-	}
-}
-
-.dragItemRemove {
-	@extend .dragItemHandle;
-
-	color: #ff2a2a;
-	opacity: 1;
-	cursor: pointer;
-
-	&:hover, &:focus {
-		opacity: .7;
-	}
-
-	&:active {
-		cursor: pointer;
-	}
-}
-
-.dragItemForm {
-	flex-grow: 1;
-}
+@include field-pair-list.styles;
 </style>

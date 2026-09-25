@@ -64,9 +64,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, watch, ref, defineAsyncComponent, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
-import type { MenuItem } from '@/types/menu.js';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
+import { getOthersContentMenuItems } from '@/features/abuse-reports/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
@@ -177,65 +177,17 @@ function edit() {
 	});
 }
 
-async function reportAbuse() {
-	if (!post.value) {
-		return;
-	}
-
-	const pageUrl = `${url}/gallery/${post.value.id}`;
-
-	const { dispose } = await os.popupAsyncWithDialog(
-		import('@/features/abuse-reports/components/MkAbuseReportWindow.vue').then((x) => x.default),
-		{
-			user: post.value.user,
-			initialComment: `Post: ${pageUrl}\n-----\n`,
-		},
-		{
-			closed: () => dispose(),
-		},
-	);
-}
-
 function showMenu(ev: PointerEvent) {
 	if (!post.value) {
 		return;
 	}
 
-	const menuItems: MenuItem[] = [];
-
-	if ($i && $i.id !== post.value.userId) {
-		menuItems.push({
-			icon: 'ti ti-exclamation-circle',
-			text: i18n.ts.reportAbuse,
-			action: reportAbuse,
-		});
-
-		if ($i.isModerator || $i.isAdmin) {
-			menuItems.push(
-				{
-					type: 'divider',
-				},
-				{
-					icon: 'ti ti-trash',
-					text: i18n.ts.delete,
-					danger: true,
-					action: () =>
-						os
-							.confirm({
-								type: 'warning',
-								text: i18n.ts.deleteConfirm,
-							})
-							.then(({ canceled }) => {
-								if (canceled || !post.value) {
-									return;
-								}
-
-								os.apiWithDialog('gallery/posts/delete', { postId: post.value.id });
-							}),
-				},
-			);
-		}
-	}
+	const postId = post.value.id;
+	const menuItems = getOthersContentMenuItems({
+		owner: post.value.user,
+		reportComment: `Post: ${url}/gallery/${postId}\n-----\n`,
+		onDelete: () => os.apiWithDialog('gallery/posts/delete', { postId }),
+	});
 
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }

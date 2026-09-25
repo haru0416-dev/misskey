@@ -66,7 +66,13 @@ import type { DroppedFile } from '@/features/drive/file-drop.js';
 import type { GridSetting } from '@/components/grid/grid.js';
 import type { GridRow } from '@/components/grid/row.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { emptyStrToEmptyArray, emptyStrToNull, roleIdsParser } from '@/pages/admin/custom-emojis-manager2/impl.js';
+import {
+	createRoleColumnSetting,
+	emptyStrToEmptyArray,
+	emptyStrToNull,
+	settleEmojiRequest,
+	toRequestLogs,
+} from '@/pages/admin/custom-emojis-manager2/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
 import MkSelect from '@/components/form/MkSelect.vue';
@@ -166,51 +172,7 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'license', title: 'license', type: 'text', editable: true, width: 140 },
 			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
 			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
-			{
-				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction',
-				title: 'role',
-				type: 'text',
-				editable: true,
-				width: 140,
-				valueTransformer: (row) => {
-					// バックエンドからは ID と名前のペア配列で受け取るが、表示には名前だけを使う。
-					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
-						.map((it) => it.name)
-						.join(',');
-				},
-				customValueEditor: async (row) => {
-					// ID の直接入力は扱いづらいため、モーダルで選ばせる。
-					const item = gridItems.value[row.index];
-					if (item == null) {
-						return [];
-					}
-					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
-					const result = await os.selectRole({
-						initialRoleIds: current.map((it) => it.id),
-						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
-						infoMessage: i18n.ts.rolesThatCanBeUsedThisEmojiAsReactionEmptyDescription,
-						publicOnly: true,
-					});
-					if (result.canceled) {
-						return current;
-					}
-
-					const transform = result.result.map((it) => ({ id: it.id, name: it.name }));
-					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
-
-					return transform;
-				},
-				events: {
-					paste: roleIdsParser,
-					delete(cell) {
-						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
-						const item = gridItems.value[cell.row.index];
-						if (item != null) {
-							item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
-						}
-					},
-				},
-			},
+			createRoleColumnSetting(gridItems),
 			{ bindTo: 'type', type: 'text', editable: false, width: 90 },
 		],
 		cells: {
@@ -261,38 +223,24 @@ async function onRegistryClicked() {
 	const items = gridItems.value;
 	const upload = () => {
 		return items.slice(0, MAXIMUM_EMOJI_REGISTER_COUNT).map((item) =>
-			misskeyApi('admin/emoji/add', {
-				name: item.name,
-				category: emptyStrToNull(item.category),
-				aliases: emptyStrToEmptyArray(item.aliases),
-				license: emptyStrToNull(item.license),
-				isSensitive: item.isSensitive,
-				localOnly: item.localOnly,
-				roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
-				fileId: item.fileId!,
-			})
-				.then(() => ({ item, success: true, err: undefined }))
-				.catch((err) => ({ item, success: false, err })),
+			settleEmojiRequest(
+				item,
+				misskeyApi('admin/emoji/add', {
+					name: item.name,
+					category: emptyStrToNull(item.category),
+					aliases: emptyStrToEmptyArray(item.aliases),
+					license: emptyStrToNull(item.license),
+					isSensitive: item.isSensitive,
+					localOnly: item.localOnly,
+					roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map((it) => it.id),
+					fileId: item.fileId!,
+				}),
+			),
 		);
 	};
 
 	const result = await os.promiseDialog(Promise.all(upload()));
-	const failedItems = result.filter((it) => !it.success);
-
-	if (failedItems.length > 0) {
-		await os.alert({
-			type: 'error',
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts._customEmojisManager._gridCommon.alertEmojisRegisterFailedDescription,
-		});
-	}
-
-	requestLogs.value = result.map((it) => ({
-		failed: !it.success,
-		url: it.item.url,
-		name: it.item.name,
-		...(it.err ? { error: JSON.stringify(it.err) } : {}),
-	}));
+	requestLogs.value = await toRequestLogs(result);
 
 	// 登録に成功したものは一覧から除く
 	const successItems = new Set(result.filter((it) => it.success).map((it) => it.item));

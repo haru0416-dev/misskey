@@ -85,6 +85,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';
 import { i18n } from '@/i18n.js';
+import { selectExpiry } from '@/utility/select-expiry.js';
 import { definePage } from '@/page.js';
 import { deviceKind } from '@/utility/device-kind.js';
 import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
@@ -221,52 +222,14 @@ async function mute() {
 	}
 	const _channel = channel.value;
 
-	const { canceled, result: period } = await os.select({
-		title: i18n.ts.mutePeriod,
-		items: [
-			{
-				value: 'indefinitely',
-				label: i18n.ts.indefinitely,
-			},
-			{
-				value: 'tenMinutes',
-				label: i18n.ts.tenMinutes,
-			},
-			{
-				value: 'oneHour',
-				label: i18n.ts.oneHour,
-			},
-			{
-				value: 'oneDay',
-				label: i18n.ts.oneDay,
-			},
-			{
-				value: 'oneWeek',
-				label: i18n.ts.oneWeek,
-			},
-		],
-		default: 'indefinitely',
-	});
-	if (canceled) {
+	const expiry = await selectExpiry(i18n.ts.mutePeriod, ['tenMinutes', 'oneHour', 'oneDay', 'oneWeek']);
+	if (expiry.canceled) {
 		return;
 	}
 
-	const expiresAt =
-		period === 'indefinitely'
-			? null
-			: period === 'tenMinutes'
-				? Date.now() + 1000 * 60 * 10
-				: period === 'oneHour'
-					? Date.now() + 1000 * 60 * 60
-					: period === 'oneDay'
-						? Date.now() + 1000 * 60 * 60 * 24
-						: period === 'oneWeek'
-							? Date.now() + 1000 * 60 * 60 * 24 * 7
-							: null;
-
 	os.apiWithDialog('channels/mute/create', {
 		channelId: _channel.id,
-		expiresAt,
+		expiresAt: expiry.expiresAt,
 	}).then(() => {
 		_channel.isMuting = true;
 	});

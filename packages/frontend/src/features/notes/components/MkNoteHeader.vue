@@ -50,67 +50,19 @@ const mock = inject(DI.mock, false);
 </script>
 
 <style lang="scss" module>
-.root {
-	display: flex;
-	align-items: baseline;
-	white-space: nowrap;
-}
+@use '@shared/styles/note-header';
 
-.name {
-	flex-shrink: 1;
-	display: block;
-	margin: 0 .5em 0 0;
-	padding: 0;
-	overflow: hidden;
-	font-size: 1em;
-	font-weight: bold;
-	text-decoration: none;
-	text-overflow: ellipsis;
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.badgeRole, .badgeRoles, .isBot, .name, .root, .username {}
 
-	&:hover {
-		text-decoration: underline;
-	}
-}
+@include note-header.base;
 
-.isBot {
-	flex-shrink: 0;
-	align-self: center;
-	margin: 0 .5em 0 0;
-	padding: 1px 6px;
-	font-size: 80%;
-	border: solid 0.5px var(--MI_THEME-divider);
-	border-radius: 3px;
-}
-
-.username {
-	flex-shrink: 9999999;
-	margin: 0 .5em 0 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
+// 投稿日時のリンクは押せる範囲を上下左右に広げる。embed は時刻を押す操作を想定しないので持たない。
 .info {
-	flex-shrink: 0;
-	margin-left: auto;
-	font-size: 0.9em;
-
 	> a {
 		display: inline-block;
 		padding: 6px 0 6px 6px;
 		margin: -6px 0 -6px -6px;
-	}
-}
-
-.badgeRoles {
-	margin: 0 .5em 0 0;
-}
-
-.badgeRole {
-	height: 1.3em;
-	vertical-align: -20%;
-
-	& + .badgeRole {
-		margin-left: 0.2em;
 	}
 }
 </style>

@@ -18,15 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<MkPreviewWithControls>
 		<template #preview>
-			<canvas ref="canvasEl" :class="$style.previewCanvas"></canvas>
-			<div :class="$style.previewContainer">
-				<div class="_acrylic" :class="$style.previewTitle">{{ i18n.ts.preview }}</div>
-				<div v-if="props.image == null" class="_acrylic" :class="$style.previewControls">
-					<button class="_button" :class="[$style.previewControlsButton, sampleImageType === '3_2' ? $style.active : null]" @click="sampleImageType = '3_2'"><i class="ti ti-crop-landscape"></i></button>
-					<button class="_button" :class="[$style.previewControlsButton, sampleImageType === '2_3' ? $style.active : null]" @click="sampleImageType = '2_3'"><i class="ti ti-crop-portrait"></i></button>
-					<button class="_button" :class="[$style.previewControlsButton]" @click="choiceImage"><i class="ti ti-upload"></i></button>
-				</div>
-			</div>
+			<MkSampleImagePreview ref="preview" v-model:sampleImageType="sampleImageType" :showSampleControls="props.image == null" @chooseImage="chooseImage"/>
 		</template>
 
 		<template #controls>
@@ -35,11 +27,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label>{{ i18n.ts._imageFrameEditor.borderThickness }}</template>
 				</MkRange>
 
-				<MkInput :modelValue="getHex(params.bgColor)" type="color" @update:modelValue="v => { const c = getRgb(v); if (c != null) params.bgColor = c; }">
+				<MkInput :modelValue="rgbToHex(params.bgColor)" type="color" @update:modelValue="v => { const c = hexToRgb(v); if (c != null) params.bgColor = c; }">
 					<template #label>{{ i18n.ts._imageFrameEditor.backgroundColor }}</template>
 				</MkInput>
 
-				<MkInput :modelValue="getHex(params.fgColor)" type="color" @update:modelValue="v => { const c = getRgb(v); if (c != null) params.fgColor = c; }">
+				<MkInput :modelValue="rgbToHex(params.fgColor)" type="color" @update:modelValue="v => { const c = hexToRgb(v); if (c != null) params.fgColor = c; }">
 					<template #label>{{ i18n.ts._imageFrameEditor.textColor }}</template>
 				</MkInput>
 
@@ -153,13 +145,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue';
+import { computed, useTemplateRef, watch, reactive } from 'vue';
 import ExifReader from 'exifreader';
 import { throttle } from 'throttle-debounce';
 import MkPreviewWithControls from '@/features/ui-preview/components/MkPreviewWithControls.vue';
+import MkSampleImagePreview from '@/features/image-editor/components/MkSampleImagePreview.vue';
+import { useSampleImagePreview } from '@/features/image-editor/sample-image-preview.js';
 import type { ImageFrameParams, ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { ImageFrameRenderer } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { i18n } from '@/i18n.js';
+import { hexToRgb, rgbToHex } from '@/features/image-editor/color.js';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
@@ -241,9 +236,7 @@ async function cancel() {
 }
 
 const updateThrottled = throttle(50, () => {
-	if (renderer != null) {
-		renderer.render(params);
-	}
+	getRenderer()?.render(params);
 });
 
 watch(
@@ -254,122 +247,36 @@ watch(
 	{ deep: true },
 );
 
-const canvasEl = useTemplateRef('canvasEl');
+const preview = useTemplateRef<InstanceType<typeof MkSampleImagePreview>>('preview');
 
-const sampleImage_3_2 = new Image();
-sampleImage_3_2.src = '/client-assets/sample/3-2.jpg';
-const sampleImage_3_2_loading = new Promise<void>((resolve) => {
-	sampleImage_3_2.onload = () => resolve();
-});
+const { sampleImageType, chooseImage, getRenderer, destroyRenderer } = useSampleImagePreview({
+	canvasEl: computed(() => preview.value?.canvasEl ?? null),
+	image: props.image,
+	createRenderer: async (canvas, source) => {
+		if (source.type !== 'provided') {
+			return new ImageFrameRenderer({
+				canvas,
+				image: source.image,
+				exif: null,
+				caption: 'Example caption',
+				filename: 'example_file_name.jpg',
+				renderAsPreview: true,
+			});
+		}
 
-const sampleImage_2_3 = new Image();
-sampleImage_2_3.src = '/client-assets/sample/2-3.jpg';
-const sampleImage_2_3_loading = new Promise<void>((resolve) => {
-	sampleImage_2_3.onload = () => resolve();
-});
+		const exif = ExifReader.load(await source.file.arrayBuffer());
 
-const sampleImageType = ref(props.image != null ? 'provided' : '3_2');
-watch(sampleImageType, async () => {
-	if (sampleImageType.value === 'provided') {
-		return;
-	}
-	if (renderer != null) {
-		renderer.destroy(false);
-		renderer = null;
-		initRenderer();
-	}
-});
-
-let imageFile = props.image;
-
-async function choiceImage() {
-	const files = await os.chooseFileFromPc({ multiple: false });
-	if (files.length === 0) {
-		return;
-	}
-	imageFile = files[0];
-	sampleImageType.value = 'provided';
-	if (renderer != null) {
-		renderer.destroy(false);
-		renderer = null;
-		initRenderer();
-	}
-}
-
-let renderer: ImageFrameRenderer | null = null;
-let imageBitmap: ImageBitmap | null = null;
-
-async function initRenderer() {
-	if (canvasEl.value == null) {
-		return;
-	}
-
-	if (sampleImageType.value === '3_2') {
-		renderer = new ImageFrameRenderer({
-			canvas: canvasEl.value,
-			image: sampleImage_3_2,
-			exif: null,
-			caption: 'Example caption',
-			filename: 'example_file_name.jpg',
-			renderAsPreview: true,
-		});
-	} else if (sampleImageType.value === '2_3') {
-		renderer = new ImageFrameRenderer({
-			canvas: canvasEl.value,
-			image: sampleImage_2_3,
-			exif: null,
-			caption: 'Example caption',
-			filename: 'example_file_name.jpg',
-			renderAsPreview: true,
-		});
-	} else if (imageFile != null) {
-		imageBitmap = await window.createImageBitmap(imageFile);
-
-		const exif = ExifReader.load(await imageFile.arrayBuffer());
-
-		renderer = new ImageFrameRenderer({
-			canvas: canvasEl.value,
-			image: imageBitmap,
+		return new ImageFrameRenderer({
+			canvas,
+			image: source.bitmap,
 			exif,
 			caption: props.imageCaption ?? null,
 			filename: props.imageFilename ?? null,
 			renderAsPreview: true,
 		});
-	}
-
-	await renderer!.render(params);
-}
-
-onMounted(async () => {
-	const closeWaiting = os.waiting();
-
-	await nextTick(); // waitingがレンダリングされるまで待つ
-
-	await sampleImage_3_2_loading;
-	await sampleImage_2_3_loading;
-
-	try {
-		await initRenderer();
-	} catch (err) {
-		console.error(err);
-		os.alert({
-			type: 'error',
-			text: i18n.ts._imageFrameEditor.failedToLoadImage,
-		});
-	}
-
-	closeWaiting();
-});
-
-onUnmounted(() => {
-	if (renderer != null) {
-		renderer.destroy();
-		renderer = null;
-	}
-	if (imageBitmap != null) {
-		imageBitmap.close();
-		imageBitmap = null;
-	}
+	},
+	render: (renderer) => renderer.render(params),
+	failedToLoadImageText: i18n.ts._imageFrameEditor.failedToLoadImage,
 });
 
 async function save() {
@@ -385,10 +292,7 @@ async function save() {
 		preset.name = name || '';
 
 		dialog.value?.close();
-		if (renderer != null) {
-			renderer.destroy();
-			renderer = null;
-		}
+		destroyRenderer();
 
 		emit('presetOk', {
 			...preset,
@@ -396,93 +300,10 @@ async function save() {
 		});
 	} else {
 		dialog.value?.close();
-		if (renderer != null) {
-			renderer.destroy();
-			renderer = null;
-		}
+		destroyRenderer();
 
 		emit('ok', params);
 	}
 }
 
-function getHex(c: [number, number, number]) {
-	return `#${c
-		.map((x) =>
-			Math.round(x * 255)
-				.toString(16)
-				.padStart(2, '0'),
-		)
-		.join('')}`;
-}
-
-function getRgb(hex: string | number): [number, number, number] | null {
-	if (typeof hex === 'number' || typeof hex !== 'string' || !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex)) {
-		return null;
-	}
-
-	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
-	if (m == null) {
-		return [0, 0, 0];
-	}
-	return m.map((x) => Number.parseInt(x, 16) / 255) as [number, number, number];
-}
 </script>
-
-<style module>
-.previewContainer {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	user-select: none;
-	-webkit-user-drag: none;
-}
-
-.previewTitle {
-	position: absolute;
-	z-index: 100;
-	top: 8px;
-	left: 8px;
-	padding: 6px 10px;
-	border-radius: 6px;
-	font-size: 85%;
-}
-
-.previewControls {
-	position: absolute;
-	z-index: 100;
-	bottom: 8px;
-	right: 8px;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 6px 10px;
-	border-radius: 6px;
-}
-
-.previewControlsButton {
-	&.active {
-		color: var(--MI_THEME-accent);
-	}
-}
-
-.previewSpinner {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	pointer-events: none;
-	user-select: none;
-	-webkit-user-drag: none;
-}
-
-.previewCanvas {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	padding: 20px;
-	box-sizing: border-box;
-	object-fit: contain;
-}
-</style>

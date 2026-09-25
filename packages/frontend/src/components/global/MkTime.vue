@@ -16,6 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
 import { dateTimeFormat } from '@shared/utility/intl-const.js';
+import { toTimeMs } from '@shared/utility/time-input.js';
 import { useLowresTime } from '@/composables/useLowresTime.js';
 
 const props = withDefaults(
@@ -31,20 +32,7 @@ const props = withDefaults(
 	},
 );
 
-function getDateSafe(n: Date | string | number) {
-	try {
-		if (n instanceof Date) {
-			return n;
-		}
-		return new Date(n);
-	} catch {
-		return {
-			getTime: () => Number.NaN,
-		};
-	}
-}
-
-const _time = props.time == null ? Number.NaN : getDateSafe(props.time).getTime();
+const _time = toTimeMs(props.time);
 const invalid = Number.isNaN(_time);
 const absolute = !invalid ? dateTimeFormat.format(_time) : i18n.ts._ago.invalid;
 

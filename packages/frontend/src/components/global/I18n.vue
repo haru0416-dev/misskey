@@ -10,6 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts" generic="T extends string | ParameterizedString">
 import { computed, h } from 'vue';
 import type { ParameterizedString } from 'i18n';
+import { splitI18nSlotTemplate } from '@shared/utility/i18n-slot-template.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -25,30 +26,7 @@ const props = withDefaults(
 const slots =
 	defineSlots<T extends ParameterizedString<infer R> ? { [K in R]: () => unknown } : NonNullable<unknown>>();
 
-const parsed = computed(() => {
-	let str = props.src as string;
-	const value: (string | { arg: string })[] = [];
-	for (;;) {
-		const nextBracketOpen = str.indexOf('{');
-		const nextBracketClose = str.indexOf('}');
-
-		if (nextBracketOpen === -1) {
-			value.push(str);
-			break;
-		} else {
-			if (nextBracketOpen > 0) {
-				value.push(str.substring(0, nextBracketOpen));
-			}
-			value.push({
-				arg: str.substring(nextBracketOpen + 1, nextBracketClose),
-			});
-		}
-
-		str = str.substring(nextBracketClose + 1);
-	}
-
-	return value;
-});
+const parsed = computed(() => splitI18nSlotTemplate(props.src as string));
 
 const render = () => {
 	return h(

@@ -300,39 +300,16 @@ function getMfmOptions(
 	def: values.Value | undefined,
 	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
 ): Options<AsUiMfm> {
+	const textOptions = getTextOptions(def);
 	utils.assertObject(def);
 
-	const text = def.value.get('text');
-	if (text) {
-		utils.assertString(text);
-	}
-	const size = def.value.get('size');
-	if (size) {
-		utils.assertNumber(size);
-	}
-	const bold = def.value.get('bold');
-	if (bold) {
-		utils.assertBoolean(bold);
-	}
-	const color = def.value.get('color');
-	if (color) {
-		utils.assertString(color);
-	}
-	const font = def.value.get('font');
-	if (font) {
-		assertStringAndIsIn(font, FONTS);
-	}
 	const onClickEv = def.value.get('onClickEv');
 	if (onClickEv) {
 		utils.assertFunction(onClickEv);
 	}
 
 	return {
-		text: text?.value,
-		size: size?.value,
-		bold: bold?.value,
-		color: color?.value,
-		font: font?.value,
+		...textOptions,
 		onClickEv: async (evId: string) => {
 			if (onClickEv) {
 				await call(onClickEv, [values.STR(evId)]);
@@ -376,40 +353,11 @@ function getTextInputOptions(
 	};
 }
 
-function getTextareaOptions(
+// textarea と textInput は受け付ける項目と型が同じ。
+const getTextareaOptions: (
 	def: values.Value | undefined,
 	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
-): Options<AsUiTextarea> {
-	utils.assertObject(def);
-
-	const onInput = def.value.get('onInput');
-	if (onInput) {
-		utils.assertFunction(onInput);
-	}
-	const defaultValue = def.value.get('default');
-	if (defaultValue) {
-		utils.assertString(defaultValue);
-	}
-	const label = def.value.get('label');
-	if (label) {
-		utils.assertString(label);
-	}
-	const caption = def.value.get('caption');
-	if (caption) {
-		utils.assertString(caption);
-	}
-
-	return {
-		onInput: async (v) => {
-			if (onInput) {
-				await call(onInput, [utils.jsToVal(v)]);
-			}
-		},
-		default: defaultValue?.value,
-		label: label?.value,
-		caption: caption?.value,
-	};
-}
+) => Options<AsUiTextarea> = getTextInputOptions;
 
 function getNumberInputOptions(
 	def: values.Value | undefined,

@@ -50,65 +50,10 @@ const collapsed = ref(isLong);
 </script>
 
 <style lang="scss" module>
-.root {
-	overflow-wrap: break-word;
+@use '@shared/styles/note-content';
 
-	&.collapsed {
-		position: relative;
-		max-height: 9em;
-		overflow: clip;
+// 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
+.collapsed, .fade, .fadeLabel, .reply, .root, .rp, .showLess, .showLessLabel {}
 
-		> .fade {
-			display: block;
-			position: absolute;
-			bottom: 0;
-			left: 0;
-			width: 100%;
-			height: 64px;
-			background: linear-gradient(0deg, var(--MI_THEME-panel), color(from var(--MI_THEME-panel) srgb r g b / 0));
-
-			> .fadeLabel {
-				display: inline-block;
-				background: var(--MI_THEME-panel);
-				padding: 6px 10px;
-				font-size: 0.8em;
-				border-radius: 999px;
-				box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
-			}
-
-			&:hover {
-				> .fadeLabel {
-					background: var(--MI_THEME-panelHighlight);
-				}
-			}
-		}
-	}
-}
-
-.reply {
-	margin-right: 6px;
-	color: var(--MI_THEME-accent);
-}
-
-.rp {
-	margin-left: 4px;
-	font-style: oblique;
-	color: var(--MI_THEME-renote);
-}
-
-.showLess {
-	width: 100%;
-	margin-top: 14px;
-	position: sticky;
-	bottom: calc(var(--MI-stickyBottom, 0px) + 14px);
-}
-
-.showLessLabel {
-	display: inline-block;
-	background: var(--MI_THEME-popup);
-	padding: 6px 10px;
-	font-size: 0.8em;
-	border-radius: 999px;
-	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
-}
+@include note-content.sub-note-content;
 </style>

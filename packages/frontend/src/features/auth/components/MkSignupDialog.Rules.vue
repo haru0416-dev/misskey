@@ -25,9 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts.serverRules }}</template>
 				<template #suffix><i v-if="agreeServerRules" class="ti ti-check" style="color: var(--MI_THEME-success)"></i></template>
 
-				<ol class="_gaps_s" :class="$style.rules">
-					<li v-for="item in instance.serverRules" :class="$style.rule"><div :class="$style.ruleText" v-html="item"></div></li>
-				</ol>
+				<MkServerRules/>
 
 				<MkSwitch :modelValue="agreeServerRules" style="margin-top: 16px;" @update:modelValue="updateAgreeServerRules">{{ i18n.ts.agree }}</MkSwitch>
 			</MkFolder>
@@ -66,6 +64,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import { instance } from '@/instance.js';
+import MkServerRules from '@/features/instances/components/MkServerRules.vue';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
@@ -163,41 +162,5 @@ async function updateAgreeNote(v: boolean) {
 	font-size: 26px;
 	background-color: var(--MI_THEME-accentedBg);
 	color: var(--MI_THEME-accent);
-}
-
-.rules {
-	counter-reset: item;
-	list-style: none;
-	padding: 0;
-	margin: 0;
-}
-
-.rule {
-	display: flex;
-	gap: 8px;
-	word-break: break-word;
-
-	&::before {
-		flex-shrink: 0;
-		display: flex;
-		position: sticky;
-		top: calc(var(--MI-stickyTop, 0px) + 8px);
-		counter-increment: item;
-		content: counter(item);
-		width: 32px;
-		height: 32px;
-		line-height: 32px;
-		background-color: var(--MI_THEME-accentedBg);
-		color: var(--MI_THEME-accent);
-		font-size: 13px;
-		font-weight: bold;
-		align-items: center;
-		justify-content: center;
-		border-radius: 999px;
-	}
-}
-
-.ruleText {
-	padding-top: 6px;
 }
 </style>

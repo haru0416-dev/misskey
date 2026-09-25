@@ -38,12 +38,11 @@ import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
-import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
-import { selectDriveFolder } from '@/features/drive/drive.js';
+import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/drag-and-drop.js';
+import { alertDriveFolderMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -101,22 +100,7 @@ function onDragover(ev: DragEvent) {
 
 	const isFile = ev.dataTransfer.items[0]?.kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles', 'driveFolders'])) {
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
 	} else {
 		ev.dataTransfer.dropEffect = 'none';
 	}
@@ -149,19 +133,7 @@ function onDrop(ev: DragEvent) {
 	{
 		const droppedData = getDragData(ev, 'driveFiles');
 		if (droppedData != null) {
-			misskeyApi('drive/files/move-bulk', {
-				fileIds: droppedData.map((f) => f.id),
-				folderId: props.folder.id,
-			}).then(() => {
-				globalEvents.emit(
-					'driveFilesUpdated',
-					droppedData.map((x) => ({
-						...x,
-						folderId: props.folder.id,
-						folder: props.folder,
-					})),
-				);
-			});
+			moveDriveFilesToFolder(droppedData, props.folder);
 		}
 	}
 	//#endregion
@@ -180,37 +152,7 @@ function onDrop(ev: DragEvent) {
 				return;
 			}
 
-			misskeyApi('drive/folders/update', {
-				folderId: droppedFolder.id,
-				parentId: props.folder.id,
-			})
-				.then(() => {
-					globalEvents.emit(
-						'driveFoldersUpdated',
-						[droppedFolder].map((x) => ({
-							...x,
-							parentId: props.folder.id,
-							parent: props.folder,
-						})),
-					);
-				})
-				.catch((err) => {
-					switch (err.code) {
-						case 'RECURSIVE_NESTING':
-							claimAchievement('driveFolderCircularReference');
-							os.alert({
-								type: 'error',
-								title: i18n.ts.unableToProcess,
-								text: i18n.ts.circularReferenceFolder,
-							});
-							break;
-						default:
-							os.alert({
-								type: 'error',
-								text: i18n.ts.somethingHappened,
-							});
-					}
-				});
+			moveDriveFolderToFolder(droppedFolder, props.folder).catch(alertDriveFolderMoveError);
 		}
 	}
 	//#endregion

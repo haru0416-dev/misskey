@@ -15,6 +15,7 @@ import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { instance } from '@/instance.js';
 import { globalEvents } from '@/events.js';
+import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';
 import { genId } from '@/utility/id.js';
 
@@ -226,6 +227,88 @@ export function chooseFileFromPcAndUpload(
 			});
 		});
 	});
+}
+
+// アイコン・バナー用。切り抜くかを利用者に確認してからアップロードする。選択やアップロードが取り消されたら null。
+export async function chooseImageFromPcCropAndUpload(aspectRatio: number): Promise<Misskey.entities.DriveFile | null> {
+	const files = await os.chooseFileFromPc({ multiple: false });
+	const file = files[0];
+	if (file == null) {
+		return null;
+	}
+
+	let originalOrCropped = file;
+
+	const { canceled } = await os.confirm({
+		type: 'question',
+		text: i18n.ts.cropImageAsk,
+		okText: i18n.ts.cropYes,
+		cancelText: i18n.ts.cropNo,
+	});
+
+	if (!canceled) {
+		originalOrCropped = await os.cropImageFile(file, {
+			aspectRatio,
+		});
+	}
+
+	return (await os.launchUploader([originalOrCropped], { multiple: false }))[0] ?? null;
+}
+
+// ドラッグ&ドロップでの移動。folder が null ならルートへ移す。
+export function moveDriveFilesToFolder(
+	files: Misskey.entities.DriveFile[],
+	folder: Misskey.entities.DriveFolder | null,
+) {
+	return misskeyApi('drive/files/move-bulk', {
+		fileIds: files.map((f) => f.id),
+		folderId: folder ? folder.id : null,
+	}).then(() => {
+		globalEvents.emit(
+			'driveFilesUpdated',
+			files.map((x) => ({
+				...x,
+				folderId: folder ? folder.id : null,
+				folder,
+			})),
+		);
+	});
+}
+
+export function moveDriveFolderToFolder(
+	movedFolder: Misskey.entities.DriveFolder,
+	parent: Misskey.entities.DriveFolder | null,
+) {
+	return misskeyApi('drive/folders/update', {
+		folderId: movedFolder.id,
+		parentId: parent ? parent.id : null,
+	}).then(() => {
+		globalEvents.emit('driveFoldersUpdated', [
+			{
+				...movedFolder,
+				parentId: parent ? parent.id : null,
+				parent,
+			},
+		]);
+	});
+}
+
+export function alertDriveFolderMoveError(err: { code?: string }) {
+	switch (err.code) {
+		case 'RECURSIVE_NESTING':
+			claimAchievement('driveFolderCircularReference');
+			os.alert({
+				type: 'error',
+				title: i18n.ts.unableToProcess,
+				text: i18n.ts.circularReferenceFolder,
+			});
+			break;
+		default:
+			os.alert({
+				type: 'error',
+				text: i18n.ts.somethingHappened,
+			});
+	}
 }
 
 export function chooseDriveFile(

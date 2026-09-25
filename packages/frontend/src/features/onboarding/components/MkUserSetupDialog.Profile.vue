@@ -38,6 +38,7 @@ import MkTextarea from '@/components/form/MkTextarea.vue';
 import FormSlot from '@/components/form/slot.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
+import { chooseImageFromPcCropAndUpload } from '@/features/drive/drive.js';
 import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
@@ -72,28 +73,7 @@ watch(description, () => {
 });
 
 async function setAvatar(ev: PointerEvent) {
-	const files = await os.chooseFileFromPc({ multiple: false });
-	const file = files[0];
-	if (file == null) {
-		return;
-	}
-
-	let originalOrCropped = file;
-
-	const { canceled } = await os.confirm({
-		type: 'question',
-		text: i18n.ts.cropImageAsk,
-		okText: i18n.ts.cropYes,
-		cancelText: i18n.ts.cropNo,
-	});
-
-	if (!canceled) {
-		originalOrCropped = await os.cropImageFile(file, {
-			aspectRatio: 1,
-		});
-	}
-
-	const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+	const driveFile = await chooseImageFromPcCropAndUpload(1);
 	if (driveFile == null) {
 		return;
 	}

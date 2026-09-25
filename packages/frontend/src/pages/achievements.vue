@@ -12,46 +12,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue';
 import MkAchievements from '@/features/achievements/components/MkAchievements.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { ensureSignin } from '@/i.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
+import { useViewAchievementsTimer } from '@/features/achievements/use-view-achievements-timer.js';
 
 const $i = ensureSignin();
 
-let timer: number | null;
-
-function viewAchievements3min() {
-	claimAchievement('viewAchievements3min');
-}
-
-onMounted(() => {
-	if (timer == null) {
-		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
-	}
-});
-
-onUnmounted(() => {
-	if (timer != null) {
-		window.clearTimeout(timer);
-		timer = null;
-	}
-});
-
-onActivated(() => {
-	if (timer == null) {
-		timer = window.setTimeout(viewAchievements3min, 1000 * 60 * 3);
-	}
-});
-
-onDeactivated(() => {
-	if (timer != null) {
-		window.clearTimeout(timer);
-		timer = null;
-	}
-});
+useViewAchievementsTimer();
 
 definePage(() => ({
 	title: i18n.ts.achievements,

@@ -44,6 +44,7 @@ import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
+import { openSearchShortcut } from '@/features/search/lookup.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -71,66 +72,26 @@ async function search() {
 		return;
 	}
 
-	//#region AP lookup
-	if (query.startsWith('https://') && !query.includes(' ')) {
-		const confirm = await os.confirm({
-			type: 'info',
-			text: i18n.ts.lookupConfirm,
-		});
-		if (!confirm.canceled) {
+	const opened = await openSearchShortcut(router, query, {
+		fetchApObject: (uri) => {
 			const promise = misskeyApi('ap/show', {
-				uri: query,
+				uri,
 			});
 
 			os.promiseDialog(promise, null, null, i18n.ts.fetchingAsApObject);
 
-			const res = await promise;
-
-			if (res.type === 'User') {
-				router.push('/@:acct/:page?', {
-					params: {
-						acct: `${res.object.username}@${res.object.host}`,
-					},
-				});
-			} else if (res.type === 'Note') {
-				router.push('/notes/:noteId/:initialTab?', {
-					params: {
-						noteId: res.object.id,
-					},
-				});
-			}
-
-			return;
-		}
-	}
-	//#endregion
-
-	if (query.length > 1 && !query.includes(' ')) {
-		if (query.startsWith('@')) {
-			const confirm = await os.confirm({
-				type: 'info',
-				text: i18n.ts.lookupConfirm,
+			return promise;
+		},
+		openTag: (tag) => {
+			router.push('/user-tags/:tag', {
+				params: {
+					tag,
+				},
 			});
-			if (!confirm.canceled) {
-				router.pushByPath(`/${query}`);
-				return;
-			}
-		}
-
-		if (query.startsWith('#')) {
-			const confirm = await os.confirm({
-				type: 'info',
-				text: i18n.ts.openTagPageConfirm,
-			});
-			if (!confirm.canceled) {
-				router.push('/user-tags/:tag', {
-					params: {
-						tag: query.substring(1),
-					},
-				});
-				return;
-			}
-		}
+		},
+	});
+	if (opened) {
+		return;
 	}
 
 	paginator.value = markRaw(
