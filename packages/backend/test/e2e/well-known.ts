@@ -54,7 +54,8 @@ describe('.well-known', () => {
 		assert.ok(res.ok);
 		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 		expect(res.headers.get('Access-Control-Expose-Headers')).toBe('Vary');
-		expect(res.headers.get('Vary')).toBe('Accept');
+		// Accept で表現が変わる。応答は gzip にもなるので Accept-Encoding も並ぶ。
+		expect(res.headers.get('Vary')?.split(',').map((v) => v.trim())).toEqual(['Accept', 'Accept-Encoding']);
 
 		const webfinger = await res.json();
 

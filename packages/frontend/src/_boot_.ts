@@ -6,11 +6,11 @@
 // https://vitejs.dev/config/build-options.html#build-modulepreload
 import 'vite/modulepreload-polyfill';
 
-if (import.meta.env.DEV) {
-	await import('icons-subsetter/vendor/tabler-icons/tabler-icons.min.css');
-} else {
-	await import('icons-subsetter/built/tabler-icons-frontend.css');
-}
+// アイコンの CSS と起動処理の読み込みは同時に始める。CSS を待ってから起動処理を読み始めると、
+// 往復 1 回ぶん待つ。CSS の link を先に挿入するので、スタイルの適用順は変わらない。
+const iconsCss = import.meta.env.DEV
+	? import('icons-subsetter/vendor/tabler-icons/tabler-icons.min.css')
+	: import('icons-subsetter/built/tabler-icons-frontend.css');
 
 import '@/style.scss';
 import { createApp, defineComponent, h, markRaw, shallowRef } from 'vue';
@@ -43,9 +43,13 @@ const subBootPaths = [
 ];
 
 if (subBootPaths.some((i) => window.location.pathname === i || window.location.pathname.startsWith(i + '/'))) {
-	const { subBoot } = await import('@/boot/sub-boot.js');
+	const subBootModule = import('@/boot/sub-boot.js');
+	await iconsCss;
+	const { subBoot } = await subBootModule;
 	await subBoot(app, setRootComponent);
 } else {
-	const { mainBoot } = await import('@/boot/main-boot.js');
+	const mainBootModule = import('@/boot/main-boot.js');
+	await iconsCss;
+	const { mainBoot } = await mainBootModule;
 	await mainBoot(app, setRootComponent);
 }

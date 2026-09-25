@@ -24,14 +24,27 @@ export function setApiHeaders(c: Context): void {
 	c.header('Cache-Control', 'private, max-age=0, must-revalidate');
 }
 
+const textEncoder = new TextEncoder();
+
+/**
+ * JSON をバイト列にして長さを付ける。app.ts の圧縮は Content-Length で 1 KB 未満を素通しするので、
+ * 長さが無いと ping のような数十バイトの応答まで gzip する。変換は送信時にも行われるので費用は増えない。
+ */
+function encodeJson(body: unknown): { bytes: Uint8Array; length: string } {
+	const bytes = textEncoder.encode(JSON.stringify(body));
+	return { bytes, length: String(bytes.byteLength) };
+}
+
 export function jsonResponse(c: Context, body: unknown, status = 200, headers: Record<string, string> = {}): Response {
 	setApiHeaders(c);
-	return new Response(JSON.stringify(body), {
+	const json = encodeJson(body);
+	return new Response(json.bytes, {
 		status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+			'Content-Length': json.length,
 			...headers,
 		},
 	});
@@ -120,12 +133,14 @@ function apiErrorResponse(c: Context, err: ApiError): Response {
 			`Bearer realm="Misskey", error="invalid_request", error_description="${err.message}"`;
 	}
 
-	return new Response(JSON.stringify(err.toBody()), {
+	const json = encodeJson(err.toBody());
+	return new Response(json.bytes, {
 		status: err.status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
+			'Content-Length': json.length,
 			...extraHeaders,
 			...err.headers,
 		},

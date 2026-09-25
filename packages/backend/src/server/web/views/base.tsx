@@ -15,9 +15,9 @@ export function Layout(
 			noindex?: boolean;
 			desc?: string;
 			img?: string;
-			serverErrorImageUrl?: string;
-			infoImageUrl?: string;
-			notFoundImageUrl?: string;
+			serverErrorImageUrl?: string | null;
+			infoImageUrl?: string | null;
+			notFoundImageUrl?: string | null;
 			metaJson?: string;
 			clientCtxJson?: string;
 
