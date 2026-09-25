@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
+import { achievementTypes } from 'misskey-js/consts.js';
 
 export const packedAchievementNameSchema = {
 	type: 'string',
-	enum: ACHIEVEMENT_TYPES,
+	enum: achievementTypes,
 	optional: false,
 } as const;
 

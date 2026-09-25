@@ -9,7 +9,7 @@ import { HttpResponse, http } from 'msw';
 import { userDetailed } from '@/stories/fakes.js';
 import { commonHandlers } from '@/stories/mocks.js';
 import MkAchievements from './MkAchievements.vue';
-import { ACHIEVEMENT_TYPES } from '@/features/achievements/achievements.js';
+import { achievementTypes } from 'misskey-js';
 export const Empty = {
 	render(args) {
 		return {
@@ -53,7 +53,7 @@ export const All = {
 			handlers: [
 				...commonHandlers,
 				http.post('/api/users/achievements', () => {
-					return HttpResponse.json(ACHIEVEMENT_TYPES.map((name) => ({ name, unlockedAt: 0 })));
+					return HttpResponse.json(achievementTypes.map((name) => ({ name, unlockedAt: 0 })));
 				}),
 			],
 		},

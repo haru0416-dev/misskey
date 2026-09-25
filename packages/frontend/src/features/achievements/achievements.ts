@@ -5,84 +5,7 @@
 
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
-
-export const ACHIEVEMENT_TYPES = [
-	'notes1',
-	'notes10',
-	'notes100',
-	'notes500',
-	'notes1000',
-	'notes5000',
-	'notes10000',
-	'notes20000',
-	'notes30000',
-	'notes40000',
-	'notes50000',
-	'notes60000',
-	'notes70000',
-	'notes80000',
-	'notes90000',
-	'notes100000',
-	'login3',
-	'login7',
-	'login15',
-	'login30',
-	'login60',
-	'login100',
-	'login200',
-	'login300',
-	'login400',
-	'login500',
-	'login600',
-	'login700',
-	'login800',
-	'login900',
-	'login1000',
-	'passedSinceAccountCreated1',
-	'passedSinceAccountCreated2',
-	'passedSinceAccountCreated3',
-	'loggedInOnBirthday',
-	'loggedInOnNewYearsDay',
-	'noteClipped1',
-	'noteFavorited1',
-	'myNoteFavorited1',
-	'profileFilled',
-	'markedAsCat',
-	'following1',
-	'following10',
-	'following50',
-	'following100',
-	'following300',
-	'followers1',
-	'followers10',
-	'followers50',
-	'followers100',
-	'followers300',
-	'followers500',
-	'followers1000',
-	'collectAchievements30',
-	'viewAchievements3min',
-	'iLoveMisskey',
-	'foundTreasure',
-	'client30min',
-	'client60min',
-	'noteDeletedWithin1min',
-	'postedAtLateNight',
-	'postedAt0min0sec',
-	'selfQuote',
-	'htl20npm',
-	'viewInstanceChart',
-	'outputHelloWorldOnScratchpad',
-	'open3windows',
-	'driveFolderCircularReference',
-	'reactWithoutRead',
-	'clickedClickHere',
-	'justPlainLucky',
-	'setNameToSyuilo',
-	'brainDiver',
-	'smashTestNotificationButton',
-	'tutorialCompleted',
-] as const;
+import { achievementTypes } from 'misskey-js';
 
 export const ACHIEVEMENT_BADGES = {
 	notes1: {
@@ -461,7 +384,7 @@ export const ACHIEVEMENT_BADGES = {
 		frame: 'bronze',
 	},
 	/* @see <https://github.com/misskey-dev/misskey/pull/10365#discussion_r1155511107>
-} as const satisfies Record<typeof ACHIEVEMENT_TYPES[number], {
+} as const satisfies Record<typeof achievementTypes[number], {
 	img: string;
 	bg: string | null;
 	frame: 'bronze' | 'silver' | 'gold' | 'platinum';
@@ -469,13 +392,13 @@ export const ACHIEVEMENT_BADGES = {
  */
 } as const;
 
-export const claimedAchievements: (typeof ACHIEVEMENT_TYPES)[number][] = $i?.achievements
+export const claimedAchievements: (typeof achievementTypes)[number][] = $i?.achievements
 	? $i.achievements.map((x) => x.name)
 	: [];
 
 const claimingQueue = new Set<string>();
 
-export async function claimAchievement(type: (typeof ACHIEVEMENT_TYPES)[number]) {
+export async function claimAchievement(type: (typeof achievementTypes)[number]) {
 	if ($i == null) {
 		return;
 	}
@@ -496,7 +419,7 @@ export async function claimAchievement(type: (typeof ACHIEVEMENT_TYPES)[number])
 
 if (_DEV_) {
 	(window as any).unlockAllAchievements = () => {
-		for (const t of ACHIEVEMENT_TYPES) {
+		for (const t of achievementTypes) {
 			claimAchievement(t);
 		}
 	};
