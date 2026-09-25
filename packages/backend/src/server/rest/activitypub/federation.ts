@@ -13,7 +13,7 @@ import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 import {
-	createInstanceInDatabase,
+	createInstanceIfNotExistsInDatabase,
 	fetchInstanceByHostFromDatabase,
 	listFederationInstancesFromDatabase,
 	listInstancesOrderByFollowersCountDescFromDatabase,
@@ -132,7 +132,8 @@ export async function fetchOrRegisterFederatedInstance(
 		return index;
 	}
 
-	return await createInstanceInDatabase(deps.db, {
+	// 同じホストからの初回の受信は並行して届く。確認と挿入の間に他の処理が挿入していても失敗させない。
+	return await createInstanceIfNotExistsInDatabase(deps.db, {
 		id: genId(),
 		host,
 		firstRetrievedAt: new Date(),

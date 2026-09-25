@@ -250,7 +250,18 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, data: Inbox
 	void deps.chartWriters.apRequestChart.inbox();
 	void deps.chartWriters.federationChart.inbox(authUser.user.host!);
 
-	process.nextTick(async () => {
+	// 受信したホストの記録は本処理を待たせない。失敗しても受信の結果は変わらないのでログに残すだけにする
+	// (catch が無いと未処理の rejection になる)。
+	process.nextTick(
+		() =>
+			void recordInboxInstance().catch((error: unknown) =>
+				deps.logger.error(
+					`Failed to record the instance of ${authUser.user.host}`,
+					error instanceof Error ? error : new Error(String(error)),
+				),
+			),
+	);
+	async function recordInboxInstance(): Promise<void> {
 		const i = deps.meta.enableStatsForFederatedInstances
 			? await fetchOrRegisterFederatedInstance(deps, authUser.user.host!)
 			: await fetchFederatedInstance(deps, authUser.user.host!);
@@ -279,7 +290,7 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, data: Inbox
 			},
 			i,
 		);
-	});
+	}
 
 	try {
 		const result = await performActivityForApi(deps, authUser.user, activity);
