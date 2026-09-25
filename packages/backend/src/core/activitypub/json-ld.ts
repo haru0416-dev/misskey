@@ -204,8 +204,8 @@ export class JsonLd {
 	@bindThis
 	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
-		// Jest では jsonld の静的 import が頻繁に失敗するため、動的に import する。
-		// https://github.com/misskey-dev/misskey/pull/9894#discussion_r1103753595
+		// jsonld は読み込むだけで RSS +18.7 MB・30 ms かかる (Bun 1.4.2 実測)。使うのは LD 署名付きの受信と
+		// 署名の作成だけなので、プロセス起動時ではなく必要になった時点で読み込む。
 		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
 			documentLoader: customLoader,
 		});
