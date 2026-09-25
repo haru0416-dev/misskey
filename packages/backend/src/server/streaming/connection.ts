@@ -175,6 +175,11 @@ const HONO_STREAM_CHANNELS: Record<string, StreamChannelDefinition<StreamConnect
 	serverStats: honoStreamChannelServerStats,
 };
 
+/**
+ * 1 接続で同時に購読できるノートの数。フロントは画面外のノートの購読を外すので、通常はこれに届かない。
+ */
+const MAX_SUBSCRIBED_NOTES_PER_CONNECTION = 1536;
+
 /** ストリーミング接続ごとの状態とチャンネル購読を保持する。 */
 export class StreamConnection {
 	public readonly user?: MiUser;
@@ -184,7 +189,8 @@ export class StreamConnection {
 	private readonly channels = new Map<string, { channelName: string; handle: StreamChannelHandle }>();
 	private readonly pendingChannels = new Map<string, StreamChannelSubscriberScope>();
 	private readonly pendingChannelScopes = new Set<StreamChannelSubscriberScope>();
-	private readonly subscribingNotes: Partial<Record<string, number>> = {};
+	/** ノート ID ごとの購読数。挿入順を古い順として、上限を超えたら先頭から外す。 */
+	private readonly subscribingNotes = new Map<string, number>();
 	private userProfile: MiUserProfile | null = null;
 	private following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
 	private followingChannels = new Set<string>();
@@ -439,13 +445,25 @@ export class StreamConnection {
 			return;
 		}
 
-		const current = this.subscribingNotes[payload['id']] ?? 0;
-		const updated = current + 1;
-		this.subscribingNotes[payload['id']] = updated;
-
-		if (updated === 1) {
-			this.subscriber?.on(`noteStream:${payload['id']}`, this.onNoteStreamMessage);
+		const noteId = payload['id'];
+		const current = this.subscribingNotes.get(noteId);
+		if (current != null) {
+			// 使われ続けている購読を末尾へ回し、上限超えで外れにくくする。
+			this.subscribingNotes.delete(noteId);
+			this.subscribingNotes.set(noteId, current + 1);
+			return;
 		}
+
+		// listener はプロセスで共有する emitter に付くので、1 接続の購読数が全体のメモリに響く。
+		if (this.subscribingNotes.size >= MAX_SUBSCRIBED_NOTES_PER_CONNECTION) {
+			const oldest = this.subscribingNotes.keys().next().value;
+			if (oldest != null) {
+				this.subscribingNotes.delete(oldest);
+				this.subscriber?.off(`noteStream:${oldest}`, this.onNoteStreamMessage);
+			}
+		}
+		this.subscribingNotes.set(noteId, 1);
+		this.subscriber?.on(`noteStream:${noteId}`, this.onNoteStreamMessage);
 	}
 
 	private onUnsubscribeNote(payload: JsonValue | undefined): void {
@@ -453,16 +471,17 @@ export class StreamConnection {
 			return;
 		}
 
-		const current = this.subscribingNotes[payload['id']];
+		const noteId = payload['id'];
+		const current = this.subscribingNotes.get(noteId);
 		if (current == null) {
 			return;
 		}
-		const updated = current - 1;
-		this.subscribingNotes[payload['id']] = updated;
-		if (updated <= 0) {
-			delete this.subscribingNotes[payload['id']];
-			this.subscriber?.off(`noteStream:${payload['id']}`, this.onNoteStreamMessage);
+		if (current > 1) {
+			this.subscribingNotes.set(noteId, current - 1);
+			return;
 		}
+		this.subscribingNotes.delete(noteId);
+		this.subscriber?.off(`noteStream:${noteId}`, this.onNoteStreamMessage);
 	}
 
 	private onChannelConnectRequested(payload: JsonValue | undefined): void {
@@ -648,7 +667,7 @@ export class StreamConnection {
 		this.disposed = true;
 		this.subscriber?.off('broadcast', this.onBroadcast);
 		this.subscriber?.off('internal', this.onInternalEvent);
-		for (const noteId of Object.keys(this.subscribingNotes)) {
+		for (const noteId of this.subscribingNotes.keys()) {
 			this.subscriber?.off(`noteStream:${noteId}`, this.onNoteStreamMessage);
 		}
 		for (const entry of this.channels.values()) {

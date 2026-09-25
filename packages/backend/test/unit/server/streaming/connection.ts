@@ -165,6 +165,43 @@ describe('hono-stream-connection', () => {
 		expect(raw).toHaveLength(0);
 	});
 
+	test('同じノートを重ねて購読したときは、購読した回数だけ unsubNote されるまで外さない', async () => {
+		const connection = new StreamConnection(deps, null, null);
+		await connection.init();
+		const subscriber = new EventEmitter();
+		connection.listen(subscriber, () => {});
+
+		connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'twice' } }));
+		connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'twice' } }));
+		expect(subscriber.listenerCount('noteStream:twice')).toBe(1);
+		connection.handleClientMessage(JSON.stringify({ type: 'unsubNote', body: { id: 'twice' } }));
+		expect(subscriber.listenerCount('noteStream:twice')).toBe(1);
+		connection.handleClientMessage(JSON.stringify({ type: 'unsubNote', body: { id: 'twice' } }));
+		expect(subscriber.listenerCount('noteStream:twice')).toBe(0);
+		connection.dispose();
+	});
+
+	// 購読数に上限が無いと、1 接続 (匿名でも可) がプロセス共有の emitter に listener を際限なく積める。
+	test('1 接続のノート購読は上限までで、超えた分は古い購読から外す', async () => {
+		const connection = new StreamConnection(deps, null, null);
+		await connection.init();
+		const subscriber = new EventEmitter();
+		subscriber.setMaxListeners(0);
+		connection.listen(subscriber, () => {});
+
+		const total = 2000;
+		for (let i = 0; i < total; i++) {
+			connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: `n${i}` } }));
+		}
+		const subscribed = subscriber.eventNames().filter((name) => String(name).startsWith('noteStream:'));
+		expect(subscribed).toHaveLength(1536);
+		expect(subscriber.listenerCount('noteStream:n0')).toBe(0);
+		expect(subscriber.listenerCount(`noteStream:n${total - 1}`)).toBe(1);
+
+		connection.dispose();
+		expect(subscriber.eventNames().filter((name) => String(name).startsWith('noteStream:'))).toHaveLength(0);
+	});
+
 	test('broadcast イベントはそのままクライアントへ送られる', async () => {
 		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
