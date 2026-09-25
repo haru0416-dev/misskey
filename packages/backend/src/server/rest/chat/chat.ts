@@ -18,7 +18,6 @@ import {
 	listRoomChatHistoryFromDatabase,
 	listUserChatHistoryFromDatabase,
 	removeChatMessageReactionInDatabase,
-	resolveChatMessagePagination,
 	searchChatMessagesFromDatabase,
 } from '@/core/chat/ChatMessageStore.js';
 import {
@@ -46,7 +45,6 @@ import {
 	listChatRoomMembershipsByUserIdFromDatabase,
 	listChatRoomsByIdsFromDatabase,
 	listChatRoomsByOwnerIdFromDatabase,
-	resolveChatRoomRecordPagination,
 	updateChatRoomInDatabase,
 	updateChatRoomInvitationIgnoredFromDatabase,
 	updateChatRoomMembershipMuteFromDatabase,
@@ -90,6 +88,8 @@ import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { pushSwNotificationForApi } from '../notification/push-notification.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
+import { resolveDateIdPagination, resolveIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiChatDependencies = ApiDriveFileDependencies &
 	ApiRolePolicyDependencies &
@@ -940,7 +940,7 @@ async function chatUserTimelineForApi(
 ): Promise<MiChatMessage[]> {
 	return await listChatMessagesBetweenUsersFromDatabase(deps.db, meId, otherId, {
 		limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(time) }, omitUndefined({ sinceId, untilId })),
+		...resolveDateIdPagination({ gen: genId }, omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -953,7 +953,7 @@ async function chatRoomTimelineForApi(
 ): Promise<MiChatMessage[]> {
 	return await listChatMessagesByRoomIdFromDatabase(deps.db, roomId, {
 		limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(time) }, omitUndefined({ sinceId, untilId })),
+		...resolveDateIdPagination({ gen: genId }, omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1153,7 +1153,7 @@ async function getSentChatRoomInvitationsWithPaginationForApi(
 ): Promise<ChatRoomInvitationRow[]> {
 	return await listChatRoomInvitationsByRoomIdFromDatabase(deps.db, roomId, {
 		limit,
-		...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })),
+		...resolveIdPagination(omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1166,7 +1166,7 @@ async function getOwnedChatRoomsWithPaginationForApi(
 ): Promise<MiChatRoom[]> {
 	return await listChatRoomsByOwnerIdFromDatabase(deps.db, ownerId, {
 		limit,
-		...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })),
+		...resolveIdPagination(omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1180,7 +1180,7 @@ async function getReceivedChatRoomInvitationsWithPaginationForApi(
 	return await listChatRoomInvitationsByUserIdFromDatabase(deps.db, userId, {
 		ignored: false,
 		limit,
-		...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })),
+		...resolveIdPagination(omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1274,7 +1274,7 @@ async function getRoomChatMembershipsWithPaginationForApi(
 ): Promise<ChatRoomMembershipRow[]> {
 	return await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, roomId, {
 		limit,
-		...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })),
+		...resolveIdPagination(omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1396,7 +1396,7 @@ async function getMyChatMembershipsForApi(
 ): Promise<ChatRoomMembershipRow[]> {
 	return await listChatRoomMembershipsByUserIdFromDatabase(deps.db, userId, {
 		limit,
-		...resolveChatRoomRecordPagination(omitUndefined({ sinceId, untilId })),
+		...resolveIdPagination(omitUndefined({ sinceId, untilId })),
 	});
 }
 
@@ -1660,8 +1660,7 @@ export async function handleApiChatMessagesRoomTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
 	const params = parseApiParams(chatMessagesRoomTimelineParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -1752,8 +1751,7 @@ export async function handleApiChatMessagesUserTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
 	const params = parseApiParams(chatMessagesUserTimelineParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -1869,8 +1867,7 @@ export async function handleApiChatRoomsOwned(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoom'>[]> {
 	const params = parseApiParams(chatRoomsOwnedParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -1903,8 +1900,7 @@ export async function handleApiChatRoomsJoining(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
 	const params = parseApiParams(chatRoomsJoiningParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -1938,8 +1934,7 @@ export async function handleApiChatRoomsMembers(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
 	const params = parseApiParams(chatRoomsMembersParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -2018,8 +2013,7 @@ export async function handleApiChatRoomsInvitationsInbox(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	const params = parseApiParams(chatRoomsInvitationsInboxParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
@@ -2045,8 +2039,7 @@ export async function handleApiChatRoomsInvitationsOutbox(
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	const params = parseApiParams(chatRoomsInvitationsOutboxParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 

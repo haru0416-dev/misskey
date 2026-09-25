@@ -3,33 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { followRequest } from '@/db/schema/follow-request.js';
 import type { FollowRequestInsert, FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type FollowRequestOrder = 'asc' | 'desc';
 
 function followRequestCondition(followerId: MiUser['id'] | Placeholder, followeeId: MiUser['id'] | Placeholder) {
 	return and(eq(followRequest.followerId, followerId), eq(followRequest.followeeId, followeeId));
-}
-
-function applyFollowRequestPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(followRequest.id, sinceId));
-		conditions.push(lt(followRequest.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(followRequest.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(followRequest.id, untilId));
-	}
 }
 
 export async function fetchFollowRequestByIdFromDatabase(
@@ -192,7 +178,7 @@ export async function listFollowRequestsByFollowerIdFromDatabase(
 ): Promise<FollowRequestRow[]> {
 	const conditions: SQL[] = [eq(followRequest.followerId, followerId)];
 
-	applyFollowRequestPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, followRequest.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()
@@ -214,7 +200,7 @@ export async function listFollowRequestsByFolloweeIdFromDatabase(
 ): Promise<FollowRequestRow[]> {
 	const conditions: SQL[] = [eq(followRequest.followeeId, followeeId)];
 
-	applyFollowRequestPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, followRequest.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

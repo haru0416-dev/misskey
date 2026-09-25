@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { page } from '@/db/schema/page.js';
 import type { PageInsert, PageRow } from '@/db/schema/page.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiPage } from '@/models/Page.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type PageOrder = 'asc' | 'desc';
 
@@ -42,33 +42,6 @@ function deserializePage(row: PageRow): MiPage {
 		user: null,
 		eyeCatchingImage: null,
 	} as MiPage;
-}
-
-function applyPagePaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(page.id, sinceId));
-		conditions.push(lt(page.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(page.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(page.id, untilId));
-	}
-}
-
-export function resolvePagePagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: PageOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchPageByIdFromDatabase(db: MiDrizzleDatabase, id: MiPage['id']): Promise<MiPage | null> {
@@ -257,7 +230,7 @@ export async function listPagesByUserIdWithPaginationFromDatabase(
 		conditions.push(eq(page.visibility, 'public'));
 	}
 
-	applyPagePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, page.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

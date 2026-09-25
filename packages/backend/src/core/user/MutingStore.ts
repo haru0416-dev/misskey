@@ -9,9 +9,9 @@ import { defineQueryPlan } from '@/db/prepared.js';
 import { muting } from '@/db/schema/muting.js';
 import type { MutingInsert, MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiMuting } from '@/models/Muting.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type MutingOrder = 'asc' | 'desc';
 
@@ -21,33 +21,6 @@ function deserializeMuting(row: MutingRow): MiMuting {
 		mutee: null,
 		muter: null,
 	} as MiMuting;
-}
-
-function applyMutingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(muting.id, sinceId));
-		conditions.push(lt(muting.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(muting.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(muting.id, untilId));
-	}
-}
-
-export function resolveMutingPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: MutingOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function countMutingsByMuterIdFromDatabase(db: MiDrizzleDatabase, muterId: MiUser['id']): Promise<number> {
@@ -137,7 +110,7 @@ export async function listMutingsByMuterIdWithPaginationFromDatabase(
 ): Promise<MiMuting[]> {
 	const conditions: SQL[] = [eq(muting.muterId, muterId)];
 
-	applyMutingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, muting.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

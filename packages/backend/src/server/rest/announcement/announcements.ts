@@ -19,7 +19,6 @@ import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForUserFromDatabase,
 	listUnreadAnnouncementsForUserFromDatabase,
-	resolveAnnouncementPagination,
 	updateAnnouncementInDatabase,
 } from '@/core/announcement/AnnouncementStore.js';
 import type { Config } from '@/config.js';
@@ -37,6 +36,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { ApiError } from '../error.js';
 import type { ApiMainStreamPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiAnnouncementDependencies = ApiRolePolicyDependencies & {
 	config: Config;
@@ -133,12 +133,7 @@ export async function handleApiAnnouncements(
 		deps.db,
 		omitUndefined({
 			limit: params.limit,
-			...resolveAnnouncementPagination(
-				{
-					gen: (time) => genId(time),
-				},
-				params,
-			),
+			...resolveDateIdPagination({ gen: genId }, params),
 			isActive: params.isActive,
 			requestUserId: user?.id,
 		}),

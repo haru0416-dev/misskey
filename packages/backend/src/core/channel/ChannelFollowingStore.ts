@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { channelFollowing } from '@/db/schema/channel-following.js';
@@ -11,26 +11,12 @@ import type { ChannelFollowingInsert, ChannelFollowingRow } from '@/db/schema/ch
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ChannelFollowingOrder = 'asc' | 'desc';
 
 function channelFollowingCondition(userId: MiUser['id'] | Placeholder, channelId: MiChannel['id'] | Placeholder) {
 	return and(eq(channelFollowing.followerId, userId), eq(channelFollowing.followeeId, channelId));
-}
-
-function applyChannelFollowingPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(channelFollowing.followeeId, sinceId));
-		conditions.push(lt(channelFollowing.followeeId, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(channelFollowing.followeeId, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(channelFollowing.followeeId, untilId));
-	}
 }
 
 const channelFollowingExistsPlan = defineQueryPlan((db) => {
@@ -133,7 +119,7 @@ export async function listChannelFollowingsByFollowerIdFromDatabase(
 ): Promise<ChannelFollowingRow[]> {
 	const conditions: SQL[] = [eq(channelFollowing.followerId, userId)];
 
-	applyChannelFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, channelFollowing.followeeId, options.sinceId, options.untilId);
 
 	return await db
 		.select()

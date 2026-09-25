@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, isNotNull, lt, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { channel } from '@/db/schema/channel.js';
 import type { ChannelInsert, ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ChannelOrder = 'asc' | 'desc';
 export type ChannelUpdate = Partial<Omit<ChannelRow, 'id'>>;
@@ -22,33 +22,6 @@ function deserializeChannel(row: ChannelRow): MiChannel {
 		user: null,
 		banner: null,
 	} as MiChannel;
-}
-
-function applyChannelPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(channel.id, sinceId));
-		conditions.push(lt(channel.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(channel.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(channel.id, untilId));
-	}
-}
-
-export function resolveChannelPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: ChannelOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 const channelByIdsPlan = defineQueryPlan((db) => {
@@ -108,7 +81,7 @@ export async function listOwnedChannelsFromDatabase(
 ): Promise<MiChannel[]> {
 	const conditions: SQL[] = [eq(channel.isArchived, false), eq(channel.userId, userId)];
 
-	applyChannelPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, channel.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()
@@ -147,7 +120,7 @@ export async function listChannelsBySearchFromDatabase(
 ): Promise<MiChannel[]> {
 	const conditions: SQL[] = [eq(channel.isArchived, false)];
 
-	applyChannelPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, channel.id, options.sinceId, options.untilId);
 
 	if (options.query !== '') {
 		const like = `%${options.query}%`;

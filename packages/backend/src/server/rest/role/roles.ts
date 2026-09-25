@@ -33,6 +33,7 @@ import { packUserDetailedManyForApi } from '../user/user.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { listRedisListTimelineNoteIds } from '../note/redis-list-timeline.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
 export type ApiRoleDependencies = {
 	config: Config;
@@ -202,8 +203,7 @@ export async function handleApiRolesNotes(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(rolesNotesParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {

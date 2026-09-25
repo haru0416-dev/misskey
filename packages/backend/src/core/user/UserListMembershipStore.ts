@@ -3,53 +3,22 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql, getTableName } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { userListMembership } from '@/db/schema/user-list-membership.js';
 import type { UserListMembershipInsert, UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import { userList } from '@/db/schema/user-list.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { UpdateValuesMissingError } from '@/misc/db-errors.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type UserListMembershipOrder = 'asc' | 'desc';
 
 function userListMembershipUserAndListCondition(userId: MiUser['id'], userListId: MiUserList['id']) {
 	return and(eq(userListMembership.userId, userId), eq(userListMembership.userListId, userListId));
-}
-
-function applyUserListMembershipPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(userListMembership.id, sinceId));
-		conditions.push(lt(userListMembership.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(userListMembership.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(userListMembership.id, untilId));
-	}
-}
-
-export function resolveUserListMembershipPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: UserListMembershipOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function userListMembershipExistsInDatabase(
@@ -199,7 +168,7 @@ export async function listUserListMembershipsByUserListIdWithPaginationFromDatab
 ): Promise<UserListMembershipRow[]> {
 	const conditions: SQL[] = [eq(userListMembership.userListId, userListId)];
 
-	applyUserListMembershipPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, userListMembership.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

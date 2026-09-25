@@ -27,7 +27,6 @@ import {
 	listPagesByIdsFromDatabase,
 	listPagesByUserIdWithPaginationFromDatabase,
 	pageNameExistsForUserInDatabase,
-	resolvePagePagination,
 	updatePageContentInDatabase,
 	updatePageInDatabase,
 } from '@/core/page/PageStore.js';
@@ -48,6 +47,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 /** `pageNameSchema` の pattern を Zod 用に再利用する。 */
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
@@ -533,7 +533,7 @@ export async function handleApiIPages(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
 	const params = parseApiParams(iPagesParamDef, body);
-	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
+	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -600,7 +600,7 @@ export async function handleApiUsersPages(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
 	const params = parseApiParams(usersPagesParamDef, body);
-	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
+	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, params.userId, {
 		limit: params.limit,

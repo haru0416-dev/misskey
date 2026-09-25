@@ -17,7 +17,6 @@ import {
 	fetchFlashByIdOrFailFromDatabase,
 	listFeaturedFlashesFromDatabase,
 	listFlashesWithPaginationFromDatabase,
-	resolveFlashPagination,
 	updateFlashInDatabase,
 } from '@/core/flash/FlashStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
@@ -35,6 +34,7 @@ import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiFlashDependencies = ApiRolePolicyDependencies & UserPackingDependencies;
 
@@ -239,7 +239,7 @@ export async function handleApiFlashMy(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(flashMyParamDef, body);
-	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
@@ -305,7 +305,7 @@ export async function handleApiFlashSearch(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(flashSearchParamDef, body);
-	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
 		searchQuery: params.query,
@@ -347,7 +347,7 @@ export async function handleApiUsersFlashs(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(usersFlashsParamDef, body);
-	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		visibility: 'public',

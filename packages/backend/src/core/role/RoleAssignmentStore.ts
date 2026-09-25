@@ -24,10 +24,10 @@ import { defineQueryPlan } from '@/db/prepared.js';
 import { roleAssignment } from '@/db/schema/role-assignment.js';
 import type { RoleAssignmentInsert, RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type RoleAssignmentOrder = 'asc' | 'desc';
 
@@ -41,37 +41,6 @@ function deserializeRoleAssignment(row: RoleAssignmentRow): MiRoleAssignment {
 
 function activeRoleAssignmentCondition(now = new Date()): SQL {
 	return or(isNull(roleAssignment.expiresAt), gt(roleAssignment.expiresAt, now))!;
-}
-
-function applyRoleAssignmentPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(roleAssignment.id, sinceId));
-		conditions.push(lt(roleAssignment.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(roleAssignment.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(roleAssignment.id, untilId));
-	}
-}
-
-export function resolveRoleAssignmentPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: RoleAssignmentOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
@@ -222,7 +191,7 @@ export async function listActiveRoleAssignmentsByRoleIdFromDatabase(
 	},
 ): Promise<MiRoleAssignment[]> {
 	const conditions: SQL[] = [eq(roleAssignment.roleId, roleId), activeRoleAssignmentCondition()];
-	applyRoleAssignmentPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, roleAssignment.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

@@ -28,3 +28,20 @@ export function resolveApiDateIdPagination(params: {
 		},
 	);
 }
+
+/**
+ * 境界ごとに ID を優先し、無ければ日時から作る。resolveApiDateIdPagination と違い、
+ * sinceId と untilDate のように片側を ID・もう片側を日時で指定しても両方が効く。
+ * 並び順は呼び出し先 (タイムライン等) が決める。
+ */
+export function resolveApiDateIdBounds(params: {
+	sinceId?: string | undefined;
+	untilId?: string | undefined;
+	sinceDate?: number | undefined;
+	untilDate?: number | undefined;
+}): { sinceId: string | null; untilId: string | null } {
+	return {
+		sinceId: params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null),
+		untilId: params.untilId ?? (params.untilDate ? genId(params.untilDate) : null),
+	};
+}

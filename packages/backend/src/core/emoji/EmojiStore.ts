@@ -545,8 +545,8 @@ export async function fetchEmojisFromDatabase(
 			hostType?: 'local' | 'remote' | 'all';
 			roleIds?: string[];
 		};
-		sinceId?: string;
-		untilId?: string;
+		sinceId?: string | null;
+		untilId?: string | null;
 	},
 	opts?: {
 		limit?: number;

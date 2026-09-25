@@ -3,33 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { noteFavorite } from '@/db/schema/note-favorite.js';
 import type { NoteFavoriteInsert, NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type NoteFavoriteOrder = 'asc' | 'desc';
 
 function noteFavoriteCondition(userId: MiUser['id'], noteId: MiNote['id']) {
 	return and(eq(noteFavorite.userId, userId), eq(noteFavorite.noteId, noteId));
-}
-
-function applyNoteFavoritePaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(noteFavorite.id, sinceId));
-		conditions.push(lt(noteFavorite.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(noteFavorite.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(noteFavorite.id, untilId));
-	}
 }
 
 export async function noteFavoriteExistsInDatabase(
@@ -88,7 +74,7 @@ export async function listNoteFavoritesByUserIdFromDatabase(
 ): Promise<NoteFavoriteRow[]> {
 	const conditions: SQL[] = [eq(noteFavorite.userId, userId)];
 
-	applyNoteFavoritePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, noteFavorite.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

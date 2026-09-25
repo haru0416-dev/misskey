@@ -3,33 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, gt, lt, sql, getTableName } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { renoteMuting } from '@/db/schema/renote-muting.js';
 import type { RenoteMutingInsert, RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type RenoteMutingOrder = 'asc' | 'desc';
 
 function renoteMutingCondition(muterId: MiUser['id'], muteeId: MiUser['id']) {
 	return and(eq(renoteMuting.muterId, muterId), eq(renoteMuting.muteeId, muteeId));
-}
-
-function applyRenoteMutingPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(renoteMuting.id, sinceId));
-		conditions.push(lt(renoteMuting.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(renoteMuting.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(renoteMuting.id, untilId));
-	}
 }
 
 /** muteeId のリノートをミュートしている muterId 一覧 (ノート作成ファンアウトの一括判定用)。 */
@@ -134,7 +120,7 @@ export async function listRenoteMutingsByMuterIdFromDatabase(
 ): Promise<RenoteMutingRow[]> {
 	const conditions: SQL[] = [eq(renoteMuting.muterId, muterId)];
 
-	applyRenoteMutingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, renoteMuting.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

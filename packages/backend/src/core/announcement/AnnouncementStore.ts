@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, isNull, lt, notInArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, notInArray, or } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { announcement } from '@/db/schema/announcement.js';
 import type { AnnouncementInsert, AnnouncementRow } from '@/db/schema/announcement.js';
 import { announcementRead } from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type AnnouncementOrder = 'asc' | 'desc';
 
@@ -21,37 +21,6 @@ function deserializeAnnouncement(row: AnnouncementRow): MiAnnouncement {
 		...row,
 		user: null,
 	} as MiAnnouncement;
-}
-
-function applyAnnouncementPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(announcement.id, sinceId));
-		conditions.push(lt(announcement.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(announcement.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(announcement.id, untilId));
-	}
-}
-
-export function resolveAnnouncementPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: AnnouncementOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchAnnouncementByIdFromDatabase(
@@ -158,7 +127,7 @@ export async function listAnnouncementsForUserFromDatabase(
 	},
 ): Promise<MiAnnouncement[]> {
 	const conditions: SQL[] = [];
-	applyAnnouncementPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, announcement.id, options.sinceId, options.untilId);
 
 	conditions.push(eq(announcement.isActive, options.isActive));
 
@@ -193,7 +162,7 @@ export async function listAnnouncementsForAdminFromDatabase(
 	},
 ): Promise<MiAnnouncement[]> {
 	const conditions: SQL[] = [];
-	applyAnnouncementPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, announcement.id, options.sinceId, options.untilId);
 
 	switch (options.status) {
 		case 'active':

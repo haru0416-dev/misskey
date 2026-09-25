@@ -15,7 +15,6 @@ import {
 	fetchRegistrationTicketByIdFromDatabase,
 	listRegistrationTicketsCreatedByFromDatabase,
 	listRegistrationTicketsForAdminFromDatabase,
-	resolveRegistrationTicketPagination,
 } from '@/core/invite/RegistrationTicketStore.js';
 import { createModerationLogInDatabase } from '@/core/moderation/ModerationLogStore.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
@@ -32,6 +31,7 @@ import { ApiError } from '../error.js';
 import { isApiModerator } from '../role/role-policy.js';
 import { packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiInviteDependencies = {
 	config: Config;
@@ -269,12 +269,7 @@ export async function handleApiInviteList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const params = parseApiParams(inviteListParamDef, body);
-	const { sinceId, untilId, order } = resolveRegistrationTicketPagination(
-		{
-			gen: (time?: number) => genId(time),
-		},
-		params,
-	);
+	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const tickets = await listRegistrationTicketsCreatedByFromDatabase(deps.db, {
 		createdById: me.id,

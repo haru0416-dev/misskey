@@ -49,6 +49,7 @@ import { isApiModerator } from '../role/role-policy.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiFederationDependencies = {
 	config: Config;
@@ -470,16 +471,7 @@ export async function handleApiFederationUsers(
 ): Promise<UserDetailedNotMeApiResponse[]> {
 	const params = parseApiParams(federationUsersParamDef, body);
 
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const users = await listUsersByHostWithPaginationFromDatabase(deps.db, {
 		host: params.host,

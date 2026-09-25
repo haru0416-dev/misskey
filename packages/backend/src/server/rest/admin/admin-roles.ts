@@ -12,10 +12,7 @@ import {
 	unassignRoleWithSideEffects,
 } from '@/core/role/RoleLogic.js';
 import type { RoleCreateOptions, RoleUpdateOptions } from '@/core/role/RoleLogic.js';
-import {
-	listActiveRoleAssignmentsByRoleIdFromDatabase,
-	resolveRoleAssignmentPagination,
-} from '@/core/role/RoleAssignmentStore.js';
+import { listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/role/RoleStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
@@ -38,6 +35,7 @@ import { parseApiParams } from '../validation.js';
 import { packApiRole, packApiRoles } from '../role/roles.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiAdminRoleDependencies = {
 	config: Config;
@@ -408,12 +406,7 @@ export async function handleApiAdminRolesUsers(
 
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
-		...resolveRoleAssignmentPagination(
-			{
-				gen: (time?: number) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 	});
 
 	const packedUsers = await packUserDetailedNotMeManyForApi(

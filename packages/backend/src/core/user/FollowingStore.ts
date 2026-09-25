@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql, getTableName } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, not, or, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { following } from '@/db/schema/following.js';
@@ -19,6 +19,7 @@ import {
 	adjustUserFollowingCountInDatabase,
 	updateUserInDatabase,
 } from '@/core/user/UserStore.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type FollowingUpdate = Partial<
 	Pick<FollowingRow, 'notify' | 'withReplies' | 'isFollowerHibernated' | 'followerSharedInbox'>
@@ -31,17 +32,6 @@ function deserializeFollowing(row: FollowingRow): MiFollowing {
 		followee: null,
 		follower: null,
 	} as MiFollowing;
-}
-
-function applyFollowingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(following.id, sinceId));
-		conditions.push(lt(following.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(following.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(following.id, untilId));
-	}
 }
 
 export async function listFollowingsByFollowerIdFromDatabase(
@@ -191,7 +181,7 @@ export async function listFollowingsByFollowerIdWithPaginationFromDatabase(
 ): Promise<MiFollowing[]> {
 	const conditions: SQL[] = [eq(following.followerId, followerId)];
 
-	applyFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, following.id, options.sinceId, options.untilId);
 
 	if (options.notification) {
 		conditions.push(isNotNull(following.notify));
@@ -219,7 +209,7 @@ export async function listFollowersByFolloweeIdWithPaginationFromDatabase(
 ): Promise<MiFollowing[]> {
 	const conditions: SQL[] = [eq(following.followeeId, followeeId)];
 
-	applyFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, following.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()
@@ -247,7 +237,7 @@ export async function listFollowingsByFollowerIdAndBirthdayWithPaginationFromDat
 		sql`get_birthday_date(${userProfile.birthday}) BETWEEN ${birthdayDate} AND ${birthdayDate}`,
 	];
 
-	applyFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, following.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()
@@ -275,7 +265,7 @@ export async function listFollowingsByHostWithPaginationFromDatabase(
 		hostType === 'follower' ? eq(following.followerHost, host) : eq(following.followeeHost, host),
 	];
 
-	applyFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, following.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

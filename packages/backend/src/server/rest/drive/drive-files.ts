@@ -19,7 +19,7 @@ import {
 import type { DriveFileUpdate } from '@/core/drive/DriveFileStore.js';
 import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
 import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
-import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/chat/ChatMessageStore.js';
+import { listChatMessagesByFileIdFromDatabase } from '@/core/chat/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import {
 	logModerationEventInDatabase,
@@ -45,6 +45,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiDriveFilesDependencies = ApiNoteDependencies &
 	ApiDriveFileDependencies &
@@ -426,7 +427,7 @@ export async function handleApiDriveFilesAttachedChatMessages(
 
 	const messages = await listChatMessagesByFileIdFromDatabase(deps.db, file.id, {
 		limit: params.limit,
-		...resolveChatMessagePagination({ gen: (time) => genId(time) }, params),
+		...resolveDateIdPagination({ gen: genId }, params),
 	});
 
 	return await packChatMessagesDetailedForApi(deps, messages, me);

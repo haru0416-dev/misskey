@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
 import type { NoteReactionInsert, NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type NoteReactionOrder = 'asc' | 'desc';
 
@@ -23,37 +23,6 @@ export type DeleteNoteReactionResult = {
 
 function noteReactionByUserAndNoteCondition(userId: MiUser['id'], noteId: MiNote['id']) {
 	return and(eq(noteReaction.userId, userId), eq(noteReaction.noteId, noteId));
-}
-
-function applyNoteReactionPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(noteReaction.id, sinceId));
-		conditions.push(lt(noteReaction.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(noteReaction.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(noteReaction.id, untilId));
-	}
-}
-
-export function resolveNoteReactionPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: NoteReactionOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchNoteReactionByIdFromDatabase(
@@ -198,7 +167,7 @@ export async function listNoteReactionsByNoteIdFromDatabase(
 		conditions.push(eq(noteReaction.reaction, options.type));
 	}
 
-	applyNoteReactionPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, noteReaction.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()
@@ -220,7 +189,7 @@ export async function listNoteReactionsByUserIdFromDatabase(
 ): Promise<NoteReactionRow[]> {
 	const conditions: SQL[] = [eq(noteReaction.userId, userId)];
 
-	applyNoteReactionPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, noteReaction.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

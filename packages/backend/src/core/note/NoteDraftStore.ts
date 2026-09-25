@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { noteDraft } from '@/db/schema/note-draft.js';
 import type { NoteDraftInsert, NoteDraftRow } from '@/db/schema/note-draft.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiUser } from '@/models/User.js';
 import { deserializeUser } from '@/core/user/UserStore.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type NoteDraftOrder = 'asc' | 'desc';
 type NoteDraftUpdateValues = Omit<NoteDraftInsert, 'id' | 'userId'>;
@@ -35,33 +35,6 @@ function deserializeNoteDraft(
 
 function toNoteDraftUpdate(data: NoteDraftUpdate): NoteDraftUpdate {
 	return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as NoteDraftUpdate;
-}
-
-function applyNoteDraftPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(noteDraft.id, sinceId));
-		conditions.push(lt(noteDraft.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(noteDraft.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(noteDraft.id, untilId));
-	}
-}
-
-export function resolveNoteDraftPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: NoteDraftOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchNoteDraftByIdFromDatabase(
@@ -154,7 +127,7 @@ export async function listNoteDraftsByUserIdFromDatabase(
 	},
 ): Promise<MiNoteDraft[]> {
 	const conditions: SQL[] = [eq(noteDraft.userId, userId)];
-	applyNoteDraftPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, noteDraft.id, options.sinceId, options.untilId);
 
 	if (options.scheduled != null) {
 		conditions.push(eq(noteDraft.isActuallyScheduled, options.scheduled));

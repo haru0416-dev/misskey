@@ -21,7 +21,6 @@ import {
 	listDriveFoldersByIdsFromDatabase,
 	listDriveFoldersByNameFromDatabase,
 	listDriveFoldersByUserIdFromDatabase,
-	resolveDriveFolderPagination,
 	updateDriveFolderInDatabase,
 } from '@/core/drive/DriveFolderStore.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
@@ -36,6 +35,7 @@ import { ApiError } from '../error.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiDriveDependencies = {
 	config: Config;
@@ -302,12 +302,7 @@ export async function handleApiDriveFolders(
 	body: Record<string, unknown>,
 ): Promise<ApiPackedDriveFolder[]> {
 	const params = parseApiParams(driveFoldersParamDef, body);
-	const pagination = resolveDriveFolderPagination(
-		{
-			gen: (time?: number) => genId(time),
-		},
-		params,
-	);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const folders = await listDriveFoldersByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		parentId: params.folderId ?? null,

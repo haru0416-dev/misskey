@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { galleryPost } from '@/db/schema/gallery-post.js';
 import type { GalleryPostInsert, GalleryPostRow } from '@/db/schema/gallery-post.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type GalleryPostOrder = 'asc' | 'desc';
 
@@ -20,37 +20,6 @@ function deserializeGalleryPost(row: GalleryPostRow): MiGalleryPost {
 		...row,
 		user: null,
 	} as MiGalleryPost;
-}
-
-function applyGalleryPostPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(galleryPost.id, sinceId));
-		conditions.push(lt(galleryPost.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(galleryPost.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(galleryPost.id, untilId));
-	}
-}
-
-export function resolveGalleryPostPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: GalleryPostOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchGalleryPostByIdFromDatabase(
@@ -153,7 +122,7 @@ export async function listGalleryPostsWithPaginationFromDatabase(
 		conditions.push(eq(galleryPost.userId, options.userId));
 	}
 
-	applyGalleryPostPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, galleryPost.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNull, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { driveFolder } from '@/db/schema/drive-folder.js';
 import type { DriveFolderInsert, DriveFolderRow } from '@/db/schema/drive-folder.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type DriveFolderOrder = 'asc' | 'desc';
 
@@ -22,37 +22,6 @@ export type DriveFolderChildFolderCount = {
 
 function driveFolderByIdAndUserIdCondition(id: DriveFolderRow['id'], userId: MiUser['id'] | null) {
 	return and(eq(driveFolder.id, id), userId != null ? eq(driveFolder.userId, userId) : isNull(driveFolder.userId));
-}
-
-function applyDriveFolderPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(driveFolder.id, sinceId));
-		conditions.push(lt(driveFolder.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(driveFolder.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(driveFolder.id, untilId));
-	}
-}
-
-export function resolveDriveFolderPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: DriveFolderOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchDriveFolderByIdFromDatabase(
@@ -144,7 +113,7 @@ export async function listDriveFoldersByUserIdFromDatabase(
 		options.parentId != null ? eq(driveFolder.parentId, options.parentId) : isNull(driveFolder.parentId),
 	];
 
-	applyDriveFolderPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, driveFolder.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

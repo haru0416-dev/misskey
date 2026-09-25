@@ -3,29 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { pageLike } from '@/db/schema/page-like.js';
 import type { PageLikeInsert, PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiPage } from '@/models/Page.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type PageLikeOrder = 'asc' | 'desc';
 
 function pageLikeCondition(userId: MiUser['id'], pageId: MiPage['id']) {
 	return and(eq(pageLike.userId, userId), eq(pageLike.pageId, pageId));
-}
-
-function applyPageLikePaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(pageLike.id, sinceId));
-		conditions.push(lt(pageLike.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(pageLike.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(pageLike.id, untilId));
-	}
 }
 
 export async function pageLikeExistsInDatabase(
@@ -99,7 +89,7 @@ export async function listPageLikesByUserIdFromDatabase(
 ): Promise<PageLikeRow[]> {
 	const conditions: SQL[] = [eq(pageLike.userId, userId)];
 
-	applyPageLikePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, pageLike.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

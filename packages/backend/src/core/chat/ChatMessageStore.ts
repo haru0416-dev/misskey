@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { chatMessage } from '@/db/schema/chat-message.js';
 import type { ChatMessageInsert, ChatMessageRow } from '@/db/schema/chat-message.js';
 import { chatRoom } from '@/db/schema/chat-room.js';
 import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ChatMessageOrder = 'asc' | 'desc';
 
@@ -27,37 +27,6 @@ function deserializeChatMessage(row: ChatMessageRow): MiChatMessage {
 		toRoom: null,
 		file: null,
 	} as MiChatMessage;
-}
-
-function applyChatMessagePaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(chatMessage.id, sinceId));
-		conditions.push(lt(chatMessage.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(chatMessage.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(chatMessage.id, untilId));
-	}
-}
-
-export function resolveChatMessagePagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: ChatMessageOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 function chatMessageBetweenUsersCondition(meId: MiUser['id'], otherId: MiUser['id']): SQL {
@@ -131,7 +100,7 @@ export async function listChatMessagesBetweenUsersFromDatabase(
 	},
 ): Promise<MiChatMessage[]> {
 	const conditions: SQL[] = [chatMessageBetweenUsersCondition(meId, otherId)];
-	applyChatMessagePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatMessage.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()
@@ -154,7 +123,7 @@ export async function listChatMessagesByRoomIdFromDatabase(
 	},
 ): Promise<MiChatMessage[]> {
 	const conditions: SQL[] = [eq(chatMessage.toRoomId, roomId)];
-	applyChatMessagePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatMessage.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()
@@ -177,7 +146,7 @@ export async function listChatMessagesByFileIdFromDatabase(
 	},
 ): Promise<MiChatMessage[]> {
 	const conditions: SQL[] = [eq(chatMessage.fileId, fileId)];
-	applyChatMessagePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatMessage.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

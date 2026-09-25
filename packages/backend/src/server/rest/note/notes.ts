@@ -68,6 +68,7 @@ import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiNotesDependencies = ApiNoteDependencies &
 	ApiNotificationDependencies & {
@@ -113,30 +114,13 @@ export const noteIdPaginationParamDef = z.object({
 	...paginationParams,
 });
 
-function resolveNoteSinceUntilId(
-	config: ApiNotesDependencies['config'],
-	params: { sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number },
-): { sinceId: string | null; untilId: string | null } {
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
-	return { sinceId, untilId };
-}
-
 export async function handleApiNotesChildren(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(noteIdPaginationParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const notes = await listChildNotesFromDatabase(deps.db, {
 		noteId: params.noteId,
@@ -223,7 +207,7 @@ export async function handleApiNotesMentions(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesMentionsParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const mentions = await listMentionNotesFromDatabase(
 		deps.db,
@@ -247,7 +231,7 @@ export async function handleApiNotesReplies(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(noteIdPaginationParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const timeline = await listReplyNotesFromDatabase(deps.db, {
 		replyId: params.noteId,
@@ -281,7 +265,7 @@ export async function handleApiNotesRenotes(
 		throw notesRenotesNoSuchNoteError();
 	}
 
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const renotes = await listRenoteNotesFromDatabase(deps.db, {
 		renoteId: note.id,
@@ -532,7 +516,7 @@ export async function handleApiNotesGlobalTimeline(
 		throw notesGlobalTimelineDisabledError();
 	}
 
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const timeline = await listGlobalTimelineNotesFromDatabase(deps.db, {
 		limit: params.limit,
@@ -562,7 +546,7 @@ export async function handleApiNotes(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const notes = await listPublicNotesFromDatabase(
 		deps.db,
@@ -618,7 +602,7 @@ export async function handleApiNotesLocalTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesLocalTimelineParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
@@ -715,7 +699,7 @@ export async function handleApiNotesHybridTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesHybridTimelineParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
@@ -975,8 +959,7 @@ export async function handleApiNotesSearch(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesSearchParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.canSearchNotes) {
@@ -1094,7 +1077,7 @@ export async function handleApiNotesSearchByTag(
 	const params = parseApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
 
 	try {
-		const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+		const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 		let tagQuery: string[][];
 		if (params.tag != null) {
@@ -1172,7 +1155,7 @@ export async function handleApiNotesTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesTimelineParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
 	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(
@@ -1266,7 +1249,7 @@ export async function handleApiNotesUserListTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(notesUserListTimelineParamDef, body);
-	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (list == null) {

@@ -16,7 +16,6 @@ import { omitUndefined } from '@/misc/clone.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForAdminFromDatabase,
-	resolveAnnouncementPagination,
 } from '@/core/announcement/AnnouncementStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -29,6 +28,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiBroadcastStreamPublisher, ApiMainStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiAdminAnnouncementDependencies = {
 	config: Config;
@@ -206,7 +206,7 @@ export async function handleApiAdminAnnouncementsList(
 		deps.db,
 		omitUndefined({
 			limit: params.limit,
-			...resolveAnnouncementPagination({ gen: (time) => genId(time) }, params),
+			...resolveDateIdPagination({ gen: genId }, params),
 			status: params.status,
 			userId: params.userId,
 		}),

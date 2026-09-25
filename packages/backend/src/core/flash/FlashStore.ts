@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { flash } from '@/db/schema/flash.js';
 import type { FlashInsert, FlashRow } from '@/db/schema/flash.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { MiFlash } from '@/models/Flash.js';
 import type { FlashVisibility } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type FlashOrder = 'asc' | 'desc';
 
@@ -22,17 +22,6 @@ function deserializeFlash(row: FlashRow): MiFlash {
 		...row,
 		user: null,
 	} as MiFlash;
-}
-
-function applyFlashPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(flash.id, sinceId));
-		conditions.push(lt(flash.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(flash.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(flash.id, untilId));
-	}
 }
 
 function applyFlashSearchCondition(conditions: SQL[], searchQuery?: string | null): void {
@@ -47,22 +36,6 @@ function applyFlashSearchCondition(conditions: SQL[], searchQuery?: string | nul
 			conditions.push(condition);
 		}
 	}
-}
-
-export function resolveFlashPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: FlashOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchFlashByIdFromDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<MiFlash | null> {
@@ -138,7 +111,7 @@ export async function listFlashesWithPaginationFromDatabase(
 		conditions.push(eq(flash.visibility, options.visibility));
 	}
 
-	applyFlashPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, flash.id, options.sinceId, options.untilId);
 	applyFlashSearchCondition(conditions, options.searchQuery);
 
 	let query = db
