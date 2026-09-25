@@ -114,4 +114,10 @@ describe('.well-known', () => {
 		expect(serverInfo.authorization_endpoint).toBe(`${origin}/oauth/authorize`);
 		expect(serverInfo.token_endpoint).toBe(`${origin}/oauth/token`);
 	});
+
+	test('change-password はセキュリティ設定へ案内する', async () => {
+		const res = await relativeFetch('.well-known/change-password', { redirect: 'manual' });
+		expect(res.status).toBe(302);
+		expect(new URL(res.headers.get('Location')!, origin).pathname).toBe('/settings/security');
+	});
 });
