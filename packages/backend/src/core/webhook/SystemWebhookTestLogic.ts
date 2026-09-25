@@ -11,10 +11,16 @@ import type {
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAbuseUserReport, MiUser } from '@/models/_.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
+import {
+	packWebhookTestUserLite,
+	webhookTestDayMillis,
+	webhookTestDummyUser1,
+	webhookTestDummyUser2,
+	webhookTestDummyUser3,
+} from '@/core/webhook/webhook-test-dummies.js';
+import type { PopulateWebhookTestEmojis } from '@/core/webhook/webhook-test-dummies.js';
 
-const oneDayMillis = 24 * 60 * 60 * 1000;
-
-type PopulateDummyEmojis = (emojiNames: string[], host: string | null) => Promise<Packed<'UserLite'>['emojis']>;
+type PopulateDummyEmojis = PopulateWebhookTestEmojis;
 
 export type SystemWebhookTestDependencies = {
 	fetchSystemWebhooksByIds: (ids: MiSystemWebhook['id'][]) => Promise<MiSystemWebhook[]>;
@@ -28,112 +34,6 @@ export type SystemWebhookTestDependencies = {
 };
 
 export class NoSuchSystemWebhookForTestError extends Error {}
-
-function generateDummyUser(override?: Partial<MiUser>): MiUser {
-	return {
-		id: 'dummy-user-1',
-		updatedAt: new Date(Date.now() - oneDayMillis * 7),
-		lastFetchedAt: new Date(Date.now() - oneDayMillis * 5),
-		lastActiveDate: new Date(Date.now() - oneDayMillis * 3),
-		hideOnlineStatus: false,
-		username: 'dummy1',
-		usernameLower: 'dummy1',
-		name: 'DummyUser1',
-		followersCount: 10,
-		followingCount: 5,
-		movedToUri: null,
-		movedAt: null,
-		alsoKnownAs: null,
-		notesCount: 30,
-		avatarId: null,
-		avatar: null,
-		bannerId: null,
-		banner: null,
-		avatarUrl: null,
-		bannerUrl: null,
-		avatarBlurhash: null,
-		bannerBlurhash: null,
-		avatarDecorations: [],
-		tags: [],
-		isSuspended: false,
-		suspensionTransitionId: null,
-		isLocked: false,
-		isBot: false,
-		isCat: true,
-		isExplorable: true,
-		isHibernated: false,
-		isDeleted: false,
-		requireSigninToViewContents: false,
-		makeNotesFollowersOnlyBefore: null,
-		makeNotesHiddenBefore: null,
-		chatScope: 'mutual',
-		emojis: [],
-		score: 0,
-		host: null,
-		inbox: null,
-		sharedInbox: null,
-		featured: null,
-		uri: null,
-		followersUri: null,
-		token: null,
-		...override,
-	};
-}
-
-const dummyUser1 = generateDummyUser();
-const dummyUser2 = generateDummyUser({
-	id: 'dummy-user-2',
-	updatedAt: new Date(Date.now() - oneDayMillis * 30),
-	lastFetchedAt: new Date(Date.now() - oneDayMillis),
-	lastActiveDate: new Date(Date.now() - oneDayMillis),
-	username: 'dummy2',
-	usernameLower: 'dummy2',
-	name: 'DummyUser2',
-	followersCount: 40,
-	followingCount: 50,
-	notesCount: 900,
-});
-const dummyUser3 = generateDummyUser({
-	id: 'dummy-user-3',
-	updatedAt: new Date(Date.now() - oneDayMillis * 15),
-	lastFetchedAt: new Date(Date.now() - oneDayMillis * 2),
-	lastActiveDate: new Date(Date.now() - oneDayMillis * 2),
-	username: 'dummy3',
-	usernameLower: 'dummy3',
-	name: 'DummyUser3',
-	followersCount: 60,
-	followingCount: 70,
-	notesCount: 15_900,
-});
-
-async function toPackedUserLiteForSystemWebhookTest(
-	populateEmojis: PopulateDummyEmojis,
-	user: MiUser,
-	override?: Packed<'UserLite'>,
-): Promise<Packed<'UserLite'>> {
-	return {
-		id: user.id,
-		name: user.name,
-		username: user.username,
-		host: user.host,
-		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? '',
-		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations.map((it) => ({
-			id: it.id,
-			angle: it.angle,
-			flipH: it.flipH,
-			url: 'https://example.com/dummy-image001.png',
-			offsetX: it.offsetX,
-			offsetY: it.offsetY,
-		})),
-		isBot: user.isBot,
-		isCat: user.isCat,
-		emojis: await populateEmojis(user.emojis, user.host),
-		onlineStatus: 'active',
-		badgeRoles: [],
-		...override,
-	};
-}
 
 async function generateSystemWebhookTestAbuseReport(
 	populateEmojis: PopulateDummyEmojis,
@@ -159,11 +59,9 @@ async function generateSystemWebhookTestAbuseReport(
 
 	return {
 		...result,
-		targetUser: result.targetUser
-			? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.targetUser)
-			: null,
-		reporter: result.reporter ? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.reporter) : null,
-		assignee: result.assignee ? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.assignee) : null,
+		targetUser: result.targetUser ? await packWebhookTestUserLite(populateEmojis, result.targetUser) : null,
+		reporter: result.reporter ? await packWebhookTestUserLite(populateEmojis, result.reporter) : null,
+		assignee: result.assignee ? await packWebhookTestUserLite(populateEmojis, result.assignee) : null,
 	};
 }
 
@@ -174,25 +72,25 @@ async function createSystemWebhookTestPayload<T extends SystemWebhookEventType>(
 	switch (type) {
 		case 'abuseReport': {
 			return (await generateSystemWebhookTestAbuseReport(populateEmojis, {
-				targetUserId: dummyUser1.id,
-				targetUser: dummyUser1,
-				reporterId: dummyUser2.id,
-				reporter: dummyUser2,
+				targetUserId: webhookTestDummyUser1.id,
+				targetUser: webhookTestDummyUser1,
+				reporterId: webhookTestDummyUser2.id,
+				reporter: webhookTestDummyUser2,
 			})) as SystemWebhookPayload<T>;
 		}
 		case 'abuseReportResolved': {
 			return (await generateSystemWebhookTestAbuseReport(populateEmojis, {
-				targetUserId: dummyUser1.id,
-				targetUser: dummyUser1,
-				reporterId: dummyUser2.id,
-				reporter: dummyUser2,
-				assigneeId: dummyUser3.id,
-				assignee: dummyUser3,
+				targetUserId: webhookTestDummyUser1.id,
+				targetUser: webhookTestDummyUser1,
+				reporterId: webhookTestDummyUser2.id,
+				reporter: webhookTestDummyUser2,
+				assigneeId: webhookTestDummyUser3.id,
+				assignee: webhookTestDummyUser3,
 				resolved: true,
 			})) as SystemWebhookPayload<T>;
 		}
 		case 'userCreated': {
-			return (await toPackedUserLiteForSystemWebhookTest(populateEmojis, dummyUser1)) as SystemWebhookPayload<T>;
+			return (await packWebhookTestUserLite(populateEmojis, webhookTestDummyUser1)) as SystemWebhookPayload<T>;
 		}
 		case 'inactiveModeratorsWarning': {
 			const dummyTime: InactiveModeratorsWarningPayload['remainingTime'] = {
