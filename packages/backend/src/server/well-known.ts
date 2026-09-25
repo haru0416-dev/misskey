@@ -231,6 +231,9 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 		return jsonResponse({ links: getNodeinfoLinks(deps.config) });
 	});
 
+	// パスワードマネージャーがパスワード変更画面を開くための標準の URL (W3C "A Well-Known URL for Changing Passwords")。
+	app.get('/.well-known/change-password', (c) => c.redirect('/settings/security', 302));
+
 	app.get('/.well-known/oauth-authorization-server', () => {
 		return jsonResponse(generateOAuthAuthorizationServerMetadata(deps.config));
 	});
