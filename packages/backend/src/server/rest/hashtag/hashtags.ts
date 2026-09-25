@@ -13,7 +13,6 @@ import {
 import type { HashtagSort } from '@/core/hashtag/HashtagStore.js';
 import { listUsersByTagFromDatabase } from '@/core/user/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
@@ -269,9 +268,6 @@ export async function handleApiHashtagsUsers(
 	const params = parseApiParams(hashtagsUsersParamDef, body);
 
 	const tag = normalizeForSearch(params.tag);
-	if (!safeForSql(tag)) {
-		throw new Error('Injection');
-	}
 
 	const users = await listUsersByTagFromDatabase(deps.db, {
 		tag,
