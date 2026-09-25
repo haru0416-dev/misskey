@@ -32,7 +32,7 @@ Rust ツールチェーンが要る。成果物 (`*.node`) と `target/` は追�
 | `init(numThreads)` | 署名処理を回すスレッドプールの初期化。プロセスで 1 度だけ |
 | `Signer` | HTTP 署名 / LD 署名の生成 (RSA-2048〜8192 / Ed25519 / ML-DSA-44) |
 | `Verifier` | HTTP 署名の検証 |
-| `ZipReader` | 絵文字インポートの zip 展開 |
+| `ZipArchiveReader` | 絵文字インポートの zip から通常ファイルだけを読む |
 
 `node:crypto` ではなくこちらを使うのは、スレッドプールへ逃がせるぶん並列時に速いため
 (実測: RSA-2048 の並列 50 で署名 6.2 倍 / 検証 3.2 倍)。
