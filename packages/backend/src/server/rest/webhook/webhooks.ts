@@ -17,6 +17,14 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
+import {
+	generateWebhookTestDummyUser,
+	packWebhookTestUserLite,
+	webhookTestDayMillis,
+	webhookTestDummyUser1,
+	webhookTestDummyUser2,
+	webhookTestDummyUser3,
+} from '@/core/webhook/webhook-test-dummies.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
@@ -226,58 +234,6 @@ export const webhooksTestParamDef = z.object({
 		.optional(),
 });
 
-const oneDayMillis = 24 * 60 * 60 * 1000;
-
-function generateWebhookTestDummyUser(override?: Partial<MiUser>): MiUser {
-	return {
-		id: 'dummy-user-1',
-		updatedAt: new Date(Date.now() - oneDayMillis * 7),
-		lastFetchedAt: new Date(Date.now() - oneDayMillis * 5),
-		lastActiveDate: new Date(Date.now() - oneDayMillis * 3),
-		hideOnlineStatus: false,
-		username: 'dummy1',
-		usernameLower: 'dummy1',
-		name: 'DummyUser1',
-		followersCount: 10,
-		followingCount: 5,
-		movedToUri: null,
-		movedAt: null,
-		alsoKnownAs: null,
-		notesCount: 30,
-		avatarId: null,
-		avatar: null,
-		bannerId: null,
-		banner: null,
-		avatarUrl: null,
-		bannerUrl: null,
-		avatarBlurhash: null,
-		bannerBlurhash: null,
-		avatarDecorations: [],
-		tags: [],
-		isSuspended: false,
-		isLocked: false,
-		isBot: false,
-		isCat: true,
-		isExplorable: true,
-		isHibernated: false,
-		isDeleted: false,
-		requireSigninToViewContents: false,
-		makeNotesFollowersOnlyBefore: null,
-		makeNotesHiddenBefore: null,
-		chatScope: 'mutual',
-		emojis: [],
-		score: 0,
-		host: null,
-		inbox: null,
-		sharedInbox: null,
-		featured: null,
-		uri: null,
-		followersUri: null,
-		token: null,
-		...override,
-	} as MiUser;
-}
-
 function generateWebhookTestDummyNote(override?: Partial<MiNote>): MiNote {
 	return {
 		id: 'dummy-note-1',
@@ -322,59 +278,11 @@ function generateWebhookTestDummyNote(override?: Partial<MiNote>): MiNote {
 	} as MiNote;
 }
 
-const webhookTestDummyUser1 = generateWebhookTestDummyUser();
-const webhookTestDummyUser2 = generateWebhookTestDummyUser({
-	id: 'dummy-user-2',
-	updatedAt: new Date(Date.now() - oneDayMillis * 30),
-	lastFetchedAt: new Date(Date.now() - oneDayMillis),
-	lastActiveDate: new Date(Date.now() - oneDayMillis),
-	username: 'dummy2',
-	usernameLower: 'dummy2',
-	name: 'DummyUser2',
-	followersCount: 40,
-	followingCount: 50,
-	notesCount: 900,
-});
-const webhookTestDummyUser3 = generateWebhookTestDummyUser({
-	id: 'dummy-user-3',
-	updatedAt: new Date(Date.now() - oneDayMillis * 15),
-	lastFetchedAt: new Date(Date.now() - oneDayMillis * 2),
-	lastActiveDate: new Date(Date.now() - oneDayMillis * 2),
-	username: 'dummy3',
-	usernameLower: 'dummy3',
-	name: 'DummyUser3',
-	followersCount: 60,
-	followingCount: 70,
-	notesCount: 15_900,
-});
-
 async function toWebhookTestPackedUserLite(
 	deps: ApiEmojiPopulateDependencies,
 	user: MiUser,
-	override?: Packed<'UserLite'>,
 ): Promise<Packed<'UserLite'>> {
-	return {
-		id: user.id,
-		name: user.name,
-		username: user.username,
-		host: user.host,
-		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? '',
-		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations.map((it) => ({
-			id: it.id,
-			angle: it.angle,
-			flipH: it.flipH,
-			url: 'https://example.com/dummy-image001.png',
-			offsetX: it.offsetX,
-			offsetY: it.offsetY,
-		})),
-		isBot: user.isBot,
-		isCat: user.isCat,
-		emojis: await populateEmojis(deps, user.emojis, user.host),
-		onlineStatus: 'active',
-		badgeRoles: [],
-		...override,
-	} as Packed<'UserLite'>;
+	return await packWebhookTestUserLite((names, host) => populateEmojis(deps, names, host), user);
 }
 
 async function toWebhookTestPackedUserDetailedNotMe(
