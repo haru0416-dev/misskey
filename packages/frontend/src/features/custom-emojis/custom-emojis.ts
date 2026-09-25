@@ -12,17 +12,50 @@ import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
 import { updateEmojiQueries } from '@/query/streaming.js';
 import { QueryCacheView } from '@/query/cache.js';
+import { groupCustomEmojisByCategory } from '@/features/custom-emojis/group-by-category.js';
 
 const [storageCache, lastEmojisFetchedAt] = await Promise.all([get('emojis'), get('lastEmojisFetchedAt')]);
 const emptyEmojis: Misskey.entities.EmojiSimple[] = [];
 const emojisQueryKey = queryKeys.endpoint(null, 'emojis', {});
+const storedEmojis = isEmojiSimpleArray(storageCache) ? storageCache : null;
+
+/*
+ * IndexedDB への保存は最後の更新から少し待って 1 回にまとめる。保存は全件の構造化複製で、1 万件で約 12 ms、
+ * 3 万件で約 29 ms メインスレッドを止める。絵文字の一括インポートは 1 件ごとに emojiAdded が届くので、
+ * 更新ごとに保存すると 1,000 件の取り込みで各クライアントが合計 12 秒ほど止まっていた。
+ * 保存は次回起動の初期値にだけ使う。待っている間にページを閉じると保存されない (pagehide で書いても
+ * Chromium では確定しなかった) が、古い一覧が古い取得時刻とともに残るので、取得から 30 秒 (staleTime) を過ぎていれば起動時に取り直す。
+ */
+const PERSIST_DELAY_MS = 1000;
+let pendingPersist: { emojis: Misskey.entities.EmojiSimple[]; updatedAt: number } | null = null;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushPersist() {
+	if (persistTimer != null) {
+		clearTimeout(persistTimer);
+		persistTimer = null;
+	}
+	if (pendingPersist == null) return;
+	const { emojis, updatedAt } = pendingPersist;
+	pendingPersist = null;
+	void set('emojis', emojis);
+	void set('lastEmojisFetchedAt', updatedAt);
+}
+
+function schedulePersist(emojis: Misskey.entities.EmojiSimple[], updatedAt: number) {
+	// 起動時に保存済みの配列そのもので呼ばれる。書き直しても中身は変わらない。
+	if (emojis === storedEmojis) return;
+	pendingPersist = { emojis, updatedAt };
+	if (persistTimer != null) clearTimeout(persistTimer);
+	persistTimer = setTimeout(flushPersist, PERSIST_DELAY_MS);
+}
+
 const emojisCache = new QueryCacheView<{ emojis: Misskey.entities.EmojiSimple[] }>(emojisQueryKey, {
-	initialData: { emojis: isEmojiSimpleArray(storageCache) ? storageCache : emptyEmojis },
-	updatedAt: isEmojiSimpleArray(storageCache) && typeof lastEmojisFetchedAt === 'number' ? lastEmojisFetchedAt : 0,
+	initialData: { emojis: storedEmojis ?? emptyEmojis },
+	updatedAt: storedEmojis != null && typeof lastEmojisFetchedAt === 'number' ? lastEmojisFetchedAt : 0,
 	onUpdate: (value, updatedAt) => {
 		if (value == null) return;
-		void set('emojis', value.emojis);
-		void set('lastEmojisFetchedAt', updatedAt);
+		schedulePersist(value.emojis, updatedAt);
 	},
 });
 export const customEmojis = computed(() => emojisCache.value.value?.emojis ?? emptyEmojis);
@@ -35,6 +68,8 @@ export const customEmojiCategories = computed<[...string[], null]>(() => {
 	}
 	return markRaw([...Array.from(categories), null]);
 });
+
+export const customEmojisByCategory = computed(() => markRaw(groupCustomEmojisByCategory(customEmojis.value)));
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
 const stopEmojiMap = watch(
@@ -69,6 +104,7 @@ export async function fetchCustomEmojis(force = false) {
 
 if (import.meta.hot) {
 	import.meta.hot.dispose(() => {
+		flushPersist();
 		stopEmojiMap();
 		emojisCache.dispose();
 	});

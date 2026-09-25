@@ -156,6 +156,7 @@ import { getAccounts, getAccountMenu } from '@/accounts.js';
 import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
+import { deleteLocalDraft, readLocalDraft, writeLocalDraft } from '@/features/post-composer/local-drafts.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mfmFunctionPicker } from '@/features/post-composer/mfm-function-picker.js';
@@ -1033,16 +1034,10 @@ type StoredDraftDataCandidate = Record<string, unknown> & {
 	scheduledAt?: unknown;
 };
 
-function getStoredDrafts(): Record<string, unknown> {
-	return miLocalStorage.getItemAsJson('drafts', isJsonObject) ?? {};
-}
-
 function saveDraft() {
 	if (props.instant || mock) {
 		return;
 	}
-
-	const draftsData = getStoredDrafts();
 
 	const draft: StoredDraft = {
 		updatedAt: new Date().toISOString(),
@@ -1060,17 +1055,13 @@ function saveDraft() {
 			scheduledAt: scheduledAt.value,
 		},
 	};
-	draftsData[draftKey.value] = draft;
-
-	miLocalStorage.setItemAsJson('drafts', draftsData);
+	const hasContent =
+		text.value.trim() !== '' || (useCw.value && (cw.value ?? '') !== '') || files.value.length > 0 || poll.value != null;
+	writeLocalDraft(draftKey.value, draft, hasContent);
 }
 
 function deleteDraft() {
-	const draftsData = getStoredDrafts();
-
-	delete draftsData[draftKey.value];
-
-	miLocalStorage.setItemAsJson('drafts', draftsData);
+	deleteLocalDraft(draftKey.value);
 }
 
 async function saveServerDraft(
@@ -1675,7 +1666,7 @@ async function restoreLocalDraft(): Promise<void> {
 		return;
 	}
 
-	const draft = getStoredDrafts()[draftKey.value];
+	const draft = readLocalDraft(draftKey.value);
 	if (!isJsonObject(draft)) {
 		return;
 	}

@@ -311,7 +311,8 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 										listId: list.id,
 										userId: user.id,
 									}).then(() => {
-										list.userIds?.splice(list.userIds.indexOf(user.id), 1);
+										const index = list.userIds?.indexOf(user.id) ?? -1;
+										if (index !== -1) list.userIds?.splice(index, 1);
 									});
 								}
 							}),

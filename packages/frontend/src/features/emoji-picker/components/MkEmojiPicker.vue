@@ -92,8 +92,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-for="child in customEmojiFolderRoot.children"
 				:key="`custom:${child.value}`"
 				:initialShown="false"
-				:emojis="computed(() => customEmojis.filter(e => filterCategory(e, child.value)).map(e => `:${e.name}:`))"
-				:disabledEmojis="computed(() => customEmojis.filter(e => filterCategory(e, child.value)).filter(e => !canReact(e)).map(e => `:${e.name}:`))"
+				:emojis="computed(() => topFolderEmojis(child.value).map(e => `:${e.name}:`))"
+				:disabledEmojis="computed(() => new Set(topFolderEmojis(child.value).filter(e => !canReact(e)).map(e => `:${e.name}:`)))"
 				:hasChildSection="child.children.length !== 0"
 				:customEmojiTree="child.children"
 				@chosen="chosen"
@@ -134,7 +134,7 @@ import { isTouchUsing } from '@/utility/touch.js';
 import { deviceKind } from '@/utility/device-kind.js';
 import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
-import { customEmojiCategories, customEmojis, customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojiCategories, customEmojis, customEmojisByCategory, customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
 import { $i } from '@/i.js';
 import { checkReactionPermissions } from '@/features/notes/check-reaction-permissions.js';
 import { prefer } from '@/preferences.js';
@@ -431,8 +431,10 @@ function canReact(emoji: Misskey.entities.EmojiSimple | UnicodeEmojiDef | string
 	return !props.targetNote || checkReactionPermissions($i!, props.targetNote, emoji);
 }
 
-function filterCategory(emoji: Misskey.entities.EmojiSimple, category: string): boolean {
-	return category === '' ? emoji.category === 'null' || !emoji.category : emoji.category === category;
+/** 最上位のフォルダの直下の絵文字。'' は未分類 (category が null・空・'null')。 */
+function topFolderEmojis(category: string): Misskey.entities.EmojiSimple[] {
+	const { byCategory, uncategorized } = customEmojisByCategory.value;
+	return category === '' ? uncategorized : (byCategory.get(category) ?? []);
 }
 
 function focus() {

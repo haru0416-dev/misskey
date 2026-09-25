@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="emoji"
 			:data-emoji="emoji"
 			class="_button item"
-			:disabled="disabledEmojis?.value.includes(emoji)"
+			:disabled="disabledEmojis?.value.has(emoji)"
 			@pointerenter="computeButtonTitle"
 			@click="emit('chosen', emoji, $event)"
 		>
@@ -35,7 +35,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-for="child in customEmojiTree"
 			:key="`custom:${child.value}`"
 			:initialShown="initialShown"
-			:emojis="computed(() => customEmojis.filter(e => e.category === child.category).map(e => `:${e.name}:`))"
+			:emojis="computed(() => (customEmojisByCategory.byCategory.get(child.category) ?? []).map(e => `:${e.name}:`))"
 			:hasChildSection="child.children.length !== 0"
 			:customEmojiTree="child.children"
 			@chosen="nestedChosen"
@@ -49,7 +49,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="emoji"
 			:data-emoji="emoji"
 			class="_button item"
-			:disabled="disabledEmojis?.value.includes(emoji)"
+			:disabled="disabledEmojis?.value.has(emoji)"
 			@pointerenter="computeButtonTitle"
 			@click="emit('chosen', emoji, $event)"
 		>
@@ -66,12 +66,12 @@ import { getEmojiName } from '@shared/utility/emojilist.js';
 import type { Ref } from 'vue';
 import type { CustomEmojiFolderTree } from '@shared/utility/emojilist.js';
 import { i18n } from '@/i18n.js';
-import { customEmojis } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojisByCategory } from '@/features/custom-emojis/custom-emojis.js';
 import MkEmojiPickerSection from '@/features/emoji-picker/components/MkEmojiPicker.Section.vue';
 
 const props = defineProps<{
 	emojis: string[] | Ref<string[]>;
-	disabledEmojis?: Ref<string[]>;
+	disabledEmojis?: Ref<Set<string>>;
 	initialShown?: boolean;
 	hasChildSection?: boolean;
 	customEmojiTree?: CustomEmojiFolderTree[];
