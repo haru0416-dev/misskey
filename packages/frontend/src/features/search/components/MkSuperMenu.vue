@@ -179,28 +179,21 @@ watch(rawSearchQuery, (value) => {
 			});
 		};
 
-		// label, keywords, texts の順に優先して表示
-
-		let items = Array.from(searchIndexItemById.values());
-
-		for (const item of items) {
-			if (compareStringIncludes(item.label, value)) {
-				addSearchResult(item);
-				items = items.filter((i) => i.id !== item.id);
-			}
-		}
-
-		for (const item of items) {
-			if (item.keywords.some((x) => compareStringIncludes(x, value))) {
-				addSearchResult(item);
-				items = items.filter((i) => i.id !== item.id);
-			}
-		}
-
-		for (const item of items) {
-			if (item.texts.some((x) => compareStringIncludes(x, value))) {
-				addSearchResult(item);
-				items = items.filter((i) => i.id !== item.id);
+		// label, keywords, texts の順に優先して表示する。一致のたびに候補の配列を作り直すと
+		// 入力 1 文字ごとに候補数の 2 乗かかるので、一致済みは集合で飛ばす。
+		const items = Array.from(searchIndexItemById.values());
+		const matched = new Set<string>();
+		const matchers: ((item: SearchIndexItem) => boolean)[] = [
+			(item) => compareStringIncludes(item.label, value),
+			(item) => item.keywords.some((x) => compareStringIncludes(x, value)),
+			(item) => item.texts.some((x) => compareStringIncludes(x, value)),
+		];
+		for (const matches of matchers) {
+			for (const item of items) {
+				if (!matched.has(item.id) && matches(item)) {
+					matched.add(item.id);
+					addSearchResult(item);
+				}
 			}
 		}
 	}
