@@ -5,7 +5,18 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
+import { isSupportedKeywordFilter } from '@/misc/is-keyword-included.js';
 import type { MiMeta } from '@/models/Meta.js';
+
+// 正規表現の形の項目は RE2 で扱えるものに限る (後方参照・先読みは照合時に使えない)。
+const keywordFilterList = z
+	.array(
+		z.string().refine(isSupportedKeywordFilter, {
+			message: 'Regular expression is not supported. Backreferences and lookarounds cannot be used.',
+		}),
+	)
+	.nullable()
+	.optional();
 
 export const adminUpdateMetaParamDef = z.object({
 	disableRegistration: z.boolean().nullable().optional(),
@@ -14,9 +25,9 @@ export const adminUpdateMetaParamDef = z.object({
 	pinnedUsers: z.array(z.string()).nullable().optional(),
 	hiddenTags: z.array(z.string()).nullable().optional(),
 	blockedHosts: z.array(z.string()).nullable().optional(),
-	sensitiveWords: z.array(z.string()).nullable().optional(),
-	prohibitedWords: z.array(z.string()).nullable().optional(),
-	prohibitedWordsForNameOfUser: z.array(z.string()).nullable().optional(),
+	sensitiveWords: keywordFilterList,
+	prohibitedWords: keywordFilterList,
+	prohibitedWordsForNameOfUser: keywordFilterList,
 	themeColor: z.string().regex(new RegExp('^#[0-9a-fA-F]{6}$')).nullable().optional(),
 	mascotImageUrl: z.string().nullable().optional(),
 	bannerUrl: z.string().nullable().optional(),
@@ -143,7 +154,7 @@ export const adminUpdateMetaParamDef = z.object({
 	urlPreviewRequireContentLength: z.boolean().optional(),
 	urlPreviewUserAgent: z.string().nullable().optional(),
 	urlPreviewSummaryProxyUrl: z.string().nullable().optional(),
-	urlPreviewSensitiveList: z.array(z.string()).nullable().optional(),
+	urlPreviewSensitiveList: keywordFilterList,
 	federation: z.enum(['all', 'none', 'specified']).optional(),
 	federationHosts: z.array(z.string()).optional(),
 	deliverSuspendedSoftware: z
