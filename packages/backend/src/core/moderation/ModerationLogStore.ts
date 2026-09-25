@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { moderationLog } from '@/db/schema/moderation-log.js';
 import type { ModerationLogInsert, ModerationLogRow } from '@/db/schema/moderation-log.js';
@@ -11,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ModerationLogOrder = 'asc' | 'desc';
 
@@ -19,21 +20,6 @@ function deserializeModerationLog(row: ModerationLogRow): MiModerationLog {
 		...row,
 		user: null,
 	} as MiModerationLog;
-}
-
-function applyModerationLogPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(moderationLog.id, sinceId));
-		conditions.push(lt(moderationLog.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(moderationLog.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(moderationLog.id, untilId));
-	}
 }
 
 export async function createModerationLogInDatabase(db: MiDrizzleDatabase, data: ModerationLogInsert): Promise<void> {
@@ -83,7 +69,7 @@ export async function listModerationLogsFromDatabase(
 ): Promise<MiModerationLog[]> {
 	const conditions: SQL[] = [];
 
-	applyModerationLogPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, moderationLog.id, options.sinceId, options.untilId);
 
 	if (options.type != null) {
 		conditions.push(eq(moderationLog.type, options.type));

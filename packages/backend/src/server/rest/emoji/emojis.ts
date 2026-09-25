@@ -44,7 +44,7 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiBroadcastStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
-import { resolveApiDateIdPagination } from '../date-id-pagination.js';
+import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiEmojiDependencies = DriveFileUploadDependencies & {
@@ -833,8 +833,7 @@ export async function handleApiV2AdminEmojiList(
 ): Promise<{ emojis: Packed<'EmojiDetailedAdmin'>[]; count: number; allCount: number; allPages: number }> {
 	const params = parseApiParams(v2AdminEmojiListParamDef, body);
 
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const q = params.query;
 	const limit = params.limit;

@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { clip } from '@/db/schema/clip.js';
 import type { ClipInsert, ClipRow } from '@/db/schema/clip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ClipOrder = 'asc' | 'desc';
 
@@ -21,33 +21,6 @@ function deserializeClip(row: ClipRow): MiClip {
 		...row,
 		user: null,
 	} as MiClip;
-}
-
-function applyClipPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(clip.id, sinceId));
-		conditions.push(lt(clip.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(clip.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(clip.id, untilId));
-	}
-}
-
-export function resolveClipPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: ClipOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function countClipsByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<number> {
@@ -191,7 +164,7 @@ export async function listClipsWithPaginationFromDatabase(
 	},
 ): Promise<MiClip[]> {
 	const conditions: SQL[] = [eq(clip.userId, options.userId)];
-	applyClipPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, clip.id, options.sinceId, options.untilId);
 
 	if (options.isPublic != null) {
 		conditions.push(eq(clip.isPublic, options.isPublic));

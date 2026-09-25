@@ -25,7 +25,6 @@ import {
 	listGalleryPostsByIdsFromDatabase,
 	listGalleryPostsWithPaginationFromDatabase,
 	listPopularGalleryPostsFromDatabase,
-	resolveGalleryPostPagination,
 	updateGalleryPostByIdAndUserIdInDatabase,
 } from '@/core/gallery/GalleryPostStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
@@ -342,7 +341,7 @@ export async function handleApiGalleryPosts(
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const params = parseApiParams(galleryPostsParamDef, body);
-	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		limit: params.limit,
 		order: pagination.order,
@@ -526,7 +525,7 @@ export async function handleApiIGalleryPosts(
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const params = parseApiParams(iGalleryPostsParamDef, body);
-	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
@@ -587,7 +586,7 @@ export async function handleApiUsersGalleryPosts(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(usersGalleryPostsParamDef, body);
-	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
 		limit: params.limit,

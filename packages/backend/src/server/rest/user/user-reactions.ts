@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import { listVisibleNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { listNoteReactionsByUserIdFromDatabase, resolveNoteReactionPagination } from '@/core/note/NoteReactionStore.js';
+import { listNoteReactionsByUserIdFromDatabase } from '@/core/note/NoteReactionStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -25,6 +25,7 @@ import { ApiError } from '../error.js';
 import { isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiUserReactionsDependencies = ApiNoteDependencies & ApiRolePolicyDependencies;
 
@@ -99,7 +100,7 @@ export async function handleApiUsersReactions(
 
 	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
 
-	const pagination = resolveNoteReactionPagination({ gen: (time?: number) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	let sinceId = pagination.sinceId;
 	let untilId = pagination.untilId;
 

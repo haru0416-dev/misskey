@@ -10,7 +10,6 @@ import {
 	deleteBlockingByIdFromDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
 	listBlockingsByBlockerIdWithPaginationFromDatabase,
-	resolveBlockingPagination,
 } from '@/core/user/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
 import {
@@ -50,6 +49,7 @@ import {
 import { packMeDetailedForApi, packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiAccountBlockingDependencies = UserPackingDependencies & {
 	config: Config;
@@ -427,12 +427,7 @@ export async function handleApiBlockingList(
 ): Promise<Packed<'Blocking'>[]> {
 	const params = parseApiParams(blockingListParamDef, body);
 	const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(deps.db, me.id, {
-		...resolveBlockingPagination(
-			{
-				gen: (time) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
 	});
 

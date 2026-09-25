@@ -29,7 +29,6 @@ import {
 	listChannelsBySearchFromDatabase,
 	listOwnedChannelsFromDatabase,
 	listRecentlyActiveChannelsFromDatabase,
-	resolveChannelPagination,
 	fetchChannelByIdFromDatabase,
 	updateChannelInDatabase,
 } from '@/core/channel/ChannelStore.js';
@@ -56,6 +55,8 @@ import { packNoteManyForApi } from '../note/note.js';
 import type { ApiNoteDependencies } from '../note/note.js';
 import { isApiModerator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiChannelsDependencies = {
 	config: Config;
@@ -376,8 +377,7 @@ export async function handleApiChannelsSearch(
 	body: Record<string, unknown>,
 ): Promise<ApiPackedChannel[]> {
 	const params = parseApiParams(channelsSearchParamDef, body);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
 		query: sqlLikeEscape(params.query),
 		type: params.type,
@@ -397,12 +397,7 @@ export async function handleApiChannelsOwned(
 ): Promise<ApiPackedChannel[]> {
 	const params = parseApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
-		...resolveChannelPagination(
-			{
-				gen: (time?: number) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
 	});
 
@@ -417,12 +412,7 @@ export async function handleApiChannelsFollowed(
 	const params = parseApiParams(channelsListParamDef, body);
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveChannelPagination(
-			{
-				gen: (time?: number) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 	});
 	const channelIds = followings.map((following) => following.followeeId);
 	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
@@ -687,8 +677,7 @@ export async function handleApiChannelsTimeline(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(channelTimelineParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {

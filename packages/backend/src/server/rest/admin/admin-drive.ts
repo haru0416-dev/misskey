@@ -17,7 +17,6 @@ import type { InternalStorageService } from '@/core/drive/InternalStorageService
 import type { ObjectStorageQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
@@ -33,6 +32,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { isApiModerator } from '../role/role-policy.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiAdminDriveDependencies = ApiRolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
@@ -285,17 +285,7 @@ export async function handleApiAdminDriveFiles(
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const params = parseApiParams(adminDriveFilesParamDef, body);
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForAdminFromDatabase(
 		deps.db,

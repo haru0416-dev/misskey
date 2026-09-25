@@ -16,7 +16,6 @@ import {
 	deleteNoteDraftByIdFromDatabase,
 	fetchNoteDraftByIdAndUserIdFromDatabase,
 	listNoteDraftsByUserIdFromDatabase,
-	resolveNoteDraftPagination,
 	updateNoteDraftInDatabase,
 } from '@/core/note/NoteDraftStore.js';
 import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
@@ -42,6 +41,7 @@ import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiNoteDraftDependencies = ApiNoteDependencies &
 	ApiRolePolicyDependencies & {
@@ -758,7 +758,7 @@ export async function handleApiNotesDraftsList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'NoteDraft'>[]> {
 	const params = parseApiParams(notesDraftsListParamDef, body);
-	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 
 	const drafts = await listNoteDraftsByUserIdFromDatabase(
 		deps.db,

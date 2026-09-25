@@ -10,7 +10,6 @@ import {
 	fetchMutingByMuterIdAndMuteeIdFromDatabase,
 	listMutingsByMuterIdWithPaginationFromDatabase,
 	mutingExistsInDatabase,
-	resolveMutingPagination,
 } from '@/core/user/MutingStore.js';
 import {
 	createRenoteMutingInDatabase,
@@ -204,12 +203,7 @@ export async function handleApiMuteList(
 ): Promise<Packed<'Muting'>[]> {
 	const params = parseApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
-		...resolveMutingPagination(
-			{
-				gen: (time) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
 	});
 

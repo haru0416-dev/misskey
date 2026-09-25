@@ -11,7 +11,6 @@ import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { fetchRoleByIdFromDatabase, listRolesByIdsFromDatabase } from '@/core/role/RoleStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { paginationParams } from '@/misc/zod-params.js';
@@ -29,6 +28,7 @@ import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { markAllApiNotificationsAsRead, resolveNotificationStreamId } from './notification.js';
 import type { ApiNotificationDependencies } from './notification.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
 export type ApiNotificationsListDependencies = ApiNoteDependencies &
 	ApiChatDependencies &
@@ -52,8 +52,8 @@ async function getApiNotifications(
 	deps: ApiNotificationsListDependencies,
 	userId: MiUser['id'],
 	options: {
-		sinceId?: string;
-		untilId?: string;
+		sinceId?: string | null;
+		untilId?: string | null;
 		limit?: number;
 		includeTypes?: string[];
 		excludeTypes?: string[];
@@ -390,8 +390,7 @@ export async function handleApiINotifications(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(notificationsParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	if (params.includeTypes?.length === 0) {
 		return [];
@@ -493,8 +492,7 @@ export async function handleApiINotificationsGrouped(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseApiParams(notificationsParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	if (params.includeTypes?.length === 0) {
 		return [];

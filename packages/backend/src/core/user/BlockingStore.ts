@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, lt, sql, getTableName } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { blocking } from '@/db/schema/blocking.js';
 import type { BlockingInsert, BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type BlockingOrder = 'asc' | 'desc';
 
@@ -21,33 +21,6 @@ function deserializeBlocking(row: BlockingRow): MiBlocking {
 		blockee: null,
 		blocker: null,
 	} as MiBlocking;
-}
-
-function applyBlockingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(blocking.id, sinceId));
-		conditions.push(lt(blocking.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(blocking.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(blocking.id, untilId));
-	}
-}
-
-export function resolveBlockingPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: BlockingOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function countBlockingsByBlockerIdFromDatabase(
@@ -137,7 +110,7 @@ export async function listBlockingsByBlockerIdWithPaginationFromDatabase(
 ): Promise<MiBlocking[]> {
 	const conditions: SQL[] = [eq(blocking.blockerId, blockerId)];
 
-	applyBlockingPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, blocking.id, options.sinceId, options.untilId);
 
 	const rows = await db
 		.select()

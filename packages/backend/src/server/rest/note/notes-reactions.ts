@@ -52,6 +52,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
 	ApiNoteDependencies &
@@ -462,26 +463,7 @@ export async function handleApiNotesReactions(
 		type = params.type.endsWith(suffix) ? params.type.slice(0, params.type.length - suffix.length) + ':' : params.type;
 	}
 
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-	let order: 'asc' | 'desc' = 'desc';
-	if (sinceId && untilId) {
-		order = 'desc';
-	} else if (sinceId) {
-		order = 'asc';
-	} else if (untilId) {
-		order = 'desc';
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(params.sinceDate);
-		untilId = genId(params.untilDate);
-		order = 'desc';
-	} else if (params.sinceDate) {
-		sinceId = genId(params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(params.untilDate);
-		order = 'desc';
-	}
+	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const reactions = await listNoteReactionsByNoteIdFromDatabase(deps.db, params.noteId, {
 		limit: params.limit,

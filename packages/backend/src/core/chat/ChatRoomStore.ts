@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { chatRoom } from '@/db/schema/chat-room.js';
 import type { ChatRoomInsert, ChatRoomRow } from '@/db/schema/chat-room.js';
@@ -12,9 +12,9 @@ import type { ChatRoomInvitationInsert, ChatRoomInvitationRow } from '@/db/schem
 import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
 import type { ChatRoomMembershipInsert, ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveIdPagination } from '@/misc/id-pagination.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
 // 招待の作成と参加では、ユーザー単位のロックより先にルームのロックを取得する。
@@ -36,61 +36,12 @@ function toChatRoomUpdate(data: ChatRoomUpdate): ChatRoomUpdate {
 	return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as ChatRoomUpdate;
 }
 
-export function resolveChatRoomRecordPagination(options: { sinceId?: string | null; untilId?: string | null }): {
-	sinceId?: string | null;
-	untilId?: string | null;
-	order: ChatRoomRecordOrder;
-} {
-	return resolveIdPagination(options);
-}
-
 function chatRoomMembershipCondition(roomId: MiChatRoom['id'], userId: MiUser['id']) {
 	return and(eq(chatRoomMembership.roomId, roomId), eq(chatRoomMembership.userId, userId));
 }
 
 function chatRoomInvitationCondition(roomId: MiChatRoom['id'], userId: MiUser['id']) {
 	return and(eq(chatRoomInvitation.roomId, roomId), eq(chatRoomInvitation.userId, userId));
-}
-
-function applyChatRoomMembershipPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(chatRoomMembership.id, sinceId));
-		conditions.push(lt(chatRoomMembership.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(chatRoomMembership.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(chatRoomMembership.id, untilId));
-	}
-}
-
-function applyChatRoomInvitationPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(chatRoomInvitation.id, sinceId));
-		conditions.push(lt(chatRoomInvitation.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(chatRoomInvitation.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(chatRoomInvitation.id, untilId));
-	}
-}
-
-function applyChatRoomPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(chatRoom.id, sinceId));
-		conditions.push(lt(chatRoom.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(chatRoom.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(chatRoom.id, untilId));
-	}
 }
 
 export async function fetchChatRoomByIdFromDatabase(
@@ -169,7 +120,7 @@ export async function listChatRoomsByOwnerIdFromDatabase(
 	} = {},
 ): Promise<MiChatRoom[]> {
 	const conditions: SQL[] = [eq(chatRoom.ownerId, ownerId)];
-	applyChatRoomPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatRoom.id, options.sinceId, options.untilId);
 
 	let query = db
 		.select()
@@ -253,7 +204,7 @@ export async function listChatRoomMembershipsByRoomIdFromDatabase(
 	} = {},
 ): Promise<ChatRoomMembershipRow[]> {
 	const conditions: SQL[] = [eq(chatRoomMembership.roomId, roomId)];
-	applyChatRoomMembershipPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatRoomMembership.id, options.sinceId, options.untilId);
 
 	let query = db
 		.select()
@@ -280,7 +231,7 @@ export async function listChatRoomMembershipsByUserIdFromDatabase(
 	} = {},
 ): Promise<ChatRoomMembershipRow[]> {
 	const conditions: SQL[] = [eq(chatRoomMembership.userId, userId)];
-	applyChatRoomMembershipPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatRoomMembership.id, options.sinceId, options.untilId);
 
 	let query = db
 		.select()
@@ -444,7 +395,7 @@ export async function listChatRoomInvitationsByRoomIdFromDatabase(
 	} = {},
 ): Promise<ChatRoomInvitationRow[]> {
 	const conditions: SQL[] = [eq(chatRoomInvitation.roomId, roomId)];
-	applyChatRoomInvitationPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatRoomInvitation.id, options.sinceId, options.untilId);
 
 	let query = db
 		.select()
@@ -475,7 +426,7 @@ export async function listChatRoomInvitationsByUserIdFromDatabase(
 	if (options.ignored !== undefined) {
 		conditions.push(eq(chatRoomInvitation.ignored, options.ignored));
 	}
-	applyChatRoomInvitationPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, chatRoomInvitation.id, options.sinceId, options.untilId);
 
 	let query = db
 		.select()

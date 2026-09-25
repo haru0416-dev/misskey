@@ -7,9 +7,7 @@ import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { listSigninHistoryFromDatabase } from '@/core/account/SigninStore.js';
-import type { SigninHistoryOrder } from '@/core/account/SigninStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { paginationParams } from '@/misc/zod-params.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -19,6 +17,7 @@ import { userDeletedError } from '../error.js';
 import { packMeDetailedForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
@@ -84,27 +83,7 @@ export async function handleApiISigninHistory(
 	body: Record<string, unknown>,
 ): Promise<ReturnType<typeof packApiSignin>[]> {
 	const params = parseApiParams(iSigninHistoryParamDef, body);
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-	let order: SigninHistoryOrder = 'desc';
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-		order = 'asc';
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(params.sinceDate);
-		untilId = genId(params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(params.untilDate);
-	}
+	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const history = await listSigninHistoryFromDatabase(deps.db, user.id, {
 		limit: params.limit,

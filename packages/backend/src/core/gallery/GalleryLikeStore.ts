@@ -3,33 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { galleryLike } from '@/db/schema/gallery-like.js';
 import type { GalleryLikeInsert, GalleryLikeRow } from '@/db/schema/gallery-like.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type GalleryLikeOrder = 'asc' | 'desc';
 
 function galleryLikeCondition(userId: MiUser['id'], postId: MiGalleryPost['id']) {
 	return and(eq(galleryLike.userId, userId), eq(galleryLike.postId, postId));
-}
-
-function applyGalleryLikePaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(galleryLike.id, sinceId));
-		conditions.push(lt(galleryLike.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(galleryLike.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(galleryLike.id, untilId));
-	}
 }
 
 export async function galleryLikeExistsInDatabase(
@@ -96,7 +82,7 @@ export async function listGalleryLikesByUserIdFromDatabase(
 ): Promise<GalleryLikeRow[]> {
 	const conditions: SQL[] = [eq(galleryLike.userId, userId)];
 
-	applyGalleryLikePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, galleryLike.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

@@ -40,7 +40,6 @@ import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase } fr
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
@@ -61,6 +60,7 @@ import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
 export type ApiNoteDependencies = ApiDriveFileDependencies &
 	UserPackingDependencies & {
@@ -1400,8 +1400,7 @@ export async function handleApiUsersNotes(
 		throw usersNotesBothWithRepliesAndWithFilesError();
 	}
 
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	// ブロック・チャンネルミュート・fanout が共有する関係を 1 クエリで取得する。
 	const viewerRelation =

@@ -18,7 +18,6 @@ import {
 	fetchUserListMembershipByUserIdAndUserListIdFromDatabase,
 	listUserListMembershipsByUserListIdWithPaginationFromDatabase,
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
-	resolveUserListMembershipPagination,
 	updateUserListMembershipWithRepliesInDatabase,
 	userListMembershipExistsInDatabase,
 } from '@/core/user/UserListMembershipStore.js';
@@ -46,6 +45,7 @@ import type { UserPackingDependencies } from './user.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiUsersListsDependencies = UserPackingDependencies &
 	ApiRolePolicyDependencies & {
@@ -454,7 +454,7 @@ export async function handleApiUsersListsGetMemberships(
 		throw noSuchListError('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 	}
 
-	const pagination = resolveUserListMembershipPagination({ gen: (time) => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const memberships = await listUserListMembershipsByUserListIdWithPaginationFromDatabase(deps.db, userList.id, {
 		limit: params.limit,
 		order: pagination.order,

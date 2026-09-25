@@ -15,7 +15,6 @@ import {
 	listAbuseUserReportsFromDatabase,
 	markAbuseUserReportForwardedInDatabase,
 	resolveAbuseUserReportInDatabase,
-	resolveAbuseUserReportPagination,
 	updateAbuseUserReportModerationNoteInDatabase,
 } from '@/core/abuse/AbuseUserReportStore.js';
 import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
@@ -47,6 +46,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserDetailedNotMeManyForApi, packUserLiteManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiAdminAbuseReportsDependencies = {
 	config: Config;
@@ -244,12 +244,7 @@ export async function handleApiAdminAbuseUserReports(
 	const params = parseApiParams(adminAbuseUserReportsParamDef, body);
 	const reports = await listAbuseUserReportsFromDatabase(deps.db, {
 		limit: params.limit,
-		...resolveAbuseUserReportPagination(
-			{
-				gen: (time) => genId(time),
-			},
-			params,
-		),
+		...resolveDateIdPagination({ gen: genId }, params),
 		state: params.state,
 		reporterOrigin: params.reporterOrigin,
 		targetUserOrigin: params.targetUserOrigin,

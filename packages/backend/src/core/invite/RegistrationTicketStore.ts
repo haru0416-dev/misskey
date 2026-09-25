@@ -9,8 +9,8 @@ import { registrationTicket } from '@/db/schema/registration-ticket.js';
 import type { RegistrationTicketInsert, RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type RegistrationTicketOrder = 'asc' | 'desc';
 
@@ -125,40 +125,9 @@ export async function deleteRegistrationTicketInDatabase(
 	await db.delete(registrationTicket).where(eq(registrationTicket.id, id));
 }
 
-function applyRegistrationTicketPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(registrationTicket.id, sinceId));
-		conditions.push(lt(registrationTicket.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(registrationTicket.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(registrationTicket.id, untilId));
-	}
-}
-
 /**
  * invite/list の sinceId/untilId/sinceDate/untilDate からカーソルと並び順を解決する。
  */
-export function resolveRegistrationTicketPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: RegistrationTicketOrder;
-} {
-	return resolveDateIdPagination(idService, options);
-}
-
 /**
  * invite/list 向け。自分が作成した招待コードをページネーションして列挙する。
  */
@@ -173,7 +142,7 @@ export async function listRegistrationTicketsCreatedByFromDatabase(
 	},
 ): Promise<RegistrationTicketRow[]> {
 	const conditions: SQL[] = [eq(registrationTicket.createdById, options.createdById)];
-	applyRegistrationTicketPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, registrationTicket.id, options.sinceId, options.untilId);
 
 	return await db
 		.select()

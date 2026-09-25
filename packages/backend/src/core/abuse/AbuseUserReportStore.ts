@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { abuseUserReport } from '@/db/schema/abuse-user-report.js';
 import type { AbuseUserReportInsert, AbuseUserReportRow } from '@/db/schema/abuse-user-report.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { AbuseReportResolveType, MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type AbuseUserReportOrder = 'asc' | 'desc';
 
@@ -21,37 +21,6 @@ function deserializeAbuseUserReport(row: AbuseUserReportRow): MiAbuseUserReport 
 		reporter: null,
 		assignee: null,
 	} as MiAbuseUserReport;
-}
-
-function applyAbuseUserReportPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(abuseUserReport.id, sinceId));
-		conditions.push(lt(abuseUserReport.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(abuseUserReport.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(abuseUserReport.id, untilId));
-	}
-}
-
-export function resolveAbuseUserReportPagination(
-	idService: { gen(time?: number): string },
-	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
-		sinceDate?: number | null;
-		untilDate?: number | null;
-	},
-): {
-	sinceId: string | null;
-	untilId: string | null;
-	order: AbuseUserReportOrder;
-} {
-	return resolveDateIdPagination(idService, options);
 }
 
 export async function fetchAbuseUserReportByIdFromDatabase(
@@ -135,7 +104,7 @@ export async function listAbuseUserReportsFromDatabase(
 	},
 ): Promise<MiAbuseUserReport[]> {
 	const conditions: SQL[] = [];
-	applyAbuseUserReportPaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, abuseUserReport.id, options.sinceId, options.untilId);
 
 	switch (options.state) {
 		case 'resolved':

@@ -56,6 +56,7 @@ import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { listRedisListTimelineNoteIds } from '../note/redis-list-timeline.js';
 import { parseApiParams } from '../validation.js';
+import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
 export type ApiAntennaDependencies = ApiNoteDependencies &
 	ApiRolePolicyDependencies & {
@@ -636,8 +637,7 @@ export async function handleApiAntennasNotes(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
 	const params = parseApiParams(antennasNotesParamDef, body);
-	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
-	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
+	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {

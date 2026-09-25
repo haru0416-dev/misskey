@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { flash } from '@/db/schema/flash.js';
 import { flashLike } from '@/db/schema/flash-like.js';
@@ -12,6 +12,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser } from '@/models/User.js';
+import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type FlashLikeOrder = 'asc' | 'desc';
 
@@ -21,17 +22,6 @@ export type FlashLikeWithFlash = FlashLikeRow & {
 
 function flashLikeCondition(userId: MiUser['id'], flashId: MiFlash['id']) {
 	return and(eq(flashLike.userId, userId), eq(flashLike.flashId, flashId));
-}
-
-function applyFlashLikePaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
-	if (sinceId && untilId) {
-		conditions.push(gt(flashLike.id, sinceId));
-		conditions.push(lt(flashLike.id, untilId));
-	} else if (sinceId) {
-		conditions.push(gt(flashLike.id, sinceId));
-	} else if (untilId) {
-		conditions.push(lt(flashLike.id, untilId));
-	}
 }
 
 function applyFlashSearchCondition(conditions: SQL[], search?: string | null): void {
@@ -111,7 +101,7 @@ export async function listFlashLikesByUserIdFromDatabase(
 ): Promise<FlashLikeWithFlash[]> {
 	const conditions: SQL[] = [eq(flashLike.userId, userId)];
 
-	applyFlashLikePaginationCondition(conditions, options.sinceId, options.untilId);
+	pushIdPaginationConditions(conditions, flashLike.id, options.sinceId, options.untilId);
 	applyFlashSearchCondition(conditions, options.search);
 
 	const rows = await db
