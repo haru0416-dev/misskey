@@ -547,3 +547,23 @@ export function getPluginHandlers<K extends keyof HandlerDef>(type: K): HandlerD
 	pluginHandlersCache.set(type, handlers);
 	return handlers;
 }
+
+/**
+ * ノートを表示する前にプラグインへ渡す。いずれかが null を返したら非表示で確定し、後続には渡さない
+ * (後続の handler は null を想定しておらず、例外になる)。1 つの handler の例外で全体を止めない。
+ */
+export function applyNoteViewInterruptors(note: Misskey.entities.Note): Misskey.entities.Note | null {
+	let result: Misskey.entities.Note = note;
+	for (const interruptor of getPluginHandlers('note_view_interruptor')) {
+		try {
+			const next = interruptor.handler(result) as Misskey.entities.Note | null;
+			if (next == null) {
+				return null;
+			}
+			result = next;
+		} catch (err) {
+			console.error(err);
+		}
+	}
+	return result;
+}
