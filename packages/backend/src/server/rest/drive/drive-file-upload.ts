@@ -8,14 +8,20 @@ import * as fs from 'node:fs';
 import { Readable } from 'node:stream';
 import * as streamPromises from 'node:stream/promises';
 import { z } from 'zod';
-import sharp from 'sharp';
 import { sql } from 'drizzle-orm';
-import type { Sharp } from 'sharp';
-import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import type { Context } from 'hono';
-import { DB_MAX_IMAGE_COMMENT_LENGTH, FILE_TYPE_BROWSERSAFE } from '@/const.js';
+import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
 import type { Config } from '@/config.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
+import {
+	buildObjectStoragePutObject,
+	driveSensitiveMediaThreshold,
+	applyDriveFileStorage,
+	generateDriveFileAlts,
+	planObjectStorageUploads,
+	saveDriveFileToInternalStorage,
+} from '@/core/drive/DriveFileUploadLogic.js';
+import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
 import {
 	createDriveFileInDatabase,
 	fetchDriveFileByMd5AndUserIdFromDatabase,
@@ -32,19 +38,17 @@ import {
 	startDriveFileDeletion,
 } from '@/core/drive/DriveFileDeletionLogic.js';
 import type { FileInfoService } from '@/core/drive/FileInfoService.js';
-import type { IImage, ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3PutObject, S3Service } from '@/core/drive/S3Service.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
-import { isMimeImage } from '@/misc/is-mime-image.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
@@ -55,7 +59,7 @@ import { castMultipartFields } from '../string-params.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { packDriveFileOrFailForApi } from './drive-file.js';
 import type { ApiDriveFileDependencies } from './drive-file.js';
-import { buildDriveFileDeletionDependencies, validateApiDriveFileName } from './drive-files.js';
+import { buildDriveFileDeletionDependencies } from './drive-files.js';
 import type { ApiDriveFilesDependencies } from './drive-files.js';
 import type { ApiDriveStreamPublisher, ApiMainStreamPublisher } from '../events.js';
 import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
@@ -167,84 +171,6 @@ function driveFileInternalError(): ApiError {
 	});
 }
 
-async function generateDriveFileAltsForApi(
-	deps: ApiDriveFileUploadDependencies,
-	path: string,
-	type: string,
-	generateWeb: boolean,
-): Promise<{ webpublic: IImage | null; thumbnail: IImage | null }> {
-	if (type.startsWith('video/')) {
-		if (deps.config.media.videoThumbnailGeneratorUrl != null) {
-			return { webpublic: null, thumbnail: null };
-		}
-
-		try {
-			const thumbnail = await deps.videoProcessingService.generateVideoThumbnail(path);
-			return { webpublic: null, thumbnail };
-		} catch (err) {
-			deps.logger.warn(`GenerateVideoThumbnail failed: ${err}`);
-			return { webpublic: null, thumbnail: null };
-		}
-	}
-
-	if (!isMimeImage(type, 'sharp-convertible-image-with-bmp')) {
-		return { webpublic: null, thumbnail: null };
-	}
-
-	let img: Sharp | null = null;
-	let satisfyWebpublic: boolean;
-	let isAnimated: boolean;
-
-	try {
-		img = await sharpBmp(path, type);
-		const metadata = await img.metadata();
-		isAnimated = !!(metadata.pages && metadata.pages > 1);
-
-		satisfyWebpublic = !!(
-			type !== 'image/svg+xml' &&
-			type !== 'image/avif' &&
-			!(metadata.exif ?? metadata.iptc ?? metadata.xmp ?? metadata.tifftagPhotoshop) &&
-			metadata.width &&
-			metadata.width <= 2048 &&
-			metadata.height &&
-			metadata.height <= 2048
-		);
-	} catch (err) {
-		deps.logger.warn(`sharp failed: ${err}`);
-		return { webpublic: null, thumbnail: null };
-	}
-
-	let webpublic: IImage | null = null;
-
-	if (generateWeb && !satisfyWebpublic && !isAnimated) {
-		try {
-			if (['image/jpeg', 'image/webp', 'image/avif'].includes(type)) {
-				webpublic = await deps.imageProcessingService.convertSharpToWebp(img, 2048, 2048);
-			} else if (['image/png', 'image/bmp', 'image/svg+xml'].includes(type)) {
-				webpublic = await deps.imageProcessingService.convertSharpToPng(img, 2048, 2048);
-			}
-		} catch (err) {
-			deps.logger.warn(`web image not created (an error occurred): ${err}`);
-		}
-	}
-
-	let thumbnail: IImage | null = null;
-
-	try {
-		if (isAnimated) {
-			thumbnail = await deps.imageProcessingService.convertSharpToWebp(sharp(path, { animated: true }), 374, 317, {
-				alphaQuality: 70,
-			});
-		} else {
-			thumbnail = await deps.imageProcessingService.convertSharpToWebp(img, 498, 422);
-		}
-	} catch (err) {
-		deps.logger.warn(`thumbnail not created (an error occurred): ${err}`);
-	}
-
-	return { webpublic, thumbnail };
-}
-
 async function uploadDriveFileToObjectStorageForApi(
 	deps: ApiDriveFileUploadDependencies,
 	key: string,
@@ -253,23 +179,7 @@ async function uploadDriveFileToObjectStorageForApi(
 	ext: string | null | undefined,
 	filename: string | undefined,
 ): Promise<void> {
-	let contentType = type;
-	if (contentType === 'image/apng') {
-		contentType = 'image/png';
-	}
-	if (!FILE_TYPE_BROWSERSAFE.includes(contentType)) {
-		contentType = 'application/octet-stream';
-	}
-
-	const object: S3PutObject = {
-		key,
-		body,
-		contentType,
-		...(filename == null
-			? {}
-			: { contentDisposition: contentDisposition('inline', ext ? correctFilename(filename, ext) : filename) }),
-		publicRead: deps.meta.objectStorageSetPublicRead,
-	};
+	const object = buildObjectStoragePutObject(deps.meta, key, body, type, ext, filename);
 
 	// 失敗を握りつぶすと実体の無いオブジェクトを指す DriveFile が DB に入り、API は成功したのに
 	// ファイル URL が 404 になる。
@@ -303,150 +213,44 @@ async function saveDriveFileForApi(
 	hash: string,
 	size: number,
 ): Promise<StoredDriveFile> {
-	const alts = await generateDriveFileAltsForApi(deps, path, type, !file.uri);
+	const alts = await generateDriveFileAlts(deps, path, type, !file.uri);
+
+	const content = { name, type, md5: hash, size };
 
 	if (deps.meta.useObjectStorage) {
-		const [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
-		let resolvedExt = ext;
-
-		if (resolvedExt === '') {
-			if (type === 'image/jpeg') {
-				resolvedExt = '.jpg';
-			}
-			if (type === 'image/png') {
-				resolvedExt = '.png';
-			}
-			if (type === 'image/webp') {
-				resolvedExt = '.webp';
-			}
-			if (type === 'image/avif') {
-				resolvedExt = '.avif';
-			}
-			if (type === 'image/apng') {
-				resolvedExt = '.apng';
-			}
-			if (type === 'image/vnd.mozilla.apng') {
-				resolvedExt = '.apng';
-			}
-		}
-
-		if (!FILE_TYPE_BROWSERSAFE.includes(type)) {
-			resolvedExt = '';
-		}
-
-		const baseUrl =
-			deps.meta.objectStorageBaseUrl ??
-			`${deps.meta.objectStorageUseSSL ? 'https' : 'http'}://${deps.meta.objectStorageEndpoint}${deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : ''}/${deps.meta.objectStorageBucket}`;
-
-		const prefix = deps.meta.objectStoragePrefix ? `${deps.meta.objectStoragePrefix}/` : '';
-		const key = `${prefix}${randomUUID()}${resolvedExt}`;
-		const url = `${baseUrl}/${key}`;
-
-		let webpublicKey: string | null = null;
-		let webpublicUrl: string | null = null;
-		let thumbnailKey: string | null = null;
-		let thumbnailUrl: string | null = null;
-
-		const uploads = [uploadDriveFileToObjectStorageForApi(deps, key, Bun!.file(path), type, null, name)];
-
-		if (alts.webpublic) {
-			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
-			webpublicUrl = `${baseUrl}/${webpublicKey}`;
-			uploads.push(
-				uploadDriveFileToObjectStorageForApi(
-					deps,
-					webpublicKey,
-					alts.webpublic.data,
-					alts.webpublic.type,
-					alts.webpublic.ext,
-					name,
-				),
-			);
-		}
-
-		if (alts.thumbnail) {
-			thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
-			thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
-			uploads.push(
-				uploadDriveFileToObjectStorageForApi(
-					deps,
-					thumbnailKey,
-					alts.thumbnail.data,
-					alts.thumbnail.type,
-					alts.thumbnail.ext,
-					`${name}.thumbnail`,
-				),
-			);
-		}
-
-		const keys = [key, thumbnailKey, webpublicKey].filter((value): value is string => value != null);
+		const { location, uploads } = planObjectStorageUploads(deps.meta, path, name, type, alts);
+		const keys = [location.accessKey, location.thumbnailAccessKey, location.webpublicAccessKey].filter(
+			(value): value is string => value != null,
+		);
 
 		try {
-			await Promise.all(uploads);
+			await Promise.all(
+				uploads.map((upload) =>
+					uploadDriveFileToObjectStorageForApi(deps, upload.key, upload.body, upload.type, upload.ext, upload.filename),
+				),
+			);
 		} catch (err) {
 			// 一部成功時も DB に紐付かないオブジェクトを残さないよう、削除してから中断する。
 			await deleteDriveFileObjectsForApi(deps, keys);
 			throw err;
 		}
 
-		file.url = url;
-		file.thumbnailUrl = thumbnailUrl;
-		file.webpublicUrl = webpublicUrl;
-		file.accessKey = key;
-		file.thumbnailAccessKey = thumbnailKey;
-		file.webpublicAccessKey = webpublicKey;
-		file.webpublicType = alts.webpublic?.type ?? null;
-		file.name = name;
-		file.type = type;
-		file.md5 = hash;
-		file.size = size;
-		file.storedInternal = false;
+		applyDriveFileStorage(file, location, alts, content);
 
 		return {
 			file,
 			cleanup: () => deleteDriveFileObjectsForApi(deps, keys),
 		};
 	}
-	const accessKey = randomUUID();
-	const thumbnailAccessKey = 'thumbnail-' + randomUUID();
-	const webpublicAccessKey = 'webpublic-' + randomUUID();
 
-	const url = deps.internalStorageService.saveFromPath(accessKey, path);
+	const { location, savedKeys } = saveDriveFileToInternalStorage(deps, path, alts);
+	applyDriveFileStorage(file, location, alts, content);
 
-	let thumbnailUrl: string | null = null;
-	let webpublicUrl: string | null = null;
-
-	if (alts.thumbnail) {
-		thumbnailUrl = deps.internalStorageService.saveFromBuffer(thumbnailAccessKey, alts.thumbnail.data);
-	}
-
-	if (alts.webpublic) {
-		webpublicUrl = deps.internalStorageService.saveFromBuffer(webpublicAccessKey, alts.webpublic.data);
-	}
-
-	file.storedInternal = true;
-	file.url = url;
-	file.thumbnailUrl = thumbnailUrl;
-	file.webpublicUrl = webpublicUrl;
-	file.accessKey = accessKey;
-	file.thumbnailAccessKey = thumbnailAccessKey;
-	file.webpublicAccessKey = webpublicAccessKey;
-	file.webpublicType = alts.webpublic?.type ?? null;
-	file.name = name;
-	file.type = type;
-	file.md5 = hash;
-	file.size = size;
-
-	const keys = [
-		accessKey,
-		alts.thumbnail ? thumbnailAccessKey : null,
-		alts.webpublic ? webpublicAccessKey : null,
-	].filter((value): value is string => value != null);
 	return {
 		file,
 		cleanup: async () => {
 			await Promise.all(
-				keys.map(async (accessKey) => {
+				savedKeys.map(async (accessKey) => {
 					try {
 						await deps.internalStorageService.del(accessKey);
 					} catch (err) {
@@ -602,22 +406,13 @@ export async function addDriveFileForApi(
 	const info = await deps.fileInfoService.getFileInfo(path, {
 		fileName: name,
 		skipSensitiveDetection: skipNsfwCheck,
-		sensitiveThreshold:
-			deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
-				? 0.1
-				: deps.meta.sensitiveMediaDetectionSensitivity === 'high'
-					? 0.3
-					: deps.meta.sensitiveMediaDetectionSensitivity === 'low'
-						? 0.7
-						: deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow'
-							? 0.9
-							: 0.5,
+		sensitiveThreshold: driveSensitiveMediaThreshold(deps.meta),
 		sensitiveThresholdForPorn: 0.75,
 		enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
 	});
 
 	const detectedName = correctFilename(
-		name != null && validateApiDriveFileName(name) ? name : 'untitled',
+		name != null && validateDriveFileName(name) ? name : 'untitled',
 		ext ?? info.type.ext,
 	);
 
@@ -834,7 +629,7 @@ export async function handleApiDriveFilesCreate(
 			name = null;
 		} else if (name === 'blob') {
 			name = null;
-		} else if (!validateApiDriveFileName(name)) {
+		} else if (!validateDriveFileName(name)) {
 			throw new ApiError({
 				status: 400,
 				message: 'Invalid file name.',

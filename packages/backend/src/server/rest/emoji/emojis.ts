@@ -44,6 +44,7 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiBroadcastStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiEmojiDependencies = DriveFileUploadDependencies & {
@@ -163,8 +164,6 @@ export const adminEmojiSetLicenseBulkParamDef = z.object({
 	license: z.string().nullable().optional(),
 });
 
-type AdminEmojiListParams = z.infer<typeof adminEmojiListParamDef>;
-type AdminEmojiListRemoteParams = z.infer<typeof adminEmojiListRemoteParamDef>;
 type AdminEmojiUpdateParams = {
 	id?: string;
 	name?: string;
@@ -205,68 +204,6 @@ function packEmojiDetailed(emoji: MiEmoji): Packed<'EmojiDetailed'> {
 		localOnly: emoji.localOnly,
 		roleIdsThatCanBeUsedThisEmojiAsReaction: emoji.roleIdsThatCanBeUsedThisEmojiAsReaction,
 	};
-}
-
-function parseLocalAdminEmojiPagination(
-	config: Config,
-	params: Pick<AdminEmojiListParams, 'sinceDate' | 'sinceId' | 'untilDate' | 'untilId'>,
-): {
-	order: 'asc' | 'desc';
-	sinceId: string | null;
-	untilId: string | null;
-} {
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-	let order: 'asc' | 'desc' = 'desc';
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-		order = 'asc';
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(params.sinceDate);
-		untilId = genId(params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(params.sinceDate);
-		order = 'asc';
-	} else if (params.untilDate) {
-		untilId = genId(params.untilDate);
-	}
-
-	return { order, sinceId, untilId };
-}
-
-function parseRemoteAdminEmojiPagination(
-	config: Config,
-	params: Pick<AdminEmojiListRemoteParams, 'sinceDate' | 'sinceId' | 'untilDate' | 'untilId'>,
-): {
-	sinceId: string | null;
-	untilId: string | null;
-} {
-	let sinceId: string | null = null;
-	let untilId: string | null = null;
-
-	if (params.sinceId && params.untilId) {
-		sinceId = params.sinceId;
-		untilId = params.untilId;
-	} else if (params.sinceId) {
-		sinceId = params.sinceId;
-	} else if (params.untilId) {
-		untilId = params.untilId;
-	} else if (params.sinceDate && params.untilDate) {
-		sinceId = genId(params.sinceDate);
-		untilId = genId(params.untilDate);
-	} else if (params.sinceDate) {
-		sinceId = genId(params.sinceDate);
-	} else if (params.untilDate) {
-		untilId = genId(params.untilDate);
-	}
-
-	return { sinceId, untilId };
 }
 
 function noSuchEmojiError(): ApiError {
@@ -474,7 +411,7 @@ export async function handleApiAdminEmojiList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
 	const params = parseApiParams(adminEmojiListParamDef, body);
-	const { order, sinceId, untilId } = parseLocalAdminEmojiPagination(deps.config, params);
+	const { order, sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	let emojis: MiEmoji[];
 	if (params.query) {
@@ -771,7 +708,7 @@ export async function handleApiAdminEmojiListRemote(
 	body: Record<string, unknown>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
 	const params = parseApiParams(adminEmojiListRemoteParamDef, body);
-	const { sinceId, untilId } = parseRemoteAdminEmojiPagination(deps.config, params);
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 	const emojis = await listRemoteEmojisPageFromDatabase(deps.db, {
 		host: params.host == null ? null : toPuny(params.host),
 		query: params.query,

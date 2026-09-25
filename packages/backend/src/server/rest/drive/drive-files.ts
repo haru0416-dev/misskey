@@ -17,6 +17,7 @@ import {
 	updateDriveFilesFolderByIdsAndUserIdInDatabase,
 } from '@/core/drive/DriveFileStore.js';
 import type { DriveFileUpdate } from '@/core/drive/DriveFileStore.js';
+import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
 import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
 import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/chat/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
@@ -42,6 +43,7 @@ import type { ApiNoteDependencies } from '../note/note.js';
 import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
+import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiDriveFilesDependencies = ApiNoteDependencies &
@@ -81,17 +83,7 @@ export async function handleApiDriveFilesList(
 ): Promise<Packed<'DriveFile'>[]> {
 	const params = parseApiParams(driveFilesParamDef, body);
 
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForUserFromDatabase(
 		deps.db,
@@ -125,17 +117,7 @@ export async function handleApiDriveStream(
 ): Promise<Packed<'DriveFile'>[]> {
 	const params = parseApiParams(driveStreamParamDef, body);
 
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForUserFromDatabase(
 		deps.db,
@@ -233,17 +215,7 @@ export async function handleApiDriveFilesAttachedNotes(
 		throw noSuchFileError('c118ece3-2e4b-4296-99d1-51756e32d232');
 	}
 
-	let sinceId = params.sinceId ?? null;
-	let untilId = params.untilId ?? null;
-
-	if (sinceId == null && untilId == null) {
-		if (params.sinceDate) {
-			sinceId = genId(params.sinceDate);
-		}
-		if (params.untilDate) {
-			untilId = genId(params.untilDate);
-		}
-	}
+	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const notes = await listNotesByAttachedFileIdFromDatabase(deps.db, file.id, {
 		limit: params.limit,
@@ -313,12 +285,6 @@ export const driveFilesUpdateParamDef = z.object({
 	comment: z.string().max(512).nullable().optional(),
 });
 
-export function validateApiDriveFileName(name: string): boolean {
-	return (
-		name.trim().length > 0 && name.length <= 200 && !name.includes('\\') && !name.includes('/') && !name.includes('..')
-	);
-}
-
 export async function handleApiDriveFilesUpdate(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -338,7 +304,7 @@ export async function handleApiDriveFilesUpdate(
 	const owner = file.userId != null ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
 	const policies = await getApiRolePolicies(deps, owner);
 
-	if (params.name != null && !validateApiDriveFileName(params.name)) {
+	if (params.name != null && !validateDriveFileName(params.name)) {
 		throw new ApiError({
 			status: 400,
 			message: 'Invalid file name.',

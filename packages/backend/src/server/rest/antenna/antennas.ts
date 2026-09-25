@@ -54,6 +54,7 @@ import type { ApiNoteDependencies } from '../note/note.js';
 import { FanoutTimelinePush } from '../note/fanout-timeline-push.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { listRedisListTimelineNoteIds } from '../note/redis-list-timeline.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAntennaDependencies = ApiNoteDependencies &
@@ -657,17 +658,11 @@ export async function handleApiAntennasNotes(
 		deps.publishInternalEvent?.('antennaUpdated', antenna);
 	}
 
-	// 配布の再試行で同じ ID が二重に入り得る (fanout-timeline-push.ts)。重複は枠を食わないよう先に除く。
-	const rawIds = [...new Set(await deps.redis.lrange(`list:antennaTimeline:${antenna.id}`, 0, -1))];
-	let noteIds =
-		untilId && sinceId
-			? rawIds.filter((id) => id < untilId && id > sinceId).sort((a, b) => (a > b ? -1 : 1))
-			: untilId
-				? rawIds.filter((id) => id < untilId).sort((a, b) => (a > b ? -1 : 1))
-				: sinceId
-					? rawIds.filter((id) => id > sinceId).sort((a, b) => (a < b ? -1 : 1))
-					: rawIds.toSorted((a, b) => (a > b ? -1 : 1));
-	noteIds = noteIds.slice(0, params.limit);
+	const noteIds = await listRedisListTimelineNoteIds(deps.redis, `list:antennaTimeline:${antenna.id}`, {
+		sinceId,
+		untilId,
+		limit: params.limit,
+	});
 
 	if (noteIds.length === 0) {
 		return [];

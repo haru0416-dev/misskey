@@ -5,6 +5,7 @@
 
 import { comment, defaultDescription } from '@/server/web/views/_.js';
 import { Splash } from '@/server/web/views/_splash.js';
+import { BootConstantsScript, CommonHeadMeta, JsonDataScript, NoScriptNotice } from '@/server/web/views/_head.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import type { PropsWithChildren, Children } from '@kitajs/html';
 
@@ -30,28 +31,17 @@ export function Layout(
 ) {
 	const now = Date.now();
 
-	// 変数名をsafeで始めることでエラーをスキップ
-	const safeMetaJson = props.metaJson;
-	const safeClientCtxJson = props.clientCtxJson;
-
 	return (
 		<>
 			{'<!DOCTYPE html>'}
 			{comment}
 			<html lang="en">
 				<head>
-					<meta charset="UTF-8" />
-					<meta name="application-name" content="Erebia" />
-					<meta name="referer" content="origin" />
-					<meta name="theme-color" content={props.themeColor ?? '#5c62d8'} />
-					<meta name="theme-color-orig" content={props.themeColor ?? '#5c62d8'} />
-					<meta property="og:site_name" content={props.instanceName || 'Erebia'} />
-					<meta property="instance_url" content={props.instanceUrl} />
-					<meta
-						name="viewport"
-						content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+					<CommonHeadMeta
+						themeColor={props.themeColor}
+						instanceName={props.instanceName}
+						instanceUrl={props.instanceUrl}
 					/>
-					<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
 					<link rel="icon" href={props.icon || '/client-assets/erebia-icon.svg'} />
 					<link rel="apple-touch-icon" href={props.appleTouchIcon || '/client-assets/erebia-icon.png'} />
 					<link rel="manifest" href="/manifest.json" />
@@ -97,23 +87,10 @@ export function Layout(
 						<link rel="stylesheet" href="/vite/loader/style.css" />
 					)}
 
-					<script>
-						const VERSION = '{props.version}'; const CLIENT_ENTRY ={' '}
-						{JSON.stringify(props.frontendViteFiles?.entryJs ?? null)}; const CLIENT_PRELOADS ={' '}
-						{JSON.stringify(props.frontendViteFiles?.modulePreloads ?? [])}; const LANGS = {JSON.stringify(props.langs)}
-						;
-					</script>
+					<BootConstantsScript version={props.version} viteFiles={props.frontendViteFiles} langs={props.langs} />
 
-					{safeMetaJson != null ? (
-						<script type="application/json" id="misskey_meta" data-generated-at={now}>
-							{safeMetaJson}
-						</script>
-					) : null}
-					{safeClientCtxJson != null ? (
-						<script type="application/json" id="misskey_clientCtx" data-generated-at={now}>
-							{safeClientCtxJson}
-						</script>
-					) : null}
+					<JsonDataScript id="misskey_meta" json={props.metaJson} generatedAt={now} />
+					<JsonDataScript id="misskey_clientCtx" json={props.clientCtxJson} generatedAt={now} />
 
 					{props.frontendBootloaderJs != null ? (
 						<script>{props.frontendBootloaderJs}</script>
@@ -122,13 +99,7 @@ export function Layout(
 					)}
 				</head>
 				<body>
-					<noscript>
-						<p>
-							JavaScriptを有効にしてください
-							<br />
-							Please turn on your JavaScript
-						</p>
-					</noscript>
+					<NoScriptNotice />
 					<Splash icon={props.icon} />
 					{props.children}
 				</body>

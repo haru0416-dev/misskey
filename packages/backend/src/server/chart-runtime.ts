@@ -9,35 +9,12 @@ import type { SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import Chart from '@/core/chart/core.js';
 import type { KVs } from '@/core/chart/core.js';
-import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/entities/active-users.js';
-import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
-import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
-import { name as federationChartName, schema as federationChartSchema } from '@/core/chart/entities/federation.js';
-import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/entities/instance.js';
-import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/entities/notes.js';
-import {
-	name as perUserDriveChartName,
-	schema as perUserDriveChartSchema,
-} from '@/core/chart/entities/per-user-drive.js';
-import {
-	name as perUserFollowingChartName,
-	schema as perUserFollowingChartSchema,
-} from '@/core/chart/entities/per-user-following.js';
-import {
-	name as perUserNotesChartName,
-	schema as perUserNotesChartSchema,
-} from '@/core/chart/entities/per-user-notes.js';
-import {
-	name as perUserReactionsChartName,
-	schema as perUserReactionsChartSchema,
-} from '@/core/chart/entities/per-user-reactions.js';
-import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/core/chart/entities/per-user-pv.js';
-import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/entities/users.js';
 import {
 	countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase,
 	countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/UserStore.js';
+import { chartDefinitions } from '@/server/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';
@@ -59,12 +36,12 @@ type ChartWriterDependencies = {
 	meta: MiMeta;
 };
 
-class DriveChartWriter extends Chart<typeof driveChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof driveChartSchema>>> {
+class DriveChartWriter extends Chart<typeof chartDefinitions.drive.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.drive.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof driveChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.drive.schema>>> {
 		return {};
 	}
 
@@ -88,12 +65,12 @@ class DriveChartWriter extends Chart<typeof driveChartSchema> {
 	}
 }
 
-class PerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof perUserDriveChartSchema>>> {
+class PerUserDriveChartWriter extends Chart<typeof chartDefinitions.perUserDrive.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.perUserDrive.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof perUserDriveChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.perUserDrive.schema>>> {
 		return {};
 	}
 
@@ -116,12 +93,12 @@ class PerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> {
 	}
 }
 
-class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof instanceChartSchema>>> {
+class InstanceChartWriter extends Chart<typeof chartDefinitions.instance.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.instance.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof instanceChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.instance.schema>>> {
 		return {};
 	}
 
@@ -210,12 +187,12 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	}
 }
 
-class NotesChartWriter extends Chart<typeof notesChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof notesChartSchema>>> {
+class NotesChartWriter extends Chart<typeof chartDefinitions.notes.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.notes.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof notesChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.notes.schema>>> {
 		return {};
 	}
 
@@ -237,12 +214,12 @@ class NotesChartWriter extends Chart<typeof notesChartSchema> {
 	}
 }
 
-class PerUserNotesChartWriter extends Chart<typeof perUserNotesChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof perUserNotesChartSchema>>> {
+class PerUserNotesChartWriter extends Chart<typeof chartDefinitions.perUserNotes.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.perUserNotes.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof perUserNotesChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.perUserNotes.schema>>> {
 		return {};
 	}
 
@@ -266,12 +243,12 @@ class PerUserNotesChartWriter extends Chart<typeof perUserNotesChartSchema> {
 	}
 }
 
-class PerUserReactionsChartWriter extends Chart<typeof perUserReactionsChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof perUserReactionsChartSchema>>> {
+class PerUserReactionsChartWriter extends Chart<typeof chartDefinitions.perUserReactions.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.perUserReactions.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof perUserReactionsChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.perUserReactions.schema>>> {
 		return {};
 	}
 
@@ -286,12 +263,12 @@ class PerUserReactionsChartWriter extends Chart<typeof perUserReactionsChartSche
 	}
 }
 
-class PerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof perUserPvChartSchema>>> {
+class PerUserPvChartWriter extends Chart<typeof chartDefinitions.perUserPv.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.perUserPv.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof perUserPvChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.perUserPv.schema>>> {
 		return {};
 	}
 
@@ -316,16 +293,23 @@ class PerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
 	}
 }
 
-class ActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
+class ActiveUsersChartWriter extends Chart<typeof chartDefinitions.activeUsers.schema> {
 	constructor(db: MiDrizzleDatabase, lock: (key: string) => ReturnType<typeof acquireChartInsertLock>, logger: Logger) {
-		super(db, lock, logger, activeUsersChartName, activeUsersChartSchema);
+		super(
+			db,
+			lock,
+			logger,
+			chartDefinitions.activeUsers.name,
+			chartDefinitions.activeUsers.schema,
+			chartDefinitions.activeUsers.grouped,
+		);
 	}
 
-	protected async tickMajor(): Promise<Partial<KVs<typeof activeUsersChartSchema>>> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.activeUsers.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof activeUsersChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.activeUsers.schema>>> {
 		return {};
 	}
 
@@ -354,7 +338,7 @@ class ActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 	}
 }
 
-class FederationChartWriter extends Chart<typeof federationChartSchema> {
+class FederationChartWriter extends Chart<typeof chartDefinitions.federation.schema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
@@ -362,14 +346,21 @@ class FederationChartWriter extends Chart<typeof federationChartSchema> {
 		private drizzle: MiDrizzleDatabase,
 		private meta: Pick<MiMeta, 'blockedHosts'>,
 	) {
-		super(db, lock, logger, federationChartName, federationChartSchema);
+		super(
+			db,
+			lock,
+			logger,
+			chartDefinitions.federation.name,
+			chartDefinitions.federation.schema,
+			chartDefinitions.federation.grouped,
+		);
 	}
 
-	protected async tickMajor(): Promise<Partial<KVs<typeof federationChartSchema>>> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.federation.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof federationChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.federation.schema>>> {
 		const blocked = this.meta.blockedHosts.flatMap((x) => [x, `%.${x}`]);
 
 		const [sub, pub, pubsub, subActive, pubActive] = await Promise.all([
@@ -486,17 +477,17 @@ class FederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 }
 
-class UsersChartWriter extends Chart<typeof usersChartSchema> {
+class UsersChartWriter extends Chart<typeof chartDefinitions.users.schema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
 		logger: Logger,
 		private drizzle: MiDrizzleDatabase,
 	) {
-		super(db, lock, logger, usersChartName, usersChartSchema);
+		super(db, lock, logger, chartDefinitions.users.name, chartDefinitions.users.schema, chartDefinitions.users.grouped);
 	}
 
-	protected async tickMajor(): Promise<Partial<KVs<typeof usersChartSchema>>> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.users.schema>>> {
 		const [localCount, remoteCount] = await Promise.all([
 			countUsersByHostFromDatabase(this.drizzle, null),
 			countUsersByHostNotNullFromDatabase(this.drizzle),
@@ -508,7 +499,7 @@ class UsersChartWriter extends Chart<typeof usersChartSchema> {
 		};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof usersChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.users.schema>>> {
 		return {};
 	}
 
@@ -523,17 +514,24 @@ class UsersChartWriter extends Chart<typeof usersChartSchema> {
 	}
 }
 
-class PerUserFollowingChartWriter extends Chart<typeof perUserFollowingChartSchema> {
+class PerUserFollowingChartWriter extends Chart<typeof chartDefinitions.perUserFollowing.schema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
 		logger: Logger,
 		private drizzle: MiDrizzleDatabase,
 	) {
-		super(db, lock, logger, perUserFollowingChartName, perUserFollowingChartSchema, true);
+		super(
+			db,
+			lock,
+			logger,
+			chartDefinitions.perUserFollowing.name,
+			chartDefinitions.perUserFollowing.schema,
+			chartDefinitions.perUserFollowing.grouped,
+		);
 	}
 
-	protected async tickMajor(group: string): Promise<Partial<KVs<typeof perUserFollowingChartSchema>>> {
+	protected async tickMajor(group: string): Promise<Partial<KVs<typeof chartDefinitions.perUserFollowing.schema>>> {
 		const [localFollowingsCount, localFollowersCount, remoteFollowingsCount, remoteFollowersCount] = await Promise.all([
 			countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase(this.drizzle, group, false),
 			countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase(this.drizzle, group, false),
@@ -549,7 +547,7 @@ class PerUserFollowingChartWriter extends Chart<typeof perUserFollowingChartSche
 		};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof perUserFollowingChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.perUserFollowing.schema>>> {
 		return {};
 	}
 
@@ -580,12 +578,12 @@ class PerUserFollowingChartWriter extends Chart<typeof perUserFollowingChartSche
 	}
 }
 
-class ApRequestChartWriter extends Chart<typeof apRequestChartSchema> {
-	protected async tickMajor(): Promise<Partial<KVs<typeof apRequestChartSchema>>> {
+class ApRequestChartWriter extends Chart<typeof chartDefinitions.apRequest.schema> {
+	protected async tickMajor(): Promise<Partial<KVs<typeof chartDefinitions.apRequest.schema>>> {
 		return {};
 	}
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof apRequestChartSchema>>> {
+	protected async tickMinor(): Promise<Partial<KVs<typeof chartDefinitions.apRequest.schema>>> {
 		return {};
 	}
 
@@ -628,39 +626,74 @@ export function createChartWriters(deps: ChartWriterDependencies): ChartWriters 
 	const logger = deps.logger as Logger;
 
 	return {
-		driveChart: new DriveChartWriter(deps.db, lock, logger, driveChartName, driveChartSchema),
+		driveChart: new DriveChartWriter(
+			deps.db,
+			lock,
+			logger,
+			chartDefinitions.drive.name,
+			chartDefinitions.drive.schema,
+			chartDefinitions.drive.grouped,
+		),
 		perUserDriveChart: new PerUserDriveChartWriter(
 			deps.db,
 			lock,
 			logger,
-			perUserDriveChartName,
-			perUserDriveChartSchema,
-			true,
+			chartDefinitions.perUserDrive.name,
+			chartDefinitions.perUserDrive.schema,
+			chartDefinitions.perUserDrive.grouped,
 		),
-		instanceChart: new InstanceChartWriter(deps.db, lock, logger, instanceChartName, instanceChartSchema, true),
-		notesChart: new NotesChartWriter(deps.db, lock, logger, notesChartName, notesChartSchema),
+		instanceChart: new InstanceChartWriter(
+			deps.db,
+			lock,
+			logger,
+			chartDefinitions.instance.name,
+			chartDefinitions.instance.schema,
+			chartDefinitions.instance.grouped,
+		),
+		notesChart: new NotesChartWriter(
+			deps.db,
+			lock,
+			logger,
+			chartDefinitions.notes.name,
+			chartDefinitions.notes.schema,
+			chartDefinitions.notes.grouped,
+		),
 		perUserNotesChart: new PerUserNotesChartWriter(
 			deps.db,
 			lock,
 			logger,
-			perUserNotesChartName,
-			perUserNotesChartSchema,
-			true,
+			chartDefinitions.perUserNotes.name,
+			chartDefinitions.perUserNotes.schema,
+			chartDefinitions.perUserNotes.grouped,
 		),
 		activeUsersChart: new ActiveUsersChartWriter(deps.db, lock, logger),
 		perUserReactionsChart: new PerUserReactionsChartWriter(
 			deps.db,
 			lock,
 			logger,
-			perUserReactionsChartName,
-			perUserReactionsChartSchema,
-			true,
+			chartDefinitions.perUserReactions.name,
+			chartDefinitions.perUserReactions.schema,
+			chartDefinitions.perUserReactions.grouped,
 		),
-		perUserPvChart: new PerUserPvChartWriter(deps.db, lock, logger, perUserPvChartName, perUserPvChartSchema, true),
+		perUserPvChart: new PerUserPvChartWriter(
+			deps.db,
+			lock,
+			logger,
+			chartDefinitions.perUserPv.name,
+			chartDefinitions.perUserPv.schema,
+			chartDefinitions.perUserPv.grouped,
+		),
 		federationChart: new FederationChartWriter(deps.db, lock, logger, deps.db, deps.meta),
 		usersChart: new UsersChartWriter(deps.db, lock, logger, deps.db),
 		perUserFollowingChart: new PerUserFollowingChartWriter(deps.db, lock, logger, deps.db),
-		apRequestChart: new ApRequestChartWriter(deps.db, lock, logger, apRequestChartName, apRequestChartSchema),
+		apRequestChart: new ApRequestChartWriter(
+			deps.db,
+			lock,
+			logger,
+			chartDefinitions.apRequest.name,
+			chartDefinitions.apRequest.schema,
+			chartDefinitions.apRequest.grouped,
+		),
 	};
 }
 
