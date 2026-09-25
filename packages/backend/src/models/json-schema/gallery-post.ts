@@ -3,40 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { editableUserContentHeaderProperties, optionalAttachmentProperties } from '@/models/json-schema/common.js';
+
 export const packedGalleryPostSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
-		updatedAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
-		userId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		user: {
-			type: 'object',
-			ref: 'UserLite',
-			optional: false,
-			nullable: false,
-		},
+		...editableUserContentHeaderProperties,
 		title: {
 			type: 'string',
 			optional: false,
@@ -47,38 +19,7 @@ export const packedGalleryPostSchema = {
 			optional: false,
 			nullable: true,
 		},
-		fileIds: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-				format: 'id',
-			},
-		},
-		files: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'object',
-				optional: false,
-				nullable: false,
-				ref: 'DriveFile',
-			},
-		},
-		tags: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-			},
-		},
+		...optionalAttachmentProperties,
 		isSensitive: {
 			type: 'boolean',
 			optional: false,

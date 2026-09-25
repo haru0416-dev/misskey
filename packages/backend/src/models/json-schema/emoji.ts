@@ -3,30 +3,35 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// Simple と Detailed で同じ意味を持つ名前と分類。
+const emojiNamingProperties = {
+	aliases: {
+		type: 'array',
+		optional: false,
+		nullable: false,
+		items: {
+			type: 'string',
+			optional: false,
+			nullable: false,
+			format: 'id',
+		},
+	},
+	name: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+	},
+	category: {
+		type: 'string',
+		optional: false,
+		nullable: true,
+	},
+} as const;
+
 export const packedEmojiSimpleSchema = {
 	type: 'object',
 	properties: {
-		aliases: {
-			type: 'array',
-			optional: false,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-				format: 'id',
-			},
-		},
-		name: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		category: {
-			type: 'string',
-			optional: false,
-			nullable: true,
-		},
+		...emojiNamingProperties,
 		url: {
 			type: 'string',
 			optional: false,
@@ -65,27 +70,7 @@ export const packedEmojiDetailedSchema = {
 			nullable: false,
 			format: 'id',
 		},
-		aliases: {
-			type: 'array',
-			optional: false,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-				format: 'id',
-			},
-		},
-		name: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-		},
-		category: {
-			type: 'string',
-			optional: false,
-			nullable: true,
-		},
+		...emojiNamingProperties,
 		host: {
 			type: 'string',
 			optional: false,

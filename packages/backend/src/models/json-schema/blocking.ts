@@ -3,22 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { entityHeaderProperties } from '@/models/json-schema/common.js';
+
 export const packedBlockingSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
+		...entityHeaderProperties,
 		blockeeId: {
 			type: 'string',
 			optional: false,

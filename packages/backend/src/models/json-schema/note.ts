@@ -3,22 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import {
+	authorProperties,
+	entityHeaderProperties,
+	noteChannelSummaryProperty,
+	optionalAttachmentProperties,
+} from '@/models/json-schema/common.js';
+
 export const packedNoteSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
+		...entityHeaderProperties,
 		deletedAt: {
 			type: 'string',
 			optional: true,
@@ -35,18 +30,7 @@ export const packedNoteSchema = {
 			optional: true,
 			nullable: true,
 		},
-		userId: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		user: {
-			type: 'object',
-			ref: 'UserLite',
-			optional: false,
-			nullable: false,
-		},
+		...authorProperties,
 		replyId: {
 			type: 'string',
 			optional: true,
@@ -106,38 +90,7 @@ export const packedNoteSchema = {
 				format: 'id',
 			},
 		},
-		fileIds: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-				format: 'id',
-			},
-		},
-		files: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'object',
-				optional: false,
-				nullable: false,
-				ref: 'DriveFile',
-			},
-		},
-		tags: {
-			type: 'array',
-			optional: true,
-			nullable: false,
-			items: {
-				type: 'string',
-				optional: false,
-				nullable: false,
-			},
-		},
+		...optionalAttachmentProperties,
 		poll: {
 			type: 'object',
 			optional: true,
@@ -202,43 +155,7 @@ export const packedNoteSchema = {
 			format: 'id',
 			example: 'xxxxxxxxxx',
 		},
-		channel: {
-			type: 'object',
-			optional: true,
-			nullable: true,
-			properties: {
-				id: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				name: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				color: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				isSensitive: {
-					type: 'boolean',
-					optional: false,
-					nullable: false,
-				},
-				allowRenoteToExternal: {
-					type: 'boolean',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: true,
-				},
-			},
-		},
+		channel: noteChannelSummaryProperty,
 		localOnly: {
 			type: 'boolean',
 			optional: true,

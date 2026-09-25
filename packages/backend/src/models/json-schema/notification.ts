@@ -3,569 +3,201 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { notificationTypes, userExportableEntities } from '@/types.js';
+import { userExportableEntities } from '@/types.js';
+import type { notificationTypes } from '@/types.js';
 
-const baseSchema = {
-	type: 'object',
-	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
-		type: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			enum: [...notificationTypes, 'reaction:grouped', 'renote:grouped'],
-		},
+const baseProperties = {
+	id: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+		format: 'id',
+	},
+	createdAt: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+		format: 'date-time',
 	},
 } as const;
+
+const notifierProperties = {
+	user: {
+		type: 'object',
+		ref: 'UserLite',
+		optional: false,
+		nullable: false,
+	},
+	userId: {
+		type: 'string',
+		optional: false,
+		nullable: false,
+		format: 'id',
+	},
+} as const;
+
+const notificationNoteProperty = {
+	type: 'object',
+	ref: 'Note',
+	optional: false,
+	nullable: false,
+} as const;
+
+const notifierNoteProperties = {
+	...notifierProperties,
+	note: notificationNoteProperty,
+} as const;
+
+type NotificationType = (typeof notificationTypes)[number] | 'reaction:grouped' | 'renote:grouped';
+
+// oneOf の各要素は type の値 1 つで判別する。
+function notificationVariant<const T extends NotificationType, const P extends object>(type: T, properties: P) {
+	return {
+		type: 'object',
+		properties: {
+			...baseProperties,
+			type: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+				enum: [type],
+			},
+			...properties,
+		},
+	} as const;
+}
 
 export const packedNotificationSchema = {
 	type: 'object',
 	oneOf: [
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['note'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
+		notificationVariant('note', notifierNoteProperties),
+		notificationVariant('mention', notifierNoteProperties),
+		notificationVariant('reply', notifierNoteProperties),
+		notificationVariant('renote', notifierNoteProperties),
+		notificationVariant('quote', notifierNoteProperties),
+		notificationVariant('reaction', {
+			...notifierNoteProperties,
+			reaction: {
+				type: 'string',
+				optional: false,
+				nullable: false,
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['mention'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
+		}),
+		notificationVariant('pollEnded', notifierNoteProperties),
+		notificationVariant('scheduledNotePosted', {
+			note: notificationNoteProperty,
+		}),
+		notificationVariant('scheduledNotePostFailed', {
+			noteDraft: {
+				type: 'object',
+				ref: 'NoteDraft',
+				optional: false,
+				nullable: false,
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['reply'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
+		}),
+		notificationVariant('follow', notifierProperties),
+		notificationVariant('receiveFollowRequest', notifierProperties),
+		notificationVariant('followRequestAccepted', {
+			...notifierProperties,
+			message: {
+				type: 'string',
+				optional: false,
+				nullable: true,
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['renote'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
+		}),
+		notificationVariant('roleAssigned', {
+			role: {
+				type: 'object',
+				ref: 'Role',
+				optional: false,
+				nullable: false,
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['quote'],
-				},
-				user: {
+		}),
+		notificationVariant('chatRoomInvitationReceived', {
+			invitation: {
+				type: 'object',
+				ref: 'ChatRoomInvitation',
+				optional: false,
+				nullable: false,
+			},
+		}),
+		notificationVariant('achievementEarned', {
+			achievement: {
+				ref: 'AchievementName',
+			},
+		}),
+		notificationVariant('exportCompleted', {
+			exportedEntity: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+				enum: userExportableEntities,
+			},
+			fileId: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+				format: 'id',
+			},
+		}),
+		notificationVariant('login', {}),
+		notificationVariant('createToken', {}),
+		notificationVariant('app', {
+			body: {
+				type: 'string',
+				optional: false,
+				nullable: false,
+			},
+			header: {
+				type: 'string',
+				optional: false,
+				nullable: true,
+			},
+			icon: {
+				type: 'string',
+				optional: false,
+				nullable: true,
+			},
+		}),
+		notificationVariant('reaction:grouped', {
+			note: notificationNoteProperty,
+			reactions: {
+				type: 'array',
+				optional: false,
+				nullable: false,
+				items: {
 					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['reaction'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
-				reaction: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['pollEnded'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['scheduledNotePosted'],
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['scheduledNotePostFailed'],
-				},
-				noteDraft: {
-					type: 'object',
-					ref: 'NoteDraft',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['follow'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['receiveFollowRequest'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['followRequestAccepted'],
-				},
-				user: {
-					type: 'object',
-					ref: 'UserLite',
-					optional: false,
-					nullable: false,
-				},
-				userId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-				message: {
-					type: 'string',
-					optional: false,
-					nullable: true,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['roleAssigned'],
-				},
-				role: {
-					type: 'object',
-					ref: 'Role',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['chatRoomInvitationReceived'],
-				},
-				invitation: {
-					type: 'object',
-					ref: 'ChatRoomInvitation',
-					optional: false,
-					nullable: false,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['achievementEarned'],
-				},
-				achievement: {
-					ref: 'AchievementName',
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['exportCompleted'],
-				},
-				exportedEntity: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: userExportableEntities,
-				},
-				fileId: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					format: 'id',
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['login'],
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['createToken'],
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['app'],
-				},
-				body: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-				},
-				header: {
-					type: 'string',
-					optional: false,
-					nullable: true,
-				},
-				icon: {
-					type: 'string',
-					optional: false,
-					nullable: true,
-				},
-			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['reaction:grouped'],
-				},
-				note: {
-					type: 'object',
-					ref: 'Note',
-					optional: false,
-					nullable: false,
-				},
-				reactions: {
-					type: 'array',
-					optional: false,
-					nullable: false,
-					items: {
-						type: 'object',
-						properties: {
-							user: {
-								type: 'object',
-								ref: 'UserLite',
-								optional: false,
-								nullable: false,
-							},
-							reaction: {
-								type: 'string',
-								optional: false,
-								nullable: false,
-							},
+					properties: {
+						user: {
+							type: 'object',
+							ref: 'UserLite',
+							optional: false,
+							nullable: false,
 						},
-						required: ['user', 'reaction'],
+						reaction: {
+							type: 'string',
+							optional: false,
+							nullable: false,
+						},
 					},
+					required: ['user', 'reaction'],
 				},
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['renote:grouped'],
-				},
-				note: {
+		}),
+		notificationVariant('renote:grouped', {
+			note: notificationNoteProperty,
+			users: {
+				type: 'array',
+				optional: false,
+				nullable: false,
+				items: {
 					type: 'object',
-					ref: 'Note',
+					ref: 'UserLite',
 					optional: false,
 					nullable: false,
-				},
-				users: {
-					type: 'array',
-					optional: false,
-					nullable: false,
-					items: {
-						type: 'object',
-						ref: 'UserLite',
-						optional: false,
-						nullable: false,
-					},
 				},
 			},
-		},
-		{
-			type: 'object',
-			properties: {
-				...baseSchema.properties,
-				type: {
-					type: 'string',
-					optional: false,
-					nullable: false,
-					enum: ['test'],
-				},
-			},
-		},
+		}),
+		notificationVariant('test', {}),
 	],
 } as const;

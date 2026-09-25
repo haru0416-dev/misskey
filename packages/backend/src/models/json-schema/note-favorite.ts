@@ -3,22 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { entityHeaderProperties } from '@/models/json-schema/common.js';
+
 export const packedNoteFavoriteSchema = {
 	type: 'object',
 	properties: {
-		id: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'id',
-			example: 'xxxxxxxxxx',
-		},
-		createdAt: {
-			type: 'string',
-			optional: false,
-			nullable: false,
-			format: 'date-time',
-		},
+		...entityHeaderProperties,
 		note: {
 			type: 'object',
 			optional: false,

@@ -14,6 +14,81 @@ import {
 } from '@/server/rest/admin/admin-queue.js';
 import { z } from 'zod';
 
+// deliver-delayed と inbox-delayed は同じ [host, 件数] の組を返す。
+const delayedJobCountsByHostSchema = {
+	type: 'array',
+	optional: false,
+	nullable: false,
+	items: {
+		type: 'array',
+		optional: false,
+		nullable: false,
+		prefixItems: [
+			{
+				type: 'string',
+			},
+			{
+				type: 'number',
+			},
+		],
+		unevaluatedItems: false,
+	},
+	example: [['example.com', 12]],
+} as const;
+
+const queueNameProperty = {
+	type: 'string',
+	optional: false,
+	nullable: false,
+	enum: QUEUE_TYPES,
+} as const;
+
+// queues の各要素と queue-stats は同じキュー状態を返す。
+const queueStateProperties = {
+	counts: {
+		type: 'object',
+		optional: false,
+		nullable: false,
+		additionalProperties: {
+			type: 'number',
+		},
+	},
+	isPaused: {
+		type: 'boolean',
+		optional: false,
+		nullable: false,
+	},
+	outbox: {
+		type: 'object',
+		optional: false,
+		nullable: true,
+		properties: {
+			pending: { type: 'number', optional: false, nullable: false },
+			deadLetter: { type: 'number', optional: false, nullable: false },
+			deliveryFailed: { type: 'number', optional: false, nullable: false },
+			invalidPayload: { type: 'number', optional: false, nullable: false },
+			oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
+		},
+	},
+	metrics: {
+		type: 'object',
+		optional: false,
+		nullable: false,
+		properties: {
+			completed: {
+				optional: false,
+				nullable: false,
+				ref: 'QueueMetrics',
+			},
+			failed: {
+				optional: false,
+				nullable: false,
+				ref: 'QueueMetrics',
+			},
+		},
+	},
+} as const;
+
 export const endpointMetas = {
 	'admin/queue/clear': {
 		meta: {
@@ -34,26 +109,7 @@ export const endpointMetas = {
 			requireModerator: true,
 			kind: 'read:admin:queue',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'array',
-					optional: false,
-					nullable: false,
-					prefixItems: [
-						{
-							type: 'string',
-						},
-						{
-							type: 'number',
-						},
-					],
-					unevaluatedItems: false,
-				},
-				example: [['example.com', 12]],
-			},
+			res: delayedJobCountsByHostSchema,
 		} as const,
 		paramDef: z.object({}),
 	},
@@ -66,26 +122,7 @@ export const endpointMetas = {
 			requireModerator: true,
 			kind: 'read:admin:queue',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'array',
-					optional: false,
-					nullable: false,
-					prefixItems: [
-						{
-							type: 'string',
-						},
-						{
-							type: 'number',
-						},
-					],
-					unevaluatedItems: false,
-				},
-				example: [['example.com', 12]],
-			},
+			res: delayedJobCountsByHostSchema,
 		} as const,
 		paramDef: z.object({}),
 	},
@@ -332,54 +369,8 @@ export const endpointMetas = {
 					optional: false,
 					nullable: false,
 					properties: {
-						name: {
-							type: 'string',
-							optional: false,
-							nullable: false,
-							enum: QUEUE_TYPES,
-						},
-						counts: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							additionalProperties: {
-								type: 'number',
-							},
-						},
-						isPaused: {
-							type: 'boolean',
-							optional: false,
-							nullable: false,
-						},
-						outbox: {
-							type: 'object',
-							optional: false,
-							nullable: true,
-							properties: {
-								pending: { type: 'number', optional: false, nullable: false },
-								deadLetter: { type: 'number', optional: false, nullable: false },
-								deliveryFailed: { type: 'number', optional: false, nullable: false },
-								invalidPayload: { type: 'number', optional: false, nullable: false },
-								oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
-							},
-						},
-						metrics: {
-							type: 'object',
-							optional: false,
-							nullable: false,
-							properties: {
-								completed: {
-									optional: false,
-									nullable: false,
-									ref: 'QueueMetrics',
-								},
-								failed: {
-									optional: false,
-									nullable: false,
-									ref: 'QueueMetrics',
-								},
-							},
-						},
+						name: queueNameProperty,
+						...queueStateProperties,
 					},
 				},
 			},
@@ -400,59 +391,13 @@ export const endpointMetas = {
 				optional: false,
 				nullable: false,
 				properties: {
-					name: {
-						type: 'string',
-						optional: false,
-						nullable: false,
-						enum: QUEUE_TYPES,
-					},
+					name: queueNameProperty,
 					qualifiedName: {
 						type: 'string',
 						optional: false,
 						nullable: false,
 					},
-					counts: {
-						type: 'object',
-						optional: false,
-						nullable: false,
-						additionalProperties: {
-							type: 'number',
-						},
-					},
-					isPaused: {
-						type: 'boolean',
-						optional: false,
-						nullable: false,
-					},
-					outbox: {
-						type: 'object',
-						optional: false,
-						nullable: true,
-						properties: {
-							pending: { type: 'number', optional: false, nullable: false },
-							deadLetter: { type: 'number', optional: false, nullable: false },
-							deliveryFailed: { type: 'number', optional: false, nullable: false },
-							invalidPayload: { type: 'number', optional: false, nullable: false },
-							oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
-						},
-					},
-					metrics: {
-						type: 'object',
-						optional: false,
-						nullable: false,
-						properties: {
-							completed: {
-								optional: false,
-								nullable: false,
-								ref: 'QueueMetrics',
-							},
-							failed: {
-								optional: false,
-								nullable: false,
-								ref: 'QueueMetrics',
-							},
-						},
-					},
+					...queueStateProperties,
 					db: {
 						type: 'object',
 						optional: false,

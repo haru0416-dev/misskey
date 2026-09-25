@@ -11,6 +11,28 @@ import {
 	adminAbuseReportNotificationRecipientUpdateParamDef,
 } from '@/server/rest/admin/admin-abuse-report-notification-recipient.js';
 
+// create と update は同じ入力検査を行い、同じエラーを返す。
+const recipientInputErrors = {
+	correlationCheckEmail: {
+		message: 'If "method" is email, "userId" must be set.',
+		code: 'CORRELATION_CHECK_EMAIL',
+		id: '348bb8ae-575a-6fe9-4327-5811999def8f',
+		httpStatusCode: 400,
+	},
+	correlationCheckWebhook: {
+		message: 'If "method" is webhook, "systemWebhookId" must be set.',
+		code: 'CORRELATION_CHECK_WEBHOOK',
+		id: 'b0c15051-de2d-29ef-260c-9585cddd701a',
+		httpStatusCode: 400,
+	},
+	emailAddressNotSet: {
+		message: 'Email address is not set.',
+		code: 'EMAIL_ADDRESS_NOT_SET',
+		id: '7cc1d85e-2f58-fc31-b644-3de8d0d3421f',
+		httpStatusCode: 400,
+	},
+} as const;
+
 export const endpointMetas = {
 	'admin/abuse-report/notification-recipient/create': {
 		meta: {
@@ -26,26 +48,7 @@ export const endpointMetas = {
 				ref: 'AbuseReportNotificationRecipient',
 			},
 
-			errors: {
-				correlationCheckEmail: {
-					message: 'If "method" is email, "userId" must be set.',
-					code: 'CORRELATION_CHECK_EMAIL',
-					id: '348bb8ae-575a-6fe9-4327-5811999def8f',
-					httpStatusCode: 400,
-				},
-				correlationCheckWebhook: {
-					message: 'If "method" is webhook, "systemWebhookId" must be set.',
-					code: 'CORRELATION_CHECK_WEBHOOK',
-					id: 'b0c15051-de2d-29ef-260c-9585cddd701a',
-					httpStatusCode: 400,
-				},
-				emailAddressNotSet: {
-					message: 'Email address is not set.',
-					code: 'EMAIL_ADDRESS_NOT_SET',
-					id: '7cc1d85e-2f58-fc31-b644-3de8d0d3421f',
-					httpStatusCode: 400,
-				},
-			},
+			errors: recipientInputErrors,
 		} as const,
 		paramDef: adminAbuseReportNotificationRecipientCreateParamDef,
 	},
@@ -121,26 +124,7 @@ export const endpointMetas = {
 				ref: 'AbuseReportNotificationRecipient',
 			},
 
-			errors: {
-				correlationCheckEmail: {
-					message: 'If "method" is email, "userId" must be set.',
-					code: 'CORRELATION_CHECK_EMAIL',
-					id: '348bb8ae-575a-6fe9-4327-5811999def8f',
-					httpStatusCode: 400,
-				},
-				correlationCheckWebhook: {
-					message: 'If "method" is webhook, "systemWebhookId" must be set.',
-					code: 'CORRELATION_CHECK_WEBHOOK',
-					id: 'b0c15051-de2d-29ef-260c-9585cddd701a',
-					httpStatusCode: 400,
-				},
-				emailAddressNotSet: {
-					message: 'Email address is not set.',
-					code: 'EMAIL_ADDRESS_NOT_SET',
-					id: '7cc1d85e-2f58-fc31-b644-3de8d0d3421f',
-					httpStatusCode: 400,
-				},
-			},
+			errors: recipientInputErrors,
 		} as const,
 		paramDef: adminAbuseReportNotificationRecipientUpdateParamDef,
 	},

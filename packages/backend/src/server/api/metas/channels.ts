@@ -17,6 +17,18 @@ import {
 import { channelParamDef } from '@/server/rest/favorite/favorites.js';
 import { HOUR } from '@/const.js';
 
+const channelListSchema = {
+	type: 'array',
+	optional: false,
+	nullable: false,
+	items: {
+		type: 'object',
+		optional: false,
+		nullable: false,
+		ref: 'Channel',
+	},
+} as const;
+
 export const endpointMetas = {
 	'channels/create': {
 		meta: {
@@ -80,17 +92,7 @@ export const endpointMetas = {
 
 			requireCredential: false,
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: emptyParamDef,
 	},
@@ -128,17 +130,7 @@ export const endpointMetas = {
 
 			kind: 'read:channels',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: channelsListParamDef,
 	},
@@ -151,17 +143,7 @@ export const endpointMetas = {
 
 			kind: 'read:channels',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: emptyParamDef,
 	},
@@ -174,17 +156,7 @@ export const endpointMetas = {
 
 			kind: 'read:channels',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: channelsListParamDef,
 	},
@@ -195,17 +167,7 @@ export const endpointMetas = {
 
 			requireCredential: false,
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: channelsSearchParamDef,
 	},
@@ -416,17 +378,7 @@ export const endpointMetas = {
 
 			kind: 'read:channels',
 
-			res: {
-				type: 'array',
-				optional: false,
-				nullable: false,
-				items: {
-					type: 'object',
-					optional: false,
-					nullable: false,
-					ref: 'Channel',
-				},
-			},
+			res: channelListSchema,
 		} as const,
 		paramDef: emptyParamDef,
 	},
