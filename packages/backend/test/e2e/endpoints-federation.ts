@@ -702,7 +702,7 @@ describe('Endpoints', () => {
 					},
 				});
 
-				const res = await api('federation/update-remote-user', { userId: remoteUser.id });
+				const res = await api('federation/update-remote-user', { userId: remoteUser.id }, alice);
 				expect(res.status, JSON.stringify(res.body)).toBe(204);
 
 				const updated = await fetchUserByIdOrFailFromDatabase(db, remoteUser.id);
@@ -721,14 +721,19 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('リモートへの取得が走るので、匿名では呼べない', async () => {
+			const res = await api('federation/update-remote-user', { userId: alice.id });
+			expect(res.status, JSON.stringify(res.body)).toBe(401);
+		});
+
 		test('存在しないuserIdは500ではなくNO_SUCH_USERを返す', async () => {
-			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' });
+			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' }, alice);
 			expect(res.status, JSON.stringify(res.body)).toBe(400);
 			expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 
 		test('ローカルユーザーを指定すると500ではなくNOT_REMOTE_USERを返す', async () => {
-			const res = await api('federation/update-remote-user', { userId: alice.id });
+			const res = await api('federation/update-remote-user', { userId: alice.id }, alice);
 			expect(res.status, JSON.stringify(res.body)).toBe(400);
 			expect(castAsError(res.body as any).error.code).toBe('NOT_REMOTE_USER');
 		});
