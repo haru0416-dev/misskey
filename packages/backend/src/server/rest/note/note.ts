@@ -875,6 +875,10 @@ export async function createPackNoteHintsForUsersForApi(
 	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
 	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForApi(deps, notes, { detail }));
 	const reactionLookupNoteIds: MiNote['id'][] = [];
+	// 利用者に依らない値は投稿ごとに 1 度だけ求める。利用者 (最大 1,000 人) ごとに求め直すと、
+	// 利用者数 × 投稿数 × リアクションの種類数になっていた。
+	const reactionStates = new Map<MiNote['id'], { reactionsCount: number; pairCache: string[]; recent: boolean }>();
+	const now = Date.now();
 	for (const target of targets) {
 		if (!detailTargetIds.has(target.id)) {
 			continue;
@@ -883,11 +887,9 @@ export async function createPackNoteHintsForUsersForApi(
 		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 		const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
 		const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((pair) => pair.join('/')));
-		if (
-			reactionsCount > 0 &&
-			reactionsCount > pairCache.length &&
-			parseId(target.id).date.getTime() + 2000 <= Date.now()
-		) {
+		const recent = parseId(target.id).date.getTime() + 2000 > now;
+		reactionStates.set(target.id, { reactionsCount, pairCache, recent });
+		if (reactionsCount > 0 && reactionsCount > pairCache.length && !recent) {
 			reactionLookupNoteIds.push(target.id);
 		}
 	}
@@ -923,32 +925,26 @@ export async function createPackNoteHintsForUsersForApi(
 		followeeIdsByFollowerId.set(row.followerId, followeeIds);
 	}
 
+	const pollVoteNoteIds = new Set(pollTargetIds);
 	return new Map(
 		uniqueUserIds.map((userId) => {
 			const myReactions = new Map<MiNote['id'], string | undefined>();
-			for (const target of targets) {
-				if (!detailTargetIds.has(target.id)) {
-					continue;
-				}
-				const buffered = staticHint.bufferedReactions.get(target.id)!;
-				const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
-				const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+			for (const [targetId, { reactionsCount, pairCache, recent }] of reactionStates) {
 				if (reactionsCount === 0) {
-					myReactions.set(target.id, undefined);
+					myReactions.set(targetId, undefined);
 					continue;
 				}
-				const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((pair) => pair.join('/')));
 				if (reactionsCount <= pairCache.length) {
 					const pair = pairCache.find((pair) => pair.startsWith(userId));
-					myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
+					myReactions.set(targetId, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
 					continue;
 				}
-				if (parseId(target.id).date.getTime() + 2000 > Date.now()) {
-					myReactions.set(target.id, undefined);
+				if (recent) {
+					myReactions.set(targetId, undefined);
 					continue;
 				}
-				const reaction = reactionByUserId.get(userId)?.get(target.id);
-				myReactions.set(target.id, reaction != null ? normalizeReactionKey(reaction) : undefined);
+				const reaction = reactionByUserId.get(userId)?.get(targetId);
+				myReactions.set(targetId, reaction != null ? normalizeReactionKey(reaction) : undefined);
 			}
 
 			return [
@@ -957,7 +953,7 @@ export async function createPackNoteHintsForUsersForApi(
 					...staticHint,
 					myReactions,
 					pollVotes: pollVotesByUserId.get(userId) ?? new Map(),
-					pollVoteNoteIds: new Set(pollTargetIds),
+					pollVoteNoteIds,
 					...omitUndefined({
 						followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
 						followeeIdCoverage,
