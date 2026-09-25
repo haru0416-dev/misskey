@@ -5,9 +5,8 @@
 
 import { z } from 'zod';
 import type { AntennaCreateValues } from '@/core/antenna/AntennaStore.js';
+import { antennaKeywordMatrixSchema } from '@/core/antenna/antenna-keywords.js';
 import { genId } from '@/misc/id/gen-id.js';
-
-const keywordMatrixSchema = z.array(z.array(z.string()));
 
 function hasKeyword(matrix: string[][]): boolean {
 	return matrix.some((group) => group.some((keyword) => keyword !== ''));
@@ -18,8 +17,8 @@ const exportedAntennaSchema = z
 		name: z.string().min(1).max(100),
 		src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
 		userListAccts: z.array(z.string()).nullable(),
-		keywords: keywordMatrixSchema,
-		excludeKeywords: keywordMatrixSchema,
+		keywords: antennaKeywordMatrixSchema,
+		excludeKeywords: antennaKeywordMatrixSchema,
 		users: z.array(z.string()),
 		caseSensitive: z.boolean(),
 		localOnly: z.boolean(),

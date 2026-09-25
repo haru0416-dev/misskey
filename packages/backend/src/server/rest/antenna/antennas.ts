@@ -8,6 +8,11 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
+	antennaKeywordMatrixSchema,
+	compactAntennaKeywords,
+	matchesAntennaKeywords,
+} from '@/core/antenna/antenna-keywords.js';
+import {
 	appendUserToAntennasInDatabase,
 	createAntennasWithinLimitInDatabase,
 	deleteAntennaFromDatabase,
@@ -176,42 +181,19 @@ export async function checkHitAntennaForApi(
 		}
 	}
 
-	const keywords = antenna.keywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
+	const keywords = compactAntennaKeywords(antenna.keywords);
+	const excludeKeywords = compactAntennaKeywords(antenna.excludeKeywords);
 
-	if (keywords.length > 0) {
+	if (keywords.length > 0 || excludeKeywords.length > 0) {
 		if (note.text == null && note.cw == null) {
 			return false;
 		}
 
-		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
-
-		const matched = keywords.some((and) =>
-			and.every((keyword) =>
-				antenna.caseSensitive ? _text.includes(keyword) : _text.toLowerCase().includes(keyword.toLowerCase()),
-			),
-		);
-
-		if (!matched) {
+		const text = (note.text ?? '') + '\n' + (note.cw ?? '');
+		if (keywords.length > 0 && !matchesAntennaKeywords(text, keywords, antenna.caseSensitive)) {
 			return false;
 		}
-	}
-
-	const excludeKeywords = antenna.excludeKeywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
-
-	if (excludeKeywords.length > 0) {
-		if (note.text == null && note.cw == null) {
-			return false;
-		}
-
-		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
-
-		const matched = excludeKeywords.some((and) =>
-			and.every((keyword) =>
-				antenna.caseSensitive ? _text.includes(keyword) : _text.toLowerCase().includes(keyword.toLowerCase()),
-			),
-		);
-
-		if (matched) {
+		if (excludeKeywords.length > 0 && matchesAntennaKeywords(text, excludeKeywords, antenna.caseSensitive)) {
 			return false;
 		}
 	}
@@ -379,8 +361,8 @@ export const antennasCreateParamDef = z
 		name: z.string().min(1).max(100),
 		src: z.enum(antennaSrcEnum),
 		userListId: misskeyId().nullable().optional(),
-		keywords: z.array(z.array(z.string())),
-		excludeKeywords: z.array(z.array(z.string())),
+		keywords: antennaKeywordMatrixSchema,
+		excludeKeywords: antennaKeywordMatrixSchema,
 		users: z.array(z.string()),
 		caseSensitive: z.boolean(),
 		localOnly: z.boolean().optional(),
@@ -478,8 +460,8 @@ export const antennasUpdateParamDef = z
 		name: z.string().min(1).max(100).optional(),
 		src: z.enum(antennaSrcEnum).optional(),
 		userListId: misskeyId().nullable().optional(),
-		keywords: z.array(z.array(z.string())).optional(),
-		excludeKeywords: z.array(z.array(z.string())).optional(),
+		keywords: antennaKeywordMatrixSchema.optional(),
+		excludeKeywords: antennaKeywordMatrixSchema.optional(),
 		users: z.array(z.string()).optional(),
 		caseSensitive: z.boolean().optional(),
 		localOnly: z.boolean().optional(),

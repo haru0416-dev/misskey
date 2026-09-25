@@ -6,7 +6,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import type * as Redis from 'ioredis';
-import Chart from '@/core/chart/core.js';
+import Chart, { mergeChartDiffs } from '@/core/chart/core.js';
 import TestChart from '../../chart-fixtures/test.js';
 import TestGroupedChart from '../../chart-fixtures/test-grouped.js';
 import TestUniqueChart from '../../chart-fixtures/test-unique.js';
@@ -629,5 +629,21 @@ describe('Chart', () => {
 				},
 			});
 		});
+	});
+});
+
+describe('mergeChartDiffs', () => {
+	test('数値は足し、一意集計の値は重複を除いて集める', () => {
+		expect(
+			mergeChartDiffs([
+				{ requests: 1, users: ['a'] },
+				{ requests: 2, users: ['b', 'a'] },
+				{ requests: -1, users: ['a'], hosts: ['x'] },
+			]),
+		).toStrictEqual({ requests: 2, users: ['a', 'b'], hosts: ['x'] });
+	});
+
+	test('差分が無ければ空', () => {
+		expect(mergeChartDiffs([])).toStrictEqual({});
 	});
 });

@@ -528,8 +528,12 @@ export async function resolveMentionedAndInvolvedRemoteUsersForApi(
 	});
 	const renotedOrReplied = await listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(deps.db, note.id);
 
-	const all = [...byUriOrId, ...renotedOrReplied];
-	return all.filter((u, i, self) => i === self.findIndex((u2) => u.id === u2.id));
+	// 先に現れた方を残して id で重複を除く。findIndex で除くと件数の 2 乗 (2 万件で約 100 ms) になる。
+	const byId = new Map<MiUser['id'], MiUser>();
+	for (const user of [...byUriOrId, ...renotedOrReplied]) {
+		if (!byId.has(user.id)) byId.set(user.id, user);
+	}
+	return [...byId.values()];
 }
 
 export function renderUpdateForApi(

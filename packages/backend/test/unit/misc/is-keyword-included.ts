@@ -120,4 +120,11 @@ describe('isKeywordIncluded', () => {
 			);
 		});
 	});
+
+	test('g フラグ付きの正規表現も、繰り返し呼んで結果が変わらない', () => {
+		for (let i = 0; i < 3; i++) {
+			expect(isKeywordIncluded('spam here', ['/spam/g'])).toBe(true);
+		}
+		expect(isKeywordIncluded('clean', ['/spam/g'])).toBe(false);
+	});
 });

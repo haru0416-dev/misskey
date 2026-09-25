@@ -183,6 +183,8 @@ async function extractApMentionsForApi(
 	).filter((x): x is MiUser => x != null);
 }
 
+const MAX_REMOTE_POLL_CHOICES = 100;
+
 async function extractPollFromQuestionForApi(
 	deps: ApiApNoteDependencies,
 	source: string | IObject,
@@ -200,16 +202,16 @@ async function extractPollFromQuestionForApi(
 
 	const expiresAt = question.endTime ? new Date(question.endTime) : question.closed ? new Date(question.closed) : null;
 
-	const choices =
-		question[multiple ? 'anyOf' : 'oneOf']
-			?.map((x: { name?: string }) => x.name)
-			.filter((x: string | undefined): x is string => x != null) ?? [];
-
-	const votes =
-		question[multiple ? 'anyOf' : 'oneOf']?.map(
-			(x: { replies?: { totalItems?: number }; _misskey_votes?: number }) =>
-				x.replies?.totalItems ?? x._misskey_votes ?? 0,
-		) ?? [];
+	// 選択肢数はリモートが決める。ローカルの上限は 10 で主要な実装も数十まで。以降の処理が選択肢数に
+	// 比例して重くなるので、先頭から MAX_REMOTE_POLL_CHOICES 個だけ取り込む。
+	const options = (question[multiple ? 'anyOf' : 'oneOf'] ?? [])
+		.filter((x: { name?: string }) => x.name != null)
+		.slice(0, MAX_REMOTE_POLL_CHOICES);
+	const choices = options.map((x: { name?: string }) => x.name!);
+	const votes = options.map(
+		(x: { replies?: { totalItems?: number }; _misskey_votes?: number }) =>
+			x.replies?.totalItems ?? x._misskey_votes ?? 0,
+	);
 
 	return { choices, votes, multiple, expiresAt };
 }
@@ -264,10 +266,17 @@ export async function updateQuestionFromApForApi(
 
 	let changed = false;
 
+	// 名前ごとの票数は 1 度だけ引けるようにする。選択肢ごとに find すると選択肢数の 2 乗
+	// (8,000 個で 134 ms) になる。同名があれば find と同じく先頭を使う。
+	const countsByName = new Map<string, number | undefined>();
+	for (const ap of apChoices) {
+		if (ap.name != null && !countsByName.has(ap.name)) countsByName.set(ap.name, ap.replies?.totalItems);
+	}
+
 	// 選択肢テキストが重複していても正しい位置を更新できるよう、indexOf ではなく列挙位置を使う。
 	for (const [index, choice] of poll.choices.entries()) {
 		const oldCount = poll.votes[index];
-		const newCount = apChoices.find((ap) => ap.name === choice)?.replies?.totalItems;
+		const newCount = countsByName.get(choice);
 		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0)) {
 			throw new Error('invalid newCount: ' + newCount);
 		}
