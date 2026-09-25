@@ -15,6 +15,8 @@ import { completeApiSignin, failApiSignin, honoApiSigninError, tooManyAuthentica
 import type { ApiSigninDependencies, ApiSigninErrorBody, ApiSigninRequest } from './signin.js';
 import { isApiRateLimited } from '../rate-limit.js';
 
+const PASSKEY_CONTEXT_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
 export type ApiSigninWithPasskeyResult = {
 	status: number;
 	body:
@@ -70,8 +72,9 @@ export async function handleApiSigninWithPasskey(
 		};
 	}
 
+	// context は initiate で randomUUID() が返した値に限る。任意の文字列を受けると challenge のキーを選ばせることになる。
 	const context = request.body.context;
-	if (!context || typeof context !== 'string') {
+	if (typeof context !== 'string' || !PASSKEY_CONTEXT_PATTERN.test(context)) {
 		return passkeySigninError(400, '1658cc2e-4495-461f-aee4-d403cdf073c1');
 	}
 
