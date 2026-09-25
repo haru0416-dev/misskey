@@ -22,7 +22,7 @@
 				"test-federation/**/*.ts",
 				"vitest.config.*.ts"
 			],
-			"ignoreDependencies": ["@misskey-dev/emoji-assets"]
+			"ignoreDependencies": ["@misskey-dev/emoji-assets", "@oxc-project/runtime"]
 		},
 		"packages/frontend": {
 			"entry": [
