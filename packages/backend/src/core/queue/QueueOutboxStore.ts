@@ -589,11 +589,19 @@ export async function runInlineDbOutboxJobs(
 	db: MiDrizzleDatabase,
 	jobs: InlineDbOutboxJob[],
 	task: (db: MiDrizzleDatabase, ownedIds: ReadonlySet<string>) => Promise<void>,
+	options: {
+		/**
+		 * COMMIT で WAL の書き出しを待たない。transaction 内の書き込みが outbox 行の削除だけで、段の処理が
+		 * 冪等なときだけ使う。クラッシュで失われるのは削除ごとなので、回復処理が同じ段をもう一度実行する。
+		 */
+		asyncCommit?: boolean;
+	} = {},
 ): Promise<ReadonlySet<string>> {
 	if (jobs.length === 0) return new Set<string>();
 	try {
 		return await db.transaction(async (transaction) => {
 			const tx = transaction as MiDrizzleDatabase;
+			if (options.asyncCommit) await tx.execute(sql`SET LOCAL synchronous_commit = off`);
 			const deleted = await inlineJobDeletionPlan.execute(tx, {
 				ids: jobs.map((job) => job.outboxId),
 				leaseTokens: jobs.map((job) => job.leaseToken),

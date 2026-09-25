@@ -1261,17 +1261,24 @@ async function runNotePostCreateBatch(
 ): Promise<void> {
 	if (jobs.length === 0) return;
 	try {
-		const ownedIds = await runInlineDbOutboxJobs(deps.db, jobs, async (db, ownedIds) => {
-			const stageDeps = { ...deps, db };
-			const context = input ?? (await loadNotePostCreateContext(stageDeps, jobs[0]!.data));
-			if (context == null) return;
-			for (const job of jobs) {
-				if (ownedIds.has(job.outboxId)) {
-					// 非同期 Push cleanup には、終了する batch transaction を渡さない。
-					await runNotePostCreateStage(stageDeps, context, job.data.stage, deps);
+		// 投稿後の段は Redis・queue・通知の冪等キーで結果を残し、transaction 内で書くのは outbox 行の削除だけ。
+		// 削除の COMMIT で fsync を待つと、応答前に投稿の保存と合わせて 2 回待つ (この VPS で 1 回 6.5〜7.1 ms)。
+		const ownedIds = await runInlineDbOutboxJobs(
+			deps.db,
+			jobs,
+			async (db, ownedIds) => {
+				const stageDeps = { ...deps, db };
+				const context = input ?? (await loadNotePostCreateContext(stageDeps, jobs[0]!.data));
+				if (context == null) return;
+				for (const job of jobs) {
+					if (ownedIds.has(job.outboxId)) {
+						// 非同期 Push cleanup には、終了する batch transaction を渡さない。
+						await runNotePostCreateStage(stageDeps, context, job.data.stage, deps);
+					}
 				}
-			}
-		});
+			},
+			{ asyncCommit: true },
+		);
 		if (required) {
 			for (const job of jobs) {
 				if (!ownedIds.has(job.outboxId)) await waitForDbOutboxJob(deps.db, deps.dbQueue, job.outboxId);

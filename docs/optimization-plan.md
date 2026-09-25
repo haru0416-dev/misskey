@@ -781,6 +781,14 @@ MFMの2乗を直した後、残りの候補を関数単位で測り、利用者�
 
 Chromium の新しいスナップショットは切り離された要素を名前ではなく detachedness 欄で示す。WeakMap の値の辺を強い参照として数えると、reactive の表を経由する見かけの経路ばかりが出て原因を取り違える。
 
+### 投稿の応答前の fsync（2026-09-25）
+
+notes/create の応答前には書き込みのある transaction が2つあった。投稿本体（note・outbox 行・投稿数）と、fanout・アンテナの段を実行して outbox 行を消す transaction。後者の COMMIT も WAL の fsync を待つ。track_wal_io_timing で測ると、この VPS の fsync は1回 6.5〜7.1 ms、投稿1件で約3回（応答後の段の transaction を含む）、合計約20 ms/投稿だった。
+
+投稿後の段の transaction が書くのは outbox 行の削除（と配送の outbox 行）だけで、段の効果は Redis・queue・通知の冪等キーに残る。そこでこの transaction だけ `SET LOCAL synchronous_commit = off` にした。クラッシュで失われるのは削除を含む COMMIT 全体なので、回復処理が同じ段を再実行する（at-least-once、各段は冪等）。投稿本体の transaction は同期のまま。ドライブ削除・凍結の inline outbox は transaction 内で他の行を書くので対象外（`asyncCommit` は明示指定）。
+
+変更前後を交互に3回ずつ（フォロワー50、各300件、ホストは他プロジェクトの負荷あり）: fsync/投稿 2.74〜2.93→0.88〜0.98、順次の p50 14.4〜19.2→13.4〜16.5 ms、p90 43.1〜79.0→24.4〜57.3 ms、rps 28〜47→38〜57。並行4では fsync がまとめられるため差は揺れの中（p50 27.5〜41.7 対 32.2〜37.4 ms）。fsync の平均は約7 ms でも分布の裾が重く、p50 より p90 に効く。
+
 ## 根拠となる入口
 
 リンクはこの文書からの相対パス。実装で移動した場合は本書も更新する。
