@@ -8,5 +8,5 @@ import { createRequire } from 'node:module';
 
 const binding = createRequire(import.meta.url)('./index.cjs');
 
-export const { init, Signer, Verifier, ZipReader, SignatureAlgorithmIdentifier } = binding;
+export const { init, Signer, Verifier, ZipArchiveReader, SignatureAlgorithmIdentifier } = binding;
 export default binding;

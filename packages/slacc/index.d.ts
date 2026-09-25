@@ -15,9 +15,18 @@ export declare class Verifier {
   verifyRaw(signature: Buffer, payload: Buffer, callback: ((err: Error | null, arg: boolean) => any)): void
 }
 
-export declare class ZipReader {
-  static withDestinationPath(path: string): ZipReader
-  viaBuffer(buffer: Buffer): void
+/**
+ * アップロードされた zip から、名前を指定した通常ファイルだけをメモリへ読む。
+ * ディスクへは展開しない。エントリ名に含まれるパスや symlink を辿る余地を残さないため。
+ */
+export declare class ZipArchiveReader {
+  static fromBuffer(buffer: Buffer): ZipArchiveReader
+  /**
+   * `name` と完全一致するエントリの中身を返す。無ければ null。
+   * ディレクトリ・symlink・暗号化されたエントリと、展開後に `max_bytes` を超えるエントリはエラーにする。
+   * 宣言サイズは偽れるので、実際に読んだバイト数でも上限を確かめる。
+   */
+  readFile(name: string, maxBytes: number): Buffer | null
 }
 
 export declare function init(numThreads: number): void

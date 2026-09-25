@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
-import { ZipReader } from 'slacc';
+import { ZipArchiveReader } from 'slacc';
 import {
 	deleteEmojiByNameAndHostFromDatabase,
 	listLocalEmojisOrderedByIdFromDatabase,
@@ -131,6 +131,10 @@ type ExportedEmojiMetaRecord = {
 	};
 };
 
+/** 数万件分の meta.json でも数 MB に収まる。 */
+const MAX_EMOJI_IMPORT_META_BYTES = 16 * 1024 * 1024;
+const MAX_EMOJI_IMPORT_FILE_BYTES = 32 * 1024 * 1024;
+
 export async function handleQueueImportCustomEmojis(
 	deps: QueueEmojisDependencies,
 	data: DbUserImportJobData,
@@ -152,13 +156,17 @@ export async function handleQueueImportCustomEmojis(
 		throw e;
 	}
 
-	const outputPath = path + '/emojis';
 	try {
-		ZipReader.withDestinationPath(outputPath).viaBuffer(await fs.promises.readFile(destPath));
-		const metaRaw = fs.readFileSync(outputPath + '/meta.json', 'utf-8');
-		const meta = JSON.parse(metaRaw) as { emojis: ExportedEmojiMetaRecord[] };
+		// zip はディスクへ展開せず、meta.json と meta.json が指すエントリだけを名前で引いて読む。
+		// symlink・ディレクトリ・暗号化エントリと上限超えは slacc 側で例外になる。
+		const zip = ZipArchiveReader.fromBuffer(await fs.promises.readFile(destPath));
+		const metaRaw = zip.readFile('meta.json', MAX_EMOJI_IMPORT_META_BYTES);
+		if (metaRaw == null) {
+			throw new Error('meta.json not found in the emoji archive');
+		}
+		const meta = JSON.parse(metaRaw.toString('utf-8')) as { emojis: ExportedEmojiMetaRecord[] };
 
-		for (const record of meta.emojis) {
+		for (const [index, record] of meta.emojis.entries()) {
 			if (!record.downloaded) {
 				continue;
 			}
@@ -171,7 +179,13 @@ export async function handleQueueImportCustomEmojis(
 			if (!/^[a-zA-Z0-9_]+$/.test(emojiInfo.name)) {
 				continue;
 			}
-			const emojiPath = outputPath + '/' + record.fileName;
+			const content = zip.readFile(record.fileName, MAX_EMOJI_IMPORT_FILE_BYTES);
+			if (content == null) {
+				continue;
+			}
+			// 書き出し先の名前は zip の内容から作らない。1 件ずつ消すので、展開後の合計でディスクが埋まらない。
+			const emojiPath = `${path}/emoji-${index}`;
+			await fs.promises.writeFile(emojiPath, content, { flag: 'wx' });
 			await deleteEmojiByNameAndHostFromDatabase(deps.db, emojiInfo.name, null);
 
 			try {
@@ -197,6 +211,8 @@ export async function handleQueueImportCustomEmojis(
 			} catch {
 				// 1件の失敗でインポート全体を中断しない。
 				continue;
+			} finally {
+				await fs.promises.rm(emojiPath, { force: true });
 			}
 		}
 
