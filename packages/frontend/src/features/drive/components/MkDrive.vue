@@ -72,7 +72,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:data-scroll-anchor="f.id"
 					:folder="f"
 					:selectMode="select === 'folder'"
-					:isSelected="selectedFolders.some(x => x.id === f.id)"
+					:isSelected="selectedFolderIds.has(f.id)"
 					@chosen="chooseFolder"
 					@unchose="unchoseFolder"
 					@click="cd(f)"
@@ -105,7 +105,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:data-scroll-anchor="file.id"
 							:file="file"
 							:folder="folder"
-							:isSelected="selectedFiles.some(x => x.id === file.id)"
+							:isSelected="selectedFileIds.has(file.id)"
 							@click="onFileClick($event, file)"
 							@dragstart="onFileDragstart(file, $event)"
 							@dragend="isDragSource = false"
@@ -128,7 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:data-scroll-anchor="file.id"
 					:file="file"
 					:folder="folder"
-					:isSelected="selectedFiles.some(x => x.id === file.id)"
+					:isSelected="selectedFileIds.has(file.id)"
 					@click="onFileClick($event, file)"
 					@dragstart="onFileDragstart(file, $event)"
 					@dragend="isDragSource = false"
@@ -237,6 +237,9 @@ const isEditMode = ref(false);
 
 const selectedFiles = ref<Misskey.entities.DriveFile[]>([]);
 const selectedFolders = ref<Misskey.entities.DriveFolder[]>([]);
+// 表示中の各項目の選択表示で引く。配列を毎回探すと、1,000 件を全選択した状態で切り替えのたびに約 100 万回比べる。
+const selectedFileIds = computed(() => new Set(selectedFiles.value.map((f) => f.id)));
+const selectedFolderIds = computed(() => new Set(selectedFolders.value.map((f) => f.id)));
 const isRootSelected = ref(false);
 
 watch(
@@ -313,7 +316,7 @@ async function fetchMoreFiles() {
 	}
 }
 
-const filesTimeline = makeDateGroupedTimelineComputedRef(filesPaginator.items, 'month');
+const filesTimeline = makeDateGroupedTimelineComputedRef(filesPaginator.items);
 const shouldBeGroupedByDate = computed(() => ['+createdAt', '-createdAt'].includes(sortModeSelect.value));
 
 watch(folder, () => emit('cd', folder.value));

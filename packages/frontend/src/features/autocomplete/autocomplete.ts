@@ -8,6 +8,7 @@ import type { Ref } from 'vue';
 import type { CompleteInfo } from '@/features/autocomplete/components/MkAutocomplete.vue';
 import { popup } from '@/os.js';
 import { getCaretCoordinates } from '@/utility/get-caret-coordinates.js';
+import { trailingMentionCandidate } from '@/features/autocomplete/mention-candidate.js';
 
 const MkAutocomplete = defineAsyncComponent(() => import('@/features/autocomplete/components/MkAutocomplete.vue'));
 
@@ -93,7 +94,7 @@ export class Autocomplete {
 		const text = beforeCaret.substring(beforeCaret.lastIndexOf('\n') + 1);
 
 		// メンションに含められる文字のみで構成された、最も末尾にある文字列を抽出
-		const mentionCandidate = text.match(/[a-zA-Z0-9_@.\-]+$/)?.[0] ?? '';
+		const mentionCandidate = trailingMentionCandidate(text);
 
 		const mentionIndex = mentionCandidate.lastIndexOf('@');
 		const hashtagIndex = text.lastIndexOf('#');

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_gaps" :class="$style.textRoot">
-	<Mfm :text="block.text ?? ''" :isNote="false"/>
+	<Mfm :text="block.text ?? ''" :parsedNodes="parsed" :isNote="false"/>
 	<div v-if="isEnabledUrlPreview" class="_gaps_s">
 		<MkUrlPreview v-for="url in urls" :key="url" :url="url"/>
 	</div>
@@ -26,7 +26,9 @@ const props = defineProps<{
 	page: Misskey.entities.Page,
 }>();
 
-const urls = props.block.text ? extractUrlFromMfm(mfm.parse(props.block.text)) : [];
+// 本文の描画と URL プレビューの抽出で同じ構文木を使う。
+const parsed = props.block.text ? mfm.parse(props.block.text) : null;
+const urls = parsed ? extractUrlFromMfm(parsed) : [];
 </script>
 
 <style lang="scss" module>

@@ -20,10 +20,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</MkFoldableSection>
 
-	<MkFoldableSection v-for="category in customEmojiCategories" v-once :key="category ?? '___root___'" :expanded="false">
+	<MkFoldableSection v-for="category in customEmojiCategories" v-once :key="category ?? '___root___'" :expanded="false" lazy>
 		<template #header>{{ category || i18n.ts.other }}</template>
 		<div :class="$style.emojis">
-			<XEmoji v-for="emoji in customEmojis.filter(e => e.category === category)" :key="emoji.name" :emoji="emoji"/>
+			<XEmoji v-for="emoji in categoryEmojis(category)" :key="emoji.name" :emoji="emoji"/>
 		</div>
 	</MkFoldableSection>
 </div>
@@ -36,12 +36,18 @@ import XEmoji from '../emojis/emoji.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
-import { customEmojis, customEmojiCategories } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojis, customEmojiCategories, customEmojisByCategory } from '@/features/custom-emojis/custom-emojis.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 
 const q = ref('');
 const searchEmojis = ref<Misskey.entities.EmojiSimple[] | null>(null);
+
+/** null は「その他」。category が空・'null' の絵文字もここに入る (customEmojiCategories はそれらを分類に数えない)。 */
+function categoryEmojis(category: string | null): Misskey.entities.EmojiSimple[] {
+	const { byCategory, uncategorized } = customEmojisByCategory.value;
+	return category == null ? uncategorized : (byCategory.get(category) ?? []);
+}
 
 function search() {
 	if (q.value === '' || q.value == null) {

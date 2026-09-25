@@ -149,9 +149,15 @@ const tableRows = computed(() => {
 	const times = [...new Set(visibleSeries.value.flatMap((series) => series.data.map((point) => point.x)))].sort(
 		(a, b) => b - a,
 	);
+	// 系列ごとに時刻で引く。時刻ごとに系列を先頭から探すと、点の数の 2 乗になる。
+	const valuesByTime = visibleSeries.value.map((series) => {
+		const values = new Map<number, number>();
+		for (const point of series.data) if (!values.has(point.x)) values.set(point.x, point.y);
+		return values;
+	});
 	return times.map((time) => ({
 		time,
-		values: visibleSeries.value.map((series) => series.data.find((point) => point.x === time)?.y ?? 0),
+		values: valuesByTime.map((values) => values.get(time) ?? 0),
 	}));
 });
 

@@ -5,6 +5,7 @@
 
 import { assert, describe, test } from 'vitest';
 import { searchEmoji } from '@/utility/search-emoji.js';
+import { trailingMentionCandidate } from '@/features/autocomplete/mention-candidate.js';
 
 describe('emoji autocomplete', () => {
 	test('名前の完全一致は名前の前方一致より優先される', async () => {
@@ -92,5 +93,30 @@ describe('emoji autocomplete', () => {
 		searchEmoji('zzz', emojiDb);
 
 		assert.equal(nameReads, emojiDb.length);
+	});
+});
+
+describe('mention candidate', () => {
+	test('行末に続くメンション用の文字だけを返す', () => {
+		for (const text of [
+			'',
+			'abc',
+			'hello @alice',
+			'hi @a.b@c-d.example',
+			'x @alice ',
+			'日本語@bob_1',
+			'@',
+			'a b.c-d_e',
+		]) {
+			assert.equal(trailingMentionCandidate(text), text.match(/[a-zA-Z0-9_@.\-]+$/)?.[0] ?? '');
+		}
+	});
+
+	// 以前の非固定の正規表現は 3,000 字で 6.3 ms、6,000 字で 25 ms かかっていた。
+	test('行の長さに比例した時間で終わる', () => {
+		const text = 'a'.repeat(200_000) + ' ';
+		const start = performance.now();
+		assert.equal(trailingMentionCandidate(text), '');
+		assert.isBelow(performance.now() - start, 50);
 	});
 });

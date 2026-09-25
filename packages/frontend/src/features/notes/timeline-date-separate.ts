@@ -96,9 +96,9 @@ export type DateGroupedTimelineItem<T> = {
 	items: T[];
 };
 
+/** 連続する同じ年月の項目をまとめる。 */
 export function makeDateGroupedTimelineComputedRef<T extends { id: string; createdAt: string }>(
 	items: Ref<T[]> | ShallowRef<T[]>,
-	span: 'day' | 'month' = 'day',
 ) {
 	return computed<DateGroupedTimelineItem<T>[]>(() => {
 		const tl: DateGroupedTimelineItem<T>[] = [];
@@ -108,9 +108,8 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 
 			if (
 				currentGroup == null ||
-				(span === 'day' && currentGroup.date.getTime() !== date.getTime()) ||
-				(span === 'month' &&
-					(currentGroup.date.getFullYear() !== date.getFullYear() || currentGroup.date.getMonth() !== date.getMonth()))
+				currentGroup.date.getFullYear() !== date.getFullYear() ||
+				currentGroup.date.getMonth() !== date.getMonth()
 			) {
 				tl.push({
 					date,

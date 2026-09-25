@@ -38,6 +38,32 @@ type ValidateViolationItem = {
 	result: ValidatorResult;
 };
 
+/**
+ * 列ごとに、値 → その値を持つ行の index。unique の検査はセルごとに全セルを走査すると行数の 2 乗になり、
+ * 1,000 行 8 列で 1 回の検証に 66 ms、3,000 行で 370 ms かかっていた。MkGrid は検証のたびに allCells を
+ * 作り直し、検証中はセルの値を変えないので、配列ごとに 1 回だけ作る。
+ */
+const valueIndexes = new WeakMap<GridCell[], Map<string, Map<CellValue, number[]>>>();
+
+function valueIndexOf(allCells: GridCell[]): Map<string, Map<CellValue, number[]>> {
+	let index = valueIndexes.get(allCells);
+	if (index != null) return index;
+	index = new Map();
+	for (const cell of allCells) {
+		const bindTo = cell.column.setting.bindTo;
+		let byValue = index.get(bindTo);
+		if (byValue == null) {
+			byValue = new Map();
+			index.set(bindTo, byValue);
+		}
+		const rows = byValue.get(cell.value);
+		if (rows == null) byValue.set(cell.value, [cell.row.index]);
+		else rows.push(cell.row.index);
+	}
+	valueIndexes.set(allCells, index);
+	return index;
+}
+
 export function cellValidation(allCells: GridCell[], cell: GridCell, newValue: CellValue): ValidateViolation {
 	const { column, row } = cell;
 	const validators = column.setting.validators ?? [];
@@ -95,10 +121,8 @@ class ValidatorPreset {
 		return {
 			name: 'unique',
 			validate: ({ column, row, value, allCells }): ValidatorResult => {
-				const bindTo = column.setting.bindTo;
-				const isUnique = !allCells.some(
-					(cell) => cell.column.setting.bindTo === bindTo && cell.row.index !== row.index && cell.value === value,
-				);
+				const rows = valueIndexOf(allCells).get(column.setting.bindTo)?.get(value) ?? [];
+				const isUnique = rows.every((index) => index === row.index);
 				return {
 					valid: isUnique,
 					message: i18n.ts._gridComponent._error.notUnique,

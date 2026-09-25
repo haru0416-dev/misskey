@@ -14,6 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				ref="text"
 				class="_selectable"
 				:text="message.text"
+				:parsedNodes="parsed"
 				:i="$i"
 				:nyaize="'respect'"
 				:enableEmojiMenu="true"
@@ -84,7 +85,9 @@ const props = defineProps<{
 }>();
 
 const isMe = computed(() => props.message.fromUserId === $i.id);
-const urls = computed(() => (props.message.text ? extractUrlFromMfm(mfm.parse(props.message.text)) : []));
+// 本文の描画と URL プレビューの抽出で同じ構文木を使う。
+const parsed = computed(() => (props.message.text ? mfm.parse(props.message.text) : null));
+const urls = computed(() => (parsed.value ? extractUrlFromMfm(parsed.value) : []));
 
 provide(DI.mfmEmojiReactCallback, (reaction) => {
 	if ($i.policies.chatAvailability !== 'available') {

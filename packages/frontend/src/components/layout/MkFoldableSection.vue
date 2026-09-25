@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@afterLeave="afterLeave"
 	>
 		<div v-show="showBody">
-			<slot></slot>
+			<slot v-if="!lazy || opened"></slot>
 		</div>
 	</Transition>
 </div>
@@ -43,16 +43,21 @@ const miLocalStoragePrefix = 'ui:folder:' as const;
 const props = withDefaults(defineProps<{
 	expanded?: boolean;
 	persistKey?: string | null;
+	/** 最初に開くまで中身を作らない。閉じた状態で並ぶ数が多い一覧用。 */
+	lazy?: boolean;
 }>(), {
 	expanded: true,
 	persistKey: null,
+	lazy: false,
 });
 
 const rootEl = useTemplateRef('rootEl');
 const parentBg = ref<string | null>(null);
 const showBody = ref((props.persistKey && miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`)) ? (miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`) === 't') : props.expanded);
 
+const opened = ref(showBody.value);
 watch(showBody, () => {
+	if (showBody.value) opened.value = true;
 	if (props.persistKey) {
 		miLocalStorage.setItem(`${miLocalStoragePrefix}${props.persistKey}`, showBody.value ? 't' : 'f');
 	}
