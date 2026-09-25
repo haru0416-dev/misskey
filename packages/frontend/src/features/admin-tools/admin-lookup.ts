@@ -52,19 +52,14 @@ export async function lookupUserByEmail() {
 		return;
 	}
 
-	try {
-		const user = await os.apiWithDialog('admin/accounts/find-by-email', { email: result });
-
+	// 失敗は apiWithDialog がダイアログで知らせる。ここでも alert すると 2 重に出る。
+	const user = await os
+		.apiWithDialog('admin/accounts/find-by-email', { email: result }, undefined, {
+			'cb865949-8af5-4062-a88c-ef55e8786d1d': { text: i18n.ts.noSuchUser },
+		})
+		.catch(() => null);
+	if (user != null) {
 		os.pageWindow(`/admin/user/${user.id}`);
-	} catch (err: any) {
-		if (err.code === 'USER_NOT_FOUND') {
-			os.alert({
-				type: 'error',
-				text: i18n.ts.noSuchUser,
-			});
-		} else {
-			throw err;
-		}
 	}
 }
 
