@@ -6,7 +6,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { memoizeInRequest, runInRequestScope } from '@/misc/request-scope.js';
 import { clearQueue, removeQueueJob, retryQueueJob, retryQueueOutboxDeadLetter } from '@/core/queue/QueueAdminLogic.js';
@@ -123,6 +123,40 @@ describe('queue outbox', () => {
 		finishTask();
 		await expect(running).resolves.toEqual(new Set([inlineJob.outboxId]));
 		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, inlineJob.outboxId))).toHaveLength(0);
+	});
+
+	test('asyncCommit はその transaction だけ COMMIT で WAL の書き出しを待たない', async () => {
+		const setting = async (db: typeof runtime.db) => {
+			const rows = (await db.execute(sql`SHOW synchronous_commit`)) as unknown as { synchronous_commit: string }[];
+			return rows[0]?.synchronous_commit;
+		};
+		const enqueue = (id: string) =>
+			enqueueInlineDbJobInOutbox(runtime.db, 'deleteAccount', { user: { id }, soft: true }, { removeOnComplete: true });
+		const [asyncJob, syncJob] = [await enqueue('queue-outbox-async-commit'), await enqueue('queue-outbox-sync-commit')];
+
+		let insideAsync: string | undefined;
+		await runInlineDbOutboxJobs(
+			runtime.db,
+			[asyncJob],
+			async (db) => {
+				insideAsync = await setting(db);
+			},
+			{ asyncCommit: true },
+		);
+		let insideSync: string | undefined;
+		await runInlineDbOutboxJobs(runtime.db, [syncJob], async (db) => {
+			insideSync = await setting(db);
+		});
+
+		expect(insideAsync).toBe('off');
+		expect(insideSync).toBe('on');
+		expect(await setting(runtime.db)).toBe('on');
+		expect(
+			await runtime.db
+				.select()
+				.from(queueOutbox)
+				.where(inArray(queueOutbox.id, [asyncJob.outboxId, syncJob.outboxId])),
+		).toHaveLength(0);
 	});
 
 	test('a stale inline owner cannot execute or release a replacement lease', async () => {
