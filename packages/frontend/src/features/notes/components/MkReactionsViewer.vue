@@ -97,7 +97,9 @@ function canReact(reaction: string) {
 	if (!$i) {
 		return false;
 	}
-	return !/@\w/.test(reaction) && (customEmojisMap.has(reaction) || isSupportedEmoji(reaction));
+	// ローカルのカスタム絵文字は `:name@.:` の形で届く。MkReactionsViewer.Reaction の canToggle と同じく名前だけにして引く。
+	const emojiName = reaction.replaceAll(':', '').replace(/@\./, '');
+	return !/@\w/.test(reaction) && (customEmojisMap.has(emojiName) || isSupportedEmoji(reaction));
 }
 
 watch(
