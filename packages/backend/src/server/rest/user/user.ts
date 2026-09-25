@@ -1330,7 +1330,7 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 		throw usersGetFrequentlyRepliedUsersNoSuchUserError();
 	}
 
-	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit);
+	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit, me ?? null);
 	if (repliedUsers.length === 0) {
 		return [];
 	}

@@ -98,21 +98,22 @@ function pureRenoteCondition(alias: string): SQL {
 	)`;
 }
 
-function noteVisibilityCondition(me: { id: MiUser['id'] } | null): SQL {
+function noteVisibilityCondition(me: { id: MiUser['id'] } | null, alias = 'note'): SQL {
+	const visibility = noteColumn(alias, 'visibility');
 	if (me == null) {
-		return sql`("note"."visibility" = 'public' OR "note"."visibility" = 'home')`;
+		return sql`(${visibility} = 'public' OR ${visibility} = 'home')`;
 	}
 
 	return sql`(
-		("note"."visibility" = 'public' OR "note"."visibility" = 'home')
-		OR "note"."userId" = ${me.id}
-		OR ARRAY[${me.id}]::varchar[] <@ "note"."visibleUserIds"
-		OR ARRAY[${me.id}]::varchar[] <@ "note"."mentions"
+		(${visibility} = 'public' OR ${visibility} = 'home')
+		OR ${noteColumn(alias, 'userId')} = ${me.id}
+		OR ARRAY[${me.id}]::varchar[] <@ ${noteColumn(alias, 'visibleUserIds')}
+		OR ARRAY[${me.id}]::varchar[] <@ ${noteColumn(alias, 'mentions')}
 		OR (
-			"note"."visibility" = 'followers'
+			${visibility} = 'followers'
 			AND (
-				"note"."userId" IN (SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id})
-				OR "note"."replyUserId" = ${me.id}
+				${noteColumn(alias, 'userId')} IN (SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id})
+				OR ${noteColumn(alias, 'replyUserId')} = ${me.id}
 			)
 		)
 	)`;
@@ -2124,26 +2125,33 @@ export async function adjustNotesPageCountInDatabase(
 	`);
 }
 
+/**
+ * 返信と返信先のどちらも `me` から見えるものだけを数える。フォロワー限定やダイレクトの返信を含めると、
+ * 見えないはずのやり取りの相手が一覧から推測できてしまう。
+ */
 export async function listFrequentlyRepliedUsersFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	limit: number,
+	me: { id: MiUser['id'] } | null,
 ): Promise<{ userId: MiUser['id']; count: number }[]> {
 	const result = await db.execute<{ userId: MiUser['id']; count: string | number }>(sql`
 		WITH "recent_replies" AS (
 			SELECT DISTINCT "replyId"
 			FROM (
-				SELECT "replyId"
+				SELECT "note"."replyId"
 				FROM "note"
-				WHERE "userId" = ${userId}
-					AND "replyId" IS NOT NULL
-				ORDER BY "id" DESC
+				WHERE "note"."userId" = ${userId}
+					AND "note"."replyId" IS NOT NULL
+					AND ${noteVisibilityCondition(me)}
+				ORDER BY "note"."id" DESC
 				LIMIT 1000
 			) AS "recent_notes"
 		)
 		SELECT "target"."userId" AS "userId", COUNT(*) AS "count"
 		FROM "note" AS "target"
 		INNER JOIN "recent_replies" ON "recent_replies"."replyId" = "target"."id"
+			AND ${noteVisibilityCondition(me, 'target')}
 		-- 他の一覧系 (users / users/recommendation) と同じくサスペンド中のユーザーは出さない。
 		-- LIMIT の前に除かないと、除外した分だけ件数が減る。
 		INNER JOIN "user" ON "user"."id" = "target"."userId" AND "user"."isSuspended" = FALSE
