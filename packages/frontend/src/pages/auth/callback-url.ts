@@ -26,7 +26,3 @@ export function setAuthCallbackUrlParameter(callbackUrl: string, name: string, v
 	url.searchParams.set(name, value);
 	return url.toString();
 }
-
-export function createAuthCallbackUrl(callbackUrl: string, token: string): string {
-	return setAuthCallbackUrlParameter(callbackUrl, 'token', token);
-}

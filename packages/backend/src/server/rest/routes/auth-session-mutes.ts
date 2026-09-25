@@ -12,12 +12,6 @@ import {
 	authenticateApiToken,
 } from '../auth/auth.js';
 import {
-	handleApiAuthAccept,
-	handleApiAuthSessionGenerate,
-	handleApiAuthSessionShow,
-	handleApiAuthSessionUserkey,
-} from '../auth/auth-session.js';
-import {
 	handleApiBlockingCreate,
 	handleApiBlockingDelete,
 	handleApiBlockingList,
@@ -43,36 +37,6 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post(
-		'/auth/session/generate',
-		endpointHandlerAnonymous(deps, 'auth/session/generate', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAuthSessionGenerate(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/auth/session/show',
-		endpointHandlerAnonymous(deps, 'auth/session/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAuthSessionShow(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/auth/session/userkey',
-		endpointHandlerAnonymous(deps, 'auth/session/userkey', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAuthSessionUserkey(deps, body)),
-		),
-	);
-
-	app.post(
-		'/auth/accept',
-		endpointHandler(deps, 'auth/accept', async ({ body, auth, c }) => {
-			await handleApiAuthAccept(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
 	app.post(
 		'/blocking/create',
 		endpointHandler(deps, 'blocking/create', async ({ body, auth, c }) =>

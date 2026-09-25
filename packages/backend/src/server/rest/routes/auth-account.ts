@@ -15,7 +15,6 @@ import {
 	handleApiAntennasShow,
 	handleApiAntennasUpdate,
 } from '../antenna/antennas.js';
-import { handleApiAppCreate, handleApiAppShow } from '../auth/app.js';
 import { handleApiSigninFlow } from '../auth/signin.js';
 import { handleApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
 import { signupPendingWithApi, signupWithApi } from '../auth/signup.js';
@@ -148,22 +147,6 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			jsonResponse(c, await handleApiAntennasNotes(deps, auth.user, body)),
 		),
 	);
-
-	app.post(
-		'/app/create',
-		endpointHandlerAnonymous(deps, 'app/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAppCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.on(['POST', 'QUERY'], '/app/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
-		});
-	});
 }
 
 export function getSignupRateLimit(meta: ApiShellDependencies['meta']): ApiEndpointRateLimit | null {

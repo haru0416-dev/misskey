@@ -4,7 +4,6 @@
  */
 
 import type { MiUser } from './User.js';
-import type { MiApp } from './App.js';
 
 export class MiAccessToken {
 	public id: string;
@@ -15,15 +14,9 @@ export class MiAccessToken {
 
 	public session: string | null;
 
-	public hash: string;
-
 	public userId: MiUser['id'];
 
 	public user: MiUser | null;
-
-	public appId: MiApp['id'] | null;
-
-	public app: MiApp | null;
 
 	public name: string | null;
 

@@ -4,6 +4,7 @@
  */
 
 import * as assert from 'node:assert';
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
 	announcementReadExistsInDatabase,
@@ -119,6 +120,7 @@ import {
 	simpleGet,
 	uploadFile,
 } from '../utils.js';
+import type { UserToken } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
@@ -750,80 +752,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('auth/session', () => {
-		test('legacy auth session flow', async () => {
-			const app = await api('app/create', {
-				name: 'legacy auth test',
-				description: 'legacy auth test',
-				permission: ['read:account'],
-				callbackUrl: null,
-			});
-			expect(app.status).toBe(200);
-			const appSecret = app.body.secret;
-			if (typeof appSecret !== 'string') {
-				expect.unreachable('app secret is missing');
-			}
-
-			const generated = await api('auth/session/generate', {
-				appSecret,
-			});
-			expect(generated.status).toBe(200);
-			const sessionToken = generated.body.token;
-			expect(typeof sessionToken).toBe('string');
-			assert.ok(generated.body.url.endsWith(`/auth/${sessionToken}`));
-
-			const shown = await api('auth/session/show', {
-				token: sessionToken,
-			});
-			expect(shown.status).toBe(200);
-			expect(shown.body.token).toBe(sessionToken);
-			expect(shown.body.app.id).toBe(app.body.id);
-
-			const pending = await api('auth/session/userkey', {
-				appSecret,
-				token: sessionToken,
-			});
-			expect(pending.status).toBe(400);
-			expect(castAsError(pending.body as any).error.code).toBe('PENDING_SESSION');
-
-			const accepted = await api(
-				'auth/accept',
-				{
-					token: sessionToken,
-				},
-				alice,
-			);
-			expect(accepted.status).toBe(204);
-
-			const userkey = await api('auth/session/userkey', {
-				appSecret,
-				token: sessionToken,
-			});
-			expect(userkey.status).toBe(200);
-			const accessToken = userkey.body.accessToken;
-			if (typeof accessToken !== 'string') {
-				expect.unreachable('access token is missing');
-			}
-			expect(userkey.body.user.id).toBe(alice.id);
-
-			const credential = await api(
-				'i',
-				{},
-				{
-					token: accessToken,
-				},
-			);
-			expect(credential.status).toBe(200);
-			expect(credential.body.id).toBe(alice.id);
-
-			const deleted = await api('auth/session/show', {
-				token: sessionToken,
-			});
-			expect(deleted.status).toBe(400);
-			expect(castAsError(deleted.body as any).error.code).toBe('NO_SUCH_SESSION');
-		});
-	});
-
 	describe('miauth', () => {
 		test('session check returns issued token once', async () => {
 			const session = 'miauth-session-test';
@@ -855,126 +783,73 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('app', () => {
-		async function createLegacyAppToken(name: string): Promise<{
-			app: { id: string; name: string; description?: string | null };
-			accessToken: string;
-		}> {
-			const created = await api(
-				'app/create',
-				{
-					name,
-					description: `${name} description`,
-					permission: ['read:account'],
-					callbackUrl: null,
-				},
-				alice,
+	describe('access tokens', () => {
+		async function issueToken(user: UserToken, name: string): Promise<string> {
+			const issued = await api(
+				'miauth/gen-token',
+				{ session: randomUUID(), name, description: `${name} description`, permission: ['read:account'] },
+				user,
 			);
-			expect(created.status).toBe(200);
-			const appSecret = created.body.secret;
-			if (typeof appSecret !== 'string') {
-				expect.unreachable('app secret is missing');
-			}
-
-			const generated = await api('auth/session/generate', {
-				appSecret,
-			});
-			expect(generated.status).toBe(200);
-			const sessionToken = generated.body.token;
-			expect(typeof sessionToken).toBe('string');
-
-			const accepted = await api(
-				'auth/accept',
-				{
-					token: sessionToken,
-				},
-				alice,
-			);
-			expect(accepted.status).toBe(204);
-
-			const userkey = await api('auth/session/userkey', {
-				appSecret,
-				token: sessionToken,
-			});
-			expect(userkey.status).toBe(200);
-			const accessToken = userkey.body.accessToken;
-			if (typeof accessToken !== 'string') {
-				expect.unreachable('access token is missing');
-			}
-
-			return {
-				app: created.body,
-				accessToken,
-			};
+			expect(issued.status).toBe(200);
+			return issued.body.token;
 		}
 
-		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
-			const created = await api(
-				'app/create',
-				{
-					name: 'test app',
-					description: 'test app description',
-					permission: ['read:account'],
-					callbackUrl: null,
-				},
-				alice,
-			);
-			expect(created.status).toBe(200);
-			expect(created.body.name).toBe('test app');
-
-			const shown = await api('app/show', { appId: created.body.id });
-			expect(shown.status).toBe(200);
-			expect(shown.body.id).toBe(created.body.id);
-			expect(shown.body.name).toBe('test app');
-			expect(shown.body.callbackUrl).toBeNull();
-			expect(shown.body.secret).toBeUndefined();
-
-			const notFound = await api('app/show', { appId: '0000000000000000' });
-			expect(notFound.status).toBe(400);
-			expect(castAsError(notFound.body as any).error.code).toBe('NO_SUCH_APP');
-
-			const mine = await api('my/apps', { limit: 100 }, alice);
-			expect(mine.status).toBe(200);
-			assert.ok(mine.body.some((app) => app.id === created.body.id));
-		});
-
-		test('i/apps と i/authorized-apps で連携アプリトークンを取得して revoke できる', async () => {
-			const byToken = await createLegacyAppToken(`i apps revoke by token ${Date.now()}`);
-			const byTokenId = await createLegacyAppToken(`i apps revoke by tokenId ${Date.now()}`);
+		test('i/apps で MiAuth のトークンを一覧し、i/revoke-token で自分のトークンだけを取り消せる', async () => {
+			const suffix = Date.now().toString(36);
+			const byTokenName = `revoke by token ${suffix}`;
+			const byIdName = `revoke by id ${suffix}`;
+			const byToken = await issueToken(alice, byTokenName);
+			await issueToken(alice, byIdName);
+			const bobToken = await issueToken(bob, `bob ${suffix}`);
 
 			const list = await api('i/apps', { sort: '-createdAt' }, alice);
 			expect(list.status).toBe(200);
-			const tokenItem = list.body.find((item) => item.name === byToken.app.name);
-			const tokenIdItem = list.body.find((item) => item.name === byTokenId.app.name);
+			const tokenItem = list.body.find((item) => item.name === byTokenName);
+			const idItem = list.body.find((item) => item.name === byIdName);
 			assert.ok(tokenItem);
-			assert.ok(tokenIdItem);
-			expect(tokenItem.permission.includes('read:account')).toBe(true);
-			expect(tokenItem.description).toBe(`${byToken.app.name} description`);
+			assert.ok(idItem);
+			expect(tokenItem.permission).toStrictEqual(['read:account']);
+			expect(tokenItem.description).toBe(`${byTokenName} description`);
 			expect(typeof tokenItem.createdAt).toBe('string');
 
-			const authorized = await api('i/authorized-apps', { limit: 100, sort: 'desc' }, alice);
-			expect(authorized.status).toBe(200);
-			const authorizedApp = authorized.body.find((app) => app.id === byToken.app.id);
-			assert.ok(authorizedApp);
-			expect(authorizedApp.name).toBe(byToken.app.name);
-			expect(authorizedApp.isAuthorized).toBe(true);
-
-			const denied = await api('i/apps', {}, { token: byToken.accessToken });
+			const denied = await api('i/apps', {}, { token: byToken });
 			expect(denied.status).toBe(400);
 			expect(castAsError(denied.body as any).error.code).toBe('ACCESS_DENIED');
 
-			const revokedByToken = await api('i/revoke-token', { token: byToken.accessToken }, alice);
+			const revokedByToken = await api('i/revoke-token', { token: byToken }, alice);
 			expect(revokedByToken.status).toBe(204);
-			const revokedCredential = await api('i', {}, { token: byToken.accessToken });
+			const revokedCredential = await api('i', {}, { token: byToken });
 			expect(revokedCredential.status).toBe(401);
 			expect(castAsError(revokedCredential.body as any).error.code).toBe('AUTHENTICATION_FAILED');
 
-			const revokedByTokenId = await api('i/revoke-token', { tokenId: tokenIdItem.id }, alice);
-			expect(revokedByTokenId.status).toBe(204);
-			const afterRevoke = await api('i/authorized-apps', { limit: 100 }, alice);
-			expect(afterRevoke.status).toBe(200);
-			expect(afterRevoke.body.some((app) => app.id === byToken.app.id)).toBe(false);
-			expect(afterRevoke.body.some((app) => app.id === byTokenId.app.id)).toBe(false);
+			const bobList = await api('i/apps', {}, bob);
+			const bobItem = bobList.body.find((item) => item.name === `bob ${suffix}`);
+			assert.ok(bobItem);
+			// 他人のトークンは ID を知っていても取り消せない。
+			expect((await api('i/revoke-token', { tokenId: bobItem.id }, alice)).status).toBe(204);
+			expect((await api('i', {}, { token: bobToken })).status).toBe(200);
+
+			expect((await api('i/revoke-token', { tokenId: idItem.id }, alice)).status).toBe(204);
+			const afterRevoke = await api('i/apps', {}, alice);
+			expect(afterRevoke.body.some((item) => item.name === byIdName || item.name === byTokenName)).toBe(false);
+		});
+
+		test('旧 3-legged 認可のエンドポイントは廃止されている', async () => {
+			for (const endpoint of [
+				'app/create',
+				'app/show',
+				'my/apps',
+				'auth/session/generate',
+				'auth/accept',
+				'i/authorized-apps',
+			]) {
+				const res = await (api as (endpoint: string, params: object, user?: UserToken) => Promise<{ status: number }>)(
+					endpoint,
+					{},
+					alice,
+				);
+				expect(res.status, endpoint).toBe(404);
+			}
 		});
 	});
 

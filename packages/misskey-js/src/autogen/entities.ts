@@ -420,26 +420,6 @@ export type ApGetRequest = NonNullable<operations['ap___get']['requestBody']>['c
 export type ApGetResponse = operations['ap___get']['responses']['200']['content']['application/json'];
 export type ApShowRequest = NonNullable<operations['ap___show']['requestBody']>['content']['application/json'];
 export type ApShowResponse = operations['ap___show']['responses']['200']['content']['application/json'];
-export type AppCreateRequest = NonNullable<operations['app___create']['requestBody']>['content']['application/json'];
-export type AppCreateResponse = operations['app___create']['responses']['200']['content']['application/json'];
-export type AppShowRequest = NonNullable<operations['app___show']['requestBody']>['content']['application/json'];
-export type AppShowResponse = operations['app___show']['responses']['200']['content']['application/json'];
-export type AuthAcceptRequest = NonNullable<operations['auth___accept']['requestBody']>['content']['application/json'];
-export type AuthSessionGenerateRequest = NonNullable<
-    operations['auth___session___generate']['requestBody']
->['content']['application/json'];
-export type AuthSessionGenerateResponse =
-    operations['auth___session___generate']['responses']['200']['content']['application/json'];
-export type AuthSessionShowRequest = NonNullable<
-    operations['auth___session___show']['requestBody']
->['content']['application/json'];
-export type AuthSessionShowResponse =
-    operations['auth___session___show']['responses']['200']['content']['application/json'];
-export type AuthSessionUserkeyRequest = NonNullable<
-    operations['auth___session___userkey']['requestBody']
->['content']['application/json'];
-export type AuthSessionUserkeyResponse =
-    operations['auth___session___userkey']['responses']['200']['content']['application/json'];
 export type BlockingCreateRequest = NonNullable<
     operations['blocking___create']['requestBody']
 >['content']['application/json'];
@@ -996,11 +976,6 @@ export type I2faUpdateKeyResponse =
     operations['i___2fa___update-key']['responses']['200']['content']['application/json'];
 export type IAppsRequest = NonNullable<operations['i___apps']['requestBody']>['content']['application/json'];
 export type IAppsResponse = operations['i___apps']['responses']['200']['content']['application/json'];
-export type IAuthorizedAppsRequest = NonNullable<
-    operations['i___authorized-apps']['requestBody']
->['content']['application/json'];
-export type IAuthorizedAppsResponse =
-    operations['i___authorized-apps']['responses']['200']['content']['application/json'];
 export type IChangePasswordRequest = NonNullable<
     operations['i___change-password']['requestBody']
 >['content']['application/json'];
@@ -1150,8 +1125,6 @@ export type MuteCreateRequest = NonNullable<operations['mute___create']['request
 export type MuteDeleteRequest = NonNullable<operations['mute___delete']['requestBody']>['content']['application/json'];
 export type MuteListRequest = NonNullable<operations['mute___list']['requestBody']>['content']['application/json'];
 export type MuteListResponse = operations['mute___list']['responses']['200']['content']['application/json'];
-export type MyAppsRequest = NonNullable<operations['my___apps']['requestBody']>['content']['application/json'];
-export type MyAppsResponse = operations['my___apps']['responses']['200']['content']['application/json'];
 export type NotesRequest = NonNullable<operations['notes']['requestBody']>['content']['application/json'];
 export type NotesResponse = operations['notes']['responses']['200']['content']['application/json'];
 export type NotesChildrenRequest = NonNullable<

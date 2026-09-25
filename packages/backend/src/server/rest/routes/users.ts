@@ -14,7 +14,6 @@ import {
 } from '../auth/auth.js';
 import { handleApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
 import { handleApiUsernameAvailable } from '../auth/availability.js';
-import { handleApiMyApps } from '../auth/app.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleApiUsersGalleryPosts } from '../gallery/gallery.js';
 import { handleApiUsersListsFavorite, handleApiUsersListsUnfavorite } from '../favorite/favorites.js';
@@ -109,14 +108,6 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			return jsonResponse(c, await handleApiMiauthCheck(deps, session));
 		});
 	});
-
-	app.on(
-		['POST', 'QUERY'],
-		'/my/apps',
-		endpointHandler(deps, 'my/apps', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiMyApps(deps, auth.user, body)),
-		),
-	);
 
 	app.on(
 		['POST', 'QUERY'],

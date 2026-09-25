@@ -4,10 +4,9 @@
  */
 
 import {
-	fetchAccessTokenByHashOrTokenFromDatabase,
+	fetchAccessTokenByTokenFromDatabase,
 	updateAccessTokenLastUsedAtInDatabase,
 } from '@/core/app/AccessTokenStore.js';
-import { fetchAppByIdOrFailFromDatabase } from '@/core/app/AppStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchLocalUserByNativeTokenWithRolesVersionFromDatabase,
@@ -57,7 +56,7 @@ export async function authenticateApiToken(
 		return { user: found.user, token: null };
 	}
 
-	const accessToken = await fetchAccessTokenByHashOrTokenFromDatabase(deps.db, token.toLowerCase(), token);
+	const accessToken = await fetchAccessTokenByTokenFromDatabase(deps.db, token);
 	if (accessToken == null) {
 		throw authenticationFailedError();
 	}
@@ -67,19 +66,6 @@ export async function authenticateApiToken(
 	const user = await fetchLocalUserByIdFromDatabase(deps.db, accessToken.userId);
 	if (user == null) {
 		throw authenticationFailedError();
-	}
-
-	if (accessToken.appId != null) {
-		const app = await fetchAppByIdOrFailFromDatabase(deps.db, accessToken.appId);
-		return {
-			user,
-			token: {
-				id: accessToken.id,
-				name: accessToken.name,
-				iconUrl: accessToken.iconUrl,
-				permission: app.permission,
-			} as MiAccessToken,
-		};
 	}
 
 	return {
