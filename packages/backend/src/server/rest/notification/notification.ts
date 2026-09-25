@@ -19,7 +19,7 @@ import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { MiMeta } from '@/models/_.js';
-import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
+import { achievementTypes } from 'misskey-js/consts.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
 import { packApiRole } from '../role/roles.js';
@@ -79,7 +79,7 @@ type AchievementEarnedNotification = {
 	id: string;
 	createdAt: string;
 	type: 'achievementEarned';
-	achievement: (typeof ACHIEVEMENT_TYPES)[number];
+	achievement: (typeof achievementTypes)[number];
 };
 
 type ScheduledNotePostedNotification = {
@@ -150,7 +150,7 @@ export const notificationsDeleteParamDef = z.object({
 });
 
 export const claimAchievementParamDef = z.object({
-	name: z.enum(ACHIEVEMENT_TYPES),
+	name: z.enum(achievementTypes),
 });
 
 export function toXListId(id: string): string {
@@ -544,7 +544,7 @@ function createTestNotification(deps: ApiNotificationDependencies, userId: MiUse
 function createAchievementEarnedNotification(
 	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
-	achievement: (typeof ACHIEVEMENT_TYPES)[number],
+	achievement: (typeof achievementTypes)[number],
 ): void {
 	trackPromise(
 		(async () => {
@@ -566,9 +566,9 @@ function createAchievementEarnedNotification(
 export async function grantAchievementForApi(
 	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
-	name: (typeof ACHIEVEMENT_TYPES)[number],
+	name: (typeof achievementTypes)[number],
 ): Promise<void> {
-	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(name)) {
+	if (!(achievementTypes as readonly string[]).includes(name)) {
 		return;
 	}
 

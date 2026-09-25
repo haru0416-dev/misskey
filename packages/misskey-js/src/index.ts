@@ -15,6 +15,7 @@ export const followersVisibilities = consts.followersVisibilities;
 export const moderationLogTypes = consts.moderationLogTypes;
 export const rolePolicies = consts.rolePolicies;
 export const queueTypes = consts.queueTypes;
+export const achievementTypes = consts.achievementTypes;
 
 // api extractorで利用する公開形態は未対応
 //export * as api from './api.js';
