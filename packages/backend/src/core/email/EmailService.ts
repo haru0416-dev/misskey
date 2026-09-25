@@ -5,6 +5,7 @@
 
 import { promises as dns } from 'node:dns';
 import * as nodemailer from 'nodemailer';
+import sanitizeHtml from 'sanitize-html';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { isDisposableEmailDomain } from 'disposable-email-domains-js';
 import type { UtilityService } from '@/core/net/UtilityService.js';
@@ -14,6 +15,7 @@ import type { LoggerService } from '@/core/LoggerService.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { escapeHtml } from '@/misc/escape-html.js';
 
 /** 使い捨てドメインの一覧照合と MX の存在確認。一覧で弾ける宛先へは問い合わせを飛ばさない。 */
 export async function validateEmailDeliverability(emailAddress: string): Promise<{
@@ -39,6 +41,60 @@ export async function validateEmailDeliverability(emailAddress: string): Promise
 	}
 
 	return { valid: true, reason: null };
+}
+
+/** 通知メールの HTML を組み立てる。本文は無害化し、差し込む値はエスケープする。 */
+export function renderEmailHtml(params: {
+	subject: string;
+	html: string;
+	logoUrl: string;
+	emailSettingUrl: string;
+	instanceUrl: string;
+	host: string;
+}): string {
+	// 本文はモデレーターの入力 (admin/send-email) も入るので、サーバー名義で任意の HTML を送らせないよう無害化する。
+	// 既定の許可タグ・スキーム (http/https/mailto など) で、既存の通知メールの <br> と <a> は通る。
+	const safeHtml = sanitizeHtml(params.html);
+	const safeSubject = escapeHtml(params.subject);
+
+	// 本文のリンクにも共通の装飾を適用し、呼び出し側のインライン指定を優先する。
+	const styledHtml = new HTMLRewriter()
+		.on('a', {
+			element(element) {
+				element.setAttribute('style', `text-decoration: none; color: #5c62d8; ${element.getAttribute('style') ?? ''}`);
+			},
+		})
+		.transform(safeHtml);
+
+	return `<!doctype html>
+<html style="background: #eee;">
+	<head>
+		<meta charset="utf-8">
+		<title>${safeSubject}</title>
+		<style>
+			a:hover {
+				text-decoration: underline;
+			}
+		</style>
+	</head>
+	<body style="padding: 16px; margin: 0; font-family: sans-serif; font-size: 14px;">
+		<main style="max-width: 500px; margin: 0 auto; background: #fff; color: #555;">
+			<header style="padding: 32px; background: #191b2e;">
+				<img src="${escapeHtml(params.logoUrl)}" style="max-width: 128px; max-height: 28px; vertical-align: bottom;">
+			</header>
+			<article style="padding: 32px;">
+				<h1 style="margin: 0 0 1em 0;">${safeSubject}</h1>
+				<div>${styledHtml}</div>
+			</article>
+			<footer style="padding: 32px; border-top: solid 1px #eee;">
+				<a href="${escapeHtml(params.emailSettingUrl)}" style="text-decoration: none; color: #5c62d8;">${'Email setting'}</a>
+			</footer>
+		</main>
+		<nav style="box-sizing: border-box; max-width: 500px; margin: 16px auto 0 auto; padding: 0 32px;">
+			<a href="${escapeHtml(params.instanceUrl)}" style="text-decoration: none; color: #888;">${escapeHtml(params.host)}</a>
+		</nav>
+	</body>
+</html>`;
 }
 
 export function createEmailService(
@@ -80,50 +136,16 @@ export function createEmailService(
 		};
 		const transporter = nodemailer.createTransport(options);
 
-		// 本文のリンクにも共通の装飾を適用し、呼び出し側のインライン指定を優先する。
-		const styledHtml = new HTMLRewriter()
-			.on('a', {
-				element(element) {
-					element.setAttribute(
-						'style',
-						`text-decoration: none; color: #5c62d8; ${element.getAttribute('style') ?? ''}`,
-					);
-				},
-			})
-			.transform(html);
-
-		const htmlContent = `<!doctype html>
-<html style="background: #eee;">
-	<head>
-		<meta charset="utf-8">
-		<title>${subject}</title>
-		<style>
-			a:hover {
-				text-decoration: underline;
-			}
-		</style>
-	</head>
-	<body style="padding: 16px; margin: 0; font-family: sans-serif; font-size: 14px;">
-		<main style="max-width: 500px; margin: 0 auto; background: #fff; color: #555;">
-			<header style="padding: 32px; background: #191b2e;">
-				<img src="${meta.logoImageUrl ?? meta.iconUrl ?? iconUrl}" style="max-width: 128px; max-height: 28px; vertical-align: bottom;">
-			</header>
-			<article style="padding: 32px;">
-				<h1 style="margin: 0 0 1em 0;">${subject}</h1>
-				<div>${styledHtml}</div>
-			</article>
-			<footer style="padding: 32px; border-top: solid 1px #eee;">
-				<a href="${emailSettingUrl}" style="text-decoration: none; color: #5c62d8;">${'Email setting'}</a>
-			</footer>
-		</main>
-		<nav style="box-sizing: border-box; max-width: 500px; margin: 16px auto 0 auto; padding: 0 32px;">
-			<a href="${config.instance.url}" style="text-decoration: none; color: #888;">${config.runtime.host}</a>
-		</nav>
-	</body>
-</html>`;
+		const htmlContent = renderEmailHtml({
+			subject,
+			html,
+			logoUrl: meta.logoImageUrl ?? meta.iconUrl ?? iconUrl,
+			emailSettingUrl,
+			instanceUrl: config.instance.url,
+			host: config.runtime.host,
+		});
 
 		try {
-			// HTML はサニタイズされないため、呼び出し側は信頼済みの本文だけを渡す。
 			const info = await transporter.sendMail({
 				from: meta.name
 					? {
