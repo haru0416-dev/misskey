@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// ランダムな文字列が生成できればなんでも良い(時系列でソートできるなら尚良)が、とりあえずaidの実装を拝借
+// 一意なランダム文字列であればよいが、時系列で並べられるよう aid と同じ形式で生成する。
 
 const TIME2000 = 946_684_800_000;
 let counter = Math.floor(Math.random() * 10_000);

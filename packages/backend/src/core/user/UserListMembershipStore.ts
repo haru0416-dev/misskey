@@ -52,9 +52,7 @@ export function resolveUserListMembershipPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-/**
- * リストの現在の所属人数カウント (人数上限チェック用)。
- */
+/** 人数上限の検査用。 */
 async function countUserListMembershipsByUserListIdInDatabase(
 	db: MiDrizzleDatabase,
 	userListId: MiUserList['id'],
@@ -138,7 +136,7 @@ const userListMembershipForFanoutByUserIdPlan = defineQueryPlan((db) => {
 });
 
 /**
- * ノート投稿時のファンアウト配信先判定 (NoteCreateService) 向け。
+ * ノート投稿時のファンアウト配信先判定向け。
  * userListId / userListUserId (リストオーナーの非正規化ID) / withReplies のみを取得する。
  */
 export async function listUserListMembershipsForFanoutByUserIdFromDatabase(

@@ -468,7 +468,7 @@ function onImagePointerdown(ev: PointerEvent) {
 	position: absolute;
 	top: 0;
 	left: 0;
-	/* なんかiOSでレンダリングがおかしい
+	/* iOS で表示が崩れるため stretch は使わない
 	width: stretch;
 	height: stretch;
 	*/

@@ -5,7 +5,7 @@ import { baseConfig } from './vitest.config.js';
 
 const include = ['test/unit/**/*.ts', 'src/**/*.test.ts'];
 
-// ファイルごとにモジュールを読み直す分離は、全体 95 秒のうち import だけで 32.7 秒かかっていた。
+// ファイルごとにモジュールを読み直す分離では、全体 95 秒のうち import だけで 32.7 秒かかる。
 // 分離が要るのは vi.mock でモジュールを差し替えるファイルで、分離を外すと差し替えが他のファイルへ
 // 漏れて落ちる。これらだけ分離して実行し、残りはワーカー内でモジュールを使い回す。
 const moduleMockingFiles = include

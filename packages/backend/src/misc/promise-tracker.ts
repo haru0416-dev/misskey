@@ -20,7 +20,7 @@ export function trackPromise(promise: Promise<unknown>) {
 
 /**
  * プロセスを終了させない遅延。本番では終了時に満了を待たずに捨てられるので、テストでも allSettled で
- * 打ち切る (AbortError で reject する)。打ち切らないと e2e のファイルごとの再起動が満了まで最大 2 秒待っていた。
+ * 打ち切る (AbortError で reject する)。打ち切らないと e2e のファイルごとの再起動が満了まで最大 2 秒待つ。
  */
 export function unrefDelay(ms: number): Promise<void> {
 	return delay(ms, undefined, { ref: false, signal: shutdown.signal });

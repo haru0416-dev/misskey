@@ -368,7 +368,7 @@ const canPost = computed((): boolean => {
 	);
 });
 
-// cannot save pure renote as draft
+// 本文・ファイル・投票の無い純粋なリノートは下書きに保存できない
 const canSaveAsServerDraft = computed((): boolean => {
 	return canPost.value && (textLength.value > 0 || files.value.length > 0 || poll.value != null);
 });
@@ -483,7 +483,7 @@ if (props.specified) {
 	pushVisibleUser(props.specified);
 }
 
-// keep cw when reply
+// 返信時に返信先の CW を引き継ぐ
 if (prefer.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
 	useCw.value = true;
 	cw.value = replyTargetNote.value.cw;
@@ -844,8 +844,7 @@ function onKeydown(ev: KeyboardEvent) {
 		post();
 	}
 
-	// justEndedComposition.value is for Safari, which keyDown occurs after compositionend.
-	// ev.isComposing is for another browsers.
+	// Safari は compositionend の後に keydown が来るため justEndedComposition で、他のブラウザは ev.isComposing で変換確定の Escape を除く。
 	if (ev.key === 'Escape' && !justEndedComposition.value && !ev.isComposing) {
 		emit('esc');
 	}

@@ -25,7 +25,6 @@ function calc(src: Element) {
 
 	// アクティベート前などでsrcが描画されていない場合
 	if (!height) {
-		// IntersectionObserverで表示検出する
 		if (!info.intersection) {
 			info.intersection = new IntersectionObserver((entries) => {
 				if (entries.some((entry) => entry.isIntersecting)) {

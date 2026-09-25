@@ -16,8 +16,7 @@ export function extractCustomEmojiName(name: string) {
 }
 
 export function extractCustomEmojiHost(name: string) {
-	// nameは:emojiName@host:の形式
-	// 取り出したい部分はhostなので、@以降を取り出す
+	// name は `:emojiName@host:` の形式
 	const index = name.indexOf('@');
 	if (index === -1) {
 		return null;

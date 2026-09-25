@@ -144,8 +144,7 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 	return {
 		status: 'ok',
 		file: { name: fileValue.name || null, path },
-		// endpoint-base.ts の cleanup は NODE_ENV に関わらず常に unlink するため、createTemp() 自体の
-		// (production 以外では no-op になる) cleanup ではなく、ここで同等の無条件 cleanup を用意する。
+		// createTemp() の cleanup は production 以外で一時ファイルを残すため、環境によらず消すものを渡す。
 		cleanup: () => fs.unlink(path, () => {}),
 		fields,
 	};
@@ -272,8 +271,8 @@ async function uploadDriveFileToObjectStorageForApi(
 		publicRead: deps.meta.objectStorageSetPublicRead,
 	};
 
-	// 失敗を無視すると、実体の無いオブジェクトを指す DriveFile が DB に入り、
-	// API 成功後にファイル URL だけが 404 にならないよう、呼び出し元へ失敗を伝播する。
+	// 失敗を握りつぶすと実体の無いオブジェクトを指す DriveFile が DB に入り、API は成功したのに
+	// ファイル URL が 404 になる。
 	await deps.s3Service.upload(deps.meta, object);
 	deps.logger.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);
 }
@@ -787,9 +786,8 @@ export async function addDriveFileForApi(
 		file = persisted.file;
 	}
 
-	// リモートユーザーのアバター/バナーを取り込むときもここを通る (ap-person)。
-	// これらのストリームを購読するのはローカルのクライアントだけなので、
-	// リモート宛に流しても誰も受け取らず publish が無駄になる。
+	// リモートユーザーのアバター/バナー取り込み (ap-person) もここを通るが、
+	// このストリームを購読するのはローカルのクライアントだけなので publish しない。
 	if (user != null && user.host == null) {
 		packDriveFileOrFailForApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(user.id, 'driveFileCreated', packedFile);

@@ -24,7 +24,7 @@ function getAt<T>(values: readonly T[], index: number): T {
 	return value;
 }
 
-/** 公式版が凍結解除後に削除済みの旧ユーザー行を引き、プロフィールが無く内部エラーになる既知失敗。 */
+// 公式版が凍結解除後に削除済みの旧ユーザー行を引き、プロフィールが無く内部エラーになる既知失敗。
 function upstreamMissingUserProfile(error: unknown): boolean {
 	const cause = (error as { info?: { e?: { code?: unknown; message?: unknown } } } | null)?.info?.e;
 	return (
@@ -118,7 +118,7 @@ describe('User', () => {
 				}
 			});
 
-			/** 未対応のためスキップする。 */
+			// 未対応のためスキップする。
 			test.skip('Setting private for followersVisibility is federated', async () => {
 				await Promise.all([
 					alice.client.request('i/update', { followersVisibility: 'private' }),
@@ -529,7 +529,7 @@ describe('User', () => {
 				}),
 			);
 
-			/** Alice からのフォローでリモートユーザーの存在を再確認する。 */
+			// Alice からのフォローでリモートユーザーの存在を再確認する。
 			test(
 				'Alice can follow Bob',
 				knownUpstreamFailure(true, upstreamMissingUserProfile, async () => {

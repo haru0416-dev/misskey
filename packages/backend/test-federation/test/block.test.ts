@@ -221,7 +221,6 @@ describe('Block', () => {
 			]);
 		});
 
-		/** 通知の受信を止めるため、対象ユーザーをミュートする。 */
 		test('Can mention and notified even if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
 			await deliveryBarrier('a.test');

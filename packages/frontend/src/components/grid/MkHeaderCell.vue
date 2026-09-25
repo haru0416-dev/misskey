@@ -90,7 +90,6 @@ function onHandleMouseDown(ev: MouseEvent) {
 
 function onHandleMouseMove(ev: MouseEvent) {
 	if (!rootEl.value) {
-		// 型ガード
 		return;
 	}
 

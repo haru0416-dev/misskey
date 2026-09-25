@@ -13,7 +13,7 @@ export function checkReactionPermissions(
 ): boolean {
 	if (typeof emoji === 'string') {
 		return true;
-	} // UnicodeEmojiDefにも無い絵文字であれば文字列で来る。Unicode絵文字であることには変わりないので常にリアクション可能とする;
+	} // UnicodeEmojiDefにも無い絵文字であれば文字列で来る。Unicode絵文字であることには変わりないので常にリアクション可能とする。
 	if ('char' in emoji) {
 		return true;
 	} // UnicodeEmojiDefなら常にリアクション可能

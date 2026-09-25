@@ -32,9 +32,7 @@ export type PaginatorCompatibleEndpoints = {
 export type ExtractorFunction<P extends IPaginator, T> = (item: UnwrapRef<P['items']>[number]) => T;
 
 export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
-	/**
-	 * 外部から直接操作しないでください
-	 */
+	/** 外部から直接操作しない。 */
 	items: Ref<_T[]> | ShallowRef<_T[]>;
 	queuedAheadItemsCount: Ref<number>;
 	fetching: Ref<boolean>;
@@ -72,9 +70,7 @@ export class Paginator<
 	T extends E['res'][number] & MisskeyEntity = E['res'][number] & MisskeyEntity,
 	SRef extends boolean = true,
 > implements IPaginator {
-	/**
-	 * 外部から直接操作しないでください
-	 */
+	/** 外部から直接操作しない。 */
 	public items: SRef extends true ? ShallowRef<T[]> : Ref<T[]>;
 
 	public queuedAheadItemsCount = ref(0);
@@ -121,10 +117,7 @@ export class Paginator<
 			params?: E['req'] | (() => E['req']);
 			computedParams?: ComputedRef<E['req'] | null | undefined>;
 
-			/**
-			 * 検索APIのような、ページング不可なエンドポイントを利用する場合
-			 * (そのようなAPIをこの関数で使うのは若干矛盾してるけど)
-			 */
+			/** 検索 API のような、ページング不可なエンドポイントを利用する場合に指定する。 */
 			noPaging?: boolean;
 
 			offsetMode?: boolean;
@@ -289,7 +282,7 @@ export class Paginator<
 			return;
 		}
 
-		// 逆順で返ってくるので
+		// newer 方向の取得結果は古い順で返る。
 		if ((this.initialId || this.initialDate) && this.initialDirection === 'newer') {
 			apiRes.reverse();
 		}

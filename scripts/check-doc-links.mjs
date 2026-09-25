@@ -3,11 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 追跡下の Markdown が張っているリポジトリ内リンクの参照先が実在するかを検査する。
-//
-// ドキュメントはコードの移動に追従しないため、リンク切れはレビューでも気づかれずに残る
-// (frontend の components/ 再編で 30 箇所が同時に切れた実績がある)。
-// 外部 URL の到達性は見ない。ネットワークに触らずミリ秒で終わる範囲に限定している。
+// 追跡下の Markdown が張っているリポジトリ内リンクの参照先が実在するかを検査する。ドキュメントはコードの移動に
+// 追従せず、リンク切れはレビューでも気づかれない (frontend の components/ 再編で 30 箇所が同時に切れた)。
+// 外部 URL の到達性は見ず、ネットワークに触らずミリ秒で終わる範囲に限る。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';

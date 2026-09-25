@@ -175,8 +175,8 @@ const antennaActivePlan = defineQueryPlan((db) => {
 });
 
 /**
- * AntennaService のインメモリキャッシュ向け。isActive な Antenna を全件取得する。
- * ノート配信時のマッチ判定で使われるホットパスなので、フィルタ条件・全件取得の挙動を変えないこと。
+ * isActive な Antenna を全件取得する。ノート配信時のアンテナ照合で使うホットパスなので、
+ * フィルタ条件・全件取得の挙動を変えないこと。
  */
 export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
 	const rows = await antennaActivePlan.execute(db);
@@ -197,10 +197,7 @@ export async function listAntennasByIdsFromDatabase(
 	return rows.map(deserializeAntenna);
 }
 
-/**
- * アカウント移行 (onMoveAccount) 向け。対象 Antenna 群の users 配列末尾へ
- * dstUserAcct を追記する (array_append)。
- */
+/** アカウント移行向け。 */
 export async function appendUserToAntennasInDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiAntenna['id'][],
@@ -218,9 +215,6 @@ export async function appendUserToAntennasInDatabase(
 		.where(inArray(antenna.id, ids));
 }
 
-/**
- * CleanProcessorService 向け。しばらく使われていない Antenna を非アクティブ化する。
- */
 export async function deactivateAntennasNotUsedSinceFromDatabase(db: MiDrizzleDatabase, cutoff: Date): Promise<void> {
 	await db.update(antenna).set({ isActive: false }).where(lt(antenna.lastUsedAt, cutoff));
 }

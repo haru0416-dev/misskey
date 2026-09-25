@@ -37,7 +37,7 @@ import { cacheVersion } from '@/db/schema/cache-version.js';
 import { user as userTable } from '@/db/schema/user.js';
 
 /*
- * 固定形の plan と従来の組み立て (行数が上限を超えたときの fallback) が
+ * 固定形の plan と通常の組み立て (行数が上限を超えたときの fallback) が
  * 同じ行を書くことを、実際に DB へ書いて読み戻して確かめる。SQL 文字列の一致ではなく結果で見るのは、
  * placeholder の値変換 (配列 / jsonb / timestamp) が組み立て時ではなく実行時に走るため。
  */

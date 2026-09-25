@@ -165,9 +165,6 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		return authenticationOptions;
 	}
 
-	/**
-	 * @returns authenticationOptions
-	 */
 	async function initiateSignInWithPasskeyAuthentication(
 		context: string,
 	): Promise<PublicKeyCredentialRequestOptionsJSON> {

@@ -178,7 +178,6 @@ function setupGrid(): GridSetting {
 			minimumDefinitionCount: 100,
 			styleRules: [
 				{
-					// チェックされたら背景色を変える
 					condition: ({ row }) => gridItems.value[row.index]?.checked ?? false,
 					applyStyle: { className: $style['changedRow'] ?? '' },
 				},

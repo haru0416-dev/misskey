@@ -117,7 +117,7 @@ if (!envOption.disableClustering) {
 		throw new Error('Unknown process type');
 	}
 } else {
-	// 非clusterの場合はMasterのみが起動するため、Workerの処理は行わない(cluster.isWorker === trueの状態でこのブロックに来ることはない)
+	// 非 cluster 構成では master だけが起動し、worker としての処理は無い。
 	logger.info(`Start main process... pid: ${process.pid}`);
 	const { masterMain } = await import('./master.js');
 	disposeRuntime = await masterMain(config);

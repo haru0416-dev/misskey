@@ -15,7 +15,7 @@ export type CustomEmojisByCategory = {
 /**
  * 絵文字ピッカーのフォルダごとの一覧を 1 回の走査で作る。元の並び順を保つ。
  * フォルダごとに全件を走査すると、1 万件・100 フォルダでピッカーを開くたびに約 11 ms、
- * 3 万件・300 フォルダで約 98 ms かかっていた。
+ * 3 万件・300 フォルダで約 98 ms かかる。
  */
 export function groupCustomEmojisByCategory(emojis: readonly Misskey.entities.EmojiSimple[]): CustomEmojisByCategory {
 	const byCategory = new Map<string, Misskey.entities.EmojiSimple[]>();

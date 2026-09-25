@@ -19,7 +19,7 @@ export function compactAntennaKeywords(matrix: string[][]): string[][] {
 
 /**
  * いずれかのまとまりの語がすべて本文に含まれるか。大文字小文字を区別しない場合は本文を 1 度だけ小文字にする
- * (語ごとに本文を小文字にし直すと、キーワード 1,600 語・3,000 字で 10 ms かかっていた)。
+ * (語ごとに本文を小文字にし直すと、キーワード 1,600 語・3,000 字で 10 ms かかる)。
  */
 export function matchesAntennaKeywords(text: string, matrix: string[][], caseSensitive: boolean): boolean {
 	const haystack = caseSensitive ? text : text.toLowerCase();

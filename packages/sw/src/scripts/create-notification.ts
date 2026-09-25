@@ -35,14 +35,7 @@ async function composeNotification(
 ): Promise<[string, NotificationOptions] | null> {
 	const i18n = await (swLang.i18n ?? swLang.fetchLocale());
 	switch (data.type) {
-		/*
-		case 'driveFileCreated': // TODO (サーバー側)
-			return [i18n.ts._notification.fileUploaded, {
-				body: body.name,
-				icon: body.url,
-				data
-			}];
-		*/
+		// TODO: サーバー側が driveFileCreated を push するようになったら i18n.ts._notification.fileUploaded で通知する。
 		case 'notification':
 			switch (data.body.type) {
 				case 'follow': {

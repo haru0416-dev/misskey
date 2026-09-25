@@ -226,7 +226,6 @@ function onDragstart(ev: DragEvent) {
 	isDragging.value = true;
 
 	// 親ブラウザに対して、ドラッグが開始されたフラグを立てる
-	// (=あなたの子供が、ドラッグを開始しましたよ)
 	emit('dragstart');
 }
 

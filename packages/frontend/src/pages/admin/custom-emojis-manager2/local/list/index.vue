@@ -130,7 +130,6 @@ function setupGrid(): GridSetting {
 			minimumDefinitionCount: 100,
 			styleRules: [
 				{
-					// 初期値から変わっていたら背景色を変更
 					condition: ({ row }) =>
 						JSON.stringify(gridItems.value[row.index]) !== JSON.stringify(originGridItems.value[row.index]),
 					applyStyle: { className: $style['changedRow'] ?? '' },
@@ -221,13 +220,13 @@ function setupGrid(): GridSetting {
 				editable: true,
 				width: 140,
 				valueTransformer(row) {
-					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
+					// バックエンドからは ID と名前のペア配列で受け取るが、表示には名前だけを使う。
 					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
 						.map((it) => it.name)
 						.join(',');
 				},
 				async customValueEditor(row) {
-					// ID直記入は体験的に最悪なのでモーダルを使って入力する
+					// ID の直接入力は扱いづらいため、モーダルで選ばせる。
 					const item = gridItems.value[row.index];
 					if (item == null) {
 						return [];

@@ -31,18 +31,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</text>
 	</template>
 
-	<!--
-	<line
-		:x1="5 - (Math.sin(sAngle) * (sHandLengthRatio * handsTailLength))"
-		:y1="5 + (Math.cos(sAngle) * (sHandLengthRatio * handsTailLength))"
-		:x2="5 + (Math.sin(sAngle) * ((sHandLengthRatio * 5) - handsPadding))"
-		:y2="5 - (Math.cos(sAngle) * ((sHandLengthRatio * 5) - handsPadding))"
-		:stroke="sHandColor"
-		:stroke-width="thickness / 2"
-		stroke-linecap="round"
-	/>
-	-->
-
 	<line
 		ref="sLine"
 		:class="[$style.s, { [$style.animate]: !disableSAnimate && sAnimation !== 'none', [$style.elastic]: sAnimation === 'elastic', [$style.easeOut]: sAnimation === 'easeOut' }]"

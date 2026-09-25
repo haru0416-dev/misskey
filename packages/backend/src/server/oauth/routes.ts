@@ -17,7 +17,7 @@ function queryParameters(c: Context): OAuthRequestParameters {
 	return parseUrlEncodedParameters(new URL(c.req.url).searchParams.toString());
 }
 
-// OAuth のリクエストボディは小さいので upstream の JSON bodyLimit と同じ 1 MiB で頭打ちにする
+// OAuth のリクエストボディは小さいので JSON API と同じ 1 MiB で頭打ちにする
 // (c.req.json()/text() は無制限にメモリへ読むため)。超過・パース失敗はいずれも「パラメータ無し」
 // として下流の invalid_request 系エラーに流す。
 const OAUTH_BODY_LIMIT = 1024 * 1024;

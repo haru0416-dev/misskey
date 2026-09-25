@@ -247,11 +247,9 @@ const virtualRows = computed(() =>
 );
 
 // virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
-// 同座標に重なる) の状態で描画することがある。「全投稿が一瞬グチャッと重なってから展開する」
-// フラッシュの正体。対策として初期状態を visibility: hidden にし、DOM更新後・ペイント前に
-// 走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ表示する。
-// (virtualizer内部のstart値はレンダーとの整合をライブラリ内部実装に依存するため、描画結果の
-// DOMそのものを真実として判定する)
+// 同座標に重なる) の状態で描画することがある。初期状態を visibility: hidden にし、DOM更新後・
+// ペイント前に走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ表示する。
+// virtualizer内部のstart値とレンダーの整合はライブラリの内部実装に依存するため、描画後のDOMで判定する。
 const virtualLayoutVerified = ref(false);
 let layoutVerifyTimer: number | null = null;
 

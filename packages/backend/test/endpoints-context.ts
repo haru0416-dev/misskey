@@ -19,11 +19,8 @@ import type { TestDatabase } from './fixtures.js';
 import { api, signup } from './utils.js';
 import type * as misskey from 'misskey-js';
 
-/*
- * endpoints-*.ts が共有する前準備。各 e2e ファイルは setup.e2e.ts で DB ごとリセットされるため、
- * 分割後のファイルはそれぞれ自前で alice 等を作り直す必要がある。同じ内容を各ファイルへ写すと
- * 増えるだけなので、ここに集約する。
- */
+// endpoints-*.ts が共有する前準備。各 e2e ファイルは setup.e2e.ts で DB ごとリセットされるため、
+// ファイルごとに alice 等を作り直す。
 export type EndpointsContext = {
 	alice: misskey.entities.SignupResponse;
 	bob: misskey.entities.SignupResponse;

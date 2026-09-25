@@ -211,7 +211,7 @@ watch([choices, multiple, expiration, atDate, atTime, after, unit], () => emit('
 				}
 
 				> section {
-					// MAGIC: Prevent div above from growing unless wrapped to its own line
+					// 大きな flex-grow で、折り返して単独行になるまで上の div を伸ばさない
 					flex-grow: 9999;
 					align-items: end;
 					display: flex;

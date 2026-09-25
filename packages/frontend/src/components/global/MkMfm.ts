@@ -65,8 +65,7 @@ type MfmEvents = {
 };
 
 export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEvents>['emit'] }) {
-	// こうしたいところだけど functional component 内では provide は使えない
-	//provide('linkNavigationBehavior', props.linkNavigationBehavior);
+	// functional component では provide を使えないため、linkNavigationBehavior は props で子へ渡す。
 
 	const isNote = props.isNote ?? true;
 	const shouldNyaize = props.nyaize ? (props.nyaize === 'respect' ? props.author?.isCat : false) : false;

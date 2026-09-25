@@ -345,8 +345,7 @@ const followingForNoteDeliveryByFolloweeIdPlan = defineQueryPlan((db) => ({
 
 /**
  * 投稿 1 件の配送に要るフォロワー情報を 1 回で読む。fanout (ローカル・休眠でない)、通知 (notify)、
- * 連合配送 (リモートの inbox) はそれぞれ同じ followee の following を別条件で読んでいたが、
- * 3 本の合計はほぼ全フォロワーなので 1 本にまとめ、呼び出し側で絞る。
+ * 連合配送 (リモートの inbox) が読む範囲の合計はほぼ全フォロワーなので、1 本で読んで呼び出し側で絞る。
  * 同一リクエスト内は listFollowersForNoteDeliveryForRequest で使い回す。
  */
 async function listFollowersForNoteDeliveryFromDatabase(

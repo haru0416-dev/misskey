@@ -24,7 +24,7 @@ describe('acceptsActivityPub', () => {
 	});
 
 	test('長い Accept も入力長に比例する時間で判定する', () => {
-		// 以前の `ld\\+json.+activitystreams` は 32 KB で約 42 ms、長さの 2 乗で伸びた。
+		// `ld\\+json.+activitystreams` の形だと長さの 2 乗で伸び、32 KB で約 42 ms かかる。
 		const started = performance.now();
 		expect(acceptsActivityPub('application/ld+json;'.repeat(16_384))).toBe(false);
 		expect(performance.now() - started).toBeLessThan(50);

@@ -286,7 +286,7 @@ type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 				? p['enum'] extends readonly (string | null)[]
 					? p['enum'][number]
 					: p['format'] extends 'date-time'
-						? string // Dateにする？？
+						? string
 						: string
 				: p['type'] extends 'boolean'
 					? boolean

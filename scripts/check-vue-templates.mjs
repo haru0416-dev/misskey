@@ -3,11 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 全 .vue の template を Vue のコンパイラに通し、パースエラーを検出する。
-//
-// oxlint も vue-tsc も template の構文 (属性の重複など) は見ないため、
-// この検査でビルド前に検出できるようにする。
-// フルビルドは重いため、パースだけを lint に組み込む。
+// 全 .vue の template を Vue のコンパイラに通し、パースエラーを検出する。oxlint も vue-tsc も
+// template の構文 (属性の重複など) は見ないため。フルビルドは重いので、パースだけを lint に組み込む。
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';

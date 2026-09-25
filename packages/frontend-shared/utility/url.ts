@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/* objを検査して
- * 1. 配列に何も入っていない時はクエリを付けない
- * 2. プロパティがundefinedの時はクエリを付けない
- * （new URLSearchParams(obj)ではそこまで丁寧なことをしてくれない）
- */
+// 空配列と undefined のプロパティはクエリに含めない。new URLSearchParams(obj) はこれらも出力する。
 export function query(obj: Record<string, string | number | boolean>): string {
 	const params = Object.entries(obj)
 		.filter(([, v]) => (Array.isArray(v) ? v.length : v !== undefined))

@@ -56,7 +56,7 @@ export async function signout() {
 		window.clearTimeout(timeout);
 	}
 
-	//#region Remove service worker registration
+	//#region Service Worker の登録解除
 	try {
 		if (navigator.serviceWorker.controller) {
 			const registration = await navigator.serviceWorker.ready;
@@ -79,7 +79,7 @@ export async function signout() {
 			return Promise.all(registrations.map((registration) => registration.unregister()));
 		});
 	} catch {
-		// nothing
+		// 登録解除の失敗ではサインアウトを止めない。
 	}
 	//#endregion
 

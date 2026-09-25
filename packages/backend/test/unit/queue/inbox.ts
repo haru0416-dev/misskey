@@ -81,12 +81,8 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		await runtime.dispose();
 	});
 
-	/**
-	 * 実際に RSA 鍵ペアを生成し、user_publickey に登録した「リモートユーザー」として
-	 * ApRequestCreator.createSignedPost で本物の HTTP-Signature 付きリクエストを組み立て、
-	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、verifyRequestSignature
-	 * が実際のバイト列に対して動作する状態を作る。
-	 */
+	// user_publickey に登録したリモートユーザーの RSA 鍵で createSignedPost の署名付きリクエストを組み立て、
+	// ローカル HTTP フィクスチャへ送って捕捉する。verifyRequestSignature を実際のバイト列に対して動かすため。
 	async function createSignedInboxPayload(
 		host: string,
 		activityOverrides: ActivityOverrides = {},
@@ -152,8 +148,8 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		});
 	}
 
-	/** base64署名文字列の途中1バイトを別の値に差し替える。末尾に文字を追加するだけだと base64 の
-	 * デコード長が変わらず (デコーダが余剰文字を無視するため) 検証が偶然成功してしまうことがある。 */
+	// 途中の 1 バイトを差し替える。末尾に文字を足すだけではデコーダが余剰文字を無視してデコード結果が変わらず、
+	// 検証が偶然成功することがある。
 	function tamperBase64Signature(signature: string): string {
 		const buf = Buffer.from(signature, 'base64');
 		buf[Math.floor(buf.length / 2)] = buf[Math.floor(buf.length / 2)]! ^ 0xff;

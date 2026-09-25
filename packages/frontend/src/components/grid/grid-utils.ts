@@ -128,8 +128,8 @@ export function copyGridDataToClipboard(gridItems: Ref<DataSource[]> | DataSourc
 }
 
 /**
- * クリップボードからタブ区切りテキストとして値を読み取り、グリッドの選択範囲に貼り付けるためのユーティリティ関数。
- * …と言いつつも、使用箇所により反映方法に差があるため更新操作はコールバック関数に任せている。
+ * クリップボードからタブ区切りテキストとして値を読み取り、グリッドの選択範囲に貼り付ける。
+ * 反映方法は使用箇所ごとに異なるため、更新操作はコールバック関数に任せる。
  */
 export async function pasteToGridFromClipboard(
 	context: GridContext,
@@ -208,8 +208,8 @@ export async function pasteToGridFromClipboard(
 }
 
 /**
- * グリッドの選択範囲にあるデータを削除するためのユーティリティ関数。
- * …と言いつつも、使用箇所により反映方法に差があるため更新操作はコールバック関数に任せている。
+ * グリッドの選択範囲にあるデータを削除する。
+ * 反映方法は使用箇所ごとに異なるため、更新操作はコールバック関数に任せる。
  */
 export function removeDataFromGrid(context: GridContext, callback: (cell: GridCell) => void) {
 	for (const cell of context.rangedCells) {

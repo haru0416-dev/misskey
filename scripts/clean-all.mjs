@@ -10,8 +10,7 @@ import { createRequire } from 'node:module';
 const __dirname = import.meta.dirname;
 const require = createRequire(import.meta.url);
 
-// clean.mjs のビルド成果物削除に加えて、全 workspace + root の node_modules と
-// bun のグローバルキャッシュも消す
+// clean.mjs のビルド成果物削除に加えて、全 workspace + root の node_modules と bun のグローバルキャッシュも消す。
 const { workspaces } = require('../package.json');
 
 execSync('bun run clean', {

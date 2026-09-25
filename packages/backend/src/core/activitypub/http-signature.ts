@@ -47,8 +47,8 @@ const SUPPORTED_ALGORITHMS = new Set(['rsa-sha256', 'hs2019', 'ed25519']);
  */
 function parseSignatureHeader(header: string): Record<string, string> {
 	// `key="value"` の並び。value 中のダブルクォートはエスケープされない仕様なので単純に読む。
-	// 署名の検証前に誰でも送れる値なので、読む位置は後ろへしか進めない。以前の非固定の正規表現は
-	// 記号の無い長い値で開始位置ごとに末尾まで読み、16 KB で 260 ms (長さの 2 乗) かかっていた。
+	// 署名の検証前に誰でも送れる値なので、読む位置は後ろへしか進めない。非固定の正規表現だと
+	// 記号の無い長い値で開始位置ごとに末尾まで読み、16 KB で 260 ms (長さの 2 乗) かかる。
 	const params: Record<string, string> = {};
 	const isSpace = (code: number) => code === 0x20 || code === 0x09;
 	const isKeyChar = (code: number) =>

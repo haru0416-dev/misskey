@@ -72,9 +72,7 @@ export async function fetchPollByNoteIdOrFailFromDatabase(
 	return row;
 }
 
-/**
- * ApQuestionService のリモート Question 更新同期向け。votes 配列全体を置き換える。
- */
+/** リモートの Question の同期向け。votes 配列全体を置き換える。 */
 export async function updatePollVotesInDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
@@ -83,10 +81,7 @@ export async function updatePollVotesInDatabase(
 	await db.update(poll).set({ votes }).where(eq(poll.noteId, noteId));
 }
 
-/**
- * 投票時に該当選択肢の得票数だけをインクリメントする。votes 配列を読み直して丸ごと書き戻すのではなく、
- * SQL の配列添字更新構文 (`votes[n] = votes[n] + 1`) を使う。
- */
+/** votes 配列を読み直して書き戻さず、配列添字の更新で該当選択肢だけを加算する。 */
 export async function incrementPollVoteInDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
@@ -97,11 +92,7 @@ export async function incrementPollVoteInDatabase(
 	await db.execute(sql`UPDATE "poll" SET "votes"[${index}] = "votes"[${index}] + 1 WHERE "noteId" = ${noteId}`);
 }
 
-/**
- * notes/polls/recommendation 向け。まだ投票していない公開範囲 public の投票中アンケートの noteId 一覧を返す。
- * poll_vote は既に drizzle 化済みだが muting は未移行のため、相関サブクエリはテーブル名を直接参照する
- * raw SQL で組み立てる (ChatMessageStore 等の未移行テーブル参照と同じ手法)。
- */
+/** notes/polls/recommendation 向け。自分が投票していない、公開範囲 public の投票中アンケートの noteId 一覧。 */
 export async function listUnvotedPublicPollNoteIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {

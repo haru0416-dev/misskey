@@ -64,7 +64,7 @@ async function offlineContentHTML() {
 }
 
 globalThis.addEventListener('install', (ev) => {
-	// 次の問題が発生するため、ServiceWorkerAutoPreload をオプトアウトする必要がある
+	// 下記の Chromium の問題を避けるため、ServiceWorkerAutoPreload をオプトアウトする。
 	// https://issues.chromium.org/issues/466790291
 	if ('addRoutes' in ev) {
 		// doc: https://developer.mozilla.org/en-US/docs/Web/API/InstallEvent/addRoutes
@@ -118,7 +118,6 @@ globalThis.addEventListener('push', (ev) => {
 				const data: PushNotificationDataMap[keyof PushNotificationDataMap] = ev.data?.json();
 
 				switch (data.type) {
-					// case 'driveFileCreated':
 					case 'notification':
 					case 'unreadAntennaNote':
 					case 'newChatMessage':

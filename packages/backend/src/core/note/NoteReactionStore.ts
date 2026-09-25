@@ -116,7 +116,6 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-
 	return await noteReactionByUserIdAndNoteIdsPlan.execute(db, { userId, noteIds });
 }
 

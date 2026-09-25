@@ -137,8 +137,7 @@ export function preferredMediaType<T extends string>(
 		return candidates[0] ?? null;
 	}
 
-	// q 値と specificity を優先し、同点ならヘッダ内の出現順と candidates の順で比較する:
-	// q 値 → マッチした range の specificity (exact > type/* > */*) → Accept ヘッダ内の出現順 →
+	// 比較順は q 値 → マッチした range の specificity (exact > type/* > */*) → Accept ヘッダ内の出現順 →
 	// candidates の順 (サーバー優先順)。specificity を無視すると
 	// `Accept: application/activity+json, */*` で */* 経由の先頭候補が同点勝ちしてしまう。
 	let best: T | null = null;

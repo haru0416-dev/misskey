@@ -95,7 +95,6 @@
 			for (const [k, v] of Object.entries(JSON.parse(theme))) {
 				document.documentElement.style.setProperty(`--MI_THEME-${k}`, v.toString());
 
-				// HTMLの theme-color 適用
 				if (k === 'htmlThemeColor') {
 					for (const tag of document.head.children) {
 						if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {

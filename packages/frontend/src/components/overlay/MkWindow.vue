@@ -140,9 +140,9 @@ const emit = defineEmits<{
 
 const INITIAL_WINDOW_WIDTH_RATIO = 0.5;
 const INITIAL_WINDOW_HEIGHT_RATIO = 0.75;
-const INITIAL_WINDOW_WIDTH_MIN = 400; // スクリーンの最小幅に合わせるのはapplyTransormWidthの担当
+const INITIAL_WINDOW_WIDTH_MIN = 400; // スクリーンの最小幅に合わせるのはapplyTransformWidthの担当
 const INITIAL_WINDOW_WIDTH_MAX = 1000; // 画面幅いっぱいに広がるのを防止するための最大幅
-const INITIAL_WINDOW_HEIGHT_MIN = 500; // スクリーンの最小幅に合わせるのはapplyTransormHeightの担当
+const INITIAL_WINDOW_HEIGHT_MIN = 500; // スクリーンの最小高に合わせるのはapplyTransformHeightの担当
 
 provide('inWindow', true);
 
@@ -174,7 +174,6 @@ function onContextmenu(ev: PointerEvent) {
 	}
 }
 
-// 最前面へ移動
 function top() {
 	if (rootEl.value) {
 		rootEl.value.style.zIndex = os.claimZIndex(props.front ? 'middle' : 'low').toString();
@@ -505,7 +504,6 @@ function onBottomLeftHandlePointerdown(evt: PointerEvent) {
 	onLeftHandlePointerdown(evt);
 }
 
-// 高さを適用
 function applyTransformHeight(height: number) {
 	if (height > window.innerHeight) {
 		height = window.innerHeight;
@@ -515,7 +513,6 @@ function applyTransformHeight(height: number) {
 	}
 }
 
-// 幅を適用
 function applyTransformWidth(width: number) {
 	if (width > window.innerWidth) {
 		width = window.innerWidth;
@@ -525,14 +522,12 @@ function applyTransformWidth(width: number) {
 	}
 }
 
-// Y座標を適用
 function applyTransformTop(top: number) {
 	if (rootEl.value) {
 		rootEl.value.style.top = top + 'px';
 	}
 }
 
-// X座標を適用
 function applyTransformLeft(left: number) {
 	if (rootEl.value) {
 		rootEl.value.style.left = left + 'px';
@@ -651,7 +646,6 @@ defineExpose({
 	background: var(--MI_THEME-windowHeader);
 	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
 	backdrop-filter: var(--MI-blur, blur(15px));
-	//border-bottom: solid 1px var(--MI_THEME-divider);
 	font-size: 90%;
 	font-weight: bold;
 

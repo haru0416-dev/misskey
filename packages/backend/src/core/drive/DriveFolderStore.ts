@@ -101,9 +101,7 @@ async function fetchDriveFolderByIdAndUserIdOrFailFromDatabase(
 	return row;
 }
 
-/**
- * DriveFolderEntityService の packMany 向け。フォルダ本体・先祖フォルダをまとめてバッチ取得する。
- */
+/** フォルダ一覧の pack 向け。フォルダ本体と先祖フォルダをまとめて取得する。 */
 export async function listDriveFoldersByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: DriveFolderRow['id'][],
@@ -124,10 +122,7 @@ export async function countDriveFoldersByParentIdFromDatabase(
 	return row?.count ?? 0;
 }
 
-/**
- * DriveFolderEntityService の packMany 向け。フォルダごとに個別カウントクエリを飛ばすと N+1 になるため、
- * 対象の parentId 群をまとめて1クエリで集計する。
- */
+/** フォルダ一覧の pack 向け。フォルダごとに数えると N+1 になるため、parentId 群を 1 クエリで集計する。 */
 export async function countChildDriveFoldersGroupedByParentIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	parentIds: DriveFolderRow['id'][],

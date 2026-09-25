@@ -53,24 +53,20 @@ export const getNoteSummary = (
 
 	let summary = '';
 
-	// 本文
 	if (note.cw != null) {
 		summary += note.cw;
 	} else {
 		summary += note.text ? note.text : '';
 	}
 
-	// ファイルが添付されているとき
 	if (_opts.showFiles && (note.files || []).length !== 0) {
 		summary += ` (${i18n.tsx.withNFiles({ n: note.files!.length })})`;
 	}
 
-	// 投票が添付されているとき
 	if (_opts.showPoll && note.poll) {
 		summary += ` (${i18n.ts.poll})`;
 	}
 
-	// 返信のとき
 	if (_opts.showReply && note.replyId) {
 		if (note.reply) {
 			summary += `\n\nRE: ${getNoteSummary(note.reply)}`;
@@ -79,7 +75,6 @@ export const getNoteSummary = (
 		}
 	}
 
-	// Renoteのとき
 	if (_opts.showRenote && note.renoteId) {
 		if (note.renote) {
 			summary += `\n\nRN: ${getNoteSummary(note.renote)}`;

@@ -163,7 +163,7 @@ export async function handleQueueImportCustomEmojis(
 				continue;
 			}
 			// アップロードされた zip 由来の値なので、バックトラックが二次時間になる形は避ける
-			// (`[a-zA-Z0-9_]+?` と `[a-zA-Z0-9.]+` は英数字が重複するため分割点が曖昧になっていた)
+			// (`[a-zA-Z0-9_]+?` と `[a-zA-Z0-9.]+` のように英数字が重複すると分割点が曖昧になる)
 			if (!/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9.]*)?$/.test(record.fileName)) {
 				continue;
 			}

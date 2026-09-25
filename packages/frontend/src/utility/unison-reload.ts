@@ -5,7 +5,7 @@
 
 export const reloadChannel = new BroadcastChannel('reload');
 
-// BroadcastChannelを用いて、クライアントが一斉にreloadするようにします。
+// BroadcastChannel で他のタブにも同時に reload させる。
 export function unisonReload(path?: string) {
 	if (path !== undefined) {
 		reloadChannel.postMessage(path);

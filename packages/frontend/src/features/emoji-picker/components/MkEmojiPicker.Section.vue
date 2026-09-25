@@ -74,8 +74,8 @@ const props = defineProps<{
 	emojis: string[] | Ref<string[]>;
 	/**
 	 * リアクションできない絵文字か。開いたときに、このフォルダの絵文字にだけ使う。入れ子のフォルダにも渡す。
-	 * 以前はテンプレートで作った computed を渡していて、絵文字一覧の computed に購読が残り、ピッカーを閉じても
-	 * DOM ごと解放されなかった (開閉 1 回で約 1,300 ノード)。
+	 * 関数で受けるのは、テンプレートで作った computed を渡すと絵文字一覧の computed に購読が残り、ピッカーを
+	 * 閉じても DOM ごと解放されないため (開閉 1 回で約 1,300 ノード)。
 	 */
 	isDisabled?: ((emoji: string) => boolean) | undefined;
 	initialShown?: boolean;

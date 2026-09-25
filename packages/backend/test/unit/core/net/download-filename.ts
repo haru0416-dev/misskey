@@ -15,12 +15,8 @@ import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createLoggerService } from '@/core/LoggerService.js';
 import { loadConfig } from '@/config.js';
 
-/**
- * リモートが返す Content-Disposition からファイル名を取り出す経路。
- *
- * 値は相手が自由に決められるので、壊れたヘッダで例外にせず URL 由来の名前へ落ちること、
- * RFC 5987 の拡張形式 (filename*) を復号することを実サーバー相手に確かめる。
- */
+// リモートの Content-Disposition は相手が自由に決められるので、壊れたヘッダで例外にせず URL 由来の名前へ
+// 落ちること、RFC 5987 の拡張形式 (filename*) を復号することを実サーバー相手に確かめる。
 describe('core:net:DownloadService のファイル名決定', () => {
 	let server: Server;
 	let port = 0;

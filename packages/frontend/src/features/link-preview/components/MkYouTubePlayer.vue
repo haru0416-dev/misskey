@@ -69,13 +69,13 @@ async function ytFetch() {
 	}
 
 	if (info.url == null || info.player?.url == null) {
-		// No URL or player info
+		// URL かプレイヤー情報が無い
 		fetching.value = false;
 		return;
 	}
 
 	if (!info.player.url.startsWith('https://') && !info.player.url.startsWith('http://')) {
-		// Invalid player URL
+		// http(s) 以外のプレイヤー URL は埋め込まない
 		fetching.value = false;
 		return;
 	}

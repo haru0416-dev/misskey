@@ -40,7 +40,7 @@ function durationToMicroseconds(duration: number): number {
  * 窓内エントリ数を数えてから今回分を必ず追加し、制限超過中のリクエストも窓を延長する。
  *
  * 時刻は Valkey の TIME を使い、窓の掃除・計数・追加・期限設定まで 1 スクリプトで行う。
- * TIME と MULTI を別に送ると 1 リクエストで 2 往復になり、レート制限付きの全 API に乗っていた。
+ * TIME と MULTI を別に送ると、レート制限付きの全 API で 1 リクエストあたり 2 往復になる。
  * マイクロ秒の時刻は 16 桁だが 2^53 未満なので double で誤差なく表せ、redis.call は数値を丸めずに渡す
  * (Lua の tostring は 14 桁に丸めるので、文字列化して渡さない)。
  */

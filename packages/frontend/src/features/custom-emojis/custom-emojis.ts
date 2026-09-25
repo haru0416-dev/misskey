@@ -21,10 +21,10 @@ const storedEmojis = isEmojiSimpleArray(storageCache) ? storageCache : null;
 
 /*
  * IndexedDB への保存は最後の更新から少し待って 1 回にまとめる。保存は全件の構造化複製で、1 万件で約 12 ms、
- * 3 万件で約 29 ms メインスレッドを止める。絵文字の一括インポートは 1 件ごとに emojiAdded が届くので、
- * 更新ごとに保存すると 1,000 件の取り込みで各クライアントが合計 12 秒ほど止まっていた。
+ * 3 万件で約 29 ms メインスレッドを止める。一括インポートは 1 件ごとに emojiAdded が届くので、更新ごとに
+ * 保存すると 1,000 件の取り込みで各クライアントが合計約 12 秒止まる。
  * 保存は次回起動の初期値にだけ使う。待っている間にページを閉じると保存されない (pagehide で書いても
- * Chromium では確定しなかった) が、古い一覧が古い取得時刻とともに残るので、取得から 30 秒 (staleTime) を過ぎていれば起動時に取り直す。
+ * Chromium では確定しない) が、古い一覧は古い取得時刻とともに残るので、staleTime (30 秒) を過ぎていれば起動時に取り直す。
  */
 const PERSIST_DELAY_MS = 1000;
 let pendingPersist: { emojis: Misskey.entities.EmojiSimple[]; updatedAt: number } | null = null;

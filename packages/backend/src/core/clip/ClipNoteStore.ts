@@ -131,7 +131,7 @@ export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(
 	},
 ): Promise<void> {
 	await db.transaction(async (tx) => {
-		// note削除はnote -> clip_noteの順にlockするため、ここも同じ順序にしてdeadlockを避ける。
+		// ノート削除は note から clip_note の順にロックするため、同じ順序にしてデッドロックを避ける。
 		const [lockedNote] = await tx
 			.select({ id: note.id })
 			.from(note)

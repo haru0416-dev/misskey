@@ -26,11 +26,9 @@ function rawStatus(status: number): Response {
 	return new Response(null, { status });
 }
 
-// inbox の受信本文は 64 KiB までに制限する。
 const INBOX_BODY_LIMIT_BYTES = 1024 * 64;
 class InboxBodyLimitExceeded extends Error {}
 
-/** ジョブ名はアクティビティIDから生成する。 */
 function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, signature: ParsedSignature) {
 	const data: InboxJobData = { activity, signature };
 	const label = (activity.id ?? '').replace('https://', '').replace('/activity', '');
@@ -44,10 +42,8 @@ function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, s
 }
 
 /**
- * `POST /inbox` / `POST /users/:user/inbox` の HTTP-Signature検証のうち、
- * リクエスト構造上のパラメータ検証とDigest検証を行い、
- * 妥当なアクティビティのみ inboxQueue に積む。実際の署名者解決・署名検証自体は
- * (キューが混雑していても受付だけは高速に返せるよう) キュー処理側 (hono-queue-inbox.ts) で行う。
+ * `POST /inbox` / `POST /users/:user/inbox` では署名パラメータの構造と Digest だけを検証してキューに積む。
+ * 署名者の解決と署名検証は、キューが混雑していても受付を速く返せるよう queue/handlers/inbox.ts で行う。
  */
 export async function handleInboxRequest(deps: InboxEndpointDependencies, request: Request): Promise<Response> {
 	if (deps.meta.federation === 'none') {
@@ -73,7 +69,6 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 			url: url.pathname + url.search,
 			headers,
 		});
-		// 署名対象に (request-target) / host / date が含まれることを要求する。
 		for (const required of ['(request-target)', 'host', 'date']) {
 			if (!signature.headers.includes(required)) {
 				return rawStatus(401);

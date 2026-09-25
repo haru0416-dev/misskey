@@ -175,7 +175,7 @@ const dialog = useTemplateRef('dialog');
 const page = ref(props.initialPage ?? 0);
 
 watch(page, (to) => {
-	// チュートリアルの枚数を増やしたら必ず変更すること！！
+	// 最終ページの番号。チュートリアルのページ数を変えたらここも合わせる。
 	if (to === 6) {
 		claimAchievement('tutorialCompleted');
 	}

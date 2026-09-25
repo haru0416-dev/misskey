@@ -84,8 +84,7 @@ describe('hono-queue-emojis', () => {
 	});
 
 	afterAll(async () => {
-		// export/importテストで作成したhost: nullの絵文字を残すと、
-		// 後続テストの全件カウントへ影響させない。
+		// export/import テストで作成した host: null の絵文字が後続テストの全件カウントに影響しないよう消す。
 		await runtime.db.delete(emoji);
 		await runtime.dispose();
 	});

@@ -49,14 +49,8 @@ describe('LD signature option canonicalization', () => {
 	}
 });
 
-/*
- * 署名オプションの正規化には jsonld.normalize を通さない高速経路がある。createVerifyData は署名生成
- * だけでなく検証にも使われ、検証側の options はリモートが送ってきた signature ブロックそのもの
- * なので、高速経路の入力は相手が自由に選べる。
- *
- * 高速経路が参照実装と 1 バイトでも違えば署名検証が失敗する。生成した入力で両者を比較し、
- * 高速経路が null を返さなかった回数にも下限を設ける。
- */
+// createVerifyData は検証にも使われ、検証側の options はリモートが送ってきた signature ブロックそのものなので、
+// 高速経路の入力は相手が自由に選べる。生成した入力で参照実装と比較し、高速経路が null を返さなかった回数にも下限を設ける。
 describe('LD signature option canonicalization (property)', () => {
 	// 高速経路も normalize も外部リクエストを行わない入力だけを与える。
 	const service = new JsonLd(null as unknown as HttpRequestService);

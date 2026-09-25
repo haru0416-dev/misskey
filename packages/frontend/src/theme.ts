@@ -58,7 +58,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		}
 	}
 
-	/** テーマを更新し、同時に適用します。 */
+	/** テーマを更新し、同時に適用する。 */
 	public updateTheme(newTheme: Theme) {
 		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) {
 			return;
@@ -76,7 +76,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		this.applyTheme();
 	}
 
-	/** プレビュー用のテーマを適用します。 */
+	/** プレビュー用のテーマを適用する。 */
 	public previewTheme(theme: Theme) {
 		this.isPreviewMode = true;
 
@@ -86,7 +86,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		this.applyTheme();
 	}
 
-	/** プレビュー状態を解除し、適用中のテーマを常用しているテーマに戻します。 */
+	/** プレビューを解除し、常用しているテーマに戻す。 */
 	public clearPreview() {
 		this.isPreviewMode = false;
 
@@ -100,7 +100,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		return compile(theme);
 	}
 
-	/** currentThemeを適用します。 */
+	/** currentTheme を適用する。 */
 	private applyTheme() {
 		if (this.currentTheme == null || this.currentCompiledTheme == null) {
 			return;

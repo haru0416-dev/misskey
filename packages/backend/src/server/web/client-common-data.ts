@@ -145,7 +145,7 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 			appleTouchIcon: deps.meta.app512IconUrl,
 			themeColor: deps.meta.themeColor,
 			// 設定された画像だけを先読みする。未設定ではクライアントも画像を出さないので、外部の既定画像
-			// (3 枚 73 KB) を先読みしても使われず、起動に要る読み込みと帯域を取り合うだけだった。
+			// (3 枚 73 KB) を先読みしても使われず、起動に要る読み込みと帯域を取り合うだけになる。
 			serverErrorImageUrl: deps.meta.serverErrorImageUrl,
 			infoImageUrl: deps.meta.infoImageUrl,
 			notFoundImageUrl: deps.meta.notFoundImageUrl,

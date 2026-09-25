@@ -84,7 +84,6 @@ function onMousedown(ev: MouseEvent) {
 	const baseZoom = zoom.value;
 	const basePos = pos.value;
 
-	// 動かした時
 	startDragging(
 		throttleByAnimationFrame((me) => {
 			const moveLeft = me.clientX - clickX;

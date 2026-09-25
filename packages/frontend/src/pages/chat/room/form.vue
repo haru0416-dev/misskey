@@ -154,7 +154,6 @@ function onDrop(ev: DragEvent): void {
 		return;
 	}
 
-	// ファイルだったら
 	if (ev.dataTransfer.files.length === 1) {
 		ev.preventDefault();
 		const droppedFile = ev.dataTransfer.files[0];
@@ -332,7 +331,6 @@ onMounted(() => {
 		autocompleteInstance = new Autocomplete(textareaEl.value, text);
 	}
 
-	// 書きかけの投稿を復元
 	const draft = getDrafts()[getDraftKey()];
 	if (isJsonObject(draft)) {
 		const candidate = draft as ChatDraftCandidate;

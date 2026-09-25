@@ -496,7 +496,6 @@ async function createFromApForApi(
 		activity.object.cc = cc;
 	}
 
-	// attributedTo がなければ Activity の actor を使う。
 	if (typeof activity.object === 'object' && !activity.object.attributedTo) {
 		activity.object.attributedTo = activity.actor;
 	}

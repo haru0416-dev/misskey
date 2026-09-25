@@ -51,13 +51,6 @@ function exists(path: string): Promise<boolean> {
 	);
 }
 
-/**
- * ビデオファイルにビデオトラックがあるかどうかチェック
- * （ない場合：m4a, webmなど）
- *
- * @param path ファイルパス
- * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
- */
 async function getFileSize(path: string): Promise<number> {
 	return (await fs.promises.stat(path)).size;
 }
@@ -68,7 +61,6 @@ async function calcHash(path: string): Promise<string> {
 	return hash.read();
 }
 
-/** 画像の寸法を判定する。 */
 async function detectImageSize(
 	path: string,
 	mime: string,
@@ -113,7 +105,6 @@ async function detectImageSize(
 	};
 }
 
-/** 画像の blurhash 文字列を計算する。 */
 async function getBlurhash(path: string, type: string): Promise<string> {
 	const sharp = await sharpBmp(path, type);
 	const { data: buffer, info } = await sharp
@@ -299,7 +290,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 			const [outDir, disposeOutDir] = await createTempDir();
 			try {
 				const videoFilters = [
-					'select=e=eq(pict_type\\,PICT_TYPE_I)', // I-Frame のみをフィルタする（VP9 とかはデコードしてみないとわからないっぽい）
+					'select=e=eq(pict_type\\,PICT_TYPE_I)', // I-Frame だけに絞る (VP9 などはデコードしないと判別できない場合がある)
 					'blackframe=amount=0', // 暗いフレームの検出（暗さに関わらず全てのフレームで測定値を取る）
 					// 暗部が 50% 以上のフレームは誤検知リスクが高いため、50% 未満に限定する。
 					'metadata=mode=select:key=lavfi.blackframe.pblack:value=50:function=less',
@@ -423,6 +414,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		}
 	}
 
+	/** m4a や音声だけの webm はビデオトラックを持たない。判定できないときは true を返す。 */
 	async function hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
 		const sublogger = logger.createSubLogger('ffprobe');
 		sublogger.info(`Checking the video file. File path: ${path}`);
@@ -435,7 +427,6 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		}
 	}
 
-	/** MIME タイプと拡張子を判定する。 */
 	async function detectType(path: string): Promise<{
 		mime: string;
 		ext: string | null;

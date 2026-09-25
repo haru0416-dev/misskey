@@ -1,9 +1,7 @@
 import { defineConfig } from 'rolldown';
 import type { Plugin, ExternalOption } from 'rolldown';
 
-/**
- * Watchモード時にバックエンドの起動・停止制御を行うプラグイン
- */
+/** watch モードでバックエンドの起動・停止を制御する。 */
 function backendDevServerPlugin(): Plugin {
 	let backendProcess: Bun.Subprocess | null = null;
 	let backendShutdownPromise: Promise<void> | null = null;

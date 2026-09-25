@@ -136,9 +136,6 @@ const resizeObserver = new ResizeObserver((entries) => {
 });
 
 const rootEl = useTemplateRef('rootEl');
-/**
- * グリッドの最も上位にある状態。
- */
 const state = ref<GridState>('normal');
 /**
  * グリッドの列定義。列定義の元の設定値は非リアクティブなので、初期値を生成して以降は変更しない。
@@ -158,9 +155,6 @@ const cells = ref<RowHolder[]>([]);
  * セルアドレスが変わった瞬間にイベントを起こしたい時のために前回値として使用する。
  */
 const previousCellAddress = ref<CellAddress>(CELL_ADDRESS_NONE);
-/**
- * 編集中のセルのアドレスを保持するための変数。
- */
 const editingCellAddress = ref<CellAddress>(CELL_ADDRESS_NONE);
 /**
  * 列の範囲選択をする際の開始地点となるインデックスを保持するための変数。
@@ -173,20 +167,11 @@ const firstSelectionColumnIdx = ref<number>(CELL_ADDRESS_NONE.col);
  */
 const firstSelectionRowIdx = ref<number>(CELL_ADDRESS_NONE.row);
 
-/**
- * 選択状態のセルを取得するための計算プロパティ。選択状態とは{@link GridCell.selected}がtrueのセルのこと。
- */
 const selectedCell = computed(() => {
 	const selected = cells.value.flatMap((it) => it.cells).filter((it) => it.selected);
 	return selected.length > 0 ? selected[0] : undefined;
 });
-/**
- * 範囲選択状態のセルを取得するための計算プロパティ。範囲選択状態とは{@link GridCell.ranged}がtrueのセルのこと。
- */
 const rangedCells = computed(() => cells.value.flatMap((it) => it.cells).filter((it) => it.ranged));
-/**
- * 範囲選択状態のセルの範囲を取得するための計算プロパティ。左上のセル番地と右下のセル番地を計算する。
- */
 const rangedBounds = computed(() => {
 	const _cells = rangedCells.value;
 	const _cols = _cells.map((it) => it.address.col);
@@ -206,9 +191,6 @@ const rangedBounds = computed(() => {
 		rightBottom,
 	};
 });
-/**
- * グリッドの中で使用可能なセルの範囲を取得するための計算プロパティ。左上のセル番地と右下のセル番地を計算する。
- */
 const availableBounds = computed(() => {
 	const leftTop = {
 		col: 0,
@@ -220,9 +202,6 @@ const availableBounds = computed(() => {
 	};
 	return { leftTop, rightBottom };
 });
-/**
- * 範囲選択状態の行を取得するための計算プロパティ。範囲選択状態とは{@link GridRow.ranged}がtrueの行のこと。
- */
 const rangedRows = computed(() => rows.value.filter((it) => it.ranged));
 
 const lastLine = computed(() => rows.value.filter((it) => it.using).length - 1);
@@ -921,9 +900,6 @@ function calcLargestCellWidth(column: GridColumn) {
 	column.width = `${Math.max(largestColumnWidth, largestCellWidth)}px`;
 }
 
-/**
- * {@link emit}を使用してイベントを発行する。
- */
 function emitGridEvent(ev: GridEvent) {
 	const currentState: GridContext = {
 		...(selectedCell.value === undefined ? {} : { selectedCell: selectedCell.value }),
@@ -982,9 +958,6 @@ function selectionCell(target: CellAddress) {
 	cell.ranged = true;
 }
 
-/**
- * {@link targets}のセルを範囲選択状態にする。
- */
 function selectionRange(...targets: CellAddress[]) {
 	const _cells = cells.value;
 	for (const target of targets) {
@@ -996,9 +969,6 @@ function selectionRange(...targets: CellAddress[]) {
 	}
 }
 
-/**
- * 行およびセルの範囲選択状態をすべて解除する。
- */
 function unSelectionRangeAll() {
 	const _cells = rangedCells.value;
 	for (const cell of _cells) {
@@ -1012,9 +982,6 @@ function unSelectionRangeAll() {
 	}
 }
 
-/**
- * {@link leftTop}から{@link rightBottom}の範囲外にあるセルを範囲選択状態から外す。
- */
 function unSelectionOutOfRange(leftTop: CellAddress, rightBottom: CellAddress) {
 	const safeBounds = getSafeAddressBounds({ leftTop, rightBottom });
 
@@ -1035,9 +1002,6 @@ function unSelectionOutOfRange(leftTop: CellAddress, rightBottom: CellAddress) {
 	}
 }
 
-/**
- * {@link leftTop}から{@link rightBottom}の範囲内にあるセルを範囲選択状態にする。
- */
 function expandCellRange(leftTop: CellAddress, rightBottom: CellAddress) {
 	const safeBounds = getSafeAddressBounds({ leftTop, rightBottom });
 	const targetRows = cells.value.slice(safeBounds.leftTop.row, safeBounds.rightBottom.row + 1);
@@ -1048,9 +1012,6 @@ function expandCellRange(leftTop: CellAddress, rightBottom: CellAddress) {
 	}
 }
 
-/**
- * {@link top}から{@link bottom}までの行を範囲選択状態にする。
- */
 function expandRowRange(top: number, bottom: number) {
 	if (!rowSetting.selectable) {
 		return;

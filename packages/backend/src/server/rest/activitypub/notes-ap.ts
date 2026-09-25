@@ -338,8 +338,8 @@ export type ActivityRenderer = () => Promise<Record<string, unknown> | null>;
 
 /**
  * 配送先があるときだけ activity を組み立てる。組み立て (Note の HTML 化や Person の取得) は配送先の数に
- * よらない固定コストで、リモートのフォロワーもリレーも無い投稿では丸ごと不要だった。
- * フォロワー向けとリレー向けの配送で結果を共有するため、組み立ては 1 度だけ行う。
+ * よらない固定コストで、リモートのフォロワーもリレーも無い投稿では不要になる。
+ * 結果はフォロワー向けとリレー向けの配送で共有する。
  */
 export function renderOnce(
 	render: () => Record<string, unknown> | null | Promise<Record<string, unknown> | null>,

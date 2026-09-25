@@ -93,7 +93,6 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>,
 	// タッチデバイスでCSSの:hoverを機能させる
 	window.document.addEventListener('touchend', () => {}, { passive: true });
 
-	// URLに#pswpを含む場合は取り除く
 	if (window.location.hash === '#pswp') {
 		window.history.replaceState(null, '', window.location.href.replace('#pswp', ''));
 	}

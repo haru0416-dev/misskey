@@ -282,7 +282,7 @@ export async function recordHashtagUsagesInDatabase(
 
 type HashtagUsageFlags = { isLocalUser: boolean; isRemoteUser: boolean; isUserAttached: boolean };
 
-/** 行数と flags で INSERT の形が決まるので、行数を key に含めて固定形を持つ。超える場合は従来どおり組み立てる。 */
+/** 行数と flags で INSERT の形が決まるので、行数を key に含めて固定形を持つ。超える場合は毎回組み立てる。 */
 const MAX_PREPARED_HASHTAG_ROWS = 16;
 
 function hashtagUsageInsertRow(

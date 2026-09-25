@@ -3,9 +3,7 @@ import { Redis } from 'ioredis';
 
 const TESTER_IP_ADDRESS = '172.20.1.1';
 
-/**
- * {@link file://./../src/misc/get-ip-hash.ts} と同じ計算方法を使う。
- */
+// src/misc/get-ip-hash.ts と同じ計算方法を使う。
 function getIpHash(ip: string) {
 	const prefix = ipaddr
 		.parse(ip)
@@ -16,9 +14,7 @@ function getIpHash(ip: string) {
 	return `ip-${BigInt('0b' + prefix).toString(36)}`;
 }
 
-/**
- * サインイン時のレート制限に達しないようにする。
- */
+/** サインイン時のレート制限に達しないようにする。 */
 export async function purgeLimit(host: string, client: Redis) {
 	const ipHash = getIpHash(TESTER_IP_ADDRESS);
 	const key = `${host}:limit:${ipHash}:signin`;

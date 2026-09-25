@@ -235,9 +235,8 @@ describe('addDriveFileForApi quota serialization', () => {
 		}
 	});
 
-	// 失敗を無視すると、実体の無いオブジェクトを指す DriveFile が DB に残り、API は成功しても URL が 404 になる。
-	// リモートユーザーのアバター/バナー取り込みでもこの経路を通る (ap-person)。
-	// これらのストリームを購読するのはローカルのクライアントだけなので、リモート宛は無駄。
+	// リモートユーザーのアバター/バナー取り込み (ap-person) もこの経路を通るが、ドライブのストリームを
+	// 購読するのはローカルのクライアントだけなので、リモート宛は無駄。
 	test('ドライブのストリームはローカルユーザーにだけ流す', async () => {
 		const remoteId = genId();
 		const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
@@ -319,6 +318,7 @@ describe('addDriveFileForApi quota serialization', () => {
 		}
 	});
 
+	// 失敗を無視すると、実体の無いオブジェクトを指す DriveFile が DB に残り、API は成功しても URL が 404 になる。
 	test('object storage upload failure rejects the request and leaves no drive file behind', async () => {
 		const filePath = path.join(tempDir, 'upload-failure.bin');
 		await fs.writeFile(filePath, Buffer.alloc(1));

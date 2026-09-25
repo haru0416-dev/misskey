@@ -2747,7 +2747,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				/** @see https://github.com/misskey-dev/misskey/issues/14000 */
+				// https://github.com/misskey-dev/misskey/issues/14000
 				test('FTT: sinceId にキャッシュより古いノートを指定しても、sinceId による絞り込みが正しく動作する', async () => {
 					const alice = await signup();
 					const noteSince = await post(alice, { text: 'Note where id will be `sinceId`.' });

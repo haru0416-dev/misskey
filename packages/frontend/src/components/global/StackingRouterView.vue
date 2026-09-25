@@ -171,7 +171,6 @@ router.useListener('replace', ({ fullPath }) => {
 }
 .transition_x_leaveActive {
 	.tabFg {
-		//position: absolute;
 	}
 }
 

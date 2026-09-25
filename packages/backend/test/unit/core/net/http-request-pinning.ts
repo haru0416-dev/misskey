@@ -11,13 +11,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vite
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { loadConfig } from '@/config.js';
 
-/**
- * SSRF 検査で見た IP へそのまま接続していることを、実サーバーで確かめる。
- *
- * 検査と接続で別々に名前解決していると、その間に応答を差し替える (DNS rebinding) 余地が残る。
- * ここでは名前解決を差し替えて「検査時と接続時で違う IP を返す」状況を作り、
- * 接続先が検査時の IP に固定されることを見る。
- */
+// 検査と接続で別々に名前解決すると、その間に応答を差し替える (DNS rebinding) 余地が残る。名前解決を差し替えて
+// 検査時と接続時で違う IP を返す状況を作り、接続先が SSRF 検査時の IP に固定されることを実サーバーで確かめる。
 describe('core:net:HttpRequestService の接続先固定', () => {
 	let allowed: Server;
 	let blocked: Server;
