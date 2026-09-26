@@ -12,9 +12,10 @@ import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
+// バックエンドと同じ設定ファイルから URL を読み、そのホスト名だけを Vite に許可する。
 const url =
 	process.env.NODE_ENV === 'development'
-		? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+		? (parse(await fsp.readFile(`../../.config/${process.env['MISSKEY_CONFIG_YML'] ?? 'default.yml'}`, 'utf-8')) as any).instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
 
@@ -69,6 +70,10 @@ function toBase62(n: number): string {
 export function getConfig(): UserConfig {
 	const localesHash = toBase62(hash(JSON.stringify(locales)));
 
+	// tailscale などで別のポートから開くときに、既定のポートと HMR の接続先を環境変数で変える。
+	const devServerPort = Number(process.env['MISSKEY_EMBED_VITE_PORT'] ?? 5174);
+	const hmrClientPort = Number(process.env['MISSKEY_EMBED_VITE_HMR_CLIENT_PORT'] ?? devServerPort);
+
 	return {
 		base: '/embed_vite/',
 
@@ -79,11 +84,11 @@ export function getConfig(): UserConfig {
 			// バックエンドが任意のアドレスからのアクセスを許可するため、Viteも任意のアドレスからのアクセスを許可する。
 			host: '0.0.0.0',
 			allowedHosts: host ? [host] : undefined,
-			port: 5174,
+			port: devServerPort,
 			strictPort: true,
 			hmr: {
 				// バックエンド経由ではアセットの配信元とViteサーバーのポートが異なるため、HMRの接続先をViteに固定する
-				clientPort: 5174,
+				clientPort: hmrClientPort,
 			},
 		},
 

@@ -191,7 +191,7 @@ function registerStaticMount(app: Hono, mount: StaticMount): void {
 
 /**
  * frontend の vite ビルド成果物が無い開発時は、vite dev サーバーへ HTTP プロキシする。
- * HMR の WebSocket は vite.config.ts の `hmr.clientPort: 5173` によりクライアントが
+ * HMR の WebSocket は vite.config.ts の `hmr.clientPort` (既定 5173、MISSKEY_VITE_HMR_CLIENT_PORT で変更) によりクライアントが
  * vite サーバーへ直接張るため、ここでは HTTP のみ転送すればよい。
  */
 function registerViteDevProxy(app: Hono, opts: { prefix: string; upstream: string }): void {
@@ -262,7 +262,10 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 			cacheControl: 'public, max-age=2592000, immutable',
 		});
 	} else {
-		registerViteDevProxy(app, { prefix: '/vite/', upstream: 'http://localhost:5173' });
+		registerViteDevProxy(app, {
+			prefix: '/vite/',
+			upstream: `http://localhost:${process.env['MISSKEY_VITE_PORT'] ?? 5173}`,
+		});
 	}
 	if (deps.config.runtime.frontendEmbedManifestExists) {
 		registerStaticMount(app, {
@@ -271,7 +274,10 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 			cacheControl: 'public, max-age=2592000, immutable',
 		});
 	} else {
-		registerViteDevProxy(app, { prefix: '/embed_vite/', upstream: 'http://localhost:5174' });
+		registerViteDevProxy(app, {
+			prefix: '/embed_vite/',
+			upstream: `http://localhost:${process.env['MISSKEY_EMBED_VITE_PORT'] ?? 5174}`,
+		});
 	}
 	registerStaticMount(app, {
 		prefix: '/tarball/',
