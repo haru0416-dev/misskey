@@ -175,6 +175,26 @@ describe('API guard drift', () => {
 		expect(errors).toStrictEqual([]);
 	});
 
+	test('ガード付きルートが meta の回数制限を数え直していない', () => {
+		// withEndpointGuards は meta.limit を同じキー (エンドポイント名) で数える。ルート側で同じ枠を
+		// もう一度数えると、1 回目の記録が 2 回目の判定に入り、本番では毎回 429 になる。
+		// meta が間隔 (minInterval) だけを宣言し、件数の上限を処理の途中で数えるのは許す。
+		const errors: string[] = [];
+
+		for (const registration of registrations) {
+			if (registration.helper == null || !/\bassertApiRateLimitForUser\b/.test(registration.body)) {
+				continue;
+			}
+			const name = registration.path.slice(1);
+			const limit = guardMetaOf(name)?.limit as { duration?: number; max?: number } | undefined;
+			if (limit?.duration != null || limit?.max != null) {
+				errors.push(`${registration.file}: ${name} は meta の limit と同じ枠をルートでも数えている`);
+			}
+		}
+
+		expect(errors).toStrictEqual([]);
+	});
+
 	test('手書きルートが meta にない検査を足していない', () => {
 		const errors: string[] = [];
 

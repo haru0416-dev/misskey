@@ -4,7 +4,6 @@
  */
 
 import { toPuny } from '@/misc/to-puny.js';
-import { SECOND, HOUR } from '@/const.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { emojiRegex } from '@/misc/emoji-regex.js';
@@ -432,12 +431,6 @@ export async function handleApiNotesReactionsDelete(
 		throw err;
 	}
 }
-
-export const reactionsDeleteRateLimit = {
-	duration: HOUR,
-	max: 60,
-	minInterval: 3 * SECOND,
-};
 
 export const notesReactionsParamDef = z.object({
 	noteId: misskeyId(),

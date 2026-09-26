@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { SECOND, HOUR } from '@/const.js';
 import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/instance/InstanceStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
@@ -136,12 +135,6 @@ export async function handleApiNotesDelete(
 	await deleteNoteForApi(deps, noteAuthor, note, me);
 }
 
-export const notesDeleteRateLimit = {
-	duration: HOUR,
-	max: 300,
-	minInterval: SECOND,
-};
-
 function notesUnrenoteNoSuchNoteError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -172,9 +165,3 @@ export async function handleApiNotesUnrenote(
 
 	await Promise.all(renotes.map((renote) => deleteNoteForApi(deps, user, renote)));
 }
-
-export const notesUnrenoteRateLimit = {
-	duration: HOUR,
-	max: 300,
-	minInterval: SECOND,
-};

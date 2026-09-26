@@ -559,10 +559,10 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canImportAntennas',
 			prohibitMoved: true,
 
-			// duration/max はファイル検証を通ったリクエストだけが消費する (実装は routes/export-import.ts)
+			// 共通 guard が掛けるのは間隔だけ。1 時間に 1 回の上限はファイル検証を通ったリクエストだけが
+			// 消費する (routes/export-import.ts)。ここに duration/max を書くと guard が先に 1 回数え、
+			// 同じキーで数え直す検証後の判定が必ず上限に掛かる。
 			limit: {
-				duration: HOUR,
-				max: 1,
 				minInterval: 5 * SECOND,
 			},
 			errors: {
