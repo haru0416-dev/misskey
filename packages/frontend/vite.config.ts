@@ -20,9 +20,11 @@ import { pluginRemoveUnrefI18n } from './builder/rollup-plugin-remove-unref-i18n
 import { Features } from 'lightningcss';
 import { hash, toBase62 } from './builder/utils.js';
 
+// バックエンドと同じ設定ファイルから URL を読み、そのホスト名だけを Vite に許可する。
 const url =
 	process.env.NODE_ENV === 'development'
-		? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+		? (parse(await fsp.readFile(`../../.config/${process.env['MISSKEY_CONFIG_YML'] ?? 'default.yml'}`, 'utf-8')) as any)
+				.instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
 
@@ -97,6 +99,10 @@ const externalPackages = [
 export function getConfig(): UserConfig {
 	const localesHash = toBase62(hash(JSON.stringify(locales)));
 
+	// tailscale などで別のポートから開くときに、既定のポートと HMR の接続先を環境変数で変える。
+	const devServerPort = Number(process.env['MISSKEY_VITE_PORT'] ?? 5173);
+	const hmrClientPort = Number(process.env['MISSKEY_VITE_HMR_CLIENT_PORT'] ?? devServerPort);
+
 	return {
 		base: '/vite/',
 
@@ -107,12 +113,12 @@ export function getConfig(): UserConfig {
 			// バックエンドが任意のアドレスからの接続を受け付けるため、Vite も全アドレスで待ち受ける。
 			host: '0.0.0.0',
 			allowedHosts: host ? [host] : undefined,
-			port: 5173,
+			port: devServerPort,
 			strictPort: true,
 			hmr: {
 				// バックエンド経由ではアセットが 3000 から配信され、HMR の WS がバックエンドの WS サーバーに吸収される。
 				// 接続先を Vite のポートに固定する。
-				clientPort: 5173,
+				clientPort: hmrClientPort,
 			},
 			headers: {
 				'X-Frame-Options': 'DENY',
