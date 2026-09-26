@@ -84,13 +84,26 @@ describe('API', () => {
 		expectType<Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse>(passkeyResponse);
 	});
 
-	test('APIError matches the runtime error schema', () => {
-		const error: Misskey.api.APIError = {
+	test('APIErrorBody matches the runtime error schema', () => {
+		const error: Misskey.api.APIErrorBody = {
 			id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
 			code: 'YOUR_ACCOUNT_MOVED',
 			message: 'You have moved your account.',
 			kind: 'permission',
 		};
-		expectType<Misskey.api.APIError>(error);
+		expectType<Misskey.api.APIErrorBody>(error);
+	});
+
+	test('isAPIError narrows code to the errors of the endpoint', (reason: unknown) => {
+		if (Misskey.api.isAPIError(reason, 'notes/create')) {
+			expectType<Misskey.api.APIError<'notes/create'>>(reason);
+			expectType<Misskey.api.APIErrorCode<'notes/create'>>(reason.code);
+			// 仕様書に載っているエラーコードだけを受け付ける。
+			const known: Misskey.api.APIErrorCode<'notes/create'> = 'CANNOT_RENOTE_TO_A_PURE_RENOTE';
+			void known;
+			// @ts-expect-error notes/create は返さないコード
+			const unknownCode: Misskey.api.APIErrorCode<'notes/create'> = 'NO_SUCH_FILE_THAT_DOES_NOT_EXIST';
+			void unknownCode;
+		}
 	});
 });

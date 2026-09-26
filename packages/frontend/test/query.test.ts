@@ -68,7 +68,10 @@ describe('TanStack Query integration', () => {
 
 		expect(
 			fetch.mock.calls.filter(
-				([url, init]) => String(url).endsWith('/users/show') && String(init?.body).includes('another-account-token'),
+				([url, init]) =>
+					String(url).endsWith('/users/show') &&
+					new Headers(init?.headers).get('Authorization') === 'Bearer another-account-token' &&
+					!String(init?.body).includes('another-account-token'),
 			),
 		).toHaveLength(2);
 	});

@@ -108,6 +108,7 @@ export function uploadFile(
 		);
 
 		xhr.open('POST', apiUrl + '/drive/files/create', true);
+		xhr.setRequestHeader('Authorization', `Bearer ${$i.token}`);
 		xhr.onload = ((ev: ProgressEvent<XMLHttpRequest>) => {
 			if (xhr.status !== 200 || ev.target == null || ev.target.response == null) {
 				if (xhr.status === 413) {
@@ -184,7 +185,6 @@ export function uploadFile(
 		}
 
 		const formData = new FormData();
-		formData.append('i', $i.token);
 		formData.append('force', 'true');
 		formData.append('file', file);
 		formData.append('name', options.name ?? (file instanceof File ? file.name : 'untitled'));

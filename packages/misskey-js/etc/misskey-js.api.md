@@ -544,8 +544,11 @@ type ApGetResponse = operations['ap___get']['responses']['200']['content']['appl
 declare namespace api {
     export {
         isAPIError,
+        parseAPIError,
         requestAPI,
         SwitchCaseResponseType,
+        APIErrorBody,
+        APIErrorCode,
         APIError,
         FetchLike,
         APITransportRequest,
@@ -575,7 +578,33 @@ class APIClient {
 }
 
 // @public (undocumented)
-type APIError = components['schemas']['Error']['error'];
+class APIError<E extends keyof Endpoints = keyof Endpoints> extends Error {
+    constructor(endpoint: E, status: number, body: APIErrorBody);
+    // (undocumented)
+    readonly code: APIErrorCode<E>;
+    // (undocumented)
+    readonly endpoint: E;
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly info?: unknown;
+    // (undocumented)
+    readonly kind: APIErrorBody['kind'];
+    // (undocumented)
+    readonly name = "APIError";
+    // (undocumented)
+    readonly status: number;
+    // (undocumented)
+    toJSON(): APIErrorBody;
+}
+
+// @public (undocumented)
+type APIErrorBody = components['schemas']['Error']['error'];
+
+// @public (undocumented)
+type APIErrorCode<E extends keyof Endpoints = keyof Endpoints> = Endpoints[E] extends {
+    err: infer C extends string;
+} ? C : string;
 
 // @public (undocumented)
 type APITransportRequest = {
@@ -2660,7 +2689,7 @@ type IResponse = operations['i']['responses']['200']['content']['application/jso
 type IRevokeTokenRequest = NonNullable<operations['i___revoke-token']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
-function isAPIError(reason: unknown): reason is APIError;
+function isAPIError<E extends keyof Endpoints = keyof Endpoints>(reason: unknown, endpoint?: E): reason is APIError<E>;
 
 // @public (undocumented)
 type ISigninHistoryRequest = NonNullable<operations['i___signin-history']['requestBody']>['content']['application/json'];
@@ -3083,6 +3112,9 @@ type PagesUpdateRequest = NonNullable<operations['pages___update']['requestBody'
 
 // @public (undocumented)
 function parse(_acct: string): Acct;
+
+// @public (undocumented)
+function parseAPIError<E extends keyof Endpoints>(endpoint: E, status: number, body: unknown): APIError<E> | null;
 
 // Warning: (ae-forgotten-export) The symbol "Values" needs to be exported by the entry point index.d.ts
 //

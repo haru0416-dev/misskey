@@ -37,25 +37,24 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 		pendingApiRequestsCount.value--;
 	};
 
-	const payload = { ...data } as Record<string, unknown> & { i?: string | null };
-	if (method === 'POST') {
-		if (token !== undefined) payload.i = token;
-	}
+	// 本文の i は Authorization ヘッダーへ移す。token を明示したときはそちらが優先 (null は匿名)。
+	const { i: bodyCredential, ...payload } = data as Record<string, unknown> & { i?: string | null };
+	const credential = token !== undefined ? token : bodyCredential;
 	const promise = Misskey.api
 		.requestAPI({
 			apiUrl,
 			endpoint,
 			method,
 			data: payload,
+			...(method === 'POST' && credential !== undefined ? { credential } : {}),
 			signal,
 		})
 		.then(({ status, body }) => {
 			if (status === 200 || status === 204) {
 				return body as _ResT;
 			}
-			// エラー本文の直接参照を維持し、不正なnull本文を成功や別のAPIエラーに変換しない。
-			const errorResponse = body as { error: unknown };
-			throw errorResponse.error;
+			// 構造化されたエラーは APIError に、それ以外は不正な本文を成功や別の API エラーに変換せずそのまま投げる。
+			throw Misskey.api.parseAPIError(endpoint, status, body) ?? (body as { error: unknown }).error;
 		});
 
 	promise.then(onFinally, onFinally);

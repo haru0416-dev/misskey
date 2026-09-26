@@ -16,7 +16,12 @@ export function ApiDocPage() {
 				</head>
 				<body>
 					<script id="api-reference" data-url="/api.json"></script>
-					<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+					{/* 版を固定しないと CDN が最新版を配り、公開後に表示や挙動が予告なく変わる。integrity で配布物の差し替えも拒否する。 */}
+					<script
+						src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.69.0/dist/browser/standalone.js"
+						integrity="sha384-UL+pt9bcR3hCuzEybA1bAyu6yv9qkzJuYCP5N+HZPOo9ZkUXcMflxqBjC1vfDzfe"
+						crossorigin="anonymous"
+					></script>
 				</body>
 			</html>
 		</>

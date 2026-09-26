@@ -4,14 +4,64 @@ import type { SwitchCaseResponseType, Endpoints } from './api.types.js';
 
 export type { SwitchCaseResponseType } from './api.types.js';
 
-const MK_API_ERROR = Symbol();
+/** サーバーが返すエラー本文 (`{ error: ... }` の中身)。 */
+export type APIErrorBody = components['schemas']['Error']['error'];
 
-export type APIError = components['schemas']['Error']['error'];
+/** そのエンドポイントが返しうるエラーコード。仕様書のエラー例から生成する。 */
+export type APIErrorCode<E extends keyof Endpoints = keyof Endpoints> = Endpoints[E] extends { err: infer C extends string } ? C : string;
 
-export function isAPIError(reason: unknown): reason is APIError {
+function isAPIErrorBody(obj: unknown): obj is APIErrorBody {
 	return (
-		reason !== null && typeof reason === 'object' && (reason as Record<PropertyKey, unknown>)[MK_API_ERROR] === true
+		obj !== null && typeof obj === 'object' && !Array.isArray(obj) &&
+		'code' in obj && typeof obj.code === 'string' &&
+		'message' in obj && typeof obj.message === 'string' &&
+		'id' in obj && typeof obj.id === 'string' &&
+		'kind' in obj && (obj.kind === 'client' || obj.kind === 'server' || obj.kind === 'permission')
 	);
+}
+
+export class APIError<E extends keyof Endpoints = keyof Endpoints> extends Error {
+	public override readonly name = 'APIError';
+	public readonly endpoint: E;
+	public readonly status: number;
+	public readonly code: APIErrorCode<E>;
+	public readonly id: string;
+	public readonly kind: APIErrorBody['kind'];
+	public readonly info?: unknown;
+
+	constructor(endpoint: E, status: number, body: APIErrorBody) {
+		super(body.message);
+		this.endpoint = endpoint;
+		this.status = status;
+		this.code = body.code as APIErrorCode<E>;
+		this.id = body.id;
+		this.kind = body.kind;
+		if ('info' in body) this.info = body.info;
+	}
+
+	// Error の message は列挙されないため、ログや画面へ JSON で出すときにサーバーの本文と同じ形へ戻す。
+	public toJSON(): APIErrorBody {
+		return {
+			code: this.code,
+			message: this.message,
+			id: this.id,
+			kind: this.kind,
+			...(this.info === undefined ? {} : { info: this.info }),
+		};
+	}
+}
+
+/**
+ * エンドポイントを渡すと、そのエンドポイントの APIError だけを通し、code をそのエンドポイントのエラーコードに絞る。
+ */
+export function isAPIError<E extends keyof Endpoints = keyof Endpoints>(reason: unknown, endpoint?: E): reason is APIError<E> {
+	return reason instanceof APIError && (endpoint === undefined || reason.endpoint === endpoint);
+}
+
+/** 応答本文が構造化された API エラーなら APIError にする。そうでなければ null。 */
+export function parseAPIError<E extends keyof Endpoints>(endpoint: E, status: number, body: unknown): APIError<E> | null {
+	const error = body !== null && typeof body === 'object' && !Array.isArray(body) && 'error' in body ? body.error : undefined;
+	return isAPIErrorBody(error) ? new APIError(endpoint, status, error) : null;
 }
 
 export type FetchLike = (
@@ -45,6 +95,11 @@ export type APITransportResponse = {
 	body: unknown;
 };
 
+function withoutCredentialField(params: Record<string, unknown>): Record<string, unknown> {
+	const { i: _i, ...rest } = params;
+	return rest;
+}
+
 // 認証情報の選択、成功ステータスとエラーの解釈、query cacheは呼び出し側が所有する。
 export async function requestAPI(options: APITransportRequest): Promise<APITransportResponse> {
 	const { apiUrl, endpoint, method, data = {}, mediaType = 'application/json', signal } = options;
@@ -53,15 +108,18 @@ export async function requestAPI(options: APITransportRequest): Promise<APITrans
 	let body: FormData | string | undefined;
 	const headers: Record<string, string> = {};
 
+	// 認証情報は本文でなく Authorization ヘッダーで送る。本文に混ぜるとリクエスト本文のログにトークンが残り、GET では送れない。
+	if (options.credential != null) {
+		headers['Authorization'] = `Bearer ${options.credential}`;
+	}
+
 	if (method === 'GET') {
 		const query = new URLSearchParams(data as Record<string, string>);
 		url += `?${query}`;
 	} else if (mediaType === 'multipart/form-data') {
 		const form = new FormData();
-		if (options.credential != null) {
-			form.append('i', options.credential);
-		}
 		for (const key in params) {
+			if (key === 'i' && 'credential' in options) continue;
 			const value = params[key];
 			if (value == null) continue;
 			if (value instanceof Blob) {
@@ -75,9 +133,9 @@ export async function requestAPI(options: APITransportRequest): Promise<APITrans
 		body = form;
 	} else {
 		headers['Content-Type'] = mediaType;
-		// SDKは明示的なundefinedでもdata.iを上書きする。匿名クライアントはcredentialを渡さない。
+		// credential を指定したら (undefined でも) 本文の i は送らない。匿名クライアントは credential 自体を渡さない。
 		body = mediaType === 'application/json'
-			? JSON.stringify('credential' in options ? { ...params, i: options.credential } : data)
+			? JSON.stringify('credential' in options ? withoutCredentialField(params) : data)
 			: '{}';
 	}
 
@@ -113,16 +171,6 @@ export class APIClient {
 		this.fetch = opts.fetch ?? ((...args) => fetch(...args));
 	}
 
-	private assertIsAPIError(obj: unknown): obj is APIError {
-		return (
-			obj !== null && typeof obj === 'object' && !Array.isArray(obj) &&
-			'code' in obj && typeof obj.code === 'string' &&
-			'message' in obj && typeof obj.message === 'string' &&
-			'id' in obj && typeof obj.id === 'string' &&
-			'kind' in obj && (obj.kind === 'client' || obj.kind === 'server' || obj.kind === 'permission')
-		);
-	}
-
 	private assertSpecialEpReqType(ep: keyof Endpoints): ep is keyof typeof endpointReqTypes {
 		return ep in endpointReqTypes;
 	}
@@ -153,13 +201,7 @@ export class APIClient {
 				// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
 				return body as SwitchCaseResponseType<E, P>;
 			}
-			const error = body !== null && typeof body === 'object' && !Array.isArray(body) && 'error' in body ? body.error : undefined;
-			throw this.assertIsAPIError(error)
-				? {
-						[MK_API_ERROR]: true,
-						...error,
-					}
-				: body;
+			throw parseAPIError(endpoint, status, body) ?? body;
 		});
 	}
 }
