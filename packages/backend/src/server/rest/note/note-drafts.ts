@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
@@ -33,7 +35,7 @@ import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { ApiError } from '../error.js';
+import type { ApiError } from '../error.js';
 import { isVisibleForMeForApi, packNoteForApi, packNoteManyForApi } from './note.js';
 import type { ApiNoteDependencies } from './note.js';
 import { packDriveFileManyByIdsForApi, packDriveFileManyForApi } from '../drive/drive-file.js';
@@ -114,97 +116,23 @@ export const notesDraftsListParamDef = z.object({
 	scheduled: z.boolean().nullable().optional(),
 });
 
-function draftNoSuchNoteDraftError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note draft.',
-		code: 'NO_SUCH_NOTE_DRAFT',
-		id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
-	});
-}
-
+// create と update は公開済みの id・code が一部異なるので、各エンドポイントが自分の契約のエラーから組み立てて渡す。
 type DraftValidationErrorMap = {
-	scheduledAtRequired: ApiError;
-	scheduledAtMustBeInFuture: ApiError;
-	cannotCreateAlreadyExpiredPoll: ApiError;
-	noSuchFile: ApiError;
-	noSuchRenoteTarget: ApiError;
-	cannotReRenote: ApiError;
-	youHaveBeenBlocked: ApiError;
-	cannotRenoteDueToVisibility: ApiError;
-	noSuchChannel: ApiError;
-	cannotRenoteToExternal: ApiError;
-	noSuchReplyTarget: ApiError;
-	cannotReplyToPureRenote: ApiError;
-	cannotReplyToInvisibleNote: ApiError;
-	cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: ApiError;
+	scheduledAtRequired: () => ApiError;
+	scheduledAtMustBeInFuture: () => ApiError;
+	cannotCreateAlreadyExpiredPoll: () => ApiError;
+	noSuchFile: () => ApiError;
+	noSuchRenoteTarget: () => ApiError;
+	cannotReRenote: () => ApiError;
+	youHaveBeenBlocked: () => ApiError;
+	cannotRenoteDueToVisibility: () => ApiError;
+	noSuchChannel: () => ApiError;
+	cannotRenoteToExternal: () => ApiError;
+	noSuchReplyTarget: () => ApiError;
+	cannotReplyToPureRenote: () => ApiError;
+	cannotReplyToInvisibleNote: () => ApiError;
+	cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: () => ApiError;
 };
-
-type DraftValidationEndpointErrors = Pick<
-	DraftValidationErrorMap,
-	| 'scheduledAtRequired'
-	| 'scheduledAtMustBeInFuture'
-	| 'noSuchRenoteTarget'
-	| 'cannotReRenote'
-	| 'noSuchReplyTarget'
-	| 'cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility'
->;
-
-// create と update で id・文言が一致する検証エラーだけをここに置く。
-// endpointErrors の各項目は公開済みの id・code がエンドポイントごとに異なるため呼び出し側が渡す。
-function draftValidationErrors(endpointErrors: DraftValidationEndpointErrors): DraftValidationErrorMap {
-	return {
-		...endpointErrors,
-		cannotCreateAlreadyExpiredPoll: new ApiError({
-			status: 400,
-			message: 'Poll is already expired.',
-			code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
-			id: '04da457d-b083-4055-9082-955525eda5a5',
-		}),
-		noSuchFile: new ApiError({
-			status: 400,
-			message: 'Some files are not found.',
-			code: 'NO_SUCH_FILE',
-			id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
-		}),
-		youHaveBeenBlocked: new ApiError({
-			status: 400,
-			message: 'You have been blocked by this user.',
-			code: 'YOU_HAVE_BEEN_BLOCKED',
-			id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
-		}),
-		cannotRenoteDueToVisibility: new ApiError({
-			status: 400,
-			message: 'You can not Renote due to target visibility.',
-			code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
-			id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
-		}),
-		noSuchChannel: new ApiError({
-			status: 400,
-			message: 'No such channel.',
-			code: 'NO_SUCH_CHANNEL',
-			id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
-		}),
-		cannotRenoteToExternal: new ApiError({
-			status: 400,
-			message: 'Cannot Renote to External.',
-			code: 'CANNOT_RENOTE_TO_EXTERNAL',
-			id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
-		}),
-		cannotReplyToPureRenote: new ApiError({
-			status: 400,
-			message: 'You can not reply to a pure Renote.',
-			code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
-			id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
-		}),
-		cannotReplyToInvisibleNote: new ApiError({
-			status: 400,
-			message: 'You cannot reply to an invisible Note.',
-			code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
-			id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
-		}),
-	};
-}
 
 async function validateNoteDraft(
 	deps: ApiNoteDraftDependencies,
@@ -224,15 +152,15 @@ async function validateNoteDraft(
 ): Promise<void> {
 	if (data.isActuallyScheduled) {
 		if (data.scheduledAt == null) {
-			throw errors.scheduledAtRequired;
+			throw errors.scheduledAtRequired();
 		}
 		if (data.scheduledAt.getTime() < Date.now()) {
-			throw errors.scheduledAtMustBeInFuture;
+			throw errors.scheduledAtMustBeInFuture();
 		}
 	}
 
 	if (data.pollExpiresAt != null && data.pollExpiresAt.getTime() < Date.now()) {
-		throw errors.cannotCreateAlreadyExpiredPoll;
+		throw errors.cannotCreateAlreadyExpiredPoll();
 	}
 
 	if (data.visibleUserIds != null && data.visibleUserIds.length > 0) {
@@ -242,40 +170,40 @@ async function validateNoteDraft(
 	if (data.fileIds != null && data.fileIds.length > 0) {
 		const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, data.fileIds, me.id);
 		if (files.length !== data.fileIds.length) {
-			throw errors.noSuchFile;
+			throw errors.noSuchFile();
 		}
 	}
 
 	if (data.renoteId != null) {
 		const renote = await fetchNoteByIdFromDatabase(deps.db, data.renoteId);
 		if (renote == null) {
-			throw errors.noSuchRenoteTarget;
+			throw errors.noSuchRenoteTarget();
 		}
 		if (isRenote(renote) && !isQuote(renote)) {
-			throw errors.cannotReRenote;
+			throw errors.cannotReRenote();
 		}
 
 		if (renote.userId !== me.id) {
 			const blockExist = await blockingExistsInDatabase(deps.db, renote.userId, me.id);
 			if (blockExist) {
-				throw errors.youHaveBeenBlocked;
+				throw errors.youHaveBeenBlocked();
 			}
 		}
 
 		if (renote.visibility === 'followers' && renote.userId !== me.id) {
-			throw errors.cannotRenoteDueToVisibility;
+			throw errors.cannotRenoteDueToVisibility();
 		}
 		if (renote.visibility === 'specified') {
-			throw errors.cannotRenoteDueToVisibility;
+			throw errors.cannotRenoteDueToVisibility();
 		}
 
 		if (renote.channelId && renote.channelId !== data.channelId) {
 			const renoteChannel = await fetchChannelByIdFromDatabase(deps.db, renote.channelId);
 			if (renoteChannel == null) {
-				throw errors.noSuchChannel;
+				throw errors.noSuchChannel();
 			}
 			if (!renoteChannel.allowRenoteToExternal) {
-				throw errors.cannotRenoteToExternal;
+				throw errors.cannotRenoteToExternal();
 			}
 		}
 	}
@@ -283,22 +211,22 @@ async function validateNoteDraft(
 	if (data.replyId != null) {
 		const reply = await fetchNoteByIdFromDatabase(deps.db, data.replyId);
 		if (reply == null) {
-			throw errors.noSuchReplyTarget;
+			throw errors.noSuchReplyTarget();
 		}
 		if (isRenote(reply) && !isQuote(reply)) {
-			throw errors.cannotReplyToPureRenote;
+			throw errors.cannotReplyToPureRenote();
 		}
 		if (!(await isVisibleForMeForApi(deps, reply, me.id))) {
-			throw errors.cannotReplyToInvisibleNote;
+			throw errors.cannotReplyToInvisibleNote();
 		}
 		if (reply.visibility === 'specified' && data.visibility !== 'specified') {
-			throw errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility;
+			throw errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility();
 		}
 
 		if (reply.userId !== me.id) {
 			const blockExist = await blockingExistsInDatabase(deps.db, reply.userId, me.id);
 			if (blockExist) {
-				throw errors.youHaveBeenBlocked;
+				throw errors.youHaveBeenBlocked();
 			}
 		}
 	}
@@ -306,7 +234,7 @@ async function validateNoteDraft(
 	if (data.channelId != null) {
 		const channel = await fetchChannelByIdFromDatabase(deps.db, data.channelId);
 		if (channel == null || channel.isArchived) {
-			throw errors.noSuchChannel;
+			throw errors.noSuchChannel();
 		}
 	}
 }
@@ -500,16 +428,12 @@ export async function handleApiNotesDraftsCreate(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof notesDraftsCreateParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/drafts/create']>,
 ): Promise<{ createdDraft: Packed<'NoteDraft'> }> {
 	const policies = await getApiRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= policies.noteDraftLimit) {
-		throw new ApiError({
-			status: 400,
-			message: 'You cannot create drafts any more.',
-			code: 'TOO_MANY_DRAFTS',
-			id: '9ee33bbe-fde3-4c71-9b51-e50492c6b9c8',
-		});
+		throw errors.tooManyDrafts();
 	}
 
 	if (params.isActuallyScheduled) {
@@ -517,12 +441,7 @@ export async function handleApiNotesDraftsCreate(
 			isActuallyScheduled: true,
 		});
 		if (currentScheduledCount >= policies.scheduledNoteLimit) {
-			throw new ApiError({
-				status: 400,
-				message: 'You cannot create scheduled notes any more.',
-				code: 'TOO_MANY_SCHEDULED_NOTES',
-				id: '22ae69eb-09e3-4541-a850-773cfa45e693',
-			});
+			throw errors.tooManyScheduledNotes();
 		}
 	}
 
@@ -543,44 +462,23 @@ export async function handleApiNotesDraftsCreate(
 			visibility: params.visibility,
 			channelId: params.channelId,
 		}),
-		draftValidationErrors({
-			scheduledAtRequired: new ApiError({
-				status: 400,
-				message: 'scheduledAt is required when isActuallyScheduled is true.',
-				code: 'SCHEDULED_AT_REQUIRED',
-				id: '15e28a55-e74c-4d65-89b7-8880cdaaa87d',
-			}),
-			scheduledAtMustBeInFuture: new ApiError({
-				status: 400,
-				message: 'scheduledAt must be in the future.',
-				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
-				id: 'e4bed6c9-017e-4934-aed0-01c22cc60ec1',
-			}),
-			noSuchRenoteTarget: new ApiError({
-				status: 400,
-				message: 'No such renote target.',
-				code: 'NO_SUCH_RENOTE_TARGET',
-				id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4',
-			}),
-			cannotReRenote: new ApiError({
-				status: 400,
-				message: 'You can not Renote a pure Renote.',
-				code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
-				id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
-			}),
-			noSuchReplyTarget: new ApiError({
-				status: 400,
-				message: 'No such reply target.',
-				code: 'NO_SUCH_REPLY_TARGET',
-				id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
-			}),
-			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new ApiError({
-				status: 400,
-				message: 'You cannot reply to a specified visibility note with extended visibility.',
-				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
-				id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
-			}),
-		}),
+		{
+			scheduledAtRequired: errors.scheduledAtRequired,
+			scheduledAtMustBeInFuture: errors.scheduledAtMustBeInFuture,
+			cannotCreateAlreadyExpiredPoll: errors.cannotCreateAlreadyExpiredPoll,
+			noSuchFile: errors.noSuchFile,
+			noSuchRenoteTarget: errors.noSuchRenoteTarget,
+			cannotReRenote: errors.cannotReRenote,
+			youHaveBeenBlocked: errors.youHaveBeenBlocked,
+			cannotRenoteDueToVisibility: errors.cannotRenoteDueToVisibility,
+			noSuchChannel: errors.noSuchChannel,
+			cannotRenoteToExternal: errors.cannotRenoteToExternal,
+			noSuchReplyTarget: errors.noSuchReplyTarget,
+			cannotReplyToPureRenote: errors.cannotReplyToPureRenote,
+			cannotReplyToInvisibleNote: errors.cannotReplyToInvisibleNote,
+			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility:
+				errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility,
+		},
 	);
 
 	const draft = await createNoteDraftInDatabase(deps.db, {
@@ -617,10 +515,11 @@ export async function handleApiNotesDraftsUpdate(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof notesDraftsUpdateParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/drafts/update']>,
 ): Promise<{ updatedDraft: Packed<'NoteDraft'> }> {
 	const existing = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (existing == null) {
-		throw draftNoSuchNoteDraftError();
+		throw errors.noSuchNoteDraft();
 	}
 
 	const policies = await getApiRolePolicies(deps, me);
@@ -629,12 +528,7 @@ export async function handleApiNotesDraftsUpdate(
 			isActuallyScheduled: true,
 		});
 		if (currentScheduledCount >= policies.scheduledNoteLimit) {
-			throw new ApiError({
-				status: 400,
-				message: 'You cannot create scheduled notes any more.',
-				code: 'TOO_MANY_SCHEDULED_NOTES',
-				id: '02f5df79-08ae-4a33-8524-f1503c8f6212',
-			});
+			throw errors.tooManyScheduledNotes();
 		}
 	}
 
@@ -661,44 +555,23 @@ export async function handleApiNotesDraftsUpdate(
 			visibility: params.visibility,
 			channelId: params.channelId,
 		}),
-		draftValidationErrors({
-			scheduledAtRequired: new ApiError({
-				status: 400,
-				message: 'scheduledAt is required when isActuallyScheduled is true.',
-				code: 'SCHEDULED_AT_REQUIRED',
-				id: 'fe9737d5-cc41-498c-af9d-149207307530',
-			}),
-			scheduledAtMustBeInFuture: new ApiError({
-				status: 400,
-				message: 'scheduledAt must be in the future.',
-				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
-				id: 'ed1a6673-d0d1-4364-aaae-9bf3f139cbc5',
-			}),
-			noSuchRenoteTarget: new ApiError({
-				status: 400,
-				message: 'No such renote.',
-				code: 'NO_SUCH_RENOTE',
-				id: '64929870-2540-4d11-af41-3b484d78c956',
-			}),
-			cannotReRenote: new ApiError({
-				status: 400,
-				message: 'Cannot renote.',
-				code: 'CANNOT_RENOTE',
-				id: '76cc5583-5a14-4ad3-8717-0298507e32db',
-			}),
-			noSuchReplyTarget: new ApiError({
-				status: 400,
-				message: 'No such reply.',
-				code: 'NO_SUCH_REPLY',
-				id: 'c4721841-22fc-4bb7-ad3d-897ef1d375b5',
-			}),
-			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new ApiError({
-				status: 400,
-				message: 'You cannot reply to a specified visibility note with extended visibility.',
-				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
-				id: '215dbc76-336c-4d2a-9605-95766ba7dab0',
-			}),
-		}),
+		{
+			scheduledAtRequired: errors.scheduledAtRequired,
+			scheduledAtMustBeInFuture: errors.scheduledAtMustBeInFuture,
+			cannotCreateAlreadyExpiredPoll: errors.cannotCreateAlreadyExpiredPoll,
+			noSuchFile: errors.noSuchFile,
+			noSuchRenoteTarget: errors.noSuchRenote,
+			cannotReRenote: errors.cannotRenote,
+			youHaveBeenBlocked: errors.youHaveBeenBlocked,
+			cannotRenoteDueToVisibility: errors.cannotRenoteDueToVisibility,
+			noSuchChannel: errors.noSuchChannel,
+			cannotRenoteToExternal: errors.cannotRenoteToExternal,
+			noSuchReplyTarget: errors.noSuchReply,
+			cannotReplyToPureRenote: errors.cannotReplyToPureRenote,
+			cannotReplyToInvisibleNote: errors.cannotReplyToInvisibleNote,
+			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility:
+				errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility,
+		},
 	);
 
 	const updatedDraft = await updateNoteDraftInDatabase(deps.db, params.draftId, {
@@ -733,10 +606,11 @@ export async function handleApiNotesDraftsDelete(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof notesDraftsDeleteParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/drafts/delete']>,
 ): Promise<void> {
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (draft == null) {
-		throw draftNoSuchNoteDraftError();
+		throw errors.noSuchNoteDraft();
 	}
 
 	await deleteNoteDraftByIdFromDatabase(deps.db, draft.id);

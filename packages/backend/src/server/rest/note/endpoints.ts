@@ -54,13 +54,17 @@ export const notesEndpoints = implementEndpoints<ApiShellDependencies>()(notesCo
 	'notes/clips': async ({ deps, me, input, errors }) => await handleApiNotesClips(deps, me, input, errors),
 	'notes/conversation': async ({ deps, me, input, errors }) =>
 		await handleApiNotesConversation(deps, me, input, errors),
-	'notes/create': async ({ deps, me, input, signal }) => await handleApiNotesCreate(deps, me, input, signal),
+	'notes/create': async ({ deps, me, input, errors, signal }) =>
+		await handleApiNotesCreate(deps, me, input, errors, signal),
 	'notes/delete': async ({ deps, me, input, errors }) => await handleApiNotesDelete(deps, me, input, errors),
 	'notes/drafts/count': async ({ deps, me }) => await handleApiNotesDraftsCount(deps, me),
-	'notes/drafts/create': async ({ deps, me, input }) => await handleApiNotesDraftsCreate(deps, me, input),
-	'notes/drafts/delete': async ({ deps, me, input }) => await handleApiNotesDraftsDelete(deps, me, input),
+	'notes/drafts/create': async ({ deps, me, input, errors }) =>
+		await handleApiNotesDraftsCreate(deps, me, input, errors),
+	'notes/drafts/delete': async ({ deps, me, input, errors }) =>
+		await handleApiNotesDraftsDelete(deps, me, input, errors),
 	'notes/drafts/list': async ({ deps, me, input }) => await handleApiNotesDraftsList(deps, me, input),
-	'notes/drafts/update': async ({ deps, me, input }) => await handleApiNotesDraftsUpdate(deps, me, input),
+	'notes/drafts/update': async ({ deps, me, input, errors }) =>
+		await handleApiNotesDraftsUpdate(deps, me, input, errors),
 	'notes/favorites/create': async ({ deps, me, input, errors }) =>
 		await handleApiNotesFavoritesCreate(deps, me, input, errors),
 	'notes/favorites/delete': async ({ deps, me, input, errors }) =>
@@ -75,7 +79,7 @@ export const notesEndpoints = implementEndpoints<ApiShellDependencies>()(notesCo
 	'notes/mentions': async ({ deps, me, input }) => await handleApiNotesMentions(deps, me, input),
 	'notes/polls/recommendation': async ({ deps, me, input }) => await handleApiNotesPollsRecommendation(deps, me, input),
 	'notes/polls/vote': async ({ deps, me, input, errors }) => await handleApiNotesPollsVote(deps, me, input, errors),
-	'notes/reactions': async ({ deps, me, input }) => await handleApiNotesReactions(deps, me, input),
+	'notes/reactions': async ({ deps, me, input, errors }) => await handleApiNotesReactions(deps, me, input, errors),
 	'notes/reactions/create': async ({ deps, me, input, errors }) =>
 		await handleApiNotesReactionsCreate(deps, me, input, errors),
 	'notes/reactions/delete': async ({ deps, me, input, errors }) =>

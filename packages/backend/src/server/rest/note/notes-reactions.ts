@@ -113,31 +113,6 @@ export function decodeReactionForApi(str: string): { reaction: string; name?: st
 	return { reaction: str };
 }
 
-function reactionsNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '263fff3d-d0e1-4af4-bea7-8408059b451a',
-	});
-}
-function reactionYouHaveBeenBlockedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot react this note because you have been blocked by this user.',
-		code: 'YOU_HAVE_BEEN_BLOCKED',
-		id: '20ef5475-9f38-4e4c-bd33-de6d979498ec',
-	});
-}
-function unreactionNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37',
-	});
-}
-
 export async function createNoteReactionForApi(
 	deps: ApiNotesReactionsDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
@@ -367,7 +342,7 @@ export async function handleApiNotesReactionsCreate(
 				throw errors.alreadyReacted();
 			}
 			if (err.id === 'e70412a4-7197-4726-8e74-f3e0deb92aa7') {
-				throw reactionYouHaveBeenBlockedError();
+				throw errors.youHaveBeenBlocked();
 			}
 			if (err.id === '12c35529-3c79-4327-b1cc-e2cf63a71925') {
 				throw errors.cannotReactToRenote();
@@ -389,7 +364,7 @@ export async function handleApiNotesReactionsDelete(
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw unreactionNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	try {
@@ -413,10 +388,11 @@ export async function handleApiNotesReactions(
 	deps: ApiNotesReactionsDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	params: ApiParams<typeof notesReactionsParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/reactions']>,
 ): Promise<{ id: string; createdAt: string; user: Packed<'UserLite'>; type: string }[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null || !(await isVisibleForMeForApi(deps, note, me?.id ?? null))) {
-		throw reactionsNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	let type: string | null = null;

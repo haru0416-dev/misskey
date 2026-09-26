@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 import { implementEndpoints, registerEndpoints } from '@/server/rest/endpoint-definition.js';
 import { ApiError } from '@/server/rest/error.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
 
 const contracts = {
 	'probe/show': defineContract({
@@ -20,7 +21,7 @@ const contracts = {
 				gone: { message: 'Gone.', code: 'GONE', id: '0c6f4d9e-4b53-4d62-9a1d-2f0a5b8f7c11', httpStatusCode: 404 },
 			},
 		},
-		paramDef: z.object({ id: z.string(), mode: z.enum(['ok', 'gone', 'undeclared']).optional() }),
+		paramDef: z.object({ id: z.string(), mode: z.enum(['ok', 'gone', 'undeclared', 'service']).optional() }),
 	}),
 	'probe/featured': defineContract({
 		meta: {
@@ -44,6 +45,7 @@ const contracts = {
 const endpoints = implementEndpoints<object>()(contracts, {
 	'probe/show': async ({ input, errors }) => {
 		if (input.mode === 'gone') throw errors.gone();
+		if (input.mode === 'service') throw new IdentifiableError('0c6f4d9e-4b53-4d62-9a1d-2f0a5b8f7c11', 'from a service');
 		if (input.mode === 'undeclared') {
 			throw new ApiError({
 				status: 400,
@@ -102,6 +104,12 @@ describe('registerEndpoints', () => {
 
 	test('宣言したエラーは宣言の HTTP ステータス・code・id で返す', async () => {
 		const res = await post(createApp(), '/probe/show', { id: 'a', mode: 'gone' });
+		expect(res.status).toBe(404);
+		expect(await errorOf(res)).toMatchObject({ code: 'GONE', id: '0c6f4d9e-4b53-4d62-9a1d-2f0a5b8f7c11' });
+	});
+
+	test('サービスの IdentifiableError は id が宣言と一致すれば宣言どおりの API エラーになる', async () => {
+		const res = await post(createApp(), '/probe/show', { id: 'a', mode: 'service' });
 		expect(res.status).toBe(404);
 		expect(await errorOf(res)).toMatchObject({ code: 'GONE', id: '0c6f4d9e-4b53-4d62-9a1d-2f0a5b8f7c11' });
 	});

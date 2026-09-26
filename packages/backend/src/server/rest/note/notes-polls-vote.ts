@@ -35,31 +35,6 @@ export type ApiNotesPollsVoteDependencies = ApiRelayDeliverDependencies &
 		publishNoteStream?: ApiNoteStreamPublisher;
 	};
 
-function pollsVoteNoPollError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The note does not attach a poll.',
-		code: 'NO_POLL',
-		id: '5f979967-52d9-4314-a911-1c673727f92f',
-	});
-}
-function pollsVoteAlreadyVotedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You have already voted.',
-		code: 'ALREADY_VOTED',
-		id: '0963fc77-efac-419b-9424-b391608dc6d8',
-	});
-}
-function pollsVoteYouHaveBeenBlockedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot vote this poll because you have been blocked by this user.',
-		code: 'YOU_HAVE_BEEN_BLOCKED',
-		id: '85a5377e-b1e9-4617-b0b9-5bea73331e49',
-	});
-}
-
 export const notesPollsVoteParamDef = z.object({
 	noteId: misskeyId(),
 	choice: z.int(),
@@ -80,13 +55,13 @@ export async function handleApiNotesPollsVote(
 	}
 
 	if (!note.hasPoll) {
-		throw pollsVoteNoPollError();
+		throw errors.noPoll();
 	}
 
 	if (note.userId !== me.id) {
 		const blocked = await blockingExistsInDatabase(deps.db, note.userId, me.id);
 		if (blocked) {
-			throw pollsVoteYouHaveBeenBlockedError();
+			throw errors.youHaveBeenBlocked();
 		}
 	}
 
@@ -103,7 +78,7 @@ export async function handleApiNotesPollsVote(
 
 		const exist = await listPollVotesByNoteAndUserFromDatabase(transaction as typeof deps.db, note.id, me.id);
 		if (exist.length > 0 && (!poll.multiple || exist.some((x) => x.choice === params.choice))) {
-			throw pollsVoteAlreadyVotedError();
+			throw errors.alreadyVoted();
 		}
 
 		const createdVote = await createPollVoteInDatabase(transaction as typeof deps.db, {
