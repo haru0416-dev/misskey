@@ -148,6 +148,27 @@
       "when": 1790314292594,
       "tag": "0020_skinny_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790395543643,
+      "tag": "0021_hesitant_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790395555957,
+      "tag": "0022_lucky_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790395629921,
+      "tag": "0023_fantastic_payback",
+      "breakpoints": true
     }
   ]
 }

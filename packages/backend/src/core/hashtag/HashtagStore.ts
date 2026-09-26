@@ -3,49 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray, ne, sql, getTableName } from 'drizzle-orm';
-import type { Placeholder, SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { hashtag } from '@/db/schema/hashtag.js';
-import type { HashtagInsert, HashtagRow } from '@/db/schema/hashtag.js';
+import type { HashtagRow } from '@/db/schema/hashtag.js';
+import { hashtagUser } from '@/db/schema/hashtag-user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
-
-type HashtagUpdateSet = Partial<
-	Record<
-		| 'mentionedUserIds'
-		| 'mentionedUsersCount'
-		| 'mentionedLocalUserIds'
-		| 'mentionedLocalUsersCount'
-		| 'mentionedRemoteUserIds'
-		| 'mentionedRemoteUsersCount'
-		| 'attachedUserIds'
-		| 'attachedUsersCount'
-		| 'attachedLocalUserIds'
-		| 'attachedLocalUsersCount'
-		| 'attachedRemoteUserIds'
-		| 'attachedRemoteUsersCount',
-		SQL
-	>
->;
-
-type HashtagUserIdsColumn =
-	| typeof hashtag.mentionedUserIds
-	| typeof hashtag.mentionedLocalUserIds
-	| typeof hashtag.mentionedRemoteUserIds
-	| typeof hashtag.attachedUserIds
-	| typeof hashtag.attachedLocalUserIds
-	| typeof hashtag.attachedRemoteUserIds;
-
-type HashtagUsersCountColumn =
-	| typeof hashtag.mentionedUsersCount
-	| typeof hashtag.mentionedLocalUsersCount
-	| typeof hashtag.mentionedRemoteUsersCount
-	| typeof hashtag.attachedUsersCount
-	| typeof hashtag.attachedLocalUsersCount
-	| typeof hashtag.attachedRemoteUsersCount;
 
 export type HashtagSort =
 	| '+mentionedUsers'
@@ -63,24 +29,6 @@ export type HashtagSort =
 
 function deserializeHashtag(row: HashtagRow): MiHashtag {
 	return row as MiHashtag;
-}
-
-function appendUserIdIfMissing(
-	userIds: HashtagUserIdsColumn,
-	count: HashtagUsersCountColumn,
-	userId: MiUser['id'] | Placeholder,
-) {
-	return {
-		userIds: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NULL THEN array_append(${userIds}, ${userId}) ELSE ${userIds} END`,
-		count: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NULL THEN ${count} + 1 ELSE ${count} END`,
-	};
-}
-
-function removeUserIdIfExists(userIds: HashtagUserIdsColumn, count: HashtagUsersCountColumn, userId: MiUser['id']) {
-	return {
-		userIds: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NOT NULL THEN array_remove(${userIds}, ${userId}) ELSE ${userIds} END`,
-		count: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NOT NULL THEN ${count} - 1 ELSE ${count} END`,
-	};
 }
 
 function getOrderBy(sort: HashtagSort) {
@@ -169,31 +117,35 @@ export async function searchHashtagNamesFromDatabase(
 	return rows.map((row) => row.name);
 }
 
-function createHashtagUsagePlan(rows: number, flags: HashtagUsageFlags) {
-	return defineQueryPlan((db) => ({
-		query: db
-			.insert(hashtag)
-			.values(
-				Array.from({ length: rows }, (_, index) =>
-					hashtagUsageInsertRow(
-						sql.placeholder(`id${index}`) as unknown as string,
-						sql.placeholder(`name${index}`) as unknown as string,
-						sql.placeholder('userIdArray') as unknown as MiUser['id'][],
-						flags,
-					),
-				),
-			)
-			.onConflictDoUpdate({
-				target: hashtag.name,
-				set: hashtagUsageIncrementSet(sql.placeholder('userId'), flags),
-			}),
-		metadata: { type: 'insert', tables: [getTableName(hashtag)] },
-		mutationTables: [hashtag],
-	}));
+type HashtagUsageFlags = { isLocalUser: boolean; isRemoteUser: boolean; isUserAttached: boolean };
+
+/** 利用者を数える件数の列。isUserAttached でプロフィールのタグ (attached*) か投稿のタグ (mentioned*) かが決まる。 */
+function usersCountColumns(flags: HashtagUsageFlags) {
+	return flags.isUserAttached
+		? {
+				all: hashtag.attachedUsersCount,
+				local: hashtag.attachedLocalUsersCount,
+				remote: hashtag.attachedRemoteUsersCount,
+			}
+		: {
+				all: hashtag.mentionedUsersCount,
+				local: hashtag.mentionedLocalUsersCount,
+				remote: hashtag.mentionedRemoteUsersCount,
+			};
 }
 
-const hashtagUsagePlans = new Map<number, ReturnType<typeof createHashtagUsagePlan>>();
+function usersCountDelta(flags: HashtagUsageFlags, delta: 1 | -1): Partial<Record<keyof HashtagRow, SQL>> {
+	const columns = usersCountColumns(flags);
+	const set: Partial<Record<keyof HashtagRow, SQL>> = { [columns.all.name]: sql`${columns.all} + ${delta}` };
+	if (flags.isLocalUser) set[columns.local.name as keyof HashtagRow] = sql`${columns.local} + ${delta}`;
+	if (flags.isRemoteUser) set[columns.remote.name as keyof HashtagRow] = sql`${columns.remote} + ${delta}`;
+	return set;
+}
 
+/**
+ * タグを使った利用者を数える。同じ人が何度使っても 1 人と数え、既に数えた人では hashtag を書き換えない。
+ * increment が false のときは、プロフィールからタグを外した人を数えから除く (投稿のタグは減らさない)。
+ */
 export async function recordHashtagUsagesInDatabase(
 	db: MiDrizzleDatabase,
 	data: {
@@ -209,175 +161,80 @@ export async function recordHashtagUsagesInDatabase(
 	if (entries.length === 0) {
 		return;
 	}
+	const flags = { isLocalUser: data.isLocalUser, isRemoteUser: data.isRemoteUser, isUserAttached: data.isUserAttached };
+	const names = entries.map((entry) => entry.name);
 
 	if (!data.increment) {
-		const set: HashtagUpdateSet = {};
-
-		if (data.isUserAttached) {
-			const attachedUsers = removeUserIdIfExists(hashtag.attachedUserIds, hashtag.attachedUsersCount, data.userId);
-			set.attachedUserIds = attachedUsers.userIds;
-			set.attachedUsersCount = attachedUsers.count;
-
-			if (data.isLocalUser) {
-				const attachedLocalUsers = removeUserIdIfExists(
-					hashtag.attachedLocalUserIds,
-					hashtag.attachedLocalUsersCount,
-					data.userId,
-				);
-				set.attachedLocalUserIds = attachedLocalUsers.userIds;
-				set.attachedLocalUsersCount = attachedLocalUsers.count;
-			} else {
-				const attachedRemoteUsers = removeUserIdIfExists(
-					hashtag.attachedRemoteUserIds,
-					hashtag.attachedRemoteUsersCount,
-					data.userId,
-				);
-				set.attachedRemoteUserIds = attachedRemoteUsers.userIds;
-				set.attachedRemoteUsersCount = attachedRemoteUsers.count;
-			}
+		if (!data.isUserAttached) {
+			return;
 		}
-
-		if (Object.keys(set).length > 0) {
+		const removed = await db
+			.delete(hashtagUser)
+			.where(
+				and(
+					eq(hashtagUser.attached, true),
+					eq(hashtagUser.userId, data.userId),
+					inArray(
+						hashtagUser.hashtagId,
+						db.select({ id: hashtag.id }).from(hashtag).where(inArray(hashtag.name, names)),
+					),
+				),
+			)
+			.returning({ hashtagId: hashtagUser.hashtagId });
+		if (removed.length > 0) {
 			await db
 				.update(hashtag)
-				.set(set)
+				.set(usersCountDelta(flags, -1))
 				.where(
 					inArray(
-						hashtag.name,
-						entries.map((entry) => entry.name),
+						hashtag.id,
+						removed.map((row) => row.hashtagId),
 					),
 				);
 		}
-
 		return;
 	}
 
-	const flags = { isLocalUser: data.isLocalUser, isRemoteUser: data.isRemoteUser, isUserAttached: data.isUserAttached };
+	const existing = await db
+		.select({ id: hashtag.id, name: hashtag.name })
+		.from(hashtag)
+		.where(inArray(hashtag.name, names));
+	const existingNames = new Set(existing.map((row) => row.name));
+	const missing = entries.filter((entry) => !existingNames.has(entry.name));
 
-	if (entries.length <= MAX_PREPARED_HASHTAG_ROWS) {
-		const values: Record<string, unknown> = { userId: data.userId, userIdArray: [data.userId] };
-		entries.forEach((entry, index) => {
-			values[`id${index}`] = entry.id;
-			values[`name${index}`] = entry.name;
-		});
-		const shape =
-			(entries.length - 1) * 8 +
-			Number(flags.isUserAttached) +
-			2 * Number(flags.isLocalUser) +
-			4 * Number(flags.isRemoteUser);
-		let plan = hashtagUsagePlans.get(shape);
-		if (plan === undefined) {
-			plan = createHashtagUsagePlan(entries.length, flags);
-			hashtagUsagePlans.set(shape, plan);
-		}
-		await plan.execute(db, values);
-		return;
-	}
-
-	await db
-		.insert(hashtag)
-		.values(entries.map((entry) => hashtagUsageInsertRow(entry.id, entry.name, [data.userId], flags)))
-		.onConflictDoUpdate({ target: hashtag.name, set: hashtagUsageIncrementSet(data.userId, flags) });
-}
-
-type HashtagUsageFlags = { isLocalUser: boolean; isRemoteUser: boolean; isUserAttached: boolean };
-
-/** 行数と flags で INSERT の形が決まるので、行数を key に含めて固定形を持つ。超える場合は毎回組み立てる。 */
-const MAX_PREPARED_HASHTAG_ROWS = 16;
-
-function hashtagUsageInsertRow(
-	id: MiHashtag['id'],
-	name: MiHashtag['name'],
-	userIdArray: MiUser['id'][],
-	flags: HashtagUsageFlags,
-): HashtagInsert {
-	return flags.isUserAttached
-		? {
-				id,
-				name,
-				mentionedUserIds: [],
-				mentionedUsersCount: 0,
-				mentionedLocalUserIds: [],
-				mentionedLocalUsersCount: 0,
-				mentionedRemoteUserIds: [],
-				mentionedRemoteUsersCount: 0,
-				attachedUserIds: userIdArray,
-				attachedUsersCount: 1,
-				attachedLocalUserIds: flags.isLocalUser ? userIdArray : [],
-				attachedLocalUsersCount: flags.isLocalUser ? 1 : 0,
-				attachedRemoteUserIds: flags.isRemoteUser ? userIdArray : [],
-				attachedRemoteUsersCount: flags.isRemoteUser ? 1 : 0,
-			}
-		: {
-				id,
-				name,
-				mentionedUserIds: userIdArray,
-				mentionedUsersCount: 1,
-				mentionedLocalUserIds: flags.isLocalUser ? userIdArray : [],
-				mentionedLocalUsersCount: flags.isLocalUser ? 1 : 0,
-				mentionedRemoteUserIds: flags.isRemoteUser ? userIdArray : [],
-				mentionedRemoteUsersCount: flags.isRemoteUser ? 1 : 0,
-				attachedUserIds: [],
-				attachedUsersCount: 0,
-				attachedLocalUserIds: [],
-				attachedLocalUsersCount: 0,
-				attachedRemoteUserIds: [],
-				attachedRemoteUsersCount: 0,
-			};
-}
-
-function hashtagUsageIncrementSet(userId: MiUser['id'] | Placeholder, flags: HashtagUsageFlags): HashtagUpdateSet {
-	const set: HashtagUpdateSet = {};
-
-	if (flags.isUserAttached) {
-		const attachedUsers = appendUserIdIfMissing(hashtag.attachedUserIds, hashtag.attachedUsersCount, userId);
-		set.attachedUserIds = attachedUsers.userIds;
-		set.attachedUsersCount = attachedUsers.count;
-
-		if (flags.isLocalUser) {
-			const attachedLocalUsers = appendUserIdIfMissing(
-				hashtag.attachedLocalUserIds,
-				hashtag.attachedLocalUsersCount,
-				userId,
-			);
-			set.attachedLocalUserIds = attachedLocalUsers.userIds;
-			set.attachedLocalUsersCount = attachedLocalUsers.count;
-		}
-
-		if (flags.isRemoteUser) {
-			const attachedRemoteUsers = appendUserIdIfMissing(
-				hashtag.attachedRemoteUserIds,
-				hashtag.attachedRemoteUsersCount,
-				userId,
-			);
-			set.attachedRemoteUserIds = attachedRemoteUsers.userIds;
-			set.attachedRemoteUsersCount = attachedRemoteUsers.count;
-		}
-	} else {
-		const mentionedUsers = appendUserIdIfMissing(hashtag.mentionedUserIds, hashtag.mentionedUsersCount, userId);
-		set.mentionedUserIds = mentionedUsers.userIds;
-		set.mentionedUsersCount = mentionedUsers.count;
-
-		if (flags.isLocalUser) {
-			const mentionedLocalUsers = appendUserIdIfMissing(
-				hashtag.mentionedLocalUserIds,
-				hashtag.mentionedLocalUsersCount,
-				userId,
-			);
-			set.mentionedLocalUserIds = mentionedLocalUsers.userIds;
-			set.mentionedLocalUsersCount = mentionedLocalUsers.count;
-		}
-
-		if (flags.isRemoteUser) {
-			const mentionedRemoteUsers = appendUserIdIfMissing(
-				hashtag.mentionedRemoteUserIds,
-				hashtag.mentionedRemoteUsersCount,
-				userId,
-			);
-			set.mentionedRemoteUserIds = mentionedRemoteUsers.userIds;
-			set.mentionedRemoteUsersCount = mentionedRemoteUsers.count;
+	// 新しいタグはこの人を数えた状態で作る。同じタグを別の投稿が同時に作っていても id を受け取れるよう、
+	// DO NOTHING ではなく DO UPDATE で既存の行も返させ、作れたかどうかは xmax で見分ける。
+	const created = new Set<MiHashtag['id']>();
+	const tagIds = existing.map((row) => row.id);
+	if (missing.length > 0) {
+		const columns = usersCountColumns(flags);
+		const inserted = await db
+			.insert(hashtag)
+			.values(
+				missing.map((entry) => ({
+					id: entry.id,
+					name: entry.name,
+					[columns.all.name]: 1,
+					...(flags.isLocalUser ? { [columns.local.name]: 1 } : {}),
+					...(flags.isRemoteUser ? { [columns.remote.name]: 1 } : {}),
+				})),
+			)
+			.onConflictDoUpdate({ target: hashtag.name, set: { name: sql`excluded."name"` } })
+			.returning({ id: hashtag.id, inserted: sql<boolean>`xmax = 0` });
+		for (const row of inserted) {
+			tagIds.push(row.id);
+			if (row.inserted) created.add(row.id);
 		}
 	}
 
-	return set;
+	// 既に数えた人の行とは競合するだけで、何も書かない。
+	const added = await db
+		.insert(hashtagUser)
+		.values(tagIds.map((hashtagId) => ({ hashtagId, attached: data.isUserAttached, userId: data.userId })))
+		.onConflictDoNothing()
+		.returning({ hashtagId: hashtagUser.hashtagId });
+	const toIncrement = added.map((row) => row.hashtagId).filter((id) => !created.has(id));
+	if (toIncrement.length > 0) {
+		await db.update(hashtag).set(usersCountDelta(flags, 1)).where(inArray(hashtag.id, toIncrement));
+	}
 }

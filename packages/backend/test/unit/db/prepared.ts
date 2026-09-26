@@ -8,7 +8,6 @@ import { eq, getTableColumns, getTableName, sql } from 'drizzle-orm';
 import { alias, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { loadConfig } from '@/config.js';
-import { fetchHashtagByNameFromDatabase, recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
 import {
 	createNoteInDatabase,
 	createNoteWithAuthorAndInlineJobsInDatabase,
@@ -429,47 +428,6 @@ describe('db/prepared', () => {
 			expect(await fetchQueueOutboxByIdFromDatabase(db, job.outboxId)).toBeNull();
 		}
 	});
-
-	test.each([1, 2, 17])(
-		'hashtag usage with %d entries upserts through the same rows as the dynamic path',
-		async (rows) => {
-			const names = Array.from({ length: rows }, () => `prepared${genId()}`);
-			const record = (uid: string) =>
-				recordHashtagUsagesInDatabase(db, {
-					entries: names.map((name) => ({ id: genId(), name })),
-					userId: uid,
-					isLocalUser: true,
-					isRemoteUser: false,
-					isUserAttached: false,
-					increment: true,
-				});
-
-			await record(userId);
-			const inserted = await fetchHashtagByNameFromDatabase(db, names[0]!);
-			expect(inserted).toMatchObject({
-				mentionedUserIds: [userId],
-				mentionedUsersCount: 1,
-				mentionedLocalUserIds: [userId],
-				mentionedLocalUsersCount: 1,
-				mentionedRemoteUserIds: [],
-				mentionedRemoteUsersCount: 0,
-				attachedUserIds: [],
-				attachedUsersCount: 0,
-			});
-
-			// 同じユーザーの再投稿は数えない
-			await record(userId);
-			expect((await fetchHashtagByNameFromDatabase(db, names[rows - 1]!))?.mentionedUsersCount).toBe(1);
-
-			// 別ユーザーは追記される
-			const otherId = genId();
-			await record(otherId);
-			const updated = await fetchHashtagByNameFromDatabase(db, names[0]!);
-			expect(updated?.mentionedUserIds).toEqual([userId, otherId]);
-			expect(updated?.mentionedUsersCount).toBe(2);
-			expect(updated?.mentionedLocalUsersCount).toBe(2);
-		},
-	);
 
 	test('active webhook lookup filters by user, active flag and event', async () => {
 		const otherUserId = genId();
