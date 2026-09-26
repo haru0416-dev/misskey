@@ -85,10 +85,9 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 		window
 			.fetch(`${apiUrl}/i`, {
 				method: 'POST',
-				body: JSON.stringify({
-					i: token,
-				}),
+				body: '{}',
 				headers: {
+					Authorization: `Bearer ${token}`,
 					'Content-Type': 'application/json',
 				},
 			})

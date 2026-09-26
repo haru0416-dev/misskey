@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import type { OpenAPIV3_1 } from 'openapi-types';
 import { toPascal } from 'ts-case-convert';
 import openapiTS, { astToString } from 'openapi-typescript';
@@ -85,6 +85,7 @@ async function generateEndpoints(
 		const path = operation._path_;
 		const operationId = operation.operationId!.replaceAll('get___', '').replaceAll('post___', '');
 		const endpoint = new Endpoint(path);
+		endpoint.errorCodes = collectErrorCodes(operation.responses);
 		endpoints.push(endpoint);
 
 		if (isRequestBodyObject(operation.requestBody)) {
@@ -170,73 +171,6 @@ async function generateEndpoints(
 	await writeFile(endpointOutputPath, endpointOutputLine.join('\n'));
 }
 
-async function generateApiClientJSDoc(
-	openApiDocs: OpenAPIV3_1.Document,
-	apiClientFileName: string,
-	endpointsFileName: string,
-	warningsOutputPath: string,
-) {
-	const endpoints: {
-		operationId: string;
-		path: string;
-		description: string;
-	}[] = [];
-
-	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
-	const paths = openApiDocs.paths ?? {};
-	const postPathItems = Object.keys(paths)
-		.map((it) => ({
-			_path_: it.replace(/^\//, ''),
-			...paths[it]?.post,
-		}))
-		.filter(filterUndefined);
-
-	for (const operation of postPathItems) {
-		const operationId = operation.operationId!.replaceAll('get___', '').replaceAll('post___', '');
-
-		if (operation.description) {
-			endpoints.push({
-				operationId,
-				path: operation._path_,
-				description: operation.description,
-			});
-		}
-	}
-
-	const endpointOutputLine: string[] = [];
-
-	endpointOutputLine.push(`import type { SwitchCaseResponseType } from '${toImportPath(apiClientFileName)}';`);
-	endpointOutputLine.push(`import type { Endpoints } from '${toImportPath(endpointsFileName)}';`);
-	endpointOutputLine.push('');
-
-	endpointOutputLine.push(`declare module '${toImportPath(apiClientFileName)}' {`);
-	endpointOutputLine.push('  export interface APIClient {');
-	for (let i = 0; i < endpoints.length; i++) {
-		const endpoint = endpoints[i];
-
-		endpointOutputLine.push(
-			'    /**',
-			`     * ${endpoint.description.split('\n').join('\n     * ')}`,
-			'     */',
-			`    request<E extends '${endpoint.path}', P extends Endpoints[E][\'req\'] = Endpoints[E][\'req\']>(`,
-			'      endpoint: E,',
-			'      ...args: Endpoints[E] extends { reqOptional: true }',
-			'        ? [params?: P, credential?: string | null]',
-			'        : [params: P, credential?: string | null]',
-			'    ): Promise<SwitchCaseResponseType<E, P>>;',
-		);
-
-		if (i < endpoints.length - 1) {
-			endpointOutputLine.push('\n');
-		}
-	}
-	endpointOutputLine.push('  }');
-	endpointOutputLine.push('}');
-	endpointOutputLine.push('');
-
-	await writeFile(warningsOutputPath, endpointOutputLine.join('\n'));
-}
-
 function isRequestBodyObject(value: unknown): value is OpenAPIV3_1.RequestBodyObject {
 	if (!value) {
 		return false;
@@ -253,6 +187,26 @@ function isResponseObject(value: unknown): value is OpenAPIV3_1.ResponseObject {
 
 	const { description } = value as Record<keyof OpenAPIV3_1.ResponseObject, unknown>;
 	return description !== undefined;
+}
+
+// 仕様書のエラー例 (examples.*.value.error.code) から、そのエンドポイントが返しうるエラーコードを集める。
+// 例に無いコードは型に現れないため、サーバー側で例を省くとクライアントの網羅が壊れる。
+function collectErrorCodes(responses: OpenAPIV3_1.ResponsesObject | undefined): string[] {
+	const codes = new Set<string>();
+	for (const [status, response] of Object.entries(responses ?? {})) {
+		if (status.startsWith('2') || !isResponseObject(response)) continue;
+		for (const media of Object.values(response.content ?? {})) {
+			for (const example of Object.values(media.examples ?? {})) {
+				const value: unknown = 'value' in example ? example.value : undefined;
+				if (value == null || typeof value !== 'object' || !('error' in value)) continue;
+				const error: unknown = value.error;
+				if (error != null && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
+					codes.add(error.code);
+				}
+			}
+		}
+	}
+	return [...codes].toSorted();
 }
 
 function filterUndefined<T>(item: T): item is Exclude<T, undefined> {
@@ -345,6 +299,7 @@ class Endpoint {
 	public readonly path: string;
 	public request?: IOperationTypeAlias;
 	public response?: IOperationTypeAlias;
+	public errorCodes: string[] = [];
 
 	constructor(path: string) {
 		this.path = path;
@@ -355,7 +310,9 @@ class Endpoint {
 		const resName = this.response?.generateName() ?? emptyResponse.generateName();
 		const reqOptional = this.request?.requestBodyOptional ?? true;
 
-		return `'${this.path}': { req: ${reqName}; res: ${resName}${reqOptional ? '; reqOptional: true' : ''} };`;
+		const err = this.errorCodes.length > 0 ? this.errorCodes.map((code) => `'${code}'`).join(' | ') : 'never';
+
+		return `'${this.path}': { req: ${reqName}; res: ${resName}; err: ${err}${reqOptional ? '; reqOptional: true' : ''} };`;
 	}
 }
 
@@ -381,6 +338,8 @@ class EndpointReqMediaType {
 
 async function main() {
 	const generatePath = './built/autogen';
+	// update-autogen-code はこのフォルダを丸ごと src/autogen へ写すので、生成しなくなったファイルを残さない。
+	await rm(generatePath, { recursive: true, force: true });
 	await mkdir(generatePath, { recursive: true });
 
 	const openApiJsonPath = './api.json';
@@ -395,9 +354,6 @@ async function main() {
 	const entitiesFileName = `${generatePath}/entities.ts`;
 	const endpointFileName = `${generatePath}/endpoint.ts`;
 	await generateEndpoints(openApiDocs, typeFileName, entitiesFileName, endpointFileName);
-
-	const apiClientWarningFileName = `${generatePath}/apiClientJSDoc.ts`;
-	await generateApiClientJSDoc(openApiDocs, '../api.ts', '../api.types.ts', apiClientWarningFileName);
 }
 
 main();

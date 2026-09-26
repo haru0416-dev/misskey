@@ -16,6 +16,10 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Change: misskey-js の `APIClient` が投げる API エラーを `Error` を継承した `APIError` にし、`endpoint`・`status`・スタックトレースを持たせた。`isAPIError(err, 'notes/create')` のようにエンドポイントを渡すと `code` がそのエンドポイントのエラーコードに絞られる (仕様書のエラー例から型を生成)。従来のエラー本文の型は `APIErrorBody` に改名
+- Change: misskey-js とクライアントが認証トークンを本文の `i` ではなく `Authorization: Bearer` ヘッダーで送るように (サーバーは両方を受け付ける)
+- Change: misskey-js の `exports` を `"./*"` から実際に使うサブパス (`acct.js` / `api.js` / `consts.js` / `entities.js` / `langmap.js` / `streaming.types.js`) の明示に変更
+- Fix: API ドキュメント (`/api-doc`) の表示ライブラリを版と SRI で固定し、CDN の更新で予告なく表示が変わらないように
 - Change: 製品名を Erebia から Toneriko へ変更（アイコン・ワードマーク・既定テーマ名・nodeinfo の `software.name` を `toneriko` に、初期設定用の環境変数を `TONERIKO_SETUP_PASSWORD` に、紹介ページを `/about-toneriko` に変更）
 - Enhance: ノートの翻訳で CW も翻訳するように
 - Change: 依存パッケージを更新 (`vue` 3.5.43 / `@microsoft/api-extractor` 7.59.1 / `@testing-library/user-event` 14.6.7 / `vitest-websocket-mock` 0.8.0、GitHub Actions の `docker/build-push-action` 7.4.0 / `docker/setup-buildx-action` 4.4.1 / `actions/upload-artifact` v7)

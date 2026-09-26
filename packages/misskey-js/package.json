@@ -9,14 +9,32 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"import": "./built/index.js",
 			"types": "./built/index.d.ts",
 			"default": "./built/index.js"
 		},
-		"./*": {
-			"import": "./built/*",
-			"types": "./built/*",
-			"default": "./built/*"
+		"./acct.js": {
+			"types": "./built/acct.d.ts",
+			"default": "./built/acct.js"
+		},
+		"./api.js": {
+			"types": "./built/api.d.ts",
+			"default": "./built/api.js"
+		},
+		"./consts.js": {
+			"types": "./built/consts.d.ts",
+			"default": "./built/consts.js"
+		},
+		"./entities.js": {
+			"types": "./built/entities.d.ts",
+			"default": "./built/entities.js"
+		},
+		"./langmap.js": {
+			"types": "./built/langmap.d.ts",
+			"default": "./built/langmap.js"
+		},
+		"./streaming.types.js": {
+			"types": "./built/streaming.types.d.ts",
+			"default": "./built/streaming.types.js"
 		}
 	},
 	"scripts": {

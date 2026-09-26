@@ -1,5 +1,5 @@
 import { vi, describe, test, expect } from 'vitest';
-import { APIClient, isAPIError, requestAPI } from '../src/api.js';
+import { APIClient, APIError, isAPIError, requestAPI } from '../src/api.js';
 
 describe('API', () => {
 	test('success', async () => {
@@ -7,7 +7,7 @@ describe('API', () => {
 			if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
 				if (options.body) {
 					const body = JSON.parse(options.body as string);
-					if (body.i === 'TOKEN') {
+					if (!('i' in body) && new Headers(options.headers).get('Authorization') === 'Bearer TOKEN') {
 						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
 				}
@@ -32,11 +32,12 @@ describe('API', () => {
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/i', {
 			method: 'POST',
 			headers: {
+				'Authorization': 'Bearer TOKEN',
 				'Content-Type': 'application/json',
 			},
 			credentials: 'omit',
 			cache: 'no-cache',
-			body: JSON.stringify({ i: 'TOKEN' }),
+			body: JSON.stringify({}),
 		});
 
 		fetchMock.mockRestore();
@@ -47,7 +48,7 @@ describe('API', () => {
 			if (url === 'https://misskey.test/api/notes/show' && options?.method === 'POST') {
 				if (options.body) {
 					const body = JSON.parse(options.body as string);
-					if (body.i === 'TOKEN' && body.noteId === 'aaaaa') {
+					if (!('i' in body) && new Headers(options.headers).get('Authorization') === 'Bearer TOKEN' && body.noteId === 'aaaaa') {
 						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
 				}
@@ -70,11 +71,12 @@ describe('API', () => {
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/notes/show', {
 			method: 'POST',
 			headers: {
+				'Authorization': 'Bearer TOKEN',
 				'Content-Type': 'application/json',
 			},
 			credentials: 'omit',
 			cache: 'no-cache',
-			body: JSON.stringify({ noteId: 'aaaaa', i: 'TOKEN' }),
+			body: JSON.stringify({ noteId: 'aaaaa' }),
 		});
 
 		fetchMock.mockRestore();
@@ -86,7 +88,8 @@ describe('API', () => {
 				if (options.body instanceof FormData) {
 					const file = options.body.get('file');
 					if (file instanceof File && file.name === 'foo.txt' &&
-						options.body.get('i') === 'TOKEN' &&
+						!options.body.has('i') &&
+						new Headers(options.headers).get('Authorization') === 'Bearer TOKEN' &&
 						!options.body.has('name') &&
 						options.body.get('isSensitive') === 'false' &&
 						new Headers(options.headers).get('Content-Type') === null) {
@@ -118,7 +121,7 @@ describe('API', () => {
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/drive/files/create', {
 			method: 'POST',
 			body: expect.any(FormData),
-			headers: {},
+			headers: { 'Authorization': 'Bearer TOKEN' },
 			credentials: 'omit',
 			cache: 'no-cache',
 		});
@@ -146,11 +149,12 @@ describe('API', () => {
 		expect(fetchMock).toHaveBeenCalledWith('https://misskey.test/api/reset-password', {
 			method: 'POST',
 			headers: {
+				'Authorization': 'Bearer TOKEN',
 				'Content-Type': 'application/json',
 			},
 			credentials: 'omit',
 			cache: 'no-cache',
-			body: JSON.stringify({ token: 'aaa', password: 'aaa', i: 'TOKEN' }),
+			body: JSON.stringify({ token: 'aaa', password: 'aaa' }),
 		});
 
 		fetchMock.mockRestore();
@@ -161,7 +165,7 @@ describe('API', () => {
 			if (url === 'https://misskey.test/api/i' && options?.method === 'POST') {
 				if (options.body) {
 					const body = JSON.parse(options.body as string);
-					if (typeof body.i === 'string') {
+					if (typeof body.i === 'string' || new Headers(options.headers).has('Authorization')) {
 						return new Response(JSON.stringify({ id: 'foo' }), { status: 200 });
 					}
 					return new Response(
@@ -210,6 +214,44 @@ describe('API', () => {
 		await expect(cli.request('i')).rejects.toMatchObject(error);
 		const reason = await cli.request('i').catch((value) => value);
 		expect(isAPIError(reason)).toBe(true);
+	});
+
+	test('api error is an Error carrying the endpoint and status', async () => {
+		const error = {
+			message: 'You can not Renote a pure Renote.',
+			code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
+			id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
+			kind: 'client',
+			info: { hint: 1 },
+		};
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response(JSON.stringify({ error }), { status: 400 }),
+		});
+		const reason = await cli.request('notes/create', { text: 'a' }).catch((value) => value);
+		expect(reason).toBeInstanceOf(Error);
+		expect(reason).toBeInstanceOf(APIError);
+		expect(reason).toMatchObject({ name: 'APIError', endpoint: 'notes/create', status: 400, ...error });
+		expect(typeof reason.stack).toBe('string');
+		expect(isAPIError(reason, 'notes/create')).toBe(true);
+		expect(isAPIError(reason, 'i')).toBe(false);
+		expect(JSON.parse(JSON.stringify(reason))).toEqual(error);
+	});
+
+	test('explicit credential replaces an i field in params', async () => {
+		const result = await requestAPI({
+			apiUrl: 'https://misskey.test/api',
+			endpoint: 'i',
+			method: 'POST',
+			data: { i: 'BODY_TOKEN', a: 1 },
+			credential: 'TOKEN',
+			fetch: async (_url, init) => {
+				expect(init?.headers['Authorization']).toBe('Bearer TOKEN');
+				expect(JSON.parse(init?.body as string)).toEqual({ a: 1 });
+				return new Response(null, { status: 204 });
+			},
+		});
+		expect(result.status).toBe(204);
 	});
 
 	test('non-object error response is not treated as an API error', async () => {
