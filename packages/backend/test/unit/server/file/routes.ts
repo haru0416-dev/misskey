@@ -36,6 +36,9 @@ const dummySize = fs.statSync(dummyPath).size;
 const dummyBuffer = fs.readFileSync(dummyPath);
 const svgBuffer = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"></svg>', 'utf8');
 const textBuffer = Buffer.from('dummy text', 'utf8');
+// 位置ごとに値の違う 256KiB。複数チャンクにまたがる切り出しのずれを検出する。
+const rangeBuffer = Buffer.from(Array.from({ length: 256 * 1024 }, (_, i) => i % 251));
+const rangeEtag = '"range-v1"';
 
 function sendBuffer(res: ServerResponse, type: string, buffer: Buffer): void {
 	res.writeHead(200, {
@@ -78,8 +81,10 @@ async function createRemoteFileServer() {
 	})
 		.png()
 		.toBuffer();
+	const requests: { pathname: string; range: string | undefined }[] = [];
 	const server = createServer((req, res) => {
 		const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+		requests.push({ pathname, range: req.headers.range });
 
 		switch (pathname) {
 			case '/dummy.png':
@@ -98,6 +103,40 @@ async function createRemoteFileServer() {
 				sendBuffer(res, 'image/png', flatPngBuffer);
 				return;
 
+			// Range と If-None-Match に応じるリモート。
+			case '/range.bin': {
+				if (req.headers['if-none-match'] === rangeEtag) {
+					res.writeHead(304, { ETag: rangeEtag });
+					res.end();
+					return;
+				}
+				const match = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? '');
+				if (match) {
+					const start = Number(match[1]);
+					const end = Math.min(Number(match[2]), rangeBuffer.length - 1);
+					res.writeHead(206, {
+						'Content-Type': 'video/mp4',
+						'Content-Range': `bytes ${start}-${end}/${rangeBuffer.length}`,
+						'Content-Length': String(end - start + 1),
+						ETag: rangeEtag,
+					});
+					res.end(rangeBuffer.subarray(start, end + 1));
+					return;
+				}
+				res.writeHead(200, {
+					'Content-Type': 'video/mp4',
+					'Content-Length': String(rangeBuffer.length),
+					ETag: rangeEtag,
+				});
+				res.end(rangeBuffer);
+				return;
+			}
+
+			// Range に応じず、常に全体を返すリモート。
+			case '/norange.bin':
+				sendBuffer(res, 'video/mp4', rangeBuffer);
+				return;
+
 			default:
 				res.statusCode = 404;
 				res.end();
@@ -112,6 +151,9 @@ async function createRemoteFileServer() {
 		svgUrl: `${baseUrl}/dummy.svg`,
 		textUrl: `${baseUrl}/dummy.txt`,
 		flatPngUrl: `${baseUrl}/flat.png`,
+		rangeUrl: `${baseUrl}/range.bin`,
+		noRangeUrl: `${baseUrl}/norange.bin`,
+		requests,
 	};
 }
 
@@ -146,6 +188,9 @@ describe('createFileServerApp', () => {
 	let remoteSvgUrl: string;
 	let remoteTextUrl: string;
 	let remoteFlatPngUrl: string;
+	let remoteRangeUrl: string;
+	let remoteNoRangeUrl: string;
+	let remoteRequests: { pathname: string; range: string | undefined }[];
 	const storedPaths: string[] = [];
 	let createdFallbackAssets = false;
 	let fallbackAssetsDir = '';
@@ -254,6 +299,9 @@ describe('createFileServerApp', () => {
 		remoteSvgUrl = remoteServerInfo.svgUrl;
 		remoteTextUrl = remoteServerInfo.textUrl;
 		remoteFlatPngUrl = remoteServerInfo.flatPngUrl;
+		remoteRangeUrl = remoteServerInfo.rangeUrl;
+		remoteNoRangeUrl = remoteServerInfo.noRangeUrl;
+		remoteRequests = remoteServerInfo.requests;
 
 		fallbackAssetsDir = path.resolve('src/server/file/assets');
 		if (!fs.existsSync(fallbackAssetsDir)) {
@@ -580,6 +628,97 @@ describe('createFileServerApp', () => {
 			expect(res.headers['content-length']).toBe('4');
 			expect(res.headers['content-type']).toBe('image/png');
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
+		});
+
+		// 動画のシークは Range の連続になる。全体を取り直さず、要求範囲だけをリモートから中継する。
+		test('GET /files/:key 外部リンクの Range をリモートへ転送し、要求範囲だけを取る', async () => {
+			const accessKey = randomString();
+			await insertDriveFile({
+				accessKey,
+				storedInternal: false,
+				isLink: true,
+				uri: remoteRangeUrl,
+				name: 'clip.mp4',
+				type: 'video/mp4',
+			});
+			remoteRequests.length = 0;
+
+			const res = await inject(app, {
+				method: 'GET',
+				url: `/files/${accessKey}`,
+				headers: { range: 'bytes=100000-100099' },
+			});
+
+			expect(res.statusCode).toBe(206);
+			expect(res.headers['content-range']).toBe(`bytes 100000-100099/${rangeBuffer.length}`);
+			expect(res.headers['content-length']).toBe('100');
+			expect(res.headers['content-type']).toBe('video/mp4');
+			expect((await res.body()).equals(rangeBuffer.subarray(100000, 100100))).toBe(true);
+			expect(remoteRequests).toStrictEqual([{ pathname: '/range.bin', range: 'bytes=100000-100099' }]);
+		});
+
+		test('GET /files/:key Range に応じないリモートでも要求範囲だけを返す', async () => {
+			const accessKey = randomString();
+			await insertDriveFile({
+				accessKey,
+				storedInternal: false,
+				isLink: true,
+				uri: remoteNoRangeUrl,
+				name: 'clip.mp4',
+				type: 'video/mp4',
+			});
+
+			const res = await inject(app, {
+				method: 'GET',
+				url: `/files/${accessKey}`,
+				headers: { range: 'bytes=70000-199999' },
+			});
+
+			expect(res.statusCode).toBe(206);
+			expect(res.headers['content-range']).toBe(`bytes 70000-199999/${rangeBuffer.length}`);
+			expect(res.headers['content-length']).toBe('130000');
+			expect((await res.body()).equals(rangeBuffer.subarray(70000, 200000))).toBe(true);
+		});
+
+		test('GET /files/:key 外部リンクの条件付き取得は 304 をそのまま返す', async () => {
+			const accessKey = randomString();
+			await insertDriveFile({
+				accessKey,
+				storedInternal: false,
+				isLink: true,
+				uri: remoteRangeUrl,
+				name: 'clip.mp4',
+				type: 'video/mp4',
+			});
+
+			const res = await inject(app, {
+				method: 'GET',
+				url: `/files/${accessKey}`,
+				headers: { 'if-none-match': rangeEtag },
+			});
+
+			expect(res.statusCode).toBe(304);
+			expect(res.headers['etag']).toBe(rangeEtag);
+			expect(await res.body()).toHaveLength(0);
+		});
+
+		test('GET /files/:key 外部画像の thumbnail はリモートへ取りに行かずにリダイレクトする', async () => {
+			const accessKey = randomString();
+			const thumbnailKey = randomString();
+			await insertDriveFile({
+				accessKey,
+				thumbnailAccessKey: thumbnailKey,
+				storedInternal: false,
+				isLink: true,
+				uri: remotePngUrl,
+				name: 'remote.png',
+			});
+			remoteRequests.length = 0;
+
+			const res = await inject(app, { method: 'GET', url: `/files/${thumbnailKey}` });
+
+			expect(res.statusCode).toBe(301);
+			expect(remoteRequests).toStrictEqual([]);
 		});
 
 		test('GET /files/:key thumbnail は mediaProxy/static.webp にリダイレクトする', async () => {

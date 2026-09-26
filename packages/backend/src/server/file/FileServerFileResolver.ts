@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as fs from 'node:fs';
 import type { MiDriveFile } from '@/models/_.js';
 import { createTemp } from '@/misc/create-temp.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
@@ -47,15 +46,13 @@ export type FileResolveResult =
 			path: string;
 	  }
 	| {
+			/** 保存していないリモートのファイル。中身は必要になった呼び出し元が取得する。mime は登録時に中身から判定した値。 */
 			kind: 'remote';
 			fileRole: 'thumbnail' | 'webpublic' | 'original';
 			file: MiDriveFile;
 			filename: string;
 			url: string;
 			mime: string;
-			ext: string | null;
-			path: string;
-			cleanup: () => void;
 	  };
 
 export class FileServerFileResolver {
@@ -85,6 +82,10 @@ export class FileServerFileResolver {
 			cleanup();
 			throw e;
 		}
+	}
+
+	public openRemoteStream(url: string, forwardHeaders: Record<string, string>) {
+		return this.downloadService.openRemoteStream(url, forwardHeaders);
 	}
 
 	public async downloadForProxy(url: string): Promise<DownloadedFileResult | DownloadedBufferResult> {
@@ -119,13 +120,10 @@ export class FileServerFileResolver {
 			if (!(file.isLink && file.uri)) {
 				return { kind: 'unavailable' };
 			}
-			const result = await this.downloadAndDetectTypeFromUrl(file.uri);
-			const { kind: _kind, ...downloaded } = result;
-			file.size = (await fs.promises.stat(downloaded.path)).size; // DB の file.size は正確とは限らない。
 			return {
 				kind: 'remote',
-				...downloaded,
 				url: file.uri,
+				mime: file.type,
 				fileRole: isThumbnail ? 'thumbnail' : isWebpublic ? 'webpublic' : 'original',
 				file,
 				filename: file.name,

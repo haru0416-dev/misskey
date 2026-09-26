@@ -4,6 +4,8 @@
  */
 
 import * as fs from 'node:fs';
+import { Transform } from 'node:stream';
+import type { Readable } from 'node:stream';
 import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
@@ -16,21 +18,52 @@ export type RangeStream = {
 	chunksize: number;
 };
 
-export function createRangeStream(rangeHeader: string, size: number, path: string): RangeStream {
+export function parseRange(rangeHeader: string, size: number): { start: number; end: number; chunksize: number } {
 	const parts = rangeHeader.replace(/bytes=/, '').split('-');
 	const start = Number.parseInt(parts[0] ?? '', 10);
 	let end = parts[1] ? Number.parseInt(parts[1], 10) : size - 1;
 	if (end > size) {
 		end = size - 1;
 	}
-	const chunksize = end - start + 1;
+	return { start, end, chunksize: end - start + 1 };
+}
 
+export function createRangeStream(rangeHeader: string, size: number, path: string): RangeStream {
+	const { start, end, chunksize } = parseRange(rangeHeader, size);
 	return {
 		stream: fs.createReadStream(path, { start, end }),
 		start,
 		end,
 		chunksize,
 	};
+}
+
+/**
+ * Range に応じないリモートの全体応答から、要求された範囲だけを流す。範囲を送り終えたら上流を止める。
+ */
+export function sliceStream(source: Readable, start: number, end: number): Readable {
+	let offset = 0;
+	const sliced = new Transform({
+		transform(chunk: Buffer, _encoding, callback) {
+			const from = Math.max(start - offset, 0);
+			const to = Math.min(end + 1 - offset, chunk.length);
+			offset += chunk.length;
+			if (from < to) {
+				this.push(chunk.subarray(from, to));
+			}
+			if (offset > end) {
+				// pipeline で上流を壊すと下流の未送信分も捨てられるので、切り離してから止める。
+				source.unpipe(sliced);
+				source.destroy();
+				this.push(null);
+			}
+			callback();
+		},
+	});
+	source.on('error', (err) => sliced.destroy(err));
+	sliced.on('close', () => source.destroy());
+	source.pipe(sliced);
+	return sliced;
 }
 
 /**
