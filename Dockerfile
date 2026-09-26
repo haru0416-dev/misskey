@@ -76,12 +76,32 @@ RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 	node_modules/.bun/@img+sharp-linuxmusl-* \
 	node_modules/.bun/@napi-rs+canvas-linux-*-musl@*
 
-# slacc はリポジトリ内でビルドするので、ターゲットの実行環境向けにここで作る。
+# slacc はリポジトリ内でビルドするので、ターゲットの実行環境向けに別の段で作り、成果物 (.node) だけを渡す。
+# 実行時の依存を入れる段で作ると、ビルド用の依存 (@napi-rs/cli や typescript) が実行用イメージに混ざる。
+FROM oven/bun:${BUN_VERSION}-debian AS slacc-builder
+
+WORKDIR /misskey
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	--mount=type=cache,target=/var/lib/apt,sharing=locked \
 	apt-get update \
 	&& apt-get install -yqq --no-install-recommends build-essential curl \
 	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+
+COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
+COPY --link ["packages/backend/package.json", "./packages/backend/"]
+COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
+COPY --link ["packages/frontend-embed/package.json", "./packages/frontend-embed/"]
+COPY --link ["packages/frontend-shared/package.json", "./packages/frontend-shared/"]
+COPY --link ["packages/i18n/package.json", "./packages/i18n/"]
+COPY --link ["packages/icons-subsetter/package.json", "./packages/icons-subsetter/"]
+COPY --link ["packages/aiscript/package.json", "./packages/aiscript/"]
+COPY --link ["packages/mfm-js/package.json", "./packages/mfm-js/"]
+COPY --link ["packages/sw/package.json", "./packages/sw/"]
+COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
+COPY --link ["packages/misskey-js/generator/package.json", "./packages/misskey-js/generator/"]
+COPY --link ["scripts/changelog-checker/package.json", "./scripts/changelog-checker/"]
 
 COPY --link ["packages/slacc", "./packages/slacc/"]
 
@@ -118,7 +138,8 @@ COPY --chown=misskey:misskey --from=target-builder /misskey/node_modules ./node_
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/node_modules ./packages/misskey-js/node_modules
 # ビルドしたネイティブモジュール (index.cjs / index.mjs / *.node)。
-COPY --chown=misskey:misskey --from=target-builder /misskey/packages/slacc ./packages/slacc
+COPY --chown=misskey:misskey --from=slacc-builder ["/misskey/packages/slacc/package.json", "/misskey/packages/slacc/index.cjs", "/misskey/packages/slacc/index.mjs", "/misskey/packages/slacc/index.d.ts", "./packages/slacc/"]
+COPY --chown=misskey:misskey --from=slacc-builder /misskey/packages/slacc/*.node ./packages/slacc/
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/icons-subsetter/vendor/tabler-icons/LICENSE ./licenses/tabler-icons.txt
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
