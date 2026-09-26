@@ -30,7 +30,7 @@ import { HOUR } from '@/const.js';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	drive: {
+	drive: defineContract({
 		meta: {
 			tags: ['drive', 'account'],
 
@@ -55,9 +55,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'drive/files': defineContract({
 		meta: {
 			allowQuery: true,

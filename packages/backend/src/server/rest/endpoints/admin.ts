@@ -44,7 +44,12 @@ import {
 	handleApiAdminAvatarDecorationsList,
 	handleApiAdminAvatarDecorationsUpdate,
 } from '../admin/admin-avatar-decorations.js';
-import { handleApiAdminDeleteAllFilesOfAUser, handleApiAdminDriveFiles } from '../admin/admin-drive.js';
+import {
+	handleApiAdminDeleteAllFilesOfAUser,
+	handleApiAdminDriveCleanRemoteFiles,
+	handleApiAdminDriveCleanup,
+	handleApiAdminDriveFiles,
+} from '../admin/admin-drive.js';
 import { handleApiAdminSendEmail } from '../admin/admin-email.js';
 import {
 	handleApiAdminRelaysAdd,
@@ -66,6 +71,7 @@ import { handleApiAdminShowModerationLogs } from '../admin/moderation-log.js';
 import { handleApiAdminCaptchaCurrent, handleApiAdminCaptchaSave } from '../captcha/captcha.js';
 import { handleApiAdminInviteCreate, handleApiAdminInviteList } from '../invite/invite.js';
 import { handleApiAdminPromoCreate } from '../note/promo.js';
+import { handleApiAdminMeta } from '../meta/meta.js';
 
 export const adminEndpoints = implementEndpoints<ApiShellDependencies>()(
 	pickContracts(adminContracts, [
@@ -89,6 +95,8 @@ export const adminEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'admin/captcha/save',
 		'admin/delete-account',
 		'admin/delete-all-files-of-a-user',
+		'admin/drive/clean-remote-files',
+		'admin/drive/cleanup',
 		'admin/drive/files',
 		'admin/federation/delete-all-files',
 		'admin/federation/refresh-remote-instance-metadata',
@@ -98,6 +106,7 @@ export const adminEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'admin/get-user-ips',
 		'admin/invite/create',
 		'admin/invite/list',
+		'admin/meta',
 		'admin/promo/create',
 		'admin/relays/add',
 		'admin/relays/list',
@@ -224,6 +233,13 @@ export const adminEndpoints = implementEndpoints<ApiShellDependencies>()(
 			await handleApiAdminUpdateProxyAccount(deps, me, input),
 		'admin/update-user-note': async ({ deps, input, me }) => {
 			await handleApiAdminUpdateUserNote(deps, me, input);
+		},
+		'admin/meta': async ({ deps }) => await handleApiAdminMeta(deps),
+		'admin/drive/clean-remote-files': async ({ deps }) => {
+			await handleApiAdminDriveCleanRemoteFiles(deps);
+		},
+		'admin/drive/cleanup': async ({ deps }) => {
+			await handleApiAdminDriveCleanup(deps);
 		},
 	},
 );

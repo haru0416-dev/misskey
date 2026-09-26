@@ -9,7 +9,7 @@ import { authenticateApiToken } from './auth/auth.js';
 import type { ApiAuthenticated } from './auth/auth.js';
 import { applyEndpointGuards } from './endpoint-guards.js';
 import type { AuthedCredential, EndpointGuardDependencies, EndpointGuardMeta } from './endpoint-guards.js';
-import { jsonBody, runApiEndpoint, tokenFromRequest } from './shell-helpers.js';
+import { getRequestIp, jsonBody, runApiEndpoint, tokenFromRequest } from './shell-helpers.js';
 
 export type { AuthedCredential } from './endpoint-guards.js';
 
@@ -25,7 +25,9 @@ export async function withEndpointGuards<T>(
 ): Promise<T> {
 	const body = await jsonBody(c);
 	const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
-	await applyEndpointGuards(deps, name, endpointMetas[name].meta as EndpointGuardMeta, auth);
+	await applyEndpointGuards(deps, name, endpointMetas[name].meta as EndpointGuardMeta, auth, () =>
+		getRequestIp(c, deps.config),
+	);
 	return await run({ body, auth });
 }
 

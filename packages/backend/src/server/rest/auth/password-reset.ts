@@ -21,12 +21,10 @@ import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { getIpHash } from '@/misc/get-ip-hash.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { passwordSchema } from '@/models/User.js';
-import { ApiError, rateLimitExceededError } from '../error.js';
-import { isApiRateLimited } from '../rate-limit.js';
+import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiPasswordResetDependencies = {
@@ -49,23 +47,10 @@ export const resetPasswordParamDef = z.object({
 export async function handleApiRequestResetPassword(
 	deps: ApiPasswordResetDependencies,
 	body: Record<string, unknown>,
-	ip: string,
 ): Promise<void> {
 	const params = parseApiParams(requestResetPasswordParamDef, body);
 
-	if (
-		await isApiRateLimited(
-			deps,
-			{
-				key: 'request-reset-password',
-				duration: 60 * 60 * 1000,
-				max: 3,
-			},
-			getIpHash(ip),
-		)
-	) {
-		throw rateLimitExceededError();
-	}
+	// 回数制限は契約の meta.limit を共通 guard が IP 単位で数える。ここで同じ枠を数え直すと 1 回目で上限に掛かる。
 
 	const user = await fetchLocalUserByUsernameFromDatabase(deps.db, params.username);
 	if (user == null) {

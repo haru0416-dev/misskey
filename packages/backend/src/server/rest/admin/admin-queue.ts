@@ -71,9 +71,7 @@ export const adminQueueOutboxJobParamDef = z.object({
 	revision: z.int().min(0),
 });
 
-export async function handleApiAdminQueueQueues(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	parseApiParams(adminQueueNoParamsDef, body);
-
+export async function handleApiAdminQueueQueues(deps: ApiAdminQueueDependencies) {
 	return await getQueues(deps);
 }
 
@@ -84,24 +82,15 @@ export async function handleApiAdminQueueQueueStats(
 	return await getQueueStats(deps, ps.queue);
 }
 
-export async function handleApiAdminQueueStats(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	parseApiParams(adminQueueNoParamsDef, body);
-
+export async function handleApiAdminQueueStats(deps: ApiAdminQueueDependencies) {
 	return await getLegacyQueueCounts(deps);
 }
 
-export async function handleApiAdminQueueDeliverDelayed(
-	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	parseApiParams(adminQueueNoParamsDef, body);
-
+export async function handleApiAdminQueueDeliverDelayed(deps: ApiAdminQueueDependencies) {
 	return await getDelayedDeliverHosts(deps.deliverQueue);
 }
 
-export async function handleApiAdminQueueInboxDelayed(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	parseApiParams(adminQueueNoParamsDef, body);
-
+export async function handleApiAdminQueueInboxDelayed(deps: ApiAdminQueueDependencies) {
 	return await getDelayedInboxHosts(deps.inboxQueue);
 }
 

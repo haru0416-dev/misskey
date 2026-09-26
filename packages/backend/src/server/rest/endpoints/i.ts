@@ -26,7 +26,7 @@ import {
 	handleApiI2faUnregister,
 	handleApiI2faUpdateKey,
 } from '../account/i-2fa.js';
-import { handleApiISigninHistory } from '../account/i.js';
+import { handleApiI, handleApiISigninHistory } from '../account/i.js';
 import { handleApiIReadAnnouncement } from '../announcement/announcements.js';
 import { handleApiIApps, handleApiIRevokeToken } from '../auth/access-tokens.js';
 import { handleApiIFavorites } from '../favorite/favorites.js';
@@ -60,6 +60,7 @@ import {
 
 export const iEndpoints = implementEndpoints<ApiShellDependencies>()(
 	pickContracts(iContracts, [
+		'i',
 		'i/2fa/done',
 		'i/2fa/key-done',
 		'i/2fa/password-less',
@@ -192,5 +193,6 @@ export const iEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'i/webhooks/update': async ({ deps, input, me }) => {
 			await handleApiIWebhooksUpdate(deps, me, input);
 		},
+		i: async ({ auth, deps, me }) => await handleApiI(deps, me, auth.token),
 	},
 );

@@ -4,7 +4,10 @@
  */
 
 import { Hono } from 'hono';
-import { describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import type * as Redis from 'ioredis';
+import { loadConfig } from '@/config.js';
+import { createRedisClient } from '@/runtime-dependencies.js';
 import { z } from 'zod';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 import { implementEndpoints, registerEndpoints } from '@/server/rest/endpoint-definition.js';
@@ -40,6 +43,10 @@ const contracts = {
 		meta: { requireCredential: false },
 		paramDef: z.object({}),
 	}),
+	'probe/limited': defineContract({
+		meta: { requireCredential: false, limit: { duration: 60_000, max: 1 } },
+		paramDef: z.object({}),
+	}),
 };
 
 const endpoints = implementEndpoints<object>()(contracts, {
@@ -59,11 +66,14 @@ const endpoints = implementEndpoints<object>()(contracts, {
 	'probe/featured': async ({ input }) => ({ limit: input.limit ?? 0 }),
 	'probe/delete': async () => {},
 	'probe/touch': async () => {},
+	'probe/limited': async () => {},
 });
 
-function createApp() {
+const testConfig = { server: { http: { ipRateLimit: true }, reverseProxy: { trustedNetworks: [] } } };
+
+function createApp(deps: object = { config: testConfig }) {
 	const app = new Hono();
-	registerEndpoints(app, {} as never, endpoints);
+	registerEndpoints(app, deps as never, endpoints);
 	return app;
 }
 
@@ -74,6 +84,17 @@ const post = (app: Hono, path: string, body: unknown, method = 'POST') =>
 	app.request(path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 describe('registerEndpoints', () => {
+	let redis: Redis.Redis;
+	beforeAll(() => {
+		redis = createRedisClient(loadConfig());
+	});
+	afterAll(() => {
+		redis.disconnect();
+	});
+	afterEach(() => {
+		process.env['NODE_ENV'] = 'test';
+	});
+
 	test('meta の allowQuery / allowGet どおりにメソッドを登録する', () => {
 		const routes = createApp().routes.map((route) => `${route.method} ${route.path}`);
 		expect(routes.toSorted()).toStrictEqual(
@@ -84,6 +105,7 @@ describe('registerEndpoints', () => {
 				'GET /probe/featured',
 				'POST /probe/delete',
 				'POST /probe/touch',
+				'POST /probe/limited',
 			].toSorted(),
 		);
 	});
@@ -152,6 +174,32 @@ describe('registerEndpoints', () => {
 			['probe/show'],
 			['probe/show'],
 		]);
+	});
+
+	test('匿名のリクエストは meta.limit を IP 単位で 1 回だけ数える', async () => {
+		// 回数制限は本番でだけ働く。リクエスト元の IP はリバースプロキシが x-misskey-remote-address に入れる。
+		// 記録は 60 秒残るので、実行ごとに別の IP を使い、失敗しても後始末する。
+		process.env['NODE_ENV'] = 'production';
+		const app = createApp({ config: testConfig, redis });
+		const octet = () => Math.floor(Math.random() * 250) + 1;
+		const ip = `203.0.113.${octet()}`;
+		const otherIp = `198.51.100.${octet()}`;
+		const from = (address: string) =>
+			app.request('/probe/limited', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'x-misskey-remote-address': address },
+				body: '{}',
+			});
+
+		try {
+			expect((await from(ip)).status).toBe(204);
+			const second = await from(ip);
+			expect(second.status).toBe(429);
+			expect((await errorOf(second)).code).toBe('RATE_LIMIT_EXCEEDED');
+			expect((await from(otherIp)).status).toBe(204);
+		} finally {
+			for (const key of await redis.keys('limit:ip-*:probe/limited*')) await redis.del(key);
+		}
 	});
 
 	test('requireCredential の meta は資格情報なしを 401 で拒否し、実装を呼ばない', async () => {

@@ -58,7 +58,7 @@ import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	i: {
+	i: defineContract({
 		meta: {
 			tags: ['account'],
 
@@ -81,9 +81,9 @@ export const endpointMetas = {
 					kind: 'permission',
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'i/2fa/done': defineContract({
 		meta: {
 			requireCredential: true,
@@ -382,7 +382,7 @@ export const endpointMetas = {
 		},
 		paramDef: deleteAccountParamDef,
 	}),
-	'i/export-antennas': {
+	'i/export-antennas': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -390,10 +390,10 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'i/export-blocking': {
+	}),
+	'i/export-blocking': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -401,10 +401,10 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'i/export-clips': {
+	}),
+	'i/export-clips': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -412,10 +412,10 @@ export const endpointMetas = {
 				duration: DAY,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'i/export-favorites': {
+	}),
+	'i/export-favorites': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -423,9 +423,9 @@ export const endpointMetas = {
 				duration: DAY,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'i/export-following': defineContract({
 		meta: {
 			secure: true,
@@ -437,7 +437,7 @@ export const endpointMetas = {
 		},
 		paramDef: exportFollowingParamDef,
 	}),
-	'i/export-mute': {
+	'i/export-mute': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -445,10 +445,10 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'i/export-notes': {
+	}),
+	'i/export-notes': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -456,10 +456,10 @@ export const endpointMetas = {
 				duration: DAY,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'i/export-user-lists': {
+	}),
+	'i/export-user-lists': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -467,9 +467,9 @@ export const endpointMetas = {
 				duration: MINUTE,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'i/favorites': defineContract({
 		meta: {
 			allowQuery: true,

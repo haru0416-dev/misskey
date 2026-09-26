@@ -239,12 +239,7 @@ async function packAdminDriveFilesForApi(
 	}));
 }
 
-export async function handleApiAdminDriveCleanRemoteFiles(
-	deps: ApiAdminDriveDependencies,
-	body: Record<string, unknown>,
-): Promise<void> {
-	parseApiParams(adminDriveNoParamsDef, body);
-
+export async function handleApiAdminDriveCleanRemoteFiles(deps: ApiAdminDriveDependencies): Promise<void> {
 	await deps.objectStorageQueue.add(
 		'cleanRemoteFiles',
 		{},
@@ -257,11 +252,7 @@ export async function handleApiAdminDriveCleanRemoteFiles(
 	);
 }
 
-export async function handleApiAdminDriveCleanup(
-	deps: ApiAdminDriveDependencies,
-	body: Record<string, unknown>,
-): Promise<void> {
-	parseApiParams(adminDriveNoParamsDef, body);
+export async function handleApiAdminDriveCleanup(deps: ApiAdminDriveDependencies): Promise<void> {
 	const files = await listOrphanDriveFilesFromDatabase(deps.db);
 
 	for (const file of files) {

@@ -12,7 +12,14 @@ import {
 	handleApiBlockingDelete,
 	handleApiBlockingList,
 } from '../account/account-blocking.js';
-import { handleApiMuteCreate, handleApiMuteList, handleApiRenoteMuteList } from '../account/account-mutes.js';
+import {
+	handleApiMuteCreate,
+	handleApiMuteDelete,
+	handleApiMuteList,
+	handleApiRenoteMuteCreate,
+	handleApiRenoteMuteDelete,
+	handleApiRenoteMuteList,
+} from '../account/account-mutes.js';
 import { handleApiApShow } from '../activitypub/ap.js';
 import { handleApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
 import { handleApiResetDb } from '../admin/reset-db.js';
@@ -26,7 +33,7 @@ import { handleApiEmailAddressAvailable, handleApiUsernameAvailable } from '../a
 import { handleApiMiauthGenToken } from '../auth/miauth.js';
 import { handleApiResetPassword } from '../auth/password-reset.js';
 import { handleApiGetAvatarDecorations } from '../avatar-decoration/avatar-decorations.js';
-import { handleApiEndpoint } from '../endpoint-info.js';
+import { handleApiEndpoint, handleApiEndpoints } from '../endpoint-info.js';
 import { handleApiInviteDelete, handleApiInviteList } from '../invite/invite.js';
 import { handleApiMeta } from '../meta/meta.js';
 import { handleApiPromoRead } from '../note/promo.js';
@@ -40,12 +47,13 @@ import {
 import { handleApiPagePush } from '../page/page-push.js';
 import { handleApiRolesList, handleApiRolesNotes, handleApiRolesShow, handleApiRolesUsers } from '../role/roles.js';
 import { handleApiPinnedUsers } from '../user/user.js';
+import { handleApiStats } from '../chart/charts.js';
 
 export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(
 	pickContracts(miscContracts, [
 		'announcements',
-		'announcements/show',
 		'announcements/react',
+		'announcements/show',
 		'announcements/unreact',
 		'ap/show',
 		'blocking/create',
@@ -53,6 +61,7 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'blocking/list',
 		'email-address/available',
 		'endpoint',
+		'endpoints',
 		'fetch-external-resources',
 		'get-avatar-decorations',
 		'invite/delete',
@@ -60,12 +69,15 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'meta',
 		'miauth/gen-token',
 		'mute/create',
+		'mute/delete',
 		'mute/list',
 		'notifications/create',
 		'notifications/delete',
 		'page-push',
 		'pinned-users',
 		'promo/read',
+		'renote-mute/create',
+		'renote-mute/delete',
 		'renote-mute/list',
 		'reset-db',
 		'reset-password',
@@ -73,6 +85,7 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'roles/notes',
 		'roles/show',
 		'roles/users',
+		'stats',
 		'sw/register',
 		'sw/show-registration',
 		'sw/unregister',
@@ -138,5 +151,16 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(
 		},
 		'sw/update-registration': async ({ deps, input, me }) => await handleApiSwUpdateRegistration(deps, me, input),
 		'username/available': async ({ deps, input }) => await handleApiUsernameAvailable(deps, input),
+		endpoints: async () => await handleApiEndpoints(),
+		'mute/delete': async ({ deps, input, me }) => {
+			await handleApiMuteDelete(deps, me, input);
+		},
+		'renote-mute/create': async ({ deps, input, me }) => {
+			await handleApiRenoteMuteCreate(deps, me, input);
+		},
+		'renote-mute/delete': async ({ deps, input, me }) => {
+			await handleApiRenoteMuteDelete(deps, me, input);
+		},
+		stats: async ({ deps }) => await handleApiStats(deps),
 	},
 );

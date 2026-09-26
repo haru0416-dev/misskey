@@ -20,6 +20,7 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { ApiError } from './error.js';
 import {
 	emptyResponse,
+	getRequestIp,
 	jsonBody,
 	jsonResponse,
 	publicCacheHeadersWhenAnonymous,
@@ -105,7 +106,7 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 			await runApiEndpoint(c, async () => {
 				const body = await readBody(c);
 				const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
-				await applyEndpointGuards(deps, name, meta, auth);
+				await applyEndpointGuards(deps, name, meta, auth, () => getRequestIp(c, deps.config));
 				const input = parseApiParams(contract.paramDef, body);
 
 				let result: unknown;
