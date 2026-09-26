@@ -1,10 +1,10 @@
 # meta・paramDef・res の責務
 
-宣言型は [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts)、実行時の共通処理は [endpoint-handlers.ts](../../../../../packages/backend/src/server/rest/endpoint-handlers.ts) を照合する。型にあるフィールドがすべて共通処理で強制されるとは限らない。
+宣言型は [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts)、実行時の共通処理は [endpoint-definition.ts](../../../../../packages/backend/src/server/rest/endpoint-definition.ts) と [endpoint-guards.ts](../../../../../packages/backend/src/server/rest/endpoint-guards.ts) を照合する。型にあるフィールドがすべて共通処理で強制されるとは限らない。
 
 ## 共通 guard が適用する条件
 
-`endpointHandler` と `endpointHandlerAnonymous` は `withEndpointGuards` を通る。body と token を読み、認証した後に以下を適用する。
+契約から登録したルートは body と token を読み、認証した後に `applyEndpointGuards` で以下を適用する。
 
 | meta | 実行時の効果 |
 | --- | --- |
@@ -14,17 +14,17 @@
 | `prohibitMoved` | 移行済み利用者を拒否する |
 | `requireRolePolicy` | 指定 policy または root を要求する |
 | `requireAdmin` / `requireModerator` | 対応する役割を検査する |
-| `limit` | 認証された利用者がいる場合に meta の rate limit を適用する |
+| `limit` | ログイン中は利用者単位 (ロールの倍率つき)、匿名は IP 単位 (IPv6 は /64) で数える |
 
-`prohibitMoved`・`requireRolePolicy` の検査には非 null 利用者が必要。これらや `secure` だけでは資格情報必須にならないため、meta の認証条件と wrapper を揃える。通常の認証必須・役割必須 API の `kind` は型の union に合わせ、値は [SDK permissions](../../../../../packages/misskey-js/src/consts.ts) を使う。
+`prohibitMoved`・`requireRolePolicy` の検査には非 null 利用者が必要。これらや `secure` だけでは資格情報必須にならないため、`requireCredential` も宣言する。通常の認証必須・役割必須 API の `kind` は型の union に合わせ、値は [SDK permissions](../../../../../packages/misskey-js/src/consts.ts) を使う。
 
 `requiredRolePolicy` も宣言型にはあるが、共通 guard が読む名前は `requireRolePolicy`。同じ効果とみなさず、変更対象のルート・ハンドラで実際の policy 判定まで追う。匿名ユーザー向けなど動的な判定は [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の利用側を確認する。クライアントが送った policy 値を認可の根拠にしない。
 
-匿名アクセスの IP 制限、独自ルートの追加制限は別責務。既存ルートが明示的にも rate limit を呼ぶ場合は、共通 guard との二重消費や判定順を確認する。multipart など wrapper を通らない経路は [API 登録](endpoint-registration.md) を参照する。
+実装の中で meta と同じ枠を数え直さない。回数の記録は挿入前の件数を返すため、同じリクエストで 2 回数えると `max: 1` 等では常に 429 になる。meta と別の枠 (期間や名前が違う) を実装で数えるのは別責務。multipart など契約を通らない経路は [API 登録](endpoint-registration.md) を参照する。
 
 ## 入力と応答
 
-- `paramDef` は原則、ハンドラ側の既存 zod schema を meta から参照する。[parseApiParams](../../../../../packages/backend/src/server/rest/validation.ts) は検証失敗を API の invalid parameter にし、解析結果から undefined のプロパティを除く。wrapper 自体は endpoint の入力 schema を parse しないので、ルートまたはハンドラでの実行を確認する。
+- `paramDef` は原則、ハンドラ側の既存 zod schema を meta から参照する。[parseApiParams](../../../../../packages/backend/src/server/rest/validation.ts) は検証失敗を API の invalid parameter にし、解析結果から undefined のプロパティを除く。契約から登録したルートは `paramDef` で検証した値を実装に渡すので、実装で body を再解析しない。実行時の検証と OpenAPI 用で schema を分けない。
 - ID・重複禁止の配列には [zod-params.ts](../../../../../packages/backend/src/misc/zod-params.ts) の `misskeyId`・`uniqueItems` を既存例に合わせて使う。省略、null、default、範囲、組合せ制約が利用側の契約に一致することを確認する。
 - `res` は [Schema](../../../../../packages/backend/src/misc/json-schema.ts) の形式。packed entity は [models/json-schema](../../../../../packages/backend/src/models/json-schema/) の定義を参照する。optional と nullable は別の契約であり、実際に返す形と生成型を揃える。宣言は応答の実行時検証や情報削除を代行しない。
 - `requireFile`、`allowGet`、`allowQuery`、`cacheSec` は共通 guard の認可条件ではない。multipart の解析、method 登録、安全で冪等な QUERY、匿名 cache の適用先をそれぞれ確認する。

@@ -48,23 +48,12 @@ export const adminDriveUserParamDef = z.object({
 	userId: misskeyId(),
 });
 
-// `fileId` または `url` を受け付ける。両方を指定してもよく、少なくとも一方は必須。
-const adminDriveShowFileParamDef = z
-	.object({
-		fileId: misskeyId().optional(),
-		url: z.string().optional(),
-	})
-	.superRefine((data, ctx) => {
-		if (data.fileId === undefined && data.url === undefined) {
-			ctx.addIssue({ code: 'custom', message: 'must match a schema in anyOf' });
-		}
-	});
-
-// OpenAPI/misskey-js コード生成専用。上の superRefine は JSON Schema 化できないため、
-// docs 用には「fileId 必須」または「url 必須」の anyOf として表現する。
-export const adminDriveShowFileDocsParamDef = z.union([
-	z.object({ fileId: misskeyId() }),
-	z.object({ url: z.string() }),
+// `fileId` または `url` を受け付ける。両方を指定してもよく、少なくとも一方は必須 (両方あれば fileId を使う)。
+// どちらの分岐にも他方のキーを残すので、指定したキーが union で落ちず、他方の値も検証される。
+// この定義がそのまま実行時の検証と OpenAPI / misskey-js の型になる。
+export const adminDriveShowFileParamDef = z.union([
+	z.object({ fileId: misskeyId(), url: z.string().optional() }),
+	z.object({ fileId: misskeyId().optional(), url: z.string() }),
 ]);
 
 export const adminDriveFilesParamDef = z.object({
@@ -296,9 +285,8 @@ export async function handleApiAdminDriveFiles(
 export async function handleApiAdminDriveShowFile(
 	deps: ApiAdminDriveDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminDriveShowFileParamDef>,
 ): Promise<AdminDriveFileResponse> {
-	const params = parseApiParams(adminDriveShowFileParamDef, body);
 	const file =
 		params.fileId !== undefined
 			? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)

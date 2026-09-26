@@ -4,11 +4,11 @@
 
 ## 実装をつなぐ
 
-1. 同じ認可・保存契約を持つ既存 endpoint の meta、ルート、ハンドラを読む。例は [notes の meta](../../../../../packages/backend/src/server/api/metas/notes.ts)、[notes のルート](../../../../../packages/backend/src/server/rest/routes/notes.ts)、[投稿処理](../../../../../packages/backend/src/server/rest/note/notes-create.ts)。
+1. 同じ認可・保存契約を持つ既存 endpoint の meta、ルート、ハンドラを読む。例は [notes の meta](../../../../../packages/backend/src/server/api/metas/notes.ts)、[notes の実装](../../../../../packages/backend/src/server/rest/endpoints/notes.ts)、[投稿処理](../../../../../packages/backend/src/server/rest/note/notes-create.ts)。
 2. 既存の機能別ハンドラに入力 schema と処理を置き、必要な依存を `deps` で受ける。`paramDef` は既存の zod schema を共有し、[parseApiParams](../../../../../packages/backend/src/server/rest/validation.ts) を通る位置を確かめる。入力の型と検証を別々に再定義しない。
-3. `server/api/metas/` に同じ schema と `meta`・`res` を登録する。新しいカテゴリなら [endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts) に集約する。
-4. `server/rest/routes/` に実ルートを登録する。通常の JSON API は [endpoint-handlers.ts](../../../../../packages/backend/src/server/rest/endpoint-handlers.ts) の共通 guard を使い、必須認証か匿名許可かに合う wrapper を選ぶ。新しいルートカテゴリなら [shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) に配線する。
-5. multipart や独自の認証経路は、近い既存ルートの認可・パラメータ処理・資源解放まで照合する。meta を置くだけでは独自経路に guard は掛からない。
+3. `server/api/metas/` に `defineContract({ meta, paramDef })` で登録する。新しいカテゴリなら [endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts) に集約する。
+4. `server/rest/endpoints/<category>.ts` の `implementEndpoints` に実装を足す。戻り値は meta.res、投げるエラーは meta.errors に型で縛られる。新しいカテゴリなら [endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts) に載せる。
+5. multipart や独自の認証経路だけ `server/rest/routes/` に手で書き、近い既存ルートの認可・パラメータ処理・資源解放まで照合する。meta を置くだけでは独自経路に guard は掛からない。
 
 登録の責務は [API 登録](../knowledge/endpoint-registration.md)、フィールド別の実行時効果は [meta・paramDef・res](../knowledge/api-meta-paramdef.md) を参照する。
 

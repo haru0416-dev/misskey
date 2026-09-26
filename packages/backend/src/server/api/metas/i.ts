@@ -561,7 +561,7 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			// 共通 guard が掛けるのは間隔だけ。1 時間に 1 回の上限はファイル検証を通ったリクエストだけが
-			// 消費する (routes/export-import.ts)。ここに duration/max を書くと guard が先に 1 回数え、
+			// 消費する (rest/endpoints/i.ts)。ここに duration/max を書くと guard が先に 1 回数え、
 			// 同じキーで数え直す検証後の判定が必ず上限に掛かる。
 			limit: {
 				minInterval: 5 * SECOND,

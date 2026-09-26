@@ -18,7 +18,8 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
+import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
+import type { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
 
@@ -248,9 +249,8 @@ export async function handleApiAdminMeta(deps: ApiMetaDependencies) {
 export async function handleApiAdminUpdateMeta(
 	deps: ApiMetaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUpdateMetaParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminUpdateMetaParamDef, body);
 	const before = await fetchMetaFromDatabase(deps.db);
 	const set = buildAdminUpdateMetaPatch(deps.meta, params);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, set);

@@ -5,21 +5,10 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
-import {
-	handleApiDriveFilesCreate,
-	handleApiDriveFilesUploadFromUrl,
-	readApiMultipartRequest,
-} from '../drive/drive-file-upload.js';
+import { handleApiDriveFilesCreate, readApiMultipartRequest } from '../drive/drive-file-upload.js';
 import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	getRequestIp,
-	runApiEndpoint,
-} from '../shell-helpers.js';
+import { jsonResponse, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -56,31 +45,6 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			} finally {
 				cleanup();
 			}
-		});
-	});
-
-	app.post('/drive/files/upload-from-url', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:drive');
-			await assertApiRateLimitForUser(
-				deps,
-				'drive/files/upload-from-url',
-				{
-					duration: 60 * 60 * 1000,
-					max: 60,
-				},
-				auth.user,
-			);
-
-			const ip = getRequestIp(c, deps.config);
-			const headers = Object.fromEntries(c.req.raw.headers.entries());
-
-			handleApiDriveFilesUploadFromUrl(deps, auth.user, body, ip, headers);
-			return emptyResponse(c);
 		});
 	});
 }

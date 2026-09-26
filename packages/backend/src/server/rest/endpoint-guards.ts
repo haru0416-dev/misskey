@@ -61,10 +61,6 @@ export async function applyEndpointGuards(
 		assertSecureCredential(auth as AuthedCredential);
 	}
 
-	if (meta.kind != null && meta.kind !== 'server') {
-		assertTokenPermission(auth, meta.kind);
-	}
-
 	if (meta.prohibitMoved === true) {
 		assertProhibitMoved((auth as AuthedCredential).user);
 	}
@@ -80,6 +76,11 @@ export async function applyEndpointGuards(
 		await assertApiAdmin(deps, auth as AuthedCredential);
 	} else if (meta.requireModerator === true) {
 		await assertApiModerator(deps, auth as AuthedCredential);
+	}
+
+	// scope はロールの判定の後に見る。権限の足りないトークンを使った非管理者には ROLE_PERMISSION_DENIED を返す (upstream と同じ順)。
+	if (meta.kind != null && meta.kind !== 'server') {
+		assertTokenPermission(auth, meta.kind);
 	}
 
 	if (meta.limit != null) {

@@ -44,7 +44,7 @@ Skills の正本は `.claude/skills/`。対象を編集する前に該当 Skill 
 | Issue/PR の作成・外部送信 | `.claude/skills/creating-issues-and-prs/SKILL.md` |
 | 指示の読込範囲・重複・常駐量の調査 | `.claude/skills/context-budget/SKILL.md` |
 
-backend は Bun/Hono/drizzle と明示的な依存の組み立て、frontend は Vue を使用する。現在の入口は `packages/backend/src/runtime-dependencies.ts`、`packages/backend/src/server/rest/endpoint-handlers.ts`、`packages/frontend/src/_boot_.ts`。過去の説明より現行コード・設定・テストに照合し、不一致を黙って無視せず正本を修正する。
+backend は Bun/Hono/drizzle と明示的な依存の組み立て、frontend は Vue を使用する。現在の入口は `packages/backend/src/runtime-dependencies.ts`、`packages/backend/src/server/rest/endpoint-definition.ts`、`packages/frontend/src/_boot_.ts`。過去の説明より現行コード・設定・テストに照合し、不一致を黙って無視せず正本を修正する。
 
 ## 検証と引き渡し
 

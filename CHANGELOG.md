@@ -259,6 +259,8 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Fix: API 仕様書 (`/api.json`) の `admin/drive/show-file`・`admin/update-meta`・`channels/timeline`・`v2/admin/emoji/list` の入力定義が実際の検証と食い違っていた問題を修正 (実行時の検証と仕様書で別々に持っていた定義を 1 つにまとめた)
+- Change: 管理者・モデレーター・ロールポリシーが必要な API を、必要な権限スコープの無いトークンで権限の無い利用者が呼んだときのエラーを `PERMISSION_DENIED` から `ROLE_PERMISSION_DENIED` に変更 (ロールを先に判定する。upstream と同じ順)
 - Fix: 回数制限を宣言したエンドポイントを匿名で呼んだとき、IP 単位の制限が掛かっていなかった問題を修正 (`notes/search` など。ログイン中は従来どおり利用者単位)
 - Change: `i` の応答から仕様書に無く常に空だった `mutingNotificationTypes` を削除 (通知の受け取り設定は `notificationRecieveConfig`)
 - Fix: `users/reactions` と `notes/reactions` が、取得中に消えた利用者のリアクションを必須の `user` が欠けた形で返し得た問題を修正

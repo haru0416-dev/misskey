@@ -9,6 +9,7 @@ import {
 	channelMuteCreateParamDef,
 	channelMuteDeleteParamDef,
 	channelShowParamDef,
+	channelTimelineParamDef,
 	channelUpdateParamDef,
 	channelsListParamDef,
 	channelsSearchParamDef,
@@ -196,7 +197,7 @@ export const endpointMetas = {
 		},
 		paramDef: channelShowParamDef,
 	}),
-	'channels/timeline': {
+	'channels/timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'channels'],
@@ -222,20 +223,9 @@ export const endpointMetas = {
 					id: '4d0eeeba-a02c-4c3c-9966-ef60d38d2e7f',
 				},
 			},
-		} as const,
-		paramDef: {
-			type: 'object',
-			properties: {
-				channelId: { type: 'string', format: 'misskey:id' },
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-				sinceId: { type: 'string', format: 'misskey:id' },
-				untilId: { type: 'string', format: 'misskey:id' },
-				sinceDate: { type: 'integer' },
-				untilDate: { type: 'integer' },
-			},
-			required: ['channelId'],
-		} as const,
-	},
+		},
+		paramDef: channelTimelineParamDef,
+	}),
 	'channels/unfavorite': defineContract({
 		meta: {
 			tags: ['channels'],

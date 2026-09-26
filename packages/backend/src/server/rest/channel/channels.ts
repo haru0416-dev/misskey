@@ -122,7 +122,7 @@ export const channelShowParamDef = z.object({
 	channelId: misskeyId(),
 });
 
-const channelTimelineParamDef = z.object({
+export const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
@@ -551,9 +551,8 @@ export async function handleApiChannelsShow(
 export async function handleApiChannelsTimeline(
 	deps: ApiChannelsDependencies & ApiNoteDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelTimelineParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(channelTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
