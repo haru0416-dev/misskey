@@ -4207,6 +4207,10 @@ export interface Locale extends ILocale {
      */
     "failedToUpload": string;
     /**
+     * 読み込めませんでした
+     */
+    "failedToLoadMedia": string;
+    /**
      * 不適切な内容を含む可能性があると判定されたためアップロードできません。
      */
     "cannotUploadBecauseInappropriate": string;
