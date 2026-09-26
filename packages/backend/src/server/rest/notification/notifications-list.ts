@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/chat/ChatRoomStore.js';
 import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/user/FollowRequestStore.js';
@@ -387,9 +388,8 @@ export const notificationsParamDef = z.object({
 export async function handleApiINotifications(
 	deps: ApiNotificationsListDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(notificationsParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	if (params.includeTypes?.length === 0) {
@@ -489,9 +489,8 @@ function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotifi
 export async function handleApiINotificationsGrouped(
 	deps: ApiNotificationsListDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(notificationsParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	if (params.includeTypes?.length === 0) {

@@ -837,10 +837,7 @@ export const pinnedUsersParamDef = z.object({});
 export async function handleApiPinnedUsers(
 	deps: UserPackingDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
 ): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
-	parseApiParams(pinnedUsersParamDef, body);
-
 	const accounts = deps.meta.pinnedUsers.map((acct) => Acct.parse(acct));
 	const users = await listUsersByUsernamesAndHostsFromDatabase(deps.db, accounts);
 	const userByAccount = new Map(users.map((user) => [`${user.username.toLowerCase()}@${user.host ?? ''}`, user]));

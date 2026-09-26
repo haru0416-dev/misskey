@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
@@ -62,48 +66,12 @@ export const adminInviteListParamDef = z.object({
 	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
 });
 
-function adminInviteCreateInvalidDateTimeError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Invalid date-time format',
-		code: 'INVALID_DATE_TIME',
-		id: 'f1380b15-3760-4c6c-a1db-5c3aaf1cbd49',
-	});
-}
-
 function inviteCreateExceededCreateLimitError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'You have exceeded the limit for creating an invitation code.',
 		code: 'EXCEEDED_LIMIT_OF_CREATE_INVITE_CODE',
 		id: '8b165dd3-6f37-4557-8db1-73175d63c641',
-	});
-}
-
-function inviteDeleteNoSuchCodeError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such invite code.',
-		code: 'NO_SUCH_INVITE_CODE',
-		id: 'cd4f9ae4-7854-4e3e-8df9-c296f051e634',
-	});
-}
-
-function inviteDeleteCantDeleteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: "You can't delete this invite code.",
-		code: 'CAN_NOT_DELETE_INVITE_CODE',
-		id: 'ff17af39-000c-4d4e-abdf-848fa30fc1ce',
-	});
-}
-
-function inviteDeleteAccessDeniedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Access denied.',
-		code: 'ACCESS_DENIED',
-		id: '5eb8d909-2540-4970-90b8-dd6f86088121',
 	});
 }
 
@@ -145,11 +113,11 @@ async function packInviteCodeForApi(
 export async function handleApiAdminInviteCreate(
 	deps: ApiInviteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminInviteCreateParamDef>,
+	errors: ContractErrors<(typeof adminContracts)['admin/invite/create']>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseApiParams(adminInviteCreateParamDef, body);
 	if (params.expiresAt && isNaN(Date.parse(params.expiresAt))) {
-		throw adminInviteCreateInvalidDateTimeError();
+		throw errors.invalidDateTime();
 	}
 
 	const tickets = await createRegistrationTicketsInDatabase(
@@ -176,9 +144,8 @@ export async function handleApiAdminInviteCreate(
 
 export async function handleApiAdminInviteList(
 	deps: ApiInviteDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminInviteListParamDef>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseApiParams(adminInviteListParamDef, body);
 	const tickets = await listRegistrationTicketsForAdminFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -222,22 +189,22 @@ export async function handleApiInviteCreate(
 export async function handleApiInviteDelete(
 	deps: ApiInviteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof inviteDeleteParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['invite/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(inviteDeleteParamDef, body);
 	const ticket = await fetchRegistrationTicketByIdFromDatabase(deps.db, params.inviteId);
 	const isModerator = await isApiModerator(deps, me);
 
 	if (ticket == null) {
-		throw inviteDeleteNoSuchCodeError();
+		throw errors.noSuchCode();
 	}
 
 	if (ticket.createdById !== me.id && !isModerator) {
-		throw inviteDeleteAccessDeniedError();
+		throw errors.accessDenied();
 	}
 
 	if (ticket.usedAt && !isModerator) {
-		throw inviteDeleteCantDeleteError();
+		throw errors.cantDelete();
 	}
 
 	await deleteRegistrationTicketInDatabase(deps.db, ticket.id);
@@ -266,9 +233,8 @@ export async function handleApiInviteLimit(
 export async function handleApiInviteList(
 	deps: ApiInviteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof inviteListParamDef>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseApiParams(inviteListParamDef, body);
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const tickets = await listRegistrationTicketsCreatedByFromDatabase(deps.db, {

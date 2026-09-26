@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import {
@@ -355,9 +356,8 @@ export async function blockForApi(
 export async function handleApiBlockingCreate(
 	deps: ApiAccountBlockingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userIdParamDef>,
 ): Promise<UserDetailedNotMeApiResponse> {
-	const params = parseApiParams(userIdParamDef, body);
 	const blocker = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
 	if (blocker.id === params.userId) {
@@ -400,9 +400,8 @@ export async function unblockForApi(
 export async function handleApiBlockingDelete(
 	deps: ApiAccountBlockingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userIdParamDef>,
 ): Promise<UserDetailedNotMeApiResponse> {
-	const params = parseApiParams(userIdParamDef, body);
 	const blocker = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
 	if (blocker.id === params.userId) {
@@ -423,9 +422,8 @@ export async function handleApiBlockingDelete(
 export async function handleApiBlockingList(
 	deps: ApiAccountBlockingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof blockingListParamDef>,
 ): Promise<Packed<'Blocking'>[]> {
-	const params = parseApiParams(blockingListParamDef, body);
 	const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,

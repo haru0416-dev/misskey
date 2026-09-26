@@ -16,13 +16,7 @@ import {
 	handleApiIExportNotes,
 	handleApiIExportUserLists,
 } from '../job/export-jobs.js';
-import {
-	handleApiIImportAntennas,
-	handleApiIImportBlocking,
-	handleApiIImportFollowing,
-	handleApiIImportMuting,
-	handleApiIImportUserLists,
-} from '../job/import-jobs.js';
+import { handleApiIImportAntennas } from '../job/import-jobs.js';
 import { handleApiFetchRss } from '../feed/fetch-rss.js';
 import { assertApiRateLimit, assertApiRateLimitForUser } from '../rate-limit.js';
 import {
@@ -204,38 +198,6 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			return emptyResponse(c);
 		});
 	});
-
-	app.post(
-		'/i/import-blocking',
-		endpointHandler(deps, 'i/import-blocking', async ({ body, auth, c }) => {
-			await handleApiIImportBlocking(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/i/import-following',
-		endpointHandler(deps, 'i/import-following', async ({ body, auth, c }) => {
-			await handleApiIImportFollowing(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/i/import-muting',
-		endpointHandler(deps, 'i/import-muting', async ({ body, auth, c }) => {
-			await handleApiIImportMuting(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/i/import-user-lists',
-		endpointHandler(deps, 'i/import-user-lists', async ({ body, auth, c }) => {
-			await handleApiIImportUserLists(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
 
 	app.post(
 		'/i/import-antennas',

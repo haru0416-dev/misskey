@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
@@ -72,22 +75,6 @@ export type ApiAccountMoveDependencies = ApiRolePolicyDependencies &
 		relationshipQueue: RelationshipQueue;
 	};
 
-function iMoveDestinationAccountForbidsError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: "Destination account doesn't have proper 'Known As' alias, or has already moved.",
-		code: 'DESTINATION_ACCOUNT_FORBIDS',
-		id: 'b5c90186-4ab0-49c8-9bba-a1f766282ba4',
-	});
-}
-function iMoveRootForbiddenError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: "The root can't migrate.",
-		code: 'NOT_ROOT_FORBIDDEN',
-		id: '4362e8dc-731f-4ad8-a694-be2a88922a24',
-	});
-}
 function iMoveNoSuchUserError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -104,15 +91,6 @@ function iMoveUriNullError(): ApiError {
 		id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
 	});
 }
-function iMoveAlreadyMovedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Account was already moved to another account.',
-		code: 'ALREADY_MOVED',
-		id: 'b234a14e-9ebe-4581-8000-074b3c215962',
-	});
-}
-
 export const iMoveParamDef = z.object({
 	moveToAccount: z.string(),
 });
@@ -436,18 +414,17 @@ export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, sr
 export async function handleApiIMove(
 	deps: ApiAccountMoveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof iMoveParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/move']>,
 ): Promise<MeDetailedApiResponse> {
-	const ps = parseApiParams(iMoveParamDef, body);
-
 	if (!ps.moveToAccount) {
-		throw iMoveNoSuchUserError();
+		throw errors.noSuchUser();
 	}
 	if (deps.meta.rootUserId === me.id) {
-		throw iMoveRootForbiddenError();
+		throw errors.rootForbidden();
 	}
 	if (me.movedToUri) {
-		throw iMoveAlreadyMovedError();
+		throw errors.alreadyMoved();
 	}
 
 	let moveTo = await resolveMoveDestinationUserForApi(deps, ps.moveToAccount);
@@ -466,7 +443,7 @@ export async function handleApiIMove(
 	}
 
 	if (!allowed || moveTo.movedToUri) {
-		throw iMoveDestinationAccountForbidsError();
+		throw errors.destinationAccountForbids();
 	}
 
 	return await moveFromLocalForApi(deps, me, moveTo);

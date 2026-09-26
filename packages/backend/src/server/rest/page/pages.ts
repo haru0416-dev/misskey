@@ -520,9 +520,8 @@ export const iPagesParamDef = z.object({
 export async function handleApiIPages(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iPagesParamDef>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseApiParams(iPagesParamDef, body);
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, me.id, {
@@ -543,10 +542,8 @@ export const iPageLikesParamDef = z.object({
 export async function handleApiIPageLikes(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iPageLikesParamDef>,
 ): Promise<{ id: string; page: Packed<'Page'> }[]> {
-	const params = parseApiParams(iPageLikesParamDef, body);
-
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const likes = await listPageLikesByUserIdFromDatabase(deps.db, me.id, {

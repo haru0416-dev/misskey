@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { hashPassword, comparePassword } from '@/misc/password.js';
 import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
@@ -85,9 +88,8 @@ export const changePasswordParamDef = z.object({
 export async function handleApiIChangePassword(
 	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof changePasswordParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(changePasswordParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1');
@@ -111,9 +113,8 @@ export const regenerateTokenParamDef = z.object({
 export async function handleApiIRegenerateToken(
 	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof regenerateTokenParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(regenerateTokenParamDef, body);
 	const freshUser = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	const oldToken = freshUser.token!;
 
@@ -142,9 +143,8 @@ export const deleteAccountParamDef = z.object({
 export async function handleApiIDeleteAccount(
 	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof deleteAccountParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(deleteAccountParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '05b2bab3-0825-4a3e-a13d-8793701af4de');
@@ -162,31 +162,6 @@ export async function handleApiIDeleteAccount(
 	await deleteAccountWithSideEffects(deps, me);
 }
 
-function iUpdateEmailIncorrectPasswordError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Incorrect password.',
-		code: 'INCORRECT_PASSWORD',
-		id: 'e54c1d7e-e7d6-4103-86b6-0a95069b4ad3',
-	});
-}
-function iUpdateEmailUnavailableError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Unavailable email address.',
-		code: 'UNAVAILABLE',
-		id: 'a2defefb-f220-8849-0af6-17f816099323',
-	});
-}
-function iUpdateEmailRequiredError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Email address is required.',
-		code: 'EMAIL_REQUIRED',
-		id: '324c7a88-59f2-492f-903f-89134f93e47e',
-	});
-}
-
 export const updateEmailParamDef = z.object({
 	password: z.string(),
 	email: z.string().nullable().optional(),
@@ -196,25 +171,25 @@ export const updateEmailParamDef = z.object({
 export async function handleApiIUpdateEmail(
 	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof updateEmailParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/update-email']>,
 ): Promise<MeDetailedApiResponse> {
-	const params = parseApiParams(updateEmailParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '624fde07-67a7-4da7-b27d-086e529666b6');
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) {
-		throw iUpdateEmailIncorrectPasswordError();
+		throw errors.incorrectPassword();
 	}
 
 	if (params.email != null) {
 		const res = await deps.emailService.validateEmailForAccount(params.email);
 		if (!res.available) {
-			throw iUpdateEmailUnavailableError();
+			throw errors.unavailable();
 		}
 	} else if (deps.meta.emailRequiredForSignup) {
-		throw iUpdateEmailRequiredError();
+		throw errors.emailRequired();
 	}
 
 	await updateUserProfileInDatabase(

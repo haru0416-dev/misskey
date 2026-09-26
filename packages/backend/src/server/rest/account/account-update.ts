@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { createPublicKey } from 'node:crypto';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
@@ -90,46 +93,6 @@ type RenderedPerson = Record<string, unknown> & {
 	alsoKnownAs?: string[];
 };
 
-function iUpdateNoSuchAvatarError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such avatar file.',
-		code: 'NO_SUCH_AVATAR',
-		id: '539f3a45-f215-4f81-a9a8-31293640207f',
-	});
-}
-function iUpdateNoSuchBannerError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such banner file.',
-		code: 'NO_SUCH_BANNER',
-		id: '0d8f5629-f210-41c2-9433-735831a58595',
-	});
-}
-function iUpdateAvatarNotAnImageError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The file specified as an avatar is not an image.',
-		code: 'AVATAR_NOT_AN_IMAGE',
-		id: 'f419f9f8-2f4d-46b1-9fb4-49d3a2fd7191',
-	});
-}
-function iUpdateBannerNotAnImageError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The file specified as a banner is not an image.',
-		code: 'BANNER_NOT_AN_IMAGE',
-		id: '75aedb19-2afd-4e6d-87fc-67941256fa60',
-	});
-}
-function iUpdateNoSuchPageError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such page.',
-		code: 'NO_SUCH_PAGE',
-		id: '8e01b590-7eb9-431b-a239-860e086c408e',
-	});
-}
 function iUpdateInvalidRegexpError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -154,48 +117,6 @@ function iUpdateNoSuchUserError(): ApiError {
 		id: 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5',
 	});
 }
-function iUpdateUriNullError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'User ActivityPup URI is null.',
-		code: 'URI_NULL',
-		id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
-	});
-}
-function iUpdateForbiddenToSetYourselfError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: "You can't set yourself as your own alias.",
-		code: 'FORBIDDEN_TO_SET_YOURSELF',
-		id: '25c90186-4ab0-49c8-9bba-a1fa6c202ba4',
-	});
-}
-function iUpdateRestrictedByRoleError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'This feature is restricted by your role.',
-		code: 'RESTRICTED_BY_ROLE',
-		id: '8feff0ba-5ab5-585b-31f4-4df816663fad',
-	});
-}
-function iUpdateNameContainsProhibitedWordsError(): ApiError {
-	return new ApiError({
-		status: 422,
-		message: 'Your new name contains prohibited words.',
-		code: 'YOUR_NAME_CONTAINS_PROHIBITED_WORDS',
-		id: '0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191',
-	});
-}
-function iUpdateYourAccountMovedError(): ApiError {
-	return new ApiError({
-		status: 403,
-		message: 'You have moved your account.',
-		code: 'YOUR_ACCOUNT_MOVED',
-		id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
-		kind: 'permission',
-	});
-}
-
 const muteWordsZodSchema = z.array(z.union([z.array(z.string()), z.string()]));
 
 export const iUpdateParamDef = z.object({
@@ -570,9 +491,9 @@ export async function handleApiIUpdate(
 	deps: ApiAccountUpdateDependencies,
 	me: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof iUpdateParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/update']>,
 ): Promise<MeDetailedApiResponse> {
-	const ps = parseApiParams(iUpdateParamDef, body);
 	const user = (await fetchUserByIdOrFailFromDatabase(deps.db, me.id)) as MiLocalUser;
 	const isSecure = token == null;
 
@@ -683,7 +604,7 @@ export async function handleApiIUpdate(
 	if (typeof ps.alwaysMarkNsfw === 'boolean') {
 		policies ??= await getApiRolePolicies(deps, user);
 		if (policies.alwaysMarkNsfw) {
-			throw iUpdateRestrictedByRoleError();
+			throw errors.restrictedByRole();
 		}
 		profileUpdates.alwaysMarkNsfw = ps.alwaysMarkNsfw;
 	}
@@ -697,16 +618,16 @@ export async function handleApiIUpdate(
 	if (ps.avatarId) {
 		policies ??= await getApiRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
-			throw iUpdateRestrictedByRoleError();
+			throw errors.restrictedByRole();
 		}
 
 		const avatar = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.avatarId, user.id);
 
 		if (avatar == null) {
-			throw iUpdateNoSuchAvatarError();
+			throw errors.noSuchAvatar();
 		}
 		if (!avatar.type.startsWith('image/')) {
-			throw iUpdateAvatarNotAnImageError();
+			throw errors.avatarNotAnImage();
 		}
 
 		updates.avatarId = avatar.id;
@@ -725,16 +646,16 @@ export async function handleApiIUpdate(
 	if (ps.bannerId) {
 		policies ??= await getApiRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
-			throw iUpdateRestrictedByRoleError();
+			throw errors.restrictedByRole();
 		}
 
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.bannerId, user.id);
 
 		if (banner == null) {
-			throw iUpdateNoSuchBannerError();
+			throw errors.noSuchBanner();
 		}
 		if (!banner.type.startsWith('image/')) {
-			throw iUpdateBannerNotAnImageError();
+			throw errors.bannerNotAnImage();
 		}
 
 		updates.bannerId = banner.id;
@@ -765,7 +686,7 @@ export async function handleApiIUpdate(
 		const decorationIdSet = new Set(decorationIds);
 
 		if (ps.avatarDecorations.length > policies.avatarDecorationLimit) {
-			throw iUpdateRestrictedByRoleError();
+			throw errors.restrictedByRole();
 		}
 
 		updates.avatarDecorations = ps.avatarDecorations
@@ -783,7 +704,7 @@ export async function handleApiIUpdate(
 		const page = await fetchPageByIdFromDatabase(deps.db, ps.pinnedPageId);
 
 		if (page == null || page.userId !== user.id) {
-			throw iUpdateNoSuchPageError();
+			throw errors.noSuchPage();
 		}
 
 		profileUpdates.pinnedPageId = page.id;
@@ -802,23 +723,23 @@ export async function handleApiIUpdate(
 
 	if (ps.alsoKnownAs) {
 		if (me.movedToUri) {
-			throw iUpdateYourAccountMovedError();
+			throw errors.yourAccountMoved();
 		}
 
 		const newAlsoKnownAs = new Set<string>();
 		for (const line of ps.alsoKnownAs) {
 			if (!line) {
-				throw iUpdateNoSuchUserError();
+				throw errors.noSuchUser();
 			}
 
 			const knownAs = await resolveAlsoKnownAsUserForApi(deps, line);
 			if (knownAs.id === me.id) {
-				throw iUpdateForbiddenToSetYourselfError();
+				throw errors.forbiddenToSetYourself();
 			}
 
 			const toUrl = getUserUriForApi(deps.config, knownAs);
 			if (!toUrl) {
-				throw iUpdateUriNullError();
+				throw errors.uriNull();
 			}
 
 			newAlsoKnownAs.add(toUrl);
@@ -842,7 +763,7 @@ export async function handleApiIUpdate(
 			hasProhibitedWords = isKeywordIncluded(newName, deps.meta.prohibitedWordsForNameOfUser);
 		}
 		if (hasProhibitedWords) {
-			throw iUpdateNameContainsProhibitedWordsError();
+			throw errors.nameContainsProhibitedWords();
 		}
 
 		const tokens = mfm.parseSimple(newName);

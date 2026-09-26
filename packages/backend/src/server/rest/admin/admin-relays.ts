@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
@@ -85,12 +86,7 @@ export async function isRelayActorForApi(
 	);
 }
 
-export async function handleApiAdminRelaysList(
-	deps: ApiAdminRelaysDependencies,
-	body: Record<string, unknown>,
-): Promise<AdminRelaysListResponse> {
-	parseApiParams(adminRelaysListParamDef, body);
-
+export async function handleApiAdminRelaysList(deps: ApiAdminRelaysDependencies): Promise<AdminRelaysListResponse> {
 	const relays = await listRelaysFromDatabase(deps.db);
 
 	return relays.map((relay) => ({
@@ -102,9 +98,8 @@ export async function handleApiAdminRelaysList(
 
 export async function handleApiAdminRelaysAdd(
 	deps: ApiAdminRelaysDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminRelaysWriteParamDef>,
 ): Promise<MiRelay> {
-	const ps = parseApiParams(adminRelaysWriteParamDef, body);
 	assertHttpsUrl(ps.inbox);
 
 	return await addRelayWithSideEffects(
@@ -130,10 +125,8 @@ export async function handleApiAdminRelaysAdd(
 
 export async function handleApiAdminRelaysRemove(
 	deps: ApiAdminRelaysDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminRelaysWriteParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminRelaysWriteParamDef, body);
-
 	await removeRelayWithSideEffects(
 		{
 			config: deps.config,

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	createAccessTokenInDatabase,
@@ -39,9 +40,8 @@ export const miauthGenTokenParamDef = z.object({
 export async function handleApiMiauthGenToken(
 	deps: ApiMiauthDependencies,
 	user: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof miauthGenTokenParamDef>,
 ): Promise<{ token: string }> {
-	const params = parseApiParams(miauthGenTokenParamDef, body);
 	const accessToken = secureRndstr(32);
 	const now = new Date();
 

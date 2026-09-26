@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { getApId, isActor, isPost } from '@/core/activitypub/type.js';
 import type { IObject } from '@/core/activitypub/type.js';
@@ -199,14 +202,13 @@ async function fetchAnyForApi(
 export async function handleApiApShow(
 	deps: ApiApShowDependencies,
 	me: MiLocalUser | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof apShowParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['ap/show']>,
 ): Promise<ApShowResult> {
-	const params = parseApiParams(apShowParamDef, body);
-
 	const object = await fetchAnyForApi(deps, params.uri, me);
 	if (object) {
 		return object;
 	}
 
-	throw apShowNoSuchObjectError();
+	throw errors.noSuchObject();
 }

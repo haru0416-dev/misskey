@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
@@ -29,43 +33,16 @@ export const adminPromoCreateParamDef = z.object({
 	expiresAt: z.int(),
 });
 
-function noSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'd785b897-fcd3-4fe9-8fc3-b85c26e6c932',
-	});
-}
-
-function adminPromoNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'ee449fbe-af2a-453b-9cae-cf2fe7c895fc',
-	});
-}
-
-function alreadyPromotedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The note has already promoted.',
-		code: 'ALREADY_PROMOTED',
-		id: 'ae427aa2-7a41-484f-a18c-2c1104051604',
-	});
-}
-
 export async function handleApiPromoRead(
 	deps: ApiPromoDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof promoReadParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['promo/read']>,
 ): Promise<void> {
-	const params = parseApiParams(promoReadParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {
-		throw noSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	if (await isPromoReadExists(deps.db, me.id, note.id)) {
@@ -81,17 +58,17 @@ export async function handleApiPromoRead(
 
 export async function handleApiAdminPromoCreate(
 	deps: ApiPromoDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminPromoCreateParamDef>,
+	errors: ContractErrors<(typeof adminContracts)['admin/promo/create']>,
 ): Promise<void> {
-	const params = parseApiParams(adminPromoCreateParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {
-		throw adminPromoNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	if (await isPromoNoteExists(deps.db, note.id)) {
-		throw alreadyPromotedError();
+		throw errors.alreadyPromoted();
 	}
 
 	await createPromoNoteInDatabase(deps.db, {

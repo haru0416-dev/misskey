@@ -6,10 +6,9 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleApiEndpoint, handleApiEndpoints } from '../endpoint-info.js';
+import { handleApiEndpoints } from '../endpoint-info.js';
 import { federationStatsParamDef, handleApiFederationStats } from '../activitypub/federation.js';
-import { handleApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
-import { handleApiApGet, handleApiApShow } from '../activitypub/ap.js';
+import { handleApiApGet } from '../activitypub/ap.js';
 import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { isApiAdministrator } from '../role/role-policy.js';
 import {
@@ -21,7 +20,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 import { queryToApiBody } from '../string-params.js';
 
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -29,13 +28,6 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		'/endpoints',
 		endpointHandlerAnonymous(deps, 'endpoints', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleApiEndpoints()),
-		),
-	);
-
-	app.post(
-		'/endpoint',
-		endpointHandlerAnonymous(deps, 'endpoint', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiEndpoint(body)),
 		),
 	);
 
@@ -89,18 +81,4 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 			return jsonResponse(c, await handleApiApGet(deps, body));
 		});
 	});
-
-	app.post(
-		'/ap/show',
-		endpointHandler(deps, 'ap/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiApShow(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/fetch-external-resources',
-		endpointHandler(deps, 'fetch-external-resources', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiFetchExternalResources(deps, auth.user, body)),
-		),
-	);
 }

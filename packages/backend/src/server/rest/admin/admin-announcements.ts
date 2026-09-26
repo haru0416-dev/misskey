@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -35,23 +36,6 @@ export type ApiAdminAnnouncementDependencies = {
 	db: MiDrizzleDatabase;
 	publishMainStream?: ApiMainStreamPublisher;
 	publishBroadcastStream?: ApiBroadcastStreamPublisher;
-};
-
-type AdminAnnouncement = {
-	id: string;
-	createdAt: string;
-	updatedAt: string | null;
-	text: string;
-	title: string;
-	icon: string;
-	display: string;
-	isActive: boolean;
-	forExistingUsers: boolean;
-	silence: boolean;
-	needConfirmationToRead: boolean;
-	userId: string | null;
-	imageUrl: string | null;
-	reads: number;
 };
 
 export const adminAnnouncementsCreateParamDef = z.object({
@@ -123,7 +107,7 @@ export function packAnnouncementForApi(
 	};
 }
 
-function packAdminAnnouncementForApi(config: Config, announcement: MiAnnouncement, reads: number): AdminAnnouncement {
+function packAdminAnnouncementForApi(config: Config, announcement: MiAnnouncement, reads: number) {
 	return {
 		id: announcement.id,
 		createdAt: parseId(announcement.id).date.toISOString(),
@@ -145,9 +129,8 @@ function packAdminAnnouncementForApi(config: Config, announcement: MiAnnouncemen
 export async function handleApiAdminAnnouncementsCreate(
 	deps: ApiAdminAnnouncementDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAnnouncementsCreateParamDef>,
 ): Promise<Packed<'Announcement'>> {
-	const params = parseApiParams(adminAnnouncementsCreateParamDef, body);
 	const { packed } = await createAnnouncementWithSideEffects(
 		{
 			db: deps.db,
@@ -178,9 +161,8 @@ export async function handleApiAdminAnnouncementsCreate(
 export async function handleApiAdminAnnouncementsDelete(
 	deps: ApiAdminAnnouncementDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAnnouncementsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAnnouncementsDeleteParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
 	if (announcement == null) {
@@ -199,9 +181,8 @@ export async function handleApiAdminAnnouncementsDelete(
 
 export async function handleApiAdminAnnouncementsList(
 	deps: ApiAdminAnnouncementDependencies,
-	body: Record<string, unknown>,
-): Promise<AdminAnnouncement[]> {
-	const params = parseApiParams(adminAnnouncementsListParamDef, body);
+	params: ApiParams<typeof adminAnnouncementsListParamDef>,
+) {
 	const announcements = await listAnnouncementsForAdminFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -224,9 +205,8 @@ export async function handleApiAdminAnnouncementsList(
 export async function handleApiAdminAnnouncementsUpdate(
 	deps: ApiAdminAnnouncementDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAnnouncementsUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAnnouncementsUpdateParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
 	if (announcement == null) {

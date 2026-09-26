@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -101,12 +102,7 @@ function packUserWebhook(webhook: MiWebhook): ApiUserWebhook {
 	};
 }
 
-export async function handleApiIWebhooksList(
-	deps: ApiWebhookDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<ApiUserWebhook[]> {
-	parseApiParams(webhooksListParamDef, body);
+export async function handleApiIWebhooksList(deps: ApiWebhookDependencies, me: MiLocalUser): Promise<ApiUserWebhook[]> {
 	const webhooks = await listWebhooksByUserIdFromDatabase(deps.db, me.id);
 	return webhooks.map((webhook) => packUserWebhook(webhook));
 }
@@ -114,9 +110,8 @@ export async function handleApiIWebhooksList(
 export async function handleApiIWebhooksShow(
 	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof webhooksShowParamDef>,
 ): Promise<ApiUserWebhook> {
-	const params = parseApiParams(webhooksShowParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -134,9 +129,8 @@ export async function handleApiIWebhooksShow(
 export async function handleApiIWebhooksDelete(
 	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof webhooksDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(webhooksDeleteParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -155,9 +149,8 @@ export async function handleApiIWebhooksDelete(
 export async function handleApiIWebhooksUpdate(
 	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof webhooksUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(webhooksUpdateParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {

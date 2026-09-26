@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { MeDetailedApiResponse } from '../user/user.js';
 import {
 	verifyCap,
 	verifyHcaptcha,
@@ -59,7 +60,7 @@ type SignupBody = {
 	emailAddress?: unknown;
 };
 
-export type SignupResponse = Record<string, unknown> & {
+export type SignupResponse = MeDetailedApiResponse & {
 	token: string;
 };
 
@@ -126,10 +127,8 @@ function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string):
 }
 
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
-	return {
-		...(await packMeDetailedForApi(deps, user, { includeSecrets: true })),
-		token,
-	};
+	// MeDetailed は交差型なので、展開すると片方の省略可能な項目の型が混ざる。組み立てたものに token だけを足す。
+	return Object.assign(await packMeDetailedForApi(deps, user, { includeSecrets: true }), { token });
 }
 
 export async function createLocalSignupAccount(

@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
@@ -52,15 +55,6 @@ export const adminAccountDeleteParamDef = z.object({
 export const adminUpdateProxyAccountParamDef = z.object({
 	description: descriptionSchema.nullable().optional(),
 });
-
-function userNotFoundError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such user who has the email address.',
-		code: 'USER_NOT_FOUND',
-		id: 'cb865949-8af5-4062-a88c-ef55e8786d1d',
-	});
-}
 
 function adminAccountCreateAccessDeniedError(): ApiError {
 	return new ApiError({
@@ -135,13 +129,13 @@ export async function handleApiAdminAccountsCreate(
 
 export async function handleApiAdminAccountsFindByEmail(
 	deps: ApiAdminAccountsDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAccountsFindByEmailParamDef>,
+	errors: ContractErrors<(typeof adminContracts)['admin/accounts/find-by-email']>,
 ): Promise<UserDetailedNotMeApiResponse> {
-	const params = parseApiParams(adminAccountsFindByEmailParamDef, body);
 	const profile = await fetchUserProfileByEmailFromDatabase(deps.db, params.email);
 
 	if (profile == null) {
-		throw userNotFoundError();
+		throw errors.userNotFound();
 	}
 
 	return await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
@@ -150,9 +144,8 @@ export async function handleApiAdminAccountsFindByEmail(
 export async function handleApiAdminAccountsDelete(
 	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAccountDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 
 	if (user == null) {
@@ -165,9 +158,8 @@ export async function handleApiAdminAccountsDelete(
 export async function handleApiAdminDeleteAccount(
 	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAccountDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw adminAccountNoSuchUserError('7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
@@ -182,9 +174,8 @@ export async function handleApiAdminDeleteAccount(
 export async function handleApiAdminUpdateProxyAccount(
 	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUpdateProxyAccountParamDef>,
 ): Promise<MeDetailedApiResponse> {
-	const params = parseApiParams(adminUpdateProxyAccountParamDef, body);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
 	const updated = await updateSystemAccountUserInDatabase(
 		deps.db,

@@ -5,28 +5,7 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
-import {
-	handleApiDrive,
-	handleApiDriveFilesCheckExistence,
-	handleApiDriveFolders,
-	handleApiDriveFoldersCreate,
-	handleApiDriveFoldersDelete,
-	handleApiDriveFoldersFind,
-	handleApiDriveFoldersShow,
-	handleApiDriveFoldersUpdate,
-} from '../drive/drive.js';
-import {
-	handleApiDriveFilesAttachedChatMessages,
-	handleApiDriveFilesAttachedNotes,
-	handleApiDriveFilesDelete,
-	handleApiDriveFilesFind,
-	handleApiDriveFilesFindByHash,
-	handleApiDriveFilesList,
-	handleApiDriveFilesMoveBulk,
-	handleApiDriveFilesShow,
-	handleApiDriveFilesUpdate,
-	handleApiDriveStream,
-} from '../drive/drive-files.js';
+import { handleApiDrive } from '../drive/drive.js';
 import {
 	handleApiDriveFilesCreate,
 	handleApiDriveFilesUploadFromUrl,
@@ -46,22 +25,6 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files',
-		endpointHandler(deps, 'drive/files', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesList(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/stream',
-		endpointHandler(deps, 'drive/stream', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveStream(deps, auth.user, body)),
-		),
-	);
-
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const parsed = await readApiMultipartRequest(c, deps.config);
@@ -123,125 +86,8 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/show',
-		endpointHandler(deps, 'drive/files/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesShow(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/find',
-		endpointHandler(deps, 'drive/files/find', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesFind(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/find-by-hash',
-		endpointHandler(deps, 'drive/files/find-by-hash', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesFindByHash(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/attached-notes',
-		endpointHandler(deps, 'drive/files/attached-notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesAttachedNotes(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/attached-chat-messages',
-		endpointHandler(deps, 'drive/files/attached-chat-messages', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesAttachedChatMessages(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/drive/files/delete',
-		endpointHandler(deps, 'drive/files/delete', async ({ body, auth, c }) => {
-			await handleApiDriveFilesDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/drive/files/update',
-		endpointHandler(deps, 'drive/files/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesUpdate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/drive/files/move-bulk',
-		endpointHandler(deps, 'drive/files/move-bulk', async ({ body, auth, c }) => {
-			await handleApiDriveFilesMoveBulk(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
 	app.post(
 		'/drive',
 		endpointHandler(deps, 'drive', async ({ body, auth, c }) => jsonResponse(c, await handleApiDrive(deps, auth.user))),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/files/check-existence',
-		endpointHandler(deps, 'drive/files/check-existence', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFilesCheckExistence(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/folders',
-		endpointHandler(deps, 'drive/folders', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFolders(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/drive/folders/create',
-		endpointHandler(deps, 'drive/folders/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFoldersCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/drive/folders/delete',
-		endpointHandler(deps, 'drive/folders/delete', async ({ body, auth, c }) => {
-			await handleApiDriveFoldersDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/folders/find',
-		endpointHandler(deps, 'drive/folders/find', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFoldersFind(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/drive/folders/show',
-		endpointHandler(deps, 'drive/folders/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFoldersShow(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/drive/folders/update',
-		endpointHandler(deps, 'drive/folders/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiDriveFoldersUpdate(deps, auth.user, body)),
-		),
 	);
 }

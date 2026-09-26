@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	createUserNotePiningWithinLimitInDatabase,
@@ -161,10 +162,8 @@ export async function removePinnedForApi(
 export async function handleApiIPin(
 	deps: ApiAccountPinDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iPinOrUnpinParamDef>,
 ): Promise<MeDetailedApiResponse> {
-	const params = parseApiParams(iPinOrUnpinParamDef, body);
-
 	await addPinnedForApi(deps, me, params.noteId);
 
 	return await packMeDetailedForApi(deps, me, { includeSecrets: false });
@@ -173,10 +172,8 @@ export async function handleApiIPin(
 export async function handleApiIUnpin(
 	deps: ApiAccountPinDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iPinOrUnpinParamDef>,
 ): Promise<MeDetailedApiResponse> {
-	const params = parseApiParams(iPinOrUnpinParamDef, body);
-
 	await removePinnedForApi(deps, me, params.noteId);
 
 	return await packMeDetailedForApi(deps, me, { includeSecrets: false });

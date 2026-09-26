@@ -7,7 +7,6 @@ import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { handleApiAdminGetIndexStats, handleApiAdminGetTableStats } from '../admin/admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleApiAdminCaptchaCurrent, handleApiAdminCaptchaSave } from '../captcha/captcha.js';
 import {
 	handleApiAdminQueueDeliverDelayed,
 	handleApiAdminQueueInboxDelayed,
@@ -15,14 +14,7 @@ import {
 	handleApiAdminQueueStats,
 } from '../admin/admin-queue.js';
 import { isApiAdministrator } from '../role/role-policy.js';
-import {
-	jsonResponse,
-	emptyResponse,
-	jsonBody,
-	tokenFromRequest,
-	runApiEndpoint,
-	assertApiAdmin,
-} from '../shell-helpers.js';
+import { jsonResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler } from '../endpoint-handlers.js';
 
@@ -86,23 +78,4 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 			return jsonResponse(c, await handleApiAdminGetTableStats(deps, body));
 		});
 	});
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/captcha/current',
-		endpointHandler(deps, 'admin/captcha/current', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminCaptchaCurrent(deps, body)),
-		),
-	);
-
-	app.post(
-		'/admin/captcha/save',
-		endpointHandler(deps, 'admin/captcha/save', async ({ body, auth, c }) => {
-			await assertApiAdmin(deps, auth);
-			assertTokenPermission(auth, 'write:admin:meta');
-
-			await handleApiAdminCaptchaSave(deps, body);
-			return emptyResponse(c);
-		}),
-	);
 }

@@ -39,12 +39,7 @@ type AdminServerInfoResponse = {
 
 export const adminServerInfoParamDef = z.object({});
 
-export async function handleApiAdminServerInfo(
-	deps: ApiAdminServerInfoDependencies,
-	body: Record<string, unknown>,
-): Promise<AdminServerInfoResponse> {
-	parseApiParams(adminServerInfoParamDef, body);
-
+export async function handleApiAdminServerInfo(deps: ApiAdminServerInfoDependencies): Promise<AdminServerInfoResponse> {
 	const si = await import('systeminformation');
 	const memStats = await si.mem();
 	const fsStats = await si.fsSize();

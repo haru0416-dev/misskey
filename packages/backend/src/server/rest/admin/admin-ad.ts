@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -94,9 +95,8 @@ function packAdForApi(ad: MiAd): Packed<'Ad'> {
 export async function handleApiAdminAdCreate(
 	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAdCreateParamDef>,
 ): Promise<Packed<'Ad'>> {
-	const params = parseApiParams(adminAdCreateParamDef, body);
 	const ad = await createAdInDatabase(deps.db, {
 		id: genId(),
 		expiresAt: new Date(params.expiresAt),
@@ -122,9 +122,8 @@ export async function handleApiAdminAdCreate(
 export async function handleApiAdminAdDelete(
 	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAdDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAdDeleteParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) {
@@ -141,9 +140,8 @@ export async function handleApiAdminAdDelete(
 
 export async function handleApiAdminAdList(
 	deps: ApiAdminAdDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAdListParamDef>,
 ): Promise<Packed<'Ad'>[]> {
-	const params = parseApiParams(adminAdListParamDef, body);
 	const { sinceId, untilId } = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
@@ -158,9 +156,8 @@ export async function handleApiAdminAdList(
 export async function handleApiAdminAdUpdate(
 	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAdUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAdUpdateParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) {

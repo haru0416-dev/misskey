@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -37,7 +38,7 @@ export const iRevokeTokenParamDef = z.union([
 export async function handleApiIApps(
 	deps: ApiAccessTokenDependencies,
 	user: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iAppsParamDef>,
 ): Promise<
 	{
 		id: string;
@@ -49,7 +50,6 @@ export async function handleApiIApps(
 		description?: string | null;
 	}[]
 > {
-	const params = parseApiParams(iAppsParamDef, body);
 	const field: AccessTokenOrderField =
 		params.sort === '+lastUsedAt' || params.sort === '-lastUsedAt' ? 'lastUsedAt' : 'id';
 	const direction = params.sort === '+createdAt' || params.sort === '+lastUsedAt' ? 'desc' : 'asc';
@@ -76,10 +76,8 @@ export async function handleApiIRevokeToken(
 	deps: ApiAccessTokenDependencies,
 	user: { id: MiUser['id'] },
 	token: { id: MiAccessToken['id'] } | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iRevokeTokenParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(iRevokeTokenParamDef, body);
-
 	let target: { id: MiAccessToken['id'] } | null;
 	if ('tokenId' in params) {
 		target = { id: params.tokenId };

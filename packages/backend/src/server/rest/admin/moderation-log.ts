@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -66,9 +67,8 @@ async function packModerationLogsForApi(
 
 export async function handleApiAdminShowModerationLogs(
 	deps: ApiModerationLogDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminShowModerationLogsParamDef>,
 ): Promise<ApiModerationLogResponse[]> {
-	const params = parseApiParams(adminShowModerationLogsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const logs = await listModerationLogsFromDatabase(
 		deps.db,

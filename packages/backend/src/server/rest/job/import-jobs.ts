@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { addDbJob } from '@/core/queue/queues.js';
@@ -102,9 +103,8 @@ export const importBlockingParamDef = z.object({
 export async function handleApiIImportBlocking(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof importBlockingParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(importBlockingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'b7fbf0b1-aeef-3b21-29ef-fadd4cb72ccf' },
@@ -126,9 +126,8 @@ export const importFollowingParamDef = z.object({
 export async function handleApiIImportFollowing(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof importFollowingParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(importFollowingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'b98644cf-a5ac-4277-a502-0b8054a709a3' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'dee9d4ed-ad07-43ed-8b34-b2856398bc60' },
@@ -153,9 +152,8 @@ export const importMutingParamDef = z.object({
 export async function handleApiIImportMuting(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof importMutingParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(importMutingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: '9b4ada6d-d7f7-0472-0713-4f558bd1ec9c' },
@@ -176,9 +174,8 @@ export const importUserListsParamDef = z.object({
 export async function handleApiIImportUserLists(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof importUserListsParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(importUserListsParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'ae6e7a22-971b-4b52-b2be-fc0b9b121fe9' },

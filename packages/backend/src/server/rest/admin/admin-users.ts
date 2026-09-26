@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	listRoleAssignmentsByRoleIdsFromDatabase,
@@ -268,9 +269,8 @@ async function packAdminUsersDetailedForApi(
 export async function handleApiAdminShowUser(
 	deps: ApiAdminUsersDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminShowUserParamDef>,
 ): Promise<AdminShowUserResponse> {
-	const params = parseApiParams(adminShowUserParamDef, body);
 	const [user, profile] = await Promise.all([
 		fetchUserByIdFromDatabase(deps.db, params.userId),
 		fetchUserProfileByUserIdFromDatabase(deps.db, params.userId),
@@ -328,9 +328,8 @@ export async function handleApiAdminShowUser(
 export async function handleApiAdminShowUsers(
 	deps: ApiAdminUsersDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminShowUsersParamDef>,
 ): Promise<UserDetailedNotMeApiResponse[]> {
-	const params = parseApiParams(adminShowUsersParamDef, body);
 	let roleUserIds: MiUser['id'][] | null = null;
 
 	switch (params.state) {
