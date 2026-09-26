@@ -29,20 +29,22 @@ import {
 	handleApiDriveFoldersShow,
 	handleApiDriveFoldersUpdate,
 } from '../drive/drive.js';
+import { handleApiDriveFilesUploadFromUrl } from '../drive/drive-file-upload.js';
 
 export const driveEndpoints = implementEndpoints<ApiShellDependencies>()(
 	pickContracts(driveContracts, [
 		'drive',
 		'drive/files',
-		'drive/files/attached-chat-messages',
 		'drive/files/attached-notes',
+		'drive/files/attached-chat-messages',
 		'drive/files/check-existence',
 		'drive/files/delete',
 		'drive/files/find',
 		'drive/files/find-by-hash',
-		'drive/files/move-bulk',
 		'drive/files/show',
 		'drive/files/update',
+		'drive/files/move-bulk',
+		'drive/files/upload-from-url',
 		'drive/folders',
 		'drive/folders/create',
 		'drive/folders/delete',
@@ -82,5 +84,8 @@ export const driveEndpoints = implementEndpoints<ApiShellDependencies>()(
 			await handleApiDriveFoldersUpdate(deps, me, input, errors),
 		'drive/stream': async ({ deps, input, me }) => await handleApiDriveStream(deps, me, input),
 		drive: async ({ deps, me }) => await handleApiDrive(deps, me),
+		'drive/files/upload-from-url': async ({ deps, me, input, requestIp, requestHeaders }) => {
+			handleApiDriveFilesUploadFromUrl(deps, me, input, requestIp(), requestHeaders());
+		},
 	},
 );

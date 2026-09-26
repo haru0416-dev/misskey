@@ -37,23 +37,7 @@ import type {
 } from './events.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
-import { registerAdminRoutes } from './routes/admin.js';
-import { registerAdminQueueRoutes } from './routes/admin-queue.js';
-import { registerAnnouncementsRoutes } from './routes/announcements.js';
 import { registerDriveRoutes } from './routes/drive.js';
-import { registerEmojisRoutes } from './routes/emojis.js';
-import { registerAuthSessionMutesRoutes } from './routes/auth-session-mutes.js';
-import { registerChannelsRoutes } from './routes/channels.js';
-import { registerChartsRoutes } from './routes/charts.js';
-import { registerChatRoutes } from './routes/chat.js';
-import { registerClipsRoutes } from './routes/clips.js';
-import { registerNotesRoutes } from './routes/notes.js';
-import { registerFederationApRoutes } from './routes/federation-ap.js';
-import { registerExportImportRoutes } from './routes/export-import.js';
-import { registerFollowingGalleryFlashRoutes } from './routes/following-gallery-flash.js';
-import { registerHashtagsInviteNotificationsRoutes } from './routes/hashtags-invite-notifications.js';
-import { registerMiscRoutes } from './routes/misc.js';
-import { registerAccountIRoutes } from './routes/account-i.js';
 import { registerUsersRoutes } from './routes/users.js';
 
 export type ApiShellDependencies = ApiAdminQueueDependencies & {
@@ -120,23 +104,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 
 	registerContractEndpoints(app, deps);
 	registerAuthAccountRoutes(app, deps);
-	registerAdminRoutes(app, deps);
-	registerAdminQueueRoutes(app, deps);
-	registerAnnouncementsRoutes(app, deps);
 	registerDriveRoutes(app, deps);
-	registerEmojisRoutes(app, deps);
-	registerAuthSessionMutesRoutes(app, deps);
-	registerChannelsRoutes(app, deps);
-	registerChartsRoutes(app, deps);
-	registerChatRoutes(app, deps);
-	registerClipsRoutes(app, deps);
-	registerNotesRoutes(app, deps);
-	registerFederationApRoutes(app, deps);
-	registerExportImportRoutes(app, deps);
-	registerFollowingGalleryFlashRoutes(app, deps);
-	registerHashtagsInviteNotificationsRoutes(app, deps);
-	registerMiscRoutes(app, deps);
-	registerAccountIRoutes(app, deps);
 	registerUsersRoutes(app, deps);
 
 	app.all('/clear-browser-cache', (c) => {

@@ -7816,8 +7816,11 @@ export interface operations {
                     | {
                           /** Format: misskey:id */
                           fileId: string;
+                          url?: string;
                       }
                     | {
+                          /** Format: misskey:id */
+                          fileId?: string;
                           url: string;
                       };
             };
@@ -13648,7 +13651,7 @@ export interface operations {
                     deeplIsPro?: boolean;
                     /** @enum {string} */
                     translatorProvider?: 'deepl' | 'libreTranslate';
-                    libreTranslateApiUrl?: string | null;
+                    libreTranslateApiUrl?: (string | '') | null;
                     libreTranslateApiKey?: string | null;
                     enableEmail?: boolean;
                     email?: string | null;
@@ -15922,11 +15925,19 @@ export interface operations {
                     channelId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -37472,11 +37483,19 @@ export interface operations {
                         hostType?: 'local' | 'remote' | 'all';
                         roleIds?: string[];
                     } | null;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;

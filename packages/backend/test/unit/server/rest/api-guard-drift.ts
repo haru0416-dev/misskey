@@ -10,22 +10,22 @@ import { describe, expect, test } from 'vitest';
 import { endpointMetas } from '@/server/api/endpoint-metas.js';
 
 /*
- * ルート登録が meta の宣言どおりに検査しているかをソースから照合する。
- * endpointHandler 経由の登録は withEndpointGuards が meta から検査を組み立てるので
- * ずれようがないが、手書きのままにした登録 (URL クエリを読む GET、multipart、
- * 認証前の特殊経路など) は宣言と実装が独立に動くため、この検査が唯一の歯止めになる。
+ * 手書きのルート登録が meta の宣言どおりに検査しているかをソースから照合する。
+ * 契約から登録するエンドポイントは registerEndpoints が meta から検査を組み立てるのでずれようがないが、
+ * 手書きのまま残した登録 (multipart、認証前の特殊経路など) は宣言と実装が独立に動くため、
+ * この検査が唯一の歯止めになる。
  */
 
 const GUARD_CALL =
 	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasApiRolePolicyOrIsRoot|assertApiAdmin|isApiAdministrator|assertApiModerator|assertApiRateLimitForUser)\b/g;
 
 const routesDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/routes');
+const endpointsDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/endpoints');
 
 type Registration = {
 	file: string;
 	path: string;
 	body: string;
-	helper: 'endpointHandler' | 'endpointHandlerAnonymous' | null;
 };
 
 /** `app.get(` 等の呼び出しを括弧の対応で切り出す (文字列リテラル内の括弧は数えない)。 */
@@ -70,11 +70,6 @@ function extractRegistrations(source: string, file: string): Registration[] {
 				file,
 				path,
 				body,
-				helper: body.includes('endpointHandlerAnonymous(deps')
-					? 'endpointHandlerAnonymous'
-					: body.includes('endpointHandler(deps')
-						? 'endpointHandler'
-						: null,
 			});
 		}
 		call.lastIndex = end;
@@ -111,7 +106,7 @@ function requiresCredential(meta: GuardMeta): boolean {
 	return meta.requireCredential === true || meta.requireModerator === true || meta.requireAdmin === true;
 }
 
-/** withEndpointGuards が meta から掛ける検査を、手書きルートで許容される呼び出し名の集合として表す。 */
+/** applyEndpointGuards が meta から掛ける検査を、手書きルートで許容される呼び出し名の集合として表す。 */
 function expectedGuards(meta: GuardMeta): { label: string; accepts: string[] }[] {
 	const expected: { label: string; accepts: string[] }[] = [];
 
@@ -153,48 +148,21 @@ describe('API guard drift', () => {
 		expect(paths).toContain('/signin-flow');
 	});
 
-	test('endpointHandler と endpointHandlerAnonymous の使い分けが meta と一致する', () => {
-		const errors: string[] = [];
-
-		for (const registration of registrations) {
-			if (registration.helper == null) {
-				continue;
-			}
-			const name = registration.path.slice(1);
-			const meta = guardMetaOf(name);
-			if (meta == null) {
-				errors.push(`${registration.file}: ${name} にメタ情報が無い`);
-				continue;
-			}
-
-			const expectedHelper = requiresCredential(meta) ? 'endpointHandler' : 'endpointHandlerAnonymous';
-			if (registration.helper !== expectedHelper) {
-				errors.push(
-					`${registration.file}: ${name} は ${expectedHelper} を使うべきだが ${registration.helper} を使っている`,
-				);
-			}
-		}
-
-		expect(errors).toStrictEqual([]);
-	});
-
-	test('ガード付きルートが meta の回数制限を数え直していない', () => {
-		// withEndpointGuards は meta.limit を同じキー (エンドポイント名) で数える。ルート側で同じ枠を
-		// もう一度数えると、1 回目の記録が 2 回目の判定に入り、本番では毎回 429 になる。
+	test('契約の実装が meta の回数制限を数え直していない', () => {
+		// 共通 guard は meta.limit を同じキー (エンドポイント名) で数える。実装で同じ枠をもう一度数えると、
+		// 1 回目の記録が 2 回目の判定に入り、本番では毎回 429 になる。
 		// meta が間隔 (minInterval) だけを宣言し、件数の上限を処理の途中で数えるのは許す。
 		const errors: string[] = [];
-
-		for (const registration of registrations) {
-			if (registration.helper == null || !/\bassertApiRateLimitForUser\b/.test(registration.body)) {
-				continue;
-			}
-			const name = registration.path.slice(1);
-			const limit = guardMetaOf(name)?.limit as { duration?: number; max?: number } | undefined;
-			if (limit?.duration != null || limit?.max != null) {
-				errors.push(`${registration.file}: ${name} は meta の limit と同じ枠をルートでも数えている`);
+		for (const name of readdirSync(endpointsDir).filter((file) => file.endsWith('.ts'))) {
+			const source = readFileSync(join(endpointsDir, name), 'utf8');
+			for (const match of source.matchAll(/assertApiRateLimitForUser\(\s*deps,\s*'([^']+)'/g)) {
+				const endpoint = match[1]!;
+				const limit = guardMetaOf(endpoint)?.limit as { duration?: number; max?: number } | undefined;
+				if (limit?.duration != null || limit?.max != null) {
+					errors.push(`${name}: ${endpoint} は meta の limit と同じ枠を実装でも数えている`);
+				}
 			}
 		}
-
 		expect(errors).toStrictEqual([]);
 	});
 
@@ -202,9 +170,6 @@ describe('API guard drift', () => {
 		const errors: string[] = [];
 
 		for (const registration of registrations) {
-			if (registration.helper != null) {
-				continue;
-			}
 			const name = registration.path.slice(1);
 			const meta = guardMetaOf(name);
 			if (meta == null) {
@@ -227,9 +192,6 @@ describe('API guard drift', () => {
 		const errors: string[] = [];
 
 		for (const registration of registrations) {
-			if (registration.helper != null) {
-				continue;
-			}
 			const name = registration.path.slice(1);
 			const meta = guardMetaOf(name);
 			if (meta == null) {

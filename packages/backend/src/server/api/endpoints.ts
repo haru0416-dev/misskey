@@ -108,9 +108,7 @@ export type IEndpointMeta =
 export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
-	// admin/update-meta の paramDef (AdminUpdateMetaLogic.ts の adminUpdateMetaJsonSchema) だけが
-	// JSON Schema 形式なので Schema も受け付ける。
-	params: Schema | z.ZodType;
+	params: z.ZodType;
 }
 
 const endpoints: IEndpoint[] = Object.entries(endpointMetas).map(([name, ep]) => {

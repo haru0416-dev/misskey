@@ -5,7 +5,7 @@
 
 import { supportedCaptchaProviders } from '@/core/captcha/CaptchaLogic.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
-import { adminUpdateMetaJsonSchema } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import {
 	adminAbuseUserReportsParamDef,
 	adminForwardAbuseUserReportParamDef,
@@ -38,7 +38,7 @@ import {
 } from '@/server/rest/admin/admin-avatar-decorations.js';
 import {
 	adminDriveFilesParamDef,
-	adminDriveShowFileDocsParamDef,
+	adminDriveShowFileParamDef,
 	adminDriveUserParamDef,
 } from '@/server/rest/admin/admin-drive.js';
 import { adminSendEmailParamDef } from '@/server/rest/admin/admin-email.js';
@@ -1056,7 +1056,7 @@ export const endpointMetas = {
 				},
 			},
 		},
-		paramDef: adminDriveShowFileDocsParamDef,
+		paramDef: adminDriveShowFileParamDef,
 	}),
 	'admin/federation/delete-all-files': defineContract({
 		meta: {
@@ -2693,16 +2693,16 @@ export const endpointMetas = {
 		},
 		paramDef: adminUpdateAbuseUserReportParamDef,
 	}),
-	'admin/update-meta': {
+	'admin/update-meta': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'write:admin:meta',
-		} as const,
-		paramDef: adminUpdateMetaJsonSchema,
-	},
+		},
+		paramDef: adminUpdateMetaParamDef,
+	}),
 	'admin/update-proxy-account': defineContract({
 		meta: {
 			tags: ['admin'],

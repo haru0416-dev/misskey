@@ -19,7 +19,7 @@ import {
 import { apGetParamDef, apShowParamDef } from '@/server/rest/activitypub/ap.js';
 import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/auth/availability.js';
 import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decoration/avatar-decorations.js';
-import { emojiParamDef } from '@/server/rest/emoji/emojis.js';
+import { emojiParamDef, v2AdminEmojiListParamDef } from '@/server/rest/emoji/emojis.js';
 import { endpointParamDef } from '@/server/rest/endpoint-info.js';
 import { fetchExternalResourcesParamDef } from '@/server/rest/activitypub/fetch-external-resources.js';
 import { fetchRssParamDef } from '@/server/rest/feed/fetch-rss.js';
@@ -1835,7 +1835,7 @@ export const endpointMetas = {
 		},
 		paramDef: verifyEmailParamDef,
 	}),
-	'v2/admin/emoji/list': {
+	'v2/admin/emoji/list': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
@@ -1860,54 +1860,7 @@ export const endpointMetas = {
 					allPages: { type: 'integer' },
 				},
 			},
-		} as const,
-		paramDef: {
-			type: 'object',
-			properties: {
-				query: {
-					type: 'object',
-					nullable: true,
-					properties: {
-						updatedAtFrom: { type: 'string' },
-						updatedAtTo: { type: 'string' },
-						name: { type: 'string' },
-						host: { type: 'string' },
-						uri: { type: 'string' },
-						publicUrl: { type: 'string' },
-						originalUrl: { type: 'string' },
-						type: { type: 'string' },
-						aliases: { type: 'string' },
-						category: { type: 'string' },
-						license: { type: 'string' },
-						isSensitive: { type: 'boolean' },
-						localOnly: { type: 'boolean' },
-						hostType: {
-							type: 'string',
-							enum: fetchEmojisHostTypes,
-							default: 'all',
-						},
-						roleIds: {
-							type: 'array',
-							items: { type: 'string', format: 'misskey:id' },
-						},
-					},
-				},
-				sinceId: { type: 'string', format: 'misskey:id' },
-				untilId: { type: 'string', format: 'misskey:id' },
-				sinceDate: { type: 'integer' },
-				untilDate: { type: 'integer' },
-				limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-				page: { type: 'integer' },
-				sortKeys: {
-					type: 'array',
-					default: ['-id'],
-					items: {
-						type: 'string',
-						enum: fetchEmojisSortKeys,
-					},
-				},
-			},
-			required: [],
-		} as const,
-	},
+		},
+		paramDef: v2AdminEmojiListParamDef,
+	}),
 };

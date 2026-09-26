@@ -28,7 +28,9 @@ const rssParser = new Parser({
 });
 
 /** 同一URLへの同時リクエストは1本にまとめて、その結果を全員で共有する。 */
-const inFlightRequests = new Map<string, Promise<unknown>>();
+type FetchedFeed = Awaited<ReturnType<typeof rssParser.parseString>>;
+
+const inFlightRequests = new Map<string, Promise<FetchedFeed>>();
 
 export type ApiFetchRssDependencies = {
 	httpRequestService: HttpRequestService;
@@ -94,7 +96,7 @@ function normalizeFetchRssUrl(input: string): string {
 	return url.href;
 }
 
-async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<unknown> {
+async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<FetchedFeed> {
 	const res = await deps.httpRequestService.send(url, {
 		method: 'GET',
 		headers: {
@@ -115,7 +117,7 @@ async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<unk
 export async function handleApiFetchRss(
 	deps: ApiFetchRssDependencies,
 	body: Record<string, unknown>,
-): Promise<unknown> {
+): Promise<FetchedFeed> {
 	const params = parseApiParams(fetchRssParamDef, body);
 	const url = normalizeFetchRssUrl(params.url);
 

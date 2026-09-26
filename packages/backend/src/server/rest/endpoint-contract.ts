@@ -65,6 +65,9 @@ export type EndpointContext<D, C extends EndpointContract> = {
 	readonly me: EndpointAuth<C['meta']>['user'];
 	readonly errors: EndpointErrors<C['meta']>;
 	readonly signal: AbortSignal;
+	/** リクエスト元の IP。信頼するリバースプロキシの設定を反映する。 */
+	readonly requestIp: () => string;
+	readonly requestHeaders: () => Record<string, string>;
 };
 
 export type EndpointHandler<D, C extends EndpointContract> = (

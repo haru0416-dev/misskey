@@ -111,7 +111,16 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 
 				let result: unknown;
 				try {
-					result = await handler({ deps, input, auth, me: auth.user, errors, signal: c.req.raw.signal });
+					result = await handler({
+						deps,
+						input,
+						auth,
+						me: auth.user,
+						errors,
+						signal: c.req.raw.signal,
+						requestIp: () => getRequestIp(c, deps.config),
+						requestHeaders: () => Object.fromEntries(c.req.raw.headers.entries()),
+					});
 				} catch (err) {
 					// サービスが投げる識別子付きのエラーは、契約に同じ id があれば宣言どおりの API エラーにする。
 					if (err instanceof IdentifiableError) {

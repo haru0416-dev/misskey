@@ -727,7 +727,7 @@ const v2AdminEmojiListQueryParamDef = z
 	})
 	.nullable();
 
-const v2AdminEmojiListParamDef = z.object({
+export const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
 	...paginationParams,
 	limit: z.int().min(1).max(100).default(10),
@@ -786,10 +786,8 @@ async function packEmojiDetailedAdminMany(
 
 export async function handleApiV2AdminEmojiList(
 	deps: ApiEmojiDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof v2AdminEmojiListParamDef>,
 ): Promise<{ emojis: Packed<'EmojiDetailedAdmin'>[]; count: number; allCount: number; allPages: number }> {
-	const params = parseApiParams(v2AdminEmojiListParamDef, body);
-
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const q = params.query;

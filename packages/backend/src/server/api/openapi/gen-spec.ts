@@ -99,11 +99,8 @@ function buildQueryParameters(schema: OpenApiSchemaObject): Record<string, unkno
 	}));
 }
 
-function acceptsEmptyObject(params: IEndpoint['params'], schema: OpenApiSchemaObject): boolean {
-	if (params instanceof z.ZodType) {
-		return params.safeParse({}).success;
-	}
-	return (schema.required?.length ?? 0) === 0;
+function acceptsEmptyObject(params: IEndpoint['params']): boolean {
+	return params.safeParse({}).success;
 }
 
 function buildErrorResponses(
@@ -243,15 +240,14 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 
 	// 生成処理の変更が次回出力へ影響しないよう、エンドポイント定義を複製する。
 	// ただし JSON.stringify は Zod スキーマインスタンスを保持できない (プレーンオブジェクトとして潰れる) ため、
-	// params が Zod スキーマのエンドポイントだけは複製前の定義を参照する。
+	// params は複製前の定義を参照する。
 	const copiedEndpoints = JSON.parse(JSON.stringify(endpoints)) as IEndpoint[];
 	for (const [i, endpoint] of copiedEndpoints.entries()) {
 		const originalEndpoint = endpoints[i];
 		if (originalEndpoint == null) {
 			throw new Error(`OpenAPI endpoint copy is missing index ${i}`);
 		}
-		const originalParams = originalEndpoint.params;
-		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
+		const params = originalEndpoint.params;
 		const resSchema = endpoint.meta.res ? convertSchemaToOpenApiSchema(endpoint.meta.res, 'res', includeSelfRef) : {};
 
 		let desc = (endpoint.meta.description ? endpoint.meta.description : 'No description provided.') + '\n\n';
@@ -268,10 +264,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		}
 
 		const requestType = endpoint.meta.requireFile ? 'multipart/form-data' : 'application/json';
-		const schema =
-			params instanceof z.ZodType
-				? { ...convertZodParamsToOpenApiSchema(params) }
-				: { ...convertSchemaToOpenApiSchema(params, 'param', false) };
+		const schema = { ...convertZodParamsToOpenApiSchema(params) };
 
 		if (endpoint.meta.requireFile) {
 			schema.properties = {
@@ -294,7 +287,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			(schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1) ||
 			['allOf', 'oneOf', 'anyOf'].some((o) => Array.isArray(schema[o]) && schema[o].length > 0);
 		const queryParameters = buildQueryParameters(schema);
-		const requestBodyRequired = endpoint.meta.requireFile === true || !acceptsEmptyObject(params, schema);
+		const requestBodyRequired = endpoint.meta.requireFile === true || !acceptsEmptyObject(params);
 
 		const authMode = authenticationMode(originalEndpoint);
 		const security =
