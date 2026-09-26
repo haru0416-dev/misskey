@@ -170,6 +170,75 @@ export function createDownloadService(
 		return { filename, ...result };
 	}
 
+	/**
+	 * リモートのファイルを保存せずに中継するため、応答を開いて本文をそのまま返す。
+	 * Range・条件付き取得のヘッダは呼び出し元が渡し、206・304 もそのまま返す。
+	 * 本文は全体の上限 (maximumFileSizeBytes) を超えたら止め、60 秒データが来なければ切る。
+	 * 返した body を destroy すると取得も中断する。
+	 */
+	async function openRemoteStream(
+		url: string,
+		forwardHeaders: Record<string, string>,
+	): Promise<{ status: number; headers: Headers; body: stream.Readable }> {
+		const responseTimeout = 30 * 1000;
+		const idleTimeout = 60 * 1000;
+		const maxSize = config.limits.maximumFileSizeBytes;
+
+		const controller = new AbortController();
+		const responseTimer = setTimeout(() => controller.abort(), responseTimeout);
+		const res = await httpRequestService
+			.fetchFollowingRedirects(
+				url,
+				{
+					method: 'GET',
+					// 自動展開されると Content-Length・Content-Range が本文と合わなくなる。
+					headers: { 'User-Agent': config.runtime.userAgent, 'Accept-Encoding': 'identity', ...forwardHeaders },
+					body: undefined,
+					signal: controller.signal,
+				},
+				false,
+			)
+			.finally(() => clearTimeout(responseTimer));
+
+		if (!res.ok && res.status !== 304) {
+			await res.body?.cancel().catch(() => {});
+			throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
+		}
+
+		const contentLength = Number(res.headers.get('content-length') ?? Number.NaN);
+		if (contentLength > maxSize) {
+			await res.body?.cancel().catch(() => {});
+			throw new StatusError(`Payload Too Large (${contentLength} > ${maxSize})`, 413, 'Payload Too Large');
+		}
+
+		let idleTimer = setTimeout(() => controller.abort(), idleTimeout);
+		let transferred = 0;
+		const limited = new stream.Transform({
+			transform(chunk: Buffer, _encoding, callback) {
+				clearTimeout(idleTimer);
+				idleTimer = setTimeout(() => controller.abort(), idleTimeout);
+				transferred += chunk.length;
+				if (transferred > maxSize) {
+					callback(new StatusError(`Payload Too Large (${transferred} > ${maxSize})`, 413, 'Payload Too Large'));
+					return;
+				}
+				callback(null, chunk);
+			},
+		});
+		const source =
+			res.body != null
+				? stream.Readable.fromWeb(res.body as import('node:stream/web').ReadableStream)
+				: stream.Readable.from([]);
+		stream.pipeline(source, limited, (err) => {
+			clearTimeout(idleTimer);
+			if (err) {
+				controller.abort();
+			}
+		});
+
+		return { status: res.status, headers: res.headers, body: limited };
+	}
+
 	async function downloadTextFile(url: string): Promise<string> {
 		const [path, cleanup] = await createTemp();
 
@@ -186,7 +255,7 @@ export function createDownloadService(
 		}
 	}
 
-	return { downloadUrl, downloadUrlToMemoryOrFile, downloadTextFile };
+	return { downloadUrl, downloadUrlToMemoryOrFile, openRemoteStream, downloadTextFile };
 }
 
 export type DownloadService = ReturnType<typeof createDownloadService>;

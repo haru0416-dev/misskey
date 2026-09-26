@@ -154,6 +154,8 @@ async function toResponse(body: unknown, reply: FileReply, method: string): Prom
 	}
 
 	if (body == null || method === 'HEAD') {
+		// リモートを中継する応答は取得を開いているので、HEAD では閉じる。
+		if (isReadable(body)) (body as Readable).destroy();
 		return new Response(null, {
 			status: reply.statusCode,
 			headers: reply.headers,
