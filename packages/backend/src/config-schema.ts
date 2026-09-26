@@ -214,7 +214,13 @@ export const sourceConfigV2Schema = z.strictObject({
 		}),
 	search: z
 		.discriminatedUnion('provider', [
-			z.strictObject({ provider: z.enum(['sqlLike', 'sqlPgroonga']).default('sqlLike') }),
+			z.strictObject({
+				provider: z.literal('sqlLike').default('sqlLike'),
+				// 本文の trigram index。検索は速くなるが、受信・投稿のたびに index のページを数十枚書き換える
+				// (実測で書き込み全体の 8 割以上)。書き込みを抑えたい環境 (SD カード等) では false にする。
+				noteTextIndex: z.boolean().default(true),
+			}),
+			z.strictObject({ provider: z.literal('sqlPgroonga') }),
 			z.strictObject({
 				provider: z.literal('meilisearch'),
 				meilisearch: z.strictObject({
@@ -225,7 +231,7 @@ export const sourceConfigV2Schema = z.strictObject({
 				}),
 			}),
 		])
-		.default({ provider: 'sqlLike' }),
+		.default({ provider: 'sqlLike', noteTextIndex: true }),
 	outboundNetwork: z
 		.strictObject({
 			bindAddress: z.string().min(1).optional(),

@@ -13,6 +13,7 @@ import {
 	listHydratedNotesByIdsFromDatabase,
 	listLocalTimelineNotesFromDatabase,
 	listUserTimelineNotesFromDatabase,
+	searchNotesByTextFromDatabase,
 } from '@/core/note/NoteStore.js';
 import { createRenoteMutingInDatabase } from '@/core/user/RenoteMutingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
@@ -314,5 +315,52 @@ describe('NoteStore hydrated note lookup', () => {
 			}),
 		).rejects.toBe(rollback);
 		expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [noteId])).toEqual([]);
+	});
+});
+
+// search.noteTextIndex: false では trigram index を持たないので、どの語も 1 ページの走査範囲を区切る経路に回す。
+// 経路が変わっても、同じ語で同じ投稿が見つかることを見る。
+describe('NoteStore text search without the trigram index', () => {
+	let runtime: RuntimeDependencies;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('finds the same notes whether or not the trigram index is used', async () => {
+		const userId = genId();
+		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: userId, username: `notestoresearch${userId}`, usernameLower: `notestoresearch${userId}` },
+			profile: { userId },
+		});
+		const marker = `zq${userId.slice(-8)}`;
+		const ids: string[] = [];
+		for (const text of [
+			`first ${marker} note`,
+			'unrelated',
+			`second ${marker.toUpperCase()} note`,
+			`日本語 ${marker}`,
+		]) {
+			const id = genId();
+			await createNoteInDatabase(runtime.db, { id, text, userId: user.id, userHost: null, visibility: 'public' });
+			if (text.toLowerCase().includes(marker)) ids.push(id);
+		}
+
+		const search = (useTextIndex: boolean) =>
+			searchNotesByTextFromDatabase(runtime.db, {
+				query: marker,
+				usePgroonga: false,
+				useTextIndex,
+				me: null,
+				blockedHosts: [],
+				limit: 10,
+			});
+		const expected = [...ids].reverse();
+		expect((await search(true)).map((note) => note.id)).toStrictEqual(expected);
+		expect((await search(false)).map((note) => note.id)).toStrictEqual(expected);
 	});
 });

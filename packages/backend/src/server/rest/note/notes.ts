@@ -976,6 +976,7 @@ export async function handleApiNotesSearch(
 		omitUndefined({
 			query: params.query,
 			usePgroonga: provider === 'sqlPgroonga',
+			useTextIndex: deps.config.search.noteTextIndex,
 			me,
 			blockedHosts: deps.meta.blockedHosts,
 			limit: params.limit,

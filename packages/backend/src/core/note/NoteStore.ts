@@ -1326,6 +1326,8 @@ export async function searchNotesByTextFromDatabase(
 	options: {
 		query: string;
 		usePgroonga: boolean;
+		/** 本文の trigram index (IDX_NOTE_TEXT_TRGM) があるか。無ければ trigram の取れない語と同じく走査の範囲を区切る。 */
+		useTextIndex: boolean;
 		me: { id: MiUser['id'] } | null;
 		blockedHosts: string[];
 		limit: number;
@@ -1361,7 +1363,7 @@ export async function searchNotesByTextFromDatabase(
 	if (options.usePgroonga) {
 		conditions.push(sql`"note"."text" &@~ ${options.query}`);
 	} else {
-		if (TRIGRAM_RUN.test(options.query)) {
+		if (options.useTextIndex && TRIGRAM_RUN.test(options.query)) {
 			conditions.push(sql`LOWER("note"."text") LIKE ${`%${sqlLikeEscape(options.query.toLowerCase())}%`}`);
 			if (options.userId == null && options.channelId == null) {
 				denseTermWindow = noteSearchWindow(
@@ -1370,6 +1372,7 @@ export async function searchNotesByTextFromDatabase(
 				);
 			}
 		} else {
+			// index が使えない (trigram の取れない語か、index を持たない設定) ときは、1 ページで読む件数を区切る。
 			// LIKE のままだとプランナーが trigram index の全件読みを約 100 行と見積もって選び、窓が
 			// 走査範囲にならない。index に掛からない strpos にして主キーの範囲走査へ寄せる。
 			conditions.push(sql`STRPOS(LOWER("note"."text"), ${options.query.toLowerCase()}) > 0`);
