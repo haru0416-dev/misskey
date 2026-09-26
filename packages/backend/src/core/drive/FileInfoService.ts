@@ -115,6 +115,10 @@ async function getBlurhash(path: string, type: string): Promise<string> {
 	return encodeBlurhash(buffer, info.width, info.height, 5, 5);
 }
 
+function checkSvgBuffer(buffer: Buffer): boolean {
+	return buffer.length <= 1 * 1024 * 1024 && isSvg(buffer.toString());
+}
+
 async function checkSvg(path: string): Promise<boolean> {
 	try {
 		const size = await getFileSize(path);
@@ -473,7 +477,26 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		return TYPE_OCTET_STREAM;
 	}
 
-	return { getFileInfo, detectType, checkSvg, getFileSize };
+	/**
+	 * メモリ上の画像候補の種類を判定する。ファイル版と違い、動画に音声しか無いかの判定 (ffprobe) はしない。
+	 * 呼び出し元のメディアプロキシは画像以外を拒否するので、動画か音声かの区別は結果を変えない。
+	 */
+	async function detectImageTypeFromBuffer(buffer: Buffer): Promise<{
+		mime: string;
+		ext: string | null;
+	}> {
+		if (buffer.length === 0) {
+			return TYPE_OCTET_STREAM;
+		}
+
+		const type = await fileType.fileTypeFromBuffer(buffer);
+		if (type && !(type.mime === 'application/xml' && checkSvgBuffer(buffer))) {
+			return { mime: type.mime, ext: type.ext };
+		}
+		return checkSvgBuffer(buffer) ? TYPE_SVG : TYPE_OCTET_STREAM;
+	}
+
+	return { getFileInfo, detectType, detectImageTypeFromBuffer, checkSvg, getFileSize };
 }
 
 export type FileInfoService = ReturnType<typeof createFileInfoService>;
