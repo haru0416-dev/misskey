@@ -10,6 +10,9 @@ import { invalidParamError } from './error.js';
 
 type ExactOptionalProperties<T> = T extends Record<string, unknown> ? OmitUndefinedProperties<T> : T;
 
+/** parseApiParams が返す検証済みの入力。宣言から登録されるエンドポイントの実装はこの型で入力を受け取る。 */
+export type ApiParams<Z extends z.ZodType> = ExactOptionalProperties<z.infer<Z>>;
+
 export function parseApiParams<Z extends z.ZodType>(
 	schema: Z,
 	body: Record<string, unknown>,

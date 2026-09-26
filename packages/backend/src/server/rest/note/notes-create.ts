@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { Packed } from '@/misc/json-schema.js';
 import { z } from 'zod';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { fetchAndCreateNote } from '@/core/note/NoteCreationService.js';
@@ -15,6 +16,7 @@ import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 import { packNoteForApi } from './note.js';
 
 function noSuchRenoteTargetError(): ApiError {
@@ -174,11 +176,9 @@ export const notesCreateParamDef = z
 export async function handleApiNotesCreate(
 	deps: NoteCreationDependencies & { notePostProcessing: NotePostProcessing },
 	me: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof notesCreateParamDef>,
 	signal?: AbortSignal,
-): Promise<{ createdNote: unknown }> {
-	const ps = parseApiParams(notesCreateParamDef, body);
-
+): Promise<{ createdNote: Packed<'Note'> }> {
 	try {
 		return await deps.notePostProcessing.runProducer(async (reservation) => {
 			const note = await fetchAndCreateNote(

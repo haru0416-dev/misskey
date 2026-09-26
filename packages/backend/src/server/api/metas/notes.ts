@@ -30,7 +30,7 @@ import {
 	notesMentionsParamDef,
 	notesParamDef,
 	notesPollsRecommendationParamDef,
-	notesSearchByTagDocsParamDef,
+	notesSearchByTagParamDef,
 	notesSearchParamDef,
 	notesShowParamDef,
 	notesShowPartialBulkParamDef,
@@ -38,9 +38,10 @@ import {
 	notesUserListTimelineParamDef,
 } from '@/server/rest/note/notes.js';
 import { SECOND, MINUTE, HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	notes: {
+	notes: defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -55,10 +56,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesParamDef,
-	},
-	'notes/children': {
+	}),
+	'notes/children': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -76,10 +77,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdPaginationParamDef,
-	},
-	'notes/clips': {
+	}),
+	'notes/clips': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['clips', 'notes'],
@@ -105,10 +106,10 @@ export const endpointMetas = {
 					id: '47db1a1c-b0af-458d-8fb4-986e4efafe1e',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/conversation': {
+	}),
+	'notes/conversation': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -134,10 +135,10 @@ export const endpointMetas = {
 					id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesConversationParamDef,
-	},
-	'notes/create': {
+	}),
+	'notes/create': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -259,10 +260,10 @@ export const endpointMetas = {
 					id: '4de0363a-3046-481b-9b0f-feff3e211025',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesCreateParamDef,
-	},
-	'notes/delete': {
+	}),
+	'notes/delete': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -289,10 +290,10 @@ export const endpointMetas = {
 					id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesDeleteParamDef,
-	},
-	'notes/drafts/list': {
+	}),
+	'notes/drafts/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'drafts'],
@@ -316,10 +317,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: notesDraftsListParamDef,
-	},
-	'notes/drafts/create': {
+	}),
+	'notes/drafts/create': defineContract({
 		meta: {
 			tags: ['notes', 'drafts'],
 
@@ -445,10 +446,10 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 300,
 			},
-		} as const,
+		},
 		paramDef: notesDraftsCreateParamDef,
-	},
-	'notes/drafts/delete': {
+	}),
+	'notes/drafts/delete': defineContract({
 		meta: {
 			tags: ['notes', 'drafts'],
 
@@ -465,10 +466,10 @@ export const endpointMetas = {
 					id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesDraftsDeleteParamDef,
-	},
-	'notes/drafts/update': {
+	}),
+	'notes/drafts/update': defineContract({
 		meta: {
 			tags: ['notes', 'drafts'],
 
@@ -594,10 +595,10 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 300,
 			},
-		} as const,
+		},
 		paramDef: notesDraftsUpdateParamDef,
-	},
-	'notes/drafts/count': {
+	}),
+	'notes/drafts/count': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'drafts'],
@@ -616,10 +617,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: countNoteDraftsParamDef,
-	},
-	'notes/favorites/create': {
+	}),
+	'notes/favorites/create': defineContract({
 		meta: {
 			tags: ['notes', 'favorites'],
 
@@ -646,10 +647,10 @@ export const endpointMetas = {
 					id: 'a402c12b-34dd-41d2-97d8-4d2ffd96a1a6',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/favorites/delete': {
+	}),
+	'notes/favorites/delete': defineContract({
 		meta: {
 			tags: ['notes', 'favorites'],
 
@@ -670,10 +671,10 @@ export const endpointMetas = {
 					id: 'b625fc69-635e-45e9-86f4-dbefbef35af5',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/featured': {
+	}),
+	'notes/featured': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -693,10 +694,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesFeaturedParamDef,
-	},
-	'notes/global-timeline': {
+	}),
+	'notes/global-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -720,10 +721,10 @@ export const endpointMetas = {
 					id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesGlobalTimelineParamDef,
-	},
-	'notes/hybrid-timeline': {
+	}),
+	'notes/hybrid-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -756,10 +757,10 @@ export const endpointMetas = {
 					id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesHybridTimelineParamDef,
-	},
-	'notes/local-timeline': {
+	}),
+	'notes/local-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -789,10 +790,10 @@ export const endpointMetas = {
 					id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesLocalTimelineParamDef,
-	},
-	'notes/mentions': {
+	}),
+	'notes/mentions': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -811,10 +812,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesMentionsParamDef,
-	},
-	'notes/polls/recommendation': {
+	}),
+	'notes/polls/recommendation': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -833,10 +834,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesPollsRecommendationParamDef,
-	},
-	'notes/polls/vote': {
+	}),
+	'notes/polls/vote': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -883,10 +884,10 @@ export const endpointMetas = {
 					id: '85a5377e-b1e9-4617-b0b9-5bea73331e49',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesPollsVoteParamDef,
-	},
-	'notes/reactions': {
+	}),
+	'notes/reactions': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'reactions'],
@@ -915,10 +916,10 @@ export const endpointMetas = {
 					id: '263fff3d-d0e1-4af4-bea7-8408059b451a',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesReactionsParamDef,
-	},
-	'notes/reactions/create': {
+	}),
+	'notes/reactions/create': defineContract({
 		meta: {
 			tags: ['reactions', 'notes'],
 
@@ -953,10 +954,10 @@ export const endpointMetas = {
 					id: 'eaccdc08-ddef-43fe-908f-d108faad57f5',
 				},
 			},
-		} as const,
+		},
 		paramDef: reactionsCreateParamDef,
-	},
-	'notes/reactions/delete': {
+	}),
+	'notes/reactions/delete': defineContract({
 		meta: {
 			tags: ['reactions', 'notes'],
 
@@ -983,10 +984,10 @@ export const endpointMetas = {
 					id: '92f4426d-4196-4125-aa5b-02943e2ec8fc',
 				},
 			},
-		} as const,
+		},
 		paramDef: reactionsDeleteParamDef,
-	},
-	'notes/renotes': {
+	}),
+	'notes/renotes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1012,10 +1013,10 @@ export const endpointMetas = {
 					id: '12908022-2e21-46cd-ba6a-3edaf6093f46',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdPaginationParamDef,
-	},
-	'notes/replies': {
+	}),
+	'notes/replies': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1033,10 +1034,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdPaginationParamDef,
-	},
-	'notes/search': {
+	}),
+	'notes/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1068,10 +1069,10 @@ export const endpointMetas = {
 					id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesSearchParamDef,
-	},
-	'notes/search-by-tag': {
+	}),
+	'notes/search-by-tag': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'hashtags'],
@@ -1087,10 +1088,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
-		paramDef: notesSearchByTagDocsParamDef,
-	},
-	'notes/show': {
+		},
+		paramDef: notesSearchByTagParamDef,
+	}),
+	'notes/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1123,10 +1124,10 @@ export const endpointMetas = {
 					id: '145f88d2-b03d-4087-8143-a78928883c4b',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesShowParamDef,
-	},
-	'notes/show-partial-bulk': {
+	}),
+	'notes/show-partial-bulk': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1166,10 +1167,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: notesShowPartialBulkParamDef,
-	},
-	'notes/state': {
+	}),
+	'notes/state': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1194,10 +1195,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/thread-muting/create': {
+	}),
+	'notes/thread-muting/create': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -1222,10 +1223,10 @@ export const endpointMetas = {
 					id: 'c146e22d-1141-4b31-b28d-176371014d18',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/thread-muting/delete': {
+	}),
+	'notes/thread-muting/delete': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -1240,10 +1241,10 @@ export const endpointMetas = {
 					id: 'bddd57ac-ceb3-b29d-4334-86ea5fae481a',
 				},
 			},
-		} as const,
+		},
 		paramDef: noteIdOnlyParamDef,
-	},
-	'notes/timeline': {
+	}),
+	'notes/timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1262,10 +1263,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesTimelineParamDef,
-	},
-	'notes/translate': {
+	}),
+	'notes/translate': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -1300,10 +1301,10 @@ export const endpointMetas = {
 					id: 'ea29f2ca-c368-43b3-aaf1-5ac3e74bbe5d',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesTranslateParamDef,
-	},
-	'notes/unrenote': {
+	}),
+	'notes/unrenote': defineContract({
 		meta: {
 			tags: ['notes'],
 
@@ -1324,10 +1325,10 @@ export const endpointMetas = {
 					id: 'efd4a259-2442-496b-8dd7-b255aa1a160f',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesUnrenoteParamDef,
-	},
-	'notes/user-list-timeline': {
+	}),
+	'notes/user-list-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes', 'lists'],
@@ -1354,7 +1355,7 @@ export const endpointMetas = {
 					id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff',
 				},
 			},
-		} as const,
+		},
 		paramDef: notesUserListTimelineParamDef,
-	},
-} as const;
+	}),
+};

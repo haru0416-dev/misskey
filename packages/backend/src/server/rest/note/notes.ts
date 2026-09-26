@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
@@ -67,6 +69,7 @@ import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiNotesDependencies = ApiNoteDependencies &
@@ -80,33 +83,6 @@ export const notesShowParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-function notesShowNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '24fcbfc6-2e37-42b6-8388-c29b3861a08d',
-	});
-}
-
-function notesShowContentRestrictedByUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Content restricted by user. Please sign in to view.',
-		code: 'CONTENT_RESTRICTED_BY_USER',
-		id: 'fbcc002d-37d9-4944-a6b0-d9e29f2d33ab',
-	});
-}
-
-function notesShowContentRestrictedByServerError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Content restricted by server settings. Please sign in to view.',
-		code: 'CONTENT_RESTRICTED_BY_SERVER',
-		id: '145f88d2-b03d-4087-8143-a78928883c4b',
-	});
-}
-
 export const noteIdPaginationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
@@ -116,9 +92,8 @@ export const noteIdPaginationParamDef = z.object({
 export async function handleApiNotesChildren(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdPaginationParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const notes = await listChildNotesFromDatabase(deps.db, {
@@ -133,15 +108,6 @@ export async function handleApiNotesChildren(
 	return await packNoteManyForApi(deps, notes, me);
 }
 
-function notesConversationNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8',
-	});
-}
-
 export const notesConversationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
@@ -151,12 +117,12 @@ export const notesConversationParamDef = z.object({
 export async function handleApiNotesConversation(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesConversationParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/conversation']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesConversationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesConversationNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const conversation: Awaited<ReturnType<typeof fetchNoteByIdFromDatabase>>[] = [];
@@ -203,9 +169,8 @@ export const notesMentionsParamDef = z.object({
 export async function handleApiNotesMentions(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesMentionsParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesMentionsParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const mentions = await listMentionNotesFromDatabase(
@@ -227,9 +192,8 @@ export async function handleApiNotesMentions(
 export async function handleApiNotesReplies(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdPaginationParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const timeline = await listReplyNotesFromDatabase(deps.db, {
@@ -244,24 +208,15 @@ export async function handleApiNotesReplies(
 	return await packNoteManyForApi(deps, timeline, me);
 }
 
-function notesRenotesNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '12908022-2e21-46cd-ba6a-3edaf6093f46',
-	});
-}
-
 export async function handleApiNotesRenotes(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdPaginationParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/renotes']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesRenotesNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
@@ -285,9 +240,8 @@ export const noteIdOnlyParamDef = z.object({
 export async function handleApiNotesState(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
 ): Promise<{ isFavorited: boolean; isMutedThread: boolean }> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdOrFailFromDatabase(deps.db, params.noteId);
 
 	const [favorite, threadMuting] = await Promise.all([
@@ -301,38 +255,20 @@ export async function handleApiNotesState(
 	};
 }
 
-function notesFavoritesCreateNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '6dd26674-e060-4816-909a-45ba3f4da458',
-	});
-}
-
-function notesFavoritesCreateAlreadyFavoritedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The note has already been marked as a favorite.',
-		code: 'ALREADY_FAVORITED',
-		id: 'a402c12b-34dd-41d2-97d8-4d2ffd96a1a6',
-	});
-}
-
 export async function handleApiNotesFavoritesCreate(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/favorites/create']>,
 ): Promise<void> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesFavoritesCreateNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const exist = await noteFavoriteExistsInDatabase(deps.db, me.id, note.id);
 	if (exist) {
-		throw notesFavoritesCreateAlreadyFavoritedError();
+		throw errors.alreadyFavorited();
 	}
 
 	try {
@@ -343,7 +279,7 @@ export async function handleApiNotesFavoritesCreate(
 		});
 	} catch (error) {
 		if (isDuplicateKeyValueDatabaseError(error)) {
-			throw notesFavoritesCreateAlreadyFavoritedError();
+			throw errors.alreadyFavorited();
 		}
 		throw error;
 	}
@@ -353,70 +289,34 @@ export async function handleApiNotesFavoritesCreate(
 	}
 }
 
-function notesFavoritesDeleteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '80848a2c-398f-4343-baa9-df1d57696c56',
-	});
-}
-
-function notesFavoritesDeleteNotFavoritedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You have not marked that note a favorite.',
-		code: 'NOT_FAVORITED',
-		id: 'b625fc69-635e-45e9-86f4-dbefbef35af5',
-	});
-}
-
 export async function handleApiNotesFavoritesDelete(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/favorites/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesFavoritesDeleteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const exist = await fetchNoteFavoriteFromDatabase(deps.db, me.id, note.id);
 	if (exist == null) {
-		throw notesFavoritesDeleteNotFavoritedError();
+		throw errors.notFavorited();
 	}
 
 	await deleteNoteFavoriteByIdFromDatabase(deps.db, exist.id);
 }
 
-function notesThreadMutingCreateNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '5ff67ada-ed3b-2e71-8e87-a1a421e177d2',
-	});
-}
-
-function notesThreadMutingCreateAlreadyMutingError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are already muting that thread.',
-		code: 'ALREADY_MUTING',
-		id: 'c146e22d-1141-4b31-b28d-176371014d18',
-	});
-}
-
 export async function handleApiNotesThreadMutingCreate(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/thread-muting/create']>,
 ): Promise<void> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesThreadMutingCreateNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	try {
@@ -428,30 +328,21 @@ export async function handleApiNotesThreadMutingCreate(
 	} catch (err) {
 		// (userId, threadId) には unique 制約があるので、二重ミュートは 500 ではなく明示的なエラーにする
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw notesThreadMutingCreateAlreadyMutingError();
+			throw errors.alreadyMuting();
 		}
 		throw err;
 	}
 }
 
-function notesThreadMutingDeleteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'bddd57ac-ceb3-b29d-4334-86ea5fae481a',
-	});
-}
-
 export async function handleApiNotesThreadMutingDelete(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/thread-muting/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesThreadMutingDeleteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	await deleteNoteThreadMutingFromDatabase(deps.db, me.id, note.threadId ?? note.id);
@@ -460,39 +351,30 @@ export async function handleApiNotesThreadMutingDelete(
 export async function handleApiNotesShow(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesShowParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/show']>,
 ): Promise<Packed<'Note'>> {
-	const params = parseApiParams(notesShowParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesShowNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 
 	if (user.requireSigninToViewContents && me == null) {
-		throw notesShowContentRestrictedByUserError();
+		throw errors.contentRestrictedByUser();
 	}
 
 	if (deps.meta.ugcVisibilityForVisitor === 'none' && me == null) {
-		throw notesShowContentRestrictedByServerError();
+		throw errors.contentRestrictedByServer();
 	}
 
 	if (deps.meta.ugcVisibilityForVisitor === 'local' && note.userHost != null && me == null) {
-		throw notesShowContentRestrictedByServerError();
+		throw errors.contentRestrictedByServer();
 	}
 
 	return await packNoteForApi(deps, note, me, {
 		detail: true,
-	});
-}
-
-function notesGlobalTimelineDisabledError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Global timeline has been disabled.',
-		code: 'GTL_DISABLED',
-		id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b',
 	});
 }
 
@@ -506,13 +388,12 @@ export const notesGlobalTimelineParamDef = z.object({
 export async function handleApiNotesGlobalTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesGlobalTimelineParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/global-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesGlobalTimelineParamDef, body);
-
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.gtlAvailable) {
-		throw notesGlobalTimelineDisabledError();
+		throw errors.gtlDisabled();
 	}
 
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
@@ -542,9 +423,8 @@ export const notesParamDef = z.object({
 
 export async function handleApiNotes(
 	deps: ApiNotesDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const notes = await listPublicNotesFromDatabase(
@@ -565,24 +445,6 @@ export async function handleApiNotes(
 	return await packNoteManyForApi(deps, notes, null);
 }
 
-function notesLocalTimelineDisabledError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Local timeline has been disabled.',
-		code: 'LTL_DISABLED',
-		id: '45a6eb02-7695-4393-b023-dd3be9aaaefd',
-	});
-}
-
-function notesLocalTimelineBothWithRepliesAndWithFilesError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Specifying both withReplies and withFiles is not supported',
-		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
-		id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793',
-	});
-}
-
 export const notesLocalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
@@ -598,18 +460,18 @@ export const notesLocalTimelineParamDef = z.object({
 export async function handleApiNotesLocalTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesLocalTimelineParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/local-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesLocalTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
-		throw notesLocalTimelineDisabledError();
+		throw errors.ltlDisabled();
 	}
 
 	if (params.withReplies && params.withFiles) {
-		throw notesLocalTimelineBothWithRepliesAndWithFilesError();
+		throw errors.bothWithRepliesAndWithFiles();
 	}
 
 	// ローカルタイムラインはフォロー関係を見ないので、fanout のフィルタが読む種別だけで足りる
@@ -662,24 +524,6 @@ export async function handleApiNotesLocalTimeline(
 	return await packNoteManyForApi(deps, timeline, me);
 }
 
-function notesHybridTimelineDisabledError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Hybrid timeline has been disabled.',
-		code: 'STL_DISABLED',
-		id: '620763f4-f621-4533-ab33-0577a1a3c342',
-	});
-}
-
-function notesHybridTimelineBothWithRepliesAndWithFilesError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Specifying both withReplies and withFiles is not supported',
-		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
-		id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f',
-	});
-}
-
 export const notesHybridTimelineParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
@@ -695,18 +539,18 @@ export const notesHybridTimelineParamDef = z.object({
 export async function handleApiNotesHybridTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesHybridTimelineParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/hybrid-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesHybridTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
-		throw notesHybridTimelineDisabledError();
+		throw errors.stlDisabled();
 	}
 
 	if (params.withReplies && params.withFiles) {
-		throw notesHybridTimelineBothWithRepliesAndWithFilesError();
+		throw errors.bothWithRepliesAndWithFiles();
 	}
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
@@ -841,10 +685,8 @@ export const notesFeaturedParamDef = z.object({
 export async function handleApiNotesFeatured(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesFeaturedParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesFeaturedParamDef, body);
-
 	let noteIds: string[];
 	if (params.channelId) {
 		noteIds = await getNotesFeaturedRanking(deps, `featuredInChannelNotesRanking:${params.channelId}`, 50);
@@ -895,24 +737,15 @@ export async function handleApiNotesFeatured(
 	return await packNoteManyForApi(deps, notes, me);
 }
 
-function notesClipsNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '47db1a1c-b0af-458d-8fb4-986e4efafe1e',
-	});
-}
-
 export async function handleApiNotesClips(
 	deps: ApiNotesDependencies & ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof noteIdOnlyParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/clips']>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesClipsNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const clipIds = await listClipNoteClipIdsByNoteIdFromDatabase(deps.db, note.id);
@@ -923,15 +756,6 @@ export async function handleApiNotesClips(
 	const clips = await listClipsByIdsFromDatabase(deps.db, clipIds, { isPublic: true });
 
 	return await packClipsManyForApi(deps, clips, me);
-}
-
-function notesSearchUnavailableError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Search of notes unavailable.',
-		code: 'UNAVAILABLE',
-		id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
-	});
 }
 
 export const notesSearchParamDef = z.object({
@@ -955,20 +779,20 @@ export const notesSearchParamDef = z.object({
 export async function handleApiNotesSearch(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesSearchParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/search']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesSearchParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.canSearchNotes) {
-		throw notesSearchUnavailableError();
+		throw errors.unavailable();
 	}
 
 	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
 		// 全文検索は SQL ベースの provider に限る。
-		throw notesSearchUnavailableError();
+		throw errors.unavailable();
 	}
 
 	const notes = await searchNotesByTextFromDatabase(
@@ -1001,45 +825,9 @@ export async function handleApiNotesSearch(
 
 // anyOf の各分岐は互いのプロパティを検証しないため、tag/query 自体は z.unknown() とする。
 // 一方が有効なら他方が不正でも許可する互換性を superRefine で維持する。
-function isValidTagBranch(tag: unknown): tag is string {
-	return typeof tag === 'string' && tag.length >= 1;
-}
-
-function isValidQueryBranch(query: unknown): query is string[][] {
-	return (
-		Array.isArray(query) &&
-		query.length >= 1 &&
-		query.every(
-			(inner) =>
-				Array.isArray(inner) && inner.length >= 1 && inner.every((tag) => typeof tag === 'string' && tag.length >= 1),
-		)
-	);
-}
-
-const notesSearchByTagParamDef = z
-	.object({
-		tag: z.unknown().optional(),
-		query: z.unknown().optional(),
-		reply: z.boolean().nullable().optional().default(null),
-		renote: z.boolean().nullable().optional().default(null),
-		withFiles: z.boolean().optional().default(false),
-		poll: z.boolean().nullable().optional().default(null),
-		...paginationParams,
-		limit: z.int().min(1).max(100).optional().default(10),
-	})
-	.superRefine((data, ctx) => {
-		if (!isValidTagBranch(data.tag) && !isValidQueryBranch(data.query)) {
-			ctx.addIssue({
-				code: 'custom',
-				message: 'must match "anyOf" schema (tag or query)',
-				path: [],
-			});
-		}
-	});
-
-// OpenAPI/misskey-js コード生成専用。上の superRefine (tag/query の anyOf 判定) は
-// JSON Schema 化できないため、docs 用には allOf+anyOf 構造を union+intersection で表現する。
-const notesSearchByTagCommonFieldsDocsSchema = z.object({
+// tag か query のどちらかを必須にする。両方あれば tag を使い、正しくない側は union の分岐で捨てる。
+// この定義がそのまま実行時の検証と OpenAPI / misskey-js の型になる。
+const notesSearchByTagCommonFieldsSchema = z.object({
 	reply: z.boolean().nullable().optional().default(null),
 	renote: z.boolean().nullable().optional().default(null),
 	withFiles: z.boolean().optional().default(false),
@@ -1047,41 +835,25 @@ const notesSearchByTagCommonFieldsDocsSchema = z.object({
 	...paginationParams,
 	limit: z.int().min(1).max(100).optional().default(10),
 });
-export const notesSearchByTagDocsParamDef = z.intersection(
+export const notesSearchByTagParamDef = z.intersection(
 	z.union([
 		z.object({ tag: z.string().min(1) }),
 		z.object({ query: z.array(z.array(z.string().min(1)).min(1)).min(1) }),
 	]),
-	notesSearchByTagCommonFieldsDocsSchema,
+	notesSearchByTagCommonFieldsSchema,
 );
-
-type NotesSearchByTagParams = {
-	tag?: string;
-	query?: string[][];
-	reply?: boolean | null;
-	renote?: boolean | null;
-	withFiles: boolean;
-	poll?: boolean | null;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-};
 
 export async function handleApiNotesSearchByTag(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesSearchByTagParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
-
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 	// タグはパラメータとして束縛するので、文字種で弾く必要はない。
 	const tagQuery: string[][] =
-		params.tag != null
+		'tag' in params
 			? [[normalizeForSearch(params.tag)]]
-			: params.query!.map((tags) => tags.map((tag) => normalizeForSearch(tag)));
+			: params.query.map((tags) => tags.map((tag) => normalizeForSearch(tag)));
 
 	const notes = await listNotesByTagSearchFromDatabase(
 		deps.db,
@@ -1109,9 +881,8 @@ export const notesShowPartialBulkParamDef = z.object({
 export async function handleApiNotesShowPartialBulk(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesShowPartialBulkParamDef>,
 ): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
-	const params = parseApiParams(notesShowPartialBulkParamDef, body);
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
 	const visibleNotes = await filterVisibleNotesForApi(deps, notes, me?.id ?? null);
 	return await fetchNoteDiffsForApi(deps, visibleNotes);
@@ -1131,9 +902,8 @@ export const notesTimelineParamDef = z.object({
 export async function handleApiNotesTimeline(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesTimelineParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
@@ -1201,15 +971,6 @@ export async function handleApiNotesTimeline(
 	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
-function notesUserListTimelineNoSuchListError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such list.',
-		code: 'NO_SUCH_LIST',
-		id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff',
-	});
-}
-
 export const notesUserListTimelineParamDef = z.object({
 	listId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
@@ -1225,14 +986,14 @@ export const notesUserListTimelineParamDef = z.object({
 export async function handleApiNotesUserListTimeline(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesUserListTimelineParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/user-list-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesUserListTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (list == null) {
-		throw notesUserListTimelineNoSuchListError();
+		throw errors.noSuchList();
 	}
 
 	const mutedChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
@@ -1264,9 +1025,8 @@ export const notesPollsRecommendationParamDef = z.object({
 export async function handleApiNotesPollsRecommendation(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesPollsRecommendationParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(notesPollsRecommendationParamDef, body);
 	const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(deps.db, {
 		meId: me.id,
 		excludeChannels: params.excludeChannels,
