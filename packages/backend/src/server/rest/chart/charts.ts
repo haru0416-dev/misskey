@@ -154,7 +154,7 @@ export async function handleApiChartsUserReactions(deps: ApiChartDependencies, b
 const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 
-export async function handleApiStats(deps: ApiChartDependencies): Promise<Record<string, unknown>> {
+export async function handleApiStats(deps: ApiChartDependencies) {
 	const notesChart = await createApiChart(deps, chartDefinitions.notes).getChart('hour', 1, null);
 	const originalNotesCount = notesChart.local.total[0] ?? 0;
 	const notesCount = originalNotesCount + (notesChart.remote.total[0] ?? 0);

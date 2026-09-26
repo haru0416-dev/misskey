@@ -6,7 +6,6 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleApiEndpoints } from '../endpoint-info.js';
 import { federationStatsParamDef, handleApiFederationStats } from '../activitypub/federation.js';
 import { handleApiApGet } from '../activitypub/ap.js';
 import { assertApiRateLimitForUser } from '../rate-limit.js';
@@ -20,17 +19,9 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 import { queryToApiBody } from '../string-params.js';
 
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post(
-		'/endpoints',
-		endpointHandlerAnonymous(deps, 'endpoints', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiEndpoints()),
-		),
-	);
-
 	app.get('/federation/stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = queryToApiBody(federationStatsParamDef, c.req.query());

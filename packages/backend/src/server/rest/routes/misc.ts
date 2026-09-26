@@ -8,7 +8,7 @@ import { handleApiGetOnlineUsersCount } from '../auth/availability.js';
 import { handleApiPing, handleApiServerInfo, handleApiTest } from '../meta/meta.js';
 import { handleApiRequestResetPassword } from '../auth/password-reset.js';
 import { handleApiRetention } from '../retention/retention.js';
-import { jsonResponse, emptyResponse, jsonBody, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
+import { jsonResponse, emptyResponse, jsonBody, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
@@ -41,7 +41,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 	app.post(
 		'/request-reset-password',
 		endpointHandlerAnonymous(deps, 'request-reset-password', async ({ body, auth, c }) => {
-			await handleApiRequestResetPassword(deps, body, getRequestIp(c, deps.config));
+			await handleApiRequestResetPassword(deps, body);
 			return emptyResponse(c);
 		}),
 	);

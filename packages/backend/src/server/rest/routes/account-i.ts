@@ -5,21 +5,12 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
-import { handleApiI } from '../account/i.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import { handleApiIWebhooksCreate } from '../webhook/webhooks.js';
 import { jsonResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post(
-		'/i',
-		endpointHandler(deps, 'i', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiI(deps, auth.user, auth.token)),
-		),
-	);
-
 	app.post('/i/webhooks/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);

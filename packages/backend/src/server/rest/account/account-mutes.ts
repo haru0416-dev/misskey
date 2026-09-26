@@ -176,10 +176,8 @@ export async function handleApiMuteCreate(
 export async function handleApiMuteDelete(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userIdParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(userIdParamDef, body);
-
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'f428b029-6b39-4d48-a1d2-cc1ae6dd5cf9');
 	}
@@ -218,10 +216,8 @@ export async function handleApiMuteList(
 export async function handleApiRenoteMuteCreate(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userIdParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(userIdParamDef, body);
-
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '37285718-52f7-4aef-b7de-c38b8e8a8420');
 	}
@@ -242,10 +238,8 @@ export async function handleApiRenoteMuteCreate(
 export async function handleApiRenoteMuteDelete(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userIdParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(userIdParamDef, body);
-
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', '619b1314-0850-4597-a242-e245f3da42af');
 	}

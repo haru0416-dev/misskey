@@ -97,7 +97,7 @@ export async function handleApiMeta(
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 
-export async function handleApiAdminMeta(deps: ApiMetaDependencies): Promise<Record<string, unknown>> {
+export async function handleApiAdminMeta(deps: ApiMetaDependencies) {
 	const instance = await fetchMetaFromDatabase(deps.db);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, instance, 'proxy');
 

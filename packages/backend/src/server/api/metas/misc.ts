@@ -428,7 +428,7 @@ export const endpointMetas = {
 		},
 		paramDef: emojiParamDef,
 	}),
-	emojis: {
+	emojis: defineContract({
 		meta: {
 			tags: ['meta'],
 
@@ -454,9 +454,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	endpoint: defineContract({
 		meta: {
 			requireCredential: false,
@@ -482,7 +482,7 @@ export const endpointMetas = {
 		},
 		paramDef: endpointParamDef,
 	}),
-	endpoints: {
+	endpoints: defineContract({
 		meta: {
 			requireCredential: false,
 
@@ -499,10 +499,10 @@ export const endpointMetas = {
 				},
 				example: ['admin/abuse-user-reports', 'admin/accounts/create', 'admin/announcements/create', '...'],
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'export-custom-emojis': {
+	}),
+	'export-custom-emojis': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -510,9 +510,9 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'fetch-external-resources': defineContract({
 		meta: {
 			tags: ['meta'],
@@ -836,7 +836,7 @@ export const endpointMetas = {
 		},
 		paramDef: getAvatarDecorationsParamDef,
 	}),
-	'get-online-users-count': {
+	'get-online-users-count': defineContract({
 		meta: {
 			tags: ['meta'],
 
@@ -854,9 +854,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'invite/create': defineContract({
 		meta: {
 			tags: ['meta'],
@@ -1114,27 +1114,27 @@ export const endpointMetas = {
 		},
 		paramDef: notificationsDeleteParamDef,
 	}),
-	'notifications/flush': {
+	'notifications/flush': defineContract({
 		meta: {
 			tags: ['notifications', 'account'],
 
 			requireCredential: true,
 
 			kind: 'write:notifications',
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'notifications/mark-all-as-read': {
+	}),
+	'notifications/mark-all-as-read': defineContract({
 		meta: {
 			tags: ['notifications', 'account'],
 
 			requireCredential: true,
 
 			kind: 'write:notifications',
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'notifications/test-notification': {
+	}),
+	'notifications/test-notification': defineContract({
 		meta: {
 			tags: ['notifications'],
 
@@ -1146,9 +1146,9 @@ export const endpointMetas = {
 				duration: 1000 * 60,
 				max: 10,
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'page-push': defineContract({
 		meta: {
 			requireCredential: true,
@@ -1164,7 +1164,7 @@ export const endpointMetas = {
 		},
 		paramDef: pagePushParamDef,
 	}),
-	ping: {
+	ping: defineContract({
 		meta: {
 			requireCredential: false,
 
@@ -1182,9 +1182,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'pinned-users': defineContract({
 		meta: {
 			allowQuery: true,
@@ -1510,7 +1510,7 @@ export const endpointMetas = {
 		},
 		paramDef: rolesUsersParamDef,
 	}),
-	'server-info': {
+	'server-info': defineContract({
 		meta: {
 			requireCredential: false,
 			allowGet: true,
@@ -1565,10 +1565,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	stats: {
+	}),
+	stats: defineContract({
 		meta: {
 			requireCredential: false,
 
@@ -1621,9 +1621,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'sw/register': defineContract({
 		meta: {
 			tags: ['account'],

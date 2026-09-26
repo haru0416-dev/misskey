@@ -7,50 +7,11 @@ import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { handleApiAdminGetIndexStats, handleApiAdminGetTableStats } from '../admin/admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
-import {
-	handleApiAdminQueueDeliverDelayed,
-	handleApiAdminQueueInboxDelayed,
-	handleApiAdminQueueQueues,
-	handleApiAdminQueueStats,
-} from '../admin/admin-queue.js';
 import { isApiAdministrator } from '../role/role-policy.js';
 import { jsonResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/queue/queues',
-		endpointHandler(deps, 'admin/queue/queues', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminQueueQueues(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/queue/stats',
-		endpointHandler(deps, 'admin/queue/stats', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminQueueStats(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/queue/deliver-delayed',
-		endpointHandler(deps, 'admin/queue/deliver-delayed', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminQueueDeliverDelayed(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/queue/inbox-delayed',
-		endpointHandler(deps, 'admin/queue/inbox-delayed', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminQueueInboxDelayed(deps, body)),
-		),
-	);
-
 	app.on(['POST', 'QUERY'], '/admin/get-index-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);

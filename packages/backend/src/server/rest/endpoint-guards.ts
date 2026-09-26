@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { getIpHash } from '@/misc/get-ip-hash.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser } from '@/models/User.js';
 import {
@@ -14,7 +15,7 @@ import {
 } from './auth/auth.js';
 import type { ApiAuthenticated, authenticateApiToken } from './auth/auth.js';
 import { assertApiAdmin, assertApiModerator } from './shell-helpers.js';
-import { assertApiRateLimitForUser } from './rate-limit.js';
+import { assertApiRateLimit, assertApiRateLimitForUser } from './rate-limit.js';
 import type { ApiEndpointRateLimit } from './rate-limit.js';
 import { rolePermissionDeniedError } from './error.js';
 import { hasApiRolePolicyOrIsRoot } from './role/role-policy.js';
@@ -39,14 +40,16 @@ export type EndpointGuardMeta = {
 };
 
 /**
- * meta から認証・権限・モデレーター判定・利用者単位の回数制限を組み立てて実行する。
- * 未認証でも通るエンドポイントの制限は IP 単位で、呼び出し側が別途掛ける。
+ * meta から認証・権限・モデレーター判定・回数制限を組み立てて実行する。
+ * 回数制限はログイン中なら利用者単位 (ロールの倍率つき)、匿名なら IP 単位 (IPv6 は /64) で数える。
  */
 export async function applyEndpointGuards(
 	deps: EndpointGuardDependencies,
 	name: string,
 	meta: EndpointGuardMeta,
 	auth: ApiAuthenticated,
+	/** 匿名で回数制限があるときだけ呼ぶ。 */
+	requestIp: () => string,
 ): Promise<void> {
 	if (meta.requireCredential === true || meta.requireModerator === true || meta.requireAdmin === true) {
 		assertCredential(auth);
@@ -79,7 +82,11 @@ export async function applyEndpointGuards(
 		await assertApiModerator(deps, auth as AuthedCredential);
 	}
 
-	if (meta.limit != null && auth.user != null) {
-		await assertApiRateLimitForUser(deps, name, meta.limit, auth.user);
+	if (meta.limit != null) {
+		if (auth.user != null) {
+			await assertApiRateLimitForUser(deps, name, meta.limit, auth.user);
+		} else {
+			await assertApiRateLimit(deps, name, meta.limit, getIpHash(requestIp()));
+		}
 	}
 }

@@ -697,7 +697,7 @@ export const endpointMetas = {
 		},
 		paramDef: chatHistoryParamDef,
 	}),
-	'chat/read-all': {
+	'chat/read-all': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -706,7 +706,7 @@ export const endpointMetas = {
 			kind: 'write:chat',
 
 			errors: {},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 };

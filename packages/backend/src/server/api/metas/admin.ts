@@ -814,26 +814,26 @@ export const endpointMetas = {
 		},
 		paramDef: adminDriveUserParamDef,
 	}),
-	'admin/drive/clean-remote-files': {
+	'admin/drive/clean-remote-files': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:drive',
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'admin/drive/cleanup': {
+	}),
+	'admin/drive/cleanup': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:drive',
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'admin/drive/files': defineContract({
 		meta: {
 			allowQuery: true,
@@ -1257,7 +1257,7 @@ export const endpointMetas = {
 		},
 		paramDef: adminInviteListParamDef,
 	}),
-	'admin/meta': {
+	'admin/meta': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['meta'],
@@ -2026,9 +2026,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'admin/promo/create': defineContract({
 		meta: {
 			tags: ['admin'],

@@ -5,7 +5,6 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
-import { handleApiDrive } from '../drive/drive.js';
 import {
 	handleApiDriveFilesCreate,
 	handleApiDriveFilesUploadFromUrl,
@@ -22,7 +21,6 @@ import {
 	runApiEndpoint,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/drive/files/create', async (c) => {
@@ -85,9 +83,4 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			return emptyResponse(c);
 		});
 	});
-
-	app.post(
-		'/drive',
-		endpointHandler(deps, 'drive', async ({ body, auth, c }) => jsonResponse(c, await handleApiDrive(deps, auth.user))),
-	);
 }

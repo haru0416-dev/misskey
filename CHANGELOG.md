@@ -259,6 +259,7 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Fix: 回数制限を宣言したエンドポイントを匿名で呼んだとき、IP 単位の制限が掛かっていなかった問題を修正 (`notes/search` など。ログイン中は従来どおり利用者単位)
 - Change: `i` の応答から仕様書に無く常に空だった `mutingNotificationTypes` を削除 (通知の受け取り設定は `notificationRecieveConfig`)
 - Fix: `users/reactions` と `notes/reactions` が、取得中に消えた利用者のリアクションを必須の `user` が欠けた形で返し得た問題を修正
 - Fix: `admin/queue/outbox-dead-letters` の `deadLetterReason` を、DB の実態どおり null を許す宣言に修正し、管理画面では不明と表示するように

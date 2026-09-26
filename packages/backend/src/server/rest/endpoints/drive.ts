@@ -20,6 +20,7 @@ import {
 	handleApiDriveStream,
 } from '../drive/drive-files.js';
 import {
+	handleApiDrive,
 	handleApiDriveFilesCheckExistence,
 	handleApiDriveFolders,
 	handleApiDriveFoldersCreate,
@@ -31,16 +32,17 @@ import {
 
 export const driveEndpoints = implementEndpoints<ApiShellDependencies>()(
 	pickContracts(driveContracts, [
+		'drive',
 		'drive/files',
-		'drive/files/attached-notes',
 		'drive/files/attached-chat-messages',
+		'drive/files/attached-notes',
 		'drive/files/check-existence',
 		'drive/files/delete',
 		'drive/files/find',
 		'drive/files/find-by-hash',
+		'drive/files/move-bulk',
 		'drive/files/show',
 		'drive/files/update',
-		'drive/files/move-bulk',
 		'drive/folders',
 		'drive/folders/create',
 		'drive/folders/delete',
@@ -79,5 +81,6 @@ export const driveEndpoints = implementEndpoints<ApiShellDependencies>()(
 		'drive/folders/update': async ({ deps, errors, input, me }) =>
 			await handleApiDriveFoldersUpdate(deps, me, input, errors),
 		'drive/stream': async ({ deps, input, me }) => await handleApiDriveStream(deps, me, input),
+		drive: async ({ deps, me }) => await handleApiDrive(deps, me),
 	},
 );

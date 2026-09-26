@@ -48,11 +48,7 @@ export function packApiSignin(
 	};
 }
 
-export async function handleApiI(
-	deps: ApiIDependencies,
-	user: MiLocalUser,
-	token: MiAccessToken | null,
-): Promise<Record<string, unknown>> {
+export async function handleApiI(deps: ApiIDependencies, user: MiLocalUser, token: MiAccessToken | null) {
 	const now = new Date();
 	const today = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
 

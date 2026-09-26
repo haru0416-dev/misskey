@@ -1494,12 +1494,7 @@ export async function handleApiChatHistory(
 
 const chatReadAllParamDef = z.object({});
 
-export async function handleApiChatReadAll(
-	deps: ApiChatDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<void> {
-	parseApiParams(chatReadAllParamDef, body);
+export async function handleApiChatReadAll(deps: ApiChatDependencies, me: MiLocalUser): Promise<void> {
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 	await readAllChatMessagesForApi(deps, me.id);
 }

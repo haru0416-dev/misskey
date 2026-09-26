@@ -101,7 +101,7 @@ export const endpointMetas = {
 		},
 		paramDef: adminQueueClearParamDef,
 	}),
-	'admin/queue/deliver-delayed': {
+	'admin/queue/deliver-delayed': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -111,10 +111,10 @@ export const endpointMetas = {
 			kind: 'read:admin:queue',
 
 			res: delayedJobCountsByHostSchema,
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'admin/queue/inbox-delayed': {
+	}),
+	'admin/queue/inbox-delayed': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -124,9 +124,9 @@ export const endpointMetas = {
 			kind: 'read:admin:queue',
 
 			res: delayedJobCountsByHostSchema,
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'admin/queue/retry-job': defineContract({
 		meta: {
 			tags: ['admin'],
@@ -314,7 +314,7 @@ export const endpointMetas = {
 		},
 		paramDef: adminQueueOutboxJobParamDef,
 	}),
-	'admin/queue/stats': {
+	'admin/queue/stats': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -350,10 +350,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
-	'admin/queue/queues': {
+	}),
+	'admin/queue/queues': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -376,9 +376,9 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: z.object({}),
-	},
+	}),
 	'admin/queue/queue-stats': defineContract({
 		meta: {
 			allowQuery: true,
