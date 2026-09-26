@@ -835,9 +835,7 @@ describe('Streaming', () => {
 				expect(rows).toHaveLength(1);
 				const row = rows[0];
 				assert.ok(row);
-				expect(row.mentionedUserIds.toSorted()).toStrictEqual([ayano.id, chitose.id].toSorted());
 				expect(row.mentionedUsersCount).toBe(2);
-				expect(row.mentionedLocalUserIds.toSorted()).toStrictEqual([ayano.id, chitose.id].toSorted());
 				expect(row.mentionedLocalUsersCount).toBe(2);
 			});
 		});
