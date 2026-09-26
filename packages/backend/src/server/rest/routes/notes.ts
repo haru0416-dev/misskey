@@ -38,21 +38,14 @@ import {
 	usersFeaturedNotesParamDef,
 } from '../note/note.js';
 import { handleApiNotesCreate } from '../note/notes-create.js';
-import {
-	handleApiNotesDelete,
-	handleApiNotesUnrenote,
-	notesDeleteRateLimit,
-	notesUnrenoteRateLimit,
-} from '../note/notes-delete.js';
+import { handleApiNotesDelete, handleApiNotesUnrenote } from '../note/notes-delete.js';
 import {
 	handleApiNotesReactions,
 	handleApiNotesReactionsCreate,
 	handleApiNotesReactionsDelete,
 	notesReactionsParamDef,
-	reactionsDeleteRateLimit,
 } from '../note/notes-reactions.js';
 import { handleApiNotesPollsVote } from '../note/notes-polls-vote.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -77,8 +70,6 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/delete',
 		endpointHandler(deps, 'notes/delete', async ({ body, auth, c }) => {
-			await assertApiRateLimitForUser(deps, 'notes/delete', notesDeleteRateLimit, auth.user);
-
 			await handleApiNotesDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
@@ -87,8 +78,6 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/unrenote',
 		endpointHandler(deps, 'notes/unrenote', async ({ body, auth, c }) => {
-			await assertApiRateLimitForUser(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user);
-
 			await handleApiNotesUnrenote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
@@ -105,8 +94,6 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/reactions/delete',
 		endpointHandler(deps, 'notes/reactions/delete', async ({ body, auth, c }) => {
-			await assertApiRateLimitForUser(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user);
-
 			await handleApiNotesReactionsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
