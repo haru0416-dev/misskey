@@ -44,6 +44,8 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>,
 		console.info(`vue ${vueVersion}`);
 
 		window.addEventListener('error', (event) => {
+			// ResizeObserver の通知が次のフレームへ持ち越されたことを知らせるだけで、処理は失われない (仕様上の通知)。
+			if (event.message.startsWith('ResizeObserver loop')) return;
 			console.error(event);
 		});
 

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { markRaw } from 'vue';
 import { MutationType } from 'pinia';
 import type { PiniaPlugin, StateTree, StoreGeneric } from 'pinia';
 import type { Cloneable } from '@/utility/clone.js';
@@ -496,11 +497,16 @@ const noPersistenceApi: PersistedStateApi = {
 	$persistDispose: () => undefined,
 };
 
+// プラグインが足す Promise はリアクティブにする意味がない。markRaw で明示しないと Pinia 4 が storeToRefs() の対象外だと警告する。
+function markPersistApiRaw(api: PersistedStateApi): PersistedStateApi {
+	return { ...api, $persistReady: markRaw(api.$persistReady), $persistLoaded: markRaw(api.$persistLoaded) };
+}
+
 export function createPersistedStatePlugin(io: PersistedStateIo): PiniaPlugin {
 	return ({ store, options }) => {
 		if (options.persist == null) {
-			return noPersistenceApi;
+			return markPersistApiRaw(noPersistenceApi);
 		}
-		return attachPersistedState(store, options.persist, io);
+		return markPersistApiRaw(attachPersistedState(store, options.persist, io));
 	};
 }
