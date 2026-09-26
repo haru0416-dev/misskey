@@ -17,6 +17,8 @@ db/
 node_modules/
 packages/*/node_modules
 packages/slacc/*.node
+# cargo のビルド作業ディレクトリ (数百 MB)。イメージの中では毎回ビルドし直す。
+packages/slacc/target/
 redis/
 files/
 fluent-emojis/
