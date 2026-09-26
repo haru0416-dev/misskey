@@ -259,6 +259,7 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Enhance: メディアプロキシが取得した画像を 16MiB まではメモリ上で変換し、一時ファイルに書かないように。縮小版の WebP は smartSubsample を使わない (Pi 5 相当の枠で TL 5 画面分の画像 240 件: 所要 5.6→1.2〜1.6 秒・CPU 9.0〜9.3→3.8〜4.2 秒・絵文字の p95 654〜671→25〜33ms・ディスク書き込み 76.9MiB→0)
 - Fix: API 仕様書 (`/api.json`) の `admin/drive/show-file`・`admin/update-meta`・`channels/timeline`・`v2/admin/emoji/list` の入力定義が実際の検証と食い違っていた問題を修正 (実行時の検証と仕様書で別々に持っていた定義を 1 つにまとめた)
 - Change: 管理者・モデレーター・ロールポリシーが必要な API を、必要な権限スコープの無いトークンで権限の無い利用者が呼んだときのエラーを `PERMISSION_DENIED` から `ROLE_PERMISSION_DENIED` に変更 (ロールを先に判定する。upstream と同じ順)
 - Fix: 回数制限を宣言したエンドポイントを匿名で呼んだとき、IP 単位の制限が掛かっていなかった問題を修正 (`notes/search` など。ログイン中は従来どおり利用者単位)

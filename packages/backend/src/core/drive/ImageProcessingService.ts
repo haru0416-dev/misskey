@@ -70,15 +70,6 @@ export function createImageProcessingService() {
 		};
 	}
 
-	function convertToWebpStream(
-		path: string,
-		width: number,
-		height: number,
-		options: WebpOptions = webpDefault,
-	): IImageSharp {
-		return convertSharpToWebpStream(sharp(path), width, height, options);
-	}
-
 	function convertSharpToWebpStream(
 		sharp: Sharp,
 		width: number,
@@ -178,7 +169,6 @@ export function createImageProcessingService() {
 	return {
 		convertToWebp,
 		convertSharpToWebp,
-		convertToWebpStream,
 		convertSharpToWebpStream,
 		convertToAvif,
 		convertSharpToAvif,

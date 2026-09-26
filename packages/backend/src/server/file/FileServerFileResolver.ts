@@ -21,6 +21,19 @@ export type DownloadedFileResult = {
 	filename: string;
 };
 
+/** メディアプロキシが取得した画像。小さいものはメモリ上に置き、一時ファイルを作らない。 */
+export type DownloadedBufferResult = {
+	kind: 'downloaded-memory';
+	mime: string;
+	ext: string | null;
+	data: Buffer;
+	filename: string;
+};
+
+// 並行 6 本 (ブラウザの同時接続数) がすべて上限いっぱいでも 96MiB に収まる大きさ。
+// リモートの写真はほとんど数 MB (Mastodon は 8.3MP の JPEG に再圧縮する) なので、超えるものだけ一時ファイルに逃がす。
+const PROXY_MEMORY_LIMIT_BYTES = 16 * 1024 * 1024;
+
 export type FileResolveResult =
 	| { kind: 'not-found' }
 	| { kind: 'unavailable' }
@@ -72,6 +85,24 @@ export class FileServerFileResolver {
 			cleanup();
 			throw e;
 		}
+	}
+
+	public async downloadForProxy(url: string): Promise<DownloadedFileResult | DownloadedBufferResult> {
+		const downloaded = await this.downloadService.downloadUrlToMemoryOrFile(url, PROXY_MEMORY_LIMIT_BYTES);
+		if ('path' in downloaded) {
+			try {
+				return { kind: 'downloaded', ...(await this.fileInfoService.detectType(downloaded.path)), ...downloaded };
+			} catch (e) {
+				downloaded.cleanup();
+				throw e;
+			}
+		}
+		return {
+			kind: 'downloaded-memory',
+			...(await this.fileInfoService.detectImageTypeFromBuffer(downloaded.data)),
+			data: downloaded.data,
+			filename: downloaded.filename,
+		};
 	}
 
 	public async resolveFileByAccessKey(key: string): Promise<FileResolveResult> {

@@ -21,14 +21,10 @@ export function createDownloadService(
 ) {
 	const logger = loggerService.getLogger('download');
 
-	async function downloadUrl(
-		url: string,
-		path: string,
-	): Promise<{
-		filename: string;
-	}> {
-		logger.info(`Downloading ${chalk.cyan(url)} to ${chalk.cyanBright(path)} ...`);
-
+	/**
+	 * 取得を始め、本文を上限つきで sink へ流す。タイムアウトと上限超過の扱いは全ての取得で共通。
+	 */
+	async function download(url: string, sink: stream.Writable): Promise<{ filename: string }> {
 		const responseTimeout = 30 * 1000;
 		const operationTimeout = 60 * 1000;
 		const maxSize = config.limits.maximumFileSizeBytes;
@@ -101,17 +97,77 @@ export function createDownloadService(
 				res.body != null
 					? stream.Readable.fromWeb(res.body as import('node:stream/web').ReadableStream)
 					: stream.Readable.from([]);
-			await pipeline(body, limitSize, fs.createWriteStream(path));
+			await pipeline(body, limitSize, sink);
+			return { filename };
 		} finally {
 			clearTimeout(operationTimer);
 			clearTimeout(responseTimer);
 		}
+	}
 
+	async function downloadUrl(
+		url: string,
+		path: string,
+	): Promise<{
+		filename: string;
+	}> {
+		logger.info(`Downloading ${chalk.cyan(url)} to ${chalk.cyanBright(path)} ...`);
+		const { filename } = await download(url, fs.createWriteStream(path));
 		logger.succ(`Download finished: ${chalk.cyan(url)}`);
+		return { filename };
+	}
 
-		return {
-			filename,
-		};
+	/**
+	 * memoryLimitBytes までは一時ファイルを作らずメモリに受け取り、超えたら一時ファイルに切り替える。
+	 * 一時ファイル経由はディスクへの書き込み (SD カードでは寿命) と、並行時に Bun の fs 処理待ちで遅れる。
+	 */
+	async function downloadUrlToMemoryOrFile(
+		url: string,
+		memoryLimitBytes: number,
+	): Promise<{ filename: string } & ({ data: Buffer } | { path: string; cleanup: () => void })> {
+		logger.info(`Downloading ${chalk.cyan(url)} ...`);
+		const chunks: Buffer[] = [];
+		let size = 0;
+		const spill: { to: { path: string; cleanup: () => void; file: fs.WriteStream } | null } = { to: null };
+		const sink = new stream.Writable({
+			write(chunk: Buffer, _encoding, callback) {
+				if (spill.to != null) {
+					spill.to.file.write(chunk, callback);
+					return;
+				}
+				chunks.push(chunk);
+				size += chunk.length;
+				if (size <= memoryLimitBytes) {
+					callback();
+					return;
+				}
+				createTemp().then(([path, cleanup]) => {
+					const file = fs.createWriteStream(path);
+					spill.to = { path, cleanup, file };
+					for (const buffered of chunks.splice(0)) file.write(buffered);
+					file.write(Buffer.alloc(0), callback);
+				}, callback);
+			},
+			final(callback) {
+				if (spill.to == null) {
+					callback();
+					return;
+				}
+				spill.to.file.end(callback);
+			},
+		});
+		let filename: string;
+		try {
+			({ filename } = await download(url, sink));
+		} catch (e) {
+			spill.to?.file.destroy();
+			spill.to?.cleanup();
+			throw e;
+		}
+		const result =
+			spill.to == null ? { data: Buffer.concat(chunks, size) } : { path: spill.to.path, cleanup: spill.to.cleanup };
+		logger.succ(`Download finished: ${chalk.cyan(url)}`);
+		return { filename, ...result };
 	}
 
 	async function downloadTextFile(url: string): Promise<string> {
@@ -130,7 +186,7 @@ export function createDownloadService(
 		}
 	}
 
-	return { downloadUrl, downloadTextFile };
+	return { downloadUrl, downloadUrlToMemoryOrFile, downloadTextFile };
 }
 
 export type DownloadService = ReturnType<typeof createDownloadService>;

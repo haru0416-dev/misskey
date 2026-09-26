@@ -14,13 +14,28 @@ import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import type { IImageStreamable, ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import { webpDefault } from '@/core/drive/ImageProcessingService.js';
+import type { WebpOptions } from 'sharp';
 import { createRangeStream, attachStreamCleanup, needsCleanup } from './FileServerUtils.js';
-import type { DownloadedFileResult, FileResolveResult, FileServerFileResolver } from './FileServerFileResolver.js';
+import type {
+	DownloadedBufferResult,
+	DownloadedFileResult,
+	FileResolveResult,
+	FileServerFileResolver,
+} from './FileServerFileResolver.js';
 import { getFileServerHeader } from './FileServerTypes.js';
 import type { FileServerReply, FileServerRequest } from './FileServerTypes.js';
 
-type ProxySource = DownloadedFileResult | FileResolveResult;
+type ProxySource = DownloadedFileResult | DownloadedBufferResult | FileResolveResult;
 type AvailableFile = Exclude<ProxySource, { kind: 'not-found' | 'unavailable' }>;
+// 縮小版は一時的でいつでも作り直せるので、smartSubsample (高画質な色差の間引き) を切る。
+// Pi 5 相当の枠で TL 5 画面分 (240 要求) の変換 CPU が 5.4→3.3 秒になる。保存するサムネイル等は webpDefault のまま。
+const proxyWebp: WebpOptions = { ...webpDefault, smartSubsample: false };
+
+/** 画像の中身。メモリ上ならそのバッファ、一時ファイルや保存済みならそのパス。 */
+function sourceOf(file: AvailableFile): Buffer | string {
+	return 'data' in file ? file.data : file.path;
+}
+
 type ProxyQuery = {
 	emoji?: string;
 	avatar?: string;
@@ -133,11 +148,21 @@ export class FileServerProxyHandler {
 		}
 
 		if ('static' in query) {
-			return this.imageProcessingService.convertSharpToWebpStream(await sharpBmp(file.path, file.mime), 498, 422);
+			return this.imageProcessingService.convertSharpToWebpStream(
+				await sharpBmp(sourceOf(file), file.mime),
+				498,
+				422,
+				proxyWebp,
+			);
 		}
 
 		if ('preview' in query) {
-			return this.imageProcessingService.convertSharpToWebpStream(await sharpBmp(file.path, file.mime), 200, 200);
+			return this.imageProcessingService.convertSharpToWebpStream(
+				await sharpBmp(sourceOf(file), file.mime),
+				200,
+				200,
+				proxyWebp,
+			);
 		}
 
 		if ('badge' in query) {
@@ -145,7 +170,7 @@ export class FileServerProxyHandler {
 		}
 
 		if (file.mime === 'image/svg+xml') {
-			return this.imageProcessingService.convertToWebpStream(file.path, 2048, 2048);
+			return this.imageProcessingService.convertSharpToWebpStream(sharp(sourceOf(file)), 2048, 2048, proxyWebp);
 		}
 
 		if (!file.mime.startsWith('image/') || !FILE_TYPE_BROWSERSAFE.includes(file.mime)) {
@@ -161,19 +186,17 @@ export class FileServerProxyHandler {
 	): Promise<IImageStreamable> {
 		const isAnimationConvertibleImage = isMimeImage(file.mime, 'sharp-animation-convertible-image-with-bmp');
 		if (!isAnimationConvertibleImage && !('static' in query)) {
-			return {
-				data: fs.createReadStream(file.path),
-				ext: file.ext,
-				type: file.mime,
-			};
+			return 'data' in file
+				? { data: file.data, ext: file.ext, type: file.mime }
+				: { data: fs.createReadStream(file.path), ext: file.ext, type: file.mime };
 		}
 
-		const data = (await sharpBmp(file.path, file.mime, { animated: !('static' in query) }))
+		const data = (await sharpBmp(sourceOf(file), file.mime, { animated: !('static' in query) }))
 			.resize({
 				height: 'emoji' in query ? 128 : 320,
 				withoutEnlargement: true,
 			})
-			.webp(webpDefault);
+			.webp(proxyWebp);
 
 		return {
 			data,
@@ -183,7 +206,7 @@ export class FileServerProxyHandler {
 	}
 
 	private async processBadge(file: AvailableFile): Promise<IImageStreamable> {
-		const mask = (await sharpBmp(file.path, file.mime))
+		const mask = (await sharpBmp(sourceOf(file), file.mime))
 			.resize(96, 96, {
 				fit: 'contain',
 				position: 'centre',
@@ -235,11 +258,9 @@ export class FileServerProxyHandler {
 			};
 		}
 
-		return {
-			data: fs.createReadStream(file.path),
-			ext: file.ext,
-			type: file.mime,
-		};
+		return 'data' in file
+			? { data: file.data, ext: file.ext, type: file.mime }
+			: { data: fs.createReadStream(file.path), ext: file.ext, type: file.mime };
 	}
 
 	private async getStreamAndTypeFromUrl(url: string): Promise<ProxySource> {
@@ -252,6 +273,6 @@ export class FileServerProxyHandler {
 			return await this.fileResolver.resolveFileByAccessKey(key);
 		}
 
-		return await this.fileResolver.downloadAndDetectTypeFromUrl(url);
+		return await this.fileResolver.downloadForProxy(url);
 	}
 }
