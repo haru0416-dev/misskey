@@ -147,10 +147,18 @@ function buildConnectionUrl(config: Config): string {
 	return url.toString();
 }
 
-export function createBunSqlClient(config: Config, maxConnections = resolveDatabasePoolSize(config)): SQL {
+/**
+ * Bun.sql の idleTimeout は、応答を待っているクエリの途中でも接続を切る (Bun 1.4.2 で、idleTimeout 2 秒・
+ * pg_sleep(4) が 2 秒で失敗することを確認)。数十秒かかる DDL を流す接続では 0 (無効) を渡す。
+ */
+export function createBunSqlClient(
+	config: Config,
+	maxConnections = resolveDatabasePoolSize(config),
+	options: { idleTimeoutSeconds?: number } = {},
+): SQL {
 	return new SQL(buildConnectionUrl(config), {
 		max: maxConnections,
-		idleTimeout: Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
+		idleTimeout: options.idleTimeoutSeconds ?? Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
 		// 名前付き prepared statement の generic plan による劣化を避ける (db/prepared.ts)。
 		prepare: false,
