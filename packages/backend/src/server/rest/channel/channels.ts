@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as channelsContracts } from '@/server/api/metas/channels.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -125,129 +128,12 @@ const channelTimelineParamDef = z.object({
 	...paginationParams,
 });
 
-function channelsShowNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: '6f6c314b-7486-4897-8966-c04a66a02923',
-	});
-}
-
 function channelsTimelineNoSuchChannelError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
 		id: '4d0eeeba-a02c-4c3c-9966-ef60d38d2e7f',
-	});
-}
-
-function channelCreateNoSuchFileError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such file.',
-		code: 'NO_SUCH_FILE',
-		id: 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050',
-	});
-}
-
-function channelUpdateNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: 'f9c5467f-d492-4c3c-9a8d-a70dacc86512',
-	});
-}
-
-function channelUpdateAccessDeniedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You do not have edit privilege of the channel.',
-		code: 'ACCESS_DENIED',
-		id: '1fb7cb09-d46a-4fdf-b8df-057788cce513',
-	});
-}
-
-function channelUpdateNoSuchFileError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such file.',
-		code: 'NO_SUCH_FILE',
-		id: 'e86c14a4-0da2-4032-8df3-e737a04c7f3b',
-	});
-}
-
-function channelFollowNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: 'c0031718-d573-4e85-928e-10039f1fbb68',
-	});
-}
-
-function channelFollowAlreadyFollowingError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are already following that channel.',
-		code: 'ALREADY_FOLLOWING',
-		id: '7db31665-651e-40c1-8e6e-28e9ad829a2d',
-	});
-}
-
-function channelUnfollowNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: '19959ee9-0153-4c51-bbd9-a98c49dc59d6',
-	});
-}
-
-function channelMuteCreateNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such Channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: '7174361e-d58f-31d6-2e7c-6fb830786a3f',
-	});
-}
-
-function channelMuteCreateAlreadyMutingError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are already muting that user.',
-		code: 'ALREADY_MUTING_CHANNEL',
-		id: '5a251978-769a-da44-3e89-3931e43bb592',
-	});
-}
-
-function channelMuteCreateExpiresAtIsPastError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Cannot set past date to "expiresAt".',
-		code: 'EXPIRES_AT_IS_PAST',
-		id: '42b32236-df2c-a45f-fdbf-def67268f749',
-	});
-}
-
-function channelMuteDeleteNoSuchChannelError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such Channel.',
-		code: 'NO_SUCH_CHANNEL',
-		id: 'e7998769-6e94-d9c2-6b8f-94a527314aba',
-	});
-}
-
-function channelMuteDeleteNotMutingError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are not muting that channel.',
-		code: 'NOT_MUTING_CHANNEL',
-		id: '14d55962-6ea8-d990-1333-d6bef78dc2ab',
 	});
 }
 
@@ -364,9 +250,7 @@ async function packChannelDetailedForApi(
 export async function handleApiChannelsFeatured(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
 ): Promise<ApiPackedChannel[]> {
-	parseApiParams(emptyParamDef, body);
 	const channels = await listRecentlyActiveChannelsFromDatabase(deps.db, 10);
 	return await packChannelsForApi(deps, channels, me);
 }
@@ -374,9 +258,8 @@ export async function handleApiChannelsFeatured(
 export async function handleApiChannelsSearch(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelsSearchParamDef>,
 ): Promise<ApiPackedChannel[]> {
-	const params = parseApiParams(channelsSearchParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
 		query: sqlLikeEscape(params.query),
@@ -393,9 +276,8 @@ export async function handleApiChannelsSearch(
 export async function handleApiChannelsOwned(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelsListParamDef>,
 ): Promise<ApiPackedChannel[]> {
-	const params = parseApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
 		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
@@ -407,9 +289,8 @@ export async function handleApiChannelsOwned(
 export async function handleApiChannelsFollowed(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelsListParamDef>,
 ): Promise<ApiPackedChannel[]> {
-	const params = parseApiParams(channelsListParamDef, body);
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveDateIdPagination({ gen: genId }, params),
@@ -428,9 +309,7 @@ export async function handleApiChannelsFollowed(
 export async function handleApiChannelsMyFavorites(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
 ): Promise<ApiPackedChannel[]> {
-	parseApiParams(emptyParamDef, body);
 	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
 	if (channelIds.length === 0) {
 		return [];
@@ -449,14 +328,14 @@ export async function handleApiChannelsMyFavorites(
 export async function handleApiChannelsCreate(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelCreateParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/create']>,
 ): Promise<ApiPackedChannel> {
-	const params = parseApiParams(channelCreateParamDef, body);
 	let bannerId: string | null = null;
 	if (params.bannerId != null) {
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
 		if (banner == null) {
-			throw channelCreateNoSuchFileError();
+			throw errors.noSuchFile();
 		}
 		bannerId = banner.id;
 	}
@@ -478,24 +357,24 @@ export async function handleApiChannelsCreate(
 export async function handleApiChannelsUpdate(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelUpdateParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/update']>,
 ): Promise<ApiPackedChannel> {
-	const params = parseApiParams(channelUpdateParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
-		throw channelUpdateNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	const isModerator = await isApiModerator(deps, me);
 	if (channel.userId !== me.id && !isModerator) {
-		throw channelUpdateAccessDeniedError();
+		throw errors.accessDenied();
 	}
 
 	let banner: { id: string } | null | undefined;
 	if (params.bannerId != null) {
 		banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
 		if (banner == null) {
-			throw channelUpdateNoSuchFileError();
+			throw errors.noSuchFile();
 		}
 	} else if (params.bannerId === null) {
 		banner = null;
@@ -516,7 +395,7 @@ export async function handleApiChannelsUpdate(
 
 	const updated = await fetchChannelByIdFromDatabase(deps.db, channel.id);
 	if (updated == null) {
-		throw channelUpdateNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	return packChannelForApi(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
@@ -525,12 +404,12 @@ export async function handleApiChannelsUpdate(
 export async function handleApiChannelsFollow(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelFollowParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/follow']>,
 ): Promise<void> {
-	const params = parseApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
-		throw channelFollowNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	try {
@@ -542,7 +421,7 @@ export async function handleApiChannelsFollow(
 	} catch (err) {
 		// (followerId, followeeId) は unique なので、二重フォローは 500 ではなく明示的なエラーにする
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw channelFollowAlreadyFollowingError();
+			throw errors.alreadyFollowing();
 		}
 		throw err;
 	}
@@ -556,12 +435,12 @@ export async function handleApiChannelsFollow(
 export async function handleApiChannelsUnfollow(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelFollowParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/unfollow']>,
 ): Promise<void> {
-	const params = parseApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
-		throw channelUnfollowNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	await deleteChannelFollowingFromDatabase(deps.db, me.id, targetChannel.id);
@@ -574,21 +453,21 @@ export async function handleApiChannelsUnfollow(
 export async function handleApiChannelsMuteCreate(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelMuteCreateParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/mute/create']>,
 ): Promise<void> {
-	const params = parseApiParams(channelMuteCreateParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
-		throw channelMuteCreateNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	const exists = await channelMutingExistsInDatabase(deps.db, me.id, targetChannel.id);
 	if (exists) {
-		throw channelMuteCreateAlreadyMutingError();
+		throw errors.alreadyMuting();
 	}
 
 	if (params.expiresAt && params.expiresAt <= Date.now()) {
-		throw channelMuteCreateExpiresAtIsPastError();
+		throw errors.expiresAtIsPast();
 	}
 
 	const expiresAt = params.expiresAt ? new Date(params.expiresAt) : null;
@@ -615,17 +494,17 @@ export async function handleApiChannelsMuteCreate(
 export async function handleApiChannelsMuteDelete(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelMuteDeleteParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/mute/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(channelMuteDeleteParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
-		throw channelMuteDeleteNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	const exists = await channelMutingExistsInDatabase(deps.db, me.id, targetChannel.id);
 	if (!exists) {
-		throw channelMuteDeleteNotMutingError();
+		throw errors.notMuting();
 	}
 
 	await deleteChannelMutingFromDatabase(deps.db, me.id, targetChannel.id);
@@ -638,9 +517,7 @@ export async function handleApiChannelsMuteDelete(
 export async function handleApiChannelsMuteList(
 	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
 ): Promise<ApiPackedChannel[]> {
-	parseApiParams(emptyParamDef, body);
 	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 	if (channelIds.length === 0) {
 		return [];
@@ -660,12 +537,12 @@ export async function handleApiChannelsMuteList(
 export async function handleApiChannelsShow(
 	deps: ApiChannelsDependencies & ApiNoteDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelShowParamDef>,
+	errors: ContractErrors<(typeof channelsContracts)['channels/show']>,
 ): Promise<ApiPackedChannel> {
-	const params = parseApiParams(channelShowParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
-		throw channelsShowNoSuchChannelError();
+		throw errors.noSuchChannel();
 	}
 
 	return await packChannelDetailedForApi(deps, channel, me);

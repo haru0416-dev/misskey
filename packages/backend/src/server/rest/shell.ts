@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { registerContractEndpoints } from './endpoints/index.js';
 import { Hono } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
@@ -117,6 +118,7 @@ export function createApiShellApp(deps: ApiShellDependencies): Hono {
 		return c.body(null, 204);
 	});
 
+	registerContractEndpoints(app, deps);
 	registerAuthAccountRoutes(app, deps);
 	registerAdminRoutes(app, deps);
 	registerAdminQueueRoutes(app, deps);

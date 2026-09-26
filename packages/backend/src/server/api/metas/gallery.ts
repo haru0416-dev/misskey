@@ -12,9 +12,10 @@ import {
 	galleryPostsUpdateParamDef,
 } from '@/server/rest/gallery/gallery.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'gallery/featured': {
+	'gallery/featured': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['gallery'],
@@ -32,10 +33,10 @@ export const endpointMetas = {
 					ref: 'GalleryPost',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryFeaturedParamDef,
-	},
-	'gallery/popular': {
+	}),
+	'gallery/popular': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['gallery'],
@@ -53,10 +54,10 @@ export const endpointMetas = {
 					ref: 'GalleryPost',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryPopularParamDef,
-	},
-	'gallery/posts': {
+	}),
+	'gallery/posts': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['gallery'],
@@ -72,10 +73,10 @@ export const endpointMetas = {
 					ref: 'GalleryPost',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryPostsParamDef,
-	},
-	'gallery/posts/create': {
+	}),
+	'gallery/posts/create': defineContract({
 		meta: {
 			tags: ['gallery'],
 
@@ -98,10 +99,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: galleryPostsCreateParamDef,
-	},
-	'gallery/posts/delete': {
+	}),
+	'gallery/posts/delete': defineContract({
 		meta: {
 			tags: ['gallery'],
 
@@ -122,10 +123,10 @@ export const endpointMetas = {
 					id: 'c86e09de-1c48-43ac-a435-1c7e42ed4496',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryPostsPostIdParamDef,
-	},
-	'gallery/posts/like': {
+	}),
+	'gallery/posts/like': defineContract({
 		meta: {
 			tags: ['gallery'],
 
@@ -154,10 +155,10 @@ export const endpointMetas = {
 					id: '40e9ed56-a59c-473a-bf3f-f289c54fb5a7',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryPostsPostIdParamDef,
-	},
-	'gallery/posts/show': {
+	}),
+	'gallery/posts/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['gallery'],
@@ -178,10 +179,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'GalleryPost',
 			},
-		} as const,
+		},
 		paramDef: galleryPostsPostIdParamDef,
-	},
-	'gallery/posts/unlike': {
+	}),
+	'gallery/posts/unlike': defineContract({
 		meta: {
 			tags: ['gallery'],
 
@@ -204,10 +205,10 @@ export const endpointMetas = {
 					id: 'e3e8e06e-be37-41f7-a5b4-87a8250288f0',
 				},
 			},
-		} as const,
+		},
 		paramDef: galleryPostsPostIdParamDef,
-	},
-	'gallery/posts/update': {
+	}),
+	'gallery/posts/update': defineContract({
 		meta: {
 			tags: ['gallery'],
 
@@ -230,7 +231,7 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: galleryPostsUpdateParamDef,
-	},
-} as const;
+	}),
+};

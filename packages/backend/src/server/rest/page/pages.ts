@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -256,10 +257,8 @@ export const pagesCreateParamDef = z.object({
 export async function handleApiPagesCreate(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pagesCreateParamDef>,
 ): Promise<Packed<'Page'>> {
-	const params = parseApiParams(pagesCreateParamDef, body);
-
 	let eyeCatchingImage = null;
 	if (params.eyeCatchingImageId != null) {
 		eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
@@ -324,10 +323,8 @@ export const pagesUpdateParamDef = z.object({
 export async function handleApiPagesUpdate(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pagesUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pagesUpdateParamDef, body);
-
 	let eyeCatchingImageId = params.eyeCatchingImageId;
 	if (params.eyeCatchingImageId !== undefined && params.eyeCatchingImageId != null) {
 		const eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
@@ -446,10 +443,8 @@ export async function deletePageForApi(
 export async function handleApiPagesDelete(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pagesDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pagesDeleteParamDef, body);
-
 	const result = await deletePageForApi(deps, me, params.pageId);
 
 	if (result.status === 'not-found') {
@@ -482,10 +477,8 @@ export const pagesShowParamDef = z.union([
 export async function handleApiPagesShow(
 	deps: ApiPageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pagesShowParamDef>,
 ): Promise<Packed<'Page'>> {
-	const params = parseApiParams(pagesShowParamDef, body);
-
 	let pageEntity: MiPage | null = null;
 	if ('pageId' in params) {
 		pageEntity = await fetchPageByIdFromDatabase(deps.db, params.pageId);
@@ -513,10 +506,7 @@ export const pagesFeaturedParamDef = z.object({});
 export async function handleApiPagesFeatured(
 	deps: ApiPageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	parseApiParams(pagesFeaturedParamDef, body);
-
 	const pages = await listFeaturedPagesFromDatabase(deps.db);
 
 	return await packPageManyForApi(deps, pages, me);

@@ -31,9 +31,10 @@ import {
 } from '@/server/rest/chat/chat.js';
 import { z } from 'zod';
 import { HOUR, DAY } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'chat/messages/create-to-user': {
+	'chat/messages/create-to-user': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -92,10 +93,10 @@ export const endpointMetas = {
 					id: '0b6812b5-f0c3-486b-a99a-4973d22c44b2',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesCreateToUserParamDef,
-	},
-	'chat/messages/create-to-room': {
+	}),
+	'chat/messages/create-to-room': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -136,10 +137,10 @@ export const endpointMetas = {
 					id: '340517b7-6d04-42c0-bac1-37ee804e3594',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesCreateToRoomParamDef,
-	},
-	'chat/messages/delete': {
+	}),
+	'chat/messages/delete': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -154,10 +155,10 @@ export const endpointMetas = {
 					id: '36b67f0e-66a6-414b-83df-992a55294f17',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesDeleteParamDef,
-	},
-	'chat/messages/show': {
+	}),
+	'chat/messages/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -180,10 +181,10 @@ export const endpointMetas = {
 					id: '3710865b-1848-4da9-8d61-cfed15510b93',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesShowParamDef,
-	},
-	'chat/messages/react': {
+	}),
+	'chat/messages/react': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -204,10 +205,10 @@ export const endpointMetas = {
 					id: '86753281-61b8-4dea-9a38-a08c0439f151',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesReactParamDef,
-	},
-	'chat/messages/unreact': {
+	}),
+	'chat/messages/unreact': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -222,10 +223,10 @@ export const endpointMetas = {
 					id: 'c39ea42f-e3ca-428a-ad57-390e0a711595',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesUnreactParamDef,
-	},
-	'chat/messages/user-timeline': {
+	}),
+	'chat/messages/user-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -253,10 +254,10 @@ export const endpointMetas = {
 					id: '11795c64-40ea-4198-b06e-3c873ed9039d',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesUserTimelineParamDef,
-	},
-	'chat/messages/room-timeline': {
+	}),
+	'chat/messages/room-timeline': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -284,10 +285,10 @@ export const endpointMetas = {
 					id: 'c4d9f88c-9270-4632-b032-6ed8cee36f7f',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesRoomTimelineParamDef,
-	},
-	'chat/messages/search': {
+	}),
+	'chat/messages/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -315,10 +316,10 @@ export const endpointMetas = {
 					id: '460b3669-81b0-4dc9-a997-44442141bf83',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatMessagesSearchParamDef,
-	},
-	'chat/rooms/create': {
+	}),
+	'chat/rooms/create': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -341,10 +342,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: chatRoomsCreateParamDef,
-	},
-	'chat/rooms/delete': {
+	}),
+	'chat/rooms/delete': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -359,10 +360,10 @@ export const endpointMetas = {
 					id: 'd4e3753d-97bf-4a19-ab8e-21080fbc0f4b',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsDeleteParamDef,
-	},
-	'chat/rooms/join': {
+	}),
+	'chat/rooms/join': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -383,10 +384,10 @@ export const endpointMetas = {
 					id: 'c5a1e411-996d-46e1-be6e-82a8b996d1a1',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsJoinParamDef,
-	},
-	'chat/rooms/leave': {
+	}),
+	'chat/rooms/leave': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -401,10 +402,10 @@ export const endpointMetas = {
 					id: 'cb7f3179-50e8-4389-8c30-dbe2650a67c9',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsLeaveParamDef,
-	},
-	'chat/rooms/mute': {
+	}),
+	'chat/rooms/mute': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -419,10 +420,10 @@ export const endpointMetas = {
 					id: 'c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsMuteParamDef,
-	},
-	'chat/rooms/show': {
+	}),
+	'chat/rooms/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -445,10 +446,10 @@ export const endpointMetas = {
 					id: '857ae02f-8759-4d20-9adb-6e95fffe4fd7',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsShowParamDef,
-	},
-	'chat/rooms/owned': {
+	}),
+	'chat/rooms/owned': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -470,10 +471,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: chatRoomsOwnedParamDef,
-	},
-	'chat/rooms/joining': {
+	}),
+	'chat/rooms/joining': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -495,10 +496,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: chatRoomsJoiningParamDef,
-	},
-	'chat/rooms/update': {
+	}),
+	'chat/rooms/update': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -520,10 +521,10 @@ export const endpointMetas = {
 					id: 'fcdb0f92-bda6-47f9-bd05-343e0e020932',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsUpdateParamDef,
-	},
-	'chat/rooms/members': {
+	}),
+	'chat/rooms/members': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -550,10 +551,10 @@ export const endpointMetas = {
 					id: '7b9fe84c-eafc-4d21-bf89-485458ed2c18',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsMembersParamDef,
-	},
-	'chat/rooms/invitations/create': {
+	}),
+	'chat/rooms/invitations/create': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -594,10 +595,10 @@ export const endpointMetas = {
 					id: 'a3482fe1-78c8-4489-bcbf-a488631e95f4',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsInvitationsCreateParamDef,
-	},
-	'chat/rooms/invitations/ignore': {
+	}),
+	'chat/rooms/invitations/ignore': defineContract({
 		meta: {
 			tags: ['chat'],
 
@@ -612,10 +613,10 @@ export const endpointMetas = {
 					id: '5130557e-5a11-4cfb-9cc5-fe60cda5de0d',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsInvitationsIgnoreParamDef,
-	},
-	'chat/rooms/invitations/inbox': {
+	}),
+	'chat/rooms/invitations/inbox': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -637,10 +638,10 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: chatRoomsInvitationsInboxParamDef,
-	},
-	'chat/rooms/invitations/outbox': {
+	}),
+	'chat/rooms/invitations/outbox': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -668,10 +669,10 @@ export const endpointMetas = {
 					id: 'a3c6b309-9717-4316-ae94-a69b53437237',
 				},
 			},
-		} as const,
+		},
 		paramDef: chatRoomsInvitationsOutboxParamDef,
-	},
-	'chat/history': {
+	}),
+	'chat/history': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['chat'],
@@ -693,9 +694,9 @@ export const endpointMetas = {
 			},
 
 			errors: {},
-		} as const,
+		},
 		paramDef: chatHistoryParamDef,
-	},
+	}),
 	'chat/read-all': {
 		meta: {
 			tags: ['chat'],
@@ -708,4 +709,4 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-} as const;
+};

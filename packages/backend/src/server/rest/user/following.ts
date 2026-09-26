@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { randomUUID } from 'node:crypto';
 import { toPunyNullable } from '@/misc/to-puny.js';
 import { z } from 'zod';
@@ -698,9 +699,8 @@ async function checkAutoAcceptIfMovedForApi(
 export async function handleApiFollowingCreate(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingCreateParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseApiParams(followingCreateParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, me.id);
 
 	if (follower.id === params.userId) {
@@ -766,9 +766,8 @@ export async function handleApiFollowingCreate(
 export async function handleApiFollowingUpdateAll(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUpdateAllParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(followingUpdateAllParamDef, body);
 	await updateFollowingsByFollowerIdInDatabase(
 		deps.db,
 		me.id,
@@ -785,9 +784,8 @@ export async function handleApiFollowingUpdateAll(
 export async function handleApiFollowingDelete(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseApiParams(followingUserIdParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -811,9 +809,8 @@ export async function handleApiFollowingDelete(
 export async function handleApiFollowingUpdate(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUpdateParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseApiParams(followingUpdateParamDef, body);
 	const follower = me;
 
 	if (me.id === params.userId) {
@@ -849,9 +846,8 @@ export async function handleApiFollowingUpdate(
 export async function handleApiFollowingInvalidate(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseApiParams(followingUserIdParamDef, body);
 	const followee = me;
 
 	if (me.id === params.userId) {
@@ -905,9 +901,8 @@ export async function acceptFollowRequestForApi(
 export async function handleApiFollowingRequestsAccept(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUserIdParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(followingUserIdParamDef, body);
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
 
 	await acceptFollowRequestForApi(deps, me, follower);
@@ -987,9 +982,8 @@ export async function acceptAllFollowRequestsForApi(
 export async function handleApiFollowingRequestsCancel(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const params = parseApiParams(followingUserIdParamDef, body);
 	const follower = me;
 	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
 
@@ -1026,9 +1020,8 @@ export async function handleApiFollowingRequestsCancel(
 export async function handleApiFollowingRequestsReject(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingUserIdParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(followingUserIdParamDef, body);
 	const followee = me;
 	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
 
@@ -1074,9 +1067,8 @@ async function packFollowRequestsForApi(
 export async function handleApiFollowingRequestsList(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingRequestsListParamDef>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1091,9 +1083,8 @@ export async function handleApiFollowingRequestsList(
 export async function handleApiFollowingRequestsSent(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingRequestsListParamDef>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const params = parseApiParams(followingRequestsListParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1132,9 +1123,8 @@ export async function packFollowingsForApi(
 export async function handleApiFollowingList(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof followingListParamDef>,
 ): Promise<FollowingListItem[]> {
-	const params = parseApiParams(followingListParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,

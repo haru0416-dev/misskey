@@ -12,8 +12,8 @@ import {
 	handleApiNotesDraftsDelete,
 	handleApiNotesDraftsList,
 	handleApiNotesDraftsUpdate,
-} from './note-drafts.js';
-import { handleApiNotesTranslate } from './note.js';
+} from '../note/note-drafts.js';
+import { handleApiNotesTranslate } from '../note/note.js';
 import {
 	handleApiNotes,
 	handleApiNotesChildren,
@@ -38,15 +38,15 @@ import {
 	handleApiNotesThreadMutingDelete,
 	handleApiNotesTimeline,
 	handleApiNotesUserListTimeline,
-} from './notes.js';
-import { handleApiNotesCreate } from './notes-create.js';
-import { handleApiNotesDelete, handleApiNotesUnrenote } from './notes-delete.js';
-import { handleApiNotesPollsVote } from './notes-polls-vote.js';
+} from '../note/notes.js';
+import { handleApiNotesCreate } from '../note/notes-create.js';
+import { handleApiNotesDelete, handleApiNotesUnrenote } from '../note/notes-delete.js';
+import { handleApiNotesPollsVote } from '../note/notes-polls-vote.js';
 import {
 	handleApiNotesReactions,
 	handleApiNotesReactionsCreate,
 	handleApiNotesReactionsDelete,
-} from './notes-reactions.js';
+} from '../note/notes-reactions.js';
 
 export const notesEndpoints = implementEndpoints<ApiShellDependencies>()(notesContracts, {
 	notes: async ({ deps, input }) => await handleApiNotes(deps, input),

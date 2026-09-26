@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -386,10 +387,8 @@ export const antennasCreateParamDef = z
 export async function handleApiAntennasCreate(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasCreateParamDef>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseApiParams(antennasCreateParamDef, body);
-
 	if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
 	}
@@ -485,10 +484,8 @@ export const antennasUpdateParamDef = z
 export async function handleApiAntennasUpdate(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasUpdateParamDef>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseApiParams(antennasUpdateParamDef, body);
-
 	if (params.keywords && params.excludeKeywords) {
 		if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 			throw emptyKeywordError('721aaff6-4e1b-4d88-8de6-877fae9f68c4');
@@ -557,10 +554,8 @@ export const antennasDeleteParamDef = z.object({
 export async function handleApiAntennasDelete(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(antennasDeleteParamDef, body);
-
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
 		throw noSuchAntennaError('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
@@ -576,10 +571,7 @@ export const antennasListParamDef = z.object({});
 export async function handleApiAntennasList(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>[]> {
-	parseApiParams(antennasListParamDef, body);
-
 	const antennas = await listAntennasByUserIdFromDatabase(deps.db, me.id);
 
 	return await Promise.all(antennas.map((x) => packAntennaForApi(deps, x)));
@@ -592,10 +584,8 @@ export const antennasShowParamDef = z.object({
 export async function handleApiAntennasShow(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasShowParamDef>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseApiParams(antennasShowParamDef, body);
-
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
 		throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
@@ -612,10 +602,8 @@ export const antennasRemoveNoteParamDef = z.object({
 export async function handleApiAntennasRemoveNote(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasRemoveNoteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(antennasRemoveNoteParamDef, body);
-
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
 		throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
@@ -634,9 +622,8 @@ export const antennasNotesParamDef = z.object({
 export async function handleApiAntennasNotes(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof antennasNotesParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(antennasNotesParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);

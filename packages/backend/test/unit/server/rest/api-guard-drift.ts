@@ -147,7 +147,10 @@ describe('API guard drift', () => {
 	const registrations = readRegistrations();
 
 	test('ルート登録をソースから抽出できている', () => {
-		expect(registrations.length).toBeGreaterThan(400);
+		// 契約から登録するエンドポイントは routes/ に現れない。手書きで残る代表的な登録を拾えているかだけを見る。
+		const paths = registrations.map((registration) => registration.path);
+		expect(paths).toContain('/drive/files/create');
+		expect(paths).toContain('/signin-flow');
 	});
 
 	test('endpointHandler と endpointHandlerAnonymous の使い分けが meta と一致する', () => {

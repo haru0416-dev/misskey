@@ -13,9 +13,10 @@ import {
 	emptyParamDef,
 } from '@/server/rest/clip/clips.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'clips/add-note': {
+	'clips/add-note': defineContract({
 		meta: {
 			tags: ['account', 'notes', 'clips'],
 
@@ -55,10 +56,10 @@ export const endpointMetas = {
 					id: 'f0dba960-ff73-4615-8df4-d6ac5d9dc118',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipsNoteParamDef,
-	},
-	'clips/create': {
+	}),
+	'clips/create': defineContract({
 		meta: {
 			tags: ['clips'],
 
@@ -82,10 +83,10 @@ export const endpointMetas = {
 					id: '920f7c2d-6208-4b76-8082-e632020f5883',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipsCreateParamDef,
-	},
-	'clips/delete': {
+	}),
+	'clips/delete': defineContract({
 		meta: {
 			tags: ['clips'],
 
@@ -100,10 +101,10 @@ export const endpointMetas = {
 					id: '70ca08ba-6865-4630-b6fb-8494759aa754',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipIdParamDef,
-	},
-	'clips/favorite': {
+	}),
+	'clips/favorite': defineContract({
 		meta: {
 			tags: ['clip'],
 
@@ -126,10 +127,10 @@ export const endpointMetas = {
 					id: '92658936-c625-4273-8326-2d790129256e',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipIdParamDef,
-	},
-	'clips/list': {
+	}),
+	'clips/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['clips', 'account'],
@@ -149,10 +150,10 @@ export const endpointMetas = {
 					ref: 'Clip',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipsListParamDef,
-	},
-	'clips/my-favorites': {
+	}),
+	'clips/my-favorites': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'clip'],
@@ -172,10 +173,10 @@ export const endpointMetas = {
 					ref: 'Clip',
 				},
 			},
-		} as const,
+		},
 		paramDef: emptyParamDef,
-	},
-	'clips/notes': {
+	}),
+	'clips/notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'notes', 'clips'],
@@ -203,10 +204,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipNotesParamDef,
-	},
-	'clips/remove-note': {
+	}),
+	'clips/remove-note': defineContract({
 		meta: {
 			tags: ['account', 'notes', 'clips'],
 
@@ -229,10 +230,10 @@ export const endpointMetas = {
 					id: 'aff017de-190e-434b-893e-33a9ff5049d8',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipsNoteParamDef,
-	},
-	'clips/show': {
+	}),
+	'clips/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['clips', 'account'],
@@ -255,10 +256,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Clip',
 			},
-		} as const,
+		},
 		paramDef: clipIdParamDef,
-	},
-	'clips/unfavorite': {
+	}),
+	'clips/unfavorite': defineContract({
 		meta: {
 			tags: ['clip'],
 
@@ -281,10 +282,10 @@ export const endpointMetas = {
 					id: '90c3a9e8-b321-4dae-bf57-2bf79bbcc187',
 				},
 			},
-		} as const,
+		},
 		paramDef: clipIdParamDef,
-	},
-	'clips/update': {
+	}),
+	'clips/update': defineContract({
 		meta: {
 			tags: ['clips'],
 
@@ -308,7 +309,7 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Clip',
 			},
-		} as const,
+		},
 		paramDef: clipsUpdateParamDef,
-	},
-} as const;
+	}),
+};

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -192,9 +193,8 @@ export async function handleApiClipsFavorite(
 export async function handleApiClipsUnfavorite(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(clipParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
 		throw clientErrorWithStatus(400, 'No such clip.', 'NO_SUCH_CLIP', '2603966e-b865-426c-94a7-af4a01241dc1');
@@ -216,9 +216,8 @@ export async function handleApiClipsUnfavorite(
 export async function handleApiChannelsFavorite(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '4938f5f3-6167-4c04-9149-6607b7542861');
@@ -234,9 +233,8 @@ export async function handleApiChannelsFavorite(
 export async function handleApiChannelsUnfavorite(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof channelParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '353c68dd-131a-476c-aa99-88a345e83668');
@@ -248,9 +246,8 @@ export async function handleApiChannelsUnfavorite(
 export async function handleApiPagesLike(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pageParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'cc98a8a2-0dc3-4123-b198-62c71df18ed3');
@@ -294,9 +291,8 @@ export async function handleApiPagesLike(
 export async function handleApiPagesUnlike(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pageParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'a0d41e20-1993-40bd-890e-f6e560ae648e');
@@ -329,9 +325,8 @@ export async function handleApiPagesUnlike(
 export async function handleApiFlashLike(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof flashParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'c07c1491-9161-4c5c-9d75-01906f911f73');
@@ -380,9 +375,8 @@ export async function handleApiFlashLike(
 export async function handleApiFlashUnlike(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof flashParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'afe8424a-a69e-432d-a5f2-2f0740c62410');

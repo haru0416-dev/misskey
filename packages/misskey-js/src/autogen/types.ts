@@ -8755,8 +8755,11 @@ export interface operations {
                     | {
                           /** Format: misskey:id */
                           id: string;
+                          name?: string;
                       }
                     | {
+                          /** Format: misskey:id */
+                          id?: string;
                           name: string;
                       }
                 ) & {

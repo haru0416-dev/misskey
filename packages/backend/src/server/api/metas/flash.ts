@@ -15,9 +15,10 @@ import {
 	flashUpdateParamDef,
 } from '@/server/rest/flash/flash.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'flash/create': {
+	'flash/create': defineContract({
 		meta: {
 			tags: ['flash'],
 
@@ -40,10 +41,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Flash',
 			},
-		} as const,
+		},
 		paramDef: flashCreateParamDef,
-	},
-	'flash/delete': {
+	}),
+	'flash/delete': defineContract({
 		meta: {
 			tags: ['flashs'],
 
@@ -64,10 +65,10 @@ export const endpointMetas = {
 					id: '1036ad7b-9f92-4fff-89c3-0e50dc941704',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashDeleteParamDef,
-	},
-	'flash/featured': {
+	}),
+	'flash/featured': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['flash'],
@@ -85,10 +86,10 @@ export const endpointMetas = {
 					ref: 'Flash',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashFeaturedParamDef,
-	},
-	'flash/like': {
+	}),
+	'flash/like': defineContract({
 		meta: {
 			tags: ['flash'],
 
@@ -117,10 +118,10 @@ export const endpointMetas = {
 					id: '010065cf-ad43-40df-8067-abff9f4686e3',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashParamDef,
-	},
-	'flash/my': {
+	}),
+	'flash/my': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'flash'],
@@ -140,10 +141,10 @@ export const endpointMetas = {
 					ref: 'Flash',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashMyParamDef,
-	},
-	'flash/my-likes': {
+	}),
+	'flash/my-likes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'flash'],
@@ -174,10 +175,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: flashMyLikesParamDef,
-	},
-	'flash/show': {
+	}),
+	'flash/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['flashs'],
@@ -198,10 +199,10 @@ export const endpointMetas = {
 					id: 'f0d34a1a-d29a-401d-90ba-1982122b5630',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashShowParamDef,
-	},
-	'flash/unlike': {
+	}),
+	'flash/unlike': defineContract({
 		meta: {
 			tags: ['flash'],
 
@@ -224,10 +225,10 @@ export const endpointMetas = {
 					id: '755f25a7-9871-4f65-9f34-51eaad9ae0ac',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashParamDef,
-	},
-	'flash/update': {
+	}),
+	'flash/update': defineContract({
 		meta: {
 			tags: ['flash'],
 
@@ -255,10 +256,10 @@ export const endpointMetas = {
 					id: '08e60c88-5948-478e-a132-02ec701d67b2',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashUpdateParamDef,
-	},
-	'flash/search': {
+	}),
+	'flash/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['flash'],
@@ -276,7 +277,7 @@ export const endpointMetas = {
 					ref: 'Flash',
 				},
 			},
-		} as const,
+		},
 		paramDef: flashSearchParamDef,
-	},
-} as const;
+	}),
+};

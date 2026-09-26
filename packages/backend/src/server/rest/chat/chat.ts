@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/chat/ChatApprovalStore.js';
@@ -1464,9 +1465,8 @@ export const chatHistoryParamDef = z.object({
 export async function handleApiChatHistory(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatHistoryParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseApiParams(chatHistoryParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const history = params.room
@@ -1513,9 +1513,8 @@ export const chatMessagesCreateToUserParamDef = z.object({
 export async function handleApiChatMessagesCreateToUser(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesCreateToUserParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
-	const params = parseApiParams(chatMessagesCreateToUserParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	let file = null;
@@ -1563,9 +1562,8 @@ export const chatMessagesCreateToRoomParamDef = z.object({
 export async function handleApiChatMessagesCreateToRoom(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesCreateToRoomParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>> {
-	const params = parseApiParams(chatMessagesCreateToRoomParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForApi(deps, params.toRoomId);
@@ -1605,9 +1603,8 @@ export const chatMessagesDeleteParamDef = z.object({
 export async function handleApiChatMessagesDelete(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatMessagesDeleteParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const message = await fetchChatMessageByIdAndFromUserIdFromDatabase(deps.db, params.messageId, me.id);
@@ -1626,9 +1623,8 @@ export const chatMessagesReactParamDef = z.object({
 export async function handleApiChatMessagesReact(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesReactParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatMessagesReactParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await reactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
 }
@@ -1641,9 +1637,8 @@ export const chatMessagesUnreactParamDef = z.object({
 export async function handleApiChatMessagesUnreact(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesUnreactParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatMessagesUnreactParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await unreactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
 }
@@ -1657,9 +1652,8 @@ export const chatMessagesRoomTimelineParamDef = z.object({
 export async function handleApiChatMessagesRoomTimeline(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesRoomTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
-	const params = parseApiParams(chatMessagesRoomTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -1690,9 +1684,8 @@ export const chatMessagesSearchParamDef = z.object({
 export async function handleApiChatMessagesSearch(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesSearchParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseApiParams(chatMessagesSearchParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	if (params.roomId != null) {
@@ -1723,9 +1716,8 @@ export const chatMessagesShowParamDef = z.object({
 export async function handleApiChatMessagesShow(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesShowParamDef>,
 ): Promise<Packed<'ChatMessage'>> {
-	const params = parseApiParams(chatMessagesShowParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, params.messageId);
@@ -1748,9 +1740,8 @@ export const chatMessagesUserTimelineParamDef = z.object({
 export async function handleApiChatMessagesUserTimeline(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatMessagesUserTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
-	const params = parseApiParams(chatMessagesUserTimelineParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -1772,9 +1763,8 @@ export const chatRoomsCreateParamDef = z.object({
 export async function handleApiChatRoomsCreate(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsCreateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseApiParams(chatRoomsCreateParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await createChatRoomForApi(deps, me, { name: params.name, description: params.description ?? '' });
@@ -1788,9 +1778,8 @@ export const chatRoomsDeleteParamDef = z.object({
 export async function handleApiChatRoomsDelete(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatRoomsDeleteParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
@@ -1814,9 +1803,8 @@ export const chatRoomsUpdateParamDef = z.object({
 export async function handleApiChatRoomsUpdate(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsUpdateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseApiParams(chatRoomsUpdateParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
@@ -1839,9 +1827,8 @@ export const chatRoomsShowParamDef = z.object({
 export async function handleApiChatRoomsShow(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsShowParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseApiParams(chatRoomsShowParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const room = await findChatRoomByIdForApi(deps, params.roomId);
@@ -1864,9 +1851,8 @@ export const chatRoomsOwnedParamDef = z.object({
 export async function handleApiChatRoomsOwned(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsOwnedParamDef>,
 ): Promise<Packed<'ChatRoom'>[]> {
-	const params = parseApiParams(chatRoomsOwnedParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -1882,9 +1868,8 @@ export const chatRoomsJoinParamDef = z.object({
 export async function handleApiChatRoomsJoin(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsJoinParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatRoomsJoinParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await joinToChatRoomForApi(deps, me.id, params.roomId);
 }
@@ -1897,9 +1882,8 @@ export const chatRoomsJoiningParamDef = z.object({
 export async function handleApiChatRoomsJoining(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsJoiningParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseApiParams(chatRoomsJoiningParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -1915,9 +1899,8 @@ export const chatRoomsLeaveParamDef = z.object({
 export async function handleApiChatRoomsLeave(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsLeaveParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatRoomsLeaveParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await leaveChatRoomForApi(deps, me.id, params.roomId);
 }
@@ -1931,9 +1914,8 @@ export const chatRoomsMembersParamDef = z.object({
 export async function handleApiChatRoomsMembers(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsMembersParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseApiParams(chatRoomsMembersParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -1959,9 +1941,8 @@ export const chatRoomsMuteParamDef = z.object({
 export async function handleApiChatRoomsMute(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsMuteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatRoomsMuteParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await muteChatRoomForApi(deps, me.id, params.roomId, params.mute);
 }
@@ -1974,9 +1955,8 @@ export const chatRoomsInvitationsCreateParamDef = z.object({
 export async function handleApiChatRoomsInvitationsCreate(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsInvitationsCreateParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>> {
-	const params = parseApiParams(chatRoomsInvitationsCreateParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
@@ -1995,9 +1975,8 @@ export const chatRoomsInvitationsIgnoreParamDef = z.object({
 export async function handleApiChatRoomsInvitationsIgnore(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsInvitationsIgnoreParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(chatRoomsInvitationsIgnoreParamDef, body);
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 	await ignoreChatRoomInvitationForApi(deps, me.id, params.roomId);
 }
@@ -2010,9 +1989,8 @@ export const chatRoomsInvitationsInboxParamDef = z.object({
 export async function handleApiChatRoomsInvitationsInbox(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsInvitationsInboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseApiParams(chatRoomsInvitationsInboxParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
@@ -2036,9 +2014,8 @@ export const chatRoomsInvitationsOutboxParamDef = z.object({
 export async function handleApiChatRoomsInvitationsOutbox(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof chatRoomsInvitationsOutboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseApiParams(chatRoomsInvitationsOutboxParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	await checkChatAvailabilityForApi(deps, me.id, 'read');

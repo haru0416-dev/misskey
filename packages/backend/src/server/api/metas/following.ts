@@ -12,6 +12,7 @@ import {
 	followingUserIdParamDef,
 } from '@/server/rest/user/following.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 // 受信・送信のどちらも同じフォローリクエスト行を返す。
 const followRequestListSchema = {
@@ -46,7 +47,7 @@ const followRequestListSchema = {
 } as const;
 
 export const endpointMetas = {
-	'following/create': {
+	'following/create': defineContract({
 		meta: {
 			tags: ['following', 'users'],
 
@@ -99,10 +100,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserLite',
 			},
-		} as const,
+		},
 		paramDef: followingCreateParamDef,
-	},
-	'following/delete': {
+	}),
+	'following/delete': defineContract({
 		meta: {
 			tags: ['following', 'users'],
 
@@ -141,10 +142,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserLite',
 			},
-		} as const,
+		},
 		paramDef: followingUserIdParamDef,
-	},
-	'following/invalidate': {
+	}),
+	'following/invalidate': defineContract({
 		meta: {
 			tags: ['following', 'users'],
 
@@ -183,10 +184,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserLite',
 			},
-		} as const,
+		},
 		paramDef: followingUserIdParamDef,
-	},
-	'following/list': {
+	}),
+	'following/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -206,10 +207,10 @@ export const endpointMetas = {
 					ref: 'Following',
 				},
 			},
-		} as const,
+		},
 		paramDef: followingListParamDef,
-	},
-	'following/requests/accept': {
+	}),
+	'following/requests/accept': defineContract({
 		meta: {
 			tags: ['following', 'account'],
 
@@ -229,10 +230,10 @@ export const endpointMetas = {
 					id: 'bcde4f8b-0913-4614-8881-614e522fb041',
 				},
 			},
-		} as const,
+		},
 		paramDef: followingUserIdParamDef,
-	},
-	'following/requests/cancel': {
+	}),
+	'following/requests/cancel': defineContract({
 		meta: {
 			tags: ['following', 'account'],
 
@@ -260,10 +261,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserLite',
 			},
-		} as const,
+		},
 		paramDef: followingUserIdParamDef,
-	},
-	'following/requests/list': {
+	}),
+	'following/requests/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['following', 'account'],
@@ -273,10 +274,10 @@ export const endpointMetas = {
 			kind: 'read:following',
 
 			res: followRequestListSchema,
-		} as const,
+		},
 		paramDef: followingRequestsListParamDef,
-	},
-	'following/requests/reject': {
+	}),
+	'following/requests/reject': defineContract({
 		meta: {
 			tags: ['following', 'account'],
 
@@ -291,10 +292,10 @@ export const endpointMetas = {
 					id: 'abc2ffa6-25b2-4380-ba99-321ff3a94555',
 				},
 			},
-		} as const,
+		},
 		paramDef: followingUserIdParamDef,
-	},
-	'following/requests/sent': {
+	}),
+	'following/requests/sent': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['following', 'account'],
@@ -304,10 +305,10 @@ export const endpointMetas = {
 			kind: 'read:following',
 
 			res: followRequestListSchema,
-		} as const,
+		},
 		paramDef: followingRequestsListParamDef,
-	},
-	'following/update': {
+	}),
+	'following/update': defineContract({
 		meta: {
 			tags: ['following', 'users'],
 
@@ -346,10 +347,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserLite',
 			},
-		} as const,
+		},
 		paramDef: followingUpdateParamDef,
-	},
-	'following/update-all': {
+	}),
+	'following/update-all': defineContract({
 		meta: {
 			tags: ['following', 'users'],
 
@@ -361,7 +362,7 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			kind: 'write:following',
-		} as const,
+		},
 		paramDef: followingUpdateAllParamDef,
-	},
-} as const;
+	}),
+};

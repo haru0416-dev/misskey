@@ -12,9 +12,10 @@ import {
 	antennasShowParamDef,
 	antennasUpdateParamDef,
 } from '@/server/rest/antenna/antennas.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'antennas/create': {
+	'antennas/create': defineContract({
 		meta: {
 			tags: ['antennas'],
 
@@ -50,10 +51,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Antenna',
 			},
-		} as const,
+		},
 		paramDef: antennasCreateParamDef,
-	},
-	'antennas/delete': {
+	}),
+	'antennas/delete': defineContract({
 		meta: {
 			tags: ['antennas'],
 
@@ -68,10 +69,10 @@ export const endpointMetas = {
 					id: 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df',
 				},
 			},
-		} as const,
+		},
 		paramDef: antennasDeleteParamDef,
-	},
-	'antennas/list': {
+	}),
+	'antennas/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['antennas', 'account'],
@@ -91,10 +92,10 @@ export const endpointMetas = {
 					ref: 'Antenna',
 				},
 			},
-		} as const,
+		},
 		paramDef: antennasListParamDef,
-	},
-	'antennas/notes': {
+	}),
+	'antennas/notes': defineContract({
 		meta: {
 			tags: ['antennas', 'account', 'notes'],
 
@@ -121,10 +122,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: antennasNotesParamDef,
-	},
-	'antennas/remove-note': {
+	}),
+	'antennas/remove-note': defineContract({
 		meta: {
 			tags: ['antennas', 'account', 'notes'],
 
@@ -141,10 +142,10 @@ export const endpointMetas = {
 					id: '850926e0-fd3b-49b6-b69a-b28a5dbd82fe',
 				},
 			},
-		} as const,
+		},
 		paramDef: antennasRemoveNoteParamDef,
-	},
-	'antennas/show': {
+	}),
+	'antennas/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['antennas', 'account'],
@@ -167,10 +168,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Antenna',
 			},
-		} as const,
+		},
 		paramDef: antennasShowParamDef,
-	},
-	'antennas/update': {
+	}),
+	'antennas/update': defineContract({
 		meta: {
 			tags: ['antennas'],
 
@@ -206,7 +207,7 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Antenna',
 			},
-		} as const,
+		},
 		paramDef: antennasUpdateParamDef,
-	},
-} as const;
+	}),
+};

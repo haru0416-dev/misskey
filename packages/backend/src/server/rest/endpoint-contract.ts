@@ -27,6 +27,14 @@ export function defineContract<const M extends IEndpointMeta, P extends z.ZodTyp
 	return contract;
 }
 
+/** カテゴリの一部だけを契約から登録するときに使う。残りは routes/ の手書き登録が受け持つ。 */
+export function pickContracts<C extends Record<string, unknown>, const K extends keyof C & string>(
+	contracts: C,
+	keys: readonly K[],
+): Pick<C, K> {
+	return Object.fromEntries(keys.map((key) => [key, contracts[key]])) as Pick<C, K>;
+}
+
 type RequiresCredential<M> = M extends { readonly requireCredential: true }
 	? true
 	: M extends { readonly requireModerator: true }

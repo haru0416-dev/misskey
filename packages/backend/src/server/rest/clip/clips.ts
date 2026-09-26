@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as clipsContracts } from '@/server/api/metas/clips.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -110,96 +113,6 @@ export const clipsNoteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-function clipsShowNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: 'c3c5fe33-d62c-44d2-9ea5-d997703f5c20',
-	});
-}
-
-function clipsCreateTooManyClipsError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot create clip any more.',
-		code: 'TOO_MANY_CLIPS',
-		id: '920f7c2d-6208-4b76-8082-e632020f5883',
-	});
-}
-
-function clipsUpdateNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: 'b4d92d70-b216-46fa-9a3f-a8c811699257',
-	});
-}
-
-function clipsDeleteNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: '70ca08ba-6865-4630-b6fb-8494759aa754',
-	});
-}
-
-function clipsAddNoteNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: 'd6e76cc0-a1b5-4c7c-a287-73fa9c716dcf',
-	});
-}
-
-function clipsAddNoteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'fc8c0b49-c7a3-4664-a0a6-b418d386bb8b',
-	});
-}
-
-function clipsAddNoteAlreadyClippedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The note has already been clipped.',
-		code: 'ALREADY_CLIPPED',
-		id: '734806c4-542c-463a-9311-15c512803965',
-	});
-}
-
-function clipsAddNoteTooManyClipNotesError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot add notes to the clip any more.',
-		code: 'TOO_MANY_CLIP_NOTES',
-		id: 'f0dba960-ff73-4615-8df4-d6ac5d9dc118',
-	});
-}
-
-function clipsRemoveNoteNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: 'b80525c6-97f7-49d7-a42d-ebccd49cfd52',
-	});
-}
-
-function clipsRemoveNoteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'aff017de-190e-434b-893e-33a9ff5049d8',
-	});
-}
-
 export async function packClipForApi(
 	deps: ApiClipDependencies,
 	clip: MiClip,
@@ -283,9 +196,8 @@ export async function packClipsManyForApi(
 export async function handleApiClipsList(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipsListParamDef>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseApiParams(clipsListParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -301,26 +213,21 @@ export async function handleApiClipsList(
 export async function handleApiClipsShow(
 	deps: ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipIdParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/show']>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
-		throw clipsShowNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) {
-		throw clipsShowNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	return await packClipForApi(deps, clip, me);
 }
 
-export async function handleApiClipsMyFavorites(
-	deps: ApiClipDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Packed<'Clip'>[]> {
-	parseApiParams(emptyParamDef, body);
+export async function handleApiClipsMyFavorites(deps: ApiClipDependencies, me: MiLocalUser): Promise<Packed<'Clip'>[]> {
 	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
 	if (clipIds.length === 0) {
 		return [];
@@ -335,10 +242,9 @@ export async function handleApiClipsMyFavorites(
 export async function handleApiClipsCreate(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipsCreateParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/create']>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseApiParams(clipsCreateParamDef, body);
-
 	const clip = await createClipWithinLimitInDatabase(
 		deps.db,
 		{
@@ -351,7 +257,7 @@ export async function handleApiClipsCreate(
 		(await getApiRolePolicies(deps, me)).clipLimit,
 	);
 	if (clip == null) {
-		throw clipsCreateTooManyClipsError();
+		throw errors.tooManyClips();
 	}
 
 	return await packClipForApi(deps, clip, me);
@@ -360,12 +266,12 @@ export async function handleApiClipsCreate(
 export async function handleApiClipsUpdate(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipsUpdateParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/update']>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseApiParams(clipsUpdateParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) {
-		throw clipsUpdateNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	await updateClipInDatabase(
@@ -384,12 +290,12 @@ export async function handleApiClipsUpdate(
 export async function handleApiClipsDelete(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipIdParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) {
-		throw clipsDeleteNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	await deleteClipInDatabase(deps.db, clip.id);
@@ -398,12 +304,12 @@ export async function handleApiClipsDelete(
 export async function handleApiClipsAddNote(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipsNoteParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/add-note']>,
 ): Promise<void> {
-	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) {
-		throw clipsAddNoteNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	try {
@@ -417,20 +323,20 @@ export async function handleApiClipsAddNote(
 			(await getApiRolePolicies(deps, me)).noteEachClipsLimit,
 		);
 		if (result === 'tooManyClipNotes') {
-			throw clipsAddNoteTooManyClipNotesError();
+			throw errors.tooManyClipNotes();
 		}
 		if (result === 'noSuchNote') {
-			throw clipsAddNoteNoSuchNoteError();
+			throw errors.noSuchNote();
 		}
 	} catch (e: unknown) {
 		if (e instanceof ApiError) {
 			throw e;
 		}
 		if (isDuplicateKeyValueDatabaseError(e)) {
-			throw clipsAddNoteAlreadyClippedError();
+			throw errors.alreadyClipped();
 		}
 		if (getDatabaseErrorCode(e) === '23503') {
-			throw clipsAddNoteNoSuchNoteError();
+			throw errors.noSuchNote();
 		}
 		throw e;
 	}
@@ -439,43 +345,34 @@ export async function handleApiClipsAddNote(
 export async function handleApiClipsRemoveNote(
 	deps: ApiClipDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipsNoteParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/remove-note']>,
 ): Promise<void> {
-	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) {
-		throw clipsRemoveNoteNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw clipsRemoveNoteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	await deleteClipNoteAndDecrementNoteClippedCountInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 }
 
-function clipsNotesNoSuchClipError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such clip.',
-		code: 'NO_SUCH_CLIP',
-		id: '1d7645e6-2b6d-4635-b0fe-fe22b0e72e00',
-	});
-}
-
 export async function handleApiClipsNotes(
 	deps: ApiClipNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof clipNotesParamDef>,
+	errors: ContractErrors<(typeof clipsContracts)['clips/notes']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(clipNotesParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
-		throw clipsNotesNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) {
-		throw clipsNotesNoSuchClipError();
+		throw errors.noSuchClip();
 	}
 
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);

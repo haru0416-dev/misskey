@@ -14,11 +14,12 @@ import {
 	adminEmojiListRemoteParamDef,
 	adminEmojiSetCategoryBulkParamDef,
 	adminEmojiSetLicenseBulkParamDef,
-	adminEmojiUpdateDocsParamDef,
+	adminEmojiUpdateParamDef,
 } from '@/server/rest/emoji/emojis.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'admin/emoji/add': {
+	'admin/emoji/add': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -49,10 +50,10 @@ export const endpointMetas = {
 				type: 'object',
 				ref: 'EmojiDetailed',
 			},
-		} as const,
+		},
 		paramDef: adminEmojiAddParamDef,
-	},
-	'admin/emoji/add-aliases-bulk': {
+	}),
+	'admin/emoji/add-aliases-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -68,10 +69,10 @@ export const endpointMetas = {
 					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiAliasesBulkParamDef,
-	},
-	'admin/emoji/copy': {
+	}),
+	'admin/emoji/copy': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -106,10 +107,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiCopyParamDef,
-	},
-	'admin/emoji/delete': {
+	}),
+	'admin/emoji/delete': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -125,10 +126,10 @@ export const endpointMetas = {
 					id: 'be83669b-773a-44b7-b1f8-e5e5170ac3c2',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiDeleteParamDef,
-	},
-	'admin/emoji/delete-bulk': {
+	}),
+	'admin/emoji/delete-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -136,19 +137,19 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
-		} as const,
+		},
 		paramDef: adminEmojiDeleteBulkParamDef,
-	},
-	'admin/emoji/import-zip': {
+	}),
+	'admin/emoji/import-zip': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
-		} as const,
+		},
 		paramDef: adminEmojiImportZipParamDef,
-	},
-	'admin/emoji/list': {
+	}),
+	'admin/emoji/list': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
@@ -167,10 +168,10 @@ export const endpointMetas = {
 					ref: 'EmojiDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiListParamDef,
-	},
-	'admin/emoji/list-remote': {
+	}),
+	'admin/emoji/list-remote': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
@@ -189,10 +190,10 @@ export const endpointMetas = {
 					ref: 'EmojiDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiListRemoteParamDef,
-	},
-	'admin/emoji/remove-aliases-bulk': {
+	}),
+	'admin/emoji/remove-aliases-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -208,10 +209,10 @@ export const endpointMetas = {
 					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiAliasesBulkParamDef,
-	},
-	'admin/emoji/set-aliases-bulk': {
+	}),
+	'admin/emoji/set-aliases-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -227,10 +228,10 @@ export const endpointMetas = {
 					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiAliasesBulkParamDef,
-	},
-	'admin/emoji/set-category-bulk': {
+	}),
+	'admin/emoji/set-category-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -246,10 +247,10 @@ export const endpointMetas = {
 					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiSetCategoryBulkParamDef,
-	},
-	'admin/emoji/set-license-bulk': {
+	}),
+	'admin/emoji/set-license-bulk': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -265,10 +266,10 @@ export const endpointMetas = {
 					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminEmojiSetLicenseBulkParamDef,
-	},
-	'admin/emoji/update': {
+	}),
+	'admin/emoji/update': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
@@ -294,7 +295,7 @@ export const endpointMetas = {
 					id: '7180fe9d-1ee3-bff9-647d-fe9896d2ffb8',
 				},
 			},
-		} as const,
-		paramDef: adminEmojiUpdateDocsParamDef,
-	},
-} as const;
+		},
+		paramDef: adminEmojiUpdateParamDef,
+	}),
+};
