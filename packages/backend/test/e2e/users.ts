@@ -600,6 +600,42 @@ describe('ユーザー', () => {
 		expect(response2, inspect(parameters)).toStrictEqual(expected2);
 	});
 
+	test('詳細情報のアバターデコレーションにも画像の url が付く (i / users/show)', async () => {
+		const decorated = await signup({ username: 'decorated' });
+		const created = await api(
+			'admin/avatar-decorations/create',
+			{ name: 'detailed-decoration', description: '', url: 'https://example.test/detailed-decoration.png' },
+			root,
+		);
+		expect(created.status).toBe(200);
+		const decorationId = (created.body as { id: string }).id;
+		try {
+			await successfulApiCall({
+				endpoint: 'i/update',
+				parameters: { avatarDecorations: [{ id: decorationId, angle: 0.5 }] },
+				user: decorated,
+			});
+			const expected = [{ id: decorationId, angle: 0.5, url: 'https://example.test/detailed-decoration.png' }];
+
+			const me = await successfulApiCall({ endpoint: 'i', parameters: {}, user: decorated });
+			expect(me.avatarDecorations).toStrictEqual(expected);
+			const shown = await successfulApiCall({
+				endpoint: 'users/show',
+				parameters: { userId: decorated.id },
+				user: alice,
+			});
+			expect(shown.avatarDecorations).toStrictEqual(expected);
+			const listed = await successfulApiCall({
+				endpoint: 'users/show',
+				parameters: { userIds: [decorated.id] },
+				user: alice,
+			});
+			expect(listed.map((user) => user.avatarDecorations)).toStrictEqual([expected]);
+		} finally {
+			await api('admin/avatar-decorations/delete', { id: decorationId }, root);
+		}
+	});
+
 	test('を書き換えることができる(Banner)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { bannerId: aliceFile!.id };

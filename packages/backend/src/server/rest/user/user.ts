@@ -96,7 +96,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type MeDetailedApiResponse = Record<string, unknown>;
-export type UserDetailedNotMeApiResponse = Record<string, unknown> & { id: MiUser['id'] };
+export type UserDetailedNotMeApiResponse = Packed<'UserDetailedNotMe'>;
 
 export type UserPackingDependencies = {
 	config: Config;
@@ -259,7 +259,7 @@ type UserDetailedExtras = {
 	isSilenced: boolean;
 	canChat: boolean;
 	pinnedNoteIds: string[];
-	pinnedNotes: unknown[];
+	pinnedNotes: Packed<'Note'>[];
 	iAmModerator: boolean;
 	relation: UserRelationForPack | null;
 	twoFactor: { twoFactorEnabled: boolean; usePasswordLessLogin: boolean; securityKeys: boolean } | null;
@@ -297,7 +297,7 @@ async function buildUserDetailedExtrasForApi(
 
 	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
 	const pinnedNoteIds = pins.map((pin) => pin.noteId);
-	let pinnedNotes: unknown[] = hint?.pinnedNotes ?? [];
+	let pinnedNotes: Packed<'Note'>[] = hint?.pinnedNotes ?? [];
 	if (hint?.pinnedNotes == null && pinnedNoteIds.length > 0 && deps.redis != null) {
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
@@ -446,6 +446,8 @@ export async function packUserDetailedNotMeManyForApi(
 		}
 	}
 
+	const avatarDecorationsByUserId = await buildApiAvatarDecorations(deps, users);
+
 	return await Promise.all(
 		users.map(async (user) => {
 			const profile =
@@ -478,6 +480,7 @@ export async function packUserDetailedNotMeManyForApi(
 				omitUndefined({
 					...migrationIdsByUserId.get(user.id),
 					emojis: emojisByUserId.get(user.id),
+					avatarDecorations: avatarDecorationsByUserId.get(user.id) ?? [],
 				}),
 			);
 		}),
@@ -551,8 +554,12 @@ async function packUserDetailedNotMeCoreForApi(
 		alsoKnownAs?: string[] | null;
 		movedTo?: string | null;
 		emojis?: Record<string, string>;
+		avatarDecorations?: ApiAvatarDecorationLite[];
 	},
 ): Promise<UserDetailedNotMeApiResponse> {
+	// DB の値は id と表示位置だけなので、UserLite と同じく画像の url を補ってから返す。
+	const avatarDecorations =
+		hint?.avatarDecorations ?? (await buildApiAvatarDecorations(deps, [user])).get(user.id) ?? [];
 	const alsoKnownAs =
 		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
 	const emojis = hint?.emojis ?? (await populateEmojis(deps, user.emojis, user.host));
@@ -564,7 +571,7 @@ async function packUserDetailedNotMeCoreForApi(
 		host: user.host,
 		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
 		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations,
+		avatarDecorations,
 		isBot: user.isBot,
 		isCat: user.isCat,
 		requireSigninToViewContents: user.requireSigninToViewContents === false ? undefined : true,
@@ -676,6 +683,8 @@ export async function packMeDetailedForApi(
 		},
 	);
 
+	const avatarDecorations = (await buildApiAvatarDecorations(deps, [user])).get(user.id) ?? [];
+
 	return {
 		id: user.id,
 		name: user.name,
@@ -683,7 +692,7 @@ export async function packMeDetailedForApi(
 		host: user.host,
 		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
 		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations,
+		avatarDecorations,
 		isBot: user.isBot,
 		isCat: user.isCat,
 		requireSigninToViewContents: user.requireSigninToViewContents === false ? undefined : true,
