@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminRolesContracts } from '@/server/api/metas/admin-roles.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import {
 	assignRoleWithSideEffects,
 	createRoleWithSideEffects,
@@ -159,21 +162,11 @@ function accessDeniedError(id: string): ApiError {
 	});
 }
 
-function notAssignedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Not assigned.',
-		code: 'NOT_ASSIGNED',
-		id: 'b9060ac7-5c94-4da4-9f55-2047c953df44',
-	});
-}
-
 export async function handleApiAdminRolesAssign(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesAssignParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminRolesAssignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
@@ -212,9 +205,8 @@ export async function handleApiAdminRolesAssign(
 export async function handleApiAdminRolesCreate(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesCreateParamDef>,
 ): Promise<Packed<'Role'>> {
-	const params = parseApiParams(adminRolesCreateParamDef, body);
 	const created = await createRoleWithSideEffects(
 		{
 			db: deps.db,
@@ -245,11 +237,7 @@ export async function handleApiAdminRolesCreate(
 	return await packApiRole(deps, created);
 }
 
-export async function handleApiAdminRolesList(
-	deps: ApiAdminRoleDependencies,
-	body: Record<string, unknown>,
-): Promise<Packed<'Role'>[]> {
-	parseApiParams(adminRolesListParamDef, body);
+export async function handleApiAdminRolesList(deps: ApiAdminRoleDependencies): Promise<Packed<'Role'>[]> {
 	const roles = await listRolesOrderByLastUsedAtDescFromDatabase(deps.db);
 	return await packApiRoles(deps, roles);
 }
@@ -257,9 +245,8 @@ export async function handleApiAdminRolesList(
 export async function handleApiAdminRolesDelete(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminRolesDeleteParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('de0d6ecd-8e0a-4253-88ff-74bc89ae3d45');
@@ -278,9 +265,8 @@ export async function handleApiAdminRolesDelete(
 
 export async function handleApiAdminRolesShow(
 	deps: ApiAdminRoleDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesShowParamDef>,
 ): Promise<Packed<'Role'>> {
-	const params = parseApiParams(adminRolesShowParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
@@ -292,9 +278,9 @@ export async function handleApiAdminRolesShow(
 export async function handleApiAdminRolesUnassign(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesUnassignParamDef>,
+	errors: ContractErrors<(typeof adminRolesContracts)['admin/roles/unassign']>,
 ): Promise<void> {
-	const params = parseApiParams(adminRolesUnassignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
@@ -324,7 +310,7 @@ export async function handleApiAdminRolesUnassign(
 		);
 	} catch (err) {
 		if (err instanceof RoleNotAssignedError) {
-			throw notAssignedError();
+			throw errors.notAssigned();
 		}
 		throw err;
 	}
@@ -333,9 +319,8 @@ export async function handleApiAdminRolesUnassign(
 export async function handleApiAdminRolesUpdate(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminRolesUpdateParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('cd23ef55-09ad-428a-ac61-95a45e124b32');
@@ -372,9 +357,8 @@ export async function handleApiAdminRolesUpdate(
 export async function handleApiAdminRolesUpdateDefaultPolicies(
 	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesUpdateDefaultPoliciesParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminRolesUpdateDefaultPoliciesParamDef, body);
 	const before = await fetchMetaFromDatabase(deps.db);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, {
 		policies: params.policies as MiMeta['policies'],
@@ -396,9 +380,8 @@ export async function handleApiAdminRolesUpdateDefaultPolicies(
 export async function handleApiAdminRolesUsers(
 	deps: ApiAdminRoleDependencies,
 	me: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminRolesUsersParamDef>,
 ): Promise<AdminRoleUser[]> {
-	const params = parseApiParams(adminRolesUsersParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
 		throw noSuchRoleError('224eff5e-2488-4b18-b3e7-f50d94421648');

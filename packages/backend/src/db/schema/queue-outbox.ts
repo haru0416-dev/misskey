@@ -32,7 +32,8 @@ export const queueOutbox = pgTable(
 	'queue_outbox',
 	{
 		id: varchar({ length: 32 }).primaryKey().notNull(),
-		queue: varchar({ length: 64 }).notNull(),
+		// 行を作るのは deliver と db のキューだけ (QueueOutboxStore)。
+		queue: varchar({ length: 64 }).notNull().$type<'deliver' | 'db'>(),
 		name: varchar({ length: 128 }).notNull(),
 		kind: varchar({ length: 32 }).default('job').notNull().$type<QueueOutboxKind>(),
 		state: varchar({ length: 32 }).default('ready').notNull().$type<QueueOutboxState>(),

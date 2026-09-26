@@ -10111,8 +10111,8 @@ export interface operations {
                         name: string;
                         coordinatorId: string | null;
                         externalJobId: string | null;
-                        /** @enum {string} */
-                        deadLetterReason: 'deliveryFailed' | 'invalidPayload';
+                        /** @enum {string|null} */
+                        deadLetterReason: 'deliveryFailed' | 'invalidPayload' | null;
                         lastError: {
                             [key: string]: unknown;
                         } | null;

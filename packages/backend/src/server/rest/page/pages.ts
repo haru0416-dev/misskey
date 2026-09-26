@@ -587,9 +587,8 @@ export const usersPagesParamDef = z.object({
 
 export async function handleApiUsersPages(
 	deps: ApiPageDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersPagesParamDef>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseApiParams(usersPagesParamDef, body);
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, params.userId, {

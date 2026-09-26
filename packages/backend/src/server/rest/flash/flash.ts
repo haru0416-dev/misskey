@@ -336,9 +336,8 @@ export const usersFlashsParamDef = z.object({
 
 export async function handleApiUsersFlashs(
 	deps: ApiFlashDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersFlashsParamDef>,
 ): Promise<Packed<'Flash'>[]> {
-	const params = parseApiParams(usersFlashsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

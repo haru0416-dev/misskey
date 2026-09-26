@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { toArray, toSingle } from '@/misc/prelude/array.js';
@@ -865,10 +866,8 @@ export const federationUpdateRemoteUserParamDef = z.object({
 
 export async function handleApiFederationUpdateRemoteUser(
 	deps: ApiApPersonDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof federationUpdateRemoteUserParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(federationUpdateRemoteUserParamDef, body);
-
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	// runApiEndpoint が 500 に変換しないよう、入力不備は明示的な API エラーにする。
 	if (user == null) {

@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import {
@@ -483,33 +486,6 @@ export async function reportAbuseForApi(
 	]);
 }
 
-function usersReportAbuseNoSuchUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such user.',
-		code: 'NO_SUCH_USER',
-		id: '1acefcb5-0959-43fd-9685-b48305736cb5',
-	});
-}
-
-function usersReportAbuseCannotReportYourselfError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Cannot report yourself.',
-		code: 'CANNOT_REPORT_YOURSELF',
-		id: '1e13149e-b1e8-43cf-902e-c01dbfcb202f',
-	});
-}
-
-function usersReportAbuseCannotReportAdminError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Cannot report the admin.',
-		code: 'CANNOT_REPORT_THE_ADMIN',
-		id: '35e166f5-05fb-4f87-a2d5-adb42676d48f',
-	});
-}
-
 export const usersReportAbuseParamDef = z.object({
 	userId: misskeyId(),
 	comment: z.string().min(1).max(2048),
@@ -518,21 +494,20 @@ export const usersReportAbuseParamDef = z.object({
 export async function handleApiUsersReportAbuse(
 	deps: ApiUsersReportAbuseDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersReportAbuseParamDef>,
+	errors: ContractErrors<(typeof usersContracts)['users/report-abuse']>,
 ): Promise<void> {
-	const params = parseApiParams(usersReportAbuseParamDef, body);
-
 	const targetUser = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (targetUser == null) {
-		throw usersReportAbuseNoSuchUserError();
+		throw errors.noSuchUser();
 	}
 
 	if (targetUser.id === me.id) {
-		throw usersReportAbuseCannotReportYourselfError();
+		throw errors.cannotReportYourself();
 	}
 
 	if (await isApiAdministrator(deps, targetUser)) {
-		throw usersReportAbuseCannotReportAdminError();
+		throw errors.cannotReportAdmin();
 	}
 
 	await reportAbuseForApi(deps, [

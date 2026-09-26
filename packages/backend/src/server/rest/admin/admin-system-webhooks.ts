@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminSystemWebhookContracts } from '@/server/api/metas/admin-system-webhook.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	createSystemWebhookWithSideEffects,
@@ -106,21 +109,11 @@ function noSuchSystemWebhookError(): ApiError {
 	});
 }
 
-function noSuchWebhookError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such webhook.',
-		code: 'NO_SUCH_WEBHOOK',
-		id: '0c52149c-e913-18f8-5dc7-74870bfe0cf9',
-	});
-}
-
 export async function handleApiAdminSystemWebhookCreate(
 	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookCreateParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseApiParams(adminSystemWebhookCreateParamDef, body);
 	const webhook = await createSystemWebhookWithSideEffects(
 		{
 			db: deps.db,
@@ -138,9 +131,8 @@ export async function handleApiAdminSystemWebhookCreate(
 export async function handleApiAdminSystemWebhookDelete(
 	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminSystemWebhookDeleteParamDef, body);
 	await deleteSystemWebhookWithSideEffects(
 		{
 			db: deps.db,
@@ -154,9 +146,8 @@ export async function handleApiAdminSystemWebhookDelete(
 
 export async function handleApiAdminSystemWebhookList(
 	deps: ApiAdminSystemWebhookDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookListParamDef>,
 ): Promise<Packed<'SystemWebhook'>[]> {
-	const params = parseApiParams(adminSystemWebhookListParamDef, body);
 	const webhooks = await listSystemWebhooksFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -170,9 +161,8 @@ export async function handleApiAdminSystemWebhookList(
 
 export async function handleApiAdminSystemWebhookShow(
 	deps: ApiAdminSystemWebhookDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookShowParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseApiParams(adminSystemWebhookShowParamDef, body);
 	const webhook = await fetchSystemWebhookByIdFromDatabase(deps.db, params.id);
 	if (webhook == null) {
 		throw noSuchSystemWebhookError();
@@ -183,9 +173,9 @@ export async function handleApiAdminSystemWebhookShow(
 
 export async function handleApiAdminSystemWebhookTest(
 	deps: ApiAdminSystemWebhookDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookTestParamDef>,
+	errors: ContractErrors<(typeof adminSystemWebhookContracts)['admin/system-webhook/test']>,
 ): Promise<void> {
-	const params = parseApiParams(adminSystemWebhookTestParamDef, body);
 	const testParams =
 		params.override === undefined
 			? {
@@ -209,7 +199,7 @@ export async function handleApiAdminSystemWebhookTest(
 		);
 	} catch (e) {
 		if (e instanceof NoSuchSystemWebhookForTestError) {
-			throw noSuchWebhookError();
+			throw errors.noSuchWebhook();
 		}
 		throw e;
 	}
@@ -218,9 +208,8 @@ export async function handleApiAdminSystemWebhookTest(
 export async function handleApiAdminSystemWebhookUpdate(
 	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminSystemWebhookUpdateParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseApiParams(adminSystemWebhookUpdateParamDef, body);
 	const webhook = await updateSystemWebhookWithSideEffects(
 		{
 			db: deps.db,

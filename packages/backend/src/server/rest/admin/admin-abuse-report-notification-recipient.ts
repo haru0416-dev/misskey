@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -258,9 +259,8 @@ async function packApiAbuseReportNotificationRecipients(
 
 export async function handleApiAdminAbuseReportNotificationRecipientList(
 	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseReportNotificationRecipientListParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
-	const params = parseApiParams(adminAbuseReportNotificationRecipientListParamDef, body);
 	const recipients = await fetchRecipients(deps, omitUndefined({ method: params.method }));
 
 	return await packApiAbuseReportNotificationRecipients(deps, recipients);
@@ -268,9 +268,8 @@ export async function handleApiAdminAbuseReportNotificationRecipientList(
 
 export async function handleApiAdminAbuseReportNotificationRecipientShow(
 	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseReportNotificationRecipientShowParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
 	if (recipients.length === 0) {
 		throw noSuchRecipientError();
@@ -286,9 +285,8 @@ export async function handleApiAdminAbuseReportNotificationRecipientShow(
 export async function handleApiAdminAbuseReportNotificationRecipientCreate(
 	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseReportNotificationRecipientCreateParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseApiParams(adminAbuseReportNotificationRecipientCreateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const recipient = await createAbuseReportNotificationRecipientInDatabase(deps.db, {
@@ -311,9 +309,8 @@ export async function handleApiAdminAbuseReportNotificationRecipientCreate(
 export async function handleApiAdminAbuseReportNotificationRecipientUpdate(
 	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseReportNotificationRecipientUpdateParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseApiParams(adminAbuseReportNotificationRecipientUpdateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const before = await fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase(deps.db, params.id);
@@ -341,9 +338,8 @@ export async function handleApiAdminAbuseReportNotificationRecipientUpdate(
 export async function handleApiAdminAbuseReportNotificationRecipientDelete(
 	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseReportNotificationRecipientDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAbuseReportNotificationRecipientDeleteParamDef, body);
 	const recipient = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, { ids: [params.id] });
 
 	await deleteAbuseReportNotificationRecipientsFromDatabase(deps.db, params.id);

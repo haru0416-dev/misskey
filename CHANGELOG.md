@@ -259,6 +259,9 @@
 - Fix: 検索インデックス生成プラグインの単独読み込みと、コンポーネントカタログの decorator の遅延評価で循環参照によるエラーが出る問題を修正
 
 ### Server
+- Change: `i` の応答から仕様書に無く常に空だった `mutingNotificationTypes` を削除 (通知の受け取り設定は `notificationRecieveConfig`)
+- Fix: `users/reactions` と `notes/reactions` が、取得中に消えた利用者のリアクションを必須の `user` が欠けた形で返し得た問題を修正
+- Fix: `admin/queue/outbox-dead-letters` の `deadLetterReason` を、DB の実態どおり null を許す宣言に修正し、管理画面では不明と表示するように
 - Fix: `i` と `users/show` のアバターデコレーションに画像の `url` が含まれず、プロフィールなど詳細情報を使う画面でデコレーションが表示されなかった問題を修正
 - Fix: `admin/emoji/update` の OpenAPI と misskey-js の型で、`id` を指定して `name` を変更する組み合わせを表現できなかった問題を修正
 - Fix: 本番環境で `notes/delete`・`notes/unrenote`・`notes/reactions/delete` が毎回、`i/import-antennas` がファイル検証の後に必ず 429 (RATE_LIMIT_EXCEEDED) になっていた問題を修正 (meta の回数制限を共通 guard とルートの両方が同じキーで数え、1 回目の記録で 2 回目の判定が上限に掛かっていた)

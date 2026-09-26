@@ -10,6 +10,7 @@ import {
 	adminAbuseReportNotificationRecipientShowParamDef,
 	adminAbuseReportNotificationRecipientUpdateParamDef,
 } from '@/server/rest/admin/admin-abuse-report-notification-recipient.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 // create と update は同じ入力検査を行い、同じエラーを返す。
 const recipientInputErrors = {
@@ -34,7 +35,7 @@ const recipientInputErrors = {
 } as const;
 
 export const endpointMetas = {
-	'admin/abuse-report/notification-recipient/create': {
+	'admin/abuse-report/notification-recipient/create': defineContract({
 		meta: {
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -49,10 +50,10 @@ export const endpointMetas = {
 			},
 
 			errors: recipientInputErrors,
-		} as const,
+		},
 		paramDef: adminAbuseReportNotificationRecipientCreateParamDef,
-	},
-	'admin/abuse-report/notification-recipient/delete': {
+	}),
+	'admin/abuse-report/notification-recipient/delete': defineContract({
 		meta: {
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -60,10 +61,10 @@ export const endpointMetas = {
 			requireModerator: true,
 			secure: true,
 			kind: 'write:admin:abuse-report:notification-recipient',
-		} as const,
+		},
 		paramDef: adminAbuseReportNotificationRecipientDeleteParamDef,
-	},
-	'admin/abuse-report/notification-recipient/list': {
+	}),
+	'admin/abuse-report/notification-recipient/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
@@ -80,10 +81,10 @@ export const endpointMetas = {
 					ref: 'AbuseReportNotificationRecipient',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAbuseReportNotificationRecipientListParamDef,
-	},
-	'admin/abuse-report/notification-recipient/show': {
+	}),
+	'admin/abuse-report/notification-recipient/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
@@ -107,10 +108,10 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAbuseReportNotificationRecipientShowParamDef,
-	},
-	'admin/abuse-report/notification-recipient/update': {
+	}),
+	'admin/abuse-report/notification-recipient/update': defineContract({
 		meta: {
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
 
@@ -125,7 +126,7 @@ export const endpointMetas = {
 			},
 
 			errors: recipientInputErrors,
-		} as const,
+		},
 		paramDef: adminAbuseReportNotificationRecipientUpdateParamDef,
-	},
-} as const;
+	}),
+};

@@ -506,9 +506,8 @@ export const usersGalleryPostsParamDef = z.object({
 export async function handleApiUsersGalleryPosts(
 	deps: ApiGalleryDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(usersGalleryPostsParamDef, body);
+	params: ApiParams<typeof usersGalleryPostsParamDef>,
+) {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

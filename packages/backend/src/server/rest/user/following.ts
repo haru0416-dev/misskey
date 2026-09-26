@@ -1258,9 +1258,8 @@ function usersFollowingBirthdayInvalidError(): ApiError {
 export async function handleApiUsersFollowers(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: UsersFollowersOrFollowingParams,
 ): Promise<FollowerListItem[]> {
-	const params = parseApiParams(usersFollowersOrFollowingParamDef, body) as UsersFollowersOrFollowingParams;
 	const user =
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
@@ -1303,9 +1302,8 @@ export async function handleApiUsersFollowers(
 export async function handleApiUsersFollowing(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: UsersFollowingParams,
 ): Promise<FollowingListItem[]> {
-	const params = parseApiParams(usersFollowingParamDef, body) as UsersFollowingParams;
 	const user =
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
@@ -1393,10 +1391,8 @@ export const usersGetFollowingUsersByBirthdayParamDef = z.object({
 export async function handleApiUsersGetFollowingUsersByBirthday(
 	deps: ApiFollowingDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersGetFollowingUsersByBirthdayParamDef>,
 ): Promise<{ id: string; birthday: string; user: Packed<'UserLite'> }[]> {
-	const params = parseApiParams(usersGetFollowingUsersByBirthdayParamDef, body);
-
 	let condition: { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
 	if (Object.hasOwn(params.birthday, 'begin') && Object.hasOwn(params.birthday, 'end')) {
 		const range = params.birthday as { begin: { month: number; day: number }; end: { month: number; day: number } };

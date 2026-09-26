@@ -12,9 +12,10 @@ import {
 	federationStatsParamDef,
 	federationUsersParamDef,
 } from '@/server/rest/activitypub/federation.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'federation/followers': {
+	'federation/followers': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['federation'],
@@ -32,10 +33,10 @@ export const endpointMetas = {
 					ref: 'Following',
 				},
 			},
-		} as const,
+		},
 		paramDef: federationHostFollowingParamDef,
-	},
-	'federation/following': {
+	}),
+	'federation/following': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['federation'],
@@ -53,10 +54,10 @@ export const endpointMetas = {
 					ref: 'Following',
 				},
 			},
-		} as const,
+		},
 		paramDef: federationHostFollowingParamDef,
-	},
-	'federation/instances': {
+	}),
+	'federation/instances': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['federation'],
@@ -76,10 +77,10 @@ export const endpointMetas = {
 					ref: 'FederationInstance',
 				},
 			},
-		} as const,
+		},
 		paramDef: federationInstancesParamDef,
-	},
-	'federation/show-instance': {
+	}),
+	'federation/show-instance': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['federation'],
@@ -92,10 +93,10 @@ export const endpointMetas = {
 				nullable: true,
 				ref: 'FederationInstance',
 			},
-		} as const,
+		},
 		paramDef: federationShowInstanceParamDef,
-	},
-	'federation/stats': {
+	}),
+	'federation/stats': defineContract({
 		meta: {
 			tags: ['federation'],
 
@@ -135,10 +136,10 @@ export const endpointMetas = {
 					otherFollowingCount: { type: 'number' },
 				},
 			},
-		} as const,
+		},
 		paramDef: federationStatsParamDef,
-	},
-	'federation/update-remote-user': {
+	}),
+	'federation/update-remote-user': defineContract({
 		meta: {
 			tags: ['federation'],
 
@@ -164,10 +165,10 @@ export const endpointMetas = {
 					id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754',
 				},
 			},
-		} as const,
+		},
 		paramDef: federationUpdateRemoteUserParamDef,
-	},
-	'federation/users': {
+	}),
+	'federation/users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['federation'],
@@ -185,7 +186,7 @@ export const endpointMetas = {
 					ref: 'UserDetailedNotMe',
 				},
 			},
-		} as const,
+		},
 		paramDef: federationUsersParamDef,
-	},
-} as const;
+	}),
+};

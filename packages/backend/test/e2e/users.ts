@@ -142,8 +142,6 @@ describe('ユーザー', () => {
 			mutedWords: user.mutedWords,
 			hardMutedWords: user.hardMutedWords,
 			mutedInstances: user.mutedInstances,
-			// @ts-expect-error SignupResponse の型に互換フィールドが含まれていない。
-			mutingNotificationTypes: user.mutingNotificationTypes,
 			notificationRecieveConfig: user.notificationRecieveConfig,
 			emailNotificationTypes: user.emailNotificationTypes,
 			achievements: user.achievements,
@@ -426,8 +424,6 @@ describe('ユーザー', () => {
 		expect(response.unreadAnnouncements).toStrictEqual([]);
 		expect(response.mutedWords).toStrictEqual([]);
 		expect(response.mutedInstances).toStrictEqual([]);
-		// @ts-expect-error 後方互換のため
-		expect(response.mutingNotificationTypes).toStrictEqual([]);
 		expect(response.notificationRecieveConfig).toStrictEqual({});
 		expect(response.emailNotificationTypes).toStrictEqual(['follow', 'receiveFollowRequest']);
 		expect(response.achievements).toStrictEqual([]);

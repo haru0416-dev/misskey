@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -191,10 +192,8 @@ export const createParamDef = z.object({
 export async function handleApiUsersListsCreate(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof createParamDef>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseApiParams(createParamDef, body);
-
 	const policies = await getApiRolePolicies(deps, me);
 	const userList = await createUserListWithinLimitInDatabase(
 		deps.db,
@@ -225,9 +224,8 @@ export const createFromPublicParamDef = z.object({
 export async function handleApiUsersListsCreateFromPublic(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof createFromPublicParamDef>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseApiParams(createFromPublicParamDef, body);
 	const copied = await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
 		const ownerExists = await lockUserListOwnerForCreationInDatabase(db, me.id);
@@ -361,10 +359,8 @@ export const pullParamDef = z.object({
 export async function handleApiUsersListsPull(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pullParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pullParamDef, body);
-
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
@@ -383,10 +379,8 @@ export const pushParamDef = z.object({
 export async function handleApiUsersListsPush(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pushParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(pushParamDef, body);
-
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
@@ -441,10 +435,8 @@ export const getMembershipsParamDef = z.object({
 export async function handleApiUsersListsGetMemberships(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof getMembershipsParamDef>,
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const params = parseApiParams(getMembershipsParamDef, body);
-
 	const userList =
 		!params.forPublic && me != null
 			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
@@ -474,10 +466,8 @@ export const updateMembershipParamDef = z.object({
 export async function handleApiUsersListsUpdateMembership(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof updateMembershipParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(updateMembershipParamDef, body);
-
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');

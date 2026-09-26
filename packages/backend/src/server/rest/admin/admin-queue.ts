@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	abandonQueueOutboxDeadLetter,
@@ -76,9 +77,10 @@ export async function handleApiAdminQueueQueues(deps: ApiAdminQueueDependencies,
 	return await getQueues(deps);
 }
 
-export async function handleApiAdminQueueQueueStats(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	const ps = parseApiParams(adminQueueSelectParamDef, body);
-
+export async function handleApiAdminQueueQueueStats(
+	deps: ApiAdminQueueDependencies,
+	ps: ApiParams<typeof adminQueueSelectParamDef>,
+) {
 	return await getQueueStats(deps, ps.queue);
 }
 
@@ -103,17 +105,17 @@ export async function handleApiAdminQueueInboxDelayed(deps: ApiAdminQueueDepende
 	return await getDelayedInboxHosts(deps.inboxQueue);
 }
 
-export async function handleApiAdminQueueJobs(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	const ps = parseApiParams(adminQueueJobsParamDef, body);
-
+export async function handleApiAdminQueueJobs(
+	deps: ApiAdminQueueDependencies,
+	ps: ApiParams<typeof adminQueueJobsParamDef>,
+) {
 	return await getQueueJobs(deps, ps.queue, ps.state, ps.search);
 }
 
 export async function handleApiAdminQueueOutboxDeadLetters(
 	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueOutboxJobsParamDef>,
 ) {
-	const ps = parseApiParams(adminQueueOutboxJobsParamDef, body);
 	const rows = await listQueueOutboxDeadLetters(deps, ps.limit ?? 50, ps.untilId);
 	return rows.map((row) => ({
 		id: row.id,
@@ -142,9 +144,8 @@ function outboxStateChangedError(): ApiError {
 
 export async function handleApiAdminQueueRetryOutboxDeadLetter(
 	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueOutboxJobParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
 	if (!(await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) {
 		throw outboxStateChangedError();
 	}
@@ -152,33 +153,32 @@ export async function handleApiAdminQueueRetryOutboxDeadLetter(
 
 export async function handleApiAdminQueueAbandonOutboxDeadLetter(
 	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueOutboxJobParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
 	if (!(await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) {
 		throw outboxStateChangedError();
 	}
 }
 
-export async function handleApiAdminQueueShowJob(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	const ps = parseApiParams(adminQueueJobParamDef, body);
-
+export async function handleApiAdminQueueShowJob(
+	deps: ApiAdminQueueDependencies,
+	ps: ApiParams<typeof adminQueueJobParamDef>,
+) {
 	return await getQueueJob(deps, ps.queue, ps.jobId);
 }
 
-export async function handleApiAdminQueueShowJobLogs(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
-	const ps = parseApiParams(adminQueueJobParamDef, body);
-
+export async function handleApiAdminQueueShowJobLogs(
+	deps: ApiAdminQueueDependencies,
+	ps: ApiParams<typeof adminQueueJobParamDef>,
+) {
 	return await getQueueJobLogs(deps, ps.queue, ps.jobId);
 }
 
 export async function handleApiAdminQueueClear(
 	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueClearParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueClearParamDef, body);
-
 	await clearQueue(deps, ps.queue, ps.state);
 	await logModerationEventInDatabase(deps, moderator, 'clearQueue');
 }
@@ -186,10 +186,8 @@ export async function handleApiAdminQueueClear(
 export async function handleApiAdminQueuePause(
 	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueSelectParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueSelectParamDef, body);
-
 	await pauseQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'pauseQueue');
 }
@@ -197,10 +195,8 @@ export async function handleApiAdminQueuePause(
 export async function handleApiAdminQueueResume(
 	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueSelectParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueSelectParamDef, body);
-
 	await resumeQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'resumeQueue');
 }
@@ -208,28 +204,22 @@ export async function handleApiAdminQueueResume(
 export async function handleApiAdminQueuePromoteJobs(
 	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueSelectParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueSelectParamDef, body);
-
 	await promoteQueueJobs(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'promoteQueue');
 }
 
 export async function handleApiAdminQueueRetryJob(
 	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueJobParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueJobParamDef, body);
-
 	await retryQueueJob(deps, ps.queue, ps.jobId);
 }
 
 export async function handleApiAdminQueueRemoveJob(
 	deps: ApiAdminQueueDependencies,
-	body: Record<string, unknown>,
+	ps: ApiParams<typeof adminQueueJobParamDef>,
 ): Promise<void> {
-	const ps = parseApiParams(adminQueueJobParamDef, body);
-
 	await removeQueueJob(deps, ps.queue, ps.jobId);
 }
