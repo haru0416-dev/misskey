@@ -85,21 +85,56 @@ function attribute(root: HTMLElement, selectors: string[], name = 'content'): st
 	return undefined;
 }
 
+function isWikipedia(url: URL): boolean {
+	return url.hostname.endsWith('.wikipedia.org');
+}
+
 function dimension(value: string | undefined): number | null {
 	const number = Number.parseInt(value ?? '', 10);
 	return Number.isNaN(number) ? null : number;
 }
 
+/** TextDecoder が知っているラベルなら正規化した名前を返す。 */
+function supportedEncoding(label: string | null | undefined): string | null {
+	if (!label) return null;
+	try {
+		return new TextDecoder(label.trim()).encoding;
+	} catch {
+		return null;
+	}
+}
+
+function bomEncoding(bytes: Uint8Array): string | null {
+	if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return 'utf-8';
+	if (bytes[0] === 0xfe && bytes[1] === 0xff) return 'utf-16be';
+	if (bytes[0] === 0xff && bytes[1] === 0xfe) return 'utf-16le';
+	return null;
+}
+
+function isUtf8(bytes: Uint8Array): boolean {
+	try {
+		new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * ブラウザと同じ優先順位で文字コードを決める: BOM → HTTP ヘッダ → 先頭 1024 バイトの meta → 正しい UTF-8 → 推定。
+ * 推定を先にすると、文字コードを宣言した短い Shift_JIS のページ (538 バイト) が windows-1252 (確信度 33、Shift_JIS は 10) と判定されて化ける。
+ */
 async function decodeHtml(response: HttpRequestSendResponse): Promise<string> {
 	const bytes = await response.bytes();
-	const utf8 = new TextDecoder().decode(bytes);
+	const head = new TextDecoder('windows-1252').decode(bytes.subarray(0, 1024));
 	const encoding =
-		detect(bytes)?.toLowerCase() ?? utf8.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1]?.toLowerCase() ?? 'utf-8';
-	try {
-		return new TextDecoder(encoding, { fatal: encoding !== 'utf-8' }).decode(bytes);
-	} catch {
-		return utf8;
-	}
+		bomEncoding(bytes) ??
+		supportedEncoding(/charset\s*=\s*["']?([^"';\s]+)/i.exec(response.headers.get('content-type') ?? '')?.[1]) ??
+		supportedEncoding(/<meta\s[^>]*?charset\s*=\s*["']?\s*([\w.:-]+)/i.exec(head)?.[1]) ??
+		(isUtf8(bytes) ? 'utf-8' : null) ??
+		supportedEncoding(detect(bytes)) ??
+		'utf-8';
+	return new TextDecoder(encoding).decode(bytes);
 }
 
 export async function fetchUrlPreview(
@@ -138,14 +173,7 @@ export async function fetchUrlPreview(
 		return response;
 	}
 
-	let actualUrl = input;
-	if (options.followRedirects) {
-		actualUrl = await request(input, 'HEAD', true)
-			.then((response) => response.url)
-			.catch(() => input);
-	}
-	const url = new URL(actualUrl);
-	if (url.hostname.endsWith('.wikipedia.org')) {
+	async function fetchWikipedia(url: URL, reportedUrl: string): Promise<UrlPreviewSummary> {
 		const lang = url.host.split('.')[0];
 		const response = await request(
 			`https://${lang}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=${url.pathname.split('/')[2]}`,
@@ -153,7 +181,7 @@ export async function fetchUrlPreview(
 		const body = (await response.json()) as { query: { pages: Record<string, { title: string; extract: string }> } };
 		const page = Object.values(body.query.pages)[0]!;
 		return {
-			url: actualUrl,
+			url: reportedUrl,
 			title: page.title,
 			description: clip(page.extract, 300),
 			icon: 'https://wikipedia.org/static/favicon/wikipedia.ico',
@@ -164,10 +192,18 @@ export async function fetchUrlPreview(
 			player: { url: null, width: null, height: null, allow: [] },
 		};
 	}
-	if (/^[a-zA-Z0-9]+\.app\.link$/.test(url.hostname) || url.hostname === 'spotify.link') {
-		url.searchParams.append('$web_only', 'true');
+
+	// リダイレクトは本文の取得で追い、最終 URL は応答から取る。先に HEAD で解決すると、ボット UA に 1 往復 2〜3 秒かける
+	// サイト (NHK/Akamai で実測) では往復の数だけ遅れて 10 秒の制限を超える。
+	const requested = new URL(input);
+	if (isWikipedia(requested)) return await fetchWikipedia(requested, input);
+	if (/^[a-zA-Z0-9]+\.app\.link$/.test(requested.hostname) || requested.hostname === 'spotify.link') {
+		requested.searchParams.append('$web_only', 'true');
 	}
-	const response = await request(url.href, 'GET', true);
+	const response = await request(requested.href, 'GET', true);
+	const actualUrl = response.url === requested.href ? input : response.url;
+	const url = new URL(actualUrl);
+	if (isWikipedia(url)) return await fetchWikipedia(url, actualUrl);
 	const root = parse(url.hostname === 'bsky.app' ? await response.text() : await decodeHtml(response), {
 		blockTextElements: { script: true, noscript: true, style: true, pre: true, title: true },
 	});
