@@ -44,10 +44,15 @@ describe('URL preview fetcher', () => {
 	let origin: string;
 	let html = '';
 	let embed = '';
-	const requests: { path: string; agent: string | undefined; language: string | undefined }[] = [];
+	const requests: { method: string; path: string; agent: string | undefined; language: string | undefined }[] = [];
 	const server = createServer((req, res) => {
 		const path = req.url!;
-		requests.push({ path, agent: req.headers['user-agent'], language: req.headers['accept-language'] });
+		requests.push({
+			method: req.method!,
+			path,
+			agent: req.headers['user-agent'],
+			language: req.headers['accept-language'],
+		});
 		if (path === '/redirect') {
 			res.writeHead(302, { location: '/page' }).end();
 			return;
@@ -76,6 +81,29 @@ describe('URL preview fetcher', () => {
 				Buffer.from('</title><meta charset="Shift_JIS">'),
 			]);
 			res.writeHead(200, { 'content-type': 'text/html', 'content-length': body.length }).end(body);
+			return;
+		}
+		// 文字コードを meta で宣言した、推定では windows-1252 と誤判定される短い Shift_JIS のページ (阿部寛のホームページと同じ形)。
+		if (path === '/sjis-declared') {
+			const body = Buffer.concat([
+				Buffer.from('<html><head><meta http-equiv="Content-Type" content="text/html; charset=Shift_JIS"><title>'),
+				Buffer.from([
+					0x88, 0xa2, 0x95, 0x94, 0x8a, 0xb0, 0x82, 0xcc, 0x83, 0x7a, 0x81, 0x5b, 0x83, 0x80, 0x83, 0x79, 0x81, 0x5b,
+					0x83, 0x57,
+				]),
+				Buffer.from('</title></head></html>'),
+			]);
+			res.writeHead(200, { 'content-type': 'text/html', 'content-length': body.length }).end(body);
+			return;
+		}
+		// HTTP ヘッダだけで文字コードを宣言したページ。
+		if (path === '/eucjp-header') {
+			const body = Buffer.concat([
+				Buffer.from('<title>'),
+				Buffer.from([0xc6, 0xfc, 0xcb, 0xdc]),
+				Buffer.from('</title>'),
+			]);
+			res.writeHead(200, { 'content-type': 'text/html; charset=EUC-JP', 'content-length': body.length }).end(body);
 			return;
 		}
 		const body = path === '/embed' ? embed : path === '/favicon.ico' ? '' : html;
@@ -121,6 +149,10 @@ describe('URL preview fetcher', () => {
 	test('decodes legacy Japanese encoding', async () => {
 		expect((await fetchUrlPreview(service(), `${origin}/sjis`, options)).title).toBe('日本語'.repeat(4));
 	});
+	test('uses the declared encoding before guessing', async () => {
+		expect((await fetchUrlPreview(service(), `${origin}/sjis-declared`, options)).title).toBe('阿部寛のホームページ');
+		expect((await fetchUrlPreview(service(), `${origin}/eucjp-header`, options)).title).toBe('日本');
+	});
 	test('keeps raw title text and decodes character references', async () => {
 		html = '<title>A<title>B &amp; C</title>';
 		expect((await fetchUrlPreview(service(), `${origin}/page`, options)).title).toBe('A<title>B & C');
@@ -128,6 +160,11 @@ describe('URL preview fetcher', () => {
 	test('follows redirects only when enabled', async () => {
 		html = '<title>Destination</title>';
 		expect((await fetchUrlPreview(service(), `${origin}/redirect`, options)).url).toBe(`${origin}/page`);
+		// 遅いサイトでは往復の数だけ遅れるので、リダイレクトの解決に HEAD を別に送らない。
+		expect(requests.filter((request) => request.path !== '/favicon.ico').map((r) => `${r.method} ${r.path}`)).toEqual([
+			'GET /redirect',
+			'GET /page',
+		]);
 		requests.length = 0;
 		await expect(
 			fetchUrlPreview(service(), `${origin}/redirect`, { ...options, followRedirects: false }),
@@ -190,7 +227,7 @@ describe('URL preview fetcher', () => {
 		const result = await fetchUrlPreview(service(['127.0.0.1/32']), `${origin}/page`, options);
 		expect(result.icon).toBeNull();
 		expect(result.player.url).toBeNull();
-		expect(requests.map((request) => request.path)).toEqual(['/page', '/page']);
+		expect(requests.map((request) => request.path)).toEqual(['/page']);
 	});
 	test('rejects non-HTTP schemes', async () => {
 		await expect(fetchUrlPreview(service(), 'file:///etc/passwd', options)).rejects.toThrow(/protocol/);
