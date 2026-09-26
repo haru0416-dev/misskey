@@ -908,7 +908,7 @@ export const endpointMetas = {
 					md5: {
 						type: 'string',
 						optional: false,
-						nullable: false,
+						nullable: true,
 						format: 'md5',
 						example: '15eca7fba0480996e2245f5185bf39f2',
 					},

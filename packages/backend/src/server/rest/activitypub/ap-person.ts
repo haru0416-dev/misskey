@@ -73,6 +73,7 @@ import { ApiError } from '../error.js';
 import { postMoveProcessForApi } from '../account/account-move.js';
 import type { ApiAccountMoveDependencies } from '../account/account-move.js';
 import { uploadDriveFileFromUrlForApi } from '../drive/drive-file-upload.js';
+import { parseDeclaredMedia } from './declared-media.js';
 import type { ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
 import { updateUsertagsForApi } from '../account/account-update.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
@@ -274,6 +275,11 @@ export async function resolveImageForApi(
 	deps: ApiApPersonDependencies,
 	actor: MiRemoteUser,
 	value: string | IObject,
+	/**
+	 * 相手の申告 (種類・寸法・blurhash) で登録し、保存しないなら中身を取得しない。ノートの添付で使う。
+	 * アバター・バナーは画面が読み込み中に blurhash を使うが、多くの実装が申告しないので取得して計算する。
+	 */
+	options: { useDeclaredMetadata: boolean } = { useDeclaredMetadata: false },
 ): Promise<MiDriveFile | null> {
 	if (actor.isSuspended) {
 		throw new Error('actor has been suspended');
@@ -302,6 +308,7 @@ export async function resolveImageForApi(
 				uri: image.url,
 				sensitive: image.sensitive,
 				isLink: !shouldBeCached,
+				declared: options.useDeclaredMetadata ? parseDeclaredMedia(image) : null,
 				comment: truncate(image.name ?? undefined, 512),
 			}),
 		);

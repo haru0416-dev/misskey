@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #key>ID</template>
 					<template #value><span class="_monospace">{{ file.id }}</span></template>
 				</MkKeyValue>
-				<MkKeyValue :copy="file.md5" oneline style="margin: 1em 0;">
+				<MkKeyValue v-if="file.md5 != null" :copy="file.md5" oneline style="margin: 1em 0;">
 					<template #key>MD5</template>
 					<template #value><span class="_monospace">{{ file.md5 }}</span></template>
 				</MkKeyValue>

@@ -95,7 +95,7 @@ type AdminDriveFileResponse = {
 	size: number;
 	type: string;
 	name: string;
-	md5: string;
+	md5: string | null;
 	createdAt: string;
 	requestIp: string | null;
 	requestHeaders: Record<string, string> | null;

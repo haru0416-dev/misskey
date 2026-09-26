@@ -15,7 +15,8 @@ export class MiDriveFile {
 
 	public userHost: string | null;
 
-	public md5: string;
+	/** 中身を取得したファイルだけが持つ。保存しないリモートのファイルは null。 */
+	public md5: string | null;
 
 	public name: string;
 

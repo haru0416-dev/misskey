@@ -197,7 +197,7 @@ export async function listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(
 
 export async function fetchDriveFileByMd5AndUserIdFromDatabase(
 	db: MiDrizzleDatabase,
-	md5: MiDriveFile['md5'],
+	md5: string,
 	userId: NonNullable<MiDriveFile['userId']>,
 ): Promise<MiDriveFile | null> {
 	const [row] = await db
@@ -211,7 +211,7 @@ export async function fetchDriveFileByMd5AndUserIdFromDatabase(
 
 export async function driveFileExistsByMd5AndUserIdFromDatabase(
 	db: MiDrizzleDatabase,
-	md5: MiDriveFile['md5'],
+	md5: string,
 	userId: NonNullable<MiDriveFile['userId']>,
 ): Promise<boolean> {
 	const [row] = await db
@@ -225,7 +225,7 @@ export async function driveFileExistsByMd5AndUserIdFromDatabase(
 
 export async function listDriveFilesByMd5AndUserIdFromDatabase(
 	db: MiDrizzleDatabase,
-	md5: MiDriveFile['md5'],
+	md5: string,
 	userId: NonNullable<MiDriveFile['userId']>,
 ): Promise<MiDriveFile[]> {
 	const rows = await db
