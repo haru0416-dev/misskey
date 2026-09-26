@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
@@ -25,6 +27,7 @@ import {
 import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 
 export type ApiNotesPollsVoteDependencies = ApiRelayDeliverDependencies &
 	ApiNoteDependencies & {
@@ -32,14 +35,6 @@ export type ApiNotesPollsVoteDependencies = ApiRelayDeliverDependencies &
 		publishNoteStream?: ApiNoteStreamPublisher;
 	};
 
-function pollsVoteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'ecafbd2e-c283-4d6d-aecb-1a0a33b75396',
-	});
-}
 function pollsVoteNoPollError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -48,28 +43,12 @@ function pollsVoteNoPollError(): ApiError {
 		id: '5f979967-52d9-4314-a911-1c673727f92f',
 	});
 }
-function pollsVoteInvalidChoiceError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Choice ID is invalid.',
-		code: 'INVALID_CHOICE',
-		id: 'e0cc9a04-f2e8-41e4-a5f1-4127293260cc',
-	});
-}
 function pollsVoteAlreadyVotedError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'You have already voted.',
 		code: 'ALREADY_VOTED',
 		id: '0963fc77-efac-419b-9424-b391608dc6d8',
-	});
-}
-function pollsVoteAlreadyExpiredError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The poll is already expired.',
-		code: 'ALREADY_EXPIRED',
-		id: '1022a357-b085-4054-9083-8f8de358337e',
 	});
 }
 function pollsVoteYouHaveBeenBlockedError(): ApiError {
@@ -89,16 +68,15 @@ export const notesPollsVoteParamDef = z.object({
 export async function handleApiNotesPollsVote(
 	deps: ApiNotesPollsVoteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesPollsVoteParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/polls/vote']>,
 ): Promise<void> {
-	const params = parseApiParams(notesPollsVoteParamDef, body);
-
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw pollsVoteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
-		throw pollsVoteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	if (!note.hasPoll) {
@@ -117,10 +95,10 @@ export async function handleApiNotesPollsVote(
 		const poll = await fetchPollByNoteIdOrFailFromDatabase(transaction as typeof deps.db, note.id);
 		const createdAt = new Date();
 		if (poll.expiresAt && poll.expiresAt < createdAt) {
-			throw pollsVoteAlreadyExpiredError();
+			throw errors.alreadyExpired();
 		}
 		if (poll.choices[params.choice] == null) {
-			throw pollsVoteInvalidChoiceError();
+			throw errors.invalidChoice();
 		}
 
 		const exist = await listPollVotesByNoteAndUserFromDatabase(transaction as typeof deps.db, note.id, me.id);

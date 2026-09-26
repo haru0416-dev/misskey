@@ -41,6 +41,7 @@ import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiNoteDraftDependencies = ApiNoteDependencies &
@@ -50,12 +51,7 @@ export type ApiNoteDraftDependencies = ApiNoteDependencies &
 
 export const countNoteDraftsParamDef = z.object({});
 
-export async function handleApiNotesDraftsCount(
-	deps: ApiNoteDraftDependencies,
-	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<number> {
-	parseApiParams(countNoteDraftsParamDef, body);
+export async function handleApiNotesDraftsCount(deps: ApiNoteDraftDependencies, me: MiLocalUser): Promise<number> {
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
@@ -503,10 +499,8 @@ async function packNoteDraftManyForApi(
 export async function handleApiNotesDraftsCreate(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesDraftsCreateParamDef>,
 ): Promise<{ createdDraft: Packed<'NoteDraft'> }> {
-	const params = parseApiParams(notesDraftsCreateParamDef, body);
-
 	const policies = await getApiRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= policies.noteDraftLimit) {
@@ -622,10 +616,8 @@ export async function handleApiNotesDraftsCreate(
 export async function handleApiNotesDraftsUpdate(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesDraftsUpdateParamDef>,
 ): Promise<{ updatedDraft: Packed<'NoteDraft'> }> {
-	const params = parseApiParams(notesDraftsUpdateParamDef, body);
-
 	const existing = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (existing == null) {
 		throw draftNoSuchNoteDraftError();
@@ -740,9 +732,8 @@ export async function handleApiNotesDraftsUpdate(
 export async function handleApiNotesDraftsDelete(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesDraftsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(notesDraftsDeleteParamDef, body);
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (draft == null) {
 		throw draftNoSuchNoteDraftError();
@@ -755,9 +746,8 @@ export async function handleApiNotesDraftsDelete(
 export async function handleApiNotesDraftsList(
 	deps: ApiNoteDraftDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesDraftsListParamDef>,
 ): Promise<Packed<'NoteDraft'>[]> {
-	const params = parseApiParams(notesDraftsListParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 
 	const drafts = await listNoteDraftsByUserIdFromDatabase(

@@ -27,13 +27,6 @@ import {
 	handleApiUsersUpdateMemo,
 } from '../user/user.js';
 import { handleApiMiauthCheck, handleApiMiauthGenToken } from '../auth/miauth.js';
-import {
-	handleApiNotesDraftsCount,
-	handleApiNotesDraftsCreate,
-	handleApiNotesDraftsDelete,
-	handleApiNotesDraftsList,
-	handleApiNotesDraftsUpdate,
-} from '../note/note-drafts.js';
 import { handleApiUsersReactions } from '../user/user-reactions.js';
 import { handleApiUsersPages } from '../page/pages.js';
 import {
@@ -97,44 +90,6 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			return jsonResponse(c, await handleApiMiauthCheck(deps, session));
 		});
 	});
-
-	app.on(
-		['POST', 'QUERY'],
-		'/notes/drafts/count',
-		endpointHandler(deps, 'notes/drafts/count', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiNotesDraftsCount(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/notes/drafts/create',
-		endpointHandler(deps, 'notes/drafts/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiNotesDraftsCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/notes/drafts/update',
-		endpointHandler(deps, 'notes/drafts/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiNotesDraftsUpdate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/notes/drafts/delete',
-		endpointHandler(deps, 'notes/drafts/delete', async ({ body, auth, c }) => {
-			await handleApiNotesDraftsDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/notes/drafts/list',
-		endpointHandler(deps, 'notes/drafts/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiNotesDraftsList(deps, auth.user, body)),
-		),
-	);
 
 	app.post('/users/show', async (c) => {
 		return await runApiEndpoint(c, async () => {

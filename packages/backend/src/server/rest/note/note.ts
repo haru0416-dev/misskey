@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
 import { URLSearchParams } from 'node:url';
 import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
@@ -60,6 +62,7 @@ import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
 export type ApiNoteDependencies = ApiDriveFileDependencies &
@@ -1211,24 +1214,6 @@ function notesTranslateUnavailableError(): ApiError {
 	});
 }
 
-function notesTranslateNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'bea9b03f-36e0-49c5-a4db-627a029f8971',
-	});
-}
-
-function notesTranslateCannotTranslateInvisibleNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Cannot translate invisible note.',
-		code: 'CANNOT_TRANSLATE_INVISIBLE_NOTE',
-		id: 'ea29f2ca-c368-43b3-aaf1-5ac3e74bbe5d',
-	});
-}
-
 export const notesTranslateParamDef = z.object({
 	noteId: misskeyId(),
 	targetLang: z.string(),
@@ -1340,22 +1325,21 @@ export async function translateTextForApi(
 export async function handleApiNotesTranslate(
 	deps: ApiNotesTranslateDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesTranslateParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/translate']>,
 ): Promise<{ sourceLang: string; text: string } | undefined> {
-	const params = parseApiParams(notesTranslateParamDef, body);
-
 	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.canUseTranslator) {
-		throw notesTranslateUnavailableError();
+		throw errors.unavailable();
 	}
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesTranslateNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
-		throw notesTranslateCannotTranslateInvisibleNoteError();
+		throw errors.cannotTranslateInvisibleNote();
 	}
 
 	// CW も訳す。区切り線はクライアントのブラウザ内翻訳と同じ形にそろえる。

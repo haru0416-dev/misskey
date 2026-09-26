@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/instance/InstanceStore.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
@@ -30,30 +32,13 @@ import { isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 
 export type ApiNotesDeleteDependencies = ApiRelayDeliverDependencies &
 	ApiRolePolicyDependencies & {
 		chartWriters: ChartWriters;
 		publishNoteStream?: ApiNoteStreamPublisher;
 	};
-
-function notesDeleteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '490be23f-8c1f-4796-819f-94cb4f9d1630',
-	});
-}
-
-function notesDeleteAccessDeniedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Access denied.',
-		code: 'ACCESS_DENIED',
-		id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9',
-	});
-}
 
 export const notesDeleteParamDef = z.object({
 	noteId: misskeyId(),
@@ -117,31 +102,21 @@ export async function deleteNoteForApi(
 export async function handleApiNotesDelete(
 	deps: ApiNotesDeleteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesDeleteParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(notesDeleteParamDef, body);
-
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesDeleteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	if (!(await isApiModerator(deps, me)) && note.userId !== me.id) {
-		throw notesDeleteAccessDeniedError();
+		throw errors.accessDenied();
 	}
 
 	const noteAuthor = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 
 	await deleteNoteForApi(deps, noteAuthor, note, me);
-}
-
-function notesUnrenoteNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: 'efd4a259-2442-496b-8dd7-b255aa1a160f',
-	});
 }
 
 export const notesUnrenoteParamDef = z.object({
@@ -151,13 +126,12 @@ export const notesUnrenoteParamDef = z.object({
 export async function handleApiNotesUnrenote(
 	deps: ApiNotesDeleteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notesUnrenoteParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/unrenote']>,
 ): Promise<void> {
-	const params = parseApiParams(notesUnrenoteParamDef, body);
-
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw notesUnrenoteNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);

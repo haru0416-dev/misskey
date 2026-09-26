@@ -38,7 +38,8 @@ import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/adm
 import { createNote } from '@/core/note/NoteCreationService.js';
 import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
-import { handleApiNotesCreate } from '@/server/rest/note/notes-create.js';
+import { handleApiNotesCreate, notesCreateParamDef } from '@/server/rest/note/notes-create.js';
+import { parseApiParams } from '@/server/rest/validation.js';
 import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import {
 	resolveNotificationStreamId,
@@ -230,11 +231,15 @@ describe('durable reliability boundaries', () => {
 		let closed = false;
 		const jobData = z.object({ noteId: z.string(), stage: z.string() });
 		try {
-			const response = await handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
-				text: 'HTTP post lifecycle',
-				localOnly: true,
-				visibility: 'home',
-			});
+			const response = await handleApiNotesCreate(
+				{ ...runtime, notePostProcessing },
+				user,
+				parseApiParams(notesCreateParamDef, {
+					text: 'HTTP post lifecycle',
+					localOnly: true,
+					visibility: 'home',
+				}),
+			);
 			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
 			await analyticsStarted.promise;
 			expect(await runtime.redisForTimelines.lrange(`list:userTimeline:${user.id}`, 0, -1)).toContain(noteId);
@@ -292,11 +297,15 @@ describe('durable reliability boundaries', () => {
 		let noteId: string | undefined;
 		try {
 			const response = await runInRequestScope(() =>
-				handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
-					text: 'operation scoped notification',
-					localOnly: true,
-					visibility: 'public',
-				}),
+				handleApiNotesCreate(
+					{ ...runtime, notePostProcessing },
+					user,
+					parseApiParams(notesCreateParamDef, {
+						text: 'operation scoped notification',
+						localOnly: true,
+						visibility: 'public',
+					}),
+				),
 			);
 			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
 			await started.promise;
@@ -326,11 +335,15 @@ describe('durable reliability boundaries', () => {
 		const jobData = z.object({ noteId: z.string() });
 		try {
 			await expect(
-				handleApiNotesCreate({ ...runtime, notePostProcessing }, user, {
-					text: 'committed creation',
-					visibility: 'home',
-					localOnly: true,
-				}),
+				handleApiNotesCreate(
+					{ ...runtime, notePostProcessing },
+					user,
+					parseApiParams(notesCreateParamDef, {
+						text: 'committed creation',
+						visibility: 'home',
+						localOnly: true,
+					}),
+				),
 			).rejects.toBe(failure);
 			await notePostProcessing.close();
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, user.id)).notesCount).toBe(1);

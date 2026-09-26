@@ -320,4 +320,4 @@ type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 										? UnionSchemaType<p['oneOf']>
 										: any;
 
-type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;
+export type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;

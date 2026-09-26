@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -51,6 +54,7 @@ import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
 export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
@@ -109,28 +113,12 @@ export function decodeReactionForApi(str: string): { reaction: string; name?: st
 	return { reaction: str };
 }
 
-function reactionNoSuchNoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such note.',
-		code: 'NO_SUCH_NOTE',
-		id: '033d0620-5bfe-4027-965d-980b0c85a3ea',
-	});
-}
 function reactionsNoSuchNoteError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '263fff3d-d0e1-4af4-bea7-8408059b451a',
-	});
-}
-function reactionAlreadyReactedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are already reacting to that note.',
-		code: 'ALREADY_REACTED',
-		id: '71efcf98-86d6-4e2b-b2ad-9d032369366b',
 	});
 }
 function reactionYouHaveBeenBlockedError(): ApiError {
@@ -141,28 +129,12 @@ function reactionYouHaveBeenBlockedError(): ApiError {
 		id: '20ef5475-9f38-4e4c-bd33-de6d979498ec',
 	});
 }
-function reactionCannotReactToRenoteError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot react to Renote.',
-		code: 'CANNOT_REACT_TO_RENOTE',
-		id: 'eaccdc08-ddef-43fe-908f-d108faad57f5',
-	});
-}
 function unreactionNoSuchNoteError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37',
-	});
-}
-function unreactionNotReactedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are not reacting to that note.',
-		code: 'NOT_REACTED',
-		id: '92f4426d-4196-4125-aa5b-02943e2ec8fc',
 	});
 }
 
@@ -379,13 +351,12 @@ export const reactionsCreateParamDef = z.object({
 export async function handleApiNotesReactionsCreate(
 	deps: ApiNotesReactionsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof reactionsCreateParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/reactions/create']>,
 ): Promise<void> {
-	const params = parseApiParams(reactionsCreateParamDef, body);
-
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
-		throw reactionNoSuchNoteError();
+		throw errors.noSuchNote();
 	}
 
 	try {
@@ -393,13 +364,13 @@ export async function handleApiNotesReactionsCreate(
 	} catch (err) {
 		if (err instanceof IdentifiableError) {
 			if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') {
-				throw reactionAlreadyReactedError();
+				throw errors.alreadyReacted();
 			}
 			if (err.id === 'e70412a4-7197-4726-8e74-f3e0deb92aa7') {
 				throw reactionYouHaveBeenBlockedError();
 			}
 			if (err.id === '12c35529-3c79-4327-b1cc-e2cf63a71925') {
-				throw reactionCannotReactToRenoteError();
+				throw errors.cannotReactToRenote();
 			}
 		}
 		throw err;
@@ -413,10 +384,9 @@ export const reactionsDeleteParamDef = z.object({
 export async function handleApiNotesReactionsDelete(
 	deps: ApiNotesReactionsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof reactionsDeleteParamDef>,
+	errors: ContractErrors<(typeof notesContracts)['notes/reactions/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(reactionsDeleteParamDef, body);
-
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
 		throw unreactionNoSuchNoteError();
@@ -426,7 +396,7 @@ export async function handleApiNotesReactionsDelete(
 		await deleteNoteReactionForApi(deps, me, note);
 	} catch (err) {
 		if (err instanceof IdentifiableError && err.id === '60527ec9-b4cb-4a88-a6bd-32d3ad26817d') {
-			throw unreactionNotReactedError();
+			throw errors.notReacted();
 		}
 		throw err;
 	}
@@ -442,9 +412,8 @@ export const notesReactionsParamDef = z.object({
 export async function handleApiNotesReactions(
 	deps: ApiNotesReactionsDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
-): Promise<{ id: string; createdAt: string; user: unknown; type: string }[]> {
-	const params = parseApiParams(notesReactionsParamDef, body);
+	params: ApiParams<typeof notesReactionsParamDef>,
+): Promise<{ id: string; createdAt: string; user: Packed<'UserLite'>; type: string }[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null || !(await isVisibleForMeForApi(deps, note, me?.id ?? null))) {
 		throw reactionsNoSuchNoteError();
@@ -472,10 +441,18 @@ export async function handleApiNotesReactions(
 	);
 	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
 
-	return reactions.map((r) => ({
-		id: r.id,
-		createdAt: parseId(r.id).date.toISOString(),
-		user: userMap.get(r.userId),
-		type: decodeReactionForApi(r.reaction).reaction,
-	}));
+	// 一覧の取得と利用者の取得の間に消えた利用者のリアクションは、仕様上必須の user を欠いたまま返さず除く。
+	return reactions.flatMap((r) => {
+		const user = userMap.get(r.userId);
+		return user == null
+			? []
+			: [
+					{
+						id: r.id,
+						createdAt: parseId(r.id).date.toISOString(),
+						user,
+						type: decodeReactionForApi(r.reaction).reaction,
+					},
+				];
+	});
 }
