@@ -45,11 +45,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template v-else>
 					<img v-if="(!originalContentLoaded || !thumbnailContentLoaded) && content.thumbnailUrl != null" :class="[$style.content, $style.thumbnail]" :src="content.thumbnailUrl" alt="" draggable="false" @load="onThumbnailLoaded" @error="onThumbnailSettled">
 					<template v-if="activated">
-						<img v-if="content.type === 'image'" :class="[$style.content, { [$style.pixelatedZoom]: pixelatedZoom }]" :src="content.url" :alt="content.file?.comment ?? ''" draggable="false" @load="onOriginalLoaded">
-						<video v-else ref="videoEl" data-gallery-click-action="video" :class="[$style.video, { [$style.videoSized]: videoAspectRatio != null }]" :src="content.url" :aria-label="content.file?.comment ?? content.filename ?? i18n.ts.video" draggable="false" :controls="prefer.useNativeUiForVideoAudioPlayer" playsinline @loadedmetadata="onVideoLoadedMetadata" @click.stop="onVideoClick"></video>
+						<img v-if="content.type === 'image'" v-show="!originalContentFailed" :class="[$style.content, { [$style.pixelatedZoom]: pixelatedZoom }]" :src="content.url" :alt="content.file?.comment ?? ''" draggable="false" @load="onOriginalLoaded" @error="onOriginalFailed">
+						<video v-else ref="videoEl" data-gallery-click-action="video" :class="[$style.video, { [$style.videoSized]: videoAspectRatio != null }]" :src="content.url" :aria-label="content.file?.comment ?? content.filename ?? i18n.ts.video" draggable="false" :controls="prefer.useNativeUiForVideoAudioPlayer" playsinline @loadedmetadata="onVideoLoadedMetadata" @error="onOriginalFailed" @click.stop="onVideoClick"></video>
 						<div v-if="content.type === 'video' && !prefer.useNativeUiForVideoAudioPlayer && !isVideoPlaying" :class="$style.playIconWrapper"><div :class="$style.playIcon"><i class="ti ti-player-play"></i></div></div>
 					</template>
-					<div v-if="activated && (!originalContentLoaded || (content.type === 'video' && isVideoPlaying && !isVideoActuallyPlaying))" :class="$style.loading"><MkLoading/></div>
+					<div v-if="activated && originalContentFailed" :class="$style.loadFailed" role="alert"><i class="ti ti-photo-off"></i>{{ i18n.ts.failedToLoadMedia }}</div>
+					<div v-else-if="activated && (!originalContentLoaded || (content.type === 'video' && isVideoPlaying && !isVideoActuallyPlaying))" :class="$style.loading"><MkLoading/></div>
 				</template>
 			</div>
 		</div>
@@ -233,6 +234,7 @@ provide(DI.mkLightboxItemVideoEl, videoEl);
 provide(DI.mkLightboxItemActive, toRef(props, 'activated'));
 
 const originalContentLoaded = ref(false);
+const originalContentFailed = ref(false);
 const thumbnailContentLoaded = ref(false);
 const enableTransition = ref(false);
 const infoShowing = ref(false);
@@ -629,6 +631,13 @@ function onOriginalLoaded() {
 	animateFromSource();
 }
 
+// 元ファイルが取れない (削除済み・到達不能な URL) と load は来ないので、error で読み込み中の表示を終える。
+// サムネイルは表示し続け、その上に失敗を重ねる。
+function onOriginalFailed() {
+	originalContentFailed.value = true;
+	animateFromSource();
+}
+
 watch(
 	[rootEl, hide],
 	([root, hidden]) => {
@@ -764,6 +773,7 @@ defineExpose({ onActive, onDeactive, closeThis });
 .videoSized { width: min(100cqw, calc(100cqh * v-bind("videoAspectRatio ?? 16 / 9"))); height: auto; aspect-ratio: v-bind("videoAspectRatio ?? 16 / 9"); background-color: #000; }
 .thumbnail { pointer-events: none; }
 .loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+.loadFailed { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; pointer-events: none; color: #fff; text-shadow: 0 0 6px #000a; > i { font-size: 2em; } }
 .hidden { position: absolute; inset: 0; margin: auto; display: grid; place-items: center; overflow: clip; padding: 0; border: 0; color: inherit; background: transparent; }
 .sensitive::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 4px var(--MI_THEME-warn); pointer-events: none; }
 .hiddenWrapper { position: relative; display: block; width: 100%; max-height: 100%; min-height: 0; }
