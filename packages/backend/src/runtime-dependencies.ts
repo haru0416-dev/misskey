@@ -63,6 +63,7 @@ import type { VideoProcessingService } from '@/core/drive/VideoProcessingService
 import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/server/chart-runtime.js';
+import { flushInstanceNoteCounts } from '@/core/instance/instance-notes-counter.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import { createNotePostProcessing, notePostProcessingConcurrency } from '@/core/note/NotePostProcessing.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
@@ -359,6 +360,12 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 						if (process.env['NODE_ENV'] !== 'test') {
 							await saveChartWriters(chartWriters);
 						}
+					} catch (error) {
+						errors.push(error);
+					}
+					try {
+						// まとめて反映する前のリモート投稿数を捨てない。
+						await flushInstanceNoteCounts();
 					} catch (error) {
 						errors.push(error);
 					}
