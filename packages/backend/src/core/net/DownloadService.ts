@@ -129,10 +129,15 @@ export function createDownloadService(
 		const chunks: Buffer[] = [];
 		let size = 0;
 		const spill: { to: { path: string; cleanup: () => void; file: fs.WriteStream } | null } = { to: null };
-		const sink = new stream.Writable({
+		// 上限超過や切断で sink が破棄されたとき、一時ファイルへの書き込みが残っていることがある。
+		// その完了通知のエラーは破棄済みの sink へ返さず、後始末は destroy でだけ行う。
+		const done = (callback: (err?: Error | null) => void) => (err?: Error | null) => {
+			if (!sink.destroyed) callback(err);
+		};
+		const sink: stream.Writable = new stream.Writable({
 			write(chunk: Buffer, _encoding, callback) {
 				if (spill.to != null) {
-					spill.to.file.write(chunk, callback);
+					spill.to.file.write(chunk, done(callback));
 					return;
 				}
 				chunks.push(chunk);
@@ -142,28 +147,34 @@ export function createDownloadService(
 					return;
 				}
 				createTemp().then(([path, cleanup]) => {
+					if (sink.destroyed) {
+						cleanup();
+						return;
+					}
 					const file = fs.createWriteStream(path);
+					file.on('error', (err) => sink.destroy(err));
 					spill.to = { path, cleanup, file };
 					for (const buffered of chunks.splice(0)) file.write(buffered);
-					file.write(Buffer.alloc(0), callback);
-				}, callback);
+					file.write(Buffer.alloc(0), done(callback));
+				}, done(callback));
 			},
 			final(callback) {
 				if (spill.to == null) {
 					callback();
 					return;
 				}
-				spill.to.file.end(callback);
+				spill.to.file.end(done(callback));
+			},
+			destroy(err, callback) {
+				// 正常終了後の自動 destroy (err が null) では一時ファイルを残して呼び出し元へ渡す。
+				if (err != null && spill.to != null) {
+					spill.to.file.destroy();
+					spill.to.cleanup();
+				}
+				callback(err);
 			},
 		});
-		let filename: string;
-		try {
-			({ filename } = await download(url, sink));
-		} catch (e) {
-			spill.to?.file.destroy();
-			spill.to?.cleanup();
-			throw e;
-		}
+		const { filename } = await download(url, sink);
 		const result =
 			spill.to == null ? { data: Buffer.concat(chunks, size) } : { path: spill.to.path, cleanup: spill.to.cleanup };
 		logger.succ(`Download finished: ${chalk.cyan(url)}`);
