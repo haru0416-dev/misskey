@@ -412,7 +412,9 @@ export async function createNoteFromApForApi(
 			attachment.sensitive = sensitive;
 		}
 	}
-	const resolvedFiles = await Promise.all(attachments.map((attach) => resolveImageForApi(deps, actor, attach)));
+	const resolvedFiles = await Promise.all(
+		attachments.map((attach) => resolveImageForApi(deps, actor, attach, { useDeclaredMetadata: true })),
+	);
 	const files = resolvedFiles.filter((file) => file != null);
 
 	const reply = await resolveIncomingReply(note.inReplyTo, (target) =>

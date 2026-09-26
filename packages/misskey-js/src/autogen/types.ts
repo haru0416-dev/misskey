@@ -4883,7 +4883,7 @@ export type components = {
              * Format: md5
              * @example 15eca7fba0480996e2245f5185bf39f2
              */
-            md5: string;
+            md5: string | null;
             /** @example 51469 */
             size: number;
             isSensitive: boolean;
@@ -7851,7 +7851,7 @@ export interface operations {
                          * Format: md5
                          * @example 15eca7fba0480996e2245f5185bf39f2
                          */
-                        md5: string;
+                        md5: string | null;
                         /** @example 192.jpg */
                         name: string;
                         /** @example image/jpeg */

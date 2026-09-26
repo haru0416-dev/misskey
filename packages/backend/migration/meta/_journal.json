@@ -169,6 +169,13 @@
       "when": 1790395629921,
       "tag": "0023_fantastic_payback",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790446947490,
+      "tag": "0024_yielding_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

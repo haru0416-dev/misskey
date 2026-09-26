@@ -37,7 +37,8 @@ import {
 	publishEnqueuedDriveFileDeletion,
 	startDriveFileDeletion,
 } from '@/core/drive/DriveFileDeletionLogic.js';
-import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { FileInfo, FileInfoService } from '@/core/drive/FileInfoService.js';
+import mime from 'mime-types';
 import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import type { S3Service } from '@/core/drive/S3Service.js';
@@ -53,6 +54,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
+import type { MiMeta } from '@/models/Meta.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { castMultipartFields } from '../string-params.js';
@@ -282,7 +284,7 @@ async function persistStoredDriveFileForApi(
 		const result = await deps.db.transaction(async (transaction) => {
 			await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtext('drive-quota'), hashtext(${user.id}))`);
 
-			if (!force) {
+			if (!force && stored.file.md5 != null) {
 				const matched = await fetchDriveFileByMd5AndUserIdFromDatabase(transaction, stored.file.md5, user.id);
 				if (matched) {
 					if (sensitive && !matched.isSensitive) {
@@ -357,9 +359,55 @@ async function expireOldDriveFileForApi(
 	}
 }
 
+/** 保存しないリモートのファイルを、中身を取得せずに登録するための相手の申告 (ActivityPub の Document)。 */
+export type DeclaredRemoteFile = {
+	mime: string;
+	width: number | null;
+	height: number | null;
+	blurhash: string | null;
+};
+
+/**
+ * センシティブ判定をこの利用者のファイルに掛ける設定か。掛けるなら中身が要る。
+ * ロールの alwaysMarkNsfw による省略は登録時に判定するので、ここでは管理設定だけを見る (取得が要らない場合にも取得する側へ倒れる)。
+ */
+function sensitiveDetectionApplies(meta: MiMeta, user: MiUser | null): boolean {
+	if (user == null || meta.sensitiveMediaDetection === 'none') return false;
+	if (meta.sensitiveMediaDetection === 'local') return user.host == null;
+	if (meta.sensitiveMediaDetection === 'remote') return user.host != null;
+	return true;
+}
+
+/** 取得しない場合のファイル名。取得時は Content-Disposition を優先するが、ここでは URL の末尾しか分からない。 */
+function fileNameFromUrl(url: string): string | null {
+	try {
+		const last = new URL(url).pathname.split('/').pop();
+		return last ? decodeURIComponent(last) : null;
+	} catch {
+		return null;
+	}
+}
+
+/** 取得していないファイルの情報。md5 は中身が無いので null、size は保存しないリモートのファイルと同じく 0。 */
+function declaredFileInfo(declared: DeclaredRemoteFile): Omit<FileInfo, 'md5'> & { md5: null } {
+	return {
+		size: 0,
+		md5: null,
+		type: { mime: declared.mime, ext: mime.extension(declared.mime) || null },
+		...(declared.width == null ? {} : { width: declared.width }),
+		...(declared.height == null ? {} : { height: declared.height }),
+		...(declared.blurhash == null ? {} : { blurhash: declared.blurhash }),
+		sensitive: false,
+		porn: false,
+		warnings: [],
+	};
+}
+
 export type AddDriveFileArgs = {
 	user: MiUser | null;
-	path: string;
+	/** 中身の一時ファイル。null なら取得せずに declared で登録する (isLink の場合だけ)。 */
+	path: string | null;
+	declared?: DeclaredRemoteFile | null;
 	name?: string | null;
 	comment?: string | null;
 	folderId?: string | null;
@@ -378,6 +426,7 @@ export async function addDriveFileForApi(
 	{
 		user,
 		path,
+		declared = null,
 		name = null,
 		comment = null,
 		folderId = null,
@@ -391,6 +440,9 @@ export async function addDriveFileForApi(
 		ext = null,
 	}: AddDriveFileArgs,
 ): Promise<MiDriveFile> {
+	if (path == null && (!isLink || declared == null)) {
+		throw new Error('A drive file without content must be a link with declared metadata');
+	}
 	const userRoleNSFW = user != null && (await getApiRolePolicies(deps, user)).alwaysMarkNsfw;
 	let skipNsfwCheck = user == null || userRoleNSFW;
 	if (deps.meta.sensitiveMediaDetection === 'none') {
@@ -403,20 +455,23 @@ export async function addDriveFileForApi(
 		skipNsfwCheck = true;
 	}
 
-	const info = await deps.fileInfoService.getFileInfo(path, {
-		fileName: name,
-		skipSensitiveDetection: skipNsfwCheck,
-		sensitiveThreshold: driveSensitiveMediaThreshold(deps.meta),
-		sensitiveThresholdForPorn: 0.75,
-		enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
-	});
+	const info: Omit<FileInfo, 'md5'> & { md5: string | null } =
+		path == null
+			? declaredFileInfo(declared!)
+			: await deps.fileInfoService.getFileInfo(path, {
+					fileName: name,
+					skipSensitiveDetection: skipNsfwCheck,
+					sensitiveThreshold: driveSensitiveMediaThreshold(deps.meta),
+					sensitiveThresholdForPorn: 0.75,
+					enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
+				});
 
 	const detectedName = correctFilename(
 		name != null && validateDriveFileName(name) ? name : 'untitled',
 		ext ?? info.type.ext,
 	);
 
-	if (user != null && !force) {
+	if (user != null && !force && info.md5 != null) {
 		const matched = await fetchDriveFileByMd5AndUserIdFromDatabase(deps.db, info.md5, user.id);
 
 		if (matched) {
@@ -573,6 +628,7 @@ export async function addDriveFileForApi(
 			}
 		}
 	} else {
+		if (path == null || info.md5 == null) throw new Error('A stored drive file needs its content');
 		const stored = await saveDriveFileForApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
 		const persisted = await persistStoredDriveFileForApi(deps, stored, user, force, sensitive);
 		if (!persisted.inserted) {
@@ -708,6 +764,7 @@ export async function uploadDriveFileFromUrlForApi(
 		sensitive = false,
 		force = false,
 		isLink = false,
+		declared = null,
 		comment = null,
 		requestIp = null,
 		requestHeaders = null,
@@ -719,11 +776,47 @@ export async function uploadDriveFileFromUrlForApi(
 		sensitive?: boolean;
 		force?: boolean;
 		isLink?: boolean;
+		/** 相手の申告。保存しない (isLink) ファイルで中身が要らなければ、取得せずにこれで登録する。 */
+		declared?: DeclaredRemoteFile | null;
 		comment?: string | null;
 		requestIp?: string | null;
 		requestHeaders?: Record<string, string> | null;
 	},
 ): Promise<MiDriveFile> {
+	// 同じ利用者の同じ URI は一意なので、登録済みなら取得し直さない (受信のたびに添付・アバターを全体取得していた)。
+	if (user != null && uri != null) {
+		const existing = await fetchDriveFileByUriAndUserIdFromDatabase(deps.db, uri, user.id);
+		if (existing != null) {
+			if (sensitive && !existing.isSensitive) {
+				await updateDriveFileInDatabase(deps.db, existing.id, { isSensitive: true });
+				existing.isSensitive = true;
+			}
+			return existing;
+		}
+	}
+
+	// 保存しないファイルは中身を取得せずに登録する。写真 4 枚のノート 50 件で 355MiB を取得して SD に書き、
+	// 保存が 13 倍遅くなっていた (Pi 5 相当の枠で実測)。センシティブ判定を掛けるときだけ中身を取得する。
+	if (isLink && declared != null && !sensitiveDetectionApplies(deps.meta, user)) {
+		const driveFile = await addDriveFileForApi(deps, {
+			user,
+			path: null,
+			declared,
+			name: fileNameFromUrl(url),
+			comment,
+			folderId,
+			force,
+			isLink,
+			url,
+			uri,
+			sensitive,
+			requestIp,
+			requestHeaders,
+		});
+		deps.logger.info(`Registered without fetching: ${driveFile.id}`);
+		return driveFile;
+	}
+
 	const [path, cleanup] = await createTemp();
 
 	try {

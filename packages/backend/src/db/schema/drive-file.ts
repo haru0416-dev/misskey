@@ -18,7 +18,8 @@ export const driveFile = pgTable(
 			.$type<MiUser['id'] | null>()
 			.references(() => user.id, { onDelete: 'set null' }),
 		userHost: varchar({ length: 128 }),
-		md5: varchar({ length: 32 }).notNull(),
+		// 中身を取得したファイルだけが持つ。保存しないリモートのファイルは取得せずに登録するので null。
+		md5: varchar({ length: 32 }),
 		name: varchar({ length: 256 }).notNull(),
 		type: varchar({ length: 128 }).notNull(),
 		size: integer().notNull(),
