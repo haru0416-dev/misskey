@@ -13,7 +13,7 @@ import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
 
 const config = {
 	instance: { url: 'https://misskey.test' },
-	runtime: { userAgent: 'Erebia/test' },
+	runtime: { userAgent: 'Toneriko/test' },
 	media: { proxyUrl: 'https://media.test' },
 } as Config;
 

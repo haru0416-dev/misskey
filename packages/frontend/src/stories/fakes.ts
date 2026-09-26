@@ -468,11 +468,11 @@ export function emoji(
 export function meta(): entities.MetaDetailed {
 	// 項目を網羅していないので直接は代入できない。story 用に足りる範囲だけ持つ。
 	const partial: Partial<entities.MetaDetailed> = {
-		maintainerName: 'Erebia',
+		maintainerName: 'Toneriko',
 		maintainerEmail: 'maintainer@example.com',
 		version: '0.1.0',
 		providesTarball: false,
-		name: 'Erebia',
+		name: 'Toneriko',
 		shortName: null,
 		uri: 'https://example.com',
 		description: 'story 用のインスタンス',

@@ -57,7 +57,7 @@ async function createNodeinfoDocument(
 		homepage: string | null;
 		repository?: string | null;
 	} = {
-		name: 'erebia',
+		name: 'toneriko',
 		version: deps.config.runtime.version,
 		homepage: meta.repositoryUrl,
 		repository: meta.repositoryUrl,

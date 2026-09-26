@@ -208,7 +208,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 
 		info: {
 			version: config.runtime.version,
-			title: 'Erebia API',
+			title: 'Toneriko API',
 			// 個々のパラメータに書くと同じ説明が数百回複製されるので、形式の説明はここに 1 度だけ置く。
 			description: [
 				'`format: misskey:id` のパラメータは、ハイフンを除いた小文字 hex 32 桁の UUIDv7 です。',

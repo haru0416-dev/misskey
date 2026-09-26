@@ -22,19 +22,19 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 		theme_color: deps.meta.themeColor || '#5c62d8',
 		icons: [
 			{
-				src: deps.meta.app192IconUrl || '/client-assets/erebia-icon-192.png',
+				src: deps.meta.app192IconUrl || '/client-assets/toneriko-icon-192.png',
 				sizes: '192x192',
 				type: 'image/png',
 				purpose: 'maskable',
 			},
 			{
-				src: deps.meta.app512IconUrl || '/client-assets/erebia-icon.png',
+				src: deps.meta.app512IconUrl || '/client-assets/toneriko-icon.png',
 				sizes: '512x512',
 				type: 'image/png',
 				purpose: 'maskable',
 			},
 			{
-				src: '/client-assets/erebia-icon.svg',
+				src: '/client-assets/toneriko-icon.svg',
 				sizes: 'any',
 				type: 'image/svg+xml',
 				purpose: 'any',
@@ -91,7 +91,7 @@ function createRobotsTxt(meta: MiMeta): string {
 }
 
 function createOpenSearchXml(deps: WebMetadataDependencies): string {
-	const name = deps.meta.name ?? 'Erebia';
+	const name = deps.meta.name ?? 'Toneriko';
 	let content = '';
 	content +=
 		'<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';

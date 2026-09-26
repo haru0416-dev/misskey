@@ -1,4 +1,4 @@
-# Erebia サーバーの設定
+# Toneriko サーバーの設定
 # すべてのキーを厳密に検証する。期間は ms/s/m/h/d、サイズは B/KiB/MiB/GiB を使用する。
 
 configVersion: 2
@@ -6,7 +6,7 @@ configVersion: 2
 instance:
   url: https://example.tld
   setupPassword:
-    fromEnvironment: EREBIA_SETUP_PASSWORD
+    fromEnvironment: TONERIKO_SETUP_PASSWORD
   publishSourceTarball: false
 
 server:

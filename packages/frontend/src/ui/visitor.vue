@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div :class="$style.main">
 		<div v-if="narrow && !isRoot" :class="$style.header">
-			<img :src="instance.iconUrl || '/client-assets/erebia-icon.svg'" alt="" :class="$style.headerIcon"/>
+			<img :src="instance.iconUrl || '/client-assets/toneriko-icon.svg'" alt="" :class="$style.headerIcon"/>
 			<MkA to="/" :class="$style.headerTitle">{{ instanceName }}</MkA>
 			<MkButton primary rounded :class="$style.headerButton" @click="goHome">{{ i18n.ts.signup }}</MkButton>
 		</div>

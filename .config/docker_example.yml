@@ -3,7 +3,7 @@ configVersion: 2
 instance:
   url: https://example.tld
   setupPassword:
-    fromEnvironment: EREBIA_SETUP_PASSWORD
+    fromEnvironment: TONERIKO_SETUP_PASSWORD
 
 server:
   listen:

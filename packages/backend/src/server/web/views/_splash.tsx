@@ -6,7 +6,7 @@
 export function Splash(props: { icon?: string | null }) {
 	return (
 		<div id="splash">
-			<img id="splashIcon" src={props.icon || '/client-assets/erebia-icon.svg'} alt="" />
+			<img id="splashIcon" src={props.icon || '/client-assets/toneriko-icon.svg'} alt="" />
 			<div id="splashSpinner">
 				<svg class="spinner bg" viewBox="0 0 152 152" xmlns="http://www.w3.org/2000/svg">
 					<g transform="matrix(1,0,0,1,12,12)">

@@ -10,7 +10,7 @@
 		const locale = JSON.parse(localStorage.getItem('locale') || '{}');
 
 		const messages = {
-			title: 'Failed to initialize Erebia',
+			title: 'Failed to initialize Toneriko',
 			serverError:
 				'If reloading after a period of time does not resolve the problem, contact the server administrator with the following ERROR ID.',
 			solution: 'The following actions may solve the problem.',

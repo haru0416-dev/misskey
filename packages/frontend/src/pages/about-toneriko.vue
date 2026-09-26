@@ -9,66 +9,66 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div class="_spacer" style="--MI_SPACER-w: 600px; --MI_SPACER-min: 20px;">
 			<div class="_gaps_m">
 				<div v-panel :class="$style.about">
-					<img src="/client-assets/erebia-icon.svg" alt="" :class="$style.icon" draggable="false"/>
-					<h1 :class="$style.name">Erebia</h1>
-					<div :class="$style.tagline">{{ i18n.ts._aboutErebia.tagline }}</div>
+					<img src="/client-assets/toneriko-icon.svg" alt="" :class="$style.icon" draggable="false"/>
+					<h1 :class="$style.name">Toneriko</h1>
+					<div :class="$style.tagline">{{ i18n.ts._aboutToneriko.tagline }}</div>
 					<div :class="$style.version">v{{ version }}</div>
 				</div>
 
 				<div :class="$style.description">
-					{{ i18n.ts._aboutErebia.about }}
+					{{ i18n.ts._aboutToneriko.about }}
 				</div>
 
-				<MkInfo>{{ i18n.ts._aboutErebia.basedOnMisskey }}</MkInfo>
+				<MkInfo>{{ i18n.ts._aboutToneriko.basedOnMisskey }}</MkInfo>
 
 				<div v-if="$i != null" :class="$style.love">
-					<MkButton primary rounded inline @click="iLoveErebia"><Mfm :text="i18n.ts._aboutErebia.love"/></MkButton>
+					<MkButton primary rounded inline @click="iLoveToneriko"><Mfm :text="i18n.ts._aboutToneriko.love"/></MkButton>
 				</div>
 
 				<FormSection>
-					<template #label>{{ i18n.ts._aboutErebia.values }}</template>
+					<template #label>{{ i18n.ts._aboutToneriko.values }}</template>
 					<div :class="$style.values">
 						<div :class="$style.value">
 							<i class="ti ti-gauge" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.performance }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.performanceDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutToneriko.performance }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutToneriko.performanceDescription }}</div>
 							</div>
 						</div>
 						<div :class="$style.value">
 							<i class="ti ti-shield-check" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.reliability }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.reliabilityDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutToneriko.reliability }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutToneriko.reliabilityDescription }}</div>
 							</div>
 						</div>
 						<div :class="$style.value">
 							<i class="ti ti-activity-heartbeat" :class="$style.valueIcon"></i>
 							<div>
-								<div :class="$style.valueTitle">{{ i18n.ts._aboutErebia.operations }}</div>
-								<div :class="$style.valueDescription">{{ i18n.ts._aboutErebia.operationsDescription }}</div>
+								<div :class="$style.valueTitle">{{ i18n.ts._aboutToneriko.operations }}</div>
+								<div :class="$style.valueDescription">{{ i18n.ts._aboutToneriko.operationsDescription }}</div>
 							</div>
 						</div>
 					</div>
 				</FormSection>
 
 				<FormSection>
-					<template #label>{{ i18n.ts._aboutErebia.development }}</template>
+					<template #label>{{ i18n.ts._aboutToneriko.development }}</template>
 					<div class="_gaps_s">
-						<div :class="$style.developmentDescription">{{ i18n.ts._aboutErebia.developmentDescription }}</div>
+						<div :class="$style.developmentDescription">{{ i18n.ts._aboutToneriko.developmentDescription }}</div>
 						<FormLink to="https://github.com/haru0416-dev/misskey" external>
 							<template #icon><i class="ti ti-code"></i></template>
-							{{ i18n.ts._aboutErebia.source }}
+							{{ i18n.ts._aboutToneriko.source }}
 							<template #suffix>GitHub</template>
 						</FormLink>
 						<FormLink to="https://github.com/haru0416-dev/misskey/releases" external>
 							<template #icon><i class="ti ti-tag"></i></template>
-							{{ i18n.ts._aboutErebia.releases }}
+							{{ i18n.ts._aboutToneriko.releases }}
 							<template #suffix>GitHub</template>
 						</FormLink>
 						<FormLink v-if="instance.providesTarball" :to="`/tarball/misskey-${version}.tar.gz`" external>
 							<template #icon><i class="ti ti-download"></i></template>
-							{{ i18n.ts._aboutErebia.source }}
+							{{ i18n.ts._aboutToneriko.source }}
 							<template #suffix>Tarball</template>
 						</FormLink>
 					</div>
@@ -92,9 +92,9 @@ import * as os from '@/os.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';
 
-function iLoveErebia() {
+function iLoveToneriko() {
 	os.post({
-		initialText: 'I $[jelly ❤] #Erebia',
+		initialText: 'I $[jelly ❤] #Toneriko',
 		instant: true,
 	});
 }
@@ -103,7 +103,7 @@ const headerActions = computed(() => []);
 const headerTabs = computed(() => []);
 
 definePage(() => ({
-	title: i18n.ts.aboutErebia,
+	title: i18n.ts.aboutToneriko,
 	icon: null,
 }));
 </script>

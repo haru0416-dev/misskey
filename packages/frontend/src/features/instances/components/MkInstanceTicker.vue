@@ -48,7 +48,7 @@ const faviconUrl = computed(() => {
 	let imageSrc: string | null = null;
 	if (props.host == null) {
 		if (localInstance.iconUrl == null) {
-			return '/client-assets/erebia-icon.svg';
+			return '/client-assets/toneriko-icon.svg';
 		}
 		imageSrc = localInstance.iconUrl;
 	} else {

@@ -28,14 +28,14 @@ function greet(props: { version: string }) {
 		console.log(themeColor('  federated social platform'));
 		console.log(' ' + chalk.gray(v) + '\n');
 
-		console.log(' Erebia is an open-source decentralized social platform based on Misskey.');
+		console.log(' Toneriko is an open-source decentralized social platform based on Misskey.');
 
 		console.log('');
 		console.log(`--- ${os.hostname()} ${chalk.gray(`(PID: ${process.pid})`)} ---`);
 	}
 
-	bootLogger.info('Welcome to Erebia!');
-	bootLogger.info(`Erebia v${props.version}`, null, true);
+	bootLogger.info('Welcome to Toneriko!');
+	bootLogger.info(`Toneriko v${props.version}`, null, true);
 }
 
 export async function masterMain(config: Config) {
@@ -55,7 +55,7 @@ export async function masterMain(config: Config) {
 		process.exit(1);
 	}
 
-	bootLogger.succ('Erebia initialized');
+	bootLogger.succ('Toneriko initialized');
 
 	initExtraThreadPool(config);
 

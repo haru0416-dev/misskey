@@ -1,8 +1,8 @@
-# Erebia
+# Toneriko
 
-Erebia is an open-source, federated social platform based on [Misskey](https://github.com/misskey-dev/misskey).
+Toneriko is an open-source, federated social platform based on [Misskey](https://github.com/misskey-dev/misskey).
 
-It remains compatible with the Fediverse and the existing Misskey ecosystem while using Erebia as its product name and user-facing brand.
+It remains compatible with the Fediverse and the existing Misskey ecosystem while using Toneriko as its product name and user-facing brand.
 
 ## Development
 
@@ -15,8 +15,8 @@ For security reports, follow [SECURITY.md](./SECURITY.md). For this fork's chang
 
 ## Upstream
 
-Erebia builds on the work of the Misskey project and its contributors. Protocol identifiers, public APIs, and other compatibility-sensitive names derived from Misskey are intentionally retained where changing them would break interoperability.
+Toneriko builds on the work of the Misskey project and its contributors. Protocol identifiers, public APIs, and other compatibility-sensitive names derived from Misskey are intentionally retained where changing them would break interoperability.
 
 ## License
 
-Erebia is licensed under the GNU Affero General Public License v3.0. See [LICENSE](./LICENSE).
+Toneriko is licensed under the GNU Affero General Public License v3.0. See [LICENSE](./LICENSE).

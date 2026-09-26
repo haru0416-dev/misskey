@@ -407,7 +407,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						width: 100%;
 						height: 100%;
 						background-size: cover;
-						/* バナー未設定時のフォールバック (Erebiaブランドの黄昏グラデーション)。画像があればinline styleのbackground-imageが優先される */
+						/* バナー未設定時のフォールバック (ブランドのアクセント色を暗く落としたグラデーション)。画像があればinline styleのbackground-imageが優先される */
 						background-color: #121320;
 						background-image: linear-gradient(135deg, #34366b 0%, #1e1f3a 45%, #121320 100%);
 						background-repeat: repeat-y;

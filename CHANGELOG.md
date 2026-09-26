@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Change: 製品名を Erebia から Toneriko へ変更（アイコン・ワードマーク・既定テーマ名・nodeinfo の `software.name` を `toneriko` に、初期設定用の環境変数を `TONERIKO_SETUP_PASSWORD` に、紹介ページを `/about-toneriko` に変更）
 - Enhance: ノートの翻訳で CW も翻訳するように
 - Change: 依存パッケージを更新 (`vue` 3.5.43 / `@microsoft/api-extractor` 7.59.1 / `@testing-library/user-event` 14.6.7 / `vitest-websocket-mock` 0.8.0、GitHub Actions の `docker/build-push-action` 7.4.0 / `docker/setup-buildx-action` 4.4.1 / `actions/upload-artifact` v7)
 - Fix: MFMのパースで、閉じていない `[` `\(` `\[` `<center>` などが並ぶ本文の処理時間が文字数の2乗で増え、表示中のクライアントが止まっていた問題を修正（8,192字の `[` で 8.8 秒→9 ms）

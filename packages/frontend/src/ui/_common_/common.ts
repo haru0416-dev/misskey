@@ -180,8 +180,8 @@ export function openInstanceMenu(ev: PointerEvent) {
 	menuItems.push(
 		{
 			type: 'link',
-			text: i18n.ts.aboutErebia,
-			to: '/about-erebia',
+			text: i18n.ts.aboutToneriko,
+			to: '/about-toneriko',
 		},
 		{
 			type: 'link',

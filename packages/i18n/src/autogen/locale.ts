@@ -12,14 +12,14 @@ export interface Locale extends ILocale {
      */
     "headlineMisskey": string;
     /**
-     * ようこそ！Erebiaは、オープンソースの分散型マイクロブログサービスです。
+     * ようこそ！Tonerikoは、オープンソースの分散型マイクロブログサービスです。
      * 「ノート」を作成して、いま起こっていることを共有したり、あなたについて皆に発信しよう📡
      * 「リアクション」機能で、皆のノートに素早く反応を追加することもできます👍
      * 新しい世界を探検しよう🚀
      */
     "introMisskey": string;
     /**
-     * {name}は、オープンソースのプラットフォーム<b>Erebia</b>のサーバーのひとつです。
+     * {name}は、オープンソースのプラットフォーム<b>Toneriko</b>のサーバーのひとつです。
      */
     "poweredByMisskeyDescription": ParameterizedString<"name">;
     /**
@@ -55,8 +55,8 @@ export interface Locale extends ILocale {
      */
     "initialPasswordIsIncorrect": string;
     /**
-     * Erebiaを自分でインストールした場合は、設定ファイルに入力したパスワードを使用してください。
-     * Erebiaのホスティングサービスなどを使用している場合は、提供されたパスワードを使用してください。
+     * Tonerikoを自分でインストールした場合は、設定ファイルに入力したパスワードを使用してください。
+     * Tonerikoのホスティングサービスなどを使用している場合は、提供されたパスワードを使用してください。
      * パスワードを設定していない場合は、空欄にしたまま続行してください。
      */
     "initialPasswordForSetupDescription": string;
@@ -733,7 +733,7 @@ export interface Locale extends ILocale {
      */
     "flagAsBot": string;
     /**
-     * このアカウントがプログラムによって運用される場合は、このフラグをオンにします。オンにすると、反応の連鎖を防ぐためのフラグとして他の開発者に役立ったり、Erebiaのシステム上での扱いがBotに合ったものになります。
+     * このアカウントがプログラムによって運用される場合は、このフラグをオンにします。オンにすると、反応の連鎖を防ぐためのフラグとして他の開発者に役立ったり、Tonerikoのシステム上での扱いがBotに合ったものになります。
      */
     "flagAsBotDescription": string;
     /**
@@ -1899,9 +1899,9 @@ export interface Locale extends ILocale {
      */
     "about": string;
     /**
-     * Erebiaについて
+     * Tonerikoについて
      */
-    "aboutErebia": string;
+    "aboutToneriko": string;
     /**
      * Misskeyについて
      */
@@ -2475,7 +2475,7 @@ export interface Locale extends ILocale {
      */
     "notUseSound": string;
     /**
-     * Erebiaがアクティブな時のみサウンドを出力する
+     * Tonerikoがアクティブな時のみサウンドを出力する
      */
     "useSoundOnlyWhenActive": string;
     /**
@@ -2543,7 +2543,7 @@ export interface Locale extends ILocale {
      */
     "scratchpad": string;
     /**
-     * スクラッチパッドは、AiScriptの実験環境を提供します。Erebiaと対話するコードの記述、実行、結果の確認ができます。
+     * スクラッチパッドは、AiScriptの実験環境を提供します。Tonerikoと対話するコードの記述、実行、結果の確認ができます。
      */
     "scratchpadDescription": string;
     /**
@@ -3139,7 +3139,7 @@ export interface Locale extends ILocale {
      */
     "private": string;
     /**
-     * Erebiaは有志によって様々な言語に翻訳されています。{link}で翻訳に協力できます。
+     * Tonerikoは有志によって様々な言語に翻訳されています。{link}で翻訳に協力できます。
      */
     "i18nInfo": ParameterizedString<"link">;
     /**
@@ -3359,7 +3359,7 @@ export interface Locale extends ILocale {
      */
     "sendErrorReports": string;
     /**
-     * オンにすると、問題が発生したときにエラーの詳細情報がErebiaに共有され、ソフトウェアの品質向上に役立てることができます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれます。
+     * オンにすると、問題が発生したときにエラーの詳細情報がTonerikoに共有され、ソフトウェアの品質向上に役立てることができます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれます。
      */
     "sendErrorReportsDescription": string;
     /**
@@ -3739,7 +3739,7 @@ export interface Locale extends ILocale {
      */
     "learnMore": string;
     /**
-     * Erebiaが更新されました！
+     * Tonerikoが更新されました！
      */
     "misskeyUpdated": string;
     /**
@@ -4351,11 +4351,11 @@ export interface Locale extends ILocale {
      */
     "remindMeLater": string;
     /**
-     * Erebiaを気に入っていただけましたか？
+     * Tonerikoを気に入っていただけましたか？
      */
     "didYouLikeMisskey": string;
     /**
-     * {host}で利用されているErebiaの基盤、Misskeyは無料のソフトウェアです。開発を支援するため、寄付をご検討ください。
+     * {host}で利用されているTonerikoの基盤、Misskeyは無料のソフトウェアです。開発を支援するため、寄付をご検討ください。
      */
     "pleaseDonate": ParameterizedString<"host">;
     /**
@@ -4871,7 +4871,7 @@ export interface Locale extends ILocale {
      */
     "later": string;
     /**
-     * Erebiaへ
+     * Tonerikoへ
      */
     "goToMisskey": string;
     /**
@@ -5139,7 +5139,7 @@ export interface Locale extends ILocale {
      */
     "repositoryUrl": string;
     /**
-     * Erebiaのソースコードが公開されているリポジトリのURLを記入します。
+     * Tonerikoのソースコードが公開されているリポジトリのURLを記入します。
      */
     "repositoryUrlDescription": string;
     /**
@@ -6685,7 +6685,7 @@ export interface Locale extends ILocale {
          */
         "haveFun": ParameterizedString<"name">;
         /**
-         * このまま{name}(Erebia)の使い方についてのチュートリアルに進むこともできますが、ここで中断してすぐに使い始めることもできます。
+         * このまま{name}(Toneriko)の使い方についてのチュートリアルに進むこともできますが、ここで中断してすぐに使い始めることもできます。
          */
         "youCanContinueTutorial": ParameterizedString<"name">;
         /**
@@ -6724,7 +6724,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * ここでは、Erebiaの基本的な使い方や機能を確認できます。
+             * ここでは、Tonerikoの基本的な使い方や機能を確認できます。
              */
             "description": string;
         };
@@ -6734,7 +6734,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Erebiaでの投稿は「ノート」と呼びます。ノートはタイムラインに時系列で並んでいて、リアルタイムで更新されていきます。
+             * Tonerikoでの投稿は「ノート」と呼びます。ノートはタイムラインに時系列で並んでいて、リアルタイムで更新されていきます。
              */
             "description": string;
             /**
@@ -6786,7 +6786,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Erebiaには、使い方に応じて複数のタイムラインが用意されています（サーバーによってはいずれかが無効になっていることがあります）。
+             * Tonerikoには、使い方に応じて複数のタイムラインが用意されています（サーバーによってはいずれかが無効になっていることがあります）。
              */
             "description1": string;
             /**
@@ -6820,7 +6820,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * Erebiaにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。
+             * Tonerikoにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。
              */
             "description1": string;
             "_visibility": {
@@ -6920,7 +6920,7 @@ export interface Locale extends ILocale {
              */
             "title": string;
             /**
-             * ここで紹介した機能はほんの一部にすぎません。Erebiaの使い方をより詳しく知るには、{link}をご覧ください。
+             * ここで紹介した機能はほんの一部にすぎません。Tonerikoの使い方をより詳しく知るには、{link}をご覧ください。
              */
             "description": ParameterizedString<"link">;
         };
@@ -7181,7 +7181,7 @@ export interface Locale extends ILocale {
          * フォロワーの移行は自動ですが、フォローの移行は手動で行う必要があります。移行前にこのアカウントでフォローエクスポートし、移行後すぐに移行先アカウントでインポートを行なってください。
          * リスト・ミュート・ブロックについても同様ですので、手動で移行する必要があります。
          *
-         * （この説明はこのサーバー（Erebia v13.12.0以降）の仕様です。Mastodonなどの他のActivityPubソフトウェアでは挙動が異なる場合があります。）
+         * （この説明はこのサーバー（Toneriko v13.12.0以降）の仕様です。Mastodonなどの他のActivityPubソフトウェアでは挙動が異なる場合があります。）
          */
         "moveAccountDescription": string;
         /**
@@ -7229,7 +7229,7 @@ export interface Locale extends ILocale {
                  */
                 "description": string;
                 /**
-                 * 良いErebiaライフを！
+                 * 良いTonerikoライフを！
                  */
                 "flavor": string;
             };
@@ -7553,7 +7553,7 @@ export interface Locale extends ILocale {
                  */
                 "description": string;
                 /**
-                 * Erebiaを使ってくれてありがとう！
+                 * Tonerikoを使ってくれてありがとう！
                  */
                 "flavor": string;
             };
@@ -7753,15 +7753,15 @@ export interface Locale extends ILocale {
             };
             "_iLoveMisskey": {
                 /**
-                 * I Love Erebia
+                 * I Love Toneriko
                  */
                 "title": string;
                 /**
-                 * "I ❤ #Erebia"を投稿した
+                 * "I ❤ #Toneriko"を投稿した
                  */
                 "description": string;
                 /**
-                 * Erebiaを使ってくださりありがとうございます！ by 開発チーム
+                 * Tonerikoを使ってくださりありがとうございます！ by 開発チーム
                  */
                 "flavor": string;
             };
@@ -7787,7 +7787,7 @@ export interface Locale extends ILocale {
             };
             "_client60min": {
                 /**
-                 * Erebiaの見すぎ
+                 * Tonerikoの見すぎ
                  */
                 "title": string;
                 /**
@@ -8013,7 +8013,7 @@ export interface Locale extends ILocale {
             };
             "_tutorialCompleted": {
                 /**
-                 * Erebia初心者講座 修了証
+                 * Toneriko初心者講座 修了証
                  */
                 "title": string;
                 /**
@@ -8226,7 +8226,7 @@ export interface Locale extends ILocale {
              */
             "maxFileSize_caption": string;
             /**
-             * サーバー全体の最大ファイルサイズ設定は {max} です。これより大きいファイルをアップロードできるようにするには、Erebiaの設定ファイルからこの設定を緩和してください。
+             * サーバー全体の最大ファイルサイズ設定は {max} です。これより大きいファイルをアップロードできるようにするには、Tonerikoの設定ファイルからこの設定を緩和してください。
              */
             "maxFileSize_caption2": ParameterizedString<"max">;
             /**
@@ -8819,17 +8819,17 @@ export interface Locale extends ILocale {
          */
         "projectMembers": string;
     };
-    "_aboutErebia": {
+    "_aboutToneriko": {
         /**
          * 互換性はそのままに、体験と運用を組み直す。
          */
         "tagline": string;
         /**
-         * ErebiaはMisskeyとの互換性を保ちながら、速度、安定性、運用性を優先して再設計する独立フォークです。
+         * TonerikoはMisskeyとの互換性を保ちながら、速度、安定性、運用性を優先して再設計する独立フォークです。
          */
         "about": string;
         /**
-         * ErebiaはMisskeyを基盤として開発されています。
+         * TonerikoはMisskeyを基盤として開発されています。
          */
         "basedOnMisskey": string;
         /**
@@ -8865,11 +8865,11 @@ export interface Locale extends ILocale {
          */
         "development": string;
         /**
-         * Erebiaはオープンソースで開発されています。ソースコード、更新履歴、配布物を公開しています。
+         * Tonerikoはオープンソースで開発されています。ソースコード、更新履歴、配布物を公開しています。
          */
         "developmentDescription": string;
         /**
-         * Erebiaのソースコード
+         * Tonerikoのソースコード
          */
         "source": string;
         /**
@@ -8877,7 +8877,7 @@ export interface Locale extends ILocale {
          */
         "releases": string;
         /**
-         * I $[jelly ❤] #Erebia
+         * I $[jelly ❤] #Toneriko
          */
         "love": string;
     };
@@ -9359,7 +9359,7 @@ export interface Locale extends ILocale {
          */
         "driveFileDurationWarn": string;
         /**
-         * 長い音声を使用するとErebiaの使用に支障をきたす可能性があります。それでも続行しますか？
+         * 長い音声を使用するとTonerikoの使用に支障をきたす可能性があります。それでも続行しますか？
          */
         "driveFileDurationWarnDescription": string;
         /**
@@ -12131,7 +12131,7 @@ export interface Locale extends ILocale {
          */
         "summaryProxy": string;
         /**
-         * Erebia本体ではなく、サマリープロキシを使用してプレビューを生成します。
+         * Toneriko本体ではなく、サマリープロキシを使用してプレビューを生成します。
          */
         "summaryProxyDescription": string;
         /**
@@ -12620,7 +12620,7 @@ export interface Locale extends ILocale {
          */
         "otherOption3": string;
         /**
-         * Erebiaをセーフモードで起動
+         * Tonerikoをセーフモードで起動
          */
         "otherOption4": string;
     };
@@ -12688,7 +12688,7 @@ export interface Locale extends ILocale {
     };
     "_serverSetupWizard": {
         /**
-         * Erebiaのインストールが完了しました！
+         * Tonerikoのインストールが完了しました！
          */
         "installCompleted": string;
         /**
@@ -12712,7 +12712,7 @@ export interface Locale extends ILocale {
          */
         "settingsYouMakeHereCanBeChangedLater": string;
         /**
-         * Erebiaをどのように使いますか？
+         * Tonerikoをどのように使いますか？
          */
         "howWillYouUseMisskey": string;
         "_use": {
@@ -12841,7 +12841,7 @@ export interface Locale extends ILocale {
         "donationRequest": string;
         "_donationRequest": {
             /**
-             * Erebiaの基盤であるMisskeyは、有志によって開発されている無料のソフトウェアです。
+             * Tonerikoの基盤であるMisskeyは、有志によって開発されている無料のソフトウェアです。
              */
             "text1": string;
             /**

@@ -44,7 +44,7 @@ describe('ハッシュタグのミュート行の同定', () => {
 	});
 
 	test('別のタグの行とは一致しない', () => {
-		expect(isSameMute(toHashtagMute('misskey'), 'erebia')).toBe(false);
+		expect(isSameMute(toHashtagMute('misskey'), 'toneriko')).toBe(false);
 	});
 
 	test('旧形式 (1語だけの配列) も外せる', () => {
@@ -55,7 +55,7 @@ describe('ハッシュタグのミュート行の同定', () => {
 	// 複数語の行は AND 条件で、単独のハッシュタグとは意味が違う。
 	// 一致させると「#a と #b の両方を含む」設定をハッシュタグ1つで消してしまう。
 	test('AND条件の行とは一致しない', () => {
-		expect(isSameMute(['#misskey', '#erebia'], 'misskey')).toBe(false);
+		expect(isSameMute(['#misskey', '#toneriko'], 'misskey')).toBe(false);
 	});
 
 	test('無関係な正規表現の行とは一致しない', () => {

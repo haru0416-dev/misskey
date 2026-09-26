@@ -10,14 +10,14 @@ export function BiosPage(props: { version: string }) {
 			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
-					<meta name="application-name" content="Erebia" />
-					<title>Erebia Repair Tool</title>
+					<meta name="application-name" content="Toneriko" />
+					<title>Toneriko Repair Tool</title>
 					<link rel="stylesheet" href="/static-assets/misc/bios.css" />
 				</head>
 
 				<body>
 					<header>
-						<h1 safe>Erebia Repair Tool {props.version}</h1>
+						<h1 safe>Toneriko Repair Tool {props.version}</h1>
 					</header>
 					<main>
 						<div class="tabs">

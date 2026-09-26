@@ -22,7 +22,7 @@ export function InfoCardPage(
 			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
-					<meta name="application-name" content="Erebia" />
+					<meta name="application-name" content="Toneriko" />
 					<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 					<title safe>{props.meta.name ?? props.config.instance.url}</title>
 					<link rel="stylesheet" href="/static-assets/misc/info-card.css" />

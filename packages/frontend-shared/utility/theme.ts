@@ -45,7 +45,7 @@ export const themeProps = Object.keys(lightTheme.props).filter((key) => !key.sta
 export const getBuiltinThemes = () =>
 	Promise.all(
 		[
-			'l-erebia',
+			'l-toneriko',
 			'l-light',
 			'l-coffee',
 			'l-apricot',
@@ -56,7 +56,7 @@ export const getBuiltinThemes = () =>
 			'l-sushi',
 			'l-u0',
 
-			'd-erebia',
+			'd-toneriko',
 			'd-dark',
 			'd-persimmon',
 			'd-astro',

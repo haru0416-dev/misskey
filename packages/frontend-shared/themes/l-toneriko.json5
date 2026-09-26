@@ -1,10 +1,10 @@
-// Erebia デフォルトライトテーマ
+// Toneriko デフォルトライトテーマ
 {
 	id: '87af7a93-56b1-4de0-a5ec-c54ad1e40069',
 
-	name: 'Erebia Light',
-	author: 'erebia',
-	desc: 'Erebia default light theme',
+	name: 'Toneriko Light',
+	author: 'toneriko',
+	desc: 'Toneriko default light theme',
 
 	base: 'light',
 

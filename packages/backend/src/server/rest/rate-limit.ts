@@ -54,7 +54,7 @@ redis.call('PEXPIRE', KEYS[1], ARGV[3])
 return count
 `;
 
-const COMMAND_NAME = 'erebiaCheckRateLimit';
+const COMMAND_NAME = 'tonerikoCheckRateLimit';
 
 type LimitCommander = {
 	[COMMAND_NAME]: (
