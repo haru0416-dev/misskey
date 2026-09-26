@@ -413,9 +413,8 @@ export const iFavoritesParamDef = z.object({
 export async function handleApiIFavorites(
 	deps: ApiIFavoritesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(iFavoritesParamDef, body);
+	params: ApiParams<typeof iFavoritesParamDef>,
+) {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {

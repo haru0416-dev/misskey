@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -270,9 +271,8 @@ export async function handleApiAdminDriveCleanup(
 
 export async function handleApiAdminDeleteAllFilesOfAUser(
 	deps: ApiAdminDriveDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminDriveUserParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminDriveUserParamDef, body);
 	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
 
 	for (const file of files) {
@@ -282,9 +282,8 @@ export async function handleApiAdminDeleteAllFilesOfAUser(
 
 export async function handleApiAdminDriveFiles(
 	deps: ApiAdminDriveDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminDriveFilesParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseApiParams(adminDriveFilesParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForAdminFromDatabase(

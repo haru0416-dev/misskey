@@ -15,10 +15,7 @@ export type ApiAvatarDecorationDependencies = {
 
 export const getAvatarDecorationsParamDef = z.object({});
 
-export async function handleApiGetAvatarDecorations(
-	deps: ApiAvatarDecorationDependencies,
-	body: Record<string, unknown>,
-): Promise<
+export async function handleApiGetAvatarDecorations(deps: ApiAvatarDecorationDependencies): Promise<
 	{
 		id: string;
 		name: string;
@@ -28,7 +25,6 @@ export async function handleApiGetAvatarDecorations(
 		category: string | null;
 	}[]
 > {
-	parseApiParams(getAvatarDecorationsParamDef, body);
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 	const allRoles = await listRolesFromDatabase(deps.db);
 	const roleIds = new Set(allRoles.map((role) => role.id));

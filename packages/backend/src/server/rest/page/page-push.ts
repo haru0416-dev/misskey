@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -23,24 +26,15 @@ export const pagePushParamDef = z.object({
 	var: z.unknown().optional(),
 });
 
-function noSuchPageError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such page.',
-		code: 'NO_SUCH_PAGE',
-		id: '4a13ad31-6729-46b4-b9af-e86b265c2e74',
-	});
-}
-
 export async function handleApiPagePush(
 	deps: ApiPagePushDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof pagePushParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['page-push']>,
 ): Promise<void> {
-	const params = parseApiParams(pagePushParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
-		throw noSuchPageError();
+		throw errors.noSuchPage();
 	}
 
 	deps.publishMainStream?.(page.userId, 'pageEvent', {

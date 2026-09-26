@@ -27,6 +27,7 @@ import {
 } from '@/server/rest/drive/drive.js';
 import { z } from 'zod';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
 	drive: {
@@ -57,7 +58,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'drive/files': {
+	'drive/files': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -77,10 +78,10 @@ export const endpointMetas = {
 					ref: 'DriveFile',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesParamDef,
-	},
-	'drive/files/attached-notes': {
+	}),
+	'drive/files/attached-notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive', 'notes'],
@@ -110,10 +111,10 @@ export const endpointMetas = {
 					id: 'c118ece3-2e4b-4296-99d1-51756e32d232',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesAttachedNotesParamDef,
-	},
-	'drive/files/attached-chat-messages': {
+	}),
+	'drive/files/attached-chat-messages': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive', 'chat'],
@@ -141,10 +142,10 @@ export const endpointMetas = {
 					id: '485ce26d-f5d2-4313-9783-e689d131eafb',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesAttachedChatMessagesParamDef,
-	},
-	'drive/files/check-existence': {
+	}),
+	'drive/files/check-existence': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -160,10 +161,10 @@ export const endpointMetas = {
 				optional: false,
 				nullable: false,
 			},
-		} as const,
+		},
 		paramDef: driveFilesCheckExistenceParamDef,
-	},
-	'drive/files/create': {
+	}),
+	'drive/files/create': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -221,10 +222,10 @@ export const endpointMetas = {
 					id: '4becd248-7f2c-48c4-a9f0-75edc4f9a1ea',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesCreateParamDef,
-	},
-	'drive/files/delete': {
+	}),
+	'drive/files/delete': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -247,10 +248,10 @@ export const endpointMetas = {
 					id: '5eb8d909-2540-4970-90b8-dd6f86088121',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesDeleteParamDef,
-	},
-	'drive/files/find': {
+	}),
+	'drive/files/find': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -272,10 +273,10 @@ export const endpointMetas = {
 					ref: 'DriveFile',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesFindParamDef,
-	},
-	'drive/files/find-by-hash': {
+	}),
+	'drive/files/find-by-hash': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -297,10 +298,10 @@ export const endpointMetas = {
 					ref: 'DriveFile',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesFindByHashParamDef,
-	},
-	'drive/files/show': {
+	}),
+	'drive/files/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -331,10 +332,10 @@ export const endpointMetas = {
 					id: '25b73c73-68b1-41d0-bad1-381cfdf6579f',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesShowParamDef,
-	},
-	'drive/files/update': {
+	}),
+	'drive/files/update': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -381,10 +382,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'DriveFile',
 			},
-		} as const,
+		},
 		paramDef: driveFilesUpdateParamDef,
-	},
-	'drive/files/move-bulk': {
+	}),
+	'drive/files/move-bulk': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -399,10 +400,10 @@ export const endpointMetas = {
 					id: 'abdd73a9-6225-4140-a3e4-8089c77168bc',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFilesMoveBulkParamDef,
-	},
-	'drive/files/upload-from-url': {
+	}),
+	'drive/files/upload-from-url': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -418,10 +419,10 @@ export const endpointMetas = {
 			prohibitMoved: true,
 
 			kind: 'write:drive',
-		} as const,
+		},
 		paramDef: driveFilesUploadFromUrlParamDef,
-	},
-	'drive/folders': {
+	}),
+	'drive/folders': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -441,10 +442,10 @@ export const endpointMetas = {
 					ref: 'DriveFolder',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFoldersParamDef,
-	},
-	'drive/folders/create': {
+	}),
+	'drive/folders/create': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -471,10 +472,10 @@ export const endpointMetas = {
 				nullable: false as const,
 				ref: 'DriveFolder',
 			},
-		} as const,
+		},
 		paramDef: driveFoldersCreateParamDef,
-	},
-	'drive/folders/delete': {
+	}),
+	'drive/folders/delete': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -495,10 +496,10 @@ export const endpointMetas = {
 					id: 'b0fc8a17-963c-405d-bfbc-859a487295e1',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFoldersDeleteParamDef,
-	},
-	'drive/folders/find': {
+	}),
+	'drive/folders/find': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -518,10 +519,10 @@ export const endpointMetas = {
 					ref: 'DriveFolder',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFoldersFindParamDef,
-	},
-	'drive/folders/show': {
+	}),
+	'drive/folders/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -544,10 +545,10 @@ export const endpointMetas = {
 					id: 'd74ab9eb-bb09-4bba-bf24-fb58f761e1e9',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveFoldersShowParamDef,
-	},
-	'drive/folders/update': {
+	}),
+	'drive/folders/update': defineContract({
 		meta: {
 			tags: ['drive'],
 
@@ -581,10 +582,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'DriveFolder',
 			},
-		} as const,
+		},
 		paramDef: driveFoldersUpdateParamDef,
-	},
-	'drive/stream': {
+	}),
+	'drive/stream': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['drive'],
@@ -604,7 +605,7 @@ export const endpointMetas = {
 					ref: 'DriveFile',
 				},
 			},
-		} as const,
+		},
 		paramDef: driveStreamParamDef,
-	},
-} as const;
+	}),
+};

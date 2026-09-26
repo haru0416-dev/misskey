@@ -328,9 +328,8 @@ export async function handleApiFederationShowInstance(
 export async function handleApiAdminFederationUpdateInstance(
 	deps: ApiAdminFederationDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminFederationUpdateInstanceParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminFederationUpdateInstanceParamDef, body);
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
 	if (instance == null) {
@@ -373,9 +372,8 @@ export async function handleApiAdminFederationUpdateInstance(
 
 export async function handleApiAdminFederationRefreshRemoteInstanceMetadata(
 	deps: ApiAdminFederationDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminFederationHostParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminFederationHostParamDef, body);
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
 	if (instance == null) {
@@ -400,9 +398,8 @@ export async function handleApiAdminFederationRefreshRemoteInstanceMetadata(
 
 export async function handleApiAdminFederationDeleteAllFiles(
 	deps: ApiAdminFederationDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminFederationHostParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminFederationHostParamDef, body);
 	const files = await listAllDriveFilesByUserHostFromDatabase(deps.db, params.host);
 
 	for (const file of files) {
@@ -412,9 +409,8 @@ export async function handleApiAdminFederationDeleteAllFiles(
 
 export async function handleApiAdminFederationRemoveAllFollowing(
 	deps: ApiAdminFederationDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminFederationHostParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminFederationHostParamDef, body);
 	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
 	const jobs = followings.map((following) =>
 		toRelationshipJob(deps.config, 'unfollow', {

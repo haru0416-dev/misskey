@@ -55,6 +55,7 @@ import {
 } from '@/server/rest/webhook/webhooks.js';
 import { z } from 'zod';
 import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
 	i: {
@@ -83,7 +84,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'i/2fa/done': {
+	'i/2fa/done': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -101,10 +102,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faDoneParamDef,
-	},
-	'i/2fa/key-done': {
+	}),
+	'i/2fa/key-done': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -133,10 +134,10 @@ export const endpointMetas = {
 					name: { type: 'string' },
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faKeyDoneParamDef,
-	},
-	'i/2fa/password-less': {
+	}),
+	'i/2fa/password-less': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -149,10 +150,10 @@ export const endpointMetas = {
 					id: 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512',
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faPasswordLessParamDef,
-	},
-	'i/2fa/register': {
+	}),
+	'i/2fa/register': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -177,10 +178,10 @@ export const endpointMetas = {
 					issuer: { type: 'string' },
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faRegisterParamDef,
-	},
-	'i/2fa/register-key': {
+	}),
+	'i/2fa/register-key': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -209,10 +210,10 @@ export const endpointMetas = {
 			res: {
 				type: 'object',
 			},
-		} as const,
+		},
 		paramDef: i2faRegisterKeyParamDef,
-	},
-	'i/2fa/remove-key': {
+	}),
+	'i/2fa/remove-key': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -229,10 +230,10 @@ export const endpointMetas = {
 					id: '141c598d-a825-44c8-9173-cfb9d92be493',
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faRemoveKeyParamDef,
-	},
-	'i/2fa/unregister': {
+	}),
+	'i/2fa/unregister': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -245,10 +246,10 @@ export const endpointMetas = {
 					id: '7add0395-9901-4098-82f9-4f67af65f775',
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faUnregisterParamDef,
-	},
-	'i/2fa/update-key': {
+	}),
+	'i/2fa/update-key': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -271,10 +272,10 @@ export const endpointMetas = {
 					id: '1fb7cb09-d46a-4fff-b8df-057708cce513',
 				},
 			},
-		} as const,
+		},
 		paramDef: i2faUpdateKeyParamDef,
-	},
-	'i/apps': {
+	}),
+	'i/apps': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -326,10 +327,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: iAppsParamDef,
-	},
-	'i/change-password': {
+	}),
+	'i/change-password': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -348,18 +349,18 @@ export const endpointMetas = {
 					id: '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1',
 				},
 			},
-		} as const,
+		},
 		paramDef: changePasswordParamDef,
-	},
-	'i/claim-achievement': {
+	}),
+	'i/claim-achievement': defineContract({
 		meta: {
 			requireCredential: true,
 			prohibitMoved: true,
 			kind: 'write:account',
-		} as const,
+		},
 		paramDef: claimAchievementParamDef,
-	},
-	'i/delete-account': {
+	}),
+	'i/delete-account': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -378,9 +379,9 @@ export const endpointMetas = {
 					id: '05b2bab3-0825-4a3e-a13d-8793701af4de',
 				},
 			},
-		} as const,
+		},
 		paramDef: deleteAccountParamDef,
-	},
+	}),
 	'i/export-antennas': {
 		meta: {
 			secure: true,
@@ -425,7 +426,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'i/export-following': {
+	'i/export-following': defineContract({
 		meta: {
 			secure: true,
 			requireCredential: true,
@@ -433,9 +434,9 @@ export const endpointMetas = {
 				duration: HOUR,
 				max: 1,
 			},
-		} as const,
+		},
 		paramDef: exportFollowingParamDef,
-	},
+	}),
 	'i/export-mute': {
 		meta: {
 			secure: true,
@@ -469,7 +470,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'i/favorites': {
+	'i/favorites': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'notes', 'favorites'],
@@ -489,10 +490,10 @@ export const endpointMetas = {
 					ref: 'NoteFavorite',
 				},
 			},
-		} as const,
+		},
 		paramDef: iFavoritesParamDef,
-	},
-	'i/gallery/likes': {
+	}),
+	'i/gallery/likes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'gallery'],
@@ -525,10 +526,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: iGalleryLikesParamDef,
-	},
-	'i/gallery/posts': {
+	}),
+	'i/gallery/posts': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'gallery'],
@@ -548,10 +549,10 @@ export const endpointMetas = {
 					ref: 'GalleryPost',
 				},
 			},
-		} as const,
+		},
 		paramDef: iGalleryPostsParamDef,
-	},
-	'i/import-antennas': {
+	}),
+	'i/import-antennas': defineContract({
 		meta: {
 			requireRolePolicy: 'canImportAntennas',
 			secure: true,
@@ -592,10 +593,10 @@ export const endpointMetas = {
 					id: 'f9755af1-12aa-44af-a75f-80a729a9e845',
 				},
 			},
-		} as const,
+		},
 		paramDef: importAntennasParamDef,
-	},
-	'i/import-blocking': {
+	}),
+	'i/import-blocking': defineContract({
 		meta: {
 			requireRolePolicy: 'canImportBlocking',
 			secure: true,
@@ -627,10 +628,10 @@ export const endpointMetas = {
 					id: '6f3a4dcc-f060-a707-4950-806fbdbe60d6',
 				},
 			},
-		} as const,
+		},
 		paramDef: importBlockingParamDef,
-	},
-	'i/import-following': {
+	}),
+	'i/import-following': defineContract({
 		meta: {
 			requireRolePolicy: 'canImportFollowing',
 			secure: true,
@@ -661,10 +662,10 @@ export const endpointMetas = {
 					id: '31a1b42c-06f7-42ae-8a38-a661c5c9f691',
 				},
 			},
-		} as const,
+		},
 		paramDef: importFollowingParamDef,
-	},
-	'i/import-muting': {
+	}),
+	'i/import-muting': defineContract({
 		meta: {
 			requireRolePolicy: 'canImportMuting',
 			secure: true,
@@ -696,10 +697,10 @@ export const endpointMetas = {
 					id: 'd2f12af1-e7b4-feac-86a3-519548f2728e',
 				},
 			},
-		} as const,
+		},
 		paramDef: importMutingParamDef,
-	},
-	'i/import-user-lists': {
+	}),
+	'i/import-user-lists': defineContract({
 		meta: {
 			requireRolePolicy: 'canImportUserLists',
 			secure: true,
@@ -730,10 +731,10 @@ export const endpointMetas = {
 					id: '99efe367-ce6e-4d44-93f8-5fae7b040356',
 				},
 			},
-		} as const,
+		},
 		paramDef: importUserListsParamDef,
-	},
-	'i/move': {
+	}),
+	'i/move': defineContract({
 		meta: {
 			tags: ['users'],
 
@@ -776,10 +777,10 @@ export const endpointMetas = {
 			res: {
 				type: 'object',
 			},
-		} as const,
+		},
 		paramDef: iMoveParamDef,
-	},
-	'i/notifications': {
+	}),
+	'i/notifications': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'notifications'],
@@ -804,10 +805,10 @@ export const endpointMetas = {
 					ref: 'Notification',
 				},
 			},
-		} as const,
+		},
 		paramDef: notificationsParamDef,
-	},
-	'i/notifications-grouped': {
+	}),
+	'i/notifications-grouped': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'notifications'],
@@ -832,10 +833,10 @@ export const endpointMetas = {
 					ref: 'Notification',
 				},
 			},
-		} as const,
+		},
 		paramDef: notificationsParamDef,
-	},
-	'i/page-likes': {
+	}),
+	'i/page-likes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'pages'],
@@ -866,10 +867,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: iPageLikesParamDef,
-	},
-	'i/pages': {
+	}),
+	'i/pages': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['account', 'pages'],
@@ -889,10 +890,10 @@ export const endpointMetas = {
 					ref: 'Page',
 				},
 			},
-		} as const,
+		},
 		paramDef: iPagesParamDef,
-	},
-	'i/pin': {
+	}),
+	'i/pin': defineContract({
 		meta: {
 			tags: ['account', 'notes'],
 
@@ -927,10 +928,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'MeDetailed',
 			},
-		} as const,
+		},
 		paramDef: iPinOrUnpinParamDef,
-	},
-	'i/read-announcement': {
+	}),
+	'i/read-announcement': defineContract({
 		meta: {
 			tags: ['account'],
 
@@ -939,10 +940,10 @@ export const endpointMetas = {
 			kind: 'write:account',
 
 			errors: {},
-		} as const,
+		},
 		paramDef: readAnnouncementParamDef,
-	},
-	'i/regenerate-token': {
+	}),
+	'i/regenerate-token': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -955,10 +956,10 @@ export const endpointMetas = {
 					id: '0fef3578-b802-47b5-abb6-38d737baaf03',
 				},
 			},
-		} as const,
+		},
 		paramDef: regenerateTokenParamDef,
-	},
-	'i/registry/get': {
+	}),
+	'i/registry/get': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -975,10 +976,10 @@ export const endpointMetas = {
 			res: {
 				type: 'object',
 			},
-		} as const,
+		},
 		paramDef: registryGetParamDef,
-	},
-	'i/registry/get-all': {
+	}),
+	'i/registry/get-all': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -987,10 +988,10 @@ export const endpointMetas = {
 			res: {
 				type: 'object',
 			},
-		} as const,
+		},
 		paramDef: registryScopeParamDef,
-	},
-	'i/registry/get-detail': {
+	}),
+	'i/registry/get-detail': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1016,10 +1017,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: registryGetParamDef,
-	},
-	'i/registry/keys': {
+	}),
+	'i/registry/keys': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1031,10 +1032,10 @@ export const endpointMetas = {
 					type: 'string',
 				},
 			},
-		} as const,
+		},
 		paramDef: registryScopeParamDef,
-	},
-	'i/registry/keys-with-type': {
+	}),
+	'i/registry/keys-with-type': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1046,17 +1047,17 @@ export const endpointMetas = {
 					type: 'string',
 				},
 			},
-		} as const,
+		},
 		paramDef: registryScopeParamDef,
-	},
-	'i/registry/remove': {
+	}),
+	'i/registry/remove': defineContract({
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
-		} as const,
+		},
 		paramDef: registryGetParamDef,
-	},
-	'i/registry/scopes-with-domain': {
+	}),
+	'i/registry/scopes-with-domain': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1083,17 +1084,17 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: registryScopesWithDomainParamDef,
-	},
-	'i/registry/set': {
+	}),
+	'i/registry/set': defineContract({
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
-		} as const,
+		},
 		paramDef: registrySetParamDef,
-	},
-	'i/revoke-token': {
+	}),
+	'i/revoke-token': defineContract({
 		meta: {
 			description:
 				'Revoke an access token of the authenticated user. When called with an app access token, only that token itself can be revoked.',
@@ -1109,10 +1110,10 @@ export const endpointMetas = {
 					id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1838',
 				},
 			},
-		} as const,
+		},
 		paramDef: iRevokeTokenParamDef,
-	},
-	'i/signin-history': {
+	}),
+	'i/signin-history': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1129,10 +1130,10 @@ export const endpointMetas = {
 					ref: 'Signin',
 				},
 			},
-		} as const,
+		},
 		paramDef: iSigninHistoryParamDef,
-	},
-	'i/unpin': {
+	}),
+	'i/unpin': defineContract({
 		meta: {
 			tags: ['account', 'notes'],
 
@@ -1154,10 +1155,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'MeDetailed',
 			},
-		} as const,
+		},
 		paramDef: iPinOrUnpinParamDef,
-	},
-	'i/update': {
+	}),
+	'i/update': defineContract({
 		meta: {
 			tags: ['account'],
 
@@ -1259,10 +1260,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'MeDetailed',
 			},
-		} as const,
+		},
 		paramDef: iUpdateParamDef,
-	},
-	'i/update-email': {
+	}),
+	'i/update-email': defineContract({
 		meta: {
 			requireCredential: true,
 
@@ -1303,10 +1304,10 @@ export const endpointMetas = {
 				type: 'object',
 				ref: 'MeDetailed',
 			},
-		} as const,
+		},
 		paramDef: updateEmailParamDef,
-	},
-	'i/webhooks/create': {
+	}),
+	'i/webhooks/create': defineContract({
 		meta: {
 			tags: ['webhooks'],
 
@@ -1348,10 +1349,10 @@ export const endpointMetas = {
 					latestStatus: { type: 'integer', nullable: true },
 				},
 			},
-		} as const,
+		},
 		paramDef: webhooksCreateParamDef,
-	},
-	'i/webhooks/delete': {
+	}),
+	'i/webhooks/delete': defineContract({
 		meta: {
 			tags: ['webhooks'],
 
@@ -1366,10 +1367,10 @@ export const endpointMetas = {
 					id: 'bae73e5a-5522-4965-ae19-3a8688e71d82',
 				},
 			},
-		} as const,
+		},
 		paramDef: webhooksDeleteParamDef,
-	},
-	'i/webhooks/list': {
+	}),
+	'i/webhooks/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['webhooks', 'account'],
@@ -1385,10 +1386,10 @@ export const endpointMetas = {
 					ref: 'UserWebhook',
 				},
 			},
-		} as const,
+		},
 		paramDef: webhooksListParamDef,
-	},
-	'i/webhooks/show': {
+	}),
+	'i/webhooks/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['webhooks'],
@@ -1409,10 +1410,10 @@ export const endpointMetas = {
 				type: 'object',
 				ref: 'UserWebhook',
 			},
-		} as const,
+		},
 		paramDef: webhooksShowParamDef,
-	},
-	'i/webhooks/test': {
+	}),
+	'i/webhooks/test': defineContract({
 		meta: {
 			tags: ['webhooks'],
 
@@ -1432,10 +1433,10 @@ export const endpointMetas = {
 					id: '0c52149c-e913-18f8-5dc7-74870bfe0cf9',
 				},
 			},
-		} as const,
+		},
 		paramDef: webhooksTestParamDef,
-	},
-	'i/webhooks/update': {
+	}),
+	'i/webhooks/update': defineContract({
 		meta: {
 			tags: ['webhooks'],
 
@@ -1450,7 +1451,7 @@ export const endpointMetas = {
 					id: 'fb0fea69-da18-45b1-828d-bd4fd1612518',
 				},
 			},
-		} as const,
+		},
 		paramDef: webhooksUpdateParamDef,
-	},
-} as const;
+	}),
+};

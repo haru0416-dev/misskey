@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
@@ -80,10 +81,8 @@ export const driveFilesParamDef = z.object({
 export async function handleApiDriveFilesList(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseApiParams(driveFilesParamDef, body);
-
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForUserFromDatabase(
@@ -114,10 +113,8 @@ export const driveStreamParamDef = z.object({
 export async function handleApiDriveStream(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveStreamParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseApiParams(driveStreamParamDef, body);
-
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const files = await listDriveFilesForUserFromDatabase(
@@ -139,10 +136,8 @@ export const driveFilesShowParamDef = z.union([z.object({ fileId: misskeyId() })
 export async function handleApiDriveFilesShow(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesShowParamDef>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseApiParams(driveFilesShowParamDef, body);
-
 	const file =
 		'fileId' in params
 			? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
@@ -167,10 +162,8 @@ export const driveFilesFindParamDef = z.object({
 export async function handleApiDriveFilesFind(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesFindParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseApiParams(driveFilesFindParamDef, body);
-
 	const files = await listDriveFilesByNameUserIdAndFolderIdFromDatabase(deps.db, {
 		name: params.name,
 		userId: me.id,
@@ -187,10 +180,8 @@ export const driveFilesFindByHashParamDef = z.object({
 export async function handleApiDriveFilesFindByHash(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesFindByHashParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseApiParams(driveFilesFindByHashParamDef, body);
-
 	const files = await listDriveFilesByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 
 	return await packDriveFileManyForApi(deps, files, { self: true });
@@ -205,10 +196,8 @@ export const driveFilesAttachedNotesParamDef = z.object({
 export async function handleApiDriveFilesAttachedNotes(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesAttachedNotesParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(driveFilesAttachedNotesParamDef, body);
-
 	const isModerator = await isApiModerator(deps, me);
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 
@@ -262,10 +251,8 @@ export const driveFilesDeleteParamDef = z.object({
 export async function handleApiDriveFilesDelete(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(driveFilesDeleteParamDef, body);
-
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) {
 		throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
@@ -289,10 +276,8 @@ export const driveFilesUpdateParamDef = z.object({
 export async function handleApiDriveFilesUpdate(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesUpdateParamDef>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseApiParams(driveFilesUpdateParamDef, body);
-
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) {
 		throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
@@ -381,10 +366,8 @@ export const driveFilesMoveBulkParamDef = z.object({
 export async function handleApiDriveFilesMoveBulk(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesMoveBulkParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(driveFilesMoveBulkParamDef, body);
-
 	const folder = params.folderId
 		? await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id)
 		: null;
@@ -409,10 +392,8 @@ export const driveFilesAttachedChatMessagesParamDef = z.object({
 export async function handleApiDriveFilesAttachedChatMessages(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesAttachedChatMessagesParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseApiParams(driveFilesAttachedChatMessagesParamDef, body);
-
 	const isModerator = await isApiModerator(deps, me);
 
 	if (!isModerator) {

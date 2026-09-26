@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
@@ -80,9 +81,8 @@ export async function handleApiI(
 export async function handleApiISigninHistory(
 	deps: ApiIDependencies,
 	user: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iSigninHistoryParamDef>,
 ): Promise<ReturnType<typeof packApiSignin>[]> {
-	const params = parseApiParams(iSigninHistoryParamDef, body);
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const history = await listSigninHistoryFromDatabase(deps.db, user.id, {

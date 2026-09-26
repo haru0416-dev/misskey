@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { EmailService } from '@/core/email/EmailService.js';
 import { isUsedUsername } from '@/core/account/UsedUsernameStore.js';
@@ -29,9 +30,8 @@ export const emailAddressAvailableParamDef = z.object({
 
 export async function handleApiUsernameAvailable(
 	deps: ApiAvailabilityDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usernameAvailableParamDef>,
 ): Promise<{ available: boolean }> {
-	const params = parseApiParams(usernameAvailableParamDef, body);
 	const [exists, used] = await Promise.all([
 		isLocalUsernameTaken(deps.db, params.username),
 		isUsedUsername(deps.db, params.username),
@@ -47,9 +47,8 @@ export async function handleApiUsernameAvailable(
 
 export async function handleApiEmailAddressAvailable(
 	deps: ApiAvailabilityDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof emailAddressAvailableParamDef>,
 ): ReturnType<EmailService['validateEmailForAccount']> {
-	const params = parseApiParams(emailAddressAvailableParamDef, body);
 	return await deps.emailService.validateEmailForAccount(params.emailAddress);
 }
 

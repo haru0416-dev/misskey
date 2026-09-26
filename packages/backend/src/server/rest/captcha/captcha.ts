@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	captchaErrorCodes,
@@ -89,16 +90,14 @@ function captchaErrorToApiError(error: CaptchaError): ApiError {
 	}
 }
 
-export async function handleApiAdminCaptchaCurrent(deps: ApiCaptchaDependencies, body: Record<string, unknown>) {
-	parseApiParams(captchaCurrentParamDef, body);
+export async function handleApiAdminCaptchaCurrent(deps: ApiCaptchaDependencies) {
 	return getCaptchaSetting(await fetchMetaFromDatabase(deps.db));
 }
 
 export async function handleApiAdminCaptchaSave(
 	deps: ApiCaptchaDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof captchaSaveParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(captchaSaveParamDef, body);
 	const result = await saveCaptchaSetting(
 		{
 			httpRequestService: deps.httpRequestService,

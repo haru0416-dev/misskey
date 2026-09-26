@@ -445,9 +445,8 @@ export const iGalleryPostsParamDef = z.object({
 export async function handleApiIGalleryPosts(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof iGalleryPostsParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseApiParams(iGalleryPostsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -468,9 +467,8 @@ export const iGalleryLikesParamDef = z.object({
 export async function handleApiIGalleryLikes(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(iGalleryLikesParamDef, body);
+	params: ApiParams<typeof iGalleryLikesParamDef>,
+) {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {

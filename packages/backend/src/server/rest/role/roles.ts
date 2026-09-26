@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	countActiveRoleAssignmentsByRoleIdFromDatabase,
@@ -53,33 +56,6 @@ export const rolesUsersParamDef = z.object({
 	...paginationParams,
 	limit: z.int().min(1).max(100).default(10),
 });
-
-function noSuchRoleError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such role.',
-		code: 'NO_SUCH_ROLE',
-		id: 'de5502bf-009a-4639-86c1-fec349e46dcb',
-	});
-}
-
-function rolesUsersNoSuchRoleError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such role.',
-		code: 'NO_SUCH_ROLE',
-		id: '30aaaee3-4792-48dc-ab0d-cf501a575ac5',
-	});
-}
-
-function rolesNotesNoSuchRoleError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such role.',
-		code: 'NO_SUCH_ROLE',
-		id: 'eb70323a-df61-4dd4-ad90-89c83c7cf26e',
-	});
-}
 
 export const rolesNotesParamDef = z.object({
 	roleId: misskeyId(),
@@ -145,23 +121,19 @@ export async function packApiRoles(deps: ApiRoleDependencies, roles: MiRole[]): 
 	);
 }
 
-export async function handleApiRolesList(
-	deps: ApiRoleDependencies,
-	body: Record<string, unknown>,
-): Promise<Packed<'Role'>[]> {
-	parseApiParams(rolesListParamDef, body);
+export async function handleApiRolesList(deps: ApiRoleDependencies): Promise<Packed<'Role'>[]> {
 	const roles = await listPublicExplorableRolesFromDatabase(deps.db);
 	return await packApiRoles(deps, roles);
 }
 
 export async function handleApiRolesShow(
 	deps: ApiRoleDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof rolesShowParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['roles/show']>,
 ): Promise<Packed<'Role'>> {
-	const params = parseApiParams(rolesShowParamDef, body);
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
-		throw noSuchRoleError();
+		throw errors.noSuchRole();
 	}
 
 	return await packApiRole(deps, role);
@@ -170,12 +142,12 @@ export async function handleApiRolesShow(
 export async function handleApiRolesUsers(
 	deps: ApiRoleDependencies & UserPackingDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof rolesUsersParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['roles/users']>,
 ): Promise<{ id: string; user: MeDetailedApiResponse | UserDetailedNotMeApiResponse }[]> {
-	const params = parseApiParams(rolesUsersParamDef, body);
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
-		throw rolesUsersNoSuchRoleError();
+		throw errors.noSuchRole();
 	}
 
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
@@ -200,14 +172,14 @@ export async function handleApiRolesUsers(
 export async function handleApiRolesNotes(
 	deps: ApiRoleNotesDependencies,
 	me: { id: MiUser['id'] },
-	body: Record<string, unknown>,
+	params: ApiParams<typeof rolesNotesParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['roles/notes']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(rolesNotesParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
-		throw rolesNotesNoSuchRoleError();
+		throw errors.noSuchRole();
 	}
 	if (!role.isExplorable) {
 		return [];

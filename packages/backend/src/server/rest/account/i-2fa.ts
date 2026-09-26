@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { comparePassword } from '@/misc/password.js';
 import * as OTPAuth from 'otpauth';
 import { z } from 'zod';
@@ -77,10 +80,8 @@ export const i2faRegisterParamDef = z.object({
 export async function handleApiI2faRegister(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faRegisterParamDef>,
 ): Promise<{ url: string; secret: string; label: string; issuer: string }> {
-	const params = parseApiParams(i2faRegisterParamDef, body);
-
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '78d6c839-20c9-4c66-b90a-fc0542168b48');
@@ -113,9 +114,8 @@ export const i2faDoneParamDef = z.object({
 export async function handleApiI2faDone(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faDoneParamDef>,
 ): Promise<{ backupCodes: string[] }> {
-	const params = parseApiParams(i2faDoneParamDef, body);
 	const token = params.token.replaceAll(/\s/g, '');
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
@@ -146,15 +146,6 @@ export const i2faRegisterKeyParamDef = z.object({
 	token: z.string().nullable().optional(),
 });
 
-function userNotFoundError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'User not found.',
-		code: 'USER_NOT_FOUND',
-		id: '652f899f-66d4-490e-993e-6606c8ec04c3',
-	});
-}
-
 function twoFactorNotEnabledError(id: string): ApiError {
 	return new ApiError({ status: 400, message: '2fa not enabled.', code: 'TWO_FACTOR_NOT_ENABLED', id });
 }
@@ -162,13 +153,12 @@ function twoFactorNotEnabledError(id: string): ApiError {
 export async function handleApiI2faRegisterKey(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faRegisterKeyParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/2fa/register-key']>,
 ): Promise<unknown> {
-	const params = parseApiParams(i2faRegisterKeyParamDef, body);
-
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, me.id);
 	if (profile == null) {
-		throw userNotFoundError();
+		throw errors.userNotFound();
 	}
 
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
@@ -191,10 +181,8 @@ export const i2faKeyDoneParamDef = z.object({
 export async function handleApiI2faKeyDone(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faKeyDoneParamDef>,
 ): Promise<{ id: string; name: string }> {
-	const params = parseApiParams(i2faKeyDoneParamDef, body);
-
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
@@ -236,10 +224,8 @@ export const i2faUpdateKeyParamDef = z.object({
 export async function handleApiI2faUpdateKey(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faUpdateKeyParamDef>,
 ): Promise<Record<string, never>> {
-	const params = parseApiParams(i2faUpdateKeyParamDef, body);
-
 	const key = await fetchUserSecurityKeyByIdFromDatabase(deps.db, params.credentialId);
 	if (key == null) {
 		throw new ApiError({
@@ -274,10 +260,8 @@ export const i2faRemoveKeyParamDef = z.object({
 export async function handleApiI2faRemoveKey(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faRemoveKeyParamDef>,
 ): Promise<Record<string, never>> {
-	const params = parseApiParams(i2faRemoveKeyParamDef, body);
-
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '141c598d-a825-44c8-9173-cfb9d92be493');
@@ -304,10 +288,8 @@ export const i2faUnregisterParamDef = z.object({
 export async function handleApiI2faUnregister(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faUnregisterParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(i2faUnregisterParamDef, body);
-
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
 	await assertPasswordMatchedForApi(profile, params.password, '7add0395-9901-4098-82f9-4f67af65f775');
@@ -329,10 +311,8 @@ export const i2faPasswordLessParamDef = z.object({
 export async function handleApiI2faPasswordLess(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof i2faPasswordLessParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(i2faPasswordLessParamDef, body);
-
 	if (params.value === true) {
 		const keyCount = await countUserSecurityKeysByUserIdFromDatabase(deps.db, me.id);
 		if (keyCount === 0) {

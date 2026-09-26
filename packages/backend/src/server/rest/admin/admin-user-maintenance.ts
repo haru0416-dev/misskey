@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { hashPasswordSync } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
@@ -41,15 +44,6 @@ type ResetPasswordResponse = {
 	password: string;
 };
 
-function noSuchUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such user.',
-		code: 'NO_SUCH_USER',
-		id: 'ccafc7fe-5074-4edd-9dc0-8ef9ef6a701d',
-	});
-}
-
 function accessDeniedError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -77,12 +71,12 @@ async function assertCanTakeOverUser(
 export async function handleApiAdminResetPassword(
 	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	errors: ContractErrors<(typeof adminContracts)['admin/reset-password']>,
 ): Promise<ResetPasswordResponse> {
-	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
-		throw noSuchUserError();
+		throw errors.noSuchUser();
 	}
 	await assertCanTakeOverUser(deps, me, user);
 
@@ -103,12 +97,12 @@ export async function handleApiAdminResetPassword(
 export async function handleApiAdminUnsetMfa(
 	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	errors: ContractErrors<(typeof adminContracts)['admin/unset-mfa']>,
 ): Promise<void> {
-	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
-		throw noSuchUserError();
+		throw errors.noSuchUser();
 	}
 	await assertCanTakeOverUser(deps, me, user);
 
@@ -123,9 +117,8 @@ export async function handleApiAdminUnsetMfa(
 export async function handleApiAdminUnsetUserAvatar(
 	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUserMaintenanceParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');
@@ -151,9 +144,8 @@ export async function handleApiAdminUnsetUserAvatar(
 export async function handleApiAdminUnsetUserBanner(
 	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUserMaintenanceParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');
@@ -179,9 +171,8 @@ export async function handleApiAdminUnsetUserBanner(
 export async function handleApiAdminUpdateUserNote(
 	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUpdateUserNoteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminUpdateUserNoteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');

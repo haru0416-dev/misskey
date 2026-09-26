@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
@@ -37,15 +40,6 @@ export const requestResetPasswordParamDef = z.object({
 	username: z.string(),
 	email: z.string(),
 });
-
-function invalidPasswordResetTokenError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Invalid or expired token.',
-		code: 'INVALID_TOKEN',
-		id: 'e04a2320-6ee2-4a11-8ad2-c9ea9e2ab84f',
-	});
-}
 
 export const resetPasswordParamDef = z.object({
 	token: z.string(),
@@ -108,22 +102,22 @@ export async function handleApiRequestResetPassword(
 
 export async function handleApiResetPassword(
 	deps: ApiPasswordResetDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof resetPasswordParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['reset-password']>,
 ): Promise<void> {
-	const params = parseApiParams(resetPasswordParamDef, body);
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
 
 	// メールのリンクは30分で切れる。これは利用者にとって普通に起こることなので、
 	// 生の Error (= 500 INTERNAL_ERROR) ではなく理由の分かるAPIエラーを返す。
 	// ハッシュ計算の前に弾くのは、無効なトークンの連投でCPUを浪費させないため
 	if (req == null || isPasswordResetRequestExpired(req)) {
-		throw invalidPasswordResetTokenError();
+		throw errors.invalidToken();
 	}
 
 	const hash = await hashPassword(params.password);
 
 	const result = await consumePasswordResetRequestInDatabase(deps.db, params.token, hash);
 	if (result !== 'ok') {
-		throw invalidPasswordResetTokenError();
+		throw errors.invalidToken();
 	}
 }

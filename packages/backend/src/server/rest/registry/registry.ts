@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -49,24 +52,6 @@ export const registrySetParamDef = z.object({
 
 export const registryScopesWithDomainParamDef = z.object({});
 
-function noSuchGetKeyError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such key.',
-		code: 'NO_SUCH_KEY',
-		id: 'ac3ed68a-62f0-422b-a7bc-d5e09e8f6a6a',
-	});
-}
-
-function noSuchGetDetailKeyError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such key.',
-		code: 'NO_SUCH_KEY',
-		id: '97a1e8e7-c0f7-47d2-957a-92e61256e01a',
-	});
-}
-
 function registryDomain(token: MiAccessToken | null, bodyDomain: string | null | undefined): string | null {
 	return token != null ? token.id : (bodyDomain ?? null);
 }
@@ -75,9 +60,9 @@ export async function handleApiRegistryGet(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryGetParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/registry/get']>,
 ): Promise<unknown> {
-	const params = parseApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -86,7 +71,7 @@ export async function handleApiRegistryGet(
 		params.key,
 	);
 	if (item == null) {
-		throw noSuchGetKeyError();
+		throw errors.noSuchKey();
 	}
 
 	return item.value;
@@ -96,9 +81,8 @@ export async function handleApiRegistryGetAll(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryScopeParamDef>,
 ): Promise<Record<string, unknown>> {
-	const params = parseApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -118,12 +102,12 @@ export async function handleApiRegistryGetDetail(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryGetParamDef>,
+	errors: ContractErrors<(typeof iContracts)['i/registry/get-detail']>,
 ): Promise<{
 	updatedAt: string;
 	value: unknown;
 }> {
-	const params = parseApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -132,7 +116,7 @@ export async function handleApiRegistryGetDetail(
 		params.key,
 	);
 	if (item == null) {
-		throw noSuchGetDetailKeyError();
+		throw errors.noSuchKey();
 	}
 
 	return {
@@ -145,9 +129,8 @@ export async function handleApiRegistryKeys(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryScopeParamDef>,
 ): Promise<string[]> {
-	const params = parseApiParams(registryScopeParamDef, body);
 	return await listRegistryKeysOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -160,9 +143,8 @@ export async function handleApiRegistryKeysWithType(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryScopeParamDef>,
 ): Promise<Record<string, string>> {
-	const params = parseApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -196,9 +178,8 @@ export async function handleApiRegistryRemove(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registryGetParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(registryGetParamDef, body);
 	await deleteRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -211,9 +192,7 @@ export async function handleApiRegistryRemove(
 export async function handleApiRegistryScopesWithDomain(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
-	body: Record<string, unknown>,
 ): Promise<{ domain: string | null; scopes: string[][] }[]> {
-	parseApiParams(registryScopesWithDomainParamDef, body);
 	const items = await listRegistryScopeAndDomainsFromDatabase(deps.db, user.id);
 	const result: { domain: string | null; scopes: string[][] }[] = [];
 	const entryByDomain = new Map<string | null, { domain: string | null; scopes: string[][] }>();
@@ -247,9 +226,8 @@ export async function handleApiRegistrySet(
 	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof registrySetParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(registrySetParamDef, body);
 	const domain = registryDomain(token, params.domain);
 	const itemDomain = domain || null;
 

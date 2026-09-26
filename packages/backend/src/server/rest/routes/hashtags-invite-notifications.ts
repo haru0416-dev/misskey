@@ -7,15 +7,8 @@ import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleApiHashtagsTrend } from '../hashtag/hashtags.js';
+import { handleApiInviteCreate, handleApiInviteLimit } from '../invite/invite.js';
 import {
-	handleApiInviteCreate,
-	handleApiInviteDelete,
-	handleApiInviteLimit,
-	handleApiInviteList,
-} from '../invite/invite.js';
-import {
-	handleApiNotificationsCreate,
-	handleApiNotificationsDelete,
 	handleApiNotificationsFlush,
 	handleApiNotificationsMarkAllAsRead,
 	handleApiNotificationsTestNotification,
@@ -24,7 +17,7 @@ import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get(
@@ -61,14 +54,6 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post(
-		'/invite/delete',
-		endpointHandler(deps, 'invite/delete', async ({ body, auth, c }) => {
-			await handleApiInviteDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
 	app.on(['POST', 'QUERY'], '/invite/limit', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -84,22 +69,6 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.on(
-		['POST', 'QUERY'],
-		'/invite/list',
-		endpointHandler(deps, 'invite/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiInviteList(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/notifications/create',
-		endpointHandler(deps, 'notifications/create', async ({ body, auth, c }) => {
-			await handleApiNotificationsCreate(deps, auth.user, auth.token, body);
-			return emptyResponse(c);
-		}),
-	);
-
 	app.post('/notifications/flush', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
@@ -111,14 +80,6 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 			return emptyResponse(c);
 		});
 	});
-
-	app.post(
-		'/notifications/delete',
-		endpointHandler(deps, 'notifications/delete', async ({ body, auth, c }) => {
-			await handleApiNotificationsDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
 
 	app.post('/notifications/mark-all-as-read', async (c) => {
 		return await runApiEndpoint(c, async () => {

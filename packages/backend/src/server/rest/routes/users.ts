@@ -5,9 +5,8 @@
 
 import type { Hono } from 'hono';
 import { resolveUserForApi } from '../activitypub/ap-person.js';
-import { handleApiUsernameAvailable } from '../auth/availability.js';
 import { handleApiUsersShow } from '../user/user.js';
-import { handleApiMiauthCheck, handleApiMiauthGenToken } from '../auth/miauth.js';
+import { handleApiMiauthCheck } from '../auth/miauth.js';
 import { handleApiVerifyEmail } from '../auth/verify-email.js';
 import {
 	jsonResponse,
@@ -18,16 +17,9 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post(
-		'/miauth/gen-token',
-		endpointHandler(deps, 'miauth/gen-token', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiMiauthGenToken(deps, auth.user, body)),
-		),
-	);
-
 	// URL は MiAuth プロトコルの公開仕様 (`/api/miauth/{session}/check`) なので変えられないが、
 	// `/miauth/gen-token` (static) と `/miauth/:session/check` (param) の同一位置共存は
 	// RegExpRouter 非対応で、この1ルートのせいでアプリ全体が TrieRouter へフォールバックする。
@@ -72,14 +64,6 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			);
 		});
 	});
-
-	app.on(
-		['POST', 'QUERY'],
-		'/username/available',
-		endpointHandlerAnonymous(deps, 'username/available', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiUsernameAvailable(deps, body)),
-		),
-	);
 
 	app.post(
 		'/verify-email',

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { ReplyError } from 'ioredis';
 import type { Redis } from 'ioredis';
 import { z } from 'zod';
@@ -596,9 +597,8 @@ export async function grantAchievementForApi(
 export async function handleApiIClaimAchievement(
 	deps: ApiNotificationDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof claimAchievementParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(claimAchievementParamDef, body);
 	await grantAchievementForApi(deps, me.id, params.name);
 }
 
@@ -660,9 +660,8 @@ function notificationGroupKey(notification: Record<string, unknown>): string | n
 export async function handleApiNotificationsDelete(
 	deps: ApiNotificationDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof notificationsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(notificationsDeleteParamDef, body);
 	const streamKey = `notificationTimeline:${me.id}`;
 	const redisId = await resolveNotificationStreamId(deps, me.id, params.notificationId);
 	let idsToDelete = [redisId];

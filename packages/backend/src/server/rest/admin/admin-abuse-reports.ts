@@ -242,9 +242,8 @@ async function packAbuseUserReportsForApi(
 
 export async function handleApiAdminAbuseUserReports(
 	deps: ApiAdminAbuseReportsDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAbuseUserReportsParamDef>,
 ): Promise<ApiAbuseUserReport[]> {
-	const params = parseApiParams(adminAbuseUserReportsParamDef, body);
 	const reports = await listAbuseUserReportsFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveDateIdPagination({ gen: genId }, params),
@@ -259,9 +258,8 @@ export async function handleApiAdminAbuseUserReports(
 export async function handleApiAdminForwardAbuseUserReport(
 	deps: ApiAdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminForwardAbuseUserReportParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminForwardAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
 		throw noSuchAbuseReportForForwardError();
@@ -292,9 +290,8 @@ export async function handleApiAdminForwardAbuseUserReport(
 export async function handleApiAdminResolveAbuseUserReport(
 	deps: ApiAdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminResolveAbuseUserReportParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminResolveAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
 		throw noSuchAbuseReportForResolveError();
@@ -321,9 +318,8 @@ export async function handleApiAdminResolveAbuseUserReport(
 export async function handleApiAdminUpdateAbuseUserReport(
 	deps: ApiAdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminUpdateAbuseUserReportParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminUpdateAbuseUserReportParamDef, body);
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
 		throw noSuchAbuseReportForUpdateError();

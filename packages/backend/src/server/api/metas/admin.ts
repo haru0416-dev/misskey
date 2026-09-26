@@ -61,9 +61,10 @@ import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/res
 import { adminShowModerationLogsParamDef } from '@/server/rest/admin/moderation-log.js';
 import { adminPromoCreateParamDef } from '@/server/rest/note/promo.js';
 import { z } from 'zod';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'admin/abuse-user-reports': {
+	'admin/abuse-user-reports': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -160,10 +161,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAbuseUserReportsParamDef,
-	},
-	'admin/accounts/create': {
+	}),
+	'admin/accounts/create': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -216,10 +217,10 @@ export const endpointMetas = {
 					},
 				],
 			},
-		} as const,
+		},
 		paramDef: adminAccountCreateParamDef,
-	},
-	'admin/accounts/delete': {
+	}),
+	'admin/accounts/delete': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -234,10 +235,10 @@ export const endpointMetas = {
 					id: 'f26ff6c4-278d-4c07-af5a-224c9d1e53f3',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAccountDeleteParamDef,
-	},
-	'admin/accounts/find-by-email': {
+	}),
+	'admin/accounts/find-by-email': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -259,10 +260,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
-		} as const,
+		},
 		paramDef: adminAccountsFindByEmailParamDef,
-	},
-	'admin/ad/create': {
+	}),
+	'admin/ad/create': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -275,10 +276,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Ad',
 			},
-		} as const,
+		},
 		paramDef: adminAdCreateParamDef,
-	},
-	'admin/ad/delete': {
+	}),
+	'admin/ad/delete': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -293,10 +294,10 @@ export const endpointMetas = {
 					id: 'ccac9863-3a03-416e-b899-8a64041118b1',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAdDeleteParamDef,
-	},
-	'admin/ad/list': {
+	}),
+	'admin/ad/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -315,10 +316,10 @@ export const endpointMetas = {
 					ref: 'Ad',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAdListParamDef,
-	},
-	'admin/ad/update': {
+	}),
+	'admin/ad/update': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -333,10 +334,10 @@ export const endpointMetas = {
 					id: 'b7aa1727-1354-47bc-a182-3a9c3973d300',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAdUpdateParamDef,
-	},
-	'admin/announcements/create': {
+	}),
+	'admin/announcements/create': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -385,10 +386,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAnnouncementsCreateParamDef,
-	},
-	'admin/announcements/delete': {
+	}),
+	'admin/announcements/delete': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -403,10 +404,10 @@ export const endpointMetas = {
 					id: 'ecad8040-a276-4e85-bda9-015a708d291e',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAnnouncementsDeleteParamDef,
-	},
-	'admin/announcements/list': {
+	}),
+	'admin/announcements/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -503,10 +504,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAnnouncementsListParamDef,
-	},
-	'admin/announcements/update': {
+	}),
+	'admin/announcements/update': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -521,10 +522,10 @@ export const endpointMetas = {
 					id: 'd3aae5a7-6372-4cb4-b61c-f511ffc2d7cc',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAnnouncementsUpdateParamDef,
-	},
-	'admin/avatar-decorations/create': {
+	}),
+	'admin/avatar-decorations/create': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
@@ -589,10 +590,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAvatarDecorationsCreateParamDef,
-	},
-	'admin/avatar-decorations/delete': {
+	}),
+	'admin/avatar-decorations/delete': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
@@ -601,10 +602,10 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canManageAvatarDecorations',
 			kind: 'write:admin:avatar-decorations',
 			errors: {},
-		} as const,
+		},
 		paramDef: adminAvatarDecorationsDeleteParamDef,
-	},
-	'admin/avatar-decorations/list': {
+	}),
+	'admin/avatar-decorations/list': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageAvatarDecorations',
 			allowQuery: true,
@@ -676,10 +677,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAvatarDecorationsListParamDef,
-	},
-	'admin/avatar-decorations/update': {
+	}),
+	'admin/avatar-decorations/update': defineContract({
 		meta: {
 			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
@@ -689,10 +690,10 @@ export const endpointMetas = {
 			kind: 'write:admin:avatar-decorations',
 
 			errors: {},
-		} as const,
+		},
 		paramDef: adminAvatarDecorationsUpdateParamDef,
-	},
-	'admin/captcha/current': {
+	}),
+	'admin/captcha/current': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'captcha'],
@@ -741,10 +742,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: captchaCurrentParamDef,
-	},
-	'admin/captcha/save': {
+	}),
+	'admin/captcha/save': defineContract({
 		meta: {
 			tags: ['admin', 'captcha'],
 
@@ -782,10 +783,10 @@ export const endpointMetas = {
 					kind: 'server',
 				},
 			},
-		} as const,
+		},
 		paramDef: captchaSaveParamDef,
-	},
-	'admin/delete-account': {
+	}),
+	'admin/delete-account': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -800,19 +801,19 @@ export const endpointMetas = {
 					id: '7ccf53b8-f359-45a7-b376-5f05a7bdfa93',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminAccountDeleteParamDef,
-	},
-	'admin/delete-all-files-of-a-user': {
+	}),
+	'admin/delete-all-files-of-a-user': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'write:admin:delete-all-files-of-a-user',
-		} as const,
+		},
 		paramDef: adminDriveUserParamDef,
-	},
+	}),
 	'admin/drive/clean-remote-files': {
 		meta: {
 			tags: ['admin'],
@@ -833,7 +834,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'admin/drive/files': {
+	'admin/drive/files': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -853,10 +854,10 @@ export const endpointMetas = {
 					ref: 'DriveFile',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminDriveFilesParamDef,
-	},
-	'admin/drive/show-file': {
+	}),
+	'admin/drive/show-file': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -1054,50 +1055,50 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminDriveShowFileDocsParamDef,
-	},
-	'admin/federation/delete-all-files': {
+	}),
+	'admin/federation/delete-all-files': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:federation',
-		} as const,
+		},
 		paramDef: adminFederationHostParamDef,
-	},
-	'admin/federation/refresh-remote-instance-metadata': {
+	}),
+	'admin/federation/refresh-remote-instance-metadata': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:federation',
-		} as const,
+		},
 		paramDef: adminFederationHostParamDef,
-	},
-	'admin/federation/remove-all-following': {
+	}),
+	'admin/federation/remove-all-following': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:federation',
-		} as const,
+		},
 		paramDef: adminFederationHostParamDef,
-	},
-	'admin/federation/update-instance': {
+	}),
+	'admin/federation/update-instance': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:federation',
-		} as const,
+		},
 		paramDef: adminFederationUpdateInstanceParamDef,
-	},
-	'admin/forward-abuse-user-report': {
+	}),
+	'admin/forward-abuse-user-report': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -1114,10 +1115,10 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: adminForwardAbuseUserReportParamDef,
-	},
-	'admin/get-index-stats': {
+	}),
+	'admin/get-index-stats': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1135,10 +1136,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminStatsParamDef,
-	},
-	'admin/get-table-stats': {
+	}),
+	'admin/get-table-stats': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -1170,10 +1171,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminStatsParamDef,
-	},
-	'admin/get-user-ips': {
+	}),
+	'admin/get-user-ips': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -1200,10 +1201,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminGetUserIpsParamDef,
-	},
-	'admin/invite/create': {
+	}),
+	'admin/invite/create': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -1230,10 +1231,10 @@ export const endpointMetas = {
 					ref: 'InviteCode',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminInviteCreateParamDef,
-	},
-	'admin/invite/list': {
+	}),
+	'admin/invite/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -1253,9 +1254,9 @@ export const endpointMetas = {
 					ref: 'InviteCode',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminInviteListParamDef,
-	},
+	}),
 	'admin/meta': {
 		meta: {
 			allowQuery: true,
@@ -2028,7 +2029,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'admin/promo/create': {
+	'admin/promo/create': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2049,10 +2050,10 @@ export const endpointMetas = {
 					id: 'ae427aa2-7a41-484f-a18c-2c1104051604',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminPromoCreateParamDef,
-	},
-	'admin/relays/add': {
+	}),
+	'admin/relays/add': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2094,10 +2095,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRelaysWriteParamDef,
-	},
-	'admin/relays/list': {
+	}),
+	'admin/relays/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -2137,20 +2138,20 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRelaysListParamDef,
-	},
-	'admin/relays/remove': {
+	}),
+	'admin/relays/remove': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:relays',
-		} as const,
+		},
 		paramDef: adminRelaysWriteParamDef,
-	},
-	'admin/reset-password': {
+	}),
+	'admin/reset-password': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2185,10 +2186,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminUserMaintenanceParamDef,
-	},
-	'admin/resolve-abuse-user-report': {
+	}),
+	'admin/resolve-abuse-user-report': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2205,20 +2206,20 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: adminResolveAbuseUserReportParamDef,
-	},
-	'admin/send-email': {
+	}),
+	'admin/send-email': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:send-email',
-		} as const,
+		},
 		paramDef: adminSendEmailParamDef,
-	},
-	'admin/server-info': {
+	}),
+	'admin/server-info': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: true,
@@ -2323,10 +2324,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminServerInfoParamDef,
-	},
-	'admin/show-moderation-logs': {
+	}),
+	'admin/show-moderation-logs': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -2381,10 +2382,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminShowModerationLogsParamDef,
-	},
-	'admin/show-user': {
+	}),
+	'admin/show-user': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -2583,10 +2584,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminShowUserParamDef,
-	},
-	'admin/show-users': {
+	}),
+	'admin/show-users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -2606,20 +2607,20 @@ export const endpointMetas = {
 					ref: 'UserDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminShowUsersParamDef,
-	},
-	'admin/suspend-user': {
+	}),
+	'admin/suspend-user': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:suspend-user',
-		} as const,
+		},
 		paramDef: adminUserSuspensionParamDef,
-	},
-	'admin/unset-mfa': {
+	}),
+	'admin/unset-mfa': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2639,40 +2640,40 @@ export const endpointMetas = {
 					id: 'cda8f8ce-89a6-4f92-8055-33bbe0c1464d',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminUserMaintenanceParamDef,
-	},
-	'admin/unset-user-avatar': {
+	}),
+	'admin/unset-user-avatar': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:unset-user-avatar',
-		} as const,
+		},
 		paramDef: adminUserMaintenanceParamDef,
-	},
-	'admin/unset-user-banner': {
+	}),
+	'admin/unset-user-banner': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:unset-user-banner',
-		} as const,
+		},
 		paramDef: adminUserMaintenanceParamDef,
-	},
-	'admin/unsuspend-user': {
+	}),
+	'admin/unsuspend-user': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:unsuspend-user',
-		} as const,
+		},
 		paramDef: adminUserSuspensionParamDef,
-	},
-	'admin/update-abuse-user-report': {
+	}),
+	'admin/update-abuse-user-report': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2689,9 +2690,9 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: adminUpdateAbuseUserReportParamDef,
-	},
+	}),
 	'admin/update-meta': {
 		meta: {
 			tags: ['admin'],
@@ -2702,7 +2703,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: adminUpdateMetaJsonSchema,
 	},
-	'admin/update-proxy-account': {
+	'admin/update-proxy-account': defineContract({
 		meta: {
 			tags: ['admin'],
 
@@ -2716,17 +2717,17 @@ export const endpointMetas = {
 				optional: false,
 				ref: 'UserDetailed',
 			},
-		} as const,
+		},
 		paramDef: adminUpdateProxyAccountParamDef,
-	},
-	'admin/update-user-note': {
+	}),
+	'admin/update-user-note': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:user-note',
-		} as const,
+		},
 		paramDef: adminUpdateUserNoteParamDef,
-	},
-} as const;
+	}),
+};

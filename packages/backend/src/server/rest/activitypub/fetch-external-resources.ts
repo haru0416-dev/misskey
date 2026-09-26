@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { createHash } from 'node:crypto';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -53,10 +54,8 @@ function clientError(error: { message: string; code: string; id: string }): ApiE
 export async function handleApiFetchExternalResources(
 	deps: ApiFetchExternalResourcesDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof fetchExternalResourcesParamDef>,
 ): Promise<ExternalResourceResponse> {
-	const params = parseApiParams(fetchExternalResourcesParamDef, body);
-
 	if (
 		await isApiRateLimitedForUser(
 			deps,

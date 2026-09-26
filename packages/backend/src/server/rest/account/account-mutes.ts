@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	createMutingInDatabase,
@@ -148,10 +149,8 @@ async function packApiRenoteMuting(
 export async function handleApiMuteCreate(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof muteCreateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(muteCreateParamDef, body);
-
 	if (me.id === params.userId) {
 		throw clientError('Mutee is yourself.', 'MUTEE_IS_YOURSELF', 'a4619cb2-5f23-484b-9301-94c903074e10');
 	}
@@ -199,9 +198,8 @@ export async function handleApiMuteDelete(
 export async function handleApiMuteList(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof muteListParamDef>,
 ): Promise<Packed<'Muting'>[]> {
-	const params = parseApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
 		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
@@ -266,9 +264,8 @@ export async function handleApiRenoteMuteDelete(
 export async function handleApiRenoteMuteList(
 	deps: ApiAccountMuteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof muteListParamDef>,
 ): Promise<Packed<'RenoteMuting'>[]> {
-	const params = parseApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveDateIdPagination({ gen: (time) => genId(time) }, params),

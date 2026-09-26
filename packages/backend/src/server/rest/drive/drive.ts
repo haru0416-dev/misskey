@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as driveContracts } from '@/server/api/metas/drive.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -78,69 +81,6 @@ export const driveFoldersUpdateParamDef = z.object({
 export const driveFoldersDeleteParamDef = z.object({
 	folderId: misskeyId(),
 });
-
-function driveFoldersCreateNoSuchFolderError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such folder.',
-		code: 'NO_SUCH_FOLDER',
-		id: '53326628-a00d-40a6-a3cd-8975105c0f95',
-	});
-}
-
-function driveFoldersShowNoSuchFolderError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such folder.',
-		code: 'NO_SUCH_FOLDER',
-		id: 'd74ab9eb-bb09-4bba-bf24-fb58f761e1e9',
-	});
-}
-
-function driveFoldersUpdateNoSuchFolderError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such folder.',
-		code: 'NO_SUCH_FOLDER',
-		id: 'f7974dac-2c0d-4a27-926e-23583b28e98e',
-	});
-}
-
-function driveFoldersUpdateNoSuchParentFolderError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such parent folder.',
-		code: 'NO_SUCH_PARENT_FOLDER',
-		id: 'ce104e3a-faaf-49d5-b459-10ff0cbbcaa1',
-	});
-}
-
-function driveFoldersUpdateRecursiveNestingError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'It can not be structured like nesting folders recursively.',
-		code: 'RECURSIVE_NESTING',
-		id: 'dbeb024837894013aed44279f9199740',
-	});
-}
-
-function driveFoldersDeleteNoSuchFolderError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such folder.',
-		code: 'NO_SUCH_FOLDER',
-		id: '1069098f-c281-440f-b085-f9932edbe091',
-	});
-}
-
-function driveFoldersDeleteHasChildrenError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'This folder has child files or folders.',
-		code: 'HAS_CHILD_FILES_OR_FOLDERS',
-		id: 'b0fc8a17-963c-405d-bfbc-859a487295e1',
-	});
-}
 
 function packDriveFolderBaseForApi(folder: DriveFolderRow): ApiPackedDriveFolder {
 	return {
@@ -261,25 +201,24 @@ export async function packDriveFoldersManyForApi(
 export async function handleApiDriveFilesCheckExistence(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFilesCheckExistenceParamDef>,
 ): Promise<boolean> {
-	const params = parseApiParams(driveFilesCheckExistenceParamDef, body);
 	return await driveFileExistsByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 }
 
 export async function handleApiDriveFoldersCreate(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersCreateParamDef>,
+	errors: ContractErrors<(typeof driveContracts)['drive/folders/create']>,
 ): Promise<ApiPackedDriveFolder> {
-	const params = parseApiParams(driveFoldersCreateParamDef, body);
 	let parent: DriveFolderRow | null = null;
 
 	if (params.parentId) {
 		parent = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.parentId, me.id);
 
 		if (parent == null) {
-			throw driveFoldersCreateNoSuchFolderError();
+			throw errors.noSuchFolder();
 		}
 	}
 
@@ -299,9 +238,8 @@ export async function handleApiDriveFoldersCreate(
 export async function handleApiDriveFolders(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersParamDef>,
 ): Promise<ApiPackedDriveFolder[]> {
-	const params = parseApiParams(driveFoldersParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const folders = await listDriveFoldersByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -315,9 +253,8 @@ export async function handleApiDriveFolders(
 export async function handleApiDriveFoldersFind(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersFindParamDef>,
 ): Promise<ApiPackedDriveFolder[]> {
-	const params = parseApiParams(driveFoldersFindParamDef, body);
 	const folders = await listDriveFoldersByNameFromDatabase(deps.db, {
 		name: params.name,
 		userId: me.id,
@@ -330,13 +267,13 @@ export async function handleApiDriveFoldersFind(
 export async function handleApiDriveFoldersShow(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersShowParamDef>,
+	errors: ContractErrors<(typeof driveContracts)['drive/folders/show']>,
 ): Promise<ApiPackedDriveFolder> {
-	const params = parseApiParams(driveFoldersShowParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
-		throw driveFoldersShowNoSuchFolderError();
+		throw errors.noSuchFolder();
 	}
 
 	return await packDriveFolderForApi(deps, folder, {
@@ -365,13 +302,13 @@ async function driveFolderWillNestRecursively(
 export async function handleApiDriveFoldersUpdate(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersUpdateParamDef>,
+	errors: ContractErrors<(typeof driveContracts)['drive/folders/update']>,
 ): Promise<ApiPackedDriveFolder> {
-	const params = parseApiParams(driveFoldersUpdateParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
-		throw driveFoldersUpdateNoSuchFolderError();
+		throw errors.noSuchFolder();
 	}
 
 	const nextFolder = {
@@ -384,18 +321,18 @@ export async function handleApiDriveFoldersUpdate(
 
 	if (params.parentId !== undefined) {
 		if (params.parentId === folder.id) {
-			throw driveFoldersUpdateRecursiveNestingError();
+			throw errors.recursiveNesting();
 		} else if (params.parentId === null) {
 			nextFolder.parentId = null;
 		} else {
 			const parent = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.parentId, me.id);
 
 			if (parent == null) {
-				throw driveFoldersUpdateNoSuchParentFolderError();
+				throw errors.noSuchParentFolder();
 			}
 
 			if (await driveFolderWillNestRecursively(deps, folder.id, parent.parentId)) {
-				throw driveFoldersUpdateRecursiveNestingError();
+				throw errors.recursiveNesting();
 			}
 
 			nextFolder.parentId = parent.id;
@@ -416,13 +353,13 @@ export async function handleApiDriveFoldersUpdate(
 export async function handleApiDriveFoldersDelete(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof driveFoldersDeleteParamDef>,
+	errors: ContractErrors<(typeof driveContracts)['drive/folders/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(driveFoldersDeleteParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
-		throw driveFoldersDeleteNoSuchFolderError();
+		throw errors.noSuchFolder();
 	}
 
 	const [childFoldersCount, childFilesCount] = await Promise.all([
@@ -431,7 +368,7 @@ export async function handleApiDriveFoldersDelete(
 	]);
 
 	if (childFoldersCount !== 0 || childFilesCount !== 0) {
-		throw driveFoldersDeleteHasChildrenError();
+		throw errors.hasChildFilesOrFolders();
 	}
 
 	await deleteDriveFolderByIdFromDatabase(deps.db, folder.id);

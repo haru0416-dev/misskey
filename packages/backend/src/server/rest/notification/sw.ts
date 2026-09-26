@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -68,9 +69,8 @@ function noSuchRegistrationError(): ApiError {
 export async function handleApiSwRegister(
 	deps: ApiSwDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof swRegisterParamDef>,
 ): Promise<SwRegisterResponse> {
-	const params = parseApiParams(swRegisterParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist != null) {
@@ -129,9 +129,8 @@ export async function handleApiSwRegister(
 export async function handleApiSwShowRegistration(
 	deps: ApiSwDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof swShowRegistrationParamDef>,
 ): Promise<SwShowRegistrationResponse | null> {
-	const params = parseApiParams(swShowRegistrationParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist == null) {
@@ -148,18 +147,16 @@ export async function handleApiSwShowRegistration(
 export async function handleApiSwUnregister(
 	deps: ApiSwDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof swShowRegistrationParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(swShowRegistrationParamDef, body);
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 }
 
 export async function handleApiSwUpdateRegistration(
 	deps: ApiSwDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof swUpdateRegistrationParamDef>,
 ): Promise<SwShowRegistrationResponse> {
-	const params = parseApiParams(swUpdateRegistrationParamDef, body);
 	const swSubscription = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (swSubscription == null) {

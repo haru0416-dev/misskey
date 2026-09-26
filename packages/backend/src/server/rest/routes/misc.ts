@@ -4,46 +4,21 @@
  */
 
 import type { Hono } from 'hono';
-import { handleApiGetAvatarDecorations } from '../avatar-decoration/avatar-decorations.js';
 import { handleApiGetOnlineUsersCount } from '../auth/availability.js';
-import { handleApiMeta, handleApiPing, handleApiServerInfo, handleApiTest } from '../meta/meta.js';
-import { handleApiRequestResetPassword, handleApiResetPassword } from '../auth/password-reset.js';
-import { handleApiPromoRead } from '../note/promo.js';
-import { handleApiResetDb } from '../admin/reset-db.js';
+import { handleApiPing, handleApiServerInfo, handleApiTest } from '../meta/meta.js';
+import { handleApiRequestResetPassword } from '../auth/password-reset.js';
 import { handleApiRetention } from '../retention/retention.js';
-import { handleApiRolesList, handleApiRolesNotes, handleApiRolesShow, handleApiRolesUsers } from '../role/roles.js';
-import {
-	handleApiSwRegister,
-	handleApiSwShowRegistration,
-	handleApiSwUnregister,
-	handleApiSwUpdateRegistration,
-} from '../notification/sw.js';
 import { jsonResponse, emptyResponse, jsonBody, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post(
-		'/meta',
-		endpointHandlerAnonymous(deps, 'meta', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiMeta(deps, body)),
-		),
-	);
-
 	app.post('/ping', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			await jsonBody(c);
 			return jsonResponse(c, handleApiPing());
 		});
 	});
-
-	app.post(
-		'/promo/read',
-		endpointHandler(deps, 'promo/read', async ({ body, auth, c }) => {
-			await handleApiPromoRead(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
 
 	app.get(
 		'/retention',
@@ -71,54 +46,6 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		}),
 	);
 
-	app.post(
-		'/reset-password',
-		endpointHandlerAnonymous(deps, 'reset-password', async ({ body, auth, c }) => {
-			await handleApiResetPassword(deps, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/reset-db',
-		endpointHandlerAnonymous(deps, 'reset-db', async ({ body, auth, c }) => {
-			await handleApiResetDb(deps, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/roles/list',
-		endpointHandler(deps, 'roles/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiRolesList(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/roles/show',
-		endpointHandlerAnonymous(deps, 'roles/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiRolesShow(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/roles/users',
-		endpointHandlerAnonymous(deps, 'roles/users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiRolesUsers(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/roles/notes',
-		endpointHandler(deps, 'roles/notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiRolesNotes(deps, auth.user, body)),
-		),
-	);
-
 	app.get(
 		'/server-info',
 		endpointHandlerAnonymous(deps, 'server-info', async ({ body, auth, c }) =>
@@ -134,35 +61,6 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 			jsonResponse(c, await handleApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
-		),
-	);
-
-	app.post(
-		'/sw/register',
-		endpointHandler(deps, 'sw/register', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiSwRegister(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/sw/show-registration',
-		endpointHandler(deps, 'sw/show-registration', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiSwShowRegistration(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/sw/unregister',
-		endpointHandlerAnonymous(deps, 'sw/unregister', async ({ body, auth, c }) => {
-			await handleApiSwUnregister(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/sw/update-registration',
-		endpointHandler(deps, 'sw/update-registration', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiSwUpdateRegistration(deps, auth.user, body)),
 		),
 	);
 
@@ -188,14 +86,6 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 			jsonResponse(c, await handleApiGetOnlineUsersCount(deps), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/get-avatar-decorations',
-		endpointHandlerAnonymous(deps, 'get-avatar-decorations', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiGetAvatarDecorations(deps, body)),
 		),
 	);
 }

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import * as os from 'node:os';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -91,9 +92,8 @@ function scheduleHiddenTagsRankingRemoval(
 
 export async function handleApiMeta(
 	deps: ApiMetaDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof metaParamDef>,
 ): Promise<Packed<'MetaLite'> | Packed<'MetaDetailed'>> {
-	const params = parseApiParams(metaParamDef, body);
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 

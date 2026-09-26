@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	countAnnouncementReactionsByAnnouncementIdsFromDatabase,
@@ -67,15 +70,6 @@ export const announcementUnreactParamDef = z.object({
 	announcementId: misskeyId(),
 });
 
-function noSuchAnnouncementError(): ApiError {
-	return new ApiError({
-		status: 404,
-		message: 'No such announcement.',
-		code: 'NO_SUCH_ANNOUNCEMENT',
-		id: 'b57b5e1d-4f49-404a-9edb-46b00268f121',
-	});
-}
-
 async function packApiAnnouncement(
 	deps: ApiAnnouncementDependencies,
 	announcement: MiAnnouncement & {
@@ -126,9 +120,8 @@ async function packApiAnnouncement(
 export async function handleApiAnnouncements(
 	deps: ApiAnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof announcementsParamDef>,
 ): Promise<Packed<'Announcement'>[]> {
-	const params = parseApiParams(announcementsParamDef, body);
 	const announcements = await listAnnouncementsForUserFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -170,15 +163,15 @@ export async function handleApiAnnouncements(
 export async function handleApiAnnouncementShow(
 	deps: ApiAnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof announcementShowParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['announcements/show']>,
 ): Promise<Packed<'Announcement'>> {
-	const params = parseApiParams(announcementShowParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
 	if (announcement == null) {
-		throw noSuchAnnouncementError();
+		throw errors.noSuchAnnouncement();
 	}
 	if (announcement.userId != null && announcement.userId !== user?.id) {
-		throw noSuchAnnouncementError();
+		throw errors.noSuchAnnouncement();
 	}
 
 	return await packApiAnnouncement(deps, announcement, user);
@@ -187,10 +180,8 @@ export async function handleApiAnnouncementShow(
 export async function handleApiIReadAnnouncement(
 	deps: ApiAnnouncementDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof readAnnouncementParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(readAnnouncementParamDef, body);
-
 	const created = await createAnnouncementReadInDatabase(deps.db, {
 		id: genId(),
 		announcementId: params.announcementId,
@@ -222,30 +213,12 @@ function reactAnnouncementNotFoundError(): ApiError {
 	});
 }
 
-function alreadyReactedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are already reacting to that announcement.',
-		code: 'ALREADY_REACTED',
-		id: '745c33cb-cd64-4c08-b88a-7bffa45e0c1f',
-	});
-}
-
 function announcementNotActiveError(): ApiError {
 	return new ApiError({
 		status: 400,
 		message: 'That announcement is no longer active.',
 		code: 'ANNOUNCEMENT_NOT_ACTIVE',
 		id: 'aa4dbb14-7a3c-4a4c-9a44-a1f5f1e0dd39',
-	});
-}
-
-function notReactedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You are not reacting to that announcement.',
-		code: 'NOT_REACTED',
-		id: '0d7d5424-466e-45a2-9ed0-9e27c4b9f4a5',
 	});
 }
 
@@ -305,9 +278,9 @@ async function fetchReactableAnnouncement(
 export async function handleApiAnnouncementReact(
 	deps: ApiAnnouncementDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof announcementReactParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['announcements/react']>,
 ): Promise<void> {
-	const params = parseApiParams(announcementReactParamDef, body);
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
 	const reaction = await normalizeAnnouncementReaction(deps, me, params.reaction);
@@ -318,20 +291,20 @@ export async function handleApiAnnouncementReact(
 		reaction,
 	});
 	if (!created) {
-		throw alreadyReactedError();
+		throw errors.alreadyReacted();
 	}
 }
 
 export async function handleApiAnnouncementUnreact(
 	deps: ApiAnnouncementDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof announcementUnreactParamDef>,
+	errors: ContractErrors<(typeof miscContracts)['announcements/unreact']>,
 ): Promise<void> {
-	const params = parseApiParams(announcementUnreactParamDef, body);
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
 	const deleted = await deleteAnnouncementReactionInDatabase(deps.db, me.id, params.announcementId);
 	if (!deleted) {
-		throw notReactedError();
+		throw errors.notReacted();
 	}
 }

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import {
 	createAvatarDecorationWithSideEffects,
@@ -85,9 +86,8 @@ function packAdminAvatarDecorationForApi(config: Config, decoration: MiAvatarDec
 export async function handleApiAdminAvatarDecorationsCreate(
 	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAvatarDecorationsCreateParamDef>,
 ): Promise<AdminAvatarDecoration> {
-	const params = parseApiParams(adminAvatarDecorationsCreateParamDef, body);
 	const created = await createAvatarDecorationWithSideEffects(
 		{
 			db: deps.db,
@@ -111,10 +111,8 @@ export async function handleApiAdminAvatarDecorationsCreate(
 export async function handleApiAdminAvatarDecorationsDelete(
 	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAvatarDecorationsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAvatarDecorationsDeleteParamDef, body);
-
 	await deleteAvatarDecorationWithSideEffects(
 		{
 			db: deps.db,
@@ -128,9 +126,7 @@ export async function handleApiAdminAvatarDecorationsDelete(
 
 export async function handleApiAdminAvatarDecorationsList(
 	deps: ApiAdminAvatarDecorationDependencies,
-	body: Record<string, unknown>,
 ): Promise<AdminAvatarDecoration[]> {
-	parseApiParams(adminAvatarDecorationsListParamDef, body);
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 
 	return decorations.map((decoration) =>
@@ -141,10 +137,8 @@ export async function handleApiAdminAvatarDecorationsList(
 export async function handleApiAdminAvatarDecorationsUpdate(
 	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminAvatarDecorationsUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminAvatarDecorationsUpdateParamDef, body);
-
 	await updateAvatarDecorationWithSideEffects(
 		{
 			db: deps.db,
