@@ -6,7 +6,7 @@
 import type { Config } from '@/config.js';
 
 export const comment = `<!--
-  E R E B I A
+  T O N E R I K O
  Thank you for using Toneriko!
  If you are reading this message... how about joining the development?
  https://github.com/haru0416-dev/misskey
