@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as hashtagsContracts } from '@/server/api/metas/hashtags.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import {
@@ -161,15 +164,6 @@ async function getHashtagCharts(
 	return charts;
 }
 
-function noSuchHashtagError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such hashtag.',
-		code: 'NO_SUCH_HASHTAG',
-		id: '110ee688-193e-4a3a-9ecf-c167b2e6981e',
-	});
-}
-
 function packApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 	return {
 		tag: src.name,
@@ -212,9 +206,8 @@ export async function handleApiHashtagsTrend(
 
 export async function handleApiHashtagsList(
 	deps: ApiHashtagDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof hashtagsListParamDef>,
 ): Promise<Packed<'Hashtag'>[]> {
-	const params = parseApiParams(hashtagsListParamDef, body);
 	const tags = await listHashtagsFromDatabase(deps.db, {
 		limit: params.limit,
 		attachedToUserOnly: params.attachedToUserOnly,
@@ -228,9 +221,8 @@ export async function handleApiHashtagsList(
 
 export async function handleApiHashtagsSearch(
 	deps: ApiHashtagDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof hashtagsSearchParamDef>,
 ): Promise<string[]> {
-	const params = parseApiParams(hashtagsSearchParamDef, body);
 	return await searchHashtagNamesFromDatabase(deps.db, {
 		query: params.query,
 		limit: params.limit,
@@ -240,12 +232,12 @@ export async function handleApiHashtagsSearch(
 
 export async function handleApiHashtagsShow(
 	deps: ApiHashtagDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof hashtagsShowParamDef>,
+	errors: ContractErrors<(typeof hashtagsContracts)['hashtags/show']>,
 ): Promise<Packed<'Hashtag'>> {
-	const params = parseApiParams(hashtagsShowParamDef, body);
 	const hashtag = await fetchHashtagByNameFromDatabase(deps.db, normalizeForSearch(params.tag));
 	if (hashtag == null) {
-		throw noSuchHashtagError();
+		throw errors.noSuchHashtag();
 	}
 
 	return packApiHashtag(hashtag);
@@ -263,10 +255,8 @@ export const hashtagsUsersParamDef = z.object({
 export async function handleApiHashtagsUsers(
 	deps: ApiHashtagDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof hashtagsUsersParamDef>,
 ): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
-	const params = parseApiParams(hashtagsUsersParamDef, body);
-
 	const tag = normalizeForSearch(params.tag);
 
 	const users = await listUsersByTagFromDatabase(deps.db, {

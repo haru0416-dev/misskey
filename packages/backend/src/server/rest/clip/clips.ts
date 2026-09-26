@@ -408,9 +408,8 @@ export const usersClipsParamDef = z.object({
 export async function handleApiUsersClips(
 	deps: ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersClipsParamDef>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseApiParams(usersClipsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,

@@ -42,9 +42,10 @@ import {
 	usersListsUpdateParamDef,
 } from '@/server/rest/user/users.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	users: {
+	users: defineContract({
 		meta: {
 			tags: ['users'],
 
@@ -61,10 +62,10 @@ export const endpointMetas = {
 					ref: 'UserDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersParamDef,
-	},
-	'users/achievements': {
+	}),
+	'users/achievements': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: false,
@@ -75,10 +76,10 @@ export const endpointMetas = {
 					ref: 'Achievement',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersAchievementsParamDef,
-	},
-	'users/clips': {
+	}),
+	'users/clips': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'clips'],
@@ -96,10 +97,10 @@ export const endpointMetas = {
 					ref: 'Clip',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersClipsParamDef,
-	},
-	'users/featured-notes': {
+	}),
+	'users/featured-notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['notes'],
@@ -119,10 +120,10 @@ export const endpointMetas = {
 					ref: 'Note',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersFeaturedNotesParamDef,
-	},
-	'users/flashs': {
+	}),
+	'users/flashs': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'flashs'],
@@ -140,10 +141,10 @@ export const endpointMetas = {
 					ref: 'Flash',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersFlashsParamDef,
-	},
-	'users/followers': {
+	}),
+	'users/followers': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -177,10 +178,10 @@ export const endpointMetas = {
 					id: '3c6a84db-d619-26af-ca14-06232a21df8a',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersFollowersOrFollowingParamDef,
-	},
-	'users/following': {
+	}),
+	'users/following': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -220,10 +221,10 @@ export const endpointMetas = {
 					id: 'a2b007b9-4782-4eba-abd3-93b05ed4130d',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersFollowingParamDef,
-	},
-	'users/get-following-users-by-birthday': {
+	}),
+	'users/get-following-users-by-birthday': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -262,10 +263,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: usersGetFollowingUsersByBirthdayParamDef,
-	},
-	'users/gallery/posts': {
+	}),
+	'users/gallery/posts': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'gallery'],
@@ -283,10 +284,10 @@ export const endpointMetas = {
 					ref: 'GalleryPost',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersGalleryPostsParamDef,
-	},
-	'users/get-frequently-replied-users': {
+	}),
+	'users/get-frequently-replied-users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -326,10 +327,10 @@ export const endpointMetas = {
 					id: 'e6965129-7b2a-40a4-bae2-cd84cd434822',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersGetFrequentlyRepliedUsersParamDef,
-	},
-	'users/lists/create': {
+	}),
+	'users/lists/create': defineContract({
 		meta: {
 			tags: ['lists'],
 
@@ -355,10 +356,10 @@ export const endpointMetas = {
 					id: '0cf21a28-7715-4f39-a20d-777bfdb8d138',
 				},
 			},
-		} as const,
+		},
 		paramDef: createParamDef,
-	},
-	'users/lists/create-from-public': {
+	}),
+	'users/lists/create-from-public': defineContract({
 		meta: {
 			requireCredential: true,
 			prohibitMoved: true,
@@ -399,10 +400,10 @@ export const endpointMetas = {
 					id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7',
 				},
 			},
-		} as const,
+		},
 		paramDef: createFromPublicParamDef,
-	},
-	'users/lists/delete': {
+	}),
+	'users/lists/delete': defineContract({
 		meta: {
 			tags: ['lists'],
 
@@ -419,10 +420,10 @@ export const endpointMetas = {
 					id: '78436795-db79-42f5-b1e2-55ea2cf19166',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersListsDeleteParamDef,
-	},
-	'users/lists/favorite': {
+	}),
+	'users/lists/favorite': defineContract({
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
@@ -439,10 +440,10 @@ export const endpointMetas = {
 					id: '6425bba0-985b-461e-af1b-518070e72081',
 				},
 			},
-		} as const,
+		},
 		paramDef: userListParamDef,
-	},
-	'users/lists/get-memberships': {
+	}),
+	'users/lists/get-memberships': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['lists', 'account'],
@@ -487,10 +488,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: getMembershipsParamDef,
-	},
-	'users/lists/list': {
+	}),
+	'users/lists/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['lists', 'account'],
@@ -529,10 +530,10 @@ export const endpointMetas = {
 					id: 'ab36de0e-29e9-48cb-9732-d82f1281620d',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersListsListParamDef,
-	},
-	'users/lists/pull': {
+	}),
+	'users/lists/pull': defineContract({
 		meta: {
 			tags: ['lists', 'users'],
 
@@ -557,10 +558,10 @@ export const endpointMetas = {
 					id: '588e7f72-c744-4a61-b180-d354e912bda2',
 				},
 			},
-		} as const,
+		},
 		paramDef: pullParamDef,
-	},
-	'users/lists/push': {
+	}),
+	'users/lists/push': defineContract({
 		meta: {
 			tags: ['lists', 'users'],
 
@@ -608,10 +609,10 @@ export const endpointMetas = {
 					id: '2dd9752e-a338-413d-8eec-41814430989b',
 				},
 			},
-		} as const,
+		},
 		paramDef: pushParamDef,
-	},
-	'users/lists/show': {
+	}),
+	'users/lists/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['lists', 'account'],
@@ -658,10 +659,10 @@ export const endpointMetas = {
 					id: '7bc05c21-1d7a-41ae-88f1-66820f4dc686',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersListsShowParamDef,
-	},
-	'users/lists/unfavorite': {
+	}),
+	'users/lists/unfavorite': defineContract({
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
@@ -678,10 +679,10 @@ export const endpointMetas = {
 					id: '835c4b27-463d-4cfa-969b-a9058678d465',
 				},
 			},
-		} as const,
+		},
 		paramDef: userListParamDef,
-	},
-	'users/lists/update': {
+	}),
+	'users/lists/update': defineContract({
 		meta: {
 			tags: ['lists'],
 
@@ -705,10 +706,10 @@ export const endpointMetas = {
 					id: '796666fe-3dff-4d39-becb-8a5932c1d5b7',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersListsUpdateParamDef,
-	},
-	'users/lists/update-membership': {
+	}),
+	'users/lists/update-membership': defineContract({
 		meta: {
 			tags: ['lists', 'users'],
 
@@ -731,10 +732,10 @@ export const endpointMetas = {
 					id: '588e7f72-c744-4a61-b180-d354e912bda2',
 				},
 			},
-		} as const,
+		},
 		paramDef: updateMembershipParamDef,
-	},
-	'users/notes': {
+	}),
+	'users/notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'notes'],
@@ -758,10 +759,10 @@ export const endpointMetas = {
 					id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersNotesParamDef,
-	},
-	'users/pages': {
+	}),
+	'users/pages': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'pages'],
@@ -779,10 +780,10 @@ export const endpointMetas = {
 					ref: 'Page',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersPagesParamDef,
-	},
-	'users/reactions': {
+	}),
+	'users/reactions': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users', 'reactions'],
@@ -816,10 +817,10 @@ export const endpointMetas = {
 					id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersReactionsParamDef,
-	},
-	'users/recommendation': {
+	}),
+	'users/recommendation': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -841,10 +842,10 @@ export const endpointMetas = {
 					ref: 'UserDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersRecommendationParamDef,
-	},
-	'users/relation': {
+	}),
+	'users/relation': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -967,10 +968,10 @@ export const endpointMetas = {
 					},
 				],
 			},
-		} as const,
+		},
 		paramDef: usersRelationParamDef,
-	},
-	'users/report-abuse': {
+	}),
+	'users/report-abuse': defineContract({
 		meta: {
 			tags: ['users'],
 
@@ -998,10 +999,10 @@ export const endpointMetas = {
 					id: '35e166f5-05fb-4f87-a2d5-adb42676d48f',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersReportAbuseParamDef,
-	},
-	'users/search': {
+	}),
+	'users/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -1022,10 +1023,10 @@ export const endpointMetas = {
 					ref: 'User',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersSearchParamDef,
-	},
-	'users/search-by-username-and-host': {
+	}),
+	'users/search-by-username-and-host': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['users'],
@@ -1045,10 +1046,10 @@ export const endpointMetas = {
 					ref: 'User',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersSearchByUsernameAndHostParamDef,
-	},
-	'users/show': {
+	}),
+	'users/show': defineContract({
 		meta: {
 			tags: ['users'],
 
@@ -1090,10 +1091,10 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: usersShowParamDef,
-	},
-	'users/update-memo': {
+	}),
+	'users/update-memo': defineContract({
 		meta: {
 			tags: ['account'],
 
@@ -1108,7 +1109,7 @@ export const endpointMetas = {
 					id: '6fef56f3-e765-4957-88e5-c6f65329b8a5',
 				},
 			},
-		} as const,
+		},
 		paramDef: usersUpdateMemoParamDef,
-	},
-} as const;
+	}),
+};

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
@@ -113,9 +114,8 @@ async function packUserListsManyForApi(
 
 export async function handleApiUsersAchievements(
 	deps: ApiUsersDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersAchievementsParamDef>,
 ): Promise<MiUserProfile['achievements']> {
-	const params = parseApiParams(usersAchievementsParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
 	return profile.achievements;
 }
@@ -123,10 +123,8 @@ export async function handleApiUsersAchievements(
 export async function handleApiUsersListsList(
 	deps: ApiUsersDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersListsListParamDef>,
 ): Promise<ApiPackedUserList[]> {
-	const params = parseApiParams(usersListsListParamDef, body);
-
 	if (params.userId !== undefined) {
 		const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 		if (user == null) {
@@ -165,9 +163,8 @@ export async function handleApiUsersListsList(
 export async function handleApiUsersListsShow(
 	deps: ApiUsersDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersListsShowParamDef>,
 ): Promise<ApiPackedUserListShow> {
-	const params = parseApiParams(usersListsShowParamDef, body);
 	const userList =
 		!params.forPublic && me !== null
 			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
@@ -194,9 +191,8 @@ export async function handleApiUsersListsShow(
 export async function handleApiUsersListsDelete(
 	deps: ApiUsersDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersListsDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(usersListsDeleteParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {
@@ -214,9 +210,8 @@ export async function handleApiUsersListsDelete(
 export async function handleApiUsersListsUpdate(
 	deps: ApiUsersDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersListsUpdateParamDef>,
 ): Promise<ApiPackedUserList> {
-	const params = parseApiParams(usersListsUpdateParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {

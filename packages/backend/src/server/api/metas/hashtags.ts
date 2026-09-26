@@ -10,9 +10,10 @@ import {
 	hashtagsTrendParamDef,
 	hashtagsUsersParamDef,
 } from '@/server/rest/hashtag/hashtags.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'hashtags/list': {
+	'hashtags/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['hashtags'],
@@ -30,10 +31,10 @@ export const endpointMetas = {
 					ref: 'Hashtag',
 				},
 			},
-		} as const,
+		},
 		paramDef: hashtagsListParamDef,
-	},
-	'hashtags/search': {
+	}),
+	'hashtags/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['hashtags'],
@@ -50,10 +51,10 @@ export const endpointMetas = {
 					nullable: false,
 				},
 			},
-		} as const,
+		},
 		paramDef: hashtagsSearchParamDef,
-	},
-	'hashtags/show': {
+	}),
+	'hashtags/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['hashtags'],
@@ -74,10 +75,10 @@ export const endpointMetas = {
 					id: '110ee688-193e-4a3a-9ecf-c167b2e6981e',
 				},
 			},
-		} as const,
+		},
 		paramDef: hashtagsShowParamDef,
-	},
-	'hashtags/trend': {
+	}),
+	'hashtags/trend': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['hashtags'],
@@ -118,10 +119,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: hashtagsTrendParamDef,
-	},
-	'hashtags/users': {
+	}),
+	'hashtags/users': defineContract({
 		meta: {
 			allowQuery: true,
 			requireCredential: false,
@@ -139,7 +140,7 @@ export const endpointMetas = {
 					ref: 'UserDetailed',
 				},
 			},
-		} as const,
+		},
 		paramDef: hashtagsUsersParamDef,
-	},
-} as const;
+	}),
+};

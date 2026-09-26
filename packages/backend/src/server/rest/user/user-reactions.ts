@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { Packed } from '@/misc/json-schema.js';
+import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
@@ -29,25 +33,6 @@ import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiUserReactionsDependencies = ApiNoteDependencies & ApiRolePolicyDependencies;
 
-function usersReactionsIsRemoteUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message:
-			'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
-		code: 'IS_REMOTE_USER',
-		id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
-	});
-}
-
-function usersReactionsNotPublicError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Reactions of the user is not public.',
-		code: 'REACTIONS_NOT_PUBLIC',
-		id: '673a7dd2-6924-1093-e0c0-e68456ceae5c',
-	});
-}
-
 export const usersReactionsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
@@ -58,9 +43,9 @@ async function packNoteReactionWithNoteForApi(
 	deps: ApiUserReactionsDependencies,
 	reaction: NoteReactionRow & { note: MiNote },
 	me: { id: MiUser['id'] } | null | undefined,
-	packedUser: unknown,
+	packedUser: Packed<'UserLite'>,
 	packedNote?: Awaited<ReturnType<typeof packNoteForApi>>,
-): Promise<Record<string, unknown>> {
+): Promise<Packed<'NoteReactionWithNote'>> {
 	return {
 		id: reaction.id,
 		createdAt: parseId(reaction.id).date.toISOString(),
@@ -73,10 +58,9 @@ async function packNoteReactionWithNoteForApi(
 export async function handleApiUsersReactions(
 	deps: ApiUserReactionsDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(usersReactionsParamDef, body);
-
+	params: ApiParams<typeof usersReactionsParamDef>,
+	errors: ContractErrors<(typeof usersContracts)['users/reactions']>,
+) {
 	const userIdsWhoBlockingMe = me
 		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
 		: new Set<string>();
@@ -85,12 +69,12 @@ export async function handleApiUsersReactions(
 	if (!iAmModerator) {
 		const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
 		if (user.host != null) {
-			throw usersReactionsIsRemoteUserError();
+			throw errors.isRemoteUser();
 		}
 
 		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
 		if ((me == null || me.id !== params.userId) && !profile.publicReactions) {
-			throw usersReactionsNotPublicError();
+			throw errors.reactionsNotPublic();
 		}
 
 		if (userIdsWhoBlockingMe.has(params.userId)) {
@@ -171,9 +155,11 @@ export async function handleApiUsersReactions(
 		me,
 	);
 
+	// 取得の間に消えた利用者のリアクションは、仕様上必須の user を欠いたまま返さず除く。
 	return await Promise.all(
-		collected.map((reaction, index) =>
-			packNoteReactionWithNoteForApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
-		),
+		collected.flatMap((reaction, index) => {
+			const user = userMap.get(reaction.userId);
+			return user == null ? [] : [packNoteReactionWithNoteForApi(deps, reaction, me, user, packedNotes[index])];
+		}),
 	);
 }

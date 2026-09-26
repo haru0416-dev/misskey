@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import { DAY } from '@/const.js';
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
@@ -95,7 +98,7 @@ import {
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
-export type MeDetailedApiResponse = Record<string, unknown>;
+export type MeDetailedApiResponse = Packed<'MeDetailed'>;
 export type UserDetailedNotMeApiResponse = Packed<'UserDetailedNotMe'>;
 
 export type UserPackingDependencies = {
@@ -769,7 +772,6 @@ export async function packMeDetailedForApi(
 		mutedWords: profile.mutedWords,
 		hardMutedWords: profile.hardMutedWords,
 		mutedInstances: profile.mutedInstances,
-		mutingNotificationTypes: [],
 		notificationRecieveConfig: profile.notificationRecieveConfig,
 		emailNotificationTypes: profile.emailNotificationTypes,
 		achievements: profile.achievements,
@@ -780,7 +782,11 @@ export async function packMeDetailedForApi(
 					email: profile.email,
 					emailVerified: profile.emailVerified,
 					securityKeysList: profile.twoFactorEnabled
-						? await listUserSecurityKeySummariesByUserIdFromDatabase(deps.db, user.id)
+						? (await listUserSecurityKeySummariesByUserIdFromDatabase(deps.db, user.id)).map((key) => ({
+								id: key.id,
+								name: key.name,
+								lastUsed: key.lastUsed.toISOString(),
+							}))
 						: [],
 				}
 			: {}),
@@ -1052,7 +1058,7 @@ export async function handleApiUsersRelation(
 	deps: ApiUsersRelationDependencies,
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
-): Promise<unknown> {
+) {
 	const params = parseApiParams(usersRelationParamDef, body);
 
 	return Array.isArray(params.userId)
@@ -1157,9 +1163,8 @@ export const usersSearchParamDef = z.object({
 export async function handleApiUsersSearch(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<unknown[]> {
-	const params = parseApiParams(usersSearchParamDef, body);
+	params: ApiParams<typeof usersSearchParamDef>,
+) {
 	const users = await searchUsersForApi(deps, params.query.trim(), me?.id ?? null, {
 		offset: params.offset,
 		limit: params.limit,
@@ -1266,10 +1271,8 @@ export const usersSearchByUsernameAndHostParamDef = z.union([
 export async function handleApiUsersSearchByUsernameAndHost(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<unknown[]> {
-	const params = parseApiParams(usersSearchByUsernameAndHostParamDef, body);
-
+	params: ApiParams<typeof usersSearchByUsernameAndHostParamDef>,
+) {
 	const searchParams = omitUndefined({
 		username: 'username' in params ? params.username : undefined,
 		host: 'host' in params ? params.host : undefined,
@@ -1301,9 +1304,8 @@ export const usersRecommendationParamDef = z.object({
 export async function handleApiUsersRecommendation(
 	deps: UserPackingDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
-): Promise<unknown[]> {
-	const params = parseApiParams(usersRecommendationParamDef, body);
+	params: ApiParams<typeof usersRecommendationParamDef>,
+) {
 	const users = await listRecommendedUsersFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		offset: params.offset,
@@ -1318,25 +1320,15 @@ export const usersGetFrequentlyRepliedUsersParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 });
 
-function usersGetFrequentlyRepliedUsersNoSuchUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such user.',
-		code: 'NO_SUCH_USER',
-		id: 'e6965129-7b2a-40a4-bae2-cd84cd434822',
-	});
-}
-
 export async function handleApiUsersGetFrequentlyRepliedUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<{ user: unknown; weight: number }[]> {
-	const params = parseApiParams(usersGetFrequentlyRepliedUsersParamDef, body);
-
+	params: ApiParams<typeof usersGetFrequentlyRepliedUsersParamDef>,
+	errors: ContractErrors<(typeof usersContracts)['users/get-frequently-replied-users']>,
+) {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
-		throw usersGetFrequentlyRepliedUsersNoSuchUserError();
+		throw errors.noSuchUser();
 	}
 
 	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit, me ?? null);
@@ -1374,10 +1366,8 @@ export const usersParamDef = z.object({
 export async function handleApiUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
-): Promise<unknown[]> {
-	const params = parseApiParams(usersParamDef, body);
-
+	params: ApiParams<typeof usersParamDef>,
+) {
 	const users = await listExplorableUsersFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -1399,25 +1389,15 @@ export const usersUpdateMemoParamDef = z.object({
 	memo: z.string().nullable(),
 });
 
-function usersUpdateMemoNoSuchUserError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such user.',
-		code: 'NO_SUCH_USER',
-		id: '6fef56f3-e765-4957-88e5-c6f65329b8a5',
-	});
-}
-
 export async function handleApiUsersUpdateMemo(
 	deps: UserPackingDependencies,
 	me: MiUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersUpdateMemoParamDef>,
+	errors: ContractErrors<(typeof usersContracts)['users/update-memo']>,
 ): Promise<void> {
-	const params = parseApiParams(usersUpdateMemoParamDef, body);
-
 	const target = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (target == null) {
-		throw usersUpdateMemoNoSuchUserError();
+		throw errors.noSuchUser();
 	}
 
 	if (params.memo === '' || params.memo == null) {

@@ -12,9 +12,10 @@ import {
 	adminSystemWebhookUpdateParamDef,
 } from '@/server/rest/admin/admin-system-webhooks.js';
 import { MINUTE } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'admin/system-webhook/create': {
+	'admin/system-webhook/create': defineContract({
 		meta: {
 			tags: ['admin', 'system-webhook'],
 
@@ -27,10 +28,10 @@ export const endpointMetas = {
 				type: 'object',
 				ref: 'SystemWebhook',
 			},
-		} as const,
+		},
 		paramDef: adminSystemWebhookCreateParamDef,
-	},
-	'admin/system-webhook/delete': {
+	}),
+	'admin/system-webhook/delete': defineContract({
 		meta: {
 			tags: ['admin', 'system-webhook'],
 
@@ -38,10 +39,10 @@ export const endpointMetas = {
 			requireModerator: true,
 			secure: true,
 			kind: 'write:admin:system-webhook',
-		} as const,
+		},
 		paramDef: adminSystemWebhookDeleteParamDef,
-	},
-	'admin/system-webhook/list': {
+	}),
+	'admin/system-webhook/list': defineContract({
 		meta: {
 			tags: ['admin', 'system-webhook'],
 
@@ -57,10 +58,10 @@ export const endpointMetas = {
 					ref: 'SystemWebhook',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminSystemWebhookListParamDef,
-	},
-	'admin/system-webhook/show': {
+	}),
+	'admin/system-webhook/show': defineContract({
 		meta: {
 			tags: ['admin', 'system-webhook'],
 
@@ -83,10 +84,10 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 			},
-		} as const,
+		},
 		paramDef: adminSystemWebhookShowParamDef,
-	},
-	'admin/system-webhook/test': {
+	}),
+	'admin/system-webhook/test': defineContract({
 		meta: {
 			tags: ['webhooks'],
 
@@ -108,10 +109,10 @@ export const endpointMetas = {
 					id: '0c52149c-e913-18f8-5dc7-74870bfe0cf9',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminSystemWebhookTestParamDef,
-	},
-	'admin/system-webhook/update': {
+	}),
+	'admin/system-webhook/update': defineContract({
 		meta: {
 			tags: ['admin', 'system-webhook'],
 
@@ -124,7 +125,7 @@ export const endpointMetas = {
 				type: 'object',
 				ref: 'SystemWebhook',
 			},
-		} as const,
+		},
 		paramDef: adminSystemWebhookUpdateParamDef,
-	},
-} as const;
+	}),
+};

@@ -130,9 +130,8 @@ export async function handleApiUsersListsFavorite(
 export async function handleApiUsersListsUnfavorite(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof userListParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(userListParamDef, body);
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
 		throw clientErrorWithStatus(400, 'No such user list.', 'NO_SUCH_USER_LIST', 'baedb33e-76b8-4b0c-86a8-9375c0a7b94b');

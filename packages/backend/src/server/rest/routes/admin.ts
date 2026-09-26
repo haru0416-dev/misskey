@@ -12,13 +12,6 @@ import {
 	handleApiAdminUpdateAbuseUserReport,
 } from '../admin/admin-abuse-reports.js';
 import {
-	handleApiAdminAbuseReportNotificationRecipientCreate,
-	handleApiAdminAbuseReportNotificationRecipientDelete,
-	handleApiAdminAbuseReportNotificationRecipientList,
-	handleApiAdminAbuseReportNotificationRecipientShow,
-	handleApiAdminAbuseReportNotificationRecipientUpdate,
-} from '../admin/admin-abuse-report-notification-recipient.js';
-import {
 	handleApiAdminAccountsCreate,
 	handleApiAdminAccountsDelete,
 	handleApiAdminAccountsFindByEmail,
@@ -48,27 +41,8 @@ import {
 	handleApiAdminRelaysList,
 	handleApiAdminRelaysRemove,
 } from '../admin/admin-relays.js';
-import {
-	handleApiAdminRolesAssign,
-	handleApiAdminRolesCreate,
-	handleApiAdminRolesDelete,
-	handleApiAdminRolesList,
-	handleApiAdminRolesShow,
-	handleApiAdminRolesUnassign,
-	handleApiAdminRolesUpdate,
-	handleApiAdminRolesUpdateDefaultPolicies,
-	handleApiAdminRolesUsers,
-} from '../admin/admin-roles.js';
 import { handleApiAdminSendEmail } from '../admin/admin-email.js';
 import { handleApiAdminServerInfo } from '../admin/admin-server-info.js';
-import {
-	handleApiAdminSystemWebhookCreate,
-	handleApiAdminSystemWebhookDelete,
-	handleApiAdminSystemWebhookList,
-	handleApiAdminSystemWebhookShow,
-	handleApiAdminSystemWebhookTest,
-	handleApiAdminSystemWebhookUpdate,
-} from '../admin/admin-system-webhooks.js';
 import { handleApiAdminGetUserIps } from '../admin/admin-user-ips.js';
 import {
 	handleApiAdminResetPassword,
@@ -157,46 +131,6 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 			await handleApiAdminDeleteAccount(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
-	);
-
-	app.post(
-		'/admin/abuse-report/notification-recipient/create',
-		endpointHandler(deps, 'admin/abuse-report/notification-recipient/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminAbuseReportNotificationRecipientCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/admin/abuse-report/notification-recipient/delete',
-		endpointHandler(deps, 'admin/abuse-report/notification-recipient/delete', async ({ body, auth, c }) => {
-			await assertApiModerator(deps, auth);
-
-			await handleApiAdminAbuseReportNotificationRecipientDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/abuse-report/notification-recipient/list',
-		endpointHandler(deps, 'admin/abuse-report/notification-recipient/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminAbuseReportNotificationRecipientList(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/abuse-report/notification-recipient/show',
-		endpointHandler(deps, 'admin/abuse-report/notification-recipient/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminAbuseReportNotificationRecipientShow(deps, body)),
-		),
-	);
-
-	app.post(
-		'/admin/abuse-report/notification-recipient/update',
-		endpointHandler(deps, 'admin/abuse-report/notification-recipient/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminAbuseReportNotificationRecipientUpdate(deps, auth.user, body)),
-		),
 	);
 
 	app.post(
@@ -354,135 +288,6 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		'/admin/invite/list',
 		endpointHandler(deps, 'admin/invite/list', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleApiAdminInviteList(deps, body)),
-		),
-	);
-
-	app.post(
-		'/admin/roles/assign',
-		endpointHandler(deps, 'admin/roles/assign', async ({ body, auth, c }) => {
-			await assertApiModerator(deps, auth);
-
-			await handleApiAdminRolesAssign(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/roles/create',
-		endpointHandler(deps, 'admin/roles/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminRolesCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/admin/roles/delete',
-		endpointHandler(deps, 'admin/roles/delete', async ({ body, auth, c }) => {
-			await assertApiAdmin(deps, auth);
-
-			await handleApiAdminRolesDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/roles/list',
-		endpointHandler(deps, 'admin/roles/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminRolesList(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/roles/show',
-		endpointHandler(deps, 'admin/roles/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminRolesShow(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/admin/roles/users',
-		endpointHandler(deps, 'admin/roles/users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminRolesUsers(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/admin/roles/unassign',
-		endpointHandler(deps, 'admin/roles/unassign', async ({ body, auth, c }) => {
-			await assertApiModerator(deps, auth);
-
-			await handleApiAdminRolesUnassign(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/roles/update',
-		endpointHandler(deps, 'admin/roles/update', async ({ body, auth, c }) => {
-			await assertApiAdmin(deps, auth);
-
-			await handleApiAdminRolesUpdate(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/roles/update-default-policies',
-		endpointHandler(deps, 'admin/roles/update-default-policies', async ({ body, auth, c }) => {
-			await assertApiAdmin(deps, auth);
-
-			await handleApiAdminRolesUpdateDefaultPolicies(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/system-webhook/create',
-		endpointHandler(deps, 'admin/system-webhook/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminSystemWebhookCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/admin/system-webhook/delete',
-		endpointHandler(deps, 'admin/system-webhook/delete', async ({ body, auth, c }) => {
-			await assertApiModerator(deps, auth);
-
-			await handleApiAdminSystemWebhookDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/system-webhook/list',
-		endpointHandler(deps, 'admin/system-webhook/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminSystemWebhookList(deps, body)),
-		),
-	);
-
-	app.post(
-		'/admin/system-webhook/show',
-		endpointHandler(deps, 'admin/system-webhook/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminSystemWebhookShow(deps, body)),
-		),
-	);
-
-	app.post(
-		'/admin/system-webhook/test',
-		endpointHandler(deps, 'admin/system-webhook/test', async ({ body, auth, c }) => {
-			await assertApiModerator(deps, auth);
-
-			await handleApiAdminSystemWebhookTest(deps, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/admin/system-webhook/update',
-		endpointHandler(deps, 'admin/system-webhook/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAdminSystemWebhookUpdate(deps, auth.user, body)),
 		),
 	);
 

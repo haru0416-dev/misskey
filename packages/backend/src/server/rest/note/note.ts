@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
 import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { URLSearchParams } from 'node:url';
@@ -1367,24 +1368,14 @@ export const usersNotesParamDef = z.object({
 	withFiles: z.boolean().default(false),
 });
 
-function usersNotesBothWithRepliesAndWithFilesError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Specifying both withReplies and withFiles is not supported',
-		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
-		id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
-	});
-}
-
 export async function handleApiUsersNotes(
 	deps: ApiNoteDependencies,
 	me: MiUser | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof usersNotesParamDef>,
+	errors: ContractErrors<(typeof usersContracts)['users/notes']>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseApiParams(usersNotesParamDef, body);
-
 	if (params.withReplies && params.withFiles) {
-		throw usersNotesBothWithRepliesAndWithFilesError();
+		throw errors.bothWithRepliesAndWithFiles();
 	}
 
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);

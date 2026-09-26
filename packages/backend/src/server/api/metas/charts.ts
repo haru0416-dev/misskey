@@ -17,9 +17,10 @@ import { schema as schema_11 } from '@/core/chart/entities/per-user-reactions.js
 import { schema as schema_12 } from '@/core/chart/entities/users.js';
 import { getJsonSchema } from '@/core/chart/core.js';
 import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/chart/charts.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'charts/active-users': {
+	'charts/active-users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users'],
@@ -28,10 +29,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-	'charts/ap-request': {
+	}),
+	'charts/ap-request': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts'],
@@ -40,10 +41,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-	'charts/drive': {
+	}),
+	'charts/drive': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'drive'],
@@ -52,10 +53,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-	'charts/federation': {
+	}),
+	'charts/federation': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts'],
@@ -64,10 +65,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-	'charts/instance': {
+	}),
+	'charts/instance': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts'],
@@ -76,10 +77,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: instanceChartParamDef,
-	},
-	'charts/notes': {
+	}),
+	'charts/notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'notes'],
@@ -88,10 +89,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-	'charts/user/drive': {
+	}),
+	'charts/user/drive': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'drive', 'users'],
@@ -100,10 +101,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: perUserChartParamDef,
-	},
-	'charts/user/following': {
+	}),
+	'charts/user/following': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users', 'following'],
@@ -112,10 +113,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: perUserChartParamDef,
-	},
-	'charts/user/notes': {
+	}),
+	'charts/user/notes': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users', 'notes'],
@@ -124,10 +125,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: perUserChartParamDef,
-	},
-	'charts/user/pv': {
+	}),
+	'charts/user/pv': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users'],
@@ -136,10 +137,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: perUserChartParamDef,
-	},
-	'charts/user/reactions': {
+	}),
+	'charts/user/reactions': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users', 'reactions'],
@@ -148,10 +149,10 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: perUserChartParamDef,
-	},
-	'charts/users': {
+	}),
+	'charts/users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['charts', 'users'],
@@ -160,7 +161,7 @@ export const endpointMetas = {
 
 			allowGet: true,
 			cacheSec: 60 * 60,
-		} as const,
+		},
 		paramDef: chartParamDef,
-	},
-} as const;
+	}),
+};

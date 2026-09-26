@@ -13,6 +13,7 @@ import {
 	adminQueueSelectParamDef,
 } from '@/server/rest/admin/admin-queue.js';
 import { z } from 'zod';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 // deliver-delayed と inbox-delayed は同じ [host, 件数] の組を返す。
 const delayedJobCountsByHostSchema = {
@@ -90,16 +91,16 @@ const queueStateProperties = {
 } as const;
 
 export const endpointMetas = {
-	'admin/queue/clear': {
+	'admin/queue/clear': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueClearParamDef,
-	},
+	}),
 	'admin/queue/deliver-delayed': {
 		meta: {
 			allowQuery: true,
@@ -126,27 +127,27 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'admin/queue/retry-job': {
+	'admin/queue/retry-job': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueJobParamDef,
-	},
-	'admin/queue/remove-job': {
+	}),
+	'admin/queue/remove-job': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueJobParamDef,
-	},
-	'admin/queue/show-job': {
+	}),
+	'admin/queue/show-job': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -160,10 +161,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'QueueJob',
 			},
-		} as const,
+		},
 		paramDef: adminQueueJobParamDef,
-	},
-	'admin/queue/show-job-logs': {
+	}),
+	'admin/queue/show-job-logs': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -182,40 +183,40 @@ export const endpointMetas = {
 					type: 'string',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueJobParamDef,
-	},
-	'admin/queue/promote-jobs': {
+	}),
+	'admin/queue/promote-jobs': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueSelectParamDef,
-	},
-	'admin/queue/pause': {
+	}),
+	'admin/queue/pause': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueSelectParamDef,
-	},
-	'admin/queue/resume': {
+	}),
+	'admin/queue/resume': defineContract({
 		meta: {
 			tags: ['admin'],
 
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
-		} as const,
+		},
 		paramDef: adminQueueSelectParamDef,
-	},
-	'admin/queue/jobs': {
+	}),
+	'admin/queue/jobs': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -234,10 +235,10 @@ export const endpointMetas = {
 					ref: 'QueueJob',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueJobsParamDef,
-	},
-	'admin/queue/outbox-dead-letters': {
+	}),
+	'admin/queue/outbox-dead-letters': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -260,11 +261,12 @@ export const endpointMetas = {
 						name: { type: 'string', optional: false, nullable: false },
 						coordinatorId: { type: 'string', optional: false, nullable: true },
 						externalJobId: { type: 'string', optional: false, nullable: true },
+						// 隔離する 2 つの経路はどちらも理由を書くが、列は null を許す。壊れた行でも一覧を返せるよう null を宣言する。
 						deadLetterReason: {
 							type: 'string',
 							optional: false,
-							nullable: false,
-							enum: ['deliveryFailed', 'invalidPayload'],
+							nullable: true,
+							enum: ['deliveryFailed', 'invalidPayload', null],
 						},
 						lastError: { type: 'object', optional: false, nullable: true, additionalProperties: true },
 						revision: { type: 'number', optional: false, nullable: false },
@@ -277,10 +279,10 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueOutboxJobsParamDef,
-	},
-	'admin/queue/retry-outbox-dead-letter': {
+	}),
+	'admin/queue/retry-outbox-dead-letter': defineContract({
 		meta: {
 			tags: ['admin'],
 			requireCredential: true,
@@ -293,10 +295,10 @@ export const endpointMetas = {
 					id: '9209ed67-4fa3-44e9-955b-a6c5d6df172f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueOutboxJobParamDef,
-	},
-	'admin/queue/abandon-outbox-dead-letter': {
+	}),
+	'admin/queue/abandon-outbox-dead-letter': defineContract({
 		meta: {
 			tags: ['admin'],
 			requireCredential: true,
@@ -309,9 +311,9 @@ export const endpointMetas = {
 					id: '9209ed67-4fa3-44e9-955b-a6c5d6df172f',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueOutboxJobParamDef,
-	},
+	}),
 	'admin/queue/stats': {
 		meta: {
 			allowQuery: true,
@@ -377,7 +379,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'admin/queue/queue-stats': {
+	'admin/queue/queue-stats': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin'],
@@ -487,7 +489,7 @@ export const endpointMetas = {
 					},
 				},
 			},
-		} as const,
+		},
 		paramDef: adminQueueSelectParamDef,
-	},
-} as const;
+	}),
+};

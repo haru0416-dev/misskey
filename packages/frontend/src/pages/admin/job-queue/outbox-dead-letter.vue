@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #suffix>
 		<MkTime :time="deadLetter.updatedAt" mode="relative"/>
 		<span style="margin-left: 1em; color: var(--MI_THEME-error);">
-			<i class="ti ti-circle-x"></i> {{ deadLetter.deadLetterReason === 'deliveryFailed' ? 'Delivery failed' : 'Invalid payload' }}
+			<i class="ti ti-circle-x"></i> {{ deadLetter.deadLetterReason === 'deliveryFailed' ? 'Delivery failed' : deadLetter.deadLetterReason === 'invalidPayload' ? 'Invalid payload' : 'Unknown' }}
 		</span>
 	</template>
 	<template #header>

@@ -6,13 +6,7 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import {
-	handleApiHashtagsList,
-	handleApiHashtagsSearch,
-	handleApiHashtagsShow,
-	handleApiHashtagsTrend,
-	handleApiHashtagsUsers,
-} from '../hashtag/hashtags.js';
+import { handleApiHashtagsTrend } from '../hashtag/hashtags.js';
 import {
 	handleApiInviteCreate,
 	handleApiInviteDelete,
@@ -33,30 +27,6 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(
-		['POST', 'QUERY'],
-		'/hashtags/list',
-		endpointHandlerAnonymous(deps, 'hashtags/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiHashtagsList(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/hashtags/search',
-		endpointHandlerAnonymous(deps, 'hashtags/search', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiHashtagsSearch(deps, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/hashtags/show',
-		endpointHandlerAnonymous(deps, 'hashtags/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiHashtagsShow(deps, body)),
-		),
-	);
-
 	app.get(
 		'/hashtags/trend',
 		endpointHandlerAnonymous(deps, 'hashtags/trend', async ({ body, auth, c }) =>
@@ -73,14 +43,6 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 			jsonResponse(c, await handleApiHashtagsTrend(deps, body), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/hashtags/users',
-		endpointHandlerAnonymous(deps, 'hashtags/users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiHashtagsUsers(deps, auth.user, body)),
 		),
 	);
 

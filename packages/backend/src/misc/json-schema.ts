@@ -248,7 +248,6 @@ type UnionObjType<
 	a extends readonly any[],
 	X extends readonly (keyof s)[] = a[number],
 > = X extends unknown ? ObjType<s, X> : never;
-type ArrayUnion<T> = T extends unknown ? T[] : never;
 type ArrayToTuple<X extends readonly Schema[]> = { [K in keyof X]: SchemaType<X[K]> };
 
 type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
@@ -297,7 +296,8 @@ type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 								? p['items']['anyOf'] extends readonly Schema[]
 									? UnionSchemaType<NonNullable<p['items']['anyOf']>>[]
 									: p['items']['oneOf'] extends readonly Schema[]
-										? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>>
+										? // 各要素がどれか 1 つに合う配列なので、配列ごとの union ではなく要素の union の配列にする。
+											UnionSchemaType<NonNullable<p['items']['oneOf']>>[]
 										: p['items']['allOf'] extends readonly Schema[]
 											? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[]
 											: never

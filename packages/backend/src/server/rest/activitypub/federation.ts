@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
@@ -313,9 +314,8 @@ export async function handleApiFederationInstances(
 export async function handleApiFederationShowInstance(
 	deps: ApiFederationDependencies,
 	user: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof federationShowInstanceParamDef>,
 ): Promise<Packed<'FederationInstance'> | null> {
-	const params = parseApiParams(federationShowInstanceParamDef, body);
 	const found = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 	if (found == null) {
 		return null;
@@ -468,10 +468,8 @@ export const federationUsersParamDef = z.object({
 export async function handleApiFederationUsers(
 	deps: ApiFederationDependencies,
 	me: MiLocalUser | null,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof federationUsersParamDef>,
 ): Promise<UserDetailedNotMeApiResponse[]> {
-	const params = parseApiParams(federationUsersParamDef, body);
-
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	const users = await listUsersByHostWithPaginationFromDatabase(deps.db, {
@@ -492,9 +490,8 @@ export const federationHostFollowingParamDef = z.object({
 
 export async function handleApiFederationFollowers(
 	deps: ApiFederationDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof federationHostFollowingParamDef>,
 ): Promise<FollowingListItem[]> {
-	const params = parseApiParams(federationHostFollowingParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
 		limit: params.limit,
@@ -508,9 +505,8 @@ export async function handleApiFederationFollowers(
 
 export async function handleApiFederationFollowing(
 	deps: ApiFederationDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof federationHostFollowingParamDef>,
 ): Promise<FollowingListItem[]> {
-	const params = parseApiParams(federationHostFollowingParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
 		limit: params.limit,

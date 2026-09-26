@@ -14,9 +14,10 @@ import {
 	adminRolesUpdateParamDef,
 	adminRolesUsersParamDef,
 } from '@/server/rest/admin/admin-roles.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'admin/roles/assign': {
+	'admin/roles/assign': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
@@ -43,10 +44,10 @@ export const endpointMetas = {
 					id: '25b5bc31-dc79-4ebd-9bd2-c84978fd052c',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesAssignParamDef,
-	},
-	'admin/roles/create': {
+	}),
+	'admin/roles/create': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
@@ -60,10 +61,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Role',
 			},
-		} as const,
+		},
 		paramDef: adminRolesCreateParamDef,
-	},
-	'admin/roles/delete': {
+	}),
+	'admin/roles/delete': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
@@ -78,10 +79,10 @@ export const endpointMetas = {
 					id: 'de0d6ecd-8e0a-4253-88ff-74bc89ae3d45',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesDeleteParamDef,
-	},
-	'admin/roles/list': {
+	}),
+	'admin/roles/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'role'],
@@ -101,10 +102,10 @@ export const endpointMetas = {
 					ref: 'Role',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesListParamDef,
-	},
-	'admin/roles/show': {
+	}),
+	'admin/roles/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'role'],
@@ -127,10 +128,10 @@ export const endpointMetas = {
 				nullable: false,
 				ref: 'Role',
 			},
-		} as const,
+		},
 		paramDef: adminRolesShowParamDef,
-	},
-	'admin/roles/unassign': {
+	}),
+	'admin/roles/unassign': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
@@ -163,10 +164,10 @@ export const endpointMetas = {
 					id: '24636eee-e8c1-493e-94b2-e16ad401e262',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesUnassignParamDef,
-	},
-	'admin/roles/update': {
+	}),
+	'admin/roles/update': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
@@ -181,20 +182,20 @@ export const endpointMetas = {
 					id: 'cd23ef55-09ad-428a-ac61-95a45e124b32',
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesUpdateParamDef,
-	},
-	'admin/roles/update-default-policies': {
+	}),
+	'admin/roles/update-default-policies': defineContract({
 		meta: {
 			tags: ['admin', 'role'],
 
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'write:admin:roles',
-		} as const,
+		},
 		paramDef: adminRolesUpdateDefaultPoliciesParamDef,
-	},
-	'admin/roles/users': {
+	}),
+	'admin/roles/users': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['admin', 'role', 'users'],
@@ -224,7 +225,7 @@ export const endpointMetas = {
 					required: ['id', 'createdAt', 'user'],
 				},
 			},
-		} as const,
+		},
 		paramDef: adminRolesUsersParamDef,
-	},
-} as const;
+	}),
+};
