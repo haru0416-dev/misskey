@@ -40,6 +40,8 @@ import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.j
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleApiNotesCreate, notesCreateParamDef } from '@/server/rest/note/notes-create.js';
 import { parseApiParams } from '@/server/rest/validation.js';
+import { contractErrors } from '@/server/rest/endpoint-definition.js';
+import { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
 import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import {
 	resolveNotificationStreamId,
@@ -239,6 +241,7 @@ describe('durable reliability boundaries', () => {
 					localOnly: true,
 					visibility: 'home',
 				}),
+				contractErrors(notesContracts['notes/create']),
 			);
 			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
 			await analyticsStarted.promise;
@@ -305,6 +308,7 @@ describe('durable reliability boundaries', () => {
 						localOnly: true,
 						visibility: 'public',
 					}),
+					contractErrors(notesContracts['notes/create']),
 				),
 			);
 			noteId = z.object({ id: z.string() }).parse(response.createdNote).id;
@@ -343,6 +347,7 @@ describe('durable reliability boundaries', () => {
 						visibility: 'home',
 						localOnly: true,
 					}),
+					contractErrors(notesContracts['notes/create']),
 				),
 			).rejects.toBe(failure);
 			await notePostProcessing.close();

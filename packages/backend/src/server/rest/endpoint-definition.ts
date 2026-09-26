@@ -9,7 +9,14 @@ import { errors as commonErrors } from '@/server/api/openapi/errors.js';
 import { authenticateApiToken } from './auth/auth.js';
 import { applyEndpointGuards } from './endpoint-guards.js';
 import type { EndpointGuardDependencies } from './endpoint-guards.js';
-import type { AnyEndpointHandler, EndpointContract, EndpointHandler, ErrorDeclarations } from './endpoint-contract.js';
+import type {
+	AnyEndpointHandler,
+	ContractErrors,
+	EndpointContract,
+	EndpointHandler,
+	ErrorDeclarations,
+} from './endpoint-contract.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { ApiError } from './error.js';
 import {
 	emptyResponse,
@@ -26,7 +33,8 @@ import { parseApiParams } from './validation.js';
  * エンドポイント 1 本の契約 (meta・入力・応答・エラー) と実装を 1 か所で結ぶ。
  * - 認証・権限・回数制限は meta からだけ組み立てる。登録の手書きが無いので宣言とずれない。
  * - 実装が返す値は meta.res から導いた型に合わなければ型エラーになる。
- * - 実装が投げる業務エラーは meta.errors から作る。宣言に無いエラーはテスト環境で 500 にして止める。
+ * - 実装が投げる業務エラーは meta.errors から作る。サービスの IdentifiableError も id が一致すれば宣言どおりになる。
+ *   宣言に無いエラーはテスト環境で 500 にして止める。
  * - HTTP メソッドは allowGet / allowQuery から決まり、api-route-contract の検査と同じ規則に従う。
  */
 
@@ -57,6 +65,11 @@ const commonErrorIds = new Set(
 	Object.values(commonErrors).flatMap((byCode) => Object.values(byCode).map((example) => example.value.error.id)),
 );
 
+/** 契約の meta.errors から ApiError を作る関数の表。実装を直接呼ぶテストでも使う。 */
+export function contractErrors<C extends EndpointContract>(contract: C): ContractErrors<C> {
+	return createErrorFactories(contract.meta.errors) as ContractErrors<C>;
+}
+
 function createErrorFactories(errors: ErrorDeclarations | undefined): Record<string, (info?: unknown) => ApiError> {
 	const factories: Record<string, (info?: unknown) => ApiError> = {};
 	for (const [key, error] of Object.entries(errors ?? {})) {
@@ -85,6 +98,7 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 		const meta = contract.meta;
 		const errors = createErrorFactories(meta.errors);
 		const declaredErrorIds = new Set(Object.values(meta.errors ?? {}).map((error) => error.id));
+		const errorsById = new Map(Object.entries(meta.errors ?? {}).map(([key, error]) => [error.id, errors[key]!]));
 		const cacheSec = 'cacheSec' in meta ? meta.cacheSec : undefined;
 
 		const run = (readBody: (c: Context) => Promise<Record<string, unknown>>) => async (c: Context) =>
@@ -98,6 +112,11 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 				try {
 					result = await handler({ deps, input, auth, me: auth.user, errors, signal: c.req.raw.signal });
 				} catch (err) {
+					// サービスが投げる識別子付きのエラーは、契約に同じ id があれば宣言どおりの API エラーにする。
+					if (err instanceof IdentifiableError) {
+						const declared = errorsById.get(err.id);
+						if (declared != null) throw declared();
+					}
 					if (
 						detectUndeclaredErrors &&
 						err instanceof ApiError &&
