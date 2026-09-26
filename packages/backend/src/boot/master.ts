@@ -24,7 +24,7 @@ const themeColor = chalk.hex('#8185f2');
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {
 		const v = `v${props.version}`;
-		console.log(themeColor('  E R E B I A  '));
+		console.log(themeColor('  T O N E R I K O  '));
 		console.log(themeColor('  federated social platform'));
 		console.log(' ' + chalk.gray(v) + '\n');
 
