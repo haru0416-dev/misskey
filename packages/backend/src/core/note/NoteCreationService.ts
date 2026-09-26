@@ -48,11 +48,8 @@ import {
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
-import {
-	adjustInstanceNotesCountFromDatabase,
-	createInstanceIfNotExistsInDatabase,
-	fetchInstanceByHostFromDatabase,
-} from '@/core/instance/InstanceStore.js';
+import { createInstanceIfNotExistsInDatabase, fetchInstanceByHostFromDatabase } from '@/core/instance/InstanceStore.js';
+import { countInstanceNote } from '@/core/instance/instance-notes-counter.js';
 import {
 	countNotesByUserIdAndChannelIdFromDatabase,
 	createNoteWithAuthorAndInlineJobsInDatabase,
@@ -837,8 +834,9 @@ async function insertNote(
 		);
 	}
 
+	let countedInstanceId: string | undefined;
 	try {
-		return await db.transaction(async (transaction) => {
+		const persisted = await db.transaction(async (transaction) => {
 			const tx = transaction as MiDrizzleDatabase;
 			const jobDataList: DbNotePostCreateJobData[] = notePostCreateStages
 				.filter((stage) => !isNoopPostCreateStage(stage, data, user, silent, mentionedUsers))
@@ -904,8 +902,8 @@ async function insertNote(
 				});
 			}
 			if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
-				const instance = await fetchOrRegisterInstance({ db: tx }, user.host);
-				await adjustInstanceNotesCountFromDatabase(tx, instance.id, 1);
+				// 投稿数の +1 は確定後にまとめて反映する (instance-notes-counter)。ここで更新すると同じサーバーからの受信が行ロックで直列になる。
+				countedInstanceId = (await fetchOrRegisterInstance({ db: tx }, user.host)).id;
 			}
 			if (data.channel) {
 				await incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(tx, data.channel.id, new Date());
@@ -928,6 +926,11 @@ async function insertNote(
 			}));
 			return { note, outboxJobs };
 		});
+		if (countedInstanceId != null) {
+			// db は呼び出し元のトランザクションのこともあるので、後で反映する接続にはしない。
+			countInstanceNote(deps.db, countedInstanceId);
+		}
+		return persisted;
 	} catch (err) {
 		if (isDuplicateKeyValueError(err)) {
 			const e = new Error('Duplicated note');

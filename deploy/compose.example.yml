@@ -57,7 +57,9 @@ services:
     # 受信・投稿のたびに更新される index のページがキャッシュに収まらないと、1 件ごとに数十枚が書き出される。
     # キャッシュをメモリの 1/4 程度に増やしチェックポイントの間隔を延ばすと、同じページの書き出しがまとまる
     # (投稿 30 万件・毎秒 0.5 件の受信で、1 件あたりの書き込みが 863 KB → 389 KB、書き込み回数が 77 → 12 回)。
-    # shared_buffers はサーバーのメモリに合わせて決めること (メモリを超えると起動しない)。
+    # shared_buffers はサーバーのメモリに合わせて決めること (メモリを超えると起動しない)。目安はメモリの 1/4 で、
+    # メモリ 1GB なら 256MB、2GB なら 512MB、4GB なら 1GB (上の数字はメモリ 4GB 相当の環境で 1GB を測ったもの)。
+    # jit と work_mem は同じ負荷で働いていなかった (JIT が働いた文 0 件、並べ替えの一時ファイル 0 件) ので既定のままでよい。
     # command: postgres -c shared_buffers=1GB -c checkpoint_timeout=15min
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
