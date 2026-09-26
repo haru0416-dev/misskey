@@ -6,15 +6,7 @@
 import type { Hono } from 'hono';
 import { handleApiGetAvatarDecorations } from '../avatar-decoration/avatar-decorations.js';
 import { handleApiGetOnlineUsersCount } from '../auth/availability.js';
-import { handleApiPagesLike, handleApiPagesUnlike } from '../favorite/favorites.js';
 import { handleApiMeta, handleApiPing, handleApiServerInfo, handleApiTest } from '../meta/meta.js';
-import {
-	handleApiPagesCreate,
-	handleApiPagesDelete,
-	handleApiPagesFeatured,
-	handleApiPagesShow,
-	handleApiPagesUpdate,
-} from '../page/pages.js';
 import { handleApiRequestResetPassword, handleApiResetPassword } from '../auth/password-reset.js';
 import { handleApiPromoRead } from '../note/promo.js';
 import { handleApiResetDb } from '../admin/reset-db.js';
@@ -36,61 +28,6 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		endpointHandlerAnonymous(deps, 'meta', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleApiMeta(deps, body)),
 		),
-	);
-
-	app.post(
-		'/pages/create',
-		endpointHandler(deps, 'pages/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiPagesCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/pages/update',
-		endpointHandler(deps, 'pages/update', async ({ body, auth, c }) => {
-			await handleApiPagesUpdate(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/pages/delete',
-		endpointHandler(deps, 'pages/delete', async ({ body, auth, c }) => {
-			await handleApiPagesDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/pages/show',
-		endpointHandlerAnonymous(deps, 'pages/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiPagesShow(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/pages/featured',
-		endpointHandlerAnonymous(deps, 'pages/featured', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiPagesFeatured(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/pages/like',
-		endpointHandler(deps, 'pages/like', async ({ body, auth, c }) => {
-			await handleApiPagesLike(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/pages/unlike',
-		endpointHandler(deps, 'pages/unlike', async ({ body, auth, c }) => {
-			await handleApiPagesUnlike(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
 	);
 
 	app.post('/ping', async (c) => {

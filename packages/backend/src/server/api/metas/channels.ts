@@ -16,6 +16,7 @@ import {
 } from '@/server/rest/channel/channels.js';
 import { channelParamDef } from '@/server/rest/favorite/favorites.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 const channelListSchema = {
 	type: 'array',
@@ -30,7 +31,7 @@ const channelListSchema = {
 } as const;
 
 export const endpointMetas = {
-	'channels/create': {
+	'channels/create': defineContract({
 		meta: {
 			requireRolePolicy: 'canCreateChannel',
 			tags: ['channels'],
@@ -62,10 +63,10 @@ export const endpointMetas = {
 					id: 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelCreateParamDef,
-	},
-	'channels/favorite': {
+	}),
+	'channels/favorite': defineContract({
 		meta: {
 			tags: ['channels'],
 
@@ -82,10 +83,10 @@ export const endpointMetas = {
 					id: '4938f5f3-6167-4c04-9149-6607b7542861',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelParamDef,
-	},
-	'channels/featured': {
+	}),
+	'channels/featured': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels'],
@@ -93,10 +94,10 @@ export const endpointMetas = {
 			requireCredential: false,
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: emptyParamDef,
-	},
-	'channels/follow': {
+	}),
+	'channels/follow': defineContract({
 		meta: {
 			tags: ['channels'],
 
@@ -118,10 +119,10 @@ export const endpointMetas = {
 					id: '7db31665-651e-40c1-8e6e-28e9ad829a2d',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelFollowParamDef,
-	},
-	'channels/followed': {
+	}),
+	'channels/followed': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels', 'account'],
@@ -131,10 +132,10 @@ export const endpointMetas = {
 			kind: 'read:channels',
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: channelsListParamDef,
-	},
-	'channels/my-favorites': {
+	}),
+	'channels/my-favorites': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels', 'account'],
@@ -144,10 +145,10 @@ export const endpointMetas = {
 			kind: 'read:channels',
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: emptyParamDef,
-	},
-	'channels/owned': {
+	}),
+	'channels/owned': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels', 'account'],
@@ -157,10 +158,10 @@ export const endpointMetas = {
 			kind: 'read:channels',
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: channelsListParamDef,
-	},
-	'channels/search': {
+	}),
+	'channels/search': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels'],
@@ -168,10 +169,10 @@ export const endpointMetas = {
 			requireCredential: false,
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: channelsSearchParamDef,
-	},
-	'channels/show': {
+	}),
+	'channels/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels'],
@@ -192,9 +193,9 @@ export const endpointMetas = {
 					id: '6f6c314b-7486-4897-8966-c04a66a02923',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelShowParamDef,
-	},
+	}),
 	'channels/timeline': {
 		meta: {
 			allowQuery: true,
@@ -235,7 +236,7 @@ export const endpointMetas = {
 			required: ['channelId'],
 		} as const,
 	},
-	'channels/unfavorite': {
+	'channels/unfavorite': defineContract({
 		meta: {
 			tags: ['channels'],
 
@@ -252,10 +253,10 @@ export const endpointMetas = {
 					id: '353c68dd-131a-476c-aa99-88a345e83668',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelParamDef,
-	},
-	'channels/unfollow': {
+	}),
+	'channels/unfollow': defineContract({
 		meta: {
 			tags: ['channels'],
 
@@ -272,10 +273,10 @@ export const endpointMetas = {
 					id: '19959ee9-0153-4c51-bbd9-a98c49dc59d6',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelFollowParamDef,
-	},
-	'channels/update': {
+	}),
+	'channels/update': defineContract({
 		meta: {
 			tags: ['channels'],
 
@@ -309,10 +310,10 @@ export const endpointMetas = {
 					id: 'e86c14a4-0da2-4032-8df3-e737a04c7f3b',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelUpdateParamDef,
-	},
-	'channels/mute/create': {
+	}),
+	'channels/mute/create': defineContract({
 		meta: {
 			tags: ['channels', 'mute'],
 
@@ -340,10 +341,10 @@ export const endpointMetas = {
 					id: '42b32236-df2c-a45f-fdbf-def67268f749',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelMuteCreateParamDef,
-	},
-	'channels/mute/delete': {
+	}),
+	'channels/mute/delete': defineContract({
 		meta: {
 			tags: ['channels', 'mute'],
 
@@ -365,10 +366,10 @@ export const endpointMetas = {
 					id: '14d55962-6ea8-d990-1333-d6bef78dc2ab',
 				},
 			},
-		} as const,
+		},
 		paramDef: channelMuteDeleteParamDef,
-	},
-	'channels/mute/list': {
+	}),
+	'channels/mute/list': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['channels', 'mute'],
@@ -379,7 +380,7 @@ export const endpointMetas = {
 			kind: 'read:channels',
 
 			res: channelListSchema,
-		} as const,
+		},
 		paramDef: emptyParamDef,
-	},
-} as const;
+	}),
+};

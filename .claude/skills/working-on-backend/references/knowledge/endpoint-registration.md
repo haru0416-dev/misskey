@@ -11,15 +11,16 @@
 
 meta はドキュメント専用ではない。一方、meta の追加だけで HTTP ルートが自動生成されるわけでもない。通常ルートでは path と wrapper に渡す endpoint 名を一致させる。
 
-## 契約から登録する (notes カテゴリで試行中)
+## 契約から登録する
 
-`notes` カテゴリは、[api/metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) の `defineContract` (meta・入力) と [note/endpoints.ts](../../../../../packages/backend/src/server/rest/note/endpoints.ts) の `implementEndpoints` (実装) を [endpoint-definition.ts](../../../../../packages/backend/src/server/rest/endpoint-definition.ts) の `registerEndpoints` が登録する。
+移行済みのカテゴリは、`api/metas/<category>.ts` の `defineContract` (meta・入力) と [rest/endpoints/](../../../../../packages/backend/src/server/rest/endpoints/) の `implementEndpoints` (実装) を、[endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts) の `registerContractEndpoints` がまとめて登録する (登録の本体は [endpoint-definition.ts](../../../../../packages/backend/src/server/rest/endpoint-definition.ts))。
 
 - HTTP メソッドは `allowGet`・`allowQuery`、匿名の公開キャッシュは `cacheSec` から決まる。wrapper の選択や `app.on` の手書きは無い。
 - 認証・権限・回数制限は meta からだけ掛かる。ルートで同じ枠を数え直さない。
 - 実装は検証済みの `input` を受け取り、戻り値は meta.res から導いた型に合わなければ型エラーになる。`res` の無いエンドポイントは `undefined` を返し 204 になる。
-- 業務エラーは `errors.<meta.errors のキー>()` で作る。宣言に無い `ApiError` が実装から出るとテスト環境では 500 になる。
-- 契約のキーと実装のキーは 1 対 1 でないと型エラーになる。新しいエンドポイントは両方に足す。
+- 業務エラーは `errors.<meta.errors のキー>()` で作る。サービスの `IdentifiableError` は id が宣言と一致すれば宣言どおりの API エラーになる。宣言に無い `ApiError` が実装から出るとテスト環境では 500 になる。
+- 入力の定義は 1 つにする。実行時の検証と OpenAPI 用で定義を分けると、契約側の定義で先に検証したときに実装が読むキーが落ちる。
+- 契約のキーと実装のキーは 1 対 1 でないと型エラーになる。カテゴリの一部だけを移すときは `pickContracts` で選ぶ。
 
 ## 既存の配線を使う
 

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -84,41 +85,10 @@ export const adminEmojiAddParamDef = z.object({
 	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
 });
 
-/**
- * id と name の一方が有効なら、他方が不正でも許可する互換性を維持する。
- * 各値を z.unknown() として受け、superRefine 内で個別に検証する。
- */
-const adminEmojiUpdateParamDef = z
-	.object({
-		id: z.unknown().optional(),
-		name: z.unknown().optional(),
-		fileId: misskeyId().optional(),
-		/** null でカテゴリを解除する。 */
-		category: z.string().nullable().optional(),
-		aliases: z.array(z.string()).optional(),
-		license: z.string().nullable().optional(),
-		isSensitive: z.boolean().optional(),
-		localOnly: z.boolean().optional(),
-		roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
-	})
-	.superRefine((data, ctx) => {
-		const idValid = misskeyId().safeParse(data.id).success;
-		const nameValid = z
-			.string()
-			.regex(/^[a-zA-Z0-9_]+$/)
-			.safeParse(data.name).success;
-		if (!idValid && !nameValid) {
-			ctx.addIssue({
-				code: 'custom',
-				message: 'must match a schema in anyOf',
-			});
-		}
-	});
-
-// OpenAPI/misskey-js コード生成専用。上の superRefine (id/name の anyOf 判定) は
-// JSON Schema 化できないため、docs 用には allOf+anyOf 構造を union+intersection で表現する。
-const adminEmojiUpdateCommonFieldsDocsSchema = z.object({
+const adminEmojiNameSchema = z.string().regex(/^[a-zA-Z0-9_]+$/);
+const adminEmojiUpdateCommonFieldsSchema = z.object({
 	fileId: misskeyId().optional(),
+	/** null でカテゴリを解除する。 */
 	category: z.string().nullable().optional(),
 	aliases: z.array(z.string()).optional(),
 	license: z.string().nullable().optional(),
@@ -126,9 +96,15 @@ const adminEmojiUpdateCommonFieldsDocsSchema = z.object({
 	localOnly: z.boolean().optional(),
 	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
 });
-export const adminEmojiUpdateDocsParamDef = z.intersection(
-	z.union([z.object({ id: misskeyId() }), z.object({ name: z.string().regex(/^[a-zA-Z0-9_]+$/) })]),
-	adminEmojiUpdateCommonFieldsDocsSchema,
+// id と name のどちらかで対象を指定する。id で指定したときの name は新しい名前として受け取るので、
+// どちらの分岐にも他方のキーを残す (片方の分岐だけに置くと、union がもう一方を捨てて改名が消える)。
+// この定義がそのまま実行時の検証と OpenAPI / misskey-js の型になる。
+export const adminEmojiUpdateParamDef = z.intersection(
+	z.union([
+		z.object({ id: misskeyId(), name: adminEmojiNameSchema.optional() }),
+		z.object({ id: misskeyId().optional(), name: adminEmojiNameSchema }),
+	]),
+	adminEmojiUpdateCommonFieldsSchema,
 );
 
 export const adminEmojiAliasesBulkParamDef = z.object({
@@ -163,18 +139,6 @@ export const adminEmojiSetLicenseBulkParamDef = z.object({
 	/** null でライセンスを解除する。 */
 	license: z.string().nullable().optional(),
 });
-
-type AdminEmojiUpdateParams = {
-	id?: string;
-	name?: string;
-	fileId?: string;
-	category?: string | null;
-	aliases?: string[];
-	license?: string | null;
-	isSensitive?: boolean;
-	localOnly?: boolean;
-	roleIdsThatCanBeUsedThisEmojiAsReaction?: string[];
-};
 
 function packEmojiSimple(emoji: MiEmoji): Packed<'EmojiSimple'> {
 	return {
@@ -408,9 +372,8 @@ export async function handleApiEmoji(
 
 export async function handleApiAdminEmojiList(
 	deps: ApiEmojiDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiListParamDef>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
-	const params = parseApiParams(adminEmojiListParamDef, body);
 	const { order, sinceId, untilId } = resolveApiDateIdPagination(params);
 
 	let emojis: MiEmoji[];
@@ -439,9 +402,8 @@ export async function handleApiAdminEmojiList(
 export async function handleApiAdminEmojiAdd(
 	deps: ApiEmojiDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiAddParamDef>,
 ): Promise<Packed<'EmojiDetailed'>> {
-	const params = parseApiParams(adminEmojiAddParamDef, body);
 	const driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (driveFile == null) {
 		throw adminAddNoSuchFileError();
@@ -492,9 +454,8 @@ export async function handleApiAdminEmojiAddAliasesBulk(
 export async function handleApiAdminEmojiDelete(
 	deps: ApiEmojiDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminEmojiDeleteParamDef, body);
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.id);
 	if (emoji == null) {
 		throw adminDeleteNoSuchEmojiError();
@@ -535,9 +496,8 @@ export async function handleApiAdminEmojiDeleteBulk(
 export async function handleApiAdminEmojiCopy(
 	deps: ApiEmojiDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiCopyParamDef>,
 ): Promise<Packed<'EmojiDetailed'>> {
-	const params = parseApiParams(adminEmojiCopyParamDef, body);
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.emojiId);
 	if (emoji == null) {
 		throw adminCopyNoSuchEmojiError();
@@ -579,9 +539,8 @@ export async function handleApiAdminEmojiCopy(
 export async function handleApiAdminEmojiImportZip(
 	deps: ApiEmojiDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiImportZipParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminEmojiImportZipParamDef, body);
 	await addDbJob(deps.dbQueue, {
 		name: 'importCustomEmojis',
 		data: { user: { id: me.id }, fileId: params.fileId },
@@ -592,9 +551,8 @@ export async function handleApiAdminEmojiImportZip(
 export async function handleApiAdminEmojiUpdate(
 	deps: ApiEmojiDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(adminEmojiUpdateParamDef, body) as AdminEmojiUpdateParams;
 	let driveFile;
 	if (params.fileId) {
 		driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
@@ -705,9 +663,8 @@ export async function handleApiAdminEmojiSetLicenseBulk(
 
 export async function handleApiAdminEmojiListRemote(
 	deps: ApiEmojiDependencies,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof adminEmojiListRemoteParamDef>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
-	const params = parseApiParams(adminEmojiListRemoteParamDef, body);
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 	const emojis = await listRemoteEmojisPageFromDatabase(deps.db, {
 		host: params.host == null ? null : toPuny(params.host),

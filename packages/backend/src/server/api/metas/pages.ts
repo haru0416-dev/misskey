@@ -12,9 +12,10 @@ import {
 	pagesUpdateParamDef,
 } from '@/server/rest/page/pages.js';
 import { HOUR } from '@/const.js';
+import { defineContract } from '@/server/rest/endpoint-contract.js';
 
 export const endpointMetas = {
-	'pages/create': {
+	'pages/create': defineContract({
 		meta: {
 			tags: ['pages'],
 
@@ -48,10 +49,10 @@ export const endpointMetas = {
 					id: '4650348e-301c-499a-83c9-6aa988c66bc1',
 				},
 			},
-		} as const,
+		},
 		paramDef: pagesCreateParamDef,
-	},
-	'pages/delete': {
+	}),
+	'pages/delete': defineContract({
 		meta: {
 			tags: ['pages'],
 
@@ -72,10 +73,10 @@ export const endpointMetas = {
 					id: '8b741b3e-2c22-44b3-a15f-29949aa1601e',
 				},
 			},
-		} as const,
+		},
 		paramDef: pagesDeleteParamDef,
-	},
-	'pages/featured': {
+	}),
+	'pages/featured': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['pages'],
@@ -93,10 +94,10 @@ export const endpointMetas = {
 					ref: 'Page',
 				},
 			},
-		} as const,
+		},
 		paramDef: pagesFeaturedParamDef,
-	},
-	'pages/like': {
+	}),
+	'pages/like': defineContract({
 		meta: {
 			tags: ['pages'],
 
@@ -125,10 +126,10 @@ export const endpointMetas = {
 					id: 'd4c1edbe-7da2-4eae-8714-1acfd2d63941',
 				},
 			},
-		} as const,
+		},
 		paramDef: pageParamDef,
-	},
-	'pages/show': {
+	}),
+	'pages/show': defineContract({
 		meta: {
 			allowQuery: true,
 			tags: ['pages'],
@@ -149,10 +150,10 @@ export const endpointMetas = {
 					id: '222120c0-3ead-4528-811b-b96f233388d7',
 				},
 			},
-		} as const,
+		},
 		paramDef: pagesShowParamDef,
-	},
-	'pages/unlike': {
+	}),
+	'pages/unlike': defineContract({
 		meta: {
 			tags: ['pages'],
 
@@ -175,10 +176,10 @@ export const endpointMetas = {
 					id: 'f5e586b0-ce93-4050-b0e3-7f31af5259ee',
 				},
 			},
-		} as const,
+		},
 		paramDef: pageParamDef,
-	},
-	'pages/update': {
+	}),
+	'pages/update': defineContract({
 		meta: {
 			tags: ['pages'],
 
@@ -215,7 +216,7 @@ export const endpointMetas = {
 					id: '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab',
 				},
 			},
-		} as const,
+		},
 		paramDef: pagesUpdateParamDef,
-	},
-} as const;
+	}),
+};

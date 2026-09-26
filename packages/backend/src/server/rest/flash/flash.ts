@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -50,9 +51,8 @@ export const flashUpdateParamDef = z.object({
 export async function handleApiFlashUpdate(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof flashUpdateParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(flashUpdateParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', '611e13d2-309e-419a-a5e4-e0422da39b02');
@@ -88,7 +88,7 @@ export async function packFlashForApi(
 	src: MiFlash['id'] | MiFlash,
 	me?: { id: MiUser['id'] } | null,
 	hint?: { packedUser?: Packed<'UserLite'>; likedFlashIds?: Set<MiFlash['id']> },
-): Promise<Record<string, unknown>> {
+): Promise<Packed<'Flash'>> {
 	const meId = me ? me.id : null;
 	const flash = typeof src === 'object' ? src : await fetchFlashByIdOrFailFromDatabase(deps.db, src);
 
@@ -120,7 +120,7 @@ async function packFlashManyForApi(
 	deps: ApiFlashDependencies,
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,
-): Promise<Record<string, unknown>[]> {
+): Promise<Packed<'Flash'>[]> {
 	if (flashes.length === 0) {
 		return [];
 	}
@@ -160,9 +160,8 @@ export const flashCreateParamDef = z.object({
 export async function handleApiFlashCreate(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-	const params = parseApiParams(flashCreateParamDef, body);
+	params: ApiParams<typeof flashCreateParamDef>,
+): Promise<Packed<'Flash'>> {
 	const flash = await createFlashInDatabase(deps.db, {
 		id: genId(),
 		userId: me.id,
@@ -184,9 +183,8 @@ export const flashDeleteParamDef = z.object({
 export async function handleApiFlashDelete(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof flashDeleteParamDef>,
 ): Promise<void> {
-	const params = parseApiParams(flashDeleteParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
@@ -217,9 +215,8 @@ export const flashFeaturedParamDef = z.object({
 export async function handleApiFlashFeatured(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(flashFeaturedParamDef, body);
+	params: ApiParams<typeof flashFeaturedParamDef>,
+): Promise<Packed<'Flash'>[]> {
 	const result = await listFeaturedFlashesFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
@@ -236,9 +233,8 @@ export const flashMyParamDef = z.object({
 export async function handleApiFlashMy(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(flashMyParamDef, body);
+	params: ApiParams<typeof flashMyParamDef>,
+): Promise<Packed<'Flash'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -260,10 +256,8 @@ export const flashMyLikesParamDef = z.object({
 export async function handleApiFlashMyLikes(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(flashMyLikesParamDef, body);
-
+	params: ApiParams<typeof flashMyLikesParamDef>,
+): Promise<{ id: string; flash: Packed<'Flash'> }[]> {
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
 	const likes = await listFlashLikesByUserIdFromDatabase(
@@ -283,7 +277,7 @@ export async function handleApiFlashMyLikes(
 		likes.map((like) => like.flash),
 		me,
 	);
-	const packedFlashById = new Map(packedFlashes.map((flash) => [flash['id'], flash]));
+	const packedFlashById = new Map(packedFlashes.map((flash) => [flash.id, flash]));
 
 	return await Promise.all(
 		likes.map(async (like) => ({
@@ -302,9 +296,8 @@ export const flashSearchParamDef = z.object({
 export async function handleApiFlashSearch(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
-	const params = parseApiParams(flashSearchParamDef, body);
+	params: ApiParams<typeof flashSearchParamDef>,
+): Promise<Packed<'Flash'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
@@ -325,9 +318,8 @@ export const flashShowParamDef = z.object({
 export async function handleApiFlashShow(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
-	body: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-	const params = parseApiParams(flashShowParamDef, body);
+	params: ApiParams<typeof flashShowParamDef>,
+): Promise<Packed<'Flash'>> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
@@ -345,7 +337,7 @@ export const usersFlashsParamDef = z.object({
 export async function handleApiUsersFlashs(
 	deps: ApiFlashDependencies,
 	body: Record<string, unknown>,
-): Promise<Record<string, unknown>[]> {
+): Promise<Packed<'Flash'>[]> {
 	const params = parseApiParams(usersFlashsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {

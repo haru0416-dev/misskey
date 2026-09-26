@@ -5,15 +5,6 @@
 
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
-import {
-	handleApiAntennasCreate,
-	handleApiAntennasDelete,
-	handleApiAntennasList,
-	handleApiAntennasNotes,
-	handleApiAntennasRemoveNote,
-	handleApiAntennasShow,
-	handleApiAntennasUpdate,
-} from '../antenna/antennas.js';
 import { handleApiSigninFlow } from '../auth/signin.js';
 import { handleApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
 import { signupPendingWithApi, signupWithApi } from '../auth/signup.js';
@@ -21,7 +12,6 @@ import { assertApiRateLimit } from '../rate-limit.js';
 import type { ApiEndpointRateLimit } from '../rate-limit.js';
 import {
 	jsonResponse,
-	emptyResponse,
 	signinFlowResponse,
 	signinWithPasskeyResponse,
 	jsonBody,
@@ -29,7 +19,6 @@ import {
 	runApiEndpoint,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/v1/instance/peers', async (c) => {
@@ -91,59 +80,6 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			);
 		});
 	});
-
-	app.post(
-		'/antennas/create',
-		endpointHandler(deps, 'antennas/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAntennasCreate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/antennas/update',
-		endpointHandler(deps, 'antennas/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAntennasUpdate(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/antennas/delete',
-		endpointHandler(deps, 'antennas/delete', async ({ body, auth, c }) => {
-			await handleApiAntennasDelete(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/antennas/list',
-		endpointHandler(deps, 'antennas/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAntennasList(deps, auth.user, body)),
-		),
-	);
-
-	app.on(
-		['POST', 'QUERY'],
-		'/antennas/show',
-		endpointHandler(deps, 'antennas/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAntennasShow(deps, auth.user, body)),
-		),
-	);
-
-	app.post(
-		'/antennas/remove-note',
-		endpointHandler(deps, 'antennas/remove-note', async ({ body, auth, c }) => {
-			await handleApiAntennasRemoveNote(deps, auth.user, body);
-			return emptyResponse(c);
-		}),
-	);
-
-	app.post(
-		'/antennas/notes',
-		endpointHandler(deps, 'antennas/notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleApiAntennasNotes(deps, auth.user, body)),
-		),
-	);
 }
 
 export function getSignupRateLimit(meta: ApiShellDependencies['meta']): ApiEndpointRateLimit | null {

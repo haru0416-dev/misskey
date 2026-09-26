@@ -5,8 +5,6 @@
 
 import type { Hono } from 'hono';
 import { handleApiUsersFeaturedNotes, handleApiUsersNotes, usersFeaturedNotesParamDef } from '../note/note.js';
-import { notesEndpoints } from '../note/endpoints.js';
-import { registerEndpoints } from '../endpoint-definition.js';
 import {
 	jsonResponse,
 	publicCacheHeadersWhenAnonymous,
@@ -19,9 +17,6 @@ import { queryToApiBody } from '../string-params.js';
 import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {
-	// notes カテゴリは契約 (api/metas/notes.ts) と実装 (note/endpoints.ts) から登録する。
-	registerEndpoints(app, deps, notesEndpoints);
-
 	app.get('/users/featured-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const query = queryToApiBody(usersFeaturedNotesParamDef, c.req.query());

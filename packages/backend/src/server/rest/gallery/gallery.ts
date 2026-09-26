@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { endpointMetas as galleryContracts } from '@/server/api/metas/gallery.js';
+import type { ContractErrors } from '../endpoint-contract.js';
+import type { ApiParams } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -145,78 +148,6 @@ export const galleryPostsPostIdParamDef = z.object({
 	postId: misskeyId(),
 });
 
-function galleryPostsShowNoSuchPostError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such post.',
-		code: 'NO_SUCH_POST',
-		id: '1137bf14-c5b0-4604-85bb-5b5371b1cd45',
-	});
-}
-
-function galleryPostsDeleteNoSuchPostError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such post.',
-		code: 'NO_SUCH_POST',
-		id: 'ae52f367-4bd7-4ecd-afc6-5672fff427f5',
-	});
-}
-
-function galleryPostsDeleteAccessDeniedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'Access denied.',
-		code: 'ACCESS_DENIED',
-		id: 'c86e09de-1c48-43ac-a435-1c7e42ed4496',
-	});
-}
-
-function galleryPostsLikeNoSuchPostError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such post.',
-		code: 'NO_SUCH_POST',
-		id: '56c06af3-1287-442f-9701-c93f7c4a62ff',
-	});
-}
-
-function galleryPostsLikeYourPostError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You cannot like your post.',
-		code: 'YOUR_POST',
-		id: 'f78f1511-5ebc-4478-a888-1198d752da68',
-	});
-}
-
-function galleryPostsLikeAlreadyLikedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'The post has already been liked.',
-		code: 'ALREADY_LIKED',
-		id: '40e9ed56-a59c-473a-bf3f-f289c54fb5a7',
-	});
-}
-
-function galleryPostsUnlikeNoSuchPostError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'No such post.',
-		code: 'NO_SUCH_POST',
-		id: 'c32e6dd0-b555-4413-925e-b3757d19ed84',
-	});
-}
-
-function galleryPostsUnlikeNotLikedError(): ApiError {
-	return new ApiError({
-		status: 400,
-		message: 'You have not liked that post.',
-		code: 'NOT_LIKED',
-		id: 'e3e8e06e-be37-41f7-a5b4-87a8250288f0',
-	});
-}
-
 export async function packGalleryPostForApi(
 	deps: ApiGalleryDependencies,
 	src: MiGalleryPost['id'] | MiGalleryPost,
@@ -295,10 +226,8 @@ async function packGalleryPostsManyForApi(
 export async function handleApiGalleryFeatured(
 	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryFeaturedParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseApiParams(galleryFeaturedParamDef, body);
-
 	let postIds: string[];
 	if (
 		galleryPostsRankingCacheLastFetchedAt !== 0 &&
@@ -328,9 +257,7 @@ export async function handleApiGalleryFeatured(
 export async function handleApiGalleryPopular(
 	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	parseApiParams(galleryPopularParamDef, body);
 	const posts = await listPopularGalleryPostsFromDatabase(deps.db);
 	return await packGalleryPostsManyForApi(deps, posts, me);
 }
@@ -338,9 +265,8 @@ export async function handleApiGalleryPopular(
 export async function handleApiGalleryPosts(
 	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseApiParams(galleryPostsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		limit: params.limit,
@@ -355,12 +281,12 @@ export async function handleApiGalleryPosts(
 export async function handleApiGalleryPostsShow(
 	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/show']>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) {
-		throw galleryPostsShowNoSuchPostError();
+		throw errors.noSuchPost();
 	}
 
 	return await packGalleryPostForApi(deps, post, me);
@@ -369,9 +295,8 @@ export async function handleApiGalleryPostsShow(
 export async function handleApiGalleryPostsCreate(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsCreateParamDef>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseApiParams(galleryPostsCreateParamDef, body);
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
 	if (files.length === 0) {
 		throw new Error();
@@ -393,10 +318,8 @@ export async function handleApiGalleryPostsCreate(
 export async function handleApiGalleryPostsUpdate(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsUpdateParamDef>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseApiParams(galleryPostsUpdateParamDef, body);
-
 	let files;
 	if (params.fileIds) {
 		files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
@@ -425,16 +348,16 @@ export async function handleApiGalleryPostsUpdate(
 export async function handleApiGalleryPostsDelete(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/delete']>,
 ): Promise<void> {
-	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) {
-		throw galleryPostsDeleteNoSuchPostError();
+		throw errors.noSuchPost();
 	}
 
 	if (!(await isApiModerator(deps, me)) && post.userId !== me.id) {
-		throw galleryPostsDeleteAccessDeniedError();
+		throw errors.accessDenied();
 	}
 
 	await deleteGalleryPostByIdFromDatabase(deps.db, post.id);
@@ -453,20 +376,20 @@ export async function handleApiGalleryPostsDelete(
 export async function handleApiGalleryPostsLike(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/like']>,
 ): Promise<void> {
-	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) {
-		throw galleryPostsLikeNoSuchPostError();
+		throw errors.noSuchPost();
 	}
 	if (post.userId === me.id) {
-		throw galleryPostsLikeYourPostError();
+		throw errors.yourPost();
 	}
 
 	const exist = await galleryLikeExistsInDatabase(deps.db, me.id, post.id);
 	if (exist) {
-		throw galleryPostsLikeAlreadyLikedError();
+		throw errors.alreadyLiked();
 	}
 
 	try {
@@ -477,7 +400,7 @@ export async function handleApiGalleryPostsLike(
 		});
 	} catch (error) {
 		if (isDuplicateKeyValueDatabaseError(error)) {
-			throw galleryPostsLikeAlreadyLikedError();
+			throw errors.alreadyLiked();
 		}
 		throw error;
 	}
@@ -492,17 +415,17 @@ export async function handleApiGalleryPostsLike(
 export async function handleApiGalleryPostsUnlike(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
-	body: Record<string, unknown>,
+	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/unlike']>,
 ): Promise<void> {
-	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) {
-		throw galleryPostsUnlikeNoSuchPostError();
+		throw errors.noSuchPost();
 	}
 
 	const exist = await fetchGalleryLikeFromDatabase(deps.db, me.id, post.id);
 	if (exist == null) {
-		throw galleryPostsUnlikeNotLikedError();
+		throw errors.notLiked();
 	}
 
 	await deleteGalleryLikeByIdFromDatabase(deps.db, exist.id);
