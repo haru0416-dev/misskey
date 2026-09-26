@@ -43,6 +43,23 @@ describe('configVersion 2 schema', () => {
 		expect(config.queues.deliver.concurrencyPerWorker).toBe(128);
 	});
 
+	// 本文の trigram index は既定で持つ。他の検索では使われず書き込みだけが増えるので、sqlLike 以外では持たない。
+	test('keeps the note text index only for sqlLike unless it is disabled', () => {
+		const materialize = (search?: unknown) =>
+			materializeConfig(
+				sourceConfigV2Schema.parse({ ...createSourceConfig(), ...(search === undefined ? {} : { search }) }),
+				{
+					version: 'test',
+				},
+			).search;
+
+		expect(materialize()).toEqual({ provider: 'sqlLike', noteTextIndex: true });
+		expect(materialize({ provider: 'sqlLike' }).noteTextIndex).toBe(true);
+		expect(materialize({ provider: 'sqlLike', noteTextIndex: false }).noteTextIndex).toBe(false);
+		expect(materialize({ provider: 'sqlPgroonga' }).noteTextIndex).toBe(false);
+		expect(() => materialize({ provider: 'sqlPgroonga', noteTextIndex: true })).toThrow();
+	});
+
 	test('rejects old and unknown configuration keys', () => {
 		expect(() =>
 			sourceConfigV2Schema.parse({

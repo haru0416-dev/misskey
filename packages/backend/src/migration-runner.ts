@@ -148,6 +148,39 @@ export async function runMigrations(
 	});
 }
 
+const NOTE_TEXT_INDEX = 'IDX_NOTE_TEXT_TRGM';
+
+/**
+ * 本文の trigram index を設定 (search.noteTextIndex) に合わせて作る・消す。index は migration で作るので、
+ * 無効にした環境ではここで消す。作成・削除は CONCURRENTLY で行い、投稿の書き込みを止めない。
+ * CONCURRENTLY の作成が中断されると無効な index が残り、書き込みの負担だけが続くので作り直す。
+ * 数十万件の投稿で作成に数分かかるため、文の時間制限は外す。
+ */
+export async function reconcileNoteTextIndex(config: Config): Promise<'created' | 'dropped' | 'unchanged'> {
+	return withMigrationSession(config, async (client) => {
+		const rows = (await client.unsafe(
+			'SELECT i.indisvalid AS valid FROM pg_class c JOIN pg_index i ON i.indexrelid = c.oid WHERE c.relname = $1',
+			[NOTE_TEXT_INDEX],
+		)) as { valid: boolean }[];
+		const existing = rows[0];
+		const wanted = config.search.noteTextIndex;
+		if (wanted && existing?.valid === true) return 'unchanged';
+		if (!wanted && existing == null) return 'unchanged';
+
+		await client.unsafe("SELECT set_config('statement_timeout', '0', false)");
+		if (existing != null) {
+			await client.unsafe(`DROP INDEX CONCURRENTLY IF EXISTS "${NOTE_TEXT_INDEX}"`);
+		}
+		if (!wanted) return 'dropped';
+		// 式は検索側 (NoteStore の LOWER("note"."text") LIKE) と完全に一致させる。fastupdate=off は、保留リストの
+		// 反映で投稿の挿入が秒単位で止まるのを避けるため (SD カード相当の I/O で最大 3.8 秒を実測)。
+		await client.unsafe(
+			`CREATE INDEX CONCURRENTLY IF NOT EXISTS "${NOTE_TEXT_INDEX}" ON "note" USING gin (lower("text") gin_trgm_ops) WITH (fastupdate = off)`,
+		);
+		return 'created';
+	});
+}
+
 export async function resetDatabase(config: Config): Promise<void> {
 	if (process.env['NODE_ENV'] !== 'test') {
 		throw new Error('Database reset is only allowed in the test environment.');
@@ -215,6 +248,10 @@ async function main(): Promise<void> {
 			}
 			if (migrations.length === 0) {
 				console.log('No migrations are pending.');
+			}
+			const noteTextIndex = await reconcileNoteTextIndex(config);
+			if (noteTextIndex !== 'unchanged') {
+				console.log(`Note text index (${NOTE_TEXT_INDEX}): ${noteTextIndex}`);
 			}
 			break;
 		}

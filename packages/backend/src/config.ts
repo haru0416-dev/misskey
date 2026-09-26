@@ -142,6 +142,8 @@ export type Config = {
 	};
 	search: {
 		provider: 'sqlLike' | 'sqlPgroonga' | 'meilisearch';
+		/** 本文の trigram index を持つか。sqlLike のときだけ true になりうる (他の検索では使われず書き込みだけ増える)。 */
+		noteTextIndex: boolean;
 		meilisearch?: {
 			endpoint: string;
 			apiKey: string;
@@ -462,6 +464,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		},
 		search: {
 			provider: source.search.provider,
+			noteTextIndex: source.search.provider === 'sqlLike' && source.search.noteTextIndex,
 			...optionalProperty('meilisearch', meilisearch),
 		},
 		outboundNetwork: {

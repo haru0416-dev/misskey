@@ -70,6 +70,11 @@ valkey:
 
 search:
   provider: sqlLike
+  # 本文の trigram index (sqlLike のときだけ使う)。検索は速くなるが、受信・投稿のたびに index のページを
+  # 数十枚書き換え、書き込み全体の 8 割以上を占める (30 万件で 1 件あたり約 860 KB → 外すと約 105 KB)。
+  # SD カードなど書き込みを抑えたい環境では false にする。外すと本文検索は新しい順に 10 万件ずつ区切って探し、
+  # ある区切りに 1 件も一致がないと、それより古い投稿は探さない。変更は次の起動 (migrate) で反映される。
+  noteTextIndex: true
 
 outboundNetwork:
   addressFamily: dualStack
