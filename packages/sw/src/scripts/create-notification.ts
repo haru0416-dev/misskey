@@ -342,7 +342,7 @@ async function composeNotification(
 export async function createEmptyNotification(): Promise<void> {
 	const i18n = await (swLang.i18n ?? swLang.fetchLocale());
 	await globalThis.registration.showNotification(new URL(origin).host, {
-		body: `Erebia v${_VERSION_}`,
+		body: `Toneriko v${_VERSION_}`,
 		silent: true,
 		badge: iconUrl('null'),
 		tag: 'read_notification',

@@ -40,8 +40,8 @@ export function BaseEmbed(
 						instanceName={props.instanceName}
 						instanceUrl={props.instanceUrl}
 					/>
-					<link rel="icon" href={props.icon ?? '/client-assets/erebia-icon.svg'} />
-					<link rel="apple-touch-icon" href={props.appleTouchIcon ?? '/client-assets/erebia-icon.png'} />
+					<link rel="icon" href={props.icon ?? '/client-assets/toneriko-icon.svg'} />
+					<link rel="apple-touch-icon" href={props.appleTouchIcon ?? '/client-assets/toneriko-icon.png'} />
 
 					{props.frontendEmbedViteFiles == null ? <script type="module" src="/embed_vite/@vite/client"></script> : null}
 
@@ -49,7 +49,7 @@ export function BaseEmbed(
 						<link rel="stylesheet" href={`/embed_vite/${href}`} />
 					))}
 
-					{props.titleSlot ?? <title safe>{props.title || 'Erebia'}</title>}
+					{props.titleSlot ?? <title safe>{props.title || 'Toneriko'}</title>}
 
 					{props.metaSlot}
 

@@ -19,7 +19,7 @@ const config = loadConfig();
 configureLogger(config);
 await initializeTelemetry(config);
 
-process.title = `Erebia (${cluster.isPrimary ? 'master' : 'worker'})`;
+process.title = `Toneriko (${cluster.isPrimary ? 'master' : 'worker'})`;
 
 Error.stackTraceLimit = Infinity;
 EventEmitter.defaultMaxListeners = 128;

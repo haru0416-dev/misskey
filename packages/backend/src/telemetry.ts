@@ -84,7 +84,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			import('@opentelemetry/semantic-conventions'),
 		]);
 		const resource = resources.resourceFromAttributes({
-			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'erebia-backend',
+			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'toneriko-backend',
 			[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
 			'service.instance.id': `${config.runtime.hostname}:${process.pid}`,
 		});
@@ -174,8 +174,8 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 		candidates.push(errorProvider);
 		candidate.start();
 		providers = candidates;
-		const tracer = api.trace.getTracer('erebia-backend');
-		const errorTracer = errorProvider.getTracer('erebia-backend-errors');
+		const tracer = api.trace.getTracer('toneriko-backend');
+		const errorTracer = errorProvider.getTracer('toneriko-backend-errors');
 		const headerGetter = {
 			keys: (headers: Headers) => [...headers.keys()],
 			get: (headers: Headers, key: string) => headers.get(key) ?? undefined,
@@ -216,7 +216,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 				},
 			);
 	} catch (error) {
-		console.error('Failed to initialize OpenTelemetry; Erebia will continue without telemetry.', error);
+		console.error('Failed to initialize OpenTelemetry; Toneriko will continue without telemetry.', error);
 		if (candidates.length > 0) {
 			await shutdownWithTimeout(candidates);
 		}

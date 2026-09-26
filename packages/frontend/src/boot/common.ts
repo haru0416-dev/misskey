@@ -6,8 +6,8 @@
 import { watch, version as vueVersion } from 'vue';
 import { compareVersions } from 'compare-versions';
 import { version, lang, apiUrl, isSafeMode } from '@shared/utility/config.js';
-import defaultLightTheme from '@shared/themes/l-erebia.json5';
-import defaultDarkTheme from '@shared/themes/d-erebia.json5';
+import defaultLightTheme from '@shared/themes/l-toneriko.json5';
+import defaultDarkTheme from '@shared/themes/d-toneriko.json5';
 import { parseThemeOrNull } from '@shared/utility/theme.js';
 import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
 import type { App } from 'vue';
@@ -36,7 +36,7 @@ import { launchPlugins } from '@/plugin.js';
  * (往復 150 ms の回線で約 0.4 秒)。ストアとアカウントの初期化は済んでいる。
  */
 export async function common(app: App<Element>, prepareVue: () => Promise<void>, beforeEmojis?: () => void) {
-	console.info(`Erebia v${version}`);
+	console.info(`Toneriko v${version}`);
 
 	if (_DEV_) {
 		console.warn('Development mode!!!');

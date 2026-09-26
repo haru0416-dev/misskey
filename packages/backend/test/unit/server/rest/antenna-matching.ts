@@ -100,7 +100,7 @@ describe('addNoteToAntennasForApi', () => {
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
 					defineCommand: vi.fn(),
-					erebiaPushFanoutTimelines: pushFanoutTimelines,
+					tonerikoPushFanoutTimelines: pushFanoutTimelines,
 				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 				publishAntennaStream,
 			},
@@ -153,7 +153,7 @@ describe('addNoteToAntennasForApi', () => {
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
 					defineCommand: vi.fn(),
-					erebiaPushFanoutTimelines: pushFanoutTimelines,
+					tonerikoPushFanoutTimelines: pushFanoutTimelines,
 				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 			},
 			note,

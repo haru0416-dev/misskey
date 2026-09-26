@@ -1,25 +1,25 @@
 {
-	"short_name": "Erebia",
-	"name": "Erebia",
+	"short_name": "Toneriko",
+	"name": "Toneriko",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#191a21",
 	"theme_color": "#5c62d8",
 	"icons": [
 		{
-			"src": "/client-assets/erebia-icon-192.png",
+			"src": "/client-assets/toneriko-icon-192.png",
 			"sizes": "192x192",
 			"type": "image/png",
 			"purpose": "maskable"
 		},
 		{
-			"src": "/client-assets/erebia-icon.png",
+			"src": "/client-assets/toneriko-icon.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"
 		},
 		{
-			"src": "/client-assets/erebia-icon.svg",
+			"src": "/client-assets/toneriko-icon.svg",
 			"sizes": "any",
 			"type": "image/svg+xml",
 			"purpose": "any"

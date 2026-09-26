@@ -1277,7 +1277,7 @@ async function post(ev?: PointerEvent) {
 				const lowerCase = text.toLowerCase();
 				if (
 					(lowerCase.includes('love') || lowerCase.includes('❤')) &&
-					(lowerCase.includes('erebia') || lowerCase.includes('misskey'))
+					(lowerCase.includes('toneriko') || lowerCase.includes('misskey'))
 				) {
 					claimAchievement('iLoveMisskey');
 				}

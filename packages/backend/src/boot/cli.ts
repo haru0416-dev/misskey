@@ -10,7 +10,7 @@ import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
 import { createEventPublishers } from '@/server/rest/events.js';
 
-process.title = 'Erebia CLI';
+process.title = 'Toneriko CLI';
 
 async function ping(): Promise<void> {
 	console.log('pong');

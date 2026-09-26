@@ -44,7 +44,7 @@ end
 return #KEYS
 `;
 
-const COMMAND_NAME = 'erebiaPushFanoutTimelines';
+const COMMAND_NAME = 'tonerikoPushFanoutTimelines';
 
 /** 1 回のスクリプト実行で扱う list の上限。フォロワー数千人の投稿でも 1 呼び出しが Valkey を長く占有しないよう分割する。 */
 const KEYS_PER_CALL = 500;

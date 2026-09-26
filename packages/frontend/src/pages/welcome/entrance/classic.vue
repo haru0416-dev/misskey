@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.shape2"></div>
 	<div :class="$style.logoWrapper">
 		<div :class="$style.poweredBy">Powered by</div>
-		<img :src="erebiasvg" :class="$style.misskey" alt="Erebia"/>
+		<img :src="tonerikosvg" :class="$style.misskey" alt="Toneriko"/>
 	</div>
 	<div :class="$style.contents">
 		<MkVisitorDashboard/>
@@ -33,7 +33,7 @@ import * as Misskey from 'misskey-js';
 import XTimeline from '../timeline/index.vue';
 import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
 import MkFeaturedPhotos from '@/features/gallery/components/MkFeaturedPhotos.vue';
-import erebiasvg from '/client-assets/erebia.svg';
+import tonerikosvg from '/client-assets/toneriko.svg';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import MkVisitorDashboard from '@/features/auth/components/MkVisitorDashboard.vue';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';

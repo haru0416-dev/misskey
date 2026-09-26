@@ -1,0 +1,27 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+	<title id="title">Toneriko</title>
+	<defs>
+		<linearGradient id="tk-bg" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#191b2e"/>
+			<stop offset="1" stop-color="#0a0b13"/>
+		</linearGradient>
+		<radialGradient id="tk-glow" cx="0.5" cy="1.2" r="1">
+			<stop offset="0" stop-color="#5c62d8" stop-opacity="0.55"/>
+			<stop offset="1" stop-color="#5c62d8" stop-opacity="0"/>
+		</radialGradient>
+		<linearGradient id="tk-mark" gradientUnits="userSpaceOnUse" x1="64" y1="30" x2="64" y2="102">
+			<stop offset="0" stop-color="#f5f6ff"/>
+			<stop offset="1" stop-color="#a9adf5"/>
+		</linearGradient>
+	</defs>
+	<rect width="128" height="128" rx="28" fill="url(#tk-bg)"/>
+	<rect width="128" height="128" rx="28" fill="url(#tk-glow)"/>
+	<g fill="url(#tk-mark)">
+		<rect x="26" y="30" width="76" height="13" rx="6.5"/>
+		<path d="M64 47C71 47 75 55 74 64C72.5 80 69 93 63 103C57.5 93 54 79 54 63C54 54 58 47 64 47Z"/>
+	</g>
+</svg>

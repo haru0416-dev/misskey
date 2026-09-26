@@ -46,7 +46,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</g>
 			</svg>
 			<div :class="$style.title">
-				<h1 :class="$style.brandHeading"><img :src="erebiaWordmark" :class="$style.wordmark" alt="Welcome to Erebia"></h1>
+				<h1 :class="$style.brandHeading"><img :src="tonerikoWordmark" :class="$style.wordmark" alt="Welcome to Toneriko"></h1>
 				<div :class="$style.version">v{{ version }}</div>
 			</div>
 			<div :class="$style.formBody">
@@ -128,7 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { host, version } from '@shared/utility/config.js';
-import erebiaWordmark from '/client-assets/erebia.svg';
+import tonerikoWordmark from '/client-assets/toneriko.svg';
 import MkButton from '@/components/form/MkButton.vue';
 import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import MkInput from '@/components/form/MkInput.vue';

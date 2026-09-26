@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "erebia",
+      "name": "toneriko",
       "devDependencies": {
         "@playwright/test": "1.61.1",
         "@types/node": "26.2.0",

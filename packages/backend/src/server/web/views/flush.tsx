@@ -10,7 +10,7 @@ export function FlushPage(props?: {}) {
 			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
-					<meta name="application-name" content="Erebia" />
+					<meta name="application-name" content="Toneriko" />
 					<title>Clear preferences and cache</title>
 				</head>
 				<body>

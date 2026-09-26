@@ -29,7 +29,7 @@ import { postMessageToParentWindow, setIframeId } from '@/post-message.js';
 import { serverContext } from '@/server-context.js';
 import { i18n } from '@/i18n.js';
 
-console.log('Erebia Embed');
+console.log('Toneriko Embed');
 
 //#region 埋め込みパラメータの取得・パース
 const params = new URLSearchParams(window.location.search);

@@ -22,9 +22,9 @@ const upstreamBrandPaths = new Set([
 	'_aboutMisskey.thisIsModifiedVersion',
 	'_aboutMisskey.translation',
 	'_aboutMisskey.donate',
-	'_aboutErebia.about',
-	'_aboutErebia.basedOnMisskey',
-	'_aboutErebia.values',
+	'_aboutToneriko.about',
+	'_aboutToneriko.basedOnMisskey',
+	'_aboutToneriko.values',
 ]);
 
 function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
@@ -66,9 +66,9 @@ function applyProductBranding<T extends ILocale>(obj: T, parentPath = ''): T {
 				.replaceAll('Misskey Flavoured Markdown', mfm)
 				.replaceAll('#MisskeyReversi', reversiHashtag)
 				.replaceAll('Misskey-Misskey', misskeyMisskey)
-				.replaceAll('Misskey', 'Erebia')
-				.replaceAll('Mískey', 'Erebia')
-				.replaceAll('ميسكي', 'Erebia')
+				.replaceAll('Misskey', 'Toneriko')
+				.replaceAll('Mískey', 'Toneriko')
+				.replaceAll('ميسكي', 'Toneriko')
 				.replaceAll(misskeyHub, 'Misskey Hub')
 				.replaceAll(mfm, 'Misskey Flavoured Markdown')
 				.replaceAll(reversiHashtag, '#MisskeyReversi')

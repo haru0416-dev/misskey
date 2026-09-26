@@ -35,7 +35,7 @@ return priorities
 
 type DeliverBulkJob = { name: string; data: DeliverJobData; opts?: Bull.BulkJobOptions };
 
-const COMMAND_NAME = 'erebiaReserveDeliverPriorities';
+const COMMAND_NAME = 'tonerikoReserveDeliverPriorities';
 type ReserveCommander = {
 	[COMMAND_NAME]: (numberOfKeys: number, ...args: (string | number)[]) => Promise<number[]>;
 };

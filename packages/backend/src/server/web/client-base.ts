@@ -51,7 +51,7 @@ export function createClientBaseApp(deps: ClientBaseDependencies): Hono {
 		return htmlResponse(
 			BasePage({
 				...(deps.meta.bannerUrl == null ? {} : { img: deps.meta.bannerUrl }),
-				title: deps.meta.name ?? 'Erebia',
+				title: deps.meta.name ?? 'Toneriko',
 				...(deps.meta.description == null ? {} : { desc: deps.meta.description }),
 				...(await getCommonData()),
 				...(options.noindex === undefined ? {} : { noindex: options.noindex }),

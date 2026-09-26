@@ -37,7 +37,7 @@ export async function packFeed(deps: FeedPackerDependencies, user: MiUser): Prom
 		id: author.link,
 		title: `${author.name} (@${user.username}@${deps.config.runtime.host})`,
 		...(latestNote == null ? {} : { updated: parseId(latestNote.id).date }),
-		generator: 'Erebia',
+		generator: 'Toneriko',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
 		link: author.link,
 		image: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),

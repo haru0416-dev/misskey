@@ -1,10 +1,10 @@
-// Erebia デフォルトダークテーマ
+// Toneriko デフォルトダークテーマ
 {
 	id: '7613ea17-80f4-4754-bfe5-18844f86aab0',
 
-	name: 'Erebia Dark',
-	author: 'erebia',
-	desc: 'Erebia default dark theme',
+	name: 'Toneriko Dark',
+	author: 'toneriko',
+	desc: 'Toneriko default dark theme',
 
 	base: 'dark',
 

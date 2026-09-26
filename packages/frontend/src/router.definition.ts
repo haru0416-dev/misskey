@@ -274,8 +274,8 @@ export const ROUTE_DEF = [
 		component: page(() => import('@/pages/contact.vue')),
 	},
 	{
-		path: '/about-erebia',
-		component: page(() => import('@/pages/about-erebia.vue')),
+		path: '/about-toneriko',
+		component: page(() => import('@/pages/about-toneriko.vue')),
 	},
 	{
 		path: '/about-misskey',

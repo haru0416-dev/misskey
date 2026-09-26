@@ -42,13 +42,13 @@ export function Layout(
 						instanceName={props.instanceName}
 						instanceUrl={props.instanceUrl}
 					/>
-					<link rel="icon" href={props.icon || '/client-assets/erebia-icon.svg'} />
-					<link rel="apple-touch-icon" href={props.appleTouchIcon || '/client-assets/erebia-icon.png'} />
+					<link rel="icon" href={props.icon || '/client-assets/toneriko-icon.svg'} />
+					<link rel="apple-touch-icon" href={props.appleTouchIcon || '/client-assets/toneriko-icon.png'} />
 					<link rel="manifest" href="/manifest.json" />
 					<link
 						rel="search"
 						type="application/opensearchdescription+xml"
-						title={props.title || 'Erebia'}
+						title={props.title || 'Toneriko'}
 						href={`${props.config.instance.url}/opensearch.xml`}
 					/>
 					{props.serverErrorImageUrl != null ? (
@@ -63,7 +63,7 @@ export function Layout(
 						<link rel="stylesheet" href={`/vite/${href}`} />
 					))}
 
-					{props.titleSlot ?? <title safe>{props.title || 'Erebia'}</title>}
+					{props.titleSlot ?? <title safe>{props.title || 'Toneriko'}</title>}
 
 					{props.noindex ? <meta name="robots" content="noindex" /> : null}
 
@@ -74,7 +74,7 @@ export function Layout(
 
 					{props.ogSlot ?? (
 						<>
-							<meta property="og:title" content={props.title || 'Erebia'} />
+							<meta property="og:title" content={props.title || 'Toneriko'} />
 							<meta property="og:description" content={props.desc || defaultDescription} />
 							{props.img != null ? <meta property="og:image" content={props.img} /> : null}
 							<meta property="twitter:card" content="summary" />

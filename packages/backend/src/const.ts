@@ -39,7 +39,7 @@ export const FILE_TYPE_IMAGE = [
 	'image/x-icon',
 ];
 
-export const PRODUCT_NAME = 'Erebia';
+export const PRODUCT_NAME = 'Toneriko';
 
 // メディアプロキシが自分自身や他のプロキシを経由し続けるのを防ぐため、
 // リクエスト元の User-Agent がこのトークンを含む場合は中継を拒否する。

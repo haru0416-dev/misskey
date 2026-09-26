@@ -10,7 +10,7 @@ export function ApiDocPage() {
 			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
-					<title>Erebia API</title>
+					<title>Toneriko API</title>
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<style>{`body { margin: 0; padding: 0; }`}</style>
 				</head>

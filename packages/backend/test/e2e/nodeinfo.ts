@@ -14,7 +14,7 @@ describe('nodeinfo', () => {
 		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const nodeInfo = (await res.json()) as any;
-		expect(nodeInfo.software.name).toBe('erebia');
+		expect(nodeInfo.software.name).toBe('toneriko');
 		expect(nodeInfo.software.homepage).toBe(nodeInfo.metadata.repositoryUrl);
 		expect(nodeInfo.software.repository).toBe(nodeInfo.metadata.repositoryUrl);
 	});
@@ -25,7 +25,7 @@ describe('nodeinfo', () => {
 		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const nodeInfo = (await res.json()) as any;
-		expect(nodeInfo.software.name).toBe('erebia');
+		expect(nodeInfo.software.name).toBe('toneriko');
 		expect(nodeInfo.software.homepage).toBe(nodeInfo.metadata.repositoryUrl);
 	});
 });
