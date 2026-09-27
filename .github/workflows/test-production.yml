@@ -5,7 +5,13 @@ on:
     branches:
       - master
       - develop
+    paths-ignore: &docs-only
+      - '**/*.md'
+      - docs/**
+      - .claude/**
+      - .agents/**
   pull_request:
+    paths-ignore: *docs-only
 
 env:
   NODE_ENV: production
