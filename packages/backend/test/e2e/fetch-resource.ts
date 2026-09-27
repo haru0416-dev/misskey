@@ -380,6 +380,31 @@ describe('Webリソース', () => {
 		});
 	});
 
+	// Like の応答には反応した利用者と対象ノートが入る。ノート本体と同じく、認証なしで見られるノートへの反応だけを返す。
+	describe('/likes/:id', () => {
+		const likeOf = async (visibility: 'public' | 'home' | 'followers' | 'specified'): Promise<string> => {
+			const note = await post(alice, { text: `like target ${visibility}`, visibility });
+			const reacted = await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, alice);
+			expect(reacted.status).toBe(204);
+			const reactions = await api('notes/reactions', { noteId: note.id }, alice);
+			const id = (reactions.body as { id: string }[])[0]?.id;
+			if (id == null) throw new Error('reaction was not created');
+			return id;
+		};
+
+		test.each(['public', 'home'] as const)(
+			'は %s のノートへの反応をActivityPubとしてGETできる。',
+			async (visibility) => {
+				const res = await ok({ path: `/likes/${await likeOf(visibility)}`, accept: ONLY_AP, type: AP });
+				expect(res.body.type).toBe('Like');
+			},
+		);
+
+		test.each(['followers', 'specified'] as const)('は %s のノートへの反応をGETできない。', async (visibility) => {
+			await notFound({ path: `/likes/${await likeOf(visibility)}`, accept: ONLY_AP });
+		});
+	});
+
 	describe('/notes/:id', () => {
 		const path = (noteId: string): string => `/notes/${noteId}`;
 

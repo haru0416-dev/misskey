@@ -454,8 +454,10 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return apError(404);
 		}
 
+		// 応答には反応した利用者と対象ノートが入る。ノート本体 (/notes/:note) と同じく、認証なしで見られる
+		// ノートへの反応だけを返す。
 		const note = await fetchNoteByIdFromDatabase(deps.db, reaction.noteId);
-		if (note == null) {
+		if (note == null || (note.visibility !== 'public' && note.visibility !== 'home') || note.localOnly) {
 			return apError(404);
 		}
 
