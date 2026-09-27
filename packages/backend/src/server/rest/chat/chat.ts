@@ -1328,10 +1328,6 @@ async function reactToChatMessageForApi(
 		throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 	}
 
-	if (message.reactions.length >= MAX_REACTIONS_PER_MESSAGE) {
-		throw tooManyChatMessageReactionsError();
-	}
-
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
 
 	if (room) {
@@ -1340,7 +1336,20 @@ async function reactToChatMessageForApi(
 		}
 	}
 
-	await addChatMessageReactionInDatabase(deps.db, message.id, userId, reaction);
+	const added = await addChatMessageReactionInDatabase(
+		deps.db,
+		message.id,
+		userId,
+		reaction,
+		MAX_REACTIONS_PER_MESSAGE,
+	);
+	if (added === 'full') {
+		throw tooManyChatMessageReactionsError();
+	}
+	if (added === 'duplicate') {
+		// 同じリアクションは付いている。重ねて配信すると受け手の表示で数が増えるので、何もせず終える。
+		return;
+	}
 
 	if (room) {
 		deps.publishChatRoomStream?.(room.id, 'react', {
