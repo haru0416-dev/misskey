@@ -206,13 +206,18 @@ const usersPaginator = iAmModerator
 
 if (iAmModerator) {
 	watch(moderationNote, async () => {
-		if (instance.value == null) {
+		// 読み込みで値を入れたときにも呼ばれるので、読み込んだ値と同じなら送らない。
+		if (instance.value == null || moderationNote.value === (instance.value.moderationNote ?? '')) {
 			return;
 		}
+		const inst = instance.value;
+		const note = moderationNote.value;
 		await misskeyApi('admin/federation/update-instance', {
-			host: instance.value.host,
-			moderationNote: moderationNote.value,
-		});
+			host: inst.host,
+			moderationNote: note,
+		}).then(() => {
+			inst.moderationNote = note;
+		}, showError);
 	});
 }
 
@@ -233,86 +238,80 @@ async function _fetch_(): Promise<void> {
 	moderationNote.value = instance.value?.moderationNote ?? '';
 }
 
-async function toggleBlock(): Promise<void> {
-	if (!iAmAdmin) {
+function showError(err: unknown) {
+	const content = os.apiErrorDialogContent(err);
+	if (content != null) {
+		os.alert({ type: 'error', ...content });
+	}
+}
+
+type HostListKey = 'blockedHosts' | 'silencedHosts' | 'mediaSilencedHosts';
+
+/**
+ * ブロック・サイレンスのスイッチの反映。失敗したらスイッチを戻して理由を出す (戻さないと、保存されていない状態が
+ * 画面に残る)。成功したら手元の meta も更新する (続けて切り替えたときに古い一覧から送らないため)。
+ */
+async function updateHostList(key: HostListKey, enabled: boolean, revert: () => void): Promise<void> {
+	if (!iAmAdmin || meta.value == null || instance.value == null) {
 		return;
 	}
-	if (!meta.value) {
-		throw new Error('No meta?');
-	}
-	if (!instance.value) {
-		throw new Error('No instance?');
-	}
 	const { host } = instance.value;
-	await misskeyApi('admin/update-meta', {
-		blockedHosts: isBlocked.value
-			? meta.value.blockedHosts.concat([host])
-			: meta.value.blockedHosts.filter((x) => x !== host),
+	const current = meta.value[key] ?? [];
+	const next = enabled ? current.filter((x) => x !== host).concat([host]) : current.filter((x) => x !== host);
+	try {
+		await misskeyApi('admin/update-meta', { [key]: next });
+		meta.value = { ...meta.value, [key]: next };
+	} catch (err) {
+		revert();
+		showError(err);
+	}
+}
+
+async function toggleBlock(): Promise<void> {
+	const enabled = isBlocked.value;
+	await updateHostList('blockedHosts', enabled, () => {
+		isBlocked.value = !enabled;
 	});
 }
 
 async function toggleSilenced(): Promise<void> {
-	if (!iAmAdmin) {
-		return;
-	}
-	if (!meta.value) {
-		throw new Error('No meta?');
-	}
-	if (!instance.value) {
-		throw new Error('No instance?');
-	}
-	const { host } = instance.value;
-	const silencedHosts = meta.value.silencedHosts ?? [];
-	await misskeyApi('admin/update-meta', {
-		silencedHosts: isSilenced.value ? silencedHosts.concat([host]) : silencedHosts.filter((x) => x !== host),
+	const enabled = isSilenced.value;
+	await updateHostList('silencedHosts', enabled, () => {
+		isSilenced.value = !enabled;
 	});
 }
 
 async function toggleMediaSilenced(): Promise<void> {
-	if (!iAmAdmin) {
+	const enabled = isMediaSilenced.value;
+	await updateHostList('mediaSilencedHosts', enabled, () => {
+		isMediaSilenced.value = !enabled;
+	});
+}
+
+async function setDeliverySuspended(suspended: boolean): Promise<void> {
+	if (!iAmModerator || instance.value == null) {
 		return;
 	}
-	if (!meta.value) {
-		throw new Error('No meta?');
+	const previous = suspensionState.value;
+	suspensionState.value = suspended ? 'manuallySuspended' : 'none';
+	try {
+		await misskeyApi('admin/federation/update-instance', {
+			host: instance.value.host,
+			isSuspended: suspended,
+		});
+	} catch (err) {
+		// 保存されていない停止・再開を画面に残さない。
+		suspensionState.value = previous;
+		showError(err);
 	}
-	if (!instance.value) {
-		throw new Error('No instance?');
-	}
-	const { host } = instance.value;
-	const mediaSilencedHosts = meta.value.mediaSilencedHosts ?? [];
-	await misskeyApi('admin/update-meta', {
-		mediaSilencedHosts: isMediaSilenced.value
-			? mediaSilencedHosts.concat([host])
-			: mediaSilencedHosts.filter((x) => x !== host),
-	});
 }
 
 async function stopDelivery(): Promise<void> {
-	if (!iAmModerator) {
-		return;
-	}
-	if (!instance.value) {
-		throw new Error('No instance?');
-	}
-	suspensionState.value = 'manuallySuspended';
-	await misskeyApi('admin/federation/update-instance', {
-		host: instance.value.host,
-		isSuspended: true,
-	});
+	await setDeliverySuspended(true);
 }
 
 async function resumeDelivery(): Promise<void> {
-	if (!iAmModerator) {
-		return;
-	}
-	if (!instance.value) {
-		throw new Error('No instance?');
-	}
-	suspensionState.value = 'none';
-	await misskeyApi('admin/federation/update-instance', {
-		host: instance.value.host,
-		isSuspended: false,
-	});
+	await setDeliverySuspended(false);
 }
 
 function refreshMetadata(): void {
