@@ -43,27 +43,43 @@ const fetching = ref(true);
 const weeks = ref(25);
 const cells = ref<{ date: string; value: number; level: number }[]>([]);
 
+// 切り替えが続いたとき、遅れて届いた前の条件の応答で今の表示を上書きしない。
+let loadGeneration = 0;
+
 async function load() {
+	const generation = ++loadGeneration;
 	fetching.value = true;
 	await nextTick();
 	const width = rootEl.value?.offsetWidth ?? 600;
 	weeks.value = width > 700 ? 50 : width < 400 ? 10 : 25;
 	const limit = weeks.value * 7;
 	let values: number[] = [];
-	if (props.src === 'active-users') {
-		values = (await misskeyApi('charts/active-users', { limit, span: 'day' })).readWrite;
-	} else if (props.src === 'notes') {
-		values = props.user
-			? (await misskeyApi('charts/user/notes', { userId: props.user.id, limit, span: 'day' })).inc
-			: (await misskeyApi('charts/notes', { limit, span: 'day' })).local.inc;
-	} else {
-		const raw = await misskeyApi('charts/ap-request', { limit, span: 'day' });
-		values =
-			props.src === 'ap-requests-inbox-received'
-				? raw.inboxReceived
-				: props.src === 'ap-requests-deliver-succeeded'
-					? raw.deliverSucceeded
-					: raw.deliverFailed;
+	try {
+		if (props.src === 'active-users') {
+			values = (await misskeyApi('charts/active-users', { limit, span: 'day' })).readWrite;
+		} else if (props.src === 'notes') {
+			values = props.user
+				? (await misskeyApi('charts/user/notes', { userId: props.user.id, limit, span: 'day' })).inc
+				: (await misskeyApi('charts/notes', { limit, span: 'day' })).local.inc;
+		} else {
+			const raw = await misskeyApi('charts/ap-request', { limit, span: 'day' });
+			values =
+				props.src === 'ap-requests-inbox-received'
+					? raw.inboxReceived
+					: props.src === 'ap-requests-deliver-succeeded'
+						? raw.deliverSucceeded
+						: raw.deliverFailed;
+		}
+	} catch {
+		// 失敗したまま読み込み中にしない。
+		if (generation === loadGeneration) {
+			cells.value = [];
+			fetching.value = false;
+		}
+		return;
+	}
+	if (generation !== loadGeneration) {
+		return;
 	}
 	const max =
 		values

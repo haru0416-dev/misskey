@@ -805,12 +805,22 @@ const fetchAndRender = async () => {
 				return null;
 		}
 	};
+	// 切り替えが続いたとき、遅れて届いた前の条件の応答で今のグラフを上書きしない。
+	const generation = ++fetchGeneration;
 	fetching.value = true;
-	chartData.value = await fetchData();
+	const data = await Promise.resolve(fetchData()).catch(() => null);
+	if (generation !== fetchGeneration) {
+		return;
+	}
+	// 失敗したら空のグラフにして読み込み中を終える (失敗したまま読み込み中にしない)。
+	chartData.value = data;
 	fetching.value = false;
 };
 
-watch(() => [props.src, props.span], fetchAndRender);
+let fetchGeneration = 0;
+
+// 対象 (ユーザー・サーバー) が変わったときも読み直す。
+watch(() => [props.src, props.span, JSON.stringify(props.args ?? null)], fetchAndRender);
 
 onMounted(() => {
 	fetchAndRender();
