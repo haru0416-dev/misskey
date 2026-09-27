@@ -71,26 +71,33 @@ async function save() {
 	if (data.value === null) {
 		return;
 	}
-	rolesCache.delete();
-	if (role.value) {
-		os.apiWithDialog('admin/roles/update', {
-			roleId: role.value.id,
-			...data.value,
-		});
-		router.push('/admin/roles/:id', {
-			params: {
-				id: role.value.id,
-			},
-		});
-	} else {
-		const created = await os.apiWithDialog('admin/roles/create', {
-			...data.value,
-		});
-		router.push('/admin/roles/:id', {
-			params: {
-				id: created.id,
-			},
-		});
+	// 保存が終わってから遷移する。先に移ると遷移先が更新前の値を読み、失敗したときは編集内容を失う
+	// (失敗は apiWithDialog が表示し、この画面に留まる)。キャッシュも保存後に捨てる。
+	try {
+		if (role.value) {
+			await os.apiWithDialog('admin/roles/update', {
+				roleId: role.value.id,
+				...data.value,
+			});
+			rolesCache.delete();
+			router.push('/admin/roles/:id', {
+				params: {
+					id: role.value.id,
+				},
+			});
+		} else {
+			const created = await os.apiWithDialog('admin/roles/create', {
+				...data.value,
+			});
+			rolesCache.delete();
+			router.push('/admin/roles/:id', {
+				params: {
+					id: created.id,
+				},
+			});
+		}
+	} catch {
+		// apiWithDialog がエラーを表示済み。
 	}
 }
 
