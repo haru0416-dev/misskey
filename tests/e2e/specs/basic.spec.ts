@@ -73,6 +73,42 @@ test.describe('After setup instance', () => {
 		await expect(page.locator('[data-cy-announcements-more]')).toHaveCount(0);
 	});
 
+	// 一覧の取得に失敗したとき、読み込み表示のまま止まらず、再試行で取り直せる。
+	test('shows a retryable error when the announcement list fails to load', async ({ page }) => {
+		const created = await page.request.post('/api/admin/announcements/create', {
+			data: { i: admin.token, title: 'Loaded after retry', text: 'Body', imageUrl: null },
+		});
+		expect(created.ok()).toBe(true);
+
+		await login(page, 'admin', 'pass');
+		await closeInitialUserSetup(page);
+		let fail = true;
+		await page.route('**/api/admin/announcements/list', (route) =>
+			fail
+				? route.fulfill({
+						status: 500,
+						contentType: 'application/json',
+						body: JSON.stringify({
+							error: {
+								message: 'x',
+								code: 'INTERNAL_ERROR',
+								id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+								kind: 'server',
+							},
+						}),
+					})
+				: route.continue(),
+		);
+		await page.goto('/admin/announcements');
+		const retry = page.getByRole('button', { name: '再試行' });
+		await expect(retry).toBeVisible();
+
+		fail = false;
+		await retry.click();
+		await expect(page.getByText('Loaded after retry')).toBeVisible();
+		await expect(retry).toHaveCount(0);
+	});
+
 	test('loads the remaining announcements without offering an empty page', async ({ page }) => {
 		for (let index = 0; index < 11; index++) {
 			const created = await page.request.post('/api/admin/announcements/create', {

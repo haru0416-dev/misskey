@@ -15,6 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkSelect>
 
 			<MkLoading v-if="loading"/>
+			<MkError v-else-if="fetchError" @retry="refresh()"/>
 
 			<template v-else>
 				<MkFolder v-for="(announcement, index) in announcements" :key="announcement.id ?? announcement._id ?? index" :defaultOpen="announcement.id == null">
@@ -116,6 +117,7 @@ const { model: announcementsStatus, def: announcementsStatusDef } = useMkSelect(
 });
 
 const loading = ref(true);
+const fetchError = ref(false);
 const loadingMore = ref(false);
 const pageSize = 10;
 const hasMore = ref(false);
@@ -231,16 +233,25 @@ async function more() {
 function refresh(status = announcementsStatus.value) {
 	const generation = ++listGeneration;
 	loading.value = true;
+	fetchError.value = false;
 	loadingMore.value = false;
 	misskeyApi('admin/announcements/list', {
 		status,
 		limit: pageSize,
-	}).then((announcementResponse) => {
-		if (generation !== listGeneration || status !== announcementsStatus.value) return;
-		announcements.value = announcementResponse;
-		hasMore.value = announcementResponse.length === pageSize;
-		loading.value = false;
-	});
+	}).then(
+		(announcementResponse) => {
+			if (generation !== listGeneration || status !== announcementsStatus.value) return;
+			announcements.value = announcementResponse;
+			hasMore.value = announcementResponse.length === pageSize;
+			loading.value = false;
+		},
+		() => {
+			// 失敗を放置すると読み込み表示のまま戻れない。古いフィルタの失敗は今の表示に反映しない。
+			if (generation !== listGeneration || status !== announcementsStatus.value) return;
+			fetchError.value = true;
+			loading.value = false;
+		},
+	);
 }
 
 const headerActions = computed(() => [
