@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { relay } from '@/db/schema/relay.js';
 import type { RelayInsert, RelayRow } from '@/db/schema/relay.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -75,12 +75,21 @@ async function listRelaysByStatusFromDatabase(db: MiDrizzleDatabase, status: MiR
 	return db.select().from(relay).where(eq(relay.status, status));
 }
 
+/** senderInboxes に、そのリレーの inbox が含まれるときだけ状態を変える (他のアクターからの Accept / Reject を効かせない)。 */
 export async function updateRelayStatusInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiRelay['id'],
 	status: MiRelay['status'],
+	senderInboxes: string[],
 ): Promise<UpdateResultLike> {
-	const rows = await db.update(relay).set({ status }).where(eq(relay.id, id)).returning({ id: relay.id });
+	const rows =
+		senderInboxes.length === 0
+			? []
+			: await db
+					.update(relay)
+					.set({ status })
+					.where(and(eq(relay.id, id), inArray(relay.inbox, senderInboxes)))
+					.returning({ id: relay.id });
 
 	invalidateRelayCache();
 	return {

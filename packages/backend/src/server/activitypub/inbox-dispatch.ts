@@ -301,7 +301,7 @@ async function acceptFollowFromApForApi(
 
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
 	if (match) {
-		return await relayAcceptedForApi(deps, match[1]!);
+		return await relayAcceptedForApi(deps, match[1]!, actor);
 	}
 
 	try {
@@ -711,7 +711,7 @@ async function rejectFollowFromApForApi(
 
 	const match = activity.id?.match(/follow-relay\/(\w+)/);
 	if (match) {
-		return await relayRejectedForApi(deps, match[1]!);
+		return await relayRejectedForApi(deps, match[1]!, actor);
 	}
 
 	await remoteRejectForApi(deps, actor, follower);
