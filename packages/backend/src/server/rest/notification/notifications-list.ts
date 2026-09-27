@@ -375,6 +375,47 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 	return packed.filter((x): x is Record<string, unknown> => x != null);
 }
 
+// 後段の除外 (ミュート・凍結・見られないノート・取り下げられたフォロー申請) は通知を作ったあとの状況で決まるので、
+// 1 ページが全件落ちることがある。空を返すとクライアントが終端とみなし、その先の見られる通知が表示されなくなるため、
+// 見られる通知が出るまで先へ進む。走査は MAX_SCANNED_PAGES ページ (limit 最大 100 で生の通知 1000 件) までに抑える。
+const MAX_SCANNED_PAGES = 10;
+
+async function fetchVisibleNotificationPage(
+	deps: ApiNotificationsListDependencies,
+	meId: MiUser['id'],
+	options: {
+		sinceId?: string | null;
+		untilId?: string | null;
+		limit: number;
+		includeTypes?: string[] | undefined;
+		excludeTypes?: string[] | undefined;
+	},
+	shape: (notifications: MiNotification[]) => (MiNotification | MiGroupedNotification)[],
+): Promise<Record<string, unknown>[]> {
+	let { sinceId, untilId } = options;
+	const ascending = sinceId != null && untilId == null;
+	for (let page = 0; page < MAX_SCANNED_PAGES; page++) {
+		const notifications = await getApiNotifications(
+			deps,
+			meId,
+			omitUndefined({
+				sinceId,
+				untilId,
+				limit: options.limit,
+				includeTypes: options.includeTypes,
+				excludeTypes: options.excludeTypes,
+			}),
+		);
+		const last = notifications.at(-1);
+		if (last == null) return [];
+		const packed = await packNotificationsForApi(deps, shape(notifications), meId);
+		if (packed.length > 0) return packed;
+		if (ascending) sinceId = last.id;
+		else untilId = last.id;
+	}
+	return [];
+}
+
 const notificationTypeEnumValues = [...notificationTypes, ...obsoleteNotificationTypes] as const;
 
 export const notificationsParamDef = z.object({
@@ -406,23 +447,16 @@ export async function handleApiINotifications(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
 	);
 
-	const notifications = await getApiNotifications(
-		deps,
-		me.id,
-		omitUndefined({
-			sinceId,
-			untilId,
-			limit: params.limit,
-			includeTypes,
-			excludeTypes,
-		}),
-	);
-
 	if (params.markAsRead) {
 		void markAllApiNotificationsAsRead(deps, me.id, false);
 	}
 
-	return await packNotificationsForApi(deps, notifications, me.id);
+	return await fetchVisibleNotificationPage(
+		deps,
+		me.id,
+		{ sinceId, untilId, limit: params.limit, includeTypes, excludeTypes },
+		(notifications) => notifications,
+	);
 }
 
 function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
@@ -507,27 +541,14 @@ export async function handleApiINotificationsGrouped(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
 	);
 
-	const notifications = await getApiNotifications(
-		deps,
-		me.id,
-		omitUndefined({
-			sinceId,
-			untilId,
-			limit: params.limit,
-			includeTypes,
-			excludeTypes,
-		}),
-	);
-
-	if (notifications.length === 0) {
-		return [];
-	}
-
 	if (params.markAsRead) {
 		void markAllApiNotificationsAsRead(deps, me.id, false);
 	}
 
-	const groupedNotifications = groupApiNotifications(notifications).slice(0, params.limit);
-
-	return await packNotificationsForApi(deps, groupedNotifications, me.id);
+	return await fetchVisibleNotificationPage(
+		deps,
+		me.id,
+		{ sinceId, untilId, limit: params.limit, includeTypes, excludeTypes },
+		(notifications) => groupApiNotifications(notifications).slice(0, params.limit),
+	);
 }
