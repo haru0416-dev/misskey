@@ -721,12 +721,6 @@ export const ROUTE_DEF = [
 		loginRequired: false,
 	},
 	{
-		// リダイレクト動作の確認用。ログイン中ユーザーのプロフィールへ飛ばす。
-		path: '/redirect-test',
-		redirect: $i ? `@${$i.username}` : '/',
-		loginRequired: true,
-	},
-	{
 		path: '/:(*)',
 		component: page(() => import('@/pages/not-found.vue')),
 	},

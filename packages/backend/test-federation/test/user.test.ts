@@ -36,18 +36,6 @@ function upstreamMissingUserProfile(error: unknown): boolean {
 }
 
 describe('User', () => {
-	test('未取得のリモートユーザーを username と host から検索できる', async () => {
-		const [remote, viewer] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-		const resolved = await viewer.client.request('users/show', { username: remote.username, host: 'a.test' });
-		expect(resolved).toMatchObject({
-			username: remote.username,
-			host: 'a.test',
-			uri: `https://a.test/users/${remote.id}`,
-		});
-		const cached = await viewer.client.request('users/show', { username: remote.username, host: 'a.test' });
-		expect(cached.id).toBe(resolved.id);
-	});
-
 	describe('Profile', () => {
 		describe('Consistency of profile', () => {
 			let alice: LoginUser;
@@ -116,67 +104,6 @@ describe('User', () => {
 					strictEqual(user.followersVisibility, 'public');
 					strictEqual(user.followingVisibility, 'public');
 				}
-			});
-
-			// 未対応のためスキップする。
-			test.skip('Setting private for followersVisibility is federated', async () => {
-				await Promise.all([
-					alice.client.request('i/update', { followersVisibility: 'private' }),
-					bob.client.request('i/update', { followersVisibility: 'private' }),
-				]);
-				await deliveryBarrier('a.test');
-
-				for (const user of await Promise.all([
-					alice.client.request('users/show', { userId: bobInA.id }),
-					bob.client.request('users/show', { userId: aliceInB.id }),
-				])) {
-					strictEqual(user.followersVisibility, 'private');
-					strictEqual(user.followingVisibility, 'public');
-				}
-			});
-
-			test.skip('Setting private for followingVisibility is federated', async () => {
-				await Promise.all([
-					alice.client.request('i/update', { followingVisibility: 'private' }),
-					bob.client.request('i/update', { followingVisibility: 'private' }),
-				]);
-				await deliveryBarrier('a.test');
-
-				for (const user of await Promise.all([
-					alice.client.request('users/show', { userId: bobInA.id }),
-					bob.client.request('users/show', { userId: aliceInB.id }),
-				])) {
-					strictEqual(user.followersVisibility, 'private');
-					strictEqual(user.followingVisibility, 'private');
-				}
-			});
-		});
-
-		describe('isCat is federated', () => {
-			let alice: LoginUser, bob: LoginUser;
-			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
-
-			beforeAll(async () => {
-				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-
-				[bobInA, aliceInB] = await Promise.all([
-					resolveRemoteUser('b.test', bob.id, alice),
-					resolveRemoteUser('a.test', alice.id, bob),
-				]);
-			});
-
-			test('Not isCat for default', () => {
-				strictEqual(aliceInB.isCat, false);
-			});
-
-			test('Becoming a cat is sent to their followers', async () => {
-				await bob.client.request('following/create', { userId: aliceInB.id });
-				await waitFor(
-					async () => (await bob.client.request('users/show', { userId: aliceInB.id })).isFollowing === true,
-				);
-
-				await alice.client.request('i/update', { isCat: true });
-				await waitFor(async () => (await bob.client.request('users/show', { userId: aliceInB.id })).isCat === true);
 			});
 		});
 

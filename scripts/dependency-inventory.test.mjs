@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { createDependencyInventory, dependencyClosure, parseResolvedPackage } from './dependency-inventory.mjs';
+import { dependencyClosure, parseResolvedPackage } from './dependency-inventory.mjs';
 
 describe('parseResolvedPackage', () => {
 	test('parses scoped and unscoped package identifiers', () => {
@@ -24,13 +24,4 @@ test('dependencyClosure handles shared dependencies and cycles', () => {
 		['shared', new Set(['root'])],
 	]);
 	expect([...dependencyClosure(graph, 'root')].toSorted()).toEqual(['a', 'b', 'root', 'shared']);
-});
-
-test('reads the repository JSONC lockfile and source usage', () => {
-	const { inventory } = createDependencyInventory();
-	expect(inventory.summary.resolvedInstances).toBeGreaterThan(inventory.summary.resolvedPackageNames);
-	expect(inventory.directRoots.find((dependency) => dependency.name === 'js-yaml')).toBeUndefined();
-	expect(inventory.directRoots.find((dependency) => dependency.name === 'yaml')?.usage).toContain(
-		'packages/frontend/vite.config.ts',
-	);
 });

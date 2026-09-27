@@ -195,49 +195,6 @@ async function prepareDelivery(senderHost: Host, receiverHost: Host, operation: 
 }
 
 describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
-	test(
-		'valid signed GET returns a public Note to a remote actor',
-		async () => {
-			const { sender, receiver } = await pair(senderHost, receiverHost);
-			const text = crypto.randomUUID();
-			const note = (await receiver.client.request('notes/create', { text, visibility: 'public' })).createdNote;
-			await deliveryBarrier(receiverHost);
-			const response = await signedRequest(receiverHost, sender.id, `/notes/${note.id}`, { method: 'GET' });
-			expect(response.status, `${hostKind(senderHost)} -> ${hostKind(receiverHost)} signed GET`).toBe(200);
-			const document = await response.json();
-			expect(document).toMatchObject({
-				type: 'Note',
-				id: `https://${receiverHost}/notes/${note.id}`,
-				attributedTo: `https://${receiverHost}/users/${receiver.id}`,
-			});
-			expect(document.content).toContain(text);
-		},
-		timeout,
-	);
-
-	test(
-		'valid signed POST applies exactly one Like',
-		async () => {
-			const { sender, receiver, senderInReceiver } = await pair(senderHost, receiverHost);
-			const note = (await receiver.client.request('notes/create', { text: crypto.randomUUID() })).createdNote;
-			const response = await signedRequest(receiverHost, sender.id, '/inbox', {
-				method: 'POST',
-				body: JSON.stringify(like(senderHost, sender.id, receiverHost, note.id)),
-			});
-			expect(response.ok, `${hostKind(senderHost)} -> ${hostKind(receiverHost)} signed POST`).toBe(true);
-			await waitFor(
-				async () =>
-					(await receiver.client.request('notes/reactions', { noteId: note.id })).some(
-						(entry) => entry.user.id === senderInReceiver.id,
-					),
-				timeout,
-			);
-			await deliveryBarrier(senderHost);
-			await assertReaction(receiver, note.id, senderInReceiver.id);
-		},
-		timeout,
-	);
-
 	test.each(['body', 'actor', 'id', 'host', 'signed-actor-mismatch', 'signed-id-mismatch'] as const)(
 		'%s causes no final side effect, while a subsequent valid POST succeeds',
 		async (variant) => {

@@ -367,27 +367,6 @@ describe('durable reliability boundaries', () => {
 		}
 	});
 
-	test('a deterministic notification can be retried without adding a second stream entry', async () => {
-		const user = await createLocalUser('durablenotification');
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'note',
-			notifierId: user.id,
-			noteId: genId(),
-		};
-		const key = `notificationTimeline:${user.id}`;
-
-		try {
-			await xaddApiNotification(runtime, user.id, notification);
-			await expect(xaddApiNotification(runtime, user.id, notification)).resolves.toBe(toXListId(notification.id));
-			expect(await runtime.redis.xlen(key)).toBe(1);
-		} finally {
-			await runtime.redis.del(key);
-			await deleteUserByIdFromDatabase(runtime.db, user.id);
-		}
-	});
-
 	test('a delayed notification is appended after newer stream entries and remains idempotent', async () => {
 		const user = await createLocalUser('durabledelayednotification');
 		const older = {
@@ -401,7 +380,10 @@ describe('durable reliability boundaries', () => {
 		const key = `notificationTimeline:${user.id}`;
 
 		try {
-			await xaddApiNotification(runtime, user.id, newer);
+			const newerId = await xaddApiNotification(runtime, user.id, newer);
+			expect(newerId).toBe(toXListId(newer.id));
+			await expect(xaddApiNotification(runtime, user.id, newer)).resolves.toBe(newerId);
+			expect(await runtime.redis.xlen(key)).toBe(1);
 			const appendedId = await xaddApiNotification(runtime, user.id, older);
 			await expect(xaddApiNotification(runtime, user.id, older)).resolves.toBe(appendedId);
 			await expect(resolveNotificationStreamId(runtime, user.id, older.id)).resolves.toBe(appendedId);

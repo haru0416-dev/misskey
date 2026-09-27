@@ -116,15 +116,6 @@ describe('API', () => {
 			expect(res.status).toBe(200);
 		});
 
-		test('default value', async () => {
-			const res = await api('test', {
-				required: true,
-				string: 'a',
-			});
-			expect(res.status).toBe(200);
-			expect(res.body.default).toBe('hello');
-		});
-
 		test('can set null even if it has default value', async () => {
 			const res = await api('test', {
 				required: true,

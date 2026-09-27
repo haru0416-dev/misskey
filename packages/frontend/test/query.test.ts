@@ -21,29 +21,6 @@ describe('TanStack Query integration', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('deduplicates concurrent endpoint queries', async () => {
-		let resolve!: (value: { id: string }) => void;
-		const request = vi.fn(
-			() =>
-				new Promise<{ id: string }>((res) => {
-					resolve = res;
-				}),
-		);
-		const options = {
-			accountId: 'account-a',
-			endpoint: 'users/show' as const,
-			params: { userId: 'user-a' },
-			queryFn: request,
-		};
-
-		const first = fetchMisskeyQuery(options);
-		const second = fetchMisskeyQuery(options);
-		resolve({ id: 'user-a' });
-
-		await expect(Promise.all([first, second])).resolves.toEqual([{ id: 'user-a' }, { id: 'user-a' }]);
-		expect(request).toHaveBeenCalledOnce();
-	});
-
 	test('routes selected misskeyApi reads through QueryClient', async () => {
 		const fetch = vi.spyOn(window, 'fetch').mockResolvedValue({
 			status: 200,

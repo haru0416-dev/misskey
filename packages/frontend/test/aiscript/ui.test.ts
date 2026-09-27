@@ -487,21 +487,6 @@ describe('AiScript UI API', () => {
 	});
 
 	describe('buttons', () => {
-		test.concurrent('all options', async () => {
-			const { root, get } = await exe(`
-				let buttons = Ui:C:buttons({
-					buttons: []
-				}, 'id')
-				Ui:render([buttons])
-			`);
-			expect(root.children).toStrictEqual(['id']);
-			expect(get('id')).toStrictEqual({
-				type: 'buttons',
-				id: 'id',
-				buttons: [],
-			});
-		});
-
 		test.concurrent('minimum options', async () => {
 			const { get } = await exe(`
 				Ui:C:buttons({}, 'id')

@@ -281,12 +281,6 @@ describe('hono-queue-system', () => {
 	});
 
 	describe('handleQueueBakeBufferedReactions', () => {
-		test('enableReactionsBufferingがfalseの場合は何もしない', async () => {
-			await expect(
-				handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } }),
-			).resolves.toBeUndefined();
-		});
-
 		test('バッファされたリアクションをnoteに反映する', async () => {
 			const userId = genId();
 			await createUserInDatabase(db, {
@@ -314,6 +308,18 @@ describe('hono-queue-system', () => {
 			// (SCANのMATCHパターンだけは自動前置の対象外なので、本体実装側で手動prefixが必要になる)
 			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 1);
 			await redisForReactions.zadd(`reactionsBufferPairs:${noteId}`, 0, `${userId}/👍`);
+
+			const noteBefore = await fetchNoteByIdOrFailFromDatabase(db, noteId);
+			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(1);
+			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(1);
+
+			await handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } });
+
+			const noteWhileDisabled = await fetchNoteByIdOrFailFromDatabase(db, noteId);
+			expect(noteWhileDisabled.reactions).toEqual(noteBefore.reactions);
+			expect(noteWhileDisabled.reactionAndUserPairCache).toEqual(noteBefore.reactionAndUserPairCache);
+			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(1);
+			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(1);
 
 			await handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
 

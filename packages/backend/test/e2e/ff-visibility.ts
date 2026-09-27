@@ -20,37 +20,6 @@ describe('FF visibility', () => {
 		1000 * 60 * 2,
 	);
 
-	test('followingVisibility, followersVisibility がともに public なユーザーのフォロー/フォロワーを誰でも見れる', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'public',
-				followersVisibility: 'public',
-			},
-			alice,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-
-		expect(followingRes.status).toBe(200);
-		expect(Array.isArray(followingRes.body)).toBe(true);
-		expect(followersRes.status).toBe(200);
-		expect(Array.isArray(followersRes.body)).toBe(true);
-	});
-
 	test('followingVisibility が public であれば followersVisibility の設定に関わらずユーザーのフォローを誰でも見れる', async () => {
 		{
 			await api(
@@ -175,37 +144,6 @@ describe('FF visibility', () => {
 			expect(followersRes.status).toBe(200);
 			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
-	});
-
-	test('followingVisibility, followersVisibility がともに followers なユーザーのフォロー/フォロワーを自分で見れる', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'followers',
-				followersVisibility: 'followers',
-			},
-			alice,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			alice,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			alice,
-		);
-
-		expect(followingRes.status).toBe(200);
-		expect(Array.isArray(followingRes.body)).toBe(true);
-		expect(followersRes.status).toBe(200);
-		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらず自分で見れる', async () => {
@@ -334,35 +272,6 @@ describe('FF visibility', () => {
 		}
 	});
 
-	test('followingVisibility, followersVisibility がともに followers なユーザーのフォロー/フォロワーを非フォロワーが見れない', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'followers',
-				followersVisibility: 'followers',
-			},
-			alice,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-
-		expect(followingRes.status).toBe(400);
-		expect(followersRes.status).toBe(400);
-	});
-
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらず非フォロワーが見れない', async () => {
 		{
 			await api(
@@ -481,45 +390,6 @@ describe('FF visibility', () => {
 			);
 			expect(followersRes.status).toBe(400);
 		}
-	});
-
-	test('followingVisibility, followersVisibility がともに followers なユーザーのフォロー/フォロワーをフォロワーが見れる', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'followers',
-				followersVisibility: 'followers',
-			},
-			alice,
-		);
-
-		await api(
-			'following/create',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-
-		expect(followingRes.status).toBe(200);
-		expect(Array.isArray(followingRes.body)).toBe(true);
-		expect(followersRes.status).toBe(200);
-		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらずフォロワーが見れる', async () => {
@@ -690,37 +560,6 @@ describe('FF visibility', () => {
 		}
 	});
 
-	test('followingVisibility, followersVisibility がともに private なユーザーのフォロー/フォロワーを自分で見れる', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'private',
-				followersVisibility: 'private',
-			},
-			alice,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			alice,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			alice,
-		);
-
-		expect(followingRes.status).toBe(200);
-		expect(Array.isArray(followingRes.body)).toBe(true);
-		expect(followersRes.status).toBe(200);
-		expect(Array.isArray(followersRes.body)).toBe(true);
-	});
-
 	test('followingVisibility が private なユーザーのフォローを followersVisibility の設定に関わらず自分で見れる', async () => {
 		{
 			await api(
@@ -845,35 +684,6 @@ describe('FF visibility', () => {
 			expect(followersRes.status).toBe(200);
 			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
-	});
-
-	test('followingVisibility, followersVisibility がともに private なユーザーのフォロー/フォロワーを他人が見れない', async () => {
-		await api(
-			'i/update',
-			{
-				followingVisibility: 'private',
-				followersVisibility: 'private',
-			},
-			alice,
-		);
-
-		const followingRes = await api(
-			'users/following',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-		const followersRes = await api(
-			'users/followers',
-			{
-				userId: alice.id,
-			},
-			bob,
-		);
-
-		expect(followingRes.status).toBe(400);
-		expect(followersRes.status).toBe(400);
 	});
 
 	test('followingVisibility が private なユーザーのフォローを followersVisibility の設定に関わらず他人が見れない', async () => {

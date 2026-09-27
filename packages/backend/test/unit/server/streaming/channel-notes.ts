@@ -50,6 +50,18 @@ function channelMessages(raw: string[]): { id: string; type: string; body: unkno
 		.map((m) => m.body);
 }
 
+function channelNoteIds(raw: string[]): string[] {
+	return channelMessages(raw)
+		.filter((message) => message.type === 'note')
+		.map((message) => {
+			const body = message.body;
+			if (body == null || typeof body !== 'object' || !('id' in body) || typeof body.id !== 'string') {
+				throw new Error('Invalid note stream message');
+			}
+			return body.id;
+		});
+}
+
 // notesStream ハンドラは内部で filterNoteForStreamingHidingForApi 等の実DBクエリを await するため、
 // emit() 呼び出し直後の同期チェックでは間に合わない。条件を満たすまで短時間ポーリングする。
 async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs = 20): Promise<void> {
@@ -74,7 +86,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await runtime.dispose();
 	});
 
-	test('hashtag: マッチするタグの公開ノートを受け取る', async () => {
+	test('hashtag: マッチするタグのみ同じ接続で受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamhashtagviewer');
 		const author = await createTestUser(deps, 'honostreamhashtagauthor');
 		const noteId = genId();
@@ -86,34 +98,16 @@ describe('hono-stream-connection: note filtering channels', () => {
 			visibility: 'public',
 			tags: ['foo'],
 		});
-		const packed = await packNoteForApi(deps, noteId, viewer);
-
-		const connection = new StreamConnection(deps, viewer, null);
-		await connection.init();
-		const subscriber = new EventEmitter();
-		const { raw, send } = collectSentMessages();
-		connection.listen(subscriber, send);
-
-		await connection.connectChannel('conn1', { q: [['foo']] }, 'hashtag', false);
-		subscriber.emit('notesStream', packed);
-		await waitUntil(() => channelMessages(raw).length > 0);
-
-		const messages = channelMessages(raw);
-		expect(messages).toHaveLength(1);
-	});
-
-	test('hashtag: マッチしないタグのノートは受け取らない', async () => {
-		const viewer = await createTestUser(deps, 'honostreamhashtagviewer2');
-		const author = await createTestUser(deps, 'honostreamhashtagauthor2');
-		const noteId = genId();
+		const otherNoteId = genId();
 		await createNoteInDatabase(deps.db, {
-			id: noteId,
+			id: otherNoteId,
 			text: '#bar hello',
 			userId: author.id,
 			userHost: null,
 			visibility: 'public',
 			tags: ['bar'],
 		});
+		const otherPacked = await packNoteForApi(deps, otherNoteId, viewer);
 		const packed = await packNoteForApi(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
@@ -123,10 +117,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { q: [['foo']] }, 'hashtag', false);
+		subscriber.emit('notesStream', otherPacked);
 		subscriber.emit('notesStream', packed);
+		await waitUntil(() => channelNoteIds(raw).includes(noteId));
 		await shortDelay();
 
-		expect(channelMessages(raw)).toHaveLength(0);
+		expect(channelNoteIds(raw)).toEqual([noteId]);
+		connection.dispose();
 	});
 
 	test('hashtag: 問い合わせは正規化して照合する', async () => {
@@ -180,11 +177,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.dispose();
 	});
 
-	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ受け取る', async () => {
+	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ同じ接続で受け取る', async () => {
 		const viewer = await createTestUser(deps, 'honostreamchannelviewer');
 		const author = await createTestUser(deps, 'honostreamchannelauthor');
 		const mkChannelId = genId();
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel', userId: author.id });
+		const otherChannelId = genId();
+		await createChannelInDatabase(deps.db, { id: otherChannelId, name: 'other channel', userId: author.id });
 		const noteId = genId();
 		await createNoteInDatabase(deps.db, {
 			id: noteId,
@@ -194,37 +193,16 @@ describe('hono-stream-connection: note filtering channels', () => {
 			visibility: 'public',
 			channelId: mkChannelId,
 		});
-		const packed = await packNoteForApi(deps, noteId, viewer);
-
-		const connection = new StreamConnection(deps, viewer, null);
-		await connection.init();
-		const subscriber = new EventEmitter();
-		const { raw, send } = collectSentMessages();
-		connection.listen(subscriber, send);
-
-		await connection.connectChannel('conn1', { channelId: mkChannelId }, 'channel', false);
-		subscriber.emit('notesStream', packed);
-		await waitUntil(() => channelMessages(raw).length > 0);
-
-		expect(channelMessages(raw)).toHaveLength(1);
-	});
-
-	test('channel (misskeyチャンネル): 異なるchannelIdのノートは受け取らない', async () => {
-		const viewer = await createTestUser(deps, 'honostreamchannelviewer2');
-		const author = await createTestUser(deps, 'honostreamchannelauthor2');
-		const mkChannelId = genId();
-		const otherChannelId = genId();
-		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel 2', userId: author.id });
-		await createChannelInDatabase(deps.db, { id: otherChannelId, name: 'test channel 3', userId: author.id });
-		const noteId = genId();
+		const otherNoteId = genId();
 		await createNoteInDatabase(deps.db, {
-			id: noteId,
+			id: otherNoteId,
 			text: 'in other channel',
 			userId: author.id,
 			userHost: null,
 			visibility: 'public',
 			channelId: otherChannelId,
 		});
+		const otherPacked = await packNoteForApi(deps, otherNoteId, viewer);
 		const packed = await packNoteForApi(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
@@ -234,10 +212,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { channelId: mkChannelId }, 'channel', false);
+		subscriber.emit('notesStream', otherPacked);
 		subscriber.emit('notesStream', packed);
+		await waitUntil(() => channelNoteIds(raw).includes(noteId));
 		await shortDelay();
 
-		expect(channelMessages(raw)).toHaveLength(0);
+		expect(channelNoteIds(raw)).toEqual([noteId]);
+		connection.dispose();
 	});
 
 	test('userList: リストメンバーの投稿のみ受け取る', async () => {

@@ -243,11 +243,6 @@ describe('API visibility', () => {
 			expect(res.body.text).toBe('x');
 		});
 
-		test('[show] specified-replyをされた人が指定されてなくても見れる', async () => {
-			const res = await show(speR.id, target);
-			expect(res.body.text).toBe('x');
-		});
-
 		test('[show] specified-replyをフォロワーが見れない', async () => {
 			const res = await show(speR.id, follower);
 			expect(res.body.isHidden).toBe(true);

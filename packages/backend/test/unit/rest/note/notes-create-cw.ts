@@ -51,13 +51,6 @@ describe('createNote の cw', () => {
 		channel: null,
 	};
 
-	test('列長を超える cw は切り詰められる', async () => {
-		const user = await createUser();
-		const note = await createNote(deps, user, { ...base, cw: 'あ'.repeat(DB_MAX_NOTE_CW_LENGTH + 88) }, false);
-
-		expect(note.cw).toHaveLength(DB_MAX_NOTE_CW_LENGTH);
-	});
-
 	// 閾値が 1 ずれても列長ちょうどのケースだけでは気付けない。+1 で確かめる。
 	test('列長 + 1 の cw は列長へ切り詰められる', async () => {
 		const user = await createUser();

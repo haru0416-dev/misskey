@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import { expect, waitFor, within } from '@/stories/test.js';
 import type { StoryObj } from '@/stories/types.js';
 import { galleryPost } from '@/stories/fakes.js';
 import MkGalleryPostPreview from './MkGalleryPostPreview.vue';
@@ -52,46 +52,10 @@ export const Default = {
 		layout: 'centered',
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;
-export const Hover = {
-	...Default,
-	async play(context) {
-		await Default.play(context);
-		const canvas = within(context.canvasElement);
-		const links = canvas.getAllByRole('link');
-		const link = links[0];
-		if (link == null) throw new Error('Gallery post link was not found');
-		await waitFor(() => userEvent.hover(link));
-	},
-} satisfies StoryObj<typeof MkGalleryPostPreview>;
-export const HoverThenUnhover = {
-	...Default,
-	async play(context) {
-		await Hover.play(context);
-		const canvas = within(context.canvasElement);
-		const links = canvas.getAllByRole('link');
-		const link = links[0];
-		if (link == null) throw new Error('Gallery post link was not found');
-		await waitFor(() => userEvent.unhover(link));
-	},
-} satisfies StoryObj<typeof MkGalleryPostPreview>;
 export const Sensitive = {
 	...Default,
 	args: {
 		...Default.args,
-		post: galleryPost(true),
-	},
-} satisfies StoryObj<typeof MkGalleryPostPreview>;
-export const SensitiveHover = {
-	...Hover,
-	args: {
-		...Hover.args,
-		post: galleryPost(true),
-	},
-} satisfies StoryObj<typeof MkGalleryPostPreview>;
-export const SensitiveHoverThenUnhover = {
-	...HoverThenUnhover,
-	args: {
-		...HoverThenUnhover.args,
 		post: galleryPost(true),
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;

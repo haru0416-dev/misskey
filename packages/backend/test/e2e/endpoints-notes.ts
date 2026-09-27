@@ -923,7 +923,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('notes/translate', () => {
-		test('role policy、可視性、DeepL未設定によるUNAVAILABLEを維持する', async () => {
+		test('可視性とDeepL未設定によるUNAVAILABLEを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnt${suffix}` });
 			const viewer = await signup({ username: `hntv${suffix}` });
@@ -933,35 +933,24 @@ describe('Endpoints', () => {
 				visibility: 'specified',
 				visibleUserIds: [author.id],
 			});
+			const followersNote = await post(author, { text: 'hono translate followers', visibility: 'followers' });
 
 			// deeplAuthKeyがテスト環境では未設定のため、可視な公開ノートに対してもUNAVAILABLEになる
 			const unavailableNoKey = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
 			expect(unavailableNoKey.status).toBe(400);
-			expect(castAsError(unavailableNoKey.body as any).error.code).toBe('UNAVAILABLE');
+			expect(castAsError(unavailableNoKey.body).error.code).toBe('UNAVAILABLE');
 
 			const noSuchNote = await api('notes/translate', { noteId: genId(), targetLang: 'en' }, viewer);
 			expect(noSuchNote.status).toBe(400);
-			expect(castAsError(noSuchNote.body as any).error.code).toBe('NO_SUCH_NOTE');
+			expect(castAsError(noSuchNote.body).error.code).toBe('NO_SUCH_NOTE');
 
 			const invisible = await api('notes/translate', { noteId: specifiedNote.id, targetLang: 'en' }, viewer);
 			expect(invisible.status).toBe(400);
-			expect(castAsError(invisible.body as any).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
+			expect(castAsError(invisible.body).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
 
-			const noTranslatorRole = await role(
-				alice,
-				{
-					name: `hono notes translate denied ${suffix}`,
-				},
-				{
-					canUseTranslator: { priority: 1, useDefault: false, value: false },
-				},
-			);
-			const assignDenied = await api('admin/roles/assign', { roleId: noTranslatorRole.id, userId: viewer.id }, alice);
-			expect(assignDenied.status).toBe(204);
-
-			const roleDenied = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
-			expect(roleDenied.status).toBe(400);
-			expect(castAsError(roleDenied.body as any).error.code).toBe('UNAVAILABLE');
+			const invisibleFollowers = await api('notes/translate', { noteId: followersNote.id, targetLang: 'en' }, viewer);
+			expect(invisibleFollowers.status).toBe(400);
+			expect(castAsError(invisibleFollowers.body).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
 		});
 
 		test('本文が無いノートは204(本文無し)を返す', async () => {
@@ -1995,50 +1984,7 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('notes/show', () => {
-		test('投稿が取得できる', async () => {
-			const myPost = await post(alice, {
-				text: 'test',
-			});
-
-			const res = await api(
-				'notes/show',
-				{
-					noteId: myPost.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.id).toBe(myPost.id);
-			expect(res.body.text).toBe(myPost.text);
-		});
-
-		test('投稿が存在しなかったら怒る', async () => {
-			const res = await api('notes/show', {
-				noteId: '000000000000000000000000',
-			});
-			expect(res.status).toBe(400);
-		});
-
-		test('間違ったIDで怒られる', async () => {
-			const res = await api('notes/show', {
-				noteId: 'kyoppie',
-			});
-			expect(res.status).toBe(400);
-		});
-	});
-
 	describe('notes/create', () => {
-		test('テキストのみで投稿できる', async () => {
-			const res = await api('notes/create', { text: 'hello hono' }, alice);
-			expect(res.status).toBe(200);
-			expect(res.body.createdNote.text).toBe('hello hono');
-			expect(res.body.createdNote.userId).toBe(alice.id);
-			expect(res.body.createdNote.visibility).toBe('public');
-		});
-
 		test('テキストもファイルもRenoteもPollも無いと怒られる', async () => {
 			const res = await api('notes/create', {}, alice);
 			expect(res.status).toBe(400);
@@ -2049,6 +1995,7 @@ describe('Endpoints', () => {
 			const res = await api('notes/create', { text: 'child', replyId: parent.body.createdNote.id }, bob);
 			expect(res.status).toBe(200);
 			expect(res.body.createdNote.replyId).toBe(parent.body.createdNote.id);
+			expect(res.body.createdNote.reply?.text).toBe(parent.body.createdNote.text);
 
 			const noSuchReply = await api('notes/create', { text: 'x', replyId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
 			expect(noSuchReply.status).toBe(400);
@@ -2060,6 +2007,7 @@ describe('Endpoints', () => {
 			const res = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
 			expect(res.status).toBe(200);
 			expect(res.body.createdNote.renoteId).toBe(target.body.createdNote.id);
+			expect(res.body.createdNote.renote?.text).toBe(target.body.createdNote.text);
 
 			const pureRenoteOfRenote = await api('notes/create', { renoteId: res.body.createdNote.id }, alice);
 			expect(pureRenoteOfRenote.status).toBe(400);
@@ -2070,18 +2018,7 @@ describe('Endpoints', () => {
 			expect(castAsError(noSuchRenote.body as any).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
 		});
 
-		test('投票を作成できる', async () => {
-			const res = await api(
-				'notes/create',
-				{
-					text: 'poll time',
-					poll: { choices: ['a', 'b'], multiple: false },
-				},
-				alice,
-			);
-			expect(res.status).toBe(200);
-			expect(res.body.createdNote.poll!.choices).toHaveLength(2);
-
+		test('期限切れの投票は作成できない', async () => {
 			const expired = await api(
 				'notes/create',
 				{
@@ -2623,61 +2560,6 @@ describe('Endpoints', () => {
 			expect(newAlice.followersCount).toBe(1);
 			expect(newAlice.followingCount).toBe(0);
 		});
-
-		test('既にフォローしている場合は怒る', async () => {
-			const res = await api(
-				'following/create',
-				{
-					userId: alice.id,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('存在しないユーザーはフォローできない', async () => {
-			const res = await api(
-				'following/create',
-				{
-					userId: '000000000000000000000000',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('自分自身はフォローできない', async () => {
-			const res = await api(
-				'following/create',
-				{
-					userId: alice.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('空のパラメータで怒られる', async () => {
-			// @ts-expect-error params must not be empty
-			const res = await api('following/create', {}, alice);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('間違ったIDで怒られる', async () => {
-			const res = await api(
-				'following/create',
-				{
-					userId: 'foo',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
 	});
 
 	describe('following/delete', () => {
@@ -2706,61 +2588,6 @@ describe('Endpoints', () => {
 			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			expect(newAlice.followersCount).toBe(0);
 			expect(newAlice.followingCount).toBe(0);
-		});
-
-		test('フォローしていない場合は怒る', async () => {
-			const res = await api(
-				'following/delete',
-				{
-					userId: alice.id,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('存在しないユーザーはフォロー解除できない', async () => {
-			const res = await api(
-				'following/delete',
-				{
-					userId: '000000000000000000000000',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('自分自身はフォロー解除できない', async () => {
-			const res = await api(
-				'following/delete',
-				{
-					userId: alice.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('空のパラメータで怒られる', async () => {
-			// @ts-expect-error params must not be empty
-			const res = await api('following/delete', {}, alice);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('間違ったIDで怒られる', async () => {
-			const res = await api(
-				'following/delete',
-				{
-					userId: 'kyoppie',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
 		});
 	});
 

@@ -63,7 +63,8 @@ export const Plain = {
 	},
 } satisfies StoryObj<typeof MkMfm>;
 export const Nowrap = {
-	...Default,
+	render: Default.render,
+	parameters: Default.parameters,
 	args: {
 		...Default.args,
 		nowrap: true,

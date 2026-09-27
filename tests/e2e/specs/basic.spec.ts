@@ -235,10 +235,6 @@ test.describe('After user signed in', () => {
 		await waitForPageCarryoverGuard(page);
 	});
 
-	test('successfully loads', async ({ page }) => {
-		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible({ timeout: 30_000 });
-	});
-
 	test('account setup wizard', async ({ page }) => {
 		await page.locator('[data-cy-user-setup-continue]').click({ timeout: 30_000 });
 

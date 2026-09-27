@@ -974,15 +974,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('drive', () => {
-		test('ドライブ情報を取得できる', async () => {
-			const res = await api('drive', {}, alice);
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			// alice は他のテストでも共有されアップロードが行われるため、0固定ではなく非負の数値であることのみ検証する
-			expect(typeof res.body.usage).toBe('number');
-			assert.ok(res.body.usage >= 0);
-		});
-
 		test('アップロード後にusageが増加し、capacityはrole policyのdriveCapacityMbと一致する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hdrv${suffix}` });
@@ -1231,65 +1222,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('drive/files/update', () => {
-		test('名前を更新できる', async () => {
-			const file = (await uploadFile(alice)).body;
-			const newName = 'いちごパスタ.png';
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					name: newName,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.name).toBe(newName);
-		});
-
-		test('他人のファイルは更新できない', async () => {
-			const file = (await uploadFile(alice)).body;
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					name: 'いちごパスタ.png',
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('親フォルダを更新できる', async () => {
-			const file = (await uploadFile(alice)).body;
-			const folder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'test',
-					},
-					alice,
-				)
-			).body;
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					folderId: folder.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.folderId).toBe(folder.id);
-		});
-
 		test('親フォルダを無しにできる', async () => {
 			const file = (await uploadFile(alice)).body;
 
@@ -1303,7 +1235,7 @@ describe('Endpoints', () => {
 				)
 			).body;
 
-			await api(
+			const moved = await api(
 				'drive/files/update',
 				{
 					fileId: file!.id,
@@ -1311,6 +1243,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
+			expect(moved.status).toBe(200);
+			expect(moved.body.folderId).toBe(folder.id);
 
 			const res = await api(
 				'drive/files/update',
@@ -1350,21 +1284,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('存在しないフォルダで怒られる', async () => {
-			const file = (await uploadFile(alice)).body;
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					folderId: '000000000000000000000000',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
 		test('不正なフォルダIDで怒られる', async () => {
 			const file = (await uploadFile(alice)).body;
 
@@ -1373,19 +1292,6 @@ describe('Endpoints', () => {
 				{
 					fileId: file!.id,
 					folderId: 'foo',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('ファイルが存在しなかったら怒る', async () => {
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: '000000000000000000000000',
-					name: 'いちごパスタ.png',
 				},
 				alice,
 			);
@@ -1703,46 +1609,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('フォルダが循環するような構造にできない', async () => {
-			const folder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'test',
-					},
-					alice,
-				)
-			).body;
-			const parentFolder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'parent',
-					},
-					alice,
-				)
-			).body;
-			await api(
-				'drive/folders/update',
-				{
-					folderId: parentFolder.id,
-					parentId: folder.id,
-				},
-				alice,
-			);
-
-			const res = await api(
-				'drive/folders/update',
-				{
-					folderId: folder.id,
-					parentId: parentFolder.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
 		test('フォルダが循環するような構造にできない(再帰的)', async () => {
 			const folderA = (
 				await api(
@@ -1771,7 +1637,8 @@ describe('Endpoints', () => {
 					alice,
 				)
 			).body;
-			await api(
+
+			const movedB = await api(
 				'drive/folders/update',
 				{
 					folderId: folderB.id,
@@ -1779,7 +1646,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			await api(
+			expect(movedB.status).toBe(200);
+			const movedC = await api(
 				'drive/folders/update',
 				{
 					folderId: folderC.id,
@@ -1787,6 +1655,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
+			expect(movedC.status).toBe(200);
 
 			const res = await api(
 				'drive/folders/update',

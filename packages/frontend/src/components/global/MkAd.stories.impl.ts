@@ -83,6 +83,7 @@ const common = {
 		layout: 'centered',
 	},
 } satisfies StoryObj<typeof MkAd>;
+const visual = { render: common.render, parameters: common.parameters };
 export const Square = {
 	...common,
 	args: {
@@ -95,7 +96,7 @@ export const Square = {
 	},
 } satisfies StoryObj<typeof MkAd>;
 export const Horizontal = {
-	...common,
+	...visual,
 	args: {
 		...common.args,
 		specify: {
@@ -106,7 +107,7 @@ export const Horizontal = {
 	},
 } satisfies StoryObj<typeof MkAd>;
 export const HorizontalBig = {
-	...common,
+	...visual,
 	args: {
 		...common.args,
 		specify: {

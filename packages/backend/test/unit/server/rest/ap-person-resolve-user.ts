@@ -25,23 +25,16 @@ describe('resolveUserForApi', () => {
 		await runtime.dispose();
 	});
 
-	test('host=nullの場合はローカルユーザーを解決する', async () => {
+	test('host=null と自ホストは同じローカルユーザーを解決する', async () => {
 		const id = genId();
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
-		const resolved = await resolveUserForApi(deps, username, null);
-		expect(resolved.id).toBe(id);
-		expect(resolved.host).toBeNull();
-	});
-
-	test('hostが自ホストの場合もローカルユーザーを解決する', async () => {
-		const id = genId();
-		const username = `honoresolveuser${id}`;
-		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
-
-		const resolved = await resolveUserForApi(deps, username, runtime.config.runtime.host);
-		expect(resolved.id).toBe(id);
+		for (const host of [null, runtime.config.runtime.host]) {
+			const resolved = await resolveUserForApi(deps, username, host);
+			expect(resolved.id).toBe(id);
+			expect(resolved.host).toBeNull();
+		}
 	});
 
 	test('存在しないローカルユーザーはエラーを投げる', async () => {

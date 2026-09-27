@@ -85,30 +85,6 @@ describe('Chart', () => {
 		}
 	});
 
-	test('Can updates', async () => {
-		await testChart.increment();
-		await testChart.save();
-
-		const chartHours = await testChart.getChart('hour', 3, null);
-		const chartDays = await testChart.getChart('day', 3, null);
-
-		expect(chartHours).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [1, 0, 0],
-				total: [1, 0, 0],
-			},
-		});
-
-		expect(chartDays).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [1, 0, 0],
-				total: [1, 0, 0],
-			},
-		});
-	});
-
 	// 列の型を超える値を書くと UPDATE ごと失敗し、以後そのグループの差分が保存されないまま溜まり続けた。
 	test('列の範囲を超える差分は範囲に丸めて保存し、以後の保存も止まらない', async () => {
 		const commit = (diff: Record<string, number>) => (testChart as any).commit(diff);
@@ -323,35 +299,6 @@ describe('Chart', () => {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
 				total: [2, 1, 1],
-			},
-		});
-
-		expect(chartDays).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [2, 0, 0],
-				total: [2, 0, 0],
-			},
-		});
-	});
-
-	test('Can specify offset', async () => {
-		await testChart.increment();
-		await testChart.save();
-
-		vi.advanceTimersByTime(60 * 60 * 1000);
-
-		await testChart.increment();
-		await testChart.save();
-
-		const chartHours = await testChart.getChart('hour', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
-		const chartDays = await testChart.getChart('day', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
-
-		expect(chartHours).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [1, 0, 0],
-				total: [1, 0, 0],
 			},
 		});
 

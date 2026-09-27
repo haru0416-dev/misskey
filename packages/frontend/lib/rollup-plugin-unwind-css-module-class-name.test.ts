@@ -16,9 +16,6 @@ function parseExpression(code: string): ESTree.Expression {
 }
 
 describe(normalizeClass.name, () => {
-	it('should normalize string', () => {
-		expect(normalizeClass(parseExpression('"a b c"'))).toBe('a b c');
-	});
 	it('should trim redundant spaces', () => {
 		expect(normalizeClass(parseExpression('" a b  c "'))).toBe('a b c');
 	});

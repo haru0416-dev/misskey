@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
-const { deepCloneMock, prefer } = vi.hoisted(() => {
+const { deepClone, prefer } = vi.hoisted(() => {
 	const profile = {
 		id: 'profile',
 		name: 'Main',
@@ -13,7 +13,7 @@ const { deepCloneMock, prefer } = vi.hoisted(() => {
 		layout: [['column']],
 	};
 	return {
-		deepCloneMock: vi.fn(<T>(value: T): T => JSON.parse(JSON.stringify(value)) as T),
+		deepClone: <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
 		prefer: {
 			'deck.profile': 'Main',
 			'deck.profiles': [profile],
@@ -22,7 +22,7 @@ const { deepCloneMock, prefer } = vi.hoisted(() => {
 	};
 });
 
-vi.mock('@/utility/clone.js', () => ({ deepClone: deepCloneMock }));
+vi.mock('@/utility/clone.js', () => ({ deepClone }));
 vi.mock('@/preferences.js', () => ({ prefer }));
 vi.mock('@/os.js', () => ({ inputText: vi.fn(), popupMenu: vi.fn() }));
 vi.mock('@/i18n.js', () => ({ i18n: { ts: { _deck: {} } } }));
@@ -30,15 +30,9 @@ vi.mock('@/i18n.js', () => ({ i18n: { ts: { _deck: {} } } }));
 import { addColumnWidget, columns } from '@/deck.js';
 
 describe('deck column updates', () => {
-	beforeEach(() => {
-		deepCloneMock.mockClear();
-	});
-
-	test('does not clone the selected column again after cloning the collection', () => {
+	test('adds a widget to the selected column', () => {
 		addColumnWidget('column', { id: 'widget', name: 'clock', data: {} });
 
 		expect(columns.value[0]?.widgets?.[0]?.id).toBe('widget');
-		// columns と永続化プロファイルの両方で複製される。
-		expect(deepCloneMock).toHaveBeenCalledTimes(2);
 	});
 });

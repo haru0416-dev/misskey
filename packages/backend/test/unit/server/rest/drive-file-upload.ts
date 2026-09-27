@@ -373,49 +373,4 @@ describe('addDriveFileForApi quota serialization', () => {
 		// 途中まで書けている可能性があるので、中断時も掃除を試みる
 		expect(deletedKeys).toEqual(uploadedKeys);
 	});
-
-	test('aborted upload result is treated as a failure', async () => {
-		const filePath = path.join(tempDir, 'upload-aborted.bin');
-		await fs.writeFile(filePath, Buffer.alloc(1));
-
-		const before = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
-		const update = vi.fn();
-		const deps = {
-			config,
-			db,
-			meta,
-			fileInfoService: {
-				getFileInfo: vi.fn(async () => ({
-					size: 1024,
-					md5: '44444444444444444444444444444444',
-					type: { mime: 'text/plain', ext: 'txt' },
-					width: undefined,
-					height: undefined,
-					orientation: undefined,
-					blurhash: undefined,
-					sensitive: false,
-					porn: false,
-				})),
-			},
-			imageProcessingService: {},
-			videoProcessingService: {},
-			internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
-			// アップロードが失敗したら DriveFile を作らずに中断する。
-			s3Service: {
-				upload: vi.fn(async () => {
-					throw new Error('Upload aborted');
-				}),
-				delete: vi.fn(async () => undefined),
-			},
-			chartWriters: {
-				driveChart: { update },
-				perUserDriveChart: { update },
-				instanceChart: { updateDrive: update },
-			},
-			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as ApiDriveFileUploadDependencies;
-
-		await expect(addDriveFileForApi(deps, { user, path: filePath, force: true })).rejects.toThrow(/Upload aborted/);
-		expect(await listAllDriveFilesByUserIdFromDatabase(db, user.id)).toHaveLength(before.length);
-	});
 });

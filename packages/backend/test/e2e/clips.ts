@@ -225,7 +225,6 @@ describe('クリップ', () => {
 
 	const createClipAllowedPattern = [
 		{ label: 'nameが最大長', parameters: { name: 'x'.repeat(100) } },
-		{ label: 'private', parameters: { isPublic: false } },
 		{ label: 'public', parameters: { isPublic: true } },
 		{ label: 'descriptionがnull', parameters: { description: null } },
 		{ label: 'descriptionが最大長', parameters: { description: 'a'.repeat(2048) } },
@@ -476,6 +475,7 @@ describe('クリップ', () => {
 			userId: alice.id,
 		});
 		expect(res).toStrictEqual([]);
+		expect(await usersClips({ userId: 'xxxxxxx' })).toStrictEqual([]);
 	});
 
 	test.each([{ label: '' }, { label: '他人アカウントから', user: () => bob }])('の一覧が$label取得できる', async () => {
@@ -492,22 +492,17 @@ describe('クリップ', () => {
 		}
 	});
 
-	test.each([
-		{ label: '未認証', user: () => undefined },
-		{ label: '存在しないユーザーのもの', parameters: { userId: 'xxxxxxx' } },
-	])('の一覧は$labelでも取得できる', async ({ parameters, user }) => {
+	test('の一覧は未認証でも取得できる', async () => {
 		const clips = await createMany({ isPublic: true });
 		const res = await usersClips(
 			{
 				userId: alice.id,
 				limit: clips.length,
-				...parameters,
 			},
-			{
-				user: (user ?? (() => alice))(),
-			},
+			{ user: undefined },
 		);
 
+		expect(res.map((clip) => clip.id).sort()).toStrictEqual(clips.map((clip) => clip.id).sort());
 		for (const clip of res) {
 			expect('isFavorited' in clip).toBe(false);
 		}

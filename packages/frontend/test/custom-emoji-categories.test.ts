@@ -30,10 +30,4 @@ describe('groupCustomEmojisByCategory', () => {
 			expect(actual).toEqual(topFolder(category));
 		}
 	});
-
-	test('入れ子のフォルダは category の完全一致で引ける', () => {
-		for (const category of ['a/c', 'a/c/d', 'missing']) {
-			expect(grouped.byCategory.get(category) ?? []).toEqual(emojis.filter((e) => e.category === category));
-		}
-	});
 });

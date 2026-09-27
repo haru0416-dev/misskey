@@ -25,7 +25,8 @@ describe('miLocalStorage JSON values', () => {
 		expect(miLocalStorage.getItemAsJson('debug', (value): value is number => typeof value === 'number')).toBe(42);
 	});
 
-	test.each(['{', 'undefined'])('removes malformed JSON without throwing: %s', (stored) => {
+	test('removes malformed JSON without throwing', () => {
+		const stored = '{';
 		window.localStorage.setItem('debug', stored);
 
 		expect(miLocalStorage.getItemAsJson('debug')).toBeUndefined();

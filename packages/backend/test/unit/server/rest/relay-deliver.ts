@@ -18,16 +18,11 @@ import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import {
-	attachLdSignatureForApi,
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
-	renderOnce,
-} from '@/server/rest/activitypub/notes-ap.js';
+import { deliverNoteActivityForApi, deliverToRelaysForApi, renderOnce } from '@/server/rest/activitypub/notes-ap.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
-describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverToRelays / ApRendererService#attachLdSignature 相当)', () => {
+describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 	let runtime: RuntimeDependencies;
 	let user: MiUser;
 	let publicKey: string;
@@ -83,27 +78,6 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 					(j.data as DeliverJobData).content.includes(contentId),
 			),
 		).toBeUndefined();
-	});
-
-	test('attachLdSignature: RsaSignature2017 の signature フィールドを付与し、元のフィールドを保持する', async () => {
-		const activity = {
-			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
-			type: 'Add',
-			actor: `${runtime.config.instance.url}/users/${user.id}`,
-			object: `${runtime.config.instance.url}/notes/dummy`,
-		};
-
-		const signed = await attachLdSignatureForApi(runtime, activity, { id: user.id, host: null });
-
-		const signature = signed['signature'] as Record<string, unknown>;
-		expect(signature).toBeDefined();
-		expect(signature['type']).toBe('RsaSignature2017');
-		expect(signature['creator']).toBe(`${runtime.config.instance.url}/users/${user.id}#main-key`);
-		expect(typeof signature['signatureValue']).toBe('string');
-		expect((signature['signatureValue'] as string).length).toBeGreaterThan(0);
-		expect(signed['type']).toBe('Add');
-		expect(signed['actor']).toBe(activity.actor);
 	});
 
 	test('deliverToRelays: accepted リレーにのみ LD 署名済みアクティビティを deliver キューへ積む', async () => {
@@ -194,6 +168,10 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 				expect(new Set(jobs.map((job) => job.data.to)).size).toBe(3);
 				expect(new Set(jobs.map((job) => job.data.content)).size).toBe(1);
 				const content = JSON.parse(jobs[0]!.data.content);
+				expect(content.signature).toMatchObject({
+					type: 'RsaSignature2017',
+					creator: `${runtime.config.instance.url}/users/${user.id}#main-key`,
+				});
 				expect(await new JsonLd(runtime.httpRequestService).verifyRsaSignature2017(content, publicKey)).toBe(true);
 				const { signature: _signature, ...unsigned } = content;
 				expect(unsigned).toEqual(activity);

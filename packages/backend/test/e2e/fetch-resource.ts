@@ -240,11 +240,6 @@ describe('Webリソース', () => {
 				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 			});
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
-				await ok({
-					path: path('xxxxxxxxxx'),
-					type: HTML,
-				}));
 			test('はHTMLとしてGETできる。(リモートユーザーでもリダイレクトせず)', async () => {
 				const res = await ok({
 					path: path(remoteUserAcct),
@@ -254,6 +249,12 @@ describe('Webリソース', () => {
 				expect(res.location).toBeNull();
 			});
 		});
+
+		test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+				type: HTML,
+			}));
 
 		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
@@ -326,12 +327,12 @@ describe('Webリソース', () => {
 				expect(res.status).toBe(302);
 				expect(res.location).toBe(`/@${alice.username}`);
 			});
-
-			test('は存在しないユーザーはGETできない。', async () =>
-				await notFound({
-					path: path('xxxxxxxx'),
-				}));
 		});
+
+		test('は存在しないユーザーはGETできない。', async () =>
+			await notFound({
+				path: path('xxxxxxxx'),
+			}));
 
 		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
@@ -419,12 +420,12 @@ describe('Webリソース', () => {
 				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 				expect(metaTag(res, 'misskey:note-id')).toBe(alicesPost.id);
 			});
-
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
-				await ok({
-					path: path('xxxxxxxxxx'),
-				}));
 		});
+
+		test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 
 		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
