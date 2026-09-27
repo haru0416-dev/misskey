@@ -93,7 +93,3 @@ jobs:
         with:
           name: federation-${{ matrix.peer }}-${{ github.sha }}
           path: packages/backend/test-federation/results/
-      - name: Stop isolated peers
-        if: always()
-        working-directory: packages/backend/test-federation
-        run: docker compose down --volumes
