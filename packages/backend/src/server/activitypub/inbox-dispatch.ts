@@ -454,7 +454,7 @@ async function announceNoteFromApForApi(
 
 		await createNote(deps, actor, data, false);
 	} finally {
-		unlock();
+		await unlock();
 	}
 }
 
@@ -546,7 +546,7 @@ async function createNoteWithLockFromApForApi(
 		}
 		throw err;
 	} finally {
-		unlock();
+		await unlock();
 	}
 }
 
@@ -629,7 +629,7 @@ async function deleteNoteFromApForApi(deps: ApiInboxDependencies, actor: MiRemot
 		await deleteNoteForApi(deps, actor, note);
 		return 'ok: note deleted';
 	} finally {
-		unlock();
+		await unlock();
 	}
 }
 
