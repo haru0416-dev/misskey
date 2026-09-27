@@ -42,7 +42,7 @@ jobs:
       COMPOSE_FILE: compose.matrix.yml
       COMPOSE_PROJECT_NAME: federation-${{ matrix.peer }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           submodules: true
       - name: Setup Bun
@@ -50,28 +50,37 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-      - name: Install FFmpeg
-        run: sudo apt install -y ffmpeg
-      - name: Build Misskey
-        run: |
-          bun install --frozen-lockfile
-          bun run --filter slacc build
-          bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
+      # サーバーはコンテナ内の oven/bun で動くため、ランナーへの FFmpeg の導入は不要。
       - name: Setup
         run: |
           echo "BUN_VERSION=$(cat .bun-version)" >> "$GITHUB_ENV"
           cd packages/backend/test-federation
           bash ./setup.sh
           sudo chmod 644 ./certificates/*.test.key
+      # 相手のイメージの取得 (upstream は約 40 秒) をビルドと並行させる。起動の直前で終わりを待つ。
+      - name: Pull peer images in the background
+        working-directory: packages/backend/test-federation
+        run: |
+          nohup docker compose pull --quiet > results/pull.log 2>&1 &
+          echo $! > results/pull.pid
+      - name: Build Misskey
+        run: |
+          bun install --frozen-lockfile
+          bun run --filter slacc build
+          bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Start isolated peers
         working-directory: packages/backend/test-federation
-        run: docker compose up -d --wait --wait-timeout 240 --scale tester=0
+        run: |
+          pid=$(cat results/pull.pid)
+          while kill -0 "$pid" 2> /dev/null; do sleep 1; done
+          cat results/pull.log
+          docker compose up -d --wait --wait-timeout 240 --scale tester=0
       - name: Record resolved peers
         working-directory: packages/backend/test-federation
         run: |
