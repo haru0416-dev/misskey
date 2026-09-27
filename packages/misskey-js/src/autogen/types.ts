@@ -19829,6 +19829,7 @@ export interface operations {
                     folderId?: string | null;
                     type?: string | null;
                     sort?: ('+createdAt' | '-createdAt' | '+name' | '-name' | '+size' | '-size') | null;
+                    offset?: number;
                 };
             };
         };

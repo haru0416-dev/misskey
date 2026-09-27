@@ -61,26 +61,27 @@ function driveFilePaginationCondition(options: {
 	return sql`TRUE`;
 }
 
+// 名前・サイズ順は同じ値が並ぶので、ID を 2 番目の鍵にして offset で読むページの境目を揺らさない。
 function driveFilePaginationOrder(options: {
 	sinceId?: MiDriveFile['id'] | null;
 	untilId?: MiDriveFile['id'] | null;
 	sort?: DriveFileListSort;
-}): SQL {
+}): SQL[] {
 	switch (options.sort) {
 		case '+createdAt':
-			return desc(driveFile.id);
+			return [desc(driveFile.id)];
 		case '-createdAt':
-			return asc(driveFile.id);
+			return [asc(driveFile.id)];
 		case '+name':
-			return desc(driveFile.name);
+			return [desc(driveFile.name), desc(driveFile.id)];
 		case '-name':
-			return asc(driveFile.name);
+			return [asc(driveFile.name), asc(driveFile.id)];
 		case '+size':
-			return desc(driveFile.size);
+			return [desc(driveFile.size), desc(driveFile.id)];
 		case '-size':
-			return asc(driveFile.size);
+			return [asc(driveFile.size), asc(driveFile.id)];
 		default:
-			return options.sinceId && !options.untilId ? asc(driveFile.id) : desc(driveFile.id);
+			return [options.sinceId && !options.untilId ? asc(driveFile.id) : desc(driveFile.id)];
 	}
 }
 
@@ -298,9 +299,14 @@ export async function listDriveFilesForUserFromDatabase(
 		folderId?: MiDriveFile['folderId'] | undefined;
 		type?: MiDriveFile['type'] | null;
 		sort?: DriveFileListSort;
+		/** 名前・サイズ順の続き。ID の範囲はこの並びと関係が無いので、指定したら sinceId / untilId は見ない。 */
+		offset?: number;
 	},
 ): Promise<MiDriveFile[]> {
-	const conditions: SQL[] = [driveFilePaginationCondition(params), eq(driveFile.userId, params.userId)];
+	const conditions: SQL[] = [
+		params.offset == null ? driveFilePaginationCondition(params) : sql`TRUE`,
+		eq(driveFile.userId, params.userId),
+	];
 
 	if (params.folderId !== undefined) {
 		conditions.push(params.folderId == null ? isNull(driveFile.folderId) : eq(driveFile.folderId, params.folderId));
@@ -318,8 +324,9 @@ export async function listDriveFilesForUserFromDatabase(
 		.select()
 		.from(driveFile)
 		.where(and(...conditions))
-		.orderBy(driveFilePaginationOrder(params))
-		.limit(params.limit);
+		.orderBy(...driveFilePaginationOrder(params))
+		.limit(params.limit)
+		.offset(params.offset ?? 0);
 
 	return rows.map((row) => deserializeDriveFile(row));
 }
@@ -382,7 +389,7 @@ export async function listDriveFilesForAdminFromDatabase(
 		.select()
 		.from(driveFile)
 		.where(and(...conditions))
-		.orderBy(driveFilePaginationOrder(params))
+		.orderBy(...driveFilePaginationOrder(params))
 		.limit(params.limit);
 
 	return rows.map((row) => deserializeDriveFile(row));

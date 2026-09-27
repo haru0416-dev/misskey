@@ -163,4 +163,21 @@ describe('Paginator', () => {
 
 		expect(paginator.canFetchOlder.value).toBe(true);
 	});
+
+	test('offsetMode を関数で渡すと、取得のたびに ID と件数のどちらで続きを取るか決め直す', async () => {
+		let useOffset = false;
+		misskeyApiMock.mockResolvedValue([item('b'), item('a')]);
+		const paginator = createPaginator({ limit: 2, offsetMode: () => useOffset });
+		await paginator.init();
+
+		await paginator.fetchOlder();
+		expect(misskeyApiMock.mock.lastCall?.[1]).toMatchObject({ untilId: 'a' });
+		expect(misskeyApiMock.mock.lastCall?.[1]).not.toHaveProperty('offset');
+
+		useOffset = true;
+		await paginator.reload();
+		await paginator.fetchOlder();
+		expect(misskeyApiMock.mock.lastCall?.[1]).toMatchObject({ offset: 2 });
+		expect(misskeyApiMock.mock.lastCall?.[1]).not.toHaveProperty('untilId');
+	});
 });

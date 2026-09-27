@@ -188,7 +188,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-import { alertDriveMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
+import { alertDriveMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder, moveDriveFolderToFolder, requestUploadFromUrl, selectDriveFolder } from '@/features/drive/drive.js';
 import { store } from '@/store.js';
 import { makeDateGroupedTimelineComputedRef } from '@/features/notes/timeline-date-separate.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
@@ -282,6 +282,8 @@ const filesPaginator = markRaw(
 	new Paginator('drive/files', {
 		limit: 30,
 		canFetchDetection: 'limit',
+		// 名前・サイズ順では ID のカーソルが並びの続きを表さないので、読んだ件数で続きを取る。
+		offsetMode: () => !['-createdAt', '+createdAt'].includes(sortModeSelect.value),
 		params: () => ({
 			// 自動でリロードしたくないためcomputedParamsは使わない
 			folderId: folder.value ? folder.value.id : null,
@@ -339,6 +341,14 @@ function onStreamDriveFileCreated(file: Misskey.entities.DriveFile) {
 	// 一覧は種類で絞り込めるので、絞り込みと合わない新着を差し込まない。
 	// 差し込むと「画像だけ」の表示に動画が混ざる。
 	if (effectiveType.value != null && !matchesTypeFilter(file.type, effectiveType.value)) {
+		return;
+	}
+	// 古い順では新着は末尾に並ぶ。先頭に差し込むと並びが崩れ、一覧の上限で切り詰めた分を読み直す手段も無い。
+	// 末尾まで読み終えているときだけ足し、続きがあるなら続きの取得に任せる。
+	if (sortModeSelect.value === '-createdAt') {
+		if (!filesPaginator.canFetchNewer.value) {
+			filesPaginator.pushItems([file]);
+		}
 		return;
 	}
 	filesPaginator.prepend(file);
@@ -460,15 +470,8 @@ async function urlUpload() {
 		return;
 	}
 
-	await os.apiWithDialog('drive/files/upload-from-url', {
-		url,
-		...(folder.value == null ? {} : { folderId: folder.value.id }),
-	});
-
-	os.alert({
-		title: i18n.ts.uploadFromUrlRequested,
-		text: i18n.ts.uploadFromUrlMayTakeTime,
-	});
+	// 保存されたファイルは drive チャンネルの fileCreated で一覧に入る。失敗の表示は requestUploadFromUrl が行う。
+	await requestUploadFromUrl(url, folder.value?.id ?? null).catch(() => {});
 }
 
 async function createFolder() {

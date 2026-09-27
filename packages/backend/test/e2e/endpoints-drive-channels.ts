@@ -993,6 +993,35 @@ describe('Endpoints', () => {
 		});
 	});
 
+	describe('drive/files の並び替え', () => {
+		test('名前順は offset で続きを読み、全件を名前順に 1 回ずつ返す', async () => {
+			const owner = await signup({ username: `hdsort${Date.now().toString(36)}` });
+			const names = Array.from({ length: 15 }, () => randomUUID().slice(0, 8));
+			for (const name of names) {
+				const md5 = createHash('md5').update(`${owner.id}-${name}`).digest('hex');
+				await createDriveFileInDatabase(db, {
+					id: genId(),
+					userId: owner.id,
+					userHost: null,
+					md5,
+					name,
+					type: 'image/png',
+					size: 11,
+					storedInternal: true,
+					url: `${origin}/files/${md5}`,
+				});
+			}
+
+			const page = async (offset: number) => {
+				const res = await api('drive/files', { sort: '+name', limit: 10, offset }, owner);
+				expect(res.status).toBe(200);
+				return (res.body as { name: string }[]).map((file) => file.name);
+			};
+			const listed = [...(await page(0)), ...(await page(10))];
+			expect(listed).toEqual([...names].sort().reverse());
+		});
+	});
+
 	describe('drive/files/create', () => {
 		const assignRole = async (userId: string, policies: Record<string, unknown>) => {
 			const createdRole = await role(alice, {}, policies);

@@ -76,6 +76,8 @@ export const driveFilesParamDef = z.object({
 		.nullable()
 		.optional(),
 	sort: z.union([z.enum(['+createdAt', '-createdAt', '+name', '-name', '+size', '-size']), z.null()]).optional(),
+	// 名前・サイズ順の続きを読むときに使う (ID のカーソルはその並びの続きを表さない)。
+	offset: z.int().min(0).optional(),
 });
 
 export async function handleApiDriveFilesList(
@@ -95,6 +97,7 @@ export async function handleApiDriveFilesList(
 			folderId: params.folderId,
 			type: params.type,
 			sort: params.sort ?? undefined,
+			offset: params.offset,
 		}),
 	);
 

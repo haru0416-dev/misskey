@@ -59,6 +59,9 @@ export interface MainEventTypes {
 		marker?: string | null;
 		file: Packed<'DriveFile'>;
 	};
+	urlUploadFailed: {
+		marker?: string | null;
+	};
 	readAllNotifications: undefined;
 	notificationFlushed: undefined;
 	unreadNotification: Packed<'Notification'>;
