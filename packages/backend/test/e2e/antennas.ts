@@ -557,6 +557,31 @@ describe('アンテナ', () => {
 			expect(otherResponse).toStrictEqual([removedNote, remainingNote]);
 		});
 
+		test('新しいノートがミュートで全部落ちても、古いノートでページを埋める', async () => {
+			const keyword = `ミュート越し${Date.now().toString(36)}`;
+			const antenna = await successfulApiCall({
+				endpoint: 'antennas/create',
+				parameters: { ...defaultParam, keywords: [[keyword]] },
+				user: alice,
+			});
+			const olderNotes = [];
+			for (let i = 0; i < 5; i++) olderNotes.push(await post(bob, { text: `${keyword} older ${i}` }));
+			for (let i = 0; i < 10; i++) await post(carol, { text: `${keyword} newer ${i}` });
+			await waitForAntennaNotes(alice, antenna.id, 15);
+
+			await successfulApiCall({ endpoint: 'mute/create', parameters: { userId: carol.id }, user: alice });
+			try {
+				const response = await successfulApiCall({
+					endpoint: 'antennas/notes',
+					parameters: { antennaId: antenna.id, limit: 5 },
+					user: alice,
+				});
+				expect(response.map((note) => note.id)).toEqual(olderNotes.map((note) => note.id).reverse());
+			} finally {
+				await successfulApiCall({ endpoint: 'mute/delete', parameters: { userId: carol.id }, user: alice });
+			}
+		});
+
 		test('から存在しないノートを削除しても成功すること。', async () => {
 			const antenna = await successfulApiCall({
 				endpoint: 'antennas/create',

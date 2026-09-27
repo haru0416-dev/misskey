@@ -1397,6 +1397,36 @@ describe('Endpoints', () => {
 			}
 		});
 
+		test('新しい注目の投稿がミュートで全部落ちても、古い投稿でページを埋める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const viewer = await signup({ username: `hnffm${suffix}` });
+			const muted = await signup({ username: `hnffmm${suffix}` });
+			const other = await signup({ username: `hnffmo${suffix}` });
+			const channelId = genId();
+			const create = async (userId: string, i: number) => {
+				const id = genId(Date.now() - (20 - i) * 1000);
+				await createNoteInDatabase(db, { id, text: 'featured', userId, userHost: null, visibility: 'public' });
+				return id;
+			};
+			const olderIds = [];
+			for (let i = 0; i < 5; i++) olderIds.push(await create(other.id, i));
+			const newerIds = [];
+			for (let i = 5; i < 15; i++) newerIds.push(await create(muted.id, i));
+			await api('mute/create', { userId: muted.id }, viewer);
+
+			const redis = createRedisClient(fixtureConfig);
+			const windowKey = `featuredInChannelNotesRanking:${channelId}:${Math.floor((Date.now() - new Date('2023-01-01T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24 * 3))}`;
+			try {
+				await redis.zadd(windowKey, ...[...olderIds, ...newerIds].flatMap((id) => [1, id]));
+				const featured = await api('notes/featured', { channelId, limit: 5 }, viewer);
+				expect(featured.status).toBe(200);
+				expect((featured.body as { id: string }[]).map((note) => note.id)).toEqual([...olderIds].reverse());
+			} finally {
+				await redis.del(windowKey);
+				await closeRedisConnection(redis);
+			}
+		});
+
 		test('他人のリアクションとリノートで注目の投稿に入る', { timeout: 120_000 }, async () => {
 			// 数えるのは反応の 30% だけなので、30 人分で外れ続ける確率を 0.7^30 (約 0.002%) まで下げる。
 			const suffix = Date.now().toString(36).slice(-6);

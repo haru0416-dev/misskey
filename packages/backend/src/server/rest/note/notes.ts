@@ -72,6 +72,7 @@ import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { GLOBAL_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
 export type ApiNotesDependencies = ApiNoteDependencies &
 	ApiNotificationDependencies & {
@@ -668,7 +669,6 @@ export async function handleApiNotesFeatured(
 	if (params.untilId) {
 		noteIds = noteIds.filter((id) => id < params.untilId!);
 	}
-	noteIds = noteIds.slice(0, params.limit);
 
 	if (noteIds.length === 0) {
 		return [];
@@ -683,17 +683,11 @@ export async function handleApiNotesFeatured(
 	const mutedSet = new Set(mutedByMe);
 	const blockedSet = new Set(blockedByOthers);
 
-	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter((note) => {
-		if (me && isUserRelated(note, blockedSet)) {
-			return false;
-		}
-		if (me && isUserRelated(note, mutedSet)) {
-			return false;
-		}
-		return true;
-	});
-
-	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
+	const notes = await collectFilteredInOrder(noteIds, params.limit, async (ids) =>
+		(await listFeaturedNotesByIdsFromDatabase(deps.db, ids, deps.meta.blockedHosts)).filter(
+			(note) => !(me && (isUserRelated(note, blockedSet) || isUserRelated(note, mutedSet))),
+		),
+	);
 
 	return await packNoteManyForApi(deps, notes, me);
 }

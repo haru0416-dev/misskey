@@ -34,7 +34,7 @@ import { packNoteManyForApi } from '../note/note.js';
 import type { ApiNoteDependencies } from '../note/note.js';
 import { packUserDetailedManyForApi } from '../user/user.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
-import { listRedisListTimelineNoteIds } from '../note/redis-list-timeline.js';
+import { collectRedisListTimelineNotes } from '../note/redis-list-timeline.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
@@ -185,25 +185,26 @@ export async function handleApiRolesNotes(
 		return [];
 	}
 
-	const noteIds = await listRedisListTimelineNoteIds(deps.redis, `list:roleTimeline:${role.id}`, {
-		sinceId,
-		untilId,
-		limit: params.limit,
-	});
-
-	if (noteIds.length === 0) {
-		return [];
-	}
-
-	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
-
-	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
-		ids: noteIds,
-		me,
-		blockedHosts: deps.meta.blockedHosts,
-		publicOnly: true,
-		mutingChannelIds,
-	});
+	// 候補が無ければ絞り込みを呼ばないので、ミュートの一覧もそのときまで読まない。
+	let mutingChannelIds: string[] | undefined;
+	const notes = await collectRedisListTimelineNotes(
+		deps.redis,
+		`list:roleTimeline:${role.id}`,
+		{ sinceId, untilId, limit: params.limit },
+		async (ids) =>
+			await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
+				ids,
+				me,
+				blockedHosts: deps.meta.blockedHosts,
+				publicOnly: true,
+				mutingChannelIds: (mutingChannelIds ??= await listActiveMutedChannelIdsByUserIdFromDatabase(
+					deps.db,
+					me.id,
+					new Date(),
+				)),
+			}),
+	);
+	// sinceId だけの指定でも新しい順で返す (このエンドポイントの従来の並び)。
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
 	return await packNoteManyForApi(deps, notes, me);

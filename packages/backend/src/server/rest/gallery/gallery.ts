@@ -52,6 +52,7 @@ import {
 	incrementFeaturedRanking,
 	readFeaturedRanking,
 } from '@/core/featured/FeaturedRanking.js';
+import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
 export type ApiGalleryDependencies = ApiDriveFileDependencies &
 	ApiRolePolicyDependencies & {
@@ -188,13 +189,13 @@ export async function handleApiGalleryFeatured(
 	if (params.untilId) {
 		postIds = postIds.filter((id) => id < params.untilId!);
 	}
-	postIds = postIds.slice(0, params.limit);
 
-	if (postIds.length === 0) {
-		return [];
-	}
-
-	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
+	// 削除済みの投稿の分を後ろの候補で埋め、新しい順を保つ (listGalleryPostsByIdsFromDatabase は順序を保証しない)。
+	const posts = await collectFilteredInOrder(
+		postIds,
+		params.limit,
+		async (ids) => await listGalleryPostsByIdsFromDatabase(deps.db, ids),
+	);
 	return await packGalleryPostsManyForApi(deps, posts, me);
 }
 
