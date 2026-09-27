@@ -34,6 +34,58 @@ describe('NoteStore renote filtering', () => {
 		await runtime.dispose();
 	});
 
+	test('ユーザーのタイムラインは withReplies が false なら他人への返信だけを除く', async () => {
+		const createUser = async () => {
+			const id = genId();
+			return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+				user: { id, username: `replies${id}`, usernameLower: `replies${id}` },
+				profile: { userId: id },
+			});
+		};
+		const [user, other] = await Promise.all([createUser(), createUser()]);
+		const note = (id: string, values: { replyId?: string; replyUserId?: string } = {}) =>
+			createNoteInDatabase(runtime.db, {
+				id,
+				userId: user.id,
+				userHost: null,
+				visibility: 'public',
+				text: 'x',
+				...values,
+			});
+		const otherNoteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: otherNoteId,
+			userId: other.id,
+			userHost: null,
+			visibility: 'public',
+			text: 'x',
+		});
+		const [plainId, selfReplyId, otherReplyId] = [genId(), genId(), genId()];
+		await note(plainId);
+		await note(selfReplyId, { replyId: plainId, replyUserId: user.id });
+		await note(otherReplyId, { replyId: otherNoteId, replyUserId: other.id });
+
+		const list = async (withReplies: boolean) =>
+			(
+				await listUserTimelineNotesFromDatabase(runtime.db, {
+					userId: user.id,
+					limit: 20,
+					withChannelNotes: false,
+					withFiles: false,
+					withRenotes: true,
+					withReplies,
+					me: null,
+					blockedHosts: [],
+					mutingChannelIds: [],
+				})
+			)
+				.map((row) => row.id)
+				.sort();
+
+		expect(await list(false)).toEqual([plainId, selfReplyId].sort());
+		expect(await list(true)).toEqual([plainId, selfReplyId, otherReplyId].sort());
+	});
+
 	test('treats CW-only and reply-only renotes as quotes in database queries', async () => {
 		const userId = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
@@ -114,6 +166,7 @@ describe('NoteStore renote filtering', () => {
 			withChannelNotes: false,
 			withFiles: false,
 			withRenotes: false,
+			withReplies: false,
 			me: null,
 			blockedHosts: [],
 			mutingChannelIds: [],

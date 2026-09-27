@@ -1433,6 +1433,7 @@ export async function handleApiUsersNotes(
 			withChannelNotes: params.withChannelNotes,
 			withFiles: params.withFiles,
 			withRenotes: params.withRenotes,
+			withReplies: params.withReplies,
 			me: me ?? null,
 			blockedHosts: deps.meta.blockedHosts,
 			mutingChannelIds: viewerRelation?.mutedChannelIds ?? [],
