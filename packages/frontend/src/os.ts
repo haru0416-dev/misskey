@@ -47,6 +47,47 @@ const MkCropperDialog = defineAsyncComponent(() => import('@/features/image-edit
 export const openingWindowsCount = ref(0);
 
 export type ApiWithDialogCustomErrors = Record<string, { title?: string; text: string }>;
+
+/**
+ * apiWithDialog の失敗時に出す内容。null は何も出さない (利用者の中断)。
+ * 通信の失敗 (TypeError) や JSON でない応答 (SyntaxError) は API のエラー本文を持たず code が無いので、先に分ける。
+ * JSON の読み取り失敗の文言はブラウザごとに違う (V8 は Unexpected token、Safari は JSON Parse error)。
+ */
+export function apiErrorDialogContent(
+	err: unknown,
+	customErrors?: ApiWithDialogCustomErrors,
+): { title?: string; text: string; internal?: true } | null {
+	if (err instanceof DOMException && err.name === 'AbortError') {
+		return null;
+	}
+	const apiError = err as Partial<Misskey.api.APIError> | null | undefined;
+	if (typeof apiError?.code !== 'string') {
+		return err instanceof SyntaxError
+			? { title: i18n.ts.gotInvalidResponseError, text: i18n.ts.gotInvalidResponseErrorDescription }
+			: { title: i18n.ts.somethingHappened, text: i18n.ts.serverIsDead };
+	}
+	const { code, id = '', message = '' } = apiError;
+	if (code === 'INTERNAL_ERROR') {
+		return { title: i18n.ts.internalServerError, text: i18n.ts.internalServerErrorDescription, internal: true };
+	}
+	if (code === 'RATE_LIMIT_EXCEEDED') {
+		return { title: i18n.ts.cannotPerformTemporary, text: i18n.ts.cannotPerformTemporaryDescription };
+	}
+	if (code === 'INVALID_PARAM') {
+		return { title: i18n.ts.invalidParamError, text: i18n.ts.invalidParamErrorDescription };
+	}
+	if (code === 'ROLE_PERMISSION_DENIED') {
+		return { title: i18n.ts.permissionDeniedError, text: i18n.ts.permissionDeniedErrorDescription };
+	}
+	if (code.startsWith('TOO_MANY')) {
+		return { title: i18n.ts.youCannotCreateAnymore, text: `${i18n.ts.error}: ${id}` };
+	}
+	const customError = customErrors?.[id];
+	if (customError != null) {
+		return { ...(customError.title === undefined ? {} : { title: customError.title }), text: customError.text };
+	}
+	return { text: message + '\n' + id };
+}
 export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 	endpoint: E,
 	data: Misskey.Endpoints[E]['req'],
@@ -60,16 +101,16 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 		mutationFn: request.execute,
 	});
 	promiseDialog(promise, null, async (err) => {
-		let title: string | undefined;
-		let text = err.message + '\n' + err.id;
-		if (err.code === 'INTERNAL_ERROR') {
-			title = i18n.ts.internalServerError;
-			text = i18n.ts.internalServerErrorDescription;
+		const content = apiErrorDialogContent(err, customErrors);
+		if (content == null) {
+			return;
+		}
+		if (content.internal) {
 			const date = new Date().toISOString();
 			const { result } = await actions({
 				type: 'error',
-				title,
-				text,
+				...(content.title === undefined ? {} : { title: content.title }),
+				text: content.text,
 				actions: [
 					{
 						value: 'ok',
@@ -86,32 +127,11 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 				copyToClipboard(`Endpoint: ${endpoint}\nInfo: ${JSON.stringify(err.info)}\nDate: ${date}`);
 			}
 			return;
-		} else if (err.code === 'RATE_LIMIT_EXCEEDED') {
-			title = i18n.ts.cannotPerformTemporary;
-			text = i18n.ts.cannotPerformTemporaryDescription;
-		} else if (err.code === 'INVALID_PARAM') {
-			title = i18n.ts.invalidParamError;
-			text = i18n.ts.invalidParamErrorDescription;
-		} else if (err.code === 'ROLE_PERMISSION_DENIED') {
-			title = i18n.ts.permissionDeniedError;
-			text = i18n.ts.permissionDeniedErrorDescription;
-		} else if (err.code.startsWith('TOO_MANY')) {
-			title = i18n.ts.youCannotCreateAnymore;
-			text = `${i18n.ts.error}: ${err.id}`;
-		} else if (err.message.startsWith('Unexpected token')) {
-			title = i18n.ts.gotInvalidResponseError;
-			text = i18n.ts.gotInvalidResponseErrorDescription;
-		} else if (customErrors && customErrors[err.id] != null) {
-			const customError = customErrors[err.id];
-			if (customError != null) {
-				title = customError.title;
-				text = customError.text;
-			}
 		}
 		alert({
 			type: 'error',
-			...(title === undefined ? {} : { title }),
-			text,
+			...(content.title === undefined ? {} : { title: content.title }),
+			text: content.text,
 		});
 	});
 
