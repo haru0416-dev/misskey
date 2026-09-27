@@ -1,0 +1,77 @@
+name: Update JS dependencies
+
+# Dependabot は bun.lock (lockfileVersion 3) を読めないので、JS の依存はここで更新する。
+# 同じメジャーの範囲だけを 1 本の PR にまとめ、メジャー更新は PR 本文に一覧で出す。
+# PR の作成と、その PR で CI を起動させるために DEPS_UPDATE_TOKEN (このリポジトリの Contents と
+# Pull requests に書き込める fine-grained token) が要る。GITHUB_TOKEN で push した PR では CI が起動せず、
+# このリポジトリの設定では GITHUB_TOKEN で PR を作ることもできない。
+on:
+  schedule:
+    # 毎週月曜 09:00 (JST)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BRANCH: deps/js-weekly
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require the token
+        env:
+          HAS_TOKEN: ${{ secrets.DEPS_UPDATE_TOKEN != '' }}
+        run: |
+          if [ "$HAS_TOKEN" != true ]; then
+            echo '::error::DEPS_UPDATE_TOKEN が設定されていません。'
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: develop
+          token: ${{ secrets.DEPS_UPDATE_TOKEN }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Update package.json
+        run: bun scripts/update-deps.mjs --write --report "$RUNNER_TEMP/report.md"
+      - name: Update bun.lock
+        run: |
+          bun install
+          # 生成した bun.lock が CI と同じ条件で使えることを確かめる。
+          bun install --frozen-lockfile
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ secrets.DEPS_UPDATE_TOKEN }}
+        run: |
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet; then
+            echo 'No updates.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git commit -a -q -m 'build(deps): update JS dependencies within their major versions'
+          # 前回の PR が開いたままなら、develop の最新から作り直した内容で置き換える。
+          git push --force origin "$BRANCH"
+          state=$(gh pr view "$BRANCH" --json state --jq .state 2> /dev/null || true)
+          if [ "$state" = OPEN ]; then
+            gh pr edit "$BRANCH" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh pr create --base develop --head "$BRANCH" \
+              --title 'build(deps): update JS dependencies' \
+              --body-file "$RUNNER_TEMP/report.md"
+          fi
