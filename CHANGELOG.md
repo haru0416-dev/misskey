@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Enhance: バージョンのタグ (`v*`) を付けると、GitHub Container Registry に amd64 / arm64 の Docker イメージを公開するように
 - Fix: `<https://...>` 形式の URL が、同じ投稿内で先に失敗したリンク記法の影響で URL として認識されないことがある問題を修正
 - Change: misskey-js の `APIClient` が投げる API エラーを `Error` を継承した `APIError` にし、`endpoint`・`status`・スタックトレースを持たせた。`isAPIError(err, 'notes/create')` のようにエンドポイントを渡すと `code` がそのエンドポイントのエラーコードに絞られる (仕様書のエラー例から型を生成)。従来のエラー本文の型は `APIErrorBody` に改名
 - Change: misskey-js とクライアントが認証トークンを本文の `i` ではなく `Authorization: Bearer` ヘッダーで送るように (サーバーは両方を受け付ける)
