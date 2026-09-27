@@ -881,7 +881,8 @@ const usersShowHostSchema = z.string().nullable().optional().describe('The local
 
 export const usersShowParamDef = z.union([
 	z.object({ userId: misskeyId(), host: usersShowHostSchema }),
-	z.object({ userIds: uniqueItems(z.array(misskeyId())), host: usersShowHostSchema }),
+	// 1 件ずつ詳細を pack するので件数に上限を置く。クライアントが渡すのは DM の宛先や引っ越し元 (いずれも数十件まで)。
+	z.object({ userIds: uniqueItems(z.array(misskeyId()).max(100)), host: usersShowHostSchema }),
 	z.object({ username: z.string(), host: usersShowHostSchema }),
 ]);
 
@@ -909,10 +910,11 @@ export async function handleApiUsersShow(
 		const users = await listUsersByIdsFromDatabase(deps.db, params.userIds, { includeSuspended: isModerator });
 		const userById = new Map(users.map((user) => [user.id, user]));
 
+		const hideRemote = deps.meta.ugcVisibilityForVisitor === 'local' && me == null;
 		const ordered: MiUser[] = [];
 		for (const id of params.userIds) {
 			const user = userById.get(id);
-			if (user != null) {
+			if (user != null && !(hideRemote && user.host != null)) {
 				ordered.push(user);
 			}
 		}

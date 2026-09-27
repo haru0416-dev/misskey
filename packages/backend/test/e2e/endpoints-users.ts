@@ -3068,6 +3068,29 @@ describe('Endpoints', () => {
 			});
 			expect(res.status).toBe(404);
 		});
+
+		test('未ログインにローカルだけ見せる設定では、複数指定でもリモートユーザーを返さない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const local = await signup({ username: `ugclocal${suffix}` });
+			const remote = await signup({ username: `ugcremote${suffix}`, host: 'ugc-remote.example.com' });
+			expect((await api('admin/update-meta', { ugcVisibilityForVisitor: 'local' }, alice)).status).toBe(204);
+			try {
+				const visitor = await api('users/show', { userIds: [local.id, remote.id] });
+				expect(visitor.status).toBe(200);
+				expect((visitor.body as { id: string }[]).map((user) => user.id)).toEqual([local.id]);
+
+				const signedIn = await api('users/show', { userIds: [local.id, remote.id] }, bob);
+				expect((signedIn.body as { id: string }[]).map((user) => user.id)).toEqual([local.id, remote.id]);
+			} finally {
+				expect((await api('admin/update-meta', { ugcVisibilityForVisitor: 'all' }, alice)).status).toBe(204);
+			}
+		});
+
+		test('複数指定は 100 件まで', async () => {
+			const ids = Array.from({ length: 101 }, (_, i) => `aaaaaaaa${i.toString().padStart(4, '0')}`);
+			expect((await api('users/show', { userIds: ids.slice(0, 100) })).status).toBe(200);
+			expect((await api('users/show', { userIds: ids })).status).toBe(400);
+		});
 	});
 
 	describe('users/followers', () => {
