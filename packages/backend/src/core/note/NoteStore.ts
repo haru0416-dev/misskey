@@ -1744,6 +1744,8 @@ export async function listUserTimelineNotesFromDatabase(
 		withChannelNotes: boolean;
 		withFiles: boolean;
 		withRenotes: boolean;
+		/** false なら他人への返信を除く (fanout の userTimeline に入れない投稿と同じ)。 */
+		withReplies: boolean;
 		me: { id: MiUser['id'] } | null;
 		blockedHosts: string[];
 		mutingChannelIds: string[];
@@ -1799,6 +1801,10 @@ export async function listUserTimelineNotesFromDatabase(
 
 	if (options.withFiles) {
 		conditions.push(hasFilesCondition());
+	}
+
+	if (!options.withReplies) {
+		conditions.push(sql`("note"."replyId" IS NULL OR "note"."replyUserId" = "note"."userId")`);
 	}
 
 	if (!options.withRenotes) {
