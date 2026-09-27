@@ -235,9 +235,7 @@ describe('hono-queue-relationship', () => {
 		await handleQueueRelationshipFollow(deps, { from: follower, to: followee, silent: true });
 
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, follower.id, followee.id)).toBeNull();
-		expect(
-			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id),
-		).not.toBeNull();
+		expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id)).not.toBeNull();
 	});
 
 	test('handleQueueRelationshipFollow はローカルフォロワーがブロックされていれば例外を投げる', async () => {
