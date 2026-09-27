@@ -26,6 +26,9 @@ export type ParsedSignature = {
 	signature: string;
 	/** 署名対象として組み立てた文字列。 */
 	signingString: string;
+	/** 署名ヘッダの created / expires (UNIX 秒の文字列)。無ければ undefined。 */
+	created?: string;
+	expires?: string;
 };
 
 export type SignatureTargetRequest = {
@@ -141,7 +144,51 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
 		lines.push(`${name}: ${value}`);
 	}
 
-	return { keyId, algorithm, headers, signature, signingString: lines.join('\n') };
+	return {
+		keyId,
+		algorithm,
+		headers,
+		signature,
+		signingString: lines.join('\n'),
+		...(params['created'] != null ? { created: params['created'] } : {}),
+		...(params['expires'] != null ? { expires: params['expires'] } : {}),
+	};
+}
+
+/** 署名の時刻と受信時刻のずれの許容幅。以前使っていた @peertube/http-signature の clockSkew 既定値と同じ。 */
+const SIGNATURE_CLOCK_SKEW_MS = 300 * 1000;
+
+/**
+ * 署名された Date と (created) / (expires) が受信時刻から許容幅に収まっているかを確かめる。
+ * 署名が正しくても、以前に届いたリクエストをそのまま送り直されたものとは区別できないので、時刻で古いものを弾く。
+ * 署名の検証より前に呼んでよい (時刻の値は署名対象なので、改ざんされていれば検証で落ちる)。
+ */
+export function assertSignatureFresh(
+	request: SignatureTargetRequest,
+	signature: ParsedSignature,
+	now: number = Date.now(),
+): void {
+	if (signature.headers.includes('date')) {
+		const date = Date.parse(request.headers['date'] ?? '');
+		if (!Number.isFinite(date)) {
+			throw new HttpSignatureError('invalid date header');
+		}
+		if (Math.abs(now - date) > SIGNATURE_CLOCK_SKEW_MS) {
+			throw new HttpSignatureError('date header is out of the allowed clock skew');
+		}
+	}
+	if (signature.created != null) {
+		const created = Number(signature.created) * 1000;
+		if (!Number.isFinite(created) || Math.abs(now - created) > SIGNATURE_CLOCK_SKEW_MS) {
+			throw new HttpSignatureError('created is invalid or out of the allowed clock skew');
+		}
+	}
+	if (signature.expires != null) {
+		const expires = Number(signature.expires) * 1000;
+		if (!Number.isFinite(expires) || now - expires > SIGNATURE_CLOCK_SKEW_MS) {
+			throw new HttpSignatureError('signature has expired');
+		}
+	}
 }
 
 /**

@@ -8,6 +8,7 @@ import { describe, expect, test } from 'vitest';
 import fc from 'fast-check';
 import {
 	HttpSignatureError,
+	assertSignatureFresh,
 	parseRequestSignature,
 	verifyRequestSignature,
 } from '@/core/activitypub/http-signature.js';
@@ -169,6 +170,52 @@ describe('core:activitypub:http-signature', () => {
 				}),
 				{ numRuns: 500 },
 			);
+		});
+	});
+
+	describe('assertSignatureFresh', () => {
+		const signedAt = Date.parse('Wed, 27 Aug 2026 00:00:00 GMT');
+		const parse = (params: Record<string, string>, request = requestOf()) => {
+			const target = {
+				...request,
+				headers: {
+					...request.headers,
+					signature: signatureHeader({ keyId: 'k', algorithm: 'rsa-sha256', signature: 'x', ...params }),
+				},
+			};
+			return { target, signature: parseRequestSignature(target) };
+		};
+
+		test('Date が前後 300 秒以内なら通し、超えたら弾く', () => {
+			const { target, signature } = parse({ headers: SIGNING_TARGET });
+			expect(() => assertSignatureFresh(target, signature, signedAt + 300_000)).not.toThrow();
+			expect(() => assertSignatureFresh(target, signature, signedAt - 300_000)).not.toThrow();
+			expect(() => assertSignatureFresh(target, signature, signedAt + 300_001)).toThrow(HttpSignatureError);
+			expect(() => assertSignatureFresh(target, signature, signedAt - 300_001)).toThrow(HttpSignatureError);
+		});
+
+		test('読めない Date は弾く', () => {
+			const { target, signature } = parse(
+				{ headers: SIGNING_TARGET },
+				requestOf({ headers: { date: 'not a date' } as Record<string, string> }),
+			);
+			expect(() => assertSignatureFresh(target, signature, signedAt)).toThrow(HttpSignatureError);
+		});
+
+		test('(created) が未来・過去に許容幅を超えるものと (expires) が切れたものを弾く', () => {
+			const seconds = signedAt / 1000;
+			const created = (value: number) => parse({ headers: '(request-target) (created)', created: String(value) });
+			const ok = created(seconds);
+			expect(() => assertSignatureFresh(ok.target, ok.signature, signedAt)).not.toThrow();
+			const future = created(seconds + 301);
+			expect(() => assertSignatureFresh(future.target, future.signature, signedAt)).toThrow(HttpSignatureError);
+			const old = created(seconds - 301);
+			expect(() => assertSignatureFresh(old.target, old.signature, signedAt)).toThrow(HttpSignatureError);
+
+			const expired = parse({ headers: '(request-target) (expires)', expires: String(seconds - 301) });
+			expect(() => assertSignatureFresh(expired.target, expired.signature, signedAt)).toThrow(HttpSignatureError);
+			const valid = parse({ headers: '(request-target) (expires)', expires: String(seconds + 60) });
+			expect(() => assertSignatureFresh(valid.target, valid.signature, signedAt)).not.toThrow();
 		});
 	});
 

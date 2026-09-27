@@ -6,7 +6,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -143,6 +143,49 @@ describe('hono-inbox-endpoint', () => {
 			(job) => job.data.activity.id === activityId,
 		);
 		expect(queued?.opts.attempts).toBe(runtime.config.queues.inbox.maximumAttempts ?? 8);
+	});
+
+	test('署名した時刻から許容幅を超えて届いたリクエストは401', async () => {
+		const { server, url, capture } = await captureRequestServer();
+		servers.push(server);
+		const host = new URL(url).host;
+
+		const deps: InboxEndpointDependencies = {
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host } },
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
+		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
+		await signedPostForApi(
+			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
+			user,
+			url,
+			{
+				id: `https://${host}/activities/${genId()}`,
+				type: 'Follow',
+				actor: `https://${host}/users/${user.id}`,
+				object: `https://${host}/users/somebody`,
+			},
+		);
+		const captured = await capture();
+		const signedAt = new Date(captured.headers['date']!).getTime();
+		const replay = () =>
+			handleInboxRequest(
+				deps,
+				new Request(url, { method: captured.method, headers: captured.headers, body: captured.body }),
+			);
+
+		vi.useFakeTimers({ toFake: ['Date'] });
+		try {
+			vi.setSystemTime(signedAt + 10 * 60 * 1000);
+			expect((await replay()).status).toBe(401);
+			vi.setSystemTime(signedAt - 10 * 60 * 1000);
+			expect((await replay()).status).toBe(401);
+			vi.setSystemTime(signedAt + 4 * 60 * 1000);
+			expect((await replay()).status).toBe(202);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	test('federationがnoneの場合は403', async () => {
