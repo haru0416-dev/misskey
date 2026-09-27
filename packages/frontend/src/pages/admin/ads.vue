@@ -68,7 +68,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkTextarea>
 
 				<div class="_buttons">
-					<MkButton inline primary style="margin-right: 12px;" @click="save(ad)">
+					<MkButton inline primary style="margin-right: 12px;" :disabled="savingAds.has(ad)" @click="save(ad)">
 						<i
 							class="ti ti-device-floppy"
 						></i> {{ i18n.ts.save }}
@@ -88,7 +88,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, shallowReactive } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -200,25 +200,36 @@ function remove(ad: Misskey.entities.Ad) {
 	});
 }
 
+// 保存中の広告。新しい広告は保存が終わるまで id が空なので、続けて押すと作成が重なる。
+const savingAds = shallowReactive(new Set<Misskey.entities.Ad>());
+
 function save(ad: Misskey.entities.Ad) {
+	if (savingAds.has(ad)) {
+		return;
+	}
+	savingAds.add(ad);
 	if (ad.id === '') {
 		misskeyApi('admin/ad/create', {
 			...ad,
 			expiresAt: new Date(ad.expiresAt).getTime(),
 			startsAt: new Date(ad.startsAt).getTime(),
 		})
-			.then(() => {
+			.then((created) => {
 				os.alert({
 					type: 'success',
 					text: i18n.ts.saved,
 				});
-				refresh();
+				// 一覧を読み直すと、まだ保存していない他の広告や編集中の内容が消えるので、この広告に ID を入れるだけにする。
+				ad.id = created.id;
 			})
 			.catch((err) => {
 				os.alert({
 					type: 'error',
 					text: err,
 				});
+			})
+			.finally(() => {
+				savingAds.delete(ad);
 			});
 	} else {
 		misskeyApi('admin/ad/update', {
@@ -237,16 +248,28 @@ function save(ad: Misskey.entities.Ad) {
 					type: 'error',
 					text: err,
 				});
+			})
+			.finally(() => {
+				savingAds.delete(ad);
 			});
 	}
 }
 
+// 一覧の取得の世代。絞り込みを切り替えた後に前の絞り込みの応答が届いても、今の一覧に混ぜない。
+let listGeneration = 0;
+let fetchingMore = false;
+
 function more() {
+	if (fetchingMore) {
+		return;
+	}
+	fetchingMore = true;
+	const generation = listGeneration;
 	misskeyApi('admin/ad/list', {
 		untilId: ads.value.reduce((acc, ad) => (ad.id !== '' ? ad : acc)).id,
 		publishing,
 	}).then((adsResponse) => {
-		if (adsResponse == null) {
+		if (adsResponse == null || generation !== listGeneration) {
 			return;
 		}
 		ads.value = ads.value.concat(
@@ -262,12 +285,15 @@ function more() {
 				};
 			}),
 		);
+	}).finally(() => {
+		fetchingMore = false;
 	});
 }
 
 function refresh() {
+	const generation = ++listGeneration;
 	misskeyApi('admin/ad/list', { publishing }).then((adsResponse) => {
-		if (adsResponse == null) {
+		if (adsResponse == null || generation !== listGeneration) {
 			return;
 		}
 		ads.value = adsResponse.map((r) => {
