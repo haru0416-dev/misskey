@@ -112,7 +112,7 @@ export async function handleApiIImportBlocking(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '6f3a4dcc-f060-a707-4950-806fbdbe60d6' },
 	});
 
-	void addDbJob(deps.dbQueue, {
+	await addDbJob(deps.dbQueue, {
 		name: 'importBlocking',
 		data: { user: { id: me.id }, fileId: file.id },
 		opts: importJobOptions(deps.config),
@@ -135,7 +135,7 @@ export async function handleApiIImportFollowing(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '31a1b42c-06f7-42ae-8a38-a661c5c9f691' },
 	});
 
-	void addDbJob(deps.dbQueue, {
+	await addDbJob(deps.dbQueue, {
 		name: 'importFollowing',
 		data: omitUndefined({
 			user: { id: me.id },
@@ -161,7 +161,7 @@ export async function handleApiIImportMuting(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: 'd2f12af1-e7b4-feac-86a3-519548f2728e' },
 	});
 
-	void addDbJob(deps.dbQueue, {
+	await addDbJob(deps.dbQueue, {
 		name: 'importMuting',
 		data: { user: { id: me.id }, fileId: file.id },
 		opts: importJobOptions(deps.config),
@@ -183,7 +183,7 @@ export async function handleApiIImportUserLists(
 		emptyFile: { message: 'That file is empty.', code: 'EMPTY_FILE', id: '99efe367-ce6e-4d44-93f8-5fae7b040356' },
 	});
 
-	void addDbJob(deps.dbQueue, {
+	await addDbJob(deps.dbQueue, {
 		name: 'importUserLists',
 		data: { user: { id: me.id }, fileId: file.id },
 		opts: importJobOptions(deps.config),

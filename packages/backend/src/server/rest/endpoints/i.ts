@@ -157,28 +157,28 @@ export const iEndpoints = implementEndpoints<ApiShellDependencies>()(iContracts,
 	},
 	i: async ({ auth, deps, me }) => await handleApiI(deps, me, auth.token),
 	'i/export-notes': async ({ deps, me }) => {
-		handleApiIExportNotes(deps, me);
+		await handleApiIExportNotes(deps, me);
 	},
 	'i/export-clips': async ({ deps, me }) => {
-		handleApiIExportClips(deps, me);
+		await handleApiIExportClips(deps, me);
 	},
 	'i/export-favorites': async ({ deps, me }) => {
-		handleApiIExportFavorites(deps, me);
+		await handleApiIExportFavorites(deps, me);
 	},
 	'i/export-following': async ({ deps, me, input }) => {
-		handleApiIExportFollowing(deps, me, input);
+		await handleApiIExportFollowing(deps, me, input);
 	},
 	'i/export-mute': async ({ deps, me }) => {
-		handleApiIExportMute(deps, me);
+		await handleApiIExportMute(deps, me);
 	},
 	'i/export-blocking': async ({ deps, me }) => {
-		handleApiIExportBlocking(deps, me);
+		await handleApiIExportBlocking(deps, me);
 	},
 	'i/export-user-lists': async ({ deps, me }) => {
-		handleApiIExportUserLists(deps, me);
+		await handleApiIExportUserLists(deps, me);
 	},
 	'i/export-antennas': async ({ deps, me }) => {
-		handleApiIExportAntennas(deps, me);
+		await handleApiIExportAntennas(deps, me);
 	},
 	'i/import-antennas': async ({ deps, me, input }) => {
 		// 1 時間に 1 回の上限はファイルの検証を通ってから数える。間隔 (minInterval) は meta から共通 guard が掛ける。

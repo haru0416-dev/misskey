@@ -32,53 +32,57 @@ type SimpleExportJobName =
 	| 'exportUserLists'
 	| 'exportAntennas';
 
-function enqueueSimpleExportJob(deps: ApiExportJobDependencies, jobName: SimpleExportJobName, user: ThinUser): void {
-	void addDbJob(deps.dbQueue, {
+async function enqueueSimpleExportJob(
+	deps: ApiExportJobDependencies,
+	jobName: SimpleExportJobName,
+	user: ThinUser,
+): Promise<void> {
+	await addDbJob(deps.dbQueue, {
 		name: jobName,
 		data: { user: { id: user.id } },
 		opts: queueRetentionOptions(deps.config),
 	});
 }
 
-export function handleApiExportCustomEmojis(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportCustomEmojis', me);
+export async function handleApiExportCustomEmojis(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportCustomEmojis', me);
 }
 
-export function handleApiIExportNotes(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportNotes', me);
+export async function handleApiIExportNotes(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportNotes', me);
 }
 
-export function handleApiIExportClips(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportClips', me);
+export async function handleApiIExportClips(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportClips', me);
 }
 
-export function handleApiIExportFavorites(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportFavorites', me);
+export async function handleApiIExportFavorites(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportFavorites', me);
 }
 
-export function handleApiIExportMute(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportMuting', me);
+export async function handleApiIExportMute(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportMuting', me);
 }
 
-export function handleApiIExportBlocking(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportBlocking', me);
+export async function handleApiIExportBlocking(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportBlocking', me);
 }
 
-export function handleApiIExportUserLists(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportUserLists', me);
+export async function handleApiIExportUserLists(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportUserLists', me);
 }
 
-export function handleApiIExportAntennas(deps: ApiExportJobDependencies, me: MiLocalUser): void {
-	enqueueSimpleExportJob(deps, 'exportAntennas', me);
+export async function handleApiIExportAntennas(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+	await enqueueSimpleExportJob(deps, 'exportAntennas', me);
 }
 
-export function handleApiIExportFollowing(
+export async function handleApiIExportFollowing(
 	deps: ApiExportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): void {
+): Promise<void> {
 	const params = parseApiParams(exportFollowingParamDef, body);
-	void addDbJob(deps.dbQueue, {
+	await addDbJob(deps.dbQueue, {
 		name: 'exportFollowing',
 		data: {
 			user: { id: me.id },
