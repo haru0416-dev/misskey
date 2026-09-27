@@ -9,7 +9,8 @@ import type { Config } from '@/config.js';
 import { addDbJob } from '@/core/queue/queues.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
+import { readDriveFileText } from '@/core/drive/DriveFileContent.js';
+import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase } from '@/core/antenna/AntennaStore.js';
 import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/antenna/AntennaImport.js';
@@ -32,10 +33,10 @@ export type ApiImportJobDependencies = UserPackingDependencies & {
 	dbQueue: DbQueue;
 };
 
-export type ApiIImportAntennasDependencies = ApiRolePolicyDependencies & {
-	downloadService: Pick<DownloadService, 'downloadTextFile'>;
-	publishInternalEvent?: ApiInternalEventPublisher;
-};
+export type ApiIImportAntennasDependencies = ApiRolePolicyDependencies &
+	DriveFileContentDependencies & {
+		publishInternalEvent?: ApiInternalEventPublisher;
+	};
 
 const importJobOptions = (config: Pick<Config, 'queues'>) => ({
 	attempts: 3,
@@ -266,7 +267,7 @@ export async function handleApiIImportAntennas(
 
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(await deps.downloadService.downloadTextFile(file.url));
+		parsed = JSON.parse(await readDriveFileText(deps, file));
 	} catch {
 		throw invalidAntennaImportFileError();
 	}

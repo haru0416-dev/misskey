@@ -67,6 +67,8 @@ import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@
 import { listClipNotesByClipIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
+import { readDriveFileText, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
+import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
@@ -98,12 +100,13 @@ import { deleteFileSyncForApi, deleteObjectStorageFileForApi } from './object-st
 import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDbDependencies = QueueObjectStorageDependencies &
+	DriveFileContentDependencies &
 	ApiDriveFileUploadDependencies &
 	ApiNotificationDependencies &
 	ApiApPersonDependencies &
 	ApiUsersListsDependencies & {
 		db: MiDrizzleDatabase;
-		downloadService: Pick<DownloadService, 'downloadTextFile' | 'downloadUrl'>;
+		downloadService: Pick<DownloadService, 'downloadUrl'>;
 		dbQueue: DbQueue;
 		relationshipQueue: RelationshipQueue;
 		publishInternalEvent?: ApiInternalEventPublisher;
@@ -536,7 +539,7 @@ export async function handleQueueImportMuting(deps: QueueDbDependencies, data: D
 		return;
 	}
 
-	const csv = await deps.downloadService.downloadTextFile(file.url);
+	const csv = await readDriveFileText(deps, file);
 
 	for (const line of csv.trim().split('\n')) {
 		try {
@@ -578,7 +581,7 @@ export async function handleQueueImportUserLists(deps: QueueDbDependencies, data
 		return;
 	}
 
-	const csv = await deps.downloadService.downloadTextFile(file.url);
+	const csv = await readDriveFileText(deps, file);
 
 	for (const line of csv.trim().split('\n')) {
 		try {
@@ -633,12 +636,10 @@ export async function handleQueueImportUserLists(deps: QueueDbDependencies, data
 
 async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollowingToDb'>(
 	deps: QueueDbDependencies,
-	url: string,
+	file: MiDriveFile,
 	createJob: (line: string, index: number) => DbJobBulkInput<K>,
 ): Promise<void> {
-	const [path, cleanup] = await createTemp();
-	try {
-		await deps.downloadService.downloadUrl(url, path);
+	await withDriveFileContent(deps, file, async (path) => {
 		const lines = readline.createInterface({ input: fs.createReadStream(path), crlfDelay: Infinity });
 		let jobs: DbJobBulkInput<K>[] = [];
 		let lineIndex = 0;
@@ -655,9 +656,7 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 		if (jobs.length > 0) {
 			await addDbJobs(deps.dbQueue, jobs);
 		}
-	} finally {
-		cleanup();
-	}
+	});
 }
 
 export async function handleQueueImportBlocking(
@@ -675,7 +674,7 @@ export async function handleQueueImportBlocking(
 		return;
 	}
 
-	await enqueueImportLines(deps, file.url, (target, index) => ({
+	await enqueueImportLines(deps, file, (target, index) => ({
 		name: 'importBlockingToDb',
 		data: { user: { id: user.id }, target } satisfies DbUserImportToDbJobData,
 		opts: { ...importLineJobOptions, jobId: `import-blocking-${importJobId}-${index}` },
@@ -727,7 +726,7 @@ export async function handleQueueImportFollowing(
 		return;
 	}
 
-	await enqueueImportLines(deps, file.url, (target, index) => ({
+	await enqueueImportLines(deps, file, (target, index) => ({
 		name: 'importFollowingToDb',
 		data: omitUndefined({
 			user: { id: user.id },

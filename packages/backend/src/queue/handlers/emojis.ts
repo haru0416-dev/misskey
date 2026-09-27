@@ -12,9 +12,11 @@ import {
 	deleteEmojiByNameAndHostFromDatabase,
 	listLocalEmojisOrderedByIdFromDatabase,
 } from '@/core/emoji/EmojiStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
+import { readDriveFileBuffer, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
+import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
@@ -25,6 +27,7 @@ import { createExportCompletedNotification } from '@/server/rest/notification/no
 import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 
 export type QueueEmojisDependencies = ApiDriveFileUploadDependencies &
+	DriveFileContentDependencies &
 	ApiEmojiDependencies &
 	ApiNotificationDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
@@ -75,7 +78,13 @@ export async function handleQueueExportCustomEmojis(
 		let downloaded = false;
 
 		try {
-			await deps.downloadService.downloadUrl(emoji.originalUrl, emojiPath);
+			// ローカルの絵文字の原本は自分のドライブにあるので、自分の URL を取得せず保存場所から写す。
+			const driveFile = await fetchDriveFileByUrlFromDatabase(deps.db, emoji.originalUrl);
+			if (driveFile != null && driveFile.url === emoji.originalUrl) {
+				await withDriveFileContent(deps, driveFile, (source) => fs.promises.copyFile(source, emojiPath));
+			} else {
+				await deps.downloadService.downloadUrl(emoji.originalUrl, emojiPath);
+			}
 			downloaded = true;
 		} catch {
 			// ダウンロードに失敗した絵文字も downloaded:false で記録し、処理を継続する。
@@ -144,22 +153,13 @@ export async function handleQueueImportCustomEmojis(
 		return;
 	}
 
+	const archive = await readDriveFileBuffer(deps, file);
 	const [path, cleanup] = await createTempDir();
-
-	const destPath = path + '/emojis.zip';
-
-	try {
-		fs.writeFileSync(destPath, '', 'binary');
-		await deps.downloadService.downloadUrl(file.url, destPath);
-	} catch (e) {
-		cleanup();
-		throw e;
-	}
 
 	try {
 		// zip はディスクへ展開せず、meta.json と meta.json が指すエントリだけを名前で引いて読む。
 		// symlink・ディレクトリ・暗号化エントリと上限超えは slacc 側で例外になる。
-		const zip = ZipArchiveReader.fromBuffer(await fs.promises.readFile(destPath));
+		const zip = ZipArchiveReader.fromBuffer(archive);
 		const metaRaw = zip.readFile('meta.json', MAX_EMOJI_IMPORT_META_BYTES);
 		if (metaRaw == null) {
 			throw new Error('meta.json not found in the emoji archive');

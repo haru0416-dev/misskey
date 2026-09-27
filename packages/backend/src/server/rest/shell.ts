@@ -47,11 +47,11 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
-	downloadService: Pick<DownloadService, 'downloadUrl' | 'downloadTextFile' | 'fetchFileName'>;
+	downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
-	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
+	internalStorageService: Pick<InternalStorageService, 'del' | 'resolvePath' | 'saveFromBuffer' | 'saveFromPath'>;
 	s3Service: Pick<S3Service, 'upload' | 'delete'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate' | 'validateOtp'>;
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
