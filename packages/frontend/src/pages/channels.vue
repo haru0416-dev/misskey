@@ -78,7 +78,7 @@ import { $i } from '@/i.js';
 type SearchType = 'nameAndDescription' | 'nameOnly';
 
 const props = defineProps<{
-	query: string;
+	query?: string;
 	type?: SearchType;
 }>();
 
