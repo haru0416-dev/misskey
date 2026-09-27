@@ -472,6 +472,9 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			async fetchCloudValues() {
+				// 取得中に reloadProfile でプロファイルが差し替わったら、この応答は旧プロファイル向けなので捨てる
+				// (差し替え後のプロファイルは reloadProfile が改めて取得する)。
+				const profileAtStart = this.profile;
 				const needs = [] as { key: keyof PREF; scope: Scope }[];
 				const revisionsAtStart = new Map<keyof PREF, number>();
 				for (const _key in PREF_DEF) {
@@ -487,6 +490,9 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 				}
 
 				const cloudValues = await io.cloudGetBulk({ needs });
+				if (this.profile !== profileAtStart) {
+					return;
+				}
 
 				for (const _key in PREF_DEF) {
 					const key = _key as keyof PREF;

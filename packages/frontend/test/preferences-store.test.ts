@@ -166,4 +166,31 @@ describe('Pinia preferences store', () => {
 		expect(store.animation).toBe(true);
 		expect(store.profile.preferences.animation[0]?.[1]).toBe(true);
 	});
+
+	// 取得中にプロファイルが差し替わった場合、旧プロファイル向けの応答を新しいプロファイルへ書き込まない。
+	test('does not apply a cloud response started for a replaced profile', async () => {
+		let resolveFirst!: (value: Partial<Record<keyof PREF, ValueOf<keyof PREF>>>) => void;
+		const first = new Promise<Partial<Record<keyof PREF, ValueOf<keyof PREF>>>>((resolve) => {
+			resolveFirst = resolve;
+		});
+		let calls = 0;
+		const cloudGetBulk: StorageProvider['cloudGetBulk'] = async <K extends keyof PREF>() => {
+			calls++;
+			return (calls === 1 ? await first : {}) as Partial<Record<K, ValueOf<K>>>;
+		};
+		let current = { ...createProfile({ animation: [[{}, false, { sync: true }]] }), id: 'profile-a' };
+		const fixture = createStorageProvider({ cloudGetBulk });
+		fixture.provider.load = () => current;
+		const store = createPreferencesStore(fixture.provider, null, createPinia());
+
+		current = { ...createProfile({ animation: [[{}, true, { sync: true }]] }), id: 'profile-b' };
+		store.reloadProfile();
+		resolveFirst({ animation: false });
+		await store.$preferencesCloudReady;
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+
+		expect(store.profile.id).toBe('profile-b');
+		expect(store.animation).toBe(true);
+		expect(store.profile.preferences.animation[0]?.[1]).toBe(true);
+	});
 });
