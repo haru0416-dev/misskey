@@ -146,7 +146,7 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscCont
 	ping: async () => handleApiPing(),
 	test: async ({ input }) => handleApiTest(input),
 	'export-custom-emojis': async ({ deps, me }) => {
-		handleApiExportCustomEmojis(deps, me);
+		await handleApiExportCustomEmojis(deps, me);
 	},
 	'fetch-rss': async ({ deps, input }) => await handleApiFetchRss(deps, input),
 	'ap/get': async ({ deps, input }) => await handleApiApGet(deps, input),
