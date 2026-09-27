@@ -98,6 +98,50 @@ describe('useRssFeed', () => {
 
 		expect(feed().rawItems.value).toEqual([]);
 		expect(feed().fetching.value).toBe(false);
+		expect(feed().error.value).toBe(true);
 		expect(onFetched).not.toHaveBeenCalled();
+	});
+
+	test('distinguishes an empty feed from a failed fetch', async () => {
+		fetchMock.mockOnceIf(
+			(req) => new URL(req.url).pathname === '/api/fetch-rss',
+			() => ({ status: 200, body: JSON.stringify({ items: [] }) }),
+		);
+
+		const { feed } = renderFeed('https://example.com/empty');
+		await flush();
+
+		expect(feed().rawItems.value).toEqual([]);
+		expect(feed().fetching.value).toBe(false);
+		expect(feed().error.value).toBe(false);
+	});
+
+	// 更新間隔の変更で古いタイマーだけ消え、新しいタイマーが始まらないと自動更新が止まる。
+	test('keeps polling after the refresh interval changes', async () => {
+		vi.useFakeTimers();
+		try {
+			// init.ts のモックを消さないよう、常設ではなく 1 回分ずつ積む。
+			for (let i = 0; i < 5; i++) {
+				fetchMock.mockOnceIf(
+					(req) => new URL(req.url).pathname === '/api/fetch-rss',
+					() => ({ status: 200, body: JSON.stringify({ items: [] }) }),
+				);
+			}
+			const { widgetProps } = renderFeed('https://example.com/interval');
+			await flush();
+			expect(fetchRssRequests()).toHaveLength(1);
+
+			widgetProps.refreshIntervalSec = 30;
+			await flush();
+			await vi.advanceTimersByTimeAsync(30_000);
+			await flush();
+			await vi.advanceTimersByTimeAsync(30_000);
+			await flush();
+
+			// 変更直後に 1 回、その後 30 秒ごとに取得する。
+			expect(fetchRssRequests().length).toBeGreaterThanOrEqual(3);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
