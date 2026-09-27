@@ -12,9 +12,9 @@ updates:
     cooldown:
       default-days: 7
 
-  # ワークスペースごとではなく、ルートだけを対象にする。
-  # https://github.com/dependabot/dependabot-core/issues/4993#issuecomment-1289133027
-  - package-ecosystem: npm
+  # 依存は Bun のワークスペースとして bun.lock 1 つで管理している。npm の種別では bun.lock が更新されず、
+  # CI の `bun install --frozen-lockfile` で落ちるので、bun の種別でルートだけを対象にする。
+  - package-ecosystem: bun
     directory: '/'
     schedule:
       interval: daily
