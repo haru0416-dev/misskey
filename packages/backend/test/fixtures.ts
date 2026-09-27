@@ -192,6 +192,7 @@ export const createDriveFolderInDatabase = bindDatabaseOperation(DriveFolderStor
 export const fetchDriveFolderByIdFromDatabase = bindDatabaseOperation(
 	DriveFolderStore.fetchDriveFolderByIdFromDatabase,
 );
+export const updateDriveFolderInDatabase = bindDatabaseOperation(DriveFolderStore.updateDriveFolderInDatabase);
 export const fetchEmojiByIdFromDatabase = bindDatabaseOperation(EmojiStore.fetchEmojiByIdFromDatabase);
 export const fetchEmojiByIdOrFailFromDatabase = bindDatabaseOperation(EmojiStore.fetchEmojiByIdOrFailFromDatabase);
 export const insertEmojiInDatabase = bindDatabaseOperation(EmojiStore.insertEmojiInDatabase);

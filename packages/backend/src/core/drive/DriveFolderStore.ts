@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { driveFolder } from '@/db/schema/drive-folder.js';
 import type { DriveFolderInsert, DriveFolderRow } from '@/db/schema/drive-folder.js';
@@ -156,6 +156,40 @@ export async function createDriveFolderInDatabase(
 	}
 
 	return row;
+}
+
+/**
+ * フォルダの親を付け替える。祖先をたどる検査と更新の間に同じ利用者の別の付け替えが入ると、互いを親にした
+ * 循環が両方とも検査を通って保存されるので、利用者単位の advisory lock で直列にしてから検査・更新する。
+ * 既存の循環に行き当たっても止まるよう、たどった祖先を覚えておく。付け替えると循環する場合は false。
+ */
+export async function moveDriveFolderInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	id: DriveFolderRow['id'],
+	values: {
+		name: DriveFolderRow['name'];
+		parentId: DriveFolderRow['id'];
+	},
+): Promise<boolean> {
+	return await db.transaction(async (tx) => {
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('drive-folder-tree'), hashtext(${userId}))`);
+		const visited = new Set<string>();
+		for (let current: string | null = values.parentId; current != null;) {
+			if (current === id || visited.has(current)) {
+				return false;
+			}
+			visited.add(current);
+			const [row] = await tx
+				.select({ parentId: driveFolder.parentId })
+				.from(driveFolder)
+				.where(eq(driveFolder.id, current))
+				.limit(1);
+			current = row?.parentId ?? null;
+		}
+		await tx.update(driveFolder).set(values).where(eq(driveFolder.id, id));
+		return true;
+	});
 }
 
 export async function updateDriveFolderInDatabase(

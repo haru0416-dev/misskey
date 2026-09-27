@@ -61,6 +61,7 @@ import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByUrlFromDatabase,
 	fetchDriveFolderByIdFromDatabase,
+	updateDriveFolderInDatabase,
 	fetchEmojiByIdFromDatabase,
 	fetchEmojiByIdOrFailFromDatabase,
 	fetchFlashByIdFromDatabase,
@@ -1476,6 +1477,44 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			expect(res.body.name).toBe('new name');
+		});
+
+		test('2 つのフォルダを互いの子へ同時に移しても循環しない', async () => {
+			for (let i = 0; i < 10; i++) {
+				const [a, b] = await Promise.all([
+					api('drive/folders/create', { name: `cycle-a-${i}` }, alice).then((res) => res.body),
+					api('drive/folders/create', { name: `cycle-b-${i}` }, alice).then((res) => res.body),
+				]);
+				const results = await Promise.all([
+					api('drive/folders/update', { folderId: a.id, parentId: b.id }, alice),
+					api('drive/folders/update', { folderId: b.id, parentId: a.id }, alice),
+				]);
+				expect(results.map((res) => res.status).sort()).toEqual([200, 400]);
+
+				const [storedA, storedB] = await Promise.all([
+					fetchDriveFolderByIdFromDatabase(db, a.id),
+					fetchDriveFolderByIdFromDatabase(db, b.id),
+				]);
+				expect(storedA?.parentId === b.id && storedB?.parentId === a.id).toBe(false);
+			}
+		});
+
+		test('既に循環しているフォルダでも表示と移動が終わる', { timeout: 15_000 }, async () => {
+			const create = (name: string) => api('drive/folders/create', { name }, alice).then((res) => res.body);
+			const [a, b, c] = await Promise.all([create('loop-a'), create('loop-b'), create('loop-c')]);
+			await updateDriveFolderInDatabase(db, a.id, { name: 'loop-a', parentId: b.id });
+			await updateDriveFolderInDatabase(db, b.id, { name: 'loop-b', parentId: a.id });
+
+			const show = await api('drive/folders/show', { folderId: a.id }, alice);
+			expect(show.status).toBe(200);
+			const move = await api('drive/folders/update', { folderId: c.id, parentId: a.id }, alice);
+			expect([200, 400]).toContain(move.status);
+
+			// フォルダ付きのファイル一覧は、親をまとめて展開する別の経路を通る。
+			const file = (await uploadFile(alice)).body!;
+			expect((await api('drive/files/update', { fileId: file.id, folderId: a.id }, alice)).status).toBe(200);
+			const files = await api('admin/drive/files', { userId: alice.id, limit: 100 }, alice);
+			expect(files.status).toBe(200);
 		});
 
 		test('他人のフォルダを更新できない', async () => {
