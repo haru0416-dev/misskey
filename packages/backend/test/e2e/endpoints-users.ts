@@ -1485,6 +1485,15 @@ describe('Endpoints', () => {
 			assert.ok(membership);
 			expect(membership.withReplies).toBe(true);
 			expect(membership.user.id).toBe(bob.id);
+
+			// リストにいない利用者の設定変更は、500 ではなく契約のエラーで返す。
+			const notMember = await api(
+				'users/lists/update-membership',
+				{ listId: userList.id, userId: carol.id, withReplies: true },
+				alice,
+			);
+			expect(notMember.status).toBe(400);
+			expect(castAsError(notMember.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 
 		test('users/lists/get-memberships supports forPublic without credentials', async () => {

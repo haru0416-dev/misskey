@@ -159,7 +159,8 @@ async function updateUserListMembershipForApi(
 ): Promise<void> {
 	const membership = await fetchUserListMembershipByUserIdAndUserListIdFromDatabase(deps.db, target.id, list.id);
 	if (membership == null) {
-		throw new Error('User is not a member of the list');
+		// リストにいない利用者の設定は変えられない。契約の noSuchUser (対象がリストに見当たらない) で返す。
+		throw noSuchUserError('588e7f72-c744-4a61-b180-d354e912bda2');
 	}
 
 	await updateUserListMembershipWithRepliesInDatabase(deps.db, membership.id, options.withReplies);
