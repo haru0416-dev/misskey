@@ -7,31 +7,9 @@ updates:
     schedule:
       interval: daily
     open-pull-requests-limit: 5
-    # bunfig.toml の minimumReleaseAge (7日) と揃える。これより新しい版を提案されると
-    # `bun install` が解決を拒否して CI が全滅する。
+    # 公開直後の版は取り下げや乗っ取りの可能性があるので、JS の依存 (bunfig.toml の minimumReleaseAge) と同じく 7 日待つ。
     cooldown:
       default-days: 7
 
-  # 依存は Bun のワークスペースとして bun.lock 1 つで管理している。npm の種別では bun.lock が更新されず、
-  # CI の `bun install --frozen-lockfile` で落ちるので、bun の種別でルートだけを対象にする。
-  - package-ecosystem: bun
-    directory: '/'
-    schedule:
-      interval: daily
-    open-pull-requests-limit: 5
-    cooldown:
-      default-days: 7
-    ignore:
-      # 3.1085.0 以降はバンドルが起動時に
-      # `ReferenceError: bindGetEndpointFromInstructions is not defined` で落ちる。
-      # rolldown と @smithy/middleware-endpoint の非互換で、解消するまで更新しない。
-      - dependency-name: '@aws-sdk/*'
-    # 同じバージョン番号で同時に更新する必要がある依存関係だけを列挙する。
-    # @fastify のように所有者が共通するだけの依存関係は対象外とする。
-    groups:
-      aws-sdk:
-        patterns:
-          - '@aws-sdk/*'
-      slacc:
-        patterns:
-          - 'slacc-*'
+  # JS の依存は対象にしない。Dependabot は bun.lock (lockfileVersion 3) を読めず、npm の種別では
+  # bun.lock を更新しないため、どちらでも PR が成立しない。更新は .github/workflows/update-deps.yml で行う。
