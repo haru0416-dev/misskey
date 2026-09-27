@@ -71,6 +71,7 @@ import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
+import { GLOBAL_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 
 export type ApiNotesDependencies = ApiNoteDependencies &
 	ApiNotificationDependencies & {
@@ -628,51 +629,6 @@ export async function handleApiNotesHybridTimeline(
 	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
-const GLOBAL_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
-const notesFeaturedEpoc = new Date('2023-01-01T00:00:00Z').getTime();
-
-function getCurrentNotesFeaturedWindow(windowRange: number): number {
-	const passed = Date.now() - notesFeaturedEpoc;
-	return Math.floor(passed / windowRange);
-}
-
-async function getNotesFeaturedRanking(deps: ApiNotesDependencies, name: string, threshold: number): Promise<string[]> {
-	const currentWindow = getCurrentNotesFeaturedWindow(GLOBAL_NOTES_RANKING_WINDOW);
-	const previousWindow = currentWindow - 1;
-
-	const redisPipeline = deps.redis.pipeline();
-	redisPipeline.zrange(`${name}:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`${name}:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
-		.exec()
-		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
-
-	const ranking = new Map<string, number>();
-	for (let i = 0; i < currentRankingResult.length; i += 2) {
-		const id = currentRankingResult[i];
-		const score = currentRankingResult[i + 1];
-		if (id == null || score == null) {
-			continue;
-		}
-		ranking.set(id, Number.parseInt(score, 10));
-	}
-	for (let i = 0; i < previousRankingResult.length; i += 2) {
-		const id = previousRankingResult[i];
-		const scoreValue = previousRankingResult[i + 1];
-		if (id == null || scoreValue == null) {
-			continue;
-		}
-		const score = Number.parseInt(scoreValue, 10);
-		const exist = ranking.get(id);
-		ranking.set(id, exist != null ? (exist + score) / 2 : score);
-	}
-
-	return [...ranking.entries()]
-		.sort((a, b) => b[1] - a[1])
-		.map((x) => x[0])
-		.slice(0, threshold);
-}
-
 let globalNotesRankingCache: string[] = [];
 let globalNotesRankingCacheLastFetchedAt = 0;
 
@@ -689,7 +645,12 @@ export async function handleApiNotesFeatured(
 ): Promise<Packed<'Note'>[]> {
 	let noteIds: string[];
 	if (params.channelId) {
-		noteIds = await getNotesFeaturedRanking(deps, `featuredInChannelNotesRanking:${params.channelId}`, 50);
+		noteIds = await readFeaturedRanking(
+			deps.redis,
+			`featuredInChannelNotesRanking:${params.channelId}`,
+			GLOBAL_NOTES_RANKING_WINDOW,
+			50,
+		);
 	} else {
 		if (
 			globalNotesRankingCacheLastFetchedAt !== 0 &&
@@ -697,7 +658,7 @@ export async function handleApiNotesFeatured(
 		) {
 			noteIds = globalNotesRankingCache;
 		} else {
-			noteIds = await getNotesFeaturedRanking(deps, 'featuredGlobalNotesRanking', 100);
+			noteIds = await readFeaturedRanking(deps.redis, 'featuredGlobalNotesRanking', GLOBAL_NOTES_RANKING_WINDOW, 100);
 			globalNotesRankingCache = noteIds;
 			globalNotesRankingCacheLastFetchedAt = Date.now();
 		}

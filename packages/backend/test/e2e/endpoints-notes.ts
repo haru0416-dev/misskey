@@ -1396,6 +1396,34 @@ describe('Endpoints', () => {
 				await closeRedisConnection(redis);
 			}
 		});
+
+		test('他人のリアクションとリノートで注目の投稿に入る', { timeout: 120_000 }, async () => {
+			// 数えるのは反応の 30% だけなので、30 人分で外れ続ける確率を 0.7^30 (約 0.002%) まで下げる。
+			const suffix = Date.now().toString(36).slice(-6);
+			const author = await signup({ username: `hnfr${suffix}` });
+			const reacted = await api('notes/create', { text: 'reacted note' }, author);
+			const renoted = await api('notes/create', { text: 'renoted note' }, author);
+			const reactors = await Promise.all(
+				Array.from({ length: 30 }, (_, i) => signup({ username: `hnfr${suffix}${i}` })),
+			);
+			for (const reactor of reactors) {
+				expect(
+					(await api('notes/reactions/create', { noteId: reacted.body.createdNote.id, reaction: '👍' }, reactor))
+						.status,
+				).toBe(204);
+				expect((await api('notes/create', { renoteId: renoted.body.createdNote.id }, reactor)).status).toBe(200);
+			}
+
+			// 加算は応答の後に行うので、有界に待つ。
+			let featuredIds: string[] = [];
+			for (let i = 0; i < 50; i++) {
+				const res = await api('users/featured-notes', { userId: author.id, limit: 10 });
+				featuredIds = (res.body as { id: string }[]).map((note) => note.id);
+				if (featuredIds.length === 2) break;
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			expect(featuredIds.sort()).toEqual([reacted.body.createdNote.id, renoted.body.createdNote.id].sort());
+		});
 	});
 
 	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {

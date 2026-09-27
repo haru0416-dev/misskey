@@ -56,6 +56,7 @@ import type { ChartWriters } from '@/server/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
+import { FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE, recordFeaturedNoteEngagement } from '@/core/featured/FeaturedRanking.js';
 
 export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
 	ApiNoteDependencies &
@@ -214,6 +215,10 @@ export async function createNoteReactionForApi(
 		} else {
 			throw err;
 		}
+	}
+
+	if (note.userId !== user.id && Math.random() < FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE) {
+		void recordFeaturedNoteEngagement(deps.redis, note, 1).catch(() => {});
 	}
 
 	if (deps.meta.enableChartsForRemoteUser || user.host == null) {

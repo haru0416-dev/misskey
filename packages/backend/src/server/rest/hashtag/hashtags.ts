@@ -23,9 +23,7 @@ import { ApiError } from '../error.js';
 import { packUserDetailedManyForApi } from '../user/user.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-
-export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
-const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
+import { HASHTAG_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 
 export type ApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
@@ -64,58 +62,9 @@ export const hashtagsShowParamDef = z.object({
 	tag: z.string(),
 });
 
-export function getCurrentFeaturedWindow(windowRange: number): number {
-	const passed = Date.now() - featuredEpoc;
-	return Math.floor(passed / windowRange);
-}
-
 /** hashtagUsers:* redis キーの時刻ウィンドウ文字列 (YYYYMMDDHHmm、10分間隔に丸めた Date を渡す)。 */
 export function formatHashtagUsersWindow(now: Date): string {
 	return `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}`;
-}
-
-async function getFeaturedRanking(
-	redis: Redis.Redis,
-	name: string,
-	windowRange: number,
-	threshold: number,
-): Promise<string[]> {
-	const currentWindow = getCurrentFeaturedWindow(windowRange);
-	const previousWindow = currentWindow - 1;
-
-	const redisPipeline = redis.pipeline();
-	redisPipeline.zrange(`${name}:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`${name}:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
-		.exec()
-		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
-
-	const ranking = new Map<string, number>();
-	for (let i = 0; i < currentRankingResult.length; i += 2) {
-		const noteId = currentRankingResult[i];
-		const scoreValue = currentRankingResult[i + 1];
-		if (noteId == null || scoreValue == null) {
-			continue;
-		}
-		const score = Number.parseInt(scoreValue, 10);
-		ranking.set(noteId, score);
-	}
-	for (let i = 0; i < previousRankingResult.length; i += 2) {
-		const noteId = previousRankingResult[i];
-		const scoreValue = previousRankingResult[i + 1];
-		if (noteId == null || scoreValue == null) {
-			continue;
-		}
-		const score = Number.parseInt(scoreValue, 10);
-		const exist = ranking.get(noteId);
-		if (exist != null) {
-			ranking.set(noteId, (exist + score) / 2);
-		} else {
-			ranking.set(noteId, score);
-		}
-	}
-
-	return Array.from(ranking.keys());
 }
 
 async function getHashtagCharts(
@@ -133,7 +82,8 @@ async function getHashtagCharts(
 		for (const hashtag of hashtags) {
 			redisPipeline.pfcount(`hashtagUsers:${hashtag}:${window}`);
 		}
-		now.setMinutes(now.getMinutes() - i * 10, 0, 0);
+		// 10 分ずつ過去の窓へ。
+		now.setMinutes(now.getMinutes() - 10, 0, 0);
 	}
 
 	const result = await redisPipeline.exec();
@@ -187,7 +137,7 @@ export async function handleApiHashtagsTrend(
 	}[]
 > {
 	parseApiParams(hashtagsTrendParamDef, body);
-	const ranking = await getFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
+	const ranking = await readFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
 	const charts = ranking.length === 0 ? {} : await getHashtagCharts(deps.redis, ranking, 20);
 
 	return ranking.map((tag) => {

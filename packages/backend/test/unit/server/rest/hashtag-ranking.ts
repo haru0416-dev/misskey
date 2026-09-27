@@ -11,11 +11,8 @@ import type { Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updateHashtagsRanking, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
-import {
-	formatHashtagUsersWindow,
-	getCurrentFeaturedWindow,
-	HASHTAG_RANKING_WINDOW,
-} from '@/server/rest/hashtag/hashtags.js';
+import { formatHashtagUsersWindow } from '@/server/rest/hashtag/hashtags.js';
+import { currentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/core/featured/FeaturedRanking.js';
 
 describe('updateHashtagsRanking', () => {
 	let config: Config;
@@ -32,7 +29,7 @@ describe('updateHashtagsRanking', () => {
 
 	/** featured ランキング更新は fire-and-forget なので、zscore が現れるまで有界ポーリングする。 */
 	async function pollFeaturedScore(tag: string): Promise<number | null> {
-		const key = `featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`;
+		const key = `featuredHashtagsRanking:${currentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`;
 		for (let i = 0; i < 20; i++) {
 			const score = await redis.zscore(key, tag);
 			if (score != null) {
@@ -124,7 +121,7 @@ describe('updateHashtagsRanking', () => {
 		await sleep(300);
 		for (const tag of [hiddenTag, sensitiveTag]) {
 			expect(
-				await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
+				await redis.zscore(`featuredHashtagsRanking:${currentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
 			).toBeNull();
 			expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
 		}
