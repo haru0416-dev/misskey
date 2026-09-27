@@ -112,6 +112,40 @@ describe('hono-queue-db (importMuting)', () => {
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, muter.id)).toBe(false);
 	});
 
+	// 内部ストレージのファイルは保存場所から読む。公開 URL を自分で取得すると、自分の URL に自分から届かない環境
+	// (ルーターがヘアピン接続しない自宅など) で失敗する。URL は届かない宛先にしておき、取得していないことを確かめる。
+	test('内部ストレージのファイルは公開 URL を取得せずに読む', async () => {
+		const muter = await createTestUser('honoqueueimpmutelocal');
+		const target = await createTestUser('honoqueueimpmutelocaltarget');
+		const accessKey = `import-${genId()}`;
+		runtime.internalStorageService.saveFromBuffer(
+			accessKey,
+			Buffer.from(`${target.username}@${runtime.config.runtime.host}\n`),
+		);
+
+		try {
+			const fileId = genId();
+			await createDriveFileInDatabase(runtime.db, {
+				id: fileId,
+				md5: 'dummy',
+				name: 'muting.csv',
+				type: 'text/csv',
+				size: 1,
+				storedInternal: true,
+				accessKey,
+				url: 'http://127.0.0.1:9/unreachable.csv',
+				userId: muter.id,
+				userHost: null,
+			});
+
+			await handleQueueImportMuting(deps, { user: { id: muter.id }, fileId });
+
+			expect(await mutingExistsInDatabase(runtime.db, muter.id, target.id)).toBe(true);
+		} finally {
+			await runtime.internalStorageService.del(accessKey);
+		}
+	});
+
 	test('存在しないfileIdは何もしない', async () => {
 		const muter = await createTestUser('honoqueueimpmutenofile');
 		await expect(handleQueueImportMuting(deps, { user: { id: muter.id }, fileId: genId() })).resolves.toBeUndefined();

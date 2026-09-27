@@ -282,23 +282,7 @@ export function createDownloadService(
 		return { status: res.status, headers: res.headers, body: limited };
 	}
 
-	async function downloadTextFile(url: string): Promise<string> {
-		const [path, cleanup] = await createTemp();
-
-		logger.info(`text file: Temp file is ${path}`);
-
-		try {
-			await downloadUrl(url, path);
-
-			const text = await fs.promises.readFile(path, 'utf8');
-
-			return text;
-		} finally {
-			cleanup();
-		}
-	}
-
-	return { downloadUrl, downloadUrlToMemoryOrFile, openRemoteStream, fetchFileName, downloadTextFile };
+	return { downloadUrl, downloadUrlToMemoryOrFile, openRemoteStream, fetchFileName };
 }
 
 export type DownloadService = ReturnType<typeof createDownloadService>;
