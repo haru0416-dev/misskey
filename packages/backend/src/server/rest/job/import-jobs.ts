@@ -19,9 +19,9 @@ import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/us
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { ApiError, rolePermissionDeniedError } from '../error.js';
+import { ApiError, rolePolicyRequiredError } from '../error.js';
 import type { ApiInternalEventPublisher } from '../events.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
+import { getApiRolePolicies, hasApiRequiredRolePolicy } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { resolveAlsoKnownAsForApi } from '../user/user.js';
 import type { UserPackingDependencies } from '../user/user.js';
@@ -297,11 +297,11 @@ export async function handleApiIImportAntennas(
 				throw importAntennasNoSuchUserError();
 			}
 
-			const policies = await getApiRolePolicies({ ...deps, db: tx }, currentUser);
-			if (currentUser.id !== deps.meta.rootUserId && !policies.canImportAntennas) {
-				throw rolePermissionDeniedError();
+			const txDeps = { ...deps, db: tx };
+			if (!(await hasApiRequiredRolePolicy(txDeps, currentUser, 'canImportAntennas'))) {
+				throw rolePolicyRequiredError();
 			}
-			return policies.antennaLimit;
+			return (await getApiRolePolicies(txDeps, currentUser)).antennaLimit;
 		},
 	);
 	if (result.status === 'limitExceeded') {

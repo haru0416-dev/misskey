@@ -139,12 +139,33 @@ export function permissionDeniedError(): ApiError {
 	});
 }
 
-export function rolePermissionDeniedError(): ApiError {
+// 3 つとも code は ROLE_PERMISSION_DENIED で、どの条件で拒否されたかは id で区別する。
+export function moderatorRequiredError(): ApiError {
 	return new ApiError({
 		status: 403,
-		message: 'Role permission denied.',
+		message: 'You are not assigned to a moderator role.',
+		code: 'ROLE_PERMISSION_DENIED',
+		id: 'd33d5333-db36-423d-a8f9-1a2b9549da41',
+		kind: 'permission',
+	});
+}
+
+export function administratorRequiredError(): ApiError {
+	return new ApiError({
+		status: 403,
+		message: 'You are not assigned to an administrator role.',
 		code: 'ROLE_PERMISSION_DENIED',
 		id: 'c3d38592-54c0-429d-be96-5636b0431a61',
+		kind: 'permission',
+	});
+}
+
+export function rolePolicyRequiredError(): ApiError {
+	return new ApiError({
+		status: 403,
+		message: 'You are not assigned to a required role.',
+		code: 'ROLE_PERMISSION_DENIED',
+		id: '7f86f06f-7e15-4057-8561-f4b6d4ac755a',
 		kind: 'permission',
 	});
 }

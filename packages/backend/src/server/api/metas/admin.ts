@@ -527,7 +527,6 @@ export const endpointMetas = {
 	}),
 	'admin/avatar-decorations/create': defineContract({
 		meta: {
-			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -595,7 +594,6 @@ export const endpointMetas = {
 	}),
 	'admin/avatar-decorations/delete': defineContract({
 		meta: {
-			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -607,7 +605,6 @@ export const endpointMetas = {
 	}),
 	'admin/avatar-decorations/list': defineContract({
 		meta: {
-			requireRolePolicy: 'canManageAvatarDecorations',
 			allowQuery: true,
 			tags: ['admin'],
 
@@ -682,7 +679,6 @@ export const endpointMetas = {
 	}),
 	'admin/avatar-decorations/update': defineContract({
 		meta: {
-			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,

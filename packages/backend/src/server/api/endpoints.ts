@@ -34,16 +34,14 @@ interface IEndpointMetaBase {
 	/** isAdministrator なロールを必要とするか。 */
 	readonly requireAdmin?: boolean;
 
+	/**
+	 * 実行に必要なロールポリシー名。root と管理者ロールの持ち主は常に通る。
+	 * 権限 (kind) とは別軸で、インスタンスがロールで許可を配る種類の制限に使う。
+	 */
 	readonly requiredRolePolicy?: KeyOf<'RolePolicies'>;
 
 	/** 引っ越し済みのユーザーによるリクエストを禁止するか。省略時は false。 */
 	readonly prohibitMoved?: boolean;
-
-	/**
-	 * 実行に必要なロールポリシー名。root は常に通る。
-	 * 権限 (kind) とは別軸で、インスタンスがロールで許可を配る種類の制限に使う。
-	 */
-	readonly requireRolePolicy?: string;
 
 	/** レート制限。省略時は制限なし。 */
 	readonly limit?: {

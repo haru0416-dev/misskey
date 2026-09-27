@@ -13,7 +13,7 @@ import {
 	payloadTooLargeError,
 	permissionDeniedError,
 	rateLimitExceededError,
-	rolePermissionDeniedError,
+	rolePolicyRequiredError,
 	userSuspendedError,
 } from '../../rest/error.js';
 import type { ApiError } from '../../rest/error.js';
@@ -34,7 +34,7 @@ export const errors = {
 	},
 	'403': {
 		PERMISSION_DENIED: example(permissionDeniedError()),
-		ROLE_PERMISSION_DENIED: example(rolePermissionDeniedError()),
+		ROLE_PERMISSION_DENIED: example(rolePolicyRequiredError()),
 		YOUR_ACCOUNT_SUSPENDED: example(userSuspendedError()),
 		YOUR_ACCOUNT_MOVED: example(accountMovedError()),
 	},
