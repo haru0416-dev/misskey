@@ -47,7 +47,7 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
-	downloadService: Pick<DownloadService, 'downloadUrl' | 'downloadTextFile'>;
+	downloadService: Pick<DownloadService, 'downloadUrl' | 'downloadTextFile' | 'fetchFileName'>;
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;

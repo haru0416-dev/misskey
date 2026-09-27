@@ -21,6 +21,49 @@ export function createDownloadService(
 ) {
 	const logger = loggerService.getLogger('download');
 
+	/** Content-Disposition の filename を優先し、無ければ URL のパス末尾を使う。 */
+	function filenameOf(url: string, headers: Headers): string {
+		const contentDisposition = headers.get('content-disposition');
+		if (contentDisposition != null) {
+			try {
+				const parsed = parse(contentDisposition);
+				if (parsed.parameters['filename']) {
+					return parsed.parameters['filename'];
+				}
+			} catch (e) {
+				logger.warn(`Failed to parse content-disposition: ${contentDisposition}`, { stack: e });
+			}
+		}
+		return new URL(url).pathname.split('/').pop() ?? 'untitled';
+	}
+
+	/**
+	 * 本文を取らずに、取得した場合と同じファイル名を得る (HEAD 1 回)。中身を取得せずに登録するリモートのファイルで使う。
+	 * HEAD に応じないサーバーもあるので、失敗したら URL のパス末尾を返す。
+	 */
+	async function fetchFileName(url: string): Promise<string> {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 10 * 1000);
+		try {
+			const res = await httpRequestService.fetchFollowingRedirects(
+				url,
+				{
+					method: 'HEAD',
+					headers: { 'User-Agent': config.runtime.userAgent },
+					body: undefined,
+					signal: controller.signal,
+				},
+				false,
+			);
+			await res.body?.cancel().catch(() => {});
+			return res.ok ? filenameOf(url, res.headers) : filenameOf(url, new Headers());
+		} catch {
+			return filenameOf(url, new Headers());
+		} finally {
+			clearTimeout(timer);
+		}
+	}
+
 	/**
 	 * 取得を始め、本文を上限つきで sink へ流す。タイムアウトと上限超過の扱いは全ての取得で共通。
 	 */
@@ -29,8 +72,7 @@ export function createDownloadService(
 		const operationTimeout = 60 * 1000;
 		const maxSize = config.limits.maximumFileSizeBytes;
 
-		const urlObj = new URL(url);
-		let filename = urlObj.pathname.split('/').pop() ?? 'untitled';
+		let filename = '';
 
 		const controller = new AbortController();
 		const operationTimer = setTimeout(() => controller.abort(), operationTimeout);
@@ -68,17 +110,7 @@ export function createDownloadService(
 				}
 			}
 
-			const contentDisposition = res.headers.get('content-disposition');
-			if (contentDisposition != null) {
-				try {
-					const parsed = parse(contentDisposition);
-					if (parsed.parameters['filename']) {
-						filename = parsed.parameters['filename'];
-					}
-				} catch (e) {
-					logger.warn(`Failed to parse content-disposition: ${contentDisposition}`, { stack: e });
-				}
-			}
+			filename = filenameOf(url, res.headers);
 
 			let transferred = 0;
 			const limitSize = new stream.Transform({
@@ -266,7 +298,7 @@ export function createDownloadService(
 		}
 	}
 
-	return { downloadUrl, downloadUrlToMemoryOrFile, openRemoteStream, downloadTextFile };
+	return { downloadUrl, downloadUrlToMemoryOrFile, openRemoteStream, fetchFileName, downloadTextFile };
 }
 
 export type DownloadService = ReturnType<typeof createDownloadService>;

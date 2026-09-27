@@ -107,12 +107,13 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 			await fs.writeFile(path, Buffer.alloc(16));
 			return { filename: 'downloaded.bin' };
 		});
+		const fetchFileName = vi.fn(async () => '192.jpg');
 		const update = vi.fn();
 		const deps = {
 			config,
 			db,
 			meta: { ...meta, ...overrides },
-			downloadService: { downloadUrl },
+			downloadService: { downloadUrl, fetchFileName },
 			fileInfoService: {
 				getFileInfo: vi.fn(async () => ({
 					size: 16,
@@ -133,7 +134,7 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 			chartWriters: { driveChart: { update }, perUserDriveChart: { update }, instanceChart: { updateDrive: update } },
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 		} as unknown as ApiDriveFileUploadDependencies;
-		return { deps, downloadUrl };
+		return { deps, downloadUrl, fetchFileName };
 	}
 
 	const declared: DeclaredRemoteFile = {
@@ -157,7 +158,7 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 
 	test('申告があれば中身を取得せずに登録し、同じ URI の 2 回目は取得も追加もしない', async () => {
 		const url = `https://remote.example.test/media/${genId()}.jpg`;
-		const { deps, downloadUrl } = buildDeps();
+		const { deps, downloadUrl, fetchFileName } = buildDeps();
 
 		const file = await register(deps, url);
 		expect(downloadUrl).not.toHaveBeenCalled();
@@ -172,7 +173,9 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 			blurhash: declared.blurhash,
 			properties: { width: 1920, height: 1440 },
 		});
-		expect(file.name).toBe(url.split('/').pop());
+		// 名前は取得した場合と同じく Content-Disposition 由来 (HEAD で得る)。URL の末尾ではない。
+		expect(fetchFileName).toHaveBeenCalledWith(url);
+		expect(file.name).toBe('192.jpg');
 		expect(file.webpublicAccessKey).toMatch(/^webpublic-/);
 
 		// 2 回目は中身を取得する経路 (申告なし。アバター・バナーと同じ) でも、登録済みの URI なら取得しない。
