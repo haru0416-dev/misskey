@@ -51,17 +51,32 @@ const notes = ref<Misskey.entities.Note[]>([]);
 const fetching = ref(true);
 const key = ref(0);
 
+// リストを切り替えた後に前のリストの応答が届いても、今のリストの表示に入れない。
+let tickGeneration = 0;
+
 const tick = () => {
 	if (props.userListId == null) {
 		return;
 	}
+	const generation = ++tickGeneration;
 	misskeyApi('notes/user-list-timeline', {
 		listId: props.userListId,
-	}).then((res) => {
-		notes.value = res;
-		fetching.value = false;
-		key.value++;
-	});
+	}).then(
+		(res) => {
+			if (generation !== tickGeneration) {
+				return;
+			}
+			notes.value = res;
+			fetching.value = false;
+			key.value++;
+		},
+		() => {
+			// 失敗したら表示中の内容を残し、読み込み中のままにしない。次の定期更新で取り直す。
+			if (generation === tickGeneration) {
+				fetching.value = false;
+			}
+		},
+	);
 };
 
 watch(() => props.userListId, tick);

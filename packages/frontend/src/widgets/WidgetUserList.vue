@@ -82,7 +82,11 @@ async function chooseList() {
 	fetch();
 }
 
+// 定期更新とリストの選び直しが重なったとき、後から届いた前のリストの応答で今のリストを上書きしない。
+let fetchGeneration = 0;
+
 const fetch = async () => {
+	const generation = ++fetchGeneration;
 	if (widgetProps.listId == null) {
 		fetching.value = false;
 		return;
@@ -92,14 +96,20 @@ const fetch = async () => {
 		const _list = await misskeyApi('users/lists/show', {
 			listId: widgetProps.listId,
 		});
-		list.value = _list;
-		users.value = await misskeyApi('users/show', {
+		const _users = await misskeyApi('users/show', {
 			userIds: _list.userIds ?? [],
 		});
+		if (generation !== fetchGeneration) {
+			return;
+		}
+		list.value = _list;
+		users.value = _users;
 	} catch {
 		// ポーリング失敗時は既存の表示を保持する (未ロードなら空のままで空状態表示になる)
 	} finally {
-		fetching.value = false;
+		if (generation === fetchGeneration) {
+			fetching.value = false;
+		}
 	}
 };
 
