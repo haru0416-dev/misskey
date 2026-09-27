@@ -110,6 +110,8 @@ function renderDocument(deps: ApiNoteApDependencies, file: MiDriveFile): Record<
 		name: file.comment,
 		width: file.properties?.width,
 		height: file.properties?.height,
+		// 受け手が中身を取得せずに登録しても読み込み中の表示を作れるよう、Mastodon と同じく申告する。
+		...(file.blurhash == null ? {} : { blurhash: file.blurhash }),
 		sensitive: file.isSensitive,
 	};
 }

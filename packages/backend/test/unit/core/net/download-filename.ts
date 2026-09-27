@@ -21,10 +21,17 @@ describe('core:net:DownloadService のファイル名決定', () => {
 	let server: Server;
 	let port = 0;
 	let header: string | null = null;
+	let rejectHead = false;
+	const methods: string[] = [];
 	let tmpDir = '';
 
 	beforeAll(async () => {
-		server = createServer((_req, res) => {
+		server = createServer((req, res) => {
+			methods.push(req.method!);
+			if (req.method === 'HEAD' && rejectHead) {
+				res.writeHead(405).end();
+				return;
+			}
 			const headers: Record<string, string> = { 'content-type': 'application/octet-stream' };
 			if (header != null) {
 				headers['content-disposition'] = header;
@@ -44,6 +51,8 @@ describe('core:net:DownloadService のファイル名決定', () => {
 
 	afterEach(() => {
 		header = null;
+		rejectHead = false;
+		methods.length = 0;
 	});
 
 	function service() {
@@ -95,5 +104,18 @@ describe('core:net:DownloadService のファイル名決定', () => {
 	test('パラメータの無い壊れたヘッダでも例外にしない', async () => {
 		header = 'attachment;;;';
 		await expect(download('/dir/from-url.bin')).resolves.toBe('from-url.bin');
+	});
+
+	// 保存しないリモートのファイルは中身を取得せずに登録するが、名前は取得した場合と同じにする。
+	test('fetchFileName は HEAD だけで Content-Disposition の名前を得る', async () => {
+		header = "attachment; filename*=UTF-8''%E7%8C%AB.png";
+		await expect(service().fetchFileName(`http://127.0.0.1:${port}/dir/from-url.bin`)).resolves.toBe('猫.png');
+		expect(methods).toStrictEqual(['HEAD']);
+	});
+
+	test('fetchFileName は HEAD に応じないサーバーでは URL 由来の名前へ落ちる', async () => {
+		rejectHead = true;
+		header = 'attachment; filename="from-header.png"';
+		await expect(service().fetchFileName(`http://127.0.0.1:${port}/dir/from-url.bin`)).resolves.toBe('from-url.bin');
 	});
 });

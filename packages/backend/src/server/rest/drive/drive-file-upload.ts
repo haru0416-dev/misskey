@@ -69,7 +69,7 @@ import { parseApiParams } from '../validation.js';
 
 export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'internalStorageService'> &
 	ApiDriveFileDependencies & {
-		downloadService: Pick<DownloadService, 'downloadUrl'>;
+		downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
 		fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 		imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 		internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
@@ -376,16 +376,6 @@ function sensitiveDetectionApplies(meta: MiMeta, user: MiUser | null): boolean {
 	if (meta.sensitiveMediaDetection === 'local') return user.host == null;
 	if (meta.sensitiveMediaDetection === 'remote') return user.host != null;
 	return true;
-}
-
-/** 取得しない場合のファイル名。取得時は Content-Disposition を優先するが、ここでは URL の末尾しか分からない。 */
-function fileNameFromUrl(url: string): string | null {
-	try {
-		const last = new URL(url).pathname.split('/').pop();
-		return last ? decodeURIComponent(last) : null;
-	} catch {
-		return null;
-	}
 }
 
 /** 取得していないファイルの情報。md5 は中身が無いので null、size は保存しないリモートのファイルと同じく 0。 */
@@ -802,7 +792,7 @@ export async function uploadDriveFileFromUrlForApi(
 			user,
 			path: null,
 			declared,
-			name: fileNameFromUrl(url),
+			name: await deps.downloadService.fetchFileName(url),
 			comment,
 			folderId,
 			force,
