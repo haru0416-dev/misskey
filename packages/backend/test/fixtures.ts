@@ -213,6 +213,7 @@ export const fetchInstanceByHostFromDatabase = bindDatabaseOperation(InstanceSto
 export const createModerationLogInDatabase = bindDatabaseOperation(ModerationLogStore.createModerationLogInDatabase);
 export const listModerationLogsFromDatabase = bindDatabaseOperation(ModerationLogStore.listModerationLogsFromDatabase);
 export const fetchMetaFromDatabase = bindDatabaseOperation(MetaStore.fetchMetaFromDatabase);
+export const updateMetaInDatabase = bindDatabaseOperation(MetaStore.updateMetaInDatabase);
 export const fetchMutingByMuterIdAndMuteeIdFromDatabase = bindDatabaseOperation(
 	MutingStore.fetchMutingByMuterIdAndMuteeIdFromDatabase,
 );
