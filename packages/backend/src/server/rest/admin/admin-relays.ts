@@ -63,13 +63,27 @@ function assertHttpsUrl(url: string): void {
 	}
 }
 
-export async function relayAcceptedForApi(deps: Pick<ApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
-	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted');
+type RelaySender = { inbox: string | null; sharedInbox: string | null };
+
+function senderInboxesOf(sender: RelaySender): string[] {
+	return [sender.inbox, sender.sharedInbox].filter((inbox): inbox is string => inbox != null);
+}
+
+export async function relayAcceptedForApi(
+	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
+	id: string,
+	sender: RelaySender,
+): Promise<string> {
+	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted', senderInboxesOf(sender));
 	return JSON.stringify(result);
 }
 
-export async function relayRejectedForApi(deps: Pick<ApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
-	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected');
+export async function relayRejectedForApi(
+	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
+	id: string,
+	sender: RelaySender,
+): Promise<string> {
+	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected', senderInboxesOf(sender));
 	return JSON.stringify(result);
 }
 
