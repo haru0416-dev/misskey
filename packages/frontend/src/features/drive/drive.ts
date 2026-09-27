@@ -336,6 +336,55 @@ export function chooseDriveFile(
 	});
 }
 
+/**
+ * URL からのアップロードを依頼し、保存されたファイルを返す。結果はストリームで届くので、成功でも失敗でも
+ * 届いたら接続を閉じる (閉じないと試すたびに接続が残る)。受け付けられなかった理由と保存の失敗は表示する。
+ */
+export function requestUploadFromUrl(url: string, folderId: string | null): Promise<Misskey.entities.DriveFile> {
+	return new Promise((res, rej) => {
+		const marker = genId();
+
+		const connection = useStream().useChannel('main');
+		const fail = (err: unknown) => {
+			connection.dispose();
+			rej(err);
+		};
+		connection.on('urlUploadFinished', (urlResponse) => {
+			if (urlResponse.marker === marker) {
+				connection.dispose();
+				res(urlResponse.file);
+			}
+		});
+		connection.on('urlUploadFailed', (failure) => {
+			if (failure.marker === marker) {
+				os.alert({ type: 'error', text: i18n.ts.somethingHappened });
+				fail(new Error('upload from url failed'));
+			}
+		});
+
+		misskeyApi('drive/files/upload-from-url', {
+			url,
+			folderId,
+			marker,
+		}).then(
+			() => {
+				os.alert({
+					title: i18n.ts.uploadFromUrlRequested,
+					text: i18n.ts.uploadFromUrlMayTakeTime,
+				});
+			},
+			(err: unknown) => {
+				// 受け付けられなかった (URL の形式・回数制限・権限) ときは、受け付けた旨ではなく理由を出す。
+				const content = os.apiErrorDialogContent(err);
+				if (content != null) {
+					os.alert({ type: 'error', ...content });
+				}
+				fail(err);
+			},
+		);
+	});
+}
+
 function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 	return new Promise((res, rej) => {
 		os.inputText({
@@ -346,27 +395,7 @@ function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 			if (canceled || url == null) {
 				return;
 			}
-
-			const marker = genId();
-
-			const connection = useStream().useChannel('main');
-			connection.on('urlUploadFinished', (urlResponse) => {
-				if (urlResponse.marker === marker) {
-					res(urlResponse.file);
-					connection.dispose();
-				}
-			});
-
-			misskeyApi('drive/files/upload-from-url', {
-				url,
-				folderId: prefer.uploadFolder,
-				marker,
-			});
-
-			os.alert({
-				title: i18n.ts.uploadFromUrlRequested,
-				text: i18n.ts.uploadFromUrlMayTakeTime,
-			});
+			requestUploadFromUrl(url, prefer.uploadFolder).then(res, rej);
 		});
 	});
 }

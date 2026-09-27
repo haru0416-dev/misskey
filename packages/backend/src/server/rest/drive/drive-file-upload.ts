@@ -859,12 +859,17 @@ export function handleApiDriveFilesUploadFromUrl(
 		// URLアップロードは enableIpLogging に関係なく接続元情報を記録する。
 		requestIp: ip,
 		requestHeaders: headers,
-	}).then((file) => {
-		packDriveFileOrFailForApi(deps, file, { self: true }).then((packedFile) => {
+	})
+		.then(async (file) => {
+			const packedFile = await packDriveFileOrFailForApi(deps, file, { self: true });
 			deps.publishMainStream?.(me.id, 'urlUploadFinished', {
 				marker: params.marker,
 				file: packedFile,
 			});
+		})
+		.catch((err: unknown) => {
+			// 応答は先に返しているので、失敗はストリームで知らせる (知らせないとクライアントは待ち続ける)。
+			deps.logger.warn(`Failed to upload from url: ${err}`);
+			deps.publishMainStream?.(me.id, 'urlUploadFailed', { marker: params.marker });
 		});
-	});
 }

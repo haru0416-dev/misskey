@@ -701,6 +701,9 @@ export type Channels = {
                 marker: string;
                 file: DriveFile;
             }) => void;
+            urlUploadFailed: (payload: {
+                marker: string;
+            }) => void;
             readAllNotifications: () => void;
             unreadNotification: (payload: Notification_2) => void;
             notificationFlushed: () => void;
@@ -3679,8 +3682,8 @@ type VerifyEmailRequest = NonNullable<operations['verify-email']['requestBody']>
 //
 // src/streaming.ts:61:4 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
 // src/streaming.ts:62:4 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:222:3 - (ae-forgotten-export) The symbol "ChatEvents" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:223:3 - (ae-forgotten-export) The symbol "ChatReceives" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:223:3 - (ae-forgotten-export) The symbol "ChatEvents" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:224:3 - (ae-forgotten-export) The symbol "ChatReceives" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

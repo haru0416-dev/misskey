@@ -93,7 +93,8 @@ export class Paginator<
 	// older: initialIdより古いものを取得する (default)
 	public initialDirection: 'newer' | 'older';
 
-	private offsetMode: boolean;
+	/** 関数なら取得のたびに評価する (並び順によって ID のカーソルが使えない一覧のため)。 */
+	private offsetMode: boolean | (() => boolean);
 	public noPaging: boolean;
 	public searchQuery = ref<null | string>('');
 	private searchParamName: keyof E['req'] | 'search';
@@ -120,7 +121,7 @@ export class Paginator<
 			/** 検索 API のような、ページング不可なエンドポイントを利用する場合に指定する。 */
 			noPaging?: boolean;
 
-			offsetMode?: boolean;
+			offsetMode?: boolean | (() => boolean);
 
 			initialId?: MisskeyEntity['id'];
 			initialDate?: number | null;
@@ -171,6 +172,10 @@ export class Paginator<
 		this.releaseQueue = this.releaseQueue.bind(this);
 		this.removeItem = this.removeItem.bind(this);
 		this.updateItem = this.updateItem.bind(this);
+	}
+
+	private isOffsetMode(): boolean {
+		return typeof this.offsetMode === 'function' ? this.offsetMode() : this.offsetMode;
 	}
 
 	private getNewestId(): string | null | undefined {
@@ -336,7 +341,7 @@ export class Paginator<
 				? { [this.searchParamName]: this.searchQuery.value }
 				: {}),
 			limit: SECOND_FETCH_LIMIT,
-			...(this.offsetMode
+			...(this.isOffsetMode()
 				? {
 						offset: this.items.value.length,
 					}
@@ -405,7 +410,7 @@ export class Paginator<
 				? { [this.searchParamName]: this.searchQuery.value }
 				: {}),
 			limit: SECOND_FETCH_LIMIT,
-			...(this.offsetMode
+			...(this.isOffsetMode()
 				? {
 						offset: this.items.value.length,
 					}
