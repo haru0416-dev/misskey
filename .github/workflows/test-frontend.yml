@@ -128,6 +128,9 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium]
+        # テストは DB を初期化し合うので 1 つの実行環境の中では順に走らせる。実行環境ごとに DB が別なので、
+        # spec ファイルを 3 つに分けて並行に走らせる (1 つで 4.9 分かかっていた)。
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -166,14 +169,14 @@ jobs:
         run: bun run playwright:install
       - name: Playwright run
         timeout-minutes: 15
-        run: bun run pw:run -- --project=${{ matrix.browser }}
+        run: bun run pw:run -- --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: ${{ matrix.browser }}-playwright-report
+          name: ${{ matrix.browser }}-${{ matrix.shard }}-playwright-report
           path: playwright-report
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: ${{ matrix.browser }}-playwright-test-results
+          name: ${{ matrix.browser }}-${{ matrix.shard }}-playwright-test-results
           path: test-results
