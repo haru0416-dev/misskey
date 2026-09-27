@@ -1966,6 +1966,59 @@ describe('Endpoints', () => {
 			expect((log!.info as any).postUserId).toBe(owner.id);
 		});
 
+		test('gallery/featured は新しい順に並べ、削除済みの投稿の分を後ろの候補で埋める', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const owner = await signup({ username: `hgf${suffix}` });
+			const fileMd5 = createHash('md5').update(`hono-gallery-featured-${suffix}`).digest('hex');
+			const file = await createDriveFileInDatabase(db, {
+				id: genId(),
+				userId: owner.id,
+				userHost: null,
+				md5: fileMd5,
+				name: `hono-gallery-featured-${suffix}.png`,
+				type: 'image/png',
+				size: 123,
+				blurhash: null,
+				properties: {},
+				storedInternal: true,
+				url: `${origin}/files/${fileMd5}`,
+				thumbnailUrl: null,
+				comment: null,
+				folderId: null,
+			});
+			const postIds: string[] = [];
+			for (let i = 0; i < 6; i++) {
+				const created = await api(
+					'gallery/posts/create',
+					{ title: `featured ${suffix} ${i}`, fileIds: [file.id] },
+					owner,
+				);
+				expect(created.status).toBe(200);
+				postIds.push(created.body.id);
+			}
+			for (const id of postIds.slice(4)) {
+				expect((await api('gallery/posts/delete', { postId: id }, owner)).status).toBe(204);
+			}
+
+			const redis = createRedisClient(fixtureConfig);
+			const windowKey = `featuredGalleryPostsRanking:${Math.floor((Date.now() - new Date('2023-01-01T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24 * 3))}`;
+			try {
+				// 点数は古い投稿ほど高くし、返す順が点数ではなく新しい順であることも見る。
+				await redis.zadd(windowKey, ...postIds.flatMap((id, i) => [100 - i, id]));
+				// このファイルで最初の gallery/featured なので、プロセス内の 30 分キャッシュはまだ空。
+				const featured = await api('gallery/featured', { limit: 3 });
+				expect(featured.status).toBe(200);
+				expect((featured.body as { id: string }[]).map((post) => post.id)).toEqual([
+					postIds[3],
+					postIds[2],
+					postIds[1],
+				]);
+			} finally {
+				await redis.zrem(windowKey, ...postIds);
+				await closeRedisConnection(redis);
+			}
+		});
+
 		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);

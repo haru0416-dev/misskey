@@ -55,7 +55,7 @@ import type { ApiNoteDependencies } from '../note/note.js';
 import { FanoutTimelinePush } from '../note/fanout-timeline-push.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { listRedisListTimelineNoteIds } from '../note/redis-list-timeline.js';
+import { collectRedisListTimelineNotes } from '../note/redis-list-timeline.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
@@ -645,29 +645,24 @@ export async function handleApiAntennasNotes(
 		deps.publishInternalEvent?.('antennaUpdated', antenna);
 	}
 
-	const noteIds = await listRedisListTimelineNoteIds(deps.redis, `list:antennaTimeline:${antenna.id}`, {
-		sinceId,
-		untilId,
-		limit: params.limit,
-	});
-
-	if (noteIds.length === 0) {
-		return [];
-	}
-
-	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
-
-	const notes = await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
-		ids: noteIds,
-		me,
-		blockedHosts: deps.meta.blockedHosts,
-		mutingChannelIds,
-	});
-	if (sinceId != null && untilId == null) {
-		notes.sort((a, b) => (a.id < b.id ? -1 : 1));
-	} else {
-		notes.sort((a, b) => (a.id > b.id ? -1 : 1));
-	}
+	// 候補が無ければ絞り込みを呼ばないので、ミュートの一覧もそのときまで読まない。
+	let mutingChannelIds: string[] | undefined;
+	const notes = await collectRedisListTimelineNotes(
+		deps.redis,
+		`list:antennaTimeline:${antenna.id}`,
+		{ sinceId, untilId, limit: params.limit },
+		async (ids) =>
+			await listFilteredTimelineNotesByIdsFromDatabase(deps.db, {
+				ids,
+				me,
+				blockedHosts: deps.meta.blockedHosts,
+				mutingChannelIds: (mutingChannelIds ??= await listActiveMutedChannelIdsByUserIdFromDatabase(
+					deps.db,
+					me.id,
+					new Date(),
+				)),
+			}),
+	);
 
 	return await packNoteManyForApi(deps, notes, me);
 }
