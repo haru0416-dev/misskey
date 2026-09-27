@@ -24,6 +24,7 @@ import {
 	listDriveFoldersByIdsFromDatabase,
 	listDriveFoldersByNameFromDatabase,
 	listDriveFoldersByUserIdFromDatabase,
+	moveDriveFolderInDatabase,
 	updateDriveFolderInDatabase,
 } from '@/core/drive/DriveFolderStore.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
@@ -126,6 +127,8 @@ export async function packDriveFolderForApi(
 	options?: {
 		detail: boolean;
 	},
+	/** detail で親をたどるときに通ったフォルダ。既存の循環に行き当たったらそこで親の展開をやめる。 */
+	descendantIds: ReadonlySet<DriveFolderRow['id']> = new Set(),
 ): Promise<ApiPackedDriveFolder> {
 	const opts = {
 		detail: false,
@@ -142,9 +145,9 @@ export async function packDriveFolderForApi(
 	const [foldersCount, filesCount, parent] = await Promise.all([
 		countDriveFoldersByParentIdFromDatabase(deps.db, folder.id),
 		countDriveFilesByFolderIdFromDatabase(deps.db, folder.id),
-		folder.parentId == null
+		folder.parentId == null || folder.parentId === folder.id || descendantIds.has(folder.parentId)
 			? Promise.resolve(undefined)
-			: packDriveFolderForApi(deps, folder.parentId, { detail: true }),
+			: packDriveFolderForApi(deps, folder.parentId, { detail: true }, new Set([...descendantIds, folder.id])),
 	]);
 
 	return {
@@ -172,30 +175,48 @@ export async function packDriveFoldersManyForApi(
 		return folders.map((folder) => packDriveFolderBaseForApi(folder));
 	}
 
-	const folderIds = [...new Set(folders.map((folder) => folder.id))];
-	const parentIds = [
-		...new Set(folders.map((folder) => folder.parentId).filter((id): id is DriveFolderRow['id'] => id != null)),
-	];
-	const [folderCounts, fileCounts, parents] = await Promise.all([
+	// 祖先を階層ごとにまとめて読む。読んだ行は覚えておくので、既存の循環があっても読み込みは終わる。
+	const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+	for (
+		let missing = [...new Set(folders.map((folder) => folder.parentId))].filter(
+			(id): id is DriveFolderRow['id'] => id != null && !folderById.has(id),
+		);
+		missing.length > 0;
+	) {
+		const parents = await listDriveFoldersByIdsFromDatabase(deps.db, missing);
+		for (const parent of parents) {
+			folderById.set(parent.id, parent);
+		}
+		missing = [...new Set(parents.map((parent) => parent.parentId))].filter(
+			(id): id is DriveFolderRow['id'] => id != null && !folderById.has(id),
+		);
+	}
+
+	const folderIds = [...folderById.keys()];
+	const [folderCounts, fileCounts] = await Promise.all([
 		countChildDriveFoldersGroupedByParentIdsFromDatabase(deps.db, folderIds),
 		countDriveFilesGroupedByFolderIdsFromDatabase(deps.db, folderIds),
-		parentIds.length === 0 ? Promise.resolve([]) : packDriveFoldersManyForApi(deps, parentIds, { detail: true }),
 	]);
 	const folderCountById = new Map(folderCounts.map((row) => [row.parentId, row.count]));
 	const fileCountById = new Map(fileCounts.map((row) => [row.folderId, row.count]));
-	const parentById = new Map(parents.map((parent) => [parent.id, parent]));
 
-	return folders.map((folder) => {
-		const packed = packDriveFolderBaseForApi(folder);
-		const parent = folder.parentId == null ? null : parentById.get(folder.parentId);
+	// descendantIds はそのフォルダから下へたどってきた経路。親がその中にあれば循環なので、そこで展開をやめる。
+	const build = (folder: DriveFolderRow, descendantIds: ReadonlySet<DriveFolderRow['id']>): ApiPackedDriveFolder => {
+		const parentRow =
+			folder.parentId == null || folder.parentId === folder.id || descendantIds.has(folder.parentId)
+				? undefined
+				: folderById.get(folder.parentId);
+		const parent = parentRow == null ? undefined : build(parentRow, new Set([...descendantIds, folder.id]));
 
 		return {
-			...packed,
+			...packDriveFolderBaseForApi(folder),
 			foldersCount: folderCountById.get(folder.id) ?? 0,
 			filesCount: fileCountById.get(folder.id) ?? 0,
 			...(parent == null ? {} : { parent }),
 		};
-	});
+	};
+
+	return folders.map((folder) => build(folder, new Set()));
 }
 
 export async function handleApiDriveFilesCheckExistence(
@@ -281,24 +302,6 @@ export async function handleApiDriveFoldersShow(
 	});
 }
 
-async function driveFolderWillNestRecursively(
-	deps: ApiDriveDependencies,
-	targetFolderId: string,
-	parentId: string | null,
-): Promise<boolean> {
-	for (let currentParentId = parentId; currentParentId != null;) {
-		const parent = await fetchDriveFolderByIdOrFailFromDatabase(deps.db, currentParentId);
-
-		if (parent.id === targetFolderId) {
-			return true;
-		}
-
-		currentParentId = parent.parentId;
-	}
-
-	return false;
-}
-
 export async function handleApiDriveFoldersUpdate(
 	deps: ApiDriveDependencies,
 	me: MiLocalUser,
@@ -319,30 +322,27 @@ export async function handleApiDriveFoldersUpdate(
 		nextFolder.name = params.name;
 	}
 
-	if (params.parentId !== undefined) {
-		if (params.parentId === folder.id) {
-			throw errors.recursiveNesting();
-		} else if (params.parentId === null) {
-			nextFolder.parentId = null;
-		} else {
-			const parent = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.parentId, me.id);
+	if (params.parentId != null) {
+		const parent = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.parentId, me.id);
 
-			if (parent == null) {
-				throw errors.noSuchParentFolder();
-			}
-
-			if (await driveFolderWillNestRecursively(deps, folder.id, parent.parentId)) {
-				throw errors.recursiveNesting();
-			}
-
-			nextFolder.parentId = parent.id;
+		if (parent == null) {
+			throw errors.noSuchParentFolder();
 		}
-	}
 
-	await updateDriveFolderInDatabase(deps.db, nextFolder.id, {
-		name: nextFolder.name,
-		parentId: nextFolder.parentId,
-	});
+		nextFolder.parentId = parent.id;
+		if (!(await moveDriveFolderInDatabase(deps.db, me.id, folder.id, { name: nextFolder.name, parentId: parent.id }))) {
+			throw errors.recursiveNesting();
+		}
+	} else {
+		if (params.parentId === null) {
+			nextFolder.parentId = null;
+		}
+
+		await updateDriveFolderInDatabase(deps.db, nextFolder.id, {
+			name: nextFolder.name,
+			parentId: nextFolder.parentId,
+		});
+	}
 
 	const packed = await packDriveFolderForApi(deps, nextFolder);
 	deps.publishDriveStream?.(me.id, 'folderUpdated', packed);
