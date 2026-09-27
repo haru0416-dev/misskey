@@ -105,7 +105,11 @@ const pollingScheduler = new PollingScheduler(async () => {
 	}
 }, POLLING_INTERVAL);
 
-function pollingSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>; $note: ReactiveNoteData }) {
+/** 購読を始め、解除する関数を返す。解除は呼び出し元の onUnmounted が行う (クリック時の購読も対象にするため)。 */
+function pollingSubscribe(props: {
+	note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>;
+	$note: ReactiveNoteData;
+}): () => void {
 	const { note, $note } = props;
 
 	function onFetched(data: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis'>): void {
@@ -121,13 +125,14 @@ function pollingSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cre
 	pollingEnqueue(note);
 	fetchEvent.on(note.id, onFetched);
 
-	onUnmounted(() => {
+	return () => {
 		pollingDequeue(note);
 		fetchEvent.off(note.id, onFetched);
-	});
+	};
 }
 
-function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'createdAt'> }): void {
+/** 購読を始め、解除する関数を返す。 */
+function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'createdAt'> }): () => void {
 	const note = props.note;
 	const connection = useStream();
 
@@ -192,10 +197,10 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 	capture(true);
 	connection.on('_connected_', onStreamConnected);
 
-	onUnmounted(() => {
+	return () => {
 		decapture(true);
 		connection.off('_connected_', onStreamConnected);
-	});
+	};
 }
 
 export type ReactiveNoteData = {
@@ -318,28 +323,35 @@ export function useNoteCapture(props: {
 		$note.pollChoices = choices;
 	}
 
+	// 購読中なら解除する関数。クリック時 (リノートなど) にも購読し始めるので、setup で登録した onUnmounted から解除する。
+	let unsubscribe: (() => void) | null = null;
+
 	function subscribe() {
 		if (mock) {
 			// モックモードでは購読しない
 			return;
 		}
-
-		if ($i && store.realtimeMode) {
-			realtimeSubscribe({
-				note,
-			});
-		} else {
-			pollingSubscribe({
-				note,
-				$note,
-			});
+		if (unsubscribe != null) {
+			return;
 		}
+
+		unsubscribe =
+			$i && store.realtimeMode
+				? realtimeSubscribe({
+						note,
+					})
+				: pollingSubscribe({
+						note,
+						$note,
+					});
 	}
 
 	onUnmounted(() => {
 		noteEvents.off(`reacted:${note.id}`, onReacted);
 		noteEvents.off(`unreacted:${note.id}`, onUnreacted);
 		noteEvents.off(`pollVoted:${note.id}`, onPollVoted);
+		unsubscribe?.();
+		unsubscribe = null;
 	});
 
 	// 投稿からある程度経過している(=タイムラインを遡って表示した)ノートは、イベントが発生する可能性が低いためそもそも購読しない
