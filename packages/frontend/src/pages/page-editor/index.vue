@@ -5,7 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs">
-	<div class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div v-if="loadError" class="_spacer" style="--MI_SPACER-w: 700px;">
+		<MkError @retry="init()"/>
+	</div>
+	<div v-else class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div class="jqqmcavi">
 			<MkButton v-if="pageId && author != null" class="button" inline type="routerLink" :to="`/@${ author.username }/pages/${ currentName }`"><i class="ti ti-external-link"></i> {{ i18n.ts._pages.viewPage }}</MkButton>
 			<MkButton v-if="!readonly" inline primary class="button" @click="save"><i class="ti ti-device-floppy"></i> {{ i18n.ts.save }}</MkButton>
@@ -86,6 +89,7 @@ const props = defineProps<{
 const tab = ref('settings');
 const author = ref<Misskey.entities.User | null>($i);
 const readonly = ref(false);
+const loadError = ref(false);
 const page = ref<Misskey.entities.Page | null>(null);
 const pageId = ref<string | null>(null);
 const currentName = ref<string | null>(null);
@@ -189,18 +193,29 @@ async function del() {
 }
 
 async function duplicate() {
-	title.value = title.value + ' - copy';
-	name.value = name.value + '-copy';
+	// 複製の名前は送る値だけに付ける。先に画面の値を書き換えると、作成に失敗したとき元のページの
+	// タイトルと名前が変わったまま残り、続けて保存すると元のページに書き込まれる。
+	const options = {
+		...getSaveOptions(),
+		title: title.value.trim() + ' - copy',
+		name: name.value.trim() + '-copy',
+	};
+	const created = await os
+		.apiWithDialog('pages/create', options, undefined, {
+			'4650348e-301c-499a-83c9-6aa988c66bc1': {
+				title: i18n.ts.somethingHappened,
+				text: i18n.ts._pages.nameAlreadyExists,
+			},
+		})
+		.catch(() => null);
+	if (created == null) {
+		return;
+	}
 
-	const created = await os.apiWithDialog('pages/create', getSaveOptions(), undefined, {
-		'4650348e-301c-499a-83c9-6aa988c66bc1': {
-			title: i18n.ts.somethingHappened,
-			text: i18n.ts._pages.nameAlreadyExists,
-		},
-	});
-
+	title.value = options.title;
+	name.value = options.name;
 	pageId.value = created.id;
-	currentName.value = name.value.trim();
+	currentName.value = options.name;
 
 	mainRouter.push('/pages/edit/:initPageId', {
 		params: {
@@ -263,16 +278,23 @@ function removeEyeCatchingImage() {
 }
 
 async function init() {
-	if (props.initPageId) {
-		page.value = await misskeyApi('pages/show', {
-			pageId: props.initPageId,
-		});
-	} else if (props.initPageName && props.initUser) {
-		page.value = await misskeyApi('pages/show', {
-			name: props.initPageName,
-			username: props.initUser,
-		});
-		readonly.value = true;
+	loadError.value = false;
+	try {
+		if (props.initPageId) {
+			page.value = await misskeyApi('pages/show', {
+				pageId: props.initPageId,
+			});
+		} else if (props.initPageName && props.initUser) {
+			page.value = await misskeyApi('pages/show', {
+				name: props.initPageName,
+				username: props.initUser,
+			});
+			readonly.value = true;
+		}
+	} catch {
+		// 既存のページを読めなかったときに空の新規ページとして出すと、保存で別のページが作られる。
+		loadError.value = true;
+		return;
 	}
 
 	if (page.value) {
