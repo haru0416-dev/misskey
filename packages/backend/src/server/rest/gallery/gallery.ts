@@ -428,13 +428,21 @@ export async function handleApiGalleryPostsUnlike(
 		throw errors.notLiked();
 	}
 
-	await deleteGalleryLikeByIdFromDatabase(deps.db, exist.id);
+	const deleted = await deps.db.transaction(async (transaction) => {
+		const db = transaction as typeof deps.db;
+		if (!(await deleteGalleryLikeByIdFromDatabase(db, exist.id))) {
+			return false;
+		}
+		await decrementGalleryPostLikedCountInDatabase(db, post.id);
+		return true;
+	});
+	if (!deleted) {
+		throw errors.notLiked();
+	}
 
 	if (Date.now() - parseId(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
 		await updateGalleryPostsRanking(deps, post.id, -1);
 	}
-
-	await decrementGalleryPostLikedCountInDatabase(deps.db, post.id);
 }
 
 export const iGalleryPostsParamDef = z.object({

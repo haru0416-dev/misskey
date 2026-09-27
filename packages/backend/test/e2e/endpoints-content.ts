@@ -2024,6 +2024,14 @@ describe('Endpoints', () => {
 
 			const afterUnlike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
 			expect(afterUnlike?.likedCount).toBe(0);
+
+			// 同時に取り消しても、成功するのは 1 回だけで数は負にならない。
+			expect((await api('gallery/posts/like', { postId: post.body.id }, liker)).status).toBe(204);
+			const parallel = await Promise.all(
+				Array.from({ length: 20 }, () => api('gallery/posts/unlike', { postId: post.body.id }, liker)),
+			);
+			expect(parallel.filter((res) => res.status === 204)).toHaveLength(1);
+			expect((await fetchGalleryPostByIdFromDatabase(db, post.body.id))?.likedCount).toBe(0);
 		});
 
 		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
