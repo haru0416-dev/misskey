@@ -9,7 +9,6 @@ import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import { assertOptionalCredential, authenticateApiToken } from './auth/auth.js';
 import type { ApiAuthenticated } from './auth/auth.js';
 import { ApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
@@ -239,16 +238,6 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 			}),
 		);
 	}
-}
-
-export async function authenticateOptionalRequest(
-	deps: ApiShellDependencies,
-	c: Context,
-	body: Record<string, unknown>,
-): Promise<ApiAuthenticated> {
-	const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
-	assertOptionalCredential(auth);
-	return auth;
 }
 
 export async function assertApiModerator(

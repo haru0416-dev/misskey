@@ -35,6 +35,7 @@ export type HttpRequestSendOptions = {
 };
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const textDecoder = new TextDecoder();
 
 /** リダイレクト先へ引き継がない (安全側に倒す) ヘッダ。cross-origin では Authorization も別途落とす。 */
 const CONTENT_HEADERS = ['content-type', 'content-length', 'content-encoding', 'content-language', 'content-location'];
@@ -51,12 +52,12 @@ function deleteHeaderCaseInsensitive(headers: Record<string, string>, name: stri
  * ip が private / non-unicast かどうか。allowedPrivateNetworks に含まれる CIDR は許可 (= private ではない扱い)。
  * send() とストリーミングダウンロードの事前 DNS チェックで使う。
  */
-function isPrivateIp(ip: string, allowedPrivateNetworks: string[] | undefined): boolean {
+function isPrivateIp(ip: string, allowedPrivateNetworks: [ipaddr.IPv4 | ipaddr.IPv6, number][]): boolean {
 	const parsedIp = ipaddr.parse(ip);
+	const kind = parsedIp.kind();
 
-	for (const net of allowedPrivateNetworks ?? []) {
-		const cidr = ipaddr.parseCIDR(net);
-		if (cidr[0].kind() === parsedIp.kind() && parsedIp.match(cidr)) {
+	for (const cidr of allowedPrivateNetworks) {
+		if (cidr[0].kind() === kind && parsedIp.match(cidr)) {
 			return false;
 		}
 	}
@@ -118,7 +119,7 @@ async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Arr
 
 function buildSendResponse(res: Response, body: Uint8Array): HttpRequestSendResponse {
 	let text: string | undefined;
-	const decode = () => (text ??= new TextDecoder().decode(body));
+	const decode = () => (text ??= textDecoder.decode(body));
 	return {
 		ok: res.ok,
 		status: res.status,
@@ -133,6 +134,8 @@ function buildSendResponse(res: Response, body: Uint8Array): HttpRequestSendResp
 
 export function createHttpRequestService(config: Config, useAgent = false) {
 	const agentClient = useAgent ? createAgentHttpClient(config) : undefined;
+	// 設定の CIDR は初回の SSRF 検査時だけパースし、以降の DNS 候補にも使い回す。
+	let allowedPrivateNetworks: [ipaddr.IPv4 | ipaddr.IPv6, number][] | undefined;
 	// SSRF検査で見た IP へそのまま接続するため、解決結果を呼び出し側へ返せるリゾルバを使う。
 	const dnsCache = createCachedResolver({
 		successTtlMs: config.outboundNetwork.dnsCache.successTtlSeconds * 1000,
@@ -162,10 +165,11 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 		}
 
 		for (const address of addresses) {
-			if (
-				ipaddr.isValid(address) &&
-				isPrivateIp(address, config.outboundNetwork.privateNetworkAccess.allowedNetworks)
-			) {
+			if (!ipaddr.isValid(address)) continue;
+			allowedPrivateNetworks ??= config.outboundNetwork.privateNetworkAccess.allowedNetworks.map((net) =>
+				ipaddr.parseCIDR(net),
+			);
+			if (isPrivateIp(address, allowedPrivateNetworks)) {
 				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
 			}
 		}

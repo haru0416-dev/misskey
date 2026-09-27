@@ -10,12 +10,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-user"></i>
 		</div>
 
-		<!-- ログイン画面メッセージ -->
 		<MkInfo v-if="message">
 			{{ message }}
 		</MkInfo>
 
-		<!-- 外部サーバーへの転送 -->
 		<div v-if="openOnRemote" class="_gaps_m">
 			<div class="_gaps_s">
 				<MkButton type="button" rounded primary style="margin: 0 auto;" @click="openRemote(openOnRemote)">
@@ -30,7 +28,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 
-		<!-- username入力 -->
 		<form class="_gaps_s" @submit.prevent="emit('usernameSubmitted', username)">
 			<MkInput v-model="username" :placeholder="i18n.ts.username" type="text" pattern="^[a-zA-Z0-9_]+$" :spellcheck="false" autocomplete="username webauthn" autofocus required data-cy-signin-username>
 				<template #prefix>@</template>
@@ -39,7 +36,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkButton type="submit" large primary rounded style="margin: 0 auto;" data-cy-signin-page-input-continue>{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
 		</form>
 
-		<!-- パスワードレスログイン -->
 		<div :class="$style.orHr">
 			<p :class="$style.orMsg">{{ i18n.ts.or }}</p>
 		</div>
@@ -86,7 +82,6 @@ const host = toUnicode(configHost);
 
 const username = ref(props.initialUsername ?? '');
 
-//#region Open on remote
 function openRemote(options: OpenOnRemoteOptions, targetHost?: string): void {
 	switch (options.type) {
 		case 'web':
@@ -130,7 +125,6 @@ async function specifyHostAndOpenRemote(options: OpenOnRemoteOptions): Promise<v
 
 	let targetHost: string | null = hostTemp ?? null;
 
-	// ドメイン部分だけを取り出す
 	targetHost = extractDomain(targetHost ?? '') ?? null;
 	if (targetHost == null) {
 		os.alert({
@@ -142,7 +136,6 @@ async function specifyHostAndOpenRemote(options: OpenOnRemoteOptions): Promise<v
 	}
 	openRemote(options, targetHost);
 }
-//#endregion
 </script>
 
 <style lang="scss" module>

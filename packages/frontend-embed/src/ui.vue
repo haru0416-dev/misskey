@@ -71,7 +71,7 @@ const maxHeight = ref(embedParams.maxHeight ?? 0);
 const rootEl = shallowRef<HTMLElement | null>(null);
 
 let previousHeight = 0;
-const resizeObserver = new ResizeObserver(async () => {
+const resizeObserver = new ResizeObserver(() => {
 	const height = rootEl.value!.scrollHeight + (embedNoBorder.value ? 0 : 2); // border 上下1px
 	if (Math.abs(previousHeight - height) < 1) {
 		return;

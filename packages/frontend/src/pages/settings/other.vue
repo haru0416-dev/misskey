@@ -142,7 +142,6 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import FormInfo from '@/components/display/MkInfo.vue';
 import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import MkButton from '@/components/form/MkButton.vue';
-import FormSlot from '@/components/form/slot.vue';
 import * as os from '@/os.js';
 import {
 	enableStoragePersistence,
@@ -152,7 +151,6 @@ import {
 import { ensureSignin } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import FormSection from '@/components/form/section.vue';
 import { prefer } from '@/preferences.js';
 import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
 import { signout } from '@/signout.js';

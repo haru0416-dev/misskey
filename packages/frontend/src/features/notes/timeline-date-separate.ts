@@ -104,19 +104,17 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 		const tl: DateGroupedTimelineItem<T>[] = [];
 		for (const item of items.value) {
 			const date = new Date(item.createdAt);
-			const currentGroup = tl.at(-1);
+			let currentGroup = tl.at(-1);
 
 			if (
 				currentGroup == null ||
 				currentGroup.date.getFullYear() !== date.getFullYear() ||
 				currentGroup.date.getMonth() !== date.getMonth()
 			) {
-				tl.push({
-					date,
-					items: [],
-				});
+				currentGroup = { date, items: [] };
+				tl.push(currentGroup);
 			}
-			tl.at(-1)?.items.push(item);
+			currentGroup.items.push(item);
 		}
 		return tl;
 	});

@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, provide, ref, computed } from 'vue';
+import { onMounted, onUnmounted, provide, ref, computed } from 'vue';
 import { instanceName } from '@shared/utility/config.js';
 import XCommon from './_common_/common.vue';
 import type { PageMetadata } from '@/page.js';
@@ -69,19 +69,22 @@ function goHome() {
 	mainRouter.push('/');
 }
 
+function onResize() {
+	if (window.innerWidth >= DESKTOP_THRESHOLD) {
+		isDesktop.value = true;
+		window.removeEventListener('resize', onResize);
+	}
+}
+
 onMounted(() => {
 	if (!isDesktop.value) {
-		window.addEventListener(
-			'resize',
-			() => {
-				if (window.innerWidth >= DESKTOP_THRESHOLD) {
-					isDesktop.value = true;
-				}
-			},
-			{ passive: true },
-		);
+		window.addEventListener('resize', onResize, { passive: true });
 	}
 });
+onUnmounted(() => {
+	window.removeEventListener('resize', onResize);
+});
+
 </script>
 
 <style>

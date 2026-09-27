@@ -10,10 +10,6 @@ const acct = (user: Misskey.Acct) => {
 	return Misskey.acct.toString(user);
 };
 
-const userName = (user: Misskey.entities.User) => {
-	return user.name || user.username;
-};
-
 export const userPage = (user: Misskey.Acct, path?: string, absolute = false) => {
 	return `${absolute ? url : ''}/@${acct(user)}${(path ? `/${path}` : '')}`;
 };

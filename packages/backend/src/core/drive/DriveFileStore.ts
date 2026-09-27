@@ -470,9 +470,11 @@ export async function countDriveFilesGroupedByFolderIdsFromDatabase(
 		.where(inArray(driveFile.folderId, folderIds))
 		.groupBy(driveFile.folderId);
 
-	return rows
-		.filter((row): row is { folderId: NonNullable<MiDriveFile['folderId']>; count: number } => row.folderId != null)
-		.map((row) => ({ folderId: row.folderId, count: row.count }));
+	const counts: { folderId: NonNullable<MiDriveFile['folderId']>; count: number }[] = [];
+	for (const row of rows) {
+		if (row.folderId != null) counts.push({ folderId: row.folderId, count: row.count });
+	}
+	return counts;
 }
 
 export async function countRemoteCachedDriveFilesFromDatabase(db: MiDrizzleDatabase): Promise<number> {

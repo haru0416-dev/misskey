@@ -12,9 +12,5 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { inject, computed } from 'vue';
-import { DI } from '@/di.js';
 import { i18n } from '@/i18n.js';
-
-const serverMetadata = inject(DI.serverMetadata)!;
 </script>

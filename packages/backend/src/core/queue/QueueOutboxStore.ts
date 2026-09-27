@@ -995,16 +995,25 @@ async function dispatchReadyOutbox(
 		return 0;
 	}
 
-	const deliverRows = rows.flatMap((row) => {
-		const job = parseDeliverOutboxJob(row);
-		return row.queue === QUEUE.DELIVER && job != null ? [{ row, job }] : [];
-	});
-	const dbRows = rows.flatMap((row) => {
-		const job = parseDbOutboxJob(row);
-		return row.queue === QUEUE.DB && job != null ? [{ row, job }] : [];
-	});
-	const validIds = new Set([...deliverRows, ...dbRows].map(({ row }) => row.id));
-	const invalidIds = rows.filter((row) => !validIds.has(row.id)).map((row) => row.id);
+	const deliverRows: { row: QueueOutboxRow; job: DeliverJobBulkInput }[] = [];
+	const dbRows: { row: QueueOutboxRow; job: DbJobBulkInput }[] = [];
+	const invalidIds: string[] = [];
+	for (const row of rows) {
+		if (row.queue === QUEUE.DELIVER) {
+			const job = parseDeliverOutboxJob(row);
+			if (job != null) {
+				deliverRows.push({ row, job });
+				continue;
+			}
+		} else if (row.queue === QUEUE.DB) {
+			const job = parseDbOutboxJob(row);
+			if (job != null) {
+				dbRows.push({ row, job });
+				continue;
+			}
+		}
+		invalidIds.push(row.id);
+	}
 	await markDeadLetter(db, invalidIds, 'publishing', leaseToken, 'invalidPayload', {
 		message: 'Queue outbox payload is invalid',
 	});
@@ -1062,7 +1071,12 @@ async function restorePublishedRows(db: MiDrizzleDatabase, rows: QueueOutboxRow[
 	const grouped = new Map<number, string[]>();
 	for (const row of rows) {
 		const interval = Math.min(MAX_POLL_INTERVAL_MS, Math.max(1000, row.pollIntervalMs * 2));
-		grouped.set(interval, [...(grouped.get(interval) ?? []), row.id]);
+		const ids = grouped.get(interval);
+		if (ids == null) {
+			grouped.set(interval, [row.id]);
+		} else {
+			ids.push(row.id);
+		}
 	}
 	for (const [interval, ids] of grouped) {
 		await db
@@ -1095,8 +1109,15 @@ async function reconcilePublishedDeliveries(
 		'reconciling',
 		leaseToken,
 		async (db, rows) => {
-			const validRows = rows.filter((row) => parseDeliverOutboxJob(row) != null);
-			const invalidIds = rows.filter((row) => parseDeliverOutboxJob(row) == null).map((row) => row.id);
+			const validRows: QueueOutboxRow[] = [];
+			const invalidIds: string[] = [];
+			for (const row of rows) {
+				if (parseDeliverOutboxJob(row) == null) {
+					invalidIds.push(row.id);
+				} else {
+					validRows.push(row);
+				}
+			}
 			await markDeadLetter(db, invalidIds, 'reconciling', leaseToken, 'invalidPayload', {
 				message: 'Queue outbox payload is invalid',
 			});
@@ -1105,14 +1126,25 @@ async function reconcilePublishedDeliveries(
 				deliverQueue,
 				validRows.map((row) => outboxJobId(row)),
 			);
-			const byState = (target: DeliverJobState) => validRows.filter((row) => states.get(outboxJobId(row)) === target);
-			const completed = byState('completed');
-			const failed = byState('failed');
-			const unknown = byState('unknown');
-			const waiting = validRows.filter((row) => {
-				const state = states.get(outboxJobId(row));
-				return state !== 'completed' && state !== 'failed' && state !== 'unknown';
-			});
+			const completed: QueueOutboxRow[] = [];
+			const failed: QueueOutboxRow[] = [];
+			const unknown: QueueOutboxRow[] = [];
+			const waiting: QueueOutboxRow[] = [];
+			for (const row of validRows) {
+				switch (states.get(outboxJobId(row))) {
+					case 'completed':
+						completed.push(row);
+						break;
+					case 'failed':
+						failed.push(row);
+						break;
+					case 'unknown':
+						unknown.push(row);
+						break;
+					default:
+						waiting.push(row);
+				}
+			}
 
 			await Promise.all(completed.map((row) => deliverQueue.remove(outboxJobId(row))));
 			if (completed.length > 0) {

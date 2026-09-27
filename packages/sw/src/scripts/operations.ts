@@ -43,15 +43,15 @@ export async function api<E extends keyof Misskey.Endpoints, P extends Misskey.E
 }
 
 // mark-all-as-read送出を1秒間隔に制限する
-const readBlockingStatus = new Map<string, boolean>();
+const readBlockingStatus = new Set<string>();
 export function sendMarkAllAsRead(userId: string): Promise<null | undefined | void> {
-	if (readBlockingStatus.get(userId)) {
+	if (readBlockingStatus.has(userId)) {
 		return Promise.resolve();
 	}
-	readBlockingStatus.set(userId, true);
+	readBlockingStatus.add(userId);
 	return new Promise((resolve) => {
 		setTimeout(() => {
-			readBlockingStatus.set(userId, false);
+			readBlockingStatus.delete(userId);
 			(api('notifications/mark-all-as-read', userId) as Promise<void>).then(resolve, resolve);
 		}, 1000);
 	});

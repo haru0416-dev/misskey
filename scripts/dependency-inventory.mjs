@@ -29,7 +29,7 @@ const bunNativeCandidates = {
 	pg: {
 		status: 'evaluate',
 		api: 'Bun.SQL',
-		note: 'Production already uses Bun.SQL; pg remains for Node-based tools and tests.',
+		note: 'Production uses Bun.SQL; federation fixtures and the optimization observer still use pg.',
 	},
 	ioredis: {
 		status: 'retain',

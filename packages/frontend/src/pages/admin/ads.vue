@@ -160,7 +160,6 @@ const filterItems = (v: typeof filterType.value) => {
 	refresh();
 };
 
-// 選択された曜日(index)のビットフラグを操作する
 function toggleDayOfWeek(ad: Misskey.entities.Ad, index: number) {
 	ad.dayOfWeek ^= 1 << index;
 }

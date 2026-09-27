@@ -79,7 +79,7 @@ export class ApRequestCreator {
 				{
 					Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
 					Date: new Date().toUTCString(),
-					Host: new URL(args.url).host,
+					Host: u.host,
 				},
 				args.additionalHeaders,
 			),
@@ -105,7 +105,7 @@ export class ApRequestCreator {
 		request.headers = this.#objectAssignWithLcKey(request.headers, {
 			Signature: signatureHeader,
 		});
-		// node-fetch が付与するため、'Host' を残すとリダイレクト後も変わらない。
+		// 署名には元 URL の Host を使う。送信時の Host は接続先に合わせるが、リダイレクト先では署名し直さない。
 		delete request.headers['host'];
 
 		return {

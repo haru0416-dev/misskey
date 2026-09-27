@@ -275,7 +275,6 @@ function onHeaderPointerdown(evt: PointerEvent) {
 		unMaximize();
 	}
 
-	// ダブルクリック判定
 	if (Date.now() - beforeClickedAt < 300) {
 		beforeClickedAt = Date.now();
 		onDblClick();

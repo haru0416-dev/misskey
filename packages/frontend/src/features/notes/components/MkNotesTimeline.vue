@@ -37,18 +37,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 			<template v-else>
 				<div
-					v-for="(note, i) in notes"
-					:key="note.id"
-					:data-scroll-anchor="note.id"
+					v-for="(row, i) in nonVirtualRows"
+					:key="row.note.id"
+					:data-scroll-anchor="row.note.id"
 					:class="[$style.rowFallback, { [$style.gapped]: !noGap, [$style.last]: i === notes.length - 1 }]"
 				>
-					<div v-if="getNoteSeparator(notes, i, note.createdAt) != null" :class="[$style.date, { [$style.noGap]: noGap }]">
-						<span><i class="ti ti-chevron-up"></i> {{ getNoteSeparator(notes, i, note.createdAt)?.prevText }}</span>
+					<div v-if="row.separatorInfo != null" :class="[$style.date, { [$style.noGap]: noGap }]">
+						<span><i class="ti ti-chevron-up"></i> {{ row.separatorInfo.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getNoteSeparator(notes, i, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ row.separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
-					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
-					<div v-if="note._shouldInsertAd_" :class="$style.ad">
+					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
+					<div v-if="row.note._shouldInsertAd_" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
 				</div>
@@ -130,23 +130,24 @@ const virtualRows = computed(() =>
 	}),
 );
 
-function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
-	const previousNote = notes[index - 1];
-	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) {
-		return null;
-	}
-	return getSeparatorInfo(previousNote.createdAt, createdAt);
-}
+const nonVirtualRows = computed(() => {
+	const notes = props.paginator.items.value;
+	return notes.map((note, index) => {
+		const previousNote = notes[index - 1];
+		return {
+			note,
+			separatorInfo:
+				previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
+					? getSeparatorInfo(previousNote.createdAt, note.createdAt)
+					: null,
+		};
+	});
+});
 
-// virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
-// 同座標に重なる) の状態で描画することがある。初期状態を visibility: hidden にし、DOM更新後・
-// ペイント前に走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ
-// 表示する (詳細は MkStreamingNotesTimeline の同名ロジック参照)
+// 初回計測前は仮想行の start が重なるため、DOM 更新後に配置を検査してから表示する。
 const virtualLayoutVerified = ref(false);
 let layoutVerifyTimer: number | null = null;
 
-// 非仮想フォールバック中は検査せず即確定扱いにする代わりに、仮想化が有効になった時点で
-// ラッチをリセットして検査をやり直す (フォールバック中の確定が仮想初回レンダーを素通しさせない)
 watch(canVirtualize, (active, prev) => {
 	if (active && !prev) {
 		virtualLayoutVerified.value = false;
@@ -154,15 +155,11 @@ watch(canVirtualize, (active, prev) => {
 });
 
 function isVirtualLayoutSane(len: number): boolean {
-	if (!canVirtualize.value) {
+	if (!canVirtualize.value || len <= 1) {
 		return true;
-	} // 非仮想フォールバックは通常フローなので対象外
-	if (len <= 1) {
-		return true;
-	} // 1件以下なら重なりようがない
+	}
 	const container = rootEl.value;
-	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
-	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
+	// 描画途中に確定扱いすると、直後の重なった行を表示してしまう。
 	if (container == null) {
 		return false;
 	}
@@ -170,8 +167,7 @@ function isVirtualLayoutSane(len: number): boolean {
 	if (rowEls.length < 2) {
 		return false;
 	}
-	// 隣接行の重なり検査 (詳細は MkStreamingNotesTimeline の同名ロジック参照)。
-	// 高さ0の行 (ハードミュート等) は top 同値でも重ならないので誤検出しない
+	// 直前の行が高さ 0 なら同じ位置を許容し、位置比較には 2px の誤差を許容する。
 	for (let i = 1; i < rowEls.length; i++) {
 		const prev = rowEls[i - 1]!;
 		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) {

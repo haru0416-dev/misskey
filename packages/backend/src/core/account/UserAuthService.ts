@@ -51,9 +51,7 @@ export function createUserAuthService(redisClient: Redis.Redis, db: MiDrizzleDat
 
 		const currentStep = totp.counter({ timestamp: now });
 		const step = currentStep + delta;
-		const secretFingerprint = createHash('sha256')
-			.update(twoFactorSecret ?? '')
-			.digest('base64url');
+		const secretFingerprint = createHash('sha256').update(twoFactorSecret).digest('base64url');
 
 		const usedTokenRedisKey = `2fa:used:${userId}:${secretFingerprint}:${step}`;
 

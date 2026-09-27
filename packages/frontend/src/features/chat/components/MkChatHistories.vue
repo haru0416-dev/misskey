@@ -67,7 +67,7 @@ async function fetchHistory() {
 	]);
 
 	history.value = [...userMessages, ...roomMessages]
-		.toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+		.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 		.map((m) => ({
 			id: m.id,
 			message: m,

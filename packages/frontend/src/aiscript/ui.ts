@@ -170,8 +170,6 @@ type Options<T extends AsUiComponent> = T extends AsUiButtons
 	? WithExplicitUndefined<Omit<T, 'id' | 'type' | 'buttons'>> & { buttons: Options<AsUiButton>[] }
 	: WithExplicitUndefined<Omit<T, 'id' | 'type'>>;
 
-function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {}
-
 function getRootOptions(def: values.Value | undefined): Options<AsUiRoot> {
 	utils.assertObject(def);
 

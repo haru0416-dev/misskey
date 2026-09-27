@@ -52,13 +52,44 @@ test.describe('Before setup instance', () => {
 });
 
 test.describe('After setup instance', () => {
+	let admin: TestUser;
 	test.beforeEach(async ({ page }) => {
 		await resetState(page);
-		await registerUser(page, 'admin', 'pass', true);
+		admin = await registerUser(page, 'admin', 'pass', true);
 	});
 
 	test.afterEach(async ({ page }) => {
 		await waitForPageCarryoverGuard(page);
+	});
+
+	test('does not offer another announcement page when the admin list is empty', async ({ page }) => {
+		await login(page, 'admin', 'pass');
+		await closeInitialUserSetup(page);
+		const listed = page.waitForResponse(
+			(response) => response.url().includes('/api/admin/announcements/list') && response.request().method() === 'POST',
+		);
+		await page.goto('/admin/announcements');
+		expect((await listed).ok()).toBe(true);
+		await expect(page.locator('[data-cy-announcements-more]')).toHaveCount(0);
+	});
+
+	test('loads the remaining announcements without offering an empty page', async ({ page }) => {
+		for (let index = 0; index < 11; index++) {
+			const created = await page.request.post('/api/admin/announcements/create', {
+				data: { i: admin.token, title: `Announcement ${index}`, text: 'Body', imageUrl: null },
+			});
+			expect(created.ok()).toBe(true);
+		}
+
+		await login(page, 'admin', 'pass');
+		await closeInitialUserSetup(page);
+		await page.goto('/admin/announcements');
+		const more = page.locator('[data-cy-announcements-more]');
+		await expect(more).toBeVisible();
+		await expect(page.getByText('Announcement 0')).toHaveCount(0);
+		await more.click();
+		await expect(page.getByText('Announcement 0')).toBeVisible();
+		await expect(more).toHaveCount(0);
 	});
 
 	test('signup', async ({ page }) => {

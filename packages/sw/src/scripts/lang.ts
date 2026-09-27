@@ -53,7 +53,7 @@ export class SwLang {
 				localeRes = await fetch(localeUrl, { signal: controller.signal });
 
 				const clone = localeRes.clone();
-				if (!clone.clone().ok) {
+				if (!clone.ok) {
 					throw new Error('locale fetching error');
 				}
 

@@ -29,13 +29,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkFoldableSection>
 					<template #header>{{ i18n.ts._role.manualRoles }}</template>
 					<div class="_gaps_s">
-						<MkRolePreview v-for="role in roles.filter(x => x.target === 'manual')" :key="role.id" :role="role" :forModeration="true"/>
+						<MkRolePreview v-for="role in manualRoles" :key="role.id" :role="role" :forModeration="true"/>
 					</div>
 				</MkFoldableSection>
 				<MkFoldableSection>
 					<template #header>{{ i18n.ts._role.conditionalRoles }}</template>
 					<div class="_gaps_s">
-						<MkRolePreview v-for="role in roles.filter(x => x.target === 'conditional')" :key="role.id" :role="role" :forModeration="true"/>
+						<MkRolePreview v-for="role in conditionalRoles" :key="role.id" :role="role" :forModeration="true"/>
 					</div>
 				</MkFoldableSection>
 			</div>
@@ -64,6 +64,8 @@ const router = useRouter();
 const baseRoleQ = ref('');
 
 const roles = await misskeyApi('admin/roles/list');
+const manualRoles = roles.filter(role => role.target === 'manual');
+const conditionalRoles = roles.filter(role => role.target === 'conditional');
 
 const policies = reactive(deepClone(instance.policies));
 

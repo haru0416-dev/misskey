@@ -23,11 +23,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:moveClass="$style.transition_x_move"
 			tag="div"
 		>
-			<div v-for="(notification, i) in paginator.items.value" :key="notification.id" :data-scroll-anchor="notification.id" :class="$style.item">
-				<div v-if="getNotificationSeparator(paginator.items.value, i, notification.createdAt) != null" :class="$style.date">
-					<span><i class="ti ti-chevron-up"></i> {{ getNotificationSeparator(paginator.items.value, i, notification.createdAt)?.prevText }}</span>
+			<div v-for="{ notification, separatorInfo } in notificationRows" :key="notification.id" :data-scroll-anchor="notification.id" :class="$style.item">
+				<div v-if="separatorInfo != null" :class="$style.date">
+					<span><i class="ti ti-chevron-up"></i> {{ separatorInfo.prevText }}</span>
 					<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-					<span>{{ getNotificationSeparator(paginator.items.value, i, notification.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+					<span>{{ separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 				</div>
 				<div :class="$style.contentRow">
 					<MkNote v-if="['reply', 'quote', 'mention'].includes(notification.type) && 'note' in notification" :class="$style.content" :note="notification.note" :withHardMute="true"/>
@@ -95,13 +95,19 @@ const paginator = prefer.useGroupedNotifications
 			}),
 		);
 
-function getNotificationSeparator(notifications: { createdAt: string }[], index: number, createdAt: string) {
-	const previousNotification = notifications[index - 1];
-	if (previousNotification == null || !isSeparatorNeeded(previousNotification.createdAt, createdAt)) {
-		return null;
-	}
-	return getSeparatorInfo(previousNotification.createdAt, createdAt);
-}
+const notificationRows = computed(() => {
+	const notifications = paginator.items.value;
+	return notifications.map((notification, index) => {
+		const previousNotification = notifications[index - 1];
+		return {
+			notification,
+			separatorInfo:
+				previousNotification && isSeparatorNeeded(previousNotification.createdAt, notification.createdAt)
+					? getSeparatorInfo(previousNotification.createdAt, notification.createdAt)
+					: null,
+		};
+	});
+});
 
 const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =

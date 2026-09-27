@@ -12,11 +12,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import EmCustomEmoji from './EmCustomEmoji.vue';
 import EmEmoji from './EmEmoji.vue';
 
-const props = defineProps<{
+defineProps<{
 	reaction: string;
 	noStyle?: boolean;
 	emojiUrl?: string | undefined;
-	withTooltip?: boolean;
 }>();
-
 </script>

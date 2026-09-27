@@ -92,9 +92,11 @@ export async function countChildDriveFoldersGroupedByParentIdsFromDatabase(
 		.where(inArray(driveFolder.parentId, parentIds))
 		.groupBy(driveFolder.parentId);
 
-	return rows
-		.filter((row): row is { parentId: string; count: number } => row.parentId != null)
-		.map((row) => ({ parentId: row.parentId, count: row.count }));
+	const counts: DriveFolderChildFolderCount[] = [];
+	for (const row of rows) {
+		if (row.parentId != null) counts.push({ parentId: row.parentId, count: row.count });
+	}
+	return counts;
 }
 
 export async function listDriveFoldersByUserIdFromDatabase(

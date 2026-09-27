@@ -56,8 +56,9 @@ function onToggleSortOrderButtonClicked(order: SortOrder<T>) {
 }
 
 function onAddSortOrderButtonClicked(ev: PointerEvent) {
+	const selectedKeys = new Set(currentOrders.value.map(order => order.key));
 	const menuItems: MenuItem[] = props.baseOrderKeyNames
-		.filter(baseKey => !currentOrders.value.map(it => it.key).includes(baseKey))
+		.filter(baseKey => !selectedKeys.has(baseKey))
 		.map(it => {
 			return {
 				text: it,

@@ -104,9 +104,11 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 
 		const run = (readBody: (c: Context) => Promise<Record<string, unknown>>) => async (c: Context) =>
 			await runApiEndpoint(c, async () => {
+				let resolvedIp: string | undefined;
+				const requestIp = () => (resolvedIp ??= getRequestIp(c, deps.config));
 				const body = await readBody(c);
 				const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
-				await applyEndpointGuards(deps, name, meta, auth, () => getRequestIp(c, deps.config));
+				await applyEndpointGuards(deps, name, meta, auth, requestIp);
 				const input = parseApiParams(contract.paramDef, body);
 
 				let result: unknown;
@@ -118,7 +120,7 @@ export function registerEndpoints<D extends EndpointGuardDependencies>(
 						me: auth.user,
 						errors,
 						signal: c.req.raw.signal,
-						requestIp: () => getRequestIp(c, deps.config),
+						requestIp,
 						requestHeaders: () => Object.fromEntries(c.req.raw.headers.entries()),
 					});
 				} catch (err) {

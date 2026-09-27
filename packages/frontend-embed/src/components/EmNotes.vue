@@ -27,14 +27,10 @@ import type { Paging } from '@/components/EmPagination.vue';
 import { i18n } from '@/i18n.js';
 import * as Misskey from 'misskey-js';
 
-withDefaults(defineProps<{
+defineProps<{
 	pagination: Paging;
-	noGap?: boolean;
 	disableAutoLoad?: boolean;
-	ad?: boolean;
-}>(), {
-	ad: true,
-});
+}>();
 
 const pagingComponent = useTemplateRef('pagingComponent');
 

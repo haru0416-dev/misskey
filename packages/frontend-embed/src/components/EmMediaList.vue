@@ -5,17 +5,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div>
-	<div v-for="media in mediaList.filter(media => !previewable(media))" :key="media.id" :class="$style.banner">
+	<div v-for="media in nonPreviewableMedia" :key="media.id" :class="$style.banner">
 		<XBanner :media="media" :href="originalEntityUrl"/>
 	</div>
-	<div v-if="mediaList.filter(media => previewable(media)).length > 0" :class="$style.container">
+	<div v-if="previewableMedia.length > 0" :class="$style.container">
 		<div
 			:class="[
 				$style.medias,
 				count === 1 ? [$style.n1] : count === 2 ? $style.n2 : count === 3 ? $style.n3 : count === 4 ? $style.n4 : $style.nMany,
 			]"
 		>
-			<div v-for="media in mediaList.filter(media => previewable(media))" :class="$style.media">
+			<div v-for="media in previewableMedia" :key="media.id" :class="$style.media">
 				<XVideo v-if="media.type.startsWith('video')" :key="`video:${media.id}`" :class="$style.mediaInner" :video="media" :href="originalEntityUrl"/>
 				<XImage v-else-if="media.type.startsWith('image')" :key="`image:${media.id}`" :class="$style.mediaInner" class="image" :image="media" :raw="raw" :href="originalEntityUrl"/>
 			</div>
@@ -40,7 +40,9 @@ const props = defineProps<{
 	originalEntityUrl: string;
 }>();
 
-const count = computed(() => props.mediaList.filter((media) => previewable(media)).length);
+const previewableMedia = computed(() => props.mediaList.filter(previewable));
+const nonPreviewableMedia = computed(() => props.mediaList.filter(media => !previewable(media)));
+const count = computed(() => previewableMedia.value.length);
 
 const previewable = (file: Misskey.entities.DriveFile): boolean => {
 	if (file.type === 'image/svg+xml') {

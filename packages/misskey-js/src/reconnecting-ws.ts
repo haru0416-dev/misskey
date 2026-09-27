@@ -32,6 +32,7 @@ export type ReconnectingWebSocketOptions = {
 const WS_OPEN = 1;
 export const MAX_OFFLINE_MESSAGE_COUNT = 1000;
 export const MAX_OFFLINE_MESSAGE_BYTES = 1024 * 1024;
+const textEncoder = new TextEncoder();
 
 export class ReconnectingWebSocket {
 	private url: string;
@@ -106,7 +107,7 @@ export class ReconnectingWebSocket {
 			this.ws.send(data);
 		} else {
 			this.messageQueue.push(data);
-			this.messageQueueBytes += new TextEncoder().encode(data).byteLength;
+			this.messageQueueBytes += textEncoder.encode(data).byteLength;
 			while (
 				this.messageQueue.length > MAX_OFFLINE_MESSAGE_COUNT ||
 				this.messageQueueBytes > MAX_OFFLINE_MESSAGE_BYTES
@@ -115,7 +116,7 @@ export class ReconnectingWebSocket {
 				if (dropped == null) {
 					break;
 				}
-				this.messageQueueBytes -= new TextEncoder().encode(dropped).byteLength;
+				this.messageQueueBytes -= textEncoder.encode(dropped).byteLength;
 			}
 		}
 	}

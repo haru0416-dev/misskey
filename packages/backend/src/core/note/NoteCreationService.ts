@@ -959,9 +959,14 @@ async function runNoteAnalytics(deps: NoteCreationDependencies, event: NoteAnaly
 		if (userHost != null && deps.meta.enableChartsForFederatedInstances) {
 			updates.push(deps.chartWriters.instanceChart.updateNote(userHost, note, true));
 		}
-		if (note.visibility === 'public' || note.visibility === 'home') {
-			const names = [...new Set(tags.map((tag) => normalizeForSearch(tag)))];
-			updates.push(updateHashtagsRankings(deps, names, note.userId));
+		if ((note.visibility === 'public' || note.visibility === 'home') && tags.length > 0) {
+			updates.push(
+				updateHashtagsRankings(
+					deps,
+					tags.map((tag) => normalizeForSearch(tag)),
+					note.userId,
+				),
+			);
 		}
 		if (!silent && userHost == null) {
 			updates.push(Promise.resolve(deps.chartWriters.activeUsersChart.write({ id: note.userId, host: null })));

@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
@@ -134,6 +134,12 @@ watch(fNow, (to) => {
 watch(day, () => {
 	nextDay.setHours(24, 0, 0, 0);
 	nextDayMidnightTime = nextDay.getTime();
+});
+
+onUnmounted(() => {
+	if (nextDayTimer != null) {
+		window.clearTimeout(nextDayTimer);
+	}
 });
 
 defineExpose<WidgetComponentExpose>({

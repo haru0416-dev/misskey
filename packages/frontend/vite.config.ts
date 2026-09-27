@@ -9,7 +9,7 @@ import { promises as fsp } from 'node:fs';
 import { parse } from 'yaml';
 
 import locales from 'i18n';
-import meta from '../../package.json';
+import meta from '../../package.json' with { type: 'json' };
 import packageInfo from './package.json' with { type: 'json' };
 import pluginUnwindCssModuleClassName from './lib/rollup-plugin-unwind-css-module-class-name.js';
 import pluginJson5 from './lib/vite-plugin-json5.js';
@@ -39,7 +39,7 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 		title: 'Toneriko frontend bundle visualizer',
 		gzipSize: true,
 		brotliSize: true,
-		projectRoot: path.resolve(__dirname, '../..'),
+		projectRoot: path.resolve(import.meta.dirname, '../..'),
 	};
 	const plugins = [
 		visualizer({
@@ -62,9 +62,6 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 	return plugins;
 }
 
-/**
- * 検索インデックスの生成設定
- */
 export const searchIndexes = [
 	{
 		targetFilePaths: ['src/pages/settings/**/*.vue'],
@@ -139,10 +136,10 @@ export function getConfig(): UserConfig {
 		resolve: {
 			extensions,
 			alias: {
-				'@/': `${path.join(__dirname, 'src')}/`,
-				'@shared/': `${path.join(__dirname, '../frontend-shared')}/`,
-				'/client-assets/': `${path.join(__dirname, 'assets')}/`,
-				'/static-assets/': `${path.join(__dirname, '../backend/assets')}/`,
+				'@/': `${path.join(import.meta.dirname, 'src')}/`,
+				'@shared/': `${path.join(import.meta.dirname, '../frontend-shared')}/`,
+				'/client-assets/': `${path.join(import.meta.dirname, 'assets')}/`,
+				'/static-assets/': `${path.join(import.meta.dirname, '../backend/assets')}/`,
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',
 			},
 		},
@@ -153,7 +150,7 @@ export function getConfig(): UserConfig {
 			},
 			modules: {
 				generateScopedName(name, filename, _css): string {
-					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name)
+					const id = (path.relative(import.meta.dirname, filename.split('?')[0]) + '-' + name)
 						.replaceAll(/[\\\/\.\?&=]/g, '-')
 						.replaceAll(/(src-|vue-)/g, '');
 					if (process.env.NODE_ENV === 'production') {
@@ -223,7 +220,7 @@ export function getConfig(): UserConfig {
 				},
 			},
 			cssCodeSplit: true,
-			outDir: path.join(__dirname, '../../built/_frontend_vite_'),
+			outDir: path.join(import.meta.dirname, '../../built/_frontend_vite_'),
 			assetsDir: '.',
 			emptyOutDir: false,
 			sourcemap: process.env.NODE_ENV === 'development',

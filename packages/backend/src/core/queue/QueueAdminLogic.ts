@@ -337,15 +337,11 @@ export async function getQueueJobs(
 
 	if (search) {
 		jobs = await queue.getJobs(jobTypes, 0, 1000);
+		const terms = search.toLowerCase().split(' ');
 
 		jobs = jobs.filter((job) => {
 			const jobString = JSON.stringify(job).toLowerCase();
-			return search
-				.toLowerCase()
-				.split(' ')
-				.every((term) => {
-					return jobString.includes(term);
-				});
+			return terms.every((term) => jobString.includes(term));
 		});
 
 		jobs = jobs.slice(0, RETURN_LIMIT);

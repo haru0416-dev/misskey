@@ -12,8 +12,7 @@ export const baseConfig = defineConfig({
 		server: {
 			deps: {
 				// Vite が外部化した zod を Bun でネイティブ import すると named export の解析に失敗し、
-				// `The requested module 'zod' does not provide an export named 'z'` で全ファイルが
-				// 全テストが起動時に失敗する (Bun 1.3〜1.4 で確認)。zod は Vite の変換対象に含める。
+				// 起動時に失敗する (Bun 1.3〜1.4 で確認)。zod は Vite の変換対象に含める。
 				inline: ['zod'],
 			},
 		},
@@ -32,7 +31,7 @@ export const baseConfig = defineConfig({
 	},
 	resolve: {
 		alias: {
-			'@': resolve(__dirname, './src'),
+			'@': resolve(import.meta.dirname, './src'),
 		},
 	},
 });

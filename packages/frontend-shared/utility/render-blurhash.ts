@@ -31,10 +31,10 @@ function srgbToLinear(source: number): number {
 	return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
 }
 
-function dc(source: number, target: Float32Array): void {
-	target[0] = srgbToLinear(source >> 16);
-	target[1] = srgbToLinear((source >> 8) & 255);
-	target[2] = srgbToLinear(source & 255);
+function dc(source: number, target: Float32Array, offset: number): void {
+	target[offset] = srgbToLinear(source >> 16);
+	target[offset + 1] = srgbToLinear((source >> 8) & 255);
+	target[offset + 2] = srgbToLinear(source & 255);
 }
 
 function acInner(source: number): number {
@@ -42,10 +42,10 @@ function acInner(source: number): number {
 	return Math.sign(value) * Math.abs(value) ** 2;
 }
 
-function ac(source: number, target: Float32Array, maximum: number): void {
-	target[0] = acInner(Math.floor(source / 361)) * maximum;
-	target[1] = acInner(Math.floor(source / 19) % 19) * maximum;
-	target[2] = acInner(source % 19) * maximum;
+function ac(source: number, target: Float32Array, offset: number, maximum: number): void {
+	target[offset] = acInner(Math.floor(source / 361)) * maximum;
+	target[offset + 1] = acInner(Math.floor(source / 19) % 19) * maximum;
+	target[offset + 2] = acInner(source % 19) * maximum;
 }
 
 const VERTEX_SHADER =
@@ -93,9 +93,9 @@ export function render(source: string, target: HTMLCanvasElement | OffscreenCanv
 	const parameters = new Float32Array(3 * width * height);
 	for (let i = 0; i < width * height; i++) {
 		if (i) {
-			ac(base83decode(source.slice(i * 2 + 4, i * 2 + 6)), parameters.subarray(i * 3, (i + 1) * 3), maximum);
+			ac(base83decode(source.slice(i * 2 + 4, i * 2 + 6)), parameters, i * 3, maximum);
 		} else {
-			dc(base83decode(source.slice(2, 6)), parameters.subarray(0, 3));
+			dc(base83decode(source.slice(2, 6)), parameters, 0);
 		}
 	}
 
@@ -104,14 +104,14 @@ export function render(source: string, target: HTMLCanvasElement | OffscreenCanv
 	for (let i = 0; i < width * height; i++) {
 		const w = i % width;
 		const h = height - 1 - (i - w) / width;
-		const pixel = colors.subarray(i * 3, (i + 1) * 3);
+		const pixelOffset = i * 3;
 		for (let y = 0; y < height; y++) {
 			const z = dcos(y * h, height);
 			for (let x = 0; x < width; x++) {
 				const basis = z * dcos(x * w, width);
-				const parameter = parameters.subarray(y * width * 3 + x * 3, y * width * 3 + (x + 1) * 3);
+				const parameterOffset = (y * width + x) * 3;
 				for (let c = 0; c < 3; c++) {
-					pixel[c]! += parameter[c]! * basis;
+					colors[pixelOffset + c]! += parameters[parameterOffset + c]! * basis;
 				}
 			}
 		}

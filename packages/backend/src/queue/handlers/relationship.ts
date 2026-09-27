@@ -42,7 +42,8 @@ function isSilencedHost(silencedHosts: string[] | undefined, host: string | null
 	if (!silencedHosts || host == null) {
 		return false;
 	}
-	return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+	const normalizedHost = `.${host.toLowerCase()}`;
+	return silencedHosts.some((x) => normalizedHost.endsWith(`.${x}`));
 }
 
 async function deliverAcceptFollowActivity(

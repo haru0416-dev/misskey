@@ -319,7 +319,12 @@ export async function handleQueueCleanRemoteNotes(
 		}
 		currentLimit = Math.min(Math.max(currentLimit, minimumLimit), 5000);
 
-		const deletableNoteIds = noteIds.filter((result) => result.isRemovable).map((result) => result.id);
+		const deletableNoteIds: MiNote['id'][] = [];
+		let nextCursorLeft = cursorLeft;
+		for (const result of noteIds) {
+			if (result.isRemovable) deletableNoteIds.push(result.id);
+			if (result.isBase && result.id > nextCursorLeft) nextCursorLeft = result.id;
+		}
 		if (deletableNoteIds.length > 0) {
 			try {
 				await deleteNotesByIdsFromDatabase(deps.db, deletableNoteIds);
@@ -345,7 +350,7 @@ export async function handleQueueCleanRemoteNotes(
 			}
 		}
 
-		cursorLeft = noteIds.filter((result) => result.isBase).reduce((max, { id }) => (id > max ? id : max), cursorLeft);
+		cursorLeft = nextCursorLeft;
 		await deps.redis.set(CURSOR_KEY, cursorLeft);
 
 		reporter.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);

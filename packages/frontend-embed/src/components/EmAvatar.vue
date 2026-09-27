@@ -5,27 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component :is="link ? EmA : 'span'" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.cat]: user.isCat }]">
-	<EmImgWithBlurhash :class="$style.inner" :src="url" :hash="user.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
-	<div v-if="user.isCat" :class="[$style.ears]">
-		<div :class="$style.earLeft">
-			<div v-if="false" :class="$style.layer">
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-			</div>
-		</div>
-		<div :class="$style.earRight">
-			<div v-if="false" :class="$style.layer">
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"></div>
-			</div>
-		</div>
+	<EmImgWithBlurhash :class="$style.inner" :src="user.avatarUrl" :hash="user.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
+	<div v-if="user.isCat" :class="$style.ears">
+		<div :class="$style.earLeft"></div>
+		<div :class="$style.earRight"></div>
 	</div>
 	<img
 		v-for="decoration in user.avatarDecorations"
 		:class="[$style.decoration]"
-		:src="getDecorationUrl(decoration)"
+		:src="decoration.url"
 		:style="{
 			rotate: getDecorationAngle(decoration),
 			scale: getDecorationScale(decoration),
@@ -64,16 +52,6 @@ const emit = defineEmits<{
 
 const bound = computed(() => (props.link ? { to: userPage(props.user) } : {}));
 
-const url = computed(() => {
-	if (props.user.avatarUrl == null) {
-		return null;
-	}
-	return props.user.avatarUrl;
-});
-
-function getDecorationUrl(decoration: Omit<Misskey.entities.UserDetailed['avatarDecorations'][number], 'id'>) {
-	return decoration.url;
-}
 </script>
 
 <style lang="scss" module>

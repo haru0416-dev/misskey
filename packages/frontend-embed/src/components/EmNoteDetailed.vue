@@ -5,7 +5,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div
-	v-show="!isDeleted"
 	ref="rootEl"
 	:class="$style.root"
 >
@@ -169,7 +168,6 @@ const isRenote = (
 
 const appearNote = computed(() => isRenote ? note.value.renote as Misskey.entities.Note : note.value);
 const showContent = ref(false);
-const isDeleted = ref(false);
 const parsed = appearNote.value.text ? mfm.parse(appearNote.value.text) : null;
 const isLong = shouldCollapsed(appearNote.value, []);
 const collapsed = ref(appearNote.value.cw == null && isLong);

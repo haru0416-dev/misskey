@@ -18,14 +18,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <div v-else ref="rootEl">
 	<div v-show="pagination.reversed && more" key="_more_" class="_margin">
-		<button v-if="!moreFetching" class="_buttonPrimary" :class="$style.more" :disabled="moreFetching" :style="{ cursor: moreFetching ? 'wait' : 'pointer' }" @click="fetchMoreAhead">
+		<button v-if="!moreFetching" class="_buttonPrimary" :class="$style.more" @click="fetchMoreAhead">
 			{{ i18n.ts.loadMore }}
 		</button>
 		<EmLoading v-else class="loading"/>
 	</div>
 	<slot :items="Array.from(items.values())" :fetching="fetching || moreFetching"></slot>
 	<div v-show="!pagination.reversed && more" key="_more_" class="_margin">
-		<button v-if="!moreFetching" class="_buttonRounded _buttonPrimary" :class="$style.more" :disabled="moreFetching" :style="{ cursor: moreFetching ? 'wait' : 'pointer' }" @click="fetchMore">
+		<button v-if="!moreFetching" class="_buttonRounded _buttonPrimary" :class="$style.more" @click="fetchMore">
 			{{ i18n.ts.loadMore }}
 		</button>
 		<EmLoading v-else class="loading"/>
@@ -379,13 +379,8 @@ const fetchMoreAhead = async (): Promise<void> => {
 				}),
 	}).then(
 		(res) => {
-			if (res.length === 0) {
-				items.value = concatMapWithArray(items.value, res);
-				more.value = false;
-			} else {
-				items.value = concatMapWithArray(items.value, res);
-				more.value = true;
-			}
+			items.value = concatMapWithArray(items.value, res);
+			more.value = res.length !== 0;
 			offset.value += res.length;
 			moreFetching.value = false;
 		},

@@ -157,7 +157,11 @@ export async function recordHashtagUsagesInDatabase(
 		increment: boolean;
 	},
 ): Promise<void> {
-	const entries = [...new Map(data.entries.map((entry) => [entry.name, entry])).values()];
+	const uniqueEntries = new Map<MiHashtag['name'], (typeof data.entries)[number]>();
+	for (const entry of data.entries) {
+		uniqueEntries.set(entry.name, entry);
+	}
+	const entries = [...uniqueEntries.values()];
 	if (entries.length === 0) {
 		return;
 	}

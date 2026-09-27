@@ -8,8 +8,6 @@ import type { MiUser } from './User.js';
 import type { MiChannel } from './Channel.js';
 import type { MiDriveFile } from './DriveFile.js';
 
-// 大規模なテーブルの既存カラムに索引を追加する場合は、必要に応じて同時作成できる新しい migration にする。
-
 export class MiNote {
 	public id: string;
 

@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <svg :class="$style.root" viewBox="0 0 10 10" preserveAspectRatio="none">
 	<template v-if="props.graduations === 'dots'">
 		<circle
-			v-for="(angle, i) in graduationsMajor"
+			v-for="(angle, i) in graduationAngles"
 			:cx="5 + (Math.sin(angle) * (5 - graduationsPadding))"
 			:cy="5 - (Math.cos(angle) * (5 - graduationsPadding))"
 			:r="0.125"
@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</template>
 	<template v-else-if="props.graduations === 'numbers'">
 		<text
-			v-for="(angle, i) in texts"
+			v-for="(angle, i) in graduationAngles"
 			:x="5 + (Math.sin(angle) * (5 - textsPadding))"
 			:y="5 - (Math.cos(angle) * (5 - textsPadding))"
 			text-anchor="middle"
@@ -109,16 +109,7 @@ const props = withDefaults(
 	},
 );
 
-const graduationsMajor = computed(() => {
-	const angles: number[] = [];
-	const times = props.twentyfour ? 24 : 12;
-	for (let i = 0; i < times; i++) {
-		const angle = (Math.PI * i) / (times / 2);
-		angles.push(angle);
-	}
-	return angles;
-});
-const texts = computed(() => {
+const graduationAngles = computed(() => {
 	const angles: number[] = [];
 	const times = props.twentyfour ? 24 : 12;
 	for (let i = 0; i < times; i++) {

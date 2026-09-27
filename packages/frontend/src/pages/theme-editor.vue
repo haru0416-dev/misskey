@@ -11,12 +11,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts.backgroundColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
-						<button v-for="color in bgColors.filter(x => x.kind === 'light')" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
+						<button v-for="color in lightBgColors" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
 							<div class="preview" :style="{ background: color.forPreview }"></div>
 						</button>
 					</div>
 					<div class="row">
-						<button v-for="color in bgColors.filter(x => x.kind === 'dark')" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
+						<button v-for="color in darkBgColors" class="color _button" :class="{ active: theme.props['bg'] === color.color }" @click="setBgColor(color)">
 							<div class="preview" :style="{ background: color.forPreview }"></div>
 						</button>
 					</div>
@@ -116,6 +116,8 @@ const bgColors = [
 	{ color: '#212525', kind: 'dark', forPreview: '#303e3e' },
 	{ color: '#191919', kind: 'dark', forPreview: '#272727' },
 ] as const;
+const lightBgColors = bgColors.filter(color => color.kind === 'light');
+const darkBgColors = bgColors.filter(color => color.kind === 'dark');
 const accentColors = ['#e36749', '#f29924', '#98c934', '#34c9a9', '#34a1c9', '#606df7', '#8d34c9', '#e84d83'];
 const fgColors = [
 	{ color: 'none', forLight: '#5f5f5f', forDark: '#dadada', forPreview: null },

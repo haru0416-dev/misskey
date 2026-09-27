@@ -24,9 +24,6 @@ export class MemoryKVCache<T> {
 	}
 
 	@bindThis
-	/**
-	 * @deprecated これを直接呼び出すべきではない。InternalEventなどで変更を全てのプロセス/マシンに通知するべき
-	 */
 	public set(key: string, value: T): void {
 		if (this.limit !== Infinity) {
 			// 期限切れの掃除は interval の gc() に任せる。ここで gc() を呼ぶと set のたびに全件走査になり、

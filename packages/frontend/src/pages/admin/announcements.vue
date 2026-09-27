@@ -80,7 +80,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 				</MkFolder>
 				<MkLoading v-if="loadingMore"/>
-				<MkButton @click="more()">
+				<MkButton v-if="hasMore && lastPersistedId != null" data-cy-announcements-more :disabled="loadingMore" @click="more()">
 					<i class="ti ti-reload"></i>{{ i18n.ts.more }}
 				</MkButton>
 			</template>
@@ -117,6 +117,9 @@ const { model: announcementsStatus, def: announcementsStatusDef } = useMkSelect(
 
 const loading = ref(true);
 const loadingMore = ref(false);
+const pageSize = 10;
+const hasMore = ref(false);
+let listGeneration = 0;
 
 const announcements = ref<
 	(Omit<
@@ -129,20 +132,9 @@ const announcements = ref<
 		reads?: Misskey.entities.AdminAnnouncementsListResponse[number]['reads'];
 	})[]
 >([]);
+const lastPersistedId = computed(() => announcements.value.findLast((announcement) => announcement.id != null)?.id ?? null);
 
-watch(
-	announcementsStatus,
-	(to) => {
-		loading.value = true;
-		misskeyApi('admin/announcements/list', {
-			status: to,
-		}).then((announcementResponse) => {
-			announcements.value = announcementResponse;
-			loading.value = false;
-		});
-	},
-	{ immediate: true },
-);
+watch(announcementsStatus, (status) => refresh(status), { immediate: true });
 
 function add() {
 	announcements.value.unshift({
@@ -216,23 +208,37 @@ async function save(announcement: (typeof announcements)['value'][number]) {
 	}
 }
 
-function more() {
+async function more() {
+	const untilId = lastPersistedId.value;
+	if (untilId == null || loadingMore.value || !hasMore.value) return;
+	const status = announcementsStatus.value;
+	const generation = listGeneration;
 	loadingMore.value = true;
-	misskeyApi('admin/announcements/list', {
-		status: announcementsStatus.value,
-		untilId: announcements.value.reduce((acc, announcement) => (announcement.id != null ? announcement : acc)).id!,
-	}).then((announcementResponse) => {
+	try {
+		const announcementResponse = await misskeyApi('admin/announcements/list', {
+			status,
+			limit: pageSize,
+			untilId,
+		});
+		if (generation !== listGeneration || status !== announcementsStatus.value) return;
 		announcements.value = announcements.value.concat(announcementResponse);
-		loadingMore.value = false;
-	});
+		hasMore.value = announcementResponse.length === pageSize;
+	} finally {
+		if (generation === listGeneration) loadingMore.value = false;
+	}
 }
 
-function refresh() {
+function refresh(status = announcementsStatus.value) {
+	const generation = ++listGeneration;
 	loading.value = true;
+	loadingMore.value = false;
 	misskeyApi('admin/announcements/list', {
-		status: announcementsStatus.value,
+		status,
+		limit: pageSize,
 	}).then((announcementResponse) => {
+		if (generation !== listGeneration || status !== announcementsStatus.value) return;
 		announcements.value = announcementResponse;
+		hasMore.value = announcementResponse.length === pageSize;
 		loading.value = false;
 	});
 }

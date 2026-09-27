@@ -4,6 +4,7 @@ use aws_lc_rs::signature::{PqdsaKeyPair, ML_DSA_44, ML_DSA_44_SIGNING};
 use napi::bindgen_prelude::*;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi_derive::napi;
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use crate::THREAD_POOL;
@@ -35,21 +36,19 @@ enum Payload {
 }
 
 impl Payload {
-  /// 署名対象のバイト列にする。
   /// 分割で渡された場合は、各片の SHA-256 を連結したものを署名対象とする。
-  fn into_message(self) -> Vec<u8> {
+  fn message(&self) -> Cow<'_, [u8]> {
     match self {
       Payload::Parts(parts) => {
-        // 片ごとの digest を連結するので、最終長は片数 × SHA-256 の出力長。
         let mut combined = Vec::with_capacity(parts.len() * aws_lc_rs::digest::SHA256.output_len());
-        for part in parts.iter() {
+        for part in parts {
           combined.extend_from_slice(
             aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, part.as_ref()).as_ref(),
           );
         }
-        combined
+        Cow::Owned(combined)
       }
-      Payload::Raw(buf) => buf.to_vec(),
+      Payload::Raw(buf) => Cow::Borrowed(buf.as_ref()),
     }
   }
 }
@@ -111,7 +110,7 @@ impl Signer {
       .ok_or_else(|| Error::new(Status::GenericFailure, "slacc is not initialized"))?
       .spawn(move || {
         let res = {
-          let message = payload.into_message();
+          let message = payload.message();
           match &*key_pair {
             KeyPair::Mldsa44(key) => {
               let mut sig = vec![0; key.algorithm().signature_len()];
@@ -199,7 +198,7 @@ impl Verifier {
       .get()
       .ok_or_else(|| Error::new(Status::GenericFailure, "slacc is not initialized"))?
       .spawn(move || {
-        let message = payload.into_message();
+        let message = payload.message();
         callback.call(
           Ok(
             match &*public_key {

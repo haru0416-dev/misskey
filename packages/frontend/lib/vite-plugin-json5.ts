@@ -7,8 +7,7 @@ import JSON5 from 'json5';
 import { createFilter } from 'vite';
 import type { FilterPattern, Plugin } from 'vite';
 
-// json5 は SyntaxError を継承せず、追加プロパティを持つエラーを返す。
-// https://github.com/json5/json5/blob/de344f0619bda1465a6e25c76f1c0c3dda8108d9/lib/parse.js#L1111-L1112
+// JSON5.parse が投げる SyntaxError の行・列番号を Vite の警告に渡す。
 interface Json5SyntaxError extends SyntaxError {
 	lineNumber: number;
 	columnNumber: number;

@@ -512,7 +512,8 @@ export class StreamConnection {
 	}
 
 	public sendMessageToWs(type: string, payload: JsonValue): void {
-		this.sendToClient?.(JSON.stringify({ type, body: payload }));
+		if (this.sendToClient == null) return;
+		this.sendToClient(JSON.stringify({ type, body: payload }));
 	}
 
 	private buildChannelContext(
