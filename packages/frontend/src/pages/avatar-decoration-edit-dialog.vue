@@ -40,15 +40,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkTextarea>
 				<MkFolder>
 					<template #label>{{ i18n.ts.availableRoles }}</template>
-					<template #suffix>{{ rolesThatCanBeUsedThisDecoration.length === 0 ? i18n.ts.all : rolesThatCanBeUsedThisDecoration.length }}</template>
+					<template #suffix>{{ roleEntries.length === 0 ? i18n.ts.all : roleEntries.length }}</template>
 
 					<div class="_gaps">
 						<MkButton rounded @click="addRole"><i class="ti ti-plus"></i> {{ i18n.ts.add }}</MkButton>
 
-						<div v-for="role in rolesThatCanBeUsedThisDecoration" :key="role.id" :class="$style.roleItem">
-							<MkRolePreview :class="$style.role" :role="role" :forModeration="true" :detailed="false" style="pointer-events: none;"/>
-							<button v-if="role.target === 'manual'" class="_button" :class="$style.roleUnassign" @click="removeRole(role, $event)"><i class="ti ti-x"></i></button>
-							<button v-else class="_button" :class="$style.roleUnassign" disabled><i class="ti ti-ban"></i></button>
+						<div v-for="entry in roleEntries" :key="entry.id" :class="$style.roleItem">
+							<template v-if="entry.role != null">
+								<MkRolePreview :class="$style.role" :role="entry.role" :forModeration="true" :detailed="false" style="pointer-events: none;"/>
+								<button v-if="entry.role.target === 'manual'" class="_button" :class="$style.roleUnassign" @click="removeRole(entry.id)"><i class="ti ti-x"></i></button>
+								<button v-else class="_button" :class="$style.roleUnassign" disabled><i class="ti ti-ban"></i></button>
+							</template>
+							<template v-else>
+								<div :class="$style.role" class="_monospace">{{ entry.id }}</div>
+								<button class="_button" :class="$style.roleUnassign" @click="removeRole(entry.id)"><i class="ti ti-x"></i></button>
+							</template>
 						</div>
 					</div>
 				</MkFolder>
@@ -63,7 +69,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, ref, useTemplateRef } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkWindow from '@/components/overlay/MkWindow.vue';
 import MkButton from '@/components/form/MkButton.vue';
@@ -77,6 +83,7 @@ import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import { ensureSignin } from '@/i.js';
+import { useRoleRestriction } from '@/composables/useRoleRestriction.js';
 
 const $i = ensureSignin();
 
@@ -95,47 +102,14 @@ const url = ref<string>(props.avatarDecoration ? props.avatarDecoration.url : ''
 const name = ref<string>(props.avatarDecoration ? props.avatarDecoration.name : '');
 const category = ref<string>(props.avatarDecoration?.category ? props.avatarDecoration.category : '');
 const description = ref<string>(props.avatarDecoration ? props.avatarDecoration.description : '');
-const roleIdsThatCanBeUsedThisDecoration = ref(
-	props.avatarDecoration ? props.avatarDecoration.roleIdsThatCanBeUsedThisDecoration : [],
-);
-const rolesThatCanBeUsedThisDecoration = ref<Misskey.entities.Role[]>([]);
+// 保存するのは ID の一覧 (useRoleRestriction)。一覧の取得に失敗しても制限を失わない。
+const {
+	roleIds: roleIdsThatCanBeUsedThisDecoration,
+	entries: roleEntries,
+	add: addRole,
+	remove: removeRole,
+} = useRoleRestriction(props.avatarDecoration?.roleIdsThatCanBeUsedThisDecoration ?? []);
 
-watch(
-	roleIdsThatCanBeUsedThisDecoration,
-	async () => {
-		// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
-		// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
-		const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
-		if (allRoles == null) {
-			return;
-		}
-		rolesThatCanBeUsedThisDecoration.value = roleIdsThatCanBeUsedThisDecoration.value
-			.map((id) => allRoles.find((role) => role.id === id))
-			.filter((x) => x != null);
-	},
-	{ immediate: true },
-);
-
-async function addRole() {
-	const roles = await misskeyApi('admin/roles/list');
-	const currentRoleIds = new Set(rolesThatCanBeUsedThisDecoration.value.map((x) => x.id));
-
-	const { canceled, result: roleId } = await os.select({
-		items: roles
-			.filter((r) => r.isPublic)
-			.filter((r) => !currentRoleIds.has(r.id))
-			.map((r) => ({ label: r.name, value: r.id })),
-	});
-	if (canceled || roleId == null) {
-		return;
-	}
-
-	rolesThatCanBeUsedThisDecoration.value.push(roles.find((r) => r.id === roleId)!);
-}
-
-async function removeRole(role: Misskey.entities.Role, ev: PointerEvent) {
-	rolesThatCanBeUsedThisDecoration.value = rolesThatCanBeUsedThisDecoration.value.filter((x) => x.id !== role.id);
-}
 
 async function done() {
 	const params = {
@@ -143,7 +117,7 @@ async function done() {
 		name: name.value,
 		description: description.value,
 		category: category.value,
-		roleIdsThatCanBeUsedThisDecoration: rolesThatCanBeUsedThisDecoration.value.map((x) => x.id),
+		roleIdsThatCanBeUsedThisDecoration: roleIdsThatCanBeUsedThisDecoration.value,
 	};
 
 	if (props.avatarDecoration) {
