@@ -1124,6 +1124,21 @@ describe('Endpoints', () => {
 			expect(created.body.eyeCatchingImageId).toBe(file.body!.id);
 			expect(created.body.eyeCatchingImage!.id).toBe(file.body!.id);
 
+			// 同じ名前の作成が同時に来ても、通るのは 1 つだけで残りは名前の衝突として返す。
+			const parallel = await Promise.all(
+				Array.from({ length: 5 }, () =>
+					api(
+						'pages/create',
+						{ title: 'race', name: `hono-page-race-${suffix}`, content: [], variables: [], script: '' },
+						alice,
+					),
+				),
+			);
+			expect(parallel.map((res) => res.status).sort()).toEqual([200, 400, 400, 400, 400]);
+			for (const res of parallel.filter((res) => res.status === 400)) {
+				expect(castAsError(res.body as any).error.code).toBe('NAME_ALREADY_EXISTS');
+			}
+
 			const noSuchFile = await api(
 				'pages/create',
 				{

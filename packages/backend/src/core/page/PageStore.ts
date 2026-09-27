@@ -9,6 +9,7 @@ import { page } from '@/db/schema/page.js';
 import type { PageInsert, PageRow } from '@/db/schema/page.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { MiPage } from '@/models/Page.js';
 import type { MiUser } from '@/models/User.js';
 import { pushIdPaginationConditions } from '@/db/id-pagination.js';
@@ -119,50 +120,66 @@ export async function updatePageInDatabase(
 	userId: MiUser['id'],
 	values: PageUpdateValues,
 ): Promise<PageUpdateResult> {
-	return await db.transaction(async (tx) => {
-		const [row] = await tx.select().from(page).where(eq(page.id, id)).for('no key update').limit(1);
-
-		if (row == null) {
-			return { status: 'not-found' };
-		}
-
-		const before = deserializePage(row);
-
-		if (before.userId !== userId) {
-			return { status: 'forbidden' };
-		}
-
-		if (values.name != null) {
-			const conflicts = await pageNameExistsForUserInDatabase(tx, userId, values.name, id);
-			if (conflicts) {
-				return { status: 'name-conflict' };
+	// 名前の確認と更新の間に同じ名前のページが作られると、一意索引 (userId, name) で UPDATE が失敗する。
+	// 失敗した文でトランザクションは中断されるので、外で受けて名前の衝突として返す。
+	return await db
+		.transaction(async (tx) => await updatePageInTransaction(tx, id, userId, values))
+		.catch((error: unknown) => {
+			if (isDuplicateKeyValueDatabaseError(error)) {
+				return { status: 'name-conflict' } as const;
 			}
+			throw error;
+		});
+}
+
+async function updatePageInTransaction(
+	tx: MiDrizzleDatabase,
+	id: MiPage['id'],
+	userId: MiUser['id'],
+	values: PageUpdateValues,
+): Promise<PageUpdateResult> {
+	const [row] = await tx.select().from(page).where(eq(page.id, id)).for('no key update').limit(1);
+
+	if (row == null) {
+		return { status: 'not-found' };
+	}
+
+	const before = deserializePage(row);
+
+	if (before.userId !== userId) {
+		return { status: 'forbidden' };
+	}
+
+	if (values.name != null) {
+		const conflicts = await pageNameExistsForUserInDatabase(tx, userId, values.name, id);
+		if (conflicts) {
+			return { status: 'name-conflict' };
 		}
+	}
 
-		const [updated] = await tx
-			.update(page)
-			.set({
-				updatedAt: new Date(),
-				title: values.title,
-				name: values.name,
-				summary: values.summary === undefined ? before.summary : values.summary,
-				content: values.content,
-				variables: values.variables,
-				script: values.script,
-				alignCenter: values.alignCenter,
-				hideTitleWhenPinned: values.hideTitleWhenPinned,
-				font: values.font,
-				eyeCatchingImageId: values.eyeCatchingImageId,
-			})
-			.where(eq(page.id, id))
-			.returning();
+	const [updated] = await tx
+		.update(page)
+		.set({
+			updatedAt: new Date(),
+			title: values.title,
+			name: values.name,
+			summary: values.summary === undefined ? before.summary : values.summary,
+			content: values.content,
+			variables: values.variables,
+			script: values.script,
+			alignCenter: values.alignCenter,
+			hideTitleWhenPinned: values.hideTitleWhenPinned,
+			font: values.font,
+			eyeCatchingImageId: values.eyeCatchingImageId,
+		})
+		.where(eq(page.id, id))
+		.returning();
 
-		if (updated == null) {
-			throw new Error('Failed to update page');
-		}
+	if (updated == null) {
+		throw new Error('Failed to update page');
+	}
 
-		return { status: 'ok', before, after: deserializePage(updated) };
-	});
+	return { status: 'ok', before, after: deserializePage(updated) };
 }
 
 export async function deletePageInDatabase(
