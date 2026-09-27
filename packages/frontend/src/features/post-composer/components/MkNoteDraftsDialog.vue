@@ -52,6 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:key="draft.id"
 							v-panel
 							:class="[$style.draft]"
+							data-cy-note-draft
 						>
 							<div :class="$style.draftBody" class="_gaps_s">
 								<MkInfo v-if="draft.scheduledAt != null && draft.isActuallyScheduled">

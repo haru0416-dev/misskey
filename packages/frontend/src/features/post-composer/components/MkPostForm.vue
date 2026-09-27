@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<header :class="$style.header">
 		<div :class="$style.headerLeft">
 			<button v-if="!fixed" :class="$style.cancel" class="_button" @click="cancel"><i class="ti ti-x"></i></button>
-			<button ref="accountMenuEl" v-click-anime v-tooltip="i18n.ts.account" class="_button" @click="openAccountMenu">
+			<button ref="accountMenuEl" v-click-anime v-tooltip="i18n.ts.account" class="_button" data-cy-post-form-account @click="openAccountMenu">
 				<img :class="$style.avatar" :src="(postAccount ?? $i).avatarUrl" style="border-radius: 100%;" alt=""/>
 			</button>
 		</div>
@@ -815,6 +815,24 @@ function pushVisibleUser(user: Misskey.entities.UserDetailed) {
 	}
 }
 
+// 宛先を丸ごと置き換える読み込みの世代。下書きを続けて復元したとき、前の下書きの宛先の応答が
+// 後から届いて今の下書きの宛先に混ざらないよう、最後の要求の応答だけを使う。
+let visibleUsersReplaceGeneration = 0;
+
+function replaceVisibleUsers(userIds: string[]) {
+	const generation = ++visibleUsersReplaceGeneration;
+	visibleUsers.value = [];
+	if (userIds.length === 0) {
+		return;
+	}
+	misskeyApi('users/show', { userIds }).then((users) => {
+		if (generation !== visibleUsersReplaceGeneration) {
+			return;
+		}
+		users.forEach((u) => pushVisibleUser(u));
+	});
+}
+
 function addVisibleUser() {
 	os.selectUser().then((user) => {
 		pushVisibleUser(user);
@@ -1491,11 +1509,6 @@ async function openAccountMenu(ev: PointerEvent) {
 							};
 						});
 					}
-					if (draft.visibleUserIds) {
-						misskeyApi('users/show', { userIds: draft.visibleUserIds }).then((users) => {
-							users.forEach((u) => pushVisibleUser(u));
-						});
-					}
 					quoteId.value = draft.renoteId ?? null;
 					renoteTargetNote.value = draft.renote;
 					replyTargetNote.value = draft.reply;
@@ -1505,14 +1518,7 @@ async function openAccountMenu(ev: PointerEvent) {
 						targetChannel.value = draft.channel as unknown as Misskey.entities.Channel;
 					}
 
-					visibleUsers.value = [];
-					draft.visibleUserIds?.forEach((uid) => {
-						if (!visibleUsers.value.some((u) => u.id === uid)) {
-							misskeyApi('users/show', { userId: uid }).then((user) => {
-								pushVisibleUser(user);
-							});
-						}
-					});
+					replaceVisibleUsers(draft.visibleUserIds ?? []);
 
 					serverDraftId.value = draft.id;
 				},
