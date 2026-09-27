@@ -110,17 +110,13 @@ async function deliverPinnedChangeForApi(
 	void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
-export async function addPinnedForApi(
-	deps: ApiAccountPinDependencies,
-	user: { id: MiUser['id']; host: MiUser['host'] },
-	noteId: string,
-): Promise<void> {
+export async function addPinnedForApi(deps: ApiAccountPinDependencies, user: MiUser, noteId: string): Promise<void> {
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
 	if (note == null) {
 		throw iPinNoSuchNoteError();
 	}
 
-	const policies = await getApiRolePolicies(deps, user as MiUser);
+	const policies = await getApiRolePolicies(deps, user);
 	const result = await createUserNotePiningWithinLimitInDatabase(
 		deps.db,
 		{
