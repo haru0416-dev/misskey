@@ -185,12 +185,15 @@ function buildFullPath(args: {
 	return fullPath;
 }
 
+// ルート定義のパスは静的なので、解析結果を使い回す (解決のたびに全ルートを解析し直していた)。
+const parsedPathCache = new Map<string, ParsedPath>();
+
 function parsePath(path: string): ParsedPath {
+	const cached = parsedPathCache.get(path);
+	if (cached != null) return cached;
 	const res = [] as ParsedPath;
 
-	path = path.substring(1);
-
-	for (const part of path.split('/')) {
+	for (const part of path.substring(1).split('/')) {
 		if (part.includes(':')) {
 			const prefix = part.substring(0, part.indexOf(':'));
 			const placeholder = part.substring(part.indexOf(':') + 1);
@@ -207,6 +210,7 @@ function parsePath(path: string): ParsedPath {
 		}
 	}
 
+	parsedPathCache.set(path, res);
 	return res;
 }
 
@@ -417,7 +421,8 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 		this.currentFullPath = res._parsedRoute.fullPath;
 
 		if (res.route.loginRequired && !this.isLoggedIn && 'component' in res.route) {
-			res.route.component = this.notFoundPageComponent;
+			// ルート定義は全ルーターで共有するので書き換えず、差し替えたコピーを使う。
+			res = { ...res, route: { ...res.route, component: this.notFoundPageComponent } };
 			res.props.set('showLoginPopup', true);
 		}
 
