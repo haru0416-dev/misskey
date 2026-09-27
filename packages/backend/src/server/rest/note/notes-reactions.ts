@@ -45,7 +45,7 @@ import {
 } from '../activitypub/notes-ap.js';
 import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
 import { createNoteNotification } from '@/core/note/NoteCreationService.js';
-import { isVisibleForMeForApi } from './note.js';
+import { isNoteContentVisibleForMeForApi } from './note.js';
 import type { ApiNoteDependencies } from './note.js';
 import { packUserLiteManyForApi } from '../user/user.js';
 import type { ApiNotificationDependencies } from '../notification/notification.js';
@@ -126,7 +126,7 @@ export async function createNoteReactionForApi(
 		}
 	}
 
-	if (!(await isVisibleForMeForApi(deps, note, user.id))) {
+	if (!(await isNoteContentVisibleForMeForApi(deps, note, user.id))) {
 		throw new IdentifiableError('68e9d2d1-48bf-42c2-b90a-b20e09fd3d48', 'Note not accessible for you.');
 	}
 
@@ -347,6 +347,9 @@ export async function handleApiNotesReactionsCreate(
 			if (err.id === '12c35529-3c79-4327-b1cc-e2cf63a71925') {
 				throw errors.cannotReactToRenote();
 			}
+			if (err.id === '68e9d2d1-48bf-42c2-b90a-b20e09fd3d48') {
+				throw errors.noSuchNote();
+			}
 		}
 		throw err;
 	}
@@ -391,7 +394,7 @@ export async function handleApiNotesReactions(
 	errors: ContractErrors<(typeof notesContracts)['notes/reactions']>,
 ): Promise<{ id: string; createdAt: string; user: Packed<'UserLite'>; type: string }[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null || !(await isVisibleForMeForApi(deps, note, me?.id ?? null))) {
+	if (note == null || !(await isNoteContentVisibleForMeForApi(deps, note, me?.id ?? null))) {
 		throw errors.noSuchNote();
 	}
 

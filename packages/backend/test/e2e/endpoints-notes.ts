@@ -2641,4 +2641,47 @@ describe('Endpoints', () => {
 			expect(getAt(res.body, 0).id).toBe(carolPost.id);
 		});
 	});
+
+	describe('時刻で隠した投稿への操作', () => {
+		const setup = async (settings: { makeNotesHiddenBefore?: number; makeNotesFollowersOnlyBefore?: number }) => {
+			const suffix = randomUUID().replaceAll('-', '').slice(0, 8);
+			const author = await signup({ username: `hideauthor${suffix}` });
+			const viewer = await signup({ username: `hideviewer${suffix}` });
+			const created = await api(
+				'notes/create',
+				{ text: '隠す投稿', poll: { choices: ['a', 'b'], multiple: false } },
+				author,
+			);
+			expect(created.status).toBe(200);
+			// 0 は「作成から 0 秒以上経過した投稿」を表し、既存の投稿すべてが対象になる。
+			const updated = await api('i/update', settings, author);
+			expect(updated.status).toBe(200);
+			return { author, viewer, noteId: created.body.createdNote.id };
+		};
+
+		test('非公開にした過去の投稿には、作者以外は投票・リアクション・翻訳できない', async () => {
+			const { author, viewer, noteId } = await setup({ makeNotesHiddenBefore: 0 });
+
+			const vote = await api('notes/polls/vote', { noteId, choice: 0 }, viewer);
+			expect(vote.status).toBe(400);
+			expect(castAsError(vote.body as any).error.code).toBe('NO_SUCH_NOTE');
+			const reaction = await api('notes/reactions/create', { noteId, reaction: '👍' }, viewer);
+			expect(reaction.status).toBe(400);
+			expect(castAsError(reaction.body as any).error.code).toBe('NO_SUCH_NOTE');
+			const translate = await api('notes/translate', { noteId, targetLang: 'en' }, viewer);
+			expect(translate.status).toBe(400);
+			expect(castAsError(translate.body as any).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
+
+			const ownVote = await api('notes/polls/vote', { noteId, choice: 0 }, author);
+			expect(ownVote.status).toBe(204);
+		});
+
+		test('フォロワー限定にした過去の投稿には、フォローしていないユーザーは投票できない', async () => {
+			const { viewer, noteId } = await setup({ makeNotesFollowersOnlyBefore: 0 });
+
+			const vote = await api('notes/polls/vote', { noteId, choice: 0 }, viewer);
+			expect(vote.status).toBe(400);
+			expect(castAsError(vote.body as any).error.code).toBe('NO_SUCH_NOTE');
+		});
+	});
 });
