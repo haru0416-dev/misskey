@@ -89,8 +89,8 @@ export async function followWithSideEffectsForApi(
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 		return followee.isSuspended ? 'rejected: suspended' : 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
-		// 相手側のブロック解除に合わせ、残っている自分側のブロックも解除する。
-		await unblockForApi(deps, followee, follower);
+		// ブロックしていたリモートの相手がフォローしてきたので、Undo Block が届かず残っている相手側のブロックを消す。
+		await unblockForApi(deps, follower, followee);
 	} else {
 		if (blocking) {
 			throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
