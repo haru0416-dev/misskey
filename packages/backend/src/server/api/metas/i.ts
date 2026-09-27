@@ -90,6 +90,19 @@ export const endpointMetas = {
 
 			secure: true,
 
+			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: 'f00afb51-beeb-4ca5-84df-10c3e7ded193',
+				},
+				twoFactorNotStarted: {
+					message: 'Two-factor authentication setup has not been started.',
+					code: 'TWO_FACTOR_NOT_STARTED',
+					id: '43f195f1-ac52-4429-821b-781d3323cc28',
+				},
+			},
+
 			res: {
 				type: 'object',
 				properties: {
@@ -112,6 +125,11 @@ export const endpointMetas = {
 			secure: true,
 
 			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: 'a8c70e54-9aab-4b79-a245-8c80c80a79d0',
+				},
 				incorrectPassword: {
 					message: 'Incorrect password.',
 					code: 'INCORRECT_PASSWORD',
@@ -160,6 +178,11 @@ export const endpointMetas = {
 			secure: true,
 
 			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: 'cba2a877-23c6-4765-a4b9-882096bf04a8',
+				},
 				incorrectPassword: {
 					message: 'Incorrect password.',
 					code: 'INCORRECT_PASSWORD',
@@ -188,6 +211,11 @@ export const endpointMetas = {
 			secure: true,
 
 			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: 'a01913f6-a955-4aad-85b8-3aea188e6f3c',
+				},
 				userNotFound: {
 					message: 'User not found.',
 					code: 'USER_NOT_FOUND',
@@ -224,6 +252,11 @@ export const endpointMetas = {
 			},
 
 			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '030b29ed-d22d-421e-83fb-abe5bb1ae7ec',
+				},
 				incorrectPassword: {
 					message: 'Incorrect password.',
 					code: 'INCORRECT_PASSWORD',
@@ -240,6 +273,11 @@ export const endpointMetas = {
 			secure: true,
 
 			errors: {
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '80545d28-42fb-4594-bc46-a4ac365bd726',
+				},
 				incorrectPassword: {
 					message: 'Incorrect password.',
 					code: 'INCORRECT_PASSWORD',

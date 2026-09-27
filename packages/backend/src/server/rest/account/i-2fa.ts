@@ -38,22 +38,33 @@ export type ApiI2faDependencies = UserPackingDependencies & {
 	publishMainStream?: ApiMainStreamPublisher;
 };
 
+// 2FA のコード誤りは利用者の入力ミスなので、契約で宣言した 400 のエラーとして返す (生の Error は 500 になる)。
+function twoFactorAuthenticationFailedError(id: string): ApiError {
+	return new ApiError({
+		status: 400,
+		message: 'Two-factor authentication failed.',
+		code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+		id,
+	});
+}
+
 async function assertTwoFactorAuthenticatedForApi(
 	deps: ApiI2faDependencies,
 	profile: MiUserProfile,
 	token: string | null | undefined,
+	errorId: string,
 ): Promise<void> {
 	if (!profile.twoFactorEnabled) {
 		return;
 	}
 	if (token == null) {
-		throw new Error('authentication failed');
+		throw twoFactorAuthenticationFailedError(errorId);
 	}
 
 	try {
 		await deps.userAuthService.twoFactorAuthenticate(profile, token);
-	} catch (_) {
-		throw new Error('authentication failed', { cause: _ });
+	} catch {
+		throw twoFactorAuthenticationFailedError(errorId);
 	}
 }
 
@@ -83,7 +94,7 @@ export async function handleApiI2faRegister(
 	params: ApiParams<typeof i2faRegisterParamDef>,
 ): Promise<{ url: string; secret: string; label: string; issuer: string }> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
-	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
+	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token, 'cba2a877-23c6-4765-a4b9-882096bf04a8');
 	await assertPasswordMatchedForApi(profile, params.password, '78d6c839-20c9-4c66-b90a-fc0542168b48');
 
 	const secret = new OTPAuth.Secret();
@@ -121,11 +132,16 @@ export async function handleApiI2faDone(
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
 	if (profile.twoFactorTempSecret == null) {
-		throw new Error('二段階認証の設定が開始されていません');
+		throw new ApiError({
+			status: 400,
+			message: 'Two-factor authentication setup has not been started.',
+			code: 'TWO_FACTOR_NOT_STARTED',
+			id: '43f195f1-ac52-4429-821b-781d3323cc28',
+		});
 	}
 
 	if (!(await deps.userAuthService.validateOtp(profile.userId, profile.twoFactorTempSecret, token))) {
-		throw new Error('not verified');
+		throw twoFactorAuthenticationFailedError('f00afb51-beeb-4ca5-84df-10c3e7ded193');
 	}
 
 	const backupCodes = Array.from({ length: 5 }, () => new OTPAuth.Secret().base32);
@@ -161,7 +177,7 @@ export async function handleApiI2faRegisterKey(
 		throw errors.userNotFound();
 	}
 
-	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
+	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token, 'a01913f6-a955-4aad-85b8-3aea188e6f3c');
 	await assertPasswordMatchedForApi(profile, params.password, '38769596-efe2-4faf-9bec-abbb3f2cd9ba');
 
 	if (!profile.twoFactorEnabled) {
@@ -184,7 +200,7 @@ export async function handleApiI2faKeyDone(
 	params: ApiParams<typeof i2faKeyDoneParamDef>,
 ): Promise<{ id: string; name: string }> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
-	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
+	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token, 'a8c70e54-9aab-4b79-a245-8c80c80a79d0');
 	await assertPasswordMatchedForApi(profile, params.password, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
 
 	if (!profile.twoFactorEnabled) {
@@ -263,7 +279,7 @@ export async function handleApiI2faRemoveKey(
 	params: ApiParams<typeof i2faRemoveKeyParamDef>,
 ): Promise<Record<string, never>> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
-	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
+	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token, '030b29ed-d22d-421e-83fb-abe5bb1ae7ec');
 	await assertPasswordMatchedForApi(profile, params.password, '141c598d-a825-44c8-9173-cfb9d92be493');
 
 	await deleteUserSecurityKeyByIdAndUserIdFromDatabase(deps.db, params.credentialId, me.id);
@@ -291,7 +307,7 @@ export async function handleApiI2faUnregister(
 	params: ApiParams<typeof i2faUnregisterParamDef>,
 ): Promise<void> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
-	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token);
+	await assertTwoFactorAuthenticatedForApi(deps, profile, params.token, '80545d28-42fb-4594-bc46-a4ac365bd726');
 	await assertPasswordMatchedForApi(profile, params.password, '7add0395-9901-4098-82f9-4f67af65f775');
 
 	await updateUserProfileInDatabase(deps.db, me.id, {

@@ -4071,6 +4071,8 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
+            | 'TWO_FACTOR_NOT_STARTED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
     'i/2fa/key-done': {
@@ -4084,6 +4086,7 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'TWO_FACTOR_NOT_ENABLED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
@@ -4111,6 +4114,7 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
     'i/2fa/register-key': {
@@ -4124,6 +4128,7 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'TWO_FACTOR_NOT_ENABLED'
             | 'USER_NOT_FOUND'
             | 'YOUR_ACCOUNT_SUSPENDED';
@@ -4139,6 +4144,7 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
     'i/2fa/unregister': {
@@ -4152,6 +4158,7 @@ export type Endpoints = {
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
+            | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
     'i/2fa/update-key': {

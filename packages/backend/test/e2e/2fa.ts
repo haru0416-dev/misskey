@@ -795,6 +795,34 @@ describe('2要素認証', () => {
 		);
 	});
 
+	test('の設定・解除で TOTP を間違えたら 400 で返し、設定を変えない。', async () => {
+		const user = await signup({ username: `tfbad_${crypto.randomBytes(4).toString('hex')}`, password });
+
+		const notStarted = await api('i/2fa/done', { token: '000000' }, user);
+		expect(notStarted.status).toBe(400);
+		expect(castAsError(notStarted.body as any).error.code).toBe('TWO_FACTOR_NOT_STARTED');
+
+		// テスト環境の TOTP 検証は既定で常に通るので、この間だけ実際に検証させる。
+		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
+		try {
+			const registered = await api('i/2fa/register', { password }, user);
+			expect(registered.status).toBe(200);
+			const wrongDone = await api('i/2fa/done', { token: invalidOtpToken(registered.body.secret) }, user);
+			expect(wrongDone.status).toBe(400);
+			expect(castAsError(wrongDone.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
+
+			const secret = await enableTotp(user);
+			for (const endpoint of ['i/2fa/unregister', 'i/2fa/register'] as const) {
+				const res = await api(endpoint, { password, token: invalidOtpToken(secret) }, user);
+				expect(res.status).toBe(400);
+				expect(castAsError(res.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
+			}
+			expect((await api('i', {}, user)).body.twoFactorEnabled).toBe(true);
+		} finally {
+			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+		}
+	});
+
 	test('が有効な場合、パスワード変更はTOTPなしまたは不正なTOTPでは失敗し、パスワードを変更しない。', async () => {
 		const user = await signup({ username: `tfcp_${crypto.randomBytes(4).toString('hex')}`, password });
 		const secret = await enableTotp(user);

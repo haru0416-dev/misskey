@@ -45,8 +45,9 @@ export function createUserAuthService(redisClient: Redis.Redis, db: MiDrizzleDat
 			timestamp: now,
 		});
 
+		// 呼び出し元はどちらも戻り値で判定するので、不一致も使用済みと同じく false で返す。
 		if (delta === null) {
-			throw new Error('authentication failed');
+			return false;
 		}
 
 		const currentStep = totp.counter({ timestamp: now });
