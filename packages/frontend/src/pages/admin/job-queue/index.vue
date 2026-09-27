@@ -296,7 +296,11 @@ async function fetchCurrentQueue() {
 	if (queue == null) {
 		return;
 	}
-	queueInfo.value = await misskeyApi('admin/queue/queue-stats', { queue });
+	const info = await misskeyApi('admin/queue/queue-stats', { queue });
+	// タブを切り替えた後に前のキューの応答が届いても、今のキューの表示に入れない。
+	if (currentQueue.value === queue) {
+		queueInfo.value = info;
+	}
 }
 
 // 「もっと見る」で広げた表示範囲は10秒ごとの自動更新でも維持する必要があるため、
@@ -352,7 +356,7 @@ async function fetchJobs() {
 	}
 	jobsFetching.value = true;
 	const state = jobState.value;
-	jobs.value = await misskeyApi('admin/queue/jobs', {
+	const fetched = await misskeyApi('admin/queue/jobs', {
 		queue,
 		state:
 			state === 'all'
@@ -373,6 +377,11 @@ async function fetchJobs() {
 		}
 		return res;
 	});
+	// 取得中にキューや状態の絞り込みを変えていたら、古い一覧で上書きしない (新しい取得が反映する)。
+	if (currentQueue.value !== queue || jobState.value !== state) {
+		return;
+	}
+	jobs.value = fetched;
 	jobsFetching.value = false;
 }
 
@@ -384,6 +393,9 @@ watch(
 		} else if (tab.value === 'outbox') {
 			fetchDeadLetters();
 		} else {
+			// 前のキューの統計と一覧を出したままにすると、新しいキューのものとして操作 (一時停止など) されてしまう。
+			queueInfo.value = null;
+			jobs.value = [];
 			fetchCurrentQueue();
 			fetchJobs();
 		}
@@ -434,7 +446,14 @@ async function clearQueue() {
 		return;
 	}
 
-	os.apiWithDialog('admin/queue/clear', { queue, state: '*' });
+	// 処理が終わってから読み直す (先に読み直すと、消した・実行したジョブがまだ表示される)。
+	const done = await os.apiWithDialog('admin/queue/clear', { queue, state: '*' }).then(
+		() => true,
+		() => false,
+	);
+	if (!done) {
+		return;
+	}
 
 	fetchCurrentQueue();
 	fetchJobs();
@@ -454,7 +473,14 @@ async function promoteAllJobs() {
 		return;
 	}
 
-	os.apiWithDialog('admin/queue/promote-jobs', { queue });
+	// 処理が終わってから読み直す (先に読み直すと、消した・実行したジョブがまだ表示される)。
+	const done = await os.apiWithDialog('admin/queue/promote-jobs', { queue }).then(
+		() => true,
+		() => false,
+	);
+	if (!done) {
+		return;
+	}
 
 	fetchCurrentQueue();
 	fetchJobs();
@@ -506,7 +532,14 @@ async function removeJobs() {
 		return;
 	}
 
-	os.apiWithDialog('admin/queue/clear', { queue, state: jobState.value === 'all' ? '*' : jobState.value });
+	// 処理が終わってから読み直す (先に読み直すと、消した・実行したジョブがまだ表示される)。
+	const done = await os.apiWithDialog('admin/queue/clear', { queue, state: jobState.value === 'all' ? '*' : jobState.value }).then(
+		() => true,
+		() => false,
+	);
+	if (!done) {
+		return;
+	}
 
 	fetchCurrentQueue();
 	fetchJobs();
