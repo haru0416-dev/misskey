@@ -34,4 +34,15 @@ test.describe('取得に失敗した画面', () => {
 		await page.goto('/admin/overview');
 		await expect(page.getByRole('button', { name: '再試行' }).first()).toBeVisible({ timeout: 15_000 });
 	});
+
+	test('ドライブのファイル情報 (失敗を「空」と出さない)', async ({ page }) => {
+		const token = await page.evaluate(() => JSON.parse(localStorage.getItem('account') ?? '{}').token as string);
+		const uploaded = await page.request.post('/api/drive/files/create', {
+			multipart: { i: token, file: { name: 'info.txt', mimeType: 'text/plain', buffer: Buffer.from('info') } },
+		});
+		const file = await uploaded.json();
+		await page.route('**/api/drive/files/show', fail);
+		await page.goto(`/my/drive/file/${file.id}`);
+		await expect(page.getByRole('button', { name: '再試行' })).toBeVisible({ timeout: 15_000 });
+	});
 });

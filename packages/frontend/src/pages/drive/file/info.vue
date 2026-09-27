@@ -65,6 +65,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkKeyValue>
 		</div>
 	</div>
+	<MkError v-else-if="fetchError" @retry="_fetch_()"/>
 	<MkResult v-else type="empty"/>
 </div>
 </template>
@@ -90,6 +91,7 @@ const props = defineProps<{
 }>();
 
 const fetching = ref(true);
+const fetchError = ref(false);
 const file = ref<Misskey.entities.DriveFile>();
 const folderHierarchy = computed(() => {
 	if (!file.value) {
@@ -113,12 +115,20 @@ const isImage = computed(() => file.value?.type.startsWith('image/'));
 
 async function _fetch_() {
 	fetching.value = true;
+	fetchError.value = false;
 
-	file.value = await misskeyApi('drive/files/show', {
+	await misskeyApi('drive/files/show', {
 		fileId: props.fileId,
-	}).catch((err) => {
-		console.error(err);
-		return undefined;
+	}).then((res) => {
+		file.value = res;
+	}, (err: { code?: string } | undefined) => {
+		// 無い・見られないファイルは空として出す。それ以外 (通信の失敗など) は、表示中の内容を消さずに
+		// 読み込み直せる状態にする (更新の後の読み直しで失敗しても、ファイルが消えたようには見せない)。
+		if (err?.code === 'NO_SUCH_FILE' || err?.code === 'ACCESS_DENIED') {
+			file.value = undefined;
+		} else if (file.value == null) {
+			fetchError.value = true;
+		}
 	});
 
 	fetching.value = false;
@@ -146,11 +156,13 @@ function move() {
 		if (canceled) {
 			return;
 		}
-		misskeyApi('drive/files/update', {
+		os.apiWithDialog('drive/files/update', {
 			fileId: f.id,
 			folderId: folders[0] ? folders[0].id : null,
 		}).then(async () => {
 			await _fetch_();
+		}, () => {
+			// 失敗は apiWithDialog が表示する。
 		});
 	});
 }
@@ -166,13 +178,8 @@ function toggleSensitive() {
 	})
 		.then(async () => {
 			await _fetch_();
-		})
-		.catch((err) => {
-			os.alert({
-				type: 'error',
-				title: i18n.ts.error,
-				text: err.message,
-			});
+		}, () => {
+			// 失敗は apiWithDialog が表示する (ここで重ねて出さない)。
 		});
 }
 
@@ -196,6 +203,8 @@ function rename() {
 			name,
 		}).then(async () => {
 			await _fetch_();
+		}, () => {
+			// 失敗は apiWithDialog が表示する。
 		});
 	});
 }
