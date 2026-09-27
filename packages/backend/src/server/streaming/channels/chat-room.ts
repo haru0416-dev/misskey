@@ -28,7 +28,7 @@ export const honoStreamChannelChatRoom: StreamChannelDefinition<ApiChatDependenc
 		if (room == null) {
 			return false;
 		}
-		if (!(await hasPermissionToViewRoomTimelineForApi(deps, user.id, room))) {
+		if (!(await hasPermissionToViewRoomTimelineForApi(deps, user, room))) {
 			return false;
 		}
 

@@ -902,13 +902,13 @@ async function readAllChatMessagesForApi(deps: ApiChatDependencies, readerId: Mi
 
 export async function hasPermissionToViewRoomTimelineForApi(
 	deps: ApiChatDependencies,
-	meId: MiUser['id'],
+	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (await isChatRoomMemberForApi(deps, room, meId)) {
+	if (await isChatRoomMemberForApi(deps, room, me.id)) {
 		return true;
 	}
-	return await isApiModerator(deps, { id: meId } as MiUser);
+	return await isApiModerator(deps, me);
 }
 
 async function deleteChatMessageForApi(deps: ApiChatDependencies, message: MiChatMessage): Promise<void> {
@@ -1035,30 +1035,30 @@ export async function createChatRoomForApi(
 
 async function hasPermissionToViewRoomInfoForApi(
 	deps: ApiChatDependencies,
-	meId: MiUser['id'],
+	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (room.ownerId === meId) {
+	if (room.ownerId === me.id) {
 		return true;
 	}
-	if (await isChatRoomMemberForApi(deps, room, meId)) {
+	if (await isChatRoomMemberForApi(deps, room, me.id)) {
 		return true;
 	}
-	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, meId)) {
+	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id)) {
 		return true;
 	}
-	return await isApiModerator(deps, { id: meId } as MiUser);
+	return await isApiModerator(deps, me);
 }
 
 async function hasPermissionToDeleteRoomForApi(
 	deps: ApiChatDependencies,
-	meId: MiUser['id'],
+	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (room.ownerId === meId) {
+	if (room.ownerId === me.id) {
 		return true;
 	}
-	return await isApiModerator(deps, { id: meId } as MiUser);
+	return await isApiModerator(deps, me);
 }
 
 async function deleteChatRoomForApi(deps: ApiChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
@@ -1658,7 +1658,7 @@ export async function handleApiChatMessagesRoomTimeline(
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 	}
 
-	if (!(await hasPermissionToViewRoomTimelineForApi(deps, me.id, room))) {
+	if (!(await hasPermissionToViewRoomTimelineForApi(deps, me, room))) {
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 	}
 
@@ -1782,7 +1782,7 @@ export async function handleApiChatRoomsDelete(
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 	}
 
-	if (!(await hasPermissionToDeleteRoomForApi(deps, me.id, room))) {
+	if (!(await hasPermissionToDeleteRoomForApi(deps, me, room))) {
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 	}
 
@@ -1831,7 +1831,7 @@ export async function handleApiChatRoomsShow(
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 	}
 
-	if (!(await hasPermissionToViewRoomInfoForApi(deps, me.id, room))) {
+	if (!(await hasPermissionToViewRoomInfoForApi(deps, me, room))) {
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 	}
 

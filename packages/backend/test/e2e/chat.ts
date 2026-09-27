@@ -5,7 +5,7 @@
 
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { api, signup } from '../utils.js';
+import { api, role, signup } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
 
@@ -227,5 +227,30 @@ describe('Chat', () => {
 
 		const remove = await api('chat/rooms/delete', { roomId }, alice);
 		expect(remove.status).toBe(204);
+	});
+
+	test('条件付きのモデレーターロールは、ユーザー本人の値で判定してからルームの閲覧・削除を許す', async () => {
+		// フォロワーが 1,000 人を超えるユーザーだけをモデレーターにする。carol (フォロワー 0) は該当しない。
+		const moderatorRole = await role(alice, {
+			isModerator: true,
+			target: 'conditional',
+			condFormula: {
+				id: 'f0b6a2f4-3b1e-4b5a-9b0d-6a2f0c1e7d11',
+				type: 'not',
+				value: { id: '4d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d', type: 'followersLessThanOrEq', value: 1000 },
+			} as never,
+		});
+		expect(moderatorRole.id).toBeTypeOf('string');
+
+		const room = await api('chat/rooms/create', { name: 'moderation check room' }, alice);
+		expect(room.status).toBe(200);
+
+		const timeline = await api('chat/messages/room-timeline', { roomId: room.body.id, limit: 10 }, carol);
+		expect(timeline.status).toBe(400);
+		expect((timeline.body as { error: { code: string } }).error.code).toBe('NO_SUCH_ROOM');
+		const remove = await api('chat/rooms/delete', { roomId: room.body.id }, carol);
+		expect(remove.status).toBe(400);
+		const show = await api('chat/rooms/show', { roomId: room.body.id }, alice);
+		expect(show.status).toBe(200);
 	});
 });

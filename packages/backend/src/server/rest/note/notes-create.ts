@@ -63,7 +63,7 @@ export const notesCreateParamDef = z
 
 export async function handleApiNotesCreate(
 	deps: NoteCreationDependencies & { notePostProcessing: NotePostProcessing },
-	me: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
+	me: MiUser,
 	ps: ApiParams<typeof notesCreateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/create']>,
 	signal?: AbortSignal,

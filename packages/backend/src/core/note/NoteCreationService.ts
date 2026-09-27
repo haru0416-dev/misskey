@@ -1458,7 +1458,7 @@ async function pushNoteToFanoutTimelines(
 
 export async function createNote(
 	deps: NoteCreationDependencies,
-	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
+	user: MiUser,
 	data: CreateNoteData,
 	silent = false,
 	persist: (insert: (db: MiDrizzleDatabase) => Promise<PersistedNote>) => Promise<PersistedNote> = (insert) =>
@@ -1479,7 +1479,7 @@ export async function createNote(
 	}
 
 	// ロールポリシーはこの関数内で2箇所 (canPublicNote / mentionLimit) から参照するため1回だけ解決する。
-	const policies = await getApiRolePolicies(deps, user as MiUser);
+	const policies = await getApiRolePolicies(deps, user);
 
 	if (data.visibility === 'public' && data.channel == null) {
 		if (isKeywordIncluded(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) || policies.canPublicNote === false) {
@@ -1677,7 +1677,7 @@ export async function createNote(
 
 export async function fetchAndCreateNote(
 	deps: NoteCreationDependencies,
-	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
+	user: MiUser,
 	data: {
 		createdAt: Date;
 		replyId: string | null;

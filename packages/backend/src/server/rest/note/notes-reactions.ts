@@ -115,7 +115,7 @@ export function decodeReactionForApi(str: string): { reaction: string; name?: st
 
 export async function createNoteReactionForApi(
 	deps: ApiNotesReactionsDependencies,
-	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	user: MiUser,
 	note: MiNote,
 	requestedReaction: string | null | undefined,
 ): Promise<void> {
@@ -152,7 +152,7 @@ export async function createNoteReactionForApi(
 
 			if (emoji) {
 				const roles =
-					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getApiUserRoles(deps, user as MiUser);
+					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getApiUserRoles(deps, user);
 				const allowed =
 					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ||
 					roles.some((r) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id));
@@ -273,7 +273,7 @@ export async function createNoteReactionForApi(
 
 export async function deleteNoteReactionForApi(
 	deps: ApiNotesReactionsDependencies,
-	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
+	user: MiUser,
 	note: MiNote,
 ): Promise<void> {
 	const exist = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, user.id, note.id);
