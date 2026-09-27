@@ -171,6 +171,8 @@ export type Config = {
 		proxyUrl: string;
 		externalProxyEnabled: boolean;
 		videoThumbnailGeneratorUrl: string | null;
+		/** アップロードした画像の Web 用画像 (最大 2048px) を、色差を高画質に間引いて作るか。 */
+		webpublicSmartSubsample: boolean;
 	};
 	limits: {
 		maximumFileSizeBytes: number;
@@ -495,6 +497,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			externalProxyEnabled: externalMediaProxy != null && externalMediaProxy !== internalMediaProxy,
 			videoThumbnailGeneratorUrl:
 				source.media.videoThumbnailGeneratorUrl == null ? null : normalizeUrl(source.media.videoThumbnailGeneratorUrl),
+			webpublicSmartSubsample: source.media.webpublicSmartSubsample,
 		},
 		limits: {
 			maximumFileSizeBytes,

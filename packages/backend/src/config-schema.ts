@@ -271,6 +271,7 @@ export const sourceConfigV2Schema = z.strictObject({
 		.strictObject({
 			externalProxyUrl: httpUrlSchema.optional(),
 			videoThumbnailGeneratorUrl: httpUrlSchema.optional(),
+			webpublicSmartSubsample: z.boolean().default(true),
 		})
 		.prefault({}),
 	limits: z
