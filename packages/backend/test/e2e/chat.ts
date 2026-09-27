@@ -5,7 +5,7 @@
 
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { api, role, signup } from '../utils.js';
+import { api, castAsError, role, signup } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
 
@@ -247,7 +247,7 @@ describe('Chat', () => {
 
 		const timeline = await api('chat/messages/room-timeline', { roomId: room.body.id, limit: 10 }, carol);
 		expect(timeline.status).toBe(400);
-		expect((timeline.body as { error: { code: string } }).error.code).toBe('NO_SUCH_ROOM');
+		expect(castAsError(timeline.body as any).error.code).toBe('NO_SUCH_ROOM');
 		const remove = await api('chat/rooms/delete', { roomId: room.body.id }, carol);
 		expect(remove.status).toBe(400);
 		const show = await api('chat/rooms/show', { roomId: room.body.id }, alice);
