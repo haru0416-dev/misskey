@@ -27,9 +27,9 @@ import { packApiRole, packApiRoles } from '../role/roles.js';
 import type { ApiRoleDependencies } from '../role/roles.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-import { markAllApiNotificationsAsRead, resolveNotificationStreamId } from './notification.js';
+import { markAllApiNotificationsAsRead, resolveNotificationStreamId, toXListId } from './notification.js';
 import type { ApiNotificationDependencies } from './notification.js';
-import { resolveApiDateIdBounds } from '../date-id-pagination.js';
+import { genId } from '@/misc/id/gen-id.js';
 
 export type ApiNotificationsListDependencies = ApiNoteDependencies &
 	ApiChatDependencies &
@@ -55,16 +55,29 @@ async function getApiNotifications(
 	options: {
 		sinceId?: string | null;
 		untilId?: string | null;
+		sinceDate?: number | null;
+		untilDate?: number | null;
 		limit?: number;
 		includeTypes?: string[];
 		excludeTypes?: string[];
 	},
 ): Promise<MiNotification[]> {
 	const limit = options.limit ?? 20;
+	// 日時の境界はストリーム上の位置へ直接変換する。日時から作った ID はストリームに存在しないので、
+	// ID として引くと遅延通知用の全件探索 (ストリーム全体の読み出しと JSON 解析) に必ず落ちる。
 	let [sinceTime, untilTime] = await Promise.all([
-		options.sinceId ? resolveNotificationStreamId(deps, userId, options.sinceId) : null,
-		options.untilId ? resolveNotificationStreamId(deps, userId, options.untilId) : null,
+		options.sinceId
+			? resolveNotificationStreamId(deps, userId, options.sinceId)
+			: options.sinceDate
+				? toXListId(genId(options.sinceDate))
+				: null,
+		options.untilId
+			? resolveNotificationStreamId(deps, userId, options.untilId)
+			: options.untilDate
+				? toXListId(genId(options.untilDate))
+				: null,
 	]);
+	const ascending = sinceTime != null && untilTime == null;
 	const includeTypeSet = options.includeTypes && options.includeTypes.length > 0 ? new Set(options.includeTypes) : null;
 	const excludeTypeSet = options.excludeTypes && options.excludeTypes.length > 0 ? new Set(options.excludeTypes) : null;
 
@@ -72,7 +85,7 @@ async function getApiNotifications(
 	for (;;) {
 		let notificationsRes: [id: string, fields: string[]][];
 
-		if (sinceTime && !untilTime) {
+		if (ascending) {
 			notificationsRes = await deps.redis.xrange(
 				`notificationTimeline:${userId}`,
 				'(' + sinceTime,
@@ -113,7 +126,7 @@ async function getApiNotifications(
 			return [];
 		}
 
-		if (options.sinceId && !options.untilId) {
+		if (ascending) {
 			sinceTime = lastEntry[0];
 		} else {
 			untilTime = lastEntry[0];
@@ -384,16 +397,22 @@ async function fetchVisibleNotificationPage(
 	deps: ApiNotificationsListDependencies,
 	meId: MiUser['id'],
 	options: {
-		sinceId?: string | null;
-		untilId?: string | null;
+		sinceId?: string | undefined;
+		untilId?: string | undefined;
+		sinceDate?: number | undefined;
+		untilDate?: number | undefined;
 		limit: number;
 		includeTypes?: string[] | undefined;
 		excludeTypes?: string[] | undefined;
 	},
 	shape: (notifications: MiNotification[]) => (MiNotification | MiGroupedNotification)[],
 ): Promise<Record<string, unknown>[]> {
-	let { sinceId, untilId } = options;
-	const ascending = sinceId != null && untilId == null;
+	// 日時の 0 は「指定なし」として扱う (他のエンドポイントの resolveApiDateIdBounds と同じ公開挙動)。
+	let sinceId: string | null = options.sinceId ?? null;
+	let untilId: string | null = options.untilId ?? null;
+	let sinceDate = sinceId == null ? options.sinceDate || null : null;
+	let untilDate = untilId == null ? options.untilDate || null : null;
+	const ascending = (sinceId != null || sinceDate != null) && untilId == null && untilDate == null;
 	for (let page = 0; page < MAX_SCANNED_PAGES; page++) {
 		const notifications = await getApiNotifications(
 			deps,
@@ -401,6 +420,8 @@ async function fetchVisibleNotificationPage(
 			omitUndefined({
 				sinceId,
 				untilId,
+				sinceDate,
+				untilDate,
 				limit: options.limit,
 				includeTypes: options.includeTypes,
 				excludeTypes: options.excludeTypes,
@@ -410,8 +431,13 @@ async function fetchVisibleNotificationPage(
 		if (last == null) return [];
 		const packed = await packNotificationsForApi(deps, shape(notifications), meId);
 		if (packed.length > 0) return packed;
-		if (ascending) sinceId = last.id;
-		else untilId = last.id;
+		if (ascending) {
+			sinceId = last.id;
+			sinceDate = null;
+		} else {
+			untilId = last.id;
+			untilDate = null;
+		}
 	}
 	return [];
 }
@@ -431,8 +457,6 @@ export async function handleApiINotifications(
 	me: MiUser,
 	params: ApiParams<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
-	const { sinceId, untilId } = resolveApiDateIdBounds(params);
-
 	if (params.includeTypes?.length === 0) {
 		return [];
 	}
@@ -454,7 +478,15 @@ export async function handleApiINotifications(
 	return await fetchVisibleNotificationPage(
 		deps,
 		me.id,
-		{ sinceId, untilId, limit: params.limit, includeTypes, excludeTypes },
+		{
+			sinceId: params.sinceId,
+			untilId: params.untilId,
+			sinceDate: params.sinceDate,
+			untilDate: params.untilDate,
+			limit: params.limit,
+			includeTypes,
+			excludeTypes,
+		},
 		(notifications) => notifications,
 	);
 }
@@ -525,8 +557,6 @@ export async function handleApiINotificationsGrouped(
 	me: MiUser,
 	params: ApiParams<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
-	const { sinceId, untilId } = resolveApiDateIdBounds(params);
-
 	if (params.includeTypes?.length === 0) {
 		return [];
 	}
@@ -548,7 +578,15 @@ export async function handleApiINotificationsGrouped(
 	return await fetchVisibleNotificationPage(
 		deps,
 		me.id,
-		{ sinceId, untilId, limit: params.limit, includeTypes, excludeTypes },
+		{
+			sinceId: params.sinceId,
+			untilId: params.untilId,
+			sinceDate: params.sinceDate,
+			untilDate: params.untilDate,
+			limit: params.limit,
+			includeTypes,
+			excludeTypes,
+		},
 		(notifications) => groupApiNotifications(notifications).slice(0, params.limit),
 	);
 }
