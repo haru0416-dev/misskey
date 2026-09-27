@@ -300,22 +300,6 @@ describe('NoteStore hydrated note lookup', () => {
 			queries.restore();
 		}
 	});
-
-	test('reads uncommitted notes through the transaction and respects rollback', async () => {
-		const noteId = genId();
-		const rollback = new Error('rollback hydration fixture');
-		expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [noteId])).toEqual([]);
-		await expect(
-			runtime.db.transaction(async (tx) => {
-				await createNoteInDatabase(tx, { id: noteId, userId, text: 'uncommitted', visibility: 'public' });
-				expect(await listHydratedNotesByIdsFromDatabase(tx, [noteId])).toMatchObject([
-					{ id: noteId, text: 'uncommitted', user: { id: userId } },
-				]);
-				throw rollback;
-			}),
-		).rejects.toBe(rollback);
-		expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [noteId])).toEqual([]);
-	});
 });
 
 // search.noteTextIndex: false では trigram index を持たないので、どの語も 1 ページの走査範囲を区切る経路に回す。

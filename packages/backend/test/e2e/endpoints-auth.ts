@@ -167,7 +167,7 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('正しくアカウントが作成できる', async () => {
+		test('正しくアカウントが作成でき、同じユーザー名のアカウントは作成できない', async () => {
 			const me = {
 				username: 'test1',
 				password: 'test1',
@@ -178,15 +178,9 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			expect(res.body.username).toBe(me.username);
-		});
 
-		test('同じユーザー名のアカウントは作成できない', async () => {
-			const res = await api('signup', {
-				username: 'test1',
-				password: 'test1',
-			});
-
-			expect(res.status).toBe(400);
+			const duplicate = await api('signup', me);
+			expect(duplicate.status).toBe(400);
 		});
 
 		test('同じリモートユーザー名の並行作成は一方だけ成功する', async () => {

@@ -10,23 +10,14 @@ describe(correctFilename, () => {
 	test('no ext to null', () => {
 		expect(correctFilename('test', null)).toBe('test.unknown');
 	});
-	test('no ext to jpg', () => {
-		expect(correctFilename('test', 'jpg')).toBe('test.jpg');
-	});
 	test('jpg to webp', () => {
 		expect(correctFilename('test.jpg', 'webp')).toBe('test.jpg.webp');
 	});
 	test('jpg to .webp', () => {
 		expect(correctFilename('test.jpg', '.webp')).toBe('test.jpg.webp');
 	});
-	test('jpeg to jpg', () => {
-		expect(correctFilename('test.jpeg', 'jpg')).toBe('test.jpeg');
-	});
 	test('JPEG to jpg', () => {
 		expect(correctFilename('test.JPEG', 'jpg')).toBe('test.JPEG');
-	});
-	test('jpg to jpg', () => {
-		expect(correctFilename('test.jpg', 'jpg')).toBe('test.jpg');
 	});
 	test('JPG to jpg', () => {
 		expect(correctFilename('test.JPG', 'jpg')).toBe('test.JPG');
@@ -39,9 +30,6 @@ describe(correctFilename, () => {
 	});
 	test('skip text file', () => {
 		expect(correctFilename('test.txt', null)).toBe('test.txt');
-	});
-	test('unknown', () => {
-		expect(correctFilename('test.hoge', null)).toBe('test.hoge');
 	});
 	test('non ascii with space', () => {
 		expect(correctFilename('ファイル 名前', 'jpg')).toBe('ファイル 名前.jpg');

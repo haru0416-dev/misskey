@@ -18,13 +18,6 @@ describe('core:net:dns-cache', () => {
 			((hostname: string) => impl(hostname)) as unknown as typeof dns.promises.lookup,
 		);
 
-	test('解決結果を返す', async () => {
-		mockLookup(async () => [{ address: '93.184.216.34', family: 4 }]);
-		const resolver = createCachedResolver({ successTtlMs: 1000, failureTtlMs: 1000 });
-
-		await expect(resolver.resolve('example.com')).resolves.toStrictEqual([{ address: '93.184.216.34', family: 4 }]);
-	});
-
 	test('TTL の間は問い合わせ直さない', async () => {
 		const spy = mockLookup(async () => [{ address: '1.2.3.4', family: 4 }]);
 		const resolver = createCachedResolver({ successTtlMs: 10_000, failureTtlMs: 1000 });

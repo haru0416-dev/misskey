@@ -78,7 +78,7 @@ describe('MkUrlPreview', () => {
 		mkUrlPreview.getByText('Mocked description');
 	});
 
-	test('Having a player should render a button', async () => {
+	test('Having a player should setup the iframe', async () => {
 		const mkUrlPreview = await renderPreviewBy({
 			url: 'https://example.local',
 			player: {
@@ -90,18 +90,11 @@ describe('MkUrlPreview', () => {
 		});
 		const buttons = mkUrlPreview.getAllByRole('button');
 		assert.strictEqual(buttons.length, 2, 'two buttons');
-	});
-
-	test('Having a player should setup the iframe', async () => {
-		const iframe = await renderAndOpenPreview({
-			url: 'https://example.local',
-			player: {
-				url: 'https://example.local/player',
-				width: null,
-				height: null,
-				allow: [],
-			},
-		});
+		const playerButton = buttons[0];
+		assert.exists(playerButton, 'player button should exist');
+		playerButton.click();
+		await Promise.resolve();
+		const iframe = mkUrlPreview.container.querySelector('iframe');
 		assert.exists(iframe, 'iframe should exist');
 		assert.strictEqual(iframe?.src, 'https://example.local/player?autoplay=1&auto_play=1');
 		assert.strictEqual(

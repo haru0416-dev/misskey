@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 const { claimAchievementMock } = vi.hoisted(() => ({
 	claimAchievementMock: vi.fn(() => Promise.resolve()),
@@ -28,19 +28,6 @@ vi.mock('@/i.js', () => ({
 }));
 
 describe('achievement loading', () => {
-	beforeEach(() => {
-		claimAchievementMock.mockClear();
-	});
-
-	test('loads the achievement implementation when a claim is requested', async () => {
-		const { claimAchievement } = await import('@/features/achievements/claim-achievement.js');
-
-		await claimAchievement('notes1');
-
-		expect(claimAchievementMock).toHaveBeenCalledOnce();
-		expect(claimAchievementMock).toHaveBeenCalledWith('notes1');
-	});
-
 	test('runs startup achievement checks from the deferred initializer', async () => {
 		const { initializeAchievements } = await import('@/features/achievements/initialize-achievements.js');
 

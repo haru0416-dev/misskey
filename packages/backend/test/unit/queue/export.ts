@@ -14,13 +14,20 @@ import { createUserListInDatabase } from '@/core/user/UserListStore.js';
 import { createUserListMembershipInDatabase } from '@/core/user/UserListMembershipStore.js';
 import { createAntennaInDatabase } from '@/core/antenna/AntennaStore.js';
 import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+import { createNoteInDatabase } from '@/core/note/NoteStore.js';
+import { createNoteFavoriteInDatabase } from '@/core/note/NoteFavoriteStore.js';
+import { createClipInDatabase } from '@/core/clip/ClipStore.js';
+import { createClipNoteInDatabase } from '@/core/clip/ClipNoteStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleQueueExportAntennas,
 	handleQueueExportBlocking,
+	handleQueueExportClips,
+	handleQueueExportFavorites,
 	handleQueueExportFollowing,
 	handleQueueExportMuting,
+	handleQueueExportNotes,
 	handleQueueExportUserLists,
 } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
@@ -128,7 +135,67 @@ describe('hono-queue-db (export)', () => {
 		expect(files.some((f) => f.name.startsWith('following-') && f.name.endsWith('.csv'))).toBe(true);
 	});
 
+	test('handleQueueExportNotes: 投稿したノート一覧をJSONとしてドライブに保存する', async () => {
+		const user = await createTestUser(runtime, 'honoqueueexpnote');
+		await createNoteInDatabase(runtime.db, {
+			id: genId(),
+			text: 'hono-queue-export-notes test',
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+
+		await handleQueueExportNotes(deps, { user: { id: user.id } }, async () => {});
+
+		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
+		expect(files.some((f) => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
+	});
+
+	test('handleQueueExportFavorites: お気に入りに登録したノート一覧をJSONとしてドライブに保存する', async () => {
+		const user = await createTestUser(runtime, 'honoqueueexpfav');
+		const noteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: noteId,
+			text: 'hono-queue-export-favorites test',
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteFavoriteInDatabase(runtime.db, { id: genId(), userId: user.id, noteId });
+
+		await handleQueueExportFavorites(deps, { user: { id: user.id } }, async () => {});
+
+		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
+		expect(files.some((f) => f.name.startsWith('favorites-') && f.name.endsWith('.json'))).toBe(true);
+	});
+
+	test('handleQueueExportClips: クリップとクリップ内のノートをJSONとしてドライブに保存する', async () => {
+		const user = await createTestUser(runtime, 'honoqueueexpclip');
+		const noteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: noteId,
+			text: 'hono-queue-export-clips test',
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		const clip = await createClipInDatabase(runtime.db, {
+			id: genId(),
+			userId: user.id,
+			name: 'test-clip',
+		});
+		await createClipNoteInDatabase(runtime.db, { id: genId(), clipId: clip.id, noteId });
+
+		await handleQueueExportClips(deps, { user: { id: user.id } }, async () => {});
+
+		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
+		expect(files.some((f) => f.name.startsWith('clips-') && f.name.endsWith('.json'))).toBe(true);
+	});
+
 	test('存在しないuserIdは何もしない', async () => {
 		await expect(handleQueueExportMuting(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
+		await expect(handleQueueExportNotes(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
+		await expect(handleQueueExportFavorites(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
+		await expect(handleQueueExportClips(deps, { user: { id: genId() } }, async () => {})).resolves.toBeUndefined();
 	});
 });

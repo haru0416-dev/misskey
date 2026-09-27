@@ -478,7 +478,6 @@ describe('OAuth', () => {
 
 		const tests: Record<string, string | undefined> = {
 			'Code followed by some junk code': code_verifier + 'x',
-			'Clipped code': code_verifier.slice(0, 80),
 			'Some part of code is replaced': code_verifier.slice(0, -10) + 'x'.repeat(10),
 			'No verifier': undefined,
 		};

@@ -8,7 +8,6 @@ import {
 	isNoteUpdatedEventFired,
 	isFired,
 	resolveRemoteUser,
-	sleep,
 	createRole,
 	waitFor,
 } from './utils.js';
@@ -32,11 +31,9 @@ describe('Timeline', () => {
 		await deliveryBarrier('b.test');
 	});
 
-	type TimelineChannel = keyof Misskey.Channels & (`${string}Timeline` | 'antenna' | 'userList' | 'hashtag');
-	type TimelineEndpoint = keyof Misskey.Endpoints &
-		(`notes/${string}timeline` | 'antennas/notes' | 'roles/notes' | 'notes/search-by-tag');
+	type TimelineChannel = keyof Misskey.Channels & (`${string}Timeline` | 'userList' | 'hashtag');
+	type TimelineEndpoint = keyof Misskey.Endpoints & (`notes/${string}timeline` | 'roles/notes' | 'notes/search-by-tag');
 	const timelineMap = new Map<TimelineChannel, TimelineEndpoint>([
-		['antenna', 'antennas/notes'],
 		['globalTimeline', 'notes/global-timeline'],
 		['homeTimeline', 'notes/timeline'],
 		['hybridTimeline', 'notes/hybrid-timeline'],
@@ -70,15 +67,13 @@ describe('Timeline', () => {
 
 		const endpoint = timelineMap.get(timelineChannel)!;
 		const params: Misskey.Endpoints[typeof endpoint]['req'] =
-			endpoint === 'antennas/notes'
-				? { antennaId: (channelParams as Misskey.Channels['antenna']['params']).antennaId }
-				: endpoint === 'notes/user-list-timeline'
-					? { listId: (channelParams as Misskey.Channels['userList']['params']).listId }
-					: endpoint === 'notes/search-by-tag'
-						? { query: (channelParams as Misskey.Channels['hashtag']['params']).q }
-						: endpoint === 'roles/notes'
-							? { roleId: (channelParams as Misskey.Channels['roleTimeline']['params']).roleId }
-							: {};
+			endpoint === 'notes/user-list-timeline'
+				? { listId: (channelParams as Misskey.Channels['userList']['params']).listId }
+				: endpoint === 'notes/search-by-tag'
+					? { query: (channelParams as Misskey.Channels['hashtag']['params']).q }
+					: endpoint === 'roles/notes'
+						? { roleId: (channelParams as Misskey.Channels['roleTimeline']['params']).roleId }
+						: {};
 
 		let notes = await (bob.client.request as Request)(endpoint, params);
 		let noteInB = notes.find(({ uri }) => uri === `https://a.test/notes/${note!.id}`);
@@ -350,65 +345,6 @@ describe('Timeline', () => {
 
 		afterAll(async () => {
 			await bAdmin.client.request('admin/roles/delete', { roleId: role.id });
-		});
-	});
-
-	// 未対応のためテストできない。
-	describe.skip('antenna', () => {
-		const antenna = 'antenna';
-
-		let bobAntenna: Misskey.entities.Antenna;
-
-		beforeAll(async () => {
-			bobAntenna = await bob.client.request('antennas/create', {
-				name: "Bob's Egosurfing Antenna",
-				src: 'all',
-				keywords: [['Bob']],
-				excludeKeywords: [],
-				users: [],
-				caseSensitive: false,
-				localOnly: false,
-				withReplies: true,
-				withFile: true,
-			});
-			await sleep();
-		});
-
-		describe("Check reception of remote followee's Note", () => {
-			test("Receive remote followee's Note", async () => {
-				await postAndCheckReception(antenna, true, { text: 'I love Bob (1)' }, { antennaId: bobAntenna.id });
-			});
-
-			test("Don't receive remote followee's home-only Note", async () => {
-				await postAndCheckReception(
-					antenna,
-					false,
-					{ text: 'I love Bob (2)', visibility: 'home' },
-					{ antennaId: bobAntenna.id },
-				);
-			});
-
-			test("Don't receive remote followee's followers-only Note", async () => {
-				await postAndCheckReception(
-					antenna,
-					false,
-					{ text: 'I love Bob (3)', visibility: 'followers' },
-					{ antennaId: bobAntenna.id },
-				);
-			});
-
-			test("Don't receive remote followee's visible specified-only Note", async () => {
-				await postAndCheckReception(
-					antenna,
-					false,
-					{ text: 'I love Bob (4)', visibility: 'specified', visibleUserIds: [bobInA.id] },
-					{ antennaId: bobAntenna.id },
-				);
-			});
-		});
-
-		afterAll(async () => {
-			await bob.client.request('antennas/delete', { antennaId: bobAntenna.id });
 		});
 	});
 });

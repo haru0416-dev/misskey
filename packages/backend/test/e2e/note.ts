@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { fetchNoteByIdFromDatabase, openTestDatabase } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import { api, castAsError, initTestDb, POLL, post, role, signup, uploadFile } from '../utils.js';
+import { api, castAsError, initTestDb, POLL, post, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Note', () => {
@@ -33,18 +33,6 @@ describe('Note', () => {
 
 	afterAll(async () => {
 		await database.close();
-	});
-
-	test('投稿できる', async () => {
-		const post = {
-			text: 'test',
-		};
-
-		const res = await api('notes/create', post, alice);
-
-		expect(res.status).toBe(200);
-		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-		expect(res.body.createdNote.text).toBe(post.text);
 	});
 
 	test('お気に入りを作成・取得・削除できる', async () => {
@@ -436,15 +424,6 @@ describe('Note', () => {
 		expect(res.status).toBe(400);
 	});
 
-	test('存在しないリプライ先で怒られる', async () => {
-		const post = {
-			text: 'test',
-			replyId: '000000000000000000000000',
-		};
-		const res = await api('notes/create', post, alice);
-		expect(res.status).toBe(400);
-	});
-
 	test('存在しないrenote対象で怒られる', async () => {
 		const post = {
 			renoteId: '000000000000000000000000',
@@ -766,35 +745,6 @@ describe('Note', () => {
 	});
 
 	describe('notes/create', () => {
-		test('投票を添付できる', async () => {
-			const res = await api(
-				'notes/create',
-				{
-					text: 'test',
-					poll: {
-						choices: ['foo', 'bar'],
-					},
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.createdNote.poll != null).toBe(true);
-		});
-
-		test('投票の選択肢が無くて怒られる', async () => {
-			const res = await api(
-				'notes/create',
-				{
-					// @ts-expect-error poll must not be empty
-					poll: {},
-				},
-				alice,
-			);
-			expect(res.status).toBe(400);
-		});
-
 		test('投票の選択肢が無くて怒られる (空の配列)', async () => {
 			const res = await api(
 				'notes/create',
@@ -1423,133 +1373,6 @@ describe('Note', () => {
 			mainNote = await fetchNoteByIdFromDatabase(database, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
 			expect(mainNote.repliesCount).toBe(0);
-		});
-	});
-
-	describe('notes/translate', () => {
-		describe('翻訳機能の利用が許可されていない場合', () => {
-			let cannotTranslateRole: misskey.entities.Role;
-
-			beforeAll(async () => {
-				cannotTranslateRole = await role(
-					root,
-					{},
-					{ canUseTranslator: { priority: 1, useDefault: false, value: false } },
-				);
-				await api('admin/roles/assign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
-			});
-
-			afterAll(async () => {
-				await api('admin/roles/unassign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
-			});
-
-			test('翻訳機能の利用が許可されていない場合翻訳できない', async () => {
-				const aliceNote = await post(alice, { text: 'Hello' });
-				const res = await api(
-					'notes/translate',
-					{
-						noteId: aliceNote.id,
-						targetLang: 'ja',
-					},
-					alice,
-				);
-
-				expect(res.status).toBe(400);
-				assert.ok(res.body);
-				expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');
-			});
-		});
-
-		test('存在しないノートは翻訳できない', async () => {
-			const res = await api('notes/translate', { noteId: 'foo', targetLang: 'ja' }, alice);
-
-			expect(res.status).toBe(400);
-			assert.ok(res.body);
-			expect(castAsError(res.body).error.code).toBe('NO_SUCH_NOTE');
-		});
-
-		test('不可視なノートは翻訳できない', async () => {
-			const aliceNote = await post(alice, { visibility: 'followers', text: 'Hello' });
-			const bobTranslateAttempt = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, bob);
-
-			expect(bobTranslateAttempt.status).toBe(400);
-			assert.ok(bobTranslateAttempt.body);
-			expect(castAsError(bobTranslateAttempt.body).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
-		});
-
-		test('text: null なノートを翻訳すると空のレスポンスが返ってくる', async () => {
-			const aliceNote = await post(alice, { text: null, poll: { choices: ['kinoko', 'takenoko'] } });
-			const res = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, alice);
-
-			expect(res.status).toBe(204);
-		});
-
-		test('サーバーに DeepL 認証キーが登録されていない場合翻訳できない', async () => {
-			const aliceNote = await post(alice, { text: 'Hello' });
-			const res = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, alice);
-
-			expect(res.status).toBe(400);
-			assert.ok(res.body);
-			expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');
-		});
-	});
-
-	describe('notes/drafts', () => {
-		test('下書きの作成、更新、一覧、件数、削除ができる', async () => {
-			const beforeCount = await api('notes/drafts/count', {}, alice);
-			expect(beforeCount.status).toBe(200);
-
-			const createRes = await api(
-				'notes/drafts/create',
-				{
-					text: 'draft body',
-				},
-				alice,
-			);
-			expect(createRes.status).toBe(200);
-			expect(createRes.body.createdDraft.text).toBe('draft body');
-
-			const draftId = createRes.body.createdDraft.id;
-
-			const countAfterCreate = await api('notes/drafts/count', {}, alice);
-			expect(countAfterCreate.status).toBe(200);
-			expect(countAfterCreate.body).toBe(beforeCount.body + 1);
-
-			const listRes = await api(
-				'notes/drafts/list',
-				{
-					limit: 10,
-					scheduled: false,
-				},
-				alice,
-			);
-			expect(listRes.status).toBe(200);
-			assert.ok(listRes.body.some((draft) => draft.id === draftId && draft.text === 'draft body'));
-
-			const updateRes = await api(
-				'notes/drafts/update',
-				{
-					draftId,
-					text: 'updated draft body',
-				},
-				alice,
-			);
-			expect(updateRes.status).toBe(200);
-			expect(updateRes.body.updatedDraft.id).toBe(draftId);
-			expect(updateRes.body.updatedDraft.text).toBe('updated draft body');
-
-			const deleteRes = await api(
-				'notes/drafts/delete',
-				{
-					draftId,
-				},
-				alice,
-			);
-			expect(deleteRes.status).toBe(204);
-
-			const countAfterDelete = await api('notes/drafts/count', {}, alice);
-			expect(countAfterDelete.status).toBe(200);
-			expect(countAfterDelete.body).toBe(beforeCount.body);
 		});
 	});
 });

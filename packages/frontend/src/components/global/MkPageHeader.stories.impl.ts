@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { waitFor } from '@/stories/test.js';
 import MkPageHeader from './MkPageHeader.vue';
 import type { StoryObj } from '@/stories/types.js';
 
@@ -32,10 +31,6 @@ export const Empty = {
 			},
 			template: '<MkPageHeader v-bind="props" />',
 		};
-	},
-	async play() {
-		const wait = new Promise((resolve) => window.setTimeout(resolve, 800));
-		await waitFor(async () => await wait);
 	},
 	args: {
 		tabs: [],

@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import { expect, within } from '@/stories/test.js';
 import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
 import { commonHandlers } from '@/stories/mocks.js';
@@ -39,8 +39,6 @@ export const Default = {
 		// 表示側の回帰は捕まらない。
 		await expect(a).toHaveTextContent('https://');
 		await expect(a).toHaveTextContent('misskey-hub.net');
-		await waitFor(() => userEvent.hover(a));
-		await waitFor(() => userEvent.unhover(a));
 	},
 	args: {
 		url: 'https://misskey-hub.net/',

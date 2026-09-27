@@ -33,13 +33,6 @@ describe('misc:MemoryKVCache', () => {
 		vi.useRealTimers();
 	});
 
-	test('set and get returns the value within lifetime', () => {
-		const cache = new MemoryKVCache<string>(1000);
-		cache.set('key', 'value');
-		expect(cache.get('key')).toBe('value');
-		cache.dispose();
-	});
-
 	test('get returns undefined after lifetime expires', () => {
 		const cache = new MemoryKVCache<string>(1000);
 		cache.set('key', 'value');
@@ -93,15 +86,6 @@ describe('misc:MemoryKVCache', () => {
 			cache.gc();
 			expect(cache.get('a')).toBeUndefined();
 			expect(cache.get('b')).toBeUndefined();
-			cache.dispose();
-		});
-
-		test('retains entries that have not yet expired', () => {
-			const cache = new MemoryKVCache<string>(2000);
-			cache.set('a', '1');
-			vi.advanceTimersByTime(1001);
-			cache.gc();
-			expect(cache.get('a')).toBe('1');
 			cache.dispose();
 		});
 

@@ -112,29 +112,21 @@ describe('updateHashtagsRanking', () => {
 		}
 	});
 
-	test('hiddenTags に含まれるタグは一切書き込まれない', async () => {
-		const tag = uniqueTag();
+	test('hiddenTags と sensitiveWords に含まれるタグは一切書き込まれない', async () => {
+		const hiddenTag = uniqueTag();
+		const sensitiveTag = uniqueTag();
 		const userId = genId();
+		const meta = { hiddenTags: [hiddenTag], sensitiveWords: [sensitiveTag] };
 
-		await updateHashtagsRanking({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
+		await updateHashtagsRanking({ meta, redis }, hiddenTag, userId);
+		await updateHashtagsRanking({ meta, redis }, sensitiveTag, userId);
 
 		await sleep(300);
-		expect(
-			await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
-		).toBeNull();
-		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
-	});
-
-	test('sensitiveWords にマッチするタグは一切書き込まれない', async () => {
-		const tag = uniqueTag();
-		const userId = genId();
-
-		await updateHashtagsRanking({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
-
-		await sleep(300);
-		expect(
-			await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
-		).toBeNull();
-		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
+		for (const tag of [hiddenTag, sensitiveTag]) {
+			expect(
+				await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
+			).toBeNull();
+			expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
+		}
 	});
 });

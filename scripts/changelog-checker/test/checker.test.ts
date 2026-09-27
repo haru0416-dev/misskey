@@ -8,18 +8,12 @@ import { Release, ReleaseCategory } from '../src/parser';
 import { checkNewRelease, checkNewTopic } from '../src/checker';
 
 suite('checkNewRelease', () => {
-	test('headに新しいリリースがある1', () => {
+	test.each([
+		['1件', ['2024.12.1', '2024.12.0']],
+		['2件', ['2024.12.2', '2024.12.1', '2024.12.0']],
+	])('headに新しいリリースがある%s', (_count, versions) => {
 		const base = [new Release('2024.12.0')];
-		const head = [new Release('2024.12.1'), new Release('2024.12.0')];
-
-		const result = checkNewRelease(base, head);
-
-		expect(result.success).toBe(true);
-	});
-
-	test('headに新しいリリースがある2', () => {
-		const base = [new Release('2024.12.0')];
-		const head = [new Release('2024.12.2'), new Release('2024.12.1'), new Release('2024.12.0')];
+		const head = versions.map((version) => new Release(version));
 
 		const result = checkNewRelease(base, head);
 

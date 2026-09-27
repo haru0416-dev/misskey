@@ -104,6 +104,11 @@ describe.each<[Host, Host]>([
 			const byUri = await resolveRemoteUser(sourceHost, author.id, viewer);
 			expect(byHandle.id).toBe(byUri.id);
 			expect(byUri).toMatchObject({ username: author.username, host: sourceHost, uri: actorUri });
+			const cachedByHandle = await viewer.client.request('users/show', {
+				username: author.username,
+				host: sourceHost,
+			});
+			expect(cachedByHandle.id).toBe(byUri.id);
 			for (const response of [
 				await unsignedRequest(sourceHost, `/users/${author.id}`),
 				await signedRequest(sourceHost, viewer.id, `/users/${author.id}`),

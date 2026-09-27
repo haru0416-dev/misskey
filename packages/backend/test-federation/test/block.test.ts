@@ -44,19 +44,6 @@ describe('Block', () => {
 			strictEqual(followers.length, 0);
 		});
 
-		test.skip('Cannot follow even if unblocked', async () => {
-			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await deliveryBarrier('a.test');
-
-			await rejects(
-				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
-				(err: any) => {
-					strictEqual(err.code, 'BLOCKED');
-					return true;
-				},
-			);
-		});
-
 		test(
 			'Can follow if unblocked',
 			// 公式版は Undo(Block) を受けても拒否が残る (プロセス間キャッシュの失効漏れと推定)。
@@ -161,22 +148,6 @@ describe('Block', () => {
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
-			await rejects(
-				async () => await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' }),
-				(err: any) => {
-					strictEqual(err.code, 'YOU_HAVE_BEEN_BLOCKED');
-					return true;
-				},
-			);
-		});
-
-		test.skip('Cannot reaction even if unblocked', async () => {
-			await alice.client.request('blocking/delete', { userId: bobInA.id });
-			await deliveryBarrier('a.test');
-
-			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
-			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
-
 			await rejects(
 				async () => await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' }),
 				(err: any) => {

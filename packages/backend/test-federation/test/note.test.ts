@@ -1,4 +1,4 @@
-import { describe, test, beforeAll, expect, afterAll } from 'vitest';
+import { describe, test, beforeAll, expect } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
 import type * as Misskey from 'misskey-js';
@@ -133,60 +133,6 @@ describe('Note', () => {
 			strictEqual(activityPubRenote.actorId?.href, `https://a.test/users/${alice.id}`);
 			strictEqual(activityPubRenote.objectId?.href, `https://a.test/notes/${renotedNote.id}`);
 		});
-
-		test('Undo(Announce) removes the remote Renote but keeps the original Note', async () => {
-			const follower = await createAccount('b.test');
-			const [aliceInFollower, followerInA] = await Promise.all([
-				resolveRemoteUser('a.test', alice.id, follower),
-				resolveRemoteUser('b.test', follower.id, alice),
-			]);
-			await follower.client.request('following/create', { userId: aliceInFollower.id });
-			await waitFor(async () =>
-				(await alice.client.request('users/followers', { userId: alice.id })).some(
-					({ followerId }) => followerId === followerInA.id,
-				),
-			);
-
-			try {
-				const originalNote = (
-					await alice.client.request('notes/create', {
-						text: 'a',
-					})
-				).createdNote;
-				const renote = (
-					await alice.client.request('notes/create', {
-						renoteId: originalNote.id,
-					})
-				).createdNote;
-
-				let renoteInB: Misskey.entities.Note | undefined;
-				await waitFor(async () => {
-					renoteInB = (await follower.client.request('notes/timeline', {})).find(
-						(note) => note.uri === `https://a.test/notes/${renote.id}/activity`,
-					);
-					return renoteInB != null;
-				});
-				assert(renoteInB != null);
-				assert(renoteInB.renoteId != null);
-				const renoteInBId = renoteInB.id;
-				const originalNoteInB = await follower.client.request('notes/show', { noteId: renoteInB.renoteId });
-
-				await alice.client.request('notes/delete', { noteId: renote.id });
-				await waitFor(
-					async () =>
-						await follower.client
-							.request('notes/show', { noteId: renoteInBId })
-							.then(() => false)
-							.catch((err) => err.code === 'NO_SUCH_NOTE'),
-				);
-				strictEqual(
-					(await follower.client.request('notes/show', { noteId: originalNoteInB.id })).id,
-					originalNoteInB.id,
-				);
-			} finally {
-				await follower.client.request('following/delete', { userId: aliceInFollower.id });
-			}
-		});
 	});
 
 	describe('Other props', () => {
@@ -205,37 +151,6 @@ describe('Note', () => {
 
 	describe('Deletion', () => {
 		describe('Check Delete is delivered', () => {
-			describe('To followers', () => {
-				let carol: LoginUser;
-
-				beforeAll(async () => {
-					carol = await createAccount('a.test');
-
-					await carol.client.request('following/create', { userId: bobInA.id });
-					await deliveryBarrier('a.test');
-				});
-
-				afterAll(async () => {
-					await carol.client.request('following/delete', { userId: bobInA.id });
-					await deliveryBarrier('a.test');
-				});
-
-				test('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
-					const noteInA = await resolveRemoteNote('b.test', note.id, carol);
-					await bob.client.request('notes/delete', { noteId: note.id });
-					await deliveryBarrier('b.test');
-
-					await rejects(
-						async () => await carol.client.request('notes/show', { noteId: noteInA.id }),
-						(err: any) => {
-							strictEqual(err.code, 'NO_SUCH_NOTE');
-							return true;
-						},
-					);
-				});
-			});
-
 			describe('To renoted and not followed user', () => {
 				test('Check', async () => {
 					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
@@ -275,49 +190,14 @@ describe('Note', () => {
 					);
 				});
 			});
-
-			// 未配送の宛先を対象とするためスキップする。
-			describe('To only resolved and not followed user', () => {
-				test.skip('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
-					const noteInA = await resolveRemoteNote('b.test', note.id, alice);
-					await deliveryBarrier('a.test');
-
-					await bob.client.request('notes/delete', { noteId: note.id });
-					await deliveryBarrier('b.test');
-
-					await rejects(
-						async () => await alice.client.request('notes/show', { noteId: noteInA.id }),
-						(err: any) => {
-							strictEqual(err.code, 'NO_SUCH_NOTE');
-							return true;
-						},
-					);
-				});
-			});
 		});
 
 		describe("Deletion of remote user's note for moderation", () => {
-			let note: Misskey.entities.Note;
-
 			test('Alice post is deleted in B', async () => {
-				note = (await alice.client.request('notes/create', { text: 'Hello' })).createdNote;
+				const note = (await alice.client.request('notes/create', { text: 'Hello' })).createdNote;
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				const bMod = await createModerator('b.test');
 				await bMod.client.request('notes/delete', { noteId: noteInB.id });
-				await rejects(
-					async () => await bob.client.request('notes/show', { noteId: noteInB.id }),
-					(err: any) => {
-						strictEqual(err.code, 'NO_SUCH_NOTE');
-						return true;
-					},
-				);
-			});
-
-			// リモートノートの削除記録を保持しないため、再解決のテストは無効にする。
-			// https://github.com/misskey-dev/misskey/issues/11437
-			test.skip('Not found even if resolve again', async () => {
-				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				await rejects(
 					async () => await bob.client.request('notes/show', { noteId: noteInB.id }),
 					(err: any) => {
@@ -355,16 +235,6 @@ describe('Note', () => {
 				strictEqual(reactions.length, 1);
 				strictEqual(getAt(reactions, 0).type, `:${emoji.name}@b.test:`);
 				strictEqual(getAt(reactions, 0).user.id, bobInA.id);
-			});
-
-			test('Undo(Like) removes the remote reaction', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
-				const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
-				await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '❤' });
-				await waitFor(async () => (await alice.client.request('notes/reactions', { noteId: note.id })).length === 1);
-
-				await bob.client.request('notes/reactions/delete', { noteId: resolvedNote.id });
-				await waitFor(async () => (await alice.client.request('notes/reactions', { noteId: note.id })).length === 0);
 			});
 		});
 

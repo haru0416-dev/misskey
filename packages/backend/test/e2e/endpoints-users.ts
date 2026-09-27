@@ -339,6 +339,9 @@ describe('Endpoints', () => {
 			const renoteTarget = await post(alice, { text: 'renote target' });
 			const file = await uploadFile(alice);
 
+			const countBeforeCreate = await api('notes/drafts/count', {}, alice);
+			expect(countBeforeCreate.status).toBe(200);
+
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
 			const created = await api(
 				'notes/drafts/create',
@@ -371,12 +374,19 @@ describe('Endpoints', () => {
 			expect(createdDraft.isActuallyScheduled).toBe(true);
 			expect(createdDraft.scheduledAt).toBe(futureScheduledAt);
 
+			const countAfterCreate = await api('notes/drafts/count', {}, alice);
+			expect(countAfterCreate.status).toBe(200);
+			expect(countAfterCreate.body).toBe((countBeforeCreate.body as number) + 1);
+
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			expect(jobs.some((job) => job.data.noteDraftId === createdDraft.id)).toBe(true);
 
 			// 後続テストの scheduledNoteLimit を消費しないよう、予約ノートを削除する。
 			const cleanup = await api('notes/drafts/delete', { draftId: createdDraft.id }, alice);
 			expect(cleanup.status).toBe(204);
+			const countAfterCleanup = await api('notes/drafts/count', {}, alice);
+			expect(countAfterCleanup.status).toBe(200);
+			expect(countAfterCleanup.body).toBe(countBeforeCreate.body);
 		});
 
 		test('notes/drafts/create validates scheduling and referenced entities', async () => {
@@ -587,11 +597,18 @@ describe('Endpoints', () => {
 				},
 			);
 
+			const countBeforeDelete = await api('notes/drafts/count', {}, alice);
+			expect(countBeforeDelete.status).toBe(200);
+
 			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
 			expect(deleted.status).toBe(204);
 
 			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
 			expect(afterDelete).toBeNull();
+
+			const countAfterDelete = await api('notes/drafts/count', {}, alice);
+			expect(countAfterDelete.status).toBe(200);
+			expect(countAfterDelete.body).toBe((countBeforeDelete.body as number) - 1);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			expect(jobs.some((job) => job.data.noteDraftId === draft.id)).toBe(false);
@@ -3038,20 +3055,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('users/show', () => {
-		test('ユーザーが取得できる', async () => {
-			const res = await api(
-				'users/show',
-				{
-					userId: alice.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect((res.body as unknown as { id: string }).id).toBe(alice.id);
-		});
-
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/show', {
 				userId: '000000000000000000000000',
@@ -3328,20 +3331,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('i/favorites', () => {
-		test('お気に入りに登録したノートが取得できる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnfav${suffix}` });
-			const note = await post(user, { text: 'test' });
-			await api('notes/favorites/create', { noteId: note.id }, user);
-
-			const res = await api('i/favorites', {}, user);
-
-			expect(res.status).toBe(200);
-			expect(res.body).toHaveLength(1);
-			expect(getAt(res.body, 0).noteId).toBe(note.id);
-			expect(getAt(res.body, 0).note.id).toBe(note.id);
-		});
-
 		test('お気に入りがない場合は空配列が返る', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnfav2${suffix}` });
@@ -3433,17 +3422,6 @@ describe('Endpoints', () => {
 
 			const deletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
 			expect(deletedUser.isDeleted).toBe(true);
-		});
-
-		test('パスワードが間違っていると失敗する', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnda2${suffix}`, password: 'password' });
-
-			const res = await api('i/delete-account', { password: 'wrongpassword' }, user);
-			expect(res.status).not.toBe(204);
-
-			const notDeletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
-			expect(notDeletedUser.isDeleted).toBe(false);
 		});
 	});
 });

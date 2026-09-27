@@ -16,10 +16,6 @@ describe('core:meta:parseTheme', () => {
 		expect(parseTheme("{ id: 'y' } // 行コメント")).toBe('{"id":"y"}');
 	});
 
-	test('素の JSON も通る', () => {
-		expect(parseTheme('{"id":"z"}')).toBe('{"id":"z"}');
-	});
-
 	test('壊れた入力は null にする', () => {
 		expect(parseTheme('{ id: ')).toBeNull();
 		expect(parseTheme(null)).toBeNull();

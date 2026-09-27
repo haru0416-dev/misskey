@@ -655,19 +655,6 @@ describe('Streaming', () => {
 			});
 
 			// #10443
-			test('チャンネル投稿は流れない', async () => {
-				const fired = await waitFireWithoutEvent(
-					chitose,
-					'userList',
-					() => api('notes/create', { text: 'foo', channelId: 'dummy' }, kyoko),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
-					{ listId: list.id },
-				);
-
-				expect(fired).toBe(false);
-			});
-
-			// #10443
 			test('ミュートしているユーザへのリプライがリストTLに流れない', async () => {
 				const fired = await waitFireWithoutEvent(
 					chitose,

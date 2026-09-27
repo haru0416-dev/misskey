@@ -53,7 +53,8 @@ export const Anonymous = {
 	},
 } satisfies StoryObj<typeof MkUserName>;
 export const Wrap = {
-	...Default,
+	render: Default.render,
+	parameters: Default.parameters,
 	args: {
 		...Default.args,
 		nowrap: false,

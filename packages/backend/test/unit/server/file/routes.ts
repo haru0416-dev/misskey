@@ -603,33 +603,6 @@ describe('createFileServerApp', () => {
 			expect(res.headers['content-disposition'] ?? '').toContain('remote.png');
 		});
 
-		test('GET /files/:key 外部リンクを Range で部分配信する', async () => {
-			const accessKey = randomString();
-			await insertDriveFile({
-				accessKey,
-				storedInternal: false,
-				isLink: true,
-				uri: remotePngUrl,
-				name: 'remote.png',
-			});
-
-			const res = await inject(app, {
-				method: 'GET',
-				url: `/files/${accessKey}`,
-				headers: {
-					range: 'bytes=0-3',
-				},
-			});
-
-			// 以前は部分長を全体長で上書きしていた。本文とずれた Content-Length では動画の再生が始まらない。
-			expect(res.statusCode).toBe(206);
-			expect(res.headers['content-range']).toBe(`bytes 0-3/${dummyBuffer.length}`);
-			expect(res.headers['accept-ranges']).toBe('bytes');
-			expect(res.headers['content-length']).toBe('4');
-			expect(res.headers['content-type']).toBe('image/png');
-			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-		});
-
 		// 動画のシークは Range の連続になる。全体を取り直さず、要求範囲だけをリモートから中継する。
 		test('GET /files/:key 外部リンクの Range をリモートへ転送し、要求範囲だけを取る', async () => {
 			const accessKey = randomString();
@@ -652,7 +625,9 @@ describe('createFileServerApp', () => {
 			expect(res.statusCode).toBe(206);
 			expect(res.headers['content-range']).toBe(`bytes 100000-100099/${rangeBuffer.length}`);
 			expect(res.headers['content-length']).toBe('100');
+			expect(res.headers['accept-ranges']).toBe('bytes');
 			expect(res.headers['content-type']).toBe('video/mp4');
+			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
 			expect((await res.body()).equals(rangeBuffer.subarray(100000, 100100))).toBe(true);
 			expect(remoteRequests).toStrictEqual([{ pathname: '/range.bin', range: 'bytes=100000-100099' }]);
 		});
@@ -702,7 +677,7 @@ describe('createFileServerApp', () => {
 			expect(await res.body()).toHaveLength(0);
 		});
 
-		test('GET /files/:key 外部画像の thumbnail はリモートへ取りに行かずにリダイレクトする', async () => {
+		test('GET /files/:key thumbnail は mediaProxy/static.webp にリダイレクトする', async () => {
 			const accessKey = randomString();
 			const thumbnailKey = randomString();
 			await insertDriveFile({
@@ -715,24 +690,6 @@ describe('createFileServerApp', () => {
 			});
 			remoteRequests.length = 0;
 
-			const res = await inject(app, { method: 'GET', url: `/files/${thumbnailKey}` });
-
-			expect(res.statusCode).toBe(301);
-			expect(remoteRequests).toStrictEqual([]);
-		});
-
-		test('GET /files/:key thumbnail は mediaProxy/static.webp にリダイレクトする', async () => {
-			const accessKey = randomString();
-			const thumbnailKey = randomString();
-			await insertDriveFile({
-				accessKey,
-				thumbnailAccessKey: thumbnailKey,
-				storedInternal: false,
-				isLink: true,
-				uri: remotePngUrl,
-				name: 'remote.png',
-			});
-
 			const res = await inject(app, {
 				method: 'GET',
 				url: `/files/${thumbnailKey}`,
@@ -742,6 +699,7 @@ describe('createFileServerApp', () => {
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
 			expect(res.headers['location']).toContain(`${config.media.proxyUrl}/static.webp`);
 			expect(res.headers['location']).toContain('static=1');
+			expect(remoteRequests).toStrictEqual([]);
 		});
 
 		test('GET /files/:key webpublic svg は mediaProxy/svg.webp にリダイレクトする', async () => {

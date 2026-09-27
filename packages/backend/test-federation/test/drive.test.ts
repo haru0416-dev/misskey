@@ -41,35 +41,16 @@ describe('Drive', () => {
 			});
 		});
 
-		let updatedImage: Misskey.entities.DriveFile, updatedImageInB: Misskey.entities.DriveFile;
-
-		describe('Update', () => {
-			beforeAll(async () => {
-				updatedImage = await uploader.client.request('drive/files/update', {
-					fileId: image.id,
-					name: 'updated_192.jpg',
-					isSensitive: true,
-				});
-
-				updatedImageInB = await bAdmin.client.request('drive/files/show', {
-					fileId: imageInB.id,
-				});
-			});
-
-			test('Check consistency', () => {
-				// drive/files/update の変更は連合先に反映されない。
-				strictEqual(updatedImage.isSensitive, true);
-				strictEqual(updatedImage.name, 'updated_192.jpg');
-				strictEqual(updatedImageInB.isSensitive, false);
-				strictEqual(updatedImageInB.name, '192.jpg');
-			});
-		});
-
 		let reupdatedImageInB: Misskey.entities.DriveFile;
 
 		describe('Re-update with attaching to Note', () => {
 			beforeAll(async () => {
-				const noteWithUpdatedImage = (await uploader.client.request('notes/create', { fileIds: [updatedImage.id] }))
+				await uploader.client.request('drive/files/update', {
+					fileId: image.id,
+					name: 'updated_192.jpg',
+					isSensitive: true,
+				});
+				const noteWithUpdatedImage = (await uploader.client.request('notes/create', { fileIds: [image.id] }))
 					.createdNote;
 				const noteWithUpdatedImageInB = await resolveRemoteNote('a.test', noteWithUpdatedImage.id, bAdmin);
 				assert(noteWithUpdatedImageInB.files != null);
