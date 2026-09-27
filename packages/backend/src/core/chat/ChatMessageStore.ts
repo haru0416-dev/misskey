@@ -285,16 +285,38 @@ export async function searchChatMessagesFromDatabase(
 	return rows.map(deserializeChatMessage);
 }
 
+/**
+ * 同じ利用者の同じリアクションが無く、件数が上限未満のときだけ追加する。確認と追加を 1 文にしないと、
+ * 同時に届いた要求がどちらも確認を通り、重複や上限超えが保存される。
+ */
 export async function addChatMessageReactionInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reaction: string,
-): Promise<void> {
-	await db
+	maxReactions: number,
+): Promise<'added' | 'duplicate' | 'full'> {
+	const entry = `${userId}/${reaction}`;
+	const updated = await db
 		.update(chatMessage)
-		.set({ reactions: sql`array_append(${chatMessage.reactions}, ${`${userId}/${reaction}`})` })
-		.where(eq(chatMessage.id, id));
+		.set({ reactions: sql`array_append(${chatMessage.reactions}, ${entry})` })
+		.where(
+			and(
+				eq(chatMessage.id, id),
+				sql`NOT (${entry} = ANY(${chatMessage.reactions}))`,
+				sql`cardinality(${chatMessage.reactions}) < ${maxReactions}`,
+			),
+		)
+		.returning({ id: chatMessage.id });
+	if (updated.length > 0) {
+		return 'added';
+	}
+	const [row] = await db
+		.select({ reactions: chatMessage.reactions })
+		.from(chatMessage)
+		.where(eq(chatMessage.id, id))
+		.limit(1);
+	return row?.reactions.includes(entry) ? 'duplicate' : 'full';
 }
 
 export async function removeChatMessageReactionInDatabase(

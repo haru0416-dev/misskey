@@ -607,8 +607,13 @@ describe('Endpoints', () => {
 			expect(ownReaction.status).toBe(400);
 			expect(castAsError(ownReaction.body as any).error.id).toBe('9b5839b9-0ba0-4351-8c35-37082093d200');
 
-			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
-			expect(reacted.status).toBe(204);
+			// 同じリアクションを同時に送っても 1 つしか付かない。
+			const reactedInParallel = await Promise.all(
+				Array.from({ length: 5 }, () =>
+					api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient),
+				),
+			);
+			expect(reactedInParallel.map((res) => res.status)).toEqual([204, 204, 204, 204, 204]);
 			const unreactedByOutsider = await api(
 				'chat/messages/unreact',
 				{ messageId: created.body.id, reaction: '👍' },
