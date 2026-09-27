@@ -1,11 +1,19 @@
 name: Check Misskey JS autogen
 
+# API 定義から misskey-js の型を生成し直し、リポジトリにある生成物と一致するか確かめる。
+# PR のコードをビルドして実行するので pull_request で動かす。pull_request_target では base のキャッシュと
+# 書き込み権限のある token の下で PR のコードが動いてしまう。
+# develop へ直接 push した変更も同じく確かめる。
 on:
-  pull_request_target:
+  push:
     branches:
-      - master
       - develop
-      - improve-misskey-js-autogen-check
+    paths:
+      - packages/backend/**
+      - packages/misskey-js/generator/**
+      - packages/misskey-js/src/autogen/**
+      - .github/workflows/check-misskey-js-autogen.yml
+  pull_request:
     paths:
       - packages/backend/**
       - packages/misskey-js/generator/**
@@ -16,147 +24,61 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  # pull_request_target ジョブは PR のマージ ref を実行するため、権限は読み取り専用にする。
-  # persist-credentials を無効にし、各ステップで secret を公開しない。
-  generate-misskey-js:
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
-      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      # example.yml は setupPassword を環境変数から読む。API 定義を書き出すだけなので固定値でよい
       TONERIKO_SETUP_PASSWORD: ci-generate-api-json
       DATABASE_PASSWORD: ci-generate-api-json
-    permissions:
-      contents: read
-    if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v6.0.2
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
         with:
           submodules: true
           persist-credentials: false
-          ref: refs/pull/${{ github.event.pull_request.number }}/merge
 
-      - name: setup bun
-        id: setup-bun
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: .bun-version
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: install dependencies
+      - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        # リポジトリ内でビルドするネイティブモジュール。backend の読み込みに必要。
         run: bun run --filter slacc build
 
       - name: Copy Config
         run: cp .config/example.yml .config/default.yml
-      - name: Build
-        run: bun run build
-      - name: Generate API JSON
-        run: bun run --bun --filter backend generate-api-json
-
-      - name: Build misskey-js
-        run: |-
-          cp packages/backend/built/api.json packages/misskey-js/generator/api.json
-          bun run --bun --filter misskey-js-type-generator generate
-
-      - name: Upload Generated
-        uses: actions/upload-artifact@v7
-        with:
-          name: generated-misskey-js
-          path: packages/misskey-js/generator/built/autogen
-
-  # pull_request_target の安全性確保のため、権限を読み取り専用にし、ユーザーコードを実行しない。
-  get-actual-misskey-js:
-    runs-on: ubuntu-latest
-    env:
-      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
-      TONERIKO_SETUP_PASSWORD: ci-generate-api-json
-      DATABASE_PASSWORD: ci-generate-api-json
-    permissions:
-      contents: read
-    if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v6.0.2
-        with:
-          submodules: true
-          persist-credentials: false
-          ref: refs/pull/${{ github.event.pull_request.number }}/merge
-
-      - name: Upload From Merged
-        uses: actions/upload-artifact@v7
-        with:
-          name: actual-misskey-js
-          path: packages/misskey-js/src/autogen
-
-  # pull_request_target の安全性確保のため、リポジトリを clone しない。
-  comment-misskey-js-autogen:
-    runs-on: ubuntu-latest
-    env:
-      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
-      TONERIKO_SETUP_PASSWORD: ci-generate-api-json
-      DATABASE_PASSWORD: ci-generate-api-json
-    needs: [generate-misskey-js, get-actual-misskey-js]
-    permissions:
-      pull-requests: write
-    steps:
-      - name: download generated-misskey-js
-        uses: actions/download-artifact@v8
-        with:
-          name: generated-misskey-js
-          path: misskey-js-generated
-
-      - name: download actual-misskey-js
-        uses: actions/download-artifact@v8
-        with:
-          name: actual-misskey-js
-          path: misskey-js-actual
-
-      - name: check misskey-js changes
-        id: check-changes
+      # build-misskey-js-with-types のうち、生成物の比較に要る段だけを実行する。
+      - name: Build backend
         run: |
-          diff -r -u --label=generated --label=on-tree ./misskey-js-generated ./misskey-js-actual > misskey-js.diff || true
+          bun run build-pre
+          bun run build:backend-deps
+          bun run --bun --filter backend build
+      - name: Generate misskey-js types
+        run: |
+          bun run --bun --filter backend generate-api-json --no-build
+          cp packages/backend/built/api.json packages/misskey-js/generator/api.json
+          bun run --bun --filter misskey-js update-autogen-code
 
-          if [ -s misskey-js.diff ]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
+      - name: Compare with the committed files
+        run: |
+          git add -N packages/misskey-js/src/autogen
+          if ! git diff --exit-code --stat packages/misskey-js/src/autogen; then
+            git diff packages/misskey-js/src/autogen
+            echo '::error::misskey-js の型が API 定義と一致しません。bun run build-misskey-js-with-types を実行して生成物をコミットしてください。'
+            exit 1
           fi
-
-      - name: Print full diff
-        run: cat ./misskey-js.diff
-
-      - name: send message
-        if: steps.check-changes.outputs.changes == 'true'
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          comment-tag: check-misskey-js-autogen
-          message: |-
-            Thank you for sending us a great Pull Request! 👍
-            Please regenerate misskey-js type definitions! 🙏
-
-            example:
-            ```sh
-            bun run build-misskey-js-with-types
-            ```
-
-      - name: send message
-        if: steps.check-changes.outputs.changes == 'false'
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          comment-tag: check-misskey-js-autogen
-          mode: delete
-          message: 'Thank you!'
-          create_if_not_exists: false
-
-      - name: Make failure if changes are detected
-        if: steps.check-changes.outputs.changes == 'true'
-        run: exit 1
