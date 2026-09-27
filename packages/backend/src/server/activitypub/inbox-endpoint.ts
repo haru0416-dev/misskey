@@ -4,7 +4,7 @@
  */
 
 import * as crypto from 'node:crypto';
-import { parseRequestSignature } from '@/core/activitypub/http-signature.js';
+import { assertSignatureFresh, parseRequestSignature } from '@/core/activitypub/http-signature.js';
 import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
@@ -63,16 +63,14 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 
 	let signature: ParsedSignature;
 	try {
-		signature = parseRequestSignature({
-			method: request.method,
-			url: url.pathname + url.search,
-			headers,
-		});
+		const target = { method: request.method, url: url.pathname + url.search, headers };
+		signature = parseRequestSignature(target);
 		for (const required of ['(request-target)', 'host', 'date']) {
 			if (!signature.headers.includes(required)) {
 				return rawStatus(401);
 			}
 		}
+		assertSignatureFresh(target, signature);
 	} catch {
 		return rawStatus(401);
 	}
