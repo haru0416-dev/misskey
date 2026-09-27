@@ -325,9 +325,13 @@ export async function handleApiAdminUpdateAbuseUserReport(
 		throw noSuchAbuseReportForUpdateError();
 	}
 
+	if (params.moderationNote === undefined) {
+		return;
+	}
+
 	await updateAbuseUserReportModerationNoteInDatabase(deps.db, report.id, params.moderationNote);
 
-	if (params.moderationNote != null && report.moderationNote !== params.moderationNote) {
+	if (report.moderationNote !== params.moderationNote) {
 		await logModerationEventInDatabase(deps, me, 'updateAbuseReportNote', {
 			reportId: report.id,
 			report,

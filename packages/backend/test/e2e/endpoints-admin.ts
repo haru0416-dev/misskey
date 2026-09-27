@@ -2504,6 +2504,12 @@ describe('Endpoints', () => {
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
 			expect(after.moderationNote).toBe(`${moderationNote} by token`);
 
+			// moderationNote は省略可能で、省略したら何も変えない。
+			const withoutNote = await api('admin/update-abuse-user-report', { reportId: report.id }, alice);
+			expect(withoutNote.status).toBe(204);
+			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
+			expect(after.moderationNote).toBe(`${moderationNote} by token`);
+
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api(
 				'admin/update-abuse-user-report',
