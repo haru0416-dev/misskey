@@ -22,7 +22,8 @@ export const galleryEndpoints = implementEndpoints<ApiShellDependencies>()(galle
 	'gallery/featured': async ({ deps, input, me }) => await handleApiGalleryFeatured(deps, me, input),
 	'gallery/popular': async ({ deps, me }) => await handleApiGalleryPopular(deps, me),
 	'gallery/posts': async ({ deps, input, me }) => await handleApiGalleryPosts(deps, me, input),
-	'gallery/posts/create': async ({ deps, input, me }) => await handleApiGalleryPostsCreate(deps, me, input),
+	'gallery/posts/create': async ({ deps, errors, input, me }) =>
+		await handleApiGalleryPostsCreate(deps, me, input, errors),
 	'gallery/posts/delete': async ({ deps, errors, input, me }) => {
 		await handleApiGalleryPostsDelete(deps, me, input, errors);
 	},
@@ -33,5 +34,6 @@ export const galleryEndpoints = implementEndpoints<ApiShellDependencies>()(galle
 	'gallery/posts/unlike': async ({ deps, errors, input, me }) => {
 		await handleApiGalleryPostsUnlike(deps, me, input, errors);
 	},
-	'gallery/posts/update': async ({ deps, input, me }) => await handleApiGalleryPostsUpdate(deps, me, input),
+	'gallery/posts/update': async ({ deps, errors, input, me }) =>
+		await handleApiGalleryPostsUpdate(deps, me, input, errors),
 });

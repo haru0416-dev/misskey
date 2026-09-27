@@ -98,7 +98,13 @@ export const endpointMetas = {
 				ref: 'GalleryPost',
 			},
 
-			errors: {},
+			errors: {
+				noSuchFile: {
+					message: 'No such file.',
+					code: 'NO_SUCH_FILE',
+					id: '47374ca6-f90e-4f3a-9e44-274929d51249',
+				},
+			},
 		},
 		paramDef: galleryPostsCreateParamDef,
 	}),
@@ -230,7 +236,23 @@ export const endpointMetas = {
 				ref: 'GalleryPost',
 			},
 
-			errors: {},
+			errors: {
+				noSuchPost: {
+					message: 'No such post.',
+					code: 'NO_SUCH_POST',
+					id: 'd2cf7ac2-31d3-4498-8504-e8bd05923719',
+				},
+				accessDenied: {
+					message: 'Access denied.',
+					code: 'ACCESS_DENIED',
+					id: '6fa79fc9-dd78-45fd-963f-67dcab8c68de',
+				},
+				noSuchFile: {
+					message: 'No such file.',
+					code: 'NO_SUCH_FILE',
+					id: '1dbf43b4-5b79-49e2-a789-59869995b140',
+				},
+			},
 		},
 		paramDef: galleryPostsUpdateParamDef,
 	}),

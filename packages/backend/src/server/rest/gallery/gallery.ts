@@ -241,10 +241,11 @@ export async function handleApiGalleryPostsCreate(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof galleryPostsCreateParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/create']>,
 ): Promise<Packed<'GalleryPost'>> {
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
 	if (files.length === 0) {
-		throw new Error();
+		throw errors.noSuchFile();
 	}
 
 	const post = await createGalleryPostInDatabase(deps.db, {
@@ -264,12 +265,22 @@ export async function handleApiGalleryPostsUpdate(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof galleryPostsUpdateParamDef>,
+	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/update']>,
 ): Promise<Packed<'GalleryPost'>> {
+	// 更新は userId 付きの UPDATE なので、他人の投稿を指定すると 0 行のまま相手の投稿を返してしまう。先に確かめる。
+	const existing = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
+	if (existing == null) {
+		throw errors.noSuchPost();
+	}
+	if (existing.userId !== me.id) {
+		throw errors.accessDenied();
+	}
+
 	let files;
 	if (params.fileIds) {
 		files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
 		if (files.length === 0) {
-			throw new Error();
+			throw errors.noSuchFile();
 		}
 	}
 

@@ -3928,6 +3928,7 @@ export type Endpoints = {
             | 'CREDENTIAL_REQUIRED'
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
+            | 'NO_SUCH_FILE'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
             | 'RATE_LIMIT_EXCEEDED'
@@ -3994,10 +3995,13 @@ export type Endpoints = {
         req: GalleryPostsUpdateRequest;
         res: GalleryPostsUpdateResponse;
         err:
+            | 'ACCESS_DENIED'
             | 'AUTHENTICATION_FAILED'
             | 'CREDENTIAL_REQUIRED'
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
+            | 'NO_SUCH_FILE'
+            | 'NO_SUCH_POST'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
             | 'RATE_LIMIT_EXCEEDED'

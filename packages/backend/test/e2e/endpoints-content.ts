@@ -1952,6 +1952,28 @@ describe('Endpoints', () => {
 			expect(updated.body.title).toBe(`${created.body.title} updated`);
 			expect(updated.body.isSensitive).toBe(true);
 
+			const strangerUpdate = await api(
+				'gallery/posts/update',
+				{ postId: created.body.id, title: 'taken over' },
+				stranger,
+			);
+			expect(strangerUpdate.status).toBe(400);
+			expect(castAsError(strangerUpdate.body as any).error.code).toBe('ACCESS_DENIED');
+			expect((await fetchGalleryPostByIdFromDatabase(db, created.body.id))?.title).toBe(
+				`${created.body.title} updated`,
+			);
+			const missingUpdate = await api('gallery/posts/update', { postId: genId(), title: 'missing' }, owner);
+			expect(castAsError(missingUpdate.body as any).error.code).toBe('NO_SUCH_POST');
+			const foreignFileUpdate = await api(
+				'gallery/posts/update',
+				{ postId: created.body.id, fileIds: [file.id] },
+				stranger,
+			);
+			expect(castAsError(foreignFileUpdate.body as any).error.code).toBe('ACCESS_DENIED');
+			const foreignFileCreate = await api('gallery/posts/create', { title: 'foreign', fileIds: [file.id] }, stranger);
+			expect(foreignFileCreate.status).toBe(400);
+			expect(castAsError(foreignFileCreate.body as any).error.code).toBe('NO_SUCH_FILE');
+
 			const deleteDenied = await api('gallery/posts/delete', { postId: created.body.id }, stranger);
 			expect(deleteDenied.status).toBe(400);
 			expect(castAsError(deleteDenied.body as any).error.code).toBe('ACCESS_DENIED');
