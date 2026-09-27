@@ -83,6 +83,7 @@ import {
 	fetchInstanceByHostFromDatabase,
 	fetchLocalUserByUsernameFromDatabase,
 	fetchMetaFromDatabase,
+	updateMetaInDatabase,
 	fetchMutingByMuterIdAndMuteeIdFromDatabase,
 	fetchNoteByIdFromDatabase,
 	fetchNoteDraftByIdFromDatabase,
@@ -331,6 +332,26 @@ describe('Endpoints', () => {
 					},
 					alice,
 				);
+			}
+		});
+	});
+
+	describe('admin/update-meta の clientOptions', () => {
+		test('プロセス内に未反映の値があっても、DB の clientOptions に重ねて更新する', async () => {
+			const before = await fetchMetaFromDatabase(db);
+			// 別のワーカーが更新した状態を、このプロセスの meta を通さずに DB へ直接書いて作る。
+			const writtenElsewhere = !before.clientOptions.showActivitiesForVisitor;
+			await updateMetaInDatabase(db, {
+				clientOptions: { ...before.clientOptions, showActivitiesForVisitor: writtenElsewhere },
+			});
+			try {
+				const updated = await api('admin/update-meta', { clientOptions: { entrancePageStyle: 'simple' } }, alice);
+				expect(updated.status).toBe(204);
+				const after = await fetchMetaFromDatabase(db);
+				expect(after.clientOptions.entrancePageStyle).toBe('simple');
+				expect(after.clientOptions.showActivitiesForVisitor).toBe(writtenElsewhere);
+			} finally {
+				await api('admin/update-meta', { clientOptions: before.clientOptions }, alice);
 			}
 		});
 	});

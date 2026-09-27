@@ -230,7 +230,8 @@ export async function handleApiAdminUpdateMeta(
 	params: ApiParams<typeof adminUpdateMetaParamDef>,
 ): Promise<void> {
 	const before = await fetchMetaFromDatabase(deps.db);
-	const set = buildAdminUpdateMetaPatch(deps.meta, params);
+	// clientOptions は既存の値に重ねるので、プロセス内の meta (他のワーカーの更新が未反映の場合がある) ではなく DB の値に重ねる。
+	const set = buildAdminUpdateMetaPatch(before, params);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, set);
 
 	Object.assign(deps.meta, after);
