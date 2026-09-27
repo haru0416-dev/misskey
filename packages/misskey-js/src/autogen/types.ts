@@ -8754,27 +8754,33 @@ export interface operations {
     admin___emoji___update: {
         requestBody: {
             content: {
-                'application/json': (
+                'application/json':
                     | {
+                          /** Format: misskey:id */
+                          fileId?: string;
+                          category?: string | null;
+                          aliases?: string[];
+                          license?: string | null;
+                          isSensitive?: boolean;
+                          localOnly?: boolean;
+                          roleIdsThatCanBeUsedThisEmojiAsReaction?: string[];
                           /** Format: misskey:id */
                           id: string;
                           name?: string;
                       }
                     | {
                           /** Format: misskey:id */
+                          fileId?: string;
+                          category?: string | null;
+                          aliases?: string[];
+                          license?: string | null;
+                          isSensitive?: boolean;
+                          localOnly?: boolean;
+                          roleIdsThatCanBeUsedThisEmojiAsReaction?: string[];
+                          /** Format: misskey:id */
                           id?: string;
                           name: string;
-                      }
-                ) & {
-                    /** Format: misskey:id */
-                    fileId?: string;
-                    category?: string | null;
-                    aliases?: string[];
-                    license?: string | null;
-                    isSensitive?: boolean;
-                    localOnly?: boolean;
-                    roleIdsThatCanBeUsedThisEmojiAsReaction?: string[];
-                };
+                      };
             };
         };
         responses: {
@@ -32081,39 +32087,61 @@ export interface operations {
     'notes___search-by-tag': {
         requestBody: {
             content: {
-                'application/json': (
+                'application/json':
                     | {
+                          /** @default null */
+                          reply?: boolean | null;
+                          /** @default null */
+                          renote?: boolean | null;
+                          /** @default false */
+                          withFiles?: boolean;
+                          /** @default null */
+                          poll?: boolean | null;
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
+                          sinceId?: string;
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
+                          untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
+                          sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
                           tag: string;
                       }
                     | {
+                          /** @default null */
+                          reply?: boolean | null;
+                          /** @default null */
+                          renote?: boolean | null;
+                          /** @default false */
+                          withFiles?: boolean;
+                          /** @default null */
+                          poll?: boolean | null;
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
+                          sinceId?: string;
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
+                          untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
+                          sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
+                          untilDate?: number;
+                          /** @default 10 */
+                          limit?: number;
                           query: string[][];
-                      }
-                ) & {
-                    /** @default null */
-                    reply?: boolean | null;
-                    /** @default null */
-                    renote?: boolean | null;
-                    /** @default false */
-                    withFiles?: boolean;
-                    /** @default null */
-                    poll?: boolean | null;
-                    /**
-                     * Format: misskey:id
-                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
-                     */
-                    sinceId?: string;
-                    /**
-                     * Format: misskey:id
-                     * @description この ID より古いものを返す。
-                     */
-                    untilId?: string;
-                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
-                    sinceDate?: number;
-                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
-                    untilDate?: number;
-                    /** @default 10 */
-                    limit?: number;
-                };
+                      };
             };
         };
         responses: {
