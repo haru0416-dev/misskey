@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { sql } from 'drizzle-orm';
 import { promiseLimit } from '@/misc/promise-limit.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
@@ -34,6 +35,7 @@ import {
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
 import { fetchNoteByUriFromDatabase } from '@/core/note/NoteStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createMfmService } from '@/core/mfm/MfmService.js';
 import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
@@ -54,6 +56,7 @@ import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePers
 import type { ApiApPersonDependencies } from './ap-person.js';
 import { deliverQuestionUpdateForApi } from './notes-ap.js';
 import { createNote } from '@/core/note/NoteCreationService.js';
+import { isNoteContentVisibleForMeForApi } from '../note/note.js';
 import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
 
@@ -292,35 +295,51 @@ export async function updateQuestionFromApForApi(
 	return changed;
 }
 
-/** AP由来の投票更新の配送は呼び出し元で行う。 */
-async function voteFromApForApi(
+/**
+ * AP由来の投票。配送は呼び出し元で行う。
+ * REST の notes/polls/vote と同じく、ブロック・公開範囲を見てから、投票者とノートの組でロックして
+ * 既存の票を読み直す。投票ノートの URI ごとの inbox ロックだけでは、別々の URI で同時に届いた
+ * 単一選択の票が両方とも入る。
+ */
+export async function voteFromApForApi(
 	deps: ApiApNoteDependencies,
-	actor: { id: MiUser['id'] },
+	actor: MiUser,
 	note: MiNote,
 	choice: number,
 ): Promise<void> {
-	const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
-	if (poll.choices[choice] == null) {
-		throw new Error('invalid choice param');
+	if (note.userId !== actor.id && (await blockingExistsInDatabase(deps.db, note.userId, actor.id))) {
+		throw new Error('blocked by the poll author');
+	}
+	if (!(await isNoteContentVisibleForMeForApi(deps, note, actor.id))) {
+		throw new Error('poll is not visible to the voter');
 	}
 
-	const exist = await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, actor.id);
-	if (poll.multiple) {
-		if (exist.some((x) => x.choice === choice)) {
+	await deps.db.transaction(async (transaction) => {
+		const db = transaction as typeof deps.db;
+		await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${note.id}), hashtext(${actor.id}))`);
+		const poll = await fetchPollByNoteIdOrFailFromDatabase(db, note.id);
+		if (poll.choices[choice] == null) {
+			throw new Error('invalid choice param');
+		}
+
+		const exist = await listPollVotesByNoteAndUserFromDatabase(db, note.id, actor.id);
+		if (poll.multiple) {
+			if (exist.some((x) => x.choice === choice)) {
+				throw new Error('already voted');
+			}
+		} else if (exist.length !== 0) {
 			throw new Error('already voted');
 		}
-	} else if (exist.length !== 0) {
-		throw new Error('already voted');
-	}
 
-	await createPollVoteInDatabase(deps.db, {
-		id: genId(),
-		noteId: note.id,
-		userId: actor.id,
-		choice,
+		await createPollVoteInDatabase(db, {
+			id: genId(),
+			noteId: note.id,
+			userId: actor.id,
+			choice,
+		});
+
+		await incrementPollVoteInDatabase(db, poll.noteId, choice);
 	});
-
-	await incrementPollVoteInDatabase(deps.db, poll.noteId, choice);
 
 	deps.publishNoteStream?.(note, 'pollVoted', { choice, userId: actor.id });
 }
