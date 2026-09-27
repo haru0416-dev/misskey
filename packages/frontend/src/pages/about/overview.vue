@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #key>Toneriko</template>
 				<template #value>{{ version }}</template>
 			</MkKeyValue>
-			<div v-html="i18n.tsx.poweredByMisskeyDescription({ name: instance.name ?? host })">
+			<div v-html="i18n.tsx.poweredByMisskeyDescription({ name: escapeHtml(instance.name ?? host) })">
 			</div>
 			<FormLink to="/about-toneriko">
 				<template #icon><i class="ti ti-info-circle"></i></template>
@@ -139,6 +139,11 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import MkLink from '@/features/link-preview/components/MkLink.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
+
+// 文言は <b> を含む HTML として描くが、差し込むサーバー名は文字列なのでエスケープする。
+function escapeHtml(text: string): string {
+	return text.replaceAll(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+}
 
 const initStats = () => misskeyApi('stats', {});
 </script>
