@@ -7,6 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div>
 	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
+		<MkError v-else-if="fetchError" @retry="fetchModerators()"/>
 		<div v-else :class="$style.root" class="_panel">
 			<MkA v-for="user in moderators" :key="user.id" class="user" :to="`/admin/user/${user.id}`">
 				<MkAvatar :user="user" class="avatar" indicator/>
@@ -24,15 +25,27 @@ import { prefer } from '@/preferences.js';
 
 const moderators = ref<Misskey.entities.UserDetailed[] | null>(null);
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 
-onMounted(async () => {
-	moderators.value = await misskeyApi('admin/show-users', {
-		sort: '+lastActiveDate',
-		state: 'adminOrModerator',
-		limit: 30,
-	});
+async function fetchModerators() {
+	fetching.value = true;
+	fetchError.value = false;
+	try {
+		moderators.value = await misskeyApi('admin/show-users', {
+			sort: '+lastActiveDate',
+			state: 'adminOrModerator',
+			limit: 30,
+		});
+	} catch {
+		fetchError.value = true;
+	} finally {
+		fetching.value = false;
+	}
+}
 
-	fetching.value = false;
+onMounted(() => {
+	fetchModerators();
 });
 </script>
 

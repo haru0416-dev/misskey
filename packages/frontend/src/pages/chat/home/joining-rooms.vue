@@ -8,7 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="memberships.length > 0" class="_gaps_s">
 		<RoomItem v-for="membership in memberships" :key="membership.id" :room="membership.room!"/>
 	</div>
-	<MkResult v-if="!fetching && memberships.length == 0" type="empty" :text="i18n.ts._chat.noRooms"/>
+	<MkError v-if="!fetching && fetchError" @retry="fetchRooms()"/>
+	<MkResult v-else-if="!fetching && memberships.length == 0" type="empty" :text="i18n.ts._chat.noRooms"/>
 	<MkLoading v-if="fetching"/>
 </div>
 </template>
@@ -21,16 +22,23 @@ import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
 const fetching = ref(true);
+const fetchError = ref(false);
 const memberships = ref<Misskey.entities.ChatRoomMembership[]>([]);
 
 async function fetchRooms() {
 	fetching.value = true;
+	fetchError.value = false;
 
-	const res = await misskeyApi('chat/rooms/joining');
+	// 失敗を空の一覧として出すと「ありません」に見えるので、再試行できるエラーとして出す。
+	try {
+		const res = await misskeyApi('chat/rooms/joining');
 
-	memberships.value = res;
-
-	fetching.value = false;
+		memberships.value = res;
+	} catch {
+		fetchError.value = true;
+	} finally {
+		fetching.value = false;
+	}
 }
 
 onMounted(() => {
