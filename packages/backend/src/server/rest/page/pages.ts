@@ -49,6 +49,7 @@ import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 
 /** `pageNameSchema` の pattern を Zod 用に再利用する。 */
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
@@ -281,6 +282,7 @@ export async function handleApiPagesCreate(
 		});
 	}
 
+	// 確認から保存までの間に同じ名前のページが作られると、一意索引 (userId, name) で INSERT が失敗する。
 	const pageEntity = await createPageInDatabase(deps.db, {
 		id: genId(),
 		updatedAt: new Date(),
@@ -296,6 +298,16 @@ export async function handleApiPagesCreate(
 		alignCenter: params.alignCenter,
 		hideTitleWhenPinned: params.hideTitleWhenPinned,
 		font: params.font,
+	}).catch((error: unknown) => {
+		if (isDuplicateKeyValueDatabaseError(error)) {
+			throw new ApiError({
+				status: 400,
+				message: 'Specified name already exists.',
+				code: 'NAME_ALREADY_EXISTS',
+				id: '4650348e-301c-499a-83c9-6aa988c66bc1',
+			});
+		}
+		throw error;
 	});
 
 	const referencedNotes = collectReferencedNotesForApi(pageEntity.content);
