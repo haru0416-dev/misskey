@@ -466,6 +466,36 @@ export async function filterNoteForStreamingHidingForApi(
 	return clonedNote;
 }
 
+/**
+ * 本文を読む・投票する・リアクションする経路の判定。公開範囲に加えて、作者が「過去の投稿を非公開にする」
+ * 「過去の投稿をフォロワー限定にする」と設定した投稿を、pack が隠すのと同じ条件で見えないものとして扱う。
+ * (isVisibleForMeForApi は公開範囲の列しか見ないので、pack を通らない経路ではこちらを使う)
+ */
+export async function isNoteContentVisibleForMeForApi(
+	deps: ApiNoteDependencies,
+	note: MiNote,
+	meId: MiUser['id'] | null,
+): Promise<boolean> {
+	if (meId === note.userId) {
+		return true;
+	}
+	const author = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
+	const createdAt = parseId(note.id).date;
+	if (author.requireSigninToViewContents && meId == null) {
+		return false;
+	}
+	if (shouldHideNoteByTime(author.makeNotesHiddenBefore, createdAt)) {
+		return false;
+	}
+	if (
+		(note.visibility === 'public' || note.visibility === 'home') &&
+		shouldHideNoteByTime(author.makeNotesFollowersOnlyBefore, createdAt)
+	) {
+		return await isVisibleForMeForApi(deps, { ...note, visibility: 'followers' }, meId);
+	}
+	return await isVisibleForMeForApi(deps, note, meId);
+}
+
 export async function isVisibleForMeForApi(
 	deps: ApiNoteDependencies,
 	note: MiNote,
@@ -1343,7 +1373,7 @@ export async function handleApiNotesTranslate(
 		throw errors.noSuchNote();
 	}
 
-	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
+	if (!(await isNoteContentVisibleForMeForApi(deps, note, me.id))) {
 		throw errors.cannotTranslateInvisibleNote();
 	}
 

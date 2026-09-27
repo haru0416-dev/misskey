@@ -16,7 +16,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isVisibleForMeForApi } from './note.js';
+import { isNoteContentVisibleForMeForApi } from './note.js';
 import type { ApiNoteDependencies } from './note.js';
 import {
 	addActivityContext,
@@ -50,7 +50,7 @@ export async function handleApiNotesPollsVote(
 	if (note == null) {
 		throw errors.noSuchNote();
 	}
-	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
+	if (!(await isNoteContentVisibleForMeForApi(deps, note, me.id))) {
 		throw errors.noSuchNote();
 	}
 
