@@ -1075,6 +1075,9 @@ function limitOffsetSqlForApi(options: { limit?: number; offset?: number }): SQL
 	);
 }
 
+// 名前 (とユーザー名) の一致を先に、自己紹介だけの一致を後に並べた 1 本の列から offset / limit で切り出す。
+// 2 本の問い合わせにそれぞれ offset / limit をかけて連結すると、両方に一致する利用者が 2 回入り、
+// ページを進めたときに抜けや重複が出る。
 async function searchUsersForApi(
 	deps: { db: MiDrizzleDatabase },
 	query: string,
@@ -1085,70 +1088,42 @@ async function searchUsersForApi(
 	const isUsername = query.startsWith('@') && !query.includes(' ') && !query.includes('@', 1);
 	const isLocalUsername = /^\w{1,20}$/.test(query);
 
-	const nameConditions: SQL[] = [
-		sql`("user"."name" ILIKE ${'%' + sqlLikeEscape(query) + '%'} ${
-			isUsername
-				? sql`OR "user"."usernameLower" LIKE ${sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'}`
-				: isLocalUsername
-					? sql`OR "user"."usernameLower" LIKE ${'%' + sqlLikeEscape(query.toLowerCase()) + '%'}`
-					: sql``
-		})`,
+	const nameMatch = sql`("user"."name" ILIKE ${'%' + sqlLikeEscape(query) + '%'} ${
+		isUsername
+			? sql`OR "user"."usernameLower" LIKE ${sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'}`
+			: isLocalUsername
+				? sql`OR "user"."usernameLower" LIKE ${'%' + sqlLikeEscape(query.toLowerCase()) + '%'}`
+				: sql``
+	})`;
+	const descriptionMatch = sql`"user"."id" IN (
+		SELECT "prof"."userId" FROM "user_profile" AS "prof"
+		WHERE "prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}
+	)`;
+
+	const conditions: SQL[] = [
+		sql`(${nameMatch} OR ${descriptionMatch})`,
 		sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
 		sql`"user"."isSuspended" = FALSE`,
 	];
 
 	if (meId != null) {
-		nameConditions.push(sql`"user"."id" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
+		conditions.push(sql`"user"."id" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
 	}
 
 	if (options.origin === 'local') {
-		nameConditions.push(sql`"user"."host" IS NULL`);
+		conditions.push(sql`"user"."host" IS NULL`);
 	} else if (options.origin === 'remote') {
-		nameConditions.push(sql`"user"."host" IS NOT NULL`);
+		conditions.push(sql`"user"."host" IS NOT NULL`);
 	}
 
-	const nameResult = await deps.db.execute<UserRow>(sql`
+	const result = await deps.db.execute<UserRow>(sql`
 		SELECT "user".*
 		FROM "user"
-		WHERE ${sql.join(nameConditions, sql` AND `)}
-		ORDER BY "user"."updatedAt" DESC NULLS LAST
+		WHERE ${sql.join(conditions, sql` AND `)}
+		ORDER BY (${nameMatch}) IS TRUE DESC, "user"."updatedAt" DESC NULLS LAST, "user"."id" DESC
 		${limitOffsetSqlForApi(options)}
 	`);
-	let users = nameResult.rows.map((row) => deserializeUser(row));
-
-	if (users.length < (options.limit ?? 30)) {
-		const profileConditions: SQL[] = [sql`"prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}`];
-
-		if (meId != null) {
-			profileConditions.push(sql`"prof"."userId" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
-		}
-
-		if (options.origin === 'local') {
-			profileConditions.push(sql`"prof"."userHost" IS NULL`);
-		} else if (options.origin === 'remote') {
-			profileConditions.push(sql`"prof"."userHost" IS NOT NULL`);
-		}
-
-		const profileUserQuery = sql`
-			SELECT "prof"."userId"
-			FROM "user_profile" AS "prof"
-			WHERE ${sql.join(profileConditions, sql` AND `)}
-		`;
-
-		const profileResult = await deps.db.execute<UserRow>(sql`
-			SELECT "user".*
-			FROM "user"
-			WHERE "user"."id" IN (${profileUserQuery})
-				AND ("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})
-				AND "user"."isSuspended" = FALSE
-			ORDER BY "user"."updatedAt" DESC NULLS LAST
-			${limitOffsetSqlForApi(options)}
-		`);
-
-		users = users.concat(profileResult.rows.map((row) => deserializeUser(row)));
-	}
-
-	return users;
+	return result.rows.map((row) => deserializeUser(row));
 }
 
 export const usersSearchParamDef = z.object({

@@ -1055,6 +1055,24 @@ describe('ユーザー', () => {
 		const expected = [await show(remote.id, alice)];
 		expect(response).toStrictEqual(expected);
 	});
+	test('名前と自己紹介の両方に一致するユーザーは 1 回だけ返し、名前の一致を先に並べる', async () => {
+		const token = `dup${Date.now().toString(36)}`;
+		const both = await signup({ username: `${token}b` });
+		expect((await api('i/update', { name: token, description: token }, both)).status).toBe(200);
+		const descriptionOnly = await signup({ username: `zz${Date.now().toString(36)}` });
+		expect((await api('i/update', { description: `about ${token}` }, descriptionOnly)).status).toBe(200);
+
+		const parameters = { query: token, limit: 10, detail: false } as const;
+		const response = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
+		expect(response.map((user) => user.id)).toEqual([both.id, descriptionOnly.id]);
+
+		const secondPage = await successfulApiCall({
+			endpoint: 'users/search',
+			parameters: { ...parameters, limit: 1, offset: 1 },
+			user: alice,
+		});
+		expect(secondPage.map((user) => user.id)).toEqual([descriptionOnly.id]);
+	});
 	test('を検索することができる(pagenation)', async () => {
 		// 検索結果は updatedAt DESC NULLS LAST で並ぶため、それぞれ投稿して
 		// updatedAt を相異なる値にしないと offset ページングが非決定的になる。
