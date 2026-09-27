@@ -47,72 +47,16 @@ import { isApiModerator } from '../role/role-policy.js';
 import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
 import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
+import {
+	GALLERY_POSTS_RANKING_WINDOW,
+	incrementFeaturedRanking,
+	readFeaturedRanking,
+} from '@/core/featured/FeaturedRanking.js';
 
 export type ApiGalleryDependencies = ApiDriveFileDependencies &
 	ApiRolePolicyDependencies & {
 		redis: Redis.Redis;
 	};
-
-const GALLERY_POSTS_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
-const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
-
-function getCurrentFeaturedWindow(windowRange: number): number {
-	const passed = Date.now() - featuredEpoc;
-	return Math.floor(passed / windowRange);
-}
-
-async function updateGalleryPostsRanking(
-	deps: ApiGalleryDependencies,
-	galleryPostId: string,
-	score = 1,
-): Promise<void> {
-	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
-	const redisTransaction = deps.redis.multi();
-	redisTransaction.zincrby(`featuredGalleryPostsRanking:${currentWindow}`, score, galleryPostId);
-	redisTransaction.expire(
-		`featuredGalleryPostsRanking:${currentWindow}`,
-		(GALLERY_POSTS_RANKING_WINDOW * 3) / 1000,
-		'NX',
-	);
-	await redisTransaction.exec();
-}
-
-async function getGalleryPostsRanking(deps: ApiGalleryDependencies, threshold: number): Promise<string[]> {
-	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
-	const previousWindow = currentWindow - 1;
-
-	const redisPipeline = deps.redis.pipeline();
-	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
-		.exec()
-		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
-
-	const ranking = new Map<string, number>();
-	for (let i = 0; i < currentRankingResult.length; i += 2) {
-		const id = currentRankingResult[i];
-		const score = currentRankingResult[i + 1];
-		if (id == null || score == null) {
-			continue;
-		}
-		ranking.set(id, Number.parseInt(score, 10));
-	}
-	for (let i = 0; i < previousRankingResult.length; i += 2) {
-		const id = previousRankingResult[i];
-		const scoreValue = previousRankingResult[i + 1];
-		if (id == null || scoreValue == null) {
-			continue;
-		}
-		const score = Number.parseInt(scoreValue, 10);
-		const exist = ranking.get(id);
-		ranking.set(id, exist != null ? (exist + score) / 2 : score);
-	}
-
-	return [...ranking.entries()]
-		.sort((a, b) => b[1] - a[1])
-		.map((x) => x[0])
-		.slice(0, threshold);
-}
 
 let galleryPostsRankingCache: string[] = [];
 let galleryPostsRankingCacheLastFetchedAt = 0;
@@ -235,7 +179,7 @@ export async function handleApiGalleryFeatured(
 	) {
 		postIds = galleryPostsRankingCache;
 	} else {
-		postIds = await getGalleryPostsRanking(deps, 100);
+		postIds = await readFeaturedRanking(deps.redis, 'featuredGalleryPostsRanking', GALLERY_POSTS_RANKING_WINDOW, 100);
 		galleryPostsRankingCache = postIds;
 		galleryPostsRankingCacheLastFetchedAt = Date.now();
 	}
@@ -406,7 +350,7 @@ export async function handleApiGalleryPostsLike(
 	}
 
 	if (Date.now() - parseId(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
-		await updateGalleryPostsRanking(deps, post.id, 1);
+		await incrementFeaturedRanking(deps.redis, 'featuredGalleryPostsRanking', GALLERY_POSTS_RANKING_WINDOW, post.id, 1);
 	}
 
 	await incrementGalleryPostLikedCountInDatabase(deps.db, post.id);
@@ -441,7 +385,13 @@ export async function handleApiGalleryPostsUnlike(
 	}
 
 	if (Date.now() - parseId(post.id).date.getTime() < GALLERY_POSTS_RANKING_WINDOW) {
-		await updateGalleryPostsRanking(deps, post.id, -1);
+		await incrementFeaturedRanking(
+			deps.redis,
+			'featuredGalleryPostsRanking',
+			GALLERY_POSTS_RANKING_WINDOW,
+			post.id,
+			-1,
+		);
 	}
 }
 

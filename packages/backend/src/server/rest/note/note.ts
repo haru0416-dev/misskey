@@ -65,6 +65,7 @@ import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
+import { PER_USER_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 
 export type ApiNoteDependencies = ApiDriveFileDependencies &
 	UserPackingDependencies & {
@@ -1140,50 +1141,6 @@ export async function fetchNoteDiffsForApi(
 	}));
 }
 
-const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
-const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
-
-function getFeaturedRankingCurrentWindowForApi(windowRange: number): number {
-	const passed = Date.now() - FEATURED_EPOCH;
-	return Math.floor(passed / windowRange);
-}
-
-async function getFeaturedRankingOfForApi(
-	redis: Redis.Redis,
-	name: string,
-	windowRange: number,
-	threshold: number,
-): Promise<string[]> {
-	const currentWindow = getFeaturedRankingCurrentWindowForApi(windowRange);
-	const previousWindow = currentWindow - 1;
-
-	const redisPipeline = redis.pipeline();
-	redisPipeline.zrange(`${name}:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`${name}:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
-	const [currentRankingResult, previousRankingResult] = await redisPipeline
-		.exec()
-		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : [[], []]));
-
-	const ranking = new Map<string, number>();
-	for (let i = 0; i < currentRankingResult!.length; i += 2) {
-		const noteId = currentRankingResult![i]!;
-		const score = Number.parseInt(currentRankingResult![i + 1]!, 10);
-		ranking.set(noteId, score);
-	}
-	for (let i = 0; i < previousRankingResult!.length; i += 2) {
-		const noteId = previousRankingResult![i]!;
-		const score = Number.parseInt(previousRankingResult![i + 1]!, 10);
-		const exist = ranking.get(noteId);
-		if (exist != null) {
-			ranking.set(noteId, (exist + score) / 2);
-		} else {
-			ranking.set(noteId, score);
-		}
-	}
-
-	return Array.from(ranking.keys());
-}
-
 export const usersFeaturedNotesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	untilId: misskeyId().optional(),
@@ -1205,7 +1162,7 @@ export async function handleApiUsersFeaturedNotes(
 		return [];
 	}
 
-	let noteIds = await getFeaturedRankingOfForApi(
+	let noteIds = await readFeaturedRanking(
 		deps.redis,
 		`featuredPerUserNotesRanking:${params.userId}`,
 		PER_USER_NOTES_RANKING_WINDOW,

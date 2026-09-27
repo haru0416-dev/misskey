@@ -22,6 +22,7 @@ import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLo
 import type { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import type { ApiInternalEventPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
+import { HASHTAG_RANKING_WINDOW, removeFromFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 
 export type ApiMetaDependencies = {
 	config: Config;
@@ -30,9 +31,6 @@ export type ApiMetaDependencies = {
 	redis: Redis.Redis;
 	publishInternalEvent?: ApiInternalEventPublisher;
 };
-
-const hashtagRankingWindow = 1000 * 60 * 60;
-const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
 export const metaParamDef = z.object({
 	detail: z.boolean().optional().default(true),
@@ -47,28 +45,6 @@ export const testParamDef = z.object({
 });
 
 type TestParams = z.infer<typeof testParamDef>;
-
-function currentFeaturedWindow(windowRange: number): number {
-	const passed = Date.now() - featuredEpoc;
-	return Math.floor(passed / windowRange);
-}
-
-async function removeHiddenTagsFromFeaturedRanking(redis: Redis.Redis, tags: Set<string>): Promise<void> {
-	if (tags.size === 0) {
-		return;
-	}
-
-	const currentWindow = currentFeaturedWindow(hashtagRankingWindow);
-	const previousWindow = currentWindow - 1;
-	const pipeline = redis.pipeline();
-
-	for (const tag of tags) {
-		pipeline.zrem(`featuredHashtagsRanking:${currentWindow}`, tag);
-		pipeline.zrem(`featuredHashtagsRanking:${previousWindow}`, tag);
-	}
-
-	await pipeline.exec();
-}
 
 function scheduleHiddenTagsRankingRemoval(
 	deps: ApiMetaDependencies,
@@ -87,7 +63,9 @@ function scheduleHiddenTagsRankingRemoval(
 			}
 		}
 
-		void removeHiddenTagsFromFeaturedRanking(deps.redis, tags);
+		if (tags.size > 0) {
+			void removeFromFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, tags);
+		}
 	});
 }
 

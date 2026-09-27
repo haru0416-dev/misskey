@@ -82,11 +82,14 @@ import { createPollInDatabase, fetchPollByNoteIdFromDatabase } from '@/core/note
 import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { addNoteToAntennasForApi } from '@/server/rest/antenna/antennas.js';
+import { formatHashtagUsersWindow } from '@/server/rest/hashtag/hashtags.js';
 import {
-	formatHashtagUsersWindow,
-	getCurrentFeaturedWindow,
+	currentFeaturedWindow,
+	FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE,
 	HASHTAG_RANKING_WINDOW,
-} from '@/server/rest/hashtag/hashtags.js';
+	recordFeaturedNoteEngagement,
+} from '@/core/featured/FeaturedRanking.js';
+import type { FeaturedNoteTarget } from '@/core/featured/FeaturedRanking.js';
 import {
 	deliverNoteActivityForApi,
 	deliverToRelaysForApi,
@@ -206,11 +209,11 @@ export async function updateHashtagsRankings(
 	const now = new Date();
 	now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
 	const window = formatHashtagUsersWindow(now);
-	const currentFeaturedWindow = getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW);
+	const featuredWindow = currentFeaturedWindow(HASHTAG_RANKING_WINDOW);
 	const redisPipeline = deps.redis.pipeline();
 	for (const hashtag of hashtagsToUpdate) {
-		redisPipeline.zincrby(`featuredHashtagsRanking:${currentFeaturedWindow}`, 1, hashtag);
-		redisPipeline.expire(`featuredHashtagsRanking:${currentFeaturedWindow}`, (HASHTAG_RANKING_WINDOW * 3) / 1000, 'NX');
+		redisPipeline.zincrby(`featuredHashtagsRanking:${featuredWindow}`, 1, hashtag);
+		redisPipeline.expire(`featuredHashtagsRanking:${featuredWindow}`, (HASHTAG_RANKING_WINDOW * 3) / 1000, 'NX');
 		redisPipeline.pfadd(`hashtagUsers:${hashtag}:${window}`, userId);
 		redisPipeline.expire(`hashtagUsers:${hashtag}:${window}`, 60 * 60 * 24 * 3, 'NX');
 		redisPipeline.sadd(`hashtagUsers:${hashtag}`, userId);
@@ -946,6 +949,8 @@ type NoteAnalyticsEvent = {
 	userHost: MiUser['host'];
 	tags: string[];
 	silent: boolean;
+	/** 注目の投稿の点数に数えるリノート元。renoteCount を増やしたときだけ入る。 */
+	featuredRenote: FeaturedNoteTarget | null;
 };
 
 async function runNoteAnalytics(deps: NoteCreationDependencies, event: NoteAnalyticsEvent): Promise<void> {
@@ -970,6 +975,9 @@ async function runNoteAnalytics(deps: NoteCreationDependencies, event: NoteAnaly
 		}
 		if (!silent && userHost == null) {
 			updates.push(Promise.resolve(deps.chartWriters.activeUsersChart.write({ id: note.userId, host: null })));
+		}
+		if (event.featuredRenote != null && Math.random() < FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE) {
+			updates.push(recordFeaturedNoteEngagement(deps.redis, event.featuredRenote, 5));
 		}
 		const results = await Promise.allSettled(updates);
 		const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
@@ -1656,6 +1664,17 @@ export async function createNote(
 		userHost: user.host,
 		tags,
 		silent,
+		featuredRenote:
+			data.renote != null && data.renote.userId !== user.id && !user.isBot
+				? {
+						id: data.renote.id,
+						userId: data.renote.userId,
+						userHost: data.renote.userHost,
+						visibility: data.renote.visibility,
+						replyId: data.renote.replyId,
+						channelId: data.renote.channelId,
+					}
+				: null,
 	};
 	if (options.reservation) {
 		let requiredComplete = false;
