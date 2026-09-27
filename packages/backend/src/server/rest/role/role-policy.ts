@@ -278,14 +278,22 @@ export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: 
 	return roles.some((role) => role.isAdministrator);
 }
 
-/** root ユーザーは requiredRolePolicy の値にかかわらず許可する。 */
-export async function hasApiRolePolicyOrIsRoot(
+/**
+ * requiredRolePolicy の判定。root と管理者ロールの持ち主はポリシーの値にかかわらず許可する
+ * (管理者ロールに canManageCustomEmojis 等を個別に付けなくても管理画面の機能を使えるようにするため)。
+ * 未ログインは基本ポリシーで判定する。
+ */
+export async function hasApiRequiredRolePolicy(
 	deps: ApiRolePolicyDependencies,
-	user: MiUser,
+	user: MiUser | null,
 	policy: keyof RolePolicies,
 ): Promise<boolean> {
-	if (deps.meta.rootUserId === user.id) {
+	if (user != null && deps.meta.rootUserId === user.id) {
 		return true;
 	}
-	return !!(await getApiRolePolicies(deps, user))[policy];
+	const roles = await getApiUserRoles(deps, user);
+	if ((await getApiRolePolicies(deps, user, roles))[policy]) {
+		return true;
+	}
+	return roles.some((role) => role.isAdministrator);
 }

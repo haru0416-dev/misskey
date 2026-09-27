@@ -1837,7 +1837,6 @@ export const endpointMetas = {
 	}),
 	'v2/admin/emoji/list': defineContract({
 		meta: {
-			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
 			tags: ['admin'],
 

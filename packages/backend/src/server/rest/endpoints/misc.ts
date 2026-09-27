@@ -68,7 +68,6 @@ import { handleApiExportCustomEmojis } from '../job/export-jobs.js';
 import { handleApiFetchRss } from '../feed/fetch-rss.js';
 import { handleApiVerifyEmail } from '../auth/verify-email.js';
 import { getApiRolePolicies } from '../role/role-policy.js';
-import { rolePermissionDeniedError } from '../error.js';
 
 export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscContracts, {
 	announcements: async ({ deps, input, me }) => await handleApiAnnouncements(deps, me, input),
@@ -153,12 +152,10 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscCont
 	'ap/get': async ({ deps, input }) => await handleApiApGet(deps, input),
 	'invite/create': async ({ deps, me, input }) => {
 		const policies = await getApiRolePolicies(deps, me);
-		if (!policies.canInvite && deps.meta.rootUserId !== me.id) throw rolePermissionDeniedError();
 		return await handleApiInviteCreate(deps, me, policies, input);
 	},
 	'invite/limit': async ({ deps, me, input }) => {
 		const policies = await getApiRolePolicies(deps, me);
-		if (!policies.canInvite && deps.meta.rootUserId !== me.id) throw rolePermissionDeniedError();
 		return await handleApiInviteLimit(deps, me, policies, input);
 	},
 	'notifications/flush': async ({ deps, me }) => {

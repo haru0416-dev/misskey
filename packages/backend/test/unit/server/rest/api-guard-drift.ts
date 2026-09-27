@@ -17,7 +17,7 @@ import { endpointMetas } from '@/server/api/endpoint-metas.js';
  */
 
 const GUARD_CALL =
-	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasApiRolePolicyOrIsRoot|assertApiAdmin|isApiAdministrator|assertApiModerator|assertApiRateLimitForUser)\b/g;
+	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasApiRequiredRolePolicy|assertApiAdmin|isApiAdministrator|assertApiModerator|assertApiRateLimitForUser)\b/g;
 
 const routesDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/routes');
 const endpointsDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/endpoints');
@@ -90,7 +90,7 @@ type GuardMeta = {
 	requireAdmin?: boolean;
 	secure?: boolean;
 	prohibitMoved?: boolean;
-	requireRolePolicy?: string;
+	requiredRolePolicy?: string;
 	kind?: string;
 	limit?: unknown;
 };
@@ -122,8 +122,8 @@ function expectedGuards(meta: GuardMeta): { label: string; accepts: string[] }[]
 	if (meta.prohibitMoved === true) {
 		expected.push({ label: 'prohibitMoved', accepts: ['assertProhibitMoved'] });
 	}
-	if (meta.requireRolePolicy != null) {
-		expected.push({ label: 'requireRolePolicy', accepts: ['hasApiRolePolicyOrIsRoot'] });
+	if (meta.requiredRolePolicy != null) {
+		expected.push({ label: 'requiredRolePolicy', accepts: ['hasApiRequiredRolePolicy'] });
 	}
 	if (meta.requireAdmin === true) {
 		expected.push({ label: 'requireAdmin', accepts: ['assertApiAdmin', 'isApiAdministrator'] });

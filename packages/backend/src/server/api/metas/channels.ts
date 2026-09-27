@@ -34,7 +34,6 @@ const channelListSchema = {
 export const endpointMetas = {
 	'channels/create': defineContract({
 		meta: {
-			requireRolePolicy: 'canCreateChannel',
 			tags: ['channels'],
 
 			requireCredential: true,

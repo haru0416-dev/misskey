@@ -554,7 +554,6 @@ export const endpointMetas = {
 	}),
 	'i/import-antennas': defineContract({
 		meta: {
-			requireRolePolicy: 'canImportAntennas',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportAntennas',
@@ -598,7 +597,6 @@ export const endpointMetas = {
 	}),
 	'i/import-blocking': defineContract({
 		meta: {
-			requireRolePolicy: 'canImportBlocking',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportBlocking',
@@ -633,7 +631,6 @@ export const endpointMetas = {
 	}),
 	'i/import-following': defineContract({
 		meta: {
-			requireRolePolicy: 'canImportFollowing',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportFollowing',
@@ -667,7 +664,6 @@ export const endpointMetas = {
 	}),
 	'i/import-muting': defineContract({
 		meta: {
-			requireRolePolicy: 'canImportMuting',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportMuting',
@@ -702,7 +698,6 @@ export const endpointMetas = {
 	}),
 	'i/import-user-lists': defineContract({
 		meta: {
-			requireRolePolicy: 'canImportUserLists',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportUserLists',

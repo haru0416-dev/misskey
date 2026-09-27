@@ -935,7 +935,7 @@ describe('Endpoints', () => {
 			const roleDenied = await api('invite/limit', {}, deniedUser);
 			expect(roleDenied.status).toBe(403);
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-			expect(castAsError(roleDenied.body as any).error.id).toBe('c3d38592-54c0-429d-be96-5636b0431a61');
+			expect(castAsError(roleDenied.body as any).error.id).toBe('7f86f06f-7e15-4057-8561-f4b6d4ac755a');
 
 			const readAccountToken = await createAppToken(inviter, ['read:account']);
 			const scopeDenied = await api('invite/limit', {}, { token: readAccountToken });

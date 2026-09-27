@@ -15,6 +15,7 @@ import {
 	failedApiCall,
 	relativeFetch,
 	resolveTargetUrl,
+	role,
 	signup,
 	successfulApiCall,
 	uploadFile,
@@ -383,6 +384,74 @@ describe('API', () => {
 				});
 				expect(result.status).toBe(401);
 			});
+		});
+	});
+
+	describe('ロールによる権限の検査', () => {
+		const MODERATOR_REQUIRED = 'd33d5333-db36-423d-a8f9-1a2b9549da41';
+		const ADMINISTRATOR_REQUIRED = 'c3d38592-54c0-429d-be96-5636b0431a61';
+		const ROLE_POLICY_REQUIRED = '7f86f06f-7e15-4057-8561-f4b6d4ac755a';
+
+		let admin: misskey.entities.SignupResponse;
+		let noSearch: misskey.entities.SignupResponse;
+
+		beforeAll(async () => {
+			admin = await signup({ username: 'roleguardadmin' });
+			noSearch = await signup({ username: 'roleguardnosearch' });
+			// 管理者ロールは canManageCustomEmojis を明示しない (既定値 false のまま)。
+			const adminRole = await role(alice, { isAdministrator: true });
+			await successfulApiCall({
+				endpoint: 'admin/roles/assign',
+				parameters: { roleId: adminRole.id, userId: admin.id },
+				user: alice,
+			});
+			const noSearchRole = await role(alice, {}, { canSearchUsers: { useDefault: false, priority: 0, value: false } });
+			await successfulApiCall({
+				endpoint: 'admin/roles/assign',
+				parameters: { roleId: noSearchRole.id, userId: noSearch.id },
+				user: alice,
+			});
+		}, 1000 * 60);
+
+		test('管理者ロールは、ポリシーを明示されていなくてもポリシー必須のエンドポイントを使える', async () => {
+			await successfulApiCall({ endpoint: 'admin/emoji/list', parameters: {}, user: admin });
+		});
+
+		test('ポリシーの無い一般ユーザーはポリシー必須の id で拒否される', async () => {
+			await failedApiCall(
+				{ endpoint: 'admin/emoji/list', parameters: {}, user: bob },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ROLE_POLICY_REQUIRED },
+			);
+		});
+
+		test('モデレーター必須と管理者必須はそれぞれの id で拒否される', async () => {
+			await failedApiCall(
+				{ endpoint: 'admin/show-users', parameters: {}, user: bob },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: MODERATOR_REQUIRED },
+			);
+			await failedApiCall(
+				{ endpoint: 'admin/get-index-stats', parameters: {}, user: bob },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ADMINISTRATOR_REQUIRED },
+			);
+		});
+
+		test('招待の権限が無いユーザーは招待コードを一覧・削除できない', async () => {
+			await failedApiCall(
+				{ endpoint: 'invite/list', parameters: {}, user: bob },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ROLE_POLICY_REQUIRED },
+			);
+			await failedApiCall(
+				{ endpoint: 'invite/delete', parameters: { inviteId: 'aaaaaaaaaaaaaaaa' }, user: bob },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ROLE_POLICY_REQUIRED },
+			);
+		});
+
+		test('ユーザー検索を許可しないロールではユーザー検索できない', async () => {
+			await successfulApiCall({ endpoint: 'users/search', parameters: { query: 'alice' }, user: bob });
+			await failedApiCall(
+				{ endpoint: 'users/search', parameters: { query: 'alice' }, user: noSearch },
+				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ROLE_POLICY_REQUIRED },
+			);
 		});
 	});
 });

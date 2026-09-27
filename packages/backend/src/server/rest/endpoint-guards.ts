@@ -17,8 +17,8 @@ import type { ApiAuthenticated, authenticateApiToken } from './auth/auth.js';
 import { assertApiAdmin, assertApiModerator } from './shell-helpers.js';
 import { assertApiRateLimit, assertApiRateLimitForUser } from './rate-limit.js';
 import type { ApiEndpointRateLimit } from './rate-limit.js';
-import { rolePermissionDeniedError } from './error.js';
-import { hasApiRolePolicyOrIsRoot } from './role/role-policy.js';
+import { rolePolicyRequiredError } from './error.js';
+import { hasApiRequiredRolePolicy } from './role/role-policy.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };
@@ -34,7 +34,7 @@ export type EndpointGuardMeta = {
 	readonly requireAdmin?: boolean;
 	readonly secure?: boolean;
 	readonly prohibitMoved?: boolean;
-	readonly requireRolePolicy?: string;
+	readonly requiredRolePolicy?: string;
 	readonly kind?: string;
 	readonly limit?: ApiEndpointRateLimit;
 };
@@ -65,17 +65,17 @@ export async function applyEndpointGuards(
 		assertProhibitMoved((auth as AuthedCredential).user);
 	}
 
-	if (meta.requireRolePolicy != null) {
-		const policy = meta.requireRolePolicy as Parameters<typeof hasApiRolePolicyOrIsRoot>[2];
-		if (!(await hasApiRolePolicyOrIsRoot(deps, (auth as AuthedCredential).user, policy))) {
-			throw rolePermissionDeniedError();
-		}
-	}
-
 	if (meta.requireAdmin === true) {
 		await assertApiAdmin(deps, auth as AuthedCredential);
 	} else if (meta.requireModerator === true) {
 		await assertApiModerator(deps, auth as AuthedCredential);
+	}
+
+	if (meta.requiredRolePolicy != null) {
+		const policy = meta.requiredRolePolicy as Parameters<typeof hasApiRequiredRolePolicy>[2];
+		if (!(await hasApiRequiredRolePolicy(deps, auth.user, policy))) {
+			throw rolePolicyRequiredError();
+		}
 	}
 
 	// scope はロールの判定の後に見る。権限の足りないトークンを使った非管理者には ROLE_PERMISSION_DENIED を返す (upstream と同じ順)。

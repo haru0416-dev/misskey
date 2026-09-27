@@ -10,7 +10,13 @@ import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
 import type { ApiAuthenticated } from './auth/auth.js';
-import { ApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
+import {
+	ApiError,
+	invalidJsonBody,
+	payloadTooLargeError,
+	administratorRequiredError,
+	moderatorRequiredError,
+} from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { isApiAdministrator, isApiModerator } from './role/role-policy.js';
 import type { ApiSigninFlowResult } from './auth/signin.js';
@@ -245,7 +251,7 @@ export async function assertApiModerator(
 	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
 	if (!(await isApiModerator(deps, auth.user))) {
-		throw rolePermissionDeniedError();
+		throw moderatorRequiredError();
 	}
 }
 
@@ -254,6 +260,6 @@ export async function assertApiAdmin(
 	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
 	if (!(await isApiAdministrator(deps, auth.user))) {
-		throw rolePermissionDeniedError();
+		throw administratorRequiredError();
 	}
 }

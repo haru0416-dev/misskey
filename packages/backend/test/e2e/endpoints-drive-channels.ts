@@ -360,7 +360,7 @@ describe('Endpoints', () => {
 			);
 			expect(policyDenied.status).toBe(403);
 			expect(castAsError(policyDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-			expect(castAsError(policyDenied.body as any).error.id).toBe('c3d38592-54c0-429d-be96-5636b0431a61');
+			expect(castAsError(policyDenied.body as any).error.id).toBe('7f86f06f-7e15-4057-8561-f4b6d4ac755a');
 
 			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
 			const missingFile = await api(
