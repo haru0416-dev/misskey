@@ -61,6 +61,7 @@ import { getStorageItemAsJson, isJsonObject, isStringArray, miLocalStorage } fro
 import { customEmojis } from '@/features/custom-emojis/custom-emojis.js';
 import { searchEmoji, searchEmojiExact } from '@/utility/search-emoji.js';
 import { prefer } from '@/preferences.js';
+import { $i } from '@/i.js';
 
 export type CompleteInfo = {
 	user: {
@@ -250,7 +251,11 @@ function setPosition() {
 	}
 }
 
+// 検索の応答は入力の順に返るとは限らない。最後に始めた検索の応答だけを表示・保存する。
+let execGeneration = 0;
+
 function exec() {
+	const generation = ++execGeneration;
 	select.value = -1;
 	if (suggests.value) {
 		for (const el of Array.from(items.value)) {
@@ -264,7 +269,8 @@ function exec() {
 			return;
 		}
 
-		const cacheKey = `autocomplete:user:${props.q}`;
+		// 検索結果は利用者ごとに変わる (フォロー関係で並びが変わる) ので、アカウントごとに分けて保存する。
+		const cacheKey = `autocomplete:user:${$i?.id ?? ''}:${props.q}`;
 		const cache = getStorageItemAsJson(sessionStorage, cacheKey, isUserArray);
 
 		if (cache != null) {
@@ -281,10 +287,15 @@ function exec() {
 				limit: 10,
 				detail: false,
 			}).then((searchedUsers) => {
+				if (generation !== execGeneration) return;
 				users.value = searchedUsers;
 				fetching.value = false;
 				// キャッシュ
 				sessionStorage.setItem(cacheKey, JSON.stringify(searchedUsers));
+			}).catch(() => {
+				if (generation !== execGeneration) return;
+				users.value = [];
+				fetching.value = false;
 			});
 		}
 	} else if (props.type === 'hashtag') {
@@ -302,10 +313,15 @@ function exec() {
 					query: props.q,
 					limit: 30,
 				}).then((searchedHashtags) => {
+					if (generation !== execGeneration) return;
 					hashtags.value = searchedHashtags;
 					fetching.value = false;
 					// キャッシュ
 					sessionStorage.setItem(cacheKey, JSON.stringify(searchedHashtags));
+				}).catch(() => {
+					if (generation !== execGeneration) return;
+					hashtags.value = [];
+					fetching.value = false;
 				});
 			}
 		}
@@ -458,17 +474,18 @@ onMounted(() => {
 
 	nextTick(() => {
 		exec();
-
-		watch(
-			() => props.q,
-			() => {
-				nextTick(() => {
-					exec();
-				});
-			},
-		);
 	});
 });
+
+// setup の直下で登録し、アンマウントで止める (onMounted の中の nextTick で登録すると止まらない)。
+watch(
+	() => props.q,
+	() => {
+		nextTick(() => {
+			exec();
+		});
+	},
+);
 
 onBeforeUnmount(() => {
 	props.textarea.removeEventListener('keydown', onKeydown);
