@@ -3,7 +3,6 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-<!-- クリップ・ハッシュタグの埋め込みページで共通の、アイコン付き見出しとノート一覧。 -->
 <template>
 <EmTimelineContainer :showHeader="embedParams.header">
 	<template #header>
@@ -29,8 +28,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			ref="notesEl"
 			:pagination="pagination"
 			:disableAutoLoad="!embedParams.autoload"
-			:noGap="true"
-			:ad="false"
 		/>
 	</template>
 </EmTimelineContainer>

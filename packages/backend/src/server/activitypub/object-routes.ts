@@ -153,7 +153,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
-		if (note == null || !['public', 'home'].includes(note.visibility) || note.localOnly) {
+		if (note == null || (note.visibility !== 'public' && note.visibility !== 'home') || note.localOnly) {
 			return apError(404);
 		}
 
@@ -173,7 +173,12 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
-		if (note == null || note.userHost != null || !['public', 'home'].includes(note.visibility) || note.localOnly) {
+		if (
+			note == null ||
+			note.userHost != null ||
+			(note.visibility !== 'public' && note.visibility !== 'home') ||
+			note.localOnly
+		) {
 			return apError(404);
 		}
 
@@ -382,7 +387,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		const pinnedNotes = pinings
 			.map((pining) => noteMap.get(pining.noteId))
 			.filter((note): note is MiNote => note != null)
-			.filter((note) => !note.localOnly && ['public', 'home'].includes(note.visibility));
+			.filter((note) => !note.localOnly && (note.visibility === 'public' || note.visibility === 'home'));
 
 		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNoteForApi(deps, note, true)));
 

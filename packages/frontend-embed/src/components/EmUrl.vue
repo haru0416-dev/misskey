@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component
-	:is="self ? EmA : 'a'" ref="el" :class="$style.root" class="_link" :[attr]="self ? localPath : props.url" :rel="rel ?? 'nofollow noopener'" :target="target"
+	:is="self ? EmA : 'a'" :class="$style.root" class="_link" :[attr]="self ? localPath : props.url" :rel="rel ?? 'nofollow noopener'" :target="target"
 	@contextmenu.stop="() => {}"
 >
 	<template v-if="!self">
@@ -24,7 +24,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
 import { toUnicodeHost as decodePunycode } from '@shared/utility/punycode.js';
 import EmA from './EmA.vue';
 import { url as local } from '@shared/utility/config.js';
@@ -38,16 +37,10 @@ function safeURIDecode(str: string): string {
 	}
 }
 
-const props = withDefaults(
-	defineProps<{
-		url: string;
-		rel?: string;
-		showUrlPreview?: boolean;
-	}>(),
-	{
-		showUrlPreview: true,
-	},
-);
+const props = defineProps<{
+	url: string;
+	rel?: string;
+}>();
 
 const url = new URL(props.url);
 if (!['http:', 'https:'].includes(url.protocol)) {
@@ -55,7 +48,6 @@ if (!['http:', 'https:'].includes(url.protocol)) {
 }
 const self = isSameOrigin(url, local);
 const localPath = url.pathname + url.search + url.hash;
-const el = ref();
 
 const schema = url.protocol;
 const hostname = decodePunycode(url.hostname);

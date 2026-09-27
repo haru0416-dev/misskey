@@ -33,11 +33,4 @@ const emit = defineEmits<{
 	margin: 0 auto;
 }
 
-.img {
-	vertical-align: bottom;
-  width: 128px;
-	height: 128px;
-	margin-bottom: 16px;
-	border-radius: 16px;
-}
 </style>

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<XReaction v-for="[reaction, count] in reactions" :key="reaction" :reaction="reaction" :count="count" :isInitial="initialReactions.has(reaction)" :note="note" @reactionToggled="onMockToggleReaction"/>
+	<XReaction v-for="[reaction, count] in reactions" :key="reaction" :reaction="reaction" :count="count" :note="note"/>
 	<slot v-if="hasMoreReactions" name="more"></slot>
 </div>
 </template>
@@ -25,17 +25,8 @@ const props = withDefaults(
 	},
 );
 
-const initialReactions = new Set(Object.keys(props.note.reactions));
-
 const reactions = ref<[string, number][]>([]);
 const hasMoreReactions = ref(false);
-
-function onMockToggleReaction(emoji: string, count: number) {
-	const i = reactions.value.findIndex((item) => item[0] === emoji);
-	if (i === -1) {
-		return;
-	}
-}
 
 watch(
 	[() => props.note.reactions, () => props.maxNumber],
@@ -62,7 +53,7 @@ watch(
 
 		newReactions = newReactions.slice(0, props.maxNumber);
 
-		if (props.note.myReaction && !newReactions.map(([x]) => x).includes(props.note.myReaction)) {
+		if (props.note.myReaction && !newReactions.some(([name]) => name === props.note.myReaction)) {
 			newReactions.push([props.note.myReaction, newSource[props.note.myReaction] ?? 0]);
 		}
 

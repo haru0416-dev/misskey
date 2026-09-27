@@ -10,8 +10,6 @@ import { runWriteTasks } from './write-tasks.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	// frontendShared はアイコンの使用箇所がなく、生成 CSS を利用側で読み込む必要もないため対象外。
-	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',
 	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
 };
 
@@ -34,6 +32,17 @@ async function main() {
 		}
 	}
 
+	const classesByUnicode = new Map<number, string[]>();
+	for (const [className, unicode] of rgMap) {
+		const codePoint = Number.parseInt(unicode, 16);
+		const classNames = classesByUnicode.get(codePoint);
+		if (classNames === undefined) {
+			classesByUnicode.set(codePoint, [className]);
+		} else {
+			classNames.push(className);
+		}
+	}
+
 	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)?.[0];
 	if (classTiBaseRule === undefined) {
 		throw new Error('Tabler Icons base CSS rule was not found.');
@@ -51,7 +60,6 @@ async function main() {
 		const cwd = path.resolve(process.cwd(), '../../');
 		const files = fsp.glob(dir, { cwd });
 		for await (const file of files) {
-			//console.log(`Scanning ${file}`);
 			const content = await fsp.readFile(path.resolve(cwd, file), 'utf-8');
 			const classRegex = /ti-[a-z0-9-]+/g;
 			let matches: RegExpExecArray | null;
@@ -131,15 +139,13 @@ async function main() {
 				cssRules.push(classTiBaseRule);
 
 				for (const icon of unicodeValues) {
-					const iconClasses = Array.from(rgMap.entries()).filter(
-						([_, unicode]) => Number.parseInt(unicode, 16) === icon,
-					);
+					const iconClasses = classesByUnicode.get(icon) ?? [];
 					if (iconClasses.length > 1) {
 						console.warn(
-							`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`,
+							`[WARN] Multiple classes for the same unicode: ${iconClasses.join(', ')}. Maybe it's deprecated?`,
 						);
 					}
-					const iconSelector = iconClasses.map(([className]) => `.${className}::before`).join(', ');
+					const iconSelector = iconClasses.map((className) => `.${className}::before`).join(', ');
 					cssRules.push(`${iconSelector} { content: "\\${icon.toString(16)}"; }`);
 				}
 			}

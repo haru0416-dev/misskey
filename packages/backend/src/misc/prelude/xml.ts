@@ -39,5 +39,5 @@ export function escapeValue(x: string): string {
 }
 
 export function escapeAttribute(x: string): string {
-	return Object.entries(map).reduce((a, [k, v]) => a.replace(k, v), x);
+	return x.replaceAll(/[&<>"']/g, (char) => map[char]!);
 }

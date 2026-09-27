@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const postMessageEventTypes = ['misskey:embed:ready', 'misskey:embed:changeHeight'] as const;
-
-export type PostMessageEventType = (typeof postMessageEventTypes)[number];
+export type PostMessageEventType = 'misskey:embed:ready' | 'misskey:embed:changeHeight';
 
 export interface PostMessageEventPayload extends Record<PostMessageEventType, unknown> {
 	'misskey:embed:ready': undefined;
@@ -13,12 +11,6 @@ export interface PostMessageEventPayload extends Record<PostMessageEventType, un
 		height: number;
 	};
 }
-
-type MiPostMessageEvent<T extends PostMessageEventType = PostMessageEventType> = {
-	type: T;
-	iframeId?: string;
-	payload?: PostMessageEventPayload[T];
-};
 
 let defaultIframeId: string | null = null;
 

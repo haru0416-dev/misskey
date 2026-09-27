@@ -83,7 +83,7 @@ export class LocaleInliner {
 			chunk.modifications = collectModifications(chunk.sourceCode, chunk.fileName, fileLogger, this);
 		}
 
-		if (!this.chunks.flatMap((x) => x.modifications ?? []).some((x) => x.type === 'localized')) {
+		if (!this.chunks.some((chunk) => chunk.modifications?.some((modification) => modification.type === 'localized'))) {
 			throw new Error('No localizations are inlined! this should mean locale inliner is not working well!');
 		}
 	}

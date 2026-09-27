@@ -108,19 +108,23 @@ function normalizeReactionKey(reaction: string): string {
 }
 
 function normalizeReactionKeys(reactions: MiNote['reactions']): MiNote['reactions'] {
-	return Object.entries(reactions)
-		.filter(([, count]) => count > 0)
-		.map(([reaction, count]) => [normalizeReactionKey(reaction), count] as const)
-		.reduce<MiNote['reactions']>((acc, [key, count]) => {
-			acc[key] = (acc[key] ?? 0) + count;
-			return acc;
-		}, {});
+	const normalized: MiNote['reactions'] = {};
+	for (const [reaction, count] of Object.entries(reactions)) {
+		if (!(count > 0)) continue;
+		const key = normalizeReactionKey(reaction);
+		normalized[key] = (normalized[key] ?? 0) + count;
+	}
+	return normalized;
 }
 
 function collectReactionEmojiNames(reactions: MiNote['reactions']): string[] {
-	return Object.keys(reactions)
-		.filter((reaction) => reaction.startsWith(':') && reaction.includes('@') && !reaction.includes('@.'))
-		.map((reaction) => decodeReaction(reaction).reaction.replaceAll(':', ''));
+	const names: string[] = [];
+	for (const reaction of Object.keys(reactions)) {
+		if (reaction.startsWith(':') && reaction.includes('@') && !reaction.includes('@.')) {
+			names.push(decodeReaction(reaction).reaction.replaceAll(':', ''));
+		}
+	}
+	return names;
 }
 
 function mergeReactions(src: MiNote['reactions'], delta: Record<string, number>): MiNote['reactions'] {

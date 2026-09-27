@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { url as base } from '@shared/utility/config.js';
 import { useInterval } from '@shared/utility/use-interval.js';
@@ -39,14 +39,19 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 		return url.toString();
 	});
 	const intervalClear = ref<(() => void) | undefined>();
+	let pendingRequest: AbortController | null = null;
 
 	const tick = () => {
+		pendingRequest?.abort();
+		pendingRequest = null;
 		if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) {
 			return;
 		}
 
-		window
-			.fetch(fetchEndpoint.value, {})
+		const request = new AbortController();
+		pendingRequest = request;
+		return window
+			.fetch(fetchEndpoint.value, { signal: request.signal })
 			.then((res) => {
 				if (!res.ok) {
 					throw new Error();
@@ -54,12 +59,16 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 				return res.json();
 			})
 			.then((feed: Misskey.entities.FetchRssResponse) => {
+				if (pendingRequest !== request) return;
 				rawItems.value = filterSafeRssItems(feed.items);
 				fetching.value = false;
 				onFetched?.();
 			})
 			.catch(() => {
-				fetching.value = false;
+				if (pendingRequest === request) fetching.value = false;
+			})
+			.finally(() => {
+				if (pendingRequest === request) pendingRequest = null;
 			});
 	};
 
@@ -77,6 +86,11 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 		},
 		{ immediate: true },
 	);
+
+	onUnmounted(() => {
+		pendingRequest?.abort();
+		pendingRequest = null;
+	});
 
 	return {
 		rawItems,

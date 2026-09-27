@@ -53,7 +53,8 @@ const props = withDefaults(defineProps<{
 
 const rootEl = useTemplateRef('rootEl');
 const parentBg = ref<string | null>(null);
-const showBody = ref((props.persistKey && miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`)) ? (miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`) === 't') : props.expanded);
+const storedExpanded = props.persistKey && miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`);
+const showBody = ref(storedExpanded ? storedExpanded === 't' : props.expanded);
 
 const opened = ref(showBody.value);
 watch(showBody, () => {

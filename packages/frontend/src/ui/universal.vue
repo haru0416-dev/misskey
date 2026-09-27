@@ -37,7 +37,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, provide, onMounted, computed, ref } from 'vue';
+import { defineAsyncComponent, provide, onMounted, onUnmounted, computed, ref } from 'vue';
 import { instanceName } from '@shared/utility/config.js';
 import { isLink } from '@shared/utility/is-link.js';
 import XCommon from './_common_/common.vue';
@@ -74,9 +74,10 @@ const MOBILE_THRESHOLD = 500;
 const showWidgetsSide = window.innerWidth >= DESKTOP_THRESHOLD;
 
 const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
-window.addEventListener('resize', () => {
+function onResize() {
 	isMobile.value = deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD;
-});
+}
+window.addEventListener('resize', onResize);
 
 const pageMetadata = ref<null | PageMetadata>(null);
 const widgetsShowing = ref(false);
@@ -97,8 +98,14 @@ provideReactiveMetadata(pageMetadata);
 
 const drawerMenuShowing = ref(false);
 
-mainRouter.on('change', () => {
+function onRouteChange() {
 	drawerMenuShowing.value = false;
+}
+mainRouter.on('change', onRouteChange);
+
+onUnmounted(() => {
+	window.removeEventListener('resize', onResize);
+	mainRouter.off('change', onRouteChange);
 });
 
 if (window.innerWidth > 1024) {

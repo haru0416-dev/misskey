@@ -6,10 +6,10 @@ import { promises as fsp } from 'node:fs';
 import { parse } from 'yaml';
 
 import locales from 'i18n';
-import meta from '../../package.json';
+import meta from '../../package.json' with { type: 'json' };
 import packageInfo from './package.json' with { type: 'json' };
 import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
-import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
+import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n.js';
 import { Features } from 'lightningcss';
 
 // バックエンドと同じ設定ファイルから URL を読み、そのホスト名だけを Vite に許可する。
@@ -21,10 +21,6 @@ const host = url ? new URL(url).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
 
-/**
- * Misskeyのフロントエンドにバンドルせず、CDNなどから別途読み込むリソースを記述する。
- * CDN を使わずにバンドルする場合は、以下の配列から該当要素を削除する。
- */
 const externalPackages = [
 	// shiki（コードブロックのシンタックスハイライトで使用中）はテーマ・言語の定義の容量が大きいため、それらはCDNから読み込む
 	{
@@ -97,10 +93,10 @@ export function getConfig(): UserConfig {
 		resolve: {
 			extensions,
 			alias: {
-				'@/': `${path.join(__dirname, 'src')}/`,
-				'@shared/': `${path.join(__dirname, '../frontend-shared')}/`,
-				'/client-assets/': `${path.join(__dirname, 'assets')}/`,
-				'/static-assets/': `${path.join(__dirname, '../backend/assets')}/`,
+				'@/': `${path.join(import.meta.dirname, 'src')}/`,
+				'@shared/': `${path.join(import.meta.dirname, '../frontend-shared')}/`,
+				'/client-assets/': `${path.join(import.meta.dirname, 'assets')}/`,
+				'/static-assets/': `${path.join(import.meta.dirname, '../backend/assets')}/`,
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',
 			},
 		},
@@ -111,7 +107,7 @@ export function getConfig(): UserConfig {
 			},
 			modules: {
 				generateScopedName(name, filename, _css): string {
-					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name)
+					const id = (path.relative(import.meta.dirname, filename.split('?')[0]) + '-' + name)
 						.replaceAll(/[\\\/\.\?&=]/g, '-')
 						.replaceAll(/(src-|vue-)/g, '');
 					if (process.env.NODE_ENV === 'production') {
@@ -174,7 +170,7 @@ export function getConfig(): UserConfig {
 				},
 			},
 			cssCodeSplit: true,
-			outDir: path.join(__dirname, '../../built/_frontend_embed_vite_'),
+			outDir: path.join(import.meta.dirname, '../../built/_frontend_embed_vite_'),
 			assetsDir: '.',
 			emptyOutDir: false,
 			sourcemap: process.env.NODE_ENV === 'development',

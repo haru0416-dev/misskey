@@ -45,7 +45,7 @@ async function unindexNoteForApi(
 	if (!deps.meilisearch) {
 		return;
 	}
-	if (!['home', 'public'].includes(note.visibility)) {
+	if (note.visibility !== 'home' && note.visibility !== 'public') {
 		return;
 	}
 

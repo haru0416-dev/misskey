@@ -11,7 +11,7 @@ import type { AuthedCredential } from './endpoint-guards.js';
 import type { ApiError } from './error.js';
 import type { parseApiParams } from './validation.js';
 
-// 契約 (meta・入力) と、そこから導く実装側の型。宣言のファイルから読み込むので実行時の依存を持たない。
+// API 宣言との参照は type-only import にし、契約の型付けから実行時の循環依存を作らない。
 
 export type ErrorDeclarations = NonNullable<IEndpointMeta['errors']>;
 
@@ -43,22 +43,21 @@ type RequiresCredential<M> = M extends { readonly requireCredential: true }
 			? true
 			: false;
 
-export type EndpointAuth<M extends IEndpointMeta> =
-	RequiresCredential<M> extends true ? AuthedCredential : ApiAuthenticated;
+type EndpointAuth<M extends IEndpointMeta> = RequiresCredential<M> extends true ? AuthedCredential : ApiAuthenticated;
 
 /** meta.res から導いた応答の型。res を宣言しないエンドポイントは 204 を返す。 */
-export type EndpointResult<M extends IEndpointMeta> = M extends { readonly res: infer R extends Schema }
+type EndpointResult<M extends IEndpointMeta> = M extends { readonly res: infer R extends Schema }
 	? SchemaType<R>
 	: void;
 
-export type EndpointErrors<M extends IEndpointMeta> = M extends { readonly errors: infer E extends ErrorDeclarations }
+type EndpointErrors<M extends IEndpointMeta> = M extends { readonly errors: infer E extends ErrorDeclarations }
 	? { readonly [K in keyof E]: (info?: unknown) => ApiError }
 	: Record<never, never>;
 
 /** 実装を別の関数に分けたとき、その関数が受け取る宣言由来のエラー。 */
 export type ContractErrors<C extends EndpointContract> = EndpointErrors<C['meta']>;
 
-export type EndpointContext<D, C extends EndpointContract> = {
+type EndpointContext<D, C extends EndpointContract> = {
 	readonly deps: D;
 	readonly input: ReturnType<typeof parseApiParams<C['paramDef']>>;
 	readonly auth: EndpointAuth<C['meta']>;

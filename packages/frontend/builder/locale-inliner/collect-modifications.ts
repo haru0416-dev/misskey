@@ -32,11 +32,12 @@ export function collectModifications(
 	}
 
 	const modifications: TextModification[] = [];
+	const i18nChunkPath = `${inliner.scriptsDir}/${inliner.i18nFileName}`;
 
 	walk(programNode, {
 		enter(this, node) {
 			if (node.type === 'Literal' && typeof node.value === 'string' && node.raw) {
-				if (node.raw.substring(1).startsWith(inliner.scriptsDir)) {
+				if (node.raw.startsWith(inliner.scriptsDir, 1)) {
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found ${inliner.scriptsDir}/ path literal ${node.raw}`);
 					modifications.push({
 						type: 'locale-name',
@@ -46,7 +47,7 @@ export function collectModifications(
 						localizedOnly: true,
 					});
 				}
-				if (node.raw.substring(1, node.raw.length - 1) === `${inliner.scriptsDir}/${inliner.i18nFileName}`) {
+				if (node.raw.length === i18nChunkPath.length + 2 && node.raw.startsWith(i18nChunkPath, 1)) {
 					// depmap 内の i18n エントリを現在のチャンク名に置換し、追加読み込みを避ける。
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found ${inliner.i18nFileName} path literal ${node.raw}`);
 					modifications.push({

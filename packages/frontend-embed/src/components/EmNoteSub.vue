@@ -55,7 +55,7 @@ const props = withDefaults(defineProps<{
 const showContent = ref(false);
 const replies = ref<Misskey.entities.Note[]>([]);
 
-if (props.detail) {
+if (props.detail && props.depth < 5) {
 	misskeyApi('notes/children', {
 		noteId: props.note.id,
 		limit: 5,

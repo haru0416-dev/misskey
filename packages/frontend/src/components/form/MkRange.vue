@@ -94,7 +94,6 @@ const containerEl = useTemplateRef('containerEl');
 const thumbEl = useTemplateRef('thumbEl');
 const labelId = useId();
 
-const maxRatio = computed(() => Math.abs(props.max) / (props.max + Math.abs(Math.min(0, props.min))));
 const minRatio = computed(() => Math.abs(Math.min(0, props.min)) / (props.max + Math.abs(Math.min(0, props.min))));
 
 const rightTrackWidth = computed(() => {
@@ -104,7 +103,7 @@ const leftTrackWidth = computed(() => {
 	return Math.max(0, (minRatio.value - steppedRawValue.value) * 100) + '%';
 });
 const rightTrackPosition = computed(() => {
-	return (Math.abs(Math.min(0, props.min)) / (props.max + Math.abs(Math.min(0, props.min)))) * 100 + '%';
+	return minRatio.value * 100 + '%';
 });
 const leftTrackPosition = computed(() => {
 	return Math.min(minRatio.value, steppedRawValue.value) * 100 + '%';

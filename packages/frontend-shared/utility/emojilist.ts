@@ -57,13 +57,11 @@ export function getUnicodeEmojiOrNull(char: string): UnicodeEmojiDef | null {
 		unicodeEmojisMap.get(forceColorizeEmoji(char)) ??
 		// カラースタイル絵文字がjsonに無い場合はテキストスタイル絵文字にフォールバックする
 		unicodeEmojisMap.get(char) ??
-		// それでも見つからない場合はnullを返す
 		null
 	);
 }
 
 export function getUnicodeEmoji(char: string): UnicodeEmojiDef | string {
-	// 絵文字が見つからない場合はそのまま返す（絵文字情報がjsonに無い場合、このフォールバックが無いとレンダリングに失敗する）
 	return getUnicodeEmojiOrNull(char) ?? char;
 }
 
@@ -72,10 +70,8 @@ export function isSupportedEmoji(char: string): boolean {
 }
 
 export function getEmojiName(char: string): string {
-	// emojilist.jsonがカラースタイルを前提としているため変換する
 	const idx = _indexByChar.get(forceColorizeEmoji(char)) ?? _indexByChar.get(char);
 	if (idx === undefined) {
-		// 絵文字情報がjsonに無い場合は名前の取得が出来ないのでそのまま返すしか無い
 		return char;
 	}
 	return emojilist[idx]?.name ?? char;

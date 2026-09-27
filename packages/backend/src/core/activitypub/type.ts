@@ -154,8 +154,10 @@ export interface IQuestion extends IObject {
 	closed?: Date;
 }
 
-export const isQuestion = (object: IObject): object is IQuestion =>
-	getApType(object) === 'Note' || getApType(object) === 'Question';
+export const isQuestion = (object: IObject): object is IQuestion => {
+	const type = getApType(object);
+	return type === 'Note' || type === 'Question';
+};
 
 interface IQuestionChoice {
 	name?: string;
@@ -206,11 +208,10 @@ export interface IActor extends IObject {
 
 export const isCollection = (object: IObject): object is ICollection => getApType(object) === 'Collection';
 
-const isOrderedCollection = (object: IObject): object is IOrderedCollection =>
-	getApType(object) === 'OrderedCollection';
-
-export const isCollectionOrOrderedCollection = (object: IObject): object is ICollection | IOrderedCollection =>
-	isCollection(object) || isOrderedCollection(object);
+export const isCollectionOrOrderedCollection = (object: IObject): object is ICollection | IOrderedCollection => {
+	const type = getApType(object);
+	return type === 'Collection' || type === 'OrderedCollection';
+};
 
 export interface IApPropertyValue extends IObject {
 	type: 'PropertyValue';

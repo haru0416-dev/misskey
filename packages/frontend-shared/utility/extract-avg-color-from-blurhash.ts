@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+const base83 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
+
 export function extractAvgColorFromBlurhash(hash: string) {
-	return typeof hash === 'string'
-		? '#' +
-				// hash.slice() は文字列なので、.map() するには文字配列への展開が必要
-				// (SonarJS S7747 は配列のコピーと誤判定する)
-				[...hash.slice(2, 6)]
-					.map((x) => '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~'.indexOf(x))
-					.reduce((a, c) => a * 83 + c, 0)
-					.toString(16)
-					.padStart(6, '0')
-		: undefined;
+	if (typeof hash !== 'string') {
+		return undefined;
+	}
+	let color = 0;
+	for (const char of hash.slice(2, 6)) {
+		color = color * 83 + base83.indexOf(char);
+	}
+	return '#' + color.toString(16).padStart(6, '0');
 }

@@ -148,11 +148,10 @@ async function deleteDriveFileStorage(
 	deps: DriveFileDeletionFinalizationDependencies,
 	file: DbDeleteDriveFileJobData['file'],
 ): Promise<void> {
-	const keys = [
-		file.accessKey,
-		...(file.thumbnailUrl == null ? [] : [file.thumbnailAccessKey]),
-		...(file.webpublicUrl == null ? [] : [file.webpublicAccessKey]),
-	].filter((key): key is string => key != null);
+	const keys: string[] = [];
+	if (file.accessKey != null) keys.push(file.accessKey);
+	if (file.thumbnailUrl != null && file.thumbnailAccessKey != null) keys.push(file.thumbnailAccessKey);
+	if (file.webpublicUrl != null && file.webpublicAccessKey != null) keys.push(file.webpublicAccessKey);
 
 	if (file.storedInternal) {
 		await Promise.all(keys.map(async (key) => deps.deleteInternalFile(key)));

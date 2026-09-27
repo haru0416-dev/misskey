@@ -18,18 +18,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
-import * as Misskey from 'misskey-js';
 import type { MenuItem } from '@/types/menu.js';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
-import { misskeyApi } from '@/utility/misskey-api.js';
-import { $i } from '@/i.js';
 import { switchAccount, removeAccount, login, getAccountWithSigninDialog, getAccountWithSignupDialog, getAccounts } from '@/accounts.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
-import { prefer } from '@/preferences.js';
 
 const accounts = await getAccounts();
 
@@ -75,10 +70,6 @@ function createAccount() {
 	});
 }
 
-const headerActions = computed(() => []);
-
-const headerTabs = computed(() => []);
-
 definePage(() => ({
 	title: i18n.ts.accounts,
 	icon: 'ti ti-users',
@@ -88,48 +79,5 @@ definePage(() => ({
 <style lang="scss" module>
 .user {
 	cursor: pointer;
-}
-
-.unknownUser {
-	display: flex;
-	align-items: center;
-	text-align: start;
-	padding: 16px;
-	background: var(--MI_THEME-panel);
-	border-radius: 8px;
-	font-size: 0.9em;
-}
-
-.unknownUserAvatarMock {
-	display: block;
-	width: 34px;
-	height: 34px;
-	line-height: 34px;
-	text-align: center;
-	font-size: 16px;
-	margin-right: 12px;
-	background-color: color-mix(in srgb, var(--MI_THEME-fg), transparent 85%);
-	color: color-mix(in srgb, var(--MI_THEME-fg), transparent 25%);
-	border-radius: 50%;
-}
-
-.unknownUserTitle {
-	display: block;
-	width: 100%;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	line-height: 18px;
-}
-
-.unknownUserSub {
-	display: block;
-	width: 100%;
-	font-size: 95%;
-	opacity: 0.7;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	line-height: 16px;
 }
 </style>

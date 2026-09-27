@@ -90,7 +90,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, ref, useTemplateRef } from 'vue';
+import { defineAsyncComponent, onUnmounted, ref, useTemplateRef } from 'vue';
 import { storeToRefs } from 'pinia';
 import XCommon from './_common_/common.vue';
 import { genId } from '@/utility/id.js';
@@ -151,7 +151,7 @@ const columnComponents = {
 	chat: XChatColumn,
 };
 
-mainRouter.navHook = (path, flag): boolean => {
+const navHook: NonNullable<typeof mainRouter.navHook> = (path, flag) => {
 	if (flag === 'forcePage') {
 		return false;
 	}
@@ -162,11 +162,13 @@ mainRouter.navHook = (path, flag): boolean => {
 	}
 	return false;
 };
+mainRouter.navHook = navHook;
 
 const isMobile = ref(window.innerWidth <= 500);
-window.addEventListener('resize', () => {
+function onResize() {
 	isMobile.value = window.innerWidth <= 500;
-});
+}
+window.addEventListener('resize', onResize);
 
 // ポインターイベント非対応用に初期値はUAから出す
 const snapScroll = ref(deviceKind === 'smartphone' || deviceKind === 'tablet');
@@ -225,6 +227,14 @@ function pointerEvent(ev: PointerEvent) {
 }
 
 window.document.addEventListener('pointerdown', pointerEvent, { passive: true });
+
+onUnmounted(() => {
+	window.removeEventListener('resize', onResize);
+	window.document.removeEventListener('pointerdown', pointerEvent);
+	if (mainRouter.navHook === navHook) {
+		mainRouter.navHook = null;
+	}
+});
 
 function onWheel(ev: WheelEvent) {
 	// WheelEvent はマウスからしか発火しないのでスナップスクロールは無効化する

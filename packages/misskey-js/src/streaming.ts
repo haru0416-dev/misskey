@@ -3,14 +3,13 @@ import { ReconnectingWebSocket } from './reconnecting-ws.js';
 import type { ReconnectingWebSocketOptions } from './reconnecting-ws.js';
 import type { BroadcastEvents, Channels } from './streaming.types.js';
 
-export function urlQuery(obj: Record<string, string | number | boolean | undefined>): string {
-	const params = Object.entries(obj)
-		.filter(([, v]) => (Array.isArray(v) ? v.length : v !== undefined))
-		.reduce((a, [k, v]) => ((a[k] = v!), a), {} as Record<string, string | number | boolean>);
-
-	return Object.entries(params)
-		.map((e) => `${e[0]}=${encodeURIComponent(e[1])}`)
-		.join('&');
+function urlQuery(obj: Record<string, string | number | boolean | undefined>): string {
+	const params: string[] = [];
+	for (const [key, value] of Object.entries(obj)) {
+		if (value === undefined || (Array.isArray(value) && value.length === 0)) continue;
+		params.push(`${key}=${encodeURIComponent(String(value))}`);
+	}
+	return params.join('&');
 }
 
 type AnyOf<T extends Record<PropertyKey, unknown>> = T[keyof T];

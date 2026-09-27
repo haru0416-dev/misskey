@@ -36,8 +36,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 				ref="notesEl"
 				:pagination="pagination"
 				:disableAutoLoad="!embedParams.autoload"
-				:noGap="true"
-				:ad="false"
 			/>
 		</template>
 	</EmTimelineContainer>

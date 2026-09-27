@@ -7,7 +7,7 @@ import path from 'node:path';
 import locales from 'i18n';
 import type { Plugin } from 'vite';
 
-const localesDir = path.resolve(__dirname, '../../../locales');
+const localesDir = path.resolve(import.meta.dirname, '../../../locales');
 
 export default function pluginWatchLocales(): Plugin {
 	return {

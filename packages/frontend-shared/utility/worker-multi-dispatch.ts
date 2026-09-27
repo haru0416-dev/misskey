@@ -10,12 +10,10 @@ function defaultUseWorkerNumber(prev: number) {
 type WorkerNumberGetter = (prev: number, totalWorkers: number) => number;
 
 export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
-	private symbol = Symbol('WorkerMultiDispatch');
 	private workers: Worker[] = [];
 	private terminated = false;
 	private prevWorkerNumber = 0;
 	private getUseWorkerNumber: WorkerNumberGetter;
-	private finalizationRegistry: FinalizationRegistry<symbol>;
 
 	constructor(workerConstructor: () => Worker, concurrency: number, getUseWorkerNumber = defaultUseWorkerNumber) {
 		if (concurrency < 1) {
@@ -25,11 +23,6 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		for (let i = 0; i < concurrency; i++) {
 			this.workers.push(workerConstructor());
 		}
-
-		this.finalizationRegistry = new FinalizationRegistry(() => {
-			this.terminate();
-		});
-		this.finalizationRegistry.register(this, this.symbol);
 
 		if (_DEV_) {
 			console.log('WorkerMultiDispatch: Created', this);
@@ -87,7 +80,6 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 			worker.terminate();
 		});
 		this.workers = [];
-		this.finalizationRegistry.unregister(this);
 	}
 
 	public isTerminated() {
@@ -96,9 +88,5 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 
 	public getWorkers() {
 		return this.workers;
-	}
-
-	public getSymbol() {
-		return this.symbol;
 	}
 }

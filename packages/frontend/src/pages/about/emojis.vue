@@ -55,11 +55,12 @@ function search() {
 		return;
 	}
 
-	const queryarry = q.value.match(/\:([a-z0-9_]*)\:/g);
+	const queryArray = q.value.match(/\:([a-z0-9_]*)\:/g);
 
-	if (queryarry) {
+	if (queryArray) {
+		const names = new Set(queryArray);
 		searchEmojis.value = customEmojis.value.filter(emoji =>
-			queryarry.includes(`:${emoji.name}:`),
+			names.has(`:${emoji.name}:`),
 		);
 	} else {
 		searchEmojis.value = customEmojis.value.filter(emoji => emoji.name.includes(q.value) || emoji.aliases.includes(q.value));

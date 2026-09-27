@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, markRaw, ref, watch } from 'vue';
+import { computed, markRaw, onUnmounted, ref, watch } from 'vue';
 import { useLowresTime } from '@/composables/useLowresTime.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';
 import { useWidgetPropsManager } from './widget.js';
@@ -171,6 +171,12 @@ watch(
 	},
 	{ immediate: true },
 );
+
+onUnmounted(() => {
+	if (nextDayTimer != null) {
+		window.clearTimeout(nextDayTimer);
+	}
+});
 
 defineExpose<WidgetComponentExpose>({
 	name,

@@ -17,10 +17,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import * as Misskey from 'misskey-js';
 import EmReactionIcon from '@/components/EmReactionIcon.vue';
 
-const props = defineProps<{
+defineProps<{
 	reaction: string;
 	count: number;
-	isInitial: boolean;
 	note: Misskey.entities.Note;
 }>();
 </script>

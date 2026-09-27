@@ -138,8 +138,8 @@ bun run --bun --filter backend test:e2e # single-server E2E tests
 ```
 If you want to run a specific test, run as a following command:
 ```sh
-bun run --bun --filter backend test -- packages/backend/test/unit/misc/cache.ts
-bun run --bun --filter backend test:e2e -- packages/backend/test/e2e/nodeinfo.ts
+bun run --bun --filter backend test -- test/unit/misc/cache.ts
+bun run --bun --filter backend test:e2e -- test/e2e/nodeinfo.ts
 ```
 
 `test` and `test:e2e` run vitest on the Bun runtime, with the application under test in the same process. `test:e2e:bun` runs the same E2E suite against a server booted as a separate process, so the assertions go through a real HTTP boundary:

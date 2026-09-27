@@ -35,11 +35,9 @@ async function composeNotification(
 ): Promise<[string, NotificationOptions] | null> {
 	const i18n = await (swLang.i18n ?? swLang.fetchLocale());
 	switch (data.type) {
-		// TODO: サーバー側が driveFileCreated を push するようになったら i18n.ts._notification.fileUploaded で通知する。
 		case 'notification':
 			switch (data.body.type) {
 				case 'follow': {
-					// users/showは型を適用しにくいため、ここでは直接リクエストする
 					const account = await getAccountFromId(data.userId);
 					if (!account) {
 						return null;

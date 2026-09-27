@@ -152,10 +152,6 @@ function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string 
 	return `import { i18n } from '@/i18n.js';\nexport const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`;
 }
 
-/**
- * オブジェクトを特殊な形式の文字列に変換する
- * i18n参照を保持しつつ適切な形式に変換
- */
 function customStringify(obj: unknown): string {
 	return JSON.stringify(obj).replaceAll(/"(.*?)"/g, (all, group) => {
 		// propertyAccessProxy が生成する ${i18n.xxx} を実行時の参照として保持する。

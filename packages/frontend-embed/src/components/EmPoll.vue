@@ -27,16 +27,12 @@ import * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
 import EmMfm from '@/components/EmMfm.js';
 
-function sum(xs: number[]): number {
-	return xs.reduce((a, b) => a + b, 0);
-}
-
 const props = defineProps<{
 	noteId: string;
 	poll: NonNullable<Misskey.entities.Note['poll']>;
 }>();
 
-const total = computed(() => sum(props.poll.choices.map(x => x.votes)));
+const total = computed(() => props.poll.choices.reduce((sum, choice) => sum + choice.votes, 0));
 </script>
 
 <style lang="scss" module>

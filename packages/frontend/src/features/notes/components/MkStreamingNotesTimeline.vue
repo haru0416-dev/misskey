@@ -20,9 +20,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button data-cy-streaming-new-notes class="_button" :class="$style.newButton" @click="releaseQueue()"><i class="ti ti-circle-arrow-up"></i> {{ i18n.ts.newNote }}</button>
 		</div>
 		<div v-if="props.viewMode === 'media'" ref="notesEl" :class="$style.mediaGrid">
-			<article v-for="note in mediaNotes" :key="note.id" :data-scroll-anchor="note.id" :class="$style.mediaCard">
-				<MkMediaList :mediaList="mediaFiles(note).slice(0, 4)" :square="true"/>
-				<div v-if="mediaFiles(note).length > 4" :class="$style.mediaCount">+{{ mediaFiles(note).length - 4 }}</div>
+			<article v-for="{ note, files } in mediaNotes" :key="note.id" :data-scroll-anchor="note.id" :class="$style.mediaCard">
+				<MkMediaList :mediaList="files.slice(0, 4)" :square="true"/>
+				<div v-if="files.length > 4" :class="$style.mediaCount">+{{ files.length - 4 }}</div>
 				<MkA :to="notePage(note)" :class="$style.mediaMeta">
 					<MkAvatar :user="note.user" :class="$style.mediaAvatar"/>
 					<span :class="$style.mediaAuthor"><MkUserName :user="note.user"/></span>
@@ -71,12 +71,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:moveClass="$style.transition_x_move"
 			tag="div"
 		>
-			<template v-for="(note, i) in paginator.items.value" :key="note.id">
-			<div v-if="getNoteSeparator(paginator.items.value, i, note.createdAt) != null" :data-scroll-anchor="note.id">
+			<template v-for="{ note, separatorInfo } in nonVirtualRows" :key="note.id">
+				<div v-if="separatorInfo != null" :data-scroll-anchor="note.id">
 					<div :class="$style.date">
-						<span><i class="ti ti-chevron-up"></i> {{ getNoteSeparator(paginator.items.value, i, note.createdAt)?.prevText }}</span>
+						<span><i class="ti ti-chevron-up"></i> {{ separatorInfo.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getNoteSeparator(paginator.items.value, i, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
 				</div>
@@ -200,14 +200,16 @@ const scrollElement = shallowRef<HTMLElement | null>(null);
 const scrollMargin = ref(0);
 const rootScrollMargin = ref(0);
 const canVirtualize = computed(() => props.viewMode === 'notes' && scrollElement.value != null);
-const mediaFiles = (note: Misskey.entities.Note) =>
-	(note.files ?? []).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
-const mediaNotes = computed(() =>
-	paginator.value.items.value.filter((note) => {
-		const files = mediaFiles(note);
-		return files.length > 0 && (props.withSensitive || files.every((file) => !file.isSensitive));
-	}),
-);
+const mediaNotes = computed(() => {
+	const result: { note: Misskey.entities.Note; files: Misskey.entities.DriveFile[] }[] = [];
+	for (const note of paginator.value.items.value) {
+		const files = (note.files ?? []).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+		if (files.length > 0 && (props.withSensitive || files.every((file) => !file.isSensitive))) {
+			result.push({ note, files });
+		}
+	}
+	return result;
+});
 
 const virtualizer = useVirtualizer(
 	computed(() => ({
@@ -246,16 +248,12 @@ const virtualRows = computed(() =>
 	}),
 );
 
-// virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
-// 同座標に重なる) の状態で描画することがある。初期状態を visibility: hidden にし、DOM更新後・
-// ペイント前に走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ表示する。
-// virtualizer内部のstart値とレンダーの整合はライブラリの内部実装に依存するため、描画後のDOMで判定する。
+// virtualizer の計測が終わるまで start=0 の行が重なる場合がある。
+// DOM 更新後に配置を検査し、未確定でも 300ms 後には表示する。
 const virtualLayoutVerified = ref(false);
 let layoutVerifyTimer: number | null = null;
 
-// ゲートが意味を持つのは仮想ブランチが描画されている間だけ。media モード等では検査せず
-// 即確定扱いにし (mediaGrid のマルチカラムは同 offsetTop が正常なため誤検出する)、
-// 仮想ブランチへ切り替わった時点でラッチをリセットして検査をやり直す
+// media モードは複数列で offsetTop が重なるため、仮想ブランチへ入るときだけ検査状態を戻す。
 const virtualGateActive = computed(() => props.viewMode === 'notes' && canVirtualize.value);
 watch(virtualGateActive, (active, prev) => {
 	if (active && !prev) {
@@ -264,15 +262,11 @@ watch(virtualGateActive, (active, prev) => {
 });
 
 function isVirtualLayoutSane(len: number): boolean {
-	if (!virtualGateActive.value) {
+	if (!virtualGateActive.value || len <= 1) {
 		return true;
-	} // 仮想ブランチ以外は対象外
-	if (len <= 1) {
-		return true;
-	} // 1件以下なら重なりようがない
+	}
 	const container = notesEl.value;
-	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
-	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
+	// 描画途中に確定扱いすると、直後の重なった行を表示してしまう。
 	if (container == null) {
 		return false;
 	}
@@ -280,9 +274,7 @@ function isVirtualLayoutSane(len: number): boolean {
 	if (rowEls.length < 2) {
 		return false;
 	}
-	// 隣接行が重なっていないかを検査する。縮退状態は「先頭数行が同座標に積み重なり後方は正常」の
-	// 混合形で現れるため、全行同topの判定では取りこぼす。高さ0の行 (ハードミュート等) は
-	// top が同値でも重ならないので誤検出しない (-2px は丸め誤差の許容)
+	// 直前の行が高さ 0 なら同じ位置を許容し、位置比較には 2px の誤差を許容する。
 	for (let i = 1; i < rowEls.length; i++) {
 		const prev = rowEls[i - 1]!;
 		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) {
@@ -325,13 +317,19 @@ watch(
 
 const virtualLayoutPending = computed(() => paginator.value.items.value.length > 0 && !virtualLayoutVerified.value);
 
-function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
-	const previousNote = notes[index - 1];
-	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) {
-		return null;
-	}
-	return getSeparatorInfo(previousNote.createdAt, createdAt);
-}
+const nonVirtualRows = computed(() => {
+	const notes = paginator.value.items.value;
+	return notes.map((note, index) => {
+		const previousNote = notes[index - 1];
+		return {
+			note,
+			separatorInfo:
+				previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
+					? getSeparatorInfo(previousNote.createdAt, note.createdAt)
+					: null,
+		};
+	});
+});
 
 const enteringNoteIds = shallowRef(new Set<string>());
 const leavingNoteIds = shallowRef(new Set<string>());

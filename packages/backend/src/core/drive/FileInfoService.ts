@@ -334,13 +334,22 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 					}
 				}
 				const predictions = await aiService.detectSensitiveMany(frameBuffers);
-				const results = predictions.filter((x): x is Prediction[] => x != null).map((x) => judgePrediction(x));
+				let judged = 0;
+				let sensitiveFrames = 0;
+				let pornFrames = 0;
+				for (const prediction of predictions) {
+					if (prediction == null) continue;
+					const [isSensitive, isPorn] = judgePrediction(prediction);
+					judged++;
+					if (isSensitive) sensitiveFrames++;
+					if (isPorn) pornFrames++;
+				}
 				// 判定に成功したフレームが 0 件のとき（接続先未設定・通信失敗等）は、
 				// Math.ceil(0) との比較が 0 >= 0 で真になり全動画がセンシティブ扱いになってしまうため、
 				// 1 件以上判定できたときのみ集約する（失敗時は非センシティブ扱い: misskey-dev/misskey#16804）。
-				if (results.length > 0) {
-					sensitive = results.filter((x) => x[0]).length >= Math.ceil(results.length * sensitiveThreshold);
-					porn = results.filter((x) => x[1]).length >= Math.ceil(results.length * sensitiveThresholdForPorn);
+				if (judged > 0) {
+					sensitive = sensitiveFrames >= Math.ceil(judged * sensitiveThreshold);
+					porn = pornFrames >= Math.ceil(judged * sensitiveThresholdForPorn);
 				}
 			} finally {
 				disposeOutDir();

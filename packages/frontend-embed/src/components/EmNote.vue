@@ -59,8 +59,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:author="appearNote.user"
 							:nyaize="'respect'"
 							:emojiUrls="appearNote.emojis"
-							:enableEmojiMenu="!true"
-							:enableEmojiMenuReaction="true"
 						/>
 					</div>
 					<div v-if="appearNote.files && appearNote.files.length > 0">

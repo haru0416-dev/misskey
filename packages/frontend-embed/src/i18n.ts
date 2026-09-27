@@ -9,8 +9,3 @@ import { locale } from '@shared/utility/locale.js';
 import type { Locale } from 'i18n';
 
 export const i18n = markRaw(new I18n<Locale>(locale, _DEV_));
-
-// test 以外では使わないこと。インライン化されてるのでだいたい意味がない
-function updateI18n(newLocale: Locale) {
-	i18n.locale = newLocale;
-}

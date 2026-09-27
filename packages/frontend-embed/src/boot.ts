@@ -81,7 +81,7 @@ window.addEventListener('message', setIframeIdHandler);
 try {
 	await fetchCustomEmojis();
 } catch {
-	/* 空のcatch */
+	// 取得・保存に失敗しても、利用可能な絵文字で埋め込みの起動を続ける。
 }
 
 const app = createApp(defineAsyncComponent(() => import('@/ui.vue')));

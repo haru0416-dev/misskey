@@ -200,9 +200,8 @@ export async function handleQueueBakeBufferedReactions(deps: QueueSystemDependen
 	if (bufferedNoteIds.size === 0) {
 		return;
 	}
-	const noteIds = [...bufferedNoteIds];
 
-	for (const noteId of noteIds) {
+	for (const noteId of bufferedNoteIds) {
 		const drainId = genId();
 		const drainingDeltaKey = `reactionsBufferDrainingDeltas:${drainId}`;
 		const drainingPairKey = `reactionsBufferDrainingPairs:${drainId}`;
