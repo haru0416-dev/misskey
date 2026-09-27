@@ -123,7 +123,7 @@ async function launchServerWithDependencies(
 			objectStorageQueue: deps.objectStorageQueue,
 			userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
 			systemWebhookDeliverQueue: deps.systemWebhookDeliverQueue,
-			logger: deps.loggerService.getLogger('Signin'),
+			logger: deps.loggerService.getLogger('api'),
 			...eventPublishers,
 		},
 		clientBase: {

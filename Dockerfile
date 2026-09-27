@@ -134,6 +134,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 USER misskey
 WORKDIR /misskey
 
+# ドライブの保存先。イメージに無いと、名前付きボリュームを付けたとき Docker が root 所有で作り、アップロードが EACCES で全て失敗する。
+# ここで misskey 所有にしておけば、新しいボリュームは作成時にこの所有者と権限を引き継ぐ。
+RUN mkdir -p /misskey/files
+
 COPY --chown=misskey:misskey --from=target-builder /misskey/node_modules ./node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/node_modules ./packages/misskey-js/node_modules
