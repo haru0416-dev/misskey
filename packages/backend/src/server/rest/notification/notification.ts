@@ -8,7 +8,7 @@ import { ReplyError } from 'ioredis';
 import type { Redis } from 'ioredis';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import { appendUserAchievementInDatabase, fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -573,23 +573,9 @@ export async function grantAchievementForApi(
 		return;
 	}
 
-	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-	if (profile == null) {
+	if (!(await appendUserAchievementInDatabase(deps.db, userId, { name, unlockedAt: Date.now() }))) {
 		return;
 	}
-	if (profile.achievements.some((a) => a.name === name)) {
-		return;
-	}
-
-	await updateUserProfileInDatabase(deps.db, userId, {
-		achievements: [
-			...profile.achievements,
-			{
-				name,
-				unlockedAt: Date.now(),
-			},
-		],
-	});
 
 	createAchievementEarnedNotification(deps, userId, name);
 }

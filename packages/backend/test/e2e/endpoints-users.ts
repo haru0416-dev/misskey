@@ -1905,6 +1905,19 @@ describe('Endpoints', () => {
 			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 			expect(profileAfter.achievements.filter((a) => a.name === 'notes1')).toHaveLength(1);
 		});
+
+		test('同時に付与しても、別の実績を消さず同じ実績を二重に入れない', async () => {
+			const user = await signup({ username: `hcap${Date.now().toString(36).slice(-8)}` });
+			const names = ['notes1', 'notes10', 'notes100', 'login3', 'login7'] as const;
+			const results = await Promise.all([
+				...names.map((name) => api('i/claim-achievement', { name }, user)),
+				...Array.from({ length: 5 }, () => api('i/claim-achievement', { name: 'following1' }, user)),
+			]);
+			expect(results.every((res) => res.status === 204)).toBe(true);
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			expect(profile.achievements.map((a) => a.name).sort()).toEqual([...names, 'following1'].sort());
+		});
 	});
 
 	describe('i/webhooks/create', () => {
