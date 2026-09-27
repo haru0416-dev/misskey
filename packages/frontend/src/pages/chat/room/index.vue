@@ -11,6 +11,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkLoading/>
 			</div>
 
+			<MkError v-else-if="initError" @retry="initialize()"/>
+
 			<div v-else-if="messages.length === 0">
 				<div class="_gaps" style="text-align: center;">
 					<div>{{ i18n.ts._chat.noMessagesYet }}</div>
@@ -136,6 +138,9 @@ export type NormalizedChatMessage = Omit<Misskey.entities.ChatMessageLite, 'from
 const initializing = ref(false);
 const initialized = ref(false);
 const moreFetching = ref(false);
+const initError = ref(false);
+// 初期化の await の間に画面を離れたら、接続やリスナーを作らない (作ると onBeforeUnmount の後なので解除されない)。
+let unmounted = false;
 const messages = ref<NormalizedChatMessage[]>([]);
 const canFetchMore = ref(false);
 const user = ref<Misskey.entities.UserDetailed | null>(null);
@@ -207,12 +212,22 @@ async function initialize() {
 
 	initializing.value = true;
 	initialized.value = false;
+	initError.value = false;
 
 	if (props.userId) {
-		const [u, m] = await Promise.all([
+		const result = await Promise.all([
 			misskeyApi('users/show', { userId: props.userId }),
 			misskeyApi('chat/messages/user-timeline', { userId: props.userId, limit: LIMIT }),
-		]);
+		]).catch(() => null);
+		if (unmounted) {
+			return;
+		}
+		if (result == null) {
+			initError.value = true;
+			initializing.value = false;
+			return;
+		}
+		const [u, m] = result;
 
 		user.value = u;
 		messages.value = m.map((x) => normalizeMessage(x));
@@ -233,12 +248,12 @@ async function initialize() {
 			misskeyApi('chat/rooms/show', { roomId: props.roomId }),
 			misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT }),
 		]);
+		if (unmounted) {
+			return;
+		}
 
 		if (rResult.status === 'rejected') {
-			os.alert({
-				type: 'error',
-				text: i18n.ts.somethingHappened,
-			});
+			initError.value = true;
 			initializing.value = false;
 			return;
 		}
@@ -256,14 +271,24 @@ async function initialize() {
 				router.push('/chat');
 				return;
 			}
-			await os.apiWithDialog('chat/rooms/join', { roomId: r.id });
+			const joined = await os.apiWithDialog('chat/rooms/join', { roomId: r.id }).then(
+				() => true,
+				() => false,
+			);
 			initializing.value = false;
-			initialize();
+			if (joined && !unmounted) {
+				initialize();
+			}
 			return;
 		}
 
-		const m =
-			mResult.status === 'fulfilled' ? (mResult.value as Misskey.entities.ChatMessagesRoomTimelineResponse) : [];
+		// 取得に失敗した一覧を空として出すと「まだメッセージはありません」に見えるので、失敗として出す。
+		if (mResult.status === 'rejected') {
+			initError.value = true;
+			initializing.value = false;
+			return;
+		}
+		const m = mResult.value as Misskey.entities.ChatMessagesRoomTimelineResponse;
 
 		room.value = r;
 		messages.value = m.map((x) => normalizeMessage(x));
@@ -307,25 +332,29 @@ async function fetchMore() {
 		return;
 	}
 
-	const newMessages =
-		props.userId && user.value != null
-			? await misskeyApi('chat/messages/user-timeline', {
-					userId: user.value.id,
-					limit: LIMIT,
-					untilId: lastMessage.id,
-				})
-			: room.value != null
-				? await misskeyApi('chat/messages/room-timeline', {
-						roomId: room.value.id,
+	try {
+		const newMessages =
+			props.userId && user.value != null
+				? await misskeyApi('chat/messages/user-timeline', {
+						userId: user.value.id,
 						limit: LIMIT,
 						untilId: lastMessage.id,
 					})
-				: [];
+				: room.value != null
+					? await misskeyApi('chat/messages/room-timeline', {
+							roomId: room.value.id,
+							limit: LIMIT,
+							untilId: lastMessage.id,
+						})
+					: [];
 
-	messages.value.push(...newMessages.map((x) => normalizeMessage(x)));
-
-	canFetchMore.value = newMessages.length === LIMIT;
-	moreFetching.value = false;
+		messages.value.push(...newMessages.map((x) => normalizeMessage(x)));
+		canFetchMore.value = newMessages.length === LIMIT;
+	} catch {
+		os.alert({ type: 'error', text: i18n.ts.somethingHappened });
+	} finally {
+		moreFetching.value = false;
+	}
 }
 
 function onMessage(message: Misskey.entities.ChatMessageLite) {
@@ -421,6 +450,7 @@ onActivated(() => {
 });
 
 onBeforeUnmount(() => {
+	unmounted = true;
 	connection.value?.dispose();
 	window.document.removeEventListener('visibilitychange', onVisibilitychange);
 });

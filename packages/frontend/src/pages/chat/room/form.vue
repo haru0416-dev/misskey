@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div
 	:class="$style.root"
+	data-cy-chat-form
 	@dragover.stop="onDragover"
 	@drop.stop="onDrop"
 >
@@ -143,7 +144,12 @@ function onDrop(ev: DragEvent): void {
 		ev.preventDefault();
 		const droppedFile = ev.dataTransfer.files[0];
 		if (droppedFile != null) {
-			os.launchUploader([droppedFile], { multiple: false });
+			os.launchUploader([droppedFile], { multiple: false }).then((driveFiles) => {
+				const driveFile = driveFiles[0];
+				if (driveFile != null) {
+					file.value = driveFile;
+				}
+			});
 		}
 		return;
 	} else if (ev.dataTransfer.files.length > 1) {
@@ -213,7 +219,8 @@ function onChangeFile() {
 }
 
 function send() {
-	if (!canSend.value) {
+	// 送信中も入力欄は操作できるので、Enter の連打で同じ内容を重ねて送らないよう送信中は受け付けない。
+	if (!canSend.value || sending.value) {
 		return;
 	}
 
