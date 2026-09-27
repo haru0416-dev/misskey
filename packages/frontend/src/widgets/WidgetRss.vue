@@ -11,6 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div class="ekmkgxbj">
 		<MkLoading v-if="fetching"/>
+		<MkResult v-else-if="error && items.length === 0" type="error"/>
 		<MkResult v-else-if="(!items || items.length === 0) && widgetProps.showHeader" type="empty"/>
 		<div v-else :class="$style.feed">
 			<a v-for="item in items" :key="item.link" :class="$style.item" :href="item.link" rel="nofollow noopener" target="_blank" :title="item.title">{{ item.title }}</a>
@@ -70,7 +71,7 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-const { rawItems, fetching } = useRssFeed(widgetProps);
+const { rawItems, fetching, error } = useRssFeed(widgetProps);
 const items = computed(() => rawItems.value.slice(0, widgetProps.maxEntries));
 
 defineExpose<WidgetComponentExpose>({

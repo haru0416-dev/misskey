@@ -13,6 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="fetching" :class="$style.loading">
 			<MkEllipsis/>
 		</div>
+		<div v-else-if="error && items.length === 0" :class="$style.loading">{{ i18n.ts.somethingHappened }}</div>
 		<div v-else>
 			<Transition v-bind="prefer.animation ? { name: $style.change } : {}" mode="default" appear>
 				<MkMarqueeText :key="key" :duration="widgetProps.duration" :reverse="widgetProps.reverse">
@@ -104,7 +105,7 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 );
 
 const key = ref(0);
-const { rawItems, fetching } = useRssFeed(widgetProps, () => {
+const { rawItems, fetching, error } = useRssFeed(widgetProps, () => {
 	key.value++;
 });
 const items = computed(() => {
