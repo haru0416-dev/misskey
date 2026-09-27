@@ -24,7 +24,7 @@ env:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Require the token
         env:
@@ -49,22 +49,37 @@ jobs:
       - name: Update bun.lock
         run: |
           bun install
+          # 更新で古い版だけを使う依存が残ると、Production build の bun dedupe --check で落ちる。
+          bun dedupe
           # 生成した bun.lock が CI と同じ条件で使えることを確かめる。
           bun install --frozen-lockfile
+          bun dedupe --check
+      # zod などの更新で API 定義の出力が変わると、misskey-js の生成物がずれて autogen の検査で落ちる。
+      - name: Regenerate misskey-js types
+        env:
+          # example.yml は setupPassword を環境変数から読む。API 定義を書き出すだけなので固定値でよい
+          TONERIKO_SETUP_PASSWORD: ci-generate-api-json
+          DATABASE_PASSWORD: ci-generate-api-json
+        run: |
+          bun run --filter slacc build
+          cp .config/example.yml .config/default.yml
+          bun run build-misskey-js-with-types
+          rm .config/default.yml
 
       - name: Open or update the pull request
         env:
           GH_TOKEN: ${{ secrets.DEPS_UPDATE_TOKEN }}
         run: |
           cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
-          if git diff --quiet; then
+          if [ -z "$(git status --porcelain)" ]; then
             echo 'No updates.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$BRANCH"
-          git commit -a -q -m 'build(deps): update JS dependencies within their major versions'
+          git add -A
+          git commit -q -m 'build(deps): update JS dependencies within their major versions'
           # 前回の PR が開いたままなら、develop の最新から作り直した内容で置き換える。
           git push --force origin "$BRANCH"
           state=$(gh pr view "$BRANCH" --json state --jq .state 2> /dev/null || true)
