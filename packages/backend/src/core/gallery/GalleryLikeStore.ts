@@ -46,11 +46,13 @@ export async function createGalleryLikeInDatabase(db: MiDrizzleDatabase, data: G
 	await db.insert(galleryLike).values(data);
 }
 
+/** 消した行があれば true。同時に取り消されたときに、減算を 1 回だけにするために使う。 */
 export async function deleteGalleryLikeByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: GalleryLikeRow['id'],
-): Promise<void> {
-	await db.delete(galleryLike).where(eq(galleryLike.id, id));
+): Promise<boolean> {
+	const deleted = await db.delete(galleryLike).where(eq(galleryLike.id, id)).returning({ id: galleryLike.id });
+	return deleted.length === 1;
 }
 
 export async function listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(
