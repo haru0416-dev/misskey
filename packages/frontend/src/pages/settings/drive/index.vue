@@ -414,17 +414,21 @@ async function addImageFramePreset() {
 	);
 }
 
+// 最後に保存できた値。失敗したら、切り替えたスイッチがどちらでもこの値に戻す。
+let savedProfile = { alwaysMarkNsfw: !!$i.alwaysMarkNsfw, autoSensitive: !!$i.autoSensitive };
+
 function saveProfile() {
-	misskeyApi('i/update', {
-		alwaysMarkNsfw: !!alwaysMarkNsfw.value,
-		autoSensitive: !!autoSensitive.value,
-	}).catch((err) => {
+	const next = { alwaysMarkNsfw: !!alwaysMarkNsfw.value, autoSensitive: !!autoSensitive.value };
+	misskeyApi('i/update', next).then(() => {
+		savedProfile = next;
+	}, (err) => {
 		os.alert({
 			type: 'error',
 			title: i18n.ts.error,
 			text: err.message,
 		});
-		alwaysMarkNsfw.value = true;
+		alwaysMarkNsfw.value = savedProfile.alwaysMarkNsfw;
+		autoSensitive.value = savedProfile.autoSensitive;
 	});
 }
 

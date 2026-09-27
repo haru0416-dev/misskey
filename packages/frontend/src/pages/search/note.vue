@@ -237,11 +237,18 @@ if (fetchedUser != null) {
 		user.value = fetchedUser;
 	}
 }
+
+// 指定されたユーザーを取得できなかったときに全体の検索へ切り替えると、そのユーザーの投稿を探したつもりで
+// 全員の投稿を探すことになる。範囲はユーザーのまま (未選択) にして、見つからなかったことを伝える。
+const requestedUserMissing = (props.userId != null || props.username != null) && fetchedUser == null;
+if (requestedUserMissing) {
+	os.alert({ type: 'error', text: i18n.ts.noSuchUser });
+}
 //#endregion
 
 const searchScope = ref<'all' | 'local' | 'server' | 'user'>(
 	(() => {
-		if (user.value != null) {
+		if (user.value != null || requestedUserMissing) {
 			return 'user';
 		}
 		if (noteSearchableScope === 'local') {
