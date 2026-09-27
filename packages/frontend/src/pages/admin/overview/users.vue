@@ -7,6 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="$style.root">
 	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
+		<MkError v-else-if="fetchError" @retry="fetch()"/>
 		<div v-else class="users">
 			<MkA v-for="(user, i) in newUsers" :key="user.id" :to="`/admin/user/${user.id}`" class="user">
 				<MkUserCardMini :user="user"/>
@@ -26,15 +27,23 @@ import { prefer } from '@/preferences.js';
 
 const newUsers = ref<Misskey.entities.UserDetailed[] | null>(null);
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 
 const fetch = async () => {
-	const _newUsers = await misskeyApi('admin/show-users', {
-		limit: 5,
-		sort: '+createdAt',
-		origin: 'local',
-	});
-	newUsers.value = _newUsers;
-	fetching.value = false;
+	try {
+		const _newUsers = await misskeyApi('admin/show-users', {
+			limit: 5,
+			sort: '+createdAt',
+			origin: 'local',
+		});
+		newUsers.value = _newUsers;
+		fetchError.value = false;
+	} catch {
+		fetchError.value = true;
+	} finally {
+		fetching.value = false;
+	}
 };
 
 useInterval(fetch, 1000 * 60, {

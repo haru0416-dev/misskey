@@ -15,7 +15,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<MkButton rounded full @click="emit('showMore')">{{ i18n.ts.showMore }} <i class="ti ti-arrow-right"></i></MkButton>
 		</div>
-		<p v-if="!fetching && notes.length == 0">{{ i18n.ts.nothing }}</p>
+		<MkError v-if="!fetching && fetchError" @retry="fetchNotes()"/>
+		<p v-else-if="!fetching && notes.length == 0">{{ i18n.ts.nothing }}</p>
 	</div>
 </MkContainer>
 </template>
@@ -38,9 +39,12 @@ const emit = defineEmits<{
 }>();
 
 const fetching = ref(true);
+const fetchError = ref(false);
 const notes = ref<Misskey.entities.Note[]>([]);
 
-onMounted(() => {
+function fetchNotes() {
+	fetching.value = true;
+	fetchError.value = false;
 	misskeyApi('users/notes', {
 		userId: props.user.id,
 		withFiles: true,
@@ -48,8 +52,17 @@ onMounted(() => {
 	}).then(_notes => {
 		notes.value = _notes;
 		fetching.value = false;
+	}, () => {
+		// 失敗を「なし」と見分けられるようにする。
+		fetchError.value = true;
+		fetching.value = false;
 	});
+}
+
+onMounted(() => {
+	fetchNotes();
 });
+
 </script>
 
 <style lang="scss" module>

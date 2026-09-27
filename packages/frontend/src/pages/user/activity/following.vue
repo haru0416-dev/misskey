@@ -5,7 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" class="_panel">
-	<MkDataChart :series="series" :ariaLabel="i18n.ts.following" :loading="loading" :height="280"/>
+	<MkError v-if="fetchError" @retry="fetchChart()"/>
+	<MkDataChart v-else :series="series" :ariaLabel="i18n.ts.following" :loading="loading" :height="280"/>
 </div>
 </template>
 
@@ -21,9 +22,18 @@ import type { DataChartSeries } from '@/features/charts/components/MkDataChart.v
 const props = defineProps<{ user: Misskey.entities.User }>();
 const series = ref<DataChartSeries[]>([]);
 const loading = ref(true);
+const fetchError = ref(false);
 
-onMounted(async () => {
-	const raw = await misskeyApi('charts/user/following', { userId: props.user.id, limit: 30, span: 'day' });
+async function fetchChart() {
+	loading.value = true;
+	fetchError.value = false;
+	const raw = await misskeyApi('charts/user/following', { userId: props.user.id, limit: 30, span: 'day' }).catch(() => null);
+	if (raw == null) {
+		// 失敗したまま読み込み中にしない。
+		fetchError.value = true;
+		loading.value = false;
+		return;
+	}
 	const now = new Date();
 	series.value = [
 		{
@@ -50,6 +60,10 @@ onMounted(async () => {
 		},
 	];
 	loading.value = false;
+}
+
+onMounted(() => {
+	fetchChart();
 });
 </script>
 

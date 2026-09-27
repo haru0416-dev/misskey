@@ -7,6 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div>
 	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
+		<MkError v-else-if="fetchError" @retry="fetch()"/>
 		<div v-else :class="$style.instances">
 			<MkA v-for="(instance, i) in instances" :key="instance.id" v-tooltip.mfm.noDelay="`${instance.name}\n${instance.host}\n${instance.softwareName} ${instance.softwareVersion}`" :to="`/instance-info/${instance.host}`" :class="$style.instance">
 				<MkInstanceCardMini :instance="instance"/>
@@ -26,14 +27,22 @@ import { prefer } from '@/preferences.js';
 
 const instances = ref<Misskey.entities.FederationInstance[]>([]);
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 
 const fetch = async () => {
-	const fetchedInstances = await misskeyApi('federation/instances', {
-		sort: '+latestRequestReceivedAt',
-		limit: 6,
-	});
-	instances.value = fetchedInstances;
-	fetching.value = false;
+	try {
+		const fetchedInstances = await misskeyApi('federation/instances', {
+			sort: '+latestRequestReceivedAt',
+			limit: 6,
+		});
+		instances.value = fetchedInstances;
+		fetchError.value = false;
+	} catch {
+		fetchError.value = true;
+	} finally {
+		fetching.value = false;
+	}
 };
 
 useInterval(fetch, 1000 * 60, {

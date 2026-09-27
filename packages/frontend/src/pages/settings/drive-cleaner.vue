@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkSelect v-model="sortModeSelect" :items="sortModeSelectDef">
 		<template #label>{{ i18n.ts.sort }}</template>
 	</MkSelect>
-	<div v-if="!fetching">
+	<div v-if="!fetching && !fetchError">
 		<MkPagination v-slot="{items}" :paginator="paginator">
 			<div class="_gaps">
 				<div
@@ -40,6 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</MkPagination>
 	</div>
+	<MkError v-else-if="fetchError" @retry="fetchDriveInfo()"/>
 	<div v-else>
 		<MkLoading/>
 	</div>
@@ -73,6 +74,7 @@ const paginator = markRaw(new Paginator('drive/files', {
 const capacity = ref<number>(0);
 const usage = ref<number>(0);
 const fetching = ref(true);
+const fetchError = ref(false);
 const {
 	model: sortModeSelect,
 	def: sortModeSelectDef,
@@ -102,9 +104,14 @@ watch(sortModeSelect, () => {
 
 function fetchDriveInfo(): void {
 	fetching.value = true;
+	fetchError.value = false;
 	misskeyApi('drive').then(info => {
 		capacity.value = info.capacity;
 		usage.value = info.usage;
+		fetching.value = false;
+	}, () => {
+		// 失敗したまま読み込み中にせず、再試行できる状態にする。
+		fetchError.value = true;
 		fetching.value = false;
 	});
 }

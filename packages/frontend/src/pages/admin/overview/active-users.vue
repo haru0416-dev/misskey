@@ -5,7 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" class="_panel">
-	<MkDataChart :series="series" :ariaLabel="i18n.ts._charts.activeUsers" :loading="fetching" :height="220"/>
+	<MkError v-if="fetchError" @retry="fetchChart()"/>
+	<MkDataChart v-else :series="series" :ariaLabel="i18n.ts._charts.activeUsers" :loading="fetching" :height="220"/>
 </div>
 </template>
 
@@ -19,16 +20,29 @@ import { toChartSeries } from '@/features/charts/chart-helpers.js';
 import { chartText } from '@/features/charts/chart-i18n.js';
 
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 const series = ref<DataChartSeries[]>([]);
 
-onMounted(async () => {
+async function fetchChart() {
+	fetching.value = true;
+	fetchError.value = false;
 	const now = new Date();
-	const raw = await misskeyApi('charts/active-users', { limit: 7, span: 'day' });
+	const raw = await misskeyApi('charts/active-users', { limit: 7, span: 'day' }).catch(() => null);
+	if (raw == null) {
+		fetchError.value = true;
+		fetching.value = false;
+		return;
+	}
 	series.value = [
 		{ name: chartText('read'), type: 'bar', data: toChartSeries(now, raw.read) },
 		{ name: chartText('write'), type: 'bar', data: toChartSeries(now, raw.write) },
 	];
 	fetching.value = false;
+}
+
+onMounted(() => {
+	fetchChart();
 });
 </script>
 

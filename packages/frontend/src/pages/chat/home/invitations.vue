@@ -27,7 +27,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</MkFolder>
 	</div>
-	<MkResult v-if="!fetching && invitations.length == 0" type="empty" :text="i18n.ts._chat.noInvitations"/>
+	<MkError v-if="!fetching && fetchError" @retry="fetchInvitations()"/>
+	<MkResult v-else-if="!fetching && invitations.length == 0" type="empty" :text="i18n.ts._chat.noInvitations"/>
 	<MkLoading v-if="fetching"/>
 </div>
 </template>
@@ -44,16 +45,23 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 const router = useRouter();
 
 const fetching = ref(true);
+const fetchError = ref(false);
 const invitations = ref<Misskey.entities.ChatRoomInvitation[]>([]);
 
 async function fetchInvitations() {
 	fetching.value = true;
+	fetchError.value = false;
 
-	const res = await misskeyApi('chat/rooms/invitations/inbox');
+	// 失敗を空の一覧として出すと「ありません」に見えるので、再試行できるエラーとして出す。
+	try {
+		const res = await misskeyApi('chat/rooms/invitations/inbox');
 
-	invitations.value = res;
-
-	fetching.value = false;
+		invitations.value = res;
+	} catch {
+		fetchError.value = true;
+	} finally {
+		fetching.value = false;
+	}
 }
 
 async function join(invitation: Misskey.entities.ChatRoomInvitation) {

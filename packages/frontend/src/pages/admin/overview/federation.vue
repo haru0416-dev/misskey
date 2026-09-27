@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div>
 	<MkLoading v-if="fetching"/>
-	<div v-show="!fetching" :class="$style.root">
+	<MkError v-else-if="fetchError" @retry="fetchFederation()"/>
+	<div v-show="!fetching && !fetchError" :class="$style.root">
 		<div v-if="topSubInstancesForPie && topPubInstancesForPie" class="pies">
 			<div class="pie deliver _panel">
 				<div class="title">Sub</div>
@@ -62,9 +63,18 @@ const federationPubActiveDiff = ref<number | null>(null);
 const federationSubActive = ref<number | null>(null);
 const federationSubActiveDiff = ref<number | null>(null);
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 
-onMounted(async () => {
-	const chart = await misskeyApiGet('charts/federation', { limit: 2, span: 'day' });
+async function fetchFederation() {
+	fetching.value = true;
+	fetchError.value = false;
+	const chart = await misskeyApiGet('charts/federation', { limit: 2, span: 'day' }).catch(() => null);
+	if (chart == null) {
+		fetchError.value = true;
+		fetching.value = false;
+		return;
+	}
 	const pubActive = chart.pubActive[0];
 	const previousPubActive = chart.pubActive[1];
 	const subActive = chart.subActive[0];
@@ -97,9 +107,15 @@ onMounted(async () => {
 			})),
 			{ name: '(other)', color: '#80808080', value: res.otherFollowingCount },
 		];
+	}).catch(() => {
+		// 円グラフは補助の表示なので、取れなければ出さない。
 	});
 
 	fetching.value = false;
+}
+
+onMounted(() => {
+	fetchFederation();
 });
 </script>
 

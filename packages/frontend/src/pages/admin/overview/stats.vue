@@ -7,6 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div>
 	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
+		<MkError v-else-if="fetchError" @retry="fetchStats()"/>
 		<div v-else-if="stats != null" :class="$style.root">
 			<div class="item _panel users">
 				<div class="icon"><i class="ti ti-users"></i></div>
@@ -76,26 +77,44 @@ const usersComparedToThePrevDay = ref<number | null>(null);
 const notesComparedToThePrevDay = ref<number | null>(null);
 const onlineUsersCount = ref(0);
 const fetching = ref(true);
+// 失敗したまま読み込み中にせず、再試行できる状態にする。
+const fetchError = ref(false);
 
-onMounted(async () => {
-	const [_stats, _onlineUsersCount] = await Promise.all([
+async function fetchStats() {
+	fetching.value = true;
+	fetchError.value = false;
+	const result = await Promise.all([
 		misskeyApi('stats', {}),
 		misskeyApiGet('get-online-users-count').then(res => res.count),
-	]);
+	]).catch(() => null);
+	if (result == null) {
+		fetchError.value = true;
+		fetching.value = false;
+		return;
+	}
+	const [_stats, _onlineUsersCount] = result;
 	stats.value = _stats;
 	onlineUsersCount.value = _onlineUsersCount;
 
 	misskeyApiGet('charts/users', { limit: 2, span: 'day' }).then(chart => {
 		const previous = chart.local.total[1];
 		usersComparedToThePrevDay.value = previous == null ? null : _stats.originalUsersCount - previous;
+	}).catch(() => {
+		// 前日比は補助の表示なので、取れなければ出さない。
 	});
 
 	misskeyApiGet('charts/notes', { limit: 2, span: 'day' }).then(chart => {
 		const previous = chart.local.total[1];
 		notesComparedToThePrevDay.value = previous == null ? null : _stats.originalNotesCount - previous;
+	}).catch(() => {
+		// 前日比は補助の表示なので、取れなければ出さない。
 	});
 
 	fetching.value = false;
+}
+
+onMounted(() => {
+	fetchStats();
 });
 </script>
 

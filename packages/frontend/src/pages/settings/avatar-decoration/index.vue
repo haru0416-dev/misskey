@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <SearchMarker path="/settings/avatar-decoration" :label="i18n.ts.avatarDecorations" :keywords="['avatar', 'icon', 'decoration']" icon="ti ti-sparkles">
 	<div>
-		<div v-if="!loading" class="_gaps">
+		<div v-if="!loading && !loadError" class="_gaps">
 			<MkInfo>{{ i18n.tsx._profile.avatarDecorationMax({ max: $i.policies.avatarDecorationLimit }) }} ({{ i18n.tsx.remainingN({ n: $i.policies.avatarDecorationLimit - $i.avatarDecorations.length }) }})</MkInfo>
 
 			<MkAvatar :class="$style.avatar" :user="$i" forceShowDecoration/>
@@ -38,6 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</MkFoldableSection>
 		</div>
+		<MkError v-else-if="loadError" @retry="fetchAvatarDecorations()"/>
 		<div v-else>
 			<MkLoading/>
 		</div>
@@ -63,13 +64,24 @@ import { groupAvatarDecorations } from '@/features/users/group-avatar-decoration
 const $i = ensureSignin();
 
 const loading = ref(true);
+const loadError = ref(false);
 const avatarDecorations = ref<Misskey.entities.GetAvatarDecorationsResponse>([]);
 const groupedDecorations = computed(() => groupAvatarDecorations(avatarDecorations.value));
 
-misskeyApi('get-avatar-decorations').then((_avatarDecorations) => {
-	avatarDecorations.value = _avatarDecorations;
-	loading.value = false;
-});
+function fetchAvatarDecorations() {
+	loading.value = true;
+	loadError.value = false;
+	misskeyApi('get-avatar-decorations').then((_avatarDecorations) => {
+		avatarDecorations.value = _avatarDecorations;
+		loading.value = false;
+	}, () => {
+		// 失敗したまま読み込み中にすると、この欄が出ないまま戻らない。
+		loadError.value = true;
+		loading.value = false;
+	});
+}
+
+fetchAvatarDecorations();
 
 function openAttachedDecoration(index: number) {
 	const attachedDecoration = $i.avatarDecorations[index];

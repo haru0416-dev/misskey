@@ -14,7 +14,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<FormSection first>
 				<template #label><SearchLabel>{{ i18n.ts.usageAmount }}</SearchLabel></template>
 
-				<div v-if="!fetching" class="_gaps_m">
+				<MkError v-if="fetchError" @retry="fetchDriveUsage()"/>
+				<div v-else-if="!fetching" class="_gaps_m">
 					<div>
 						<div :class="$style.meter"><div :class="$style.meterValue" :style="meterStyle"></div></div>
 					</div>
@@ -230,6 +231,7 @@ import { genId } from '@/utility/id.js';
 const $i = ensureSignin();
 
 const fetching = ref(true);
+const fetchError = ref(false);
 const usage = ref<number | null>(null);
 const capacity = ref<number | null>(null);
 const uploadFolder = ref<Misskey.entities.DriveFolder | null>(null);
@@ -291,11 +293,21 @@ function changeImageFramePresetsSyncEnabled(value: boolean) {
 	}
 }
 
-misskeyApi('drive').then((info) => {
-	capacity.value = info.capacity;
-	usage.value = info.usage;
-	fetching.value = false;
-});
+function fetchDriveUsage() {
+	fetching.value = true;
+	fetchError.value = false;
+	misskeyApi('drive').then((info) => {
+		capacity.value = info.capacity;
+		usage.value = info.usage;
+		fetching.value = false;
+	}, () => {
+		// 失敗したまま読み込み中にすると、使用量の欄が出ないまま戻らない。
+		fetchError.value = true;
+		fetching.value = false;
+	});
+}
+
+fetchDriveUsage();
 
 if (prefer.uploadFolder) {
 	misskeyApi('drive/folders/show', {
