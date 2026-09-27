@@ -71,7 +71,14 @@ export async function removeAccount(host: string, id: AccountWithToken['id']) {
 	);
 }
 
+// 凍結・削除・トークン失効のように、アカウントがもう使えないと応答が明示した場合だけ使う。
+// それ以外の 4xx (回数制限など) は一時的なことがあるので、保存済みの認証情報を消す理由にしない。
 const isAccountDeleted = Symbol('isAccountDeleted');
+const accountUnusableErrorIds = new Set([
+	'a8c724b3-6e9c-4b46-b1a8-bc3ed6258370', // SUSPENDED
+	'e5b3b9f0-2b8f-4b9f-9c1f-8c5c1b2e1b1a', // USER_IS_DELETED
+	'b0a7f5f8-dc2f-4171-b91f-de88ad238e14', // AUTHENTICATION_FAILED
+]);
 
 type ApiErrorResponse = {
 	error: {
@@ -135,7 +142,7 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 						});
 					}
 
-					fail(isAccountDeleted);
+					fail(accountUnusableErrorIds.has(res.error.id) ? isAccountDeleted : res.error);
 				} else {
 					done(res);
 				}
@@ -191,8 +198,10 @@ export async function refreshCurrentAccount() {
 		})
 		.catch((reason) => {
 			if (reason === isAccountDeleted && isSelectedAccount(me.id, me.token)) {
+				// 外したアカウントのトークンは、removeAccount の直後でもまだ store から読めることがある。
+				// それで再ログインすると同じエラーで止まり、サインアウトもされないので、切り替え先から明示的に除く。
+				const remainingToken = Object.entries(store.accountTokens).find(([key]) => key !== host + '/' + me.id)?.[1];
 				removeAccount(host, me.id);
-				const remainingToken = Object.values(store.accountTokens)[0];
 				if (remainingToken != null) {
 					login(remainingToken);
 				} else {
