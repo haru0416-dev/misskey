@@ -187,6 +187,8 @@ async function processResult(result: QrScanner.ScanResult) {
 			updateLists();
 		})
 		.catch((err) => {
+			// 取得中の印を残すと、同じ QR を読み直しても取り直さない。失敗したら印を外して次の読み取りで試せるようにする。
+			sources.delete(trimmed);
 			tab.value = 'all';
 			throw err;
 		});

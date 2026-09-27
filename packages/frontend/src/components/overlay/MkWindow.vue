@@ -72,8 +72,13 @@ const minWidth = 250;
 
 function dragListen(fn: (ev: PointerEvent) => void) {
 	window.addEventListener('pointermove', fn);
+	// 終わりを知らせるイベントは 3 つのうちどれか 1 つしか来ないので、来なかった残りもここで外す
+	// (once だけでは、ドラッグのたびに発火しなかったリスナーが window に残る)。
 	const clear = () => {
 		dragClear(fn);
+		window.removeEventListener('pointerup', clear);
+		window.removeEventListener('pointercancel', clear);
+		window.removeEventListener('blur', clear);
 	};
 	window.addEventListener('pointerup', clear, { once: true });
 	window.addEventListener('pointercancel', clear, { once: true });

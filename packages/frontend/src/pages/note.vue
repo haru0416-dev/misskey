@@ -116,6 +116,8 @@ function fetchNote() {
 	showPrev.value = false;
 	showNext.value = false;
 	note.value = null;
+	// 再試行のときは前のエラーを消して読み込み中を出す (消さないとエラーのまま再試行が見えない)。
+	error.value = null;
 
 	if (CTX_NOTE && CTX_NOTE.id === props.noteId) {
 		note.value = CTX_NOTE;

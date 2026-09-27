@@ -72,6 +72,8 @@ const path = computed(() => props.announcementId);
 
 function _fetch_() {
 	announcement.value = null;
+	// 再試行のときは前のエラーを消して読み込み中を出す。
+	error.value = null;
 	misskeyApi('announcements/show', {
 		announcementId: props.announcementId,
 	})
