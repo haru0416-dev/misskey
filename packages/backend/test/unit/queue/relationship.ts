@@ -221,6 +221,25 @@ describe('hono-queue-relationship', () => {
 		expect(following).toBeNull();
 	});
 
+	test('handleQueueRelationshipFollow はリモートフォロワー側のブロックを外してからフォローを作る', async () => {
+		// リモートの Undo Block が届かないまま相手がフォローしてきたとき、残っている相手側のブロックを消す。
+		const follower = await createTestRemoteUser(deps, 'honoqueuerel-remote-unblock.example.com');
+		const followee = await createTestUser(deps);
+
+		await createBlockingInDatabase(deps.db, {
+			id: genId(),
+			blockerId: follower.id,
+			blockeeId: followee.id,
+		});
+
+		await handleQueueRelationshipFollow(deps, { from: follower, to: followee, silent: true });
+
+		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, follower.id, followee.id)).toBeNull();
+		expect(
+			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id),
+		).not.toBeNull();
+	});
+
 	test('handleQueueRelationshipFollow はローカルフォロワーがブロックされていれば例外を投げる', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
