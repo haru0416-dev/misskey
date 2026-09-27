@@ -208,6 +208,24 @@ describe('Mute', () => {
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
 		});
+
+		// 通知を受けたあとで相手をミュートすると、最新のページが全件除外されることがある。空のページは
+		// クライアントに「これ以上ない」と受け取られ、その先の見られる通知が表示されなくなる。
+		test('最新の通知がすべてミュート相手のものでも、その先の通知を返す', async () => {
+			const dave = await signup({ username: `daven${Date.now() % 100000}` });
+			const aliceNote = await post(alice, { text: 'hi' });
+			const bobReply = await post(bob, { text: '@alice visible', replyId: aliceNote.id });
+			for (let i = 0; i < 3; i++) await post(dave, { text: `@alice later muted ${i}`, replyId: aliceNote.id });
+			await api('mute/create', { userId: dave.id }, alice);
+
+			const res = await api('i/notifications', { limit: 2 }, alice);
+
+			expect(res.status).toBe(200);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === dave.id)).toBe(false);
+			expect(res.body.some((notification) => 'note' in notification && notification.note?.id === bobReply.id)).toBe(
+				true,
+			);
+		});
 	});
 
 	describe('Notification (Grouped)', () => {
@@ -307,6 +325,24 @@ describe('Mute', () => {
 
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
+		});
+
+		// 通知を受けたあとで相手をミュートすると、最新のページが全件除外されることがある。空のページは
+		// クライアントに「これ以上ない」と受け取られ、その先の見られる通知が表示されなくなる。
+		test('最新の通知がすべてミュート相手のものでも、その先の通知を返す', async () => {
+			const dave = await signup({ username: `daveg${Date.now() % 100000}` });
+			const aliceNote = await post(alice, { text: 'hi' });
+			const bobReply = await post(bob, { text: '@alice visible', replyId: aliceNote.id });
+			for (let i = 0; i < 3; i++) await post(dave, { text: `@alice later muted ${i}`, replyId: aliceNote.id });
+			await api('mute/create', { userId: dave.id }, alice);
+
+			const res = await api('i/notifications-grouped', { limit: 2 }, alice);
+
+			expect(res.status).toBe(200);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === dave.id)).toBe(false);
+			expect(res.body.some((notification) => 'note' in notification && notification.note?.id === bobReply.id)).toBe(
+				true,
+			);
 		});
 	});
 });
