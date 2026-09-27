@@ -51,14 +51,26 @@ const _permissions = computed(() => {
 const authRoot = useTemplateRef('authRoot');
 
 async function onAccept(token: string) {
+	// 戻り先が使えない URL なら、トークンを発行する前に止める。発行後に失敗を表示すると、
+	// 画面は失敗なのにトークンは有効で、セッションを知るアプリが受け取れてしまう。
+	let redirectTo: string | null = null;
+	if (props.callback && props.callback !== '') {
+		try {
+			redirectTo = setAuthCallbackUrlParameter(props.callback, 'session', props.session);
+		} catch {
+			authRoot.value?.showUI('failed');
+			return;
+		}
+	}
+
 	await misskeyApi('miauth/gen-token', {
 		session: props.session,
 		...(props.name === undefined ? {} : { name: props.name }),
 		...(props.icon === undefined ? {} : { iconUrl: props.icon }),
 		permission: _permissions.value,
 	}, token).then(() => {
-		if (props.callback && props.callback !== '') {
-			window.location.href = setAuthCallbackUrlParameter(props.callback, 'session', props.session);
+		if (redirectTo != null) {
+			window.location.href = redirectTo;
 		} else {
 			authRoot.value?.showUI('success');
 		}
