@@ -24,7 +24,7 @@
 - Fix: API ドキュメント (`/api-doc`) の表示ライブラリを版と SRI で固定し、CDN の更新で予告なく表示が変わらないように
 - Change: 製品名を Erebia から Toneriko へ変更（アイコン・ワードマーク・既定テーマ名・nodeinfo の `software.name` を `toneriko` に、初期設定用の環境変数を `TONERIKO_SETUP_PASSWORD` に、紹介ページを `/about-toneriko` に変更）
 - Enhance: ノートの翻訳で CW も翻訳するように
-- Change: 依存パッケージを更新 (`vue` 3.5.43 / `@microsoft/api-extractor` 7.59.1 / `@testing-library/user-event` 14.6.7 / `vitest-websocket-mock` 0.8.0、GitHub Actions の `docker/build-push-action` 7.4.0 / `docker/setup-buildx-action` 4.4.1 / `actions/upload-artifact` v7)
+- Change: 依存パッケージを更新 (`vue` 3.5.43 / `@microsoft/api-extractor` 7.59.1 / `@testing-library/user-event` 14.6.7 / `vitest-websocket-mock` 0.8.0、GitHub Actions の `docker/build-push-action` 7.4.0 / `docker/setup-buildx-action` 4.4.1 / `actions/upload-artifact` v7 / `actions/checkout` 7.0.1 / `actions/cache` 6.1.0)
 - Fix: MFMのパースで、閉じていない `[` `\(` `\[` `<center>` などが並ぶ本文の処理時間が文字数の2乗で増え、表示中のクライアントが止まっていた問題を修正（8,192字の `[` で 8.8 秒→9 ms）
 - Fix: 依存パッケージの既知脆弱性13件（high 5・moderate 6・low 2）を修正（hono 4.13.8 / sharp 0.35.4 / nodemailer 9.1.1 / exifreader 4.45.0 に更新し、間接依存の joi 17.13.8 / js-yaml 4.3.2 / smol-toml 1.8.0 と sharp を overrides で固定。`bun audit` の指摘をゼロに）
 - Fix: MFMのパースで、数字や記号の多い長い行の処理時間が文字数の2乗で増えていた問題を修正（検索構文の行末判定を行頭以外でも行っていた。1,088字で1文字あたり7.3µs→0.1µs）

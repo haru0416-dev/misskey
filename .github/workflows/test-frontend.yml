@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           submodules: true
       - name: Setup Bun
@@ -59,7 +59,7 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
@@ -93,7 +93,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           submodules: true
       - name: Setup Bun
@@ -101,7 +101,7 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
@@ -146,7 +146,7 @@ jobs:
           - 56312:6379
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           submodules: true
       - name: Setup Bun
@@ -154,7 +154,7 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: Cache bun install cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
