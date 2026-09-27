@@ -4,8 +4,9 @@
  */
 
 import * as dns from 'node:dns';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import type { Server } from 'node:http';
+import { connect } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
@@ -157,4 +158,102 @@ describe('core:net:HttpRequestService の接続先固定', () => {
 		// サーバーには 1 度も届かない。
 		expect(hits).toStrictEqual([]);
 	});
+});
+
+// proxy 経由でも、proxy へ渡す宛先を検査した IP にする。ホスト名のまま渡すと proxy が改めて名前を引き、
+// 検査後に応答が変われば検査していないアドレスへ繋がりうる。proxy が受け取った宛先を記録して確かめる。
+describe('core:net:HttpRequestService の proxy 経由の接続先固定', () => {
+	let target: Server;
+	let proxy: Server;
+	let targetPort = 0;
+	let proxyPort = 0;
+	const proxyTargets: string[] = [];
+	const hosts: string[] = [];
+
+	beforeAll(async () => {
+		target = createServer((req, res) => {
+			hosts.push(req.headers.host ?? '');
+			res.end('via proxy');
+		});
+		// 絶対 URI の GET を中継するだけの最小の proxy。宛先は要求された URI のまま (名前解決も proxy 任せ)。
+		proxy = createServer((req, res) => {
+			proxyTargets.push(req.url ?? '');
+			const upstream = new URL(req.url ?? '');
+			const forwarded = httpRequest(
+				{
+					host: upstream.hostname,
+					port: upstream.port,
+					path: upstream.pathname + upstream.search,
+					method: req.method,
+					headers: req.headers,
+				},
+				(upstreamRes) => {
+					res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+					upstreamRes.pipe(res);
+				},
+			);
+			forwarded.on('error', () => res.writeHead(502).end());
+			req.pipe(forwarded);
+		});
+		// agent 経由 (hpagent) は http の宛先にも CONNECT でトンネルを張る。
+		proxy.on('connect', (req, clientSocket, head) => {
+			proxyTargets.push(`CONNECT ${req.url ?? ''}`);
+			const [host, port] = (req.url ?? '').split(':');
+			const upstream = connect(Number(port), host!, () => {
+				clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+				upstream.write(head);
+				upstream.pipe(clientSocket);
+				clientSocket.pipe(upstream);
+			});
+			upstream.on('error', () => clientSocket.destroy());
+			clientSocket.on('error', () => upstream.destroy());
+		});
+		await new Promise<void>((r) => target.listen(0, '127.0.0.1', r));
+		await new Promise<void>((r) => proxy.listen(0, '127.0.0.1', r));
+		targetPort = (target.address() as AddressInfo).port;
+		proxyPort = (proxy.address() as AddressInfo).port;
+	});
+
+	afterAll(async () => {
+		await new Promise<void>((r) => target.close(() => r()));
+		await new Promise<void>((r) => proxy.close(() => r()));
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+		proxyTargets.length = 0;
+		hosts.length = 0;
+	});
+
+	test.each([false, true])(
+		'proxy には検査した IP を宛先として渡し、Host は元のホスト名にする (agent: %s)',
+		async (useAgent) => {
+			vi.stubEnv('NODE_ENV', 'production');
+			vi.spyOn(dns.promises, 'lookup').mockImplementation((async () => [
+				{ address: '127.0.0.1', family: 4 },
+			]) as unknown as typeof dns.promises.lookup);
+			const config = loadConfig();
+			const service = createHttpRequestService(
+				{
+					...config,
+					outboundNetwork: {
+						...config.outboundNetwork,
+						privateNetworkAccess: { ...config.outboundNetwork.privateNetworkAccess, allowedNetworks: ['127.0.0.0/8'] },
+						proxy: { ...config.outboundNetwork.proxy, url: `http://127.0.0.1:${proxyPort}`, bypassHosts: [] },
+					},
+				} as unknown as typeof config,
+				useAgent,
+			);
+
+			const res = await service.send(`http://pinned.test:${targetPort}/via`);
+			await expect(res.text()).resolves.toBe('via proxy');
+			// fetch は絶対 URI、agent は CONNECT で宛先を渡す。どちらもホスト名ではなく検査した IP になる。
+			expect(proxyTargets).toStrictEqual([
+				useAgent ? `CONNECT 127.0.0.1:${targetPort}` : `http://127.0.0.1:${targetPort}/via`,
+			]);
+			expect(hosts).toStrictEqual([`pinned.test:${targetPort}`]);
+			service.dispose?.();
+		},
+	);
 });

@@ -281,21 +281,20 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 			}
 			let allowedAddresses = await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
-			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
 			const proxyUrl = config.outboundNetwork.proxy.url;
 			const useProxy =
 				proxyUrl != null && !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
-			if (agentClient && !useProxy && allowedAddresses && config.outboundNetwork.addressFamily !== 'dualStack') {
+			if (agentClient && allowedAddresses && config.outboundNetwork.addressFamily !== 'dualStack') {
 				const kind = config.outboundNetwork.addressFamily;
 				allowedAddresses = allowedAddresses.filter((address) => ipaddr.parse(address).kind() === kind);
 				if (allowedAddresses.length === 0) throw new Error(`No ${kind} address for ${currentUrl.hostname}`);
 			}
 
-			// proxy 経由では宛先解決を proxy が行うので、IP 固定はしない (できない)。
+			// proxy 経由でも検査した IP を宛先にする。ホスト名のまま渡すと proxy が改めて名前を引き、
+			// 検査後に DNS の応答が変われば検査していない (内部の) アドレスへ繋がりうる。
+			// ホスト名は Host ヘッダと TLS の SNI・証明書検証に残す (http は絶対 URI、https は CONNECT の宛先が IP になる)。
 			const pinned =
-				!useProxy && allowedAddresses != null && allowedAddresses.length > 0
-					? pinToAddress(currentUrl, allowedAddresses[0]!)
-					: null;
+				allowedAddresses != null && allowedAddresses.length > 0 ? pinToAddress(currentUrl, allowedAddresses[0]!) : null;
 
 			const init: RequestInit & { proxy?: string; tls?: { serverName: string } } = {
 				method,
