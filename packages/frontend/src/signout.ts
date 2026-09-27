@@ -20,7 +20,9 @@ export async function signout() {
 	waiting();
 
 	if (store.enablePreferencesAutoCloudBackup) {
-		await cloudBackup();
+		// バックアップは送れれば送るだけで、失敗 (トークン失効・通信の失敗・名前の無いプロファイル) でも
+		// サインアウトは続ける。ここで止まると待機表示のまま画面が操作できず、再読込でも同じ失敗を繰り返す。
+		await cloudBackup().catch(() => {});
 	}
 
 	localStorage.clear();
