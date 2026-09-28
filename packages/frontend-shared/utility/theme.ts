@@ -4,7 +4,6 @@
  */
 
 import tinycolor from 'tinycolor2';
-import JSON5 from 'json5';
 import lightTheme from '@shared/themes/_light.json5';
 import darkTheme from '@shared/themes/_dark.json5';
 import type { BundledTheme } from 'shiki/themes';
@@ -243,33 +242,32 @@ export function validateTheme(theme: unknown): theme is Theme {
 	return true;
 }
 
-export function parseThemeCode(code: string): Theme {
-	let theme;
-
-	try {
-		theme = JSON5.parse(code);
-	} catch (_) {
-		throw new Error('Failed to parse theme json', { cause: _ });
-	}
-	if (!validateTheme(theme)) {
+/** 検証とコンパイルを通った値だけを Theme として返す。 */
+export function parseThemeValue(value: unknown): Theme {
+	if (!validateTheme(value)) {
 		throw new Error('This theme is invaild');
 	}
 	try {
-		compile(theme);
+		compile(value);
 	} catch (_) {
 		throw new Error('This theme is invaild', { cause: _ });
 	}
 
-	return theme;
+	return value;
 }
 
-export function parseThemeOrNull(code: string | null | undefined): Theme | null {
-	if (code == null) {
+/**
+ * サーバーが渡す既定テーマ (meta の defaultLightTheme / defaultDarkTheme) を読む。サーバーが JSON5 から JSON に
+ * 変換して渡すので JSON として読み、起動時の読み込みに JSON5 (gzip で約 10 KB) を乗せない。
+ * 利用者が書いたテーマは theme-code.ts で読む。
+ */
+export function parseThemeJsonOrNull(json: string | null | undefined): Theme | null {
+	if (json == null) {
 		return null;
 	}
 
 	try {
-		return parseThemeCode(code);
+		return parseThemeValue(JSON.parse(json));
 	} catch {
 		return null;
 	}

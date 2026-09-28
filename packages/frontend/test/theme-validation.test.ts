@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { compile, getBuiltinThemes, parseThemeCode, parseThemeOrNull, validateTheme } from '@shared/utility/theme.js';
+import { compile, getBuiltinThemes, parseThemeJsonOrNull, validateTheme } from '@shared/utility/theme.js';
+import { parseThemeCode, parseThemeOrNull } from '@shared/utility/theme-code.js';
 import type { Theme } from '@shared/utility/theme.js';
 
 const validTheme = {
@@ -99,5 +100,19 @@ describe('theme validation', () => {
 
 		expect(() => parseThemeCode(code)).toThrow('This theme is invaild');
 		expect(parseThemeOrNull(code)).toBeNull();
+	});
+});
+
+// 起動時はサーバーが JSON に変換した既定テーマを読む。JSON5 を読み込まずに、同じ検証を通す。
+describe('parseThemeJsonOrNull', () => {
+	test('reads a theme delivered as JSON', () => {
+		expect(parseThemeJsonOrNull(JSON.stringify(validTheme))).toStrictEqual(validTheme);
+	});
+
+	test('returns null for malformed JSON, invalid themes and missing values', () => {
+		expect(parseThemeJsonOrNull('{')).toBeNull();
+		expect(parseThemeJsonOrNull(JSON.stringify({ ...validTheme, props: null }))).toBeNull();
+		expect(parseThemeJsonOrNull(null)).toBeNull();
+		expect(parseThemeJsonOrNull(undefined)).toBeNull();
 	});
 });

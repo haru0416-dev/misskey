@@ -6,7 +6,7 @@
 import { ref, nextTick } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { version } from '@shared/utility/config.js';
-import { getBuiltinThemes, parseThemeCode, themeProps, compile } from '@shared/utility/theme.js';
+import { getBuiltinThemes, themeProps, compile } from '@shared/utility/theme.js';
 import type { Theme, CompiledTheme } from '@shared/utility/theme.js';
 import { deepClone } from '@/utility/clone.js';
 import { miLocalStorage } from '@/local-storage.js';
@@ -211,6 +211,8 @@ export async function removeTheme(theme: Theme): Promise<void> {
 }
 
 export async function installTheme(code: string): Promise<void> {
+	// JSON5 を扱うので、起動時の読み込みに乗せないよう導入のときだけ読み込む。
+	const { parseThemeCode } = await import('@shared/utility/theme-code.js');
 	const theme = parseThemeCode(code);
 	if (theme == null) {
 		return;

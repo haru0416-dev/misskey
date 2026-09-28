@@ -18,7 +18,7 @@ import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-dark.json5';
 import { MediaProxy } from '@shared/utility/media-proxy.js';
 import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
-import { parseThemeOrNull } from '@shared/utility/theme.js';
+import { parseThemeJsonOrNull } from '@shared/utility/theme.js';
 import { applyTheme } from '@/theme.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { DI } from '@/di.js';
@@ -40,8 +40,8 @@ if (_DEV_) {
 //#endregion
 
 //#region テーマ
-const lightTheme = parseThemeOrNull(serverMetadata.defaultLightTheme) ?? defaultLightTheme;
-const darkTheme = parseThemeOrNull(serverMetadata.defaultDarkTheme) ?? defaultDarkTheme;
+const lightTheme = parseThemeJsonOrNull(serverMetadata.defaultLightTheme) ?? defaultLightTheme;
+const darkTheme = parseThemeJsonOrNull(serverMetadata.defaultDarkTheme) ?? defaultDarkTheme;
 
 if (embedParams.colorMode === 'dark') {
 	applyTheme(darkTheme);
