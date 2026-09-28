@@ -37,6 +37,30 @@ import { baseWorkerOptions, QUEUE } from '@/queue/const.js';
 
 const waitForNextPoll = async () => await new Promise((resolve) => setTimeout(resolve, 1100));
 
+/**
+ * outbox 全体の件数を読む。件数は他のファイルのテストが残した行でもずれるので、検査の失敗メッセージに
+ * 今ある行を添えて出所を追えるようにする (シャッフル実行で 1 度だけ pending が 2 件多く、再現しなかった)。
+ */
+async function readOutboxStats(db: RuntimeDependencies['db']) {
+	const stats = await getQueueOutboxStats(db);
+	const rows = await db
+		.select({
+			id: queueOutbox.id,
+			queue: queueOutbox.queue,
+			name: queueOutbox.name,
+			kind: queueOutbox.kind,
+			state: queueOutbox.state,
+			coordinatorId: queueOutbox.coordinatorId,
+			leaseToken: queueOutbox.leaseToken,
+			availableAt: queueOutbox.availableAt,
+			createdAt: queueOutbox.createdAt,
+			data: queueOutbox.data,
+		})
+		.from(queueOutbox);
+	const context = `queue_outbox rows: ${JSON.stringify(rows).slice(0, 4000)}`;
+	return { stats, context };
+}
+
 function deliveryInput(userId: string, host = 'remote.example.test') {
 	return {
 		name: host,
@@ -83,7 +107,8 @@ describe('queue outbox', () => {
 		const job = await runtime.dbQueue.getJob(`outbox-${outboxId}`);
 		expect(job?.data).toEqual({ user: { id: 'queue-outbox-test-user' }, soft: true });
 		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
-		expect(await getQueueOutboxStats(runtime.db)).toEqual({
+		const { stats, context } = await readOutboxStats(runtime.db);
+		expect(stats, context).toEqual({
 			pending: 0,
 			deadLetter: 0,
 			deliveryFailed: 0,
@@ -815,8 +840,8 @@ describe('queue outbox', () => {
 		// 生 sql で timestamptz を受けると文字列で返り、統計を読む admin/queue の endpoint が 500 になる。
 		const outboxId = await enqueueDeliverJobInOutbox(runtime.db, deliveryInput('queue-outbox-stats-user'));
 		try {
-			const stats = await getQueueOutboxStats(runtime.db);
-			expect(stats.pending).toBe(1);
+			const { stats, context } = await readOutboxStats(runtime.db);
+			expect(stats.pending, context).toBe(1);
 			expect(typeof stats.oldestPendingAgeMs).toBe('number');
 			expect(stats.oldestPendingAgeMs).toBeGreaterThanOrEqual(0);
 		} finally {
@@ -876,7 +901,8 @@ describe('queue outbox', () => {
 
 		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(500);
 		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(100);
-		expect((await getQueueOutboxStats(runtime.db)).pending).toBe(0);
+		const { stats, context } = await readOutboxStats(runtime.db);
+		expect(stats.pending, context).toBe(0);
 		await Promise.all(outboxIds.map(async (id) => await (await runtime.dbQueue.getJob(`outbox-${id}`))?.remove()));
 	});
 });
