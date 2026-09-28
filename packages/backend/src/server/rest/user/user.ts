@@ -217,6 +217,20 @@ async function resolveUsersFromSrcsForApi(
 	return srcs.map((src) => (typeof src === 'object' ? src : userById.get(src)!));
 }
 
+/**
+ * srcs を MiUser へ解決する。一覧のクエリの後で削除が確定したユーザーは null にする (並びは srcs と同じ)。
+ * ユーザーの削除は user 行の DELETE で、プロフィールやフォロー等も同じ文の cascade で消える。
+ */
+async function resolveUsersOrNullFromSrcsForApi(
+	deps: UserPackingDependencies,
+	srcs: (MiUser['id'] | MiUser)[],
+): Promise<(MiUser | null)[]> {
+	const ids = [...new Set(srcs.filter((src): src is string => typeof src === 'string'))];
+	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
+	const userById = new Map(fetchedUsers.map((user) => [user.id, user]));
+	return srcs.map((src) => (typeof src === 'object' ? src : (userById.get(src) ?? null)));
+}
+
 async function populateUserEmojisManyForApi(
 	deps: UserPackingDependencies,
 	users: MiUser[],
@@ -372,15 +386,24 @@ export async function packUserDetailedNotMeForApi(
 	return packUserDetailedNotMeCoreForApi(deps, user, profile, memo, extras);
 }
 
+/**
+ * srcs と同じ並びで詳細を返す。一覧のクエリの後で削除が確定したユーザー (行もプロフィールも無い) は null にするので、
+ * 呼び出し側はその要素 (と対応する関係の行) を返さない。
+ */
 export async function packUserDetailedNotMeManyForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me?: { id: MiUser['id'] } | null,
-): Promise<UserDetailedNotMeApiResponse[]> {
-	const users = await resolveUsersFromSrcsForApi(deps, srcs);
-	const userIds = [...new Set(users.map((user) => user.id))];
-	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, userIds);
+): Promise<(UserDetailedNotMeApiResponse | null)[]> {
+	const resolved = await resolveUsersOrNullFromSrcsForApi(deps, srcs);
+	const candidates = resolved.filter((user) => user != null);
+	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, [
+		...new Set(candidates.map((user) => user.id)),
+	]);
 	const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
+	// プロフィールはユーザーと同じトランザクションで作られるので、無ければ削除済み。
+	const users = candidates.filter((user) => profileByUserId.has(user.id));
+	const userIds = [...new Set(users.map((user) => user.id))];
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id, userIds) : null;
 
 	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
@@ -451,10 +474,9 @@ export async function packUserDetailedNotMeManyForApi(
 
 	const avatarDecorationsByUserId = await buildApiAvatarDecorations(deps, users);
 
-	return await Promise.all(
+	const packed = await Promise.all(
 		users.map(async (user) => {
-			const profile =
-				profileByUserId.get(user.id) ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
+			const profile = profileByUserId.get(user.id)!;
 			const pins = pinsByUserId.get(user.id) ?? [];
 			const hasSecurityKey =
 				me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
@@ -488,6 +510,8 @@ export async function packUserDetailedNotMeManyForApi(
 			);
 		}),
 	);
+	const packedById = new Map(packed.map((user) => [user.id, user]));
+	return resolved.map((user) => (user == null ? null : (packedById.get(user.id) ?? null)));
 }
 
 export async function resolveAlsoKnownAsForApi(
@@ -805,31 +829,28 @@ export async function packUserDetailedForApi(
 	return await packUserDetailedNotMeForApi(deps, user, me);
 }
 
+/** packUserDetailedNotMeManyForApi と同じく srcs の並びで返し、削除が確定したユーザーは null にする。 */
 export async function packUserDetailedManyForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me: { id: MiUser['id'] } | null | undefined,
-): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
+): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse | null)[]> {
 	if (me == null) {
 		return await packUserDetailedNotMeManyForApi(deps, srcs);
 	}
 
-	const users = await resolveUsersFromSrcsForApi(deps, srcs);
-	const meIndex = users.findIndex((user) => user.id === me.id);
-	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
+	const isMe = (src: MiUser['id'] | MiUser) => (typeof src === 'object' ? src.id : src) === me.id;
+	const others = srcs.filter((src) => !isMe(src));
 	const packedOthers = await packUserDetailedNotMeManyForApi(deps, others, me);
-
-	if (meIndex === -1) {
+	const meSrc = srcs.find(isMe);
+	if (meSrc == null) {
 		return packedOthers;
 	}
 
-	const packedMe = await packMeDetailedForApi(deps, users[meIndex]!, { includeSecrets: false });
-	const result: (MeDetailedApiResponse | UserDetailedNotMeApiResponse)[] = [];
+	const meUser = typeof meSrc === 'object' ? meSrc : await fetchUserByIdFromDatabase(deps.db, me.id);
+	const packedMe = meUser != null ? await packMeDetailedForApi(deps, meUser, { includeSecrets: false }) : null;
 	let otherIndex = 0;
-	for (let i = 0; i < users.length; i++) {
-		result.push(i === meIndex ? packedMe : packedOthers[otherIndex++]!);
-	}
-	return result;
+	return srcs.map((src) => (isMe(src) ? packedMe : (packedOthers[otherIndex++] ?? null)));
 }
 
 export const pinnedUsersParamDef = z.object({});
@@ -845,7 +866,7 @@ export async function handleApiPinnedUsers(
 		.map((account) => userByAccount.get(`${account.username.toLowerCase()}@${account.host ?? ''}`))
 		.filter((user) => user != null);
 
-	return await packUserDetailedManyForApi(deps, orderedUsers, me);
+	return (await packUserDetailedManyForApi(deps, orderedUsers, me)).filter((user) => user != null);
 }
 
 export type ApiUsersShowDependencies = UserPackingDependencies &
@@ -919,10 +940,7 @@ export async function handleApiUsersShow(
 			}
 		}
 
-		const packedMap = new Map(
-			(await packUserDetailedManyForApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]),
-		);
-		return ordered.map((u) => packedMap.get(u.id)!);
+		return (await packUserDetailedManyForApi(deps, ordered, me)).filter((user) => user != null);
 	}
 
 	let user: MiUser | null;
@@ -1145,7 +1163,9 @@ export async function handleApiUsersSearch(
 		origin: params.origin,
 	});
 
-	return params.detail ? await packUserDetailedManyForApi(deps, users, me) : await packUserLiteManyForApi(deps, users);
+	return params.detail
+		? (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null)
+		: await packUserLiteManyForApi(deps, users);
 }
 
 function buildBaseUserSearchConditionsForApi(
@@ -1267,7 +1287,9 @@ export async function handleApiUsersSearchByUsernameAndHost(
 	}
 
 	const ids = [...resultSet].slice(0, limit);
-	return params.detail ? await packUserDetailedManyForApi(deps, ids, me) : await packUserLiteManyForApi(deps, ids);
+	return params.detail
+		? (await packUserDetailedManyForApi(deps, ids, me)).filter((user) => user != null)
+		: await packUserLiteManyForApi(deps, ids);
 }
 
 export const usersRecommendationParamDef = z.object({
@@ -1286,7 +1308,7 @@ export async function handleApiUsersRecommendation(
 		updatedAfter: new Date(Date.now() - 7 * DAY),
 	});
 
-	return await packUserDetailedManyForApi(deps, users, me);
+	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
 }
 
 export const usersGetFrequentlyRepliedUsersParamDef = z.object({
@@ -1314,18 +1336,11 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 	const topRepliedUserIds = repliedUsers.map((row) => row.userId);
 	const repliedUserCounts = new Map(repliedUsers.map((row) => [row.userId, row.count]));
 
-	const userMap = new Map(
-		(await packUserDetailedManyForApi(deps, topRepliedUserIds, me)).map((u) => [(u as { id: string }).id, u]),
-	);
-
-	return await Promise.all(
-		topRepliedUserIds.map(async (userId) => ({
-			user:
-				userMap.get(userId) ??
-				(await packUserDetailedForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me)),
-			weight: repliedUserCounts.get(userId)! / peak,
-		})),
-	);
+	const packedUsers = await packUserDetailedManyForApi(deps, topRepliedUserIds, me);
+	return topRepliedUserIds.flatMap((userId, index) => {
+		const user = packedUsers[index];
+		return user == null ? [] : [{ user, weight: repliedUserCounts.get(userId)! / peak }];
+	});
 }
 
 export const usersParamDef = z.object({
@@ -1355,7 +1370,7 @@ export async function handleApiUsers(
 		}),
 	);
 
-	return await packUserDetailedManyForApi(deps, users, me);
+	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
 }
 
 export const usersUpdateMemoParamDef = z.object({

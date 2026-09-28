@@ -221,23 +221,35 @@ async function packAbuseUserReportsForApi(
 		...reports.map((report) => report.assignee ?? report.assigneeId).filter((x) => x != null),
 	];
 	const users = userRefs.length > 0 ? await packUserDetailedNotMeManyForApi(deps, userRefs) : [];
-	const userMap = new Map(users.map((user) => [String(user.id), user]));
+	const userMap = new Map(users.filter((user) => user != null).map((user) => [String(user.id), user]));
 
-	return reports.map((report) => ({
-		id: report.id,
-		createdAt: parseId(report.id).date.toISOString(),
-		comment: report.comment,
-		resolved: report.resolved,
-		reporterId: report.reporterId,
-		targetUserId: report.targetUserId,
-		assigneeId: report.assigneeId,
-		reporter: userMap.get(report.reporterId)!,
-		targetUser: userMap.get(report.targetUserId)!,
-		assignee: report.assigneeId == null ? null : userMap.get(report.assigneeId)!,
-		forwarded: report.forwarded,
-		resolvedAs: report.resolvedAs,
-		moderationNote: report.moderationNote,
-	}));
+	// 一覧のクエリの後で削除が確定したユーザーは外部キーに合わせる: 通報者・対象が消えた通報は消える (cascade)、
+	// 担当者が消えた通報は担当者が空になる (set null)。
+	return reports.flatMap((report) => {
+		const reporter = userMap.get(report.reporterId);
+		const targetUser = userMap.get(report.targetUserId);
+		if (reporter == null || targetUser == null) {
+			return [];
+		}
+		const assignee = report.assigneeId == null ? null : (userMap.get(report.assigneeId) ?? null);
+		return [
+			{
+				id: report.id,
+				createdAt: parseId(report.id).date.toISOString(),
+				comment: report.comment,
+				resolved: report.resolved,
+				reporterId: report.reporterId,
+				targetUserId: report.targetUserId,
+				assigneeId: assignee == null ? null : report.assigneeId,
+				reporter,
+				targetUser,
+				assignee,
+				forwarded: report.forwarded,
+				resolvedAs: report.resolvedAs,
+				moderationNote: report.moderationNote,
+			},
+		];
+	});
 }
 
 export async function handleApiAdminAbuseUserReports(

@@ -218,5 +218,5 @@ export async function handleApiHashtagsUsers(
 		origin: params.origin,
 	});
 
-	return await packUserDetailedManyForApi(deps, users, me);
+	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
 }

@@ -111,7 +111,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 		}
 		const ids = [absent.id, target.id, target.id];
 		const packed = await packUserDetailedNotMeManyForApi(deps, ids, viewer);
-		expect(packed.map((item) => ({ id: item.id, memo: item['memo'] }))).toEqual([
+		expect(packed.map((item) => ({ id: item!.id, memo: item!['memo'] }))).toEqual([
 			{ id: absent.id, memo: null },
 			{ id: target.id, memo: '日本語メモ' },
 			{ id: target.id, memo: '日本語メモ' },
@@ -162,7 +162,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			queries.reset();
 			const packed = await packUserDetailedNotMeManyForApi(deps, input);
 			expect(packed).toEqual(expected);
-			expect(packed.map((entry) => entry.id)).toEqual(input.map((entry) => entry.id));
+			expect(packed.map((entry) => entry!.id)).toEqual(input.map((entry) => entry.id));
 			expect(queries.count()).toBe(singleCount);
 		} finally {
 			queries.restore();

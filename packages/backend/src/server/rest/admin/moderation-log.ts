@@ -49,19 +49,22 @@ async function packModerationLogsForApi(
 		logs.map((log) => log.user ?? log.userId),
 	);
 
-	return logs.map((log, index) => {
+	// 一覧のクエリの後で実行者の削除が確定したログは返さない (ログも同じ削除の cascade で消えている)。
+	return logs.flatMap((log, index) => {
 		const user = users[index];
 		if (user == null) {
-			throw new Error(`Packed moderation log user is missing at index ${index}`);
+			return [];
 		}
-		return {
-			id: log.id,
-			createdAt: parseId(log.id).date.toISOString(),
-			type: log.type,
-			info: log.info,
-			userId: log.userId,
-			user,
-		};
+		return [
+			{
+				id: log.id,
+				createdAt: parseId(log.id).date.toISOString(),
+				type: log.type,
+				info: log.info,
+				userId: log.userId,
+				user,
+			},
+		];
 	});
 }
 
