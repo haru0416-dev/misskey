@@ -13,6 +13,7 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+    # HTTPS は前段のリバースプロキシで付ける。nginx の設定例は nginx.md を参照。
     ports:
       - '127.0.0.1:3000:3000'
     networks:

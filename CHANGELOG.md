@@ -28,6 +28,7 @@
 - Enhance: ゲーム機能を削除
 - Enhance: メンション抽出処理を共通化し、同一アカウントへの重複した検索や処理を抑制
 - Enhance: ストリーミングのRedisイベント振り分けを接続数に比例しないよう最適化
+- Enhance: 前段に置く nginx の設定例と手順を `deploy/` に追加
 - Change: misskey-js の `APIClient` が投げる API エラーを `Error` を継承した `APIError` にし、`endpoint`・`status`・スタックトレースを持たせた。`isAPIError(err, 'notes/create')` のようにエンドポイントを渡すと `code` がそのエンドポイントのエラーコードに絞られる (仕様書のエラー例から型を生成)。従来のエラー本文の型は `APIErrorBody` に改名
 - Change: misskey-js とクライアントが認証トークンを本文の `i` ではなく `Authorization: Bearer` ヘッダーで送るように (サーバーは両方を受け付ける)
 - Change: misskey-js の `exports` を `"./*"` から実際に使うサブパス (`acct.js` / `api.js` / `consts.js` / `entities.js` / `langmap.js` / `streaming.types.js`) の明示に変更

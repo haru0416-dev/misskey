@@ -1,0 +1,72 @@
+# Misskey の前段に置く nginx の設定例 (手順は nginx.md)。
+# example.tld は公開するドメインに、証明書のパスは取得したものに置き換える。
+# アプリは compose.example.yml の既定どおり 127.0.0.1:3000 で待ち受けている前提。
+
+# WebSocket (/streaming) だけ Upgrade を渡す。通常のリクエストは Connection を空にし、
+# 下の keepalive でアプリへの接続を使い回す (close にすると毎回 TCP をつなぎ直す)。
+map $http_upgrade $connection_upgrade {
+	default upgrade;
+	'' '';
+}
+
+upstream misskey {
+	server 127.0.0.1:3000;
+	keepalive 16;
+}
+
+server {
+	listen 80;
+	listen [::]:80;
+	server_name example.tld;
+
+	# Let's Encrypt の HTTP-01 チャレンジ (certbot --webroot -w /var/www/html)
+	location /.well-known/acme-challenge/ {
+		root /var/www/html;
+	}
+
+	location / {
+		return 301 https://$host$request_uri;
+	}
+}
+
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
+	http2 on;
+	server_name example.tld;
+
+	ssl_certificate /etc/letsencrypt/live/example.tld/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/example.tld/privkey.pem;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_session_cache shared:SSL:10m;
+
+	# HTTP/3 を使うなら次の 3 行を有効にし、UDP 443 を開ける。損失 2% の回線で初回表示が
+	# 3.2〜7.7 秒とばらついた (HTTP/2 は 3.3〜4.8 秒) ので、既定では HTTP/2 までにしている。
+	# listen 443 quic reuseport;
+	# listen [::]:443 quic reuseport;
+	# add_header Alt-Svc 'h3=":443"; ma=86400' always;
+
+	# アプリ側の server.http.maximumRequestBodySize (既定 251MiB) に合わせる。
+	# nginx の既定 1m のままだと、1MB を超える添付のアップロードが 413 で落ちる。
+	client_max_body_size 251m;
+
+	location / {
+		proxy_pass http://misskey;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection $connection_upgrade;
+		# アプリは信頼するネットワーク (server.reverseProxy.trustedNetworks) から来た X-Forwarded-For を読んで
+		# IP ごとの回数制限をかける。クライアントが送ってきた値は捨て、接続元で上書きする。
+		# CDN などをさらに前に置くときは、そこから来た値だけを残すよう書き換えること。
+		proxy_set_header X-Forwarded-For $remote_addr;
+		proxy_set_header X-Forwarded-Proto $scheme;
+
+		# アップロードと大きい応答を nginx の一時ファイルに書かず、そのままアプリとの間で流す
+		# (SD カードなど書き込みの遅い・減るストレージで、同じ内容を 2 回書かないため)。
+		proxy_request_buffering off;
+		proxy_buffering off;
+
+		# 圧縮はアプリがしている (gzip を重ねない)。HSTS もアプリが付ける。
+	}
+}
