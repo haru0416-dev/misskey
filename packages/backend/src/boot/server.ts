@@ -223,6 +223,7 @@ async function launchServerWithDependencies(
 		redis: deps.redis,
 		redisForSub: deps.redisForSub,
 		meta: deps.meta,
+		httpRequestService: deps.httpRequestService,
 		publishMainStream: eventPublishers.publishMainStream,
 	} satisfies StreamServerDependencies;
 

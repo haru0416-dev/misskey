@@ -5838,6 +5838,7 @@ export type Endpoints = {
             | 'CREDENTIAL_REQUIRED'
             | 'INTERNAL_ERROR'
             | 'INVALID_PARAM'
+            | 'INVALID_PUSH_ENDPOINT'
             | 'PAYLOAD_TOO_LARGE'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };

@@ -5,6 +5,7 @@
 
 import { afterAll, beforeAll, expect, test, vi } from 'vitest';
 import push from 'web-push';
+import { StatusError } from '@/misc/status-error.js';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -56,24 +57,29 @@ test('a delayed push 410 removes its subscription after the note stage commits',
 	};
 	const parent = await createNote(deps, recipient, base);
 	const endpoint = `https://push.example.test/${genId()}`;
+	// 送信前に購読の鍵で暗号化するので、ブラウザと同じ形の有効な鍵が要る (不正だと送信が飛ばされる)。
+	const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
 	await createSwSubscriptionInDatabase(runtime.db, {
 		id: genId(),
 		userId: recipient.id,
 		endpoint,
-		auth: 'test-auth',
-		publickey: 'test-key',
+		auth: Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64url'),
+		publickey: Buffer.from(await crypto.subtle.exportKey('raw', pair.publicKey)).toString('base64url'),
 	});
-	const delivery = Promise.withResolvers<push.SendResult>();
-	const sent = Promise.withResolvers<void>();
-	vi.spyOn(push, 'sendNotification').mockImplementation(() => {
-		sent.resolve();
+	const delivery = Promise.withResolvers<never>();
+	const sent = Promise.withResolvers<string>();
+	// 送信は SSRF 検査付きの httpRequestService.send を経由する。web-push 内蔵の https 送信ではない。
+	const sendSpy = vi.spyOn(deps.httpRequestService, 'send').mockImplementation((url) => {
+		sent.resolve(url);
 		return delivery.promise;
 	});
 	// 外部応答を待たずに投稿と stage transaction が終了し、その後の失効応答でも削除できる。
 	await createNote(deps, author, { ...base, reply: parent });
-	await sent.promise;
+	// 検査付きクライアントへ、登録した endpoint がそのまま渡る。
+	expect(await sent.promise).toBe(endpoint);
+	expect(sendSpy.mock.calls[0]?.[1]?.method).toBe('POST');
 	expect(await fetchSwSubscriptionFromDatabase(runtime.db, recipient.id, endpoint)).not.toBeNull();
-	delivery.reject(Object.assign(new Error('expired subscription'), { statusCode: 410 }));
+	delivery.reject(new StatusError('expired subscription', 410, 'Gone'));
 	await vi.waitFor(async () => {
 		expect(await fetchSwSubscriptionFromDatabase(runtime.db, recipient.id, endpoint)).toBeNull();
 	});

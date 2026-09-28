@@ -35,6 +35,12 @@ describe('hono-queue-ended-poll-notification', () => {
 				get: async () => null,
 			} as unknown as QueueEndedPollNotificationDependencies['redis'],
 			meta: { enableServiceWorker: false, swPublicKey: null, swPrivateKey: null },
+			// SW 無効なので push は送られない。呼ばれたら失敗させる。
+			httpRequestService: {
+				send: async () => {
+					throw new Error('push must not be sent while the service worker is disabled');
+				},
+			},
 			publishMainStream: (userId, type) => {
 				publishedNotifications.push({ userId, type });
 			},

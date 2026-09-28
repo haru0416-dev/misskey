@@ -25,7 +25,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
 import { packApiRole } from '../role/roles.js';
 import { pushSwNotificationForApi } from './push-notification.js';
-import type { PushNotificationsTypes } from './push-notification.js';
+import type { ApiPushNotificationDependencies, PushNotificationsTypes } from './push-notification.js';
 import type { ApiMainStreamPublisher } from '../events.js';
 import { parseApiParams } from '../validation.js';
 
@@ -36,6 +36,7 @@ export type ApiNotificationDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
+	httpRequestService: ApiPushNotificationDependencies['httpRequestService'];
 	publishMainStream?: ApiMainStreamPublisher;
 };
 
