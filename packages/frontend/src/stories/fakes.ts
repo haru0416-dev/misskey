@@ -510,7 +510,6 @@ export function meta(): entities.MetaDetailed {
 		policies: {} as entities.MetaDetailed['policies'],
 		mediaProxy: '/proxy',
 		enableUrlPreview: true,
-		noteSearchableScope: 'global',
 		maxFileSize: 32 * 1024 * 1024,
 		federation: 'all',
 		cacheRemoteFiles: true,

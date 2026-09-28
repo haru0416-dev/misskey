@@ -15,7 +15,7 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';
-import { notesSearchAvailable, canSearchNonLocalNotes } from '@/utility/check-permissions.js';
+import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { antennasCache, rolesCache, userListsCache } from '@/cache.js';
 import { mainRouter } from '@/router.js';
 import { genEmbedCode } from '@/features/code/get-embed-code.js';
@@ -224,7 +224,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 		});
 	}
 
-	if (notesSearchAvailable && (user.host == null || canSearchNonLocalNotes)) {
+	if (notesSearchAvailable) {
 		menuItems.push({
 			icon: 'ti ti-search',
 			text: i18n.ts.searchThisUsersNotes,

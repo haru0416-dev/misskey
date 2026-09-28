@@ -10,8 +10,6 @@ export const notesSearchAvailable = (($i == null && instance.policies != null &&
 	($i != null && $i.policies.canSearchNotes) ||
 	false) as boolean;
 
-export const canSearchNonLocalNotes = instance.noteSearchableScope === 'global';
-
 export const usersSearchAvailable =
 	($i == null && instance.policies != null && instance.policies.canSearchUsers) ||
 	($i != null && $i.policies.canSearchUsers) ||

@@ -214,8 +214,6 @@ const { model: visibilityFilter } = useMkSelect({ items: visibilityFilterDef, in
 
 const user = shallowRef<Misskey.entities.UserDetailed | null>(null);
 
-const noteSearchableScope = instance.noteSearchableScope ?? 'local';
-
 //#region set user
 let fetchedUser: Misskey.entities.UserDetailed | null = null;
 
@@ -233,9 +231,7 @@ if (props.username && fetchedUser == null) {
 }
 
 if (fetchedUser != null) {
-	if (!(noteSearchableScope === 'local' && fetchedUser.host != null)) {
-		user.value = fetchedUser;
-	}
+	user.value = fetchedUser;
 }
 
 // 指定されたユーザーを取得できなかったときに全体の検索へ切り替えると、そのユーザーの投稿を探したつもりで
@@ -251,9 +247,6 @@ const searchScope = ref<'all' | 'local' | 'server' | 'user'>(
 		if (user.value != null || requestedUserMissing) {
 			return 'user';
 		}
-		if (noteSearchableScope === 'local') {
-			return 'local';
-		}
 		if (hostInput.value) {
 			return 'server';
 		}
@@ -264,7 +257,7 @@ const searchScope = ref<'all' | 'local' | 'server' | 'user'>(
 const searchScopeDef = computed<MkRadiosOption[]>(() => {
 	const options: MkRadiosOption[] = [];
 
-	if (instance.federation !== 'none' && noteSearchableScope === 'global') {
+	if (instance.federation !== 'none') {
 		options.push({ value: 'all', label: i18n.ts._search.searchScopeAll });
 	}
 
@@ -273,7 +266,7 @@ const searchScopeDef = computed<MkRadiosOption[]>(() => {
 		label: instance.federation === 'none' ? i18n.ts._search.searchScopeAll : i18n.ts._search.searchScopeLocal,
 	});
 
-	if (instance.federation !== 'none' && noteSearchableScope === 'global') {
+	if (instance.federation !== 'none') {
 		options.push({ value: 'server', label: i18n.ts._search.searchScopeServer });
 	}
 
@@ -379,7 +372,6 @@ const searchParams = computed<SearchParams | null>(() => {
 function selectUser() {
 	os.selectUser({
 		includeSelf: true,
-		localOnly: instance.noteSearchableScope === 'local',
 	}).then((_user) => {
 		user.value = _user;
 	});

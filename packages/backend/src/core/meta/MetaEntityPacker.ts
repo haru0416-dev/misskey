@@ -113,8 +113,6 @@ export async function packMetaLite(deps: MetaEntityPackerDependencies, meta = de
 					},
 		mediaProxy: deps.config.media.proxyUrl,
 		enableUrlPreview: meta.urlPreviewEnabled,
-		// 全文検索は SQL だけで、連合で受け取ったノートも含めて全体を対象にする。
-		noteSearchableScope: 'global',
 		maxFileSize: deps.config.limits.maximumFileSizeBytes,
 		federation: deps.meta.federation,
 	};

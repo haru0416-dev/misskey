@@ -383,6 +383,7 @@
 - Change: 効果の無くなっていたリアクションのバッファリング設定 (`enableReactionsBuffering`、管理画面の「RBT」) と Valkey の接続割り当て `valkey.assignments.reactions` を削除。設定ファイルに `reactions:` が残っていると起動時にエラーになるので消す
 - Change: プッシュ通知の購読登録 (`sw/register`) で、送信先に https の絶対 URL 以外を受け付けないように
 - Change: 全文検索の Meilisearch 対応を削除 (選ぶと検索できない状態だった)。検索は `sqlLike` / `sqlPgroonga` のみで、設定に `search.provider: meilisearch` が残っていると起動時にエラーになる
+- Change: `meta` の応答から `noteSearchableScope` を削除 (全文検索は SQL だけになり常に `global` だった)。ノート検索の画面は、連合を有効にしていれば常に全体・サーバー指定の範囲を選べる
 - Change: バックエンドの OpenTelemetry で、Bun 上では span を出していなかった HTTP 送信・fetch・Redis の自動計装と、それを前提にしていた設定 `tracePropagationTargets` を削除。`disabledInstrumentations` に指定できるのは `instrumentation-runtime-node` と `instrumentation-host-metrics` だけになる
 - Change: オブジェクトストレージのクライアントを AWS SDK から Bun 組み込みの S3 クライアントへ置き換え
 	- アップロードするオブジェクトに `Cache-Control` が付かなくなります。`/files/` 経由の配信ではサーバー側が同じヘッダを付けるため影響しませんが、**オブジェクトストレージの URL をクライアントへ直接配る設定 (`objectStorageBaseUrl`) を使っている場合はキャッシュ効率が落ちます**
