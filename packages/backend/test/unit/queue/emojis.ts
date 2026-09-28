@@ -7,9 +7,10 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as fs from 'node:fs';
-import { ZipArchive } from 'archiver';
+import { ZipArchiveReader } from 'slacc';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
+import { writeZip } from '@/misc/zip-writer.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies, RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
@@ -22,6 +23,7 @@ import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/co
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { createTemp } from '@/misc/create-temp.js';
+import { readDriveFileBuffer } from '@/core/drive/DriveFileContent.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from '@/queue/handlers/emojis.js';
 import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
@@ -110,7 +112,17 @@ describe('hono-queue-emojis', () => {
 		await handleQueueExportCustomEmojis(deps, { user: { id: user.id } } satisfies DbJobDataWithUser);
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
-		expect(files.some((f) => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'))).toBe(true);
+		const exported = files.find((f) => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'));
+		expect(exported).toBeDefined();
+
+		// 書き出した zip を取り込み側と同じ reader で開き、meta.json と画像の中身まで確かめる。
+		const zip = ZipArchiveReader.fromBuffer(Buffer.from(await readDriveFileBuffer(deps, exported!)));
+		const meta = JSON.parse(zip.readFile('meta.json', 1024 * 1024)!.toString('utf-8')) as {
+			emojis: { fileName: string; downloaded: boolean; emoji: { name: string } }[];
+		};
+		const record = meta.emojis.find((e) => e.emoji.name === emojiName);
+		expect(record).toMatchObject({ fileName: `${emojiName}.png`, downloaded: true });
+		expect(zip.readFile(`${emojiName}.png`, 1024)).toStrictEqual(pngBytes);
 	});
 
 	test('存在しないuserIdは何もしない (export)', async () => {
@@ -124,13 +136,7 @@ describe('hono-queue-emojis', () => {
 		const pngBytes = Buffer.from('89504e470d0a1a0a', 'hex');
 
 		const [zipPath, cleanupZip] = await createTemp();
-		await new Promise<void>((resolve, reject) => {
-			const archiveStream = fs.createWriteStream(zipPath);
-			const archive = new ZipArchive({ zlib: { level: 0 } });
-			archiveStream.on('close', () => resolve());
-			archive.on('error', reject);
-			archive.pipe(archiveStream);
-
+		{
 			const meta = {
 				metaVersion: 2,
 				host: null,
@@ -151,10 +157,11 @@ describe('hono-queue-emojis', () => {
 				],
 			};
 
-			archive.append(JSON.stringify(meta), { name: 'meta.json' });
-			archive.append(pngBytes, { name: `${emojiName}.png` });
-			archive.finalize();
-		});
+			await writeZip(zipPath, [
+				{ name: 'meta.json', data: Buffer.from(JSON.stringify(meta)) },
+				{ name: `${emojiName}.png`, data: pngBytes },
+			]);
+		}
 
 		try {
 			const zipBuffer = await fs.promises.readFile(zipPath);

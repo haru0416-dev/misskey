@@ -6,7 +6,6 @@
 import * as fs from 'node:fs';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import mime from 'mime-types';
-import { ZipArchive } from 'archiver';
 import { ZipArchiveReader } from 'slacc';
 import {
 	deleteEmojiByNameAndHostFromDatabase,
@@ -15,6 +14,8 @@ import {
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
+import { writeZip } from '@/misc/zip-writer.js';
+import type { ZipEntry } from '@/misc/zip-writer.js';
 import { readDriveFileBuffer, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
 import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
@@ -43,6 +44,18 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 			}
 		});
 	});
+}
+
+// 書き出し用の一時ディレクトリにある通常ファイルを、1 件ずつ読んで zip のエントリにする。
+async function* directoryEntries(dir: string): AsyncGenerator<ZipEntry> {
+	for (const name of (await fs.promises.readdir(dir)).sort()) {
+		const filePath = dir + '/' + name;
+		const stats = await fs.promises.stat(filePath);
+		if (!stats.isFile()) {
+			continue;
+		}
+		yield { name, data: await fs.promises.readFile(filePath), modifiedAt: stats.mtime };
+	}
 }
 
 export async function handleQueueExportCustomEmojis(
@@ -103,28 +116,23 @@ export async function handleQueueExportCustomEmojis(
 	}
 
 	await writeToFile(metaStream, ']}');
-	metaStream.end();
+	// 次に meta.json を読むので、書き込みが終わるのを待つ。
+	await new Promise<void>((resolve, reject) => {
+		metaStream.on('error', reject);
+		metaStream.end(resolve);
+	});
 
 	const [archivePath, archiveCleanup] = await createTemp();
-	await new Promise<void>((resolve) => {
-		const archiveStream = fs.createWriteStream(archivePath);
-		const archive = new ZipArchive({
-			zlib: { level: 0 },
-		});
-		archiveStream.on('close', async () => {
-			const fileName = 'custom-emojis-' + formatDateTimeForFileName(new Date()) + '.zip';
-			const driveFile = await addDriveFileForApi(deps, { user, path: archivePath, name: fileName, force: true });
+	try {
+		await writeZip(archivePath, directoryEntries(path));
+		const fileName = 'custom-emojis-' + formatDateTimeForFileName(new Date()) + '.zip';
+		const driveFile = await addDriveFileForApi(deps, { user, path: archivePath, name: fileName, force: true });
 
-			createExportCompletedNotification(deps, user.id, 'customEmoji', driveFile.id);
-
-			cleanup();
-			archiveCleanup();
-			resolve();
-		});
-		archive.pipe(archiveStream);
-		archive.directory(path, false);
-		archive.finalize();
-	});
+		createExportCompletedNotification(deps, user.id, 'customEmoji', driveFile.id);
+	} finally {
+		cleanup();
+		archiveCleanup();
+	}
 }
 
 type ExportedEmojiMetaRecord = {
