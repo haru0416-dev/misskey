@@ -11,6 +11,17 @@ import { ref } from 'vue';
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
+// ロケールは読み込み時の top-level await で取得される (frontend-shared/utility/locale.ts)。下の import より前に
+// 応答を差し替えないと、localhost:3000 へ実際に取りに行き、そこで動いているサーバー次第で結果が変わる。
+// 照合する URL は絶対 URL になるので、先頭には固定しない。
+fetchMocker.mockIf(/\/assets\/locales\/[^/]+\.json$/, async () => {
+	const { default: locales } = await import('i18n');
+	return {
+		status: 200,
+		body: JSON.stringify(locales['en-US']),
+	};
+});
+
 // WebSocket が未定義だと misskey-js の初期化に失敗する。
 vi.stubGlobal(
 	'WebSocket',
@@ -59,13 +70,6 @@ localStorage.setItem('instanceCachedAt', '1');
 
 // i18n の読み込み時に localStorage を参照するため、localStorage のモック設定後に実行する。
 const { default: locales } = await import('i18n');
-
-fetchMocker.mockIf(/^\/assets\/locales\/.*\.json$/, async () => {
-	return {
-		status: 200,
-		body: JSON.stringify(locales['en-US']),
-	};
-});
 
 const { updateI18n } = await import('@/i18n.js');
 const enUsLocale = locales['en-US'];
