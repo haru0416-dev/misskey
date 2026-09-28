@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { pickUpdate } from './update-deps.mjs';
+import { pickUpdate, splitHeldMajors } from './update-deps.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.UTC(2026, 8, 28);
@@ -47,4 +47,27 @@ describe('pickUpdate', () => {
 			major: null,
 		});
 	});
+});
+
+describe('splitHeldMajors', () => {
+	const held = { typescript: { major: 7, reason: 'API がない' } };
+
+	test('据え置いたメジャーだけを分け、理由を添える', () => {
+		const { pending, held: kept } = splitHeldMajors(
+			[
+				{ name: 'typescript', from: '6.0.3', to: '7.0.2' },
+				{ name: 'vitest', from: '4.1.11', to: '5.0.1' },
+			],
+			held,
+		);
+		expect(pending).toEqual([{ name: 'vitest', from: '4.1.11', to: '5.0.1' }]);
+		expect(kept).toEqual([{ name: 'typescript', from: '6.0.3', to: '7.0.2', reason: 'API がない' }]);
+	});
+
+	test('次のメジャーが出たら判断対象に戻す', () => {
+		const { pending, held: kept } = splitHeldMajors([{ name: 'typescript', from: '6.0.3', to: '8.0.0' }], held);
+		expect(pending).toHaveLength(1);
+		expect(kept).toHaveLength(0);
+	});
+
 });
