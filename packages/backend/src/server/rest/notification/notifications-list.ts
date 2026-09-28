@@ -452,10 +452,11 @@ export const notificationsParamDef = z.object({
 	excludeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),
 });
 
-export async function handleApiINotifications(
+async function listApiNotifications(
 	deps: ApiNotificationsListDependencies,
 	me: MiUser,
 	params: ApiParams<typeof notificationsParamDef>,
+	shape: (notifications: MiNotification[]) => (MiNotification | MiGroupedNotification)[],
 ): Promise<Record<string, unknown>[]> {
 	if (params.includeTypes?.length === 0) {
 		return [];
@@ -487,8 +488,16 @@ export async function handleApiINotifications(
 			includeTypes,
 			excludeTypes,
 		},
-		(notifications) => notifications,
+		shape,
 	);
+}
+
+export async function handleApiINotifications(
+	deps: ApiNotificationsListDependencies,
+	me: MiUser,
+	params: ApiParams<typeof notificationsParamDef>,
+): Promise<Record<string, unknown>[]> {
+	return await listApiNotifications(deps, me, params, (notifications) => notifications);
 }
 
 function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
@@ -557,36 +566,7 @@ export async function handleApiINotificationsGrouped(
 	me: MiUser,
 	params: ApiParams<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
-	if (params.includeTypes?.length === 0) {
-		return [];
-	}
-	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) {
-		return [];
-	}
-
-	const includeTypes = params.includeTypes?.filter(
-		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
-	);
-	const excludeTypes = params.excludeTypes?.filter(
-		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
-	);
-
-	if (params.markAsRead) {
-		void markAllApiNotificationsAsRead(deps, me.id, false);
-	}
-
-	return await fetchVisibleNotificationPage(
-		deps,
-		me.id,
-		{
-			sinceId: params.sinceId,
-			untilId: params.untilId,
-			sinceDate: params.sinceDate,
-			untilDate: params.untilDate,
-			limit: params.limit,
-			includeTypes,
-			excludeTypes,
-		},
-		(notifications) => groupApiNotifications(notifications).slice(0, params.limit),
+	return await listApiNotifications(deps, me, params, (notifications) =>
+		groupApiNotifications(notifications).slice(0, params.limit),
 	);
 }
