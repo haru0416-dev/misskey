@@ -8,7 +8,6 @@ import { Hono } from 'hono';
 import { sql } from 'drizzle-orm';
 import { readyRef } from '@/boot/ready.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { Meilisearch } from 'meilisearch';
 
 export type HealthDependencies = {
 	redis: Redis.Redis;
@@ -16,7 +15,6 @@ export type HealthDependencies = {
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	db: MiDrizzleDatabase;
-	meilisearch: Meilisearch | null;
 };
 
 async function checkHealth(deps: HealthDependencies): Promise<boolean> {
@@ -27,7 +25,6 @@ async function checkHealth(deps: HealthDependencies): Promise<boolean> {
 		deps.redisForSub.ping(),
 		deps.redisForTimelines.ping(),
 		deps.db.execute(sql`SELECT 1`),
-		...(deps.meilisearch ? [deps.meilisearch.health()] : []),
 	]).then(
 		() => true,
 		() => false,

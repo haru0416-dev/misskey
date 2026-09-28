@@ -4,7 +4,6 @@
  */
 
 import * as Redis from 'ioredis';
-import { Meilisearch } from 'meilisearch';
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
@@ -73,7 +72,6 @@ export type RuntimeDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
-	meilisearch: Meilisearch | null;
 	downloadService: DownloadService;
 	emailService: EmailService;
 	fileInfoService: FileInfoService;
@@ -123,21 +121,6 @@ type RuntimeResources = {
 	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
 	urlPreviewService?: UrlPreviewService;
 };
-
-function createMeilisearchClient(config: Config): Meilisearch | null {
-	if (config.search.provider !== 'meilisearch') {
-		return null;
-	}
-
-	if (!config.search.meilisearch) {
-		throw new Error('Meilisearch is enabled but no configuration is provided');
-	}
-
-	return new Meilisearch({
-		host: config.search.meilisearch.endpoint,
-		apiKey: config.search.meilisearch.apiKey,
-	});
-}
 
 export function createRedisClient(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.primary);
@@ -273,7 +256,6 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		} finally {
 			clearTimeout(queueReadyTimer);
 		}
-		const meilisearch = createMeilisearchClient(config);
 		const meta = await fetchReactiveMeta(db, redisForSub);
 		const loggerService = createLoggerService();
 		const httpRequestService = createHttpRequestService(config);
@@ -308,7 +290,6 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 			config,
 			db,
 			meta,
-			meilisearch,
 			downloadService,
 			emailService,
 			fileInfoService,

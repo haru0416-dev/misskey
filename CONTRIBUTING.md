@@ -46,7 +46,7 @@ AI コーディングエージェント向けの規約は [AGENTS.md](./AGENTS.m
 ### Setup
 
 Use the Bun version specified in [package.json](./package.json). Install dependencies with `bun install --frozen-lockfile`.
-The application needs PostgreSQL, Valkey, and FFmpeg. Meilisearch is optional for normal development, but some features and tests require it.
+The application needs PostgreSQL, Valkey, and FFmpeg.
 
 #### Use system-wide software
 

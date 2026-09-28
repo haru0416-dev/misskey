@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Meilisearch } from 'meilisearch';
 import * as Bull from 'bullmq';
 import type { EmailService } from '@/core/email/EmailService.js';
 import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/page/PageStore.js';
@@ -30,28 +29,12 @@ export type QueueDeleteAccountDependencies = QueueObjectStorageDependencies &
 		meta: Pick<MiMeta, 'rootUserId'>;
 		dbQueue: DbQueue;
 		deliverQueue: DeliverQueue;
-		meilisearch: Meilisearch | null;
 		emailService: Pick<EmailService, 'sendEmail'>;
 		publishInternalEvent?: <K extends 'userChangeDeletedState'>(
 			type: K,
 			value: { id: MiUser['id']; isDeleted: true },
 		) => void;
 	};
-
-async function unindexNoteForApi(
-	deps: QueueDeleteAccountDependencies,
-	note: Pick<MiNote, 'id' | 'visibility'>,
-): Promise<void> {
-	if (!deps.meilisearch) {
-		return;
-	}
-	if (note.visibility !== 'home' && note.visibility !== 'public') {
-		return;
-	}
-
-	const index = deps.meilisearch.index(`${deps.config.search.meilisearch!.index}---notes`);
-	await index.deleteDocument(note.id);
-}
 
 export async function handleQueueDeleteAccount(
 	deps: QueueDeleteAccountDependencies,
@@ -84,10 +67,6 @@ export async function handleQueueDeleteAccount(
 				deps.db,
 				notes.map((note) => note.id),
 			);
-
-			for (const note of notes) {
-				await unindexNoteForApi(deps, note);
-			}
 		}
 	}
 

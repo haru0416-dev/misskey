@@ -8,7 +8,6 @@ services:
   web:
     build: ..
     restart: unless-stopped
-    #     - meilisearch
     depends_on:
       db:
         condition: service_healthy
@@ -71,19 +70,6 @@ services:
     logging: *default-logging
 
 # Capはcompose.cap.ymlで別サービスとして起動する。設定手順はcap.mdを参照。
-
-#  meilisearch:
-#    restart: always
-#    image: getmeili/meilisearch:v1.3.4
-#    environment:
-#      - MEILI_NO_ANALYTICS=true
-#      - MEILI_ENV=production
-#    env_file:
-#      - ../.config/meilisearch.env
-#    networks:
-#      - internal_network
-#    volumes:
-#      - ../meili_data:/meili_data
 
 networks:
   internal_network:
