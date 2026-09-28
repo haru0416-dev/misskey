@@ -4,10 +4,10 @@
  */
 
 import Logger from '@/logger.js';
-import type { Keyword } from 'color-convert';
+import type { LogColor } from '@/logger.js';
 
 export function createLoggerService() {
-	function getLogger(domain: string, color?: Keyword | undefined) {
+	function getLogger(domain: string, color?: LogColor | undefined) {
 		return new Logger(domain, color);
 	}
 

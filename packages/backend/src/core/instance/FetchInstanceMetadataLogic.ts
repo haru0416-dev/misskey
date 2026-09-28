@@ -5,7 +5,6 @@
 
 import { URL } from 'node:url';
 import * as htmlParser from 'node-html-parser';
-import convert from 'color-convert';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type Logger from '@/logger.js';
 import type { MiInstance } from '@/models/Instance.js';
@@ -206,8 +205,41 @@ async function getThemeColor(
 	return null;
 }
 
-// hex / rgb() / hsl() / CSS カラー名を '#rrggbb' に変換する。
-function parseCssColorToHex(input: string): string | null {
+function toHexByte(value: number): string {
+	return Math.round(value).toString(16).padStart(2, '0');
+}
+
+// 標準の HSL→RGB 変換。各チャンネルを小数のまま計算し、最後に四捨五入する。
+// 範囲外の値は、桁あふれさせずに CSS どおり色相は 360 の剰余、彩度・明度は 0〜100% に丸める。
+function hslToHex(hue: number, saturation: number, lightness: number): string {
+	const h = (((hue % 360) + 360) % 360) / 360;
+	const s = Math.min(100, Math.max(0, saturation)) / 100;
+	const l = Math.min(100, Math.max(0, lightness)) / 100;
+	if (s === 0) {
+		return '#' + toHexByte(l * 255).repeat(3);
+	}
+	const t2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	const t1 = 2 * l - t2;
+	let hex = '#';
+	for (let i = 0; i < 3; i++) {
+		let t3 = h + (1 / 3) * -(i - 1);
+		if (t3 < 0) t3++;
+		if (t3 > 1) t3--;
+		let value: number;
+		if (6 * t3 < 1) value = t1 + (t2 - t1) * 6 * t3;
+		else if (2 * t3 < 1) value = t2;
+		else if (3 * t3 < 2) value = t1 + (t2 - t1) * (2 / 3 - t3) * 6;
+		else value = t1;
+		hex += toHexByte(value * 255);
+	}
+	return hex;
+}
+
+/**
+ * hex / rgb() / hsl() / CSS カラー名を '#rrggbb' に変換する。リモートから受け取る値なので、この 4 つの形以外は null。
+ * カラー名は Bun.color に任せるが、transparent やシステム色 (canvas 等) は '#rrggbb' にならない・意味が違うので受けない。
+ */
+export function parseCssColorToHex(input: string): string | null {
 	const str = input.trim().toLowerCase();
 
 	const hex = str.match(/^#([0-9a-f]{3}|[0-9a-f]{6})(?:[0-9a-f]{2})?$/)?.[1];
@@ -217,20 +249,27 @@ function parseCssColorToHex(input: string): string | null {
 
 	const rgb = str.match(/^rgba?\(\s*(\d{1,3})[,\s]+(\d{1,3})[,\s]+(\d{1,3})(?:[,\s/]+[\d.%]+)?\s*\)$/);
 	if (rgb) {
-		const channels = rgb.slice(1, 4).map((v) => Math.min(255, Number(v))) as [number, number, number];
-		return '#' + convert.rgb.hex(channels).toLowerCase();
+		return (
+			'#' +
+			rgb
+				.slice(1, 4)
+				.map((v) => toHexByte(Math.min(255, Number(v))))
+				.join('')
+		);
 	}
 
 	const hsl = str.match(/^hsla?\(\s*([\d.]+)(?:deg)?[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s/]+[\d.%]+)?\s*\)$/);
 	if (hsl) {
-		return '#' + convert.hsl.hex([Number(hsl[1]), Number(hsl[2]), Number(hsl[3])]).toLowerCase();
+		return hslToHex(Number(hsl[1]), Number(hsl[2]), Number(hsl[3]));
 	}
 
-	try {
-		return '#' + convert.keyword.hex(str as Parameters<typeof convert.keyword.hex>[0]).toLowerCase();
-	} catch {
-		return null;
+	if (/^[a-z]+$/.test(str) && str !== 'transparent') {
+		const named = Bun!.color(str, 'hex');
+		if (named != null && /^#[0-9a-f]{6}$/.test(named)) {
+			return named;
+		}
 	}
+	return null;
 }
 
 async function getSiteName(

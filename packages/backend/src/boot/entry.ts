@@ -6,7 +6,7 @@
 import cluster from 'node:cluster';
 import { EventEmitter } from 'node:events';
 import { writeHeapSnapshot } from 'node:v8';
-import chalk from 'chalk';
+import { styleText } from 'node:util';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import Logger, { configureLogger } from '@/logger.js';
 import { loadConfig } from '@/config.js';
@@ -38,7 +38,7 @@ cluster.on('online', (worker) => {
 });
 
 cluster.on('exit', (worker) => {
-	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
+	clusterLogger.error(styleText('red', `[${worker.id}] died :(`));
 	const assignment = assignmentByWorkerId.get(worker.id);
 	assignmentByWorkerId.delete(worker.id);
 	if (shuttingDown) {
