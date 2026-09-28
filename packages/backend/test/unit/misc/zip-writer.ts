@@ -41,8 +41,10 @@ describe('misc:zip-writer', () => {
 		for (const entry of entries) {
 			const expected = Buffer.from(entry.data);
 			expect(reader.readFile(entry.name, expected.length + 1)).toStrictEqual(expected);
-			expect(execFileSync('unzip', ['-p', zipPath, entry.name])).toStrictEqual(expected);
 		}
+		// unzip へ名前を引数で渡すと、非 ASCII の名前の照合が unzip の版・ロケールで変わる (CI の Ubuntu 24.04 は
+		// 照合できない)。名前を渡さず全エントリを書いた順に連結して取り出し、内容を比べる。
+		expect(execFileSync('unzip', ['-p', zipPath])).toStrictEqual(Buffer.concat(entries.map((entry) => entry.data)));
 	}
 
 	test('空・複数ブロックにまたがる大きさ・UTF-8 の名前を書いて読める', async () => {
