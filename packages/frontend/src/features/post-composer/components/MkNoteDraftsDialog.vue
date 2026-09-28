@@ -124,14 +124,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 									>
 										<i class="ti ti-calendar-x"></i> {{ i18n.ts._drafts.cancelSchedule }}
 									</MkButton>
-									<!-- TODO: 予約日時を変更する操作を実装する
 									<MkButton
 										small
 										@click="reSchedule(draft)"
 									>
 										<i class="ti ti-calendar-time"></i> {{ i18n.ts._drafts.reSchedule }}
 									</MkButton>
-									-->
 								</template>
 								<MkButton
 									v-else
@@ -234,6 +232,33 @@ async function deleteDraft(draft: Misskey.entities.NoteDraft) {
 
 	os.apiWithDialog('notes/drafts/delete', { draftId: draft.id }).then(() => {
 		draftsPaginator.reload();
+	});
+}
+
+// datetime-local の入力欄に入れる、手元の時刻での 'YYYY-MM-DDTHH:mm'。
+function toDatetimeLocalValue(time: number): string {
+	const date = new Date(time);
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// 予約の付け替えはサーバーが行う (古い日時のジョブを消して新しい日時で積み直す)。過去の日時はサーバーが拒否し、
+// その理由をダイアログで伝える。
+async function reSchedule(draft: Misskey.entities.NoteDraft) {
+	const { canceled, result } = await os.inputDatetime({
+		title: i18n.ts._drafts.reSchedule,
+		default: draft.scheduledAt != null ? toDatetimeLocalValue(draft.scheduledAt) : null,
+	});
+	if (canceled) {
+		return;
+	}
+
+	os.apiWithDialog('notes/drafts/update', {
+		draftId: draft.id,
+		isActuallyScheduled: true,
+		scheduledAt: result.getTime(),
+	}).then(() => {
+		scheduledPaginator.reload();
 	});
 }
 

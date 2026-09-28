@@ -12680,6 +12680,10 @@ export interface Locale extends ILocale {
          * 予約解除
          */
         "cancelSchedule": string;
+        /**
+         * 予約日時を変更
+         */
+        "reSchedule": string;
     };
     /**
      * 二次元コード

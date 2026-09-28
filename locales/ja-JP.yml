@@ -3410,6 +3410,7 @@ _drafts:
   schedule: "投稿予約"
   listScheduledNotes: "予約投稿一覧"
   cancelSchedule: "予約解除"
+  reSchedule: "予約日時を変更"
 
 qr: "二次元コード"
 _qr:
