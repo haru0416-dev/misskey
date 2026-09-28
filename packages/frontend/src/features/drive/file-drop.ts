@@ -51,9 +51,6 @@ export async function extractDroppedItems(ev: DragEvent): Promise<DroppedItem[]>
 	return droppedFiles;
 }
 
-/**
- * ドラッグ＆ドロップされたファイルのリストからディレクトリ構造とファイルへの参照（{@link File}）を取得する。
- */
 async function readDataTransferItems(itemList: DataTransferItemList): Promise<DroppedItem[]> {
 	async function readEntry(entry: FileSystemEntry): Promise<DroppedItem> {
 		if (entry.isFile) {
@@ -90,7 +87,6 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 		return await Promise.all(allEntries.map(readEntry));
 	}
 
-	// 扱いにくいので配列に変換
 	const items = Array.of<DataTransferItem>();
 	for (const item of itemList) {
 		items.push(item);
@@ -104,9 +100,6 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 	);
 }
 
-/**
- * {@link DroppedItem}のリストからディレクトリを再帰的に検索し、ファイルのリストを取得する。
- */
 export function flattenDroppedFiles(items: DroppedItem[]): DroppedFile[] {
 	const result = Array.of<DroppedFile>();
 	const remaining = items.toReversed();

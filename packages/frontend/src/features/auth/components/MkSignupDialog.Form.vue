@@ -167,17 +167,14 @@ function getPasswordStrength(source: string): number {
 	let strength = 0;
 	let power = 0.018;
 
-	// 英数字
 	if (/[a-zA-Z]/.test(source) && /[0-9]/.test(source)) {
 		power += 0.02;
 	}
 
-	// 大文字と小文字が混ざってたら
 	if (/[a-z]/.test(source) && /[A-Z]/.test(source)) {
 		power += 0.015;
 	}
 
-	// 記号が混ざってたら
 	if (/[!\x22\#$%&@'()*+,-./_]/.test(source)) {
 		power += 0.02;
 	}

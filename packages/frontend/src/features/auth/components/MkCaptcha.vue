@@ -158,7 +158,6 @@ function reset() {
 		try {
 			captcha.value.reset(captchaWidgetId.value);
 		} catch (error: unknown) {
-			// ignore
 			if (_DEV_) {
 				console.warn(error);
 			}
@@ -177,7 +176,6 @@ function remove() {
 			}
 			captcha.value.remove(captchaWidgetId.value);
 		} catch (error: unknown) {
-			// ignore
 			if (_DEV_) {
 				console.warn(error);
 			}
@@ -212,7 +210,6 @@ function clearWidget() {
 	remove();
 
 	if (captchaEl.value) {
-		// レンダリング先のコンテナの中身を掃除し、フォームが増殖するのを抑止
 		captchaEl.value.innerHTML = '';
 	}
 }

@@ -200,7 +200,6 @@ function resolveTopology(config: Config): Topology {
 		...Array.from({ length: Math.max(forkedQueue, 0) }, () => ({ role: 'queue' as const, ownsDaemons: false })),
 	];
 
-	// デーモンはストリーム配信先と同じ HTTP プロセスに割り当てる。
 	if (masterRole !== 'server') {
 		const owner = workerAssignments.find((assignment) => assignment.role === 'server') ?? workerAssignments[0];
 		if (owner != null) {

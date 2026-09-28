@@ -436,7 +436,6 @@ export class Paginator<
 
 		if (apiRes.length === 0) {
 			this.canFetchNewer.value = false;
-			// 余計なre-renderを防止するためここで終了
 			return;
 		}
 
@@ -459,8 +458,6 @@ export class Paginator<
 				this.canFetchNewer.value = true;
 			}
 		}
-		// canFetchDetectionが'safe'の場合・apiRes.length === 0 の場合は apiRes.length === 0 の場合に canFetchNewer.value = false になるが、
-		// 余計な re-render を防ぐために上部で処理している。そのため、ここでは何もしない
 	}
 
 	public trim(_trigger = true): void {

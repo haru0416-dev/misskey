@@ -111,10 +111,10 @@ function calcScale() {
 	if (!resizerRootEl.value) {
 		return;
 	}
-	const previewWidth = resizerRootEl.value.clientWidth - 40; // 左右の余白 20pxずつ
-	const previewHeight = resizerRootEl.value.clientHeight - 40; // 上下の余白 20pxずつ
+	const previewWidth = resizerRootEl.value.clientWidth - 40;
+	const previewHeight = resizerRootEl.value.clientHeight - 40;
 	const widgetWidth = resizerEl.value?.offsetWidth ?? 280;
-	const scale = Math.min(previewWidth / widgetWidth, previewHeight / widgetHeight.value, 1); // 拡大はしないので1を上限に
+	const scale = Math.min(previewWidth / widgetWidth, previewHeight / widgetHeight.value, 1);
 	widgetScale.value = scale;
 }
 

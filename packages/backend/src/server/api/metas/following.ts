@@ -14,7 +14,6 @@ import {
 import { HOUR } from '@/const.js';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 
-// 受信・送信のどちらも同じフォローリクエスト行を返す。
 const followRequestListSchema = {
 	type: 'array',
 	optional: false,

@@ -121,7 +121,6 @@ globalThis.addEventListener('push', (ev) => {
 					case 'notification':
 					case 'unreadAntennaNote':
 					case 'newChatMessage':
-						// 1日以上経過している場合は無視
 						if (Date.now() - data.dateTime > 1000 * 60 * 60 * 24) {
 							break;
 						}

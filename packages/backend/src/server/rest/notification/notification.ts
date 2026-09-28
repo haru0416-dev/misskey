@@ -302,7 +302,6 @@ async function xaddNotification(
 
 type NotificationReceiveType = keyof MiUserProfile['notificationRecieveConfig'];
 
-/** 受け取り設定が `never` でなければ true。 */
 async function receivesNotification(
 	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],

@@ -20,11 +20,8 @@ import type { SignatureAlgorithm } from 'slacc';
 export type ParsedSignature = {
 	keyId: string;
 	algorithm: string;
-	/** 署名対象に含めるヘッダ名 (小文字)。 */
 	headers: string[];
-	/** base64 の署名。 */
 	signature: string;
-	/** 署名対象として組み立てた文字列。 */
 	signingString: string;
 	/** 署名ヘッダの created / expires (UNIX 秒の文字列)。無ければ undefined。 */
 	created?: string;

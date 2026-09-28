@@ -100,11 +100,11 @@ function normalizeStringWithHiraganaFromNormalized(str: string): string {
 	return normalizeHyphens(toHiragana(str, { convertLongVowelMark: false }));
 }
 
-/** aとbが同じかどうか */
+// NFKC 正規化で文字数が変わるため、元の長さが異なっても比較を打ち切れない。
 export function compareStringEquals(a: string, b: string) {
 	if (a === b) {
 		return true;
-	} // まったく同じ場合はtrue。なお、ノーマライズ前後で文字数が変化することがあるため、文字数が違うからといってfalseにはできない
+	}
 	const normalizedA = normalizeString(a);
 	const normalizedB = normalizeString(b);
 	if (normalizedA === normalizedB) {
@@ -118,11 +118,10 @@ export function compareStringEquals(a: string, b: string) {
 	return false;
 }
 
-/** baseにqueryが含まれているかどうか */
 export function compareStringIncludes(base: string, query: string) {
 	if (base === query) {
 		return true;
-	} // まったく同じ場合は含まれていると考えてよいのでtrue
+	}
 	if (base.includes(query)) {
 		return true;
 	}

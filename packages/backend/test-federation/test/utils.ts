@@ -68,7 +68,6 @@ export function knownUpstreamFailure(
 	};
 }
 
-/** knownUpstreamFailure の matches に渡す、エラーの message を照合する判定。 */
 export function errorMessageMatches(pattern: RegExp): (error: unknown) => boolean {
 	return (error) => {
 		const message = typeof error === 'object' && error != null ? (error as { message?: unknown }).message : undefined;

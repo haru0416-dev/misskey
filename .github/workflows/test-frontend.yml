@@ -13,7 +13,6 @@ on:
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**
-      # 権限関連
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**
@@ -31,7 +30,6 @@ on:
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**
-      # 権限関連
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**

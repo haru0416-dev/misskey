@@ -82,7 +82,6 @@ export function getHighlighter(): Promise<HighlighterCore> {
 }
 
 async function initHighlighter() {
-	// テーマの重複を消す
 	const themes = unique([darkPlus, ...(await Promise.all([getTheme('light'), getTheme('dark')]))]);
 
 	const jsLangInfo = bundledLanguagesInfo.find((t) => t.id === 'javascript');

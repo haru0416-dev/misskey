@@ -32,7 +32,7 @@ const state = ref<'fetching' | 'done'>('fetching');
 function _fetch_() {
 	const params = new URL(window.location.href).searchParams;
 
-	// acctのほうはdeprecated
+	// 旧リンクの acct パラメータも受け取り、既存の共有 URL を開けるようにする。
 	let uri = params.get('uri') ?? params.get('acct');
 	if (uri == null) {
 		state.value = 'done';

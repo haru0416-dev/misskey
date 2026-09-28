@@ -100,13 +100,11 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		if (prefer.enableSeasonalScreenEffect) {
 			const month = new Date().getMonth() + 1;
 			if (prefer.hemisphere === 'S') {
-				// ▼南半球
 				if (month === 7 || month === 8) {
 					const SnowfallEffect = (await import('@/utility/snowfall-effect.js')).SnowfallEffect;
 					new SnowfallEffect({}).render();
 				}
 			} else {
-				// ▼北半球
 				if (month === 12 || month === 1) {
 					const SnowfallEffect = (await import('@/utility/snowfall-effect.js')).SnowfallEffect;
 					new SnowfallEffect({}).render();

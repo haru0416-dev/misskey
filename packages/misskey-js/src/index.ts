@@ -17,9 +17,6 @@ export const rolePolicies = consts.rolePolicies;
 export const queueTypes = consts.queueTypes;
 export const achievementTypes = consts.achievementTypes;
 
-// api extractorで利用する公開形態は未対応
-//export * as api from './api.js';
-//export * as entities from './entities.js';
 import * as api from './api.js';
 import * as entities from './entities.js';
 import * as acct from './acct.js';

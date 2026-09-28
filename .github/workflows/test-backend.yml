@@ -8,7 +8,6 @@ on:
     paths:
       - packages/backend/**
       - packages/mfm-js/**
-      # 権限関連
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
@@ -18,7 +17,6 @@ on:
     paths:
       - packages/backend/**
       - packages/mfm-js/**
-      # 権限関連
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml

@@ -11,7 +11,6 @@ export const animDirective = {
 	beforeMount(src) {
 		src.style.opacity = '0';
 		src.style.transform = 'scale(0.9)';
-		// ページネーションと相性が悪いので
 		src.classList.add('_zoom');
 	},
 

@@ -67,7 +67,7 @@ const withRenotes = computed<boolean>({
 	set: (x) => saveTlFilter('withRenotes', x),
 });
 
-// computed内での無限ループを防ぐためのフラグ
+// ローカル・ソーシャルでは返信とファイルのフィルタを排他的に見せる。computed 同士の相互参照を避けて最後に選んだ側を保持する。
 const localSocialTLFilterSwitchStore = ref<'withReplies' | 'onlyFiles' | false>(
 	store.tl.filter.withReplies ? 'withReplies' : store.tl.filter.onlyFiles ? 'onlyFiles' : false,
 );

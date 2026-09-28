@@ -20,7 +20,7 @@ export function useRoleRestriction(initialRoleIds: readonly string[]) {
 	misskeyApi('admin/roles/list')
 		.then((roles) => {
 			roleById.value = new Map(roles.map((role) => [role.id, role]));
-			// 一覧に無い ID は削除済みのロールなので、制限から外す。
+			// 正常に取得できた一覧を正本とし、そこに無い ID だけを制限から外す。
 			roleIds.value = roleIds.value.filter((id) => roleById.value.has(id));
 		})
 		.catch(() => {

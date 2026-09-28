@@ -272,7 +272,6 @@ export function createMfmService(config: Config) {
 				}
 
 				default: {
-					// インライン要素を含む。
 					analyzeChildren(node.childNodes);
 					break;
 				}

@@ -176,7 +176,6 @@ export type FederationInstancesSort =
 
 function resolveFederationInstancesOrderBy(sort: FederationInstancesSort): SQL[] {
 	switch (sort) {
-		// これらの別名は最後に指定された値を優先する。
 		case '+pubSub':
 			return [desc(instance.followersCount)];
 		case '-pubSub':

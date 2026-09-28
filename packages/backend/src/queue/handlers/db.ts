@@ -503,9 +503,6 @@ export async function handleQueueExportFollowing(
 	}
 }
 
-/**
- * ローカルユーザーの解決に失敗した場合はnullを返す (呼び出し元でスキップする)。
- */
 async function resolveImportTargetUserForApi(
 	deps: QueueDbDependencies,
 	acct: string,
@@ -1114,7 +1111,6 @@ async function processClipsForApi(
 		cursor = clips.at(-1)?.id ?? null;
 
 		for (const clip of clips) {
-			// 文字列化するが、末尾の `]}` は除く。
 			const content = JSON.stringify(serializeClipForApi(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);

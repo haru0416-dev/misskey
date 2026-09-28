@@ -39,7 +39,6 @@ function onDragover(ev: DragEvent) {
 		return;
 	}
 
-	// このフォルダがルートかつカレントディレクトリならドロップ禁止
 	if (props.folder == null && props.parentFolder == null) {
 		ev.dataTransfer.dropEffect = 'none';
 	}
@@ -73,7 +72,6 @@ function onDrop(ev: DragEvent) {
 		return;
 	}
 
-	// ファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
 		emit('upload', Array.from(ev.dataTransfer.files), props.folder);
 		return;
@@ -96,7 +94,6 @@ function onDrop(ev: DragEvent) {
 			if (droppedFolder == null) {
 				return;
 			}
-			// 移動先が自分自身ならreject
 			if (props.folder && droppedFolder.id === props.folder.id) {
 				return;
 			}

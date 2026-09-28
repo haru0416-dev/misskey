@@ -41,7 +41,7 @@ const ago = computed(() => (now.value - _time) / 1000 /*ms*/);
 const relative = computed<string>(() => {
 	if (props.mode === 'absolute') {
 		return '';
-	} // absoluteではrelativeを使わないので計算しない
+	}
 	if (invalid) {
 		return i18n.ts._ago.invalid;
 	}

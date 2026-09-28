@@ -93,7 +93,6 @@ const pollingScheduler = new PollingScheduler(async () => {
 		return;
 	}
 
-	// まとめてリクエストするのではなく、個別にHTTPリクエスト投げてCDNにキャッシュさせた方がサーバーの負荷低減には良いかもしれない？
 	const items = await misskeyApi('notes/show-partial-bulk', {
 		noteIds: ids,
 	});
@@ -241,7 +240,6 @@ export function useNoteCapture(props: {
 	noteEvents.on(`unreacted:${note.id}`, onUnreacted);
 	noteEvents.on(`pollVoted:${note.id}`, onPollVoted);
 
-	// 操作がダブっていないかどうかを簡易的に記録するためのMap
 	const reactionUserMap = new Map<Misskey.entities.User['id'], string | typeof noReaction>();
 	let latestPollVotedKey: string | null = null;
 
@@ -328,7 +326,6 @@ export function useNoteCapture(props: {
 
 	function subscribe() {
 		if (mock) {
-			// モックモードでは購読しない
 			return;
 		}
 		if (unsubscribe != null) {
@@ -358,7 +355,6 @@ export function useNoteCapture(props: {
 	// ただし「リノートされたばかりの過去のノート」(= parentNoteが存在し、かつparentNoteの投稿日時が最近)はイベント発生が考えられるため購読する
 	if (parentNote == null) {
 		if (Date.now() - new Date(note.createdAt).getTime() > 1000 * 60 * 5) {
-			// リノートで表示されているノートでもないし、投稿からある程度経過しているので自動で購読しない
 			return {
 				$note,
 				subscribe: () => {
@@ -368,8 +364,6 @@ export function useNoteCapture(props: {
 		}
 	} else {
 		if (Date.now() - new Date(parentNote.createdAt).getTime() > 1000 * 60 * 5) {
-			// 5min
-			// リノートで表示されているノートだが、リノートされてからある程度経過しているので自動で購読しない
 			return {
 				$note,
 				subscribe: () => {
@@ -383,8 +377,6 @@ export function useNoteCapture(props: {
 
 	return {
 		$note,
-		subscribe: () => {
-			// すでに購読しているので何もしない
-		},
+		subscribe: () => {},
 	};
 }

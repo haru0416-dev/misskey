@@ -85,7 +85,7 @@ describe('Chart', () => {
 		}
 	});
 
-	// 列の型を超える値を書くと UPDATE ごと失敗し、以後そのグループの差分が保存されないまま溜まり続けた。
+	// 列の型を超える値で UPDATE が失敗すると、そのグループの差分が保存されず蓄積する。
 	test('列の範囲を超える差分は範囲に丸めて保存し、以後の保存も止まらない', async () => {
 		const commit = (diff: Record<string, number>) => (testChart as any).commit(diff);
 		commit({ 'foo.inc': 3_000_000_000, 'foo.total': -3_000_000_000 });

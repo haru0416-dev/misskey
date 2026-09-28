@@ -29,7 +29,6 @@ function config(ipRateLimit: boolean): Config {
 	} as Config;
 }
 
-/** Valkey の TIME をマイクロ秒で返す。 */
 async function serverTimeMicroseconds(redis: Redis.Redis): Promise<bigint> {
 	const [seconds, microseconds] = await redis.time();
 	if (seconds == null || microseconds == null) throw new Error('TIME returned no value');

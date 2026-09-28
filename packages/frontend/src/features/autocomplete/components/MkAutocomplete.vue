@@ -290,7 +290,6 @@ function exec() {
 				if (generation !== execGeneration) return;
 				users.value = searchedUsers;
 				fetching.value = false;
-				// キャッシュ
 				sessionStorage.setItem(cacheKey, JSON.stringify(searchedUsers));
 			}).catch(() => {
 				if (generation !== execGeneration) return;
@@ -316,7 +315,6 @@ function exec() {
 					if (generation !== execGeneration) return;
 					hashtags.value = searchedHashtags;
 					fetching.value = false;
-					// キャッシュ
 					sessionStorage.setItem(cacheKey, JSON.stringify(searchedHashtags));
 				}).catch(() => {
 					if (generation !== execGeneration) return;
@@ -327,7 +325,6 @@ function exec() {
 		}
 	} else if (props.type === 'emoji') {
 		if (!props.q || props.q === '') {
-			// 最近使った絵文字をサジェスト
 			emojis.value = store.recentlyUsedEmojis
 				.map((emoji) => emojiDb.value.find((dbEmoji) => dbEmoji.emoji === emoji))
 				.filter((x) => x) as EmojiDef[];

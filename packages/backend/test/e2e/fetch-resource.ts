@@ -10,13 +10,11 @@ import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, u
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
-// Accept ヘッダーを小文字で送信する。
 const ONLY_AP = 'application/activity+json';
 const PREFER_AP = 'application/activity+json, */*';
 const PREFER_HTML = 'text/html, */*';
 const UNSPECIFIED = '*/*';
 
-// Content-Type ヘッダーを小文字で返す。
 const AP = 'application/activity+json; charset=utf-8';
 const HTML = 'text/html; charset=utf-8';
 const JSON_UTF8 = 'application/json; charset=utf-8';

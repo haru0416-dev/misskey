@@ -141,30 +141,12 @@ const state = ref<GridState>('normal');
  * グリッドの列定義。列定義の元の設定値は非リアクティブなので、初期値を生成して以降は変更しない。
  */
 const columns = ref<GridColumn[]>(columnSettings.map(createColumn));
-/**
- * グリッドの行定義。propsで受け取った{@link data}をもとに、{@link refreshData}で再計算される。
- */
 const rows = ref<GridRow[]>([]);
-/**
- * グリッドのセル定義。propsで受け取った{@link data}をもとに、{@link refreshData}で再計算される。
- */
 const cells = ref<RowHolder[]>([]);
 
-/**
- * mousemoveイベントが発生した際に、イベントから取得したセルアドレスを保持するための変数。
- * セルアドレスが変わった瞬間にイベントを起こしたい時のために前回値として使用する。
- */
 const previousCellAddress = ref<CellAddress>(CELL_ADDRESS_NONE);
 const editingCellAddress = ref<CellAddress>(CELL_ADDRESS_NONE);
-/**
- * 列の範囲選択をする際の開始地点となるインデックスを保持するための変数。
- * この開始地点からマウスが動いた地点までの範囲を選択する。
- */
 const firstSelectionColumnIdx = ref<number>(CELL_ADDRESS_NONE.col);
-/**
- * 行の範囲選択をする際の開始地点となるインデックスを保持するための変数。
- * この開始地点からマウスが動いた地点までの範囲を選択する。
- */
 const firstSelectionRowIdx = ref<number>(CELL_ADDRESS_NONE.row);
 
 const selectedCell = computed(() => {
@@ -218,7 +200,6 @@ if (_DEV_) {
 }
 
 // #region Event Handlers
-// region Event Handlers
 
 function onResize(entries: ResizeObserverEntry[]) {
 	const entry = entries[0];
@@ -237,10 +218,8 @@ function onResize(entries: ResizeObserverEntry[]) {
 				// 先に状態を変更しておき、再計算要求が複数回走らないようにする
 				state.value = 'normal';
 
-				// 選択状態が狂うかもしれないので解除しておく
 				unSelectionRangeAll();
 
-				// 再計算要求を発行。各セル側で最低限必要な横幅を算出し、emitで返してくるようになっている
 				bus.emit('forceRefreshContentSize');
 			}
 			break;

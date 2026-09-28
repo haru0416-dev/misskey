@@ -378,7 +378,7 @@ if (props.id) {
 
 const title = ref(flash.value?.title ?? 'New Play');
 const summary = ref(flash.value?.summary ?? '');
-const permissions = ref([]); // 未実装
+const permissions = ref([]); // 権限の編集欄がないため、保存時には空の一覧を送る。
 const { model: visibility, def: visibilityDef } = useMkSelect({
 	items: [
 		{ label: i18n.ts.public, value: 'public' },

@@ -43,7 +43,6 @@ describe('configVersion 2 schema', () => {
 		expect(config.queues.deliver.concurrencyPerWorker).toBe(128);
 	});
 
-	// Web 用画像の色差の間引き方は、既定で画質を優先する (CPU の弱い機械では false にできる)。
 	test('keeps high-quality chroma for web images unless it is disabled', () => {
 		const materialize = (media?: unknown) =>
 			materializeConfig(

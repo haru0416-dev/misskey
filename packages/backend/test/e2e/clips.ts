@@ -466,7 +466,6 @@ describe('クリップ', () => {
 			parameters: { limit: clips.length },
 		});
 
-		// API が順序を保証しないため、ID 順に揃えて比較する。
 		expect(res.toReversed()).toStrictEqual(clips.sort(compareBy((s) => s.id)));
 	});
 

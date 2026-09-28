@@ -312,22 +312,18 @@ function onHeaderPointerdown(evt: PointerEvent) {
 		let moveLeft = x - moveBaseX;
 		let moveTop = y - moveBaseY;
 
-		// 下はみ出し
 		if (moveTop + windowHeight > browserHeight) {
 			moveTop = browserHeight - windowHeight;
 		}
 
-		// 左はみ出し
 		if (moveLeft < 0) {
 			moveLeft = 0;
 		}
 
-		// 上はみ出し
 		if (moveTop < 0) {
 			moveTop = 0;
 		}
 
-		// 右はみ出し
 		if (moveLeft + windowWidth > browserWidth) {
 			moveLeft = browserWidth - windowWidth;
 		}
@@ -342,7 +338,6 @@ function onHeaderPointerdown(evt: PointerEvent) {
 		move(clickX, clickY);
 	}
 
-	// 動かした時
 	dragListen((me) => {
 		const x = getPositionX(me);
 		const y = getPositionY(me);
@@ -351,12 +346,10 @@ function onHeaderPointerdown(evt: PointerEvent) {
 	});
 }
 
-// 上ハンドル掴み時
 function onTopHandlePointerdown(evt: PointerEvent) {
 	capturePointer(evt);
 
 	const main = rootEl.value;
-	// どういうわけかnullになることがある
 	if (main == null) {
 		return;
 	}
@@ -366,7 +359,6 @@ function onTopHandlePointerdown(evt: PointerEvent) {
 	const height = Number.parseInt(computedStyle.height, 10);
 	const top = Number.parseInt(computedStyle.top, 10);
 
-	// 動かした時
 	dragListen((me) => {
 		const move = getPositionY(me) - base;
 		if (top + move > 0) {
@@ -374,19 +366,16 @@ function onTopHandlePointerdown(evt: PointerEvent) {
 				applyTransformHeight(height + -move);
 				applyTransformTop(top + move);
 			} else {
-				// 最小の高さより小さくなろうとした時
 				applyTransformHeight(minHeight);
 				applyTransformTop(top + (height - minHeight));
 			}
 		} else {
-			// 上のはみ出し時
 			applyTransformHeight(top + height);
 			applyTransformTop(0);
 		}
 	});
 }
 
-// 右ハンドル掴み時
 function onRightHandlePointerdown(evt: PointerEvent) {
 	capturePointer(evt);
 
@@ -401,24 +390,19 @@ function onRightHandlePointerdown(evt: PointerEvent) {
 	const left = Number.parseInt(computedStyle.left, 10);
 	const browserWidth = window.innerWidth;
 
-	// 動かした時
 	dragListen((me) => {
 		const move = getPositionX(me) - base;
 		if (left + width + move < browserWidth) {
 			if (width + move > minWidth) {
 				applyTransformWidth(width + move);
 			} else {
-				// 最小の幅より小さくなろうとした時
 				applyTransformWidth(minWidth);
 			}
 		} else {
-			// 右のはみ出し時
 			applyTransformWidth(browserWidth - left);
 		}
 	});
 }
-
-// 下ハンドル掴み時
 function onBottomHandlePointerdown(evt: PointerEvent) {
 	capturePointer(evt);
 
@@ -432,15 +416,12 @@ function onBottomHandlePointerdown(evt: PointerEvent) {
 	const height = Number.parseInt(computedStyle.height, 10);
 	const top = Number.parseInt(computedStyle.top, 10);
 	const browserHeight = window.innerHeight;
-
-	// 動かした時
 	dragListen((me) => {
 		const move = getPositionY(me) - base;
 		if (top + height + move < browserHeight) {
 			if (height + move > minHeight) {
 				applyTransformHeight(height + move);
 			} else {
-				// 最小の高さより小さくなろうとした時
 				applyTransformHeight(minHeight);
 			}
 		} else {
@@ -551,16 +532,16 @@ function onBrowserResize() {
 	const windowHeight = main.offsetHeight;
 	if (position.left < 0) {
 		main.style.left = '0';
-	} // 左はみ出し
+	}
 	if (position.top + windowHeight > browserHeight) {
 		main.style.top = browserHeight - windowHeight + 'px';
-	} // 下はみ出し
+	}
 	if (position.left + windowWidth > browserWidth) {
 		main.style.left = browserWidth - windowWidth + 'px';
-	} // 右はみ出し
+	}
 	if (position.top < 0) {
 		main.style.top = '0';
-	} // 上はみ出し
+	}
 }
 
 onMounted(() => {

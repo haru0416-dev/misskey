@@ -24,7 +24,7 @@ export class QueryCacheView<T> {
 		protected readonly queryKey: QueryKey,
 		options: QueryCacheOptions<T> = {},
 	) {
-		// 表示中のsingletonをGCして別の正本を必要としないよう、所有者の寿命まで保持する。
+		// この query key の GC を無効にし、表示中の singleton を維持する。
 		queryClient.setQueryDefaults(this.queryKey, { gcTime: Infinity });
 		const current = queryClient.getQueryState(this.queryKey);
 		if (

@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// NIRAX --- 軽量ルーター
-
 import { onBeforeUnmount, shallowRef } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import type { Component, ShallowRef } from 'vue';

@@ -98,7 +98,6 @@ export function createAiService(meta: MiMeta, httpRequestService: HttpRequestSer
 
 		const baseUrl = meta.sensitiveMediaDetectionApiUrl;
 		if (baseUrl == null || baseUrl.trim() === '') {
-			// 接続先が未設定なら検出不能。全件 null（非センシティブ扱い）を返す。
 			return sources.map(() => null);
 		}
 

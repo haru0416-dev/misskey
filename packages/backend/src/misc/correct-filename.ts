@@ -8,10 +8,8 @@ const targetExtsToSkip = new Set(['.gz', '.tar', '.tgz', '.bz2', '.xz', '.zip', 
 const extRegExp = /\.[0-9a-zA-Z]+$/;
 
 /**
- * 与えられた拡張子とファイル名が一致しているかどうかを確認し、
- * 一致していない場合は拡張子を付与して返す
- *
- * extはfile-typeのextを想定
+ * file-type が判定した拡張子をファイル名に補う。圧縮形式と PE の別名は既存名を優先し、
+ * 判定結果が無い場合は既存の拡張子を維持する。
  */
 export function correctFilename(filename: string, ext: string | null) {
 	const dotExt = ext ? (ext[0] === '.' ? ext : `.${ext}`) : '.unknown';

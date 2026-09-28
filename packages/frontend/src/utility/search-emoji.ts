@@ -72,7 +72,6 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 		appendUnique(matched, partials, max);
 	}
 
-	// 簡易あいまい検索 (4 文字以上)
 	if (matched.size < max && query.length > 3) {
 		const queryChars = [...query];
 		const hitEmojis = new Map<string, EmojiScore>();
@@ -88,7 +87,7 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 				hit++;
 			}
 
-			// 半分以上の文字が含まれていればヒットとする
+			// 文字数の半分を切り上げた数より多く、名前に順に含まれる候補だけを採る。
 			if (hit > Math.ceil(queryChars.length / 2) && !matched.has(canonicalName(x))) {
 				hitEmojis.set(canonicalName(x), { emoji: x, score: hit - 2 });
 			}

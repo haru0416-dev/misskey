@@ -82,7 +82,7 @@ misskeyApi('drive/stream', {
 		images.value = res;
 	})
 	.catch(() => {
-		// 取得失敗時は空のまま (unhandled rejection を防ぐ)
+		// 取得に失敗しても、購読で先に届いた画像を消さずに読み込み表示だけ終了する。
 	})
 	.finally(() => {
 		fetching.value = false;

@@ -117,7 +117,6 @@ if (!envOption.disableClustering) {
 		throw new Error('Unknown process type');
 	}
 } else {
-	// 非 cluster 構成では master だけが起動し、worker としての処理は無い。
 	logger.info(`Start main process... pid: ${process.pid}`);
 	const { masterMain } = await import('./master.js');
 	disposeRuntime = await masterMain(config);
@@ -176,7 +175,7 @@ process.on('message', (msg) => {
 
 readyRef.value = true;
 
-// ユニットテストの子プロセスだけが起動完了を親へ通知する。
+// IPC チャネルを持つ子プロセスへ起動完了を通知する。
 if (process.send) {
 	process.send('ok');
 }

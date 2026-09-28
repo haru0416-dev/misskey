@@ -100,7 +100,7 @@ export async function handleQueueExportCustomEmojis(
 			}
 			downloaded = true;
 		} catch {
-			// ダウンロードに失敗した絵文字も downloaded:false で記録し、処理を継続する。
+			// ファイル取得に失敗した絵文字も downloaded:false で記録し、処理を継続する。
 		}
 
 		if (!downloaded) {
@@ -148,7 +148,6 @@ type ExportedEmojiMetaRecord = {
 	};
 };
 
-/** 数万件分の meta.json でも数 MB に収まる。 */
 const MAX_EMOJI_IMPORT_META_BYTES = 16 * 1024 * 1024;
 const MAX_EMOJI_IMPORT_FILE_BYTES = 32 * 1024 * 1024;
 

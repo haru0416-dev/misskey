@@ -6,7 +6,6 @@
 import { computed } from 'vue';
 import { prefer } from '@/preferences.js';
 
-// custom絵文字の情報からキーを作成する
 export function makeEmojiMuteKey(props: { name: string; host?: string | null }) {
 	return props.name.startsWith(':') ? props.name : `:${props.name}${props.host ? `@${props.host}` : ''}:`;
 }

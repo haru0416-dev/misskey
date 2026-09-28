@@ -100,7 +100,6 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		return compile(theme);
 	}
 
-	/** currentTheme を適用する。 */
 	private applyTheme() {
 		if (this.currentTheme == null || this.currentCompiledTheme == null) {
 			return;
@@ -127,7 +126,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 				void transition.ready.catch((err) => console.error(err));
 				void transition.finished.then(finish, fallback);
 			} catch (err) {
-				// 様々な理由により startViewTransition は失敗することがある
+				// 開始時の例外も通常の属性更新へ戻し、テーマ切り替えを止めない。
 				// ref. https://github.com/misskey-dev/misskey/issues/16562
 				fallback(err);
 			}

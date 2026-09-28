@@ -109,10 +109,8 @@ const convertToMisskeyTheme = (
 
 const convertToViewModel = (theme: Theme): ThemeViewModel => {
 	const vm: ThemeViewModel = [];
-	// プロパティの登録
 	vm.push(...themeProps.map((key) => [key, fromThemeString(theme.props[key])] as [string, ThemeValue]));
 
-	// 定数の登録
 	const consts = Object.keys(theme.props)
 		.filter((k) => k.startsWith('$'))
 		.map((k) => [k, fromThemeString(theme.props[k])] as [string, ThemeValue]);

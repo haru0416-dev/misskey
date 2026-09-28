@@ -45,8 +45,6 @@ describe('Drive', () => {
 	});
 
 	test('ファイルURLからアップロードできる', async () => {
-		// utils.js uploadUrl の処理だがAPIレスポンスも見るためここで同様の処理を書いている
-
 		const marker = Math.random().toString();
 
 		const catcher = makeStreamCatcher(
@@ -75,8 +73,6 @@ describe('Drive', () => {
 	});
 
 	test('ローカルからアップロードできる', async () => {
-		// APIレスポンスを直接使用するので utils.js uploadFile が通過することで成功とする
-
 		const res = await uploadFile(alice, { path: '192.jpg', name: 'テスト画像' });
 
 		expect(res.body).toMatchObject({ name: 'テスト画像.jpg', type: 'image/jpeg' });

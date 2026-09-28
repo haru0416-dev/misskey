@@ -51,7 +51,6 @@ import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 
-/** `pageNameSchema` の pattern を Zod 用に再利用する。 */
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
 export type ApiPageDependencies = ApiDriveFileDependencies & ApiRolePolicyDependencies;

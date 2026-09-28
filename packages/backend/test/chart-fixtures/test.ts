@@ -13,7 +13,7 @@ import { name, schema } from './entities/test.js';
 import type { KVs } from '@/core/chart/core.js';
 
 export default class TestChart extends Chart<typeof schema> {
-	public total = 0; // publicにするのはテストのため
+	public total = 0;
 
 	constructor(
 		private db: MiDrizzleDatabase,

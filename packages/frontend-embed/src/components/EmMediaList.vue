@@ -45,10 +45,10 @@ const nonPreviewableMedia = computed(() => props.mediaList.filter(media => !prev
 const count = computed(() => previewableMedia.value.length);
 
 const previewable = (file: Misskey.entities.DriveFile): boolean => {
+	// SVG は通常 PNG サムネイルで描画するため候補に含める。raw 指定時は元 URL を使う。
 	if (file.type === 'image/svg+xml') {
 		return true;
-	} // svgのwebpublic/thumbnailはpngなのでtrue
-	// FILE_TYPE_BROWSERSAFEに適合しないものはブラウザで表示するのに不適切
+	}
 	return (file.type.startsWith('video') || file.type.startsWith('image')) && FILE_TYPE_BROWSERSAFE.includes(file.type);
 };
 </script>
@@ -81,19 +81,19 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 		&.n116_9 {
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 16 / 9; // コンテナクエリが使えない場合の比率
+			aspect-ratio: 16 / 9;
 		}
 
 		&.n11_1{
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 1 / 1; // コンテナクエリが使えない場合の比率
+			aspect-ratio: 1 / 1;
 		}
 
 		&.n12_3 {
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 2 / 3; // コンテナクエリが使えない場合の比率
+			aspect-ratio: 2 / 3;
 		}
 	}
 

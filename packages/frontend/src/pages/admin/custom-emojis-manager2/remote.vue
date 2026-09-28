@@ -179,7 +179,6 @@ function setupGrid(): GridSetting {
 
 	return {
 		row: {
-			// グリッドの行数をあらかじめ100行確保する
 			minimumDefinitionCount: 100,
 			styleRules: [
 				{

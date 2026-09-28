@@ -82,7 +82,6 @@ async function getHashtagCharts(
 		for (const hashtag of hashtags) {
 			redisPipeline.pfcount(`hashtagUsers:${hashtag}:${window}`);
 		}
-		// 10 分ずつ過去の窓へ。
 		now.setMinutes(now.getMinutes() - 10, 0, 0);
 	}
 

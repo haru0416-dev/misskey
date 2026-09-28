@@ -129,12 +129,10 @@ function setupGrid(): GridSetting {
 			minimumDefinitionCount: 100,
 			styleRules: [
 				{
-					// 1つでもバリデーションエラーがあれば行全体をエラー表示する
 					condition: ({ cells }) => cells.some((it) => !it.violation.valid),
 					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
-			// 行のコンテキストメニュー設定
 			contextMenuFactory: (row, context) => {
 				return [
 					{
@@ -176,7 +174,6 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'type', type: 'text', editable: false, width: 90 },
 		],
 		cells: {
-			// セルのコンテキストメニュー設定
 			contextMenuFactory: (col, row, value, context) => {
 				return [
 					{
@@ -242,7 +239,6 @@ async function onRegistryClicked() {
 	const result = await os.promiseDialog(Promise.all(upload()));
 	requestLogs.value = await toRequestLogs(result);
 
-	// 登録に成功したものは一覧から除く
 	const successItems = new Set(result.filter((it) => it.success).map((it) => it.item));
 	gridItems.value = gridItems.value.filter((it) => !successItems.has(it));
 }

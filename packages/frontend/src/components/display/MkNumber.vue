@@ -27,7 +27,6 @@ watch(
 			return;
 		}
 
-		// requestAnimationFrameを利用して、500msで現在の表示値から最新値までを1次関数的に変化させる
 		let start: number | null = null;
 		let frameId: number | null = null;
 

@@ -10,11 +10,8 @@ import type * as misskey from 'misskey-js';
 
 describe('API visibility', () => {
 	describe('Note visibility', () => {
-		/** ヒロイン */
 		let alice: misskey.entities.SignupResponse;
-		/** フォロワー */
 		let follower: misskey.entities.SignupResponse;
-		/** 非フォロワー */
 		let other: misskey.entities.SignupResponse;
 		/** 非フォロワーでもリプライやメンションをされた人 */
 		let target: misskey.entities.SignupResponse;

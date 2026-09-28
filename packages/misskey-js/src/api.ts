@@ -184,7 +184,6 @@ export class APIClient {
 		const params = args[0] ?? ({} as P);
 		const credential = args[1];
 		const signal = args[2];
-		// 生成定義にnullが含まれる場合は、デフォルト値を維持する。
 		const mediaType = this.assertSpecialEpReqType(endpoint) ? endpointReqTypes[endpoint] ?? 'application/json' : 'application/json';
 		return requestAPI({
 			apiUrl: `${this.origin}/api`,

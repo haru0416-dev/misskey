@@ -40,7 +40,6 @@
 		} else {
 			lang = supportedLangs.find((x) => x.split('-')[0] === navigator.language);
 
-			// 一致する言語がない場合は英語にする
 			if (lang == null) {
 				lang = 'en-US';
 			}
@@ -74,7 +73,6 @@
 		});
 	}
 
-	// タイミングによっては、この時点でDOMの構築が済んでいる場合とそうでない場合とがある
 	if (document.readyState !== 'loading') {
 		importAppScript();
 	} else {
@@ -93,7 +91,6 @@
 	}
 
 	async function renderError(code) {
-		// DOM構築前は本文を書き換えられないため、構築完了を待つ
 		if (document.readyState === 'loading') {
 			await new Promise((resolve) => window.addEventListener('DOMContentLoaded', resolve));
 		}
@@ -104,7 +101,6 @@
 			messages = JSON.parse(bootloaderLocales);
 		}
 		if (!messages) {
-			// bootloaderLocalesがない場合は、locale全体から起動時の文言を取得する
 			const legacyLocale = localStorage.getItem('locale');
 			if (legacyLocale) {
 				const parsed = JSON.parse(legacyLocale);

@@ -31,7 +31,6 @@ type AvailableFile = Exclude<ProxySource, { kind: 'not-found' | 'unavailable' }>
 // Pi 5 相当の枠で TL 5 画面分 (240 要求) の変換 CPU が 5.4→3.3 秒になる。保存するサムネイル等は webpDefault のまま。
 const proxyWebp: WebpOptions = { ...webpDefault, smartSubsample: false };
 
-/** 画像の中身。メモリ上ならそのバッファ、一時ファイルや保存済みならそのパス。 */
 function sourceOf(file: AvailableFile): Buffer | string {
 	return 'data' in file ? file.data : file.path;
 }

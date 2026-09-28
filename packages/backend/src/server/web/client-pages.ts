@@ -95,13 +95,9 @@ function isUgcVisibleToVisitor(deps: Pick<ClientPagesDependencies, 'meta'>, user
 	);
 }
 
-/**
- * 該当エンティティが見つからない・可視でない場合は next() で後段の client-base (汎用ページ) に委ねる。
- */
 export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	const app = new Hono();
 
-	// /users/:id → /@:username リダイレクト (HTML閲覧時)
 	app.get('/users/:user', async (c) => {
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
 
@@ -353,7 +349,6 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const { username, host } = Acct.parse(acctStr);
 		const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, username, host ?? null);
 
-		// /@:user/pages/:page
 		if (segments.length === 3 && segments[1] === 'pages' && segments[2] !== '') {
 			if (user == null) {
 				await next();
@@ -380,7 +375,6 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			);
 		}
 
-		// /@:user or /@:user/:sub
 		if (segments.length > 2) {
 			await next();
 			return;

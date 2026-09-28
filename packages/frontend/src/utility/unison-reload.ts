@@ -5,7 +5,6 @@
 
 export const reloadChannel = new BroadcastChannel('reload');
 
-// BroadcastChannel で他のタブにも同時に reload させる。
 export function unisonReload(path?: string) {
 	if (path !== undefined) {
 		reloadChannel.postMessage(path);

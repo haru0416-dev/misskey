@@ -13,13 +13,10 @@ const pendingLoads = new Map<string, Promise<AudioBuffer | undefined>>();
 let canPlay = true;
 
 export const soundsTypes = [
-	// 音声なし
 	null,
 
-	// ドライブの音声
 	'_driveFile_',
 
-	// プリインストール
 	'syuilo/n-aec',
 	'syuilo/n-aec-4va',
 	'syuilo/n-aec-4vb',
@@ -75,10 +72,8 @@ export const soundsTypes = [
 
 export const operationTypes = ['noteMy', 'note', 'notification', 'reaction', 'chatMessage'] as const;
 
-/** サウンドの種類 */
 export type SoundType = (typeof soundsTypes)[number];
 
-/** スプライトの種類 */
 export type OperationType = (typeof operationTypes)[number];
 
 /**
@@ -133,10 +128,6 @@ export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 	return load;
 }
 
-/**
- * 既定のスプライトを再生する
- * @param type スプライトの種類を指定
- */
 export function playMisskeySfx(operationType: OperationType) {
 	const sound = prefer[`sound.on.${operationType}`];
 	playMisskeySfxFile(sound).then((succeed) => {
@@ -155,12 +146,7 @@ export function playMisskeySfx(operationType: OperationType) {
 	});
 }
 
-/**
- * サウンド設定形式で指定された音声を再生する
- * @param soundStore サウンド設定
- */
 export async function playMisskeySfxFile(soundStore: SoundStore): Promise<boolean> {
-	// 連続して再生しない
 	if (!canPlay) {
 		return false;
 	}
@@ -168,7 +154,6 @@ export async function playMisskeySfxFile(soundStore: SoundStore): Promise<boolea
 	if ('userActivation' in navigator && !navigator.userActivation.hasBeenActive) {
 		return false;
 	}
-	// サウンドがない場合は再生しない
 	if (soundStore.type === null || (soundStore.type === '_driveFile_' && !soundStore.fileUrl)) {
 		return false;
 	}
@@ -259,18 +244,13 @@ export async function getSoundDuration(file: string): Promise<number> {
 	});
 }
 
-/**
- * ミュートすべきかどうかを判断する
- */
 function isMute(): boolean {
 	if (prefer['sound.notUseSound']) {
-		// サウンドを出力しない
 		return true;
 	}
 
 	// noinspection RedundantIfStatementJS
 	if (prefer['sound.useSoundOnlyWhenActive'] && window.document.visibilityState === 'hidden') {
-		// ブラウザがアクティブな時のみサウンドを出力する
 		return true;
 	}
 

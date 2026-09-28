@@ -40,7 +40,7 @@ function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
 	}), {} as ILocale) as T;
 }
 
-// 空文字列はフォールバックを無効化するため、プロパティを削除する。
+// 空の翻訳を削除し、親言語または ja-JP の値を適用できるようにする。
 function removeEmpty<T extends ILocale>(obj: T): T {
 	for (const [k, v] of Object.entries(obj)) {
 		if (v === '') {

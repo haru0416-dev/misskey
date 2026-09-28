@@ -132,7 +132,7 @@ const notifications = ref<Misskey.entities.Notification[]>([]);
 function onNotification(notification: Misskey.entities.Notification, isClient = false) {
 	if (window.document.visibilityState === 'visible') {
 		if (!isClient && notification.type !== 'test') {
-			// サーバーサイドのテスト通知の際は自動で既読をつけない（テストできないので）
+			// テスト通知は表示を確認できるよう未読のまま残す。クライアント発の通知にはサーバーでの既読状態がない。
 			if (store.realtimeMode) {
 				useStream().send('readNotification');
 			}

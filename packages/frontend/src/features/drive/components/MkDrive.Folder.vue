@@ -91,9 +91,7 @@ function onDragover(ev: DragEvent) {
 		return;
 	}
 
-	// 自分自身がドラッグされている場合
 	if (isDragging.value) {
-		// 自分自身にはドロップさせない
 		ev.dataTransfer.dropEffect = 'none';
 		return;
 	}
@@ -123,7 +121,6 @@ function onDrop(ev: DragEvent) {
 		return;
 	}
 
-	// ファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
 		emit('upload', Array.from(ev.dataTransfer.files), props.folder);
 		return;
@@ -147,7 +144,6 @@ function onDrop(ev: DragEvent) {
 				return;
 			}
 
-			// 移動先が自分自身ならreject
 			if (droppedFolder.id === props.folder.id) {
 				return;
 			}
@@ -167,7 +163,6 @@ function onDragstart(ev: DragEvent) {
 	setDragData(ev, 'driveFolders', [props.folder]);
 	isDragging.value = true;
 
-	// 親ブラウザに対して、ドラッグが開始されたフラグを立てる
 	emit('dragstart');
 }
 

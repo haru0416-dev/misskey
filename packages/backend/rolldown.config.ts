@@ -2,7 +2,6 @@ import { defineConfig } from 'rolldown';
 import type { Plugin } from 'rolldown';
 import { externalModules } from './runtime-externals.mjs';
 
-/** watch モードでバックエンドの起動・停止を制御する。 */
 function backendDevServerPlugin(): Plugin {
 	let backendProcess: Bun.Subprocess | null = null;
 	let backendShutdownPromise: Promise<void> | null = null;

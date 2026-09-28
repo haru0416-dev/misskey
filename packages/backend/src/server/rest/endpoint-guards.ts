@@ -27,7 +27,6 @@ export type EndpointGuardDependencies = Parameters<typeof authenticateApiToken>[
 	Parameters<typeof assertApiModerator>[0] &
 	Parameters<typeof assertApiRateLimitForUser>[0];
 
-/** 共通 guard が読む meta の項目。 */
 export type EndpointGuardMeta = {
 	readonly requireCredential?: boolean;
 	readonly requireModerator?: boolean;

@@ -200,7 +200,6 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 	});
 
 	test('movedToが新規に検知され、dstがsrcをalsoKnownAsで承認していれば、未知のdstを新規作成しフォロワーの移行ジョブを積む', async () => {
-		// dst (移行先、まだこのインスタンスには知られていない新規リモートユーザー) のフィクスチャ
 		const dstFixture = await actorFixtureServer(() => ({
 			'@context': 'https://www.w3.org/ns/activitystreams',
 			id: `http://${dstFixture.host}/users/dst`,
@@ -212,7 +211,6 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 		servers.push(dstFixture.server);
 		const dstUri = `http://${dstFixture.host}/users/dst`;
 
-		// src (移行元、既存のリモートユーザー) のフィクスチャ。movedToでdstUriを指す。
 		const srcFixture = await actorFixtureServer(() => ({
 			'@context': 'https://www.w3.org/ns/activitystreams',
 			id: `http://${srcFixture.host}/users/src`,
@@ -271,7 +269,6 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			type: 'Person',
 			preferredUsername: 'noackdst',
 			inbox: `http://${dstFixture.host}/users/noackdst/inbox`,
-			// alsoKnownAsを設定しない (承認していないケース)
 		}));
 		servers.push(dstFixture.server);
 		const dstUri = `http://${dstFixture.host}/users/noackdst`;

@@ -123,7 +123,6 @@ type ConnectionSnapshot = {
 	userMutedInstances: Set<string>;
 };
 
-/** ストリーミング接続で使う関連セットを DB から取得する。 */
 async function fetchStreamConnectionSnapshot(
 	deps: StreamConnectionDependencies,
 	userId: MiUser['id'],
@@ -180,7 +179,6 @@ const HONO_STREAM_CHANNELS: Record<string, StreamChannelDefinition<StreamConnect
  */
 const MAX_SUBSCRIBED_NOTES_PER_CONNECTION = 1536;
 
-/** ストリーミング接続ごとの状態とチャンネル購読を保持する。 */
 export class StreamConnection {
 	public readonly user?: MiUser;
 	public readonly token?: MiAccessToken;

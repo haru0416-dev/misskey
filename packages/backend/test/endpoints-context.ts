@@ -95,7 +95,6 @@ export async function createEndpointsContext(): Promise<EndpointsContext> {
 	};
 }
 
-/** endpoints-*.ts のテスト本体が使う小さな断言ヘルパー。 */
 export function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
 	if (value == null) {

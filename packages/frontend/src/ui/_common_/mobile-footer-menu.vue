@@ -64,7 +64,7 @@ const menuIndicated = computed(() => {
 	for (const [key, def] of Object.entries(navbarItemDef)) {
 		if (key === 'notifications') {
 			continue;
-		} // 通知は下にボタンとして表示されてるから
+		} // 通知はフッターに専用ボタンがあるため、メニュー側の未読表示から除外する。
 		if (def.indicated) {
 			return true;
 		}

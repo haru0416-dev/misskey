@@ -128,7 +128,6 @@ function setupGrid(): GridSetting {
 		row: {
 			showNumber: true,
 			selectable: true,
-			// グリッドの行数をあらかじめ100行確保する
 			minimumDefinitionCount: 100,
 			styleRules: [
 				{
@@ -137,12 +136,10 @@ function setupGrid(): GridSetting {
 					applyStyle: { className: $style['changedRow'] ?? '' },
 				},
 				{
-					// バリデーションに引っかかっていたら背景色を変更
 					condition: ({ cells }) => cells.some((it) => !it.violation.valid),
 					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
-			// 行のコンテキストメニュー設定
 			contextMenuFactory: (row, context) => {
 				return [
 					{
@@ -222,7 +219,6 @@ function setupGrid(): GridSetting {
 			{ bindTo: 'originalUrl', type: 'text', editable: false, width: 180 },
 		],
 		cells: {
-			// セルのコンテキストメニュー設定
 			contextMenuFactory(col, row, value, context) {
 				return [
 					{

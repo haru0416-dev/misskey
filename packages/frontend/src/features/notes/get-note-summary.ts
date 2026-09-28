@@ -6,28 +6,12 @@
 import type * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
 
-/**
- * 投稿を表す文字列を取得します。
- * @param {*} note (packされた)投稿
- */
 export const getNoteSummary = (
 	note?: Misskey.entities.Note | Misskey.entities.NoteDraft | null,
 	opts?: {
-		/**
-		 * ファイルの数を表示するかどうか
-		 */
 		showFiles?: boolean;
-		/**
-		 * 投票の有無を表示するかどうか
-		 */
 		showPoll?: boolean;
-		/**
-		 * 返信の有無を表示するかどうか
-		 */
 		showReply?: boolean;
-		/**
-		 * Renoteの有無を表示するかどうか
-		 */
 		showRenote?: boolean;
 	},
 ): string => {

@@ -291,10 +291,8 @@ function onImagePointerdown(ev: PointerEvent) {
 	let yOffset = 0;
 
 	if (AW / AH < BW / BH) {
-		// 横長
 		yOffset = AH - BH * (AW / BW);
 	} else {
-		// 縦長
 		xOffset = AW - BW * (AH / BH);
 	}
 
@@ -305,11 +303,9 @@ function onImagePointerdown(ev: PointerEvent) {
 	let startY = ev.offsetY - yOffset;
 
 	if (AW / AH < BW / BH) {
-		// 横長
 		startX = startX / (Math.max(AW, AH) / Math.max(BH / BW, 1));
 		startY = startY / (Math.max(AW, AH) / Math.max(BW / BH, 1));
 	} else {
-		// 縦長
 		startX = startX / (Math.min(AW, AH) / Math.max(BH / BW, 1));
 		startY = startY / (Math.min(AW, AH) / Math.max(BW / BH, 1));
 	}
@@ -367,11 +363,9 @@ function onImagePointerdown(ev: PointerEvent) {
 		let y = pointerY - yOffset;
 
 		if (AW / AH < BW / BH) {
-			// 横長
 			x = x / (Math.max(AW, AH) / Math.max(BH / BW, 1));
 			y = y / (Math.max(AW, AH) / Math.max(BW / BH, 1));
 		} else {
-			// 縦長
 			x = x / (Math.min(AW, AH) / Math.max(BH / BW, 1));
 			y = y / (Math.min(AW, AH) / Math.max(BW / BH, 1));
 		}

@@ -118,9 +118,7 @@ const rootEl = useTemplateRef('rootEl');
 const contentAreaEl = useTemplateRef('contentAreaEl');
 const inputAreaEl = useTemplateRef('inputAreaEl');
 
-/** 値が編集中かどうか */
 const editing = ref<boolean>(false);
-/** 編集中の値. {@link beginEditing}と{@link endEditing}内、および各inputタグやそのコールバックからの操作のみを想定する */
 const editingValue = ref<CellValue>(undefined);
 
 const cellWidth = computed(() => cell.value.column.width);
@@ -244,7 +242,6 @@ async function beginEditing(target: HTMLElement) {
 				break;
 			}
 			case 'boolean': {
-				// とくに特殊なUIは設けず、トグルするだけ
 				emitValueChange(!cell.value.value);
 				break;
 			}

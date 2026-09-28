@@ -125,10 +125,6 @@ const backed = ref(false);
 
 const scrollRemove = ref<(() => void) | null>(null);
 
-/**
- * 表示するアイテムのソース
- * 最新が0番目
- */
 const items = ref<MisskeyEntityMap>(new Map());
 
 /**
@@ -139,9 +135,6 @@ const queue = ref<MisskeyEntityMap>(new Map());
 
 const offset = ref(0);
 
-/**
- * 初期化中かどうか（trueならEmLoadingで全て隠す）
- */
 const fetching = ref(true);
 
 const moreFetching = ref(false);

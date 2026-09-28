@@ -17,7 +17,6 @@ import type { MiUser } from '@/models/User.js';
 import { pushIdPaginationConditions } from '@/db/id-pagination.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
-// 招待の作成と参加では、ユーザー単位のロックより先にルームのロックを取得する。
 export class ChatRoomCapacityExceededError extends Error {}
 export class ChatRoomInvitationConflictError extends Error {}
 export class ChatRoomInvitationNotFoundError extends Error {}
@@ -287,6 +286,7 @@ export async function createChatRoomMembershipInDatabase(
 	return row;
 }
 
+// 招待の作成と参加では、ユーザー単位のロックより先にルームのロックを取得する。
 export async function joinChatRoomFromInvitationInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChatRoomMembershipInsert,

@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 const promiseRefs = new Set<WeakRef<Promise<unknown>>>();
 let shutdown = new AbortController();
 
-/** 他モジュールが待機しない Promise を追跡し、サーバー終了前にすべて settle させる。 */
+/** テストで fire-and-forget の処理を終了前に待つ。本番では追跡しない。 */
 export function trackPromise(promise: Promise<unknown>) {
 	if (process.env['NODE_ENV'] !== 'test') {
 		return;
@@ -29,6 +29,5 @@ export function unrefDelay(ms: number): Promise<void> {
 export async function allSettled(): Promise<void> {
 	shutdown.abort();
 	shutdown = new AbortController();
-	// WeakRef.deref() は回収済みなら undefined を返すので、Promise だけを渡す
 	await Promise.allSettled([...promiseRefs].map((r) => r.deref()).filter((p) => p != null));
 }

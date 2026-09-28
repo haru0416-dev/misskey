@@ -45,5 +45,5 @@ export class MiAntenna {
 
 	public excludeNotesInSensitiveChannel: boolean;
 }
-// カラムを追加する場合は、handleQueueExportAntennas と handleApiIImportAntennas (exportedAntennasSchema) の
-// エクスポート・インポート対象も更新する。
+// エクスポート形式と取り込み処理は MiAntenna 全カラムを対象にしない。
+// エクスポート対象を追加する場合は AntennaImport の schema と queue 側の出力を揃える。

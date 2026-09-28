@@ -64,14 +64,12 @@ function onModalClose() {
 function onMenuClose() {
 	close();
 	if (hiding.value) {
-		// hidingであればclosedを発火
 		emit('closed');
 	}
 }
 
 function onModalClosed() {
 	if (!hiding.value) {
-		// hidingでなければclosedを発火
 		emit('closed');
 	}
 }
@@ -80,14 +78,12 @@ function hide() {
 	manualShowing.value = false;
 	hiding.value = true;
 
-	// closeは呼ぶ必要がある
 	modal.value?.close();
 }
 
 function close() {
 	manualShowing.value = false;
 
-	// closeは呼ぶ必要がある
 	modal.value?.close();
 }
 </script>

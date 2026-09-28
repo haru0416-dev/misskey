@@ -16,8 +16,8 @@ import type { MiUser } from '@/models/User.js';
 function deserializeAntenna(row: AntennaRow): MiAntenna {
 	return {
 		...row,
-		user: null, // joinなカラムは通常取ってこないので
-		userList: null, // joinなカラムは通常取ってこないので
+		user: null,
+		userList: null,
 	} as MiAntenna;
 }
 

@@ -108,7 +108,6 @@ describe('Note', () => {
 		});
 
 		test('Consistency of Renote', async () => {
-			// renoteCount は増加しないため、再取得しない。
 			const renotedNote = (
 				await alice.client.request('notes/create', {
 					text: 'a',

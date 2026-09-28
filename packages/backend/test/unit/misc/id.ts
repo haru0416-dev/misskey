@@ -13,7 +13,6 @@ describe('misc:id', () => {
 		const gotUuidv7 = genUuidv7(date);
 		expect(gotUuidv7).toMatch(uuidv7RegExp);
 		expect(parseUuidv7(gotUuidv7).date.getTime()).toBe(date);
-		// version nibble と variant bits
 		expect(gotUuidv7[12]).toBe('7');
 		expect('89ab').toContain(gotUuidv7[16]);
 	});

@@ -126,9 +126,6 @@ export async function deleteRegistrationTicketInDatabase(
 }
 
 /**
- * invite/list の sinceId/untilId/sinceDate/untilDate からカーソルと並び順を解決する。
- */
-/**
  * invite/list 向け。自分が作成した招待コードをページネーションして列挙する。
  */
 export async function listRegistrationTicketsCreatedByFromDatabase(

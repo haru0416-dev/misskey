@@ -141,7 +141,6 @@ function renderError(e?: Error): unknown {
 	return { stack: e.stack, message: e.message, name: e.name };
 }
 
-/** 各キューの `Bull.Worker` を `deps` 付きのハンドラ関数にバインドする。本番の起動経路は `boot/common.ts` の `jobQueue()`。 */
 export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	const runInBackgroundScope = createBackgroundExecutionScope();
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');

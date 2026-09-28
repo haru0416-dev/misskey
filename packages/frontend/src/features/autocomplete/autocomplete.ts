@@ -93,7 +93,6 @@ export class Autocomplete {
 		const beforeCaret = this.text.substring(0, caretPos);
 		const text = beforeCaret.substring(beforeCaret.lastIndexOf('\n') + 1);
 
-		// メンションに含められる文字のみで構成された、最も末尾にある文字列を抽出
 		const mentionCandidate = trailingMentionCandidate(text);
 
 		const mentionIndex = mentionCandidate.lastIndexOf('@');
@@ -121,7 +120,6 @@ export class Autocomplete {
 				.split(/:[a-z0-9_+\-]+:/)
 				.pop()!
 				.includes(':');
-		// `:ok:` のような入力を Unicode 絵文字 (🆗) へ補完するか。
 		const isEmojiCompleteToUnicode = !isEmoji && emojiIndex === text.length - 1;
 
 		let opened = false;
@@ -132,11 +130,9 @@ export class Autocomplete {
 			// ホスト名を含むリモートのユーザ名を全て拾えるようにする
 			const mentionIndexAlt = mentionCandidate.lastIndexOf('@', mentionIndex - 1);
 
-			// @が連続している場合、1つ目を無視する
 			const mentionIndexLeft =
 				mentionIndexAlt !== -1 && mentionIndexAlt !== mentionIndex - 1 ? mentionIndexAlt : mentionIndex;
 
-			// メンションを構成する条件を満たしているか確認する
 			const precedingCharacter = mentionCandidate[mentionIndexLeft - 1];
 			const isMention = mentionIndexLeft === 0 || (precedingCharacter != null && '_@.-'.includes(precedingCharacter));
 
@@ -285,7 +281,6 @@ export class Autocomplete {
 
 			this.text = `${trimmedBefore}@${acct} ${after}`;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + (acct.length + 2);
@@ -300,7 +295,6 @@ export class Autocomplete {
 
 			this.text = `${trimmedBefore}#${props.value} ${after}`;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + (props.value.length + 2);
@@ -315,7 +309,6 @@ export class Autocomplete {
 
 			this.text = trimmedBefore + props.value + after;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + props.value.length;
@@ -330,7 +323,6 @@ export class Autocomplete {
 
 			this.text = trimmedBefore + props.value + after;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + props.value.length;
@@ -345,7 +337,6 @@ export class Autocomplete {
 
 			this.text = `${trimmedBefore}$[${props.value} ]${after}`;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + (props.value.length + 3);
@@ -360,7 +351,6 @@ export class Autocomplete {
 
 			this.text = `${trimmedBefore}.${props.value}${after}`;
 
-			// キャレットを戻す
 			nextTick(() => {
 				this.textarea.focus();
 				const pos = trimmedBefore.length + (props.value.length + 1);

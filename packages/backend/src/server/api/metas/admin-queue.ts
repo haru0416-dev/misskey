@@ -15,7 +15,6 @@ import {
 import { z } from 'zod';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 
-// deliver-delayed と inbox-delayed は同じ [host, 件数] の組を返す。
 const delayedJobCountsByHostSchema = {
 	type: 'array',
 	optional: false,
@@ -44,7 +43,6 @@ const queueNameProperty = {
 	enum: QUEUE_TYPES,
 } as const;
 
-// queues の各要素と queue-stats は同じキュー状態を返す。
 const queueStateProperties = {
 	counts: {
 		type: 'object',

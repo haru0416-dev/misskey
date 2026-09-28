@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// ブラウザで直接表示することを許可するファイルの種類のリスト
-// ここに含まれないものは application/octet-stream としてレスポンスされる
-// SVGはXSSを生むので許可しない
+// メディアのプレビュー判定に使う MIME の一覧。サーバー側の安全な配信 MIME 一覧とは別定義なので
+// 新しい形式を追加するときは双方を照合する。この一覧には SVG を含めない (埋め込み側は別途扱う)。
 export const FILE_TYPE_BROWSERSAFE = [
 	// 画像
 	'image/png',

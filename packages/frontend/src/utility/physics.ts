@@ -34,7 +34,6 @@ export function physics(container: HTMLElement) {
 		},
 	});
 
-	// Matter.js 自身の描画 (デバッグ表示)。不要ならこの呼び出しを外す。
 	Matter.Render.run(render);
 
 	const runner = Matter.Runner.create();
@@ -103,7 +102,6 @@ export function physics(container: HTMLElement) {
 
 	Matter.World.add(engine.world, mouseConstraint);
 
-	// マウス座標を描画と同期させる。
 	render.mouse = mouse;
 
 	for (const objEl of objEls) {
@@ -133,7 +131,6 @@ export function physics(container: HTMLElement) {
 		}
 	}
 
-	// 奈落に落ちたオブジェクトは消す
 	const intervalId = window.setInterval(() => {
 		for (const obj of objs) {
 			if (obj.position.y > containerHeight + 1024) {

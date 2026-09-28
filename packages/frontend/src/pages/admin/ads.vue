@@ -110,7 +110,7 @@ type Ad = Misskey.entities.Ad & {
 
 const ads = ref<Ad[]>([]);
 
-// ISO形式はTZがUTCになってしまうので、TZ分ずらして時間を初期化
+// 現在のタイムゾーンオフセットを全広告日時に流用するため、夏時間をまたぐ日時は現地時刻からずれる。
 const localTime = new Date();
 const localTimeDiff = localTime.getTimezoneOffset() * 60 * 1000;
 const daysOfWeek: string[] = [

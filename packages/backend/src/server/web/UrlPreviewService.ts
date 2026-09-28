@@ -37,7 +37,7 @@ export function createUrlPreviewService(
 	const logger = loggerService.getLogger('url-preview');
 	let previewHttp: HttpRequestService | undefined;
 	const defaultUserAgent = config.runtime.userAgent;
-	const summaryCache = new MemoryKVCache<UrlPreviewSummary>(1000 * 60 * 60, 100); // 1時間、最大100件
+	const summaryCache = new MemoryKVCache<UrlPreviewSummary>(1000 * 60 * 60, 100);
 
 	function wrap(url?: string | null): string | null {
 		return url != null

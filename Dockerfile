@@ -2,8 +2,6 @@
 
 ARG BUN_VERSION=1.4.2
 
-# build assets & compile TypeScript
-
 FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION}-debian AS native-builder
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -45,8 +43,6 @@ RUN . "$HOME/.cargo/env" \
 	&& bun run build \
 	&& hardlink built/_frontend_vite_
 RUN rm -rf .git/
-
-# build native dependencies for target platform
 
 FROM oven/bun:${BUN_VERSION}-debian AS target-builder
 
@@ -200,7 +196,6 @@ RUN mkdir -p /misskey/files
 COPY --chown=misskey:misskey --from=target-builder /misskey/node_modules ./node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/node_modules ./packages/misskey-js/node_modules
-# ビルドしたネイティブモジュール (index.cjs / index.mjs / *.node)。
 COPY --chown=misskey:misskey --from=slacc-builder ["/misskey/packages/slacc/package.json", "/misskey/packages/slacc/index.cjs", "/misskey/packages/slacc/index.mjs", "/misskey/packages/slacc/index.d.ts", "./packages/slacc/"]
 COPY --chown=misskey:misskey --from=slacc-builder /misskey/packages/slacc/*.node ./packages/slacc/
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built

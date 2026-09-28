@@ -66,10 +66,6 @@ export function sliceStream(source: Readable, start: number, end: number): Reada
 	return sliced;
 }
 
-/**
- * ストリームにcleanupハンドラを設定する
- * ストリームでない場合は即座にcleanupを実行する
- */
 export function attachStreamCleanup(data: IImageStreamable['data'], cleanup: () => void): void {
 	if ('pipe' in data && typeof data.pipe === 'function') {
 		data.on('end', cleanup);

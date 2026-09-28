@@ -226,7 +226,7 @@ export async function handleQueueCleanRemoteNotes(
 	const minimumLimit = 10;
 	let currentLimit = 100;
 	const savedCursor = await deps.redis.get(CURSOR_KEY);
-	// 保存期間の設定を縮めた場合など、再開位置が対象範囲の外なら先頭からやり直す。
+	// 保存期間を延ばした場合など、再開位置が対象範囲の外なら先頭からやり直す。
 	let cursorLeft = savedCursor != null && savedCursor < initialConfig.newestLimit ? savedCursor : '0';
 
 	const stats = {

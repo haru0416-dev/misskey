@@ -221,7 +221,7 @@ function onContextmenu(ev: PointerEvent) {
 	);
 }
 
-// タッチでスクロールしてるときはスナップスクロールを有効にする
+// タッチ操作を始めたときはスナップスクロールを有効にする。
 function pointerEvent(ev: PointerEvent) {
 	snapScroll.value = ev.pointerType === 'touch';
 }
@@ -237,7 +237,7 @@ onUnmounted(() => {
 });
 
 function onWheel(ev: WheelEvent) {
-	// WheelEvent はマウスからしか発火しないのでスナップスクロールは無効化する
+	// ホイールやトラックパッドで操作するときはタッチ向けのスナップスクロールを無効にする。
 	snapScroll.value = false;
 	if (ev.deltaX === 0 && columnsEl.value != null) {
 		columnsEl.value.scrollLeft += ev.deltaY;

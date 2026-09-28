@@ -45,21 +45,13 @@ const emit = defineEmits<{
 
 const shouldAnimate = computed(() => prefer.enableHorizontalSwipe || prefer.animation);
 
-// ▼ しきい値 ▼ //
-
-// スワイプと判定される最小の距離
 const MIN_SWIPE_DISTANCE = 20;
 
-// スワイプ時の動作を発火する最小の距離
 const SWIPE_DISTANCE_THRESHOLD = 70;
 
-// スワイプできる最大の距離
 const MAX_SWIPE_DISTANCE = 120;
 
-// スワイプ方向を判定する角度の許容範囲（度数）
 const SWIPE_DIRECTION_ANGLE_THRESHOLD = 50;
-
-// ▲ しきい値 ▲ //
 
 let startScreenX: number | null = null;
 let startScreenY: number | null = null;

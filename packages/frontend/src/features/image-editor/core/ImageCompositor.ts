@@ -133,7 +133,8 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		`,
 		);
 
-		// レジスタ番号はシェーダープログラムに属しているわけではなく、独立の存在なので、とりあえず nopProgram を使って設定する(その後は効果が持続する)
+		// VAO は属性の参照設定を保持するが、位置はプログラムごとに決まる。描画用プログラムの
+		// position も nopProgram と同じ位置にリンクされる前提で、現状は明示的に固定していない。
 		// ref. https://qiita.com/emadurandal/items/5966c8374f03d4de3266
 		const positionLocation = gl.getAttribLocation(this.nopProgram, 'position');
 		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
@@ -254,7 +255,6 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			this.perLayerResultFrameBuffers.delete(id);
 		}
 
-		// 入力をそのまま出力
 		if (layers.length === 0) {
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, this.baseTexture);

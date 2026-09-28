@@ -17,13 +17,13 @@ const MAX_CODE_POINT = 0x10_ff_ff;
 function digitOf(codePoint: number): number {
 	if (codePoint >= 0x30 && codePoint <= 0x39) {
 		return codePoint - 0x30 + 26;
-	} // 0-9
+	}
 	if (codePoint >= 0x41 && codePoint <= 0x5a) {
 		return codePoint - 0x41;
-	} // A-Z
+	}
 	if (codePoint >= 0x61 && codePoint <= 0x7a) {
 		return codePoint - 0x61;
-	} // a-z
+	}
 	return BASE;
 }
 

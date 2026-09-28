@@ -12,7 +12,6 @@ import type { Config } from '@/config.js';
 
 type Received = { path: string; spans: string[] };
 
-// OTLP/HTTP の受け口。届いたパスと (JSON の traces なら) span 名を記録する。
 function captureServer(received: Received[]): Server {
 	return createServer((req, res) => {
 		const chunks: Buffer[] = [];
@@ -27,7 +26,7 @@ function captureServer(received: Received[]): Server {
 					(r.scopeSpans ?? []).flatMap((s) => (s.spans ?? []).map((span) => span.name)),
 				);
 			} catch {
-				// metrics は traces と形が違うので span は数えない。
+				// JSON 以外の OTLP ペイロードからは span 名を抽出できない。
 			}
 			received.push({ path: req.url ?? '', spans });
 			res.setHeader('content-type', 'application/json');
@@ -83,7 +82,6 @@ test('traces と metrics はそれぞれ設定した送り先へ届く', async (
 	expect(spanNames).toContain('unhandled exception');
 	expect(tracesReceived.every((r) => r.path === '/v1/traces')).toBe(true);
 
-	// metrics は traces の送り先ではなく、明示した metricsEndpoint へ届く。
 	expect(metricsReceived.length).toBeGreaterThan(0);
 	expect(metricsReceived.every((r) => r.path === '/v1/metrics')).toBe(true);
 });

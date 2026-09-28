@@ -44,8 +44,7 @@ function toDosDateTime(value: Date): { time: number; date: number } {
 
 /**
  * entries を順に zip として outPath へ書く。本文は deflate の level 0 (実質無圧縮) で格納する。
- * 一度に保持するのは 1 件ぶんの本文だけなので、件数が多くてもメモリは最大の 1 件で決まる。
- * 書き込みの失敗はそのまま投げる。
+ * 各本文とは別に、中央ディレクトリ用のファイル名とメタデータを件数分保持する。
  */
 export async function writeZip(outPath: string, entries: Iterable<ZipEntry> | AsyncIterable<ZipEntry>): Promise<void> {
 	const file = await open(outPath, 'w');
@@ -103,7 +102,6 @@ export async function writeZip(outPath: string, entries: Iterable<ZipEntry> | As
 			header.writeUInt32LE(record.compressedSize, 20);
 			header.writeUInt32LE(record.size, 24);
 			header.writeUInt16LE(record.name.length, 28);
-			// extra 長 / comment 長 / 開始ディスク / 内部属性 / 外部属性 はすべて 0。
 			header.writeUInt32LE(record.offset, 42);
 			await file.write(header);
 			await file.write(record.name);

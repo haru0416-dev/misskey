@@ -426,12 +426,10 @@ if (replyTargetNote.value && replyTargetNote.value.text != null) {
 				? `@${x.username}`
 				: `@${x.username}@${otherHost}`;
 
-		// 自分は除外
 		if ($i.username === x.username && (x.host == null || x.host === host)) {
 			continue;
 		}
 
-		// 重複は除外
 		if (text.value.includes(`${mention} `)) {
 			continue;
 		}
@@ -978,7 +976,6 @@ function onDragleave() {
 function onDrop(ev: DragEvent): void {
 	draghover.value = false;
 
-	// ファイルだったら
 	if (ev.dataTransfer && ev.dataTransfer.files.length > 0) {
 		ev.preventDefault();
 		uploader.addFiles(Array.from(ev.dataTransfer.files));
@@ -1131,7 +1128,6 @@ async function post(ev?: PointerEvent) {
 		if (uploader.items.value.some((x) => x.uploaded == null)) {
 			await uploadFiles();
 
-			// アップロード失敗したものがあったら中止
 			if (uploader.items.value.some((x) => x.uploaded == null)) {
 				return;
 			}
@@ -1188,7 +1184,6 @@ async function post(ev?: PointerEvent) {
 	if (uploader.items.value.some((x) => x.uploaded == null)) {
 		await uploadFiles();
 
-		// アップロード失敗したものがあったら中止
 		if (uploader.items.value.some((x) => x.uploaded == null)) {
 			return;
 		}
@@ -1233,7 +1228,6 @@ async function post(ev?: PointerEvent) {
 		}
 	}
 
-	// plugin
 	const notePostInterruptors = getPluginHandlers('note_post_interruptor');
 	if (notePostInterruptors.length > 0) {
 		for (const interruptor of notePostInterruptors) {

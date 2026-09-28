@@ -11,13 +11,7 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 
 const MOBILE_THRESHOLD = 500;
 
-/**
- * パラメータを正規化する（埋め込みコード作成用）
- * @param params パラメータ
- * @returns 正規化されたパラメータ
- */
 export function normalizeEmbedParams(params: EmbedParams): Record<string, string> {
-	// paramsのvalueをすべてstringに変換。undefinedやnullはプロパティごと消す
 	const normalizedParams: Record<string, string> = {};
 	for (const key in params) {
 		const k = key as keyof EmbedParams;
@@ -40,9 +34,6 @@ export function normalizeEmbedParams(params: EmbedParams): Record<string, string
 	return normalizedParams;
 }
 
-/**
- * 埋め込みコードを生成（iframe IDの発番もやる）
- */
 export function getEmbedCode(path: string, params?: EmbedParams): string {
 	const iframeId = 'v1_' + genId(); // embed.js のバージョン識別用に v1_ を付ける。
 
@@ -71,7 +62,6 @@ export async function genEmbedCode(entity: EmbeddableEntity, id: string, params?
 		_params.maxHeight = 700;
 	}
 
-	// PCじゃない場合はコードカスタマイズ画面を出さずにそのままコピー
 	if (window.innerWidth < MOBILE_THRESHOLD) {
 		copyToClipboard(getEmbedCode(`/embed/${entity}/${id}`, _params));
 	} else {

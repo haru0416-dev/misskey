@@ -13,7 +13,6 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { genId } from '@/misc/id/gen-id.js';
 
 // タグを使った利用者は hashtag_user に 1 人 1 行で持ち、*UsersCount はそこから重複なく数える。
-// 以前は hashtag の行に利用者 ID の配列を持たせていて、同じ人がまた使うだけで配列全体を書き直していた。
 describe('recordHashtagUsagesInDatabase', () => {
 	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;

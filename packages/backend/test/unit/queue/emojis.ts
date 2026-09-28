@@ -30,9 +30,8 @@ import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
-// カスタム絵文字export/importはDriveService.addFileのuploadableFileTypesチェックに
-// application/zipが含まれないため、モデレーターでない限り常に失敗する
-// そのためテストユーザーには明示的にモデレーターロールを付与する。
+// 書き出した ZIP は Drive に保存する。基本ポリシーでは application/zip をアップロードできないため、
+// MIME 制限を受けないモデレーターを使い、書き出しと取り込みを検証する。
 async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Promise<MiUser> {
 	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {

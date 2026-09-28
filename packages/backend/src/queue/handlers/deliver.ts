@@ -153,7 +153,7 @@ export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: D
 
 		if (res instanceof StatusError) {
 			if (!res.isRetryable) {
-				// 410 は配送先の閉鎖を示すため、共有 inbox への配送を停止する。
+				// 共有 inbox が 410 を返したホストは、後続の配送を抑止するため停止状態にする。
 				if (data.isSharedInbox && res.statusCode === 410) {
 					fetchOrRegisterFederatedInstance(deps, host)
 						.then((i2) =>
@@ -167,10 +167,9 @@ export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: D
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
 			}
 
-			// 5xx などは再試行する。
+			// 再試行可能な HTTP エラーは BullMQ に再試行させる。
 			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
-			// DNS エラー、ソケットエラー、タイムアウトなど。
 			throw res;
 		}
 	}

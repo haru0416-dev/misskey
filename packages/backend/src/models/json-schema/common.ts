@@ -36,7 +36,6 @@ export const authorProperties = {
 	},
 } as const;
 
-// 作成後に編集できる利用者投稿物 (Page / Flash / GalleryPost) の先頭列。
 export const editableUserContentHeaderProperties = {
 	...entityHeaderProperties,
 	updatedAt: {
@@ -48,7 +47,6 @@ export const editableUserContentHeaderProperties = {
 	...authorProperties,
 } as const;
 
-// 添付ファイルの指定を省略できる Note / GalleryPost の添付とタグ。
 export const optionalAttachmentProperties = {
 	fileIds: {
 		type: 'array',
@@ -84,7 +82,6 @@ export const optionalAttachmentProperties = {
 	},
 } as const;
 
-// Note と NoteDraft が埋め込む所属チャンネルの要約。
 export const noteChannelSummaryProperty = {
 	type: 'object',
 	optional: true,

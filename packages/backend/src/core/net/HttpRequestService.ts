@@ -209,7 +209,7 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 			},
 		);
 
-		const finalUrl = res.url; // リダイレクト後の URL
+		const finalUrl = res.url;
 		const activity = (await res.json()) as IObject;
 
 		assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);

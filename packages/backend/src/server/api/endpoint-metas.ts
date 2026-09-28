@@ -4,7 +4,6 @@
  */
 
 /*
- * エンドポイントメタデータを統合する。
  * 公開 `/api.json` のエンドポイント順序に使うため、以下のキーは UTF-16 コード単位順を維持する。
  */
 import { endpointMetas as adminMetas } from './metas/admin.js';

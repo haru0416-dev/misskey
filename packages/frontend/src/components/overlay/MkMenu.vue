@@ -596,10 +596,10 @@ function parentMouseMove(ev: MouseEvent) {
 	const childBounding = child.value.rootElement.getBoundingClientRect();
 	const isChildRight = childBounding.left > rootBounding.left;
 
-	const CURSOR_SIDE_X_PADDING = 3; // (px)
-	const CHILD_SIDE_Y_PADDING_BASE = 70; // (px)
-	const CHILD_SIDE_Y_PADDING_EXTEND = 30; // (px)
-	const SCALE_FACTOR_COMPUTE_DISTANCE = 300; // コーンの広さが最大になる距離(px)
+	const CURSOR_SIDE_X_PADDING = 3;
+	const CHILD_SIDE_Y_PADDING_BASE = 70;
+	const CHILD_SIDE_Y_PADDING_EXTEND = 30;
+	const SCALE_FACTOR_COMPUTE_DISTANCE = 300;
 	const localMouseX = ev.clientX - itemBounding.left;
 	const localMouseY = ev.clientY - rootBounding.top;
 	const scaleFactor = isChildRight

@@ -24,7 +24,6 @@ files/
 fluent-emojis/
 .pnp.*
 
-# .yarn関連
 .yarn/*
 !.yarn/patches
 !.yarn/plugins

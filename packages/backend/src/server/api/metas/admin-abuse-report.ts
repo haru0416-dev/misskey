@@ -12,7 +12,6 @@ import {
 } from '@/server/rest/admin/admin-abuse-report-notification-recipient.js';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 
-// create と update は同じ入力検査を行い、同じエラーを返す。
 const recipientInputErrors = {
 	correlationCheckEmail: {
 		message: 'If "method" is email, "userId" must be set.',

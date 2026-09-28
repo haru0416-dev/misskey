@@ -16,7 +16,6 @@ const PERIOD_MS = {
 
 type ExpiryPeriod = keyof typeof PERIOD_MS;
 
-// 無期限を先頭・既定にした期間選択を出す。expiresAt が null のときは無期限。
 export async function selectExpiry(
 	title: string,
 	periods: readonly ExpiryPeriod[],

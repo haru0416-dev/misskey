@@ -144,8 +144,7 @@ test.describe('Virtualized note list', () => {
 					await scrollTimeline(list, 1);
 					return await maxRenderedIndex(list);
 				},
-				// 60件に届くには数ページ分の取得が要る。既定の 30 秒だと、
-				// 直列実行の最後 (このテストは24本目) でまれに間に合わない。
+				// 60 件まで複数ページを取得するため、ポーリング時間に余裕を持たせる。
 				{ timeout: 60_000, intervals: [500] },
 			)
 			.toBeGreaterThanOrEqual(60);
