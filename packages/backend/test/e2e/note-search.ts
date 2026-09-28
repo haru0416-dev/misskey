@@ -23,7 +23,9 @@ describe('notes/search の窓と全体検索', () => {
 	const beyondTerm = `beyond${suffix}`;
 	const filteredTerm = `filtered${suffix}`;
 	const denseTerm = `dense${suffix}`;
+	const pairTerm = `pair${suffix}`;
 	let beyondNoteId: string;
+	const pairNoteIds: string[] = [];
 	let filteredOldNoteId: string;
 	const denseNoteIds: string[] = [];
 
@@ -46,6 +48,8 @@ describe('notes/search の窓と全体検索', () => {
 		// 窓の外 (古い側) にだけ一致する投稿。
 		beyondNoteId = await insertNote(author.id, `old ${beyondTerm}`);
 		filteredOldNoteId = await insertNote(author.id, `old ${filteredTerm}`);
+		pairNoteIds.push(await insertNote(author.id, `old ${pairTerm} 1`));
+		pairNoteIds.push(await insertNote(author.id, `old ${pairTerm} 2`));
 		for (let index = 0; index < NEWER_NOTES; index++) {
 			await insertNote(author.id, index % 2 === 0 ? `filler ${index}` : `filler ${index} ${denseTerm}`);
 		}
@@ -77,6 +81,11 @@ describe('notes/search の窓と全体検索', () => {
 
 	test('窓の外にしか無い語は全体から探す', async () => {
 		expect(await search({ query: beyondTerm })).toStrictEqual([beyondNoteId]);
+	});
+
+	// 全体から探す段は、主キーの順に辿らず一致を集めてから並べる。並べ直しても新しい順が保たれる。
+	test('窓の外に複数ある語は、全体からも新しい順に返す', async () => {
+		expect(await search({ query: pairTerm })).toStrictEqual([pairNoteIds[1]]);
 	});
 
 	test('窓の中の一致がミュートで全て除かれると、全体から次に新しい一致を探す', async () => {
