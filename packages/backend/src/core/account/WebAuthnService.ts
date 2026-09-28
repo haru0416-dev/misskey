@@ -19,7 +19,6 @@ import {
 } from '@/core/account/UserSecurityKeyStore.js';
 import type {
 	AuthenticationResponseJSON,
-	AuthenticatorTransportFuture,
 	CredentialDeviceType,
 	PublicKeyCredentialCreationOptionsJSON,
 	PublicKeyCredentialRequestOptionsJSON,
@@ -72,7 +71,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 					id: key.id,
 					publicKey: Buffer.from(key.publicKey, 'base64url'),
 					counter: key.counter,
-					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
+					...(key.transports ? { transports: key.transports } : {}),
 				},
 				requireUserVerification: true,
 			});
@@ -102,7 +101,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 					({
 						id: key.id,
 						...(key.transports == null ? {} : { transports: key.transports }),
-					}) as { id: string; transports?: AuthenticatorTransportFuture[] },
+					}) as { id: string; transports?: string[] },
 			),
 			authenticatorSelection: {
 				residentKey: 'required',
@@ -127,7 +126,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 		userVerified: boolean;
 		credentialDeviceType: CredentialDeviceType;
 		credentialBackedUp: boolean;
-		transports?: AuthenticatorTransportFuture[];
+		transports?: string[];
 	}> {
 		const challenge = await redisClient.getdel(challengeKey('registration', userId));
 
@@ -191,7 +190,7 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 					({
 						id: key.id,
 						transports: key.transports ?? undefined,
-					}) as { id: string; transports?: AuthenticatorTransportFuture[] },
+					}) as { id: string; transports?: string[] },
 			),
 			userVerification: 'preferred',
 		});

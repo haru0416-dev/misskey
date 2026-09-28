@@ -67,7 +67,7 @@
 		"built"
 	],
 	"dependencies": {
-		"@simplewebauthn/browser": "13.3.0",
+		"@simplewebauthn/browser": "14.0.0",
 		"eventemitter3": "5.0.4"
 	}
 }
