@@ -434,9 +434,11 @@ export async function handleApiBlockingList(
 		blockings.map((blocking) => blocking.blockee ?? blocking.blockeeId),
 		me,
 	);
+	// 一覧のクエリの後で相手の削除が確定した行は返さない (ブロックの行も同じ削除で消えている)。
 	return await Promise.all(
-		blockings.map(
-			(blocking, index) => packApiBlocking(deps, blocking, me, blockees[index]) as Promise<Packed<'Blocking'>>,
-		),
+		blockings.flatMap((blocking, index) => {
+			const blockee = blockees[index];
+			return blockee == null ? [] : [packApiBlocking(deps, blocking, me, blockee) as Promise<Packed<'Blocking'>>];
+		}),
 	);
 }

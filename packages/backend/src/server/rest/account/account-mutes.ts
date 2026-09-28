@@ -208,8 +208,12 @@ export async function handleApiMuteList(
 		mutings.map((muting) => muting.mutee ?? muting.muteeId),
 		me,
 	);
+	// 一覧のクエリの後で相手の削除が確定した行は返さない (ミュートの行も同じ削除で消えている)。
 	return await Promise.all(
-		mutings.map((muting, index) => packApiMuting(deps, muting, me, mutees[index]) as Promise<Packed<'Muting'>>),
+		mutings.flatMap((muting, index) => {
+			const mutee = mutees[index];
+			return mutee == null ? [] : [packApiMuting(deps, muting, me, mutee) as Promise<Packed<'Muting'>>];
+		}),
 	);
 }
 
@@ -270,9 +274,11 @@ export async function handleApiRenoteMuteList(
 		mutings.map((muting) => muting.muteeId),
 		me,
 	);
+	// 一覧のクエリの後で相手の削除が確定した行は返さない (ミュートの行も同じ削除で消えている)。
 	return await Promise.all(
-		mutings.map(
-			(muting, index) => packApiRenoteMuting(deps, muting, me, mutees[index]) as Promise<Packed<'RenoteMuting'>>,
-		),
+		mutings.flatMap((muting, index) => {
+			const mutee = mutees[index];
+			return mutee == null ? [] : [packApiRenoteMuting(deps, muting, me, mutee) as Promise<Packed<'RenoteMuting'>>];
+		}),
 	);
 }

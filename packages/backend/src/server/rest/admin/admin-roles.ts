@@ -399,12 +399,19 @@ export async function handleApiAdminRolesUsers(
 		assigns.map((assign) => assign.userId),
 		me,
 	);
-	const userById = new Map(packedUsers.map((user) => [user.id, user]));
-
-	return assigns.map((assign) => ({
-		id: assign.id,
-		createdAt: parseId(assign.id).date.toISOString(),
-		user: userById.get(assign.userId)!,
-		expiresAt: assign.expiresAt?.toISOString() ?? null,
-	}));
+	// 一覧のクエリの後で削除が確定したユーザーの割り当ては返さない (割り当ても同じ削除の cascade で消えている)。
+	return assigns.flatMap((assign, index) => {
+		const user = packedUsers[index];
+		if (user == null) {
+			return [];
+		}
+		return [
+			{
+				id: assign.id,
+				createdAt: parseId(assign.id).date.toISOString(),
+				user,
+				expiresAt: assign.expiresAt?.toISOString() ?? null,
+			},
+		];
+	});
 }

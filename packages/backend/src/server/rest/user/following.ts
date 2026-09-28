@@ -1107,18 +1107,21 @@ export async function packFollowingsForApi(
 		followings.map((f) => f.followee ?? f.followeeId),
 	);
 
-	return followings.map((following, index) => {
+	// 一覧のクエリの後で相手の削除が確定した行は返さない (フォローの行も同じ削除で消えている)。
+	return followings.flatMap((following, index) => {
 		const followee = packedFollowees[index];
 		if (followee == null) {
-			throw new Error(`Packed followee is missing at index ${index}`);
+			return [];
 		}
-		return {
-			id: following.id,
-			createdAt: parseId(following.id).date.toISOString(),
-			followeeId: following.followeeId,
-			followerId: following.followerId,
-			followee,
-		};
+		return [
+			{
+				id: following.id,
+				createdAt: parseId(following.id).date.toISOString(),
+				followeeId: following.followeeId,
+				followerId: following.followerId,
+				followee,
+			},
+		];
 	});
 }
 
@@ -1156,18 +1159,21 @@ async function packFollowersForApi(
 		followings.map((f) => f.follower ?? f.followerId),
 	);
 
-	return followings.map((following, index) => {
+	// 一覧のクエリの後で相手の削除が確定した行は返さない (フォローの行も同じ削除で消えている)。
+	return followings.flatMap((following, index) => {
 		const follower = packedFollowers[index];
 		if (follower == null) {
-			throw new Error(`Packed follower is missing at index ${index}`);
+			return [];
 		}
-		return {
-			id: following.id,
-			createdAt: parseId(following.id).date.toISOString(),
-			followeeId: following.followeeId,
-			followerId: following.followerId,
-			follower,
-		};
+		return [
+			{
+				id: following.id,
+				createdAt: parseId(following.id).date.toISOString(),
+				followeeId: following.followeeId,
+				followerId: following.followerId,
+				follower,
+			},
+		];
 	});
 }
 

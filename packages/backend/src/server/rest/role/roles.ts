@@ -163,10 +163,11 @@ export async function handleApiRolesUsers(
 		assigns.map((assign) => assign.userId),
 		me,
 	);
-	return assigns.map((assign, index) => ({
-		id: assign.id,
-		user: packedUsers[index]!,
-	}));
+	// 一覧のクエリの後で削除が確定したユーザーの割り当ては返さない (割り当ても同じ削除の cascade で消えている)。
+	return assigns.flatMap((assign, index) => {
+		const user = packedUsers[index];
+		return user == null ? [] : [{ id: assign.id, user }];
+	});
 }
 
 export async function handleApiRolesNotes(

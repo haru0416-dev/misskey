@@ -370,6 +370,15 @@ export async function handleApiAdminShowUsers(
 		}),
 	);
 	const baseUsers = await packUserDetailedNotMeManyForApi(deps, users, me);
+	// 一覧のクエリの後で削除が確定したユーザーは返さない。
+	const live = users.flatMap((user, index) => {
+		const base = baseUsers[index];
+		return base == null ? [] : [{ user, base }];
+	});
 
-	return await packAdminUsersDetailedForApi(deps, users, baseUsers);
+	return await packAdminUsersDetailedForApi(
+		deps,
+		live.map((entry) => entry.user),
+		live.map((entry) => entry.base),
+	);
 }

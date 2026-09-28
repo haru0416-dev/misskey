@@ -475,7 +475,7 @@ export async function handleApiFederationUsers(
 		untilId,
 	});
 
-	return await packUserDetailedNotMeManyForApi(deps, users, me);
+	return (await packUserDetailedNotMeManyForApi(deps, users, me)).filter((user) => user != null);
 }
 
 export const federationHostFollowingParamDef = z.object({
