@@ -14,13 +14,25 @@ fetchMocker.enableMocks();
 // ロケールは読み込み時の top-level await で取得される (frontend-shared/utility/locale.ts)。下の import より前に
 // 応答を差し替えないと、localhost:3000 へ実際に取りに行き、そこで動いているサーバー次第で結果が変わる。
 // 照合する URL は絶対 URL になるので、先頭には固定しない。
-fetchMocker.mockIf(/\/assets\/locales\/[^/]+\.json$/, async () => {
-	const { default: locales } = await import('i18n');
-	return {
-		status: 200,
-		body: JSON.stringify(locales['en-US']),
-	};
-});
+function mockLocaleFetch(): void {
+	fetchMocker.mockIf(/\/assets\/locales\/[^/]+\.json$/, async () => {
+		const { default: locales } = await import('i18n');
+		return {
+			status: 200,
+			body: JSON.stringify(locales['en-US']),
+		};
+	});
+}
+mockLocaleFetch();
+
+/**
+ * テストが積んだ 1 回限りの応答と呼び出し履歴を捨てる。使われずに残った応答は、後に実行されたテストの取得に返ってしまう。
+ * resetMocks だけではロケールの応答も消えるので張り直す。
+ */
+export function resetFetchMocks(): void {
+	fetchMocker.resetMocks();
+	mockLocaleFetch();
+}
 
 // WebSocket が未定義だと misskey-js の初期化に失敗する。
 vi.stubGlobal(

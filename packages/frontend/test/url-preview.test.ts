@@ -6,7 +6,7 @@
 import { describe, test, assert, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/vue';
 import type { RenderResult } from '@testing-library/vue';
-import './init';
+import { resetFetchMocks } from './init';
 import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
@@ -66,7 +66,7 @@ describe('MkUrlPreview', () => {
 	};
 
 	afterEach(() => {
-		fetchMock.resetMocks();
+		resetFetchMocks();
 		cleanup();
 	});
 
