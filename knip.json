@@ -47,7 +47,7 @@
 				"@shared/*": ["../frontend-shared/*"]
 			},
 			"entry": ["src/boot.ts", "src/workers/*.ts"],
-			"ignoreDependencies": ["frontend-shared", "shiki", "frontend", "@misskey-dev/emoji-assets", "vue-tsc"]
+			"ignoreDependencies": ["frontend-shared", "frontend", "vue-tsc"]
 		},
 		"packages/sw": {
 			"entry": ["src/sw.ts"],

@@ -7,7 +7,6 @@ import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json' with { type: 'json' };
-import packageInfo from './package.json' with { type: 'json' };
 import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n.js';
 import { Features } from 'lightningcss';
@@ -20,18 +19,6 @@ const url =
 const host = url ? new URL(url).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
-
-const externalPackages = [
-	// shiki（コードブロックのシンタックスハイライトで使用中）はテーマ・言語の定義の容量が大きいため、それらはCDNから読み込む
-	{
-		name: 'shiki',
-		match: /^shiki\/(?<subPkg>(langs|themes))$/,
-		path(id: string, pattern: RegExp): string {
-			const match = pattern.exec(id)?.groups;
-			return match ? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}` : id;
-		},
-	},
-];
 
 const hash = (str: string, seed = 0): number => {
 	let h1 = 0xde_ad_be_ef ^ seed,
@@ -97,7 +84,6 @@ export function getConfig(): UserConfig {
 				'@shared/': `${path.join(import.meta.dirname, '../frontend-shared')}/`,
 				'/client-assets/': `${path.join(import.meta.dirname, 'assets')}/`,
 				'/static-assets/': `${path.join(import.meta.dirname, '../backend/assets')}/`,
-				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',
 			},
 		},
 
@@ -139,7 +125,6 @@ export function getConfig(): UserConfig {
 					i18n: './src/i18n.ts',
 					entry: './src/boot.ts',
 				},
-				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',
 				output: {
 					codeSplitting: {
@@ -158,15 +143,6 @@ export function getConfig(): UserConfig {
 					entryFileNames: `scripts/${localesHash}-[hash:8].js`,
 					chunkFileNames: `scripts/${localesHash}-[hash:8].js`,
 					assetFileNames: `assets/${localesHash}-[hash:8][extname]`,
-					paths(id) {
-						for (const p of externalPackages) {
-							if (p.match.test(id)) {
-								return p.path(id, p.match);
-							}
-						}
-
-						return id;
-					},
 				},
 			},
 			cssCodeSplit: true,

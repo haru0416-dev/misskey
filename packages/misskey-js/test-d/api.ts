@@ -1,5 +1,4 @@
-import { describe, test } from 'vitest';
-import { expectError, expectType } from 'tsd';
+import { describe, expectTypeOf, test } from 'vitest';
 import * as Misskey from '../src/index.js';
 
 describe('API', () => {
@@ -10,16 +9,16 @@ describe('API', () => {
 		});
 
 		const res = await cli.request('meta', { detail: true });
-		expectType<Misskey.entities.MetaResponse>(res);
+		expectTypeOf(res).toEqualTypeOf<Misskey.entities.MetaResponse>();
 
 		const res2 = await cli.request('meta', { detail: false });
-		expectType<Misskey.entities.MetaResponse>(res2);
+		expectTypeOf(res2).toEqualTypeOf<Misskey.entities.MetaResponse>();
 
 		const res3 = await cli.request('meta', { });
-		expectType<Misskey.entities.MetaResponse>(res3);
+		expectTypeOf(res3).toEqualTypeOf<Misskey.entities.MetaResponse>();
 
 		const res4 = await cli.request('meta', { detail: true as boolean });
-		expectType<Misskey.entities.MetaResponse>(res4);
+		expectTypeOf(res4).toEqualTypeOf<Misskey.entities.MetaResponse>();
 	});
 
 	test('admin/roles/create accepts policy overrides', async () => {
@@ -46,7 +45,7 @@ describe('API', () => {
 			},
 			target: 'manual',
 		});
-		expectType<Misskey.entities.AdminRolesCreateResponse>(response);
+		expectTypeOf(response).toEqualTypeOf<Misskey.entities.AdminRolesCreateResponse>();
 	});
 
 	test('conditional response type (users/show)', async () => {
@@ -56,12 +55,14 @@ describe('API', () => {
 		});
 
 		const res = await cli.request('users/show', { userId: 'xxxxxxxx' });
-		expectType<Misskey.entities.UserDetailed>(res);
+		expectTypeOf(res).toEqualTypeOf<Misskey.entities.UserDetailed>();
 
 		const res2 = await cli.request('users/show', { userIds: ['xxxxxxxx'] });
-		expectType<Misskey.entities.UserDetailed[]>(res2);
+		expectTypeOf(res2).toEqualTypeOf<Misskey.entities.UserDetailed[]>();
 
-		expectError(cli.request('users/show'));
+		// @ts-expect-error 型エラーになることを確かめる
+
+		void cli.request('users/show');
 	});
 
 	test('optional request body and no-content response types', async () => {
@@ -71,35 +72,37 @@ describe('API', () => {
 		});
 
 		const meta = await cli.request('meta');
-		expectType<Misskey.entities.MetaResponse>(meta);
+		expectTypeOf(meta).toEqualTypeOf<Misskey.entities.MetaResponse>();
 		const cancellableMeta = await cli.request('meta', undefined, null, new AbortController().signal);
-		expectType<Misskey.entities.MetaResponse>(cancellableMeta);
+		expectTypeOf(cancellableMeta).toEqualTypeOf<Misskey.entities.MetaResponse>();
 		const passkeyInit = await cli.request('signin-with-passkey');
-		expectType<Misskey.entities.SigninWithPasskeyInitResponse>(passkeyInit);
+		expectTypeOf(passkeyInit).toEqualTypeOf<Misskey.entities.SigninWithPasskeyInitResponse>();
 		await cli.request('clear-browser-cache');
 
 		const translated = await cli.request('notes/translate', { noteId: 'xxxxxxxx', targetLang: 'en' }, undefined, new AbortController().signal);
-		expectType<{ sourceLang: string; text: string } | null>(translated);
+		expectTypeOf(translated).toEqualTypeOf<{ sourceLang: string; text: string } | null>();
 
 		const deleted = await cli.request('admin/emoji/delete', { id: 'xxxxxxxx' });
-		expectType<null>(deleted);
+		expectTypeOf(deleted).toEqualTypeOf<null>();
 
 		const updatedKey = await cli.request('i/2fa/update-key', { name: 'renamed', credentialId: 'xxxxxxxx' });
-		expectType<Record<string, never>>(updatedKey);
+		expectTypeOf(updatedKey).toEqualTypeOf<Record<string, never>>();
 		const removedKey = await cli.request('i/2fa/remove-key', { password: 'password', credentialId: 'xxxxxxxx' });
-		expectType<Record<string, never>>(removedKey);
+		expectTypeOf(removedKey).toEqualTypeOf<Record<string, never>>();
 	});
 
 	test('conditional responses include every possible branch for widened params', async () => {
 		const cli = new Misskey.api.APIClient({ origin: 'https://misskey.test' });
 		const params = {} as Misskey.Endpoints['users/show']['req'];
 		const response = await cli.request('users/show', params);
-		expectType<Misskey.entities.UserDetailed | Misskey.entities.UserDetailed[]>(response);
+		expectTypeOf(response).toEqualTypeOf<Misskey.entities.UserDetailed | Misskey.entities.UserDetailed[]>();
 
-		expectError(cli.request('signin-with-passkey', { context: 'invalid-without-credential' }));
+		// @ts-expect-error 型エラーになることを確かめる
+
+		void cli.request('signin-with-passkey', { context: 'invalid-without-credential' });
 		const passkeyParams = {} as Misskey.Endpoints['signin-with-passkey']['req'];
 		const passkeyResponse = await cli.request('signin-with-passkey', passkeyParams);
-		expectType<Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse>(passkeyResponse);
+		expectTypeOf(passkeyResponse).toEqualTypeOf<Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse>();
 	});
 
 	test('APIErrorBody matches the runtime error schema', () => {
@@ -109,13 +112,13 @@ describe('API', () => {
 			message: 'You have moved your account.',
 			kind: 'permission',
 		};
-		expectType<Misskey.api.APIErrorBody>(error);
+		expectTypeOf(error).toEqualTypeOf<Misskey.api.APIErrorBody>();
 	});
 
 	test('isAPIError narrows code to the errors of the endpoint', (reason: unknown) => {
 		if (Misskey.api.isAPIError(reason, 'notes/create')) {
-			expectType<Misskey.api.APIError<'notes/create'>>(reason);
-			expectType<Misskey.api.APIErrorCode<'notes/create'>>(reason.code);
+			expectTypeOf(reason).toEqualTypeOf<Misskey.api.APIError<'notes/create'>>();
+			expectTypeOf(reason.code).toEqualTypeOf<Misskey.api.APIErrorCode<'notes/create'>>();
 			// 仕様書に載っているエラーコードだけを受け付ける。
 			const known: Misskey.api.APIErrorCode<'notes/create'> = 'CANNOT_RENOTE_TO_A_PURE_RENOTE';
 			void known;

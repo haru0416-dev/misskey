@@ -1,5 +1,4 @@
-import { describe, test } from 'vitest';
-import { expectType } from 'tsd';
+import { describe, expectTypeOf, test } from 'vitest';
 import * as Misskey from '../src/index.js';
 
 describe('Streaming', () => {
@@ -7,7 +6,7 @@ describe('Streaming', () => {
 		const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
 		const mainChannel = stream.useChannel('main');
 		mainChannel.on('notification', notification => {
-			expectType<Misskey.entities.Notification>(notification);
+			expectTypeOf(notification).toEqualTypeOf<Misskey.entities.Notification>();
 		});
 	});
 });

@@ -98,7 +98,6 @@ export default defineConfig((args) => {
 		'bun',
 		'bullmq',
 		'ioredis',
-		'pg',
 		'sharp',
 		'ipaddr.js',
 		'file-type',
