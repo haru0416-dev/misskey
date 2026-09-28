@@ -111,6 +111,8 @@ jobs:
         # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
         run: bun run --filter slacc build
       - run: bun run lint:ox
+      # 使われていない export・依存・ファイルは lint にも CI にも掛からず溜まっていた。
+      - run: bun run lint:knip
 
   oxfmt:
     runs-on: ubuntu-latest

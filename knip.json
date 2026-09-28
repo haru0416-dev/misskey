@@ -5,14 +5,14 @@
 		"packages/backend/assets/**",
 		"packages/frontend/assets/**",
 		"packages/frontend/public/**",
-		"**/public/**"
+		"**/public/**",
+		"packages/misskey-js/src/autogen/**"
 	],
 	"workspaces": {
 		".": {
 			"entry": ["scripts/*.{mjs,cjs,ts}", ".github/scripts/*.{mjs,cjs,mts,ts}"],
 			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"],
-			"ignoreDependencies": ["pg", "ioredis"],
-			"ignoreBinaries": ["dedupe"]
+			"ignoreDependencies": ["pg", "ioredis"]
 		},
 		"packages/backend": {
 			"entry": [
