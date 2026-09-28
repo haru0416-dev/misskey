@@ -87,7 +87,8 @@ const telemetryBackendSchema = z.strictObject({
 	headers: z.record(z.string().min(1), secretSourceSchema).optional(),
 	serviceName: z.string().min(1).optional(),
 	tracesSampleRatio: z.number().min(0).max(1).optional(),
-	tracePropagationTargets: z.array(httpUrlSchema).optional(),
+	// runtime / host の metrics の送り先。未設定なら metrics は送らない。
+	metricsEndpoint: httpUrlSchema.optional(),
 	disabledInstrumentations: z.array(z.string().min(1)).optional(),
 });
 
