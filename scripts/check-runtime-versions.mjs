@@ -68,7 +68,7 @@ const checks = [
 		!packageJson.devDependencies?.['@typescript/native-preview'],
 	],
 	[
-		'the classic TypeScript API must stay on 6.x (vue-tsc / api-extractor / i18n codegen need it)',
+		'the classic TypeScript API must stay on 6.x (TypeScript 7 has no JS API; vue-tsc, i18n codegen and the misskey-js generator need it)',
 		(packageJson.devDependencies?.typescript ?? '').startsWith('6.'),
 	],
 	[
