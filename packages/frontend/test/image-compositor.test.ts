@@ -132,4 +132,34 @@ describe('ImageCompositor', () => {
 			'Uniform "amount" is unavailable in image compositor function "test"',
 		);
 	});
+
+	// 頂点属性の設定は一度だけ行い、全プログラムで共有する。どのプログラムの position も同じ位置に
+	// 固定されていないと、リンク時に別の位置が割り当てられた描画用プログラムで頂点が読めなくなる。
+	test('pins position to the same attribute location in every vertex shader', () => {
+		initShaderProgramMock.mockClear();
+		const gl = createGl();
+		const canvas = window.document.createElement('canvas');
+		vi.spyOn(canvas, 'getContext').mockReturnValue(gl);
+		const compositor = new ImageCompositor({
+			canvas,
+			renderWidth: 100,
+			renderHeight: 100,
+			image: null,
+			functions: {
+				a: { shader: 'uniform float u_amount;', main: () => {} },
+				b: { shader: 'uniform float u_amount;', main: () => {} },
+			},
+		});
+		compositor.render([{ id: 'first', functionId: 'a', params: {} }]);
+		compositor.render([{ id: 'second', functionId: 'b', params: {} }]);
+
+		const vertexShaders = initShaderProgramMock.mock.calls.map((call) => (call as unknown[])[1] as string);
+		expect(vertexShaders).toHaveLength(3);
+		for (const source of vertexShaders) {
+			expect(source).toMatch(/layout\(location = 0\) in vec2 position;/);
+		}
+		expect(gl.vertexAttribPointer).toHaveBeenCalledWith(0, 2, gl.FLOAT, false, 0, 0);
+		expect(gl.enableVertexAttribArray).toHaveBeenCalledWith(0);
+		expect(gl.getAttribLocation).not.toHaveBeenCalled();
+	});
 });

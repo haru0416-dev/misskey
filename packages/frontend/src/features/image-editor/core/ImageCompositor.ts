@@ -5,6 +5,9 @@
 
 import { createTexture, initShaderProgram } from '@/utility/webgl.js';
 
+// 頂点シェーダーの position を置く位置。全プログラムで同じ番号にリンクさせる。
+const POSITION_ATTRIBUTE_LOCATION = 0;
+
 export type ImageCompositorFunctionParams = Record<string, any>;
 
 export type ImageCompositorFunction<PS extends ImageCompositorFunctionParams = ImageCompositorFunctionParams> = {
@@ -112,7 +115,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		this.nopProgram = initShaderProgram(
 			this.gl,
 			`#version 300 es
-			in vec2 position;
+			layout(location = ${POSITION_ATTRIBUTE_LOCATION}) in vec2 position;
 			out vec2 in_uv;
 
 			void main() {
@@ -133,12 +136,10 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		`,
 		);
 
-		// VAO は属性の参照設定を保持するが、位置はプログラムごとに決まる。描画用プログラムの
-		// position も nopProgram と同じ位置にリンクされる前提で、現状は明示的に固定していない。
-		// ref. https://qiita.com/emadurandal/items/5966c8374f03d4de3266
-		const positionLocation = gl.getAttribLocation(this.nopProgram, 'position');
-		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-		gl.enableVertexAttribArray(positionLocation);
+		// VAO の属性の設定は位置の番号で共有される。どの頂点シェーダーも position を
+		// layout(location = POSITION_ATTRIBUTE_LOCATION) で同じ番号に固定しているので、1 回の設定で全プログラムに効く。
+		gl.vertexAttribPointer(POSITION_ATTRIBUTE_LOCATION, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(POSITION_ATTRIBUTE_LOCATION);
 
 		for (const [id, fn] of Object.entries(options.functions)) {
 			const uniforms = this.extractUniformNamesFromShader(fn.shader);
@@ -187,7 +188,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			initShaderProgram(
 				this.gl,
 				`#version 300 es
-			in vec2 position;
+			layout(location = ${POSITION_ATTRIBUTE_LOCATION}) in vec2 position;
 			uniform bool u_invert;
 			out vec2 in_uv;
 
