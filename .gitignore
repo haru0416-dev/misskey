@@ -51,7 +51,6 @@ ormconfig.json
 /data/
 /db/
 /files/
-/meili_data/
 /redis/
 misskey-assets/
 temp/

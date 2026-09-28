@@ -380,6 +380,7 @@
 - Change: 署名・zip 展開に使うネイティブモジュール slacc をリポジトリに取り込みました。**ソースからビルドするため、自前でビルドする場合は Rust ツールチェーンが必要です** (Docker イメージを使う場合は不要)
 - Change: 効果の無くなっていたリアクションのバッファリング設定 (`enableReactionsBuffering`、管理画面の「RBT」) と Valkey の接続割り当て `valkey.assignments.reactions` を削除。設定ファイルに `reactions:` が残っていると起動時にエラーになるので消す
 - Change: プッシュ通知の購読登録 (`sw/register`) で、送信先に https の絶対 URL 以外を受け付けないように
+- Change: 全文検索の Meilisearch 対応を削除 (選ぶと検索できない状態だった)。検索は `sqlLike` / `sqlPgroonga` のみで、設定に `search.provider: meilisearch` が残っていると起動時にエラーになる
 - Fix: プッシュ通知の送信を、ほかの外部への通信と同じ送信処理に統一
 - Change: オブジェクトストレージのクライアントを AWS SDK から Bun 組み込みの S3 クライアントへ置き換え
 	- アップロードするオブジェクトに `Cache-Control` が付かなくなります。`/files/` 経由の配信ではサーバー側が同じヘッダを付けるため影響しませんが、**オブジェクトストレージの URL をクライアントへ直接配る設定 (`objectStorageBaseUrl`) を使っている場合はキャッシュ効率が落ちます**

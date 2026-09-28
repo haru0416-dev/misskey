@@ -744,11 +744,7 @@ export async function handleApiNotesSearch(
 		throw errors.unavailable();
 	}
 
-	const provider = deps.config.search.provider ?? 'sqlLike';
-	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
-		// 全文検索は SQL ベースの provider に限る。
-		throw errors.unavailable();
-	}
+	const provider = deps.config.search.provider;
 
 	const notes = await searchNotesByTextFromDatabase(
 		deps.db,

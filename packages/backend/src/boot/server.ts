@@ -151,7 +151,6 @@ async function launchServerWithDependencies(
 			redisForSub: deps.redisForSub,
 			redisForTimelines: deps.redisForTimelines,
 			db: deps.db,
-			meilisearch: deps.meilisearch,
 		},
 		nodeinfo: {
 			config,

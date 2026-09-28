@@ -24,10 +24,6 @@ const httpUrlSchema = z.url().refine((value) => {
 		url.hash === ''
 	);
 }, 'Must be an HTTP(S) URL without credentials or a fragment');
-const originUrlSchema = httpUrlSchema.refine((value) => {
-	const url = new URL(value);
-	return url.pathname === '/' && url.search === '';
-}, 'Must be an HTTP(S) origin without a path or query parameters');
 const publicTelemetryUrlSchema = httpUrlSchema.refine(
 	(value) => new URL(value).search === '',
 	'Public telemetry URLs must not contain query parameters',
@@ -220,15 +216,6 @@ export const sourceConfigV2Schema = z.strictObject({
 				noteTextIndex: z.boolean().default(true),
 			}),
 			z.strictObject({ provider: z.literal('sqlPgroonga') }),
-			z.strictObject({
-				provider: z.literal('meilisearch'),
-				meilisearch: z.strictObject({
-					endpoint: originUrlSchema,
-					apiKey: secretSourceSchema,
-					index: z.string().min(1),
-					scope: z.union([z.enum(['local', 'global']), z.array(z.string().min(1))]).default('local'),
-				}),
-			}),
 		])
 		.default({ provider: 'sqlLike', noteTextIndex: true }),
 	outboundNetwork: z

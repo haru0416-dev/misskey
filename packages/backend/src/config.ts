@@ -140,15 +140,9 @@ export type Config = {
 		timelines: RuntimeValkeyConnection;
 	};
 	search: {
-		provider: 'sqlLike' | 'sqlPgroonga' | 'meilisearch';
+		provider: 'sqlLike' | 'sqlPgroonga';
 		/** 本文の trigram index を持つか。sqlLike のときだけ true になりうる (他の検索では使われず書き込みだけ増える)。 */
 		noteTextIndex: boolean;
-		meilisearch?: {
-			endpoint: string;
-			apiKey: string;
-			index: string;
-			scope: 'local' | 'global' | string[];
-		};
 	};
 	outboundNetwork: {
 		bindAddress?: string;
@@ -397,16 +391,6 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 	const externalMediaProxy = source.media.externalProxyUrl == null ? null : normalizeUrl(source.media.externalProxyUrl);
 	const connections = source.valkey.assignments;
 	const primary = resolveValkeyConnection(source, 'primary', instanceUrl.host);
-	const meilisearch =
-		source.search.provider === 'meilisearch'
-			? {
-					endpoint: normalizeUrl(source.search.meilisearch.endpoint),
-					apiKey: resolveSecret(source.search.meilisearch.apiKey, 'search.meilisearch.apiKey'),
-					index: source.search.meilisearch.index,
-					scope: source.search.meilisearch.scope,
-				}
-			: undefined;
-
 	return {
 		configVersion: 2,
 		instance: {
@@ -462,7 +446,6 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		search: {
 			provider: source.search.provider,
 			noteTextIndex: source.search.provider === 'sqlLike' && source.search.noteTextIndex,
-			...optionalProperty('meilisearch', meilisearch),
 		},
 		outboundNetwork: {
 			...optionalProperty('bindAddress', source.outboundNetwork.bindAddress),
@@ -555,13 +538,6 @@ function redactValkey(valkey: Config['valkey']): Config['valkey'] {
 	) as Config['valkey'];
 }
 
-function redactSearch(search: Config['search']): Config['search'] {
-	if (search.meilisearch == null) {
-		return search;
-	}
-	return { ...search, meilisearch: { ...search.meilisearch, apiKey: REDACTED } };
-}
-
 function redactTelemetryBackend(
 	backend: Config['observability']['telemetry']['backend'],
 ): Config['observability']['telemetry']['backend'] {
@@ -592,7 +568,7 @@ export function createRedactedConfig(config: Config): object {
 		},
 		database: { ...config.database, primary: { ...config.database.primary, password: REDACTED } },
 		valkey: redactValkey(config.valkey),
-		search: redactSearch(config.search),
+		search: config.search,
 		outboundNetwork: {
 			...config.outboundNetwork,
 			proxy: {

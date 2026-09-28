@@ -87,26 +87,30 @@ describe('configVersion 2 schema', () => {
 		).toThrow();
 	});
 
-	test('rejects invalid network ranges and Meilisearch paths', () => {
+	test('rejects invalid network ranges', () => {
 		expect(() =>
 			sourceConfigV2Schema.parse({
 				...createSourceConfig(),
 				server: { reverseProxy: { trustedNetworks: ['not-a-network'] } },
 			}),
 		).toThrow();
+	});
+
+	test('rejects the removed meilisearch search provider', () => {
+		// 検索は SQL だけ。以前の設定が残っていても黙って別の検索へ切り替えず、起動時に失敗させる。
 		expect(() =>
 			sourceConfigV2Schema.parse({
 				...createSourceConfig(),
 				search: {
 					provider: 'meilisearch',
 					meilisearch: {
-						endpoint: 'https://search.example.test/prefix',
+						endpoint: 'https://search.example.test',
 						apiKey: { plainText: 'search-secret' },
 						index: 'misskey',
 					},
 				},
 			}),
-		).toThrow();
+		).toThrow(/provider/);
 	});
 
 	test('requires referenced environment secrets', () => {
