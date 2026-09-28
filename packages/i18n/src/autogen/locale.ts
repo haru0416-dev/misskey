@@ -12,20 +12,9 @@ export interface Locale extends ILocale {
      */
     "headlineMisskey": string;
     /**
-     * ようこそ！Tonerikoは、オープンソースの分散型マイクロブログサービスです。
-     * 「ノート」を作成して、いま起こっていることを共有したり、あなたについて皆に発信しよう📡
-     * 「リアクション」機能で、皆のノートに素早く反応を追加することもできます👍
-     * 新しい世界を探検しよう🚀
-     */
-    "introMisskey": string;
-    /**
      * {name}は、オープンソースのプラットフォーム<b>Toneriko</b>のサーバーのひとつです。
      */
     "poweredByMisskeyDescription": ParameterizedString<"name">;
-    /**
-     * {month}月 {day}日
-     */
-    "monthAndDay": ParameterizedString<"month" | "day">;
     /**
      * 検索
      */
@@ -50,10 +39,6 @@ export interface Locale extends ILocale {
      * 初期設定開始用パスワード
      */
     "initialPasswordForSetup": string;
-    /**
-     * 初期設定開始用のパスワードが違います。
-     */
-    "initialPasswordIsIncorrect": string;
     /**
      * Tonerikoを自分でインストールした場合は、設定ファイルに入力したパスワードを使用してください。
      * Tonerikoのホスティングサービスなどを使用している場合は、提供されたパスワードを使用してください。
@@ -81,14 +66,6 @@ export interface Locale extends ILocale {
      */
     "cancel": string;
     /**
-     * やめておく
-     */
-    "noThankYou": string;
-    /**
-     * ユーザー名を入力
-     */
-    "enterUsername": string;
-    /**
      * {user}がリノート
      */
     "renotedBy": ParameterizedString<"user">;
@@ -113,10 +90,6 @@ export interface Locale extends ILocale {
      */
     "notificationSettings": string;
     /**
-     * 基本設定
-     */
-    "basicSettings": string;
-    /**
      * その他の設定
      */
     "otherSettings": string;
@@ -140,10 +113,6 @@ export interface Locale extends ILocale {
      * ログイン
      */
     "login": string;
-    /**
-     * ログイン中
-     */
-    "loggingIn": string;
     /**
      * ログアウト
      */
@@ -188,10 +157,6 @@ export interface Locale extends ILocale {
      * 既にお気に入りに登録されています。
      */
     "alreadyFavorited": string;
-    /**
-     * お気に入りに登録できませんでした。
-     */
-    "cantFavorite": string;
     /**
      * ピン留め
      */
@@ -317,10 +282,6 @@ export interface Locale extends ILocale {
      */
     "directNotes": string;
     /**
-     * インポートとエクスポート
-     */
-    "importAndExport": string;
-    /**
      * インポート
      */
     "import": string;
@@ -368,10 +329,6 @@ export interface Locale extends ILocale {
      * リスト
      */
     "lists": string;
-    /**
-     * リストはありません
-     */
-    "noLists": string;
     /**
      * ノート
      */
@@ -465,10 +422,6 @@ export interface Locale extends ILocale {
      */
     "followRequestPending": string;
     /**
-     * 絵文字を入力
-     */
-    "enterEmoji": string;
-    /**
      * リノート
      */
     "renote": string;
@@ -484,14 +437,6 @@ export interface Locale extends ILocale {
      * {name} にリノートしました。
      */
     "renotedToX": ParameterizedString<"name">;
-    /**
-     * この投稿はリノートできません。
-     */
-    "cantRenote": string;
-    /**
-     * リノートをリノートすることはできません。
-     */
-    "cantReRenote": string;
     /**
      * 引用
      */
@@ -549,25 +494,9 @@ export interface Locale extends ILocale {
      */
     "emojiPicker": string;
     /**
-     * リアクション時にピン留め表示する絵文字を設定できます
-     */
-    "pinnedEmojisForReactionSettingDescription": string;
-    /**
-     * 絵文字入力時にピン留め表示する絵文字を設定できます
-     */
-    "pinnedEmojisSettingDescription": string;
-    /**
      * ピッカーの表示
      */
     "emojiPickerDisplay": string;
-    /**
-     * リアクション設定から上書きする
-     */
-    "overwriteFromPinnedEmojisForReaction": string;
-    /**
-     * 全般設定から上書きする
-     */
-    "overwriteFromPinnedEmojis": string;
     /**
      * ドラッグして並び替え、クリックして削除、＋を押して追加します。
      */
@@ -705,10 +634,6 @@ export interface Locale extends ILocale {
      */
     "addEmoji": string;
     /**
-     * おすすめ設定
-     */
-    "settingGuide": string;
-    /**
      * リモートのファイルをキャッシュする
      */
     "cacheRemoteFiles": string;
@@ -745,14 +670,6 @@ export interface Locale extends ILocale {
      */
     "flagAsCatDescription": string;
     /**
-     * タイムラインにノートへの返信を表示する
-     */
-    "flagShowTimelineReplies": string;
-    /**
-     * オンにすると、タイムラインにユーザーのノート以外にもそのユーザーの他のノートへの返信を表示します。
-     */
-    "flagShowTimelineRepliesDescription": string;
-    /**
      * フォロー中ユーザーからのフォロー申請を自動承認
      */
     "autoAcceptFollowed": string;
@@ -760,10 +677,6 @@ export interface Locale extends ILocale {
      * アカウントを追加
      */
     "addAccount": string;
-    /**
-     * アカウントリストの情報を更新
-     */
-    "reloadAccountsList": string;
     /**
      * ログインに失敗しました
      */
@@ -776,10 +689,6 @@ export interface Locale extends ILocale {
      * リモートで続行
      */
     "continueOnRemote": string;
-    /**
-     * Misskey Hubからサーバーを選択
-     */
-    "chooseServerOnMisskeyHub": string;
     /**
      * サーバーのドメインを直接指定
      */
@@ -804,14 +713,6 @@ export interface Locale extends ILocale {
      * 壁紙を削除
      */
     "removeWallpaper": string;
-    /**
-     * 検索: {q}
-     */
-    "searchWith": ParameterizedString<"q">;
-    /**
-     * リストがありません
-     */
-    "youHaveNoLists": string;
     /**
      * {name}をフォローしますか？
      */
@@ -881,10 +782,6 @@ export interface Locale extends ILocale {
      */
     "perDay": string;
     /**
-     * アクティビティの配送を停止
-     */
-    "stopActivityDelivery": string;
-    /**
      * このサーバーをブロック
      */
     "blockThisInstance": string;
@@ -921,17 +818,9 @@ export interface Locale extends ILocale {
      */
     "withNFiles": ParameterizedString<"n">;
     /**
-     * モニター
-     */
-    "monitor": string;
-    /**
      * ジョブキュー
      */
     "jobQueue": string;
-    /**
-     * CPUとメモリ
-     */
-    "cpuAndMemory": string;
     /**
      * ネットワーク
      */
@@ -1049,10 +938,6 @@ export interface Locale extends ILocale {
      */
     "default": string;
     /**
-     * デフォルト: {value}
-     */
-    "defaultValueIs": ParameterizedString<"value">;
-    /**
      * 絵文字はありません
      */
     "noCustomEmojis": string;
@@ -1088,18 +973,6 @@ export interface Locale extends ILocale {
      * 応答なし
      */
     "notResponding": string;
-    /**
-     * サーバーのフォロー
-     */
-    "instanceFollowing": string;
-    /**
-     * サーバーのフォロワー
-     */
-    "instanceFollowers": string;
-    /**
-     * サーバーのユーザー
-     */
-    "instanceUsers": string;
     /**
      * パスワードを変更
      */
@@ -1189,14 +1062,6 @@ export interface Locale extends ILocale {
      */
     "upload": string;
     /**
-     * オリジナル画像を保持
-     */
-    "keepOriginalUploading": string;
-    /**
-     * 画像をアップロードする時にオリジナル版を保持します。オフにするとアップロード時にブラウザでWeb公開用画像を生成します。
-     */
-    "keepOriginalUploadingDescription": string;
-    /**
      * ドライブから
      */
     "fromDrive": string;
@@ -1237,10 +1102,6 @@ export interface Locale extends ILocale {
      */
     "readAllChatMessages": string;
     /**
-     * これより過去の履歴はありません
-     */
-    "noMoreHistory": string;
-    /**
      * メッセージを送る
      */
     "startChat": string;
@@ -1256,10 +1117,6 @@ export interface Locale extends ILocale {
      * 同意する
      */
     "agree": string;
-    /**
-     * 下記に同意する
-     */
-    "agreeBelow": string;
     /**
      * 基本的な注意事項
      */
@@ -1328,14 +1185,6 @@ export interface Locale extends ILocale {
      * ダーク
      */
     "dark": string;
-    /**
-     * 明るいテーマ
-     */
-    "lightThemes": string;
-    /**
-     * 暗いテーマ
-     */
-    "darkThemes": string;
     /**
      * デバイスのダークモードと同期する
      */
@@ -1627,26 +1476,6 @@ export interface Locale extends ILocale {
      */
     "integration": string;
     /**
-     * 接続する
-     */
-    "connectService": string;
-    /**
-     * 切断する
-     */
-    "disconnectService": string;
-    /**
-     * ローカルタイムラインを有効にする
-     */
-    "enableLocalTimeline": string;
-    /**
-     * グローバルタイムラインを有効にする
-     */
-    "enableGlobalTimeline": string;
-    /**
-     * これらのタイムラインを無効化しても、利便性のため管理者およびモデレーターは引き続き利用することができます。
-     */
-    "disablingTimelinesInfo": string;
-    /**
      * 登録
      */
     "registration": string;
@@ -1654,18 +1483,6 @@ export interface Locale extends ILocale {
      * 招待
      */
     "invite": string;
-    /**
-     * ローカルユーザーひとりあたりのドライブ容量
-     */
-    "driveCapacityPerLocalAccount": string;
-    /**
-     * リモートユーザーひとりあたりのドライブ容量
-     */
-    "driveCapacityPerRemoteAccount": string;
-    /**
-     * メガバイト単位
-     */
-    "inMb": string;
     /**
      * バナー画像のURL
      */
@@ -1675,10 +1492,6 @@ export interface Locale extends ILocale {
      */
     "backgroundImageUrl": string;
     /**
-     * 基本情報
-     */
-    "basicInfo": string;
-    /**
      * ピン留めユーザー
      */
     "pinnedUsers": string;
@@ -1686,18 +1499,6 @@ export interface Locale extends ILocale {
      * 「みつける」ページなどにピン留めしたいユーザーを改行で区切って記述します。
      */
     "pinnedUsersDescription": string;
-    /**
-     * ピン留めページ
-     */
-    "pinnedPages": string;
-    /**
-     * サーバーのトップページにピン留めしたいページのパスを改行で区切って記述します。
-     */
-    "pinnedPagesDescription": string;
-    /**
-     * ピン留めするクリップのID
-     */
-    "pinnedClipId": string;
     /**
      * ピン留めされたノート
      */
@@ -1771,10 +1572,6 @@ export interface Locale extends ILocale {
      */
     "turnstileSecretKey": string;
     /**
-     * 複数のCaptchaを使用すると干渉を起こす可能性があります。他のCaptchaを無効にしますか？キャンセルして複数のCaptchaを有効化したままにすることも可能です。
-     */
-    "avoidMultiCaptchaConfirm": string;
-    /**
      * アンテナ
      */
     "antennas": string;
@@ -1807,10 +1604,6 @@ export interface Locale extends ILocale {
      */
     "antennaKeywordsDescription": string;
     /**
-     * 新しいノートを通知する
-     */
-    "notifyAntenna": string;
-    /**
      * ファイルが添付されたノートのみ
      */
     "withFileAntenna": string;
@@ -1835,14 +1628,6 @@ export interface Locale extends ILocale {
      */
     "withReplies": string;
     /**
-     * 次のアカウントに接続されています
-     */
-    "connectedTo": string;
-    /**
-     * 投稿と返信
-     */
-    "notesAndReplies": string;
-    /**
      * ファイル付き
      */
     "withFiles": string;
@@ -1850,18 +1635,6 @@ export interface Locale extends ILocale {
      * サイレンス
      */
     "silence": string;
-    /**
-     * サイレンスしますか？
-     */
-    "silenceConfirm": string;
-    /**
-     * サイレンス解除
-     */
-    "unsilence": string;
-    /**
-     * サイレンス解除しますか？
-     */
-    "unsilenceConfirm": string;
     /**
      * 人気のユーザー
      */
@@ -1878,14 +1651,6 @@ export interface Locale extends ILocale {
      * 最近発見されたユーザー
      */
     "recentlyDiscoveredUsers": string;
-    /**
-     * {count}のユーザーがいます
-     */
-    "exploreUsersCount": ParameterizedString<"count">;
-    /**
-     * Fediverseを探索
-     */
-    "exploreFediverse": string;
     /**
      * 人気のタグ
      */
@@ -2018,14 +1783,6 @@ export interface Locale extends ILocale {
      * すべての通知を既読にする
      */
     "markAsReadAllNotifications": string;
-    /**
-     * すべての投稿を既読にする
-     */
-    "markAsReadAllUnreadNotes": string;
-    /**
-     * すべてのダイレクトメッセージを既読にする
-     */
-    "markAsReadAllTalkMessages": string;
     /**
      * ヘルプ
      */
@@ -2239,10 +1996,6 @@ export interface Locale extends ILocale {
      */
     "tags": string;
     /**
-     * このドキュメントのソース
-     */
-    "docSource": string;
-    /**
      * アカウントを作成
      */
     "createAccount": string;
@@ -2295,10 +2048,6 @@ export interface Locale extends ILocale {
      */
     "total": string;
     /**
-     * 前週比
-     */
-    "weekOverWeekChanges": string;
-    /**
      * 前日比
      */
     "dayOverDayChanges": string;
@@ -2307,17 +2056,9 @@ export interface Locale extends ILocale {
      */
     "appearance": string;
     /**
-     * クライアント設定
-     */
-    "clientSettings": string;
-    /**
      * アカウント設定
      */
     "accountSettings": string;
-    /**
-     * プロモーション
-     */
-    "promotion": string;
     /**
      * プロモート
      */
@@ -2326,14 +2067,6 @@ export interface Locale extends ILocale {
      * 日数
      */
     "numberOfDays": string;
-    /**
-     * このノートを非表示
-     */
-    "hideThisNote": string;
-    /**
-     * タイムラインにおすすめのノートを表示する
-     */
-    "showFeaturedNotesInTimeline": string;
     /**
      * オブジェクトストレージ
      */
@@ -2407,10 +2140,6 @@ export interface Locale extends ILocale {
      */
     "s3ForcePathStyleDesc": string;
     /**
-     * サーバーログ
-     */
-    "serverLogs": string;
-    /**
      * 全て削除
      */
     "deleteAll": string;
@@ -2426,10 +2155,6 @@ export interface Locale extends ILocale {
      * フォローする際、デフォルトで返信をTLに含むようにする
      */
     "withRepliesByDefaultForNewlyFollowed": string;
-    /**
-     * 新しいノートがあります
-     */
-    "newNoteRecived": string;
     /**
      * 新しいノート
      */
@@ -2563,10 +2288,6 @@ export interface Locale extends ILocale {
      */
     "script": string;
     /**
-     * Pagesのスクリプトを無効にする
-     */
-    "disablePagesScript": string;
-    /**
      * リモートユーザー情報の更新
      */
     "updateRemoteUser": string;
@@ -2603,21 +2324,9 @@ export interface Locale extends ILocale {
      */
     "deleteAllFilesConfirm": string;
     /**
-     * フォローを全解除
-     */
-    "removeAllFollowing": string;
-    /**
-     * {host}からのフォローをすべて解除します。そのサーバーがもう存在しなくなった場合などに実行してください。
-     */
-    "removeAllFollowingDescription": ParameterizedString<"host">;
-    /**
      * このユーザーは凍結されています。
      */
     "userSuspended": string;
-    /**
-     * このユーザーはサイレンスされています。
-     */
-    "userSilenced": string;
     /**
      * アカウントが凍結されています
      */
@@ -2671,10 +2380,6 @@ export interface Locale extends ILocale {
      */
     "inboxUrl": string;
     /**
-     * 追加済みのリレー
-     */
-    "addedRelays": string;
-    /**
      * プッシュ通知を行うには有効にする必要があります。
      */
     "serviceworkerInfo": string;
@@ -2727,17 +2432,9 @@ export interface Locale extends ILocale {
      */
     "describeFile": string;
     /**
-     * キャプションを入力
-     */
-    "enterFileDescription": string;
-    /**
      * 作者
      */
     "author": string;
-    /**
-     * 未保存の変更があります。破棄しますか？
-     */
-    "leaveConfirm": string;
     /**
      * 管理
      */
@@ -2747,25 +2444,13 @@ export interface Locale extends ILocale {
      */
     "plugins": string;
     /**
-     * 設定のバックアップ
-     */
-    "preferencesBackups": string;
-    /**
      * デッキ
      */
     "deck": string;
     /**
-     * デッキ解除
-     */
-    "undeck": string;
-    /**
      * モーダルにぼかし効果を使用
      */
     "useBlurEffectForModal": string;
-    /**
-     * フル機能リアクションピッカーを使用
-     */
-    "useFullReactionPicker": string;
     /**
      * 幅
      */
@@ -2971,14 +2656,6 @@ export interface Locale extends ILocale {
      */
     "notificationSettingDesc": string;
     /**
-     * グローバル設定を使う
-     */
-    "useGlobalSetting": string;
-    /**
-     * オンにすると、アカウントの通知設定が使用されます。オフにすると、個別に設定できるようになります。
-     */
-    "useGlobalSettingDesc": string;
-    /**
      * その他
      */
     "other": string;
@@ -3054,10 +2731,6 @@ export interface Locale extends ILocale {
      * 新しいタブで開く
      */
     "openInNewTab": string;
-    /**
-     * サイドビューで開く
-     */
-    "openInSideView": string;
     /**
      * デフォルトのナビゲーション
      */
@@ -3159,18 +2832,6 @@ export interface Locale extends ILocale {
      */
     "repliesCount": string;
     /**
-     * リノートした数
-     */
-    "renotesCount": string;
-    /**
-     * 返信された数
-     */
-    "repliedCount": string;
-    /**
-     * リノートされた数
-     */
-    "renotedCount": string;
-    /**
      * フォロー数
      */
     "followingCount": string;
@@ -3179,22 +2840,6 @@ export interface Locale extends ILocale {
      */
     "followersCount": string;
     /**
-     * リアクションした数
-     */
-    "sentReactionsCount": string;
-    /**
-     * リアクションされた数
-     */
-    "receivedReactionsCount": string;
-    /**
-     * アンケートに投票した数
-     */
-    "pollVotesCount": string;
-    /**
-     * アンケートに投票された数
-     */
-    "pollVotedCount": string;
-    /**
      * はい
      */
     "yes": string;
@@ -3202,10 +2847,6 @@ export interface Locale extends ILocale {
      * いいえ
      */
     "no": string;
-    /**
-     * ドライブのファイル数
-     */
-    "driveFilesCount": string;
     /**
      * ドライブ使用量
      */
@@ -3255,18 +2896,6 @@ export interface Locale extends ILocale {
      */
     "emailVerified": string;
     /**
-     * お気に入りノートの数
-     */
-    "noteFavoritesCount": string;
-    /**
-     * Pageにいいねした数
-     */
-    "pageLikesCount": string;
-    /**
-     * Pageにいいねされた数
-     */
-    "pageLikedCount": string;
-    /**
      * 連絡先
      */
     "contact": string;
@@ -3286,10 +2915,6 @@ export interface Locale extends ILocale {
      * 実験的
      */
     "experimental": string;
-    /**
-     * これは実験的な機能です。仕様が変更されたり、正常に動作しなかったりする可能性があります。
-     */
-    "thisIsExperimentalFeature": string;
     /**
      * 開発者
      */
@@ -3355,18 +2980,6 @@ export interface Locale extends ILocale {
      */
     "nNotes": ParameterizedString<"n">;
     /**
-     * エラーリポートを送信
-     */
-    "sendErrorReports": string;
-    /**
-     * オンにすると、問題が発生したときにエラーの詳細情報がTonerikoに共有され、ソフトウェアの品質向上に役立てることができます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれます。
-     */
-    "sendErrorReportsDescription": string;
-    /**
-     * マイテーマ
-     */
-    "myTheme": string;
-    /**
      * 背景
      */
     "backgroundColor": string;
@@ -3423,18 +3036,6 @@ export interface Locale extends ILocale {
      */
     "closeAccount": string;
     /**
-     * 現在のバージョン
-     */
-    "currentVersion": string;
-    /**
-     * 最新のバージョン
-     */
-    "latestVersion": string;
-    /**
-     * お使いのクライアントは最新です。
-     */
-    "youAreRunningUpToDateClient": string;
-    /**
      * 新しいバージョンのクライアントが利用可能です。
      */
     "newVersionOfClientAvailable": string;
@@ -3471,25 +3072,9 @@ export interface Locale extends ILocale {
      */
     "publish": string;
     /**
-     * チャンネル内検索
-     */
-    "inChannelSearch": string;
-    /**
      * 右クリックでリアクションピッカーを開く
      */
     "useReactionPickerForContextMenu": string;
-    /**
-     * {users}が入力中
-     */
-    "typingUsers": ParameterizedString<"users">;
-    /**
-     * 特定の日付にジャンプ
-     */
-    "jumpToSpecifiedDate": string;
-    /**
-     * 過去のタイムラインを表示しています
-     */
-    "showingPastTimeline": string;
     /**
      * クリア
      */
@@ -3506,14 +3091,6 @@ export interface Locale extends ILocale {
      * いいね解除しますか？
      */
     "unlikeConfirm": string;
-    /**
-     * フルビュー
-     */
-    "fullView": string;
-    /**
-     * フルビュー解除
-     */
-    "quitFullView": string;
     /**
      * 説明を追加
      */
@@ -3570,10 +3147,6 @@ export interface Locale extends ILocale {
      * Botプロテクション
      */
     "botProtection": string;
-    /**
-     * サーバーブロック・サイレンス
-     */
-    "instanceBlocking": string;
     /**
      * アカウントを選択
      */
@@ -3779,10 +3352,6 @@ export interface Locale extends ILocale {
      */
     "pubSub": string;
     /**
-     * 直近の通信
-     */
-    "lastCommunication": string;
-    /**
      * 解決済み
      */
     "resolved": string;
@@ -3887,10 +3456,6 @@ export interface Locale extends ILocale {
      */
     "hide": string;
     /**
-     * モバイルデバイスのときドロワーで表示
-     */
-    "useDrawerReactionPickerForMobile": string;
-    /**
      * おかえりなさい、{name}さん
      */
     "welcomeBackWithName": ParameterizedString<"name">;
@@ -3926,10 +3491,6 @@ export interface Locale extends ILocale {
      * 列の数
      */
     "numberOfColumn": string;
-    /**
-     * 検索
-     */
-    "searchByGoogle": string;
     /**
      * {provider}で検索
      */
@@ -4047,10 +3608,6 @@ export interface Locale extends ILocale {
      */
     "threeDays": string;
     /**
-     * 反映されるまで時間がかかる場合があります。
-     */
-    "reflectMayTakeTime": string;
-    /**
      * アカウント情報の取得に失敗しました
      */
     "failedToFetchAccountInformation": string;
@@ -4102,14 +3659,6 @@ export interface Locale extends ILocale {
      * チェック
      */
     "check": string;
-    /**
-     * このユーザーのドライブ容量上限を変更
-     */
-    "driveCapOverrideLabel": string;
-    /**
-     * 0以下を指定すると解除されます。
-     */
-    "driveCapOverrideCaption": string;
     /**
      * 閲覧するには管理者アカウントでログインしている必要があります。
      */
@@ -4322,10 +3871,6 @@ export interface Locale extends ILocale {
      * ツール
      */
     "tools": string;
-    /**
-     * 読み込めません
-     */
-    "cannotLoad": string;
     /**
      * プロフィール表示回数
      */
@@ -4671,10 +4216,6 @@ export interface Locale extends ILocale {
      */
     "audio": string;
     /**
-     * 音声
-     */
-    "audioFiles": string;
-    /**
      * データセーバー
      */
     "dataSaver": string;
@@ -4706,18 +4247,6 @@ export interface Locale extends ILocale {
      * メモを編集
      */
     "editMemo": string;
-    /**
-     * リアクション一覧
-     */
-    "reactionsList": string;
-    /**
-     * リノート一覧
-     */
-    "renotesList": string;
-    /**
-     * 通知の表示
-     */
-    "notificationDisplay": string;
     /**
      * 左上
      */
@@ -4803,10 +4332,6 @@ export interface Locale extends ILocale {
      */
     "thisChannelArchived": string;
     /**
-     * ノートの表示
-     */
-    "displayOfNote": string;
-    /**
      * 初期設定
      */
     "initialAccountSetting": string;
@@ -4826,10 +4351,6 @@ export interface Locale extends ILocale {
      * オプション
      */
     "options": string;
-    /**
-     * ユーザー指定
-     */
-    "specifyUser": string;
     /**
      * 照会しますか？
      */
@@ -4922,10 +4443,6 @@ export interface Locale extends ILocale {
      * 招待コードを作成しました
      */
     "inviteCodeCreated": string;
-    /**
-     * 作成できる招待コードの数が上限に達しています。
-     */
-    "inviteLimitExceeded": string;
     /**
      * 作成できる招待コード: 残り {limit} 個
      */
@@ -5107,26 +4624,6 @@ export interface Locale extends ILocale {
      */
     "showRepliesToOthersInTimeline": string;
     /**
-     * TLに他の人への返信を含めない
-     */
-    "hideRepliesToOthersInTimeline": string;
-    /**
-     * TLに現在フォロー中の人全員の返信を含めるようにする
-     */
-    "showRepliesToOthersInTimelineAll": string;
-    /**
-     * TLに現在フォロー中の人全員の返信を含めないようにする
-     */
-    "hideRepliesToOthersInTimelineAll": string;
-    /**
-     * この操作は元に戻せません。本当にTLに現在フォロー中の人全員の返信を含めるようにしますか？
-     */
-    "confirmShowRepliesAll": string;
-    /**
-     * この操作は元に戻せません。本当にTLに現在フォロー中の人全員の返信を含めないようにしますか？
-     */
-    "confirmHideRepliesAll": string;
-    /**
      * 外部サービス
      */
     "externalServices": string;
@@ -5231,10 +4728,6 @@ export interface Locale extends ILocale {
      */
     "emailVerificationFailedError": string;
     /**
-     * 「内容を隠す」がオンの場合は注釈の記述が必要です。
-     */
-    "cwNotationRequired": string;
-    /**
      * リアクションする
      */
     "doReaction": string;
@@ -5250,10 +4743,6 @@ export interface Locale extends ILocale {
      * 残り: {n}
      */
     "remainingN": ParameterizedString<"n">;
-    /**
-     * 現在の内容に上書きされますがよろしいですか？
-     */
-    "overwriteContentConfirm": string;
     /**
      * 季節に応じた画面の演出
      */
@@ -5274,10 +4763,6 @@ export interface Locale extends ILocale {
      * 効果音
      */
     "sfx": string;
-    /**
-     * サウンドが再生されます
-     */
-    "soundWillBePlayed": string;
     /**
      * お住まいの地域
      */
@@ -5681,10 +5166,6 @@ export interface Locale extends ILocale {
      * デフォルトの画像圧縮度
      */
     "defaultImageCompressionLevel": string;
-    /**
-     * 低くすると画質を保てますが、ファイルサイズは増加します。<br>高くするとファイルサイズを減らせますが、画質は低下します。
-     */
-    "defaultImageCompressionLevel_description": string;
     /**
      * デフォルトの圧縮度
      */
@@ -6138,14 +5619,6 @@ export interface Locale extends ILocale {
          */
         "chatNotAvailableInOtherAccount": string;
         /**
-         * このユーザーとのダイレクトメッセージを開始できません
-         */
-        "cannotChatWithTheUser": string;
-        /**
-         * ダイレクトメッセージが使えない状態になっているか、相手がダイレクトメッセージを開放していません。
-         */
-        "cannotChatWithTheUser_description": string;
-        /**
          * あなたはこのグループの参加者ではありませんが、招待が届いています。参加するには、招待を承認してください。
          */
         "youAreNotAMemberOfThisRoomButInvited": string;
@@ -6279,10 +5752,6 @@ export interface Locale extends ILocale {
          * 好みに応じた、クライアントの全体的な動作の設定が行えます。
          */
         "preferencesBanner": string;
-        /**
-         * 好みに応じた、クライアントの見た目・表示方法に関する設定が行えます。
-         */
-        "appearanceBanner": string;
         /**
          * クライアントで再生するサウンドの設定が行えます。
          */
@@ -6472,10 +5941,6 @@ export interface Locale extends ILocale {
          */
         "requireSigninToViewContentsDescription2": string;
         /**
-         * リモートサーバーに連合されたコンテンツでは、これらの制限が適用されない場合があります。
-         */
-        "requireSigninToViewContentsDescription3": string;
-        /**
          * 過去のノートをフォロワーのみ表示可能にする
          */
         "makeNotesFollowersOnlyBefore": string;
@@ -6491,10 +5956,6 @@ export interface Locale extends ILocale {
          * この機能が有効になっている間、設定された日時より過去、または設定された時間を経過しているノートが自分のみ表示可能(非公開化)になります。無効に戻すと、ノートの公開状態も元に戻ります。
          */
         "makeNotesHiddenBeforeDescription": string;
-        /**
-         * リモートサーバーに連合されたノートには効果が及ばない場合があります。
-         */
-        "mayNotEffectForFederatedNotes": string;
         /**
          * これらの制限は簡易的なものです。リモートサーバーでの閲覧やモデレーション時など、一部のシチュエーションでは適用されない場合があります。
          */
@@ -6652,10 +6113,6 @@ export interface Locale extends ILocale {
          * さっそくアカウントの初期設定を行いましょう。
          */
         "letsStartAccountSetup": string;
-        /**
-         * まずはあなたのプロフィールを設定しましょう。
-         */
-        "letsFillYourProfile": string;
         /**
          * プロフィール設定
          */
@@ -7071,10 +6528,6 @@ export interface Locale extends ILocale {
          */
         "singleUserMode": string;
         /**
-         * このサーバーを利用するのが自分だけの場合、このモードを有効にすることで動作が最適化されます。
-         */
-        "singleUserMode_description": string;
-        /**
          * GETリクエストに署名する
          */
         "signToActivityPubGet": string;
@@ -7218,10 +6671,6 @@ export interface Locale extends ILocale {
         "movedTo": string;
     };
     "_achievements": {
-        /**
-         * 獲得日時
-         */
-        "earnedAt": string;
         "_types": {
             "_notes1": {
                 /**
@@ -8680,20 +8129,12 @@ export interface Locale extends ILocale {
          * ソースを表示
          */
         "viewSource": string;
-        /**
-         * ログを表示
-         */
-        "viewLog": string;
     };
     "_preferencesBackups": {
         /**
          * 作成したバックアップ
          */
         "list": string;
-        /**
-         * 新規保存
-         */
-        "saveNew": string;
         /**
          * ファイルを読み込み
          */
@@ -8707,21 +8148,9 @@ export interface Locale extends ILocale {
          */
         "save": string;
         /**
-         * バックアップ名を入力
-         */
-        "inputName": string;
-        /**
-         * 保存できません
-         */
-        "cannotSave": string;
-        /**
          * バックアップ名「{name}」は既に存在します。違う名前を指定してください。
          */
         "nameAlreadyExists": ParameterizedString<"name">;
-        /**
-         * バックアップ「{name}」を現在のデバイスに適用しますか？現在のデバイス設定は失われます。
-         */
-        "applyConfirm": ParameterizedString<"name">;
         /**
          * {name}に上書き保存しますか？
          */
@@ -8730,10 +8159,6 @@ export interface Locale extends ILocale {
          * {name}を削除しますか？
          */
         "deleteConfirm": ParameterizedString<"name">;
-        /**
-         * 「{old}」を「{new}」に変更しますか？
-         */
-        "renameConfirm": ParameterizedString<"old" | "new">;
         /**
          * バックアップはありません。「新規保存」で現在のクライアント設定をサーバーに保存できます。
          */
@@ -8746,10 +8171,6 @@ export interface Locale extends ILocale {
          * 更新日時: {date} {time}
          */
         "updatedAt": ParameterizedString<"date" | "time">;
-        /**
-         * 読み込みできません
-         */
-        "cannotLoad": string;
         /**
          * ファイル形式が違います。
          */
@@ -8786,10 +8207,6 @@ export interface Locale extends ILocale {
          * コントリビューター
          */
         "contributors": string;
-        /**
-         * 全てのコントリビューター
-         */
-        "allContributors": string;
         /**
          * ソースコード
          */
@@ -9113,10 +8530,6 @@ export interface Locale extends ILocale {
          */
         "base": string;
         /**
-         * 定数を追加
-         */
-        "addConstant": string;
-        /**
          * 定数
          */
         "constant": string;
@@ -9145,17 +8558,9 @@ export interface Locale extends ILocale {
          */
         "func": string;
         /**
-         * 関数の種類
-         */
-        "funcKind": string;
-        /**
          * 引数
          */
         "argument": string;
-        /**
-         * 元にするプロパティの名前
-         */
-        "basedProp": string;
         /**
          * 不透明度
          */
@@ -9168,18 +8573,6 @@ export interface Locale extends ILocale {
          * 明るさ
          */
         "lighten": string;
-        /**
-         * 定数名を入力してください
-         */
-        "inputConstantName": string;
-        /**
-         * ここにテーマコードを貼り付けて、エディターにインポートできます
-         */
-        "importInfo": string;
-        /**
-         * 定数 {const} を削除しても良いですか？
-         */
-        "deleteConstantConfirm": ParameterizedString<"const">;
         "keys": {
             /**
              * アクセント
@@ -9285,14 +8678,6 @@ export interface Locale extends ILocale {
              * 警告の文字
              */
             "infoWarnFg": string;
-            /**
-             * 通知トーストの背景
-             */
-            "toastBg": string;
-            /**
-             * 通知トーストの文字
-             */
-            "toastFg": string;
             /**
              * ボタンの背景
              */
@@ -9931,10 +9316,6 @@ export interface Locale extends ILocale {
     };
     "_auth": {
         /**
-         * アプリへのアクセス許可
-         */
-        "shareAccessTitle": string;
-        /**
          * 「{name}」がアカウントにアクセスすることを許可しますか？
          */
         "shareAccess": ParameterizedString<"name">;
@@ -9978,10 +9359,6 @@ export interface Locale extends ILocale {
          * アクセスを許可すると、自動で以下のURLに遷移します
          */
         "byClickingYouWillBeRedirectedToThisUrl": string;
-        /**
-         * このアプリケーションは既にアクセスが許可されています。
-         */
-        "alreadyAuthorized": string;
     };
     "_antennaSources": {
         /**
@@ -10718,10 +10095,6 @@ export interface Locale extends ILocale {
          * ストレージ使用量の増減
          */
         "storageUsageIncDec": string;
-        /**
-         * ストレージ使用量の合計
-         */
-        "storageUsageTotal": string;
     };
     "_instanceCharts": {
         /**
@@ -10871,14 +10244,6 @@ export interface Locale extends ILocale {
          */
         "nameAlreadyExists": string;
         /**
-         * 不正なページURLです
-         */
-        "invalidNameTitle": string;
-        /**
-         * 空白でないか確認してください
-         */
-        "invalidNameText": string;
-        /**
          * このページを編集
          */
         "editThisPage": string;
@@ -10910,10 +10275,6 @@ export interface Locale extends ILocale {
          * 人気
          */
         "featured": string;
-        /**
-         * インスペクター
-         */
-        "inspector": string;
         /**
          * コンテンツ
          */
@@ -10974,22 +10335,6 @@ export interface Locale extends ILocale {
          * セクションタイトルを入力
          */
         "enterSectionTitle": string;
-        /**
-         * 種類を選択
-         */
-        "selectType": string;
-        /**
-         * コンテンツ
-         */
-        "contentBlocks": string;
-        /**
-         * 入力
-         */
-        "inputBlocks": string;
-        /**
-         * 特殊
-         */
-        "specialBlocks": string;
         "blocks": {
             /**
              * テキスト
@@ -11059,10 +10404,6 @@ export interface Locale extends ILocale {
          */
         "hideThisNotification": string;
         /**
-         * ファイルがアップロードされました
-         */
-        "fileUploaded": string;
-        /**
          * {name}からのメンション
          */
         "youGotMention": ParameterizedString<"name">;
@@ -11119,10 +10460,6 @@ export interface Locale extends ILocale {
          */
         "chatRoomInvitationReceived": string;
         /**
-         * プッシュ通知の更新をしました
-         */
-        "emptyPushNotificationMessage": string;
-        /**
          * 実績を獲得
          */
         "achievementEarned": string;
@@ -11154,10 +10491,6 @@ export interface Locale extends ILocale {
          * {n}人がリノートしました
          */
         "renotedBySomeUsers": ParameterizedString<"n">;
-        /**
-         * {n}人にフォローされました
-         */
-        "followedBySomeUsers": ParameterizedString<"n">;
         /**
          * 通知の履歴をリセットする
          */
@@ -12198,10 +11531,6 @@ export interface Locale extends ILocale {
              */
             "requiredValue": string;
             /**
-             * 正規表現によるバリデーションはtype:textのカラムのみサポートします。
-             */
-            "columnTypeNotSupport": string;
-            /**
              * この値は{pattern}のパターンに一致しません
              */
             "patternNotMatch": ParameterizedString<"pattern">;
@@ -12389,10 +11718,6 @@ export interface Locale extends ILocale {
                  * 編集内容を破棄し、リストに表示されている絵文字をクリアします。よろしいですか？
                  */
                 "confirmClearEmojisDescription": string;
-                /**
-                 * ドラッグ＆ドロップされた{count}個のファイルをドライブにアップロードします。実行しますか？
-                 */
-                "confirmUploadEmojisDescription": ParameterizedString<"count">;
             };
         };
     };
@@ -12623,10 +11948,6 @@ export interface Locale extends ILocale {
          * 修復ツールを起動
          */
         "otherOption3": string;
-        /**
-         * Tonerikoをセーフモードで起動
-         */
-        "otherOption4": string;
     };
     "_search": {
         /**
@@ -13303,10 +12624,6 @@ export interface Locale extends ILocale {
          * 下書きを選択
          */
         "select": string;
-        /**
-         * 下書きの作成可能数を超えています。
-         */
-        "cannotCreateDraftAnymore": string;
         /**
          * この内容では下書きを作成できません。
          */
