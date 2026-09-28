@@ -627,7 +627,7 @@ export async function deliverQuestionUpdateForApi(
 	}
 }
 
-export async function attachLdSignatureForApi(
+async function attachLdSignatureForApi(
 	deps: Pick<ApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
 	activity: Record<string, unknown>,
 	user: { id: MiUser['id']; host: null },
