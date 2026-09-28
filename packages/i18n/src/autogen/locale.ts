@@ -6476,10 +6476,6 @@ export interface Locale extends ILocale {
          */
         "fanoutTimelineDbFallbackDescription": string;
         /**
-         * 有効にすると、リアクション作成時のパフォーマンスが大幅に向上し、データベースへの負荷を軽減することが可能です。ただし、Valkeyのメモリ使用量は増加します。
-         */
-        "reactionsBufferingDescription": string;
-        /**
          * リモート投稿の自動クリーニング
          */
         "remoteNotesCleaning": string;

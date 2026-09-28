@@ -80,9 +80,6 @@ export type ApiEmojiPopulateDependencies = {
 	db: ApiNoteDependencies['db'];
 };
 
-const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
-const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
-
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 function decodeReaction(str: string): { reaction: string; name?: string; host?: string | null } {
@@ -127,76 +124,6 @@ function collectReactionEmojiNames(reactions: MiNote['reactions']): string[] {
 		}
 	}
 	return names;
-}
-
-function mergeReactions(src: MiNote['reactions'], delta: Record<string, number>): MiNote['reactions'] {
-	const reactions = { ...src };
-	for (const [name, count] of Object.entries(delta)) {
-		reactions[name] = (reactions[name] ?? 0) + count;
-	}
-	return reactions;
-}
-
-async function getBufferedReactions(
-	deps: ApiNoteDependencies,
-	noteId: MiNote['id'],
-): Promise<{ deltas: Record<string, number>; pairs: [MiUser['id'], string][] }> {
-	if (!deps.meta.enableReactionsBuffering) {
-		return { deltas: {}, pairs: [] };
-	}
-
-	const pipeline = deps.redis.pipeline();
-	pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-	pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, '-1');
-	const results = await pipeline.exec();
-
-	const resultDeltas = (results?.[0]?.[1] ?? {}) as Record<string, string>;
-	const resultPairs = (results?.[1]?.[1] ?? []) as string[];
-
-	const deltas: Record<string, number> = {};
-	for (const [name, count] of Object.entries(resultDeltas)) {
-		deltas[name] = Number.parseInt(count, 10);
-	}
-
-	const pairs = resultPairs.map((x) => x.split('/') as [MiUser['id'], string]);
-
-	return { deltas, pairs };
-}
-
-async function getBufferedReactionsMany(
-	deps: ApiNoteDependencies,
-	noteIds: MiNote['id'][],
-): Promise<Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>> {
-	const result = new Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>(
-		noteIds.map((id) => [id, { deltas: {}, pairs: [] }]),
-	);
-	if (!deps.meta.enableReactionsBuffering || noteIds.length === 0) {
-		return result;
-	}
-
-	const pipeline = deps.redis.pipeline();
-	for (const noteId of noteIds) {
-		pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, '-1');
-	}
-	const results = await pipeline.exec();
-
-	for (let i = 0; i < noteIds.length; i++) {
-		const resultDeltas = (results?.[i * 2]?.[1] ?? {}) as Record<string, string>;
-		const resultPairs = (results?.[i * 2 + 1]?.[1] ?? []) as string[];
-
-		const deltas: Record<string, number> = {};
-		for (const [name, count] of Object.entries(resultDeltas)) {
-			deltas[name] = Number.parseInt(count, 10);
-		}
-
-		result.set(noteIds[i]!, {
-			deltas,
-			pairs: resultPairs.map((x) => x.split('/') as [MiUser['id'], string]),
-		});
-	}
-
-	return result;
 }
 
 function isSelfHost(config: Config, host: string | null): boolean {
@@ -590,7 +517,6 @@ type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFro
  */
 export type PackNoteBatchHint = {
 	noteIds: Set<MiNote['id']>;
-	bufferedReactions: Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>;
 	myReactions: Map<MiNote['id'], string | undefined>;
 	polls: Map<MiNote['id'], MiPoll>;
 	pollVotes: Map<MiNote['id'], MiPollVote[]>;
@@ -633,11 +559,8 @@ export async function packNoteForApi(
 	// hint は事前一括取得の対象だったノートに限り信頼する。
 	const hint = opts.hint?.noteIds.has(note.id) ? opts.hint : undefined;
 
-	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? (await getBufferedReactions(deps, note.id));
-	const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
-	const reactionAndUserPairCache = note.reactionAndUserPairCache.concat(
-		bufferedReactions.pairs.map((x) => x.join('/')),
-	);
+	const reactions = normalizeReactionKeys(note.reactions);
+	const reactionAndUserPairCache = note.reactionAndUserPairCache;
 
 	let text = note.text;
 	if (note.name && (note.url ?? note.uri)) {
@@ -819,7 +742,7 @@ function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTarge
 
 type PackNoteStaticHint = Pick<
 	PackNoteBatchHint,
-	'noteIds' | 'bufferedReactions' | 'polls' | 'reactionEmojis' | 'emojis' | 'packedUsers' | 'packedFiles' | 'channels'
+	'noteIds' | 'polls' | 'reactionEmojis' | 'emojis' | 'packedUsers' | 'packedFiles' | 'channels'
 >;
 
 async function buildPackNoteStaticHint(
@@ -827,13 +750,7 @@ async function buildPackNoteStaticHint(
 	targetInfo: PackNoteTargets,
 ): Promise<PackNoteStaticHint> {
 	const { targetById, targets, pollTargetIds } = targetInfo;
-	const [bufferedReactions, polls] = await Promise.all([
-		getBufferedReactionsMany(
-			deps,
-			targets.map((target) => target.id),
-		),
-		listPollsByNoteIdsFromDatabase(deps.db, pollTargetIds),
-	]);
+	const polls = await listPollsByNoteIdsFromDatabase(deps.db, pollTargetIds);
 
 	const userSrcById = new Map<MiUser['id'], MiUser['id'] | MiUser>();
 	const fileIds = new Set<string>();
@@ -850,8 +767,7 @@ async function buildPackNoteStaticHint(
 		if (target.channelId) {
 			channelIds.add(target.channelId);
 		}
-		const buffered = bufferedReactions.get(target.id)!;
-		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+		const reactions = normalizeReactionKeys(target.reactions);
 		emojiRequests.push({ emojiNames: collectReactionEmojiNames(reactions), noteUserHost: target.userHost });
 		emojiRequests.push({ emojiNames: target.userHost != null ? target.emojis : [], noteUserHost: target.userHost });
 	}
@@ -865,7 +781,6 @@ async function buildPackNoteStaticHint(
 
 	return {
 		noteIds: new Set(targetById.keys()),
-		bufferedReactions,
 		polls: new Map(polls.map((poll) => [poll.noteId, poll])),
 		reactionEmojis: new Map(targets.map((target, index) => [target.id, populatedEmojiArray[index * 2]!])),
 		emojis: new Map(
@@ -924,10 +839,9 @@ export async function createPackNoteHintsForUsersForApi(
 		if (!detailTargetIds.has(target.id)) {
 			continue;
 		}
-		const buffered = staticHint.bufferedReactions.get(target.id)!;
-		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+		const reactions = normalizeReactionKeys(target.reactions);
 		const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
-		const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((pair) => pair.join('/')));
+		const pairCache = target.reactionAndUserPairCache ?? [];
 		const recent = parseId(target.id).date.getTime() + 2000 > now;
 		reactionStates.set(target.id, { reactionsCount, pairCache, recent });
 		if (reactionsCount > 0 && reactionsCount > pairCache.length && !recent) {
@@ -1071,14 +985,13 @@ export async function packNoteManyForApi(
 			if (!detailTargetIds.has(target.id)) {
 				continue;
 			}
-			const buffered = staticHint.bufferedReactions.get(target.id)!;
-			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+			const reactions = normalizeReactionKeys(target.reactions);
 			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
 			if (reactionsCount === 0) {
 				myReactions.set(target.id, undefined);
 				continue;
 			}
-			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((x) => x.join('/')));
+			const pairCache = target.reactionAndUserPairCache ?? [];
 			if (reactionsCount <= pairCache.length) {
 				const pair = pairCache.find((pair) => pair.startsWith(meId));
 				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
@@ -1118,13 +1031,8 @@ export async function fetchNoteDiffsForApi(
 	deps: ApiNoteDependencies,
 	notes: MiNote[],
 ): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
-	const bufferedReactionsByNoteId = await getBufferedReactionsMany(
-		deps,
-		notes.map((note) => note.id),
-	);
 	const diffs = notes.map((note) => {
-		const bufferedReactions = bufferedReactionsByNoteId.get(note.id)!;
-		const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
+		const reactions = normalizeReactionKeys(note.reactions);
 		return { note, reactions, reactionEmojiNames: collectReactionEmojiNames(reactions) };
 	});
 	const reactionEmojis = await populateEmojisMany(

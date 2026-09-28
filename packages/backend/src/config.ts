@@ -138,7 +138,6 @@ export type Config = {
 		pubsub: RuntimeValkeyConnection;
 		jobQueue: RuntimeValkeyConnection;
 		timelines: RuntimeValkeyConnection;
-		reactions: RuntimeValkeyConnection;
 	};
 	search: {
 		provider: 'sqlLike' | 'sqlPgroonga' | 'meilisearch';
@@ -459,10 +458,6 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 				connections.timelines === 'primary'
 					? primary
 					: resolveValkeyConnection(source, connections.timelines, instanceUrl.host),
-			reactions:
-				connections.reactions === 'primary'
-					? primary
-					: resolveValkeyConnection(source, connections.reactions, instanceUrl.host),
 		},
 		search: {
 			provider: source.search.provider,

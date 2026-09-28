@@ -378,6 +378,7 @@
 - Change: 絵文字パックの取り込みが対応する圧縮方式を deflate (と無圧縮) に限定 (ネイティブモジュール slacc から bzip2 / lzma / zstd / ppmd / AES 暗号化 zip の展開系を除去。一般的な zip 作成ツールと本体の書き出しはいずれも deflate なので通常の利用に影響はなく、未対応の方式は明示的なエラーになる)
 - Change: 2要素認証の設定 QR をサーバーで画像生成せず、クライアントで描画するように (他の QR 表示と見た目が揃う。`i/2fa/register` のレスポンスから `qr` が無くなり、同じレスポンスの `url` から描画する。バックエンドから `qrcode` とその依存 pngjs / yargs が不要になった)
 - Change: 署名・zip 展開に使うネイティブモジュール slacc をリポジトリに取り込みました。**ソースからビルドするため、自前でビルドする場合は Rust ツールチェーンが必要です** (Docker イメージを使う場合は不要)
+- Change: 効果の無くなっていたリアクションのバッファリング設定 (`enableReactionsBuffering`、管理画面の「RBT」) と Valkey の接続割り当て `valkey.assignments.reactions` を削除。設定ファイルに `reactions:` が残っていると起動時にエラーになるので消す
 - Change: オブジェクトストレージのクライアントを AWS SDK から Bun 組み込みの S3 クライアントへ置き換え
 	- アップロードするオブジェクトに `Cache-Control` が付かなくなります。`/files/` 経由の配信ではサーバー側が同じヘッダを付けるため影響しませんが、**オブジェクトストレージの URL をクライアントへ直接配る設定 (`objectStorageBaseUrl`) を使っている場合はキャッシュ効率が落ちます**
 	- オブジェクトストレージへのプロキシ経由アクセス (`objectStorageUseProxy`) は使えなくなります

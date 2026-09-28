@@ -24,7 +24,6 @@ import { alias } from 'drizzle-orm/pg-core';
 import { defineQueryPlan } from '@/db/prepared.js';
 import { note } from '@/db/schema/note.js';
 import type { NoteInsert, NoteRow } from '@/db/schema/note.js';
-import { noteReaction } from '@/db/schema/note-reaction.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import { poll } from '@/db/schema/poll.js';
 import type { PollInsert } from '@/db/schema/poll.js';
@@ -737,35 +736,6 @@ export async function decrementNoteReactionInDatabase(
 			reactionAndUserPairCache: sql`array_remove(${note.reactionAndUserPairCache}, ${pairToRemove})`,
 		})
 		.where(eq(note.id, id));
-}
-
-export async function rebuildNoteReactionsInDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<void> {
-	await db.transaction(async (transaction) => {
-		const [target] = await transaction.select({ id: note.id }).from(note).where(eq(note.id, id)).for('update').limit(1);
-		if (target == null) {
-			return;
-		}
-
-		const counts = await transaction
-			.select({ reaction: noteReaction.reaction, count: count() })
-			.from(noteReaction)
-			.where(eq(noteReaction.noteId, id))
-			.groupBy(noteReaction.reaction);
-		const recentPairs = await transaction
-			.select({ userId: noteReaction.userId, reaction: noteReaction.reaction })
-			.from(noteReaction)
-			.where(eq(noteReaction.noteId, id))
-			.orderBy(desc(noteReaction.id))
-			.limit(PER_NOTE_REACTION_USER_PAIR_CACHE_MAX);
-
-		await transaction
-			.update(note)
-			.set({
-				reactions: Object.fromEntries(counts.map((row) => [row.reaction, row.count])),
-				reactionAndUserPairCache: recentPairs.toReversed().map((row) => `${row.userId}/${row.reaction}`),
-			})
-			.where(eq(note.id, id));
-	});
 }
 
 export async function listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(

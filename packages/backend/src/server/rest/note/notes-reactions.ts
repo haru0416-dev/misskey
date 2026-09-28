@@ -7,7 +7,6 @@ import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.j
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { toPuny } from '@/misc/to-puny.js';
-import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -64,7 +63,6 @@ export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
 	ApiNotificationDependencies & {
 		chartWriters: ChartWriters;
 		publishNoteStream?: ApiNoteStreamPublisher;
-		redisForReactions: Redis.Redis;
 	};
 
 const FALLBACK = '❤';

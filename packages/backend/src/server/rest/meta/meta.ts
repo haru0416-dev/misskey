@@ -199,7 +199,6 @@ export async function handleApiAdminMeta(deps: ApiMetaDependencies) {
 		perRemoteUserUserTimelineCacheMax: instance.perRemoteUserUserTimelineCacheMax,
 		perUserHomeTimelineCacheMax: instance.perUserHomeTimelineCacheMax,
 		perUserListTimelineCacheMax: instance.perUserListTimelineCacheMax,
-		enableReactionsBuffering: instance.enableReactionsBuffering,
 		notesPerOneAd: instance.notesPerOneAd,
 		urlPreviewEnabled: instance.urlPreviewEnabled,
 		urlPreviewAllowRedirect: instance.urlPreviewAllowRedirect,

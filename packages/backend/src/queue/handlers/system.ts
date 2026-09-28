@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Redis from 'ioredis';
 import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/UserIpStore.js';
 import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
@@ -19,26 +18,18 @@ import {
 	deleteChannelMutingsByIdsFromDatabase,
 	listExpiredChannelMutingsFromDatabase,
 } from '@/core/channel/ChannelMutingStore.js';
-import { rebuildNoteReactionsInDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
 import type { ChartWriters } from '../../server/chart-runtime.js';
 import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
 
-const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
-const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
-const REACTIONS_BUFFER_REBUILD_PREFIX = 'reactionsBufferRebuild';
-
 export type QueueSystemDependencies = {
-	config: Pick<Config, 'maintenance' | 'valkey'>;
+	config: Pick<Config, 'maintenance'>;
 	db: MiDrizzleDatabase;
 	chartWriters: ChartWriters;
-	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
-	redisForReactions: Redis.Redis;
 	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
@@ -156,67 +147,5 @@ export async function handleQueueCheckExpiredMutings(deps: QueueSystemDependenci
 		for (const muting of expiredChannelMutings) {
 			deps.publishInternalEvent?.('unmuteChannel', { userId: muting.userId, channelId: muting.channelId });
 		}
-	}
-}
-
-export async function handleQueueBakeBufferedReactions(deps: QueueSystemDependencies): Promise<void> {
-	if (!deps.meta.enableReactionsBuffering) {
-		return;
-	}
-
-	const bufferedNoteIds = new Set<string>();
-	const reactionRedisPrefix = deps.config.valkey.reactions.prefix;
-	let cursor = '0';
-	do {
-		const result = await deps.redisForReactions.scan(
-			cursor,
-			'MATCH',
-			`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
-			'COUNT',
-			'1000',
-		);
-
-		cursor = result[0];
-		for (const key of result[1]) {
-			bufferedNoteIds.add(key.replace(`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:`, ''));
-		}
-	} while (cursor !== '0');
-	cursor = '0';
-	do {
-		const result = await deps.redisForReactions.scan(
-			cursor,
-			'MATCH',
-			`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:*`,
-			'COUNT',
-			'1000',
-		);
-
-		cursor = result[0];
-		for (const key of result[1]) {
-			bufferedNoteIds.add(key.replace(`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:`, ''));
-		}
-	} while (cursor !== '0');
-
-	if (bufferedNoteIds.size === 0) {
-		return;
-	}
-
-	for (const noteId of bufferedNoteIds) {
-		const drainId = genId();
-		const drainingDeltaKey = `reactionsBufferDrainingDeltas:${drainId}`;
-		const drainingPairKey = `reactionsBufferDrainingPairs:${drainId}`;
-		const rebuildKey = `${REACTIONS_BUFFER_REBUILD_PREFIX}:${noteId}`;
-		await deps.redisForReactions.set(rebuildKey, '1');
-		await deps.redisForReactions.eval(
-			`if redis.call('exists', KEYS[1]) == 1 then redis.call('rename', KEYS[1], KEYS[3]) end
-			if redis.call('exists', KEYS[2]) == 1 then redis.call('rename', KEYS[2], KEYS[4]) end`,
-			4,
-			`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`,
-			`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`,
-			drainingDeltaKey,
-			drainingPairKey,
-		);
-		await rebuildNoteReactionsInDatabase(deps.db, noteId);
-		await deps.redisForReactions.del(drainingDeltaKey, drainingPairKey, rebuildKey);
 	}
 }

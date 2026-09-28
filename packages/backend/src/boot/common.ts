@@ -58,7 +58,6 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 		meilisearch: deps.meilisearch,
 		redis: deps.redis,
 		redisForTimelines: deps.redisForTimelines,
-		redisForReactions: deps.redisForReactions,
 		chartWriters: deps.chartWriters,
 		downloadService: deps.downloadService,
 		emailService: deps.emailService,

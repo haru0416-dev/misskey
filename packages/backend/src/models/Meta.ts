@@ -237,8 +237,6 @@ export class MiMeta {
 
 	public perUserListTimelineCacheMax: number;
 
-	public enableReactionsBuffering: boolean;
-
 	public notesPerOneAd: number;
 
 	public urlPreviewEnabled: boolean;

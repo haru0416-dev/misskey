@@ -15,7 +15,6 @@ export type HealthDependencies = {
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
-	redisForReactions: Redis.Redis;
 	db: MiDrizzleDatabase;
 	meilisearch: Meilisearch | null;
 };
@@ -27,7 +26,6 @@ async function checkHealth(deps: HealthDependencies): Promise<boolean> {
 		deps.redisForPub.ping(),
 		deps.redisForSub.ping(),
 		deps.redisForTimelines.ping(),
-		deps.redisForReactions.ping(),
 		deps.db.execute(sql`SELECT 1`),
 		...(deps.meilisearch ? [deps.meilisearch.health()] : []),
 	]).then(

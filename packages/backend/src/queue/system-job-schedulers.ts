@@ -14,7 +14,6 @@ export const systemJobSchedulers = [
 	{ name: 'aggregateRetention', pattern: '0 0 * * *' },
 	{ name: 'clean', pattern: '0 0 * * *' },
 	{ name: 'checkExpiredMutings', pattern: '*/5 * * * *' },
-	{ name: 'bakeBufferedReactions', pattern: '0 0 * * *' },
 	{ name: 'checkModeratorsActivity', pattern: '30 * * * *' },
 	{ name: 'cleanRemoteNotes', pattern: '0 4 * * *' },
 ] as const;

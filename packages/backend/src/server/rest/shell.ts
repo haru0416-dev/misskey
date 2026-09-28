@@ -46,7 +46,6 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	meta: MiMeta;
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
-	redisForReactions: Redis.Redis;
 	downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	httpRequestService: HttpRequestService;

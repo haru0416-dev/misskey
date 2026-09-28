@@ -30,15 +30,12 @@ import {
 	createChannelMutingInDatabase,
 	listActiveMutedChannelIdsByUserIdFromDatabase,
 } from '@/core/channel/ChannelMutingStore.js';
-import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
-import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createChartWriters } from '@/server/chart-runtime.js';
 import type { ChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
 import {
 	handleQueueAggregateRetention,
-	handleQueueBakeBufferedReactions,
 	handleQueueCheckExpiredMutings,
 	handleQueueClean,
 	handleQueueCleanCharts,
@@ -52,7 +49,6 @@ describe('hono-queue-system', () => {
 	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
 	let redis: Redis.Redis;
-	let redisForReactions: Redis.Redis;
 	let config: Config;
 	let chartWriters: ChartWriters;
 	let deps: QueueSystemDependencies;
@@ -62,15 +58,13 @@ describe('hono-queue-system', () => {
 		pool = createBunSqlClient(config);
 		db = createBunSqlDatabase(pool, config);
 		redis = new Redis.Redis(config.valkey.primary);
-		redisForReactions = new Redis.Redis(config.valkey.reactions);
 		const meta = await fetchMetaFromDatabase(db);
 		chartWriters = createChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
-		deps = { config, db, chartWriters, meta, redisForReactions };
+		deps = { config, db, chartWriters };
 	});
 
 	afterAll(async () => {
 		redis.disconnect();
-		redisForReactions.disconnect();
 		await pool.close();
 	});
 
@@ -289,57 +283,6 @@ describe('hono-queue-system', () => {
 
 			expect(published).toContainEqual({ type: 'unmute', value: { muterId, muteeId } });
 			expect(published).toContainEqual({ type: 'unmuteChannel', value: { userId: muterId, channelId } });
-		});
-	});
-
-	describe('handleQueueBakeBufferedReactions', () => {
-		test('バッファされたリアクションをnoteに反映する', async () => {
-			const userId = genId();
-			await createUserInDatabase(db, {
-				id: userId,
-				username: `honoqueuesys${userId}`,
-				usernameLower: `honoqueuesys${userId}`.toLowerCase(),
-			});
-
-			const noteId = genId();
-			await createNoteInDatabase(db, {
-				id: noteId,
-				text: 'hono-queue-system bake test',
-				userId,
-				userHost: null,
-				visibility: 'public',
-			});
-			await createNoteReactionInDatabase(db, {
-				id: genId(),
-				noteId,
-				userId,
-				reaction: '👍',
-			});
-
-			// ioredisのkeyPrefixが自動で前置されるため、ここではbareキーを使う
-			// (SCANのMATCHパターンだけは自動前置の対象外なので、本体実装側で手動prefixが必要になる)
-			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 1);
-			await redisForReactions.zadd(`reactionsBufferPairs:${noteId}`, 0, `${userId}/👍`);
-
-			const noteBefore = await fetchNoteByIdOrFailFromDatabase(db, noteId);
-			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(1);
-			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(1);
-
-			await handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } });
-
-			const noteWhileDisabled = await fetchNoteByIdOrFailFromDatabase(db, noteId);
-			expect(noteWhileDisabled.reactions).toEqual(noteBefore.reactions);
-			expect(noteWhileDisabled.reactionAndUserPairCache).toEqual(noteBefore.reactionAndUserPairCache);
-			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(1);
-			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(1);
-
-			await handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
-
-			const noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
-			expect(noteAfter.reactions['👍']).toBe(1);
-			expect(noteAfter.reactionAndUserPairCache).toContain(`${userId}/👍`);
-			expect(await redisForReactions.exists(`reactionsBufferDeltas:${noteId}`)).toBe(0);
-			expect(await redisForReactions.exists(`reactionsBufferPairs:${noteId}`)).toBe(0);
 		});
 	});
 });
