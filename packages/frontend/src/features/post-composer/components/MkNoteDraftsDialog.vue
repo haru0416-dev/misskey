@@ -170,6 +170,7 @@ import * as os from '@/os.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api';
 import { Paginator } from '@/utility/paginator.js';
+import { toDatetimeLocalValue } from '@/utility/datetime-local.js';
 import MkTabs from '@/components/layout/MkTabs.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 
@@ -233,13 +234,6 @@ async function deleteDraft(draft: Misskey.entities.NoteDraft) {
 	os.apiWithDialog('notes/drafts/delete', { draftId: draft.id }).then(() => {
 		draftsPaginator.reload();
 	});
-}
-
-// datetime-local の入力欄に入れる、手元の時刻での 'YYYY-MM-DDTHH:mm'。
-function toDatetimeLocalValue(time: number): string {
-	const date = new Date(time);
-	const pad = (value: number) => String(value).padStart(2, '0');
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // 予約の付け替えはサーバーが行う (古い日時のジョブを消して新しい日時で積み直す)。過去の日時はサーバーが拒否し、

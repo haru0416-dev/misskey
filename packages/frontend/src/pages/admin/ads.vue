@@ -103,6 +103,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
+import { toDatetimeLocalValue } from '@/utility/datetime-local.js';
 
 type Ad = Misskey.entities.Ad & {
 	place: 'square' | 'horizontal' | 'horizontal-big';
@@ -110,9 +111,15 @@ type Ad = Misskey.entities.Ad & {
 
 const ads = ref<Ad[]>([]);
 
-// 現在のタイムゾーンオフセットを全広告日時に流用するため、夏時間をまたぐ日時は現地時刻からずれる。
-const localTime = new Date();
-const localTimeDiff = localTime.getTimezoneOffset() * 60 * 1000;
+// 入力欄 (datetime-local) には手元の時刻で入れ、保存時は `new Date(value)` で手元の時刻として読む。
+function toEditableAd(ad: Misskey.entities.Ad): Ad {
+	return {
+		...(ad as Ad),
+		expiresAt: toDatetimeLocalValue(ad.expiresAt),
+		startsAt: toDatetimeLocalValue(ad.startsAt),
+	};
+}
+
 const daysOfWeek: string[] = [
 	i18n.ts._weekday.sunday,
 	i18n.ts._weekday.monday,
@@ -131,22 +138,6 @@ const { model: filterType, def: filterTypeDef } = useMkSelect({
 	initialValue: 'all',
 });
 let publishing: boolean | null = null;
-
-misskeyApi('admin/ad/list', { publishing }).then((adsResponse) => {
-	if (adsResponse != null) {
-		ads.value = adsResponse.map((r) => {
-			const exdate = new Date(r.expiresAt);
-			const stdate = new Date(r.startsAt);
-			exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
-			stdate.setMilliseconds(stdate.getMilliseconds() - localTimeDiff);
-			return {
-				...(r as Ad),
-				expiresAt: exdate.toISOString().slice(0, 16),
-				startsAt: stdate.toISOString().slice(0, 16),
-			};
-		});
-	}
-});
 
 const filterItems = (v: typeof filterType.value) => {
 	if (v === 'publishing') {
@@ -173,8 +164,8 @@ function add() {
 		ratio: 1,
 		url: '',
 		imageUrl: '',
-		expiresAt: new Date().toISOString(),
-		startsAt: new Date().toISOString(),
+		expiresAt: toDatetimeLocalValue(Date.now()),
+		startsAt: toDatetimeLocalValue(Date.now()),
 		dayOfWeek: 0,
 		isSensitive: false,
 	});
@@ -273,17 +264,7 @@ function more() {
 			return;
 		}
 		ads.value = ads.value.concat(
-			adsResponse.map((r) => {
-				const exdate = new Date(r.expiresAt);
-				const stdate = new Date(r.startsAt);
-				exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
-				stdate.setMilliseconds(stdate.getMilliseconds() - localTimeDiff);
-				return {
-					...(r as Ad),
-					expiresAt: exdate.toISOString().slice(0, 16),
-					startsAt: stdate.toISOString().slice(0, 16),
-				};
-			}),
+			adsResponse.map(toEditableAd),
 		);
 	}).finally(() => {
 		fetchingMore = false;
@@ -296,17 +277,7 @@ function refresh() {
 		if (adsResponse == null || generation !== listGeneration) {
 			return;
 		}
-		ads.value = adsResponse.map((r) => {
-			const exdate = new Date(r.expiresAt);
-			const stdate = new Date(r.startsAt);
-			exdate.setMilliseconds(exdate.getMilliseconds() - localTimeDiff);
-			stdate.setMilliseconds(stdate.getMilliseconds() - localTimeDiff);
-			return {
-				...(r as Ad),
-				expiresAt: exdate.toISOString().slice(0, 16),
-				startsAt: stdate.toISOString().slice(0, 16),
-			};
-		});
+		ads.value = adsResponse.map(toEditableAd);
 	});
 }
 
