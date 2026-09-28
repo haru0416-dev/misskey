@@ -1,5 +1,6 @@
 import { defineConfig } from 'rolldown';
-import type { Plugin, ExternalOption } from 'rolldown';
+import type { Plugin } from 'rolldown';
+import { externalModules } from './runtime-externals.mjs';
 
 /** watch モードでバックエンドの起動・停止を制御する。 */
 function backendDevServerPlugin(): Plugin {
@@ -85,23 +86,6 @@ function backendDevServerPlugin(): Plugin {
 export default defineConfig((args) => {
 	const isWatchMode = args['watch'] != null && args['watch'] !== 'false';
 	const isE2E = process.env['MISSKEY_BUILD_E2E'] === '1';
-
-	const externalModules: ExternalOption = [
-		// slacc 本体もバンドルしない。napi-rs のローダーは `slacc-linux-x64-gnu` 等を
-		// 自分の位置から require するため、バンドルへ取り込むと解決の起点が built/ になり、
-		// isolated リンカ (bunfig.toml) がストア配下にしか置かないネイティブパッケージを見つけられない。
-		'slacc',
-		/^slacc-.*/,
-		/^@opentelemetry\/.*/,
-		/^@napi-rs\/.*/,
-		// `drizzle-orm/bun-sql` が `import { SQL } from 'bun'` を含む。bunランタイム組み込みなので解決させない
-		'bun',
-		'bullmq',
-		'ioredis',
-		'sharp',
-		'ipaddr.js',
-		'file-type',
-	];
 
 	if (isE2E) {
 		return {

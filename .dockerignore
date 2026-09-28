@@ -1,5 +1,7 @@
 .autogen
 .agents/
+# 手元のツールの作業領域 (1 GB 超)。ビルドには要らない。
+.ward/
 .claude/
 .git
 .github
