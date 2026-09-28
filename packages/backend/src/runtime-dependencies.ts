@@ -100,7 +100,6 @@ export type RuntimeDependencies = {
 	redisForPub: Redis.Redis;
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
-	redisForReactions: Redis.Redis;
 	chartWriters: ChartWriters;
 	notePostProcessing: NotePostProcessing;
 	dispose: () => Promise<void>;
@@ -112,7 +111,6 @@ type RuntimeResources = {
 	redisForPub?: Redis.Redis;
 	redisForSub?: Redis.Redis;
 	redisForTimelines?: Redis.Redis;
-	redisForReactions?: Redis.Redis;
 	systemQueue?: SystemQueue;
 	endedPollNotificationQueue?: EndedPollNotificationQueue;
 	postScheduledNoteQueue?: PostScheduledNoteQueue;
@@ -162,10 +160,6 @@ async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 
 function createRedisForTimelines(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.timelines);
-}
-
-function createRedisForReactions(config: Config): Redis.Redis {
-	return new Redis.Redis(config.valkey.reactions);
 }
 
 async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {
@@ -222,7 +216,6 @@ async function disposeRuntimeResources(resources: RuntimeResources): Promise<voi
 		resources.redisForPub ? closeRedisConnection(resources.redisForPub) : undefined,
 		resources.redisForSub ? closeRedisConnection(resources.redisForSub) : undefined,
 		resources.redisForTimelines ? closeRedisConnection(resources.redisForTimelines) : undefined,
-		resources.redisForReactions ? closeRedisConnection(resources.redisForReactions) : undefined,
 	]);
 	const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 	if (errors.length > 0)
@@ -242,7 +235,6 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const redisForPub = (resources.redisForPub = createRedisForPub(config));
 		const redisForSub = (resources.redisForSub = await createRedisForSub(config));
 		const redisForTimelines = (resources.redisForTimelines = createRedisForTimelines(config));
-		const redisForReactions = (resources.redisForReactions = createRedisForReactions(config));
 		const systemQueue = (resources.systemQueue = createSystemQueue(config));
 		const endedPollNotificationQueue = (resources.endedPollNotificationQueue =
 			createEndedPollNotificationQueue(config));
@@ -343,7 +335,6 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 			redisForPub,
 			redisForSub,
 			redisForTimelines,
-			redisForReactions,
 			chartWriters,
 			notePostProcessing,
 			dispose: () => {

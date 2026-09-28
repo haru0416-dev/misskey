@@ -197,7 +197,6 @@ export const sourceConfigV2Schema = z.strictObject({
 					pubsub: z.string().min(1).default('primary'),
 					jobQueue: z.string().min(1).default('primary'),
 					timelines: z.string().min(1).default('primary'),
-					reactions: z.string().min(1).default('primary'),
 				})
 				.prefault({}),
 		})

@@ -1747,11 +1747,6 @@ export const endpointMetas = {
 						optional: false,
 						nullable: false,
 					},
-					enableReactionsBuffering: {
-						type: 'boolean',
-						optional: false,
-						nullable: false,
-					},
 					notesPerOneAd: {
 						type: 'number',
 						optional: false,

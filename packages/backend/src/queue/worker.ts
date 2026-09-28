@@ -22,7 +22,6 @@ import { handleQueuePostScheduledNote } from './handlers/post-scheduled-note.js'
 import type { QueuePostScheduledNoteDependencies } from './handlers/post-scheduled-note.js';
 import {
 	handleQueueAggregateRetention,
-	handleQueueBakeBufferedReactions,
 	handleQueueCheckExpiredMutings,
 	handleQueueClean,
 	handleQueueCleanCharts,
@@ -299,7 +298,6 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		resyncCharts: () => handleQueueResyncCharts(deps),
 		cleanCharts: () => handleQueueCleanCharts(deps),
 		checkExpiredMutings: () => handleQueueCheckExpiredMutings(deps),
-		bakeBufferedReactions: () => handleQueueBakeBufferedReactions(deps),
 		cleanRemoteNotes: (job) =>
 			handleQueueCleanRemoteNotes(deps, {
 				log: (message) => job.log(message),

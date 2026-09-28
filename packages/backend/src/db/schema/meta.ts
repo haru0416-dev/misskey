@@ -193,7 +193,6 @@ export const meta = pgTable('meta', {
 	perRemoteUserUserTimelineCacheMax: integer().default(100).notNull(),
 	perUserHomeTimelineCacheMax: integer().default(300).notNull(),
 	perUserListTimelineCacheMax: integer().default(300).notNull(),
-	enableReactionsBuffering: boolean().default(false).notNull(),
 	notesPerOneAd: integer().default(0).notNull(),
 	urlPreviewEnabled: boolean().default(true).notNull(),
 	urlPreviewAllowRedirect: boolean().default(true).notNull(),
