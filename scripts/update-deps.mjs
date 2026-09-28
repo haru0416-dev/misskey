@@ -15,6 +15,16 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const dependencyGroups = ['dependencies', 'devDependencies', 'optionalDependencies'];
 const exactVersion = /^\d+\.\d+\.\d+$/;
 const DEFAULT_MIN_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+// 上げられない理由が分かっているメジャー更新。そのメジャーの間は「据え置き」に分けて毎週の判断対象から外し、
+// 次のメジャーが出たら再び判断対象に戻す。理由が解消したら行ごと消す。
+const heldMajors = {
+	typescript: {
+		major: 7,
+		reason:
+			'TypeScript 7 は JS API を持たず、vue-tsc・i18n の型生成・misskey-js の generator が 6 系を要する (型検査は typescript-native の 7 で実行済み)',
+	},
+};
 const FETCH_CONCURRENCY = 8;
 
 function parseVersion(version) {
@@ -108,7 +118,26 @@ async function mapConcurrent(items, limit, fn) {
 	return results;
 }
 
-function renderReport({ updated, majors, failures, minAgeSeconds }) {
+/**
+ * @param {{ name: string, from: string, to: string }[]} majors
+ * @param {Record<string, { major: number, reason: string }>} held
+ * @returns {{ pending: typeof majors, held: (typeof majors[number] & { reason: string })[] }}
+ */
+export function splitHeldMajors(majors, held) {
+	const pending = [];
+	const kept = [];
+	for (const entry of majors) {
+		const hold = Object.hasOwn(held, entry.name) ? held[entry.name] : undefined;
+		if (hold != null && parseVersion(entry.to)?.[0] === hold.major) {
+			kept.push({ ...entry, reason: hold.reason });
+		} else {
+			pending.push(entry);
+		}
+	}
+	return { pending, held: kept };
+}
+
+function renderReport({ updated, majors, held, failures, minAgeSeconds }) {
 	const lines = [];
 	const days = minAgeSeconds / 86400;
 	lines.push(`公開から ${days} 日以上経った版のうち、同じメジャー (0.x は同じマイナー) の最新へ更新します。`, '');
@@ -125,6 +154,16 @@ function renderReport({ updated, majors, failures, minAgeSeconds }) {
 			'| --- | --- | --- |',
 		);
 		for (const { name, from, to } of majors) lines.push(`| \`${name}\` | ${from} | ${to} |`);
+		lines.push('');
+	}
+	if (held.length > 0) {
+		lines.push(
+			'### 据え置き (理由が解消するまで上げない)',
+			'',
+			'| パッケージ | 現在 | 最新 | 理由 |',
+			'| --- | --- | --- | --- |',
+		);
+		for (const { name, from, to, reason } of held) lines.push(`| \`${name}\` | ${from} | ${to} | ${reason} |`);
 		lines.push('');
 	}
 	if (failures.length > 0) {
@@ -200,10 +239,11 @@ async function main() {
 		}
 	}
 
-	const report = renderReport({ updated, majors, failures, minAgeSeconds });
+	const { pending, held } = splitHeldMajors(majors, heldMajors);
+	const report = renderReport({ updated, majors: pending, held, failures, minAgeSeconds });
 	if (reportPath != null) writeFileSync(reportPath, report);
 	console.log(report);
-	console.log(`updated=${updated.length} majors=${majors.length} failures=${failures.length}`);
+	console.log(`updated=${updated.length} majors=${pending.length} held=${held.length} failures=${failures.length}`);
 }
 
 if (import.meta.main) {
