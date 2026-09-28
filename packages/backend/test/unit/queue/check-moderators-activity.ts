@@ -11,7 +11,7 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	updateUserLastActiveDateInDatabase,
 } from '@/core/user/UserStore.js';
-import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleInDatabase, deleteRoleInDatabase } from '@/core/role/RoleStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
@@ -19,6 +19,10 @@ import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueCheckModeratorsActivity } from '@/queue/handlers/check-moderators-activity.js';
 import type { QueueCheckModeratorsActivityDependencies } from '@/queue/handlers/check-moderators-activity.js';
 import type { MiUser } from '@/models/User.js';
+
+// アクティブなモデレーターが 1 人でも残ると、後のテストで招待制に切り替わらない。テストごとにロールを消す
+// (割り当ては外部キーで一緒に消える)。
+const createdRoleIds: string[] = [];
 
 async function createModeratorTestUser(
 	runtime: RuntimeDependencies,
@@ -39,6 +43,7 @@ async function createModeratorTestUser(
 		lastUsedAt: new Date(),
 		isModerator: true,
 	});
+	createdRoleIds.push(roleId);
 	await createRoleAssignmentInDatabase(runtime.db, { id: genId(), userId: user.id, roleId, expiresAt: null });
 	await updateUserLastActiveDateInDatabase(runtime.db, user.id, lastActiveDate);
 	return { ...user, lastActiveDate };
@@ -60,6 +65,9 @@ describe('hono-queue-check-moderators-activity', () => {
 	});
 
 	afterEach(async () => {
+		for (const roleId of createdRoleIds.splice(0)) {
+			await deleteRoleInDatabase(runtime.db, roleId);
+		}
 		// disableRegistration をリセットし、テスト間の影響を防ぐ。
 		const { after } = await updateMetaInDatabase(runtime.db, { disableRegistration: false });
 		Object.assign(runtime.meta, after);

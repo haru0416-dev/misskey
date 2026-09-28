@@ -108,7 +108,9 @@ describe('Bun HTTP Agent network settings', () => {
 				upstream.pipe(socket);
 				socket.pipe(upstream);
 			});
+			// listen() が張る接続と同じく、閉じたら集合から外す。残ると後のテストが「開いたまま」と数える。
 			sockets.add(upstream);
+			upstream.on('close', () => sockets.delete(upstream));
 			upstream.on('error', () => socket.destroy());
 			socket.on('error', () => upstream.destroy());
 		});
