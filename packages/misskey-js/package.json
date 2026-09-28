@@ -40,13 +40,13 @@
 	"scripts": {
 		"build": "bun ./build.js",
 		"watch": "bun ./build.js --watch",
-		"tsd": "tsd",
+		"test-d": "bun ../../scripts/tsc-native.mjs -p test-d --noEmit",
 		"api": "api-extractor run --local --verbose",
 		"api-prod": "api-extractor run --verbose",
 		"typecheck": "bun ../../scripts/tsc-native.mjs --noEmit",
 		"lint": "bun run --bun typecheck",
 		"vitest": "vitest run",
-		"test": "bun run --bun vitest && bun run --bun tsd",
+		"test": "bun run --bun vitest && bun run --bun test-d",
 		"update-autogen-code": "bun run --filter misskey-js-type-generator generate && rm -rf src/autogen && cp -R generator/built/autogen src/autogen"
 	},
 	"repository": {
@@ -59,7 +59,6 @@
 		"@types/node": "26.6.2",
 		"@vitest/coverage-v8": "5.0.1",
 		"esbuild": "0.28.2",
-		"tsd": "0.33.0",
 		"vitest": "5.0.1",
 		"vitest-websocket-mock": "0.8.0"
 	},

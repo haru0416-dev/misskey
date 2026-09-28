@@ -86,7 +86,7 @@ jobs:
         # i18n / misskey-js だけをビルドする (backend本体はテストスクリプトがビルドする)
         run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Test
-        # v8 coverage は Node の inspector API 依存で Bun ランタイムでは動かないため、カバレッジ無しで実行する
+        # CI ではカバレッジを取らない (手元では test-and-coverage で Bun 上でも取れる)
         run: bun run --bun --filter backend test
 
   e2e:
@@ -132,7 +132,7 @@ jobs:
       - name: Build
         run: bun run build
       - name: Test
-        # v8 coverage は Node の inspector API 依存で Bun ランタイムでは動かないため、カバレッジ無しで実行する
+        # CI ではカバレッジを取らない (手元では test-and-coverage で Bun 上でも取れる)
         run: bun run --bun --filter backend test:e2e
 
   e2e-bun:

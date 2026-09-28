@@ -14,12 +14,10 @@
 		"icons-subsetter": "workspace:*",
 		"mfm-js": "workspace:*",
 		"misskey-js": "workspace:*",
-		"shiki": "4.4.3",
 		"tinycolor2": "1.6.0",
 		"vue": "3.5.43"
 	},
 	"devDependencies": {
-		"@misskey-dev/emoji-assets": "17.0.6",
 		"@types/node": "26.6.2",
 		"@types/tinycolor2": "1.4.6",
 		"@vitejs/plugin-vue": "6.0.9",
