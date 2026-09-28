@@ -211,7 +211,7 @@ import JSON5 from 'json5';
 import defaultLightTheme from '@shared/themes/l-light.json5';
 import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
 import { isSafeMode } from '@shared/utility/config.js';
-import { getBuiltinThemes, parseThemeOrNull } from '@shared/utility/theme.js';
+import { getBuiltinThemes, parseThemeJsonOrNull } from '@shared/utility/theme.js';
 import type { Theme } from '@shared/utility/theme.js';
 import * as os from '@/os.js';
 import MkSwitch from '@/components/form/MkSwitch.vue';
@@ -237,10 +237,10 @@ getBuiltinThemes().then((themes) => {
 	builtinThemes.value = themes;
 });
 
-const instanceDarkTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultDarkTheme));
+const instanceDarkTheme = computed<Theme | null>(() => parseThemeJsonOrNull(instance.defaultDarkTheme));
 const installedDarkThemes = computed(() => installedThemes.value.filter((t) => t.base === 'dark'));
 const builtinDarkThemes = computed(() => builtinThemes.value.filter((t) => t.base === 'dark'));
-const instanceLightTheme = computed<Theme | null>(() => parseThemeOrNull(instance.defaultLightTheme));
+const instanceLightTheme = computed<Theme | null>(() => parseThemeJsonOrNull(instance.defaultLightTheme));
 const installedLightThemes = computed(() => installedThemes.value.filter((t) => t.base === 'light'));
 const builtinLightThemes = computed(() => builtinThemes.value.filter((t) => t.base === 'light'));
 const themes = computed(() =>

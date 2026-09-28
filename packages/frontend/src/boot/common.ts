@@ -8,7 +8,7 @@ import { compareVersions } from 'compare-versions';
 import { version, lang, apiUrl, isSafeMode } from '@shared/utility/config.js';
 import defaultLightTheme from '@shared/themes/l-toneriko.json5';
 import defaultDarkTheme from '@shared/themes/d-toneriko.json5';
-import { parseThemeOrNull } from '@shared/utility/theme.js';
+import { parseThemeJsonOrNull } from '@shared/utility/theme.js';
 import { storeBootloaderErrors } from '@shared/utility/store-boot-errors';
 import type { App } from 'vue';
 import widgets from '@/widgets/index.js';
@@ -152,13 +152,13 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>,
 
 	if (!isSafeMode) {
 		if (prefer.lightTheme == null) {
-			const instanceLightTheme = parseThemeOrNull(instance.defaultLightTheme);
+			const instanceLightTheme = parseThemeJsonOrNull(instance.defaultLightTheme);
 			if (instanceLightTheme != null) {
 				prefer.commit('lightTheme', instanceLightTheme);
 			}
 		}
 		if (prefer.darkTheme == null) {
-			const instanceDarkTheme = parseThemeOrNull(instance.defaultDarkTheme);
+			const instanceDarkTheme = parseThemeJsonOrNull(instance.defaultDarkTheme);
 			if (instanceDarkTheme != null) {
 				prefer.commit('darkTheme', instanceDarkTheme);
 			}
