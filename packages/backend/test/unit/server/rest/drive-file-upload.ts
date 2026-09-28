@@ -66,6 +66,17 @@ describe('addDriveFileForApi quota serialization', () => {
 	});
 
 	test('concurrent uploads persist only within quota and clean the rejected object', async () => {
+		// 共有の user には他のテストがファイルを残すので、容量と件数を数えるこのテストは専用のユーザーで行う。
+		const quotaUserId = genId();
+		const quotaUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+			user: {
+				id: quotaUserId,
+				username: `drivequotaown${quotaUserId}`,
+				usernameLower: `drivequotaown${quotaUserId}`,
+				isExplorable: false,
+			},
+			profile: { userId: quotaUserId },
+		});
 		const fileSize = 700 * 1024;
 		const paths = [path.join(tempDir, 'first.bin'), path.join(tempDir, 'second.bin')];
 		await Promise.all(paths.map((filePath) => fs.writeFile(filePath, Buffer.alloc(1))));
@@ -124,7 +135,7 @@ describe('addDriveFileForApi quota serialization', () => {
 		const results = await Promise.allSettled(
 			paths.map((filePath) =>
 				addDriveFileForApi(deps, {
-					user,
+					user: quotaUser,
 					path: filePath,
 					force: true,
 				}),
@@ -141,12 +152,13 @@ describe('addDriveFileForApi quota serialization', () => {
 		const rejected = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 		expect(rejected).toHaveLength(1);
 		expect(rejected[0]?.reason).toMatchObject({ id: 'c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6' });
-		const files = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
+		const files = await listAllDriveFilesByUserIdFromDatabase(db, quotaUser.id);
 		expect(upload).toHaveBeenCalledTimes(2);
 		expect(files).toHaveLength(1);
 		expect(files[0]?.size).toBe(fileSize);
 		expect(storedKeys).toEqual(new Set([files[0]?.accessKey]));
 		expect(deletedKeys).toHaveLength(1);
+		await deleteUserByIdFromDatabase(db, quotaUser.id);
 	});
 
 	test('remote quota eviction commits the new file and deletion outbox atomically during a queue outage', async () => {

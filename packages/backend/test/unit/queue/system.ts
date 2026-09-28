@@ -5,10 +5,12 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
+import { eq } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { retentionAggregation } from '@/db/schema/retention-aggregation.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
 import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
@@ -155,7 +157,14 @@ describe('hono-queue-system', () => {
 	});
 
 	describe('handleQueueAggregateRetention', () => {
+		// 本日分が既にあると、ハンドラーは重複として過去分を更新せずに戻る。
+		const todayKey = () => {
+			const now = new Date();
+			return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+		};
+
 		test('本日分のretention_aggregationレコードを作成し、過去のレコードのretention数を更新する', async () => {
+			await db.delete(retentionAggregation).where(eq(retentionAggregation.dateKey, todayKey()));
 			const pastId = genId(Date.now() - 1000 * 60 * 60 * 24 * 5);
 			await createRetentionAggregationInDatabase(db, {
 				id: pastId,
@@ -168,8 +177,7 @@ describe('hono-queue-system', () => {
 
 			await handleQueueAggregateRetention(deps);
 
-			const now = new Date();
-			const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+			const dateKey = todayKey();
 			const records = await listRetentionAggregationsCreatedAfter(db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 31));
 			expect(records.some((r) => r.dateKey === dateKey)).toBe(true);
 
@@ -178,7 +186,11 @@ describe('hono-queue-system', () => {
 		});
 
 		test('既に本日分が存在する場合は重複エラーを握りつぶす', async () => {
+			// 1 回目で本日分を用意する (既にあれば、ここで既に重複の経路を通る)。
+			await handleQueueAggregateRetention(deps);
 			await expect(handleQueueAggregateRetention(deps)).resolves.toBeUndefined();
+			const rows = await db.select().from(retentionAggregation).where(eq(retentionAggregation.dateKey, todayKey()));
+			expect(rows).toHaveLength(1);
 		});
 	});
 

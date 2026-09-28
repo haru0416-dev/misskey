@@ -7,7 +7,7 @@ import { createHash, createVerify } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -45,14 +45,17 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 		});
 	});
 
-	afterAll(async () => {
+	// accepted のリレーはすべて配送先になるので、作ったリレーをテストごとに消さないと後のテストの宛先に混ざる。
+	afterEach(async () => {
 		for (const relayId of createdRelayIds.splice(0)) {
 			await deleteRelayFromDatabase(runtime.db, relayId);
 		}
+	});
+
+	afterAll(async () => {
 		await runtime.dispose();
 	});
 
-	// リレー行を作成するテストより前に実行する必要がある (作成された relay 行は afterAll まで残るため)。
 	test('deliverToRelays: accepted リレーが無い場合は何もしない (署名もキュー投入も発生しない)', async () => {
 		const activity = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
@@ -163,9 +166,9 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 					(await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed'])).filter((job) =>
 						job.data.content?.includes(activity.id),
 					);
-				await expect.poll(async () => (await findJobs()).length).toBe(3);
+				await expect.poll(async () => (await findJobs()).length).toBe(2);
 				const jobs = await findJobs();
-				expect(new Set(jobs.map((job) => job.data.to)).size).toBe(3);
+				expect(new Set(jobs.map((job) => job.data.to)).size).toBe(2);
 				expect(new Set(jobs.map((job) => job.data.content)).size).toBe(1);
 				const content = JSON.parse(jobs[0]!.data.content);
 				expect(content.signature).toMatchObject({
