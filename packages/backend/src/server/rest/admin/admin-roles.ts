@@ -33,6 +33,7 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
 import { createRoleAssignedNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import { isApiAdministrator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { packApiRole, packApiRoles } from '../role/roles.js';
@@ -45,6 +46,7 @@ export type ApiAdminRoleDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis;
+	httpRequestService: ApiNotificationDependencies['httpRequestService'];
 	publishInternalEvent?: ApiInternalEventPublisher;
 	publishMainStream?: ApiMainStreamPublisher;
 };

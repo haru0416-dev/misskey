@@ -9,9 +9,11 @@ import {
 	deleteSwSubscriptionForPushEndpointFromDatabase,
 	listSwSubscriptionsByUserIdFromDatabase,
 } from '@/core/sw/SwSubscriptionStore.js';
+import { StatusError } from '@/misc/status-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -27,9 +29,12 @@ export type PushNotificationsTypes = {
 };
 
 export type ApiPushNotificationDependencies = {
-	config: Pick<Config, 'instance' | 'outboundNetwork'>;
+	config: Pick<Config, 'instance'>;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
 	db: MiDrizzleDatabase;
+	// 送信先は利用者が登録した任意 URL なので、SSRF 検査 (private/非ユニキャスト遮断・
+	// 検査済み IP への pin) を持つ send を必ず経由する。web-push 内蔵の https 送信は使わない。
+	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
 function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
@@ -63,6 +68,32 @@ function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
 }
 
 /**
+ * web-push は暗号化 (RFC 8291) と VAPID ヘッダ (RFC 8292) の生成だけに使い、送信はしない。
+ * 購読の鍵が不正などで生成できない購読は null を返して飛ばす。
+ */
+function buildPushRequest(
+	subscription: push.PushSubscription,
+	payload: unknown,
+	vapidDetails: { subject: string; publicKey: string; privateKey: string },
+): { endpoint: string; headers: Record<string, string>; body: Buffer } | null {
+	let details: push.RequestDetails & { body: Buffer };
+	try {
+		details = push.generateRequestDetails(subscription, JSON.stringify(payload), { vapidDetails });
+	} catch {
+		return null;
+	}
+
+	// Content-Length は本文から fetch が付け直すので落とす。残りは文字列へ揃える (TTL は数値)。
+	const headers: Record<string, string> = {};
+	for (const [key, value] of Object.entries(details.headers)) {
+		if (key.toLowerCase() === 'content-length') continue;
+		headers[key] = String(value);
+	}
+
+	return { endpoint: details.endpoint, headers, body: details.body };
+}
+
+/**
  * fire-and-forget (配信失敗はエンドポイント失効時の購読削除以外は握りつぶす) なので await 不要。
  */
 export async function pushSwNotificationForApi<T extends keyof PushNotificationsTypes>(
@@ -71,11 +102,11 @@ export async function pushSwNotificationForApi<T extends keyof PushNotifications
 	type: T,
 	body: PushNotificationsTypes[T],
 ): Promise<void> {
-	if (!deps.meta.enableServiceWorker || deps.meta.swPublicKey == null || deps.meta.swPrivateKey == null) {
+	const swPublicKey = deps.meta.swPublicKey;
+	const swPrivateKey = deps.meta.swPrivateKey;
+	if (!deps.meta.enableServiceWorker || swPublicKey == null || swPrivateKey == null) {
 		return;
 	}
-
-	push.setVapidDetails(deps.config.instance.url, deps.meta.swPublicKey, deps.meta.swPrivateKey);
 
 	const subscriptions = await listSwSubscriptionsByUserIdFromDatabase(deps.db, userId);
 
@@ -93,21 +124,35 @@ export async function pushSwNotificationForApi<T extends keyof PushNotifications
 			},
 		};
 
-		push
-			.sendNotification(
-				pushSubscription,
-				JSON.stringify({
-					type,
-					body: type === 'notification' || type === 'unreadAntennaNote' ? truncateNotificationBody(type, body) : body,
-					userId,
-					dateTime: Date.now(),
-				}),
-				{
-					proxy: deps.config.outboundNetwork.proxy.url,
-				},
-			)
-			.catch((err: push.WebPushError) => {
-				if (err.statusCode === 410) {
+		const request = buildPushRequest(
+			pushSubscription,
+			{
+				type,
+				body: type === 'notification' || type === 'unreadAntennaNote' ? truncateNotificationBody(type, body) : body,
+				userId,
+				dateTime: Date.now(),
+			},
+			{
+				subject: deps.config.instance.url,
+				publicKey: swPublicKey,
+				privateKey: swPrivateKey,
+			},
+		);
+		if (request == null) {
+			continue;
+		}
+
+		void deps.httpRequestService
+			.send(request.endpoint, {
+				method: 'POST',
+				headers: request.headers,
+				body: request.body,
+				followRedirects: false,
+			})
+			.catch((err: unknown) => {
+				// 失効した購読 (404/410) だけ削除する。それ以外の失敗 (SSRF 遮断・一時障害) は握りつぶす。
+				const status = err instanceof StatusError ? err.statusCode : undefined;
+				if (status === 404 || status === 410) {
 					void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {
 						userId,
 						endpoint: subscription.endpoint,

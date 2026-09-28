@@ -66,11 +66,35 @@ function noSuchRegistrationError(): ApiError {
 	});
 }
 
+function invalidEndpointError(): ApiError {
+	return new ApiError({
+		status: 400,
+		message: 'The push endpoint must be an absolute https URL.',
+		code: 'INVALID_PUSH_ENDPOINT',
+		id: 'ec2677a8-9988-44bd-8ee3-1b9fc12a0a4e',
+	});
+}
+
+// 送信は SSRF 検査付きの HttpRequestService を通すが、登録の時点で https の絶対 URL 以外を弾いておく。
+function assertValidPushEndpoint(endpoint: string): void {
+	let url: URL;
+	try {
+		url = new URL(endpoint);
+	} catch {
+		throw invalidEndpointError();
+	}
+	if (url.protocol !== 'https:') {
+		throw invalidEndpointError();
+	}
+}
+
 export async function handleApiSwRegister(
 	deps: ApiSwDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof swRegisterParamDef>,
 ): Promise<SwRegisterResponse> {
+	assertValidPushEndpoint(params.endpoint);
+
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist != null) {

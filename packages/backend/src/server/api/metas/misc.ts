@@ -1666,6 +1666,13 @@ export const endpointMetas = {
 					},
 				},
 			},
+			errors: {
+				invalidEndpoint: {
+					message: 'The push endpoint must be an absolute https URL.',
+					code: 'INVALID_PUSH_ENDPOINT',
+					id: 'ec2677a8-9988-44bd-8ee3-1b9fc12a0a4e',
+				},
+			},
 		},
 		paramDef: swRegisterParamDef,
 	}),

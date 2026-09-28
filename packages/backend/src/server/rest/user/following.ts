@@ -79,6 +79,7 @@ import type { ApiError } from '../error.js';
 import { clientError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { xaddApiNotification } from '../notification/notification.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
 import {
 	packMeDetailedForApi,
 	packUserDetailedNotMeForApi,
@@ -97,6 +98,7 @@ export type ApiFollowingDependencies = UserPackingDependencies & {
 	meta: MiMeta;
 	redis: Redis.Redis;
 	userWebhookDeliverQueue: UserWebhookDeliverQueue;
+	httpRequestService: ApiNotificationDependencies['httpRequestService'];
 	publishInternalEvent?: ApiInternalEventPublisher;
 	publishMainStream?: ApiMainStreamPublisher;
 };
