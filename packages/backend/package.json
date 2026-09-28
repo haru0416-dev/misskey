@@ -99,7 +99,7 @@
 		"@types/simple-oauth2": "5.0.8",
 		"@types/web-push": "3.6.4",
 		"@types/ws": "8.18.1",
-		"@vitest/coverage-v8": "4.1.11",
+		"@vitest/coverage-v8": "5.0.1",
 		"blurhash": "2.0.5",
 		"cbor2": "2.3.0",
 		"drizzle-kit": "0.31.10",
@@ -107,7 +107,7 @@
 		"rolldown": "1.2.9",
 		"simple-oauth2": "5.1.0",
 		"vite": "8.3.0",
-		"vitest": "4.1.11",
+		"vitest": "5.0.1",
 		"ws": "8.21.3"
 	}
 }
