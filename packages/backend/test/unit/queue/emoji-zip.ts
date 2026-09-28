@@ -4,15 +4,15 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { createWriteStream, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ZipArchive } from 'archiver';
 import { ZipArchiveReader } from 'slacc';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { writeZip } from '@/misc/zip-writer.js';
 
-// 絵文字パックの書き出し (archiver) と取り込み (slacc の ZipArchiveReader) の噛み合わせ。ZipArchiveReader は deflate
+// 絵文字パックの書き出し (misc/zip-writer) と取り込み (slacc の ZipArchiveReader) の噛み合わせ。ZipArchiveReader は deflate
 // だけを持ち bzip2 や lzma は持たないので、自前の書き出しと一般的な zip が読めることと、持たない方式が黙って壊れず
 // 明示的に失敗することを見る。取り込みはアップロードされた zip を読むので、通常ファイル以外と上限超えも拒否する。
 describe('queue:emoji-zip', () => {
@@ -33,17 +33,12 @@ describe('queue:emoji-zip', () => {
 	const zipCli = (args: string[]) => execFileSync('zip', ['-q', ...args], { cwd: dir });
 
 	test('書き出したパックをそのまま取り込める', async () => {
-		// エクスポート側と同じ設定 (zlib level 0 = 無圧縮の deflate)。
+		// エクスポートと同じ書き出し (deflate の level 0 = 実質無圧縮)。
 		const zipPath = join(dir, 'exported.zip');
-		const stream = createWriteStream(zipPath);
-		const archive = new ZipArchive({ zlib: { level: 0 } });
-		archive.pipe(stream);
-		archive.file(join(dir, 'a.png'), { name: 'a.png' });
-		archive.append(Buffer.from(JSON.stringify({ emojis: [] })), { name: 'meta.json' });
-		await new Promise<void>((resolve) => {
-			stream.on('close', () => resolve());
-			void archive.finalize();
-		});
+		await writeZip(zipPath, [
+			{ name: 'a.png', data: readFileSync(join(dir, 'a.png')) },
+			{ name: 'meta.json', data: Buffer.from(JSON.stringify({ emojis: [] })) },
+		]);
 
 		const zip = open(zipPath);
 		expect(zip.readFile('a.png', 1024 * 1024)).toStrictEqual(payload);
