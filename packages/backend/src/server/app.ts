@@ -117,7 +117,7 @@ function activityPubRedirectRefusal(location: string, headers: Headers): Respons
 // ハンドラが Response を返すまでの時間で、レスポンスボディの送信時間 (クライアント速度依存) は含まない。
 const SLOW_REQUEST_THRESHOLD_MS = 1000;
 
-function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): void {
+export function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): void {
 	// 応答本文を gzip で送る。最後に組み上がった応答を圧縮するので最初に登録する。静的ファイルは
 	// static-assets.ts が圧縮済みを返し (Content-Encoding 付きは素通し)、画像・動画は種類で除外される。
 	// 絵文字一覧 (1 万件) は 1,170 KB → 47 KB になり、初回表示はこの取得を待つ。圧縮の CPU は 1 回約 7 ms、
@@ -137,9 +137,11 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 	}
 
 	if (deps.config.instance.url.startsWith('https') && deps.config.server.http.hsts) {
+		// ハンドラの後で付ける。前に c.header() で積んだ値は、ハンドラが Response を直接返すと捨てられる
+		// (API・静的ファイル・SSR はどれも Response を直接返す)。
 		app.use('*', async (c, next) => {
-			c.header('strict-transport-security', 'max-age=15552000; preload');
 			await next();
+			c.header('strict-transport-security', 'max-age=15552000; preload');
 		});
 	}
 
