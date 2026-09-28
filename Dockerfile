@@ -70,11 +70,17 @@ COPY --link ["scripts/changelog-checker/package.json", "./scripts/changelog-chec
 ARG NODE_ENV=production
 
 RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
-	bun install --frozen-lockfile --production --filter backend \
+	bun install --frozen-lockfile --production --filter backend
+
+# backend の本番バンドル (built/) は大半の依存を取り込み済み。実行時に node_modules から読むもの
+# (runtime-externals.mjs) とその依存だけを残す (実測で 180 → 114 MiB)。sharp の musl 版は任意依存として
+# 残るので別に消す。刈り込み後に残した全パッケージの依存が解決できなければ失敗する。
+COPY --link ["packages/backend/runtime-externals.mjs", "./packages/backend/"]
+COPY --link ["packages/backend/scripts/prune-runtime-modules.mjs", "./packages/backend/scripts/"]
+RUN bun packages/backend/scripts/prune-runtime-modules.mjs /misskey \
 	&& rm -rf \
 	node_modules/.bun/@img+sharp-libvips-linuxmusl-* \
-	node_modules/.bun/@img+sharp-linuxmusl-* \
-	node_modules/.bun/@napi-rs+canvas-linux-*-musl@*
+	node_modules/.bun/@img+sharp-linuxmusl-*
 
 # slacc はリポジトリ内でビルドするので、ターゲットの実行環境向けに別の段で作り、成果物 (.node) だけを渡す。
 # 実行時の依存を入れる段で作ると、ビルド用の依存 (@napi-rs/cli や typescript) が実行用イメージに混ざる。
@@ -113,6 +119,59 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 	&& touch packages/slacc/index.d.ts \
 	&& bun run --filter slacc build
 
+# ffmpeg は動画の長さ・サムネイル・センシティブ判定のフレーム抽出にだけ使う。Debian の ffmpeg は X11・音声出力・
+# 多数のコーデックの共有ライブラリを引き込み、apt の層が約 450 MB になる。使う部品だけを Debian trixie と同じ版の
+# ソースから組み、ffmpeg / ffprobe で約 17 MB にする (見本 17 種で Debian 版と probe・サムネイル画素・抽出枚数が一致)。
+# blackframe フィルタが GPL の部品なので --enable-gpl にする (Debian 版も GPL で組まれている)。
+FROM oven/bun:${BUN_VERSION}-debian AS ffmpeg-builder
+
+ARG FFMPEG_VERSION=7.1.5
+# https://ffmpeg.org/releases/ の署名を FFmpeg release signing key
+# (FCF9 86EA 15E6 E293 A564 4F10 B432 2F04 D676 58D8) で検証したうえで固定した値。
+ARG FFMPEG_SHA256=de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+	--mount=type=cache,target=/var/lib/apt,sharing=locked \
+	apt-get update \
+	&& apt-get install -yqq --no-install-recommends \
+	build-essential nasm pkg-config libdav1d-dev zlib1g-dev xz-utils curl ca-certificates
+
+WORKDIR /src
+RUN curl --proto '=https' --tlsv1.2 -fsSLO "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+	&& echo "${FFMPEG_SHA256}  ffmpeg-${FFMPEG_VERSION}.tar.xz" | sha256sum -c - \
+	&& tar xf "ffmpeg-${FFMPEG_VERSION}.tar.xz"
+
+WORKDIR /src/ffmpeg-${FFMPEG_VERSION}
+RUN ./configure \
+	--prefix=/opt/ffmpeg \
+	--disable-everything --disable-autodetect \
+	--disable-debug --disable-doc --disable-ffplay --disable-network \
+	--enable-gpl --enable-zlib --enable-libdav1d \
+	--enable-protocol=file,pipe \
+	--enable-demuxer=mov,matroska,avi,mpegts,mpegps,flv,ogg,asf,apng,gif,mp3,aac,wav,flac,m4v,h264,hevc,mjpeg \
+	--enable-decoder=h264,hevc,vp8,vp9,libdav1d,mpeg4,h263,mjpeg,mpeg1video,mpeg2video,theora,prores,png,apng,gif,wmv1,wmv2,wmv3,vc1,msmpeg4v1,msmpeg4v2,msmpeg4v3,aac,mp3,opus,vorbis,flac,pcm_s16le,pcm_s24le,pcm_f32le \
+	--enable-parser=h264,hevc,vp8,vp9,av1,mpeg4video,mpegvideo,mjpeg,png,gif,aac,opus,vorbis,mpegaudio,flac,h263,vc1 \
+	--enable-bsf=vp9_superframe_split,av1_frame_split,h264_mp4toannexb,hevc_mp4toannexb,extract_extradata \
+	--enable-encoder=png \
+	--enable-muxer=image2 \
+	--enable-filter=select,blackframe,metadata,scale,format,null \
+	&& make -j"$(nproc)" \
+	&& make install \
+	&& strip /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe \
+	&& mkdir -p /opt/ffmpeg/licenses \
+	&& cp LICENSE.md COPYING.GPLv2 /opt/ffmpeg/licenses/ \
+	&& printf 'FFmpeg %s, built from https://ffmpeg.org/releases/ffmpeg-%s.tar.xz (sha256 %s).\nThe build configuration is the ffmpeg-builder stage of the Dockerfile in the Toneriko source repository.\n' \
+	"${FFMPEG_VERSION}" "${FFMPEG_VERSION}" "${FFMPEG_SHA256}" > /opt/ffmpeg/licenses/SOURCE.txt
+
+# 指定した部品が黙って外れていないか確かめる (ライセンスや依存の不足で configure が落とすことがある)。
+RUN F=/opt/ffmpeg/bin/ffmpeg; missing=""; \
+	for x in select blackframe metadata scale format; do $F -hide_banner -filters 2>/dev/null | grep -qE "^ [.A-Z|]+ $x " || missing="$missing filter:$x"; done; \
+	for x in h264 hevc vp8 vp9 libdav1d mpeg4 mjpeg prores png apng gif theora; do $F -hide_banner -decoders 2>/dev/null | grep -qE "^ [.A-Z]+ $x " || missing="$missing decoder:$x"; done; \
+	for x in mov,mp4,m4a,3gp,3g2,mj2 matroska,webm avi apng ogg; do $F -hide_banner -demuxers 2>/dev/null | grep -qE "^ +D +$x " || missing="$missing demuxer:$x"; done; \
+	$F -hide_banner -encoders 2>/dev/null | grep -qE "^ [.A-Z]+ png " || missing="$missing encoder:png"; \
+	$F -hide_banner -muxers 2>/dev/null | grep -qE "^ +E +image2 " || missing="$missing muxer:image2"; \
+	if [ -n "$missing" ]; then echo "ffmpeg is missing:$missing"; exit 1; fi
+
 FROM oven/bun:${BUN_VERSION}-slim AS runner
 
 ARG UID="991"
@@ -122,7 +181,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	--mount=type=cache,target=/var/lib/apt,sharing=locked \
 	apt-get update \
 	&& apt-get install -y --no-install-recommends \
-	ffmpeg tini libjemalloc2 \
+	libdav1d7 tini libjemalloc2 \
 	&& ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so \
 	&& groupadd -g "${GID}" misskey \
 	&& useradd -l -u "${UID}" -g "${GID}" -m -d /misskey misskey \
@@ -146,6 +205,9 @@ COPY --chown=misskey:misskey --from=slacc-builder ["/misskey/packages/slacc/pack
 COPY --chown=misskey:misskey --from=slacc-builder /misskey/packages/slacc/*.node ./packages/slacc/
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/icons-subsetter/vendor/tabler-icons/LICENSE ./licenses/tabler-icons.txt
+# 自前で組んだ ffmpeg (GPL) と、そのライセンス・ソースの所在。libdav1d7 は AV1 のデコードに要る。
+COPY --from=ffmpeg-builder /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe /usr/local/bin/
+COPY --chown=misskey:misskey --from=ffmpeg-builder /opt/ffmpeg/licenses ./licenses/ffmpeg
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/built ./packages/i18n/built

@@ -18,6 +18,7 @@
 ### General
 - Feat: 条件に一致したURLプレビューのサムネイルをセンシティブ扱いにできるように
 - Feat: コントロールパネルから二要素認証を解除できるように
+- Enhance: Docker イメージを約 1.3 GB から約 640 MB に縮小 (ffmpeg を使う部品だけで組み、実行時に読まない依存を入れない)。イメージ内の ffmpeg は同じ版 (7.1.5) のソースから組んだもので、ライセンスは `/misskey/licenses/ffmpeg` にある
 - Enhance: バージョンのタグ (`v*`) を付けると、GitHub Container Registry に amd64 / arm64 の Docker イメージを公開するように
 - Enhance: ノートの翻訳で CW も翻訳するように
 - Enhance: MFMのパースを高速化（構文を始め得ない文字は候補を試さずに読み進め、構文を始め得る位置では先頭の文字で成立し得る構文だけを試すように。出力は従来と同一）
@@ -382,14 +383,14 @@
 - Change: プッシュ通知の購読登録 (`sw/register`) で、送信先に https の絶対 URL 以外を受け付けないように
 - Change: 全文検索の Meilisearch 対応を削除 (選ぶと検索できない状態だった)。検索は `sqlLike` / `sqlPgroonga` のみで、設定に `search.provider: meilisearch` が残っていると起動時にエラーになる
 - Change: バックエンドの OpenTelemetry で、Bun 上では span を出していなかった HTTP 送信・fetch・Redis の自動計装と、それを前提にしていた設定 `tracePropagationTargets` を削除。`disabledInstrumentations` に指定できるのは `instrumentation-runtime-node` と `instrumentation-host-metrics` だけになる
-- Fix: バックエンドの runtime / host の metrics が、設定した送り先ではなく既定の `localhost:4318` へ送られていた問題を修正。metrics は新しい設定 `observability.telemetry.backend.metricsEndpoint` を指定したときだけ送る
-- Fix: カスタム絵文字の書き出しで zip の作成に失敗すると、ジョブが終わらずに止まったままになる問題を修正
-- Fix: プッシュ通知の送信を、ほかの外部への通信と同じ送信処理に統一
 - Change: オブジェクトストレージのクライアントを AWS SDK から Bun 組み込みの S3 クライアントへ置き換え
 	- アップロードするオブジェクトに `Cache-Control` が付かなくなります。`/files/` 経由の配信ではサーバー側が同じヘッダを付けるため影響しませんが、**オブジェクトストレージの URL をクライアントへ直接配る設定 (`objectStorageBaseUrl`) を使っている場合はキャッシュ効率が落ちます**
 	- オブジェクトストレージへのプロキシ経由アクセス (`objectStorageUseProxy`) は使えなくなります
 - Change: 外部へ送信する User-Agent の製品名を `Misskey` から `Toneriko` へ変更 (メディアプロキシの再帰検出は `toneriko/` と `misskey/` の両方を弾く)
 - Change: アバター未設定ユーザーの identicon の模様が変わるように (乱数生成器の変更のため。配色パレット等は不変)
+- Fix: バックエンドの runtime / host の metrics が、設定した送り先ではなく既定の `localhost:4318` へ送られていた問題を修正。metrics は新しい設定 `observability.telemetry.backend.metricsEndpoint` を指定したときだけ送る
+- Fix: カスタム絵文字の書き出しで zip の作成に失敗すると、ジョブが終わらずに止まったままになる問題を修正
+- Fix: プッシュ通知の送信を、ほかの外部への通信と同じ送信処理に統一
 - Fix: ノート検索で、一致が古い時期に固まっている語の検索が、投稿数に比例して遅くなる問題を修正 (52.5 万件で 0.30〜0.50 秒 → 31〜92 ms)
 - Fix: リレーの承認・拒否の状態を、リレー以外から届いた Accept / Reject でも変えられた問題を修正
 - Fix: 実績が同時に付与されると、ほかの実績が消えたり同じ実績と通知が二重になったりする問題を修正
