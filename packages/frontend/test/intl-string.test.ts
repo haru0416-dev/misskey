@@ -110,6 +110,11 @@ describe('compareStringEquals', () => {
 });
 
 describe('compareStringIncludes', () => {
+	// ひらがなへの変換は initIntlString で読み込むまで恒等変換なので、他の describe の実行順に頼らず読み込む。
+	beforeEach(async () => {
+		await initIntlString(true);
+	});
+
 	test('部分一致ならtrue', () => {
 		assert.isTrue(compareStringIncludes('これはテストです', 'テスト'));
 	});
