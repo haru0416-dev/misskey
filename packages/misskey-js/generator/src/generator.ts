@@ -1,13 +1,26 @@
 import assert from 'node:assert';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import type { OpenAPIV3_1 } from 'openapi-types';
-import { toPascal } from 'ts-case-convert';
 import openapiTS, { astToString } from 'openapi-typescript';
-import type { OpenAPI3, OperationObject, PathItemObject } from 'openapi-typescript';
+import type {
+	OpenAPI3,
+	OperationObject,
+	PathItemObject,
+	RequestBodyObject,
+	ResponseObject,
+	ResponsesObject,
+} from 'openapi-typescript';
 import ts from 'typescript';
 import { removeNeverPropertiesFromAST } from './ast-transformer.js';
 
-async function generateBaseTypes(openApiDocs: OpenAPIV3_1.Document, openApiJsonPath: string, typeFileName: string) {
+// 'admin/accounts/create' + 'Request' のパスから型名 'AdminAccountsCreateRequest' を作る。
+function toPascalCase(term: string): string {
+	return term
+		.replace(/^([A-Z])/, (m) => m.toLowerCase())
+		.replaceAll(/[_-]([a-z0-9])/g, (m) => m[1]!.toUpperCase())
+		.replace(/^([a-z])/, (m) => m.toUpperCase());
+}
+
+async function generateBaseTypes(openApiDocs: OpenAPI3, openApiJsonPath: string, typeFileName: string) {
 	const lines: string[] = [];
 
 	// GETとPOSTでoperationIdを揃え、型定義の重複を防ぐ。
@@ -46,7 +59,7 @@ async function generateBaseTypes(openApiDocs: OpenAPIV3_1.Document, openApiJsonP
 	await writeFile(typeFileName, lines.join('\n'));
 }
 
-async function generateSchemaEntities(openApiDocs: OpenAPIV3_1.Document, typeFileName: string, outputPath: string) {
+async function generateSchemaEntities(openApiDocs: OpenAPI3, typeFileName: string, outputPath: string) {
 	if (!openApiDocs.components?.schemas) {
 		return;
 	}
@@ -63,7 +76,7 @@ async function generateSchemaEntities(openApiDocs: OpenAPIV3_1.Document, typeFil
 }
 
 async function generateEndpoints(
-	openApiDocs: OpenAPIV3_1.Document,
+	openApiDocs: OpenAPI3,
 	typeFileName: string,
 	entitiesOutputPath: string,
 	endpointOutputPath: string,
@@ -74,12 +87,12 @@ async function generateEndpoints(
 
 	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
-	const postPathItems = Object.keys(paths)
-		.map((it) => ({
-			_path_: it.replace(/^\//, ''),
-			...paths[it]?.post,
-		}))
-		.filter(filterUndefined);
+	// 自前の api.json は path にも operation にも $ref を使わない。
+	const postPathItems = Object.entries(paths).flatMap(([it, item]) =>
+		item == null || '$ref' in item || item.post == null || '$ref' in item.post
+			? []
+			: [{ _path_: it.replace(/^\//, ''), ...item.post }],
+	);
 
 	for (const operation of postPathItems) {
 		const path = operation._path_;
@@ -171,27 +184,27 @@ async function generateEndpoints(
 	await writeFile(endpointOutputPath, endpointOutputLine.join('\n'));
 }
 
-function isRequestBodyObject(value: unknown): value is OpenAPIV3_1.RequestBodyObject {
+function isRequestBodyObject(value: unknown): value is RequestBodyObject {
 	if (!value) {
 		return false;
 	}
 
-	const { content } = value as Record<keyof OpenAPIV3_1.RequestBodyObject, unknown>;
+	const { content } = value as Record<keyof RequestBodyObject, unknown>;
 	return content !== undefined;
 }
 
-function isResponseObject(value: unknown): value is OpenAPIV3_1.ResponseObject {
+function isResponseObject(value: unknown): value is ResponseObject {
 	if (!value) {
 		return false;
 	}
 
-	const { description } = value as Record<keyof OpenAPIV3_1.ResponseObject, unknown>;
+	const { description } = value as Record<keyof ResponseObject, unknown>;
 	return description !== undefined;
 }
 
 // 仕様書のエラー例 (examples.*.value.error.code) から、そのエンドポイントが返しうるエラーコードを集める。
 // 例に無いコードは型に現れないため、サーバー側で例を省くとクライアントの網羅が壊れる。
-function collectErrorCodes(responses: OpenAPIV3_1.ResponsesObject | undefined): string[] {
+function collectErrorCodes(responses: ResponsesObject | undefined): string[] {
 	const codes = new Set<string>();
 	for (const [status, response] of Object.entries(responses ?? {})) {
 		if (status.startsWith('2') || !isResponseObject(response)) continue;
@@ -257,7 +270,7 @@ class OperationTypeAlias implements IOperationTypeAlias {
 
 	generateName(): string {
 		const nameBase = this.path.replaceAll('/', '-');
-		return toPascal(nameBase + this.type);
+		return toPascalCase(nameBase + this.type);
 	}
 
 	toLine(): string {
@@ -343,7 +356,7 @@ async function main() {
 	await mkdir(generatePath, { recursive: true });
 
 	const openApiJsonPath = './api.json';
-	const openApiDocs = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPIV3_1.Document;
+	const openApiDocs = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
 
 	const typeFileName = './built/autogen/types.ts';
 	await generateBaseTypes(openApiDocs, openApiJsonPath, typeFileName);
