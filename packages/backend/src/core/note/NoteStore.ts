@@ -1297,9 +1297,28 @@ const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
  * trigram の取れる語でも、一致件数の見積もりは統計の標本次第で大きく外れる。1 万件前後に一致する語を
  * 約 25 件と見積もると、一致全件のヒープ読みと結合・可視性判定の後に並べ替え、100 万件で 115〜136 ms
  * かかった。先にこの件数 × 1 ページの件数だけ新しい順に読んで探し、1 ページ分そろえばそれを返す。
- * そろわない語は一致がまばら (約 0.2% 未満) なので、trigram index を使う通常の検索へ回す。
  */
 const DENSE_TERM_WINDOW_PER_RESULT = 500;
+
+/**
+ * 窓でそろわなかった語の探し方を分ける、全体の一致件数の見積もり。窓を抜けた語は、主キーを逆に辿ると
+ * 一致の位置次第で、trigram index で一致を集めて並べると一致の件数次第で費用が決まる (52.5 万件で計測)。
+ * - 一致が古い時期に固まった語: 逆に辿ると 1,728 件で 382 ms、2 万件で 333 ms。集めて並べると 8 ms / 39 ms
+ * - 全体では多いが直近の投稿に無い語 (11 万件): 逆に辿ると 18 ms、集めて並べると 95〜218 ms
+ * 見積もりは多い語ではよく合い (11 万件を 10.7 万件)、少ない語では外れる (3,456 件を 44 件) が、少ない語は
+ * どちらにしても集めて並べる側なので判断を変えない。この件数までなら並べる費用は 70 ms 前後に収まる。
+ */
+const DENSE_TERM_ESTIMATED_MATCHES = 50_000;
+
+/** 本文の LIKE に一致する投稿数のプランナーの見積もり。実行はしないので 1 ms 未満で返る。 */
+async function estimateNoteTextMatches(db: MiDrizzleDatabase, pattern: string): Promise<number> {
+	const result = await db.execute<{ 'QUERY PLAN': unknown }>(
+		sql`EXPLAIN (FORMAT JSON) SELECT 1 FROM "note" WHERE LOWER("note"."text") LIKE ${pattern}`,
+	);
+	const plan = result.rows[0]?.['QUERY PLAN'];
+	const parsed = (typeof plan === 'string' ? JSON.parse(plan) : plan) as [{ Plan: { 'Plan Rows': number } }];
+	return parsed[0].Plan['Plan Rows'];
+}
 
 /**
  * ページの起点から並び順に size 件を読む副問い合わせ。窓の外は次のページの起点から探す。境界の id を
@@ -1360,11 +1379,13 @@ export async function searchNotesByTextFromDatabase(
 
 	let source = sql`"note"`;
 	let denseTermWindow: SQL | undefined;
+	let textPattern: string | undefined;
 	if (options.usePgroonga) {
 		conditions.push(sql`"note"."text" &@~ ${options.query}`);
 	} else {
 		if (options.useTextIndex && TRIGRAM_RUN.test(options.query)) {
-			conditions.push(sql`LOWER("note"."text") LIKE ${`%${sqlLikeEscape(options.query.toLowerCase())}%`}`);
+			textPattern = `%${sqlLikeEscape(options.query.toLowerCase())}%`;
+			conditions.push(sql`LOWER("note"."text") LIKE ${textPattern}`);
 			if (options.userId == null && options.channelId == null) {
 				denseTermWindow = noteSearchWindow(
 					options,
@@ -1436,6 +1457,12 @@ export async function searchNotesByTextFromDatabase(
 		// 窓の中で 1 ページ分そろえば、それが起点から最新の一致そのもの。
 		const recent = await executeTimelineNoteQuery(db, conditions, options, denseTermWindow);
 		if (recent.length >= options.limit) return recent;
+		// 見積もりが少ない語は、並び順を index で出せない式にして trigram index で一致を集めてから並べる。
+		// 主キーで出せる形のままだと、プランナーは一致を全体に均等と見て逆に辿り、一致が古い時期に固まった語で
+		// 52.5 万件中 32 万行を読み捨てた。並べる値は同じ文字列なので順序は変わらない。
+		if (textPattern != null && (await estimateNoteTextMatches(db, textPattern)) < DENSE_TERM_ESTIMATED_MATCHES) {
+			return await executeTimelineNoteQuery(db, conditions, options, source, { sortWithoutIdIndex: true });
+		}
 	}
 	return await executeTimelineNoteQuery(db, conditions, options, source);
 }
@@ -1444,14 +1471,16 @@ export async function searchNotesByTextFromDatabase(
  * タイムライン系クエリで共通の SELECT + JOIN + WHERE + ORDER + LIMIT。
  * 展開前と生成 SQL が完全に同一であることを前提にした集約なので、
  * 結合順・別名・ORDER BY の形をここで変えないこと (クエリプランが変わる)。
- * source は読み取り範囲を副問い合わせで限る検索だけが差し替える。
+ * source は読み取り範囲を副問い合わせで限る検索だけが差し替える。sortWithoutIdIndex も検索専用。
  */
 async function executeTimelineNoteQuery(
 	db: MiDrizzleDatabase,
 	conditions: SQL[],
 	options: { sinceId?: MiNote['id'] | null; untilId?: MiNote['id'] | null; limit: number },
 	source: SQL = sql`"note"`,
+	{ sortWithoutIdIndex = false }: { sortWithoutIdIndex?: boolean } = {},
 ): Promise<MiNote[]> {
+	const sortKey = sortWithoutIdIndex ? sql`("note"."id" || '')` : sql`"note"."id"`;
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
 		FROM ${source} AS "note"
@@ -1463,7 +1492,7 @@ async function executeTimelineNoteQuery(
 			conditions.map((condition) => sql`(${condition})`),
 			sql` AND `,
 		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
+		ORDER BY ${sortKey} ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
