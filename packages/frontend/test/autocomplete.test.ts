@@ -8,6 +8,8 @@ import { afterEach, assert, describe, expect, test, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { searchEmoji } from '@/utility/search-emoji.js';
 import { trailingMentionCandidate } from '@/features/autocomplete/mention-candidate.js';
+// テスト本体で import すると、依存の多いコンポーネントの読み込みが 5 秒の制限に含まれ、負荷次第で落ちる。
+import MkAutocomplete from '@/features/autocomplete/components/MkAutocomplete.vue';
 
 describe('emoji autocomplete', () => {
 	test('名前の部分一致はタグの部分一致より優先される', async () => {
@@ -126,7 +128,6 @@ afterEach(() => {
 
 describe('MkAutocomplete', () => {
 	test('後から届いた古い検索結果で、今の入力の候補を上書きしない', async () => {
-		const MkAutocomplete = (await import('@/features/autocomplete/components/MkAutocomplete.vue')).default;
 		const textarea = document.createElement('textarea');
 		document.body.appendChild(textarea);
 		const props = { type: 'user' as const, q: 'al', textarea, close: () => {}, x: 0, y: 0 };

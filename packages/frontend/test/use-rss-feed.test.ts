@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import { defineComponent, h, reactive } from 'vue';
-import './init';
+import { resetFetchMocks } from './init';
 import { useRssFeed } from '@/widgets/use-rss-feed.js';
 
 type Feed = ReturnType<typeof useRssFeed>;
@@ -41,8 +41,7 @@ function fetchRssRequests(): URL[] {
 describe('useRssFeed', () => {
 	afterEach(() => {
 		cleanup();
-		// init.ts が張るロケール取得のモックまで消えると実ネットワークへ抜けるので、呼び出し履歴だけ消す。
-		fetchMock.mockClear();
+		resetFetchMocks();
 		vi.restoreAllMocks();
 	});
 
@@ -120,7 +119,7 @@ describe('useRssFeed', () => {
 	test('keeps polling after the refresh interval changes', async () => {
 		vi.useFakeTimers();
 		try {
-			// init.ts のモックを消さないよう、常設ではなく 1 回分ずつ積む。
+			// 常設の応答はロケールの応答を置き換えるので、1 回分ずつ積む。余りは afterEach で捨てる。
 			for (let i = 0; i < 5; i++) {
 				fetchMock.mockOnceIf(
 					(req) => new URL(req.url).pathname === '/api/fetch-rss',

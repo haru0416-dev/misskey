@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
+import { defineComponent, h } from 'vue';
 import './init';
 
 const { widgetProps } = vi.hoisted(() => ({
@@ -26,6 +27,13 @@ vi.mock('@/widgets/widget.js', () => ({
 import WidgetUnixClock from '@/widgets/WidgetUnixClock.vue';
 
 describe('WidgetUnixClock', () => {
+	beforeAll(() => {
+		// ファイルで最初の描画のとき、Vue は devtools の接続待ちに setTimeout (3 秒) を 1 回だけ張る。
+		// setTimeout を spy した中で最初に描画すると、それをウィジェットのタイマーとして数えてしまう。
+		render(defineComponent({ render: () => h('div') }));
+		cleanup();
+	});
+
 	afterEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
