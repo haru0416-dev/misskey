@@ -7,6 +7,9 @@ services:
       setup: { condition: service_completed_successfully }
       db.b.test: { condition: service_healthy }
       valkey.test: { condition: service_healthy }
+      # a と b は共有の built に ._config_.json を重ねてマウントする。同時に起動すると
+      # マウント先の作成が競合して片方が "file exists" で起動に失敗するので、a の起動後に作る。
+      misskey.a.test: { condition: service_started }
     networks: [federation, database-b, internet]
     volumes:
       - ./.config/b.test.config.json:/misskey/built/._config_.json:ro
