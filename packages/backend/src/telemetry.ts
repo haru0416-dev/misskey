@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ClientRequest } from 'node:http';
-import type { Context, TextMapPropagator, TextMapSetter } from '@opentelemetry/api';
-import type { HttpInstrumentationConfig } from '@opentelemetry/instrumentation-http';
-import type { UndiciInstrumentationConfig } from '@opentelemetry/instrumentation-undici';
+import type { TextMapPropagator } from '@opentelemetry/api';
 import type { Config, TelemetryInstrumentationName } from '@/config.js';
 
 const DEFAULT_TRACE_SAMPLE_RATIO = 0.1;
@@ -20,36 +17,6 @@ let traceHttpRequestImpl = (
 	handler: () => Response | Promise<Response>,
 ): Response | Promise<Response> => handler();
 
-export function shouldPropagateTraceContext(target: string | URL, configuredTargets: readonly string[]): boolean {
-	let targetUrl: URL;
-	try {
-		targetUrl = typeof target === 'string' ? new URL(target) : target;
-	} catch {
-		return false;
-	}
-
-	return configuredTargets.some((configuredTarget) => {
-		const allowedUrl = new URL(configuredTarget);
-		if (targetUrl.origin !== allowedUrl.origin) {
-			return false;
-		}
-		if (allowedUrl.pathname === '/' && allowedUrl.search === '') {
-			return true;
-		}
-		return targetUrl.href.startsWith(allowedUrl.href);
-	});
-}
-
-export function getClientRequestTarget(request: {
-	host: string;
-	path: string;
-	port?: string | number;
-	protocol: string;
-}): URL {
-	const authority = request.port == null || request.port === '' ? request.host : `${request.host}:${request.port}`;
-	return new URL(request.path, `${request.protocol}//${authority}`);
-}
-
 export async function initializeTelemetry(config: Config): Promise<void> {
 	const telemetry = config.observability.telemetry.backend;
 	if (telemetry == null) {
@@ -58,127 +25,74 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 
 	const candidates: TelemetryProvider[] = [];
 	try {
-		const [
-			api,
-			http,
-			undici,
-			ioredis,
-			runtimeNode,
-			hostMetrics,
-			exporter,
-			resources,
-			sdkNode,
-			traceBase,
-			semanticConventions,
-		] = await Promise.all([
+		const [api, core, exporter, resources, traceBase, traceNode, semanticConventions] = await Promise.all([
 			import('@opentelemetry/api'),
-			import('@opentelemetry/instrumentation-http'),
-			import('@opentelemetry/instrumentation-undici'),
-			import('@opentelemetry/instrumentation-ioredis'),
-			import('@opentelemetry/instrumentation-runtime-node'),
-			import('@opentelemetry/instrumentation-host-metrics'),
+			import('@opentelemetry/core'),
 			import('@opentelemetry/exporter-trace-otlp-http'),
 			import('@opentelemetry/resources'),
-			import('@opentelemetry/sdk-node'),
 			import('@opentelemetry/sdk-trace-base'),
+			import('@opentelemetry/sdk-trace-node'),
 			import('@opentelemetry/semantic-conventions'),
 		]);
-		const resource = resources.resourceFromAttributes({
-			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'toneriko-backend',
-			[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
-			'service.instance.id': `${config.runtime.hostname}:${process.pid}`,
+		const resource = resources
+			.resourceFromAttributes({
+				[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'toneriko-backend',
+				[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
+				'service.instance.id': `${config.runtime.hostname}:${process.pid}`,
+			})
+			// NodeSDK の既定と同じ検出器・同じ優先順位 (衝突時は検出側)。OTEL_RESOURCE_ATTRIBUTES などの環境変数と、
+			// プロセス・ホストの属性を付ける。
+			.merge(
+				resources.detectResources({
+					detectors: [resources.envDetector, resources.processDetector, resources.hostDetector],
+				}),
+			);
+		const headers = telemetry.headers === undefined ? {} : { headers: telemetry.headers };
+		const standardPropagator = new core.CompositePropagator({
+			propagators: [new core.W3CTraceContextPropagator(), new core.W3CBaggagePropagator()],
 		});
-		const exporterOptions = {
-			url: telemetry.endpoint,
-			...(telemetry.headers === undefined ? {} : { headers: telemetry.headers }),
-		};
-		const standardPropagator = new sdkNode.core.CompositePropagator({
-			propagators: [new sdkNode.core.W3CTraceContextPropagator(), new sdkNode.core.W3CBaggagePropagator()],
-		});
+		// 受信した trace context は取り込むが、送信側へは付けない。Bun では node:http / fetch / ioredis の
+		// 自動計装が span を出さない (実測で 0 件) ため、送信への伝播は行っていない。
 		const extractionOnlyPropagator: TextMapPropagator = {
 			inject: () => {},
 			extract: (context, carrier, getter) => standardPropagator.extract(context, carrier, getter),
 			fields: () => standardPropagator.fields(),
 		};
-		const propagationTargets = telemetry.tracePropagationTargets ?? [];
-		const injectIfAllowed = (target: string | URL, context: Context, carrier: unknown, setter: TextMapSetter): void => {
-			if (
-				shouldPropagateTraceContext(target, propagationTargets) &&
-				!shouldPropagateTraceContext(target, [telemetry.endpoint])
-			) {
-				standardPropagator.inject(context, carrier, setter);
-			}
-		};
-		const instrumentationConfig: {
-			'@opentelemetry/instrumentation-http': HttpInstrumentationConfig;
-			'@opentelemetry/instrumentation-undici': UndiciInstrumentationConfig;
-		} = {
-			'@opentelemetry/instrumentation-http': {
-				requestHook: (span, request) => {
-					if (!isClientRequest(request)) {
-						return;
-					}
-					const target = getClientRequestTarget(request);
-					injectIfAllowed(target, api.trace.setSpan(api.context.active(), span), request, {
-						set: (carrier: ClientRequest, key, value) => carrier.setHeader(key, value),
-					});
-				},
-			},
-			'@opentelemetry/instrumentation-undici': {
-				requestHook: (span, request) => {
-					injectIfAllowed(
-						new URL(request.path, request.origin),
-						api.trace.setSpan(api.context.active(), span),
-						request,
-						{
-							set: (carrier, key, value) => carrier.addHeader(key, value),
-						},
-					);
-				},
-			},
-		};
-		const instrumentationFactories = {
-			'@opentelemetry/instrumentation-http': () =>
-				new http.HttpInstrumentation(instrumentationConfig['@opentelemetry/instrumentation-http']),
-			'@opentelemetry/instrumentation-undici': () =>
-				new undici.UndiciInstrumentation(instrumentationConfig['@opentelemetry/instrumentation-undici']),
-			'@opentelemetry/instrumentation-ioredis': () => new ioredis.IORedisInstrumentation(),
-			'@opentelemetry/instrumentation-runtime-node': () => new runtimeNode.RuntimeNodeInstrumentation(),
-			'@opentelemetry/instrumentation-host-metrics': () => new hostMetrics.HostMetricsInstrumentation(),
-		};
-		const instrumentations = Object.entries(instrumentationFactories)
-			.filter(([name]) =>
-				isInstrumentationEnabled(name as TelemetryInstrumentationName, telemetry.disabledInstrumentations ?? []),
-			)
-			.flatMap(([, create]) => {
-				try {
-					return [create()];
-				} catch (error) {
-					api.diag.error('Failed to initialize an OpenTelemetry instrumentation.', error);
-					return [];
-				}
-			});
-		const candidate = new sdkNode.NodeSDK({
+
+		const tracerProvider = new traceNode.NodeTracerProvider({
 			resource,
 			sampler: new traceBase.TraceIdRatioBasedSampler(telemetry.tracesSampleRatio ?? DEFAULT_TRACE_SAMPLE_RATIO),
-			traceExporter: new exporter.OTLPTraceExporter(exporterOptions),
-			textMapPropagator: extractionOnlyPropagator,
-			instrumentations,
+			spanProcessors: [
+				new traceBase.BatchSpanProcessor(new exporter.OTLPTraceExporter({ url: telemetry.endpoint, ...headers })),
+			],
 		});
-		candidates.push(candidate);
+		candidates.push(tracerProvider);
+		// 例外は標本化に関係なく必ず送る。
 		const errorProvider = new traceBase.BasicTracerProvider({
 			resource,
 			sampler: new traceBase.AlwaysOnSampler(),
-			spanProcessors: [new traceBase.BatchSpanProcessor(new exporter.OTLPTraceExporter(exporterOptions))],
+			spanProcessors: [
+				new traceBase.BatchSpanProcessor(new exporter.OTLPTraceExporter({ url: telemetry.endpoint, ...headers })),
+			],
 		});
 		candidates.push(errorProvider);
-		candidate.start();
+
+		// metrics の送り先は traces とは別に明示したときだけ使う。未設定なら計装を作らず何も送らない
+		// (SDK 既定の localhost:4318 へ黙って送らない)。
+		if (telemetry.metricsEndpoint != null) {
+			const meterProvider = await createMeterProvider(telemetry, telemetry.metricsEndpoint, resource, headers);
+			if (meterProvider != null) {
+				candidates.push(meterProvider);
+			}
+		}
+
+		tracerProvider.register({ propagator: extractionOnlyPropagator });
 		providers = candidates;
 		const tracer = api.trace.getTracer('toneriko-backend');
 		const errorTracer = errorProvider.getTracer('toneriko-backend-errors');
 		const headerGetter = {
-			keys: (headers: Headers) => [...headers.keys()],
-			get: (headers: Headers, key: string) => headers.get(key) ?? undefined,
+			keys: (requestHeaders: Headers) => [...requestHeaders.keys()],
+			get: (requestHeaders: Headers, key: string) => requestHeaders.get(key) ?? undefined,
 		};
 		recordExceptionImpl = (error: unknown) => {
 			const span = errorTracer.startSpan('unhandled exception');
@@ -223,8 +137,46 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 	}
 }
 
-function isClientRequest(request: ClientRequest | import('node:http').IncomingMessage): request is ClientRequest {
-	return 'setHeader' in request && 'path' in request && 'protocol' in request && 'host' in request;
+async function createMeterProvider(
+	telemetry: NonNullable<Config['observability']['telemetry']['backend']>,
+	metricsEndpoint: string,
+	resource: import('@opentelemetry/resources').Resource,
+	headers: { headers?: Record<string, string> },
+): Promise<TelemetryProvider | null> {
+	const [api, instrumentation, metricsExporter, sdkMetrics, runtimeNode, hostMetrics] = await Promise.all([
+		import('@opentelemetry/api'),
+		import('@opentelemetry/instrumentation'),
+		import('@opentelemetry/exporter-metrics-otlp-http'),
+		import('@opentelemetry/sdk-metrics'),
+		import('@opentelemetry/instrumentation-runtime-node'),
+		import('@opentelemetry/instrumentation-host-metrics'),
+	]);
+	const meterProvider = new sdkMetrics.MeterProvider({
+		resource,
+		readers: [
+			new sdkMetrics.PeriodicExportingMetricReader({
+				exporter: new metricsExporter.OTLPMetricExporter({ url: metricsEndpoint, ...headers }),
+			}),
+		],
+	});
+	const instrumentationFactories = {
+		'@opentelemetry/instrumentation-runtime-node': () => new runtimeNode.RuntimeNodeInstrumentation(),
+		'@opentelemetry/instrumentation-host-metrics': () => new hostMetrics.HostMetricsInstrumentation(),
+	};
+	const instrumentations = Object.entries(instrumentationFactories)
+		.filter(([name]) =>
+			isInstrumentationEnabled(name as TelemetryInstrumentationName, telemetry.disabledInstrumentations ?? []),
+		)
+		.flatMap(([, create]) => {
+			try {
+				return [create()];
+			} catch (error) {
+				api.diag.error('Failed to initialize an OpenTelemetry instrumentation.', error);
+				return [];
+			}
+		});
+	instrumentation.registerInstrumentations({ meterProvider, instrumentations });
+	return meterProvider;
 }
 
 function isInstrumentationEnabled(

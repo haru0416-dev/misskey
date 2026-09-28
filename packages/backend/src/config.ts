@@ -12,47 +12,10 @@ import { optionalProperty } from '@/misc/optional-property.js';
 import { compiledConfigEnvelopeSchema, parseByteSize, parseDuration } from './config-schema.js';
 import type { CompiledConfigV2, SecretSource } from './config-schema.js';
 
+// metrics の計装だけを持つ。Bun では node:http / fetch / ioredis の自動計装が span を出さないため使わない。
 const telemetryInstrumentationNames = [
-	'@opentelemetry/instrumentation-amqplib',
-	'@opentelemetry/instrumentation-aws-lambda',
-	'@opentelemetry/instrumentation-aws-sdk',
-	'@opentelemetry/instrumentation-bunyan',
-	'@opentelemetry/instrumentation-cassandra-driver',
-	'@opentelemetry/instrumentation-connect',
-	'@opentelemetry/instrumentation-cucumber',
-	'@opentelemetry/instrumentation-dataloader',
-	'@opentelemetry/instrumentation-dns',
-	'@opentelemetry/instrumentation-express',
-	'@opentelemetry/instrumentation-fs',
-	'@opentelemetry/instrumentation-generic-pool',
-	'@opentelemetry/instrumentation-graphql',
-	'@opentelemetry/instrumentation-grpc',
-	'@opentelemetry/instrumentation-hapi',
 	'@opentelemetry/instrumentation-host-metrics',
-	'@opentelemetry/instrumentation-http',
-	'@opentelemetry/instrumentation-ioredis',
-	'@opentelemetry/instrumentation-kafkajs',
-	'@opentelemetry/instrumentation-knex',
-	'@opentelemetry/instrumentation-koa',
-	'@opentelemetry/instrumentation-lru-memoizer',
-	'@opentelemetry/instrumentation-memcached',
-	'@opentelemetry/instrumentation-mongodb',
-	'@opentelemetry/instrumentation-mongoose',
-	'@opentelemetry/instrumentation-mysql',
-	'@opentelemetry/instrumentation-mysql2',
-	'@opentelemetry/instrumentation-nestjs-core',
-	'@opentelemetry/instrumentation-net',
-	'@opentelemetry/instrumentation-openai',
-	'@opentelemetry/instrumentation-oracledb',
-	'@opentelemetry/instrumentation-pino',
-	'@opentelemetry/instrumentation-redis',
-	'@opentelemetry/instrumentation-restify',
-	'@opentelemetry/instrumentation-router',
 	'@opentelemetry/instrumentation-runtime-node',
-	'@opentelemetry/instrumentation-socket.io',
-	'@opentelemetry/instrumentation-tedious',
-	'@opentelemetry/instrumentation-undici',
-	'@opentelemetry/instrumentation-winston',
 ] as const;
 
 export type TelemetryInstrumentationName = (typeof telemetryInstrumentationNames)[number];
@@ -63,7 +26,7 @@ export type TelemetryConfig = {
 	headers?: Record<string, string>;
 	serviceName?: string;
 	tracesSampleRatio?: number;
-	tracePropagationTargets?: string[];
+	metricsEndpoint?: string;
 	disabledInstrumentations?: TelemetryInstrumentationName[];
 };
 
@@ -289,7 +252,7 @@ function resolveTelemetryBackend(
 		endpoint: backend.endpoint,
 		...optionalProperty('serviceName', backend.serviceName),
 		...optionalProperty('tracesSampleRatio', backend.tracesSampleRatio),
-		...optionalProperty('tracePropagationTargets', backend.tracePropagationTargets),
+		...optionalProperty('metricsEndpoint', backend.metricsEndpoint),
 		...optionalProperty(
 			'headers',
 			backend.headers == null
@@ -548,8 +511,8 @@ function redactTelemetryBackend(
 		...backend,
 		endpoint: redactUrlSecrets(backend.endpoint)!,
 		...optionalProperty(
-			'tracePropagationTargets',
-			backend.tracePropagationTargets?.map((t) => redactUrlSecrets(t)!),
+			'metricsEndpoint',
+			backend.metricsEndpoint == null ? undefined : redactUrlSecrets(backend.metricsEndpoint)!,
 		),
 		...optionalProperty(
 			'headers',
