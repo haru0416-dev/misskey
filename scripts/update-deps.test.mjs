@@ -69,5 +69,4 @@ describe('splitHeldMajors', () => {
 		expect(pending).toHaveLength(1);
 		expect(kept).toHaveLength(0);
 	});
-
 });
