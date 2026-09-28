@@ -6,8 +6,8 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import cluster from 'node:cluster';
-import chalk from 'chalk';
-import Logger from '@/logger.js';
+import { styleText } from 'node:util';
+import Logger, { colorize } from '@/logger.js';
 import type { Config } from '@/config.js';
 import { showMachineInfo } from '@/misc/show-machine-info.js';
 import { resolveHostProcessCounts } from '@/misc/process-topology.js';
@@ -19,19 +19,19 @@ import { initExtraThreadPool, jobQueue, server } from './common.js';
 const logger = new Logger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
 
-const themeColor = chalk.hex('#8185f2');
+const themeColor = (text: string) => colorize('#8185f2', text);
 
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {
 		const v = `v${props.version}`;
 		console.log(themeColor('  T O N E R I K O  '));
 		console.log(themeColor('  federated social platform'));
-		console.log(' ' + chalk.gray(v) + '\n');
+		console.log(' ' + styleText('gray', v) + '\n');
 
 		console.log(' Toneriko is an open-source decentralized social platform based on Misskey.');
 
 		console.log('');
-		console.log(`--- ${os.hostname()} ${chalk.gray(`(PID: ${process.pid})`)} ---`);
+		console.log(`--- ${os.hostname()} ${styleText('gray', `(PID: ${process.pid})`)} ---`);
 	}
 
 	bootLogger.info('Welcome to Toneriko!');

@@ -149,6 +149,8 @@ declare const Bun:
 				stringify(value: unknown, replacer?: null, space?: string | number): string;
 			};
 			S3Client: typeof Bun.S3Client;
+			// 'ansi' は端末の色数と NO_COLOR / FORCE_COLOR に合わせた前景色の制御文字 (色を付けないときは '')。
+			color(input: string, outputFormat: 'hex' | 'ansi'): string | null;
 			password: {
 				hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
 				hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;

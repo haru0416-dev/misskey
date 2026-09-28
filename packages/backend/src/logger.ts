@@ -4,18 +4,28 @@
  */
 
 import cluster from 'node:cluster';
-import chalk from 'chalk';
-import { default as convertColor } from 'color-convert';
+import { styleText } from 'node:util';
 import { bindThis } from '@/decorators.js';
 import { formatTime } from '@/misc/format-date-time.js';
 import { envOption } from './env.js';
 import type { Config } from './config.js';
-import type { Keyword } from 'color-convert';
+
+/** 文脈名に付ける色。CSS のカラー名で、Bun.color が解釈する。 */
+export type LogColor = 'cyan' | 'gray' | 'magenta' | 'orange' | 'white' | 'yellow';
 
 type Context = {
 	name: string;
-	color?: Keyword;
+	color?: LogColor;
 };
+
+/**
+ * 任意の色 (CSS のカラー名・hex) の前景色。Bun.color は styleText と同じく、端末かどうかと
+ * NO_COLOR / FORCE_COLOR で色を付けるか決める (付けないときは空文字を返す)。
+ */
+export function colorize(color: string, text: string): string {
+	const code = Bun!.color(color, 'ansi');
+	return code ? `${code}${text}\u001b[39m` : text;
+}
 
 type Level = 'error' | 'success' | 'warning' | 'debug' | 'info';
 
@@ -53,7 +63,7 @@ export default class Logger {
 	private context: Context;
 	private parentLogger: Logger | null = null;
 
-	constructor(context: string, color?: Keyword) {
+	constructor(context: string, color?: LogColor) {
 		this.context = {
 			name: context,
 			...(color === undefined ? {} : { color }),
@@ -61,7 +71,7 @@ export default class Logger {
 	}
 
 	@bindThis
-	public createSubLogger(context: string, color?: Keyword): Logger {
+	public createSubLogger(context: string, color?: LogColor): Logger {
 		const logger = new Logger(context, color);
 		logger.parentLogger = this;
 		return logger;
@@ -105,41 +115,41 @@ export default class Logger {
 		const l =
 			level === 'error'
 				? important
-					? chalk.bgRed.white('ERR ')
-					: chalk.red('ERR ')
+					? styleText(['bgRed', 'white'], 'ERR ')
+					: styleText('red', 'ERR ')
 				: level === 'warning'
-					? chalk.yellow('WARN')
+					? styleText('yellow', 'WARN')
 					: level === 'success'
 						? important
-							? chalk.bgGreen.white('DONE')
-							: chalk.green('DONE')
+							? styleText(['bgGreen', 'white'], 'DONE')
+							: styleText('green', 'DONE')
 						: level === 'debug'
-							? chalk.gray('VERB')
+							? styleText('gray', 'VERB')
 							: level === 'info'
-								? chalk.blue('INFO')
+								? styleText('blue', 'INFO')
 								: null;
 		const contexts = [this.context]
 			.concat(subContexts)
-			.map((d) => (d.color ? chalk.rgb(...convertColor.keyword.rgb(d.color))(d.name) : chalk.white(d.name)));
+			.map((d) => (d.color ? colorize(d.color, d.name) : styleText('white', d.name)));
 		const m =
 			level === 'error'
-				? chalk.red(message)
+				? styleText('red', message)
 				: level === 'warning'
-					? chalk.yellow(message)
+					? styleText('yellow', message)
 					: level === 'success'
-						? chalk.green(message)
+						? styleText('green', message)
 						: level === 'debug'
-							? chalk.gray(message)
+							? styleText('gray', message)
 							: level === 'info'
 								? message
 								: null;
 
 		let log = `${l} ${worker}\t[${contexts.join(' ')}]\t${m}`;
 		if (envOption.withLogTime || loggingConfig.includeTimestamp) {
-			log = chalk.gray(time) + ' ' + log;
+			log = styleText('gray', time) + ' ' + log;
 		}
 
-		const args: unknown[] = [important ? chalk.bold(log) : log];
+		const args: unknown[] = [important ? styleText('bold', log) : log];
 		if (data != null) {
 			args.push(data);
 		}

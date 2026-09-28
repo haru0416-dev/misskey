@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import * as stream from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import chalk from 'chalk';
+import { styleText } from 'node:util';
 import { parse } from 'content-disposition';
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
@@ -143,9 +143,9 @@ export function createDownloadService(
 	): Promise<{
 		filename: string;
 	}> {
-		logger.info(`Downloading ${chalk.cyan(url)} to ${chalk.cyanBright(path)} ...`);
+		logger.info(`Downloading ${styleText('cyan', url)} to ${styleText('cyanBright', path)} ...`);
 		const { filename } = await download(url, fs.createWriteStream(path));
-		logger.succ(`Download finished: ${chalk.cyan(url)}`);
+		logger.succ(`Download finished: ${styleText('cyan', url)}`);
 		return { filename };
 	}
 
@@ -157,7 +157,7 @@ export function createDownloadService(
 		url: string,
 		memoryLimitBytes: number,
 	): Promise<{ filename: string } & ({ data: Buffer } | { path: string; cleanup: () => void })> {
-		logger.info(`Downloading ${chalk.cyan(url)} ...`);
+		logger.info(`Downloading ${styleText('cyan', url)} ...`);
 		const chunks: Buffer[] = [];
 		let size = 0;
 		const spill: { to: { path: string; cleanup: () => void; file: fs.WriteStream } | null } = { to: null };
@@ -209,7 +209,7 @@ export function createDownloadService(
 		const { filename } = await download(url, sink);
 		const result =
 			spill.to == null ? { data: Buffer.concat(chunks, size) } : { path: spill.to.path, cleanup: spill.to.cleanup };
-		logger.succ(`Download finished: ${chalk.cyan(url)}`);
+		logger.succ(`Download finished: ${styleText('cyan', url)}`);
 		return { filename, ...result };
 	}
 
