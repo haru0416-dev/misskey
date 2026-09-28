@@ -111,6 +111,11 @@ jobs:
         # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
         run: bun run --filter slacc build
       - run: bun run lint:ox
+      # knip は vite / drizzle の設定ファイルを実行して入口を集める。i18n の built と compile 済みの設定が
+      # 無いと読み込みに失敗し、そこから辿る schema の enum などを未使用と誤って報告する。
+      - run: bun run --filter i18n build
+      - name: Compile config
+        run: cp .github/misskey/test.yml .config/default.yml && bun run --filter backend compile-config
       # 使われていない export・依存・ファイルは lint にも CI にも掛からず溜まっていた。
       - run: bun run lint:knip
 
