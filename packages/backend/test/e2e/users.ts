@@ -1208,48 +1208,35 @@ describe('ユーザー', () => {
 		expect(response.map((s) => s.user).filter((u) => u.id === user().id)).toStrictEqual(expected);
 	});
 
-	test.each([
-		{
-			label: 'フォロワー昇順',
-			sort: { sort: '+follower' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.followersCount),
-		},
-		{
-			label: 'フォロワー降順',
-			sort: { sort: '-follower' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.followersCount),
-		},
-		{
-			label: '登録日時昇順',
-			sort: { sort: '+createdAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => u.createdAt,
-		},
-		{
-			label: '登録日時降順',
-			sort: { sort: '-createdAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => u.createdAt,
-		},
-		{
-			label: '投稿日時昇順',
-			sort: { sort: '+updatedAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.updatedAt),
-		},
-		{
-			label: '投稿日時降順',
-			sort: { sort: '-updatedAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.updatedAt),
-		},
-	] as const)('をハッシュタグ指定で取得することができる($label)', async ({ sort, selector }) => {
-		const hashtag = 'test_hashtag';
-		await successfulApiCall({ endpoint: 'i/update', parameters: { description: `#${hashtag}` }, user: alice });
-		const parameters = { tag: hashtag, limit: 5, ...sort };
-		const response = await successfulApiCall({ endpoint: 'hashtags/users', parameters, user: alice });
-		const users = await Promise.all(response.map((u) => show(u.id, alice)));
-		const expected = users.sort((x, y) => {
-			const index = selector(x) < selector(y) ? -1 : selector(x) > selector(y) ? 1 : 0;
-			return index * (parameters.sort.startsWith('+') ? -1 : 1);
-		});
-		expect(response).toStrictEqual(expected);
+	// `+` は多い順・新しい順 (UserStore の並び)。並びが一意に決まるよう、フォロワー数・登録順・最終投稿の順をずらした 3 人で見る。
+	test('をハッシュタグ指定で並べ替えて取得できる', async () => {
+		const tag = `sorttag${Date.now().toString(36)}`;
+		// 登録順は first → second → third。フォロワー数は third 2、first 1、second 0。最終投稿は second が最新、third が最古。
+		const first = await signup();
+		const second = await signup();
+		const third = await signup();
+		for (const user of [first, second, third]) {
+			await successfulApiCall({ endpoint: 'i/update', parameters: { description: `#${tag}` }, user });
+		}
+		await successfulApiCall({ endpoint: 'following/create', parameters: { userId: third.id }, user: first });
+		await successfulApiCall({ endpoint: 'following/create', parameters: { userId: third.id }, user: second });
+		await successfulApiCall({ endpoint: 'following/create', parameters: { userId: first.id }, user: second });
+		for (const user of [third, first, second]) {
+			await post(user, { text: 'sort' });
+		}
+		const sorted = async (
+			sort: '+follower' | '-follower' | '+createdAt' | '-createdAt' | '+updatedAt' | '-updatedAt',
+		) =>
+			(await successfulApiCall({ endpoint: 'hashtags/users', parameters: { tag, limit: 10, sort }, user: alice })).map(
+				(user) => user.id,
+			);
+
+		expect(await sorted('+follower')).toEqual([third.id, first.id, second.id]);
+		expect(await sorted('-follower')).toEqual([second.id, first.id, third.id]);
+		expect(await sorted('+createdAt')).toEqual([third.id, second.id, first.id]);
+		expect(await sorted('-createdAt')).toEqual([first.id, second.id, third.id]);
+		expect(await sorted('+updatedAt')).toEqual([second.id, first.id, third.id]);
+		expect(await sorted('-updatedAt')).toEqual([third.id, first.id, second.id]);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },

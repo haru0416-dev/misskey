@@ -477,14 +477,24 @@ describe('クリップ', () => {
 		expect(await usersClips({ userId: 'xxxxxxx' })).toStrictEqual([]);
 	});
 
-	test.each([{ label: '' }, { label: '他人アカウントから', user: () => bob }])('の一覧が$label取得できる', async () => {
+	// 件数 (notesCount) は持ち主にだけ返す。
+	test.each([
+		{ label: '自分から', user: undefined },
+		{ label: '他人アカウントから', user: () => bob },
+	])('の一覧が$label取得できる', async ({ user }) => {
 		const clips = await createMany({ isPublic: true });
-		const res = await usersClips({
-			userId: alice.id,
-		});
+		const res = await usersClips(
+			{
+				userId: alice.id,
+			},
+			user ? { user: user() } : {},
+		);
+		const expected = user ? clips.map(({ notesCount: _, ...clip }) => clip) : clips;
 
 		// API が順序を保証しないため、ID 順に揃えて比較する。
-		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id))).toStrictEqual(clips.sort(compareBy((s) => s.id)));
+		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id))).toStrictEqual(
+			expected.sort(compareBy((s) => s.id)),
+		);
 
 		for (const clip of res) {
 			expect(clip.isFavorited).toBe(false);

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeAll, describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { api, post, react, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -109,14 +109,17 @@ describe('Mute', () => {
 	describe('Notification', () => {
 		test('通知にミュートしているユーザーの通知が含まれない(リアクション)', async () => {
 			const aliceNote = await post(alice, { text: 'hi' });
-			await react(bob, aliceNote, 'like');
+			// リアクションの通知は応答を待たずに作られる。ミュート相手が先に反応し、後から反応した bob の通知が
+			// 届くのを待ってから見ないと、作られる前に読んで通ってしまう。
 			await react(carol, aliceNote, 'like');
+			await react(bob, aliceNote, 'like');
 
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			const res = await vi.waitFor(async () => {
+				const res = await api('i/notifications', {}, alice);
+				expect(res.status).toBe(200);
+				expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+				return res;
+			});
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
@@ -231,14 +234,17 @@ describe('Mute', () => {
 	describe('Notification (Grouped)', () => {
 		test('通知にミュートしているユーザーの通知が含まれない(リアクション)', async () => {
 			const aliceNote = await post(alice, { text: 'hi' });
-			await react(bob, aliceNote, 'like');
+			// リアクションの通知は応答を待たずに作られる。ミュート相手が先に反応し、後から反応した bob の通知が
+			// 届くのを待ってから見ないと、作られる前に読んで通ってしまう。
 			await react(carol, aliceNote, 'like');
+			await react(bob, aliceNote, 'like');
 
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			const res = await vi.waitFor(async () => {
+				const res = await api('i/notifications-grouped', {}, alice);
+				expect(res.status).toBe(200);
+				expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+				return res;
+			});
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {

@@ -185,7 +185,7 @@ describe('Timelines', () => {
 						text: 'hi',
 						replyId: carolNote.id,
 						visibility: 'specified',
-						visibleUserIds: [carolNote.id],
+						visibleUserIds: [carol.id],
 					});
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
@@ -260,7 +260,7 @@ describe('Timelines', () => {
 						text: 'hi',
 						replyId: carolNote.id,
 						visibility: 'specified',
-						visibleUserIds: [carolNote.id],
+						visibleUserIds: [carol.id],
 					});
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
@@ -1068,7 +1068,7 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					const res = await api('notes/local-timeline', { limit: 100 }, alice);
+					const res = await api('notes/local-timeline', { limit: 100, withReplies: true }, alice);
 
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
@@ -1438,7 +1438,7 @@ describe('Timelines', () => {
 
 					const bobNote = await post(bob, { text: 'hi' });
 
-					const res = await api('notes/local-timeline', { limit: 100 }, alice);
+					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
@@ -1478,7 +1478,7 @@ describe('Timelines', () => {
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'hi', replyId: aliceNote.id });
 
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
+						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
