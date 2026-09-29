@@ -44,8 +44,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 		</component>
-		<button v-show="paginator.canFetchOlder.value" key="_more_" v-appear="prefer.enableInfiniteScroll ? paginator.fetchOlder : null" :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
-			<div v-if="!paginator.fetchingOlder.value">{{ i18n.ts.loadMore }}</div>
+		<MkPaginatorFailure v-if="paginator.canFetchOlder.value && !paginator.fetchingOlder.value" :failure="paginator.olderFailure.value"/>
+		<!-- v-appear は mounted でしか値を読まないので、失敗の有無で作り直して自動の読み込みを止める・戻す。 -->
+		<button v-show="paginator.canFetchOlder.value" :key="paginator.olderFailure.value ? '_more_failed_' : '_more_'" v-appear="prefer.enableInfiniteScroll && !paginator.olderFailure.value ? paginator.fetchOlder : null" :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
+			<div v-if="!paginator.fetchingOlder.value">{{ paginator.olderFailure.value ? i18n.ts.retry : i18n.ts.loadMore }}</div>
 			<MkLoading v-else/>
 		</button>
 	</div>
@@ -64,6 +66,7 @@ import MkNote from '@/features/notes/components/MkNote.vue';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';
+import MkPaginatorFailure from '@/components/layout/MkPaginatorFailure.vue';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';

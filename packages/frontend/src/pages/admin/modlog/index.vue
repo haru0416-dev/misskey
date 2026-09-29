@@ -36,7 +36,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkTl>
 			</component>
 
-			<MkButton primary rounded style="margin: 0 auto;" @click="fetchMore">{{ i18n.ts.loadMore }}</MkButton>
+			<MkPaginatorFailure :failure="moreFailure"/>
+			<MkButton primary rounded style="margin: 0 auto;" @click="fetchMore">{{ moreFailure ? i18n.ts.retry : i18n.ts.loadMore }}</MkButton>
 		</div>
 	</div>
 </PageWithHeader>
@@ -49,6 +50,7 @@ import XModLog from './mod-log.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkTl from '@/components/layout/MkTl.vue';
+import MkPaginatorFailure from '@/components/layout/MkPaginatorFailure.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
@@ -89,6 +91,10 @@ const timeline = computed(() => {
 		data: x as Misskey.entities.ModerationLog,
 	}));
 });
+
+const moreFailure = computed(() =>
+	paginator.order.value === 'oldest' ? paginator.newerFailure.value : paginator.olderFailure.value,
+);
 
 function fetchMore() {
 	if (paginator.order.value === 'oldest') {

@@ -89,8 +89,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkNote v-else :class="$style.note" :note="note" :withHardMute="true" :data-scroll-anchor="note.id"/>
 			</template>
 		</component>
-		<button v-show="paginator.canFetchOlder.value" key="_more_" v-appear="prefer.enableInfiniteScroll ? paginator.fetchOlder : null" data-cy-streaming-load-more :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
-			<div v-if="!paginator.fetchingOlder.value">{{ i18n.ts.loadMore }}</div>
+		<MkPaginatorFailure v-if="paginator.canFetchOlder.value && !paginator.fetchingOlder.value" :failure="paginator.olderFailure.value"/>
+		<!-- v-appear は mounted でしか値を読まないので、失敗の有無で作り直して自動の読み込みを止める・戻す。 -->
+		<button v-show="paginator.canFetchOlder.value" :key="paginator.olderFailure.value ? '_more_failed_' : '_more_'" v-appear="prefer.enableInfiniteScroll && !paginator.olderFailure.value ? paginator.fetchOlder : null" data-cy-streaming-load-more :disabled="paginator.fetchingOlder.value" class="_button" :class="$style.more" @click="paginator.fetchOlder">
+			<div v-if="!paginator.fetchingOlder.value">{{ paginator.olderFailure.value ? i18n.ts.retry : i18n.ts.loadMore }}</div>
 			<MkLoading v-else :inline="true"/>
 		</button>
 	</div>
@@ -123,6 +125,7 @@ import { prefer } from '@/preferences.js';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
 import MkButton from '@/components/form/MkButton.vue';
+import MkPaginatorFailure from '@/components/layout/MkPaginatorFailure.vue';
 import { i18n } from '@/i18n.js';
 import { DI } from '@/di.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';

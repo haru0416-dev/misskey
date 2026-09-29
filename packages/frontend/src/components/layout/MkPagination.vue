@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<MkLoading v-if="paginator.fetching.value"/>
 
-			<MkError v-else-if="paginator.error.value" :text="errorText(paginator.errorCode.value)" @retry="paginator.init()"/>
+			<MkError v-else-if="paginator.error.value" :text="paginatorErrorText(paginator.errorCode.value)" @retry="paginator.init()"/>
 
 			<div v-else-if="paginator.items.value.length === 0" key="_empty_">
 				<slot name="empty"><MkResult type="empty"/></slot>
@@ -26,15 +26,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			<div v-else key="_root_" class="_gaps">
 				<div v-if="direction === 'up' || direction === 'both'" v-show="upButtonVisible">
-					<MkButton v-if="!upButtonLoading" v-appear="shouldEnableInfiniteScroll ? upButtonClick : null" :class="$style.more" primary rounded @click="upButtonClick">
-						{{ i18n.ts.loadMore }}
+					<MkPaginatorFailure v-if="!upButtonLoading" :failure="upFailure"/>
+					<MkButton v-if="!upButtonLoading" v-appear="shouldEnableInfiniteScroll && !upFailure ? upButtonClick : null" :class="$style.more" primary rounded @click="upButtonClick">
+						{{ upFailure ? i18n.ts.retry : i18n.ts.loadMore }}
 					</MkButton>
 					<MkLoading v-else/>
 				</div>
 				<slot :items="getValue(paginator.items)" :fetching="paginator.fetching.value || paginator.fetchingOlder.value"></slot>
 				<div v-if="direction === 'down' || direction === 'both'" v-show="downButtonVisible">
-					<MkButton v-if="!downButtonLoading" v-appear="shouldEnableInfiniteScroll ? downButtonClick : null" data-cy-pagination-down :class="$style.more" primary rounded @click="downButtonClick">
-						{{ i18n.ts.loadMore }}
+					<MkPaginatorFailure v-if="!downButtonLoading" :failure="downFailure"/>
+					<MkButton v-if="!downButtonLoading" v-appear="shouldEnableInfiniteScroll && !downFailure ? downButtonClick : null" data-cy-pagination-down :class="$style.more" primary rounded @click="downButtonClick">
+						{{ downFailure ? i18n.ts.retry : i18n.ts.loadMore }}
 					</MkButton>
 					<MkLoading v-else/>
 				</div>
@@ -66,7 +68,9 @@ export type MkPaginationOptions = {
 import { isLink } from '@shared/utility/is-link.js';
 import { onMounted, computed, watch, unref } from 'vue';
 import type { UnwrapRef } from 'vue';
+import { paginatorErrorText } from '@/utility/paginator.js';
 import type { IPaginator } from '@/utility/paginator.js';
+import MkPaginatorFailure from '@/components/layout/MkPaginatorFailure.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
@@ -117,13 +121,6 @@ function onContextmenu(ev: PointerEvent) {
 	);
 }
 
-// 理由が分かると次の操作が変わる失敗だけ文言を出し分ける。それ以外は MkError の既定のまま。
-function errorText(code: string | null): string | undefined {
-	if (code === 'SEARCH_TIMED_OUT') return i18n.ts.searchTimedOut;
-	if (code === 'RATE_LIMIT_EXCEEDED') return i18n.ts.cannotPerformTemporaryDescription;
-	return undefined;
-}
-
 function getValue(v: IPaginator['items']) {
 	return unref(v) as UnwrapRef<T['items']>;
 }
@@ -154,6 +151,14 @@ const upButtonLoading = computed(() => {
 		? props.paginator.fetchingOlder.value
 		: props.paginator.fetchingNewer.value;
 });
+
+// 続きの取得の失敗は、ボタンの向きに対応する側のものを出す (並び順が古い順だと上下が入れ替わる)。
+const upFailure = computed(() =>
+	props.paginator.order.value === 'oldest' ? props.paginator.olderFailure.value : props.paginator.newerFailure.value,
+);
+const downFailure = computed(() =>
+	props.paginator.order.value === 'oldest' ? props.paginator.newerFailure.value : props.paginator.olderFailure.value,
+);
 
 function upButtonClick() {
 	if (props.paginator.order.value === 'oldest') {

@@ -197,4 +197,34 @@ describe('Paginator', () => {
 		expect(paginator.error.value).toBe(false);
 		expect(paginator.errorCode.value).toBeNull();
 	});
+
+	test('records a failed load-more per direction without replacing the list, and clears it on success', async () => {
+		const paginator = createPaginator();
+		misskeyApiMock.mockResolvedValueOnce([item('c'), item('b')]);
+		await paginator.init();
+		paginator.canFetchOlder.value = true;
+
+		misskeyApiMock.mockRejectedValueOnce({ code: 'SEARCH_TIMED_OUT' });
+		await paginator.fetchOlder();
+		expect(paginator.olderFailure.value).toEqual({ code: 'SEARCH_TIMED_OUT' });
+		expect(paginator.newerFailure.value).toBeNull();
+		expect(paginator.error.value).toBe(false);
+		expect(paginator.items.value.map((value) => value.id)).toEqual(['c', 'b']);
+
+		misskeyApiMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+		await paginator.fetchNewer();
+		expect(paginator.newerFailure.value).toEqual({ code: null });
+
+		misskeyApiMock.mockResolvedValueOnce([item('a')]);
+		await paginator.fetchOlder();
+		expect(paginator.olderFailure.value).toBeNull();
+		expect(paginator.items.value.map((value) => value.id)).toEqual(['c', 'b', 'a']);
+
+		// 一覧を取り直すと、取り直しが失敗しても前の続きの失敗は残らない。
+		expect(paginator.newerFailure.value).toEqual({ code: null });
+		misskeyApiMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+		await paginator.init();
+		expect(paginator.newerFailure.value).toBeNull();
+		expect(paginator.error.value).toBe(true);
+	});
 });

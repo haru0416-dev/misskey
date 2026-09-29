@@ -7,6 +7,7 @@ import { ref, shallowRef } from 'vue';
 import type * as Misskey from 'misskey-js';
 import type { ComputedRef, Ref, ShallowRef, UnwrapRef } from 'vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { i18n } from '@/i18n.js';
 import type { MisskeyEntity } from '@shared/utility/misskey-entity.js';
 
 export type { MisskeyEntity };
@@ -31,6 +32,23 @@ export type PaginatorCompatibleEndpoints = {
 
 export type ExtractorFunction<P extends IPaginator, T> = (item: UnwrapRef<P['items']>[number]) => T;
 
+export type PaginatorFailure = {
+	/** API エラーのコード。通信の失敗などコードの無いものは null。 */
+	code: string | null;
+};
+
+/** 理由が分かると次の操作が変わる失敗だけ、一覧に出す文言を返す。それ以外は undefined (画面の既定の文言)。 */
+export function paginatorErrorText(code: string | null): string | undefined {
+	if (code === 'SEARCH_TIMED_OUT') return i18n.ts.searchTimedOut;
+	if (code === 'RATE_LIMIT_EXCEEDED') return i18n.ts.cannotPerformTemporaryDescription;
+	return undefined;
+}
+
+function toFailure(err: unknown): PaginatorFailure {
+	const code = (err as { code?: unknown } | null)?.code;
+	return { code: typeof code === 'string' ? code : null };
+}
+
 export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	/** 外部から直接操作しない。 */
 	items: Ref<_T[]> | ShallowRef<_T[]>;
@@ -44,6 +62,9 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	error: Ref<boolean>;
 	/** 最後の取得の失敗が API エラーならそのコード。画面で理由を出し分けるのに使う。 */
 	errorCode: Ref<string | null>;
+	/** 続きの取得 (古い側 / 新しい側) の直近の失敗。成功するか取り直すと null に戻る。 */
+	olderFailure: Ref<PaginatorFailure | null>;
+	newerFailure: Ref<PaginatorFailure | null>;
 	computedParams: ComputedRef<Misskey.Endpoints[PaginatorCompatibleEndpointPaths]['req'] | null | undefined> | null;
 	initialId: MisskeyEntity['id'] | null;
 	initialDate: number | null;
@@ -84,6 +105,8 @@ export class Paginator<
 	public canSearch = false;
 	public error = ref(false);
 	public errorCode = ref<string | null>(null);
+	public olderFailure = ref<PaginatorFailure | null>(null);
+	public newerFailure = ref<PaginatorFailure | null>(null);
 	private endpoint: Endpoint;
 	private limit: number;
 	private params: E['req'] | (() => E['req']);
@@ -245,6 +268,9 @@ export class Paginator<
 		this.items.value = [];
 		this.aheadQueue = [];
 		this.queuedAheadItemsCount.value = 0;
+		// 一覧を取り直すので、前の一覧の続きの取得で起きた失敗は持ち越さない。
+		this.olderFailure.value = null;
+		this.newerFailure.value = null;
 		this.fetching.value = true;
 
 		const data: E['req'] = {
@@ -277,8 +303,7 @@ export class Paginator<
 			apiRes = (await misskeyApi(this.endpoint, data, undefined, abortController.signal)) as T[];
 		} catch (err) {
 			if (!abortController.signal.aborted) {
-				const code = (err as { code?: unknown } | null)?.code;
-				this.errorCode.value = typeof code === 'string' ? code : null;
+				this.errorCode.value = toFailure(err).code;
 				this.error.value = true;
 			}
 			return;
@@ -359,7 +384,10 @@ export class Paginator<
 		let apiRes: T[];
 		try {
 			apiRes = await misskeyApi<T[]>(this.endpoint, data, undefined, abortController.signal);
-		} catch {
+		} catch (err) {
+			if (!abortController.signal.aborted) {
+				this.olderFailure.value = toFailure(err);
+			}
 			return;
 		} finally {
 			if (this.olderAbortController === abortController) {
@@ -370,6 +398,7 @@ export class Paginator<
 		if (abortController.signal.aborted) {
 			return;
 		}
+		this.olderFailure.value = null;
 
 		const eleventhItem = apiRes[10];
 		if (eleventhItem != null) {
@@ -428,7 +457,10 @@ export class Paginator<
 		let apiRes: T[];
 		try {
 			apiRes = await misskeyApi<T[]>(this.endpoint, data, undefined, abortController.signal);
-		} catch {
+		} catch (err) {
+			if (!abortController.signal.aborted) {
+				this.newerFailure.value = toFailure(err);
+			}
 			return;
 		} finally {
 			if (this.newerAbortController === abortController) {
@@ -439,6 +471,7 @@ export class Paginator<
 		if (abortController.signal.aborted) {
 			return;
 		}
+		this.newerFailure.value = null;
 
 		if (apiRes.length === 0) {
 			this.canFetchNewer.value = false;

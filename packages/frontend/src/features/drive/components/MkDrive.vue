@@ -81,7 +81,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					@dragend="isDragSource = false"
 				/>
 			</div>
-			<MkButton v-if="foldersPaginator.canFetchOlder.value" :class="$style.loadMore" primary rounded @click="foldersPaginator.fetchOlder()">{{ i18n.ts.loadMore }}</MkButton>
+			<MkPaginatorFailure v-if="foldersPaginator.canFetchOlder.value" :failure="foldersPaginator.olderFailure.value"/>
+			<MkButton v-if="foldersPaginator.canFetchOlder.value" :class="$style.loadMore" primary rounded @click="foldersPaginator.fetchOlder()">{{ foldersPaginator.olderFailure.value ? i18n.ts.retry : i18n.ts.loadMore }}</MkButton>
 
 			<template v-if="shouldBeGroupedByDate">
 				<MkStickyContainer v-for="(item, i) in filesTimeline" :key="`${item.date.getFullYear()}/${item.date.getMonth() + 1}`">
@@ -135,15 +136,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 				/>
 			</TransitionGroup>
 
+			<MkPaginatorFailure v-if="canFetchFiles" :failure="filesFailure"/>
+			<!-- v-appear は mounted でしか値を読まないので、失敗の有無で作り直して自動の読み込みを止める・戻す。 -->
 			<MkButton
 				v-show="canFetchFiles"
-				v-appear="shouldEnableInfiniteScroll ? fetchMoreFiles : null"
+				:key="filesFailure ? 'more-failed' : 'more'"
+				v-appear="shouldEnableInfiniteScroll && !filesFailure ? fetchMoreFiles : null"
 				:class="$style.loadMore"
 				primary
 				rounded
 				@click="fetchMoreFiles"
 			>
-				{{ i18n.ts.loadMore }}
+				{{ filesFailure ? i18n.ts.retry : i18n.ts.loadMore }}
 			</MkButton>
 
 			<div v-if="filesPaginator.items.value.length == 0 && foldersPaginator.items.value.length == 0 && !fetching" :class="$style.empty">
@@ -179,6 +183,7 @@ import {
 } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkButton from '@/components/form/MkButton.vue';
+import MkPaginatorFailure from '@/components/layout/MkPaginatorFailure.vue';
 import type { MenuItem } from '@/types/menu.js';
 import XNavFolder from '@/features/drive/components/MkDrive.NavFolder.vue';
 import XFolder from '@/features/drive/components/MkDrive.Folder.vue';
@@ -307,6 +312,10 @@ const canFetchFiles = computed(
 	() =>
 		!fetching.value &&
 		(filesPaginator.order.value === 'oldest' ? filesPaginator.canFetchNewer.value : filesPaginator.canFetchOlder.value),
+);
+
+const filesFailure = computed(() =>
+	filesPaginator.order.value === 'oldest' ? filesPaginator.newerFailure.value : filesPaginator.olderFailure.value,
 );
 
 async function fetchMoreFiles() {
