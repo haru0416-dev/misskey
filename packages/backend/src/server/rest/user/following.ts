@@ -78,7 +78,7 @@ import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import type { ApiError } from '../error.js';
 import { clientError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
-import { xaddApiNotification } from '../notification/notification.js';
+import { scheduleUnreadNotification, xaddApiNotification } from '../notification/notification.js';
 import type { ApiNotificationDependencies } from '../notification/notification.js';
 import {
 	packMeDetailedForApi,
@@ -371,17 +371,7 @@ async function createFollowingNotification(
 	};
 
 	deps.publishMainStream?.(notifieeId, 'notification', packed);
-	trackPromise(
-		unrefDelay(2000)
-			.then(async () => {
-				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
-				if (latestReadNotificationId && latestReadNotificationId >= redisId) {
-					return;
-				}
-				deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
-			})
-			.catch(() => {}),
-	);
+	scheduleUnreadNotification(deps, notifieeId, redisId, packed);
 }
 
 /** follow 系 webhook / mainStream 通知だけに必要な最小 deps (blocking 経路からも共有される)。 */

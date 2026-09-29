@@ -402,6 +402,7 @@
 	- オブジェクトストレージへのプロキシ経由アクセス (`objectStorageUseProxy`) は使えなくなります
 - Change: 外部へ送信する User-Agent の製品名を `Misskey` から `Toneriko` へ変更 (メディアプロキシの再帰検出は `toneriko/` と `misskey/` の両方を弾く)
 - Change: アバター未設定ユーザーの identicon の模様が変わるように (乱数生成器の変更のため。配色パレット等は不変)
+- Fix: メンション・返信・リアクションなどノートの通知で未読の知らせ (`unreadNotification`) が流れず、未読数の表示が読み直すまで増えなかった問題を修正
 - Fix: ユーザーとチャンネルの両方をフォローしていると、ミュートしたチャンネルのノートのリノートがホームタイムラインに出ることがあった問題を修正 (Redis のタイムラインを使わない設定や、Redis に残っていない古いページで起きていた)
 - Fix: リモートファイルのキャッシュを消すジョブの進捗が、総数に応じて 100 を大きく超えるなど正しく出ていなかった問題を修正
 - Fix: バックエンドの runtime / host の metrics が、設定した送り先ではなく既定の `localhost:4318` へ送られていた問題を修正。metrics は新しい設定 `observability.telemetry.backend.metricsEndpoint` を指定したときだけ送る

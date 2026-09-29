@@ -313,6 +313,27 @@ async function receivesNotification(
 }
 
 /**
+ * 既読にならないまま 2 秒たてば未読の知らせ (unreadNotification) を流す。クライアントの未読数のバッジはこれで増える。
+ * redisId は通知を保存したストリームの ID。
+ */
+export function scheduleUnreadNotification(
+	deps: Pick<ApiNotificationDependencies, 'redis' | 'publishMainStream'>,
+	userId: MiUser['id'],
+	redisId: string,
+	packed: unknown,
+): void {
+	trackPromise(
+		unrefDelay(2000)
+			.then(async () => {
+				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+				if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+				deps.publishMainStream?.(userId, 'unreadNotification', packed);
+			})
+			.catch(() => {}),
+	);
+}
+
+/**
  * 保存して配信と Push 送信をし、既読にならないまま 2 秒たてば未読の知らせを流す。
  * packed は配信用の形 (保存する形と違う種類だけ渡す)。
  */
@@ -326,20 +347,13 @@ async function publishNotification(
 	const redisId = await xaddNotification(deps, userId, notification);
 	deps.publishMainStream?.(userId, 'notification', packed);
 	void pushSwNotificationForApi(deps, userId, 'notification', packed);
-	const publishUnread = async () => {
+	if (options.delayUnread === false) {
 		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
 		deps.publishMainStream?.(userId, 'unreadNotification', packed);
-	};
-	if (options.delayUnread === false) {
-		await publishUnread();
 		return;
 	}
-	trackPromise(
-		unrefDelay(2000)
-			.then(publishUnread)
-			.catch(() => {}),
-	);
+	scheduleUnreadNotification(deps, userId, redisId, packed);
 }
 
 function createSimpleNotification(

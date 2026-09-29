@@ -114,7 +114,11 @@ import { pushSwNotificationForApi } from '@/server/rest/notification/push-notifi
 import type { ApiPushNotificationDependencies } from '@/server/rest/notification/push-notification.js';
 import { packNotificationForApi } from '@/server/rest/notification/notifications-list.js';
 import type { ApiNotificationsListDependencies } from '@/server/rest/notification/notifications-list.js';
-import { xaddApiNotifications } from '@/server/rest/notification/notification.js';
+import {
+	scheduleUnreadNotification,
+	toXListId,
+	xaddApiNotifications,
+} from '@/server/rest/notification/notification.js';
 import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 import { packUserLiteForApi } from '@/server/rest/user/user.js';
 import type {
@@ -521,6 +525,8 @@ async function createNoteNotifications(
 				if (packed != null) {
 					deps.publishMainStream?.(item.request.notifieeId, 'notification', packed);
 					void pushSwNotificationForApi(pushDeps, item.request.notifieeId, 'notification', packed);
+					// 保存は通知の ID から決まるストリーム ID で行う (xaddApiNotifications)。
+					scheduleUnreadNotification(deps, item.request.notifieeId, toXListId(item.notification.id), packed);
 				}
 			}),
 		);

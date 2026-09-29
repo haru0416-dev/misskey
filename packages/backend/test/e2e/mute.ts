@@ -41,16 +41,19 @@ describe('Mute', () => {
 		expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 	});
 
-	// ノートの通知 (メンション等) は作成の直後に notification を流し、unreadNotification は流さない。ミュート相手の通知は
-	// 作成側 (createNoteNotifications) とストリームの main チャンネルの両方で弾くので、どちらかが効いていることを見る。
-	test('ミュートしているユーザーからメンションされても、ストリームに通知が流れてこない', async () => {
+	// ミュート相手の通知は作成側 (createNoteNotifications) とストリームの main チャンネルの両方で弾く。notification は
+	// ストリーム側でも弾くが、2 秒後の unreadNotification はストリーム側では弾かないので、作成側の判定 (プッシュ通知と
+	// 未読数を守るのはこれだけ) を見るために unreadNotification まで待つ。
+	test('ミュートしているユーザーからメンションされても、ストリームに通知も未読の知らせも流れてこない', async () => {
 		await api('notifications/mark-all-as-read', {}, alice);
 
 		const fired = await waitFire(
 			alice,
 			'main',
 			() => post(carol, { text: '@alice hi' }),
-			(msg) => msg.type === 'notification',
+			(msg) => msg.type === 'notification' || msg.type === 'unreadNotification',
+			undefined,
+			3000,
 		);
 
 		expect(fired).toBe(false);

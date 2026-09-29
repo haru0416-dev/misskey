@@ -148,6 +148,23 @@ describe('Streaming', () => {
 
 				expect(fired).toBe(true);
 			});
+
+			// クライアントの未読数のバッジは unreadNotification でだけ増える。ノートの通知 (メンション等) も、既読に
+			// ならないまま 2 秒たてば流す。
+			test('メンションの通知が既読にならなければ unreadNotification が流れる', async () => {
+				await api('notifications/mark-all-as-read', {}, kyoko);
+
+				const fired = await waitFire(
+					kyoko,
+					'main',
+					() => post(ayano, { text: 'unread @kyoko' }),
+					(msg) => msg.type === 'unreadNotification' && msg.body['type'] === 'mention',
+					undefined,
+					5000,
+				);
+
+				expect(fired).toBe(true);
+			});
 		});
 
 		describe('Home Timeline', () => {

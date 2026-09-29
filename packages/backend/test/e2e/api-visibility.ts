@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { createNoteInDatabase, genId, openTestDatabase } from '../fixtures.js';
+import type { TestDatabase } from '../fixtures.js';
 import { api, post, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -17,8 +19,11 @@ describe('API visibility', () => {
 		let target2: misskey.entities.SignupResponse;
 
 		let tgt: misskey.entities.Note;
-		const posted: Record<'pub' | 'home' | 'fol' | 'spe' | 'folR' | 'speR' | 'folM' | 'speM', misskey.entities.Note> =
-			{} as never;
+		const posted: Record<
+			'pub' | 'home' | 'fol' | 'spe' | 'folR' | 'folRNoMention' | 'speR' | 'folM' | 'speM',
+			misskey.entities.Note
+		> = {} as never;
+		let database: TestDatabase;
 
 		beforeAll(async () => {
 			alice = await signup({ username: 'alice' });
@@ -39,10 +44,41 @@ describe('API visibility', () => {
 			// リプライ先は visibleUserIds に自動で入る
 			posted.speR = await post(alice, { text: 'x', replyId: tgt.id, visibility: 'specified' });
 
+			// ローカルの投稿ではリプライ先が自動でメンションに入り、メンションの分岐で見えてしまう。リモートから届く
+			// 返信はメンションを持たないことがあるので、リプライ先の分岐 (replyUserId) だけで見えることを DB から作って見る。
+			database = openTestDatabase();
+			const folRNoMentionId = genId();
+			await createNoteInDatabase(database, {
+				id: folRNoMentionId,
+				text: 'x',
+				userId: alice.id,
+				userHost: null,
+				visibility: 'followers',
+				replyId: tgt.id,
+				replyUserId: target.id,
+				replyUserHost: null,
+				mentions: [],
+			});
+			posted.folRNoMention = { id: folRNoMentionId, text: 'x' } as misskey.entities.Note;
+
 			// リプライにするとリプライ先の分岐で見えてしまい、メンションの分岐を踏まない
 			posted.folM = await post(alice, { text: '@target x', visibility: 'followers' });
 			// メンションだけでは visibleUserIds に入らない
 			posted.speM = await post(alice, { text: '@target2 x', replyId: tgt.id, visibility: 'specified' });
+		});
+
+		afterAll(async () => {
+			await database.close();
+		});
+
+		// notes/show はパック時の判定 (返信先を reply.userId で見る)、一覧系は isVisibleForMe (replyUserId の列を見る) と
+		// 経路が分かれるので、メンションの無い返信は一覧系でも返信先の本人にだけ返ることを見る。
+		test('[partial-bulk] メンションの無い followers の返信は返信先の本人にだけ返る', async () => {
+			const noteIds = [posted.folRNoMention.id];
+			const forTarget = await api('notes/show-partial-bulk', { noteIds }, target);
+			const forOther = await api('notes/show-partial-bulk', { noteIds }, other);
+			expect(forTarget.body.map((note) => note.id)).toEqual(noteIds);
+			expect(forOther.body).toEqual([]);
 		});
 
 		type Viewer = 'alice' | 'follower' | 'other' | 'target' | 'target2' | 'anonymous';
@@ -65,6 +101,8 @@ describe('API visibility', () => {
 			['spe', 'anonymous', false],
 			['folR', 'target', true],
 			['folR', 'other', false],
+			['folRNoMention', 'target', true],
+			['folRNoMention', 'other', false],
 			['speR', 'target', true],
 			['speR', 'follower', false],
 			['folM', 'target', true],
