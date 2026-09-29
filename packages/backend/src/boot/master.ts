@@ -200,6 +200,7 @@ function resolveTopology(config: Config): Topology {
 		...Array.from({ length: Math.max(forkedQueue, 0) }, () => ({ role: 'queue' as const, ownsDaemons: false })),
 	];
 
+	// デーモンは HTTP の起動処理 (boot/server.ts) の中で始まるので、HTTP ワーカーを優先して割り当てる。
 	if (masterRole !== 'server') {
 		const owner = workerAssignments.find((assignment) => assignment.role === 'server') ?? workerAssignments[0];
 		if (owner != null) {

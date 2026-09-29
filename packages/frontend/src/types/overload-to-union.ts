@@ -5,6 +5,7 @@
 
 type FlattenAndDedup<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never;
 
+// 取り出せる overload は 10 個まで。超えた分は警告なしに落ちるので、足りなければ段を増やす。
 export type OverloadToUnion<T> = FlattenAndDedup<
 	T extends {
 		(...args: infer A1): infer R1;

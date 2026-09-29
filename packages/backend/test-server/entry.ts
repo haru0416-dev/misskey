@@ -34,6 +34,7 @@ export async function setup() {
 
 	await startControllerEndpoints();
 
+	// テスト結果への非決定的な副作用を避けるため、ジョブキューはここでは起動せず、必要なテストだけが起動する。
 	console.log('controller initialized.');
 }
 

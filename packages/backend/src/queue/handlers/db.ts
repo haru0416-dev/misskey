@@ -1111,6 +1111,7 @@ async function processClipsForApi(
 		cursor = clips.at(-1)?.id ?? null;
 
 		for (const clip of clips) {
+			// 末尾の `]}` を除いて書き、ノートを足した後で閉じる。
 			const content = JSON.stringify(serializeClipForApi(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);

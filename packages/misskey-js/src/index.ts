@@ -17,6 +17,7 @@ export const rolePolicies = consts.rolePolicies;
 export const queueTypes = consts.queueTypes;
 export const achievementTypes = consts.achievementTypes;
 
+// `export * as api from` の形は api-extractor の dtsRollup が扱えないので、import してから export する。
 import * as api from './api.js';
 import * as entities from './entities.js';
 import * as acct from './acct.js';
