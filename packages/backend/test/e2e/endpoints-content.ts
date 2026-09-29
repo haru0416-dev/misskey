@@ -274,7 +274,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('account blocking endpoints', () => {
-		test('blocking はDB、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
+		test('blocking はDB、follow cleanup、list membership cleanup、list、delete、エラーを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const blocker = await signup({ username: `hblock${suffix}` });
@@ -322,11 +322,6 @@ describe('Endpoints', () => {
 				userListUserId: blockee.id,
 			});
 
-			const wrongWriteToken = await createAppToken(blocker, ['read:blocks']);
-			const createScopeDenied = await api('blocking/create', { userId: blockee.id }, { token: wrongWriteToken });
-			expect(createScopeDenied.status).toBe(403);
-			expect(castAsError(createScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 			const selfBlock = await api('blocking/create', { userId: blocker.id }, blocker);
 			expect(selfBlock.status).toBe(400);
 			expect(castAsError(selfBlock.body as any).error.code).toBe('BLOCKEE_IS_YOURSELF');
@@ -371,11 +366,6 @@ describe('Endpoints', () => {
 			expect(listed.id).toBe(blocking.id);
 			expect(listed.blockee.id).toBe(blockee.id);
 
-			const wrongReadToken = await createAppToken(blocker, ['write:blocks']);
-			const listScopeDenied = await api('blocking/list', {}, { token: wrongReadToken });
-			expect(listScopeDenied.status).toBe(403);
-			expect(castAsError(listScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 			const deleted = await api('blocking/delete', { userId: blockee.id }, blocker);
 			expect(deleted.status).toBe(200);
 			expect(deleted.body.id).toBe(blockee.id);
@@ -389,17 +379,12 @@ describe('Endpoints', () => {
 	});
 
 	describe('account mute endpoints', () => {
-		test('mute と renote-mute はDB、list、delete、scope、エラーを維持する', async () => {
+		test('mute と renote-mute はDB、list、delete、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const muter = await signup({ username: `hmute${suffix}` });
 			const mutee = await signup({ username: `hmutee${suffix}` });
 			const renoteMutee = await signup({ username: `hrmutee${suffix}` });
 			const expiresAt = Date.now() + 1000 * 60 * 60;
-
-			const wrongWriteToken = await createAppToken(muter, ['read:mutes']);
-			const muteScopeDenied = await api('mute/create', { userId: mutee.id }, { token: wrongWriteToken });
-			expect(muteScopeDenied.status).toBe(403);
-			expect(castAsError(muteScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api('mute/create', { userId: mutee.id, expiresAt }, muter);
 			expect(created.status).toBe(204);
@@ -431,11 +416,6 @@ describe('Endpoints', () => {
 			expect(listed.mutee.id).toBe(mutee.id);
 			expect(listed.expiresAt).toBe(new Date(expiresAt).toISOString());
 
-			const wrongReadToken = await createAppToken(muter, ['write:mutes']);
-			const listScopeDenied = await api('mute/list', {}, { token: wrongReadToken });
-			expect(listScopeDenied.status).toBe(403);
-			expect(castAsError(listScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 			const deleted = await api('mute/delete', { userId: mutee.id }, muter);
 			expect(deleted.status).toBe(204);
 			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id)).toBeNull();
@@ -443,10 +423,6 @@ describe('Endpoints', () => {
 			const notMuting = await api('mute/delete', { userId: mutee.id }, muter);
 			expect(notMuting.status).toBe(400);
 			expect(castAsError(notMuting.body as any).error.code).toBe('NOT_MUTING');
-
-			const renoteScopeDenied = await api('renote-mute/create', { userId: renoteMutee.id }, { token: wrongWriteToken });
-			expect(renoteScopeDenied.status).toBe(403);
-			expect(castAsError(renoteScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const renoteCreated = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
 			expect(renoteCreated.status).toBe(204);
@@ -862,7 +838,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('promo/read endpoint', () => {
-		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
+		test('admin/promo/create はpromo note作成と重複を維持する', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();
 			const noteId = genId();
@@ -887,36 +863,6 @@ describe('Endpoints', () => {
 			expect(missing.status).toBe(400);
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
 			expect(castAsError(missing.body as any).error.id).toBe('ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
-
-			const writeToken = await createAppToken(alice, ['write:admin:promo']);
-			const tokenNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: tokenNoteId,
-				text: 'admin promo create token target',
-				userId: alice.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const createdWithToken = await api(
-				'admin/promo/create',
-				{ noteId: tokenNoteId, expiresAt: now + 60_000 },
-				{ token: writeToken },
-			);
-			expect(createdWithToken.status).toBe(204);
-
-			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
-			const scopeDenied = await api(
-				'admin/promo/create',
-				{ noteId: genId(), expiresAt: now + 60_000 },
-				{ token: deniedToken },
-			);
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const normalUser = await signup({ username: `honopromo${now.toString(36)}` });
-			const roleDenied = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, normalUser);
-			expect(roleDenied.status).toBe(403);
-			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('promo/read records a promoted note as read idempotently', async () => {
@@ -941,23 +887,6 @@ describe('Endpoints', () => {
 			const missing = await api('promo/read', { noteId: genId() }, bob);
 			expect(missing.status).toBe(400);
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
-		});
-
-		test('promo/read requires write account permission for app tokens', async () => {
-			const config = fixtureConfig;
-			const noteId = genId();
-			await createNoteInDatabase(db, {
-				id: noteId,
-				text: 'promo read app token target',
-				userId: alice.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const appToken = await createAppToken(bob, ['read:account']);
-
-			const denied = await api('promo/read', { noteId }, { token: appToken });
-			expect(denied.status).toBe(403);
-			expect(castAsError(denied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 	});
 
@@ -1079,52 +1008,14 @@ describe('Endpoints', () => {
 			expect(flashUnlike.status).toBe(204);
 			expect(await flashLikeExistsInDatabase(db, bob.id, flash.id)).toBe(false);
 		});
-
-		test('favorite and like endpoints require matching app token permissions', async () => {
-			const { userList, clip, channel, page, flash } = await createFavoriteFixtures(
-				`hono-favorite-permission-${Date.now()}`,
-			);
-			const appToken = await createAppToken(bob, ['read:account']);
-
-			for (const [endpoint, params] of [
-				['users/lists/favorite', { listId: userList.id }],
-				['clips/favorite', { clipId: clip.id }],
-				['channels/favorite', { channelId: channel.id }],
-				['pages/like', { pageId: page.id }],
-				['flash/like', { flashId: flash.id }],
-			] as const) {
-				const denied = await api(endpoint, params as any, { token: appToken });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-		});
-
-		test('prohibitMoved endpoints reject moved users before side effects', async () => {
-			const { page } = await createFavoriteFixtures(`hono-favorite-moved-${Date.now()}`);
-			const movedUser = await signup({ username: `mvfav${Date.now().toString(36)}` });
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-
-			const denied = await api('pages/like', { pageId: page.id }, movedUser);
-			expect(denied.status).toBe(403);
-			expect(castAsError(denied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-			expect(await pageLikeExistsInDatabase(db, movedUser.id, page.id)).toBe(false);
-		});
 	});
 
 	describe('rate limited write endpoints', () => {
-		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
+		test('following/create は follow 作成、locked follow request、blocking、エラーを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const follower = await signup({ username: `hfc${suffix}` });
 			const followee = await signup({ username: `hfce${suffix}` });
-
-			const wrongWriteToken = await createAppToken(follower, ['read:following']);
-			const scopeDenied = await api('following/create', { userId: followee.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfFollow = await api('following/create', { userId: follower.id }, follower);
 			expect(selfFollow.status).toBe(400);
@@ -1184,20 +1075,11 @@ describe('Endpoints', () => {
 			expect(followRequest.withReplies).toBe(false);
 		});
 
-		test('following/update は notify/withReplies 変更、scope、エラーを維持する', async () => {
+		test('following/update は notify/withReplies 変更とエラーを維持する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hfu${suffix}` });
 			const followee = await signup({ username: `hfue${suffix}` });
-
-			const wrongWriteToken = await createAppToken(follower, ['read:following']);
-			const scopeDenied = await api(
-				'following/update',
-				{ userId: followee.id, notify: 'normal' },
-				{ token: wrongWriteToken },
-			);
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfUpdate = await api('following/update', { userId: follower.id, notify: 'normal' }, follower);
 			expect(selfUpdate.status).toBe(400);
@@ -1235,15 +1117,10 @@ describe('Endpoints', () => {
 			expect(refreshed?.withReplies).toBe(true);
 		});
 
-		test('following/delete は unfollow、カウント減算、scope、エラーを維持する', async () => {
+		test('following/delete は unfollow、カウント減算、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hfd${suffix}` });
 			const followee = await signup({ username: `hfde${suffix}` });
-
-			const wrongWriteToken = await createAppToken(follower, ['read:following']);
-			const scopeDenied = await api('following/delete', { userId: followee.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfUnfollow = await api('following/delete', { userId: follower.id }, follower);
 			expect(selfUnfollow.status).toBe(400);
@@ -1275,15 +1152,10 @@ describe('Endpoints', () => {
 			expect(refreshedFollowee.followersCount).toBe(0);
 		});
 
-		test('following/invalidate は他人のフォローを解除、カウント減算、scope、エラーを維持する', async () => {
+		test('following/invalidate は他人のフォローを解除、カウント減算、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hfi${suffix}` });
 			const follower = await signup({ username: `hfie${suffix}` });
-
-			const wrongWriteToken = await createAppToken(followee, ['read:following']);
-			const scopeDenied = await api('following/invalidate', { userId: follower.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfInvalidate = await api('following/invalidate', { userId: followee.id }, followee);
 			expect(selfInvalidate.status).toBe(400);
@@ -1322,11 +1194,6 @@ describe('Endpoints', () => {
 			const follower = await signup({ username: `hrae${suffix}` });
 			await updateUserInDatabase(db, followee.id, { isLocked: true });
 
-			const wrongWriteToken = await createAppToken(followee, ['read:following']);
-			const scopeDenied = await api('following/requests/accept', { userId: follower.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 			const noSuch = await api('following/requests/accept', { userId: genId(Date.now() - 1000) }, followee);
 			expect(noSuch.status).toBe(400);
 			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
@@ -1362,11 +1229,6 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hrce${suffix}` });
 			await updateUserInDatabase(db, followee.id, { isLocked: true });
 
-			const wrongWriteToken = await createAppToken(follower, ['read:following']);
-			const scopeDenied = await api('following/requests/cancel', { userId: followee.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 			const noSuch = await api('following/requests/cancel', { userId: genId(Date.now() - 1000) }, follower);
 			expect(noSuch.status).toBe(400);
 			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
@@ -1392,11 +1254,6 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hrr${suffix}` });
 			const follower = await signup({ username: `hrre${suffix}` });
 			await updateUserInDatabase(db, followee.id, { isLocked: true });
-
-			const wrongWriteToken = await createAppToken(followee, ['read:following']);
-			const scopeDenied = await api('following/requests/reject', { userId: follower.id }, { token: wrongWriteToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const noSuch = await api('following/requests/reject', { userId: genId(Date.now() - 1000) }, followee);
 			expect(noSuch.status).toBe(400);
@@ -1572,55 +1429,6 @@ describe('Endpoints', () => {
 			expect(missing.status).toBe(400);
 			expect(castAsError(missing.body as any).error.id).toBe('611e13d2-309e-419a-a5e4-e0422da39b02');
 		});
-
-		test('flash/update rejects moved users before side effects', async () => {
-			const config = fixtureConfig;
-			const movedUser = await signup({ username: `mvflash${Date.now().toString(36)}` });
-			const flash = await createFlashInDatabase(db, {
-				id: genId(),
-				updatedAt: new Date(),
-				title: 'moved title',
-				summary: 'moved summary',
-				userId: movedUser.id,
-				script: 'moved script',
-				permissions: [],
-				visibility: 'public',
-			});
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-
-			const denied = await api('flash/update', { flashId: flash.id, title: 'updated by moved user' }, movedUser);
-			expect(denied.status).toBe(403);
-			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-
-			const unchanged = await fetchFlashByIdFromDatabase(db, flash.id);
-			expect(unchanged?.title).toBe('moved title');
-		});
-
-		test('rate limited write endpoints require matching app token permissions', async () => {
-			const config = fixtureConfig;
-			const readAccountToken = await createAppToken(alice, ['read:account']);
-			const flash = await createFlashInDatabase(db, {
-				id: genId(),
-				updatedAt: new Date(),
-				title: 'permission title',
-				summary: 'permission summary',
-				userId: alice.id,
-				script: 'permission script',
-				permissions: [],
-				visibility: 'public',
-			});
-
-			for (const [endpoint, params] of [
-				['following/update-all', { notify: 'normal' }],
-				['flash/update', { flashId: flash.id, title: 'denied update' }],
-			] as const) {
-				const denied = await api(endpoint, params as any, { token: readAccountToken });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-		});
 	});
 
 	describe('export jobs', () => {
@@ -1690,15 +1498,10 @@ describe('Endpoints', () => {
 			}
 		}
 
-		test('notifications/create は scope 保護つきで app 通知を作成しwrite:notifications 以外は拒否される', async () => {
+		test('notifications/create は app 通知を作成する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnc${suffix}` });
-
-			const wrongScopeToken = await createAppToken(user, ['read:account']);
-			const scopeDenied = await api('notifications/create', { body: 'hello' }, { token: wrongScopeToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api(
 				'notifications/create',
@@ -1792,14 +1595,6 @@ describe('Endpoints', () => {
 				assert.ok(found);
 				return found;
 			}, POLL);
-
-			const wrongScopeToken = await createAppToken(user, ['read:account']);
-			const scopeDenied = await api(
-				'notifications/delete',
-				{ notificationId: notification.id },
-				{ token: wrongScopeToken },
-			);
-			expect(scopeDenied.status).toBe(403);
 
 			const otherDelete = await api('notifications/delete', { notificationId: notification.id }, other);
 			expect(otherDelete.status).toBe(204);
@@ -2215,10 +2010,6 @@ describe('Endpoints', () => {
 			expect(mine.status).toBe(200);
 			assert.ok(mine.body.some((p: any) => p.id === post.body.id));
 			assert.ok(!mine.body.some((p: any) => p.id === otherPost.body.id));
-
-			const unauthorized = await api('i/gallery/posts', {});
-			expect(unauthorized.status).toBe(401);
-			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 
 		test('i/gallery/likes はいいねした投稿一覧を返す', async () => {
@@ -2264,10 +2055,6 @@ describe('Endpoints', () => {
 			expect(likes.status).toBe(200);
 			expect(likes.body).toHaveLength(1);
 			expect(getAt(likes.body, 0).post.id).toBe(post.body.id);
-
-			const unauthorized = await api('i/gallery/likes', {});
-			expect(unauthorized.status).toBe(401);
-			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 

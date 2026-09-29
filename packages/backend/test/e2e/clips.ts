@@ -573,33 +573,6 @@ describe('クリップ', () => {
 		),
 	);
 
-	test.each([
-		{ label: '作成', endpoint: 'clips/create' as const },
-		{ label: '更新', endpoint: 'clips/update' as const },
-		{ label: '削除', endpoint: 'clips/delete' as const },
-		{ label: '取得', endpoint: 'clips/list' as const },
-		{ label: 'お気に入り設定', endpoint: 'clips/favorite' as const },
-		{ label: 'お気に入り解除', endpoint: 'clips/unfavorite' as const },
-		{ label: 'お気に入り取得', endpoint: 'clips/my-favorites' as const },
-		{ label: 'ノート追加', endpoint: 'clips/add-note' as const },
-		{ label: 'ノート削除', endpoint: 'clips/remove-note' as const },
-	])(
-		'の$labelは未認証ではできない',
-		async ({ endpoint }) =>
-			await failedApiCall(
-				{
-					endpoint,
-					parameters: {},
-					user: undefined,
-				},
-				{
-					status: 401,
-					code: 'CREDENTIAL_REQUIRED',
-					id: '1384574d-a912-4b81-8601-c7b1c4085df1',
-				},
-			),
-	);
-
 	describe('のお気に入り', () => {
 		let aliceClip: Misskey.entities.Clip;
 

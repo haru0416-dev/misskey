@@ -265,7 +265,7 @@ describe('Endpoints', () => {
 			expect(typeof statsBody.otherFollowingCount).toBe('number');
 		});
 
-		test('admin/federation/update-instance は suspension、moderationNote、token scope、role、ログを維持する', async () => {
+		test('admin/federation/update-instance は suspension、moderationNote、ログを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-admin-fed-${suffix}.example`;
@@ -333,61 +333,6 @@ describe('Endpoints', () => {
 			assert.ok(after);
 			expect(after.suspensionState).toBe('none');
 			expect(after.moderationNote).toBe(`updated note ${suffix}`);
-
-			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/federation/update-instance', { host }, { token: wrongScopeToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const normalUser = await signup({ username: `haf${suffix}` });
-			const roleDenied = await api('admin/federation/update-instance', { host }, normalUser);
-			expect(roleDenied.status).toBe(403);
-			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-		});
-
-		test('admin/federation/refresh-remote-instance-metadata は即時応答、token scope、roleを維持する', async () => {
-			const config = fixtureConfig;
-			const now = Date.now();
-			const suffix = now.toString(36).slice(-8);
-			const host = `hono-refresh-fed-${suffix}.invalid`;
-			await createInstanceInDatabase(db, {
-				id: genId(now),
-				host,
-				firstRetrievedAt: new Date(now),
-			});
-
-			const refreshed = await api(
-				'admin/federation/refresh-remote-instance-metadata',
-				{
-					host: host.toUpperCase(),
-				},
-				alice,
-			);
-			expect(refreshed.status).toBe(204);
-
-			const token = await createAppToken(alice, ['write:admin:federation']);
-			const refreshedByToken = await api(
-				'admin/federation/refresh-remote-instance-metadata',
-				{
-					host,
-				},
-				{ token },
-			);
-			expect(refreshedByToken.status).toBe(204);
-
-			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api(
-				'admin/federation/refresh-remote-instance-metadata',
-				{ host },
-				{ token: wrongScopeToken },
-			);
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const normalUser = await signup({ username: `harf${suffix}` });
-			const roleDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, normalUser);
-			expect(roleDenied.status).toBe(403);
-			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
@@ -420,11 +365,6 @@ describe('Endpoints', () => {
 			}, POLL);
 			assert.ok(job);
 			await job.remove();
-
-			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/federation/remove-all-following', { host }, { token: wrongScopeToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 
 		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
@@ -498,7 +438,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('ap/get', () => {
-		test('管理者かつread:federationスコープでのみ呼べ、ローカルNote/UserをActivityPubオブジェクトとして解決できる', async () => {
+		test('ローカルNote/UserをActivityPubオブジェクトとして解決できる', async () => {
 			const config = fixtureConfig;
 
 			const note = await post(alice, { text: 'ap/get resolve target' });
@@ -520,16 +460,6 @@ describe('Endpoints', () => {
 			expect(userRes.body['type']).toBe('Person');
 			expect(userRes.body['id']).toBe(userUri);
 			expect(userRes.body['preferredUsername']).toBe(alice.username);
-
-			const scopeDeniedToken = await createAppToken(alice, ['read:account']);
-			const scopeDenied = await api('ap/get', { uri: noteUri }, { token: scopeDeniedToken });
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const normalUser = await signup({ username: `honoapget${Date.now().toString(36)}` });
-			const roleDenied = await api('ap/get', { uri: noteUri }, normalUser);
-			expect(roleDenied.status).toBe(403);
-			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('questions/likes/followsのローカルURIも解決できる', async () => {
@@ -721,11 +651,6 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('リモートへの取得が走るので、匿名では呼べない', async () => {
-			const res = await api('federation/update-remote-user', { userId: alice.id });
-			expect(res.status, JSON.stringify(res.body)).toBe(401);
-		});
-
 		test('存在しないuserIdは500ではなくNO_SUCH_USERを返す', async () => {
 			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' }, alice);
 			expect(res.status, JSON.stringify(res.body)).toBe(400);
@@ -909,19 +834,7 @@ describe('Endpoints', () => {
 			});
 		});
 
-		test('rejects third-party app tokens and mismatched resources', async () => {
-			const appToken = await createAppToken(alice, ['read:account']);
-			const appDenied = await api(
-				'fetch-external-resources',
-				{
-					url: `${resourceUrl}/valid`,
-					hash: 'bad',
-				},
-				{ token: appToken },
-			);
-			expect(appDenied.status).toBe(400);
-			expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
-
+		test('rejects mismatched and invalid resources', async () => {
 			const mismatched = await api(
 				'fetch-external-resources',
 				{

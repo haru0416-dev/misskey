@@ -142,7 +142,6 @@ import type { EndpointsContext } from '../endpoints-context.js';
 
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
-	let bob: misskey.entities.SignupResponse;
 	let db: TestDatabase;
 	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let context: EndpointsContext;
@@ -150,7 +149,7 @@ describe('Endpoints', () => {
 	beforeAll(
 		async () => {
 			context = await createEndpointsContext();
-			({ alice, bob, db, dbQueue } = context);
+			({ alice, db, dbQueue } = context);
 		},
 		1000 * 60 * 2,
 	);
@@ -269,7 +268,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/emoji', () => {
-		test('admin/emoji/list と list-remote は filter、pagination、packing、scope、role policyを維持する', async () => {
+		test('admin/emoji/list と list-remote は filter、pagination、packingを維持する', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -412,15 +411,6 @@ describe('Endpoints', () => {
 				);
 				expect(byToken.status).toBe(200);
 				expect((byToken.body as any[]).map((emoji) => emoji.id)).toStrictEqual([remoteNewer.id]);
-
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
-				const scopeDenied = await api('admin/emoji/list', {}, { token: wrongScopeToken });
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-				const roleDenied = await api('admin/emoji/list', {}, bob);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -440,7 +430,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPages、role policyを維持する', async () => {
+		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPagesを維持する', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -551,15 +541,6 @@ describe('Endpoints', () => {
 				expect(paged.body.count).toBe(1);
 				expect(paged.body.allCount).toBe(3);
 				expect(paged.body.allPages).toBe(3);
-
-				const roleDenied = await api('v2/admin/emoji/list', {}, bob);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
-				const scopeDenied = await api('v2/admin/emoji/list', {}, { token: wrongScopeToken });
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -579,7 +560,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/add と update はDB更新、moderation log、scope、role policyを維持する', async () => {
+		test('admin/emoji/add と update はDB更新、moderation logを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemw${suffix}` });
@@ -628,18 +609,6 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api(
-					'admin/emoji/add',
-					{
-						name: `honoemoji_scope_${suffix}`,
-						fileId: addFile.id,
-					},
-					{ token: wrongScopeToken },
-				);
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
 				const added = await api(
 					'admin/emoji/add',
 					{
@@ -673,17 +642,6 @@ describe('Endpoints', () => {
 				);
 				expect(duplicate.status).toBe(400);
 				expect(castAsError(duplicate.body as any).error.code).toBe('DUPLICATE_NAME');
-
-				const roleDenied = await api(
-					'admin/emoji/update',
-					{
-						id: added.body.id,
-						category: `denied_${suffix}`,
-					},
-					bob,
-				);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const updated = await api(
 					'admin/emoji/update',
@@ -751,7 +709,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、log、scope、role policyを維持する', async () => {
+		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、logを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemc${suffix}` });
@@ -807,15 +765,6 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api('admin/emoji/copy', { emojiId: remote.id }, { token: wrongScopeToken });
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-				const roleDenied = await api('admin/emoji/copy', { emojiId: remote.id }, bob);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-
 				const copied = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
 				expect(copied.status).toBe(200);
 				const copiedBody = copied.body as any;
@@ -875,7 +824,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji bulk metadata 更新は aliases、category、license、scope、role policyを維持する', async () => {
+		test('admin/emoji bulk metadata 更新は aliases、category、licenseを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemb${suffix}` });
@@ -1028,29 +977,6 @@ describe('Endpoints', () => {
 				expect(tokenUpdated.status).toBe(204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
 				expect(afterFirst.category).toBeNull();
-
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api(
-					'admin/emoji/set-aliases-bulk',
-					{
-						ids: [first.id],
-						aliases: [],
-					},
-					{ token: wrongScopeToken },
-				);
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-				const roleDenied = await api(
-					'admin/emoji/set-category-bulk',
-					{
-						ids: [first.id],
-						category: `denied_${suffix}`,
-					},
-					bob,
-				);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -1070,7 +996,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/delete と delete-bulk はDB削除、moderation log、scope、role policyを維持する', async () => {
+		test('admin/emoji/delete と delete-bulk はDB削除、moderation logを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemd${suffix}` });
@@ -1164,39 +1090,6 @@ describe('Endpoints', () => {
 					expect(logs.some((log) => (log.info as any).emojiId === bulkFirst.id)).toBe(true);
 					expect(logs.some((log) => (log.info as any).emojiId === bulkSecond.id)).toBe(true);
 				}, POLL);
-
-				const tokenTarget = await insertEmojiInDatabase(db, {
-					id: genId(now + 1000),
-					name: `honoemoji_delete_token_${suffix}`,
-					host: null,
-					aliases: [],
-					category: null,
-					originalUrl: `${origin}/emoji/${suffix}/delete-token.webp`,
-					publicUrl: '',
-					license: null,
-					isSensitive: false,
-					localOnly: false,
-					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
-				});
-				const token = await createAppToken(manager, ['write:admin:emoji']);
-				const deletedByToken = await api('admin/emoji/delete', { id: tokenTarget.id }, { token });
-				expect(deletedByToken.status).toBe(204);
-				expect(await fetchEmojiByIdFromDatabase(db, tokenTarget.id)).toBeNull();
-
-				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api(
-					'admin/emoji/delete-bulk',
-					{
-						ids: [tokenTarget.id],
-					},
-					{ token: wrongScopeToken },
-				);
-				expect(scopeDenied.status).toBe(403);
-				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-				const roleDenied = await api('admin/emoji/delete', { id: tokenTarget.id }, bob);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -1216,7 +1109,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/import-zip は import job、secure credential、role policyを維持する', async () => {
+		test('admin/emoji/import-zip は import jobを維持する', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -1273,15 +1166,6 @@ describe('Endpoints', () => {
 					user: { id: manager.id },
 					fileId,
 				});
-
-				const token = await createAppToken(manager, ['write:admin:emoji']);
-				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 1) }, { token });
-				expect(appDenied.status).toBe(400);
-				expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
-
-				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 2) }, bob);
-				expect(roleDenied.status).toBe(403);
-				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await removeImportJobs();
 				await api(

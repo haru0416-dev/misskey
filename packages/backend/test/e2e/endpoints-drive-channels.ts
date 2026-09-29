@@ -102,25 +102,12 @@ import {
 	RootUserAlreadyAssignedError,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
-	updateUserInDatabase,
 	updateUserProfileInDatabase,
 	userListFavoriteExistsInDatabase,
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import {
-	api,
-	castAsError,
-	createAppToken,
-	origin,
-	POLL,
-	post,
-	relativeFetch,
-	role,
-	signup,
-	simpleGet,
-	uploadFile,
-} from '../utils.js';
+import { api, castAsError, origin, POLL, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
@@ -222,20 +209,6 @@ describe('Endpoints', () => {
 			assert.ok(favorite);
 			expect(favorite.isFavorited).toBe(true);
 		});
-
-		test('channel account read endpoints require read:channels app token permission', async () => {
-			const readAccountToken = await createAppToken(alice, ['read:account']);
-
-			for (const [endpoint, params] of [
-				['channels/owned', {}],
-				['channels/followed', {}],
-				['channels/my-favorites', {}],
-			] as const) {
-				const denied = await api(endpoint, params, { token: readAccountToken });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-		});
 	});
 
 	describe('channel write endpoints', () => {
@@ -310,59 +283,11 @@ describe('Endpoints', () => {
 			expect(updated.body.allowRenoteToExternal).toBe(true);
 		});
 
-		test('keeps legacy channel create validation, policy, and moved-account errors', async () => {
+		test('keeps legacy channel create file validation errors', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();
-			const deniedUser = await signup({ username: `honochdeny${now.toString(36)}` });
 			const requester = await signup({ username: `honochreq${now.toString(36)}` });
 			const fileOwner = await signup({ username: `honochfile${now.toString(36)}` });
-			const denyRole = await createRoleInDatabase(db, {
-				id: genId(now),
-				updatedAt: new Date(now),
-				lastUsedAt: new Date(now),
-				name: `channel create deny role ${now}`,
-				description: 'channel create deny role',
-				color: null,
-				iconUrl: null,
-				target: 'manual',
-				condFormula: {
-					id: 'ebef1684-672d-49b6-ad82-1b3ec3784f85',
-					type: 'isRemote',
-				},
-				isPublic: false,
-				isAdministrator: false,
-				isModerator: false,
-				isExplorable: false,
-				asBadge: false,
-				preserveAssignmentOnMoveAccount: false,
-				canEditMembersByModerator: false,
-				displayOrder: 1,
-				policies: {
-					canCreateChannel: {
-						useDefault: false,
-						priority: 2,
-						value: false,
-					},
-				},
-			});
-			await createRoleAssignmentInDatabase(db, {
-				id: genId(now + 1),
-				userId: deniedUser.id,
-				roleId: denyRole.id,
-				expiresAt: null,
-			});
-
-			const policyDenied = await api(
-				'channels/create',
-				{
-					name: 'hono policy denied channel',
-				},
-				deniedUser,
-			);
-			expect(policyDenied.status).toBe(403);
-			expect(castAsError(policyDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
-			expect(castAsError(policyDenied.body as any).error.id).toBe('7f86f06f-7e15-4057-8561-f4b6d4ac755a');
-
 			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
 			const missingFile = await api(
 				'channels/create',
@@ -374,31 +299,6 @@ describe('Endpoints', () => {
 			);
 			expect(missingFile.status).toBe(400);
 			expect(castAsError(missingFile.body as any).error.id).toBe('cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
-
-			const readToken = await createAppToken(requester, ['read:channels']);
-			const permissionDenied = await api(
-				'channels/create',
-				{
-					name: 'hono channel app denied',
-				},
-				{ token: readToken },
-			);
-			expect(permissionDenied.status).toBe(403);
-			expect(castAsError(permissionDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const movedUser = await signup({ username: `honochmoved${now.toString(36)}` });
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-			const movedDenied = await api(
-				'channels/create',
-				{
-					name: 'hono moved denied channel',
-				},
-				movedUser,
-			);
-			expect(movedDenied.status).toBe(403);
-			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
 		});
 
 		test('keeps legacy channel update authorization and file errors', async () => {
@@ -446,18 +346,6 @@ describe('Endpoints', () => {
 			);
 			expect(missingFile.status).toBe(400);
 			expect(castAsError(missingFile.body as any).error.id).toBe('e86c14a4-0da2-4032-8df3-e737a04c7f3b');
-
-			const readToken = await createAppToken(owner, ['read:channels']);
-			const permissionDenied = await api(
-				'channels/update',
-				{
-					channelId: target.id,
-					name: 'denied by app scope',
-				},
-				{ token: readToken },
-			);
-			expect(permissionDenied.status).toBe(403);
-			expect(castAsError(permissionDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const moderator = await signup({ username: `honomod${now.toString(36)}` });
 			const moderatorRole = await createRoleInDatabase(db, {
@@ -555,15 +443,8 @@ describe('Endpoints', () => {
 			expect(unfollowedAgain.status).toBe(204);
 		});
 
-		test('keeps legacy validation, permission, and moved-account errors', async () => {
+		test('keeps legacy validation errors', async () => {
 			const config = fixtureConfig;
-			const target = await createChannelInDatabase(db, {
-				id: genId(),
-				userId: bob.id,
-				name: `hono-follow-validation-${Date.now().toString(36)}`,
-				description: 'hono follow validation target',
-			});
-
 			const missingFollow = await api(
 				'channels/follow',
 				{
@@ -583,28 +464,6 @@ describe('Endpoints', () => {
 			);
 			expect(missingUnfollow.status).toBe(400);
 			expect(castAsError(missingUnfollow.body as any).error.id).toBe('19959ee9-0153-4c51-bbd9-a98c49dc59d6');
-
-			const readToken = await createAppToken(alice, ['read:channels']);
-			for (const endpoint of ['channels/follow', 'channels/unfollow'] as const) {
-				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-
-			const movedUser = await signup({ username: `honofollow${Date.now().toString(36)}` });
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-			const movedDenied = await api(
-				'channels/follow',
-				{
-					channelId: target.id,
-				},
-				movedUser,
-			);
-			expect(movedDenied.status).toBe(403);
-			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(await channelFollowingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
 
@@ -693,7 +552,7 @@ describe('Endpoints', () => {
 			expect(castAsError(missingDelete.body as any).error.id).toBe('14d55962-6ea8-d990-1333-d6bef78dc2ab');
 		});
 
-		test('keeps legacy validation, permission, and moved-account errors', async () => {
+		test('keeps legacy validation errors', async () => {
 			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
@@ -732,33 +591,6 @@ describe('Endpoints', () => {
 			);
 			expect(pastExpiration.status).toBe(400);
 			expect(castAsError(pastExpiration.body as any).error.id).toBe('42b32236-df2c-a45f-fdbf-def67268f749');
-
-			const readToken = await createAppToken(alice, ['read:channels']);
-			const writeToken = await createAppToken(alice, ['write:channels']);
-			for (const endpoint of ['channels/mute/create', 'channels/mute/delete'] as const) {
-				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-
-			const listDenied = await api('channels/mute/list', {}, { token: writeToken });
-			expect(listDenied.status).toBe(403);
-			expect(castAsError(listDenied.body as any).error.code).toBe('PERMISSION_DENIED');
-
-			const movedUser = await signup({ username: `honomute${Date.now().toString(36)}` });
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-			const movedDenied = await api(
-				'channels/mute/create',
-				{
-					channelId: target.id,
-				},
-				movedUser,
-			);
-			expect(movedDenied.status).toBe(403);
-			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(await channelMutingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
 

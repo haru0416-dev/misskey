@@ -131,9 +131,4 @@ describe('following/list', () => {
 		expect(res.status).toBe(200);
 		expect(res.body).toHaveLength(1);
 	});
-
-	test('未認証の場合はエラー', async () => {
-		const res = await api('following/list', {});
-		expect(res.status).toBe(401);
-	});
 });

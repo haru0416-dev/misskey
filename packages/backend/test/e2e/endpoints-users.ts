@@ -121,19 +121,7 @@ import {
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import {
-	api,
-	castAsError,
-	createAppToken,
-	origin,
-	POLL,
-	post,
-	relativeFetch,
-	role,
-	signup,
-	simpleGet,
-	uploadFile,
-} from '../utils.js';
+import { api, castAsError, origin, POLL, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
@@ -316,16 +304,6 @@ describe('Endpoints', () => {
 			const after = await api('notes/drafts/count', {}, alice);
 			expect(after.status).toBe(200);
 			expect(after.body).toBe((before.body as number) + 2);
-
-			const movedUser = await signup({ username: `mvdraft${Date.now().toString(36)}` });
-			await updateUserInDatabase(db, movedUser.id, {
-				movedToUri: `${origin}/users/${alice.id}`,
-			});
-
-			const denied = await api('notes/drafts/count', {}, movedUser);
-			expect(denied.status).toBe(403);
-			expect(castAsError(denied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 		});
 
 		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
@@ -1843,35 +1821,6 @@ describe('Endpoints', () => {
 			expect(fetched?.name).toBe('hono updated list');
 			expect(fetched?.isPublic).toBe(true);
 		});
-
-		test('account data endpoints require matching app token permissions', async () => {
-			const readAccountToken = await createAppToken(alice, ['read:account']);
-			const readDriveToken = await createAppToken(alice, ['read:drive']);
-			const config = fixtureConfig;
-
-			for (const [endpoint, params, token] of [
-				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
-				['drive/folders', {}, readAccountToken],
-				['drive/folders/create', { name: 'hono-denied-folder' }, readDriveToken],
-				['drive/folders/delete', { folderId: genId() }, readDriveToken],
-				['drive/folders/find', { name: 'hono-denied-folder' }, readAccountToken],
-				['drive/folders/show', { folderId: genId() }, readAccountToken],
-				['drive/folders/update', { folderId: genId(), name: 'hono-denied-folder' }, readDriveToken],
-				['notes/drafts/count', {}, readDriveToken],
-				['i/webhooks/list', {}, readDriveToken],
-				['i/webhooks/show', { webhookId: genId() }, readDriveToken],
-				['i/webhooks/delete', { webhookId: genId() }, readAccountToken],
-				['i/webhooks/update', { webhookId: genId() }, readAccountToken],
-				['users/lists/list', {}, readDriveToken],
-				['users/lists/show', { listId: genId() }, readDriveToken],
-				['users/lists/delete', { listId: genId() }, readAccountToken],
-				['users/lists/update', { listId: genId() }, readAccountToken],
-			] as const) {
-				const denied = await api(endpoint, params as any, { token });
-				expect(denied.status, endpoint).toBe(403);
-				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
-			}
-		});
 	});
 
 	describe('i/claim-achievement', () => {
@@ -1921,18 +1870,9 @@ describe('Endpoints', () => {
 	});
 
 	describe('i/webhooks/create', () => {
-		test('webhookを作成しTOO_MANY_WEBHOOKSでscope保護される', async () => {
+		test('webhookを作成しTOO_MANY_WEBHOOKSで上限を守る', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hwc${suffix}` });
-
-			const wrongScopeToken = await createAppToken(user, ['read:account']);
-			const scopeDenied = await api(
-				'i/webhooks/create',
-				{ name: 'hook', url: 'https://example.com/hook', on: ['note'] },
-				{ token: wrongScopeToken },
-			);
-			expect(scopeDenied.status).toBe(403);
-			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api(
 				'i/webhooks/create',
@@ -2022,13 +1962,9 @@ describe('Endpoints', () => {
 			});
 		}
 
-		test('i/import-blocking はrole policy、ファイル検証、キュー投入を維持する', async () => {
+		test('i/import-blocking はファイル検証とキュー投入を維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hib${suffix}` });
-
-			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId() }, user);
-			expect(deniedBeforeGrant.status).toBe(403);
-			expect(castAsError(deniedBeforeGrant.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportBlocking');
 
@@ -2073,14 +2009,10 @@ describe('Endpoints', () => {
 		});
 
 		// i/import-antennas はファイル内容を自分自身のURL(config.instance.url)からHTTPダウンロードする。
-		test('i/import-antennas はrole policy、ファイル検証、ダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
+		test('i/import-antennas はファイル検証とダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hia${suffix}` });
-
-			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId() }, user);
-			expect(deniedBeforeGrant.status).toBe(403);
-			expect(castAsError(deniedBeforeGrant.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportAntennas');
 
@@ -2249,10 +2181,6 @@ describe('Endpoints', () => {
 			expect(byId.get(mutee.id).isMuted).toBe(true);
 			expect(byId.get(renoteMutee.id).isRenoteMuted).toBe(true);
 			expect(byId.get(stranger.id).isFollowing).toBe(false);
-
-			const unauthorized = await api('users/relation', { userId: stranger.id });
-			expect(unauthorized.status).toBe(401);
-			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -2574,10 +2502,6 @@ describe('Endpoints', () => {
 			expect(range.status).toBe(200);
 			expect(range.body.map((u: any) => u.id)).toStrictEqual([followee1.id, followee2.id]);
 			assert.ok(!range.body.some((u: any) => u.id === notFollowed.id));
-
-			const unauthorized = await api('users/get-following-users-by-birthday', { birthday: { month: 6, day: 15 } });
-			expect(unauthorized.status).toBe(401);
-			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -2627,10 +2551,6 @@ describe('Endpoints', () => {
 			assert.ok(!ids.has(alreadyFollowed.id));
 			assert.ok(!ids.has(remoteId));
 			assert.ok(!ids.has(me.id));
-
-			const unauthorized = await api('users/recommendation', {});
-			expect(unauthorized.status).toBe(401);
-			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 

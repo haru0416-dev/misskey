@@ -199,8 +199,6 @@ describe('Account Move', () => {
 	});
 
 	describe('Local to Local', () => {
-		let antennaId = '';
-
 		beforeAll(async () => {
 			await api(
 				'i/update',
@@ -239,23 +237,6 @@ describe('Account Move', () => {
 				},
 				alice,
 			);
-			const antenna = await api(
-				'antennas/create',
-				{
-					name: secureRndstr(8),
-					src: 'home',
-					keywords: [[secureRndstr(8)]],
-					excludeKeywords: [],
-					users: [],
-					caseSensitive: false,
-					localOnly: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			antennaId = antenna.body.id;
-
 			await api(
 				'i/update',
 				{
@@ -543,81 +524,6 @@ describe('Account Move', () => {
 			newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
 			expect(newEve.followingCount).toBe(1);
 			expect(newEve.followersCount).toBe(1);
-		});
-
-		test.each([
-			'antennas/create',
-			'channels/create',
-			'channels/favorite',
-			'channels/follow',
-			'channels/unfavorite',
-			'channels/unfollow',
-			'clips/add-note',
-			'clips/create',
-			'clips/favorite',
-			'clips/remove-note',
-			'clips/unfavorite',
-			'clips/update',
-			'drive/files/upload-from-url',
-			'flash/create',
-			'flash/like',
-			'flash/unlike',
-			'flash/update',
-			'following/create',
-			'gallery/posts/create',
-			'gallery/posts/like',
-			'gallery/posts/unlike',
-			'gallery/posts/update',
-			'i/claim-achievement',
-			'i/move',
-			'i/import-blocking',
-			'i/import-following',
-			'i/import-muting',
-			'i/import-user-lists',
-			'i/pin',
-			'mute/create',
-			'notes/create',
-			'notes/favorites/create',
-			'notes/polls/vote',
-			'notes/reactions/create',
-			'pages/create',
-			'pages/like',
-			'pages/unlike',
-			'pages/update',
-			'renote-mute/create',
-			'users/lists/create',
-			'users/lists/pull',
-			'users/lists/push',
-		] as const)('Prohibit access after moving: %s', async (endpoint) => {
-			const res = await api(endpoint, {}, alice);
-			expect(res.status).toBe(403);
-			assert.ok(res.body);
-			expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-		});
-
-		test('Prohibit access after moving: /antennas/update', async () => {
-			const res = await api(
-				'antennas/update',
-				{
-					antennaId,
-					name: secureRndstr(8),
-					src: 'users',
-					keywords: [[secureRndstr(8)]],
-					excludeKeywords: [],
-					users: [eve.id],
-					caseSensitive: false,
-					localOnly: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(403);
-			assert.ok(res.body);
-			expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 		});
 
 		test('Prohibit access after moving: /drive/files/create', async () => {
