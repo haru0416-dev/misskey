@@ -2540,7 +2540,8 @@ describe('Timelines', () => {
 				});
 			});
 
-			describe('Channel TL', () => {
+			// チャンネルのタイムラインは DB だけから読み、enableFanoutTimeline を見ない。同じ内容を 2 回走らせないよう片方だけで回す。
+			describe.skipIf(enableFanoutTimeline)('Channel TL', () => {
 				test('閲覧中チャンネルのノートが含まれる', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 

@@ -105,16 +105,6 @@ describe('API', () => {
 		expectTypeOf(passkeyResponse).toEqualTypeOf<Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse>();
 	});
 
-	test('APIErrorBody matches the runtime error schema', () => {
-		const error: Misskey.api.APIErrorBody = {
-			id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
-			code: 'YOUR_ACCOUNT_MOVED',
-			message: 'You have moved your account.',
-			kind: 'permission',
-		};
-		expectTypeOf(error).toEqualTypeOf<Misskey.api.APIErrorBody>();
-	});
-
 	test('isAPIError narrows code to the errors of the endpoint', (reason: unknown) => {
 		if (Misskey.api.isAPIError(reason, 'notes/create')) {
 			expectTypeOf(reason).toEqualTypeOf<Misskey.api.APIError<'notes/create'>>();

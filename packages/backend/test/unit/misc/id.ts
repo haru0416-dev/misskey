@@ -7,17 +7,6 @@ import { describe, expect, test } from 'vitest';
 import { genUuidv7, parseUuidv7, parseUuidv7Full, uuidv7RegExp } from '@/misc/id/uuidv7.js';
 import fc from 'fast-check';
 
-describe('misc:id', () => {
-	test('uuidv7', () => {
-		const date = Date.now();
-		const gotUuidv7 = genUuidv7(date);
-		expect(gotUuidv7).toMatch(uuidv7RegExp);
-		expect(parseUuidv7(gotUuidv7).date.getTime()).toBe(date);
-		expect(gotUuidv7[12]).toBe('7');
-		expect('89ab').toContain(gotUuidv7[16]);
-	});
-});
-
 /*
  * ID は全ページングのソートキーで、順序が崩れるとタイムラインが静かに壊れる。
  * 例で押さえられるのは代表値だけなので、生成した時刻で往復と単調性を確かめる。
@@ -32,6 +21,9 @@ describe('uuidv7 (property)', () => {
 				const id = genUuidv7(date);
 				expect(id).toMatch(uuidv7RegExp);
 				expect(parseUuidv7(id).date.getTime()).toBe(date);
+				// 書式の正規表現は 16 進 32 桁しか見ないので、version (7) と variant (10xx) はここで見る。
+				expect(id[12]).toBe('7');
+				expect('89ab').toContain(id[16]);
 			}),
 			{ numRuns: 1000 },
 		);

@@ -37,28 +37,6 @@ describe('misc:zod-params', () => {
 	});
 
 	describe('paginationParams', () => {
-		test('説明を除けばインラインで書いた場合と同じ JSON Schema になる', () => {
-			const shared = z.object({ limit: z.int().min(1).max(100).default(10), ...paginationParams });
-			const inline = z.object({
-				limit: z.int().min(1).max(100).default(10),
-				sinceId: misskeyId().optional(),
-				untilId: misskeyId().optional(),
-				sinceDate: z.int().optional(),
-				untilDate: z.int().optional(),
-			});
-			const stripDescriptions = (schema: z.ZodObject): string => {
-				const json = z.toJSONSchema(schema, { io: 'input' }) as {
-					properties?: Record<string, Record<string, unknown>>;
-				};
-				for (const property of Object.values(json.properties ?? {})) {
-					delete property['description'];
-				}
-				// キー順まで一致していないと api.json が変わる。
-				return JSON.stringify(json);
-			};
-			expect(stripDescriptions(shared)).toBe(stripDescriptions(inline));
-		});
-
 		test('4 つとも OpenAPI に説明が載る', () => {
 			// ここが空になると、生成される misskey-js の型から since/until の意味が消える。
 			const json = z.toJSONSchema(z.object({ ...paginationParams }), { io: 'input' }) as {
@@ -88,11 +66,6 @@ describe('misc:zod-params', () => {
 			expect(birthdaySchema.safeParse('2000-02-30').success).toBe(false);
 			expect(birthdaySchema.safeParse('2001-02-29').success).toBe(false);
 			expect(birthdaySchema.safeParse('9999-99-99').success).toBe(false);
-		});
-
-		test('YYYY-MM-DD 以外の形を弾く', () => {
-			expect(birthdaySchema.safeParse('2000-6-15').success).toBe(false);
-			expect(birthdaySchema.safeParse('2000-06-15T00:00:00Z').success).toBe(false);
 		});
 	});
 

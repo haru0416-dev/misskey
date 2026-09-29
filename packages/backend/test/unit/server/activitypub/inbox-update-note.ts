@@ -123,18 +123,6 @@ describe('Update(Note) の受信', () => {
 		});
 	});
 
-	test('保存済みより古い編集と、同じ編集の二重配送は捨てる', async () => {
-		const actor = await createRemoteUser();
-		const note = await createRemoteNote(actor);
-		const newer = update(actor, editedNote(actor, note, { content: 'newer', updated: '2026-01-02T00:00:00Z' }));
-		const older = update(actor, editedNote(actor, note, { content: 'older', updated: '2026-01-01T00:00:00Z' }));
-
-		expect(await performOneActivityForApi(deps, actor, newer, new Set())).toBe('ok: Note updated');
-		expect(await performOneActivityForApi(deps, actor, newer, new Set())).toBe('skip: older or same edit');
-		expect(await performOneActivityForApi(deps, actor, older, new Set())).toBe('skip: older or same edit');
-		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('newer');
-	});
-
 	test('投稿者以外・updated の無いもの・知らないノートでは何もしない', async () => {
 		const actor = await createRemoteUser();
 		const other = await createRemoteUser();

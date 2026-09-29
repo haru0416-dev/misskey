@@ -173,21 +173,9 @@ describe('MkUrlPreview', () => {
 		assert.strictEqual(iframe?.parentElement?.style.paddingTop, '200px');
 	});
 
-	test('Loading a tweet in iframe', async () => {
+	test.each(['twitter.com', 'x.com'])('Loading a post on %s in iframe', async (host) => {
 		const iframe = await renderAndOpenPreview({
-			url: 'https://twitter.com/i/web/status/1685072521782325249',
-		});
-		assert.exists(iframe, 'iframe should exist');
-		assert.strictEqual(iframe?.getAttribute('allow'), 'fullscreen;web-share');
-		assert.strictEqual(
-			iframe?.getAttribute('sandbox'),
-			'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin',
-		);
-	});
-
-	test('Loading a post in iframe', async () => {
-		const iframe = await renderAndOpenPreview({
-			url: 'https://x.com/i/web/status/1685072521782325249',
+			url: `https://${host}/i/web/status/1685072521782325249`,
 		});
 		assert.exists(iframe, 'iframe should exist');
 		assert.strictEqual(iframe?.getAttribute('allow'), 'fullscreen;web-share');

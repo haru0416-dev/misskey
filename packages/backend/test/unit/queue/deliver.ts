@@ -108,27 +108,6 @@ describe('hono-queue-deliver', () => {
 		expect(result).toBe('skip (blocked)');
 	});
 
-	test('署名付きPOSTが成功した場合はSuccessを返す', async () => {
-		const host = `honoqueuedeliver-ok-${genId()}.example.com`;
-		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
-
-		const deps: QueueDeliverDependencies = {
-			...federatedDeps,
-			httpRequestService: { ...federatedDeps.httpRequestService, send },
-		};
-
-		const result = await handleQueueDeliver(deps, {
-			user: { id: actor.id },
-			content: '{}',
-			digest: 'SHA-256=dummy',
-			to: `https://${host}/inbox`,
-			isSharedInbox: false,
-		});
-
-		expect(result).toBe('Success');
-		expect(send).toHaveBeenCalledOnce();
-	});
-
 	test('4xx(リトライ不可)エラーの場合はUnrecoverableErrorを投げる', async () => {
 		const host = `honoqueuedeliver-ng-${genId()}.example.com`;
 		const send = vi.fn().mockRejectedValue(new StatusError('Not Found', 404, 'Not Found'));

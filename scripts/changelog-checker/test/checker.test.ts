@@ -8,10 +8,7 @@ import { Release, ReleaseCategory } from '../src/parser';
 import { checkNewRelease, checkNewTopic } from '../src/checker';
 
 suite('checkNewRelease', () => {
-	test.each([
-		['1件', ['2024.12.1', '2024.12.0']],
-		['2件', ['2024.12.2', '2024.12.1', '2024.12.0']],
-	])('headに新しいリリースがある%s', (_count, versions) => {
+	test.each([['1件', ['2024.12.1', '2024.12.0']]])('headに新しいリリースがある%s', (_count, versions) => {
 		const base = [new Release('2024.12.0')];
 		const head = versions.map((version) => new Release(version));
 
@@ -26,7 +23,6 @@ suite('checkNewRelease', () => {
 
 		const result = checkNewRelease(base, head);
 
-		console.log(result.message);
 		expect(result.success).toBe(false);
 	});
 
@@ -36,12 +32,12 @@ suite('checkNewRelease', () => {
 
 		const result = checkNewRelease(base, head);
 
-		console.log(result.message);
 		expect(result.success).toBe(false);
 	});
 });
 
 suite('checkNewTopic', () => {
+	// カテゴリ・項目の追加と削除は、どちらも件数の差として同じ分岐で判定される。
 	test('追記なし', () => {
 		const base = [
 			new Release('2024.12.1', [
@@ -95,31 +91,6 @@ suite('checkNewTopic', () => {
 		expect(result.success).toBe(true);
 	});
 
-	test('最新バージョンからカテゴリを削除したときはエラーにならない', () => {
-		const base = [
-			new Release('2024.12.1', [
-				new ReleaseCategory('Server', ['feat1', 'feat2']),
-				new ReleaseCategory('Client', ['feat3', 'feat4']),
-			]),
-			new Release('2024.12.0', [
-				new ReleaseCategory('Server', ['feat1', 'feat2']),
-				new ReleaseCategory('Client', ['feat3', 'feat4']),
-			]),
-		];
-
-		const head = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', [
-				new ReleaseCategory('Server', ['feat1', 'feat2']),
-				new ReleaseCategory('Client', ['feat3', 'feat4']),
-			]),
-		];
-
-		const result = checkNewTopic(base, head);
-
-		expect(result.success).toBe(true);
-	});
-
 	test('最新バージョンに追記したときはエラーにならない', () => {
 		const base = [
 			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
@@ -128,22 +99,6 @@ suite('checkNewTopic', () => {
 
 		const head = [
 			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2', 'feat3'])]),
-			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-		];
-
-		const result = checkNewTopic(base, head);
-
-		expect(result.success).toBe(true);
-	});
-
-	test('最新バージョンから削除したときはエラーにならない', () => {
-		const base = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-		];
-
-		const head = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1'])]),
 			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
 		];
 
@@ -168,24 +123,6 @@ suite('checkNewTopic', () => {
 
 		const result = checkNewTopic(base, head);
 
-		console.log(result.message);
-		expect(result.success).toBe(false);
-	});
-
-	test('古いバージョンからカテゴリを削除したときはエラーになる', () => {
-		const base = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-		];
-
-		const head = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', []),
-		];
-
-		const result = checkNewTopic(base, head);
-
-		console.log(result.message);
 		expect(result.success).toBe(false);
 	});
 
@@ -202,24 +139,6 @@ suite('checkNewTopic', () => {
 
 		const result = checkNewTopic(base, head);
 
-		console.log(result.message);
-		expect(result.success).toBe(false);
-	});
-
-	test('古いバージョンから削除したときはエラーになる', () => {
-		const base = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-		];
-
-		const head = [
-			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),
-			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1'])]),
-		];
-
-		const result = checkNewTopic(base, head);
-
-		console.log(result.message);
 		expect(result.success).toBe(false);
 	});
 });

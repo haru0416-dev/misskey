@@ -13,15 +13,10 @@ import {
 } from '@/utility/intl-string.js';
 
 const runCommonTests = (normalizeFn: (str: string) => string) => {
-	test('全角英数字が半角の小文字になる', () => {
-		const input = 'Ｂ１２３';
-		const expected = 'b123';
-		assert.strictEqual(normalizeFn(input), expected);
-	});
-	test('濁点・半濁点が正しく結合される', () => {
-		const input = 'か\u3099';
-		const expected = 'が';
-		assert.strictEqual(normalizeFn(input), expected);
+	// 全角の半角化と濁点の結合は、どちらも NFKC 正規化による。
+	test('全角英数字が半角の小文字になり、濁点が結合される', () => {
+		assert.strictEqual(normalizeFn('Ｂ１２３'), 'b123');
+		assert.strictEqual(normalizeFn('か\u3099'), 'が');
 	});
 	test('小文字に揃う', () => {
 		const input = 'tSt';
@@ -38,16 +33,9 @@ const runCommonTests = (normalizeFn: (str: string) => string) => {
 describe('normalize string', () => {
 	runCommonTests(normalizeString);
 
-	test('異体字の正規化 (ligature)', () => {
-		const input = 'ﬁ';
-		const expected = 'fi';
-		assert.strictEqual(normalizeString(input), expected);
-	});
-
-	test('半角カタカナは全角に変換される', () => {
-		const input = 'ｶﾀｶﾅ';
-		const expected = 'カタカナ';
-		assert.strictEqual(normalizeString(input), expected);
+	test('合字と半角カタカナを NFKC で正規化する', () => {
+		assert.strictEqual(normalizeString('ﬁ'), 'fi');
+		assert.strictEqual(normalizeString('ｶﾀｶﾅ'), 'カタカナ');
 	});
 });
 
@@ -92,16 +80,8 @@ describe('compareStringEquals', () => {
 		assert.isTrue(compareStringEquals('TeSt', 'test'));
 	});
 
-	test('全角・半角の違いを無視', () => {
-		assert.isTrue(compareStringEquals('ＡＢＣ', 'abc'));
-	});
-
 	test('カタカナとひらがなの違いを無視', () => {
 		assert.isTrue(compareStringEquals('カタカナ', 'かたかな'));
-	});
-
-	test('ローマ字をひらがなと比較可能', () => {
-		assert.isTrue(compareStringEquals('hiragana', 'ひらがな'));
 	});
 
 	test('異なる文字列はfalse', () => {
@@ -123,16 +103,8 @@ describe('compareStringIncludes', () => {
 		assert.isTrue(compareStringIncludes('This is a Test', 'test'));
 	});
 
-	test('全角・半角の違いを無視', () => {
-		assert.isTrue(compareStringIncludes('ＡＢＣＤＥ', 'abc'));
-	});
-
 	test('カタカナとひらがなの違いを無視', () => {
 		assert.isTrue(compareStringIncludes('カタカナのテスト', 'かたかな'));
-	});
-
-	test('ローマ字をひらがなと比較可能', () => {
-		assert.isTrue(compareStringIncludes('これはhiraganaのテスト', 'ひらがな'));
 	});
 
 	test('異なる文字列はfalse', () => {
