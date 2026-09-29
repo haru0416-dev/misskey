@@ -1172,6 +1172,12 @@ export const endpointMetas = {
 								type: 'string',
 							},
 						},
+						updatedAt: {
+							type: 'string',
+							optional: true,
+							nullable: false,
+							format: 'date-time',
+						},
 					},
 				},
 			},

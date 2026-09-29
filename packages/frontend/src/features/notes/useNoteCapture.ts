@@ -176,6 +176,31 @@ const pollingScheduler = new PollingScheduler(async () => {
 	}
 }, POLLING_INTERVAL);
 
+// ポーリングでの編集の検出。リアクションの queue (追加から 5 分・新しい順に 30 件) とは分ける。編集は古いノートにも
+// 起きるので表示中のノートをすべて見るが、編集はまれなので間隔を長くする。
+const EDIT_POLLING_INTERVAL = 1000 * 60;
+// notes/show-partial-bulk の noteIds の上限。
+const EDIT_POLLING_CHUNK = 100;
+const editPollingTargets = new Map<string, number>();
+const editFetchEvent = new EventEmitter<{ [id: string]: (updatedAt: string | undefined) => void }>();
+const editPollingScheduler = new PollingScheduler(async () => {
+	const ids = [...editPollingTargets.keys()];
+	if (ids.length === 0) {
+		editPollingScheduler.stop();
+		return;
+	}
+	try {
+		for (let i = 0; i < ids.length; i += EDIT_POLLING_CHUNK) {
+			const items = await misskeyApi('notes/show-partial-bulk', { noteIds: ids.slice(i, i + EDIT_POLLING_CHUNK) });
+			for (const item of items) {
+				editFetchEvent.emit(item.id, item.updatedAt);
+			}
+		}
+	} catch {
+		// 打ち切りの無い繰り返しなので、オフラインの間に毎回の失敗を未処理のエラーとして報告させない。次の回に問い合わせ直す。
+	}
+}, EDIT_POLLING_INTERVAL);
+
 /** 購読を始め、解除する関数を返す。解除は呼び出し元の onUnmounted が行う (クリック時の購読も対象にするため)。 */
 function pollingSubscribe(props: {
 	note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>;
@@ -252,30 +277,21 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 		}
 	}
 
-	function capture(withHandler = false): void {
+	function capture(): void {
 		connection.send('sr', { id: note.id });
-		if (withHandler) {
-			connection.on('noteUpdated', onStreamNoteUpdated);
-		}
 	}
 
-	function decapture(withHandler = false): void {
-		connection.send('un', { id: note.id });
-		if (withHandler) {
-			connection.off('noteUpdated', onStreamNoteUpdated);
-		}
+	connection.on('noteUpdated', onStreamNoteUpdated);
+	// 未接続の間の送信は接続時にまとめて送られ、_connected_ でも送り直すので 2 回の購読になる (解除 1 回では残る)。
+	if (connection.state === 'connected') {
+		capture();
 	}
-
-	function onStreamConnected() {
-		capture(false);
-	}
-
-	capture(true);
-	connection.on('_connected_', onStreamConnected);
+	connection.on('_connected_', capture);
 
 	return () => {
-		decapture(true);
-		connection.off('_connected_', onStreamConnected);
+		connection.send('un', { id: note.id });
+		connection.off('noteUpdated', onStreamNoteUpdated);
+		connection.off('_connected_', capture);
 	};
 }
 
@@ -283,40 +299,55 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 const SUBSCRIBE_WINDOW = 1000 * 60 * 5;
 
 /**
- * 編集の合図だけを購読する。返信先・引用先はリアクションを出さず、同じ画面に単独で出ていなければ誰も購読していないので、
- * これで編集を受け取る。解除する関数を返す (購読しなかったときは何もしない関数)。
- * @param displayedNote 画面に出している外側のノート。これが新しいときだけ購読する (useNoteCapture と同じ基準)。
- * null なら新しさを問わない (詳細ページのように、古いノートを開いて見ている画面で使う)。
+ * 編集の合図だけを購読し、解除する関数を返す。リアクション等は受け取らないので、投稿の新しさを問わず表示中のノートすべてに使える。
+ * リアルタイムモードでなければ、リアクションと一緒にポーリングで届く最終の編集日時の変化で編集を見つける。
  */
-export function subscribeNoteEdits(
-	note: Pick<Misskey.entities.Note, 'id'>,
-	displayedNote: Pick<Misskey.entities.Note, 'createdAt'> | null,
-): () => void {
-	if (!$i || !store.realtimeMode) {
-		return () => {};
+export function subscribeNoteEdits(note: Pick<Misskey.entities.Note, 'id' | 'createdAt' | 'updatedAt'>): () => void {
+	if ($i && store.realtimeMode) {
+		const connection = useStream();
+		function onStreamNoteUpdated(data: NoteUpdatedEvent): void {
+			if (data.id === note.id && data.type === 'edited') {
+				refetchEditedNote(data.id, data.body.updatedAt);
+			}
+		}
+		function capture(): void {
+			connection.send('se', { id: note.id });
+		}
+		// 未接続の間の送信は接続時にまとめて送られ、_connected_ でも送り直すので 2 回の購読になる (解除 1 回では残る)。
+		if (connection.state === 'connected') {
+			capture();
+		}
+		connection.on('noteUpdated', onStreamNoteUpdated);
+		connection.on('_connected_', capture);
+		return () => {
+			connection.send('ue', { id: note.id });
+			connection.off('noteUpdated', onStreamNoteUpdated);
+			connection.off('_connected_', capture);
+		};
 	}
-	if (displayedNote != null && Date.now() - new Date(displayedNote.createdAt).getTime() > SUBSCRIBE_WINDOW) {
-		return () => {};
-	}
-	const connection = useStream();
-	function onStreamNoteUpdated(data: NoteUpdatedEvent): void {
-		if (data.id === note.id && data.type === 'edited') {
-			refetchEditedNote(data.id, data.body.updatedAt);
+
+	// 差し替えた後も同じ購読が続くので、見つけた編集の日時を覚えて同じ編集で取り直し続けない。
+	let known = note.updatedAt;
+	function onFetched(updatedAt: string | undefined): void {
+		if (updatedAt != null && updatedAt !== known) {
+			known = updatedAt;
+			refetchEditedNote(note.id, updatedAt);
 		}
 	}
-	function capture(): void {
-		connection.send('sr', { id: note.id });
-	}
-	// 未接続の間の送信は接続時にまとめて送られ、_connected_ でも送り直すので 2 回の購読になる (解除 1 回では残る)。
-	if (connection.state === 'connected') {
-		capture();
-	}
-	connection.on('noteUpdated', onStreamNoteUpdated);
-	connection.on('_connected_', capture);
+	editPollingTargets.set(note.id, (editPollingTargets.get(note.id) ?? 0) + 1);
+	editFetchEvent.on(note.id, onFetched);
+	editPollingScheduler.start();
 	return () => {
-		connection.send('un', { id: note.id });
-		connection.off('noteUpdated', onStreamNoteUpdated);
-		connection.off('_connected_', capture);
+		const count = editPollingTargets.get(note.id) ?? 0;
+		if (count <= 1) {
+			editPollingTargets.delete(note.id);
+		} else {
+			editPollingTargets.set(note.id, count - 1);
+		}
+		editFetchEvent.off(note.id, onFetched);
+		if (editPollingTargets.size === 0) {
+			editPollingScheduler.stop();
+		}
 	};
 }
 

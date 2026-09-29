@@ -233,7 +233,7 @@ import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { noteEvents, noteRenderKey, useNoteCapture } from '@/features/notes/useNoteCapture.js';
-import { useEditedNestedNotes } from '@/features/notes/useEditedNestedNotes.js';
+import { useNoteEdits } from '@/features/notes/useNoteEdits.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
@@ -312,9 +312,7 @@ const { $note: $appearNote, subscribe: subscribeManuallyToNoteCapture } = useNot
 	mock: props.mock,
 });
 
-const { reply: replyNote, quote: quoteNote } = useEditedNestedNotes(props.note, note, {
-	subscribe: props.mock ? 'never' : 'recent',
-});
+const { reply: replyNote, quote: quoteNote } = useNoteEdits(props.note, note, { subscribe: !props.mock });
 
 const rootEl = useTemplateRef('rootEl');
 const menuButton = useTemplateRef('menuButton');

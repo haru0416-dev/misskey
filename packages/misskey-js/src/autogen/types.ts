@@ -32294,6 +32294,8 @@ export interface operations {
                         reactionEmojis: {
                             [key: string]: string;
                         };
+                        /** Format: date-time */
+                        updatedAt?: string;
                     }[];
                 };
             };

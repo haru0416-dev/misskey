@@ -13,7 +13,8 @@ const stream = Object.assign(new EventEmitter(), { send: vi.fn(), state: 'connec
 
 vi.mock('@/stream.js', () => ({ useStream: () => stream }));
 vi.mock('@/i.js', () => ({ $i: { id: 'me' } }));
-vi.mock('@/store.js', () => ({ store: { realtimeMode: true } }));
+const { storeState } = vi.hoisted(() => ({ storeState: { realtimeMode: true } }));
+vi.mock('@/store.js', () => ({ store: storeState }));
 const { misskeyApiMock } = vi.hoisted(() => ({ misskeyApiMock: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: misskeyApiMock }));
 // プラグイン (note_view_interruptor) が入っている状態を作る。
@@ -62,6 +63,42 @@ describe('useNoteCapture', () => {
 		expect(stream.listenerCount('noteUpdated')).toBe(0);
 		expect(stream.listenerCount('_connected_')).toBe(0);
 		expect(stream.send).toHaveBeenCalledWith('un', { id: 'old-note' });
+	});
+
+	test('未接続の間に始めた購読は、接続したときに 1 回だけ送る (解除 1 回でサーバーに残らない)', async () => {
+		const { useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		const note = {
+			id: 'offline-note',
+			createdAt: new Date().toISOString(),
+			reactions: {},
+			reactionCount: 0,
+			reactionEmojis: {},
+			myReaction: null,
+			poll: null,
+		} as unknown as Misskey.entities.Note;
+		stream.send.mockClear();
+		stream.state = 'reconnecting';
+		try {
+			const { unmount } = render(
+				defineComponent({
+					setup() {
+						useNoteCapture({ note, parentNote: null });
+						return () => h('div');
+					},
+				}),
+			);
+			expect(stream.send).not.toHaveBeenCalled();
+			stream.emit('_connected_');
+			expect(stream.send.mock.calls.filter(([type, body]) => type === 'sr' && body.id === 'offline-note')).toHaveLength(
+				1,
+			);
+			unmount();
+			expect(stream.send.mock.calls.filter(([type, body]) => type === 'un' && body.id === 'offline-note')).toHaveLength(
+				1,
+			);
+		} finally {
+			stream.state = 'connected';
+		}
 	});
 
 	test('編集の合図を受けたら、同じノートを何か所に出していても 1 回だけ取り直して配る', async () => {
@@ -189,15 +226,15 @@ describe('noteRenderKey', () => {
 	});
 });
 
-describe('useEditedNestedNotes', () => {
+describe('useNoteEdits', () => {
 	async function mountNested(source: Misskey.entities.Note) {
-		const { useEditedNestedNotes } = await import('@/features/notes/useEditedNestedNotes.js');
+		const { useNoteEdits } = await import('@/features/notes/useNoteEdits.js');
 		const viewed = pluginState.interrupt ? pluginState.interrupt(structuredClone(source))! : source;
-		let nested!: ReturnType<typeof useEditedNestedNotes>;
+		let nested!: ReturnType<typeof useNoteEdits>;
 		render(
 			defineComponent({
 				setup() {
-					nested = useEditedNestedNotes(source, viewed, { subscribe: 'recent' });
+					nested = useNoteEdits(source, viewed, { subscribe: false });
 					return () => h('div');
 				},
 			}),
@@ -264,14 +301,16 @@ describe('useEditedNestedNotes', () => {
 		expect(nested.quote.value?.text).toBe('[x] *** after');
 	});
 
-	test('新しいノートの中の引用先は編集の合図を購読し、合図で取り直して差し替える (古いノートでは購読しない)', async () => {
-		const { useEditedNestedNotes } = await import('@/features/notes/useEditedNestedNotes.js');
-		const young = {
-			...outer,
-			id: 'young',
-			createdAt: new Date().toISOString(),
-			renote: { ...quoted, id: 'yq' },
-		} as Misskey.entities.Note;
+	test('プラグインがノートごと隠す判断をしても、前の表示を保つ (消えたノートとして出さない)', async () => {
+		const { globalEvents } = await import('@/events.js');
+		pluginState.interrupt = (note) => (note.renote?.text?.includes('secret') ? null : note);
+		const nested = await mountNested(outer);
+		globalEvents.emit('noteEdited', edited);
+		expect(nested.quote.value?.text).toBe('before');
+	});
+
+	test('投稿の新しさを問わず、表示するノートと引用先の編集の合図だけを購読し、合図で取り直して差し替える', async () => {
+		const { useNoteEdits } = await import('@/features/notes/useNoteEdits.js');
 		const old = {
 			...outer,
 			id: 'old',
@@ -280,47 +319,28 @@ describe('useEditedNestedNotes', () => {
 		} as Misskey.entities.Note;
 		stream.send.mockClear();
 		misskeyApiMock.mockReset();
-		misskeyApiMock.mockResolvedValue({ ...edited, id: 'yq' });
-		let nested!: ReturnType<typeof useEditedNestedNotes>;
+		misskeyApiMock.mockResolvedValue({ ...edited, id: 'oq' });
+		let nested!: ReturnType<typeof useNoteEdits>;
 		const { unmount } = render(
 			defineComponent({
 				setup() {
-					nested = useEditedNestedNotes(young, young, { subscribe: 'recent' });
-					useEditedNestedNotes(old, old, { subscribe: 'recent' });
+					nested = useNoteEdits(old, old, { subscribe: true });
 					return () => h('div');
 				},
 			}),
 		);
-		expect(stream.send).toHaveBeenCalledWith('sr', { id: 'yq' });
-		expect(stream.send).not.toHaveBeenCalledWith('sr', { id: 'oq' });
+		expect(stream.send).toHaveBeenCalledWith('se', { id: 'old' });
+		expect(stream.send).toHaveBeenCalledWith('se', { id: 'oq' });
+		expect(stream.send).not.toHaveBeenCalledWith('sr', expect.anything());
 
-		stream.emit('noteUpdated', { id: 'yq', type: 'edited', body: { updatedAt: '2026-01-03T00:00:00.000Z' } });
+		stream.emit('noteUpdated', { id: 'oq', type: 'edited', body: { updatedAt: '2026-01-03T00:00:00.000Z' } });
 		await vi.waitFor(() => expect(nested.quote.value?.text).toBe('secret after'));
-		expect(misskeyApiMock).toHaveBeenCalledWith('notes/show', { noteId: 'yq' });
+		expect(misskeyApiMock).toHaveBeenCalledWith('notes/show', { noteId: 'oq' });
 
 		unmount();
-		expect(stream.send).toHaveBeenCalledWith('un', { id: 'yq' });
+		expect(stream.send).toHaveBeenCalledWith('ue', { id: 'old' });
+		expect(stream.send).toHaveBeenCalledWith('ue', { id: 'oq' });
 		expect(stream.listenerCount('noteUpdated')).toBe(0);
-	});
-
-	test('詳細ページ (always) では古いノートの中の引用先も購読する', async () => {
-		const { useEditedNestedNotes } = await import('@/features/notes/useEditedNestedNotes.js');
-		const old = {
-			...outer,
-			id: 'old2',
-			createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-			renote: { ...quoted, id: 'oq2' },
-		} as Misskey.entities.Note;
-		stream.send.mockClear();
-		render(
-			defineComponent({
-				setup() {
-					useEditedNestedNotes(old, old, { subscribe: 'always' });
-					return () => h('div');
-				},
-			}),
-		);
-		expect(stream.send).toHaveBeenCalledWith('sr', { id: 'oq2' });
 	});
 
 	test('未接続の間は購読を送らず、接続したときに 1 回だけ送る (接続時の送り直しと重ねない)', async () => {
@@ -328,21 +348,133 @@ describe('useEditedNestedNotes', () => {
 		stream.send.mockClear();
 		stream.state = 'reconnecting';
 		try {
-			const unsubscribe = subscribeNoteEdits({ id: 'pending' }, null);
+			const unsubscribe = subscribeNoteEdits({ id: 'pending', createdAt: new Date().toISOString() });
 			expect(stream.send).not.toHaveBeenCalled();
 			stream.emit('_connected_');
-			expect(stream.send.mock.calls.filter(([type, body]) => type === 'sr' && body.id === 'pending')).toHaveLength(1);
+			expect(stream.send.mock.calls.filter(([type, body]) => type === 'se' && body.id === 'pending')).toHaveLength(1);
 			unsubscribe();
 		} finally {
 			stream.state = 'connected';
 		}
 	});
 
-	test('プラグインがノートごと隠す判断をしても、前の表示を保つ (消えたノートとして出さない)', async () => {
+	test('リアルタイムモードでなければ、ポーリングで届く編集日時の変化で 1 回だけ取り直す (表示から時間が経っても)', async () => {
+		const { subscribeNoteEdits } = await import('@/features/notes/useNoteCapture.js');
 		const { globalEvents } = await import('@/events.js');
-		pluginState.interrupt = (note) => (note.renote?.text?.includes('secret') ? null : note);
-		const nested = await mountNested(outer);
-		globalEvents.emit('noteEdited', edited);
-		expect(nested.quote.value?.text).toBe('before');
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		const editedEvents = vi.fn();
+		globalEvents.on('noteEdited', editedEvents);
+		let updatedAt: string | undefined;
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockImplementation(async (endpoint: string, params: { noteIds?: string[] }) =>
+			endpoint === 'notes/show-partial-bulk'
+				? (params.noteIds ?? []).map((id) => ({
+						id,
+						reactions: {},
+						reactionEmojis: {},
+						...(id === 'polled' && updatedAt ? { updatedAt } : {}),
+					}))
+				: { id: 'polled', text: 'after', updatedAt },
+		);
+		stream.send.mockClear();
+		const unsubscribe = subscribeNoteEdits({ id: 'polled', createdAt: new Date().toISOString() });
+		try {
+			expect(stream.send).not.toHaveBeenCalled();
+			// リアクションの queue が打ち切る 5 分を過ぎてから編集される。
+			await vi.advanceTimersByTimeAsync(7 * 60_000);
+			expect(editedEvents).not.toHaveBeenCalled();
+
+			updatedAt = '2026-01-04T00:00:00.000Z';
+			await vi.advanceTimersByTimeAsync(61_000);
+			expect(editedEvents).toHaveBeenCalledTimes(1);
+			// 同じ編集日時が届き続けても、取り直しは最初の 1 回だけ (差し替え後も購読は続く)。
+			await vi.advanceTimersByTimeAsync(3 * 60_000);
+			expect(misskeyApiMock.mock.calls.filter(([endpoint]) => endpoint === 'notes/show')).toHaveLength(1);
+		} finally {
+			unsubscribe();
+			globalEvents.off('noteEdited', editedEvents);
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test('ポーリングの問い合わせが失敗しても、未処理のエラーにせず次の回で編集を拾う', async () => {
+		const { subscribeNoteEdits } = await import('@/features/notes/useNoteCapture.js');
+		const { globalEvents } = await import('@/events.js');
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		const editedEvents = vi.fn();
+		globalEvents.on('noteEdited', editedEvents);
+		let offline = true;
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockImplementation(async (endpoint: string, params: { noteIds?: string[] }) => {
+			if (offline) throw new Error('offline');
+			return endpoint === 'notes/show-partial-bulk'
+				? (params.noteIds ?? []).map((id) => ({
+						id,
+						reactions: {},
+						reactionEmojis: {},
+						updatedAt: '2026-01-05T00:00:00.000Z',
+					}))
+				: { id: 'flaky', text: 'after' };
+		});
+		const unsubscribe = subscribeNoteEdits({ id: 'flaky', createdAt: new Date().toISOString() });
+		try {
+			await vi.advanceTimersByTimeAsync(61_000);
+			expect(editedEvents).not.toHaveBeenCalled();
+			offline = false;
+			await vi.advanceTimersByTimeAsync(61_000);
+			expect(editedEvents).toHaveBeenCalledTimes(1);
+		} finally {
+			unsubscribe();
+			globalEvents.off('noteEdited', editedEvents);
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test('ポーリングでの編集の検出は、リアクションの問い合わせ (新しい順に 30 件) からノートを押し出さない', async () => {
+		const { subscribeNoteEdits, useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockImplementation(async (_endpoint: string, params: { noteIds?: string[] }) =>
+			(params.noteIds ?? []).map((id) => ({ id, reactions: {}, reactionEmojis: {} })),
+		);
+		// リノートされたばかりの古いノート (リアクションを追う対象) と、それより ID の新しい編集検出の対象 40 件。
+		const oldNote = {
+			id: '0000-old',
+			createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+			reactions: {},
+			reactionCount: 0,
+			reactionEmojis: {},
+			myReaction: null,
+			poll: null,
+		} as unknown as Misskey.entities.Note;
+		const renote = { id: 'zzzz-renote', createdAt: new Date().toISOString() } as Misskey.entities.Note;
+		const unsubscribes = Array.from({ length: 40 }, (_, i) =>
+			subscribeNoteEdits({ id: `zzzz-${String(i).padStart(2, '0')}`, createdAt: new Date().toISOString() }),
+		);
+		const { unmount } = render(
+			defineComponent({
+				setup() {
+					useNoteCapture({ note: oldNote, parentNote: renote }).subscribe();
+					return () => h('div');
+				},
+			}),
+		);
+		try {
+			await vi.advanceTimersByTimeAsync(30_000);
+			const reactionPolls = misskeyApiMock.mock.calls.filter(([, params]) =>
+				(params.noteIds ?? []).includes('0000-old'),
+			);
+			expect(reactionPolls.length).toBeGreaterThan(0);
+		} finally {
+			unmount();
+			for (const unsubscribe of unsubscribes) unsubscribe();
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
 	});
 });

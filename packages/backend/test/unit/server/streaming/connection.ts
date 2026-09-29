@@ -181,6 +181,46 @@ describe('hono-stream-connection', () => {
 		connection.dispose();
 	});
 
+	test('編集の合図だけの購読 (se) には edited だけを送り、全体の購読 (sr) と数を分けて外す', async () => {
+		const viewer = await createTestUser(deps, 'honostreamviewer4');
+		const author = await createTestUser(deps, 'honostreamauthor4');
+		const connection = new StreamConnection(deps, viewer, null);
+		await connection.init();
+		const subscriber = new EventEmitter();
+		const { raw, send } = collectSentMessages();
+		connection.listen(subscriber, send);
+		const emit = (type: string) =>
+			subscriber.emit('noteStream:edits', {
+				type,
+				body: { id: 'edits', userId: author.id, visibility: 'public', body: {} },
+			});
+		const received = () =>
+			raw
+				.map((r) => JSON.parse(r))
+				.filter((m) => m.type === 'noteUpdated')
+				.map((m) => m.body.type);
+
+		connection.handleClientMessage(JSON.stringify({ type: 'se', body: { id: 'edits' } }));
+		emit('reacted');
+		emit('edited');
+		expect(received()).toEqual(['edited']);
+
+		// 全体の購読が重なっている間はすべて送り、全体の購読を外すと edited だけに戻る。
+		connection.handleClientMessage(JSON.stringify({ type: 'sr', body: { id: 'edits' } }));
+		emit('reacted');
+		connection.handleClientMessage(JSON.stringify({ type: 'un', body: { id: 'edits' } }));
+		emit('reacted');
+		expect(received()).toEqual(['edited', 'reacted']);
+		expect(subscriber.listenerCount('noteStream:edits')).toBe(1);
+
+		// 数の無い種類の解除は無視し、編集の購読は残す。
+		connection.handleClientMessage(JSON.stringify({ type: 'un', body: { id: 'edits' } }));
+		expect(subscriber.listenerCount('noteStream:edits')).toBe(1);
+		connection.handleClientMessage(JSON.stringify({ type: 'ue', body: { id: 'edits' } }));
+		expect(subscriber.listenerCount('noteStream:edits')).toBe(0);
+		connection.dispose();
+	});
+
 	// 購読数に上限が無いと、1 接続 (匿名でも可) がプロセス共有の emitter に listener を際限なく積める。
 	test('1 接続のノート購読は上限までで、超えた分は古い購読から外す', async () => {
 		const connection = new StreamConnection(deps, null, null);
@@ -200,6 +240,31 @@ describe('hono-stream-connection', () => {
 
 		connection.dispose();
 		expect(subscriber.eventNames().filter((name) => String(name).startsWith('noteStream:'))).toHaveLength(0);
+	});
+
+	test('上限に達したら、編集の合図だけの購読から先に外す (全体の購読は古くても残す)', async () => {
+		const connection = new StreamConnection(deps, null, null);
+		await connection.init();
+		const subscriber = new EventEmitter();
+		subscriber.setMaxListeners(0);
+		connection.listen(subscriber, () => {});
+
+		connection.handleClientMessage(JSON.stringify({ type: 'sr', body: { id: 'all0' } }));
+		// 編集の合図だけで始めて全体の購読が重なったものは、全体の購読として残す。
+		connection.handleClientMessage(JSON.stringify({ type: 'se', body: { id: 'mixed' } }));
+		connection.handleClientMessage(JSON.stringify({ type: 'sr', body: { id: 'mixed' } }));
+		for (let i = 0; i < 1534; i++) {
+			connection.handleClientMessage(JSON.stringify({ type: 'se', body: { id: `e${i}` } }));
+		}
+		connection.handleClientMessage(JSON.stringify({ type: 'se', body: { id: 'overflow' } }));
+
+		expect(subscriber.eventNames().filter((name) => String(name).startsWith('noteStream:'))).toHaveLength(1536);
+		expect(subscriber.listenerCount('noteStream:all0')).toBe(1);
+		expect(subscriber.listenerCount('noteStream:mixed')).toBe(1);
+		expect(subscriber.listenerCount('noteStream:e0')).toBe(0);
+		expect(subscriber.listenerCount('noteStream:e1')).toBe(1);
+		expect(subscriber.listenerCount('noteStream:overflow')).toBe(1);
+		connection.dispose();
 	});
 
 	test('broadcast イベントはそのままクライアントへ送られる', async () => {

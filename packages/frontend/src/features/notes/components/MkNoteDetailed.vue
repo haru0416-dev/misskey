@@ -251,7 +251,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, markRaw, onUnmounted, provide, ref, useTemplateRef } from 'vue';
+import { computed, inject, markRaw, provide, ref, useTemplateRef } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { isLink } from '@shared/utility/is-link.js';
@@ -283,8 +283,8 @@ import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { dateString } from '@/filters/date.js';
 import { getNoteClipMenu, getNoteMenu, getRenoteMenu } from '@/features/notes/get-note-menu.js';
-import { noteEvents, noteRenderKey, subscribeNoteEdits, useNoteCapture } from '@/features/notes/useNoteCapture.js';
-import { useEditedNestedNotes } from '@/features/notes/useEditedNestedNotes.js';
+import { noteEvents, noteRenderKey, useNoteCapture } from '@/features/notes/useNoteCapture.js';
+import { useNoteEdits } from '@/features/notes/useNoteEdits.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
@@ -333,10 +333,7 @@ const { $note: $appearNote, subscribe: subscribeManuallyToNoteCapture } = useNot
 	parentNote: note,
 });
 
-// 返信先・引用先の編集はここで差し替える (このノートの key は変わらないので描き直されない)。
-// 詳細ページは古いノートを開いて見ていることが多いので、編集の合図は新しさを問わず購読する (このノート自身の分も)。
-const { reply: replyNote, quote: quoteNote } = useEditedNestedNotes(props.note, note, { subscribe: 'always' });
-onUnmounted(subscribeNoteEdits(appearNote, null));
+const { reply: replyNote, quote: quoteNote } = useNoteEdits(props.note, note, { subscribe: true });
 
 const rootEl = useTemplateRef('rootEl');
 const menuButton = useTemplateRef('menuButton');

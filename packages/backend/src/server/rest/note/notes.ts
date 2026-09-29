@@ -840,7 +840,9 @@ export async function handleApiNotesShowPartialBulk(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	params: ApiParams<typeof notesShowPartialBulkParamDef>,
-): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
+): Promise<
+	{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string>; updatedAt?: string }[]
+> {
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
 	const visibleNotes = await filterVisibleNotesForApi(deps, notes, me?.id ?? null);
 	return await fetchNoteDiffsForApi(deps, visibleNotes);

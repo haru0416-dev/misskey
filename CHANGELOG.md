@@ -165,6 +165,7 @@
 - Enhance: データセーバーやセンシティブメディア表示、UIアニメーションを切り替えるクイック設定を追加
 - Enhance: 一覧の最初の読み込みが時間切れ・回数制限で失敗したとき、「問題が発生しました」ではなく理由を表示するように
 - Change: BlurHash の描画実装 (buraha) をリポジトリに取り込み (misskey-dev/buraha の MIT 実装を移植。出力がビット単位で同一であることを確認済み。frontend / frontend-embed から依存パッケージが1つ減る)
+- Fix: ストリーミングの接続前に表示したノートの購読が、表示を閉じてもサーバーに残り続けることがある問題を修正
 - Fix: 投稿・お知らせのページで再試行してもエラーのまま表示される問題、ドライブの設定で保存の失敗時に関係のない設定が変わる問題、投稿の検索で指定のユーザーが見つからないと全体を検索していた問題、QR の読み取りで失敗した URL を読み直さない問題を修正
 - Fix: グラフ・ヒートマップ・ユーザーリストのウィジェットで、切り替え前の条件の応答が後から届くと表示が戻ったり、失敗すると読み込み中のまま止まったりする問題を修正
 - Fix: サーバー情報のモデレーションで、切り替えや配信停止が失敗しても画面の状態が戻らなかった問題を修正
@@ -266,7 +267,7 @@
 - Feat: `announcements/react` / `announcements/unreact` を追加し、お知らせの packed entity に `reactions`・`myReaction`・`isActive` を追加 (終了したお知らせはリアクションの件数だけ見られる)
 - Feat: 読み取りAPI 183本を HTTP QUERY (RFC 10008) でも受け付けるように (POST も従来どおり受ける。QUERY は safe かつ idempotent なので Cache-Control が中間キャッシュに実際に効く)
 - Feat: ID生成方式を `uuidv7` (RFC 9562、ハイフン無しhex表現) 固定にし、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除
-- Feat: リモートで編集されたノート (ActivityPub の Update(Note)) を受け取り、本文・CW・添付・絵文字・タグ・メンションを書き換えるように (編集履歴は持たず、最終の編集日時を `updatedAt` で返す)
+- Feat: リモートで編集されたノート (ActivityPub の Update(Note)) を受け取り、本文・CW・添付・絵文字・タグ・メンションを書き換えるように (編集履歴は持たず、最終の編集日時を `updatedAt` で返す。`notes/show-partial-bulk` も返す)。ストリーミングに編集の合図だけを受け取るノートの購読 (`se` / `ue`) を追加
 - Enhance: `drive/files` に続きを件数で指定する `offset` を追加 (名前・サイズ順の続きの取得用)
 - Enhance: `users/show` で一度に指定できるユーザーを 100 件までに
 - Enhance: アップロードした画像のサムネイルで smartSubsample を使わないように (変換の CPU が 3〜4 割減る)。Web 用画像も `media.webpublicSmartSubsample: false` で同じにでき、CPU の弱い機械で写真の投稿が軽くなる (4032x3024 の写真 1 枚で 892→424ms、実写真で PSNR 約 −0.6dB)

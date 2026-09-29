@@ -1757,6 +1757,20 @@ describe('Endpoints', () => {
 			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(noteId);
 			expect(getAt(res.body, 0).reactions['👍']).toBe(3);
+			expect(getAt(res.body, 0).updatedAt).toBeUndefined();
+
+			// 編集されたノートは最終の編集日時を返す (ポーリングの表示が編集を見つける手がかり)。
+			const editedId = genId();
+			await createNoteInDatabase(db, {
+				id: editedId,
+				text: 'edited partial bulk target',
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+				updatedAt: new Date('2026-01-02T03:04:05.000Z'),
+			});
+			const edited = await api('notes/show-partial-bulk', { noteIds: [editedId] });
+			expect(getAt(edited.body, 0).updatedAt).toBe('2026-01-02T03:04:05.000Z');
 		});
 
 		test('notes/show-partial-bulk は閲覧できないノートを返さない', async () => {

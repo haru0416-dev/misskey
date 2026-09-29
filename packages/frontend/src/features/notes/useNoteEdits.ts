@@ -13,34 +13,35 @@ import { applyNoteViewInterruptors, getPluginHandlers } from '@/plugin.js';
 import { deepClone } from '@/utility/clone.js';
 
 function nestedOf(note: Misskey.entities.Note): {
+	appear: Misskey.entities.Note;
 	reply: Misskey.entities.Note | null;
 	quote: Misskey.entities.Note | null;
 } {
 	const appear = getAppearNote(note) ?? note;
-	return { reply: appear.reply ?? null, quote: appear.renote ?? null };
+	return { appear, reply: appear.reply ?? null, quote: appear.renote ?? null };
 }
 
 /**
- * ノートの中に出す返信先・引用先。編集されたらその場で差し替える (外側のノートを描き直すと、読み込み後に増えた
- * リアクション等の状態が消えるため)。
+ * 表示するノートと、その中に出す返信先・引用先の編集を受け取る。返信先・引用先はその場で差し替える (外側のノートを
+ * 描き直すと、読み込み後に増えたリアクション等の状態が消えるため)。表示するノート自身の編集は、一覧やページが
+ * key を変えて描き直す。
  *
  * @param source プラグインを通す前のノート。
  * @param viewed 表示に使っている、プラグインを通した後のノート。
- * @param options.subscribe 編集の合図の購読。recent は外側のノートが新しいときだけ (一覧)、always は新しさを問わず
- * (詳細ページ)、never は購読しない (見本の表示)。
+ * @param options.subscribe 編集の合図を購読するか (見本の表示では購読しない)。
  */
-export function useEditedNestedNotes(
+export function useNoteEdits(
 	source: Misskey.entities.Note,
 	viewed: Misskey.entities.Note,
-	options: { subscribe: 'recent' | 'always' | 'never' },
+	options: { subscribe: boolean },
 ): { reply: ShallowRef<Misskey.entities.Note | null>; quote: ShallowRef<Misskey.entities.Note | null> } {
 	const initial = nestedOf(viewed);
 	const reply = shallowRef(initial.reply);
 	const quote = shallowRef(initial.quote);
-	if (options.subscribe !== 'never') {
-		const unsubscribes = [initial.reply, initial.quote]
+	if (options.subscribe) {
+		const unsubscribes = [initial.appear, initial.reply, initial.quote]
 			.filter((note) => note != null)
-			.map((note) => subscribeNoteEdits(note, options.subscribe === 'always' ? null : viewed));
+			.map((note) => subscribeNoteEdits(note));
 		onUnmounted(() => {
 			for (const unsubscribe of unsubscribes) unsubscribe();
 		});

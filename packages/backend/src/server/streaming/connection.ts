@@ -187,8 +187,13 @@ export class StreamConnection {
 	private readonly channels = new Map<string, { channelName: string; handle: StreamChannelHandle }>();
 	private readonly pendingChannels = new Map<string, StreamChannelSubscriberScope>();
 	private readonly pendingChannelScopes = new Set<StreamChannelSubscriberScope>();
-	/** ノート ID ごとの購読数。挿入順を古い順として、上限を超えたら先頭から外す。 */
-	private readonly subscribingNotes = new Map<string, number>();
+	/**
+	 * ノート ID ごとの購読数。all は全イベント、edits は編集の合図だけの購読。挿入順を古い順として、上限を超えたら
+	 * 先頭から外す。
+	 */
+	private readonly subscribingNotes = new Map<string, { all: number; edits: number }>();
+	/** subscribingNotes のうち編集の合図だけ (all が 0) の ID。上限時にこれの先頭から外す (走査せずに見つけるため)。 */
+	private readonly editOnlyNotes = new Set<string>();
 	private userProfile: MiUserProfile | null = null;
 	private following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
 	private followingChannels = new Set<string>();
@@ -310,6 +315,11 @@ export class StreamConnection {
 			}
 		}
 
+		// 編集の合図だけの購読には、リアクション等を送らない (古いノートでも購読できるように、量を編集の回数に抑える)。
+		if (data.type !== 'edited' && (this.subscribingNotes.get(data.body.id)?.all ?? 0) === 0) {
+			return;
+		}
+
 		this.sendMessageToWs('noteUpdated', {
 			id: data.body.id,
 			type: data.type,
@@ -412,11 +422,18 @@ export class StreamConnection {
 			case 'subNote':
 			case 's':
 			case 'sr':
-				this.onSubscribeNote(body);
+				this.onSubscribeNote(body, 'all');
 				break;
 			case 'unsubNote':
 			case 'un':
-				this.onUnsubscribeNote(body);
+				this.onUnsubscribeNote(body, 'all');
+				break;
+			// 編集の合図 ('edited') だけを受け取る購読。
+			case 'se':
+				this.onSubscribeNote(body, 'edits');
+				break;
+			case 'ue':
+				this.onUnsubscribeNote(body, 'edits');
 				break;
 			case 'connect':
 				this.onChannelConnectRequested(body);
@@ -438,7 +455,7 @@ export class StreamConnection {
 		void markAllApiNotificationsAsRead(this.deps, this.user.id, false);
 	}
 
-	private onSubscribeNote(payload: JsonValue | undefined): void {
+	private onSubscribeNote(payload: JsonValue | undefined, kind: 'all' | 'edits'): void {
 		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') {
 			return;
 		}
@@ -447,39 +464,58 @@ export class StreamConnection {
 		const current = this.subscribingNotes.get(noteId);
 		if (current != null) {
 			// 使われ続けている購読を末尾へ回し、上限超えで外れにくくする。
-			this.subscribingNotes.delete(noteId);
-			this.subscribingNotes.set(noteId, current + 1);
+			this.setNoteSubscription(noteId, { ...current, [kind]: current[kind] + 1 }, true);
 			return;
 		}
 
 		// listener はプロセスで共有する emitter に付くので、1 接続の購読数が全体のメモリに響く。
+		// 外すのは編集の合図だけの購読の最も古いものから (表示中のノートすべてが送るので数が多く、外れても
+		// 失うのは編集の即時反映だけ)。無ければ最も古い購読を外す。
 		if (this.subscribingNotes.size >= MAX_SUBSCRIBED_NOTES_PER_CONNECTION) {
-			const oldest = this.subscribingNotes.keys().next().value;
-			if (oldest != null) {
-				this.subscribingNotes.delete(oldest);
-				this.subscriber?.off(`noteStream:${oldest}`, this.onNoteStreamMessage);
+			const evicted = this.editOnlyNotes.values().next().value ?? this.subscribingNotes.keys().next().value;
+			if (evicted != null) {
+				this.deleteNoteSubscription(evicted);
 			}
 		}
-		this.subscribingNotes.set(noteId, 1);
+		this.setNoteSubscription(noteId, { all: 0, edits: 0, [kind]: 1 }, true);
 		this.subscriber?.on(`noteStream:${noteId}`, this.onNoteStreamMessage);
 	}
 
-	private onUnsubscribeNote(payload: JsonValue | undefined): void {
+	/** moveToEnd なら古い順の末尾へ回す。 */
+	private setNoteSubscription(noteId: string, counts: { all: number; edits: number }, moveToEnd: boolean): void {
+		if (moveToEnd) {
+			this.subscribingNotes.delete(noteId);
+			this.editOnlyNotes.delete(noteId);
+		}
+		this.subscribingNotes.set(noteId, counts);
+		// all が増えるのは購読のとき (moveToEnd) だけで、そこで先に外している。
+		if (counts.all === 0) {
+			this.editOnlyNotes.add(noteId);
+		}
+	}
+
+	private deleteNoteSubscription(noteId: string): void {
+		this.subscribingNotes.delete(noteId);
+		this.editOnlyNotes.delete(noteId);
+		this.subscriber?.off(`noteStream:${noteId}`, this.onNoteStreamMessage);
+	}
+
+	private onUnsubscribeNote(payload: JsonValue | undefined, kind: 'all' | 'edits'): void {
 		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') {
 			return;
 		}
 
 		const noteId = payload['id'];
 		const current = this.subscribingNotes.get(noteId);
-		if (current == null) {
+		if (current == null || current[kind] === 0) {
 			return;
 		}
-		if (current > 1) {
-			this.subscribingNotes.set(noteId, current - 1);
+		const next = { ...current, [kind]: current[kind] - 1 };
+		if (next.all > 0 || next.edits > 0) {
+			this.setNoteSubscription(noteId, next, false);
 			return;
 		}
-		this.subscribingNotes.delete(noteId);
-		this.subscriber?.off(`noteStream:${noteId}`, this.onNoteStreamMessage);
+		this.deleteNoteSubscription(noteId);
 	}
 
 	private onChannelConnectRequested(payload: JsonValue | undefined): void {

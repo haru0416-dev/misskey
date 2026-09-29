@@ -1031,7 +1031,9 @@ export async function packNoteManyForApi(
 export async function fetchNoteDiffsForApi(
 	deps: ApiNoteDependencies,
 	notes: MiNote[],
-): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
+): Promise<
+	{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string>; updatedAt?: string }[]
+> {
 	const diffs = notes.map((note) => {
 		const reactions = normalizeReactionKeys(note.reactions);
 		return { note, reactions, reactionEmojiNames: collectReactionEmojiNames(reactions) };
@@ -1048,6 +1050,8 @@ export async function fetchNoteDiffsForApi(
 		id: diff.note.id,
 		reactions: diff.reactions,
 		reactionEmojis: reactionEmojis[index]!,
+		// ポーリングで編集を見つけるため (リアルタイム購読を使わない表示向け)。
+		...(diff.note.updatedAt == null ? {} : { updatedAt: new Date(diff.note.updatedAt).toISOString() }),
 	}));
 }
 
