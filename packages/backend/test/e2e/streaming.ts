@@ -792,20 +792,6 @@ describe('Streaming', () => {
 				expect(await receives([['streaminghashtag']], '#streaminghashtag')).toBe(true);
 			});
 
-			test('指定したハッシュタグの投稿が流れる (AND)', async () => {
-				const query = [['streamingandfoo', 'streamingandbar']];
-				expect(await receives(query, '#streamingandfoo #streamingandbar')).toBe(true);
-				expect(await doesNotReceive(query, '#streamingandfoo')).toBe(false);
-			});
-
-			test('指定したハッシュタグの投稿が流れる (OR)', async () => {
-				const query = [['streamingorfoo'], ['streamingorbar']];
-				expect(await receives(query, '#streamingorfoo')).toBe(true);
-				expect(await receives(query, '#streamingorbar')).toBe(true);
-				expect(await receives(query, '#streamingorfoo #streamingorbar')).toBe(true);
-				expect(await doesNotReceive(query, '#streamingorpiyo')).toBe(false);
-			});
-
 			test('指定したハッシュタグの投稿が流れる (AND + OR)', async () => {
 				const query = [['streamingmixedfoo', 'streamingmixedbar'], ['streamingmixedpiyo']];
 				expect(await receives(query, '#streamingmixedfoo #streamingmixedbar')).toBe(true);

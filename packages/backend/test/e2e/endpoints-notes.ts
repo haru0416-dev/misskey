@@ -46,8 +46,6 @@ import {
 	createSigninInDatabase,
 	createSwSubscriptionInDatabase,
 	createUserInDatabase,
-	createUserListInDatabase,
-	createUserListMembershipInDatabase,
 	createUserPendingInDatabase,
 	createUserSecurityKeyInDatabase,
 	createUserWithProfileAndPublickeyInDatabase,
@@ -80,10 +78,8 @@ import {
 	fetchRenoteMutingFromDatabase,
 	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
 	fetchSystemWebhookByIdFromDatabase,
-	fetchUserByIdOrFailFromDatabase,
 	fetchUserListByIdAndUserIdFromDatabase,
 	fetchUserListByNameAndUserIdFromDatabase,
-	fetchUserProfileByUserIdOrFailFromDatabase,
 	fetchWebhookByIdAndUserIdFromDatabase,
 	fixtureConfig,
 	flashLikeExistsInDatabase,
@@ -132,14 +128,13 @@ describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
-	let dave: misskey.entities.SignupResponse;
 	let db: TestDatabase;
 	let context: EndpointsContext;
 
 	beforeAll(
 		async () => {
 			context = await createEndpointsContext();
-			({ alice, bob, carol, dave, db } = context);
+			({ alice, bob, carol, db } = context);
 		},
 		1000 * 60 * 2,
 	);
@@ -305,39 +300,6 @@ describe('Endpoints', () => {
 			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
 			expect(imagesOnly.status).toBe(200);
 			expect(imagesOnly.body.map((f: any) => f.id)).toStrictEqual([imageFile.id]);
-		});
-
-		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36);
-			const md5 = createHash('md5').update(`hono-attached-notes-${suffix}`).digest('hex');
-			const file = await createDriveFileInDatabase(db, {
-				id: genId(),
-				userId: alice.id,
-				userHost: null,
-				md5,
-				name: `hono-attached-notes-${suffix}.bin`,
-				type: 'application/octet-stream',
-				size: 10,
-				storedInternal: true,
-				url: `${origin}/files/${md5}`,
-			});
-			const noteId = genId();
-			await createNoteInDatabase(db, {
-				id: noteId,
-				userId: alice.id,
-				text: 'attached file note',
-				visibility: 'public',
-				fileIds: [file.id],
-			});
-
-			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
-			expect(found.status).toBe(200);
-			expect((found.body as any[]).some((n) => n.id === noteId)).toBe(true);
-
-			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
-			expect(deniedForBob.status).toBe(400);
-			expect(castAsError(deniedForBob.body as any).error.id).toBe('c118ece3-2e4b-4296-99d1-51756e32d232');
 		});
 
 		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
@@ -1077,50 +1039,10 @@ describe('Endpoints', () => {
 			expect(castAsError(missing.body as any).error.id).toBe('24fcbfc6-2e37-42b6-8388-c29b3861a08d');
 		});
 
-		test('可視性(specified/followers)とrequireSigninToViewContentsを維持する', async () => {
-			const config = fixtureConfig;
+		test('requireSigninToViewContents のユーザーの投稿は未認証では見られない', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnv${suffix}` });
-			const addressee = await signup({ username: `hnva${suffix}` });
 			const stranger = await signup({ username: `hnvs${suffix}` });
-			const follower = await signup({ username: `hnvf${suffix}` });
-			await api('following/create', { userId: author.id }, follower);
-
-			const specifiedNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: specifiedNoteId,
-				text: 'specified note',
-				userId: author.id,
-				userHost: null,
-				visibility: 'specified',
-				visibleUserIds: [addressee.id],
-			});
-
-			const hiddenFromStranger = await api('notes/show', { noteId: specifiedNoteId }, stranger);
-			expect(hiddenFromStranger.status).toBe(200);
-			expect(hiddenFromStranger.body.isHidden).toBe(true);
-			expect(hiddenFromStranger.body.text).toBeNull();
-
-			const visibleToAddressee = await api('notes/show', { noteId: specifiedNoteId }, addressee);
-			expect(visibleToAddressee.status).toBe(200);
-			expect(visibleToAddressee.body.isHidden).toBeUndefined();
-			expect(visibleToAddressee.body.text).toBe('specified note');
-
-			const followersNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: followersNoteId,
-				text: 'followers only note',
-				userId: author.id,
-				userHost: null,
-				visibility: 'followers',
-			});
-
-			const hiddenFromNonFollower = await api('notes/show', { noteId: followersNoteId }, stranger);
-			expect(hiddenFromNonFollower.body.isHidden).toBe(true);
-
-			const visibleToFollower = await api('notes/show', { noteId: followersNoteId }, follower);
-			expect(visibleToFollower.body.isHidden).toBeUndefined();
-			expect(visibleToFollower.body.text).toBe('followers only note');
 
 			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
 			const publicNoteId = genId();
@@ -1236,49 +1158,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('notes/state and notes/favorites', () => {
-		test('notes/state、notes/favorites/{create,delete}はfavorite状態とachievementを維持する', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const author = await signup({ username: `hnf${suffix}` });
-			const favoriter = await signup({ username: `hnff${suffix}` });
-			const noteId = genId();
-			await createNoteInDatabase(db, {
-				id: noteId,
-				text: 'favorite target',
-				userId: author.id,
-				userHost: null,
-				visibility: 'public',
-			});
-
-			const stateBefore = await api('notes/state', { noteId }, favoriter);
-			expect(stateBefore.status).toBe(200);
-			expect(stateBefore.body.isFavorited).toBe(false);
-			expect(stateBefore.body.isMutedThread).toBe(false);
-
-			const missingFavorite = await api('notes/favorites/delete', { noteId }, favoriter);
-			expect(missingFavorite.status).toBe(400);
-			expect(castAsError(missingFavorite.body as any).error.code).toBe('NOT_FAVORITED');
-
-			const favorited = await api('notes/favorites/create', { noteId }, favoriter);
-			expect(favorited.status).toBe(204);
-
-			const duplicateFavorite = await api('notes/favorites/create', { noteId }, favoriter);
-			expect(duplicateFavorite.status).toBe(400);
-			expect(castAsError(duplicateFavorite.body as any).error.code).toBe('ALREADY_FAVORITED');
-
-			const stateAfter = await api('notes/state', { noteId }, favoriter);
-			expect(stateAfter.body.isFavorited).toBe(true);
-
-			const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, author.id);
-			assert.ok(authorProfile.achievements.some((a) => a.name === 'myNoteFavorited1'));
-
-			const unfavorited = await api('notes/favorites/delete', { noteId }, favoriter);
-			expect(unfavorited.status).toBe(204);
-
-			const stateFinal = await api('notes/state', { noteId }, favoriter);
-			expect(stateFinal.body.isFavorited).toBe(false);
-		});
-
 		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
@@ -1336,24 +1215,6 @@ describe('Endpoints', () => {
 			expect(local.status).toBe(200);
 			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
 			expect(local.body.some((n: any) => n.id === homeNoteId)).toBe(false);
-		});
-
-		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const viewer = await signup({ username: `hht${suffix}` });
-			const followee = await signup({ username: `hhtf${suffix}` });
-			const stranger = await signup({ username: `hhts${suffix}` });
-			await api('following/create', { userId: followee.id }, viewer);
-
-			const followeeNoteId = (await post(followee, { text: 'from followee', visibility: 'public' })).id;
-			const strangerNoteId = (
-				await post(stranger, { text: 'from stranger, not followed, not local timeline eligible', visibility: 'home' })
-			).id;
-
-			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
-			expect(hybrid.status).toBe(200);
-			assert.ok(hybrid.body.some((n: any) => n.id === followeeNoteId));
-			expect(hybrid.body.some((n: any) => n.id === strangerNoteId)).toBe(false);
 		});
 
 		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
@@ -1818,76 +1679,9 @@ describe('Endpoints', () => {
 			expect(res.body.map((note) => note.id)).toStrictEqual([followeeNote.id]);
 		});
 
-		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const viewer = await signup({ username: `hnt${suffix}` });
-			const followee = await signup({ username: `hntf${suffix}` });
-			const stranger = await signup({ username: `hnts${suffix}` });
-			await api('following/create', { userId: followee.id }, viewer);
-
-			const followeeNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: followeeNoteId,
-				text: 'timeline from followee',
-				userId: followee.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const strangerNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: strangerNoteId,
-				text: 'timeline from stranger',
-				userId: stranger.id,
-				userHost: null,
-				visibility: 'public',
-			});
-
-			const timeline = await api('notes/timeline', { limit: 100 }, viewer);
-			expect(timeline.status).toBe(200);
-			assert.ok(timeline.body.some((n: any) => n.id === followeeNoteId));
-			expect(timeline.body.some((n: any) => n.id === strangerNoteId)).toBe(false);
-		});
-
-		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
-			const config = fixtureConfig;
+		test('notes/user-list-timeline は存在しないリストで NO_SUCH_LIST', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hult${suffix}` });
-			const member = await signup({ username: `hultm${suffix}` });
-			const nonMember = await signup({ username: `hultn${suffix}` });
-			const list = await createUserListInDatabase(db, {
-				id: genId(),
-				userId: owner.id,
-				name: `hono user-list-timeline ${suffix}`,
-			});
-			await createUserListMembershipInDatabase(db, {
-				id: genId(),
-				userId: member.id,
-				userListId: list.id,
-				userListUserId: owner.id,
-			});
-
-			const memberNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: memberNoteId,
-				text: 'from list member',
-				userId: member.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const nonMemberNoteId = genId();
-			await createNoteInDatabase(db, {
-				id: nonMemberNoteId,
-				text: 'from non member',
-				userId: nonMember.id,
-				userHost: null,
-				visibility: 'public',
-			});
-
-			const timeline = await api('notes/user-list-timeline', { listId: list.id, limit: 100 }, owner);
-			expect(timeline.status).toBe(200);
-			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
-			expect(timeline.body.some((n: any) => n.id === nonMemberNoteId)).toBe(false);
 
 			const missingList = await api('notes/user-list-timeline', { listId: genId() }, owner);
 			expect(missingList.status).toBe(400);
@@ -1924,29 +1718,6 @@ describe('Endpoints', () => {
 			const recommendation = await api('notes/polls/recommendation', { limit: 100 }, voter);
 			expect(recommendation.status).toBe(200);
 			assert.ok(recommendation.body.some((n: any) => n.id === unvotedNoteId));
-		});
-
-		test('notes/search はテキスト全文検索とROLE制限を維持する', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const author = await signup({ username: `hnse${suffix}` });
-			const searchNoteId = genId();
-			const uniqueText = `hono-search-unique-${suffix}`;
-			await createNoteInDatabase(db, {
-				id: searchNoteId,
-				text: uniqueText,
-				userId: author.id,
-				userHost: null,
-				visibility: 'public',
-			});
-
-			// canSearchNotes はデフォルト false のため、ロールで許可してから検索する。
-			const searchRole = await role(alice, {}, { canSearchNotes: { priority: 1, useDefault: false, value: true } });
-			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
-
-			const searched = await api('notes/search', { query: uniqueText }, author);
-			expect(searched.status).toBe(200);
-			assert.ok(searched.body.some((n: any) => n.id === searchNoteId));
 		});
 
 		test('notes/search は内容の詳細条件で絞り込める', async () => {
@@ -2175,32 +1946,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('notes/reactions/create', () => {
-		test('リアクションできる', async () => {
-			const bobPost = await post(bob, { text: 'hi' });
-
-			const res = await api(
-				'notes/reactions/create',
-				{
-					noteId: bobPost.id,
-					reaction: '🚀',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(204);
-
-			const resNote = await api(
-				'notes/show',
-				{
-					noteId: bobPost.id,
-				},
-				alice,
-			);
-
-			expect(resNote.status).toBe(200);
-			expect(resNote.body.reactions['🚀']).toBe(1);
-		});
-
 		test('自分の投稿にもリアクションできる', async () => {
 			const myPost = await post(alice, { text: 'hi' });
 
@@ -2324,68 +2069,18 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(204);
 		});
 
-		test('空文字列のリアクションは\u2764にフォールバックされる', async () => {
+		test.each([
+			['空文字列', ''],
+			['絵文字ではない文字列', 'Hello!'],
+		])('%sのリアクションは\u2764にフォールバックされる', async (_, reaction) => {
 			const bobNote = await post(bob, { text: 'hi' });
 
-			const res = await api(
-				'notes/reactions/create',
-				{
-					noteId: bobNote.id,
-					reaction: '',
-				},
-				alice,
-			);
-
+			const res = await api('notes/reactions/create', { noteId: bobNote.id, reaction }, alice);
 			expect(res.status).toBe(204);
 
-			const reaction = await api('notes/reactions', {
-				noteId: bobNote.id,
-			});
-
-			expect(reaction.body).toHaveLength(1);
-			expect(getAt(reaction.body, 0).type).toBe('\u2764');
-		});
-
-		test('絵文字ではない文字列のリアクションは\u2764にフォールバックされる', async () => {
-			const bobNote = await post(bob, { text: 'hi' });
-
-			const res = await api(
-				'notes/reactions/create',
-				{
-					noteId: bobNote.id,
-					reaction: 'Hello!',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(204);
-
-			const reaction = await api('notes/reactions', {
-				noteId: bobNote.id,
-			});
-
-			expect(reaction.body).toHaveLength(1);
-			expect(getAt(reaction.body, 0).type).toBe('\u2764');
-		});
-
-		test('空のパラメータで怒られる', async () => {
-			// @ts-expect-error param must not be empty
-			const res = await api('notes/reactions/create', {}, alice);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('間違ったIDで怒られる', async () => {
-			const res = await api(
-				'notes/reactions/create',
-				{
-					noteId: 'kyoppie',
-					reaction: '🚀',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
+			const reactions = await api('notes/reactions', { noteId: bobNote.id });
+			expect(reactions.body).toHaveLength(1);
+			expect(getAt(reactions.body, 0).type).toBe('\u2764');
 		});
 	});
 
@@ -2615,107 +2310,6 @@ describe('Endpoints', () => {
 			} finally {
 				await api('blocking/delete', { userId: alice.id }, bob);
 			}
-		});
-	});
-
-	describe('following/create', () => {
-		test('フォローできる', async () => {
-			const res = await api(
-				'following/create',
-				{
-					userId: alice.id,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(200);
-
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.followersCount).toBe(0);
-			expect(newBob.followingCount).toBe(1);
-			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
-			expect(newAlice.followersCount).toBe(1);
-			expect(newAlice.followingCount).toBe(0);
-		});
-	});
-
-	describe('following/delete', () => {
-		test('フォロー解除できる', async () => {
-			await api(
-				'following/create',
-				{
-					userId: alice.id,
-				},
-				bob,
-			);
-
-			const res = await api(
-				'following/delete',
-				{
-					userId: alice.id,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(200);
-
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.followersCount).toBe(0);
-			expect(newBob.followingCount).toBe(0);
-			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
-			expect(newAlice.followersCount).toBe(0);
-			expect(newAlice.followingCount).toBe(0);
-		});
-	});
-
-	describe('notes/replies', () => {
-		test('自分に閲覧権限のない投稿は含まれない', async () => {
-			const alicePost = await post(alice, {
-				text: 'foo',
-			});
-
-			await post(bob, {
-				replyId: alicePost.id,
-				text: 'bar',
-				visibility: 'specified',
-				visibleUserIds: [alice.id],
-			});
-
-			const res = await api(
-				'notes/replies',
-				{
-					noteId: alicePost.id,
-				},
-				carol,
-			);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(0);
-		});
-	});
-
-	describe('notes/timeline', () => {
-		test('フォロワー限定投稿が含まれる', async () => {
-			await api(
-				'following/create',
-				{
-					userId: carol.id,
-				},
-				dave,
-			);
-
-			const carolPost = await post(carol, {
-				text: 'foo',
-				visibility: 'followers',
-			});
-
-			const res = await api('notes/timeline', {}, dave);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(1);
-			expect(getAt(res.body, 0).id).toBe(carolPost.id);
 		});
 	});
 

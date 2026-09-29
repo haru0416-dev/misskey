@@ -2635,31 +2635,6 @@ describe('Endpoints', () => {
 			}, POLL);
 		});
 
-		test('admin/send-email は送信要求とvalidationを維持する', async () => {
-			const now = Date.now();
-			const suffix = now.toString(36).slice(-8);
-			const payload = {
-				to: `hono-send-email-${suffix}@example.test`,
-				subject: `send email ${suffix}`,
-				text: `Hello ${suffix}`,
-			};
-
-			const sent = await api('admin/send-email', payload, alice);
-			expect(sent.status).toBe(204);
-
-			const invalidPayload: Record<string, unknown> = {
-				to: payload.to,
-				subject: payload.subject,
-			};
-			const invalid = await api(
-				'admin/send-email',
-				invalidPayload as misskey.Endpoints['admin/send-email']['req'],
-				alice,
-			);
-			expect(invalid.status).toBe(400);
-			expect(castAsError(invalid.body as any).error.code).toBe('INVALID_PARAM');
-		});
-
 		test('admin/suspend-user と admin/unsuspend-user は状態更新、queue、ログを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);

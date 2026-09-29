@@ -70,32 +70,6 @@ describe('Account Move', () => {
 			expect(res.body.alsoKnownAs).toStrictEqual([alice.id]);
 		});
 
-		test('Able to create a local alias without hostname', async () => {
-			await api(
-				'i/update',
-				{
-					alsoKnownAs: ['@alice'],
-				},
-				bob,
-			);
-
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.alsoKnownAs).toStrictEqual([`${url.origin}/users/${alice.id}`]);
-		});
-
-		test('Able to create a local alias without @', async () => {
-			await api(
-				'i/update',
-				{
-					alsoKnownAs: ['alice'],
-				},
-				bob,
-			);
-
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.alsoKnownAs).toStrictEqual([`${url.origin}/users/${alice.id}`]);
-		});
-
 		test('Able to set remote user (but may fail)', async () => {
 			const res = await api(
 				'i/update',
@@ -164,37 +138,17 @@ describe('Account Move', () => {
 			expect(castAsError(res2.body).error.id).toBe('fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 		});
 
-		test('Able to add two existing local account to alsoKnownAs', async () => {
-			await api(
-				'i/update',
-				{
-					alsoKnownAs: [`@alice@${url.hostname}`, `@carol@${url.hostname}`],
-				},
-				bob,
-			);
+		// ホスト名なし・@ なしの書き方は同じループで同じ解決処理を通るので、複数指定と上書きを合わせて 1 回で見る。
+		test('Able to add local accounts written without hostname or @, and overwrite them', async () => {
+			await api('i/update', { alsoKnownAs: ['@alice', 'carol'] }, bob);
 
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.alsoKnownAs).toStrictEqual([`${url.origin}/users/${alice.id}`, `${url.origin}/users/${carol.id}`]);
-		});
+			const added = await fetchUserByIdOrFailFromDatabase(db, bob.id);
+			expect(added.alsoKnownAs).toStrictEqual([`${url.origin}/users/${alice.id}`, `${url.origin}/users/${carol.id}`]);
 
-		test('Able to properly overwrite alsoKnownAs', async () => {
-			await api(
-				'i/update',
-				{
-					alsoKnownAs: [`@alice@${url.hostname}`],
-				},
-				bob,
-			);
-			await api(
-				'i/update',
-				{
-					alsoKnownAs: [`@carol@${url.hostname}`, `@dave@${url.hostname}`],
-				},
-				bob,
-			);
+			await api('i/update', { alsoKnownAs: [`@dave@${url.hostname}`] }, bob);
 
-			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			expect(newBob.alsoKnownAs).toStrictEqual([`${url.origin}/users/${carol.id}`, `${url.origin}/users/${dave.id}`]);
+			const overwritten = await fetchUserByIdOrFailFromDatabase(db, bob.id);
+			expect(overwritten.alsoKnownAs).toStrictEqual([`${url.origin}/users/${dave.id}`]);
 		});
 	});
 

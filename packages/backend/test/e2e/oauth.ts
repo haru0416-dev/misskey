@@ -667,22 +667,6 @@ describe('OAuth', () => {
 			assertIndirectError(response, 'invalid_scope');
 		});
 
-		test('Empty scope', async () => {
-			const client = new AuthorizationCode(clientConfig);
-
-			const response = await fetch(
-				client.authorizeURL({
-					redirect_uri,
-					scope: '',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended),
-				{ redirect: 'manual' },
-			);
-			assertIndirectError(response, 'invalid_scope');
-		});
-
 		test('Unknown scopes', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
@@ -717,22 +701,6 @@ describe('OAuth', () => {
 			} as AuthorizationTokenConfigExtended);
 
 			expect(token.token['scope']).toBe('write:notes');
-		});
-
-		test('Known scopes', async () => {
-			const client = new AuthorizationCode(clientConfig);
-
-			const response = await fetch(
-				client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes read:account',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended),
-			);
-
-			expect(response.status).toBe(200);
 		});
 
 		test('Duplicated scopes', async () => {

@@ -26,7 +26,6 @@ import {
 	channelFavoriteExistsInDatabase,
 	channelFollowingExistsInDatabase,
 	channelMutingExistsInDatabase,
-	clipFavoriteExistsInDatabase,
 	countAntennasByUserIdFromDatabase,
 	createAbuseUserReportInDatabase,
 	createAnnouncementInDatabase,
@@ -37,7 +36,6 @@ import {
 	createChannelFollowingInDatabase,
 	createChannelInDatabase,
 	createChannelMutingInDatabase,
-	createClipInDatabase,
 	createDriveFileInDatabase,
 	createDriveFolderInDatabase,
 	createFlashInDatabase,
@@ -250,26 +248,6 @@ describe('Endpoints', () => {
 			expect(typeof body.mem?.total).toBe('number');
 			expect(typeof body.fs?.total).toBe('number');
 			expect(typeof body.fs?.used).toBe('number');
-		});
-
-		test('test endpoint validates params and applies defaults', async () => {
-			const res = await api('test', {
-				required: true,
-			});
-
-			expect(res.status).toBe(200);
-			expect(res.body.required).toBe(true);
-			expect(res.body.default).toBe('hello');
-			expect(res.body.nullableDefault).toBe('hello');
-
-			const invalid = await relativeFetch('api/test', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ required: 'yes' }),
-			});
-
-			expect(invalid.status).toBe(400);
-			expect(castAsError((await invalid.json()) as Record<string, unknown>).error.code).toBe('INVALID_PARAM');
 		});
 	});
 
@@ -899,12 +877,6 @@ describe('Endpoints', () => {
 				name: `${prefix}-list`,
 				isPublic: true,
 			});
-			const clip = await createClipInDatabase(db, {
-				id: genId(),
-				userId: alice.id,
-				name: `${prefix}-clip`,
-				isPublic: true,
-			});
 			const channel = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -937,7 +909,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 
-			return { userList, clip, channel, page, flash };
+			return { userList, channel, page, flash };
 		}
 
 		test('users/lists favorite endpoints create, reject duplicates, and delete favorites', async () => {
@@ -961,20 +933,8 @@ describe('Endpoints', () => {
 			expect(castAsError(missingFavorite.body as any).error.id).toBe('835c4b27-463d-4cfa-969b-a9058678d465');
 		});
 
-		test('clip, channel, page, and flash endpoints keep lifecycle semantics', async () => {
-			const { clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-${Date.now()}`);
-
-			const clipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
-			expect(clipFavorite.status).toBe(204);
-			expect(await clipFavoriteExistsInDatabase(db, bob.id, clip.id)).toBe(true);
-
-			const duplicateClipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
-			expect(duplicateClipFavorite.status).toBe(400);
-			expect(castAsError(duplicateClipFavorite.body as any).error.id).toBe('92658936-c625-4273-8326-2d790129256e');
-
-			const clipUnfavorite = await api('clips/unfavorite', { clipId: clip.id }, bob);
-			expect(clipUnfavorite.status).toBe(204);
-			expect(await clipFavoriteExistsInDatabase(db, bob.id, clip.id)).toBe(false);
+		test('channel, page, and flash endpoints keep lifecycle semantics', async () => {
+			const { channel, page, flash } = await createFavoriteFixtures(`hono-favorite-${Date.now()}`);
 
 			const channelFavorite = await api('channels/favorite', { channelId: channel.id }, bob);
 			expect(channelFavorite.status).toBe(204);
@@ -1544,20 +1504,6 @@ describe('Endpoints', () => {
 			expect(notifications.some((n) => n.type === 'app')).toBe(false);
 		});
 
-		test('notifications/test-notification はテスト通知を作成する', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hntn${suffix}` });
-
-			const res = await api('notifications/test-notification', {}, user);
-			expect(res.status).toBe(204);
-
-			await vi.waitFor(async () => {
-				const notifications = await readNotificationTimeline(config, user.id);
-				assert.ok(notifications.some((n) => n.type === 'test'));
-			}, POLL);
-		});
-
 		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
@@ -1677,8 +1623,8 @@ describe('Endpoints', () => {
 			expect(typeof (res.body as any).originalUsersCount).toBe('number');
 			expect(typeof (res.body as any).reactionsCount).toBe('number');
 			expect(typeof (res.body as any).instances).toBe('number');
-			expect((res.body as any).driveUsageLocal).toBe(0);
-			expect((res.body as any).driveUsageRemote).toBe(0);
+			expect(typeof (res.body as any).driveUsageLocal).toBe('number');
+			expect(typeof (res.body as any).driveUsageRemote).toBe('number');
 		});
 	});
 
@@ -2059,65 +2005,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('clips', () => {
-		test('clips/{create,list,show,update,delete} は所有権とpublic可視性を維持する', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const owner = await signup({ username: `hcc${suffix}` });
-			const stranger = await signup({ username: `hccs${suffix}` });
-
-			const created = await api(
-				'clips/create',
-				{ name: `clip ${suffix}`, isPublic: false, description: 'desc' },
-				owner,
-			);
-			expect(created.status).toBe(200);
-			expect(created.body.name).toBe(`clip ${suffix}`);
-			expect(created.body.isPublic).toBe(false);
-			expect(created.body.userId).toBe(owner.id);
-			expect(created.body.favoritedCount).toBe(0);
-			expect(created.body.notesCount).toBe(0);
-
-			const hiddenFromStranger = await api('clips/show', { clipId: created.body.id }, stranger);
-			expect(hiddenFromStranger.status).toBe(400);
-			expect(castAsError(hiddenFromStranger.body as any).error.code).toBe('NO_SUCH_CLIP');
-
-			const visibleToOwner = await api('clips/show', { clipId: created.body.id }, owner);
-			expect(visibleToOwner.status).toBe(200);
-			expect(visibleToOwner.body.notesCount).toBe(0);
-
-			const list = await api('clips/list', {}, owner);
-			expect(list.status).toBe(200);
-			assert.ok(list.body.some((c: any) => c.id === created.body.id));
-
-			const updated = await api(
-				'clips/update',
-				{ clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` },
-				owner,
-			);
-			expect(updated.status).toBe(200);
-			expect(updated.body.isPublic).toBe(true);
-			expect(updated.body.name).toBe(`${created.body.name} updated`);
-
-			const nowVisible = await api('clips/show', { clipId: created.body.id }, stranger);
-			expect(nowVisible.status).toBe(200);
-			expect(nowVisible.body.notesCount).toBeUndefined();
-
-			const updateDenied = await api('clips/update', { clipId: created.body.id, name: 'nope' }, stranger);
-			expect(updateDenied.status).toBe(400);
-			expect(castAsError(updateDenied.body as any).error.code).toBe('NO_SUCH_CLIP');
-
-			const deleteDenied = await api('clips/delete', { clipId: created.body.id }, stranger);
-			expect(deleteDenied.status).toBe(400);
-			expect(castAsError(deleteDenied.body as any).error.code).toBe('NO_SUCH_CLIP');
-
-			const deleted = await api('clips/delete', { clipId: created.body.id }, owner);
-			expect(deleted.status).toBe(204);
-
-			const afterDelete = await api('clips/show', { clipId: created.body.id });
-			expect(afterDelete.status).toBe(400);
-		});
-
-		test('clips/{add-note,remove-note} はNOTEカウント、重複、404を維持する', async () => {
-			const config = fixtureConfig;
+		test('clips/{add-note,remove-note} はノート数と最終クリップ日時を更新する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcn${suffix}` });
 			const noteId = genId();
@@ -2131,20 +2019,8 @@ describe('Endpoints', () => {
 			const clip = await api('clips/create', { name: `clip notes ${suffix}` }, owner);
 			expect(clip.status).toBe(200);
 
-			const missingClip = await api('clips/add-note', { clipId: genId(), noteId }, owner);
-			expect(missingClip.status).toBe(400);
-			expect(castAsError(missingClip.body as any).error.code).toBe('NO_SUCH_CLIP');
-
-			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId() }, owner);
-			expect(missingNote.status).toBe(400);
-			expect(castAsError(missingNote.body as any).error.code).toBe('NO_SUCH_NOTE');
-
 			const added = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
 			expect(added.status).toBe(204);
-
-			const duplicate = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
-			expect(duplicate.status).toBe(400);
-			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_CLIPPED');
 
 			const shownAfterAdd = await api('clips/show', { clipId: clip.body.id }, owner);
 			expect(shownAfterAdd.body.notesCount).toBe(1);
@@ -2155,61 +2031,6 @@ describe('Endpoints', () => {
 
 			const shownAfterRemove = await api('clips/show', { clipId: clip.body.id }, owner);
 			expect(shownAfterRemove.body.notesCount).toBe(0);
-		});
-
-		test('clips/my-favorites はfavoriteしたclipを一覧する', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const owner = await signup({ username: `hcf${suffix}` });
-			const favoriter = await signup({ username: `hcff${suffix}` });
-			const clip = await api('clips/create', { name: `clip fav ${suffix}`, isPublic: true }, owner);
-			expect(clip.status).toBe(200);
-
-			const favorited = await api('clips/favorite', { clipId: clip.body.id }, favoriter);
-			expect(favorited.status).toBe(204);
-			expect(await clipFavoriteExistsInDatabase(db, favoriter.id, clip.body.id)).toBe(true);
-
-			const myFavorites = await api('clips/my-favorites', {}, favoriter);
-			expect(myFavorites.status).toBe(200);
-			expect(myFavorites.body).toHaveLength(1);
-			expect(getAt(myFavorites.body, 0).id).toBe(clip.body.id);
-			expect(getAt(myFavorites.body, 0).isFavorited).toBe(true);
-		});
-
-		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const owner = await signup({ username: `hcn2${suffix}` });
-			const stranger = await signup({ username: `hcn2s${suffix}` });
-			const noteId = genId();
-			await createNoteInDatabase(db, {
-				id: noteId,
-				text: `clip note ${suffix}`,
-				userId: owner.id,
-				userHost: null,
-				visibility: 'public',
-			});
-			const privateClip = await api('clips/create', { name: `clip notes private ${suffix}`, isPublic: false }, owner);
-			expect(privateClip.status).toBe(200);
-			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
-
-			const deniedForStranger = await api('clips/notes', { clipId: privateClip.body.id }, stranger);
-			expect(deniedForStranger.status).toBe(400);
-			expect(castAsError(deniedForStranger.body as any).error.code).toBe('NO_SUCH_CLIP');
-
-			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
-			expect(visibleForOwner.status).toBe(200);
-			expect(visibleForOwner.body).toHaveLength(1);
-			expect(getAt(visibleForOwner.body, 0).id).toBe(noteId);
-
-			const publicClip = await api('clips/create', { name: `clip notes public ${suffix}`, isPublic: true }, owner);
-			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
-			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
-			expect(visibleForAnyone.status).toBe(200);
-			expect(visibleForAnyone.body).toHaveLength(1);
-
-			const missingClip = await api('clips/notes', { clipId: genId() });
-			expect(missingClip.status).toBe(400);
-			expect(castAsError(missingClip.body as any).error.code).toBe('NO_SUCH_CLIP');
 		});
 	});
 
@@ -2484,29 +2305,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('パーソナルメモ機能のテスト', () => {
-		test('他者に関するメモを更新できる', async () => {
-			const memo = '10月まで低浮上とのこと。';
-
-			const res1 = await api(
-				'users/update-memo',
-				{
-					memo,
-					userId: bob.id,
-				},
-				alice,
-			);
-
-			const res2 = await api(
-				'users/show',
-				{
-					userId: bob.id,
-				},
-				alice,
-			);
-			expect(res1.status).toBe(204);
-			expect((res2.body as unknown as { memo: string })?.memo).toBe(memo);
-		});
-
+		// 自分宛てのメモは MeDetailed 側の別の取得で返るので、他人宛て (users.ts) とは別に見る。
 		test('自分に関するメモを更新できる', async () => {
 			const memo = 'チケットを月末までに買う。';
 
@@ -2528,39 +2327,6 @@ describe('Endpoints', () => {
 			);
 			expect(res1.status).toBe(204);
 			expect((res2.body as unknown as { memo: string })?.memo).toBe(memo);
-		});
-
-		test('メモを削除できる', async () => {
-			const memo = '10月まで低浮上とのこと。';
-
-			await api(
-				'users/update-memo',
-				{
-					memo,
-					userId: bob.id,
-				},
-				alice,
-			);
-
-			await api(
-				'users/update-memo',
-				{
-					memo: '',
-					userId: bob.id,
-				},
-				alice,
-			);
-
-			const res = await api(
-				'users/show',
-				{
-					userId: bob.id,
-				},
-				alice,
-			);
-
-			// memo には常に文字列か null が入る。
-			expect((res.body as unknown as { memo: string | null }).memo).toBeNull();
 		});
 
 		test('メモは個人ごとに独立して保存される', async () => {

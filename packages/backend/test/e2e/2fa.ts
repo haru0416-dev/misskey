@@ -238,7 +238,7 @@ describe('2要素認証', () => {
 		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 	});
 
-	test('が設定でき、OTPでログインできる。', async () => {
+	test('が設定でき、OTPでログインでき、解除後はパスワードのみでログインできる。', async () => {
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
@@ -262,6 +262,12 @@ describe('2要素認証', () => {
 			alice,
 		);
 		expect(doneResponse.status).toBe(200);
+		// バックアップコードは完了時の応答でしか受け取れない
+		expect(doneResponse.body.backupCodes).toHaveLength(5);
+
+		const iResponse = await api('i', {}, alice);
+		expect(iResponse.status).toBe(200);
+		expect(iResponse.body.twoFactorEnabled).toBe(true);
 
 		const signinWithoutTokenResponse = await api('signin-flow', {
 			...signinParam(),
@@ -280,7 +286,7 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse.body.finished, true);
 		expect(signinResponse.body.i).toEqual(expect.anything());
 
-		await api(
+		const unregisterResponse = await api(
 			'i/2fa/unregister',
 			{
 				password,
@@ -288,6 +294,15 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
+		expect(unregisterResponse.status).toBe(204);
+
+		// 解除後はパスワードだけでログインが完了する
+		const signinWithoutTwoFactorResponse = await api('signin-flow', {
+			...signinParam(),
+		});
+		expect(signinWithoutTwoFactorResponse.status).toBe(200);
+		assert.strictEqual(signinWithoutTwoFactorResponse.body.finished, true);
+		expect(signinWithoutTwoFactorResponse.body.i).toEqual(expect.anything());
 	});
 
 	test('が設定でき、セキュリティキーでログインできる。', async () => {
@@ -587,7 +602,7 @@ describe('2要素認証', () => {
 		}
 	});
 
-	test('が設定でき、設定したセキュリティキーの名前を変更できる。', async () => {
+	test('が設定でき、設定したセキュリティキーの名前を変更・削除できる。', async () => {
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
@@ -653,59 +668,6 @@ describe('2要素認証', () => {
 		expect(securityKey.name).toBe(renamedKey);
 		expect(securityKey.lastUsed).toEqual(expect.anything());
 
-		await api(
-			'i/2fa/unregister',
-			{
-				password,
-				token: otpToken(registerResponse.body.secret),
-			},
-			alice,
-		);
-	});
-
-	test('が設定でき、設定したセキュリティキーを削除できる。', async () => {
-		const registerResponse = await api(
-			'i/2fa/register',
-			{
-				password,
-			},
-			alice,
-		);
-		expect(registerResponse.status).toBe(200);
-
-		const doneResponse = await api(
-			'i/2fa/done',
-			{
-				token: otpToken(registerResponse.body.secret),
-			},
-			alice,
-		);
-		expect(doneResponse.status).toBe(200);
-
-		const registerKeyResponse = await api(
-			'i/2fa/register-key',
-			{
-				token: otpToken(registerResponse.body.secret),
-				password,
-			},
-			alice,
-		);
-		expect(registerKeyResponse.status).toBe(200);
-
-		const keyName = 'example-key';
-		const credentialId = crypto.randomBytes(0x41);
-		const keyDoneResponse = await api(
-			'i/2fa/key-done',
-			keyDoneParam({
-				token: otpToken(registerResponse.body.secret),
-				keyName,
-				credentialId,
-				creationOptions: registerKeyResponse.body,
-			} as any) as any,
-			alice,
-		);
-		expect(keyDoneResponse.status).toBe(200);
-
 		// テスト順に依存しないよう、残存する登録をすべて削除する。
 		const beforeIResponse = await api('i', {}, alice);
 		expect(beforeIResponse.status).toBe(200);
@@ -730,56 +692,6 @@ describe('2要素認証', () => {
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
 			token: otpToken(registerResponse.body.secret),
-		});
-		expect(signinResponse.status).toBe(200);
-		assert.strictEqual(signinResponse.body.finished, true);
-		expect(signinResponse.body.i).toEqual(expect.anything());
-
-		await api(
-			'i/2fa/unregister',
-			{
-				password,
-				token: otpToken(registerResponse.body.secret),
-			},
-			alice,
-		);
-	});
-
-	test('が設定でき、設定解除できる。（パスワードのみでログインできる。）', async () => {
-		const registerResponse = await api(
-			'i/2fa/register',
-			{
-				password,
-			},
-			alice,
-		);
-		expect(registerResponse.status).toBe(200);
-
-		const doneResponse = await api(
-			'i/2fa/done',
-			{
-				token: otpToken(registerResponse.body.secret),
-			},
-			alice,
-		);
-		expect(doneResponse.status).toBe(200);
-
-		const iResponse = await api('i', {}, alice);
-		expect(iResponse.status).toBe(200);
-		expect(iResponse.body.twoFactorEnabled).toBe(true);
-
-		const unregisterResponse = await api(
-			'i/2fa/unregister',
-			{
-				token: otpToken(registerResponse.body.secret),
-				password,
-			},
-			alice,
-		);
-		expect(unregisterResponse.status).toBe(204);
-
-		const signinResponse = await api('signin-flow', {
-			...signinParam(),
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);

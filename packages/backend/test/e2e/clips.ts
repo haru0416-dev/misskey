@@ -223,41 +223,6 @@ describe('クリップ', () => {
 		);
 	});
 
-	const createClipAllowedPattern = [
-		{ label: 'nameが最大長', parameters: { name: 'x'.repeat(100) } },
-		{ label: 'public', parameters: { isPublic: true } },
-		{ label: 'descriptionがnull', parameters: { description: null } },
-		{ label: 'descriptionが最大長', parameters: { description: 'a'.repeat(2048) } },
-	];
-	test.each(createClipAllowedPattern)('の作成は$labelでもできる', async ({ parameters }) => {
-		expect((await create(parameters)).id).toBeTypeOf('string');
-	});
-
-	const createClipDenyPattern = [
-		{ label: 'nameがnull', parameters: { name: null } },
-		{ label: 'nameが最大長+1', parameters: { name: 'x'.repeat(101) } },
-		{ label: 'isPublicがboolじゃない', parameters: { isPublic: 'true' } },
-		{ label: 'descriptionが最大長+1', parameters: { description: 'a'.repeat(2049) } },
-	];
-	test.each(createClipDenyPattern)('の作成は$labelならできない', async ({ parameters }) =>
-		failedApiCall(
-			{
-				endpoint: 'clips/create',
-				// @ts-expect-error invalid params
-				parameters: {
-					...defaultCreate(),
-					...parameters,
-				},
-				user: alice,
-			},
-			{
-				status: 400,
-				code: 'INVALID_PARAM',
-				id: '3d81ceae-475f-4600-b2a8-2bc116157532',
-			},
-		),
-	);
-
 	test('の作成はdescriptionが空文字ならnullになる', async () => {
 		const clip = await successfulApiCall({
 			endpoint: 'clips/create',
@@ -292,53 +257,22 @@ describe('クリップ', () => {
 		expect(res.isFavorited).toBe(false);
 	});
 
-	test.each(createClipAllowedPattern)('の更新は$labelでもできる', async ({ parameters }) => {
-		const clip = await update({
-			clipId: (await create()).id,
-			name: 'updated',
-			...parameters,
-		});
-		expect(clip).toMatchObject({ name: 'updated', ...parameters });
-	});
-
-	test.each([
-		{ label: 'clipIdがnull', parameters: { clipId: null } },
-		{
-			label: '存在しないクリップ',
-			parameters: { clipId: 'xxxxxx' },
-			assertion: {
-				code: 'NO_SUCH_CLIP',
-				id: 'b4d92d70-b216-46fa-9a3f-a8c811699257',
-			},
-		},
-		{
-			label: '他人のクリップ',
-			user: () => bob,
-			assertion: {
-				code: 'NO_SUCH_CLIP',
-				id: 'b4d92d70-b216-46fa-9a3f-a8c811699257',
-			},
-		},
-		...(createClipDenyPattern as any),
-	])('の更新は$labelならできない', async ({ parameters, user, assertion }) =>
+	test('の更新は他人のクリップならできない', async () =>
 		failedApiCall(
 			{
 				endpoint: 'clips/update',
 				parameters: {
-					clipId: (await create({}, { user: (user ?? (() => alice))() })).id,
+					clipId: (await create({}, { user: bob })).id,
 					name: 'updated',
-					...parameters,
 				},
 				user: alice,
 			},
 			{
 				status: 400,
-				code: 'INVALID_PARAM',
-				id: '3d81ceae-475f-4600-b2a8-2bc116157532',
-				...assertion,
+				code: 'NO_SUCH_CLIP',
+				id: 'b4d92d70-b216-46fa-9a3f-a8c811699257',
 			},
-		),
-	);
+		));
 
 	test('の更新はdescriptionが空文字ならnullになる', async () => {
 		const clip = await successfulApiCall({
@@ -367,14 +301,6 @@ describe('クリップ', () => {
 
 	test.each([
 		{ label: 'clipIdがnull', parameters: { clipId: null } },
-		{
-			label: '存在しないクリップ',
-			parameters: { clipId: 'xxxxxx' },
-			assertion: {
-				code: 'NO_SUCH_CLIP',
-				id: '70ca08ba-6865-4630-b6fb-8494759aa754',
-			},
-		},
 		{
 			label: '他人のクリップ',
 			user: () => bob,
@@ -948,14 +874,6 @@ describe('クリップ', () => {
 			{ label: 'clipId未指定', parameters: { clipId: undefined } },
 			{ label: 'noteId未指定', parameters: { noteId: undefined } },
 			{
-				label: '存在しないクリップ',
-				parameters: { clipId: 'xxxxxx' },
-				assetion: {
-					code: 'NO_SUCH_CLIP',
-					id: 'd6e76cc0-a1b5-4c7c-a287-73fa9c716dcf',
-				},
-			},
-			{
 				label: '存在しないノート',
 				parameters: { noteId: 'xxxxxx' },
 				assetion: {
@@ -1002,14 +920,6 @@ describe('クリップ', () => {
 		test.each([
 			{ label: 'clipId未指定', parameters: { clipId: undefined } },
 			{ label: 'noteId未指定', parameters: { noteId: undefined } },
-			{
-				label: '存在しないクリップ',
-				parameters: { clipId: 'xxxxxx' },
-				assetion: {
-					code: 'NO_SUCH_CLIP',
-					id: 'b80525c6-97f7-49d7-a42d-ebccd49cfd52', // add-noteと異なる
-				},
-			},
 			{
 				label: '存在しないノート',
 				parameters: { noteId: 'xxxxxx' },

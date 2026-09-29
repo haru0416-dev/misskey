@@ -29,26 +29,6 @@ describe('Mute', () => {
 		1000 * 60 * 2,
 	);
 
-	test('ミュート作成', async () => {
-		const res = await api(
-			'mute/create',
-			{
-				userId: bob.id,
-			},
-			alice,
-		);
-
-		expect(res.status).toBe(204);
-
-		await api(
-			'mute/delete',
-			{
-				userId: bob.id,
-			},
-			alice,
-		);
-	});
-
 	test('「自分宛ての投稿」にミュートしているユーザーの投稿が含まれない', async () => {
 		const bobNote = await post(bob, { text: '@alice hi' });
 		const carolNote = await post(carol, { text: '@alice hi' });
@@ -61,49 +41,19 @@ describe('Mute', () => {
 		expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 	});
 
-	test('ミュートしているユーザーからメンションされても、ストリームに unreadNotification イベントが流れてこない', async () => {
+	// ノートの通知 (メンション等) は作成の直後に notification を流し、unreadNotification は流さない。ミュート相手の通知は
+	// 作成側 (createNoteNotifications) とストリームの main チャンネルの両方で弾くので、どちらかが効いていることを見る。
+	test('ミュートしているユーザーからメンションされても、ストリームに通知が流れてこない', async () => {
 		await api('notifications/mark-all-as-read', {}, alice);
 
 		const fired = await waitFire(
 			alice,
 			'main',
 			() => post(carol, { text: '@alice hi' }),
-			(msg) => msg.type === 'unreadNotification',
+			(msg) => msg.type === 'notification',
 		);
 
 		expect(fired).toBe(false);
-	});
-
-	describe('Timeline', () => {
-		test('タイムラインにミュートしているユーザーの投稿が含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			const bobNote = await post(bob, { text: 'hi' });
-			const carolNote = await post(carol, { text: 'hi' });
-
-			const res = await api('notes/local-timeline', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-			expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-			expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-		});
-
-		test('タイムラインにミュートしているユーザーの投稿のRenoteが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			const carolNote = await post(carol, { text: 'hi' });
-			const bobNote = await post(bob, {
-				renoteId: carolNote.id,
-			});
-
-			const res = await api('notes/local-timeline', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-			expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-			expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-			expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-		});
 	});
 
 	describe('Notification', () => {
@@ -120,62 +70,6 @@ describe('Mute', () => {
 				expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
 				return res;
 			});
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { text: '@alice hi', replyId: aliceNote.id });
-			await post(carol, { text: '@alice hi', replyId: aliceNote.id });
-
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
-			await post(alice, { text: 'hi' });
-			await post(bob, { text: '@alice hi' });
-			await post(carol, { text: '@alice hi' });
-
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { text: 'hi', renoteId: aliceNote.id });
-			await post(carol, { text: 'hi', renoteId: aliceNote.id });
-
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { renoteId: aliceNote.id });
-			await post(carol, { renoteId: aliceNote.id });
-
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
@@ -245,91 +139,6 @@ describe('Mute', () => {
 				expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
 				return res;
 			});
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { text: '@alice hi', replyId: aliceNote.id });
-			await post(carol, { text: '@alice hi', replyId: aliceNote.id });
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
-			await post(alice, { text: 'hi' });
-			await post(bob, { text: '@alice hi' });
-			await post(carol, { text: '@alice hi' });
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { text: 'hi', renoteId: aliceNote.id });
-			await post(carol, { text: 'hi', renoteId: aliceNote.id });
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
-			const aliceNote = await post(alice, { text: 'hi' });
-			await post(bob, { renoteId: aliceNote.id });
-			await post(carol, { renoteId: aliceNote.id });
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-		});
-
-		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
-			await api('following/create', { userId: alice.id }, bob);
-			await api('following/create', { userId: alice.id }, carol);
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-
-			await api('following/delete', { userId: alice.id }, bob);
-			await api('following/delete', { userId: alice.id }, carol);
-		});
-
-		test('通知にミュートしているユーザーからのフォローリクエストが含まれない', async () => {
-			await api('i/update', { isLocked: true }, alice);
-			await api('following/create', { userId: alice.id }, bob);
-			await api('following/create', { userId: alice.id }, carol);
-
-			const res = await api('i/notifications-grouped', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 

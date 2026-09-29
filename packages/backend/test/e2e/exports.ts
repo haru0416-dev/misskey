@@ -79,27 +79,7 @@ describe('export-clips', () => {
 		);
 	});
 
-	test('basic export', async () => {
-		const res1 = await api(
-			'clips/create',
-			{
-				name: 'foo',
-				description: 'bar',
-			},
-			alice,
-		);
-		expect(res1.status).toBe(200);
-
-		const res2 = await api('i/export-clips', {}, alice);
-		expect(res2.status).toBe(204);
-
-		const exported = await pollFirstDriveFile();
-		expect(exported[0].name).toBe('foo');
-		expect(exported[0].description).toBe('bar');
-		expect(exported[0].clipNotes).toHaveLength(0);
-	});
-
-	test('export with notes', async () => {
+	test('export multiple clips with notes', async () => {
 		const res = await api(
 			'clips/create',
 			{
@@ -134,85 +114,27 @@ describe('export-clips', () => {
 			expect(res2.status).toBe(204);
 		}
 
+		// クリップ同士の区切りも書き出しで組み立てるので、2 つ目のクリップも入れる。
+		const res4 = await api('clips/create', { name: 'yuri', description: 'yuri' }, alice);
+		expect(res4.status).toBe(200);
+		const note3 = await post(alice, { text: 'baz3' });
+		const res5 = await api('clips/add-note', { clipId: res4.body.id, noteId: note3.id }, alice);
+		expect(res5.status).toBe(204);
+
 		const res3 = await api('i/export-clips', {}, alice);
 		expect(res3.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
+		expect(exported).toHaveLength(2);
 		expect(exported[0].name).toBe('foo');
 		expect(exported[0].description).toBe('bar');
 		expect(exported[0].clipNotes).toHaveLength(2);
 		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
 		expect(exported[0].clipNotes[1].note.text).toBe('baz2');
 		expect(exported[0].clipNotes[1].note.poll.choices[0]).toBe('sakura');
-	});
-
-	test('multiple clips', async () => {
-		const res1 = await api(
-			'clips/create',
-			{
-				name: 'kawaii',
-				description: 'kawaii',
-			},
-			alice,
-		);
-		expect(res1.status).toBe(200);
-		const clip1 = res1.body;
-
-		const res2 = await api(
-			'clips/create',
-			{
-				name: 'yuri',
-				description: 'yuri',
-			},
-			alice,
-		);
-		expect(res2.status).toBe(200);
-		const clip2 = res2.body;
-
-		const note1 = await post(alice, {
-			text: 'baz1',
-		});
-
-		const note2 = await post(alice, {
-			text: 'baz2',
-		});
-
-		{
-			const res = await api(
-				'clips/add-note',
-				{
-					clipId: clip1.id,
-					noteId: note1.id,
-				},
-				alice,
-			);
-			expect(res.status).toBe(204);
-		}
-
-		{
-			const res = await api(
-				'clips/add-note',
-				{
-					clipId: clip2.id,
-					noteId: note2.id,
-				},
-				alice,
-			);
-			expect(res.status).toBe(204);
-		}
-
-		{
-			const res = await api('i/export-clips', {}, alice);
-			expect(res.status).toBe(204);
-		}
-
-		const exported = await pollFirstDriveFile();
-		expect(exported[0].name).toBe('kawaii');
-		expect(exported[0].clipNotes).toHaveLength(1);
-		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
 		expect(exported[1].name).toBe('yuri');
 		expect(exported[1].clipNotes).toHaveLength(1);
-		expect(exported[1].clipNotes[0].note.text).toBe('baz2');
+		expect(exported[1].clipNotes[0].note.text).toBe('baz3');
 	});
 
 	test("Clipping other user's note (followers only notes are excluded when not following)", async () => {

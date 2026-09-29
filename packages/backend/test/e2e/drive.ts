@@ -72,6 +72,8 @@ describe('Drive', () => {
 		expect(file.type).toBe('image/jpeg');
 	});
 
+	// multipart のフィールドに非 ASCII の名前を渡すのはこのテストだけ。フィールドを UTF-8 以外で
+	// 読む実装に変わると名前が化ける。
 	test('ローカルからアップロードできる', async () => {
 		const res = await uploadFile(alice, { path: '192.jpg', name: 'テスト画像' });
 

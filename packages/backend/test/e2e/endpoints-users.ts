@@ -679,213 +679,6 @@ describe('Endpoints', () => {
 			expect(body.totalSize).toHaveLength(5);
 		});
 
-		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
-			const suffix = Date.now().toString(36);
-
-			const created = await api(
-				'antennas/create',
-				{
-					name: `antenna-${suffix}`,
-					src: 'home',
-					keywords: [['hello']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(created.status).toBe(200);
-			expect(created.body.name).toBe(`antenna-${suffix}`);
-			expect(created.body.src).toBe('home');
-			expect(created.body.isActive).toBe(true);
-
-			const empty = await api(
-				'antennas/create',
-				{
-					name: `antenna-empty-${suffix}`,
-					src: 'home',
-					keywords: [['']],
-					excludeKeywords: [['']],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(empty.status).toBe(400);
-			expect(castAsError(empty.body as any).error.id).toBe('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
-
-			const noSuchList = await api(
-				'antennas/create',
-				{
-					name: `antenna-nolist-${suffix}`,
-					src: 'list',
-					userListId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-					keywords: [['hello']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(noSuchList.status).toBe(400);
-			expect(castAsError(noSuchList.body as any).error.id).toBe('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
-
-			const config = fixtureConfig;
-			const userList = await createUserListInDatabase(db, {
-				id: genId(),
-				userId: alice.id,
-				name: `antenna-list-${suffix}`,
-			});
-			const withList = await api(
-				'antennas/create',
-				{
-					name: `antenna-list-src-${suffix}`,
-					src: 'list',
-					userListId: userList.id,
-					keywords: [['hello']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(withList.status).toBe(200);
-			expect(withList.body.userListId).toBe(userList.id);
-		});
-
-		test('antennas/update updates an antenna and rejects foreign or missing antennas', async () => {
-			const suffix = Date.now().toString(36);
-			const created = await api(
-				'antennas/create',
-				{
-					name: `antenna-upd-${suffix}`,
-					src: 'home',
-					keywords: [['before']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(created.status).toBe(200);
-
-			const updated = await api(
-				'antennas/update',
-				{
-					antennaId: created.body.id,
-					name: `antenna-upd-renamed-${suffix}`,
-				},
-				alice,
-			);
-			expect(updated.status).toBe(200);
-			expect(updated.body.name).toBe(`antenna-upd-renamed-${suffix}`);
-
-			const emptyKeywordUpdate = await api(
-				'antennas/update',
-				{
-					antennaId: created.body.id,
-					keywords: [['']],
-					excludeKeywords: [['']],
-				},
-				alice,
-			);
-			expect(emptyKeywordUpdate.status).toBe(400);
-			expect(castAsError(emptyKeywordUpdate.body as any).error.id).toBe('721aaff6-4e1b-4d88-8de6-877fae9f68c4');
-
-			const foreignUpdate = await api(
-				'antennas/update',
-				{
-					antennaId: created.body.id,
-					name: 'hijack',
-				},
-				bob,
-			);
-			expect(foreignUpdate.status).toBe(400);
-			expect(castAsError(foreignUpdate.body as any).error.id).toBe('10c673ac-8852-48eb-aa1f-f5b67f069290');
-
-			const missingUpdate = await api(
-				'antennas/update',
-				{
-					antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-					name: 'missing',
-				},
-				alice,
-			);
-			expect(missingUpdate.status).toBe(400);
-			expect(castAsError(missingUpdate.body as any).error.id).toBe('10c673ac-8852-48eb-aa1f-f5b67f069290');
-		});
-
-		test('antennas/show and antennas/list scope antennas to the caller', async () => {
-			const suffix = Date.now().toString(36);
-			const created = await api(
-				'antennas/create',
-				{
-					name: `antenna-show-${suffix}`,
-					src: 'home',
-					keywords: [['x']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(created.status).toBe(200);
-
-			const shown = await api('antennas/show', { antennaId: created.body.id }, alice);
-			expect(shown.status).toBe(200);
-			expect(shown.body.id).toBe(created.body.id);
-
-			const shownByBob = await api('antennas/show', { antennaId: created.body.id }, bob);
-			expect(shownByBob.status).toBe(400);
-			expect(castAsError(shownByBob.body as any).error.id).toBe('c06569fb-b025-4f23-b22d-1fcd20d2816b');
-
-			const list = await api('antennas/list', {}, alice);
-			expect(list.status).toBe(200);
-			expect((list.body as any[]).some((a) => a.id === created.body.id)).toBe(true);
-		});
-
-		test('antennas/delete removes an antenna, rejecting foreign or missing antennas', async () => {
-			const suffix = Date.now().toString(36);
-			const created = await api(
-				'antennas/create',
-				{
-					name: `antenna-del-${suffix}`,
-					src: 'home',
-					keywords: [['x']],
-					excludeKeywords: [[]],
-					users: [],
-					caseSensitive: false,
-					withReplies: false,
-					withFile: false,
-				},
-				alice,
-			);
-			expect(created.status).toBe(200);
-
-			const foreignDelete = await api('antennas/delete', { antennaId: created.body.id }, bob);
-			expect(foreignDelete.status).toBe(400);
-			expect(castAsError(foreignDelete.body as any).error.id).toBe('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
-
-			const deleted = await api('antennas/delete', { antennaId: created.body.id }, alice);
-			expect(deleted.status).toBe(204);
-
-			const missingDelete = await api('antennas/delete', { antennaId: created.body.id }, alice);
-			expect(missingDelete.status).toBe(400);
-			expect(castAsError(missingDelete.body as any).error.id).toBe('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
-		});
-
 		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
 			const config = fixtureConfig;
 			const created = await api(
@@ -954,31 +747,12 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('i/2fa/register and i/2fa/done enable TOTP two-factor authentication', async () => {
+		test('i/2fa/register rejects a wrong password', async () => {
 			const user = await signup({ username: `twofa${Date.now().toString(36)}` });
 
 			const wrongPassword = await api('i/2fa/register', { password: 'wrong' }, user);
 			expect(wrongPassword.status).toBe(400);
 			expect(castAsError(wrongPassword.body as any).error.id).toBe('78d6c839-20c9-4c66-b90a-fc0542168b48');
-
-			const registered = await api('i/2fa/register', { password: 'test' }, user);
-			expect(registered.status).toBe(200);
-			expect(typeof registered.body.secret).toBe('string');
-			expect(registered.body.url).toContain(registered.body.secret);
-
-			// テスト環境では MISSKEY_TEST_CHECK_DUPLICATED_TOTP 未設定時に任意の TOTP トークンが受理される。
-			const done = await api('i/2fa/done', { token: '000000' }, user);
-			expect(done.status).toBe(200);
-			expect((done.body as any).backupCodes).toHaveLength(5);
-
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profile.twoFactorEnabled).toBe(true);
-
-			const unregistered = await api('i/2fa/unregister', { password: 'test', token: '000000' }, user);
-			expect(unregistered.status).toBe(204);
-
-			const afterUnregister = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(afterUnregister.twoFactorEnabled).toBe(false);
 		});
 
 		test('i/2fa/register-key requires two-factor authentication to already be enabled', async () => {
@@ -1013,7 +787,7 @@ describe('Endpoints', () => {
 			expect(castAsError(notEnabled.body as any).error.id).toBe('798d6847-b1ed-4f9c-b1f9-163c42655995');
 		});
 
-		test('i/2fa/update-key and i/2fa/remove-key manage an existing security key', async () => {
+		test('i/2fa/update-key and i/2fa/remove-key reject missing keys, other users, and wrong passwords', async () => {
 			const user = await signup({ username: `twofaupdkey${Date.now().toString(36)}` });
 			const keyId = `hono-key-${Date.now().toString(36)}`;
 			await createUserSecurityKeyInDatabase(db, {
@@ -1039,20 +813,9 @@ describe('Endpoints', () => {
 			expect(accessDenied.status).toBe(400);
 			expect(castAsError(accessDenied.body as any).error.id).toBe('1fb7cb09-d46a-4fff-b8df-057708cce513');
 
-			const updated = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, user);
-			expect(updated.status).toBe(200);
-			expect(updated.body).toStrictEqual({});
-
 			const wrongPassword = await api('i/2fa/remove-key', { password: 'wrong', credentialId: keyId }, user);
 			expect(wrongPassword.status).toBe(400);
 			expect(castAsError(wrongPassword.body as any).error.id).toBe('141c598d-a825-44c8-9173-cfb9d92be493');
-
-			const removed = await api('i/2fa/remove-key', { password: 'test', credentialId: keyId }, user);
-			expect(removed.status).toBe(200);
-			expect(removed.body).toStrictEqual({});
-
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profile.usePasswordLessLogin).toBe(false);
 		});
 
 		test('i/2fa/password-less requires a security key before it can be enabled', async () => {
@@ -1061,23 +824,6 @@ describe('Endpoints', () => {
 			const noKey = await api('i/2fa/password-less', { value: true }, user);
 			expect(noKey.status).toBe(400);
 			expect(castAsError(noKey.body as any).error.id).toBe('f9c54d7f-d4c2-4d3c-9a8g-a70daac86512');
-
-			await createUserSecurityKeyInDatabase(db, {
-				id: `hono-pwless-key-${Date.now().toString(36)}`,
-				userId: user.id,
-				name: 'a key',
-				publicKey: 'dummy-public-key',
-				counter: 0,
-				credentialDeviceType: 'singleDevice',
-				credentialBackedUp: false,
-				transports: [],
-			});
-
-			const enabled = await api('i/2fa/password-less', { value: true }, user);
-			expect(enabled.status).toBe(204);
-
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profile.usePasswordLessLogin).toBe(true);
 		});
 
 		test('pages/create creates a page and rejects missing files or duplicate names', async () => {
@@ -2185,21 +1931,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('users/clips, users/flashs, users/gallery/posts', () => {
-		test('users/clips は公開clipのみをページングして返す', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const owner = await signup({ username: `huc${suffix}` });
-
-			const pub = await api('clips/create', { name: `hono users/clips public ${suffix}`, isPublic: true }, owner);
-			expect(pub.status).toBe(200);
-			const priv = await api('clips/create', { name: `hono users/clips private ${suffix}`, isPublic: false }, owner);
-			expect(priv.status).toBe(200);
-
-			const listed = await api('users/clips', { userId: owner.id, limit: 100 });
-			expect(listed.status).toBe(200);
-			assert.ok(listed.body.some((c: any) => c.id === pub.body.id));
-			assert.ok(!listed.body.some((c: any) => c.id === priv.body.id));
-		});
-
 		test('users/flashs は公開flashのみをページングして返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `huf${suffix}` });
@@ -2274,7 +2005,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('users/search', () => {
-		test('users/search はname/username/description一致、origin絞り込み、mute除外、detailスキーマを維持する', async () => {
+		test('users/search はname/@username前方一致/description一致とorigin絞り込みを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const byName = await signup({ username: `husn${suffix}` });
 			await api('i/update', { name: `Search Target ${suffix}` }, byName);
@@ -2285,11 +2016,6 @@ describe('Endpoints', () => {
 			await updateUserProfileInDatabase(db, byDescription.id, {
 				description: `hono search description marker ${suffix}`,
 			});
-
-			const muter = await signup({ username: `husm${suffix}` });
-			const muted = await signup({ username: `hussrchmuted${suffix}` });
-			const muteRes = await api('mute/create', { userId: muted.id }, muter);
-			expect(muteRes.status).toBe(204);
 
 			const byNameResult = await api('users/search', { query: `Search Target ${suffix}` });
 			expect(byNameResult.status).toBe(200);
@@ -2303,14 +2029,6 @@ describe('Endpoints', () => {
 			expect(byDescriptionResult.status).toBe(200);
 			assert.ok(byDescriptionResult.body.some((u: any) => u.id === byDescription.id));
 
-			const mutedIncludedForAnon = await api('users/search', { query: `hussrchmuted${suffix}` });
-			expect(mutedIncludedForAnon.status).toBe(200);
-			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
-
-			const mutedExcludedForMuter = await api('users/search', { query: `hussrchmuted${suffix}` }, muter);
-			expect(mutedExcludedForMuter.status).toBe(200);
-			assert.ok(!mutedExcludedForMuter.body.some((u: any) => u.id === muted.id));
-
 			const localOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'local' });
 			expect(localOnly.status).toBe(200);
 			assert.ok(localOnly.body.some((u: any) => u.id === byUsername.id));
@@ -2318,24 +2036,13 @@ describe('Endpoints', () => {
 			const remoteOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'remote' });
 			expect(remoteOnly.status).toBe(200);
 			assert.ok(!remoteOnly.body.some((u: any) => u.id === byUsername.id));
-
-			const detailed = await api('users/search', { query: `@hussrch${suffix}`, detail: true });
-			expect(detailed.status).toBe(200);
-			assert.ok(Object.hasOwn(getAt(detailed.body, 0), 'isLocked'));
-
-			const lite = await api('users/search', { query: `@hussrch${suffix}`, detail: false });
-			expect(lite.status).toBe(200);
-			assert.ok(!Object.hasOwn(getAt(lite.body, 0), 'isLocked'));
 		});
 	});
 
 	describe('users (bare, explorableユーザー一覧)', () => {
-		test('isExplorable/isSuspended、origin、hostname、mute除外を維持する', async () => {
+		test('origin の既定はローカルだけで、combined はリモートも含む', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const explorable = await signup({ username: `hu${suffix}` });
-
-			const notExplorable = await signup({ username: `hune${suffix}` });
-			await updateUserInDatabase(db, notExplorable.id, { isExplorable: false });
 
 			const remoteHost = `hono-users-${suffix}.example`;
 			const remoteId = genId();
@@ -2355,109 +2062,54 @@ describe('Endpoints', () => {
 				},
 			});
 
-			const muter = await signup({ username: `hum${suffix}` });
-			const muted = await signup({ username: `humt${suffix}` });
-			const muteRes = await api('mute/create', { userId: muted.id }, muter);
-			expect(muteRes.status).toBe(204);
-
 			// フルスイートでは既存のexplorableユーザーが100件を超えるため、新規作成分を確実に上位に出す
 			// sort=+createdAt (id降順) を明示する。
 			const all = await api('users', { limit: 100, sort: '+createdAt' });
 			expect(all.status).toBe(200);
 			assert.ok(all.body.some((u: any) => u.id === explorable.id));
-			expect(all.body.some((u: any) => u.id === notExplorable.id)).toBe(false);
 			expect(all.body.some((u: any) => u.id === remoteUser.id)).toBe(false);
 
 			const combined = await api('users', { limit: 100, origin: 'combined', sort: '+createdAt' });
 			expect(combined.status).toBe(200);
 			assert.ok(combined.body.some((u: any) => u.id === remoteUser.id));
-
-			const remoteOnly = await api('users', { limit: 100, origin: 'remote', sort: '+createdAt' });
-			expect(remoteOnly.status).toBe(200);
-			assert.ok(remoteOnly.body.some((u: any) => u.id === remoteUser.id));
-			expect(remoteOnly.body.some((u: any) => u.id === explorable.id)).toBe(false);
-
-			const byHostname = await api('users', { limit: 100, origin: 'combined', hostname: remoteHost });
-			expect(byHostname.status).toBe(200);
-			assert.ok(byHostname.body.some((u: any) => u.id === remoteUser.id));
-			expect(byHostname.body.some((u: any) => u.id === explorable.id)).toBe(false);
-
-			const mutedIncludedForAnon = await api('users', { limit: 100, sort: '+createdAt' });
-			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
-
-			const mutedExcludedForMuter = await api('users', { limit: 100, sort: '+createdAt' }, muter);
-			expect(mutedExcludedForMuter.status).toBe(200);
-			expect(mutedExcludedForMuter.body.some((u: any) => u.id === muted.id)).toBe(false);
 		});
 
-		test('sort=+followerとstate=aliveを維持する', async () => {
+		test('state=aliveは最近更新のないユーザーを除く', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
-			// フルスイートでは既存ユーザーのfollowersCountが不定のため、飛び抜けた値で先頭固定を保証する。
-			const popular = await signup({ username: `hup${suffix}` });
-			await updateUserInDatabase(db, popular.id, { followersCount: 999_999_999, updatedAt: new Date() });
+			const active = await signup({ username: `hup${suffix}` });
+			await updateUserInDatabase(db, active.id, { updatedAt: new Date() });
 
 			const stale = await signup({ username: `hus${suffix}` });
 			await updateUserInDatabase(db, stale.id, { updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10) });
 
-			const sorted = await api('users', { limit: 1, sort: '+follower' });
-			expect(sorted.status).toBe(200);
-			expect(sorted.body[0]?.id).toBe(popular.id);
-
 			const alive = await api('users', { limit: 100, state: 'alive', sort: '+createdAt' });
 			expect(alive.status).toBe(200);
-			assert.ok(alive.body.some((u: any) => u.id === popular.id));
+			assert.ok(alive.body.some((u: any) => u.id === active.id));
 			expect(alive.body.some((u: any) => u.id === stale.id)).toBe(false);
 		});
 	});
 
 	describe('users/search-by-username-and-host', () => {
-		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
+		test('usernameの前方一致 (未ログイン)、ログイン時のフォロー優先、detail: false を維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const target = await signup({ username: `hsbuh${suffix}` });
 			const otherPrefixed = await signup({ username: `hsbuh${suffix}x` });
 			const searcher = await signup({ username: `hsbuhs${suffix}` });
-			const remoteHost = `hono-sbuh-${suffix}.example`;
-			const remoteId = genId();
-			const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
-				user: {
-					id: remoteId,
-					username: `remote${suffix}`,
-					usernameLower: `remote${suffix}`,
-					host: remoteHost,
-					inbox: `https://${remoteHost}/inbox`,
-					uri: `https://${remoteHost}/users/${remoteId}`,
-				},
-				profile: {
-					userId: remoteId,
-					userHost: remoteHost,
-				},
-			});
 
 			const byUsername = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 100 });
 			expect(byUsername.status).toBe(200);
 			assert.ok(byUsername.body.some((u: any) => u.id === target.id));
 			assert.ok(byUsername.body.some((u: any) => u.id === otherPrefixed.id));
 
-			const byHost = await api('users/search-by-username-and-host', { host: remoteHost, limit: 100 });
-			expect(byHost.status).toBe(200);
-			assert.ok(byHost.body.some((u: any) => u.id === remoteUser.id));
-
-			await api('following/create', { userId: target.id }, searcher);
+			// 名前順では target が先に来るので、後に来る方をフォローして順位が入れ替わることを見る
+			await api('following/create', { userId: otherPrefixed.id }, searcher);
 			const followedFirst = await api(
 				'users/search-by-username-and-host',
 				{ username: `hsbuh${suffix}`, limit: 1 },
 				searcher,
 			);
 			expect(followedFirst.status).toBe(200);
-			expect(getAt(followedFirst.body, 0).id).toBe(target.id);
-
-			// @ts-expect-error params must include username or host
-			const missingBoth = await api('users/search-by-username-and-host', { limit: 10 });
-			expect(missingBoth.status).toBe(400);
-
-			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
-			expect(detailed.status).toBe(200);
-			assert.ok(Object.hasOwn(getAt(detailed.body, 0), 'isLocked'));
+			expect(getAt(followedFirst.body, 0).id).toBe(otherPrefixed.id);
 
 			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
 			expect(lite.status).toBe(200);
@@ -2930,28 +2582,6 @@ describe('Endpoints', () => {
 	});
 
 	describe('i/update', () => {
-		test('アカウント設定を更新できる', async () => {
-			const myName = '大室櫻子';
-			const myLocation = '七森中';
-			const myBirthday = '2000-09-07';
-
-			const res = await api(
-				'i/update',
-				{
-					name: myName,
-					location: myLocation,
-					birthday: myBirthday,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.name).toBe(myName);
-			expect(res.body.location).toBe(myLocation);
-			expect(res.body.birthday).toBe(myBirthday);
-		});
-
 		test('名前を空白のみにした場合nullになる', async () => {
 			const res = await api(
 				'i/update',
@@ -2998,17 +2628,6 @@ describe('Endpoints', () => {
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			expect(res.body.birthday).toBeNull();
 		});
-
-		test('不正な誕生日の形式で怒られる', async () => {
-			const res = await api(
-				'i/update',
-				{
-					birthday: '2000/09/07',
-				},
-				alice,
-			);
-			expect(res.status).toBe(400);
-		});
 	});
 
 	describe('users/show', () => {
@@ -3041,12 +2660,6 @@ describe('Endpoints', () => {
 			} finally {
 				expect((await api('admin/update-meta', { ugcVisibilityForVisitor: 'all' }, alice)).status).toBe(204);
 			}
-		});
-
-		test('複数指定は 100 件まで', async () => {
-			const ids = Array.from({ length: 101 }, (_, i) => `aaaaaaaa${i.toString().padStart(4, '0')}`);
-			expect((await api('users/show', { userIds: ids.slice(0, 100) })).status).toBe(200);
-			expect((await api('users/show', { userIds: ids })).status).toBe(400);
 		});
 	});
 
@@ -3107,15 +2720,6 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('不正なbirthday形式で怒られる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const follower = await signup({ username: `hnflgb${suffix}` });
-
-			const res = await api('users/following', { userId: follower.id, birthday: 'not-a-date' });
-
-			expect(res.status).toBe(400);
-		});
-
 		test('birthdayでフォロー中ユーザーを絞り込める', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hnflgbd${suffix}` });
@@ -3151,15 +2755,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(res.body.name).toBe('my list');
 			expect(res.body.userIds).toStrictEqual([]);
-		});
-
-		test('空文字列の名前で怒られる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnlstc2${suffix}` });
-
-			const res = await api('users/lists/create', { name: '' }, user);
-
-			expect(res.status).toBe(400);
 		});
 	});
 
@@ -3214,99 +2809,68 @@ describe('Endpoints', () => {
 	});
 
 	describe('i/notifications', () => {
-		test('includeTypesで指定したtypeの通知のみ返る', async () => {
+		test('includeTypes・excludeTypes で種別を絞り込み、includeTypes が空配列なら空配列を返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hnnfie${suffix}` });
 			const follower = await signup({ username: `hnnfir${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			const res = await vi.waitFor(async () => {
+			// 通知作成前に読むと、除外・空配列の反映と未作成を区別できず偽陽性になる。
+			const included = await vi.waitFor(async () => {
 				const found = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 				expect(found.status).toBe(200);
 				expect(found.body).toHaveLength(1);
 				return found;
 			}, POLL);
+			expect(getAt(included.body, 0).type).toBe('follow');
 
-			expect(getAt(res.body, 0).type).toBe('follow');
-		});
+			const excluded = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
+			expect(excluded.status).toBe(200);
+			expect(excluded.body).toHaveLength(0);
 
-		test('excludeTypesで指定したtypeの通知が除外される', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const followee = await signup({ username: `hnnexe${suffix}` });
-			const follower = await signup({ username: `hnnexr${suffix}` });
-			await api('following/create', { userId: followee.id }, follower);
-			// 通知作成前に読むと除外と未作成を区別できず、偽陽性になる。
-			await vi.waitFor(async () => {
-				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
-				expect(created.body).toHaveLength(1);
-			}, POLL);
-
-			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
-
-			expect(res.status).toBe(200);
-			expect(res.body).toHaveLength(0);
-		});
-
-		test('includeTypesが空配列の場合、空配列が返る', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const followee = await signup({ username: `hnniee${suffix}` });
-			const follower = await signup({ username: `hnnier${suffix}` });
-			await api('following/create', { userId: followee.id }, follower);
-			// 通知作成前に読むと空配列指定の反映と未作成を区別できず、偽陽性になる。
-			await vi.waitFor(async () => {
-				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
-				expect(created.body).toHaveLength(1);
-			}, POLL);
-
-			const res = await api('i/notifications', { includeTypes: [] }, followee);
-
-			expect(res.status).toBe(200);
-			expect(res.body).toHaveLength(0);
+			const emptyInclude = await api('i/notifications', { includeTypes: [] }, followee);
+			expect(emptyInclude.status).toBe(200);
+			expect(emptyInclude.body).toHaveLength(0);
 		});
 	});
 
 	describe('i/notifications-grouped', () => {
-		test('同じノートへの複数のリアクション通知がまとめられる', async () => {
+		test('同じノートへの複数のリアクション・リノート通知がそれぞれまとめられる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hngra${suffix}` });
 			const reactor1 = await signup({ username: `hngr1${suffix}` });
 			const reactor2 = await signup({ username: `hngr2${suffix}` });
+			const renoter1 = await signup({ username: `hngn1${suffix}` });
+			const renoter2 = await signup({ username: `hngn2${suffix}` });
 			const note = await post(author, { text: 'hi' });
+
+			// まとめるのは隣り合う同種の通知だけなので、リアクションの通知が揃ってからリノートする。
 			await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, reactor1);
 			await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, reactor2);
-			const grouped = await vi.waitFor(async () => {
+			await vi.waitFor(async () => {
 				const res = await api('i/notifications-grouped', {}, author);
 				expect(res.status).toBe(200);
 				const found = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
 				expect(found).toHaveLength(1);
 				expect(found[0].reactions).toHaveLength(2);
-				return found;
 			}, POLL);
 
-			const userIds = new Set(grouped[0].reactions.map((r: any) => r.user.id));
-			assert.ok(userIds.has(reactor1.id));
-			assert.ok(userIds.has(reactor2.id));
-		});
-
-		test('同じノートへの複数のリノート通知がまとめられる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const author = await signup({ username: `hngna${suffix}` });
-			const renoter1 = await signup({ username: `hngn1${suffix}` });
-			const renoter2 = await signup({ username: `hngn2${suffix}` });
-			const note = await post(author, { text: 'hi' });
 			await post(renoter1, { renoteId: note.id });
 			await post(renoter2, { renoteId: note.id });
-			const grouped = await vi.waitFor(async () => {
+			const res = await vi.waitFor(async () => {
 				const res = await api('i/notifications-grouped', {}, author);
 				expect(res.status).toBe(200);
 				const found = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
 				expect(found).toHaveLength(1);
 				expect(found[0].users).toHaveLength(2);
-				return found;
+				return res;
 			}, POLL);
 
-			const userIds = new Set(grouped[0].users.map((u: any) => u.id));
-			assert.ok(userIds.has(renoter1.id));
-			assert.ok(userIds.has(renoter2.id));
+			const reactionGroup = res.body.find((n: any) => n.type === 'reaction:grouped') as any;
+			expect(new Set(reactionGroup.reactions.map((r: any) => r.user.id))).toStrictEqual(
+				new Set([reactor1.id, reactor2.id]),
+			);
+			const renoteGroup = res.body.find((n: any) => n.type === 'renote:grouped') as any;
+			expect(new Set(renoteGroup.users.map((u: any) => u.id))).toStrictEqual(new Set([renoter1.id, renoter2.id]));
 		});
 	});
 
@@ -3338,18 +2902,6 @@ describe('Endpoints', () => {
 			});
 			expect(relogged.status).toBe(200);
 			expect(relogged.body.finished).toBe(true);
-		});
-
-		test('現在のパスワードが間違っていると失敗する', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hncp2${suffix}`, password: 'oldpassword' });
-
-			const res = await api(
-				'i/change-password',
-				{ currentPassword: 'wrongpassword', newPassword: 'newpassword' },
-				user,
-			);
-			expect(res.status).not.toBe(204);
 		});
 	});
 

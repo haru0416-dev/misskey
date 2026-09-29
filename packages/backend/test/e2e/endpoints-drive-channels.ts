@@ -732,34 +732,6 @@ describe('Endpoints', () => {
 			expect(res.body).toHaveLength(1);
 			expect(getAt(res.body, 0).id).toBe(fixture.ccc1.id);
 		});
-		test('名前と説明の検索で名前を複数検索できる', async () => {
-			const fixture = await ensureChannelSearchFixture();
-			const res = await api(
-				'channels/search',
-				{
-					query: `${fixture.prefix}-ccc`,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(2);
-		});
-		test('名前と説明での検索で説明を複数検索できる', async () => {
-			const fixture = await ensureChannelSearchFixture();
-			const res = await api(
-				'channels/search',
-				{
-					query: `${fixture.prefix}-ddd`,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(2);
-		});
 	});
 
 	describe('channels/show and channels/timeline', () => {
@@ -891,22 +863,6 @@ describe('Endpoints', () => {
 			);
 		};
 
-		test('ファイルを作成できる', async () => {
-			const res = await uploadFile(alice);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body!.name).toBe('192.jpg');
-		});
-
-		test('ファイルに名前を付けられる', async () => {
-			const res = await uploadFile(alice, { name: 'Belmond.jpg' });
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body!.name).toBe('Belmond.jpg');
-		});
-
 		test('ファイルに名前を付けられるが、拡張子は正しいものになる', async () => {
 			const res = await uploadFile(alice, { name: 'Belmond.png' });
 
@@ -964,17 +920,6 @@ describe('Endpoints', () => {
 				const path = `with-alpha.${type}`;
 				const res = await uploadFile(alice, { path });
 
-				expect(res.status).toBe(200);
-				expect(res.body!.name).toBe(path);
-				expect(res.body!.type).toBe(mediaType);
-
-				const webpublicType = await getWebpublicType(alice, res.body!.id);
-				expect(webpublicType).toBe('image/webp');
-			});
-
-			test(`透明じゃない${type}ファイルを作成できる`, async () => {
-				const path = `without-alpha.${type}`;
-				const res = await uploadFile(alice, { path });
 				expect(res.status).toBe(200);
 				expect(res.body!.name).toBe(path);
 				expect(res.body!.type).toBe(mediaType);
@@ -1146,21 +1091,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('不正なフォルダIDで怒られる', async () => {
-			const file = (await uploadFile(alice)).body;
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					folderId: 'foo',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
 		test('不正なファイル名で怒られる', async () => {
 			const file = (await uploadFile(alice)).body;
 			const newName = '';
@@ -1175,35 +1105,6 @@ describe('Endpoints', () => {
 			);
 
 			expect(res.status).toBe(400);
-		});
-
-		test('間違ったIDで怒られる', async () => {
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: 'kyoppie',
-					name: 'いちごパスタ.png',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-	});
-
-	describe('drive/folders/create', () => {
-		test('フォルダを作成できる', async () => {
-			const res = await api(
-				'drive/folders/create',
-				{
-					name: 'test',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.name).toBe('test');
 		});
 	});
 
@@ -1615,46 +1516,11 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('不正な親フォルダIDで怒られる', async () => {
-			const folder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'test',
-					},
-					alice,
-				)
-			).body;
-
-			const res = await api(
-				'drive/folders/update',
-				{
-					folderId: folder.id,
-					parentId: 'foo',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
 		test('存在しないフォルダを更新できない', async () => {
 			const res = await api(
 				'drive/folders/update',
 				{
 					folderId: '000000000000000000000000',
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('不正なフォルダIDで怒られる', async () => {
-			const res = await api(
-				'drive/folders/update',
-				{
-					folderId: 'foo',
 				},
 				alice,
 			);

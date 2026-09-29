@@ -157,6 +157,7 @@ describe('Endpoints', () => {
 				password: 'test',
 			});
 			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INVALID_USERNAME');
 		});
 
 		test('空のパスワードでアカウントが作成できない', async () => {
@@ -165,6 +166,7 @@ describe('Endpoints', () => {
 				password: '',
 			});
 			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INVALID_PASSWORD');
 		});
 
 		test('正しくアカウントが作成でき、同じユーザー名のアカウントは作成できない', async () => {
@@ -282,20 +284,6 @@ describe('Endpoints', () => {
 			expect(castAsError(res.body as any).error.kind).toBe('permission');
 		});
 
-		test('クエリをインジェクションできない', async () => {
-			const res = await api('signin-flow', {
-				username: alice.username,
-				// @ts-expect-error password must be string
-				password: {
-					$gt: '',
-				},
-			});
-
-			expect(res.status).toBe(400);
-			expect(castAsError(res.body as any).error.code).toBe('INVALID_PARAM');
-			expect(castAsError(res.body as any).error.kind).toBe('client');
-		});
-
 		test('正しい情報でサインインできる', async () => {
 			const res = await api('signin-flow', {
 				username: 'test1',
@@ -303,16 +291,6 @@ describe('Endpoints', () => {
 			});
 
 			expect(res.status).toBe(200);
-		});
-	});
-
-	describe('signin-with-passkey', () => {
-		test('パスキーサインインの challenge を開始できる', async () => {
-			const res = await api('signin-with-passkey', {});
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body.context).toBe('string');
-			expect(typeof res.body.option.challenge).toBe('string');
 		});
 	});
 

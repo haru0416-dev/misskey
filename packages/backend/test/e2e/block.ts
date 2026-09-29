@@ -18,38 +18,10 @@ describe('Block', () => {
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
 			carol = await signup({ username: 'carol' });
+			await api('blocking/create', { userId: bob.id }, alice);
 		},
 		1000 * 60 * 2,
 	);
-
-	test('Block作成', async () => {
-		const res = await api(
-			'blocking/create',
-			{
-				userId: bob.id,
-			},
-			alice,
-		);
-
-		expect(res.status).toBe(200);
-	});
-
-	test('ブロックされているユーザーをフォローできない', async () => {
-		const res = await api('following/create', { userId: alice.id }, bob);
-
-		expect(res.status).toBe(400);
-		expect(castAsError(res.body).error.id).toBe('c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
-	});
-
-	test('ブロックされているユーザーにリアクションできない', async () => {
-		const note = await post(alice, { text: 'hello' });
-
-		const res = await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, bob);
-
-		expect(res.status).toBe(400);
-		assert.ok(res.body);
-		expect(castAsError(res.body).error.id).toBe('20ef5475-9f38-4e4c-bd33-de6d979498ec');
-	});
 
 	test('ブロックされているユーザーに返信できない', async () => {
 		const note = await post(alice, { text: 'hello' });

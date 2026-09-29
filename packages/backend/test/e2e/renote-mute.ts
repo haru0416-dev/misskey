@@ -19,21 +19,10 @@ describe('Renote Mute', () => {
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
 			carol = await signup({ username: 'carol' });
+			await api('renote-mute/create', { userId: carol.id }, alice);
 		},
 		1000 * 60 * 2,
 	);
-
-	test('ミュート作成', async () => {
-		const res = await api(
-			'renote-mute/create',
-			{
-				userId: carol.id,
-			},
-			alice,
-		);
-
-		expect(res.status).toBe(204);
-	});
 
 	test('タイムラインにリノートミュートしているユーザーのリノートが含まれない', async () => {
 		const bobNote = await post(bob, { text: 'hi' });

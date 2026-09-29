@@ -287,31 +287,61 @@ describe('アンテナ', () => {
 		expect(response.userListId).toBeNull();
 	});
 
-	const antennaParamPattern = [
-		{ parameters: () => ({ name: 'x'.repeat(100) }) },
-		{ parameters: () => ({ name: 'x' }) },
-		{ parameters: () => ({ src: 'home' as const }) },
-		{ parameters: () => ({ src: 'users' as const }) },
-		{ parameters: () => ({ src: 'list' as const, userListId: aliceList.id }) },
-		{ parameters: () => ({ keywords: [['x']] }) },
-		{ parameters: () => ({ keywords: [['a', 'b', 'c'], ['x'], ['y'], ['z']] }) },
-		{ parameters: () => ({ excludeKeywords: [['a', 'b', 'c'], ['x'], ['y'], ['z']] }) },
-		{ parameters: () => ({ users: [alice.username] }) },
-		{ parameters: () => ({ users: [alice.username, bob.username, carol.username] }) },
-		{ parameters: () => ({ caseSensitive: true }) },
-		{ parameters: () => ({ withReplies: true }) },
-		{ parameters: () => ({ withFile: true }) },
-		{ parameters: () => ({ excludeNotesInSensitiveChannel: false }) },
-		{ parameters: () => ({ excludeNotesInSensitiveChannel: true }) },
-	];
-	test.each(antennaParamPattern)('を作成できること($#)', async ({ parameters }) => {
-		const response = await successfulApiCall({
+	// 作成・変更とも入力を保存して返すだけなので、全項目を既定値以外にした往復で取りこぼしを見る。
+	// 変更は作成時と逆の値に戻し、変更が無視されると作成時の値が残って落ちるようにしている。
+	test('を全項目既定値以外で作成し、別の値に変更できること', async () => {
+		const createParameters = {
+			name: 'x'.repeat(100),
+			src: 'users' as const,
+			userListId: null,
+			keywords: [['a', 'b']],
+			excludeKeywords: [['c']],
+			users: [alice.username, bob.username, carol.username],
+			caseSensitive: true,
+			localOnly: true,
+			excludeBots: true,
+			withReplies: true,
+			withFile: true,
+			excludeNotesInSensitiveChannel: true,
+		};
+		const created = await successfulApiCall({
 			endpoint: 'antennas/create',
-			parameters: { ...defaultParam, ...parameters() },
+			parameters: createParameters,
 			user: alice,
 		});
-		const expected = { ...response, ...parameters() };
-		expect(response).toStrictEqual(expected);
+		expect(created).toStrictEqual({ ...created, ...createParameters });
+
+		const updateParameters = {
+			name: 'y',
+			src: 'list' as const,
+			userListId: aliceList.id,
+			keywords: [['x']],
+			excludeKeywords: [['y']],
+			users: [alice.username],
+			caseSensitive: false,
+			localOnly: false,
+			excludeBots: false,
+			withReplies: false,
+			withFile: false,
+			excludeNotesInSensitiveChannel: false,
+		};
+		const updated = await successfulApiCall({
+			endpoint: 'antennas/update',
+			parameters: { antennaId: created.id, ...updateParameters },
+			user: alice,
+		});
+		expect(updated).toStrictEqual({ ...updated, ...updateParameters });
+	});
+
+	test('のキーワードに複数のグループを指定できること', async () => {
+		const parameters = {
+			...defaultParam,
+			keywords: [['a', 'b', 'c'], ['x'], ['y'], ['z']],
+			excludeKeywords: [['d', 'e'], ['w']],
+		};
+		const response = await successfulApiCall({ endpoint: 'antennas/create', parameters, user: alice });
+		expect(response.keywords).toStrictEqual(parameters.keywords);
+		expect(response.excludeKeywords).toStrictEqual(parameters.excludeKeywords);
 	});
 
 	test('を作成する時キーワードが指定されていないとエラーになる', async () => {
@@ -329,16 +359,6 @@ describe('アンテナ', () => {
 		);
 	});
 
-	test.each(antennaParamPattern)('を変更できること($#)', async ({ parameters }) => {
-		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
-		const response = await successfulApiCall({
-			endpoint: 'antennas/update',
-			parameters: { antennaId: antenna.id, ...defaultParam, ...parameters() },
-			user: alice,
-		});
-		const expected = { ...response, ...parameters() };
-		expect(response).toStrictEqual(expected);
-	});
 	test('は他人のものは変更できない', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
 		await failedApiCall(

@@ -325,26 +325,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
-				test('[withRenotes: false] フォローしているユーザーの投稿が含まれる', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
-
-					await api('following/create', { userId: bob.id }, alice);
-					const bobNote = await post(bob, { text: 'hi' });
-					const carolNote = await post(carol, { text: 'hi' });
-
-					const res = await api(
-						'notes/timeline',
-						{
-							limit: 100,
-							withRenotes: false,
-						},
-						alice,
-					);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-				});
-
 				test('[withRenotes: false] フォローしているユーザーのファイルのみの投稿が含まれる', async () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
@@ -569,17 +549,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				test('フォローしているユーザーの自身を visibleUserIds に指定していない visibility: specified なノートが含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
-
-					await api('following/create', { userId: bob.id }, alice);
-					const bobNote = await post(bob, { text: 'hi', visibility: 'specified', visibleUserIds: [carol.id] });
-
-					const res = await api('notes/timeline', { limit: 100 }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-				});
-
 				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'フォローしていないユーザーからの visibility: specified なノートに返信したときの自身のノートが含まれる',
@@ -674,35 +643,23 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
-					test('チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
+					// ユーザーをフォローしているかで DB の経路の分岐が変わるので、両方の閲覧者で見る。
+					test('チャンネルフォロー　＋　チャンネルミュート　＝　ユーザフォローの有無によらずTLに流れない', async () => {
+						const [alice, carol, bob] = await Promise.all([signup(), signup(), signup()]);
 						await api('following/create', { userId: bob.id }, alice);
 
 						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
+						for (const viewer of [alice, carol]) {
+							await followChannel(channel.id, viewer);
+							await muteChannel(channel.id, viewer);
+						}
 
-						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
+						for (const viewer of [alice, carol]) {
+							const res = await api('notes/timeline', { limit: 100 }, viewer);
+							expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
+						}
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＝　TLに流れない', async () => {
@@ -763,22 +720,6 @@ describe('Timelines', () => {
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
 						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					// ミュートしたチャンネルはフォロー中の一覧から外れる。別のチャンネルもフォローしていると DB の経路が
@@ -866,41 +807,6 @@ describe('Timelines', () => {
 					expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(0);
 				});
 
-				describe('凍結', () => {
-					let alice: SignupResponse, bob: SignupResponse, carol: SignupResponse;
-					let aliceNote: Note, bobNote: Note, carolNote: Note;
-
-					beforeAll(async () => {
-						[alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
-
-						await api('following/create', { userId: bob.id }, alice);
-						await api('following/create', { userId: carol.id }, alice);
-						aliceNote = await post(alice, { text: 'hi' });
-						bobNote = await post(bob, { text: 'yo' });
-						carolNote = await post(carol, { text: "kon'nichiwa" });
-
-						await api('admin/suspend-user', { userId: carol.id }, root);
-					});
-
-					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-					});
-
-					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
-						await api('admin/unsuspend-user', { userId: carol.id }, root);
-
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
-						expect(res.body.find((note) => note.id === carolNote.id)?.text).toBe("kon'nichiwa");
-					});
-				});
-
 				describe('凍結 (Renote)', () => {
 					let alice: SignupResponse, bob: SignupResponse, carol: SignupResponse;
 					let aliceNote: Note, bobNote: Note, carolNote: Note, bobRenote: Note, carolRenote: Note;
@@ -938,46 +844,6 @@ describe('Timelines', () => {
 						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === bobRenote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === carolRenote.id)).toBe(true);
-					});
-				});
-
-				describe('凍結(リモート)', () => {
-					let alice: SignupResponse, bob: SignupResponse, carol: SignupResponse;
-					let aliceNote: Note, bobNote: Note, carolNote: Note;
-
-					beforeAll(async () => {
-						[alice, bob, carol] = await Promise.all([
-							signup(),
-							signup({ host: genHost() }),
-							signup({ host: genHost() }),
-						]);
-
-						await sendEnvUpdateRequest({ key: 'FORCE_FOLLOW_REMOTE_USER_FOR_TESTING', value: 'true' });
-						await api('following/create', { userId: bob.id }, alice);
-						await api('following/create', { userId: carol.id }, alice);
-						aliceNote = await post(alice, { text: 'hi' });
-						bobNote = await post(bob, { text: 'yo' });
-						carolNote = await post(carol, { text: "kon'nichiwa" });
-
-						await api('admin/suspend-user', { userId: carol.id }, root);
-					});
-
-					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-					});
-
-					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
-						await api('admin/unsuspend-user', { userId: carol.id }, root);
-
-						const res = await api('notes/timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 					});
 				});
 			});
@@ -1019,17 +885,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
-				test('チャンネル投稿が含まれない', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
-					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-				});
-
 				test('リモートユーザーのノートが含まれない', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup({ host: genHost() })]);
 
@@ -1038,19 +893,6 @@ describe('Timelines', () => {
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-				});
-
-				test('フォローしているユーザーの visibility: home なノートが含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
-
-					await api('following/create', { userId: carol.id }, alice);
-					const carolNote = await post(carol, { text: 'hi', visibility: 'home' });
-					const bobNote = await post(bob, { text: 'hi' });
-
-					const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートが含まれない', async () => {
@@ -1200,49 +1042,6 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
-					test('チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
@@ -1257,71 +1056,8 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
-					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/local-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
 
 						const channel = await createChannel('channel', bob);
 						await followChannel(channel.id, alice);
@@ -1562,53 +1298,8 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
-					test('チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
-					});
-
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
 
 						const channel = await createChannel('channel', bob);
 						await followChannel(channel.id, alice);
@@ -1636,71 +1327,8 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
-					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-						await api('following/create', { userId: bob.id }, alice);
 
 						const channel = await createChannel('channel', bob);
 						await followChannel(channel.id, alice);
@@ -1757,51 +1385,6 @@ describe('Timelines', () => {
 						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === daveNote.id)).toBe(true);
-					});
-				});
-
-				describe('凍結 (リモート)', () => {
-					/*
-					 * carol = 未フォローのリモートユーザー (凍結対象)
-					 * elle = フォローしているリモートユーザー (凍結対象)
-					 */
-					let alice: SignupResponse, carol: SignupResponse, elle: SignupResponse;
-					let aliceNote: Note, carolNote: Note, elleNote: Note;
-
-					beforeAll(async () => {
-						[alice, carol, elle] = await Promise.all([
-							signup(),
-							signup({ host: genHost() }),
-							signup({ host: genHost() }),
-						]);
-
-						await sendEnvUpdateRequest({ key: 'FORCE_FOLLOW_REMOTE_USER_FOR_TESTING', value: 'true' });
-						await api('following/create', { userId: elle.id }, alice);
-						aliceNote = await post(alice, { text: 'hi' });
-						carolNote = await post(carol, { text: "kon'nichiwa" });
-						elleNote = await post(elle, { text: 'hi there' });
-
-						await api('admin/suspend-user', { userId: carol.id }, root);
-						await api('admin/suspend-user', { userId: elle.id }, root);
-					});
-
-					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-						expect(res.body.some((note) => note.id === elleNote.id)).toBe(false);
-					});
-
-					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
-						await api('admin/unsuspend-user', { userId: carol.id }, root);
-						await api('admin/unsuspend-user', { userId: elle.id }, root);
-
-						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
-
-						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
-						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-						expect(res.body.some((note) => note.id === elleNote.id)).toBe(true);
 					});
 				});
 			});
@@ -1884,20 +1467,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
-				test('withReplies: false でリスインしているフォローしていないユーザーの他人への返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
-
-					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
-					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: false }, alice);
-					const carolNote = await post(carol, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-				});
-
 				test('withReplies: true でリスインしているフォローしていないユーザーの他人への返信が含まれる', async () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
@@ -1906,19 +1475,6 @@ describe('Timelines', () => {
 					await api('users/lists/update-membership', { listId: list.id, userId: bob.id, withReplies: true }, alice);
 					const carolNote = await post(carol, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
-
-					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-				});
-
-				test('リスインしているフォローしているユーザーの visibility: home なノートが含まれる', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					await api('following/create', { userId: bob.id }, alice);
-					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
-					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					const bobNote = await post(bob, { text: 'hi', visibility: 'home' });
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
@@ -1950,19 +1506,6 @@ describe('Timelines', () => {
 
 					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
 					expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('hi');
-				});
-
-				test('リスインしているユーザーのチャンネルノートが含まれない', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
-					const list = await api('users/lists/create', { name: 'list' }, alice).then((res) => res.body);
-					await api('users/lists/push', { listId: list.id, userId: bob.id }, alice);
-					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-
-					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
-
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test(
@@ -2011,53 +1554,6 @@ describe('Timelines', () => {
 				});
 
 				describe('Channel', () => {
-					test('チャンネル未フォロー　＋　リスインしてない　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネルフォロー　＋　リスインしてない　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
-					test('チャンネル未フォロー　＋　リスインしてる　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-						await pushList(list.id, [bob.id], alice);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					});
-
 					test('チャンネルフォロー　＋　リスインしてる　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
@@ -2079,25 +1575,11 @@ describe('Timelines', () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
 						const list = await createList('list', alice);
+						// どのリストにも入っていないユーザーは membership の結合だけで落ちるので、別のリストには入れておく。
+						const otherList = await createList('other', alice);
+						await pushList(otherList.id, [bob.id], alice);
 
 						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてない　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
 
 						const aliceNote = await post(alice, { text: 'hi' });
 						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
@@ -2125,24 +1607,6 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
-					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてる　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-						await pushList(list.id, [bob.id], alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-					});
-
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 
@@ -2150,25 +1614,6 @@ describe('Timelines', () => {
 						await pushList(list.id, [bob.id], alice);
 
 						const channel = await createChannel('channel', bob);
-						await muteChannel(channel.id, alice);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-						const bobRenote = await renote(bobNote.id, bob);
-
-						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
-					});
-
-					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const list = await createList('list', alice);
-						await pushList(list.id, [bob.id], alice);
-
-						const channel = await createChannel('channel', bob);
-						await followChannel(channel.id, alice);
 						await muteChannel(channel.id, alice);
 
 						const aliceNote = await post(alice, { text: 'hi' });
@@ -2325,18 +1770,6 @@ describe('Timelines', () => {
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, bob);
 
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
-				});
-
-				test('[withChannelNotes: true] 他人が取得した場合センシティブチャンネル投稿のリノートが含まれない', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
-					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
-					const bobRenote = await post(bob, { renoteId: bobNote.id });
-
-					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
-
-					expect(res.body.some((note) => note.id === bobRenote.id)).toBe(false);
 				});
 
 				// リノート自体は channelId が NULL なので、チャンネル投稿を除外する条件では弾けない
@@ -2542,62 +1975,25 @@ describe('Timelines', () => {
 
 			// チャンネルのタイムラインは DB だけから読み、enableFanoutTimeline を見ない。同じ内容を 2 回走らせないよう片方だけで回す。
 			describe.skipIf(enableFanoutTimeline)('Channel TL', () => {
-				test('閲覧中チャンネルのノートが含まれる', async () => {
+				test('閲覧中チャンネルに投稿されたノートとリノート (別チャンネルのノートのリノートを含む) だけが含まれる', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					const channel = await createChannel('channel', bob);
+					const channel2 = await createChannel('channel', bob);
 
 					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
+					const bobNote2 = await post(bob, { text: 'ok', channelId: channel2.id });
+					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
+					const bobRenoteFromChannel2 = await post(bob, { channelId: channel.id, renoteId: bobNote2.id });
 
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
+					const res = await api('channels/timeline', { channelId: channel.id, limit: 100 }, alice);
 
 					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
 					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
-				});
-
-				test('閲覧中チャンネルとは別チャンネルのノートは含まれない', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await createChannel('channel', bob);
-					const channel2 = await createChannel('channel', bob);
-
-					const aliceNote = await post(alice, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'ok', channelId: channel2.id });
-
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
-
-					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
-					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-				});
-
-				test('閲覧中チャンネルのノートにリノートが含まれる', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await createChannel('channel', bob);
-
-					const aliceNote = await post(alice, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
-
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
-
+					expect(res.body.some((note: any) => note.id === bobNote2.id)).toBe(false);
 					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-				});
-
-				test('閲覧中チャンネルとは別チャンネルからのリノートが含まれる', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await createChannel('channel', bob);
-					const channel2 = await createChannel('channel', bob);
-
-					const aliceNote = await post(alice, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'ok', channelId: channel2.id });
-					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
-
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
-
-					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
+					expect(res.body.some((note: any) => note.id === bobRenoteFromChannel2.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルに自分の他人への返信が含まれる', async () => {
@@ -2658,49 +2054,21 @@ describe('Timelines', () => {
 					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 				});
 
-				test('閲覧中チャンネルをミュートしていてもノートが含まれる', async () => {
+				test('閲覧中チャンネルをミュートしていても、同チャンネルのノート・リノート・リプライが含まれる', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
 					const channel = await createChannel('channel', bob);
 					await muteChannel(channel.id, alice);
 
-					const aliceNote = await post(alice, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
-
-					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
-					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
-				});
-
-				test('閲覧中チャンネルをミュートしていても、同チャンネルのリノートが含まれる', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await createChannel('channel', bob);
-					await muteChannel(channel.id, alice);
-
-					const aliceNote = await post(alice, { text: 'hi' });
 					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
 					const bobRenote = await post(bob, { channelId: channel.id, renoteId: bobNote.id });
+					const bobReply = await post(bob, { channelId: channel.id, replyId: bobNote.id, text: 'ho' });
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
-				});
-
-				test('閲覧中チャンネルをミュートしていても、同チャンネルのリプライが含まれる', async () => {
-					const [alice, bob] = await Promise.all([signup(), signup()]);
-
-					const channel = await createChannel('channel', bob);
-					await muteChannel(channel.id, alice);
-
-					const aliceNote = await post(alice, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-					const bobRenote = await post(bob, { channelId: channel.id, replyId: bobNote.id, text: 'ho' });
-
-					const res = await api('channels/timeline', { channelId: channel.id }, alice);
-
-					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
+					expect(res.body.some((note: any) => note.id === bobReply.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルとは別チャンネルをミュートしているとき、そのチャンネルからのリノートは含まれない', async () => {

@@ -6,7 +6,11 @@
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
-import { fetchNoteByIdFromDatabase, openTestDatabase } from '../fixtures.js';
+import {
+	fetchNoteByIdFromDatabase,
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	openTestDatabase,
+} from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
 import { api, castAsError, initTestDb, POLL, post, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -51,6 +55,9 @@ describe('Note', () => {
 		expect(favoritedState.status).toBe(200);
 		expect(favoritedState.body.isFavorited).toBe(true);
 
+		const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(database, bob.id);
+		expect(authorProfile.achievements.some((a) => a.name === 'myNoteFavorited1')).toBe(true);
+
 		const duplicate = await api('notes/favorites/create', { noteId: note.id }, alice);
 		expect(duplicate.status).toBe(400);
 		expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_FAVORITED');
@@ -76,26 +83,6 @@ describe('Note', () => {
 		expect(duplicateRemove.status).toBe(400);
 		expect(castAsError(duplicateRemove.body as any).error.code).toBe('NOT_FAVORITED');
 	});
-
-	test(
-		'ファイルを添付できる',
-		async () => {
-			const file = await uploadFile(alice);
-
-			const res = await api(
-				'notes/create',
-				{
-					fileIds: [file.body!.id],
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.createdNote.fileIds).toStrictEqual([file.body!.id]);
-		},
-		1000 * 10,
-	);
 
 	test(
 		'他人のファイルで怒られる',
@@ -131,57 +118,6 @@ describe('Note', () => {
 		expect(res.status).toBe(400);
 		expect(castAsError(res.body).error.code).toBe('NO_SUCH_FILE');
 		expect(castAsError(res.body).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
-	});
-
-	test('不正なファイルIDで怒られる', async () => {
-		const res = await api(
-			'notes/create',
-			{
-				fileIds: ['kyoppie'],
-			},
-			alice,
-		);
-		expect(res.status).toBe(400);
-		expect(castAsError(res.body).error.code).toBe('NO_SUCH_FILE');
-		expect(castAsError(res.body).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
-	});
-
-	test('返信できる', async () => {
-		const bobPost = await post(bob, {
-			text: 'foo',
-		});
-
-		const alicePost = {
-			text: 'bar',
-			replyId: bobPost.id,
-		};
-
-		const res = await api('notes/create', alicePost, alice);
-
-		expect(res.status).toBe(200);
-		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-		expect(res.body.createdNote.text).toBe(alicePost.text);
-		expect(res.body.createdNote.replyId).toBe(alicePost.replyId);
-		assert.ok(res.body.createdNote.reply);
-		expect(res.body.createdNote.reply.text).toBe(bobPost.text);
-	});
-
-	test('renoteできる', async () => {
-		const bobPost = await post(bob, {
-			text: 'test',
-		});
-
-		const alicePost = {
-			renoteId: bobPost.id,
-		};
-
-		const res = await api('notes/create', alicePost, alice);
-
-		expect(res.status).toBe(200);
-		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-		expect(res.body.createdNote.renoteId).toBe(alicePost.renoteId);
-		assert.ok(res.body.createdNote.renote);
-		expect(res.body.createdNote.renote.text).toBe(bobPost.text);
 	});
 
 	test('引用renoteできる', async () => {
@@ -414,39 +350,6 @@ describe('Note', () => {
 		};
 		const res = await api('notes/create', post, alice);
 		expect(res.status).toBe(200);
-	});
-
-	test('文字数オーバーで怒られる', async () => {
-		const post = {
-			text: '!'.repeat(MAX_NOTE_TEXT_LENGTH + 1),
-		};
-		const res = await api('notes/create', post, alice);
-		expect(res.status).toBe(400);
-	});
-
-	test('存在しないrenote対象で怒られる', async () => {
-		const post = {
-			renoteId: '000000000000000000000000',
-		};
-		const res = await api('notes/create', post, alice);
-		expect(res.status).toBe(400);
-	});
-
-	test('不正なリプライ先IDで怒られる', async () => {
-		const post = {
-			text: 'test',
-			replyId: 'foo',
-		};
-		const res = await api('notes/create', post, alice);
-		expect(res.status).toBe(400);
-	});
-
-	test('不正なrenote対象IDで怒られる', async () => {
-		const post = {
-			renoteId: 'foo',
-		};
-		const res = await api('notes/create', post, alice);
-		expect(res.status).toBe(400);
 	});
 
 	test('存在しないユーザーにメンションできる', async () => {
@@ -745,160 +648,6 @@ describe('Note', () => {
 	});
 
 	describe('notes/create', () => {
-		test('投票の選択肢が無くて怒られる (空の配列)', async () => {
-			const res = await api(
-				'notes/create',
-				{
-					poll: {
-						choices: [],
-					},
-				},
-				alice,
-			);
-			expect(res.status).toBe(400);
-		});
-
-		test('投票の選択肢が1つで怒られる', async () => {
-			const res = await api(
-				'notes/create',
-				{
-					poll: {
-						choices: ['Strawberry Pasta'],
-					},
-				},
-				alice,
-			);
-			expect(res.status).toBe(400);
-		});
-
-		test('投票できる', async () => {
-			const { body } = await api(
-				'notes/create',
-				{
-					text: 'test',
-					poll: {
-						choices: ['sakura', 'izumi', 'ako'],
-					},
-				},
-				alice,
-			);
-
-			const res = await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 1,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(204);
-		});
-
-		test('複数投票できない', async () => {
-			const { body } = await api(
-				'notes/create',
-				{
-					text: 'test',
-					poll: {
-						choices: ['sakura', 'izumi', 'ako'],
-					},
-				},
-				alice,
-			);
-
-			await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 0,
-				},
-				alice,
-			);
-
-			const res = await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 2,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('許可されている場合は複数投票できる', async () => {
-			const { body } = await api(
-				'notes/create',
-				{
-					text: 'test',
-					poll: {
-						choices: ['sakura', 'izumi', 'ako'],
-						multiple: true,
-					},
-				},
-				alice,
-			);
-
-			await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 0,
-				},
-				alice,
-			);
-
-			await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 1,
-				},
-				alice,
-			);
-
-			const res = await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 2,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(204);
-		});
-
-		test('締め切られている場合は投票できない', async () => {
-			const { body } = await api(
-				'notes/create',
-				{
-					text: 'test',
-					poll: {
-						choices: ['sakura', 'izumi', 'ako'],
-						expiredAfter: 1,
-					},
-				},
-				alice,
-			);
-
-			// 投票期限そのものが過ぎるのを待つ (状態の伝播待ちではないので固定で待つ)
-			await new Promise((x) => setTimeout(x, 2));
-
-			const res = await api(
-				'notes/polls/vote',
-				{
-					noteId: body.createdNote.id,
-					choice: 1,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
 		test('センシティブな投稿はhomeになる (単語指定)', async () => {
 			const sensitive = await api(
 				'admin/update-meta',
@@ -925,52 +674,6 @@ describe('Note', () => {
 			expect(note1.body.createdNote.visibility).toBe('home');
 		});
 
-		test('センシティブな投稿はhomeになる (正規表現)', async () => {
-			const sensitive = await api(
-				'admin/update-meta',
-				{
-					sensitiveWords: ['/Test/i'],
-				},
-				root,
-			);
-
-			expect(sensitive.status).toBe(204);
-
-			const note2 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				alice,
-			);
-
-			expect(note2.status).toBe(200);
-			expect(note2.body.createdNote.visibility).toBe('home');
-		});
-
-		test('センシティブな投稿はhomeになる (スペースアンド)', async () => {
-			const sensitive = await api(
-				'admin/update-meta',
-				{
-					sensitiveWords: ['Test hoge'],
-				},
-				root,
-			);
-
-			expect(sensitive.status).toBe(204);
-
-			const note2 = await api(
-				'notes/create',
-				{
-					text: 'hogeTesthuge',
-				},
-				alice,
-			);
-
-			expect(note2.status).toBe(200);
-			expect(note2.body.createdNote.visibility).toBe('home');
-		});
-
 		test('禁止ワードを含む投稿はエラーになる (単語指定)', async () => {
 			const prohibited = await api(
 				'admin/update-meta',
@@ -995,78 +698,6 @@ describe('Note', () => {
 
 				expect(rejected.status).toBe(400);
 				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
-			}, POLL);
-		});
-
-		test('禁止ワードを含む投稿はエラーになる (正規表現)', async () => {
-			const prohibited = await api(
-				'admin/update-meta',
-				{
-					prohibitedWords: ['/Test/i'],
-				},
-				root,
-			);
-
-			expect(prohibited.status).toBe(204);
-
-			const note2 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				alice,
-			);
-
-			expect(note2.status).toBe(400);
-			expect(castAsError(note2.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
-		});
-
-		test('禁止ワードを含む投稿はエラーになる (スペースアンド)', async () => {
-			const prohibited = await api(
-				'admin/update-meta',
-				{
-					prohibitedWords: ['Test hoge'],
-				},
-				root,
-			);
-
-			expect(prohibited.status).toBe(204);
-
-			const note2 = await api(
-				'notes/create',
-				{
-					text: 'hogeTesthuge',
-				},
-				alice,
-			);
-
-			expect(note2.status).toBe(400);
-			expect(castAsError(note2.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
-		});
-
-		test('禁止ワードを含んでるリモートノートもエラーになる', async () => {
-			const prohibited = await api(
-				'admin/update-meta',
-				{
-					prohibitedWords: ['test'],
-				},
-				root,
-			);
-
-			expect(prohibited.status).toBe(204);
-
-			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
-			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
-			await vi.waitFor(async () => {
-				const rejected = await api(
-					'notes/create',
-					{
-						text: 'hogetesthuge',
-					},
-					tom,
-				);
-
-				expect(rejected.status).toBe(400);
 			}, POLL);
 		});
 

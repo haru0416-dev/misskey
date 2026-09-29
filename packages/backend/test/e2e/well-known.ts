@@ -19,6 +19,7 @@ describe('.well-known', () => {
 		1000 * 60 * 2,
 	);
 
+	// .well-known の応答は webfinger を除いて同じヘッダー生成を通るので、CORS はここと webfinger で見る。
 	test('nodeinfo', async () => {
 		const res = await relativeFetch('.well-known/nodeinfo');
 		assert.ok(res.ok);
@@ -84,13 +85,12 @@ describe('.well-known', () => {
 	test('host-meta', async () => {
 		const res = await relativeFetch('.well-known/host-meta');
 		assert.ok(res.ok);
-		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+		expect(await res.text()).toContain(`template="${origin}/.well-known/webfinger?resource={uri}"`);
 	});
 
 	test('host-meta.json', async () => {
 		const res = await relativeFetch('.well-known/host-meta.json');
 		assert.ok(res.ok);
-		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const hostMeta = await res.json();
 		expect(hostMeta).toStrictEqual({
@@ -107,7 +107,6 @@ describe('.well-known', () => {
 	test('oauth-authorization-server', async () => {
 		const res = await relativeFetch('.well-known/oauth-authorization-server');
 		assert.ok(res.ok);
-		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const serverInfo = (await res.json()) as any;
 		expect(serverInfo.issuer).toBe(origin);
@@ -119,5 +118,26 @@ describe('.well-known', () => {
 		const res = await relativeFetch('.well-known/change-password', { redirect: 'manual' });
 		expect(res.status).toBe(302);
 		expect(new URL(res.headers.get('Location')!, origin).pathname).toBe('/settings/security');
+	});
+
+	// nodeinfo の 2.0 と 2.1 は同じヘッダー生成を通るので、CORS は 2.1 だけで見る。
+	test('nodeinfo 2.1', async () => {
+		const res = await relativeFetch('nodeinfo/2.1');
+		assert.ok(res.ok);
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+
+		const nodeInfo = (await res.json()) as any;
+		expect(nodeInfo.software.name).toBe('toneriko');
+		expect(nodeInfo.software.homepage).toBe(nodeInfo.metadata.repositoryUrl);
+		expect(nodeInfo.software.repository).toBe(nodeInfo.metadata.repositoryUrl);
+	});
+
+	test('nodeinfo 2.0', async () => {
+		const res = await relativeFetch('nodeinfo/2.0');
+		assert.ok(res.ok);
+
+		const nodeInfo = (await res.json()) as any;
+		expect(nodeInfo.software.name).toBe('toneriko');
+		expect(nodeInfo.software.homepage).toBe(nodeInfo.metadata.repositoryUrl);
 	});
 });
