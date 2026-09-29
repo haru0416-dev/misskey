@@ -59,7 +59,7 @@ describe('db/prepared', () => {
 		await runtime.dispose();
 	});
 
-	function fullNoteValues(id: string) {
+	function fullNoteValues(id: string, updatedAt: Date | null = null) {
 		return {
 			id,
 			uri: null,
@@ -95,6 +95,7 @@ describe('db/prepared', () => {
 			renoteUserHost: null,
 			renoteChannelId: null,
 			userHost: null,
+			updatedAt,
 		};
 	}
 
@@ -105,10 +106,15 @@ describe('db/prepared', () => {
 	test('note insert round-trips arrays and jsonb inside a transaction', async () => {
 		const outsideId = genId();
 		const insideId = genId();
+		const editedAt = new Date('2026-01-02T03:04:05.678Z');
 		await createNoteInDatabase(db, fullNoteValues(outsideId));
 		await db.transaction(async (tx) => {
-			await createNoteInDatabase(tx as MiDrizzleDatabase, fullNoteValues(insideId));
+			await createNoteInDatabase(tx as MiDrizzleDatabase, fullNoteValues(insideId, editedAt));
 		});
+		expect((await fetchNoteByIdFromDatabase(db, outsideId))!.updatedAt).toBeNull();
+		expect(new Date((await fetchNoteByIdFromDatabase(db, insideId))!.updatedAt!).toISOString()).toBe(
+			editedAt.toISOString(),
+		);
 
 		for (const id of [outsideId, insideId]) {
 			const note = await fetchNoteByIdFromDatabase(db, id);

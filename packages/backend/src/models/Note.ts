@@ -92,6 +92,9 @@ export class MiNote {
 
 	public renoteChannelId: MiChannel['id'] | null;
 
+	/** リモートで編集された (Update(Note) を受け取った) 最終の日時。 */
+	public updatedAt: Date | null;
+
 	constructor(data: Partial<MiNote>) {
 		if (data == null) {
 			return;

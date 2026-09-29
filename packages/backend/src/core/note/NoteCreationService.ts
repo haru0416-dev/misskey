@@ -666,6 +666,8 @@ async function enqueueUserWebhook(
 
 export type CreateNoteData = {
 	createdAt: Date | null;
+	// リモートで編集済みのノートを取り込むときの最終編集日時。後から届く古い Update で巻き戻さないために残す。
+	updatedAt?: Date | null;
 	name?: string | null;
 	text: string | null;
 	reply: MiNote | null;
@@ -767,6 +769,28 @@ function isQuoteData(data: {
 	);
 }
 
+/** note.mentionedRemoteUsers の JSON。リモートの利用者だけを、プロフィールの URL を添えて並べる。 */
+async function serializeMentionedRemoteUsers(db: MiDrizzleDatabase, mentionedUsers: MiUser[]): Promise<string> {
+	const profiles = await listUserProfilesByUserIdsFromDatabase(
+		db,
+		mentionedUsers.map((u) => u.id),
+	);
+	const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
+	return JSON.stringify(
+		mentionedUsers
+			.filter((u): u is MiUser & { host: string } => u.host != null)
+			.map((u) => {
+				const profile = profileByUserId.get(u.id);
+				return {
+					uri: u.uri,
+					url: profile?.url ?? undefined,
+					username: u.username,
+					host: u.host,
+				} as IMentionedRemoteUsers[0];
+			}),
+	);
+}
+
 async function insertNote(
 	deps: NoteCreationDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
@@ -813,28 +837,12 @@ async function insertNote(
 		renoteUserHost: data.renote ? data.renote.userHost : null,
 		renoteChannelId: data.renote ? data.renote.channelId : null,
 		userHost: user.host,
+		updatedAt: data.updatedAt ?? null,
 	};
 
 	if (mentionedUsers.length > 0) {
 		insert.mentions = mentionedUsers.map((u) => u.id);
-		const profiles = await listUserProfilesByUserIdsFromDatabase(
-			db,
-			mentionedUsers.map((u) => u.id),
-		);
-		const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
-		insert.mentionedRemoteUsers = JSON.stringify(
-			mentionedUsers
-				.filter((u): u is MiUser & { host: string } => u.host != null)
-				.map((u) => {
-					const profile = profileByUserId.get(u.id);
-					return {
-						uri: u.uri,
-						url: profile?.url ?? undefined,
-						username: u.username,
-						host: u.host,
-					} as IMentionedRemoteUsers[0];
-				}),
-		);
+		insert.mentionedRemoteUsers = await serializeMentionedRemoteUsers(db, mentionedUsers);
 	}
 
 	let countedInstanceId: string | undefined;
@@ -1692,6 +1700,105 @@ export async function createNote(
 	}
 
 	return persisted.note;
+}
+
+export type RemoteNoteEditData = {
+	text: string | null;
+	cw: string | null;
+	files: MiDriveFile[];
+	apMentions: MiUser[];
+	/** 解決できなかった分も含めた、編集後のメンションの数 (上限の判定に使う)。 */
+	apMentionRawCount: number;
+	apHashtags: string[];
+	apEmojis: string[];
+};
+
+export type RemoteNoteEditValues = Pick<
+	MiNote,
+	| 'text'
+	| 'cw'
+	| 'visibility'
+	| 'fileIds'
+	| 'attachedFileTypes'
+	| 'emojis'
+	| 'tags'
+	| 'mentions'
+	| 'mentionedRemoteUsers'
+>;
+
+/**
+ * リモートで編集されたノートの、書き換える列を作る。作成と同じ規則 (長さ・センシティブワード・禁止ワード・メンションの上限・
+ * サイレンス) を当てる。禁止ワードとメンションの上限にかかる編集は IdentifiableError を投げる (呼び出し元は編集を捨てる)。
+ * 公開範囲は広げない (センシティブワードなどで public を home に下げることだけする)。
+ * followers / specified のノートはメンションを書き換えない。メンションされた利用者はそのノートを見られるので、
+ * 編集で足すと見られる人を後から増やせてしまう。
+ */
+export async function prepareRemoteNoteEdit(
+	deps: NoteCreationDependencies,
+	user: MiUser,
+	existing: MiNote,
+	data: RemoteNoteEditData,
+): Promise<RemoteNoteEditValues> {
+	let text = data.text == null ? null : data.text.slice(0, DB_MAX_NOTE_TEXT_LENGTH).trim();
+	if (text === '') {
+		text = null;
+	}
+	const cw = data.cw == null ? null : data.cw.slice(0, DB_MAX_NOTE_CW_LENGTH);
+
+	if (isKeywordIncluded(concatNoteContentsForKeyWordCheck({ cw, text }), deps.meta.prohibitedWords)) {
+		throw new IdentifiableError('689ee33f-f97c-479a-ac49-1b9f8140af99', 'Note contains prohibited words');
+	}
+
+	const policies = await getApiRolePolicies(deps, user);
+	let visibility = existing.visibility;
+	if (
+		visibility === 'public' &&
+		(isKeywordIncluded(cw ?? text ?? '', deps.meta.sensitiveWords) ||
+			policies.canPublicNote === false ||
+			isSilencedHost(deps.meta.silencedHosts, user.host))
+	) {
+		visibility = 'home';
+	}
+
+	let mentions = existing.mentions;
+	let mentionedRemoteUsers = existing.mentionedRemoteUsers;
+	if (existing.visibility === 'public' || existing.visibility === 'home') {
+		const mentionedUsers = [...data.apMentions];
+		let mentionCount = data.apMentionRawCount;
+		// 作成時と同じく、返信先の投稿者はメンションに含める。
+		if (
+			existing.replyUserId != null &&
+			existing.replyUserId !== user.id &&
+			!mentionedUsers.some((mentioned) => mentioned.id === existing.replyUserId)
+		) {
+			const replyUser = await fetchUserByIdFromDatabase(deps.db, existing.replyUserId);
+			if (replyUser != null) {
+				mentionedUsers.push(replyUser);
+				mentionCount++;
+			}
+		}
+		if (mentionCount > 0 && mentionCount > policies.mentionLimit) {
+			throw new IdentifiableError('9f466dab-c856-48cd-9e65-ff90ff750580', 'Note contains too many mentions');
+		}
+		mentions = mentionedUsers.map((mentioned) => mentioned.id);
+		mentionedRemoteUsers =
+			mentionedUsers.length > 0 ? await serializeMentionedRemoteUsers(deps.db, mentionedUsers) : '[]';
+	}
+
+	return {
+		text,
+		cw,
+		visibility,
+		fileIds: data.files.map((file) => file.id),
+		attachedFileTypes: data.files.map((file) => file.type),
+		emojis: isMediaSilencedHost(deps.meta.mediaSilencedHosts, user.host) ? [] : data.apEmojis,
+		tags: data.apHashtags
+			.filter((tag) => Array.from(tag).length <= 128)
+			.slice(0, 32)
+			.map((tag) => normalizeForSearch(tag)),
+		mentions,
+		mentionedRemoteUsers,
+	};
 }
 
 export async function fetchAndCreateNote(

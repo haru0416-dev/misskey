@@ -15,6 +15,7 @@ import { instance } from '@/instance.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { globalEvents } from '@/events.js';
+import { applyEditedNote } from '@/features/notes/useNoteCapture.js';
 
 type TimelineOptions = {
 	src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';
@@ -257,7 +258,12 @@ export function useStreamingNotesTimeline(options: TimelineOptions, effects: Tim
 		}
 	}
 
+	function onNoteEdited(edited: Misskey.entities.Note): void {
+		current.mapItems((item) => applyEditedNote(item, edited));
+	}
+
 	globalEvents.on('noteDeleted', effects.onRemove);
+	globalEvents.on('noteEdited', onNoteEdited);
 	globalEvents.on('noteRemovedFromAntenna', onNoteRemovedFromAntenna);
 
 	onMounted(() => {
@@ -289,6 +295,7 @@ export function useStreamingNotesTimeline(options: TimelineOptions, effects: Tim
 		current.dispose();
 		window.document.removeEventListener('visibilitychange', onVisibilityChange);
 		globalEvents.off('noteDeleted', effects.onRemove);
+		globalEvents.off('noteEdited', onNoteEdited);
 		globalEvents.off('noteRemovedFromAntenna', onNoteRemovedFromAntenna);
 	});
 

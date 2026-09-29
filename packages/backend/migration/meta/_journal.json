@@ -183,6 +183,13 @@
       "when": 1790590084880,
       "tag": "0025_drop_reactions_buffering",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790657495963,
+      "tag": "0026_note_updated_at",
+      "breakpoints": true
     }
   ]
 }

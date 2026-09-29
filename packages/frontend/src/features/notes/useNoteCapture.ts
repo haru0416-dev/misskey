@@ -4,7 +4,7 @@
  */
 
 import { onUnmounted, reactive } from 'vue';
-import type * as Misskey from 'misskey-js';
+import * as Misskey from 'misskey-js';
 import { EventEmitter } from 'eventemitter3';
 import type { Reactive } from 'vue';
 import type { NoteUpdatedEvent } from 'misskey-js/streaming.types.js';
@@ -29,6 +29,78 @@ export const noteEvents = new EventEmitter<{
 	}) => void;
 	[ev: `pollVoted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; choice: number }) => void;
 }>();
+
+// 同じノートを何か所に表示していても、1 回の編集につき取り直しは 1 回にする。
+const editedNoteFetches = new Set<string>();
+
+function refetchEditedNote(noteId: Misskey.entities.Note['id'], updatedAt: string): void {
+	const key = `${noteId}:${updatedAt}`;
+	if (editedNoteFetches.has(key)) {
+		return;
+	}
+	editedNoteFetches.add(key);
+	misskeyApi('notes/show', { noteId })
+		.then((note) => globalEvents.emit('noteEdited', note))
+		.catch(() => {})
+		.finally(() => window.setTimeout(() => editedNoteFetches.delete(key), 10_000));
+}
+
+// 編集後の取り直しで当てる列。編集で変わりうる列に加え、リアクション・投票も取り直した時点の値にする
+// (描き直した MkNote はこの項目から状態を作り直すので、一覧の読み込み時の値に戻さないため)。
+// 取り直した側に無い列 (タグを全部消した等) は項目からも消す。
+const refreshedNoteKeys = [
+	'text',
+	'cw',
+	'files',
+	'fileIds',
+	'emojis',
+	'tags',
+	'mentions',
+	'visibility',
+	'updatedAt',
+	'reactions',
+	'reactionCount',
+	'reactionEmojis',
+	'myReaction',
+	'poll',
+] as const;
+
+function withEditedFields<T extends Misskey.entities.Note>(target: T, edited: Misskey.entities.Note): T {
+	const next: Record<string, unknown> = { ...target };
+	for (const key of refreshedNoteKeys) {
+		if (key in edited) {
+			next[key] = edited[key];
+		} else {
+			delete next[key];
+		}
+	}
+	return next as T;
+}
+
+/**
+ * 一覧の項目に、取り直した編集後のノートの中身を当てる。項目がそのノートか、リノート・返信として (入れ子を含めて)
+ * そのノートを含むときだけ新しいオブジェクトを返す (それ以外は同じ参照)。一覧が項目に付けた印を消さないよう、
+ * 編集で変わる列だけ書き換える。
+ */
+export function applyEditedNote<T extends Misskey.entities.Note>(item: T, edited: Misskey.entities.Note): T {
+	let next = item.id === edited.id ? withEditedFields(item, edited) : item;
+	const renote = next.renote == null ? next.renote : applyEditedNote(next.renote, edited);
+	const reply = next.reply == null ? next.reply : applyEditedNote(next.reply, edited);
+	if (renote !== next.renote) next = { ...next, renote };
+	if (reply !== next.reply) next = { ...next, reply };
+	return next;
+}
+
+/**
+ * ノートの描画の key。MkNote は受け取ったノートを最初に一度だけ解釈するので、表示の主体 (ノート自身か、単なる
+ * リノートならリノート先) が編集されたら描き直させる。引用先・返信先の編集は MkNote の中で差し替えるので含めない
+ * (含めると外側のノートの、読み込み後に増えたリアクション等の状態まで作り直してしまう)。
+ */
+export function noteRenderKey(note: Misskey.entities.Note): string {
+	// リノート先を取れなかった項目は renote が null で届く。
+	const renoteUpdatedAt = Misskey.note.isPureRenote(note) ? (note.renote?.updatedAt ?? '') : '';
+	return `${note.id}:${note.updatedAt ?? ''}:${renoteUpdatedAt}`;
+}
 
 const fetchEvent = new EventEmitter<{
 	[id: string]: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis'>;
@@ -172,6 +244,11 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 				globalEvents.emit('noteDeleted', id);
 				break;
 			}
+
+			case 'edited': {
+				refetchEditedNote(id, body.updatedAt);
+				break;
+			}
 		}
 	}
 
@@ -199,6 +276,47 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 	return () => {
 		decapture(true);
 		connection.off('_connected_', onStreamConnected);
+	};
+}
+
+// 投稿から一定時間が経ったノートは、イベントが起きる見込みが低いので購読しない。
+const SUBSCRIBE_WINDOW = 1000 * 60 * 5;
+
+/**
+ * 編集の合図だけを購読する。返信先・引用先はリアクションを出さず、同じ画面に単独で出ていなければ誰も購読していないので、
+ * これで編集を受け取る。解除する関数を返す (購読しなかったときは何もしない関数)。
+ * @param displayedNote 画面に出している外側のノート。これが新しいときだけ購読する (useNoteCapture と同じ基準)。
+ * null なら新しさを問わない (詳細ページのように、古いノートを開いて見ている画面で使う)。
+ */
+export function subscribeNoteEdits(
+	note: Pick<Misskey.entities.Note, 'id'>,
+	displayedNote: Pick<Misskey.entities.Note, 'createdAt'> | null,
+): () => void {
+	if (!$i || !store.realtimeMode) {
+		return () => {};
+	}
+	if (displayedNote != null && Date.now() - new Date(displayedNote.createdAt).getTime() > SUBSCRIBE_WINDOW) {
+		return () => {};
+	}
+	const connection = useStream();
+	function onStreamNoteUpdated(data: NoteUpdatedEvent): void {
+		if (data.id === note.id && data.type === 'edited') {
+			refetchEditedNote(data.id, data.body.updatedAt);
+		}
+	}
+	function capture(): void {
+		connection.send('sr', { id: note.id });
+	}
+	// 未接続の間の送信は接続時にまとめて送られ、_connected_ でも送り直すので 2 回の購読になる (解除 1 回では残る)。
+	if (connection.state === 'connected') {
+		capture();
+	}
+	connection.on('noteUpdated', onStreamNoteUpdated);
+	connection.on('_connected_', capture);
+	return () => {
+		connection.send('un', { id: note.id });
+		connection.off('noteUpdated', onStreamNoteUpdated);
+		connection.off('_connected_', capture);
 	};
 }
 
@@ -354,7 +472,7 @@ export function useNoteCapture(props: {
 	// 投稿からある程度経過している(=タイムラインを遡って表示した)ノートは、イベントが発生する可能性が低いためそもそも購読しない
 	// ただし「リノートされたばかりの過去のノート」(= parentNoteが存在し、かつparentNoteの投稿日時が最近)はイベント発生が考えられるため購読する
 	if (parentNote == null) {
-		if (Date.now() - new Date(note.createdAt).getTime() > 1000 * 60 * 5) {
+		if (Date.now() - new Date(note.createdAt).getTime() > SUBSCRIBE_WINDOW) {
 			return {
 				$note,
 				subscribe: () => {
@@ -363,7 +481,7 @@ export function useNoteCapture(props: {
 			};
 		}
 	} else {
-		if (Date.now() - new Date(parentNote.createdAt).getTime() > 1000 * 60 * 5) {
+		if (Date.now() - new Date(parentNote.createdAt).getTime() > SUBSCRIBE_WINDOW) {
 			return {
 				$note,
 				subscribe: () => {

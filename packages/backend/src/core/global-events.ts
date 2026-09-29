@@ -106,9 +106,9 @@ export interface NoteEventTypes {
 	deleted: {
 		deletedAt: Date;
 	};
-	updated: {
-		cw: string | null;
-		text: string;
+	/** リモートで編集された。中身は見る人ごとに見てよいかが違うので、編集の日時だけ配る。 */
+	edited: {
+		updatedAt: Date;
 	};
 	reacted: {
 		reaction: string;

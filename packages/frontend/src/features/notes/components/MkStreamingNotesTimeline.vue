@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
 						<span>{{ row.separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
-					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
+					<MkNote :key="noteRenderKey(row.note)" :class="$style.note" :note="row.note" :withHardMute="true"/>
 					<div v-if="row.note._shouldInsertAd_ && !row.separatorInfo" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
@@ -78,15 +78,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
 						<span>{{ separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
-					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
+					<MkNote :key="noteRenderKey(note)" :class="$style.note" :note="note" :withHardMute="true"/>
 				</div>
 				<div v-else-if="note._shouldInsertAd_" :data-scroll-anchor="note.id">
-					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
+					<MkNote :key="noteRenderKey(note)" :class="$style.note" :note="note" :withHardMute="true"/>
 					<div :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
 				</div>
-				<MkNote v-else :class="$style.note" :note="note" :withHardMute="true" :data-scroll-anchor="note.id"/>
+				<!-- TransitionGroup の子の key は note.id のまま保つ。MkNote の key を直に子にすると、編集で描き直すたびに退場と登場のアニメーションが重なる。 -->
+				<div v-else :data-scroll-anchor="note.id">
+					<MkNote :key="noteRenderKey(note)" :class="$style.note" :note="note" :withHardMute="true"/>
+				</div>
 			</template>
 		</component>
 		<MkPaginatorFailure v-if="paginator.canFetchOlder.value && !paginator.fetchingOlder.value" :failure="paginator.olderFailure.value"/>
@@ -130,6 +133,7 @@ import { i18n } from '@/i18n.js';
 import { DI } from '@/di.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';
 import { useStreamingNotesTimeline } from '@/features/notes/useStreamingNotesTimeline.js';
+import { noteRenderKey } from '@/features/notes/useNoteCapture.js';
 import { notePage } from '@/filters/note.js';
 
 const props = withDefaults(

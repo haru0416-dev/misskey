@@ -20,6 +20,13 @@ export const packedNoteSchema = {
 			nullable: true,
 			format: 'date-time',
 		},
+		// リモートで編集された最終の日時。編集されていなければ無い。
+		updatedAt: {
+			type: 'string',
+			optional: true,
+			nullable: false,
+			format: 'date-time',
+		},
 		text: {
 			type: 'string',
 			optional: false,

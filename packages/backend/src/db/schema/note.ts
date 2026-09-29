@@ -4,7 +4,18 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { boolean, index, jsonb, pgEnum, pgTable, smallint, text, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	index,
+	jsonb,
+	pgEnum,
+	pgTable,
+	smallint,
+	text,
+	timestamp,
+	uniqueIndex,
+	varchar,
+} from 'drizzle-orm/pg-core';
 import { noteVisibilities } from '@/types.js';
 import type { noteReactionAcceptances } from '@/types.js';
 import type { MiChannel } from '@/models/Channel.js';
@@ -60,6 +71,8 @@ export const note = pgTable(
 		renoteUserId: varchar({ length: 32 }).$type<MiUser['id'] | null>(),
 		renoteUserHost: varchar({ length: 128 }),
 		renoteChannelId: varchar({ length: 32 }).$type<MiChannel['id'] | null>(),
+		// リモートで編集された (Update(Note) を受け取った) 最終の日時。編集されていなければ null。
+		updatedAt: timestamp({ withTimezone: true }),
 	},
 	(table) => [
 		index('IDX_NOTE_REPLY_ID').on(table.replyId),

@@ -85,6 +85,8 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	releaseQueue(): void;
 	removeItem(id: string): void;
 	updateItem(id: string, updater: (item: _T) => _T): void;
+	/** 全項目 (先読みの分も) に mapper を当て、別のオブジェクトが返った項目だけ差し替える。 */
+	mapItems(mapper: (item: _T) => _T): void;
 }
 
 export class Paginator<
@@ -574,6 +576,19 @@ export class Paginator<
 			this.aheadQueue = queuedItems;
 			this.queuedAheadItemsCount.value = queuedItems.length;
 		}
+	}
+
+	public mapItems(mapper: (item: T) => T): void {
+		let changed = false;
+		const items = this.items.value.map((item) => {
+			const mapped = mapper(item);
+			if (mapped !== item) changed = true;
+			return mapped;
+		});
+		if (changed) {
+			this.items.value = items;
+		}
+		this.aheadQueue = this.aheadQueue.map(mapper);
 	}
 
 	public updateItem(id: string, updater: (item: T) => T): void {

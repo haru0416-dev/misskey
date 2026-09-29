@@ -259,6 +259,12 @@ export type NoteUpdatedEvent = { id: Note['id'] } & ({
 		choice: number;
 		userId: User['id'];
 	};
+} | {
+	// リモートで編集された。中身は含まないので、表示側がノートを取り直す。
+	type: 'edited';
+	body: {
+		updatedAt: string;
+	};
 });
 
 export type BroadcastEvents = {

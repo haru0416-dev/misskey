@@ -69,6 +69,7 @@
 - Feat: 画像ビューアーにピクセルアート拡大モードを追加 (メニューから切り替えると拡大時に補間せず、ドット絵がぼやけない)
 - Feat: アップロード待ちのファイルを、サムネイルのクリックまたは詳細メニューの「プレビュー」からビューアーで確認できるように (動画も対象)
 - Feat: 予約投稿の日時を予約投稿一覧から変更できるように
+- Feat: 編集されたノートに印を出し、表示中のノートは読み直さずに編集後の内容へ切り替えるように
 - Enhance: ノート上でぼかしを解除したメディアは、画像ビューワーで 2 枚目以降もぼかさないように
 - Enhance: 設定の検索で、入力のたびに候補数の 2 乗の処理をしていたのを 1 周で済ませるように
 - Enhance: 起動時の読み込みの待ち合わせを減らし、初回表示を高速化（静的な依存をすべて先読みし、アイコンのCSS・画面の骨組みを並行して読み込む。往復150 ms・1.6 Mbps の回線でタイムライン表示まで 12.4秒→3.6秒、サーバー側の圧縮を含む）
@@ -265,6 +266,7 @@
 - Feat: `announcements/react` / `announcements/unreact` を追加し、お知らせの packed entity に `reactions`・`myReaction`・`isActive` を追加 (終了したお知らせはリアクションの件数だけ見られる)
 - Feat: 読み取りAPI 183本を HTTP QUERY (RFC 10008) でも受け付けるように (POST も従来どおり受ける。QUERY は safe かつ idempotent なので Cache-Control が中間キャッシュに実際に効く)
 - Feat: ID生成方式を `uuidv7` (RFC 9562、ハイフン無しhex表現) 固定にし、設定ファイルの `id` 項目 (aid/aidx/meid/meidg/objectid/ulid の選択) を削除
+- Feat: リモートで編集されたノート (ActivityPub の Update(Note)) を受け取り、本文・CW・添付・絵文字・タグ・メンションを書き換えるように (編集履歴は持たず、最終の編集日時を `updatedAt` で返す)
 - Enhance: `drive/files` に続きを件数で指定する `offset` を追加 (名前・サイズ順の続きの取得用)
 - Enhance: `users/show` で一度に指定できるユーザーを 100 件までに
 - Enhance: アップロードした画像のサムネイルで smartSubsample を使わないように (変換の CPU が 3〜4 割減る)。Web 用画像も `media.webpublicSmartSubsample: false` で同じにでき、CPU の弱い機械で写真の投稿が軽くなる (4032x3024 の写真 1 枚で 892→424ms、実写真で PSNR 約 −0.6dB)

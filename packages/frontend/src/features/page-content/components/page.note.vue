@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<MkNote v-if="note && !block.detailed" :key="note.id + ':normal'" :note="note"/>
-	<MkNoteDetailed v-if="note && block.detailed" :key="note.id + ':detail'" :note="note"/>
+	<MkNoteDetailed v-if="note && block.detailed" :key="noteRenderKey(note) + ':detail'" :note="note"/>
 </div>
 </template>
 
@@ -16,6 +16,8 @@ import * as Misskey from 'misskey-js';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { applyEditedNote, noteRenderKey } from '@/features/notes/useNoteCapture.js';
+import { useGlobalEvent } from '@/events.js';
 
 const props = defineProps<{
 	block: Extract<Misskey.entities.PageBlock, { type: 'note' }>;
@@ -23,6 +25,11 @@ const props = defineProps<{
 }>();
 
 const note = ref<Misskey.entities.Note | null>(null);
+
+// 詳細表示のノートは編集の合図を受けるので (MkNoteDetailed)、編集後の中身を当てて描き直させる。
+useGlobalEvent('noteEdited', (edited) => {
+	if (note.value != null) note.value = applyEditedNote(note.value, edited);
+});
 
 onMounted(() => {
 	if (props.block.note == null) {

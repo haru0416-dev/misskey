@@ -646,6 +646,7 @@ export async function packNoteForApi(
 	const packed = {
 		id: note.id,
 		createdAt: parseId(note.id).date.toISOString(),
+		updatedAt: note.updatedAt == null ? undefined : new Date(note.updatedAt).toISOString(),
 		userId: note.userId,
 		user,
 		text,

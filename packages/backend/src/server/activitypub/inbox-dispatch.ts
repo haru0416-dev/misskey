@@ -80,6 +80,7 @@ import {
 	createNoteFromApForApi,
 	parseAudienceForApi,
 	resolveNoteForApi,
+	updateNoteFromApForApi,
 	updateQuestionFromApForApi,
 } from '@/server/rest/activitypub/ap-note.js';
 import type { ApiApNoteDependencies } from '@/server/rest/activitypub/ap-note.js';
@@ -762,7 +763,13 @@ async function updateFromApForApi(
 		return 'ok: Person updated';
 	} else if (getApType(object) === 'Question') {
 		await updateQuestionFromApForApi(deps, object, actor, history).catch((err) => console.error(err));
+		// 票の集計の Update には updated が無い。付いていれば本文などの編集でもある (Mastodon のアンケート付き投稿の編集)。
+		if ((object as IPost).updated != null) {
+			return await updateNoteFromApForApi(deps, actor, object, history);
+		}
 		return 'ok: Question updated';
+	} else if (isPost(object)) {
+		return await updateNoteFromApForApi(deps, actor, object, history);
 	}
 	return `skip: Unknown type: ${getApType(object)}`;
 }

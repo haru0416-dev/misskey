@@ -394,8 +394,19 @@ function notePaginationOrder(options: { sinceId?: MiNote['id'] | null; untilId?:
 }
 
 const noteColumnKeys = Object.keys(getTableColumns(note)) as (keyof NoteInsert)[];
+
+// updatedAt は null を取る timestamp。drizzle の timestamp 変換は placeholder の null で toISOString を呼んで落ちるため、
+// 変換を通さず ISO 文字列か null を timestamptz として渡す (Bun.sql は Date を toString() で送るので Date のままにしない)。
+function notePlaceholder(key: keyof NoteInsert, name: string): unknown {
+	return key === 'updatedAt' ? sql`${sql.placeholder(name)}::timestamptz` : sql.placeholder(name);
+}
+
+function notePlanValue(key: keyof NoteInsert, value: unknown): unknown {
+	return key === 'updatedAt' && value instanceof Date ? value.toISOString() : value;
+}
+
 const noteInsertPlaceholders = Object.fromEntries(
-	noteColumnKeys.map((key) => [key, sql.placeholder(key)]),
+	noteColumnKeys.map((key) => [key, notePlaceholder(key, key)]),
 ) as unknown as NoteInsert;
 
 const noteInsertPlan = defineQueryPlan((db) => ({
@@ -407,14 +418,17 @@ const noteInsertPlan = defineQueryPlan((db) => ({
 /** 全列が揃う場合だけ固定形を使い、欠けた列の DEFAULT は通常の builder に任せる。 */
 export async function createNoteInDatabase(db: MiDrizzleDatabase, values: NoteInsert): Promise<void> {
 	if (noteColumnKeys.every((key) => values[key] !== undefined)) {
-		await noteInsertPlan.execute(db, values);
+		await noteInsertPlan.execute(
+			db,
+			Object.fromEntries(noteColumnKeys.map((key) => [key, notePlanValue(key, values[key])])),
+		);
 		return;
 	}
 	await db.insert(note).values(values);
 }
 
 const noteCreationPlaceholders = Object.fromEntries(
-	noteColumnKeys.map((key) => [key, sql.placeholder(`note_${key}`)]),
+	noteColumnKeys.map((key) => [key, notePlaceholder(key, `note_${key}`)]),
 ) as unknown as NoteInsert;
 
 function noteCreationPlan(rowCount: number) {
@@ -457,7 +471,7 @@ export async function createNoteWithAuthorAndInlineJobsInDatabase(
 	opts: Parameters<typeof prepareInlineDbOutboxJobs>[2],
 ): Promise<{ author: MiUser; jobs: InlineDbOutboxJob[] }> {
 	const { jobs, values } = prepareInlineDbOutboxJobs('notePostCreate', dataList, opts);
-	for (const key of noteColumnKeys) values[`note_${key}`] = noteValues[key];
+	for (const key of noteColumnKeys) values[`note_${key}`] = notePlanValue(key, noteValues[key]);
 	const plan = noteCreationPlans[dataList.length] ?? noteCreationPlan(dataList.length);
 	const [author] = await plan.execute(db, values);
 	if (author == null) throw new EntityNotFoundError('MiUser', { id: noteValues.userId });
@@ -685,6 +699,37 @@ export async function deleteNoteAndDecrementParentRepliesCountInDatabase(
 			.set({ repliesCount: sql`${note.repliesCount} - 1` })
 			.where(eq(note.id, deleted.replyId));
 	});
+}
+
+/**
+ * リモートで編集されたノートの内容を書き換える。受け取った編集が保存済みより新しいときだけ書き、書き換えた行を返す。
+ * 古い編集や、同じ編集の二重配送は null (判定と書き込みを 1 文にして、順番が前後した配送でも古い内容に戻さない)。
+ */
+export async function updateRemoteNoteContentInDatabase(
+	db: MiDrizzleDatabase,
+	id: MiNote['id'],
+	userId: MiUser['id'],
+	values: Pick<
+		MiNote,
+		| 'text'
+		| 'cw'
+		| 'visibility'
+		| 'fileIds'
+		| 'attachedFileTypes'
+		| 'emojis'
+		| 'tags'
+		| 'mentions'
+		| 'mentionedRemoteUsers'
+	> & { updatedAt: Date },
+): Promise<MiNote | null> {
+	const [row] = await db
+		.update(note)
+		.set(values)
+		.where(
+			and(eq(note.id, id), eq(note.userId, userId), or(isNull(note.updatedAt), lt(note.updatedAt, values.updatedAt))),
+		)
+		.returning();
+	return row == null ? null : deserializeNote(row);
 }
 
 export async function incrementNoteRepliesCountInDatabase(

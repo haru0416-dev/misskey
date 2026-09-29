@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
 						<span>{{ row.separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
-					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
+					<MkNote :key="noteRenderKey(row.note)" :class="$style.note" :note="row.note" :withHardMute="true"/>
 					<div v-if="row.note._shouldInsertAd_" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
@@ -47,7 +47,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
 						<span>{{ row.separatorInfo.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
-					<MkNote :class="$style.note" :note="row.note" :withHardMute="true"/>
+					<MkNote :key="noteRenderKey(row.note)" :class="$style.note" :note="row.note" :withHardMute="true"/>
 					<div v-if="row.note._shouldInsertAd_" :class="$style.ad">
 						<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					</div>
@@ -70,6 +70,7 @@ import MkNote from '@/features/notes/components/MkNote.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import { i18n } from '@/i18n.js';
 import { useGlobalEvent } from '@/events.js';
+import { applyEditedNote, noteRenderKey } from '@/features/notes/useNoteCapture.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/features/notes/timeline-date-separate.js';
 
 const props = withDefaults(
@@ -285,6 +286,10 @@ onUnmounted(() => {
 
 useGlobalEvent('noteDeleted', (noteId) => {
 	props.paginator.removeItem(noteId);
+});
+
+useGlobalEvent('noteEdited', (edited) => {
+	props.paginator.mapItems((item) => applyEditedNote(item, edited));
 });
 
 function reload() {

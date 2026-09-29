@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<MkNoteSub v-for="note in conversation" :key="note.id" :class="$style.replyToMore" :note="note"/>
 		</div>
-		<MkNoteSub :note="appearNote?.reply ?? null" :class="$style.replyTo"/>
+		<MkNoteSub :key="replyNote ? noteRenderKey(replyNote) : ''" :note="replyNote" :class="$style.replyTo"/>
 	</details>
 	<div v-if="isRenote" :class="$style.renote">
 		<MkAvatar :class="$style.renoteAvatar" :user="note.user" link preview/>
@@ -134,7 +134,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-if="isEnabledUrlPreview">
 						<MkUrlPreview v-for="url in urls" :key="url" :url="url" :compact="true" :detail="true" style="margin-top: 6px;"/>
 					</div>
-					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :note="appearNote.renote ?? null" :class="$style.quoteNote"/></div>
+					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :key="quoteNote ? noteRenderKey(quoteNote) : ''" :note="quoteNote" :class="$style.quoteNote"/></div>
 				</div>
 				<MkA v-if="appearNote.channel && !inChannel" :class="$style.channel" :to="`/channels/${appearNote.channel.id}`"><i class="ti ti-device-tv"></i> {{ appearNote.channel.name }}</MkA>
 			</div>
@@ -143,6 +143,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkA :to="notePage(appearNote)">
 						<MkTime :time="appearNote.createdAt" mode="detail" colored/>
 					</MkA>
+					<span v-if="appearNote.updatedAt" style="margin-left: 0.5em;" :title="`${i18n.ts.edited}: ${dateString(appearNote.updatedAt)}`">
+						<i class="ti ti-pencil"></i> {{ i18n.ts.edited }}
+					</span>
 					<span style="margin-left: 0.5em;">
 						<span style="border: 1px solid var(--MI_THEME-divider); margin-right: 0.5em;"></span>
 						<i v-if="appearNote.visibility === 'public'" class="ti ti-world"></i>
@@ -248,7 +251,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, markRaw, provide, ref, useTemplateRef } from 'vue';
+import { computed, inject, markRaw, onUnmounted, provide, ref, useTemplateRef } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { isLink } from '@shared/utility/is-link.js';
@@ -278,8 +281,10 @@ import { reactionPicker } from '@/features/emoji-picker/reaction-picker.js';
 import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
+import { dateString } from '@/filters/date.js';
 import { getNoteClipMenu, getNoteMenu, getRenoteMenu } from '@/features/notes/get-note-menu.js';
-import { noteEvents, useNoteCapture } from '@/features/notes/useNoteCapture.js';
+import { noteEvents, noteRenderKey, subscribeNoteEdits, useNoteCapture } from '@/features/notes/useNoteCapture.js';
+import { useEditedNestedNotes } from '@/features/notes/useEditedNestedNotes.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
@@ -327,6 +332,11 @@ const { $note: $appearNote, subscribe: subscribeManuallyToNoteCapture } = useNot
 	note: appearNote,
 	parentNote: note,
 });
+
+// 返信先・引用先の編集はここで差し替える (このノートの key は変わらないので描き直されない)。
+// 詳細ページは古いノートを開いて見ていることが多いので、編集の合図は新しさを問わず購読する (このノート自身の分も)。
+const { reply: replyNote, quote: quoteNote } = useEditedNestedNotes(props.note, note, { subscribe: 'always' });
+onUnmounted(subscribeNoteEdits(appearNote, null));
 
 const rootEl = useTemplateRef('rootEl');
 const menuButton = useTemplateRef('menuButton');

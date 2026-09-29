@@ -18,6 +18,8 @@ export interface IObject {
 	_misskey_makeNotesFollowersOnlyBefore?: number | null;
 	_misskey_makeNotesHiddenBefore?: number | null;
 	published?: string;
+	/** 編集された日時。Update(Note) で送られる編集後のオブジェクトに付く。 */
+	updated?: string;
 	cc?: ApObject;
 	to?: ApObject;
 	attributedTo?: ApObject;

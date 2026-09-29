@@ -33,7 +33,7 @@ import {
 	updatePollVotesInDatabase,
 } from '@/core/note/PollStore.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
-import { fetchNoteByUriFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchNoteByUriFromDatabase, updateRemoteNoteContentInDatabase } from '@/core/note/NoteStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -41,7 +41,10 @@ import { createMfmService } from '@/core/mfm/MfmService.js';
 import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiDriveFile } from '@/models/DriveFile.js';
+import { isQuote, isRenote } from '@/misc/is-renote.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import {
 	extractDbHost,
@@ -55,7 +58,9 @@ import type { ApiApResolveDependencies } from './ap-resolve.js';
 import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePersonForApi } from './ap-person.js';
 import type { ApiApPersonDependencies } from './ap-person.js';
 import { deliverQuestionUpdateForApi } from './notes-ap.js';
-import { createNote } from '@/core/note/NoteCreationService.js';
+import { createNote, prepareRemoteNoteEdit, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
+import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
+import { updateDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { isNoteContentVisibleForMeForApi } from '../note/note.js';
 import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import type { ApiNoteStreamPublisher } from '../events.js';
@@ -345,6 +350,41 @@ export async function voteFromApForApi(
 }
 
 /** 禁止ワードは actor 解決後、ノート作成前に createNote 内で必ず検査する。 */
+/** ノートの本文を MFM で取り出す。Misskey 系の元の MFM があればそれを、無ければ HTML から変換する。 */
+function extractNoteTextForApi(deps: ApiApNoteDependencies, note: IPost): string | null {
+	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
+		return note.source.content;
+	}
+	if (note._misskey_content !== undefined) {
+		return note._misskey_content;
+	}
+	if (typeof note.content === 'string') {
+		return createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);
+	}
+	return null;
+}
+
+/** 添付を解決する。添付ごとの sensitive が無ければノートの sensitive を引き継ぐ。 */
+async function resolveNoteAttachmentsForApi(
+	deps: ApiApNoteDependencies,
+	actor: MiRemoteUser,
+	note: IPost,
+	options: { declaredComments?: Map<MiDriveFile['id'], string | null> } = {},
+): Promise<MiDriveFile[]> {
+	const attachments = toArray(note.attachment);
+	for (const attach of attachments) {
+		const attachment = attach as { sensitive?: boolean };
+		const sensitive = (note as { sensitive?: boolean }).sensitive;
+		if (attachment.sensitive == null && sensitive !== undefined) {
+			attachment.sensitive = sensitive;
+		}
+	}
+	const resolvedFiles = await Promise.all(
+		attachments.map((attach) => resolveImageForApi(deps, actor, attach, { useDeclaredMetadata: true, ...options })),
+	);
+	return resolvedFiles.filter((file) => file != null);
+}
+
 export async function createNoteFromApForApi(
 	deps: ApiApNoteDependencies,
 	value: string | IObject,
@@ -389,15 +429,7 @@ export async function createNoteFromApForApi(
 	const apHashtags = extractApHashtags(note.tag);
 
 	const cw = note.summary === '' ? null : (note.summary ?? null);
-
-	let text: string | null = null;
-	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
-		text = note.source.content;
-	} else if (note._misskey_content !== undefined) {
-		text = note._misskey_content as string;
-	} else if (typeof note.content === 'string') {
-		text = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);
-	}
+	const text = extractNoteTextForApi(deps, note);
 
 	const poll = await extractPollFromQuestionForApi(deps, note, history).catch(() => undefined);
 
@@ -423,18 +455,7 @@ export async function createNoteFromApForApi(
 		}
 	}
 
-	const attachments = toArray(note.attachment);
-	for (const attach of attachments) {
-		const attachment = attach as { sensitive?: boolean };
-		const sensitive = (note as { sensitive?: boolean }).sensitive;
-		if (attachment.sensitive == null && sensitive !== undefined) {
-			attachment.sensitive = sensitive;
-		}
-	}
-	const resolvedFiles = await Promise.all(
-		attachments.map((attach) => resolveImageForApi(deps, actor, attach, { useDeclaredMetadata: true })),
-	);
-	const files = resolvedFiles.filter((file) => file != null);
+	const files = await resolveNoteAttachmentsForApi(deps, actor, note);
 
 	const reply = await resolveIncomingReply(note.inReplyTo, (target) =>
 		resolveNoteForApi(deps, target, {
@@ -496,8 +517,12 @@ export async function createNoteFromApForApi(
 	const emojis = await extractEmojisForApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
 	const apEmojis = emojis.map((emoji) => emoji.name);
 
+	const createdAt = note.published ? new Date(note.published) : null;
+	// 編集していなくても published と同じ updated を付ける実装があるので、それより後のときだけ編集済みとする。
+	const updatedAt = parseApUpdated(note);
 	const data: CreateNoteData = omitUndefined({
-		createdAt: note.published ? new Date(note.published) : null,
+		createdAt,
+		updatedAt: updatedAt != null && (createdAt == null || updatedAt > createdAt) ? updatedAt : null,
 		files,
 		reply,
 		renote: quote ?? null,
@@ -532,6 +557,129 @@ export async function createNoteFromApForApi(
 		}
 		throw err;
 	}
+}
+
+/**
+ * Update(Note) を受け取り、既に取り込んだリモートのノートの内容を書き換える。未知のノートは作らない (Create で届く)。
+ * 本文・CW・添付・絵文字・タグ・メンションを取り込みと同じ規則で作り直し、編集の日時 (updated) を残す。
+ * 返信先・引用先・公開範囲の宛先・アンケートの選択肢は変えない (票は Update(Question) の集計で反映する)。
+ * 編集履歴は持たない。
+ */
+function parseApUpdated(note: IPost): Date | null {
+	const updated = note.updated == null ? Number.NaN : new Date(note.updated).getTime();
+	return Number.isFinite(updated) ? new Date(updated) : null;
+}
+
+export async function updateNoteFromApForApi(
+	deps: ApiApNoteDependencies,
+	actor: MiRemoteUser,
+	object: IObject,
+	history: Set<string>,
+): Promise<string> {
+	const note = object as IPost;
+	if (note.id == null) {
+		return 'skip: note without id';
+	}
+	const invalid = validateNoteForApi(object, note.id, actor);
+	if (invalid) {
+		return `skip: ${invalid.message}`;
+	}
+
+	// 送り手の日時をそのまま比べる。受信時刻で丸めると、時計の進んだ相手の編集は後着の古い版を新しいと誤り、
+	// 同じ編集の再送も別の編集に見える。未来の日時で止まるのは投稿者本人のノートの編集だけ。
+	const editedAt = parseApUpdated(note);
+	if (editedAt == null) {
+		return 'skip: not an edit (no updated)';
+	}
+
+	const existing = await fetchNoteByUriFromDatabase(deps.db, note.id);
+	if (existing == null) {
+		return 'skip: note not found';
+	}
+	if (existing.userId !== actor.id) {
+		return 'skip: actor is not the author';
+	}
+	if (isRenote(existing) && !isQuote(existing)) {
+		return 'skip: a pure renote cannot be edited';
+	}
+	if (existing.updatedAt != null && editedAt.getTime() <= new Date(existing.updatedAt).getTime()) {
+		return 'skip: older or same edit';
+	}
+
+	const text = extractNoteTextForApi(deps, note);
+	const cw = note.summary === '' ? null : (note.summary ?? null);
+	// 代替テキストの書き換えは、編集を受け入れると決まってから行う (禁止ワード等で捨てる編集では変えない)。
+	// 今の値との差分ではなく申告どおりに書く。並行した別の編集が先にコミットして値が変わっても、後の編集の値に揃う。
+	const declaredComments = new Map<MiDriveFile['id'], string | null>();
+	const files = await resolveNoteAttachmentsForApi(deps, actor, note, { declaredComments });
+
+	let values;
+	try {
+		values = await prepareRemoteNoteEdit(deps, actor, existing, {
+			text,
+			cw,
+			files,
+			apMentions: await extractApMentionsForApi(deps, note.tag, history),
+			apMentionRawCount: new Set(extractApMentionObjectsForApi(note.tag).map((x) => x.href)).size,
+			apHashtags: extractApHashtags(note.tag),
+			apEmojis: (await extractEmojisForApi(deps, note.tag ?? [], actor.host).catch(() => [])).map(
+				(emoji) => emoji.name,
+			),
+		});
+	} catch (err) {
+		if (err instanceof IdentifiableError) {
+			return `skip: ${err.message}`;
+		}
+		throw err;
+	}
+	// 引用から中身を消すと、引用先を残したまま単なるリノートに変わってしまう。空白だけの本文は整形後に消えるので、
+	// 整形後の値で引用の条件 (isQuote) を満たすかを見る。
+	if (isRenote(existing) && !isQuote({ ...existing, ...values })) {
+		return 'skip: the edit would turn a quote into a renote';
+	}
+
+	// ノートの書き換えと代替テキスト・ハッシュタグの記録を 1 つのトランザクションにする。同じノートへの編集が並行しても、
+	// 後の UPDATE は先のコミットを待って日時の条件を見直すので、古い編集の代替テキストが後から勝たない。
+	const previousTags = new Set(existing.tags);
+	const isListed = (visibility: MiNote['visibility']) => visibility === 'public' || visibility === 'home';
+	const edited = await deps.db.transaction(async (transaction) => {
+		const tx = transaction as MiDrizzleDatabase;
+		const row = await updateRemoteNoteContentInDatabase(tx, existing.id, actor.id, { ...values, updatedAt: editedAt });
+		if (row == null) {
+			return null;
+		}
+		// 添付の解決が終わった順ではなく ID 順に書く。同じ添付を持つ別のノートの編集と、行ロックの順序を揃える。
+		for (const [fileId, comment] of [...declaredComments].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+			await updateDriveFileInDatabase(tx, fileId, { comment });
+		}
+		// 編集で増えたタグをハッシュタグ一覧に載せる。消えたタグは作成時と同じく数え戻さない。
+		const addedTags = row.tags.filter((tag) => !previousTags.has(tag));
+		if (addedTags.length > 0 && isListed(row.visibility)) {
+			await recordHashtagUsagesInDatabase(tx, {
+				entries: addedTags.map((name) => ({ id: genId(), name })),
+				userId: actor.id,
+				isLocalUser: false,
+				isRemoteUser: true,
+				isUserAttached: false,
+				increment: true,
+			});
+		}
+		return row;
+	});
+	if (edited == null) {
+		return 'skip: older or same edit';
+	}
+	// 中身は見る人ごとに見てよいかが違うので、編集の日時だけ配り、表示側が取り直す。
+	deps.publishNoteStream?.(edited, 'edited', { updatedAt: editedAt });
+
+	// 流行の集計は Redis だけの付随処理。失敗でジョブを再試行させても、再試行は同じ編集として捨てられて何も残らない。
+	const addedTags = edited.tags.filter((tag) => !previousTags.has(tag));
+	if (addedTags.length > 0 && isListed(edited.visibility)) {
+		await updateHashtagsRankings(deps, addedTags, actor.id).catch((error: unknown) => {
+			console.error(`Failed to update hashtag rankings for edited note ${edited.id}`, error);
+		});
+	}
+	return 'ok: Note updated';
 }
 
 export async function resolveNoteForApi(

@@ -4466,6 +4466,8 @@ export type components = {
             createdAt: string;
             /** Format: date-time */
             deletedAt?: string | null;
+            /** Format: date-time */
+            updatedAt?: string;
             text: string | null;
             cw?: string | null;
             /** Format: id */

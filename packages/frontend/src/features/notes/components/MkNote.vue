@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="[$style.root, { [$style.showActionsOnlyHover]: prefer.showNoteActionsOnlyHover, [$style.skipRender]: prefer.skipNoteRender }]"
 	tabindex="0"
 >
-	<MkNoteSub v-if="appearNote.replyId && !renoteCollapsed" :note="appearNote?.reply ?? null" :class="$style.replyTo"/>
+	<MkNoteSub v-if="appearNote.replyId && !renoteCollapsed" :key="replyNote ? noteRenderKey(replyNote) : ''" :note="replyNote" :class="$style.replyTo"/>
 	<div v-if="pinned" :class="$style.tip"><i class="ti ti-pin"></i> {{ i18n.ts.pinnedNote }}</div>
 	<div v-if="isRenote" :class="$style.renote">
 		<div v-if="note.channel" :class="$style.colorBar" :style="{ background: note.channel.color }"></div>
@@ -104,7 +104,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-if="isEnabledUrlPreview">
 						<MkUrlPreview v-for="url in urls" :key="url" :url="url" :compact="true" :detail="false" :class="$style.urlPreview"/>
 					</div>
-					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :note="appearNote?.renote ?? null" :class="$style.quoteNote"/></div>
+					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :key="quoteNote ? noteRenderKey(quoteNote) : ''" :note="quoteNote" :class="$style.quoteNote"/></div>
 					<button v-if="isLong && collapsed" :class="$style.collapsed" class="_button" @click="collapsed = false">
 						<span :class="$style.collapsedLabel">{{ i18n.ts.showMore }}</span>
 					</button>
@@ -232,7 +232,8 @@ import { reactionPicker } from '@/features/emoji-picker/reaction-picker.js';
 import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
-import { noteEvents, useNoteCapture } from '@/features/notes/useNoteCapture.js';
+import { noteEvents, noteRenderKey, useNoteCapture } from '@/features/notes/useNoteCapture.js';
+import { useEditedNestedNotes } from '@/features/notes/useEditedNestedNotes.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
@@ -309,6 +310,10 @@ const { $note: $appearNote, subscribe: subscribeManuallyToNoteCapture } = useNot
 	note: appearNote,
 	parentNote: note,
 	mock: props.mock,
+});
+
+const { reply: replyNote, quote: quoteNote } = useEditedNestedNotes(props.note, note, {
+	subscribe: props.mock ? 'never' : 'recent',
 });
 
 const rootEl = useTemplateRef('rootEl');

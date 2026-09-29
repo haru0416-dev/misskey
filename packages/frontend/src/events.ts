@@ -11,6 +11,8 @@ type Events = {
 	clientNotification: (notification: Misskey.entities.Notification) => void;
 	notePosted: (note: Misskey.entities.Note) => void;
 	noteDeleted: (noteId: Misskey.entities.Note['id']) => void;
+	/** リモートで編集されたノートを取り直した。一覧は同じ ID のノート (リノート・返信の中も) を差し替える。 */
+	noteEdited: (note: Misskey.entities.Note) => void;
 	noteRemovedFromAntenna: (antennaId: Misskey.entities.Antenna['id'], noteId: Misskey.entities.Note['id']) => void;
 	driveFileCreated: (file: Misskey.entities.DriveFile) => void;
 	driveFilesUpdated: (files: Misskey.entities.DriveFile[]) => void;

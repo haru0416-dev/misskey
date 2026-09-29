@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkSwitch v-model="detailed"><span>{{ i18n.ts._pages.blocks._note.detailed }}</span></MkSwitch>
 
 		<MkNote v-if="note && !detailed" :key="note.id + ':normal'" v-model:note="note" style="margin-bottom: 16px;"/>
-		<MkNoteDetailed v-if="note && detailed" :key="note.id + ':detail'" v-model:note="note" style="margin-bottom: 16px;"/>
+		<MkNoteDetailed v-if="note && detailed" :key="noteRenderKey(note) + ':detail'" v-model:note="note" style="margin-bottom: 16px;"/>
 	</section>
 </XContainer>
 </template>
@@ -29,6 +29,8 @@ import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkNote from '@/features/notes/components/MkNote.vue';
 import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { applyEditedNote, noteRenderKey } from '@/features/notes/useNoteCapture.js';
+import { useGlobalEvent } from '@/events.js';
 import { i18n } from '@/i18n.js';
 
 const props = defineProps<{
@@ -43,6 +45,11 @@ const emit = defineEmits<{
 
 const id = ref(props.modelValue.note);
 const note = ref<Misskey.entities.Note | null>(null);
+
+// 詳細表示のノートは編集の合図を受けるので (MkNoteDetailed)、編集後の中身を当てて描き直させる。
+useGlobalEvent('noteEdited', (edited) => {
+	if (note.value != null) note.value = applyEditedNote(note.value, edited);
+});
 
 // props を直接書き換えず update:modelValue で親に返す (id 側と同じ経路に揃える)
 const detailed = computed({
