@@ -3964,6 +3964,10 @@ export interface Locale extends ILocale {
      */
     "cannotPerformTemporaryDescription": string;
     /**
+     * 検索が時間内に終わりませんでした。語を増やすか、期間を絞ってもう一度お試しください。
+     */
+    "searchTimedOut": string;
+    /**
      * パラメータエラー
      */
     "invalidParamError": string;

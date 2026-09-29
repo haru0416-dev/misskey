@@ -50,6 +50,7 @@ import {
 	homeTimelineViewerRelationKinds,
 } from '@/core/user/ViewerRelationStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { isStatementTimeoutError } from '@/misc/db-errors.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
@@ -746,30 +747,36 @@ export async function handleApiNotesSearch(
 
 	const provider = deps.config.search.provider;
 
-	const notes = await searchNotesByTextFromDatabase(
-		deps.db,
-		omitUndefined({
-			query: params.query,
-			usePgroonga: provider === 'sqlPgroonga',
-			useTextIndex: deps.config.search.noteTextIndex,
-			me,
-			blockedHosts: deps.meta.blockedHosts,
-			limit: params.limit,
-			sinceId,
-			untilId,
-			userId: params.userId,
-			channelId: params.channelId,
-			host: params.host,
-			rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
-			rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
-			withFiles: params.withFiles,
-			withSensitiveFiles: params.withSensitiveFiles,
-			withReplies: params.withReplies,
-			withQuotes: params.withQuotes,
-			withCw: params.withCw,
-			visibility: params.visibility,
-		}),
-	);
+	let notes: Awaited<ReturnType<typeof searchNotesByTextFromDatabase>>;
+	try {
+		notes = await searchNotesByTextFromDatabase(
+			deps.db,
+			omitUndefined({
+				query: params.query,
+				usePgroonga: provider === 'sqlPgroonga',
+				useTextIndex: deps.config.search.noteTextIndex,
+				me,
+				blockedHosts: deps.meta.blockedHosts,
+				limit: params.limit,
+				sinceId,
+				untilId,
+				userId: params.userId,
+				channelId: params.channelId,
+				host: params.host,
+				rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
+				rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
+				withFiles: params.withFiles,
+				withSensitiveFiles: params.withSensitiveFiles,
+				withReplies: params.withReplies,
+				withQuotes: params.withQuotes,
+				withCw: params.withCw,
+				visibility: params.visibility,
+			}),
+		);
+	} catch (err) {
+		if (isStatementTimeoutError(err)) throw errors.timedOut();
+		throw err;
+	}
 
 	return await packNoteManyForApi(deps, notes, me);
 }

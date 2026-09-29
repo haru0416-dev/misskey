@@ -180,4 +180,21 @@ describe('Paginator', () => {
 		expect(misskeyApiMock.mock.lastCall?.[1]).toMatchObject({ offset: 2 });
 		expect(misskeyApiMock.mock.lastCall?.[1]).not.toHaveProperty('untilId');
 	});
+
+	test('keeps the API error code of a failed load and clears it after a retry succeeds', async () => {
+		const paginator = createPaginator();
+		misskeyApiMock.mockRejectedValueOnce({ code: 'SEARCH_TIMED_OUT', id: '1667db67-5b25-414d-8138-f9ef15c624c4' });
+		await paginator.init();
+		expect(paginator.error.value).toBe(true);
+		expect(paginator.errorCode.value).toBe('SEARCH_TIMED_OUT');
+
+		misskeyApiMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+		await paginator.init();
+		expect(paginator.errorCode.value).toBeNull();
+
+		misskeyApiMock.mockResolvedValueOnce([item('a')]);
+		await paginator.init();
+		expect(paginator.error.value).toBe(false);
+		expect(paginator.errorCode.value).toBeNull();
+	});
 });

@@ -1068,6 +1068,16 @@ export const endpointMetas = {
 					code: 'UNAVAILABLE',
 					id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
 				},
+
+				// 一致が多いのに直近にほとんど無い語は、ディスクから数千ページ読むことになり、キャッシュが冷えていると
+				// statement_timeout (既定 10 秒) を超える (55 万件で 3〜7 秒の実測)。問い合わせの形では読む量が減らない。
+				timedOut: {
+					message: 'The search took too long. Try more specific words or a narrower period.',
+					code: 'SEARCH_TIMED_OUT',
+					id: '1667db67-5b25-414d-8138-f9ef15c624c4',
+					kind: 'server',
+					httpStatusCode: 503,
+				},
 			},
 		},
 		paramDef: notesSearchParamDef,

@@ -42,6 +42,8 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	canFetchNewer: Ref<boolean>;
 	canSearch: boolean;
 	error: Ref<boolean>;
+	/** 最後の取得の失敗が API エラーならそのコード。画面で理由を出し分けるのに使う。 */
+	errorCode: Ref<string | null>;
 	computedParams: ComputedRef<Misskey.Endpoints[PaginatorCompatibleEndpointPaths]['req'] | null | undefined> | null;
 	initialId: MisskeyEntity['id'] | null;
 	initialDate: number | null;
@@ -81,6 +83,7 @@ export class Paginator<
 	public canFetchNewer = ref(false);
 	public canSearch = false;
 	public error = ref(false);
+	public errorCode = ref<string | null>(null);
 	private endpoint: Endpoint;
 	private limit: number;
 	private params: E['req'] | (() => E['req']);
@@ -272,8 +275,10 @@ export class Paginator<
 		let apiRes: T[];
 		try {
 			apiRes = (await misskeyApi(this.endpoint, data, undefined, abortController.signal)) as T[];
-		} catch {
+		} catch (err) {
 			if (!abortController.signal.aborted) {
+				const code = (err as { code?: unknown } | null)?.code;
+				this.errorCode.value = typeof code === 'string' ? code : null;
 				this.error.value = true;
 			}
 			return;
@@ -314,6 +319,7 @@ export class Paginator<
 		}
 
 		this.error.value = false;
+		this.errorCode.value = null;
 	}
 
 	public reload(): Promise<void> {

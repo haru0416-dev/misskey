@@ -5363,6 +5363,7 @@ export type Endpoints = {
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
             | 'RATE_LIMIT_EXCEEDED'
+            | 'SEARCH_TIMED_OUT'
             | 'UNAVAILABLE'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };

@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<MkLoading v-if="paginator.fetching.value"/>
 
-			<MkError v-else-if="paginator.error.value" @retry="paginator.init()"/>
+			<MkError v-else-if="paginator.error.value" :text="errorText(paginator.errorCode.value)" @retry="paginator.init()"/>
 
 			<div v-else-if="paginator.items.value.length === 0" key="_empty_">
 				<slot name="empty"><MkResult type="empty"/></slot>
@@ -115,6 +115,13 @@ function onContextmenu(ev: PointerEvent) {
 		],
 		ev,
 	);
+}
+
+// 理由が分かると次の操作が変わる失敗だけ文言を出し分ける。それ以外は MkError の既定のまま。
+function errorText(code: string | null): string | undefined {
+	if (code === 'SEARCH_TIMED_OUT') return i18n.ts.searchTimedOut;
+	if (code === 'RATE_LIMIT_EXCEEDED') return i18n.ts.cannotPerformTemporaryDescription;
+	return undefined;
 }
 
 function getValue(v: IPaginator['items']) {

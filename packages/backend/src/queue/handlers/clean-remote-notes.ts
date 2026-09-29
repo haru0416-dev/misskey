@@ -9,6 +9,7 @@ import type { QueueMaintenanceReporter } from '@/queue/types.js';
 import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { getDatabaseErrorCode, isStatementTimeoutError } from '@/misc/db-errors.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
@@ -43,26 +44,6 @@ type CandidateNoteRow = {
 	isRemovable: boolean;
 	isBase: boolean;
 };
-
-function getDatabaseErrorCode(error: unknown): string | undefined {
-	let current: unknown = error;
-
-	for (let i = 0; i < 5 && current != null && typeof current === 'object'; i++) {
-		const candidate = current as {
-			code?: unknown;
-			cause?: unknown;
-			driverError?: unknown;
-		};
-
-		if (typeof candidate.code === 'string') {
-			return candidate.code;
-		}
-
-		current = candidate.driverError ?? candidate.cause;
-	}
-
-	return undefined;
-}
 
 function removalCriteriaSql(newestLimit: MiNote['id']) {
 	return sql`
@@ -275,7 +256,7 @@ export async function handleQueueCleanRemoteNotes(
 				limit: currentLimit,
 			});
 		} catch (e) {
-			if (getDatabaseErrorCode(e) === '57014') {
+			if (isStatementTimeoutError(e)) {
 				if (currentLimit <= minimumLimit) {
 					reporter.log('Local note tree complexity is too high, finding next root note...');
 

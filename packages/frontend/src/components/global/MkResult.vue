@@ -26,7 +26,7 @@ import { prefer } from '@/preferences.js';
 
 const props = defineProps<{
 	type: 'empty' | 'notFound' | 'error';
-	text?: string;
+	text?: string | undefined;
 }>();
 </script>
 

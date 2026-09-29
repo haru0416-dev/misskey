@@ -49,3 +49,32 @@ export class UpdateValuesMissingError extends Error {
 export function isEntityNotFoundError(error: unknown): boolean {
 	return error instanceof EntityNotFoundError || (error instanceof Error && error.name === 'EntityNotFoundError');
 }
+
+/**
+ * PostgreSQL のエラーコード (SQLSTATE)。drizzle は "Failed query: ..." で包んで cause に入れ、
+ * bun-sql.ts は errno を code へ写すので、包みを辿って最初に見つかった文字列の code を返す。
+ */
+export function getDatabaseErrorCode(error: unknown): string | undefined {
+	let current: unknown = error;
+
+	for (let i = 0; i < 5 && current != null && typeof current === 'object'; i++) {
+		const candidate = current as {
+			code?: unknown;
+			cause?: unknown;
+			driverError?: unknown;
+		};
+
+		if (typeof candidate.code === 'string') {
+			return candidate.code;
+		}
+
+		current = candidate.driverError ?? candidate.cause;
+	}
+
+	return undefined;
+}
+
+/** statement_timeout で打ち切られた (57014 query_canceled)。 */
+export function isStatementTimeoutError(error: unknown): boolean {
+	return getDatabaseErrorCode(error) === '57014';
+}
