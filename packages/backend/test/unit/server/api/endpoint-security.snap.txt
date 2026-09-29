@@ -1,0 +1,427 @@
+admin/abuse-report/notification-recipient/create: moderator secure kind=write:admin:abuse-report:notification-recipient
+admin/abuse-report/notification-recipient/delete: moderator secure kind=write:admin:abuse-report:notification-recipient
+admin/abuse-report/notification-recipient/list: moderator secure kind=read:admin:abuse-report:notification-recipient
+admin/abuse-report/notification-recipient/show: moderator secure kind=read:admin:abuse-report:notification-recipient
+admin/abuse-report/notification-recipient/update: moderator secure kind=write:admin:abuse-report:notification-recipient
+admin/abuse-user-reports: moderator kind=read:admin:abuse-user-reports
+admin/accounts/create: anonymous
+admin/accounts/delete: admin kind=write:admin:account
+admin/accounts/find-by-email: admin kind=read:admin:account
+admin/ad/create: moderator kind=write:admin:ad
+admin/ad/delete: moderator kind=write:admin:ad
+admin/ad/list: moderator kind=read:admin:ad
+admin/ad/update: moderator kind=write:admin:ad
+admin/announcements/create: moderator kind=write:admin:announcements
+admin/announcements/delete: moderator kind=write:admin:announcements
+admin/announcements/list: moderator kind=read:admin:announcements
+admin/announcements/update: moderator kind=write:admin:announcements
+admin/avatar-decorations/create: credential policy=canManageAvatarDecorations kind=write:admin:avatar-decorations
+admin/avatar-decorations/delete: credential policy=canManageAvatarDecorations kind=write:admin:avatar-decorations
+admin/avatar-decorations/list: credential policy=canManageAvatarDecorations kind=read:admin:avatar-decorations
+admin/avatar-decorations/update: credential policy=canManageAvatarDecorations kind=write:admin:avatar-decorations
+admin/captcha/current: admin kind=read:admin:meta
+admin/captcha/save: admin kind=write:admin:meta
+admin/delete-account: admin kind=write:admin:delete-account
+admin/delete-all-files-of-a-user: admin kind=write:admin:delete-all-files-of-a-user
+admin/drive/clean-remote-files: moderator kind=write:admin:drive
+admin/drive/cleanup: moderator kind=write:admin:drive
+admin/drive/files: moderator kind=read:admin:drive
+admin/drive/show-file: moderator kind=read:admin:drive
+admin/emoji/add: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/add-aliases-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/copy: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/delete: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/delete-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/import-zip: credential secure policy=canManageCustomEmojis
+admin/emoji/list: credential policy=canManageCustomEmojis kind=read:admin:emoji
+admin/emoji/list-remote: credential policy=canManageCustomEmojis kind=read:admin:emoji
+admin/emoji/remove-aliases-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/set-aliases-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/set-category-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/set-license-bulk: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/emoji/update: credential policy=canManageCustomEmojis kind=write:admin:emoji
+admin/federation/delete-all-files: moderator kind=write:admin:federation
+admin/federation/refresh-remote-instance-metadata: moderator kind=write:admin:federation
+admin/federation/remove-all-following: moderator kind=write:admin:federation
+admin/federation/update-instance: moderator kind=write:admin:federation
+admin/forward-abuse-user-report: moderator kind=write:admin:resolve-abuse-user-report
+admin/get-index-stats: admin kind=read:admin:index-stats
+admin/get-table-stats: admin kind=read:admin:table-stats
+admin/get-user-ips: admin kind=read:admin:user-ips
+admin/invite/create: moderator kind=write:admin:invite-codes
+admin/invite/list: moderator kind=read:admin:invite-codes
+admin/meta: admin kind=read:admin:meta
+admin/promo/create: moderator kind=write:admin:promo
+admin/queue/abandon-outbox-dead-letter: moderator kind=write:admin:queue
+admin/queue/clear: moderator kind=write:admin:queue
+admin/queue/deliver-delayed: moderator kind=read:admin:queue
+admin/queue/inbox-delayed: moderator kind=read:admin:queue
+admin/queue/jobs: moderator kind=read:admin:queue
+admin/queue/outbox-dead-letters: moderator kind=read:admin:queue
+admin/queue/pause: moderator kind=write:admin:queue
+admin/queue/promote-jobs: moderator kind=write:admin:queue
+admin/queue/queue-stats: moderator kind=read:admin:queue
+admin/queue/queues: moderator kind=read:admin:queue
+admin/queue/remove-job: moderator kind=write:admin:queue
+admin/queue/resume: moderator kind=write:admin:queue
+admin/queue/retry-job: moderator kind=write:admin:queue
+admin/queue/retry-outbox-dead-letter: moderator kind=write:admin:queue
+admin/queue/show-job: moderator kind=read:admin:queue
+admin/queue/show-job-logs: moderator kind=read:admin:queue
+admin/queue/stats: moderator kind=read:admin:queue
+admin/relays/add: moderator kind=write:admin:relays
+admin/relays/list: moderator kind=read:admin:relays
+admin/relays/remove: moderator kind=write:admin:relays
+admin/reset-password: moderator kind=write:admin:reset-password
+admin/resolve-abuse-user-report: moderator kind=write:admin:resolve-abuse-user-report
+admin/roles/assign: moderator kind=write:admin:roles
+admin/roles/create: admin kind=write:admin:roles
+admin/roles/delete: admin kind=write:admin:roles
+admin/roles/list: moderator kind=read:admin:roles
+admin/roles/show: moderator kind=read:admin:roles
+admin/roles/unassign: moderator kind=write:admin:roles
+admin/roles/update: admin kind=write:admin:roles
+admin/roles/update-default-policies: admin kind=write:admin:roles
+admin/roles/users: moderator kind=read:admin:roles
+admin/send-email: moderator kind=write:admin:send-email
+admin/server-info: moderator kind=read:admin:server-info
+admin/show-moderation-logs: admin kind=read:admin:show-moderation-log
+admin/show-user: moderator kind=read:admin:show-user
+admin/show-users: moderator kind=read:admin:show-user
+admin/suspend-user: moderator kind=write:admin:suspend-user
+admin/system-webhook/create: moderator secure kind=write:admin:system-webhook
+admin/system-webhook/delete: moderator secure kind=write:admin:system-webhook
+admin/system-webhook/list: moderator secure kind=write:admin:system-webhook
+admin/system-webhook/show: moderator secure kind=write:admin:system-webhook
+admin/system-webhook/test: moderator secure kind=read:admin:system-webhook
+admin/system-webhook/update: moderator secure kind=write:admin:system-webhook
+admin/unset-mfa: moderator kind=write:admin:unset-mfa
+admin/unset-user-avatar: moderator kind=write:admin:unset-user-avatar
+admin/unset-user-banner: moderator kind=write:admin:unset-user-banner
+admin/unsuspend-user: moderator kind=write:admin:unsuspend-user
+admin/update-abuse-user-report: moderator kind=write:admin:resolve-abuse-user-report
+admin/update-meta: admin kind=write:admin:meta
+admin/update-proxy-account: moderator kind=write:admin:account
+admin/update-user-note: moderator kind=write:admin:user-note
+announcements: anonymous
+announcements/react: credential prohibit-moved kind=write:account
+announcements/show: anonymous
+announcements/unreact: credential prohibit-moved kind=write:account
+antennas/create: credential prohibit-moved kind=write:account
+antennas/delete: credential kind=write:account
+antennas/list: credential kind=read:account
+antennas/notes: credential kind=read:account
+antennas/remove-note: credential prohibit-moved kind=write:account
+antennas/show: credential kind=read:account
+antennas/update: credential prohibit-moved kind=write:account
+ap/get: admin kind=read:federation
+ap/show: credential kind=read:account
+blocking/create: credential kind=write:blocks
+blocking/delete: credential kind=write:blocks
+blocking/list: credential kind=read:blocks
+channels/create: credential prohibit-moved policy=canCreateChannel kind=write:channels
+channels/favorite: credential prohibit-moved kind=write:channels
+channels/featured: anonymous
+channels/follow: credential prohibit-moved kind=write:channels
+channels/followed: credential kind=read:channels
+channels/mute/create: credential prohibit-moved kind=write:channels
+channels/mute/delete: credential prohibit-moved kind=write:channels
+channels/mute/list: credential prohibit-moved kind=read:channels
+channels/my-favorites: credential kind=read:channels
+channels/owned: credential kind=read:channels
+channels/search: anonymous
+channels/show: anonymous
+channels/timeline: anonymous
+channels/unfavorite: credential prohibit-moved kind=write:channels
+channels/unfollow: credential prohibit-moved kind=write:channels
+channels/update: credential kind=write:channels
+charts/active-users: anonymous
+charts/ap-request: anonymous
+charts/drive: anonymous
+charts/federation: anonymous
+charts/instance: anonymous
+charts/notes: anonymous
+charts/user/drive: anonymous
+charts/user/following: anonymous
+charts/user/notes: anonymous
+charts/user/pv: anonymous
+charts/user/reactions: anonymous
+charts/users: anonymous
+chat/history: credential kind=read:chat
+chat/messages/create-to-room: credential prohibit-moved kind=write:chat
+chat/messages/create-to-user: credential prohibit-moved kind=write:chat
+chat/messages/delete: credential kind=write:chat
+chat/messages/react: credential kind=write:chat
+chat/messages/room-timeline: credential kind=read:chat
+chat/messages/search: credential kind=read:chat
+chat/messages/show: credential kind=read:chat
+chat/messages/unreact: credential kind=write:chat
+chat/messages/user-timeline: credential kind=read:chat
+chat/read-all: credential kind=write:chat
+chat/rooms/create: credential prohibit-moved kind=write:chat
+chat/rooms/delete: credential kind=write:chat
+chat/rooms/invitations/create: credential prohibit-moved kind=write:chat
+chat/rooms/invitations/ignore: credential kind=write:chat
+chat/rooms/invitations/inbox: credential kind=read:chat
+chat/rooms/invitations/outbox: credential kind=read:chat
+chat/rooms/join: credential kind=write:chat
+chat/rooms/joining: credential kind=read:chat
+chat/rooms/leave: credential kind=write:chat
+chat/rooms/members: credential kind=write:chat
+chat/rooms/mute: credential kind=write:chat
+chat/rooms/owned: credential kind=read:chat
+chat/rooms/show: credential kind=read:chat
+chat/rooms/update: credential kind=write:chat
+clips/add-note: credential prohibit-moved kind=write:account
+clips/create: credential prohibit-moved kind=write:account
+clips/delete: credential kind=write:account
+clips/favorite: credential prohibit-moved kind=write:clip-favorite
+clips/list: credential kind=read:account
+clips/my-favorites: credential kind=read:clip-favorite
+clips/notes: anonymous kind=read:account
+clips/remove-note: credential prohibit-moved kind=write:account
+clips/show: anonymous kind=read:account
+clips/unfavorite: credential prohibit-moved kind=write:clip-favorite
+clips/update: credential prohibit-moved kind=write:account
+drive: credential kind=read:drive
+drive/files: credential kind=read:drive
+drive/files/attached-chat-messages: credential kind=read:drive
+drive/files/attached-notes: credential kind=read:drive
+drive/files/check-existence: credential kind=read:drive
+drive/files/create: credential prohibit-moved kind=write:drive
+drive/files/delete: credential kind=write:drive
+drive/files/find: credential kind=read:drive
+drive/files/find-by-hash: credential kind=read:drive
+drive/files/move-bulk: credential kind=write:drive
+drive/files/show: credential kind=read:drive
+drive/files/update: credential kind=write:drive
+drive/files/upload-from-url: credential prohibit-moved kind=write:drive
+drive/folders: credential kind=read:drive
+drive/folders/create: credential kind=write:drive
+drive/folders/delete: credential kind=write:drive
+drive/folders/find: credential kind=read:drive
+drive/folders/show: credential kind=read:drive
+drive/folders/update: credential kind=write:drive
+drive/stream: credential kind=read:drive
+email-address/available: anonymous
+emoji: anonymous
+emojis: anonymous
+endpoint: anonymous
+endpoints: anonymous
+export-custom-emojis: credential secure
+federation/followers: anonymous
+federation/following: anonymous
+federation/instances: anonymous
+federation/show-instance: anonymous
+federation/stats: anonymous
+federation/update-remote-user: credential kind=read:account
+federation/users: anonymous
+fetch-external-resources: credential secure
+fetch-rss: anonymous
+flash/create: credential prohibit-moved kind=write:flash
+flash/delete: credential kind=write:flash
+flash/featured: anonymous
+flash/like: credential prohibit-moved kind=write:flash-likes
+flash/my: credential kind=read:flash
+flash/my-likes: credential kind=read:flash-likes
+flash/search: anonymous
+flash/show: anonymous
+flash/unlike: credential prohibit-moved kind=write:flash-likes
+flash/update: credential prohibit-moved kind=write:flash
+following/create: credential prohibit-moved kind=write:following
+following/delete: credential kind=write:following
+following/invalidate: credential kind=write:following
+following/list: credential kind=read:following
+following/requests/accept: credential kind=write:following
+following/requests/cancel: credential kind=write:following
+following/requests/list: credential kind=read:following
+following/requests/reject: credential kind=write:following
+following/requests/sent: credential kind=read:following
+following/update: credential kind=write:following
+following/update-all: credential kind=write:following
+gallery/featured: anonymous
+gallery/popular: anonymous
+gallery/posts: anonymous
+gallery/posts/create: credential prohibit-moved kind=write:gallery
+gallery/posts/delete: credential kind=write:gallery
+gallery/posts/like: credential prohibit-moved kind=write:gallery-likes
+gallery/posts/show: anonymous
+gallery/posts/unlike: credential prohibit-moved kind=write:gallery-likes
+gallery/posts/update: credential prohibit-moved kind=write:gallery
+get-avatar-decorations: anonymous
+get-online-users-count: anonymous
+hashtags/list: anonymous
+hashtags/search: anonymous
+hashtags/show: anonymous
+hashtags/trend: anonymous
+hashtags/users: anonymous
+i: credential kind=read:account
+i/2fa/done: credential secure
+i/2fa/key-done: credential secure
+i/2fa/password-less: credential secure
+i/2fa/register: credential secure
+i/2fa/register-key: credential secure
+i/2fa/remove-key: credential secure
+i/2fa/unregister: credential secure
+i/2fa/update-key: credential secure
+i/apps: credential secure
+i/change-password: credential secure
+i/claim-achievement: credential prohibit-moved kind=write:account
+i/delete-account: credential secure
+i/export-antennas: credential secure
+i/export-blocking: credential secure
+i/export-clips: credential secure
+i/export-favorites: credential secure
+i/export-following: credential secure
+i/export-mute: credential secure
+i/export-notes: credential secure
+i/export-user-lists: credential secure
+i/favorites: credential kind=read:favorites
+i/gallery/likes: credential kind=read:gallery-likes
+i/gallery/posts: credential kind=read:gallery
+i/import-antennas: credential secure prohibit-moved policy=canImportAntennas
+i/import-blocking: credential secure prohibit-moved policy=canImportBlocking
+i/import-following: credential secure prohibit-moved policy=canImportFollowing
+i/import-muting: credential secure prohibit-moved policy=canImportMuting
+i/import-user-lists: credential secure prohibit-moved policy=canImportUserLists
+i/move: credential secure prohibit-moved
+i/notifications: credential kind=read:notifications
+i/notifications-grouped: credential kind=read:notifications
+i/page-likes: credential kind=read:page-likes
+i/pages: credential kind=read:pages
+i/pin: credential prohibit-moved kind=write:account
+i/read-announcement: credential kind=write:account
+i/regenerate-token: credential secure
+i/registry/get: credential kind=read:account
+i/registry/get-all: credential kind=read:account
+i/registry/get-detail: credential kind=read:account
+i/registry/keys: credential kind=read:account
+i/registry/keys-with-type: credential kind=read:account
+i/registry/remove: credential kind=write:account
+i/registry/scopes-with-domain: credential secure
+i/registry/set: credential kind=write:account
+i/revoke-token: credential kind=read:account
+i/signin-history: credential secure
+i/unpin: credential kind=write:account
+i/update: credential kind=write:account
+i/update-email: credential secure
+i/webhooks/create: credential kind=write:account
+i/webhooks/delete: credential kind=write:account
+i/webhooks/list: credential kind=read:account
+i/webhooks/show: credential kind=read:account
+i/webhooks/test: credential secure kind=read:account
+i/webhooks/update: credential kind=write:account
+invite/create: credential policy=canInvite kind=write:invite-codes
+invite/delete: credential policy=canInvite kind=write:invite-codes
+invite/limit: credential policy=canInvite kind=read:invite-codes
+invite/list: credential policy=canInvite kind=read:invite-codes
+meta: anonymous
+miauth/gen-token: credential secure
+mute/create: credential prohibit-moved kind=write:mutes
+mute/delete: credential kind=write:mutes
+mute/list: credential kind=read:mutes
+notes: anonymous
+notes/children: anonymous
+notes/clips: anonymous
+notes/conversation: anonymous
+notes/create: credential prohibit-moved kind=write:notes
+notes/delete: credential kind=write:notes
+notes/drafts/count: credential prohibit-moved kind=read:account
+notes/drafts/create: credential prohibit-moved kind=write:account
+notes/drafts/delete: credential prohibit-moved kind=write:account
+notes/drafts/list: credential prohibit-moved kind=read:account
+notes/drafts/update: credential prohibit-moved kind=write:account
+notes/favorites/create: credential prohibit-moved kind=write:favorites
+notes/favorites/delete: credential kind=write:favorites
+notes/featured: anonymous
+notes/global-timeline: anonymous
+notes/hybrid-timeline: credential kind=read:account
+notes/local-timeline: anonymous
+notes/mentions: credential kind=read:account
+notes/polls/recommendation: credential kind=read:account
+notes/polls/vote: credential prohibit-moved kind=write:votes
+notes/reactions: anonymous
+notes/reactions/create: credential prohibit-moved kind=write:reactions
+notes/reactions/delete: credential kind=write:reactions
+notes/renotes: anonymous
+notes/replies: anonymous
+notes/search: anonymous
+notes/search-by-tag: anonymous
+notes/show: anonymous
+notes/show-partial-bulk: anonymous
+notes/state: credential kind=read:account
+notes/thread-muting/create: credential kind=write:account
+notes/thread-muting/delete: credential kind=write:account
+notes/timeline: credential kind=read:account
+notes/translate: credential kind=read:account
+notes/unrenote: credential kind=write:notes
+notes/user-list-timeline: credential kind=read:account
+notifications/create: credential kind=write:notifications
+notifications/delete: credential kind=write:notifications
+notifications/flush: credential kind=write:notifications
+notifications/mark-all-as-read: credential kind=write:notifications
+notifications/test-notification: credential kind=write:notifications
+page-push: credential secure
+pages/create: credential prohibit-moved kind=write:pages
+pages/delete: credential kind=write:pages
+pages/featured: anonymous
+pages/like: credential prohibit-moved kind=write:page-likes
+pages/show: anonymous
+pages/unlike: credential prohibit-moved kind=write:page-likes
+pages/update: credential prohibit-moved kind=write:pages
+ping: anonymous
+pinned-users: anonymous
+promo/read: credential kind=write:account
+renote-mute/create: credential prohibit-moved kind=write:mutes
+renote-mute/delete: credential kind=write:mutes
+renote-mute/list: credential kind=read:mutes
+request-reset-password: anonymous
+reset-db: anonymous
+reset-password: anonymous
+retention: anonymous
+roles/list: credential kind=read:account
+roles/notes: credential kind=read:account
+roles/show: anonymous
+roles/users: anonymous
+server-info: anonymous
+stats: anonymous
+sw/register: credential secure
+sw/show-registration: credential secure
+sw/unregister: anonymous
+sw/update-registration: credential secure
+test: anonymous
+username/available: anonymous
+users: anonymous
+users/achievements: anonymous
+users/clips: anonymous
+users/featured-notes: anonymous
+users/flashs: anonymous
+users/followers: anonymous
+users/following: anonymous
+users/gallery/posts: anonymous
+users/get-following-users-by-birthday: credential kind=read:account
+users/get-frequently-replied-users: anonymous
+users/lists/create: credential prohibit-moved kind=write:account
+users/lists/create-from-public: credential prohibit-moved kind=write:account
+users/lists/delete: credential kind=write:account
+users/lists/favorite: credential kind=write:account
+users/lists/get-memberships: anonymous kind=read:account
+users/lists/list: anonymous kind=read:account
+users/lists/pull: credential prohibit-moved kind=write:account
+users/lists/push: credential prohibit-moved kind=write:account
+users/lists/show: anonymous kind=read:account
+users/lists/unfavorite: credential kind=write:account
+users/lists/update: credential kind=write:account
+users/lists/update-membership: credential prohibit-moved kind=write:account
+users/notes: anonymous
+users/pages: anonymous
+users/reactions: anonymous
+users/recommendation: credential kind=read:account
+users/relation: credential kind=read:account
+users/report-abuse: credential kind=write:report-abuse
+users/search: anonymous policy=canSearchUsers
+users/search-by-username-and-host: anonymous
+users/show: anonymous
+users/update-memo: credential kind=write:account
+v2/admin/emoji/list: credential policy=canManageCustomEmojis kind=read:admin:emoji
+verify-email: anonymous
