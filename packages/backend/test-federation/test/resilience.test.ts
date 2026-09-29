@@ -195,7 +195,8 @@ async function prepareDelivery(senderHost: Host, receiverHost: Host, operation: 
 }
 
 describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
-	test.each(['body', 'actor', 'id', 'host', 'signed-actor-mismatch', 'signed-id-mismatch'] as const)(
+	// actor・id を本文だけで書き換える改ざんは body と同じく digest の不一致で落ちるので、意味の食い違いは signed-* で見る。
+	test.each(['body', 'host', 'signed-actor-mismatch', 'signed-id-mismatch'] as const)(
 		'%s causes no final side effect, while a subsequent valid POST succeeds',
 		async (variant) => {
 			const { sender, receiver, senderInReceiver } = await pair(senderHost, receiverHost);

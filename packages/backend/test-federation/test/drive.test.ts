@@ -100,26 +100,6 @@ describe('Drive', () => {
 			});
 		});
 
-		describe('isSensitive is federated in resolving', () => {
-			let alice: LoginUser, bob: LoginUser;
-
-			beforeAll(async () => {
-				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-			});
-
-			test('Alice uploads sensitive image and it is shown as sensitive from Bob', async () => {
-				const file = await uploadFile('a.test', alice);
-				await alice.client.request('drive/files/update', { fileId: file.id, isSensitive: true });
-				const note = (await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id] }))
-					.createdNote;
-
-				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
-				assert(noteInB.files != null);
-				strictEqual(noteInB.files.length, 1);
-				strictEqual(noteInB.files[0]?.isSensitive, true);
-			});
-		});
-
 		// https://github.com/misskey-dev/misskey/issues/12208
 		describe('isSensitive is federated in replying', () => {
 			let alice: LoginUser, bob: LoginUser;

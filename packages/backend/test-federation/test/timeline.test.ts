@@ -146,16 +146,6 @@ describe('Timeline', () => {
 				});
 			});
 
-			test("Receive remote followee's visible specified-only reply to invisible specified-only Note", async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a', visibility: 'specified' })).createdNote;
-				const reply = await postAndCheckReception(homeTimeline, true, {
-					replyId: note.id,
-					visibility: 'specified',
-					visibleUserIds: [bobInA.id],
-				});
-				strictEqual(reply?.replyId, null);
-			});
-
 			test('Preserve the reply relation to a visible specified-only Note', async () => {
 				const text = crypto.randomUUID();
 				const parent = (

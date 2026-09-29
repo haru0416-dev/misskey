@@ -296,17 +296,6 @@ export async function addCustomEmoji(
 	return await admin.client.request('admin/emoji/add', { name, fileId: file.id, ...param });
 }
 
-export function deepStrictEqualWithExcludedFields<T>(actual: T, expected: T, excludedFields: (keyof T)[]) {
-	const _actual = structuredClone(actual);
-	const _expected = structuredClone(expected);
-	for (const obj of [_actual, _expected]) {
-		for (const field of excludedFields) {
-			delete obj[field];
-		}
-	}
-	deepStrictEqual(_actual, _expected);
-}
-
 export async function isFired<C extends keyof Misskey.Channels, T extends keyof Misskey.Channels[C]['events']>(
 	host: Host,
 	user: { i: string },
@@ -679,7 +668,7 @@ export async function signedRequest(
 	host: Host,
 	userId: string,
 	path: string,
-	options: { method?: 'GET' | 'POST'; body?: string; tamper?: 'body' | 'actor' | 'id' | 'host' } = {},
+	options: { method?: 'GET' | 'POST'; body?: string; tamper?: 'body' | 'host' } = {},
 ): Promise<Response> {
 	const signerHost: Host = host === 'a.test' ? 'b.test' : 'a.test';
 	const key = await peerQuery(signerHost, 'SELECT "privateKey" FROM user_keypair WHERE "userId" = $1', [userId]);
@@ -702,11 +691,6 @@ export async function signedRequest(
 		headers['content-type'] = 'application/activity+json';
 		headers['digest'] = digest;
 		if (options.tamper === 'body') sentBody = `${body} `;
-		if (options.tamper === 'actor' || options.tamper === 'id') {
-			const value = JSON.parse(body);
-			value[options.tamper] = `https://${host}/users/${userId}`;
-			sentBody = JSON.stringify(value);
-		}
 	}
 	return await new Promise<Response>((resolve, reject) => {
 		// HTTP Host の改変とは独立に、接続先の名前で TLS 証明書を検証する。CA は実行環境の信頼設定を使う。
