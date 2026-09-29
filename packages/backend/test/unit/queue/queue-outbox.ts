@@ -38,8 +38,7 @@ import { baseWorkerOptions, QUEUE } from '@/queue/const.js';
 const waitForNextPoll = async () => await new Promise((resolve) => setTimeout(resolve, 1100));
 
 /**
- * outbox 全体の件数を読む。件数は他のファイルのテストが残した行でもずれるので、検査の失敗メッセージに
- * 今ある行を添えて出所を追えるようにする (シャッフル実行で 1 度だけ pending が 2 件多く、再現しなかった)。
+ * outbox 全体の件数を読む。ずれたときに出所を追えるよう、検査の失敗メッセージに今ある行を添える。
  */
 async function readOutboxStats(db: RuntimeDependencies['db']) {
 	const stats = await getQueueOutboxStats(db);
@@ -85,6 +84,9 @@ describe('queue outbox', () => {
 			prefix: `queue-outbox-test-${process.pid}`,
 		};
 		runtime = await createRuntimeDependencies(config);
+		// このファイルは unit の組が終わってから、別の組として単独で走る (vitest.config.unit.ts)。outbox 全体の件数を
+		// 検査するので、先に走ったファイルが後処理の途中で置いていった行を消してから始める。
+		await runtime.db.delete(queueOutbox);
 	});
 
 	afterAll(async () => {

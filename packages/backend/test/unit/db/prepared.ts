@@ -505,15 +505,21 @@ describe('db/prepared', () => {
 		});
 
 		test('準備した後に列の型が変わっても失敗せず、以後は計画を使い回さない', async () => {
-			// 計画用の接続のどれもが文を準備するよう、並行して何度も実行する。
-			await Promise.all(Array.from({ length: 16 }, () => probeById.execute(isolatedRuntime.db, { id: 'a' })));
-			await isolatedRuntime.db.execute(sql`ALTER TABLE "test_plan_cache_probe" ALTER COLUMN "value" TYPE varchar(64)`);
+			// 使い回しを止めた状態を他のテストへ残さないよう、このテストだけの runtime で確かめる。
+			const staleRuntime = await createRuntimeDependencies(loadConfig());
+			try {
+				// 計画用の接続のどれもが文を準備するよう、並行して何度も実行する。
+				await Promise.all(Array.from({ length: 16 }, () => probeById.execute(staleRuntime.db, { id: 'a' })));
+				await staleRuntime.db.execute(sql`ALTER TABLE "test_plan_cache_probe" ALTER COLUMN "value" TYPE varchar(64)`);
 
-			const results = await Promise.all(
-				Array.from({ length: 16 }, () => probeById.execute(isolatedRuntime.db, { id: 'a' })),
-			);
-			expect(results.every((rows) => rows.length === 1 && rows[0]!.value === 'x')).toBe(true);
-			expect(getPlanCacheDatabase(isolatedRuntime.db)).toBeUndefined();
+				const results = await Promise.all(
+					Array.from({ length: 16 }, () => probeById.execute(staleRuntime.db, { id: 'a' })),
+				);
+				expect(results.every((rows) => rows.length === 1 && rows[0]!.value === 'x')).toBe(true);
+				expect(getPlanCacheDatabase(staleRuntime.db)).toBeUndefined();
+			} finally {
+				await staleRuntime.dispose();
+			}
 		});
 	});
 });
