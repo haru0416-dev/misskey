@@ -9,6 +9,7 @@ import type { ApiParams } from '../validation.js';
 import { DAY } from '@/const.js';
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
+import { estimateRows } from '@/db/estimate.js';
 import type { SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
@@ -1093,6 +1094,15 @@ function limitOffsetSqlForApi(options: { limit?: number; offset?: number }): SQL
 	);
 }
 
+/**
+ * 名前・ユーザー名・自己紹介の一致をそれぞれ trigram index で集める経路を使う、一致件数の見積もりの上限。
+ * 3 つの条件を 1 つの OR で書くと、自己紹介が別の表なので user を全件走査する (利用者 10.5 万人で一致の少ない語
+ * 41〜114 ms、利用者数に比例)。集める経路は一致件数に比例し、少ない語で 3〜12 ms、2,222 件で 10 ms、
+ * 1.7 万件で 135 ms (全件走査は 48 ms)。見積もりは多い語ではよく合い (1.7 万件を 1.7 万件)、少ない語では
+ * 少なめに外れる (250 件を 21〜32 件) が、どちらも集める経路になるので判断は変わらない。
+ */
+const SPARSE_USER_SEARCH_ESTIMATED_MATCHES = 5_000;
+
 // 名前 (とユーザー名) の一致を先に、自己紹介だけの一致を後に並べた 1 本の列から offset / limit で切り出す。
 // 2 本の問い合わせにそれぞれ offset / limit をかけて連結すると、両方に一致する利用者が 2 回入り、
 // ページを進めたときに抜けや重複が出る。
@@ -1106,20 +1116,32 @@ async function searchUsersForApi(
 	const isUsername = query.startsWith('@') && !query.includes(' ') && !query.includes('@', 1);
 	const isLocalUsername = /^\w{1,20}$/.test(query);
 
-	const nameMatch = sql`("user"."name" ILIKE ${'%' + sqlLikeEscape(query) + '%'} ${
-		isUsername
-			? sql`OR "user"."usernameLower" LIKE ${sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'}`
-			: isLocalUsername
-				? sql`OR "user"."usernameLower" LIKE ${'%' + sqlLikeEscape(query.toLowerCase()) + '%'}`
-				: sql``
+	const namePattern = '%' + sqlLikeEscape(query) + '%';
+	const usernamePattern = isUsername
+		? sqlLikeEscape(query.replace('@', '').toLowerCase()) + '%'
+		: isLocalUsername
+			? '%' + sqlLikeEscape(query.toLowerCase()) + '%'
+			: null;
+	const nameMatch = sql`("user"."name" ILIKE ${namePattern} ${
+		usernamePattern != null ? sql`OR "user"."usernameLower" LIKE ${usernamePattern}` : sql``
 	})`;
 	const descriptionMatch = sql`"user"."id" IN (
 		SELECT "prof"."userId" FROM "user_profile" AS "prof"
-		WHERE "prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}
+		WHERE "prof"."description" ILIKE ${namePattern}
 	)`;
+	// 同じ一致を、条件ごとに index で集めた id の列として書いたもの。
+	const matchedIds = sql.join(
+		[
+			sql`SELECT "id" FROM "user" WHERE "name" ILIKE ${namePattern}`,
+			...(usernamePattern != null ? [sql`SELECT "id" FROM "user" WHERE "usernameLower" LIKE ${usernamePattern}`] : []),
+			sql`SELECT "userId" FROM "user_profile" WHERE "description" ILIKE ${namePattern}`,
+		],
+		sql` UNION ALL `,
+	);
+	const sparse = (await estimateRows(deps.db, matchedIds)) < SPARSE_USER_SEARCH_ESTIMATED_MATCHES;
 
 	const conditions: SQL[] = [
-		sql`(${nameMatch} OR ${descriptionMatch})`,
+		sparse ? sql`"user"."id" IN (${matchedIds})` : sql`(${nameMatch} OR ${descriptionMatch})`,
 		sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
 		sql`"user"."isSuspended" = FALSE`,
 	];

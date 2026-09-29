@@ -49,6 +49,7 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import { deserializeUser } from '@/core/user/UserStore.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { estimateRows } from '@/db/estimate.js';
 import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 
 function deserializeNote(row: NoteRow): MiNote {
@@ -1280,14 +1281,9 @@ const DENSE_TERM_WINDOW_PER_RESULT = 500;
  */
 const DENSE_TERM_ESTIMATED_MATCHES = 50_000;
 
-/** 本文の LIKE に一致する投稿数のプランナーの見積もり。実行はしないので 1 ms 未満で返る。 */
+/** 本文の LIKE に一致する投稿数のプランナーの見積もり。 */
 async function estimateNoteTextMatches(db: MiDrizzleDatabase, pattern: string): Promise<number> {
-	const result = await db.execute<{ 'QUERY PLAN': unknown }>(
-		sql`EXPLAIN (FORMAT JSON) SELECT 1 FROM "note" WHERE LOWER("note"."text") LIKE ${pattern}`,
-	);
-	const plan = result.rows[0]?.['QUERY PLAN'];
-	const parsed = (typeof plan === 'string' ? JSON.parse(plan) : plan) as [{ Plan: { 'Plan Rows': number } }];
-	return parsed[0].Plan['Plan Rows'];
+	return await estimateRows(db, sql`SELECT 1 FROM "note" WHERE LOWER("note"."text") LIKE ${pattern}`);
 }
 
 /**
