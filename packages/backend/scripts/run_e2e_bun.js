@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const backendDir = resolve(scriptDir, '..');
 const targetEntry = resolve(scriptDir, 'e2e_external_target.mjs');
-const compiledConfigPath = resolve(backendDir, '../../built/.config.json');
+// package.json の test:e2e:bun は NODE_ENV=test でコンパイルするので、テスト用の設定を読む。
+const compiledConfigPath = resolve(backendDir, '../../built/.config.test.json');
 
 const TARGET_READY_TIMEOUT_MS = 120_000;
 

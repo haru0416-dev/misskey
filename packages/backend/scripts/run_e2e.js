@@ -14,6 +14,8 @@ const extraArgs = process.argv.slice(2);
 const test = Bun.spawn(
 	[process.execPath, 'run', '--bun', 'vitest', 'run', '--config', 'vitest.config.e2e.ts', ...extraArgs],
 	{
+		// 設定の読み込み先 (built/.config.test.json) は NODE_ENV で決まる。vitest 任せにせず明示する。
+		env: { ...process.env, NODE_ENV: 'test' },
 		stdin: 'ignore',
 		stdout: 'inherit',
 		stderr: 'inherit',

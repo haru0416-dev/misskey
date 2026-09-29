@@ -16,7 +16,13 @@ const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 
 const configDir = resolve(_dirname, '../../../.config');
-const OUTPUT_PATH = resolve(_dirname, '../../../built/.config.json');
+// テスト用は別ファイルにする (src/config.ts と同じ規則)。同じファイルだと、テストのコンパイルが
+// 動作中の dev・計測サーバーの設定を上書きする。
+const OUTPUT_PATH = resolve(
+	_dirname,
+	'../../../built',
+	process.env.NODE_ENV === 'test' ? '.config.test.json' : '.config.json',
+);
 
 /**
  * @param {string} ymlPath - YAMLファイルのパス

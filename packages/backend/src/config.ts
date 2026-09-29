@@ -188,11 +188,14 @@ while (!fs.existsSync(resolve(rootDir, 'packages'))) {
 }
 
 const projectBuiltDir = resolve(rootDir, 'built');
-const compiledConfigFilePathForTest = resolve(projectBuiltDir, '._config_.json');
+// 連合テストのコンテナが共有の built に重ねてマウントする設定。あればそれを優先する。
+const mountedConfigFilePath = resolve(projectBuiltDir, '._config_.json');
 
-export const compiledConfigFilePath = fs.existsSync(compiledConfigFilePathForTest)
-	? compiledConfigFilePathForTest
-	: resolve(projectBuiltDir, '.config.json');
+// テスト (NODE_ENV=test) は別ファイルに書き・読む (scripts/compile_config.js と同じ規則)。同じファイルだと、
+// テストのコンパイルが動作中の dev・計測サーバーの設定を上書きし、再起動時にテスト DB へつながってしまう。
+export const compiledConfigFilePath = fs.existsSync(mountedConfigFilePath)
+	? mountedConfigFilePath
+	: resolve(projectBuiltDir, process.env['NODE_ENV'] === 'test' ? '.config.test.json' : '.config.json');
 
 function resolveSecret(secret: SecretSource, path: string): string {
 	if ('plainText' in secret) {
