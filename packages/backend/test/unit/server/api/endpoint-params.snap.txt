@@ -1,0 +1,1439 @@
+admin/abuse-report/notification-recipient/create: required=["isActive","method","name"]
+admin/abuse-report/notification-recipient/create.name: minLength=1 maxLength=255
+admin/abuse-report/notification-recipient/create.method: enum=["email","webhook"]
+admin/abuse-report/notification-recipient/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/create.systemWebhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/delete: required=["id"]
+admin/abuse-report/notification-recipient/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/list.method[]: enum=["email","webhook"]
+admin/abuse-report/notification-recipient/show: required=["id"]
+admin/abuse-report/notification-recipient/show.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/update: required=["id","isActive","method","name"]
+admin/abuse-report/notification-recipient/update.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/update.name: minLength=1 maxLength=255
+admin/abuse-report/notification-recipient/update.method: enum=["email","webhook"]
+admin/abuse-report/notification-recipient/update.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-report/notification-recipient/update.systemWebhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-user-reports.limit: minimum=1 maximum=100
+admin/abuse-user-reports.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-user-reports.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/abuse-user-reports.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/abuse-user-reports.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/abuse-user-reports.reporterOrigin: enum=["combined","local","remote"]
+admin/abuse-user-reports.targetUserOrigin: enum=["combined","local","remote"]
+admin/accounts/create: required=["password","username"]
+admin/accounts/create.username: pattern="^\\w{1,20}$"
+admin/accounts/create.password: minLength=1
+admin/accounts/delete: required=["userId"]
+admin/accounts/delete.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/accounts/find-by-email: required=["email"]
+admin/ad/create: required=["dayOfWeek","expiresAt","imageUrl","memo","place","priority","ratio","startsAt","url"]
+admin/ad/create.url: minLength=1
+admin/ad/create.ratio: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/create.expiresAt: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/create.startsAt: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/create.imageUrl: minLength=1
+admin/ad/create.dayOfWeek: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/delete: required=["id"]
+admin/ad/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/ad/list.limit: minimum=1 maximum=100
+admin/ad/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/ad/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/ad/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/update: required=["id"]
+admin/ad/update.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/ad/update.url: minLength=1
+admin/ad/update.imageUrl: minLength=1
+admin/ad/update.ratio: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/update.expiresAt: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/update.startsAt: minimum=-9007199254740991 maximum=9007199254740991
+admin/ad/update.dayOfWeek: minimum=-9007199254740991 maximum=9007199254740991
+admin/announcements/create: required=["imageUrl","text","title"]
+admin/announcements/create.title: minLength=1
+admin/announcements/create.text: minLength=1
+admin/announcements/create.imageUrl<anyOf0>: minLength=0
+admin/announcements/create.icon: enum=["info","warning","error","success"]
+admin/announcements/create.display: enum=["normal","banner","dialog"]
+admin/announcements/create.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/delete: required=["id"]
+admin/announcements/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/list.limit: minimum=1 maximum=100
+admin/announcements/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/announcements/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/announcements/list.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/list.status: enum=["all","active","archived"]
+admin/announcements/update: required=["id"]
+admin/announcements/update.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/announcements/update.title: minLength=1
+admin/announcements/update.text: minLength=1
+admin/announcements/update.imageUrl<anyOf0>: minLength=0
+admin/announcements/update.icon: enum=["info","warning","error","success"]
+admin/announcements/update.display: enum=["normal","banner","dialog"]
+admin/avatar-decorations/create: required=["description","name","url"]
+admin/avatar-decorations/create.name: minLength=1
+admin/avatar-decorations/create.url: minLength=1
+admin/avatar-decorations/delete: required=["id"]
+admin/avatar-decorations/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/avatar-decorations/list.limit: minimum=1 maximum=100
+admin/avatar-decorations/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/avatar-decorations/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/avatar-decorations/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/avatar-decorations/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/avatar-decorations/list.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/avatar-decorations/update: required=["id"]
+admin/avatar-decorations/update.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/avatar-decorations/update.name: minLength=1
+admin/avatar-decorations/update.url: minLength=1
+admin/captcha/save: required=["provider"]
+admin/captcha/save.provider: enum=["none","hcaptcha","cap","recaptcha","turnstile","testcaptcha"]
+admin/delete-account: required=["userId"]
+admin/delete-account.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/delete-all-files-of-a-user: required=["userId"]
+admin/delete-all-files-of-a-user.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/drive/files.limit: minimum=1 maximum=100
+admin/drive/files.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/drive/files.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/drive/files.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/drive/files.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/drive/files.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/drive/files.type<anyOf0>: pattern="^[a-zA-Z0-9\\/\\-*]+$"
+admin/drive/files.origin: enum=["combined","local","remote"]
+admin/drive/show-file<anyOf0>: required=["fileId"]
+admin/drive/show-file<anyOf0>.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/drive/show-file<anyOf1>: required=["url"]
+admin/drive/show-file<anyOf1>.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/add: required=["fileId","name"]
+admin/emoji/add.name: pattern="^[a-zA-Z0-9_]+$"
+admin/emoji/add.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/add-aliases-bulk: required=["aliases","ids"]
+admin/emoji/add-aliases-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/copy: required=["emojiId"]
+admin/emoji/copy.emojiId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/delete: required=["id"]
+admin/emoji/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/delete-bulk: required=["ids"]
+admin/emoji/delete-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/import-zip: required=["fileId"]
+admin/emoji/import-zip.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/list.limit: minimum=1 maximum=100
+admin/emoji/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/emoji/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/emoji/list-remote.limit: minimum=1 maximum=100
+admin/emoji/list-remote.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/list-remote.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/list-remote.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/emoji/list-remote.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/emoji/remove-aliases-bulk: required=["aliases","ids"]
+admin/emoji/remove-aliases-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/set-aliases-bulk: required=["aliases","ids"]
+admin/emoji/set-aliases-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/set-category-bulk: required=["ids"]
+admin/emoji/set-category-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/set-license-bulk: required=["ids"]
+admin/emoji/set-license-bulk.ids[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/update<anyOf0>: required=["id"]
+admin/emoji/update<anyOf0>.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/update<anyOf0>.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/update<anyOf0>.name: pattern="^[a-zA-Z0-9_]+$"
+admin/emoji/update<anyOf1>: required=["name"]
+admin/emoji/update<anyOf1>.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/update<anyOf1>.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/emoji/update<anyOf1>.name: pattern="^[a-zA-Z0-9_]+$"
+admin/federation/delete-all-files: required=["host"]
+admin/federation/refresh-remote-instance-metadata: required=["host"]
+admin/federation/remove-all-following: required=["host"]
+admin/federation/update-instance: required=["host"]
+admin/forward-abuse-user-report: required=["reportId"]
+admin/forward-abuse-user-report.reportId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/get-user-ips: required=["userId"]
+admin/get-user-ips.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/invite/create.count: minimum=1 maximum=100
+admin/invite/list.limit: minimum=1 maximum=100
+admin/invite/list.offset: minimum=0 maximum=9007199254740991
+admin/invite/list.type: enum=["unused","used","expired","all"]
+admin/invite/list.sort: enum=["+createdAt","-createdAt","+usedAt","-usedAt"]
+admin/promo/create: required=["expiresAt","noteId"]
+admin/promo/create.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/promo/create.expiresAt: minimum=-9007199254740991 maximum=9007199254740991
+admin/queue/abandon-outbox-dead-letter: required=["outboxId","revision"]
+admin/queue/abandon-outbox-dead-letter.outboxId: minLength=1 maxLength=32
+admin/queue/abandon-outbox-dead-letter.revision: minimum=0 maximum=9007199254740991
+admin/queue/clear: required=["queue","state"]
+admin/queue/clear.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/clear.state: enum=["*","completed","wait","active","paused","prioritized","delayed","failed"]
+admin/queue/jobs: required=["queue","state"]
+admin/queue/jobs.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/jobs.state[]: enum=["active","wait","prioritized","delayed","completed","failed"]
+admin/queue/outbox-dead-letters.limit: minimum=1 maximum=100
+admin/queue/outbox-dead-letters.untilId: minLength=1 maxLength=32
+admin/queue/pause: required=["queue"]
+admin/queue/pause.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/promote-jobs: required=["queue"]
+admin/queue/promote-jobs.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/queue-stats: required=["queue"]
+admin/queue/queue-stats.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/remove-job: required=["jobId","queue"]
+admin/queue/remove-job.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/resume: required=["queue"]
+admin/queue/resume.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/retry-job: required=["jobId","queue"]
+admin/queue/retry-job.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/retry-outbox-dead-letter: required=["outboxId","revision"]
+admin/queue/retry-outbox-dead-letter.outboxId: minLength=1 maxLength=32
+admin/queue/retry-outbox-dead-letter.revision: minimum=0 maximum=9007199254740991
+admin/queue/show-job: required=["jobId","queue"]
+admin/queue/show-job.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/queue/show-job-logs: required=["jobId","queue"]
+admin/queue/show-job-logs.queue: enum=["system","endedPollNotification","postScheduledNote","deliver","inbox","db","relationship","objectStorage","userWebhookDeliver","systemWebhookDeliver"]
+admin/relays/add: required=["inbox"]
+admin/relays/remove: required=["inbox"]
+admin/reset-password: required=["userId"]
+admin/reset-password.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/resolve-abuse-user-report: required=["reportId"]
+admin/resolve-abuse-user-report.reportId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/resolve-abuse-user-report.resolvedAs<anyOf0>: enum=["accept","reject"]
+admin/roles/assign: required=["roleId","userId"]
+admin/roles/assign.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/assign.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/assign.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+admin/roles/create: required=["asBadge","canEditMembersByModerator","color","condFormula","description","displayOrder","iconUrl","isAdministrator","isModerator","isPublic","name","policies","target"]
+admin/roles/create.target: enum=["manual","conditional"]
+admin/roles/delete: required=["roleId"]
+admin/roles/delete.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/show: required=["roleId"]
+admin/roles/show.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/unassign: required=["roleId","userId"]
+admin/roles/unassign.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/unassign.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/update: required=["roleId"]
+admin/roles/update.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/update.target: enum=["manual","conditional"]
+admin/roles/update-default-policies: required=["policies"]
+admin/roles/users: required=["roleId"]
+admin/roles/users.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/users.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/users.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/roles/users.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/roles/users.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/roles/users.limit: minimum=1 maximum=100
+admin/send-email: required=["subject","text","to"]
+admin/show-moderation-logs.limit: minimum=1 maximum=100
+admin/show-moderation-logs.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/show-moderation-logs.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/show-moderation-logs.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/show-moderation-logs.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+admin/show-moderation-logs.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/show-user: required=["userId"]
+admin/show-user.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/show-users.limit: minimum=1 maximum=100
+admin/show-users.offset: minimum=0 maximum=9007199254740991
+admin/show-users.sort: enum=["+follower","-follower","+createdAt","-createdAt","+updatedAt","-updatedAt","+lastActiveDate","-lastActiveDate"]
+admin/show-users.state: enum=["all","alive","available","admin","moderator","adminOrModerator","suspended"]
+admin/show-users.origin: enum=["combined","local","remote"]
+admin/suspend-user: required=["userId"]
+admin/suspend-user.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/system-webhook/create: required=["isActive","name","on","url"]
+admin/system-webhook/create.name: minLength=1 maxLength=255
+admin/system-webhook/create.on[]: enum=["abuseReport","abuseReportResolved","userCreated","inactiveModeratorsWarning","inactiveModeratorsInvitationOnlyChanged"]
+admin/system-webhook/create.url: minLength=1 maxLength=1024
+admin/system-webhook/create.secret: maxLength=1024
+admin/system-webhook/delete: required=["id"]
+admin/system-webhook/delete.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/system-webhook/list.on[]: enum=["abuseReport","abuseReportResolved","userCreated","inactiveModeratorsWarning","inactiveModeratorsInvitationOnlyChanged"]
+admin/system-webhook/show: required=["id"]
+admin/system-webhook/show.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/system-webhook/test: required=["type","webhookId"]
+admin/system-webhook/test.webhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/system-webhook/test.type: enum=["abuseReport","abuseReportResolved","userCreated","inactiveModeratorsWarning","inactiveModeratorsInvitationOnlyChanged"]
+admin/system-webhook/update: required=["id","isActive","name","on","url"]
+admin/system-webhook/update.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/system-webhook/update.name: minLength=1 maxLength=255
+admin/system-webhook/update.on[]: enum=["abuseReport","abuseReportResolved","userCreated","inactiveModeratorsWarning","inactiveModeratorsInvitationOnlyChanged"]
+admin/system-webhook/update.url: minLength=1 maxLength=1024
+admin/system-webhook/update.secret: maxLength=1024
+admin/unset-mfa: required=["userId"]
+admin/unset-mfa.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/unset-user-avatar: required=["userId"]
+admin/unset-user-avatar.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/unset-user-banner: required=["userId"]
+admin/unset-user-banner.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/unsuspend-user: required=["userId"]
+admin/unsuspend-user.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/update-abuse-user-report: required=["reportId"]
+admin/update-abuse-user-report.reportId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+admin/update-meta.signupRateLimitMinIntervalSeconds: minimum=0 maximum=86400
+admin/update-meta.signupRateLimitMaxPerHour: minimum=0 maximum=100000
+admin/update-meta.themeColor<anyOf0>: pattern="^#[0-9a-fA-F]{6}$"
+admin/update-meta.clientOptions.entrancePageStyle: enum=["classic","simple"]
+admin/update-meta.sensitiveMediaDetection: enum=["none","all","local","remote"]
+admin/update-meta.sensitiveMediaDetectionSensitivity: enum=["medium","low","high","veryLow","veryHigh"]
+admin/update-meta.sensitiveMediaDetectionTimeout: minimum=1 maximum=9007199254740991
+admin/update-meta.sensitiveMediaDetectionMaxImagesPerRequest: minimum=1 maximum=9007199254740991
+admin/update-meta.translatorProvider: enum=["deepl","libreTranslate"]
+admin/update-meta.libreTranslateApiUrl<anyOf0><anyOf0>: format="uri"
+admin/update-meta.libreTranslateApiUrl<anyOf0><anyOf1>: const=""
+admin/update-meta.smtpPort<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.objectStoragePrefix<anyOf0>: pattern="^[a-zA-Z0-9-._]*$"
+admin/update-meta.objectStoragePort<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.perLocalUserUserTimelineCacheMax: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.perRemoteUserUserTimelineCacheMax: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.perUserHomeTimelineCacheMax: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.perUserListTimelineCacheMax: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.notesPerOneAd: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.urlPreviewTimeout: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.urlPreviewMaximumContentLength: minimum=-9007199254740991 maximum=9007199254740991
+admin/update-meta.federation: enum=["all","none","specified"]
+admin/update-meta.deliverSuspendedSoftware[]: required=["software","versionRange"]
+admin/update-meta.ugcVisibilityForVisitor: enum=["all","local","none"]
+admin/update-proxy-account.description<anyOf0>: minLength=1 maxLength=1500
+admin/update-user-note: required=["text","userId"]
+admin/update-user-note.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+announcements.limit: minimum=1 maximum=100
+announcements.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+announcements.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+announcements.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+announcements.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+announcements/react: required=["announcementId","reaction"]
+announcements/react.announcementId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+announcements/react.reaction: minLength=1 maxLength=100
+announcements/show: required=["announcementId"]
+announcements/show.announcementId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+announcements/unreact: required=["announcementId"]
+announcements/unreact.announcementId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/create: required=["caseSensitive","excludeKeywords","keywords","name","src","users","withFile","withReplies"]
+antennas/create.name: minLength=1 maxLength=100
+antennas/create.src: enum=["home","all","users","list","users_blacklist"]
+antennas/create.userListId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/create.keywords: maxItems=100
+antennas/create.keywords[]: maxItems=10
+antennas/create.keywords[][]: maxLength=200
+antennas/create.excludeKeywords: maxItems=100
+antennas/create.excludeKeywords[]: maxItems=10
+antennas/create.excludeKeywords[][]: maxLength=200
+antennas/delete: required=["antennaId"]
+antennas/delete.antennaId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/notes: required=["antennaId"]
+antennas/notes.antennaId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/notes.limit: minimum=1 maximum=100
+antennas/notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+antennas/notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+antennas/remove-note: required=["antennaId","noteId"]
+antennas/remove-note.antennaId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/remove-note.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/show: required=["antennaId"]
+antennas/show.antennaId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/update: required=["antennaId"]
+antennas/update.antennaId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/update.name: minLength=1 maxLength=100
+antennas/update.src: enum=["home","all","users","list","users_blacklist"]
+antennas/update.userListId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+antennas/update.keywords: maxItems=100
+antennas/update.keywords[]: maxItems=10
+antennas/update.keywords[][]: maxLength=200
+antennas/update.excludeKeywords: maxItems=100
+antennas/update.excludeKeywords[]: maxItems=10
+antennas/update.excludeKeywords[][]: maxLength=200
+ap/get: required=["uri"]
+ap/show: required=["uri"]
+blocking/create: required=["userId"]
+blocking/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+blocking/delete: required=["userId"]
+blocking/delete.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+blocking/list.limit: minimum=1 maximum=100
+blocking/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+blocking/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+blocking/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+blocking/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/create: required=["name"]
+channels/create.name: minLength=1 maxLength=128
+channels/create.description<anyOf0>: maxLength=2048
+channels/create.bannerId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/create.color: minLength=1 maxLength=16
+channels/favorite: required=["channelId"]
+channels/favorite.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/follow: required=["channelId"]
+channels/follow.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/followed.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/followed.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/followed.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/followed.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/followed.limit: minimum=1 maximum=100
+channels/mute/create: required=["channelId"]
+channels/mute/create.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/mute/create.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+channels/mute/delete: required=["channelId"]
+channels/mute/delete.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/owned.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/owned.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/owned.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/owned.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/owned.limit: minimum=1 maximum=100
+channels/search: required=["query"]
+channels/search.type: enum=["nameAndDescription","nameOnly"]
+channels/search.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/search.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/search.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/search.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/search.limit: minimum=1 maximum=100
+channels/show: required=["channelId"]
+channels/show.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/timeline: required=["channelId"]
+channels/timeline.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/timeline.limit: minimum=1 maximum=100
+channels/timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+channels/unfavorite: required=["channelId"]
+channels/unfavorite.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/unfollow: required=["channelId"]
+channels/unfollow.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/update: required=["channelId"]
+channels/update.channelId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/update.name: minLength=1 maxLength=128
+channels/update.description<anyOf0>: maxLength=2048
+channels/update.bannerId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/update.pinnedNoteIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+channels/update.color: minLength=1 maxLength=16
+charts/active-users: required=["span"]
+charts/active-users.span: enum=["day","hour"]
+charts/active-users.limit: minimum=1 maximum=500
+charts/active-users.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/ap-request: required=["span"]
+charts/ap-request.span: enum=["day","hour"]
+charts/ap-request.limit: minimum=1 maximum=500
+charts/ap-request.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/drive: required=["span"]
+charts/drive.span: enum=["day","hour"]
+charts/drive.limit: minimum=1 maximum=500
+charts/drive.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/federation: required=["span"]
+charts/federation.span: enum=["day","hour"]
+charts/federation.limit: minimum=1 maximum=500
+charts/federation.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/instance: required=["host","span"]
+charts/instance.span: enum=["day","hour"]
+charts/instance.limit: minimum=1 maximum=500
+charts/instance.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/notes: required=["span"]
+charts/notes.span: enum=["day","hour"]
+charts/notes.limit: minimum=1 maximum=500
+charts/notes.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/drive: required=["span","userId"]
+charts/user/drive.span: enum=["day","hour"]
+charts/user/drive.limit: minimum=1 maximum=500
+charts/user/drive.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/drive.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+charts/user/following: required=["span","userId"]
+charts/user/following.span: enum=["day","hour"]
+charts/user/following.limit: minimum=1 maximum=500
+charts/user/following.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/following.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+charts/user/notes: required=["span","userId"]
+charts/user/notes.span: enum=["day","hour"]
+charts/user/notes.limit: minimum=1 maximum=500
+charts/user/notes.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/notes.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+charts/user/pv: required=["span","userId"]
+charts/user/pv.span: enum=["day","hour"]
+charts/user/pv.limit: minimum=1 maximum=500
+charts/user/pv.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/pv.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+charts/user/reactions: required=["span","userId"]
+charts/user/reactions.span: enum=["day","hour"]
+charts/user/reactions.limit: minimum=1 maximum=500
+charts/user/reactions.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+charts/user/reactions.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+charts/users: required=["span"]
+charts/users.span: enum=["day","hour"]
+charts/users.limit: minimum=1 maximum=500
+charts/users.offset<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+chat/history.limit: minimum=1 maximum=100
+chat/messages/create-to-room: required=["toRoomId"]
+chat/messages/create-to-room.text<anyOf0>: maxLength=2000
+chat/messages/create-to-room.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/create-to-room.toRoomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/create-to-user: required=["toUserId"]
+chat/messages/create-to-user.text<anyOf0>: maxLength=2000
+chat/messages/create-to-user.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/create-to-user.toUserId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/delete: required=["messageId"]
+chat/messages/delete.messageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/react: required=["messageId","reaction"]
+chat/messages/react.messageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/room-timeline: required=["roomId"]
+chat/messages/room-timeline.limit: minimum=1 maximum=100
+chat/messages/room-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/room-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/room-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/messages/room-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/messages/room-timeline.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/search: required=["query"]
+chat/messages/search.query: minLength=1 maxLength=256
+chat/messages/search.limit: minimum=1 maximum=100
+chat/messages/search.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/search.roomId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/show: required=["messageId"]
+chat/messages/show.messageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/unreact: required=["messageId","reaction"]
+chat/messages/unreact.messageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/user-timeline: required=["userId"]
+chat/messages/user-timeline.limit: minimum=1 maximum=100
+chat/messages/user-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/user-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/messages/user-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/messages/user-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/messages/user-timeline.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/create: required=["name"]
+chat/rooms/create.name: maxLength=256
+chat/rooms/create.description: maxLength=1024
+chat/rooms/delete: required=["roomId"]
+chat/rooms/delete.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/create: required=["roomId","userId"]
+chat/rooms/invitations/create.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/ignore: required=["roomId"]
+chat/rooms/invitations/ignore.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/inbox.limit: minimum=1 maximum=100
+chat/rooms/invitations/inbox.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/inbox.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/inbox.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/invitations/inbox.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/invitations/outbox: required=["roomId"]
+chat/rooms/invitations/outbox.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/outbox.limit: minimum=1 maximum=100
+chat/rooms/invitations/outbox.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/outbox.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/invitations/outbox.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/invitations/outbox.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/join: required=["roomId"]
+chat/rooms/join.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/joining.limit: minimum=1 maximum=100
+chat/rooms/joining.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/joining.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/joining.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/joining.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/leave: required=["roomId"]
+chat/rooms/leave.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/members: required=["roomId"]
+chat/rooms/members.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/members.limit: minimum=1 maximum=100
+chat/rooms/members.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/members.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/members.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/members.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/mute: required=["mute","roomId"]
+chat/rooms/mute.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/owned.limit: minimum=1 maximum=100
+chat/rooms/owned.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/owned.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/owned.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/owned.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+chat/rooms/show: required=["roomId"]
+chat/rooms/show.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/update: required=["roomId"]
+chat/rooms/update.roomId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+chat/rooms/update.name: maxLength=256
+chat/rooms/update.description: maxLength=1024
+clips/add-note: required=["clipId","noteId"]
+clips/add-note.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/add-note.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/create: required=["name"]
+clips/create.name: minLength=1 maxLength=100
+clips/create.description<anyOf0>: maxLength=2048
+clips/delete: required=["clipId"]
+clips/delete.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/favorite: required=["clipId"]
+clips/favorite.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/list.limit: minimum=1 maximum=100
+clips/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+clips/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+clips/notes: required=["clipId"]
+clips/notes.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/notes.limit: minimum=1 maximum=100
+clips/notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+clips/notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+clips/notes.search<anyOf0>: minLength=1 maxLength=100
+clips/remove-note: required=["clipId","noteId"]
+clips/remove-note.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/remove-note.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/show: required=["clipId"]
+clips/show.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/unfavorite: required=["clipId"]
+clips/unfavorite.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/update: required=["clipId"]
+clips/update.clipId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+clips/update.name: minLength=1 maxLength=100
+clips/update.description<anyOf0>: maxLength=2048
+drive/files.limit: minimum=1 maximum=100
+drive/files.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files.type<anyOf0>: pattern="^[a-zA-Z/\\-*]+$"
+drive/files.sort<anyOf0>: enum=["+createdAt","-createdAt","+name","-name","+size","-size"]
+drive/files.offset: minimum=0 maximum=9007199254740991
+drive/files/attached-chat-messages: required=["fileId"]
+drive/files/attached-chat-messages.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/attached-chat-messages.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/attached-chat-messages.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files/attached-chat-messages.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files/attached-chat-messages.limit: minimum=1 maximum=100
+drive/files/attached-chat-messages.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/attached-notes: required=["fileId"]
+drive/files/attached-notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/attached-notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/attached-notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files/attached-notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/files/attached-notes.limit: minimum=1 maximum=100
+drive/files/attached-notes.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/check-existence: required=["md5"]
+drive/files/create.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/create.comment<anyOf0>: maxLength=512
+drive/files/delete: required=["fileId"]
+drive/files/delete.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/find: required=["name"]
+drive/files/find.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/find-by-hash: required=["md5"]
+drive/files/move-bulk: required=["fileIds"]
+drive/files/move-bulk.fileIds: minItems=1 maxItems=100 uniqueItems=true
+drive/files/move-bulk.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/move-bulk.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/show<anyOf0>: required=["fileId"]
+drive/files/show<anyOf0>.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/show<anyOf1>: required=["url"]
+drive/files/update: required=["fileId"]
+drive/files/update.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/update.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/update.comment<anyOf0>: maxLength=512
+drive/files/upload-from-url: required=["url"]
+drive/files/upload-from-url.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/files/upload-from-url.comment<anyOf0>: maxLength=512
+drive/folders.limit: minimum=1 maximum=100
+drive/folders.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/folders.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/folders.folderId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/create.name: maxLength=200
+drive/folders/create.parentId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/delete: required=["folderId"]
+drive/folders/delete.folderId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/find: required=["name"]
+drive/folders/find.parentId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/show: required=["folderId"]
+drive/folders/show.folderId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/update: required=["folderId"]
+drive/folders/update.folderId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/folders/update.name: maxLength=200
+drive/folders/update.parentId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/stream.limit: minimum=1 maximum=100
+drive/stream.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/stream.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+drive/stream.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/stream.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+drive/stream.type: pattern="^[a-zA-Z/\\-*]+$"
+email-address/available: required=["emailAddress"]
+emoji: required=["name"]
+endpoint: required=["endpoint"]
+federation/followers: required=["host"]
+federation/followers.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/followers.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/followers.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/followers.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/followers.limit: minimum=1 maximum=100
+federation/following: required=["host"]
+federation/following.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/following.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/following.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/following.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/following.limit: minimum=1 maximum=100
+federation/instances.limit: minimum=1 maximum=100
+federation/instances.offset: minimum=0 maximum=9007199254740991
+federation/instances.sort<anyOf0>: enum=["+pubSub","-pubSub","+notes","-notes","+users","-users","+following","-following","+followers","-followers","+firstRetrievedAt","-firstRetrievedAt","+latestRequestReceivedAt","-latestRequestReceivedAt"]
+federation/show-instance: required=["host"]
+federation/stats.limit: minimum=1 maximum=100
+federation/update-remote-user: required=["userId"]
+federation/update-remote-user.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/users: required=["host"]
+federation/users.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/users.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+federation/users.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/users.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+federation/users.limit: minimum=1 maximum=100
+fetch-external-resources: required=["hash","url"]
+fetch-rss: required=["url"]
+flash/create: required=["permissions","script","summary","title"]
+flash/create.visibility: enum=["public","private"]
+flash/delete: required=["flashId"]
+flash/delete.flashId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/featured.offset: minimum=0 maximum=9007199254740991
+flash/featured.limit: minimum=1 maximum=100
+flash/like: required=["flashId"]
+flash/like.flashId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/my.limit: minimum=1 maximum=100
+flash/my.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/my.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/my.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/my.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/my-likes.limit: minimum=1 maximum=100
+flash/my-likes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/my-likes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/my-likes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/my-likes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/my-likes.search<anyOf0>: minLength=1 maxLength=100
+flash/search: required=["query"]
+flash/search.query: minLength=1 maxLength=100
+flash/search.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/search.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/search.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/search.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+flash/search.limit: minimum=1 maximum=100
+flash/show: required=["flashId"]
+flash/show.flashId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/unlike: required=["flashId"]
+flash/unlike.flashId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/update: required=["flashId"]
+flash/update.flashId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+flash/update.visibility: enum=["public","private"]
+following/create: required=["userId"]
+following/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/delete: required=["userId"]
+following/delete.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/invalidate: required=["userId"]
+following/invalidate.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+following/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+following/list.limit: minimum=1 maximum=100
+following/requests/accept: required=["userId"]
+following/requests/accept.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/cancel: required=["userId"]
+following/requests/cancel.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+following/requests/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+following/requests/list.limit: minimum=1 maximum=100
+following/requests/reject: required=["userId"]
+following/requests/reject.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/sent.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/sent.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/requests/sent.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+following/requests/sent.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+following/requests/sent.limit: minimum=1 maximum=100
+following/update: required=["userId"]
+following/update.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+following/update.notify: enum=["normal","none"]
+following/update-all.notify: enum=["normal","none"]
+gallery/featured.limit: minimum=1 maximum=100
+gallery/featured.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts.limit: minimum=1 maximum=100
+gallery/posts.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+gallery/posts.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+gallery/posts/create: required=["fileIds","title"]
+gallery/posts/create.title: minLength=1
+gallery/posts/create.fileIds: minItems=1 maxItems=32 uniqueItems=true
+gallery/posts/create.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/delete: required=["postId"]
+gallery/posts/delete.postId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/like: required=["postId"]
+gallery/posts/like.postId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/show: required=["postId"]
+gallery/posts/show.postId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/unlike: required=["postId"]
+gallery/posts/unlike.postId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/update: required=["postId"]
+gallery/posts/update.postId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+gallery/posts/update.title: minLength=1
+gallery/posts/update.fileIds: minItems=1 maxItems=32 uniqueItems=true
+gallery/posts/update.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+hashtags/list: required=["sort"]
+hashtags/list.limit: minimum=1 maximum=100
+hashtags/list.sort: enum=["+mentionedUsers","-mentionedUsers","+mentionedLocalUsers","-mentionedLocalUsers","+mentionedRemoteUsers","-mentionedRemoteUsers","+attachedUsers","-attachedUsers","+attachedLocalUsers","-attachedLocalUsers","+attachedRemoteUsers","-attachedRemoteUsers"]
+hashtags/search: required=["query"]
+hashtags/search.limit: minimum=1 maximum=100
+hashtags/search.offset: minimum=0 maximum=9007199254740991
+hashtags/show: required=["tag"]
+hashtags/users: required=["sort","tag"]
+hashtags/users.limit: minimum=1 maximum=100
+hashtags/users.offset: minimum=0 maximum=9007199254740991
+hashtags/users.sort: enum=["+follower","-follower","+createdAt","-createdAt","+updatedAt","-updatedAt"]
+hashtags/users.state: enum=["all","alive"]
+hashtags/users.origin: enum=["combined","local","remote"]
+i/2fa/done: required=["token"]
+i/2fa/key-done: required=["credential","name","password"]
+i/2fa/key-done.name: minLength=1 maxLength=30
+i/2fa/password-less: required=["value"]
+i/2fa/register: required=["password"]
+i/2fa/register-key: required=["password"]
+i/2fa/remove-key: required=["credentialId","password"]
+i/2fa/unregister: required=["password"]
+i/2fa/update-key: required=["credentialId","name"]
+i/2fa/update-key.name: minLength=1 maxLength=30
+i/apps.sort: enum=["+createdAt","-createdAt","+lastUsedAt","-lastUsedAt"]
+i/change-password: required=["currentPassword","newPassword"]
+i/change-password.newPassword: minLength=1
+i/claim-achievement: required=["name"]
+i/claim-achievement.name: enum=["notes1","notes10","notes100","notes500","notes1000","notes5000","notes10000","notes20000","notes30000","notes40000","notes50000","notes60000","notes70000","notes80000","notes90000","notes100000","login3","login7","login15","login30","login60","login100","login200","login300","login400","login500","login600","login700","login800","login900","login1000","passedSinceAccountCreated1","passedSinceAccountCreated2","passedSinceAccountCreated3","loggedInOnBirthday","loggedInOnNewYearsDay","noteClipped1","noteFavorited1","myNoteFavorited1","profileFilled","markedAsCat","following1","following10","following50","following100","following300","followers1","followers10","followers50","followers100","followers300","followers500","followers1000","collectAchievements30","viewAchievements3min","iLoveMisskey","foundTreasure","client30min","client60min","noteDeletedWithin1min","postedAtLateNight","postedAt0min0sec","selfQuote","htl20npm","viewInstanceChart","outputHelloWorldOnScratchpad","open3windows","driveFolderCircularReference","reactWithoutRead","clickedClickHere","justPlainLucky","setNameToSyuilo","brainDiver","smashTestNotificationButton","tutorialCompleted"]
+i/delete-account: required=["password"]
+i/favorites.limit: minimum=1 maximum=100
+i/favorites.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/favorites.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/favorites.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/favorites.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/gallery/likes.limit: minimum=1 maximum=100
+i/gallery/likes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/gallery/likes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/gallery/likes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/gallery/likes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/gallery/posts.limit: minimum=1 maximum=100
+i/gallery/posts.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/gallery/posts.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/gallery/posts.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/gallery/posts.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/import-antennas: required=["fileId"]
+i/import-antennas.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/import-blocking: required=["fileId"]
+i/import-blocking.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/import-following: required=["fileId"]
+i/import-following.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/import-muting: required=["fileId"]
+i/import-muting.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/import-user-lists: required=["fileId"]
+i/import-user-lists.fileId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/move: required=["moveToAccount"]
+i/notifications.limit: minimum=1 maximum=100
+i/notifications.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/notifications.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/notifications.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/notifications.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/notifications.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/notifications.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/notifications-grouped.limit: minimum=1 maximum=100
+i/notifications-grouped.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/notifications-grouped.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/notifications-grouped.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/notifications-grouped.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/notifications-grouped.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/notifications-grouped.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/page-likes.limit: minimum=1 maximum=100
+i/page-likes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/page-likes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/page-likes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/page-likes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/pages.limit: minimum=1 maximum=100
+i/pages.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/pages.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/pages.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/pages.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/pin: required=["noteId"]
+i/pin.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/read-announcement: required=["announcementId"]
+i/read-announcement.announcementId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/regenerate-token: required=["password"]
+i/registry/get: required=["key"]
+i/registry/get.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/get-all.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/get-detail: required=["key"]
+i/registry/get-detail.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/keys.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/keys-with-type.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/remove: required=["key"]
+i/registry/remove.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/registry/set: required=["key","value"]
+i/registry/set.key: minLength=1
+i/registry/set.scope[]: pattern="^[a-zA-Z0-9_]+$"
+i/revoke-token<anyOf0>: required=["tokenId"]
+i/revoke-token<anyOf0>.tokenId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/revoke-token<anyOf1>: required=["token"]
+i/signin-history.limit: minimum=1 maximum=100
+i/signin-history.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/signin-history.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/signin-history.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+i/signin-history.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+i/unpin: required=["noteId"]
+i/unpin.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.name<anyOf0>: minLength=1 maxLength=50
+i/update.description<anyOf0>: minLength=1 maxLength=1500
+i/update.followedMessage<anyOf0>: minLength=1 maxLength=256
+i/update.location<anyOf0>: minLength=1 maxLength=50
+i/update.birthday<anyOf0>: pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$" format="date"
+i/update.lang<anyOf0>: enum=["ach","ady","af","af-NA","af-ZA","ak","ar","ar-AR","ar-MA","ar-SA","ay-BO","az","az-AZ","be-BY","bg","bg-BG","bn","bn-IN","bn-BD","br","bs-BA","ca","ca-ES","cak","ck-US","cs","cs-CZ","cy","cy-GB","da","da-DK","de","de-AT","de-DE","de-CH","dsb","el","el-GR","en","en-GB","en-AU","en-CA","en-IE","en-IN","en-PI","en-SG","en-UD","en-US","en-ZA","en@pirate","eo","eo-EO","es","es-AR","es-419","es-CL","es-CO","es-EC","es-ES","es-LA","es-NI","es-MX","es-US","es-VE","et","et-EE","eu","eu-ES","fa","fa-IR","fb-LT","ff","fi","fi-FI","fo","fo-FO","fr","fr-CA","fr-FR","fr-BE","fr-CH","fy-NL","ga","ga-IE","gd","gl","gl-ES","gn-PY","gu-IN","gv","gx-GR","he","he-IL","hi","hi-IN","hr","hr-HR","hsb","ht","hu","hu-HU","hy","hy-AM","id","id-ID","is","is-IS","it","it-IT","ja","ja-JP","jv-ID","ka-GE","kk-KZ","km","kl","km-KH","kab","kn","kn-IN","ko","ko-KR","ku-TR","kw","la","la-VA","lb","li-NL","lt","lt-LT","lv","lv-LV","mai","mg-MG","mk","mk-MK","ml","ml-IN","mn-MN","mr","mr-IN","ms","ms-MY","mt","mt-MT","my","no","nb","nb-NO","ne","ne-NP","nl","nl-BE","nl-NL","nn-NO","oc","or-IN","pa","pa-IN","pl","pl-PL","ps-AF","pt","pt-BR","pt-PT","qu-PE","rm-CH","ro","ro-RO","ru","ru-RU","sa-IN","se-NO","sh","si-LK","sk","sk-SK","sl","sl-SI","so-SO","sq","sq-AL","sr","sr-RS","su","sv","sv-SE","sw","sw-KE","ta","ta-IN","te","te-IN","tg","tg-TJ","th","th-TH","fil","tlh","tr","tr-TR","tt-RU","uk","uk-UA","ur","ur-PK","uz","uz-UZ","vi","vi-VN","xh-ZA","yi","yi-DE","zh","zh-Hans","zh-Hant","zh-CN","zh-HK","zh-SG","zh-TW","zu-ZA"]
+i/update.avatarId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.avatarDecorations: maxItems=16
+i/update.avatarDecorations[]: required=["id"]
+i/update.avatarDecorations[].id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.avatarDecorations[].angle<anyOf0>: minimum=-0.5 maximum=0.5
+i/update.avatarDecorations[].offsetX<anyOf0>: minimum=-0.25 maximum=0.25
+i/update.avatarDecorations[].offsetY<anyOf0>: minimum=-0.25 maximum=0.25
+i/update.bannerId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.fields: minItems=0 maxItems=16
+i/update.fields[]: required=["name","value"]
+i/update.fields[].name: maxLength=50
+i/update.fields[].value: maxLength=512
+i/update.makeNotesFollowersOnlyBefore<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+i/update.makeNotesHiddenBefore<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+i/update.followingVisibility: enum=["public","followers","private"]
+i/update.followersVisibility: enum=["public","followers","private"]
+i/update.chatScope: enum=["everyone","followers","following","mutual","none"]
+i/update.pinnedPageId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.note<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.note<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.note<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.note<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.note<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.follow<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.follow<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.follow<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.follow<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.follow<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.mention<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.mention<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.mention<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.mention<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.mention<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.reply<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.reply<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.reply<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.reply<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.reply<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.renote<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.renote<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.renote<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.renote<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.renote<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.quote<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.quote<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.quote<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.quote<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.quote<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.reaction<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.reaction<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.reaction<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.reaction<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.reaction<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.pollEnded<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.pollEnded<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.pollEnded<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.pollEnded<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.pollEnded<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.scheduledNotePosted<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.scheduledNotePosted<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.scheduledNotePosted<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.scheduledNotePosted<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.scheduledNotePosted<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.scheduledNotePostFailed<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.scheduledNotePostFailed<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.scheduledNotePostFailed<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.scheduledNotePostFailed<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.scheduledNotePostFailed<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.receiveFollowRequest<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.receiveFollowRequest<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.receiveFollowRequest<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.receiveFollowRequest<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.receiveFollowRequest<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.followRequestAccepted<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.followRequestAccepted<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.followRequestAccepted<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.followRequestAccepted<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.followRequestAccepted<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.roleAssigned<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.roleAssigned<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.roleAssigned<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.roleAssigned<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.roleAssigned<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.achievementEarned<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.achievementEarned<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.achievementEarned<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.achievementEarned<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.achievementEarned<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.app<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.app<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.app<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.app<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.app<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.notificationRecieveConfig.test<anyOf0>: required=["type"]
+i/update.notificationRecieveConfig.test<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
+i/update.notificationRecieveConfig.test<anyOf1>: required=["type","userListId"]
+i/update.notificationRecieveConfig.test<anyOf1>.type: const="list"
+i/update.notificationRecieveConfig.test<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/update.alsoKnownAs: maxItems=10 uniqueItems=true
+i/update-email: required=["password"]
+i/webhooks/create: required=["name","on","url"]
+i/webhooks/create.name: minLength=1 maxLength=100
+i/webhooks/create.url: minLength=1 maxLength=1024
+i/webhooks/create.secret: maxLength=1024
+i/webhooks/create.on[]: enum=["mention","unfollow","follow","followed","note","reply","renote","reaction"]
+i/webhooks/delete: required=["webhookId"]
+i/webhooks/delete.webhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/webhooks/show: required=["webhookId"]
+i/webhooks/show.webhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/webhooks/test: required=["type","webhookId"]
+i/webhooks/test.webhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/webhooks/test.type: enum=["mention","unfollow","follow","followed","note","reply","renote","reaction"]
+i/webhooks/update: required=["webhookId"]
+i/webhooks/update.webhookId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+i/webhooks/update.name: minLength=1 maxLength=100
+i/webhooks/update.url: minLength=1 maxLength=1024
+i/webhooks/update.secret<anyOf0>: maxLength=1024
+i/webhooks/update.on[]: enum=["mention","unfollow","follow","followed","note","reply","renote","reaction"]
+invite/delete: required=["inviteId"]
+invite/delete.inviteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+invite/list.limit: minimum=1 maximum=100
+invite/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+invite/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+invite/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+invite/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+miauth/gen-token: required=["permission","session"]
+miauth/gen-token.permission: uniqueItems=true
+mute/create: required=["userId"]
+mute/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+mute/create.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+mute/delete: required=["userId"]
+mute/delete.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+mute/list.limit: minimum=1 maximum=100
+mute/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+mute/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+mute/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+mute/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes.limit: minimum=1 maximum=100
+notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/children: required=["noteId"]
+notes/children.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/children.limit: minimum=1 maximum=100
+notes/children.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/children.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/children.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/children.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/clips: required=["noteId"]
+notes/clips.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/conversation: required=["noteId"]
+notes/conversation.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/conversation.limit: minimum=1 maximum=100
+notes/conversation.offset: minimum=0 maximum=9007199254740991
+notes/create.visibility: enum=["public","home","followers","specified"]
+notes/create.visibleUserIds: uniqueItems=true
+notes/create.visibleUserIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.cw<anyOf0>: minLength=1 maxLength=100
+notes/create.reactionAcceptance<anyOf0>: enum=["likeOnly","likeOnlyForRemote","nonSensitiveOnly","nonSensitiveOnlyForLocalLikeOnlyForRemote"]
+notes/create.replyId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.renoteId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.channelId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.text<anyOf0>: minLength=1 maxLength=3000
+notes/create.fileIds: minItems=1 maxItems=16 uniqueItems=true
+notes/create.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.mediaIds: minItems=1 maxItems=16 uniqueItems=true
+notes/create.mediaIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/create.poll<anyOf0>: required=["choices"]
+notes/create.poll<anyOf0>.choices: minItems=2 maxItems=10 uniqueItems=true
+notes/create.poll<anyOf0>.choices[]: minLength=1 maxLength=50
+notes/create.poll<anyOf0>.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/create.poll<anyOf0>.expiredAfter<anyOf0>: minimum=1 maximum=9007199254740991
+notes/delete: required=["noteId"]
+notes/delete.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.visibility: enum=["public","home","followers","specified"]
+notes/drafts/create.visibleUserIds: uniqueItems=true
+notes/drafts/create.visibleUserIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.cw<anyOf0>: minLength=1 maxLength=100
+notes/drafts/create.hashtag<anyOf0>: maxLength=200
+notes/drafts/create.reactionAcceptance<anyOf0>: enum=["likeOnly","likeOnlyForRemote","nonSensitiveOnly","nonSensitiveOnlyForLocalLikeOnlyForRemote"]
+notes/drafts/create.replyId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.renoteId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.channelId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.text<anyOf0>: minLength=0 maxLength=3000
+notes/drafts/create.fileIds: minItems=0 maxItems=16 uniqueItems=true
+notes/drafts/create.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/create.poll<anyOf0>: required=["choices"]
+notes/drafts/create.poll<anyOf0>.choices: minItems=0 maxItems=10 uniqueItems=true
+notes/drafts/create.poll<anyOf0>.choices[]: minLength=1 maxLength=50
+notes/drafts/create.poll<anyOf0>.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/drafts/create.poll<anyOf0>.expiredAfter<anyOf0>: minimum=1 maximum=9007199254740991
+notes/drafts/create.scheduledAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/drafts/delete: required=["draftId"]
+notes/drafts/delete.draftId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/list.limit: minimum=1 maximum=100
+notes/drafts/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/drafts/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/drafts/update: required=["draftId"]
+notes/drafts/update.draftId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.visibility: enum=["public","home","followers","specified"]
+notes/drafts/update.visibleUserIds: uniqueItems=true
+notes/drafts/update.visibleUserIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.cw<anyOf0>: minLength=1 maxLength=100
+notes/drafts/update.hashtag<anyOf0>: maxLength=200
+notes/drafts/update.reactionAcceptance<anyOf0>: enum=["likeOnly","likeOnlyForRemote","nonSensitiveOnly","nonSensitiveOnlyForLocalLikeOnlyForRemote"]
+notes/drafts/update.replyId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.renoteId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.channelId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.text<anyOf0>: minLength=0 maxLength=3000
+notes/drafts/update.fileIds: minItems=0 maxItems=16 uniqueItems=true
+notes/drafts/update.fileIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/drafts/update.poll<anyOf0>: required=["choices"]
+notes/drafts/update.poll<anyOf0>.choices: minItems=0 maxItems=10 uniqueItems=true
+notes/drafts/update.poll<anyOf0>.choices[]: minLength=1 maxLength=50
+notes/drafts/update.poll<anyOf0>.expiresAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/drafts/update.poll<anyOf0>.expiredAfter<anyOf0>: minimum=1 maximum=9007199254740991
+notes/drafts/update.scheduledAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/favorites/create: required=["noteId"]
+notes/favorites/create.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/favorites/delete: required=["noteId"]
+notes/favorites/delete.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/featured.limit: minimum=1 maximum=100
+notes/featured.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/featured.channelId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/global-timeline.limit: minimum=1 maximum=100
+notes/global-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/global-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/global-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/global-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/hybrid-timeline.limit: minimum=1 maximum=100
+notes/hybrid-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/hybrid-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/hybrid-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/hybrid-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/local-timeline.limit: minimum=1 maximum=100
+notes/local-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/local-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/local-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/local-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/mentions.limit: minimum=1 maximum=100
+notes/mentions.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/mentions.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/mentions.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/mentions.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/polls/recommendation.limit: minimum=1 maximum=100
+notes/polls/recommendation.offset: minimum=0 maximum=9007199254740991
+notes/polls/vote: required=["choice","noteId"]
+notes/polls/vote.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/polls/vote.choice: minimum=-9007199254740991 maximum=9007199254740991
+notes/reactions: required=["noteId"]
+notes/reactions.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/reactions.limit: minimum=1 maximum=100
+notes/reactions.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/reactions.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/reactions.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/reactions.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/reactions/create: required=["noteId","reaction"]
+notes/reactions/create.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/reactions/delete: required=["noteId"]
+notes/reactions/delete.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/renotes: required=["noteId"]
+notes/renotes.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/renotes.limit: minimum=1 maximum=100
+notes/renotes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/renotes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/renotes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/renotes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/replies: required=["noteId"]
+notes/replies.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/replies.limit: minimum=1 maximum=100
+notes/replies.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/replies.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/replies.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/replies.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search: required=["query"]
+notes/search.rangeStartAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/search.rangeEndAt<anyOf0>: minimum=-9007199254740991 maximum=9007199254740991
+notes/search.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search.limit: minimum=1 maximum=100
+notes/search.offset: minimum=0 maximum=9007199254740991
+notes/search.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search.channelId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search.visibility<anyOf0>: enum=["public","home","followers","specified"]
+notes/search-by-tag<anyOf0>: required=["tag"]
+notes/search-by-tag<anyOf0>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search-by-tag<anyOf0>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search-by-tag<anyOf0>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search-by-tag<anyOf0>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search-by-tag<anyOf0>.limit: minimum=1 maximum=100
+notes/search-by-tag<anyOf0>.tag: minLength=1
+notes/search-by-tag<anyOf1>: required=["query"]
+notes/search-by-tag<anyOf1>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search-by-tag<anyOf1>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/search-by-tag<anyOf1>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search-by-tag<anyOf1>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/search-by-tag<anyOf1>.limit: minimum=1 maximum=100
+notes/search-by-tag<anyOf1>.query: minItems=1
+notes/search-by-tag<anyOf1>.query[]: minItems=1
+notes/search-by-tag<anyOf1>.query[][]: minLength=1
+notes/show: required=["noteId"]
+notes/show.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/show-partial-bulk: required=["noteIds"]
+notes/show-partial-bulk.noteIds: minItems=1 maxItems=100
+notes/show-partial-bulk.noteIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/state: required=["noteId"]
+notes/state.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/thread-muting/create: required=["noteId"]
+notes/thread-muting/create.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/thread-muting/delete: required=["noteId"]
+notes/thread-muting/delete.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/timeline.limit: minimum=1 maximum=100
+notes/timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/translate: required=["noteId","targetLang"]
+notes/translate.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/unrenote: required=["noteId"]
+notes/unrenote.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/user-list-timeline: required=["listId"]
+notes/user-list-timeline.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/user-list-timeline.limit: minimum=1 maximum=100
+notes/user-list-timeline.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/user-list-timeline.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+notes/user-list-timeline.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+notes/user-list-timeline.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+notifications/create: required=["body"]
+notifications/delete: required=["notificationId"]
+notifications/delete.notificationId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+page-push: required=["event","pageId"]
+page-push.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/create: required=["content","name","script","title","variables"]
+pages/create.name: minLength=1 pattern="^[^\\s:\\/?#\\[\\]@!$&'()*+,;=\\\\%\\x00-\\x20]{1,256}$"
+pages/create.eyeCatchingImageId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/create.font: enum=["serif","sans-serif"]
+pages/delete: required=["pageId"]
+pages/delete.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/like: required=["pageId"]
+pages/like.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/show<anyOf0>: required=["pageId"]
+pages/show<anyOf0>.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/show<anyOf1>: required=["name","username"]
+pages/unlike: required=["pageId"]
+pages/unlike.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/update: required=["pageId"]
+pages/update.pageId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/update.name: minLength=1 pattern="^[^\\s:\\/?#\\[\\]@!$&'()*+,;=\\\\%\\x00-\\x20]{1,256}$"
+pages/update.eyeCatchingImageId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+pages/update.font: enum=["serif","sans-serif"]
+promo/read: required=["noteId"]
+promo/read.noteId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+renote-mute/create: required=["userId"]
+renote-mute/create.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+renote-mute/delete: required=["userId"]
+renote-mute/delete.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+renote-mute/list.limit: minimum=1 maximum=100
+renote-mute/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+renote-mute/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+renote-mute/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+renote-mute/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+request-reset-password: required=["email","username"]
+reset-password: required=["password","token"]
+reset-password.password: minLength=1
+roles/notes: required=["roleId"]
+roles/notes.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/notes.limit: minimum=1 maximum=100
+roles/notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+roles/notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+roles/show: required=["roleId"]
+roles/show.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/users: required=["roleId"]
+roles/users.roleId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/users.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/users.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+roles/users.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+roles/users.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+roles/users.limit: minimum=1 maximum=100
+sw/register: required=["auth","endpoint","publickey"]
+sw/show-registration: required=["endpoint"]
+sw/unregister: required=["endpoint"]
+sw/update-registration: required=["endpoint"]
+test: required=["required"]
+test.id: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+username/available: required=["username"]
+username/available.username: pattern="^\\w{1,20}$"
+users.limit: minimum=1 maximum=100
+users.offset: minimum=0 maximum=9007199254740991
+users.sort: enum=["+follower","-follower","+createdAt","-createdAt","+updatedAt","-updatedAt"]
+users.state: enum=["all","alive"]
+users.origin: enum=["combined","local","remote"]
+users/achievements: required=["userId"]
+users/achievements.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/clips: required=["userId"]
+users/clips.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/clips.limit: minimum=1 maximum=100
+users/clips.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/clips.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/clips.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/clips.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/featured-notes: required=["userId"]
+users/featured-notes.limit: minimum=1 maximum=100
+users/featured-notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/featured-notes.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/flashs: required=["userId"]
+users/flashs.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/flashs.limit: minimum=1 maximum=100
+users/flashs.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/flashs.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/flashs.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/flashs.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/followers<anyOf0>: required=["userId"]
+users/followers<anyOf0>.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/followers<anyOf0>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/followers<anyOf0>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/followers<anyOf0>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/followers<anyOf0>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/followers<anyOf0>.limit: minimum=1 maximum=100
+users/followers<anyOf1>: required=["host","username"]
+users/followers<anyOf1>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/followers<anyOf1>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/followers<anyOf1>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/followers<anyOf1>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/followers<anyOf1>.limit: minimum=1 maximum=100
+users/following<anyOf0>: required=["userId"]
+users/following<anyOf0>.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/following<anyOf0>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/following<anyOf0>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/following<anyOf0>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/following<anyOf0>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/following<anyOf0>.limit: minimum=1 maximum=100
+users/following<anyOf0>.birthday<anyOf0>: pattern="^\\d{4}-\\d{2}-\\d{2}$"
+users/following<anyOf1>: required=["host","username"]
+users/following<anyOf1>.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/following<anyOf1>.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/following<anyOf1>.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/following<anyOf1>.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/following<anyOf1>.limit: minimum=1 maximum=100
+users/following<anyOf1>.birthday<anyOf0>: pattern="^\\d{4}-\\d{2}-\\d{2}$"
+users/gallery/posts: required=["userId"]
+users/gallery/posts.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/gallery/posts.limit: minimum=1 maximum=100
+users/gallery/posts.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/gallery/posts.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/gallery/posts.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/gallery/posts.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/get-following-users-by-birthday: required=["birthday"]
+users/get-following-users-by-birthday.limit: minimum=1 maximum=100
+users/get-following-users-by-birthday.offset: minimum=0 maximum=9007199254740991
+users/get-following-users-by-birthday.birthday<oneOf0>: required=["day","month"]
+users/get-following-users-by-birthday.birthday<oneOf0>.month: minimum=1 maximum=12
+users/get-following-users-by-birthday.birthday<oneOf0>.day: minimum=1 maximum=31
+users/get-following-users-by-birthday.birthday<oneOf1>: required=["begin","end"]
+users/get-following-users-by-birthday.birthday<oneOf1>.begin: required=["day","month"]
+users/get-following-users-by-birthday.birthday<oneOf1>.begin.month: minimum=1 maximum=12
+users/get-following-users-by-birthday.birthday<oneOf1>.begin.day: minimum=1 maximum=31
+users/get-following-users-by-birthday.birthday<oneOf1>.end: required=["day","month"]
+users/get-following-users-by-birthday.birthday<oneOf1>.end.month: minimum=1 maximum=12
+users/get-following-users-by-birthday.birthday<oneOf1>.end.day: minimum=1 maximum=31
+users/get-frequently-replied-users: required=["userId"]
+users/get-frequently-replied-users.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/get-frequently-replied-users.limit: minimum=1 maximum=100
+users/lists/create: required=["name"]
+users/lists/create.name: minLength=1 maxLength=100
+users/lists/create-from-public: required=["listId","name"]
+users/lists/create-from-public.name: minLength=1 maxLength=100
+users/lists/create-from-public.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/delete: required=["listId"]
+users/lists/delete.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/favorite: required=["listId"]
+users/lists/favorite.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/get-memberships: required=["listId"]
+users/lists/get-memberships.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/get-memberships.limit: minimum=1 maximum=100
+users/lists/get-memberships.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/get-memberships.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/get-memberships.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/lists/get-memberships.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/lists/list.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/pull: required=["listId","userId"]
+users/lists/pull.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/pull.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/push: required=["listId","userId"]
+users/lists/push.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/push.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/show: required=["listId"]
+users/lists/show.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/unfavorite: required=["listId"]
+users/lists/unfavorite.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/update: required=["listId"]
+users/lists/update.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/update.name: minLength=1 maxLength=100
+users/lists/update-membership: required=["listId","userId"]
+users/lists/update-membership.listId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/lists/update-membership.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/notes: required=["userId"]
+users/notes.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/notes.limit: minimum=1 maximum=100
+users/notes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/notes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/notes.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/notes.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/pages: required=["userId"]
+users/pages.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/pages.limit: minimum=1 maximum=100
+users/pages.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/pages.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/pages.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/pages.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/reactions: required=["userId"]
+users/reactions.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/reactions.limit: minimum=1 maximum=100
+users/reactions.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/reactions.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/reactions.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+users/reactions.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+users/recommendation.limit: minimum=1 maximum=100
+users/recommendation.offset: minimum=0 maximum=9007199254740991
+users/relation: required=["userId"]
+users/relation.userId<anyOf0>: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/relation.userId<anyOf1>[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/report-abuse: required=["comment","userId"]
+users/report-abuse.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/report-abuse.comment: minLength=1 maxLength=2048
+users/search: required=["query"]
+users/search.offset: minimum=0 maximum=9007199254740991
+users/search.limit: minimum=1 maximum=100
+users/search.origin: enum=["local","remote","combined"]
+users/search-by-username-and-host<anyOf0>: required=["username"]
+users/search-by-username-and-host<anyOf0>.limit: minimum=1 maximum=100
+users/search-by-username-and-host<anyOf1>: required=["host"]
+users/search-by-username-and-host<anyOf1>.limit: minimum=1 maximum=100
+users/show<anyOf0>: required=["userId"]
+users/show<anyOf0>.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/show<anyOf1>: required=["userIds"]
+users/show<anyOf1>.userIds: maxItems=100 uniqueItems=true
+users/show<anyOf1>.userIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+users/show<anyOf2>: required=["username"]
+users/update-memo: required=["memo","userId"]
+users/update-memo.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+v2/admin/emoji/list.query<anyOf0>.hostType: enum=["local","remote","all"]
+v2/admin/emoji/list.query<anyOf0>.roleIds[]: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+v2/admin/emoji/list.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+v2/admin/emoji/list.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
+v2/admin/emoji/list.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
+v2/admin/emoji/list.untilDate: minimum=-9007199254740991 maximum=9007199254740991
+v2/admin/emoji/list.limit: minimum=1 maximum=100
+v2/admin/emoji/list.page: minimum=-9007199254740991 maximum=9007199254740991
+v2/admin/emoji/list.sortKeys[]: enum=["+id","-id","+updatedAt","-updatedAt","+name","-name","+host","-host","+uri","-uri","+publicUrl","-publicUrl","+type","-type","+aliases","-aliases","+category","-category","+license","-license","+isSensitive","-isSensitive","+localOnly","-localOnly","+roleIdsThatCanBeUsedThisEmojiAsReaction","-roleIdsThatCanBeUsedThisEmojiAsReaction"]
+verify-email: required=["code"]

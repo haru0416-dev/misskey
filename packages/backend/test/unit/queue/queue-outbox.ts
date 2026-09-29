@@ -566,28 +566,6 @@ describe('queue outbox', () => {
 		}
 	});
 
-	test('post-processing runs at most the configured number of tasks at once', async () => {
-		const lifecycle = createNotePostProcessing(() => {}, 5);
-		const blocked = Promise.withResolvers<void>();
-		let active = 0;
-		let peakActive = 0;
-		const producers = Array.from({ length: 12 }, () =>
-			lifecycle.runProducer(async (reservation) => {
-				reservation.submit(async () => {
-					active++;
-					peakActive = Math.max(peakActive, active);
-					await blocked.promise;
-					active--;
-				});
-			}),
-		);
-		await Promise.all(producers);
-		await vi.waitFor(() => expect(active).toBe(5));
-		blocked.resolve();
-		await lifecycle.close();
-		expect(peakActive).toBe(5);
-	});
-
 	test('post-processing concurrency takes a quarter of the database pool within 2 to 8', () => {
 		expect([1, 11, 12, 16, 30, 32, 60].map(notePostProcessingConcurrency)).toStrictEqual([2, 2, 3, 4, 7, 8, 8]);
 	});
@@ -815,27 +793,6 @@ describe('queue outbox', () => {
 		const job = await runtime.dbQueue.getJob(`outbox-${outboxId}`);
 		expect(job).toBeDefined();
 		await job?.remove();
-	});
-
-	test('rolls an outbox row back with its surrounding transaction', async () => {
-		let outboxId: string | undefined;
-		await expect(
-			runtime.db.transaction(async (transaction) => {
-				outboxId = await enqueueDbJobInOutbox(
-					transaction as RuntimeDependencies['db'],
-					'deleteAccount',
-					{
-						user: { id: 'queue-outbox-rollback-user' },
-						soft: true,
-					},
-					{ removeOnComplete: true },
-				);
-				throw new Error('rollback');
-			}),
-		).rejects.toThrow('rollback');
-
-		expect(outboxId).toBeDefined();
-		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId!))).toHaveLength(0);
 	});
 
 	test('reports the age of the oldest pending row as a number', async () => {

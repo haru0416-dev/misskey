@@ -71,6 +71,7 @@ describe('hono-queue-object-storage', () => {
 		await expect(handleQueueDeleteFile(deps, { key: 'missing-key' } satisfies ObjectStorageFileJobData)).resolves.toBe(
 			'Success',
 		);
+		expect(deleteMock).toHaveBeenCalledOnce();
 	});
 
 	test('deleteFileSyncForApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
