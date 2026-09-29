@@ -5,7 +5,7 @@
 
 import { and, desc, eq, gt, isNull, ne, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { poll } from '@/db/schema/poll.js';
 import type { PollInsert, PollRow } from '@/db/schema/poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -32,7 +32,7 @@ export async function fetchPollByNoteIdFromDatabase(
 	return row == null ? null : deserializePoll(row);
 }
 
-const pollByNoteIdsPlan = defineQueryPlan((db) => {
+const pollByNoteIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(poll);
 	return {
 		query: db

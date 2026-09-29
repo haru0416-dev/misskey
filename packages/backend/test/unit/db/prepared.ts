@@ -5,8 +5,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { eq, getTableColumns, getTableName, sql } from 'drizzle-orm';
-import { alias, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { alias, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { defineCachedQueryPlan, defineQueryPlan, getPlanCacheDatabase } from '@/db/prepared.js';
 import { loadConfig } from '@/config.js';
 import {
 	createNoteInDatabase,
@@ -444,5 +444,76 @@ describe('db/prepared', () => {
 		const rows = await listActiveWebhooksByUserIdAndEventFromDatabase(db, userId, 'note');
 		expect(rows.map((row) => row.id)).toEqual([matching.id]);
 		expect(await listActiveWebhooksByUserIdAndEventFromDatabase(db, userId, 'reaction')).toEqual([]);
+	});
+
+	describe('計画を使い回す接続', () => {
+		// 専用の表で確かめる。列の型を変えるので、他のテストが使う表には触れない。
+		const planCacheProbe = pgTable('test_plan_cache_probe', {
+			id: varchar('id', { length: 32 }).primaryKey(),
+			value: varchar('value', { length: 16 }),
+		});
+		const probeById = defineCachedQueryPlan((planDb) => {
+			const selection = getTableColumns(planCacheProbe);
+			return {
+				query: planDb
+					.select(selection)
+					.from(planCacheProbe)
+					.where(eq(planCacheProbe.id, sql.placeholder('id'))),
+				selection,
+				metadata: { type: 'select', tables: [getTableName(planCacheProbe)] },
+			};
+		});
+		let isolatedRuntime: RuntimeDependencies;
+
+		beforeAll(async () => {
+			// 使い回しを止めた状態が他のテストに残らないよう、専用の runtime で確かめる。
+			isolatedRuntime = await createRuntimeDependencies(loadConfig());
+			await isolatedRuntime.db.execute(sql`DROP TABLE IF EXISTS "test_plan_cache_probe"`);
+			await isolatedRuntime.db.execute(
+				sql`CREATE TABLE "test_plan_cache_probe" ("id" varchar(32) PRIMARY KEY, "value" varchar(16))`,
+			);
+			await isolatedRuntime.db.execute(sql`INSERT INTO "test_plan_cache_probe" VALUES ('a', 'x')`);
+		});
+
+		afterAll(async () => {
+			await isolatedRuntime.db.execute(sql`DROP TABLE IF EXISTS "test_plan_cache_probe"`);
+			await isolatedRuntime.dispose();
+		});
+
+		test('ルートの db では計画用の接続で、transaction の中ではその接続で実行する', async () => {
+			const planCacheDb = getPlanCacheDatabase(isolatedRuntime.db);
+			expect(planCacheDb).toBeDefined();
+			const client = (planCacheDb as unknown as { $client: { unsafe: (...args: unknown[]) => unknown } }).$client;
+			const original = client.unsafe;
+			let calls = 0;
+			client.unsafe = function (this: unknown, ...args: unknown[]) {
+				calls++;
+				return original.apply(this, args);
+			};
+			try {
+				expect(await probeById.execute(isolatedRuntime.db, { id: 'a' })).toEqual([{ id: 'a', value: 'x' }]);
+				expect(calls).toBe(1);
+				await isolatedRuntime.db.transaction(async (tx) => {
+					expect(await probeById.execute(tx as unknown as MiDrizzleDatabase, { id: 'a' })).toEqual([
+						{ id: 'a', value: 'x' },
+					]);
+				});
+				expect(calls).toBe(1);
+			} finally {
+				client.unsafe = original;
+			}
+		});
+
+		test('準備した後に列の型が変わっても失敗せず、以後は計画を使い回さない', async () => {
+			// 計画用の接続のどれもが文を準備するよう、並行して何度も実行する。
+			await Promise.all(Array.from({ length: 16 }, () => probeById.execute(isolatedRuntime.db, { id: 'a' })));
+			await isolatedRuntime.db.execute(sql`ALTER TABLE "test_plan_cache_probe" ALTER COLUMN "value" TYPE varchar(64)`);
+
+			const results = await Promise.all(
+				Array.from({ length: 16 }, () => probeById.execute(isolatedRuntime.db, { id: 'a' })),
+			);
+			expect(results.every((rows) => rows.length === 1 && rows[0]!.value === 'x')).toBe(true);
+			expect(getPlanCacheDatabase(isolatedRuntime.db)).toBeUndefined();
+		});
 	});
 });

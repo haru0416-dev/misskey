@@ -23,7 +23,7 @@ import type { SQL } from 'drizzle-orm';
 import { instance } from '@/db/schema/instance.js';
 import type { InstanceInsert, InstanceRow } from '@/db/schema/instance.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiInstance } from '@/models/Instance.js';
@@ -32,7 +32,7 @@ function deserializeInstance(row: InstanceRow): MiInstance {
 	return row as MiInstance;
 }
 
-const instanceByHostPlan = defineQueryPlan((db) => {
+const instanceByHostPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(instance);
 	return {
 		query: db

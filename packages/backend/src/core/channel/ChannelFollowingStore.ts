@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { channelFollowing } from '@/db/schema/channel-following.js';
 import type { ChannelFollowingInsert, ChannelFollowingRow } from '@/db/schema/channel-following.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -19,7 +19,7 @@ function channelFollowingCondition(userId: MiUser['id'] | Placeholder, channelId
 	return and(eq(channelFollowing.followerId, userId), eq(channelFollowing.followeeId, channelId));
 }
 
-const channelFollowingExistsPlan = defineQueryPlan((db) => {
+const channelFollowingExistsPlan = defineCachedQueryPlan((db) => {
 	const selection = { id: channelFollowing.id };
 	return {
 		query: db
@@ -57,7 +57,7 @@ export async function deleteChannelFollowingFromDatabase(
 	await db.delete(channelFollowing).where(channelFollowingCondition(userId, channelId));
 }
 
-const channelFollowingFollowedChannelIdsByUserIdPlan = defineQueryPlan((db) => {
+const channelFollowingFollowedChannelIdsByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { followeeId: channelFollowing.followeeId };
 	return {
 		query: db

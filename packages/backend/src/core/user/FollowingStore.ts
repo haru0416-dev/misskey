@@ -5,7 +5,7 @@
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, not, or, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { following } from '@/db/schema/following.js';
 import type { FollowingInsert, FollowingRow } from '@/db/schema/following.js';
 import { user as userTable } from '@/db/schema/user.js';
@@ -311,7 +311,7 @@ export const followerForNoteDeliverySelection = {
 	followerInbox: following.followerInbox,
 } as const;
 
-const followingForNoteDeliveryByFolloweeIdPlan = defineQueryPlan((db) => ({
+const followingForNoteDeliveryByFolloweeIdPlan = defineCachedQueryPlan((db) => ({
 	query: db
 		.select(followerForNoteDeliverySelection)
 		.from(following)
@@ -452,7 +452,7 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 	});
 }
 
-const followingExistsPlan = defineQueryPlan((db) => {
+const followingExistsPlan = defineCachedQueryPlan((db) => {
 	const selection = { id: following.id };
 	return {
 		query: db

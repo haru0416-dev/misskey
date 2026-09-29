@@ -5,7 +5,7 @@
 
 import { and, asc, count, desc, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
 import type { NoteReactionInsert, NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -57,7 +57,7 @@ export async function fetchNoteReactionByUserAndNoteFromDatabase(
 	return row ?? null;
 }
 
-const noteReactionByUserIdAndNoteIdsPlan = defineQueryPlan((db) => {
+const noteReactionByUserIdAndNoteIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(noteReaction);
 	return {
 		query: db
@@ -88,7 +88,7 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 	return await noteReactionByUserIdAndNoteIdsPlan.execute(db, { userId, noteIds });
 }
 
-const noteReactionByNoteIdsAndUserIdsPlan = defineQueryPlan((db) => {
+const noteReactionByNoteIdsAndUserIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(noteReaction);
 	return {
 		query: db

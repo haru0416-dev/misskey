@@ -21,7 +21,7 @@ import {
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan, defineQueryPlan } from '@/db/prepared.js';
 import { note } from '@/db/schema/note.js';
 import type { NoteInsert, NoteRow } from '@/db/schema/note.js';
 import { driveFile } from '@/db/schema/drive-file.js';
@@ -476,7 +476,7 @@ export async function createNoteWithPollInDatabase(
 	});
 }
 
-const noteByIdPlan = defineQueryPlan((db) => {
+const noteByIdPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(note);
 	return {
 		query: db
@@ -495,7 +495,7 @@ export async function fetchNoteByIdFromDatabase(db: MiDrizzleDatabase, id: MiNot
 	return row ? deserializeNote(row) : null;
 }
 
-const notePostCreateSnapshotPlan = defineQueryPlan((db) => {
+const notePostCreateSnapshotPlan = defineCachedQueryPlan((db) => {
 	const followerFields = Object.entries(followerForNoteDeliverySelection).flatMap(([key, column]) => [
 		sql`${key}::text`,
 		sql`${column}`,
@@ -565,7 +565,7 @@ export async function fetchNoteByIdOrFailFromDatabase(db: MiDrizzleDatabase, id:
 	return found;
 }
 
-const noteByIdsPlan = defineQueryPlan((db) => {
+const noteByIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(note);
 	return {
 		query: db
@@ -1190,7 +1190,7 @@ export async function listVisibleNotesWithUsersByIdsFromDatabase(
 	}));
 }
 
-const noteHydratedByIdsPlan = defineQueryPlan((db) => {
+const noteHydratedByIdsPlan = defineCachedQueryPlan((db) => {
 	const replyNote = alias(note, 'reply');
 	const renoteNote = alias(note, 'renote');
 	const replyUser = alias(userTable, 'replyUser');

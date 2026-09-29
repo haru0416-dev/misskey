@@ -9,6 +9,7 @@ import { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { SelectedFields, SelectedFieldsOrdered } from 'drizzle-orm/pg-core';
 import type { WithCacheConfig } from 'drizzle-orm/cache/core/types';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import Logger from '@/logger.js';
 
 type QueryRecipe<T> = {
 	query: { toSQL(): Query; then: PromiseLike<T>['then'] };
@@ -30,6 +31,34 @@ type CompiledQuery = Readonly<{
 	metadata: QueryRecipe<unknown>['metadata'];
 	cacheConfig: WithCacheConfig | undefined;
 }>;
+
+/**
+ * 計画を使い回す接続 (名前付きの文) の db。ルートの db で実行した defineCachedQueryPlan の文だけをそちらへ回す。
+ * transaction / savepoint の db は登録されないので、その接続のまま実行する。
+ */
+const planCacheDatabases = new WeakMap<MiDrizzleDatabase, MiDrizzleDatabase>();
+
+const logger = new Logger('db').createSubLogger('prepared', 'gray');
+
+/**
+ * 名前付きの文は、準備した後に列の型が変わると (動作中に ALTER COLUMN ... TYPE を当てる等) その接続で失敗し続け、
+ * Bun.sql は作り直さない。受けたら今の接続で実行し直し、以後はこの db の計画の使い回しを止める。
+ */
+function isStalePreparedPlanError(error: unknown): boolean {
+	// drizzle は "Failed query: ..." で包み、PostgreSQL のエラーは cause に入る。
+	for (let current: unknown = error; current instanceof Error; current = current.cause) {
+		if (/cached plan must not change result type/.test(current.message)) return true;
+	}
+	return false;
+}
+
+export function registerPlanCacheDatabase(db: MiDrizzleDatabase, planCacheDb: MiDrizzleDatabase): void {
+	planCacheDatabases.set(db, planCacheDb);
+}
+
+export function getPlanCacheDatabase(db: MiDrizzleDatabase): MiDrizzleDatabase | undefined {
+	return planCacheDatabases.get(db);
+}
 
 export type QueryPlan<T> = {
 	execute(db: MiDrizzleDatabase, values?: Record<string, unknown>): Promise<T>;
@@ -100,7 +129,20 @@ function compileRowMapper(
  * selection は同じ recipe 内で select / returning にも渡す。任意の prepared object の抽出や
  * all() の raw row 実行は扱わない。SQL と mapping の再利用と、session の寿命を分離する。
  */
+/**
+ * 計画を使い回してよい文。値によって最適な計画が変わらないもの (キーの等号・キーの配列・存在確認で引く読み取りと、
+ * 条件の無い全件の読み取り) だけに使う。範囲や絞り込みで一致件数が大きく変わる文に使うと、generic plan に
+ * 固定されて遅くなる (公開ノート一覧の絞り込みで 55〜72 → 127〜170 ms、冷えたキャッシュで 117 → 3,069 ms)。
+ */
+export function defineCachedQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>): QueryPlan<T> {
+	return createQueryPlan(recipe, true);
+}
+
 export function defineQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>): QueryPlan<T> {
+	return createQueryPlan(recipe, false);
+}
+
+function createQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>, cachePlan: boolean): QueryPlan<T> {
 	let compiled: CompiledQuery | undefined;
 	return Object.freeze({
 		async execute(db: MiDrizzleDatabase, values?: Record<string, unknown>): Promise<T> {
@@ -123,17 +165,31 @@ export function defineQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecip
 				);
 				if (!dynamicDefaults) compiled = plan;
 			}
-			// 無名文を現在の transaction / savepoint の session にだけ結び付ける。
-			const prepared = db._.session.prepareQuery<{ execute: T; all: unknown; values: unknown }>(
-				plan.query,
-				undefined,
-				undefined,
-				plan.mapRows !== undefined,
-				plan.mapRows as ((rows: unknown[][]) => T) | undefined,
-				plan.metadata,
-				plan.cacheConfig,
-			);
-			return await prepared.execute(values);
+			// 現在の transaction / savepoint の session に結び付ける。ルートの db なら計画を使い回す接続へ回す。
+			const run = (target: MiDrizzleDatabase) =>
+				target._.session
+					.prepareQuery<{ execute: T; all: unknown; values: unknown }>(
+						plan.query,
+						undefined,
+						undefined,
+						plan.mapRows !== undefined,
+						plan.mapRows as ((rows: unknown[][]) => T) | undefined,
+						plan.metadata,
+						plan.cacheConfig,
+					)
+					.execute(values);
+			const planCacheDb = cachePlan ? planCacheDatabases.get(db) : undefined;
+			if (planCacheDb == null) {
+				return await run(db);
+			}
+			try {
+				return await run(planCacheDb);
+			} catch (error) {
+				if (!isStalePreparedPlanError(error)) throw error;
+				planCacheDatabases.delete(db);
+				logger.warn('A cached query plan became invalid after a schema change; stopped reusing plans until restart.');
+				return await run(db);
+			}
 		},
 	});
 }

@@ -4,7 +4,7 @@
  */
 
 import { and, count, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { webhook, deserializeWebhook } from '@/db/schema/webhook.js';
 import type { WebhookInsert } from '@/db/schema/webhook.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -30,7 +30,7 @@ export async function fetchWebhookByIdAndUserIdFromDatabase(
 	return row == null ? null : deserializeWebhook(row);
 }
 
-const webhookActiveByUserIdAndEventPlan = defineQueryPlan((db) => {
+const webhookActiveByUserIdAndEventPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(webhook);
 	return {
 		query: db

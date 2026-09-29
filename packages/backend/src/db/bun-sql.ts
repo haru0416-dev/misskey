@@ -10,6 +10,7 @@ import { createDrizzleQueryLogger } from '@/drizzle.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
+import { registerPlanCacheDatabase } from '@/db/prepared.js';
 
 const logger = new MisskeyLogger('db').createSubLogger('bun-sql', 'gray');
 
@@ -154,14 +155,15 @@ function buildConnectionUrl(config: Config): string {
 export function createBunSqlClient(
 	config: Config,
 	maxConnections = resolveDatabasePoolSize(config),
-	options: { idleTimeoutSeconds?: number } = {},
+	options: { idleTimeoutSeconds?: number; prepare?: boolean } = {},
 ): SQL {
 	return new SQL(buildConnectionUrl(config), {
 		max: maxConnections,
 		idleTimeout: options.idleTimeoutSeconds ?? Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
-		// 名前付き prepared statement の generic plan による劣化を避ける (db/prepared.ts)。
-		prepare: false,
+		// 既定は無名の文で、実行のたびに値に合わせて計画する。名前付き (prepare: true) は計画を使い回すので、
+		// 値で最適な計画が変わる文では generic plan に落ちて遅くなる (ホームタイムラインの DB 読みが 9 → 82〜91 ms)。
+		prepare: options.prepare ?? false,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
 	});
 }
@@ -176,11 +178,31 @@ export function createBunSqlDatabase(client: SQL, config: Config): MiDrizzleData
 	return db as unknown as MiDrizzleDatabase;
 }
 
+/**
+ * defineQueryPlan の文 (キーの等号で引く単純な読み書き) に回す接続の割合。これらの文は値によらず計画が同じなので、
+ * 名前付きの文で計画を使い回す。混合負荷で PostgreSQL の時間の約 4 割が計画の作成で、主キーで 1 行引く文でも
+ * 実行 0.10 ms に対して計画 0.32 ms かかっていた。接続の総数は変えずに分ける。
+ */
+const PLAN_CACHE_CONNECTION_SHARE = 4;
+
 export function createBunSqlRuntime(config: Config): BunSqlRuntime {
 	const maxConnections = resolveDatabasePoolSize(config);
-	const client = createBunSqlClient(config, maxConnections);
+	const planCacheConnections = Math.floor(maxConnections / PLAN_CACHE_CONNECTION_SHARE);
+	const client = createBunSqlClient(config, maxConnections - planCacheConnections);
 	const db = createBunSqlDatabase(client, config);
-	logger.info(`Using Bun.sql driver (max: ${maxConnections} connections)`);
+	logger.info(
+		`Using Bun.sql driver (max: ${maxConnections - planCacheConnections} connections + ${planCacheConnections} for cached plans)`,
+	);
+	if (planCacheConnections === 0) {
+		return { db, close: () => client.close() };
+	}
 
-	return { db, close: () => client.close() };
+	const planCacheClient = createBunSqlClient(config, planCacheConnections, { prepare: true });
+	registerPlanCacheDatabase(db, createBunSqlDatabase(planCacheClient, config));
+	return {
+		db,
+		close: async () => {
+			await Promise.all([client.close(), planCacheClient.close()]);
+		},
+	};
 }

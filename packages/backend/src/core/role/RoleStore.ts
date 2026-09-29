@@ -4,7 +4,7 @@
  */
 
 import { and, desc, eq, inArray, getTableColumns, getTableName } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { cacheVersion } from '@/db/schema/cache-version.js';
 import { role } from '@/db/schema/role.js';
 import type { RoleInsert, RoleRow } from '@/db/schema/role.js';
@@ -19,7 +19,7 @@ function deserializeRole(row: RoleRow): MiRole {
 	return row as MiRole;
 }
 
-const roleAllPlan = defineQueryPlan((db) => {
+const roleAllPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(role);
 	return {
 		query: db.select(selection).from(role),
@@ -34,7 +34,7 @@ export async function listRolesFromDatabase(db: MiDrizzleDatabase): Promise<MiRo
 	return rows.map((row) => deserializeRole(row));
 }
 
-const cacheVersionRolesPlan = defineQueryPlan((db) => {
+const cacheVersionRolesPlan = defineCachedQueryPlan((db) => {
 	const selection = { version: cacheVersion.version };
 	return {
 		query: db.select(selection).from(cacheVersion).where(eq(cacheVersion.key, 'roles')),

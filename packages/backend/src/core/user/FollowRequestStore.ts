@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder, SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { followRequest } from '@/db/schema/follow-request.js';
 import type { FollowRequestInsert, FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -37,7 +37,7 @@ export async function fetchFollowRequestFromDatabase(
 	return row ?? null;
 }
 
-const followRequestExistsPlan = defineQueryPlan((db) => {
+const followRequestExistsPlan = defineCachedQueryPlan((db) => {
 	const selection = { id: followRequest.id };
 	return {
 		query: db

@@ -4,7 +4,7 @@
  */
 
 import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { blocking } from '@/db/schema/blocking.js';
 import { channelFollowing } from '@/db/schema/channel-following.js';
 import { channelMuting } from '@/db/schema/channel-muting.js';
@@ -141,7 +141,7 @@ export function viewerRelationSnapshotCovers(
 
 function createViewerRelationPlan(mask: number) {
 	const orderedKinds = kindOrder.filter((_, index) => (mask & (1 << index)) !== 0);
-	return defineQueryPlan((db) => {
+	return defineCachedQueryPlan((db) => {
 		const selection = {
 			kind: sql<ViewerRelationKind>`"viewer_relation"."kind"`,
 			id: sql<string>`"viewer_relation"."id"`,

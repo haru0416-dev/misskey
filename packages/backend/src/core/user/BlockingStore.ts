@@ -5,7 +5,7 @@
 
 import { and, asc, count, desc, eq, gt, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { blocking } from '@/db/schema/blocking.js';
 import type { BlockingInsert, BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -139,7 +139,7 @@ export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
 	return rows.map((row) => row.blockeeId);
 }
 
-const blockingBlockerIdsByBlockeeIdPlan = defineQueryPlan((db) => {
+const blockingBlockerIdsByBlockeeIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { blockerId: blocking.blockerId };
 	return {
 		query: db

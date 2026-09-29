@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { renoteMuting } from '@/db/schema/renote-muting.js';
 import type { RenoteMutingInsert, RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -70,7 +70,7 @@ export async function deleteRenoteMutingsByIdsFromDatabase(
 	await db.delete(renoteMuting).where(inArray(renoteMuting.id, ids));
 }
 
-const renoteMutingMuteeIdsByMuterIdPlan = defineQueryPlan((db) => {
+const renoteMutingMuteeIdsByMuterIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { muteeId: renoteMuting.muteeId };
 	return {
 		query: db

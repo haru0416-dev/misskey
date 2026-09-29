@@ -20,7 +20,7 @@ import {
 	getTableName,
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { roleAssignment } from '@/db/schema/role-assignment.js';
 import type { RoleAssignmentInsert, RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -88,7 +88,7 @@ export async function listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(
 	return assignments;
 }
 
-const roleAssignmentByUserIdPlan = defineQueryPlan((db) => {
+const roleAssignmentByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(roleAssignment);
 	return {
 		query: db
@@ -109,7 +109,7 @@ export async function listRoleAssignmentsByUserIdFromDatabase(
 	return rows.map((row) => deserializeRoleAssignment(row));
 }
 
-const roleAssignmentByUserIdsPlan = defineQueryPlan((db) => {
+const roleAssignmentByUserIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(roleAssignment);
 	return {
 		query: db

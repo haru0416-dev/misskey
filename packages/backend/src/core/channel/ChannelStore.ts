@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, isNotNull, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { channel } from '@/db/schema/channel.js';
 import type { ChannelInsert, ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -24,7 +24,7 @@ function deserializeChannel(row: ChannelRow): MiChannel {
 	} as MiChannel;
 }
 
-const channelByIdsPlan = defineQueryPlan((db) => {
+const channelByIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(channel);
 	return {
 		query: db

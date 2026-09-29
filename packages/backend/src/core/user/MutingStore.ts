@@ -5,7 +5,7 @@
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { muting } from '@/db/schema/muting.js';
 import type { MutingInsert, MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -122,7 +122,7 @@ export async function listMutingsByMuterIdWithPaginationFromDatabase(
 	return rows.map((row) => deserializeMuting(row));
 }
 
-const mutingMuteeIdsByMuterIdPlan = defineQueryPlan((db) => {
+const mutingMuteeIdsByMuterIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { muteeId: muting.muteeId };
 	return {
 		query: db

@@ -4,7 +4,7 @@
  */
 
 import { and, asc, desc, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { userNotePining } from '@/db/schema/user-note-pining.js';
 import type { UserNotePiningInsert, UserNotePiningRow } from '@/db/schema/user-note-pining.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -24,7 +24,7 @@ function userNotePiningCondition(userId: MiUser['id'], noteId: MiNote['id']) {
 }
 
 const userNotePiningsByUserIdPlans = (['asc', 'desc'] as const).map((order) =>
-	defineQueryPlan((db) => {
+	defineCachedQueryPlan((db) => {
 		const selection = getTableColumns(userNotePining);
 		return {
 			query: db
@@ -53,7 +53,7 @@ export async function listUserNotePiningsByUserIdFromDatabase(
 }
 
 const userNotePiningsByUserIdsPlans = (['asc', 'desc'] as const).map((order) =>
-	defineQueryPlan((db) => {
+	defineCachedQueryPlan((db) => {
 		const selection = getTableColumns(userNotePining);
 		return {
 			query: db

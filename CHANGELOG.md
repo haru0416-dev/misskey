@@ -373,6 +373,7 @@
 - Enhance: プロフィールの権限計算とメモ取得、通知一覧のユーザー取得、リレー配送のキュー投入を最適化
 - Enhance: API の JSON 応答の gzip 圧縮を軽くした (混合負荷で 1 リクエストあたりのアプリ CPU が約 1 割減、圧縮後の大きさは同じ)
 - Enhance: ユーザー検索で、一致の少ない語は名前・ユーザー名・自己紹介をそれぞれ索引で引くようにし、ユーザー数に比例して遅くならないように
+- Enhance: キーで引く単純な問い合わせは PostgreSQL の実行計画を使い回すようにした (混合負荷で 1 リクエストあたりの PostgreSQL の CPU が約 25% 減)
 - Change: 外向きのプロキシ (`outboundNetwork.proxy.url`) を使うとき、接続先を送信前に検査した IP アドレスで指定するように (ホスト名は Host ヘッダと TLS の証明書検証に使う)。宛先のドメイン名で許可を決めているプロキシでは設定の見直しが必要
 - Change: `DriveFile` の `md5` を、中身を取得していないリモートのファイルでは `null` にした
 - Change: `i` の応答から仕様書に無く常に空だった `mutingNotificationTypes` を削除 (通知の受け取り設定は `notificationRecieveConfig`)

@@ -4,7 +4,7 @@
  */
 
 import { and, eq, sql, getTableName } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { userMemo } from '@/db/schema/user-memo.js';
 import type { UserMemoInsert } from '@/db/schema/user-memo.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -30,7 +30,7 @@ export async function upsertUserMemoInDatabase(db: MiDrizzleDatabase, data: User
 		});
 }
 
-const userMemoTextByUserIdAndTargetUserIdPlan = defineQueryPlan((db) => {
+const userMemoTextByUserIdAndTargetUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { memo: userMemo.memo };
 	return {
 		query: db
@@ -55,7 +55,7 @@ export async function fetchUserMemoTextFromDatabase(
 	return row?.memo ?? null;
 }
 
-const userMemoTextsByUserIdPlan = defineQueryPlan((db) => {
+const userMemoTextsByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = {
 		targetUserId: userMemo.targetUserId,
 		memo: userMemo.memo,

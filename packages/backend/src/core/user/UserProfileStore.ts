@@ -5,7 +5,7 @@
 
 import { and, count, eq, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { userProfile } from '@/db/schema/user-profile.js';
 import type { UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
@@ -24,7 +24,7 @@ function deserializeUserProfile(row: UserProfileRow): MiUserProfile {
 	} as MiUserProfile;
 }
 
-const userProfileByUserIdPlan = defineQueryPlan((db) => {
+const userProfileByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(userProfile);
 	return {
 		query: db
@@ -89,7 +89,7 @@ export async function fetchUserProfileByEmailVerifyCodeFromDatabase(
 	return row ? deserializeUserProfile(row) : null;
 }
 
-const userProfileByUserIdsPlan = defineQueryPlan((db) => {
+const userProfileByUserIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(userProfile);
 	return {
 		query: db

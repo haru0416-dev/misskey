@@ -5,7 +5,7 @@
 
 import { and, asc, count, desc, eq, inArray, sql, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { userListMembership } from '@/db/schema/user-list-membership.js';
 import type { UserListMembershipInsert, UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import { userList } from '@/db/schema/user-list.js';
@@ -75,7 +75,7 @@ export async function fetchUserListMembershipByUserIdAndUserListIdFromDatabase(
 	return row ?? null;
 }
 
-const userListMembershipForFanoutByUserIdPlan = defineQueryPlan((db) => {
+const userListMembershipForFanoutByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = {
 		userListId: userListMembership.userListId,
 		userListUserId: userListMembership.userListUserId,

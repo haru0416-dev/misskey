@@ -4,7 +4,7 @@
  */
 
 import { and, count, eq, inArray, lt, sql, getTableColumns, getTableName } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { antenna } from '@/db/schema/antenna.js';
 import type { AntennaInsert, AntennaRow } from '@/db/schema/antenna.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -165,7 +165,7 @@ export async function listAntennasByUserIdFromDatabase(
 	return rows.map(deserializeAntenna);
 }
 
-const antennaActivePlan = defineQueryPlan((db) => {
+const antennaActivePlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(antenna);
 	return {
 		query: db.select(selection).from(antenna).where(eq(antenna.isActive, true)),

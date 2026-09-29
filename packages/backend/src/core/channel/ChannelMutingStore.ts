@@ -5,7 +5,7 @@
 
 import { and, eq, gt, inArray, isNull, lt, or, sql, getTableName } from 'drizzle-orm';
 import type { Placeholder } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { channelMuting } from '@/db/schema/channel-muting.js';
 import type { ChannelMutingInsert, ChannelMutingRow } from '@/db/schema/channel-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -46,7 +46,7 @@ export async function listMutedChannelIdsByUserIdFromDatabase(
 	return rows.map((row) => row.channelId);
 }
 
-const channelMutingActiveChannelIdsByUserIdPlan = defineQueryPlan((db) => {
+const channelMutingActiveChannelIdsByUserIdPlan = defineCachedQueryPlan((db) => {
 	const selection = { channelId: channelMuting.channelId };
 	return {
 		query: db

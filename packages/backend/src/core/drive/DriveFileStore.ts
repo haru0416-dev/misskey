@@ -22,7 +22,7 @@ import {
 	getTableName,
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import type { DriveFileInsert, DriveFileRow } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -146,7 +146,7 @@ export async function fetchDriveFileByAccessKeyFromDatabase(
 	return row ? deserializeDriveFile(row) : null;
 }
 
-const driveFileByIdsPlan = defineQueryPlan((db) => {
+const driveFileByIdsPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(driveFile);
 	return {
 		query: db

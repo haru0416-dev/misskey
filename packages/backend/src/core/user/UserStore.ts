@@ -23,7 +23,7 @@ import {
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { cacheVersion } from '@/db/schema/cache-version.js';
-import { defineQueryPlan } from '@/db/prepared.js';
+import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { user as userTable } from '@/db/schema/user.js';
 import type { UserInsert, UserRow } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
@@ -228,7 +228,7 @@ export async function fetchLocalUserByIdFromDatabase(
 	return user?.host == null ? (user as MiLocalUser) : null;
 }
 
-const userByNativeTokenPlan = defineQueryPlan((db) => {
+const userByNativeTokenPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(userTable);
 	return {
 		query: db
@@ -251,7 +251,7 @@ export async function fetchLocalUserByNativeTokenFromDatabase(
 	return row ? (deserializeUser(row) as MiLocalUser) : null;
 }
 
-const userByNativeTokenWithRolesVersionPlan = defineQueryPlan((db) => {
+const userByNativeTokenWithRolesVersionPlan = defineCachedQueryPlan((db) => {
 	const selection = {
 		...getTableColumns(userTable),
 		rolesVersion: sql<number>`(select ${cacheVersion.version} from ${cacheVersion} where ${cacheVersion.key} = 'roles')`,
@@ -293,7 +293,7 @@ export async function fetchRemoteUserByIdFromDatabase(
 	return user?.host != null ? (user as MiRemoteUser) : null;
 }
 
-const userByIdPlan = defineQueryPlan((db) => {
+const userByIdPlan = defineCachedQueryPlan((db) => {
 	const selection = getTableColumns(userTable);
 	return {
 		query: db
@@ -353,7 +353,7 @@ export async function countUsersByHostNotNullFromDatabase(db: MiDrizzleDatabase)
 }
 
 const usersByIdsPlans = [false, true].map((includeSuspended) =>
-	defineQueryPlan((db) => {
+	defineCachedQueryPlan((db) => {
 		const conditions: SQL[] = [sql`${userTable.id} = ANY(${sql.placeholder('ids')})`];
 		if (!includeSuspended) {
 			conditions.push(eq(userTable.isSuspended, false));
