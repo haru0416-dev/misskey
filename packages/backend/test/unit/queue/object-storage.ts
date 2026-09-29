@@ -205,9 +205,17 @@ describe('hono-queue-object-storage', () => {
 			userHost: 'remote.example.com',
 		});
 
-		await handleQueueCleanRemoteFiles(deps, async () => {});
+		const progress: number[] = [];
+		await handleQueueCleanRemoteFiles(deps, async (value) => {
+			progress.push(value);
+		});
 
 		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(after).toBeNull();
+		// 進捗は 0〜100 で増えていき、最後の批の直後に全件ぶんの 100 に届く。
+		expect(progress.every((value, i) => value >= 0 && value <= 100 && (i === 0 || value >= progress[i - 1]!))).toBe(
+			true,
+		);
+		expect(progress.at(-2)).toBe(100);
 	});
 });

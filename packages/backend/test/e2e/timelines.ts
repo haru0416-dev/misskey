@@ -781,6 +781,27 @@ describe('Timelines', () => {
 						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
+					// ミュートしたチャンネルはフォロー中の一覧から外れる。別のチャンネルもフォローしていると DB の経路が
+					// 「ユーザーとチャンネルの両方をフォロー」の分岐に入るので、その分岐でもミュートが効くことを見る。
+					test('[チャンネル外リノート] 別のチャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
+						const [alice, bob] = await Promise.all([signup(), signup()]);
+						await api('following/create', { userId: bob.id }, alice);
+
+						const followedChannel = await createChannel('followed', bob);
+						const mutedChannel = await createChannel('muted', bob);
+						await followChannel(followedChannel.id, alice);
+						await muteChannel(mutedChannel.id, alice);
+
+						const bobNote = await post(bob, { text: 'ok', channelId: mutedChannel.id });
+						const bobRenote = await renote(bobNote.id, bob);
+						const bobPlain = await post(bob, { text: 'plain' });
+
+						const res = await api('notes/timeline', { limit: 100 }, alice);
+
+						expect(res.body.some((note: any) => note.id === bobPlain.id)).toBe(true);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
+					});
+
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 						await api('following/create', { userId: bob.id }, alice);

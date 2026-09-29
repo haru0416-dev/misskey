@@ -133,9 +133,9 @@ export async function handleQueueCleanRemoteFiles(
 
 		await Promise.all(files.map((file) => deleteFileSyncForApi(deps, file, true)));
 
-		deletedCount += 8;
+		deletedCount += files.length;
 
-		updateProgress((deletedCount * total) / 100);
+		updateProgress(Math.min(100, (deletedCount / total) * 100));
 	}
 }
 

@@ -1957,6 +1957,20 @@ export async function listHomeTimelineNotesFromDatabase(
 	// 配列1パラメータの = ANY() で渡す。DB driver が PostgreSQL 配列リテラルへ変換する。
 	const meOrFolloweeIds = [options.me.id, ...options.followeeIds];
 
+	// フォロー中の人が、ミュートしたチャンネルのノートをチャンネルの外でリノートしたものを除く。
+	// DB から読んだ分は後段の絞り込み (fanout-timeline の isChannelRelated) を通らないので、ここで除く。
+	const excludeMutedChannelRenotes = () => {
+		if (options.mutingChannelIds.length > 0) {
+			conditions.push(sql`(
+				"note"."renoteChannelId" IS NULL
+				OR "note"."renoteChannelId" NOT IN (${sql.join(
+					options.mutingChannelIds.map((id) => sql`${id}`),
+					sql`, `,
+				)})
+			)`);
+		}
+	};
+
 	if (options.followeeIds.length > 0 && options.followingChannelIds.length > 0) {
 		conditions.push(sql`(
 			(
@@ -1968,21 +1982,13 @@ export async function listHomeTimelineNotesFromDatabase(
 				sql`, `,
 			)})
 		)`);
+		excludeMutedChannelRenotes();
 	} else if (options.followeeIds.length > 0) {
 		conditions.push(sql`
 			"note"."channelId" IS NULL
 			AND "note"."userId" = ANY(${sql.param(meOrFolloweeIds)})
 		`);
-
-		if (options.mutingChannelIds.length > 0) {
-			conditions.push(sql`(
-				"note"."renoteChannelId" IS NULL
-				OR "note"."renoteChannelId" NOT IN (${sql.join(
-					options.mutingChannelIds.map((id) => sql`${id}`),
-					sql`, `,
-				)})
-			)`);
-		}
+		excludeMutedChannelRenotes();
 	} else if (options.followingChannelIds.length > 0) {
 		conditions.push(sql`(
 			"note"."channelId" IN (${sql.join(
