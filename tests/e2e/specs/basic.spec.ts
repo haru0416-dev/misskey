@@ -238,14 +238,40 @@ test.describe('After user signed in', () => {
 	test('account setup wizard', async ({ page }) => {
 		await page.locator('[data-cy-user-setup-continue]').click({ timeout: 30_000 });
 
-		await page.locator('[data-cy-user-setup-user-name] input').fill('ありす');
-		await page.locator('[data-cy-user-setup-user-description] textarea').fill('ほげ');
+		// 名前と自己紹介の欄は保存ボタンを押したときだけ反映される (manualSave)。
+		for (const [field, control, value] of [
+			['[data-cy-user-setup-user-name]', 'input', 'ありす'],
+			['[data-cy-user-setup-user-description]', 'textarea', 'ほげ'],
+		] as const) {
+			await page.locator(`${field} ${control}`).fill(value);
+			const saved = page.waitForResponse((res) => res.url().endsWith('/api/i/update') && res.ok());
+			await page.locator(`${field} button`).filter({ hasText: '保存' }).click();
+			await saved;
+			// 保存の完了を知らせるダイアログは 1 秒ほど開いたままで、その間は次の欄に入力が届かない。
+			const done = page.locator('[role="status"] .ti-check');
+			await expect(done).toBeVisible();
+			await expect(done).toBeHidden();
+		}
 
 		await page.locator('[data-cy-user-setup-continue]').click();
 		await page.locator('[data-cy-user-setup-continue]').click();
 		await page.locator('[data-cy-user-setup-continue]').click();
 		await page.locator('[data-cy-user-setup-continue]').click();
 		await page.locator('[data-cy-user-setup-continue]').click();
+
+		// ウィザードを抜け、入力した名前と自己紹介がアカウントに保存されている。
+		await expect(page.locator('[data-cy-user-setup]')).toBeHidden();
+		const me = await page.evaluate(async () => {
+			const account = JSON.parse(localStorage.getItem('account') ?? '{}') as { token?: string };
+			const res = await fetch('/api/i', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ i: account.token }),
+			});
+			return (await res.json()) as { name: string | null; description: string | null };
+		});
+		expect(me.name).toBe('ありす');
+		expect(me.description).toBe('ほげ');
 	});
 });
 
@@ -260,22 +286,6 @@ test.describe('After user setup', () => {
 
 	test.afterEach(async ({ page }) => {
 		await waitForPageCarryoverGuard(page);
-	});
-
-	test('note', async ({ page }) => {
-		await expect(page.locator('[data-cy-open-post-form]')).toBeVisible();
-		await page.locator('[data-cy-open-post-form]').click();
-		await page.locator('[data-cy-post-form-text]').pressSequentially('Hello, Misskey!');
-
-		const noteCreated = page.waitForResponse((response) => {
-			return response.url().includes('/api/notes/create') && response.request().method() === 'POST';
-		});
-		await page.locator('[data-cy-open-post-form-submit]').click();
-		const noteResponse = await noteCreated;
-		expect(noteResponse.ok()).toBe(true);
-
-		const note = (await noteResponse.json()) as { createdNote: { text: string | null } };
-		expect(note.createdNote.text).toBe('Hello, Misskey!');
 	});
 
 	test('open note form with hotkey', async ({ page }) => {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import type * as Redis from 'ioredis';
 import Chart, { mergeChartDiffs } from '@/core/chart/core.js';
@@ -19,7 +19,6 @@ import { loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import Logger from '@/logger.js';
 
 describe('Chart', () => {
@@ -38,34 +37,38 @@ describe('Chart', () => {
 	let testUniqueChart: TestUniqueChart;
 	let testIntersectionChart: TestIntersectionChart;
 
-	beforeEach(async () => {
-		if (drizzlePool) {
-			await drizzlePool.close();
-		}
+	const fixtureEntities = [
+		TestChartEntity.hour,
+		TestChartEntity.day,
+		TestGroupedChartEntity.hour,
+		TestGroupedChartEntity.day,
+		TestUniqueChartEntity.hour,
+		TestUniqueChartEntity.day,
+		TestIntersectionChartEntity.hour,
+		TestIntersectionChartEntity.day,
+	];
+	const fixtureTables = fixtureEntities.map((entity) => `"${entity.tableName}"`).join(', ');
 
+	// テスト用のチャートの表だけを作って使う。共有のテスト DB を丸ごと作り直すと、並行して走る他のファイルの表まで消える。
+	beforeAll(async () => {
 		drizzlePool = createBunSqlClient(config);
-		await resetDatabase(config);
-		for (const entity of [
-			TestChartEntity.hour,
-			TestChartEntity.day,
-			TestGroupedChartEntity.hour,
-			TestGroupedChartEntity.day,
-			TestUniqueChartEntity.hour,
-			TestUniqueChartEntity.day,
-			TestIntersectionChartEntity.hour,
-			TestIntersectionChartEntity.day,
-		]) {
+		await drizzlePool.unsafe(`DROP TABLE IF EXISTS ${fixtureTables}`);
+		for (const entity of fixtureEntities) {
 			for (const statement of Chart.entityToCreateTableSql(entity)) {
 				await drizzlePool.unsafe(statement);
 			}
 		}
 		drizzle = createBunSqlDatabase(drizzlePool, config);
+	});
+
+	beforeEach(async () => {
+		await drizzlePool!.unsafe(`TRUNCATE ${fixtureTables}`);
 
 		const logger = new Logger('chart');
-		testChart = new TestChart(drizzle, redisClient, logger);
-		testGroupedChart = new TestGroupedChart(drizzle, redisClient, logger);
-		testUniqueChart = new TestUniqueChart(drizzle, redisClient, logger);
-		testIntersectionChart = new TestIntersectionChart(drizzle, redisClient, logger);
+		testChart = new TestChart(drizzle!, redisClient, logger);
+		testGroupedChart = new TestGroupedChart(drizzle!, redisClient, logger);
+		testUniqueChart = new TestUniqueChart(drizzle!, redisClient, logger);
+		testIntersectionChart = new TestIntersectionChart(drizzle!, redisClient, logger);
 
 		vi.useFakeTimers({
 			toFake: ['Date'],
@@ -79,8 +82,7 @@ describe('Chart', () => {
 
 	afterAll(async () => {
 		if (drizzlePool) {
-			await resetDatabase(config);
-			await runMigrations(config);
+			await drizzlePool.unsafe(`DROP TABLE IF EXISTS ${fixtureTables}`);
 			await drizzlePool.close();
 		}
 	});

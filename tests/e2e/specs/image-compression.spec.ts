@@ -105,25 +105,19 @@ async function measure(
 }
 
 test.describe('画像圧縮', () => {
-	test('上限を超える画像は縦横比を保って縮小され、指定の形式で返る', async ({ page }) => {
+	test('上限を超える画像は縦横比を保って縮小され、上限より小さい画像は拡大されない', async ({ page }) => {
 		await loadModule(page);
+
 		await makeSource(page, 2016, 1512, 'photo');
+		const shrunk = await measure(page, 1000);
+		expect(shrunk.width).toBe(1000);
+		expect(shrunk.height).toBe(750);
+		expect(shrunk.type).toBe('image/webp');
 
-		const result = await measure(page, 1000);
-
-		expect(result.width).toBe(1000);
-		expect(result.height).toBe(750);
-		expect(result.type).toBe('image/webp');
-	});
-
-	test('上限より小さい画像は拡大されない', async ({ page }) => {
-		await loadModule(page);
 		await makeSource(page, 640, 480, 'photo');
-
-		const result = await measure(page, 2000);
-
-		expect(result.width).toBe(640);
-		expect(result.height).toBe(480);
+		const kept = await measure(page, 2000);
+		expect(kept.width).toBe(640);
+		expect(kept.height).toBe(480);
 	});
 
 	test('低品質のリサンプラに落ちていない', async ({ page }) => {
