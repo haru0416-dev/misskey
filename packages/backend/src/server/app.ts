@@ -120,8 +120,8 @@ const SLOW_REQUEST_THRESHOLD_MS = 1000;
 export function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): void {
 	// 応答本文を gzip で送る。最後に組み上がった応答を圧縮するので最初に登録する。静的ファイルは
 	// static-assets.ts が圧縮済みを返し (Content-Encoding 付きは素通し)、画像・動画は種類で除外される。
-	// 絵文字一覧 (1 万件) は 1,170 KB → 47 KB になり、初回表示はこの取得を待つ。圧縮の CPU は 1 回約 7 ms、
-	// 通常の API 応答 (17 KB) で約 0.1 ms。
+	// 絵文字一覧 (1 万件) は 1,170 KB → 47 KB になり、初回表示はこの取得を待つ。API の JSON (1MiB 以下) は
+	// jsonResponse が同期で圧縮済み (Content-Encoding 付き) で返すので、ここはそれ以外の応答を扱う。
 	app.use('*', compress());
 
 	if (deps.logger != null) {

@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
 import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
+import { gzipApiBody } from '@/server/compress.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
 import type { ApiAuthenticated } from './auth/auth.js';
@@ -43,13 +44,16 @@ function encodeJson(body: unknown): { bytes: Uint8Array; length: string } {
 export function jsonResponse(c: Context, body: unknown, status = 200, headers: Record<string, string> = {}): Response {
 	setApiHeaders(c);
 	const json = encodeJson(body);
-	return new Response(json.bytes, {
+	// 圧縮したときは app.ts の hono/compress が Content-Encoding を見て素通しするので、Vary もここで付ける。
+	const gzipped = gzipApiBody(c, json.bytes);
+	return new Response(gzipped ?? json.bytes, {
 		status,
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Cache-Control': 'private, max-age=0, must-revalidate',
 			'Content-Type': 'application/json; charset=utf-8',
-			'Content-Length': json.length,
+			'Content-Length': gzipped == null ? json.length : String(gzipped.byteLength),
+			...(gzipped == null ? {} : { 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' }),
 			...headers,
 		},
 	});

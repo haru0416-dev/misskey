@@ -144,6 +144,7 @@ declare const Bun:
 			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
 			spawn(command: string[], options?: Bun.SpawnOptions): Bun.Subprocess;
 			file(path: string): Bun.BunFile;
+			gzipSync(data: Uint8Array, options?: { level?: number }): Uint8Array;
 			JSON5: {
 				parse(text: string): unknown;
 				stringify(value: unknown, replacer?: null, space?: string | number): string;
