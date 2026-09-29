@@ -50,12 +50,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div :class="$style.scrollPage" tabindex="-1">
 					<div :class="$style.pageRoot">
 						<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;" :class="$style.pageMain">
-							<XProfile/>
+							<XProfile ref="profile"/>
 						</div>
 						<div :class="$style.pageFooter">
 							<div class="_buttonsCenter">
-								<MkButton rounded data-cy-user-setup-back @click="page--"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
-								<MkButton primary rounded gradate data-cy-user-setup-continue @click="page++">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
+								<MkButton rounded data-cy-user-setup-back @click="leaveProfile(-1)"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
+								<MkButton primary rounded gradate data-cy-user-setup-continue @click="leaveProfile(1)">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
 							</div>
 						</div>
 					</div>
@@ -151,6 +151,7 @@ const emit = defineEmits<{
 }>();
 
 const dialog = useTemplateRef('dialog');
+const profile = useTemplateRef('profile');
 
 const page = ref(store.accountSetupWizard);
 const closing = ref(false);
@@ -189,6 +190,14 @@ watch(page, async (value, previousValue) => {
 		savingPage.value = false;
 	}
 });
+
+// プロフィールのステップは離れるときに保存し、保存できなければ留まる。
+async function leaveProfile(step: 1 | -1) {
+	if (profile.value != null && !(await profile.value.save())) {
+		return;
+	}
+	page.value += step;
+}
 
 async function close(skip: boolean) {
 	if (closing.value || savingPage.value) {

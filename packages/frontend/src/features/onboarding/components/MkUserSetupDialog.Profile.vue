@@ -17,11 +17,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</FormSlot>
 
-	<MkInput v-model="name" :max="30" manualSave data-cy-user-setup-user-name>
+	<MkInput v-model="name" :max="30" data-cy-user-setup-user-name>
 		<template #label>{{ i18n.ts._profile.name }}</template>
 	</MkInput>
 
-	<MkTextarea v-model="description" :max="500" tall manualSave data-cy-user-setup-user-description>
+	<MkTextarea v-model="description" :max="500" tall data-cy-user-setup-user-description>
 		<template #label>{{ i18n.ts._profile.description }}</template>
 	</MkTextarea>
 
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -40,37 +40,51 @@ import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 import { chooseImageFromPcCropAndUpload } from '@/features/drive/drive.js';
 import { ensureSignin } from '@/i.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
 
 const $i = ensureSignin();
 
 const name = ref($i.name ?? '');
 const description = ref($i.description ?? '');
+// 保存済みの値。入力のたびには保存せず、ステップを離れるときにまとめて保存する (入力のたびに保存の知らせを出すと、
+// その間は次の欄に入力が届かず、保存ボタンを押し忘れると入力が捨てられていた)。
+let savedName = name.value;
+let savedDescription = description.value;
 
-watch(name, () => {
-	os.apiWithDialog(
-		'i/update',
-		{
-			// 空文字列も null にするため ?? ではなく || を使う
-
-			name: name.value || null,
-		},
-		undefined,
-		{
+/** 変更があれば保存する。保存できなかったときは理由を知らせて false を返す (ステップを進めない)。 */
+async function save(): Promise<boolean> {
+	const changes: { name?: string | null; description?: string | null } = {};
+	// 空文字列も null にするため ?? ではなく || を使う
+	if (name.value !== savedName) changes.name = name.value || null;
+	if (description.value !== savedDescription) changes.description = description.value || null;
+	if (Object.keys(changes).length === 0) {
+		return true;
+	}
+	try {
+		await misskeyApi('i/update', changes);
+		savedName = name.value;
+		savedDescription = description.value;
+		return true;
+	} catch (err) {
+		const content = os.apiErrorDialogContent(err, {
 			'0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191': {
 				title: i18n.ts.yourNameContainsProhibitedWords,
 				text: i18n.ts.yourNameContainsProhibitedWordsDescription,
 			},
-		},
-	);
+		});
+		if (content != null) {
+			await os.alert({ type: 'error', ...(content.title === undefined ? {} : { title: content.title }), text: content.text });
+		}
+		return false;
+	}
+}
+
+// ステップを経ずにダイアログを閉じたときも、入力を捨てない。
+onBeforeUnmount(() => {
+	void save();
 });
 
-watch(description, () => {
-	os.apiWithDialog('i/update', {
-		// 空文字列も null にするため ?? ではなく || を使う
-
-		description: description.value || null,
-	});
-});
+defineExpose({ save });
 
 async function setAvatar(ev: PointerEvent) {
 	const driveFile = await chooseImageFromPcCropAndUpload(1);

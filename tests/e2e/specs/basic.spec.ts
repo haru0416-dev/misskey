@@ -238,20 +238,9 @@ test.describe('After user signed in', () => {
 	test('account setup wizard', async ({ page }) => {
 		await page.locator('[data-cy-user-setup-continue]').click({ timeout: 30_000 });
 
-		// 名前と自己紹介の欄は保存ボタンを押したときだけ反映される (manualSave)。
-		for (const [field, control, value] of [
-			['[data-cy-user-setup-user-name]', 'input', 'ありす'],
-			['[data-cy-user-setup-user-description]', 'textarea', 'ほげ'],
-		] as const) {
-			await page.locator(`${field} ${control}`).fill(value);
-			const saved = page.waitForResponse((res) => res.url().endsWith('/api/i/update') && res.ok());
-			await page.locator(`${field} button`).filter({ hasText: '保存' }).click();
-			await saved;
-			// 保存の完了を知らせるダイアログは 1 秒ほど開いたままで、その間は次の欄に入力が届かない。
-			const done = page.locator('[role="status"] .ti-check');
-			await expect(done).toBeVisible();
-			await expect(done).toBeHidden();
-		}
+		// 名前と自己紹介は、ステップを進めるときにまとめて保存される。
+		await page.locator('[data-cy-user-setup-user-name] input').fill('ありす');
+		await page.locator('[data-cy-user-setup-user-description] textarea').fill('ほげ');
 
 		await page.locator('[data-cy-user-setup-continue]').click();
 		await page.locator('[data-cy-user-setup-continue]').click();
