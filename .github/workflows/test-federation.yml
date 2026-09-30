@@ -87,7 +87,7 @@ jobs:
           git rev-parse HEAD > results/fork-revision.txt
           docker compose config > results/compose.yml
           docker compose images --format json > results/images.json
-          cp upstream.json results/upstream.json
+          cp upstream.json results/upstream-identity.json
       - name: Test both sender directions
         working-directory: packages/backend/test-federation
         run: docker compose run --no-deps --rm tester

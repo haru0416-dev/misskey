@@ -456,20 +456,7 @@ return value
 `;
 const claimRedisGrantCodeScript = `
 local raw = redis.call('get', KEYS[1])
-if not raw then
-	local legacyRaw = redis.call('get', KEYS[2])
-	if not legacyRaw then return nil end
-	local legacyTtl = redis.call('pttl', KEYS[2])
-	redis.call('del', KEYS[2])
-	local legacyGrant = cjson.decode(legacyRaw)
-	local migrated = { status = 'exchanging', grant = legacyGrant }
-	if legacyTtl > 0 then
-		redis.call('set', KEYS[1], cjson.encode(migrated), 'PX', legacyTtl)
-	else
-		redis.call('set', KEYS[1], cjson.encode(migrated))
-	end
-	return cjson.encode({ status = 'claimed', grant = legacyGrant })
-end
+if not raw then return nil end
 local value = cjson.decode(raw)
 local result = { grant = value.grant }
 if value.status == 'pending' then
@@ -573,7 +560,7 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 		consumeAuthorizationTransaction: (id) => consume(`oauth:authorization:${id}`),
 		setGrantCode: (code, value) => set(`oauth:grant:v2:${code}`, { status: 'pending', grant: value }),
 		async claimGrantCode(code) {
-			const raw = await redis.eval(claimRedisGrantCodeScript, 2, `oauth:grant:v2:${code}`, `oauth:grant:${code}`);
+			const raw = await redis.eval(claimRedisGrantCodeScript, 1, `oauth:grant:v2:${code}`);
 			if (typeof raw !== 'string') {
 				return null;
 			}

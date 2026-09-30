@@ -27,6 +27,11 @@ export type DeliverJobData = {
 	to: string;
 	isSharedInbox: boolean;
 	userStateGuard?: UserStateGuard;
+	followStateGuard?: {
+		followerId: MiUser['id'];
+		followeeId: MiUser['id'];
+		followingId: string;
+	};
 };
 
 export type InboxJobData = {

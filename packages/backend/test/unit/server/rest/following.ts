@@ -3,235 +3,199 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, expect, test, vi } from 'vitest';
+import { generateKeyPairSync } from 'node:crypto';
+import { eq, sql } from 'drizzle-orm';
+import { loadConfig } from '@/config.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	updateUserInDatabase,
+} from '@/core/user/UserStore.js';
+import {
+	createFollowRequestInDatabase,
+	deleteFollowRequestByIdFromDatabase,
+	fetchFollowRequestFromDatabase,
+} from '@/core/user/FollowRequestStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { userKeypair } from '@/db/schema/user-keypair.js';
+import { endpointMetas } from '@/server/api/metas/i.js';
+import { handleApiIUpdate, iUpdateParamDef } from '@/server/rest/account/account-update.js';
+import type { ContractErrors } from '@/server/rest/endpoint-contract.js';
+import { ApiError } from '@/server/rest/error.js';
+import type { DeliverJobData } from '@/queue/types.js';
+import { parseApiParams } from '@/server/rest/validation.js';
+import { genId } from '@/misc/id/gen-id.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
+import type * as NotificationModule from '@/server/rest/notification/notification.js';
 
-const {
-	createFollowingMock,
-	fetchRequestMock,
-	listRequestsMock,
-	listUsersMock,
-	fetchUserMock,
-	fetchProfileMock,
-	packMeMock,
-	xaddNotificationMock,
-	enqueueDeliverMock,
-} = vi.hoisted(() => ({
-	createFollowingMock: vi.fn(),
-	fetchRequestMock: vi.fn(),
-	listRequestsMock: vi.fn(),
-	listUsersMock: vi.fn(),
-	fetchUserMock: vi.fn(),
-	fetchProfileMock: vi.fn(),
-	packMeMock: vi.fn(),
-	xaddNotificationMock: vi.fn(),
-	enqueueDeliverMock: vi.fn(),
-}));
-
-vi.mock('@/core/queue/DeliverQueue.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/queue/DeliverQueue.js')>()),
-	enqueueDeliverJob: enqueueDeliverMock,
-}));
-
-vi.mock('@/core/user/FollowRequestStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/user/FollowRequestStore.js')>()),
-	fetchFollowRequestFromDatabase: fetchRequestMock,
-	followRequestExistsInDatabase: vi.fn().mockResolvedValue(false),
-	listAllFollowRequestsByFolloweeIdFromDatabase: listRequestsMock,
-}));
-
-vi.mock('@/core/user/FollowingStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/user/FollowingStore.js')>()),
-	createFollowingInDatabase: createFollowingMock,
-	listFolloweeIdsWithRepliesByFollowerIdFromDatabase: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock('@/core/user/UserStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/user/UserStore.js')>()),
-	adjustUserFollowersCountInDatabase: vi.fn().mockResolvedValue(undefined),
-	adjustUserFollowingCountInDatabase: vi.fn().mockResolvedValue(undefined),
-	fetchUserByIdOrFailFromDatabase: fetchUserMock,
-	listUsersByIdsFromDatabase: listUsersMock,
-}));
-
-vi.mock('@/core/user/UserProfileStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/user/UserProfileStore.js')>()),
-	fetchUserProfileByUserIdOrFailFromDatabase: fetchProfileMock,
-}));
-
-vi.mock('@/core/user/MutingStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/user/MutingStore.js')>()),
-	mutingExistsInDatabase: vi.fn().mockResolvedValue(false),
-}));
-
-vi.mock('@/core/webhook/WebhookStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/webhook/WebhookStore.js')>()),
-	listActiveWebhooksByUserIdAndEventFromDatabase: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock('@/server/rest/user/user.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/server/rest/user/user.js')>()),
-	packMeDetailedForApi: packMeMock,
-	packUserDetailedNotMeForApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
-	packUserLiteForApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
-}));
-
+const { notificationSink } = vi.hoisted(() => ({ notificationSink: vi.fn() }));
 vi.mock('@/server/rest/notification/notification.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/server/rest/notification/notification.js')>()),
-	xaddApiNotification: xaddNotificationMock,
+	...(await importOriginal<typeof NotificationModule>()),
+	xaddApiNotification: notificationSink,
 }));
 
-import { acceptAllFollowRequestsForApi } from '@/server/rest/user/following.js';
+import { acceptAllFollowRequestsForApi, acceptFollowRequestForApi } from '@/server/rest/user/following.js';
 
-describe('acceptAllFollowRequestsForApi', () => {
-	const followee = { id: 'followee', host: null, isLocked: false } as MiLocalUser;
-	const freshFollowee = { ...followee, followersCount: 18 } as MiLocalUser;
-	const followers = Array.from({ length: 20 }, (_, index) => ({
-		id: `follower-${index}`,
-		host: null,
-		movedToUri: null,
-	})) as MiLocalUser[];
-	const requests = followers.map((follower, index) => ({
-		id: `request-${index}`,
+let runtime: RuntimeDependencies;
+beforeAll(async () => {
+	runtime = await createRuntimeDependencies(loadConfig());
+});
+afterAll(async () => {
+	await runtime.dispose();
+});
+
+async function createUser(remote = false) {
+	const id = genId();
+	return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+		user: {
+			id,
+			username: `bulk${id}`,
+			usernameLower: `bulk${id}`,
+			...(remote
+				? {
+						host: 'bulk.example.test',
+						uri: `https://bulk.example.test/users/${id}`,
+						inbox: 'https://bulk.example.test/inbox',
+					}
+				: {}),
+		},
+		profile: { userId: id, notificationRecieveConfig: { follow: { type: 'never' } } },
+	});
+}
+
+async function request(follower: MiUser, followee: MiUser) {
+	return await createFollowRequestInDatabase(runtime.db, {
+		id: genId(),
 		followerId: follower.id,
 		followeeId: followee.id,
-		withReplies: false,
-		requestId: null,
-	}));
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-		listRequestsMock.mockResolvedValue(requests);
-		fetchRequestMock.mockImplementation(async (_db, followerId: string) =>
-			followerId === followers[2]!.id ? null : requests.find((request) => request.followerId === followerId),
-		);
-		listUsersMock.mockResolvedValue(followers);
-		fetchUserMock.mockResolvedValue(freshFollowee);
-		fetchProfileMock.mockResolvedValue({
-			userId: followee.id,
-			followedMessage: null,
-			notificationRecieveConfig: { follow: { type: 'never' } },
-		});
-		packMeMock.mockResolvedValue({ id: followee.id });
-		xaddNotificationMock.mockResolvedValue('1-0');
-		enqueueDeliverMock.mockResolvedValue(undefined);
+		requestId: follower.uri == null ? null : `https://bulk.example.test/follows/${genId()}`,
 	});
+}
 
-	test('limits concurrency, waits for completion, and publishes the final state once', async () => {
-		let active = 0;
-		let maxActive = 0;
-		let releaseCreates!: () => void;
-		const createBarrier = new Promise<void>((resolve) => {
-			releaseCreates = resolve;
-		});
-		createFollowingMock.mockImplementation(async (db, data) => {
-			active++;
-			maxActive = Math.max(maxActive, active);
-			await createBarrier;
-			active--;
-			if (data.followerId === followers[3]!.id) {
-				throw new Error('stale request');
-			}
-			return data;
-		});
-		const publishMainStream = vi.fn();
-		const deps = {
-			db: {},
-			redis: { set: vi.fn().mockResolvedValue('OK') },
-			meta: { enableStatsForFederatedInstances: false },
-			config: { instance: { url: 'https://example.test' } },
-			deliverQueue: {},
-			userWebhookDeliverQueue: { add: vi.fn() },
-			publishMainStream,
-		} as unknown as ApiFollowingDependencies;
-
-		const completion = acceptAllFollowRequestsForApi(deps, followee);
-		await vi.waitFor(() => expect(createFollowingMock).toHaveBeenCalledTimes(8));
-		expect(active).toBe(8);
-		releaseCreates();
-		await completion;
-
-		expect(createFollowingMock).toHaveBeenCalledTimes(requests.length - 1);
-		expect(active).toBe(0);
-		expect(maxActive).toBeGreaterThan(1);
-		expect(maxActive).toBeLessThanOrEqual(8);
-		expect(packMeMock).toHaveBeenCalledTimes(1);
-		expect(packMeMock).toHaveBeenCalledWith(deps, freshFollowee, { includeSecrets: false });
-		expect(publishMainStream).toHaveBeenCalledWith(followee.id, 'meUpdated', { id: followee.id });
+test('一括承認は通知の保存待ちを含めて並行数を制限し、取消済み要求を除いた最終集計を返す', async () => {
+	const followee = (await createUser()) as MiLocalUser;
+	const followers = await Promise.all(Array.from({ length: 20 }, () => createUser()));
+	const requests = await Promise.all(followers.map((follower) => request(follower, followee)));
+	await deleteFollowRequestByIdFromDatabase(runtime.db, requests[2]!.id);
+	let active = 0;
+	let maximum = 0;
+	const { promise: barrier, resolve: release } = Promise.withResolvers<void>();
+	notificationSink.mockImplementation(async () => {
+		active++;
+		maximum = Math.max(maximum, active);
+		await barrier;
+		active--;
+		return '1-0';
 	});
-
-	test('keeps the concurrency slot until notification persistence completes', async () => {
-		const [follower] = followers;
-		const [request] = requests;
-		listRequestsMock.mockResolvedValue([request]);
-		fetchRequestMock.mockResolvedValue(request);
-		listUsersMock.mockResolvedValue([follower]);
-		fetchProfileMock.mockResolvedValue({ userId: followee.id, followedMessage: null });
-		createFollowingMock.mockImplementation(async (db, data) => data);
-		let releaseNotification!: () => void;
-		xaddNotificationMock.mockImplementation(
-			() =>
-				new Promise<string>((resolve) => {
-					releaseNotification = () => resolve('1-0');
-				}),
-		);
-		const deps = {
-			db: {},
-			redis: { set: vi.fn().mockResolvedValue('OK'), get: vi.fn().mockResolvedValue(null) },
-			meta: { enableStatsForFederatedInstances: false },
-			config: { instance: { url: 'https://example.test' }, limits: { userNotifications: 100 } },
-			deliverQueue: {},
-			userWebhookDeliverQueue: { add: vi.fn() },
-		} as unknown as ApiFollowingDependencies;
-
-		let settled = false;
-		const completion = acceptAllFollowRequestsForApi(deps, followee).then(() => {
-			settled = true;
-		});
-		await vi.waitFor(() => expect(xaddNotificationMock).toHaveBeenCalledTimes(1));
+	const updates: unknown[] = [];
+	let settled = false;
+	const completion = acceptAllFollowRequestsForApi(
+		{
+			...runtime,
+			publishMainStream: (id, type, body) => {
+				if (id === followee.id && type === 'meUpdated') updates.push(body);
+			},
+		},
+		followee,
+	).then(() => {
+		settled = true;
+	});
+	try {
+		await vi.waitFor(() => expect(active).toBe(8));
 		expect(settled).toBe(false);
-		releaseNotification();
+		expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(8);
+		expect(updates).toEqual([]);
+	} finally {
+		release();
 		await completion;
-		expect(settled).toBe(true);
+	}
+	expect(maximum).toBeLessThanOrEqual(8);
+	expect(active).toBe(0);
+	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(19);
+	expect(
+		await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, followers[2]!.id, followee.id),
+	).toBeNull();
+	expect(updates).toMatchObject([{ id: followee.id, followersCount: 19 }]);
+});
+
+test('解除時の一括承認失敗でも保存済み actor 更新を配送し、残る要求は手動で再承認できる', async () => {
+	const followee = (await createUser()) as MiLocalUser;
+	const [failedFollower, successfulFollower] = await Promise.all([createUser(true), createUser(true)]);
+	const failedRequest = await request(failedFollower!, followee);
+	await request(successfulFollower!, followee);
+	await updateUserInDatabase(runtime.db, followee.id, { isLocked: true });
+	const keypair = generateKeyPairSync('rsa', {
+		modulusLength: 2048,
+		publicKeyEncoding: { type: 'spki', format: 'pem' },
+		privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 	});
-
-	test('waits for remote delivery enqueue before completing', async () => {
-		const remoteFollower = {
-			...followers[0],
-			host: 'remote.example',
-			uri: 'https://remote.example/users/follower',
-			inbox: 'https://remote.example/users/follower/inbox',
-		} as MiUser;
-		const request = { ...requests[0]!, followerId: remoteFollower.id };
-		listRequestsMock.mockResolvedValue([request]);
-		fetchRequestMock.mockResolvedValue(request);
-		listUsersMock.mockResolvedValue([remoteFollower]);
-		createFollowingMock.mockImplementation(async (db, data) => data);
-		let releaseDelivery!: () => void;
-		enqueueDeliverMock.mockImplementation(
-			() =>
-				new Promise<void>((resolve) => {
-					releaseDelivery = resolve;
-				}),
-		);
-		const deps = {
-			db: {},
-			redis: { set: vi.fn().mockResolvedValue('OK') },
-			meta: { enableStatsForFederatedInstances: false },
-			config: { instance: { url: 'https://example.test' } },
-			deliverQueue: {},
-			userWebhookDeliverQueue: { add: vi.fn() },
-		} as unknown as ApiFollowingDependencies;
-
-		let settled = false;
-		const completion = acceptAllFollowRequestsForApi(deps, followee).then(() => {
-			settled = true;
+	await runtime.db.insert(userKeypair).values({ userId: followee.id, ...keypair });
+	const errors = Object.fromEntries(
+		Object.entries(endpointMetas['i/update'].meta.errors).map(([key, value]) => [
+			key,
+			() => new ApiError({ status: 400, ...value }),
+		]),
+	) as ContractErrors<(typeof endpointMetas)['i/update']>;
+	const constraint = `reject_bulk_${genId()}`;
+	await runtime.db.execute(
+		sql.raw(
+			`ALTER TABLE queue_outbox ADD CONSTRAINT "${constraint}" CHECK (COALESCE(data->'data'->>'content','') NOT LIKE '%${failedRequest.requestId!}%')`,
+		),
+	);
+	try {
+		await expect(
+			handleApiIUpdate(
+				runtime,
+				followee,
+				null,
+				parseApiParams(iUpdateParamDef, { isLocked: false, name: 'Saved despite approval failure' }),
+				errors,
+			),
+		).rejects.toBeInstanceOf(AggregateError);
+		expect(await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).toMatchObject({
+			isLocked: false,
+			name: 'Saved despite approval failure',
 		});
-		await vi.waitFor(() => expect(enqueueDeliverMock).toHaveBeenCalledTimes(1));
-		expect(settled).toBe(false);
-		releaseDelivery();
-		await completion;
-		expect(settled).toBe(true);
+		await vi.waitFor(async () => {
+			const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
+			const activities = jobs.map((job) => JSON.parse(job.data.content));
+			expect(activities).toContainEqual(
+				expect.objectContaining({
+					type: 'Update',
+					object: expect.objectContaining({
+						id: `${runtime.config.instance.url}/users/${followee.id}`,
+						name: 'Saved despite approval failure',
+						manuallyApprovesFollowers: false,
+					}),
+				}),
+			);
+		});
+		expect(
+			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, failedFollower!.id, followee.id),
+		).toBeNull();
+		expect(await fetchFollowRequestFromDatabase(runtime.db, failedFollower!.id, followee.id)).toMatchObject({
+			id: failedRequest.id,
+		});
+		expect(
+			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, successfulFollower!.id, followee.id),
+		).not.toBeNull();
+		expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(1);
+	} finally {
+		await runtime.db.execute(sql.raw(`ALTER TABLE queue_outbox DROP CONSTRAINT "${constraint}"`));
+		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
+		await Promise.all(jobs.filter((job) => job.data.user.id === followee.id).map((job) => job.remove()));
+	}
+	await acceptFollowRequestForApi(runtime, followee, failedFollower!);
+	expect(await fetchFollowRequestFromDatabase(runtime.db, failedFollower!.id, followee.id)).toBeNull();
+	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(2);
+	const deliveries = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.queue, 'deliver'));
+	const accepts = deliveries.filter((row) => {
+		const activity = JSON.parse((row.data as { data: DeliverJobData }).data.content);
+		return activity.type === 'Accept' && activity.actor === `${runtime.config.instance.url}/users/${followee.id}`;
 	});
+	expect(accepts).toHaveLength(2);
 });

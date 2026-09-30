@@ -16,6 +16,7 @@ import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } f
 import {
 	deleteFollowingAndUpdateUserCountsByIdInDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+	lockFollowingUserPairInDatabase,
 } from '@/core/user/FollowingStore.js';
 import {
 	adjustInstanceFollowersCountFromDatabase,
@@ -222,6 +223,40 @@ export async function unfollow(
 	}
 
 	await deliverFollowCancelActivity(deps, follower, followee);
+}
+
+export async function undoFollowForApi(
+	deps: ApiAccountBlockingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+): Promise<'request' | 'following' | 'none'> {
+	const result = await deps.db.transaction(async (transaction) => {
+		const db = transaction as MiDrizzleDatabase;
+		await lockFollowingUserPairInDatabase(db, follower.id, followee.id);
+		const request = await fetchFollowRequestFromDatabase(db, follower.id, followee.id);
+		if (request != null) {
+			await deleteFollowRequestByIdFromDatabase(db, request.id);
+			return { kind: 'request' as const, requestId: request.requestId };
+		}
+		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
+		if (following == null) return { kind: 'none' as const };
+		if (!(await deleteFollowingAndUpdateUserCountsByIdInDatabase(db, following.id, follower.id, followee.id))) {
+			return { kind: 'none' as const };
+		}
+		return { kind: 'following' as const };
+	});
+	if (result.kind === 'none') return 'none';
+	if (result.kind === 'request' && isLocalUser(followee)) {
+		deps.publishMainStream?.(
+			followee.id,
+			'meUpdated',
+			await packMeDetailedForApi(deps, followee, { includeSecrets: false }),
+		);
+	}
+	if (result.kind === 'following') await decrementFollowing(deps, follower, followee);
+	await publishUnfollowToLocalFollower(deps, follower, followee);
+	await deliverFollowCancelActivity(deps, follower, followee, result.kind === 'request' ? result.requestId : undefined);
+	return result.kind;
 }
 
 /**

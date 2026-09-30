@@ -812,11 +812,14 @@ export async function handleApiIUpdate(
 
 	deps.publishMainStream?.(user.id, 'meUpdated', iObj);
 
-	if (user.isLocked && ps.isLocked === false) {
-		void acceptAllFollowRequestsForApi(deps, user).catch(() => {});
+	try {
+		if (user.isLocked && ps.isLocked === false) {
+			await acceptAllFollowRequestsForApi(deps, user);
+		}
+	} finally {
+		// 承認の一部が失敗しても、保存済みの actor 更新は既存フォロワーへ配送する。
+		void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
 	}
-
-	void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
 
 	const urls = updatedProfile.fields.filter((x) => x.value.startsWith('https://'));
 	for (const url of urls) {

@@ -171,7 +171,45 @@ barriers a six-minute deadline.
 | Existing regression contracts remain gates | all original federation files still included; A1 unit/e2e suites remain mandatory |
 | CI includes lock/runtime/native dependency changes | workflow paths include lock, Bun version/config, root manifests, patches, native slacc, backend dependencies and build scripts |
 
-## Verification status
+## Current compatibility gate
+
+Both matrix cells execute the scenarios directly. A known upstream error remains
+a failed feature result; reproducing that error is not successful interoperability.
+Do not add expected-failure wrappers, skips, or weaker assertions to make a cell
+green. The pinned official peer remains unmodified.
+
+`results/fork.json` and `results/upstream.json` contain scenario outcomes.
+`results/upstream-identity.json` records the independently pinned peer identity;
+it must not be overwritten by the test reporter.
+
+The strict run after durable Follow acceptance registration reports **144 passed,
+5 failed, 0 skipped** (149 scenarios). Follow response loss from official upstream
+to the fork now converges without duplicate Accept delivery. The preceding strict
+run reported 143 passed and 6 failed; neither result certifies the whole matrix.
+
+The remaining failures are unchanged:
+
+- Move to an upstream-local destination: the official receiver looks up and
+  compares the local destination's nullable `uri` against its canonical actor URI.
+- Follow and Reaction after unblock: warm official HTTP-process block caches
+  retain the block after its DB row and Redis cache entry have been removed.
+  The same operations succeed when that process cache was not warmed.
+- Both Follow checks after unsuspension: the official API resolves the actor
+  through a deleted user ID although its recreated canonical actor and profile
+  exist in the DB; packing the obsolete profile fails.
+
+The official image, actor identities and feature assertions remain unchanged.
+Receiver-side defects cannot be counted as successful interoperability or hidden
+by sender-side protocol substitutions.
+
+The fork stores each ID-bearing accepted Follow together with its Accept delivery
+in a single DB transaction. Replays do not recreate a relationship after Undo
+or produce another Accept; queued Accepts carry the relationship generation and
+are discarded if that generation has ended. Manual approval rechecks the pending
+request under the same ordered user-pair lock as received Undo cancellation. ID-less Follow
+deduplication is limited to the current relationship generation.
+
+## Historical verification status
 
 The official pinned image and acceptance conditions remain unchanged. B–E
 cutovers are on hold until phase A passes; tests must not be skipped or weakened
@@ -215,13 +253,12 @@ passed all 11 files on fresh dedicated PostgreSQL/Valkey instances:
 not proof of compatibility with the pinned upstream.
 Neither the added upstream matrix nor its fault-recovery gate is certified as passing.
 
-The user approved proceeding with internal optimization while retaining the
-official target and recording its known defects. Remediating those existing
-upstream defects is no longer a completion requirement. Assertions and failure
-reports remain unchanged; no new skips are permitted. Before/after comparisons
-must distinguish the same observed upstream failure from a new cause or a
-regression, using direction, persisted state, errors and remaining jobs rather
-than only matching test names or failure counts.
+During the earlier internal-optimization cutover, the user approved proceeding
+while recording existing upstream defects. That historical exception is not the
+current compatibility gate: all current feature failures must remain failures.
+Before/after comparisons must distinguish the same observed upstream failure
+from a new cause or a regression, using direction, persisted state, errors and
+remaining jobs rather than only matching test names or failure counts.
 
 The final full matrices after the B/C/E cutover retain 168/0/10
 (passed/failed/existing skips) for fork-fork and 108/23/47 for pinned upstream.

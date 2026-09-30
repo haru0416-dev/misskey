@@ -97,6 +97,7 @@ import {
 	remoteRejectForApi,
 	unblockForApi,
 	unfollow,
+	undoFollowForApi,
 } from '@/server/rest/account/account-blocking.js';
 import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 import { followWithSideEffectsForApi } from '../../queue/handlers/relationship.js';
@@ -887,20 +888,12 @@ async function undoFollowFromApForApi(
 		return 'skip: フォロー解除しようとしているユーザーはローカルユーザーではありません';
 	}
 
-	const requestExist = await followRequestExistsInDatabase(deps.db, actor.id, followee.id);
-	const isFollowing = await followingExistsInDatabase(deps.db, actor.id, followee.id);
-
-	if (requestExist) {
-		await cancelFollowRequest(deps, actor, followee);
-		return 'ok: follow request canceled';
-	}
-
-	if (isFollowing) {
-		await unfollow(deps, actor, followee);
-		return 'ok: unfollowed';
-	}
-
-	return 'skip: リクエストもフォローもされていない';
+	const result = await undoFollowForApi(deps, actor, followee);
+	return result === 'request'
+		? 'ok: follow request canceled'
+		: result === 'following'
+			? 'ok: unfollowed'
+			: 'skip: リクエストもフォローもされていない';
 }
 
 async function undoLikeFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: ILike): Promise<string> {

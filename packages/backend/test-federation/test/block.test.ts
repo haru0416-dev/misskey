@@ -8,8 +8,6 @@ import {
 	resolveRemoteNote,
 	resolveRemoteUser,
 	waitFor,
-	errorMessageMatches,
-	knownUpstreamFailure,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
 
@@ -44,22 +42,19 @@ describe('Block', () => {
 			strictEqual(followers.length, 0);
 		});
 
-		test(
-			'Can follow if unblocked',
+		test('Can follow if unblocked', async () => {
 			// 公式版は Undo(Block) を受けても拒否が残る (プロセス間キャッシュの失効漏れと推定)。
-			knownUpstreamFailure(true, errorMessageMatches(/^You are blocked by that user\.$/), async () => {
-				await alice.client.request('blocking/delete', { userId: bobInA.id });
-				await deliveryBarrier('a.test');
+			await alice.client.request('blocking/delete', { userId: bobInA.id });
+			await deliveryBarrier('a.test');
 
-				await bob.client.request('following/create', { userId: aliceInB.id });
-				await deliveryBarrier('b.test');
+			await bob.client.request('following/create', { userId: aliceInB.id });
+			await deliveryBarrier('b.test');
 
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 1);
-				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1);
-			}),
-		);
+			const following = await bob.client.request('users/following', { userId: bob.id });
+			strictEqual(following.length, 1);
+			const followers = await alice.client.request('users/followers', { userId: alice.id });
+			strictEqual(followers.length, 1);
+		});
 
 		test('Remove follower when block them', async () => {
 			const [blocker, follower] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
@@ -157,26 +152,19 @@ describe('Block', () => {
 			);
 		});
 
-		test(
-			'Can reaction if unblocked',
+		test('Can reaction if unblocked', async () => {
 			// 公式版は Undo(Block) を受けても拒否が残る (プロセス間キャッシュの失効漏れと推定)。
-			knownUpstreamFailure(
-				true,
-				errorMessageMatches(/^You cannot react this note because you have been blocked by this user\.$/),
-				async () => {
-					await alice.client.request('blocking/delete', { userId: bobInA.id });
-					await deliveryBarrier('a.test');
+			await alice.client.request('blocking/delete', { userId: bobInA.id });
+			await deliveryBarrier('a.test');
 
-					const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
-					const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
-					await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' });
-					await deliveryBarrier('b.test');
+			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
+			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
+			await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' });
+			await deliveryBarrier('b.test');
 
-					const _note = await alice.client.request('notes/show', { noteId: note.id });
-					deepStrictEqual(_note.reactions, { '😅': 1 });
-				},
-			),
-		);
+			const _note = await alice.client.request('notes/show', { noteId: note.id });
+			deepStrictEqual(_note.reactions, { '😅': 1 });
+		});
 	});
 
 	describe('Check mention', () => {

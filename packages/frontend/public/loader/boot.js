@@ -150,17 +150,6 @@
 			messages = JSON.parse(bootloaderLocales);
 		}
 		if (!messages) {
-			// bootloaderLocales がない環境では、locale 全体に保存された値を利用する。
-			const legacyLocale = localStorage.getItem('locale');
-			if (legacyLocale) {
-				const parsed = JSON.parse(legacyLocale);
-				messages = {
-					...(parsed._bootErrors ?? {}),
-					reload: parsed.reload,
-				};
-			}
-		}
-		if (!messages) {
 			messages = {};
 		}
 

@@ -101,16 +101,6 @@
 			messages = JSON.parse(bootloaderLocales);
 		}
 		if (!messages) {
-			const legacyLocale = localStorage.getItem('locale');
-			if (legacyLocale) {
-				const parsed = JSON.parse(legacyLocale);
-				messages = {
-					...(parsed._bootErrors ?? {}),
-					reload: parsed.reload,
-				};
-			}
-		}
-		if (!messages) {
 			messages = {};
 		}
 

@@ -391,6 +391,20 @@ export async function fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(
 	return row ? deserializeFollowing(row) : null;
 }
 
+export async function lockFollowingUserPairInDatabase(
+	db: MiDrizzleDatabase,
+	followerId: string,
+	followeeId: string,
+): Promise<void> {
+	// 相互フォローの同時処理でも、集計更新の行ロックは同じ順序で取得する。
+	await db
+		.select({ id: userTable.id })
+		.from(userTable)
+		.where(inArray(userTable.id, [followerId, followeeId]))
+		.orderBy(asc(userTable.id))
+		.for('update');
+}
+
 export async function createFollowingInDatabase(db: MiDrizzleDatabase, data: FollowingInsert): Promise<MiFollowing> {
 	const [row] = await db.insert(following).values(data).returning();
 

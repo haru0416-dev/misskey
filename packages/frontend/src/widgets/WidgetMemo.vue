@@ -22,10 +22,7 @@ import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
-import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
-import { miLocalStorage } from '@/local-storage.js';
-import { $i } from '@/i.js';
 
 const name = 'memo';
 
@@ -60,18 +57,6 @@ const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
 const { widgetProps, save, configure } = useWidgetPropsManager(name, widgetPropsDef, props, emit);
-
-const migrationKey = `memoWidgetMigrationCompleted:${$i?.id ?? 'guest'}` as const;
-const shouldMigrateLegacyMemo =
-	props.widget?.id !== '__PREVIEW__' &&
-	props.widget != null &&
-	props.widget.data.text === undefined &&
-	miLocalStorage.getItem(migrationKey) !== 'true';
-if (shouldMigrateLegacyMemo) {
-	widgetProps.text = store.memo ?? '';
-	miLocalStorage.setItem(migrationKey, 'true');
-	save();
-}
 
 const text = ref(widgetProps.text);
 const changed = ref(false);

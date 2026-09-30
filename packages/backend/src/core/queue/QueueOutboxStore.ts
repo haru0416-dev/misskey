@@ -25,7 +25,7 @@ import type {
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { QUEUE } from '@/queue/const.js';
-import type { DbJobMap } from '@/queue/types.js';
+import type { DbJobMap, DeliverJobData } from '@/queue/types.js';
 
 const CLAIM_LEASE_MS = 30_000;
 const MAX_POLL_INTERVAL_MS = 30_000;
@@ -80,10 +80,8 @@ type SerializedDeliverData = Record<string, unknown> & {
 	digest?: unknown;
 	to?: unknown;
 	isSharedInbox?: unknown;
-};
-
-type SerializedDeliverUser = Record<string, unknown> & {
-	id?: unknown;
+	userStateGuard?: unknown;
+	followStateGuard?: unknown;
 };
 
 type SerializedDeliverEnvelope = Record<string, unknown> & {
@@ -288,9 +286,9 @@ function parseDeliverOutboxJob(row: QueueOutboxRow): DeliverJobBulkInput | null 
 		return null;
 	}
 	const data = envelope.data as SerializedDeliverData;
-	if (!isRecord(data.user) || typeof (data.user as SerializedDeliverUser).id !== 'string') {
-		return null;
-	}
+	const user = data.user;
+	if (!isRecord(user) || typeof user['id'] !== 'string') return null;
+	const userId = user['id'];
 	if (
 		typeof data.content !== 'string' ||
 		typeof data.digest !== 'string' ||
@@ -309,15 +307,51 @@ function parseDeliverOutboxJob(row: QueueOutboxRow): DeliverJobBulkInput | null 
 	if (!isRecord(opts.backoff) || opts.backoff['type'] !== 'custom') {
 		return null;
 	}
+	let userStateGuard: DeliverJobData['userStateGuard'];
+	if (data.userStateGuard !== undefined) {
+		const guard = data.userStateGuard;
+		if (
+			!isRecord(guard) ||
+			typeof guard['userId'] !== 'string' ||
+			typeof guard['isSuspended'] !== 'boolean' ||
+			typeof guard['transitionedAt'] !== 'string' ||
+			typeof guard['transitionId'] !== 'string'
+		)
+			return null;
+		userStateGuard = {
+			userId: guard['userId'],
+			isSuspended: guard['isSuspended'],
+			transitionedAt: guard['transitionedAt'],
+			transitionId: guard['transitionId'],
+		};
+	}
+	let followStateGuard: DeliverJobData['followStateGuard'];
+	if (data.followStateGuard !== undefined) {
+		const guard = data.followStateGuard;
+		if (
+			!isRecord(guard) ||
+			typeof guard['followerId'] !== 'string' ||
+			typeof guard['followeeId'] !== 'string' ||
+			typeof guard['followingId'] !== 'string'
+		)
+			return null;
+		followStateGuard = {
+			followerId: guard['followerId'],
+			followeeId: guard['followeeId'],
+			followingId: guard['followingId'],
+		};
+	}
 
 	return {
 		name: envelope.name,
 		data: {
-			user: { id: (data.user as SerializedDeliverUser).id as string },
+			user: { id: userId },
 			content: data.content,
 			digest: data.digest,
 			to: data.to,
 			isSharedInbox: data.isSharedInbox,
+			...(userStateGuard == null ? {} : { userStateGuard }),
+			...(followStateGuard == null ? {} : { followStateGuard }),
 		},
 		opts: {
 			...(opts.attempts === undefined ? {} : { attempts: opts.attempts }),

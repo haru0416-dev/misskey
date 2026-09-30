@@ -18,7 +18,6 @@ function createBaseState() {
 	return {
 		accountSetupWizard: 0,
 		tips: {} as Partial<Record<(typeof TIPS)[number], boolean>>, // true = 既読
-		memo: null as string | null,
 		reactionAcceptance: 'nonSensitiveOnly' as
 			| 'likeOnly'
 			| 'likeOnlyForRemote'
@@ -64,7 +63,6 @@ const basePersistedState = {
 	properties: {
 		accountSetupWizard: { where: 'account' },
 		tips: { where: 'device' },
-		memo: { where: 'account' },
 		reactionAcceptance: { where: 'account' },
 		mutedAds: { where: 'account' },
 		visibility: { where: 'deviceAccount' },

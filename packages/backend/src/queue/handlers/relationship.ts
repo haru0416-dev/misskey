@@ -11,6 +11,7 @@ import {
 } from '@/core/user/BlockingStore.js';
 import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
 import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
+import { hasAcceptedFollowInDatabase } from '@/core/user/FollowAcceptanceStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -23,10 +24,10 @@ import type { ApiAccountBlockingDependencies } from '@/server/rest/account/accou
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
+	deliverAcceptForFollow,
 	insertFollowingWithSideEffects,
 	isLocalUser,
 	isRemoteUser,
-	renderAccept,
 	renderFollow,
 	renderReject,
 } from '@/server/rest/user/following.js';
@@ -46,23 +47,6 @@ function isSilencedHost(silencedHosts: string[] | undefined, host: string | null
 	return silencedHosts.some((x) => normalizedHost.endsWith(`.${x}`));
 }
 
-async function deliverAcceptFollowActivity(
-	deps: QueueRelationshipDependencies,
-	follower: MiUser,
-	followee: MiUser,
-	requestId?: string,
-): Promise<void> {
-	if (!isRemoteUser(follower) || !isLocalUser(followee)) {
-		return;
-	}
-
-	const content = addActivityContext(
-		deps.config,
-		renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
-	);
-	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
-}
-
 export async function followWithSideEffectsForApi(
 	deps: QueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
@@ -80,6 +64,18 @@ export async function followWithSideEffectsForApi(
 		blockingExistsInDatabase(deps.db, followee.id, follower.id),
 	]);
 
+	if (
+		isRemoteUser(follower) &&
+		isLocalUser(followee) &&
+		!blocked &&
+		!followee.isSuspended &&
+		(await hasAcceptedFollowInDatabase(deps.db, {
+			actorUri: follower.uri,
+			followeeId: followee.id,
+			...(requestId == null ? {} : { requestId }),
+		}))
+	)
+		return 'ok: follow activity already accepted';
 	if (isRemoteUser(follower) && isLocalUser(followee) && (blocked || followee.isSuspended)) {
 		// リモート側にアクターが残っていても、凍結中・ブロック中のフォロー要求は承認しない。
 		const content = addActivityContext(
@@ -102,8 +98,8 @@ export async function followWithSideEffectsForApi(
 
 	if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
 		if (isRemoteUser(follower) && isLocalUser(followee)) {
-			// 再送された要求にも Accept を返す。
-			await deliverAcceptFollowActivity(deps, follower, followee, requestId);
+			// 既存の関係に対する別 ID の要求も、承認と配送登録を一度だけ確定する。
+			await deliverAcceptForFollow(deps, follower, followee, requestId);
 			return 'ok: already following';
 		}
 		if (isLocalUser(follower)) {
@@ -155,20 +151,17 @@ export async function followWithSideEffectsForApi(
 			deps,
 			follower,
 			followee,
-			omitUndefined({ withReplies, followeeProfile, silent }),
+			omitUndefined({ withReplies, followeeProfile, silent, requestId }),
 		);
 	} catch (err) {
 		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
+			await deliverAcceptForFollow(deps, follower, followee, requestId);
 			if (await followRequestExistsInDatabase(deps.db, follower.id, followee.id)) {
 				await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 			}
 		} else {
 			throw err;
 		}
-	}
-
-	if (isRemoteUser(follower) && isLocalUser(followee)) {
-		await deliverAcceptFollowActivity(deps, follower, followee, requestId);
 	}
 
 	return 'ok';

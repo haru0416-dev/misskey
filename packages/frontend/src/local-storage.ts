@@ -38,7 +38,6 @@ export type Keys =
 	| `ui:folder:${string}`
 	| `aiscript:${string}`
 	| `channelLastReadedAt:${string}`
-	| `memoWidgetMigrationCompleted:${string}`
 	| `idbfallback::${string}`;
 
 type JsonValidator<T> = (value: unknown) => value is T;

@@ -9,7 +9,12 @@ import { toPunyNullable } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
-import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import {
+	followAcceptanceKey,
+	hasAcceptedFollowInDatabase,
+	registerFollowAcceptanceDeliveryInDatabase,
+} from '@/core/user/FollowAcceptanceStore.js';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import {
 	createFollowRequestInDatabase,
@@ -31,6 +36,7 @@ import {
 	followingExistsInDatabase,
 	listFollowersByFolloweeIdWithPaginationFromDatabase,
 	listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase,
+	lockFollowingUserPairInDatabase,
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
 	updateFollowingByIdInDatabase,
 	updateFollowingsByFollowerIdInDatabase,
@@ -75,8 +81,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import type { ApiError } from '../error.js';
-import { clientError } from '../error.js';
+import { ApiError, clientError } from '../error.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { scheduleUnreadNotification, xaddApiNotification } from '../notification/notification.js';
 import type { ApiNotificationDependencies } from '../notification/notification.js';
@@ -523,14 +528,7 @@ export async function createFollowRequestWithSideEffects(
 	}
 }
 
-async function incrementFollowing(
-	deps: ApiFollowingDependencies,
-	follower: MiUser,
-	followee: MiUser,
-	withReplies: MiFollowing['withReplies'],
-): Promise<void> {
-	deps.publishInternalEvent?.('follow', { followerId: follower.id, followeeId: followee.id, withReplies });
-
+async function incrementFollowing(deps: ApiFollowingDependencies, follower: MiUser, followee: MiUser): Promise<void> {
 	if (!follower.movedToUri && !followee.movedToUri) {
 		await Promise.all([
 			adjustUserFollowingCountInDatabase(deps.db, follower.id, 1),
@@ -624,41 +622,91 @@ export async function insertFollowingWithSideEffects(
 		followeeProfile: MiUserProfile;
 		silent?: boolean;
 		awaitNotification?: boolean;
+		requestId?: string | undefined;
+		requestRowId?: string;
 	},
-): Promise<void> {
-	await createFollowingInDatabase(deps.db, {
-		id: genId(),
-		followerId: follower.id,
-		followeeId: followee.id,
-		withReplies: options.withReplies,
-		followerHost: follower.host,
-		followerInbox: isRemoteUser(follower) ? follower.inbox : null,
-		followerSharedInbox: isRemoteUser(follower) ? follower.sharedInbox : null,
-		followeeHost: followee.host,
-		followeeInbox: isRemoteUser(followee) ? followee.inbox : null,
-		followeeSharedInbox: isRemoteUser(followee) ? followee.sharedInbox : null,
+): Promise<boolean> {
+	const requestExists = await deps.db.transaction(async (transaction) => {
+		const db = transaction as MiDrizzleDatabase;
+		const transactionDeps = { ...deps, db };
+		await lockFollowingUserPairInDatabase(db, follower.id, followee.id);
+		if (
+			isRemoteUser(follower) &&
+			isLocalUser(followee) &&
+			(await hasAcceptedFollowInDatabase(db, {
+				actorUri: follower.uri,
+				followeeId: followee.id,
+				...(options.requestId == null ? {} : { requestId: options.requestId }),
+			}))
+		)
+			return null;
+		const request = await fetchFollowRequestFromDatabase(db, follower.id, followee.id);
+		if (options.requestRowId != null && request?.id !== options.requestRowId) {
+			throw followingRequestsAcceptNoFollowRequestError();
+		}
+		await createFollowingInDatabase(db, {
+			id: genId(),
+			followerId: follower.id,
+			followeeId: followee.id,
+			withReplies: options.withReplies,
+			followerHost: follower.host,
+			followerInbox: isRemoteUser(follower) ? follower.inbox : null,
+			followerSharedInbox: isRemoteUser(follower) ? follower.sharedInbox : null,
+			followeeHost: followee.host,
+			followeeInbox: isRemoteUser(followee) ? followee.inbox : null,
+			followeeSharedInbox: isRemoteUser(followee) ? followee.sharedInbox : null,
+		});
+		const exists = request != null;
+		if (request != null) await deleteFollowRequestByIdFromDatabase(db, request.id);
+		await incrementFollowing(transactionDeps, follower, followee);
+		await deliverAcceptForFollow(transactionDeps, follower, followee, options.requestId);
+		return exists;
 	});
-
-	const requestExists = await followRequestExistsInDatabase(deps.db, follower.id, followee.id);
-	if (requestExists) {
-		await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
-		if (isLocalUser(follower)) {
-			const notification = createFollowingNotification(deps, follower.id, 'followRequestAccepted', followee, {
-				message: options.followeeProfile.followedMessage,
-			});
-			if (options.awaitNotification) {
-				await notification.catch(() => {});
-			} else {
-				trackPromise(notification);
-			}
+	if (requestExists == null) return false;
+	if (requestExists && isLocalUser(follower)) {
+		const notification = createFollowingNotification(deps, follower.id, 'followRequestAccepted', followee, {
+			message: options.followeeProfile.followedMessage,
+		});
+		if (options.awaitNotification) {
+			await notification.catch(() => {});
+		} else {
+			trackPromise(notification);
 		}
 	}
-
-	await incrementFollowing(deps, follower, followee, options.withReplies ?? false);
+	deps.publishInternalEvent?.('follow', {
+		followerId: follower.id,
+		followeeId: followee.id,
+		withReplies: options.withReplies ?? false,
+	});
 	await Promise.all([
 		options.silent ? Promise.resolve() : publishFollowToLocalFollower(deps, follower, followee),
 		publishFollowedToLocalFollowee(deps, followee, follower, options.awaitNotification),
 	]);
+	return true;
+}
+
+export async function deliverAcceptForFollow(
+	deps: ApiFollowingDependencies,
+	follower: MiUser,
+	followee: MiUser,
+	requestId?: string,
+): Promise<void> {
+	if (!isRemoteUser(follower) || !isLocalUser(followee)) return;
+	const relationship = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
+	if (relationship == null) throw new Error('Follow acceptance requires a current relationship');
+	const identity = {
+		actorUri: follower.uri!,
+		followeeId: followee.id,
+		followingId: relationship.id,
+		...(requestId == null ? {} : { requestId }),
+	};
+	const accept = renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee);
+	accept.id = `${deps.config.instance.url}/accepts/${followAcceptanceKey(requestId, relationship.id)}`;
+	const content = addActivityContext(deps.config, accept);
+	const job = createDeliverJob(deps.config, followee, content as IActivity, follower.inbox, false);
+	if (job == null) throw new Error('Accepted remote Follow has no delivery destination');
+	job.data.followStateGuard = { followerId: follower.id, followeeId: followee.id, followingId: relationship.id };
+	await registerFollowAcceptanceDeliveryInDatabase(deps.db, identity, job);
 }
 
 // 移行前に承認済みのフォローは、移行後の鍵アカウントでも自動承認する。
@@ -875,19 +923,9 @@ export async function acceptFollowRequestForApi(
 	await insertFollowingWithSideEffects(deps, follower, followee, {
 		withReplies: request.withReplies ?? undefined,
 		followeeProfile,
+		requestId: request.requestId ?? undefined,
+		requestRowId: request.id,
 	});
-
-	if (isRemoteUser(follower) && isLocalUser(followee)) {
-		const content = addActivityContext(
-			deps.config,
-			renderAccept(
-				deps.config,
-				renderFollow(deps.config, follower, followee, request.requestId ?? undefined),
-				followee,
-			),
-		);
-		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
-	}
 }
 
 export async function handleApiFollowingRequestsAccept(
@@ -917,6 +955,7 @@ export async function acceptAllFollowRequestsForApi(
 	const followerById = new Map(followers.map((follower) => [follower.id, follower]));
 	const limit = promiseLimit<void>(ACCEPT_FOLLOW_REQUEST_CONCURRENCY);
 	let accepted = false;
+	const failures: unknown[] = [];
 
 	await Promise.all(
 		requests.map((request) =>
@@ -929,33 +968,16 @@ export async function acceptAllFollowRequestsForApi(
 					const follower =
 						followerById.get(request.followerId) ??
 						(await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId));
-					await insertFollowingWithSideEffects(deps, follower, followee, {
+					const created = await insertFollowingWithSideEffects(deps, follower, followee, {
 						withReplies: currentRequest.withReplies ?? undefined,
 						followeeProfile,
 						awaitNotification: true,
+						requestId: currentRequest.requestId ?? undefined,
+						requestRowId: currentRequest.id,
 					});
-					accepted = true;
-
-					if (isRemoteUser(follower) && isLocalUser(followee)) {
-						const content = addActivityContext(
-							deps.config,
-							renderAccept(
-								deps.config,
-								renderFollow(deps.config, follower, followee, currentRequest.requestId ?? undefined),
-								followee,
-							),
-						);
-						await enqueueDeliverJob(
-							deps.deliverQueue,
-							deps.config,
-							followee,
-							content as IActivity,
-							follower.inbox,
-							false,
-						);
-					}
-				} catch {
-					// 古い、または不正な1件で残りのリクエストの承認を止めない。
+					accepted = created || accepted;
+				} catch (error) {
+					if (!(error instanceof ApiError) || error.code !== 'NO_FOLLOW_REQUEST') failures.push(error);
 				}
 			}),
 		),
@@ -969,6 +991,7 @@ export async function acceptAllFollowRequestsForApi(
 			await packMeDetailedForApi(deps, freshFollowee, { includeSecrets: false }),
 		);
 	}
+	if (failures.length > 0) throw new AggregateError(failures, 'Some follow requests could not be approved');
 }
 
 export async function handleApiFollowingRequestsCancel(

@@ -12,6 +12,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
 import MisskeyLogger from '@/logger.js';
 import { isFederationAllowedUri, signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
 import {
@@ -58,6 +59,15 @@ export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: D
 		) {
 			return 'skip (stale user state)';
 		}
+	}
+	if (data.followStateGuard != null) {
+		const guard = data.followStateGuard;
+		const relationship = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(
+			deps.db,
+			guard.followerId,
+			guard.followeeId,
+		);
+		if (relationship?.id !== guard.followingId) return 'skip (stale follow acceptance)';
 	}
 	const { host } = new URL(data.to);
 
