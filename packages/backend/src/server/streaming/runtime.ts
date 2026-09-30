@@ -50,7 +50,10 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 	let disposed = false;
 	let reconnectRefreshPromise: Promise<void> | undefined;
 	let reconnectRefreshQueued = false;
+	let authorizationSubscriberReady = deps.redisForSub.status === 'ready';
+	let subscriberGeneration = 0;
 	const onRedisReady = () => {
+		authorizationSubscriberReady = false;
 		if (reconnectRefreshPromise != null) {
 			reconnectRefreshQueued = true;
 			return;
@@ -58,6 +61,11 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
+				const generation = subscriberGeneration;
+				// eslint-disable-next-line no-await-in-loop
+				await deps.redisForSub.subscribe(deps.config.runtime.host);
+				authorizationSubscriberReady =
+					!disposed && generation === subscriberGeneration && deps.redisForSub.status === 'ready';
 				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshStreamConnections(activeConnections);
@@ -70,6 +78,18 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 			});
 	};
 	deps.redisForSub.on('ready', onRedisReady);
+	const onRedisClose = () => {
+		authorizationSubscriberReady = false;
+		subscriberGeneration++;
+		// Pub/sub の切断中に失効通知を取りこぼした接続を存続させない。
+		for (const [connection, terminate] of activeConnections) {
+			if (connection.user != null) terminate();
+		}
+		for (const connection of pendingConnections) {
+			if (connection.user != null) release(connection);
+		}
+	};
+	deps.redisForSub.on('close', onRedisClose);
 
 	function release(connection: StreamConnection): void {
 		pendingConnections.delete(connection);
@@ -80,6 +100,9 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 		async init(connection: StreamConnection): Promise<void> {
 			if (disposed) {
 				throw new Error('Streaming server is disposed');
+			}
+			if (connection.user != null && !authorizationSubscriberReady) {
+				throw new Error('Streaming authorization subscriber is unavailable');
 			}
 			pendingConnections.add(connection);
 			try {
@@ -114,7 +137,8 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 				cleanup();
 				terminate();
 			});
-			connection.listen(globalEv, send);
+			connection.listen(globalEv, send, activeConnections.get(connection));
+			if (closed) return cleanup;
 
 			const user = connection.user;
 			if (user) {
@@ -129,6 +153,7 @@ export function createStreamRuntime(deps: StreamServerDependencies) {
 			disposed = true;
 			deps.redisForSub.off('message', onRedisMessage);
 			deps.redisForSub.off('ready', onRedisReady);
+			deps.redisForSub.off('close', onRedisClose);
 			for (const terminate of activeConnections.values()) {
 				terminate();
 			}

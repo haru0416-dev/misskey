@@ -6,11 +6,25 @@
 import { isJsonObject, miLocalStorage } from '@/local-storage.js';
 
 /**
- * 端末に残す下書きの件数。下書きは返信先・引用元・チャンネルごとに別の鍵で残り、投稿せずに閉じた分は
- * 消えないので、上限が無いと増え続ける。保存は入力のたびに全件を読み書きするため、件数がそのまま
+ * 端末全体に残す下書きの件数。アカウント・返信先・引用元・チャンネルごとに別の鍵で残り、投稿せずに
+ * 閉じた分は消えないので、上限が無いと増え続ける。保存は入力のたびに全件を読み書きするため、件数がそのまま
  * 1 打鍵の費用になり、localStorage の容量の上限を超えると以後の保存が例外で失敗する。
  */
 export const MAX_LOCAL_DRAFTS = 50;
+
+export type LocalDraftScope = {
+	accountId: string;
+	channelId?: string | undefined;
+	replyId?: string | undefined;
+	renoteId?: string | undefined;
+};
+
+function keyOf(scope: LocalDraftScope): string {
+	const channel = scope.channelId ? `channel:${scope.channelId}` : '';
+	if (scope.renoteId) return `${channel}renote:${scope.renoteId}:${scope.accountId}`;
+	if (scope.replyId) return `${channel}reply:${scope.replyId}:${scope.accountId}`;
+	return `${channel}note:${scope.accountId}`;
+}
 
 function readAll(): Record<string, unknown> {
 	return miLocalStorage.getItemAsJson('drafts', isJsonObject) ?? {};
@@ -31,12 +45,13 @@ export function pruneLocalDrafts(drafts: Record<string, unknown>, max = MAX_LOCA
 	return Object.fromEntries(kept.map((key) => [key, drafts[key]]));
 }
 
-export function readLocalDraft(key: string): unknown {
-	return readAll()[key];
+export function readLocalDraft(scope: LocalDraftScope): unknown {
+	return readAll()[keyOf(scope)];
 }
 
 /** 中身の無い下書きは残さない (復元しても何も戻らず、確認だけが出る)。 */
-export function writeLocalDraft(key: string, draft: { updatedAt: string }, hasContent: boolean): void {
+export function writeLocalDraft(scope: LocalDraftScope, draft: { updatedAt: string }, hasContent: boolean): void {
+	const key = keyOf(scope);
 	const drafts = readAll();
 	if (hasContent) {
 		drafts[key] = draft;
@@ -47,6 +62,6 @@ export function writeLocalDraft(key: string, draft: { updatedAt: string }, hasCo
 	miLocalStorage.setItemAsJson('drafts', pruneLocalDrafts(drafts));
 }
 
-export function deleteLocalDraft(key: string): void {
-	writeLocalDraft(key, { updatedAt: '' }, false);
+export function deleteLocalDraft(scope: LocalDraftScope): void {
+	writeLocalDraft(scope, { updatedAt: '' }, false);
 }

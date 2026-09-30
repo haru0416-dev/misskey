@@ -4,3 +4,6 @@
  */
 
 export const readyRef = { value: false };
+
+// HTTP-only ホストは consumer を所有せず、queue の必須性は boot の topology が決める。
+export const queueReadyRef = { value: true };

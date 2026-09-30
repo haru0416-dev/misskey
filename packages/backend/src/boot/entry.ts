@@ -41,7 +41,7 @@ cluster.on('exit', (worker) => {
 	clusterLogger.error(styleText('red', `[${worker.id}] died :(`));
 	const assignment = assignmentByWorkerId.get(worker.id);
 	assignmentByWorkerId.delete(worker.id);
-	if (shuttingDown) {
+	if (shuttingDown || !readyRef.value) {
 		return;
 	}
 
@@ -51,7 +51,9 @@ cluster.on('exit', (worker) => {
 		clusterLogger.error(`No role recorded for worker [${worker.id}]; not respawning`);
 		return;
 	}
-	void import('./master.js').then(({ spawnWorker }) => spawnWorker(assignment));
+	void import('./master.js')
+		.then(({ spawnWorker }) => spawnWorker(assignment))
+		.catch((error) => clusterLogger.error('Failed to restart worker', { e: error }));
 });
 
 if (!envOption.quiet) {

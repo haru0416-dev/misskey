@@ -30,6 +30,7 @@ import type {
 	ApiChatRoomStreamPublisher,
 	ApiChatUserStreamPublisher,
 	ApiDriveStreamPublisher,
+	ApiCredentialEventPublisher,
 	ApiInternalEventPublisher,
 	ApiNoteStreamPublisher,
 	ApiNotesStreamPublisher,
@@ -68,6 +69,7 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	notePostProcessing: NotePostProcessing;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishInternalEvent?: ApiInternalEventPublisher;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 	publishBroadcastStream?: ApiBroadcastStreamPublisher;
 	publishMainStream?: ApiMainStreamPublisher;
 	publishAdminStream?: ApiAdminStreamPublisher;

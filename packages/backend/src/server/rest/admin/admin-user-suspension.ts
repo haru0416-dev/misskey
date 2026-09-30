@@ -29,6 +29,7 @@ import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
 import { addActivityContext, genLocalUserUri, renderUndo } from '../user/following.js';
 import { isApiModerator } from '../role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiCredentialEventPublisher } from '../events.js';
 
 export type ApiAdminUserSuspensionDependencies = {
 	config: Config;
@@ -37,10 +38,7 @@ export type ApiAdminUserSuspensionDependencies = {
 	deliverQueue: DeliverQueue;
 	dbQueue: DbQueue;
 	relationshipQueue: RelationshipQueue;
-	publishInternalEvent?: <K extends 'userChangeSuspendedState'>(
-		type: K,
-		value: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] },
-	) => void;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 };
 
 export const adminUserSuspensionParamDef = z.object({
@@ -163,7 +161,7 @@ async function postSuspend(
 	transitionedAt: string,
 	transitionId: string,
 ): Promise<void> {
-	deps.publishInternalEvent?.('userChangeSuspendedState', { id: user.id, isSuspended: true });
+	await deps.publishCredentialEvent('userChangeSuspendedState', { id: user.id, isSuspended: true });
 
 	await enqueueSharedInboxDelete(deps, user, transitionedAt, transitionId);
 }
@@ -174,7 +172,7 @@ async function postUnsuspend(
 	transitionedAt: string,
 	transitionId: string,
 ): Promise<void> {
-	deps.publishInternalEvent?.('userChangeSuspendedState', { id: user.id, isSuspended: false });
+	await deps.publishCredentialEvent('userChangeSuspendedState', { id: user.id, isSuspended: false });
 
 	await enqueueSharedInboxUndoDelete(deps, user, transitionedAt, transitionId);
 }
@@ -243,6 +241,8 @@ async function changeSuspensionState(
 		const outboxJob = await enqueueInlineDbJobInOutbox(tx, 'userSuspensionPostEffects', data, opts);
 		return { data, ...outboxJob };
 	});
+	// 連合用 outbox の遅延・失敗とは独立に、保存された停止状態を既存接続へ反映する。
+	await deps.publishCredentialEvent('userChangeSuspendedState', { id: user.id, isSuspended });
 
 	try {
 		await runInlineDbOutboxJobs(deps.db, [result], async (db) => {

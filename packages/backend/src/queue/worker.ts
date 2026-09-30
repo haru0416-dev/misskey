@@ -68,6 +68,7 @@ import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
 import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
+import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
 import { handleQueueNotePostCreate } from '@/core/note/NoteCreationService.js';
 
 export type QueueShellDependencies = QueueWebhookDeliverDependencies &
@@ -82,7 +83,8 @@ export type QueueShellDependencies = QueueWebhookDeliverDependencies &
 	QueueDbDependencies &
 	QueueEmojisDependencies &
 	QueueDeleteAccountDependencies &
-	QueueCheckModeratorsActivityDependencies & {
+	QueueCheckModeratorsActivityDependencies &
+	ApiAdminUserSuspensionDependencies & {
 		config: Config;
 		logger: Logger;
 	};
@@ -100,6 +102,7 @@ export type QueueWorkers = {
 	dbQueueWorker: Bull.Worker<DbJobData<DbJobName>, unknown, DbJobName>;
 	start: () => Promise<void>;
 	stop: () => Promise<void>;
+	isReady: () => boolean;
 };
 
 type DbJobHandlerMap = {
@@ -141,7 +144,10 @@ function renderError(e?: Error): unknown {
 	return { stack: e.stack, message: e.message, name: e.name };
 }
 
-export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
+export function createQueueWorkers(
+	deps: QueueShellDependencies,
+	onReadyChange: (ready: boolean) => void = () => {},
+): QueueWorkers {
 	const runInBackgroundScope = createBackgroundExecutionScope();
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');
 	let outboxTimer: ReturnType<typeof setInterval> | undefined;
@@ -149,6 +155,16 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	let publicationStopped = false;
 	let outboxDispatch: Promise<void> | undefined;
 	let stopPromise: Promise<void> | undefined;
+	let startPromise: Promise<void> | undefined;
+	let ready = false;
+	let started = false;
+	let runFailed = false;
+	const stoppedDuringStart = Promise.withResolvers<void>();
+	const setReady = (value: boolean) => {
+		if (ready === value) return;
+		ready = value;
+		onReadyChange(value);
+	};
 	const dispatchOutbox = (): Promise<void> => {
 		if (publicationStopped) return Promise.resolve();
 		if (outboxDispatch != null) return outboxDispatch;
@@ -516,6 +532,75 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 			.on('stalled', (jobId) => logger.warn(`stalled id=${jobId}`));
 	}
 
+	const consumers = [
+		userWebhookDeliverQueueWorker,
+		systemWebhookDeliverQueueWorker,
+		relationshipQueueWorker,
+		postScheduledNoteQueueWorker,
+		systemQueueWorker,
+		deliverQueueWorker,
+		inboxQueueWorker,
+		endedPollNotificationQueueWorker,
+		objectStorageQueueWorker,
+		dbQueueWorker,
+	];
+	const connectionReadiness = new Map<Bull.RedisConnection, boolean>();
+	const updateReady = () => {
+		let healthy = started && !runFailed && !stopping;
+		for (const connected of connectionReadiness.values()) {
+			if (!connected) healthy = false;
+		}
+		setReady(healthy);
+	};
+	for (const consumer of consumers) {
+		const backend = consumer.getBackend();
+		for (const connection of [backend.connection, backend.blockingConnection]) {
+			if (connection == null) continue;
+			connectionReadiness.set(connection, connection.status === 'ready');
+			connection.on('close', () => {
+				connectionReadiness.set(connection, false);
+				updateReady();
+			});
+			connection.on('ready', () => {
+				connectionReadiness.set(connection, true);
+				updateReady();
+			});
+		}
+	}
+	const stop = (force = false): Promise<void> => {
+		if (stopPromise != null) return stopPromise;
+		stopping = true;
+		setReady(false);
+		stoppedDuringStart.resolve();
+		stopPromise = (async () => {
+			// 投稿を作る handler は DB stage を待ち得るため、dispatcher と DB consumer を先に止めない。
+			const results = await Promise.allSettled([
+				userWebhookDeliverQueueWorker.close(force),
+				systemWebhookDeliverQueueWorker.close(force),
+				relationshipQueueWorker.close(force),
+				postScheduledNoteQueueWorker.close(force),
+				systemQueueWorker.close(force),
+				inboxQueueWorker.close(force),
+				objectStorageQueueWorker.close(force),
+				endedPollNotificationQueueWorker.close(force),
+			]);
+			publicationStopped = true;
+			if (outboxTimer != null) {
+				clearInterval(outboxTimer);
+				outboxTimer = undefined;
+			}
+			results.push(...(await Promise.allSettled([outboxDispatch])));
+			results.push(...(await Promise.allSettled([dbQueueWorker.close(force), deliverQueueWorker.close(force)])));
+			const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+			if (errors.length > 0)
+				throw new AggregateError(
+					errors.map((result) => result.reason),
+					'Failed to stop queue workers',
+				);
+		})();
+		return stopPromise;
+	};
+
 	return {
 		userWebhookDeliverQueueWorker,
 		systemWebhookDeliverQueueWorker,
@@ -527,53 +612,52 @@ export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 		endedPollNotificationQueueWorker,
 		objectStorageQueueWorker,
 		dbQueueWorker,
-		start: async () => {
-			await dispatchOutbox();
-			if (stopping) return;
-			outboxTimer = setInterval(() => void dispatchOutbox(), 1000);
-			await Promise.all([
-				userWebhookDeliverQueueWorker.run(),
-				systemWebhookDeliverQueueWorker.run(),
-				relationshipQueueWorker.run(),
-				postScheduledNoteQueueWorker.run(),
-				systemQueueWorker.run(),
-				deliverQueueWorker.run(),
-				inboxQueueWorker.run(),
-				endedPollNotificationQueueWorker.run(),
-				objectStorageQueueWorker.run(),
-				dbQueueWorker.run(),
-			]);
-		},
-		stop: () => {
-			if (stopPromise != null) return stopPromise;
-			stopping = true;
-			stopPromise = (async () => {
-				// 投稿を作る handler は DB stage を待ち得るため、dispatcher と DB consumer を先に止めない。
-				const results = await Promise.allSettled([
-					userWebhookDeliverQueueWorker.close(),
-					systemWebhookDeliverQueueWorker.close(),
-					relationshipQueueWorker.close(),
-					postScheduledNoteQueueWorker.close(),
-					systemQueueWorker.close(),
-					inboxQueueWorker.close(),
-					objectStorageQueueWorker.close(),
-					endedPollNotificationQueueWorker.close(),
-				]);
-				publicationStopped = true;
-				if (outboxTimer != null) {
-					clearInterval(outboxTimer);
-					outboxTimer = undefined;
+		isReady: () => ready,
+		start: () => {
+			if (startPromise != null) return startPromise;
+			startPromise = (async () => {
+				const failed = Promise.withResolvers<never>();
+				// ready 後の run 終了も監視するが、永続ループそのものを起動完了として await しない。
+				void failed.promise.catch(() => {});
+				const fail = (error: unknown) => {
+					if (stopping) return;
+					runFailed = true;
+					updateReady();
+					failed.reject(error);
+					deps.logger.error('Queue consumer stopped unexpectedly', { e: error });
+				};
+				try {
+					await dispatchOutbox();
+					if (stopping) return;
+					outboxTimer = setInterval(() => void dispatchOutbox(), 1000);
+					for (const consumer of consumers) {
+						void consumer
+							.run()
+							.then(() => fail(new Error(`Queue consumer ${consumer.name} exited unexpectedly`)), fail);
+					}
+					await Promise.race([
+						Promise.all(consumers.map((consumer) => consumer.waitUntilReady())),
+						failed.promise,
+						stoppedDuringStart.promise,
+					]);
+					if (!stopping) {
+						started = true;
+						updateReady();
+					}
+				} catch (error) {
+					try {
+						// 起動失敗時は依存 consumer が動いていない可能性があり、handler の完了を待てない。
+						await stop(true);
+					} catch (cleanupError) {
+						throw new AggregateError([error, cleanupError], 'Queue startup and cleanup failed', {
+							cause: cleanupError,
+						});
+					}
+					throw error;
 				}
-				results.push(...(await Promise.allSettled([outboxDispatch])));
-				results.push(...(await Promise.allSettled([dbQueueWorker.close(), deliverQueueWorker.close()])));
-				const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
-				if (errors.length > 0)
-					throw new AggregateError(
-						errors.map((result) => result.reason),
-						'Failed to stop queue workers',
-					);
 			})();
-			return stopPromise;
+			return startPromise;
 		},
+		stop: () => stop(),
 	};
 }

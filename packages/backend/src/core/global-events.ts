@@ -187,6 +187,7 @@ export interface InternalEventTypes {
 	userChangeSuspendedState: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] };
 	userChangeDeletedState: { id: MiUser['id']; isDeleted: MiUser['isDeleted'] };
 	userTokenRegenerated: { id: MiUser['id']; oldToken: string; newToken: string };
+	accessTokenRevoked: { userId: MiUser['id']; tokenId: string } | { tokenHash: string };
 	remoteUserUpdated: { id: MiUser['id'] };
 	localUserUpdated: { id: MiUser['id'] };
 	follow: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies'] };

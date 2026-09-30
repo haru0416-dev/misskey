@@ -75,6 +75,10 @@ export async function deleteAccessTokenByIdAndUserIdFromDatabase(
 export async function deleteAccessTokenByTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: AccessTokenRow['token'],
-): Promise<void> {
-	await db.delete(accessToken).where(eq(accessToken.token, token));
+): Promise<Pick<AccessTokenRow, 'id' | 'userId'> | null> {
+	const [deleted] = await db
+		.delete(accessToken)
+		.where(eq(accessToken.token, token))
+		.returning({ id: accessToken.id, userId: accessToken.userId });
+	return deleted ?? null;
 }

@@ -15,7 +15,28 @@ import { envOption } from '@/env.js';
 import { assignmentByWorkerId, workerEnvFor } from './cluster-roles.js';
 import type { WorkerAssignment, WorkerRole } from './cluster-roles.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
+import type { JobQueueRuntime } from './common.js';
+import { queueReadyRef } from './ready.js';
 
+const queueWorkerReadiness = new Map<number, boolean>();
+let requiredQueueWorkers = 0;
+let localQueueReady = true;
+let rejectWorkerStartup: ((error: Error) => void) | undefined;
+
+function publishQueueReadiness() {
+	let ready = localQueueReady && queueWorkerReadiness.size >= requiredQueueWorkers;
+	for (const queueReady of queueWorkerReadiness.values()) {
+		if (!queueReady) ready = false;
+	}
+	queueReadyRef.value = ready;
+	for (const worker of Object.values(cluster.workers ?? {})) {
+		if (worker != null && worker.isConnected() && assignmentByWorkerId.get(worker.id)?.role === 'server') {
+			worker.send({ type: 'queueReadiness', ready: queueReadyRef.value }, (error) => {
+				if (error != null) bootLogger.error('Failed to send queue readiness to HTTP worker', { e: error });
+			});
+		}
+	}
+}
 const logger = new Logger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
 
@@ -64,6 +85,17 @@ export async function masterMain(config: Config) {
 	);
 
 	const topology = resolveTopology(config);
+	requiredQueueWorkers = envOption.disableClustering
+		? 0
+		: topology.workerAssignments.filter((assignment) => assignment.role === 'queue').length;
+	localQueueReady = topology.queueWorkers === 0 || (!envOption.disableClustering && topology.masterRole !== 'queue');
+	publishQueueReadiness();
+	const watchQueue = (runtime: JobQueueRuntime) => {
+		runtime.onReadyChange((ready) => {
+			localQueueReady = ready;
+			publishQueueReadiness();
+		});
+	};
 
 	if (!envOption.disableClustering) {
 		bootLogger.info(`topology: [http: ${topology.httpWorkers}, queue: ${topology.queueWorkers}]`);
@@ -73,18 +105,37 @@ export async function masterMain(config: Config) {
 			disposers.push(() => runtime.dispose());
 		} else if (topology.masterRole === 'queue') {
 			const runtime = await jobQueue(config);
+			watchQueue(runtime);
 			disposers.push(() => runtime.close());
 		}
 		// Bun の node:cluster は SO_REUSEPORT を使うため、masterRole が null ならワーカーだけが listen する。
 		// 実測では httpWorkers=3 の各ワーカーが :3000 を LISTEN し、master は LISTEN しない。
 
-		await spawnWorkers(topology.workerAssignments);
+		try {
+			await spawnWorkers(topology.workerAssignments);
+		} catch (error) {
+			const stoppingWorkers = Object.values(cluster.workers ?? {}).flatMap((worker) => {
+				if (worker == null || worker.isDead()) return [];
+				const stopped = Promise.withResolvers<void>();
+				worker.once('exit', () => stopped.resolve());
+				worker.process.kill('SIGTERM');
+				return [stopped.promise];
+			});
+			await Promise.all(stoppingWorkers);
+			const cleanup = await Promise.allSettled(disposers.map((dispose) => dispose()));
+			const errors = cleanup.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+			if (errors.length > 0) {
+				throw new AggregateError([error, ...errors], 'Worker startup and runtime cleanup failed', { cause: error });
+			}
+			throw error;
+		}
 	} else {
 		if (topology.queueWorkers === 0) {
 			const runtime = await server(config, undefined, { daemons: true });
 			disposers.push(() => runtime.dispose());
 		} else if (topology.httpWorkers === 0) {
 			const runtime = await jobQueue(config);
+			watchQueue(runtime);
 			disposers.push(() => runtime.close());
 		} else {
 			const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
@@ -93,6 +144,7 @@ export async function masterMain(config: Config) {
 			try {
 				const startedServerRuntime = (serverRuntime = await server(config, dependencies, { daemons: true }));
 				const queueRuntime = await jobQueue(config, dependencies);
+				watchQueue(queueRuntime);
 				disposers.push(async () => {
 					const results = await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
 					const errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
@@ -218,23 +270,58 @@ async function spawnWorkers(assignments: WorkerAssignment[]) {
 	}
 
 	bootLogger.info(`Starting ${assignments.length} worker${assignments.length === 1 ? '' : 's'}...`);
-	await Promise.all(assignments.map(spawnWorker));
+	const failed = Promise.withResolvers<never>();
+	rejectWorkerStartup = failed.reject;
+	try {
+		await Promise.race([Promise.all(assignments.map(spawnWorker)), failed.promise]);
+	} finally {
+		rejectWorkerStartup = undefined;
+	}
 	bootLogger.succ('All workers started');
 }
 
 export function spawnWorker(assignment: WorkerAssignment): Promise<void> {
-	return new Promise((res) => {
-		const worker = cluster.fork(workerEnvFor(assignment));
-		assignmentByWorkerId.set(worker.id, assignment);
-		worker.on('message', (message) => {
-			if (message === 'listenFailed') {
-				bootLogger.error('The server Listen failed due to the previous error.');
-				process.exit(1);
-			}
-			if (message !== 'ready') {
-				return;
-			}
-			res();
-		});
+	const { promise, resolve, reject } = Promise.withResolvers<void>();
+	const rejectStartupGroup = rejectWorkerStartup;
+	const worker = cluster.fork(workerEnvFor(assignment));
+	assignmentByWorkerId.set(worker.id, assignment);
+	if (assignment.role === 'queue') {
+		queueWorkerReadiness.set(worker.id, false);
+		publishQueueReadiness();
+	}
+	const startupExit = () => reject(new Error(`Worker ${worker.id} exited before becoming ready`));
+	worker.once('exit', startupExit);
+	worker.once('exit', () => {
+		// 個別 ready 通知後も、兄弟全員の起動が終わるまでは死亡を起動失敗にする。
+		if (rejectStartupGroup != null && rejectWorkerStartup === rejectStartupGroup) {
+			rejectStartupGroup(new Error(`Worker ${worker.id} exited during startup`));
+		}
+		if (assignment.role === 'queue') {
+			queueWorkerReadiness.delete(worker.id);
+			publishQueueReadiness();
+		}
 	});
+	worker.on('message', (message) => {
+		if (
+			assignment.role === 'queue' &&
+			message != null &&
+			typeof message === 'object' &&
+			'type' in message &&
+			message.type === 'queueReadiness' &&
+			'ready' in message &&
+			typeof message.ready === 'boolean'
+		) {
+			queueWorkerReadiness.set(worker.id, message.ready);
+			publishQueueReadiness();
+		}
+		if (message === 'listenFailed') {
+			bootLogger.error('The server Listen failed due to the previous error.');
+			reject(new Error(`Worker ${worker.id} failed to listen`));
+		}
+		if (message !== 'ready') return;
+		worker.off('exit', startupExit);
+		publishQueueReadiness();
+		resolve();
+	});
+	return promise;
 }

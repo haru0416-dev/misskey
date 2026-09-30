@@ -28,6 +28,13 @@ export type ApiInternalEventPublisher = <K extends keyof InternalEventTypes>(
 	value?: InternalEventTypes[K],
 ) => void;
 
+export type ApiCredentialEventPublisher = <
+	K extends 'accessTokenRevoked' | 'userTokenRegenerated' | 'userChangeSuspendedState',
+>(
+	type: K,
+	value: InternalEventTypes[K],
+) => Promise<void>;
+
 export type ApiAdminStreamPublisher = <K extends keyof AdminEventTypes>(
 	userId: MiUser['id'],
 	type: K,
@@ -105,6 +112,7 @@ function publishToChannel(
 
 export type EventPublishers = {
 	publishInternalEvent: ApiInternalEventPublisher;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 	publishBroadcastStream: ApiBroadcastStreamPublisher;
 	publishMainStream: ApiMainStreamPublisher;
 	publishAdminStream: ApiAdminStreamPublisher;
@@ -121,6 +129,10 @@ export type EventPublishers = {
 export function createEventPublishers(deps: RedisEventPublisherDependencies): EventPublishers {
 	return {
 		publishInternalEvent: (type, value) => publishToChannel(deps, 'internal', type, value),
+		publishCredentialEvent: async (type, body) => {
+			// Redis の受理まで待つ。購読側での反映完了や永続化は保証しない。
+			await deps.publish(deps.config.runtime.host, JSON.stringify({ channel: 'internal', message: { type, body } }));
+		},
 		publishBroadcastStream: (type, value) => publishToChannel(deps, 'broadcast', type, value),
 		publishMainStream: (userId, type, value) => publishToChannel(deps, `mainStream:${userId}`, type, value),
 		publishAdminStream: (userId, type, value) => publishToChannel(deps, `adminStream:${userId}`, type, value),

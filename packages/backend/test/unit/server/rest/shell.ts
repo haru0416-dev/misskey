@@ -14,6 +14,7 @@ import { muting } from '@/db/schema/muting.js';
 import { note } from '@/db/schema/note.js';
 import { countDatabaseQueries } from '../../../query-counter.js';
 import { createApiShellApp } from '@/server/rest/shell.js';
+import { createEventPublishers } from '@/server/rest/events.js';
 
 function expectApiHeaders(response: Response): void {
 	expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
@@ -96,6 +97,10 @@ describe('通知一覧のユーザー取得', () => {
 		await runtime.db.insert(muting).values({ id: genId(), muterId: viewerId, muteeId: users[1]!.id });
 		const app = createApiShellApp({
 			...runtime,
+			...createEventPublishers({
+				config: runtime.config,
+				publish: (host, message) => runtime.redisForPub.publish(host, message),
+			}),
 			logger: runtime.loggerService.getLogger('test-notifications'),
 		});
 		const stream = `notificationTimeline:${viewerId}`;

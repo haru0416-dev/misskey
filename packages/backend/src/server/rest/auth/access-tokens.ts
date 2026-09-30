@@ -4,6 +4,7 @@
  */
 
 import type { ApiParams } from '../validation.js';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -19,9 +20,11 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import { permissionDeniedError } from '../error.js';
 import { parseApiParams } from '../validation.js';
+import type { ApiCredentialEventPublisher } from '../events.js';
 
 export type ApiAccessTokenDependencies = {
 	db: MiDrizzleDatabase;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 };
 
 export const iAppsParamDef = z.object({
@@ -83,7 +86,14 @@ export async function handleApiIRevokeToken(
 		target = { id: params.tokenId };
 	} else if (params.token) {
 		const found = await fetchAccessTokenByTokenFromDatabase(deps.db, params.token);
-		target = found != null && found.userId === user.id ? found : null;
+		if (found == null) {
+			// DB 削除後に publish が失敗した再試行でも、旧接続の資格を特定できる。
+			await deps.publishCredentialEvent('accessTokenRevoked', {
+				tokenHash: createHash('sha256').update(params.token).digest('hex'),
+			});
+			return;
+		}
+		target = found.userId === user.id ? found : null;
 	} else {
 		return;
 	}
@@ -95,4 +105,5 @@ export async function handleApiIRevokeToken(
 		throw permissionDeniedError();
 	}
 	await deleteAccessTokenByIdAndUserIdFromDatabase(deps.db, target.id, user.id);
+	await deps.publishCredentialEvent('accessTokenRevoked', { userId: user.id, tokenId: target.id });
 }

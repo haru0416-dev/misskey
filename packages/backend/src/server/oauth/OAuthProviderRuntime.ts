@@ -4,6 +4,7 @@
  */
 
 import dns from 'node:dns/promises';
+import { createHash } from 'node:crypto';
 import * as htmlParser from 'node-html-parser';
 import type * as Redis from 'ioredis';
 import { extractLinkHeaderUrisByRel } from '@/misc/parse-link-header.js';
@@ -14,6 +15,7 @@ import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } fro
 import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
+import type { ApiCredentialEventPublisher } from '@/server/rest/events.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
@@ -171,6 +173,7 @@ export type OAuthProviderRuntimeDependencies = {
 	fetchLocalUserByNativeToken?: (token: string) => Promise<MiLocalUser | null>;
 	createAccessToken?: typeof createAccessTokenInDatabase;
 	deleteAccessTokenByToken?: typeof deleteAccessTokenByTokenFromDatabase;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 };
 
 export type OAuthProviderRuntime = {
@@ -601,7 +604,13 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 		let lastError: unknown;
 		for (let attempt = 0; attempt < OAUTH_TOKEN_REVOCATION_ATTEMPTS; attempt++) {
 			try {
-				await deleteAccessTokenByToken(deps.db, accessToken);
+				const deleted = await deleteAccessTokenByToken(deps.db, accessToken);
+				await deps.publishCredentialEvent(
+					'accessTokenRevoked',
+					deleted != null
+						? { userId: deleted.userId, tokenId: deleted.id }
+						: { tokenHash: createHash('sha256').update(accessToken).digest('hex') },
+				);
 				return;
 			} catch (error) {
 				lastError = error;

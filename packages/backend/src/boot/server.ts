@@ -86,6 +86,7 @@ async function launchServerWithDependencies(
 		}),
 		logger: deps.loggerService.getLogger('oauth'),
 		redis: deps.redis,
+		publishCredentialEvent: eventPublishers.publishCredentialEvent,
 	});
 	disposers.push(() => oauthRuntime.dispose());
 	const app = createMisskeyApp({

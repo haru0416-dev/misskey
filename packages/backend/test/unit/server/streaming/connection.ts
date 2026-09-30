@@ -9,8 +9,17 @@ import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createChatRoomInDatabase } from '@/core/chat/ChatRoomStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import {
+	createAccessTokenInDatabase,
+	deleteAccessTokenByIdAndUserIdFromDatabase,
+} from '@/core/app/AccessTokenStore.js';
+import { deserializeAccessToken } from '@/db/schema/access-token.js';
+import { createStreamRuntime } from '@/server/streaming/runtime.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { generateNativeUserToken } from '@/misc/token.js';
+import { createEventPublishers } from '@/server/rest/events.js';
+import { handleApiIRevokeToken } from '@/server/rest/auth/access-tokens.js';
 import { StreamConnection, refreshStreamConnections } from '@/server/streaming/connection.js';
 import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
@@ -39,6 +48,188 @@ describe('hono-stream-connection', () => {
 
 	afterAll(async () => {
 		await runtime.dispose();
+	});
+
+	test('失効通知は初期化中と upgrade 待ちでも資格接続を無効化する', async () => {
+		const user = await createTestUser(deps, 'honostreamrevokeinit');
+		for (const duringInitialization of [true, false]) {
+			const subscriber = new EventEmitter();
+			const connection = new StreamConnection(deps, user, null);
+			const initializing = connection.init(subscriber);
+			if (!duringInitialization) await initializing;
+			subscriber.emit('internal', { type: 'userChangeSuspendedState', body: { id: user.id, isSuspended: true } });
+			if (duringInitialization) await expect(initializing).rejects.toThrow();
+			const terminate = vi.fn();
+			const { raw, send } = collectSentMessages();
+			connection.listen(subscriber, send, terminate);
+			connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'secret' } }));
+			await connection.connectChannel('new', {}, 'main', true);
+			connection.sendMessageToWs('private', { text: 'secret' });
+			expect(terminate).toHaveBeenCalledOnce();
+			expect(raw).toEqual([]);
+			expect(subscriber.listenerCount('noteStream:secret')).toBe(0);
+		}
+	});
+
+	test.each(['tokenId', 'token'] as const)(
+		'失効publish失敗は呼出元へ返し、%s再試行で旧接続を切断する',
+		async (kind) => {
+			const user = await createTestUser(deps, 'honostreamretrypublish');
+			const token = deserializeAccessToken({
+				id: genId(),
+				userId: user.id,
+				token: genId(),
+				permission: ['read:account'],
+				lastUsedAt: null,
+				session: null,
+				name: null,
+				description: null,
+				iconUrl: null,
+				fetched: false,
+			});
+			await createAccessTokenInDatabase(deps.db, token);
+			const subscriber = new EventEmitter();
+			const connection = new StreamConnection(deps, user, token);
+			await connection.init(subscriber);
+			const terminate = vi.fn();
+			const { raw, send } = collectSentMessages();
+			connection.listen(subscriber, send, terminate);
+			await connection.connectChannel('private', {}, 'main');
+			let fail = true;
+			const publishers = createEventPublishers({
+				config: deps.config,
+				publish: async (_host, payload) => {
+					if (fail) {
+						fail = false;
+						throw new Error('injected publish rejection');
+					}
+					const event = JSON.parse(payload);
+					subscriber.emit(event.channel, event.message);
+				},
+			});
+			const params = kind === 'tokenId' ? { tokenId: token.id } : { token: token.token };
+			await expect(handleApiIRevokeToken({ ...deps, ...publishers }, user, null, params)).rejects.toThrow(
+				'injected publish rejection',
+			);
+			await handleApiIRevokeToken({ ...deps, ...publishers }, user, null, params);
+			subscriber.emit(`mainStream:${user.id}`, { type: 'meUpdated', body: { id: user.id } });
+			connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'secret' } }));
+			expect(terminate).toHaveBeenCalledOnce();
+			expect(raw).toEqual([]);
+			expect(subscriber.listenerCount('noteStream:secret')).toBe(0);
+		},
+	);
+
+	test('同時 token 再生成の古い通知でも失効を検出し、現行 native token は保持する', async () => {
+		const user = await createTestUser(deps, 'honostreamrotationrace');
+		const oldToken = generateNativeUserToken();
+		const newToken = generateNativeUserToken();
+		await updateUserInDatabase(deps.db, user.id, { token: oldToken });
+		const subscriber = new EventEmitter();
+		const stale = new StreamConnection(deps, { ...user, token: oldToken }, null);
+		await stale.init(subscriber);
+		const terminateStale = vi.fn();
+		stale.listen(subscriber, () => {}, terminateStale);
+		await updateUserInDatabase(deps.db, user.id, { token: newToken });
+		const current = new StreamConnection(deps, { ...user, token: newToken }, null);
+		await current.init(subscriber);
+		const terminateCurrent = vi.fn();
+		const { raw, send } = collectSentMessages();
+		current.listen(subscriber, send, terminateCurrent);
+		await current.connectChannel('private', {}, 'main');
+		subscriber.emit('internal', {
+			type: 'userTokenRegenerated',
+			body: { id: user.id, oldToken: generateNativeUserToken(), newToken },
+		});
+		await vi.waitFor(() => expect(terminateStale).toHaveBeenCalledOnce());
+		await current.refresh();
+		expect(terminateCurrent).not.toHaveBeenCalled();
+		subscriber.emit(`mainStream:${user.id}`, { type: 'meUpdated', body: { id: user.id } });
+		expect(raw.map((message) => JSON.parse(message).body.body)).toEqual([{ id: user.id }]);
+		current.dispose();
+	});
+
+	test('失効イベントを取りこぼしても refresh で DB の token と停止状態を照合する', async () => {
+		const user = await createTestUser(deps, 'honostreamlostrevoke');
+		for (const kind of ['access', 'native', 'suspension'] as const) {
+			const nativeToken = generateNativeUserToken();
+			await updateUserInDatabase(deps.db, user.id, { isSuspended: false, token: nativeToken });
+			const token = deserializeAccessToken({
+				id: genId(),
+				userId: user.id,
+				token: genId(),
+				permission: ['read:account'],
+				lastUsedAt: null,
+				session: null,
+				name: null,
+				description: null,
+				iconUrl: null,
+				fetched: false,
+			});
+			await createAccessTokenInDatabase(deps.db, token);
+			const connection = new StreamConnection(deps, { ...user, token: nativeToken }, kind === 'access' ? token : null);
+			const subscriber = new EventEmitter();
+			await connection.init(subscriber);
+			const terminate = vi.fn();
+			const { raw, send } = collectSentMessages();
+			connection.listen(subscriber, send, terminate);
+			await connection.connectChannel('private', {}, 'main');
+			if (kind === 'access') {
+				await deleteAccessTokenByIdAndUserIdFromDatabase(deps.db, token.id, user.id);
+			} else {
+				await updateUserInDatabase(
+					deps.db,
+					user.id,
+					kind === 'native' ? { token: generateNativeUserToken() } : { isSuspended: true },
+				);
+			}
+			await expect(connection.refresh()).rejects.toThrow();
+			subscriber.emit(`mainStream:${user.id}`, { type: 'meUpdated', body: { id: user.id } });
+			connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'secret' } }));
+			expect(terminate).toHaveBeenCalledOnce();
+			expect(raw).toEqual([]);
+			expect(subscriber.listenerCount('noteStream:secret')).toBe(0);
+		}
+	});
+
+	test('失効通知の Redis 接続が切れたら資格接続を切断し、再購読完了まで upgrade を認めない', async () => {
+		const user = await createTestUser(deps, 'honostreamredisrevoke');
+		let acknowledgeSubscription!: () => void;
+		const redis = Object.assign(new EventEmitter(), {
+			status: 'ready',
+			subscribe: () =>
+				new Promise<number>((resolve) => {
+					acknowledgeSubscription = () => resolve(1);
+				}),
+		});
+		// テスト対象は pub/sub ライフサイクルだけで、他の Redis 操作は使用しない。
+		const streamRuntime = createStreamRuntime({ ...runtime, redisForSub: redis as typeof runtime.redisForSub });
+		const authenticated = new StreamConnection(deps, user, null);
+		const anonymous = new StreamConnection(deps, null, null);
+		try {
+			await streamRuntime.init(authenticated);
+			await streamRuntime.init(anonymous);
+			const terminateAuthenticated = vi.fn();
+			const terminateAnonymous = vi.fn();
+			streamRuntime.listen(authenticated, () => {}, terminateAuthenticated);
+			streamRuntime.listen(anonymous, () => {}, terminateAnonymous);
+			redis.status = 'reconnecting';
+			redis.emit('close');
+			expect(terminateAuthenticated).toHaveBeenCalledOnce();
+			expect(terminateAnonymous).not.toHaveBeenCalled();
+			await expect(streamRuntime.init(new StreamConnection(deps, user, null))).rejects.toThrow();
+			redis.status = 'ready';
+			redis.emit('ready');
+			await expect(streamRuntime.init(new StreamConnection(deps, user, null))).rejects.toThrow();
+			acknowledgeSubscription();
+			await vi.waitFor(async () => {
+				const replacement = new StreamConnection(deps, user, null);
+				await streamRuntime.init(replacement);
+				streamRuntime.release(replacement);
+			});
+		} finally {
+			streamRuntime.dispose();
+		}
 	});
 
 	test('未ログインではrequireCredentialなチャンネルに接続できない', async () => {

@@ -4,8 +4,11 @@
  */
 
 import type { EventEmitter } from 'node:events';
+import { createHash } from 'node:crypto';
 import type { GlobalEvents } from '@/core/global-events.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { fetchAccessTokenByTokenFromDatabase } from '@/core/app/AccessTokenStore.js';
 import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
 import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
 import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
@@ -182,8 +185,10 @@ const MAX_SUBSCRIBED_NOTES_PER_CONNECTION = 1536;
 export class StreamConnection {
 	public readonly user?: MiUser;
 	public readonly token?: MiAccessToken;
+	private readonly tokenHash?: string;
 	private subscriber?: EventEmitter;
-	private sendToClient?: (raw: string) => void;
+	private sendToClient: ((raw: string) => void) | undefined;
+	private terminate: (() => void) | undefined;
 	private readonly channels = new Map<string, { channelName: string; handle: StreamChannelHandle }>();
 	private readonly pendingChannels = new Map<string, StreamChannelSubscriberScope>();
 	private readonly pendingChannelScopes = new Set<StreamChannelSubscriberScope>();
@@ -209,6 +214,31 @@ export class StreamConnection {
 		this.sendMessageToWs(data.type, data.body);
 	};
 	private readonly onInternalEvent = (data: GlobalEvents['internal']['payload']): void => {
+		if (this.disposed) return;
+		// 資格失効はプロフィールの再取得待ちに積まず、購読と送信を直ちに止める。
+		if (this.user != null) {
+			if (
+				(data.type === 'userChangeSuspendedState' && data.body.id === this.user.id && data.body.isSuspended) ||
+				(data.type === 'accessTokenRevoked' &&
+					this.token != null &&
+					('tokenId' in data.body
+						? data.body.userId === this.user.id && data.body.tokenId === this.token.id
+						: data.body.tokenHash === this.tokenHash)) ||
+				(data.type === 'userTokenRegenerated' &&
+					data.body.id === this.user.id &&
+					this.token == null &&
+					data.body.oldToken === this.user.token)
+			) {
+				this.invalidate();
+				return;
+			}
+			if (data.type === 'userTokenRegenerated' && data.body.id === this.user.id && this.token == null) {
+				// 同時再生成では producer が読んだ旧 token が古い場合があるため、保存済みの資格も照合する。
+				void this.refresh()
+					.then(() => this.assertCredentialValid())
+					.catch(() => this.invalidate());
+			}
+		}
 		if (this.pendingInternalEvents != null) {
 			this.pendingInternalEvents.push(data);
 			return;
@@ -337,6 +367,35 @@ export class StreamConnection {
 		}
 		if (token) {
 			this.token = token;
+			this.tokenHash = createHash('sha256').update(token.token).digest('hex');
+		}
+	}
+
+	private invalidate(): void {
+		if (this.disposed) return;
+		const terminate = this.terminate;
+		this.dispose();
+		terminate?.();
+	}
+
+	private async assertCredentialValid(): Promise<void> {
+		if (this.user == null) return;
+		const [currentUser, currentToken] = await Promise.all([
+			fetchUserByIdFromDatabase(this.deps.db, this.user.id),
+			this.token == null ? null : fetchAccessTokenByTokenFromDatabase(this.deps.db, this.token.token),
+		]);
+		if (
+			currentUser == null ||
+			currentUser.isSuspended ||
+			(this.token == null
+				? currentUser.token !== this.user.token
+				: currentToken == null ||
+					currentToken.id !== this.token.id ||
+					currentToken.userId !== this.user.id ||
+					!currentToken.permission.includes('read:account'))
+		) {
+			this.invalidate();
+			throw new Error('Streaming credentials are no longer valid');
 		}
 	}
 
@@ -345,6 +404,7 @@ export class StreamConnection {
 			return;
 		}
 		const snapshot = await fetchStreamConnectionSnapshot(this.deps, this.user.id);
+		await this.assertCredentialValid();
 		this.userProfile = snapshot.userProfile;
 		this.following = snapshot.following;
 		this.followingChannels = snapshot.followingChannels;
@@ -364,6 +424,7 @@ export class StreamConnection {
 
 		try {
 			await withTimeout(this.refresh(), 'Stream connection initialization timed out');
+			if (this.disposed) throw new Error('Streaming connection is disposed');
 		} catch (error) {
 			this.dispose();
 			throw error;
@@ -393,7 +454,12 @@ export class StreamConnection {
 		return refreshPromise;
 	}
 
-	public listen(subscriber: EventEmitter, sendToClient: (raw: string) => void): void {
+	public listen(subscriber: EventEmitter, sendToClient: (raw: string) => void, terminate?: () => void): void {
+		if (this.disposed) {
+			terminate?.();
+			return;
+		}
+		this.terminate = terminate;
 		if (this.subscriber == null) {
 			this.subscriber = subscriber;
 			this.subscriber.on('internal', this.onInternalEvent);
@@ -406,6 +472,7 @@ export class StreamConnection {
 	}
 
 	public handleClientMessage(raw: string): void {
+		if (this.disposed) return;
 		let obj: JsonObject;
 		try {
 			obj = JSON.parse(raw);
@@ -546,7 +613,7 @@ export class StreamConnection {
 	}
 
 	public sendMessageToWs(type: string, payload: JsonValue): void {
-		if (this.sendToClient == null) return;
+		if (this.disposed || this.sendToClient == null) return;
 		this.sendToClient(JSON.stringify({ type, body: payload }));
 	}
 
@@ -700,6 +767,8 @@ export class StreamConnection {
 
 	public dispose(): void {
 		this.disposed = true;
+		this.sendToClient = undefined;
+		this.terminate = undefined;
 		this.subscriber?.off('broadcast', this.onBroadcast);
 		this.subscriber?.off('internal', this.onInternalEvent);
 		for (const noteId of this.subscribingNotes.keys()) {

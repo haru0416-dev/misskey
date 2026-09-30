@@ -6,7 +6,7 @@
 import type * as Redis from 'ioredis';
 import { Hono } from 'hono';
 import { sql } from 'drizzle-orm';
-import { readyRef } from '@/boot/ready.js';
+import { queueReadyRef, readyRef } from '@/boot/ready.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 export type HealthDependencies = {
@@ -18,8 +18,8 @@ export type HealthDependencies = {
 };
 
 async function checkHealth(deps: HealthDependencies): Promise<boolean> {
+	if (!readyRef.value || !queueReadyRef.value) return false;
 	return await Promise.all([
-		new Promise<void>((resolve, reject) => (readyRef.value ? resolve() : reject(new Error('server is not ready')))),
 		deps.redis.ping(),
 		deps.redisForPub.ping(),
 		deps.redisForSub.ping(),

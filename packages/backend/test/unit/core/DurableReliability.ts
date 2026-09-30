@@ -71,16 +71,18 @@ describe('durable reliability boundaries', () => {
 	test('suspension commits state, log and outbox, and an older job cannot apply after unsuspend', async () => {
 		const moderator = await createLocalUser('durablemoderator');
 		const target = await createLocalUser('durabletarget');
-		const publishInternalEvent = vi.fn().mockImplementationOnce(() => {
-			throw new Error('injected inline side-effect failure');
-		});
+		const publishCredentialEvent = vi
+			.fn(async () => {})
+			.mockRejectedValueOnce(new Error('injected authorization publish failure'));
 		const deps = {
 			...runtime,
-			publishInternalEvent,
+			publishCredentialEvent,
 		} as unknown as ApiAdminUserSuspensionDependencies;
 
 		try {
-			await handleApiAdminSuspendUser(deps, moderator, { userId: target.id });
+			await expect(handleApiAdminSuspendUser(deps, moderator, { userId: target.id })).rejects.toThrow(
+				'injected authorization publish failure',
+			);
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isSuspended).toBe(true);
 			const [suspendOutbox] = await runtime.db
 				.select()
@@ -102,21 +104,21 @@ describe('durable reliability boundaries', () => {
 			);
 			await deleteUserByIdFromDatabase(runtime.db, moderator.id);
 			await updateUserInDatabase(runtime.db, target.id, { updatedAt: new Date(Date.now() + 1000) });
-			publishInternalEvent.mockClear();
+			publishCredentialEvent.mockClear();
 			await handleQueueUserSuspensionPostEffects(deps, {
 				userId: target.id,
 				isSuspended: false,
 				transitionedAt: new Date().toISOString(),
 				transitionId: unsuspendLog!.id,
 			});
-			expect(publishInternalEvent).toHaveBeenCalledWith('userChangeSuspendedState', {
+			expect(publishCredentialEvent).toHaveBeenCalledWith('userChangeSuspendedState', {
 				id: target.id,
 				isSuspended: false,
 			});
-			publishInternalEvent.mockClear();
+			publishCredentialEvent.mockClear();
 
 			await handleQueueUserSuspensionPostEffects(deps, suspendOutbox!.data as DbUserSuspensionPostEffectsJobData);
-			expect(publishInternalEvent).not.toHaveBeenCalled();
+			expect(publishCredentialEvent).not.toHaveBeenCalled();
 
 			const guard = suspendOutbox!.data as DbUserSuspensionPostEffectsJobData;
 			await expect(

@@ -4,7 +4,7 @@
  */
 
 import * as assert from 'node:assert';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import { createFollowingInDatabase, findHashtagsByName, genId, openTestDatabase } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
@@ -784,6 +784,99 @@ describe('Streaming', () => {
 			);
 
 			expect(fired).toBe(true);
+		});
+
+		describe('資格失効', () => {
+			const receive = (
+				socket: WebSocket,
+				predicate: (message: { type: string; body?: { type?: string; body?: { text?: string } } }) => boolean,
+			) =>
+				new Promise<void>((resolve, reject) => {
+					const timer = setTimeout(() => {
+						socket.off('message', onMessage);
+						reject(new Error('Streaming message timed out'));
+					}, 3000);
+					const onMessage = (raw: WebSocket.RawData) => {
+						if (!predicate(JSON.parse(raw.toString()))) return;
+						clearTimeout(timer);
+						socket.off('message', onMessage);
+						resolve();
+					};
+					socket.on('message', onMessage);
+				});
+
+			const open = async (token: string) => {
+				const url = resolveStreamingUrl();
+				url.searchParams.set('i', token);
+				const socket = new WebSocket(url);
+				try {
+					await new Promise<void>((resolve, reject) => {
+						socket.once('open', resolve);
+						socket.on('error', reject);
+					});
+					const connected = receive(socket, (message) => message.type === 'connected');
+					socket.send(
+						JSON.stringify({ type: 'connect', body: { channel: 'hybridTimeline', id: 'timeline', pong: true } }),
+					);
+					await connected;
+					return socket;
+				} catch (error) {
+					if (socket.readyState !== WebSocket.CLOSED) socket.close();
+					throw error;
+				}
+			};
+
+			test.each(['tokenId', 'token', 'native', 'suspension'] as const)(
+				'%s: 既存接続を切断し、別資格の接続は保持する',
+				async (kind) => {
+					const target = await signup();
+					const other = await signup();
+					const application = await createAppToken(target, ['read:account']);
+					const apps = await api('i/apps', {}, target);
+					const applicationId = apps.body[0]?.id;
+					const survivorToken = await createAppToken(target, ['read:account']);
+					const revokedToken = kind === 'native' || kind === 'suspension' ? target.token : application;
+					const sockets = await Promise.all([open(revokedToken), open(survivorToken), open(other.token)]);
+					const [revoked, sameAccount, otherAccount] = sockets;
+					try {
+						if (kind === 'native') {
+							expect((await api('i/regenerate-token', { password: 'test' }, target)).status).toBe(204);
+						} else if (kind === 'suspension') {
+							expect((await api('admin/suspend-user', { userId: target.id }, ayano)).status).toBe(204);
+						} else {
+							assert.ok(applicationId);
+							expect(
+								(
+									await api(
+										'i/revoke-token',
+										kind === 'token' ? { token: application } : { tokenId: applicationId },
+										target,
+									)
+								).status,
+							).toBe(204);
+						}
+						await vi.waitFor(() => expect(revoked.readyState).toBe(WebSocket.CLOSED));
+						if (kind === 'suspension') {
+							await vi.waitFor(() => expect(sameAccount.readyState).toBe(WebSocket.CLOSED));
+						}
+						const survivors = kind === 'suspension' ? [otherAccount] : [sameAccount, otherAccount];
+						const delivered = survivors.map((socket) =>
+							receive(
+								socket,
+								(message) =>
+									message.type === 'channel' &&
+									message.body?.type === 'note' &&
+									message.body.body?.text === `after-${target.id}`,
+							),
+						);
+						await post(ayano, { text: `after-${target.id}` });
+						await Promise.all(delivered);
+						await expect(open(revokedToken)).rejects.toThrow();
+					} finally {
+						for (const socket of sockets) socket.close();
+					}
+				},
+			);
 		});
 
 		describe('Hashtag Timeline', () => {

@@ -65,6 +65,9 @@ describe('createOAuthProviderRuntime', () => {
 		const runtime = createOAuthProviderRuntime({
 			config,
 			db: {} as MiDrizzleDatabase,
+			publishCredentialEvent: async () => {
+				throw new Error('Unexpected credential invalidation');
+			},
 			httpRequestService: {
 				send: async (url) =>
 					responseWithUrl(
@@ -153,6 +156,9 @@ describe('createOAuthProviderRuntime', () => {
 		const runtime = createOAuthProviderRuntime({
 			config,
 			db: {} as MiDrizzleDatabase,
+			publishCredentialEvent: async () => {
+				throw new Error('Unexpected credential invalidation');
+			},
 			httpRequestService: { send: async (url) => responseWithUrl('', url) },
 			getCommonData: async () => commonData,
 			logger: {
@@ -190,6 +196,7 @@ describe('createOAuthProviderRuntime', () => {
 		const dependencies = {
 			config,
 			db: {} as MiDrizzleDatabase,
+			publishCredentialEvent: async () => {},
 			httpRequestService: {
 				send: async (url: string) =>
 					responseWithUrl(
@@ -212,6 +219,7 @@ describe('createOAuthProviderRuntime', () => {
 					deletionFailuresRemaining--;
 					throw new Error('temporary database failure');
 				}
+				return { id: 'token-id', userId: 'user-id' };
 			},
 		};
 		const first = createOAuthProviderRuntime(dependencies);

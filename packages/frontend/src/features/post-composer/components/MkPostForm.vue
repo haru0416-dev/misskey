@@ -157,6 +157,7 @@ import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
 import { deleteLocalDraft, readLocalDraft, writeLocalDraft } from '@/features/post-composer/local-drafts.js';
+import type { LocalDraftScope } from '@/features/post-composer/local-drafts.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mfmFunctionPicker } from '@/features/post-composer/mfm-function-picker.js';
@@ -279,19 +280,13 @@ uploader.events.on('itemUploaded', (ctx) => {
 	uploader.removeItem(ctx.item);
 });
 
-const draftKey = computed((): string => {
-	let key = targetChannel.value ? `channel:${targetChannel.value.id}` : '';
-
-	if (renoteTargetNote.value) {
-		key += `renote:${renoteTargetNote.value.id}`;
-	} else if (replyTargetNote.value) {
-		key += `reply:${replyTargetNote.value.id}`;
-	} else {
-		key += `note:${$i.id}`;
-	}
-
-	return key;
-});
+// 送信先として選ぶ postAccount ではなく、フォームを開いたログイン主体が端末下書きを所有する。
+const localDraftScope = computed((): LocalDraftScope => ({
+	accountId: $i.id,
+	channelId: targetChannel.value?.id,
+	renoteId: renoteTargetNote.value?.id,
+	replyId: replyTargetNote.value?.id,
+}));
 
 const placeholder = computed((): string => {
 	if (renoteTargetNote.value) {
@@ -1056,11 +1051,11 @@ function saveDraft() {
 	};
 	const hasContent =
 		text.value.trim() !== '' || (useCw.value && (cw.value ?? '') !== '') || files.value.length > 0 || poll.value != null;
-	writeLocalDraft(draftKey.value, draft, hasContent);
+	writeLocalDraft(localDraftScope.value, draft, hasContent);
 }
 
 function deleteDraft() {
-	deleteLocalDraft(draftKey.value);
+	deleteLocalDraft(localDraftScope.value);
 }
 
 async function saveServerDraft(
@@ -1650,7 +1645,7 @@ async function restoreLocalDraft(): Promise<void> {
 		return;
 	}
 
-	const draft = readLocalDraft(draftKey.value);
+	const draft = readLocalDraft(localDraftScope.value);
 	if (!isJsonObject(draft)) {
 		return;
 	}

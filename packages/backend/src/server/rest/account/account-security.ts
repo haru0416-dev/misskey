@@ -26,7 +26,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
-import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import type { ApiCredentialEventPublisher, ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
 import { packMeDetailedForApi } from '../user/user.js';
 import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
@@ -40,6 +40,7 @@ export type ApiAccountSecurityDependencies = UserPackingDependencies & {
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	publishInternalEvent?: ApiInternalEventPublisher;
+	publishCredentialEvent: ApiCredentialEventPublisher;
 	publishMainStream?: ApiMainStreamPublisher;
 };
 
@@ -131,7 +132,7 @@ export async function handleApiIRegenerateToken(
 		token: newToken,
 	});
 
-	deps.publishInternalEvent?.('userTokenRegenerated', { id: me.id, oldToken, newToken });
+	await deps.publishCredentialEvent('userTokenRegenerated', { id: me.id, oldToken, newToken });
 	deps.publishMainStream?.(me.id, 'myTokenRegenerated');
 }
 

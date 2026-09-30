@@ -9,6 +9,10 @@ import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createQueueWorkers } from '@/queue/worker.js';
+import type { QueueShellDependencies } from '@/queue/worker.js';
+import { createEventPublishers } from '@/server/rest/events.js';
+import { queueReadyRef, readyRef } from '@/boot/ready.js';
+import { createHealthApp } from '@/server/health.js';
 import { enqueueDbJobInOutbox, waitForDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -19,10 +23,19 @@ vi.mock('@/queue/handlers/post-scheduled-note.js', () => ({
 }));
 
 let runtime: RuntimeDependencies;
+let workerDependencies: QueueShellDependencies;
 beforeAll(async () => {
 	const config = loadConfig();
 	config.valkey.jobQueue = { ...config.valkey.jobQueue, prefix: `worker-shutdown-${process.pid}` };
 	runtime = await createRuntimeDependencies(config);
+	workerDependencies = {
+		...runtime,
+		...createEventPublishers({
+			config,
+			publish: (host, message) => runtime.redisForPub.publish(host, message),
+		}),
+		logger: runtime.loggerService.getLogger('worker-test'),
+	};
 });
 afterAll(async () => {
 	await runtime.dispose();
@@ -52,7 +65,10 @@ test('shutdown drains a parent that still needs outbox publication and the DB co
 		await waitForDbOutboxJob(runtime.db, runtime.dbQueue, outboxId);
 		parentCompleted = true;
 	};
-	const workers = createQueueWorkers({ ...runtime, logger: runtime.loggerService.getLogger('shutdown-test') });
+	const workers = createQueueWorkers({
+		...workerDependencies,
+		logger: runtime.loggerService.getLogger('shutdown-test'),
+	});
 	const running = workers.start();
 	let stopping: Promise<void> | undefined;
 	const job = await runtime.postScheduledNoteQueue.add(
@@ -89,11 +105,104 @@ test('shutdown drains a parent that still needs outbox publication and the DB co
 });
 
 test('stop racing initial publication does not start consumers after they close', async () => {
-	const workers = createQueueWorkers({ ...runtime, logger: runtime.loggerService.getLogger('shutdown-race-test') });
+	const workers = createQueueWorkers({
+		...workerDependencies,
+		logger: runtime.loggerService.getLogger('shutdown-race-test'),
+	});
 	const running = workers.start();
 	const stopping = workers.stop();
 	expect(workers.stop()).toBe(stopping);
 	await stopping;
 	await running;
 	expect(workers.dbQueueWorker.isRunning()).toBe(false);
+});
+
+test('consumer startup rejection closes consumers instead of reporting readiness', async () => {
+	const workers = createQueueWorkers({
+		...workerDependencies,
+		logger: runtime.loggerService.getLogger('startup-failure-test'),
+	});
+	const failure = new Error('injected startup failure');
+	vi.spyOn(workers.inboxQueueWorker, 'run').mockRejectedValue(failure);
+	await expect(workers.start()).rejects.toThrow(failure);
+	expect(workers.isReady()).toBe(false);
+	expect(workers.postScheduledNoteQueueWorker.getBackend().connection.status).toBe('closed');
+	expect(workers.dbQueueWorker.getBackend().connection.status).toBe('closed');
+	expect(workers.deliverQueueWorker.getBackend().connection.status).toBe('closed');
+	await workers.stop();
+});
+
+test('queue connections alone control health and all required sockets must reconnect before recovery', async () => {
+	const previousReady = readyRef.value;
+	const previousQueueReady = queueReadyRef.value;
+	readyRef.value = true;
+	const workers = createQueueWorkers(workerDependencies, (ready) => {
+		queueReadyRef.value = ready;
+	});
+	const health = createHealthApp(runtime);
+	const allowBlockingReconnect = Promise.withResolvers<void>();
+	try {
+		await workers.start();
+		const backend = workers.inboxQueueWorker.getBackend();
+		const main = await backend.client;
+		const blocking = await backend.blockingClient;
+		if (blocking == null) throw new Error('inbox consumer has no blocking connection');
+		const connectBlocking = blocking.connect.bind(blocking);
+		let reconnecting: Promise<void> | undefined;
+		// BullMQ 側の自動 reconnect も同じ境界で止め、main だけ復旧した状態を確定する。
+		vi.spyOn(blocking, 'connect').mockImplementation(() => {
+			reconnecting ??= allowBlockingReconnect.promise.then(() => connectBlocking());
+			return reconnecting;
+		});
+		main.disconnect();
+		blocking.disconnect();
+		await vi.waitFor(() => expect(workers.isReady()).toBe(false));
+		expect((await health.request('/')).status).toBe(503);
+		expect(await runtime.redis.ping()).toBe('PONG');
+		await main.connect();
+		expect((await health.request('/')).status).toBe(503);
+		const restoringBlocking = blocking.connect();
+		allowBlockingReconnect.resolve();
+		await restoringBlocking;
+		await vi.waitFor(() => expect(workers.isReady()).toBe(true));
+		expect((await health.request('/')).status).toBe(200);
+	} finally {
+		allowBlockingReconnect.resolve();
+		await workers.stop();
+		readyRef.value = previousReady;
+		queueReadyRef.value = previousQueueReady;
+	}
+});
+
+test('a consumer loop failure withdraws health readiness even while DB and Valkey remain usable', async () => {
+	const previousReady = readyRef.value;
+	const previousQueueReady = queueReadyRef.value;
+	readyRef.value = true;
+	const running = Promise.withResolvers<void>();
+	const workers = createQueueWorkers(
+		{ ...workerDependencies, logger: runtime.loggerService.getLogger('run-failure-test') },
+		(ready) => {
+			queueReadyRef.value = ready;
+		},
+	);
+	vi.spyOn(workers.inboxQueueWorker, 'run').mockReturnValue(running.promise);
+	const health = createHealthApp(runtime);
+	try {
+		await workers.start();
+		expect(workers.isReady()).toBe(true);
+		expect((await health.request('/')).status).toBe(200);
+		running.reject(new Error('injected permanent consumer failure'));
+		await vi.waitFor(() => expect(workers.isReady()).toBe(false));
+		expect((await health.request('/')).status).toBe(503);
+		const backend = workers.inboxQueueWorker.getBackend();
+		backend.connection.emit('ready');
+		backend.blockingConnection?.emit('ready');
+		expect((await health.request('/')).status).toBe(503);
+		expect(await runtime.redis.ping()).toBe('PONG');
+	} finally {
+		await workers.stop();
+		running.resolve();
+		readyRef.value = previousReady;
+		queueReadyRef.value = previousQueueReady;
+	}
 });
