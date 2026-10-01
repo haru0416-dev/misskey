@@ -18,7 +18,7 @@ import { memoizeInRequest } from '@/misc/request-scope.js';
 /** 認証・後処理snapshotとロール解決が共有する、実行scope内の世代番号。 */
 export const ROLES_VERSION_MEMO_KEY = 'roles:version';
 
-export type ApiRolePolicyDependencies = {
+export type RolePolicyDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -77,8 +77,8 @@ function evaluateRoleCondition(user: MiUser, assignedRoles: MiRole[], value: Rol
  * 取得済みのロールと割り当てから、現在有効な割り当てと条件付きロールを解決する。
  * 一覧の pack は一括取得した割り当てを渡し、ユーザーごとの DB 問い合わせを避ける。
  */
-export function computeApiUserRoles(
-	deps: ApiRolePolicyDependencies,
+export function computeUserRoles(
+	deps: RolePolicyDependencies,
 	user: MiUser,
 	roles: MiRole[],
 	assignments: { roleId: MiRole['id']; expiresAt: Date | null }[],
@@ -99,7 +99,7 @@ export function computeApiUserRoles(
 	];
 }
 
-export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
+export async function getUserRoles(deps: RolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
 	if (user == null) {
 		return [];
 	}
@@ -112,7 +112,7 @@ export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiU
 		listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(deps.db, user.id, version),
 	]);
 
-	return computeApiUserRoles(deps, user, [...roles], [...assignments]);
+	return computeUserRoles(deps, user, [...roles], [...assignments]);
 }
 
 /**
@@ -178,8 +178,8 @@ function createPolicyCalculator(basePolicies: RolePolicies, roles: MiRole[]) {
 	};
 }
 
-export function getApiUserProfilePolicies(
-	deps: ApiRolePolicyDependencies,
+export function getUserProfilePolicies(
+	deps: RolePolicyDependencies,
 	roles: MiRole[],
 ): Pick<RolePolicies, 'canPublicNote' | 'chatAvailability'> {
 	const calc = createPolicyCalculator({ ...DEFAULT_POLICIES, ...deps.meta.policies }, roles);
@@ -189,13 +189,13 @@ export function getApiUserProfilePolicies(
 	};
 }
 
-export async function getApiRolePolicies(
-	deps: ApiRolePolicyDependencies,
+export async function getRolePolicies(
+	deps: RolePolicyDependencies,
 	user: MiUser | null,
 	precomputedRoles?: MiRole[],
 ): Promise<RolePolicies> {
 	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
-	const roles = precomputedRoles ?? (await getApiUserRoles(deps, user));
+	const roles = precomputedRoles ?? (await getUserRoles(deps, user));
 	const calc = createPolicyCalculator(basePolicies, roles);
 	const serverMaxFileSizeMb = Math.floor(deps.config.limits.maximumFileSizeBytes / (1024 * 1024));
 
@@ -253,7 +253,7 @@ export async function getApiRolePolicies(
 	};
 }
 
-export async function isApiModerator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
+export async function userIsModerator(deps: RolePolicyDependencies, user: MiUser | null): Promise<boolean> {
 	if (user == null) {
 		return false;
 	}
@@ -261,11 +261,11 @@ export async function isApiModerator(deps: ApiRolePolicyDependencies, user: MiUs
 		return true;
 	}
 
-	const roles = await getApiUserRoles(deps, user);
+	const roles = await getUserRoles(deps, user);
 	return roles.some((role) => role.isModerator || role.isAdministrator);
 }
 
-export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
+export async function userIsAdministrator(deps: RolePolicyDependencies, user: MiUser | null): Promise<boolean> {
 	if (user == null) {
 		return false;
 	}
@@ -273,7 +273,7 @@ export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: 
 		return true;
 	}
 
-	const roles = await getApiUserRoles(deps, user);
+	const roles = await getUserRoles(deps, user);
 	return roles.some((role) => role.isAdministrator);
 }
 
@@ -282,16 +282,16 @@ export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: 
  * (管理者ロールに canManageCustomEmojis 等を個別に付けなくても管理画面の機能を使えるようにするため)。
  * 未ログインは基本ポリシーで判定する。
  */
-export async function hasApiRequiredRolePolicy(
-	deps: ApiRolePolicyDependencies,
+export async function hasRequiredRolePolicy(
+	deps: RolePolicyDependencies,
 	user: MiUser | null,
 	policy: keyof RolePolicies,
 ): Promise<boolean> {
 	if (user != null && deps.meta.rootUserId === user.id) {
 		return true;
 	}
-	const roles = await getApiUserRoles(deps, user);
-	if ((await getApiRolePolicies(deps, user, roles))[policy]) {
+	const roles = await getUserRoles(deps, user);
+	if ((await getRolePolicies(deps, user, roles))[policy]) {
 		return true;
 	}
 	return roles.some((role) => role.isAdministrator);

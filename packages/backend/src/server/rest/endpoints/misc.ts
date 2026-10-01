@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {
@@ -67,7 +67,7 @@ import { handleApiRetention } from '../retention/retention.js';
 import { handleApiExportCustomEmojis } from '../job/export-jobs.js';
 import { handleApiFetchRss } from '../feed/fetch-rss.js';
 import { handleApiVerifyEmail } from '../auth/verify-email.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
 
 export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscContracts, {
 	announcements: async ({ deps, input, me }) => await handleApiAnnouncements(deps, me, input),
@@ -151,11 +151,11 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscCont
 	'fetch-rss': async ({ deps, input }) => await handleApiFetchRss(deps, input),
 	'ap/get': async ({ deps, input }) => await handleApiApGet(deps, input),
 	'invite/create': async ({ deps, me, input }) => {
-		const policies = await getApiRolePolicies(deps, me);
+		const policies = await getRolePolicies(deps, me);
 		return await handleApiInviteCreate(deps, me, policies, input);
 	},
 	'invite/limit': async ({ deps, me, input }) => {
-		const policies = await getApiRolePolicies(deps, me);
+		const policies = await getRolePolicies(deps, me);
 		return await handleApiInviteLimit(deps, me, policies, input);
 	},
 	'notifications/flush': async ({ deps, me }) => {

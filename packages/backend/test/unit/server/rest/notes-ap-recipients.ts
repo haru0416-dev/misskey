@@ -10,16 +10,16 @@ import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { resolveMentionedAndInvolvedRemoteUsersForApi } from '@/server/rest/activitypub/notes-ap.js';
-import type { ApiNoteApDependencies } from '@/server/rest/activitypub/notes-ap.js';
+import { resolveMentionedAndInvolvedRemoteUsers } from '@/core/activitypub/notes-ap.js';
+import type { NoteApDependencies } from '@/core/activitypub/notes-ap.js';
 
-describe('resolveMentionedAndInvolvedRemoteUsersForApi', () => {
+describe('resolveMentionedAndInvolvedRemoteUsers', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiNoteApDependencies;
+	let deps: NoteApDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
-		deps = runtime as unknown as ApiNoteApDependencies;
+		deps = runtime as unknown as NoteApDependencies;
 	});
 
 	afterAll(async () => {
@@ -71,7 +71,7 @@ describe('resolveMentionedAndInvolvedRemoteUsersForApi', () => {
 		}
 
 		const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
-		const users = await resolveMentionedAndInvolvedRemoteUsersForApi(deps, note!);
+		const users = await resolveMentionedAndInvolvedRemoteUsers(deps, note!);
 		expect(users.map((user) => user.id).toSorted()).toStrictEqual([remote, other].toSorted());
 	});
 });

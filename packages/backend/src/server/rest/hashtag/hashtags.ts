@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as hashtagsContracts } from '@/server/api/metas/hashtags.js';
+import type { endpointMetas as hashtagsContracts } from '@/server/rest/contracts/hashtags.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import type * as Redis from 'ioredis';
@@ -19,11 +19,12 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
-import { ApiError } from '../error.js';
 import { packUserDetailedManyForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { HASHTAG_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
 
 export type ApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
@@ -61,11 +62,6 @@ export const hashtagsSearchParamDef = z.object({
 export const hashtagsShowParamDef = z.object({
 	tag: z.string(),
 });
-
-/** hashtagUsers:* redis キーの時刻ウィンドウ文字列 (YYYYMMDDHHmm、10分間隔に丸めた Date を渡す)。 */
-export function formatHashtagUsersWindow(now: Date): string {
-	return `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}`;
-}
 
 async function getHashtagCharts(
 	redis: Redis.Redis,

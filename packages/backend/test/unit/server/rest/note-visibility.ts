@@ -28,7 +28,7 @@ vi.mock('@/core/user/UserStore.js', () => ({
 	fetchUserByIdOrFailFromDatabase: fetchUserByIdOrFailFromDatabaseMock,
 }));
 
-import { filterVisibleNotesForApi } from '@/server/rest/note/note.js';
+import { filterVisibleNotes } from '@/core/note/note-packing.js';
 
 const viewerId = '019f587c6bc4785ead8d511d603959f0';
 const followedId = '019f587c6bc4785ead8d511d603959f1';
@@ -53,7 +53,7 @@ function createNote(
 	} as unknown as MiNote;
 }
 
-describe('filterVisibleNotesForApi', () => {
+describe('filterVisibleNotes', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabaseMock.mockResolvedValue([followedId]);
@@ -68,8 +68,8 @@ describe('filterVisibleNotesForApi', () => {
 		const ownNote = createNote('own', viewerId, 'followers');
 		const mentionedNote = createNote('mentioned', strangerId, 'followers', { mentions: [viewerId] });
 
-		const visibleNotes = await filterVisibleNotesForApi(
-			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotesForApi>[0],
+		const visibleNotes = await filterVisibleNotes(
+			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotes>[0],
 			[publicNote, followedNote, strangerNote, remoteNote, ownNote, mentionedNote],
 			viewerId,
 		);
@@ -90,8 +90,8 @@ describe('filterVisibleNotesForApi', () => {
 		fetchUserByIdOrFailFromDatabaseMock.mockResolvedValue({ id: viewerId, host: 'viewer.example' } as MiUser);
 		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabaseMock.mockResolvedValue([]);
 
-		const visibleNotes = await filterVisibleNotesForApi(
-			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotesForApi>[0],
+		const visibleNotes = await filterVisibleNotes(
+			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotes>[0],
 			[remoteNote],
 			viewerId,
 		);
@@ -103,8 +103,8 @@ describe('filterVisibleNotesForApi', () => {
 		const publicNote = createNote('public', strangerId, 'public');
 		const followersNote = createNote('followers', followedId, 'followers');
 
-		const visibleNotes = await filterVisibleNotesForApi(
-			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotesForApi>[0],
+		const visibleNotes = await filterVisibleNotes(
+			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotes>[0],
 			[publicNote, followersNote],
 			null,
 		);
@@ -124,8 +124,8 @@ describe('filterVisibleNotesForApi', () => {
 			replyUserId: viewerId,
 		});
 
-		const visibleNotes = await filterVisibleNotesForApi(
-			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotesForApi>[0],
+		const visibleNotes = await filterVisibleNotes(
+			{ db: {} as MiDrizzleDatabase } as Parameters<typeof filterVisibleNotes>[0],
 			[replyToViewer],
 			viewerId,
 		);

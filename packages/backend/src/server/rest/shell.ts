@@ -20,22 +20,22 @@ import type { UserAuthService } from '@/core/account/UserAuthService.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import type { EmailService } from '@/core/email/EmailService.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import type Logger from '@/logger.js';
 import type { ApiAdminQueueDependencies } from './admin/admin-queue.js';
-import type { ApiMainStreamPublisher } from './notification/notification.js';
+import type { MainStreamPublisher } from '../../core/notification/notification.js';
 import type {
-	ApiAdminStreamPublisher,
-	ApiBroadcastStreamPublisher,
-	ApiChatRoomStreamPublisher,
-	ApiChatUserStreamPublisher,
-	ApiDriveStreamPublisher,
-	ApiCredentialEventPublisher,
-	ApiInternalEventPublisher,
-	ApiNoteStreamPublisher,
-	ApiNotesStreamPublisher,
-	ApiUserListStreamPublisher,
-} from './events.js';
+	AdminStreamPublisher,
+	BroadcastStreamPublisher,
+	ChatRoomStreamPublisher,
+	ChatUserStreamPublisher,
+	DriveStreamPublisher,
+	CredentialEventPublisher,
+	InternalEventPublisher,
+	NoteStreamPublisher,
+	NotesStreamPublisher,
+	UserListStreamPublisher,
+} from '../../core/events.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerDriveRoutes } from './routes/drive.js';
@@ -68,17 +68,17 @@ export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	chartWriters: ChartWriters;
 	notePostProcessing: NotePostProcessing;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishCredentialEvent: ApiCredentialEventPublisher;
-	publishBroadcastStream?: ApiBroadcastStreamPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
-	publishAdminStream?: ApiAdminStreamPublisher;
-	publishDriveStream?: ApiDriveStreamPublisher;
-	publishUserListStream?: ApiUserListStreamPublisher;
-	publishChatUserStream?: ApiChatUserStreamPublisher;
-	publishChatRoomStream?: ApiChatRoomStreamPublisher;
-	publishNotesStream?: ApiNotesStreamPublisher;
-	publishNoteStream?: ApiNoteStreamPublisher;
+	publishInternalEvent?: InternalEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
+	publishBroadcastStream?: BroadcastStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
+	publishAdminStream?: AdminStreamPublisher;
+	publishDriveStream?: DriveStreamPublisher;
+	publishUserListStream?: UserListStreamPublisher;
+	publishChatUserStream?: ChatUserStreamPublisher;
+	publishChatRoomStream?: ChatRoomStreamPublisher;
+	publishNotesStream?: NotesStreamPublisher;
+	publishNoteStream?: NoteStreamPublisher;
 };
 
 const unknownApiEndpoint = {

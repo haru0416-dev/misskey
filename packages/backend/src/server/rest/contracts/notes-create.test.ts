@@ -7,8 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { describe, test, expect } from 'vitest';
-import { getValidator } from '../../../test/get-api-validator.js';
-import { endpointMetas } from './endpoint-metas.js';
+import { getValidator } from '../../../../test/get-api-validator.js';
+import { endpointMetas } from '../endpoint-metas.js';
 
 const paramDef = endpointMetas['notes/create'].paramDef;
 
@@ -21,7 +21,7 @@ const INVALID = false;
 describe('api:notes/create', () => {
 	describe('validation', () => {
 		const v = getValidator(paramDef);
-		const tooLong = readFile(_dirname + '/../../../test/resources/misskey.svg', 'utf-8');
+		const tooLong = readFile(_dirname + '/../../../../test/resources/misskey.svg', 'utf-8');
 
 		test('reject empty', () => {
 			const valid = v({});

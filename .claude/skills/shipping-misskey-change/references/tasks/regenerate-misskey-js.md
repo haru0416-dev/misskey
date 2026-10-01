@@ -2,7 +2,7 @@
 
 API の追加・削除、`meta`・`paramDef`・`res`、公開 schema、OpenAPI または型 generator の出力契約を変えた場合に使う。API ディレクトリ内の内部処理・コメントだけの変更や、調査・文書変更だけでは実行しない。
 
-生成入力は [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts)、[OpenAPI generator](../../../../../packages/backend/src/server/api/openapi/gen-spec.ts)、[schema 変換](../../../../../packages/backend/src/server/api/openapi/schemas.ts) から追う。ファイルの配置だけでは適用可否を決めない。
+生成入力は [endpoint-catalog.ts](../../../../../packages/backend/src/server/rest/endpoint-catalog.ts)、[OpenAPI generator](../../../../../packages/backend/src/server/rest/openapi/gen-spec.ts)、[schema 変換](../../../../../packages/backend/src/server/rest/openapi/schemas.ts) から追う。ファイルの配置だけでは適用可否を決めない。
 
 ## 実行
 

@@ -61,9 +61,9 @@ import { createVideoProcessingService } from '@/core/drive/VideoProcessingServic
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/server/chart-runtime.js';
+import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/core/chart/chart-runtime.js';
 import { flushInstanceNoteCounts } from '@/core/instance/instance-notes-counter.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { createNotePostProcessing, notePostProcessingConcurrency } from '@/core/note/NotePostProcessing.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';

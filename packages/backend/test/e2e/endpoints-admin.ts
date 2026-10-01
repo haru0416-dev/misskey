@@ -17,7 +17,7 @@ import type {
 	PostScheduledNoteJobData,
 	RelationshipJobData,
 	SystemWebhookDeliverJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import {
 	announcementReadExistsInDatabase,

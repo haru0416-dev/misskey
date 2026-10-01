@@ -29,7 +29,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { DbNotePostCreateJobData } from '@/queue/types.js';
+import type { DbNotePostCreateJobData } from '@/core/queue/types.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { following } from '@/db/schema/following.js';
 import { cacheVersion } from '@/db/schema/cache-version.js';

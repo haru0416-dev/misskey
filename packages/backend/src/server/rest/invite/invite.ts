@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
-import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
+import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -32,8 +32,8 @@ import type { MiMeta } from '@/models/_.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isApiModerator } from '../role/role-policy.js';
-import { packUserLiteManyForApi } from '../user/user.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
@@ -84,7 +84,7 @@ async function packInviteCodesForApi(
 			tickets.flatMap((ticket) => [ticket.createdById, ticket.usedById]).filter((id): id is string => id != null),
 		),
 	];
-	const packedUsers = userIds.length > 0 ? await packUserLiteManyForApi(deps, userIds) : [];
+	const packedUsers = userIds.length > 0 ? await packUserLiteMany(deps, userIds) : [];
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
 	return tickets.map((ticket) => ({
@@ -193,7 +193,7 @@ export async function handleApiInviteDelete(
 	errors: ContractErrors<(typeof miscContracts)['invite/delete']>,
 ): Promise<void> {
 	const ticket = await fetchRegistrationTicketByIdFromDatabase(deps.db, params.inviteId);
-	const isModerator = await isApiModerator(deps, me);
+	const isModerator = await userIsModerator(deps, me);
 
 	if (ticket == null) {
 		throw errors.noSuchCode();

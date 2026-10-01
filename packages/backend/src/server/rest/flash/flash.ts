@@ -29,15 +29,15 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiFlashDependencies = ApiRolePolicyDependencies & UserPackingDependencies;
+export type ApiFlashDependencies = RolePolicyDependencies & UserPackingDependencies;
 
 export const flashUpdateParamDef = z.object({
 	flashId: misskeyId(),
@@ -92,7 +92,7 @@ export async function packFlashForApi(
 	const meId = me ? me.id : null;
 	const flash = typeof src === 'object' ? src : await fetchFlashByIdOrFailFromDatabase(deps.db, src);
 
-	const user = hint?.packedUser ?? (await packUserLiteForApi(deps, flash.userId));
+	const user = hint?.packedUser ?? (await packUserLite(deps, flash.userId));
 
 	let isLiked: boolean | undefined;
 	if (meId) {
@@ -128,7 +128,7 @@ async function packFlashManyForApi(
 	const userIds = [...new Set(flashes.map((flash) => flash.userId))];
 	const flashIds = flashes.map((flash) => flash.id);
 	const [packedUsers, likedFlashIds] = await Promise.all([
-		packUserLiteManyForApi(deps, userIds),
+		packUserLiteMany(deps, userIds),
 		me ? listLikedFlashIdsByUserIdAndFlashIdsFromDatabase(deps.db, me.id, flashIds) : Promise.resolve([]),
 	]);
 	const userById = new Map(packedUsers.map((u) => [u.id, u]));
@@ -190,7 +190,7 @@ export async function handleApiFlashDelete(
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
 	}
 
-	if (!(await isApiModerator(deps, me)) && flash.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && flash.userId !== me.id) {
 		throw clientErrorWithStatus(400, 'Access denied.', 'ACCESS_DENIED', '1036ad7b-9f92-4fff-89c3-0e50dc941704');
 	}
 

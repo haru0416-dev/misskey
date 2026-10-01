@@ -5,7 +5,7 @@
 
 import type { Context, Hono } from 'hono';
 import type { z } from 'zod';
-import { errors as commonErrors } from '@/server/api/openapi/errors.js';
+import { errors as commonErrors } from '@/server/rest/openapi/errors.js';
 import { authenticateApiToken } from './auth/auth.js';
 import { applyEndpointGuards } from './endpoint-guards.js';
 import type { EndpointGuardDependencies } from './endpoint-guards.js';

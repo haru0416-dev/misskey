@@ -18,7 +18,7 @@ import type {
 	DbUserImportJobData,
 	DbUserImportToDbJobData,
 	RelationshipJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
 import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
 import {
@@ -83,33 +83,33 @@ import type { Config } from '@/config.js';
 import { addDbJobs } from '@/core/queue/queues.js';
 import type { DbJobBulkInput, DbQueue, RelationshipQueue } from '@/core/queue/queues.js';
 import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
 import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
-import { packDriveFileManyByIdsForApi } from '@/server/rest/drive/drive-file.js';
+import { packDriveFileManyByIds } from '@/core/drive/drive-file-packing.js';
 import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
 import { resolveUserForApi } from '@/server/rest/activitypub/ap-person.js';
 import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
-import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
-import { createExportCompletedNotification } from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import type { InternalEventPublisher } from '../../core/events.js';
+import { createExportCompletedNotification } from '@/core/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
 import { addUserListMemberForApi } from '@/server/rest/user/users-lists.js';
 import type { ApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
-import { isApiModerator } from '@/server/rest/role/role-policy.js';
+import { userIsModerator } from '@/core/role/role-policy.js';
 import { deleteFileSyncForApi, deleteObjectStorageFileForApi } from './object-storage.js';
 import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDbDependencies = QueueObjectStorageDependencies &
 	DriveFileContentDependencies &
 	ApiDriveFileUploadDependencies &
-	ApiNotificationDependencies &
+	NotificationDependencies &
 	ApiApPersonDependencies &
 	ApiUsersListsDependencies & {
 		db: MiDrizzleDatabase;
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 		dbQueue: DbQueue;
 		relationshipQueue: RelationshipQueue;
-		publishInternalEvent?: ApiInternalEventPublisher;
+		publishInternalEvent?: InternalEventPublisher;
 	};
 
 const importLineJobOptions = {
@@ -210,7 +210,7 @@ export async function handleQueueDeleteDriveFile(
 			...deps,
 			deleteInternalFile: (key) => deps.internalStorageService.del(key),
 			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForApi(deps, key),
-			isModerator: (user) => isApiModerator(deps, user),
+			isModerator: (user) => userIsModerator(deps, user),
 			logDriveFileDeletion: (db, moderator, logId, info) =>
 				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
 		},
@@ -900,7 +900,7 @@ function serializeNoteForApi(
 	deps: Pick<QueueDbDependencies, 'config'>,
 	note: MiNote,
 	poll: MiPoll | null,
-	files: Awaited<ReturnType<typeof packDriveFileManyByIdsForApi>>,
+	files: Awaited<ReturnType<typeof packDriveFileManyByIds>>,
 ): Record<string, unknown> {
 	return {
 		id: note.id,
@@ -962,7 +962,7 @@ export async function handleQueueExportNotes(
 			);
 			const pollMap = new Map(polls.map((poll) => [poll.noteId, poll]));
 			const fileIds = [...new Set(notes.flatMap((note) => note.fileIds))];
-			const packedFiles = await packDriveFileManyByIdsForApi(deps, fileIds);
+			const packedFiles = await packDriveFileManyByIds(deps, fileIds);
 			const packedFileMap = new Map(packedFiles.map((file) => [file.id, file]));
 
 			for (const note of notes) {

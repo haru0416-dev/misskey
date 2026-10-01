@@ -10,7 +10,7 @@ import type { AddressInfo } from 'node:net';
 import * as assert from 'node:assert';
 import type * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import { toXListId } from '@/server/rest/notification/notification.js';
+import { toXListId } from '@/core/notification/notification.js';
 import type {
 	DbJobData,
 	DeliverJobData,
@@ -19,7 +19,7 @@ import type {
 	PostScheduledNoteJobData,
 	RelationshipJobData,
 	SystemWebhookDeliverJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import {
 	announcementReadExistsInDatabase,

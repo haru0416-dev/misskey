@@ -18,7 +18,7 @@ vi.mock('@/core/webhook/WebhookStore.js', () => ({
 	fetchWebhookByIdAndUserIdFromDatabase: fetchWebhookMock,
 }));
 
-vi.mock('@/server/rest/note/note.js', () => ({
+vi.mock('@/core/note/note-packing.js', () => ({
 	populateEmojis: vi.fn().mockResolvedValue({}),
 }));
 

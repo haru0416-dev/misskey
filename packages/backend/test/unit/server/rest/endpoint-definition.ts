@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 import { implementEndpoints, registerEndpoints } from '@/server/rest/endpoint-definition.js';
 import { ApiError } from '@/server/rest/error.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { createRoleInDatabase, deleteRoleInDatabase } from '@/core/role/RoleStore.js';

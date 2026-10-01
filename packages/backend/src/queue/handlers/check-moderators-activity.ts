@@ -20,7 +20,7 @@ import type { AnnouncementCreateValues } from '@/core/announcement/AnnouncementL
 import { genId } from '@/misc/id/gen-id.js';
 import { getModeratorsForApi } from '@/server/rest/admin/admin-users.js';
 import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
-import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../../server/rest/events.js';
+import type { InternalEventPublisher, MainStreamPublisher } from '../../core/events.js';
 
 export type QueueCheckModeratorsActivityDependencies = {
 	config: Config;
@@ -28,8 +28,8 @@ export type QueueCheckModeratorsActivityDependencies = {
 	meta: MiMeta;
 	emailService: Pick<EmailService, 'sendEmail'>;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishInternalEvent?: InternalEventPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 const MODERATOR_INACTIVITY_LIMIT_DAYS = 7;

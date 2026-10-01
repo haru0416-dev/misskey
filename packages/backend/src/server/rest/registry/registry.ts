@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -21,13 +21,13 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import type { ApiMainStreamPublisher } from '../notification/notification.js';
+import type { MainStreamPublisher } from '../../../core/notification/notification.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiRegistryDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 const registryScopeZodSchema = z.array(z.string().regex(/^[a-zA-Z0-9_]+$/)).default([]);

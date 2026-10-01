@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { comparePassword } from '@/misc/password.js';
@@ -27,15 +27,15 @@ import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
-import type { ApiMainStreamPublisher } from '../events.js';
+import type { MainStreamPublisher } from '../../../core/events.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiI2faDependencies = UserPackingDependencies & {
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate' | 'validateOtp'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateRegistration' | 'verifyRegistration'>;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 // 2FA のコード誤りは利用者の入力ミスなので、契約で宣言した 400 のエラーとして返す (生の Error は 500 になる)。

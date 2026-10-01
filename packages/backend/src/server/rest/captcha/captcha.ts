@@ -18,7 +18,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { recordException } from '@/telemetry.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
@@ -26,7 +26,7 @@ export type ApiCaptchaDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export const captchaCurrentParamDef = z.object({});

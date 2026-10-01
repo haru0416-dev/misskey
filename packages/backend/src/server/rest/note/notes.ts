@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -62,12 +62,13 @@ import type { Packed } from '@/misc/json-schema.js';
 import { packClipsManyForApi } from '../clip/clips.js';
 import type { ApiClipDependencies } from '../clip/clips.js';
 import { ApiError } from '../error.js';
-import { fetchNoteDiffsForApi, filterVisibleNotesForApi, packNoteForApi, packNoteManyForApi } from './note.js';
-import type { ApiNoteDependencies } from './note.js';
+import { fetchNoteDiffs, filterVisibleNotes, packNote } from '../../../core/note/note-packing.js';
+import { packNoteManyForApi } from './note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { grantAchievementForApi } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
@@ -75,8 +76,8 @@ import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-p
 import { GLOBAL_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
-export type ApiNotesDependencies = ApiNoteDependencies &
-	ApiNotificationDependencies & {
+export type ApiNotesDependencies = NoteDependencies &
+	NotificationDependencies & {
 		meta: MiMeta;
 		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
 		redisForTimelines?: Redis.Redis;
@@ -376,7 +377,7 @@ export async function handleApiNotesShow(
 		throw errors.contentRestrictedByServer();
 	}
 
-	return await packNoteForApi(deps, note, me, {
+	return await packNote(deps, note, me, {
 		detail: true,
 	});
 }
@@ -389,12 +390,12 @@ export const notesGlobalTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesGlobalTimeline(
-	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
+	deps: ApiNotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
 	params: ApiParams<typeof notesGlobalTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/global-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	if (!policies.gtlAvailable) {
 		throw errors.gtlDisabled();
 	}
@@ -461,14 +462,14 @@ export const notesLocalTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesLocalTimeline(
-	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
+	deps: ApiNotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
 	params: ApiParams<typeof notesLocalTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/local-timeline']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
 		throw errors.ltlDisabled();
 	}
@@ -540,14 +541,14 @@ export const notesHybridTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesHybridTimeline(
-	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
+	deps: ApiNotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof notesHybridTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/hybrid-timeline']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
 		throw errors.stlDisabled();
 	}
@@ -733,14 +734,14 @@ export const notesSearchParamDef = z.object({
 });
 
 export async function handleApiNotesSearch(
-	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
+	deps: ApiNotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
 	params: ApiParams<typeof notesSearchParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/search']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	if (!policies.canSearchNotes) {
 		throw errors.unavailable();
 	}
@@ -842,8 +843,8 @@ export async function handleApiNotesShowPartialBulk(
 	{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string>; updatedAt?: string }[]
 > {
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
-	const visibleNotes = await filterVisibleNotesForApi(deps, notes, me?.id ?? null);
-	return await fetchNoteDiffsForApi(deps, visibleNotes);
+	const visibleNotes = await filterVisibleNotes(deps, notes, me?.id ?? null);
+	return await fetchNoteDiffs(deps, visibleNotes);
 }
 
 export const notesTimelineParamDef = z.object({

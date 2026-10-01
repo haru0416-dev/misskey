@@ -11,8 +11,8 @@ import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import type { InboxQueue } from '@/core/queue/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { InboxJobData } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import type { InboxJobData } from '@/core/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { readRequestBodyWithLimit } from '../body-limit.js';
 
 export type InboxEndpointDependencies = {

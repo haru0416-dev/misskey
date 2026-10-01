@@ -27,26 +27,26 @@ import {
 } from '@/core/webhook/webhook-test-dummies.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
-import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import type { UserWebhookDeliverJobData } from '@/core/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { webhookEventTypes } from '@/models/Webhook.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
-import { populateEmojis } from '../note/note.js';
-import type { ApiEmojiPopulateDependencies } from '../note/note.js';
+import { populateEmojis } from '../../../core/note/note-packing.js';
+import type { EmojiPopulateDependencies } from '../../../core/note/note-packing.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export type ApiWebhookTestDependencies = ApiWebhookDependencies &
-	ApiEmojiPopulateDependencies & {
+	EmojiPopulateDependencies & {
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
 	};
 
@@ -270,15 +270,12 @@ function generateWebhookTestDummyNote(override?: Partial<MiNote>): MiNote {
 	} as MiNote;
 }
 
-async function toWebhookTestPackedUserLite(
-	deps: ApiEmojiPopulateDependencies,
-	user: MiUser,
-): Promise<Packed<'UserLite'>> {
+async function toWebhookTestPackedUserLite(deps: EmojiPopulateDependencies, user: MiUser): Promise<Packed<'UserLite'>> {
 	return await packWebhookTestUserLite((names, host) => populateEmojis(deps, names, host), user);
 }
 
 async function toWebhookTestPackedUserDetailedNotMe(
-	deps: ApiEmojiPopulateDependencies,
+	deps: EmojiPopulateDependencies,
 	user: MiUser,
 	override?: Packed<'UserDetailedNotMe'>,
 ): Promise<Packed<'UserDetailedNotMe'>> {
@@ -335,7 +332,7 @@ async function toWebhookTestPackedUserDetailedNotMe(
 }
 
 async function toWebhookTestPackedNote(
-	deps: ApiEmojiPopulateDependencies,
+	deps: EmojiPopulateDependencies,
 	note: MiNote,
 	detail = true,
 	override?: Packed<'Note'>,

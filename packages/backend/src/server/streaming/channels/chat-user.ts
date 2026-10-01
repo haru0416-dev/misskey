@@ -5,10 +5,10 @@
 
 import type { JsonValue } from '@/misc/json-value.js';
 import { readUserChatMessageForApi } from '@/server/rest/chat/chat.js';
-import type { ApiChatDependencies } from '@/server/rest/chat/chat.js';
+import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelChatUser: StreamChannelDefinition<ApiChatDependencies> = {
+export const honoStreamChannelChatUser: StreamChannelDefinition<ChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:chat',

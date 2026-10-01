@@ -32,15 +32,16 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { ApiError } from '../error.js';
 import { clientError } from '../error.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '../user/user.js';
-import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountMuteDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export const muteCreateParamDef = z.object({

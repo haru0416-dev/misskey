@@ -17,7 +17,8 @@ import {
 	recordFeaturedNoteEngagement,
 } from '@/core/featured/FeaturedRanking.js';
 import type { FeaturedNoteTarget } from '@/core/featured/FeaturedRanking.js';
-import { formatHashtagUsersWindow, handleApiHashtagsTrend } from '@/server/rest/hashtag/hashtags.js';
+import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
+import { handleApiHashtagsTrend } from '@/server/rest/hashtag/hashtags.js';
 import type { ApiHashtagDependencies } from '@/server/rest/hashtag/hashtags.js';
 
 describe('FeaturedRanking', () => {

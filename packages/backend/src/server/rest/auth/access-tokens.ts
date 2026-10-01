@@ -20,11 +20,11 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import { permissionDeniedError } from '../error.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiCredentialEventPublisher } from '../events.js';
+import type { CredentialEventPublisher } from '../../../core/events.js';
 
 export type ApiAccessTokenDependencies = {
 	db: MiDrizzleDatabase;
-	publishCredentialEvent: ApiCredentialEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
 };
 
 export const iAppsParamDef = z.object({

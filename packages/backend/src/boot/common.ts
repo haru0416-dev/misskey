@@ -46,7 +46,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
 	const { createQueueWorkers } = await import('../queue/worker.js');
 	const { syncSystemJobSchedulers } = await import('../queue/system-job-schedulers.js');
-	const { createEventPublishers } = await import('../server/rest/events.js');
+	const { createEventPublishers } = await import('../core/events.js');
 
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const logger = deps.loggerService.getLogger('queue', 'orange');

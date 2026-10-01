@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/instance/InstanceStore.js';
@@ -18,26 +18,26 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import type { ApiNoteStreamPublisher } from '../events.js';
+import type { NoteStreamPublisher } from '../../../core/events.js';
 import {
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
-	renderNoteDeleteOrUndoAnnounceActivityForApi,
+	deliverNoteActivity,
+	deliverToRelays,
+	renderNoteDeleteOrUndoAnnounceActivity,
 	renderOnce,
-	resolveMentionedAndInvolvedRemoteUsersForApi,
-} from '../activitypub/notes-ap.js';
-import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
+	resolveMentionedAndInvolvedRemoteUsers,
+} from '../../../core/activitypub/notes-ap.js';
+import type { RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
 import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
-import { isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 
-export type ApiNotesDeleteDependencies = ApiRelayDeliverDependencies &
-	ApiRolePolicyDependencies & {
+export type ApiNotesDeleteDependencies = RelayDeliverDependencies &
+	RolePolicyDependencies & {
 		chartWriters: ChartWriters;
-		publishNoteStream?: ApiNoteStreamPublisher;
+		publishNoteStream?: NoteStreamPublisher;
 	};
 
 export const notesDeleteParamDef = z.object({
@@ -56,16 +56,16 @@ export async function deleteNoteForApi(
 
 	if (user.host == null && !note.localOnly) {
 		// アクティビティ生成の失敗は削除を失敗させ、ネットワーク配送だけをバックグラウンドで行う。
-		const rendered = await renderNoteDeleteOrUndoAnnounceActivityForApi(deps, note, user);
+		const rendered = await renderNoteDeleteOrUndoAnnounceActivity(deps, note, user);
 		const activity = renderOnce(() => rendered);
 		(async () => {
-			const directRecipients = await resolveMentionedAndInvolvedRemoteUsersForApi(deps, note);
-			await deliverNoteActivityForApi(deps, user, activity, {
+			const directRecipients = await resolveMentionedAndInvolvedRemoteUsers(deps, note);
+			await deliverNoteActivity(deps, user, activity, {
 				directRecipients,
 				deliverToFollowers: true,
 			});
 
-			void deliverToRelaysForApi(deps, { id: user.id, host: null }, activity).catch(() => {});
+			void deliverToRelays(deps, { id: user.id, host: null }, activity).catch(() => {});
 		})().catch(() => {});
 	}
 
@@ -110,7 +110,7 @@ export async function handleApiNotesDelete(
 		throw errors.noSuchNote();
 	}
 
-	if (!(await isApiModerator(deps, me)) && note.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && note.userId !== me.id) {
 		throw errors.accessDenied();
 	}
 

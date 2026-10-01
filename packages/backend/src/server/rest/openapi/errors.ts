@@ -15,8 +15,8 @@ import {
 	rateLimitExceededError,
 	rolePolicyRequiredError,
 	userSuspendedError,
-} from '../../rest/error.js';
-import type { ApiError } from '../../rest/error.js';
+} from '../error.js';
+import type { ApiError } from '../error.js';
 
 function example(error: ApiError) {
 	return { value: error.toBody() };

@@ -6,7 +6,7 @@
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
 import { HostFairDeliverQueue } from '@/core/queue/deliver-priority.js';
-import { baseQueueOptions, QUEUE } from '@/queue/const.js';
+import { baseQueueOptions, QUEUE } from '@/core/queue/const.js';
 import type {
 	DbJobData,
 	DbJobMap,
@@ -18,7 +18,7 @@ import type {
 	UserWebhookDeliverJobData,
 	SystemWebhookDeliverJobData,
 	PostScheduledNoteJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 
 export type SystemQueue = Bull.Queue<Record<string, unknown>>;
 export type EndedPollNotificationQueue = Bull.Queue<EndedPollNotificationJobData>;

@@ -4,7 +4,7 @@
  */
 
 import * as Bull from 'bullmq';
-import { baseQueueOptions, QUEUE } from '@/queue/const.js';
+import { baseQueueOptions, QUEUE } from '@/core/queue/const.js';
 import type {
 	DbJobData,
 	DeliverJobData,
@@ -13,7 +13,7 @@ import type {
 	PostScheduledNoteJobData,
 	RelationshipJobData,
 	SystemWebhookDeliverJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 import { fixtureConfig, openTestDatabase } from './fixtures.js';
 import type { TestDatabase } from './fixtures.js';
 import { api, signup } from './utils.js';

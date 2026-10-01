@@ -8,8 +8,8 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
-import { getApiRolePolicies } from './role/role-policy.js';
-import type { ApiRolePolicyDependencies } from './role/role-policy.js';
+import { getRolePolicies } from '../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../core/role/role-policy.js';
 
 export type ApiRateLimitDependencies = {
 	config: Config;
@@ -181,12 +181,12 @@ export async function assertApiRateLimit(
  * factor <= 0 はレート制限なし、1 未満は緩和、1 超は強化 (minInterval/max に反映される)。
  */
 export async function assertApiRateLimitForUser(
-	deps: ApiRateLimitDependencies & ApiRolePolicyDependencies,
+	deps: ApiRateLimitDependencies & RolePolicyDependencies,
 	endpointName: string,
 	limitation: ApiEndpointRateLimit,
 	user: MiUser,
 ): Promise<void> {
-	const factor = (await getApiRolePolicies(deps, user)).rateLimitFactor;
+	const factor = (await getRolePolicies(deps, user)).rateLimitFactor;
 	if (factor <= 0) {
 		return;
 	}

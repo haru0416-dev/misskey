@@ -9,16 +9,16 @@ import { noteDraft } from '@/db/schema/note-draft.js';
 import type { NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
-import type { PostScheduledNoteJobData } from '@/queue/types.js';
+import type { PostScheduledNoteJobData } from '@/core/queue/types.js';
 import { fetchAndCreateNote } from '@/core/note/NoteCreationService.js';
 import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,
-} from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+} from '@/core/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
 
-export type QueuePostScheduledNoteDependencies = NoteCreationDependencies & ApiNotificationDependencies;
+export type QueuePostScheduledNoteDependencies = NoteCreationDependencies & NotificationDependencies;
 
 class ScheduledNoteDraftUnavailableError extends Error {}
 

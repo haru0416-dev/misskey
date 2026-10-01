@@ -18,7 +18,7 @@ import { assertApiAdmin, assertApiModerator } from './shell-helpers.js';
 import { assertApiRateLimit, assertApiRateLimitForUser } from './rate-limit.js';
 import type { ApiEndpointRateLimit } from './rate-limit.js';
 import { rolePolicyRequiredError } from './error.js';
-import { hasApiRequiredRolePolicy } from './role/role-policy.js';
+import { hasRequiredRolePolicy } from '../../core/role/role-policy.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };
@@ -71,8 +71,8 @@ export async function applyEndpointGuards(
 	}
 
 	if (meta.requiredRolePolicy != null) {
-		const policy = meta.requiredRolePolicy as Parameters<typeof hasApiRequiredRolePolicy>[2];
-		if (!(await hasApiRequiredRolePolicy(deps, auth.user, policy))) {
+		const policy = meta.requiredRolePolicy as Parameters<typeof hasRequiredRolePolicy>[2];
+		if (!(await hasRequiredRolePolicy(deps, auth.user, policy))) {
 			throw rolePolicyRequiredError();
 		}
 	}

@@ -27,7 +27,7 @@ import { readDriveFileBuffer } from '@/core/drive/DriveFileContent.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from '@/queue/handlers/emojis.js';
 import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';
-import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
+import type { DbJobDataWithUser, DbUserImportJobData } from '@/core/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
 // 書き出した ZIP は Drive に保存する。基本ポリシーでは application/zip をアップロードできないため、

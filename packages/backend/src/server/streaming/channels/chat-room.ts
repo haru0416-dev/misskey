@@ -6,10 +6,10 @@
 import { fetchChatRoomByIdFromDatabase } from '@/core/chat/ChatRoomStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import { hasPermissionToViewRoomTimelineForApi, readRoomChatMessageForApi } from '@/server/rest/chat/chat.js';
-import type { ApiChatDependencies } from '@/server/rest/chat/chat.js';
+import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelChatRoom: StreamChannelDefinition<ApiChatDependencies> = {
+export const honoStreamChannelChatRoom: StreamChannelDefinition<ChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:chat',

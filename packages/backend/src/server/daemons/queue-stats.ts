@@ -5,7 +5,7 @@
 
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
-import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
+import { QUEUE, baseQueueEventsOptions } from '@/core/queue/const.js';
 import { getQueueJobCounts } from '@/core/queue/queues.js';
 import type { DeliverQueue, InboxQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';

@@ -35,7 +35,7 @@ import {
 	prepareInlineDbOutboxJobs,
 } from '@/core/queue/QueueOutboxStore.js';
 import type { InlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
-import type { DbNotePostCreateJobData } from '@/queue/types.js';
+import type { DbNotePostCreateJobData } from '@/core/queue/types.js';
 import { following } from '@/db/schema/following.js';
 import { cacheVersion } from '@/db/schema/cache-version.js';
 import { followerForNoteDeliverySelection } from '@/core/user/FollowingStore.js';

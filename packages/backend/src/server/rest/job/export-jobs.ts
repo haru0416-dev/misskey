@@ -7,10 +7,10 @@ import { z } from 'zod';
 import { addDbJob } from '@/core/queue/queues.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { parseApiParams } from '../validation.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ThinUser } from '@/queue/types.js';
+import type { ThinUser } from '@/core/queue/types.js';
 
 export type ApiExportJobDependencies = {
 	config: Config;

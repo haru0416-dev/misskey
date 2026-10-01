@@ -38,14 +38,15 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import { ApiError, signupValidationError } from '../error.js';
 import { completeApiSignin } from './signin.js';
 import type { ApiSigninDependencies, ApiSigninFlowResult, ApiSigninRequest } from './signin.js';
-import { packMeDetailedForApi, packUserLiteForApi } from '../user/user.js';
+import { packUserLite } from '../../../core/user/user-packing.js';
+import { packMeDetailedForApi } from '../user/user.js';
 
 type SignupBody = {
 	'cap-response'?: unknown;
@@ -64,7 +65,7 @@ export type SignupResponse = MeDetailedApiResponse & {
 	token: string;
 };
 
-export type SignupInternalEventPublisher = ApiInternalEventPublisher;
+export type SignupInternalEventPublisher = InternalEventPublisher;
 
 export type SignupDependencies = {
 	config: Config;
@@ -219,7 +220,7 @@ export async function createLocalSignupAccount(
 			if (webhooks.length === 0) {
 				return;
 			}
-			const packed = await packUserLiteForApi(deps, account);
+			const packed = await packUserLite(deps, account);
 			await Promise.all(
 				webhooks.map((webhook) => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)),
 			);

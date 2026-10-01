@@ -59,16 +59,16 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { castMultipartFields } from '../string-params.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { packDriveFileOrFailForApi } from './drive-file.js';
-import type { ApiDriveFileDependencies } from './drive-file.js';
+import { packDriveFileOrFail } from '../../../core/drive/drive-file-packing.js';
+import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
 import { buildDriveFileDeletionDependencies } from './drive-files.js';
 import type { ApiDriveFilesDependencies } from './drive-files.js';
-import type { ApiDriveStreamPublisher, ApiMainStreamPublisher } from '../events.js';
-import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
+import type { DriveStreamPublisher, MainStreamPublisher } from '../../../core/events.js';
+import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'internalStorageService'> &
-	ApiDriveFileDependencies & {
+	DriveFileDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
 		fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 		imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
@@ -76,8 +76,8 @@ export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'in
 		s3Service: Pick<S3Service, 'upload' | 'delete'>;
 		videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 		logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-		publishMainStream?: ApiMainStreamPublisher;
-		publishDriveStream?: ApiDriveStreamPublisher;
+		publishMainStream?: MainStreamPublisher;
+		publishDriveStream?: DriveStreamPublisher;
 	};
 
 // ファイル欠如・サイズ超過は、API互換性のためエラーボディ無しの生ステータスとして呼び出し元へ返す。
@@ -296,11 +296,11 @@ async function persistStoredDriveFileForApi(
 			}
 
 			const isLocalUser = user.host == null;
-			const isModerator = isLocalUser ? await isApiModerator({ ...deps, db: transaction }, user) : false;
+			const isModerator = isLocalUser ? await userIsModerator({ ...deps, db: transaction }, user) : false;
 			let expiredFiles: MiDriveFile[] = [];
 
 			if (!stored.file.isLink && !isModerator) {
-				const policies = await getApiRolePolicies({ ...deps, db: transaction }, user);
+				const policies = await getRolePolicies({ ...deps, db: transaction }, user);
 				const driveCapacity = 1024 * 1024 * policies.driveCapacityMb;
 				const usage = await sumDriveFileSizeByUserIdFromDatabase(transaction, user.id);
 
@@ -433,7 +433,7 @@ export async function addDriveFileForApi(
 	if (path == null && (!isLink || declared == null)) {
 		throw new Error('A drive file without content must be a link with declared metadata');
 	}
-	const userRoleNSFW = user != null && (await getApiRolePolicies(deps, user)).alwaysMarkNsfw;
+	const userRoleNSFW = user != null && (await getRolePolicies(deps, user)).alwaysMarkNsfw;
 	let skipNsfwCheck = user == null || userRoleNSFW;
 	if (deps.meta.sensitiveMediaDetection === 'none') {
 		skipNsfwCheck = true;
@@ -475,9 +475,9 @@ export async function addDriveFileForApi(
 
 	if (user != null && !isLink) {
 		const isLocalUser = user.host == null;
-		const isModerator = isLocalUser ? await isApiModerator(deps, user) : false;
+		const isModerator = isLocalUser ? await userIsModerator(deps, user) : false;
 		if (!isModerator) {
-			const policies = await getApiRolePolicies(deps, user);
+			const policies = await getRolePolicies(deps, user);
 
 			const allowedMimeTypes = policies.uploadableFileTypes;
 			const isAllowed = allowedMimeTypes.some((mimeType) => {
@@ -630,7 +630,7 @@ export async function addDriveFileForApi(
 	// リモートユーザーのアバター/バナー取り込み (ap-person) もここを通るが、
 	// このストリームを購読するのはローカルのクライアントだけなので publish しない。
 	if (user != null && user.host == null) {
-		packDriveFileOrFailForApi(deps, file, { self: true }).then((packedFile) => {
+		packDriveFileOrFail(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(user.id, 'driveFileCreated', packedFile);
 			deps.publishDriveStream?.(user.id, 'fileCreated', packedFile);
 		});
@@ -697,7 +697,7 @@ export async function handleApiDriveFilesCreate(
 			requestIp: deps.meta.enableIpLogging ? ip : null,
 			requestHeaders: deps.meta.enableIpLogging ? headers : null,
 		});
-		return await packDriveFileOrFailForApi(deps, driveFile, { self: true });
+		return await packDriveFileOrFail(deps, driveFile, { self: true });
 	} catch (err) {
 		if (err instanceof ApiError) {
 			throw err;
@@ -861,7 +861,7 @@ export function handleApiDriveFilesUploadFromUrl(
 		requestHeaders: headers,
 	})
 		.then(async (file) => {
-			const packedFile = await packDriveFileOrFailForApi(deps, file, { self: true });
+			const packedFile = await packDriveFileOrFail(deps, file, { self: true });
 			deps.publishMainStream?.(me.id, 'urlUploadFinished', {
 				marker: params.marker,
 				file: packedFile,

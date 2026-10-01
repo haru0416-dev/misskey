@@ -5,7 +5,7 @@
 
 import type { z } from 'zod';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
-import type { IEndpointMeta } from '@/server/api/endpoints.js';
+import type { IEndpointMeta } from '@/server/rest/endpoint-catalog.js';
 import type { ApiAuthenticated } from './auth/auth.js';
 import type { AuthedCredential } from './endpoint-guards.js';
 import type { ApiError } from './error.js';

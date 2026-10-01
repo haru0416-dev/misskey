@@ -4,7 +4,7 @@
  */
 
 import type { Packed } from '@/misc/json-schema.js';
-import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -22,16 +22,17 @@ import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { decodeReactionForApi } from '../note/notes-reactions.js';
-import { packNoteForApi, packNoteManyForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
-import { packUserLiteManyForApi } from './user.js';
+import { packNote } from '../../../core/note/note-packing.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import { ApiError } from '../error.js';
-import { isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiUserReactionsDependencies = ApiNoteDependencies & ApiRolePolicyDependencies;
+export type ApiUserReactionsDependencies = NoteDependencies & RolePolicyDependencies;
 
 export const usersReactionsParamDef = z.object({
 	userId: misskeyId(),
@@ -44,14 +45,14 @@ async function packNoteReactionWithNoteForApi(
 	reaction: NoteReactionRow & { note: MiNote },
 	me: { id: MiUser['id'] } | null | undefined,
 	packedUser: Packed<'UserLite'>,
-	packedNote?: Awaited<ReturnType<typeof packNoteForApi>>,
+	packedNote?: Awaited<ReturnType<typeof packNote>>,
 ): Promise<Packed<'NoteReactionWithNote'>> {
 	return {
 		id: reaction.id,
 		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
 		type: decodeReactionForApi(reaction.reaction).reaction,
-		note: packedNote ?? (await packNoteForApi(deps, reaction.note, me)),
+		note: packedNote ?? (await packNote(deps, reaction.note, me)),
 	};
 }
 
@@ -64,7 +65,7 @@ export async function handleApiUsersReactions(
 	const userIdsWhoBlockingMe = me
 		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
 		: new Set<string>();
-	const iAmModerator = me ? await isApiModerator(deps, me) : false;
+	const iAmModerator = me ? await userIsModerator(deps, me) : false;
 
 	if (!iAmModerator) {
 		const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
@@ -147,7 +148,7 @@ export async function handleApiUsersReactions(
 	}
 
 	const userIds = [...new Set(collected.map((r) => r.userId))];
-	const packedUsers = await packUserLiteManyForApi(deps, userIds);
+	const packedUsers = await packUserLiteMany(deps, userIds);
 	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
 	const packedNotes = await packNoteManyForApi(
 		deps,

@@ -11,7 +11,7 @@ import {
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
 } from '@/core/user/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import {
 	createUserListMembershipWithinLimitInDatabase,
@@ -40,19 +40,19 @@ import type { UserListMembershipRow } from '@/db/schema/user-list-membership.js'
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import { ApiError } from '../error.js';
-import type { ApiInternalEventPublisher, ApiUserListStreamPublisher } from '../events.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from './user.js';
-import type { UserPackingDependencies } from './user.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import type { InternalEventPublisher, UserListStreamPublisher } from '../../../core/events.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
 export type ApiUsersListsDependencies = UserPackingDependencies &
-	ApiRolePolicyDependencies & {
+	RolePolicyDependencies & {
 		relationshipQueue: RelationshipQueue;
-		publishInternalEvent?: ApiInternalEventPublisher;
-		publishUserListStream?: ApiUserListStreamPublisher;
+		publishInternalEvent?: InternalEventPublisher;
+		publishUserListStream?: UserListStreamPublisher;
 	};
 
 class TooManyUsersError extends Error {}
@@ -76,7 +76,7 @@ async function packUserListMembershipsManyForApi(
 	deps: ApiUsersListsDependencies,
 	memberships: UserListMembershipRow[],
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const packedUsers = await packUserLiteManyForApi(
+	const packedUsers = await packUserLiteMany(
 		deps,
 		memberships.map(({ userId }) => userId),
 	);
@@ -87,7 +87,7 @@ async function packUserListMembershipsManyForApi(
 			id: membership.id,
 			createdAt: parseId(membership.id).date.toISOString(),
 			userId: membership.userId,
-			user: userMap.get(membership.userId) ?? (await packUserLiteForApi(deps, membership.userId)),
+			user: userMap.get(membership.userId) ?? (await packUserLite(deps, membership.userId)),
 			withReplies: membership.withReplies,
 		})),
 	);
@@ -115,7 +115,7 @@ export async function addUserListMemberForApi(
 	me: MiUser,
 	options: { withReplies?: boolean } = {},
 ): Promise<void> {
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	const created = await createUserListMembershipWithinLimitInDatabase(
 		deps.db,
 		{
@@ -132,7 +132,7 @@ export async function addUserListMemberForApi(
 	}
 
 	deps.publishInternalEvent?.('userListMemberAdded', { userListId: list.id, memberId: target.id });
-	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForApi(deps, target));
+	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLite(deps, target));
 
 	if (target.host != null) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
@@ -148,7 +148,7 @@ async function removeUserListMemberForApi(
 	await deleteUserListMembershipInDatabase(deps.db, target.id, list.id);
 
 	deps.publishInternalEvent?.('userListMemberRemoved', { userListId: list.id, memberId: target.id });
-	deps.publishUserListStream?.(list.id, 'userRemoved', await packUserLiteForApi(deps, target));
+	deps.publishUserListStream?.(list.id, 'userRemoved', await packUserLite(deps, target));
 }
 
 async function updateUserListMembershipForApi(
@@ -195,7 +195,7 @@ export async function handleApiUsersListsCreate(
 	me: MiLocalUser,
 	params: ApiParams<typeof createParamDef>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	const userList = await createUserListWithinLimitInDatabase(
 		deps.db,
 		{
@@ -235,7 +235,7 @@ export async function handleApiUsersListsCreateFromPublic(
 			throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
 		}
 
-		const policies = await getApiRolePolicies({ ...deps, db }, me);
+		const policies = await getRolePolicies({ ...deps, db }, me);
 		if (!ownerExists || (await countUserListsByUserIdFromDatabase(db, me.id)) >= policies.userListLimit) {
 			throw new ApiError({
 				status: 400,
@@ -289,7 +289,7 @@ export async function handleApiUsersListsCreateFromPublic(
 				: (
 						await Promise.all(
 							Array.from({ length: Math.ceil(userIds.length / 50) }, (_, index) =>
-								packUserLiteManyForApi({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50)),
+								packUserLiteMany({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50)),
 							),
 						)
 					).flat();

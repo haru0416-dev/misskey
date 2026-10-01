@@ -28,8 +28,8 @@ import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/mode
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { packApiSystemWebhook } from './admin-system-webhooks.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
@@ -212,7 +212,7 @@ async function packApiAbuseReportNotificationRecipient(
 	const user =
 		recipient.userId == null
 			? undefined
-			: (refs?.users.get(recipient.userId) ?? (await packUserLiteForApi(deps, recipient.userId)));
+			: (refs?.users.get(recipient.userId) ?? (await packUserLite(deps, recipient.userId)));
 	const systemWebhook =
 		recipient.systemWebhookId == null
 			? undefined
@@ -237,7 +237,7 @@ async function packApiAbuseReportNotificationRecipients(
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
 	const userIds = recipients.map((recipient) => recipient.userId).filter((x) => x != null);
-	const users = userIds.length > 0 ? await packUserLiteManyForApi(deps, [...new Set(userIds)]) : [];
+	const users = userIds.length > 0 ? await packUserLiteMany(deps, [...new Set(userIds)]) : [];
 	const usersById = new Map(users.map((user) => [user.id, user]));
 
 	const systemWebhookIds = recipients.map((recipient) => recipient.systemWebhookId).filter((x) => x != null);

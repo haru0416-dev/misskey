@@ -20,7 +20,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import type { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 import { HASHTAG_RANKING_WINDOW, removeFromFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
 
@@ -29,7 +29,7 @@ export type ApiMetaDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis.Redis;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export const metaParamDef = z.object({

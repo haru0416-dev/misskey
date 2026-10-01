@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as antennasContracts } from '@/server/api/metas/antennas.js';
+import { endpointMetas as antennasContracts } from '@/server/rest/contracts/antennas.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

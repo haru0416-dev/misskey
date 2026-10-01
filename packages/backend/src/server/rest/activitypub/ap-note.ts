@@ -57,19 +57,19 @@ import {
 import type { ApiApResolveDependencies } from './ap-resolve.js';
 import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePersonForApi } from './ap-person.js';
 import type { ApiApPersonDependencies } from './ap-person.js';
-import { deliverQuestionUpdateForApi } from './notes-ap.js';
+import { deliverQuestionUpdate } from '../../../core/activitypub/notes-ap.js';
 import { createNote, prepareRemoteNoteEdit, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
 import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
 import { updateDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { isNoteContentVisibleForMeForApi } from '../note/note.js';
 import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
-import type { ApiNoteStreamPublisher } from '../events.js';
+import type { NoteStreamPublisher } from '../../../core/events.js';
 
 export type ApiApNoteDependencies = ApiApPersonDependencies &
 	ApiApResolveDependencies &
 	NoteCreationDependencies & {
 		redis: Redis.Redis;
-		publishNoteStream?: ApiNoteStreamPublisher;
+		publishNoteStream?: NoteStreamPublisher;
 	};
 
 function validateNoteForApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
@@ -507,7 +507,7 @@ export async function createNoteFromApForApi(
 				return null;
 			} else if (index !== -1) {
 				await voteFromApForApi(deps, actor, reply, index);
-				void deliverQuestionUpdateForApi(deps, reply.id).catch(() => {});
+				void deliverQuestionUpdate(deps, reply.id).catch(() => {});
 			}
 			return null;
 		}

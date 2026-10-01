@@ -7,11 +7,11 @@ import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/PollVoteStore.js';
 import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { EndedPollNotificationJobData } from '@/queue/types.js';
-import { createPollEndedNotification } from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import type { EndedPollNotificationJobData } from '@/core/queue/types.js';
+import { createPollEndedNotification } from '@/core/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
 
-export type QueueEndedPollNotificationDependencies = ApiNotificationDependencies & {
+export type QueueEndedPollNotificationDependencies = NotificationDependencies & {
 	db: MiDrizzleDatabase;
 };
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { createPublicKey } from 'node:crypto';
@@ -67,7 +67,7 @@ import {
 	enqueueAcceptAllFollowRequestsInOutbox,
 	genLocalUserUri,
 } from '../user/following.js';
-import type { DbJobMap } from '@/queue/types.js';
+import type { DbJobMap } from '@/core/queue/types.js';
 import { publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -75,26 +75,27 @@ import type { ApiFollowingDependencies } from '../user/following.js';
 import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForApi,
+	deliverNoteActivity,
 	renderEmoji,
 	renderOnce,
-	renderUpdateForApi,
-} from '../activitypub/notes-ap.js';
-import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
+	renderUpdate,
+} from '../../../core/activitypub/notes-ap.js';
+import type { NoteApDependencies } from '../../../core/activitypub/notes-ap.js';
 import { updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { getApiRolePolicies, getApiUserRoles, isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getRolePolicies, getUserRoles, userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { resolveUserForApi } from '../activitypub/ap-person.js';
 import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
-export type ApiAccountUpdateDependencies = ApiRolePolicyDependencies &
+export type ApiAccountUpdateDependencies = RolePolicyDependencies &
 	ApiFollowingDependencies &
 	UserPackingDependencies &
-	ApiNoteApDependencies & {
+	NoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
 		/** hashtag ランキング (updateHashtagsRankings) 用。 */
 		redis: Redis.Redis;
@@ -414,14 +415,11 @@ async function publishAccountUpdateToFollowersForApi(
 
 	const localUser = user as MiLocalUser;
 	const content = renderOnce(async () =>
-		addActivityContext(
-			deps.config,
-			renderUpdateForApi(deps.config, await renderPersonForApi(deps, localUser), localUser),
-		),
+		addActivityContext(deps.config, renderUpdate(deps.config, await renderPersonForApi(deps, localUser), localUser)),
 	);
 
 	// リレー配送には LD-signature が必要なため、署名しないこの経路ではフォロワー配送だけを行う。
-	await deliverNoteActivityForApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivity(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
 }
 
 export async function handleQueueAcceptAllFollowRequests(
@@ -535,7 +533,7 @@ export async function handleApiIUpdate(
 	const profileUpdates: UserProfileUpdate = {};
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	let policies: Awaited<ReturnType<typeof getApiRolePolicies>> | null = null;
+	let policies: Awaited<ReturnType<typeof getRolePolicies>> | null = null;
 
 	if (ps.name !== undefined) {
 		if (ps.name === null) {
@@ -571,7 +569,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.mutedWords !== undefined) {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		checkMuteWordCount(ps.mutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.mutedWords);
 
@@ -579,7 +577,7 @@ export async function handleApiIUpdate(
 		profileUpdates.enableWordMute = ps.mutedWords.length > 0;
 	}
 	if (ps.hardMutedWords !== undefined) {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		checkMuteWordCount(ps.hardMutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.hardMutedWords);
 		profileUpdates.hardMutedWords = ps.hardMutedWords;
@@ -636,7 +634,7 @@ export async function handleApiIUpdate(
 		profileUpdates.receiveAnnouncementEmail = ps.receiveAnnouncementEmail;
 	}
 	if (typeof ps.alwaysMarkNsfw === 'boolean') {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		if (policies.alwaysMarkNsfw) {
 			throw errors.restrictedByRole();
 		}
@@ -650,7 +648,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.avatarId) {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
 			throw errors.restrictedByRole();
 		}
@@ -678,7 +676,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.bannerId) {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
 			throw errors.restrictedByRole();
 		}
@@ -702,10 +700,10 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.avatarDecorations) {
-		policies ??= await getApiRolePolicies(deps, user);
+		policies ??= await getRolePolicies(deps, user);
 		const [decorations, myRoles, allRoles] = await Promise.all([
 			listAvatarDecorationsFromDatabase(deps.db),
-			getApiUserRoles(deps, user),
+			getUserRoles(deps, user),
 			listRolesFromDatabase(deps.db),
 		]);
 		const allRoleIds = new Set(allRoles.map((role) => role.id));
@@ -793,7 +791,7 @@ export async function handleApiIUpdate(
 
 	if (newName != null) {
 		let hasProhibitedWords = false;
-		if (!(await isApiModerator(deps, user))) {
+		if (!(await userIsModerator(deps, user))) {
 			hasProhibitedWords = isKeywordIncluded(newName, deps.meta.prohibitedWordsForNameOfUser);
 		}
 		if (hasProhibitedWords) {

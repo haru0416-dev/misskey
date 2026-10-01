@@ -5,8 +5,8 @@
 
 import { describe, expect, test } from 'vitest';
 import type { Config } from '@/config.js';
-import endpoints from '@/server/api/endpoints.js';
-import { genOpenapiSpec } from '@/server/api/openapi/gen-spec.js';
+import endpoints from '@/server/rest/endpoint-catalog.js';
+import { genOpenapiSpec } from '@/server/rest/openapi/gen-spec.js';
 
 type ErrorBody = {
 	error: {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -17,22 +17,22 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { isNoteContentVisibleForMeForApi } from './note.js';
-import type { ApiNoteDependencies } from './note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import {
 	addActivityContext,
-	deliverQuestionUpdateForApi,
-	deliverSingleActivityForApi,
-	renderVoteForApi,
-} from '../activitypub/notes-ap.js';
-import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
-import type { ApiNoteStreamPublisher } from '../events.js';
+	deliverQuestionUpdate,
+	deliverSingleActivity,
+	renderVote,
+} from '../../../core/activitypub/notes-ap.js';
+import type { NoteApDependencies, RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
+import type { NoteStreamPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 
-export type ApiNotesPollsVoteDependencies = ApiRelayDeliverDependencies &
-	ApiNoteDependencies & {
-		config: ApiNoteApDependencies['config'];
-		publishNoteStream?: ApiNoteStreamPublisher;
+export type ApiNotesPollsVoteDependencies = RelayDeliverDependencies &
+	NoteDependencies & {
+		config: NoteApDependencies['config'];
+		publishNoteStream?: NoteStreamPublisher;
 	};
 
 export const notesPollsVoteParamDef = z.object({
@@ -101,11 +101,11 @@ export async function handleApiNotesPollsVote(
 		if (pollOwner.inbox != null && pollOwner.uri != null) {
 			const activity = addActivityContext(
 				deps.config,
-				renderVoteForApi(deps.config, me, vote, note, poll, { uri: pollOwner.uri }),
+				renderVote(deps.config, me, vote, note, poll, { uri: pollOwner.uri }),
 			);
-			await deliverSingleActivityForApi(deps, me, activity, pollOwner.inbox);
+			await deliverSingleActivity(deps, me, activity, pollOwner.inbox);
 		}
 	}
 
-	void deliverQuestionUpdateForApi(deps, note.id).catch(() => {});
+	void deliverQuestionUpdate(deps, note.id).catch(() => {});
 }

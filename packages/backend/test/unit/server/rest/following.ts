@@ -22,7 +22,7 @@ import {
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
-import { endpointMetas } from '@/server/api/metas/i.js';
+import { endpointMetas } from '@/server/rest/contracts/i.js';
 import {
 	handleApiIUpdate,
 	handleQueueAcceptAllFollowRequests,
@@ -30,16 +30,16 @@ import {
 } from '@/server/rest/account/account-update.js';
 import type { ContractErrors } from '@/server/rest/endpoint-contract.js';
 import { ApiError } from '@/server/rest/error.js';
-import type { DbJobMap, DeliverJobData } from '@/queue/types.js';
+import type { DbJobMap, DeliverJobData } from '@/core/queue/types.js';
 import { parseApiParams } from '@/server/rest/validation.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type * as NotificationModule from '@/server/rest/notification/notification.js';
+import type * as NotificationModule from '@/core/notification/notification.js';
 
 const { notificationSink } = vi.hoisted(() => ({ notificationSink: vi.fn() }));
-vi.mock('@/server/rest/notification/notification.js', async (importOriginal) => ({
+vi.mock('@/core/notification/notification.js', async (importOriginal) => ({
 	...(await importOriginal<typeof NotificationModule>()),
-	xaddApiNotification: notificationSink,
+	xaddNotification: notificationSink,
 }));
 
 import { acceptAllFollowRequestsForApi, acceptFollowRequestForApi } from '@/server/rest/user/following.js';

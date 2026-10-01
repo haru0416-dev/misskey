@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { baseQueueEventsOptions, baseQueueOptions, baseWorkerOptions, QUEUE } from '@/queue/const.js';
+import { baseQueueEventsOptions, baseQueueOptions, baseWorkerOptions, QUEUE } from '@/core/queue/const.js';
 
 describe('queue options', () => {
 	const config = loadConfig();

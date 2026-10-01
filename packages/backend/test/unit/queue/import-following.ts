@@ -15,7 +15,7 @@ import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueImportFollowing, handleQueueImportFollowingToDb } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
+import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/core/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
 async function serveText(text: string): Promise<{ url: string; server: Server }> {

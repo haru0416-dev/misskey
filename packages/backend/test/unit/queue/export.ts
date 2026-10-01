@@ -31,7 +31,7 @@ import {
 	handleQueueExportUserLists,
 } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DBExportAntennasData, DbExportFollowingData } from '@/queue/types.js';
+import type { DBExportAntennasData, DbExportFollowingData } from '@/core/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(runtime: RuntimeDependencies, prefix: string): Promise<MiUser> {

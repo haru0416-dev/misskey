@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -23,19 +23,20 @@ import type { MiLocalUser } from '@/models/User.js';
 import { hashPassword } from '@/misc/password.js';
 import { ApiError } from '../error.js';
 import type { ApiAuthenticated } from '../auth/auth.js';
-import type { ApiInternalEventPublisher } from '../events.js';
-import { isApiAdministrator } from '../role/role-policy.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
+import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { createLocalSignupAccount, packSignupUser } from '../auth/signup.js';
 import type { SignupDependencies, SignupResponse } from '../auth/signup.js';
 import { packMeDetailedForApi, packUserDetailedNotMeForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAccountsDependencies = UserPackingDependencies &
 	SignupDependencies & {
 		dbQueue: DbQueue;
 		deliverQueue: DeliverQueue;
-		publishInternalEvent?: ApiInternalEventPublisher;
+		publishInternalEvent?: InternalEventPublisher;
 	};
 
 export const adminAccountCreateParamDef = z.object({
@@ -103,7 +104,7 @@ export async function handleApiAdminAccountsCreate(
 	} else if (
 		auth.token !== null ||
 		// root だけに限ると、後から管理者ロールを付与したアカウントがこのAPIを使えない
-		!(await isApiAdministrator({ ...deps, meta: currentMeta }, auth.user))
+		!(await userIsAdministrator({ ...deps, meta: currentMeta }, auth.user))
 	) {
 		throw adminAccountCreateAccessDeniedError();
 	}

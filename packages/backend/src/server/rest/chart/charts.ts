@@ -7,7 +7,7 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import Chart from '@/core/chart/core.js';
 import type { KVs } from '@/core/chart/core.js';
-import { chartDefinitions } from '@/server/chart-definitions.js';
+import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { countNoteReactionsFromDatabase } from '@/core/note/NoteReactionStore.js';
 import { countInstancesFromDatabase } from '@/core/instance/InstanceStore.js';

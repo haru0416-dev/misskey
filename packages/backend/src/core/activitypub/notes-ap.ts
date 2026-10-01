@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { shouldOmitOutgoingReplyReference } from '@/core/activitypub/interop/reply.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
@@ -43,18 +43,18 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';
 import { parseMfmCached } from '@/misc/mfm-parse-cache.js';
 import type { MiUser } from '@/models/User.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 
-export type ApiNoteApDependencies = {
+export type NoteApDependencies = {
 	config: Pick<Config, 'instance' | 'queues' | 'media'>;
 	meta: Pick<MiMeta, 'proxyRemoteFiles'>;
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
 };
 
-/** リレー配信 (deliverToRelaysForApi) を行う呼び出し元が満たすべき依存。LD 署名の
+/** リレー配信 (deliverToRelays) を行う呼び出し元が満たすべき依存。LD 署名の
  * JSON-LD 正規化で remote context の取得があり得るため full HttpRequestService を要求する。 */
-export type ApiRelayDeliverDependencies = ApiNoteApDependencies & {
+export type RelayDeliverDependencies = NoteApDependencies & {
 	httpRequestService: HttpRequestService;
 };
 
@@ -102,7 +102,7 @@ export function renderEmoji(config: Pick<Config, 'instance'>, emoji: MiEmoji): R
 	};
 }
 
-function renderDocument(deps: ApiNoteApDependencies, file: MiDriveFile): Record<string, unknown> {
+function renderDocument(deps: NoteApDependencies, file: MiDriveFile): Record<string, unknown> {
 	return {
 		type: 'Document',
 		mediaType: file.webpublicType ?? file.type,
@@ -116,8 +116,8 @@ function renderDocument(deps: ApiNoteApDependencies, file: MiDriveFile): Record<
 	};
 }
 
-export async function renderNoteForApi(
-	deps: ApiNoteApDependencies,
+export async function renderNote(
+	deps: NoteApDependencies,
 	note: MiNote,
 	dive: boolean,
 ): Promise<Record<string, unknown>> {
@@ -130,7 +130,7 @@ export async function renderNoteForApi(
 			} else if (inReplyToNote.uri) {
 				inReplyTo = inReplyToNote.uri;
 			} else if (dive && (inReplyToNote.visibility === 'public' || inReplyToNote.visibility === 'home')) {
-				inReplyTo = await renderNoteForApi(deps, inReplyToNote, false);
+				inReplyTo = await renderNote(deps, inReplyToNote, false);
 			} else {
 				// 返信の宛先が返信元を閲覧できるとは限らないため、非公開の本文は埋め込まない。
 				inReplyTo = `${deps.config.instance.url}/notes/${inReplyToNote.id}`;
@@ -258,7 +258,7 @@ export async function renderNoteForApi(
 	};
 }
 
-export function renderCreateForApi(
+export function renderCreate(
 	config: Pick<Config, 'instance'>,
 	object: Record<string, unknown>,
 	note: MiNote,
@@ -279,7 +279,7 @@ export function renderCreateForApi(
 	return activity;
 }
 
-function renderAnnounceForApi(config: Pick<Config, 'instance'>, object: string, note: MiNote): Record<string, unknown> {
+function renderAnnounce(config: Pick<Config, 'instance'>, object: string, note: MiNote): Record<string, unknown> {
 	const attributedTo = genLocalUserUri(config, note.userId);
 	const Public = 'https://www.w3.org/ns/activitystreams#Public';
 	const followers = `${attributedTo}/followers`;
@@ -314,8 +314,8 @@ function renderAnnounceForApi(config: Pick<Config, 'instance'>, object: string, 
 	};
 }
 
-export async function renderNoteOrRenoteActivityForApi(
-	deps: ApiNoteApDependencies,
+export async function renderNoteOrRenoteActivity(
+	deps: NoteApDependencies,
 	data: { localOnly: boolean; renote: Pick<MiNote, 'id' | 'uri'> | null; isQuote: boolean },
 	note: MiNote,
 ): Promise<Record<string, unknown> | null> {
@@ -325,12 +325,8 @@ export async function renderNoteOrRenoteActivityForApi(
 
 	const content =
 		data.renote != null && !data.isQuote
-			? renderAnnounceForApi(
-					deps.config,
-					data.renote.uri ?? `${deps.config.instance.url}/notes/${data.renote.id}`,
-					note,
-				)
-			: renderCreateForApi(deps.config, await renderNoteForApi(deps, note, false), note);
+			? renderAnnounce(deps.config, data.renote.uri ?? `${deps.config.instance.url}/notes/${data.renote.id}`, note)
+			: renderCreate(deps.config, await renderNote(deps, note, false), note);
 
 	return addActivityContext(deps.config, content);
 }
@@ -349,8 +345,8 @@ export function renderOnce(
 	return () => (rendered ??= Promise.resolve().then(render));
 }
 
-export async function deliverNoteActivityForApi(
-	deps: ApiNoteApDependencies,
+export async function deliverNoteActivity(
+	deps: NoteApDependencies,
 	author: { id: MiUser['id'] },
 	render: ActivityRenderer,
 	options: {
@@ -418,10 +414,7 @@ export async function deliverNoteActivityForApi(
 	);
 }
 
-export async function resolveRemoteRecipientForApi(
-	deps: ApiNoteApDependencies,
-	userId: MiUser['id'],
-): Promise<MiUser | null> {
+export async function resolveRemoteRecipient(deps: NoteApDependencies, userId: MiUser['id']): Promise<MiUser | null> {
 	const u = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (u == null || !isRemoteUser(u)) {
 		return null;
@@ -429,11 +422,11 @@ export async function resolveRemoteRecipientForApi(
 	return u;
 }
 
-function renderTombstoneForApi(id: string): Record<string, unknown> {
+function renderTombstone(id: string): Record<string, unknown> {
 	return { id, type: 'Tombstone' };
 }
 
-function renderDeleteForApi(
+function renderDeleteActivity(
 	config: Pick<Config, 'instance'>,
 	object: Record<string, unknown> | string,
 	user: { id: MiUser['id'] },
@@ -446,7 +439,7 @@ function renderDeleteForApi(
 	};
 }
 
-export function renderUndoForApi(
+export function renderUndoActivity(
 	config: Pick<Config, 'instance'>,
 	object: string | Record<string, unknown>,
 	user: { id: MiUser['id'] },
@@ -464,8 +457,8 @@ export function renderUndoForApi(
 	};
 }
 
-export async function renderLikeForApi(
-	deps: ApiNoteApDependencies,
+export async function renderLike(
+	deps: NoteApDependencies,
 	noteReaction: { id: string; userId: MiUser['id']; reaction: string },
 	note: { uri: string | null; id: MiNote['id'] },
 ): Promise<Record<string, unknown>> {
@@ -491,8 +484,8 @@ export async function renderLikeForApi(
 	return object;
 }
 
-export async function renderNoteDeleteOrUndoAnnounceActivityForApi(
-	deps: ApiNoteApDependencies,
+export async function renderNoteDeleteOrUndoAnnounceActivity(
+	deps: NoteApDependencies,
 	note: MiNote,
 	user: { id: MiUser['id'] },
 ): Promise<Record<string, unknown>> {
@@ -507,18 +500,18 @@ export async function renderNoteDeleteOrUndoAnnounceActivityForApi(
 
 	const content =
 		renote != null
-			? renderUndoForApi(
+			? renderUndoActivity(
 					deps.config,
-					renderAnnounceForApi(deps.config, renote.uri ?? `${deps.config.instance.url}/notes/${renote.id}`, note),
+					renderAnnounce(deps.config, renote.uri ?? `${deps.config.instance.url}/notes/${renote.id}`, note),
 					user,
 				)
-			: renderDeleteForApi(deps.config, renderTombstoneForApi(`${deps.config.instance.url}/notes/${note.id}`), user);
+			: renderDeleteActivity(deps.config, renderTombstone(`${deps.config.instance.url}/notes/${note.id}`), user);
 
 	return addActivityContext(deps.config, content);
 }
 
-export async function resolveMentionedAndInvolvedRemoteUsersForApi(
-	deps: ApiNoteApDependencies,
+export async function resolveMentionedAndInvolvedRemoteUsers(
+	deps: NoteApDependencies,
 	note: MiNote,
 ): Promise<MiUser[]> {
 	const mentionUris = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map((x) => x.uri);
@@ -536,7 +529,7 @@ export async function resolveMentionedAndInvolvedRemoteUsersForApi(
 	return [...byId.values()];
 }
 
-export function renderUpdateForApi(
+export function renderUpdate(
 	config: Pick<Config, 'instance'>,
 	object: string | Record<string, unknown>,
 	user: { id: MiUser['id'] },
@@ -551,7 +544,7 @@ export function renderUpdateForApi(
 	};
 }
 
-export function renderVoteForApi(
+export function renderVote(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	vote: { id: string; choice: number },
@@ -576,8 +569,8 @@ export function renderVoteForApi(
 	};
 }
 
-export async function deliverSingleActivityForApi(
-	deps: ApiNoteApDependencies,
+export async function deliverSingleActivity(
+	deps: NoteApDependencies,
 	author: { id: MiUser['id'] },
 	activity: Record<string, unknown>,
 	inbox: string,
@@ -585,10 +578,7 @@ export async function deliverSingleActivityForApi(
 	enqueueDeliverJob(deps.deliverQueue, deps.config as Config, author, activity as unknown as IActivity, inbox, false);
 }
 
-export async function deliverQuestionUpdateForApi(
-	deps: ApiRelayDeliverDependencies,
-	noteId: MiNote['id'],
-): Promise<void> {
+export async function deliverQuestionUpdate(deps: RelayDeliverDependencies, noteId: MiNote['id']): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
 	if (note == null) {
 		throw new Error('note not found');
@@ -604,9 +594,9 @@ export async function deliverQuestionUpdateForApi(
 
 	if (!isRemoteUser(user)) {
 		const content = renderOnce(async () => {
-			const object = await renderNoteForApi(deps, note, false);
+			const object = await renderNote(deps, note, false);
 			return addActivityContext(deps.config, {
-				...renderUpdateForApi(deps.config, object, user),
+				...renderUpdate(deps.config, object, user),
 				to: object['to'],
 				cc: object['cc'],
 			});
@@ -616,18 +606,18 @@ export async function deliverQuestionUpdateForApi(
 				? note.visibleUserIds
 				: [...note.mentions, ...[note.replyUserId, note.renoteUserId].filter((id) => id != null)];
 		const directRecipients = await listUsersByIdsFromDatabase(deps.db, recipientIds, { includeSuspended: true });
-		await deliverNoteActivityForApi(deps, user, content, {
+		await deliverNoteActivity(deps, user, content, {
 			directRecipients,
 			deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
 		});
 		if (note.visibility === 'public') {
-			void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
+			void deliverToRelays(deps, { id: user.id, host: null }, content).catch(() => {});
 		}
 	}
 }
 
-async function attachLdSignatureForApi(
-	deps: Pick<ApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
+async function attachLdSignature(
+	deps: Pick<RelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
 	activity: Record<string, unknown>,
 	user: { id: MiUser['id']; host: null },
 ): Promise<Record<string, unknown>> {
@@ -643,8 +633,8 @@ async function attachLdSignatureForApi(
 }
 
 /** accepted リレーが無ければ、activity の生成と LD 署名を省く。 */
-export async function deliverToRelaysForApi(
-	deps: ApiRelayDeliverDependencies,
+export async function deliverToRelays(
+	deps: RelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },
 	render: ActivityRenderer,
 	jobIdPrefix?: string,
@@ -663,7 +653,7 @@ export async function deliverToRelaysForApi(
 		copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
 	}
 
-	const signed = await attachLdSignatureForApi(deps, copy, user);
+	const signed = await attachLdSignature(deps, copy, user);
 
 	const firstJob = createDeliverJob(deps.config, user, signed as unknown as IActivity, relays[0]!.inbox, false)!;
 	const jobs = relays.map((relay) => ({

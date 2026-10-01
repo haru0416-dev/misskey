@@ -9,7 +9,7 @@ import { concat, toArray, toSingle, unique } from '@/misc/prelude/array.js';
 import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import {
 	getApHrefNullable,
 	getApId,
@@ -90,7 +90,7 @@ import { deleteNoteForApi } from '@/server/rest/note/notes-delete.js';
 import type { ApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
 import { createNoteReactionForApi, deleteNoteReactionForApi } from '@/server/rest/note/notes-reactions.js';
 import type { ApiNotesReactionsDependencies } from '@/server/rest/note/notes-reactions.js';
-import { isVisibleForMeForApi, packNoteForApi } from '@/server/rest/note/note.js';
+import { isVisibleForMe, packNote } from '@/core/note/note-packing.js';
 import {
 	blockForApi,
 	cancelFollowRequest,
@@ -111,8 +111,8 @@ import { isRelayActorForApi, relayAcceptedForApi, relayRejectedForApi } from '@/
 import type { ApiAdminRelaysDependencies } from '@/server/rest/admin/admin-relays.js';
 import { reportAbuseForApi } from '@/server/rest/admin/admin-abuse-reports.js';
 import type { ApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
-import type { ApiInternalEventPublisher, ApiNotesStreamPublisher, ApiNoteStreamPublisher } from '../rest/events.js';
-import type { ChartWriters } from '../chart-runtime.js';
+import type { InternalEventPublisher, NotesStreamPublisher, NoteStreamPublisher } from '../../core/events.js';
+import type { ChartWriters } from '../../core/chart/chart-runtime.js';
 
 export type ApiInboxDependencies = ApiApResolveDependencies &
 	ApiApPersonDependencies &
@@ -130,9 +130,9 @@ export type ApiInboxDependencies = ApiApResolveDependencies &
 		redis: Redis.Redis;
 		dbQueue: DbQueue;
 		chartWriters: ChartWriters;
-		publishInternalEvent?: ApiInternalEventPublisher;
-		publishNoteStream?: ApiNoteStreamPublisher;
-		publishNotesStream?: ApiNotesStreamPublisher;
+		publishInternalEvent?: InternalEventPublisher;
+		publishNoteStream?: NoteStreamPublisher;
+		publishNotesStream?: NotesStreamPublisher;
 	};
 
 export async function performActivityForApi(
@@ -413,7 +413,7 @@ async function announceNoteFromApForApi(
 
 		// リレー由来の Announce はリノートを作成せず、対象ノートを直接公開する。
 		if (fromRelay) {
-			const noteObj = await packNoteForApi(deps, renote, null, {
+			const noteObj = await packNote(deps, renote, null, {
 				skipHide: true,
 				withReactionAndUserPairCache: true,
 			});
@@ -421,7 +421,7 @@ async function announceNoteFromApForApi(
 			return;
 		}
 
-		if (!(await isVisibleForMeForApi(deps, renote, actor.id))) {
+		if (!(await isVisibleForMe(deps, renote, actor.id))) {
 			return 'skip: invalid actor for this activity';
 		}
 

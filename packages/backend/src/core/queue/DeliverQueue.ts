@@ -8,8 +8,8 @@ import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { addDeliverJob } from '@/core/queue/queues.js';
 import type { DeliverJobInput, DeliverQueue } from '@/core/queue/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { DeliverJobData, ThinUser } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import type { DeliverJobData, ThinUser } from '@/core/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 
 export function createDeliverJob(
 	config: Pick<Config, 'queues'>,

@@ -18,11 +18,11 @@ import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import { deliverNoteActivityForApi, deliverToRelaysForApi, renderOnce } from '@/server/rest/activitypub/notes-ap.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import { deliverNoteActivity, deliverToRelays, renderOnce } from '@/core/activitypub/notes-ap.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
-describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
+describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 	let runtime: RuntimeDependencies;
 	let user: MiUser;
 	let publicKey: string;
@@ -66,7 +66,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 		};
 
 		const render = vi.fn(async () => activity);
-		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, render);
+		await deliverToRelays(runtime, { id: user.id, host: null }, render);
 		expect(render).not.toHaveBeenCalled();
 
 		// 共有 redis 上の deliver キューには他テストの残骸ジョブが混在し得るため、
@@ -102,7 +102,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 			object: { type: 'Note' },
 		};
 
-		await deliverToRelaysForApi(
+		await deliverToRelays(
 			runtime,
 			{ id: user.id, host: null },
 			renderOnce(() => activity),
@@ -151,7 +151,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 			const bulk = vi.spyOn(runtime.deliverQueue, 'addBulk');
 			const single = vi.spyOn(runtime.deliverQueue, 'add');
 			try {
-				await deliverToRelaysForApi(
+				await deliverToRelays(
 					runtime,
 					{ id: user.id, host: null },
 					renderOnce(() => activity),
@@ -187,7 +187,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 						expect(job.id).toBe(`${prefix}-${createHash('sha256').update(job.data.to).digest('hex').slice(0, 24)}`);
 				}
 				if (prefix != null) {
-					await deliverToRelaysForApi(
+					await deliverToRelays(
 						runtime,
 						{ id: user.id, host: null },
 						renderOnce(() => activity),
@@ -246,7 +246,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 				const relay = await createRelayInDatabase(runtime.db, { id: genId(), inbox, status: 'accepted' });
 				relayIds.push(relay.id);
 			}
-			await deliverToRelaysForApi(
+			await deliverToRelays(
 				runtime,
 				{ id: user.id, host: null },
 				renderOnce(() => activity),
@@ -287,7 +287,7 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 	test('deliverNoteActivity: リモートのフォロワーも宛先も無ければ activity を組み立てない', async () => {
 		const render = vi.fn(async () => ({ id: `${runtime.config.instance.url}/test-activity/${genId()}` }));
 
-		await deliverNoteActivityForApi(runtime, user, render, { directRecipients: [], deliverToFollowers: true });
+		await deliverNoteActivity(runtime, user, render, { directRecipients: [], deliverToFollowers: true });
 
 		expect(render).not.toHaveBeenCalled();
 	});
@@ -304,11 +304,11 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 		const render = renderOnce(build);
 		const recipient = { inbox: `https://render-once-${genId()}.example/inbox`, sharedInbox: null } as MiUser;
 
-		await deliverNoteActivityForApi(runtime, user, render, {
+		await deliverNoteActivity(runtime, user, render, {
 			directRecipients: [recipient],
 			deliverToFollowers: false,
 		});
-		await deliverNoteActivityForApi(runtime, user, render, {
+		await deliverNoteActivity(runtime, user, render, {
 			directRecipients: [recipient],
 			deliverToFollowers: false,
 		});

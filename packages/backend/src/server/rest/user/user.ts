@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { DAY } from '@/const.js';
@@ -11,12 +11,10 @@ import { z } from 'zod';
 import { sql } from 'drizzle-orm';
 import { estimateRows } from '@/db/estimate.js';
 import type { SQL } from 'drizzle-orm';
-import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
 import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { listAvatarDecorationsFromDatabaseCached } from '@/core/avatar-decoration/AvatarDecorationStore.js';
 import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
 import {
 	listUserNotePiningsByUserIdFromDatabase,
@@ -38,7 +36,6 @@ import {
 	deserializeUser,
 	fetchLocalUserByUsernameFromDatabase,
 	fetchUserByIdFromDatabase,
-	fetchUserByIdOrFailFromDatabase,
 	listExplorableUsersFromDatabase,
 	listRecommendedUsersFromDatabase,
 	listUsersByIdsFromDatabase,
@@ -80,143 +77,39 @@ import type { UserRow } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { MiMeta } from '@/models/_.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi, populateEmojis, populateEmojisMany } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import { populateEmojis } from '../../../core/note/note-packing.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import {
-	computeApiUserRoles,
-	getApiRolePolicies,
-	getApiUserRoles,
-	getApiUserProfilePolicies,
-	isApiModerator,
-} from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+	computeUserRoles,
+	getRolePolicies,
+	getUserRoles,
+	getUserProfilePolicies,
+	userIsModerator,
+} from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
+import type { AvatarDecorationLite, UserPackingDependencies } from '@/core/user/user-packing.js';
+import {
+	buildAvatarDecorations,
+	getOnlineStatus,
+	packUserLiteMany,
+	populateUserEmojisMany,
+} from '@/core/user/user-packing.js';
 
 export type MeDetailedApiResponse = Packed<'MeDetailed'>;
 export type UserDetailedNotMeApiResponse = Packed<'UserDetailedNotMe'>;
-
-export type UserPackingDependencies = {
-	config: Config;
-	db: MiDrizzleDatabase;
-	meta: MiMeta;
-	/** pinnedNotes を detail:true で pack するのに必要。省略時 pinnedNotes は空配列になる (pinnedNoteIds は常に入る)。 */
-	redis?: Redis.Redis;
-};
-
-type ApiAvatarDecorationLite = {
-	id: string;
-	angle?: number;
-	flipH?: boolean;
-	offsetX?: number;
-	offsetY?: number;
-	url: string;
-};
 
 type PackMeDetailedOptions = {
 	includeSecrets: boolean;
 	profile?: MiUserProfile;
 };
-
-function packUserLiteCoreForApi(
-	deps: UserPackingDependencies,
-	user: MiUser,
-	avatarDecorations: ApiAvatarDecorationLite[],
-	emojis: Record<string, string>,
-): Packed<'UserLite'> {
-	return {
-		id: user.id,
-		name: user.name,
-		username: user.username,
-		host: user.host,
-		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
-		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations,
-		isBot: user.isBot,
-		isCat: user.isCat,
-		requireSigninToViewContents: user.requireSigninToViewContents === false ? undefined : true,
-		makeNotesFollowersOnlyBefore: user.makeNotesFollowersOnlyBefore ?? undefined,
-		makeNotesHiddenBefore: user.makeNotesHiddenBefore ?? undefined,
-		instance: undefined,
-		emojis,
-		onlineStatus: getOnlineStatus(user),
-		badgeRoles: [],
-	};
-}
-
-async function buildApiAvatarDecorations(
-	deps: UserPackingDependencies,
-	users: MiUser[],
-): Promise<Map<MiUser['id'], ApiAvatarDecorationLite[]>> {
-	const usersWithDecorations = users.filter((user) => user.avatarDecorations.length > 0);
-	if (usersWithDecorations.length === 0) {
-		return new Map();
-	}
-
-	const decorations = await listAvatarDecorationsFromDatabaseCached(deps.db);
-	const decorationById = new Map(decorations.map((decoration) => [decoration.id, decoration]));
-	const map = new Map<MiUser['id'], ApiAvatarDecorationLite[]>();
-
-	for (const user of usersWithDecorations) {
-		map.set(
-			user.id,
-			user.avatarDecorations.flatMap((userDecoration) => {
-				const decoration = decorationById.get(userDecoration.id);
-				if (decoration == null) {
-					return [];
-				}
-				return [
-					{
-						id: userDecoration.id,
-						...(userDecoration.angle ? { angle: userDecoration.angle } : {}),
-						...(userDecoration.flipH ? { flipH: true } : {}),
-						...(userDecoration.offsetX ? { offsetX: userDecoration.offsetX } : {}),
-						...(userDecoration.offsetY ? { offsetY: userDecoration.offsetY } : {}),
-						url: decoration.url,
-					},
-				];
-			}),
-		);
-	}
-
-	return map;
-}
-
-export async function packUserLiteForApi(
-	deps: UserPackingDependencies,
-	src: MiUser['id'] | MiUser,
-): Promise<Packed<'UserLite'>> {
-	const user = typeof src === 'object' ? src : await fetchUserByIdOrFailFromDatabase(deps.db, src);
-	const avatarDecorations = await buildApiAvatarDecorations(deps, [user]);
-	const emojis = await populateEmojis(deps, user.emojis, user.host);
-
-	return packUserLiteCoreForApi(deps, user, avatarDecorations.get(user.id) ?? [], emojis);
-}
-
-/** srcs (MiUser本体 or ID) を MiUser[] に解決する。バッチ取得で見つからなかったIDは1件ずつ fetchUserByIdOrFailFromDatabase にフォールバックする (見つからなければ throw)。 */
-async function resolveUsersFromSrcsForApi(
-	deps: UserPackingDependencies,
-	srcs: (MiUser['id'] | MiUser)[],
-): Promise<MiUser[]> {
-	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
-	const ids = [...new Set(srcs.filter((src): src is string => typeof src === 'string'))];
-	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
-	const userById = new Map([...explicitUsers, ...fetchedUsers].map((user) => [user.id, user]));
-	const missingIds = ids.filter((id) => !userById.has(id));
-	if (missingIds.length > 0) {
-		for (const user of await Promise.all(missingIds.map((id) => fetchUserByIdOrFailFromDatabase(deps.db, id)))) {
-			userById.set(user.id, user);
-		}
-	}
-
-	return srcs.map((src) => (typeof src === 'object' ? src : userById.get(src)!));
-}
 
 /**
  * srcs を MiUser へ解決する。一覧のクエリの後で削除が確定したユーザーは null にする (並びは srcs と同じ)。
@@ -230,34 +123,6 @@ async function resolveUsersOrNullFromSrcsForApi(
 	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
 	const userById = new Map(fetchedUsers.map((user) => [user.id, user]));
 	return srcs.map((src) => (typeof src === 'object' ? src : (userById.get(src) ?? null)));
-}
-
-async function populateUserEmojisManyForApi(
-	deps: UserPackingDependencies,
-	users: MiUser[],
-): Promise<Map<MiUser['id'], Record<string, string>>> {
-	const resolved = await populateEmojisMany(
-		deps,
-		users.map((user) => ({
-			emojiNames: user.emojis,
-			noteUserHost: user.host,
-		})),
-	);
-
-	return new Map(users.map((user, index) => [user.id, resolved[index]!]));
-}
-
-export async function packUserLiteManyForApi(
-	deps: UserPackingDependencies,
-	srcs: (MiUser['id'] | MiUser)[],
-): Promise<Packed<'UserLite'>[]> {
-	const users = await resolveUsersFromSrcsForApi(deps, srcs);
-	const avatarDecorations = await buildApiAvatarDecorations(deps, users);
-	const emojisByUserId = await populateUserEmojisManyForApi(deps, users);
-
-	return users.map((user) =>
-		packUserLiteCoreForApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisByUserId.get(user.id) ?? {}),
-	);
 }
 
 type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForApi>>;
@@ -307,11 +172,11 @@ async function buildUserDetailedExtrasForApi(
 	let iAmModerator = hint?.iAmModerator ?? false;
 	if (hint?.iAmModerator === undefined && me != null) {
 		const meUser = isMe ? user : await fetchUserByIdFromDatabase(deps.db, me.id);
-		iAmModerator = meUser != null && (await isApiModerator(deps, meUser));
+		iAmModerator = meUser != null && (await userIsModerator(deps, meUser));
 	}
 
-	const userRoles = hint?.userRoles ?? (await getApiUserRoles(deps, user));
-	const policies = hint?.policies ?? getApiUserProfilePolicies(deps, userRoles);
+	const userRoles = hint?.userRoles ?? (await getUserRoles(deps, user));
+	const policies = hint?.policies ?? getUserProfilePolicies(deps, userRoles);
 
 	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
 	const pinnedNoteIds = pins.map((pin) => pin.noteId);
@@ -320,7 +185,7 @@ async function buildUserDetailedExtrasForApi(
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = pinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
-		pinnedNotes = await packNoteManyForApi(deps as UserPackingDependencies & ApiNoteDependencies, orderedNotes, me, {
+		pinnedNotes = await packNoteManyForApi(deps as UserPackingDependencies & NoteDependencies, orderedNotes, me, {
 			detail: true,
 		});
 	}
@@ -408,7 +273,7 @@ export async function packUserDetailedNotMeManyForApi(
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id, userIds) : null;
 
 	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
-	const iAmModerator = meUser != null && (await isApiModerator(deps, meUser));
+	const iAmModerator = meUser != null && (await userIsModerator(deps, meUser));
 	const relationByUserId =
 		me != null
 			? await getUserRelationsForApi(
@@ -434,7 +299,7 @@ export async function packUserDetailedNotMeManyForApi(
 				)
 			: Promise.resolve([]),
 		resolveMigrationIdsManyForApi(deps, users),
-		populateUserEmojisManyForApi(deps, users),
+		populateUserEmojisMany(deps, users),
 	]);
 	const securityKeyUserIdSet = new Set(securityKeyUserIds);
 	const assignmentsByUserId = new Map<string, typeof allAssignments>();
@@ -462,7 +327,7 @@ export async function packUserDetailedNotMeManyForApi(
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = allPinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
 		const packedPinnedNotes = await packNoteManyForApi(
-			deps as UserPackingDependencies & ApiNoteDependencies,
+			deps as UserPackingDependencies & NoteDependencies,
 			orderedNotes,
 			me,
 			{ detail: true },
@@ -472,7 +337,7 @@ export async function packUserDetailedNotMeManyForApi(
 		}
 	}
 
-	const avatarDecorationsByUserId = await buildApiAvatarDecorations(deps, users);
+	const avatarDecorationsByUserId = await buildAvatarDecorations(deps, users);
 
 	const packed = await Promise.all(
 		users.map(async (user) => {
@@ -490,7 +355,7 @@ export async function packUserDetailedNotMeManyForApi(
 				omitUndefined({
 					iAmModerator,
 					relation: relationByUserId?.get(user.id) ?? null,
-					userRoles: computeApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
+					userRoles: computeUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
 					pins,
 					pinnedNotes: pins.map((pin) => packedPinnedNoteById.get(pin.noteId)).filter((note) => note != null),
 					hasSecurityKey,
@@ -581,12 +446,11 @@ async function packUserDetailedNotMeCoreForApi(
 		alsoKnownAs?: string[] | null;
 		movedTo?: string | null;
 		emojis?: Record<string, string>;
-		avatarDecorations?: ApiAvatarDecorationLite[];
+		avatarDecorations?: AvatarDecorationLite[];
 	},
 ): Promise<UserDetailedNotMeApiResponse> {
 	// DB の値は id と表示位置だけなので、UserLite と同じく画像の url を補ってから返す。
-	const avatarDecorations =
-		hint?.avatarDecorations ?? (await buildApiAvatarDecorations(deps, [user])).get(user.id) ?? [];
+	const avatarDecorations = hint?.avatarDecorations ?? (await buildAvatarDecorations(deps, [user])).get(user.id) ?? [];
 	const alsoKnownAs =
 		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
 	const emojis = hint?.emojis ?? (await populateEmojis(deps, user.emojis, user.host));
@@ -663,19 +527,6 @@ async function packUserDetailedNotMeCoreForApi(
 	};
 }
 
-function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offline' {
-	if (user.hideOnlineStatus) {
-		return 'unknown';
-	}
-	if (user.lastActiveDate == null) {
-		return 'unknown';
-	}
-
-	const elapsed = Date.now() - user.lastActiveDate.getTime();
-
-	return elapsed < 1000 * 60 * 10 ? 'online' : elapsed < 1000 * 60 * 60 * 24 * 3 ? 'active' : 'offline';
-}
-
 function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
 	const count = profile.twoFactorBackupSecret?.length ?? 0;
 	if (count === 5) {
@@ -690,8 +541,8 @@ export async function packMeDetailedForApi(
 	options: PackMeDetailedOptions,
 ): Promise<MeDetailedApiResponse> {
 	const profile = options.profile ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
-	const userRoles = await getApiUserRoles(deps, user);
-	const policies = await getApiRolePolicies(deps, user, userRoles);
+	const userRoles = await getUserRoles(deps, user);
+	const policies = await getRolePolicies(deps, user, userRoles);
 	const isRoot = deps.meta.rootUserId === user.id;
 	const isAdmin = isRoot || userRoles.some((role) => role.isAdministrator);
 	const isModerator = isRoot || userRoles.some((role) => role.isModerator || role.isAdministrator);
@@ -710,7 +561,7 @@ export async function packMeDetailedForApi(
 		},
 	);
 
-	const avatarDecorations = (await buildApiAvatarDecorations(deps, [user])).get(user.id) ?? [];
+	const avatarDecorations = (await buildAvatarDecorations(deps, [user])).get(user.id) ?? [];
 
 	return {
 		id: user.id,
@@ -870,7 +721,7 @@ export async function handleApiPinnedUsers(
 }
 
 export type ApiUsersShowDependencies = UserPackingDependencies &
-	ApiRolePolicyDependencies & {
+	RolePolicyDependencies & {
 		chartWriters: ChartWriters;
 		resolveUser: (username: string, host: string) => Promise<MiUser>;
 	};
@@ -917,7 +768,7 @@ export async function handleApiUsersShow(
 > {
 	const params = parseApiParams(usersShowParamDef, body);
 
-	const isModerator = await isApiModerator(deps, me ?? null);
+	const isModerator = await userIsModerator(deps, me ?? null);
 
 	if ('username' in params) {
 		params.username = params.username.trim();
@@ -1186,7 +1037,7 @@ export async function handleApiUsersSearch(
 
 	return params.detail
 		? (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null)
-		: await packUserLiteManyForApi(deps, users);
+		: await packUserLiteMany(deps, users);
 }
 
 function buildBaseUserSearchConditionsForApi(
@@ -1310,7 +1161,7 @@ export async function handleApiUsersSearchByUsernameAndHost(
 	const ids = [...resultSet].slice(0, limit);
 	return params.detail
 		? (await packUserDetailedManyForApi(deps, ids, me)).filter((user) => user != null)
-		: await packUserLiteManyForApi(deps, ids);
+		: await packUserLiteMany(deps, ids);
 }
 
 export const usersRecommendationParamDef = z.object({

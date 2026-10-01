@@ -4,8 +4,8 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { getValidator } from '../../../test/get-api-validator.js';
-import { endpointMetas } from './endpoint-metas.js';
+import { getValidator } from '../../../../test/get-api-validator.js';
+import { endpointMetas } from '../endpoint-metas.js';
 
 const paramDef = endpointMetas['users/show'].paramDef;
 

@@ -13,7 +13,7 @@ import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CollapsedQueue } from '@/misc/collapsed-queue.js';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
-import type { InboxJobData } from '@/queue/types.js';
+import type { InboxJobData } from '@/core/queue/types.js';
 import {
 	extractDbHost,
 	getAuthUserFromKeyIdForApi,

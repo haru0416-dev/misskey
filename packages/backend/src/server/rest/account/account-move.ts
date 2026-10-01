@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
@@ -33,8 +33,8 @@ import {
 	listLocalFollowerFollowingsByFolloweeIdFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
-import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import type { RelationshipJobData, ThinUser } from '@/core/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';
 import Logger from '@/logger.js';
@@ -43,20 +43,21 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
+	deliverNoteActivity,
+	deliverToRelays,
 	renderOnce,
-	renderUpdateForApi,
-} from '../activitypub/notes-ap.js';
-import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
-import { onMoveAccountForApi } from '../antenna/antennas.js';
+	renderUpdate,
+} from '../../../core/activitypub/notes-ap.js';
+import type { NoteApDependencies, RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
+import { onMoveAccount } from '../../../core/antenna/antenna-delivery.js';
 import { renderPersonForApi } from './account-update.js';
 import type { ApiAccountUpdateDependencies } from './account-update.js';
-import { createRoleAssignedNotification } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { createRoleAssignedNotification } from '../../../core/notification/notification.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse } from '../user/user.js';
 import { genLocalUserUri } from '../user/following.js';
 import type { ApiFollowingDependencies } from '../user/following.js';
 import { parseApiParams } from '../validation.js';
@@ -65,11 +66,11 @@ import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
 const accountMoveLogger = new Logger('account-move', 'yellow');
 
-export type ApiAccountMoveDependencies = ApiRolePolicyDependencies &
+export type ApiAccountMoveDependencies = RolePolicyDependencies &
 	ApiFollowingDependencies &
-	ApiNotificationDependencies &
-	ApiNoteApDependencies &
-	ApiRelayDeliverDependencies &
+	NotificationDependencies &
+	NoteApDependencies &
+	RelayDeliverDependencies &
 	ApiAccountUpdateDependencies &
 	UserPackingDependencies & {
 		relationshipQueue: RelationshipQueue;
@@ -341,17 +342,14 @@ async function moveFromLocalForApi(
 	deps.publishInternalEvent?.('localUserUpdated', updatedSrc);
 
 	const updateAct = renderOnce(async () =>
-		addActivityContext(
-			deps.config,
-			renderUpdateForApi(deps.config, await renderPersonForApi(deps, updatedSrc), updatedSrc),
-		),
+		addActivityContext(deps.config, renderUpdate(deps.config, await renderPersonForApi(deps, updatedSrc), updatedSrc)),
 	);
-	await deliverNoteActivityForApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivity(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、アカウント移行の完了を待たせない。
-	void deliverToRelaysForApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
+	void deliverToRelays(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
 	const moveAct = renderOnce(() => addActivityContext(deps.config, renderMoveForApi(deps.config, updatedSrc, dst)));
-	await deliverNoteActivityForApi(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivity(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
 
 	const iObj = await packMeDetailedForApi(deps, updatedSrc, { includeSecrets: true });
 	deps.publishMainStream?.(updatedSrc.id, 'meUpdated', iObj);
@@ -380,7 +378,7 @@ export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, sr
 		['copyMutings', copyMutingsForApi(deps, src, dst)],
 		['copyRoles', copyRolesForApi(deps, src, dst)],
 		['updateLists', updateListsForApi(deps, src, dst)],
-		['onMoveAccount', onMoveAccountForApi(deps, src, dst)],
+		['onMoveAccount', onMoveAccount(deps, src, dst)],
 	] as const;
 	const results = await Promise.allSettled(cascades.map(([, promise]) => promise));
 	for (const [index, result] of results.entries()) {

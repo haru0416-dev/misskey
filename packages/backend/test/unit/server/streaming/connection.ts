@@ -18,7 +18,7 @@ import { deserializeAccessToken } from '@/db/schema/access-token.js';
 import { createStreamRuntime } from '@/server/streaming/runtime.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 import { handleApiIRevokeToken } from '@/server/rest/auth/access-tokens.js';
 import { StreamConnection, refreshStreamConnections } from '@/server/streaming/connection.js';
 import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';

@@ -26,7 +26,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { ApiBroadcastStreamPublisher, ApiMainStreamPublisher } from '../events.js';
+import type { BroadcastStreamPublisher, MainStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -34,8 +34,8 @@ import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 export type ApiAdminAnnouncementDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishMainStream?: ApiMainStreamPublisher;
-	publishBroadcastStream?: ApiBroadcastStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
+	publishBroadcastStream?: BroadcastStreamPublisher;
 };
 
 export const adminAnnouncementsCreateParamDef = z.object({

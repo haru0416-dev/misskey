@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as iContracts } from '@/server/api/metas/i.js';
+import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -26,9 +26,10 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
-import type { ApiCredentialEventPublisher, ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import type { CredentialEventPublisher, InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAccountSecurityDependencies = UserPackingDependencies & {
@@ -39,9 +40,9 @@ export type ApiAccountSecurityDependencies = UserPackingDependencies & {
 	deliverQueue: DeliverQueue;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishCredentialEvent: ApiCredentialEventPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishInternalEvent?: InternalEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 // パスワード誤入力も2FA失敗も利用者の入力ミスなので、明示的なAPIエラーとして返す。

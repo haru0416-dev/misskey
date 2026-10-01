@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
-import { endpointMetas } from '@/server/api/endpoint-metas.js';
+import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 
 const endpointsDir = fileURLToPath(new URL('../../../../src/server/rest/endpoints/', import.meta.url));
 

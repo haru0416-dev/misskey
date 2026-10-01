@@ -41,11 +41,11 @@ import type { MiPageContentBlock, MiPage } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packDriveFileForApi, packDriveFileManyForApi } from '../drive/drive-file.js';
-import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
-import { isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { packDriveFile, packDriveFileMany } from '../../../core/drive/drive-file-packing.js';
+import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -53,7 +53,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
-export type ApiPageDependencies = ApiDriveFileDependencies & ApiRolePolicyDependencies;
+export type ApiPageDependencies = DriveFileDependencies & RolePolicyDependencies;
 
 function collectReferencedNotesForApi(content: MiPage['content']): string[] {
 	const referencingNotes = new Set<string>();
@@ -131,11 +131,11 @@ export async function packPageForApi(
 	}
 
 	const [user, eyeCatchingImage, attachedFilesPacked, pageLikeExists] = await Promise.all([
-		hint?.packedUser ?? packUserLiteForApi(deps, pageEntity.user ?? pageEntity.userId),
+		hint?.packedUser ?? packUserLite(deps, pageEntity.user ?? pageEntity.userId),
 		hint?.packedEyeCatchingImage !== undefined
 			? hint.packedEyeCatchingImage
 			: pageEntity.eyeCatchingImageId
-				? packDriveFileForApi(deps, pageEntity.eyeCatchingImageId)
+				? packDriveFile(deps, pageEntity.eyeCatchingImageId)
 				: Promise.resolve(null),
 		hint?.packedAttachedFiles ??
 			(async () => {
@@ -144,7 +144,7 @@ export async function packPageForApi(
 				const orderedFiles = attachedFiles
 					.map((fileId) => fileById.get(fileId))
 					.filter((file): file is NonNullable<typeof file> => file != null && file.userId === pageEntity.userId);
-				return await packDriveFileManyForApi(deps, orderedFiles);
+				return await packDriveFileMany(deps, orderedFiles);
 			})(),
 		hint?.isLiked ?? (meId ? pageLikeExistsInDatabase(deps.db, meId, pageEntity.id) : Promise.resolve(undefined)),
 	]);
@@ -192,12 +192,12 @@ async function packPageManyForApi(
 		),
 	];
 	const [packedUsers, files, likedPageIds] = await Promise.all([
-		packUserLiteManyForApi(deps, users),
+		packUserLiteMany(deps, users),
 		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
 		me ? listLikedPageIdsByUserIdAndPageIdsFromDatabase(deps.db, me.id, pageIds) : Promise.resolve([]),
 	]);
 	const packedUserById = new Map(packedUsers.map((u) => [u.id, u]));
-	const packedFiles = await packDriveFileManyForApi(deps, files);
+	const packedFiles = await packDriveFileMany(deps, files);
 	const packedFileById = new Map(packedFiles.map((file) => [file.id, file]));
 	const fileById = new Map(files.map((file) => [file.id, file]));
 	const likedPageIdSet = new Set(likedPageIds);
@@ -423,7 +423,7 @@ export async function deletePageForApi(
 	me: MiUser,
 	pageId: MiPage['id'],
 ): Promise<{ status: 'not-found' | 'forbidden' } | { status: 'ok'; page: MiPage }> {
-	const isModerator = await isApiModerator(deps, me);
+	const isModerator = await userIsModerator(deps, me);
 
 	const result = await deletePageInDatabase(deps.db, pageId, { userId: me.id, isModerator });
 

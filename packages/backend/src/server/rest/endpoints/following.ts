@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as followingContracts } from '@/server/api/metas/following.js';
+import { endpointMetas as followingContracts } from '@/server/rest/contracts/following.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

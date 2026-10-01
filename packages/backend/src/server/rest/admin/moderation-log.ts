@@ -15,7 +15,8 @@ import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
-import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiModerationLogDependencies = UserPackingDependencies & {

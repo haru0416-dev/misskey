@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
@@ -22,7 +22,7 @@ import {
 } from '@/core/note/NoteDraftStore.js';
 import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import type { PostScheduledNoteQueue } from '@/core/queue/queues.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -36,18 +36,19 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiError } from '../error.js';
-import { isVisibleForMeForApi, packNoteForApi, packNoteManyForApi } from './note.js';
-import type { ApiNoteDependencies } from './note.js';
-import { packDriveFileManyByIdsForApi, packDriveFileManyForApi } from '../drive/drive-file.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { isVisibleForMe, packNote } from '../../../core/note/note-packing.js';
+import { packNoteManyForApi } from './note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { packDriveFileManyByIds, packDriveFileMany } from '../../../core/drive/drive-file-packing.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiNoteDraftDependencies = ApiNoteDependencies &
-	ApiRolePolicyDependencies & {
+export type ApiNoteDraftDependencies = NoteDependencies &
+	RolePolicyDependencies & {
 		postScheduledNoteQueue: PostScheduledNoteQueue;
 	};
 
@@ -216,7 +217,7 @@ async function validateNoteDraft(
 		if (isRenote(reply) && !isQuote(reply)) {
 			throw errors.cannotReplyToPureRenote();
 		}
-		if (!(await isVisibleForMeForApi(deps, reply, me.id))) {
+		if (!(await isVisibleForMe(deps, reply, me.id))) {
 			throw errors.cannotReplyToInvisibleNote();
 		}
 		if (reply.visibility === 'specified' && data.visibility !== 'specified') {
@@ -311,21 +312,21 @@ async function packNoteDraftForApi(
 	}
 
 	const [user, files, reply, renote] = await Promise.all([
-		hint?.packedUser ?? packUserLiteForApi(deps, draft.userId),
+		hint?.packedUser ?? packUserLite(deps, draft.userId),
 		hint?.packedFiles
 			? draft.fileIds
 					.map((fileId) => hint.packedFiles?.get(fileId))
 					.filter((file): file is Packed<'DriveFile'> => file != null)
-			: packDriveFileManyByIdsForApi(deps, draft.fileIds),
+			: packDriveFileManyByIds(deps, draft.fileIds),
 		draft.replyId
 			? hint?.reply !== undefined
 				? hint.reply
-				: nullIfEntityNotFound(packNoteForApi(deps, draft.replyId, me, { detail: false }))
+				: nullIfEntityNotFound(packNote(deps, draft.replyId, me, { detail: false }))
 			: Promise.resolve(undefined),
 		draft.renoteId
 			? hint?.renote !== undefined
 				? hint.renote
-				: nullIfEntityNotFound(packNoteForApi(deps, draft.renoteId, me, { detail: true }))
+				: nullIfEntityNotFound(packNote(deps, draft.renoteId, me, { detail: true }))
 			: Promise.resolve(undefined),
 	]);
 
@@ -387,7 +388,7 @@ async function packNoteDraftManyForApi(
 	const renoteIds = [...new Set(drafts.map((draft) => draft.renoteId).filter((id): id is string => id != null))];
 
 	const [packedUsers, files, channels, replyNotes, renoteNotes] = await Promise.all([
-		packUserLiteManyForApi(deps, userSources),
+		packUserLiteMany(deps, userSources),
 		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
 		channelIds.length > 0 ? listChannelsByIdsFromDatabase(deps.db, channelIds) : Promise.resolve([]),
 		replyIds.length > 0 ? listNotesByIdsFromDatabase(deps.db, replyIds) : Promise.resolve([]),
@@ -395,7 +396,7 @@ async function packNoteDraftManyForApi(
 	]);
 
 	const [packedFiles, packedReplies, packedRenotes] = await Promise.all([
-		packDriveFileManyForApi(deps, files),
+		packDriveFileMany(deps, files),
 		packNoteManyForApi(deps, replyNotes, me, { detail: false }),
 		packNoteManyForApi(deps, renoteNotes, me, { detail: true }),
 	]);
@@ -430,7 +431,7 @@ export async function handleApiNotesDraftsCreate(
 	params: ApiParams<typeof notesDraftsCreateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/drafts/create']>,
 ): Promise<{ createdDraft: Packed<'NoteDraft'> }> {
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= policies.noteDraftLimit) {
 		throw errors.tooManyDrafts();
@@ -522,7 +523,7 @@ export async function handleApiNotesDraftsUpdate(
 		throw errors.noSuchNoteDraft();
 	}
 
-	const policies = await getApiRolePolicies(deps, me);
+	const policies = await getRolePolicies(deps, me);
 	if (!existing.isActuallyScheduled && params.isActuallyScheduled) {
 		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
 			isActuallyScheduled: true,

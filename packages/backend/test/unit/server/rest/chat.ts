@@ -22,7 +22,7 @@ import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { countDatabaseQueries } from '../../../query-counter.js';
 import type { QueryCounter } from '../../../query-counter.js';
 import { packChatMessageDetailedForApi, packChatMessagesDetailedForApi } from '@/server/rest/chat/chat.js';
-import type { ApiChatDependencies } from '@/server/rest/chat/chat.js';
+import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 
 describe('chat message packing', () => {
 	let runtime: RuntimeDependencies;
@@ -70,7 +70,7 @@ describe('chat message packing', () => {
 			reactions: [`${reactor1.id}/👍`, `${deletedReactorId}/❌`, `${reactor2.id}/⭐`],
 		};
 
-		const deps = runtime as unknown as ApiChatDependencies;
+		const deps = runtime as unknown as ChatDependencies;
 
 		queries.reset();
 		const packedSingle = await packChatMessageDetailedForApi(deps, message, sender);
@@ -119,7 +119,7 @@ describe('chat message packing', () => {
 			reactions: [],
 		} satisfies MiChatMessage;
 
-		const deps = runtime as unknown as ApiChatDependencies;
+		const deps = runtime as unknown as ChatDependencies;
 
 		queries.reset();
 		await expect(packChatMessageDetailedForApi(deps, message, sender)).rejects.toMatchObject({

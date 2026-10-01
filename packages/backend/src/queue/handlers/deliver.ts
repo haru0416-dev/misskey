@@ -10,7 +10,7 @@ import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
 import MisskeyLogger from '@/logger.js';
@@ -23,7 +23,7 @@ import {
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
 } from '@/server/rest/activitypub/federation.js';
-import type { ChartWriters } from '../../server/chart-runtime.js';
+import type { ChartWriters } from '../../core/chart/chart-runtime.js';
 
 export type QueueDeliverDependencies = {
 	config: Pick<Config, 'instance' | 'runtime'>;

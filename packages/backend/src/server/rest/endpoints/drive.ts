@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as driveContracts } from '@/server/api/metas/drive.js';
+import { endpointMetas as driveContracts } from '@/server/rest/contracts/drive.js';
 import { pickContracts } from '../endpoint-contract.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';

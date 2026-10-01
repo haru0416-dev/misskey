@@ -24,8 +24,8 @@ import type {
 } from '@/db/schema/queue-outbox.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { QUEUE } from '@/queue/const.js';
-import type { DbJobMap, DeliverJobData } from '@/queue/types.js';
+import { QUEUE } from '@/core/queue/const.js';
+import type { DbJobMap, DeliverJobData } from '@/core/queue/types.js';
 
 const CLAIM_LEASE_MS = 30_000;
 const MAX_POLL_INTERVAL_MS = 30_000;

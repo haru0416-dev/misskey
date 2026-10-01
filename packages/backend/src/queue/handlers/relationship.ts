@@ -18,7 +18,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import type { RelationshipJobData } from '@/queue/types.js';
+import type { RelationshipJobData } from '@/core/queue/types.js';
 import { blockForApi, unblockForApi, unfollow } from '@/server/rest/account/account-blocking.js';
 import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 import {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as federationContracts } from '@/server/api/metas/federation.js';
+import { endpointMetas as federationContracts } from '@/server/rest/contracts/federation.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { handleApiFederationUpdateRemoteUser } from '../activitypub/ap-person.js';

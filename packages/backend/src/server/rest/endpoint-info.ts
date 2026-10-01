@@ -7,12 +7,12 @@ import type { ApiParams } from './validation.js';
 import { z } from 'zod';
 import { parseApiParams } from './validation.js';
 
-type ApiEndpoints = typeof import('../api/endpoints.js').default;
+type ApiEndpoints = typeof import('./endpoint-catalog.js').default;
 
 let endpointsPromise: Promise<ApiEndpoints> | undefined;
 
 function getEndpoints(): Promise<ApiEndpoints> {
-	return (endpointsPromise ??= import('../api/endpoints.js').then((module) => module.default));
+	return (endpointsPromise ??= import('./endpoint-catalog.js').then((module) => module.default));
 }
 
 export const endpointParamDef = z.object({

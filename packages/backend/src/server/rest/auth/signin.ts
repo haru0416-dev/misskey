@@ -26,12 +26,12 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';
-import { createLoginNotification } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
+import { createLoginNotification } from '../../../core/notification/notification.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import { isApiRateLimited } from '../rate-limit.js';
 import type { ApiErrorBody, ApiErrorKind } from '../error.js';
 
-export type ApiSigninDependencies = ApiNotificationDependencies & {
+export type ApiSigninDependencies = NotificationDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;

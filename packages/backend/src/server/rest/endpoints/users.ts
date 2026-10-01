@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { handleApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';

@@ -8,7 +8,7 @@ import { loadConfig } from '@/config.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { FanoutTimelinePush } from '@/server/rest/note/fanout-timeline-push.js';
+import { FanoutTimelinePush } from '@/core/note/fanout-timeline-push.js';
 
 describe('FanoutTimelinePush', () => {
 	let runtime: RuntimeDependencies;

@@ -39,14 +39,14 @@ import type { Packed } from '@/misc/json-schema.js';
 import { paginationParams } from '@/misc/zod-params.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { RelationshipJobData } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import type { RelationshipJobData } from '@/core/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import type Logger from '@/logger.js';
 import { startApiAdminDriveFileDeletion } from '../admin/admin-drive.js';
 import type { ApiAdminDriveDependencies } from '../admin/admin-drive.js';
 import { packFollowingsForApi } from '../user/following.js';
 import type { FollowingListItem } from '../user/following.js';
-import { isApiModerator } from '../role/role-policy.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
@@ -267,7 +267,7 @@ async function packApiFederationInstances(
 	user: MiLocalUser | null,
 	meta: MiMeta,
 ): Promise<Packed<'FederationInstance'>[]> {
-	const isModerator = await isApiModerator(deps, user);
+	const isModerator = await userIsModerator(deps, user);
 	return packApiFederationInstancesWithModerator(meta, instances, isModerator);
 }
 
@@ -445,7 +445,7 @@ export async function handleApiFederationStats(
 	const gotSubCount = topSubInstances.map((x) => x.followersCount).reduce((a, b) => a + b, 0);
 	const gotPubCount = topPubInstances.map((x) => x.followingCount).reduce((a, b) => a + b, 0);
 
-	const isModerator = await isApiModerator(deps, user);
+	const isModerator = await userIsModerator(deps, user);
 
 	return {
 		topSubInstances: packApiFederationInstancesWithModerator(deps.meta, topSubInstances, isModerator),

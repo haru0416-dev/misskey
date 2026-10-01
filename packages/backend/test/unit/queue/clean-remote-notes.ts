@@ -14,7 +14,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueCleanRemoteNotes } from '@/queue/handlers/clean-remote-notes.js';
 import type { QueueCleanRemoteNotesDependencies } from '@/queue/handlers/clean-remote-notes.js';
 import type { Config } from '@/config.js';
-import type { QueueMaintenanceReporter } from '@/queue/types.js';
+import type { QueueMaintenanceReporter } from '@/core/queue/types.js';
 
 function createReporter(): QueueMaintenanceReporter {
 	return {

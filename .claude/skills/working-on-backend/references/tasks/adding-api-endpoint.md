@@ -4,9 +4,9 @@
 
 ## 実装をつなぐ
 
-1. 同じ認可・保存契約を持つ既存 endpoint の meta、ルート、ハンドラを読む。例は [notes の meta](../../../../../packages/backend/src/server/api/metas/notes.ts)、[notes の実装](../../../../../packages/backend/src/server/rest/endpoints/notes.ts)、[投稿処理](../../../../../packages/backend/src/server/rest/note/notes-create.ts)。
+1. 同じ認可・保存契約を持つ既存 endpoint の meta、ルート、ハンドラを読む。例は [notes の meta](../../../../../packages/backend/src/server/rest/contracts/notes.ts)、[notes の実装](../../../../../packages/backend/src/server/rest/endpoints/notes.ts)、[投稿処理](../../../../../packages/backend/src/server/rest/note/notes-create.ts)。
 2. 既存の機能別ハンドラに入力 schema と処理を置き、必要な依存を `deps` で受ける。`paramDef` は既存の zod schema を共有し、[parseApiParams](../../../../../packages/backend/src/server/rest/validation.ts) を通る位置を確かめる。入力の型と検証を別々に再定義しない。
-3. `server/api/metas/` に `defineContract({ meta, paramDef })` で登録する。新しいカテゴリなら [endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts) に集約する。
+3. `server/rest/contracts/` に `defineContract({ meta, paramDef })` で登録する。新しいカテゴリなら [endpoint-metas.ts](../../../../../packages/backend/src/server/rest/endpoint-metas.ts) に集約する。
 4. `server/rest/endpoints/<category>.ts` の `implementEndpoints` に実装を足す。戻り値は meta.res、投げるエラーは meta.errors に型で縛られる。新しいカテゴリなら [endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts) に載せる。
 5. multipart や独自の認証経路だけ `server/rest/routes/` に手で書き、近い既存ルートの認可・パラメータ処理・資源解放まで照合する。meta を置くだけでは独自経路に guard は掛からない。
 

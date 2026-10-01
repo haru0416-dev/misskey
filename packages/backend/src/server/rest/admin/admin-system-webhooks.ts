@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminSystemWebhookContracts } from '@/server/api/metas/admin-system-webhook.js';
+import type { endpointMetas as adminSystemWebhookContracts } from '@/server/rest/contracts/admin-system-webhook.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -29,7 +29,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { systemWebhookEventTypes } from '@/models/SystemWebhook.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
@@ -37,7 +37,7 @@ export type ApiAdminSystemWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export const adminSystemWebhookCreateParamDef = z.object({

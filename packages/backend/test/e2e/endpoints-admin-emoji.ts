@@ -18,7 +18,7 @@ import type {
 	PostScheduledNoteJobData,
 	RelationshipJobData,
 	SystemWebhookDeliverJobData,
-} from '@/queue/types.js';
+} from '@/core/queue/types.js';
 import {
 	announcementReadExistsInDatabase,
 	channelFavoriteExistsInDatabase,

@@ -16,7 +16,7 @@ import type { QueryCounter } from '../../../query-counter.js';
 import { createApObjectRoutesApp } from '@/server/activitypub/object-routes.js';
 import type { ApObjectRoutesDependencies } from '@/server/activitypub/object-routes.js';
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
-import { deliverQuestionUpdateForApi, renderNoteForApi } from '@/server/rest/activitypub/notes-ap.js';
+import { deliverQuestionUpdate, renderNote } from '@/core/activitypub/notes-ap.js';
 
 describe('ActivityPub object routes', () => {
 	let runtime: RuntimeDependencies;
@@ -58,7 +58,7 @@ describe('ActivityPub object routes', () => {
 				replyId: parentId,
 			});
 			const reply = await fetchNoteByIdOrFailFromDatabase(runtime.db, replyId);
-			const rendered = await renderNoteForApi(runtime, reply, true);
+			const rendered = await renderNote(runtime, reply, true);
 			const parentUri = `${runtime.config.instance.url}/notes/${parentId}`;
 			if (visibility === 'public' || visibility === 'home') {
 				expect(rendered['inReplyTo']).toMatchObject({ id: parentUri, type: 'Note' });
@@ -107,7 +107,7 @@ describe('ActivityPub object routes', () => {
 		});
 		const reply = await fetchNoteByIdOrFailFromDatabase(runtime.db, replyId);
 		for (const dive of [false, true]) {
-			const rendered = await renderNoteForApi(runtime, reply, dive);
+			const rendered = await renderNote(runtime, reply, dive);
 			expect(rendered['inReplyTo']).toBe(canReadParent ? `${runtime.config.instance.url}/notes/${parentId}` : null);
 			expect(rendered['to']).toEqual([recipient.uri]);
 			expect(JSON.stringify(rendered)).not.toContain('private parent body');
@@ -142,7 +142,7 @@ describe('ActivityPub object routes', () => {
 		});
 		const reply = await fetchNoteByIdOrFailFromDatabase(runtime.db, replyId);
 		for (const dive of [false, true]) {
-			const rendered = await renderNoteForApi(runtime, reply, dive);
+			const rendered = await renderNote(runtime, reply, dive);
 			expect(rendered['inReplyTo']).toBe(sameAuthor ? `${runtime.config.instance.url}/notes/${parentId}` : null);
 			expect(JSON.stringify(rendered)).not.toContain('private parent body');
 		}
@@ -202,7 +202,7 @@ describe('ActivityPub object routes', () => {
 			});
 			const addBulk = vi.spyOn(runtime.deliverQueue, 'addBulk').mockResolvedValue([]);
 			try {
-				await deliverQuestionUpdateForApi(runtime, noteId);
+				await deliverQuestionUpdate(runtime, noteId);
 				expect(addBulk).toHaveBeenCalledOnce();
 				const jobs = addBulk.mock.calls[0]![0];
 				expect(jobs.map((job) => job.data.to).sort()).toEqual(

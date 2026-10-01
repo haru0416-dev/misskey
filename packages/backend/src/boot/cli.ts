@@ -8,7 +8,7 @@ import { createRedactedConfig, loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 
 process.title = 'Toneriko CLI';
 

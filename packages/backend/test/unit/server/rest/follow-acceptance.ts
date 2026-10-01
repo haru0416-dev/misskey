@@ -25,7 +25,7 @@ import type { ApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.j
 import { isRemoteUser, insertFollowingWithSideEffects } from '@/server/rest/user/following.js';
 import { blockForApi, undoFollowForApi } from '@/server/rest/account/account-blocking.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 import type { IFollow } from '@/core/activitypub/type.js';
 
 let runtime: RuntimeDependencies;

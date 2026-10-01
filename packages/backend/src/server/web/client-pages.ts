@@ -31,8 +31,8 @@ import { packFlashForApi } from '@/server/rest/flash/flash.js';
 import type { ApiFlashDependencies } from '@/server/rest/flash/flash.js';
 import { packGalleryPostForApi } from '@/server/rest/gallery/gallery.js';
 import type { ApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
-import { packNoteForApi } from '@/server/rest/note/note.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packNote } from '@/core/note/note-packing.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { packPageForApi } from '@/server/rest/page/pages.js';
 import type { ApiPageDependencies } from '@/server/rest/page/pages.js';
 import { packUserDetailedNotMeForApi } from '@/server/rest/user/user.js';
@@ -47,7 +47,7 @@ import { NotePage } from './views/note.js';
 import { PagePage } from './views/page.js';
 import { UserPage } from './views/user.js';
 
-export type ClientPagesDependencies = ApiNoteDependencies &
+export type ClientPagesDependencies = NoteDependencies &
 	ApiClipDependencies &
 	ApiFlashDependencies &
 	ApiGalleryDependencies &
@@ -122,7 +122,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			['public', 'home'].includes(note.visibility) &&
 			isUgcVisibleToVisitor(deps, note.userHost)
 		) {
-			const packedNote = await packNoteForApi(deps, note, null, { detail: true });
+			const packedNote = await packNote(deps, note, null, { detail: true });
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, note.userId);
 
 			return htmlResponse(
@@ -246,7 +246,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedNote = await packNoteForApi(deps, note, null, { detail: true });
+		const packedNote = await packNote(deps, note, null, { detail: true });
 
 		return embedHtmlResponse(
 			BaseEmbed({

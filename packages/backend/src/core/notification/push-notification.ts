@@ -28,7 +28,7 @@ export type PushNotificationsTypes = {
 	newChatMessage: Packed<'ChatMessage'>;
 };
 
-export type ApiPushNotificationDependencies = {
+export type PushNotificationDependencies = {
 	config: Pick<Config, 'instance'>;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
 	db: MiDrizzleDatabase;
@@ -97,8 +97,8 @@ function buildPushRequest(
  * 購読の読み出しは待つが、送信と失効した購読の削除の完了は待たない。
  * 通信失敗は呼び出し側へ返さないが、購読の読み出しに失敗すると reject する。
  */
-export async function pushSwNotificationForApi<T extends keyof PushNotificationsTypes>(
-	deps: ApiPushNotificationDependencies,
+export async function pushSwNotification<T extends keyof PushNotificationsTypes>(
+	deps: PushNotificationDependencies,
 	userId: MiUser['id'],
 	type: T,
 	body: PushNotificationsTypes[T],

@@ -19,7 +19,7 @@ import { following } from '@/db/schema/following.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type { QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { QUEUE } from '@/queue/const.js';
+import { QUEUE } from '@/core/queue/const.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 

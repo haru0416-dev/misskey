@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as usersContracts } from '@/server/api/metas/users.js';
+import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import sanitizeHtml from 'sanitize-html';
@@ -41,12 +41,13 @@ import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { ApiAdminStreamPublisher } from '../events.js';
+import type { AdminStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { addActivityContext, genLocalUserUri } from '../user/following.js';
-import { isApiAdministrator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserDetailedNotMeManyForApi, packUserLiteManyForApi } from '../user/user.js';
+import { userIsAdministrator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLiteMany } from '../../../core/user/user-packing.js';
+import { packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -60,9 +61,9 @@ export type ApiAdminAbuseReportsDependencies = {
 };
 
 export type ApiUsersReportAbuseDependencies = ApiAdminAbuseReportsDependencies &
-	ApiRolePolicyDependencies & {
+	RolePolicyDependencies & {
 		emailService: Pick<EmailService, 'sendEmail'>;
-		publishAdminStream?: ApiAdminStreamPublisher;
+		publishAdminStream?: AdminStreamPublisher;
 	};
 
 export const adminResolveAbuseUserReportParamDef = z.object({
@@ -155,7 +156,7 @@ async function packAbuseReportsForSystemWebhook<T extends 'abuseReport' | 'abuse
 			].filter((x): x is string => x != null),
 		),
 	];
-	const users = userIds.length > 0 ? await packUserLiteManyForApi(deps, userIds) : [];
+	const users = userIds.length > 0 ? await packUserLiteMany(deps, userIds) : [];
 	const usersMap = new Map(users.map((user) => [user.id, user]));
 
 	return reports.map(
@@ -518,7 +519,7 @@ export async function handleApiUsersReportAbuse(
 		throw errors.cannotReportYourself();
 	}
 
-	if (await isApiAdministrator(deps, targetUser)) {
+	if (await userIsAdministrator(deps, targetUser)) {
 		throw errors.cannotReportAdmin();
 	}
 

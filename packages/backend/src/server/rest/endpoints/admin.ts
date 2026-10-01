@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

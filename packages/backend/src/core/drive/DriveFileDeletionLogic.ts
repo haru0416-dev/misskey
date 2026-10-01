@@ -20,7 +20,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { DbDeleteDriveFileJobData } from '@/queue/types.js';
+import type { DbDeleteDriveFileJobData } from '@/core/queue/types.js';
 
 type DriveFileChartSnapshot = Pick<MiDriveFile, 'id' | 'userId' | 'userHost' | 'size'>;
 

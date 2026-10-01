@@ -15,7 +15,7 @@ import { createAccessTokenInDatabase, deleteAccessTokenByTokenFromDatabase } fro
 import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiCredentialEventPublisher } from '@/server/rest/events.js';
+import type { CredentialEventPublisher } from '@/core/events.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
@@ -173,7 +173,7 @@ export type OAuthProviderRuntimeDependencies = {
 	fetchLocalUserByNativeToken?: (token: string) => Promise<MiLocalUser | null>;
 	createAccessToken?: typeof createAccessTokenInDatabase;
 	deleteAccessTokenByToken?: typeof deleteAccessTokenByTokenFromDatabase;
-	publishCredentialEvent: ApiCredentialEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
 };
 
 export type OAuthProviderRuntime = {

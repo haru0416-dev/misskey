@@ -19,18 +19,18 @@ import type { ZipEntry } from '@/misc/zip-writer.js';
 import { readDriveFileBuffer, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
 import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
-import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
+import type { DbJobDataWithUser, DbUserImportJobData } from '@/core/queue/types.js';
 import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
 import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import { addCustomEmojiForApi } from '@/server/rest/emoji/emojis.js';
 import type { ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
-import { createExportCompletedNotification } from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import { createExportCompletedNotification } from '@/core/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
 
 export type QueueEmojisDependencies = ApiDriveFileUploadDependencies &
 	DriveFileContentDependencies &
 	ApiEmojiDependencies &
-	ApiNotificationDependencies & {
+	NotificationDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 	};
 

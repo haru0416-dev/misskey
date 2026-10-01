@@ -109,7 +109,7 @@ export default defineConfig((args) => {
 			'./src/config-schema.ts',
 			'./src/drizzle.ts',
 			'./src/migration-runner.ts',
-			'./src/server/api/openapi/gen-spec.ts',
+			'./src/server/rest/openapi/gen-spec.ts',
 		],
 		platform: 'node',
 		tsconfig: true,

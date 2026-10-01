@@ -36,7 +36,7 @@ import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiError } from '../error.js';
 import { clientError } from '../error.js';
-import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import type { InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
 import { fetchOrRegisterFederatedInstance } from '../activitypub/federation.js';
 import {
 	addActivityContext,
@@ -49,7 +49,8 @@ import {
 	renderUndo,
 } from '../user/following.js';
 import { packMeDetailedForApi, packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '../user/user.js';
-import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
@@ -58,8 +59,8 @@ export type ApiAccountBlockingDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
 	userWebhookDeliverQueue: UserWebhookDeliverQueue;
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishInternalEvent?: InternalEventPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 export const userIdParamDef = z.object({

@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
-import { endpointMetas } from '@/server/api/endpoint-metas.js';
+import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 
 /*
  * paramDef が宣言する入力制約 (長さ・件数・範囲・形式・必須) を固定し、意図しない API 契約の変更を検出する。

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as channelsContracts } from '@/server/api/metas/channels.js';
+import type { endpointMetas as channelsContracts } from '@/server/rest/contracts/channels.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -52,11 +52,11 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { packNoteManyForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
-import { isApiModerator } from '../role/role-policy.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -65,7 +65,7 @@ export type ApiChannelsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 type ApiPackedChannel = Packed<'Channel'>;
@@ -228,7 +228,7 @@ export async function packChannelForSsr(deps: ApiChannelsDependencies, channel: 
 }
 
 async function packChannelDetailedForApi(
-	deps: ApiChannelsDependencies & ApiNoteDependencies,
+	deps: ApiChannelsDependencies & NoteDependencies,
 	channel: MiChannel,
 	me: MiLocalUser | null,
 ): Promise<ApiPackedChannel> {
@@ -365,7 +365,7 @@ export async function handleApiChannelsUpdate(
 		throw errors.noSuchChannel();
 	}
 
-	const isModerator = await isApiModerator(deps, me);
+	const isModerator = await userIsModerator(deps, me);
 	if (channel.userId !== me.id && !isModerator) {
 		throw errors.accessDenied();
 	}
@@ -535,7 +535,7 @@ export async function handleApiChannelsMuteList(
 }
 
 export async function handleApiChannelsShow(
-	deps: ApiChannelsDependencies & ApiNoteDependencies,
+	deps: ApiChannelsDependencies & NoteDependencies,
 	me: MiLocalUser | null,
 	params: ApiParams<typeof channelShowParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/show']>,
@@ -549,7 +549,7 @@ export async function handleApiChannelsShow(
 }
 
 export async function handleApiChannelsTimeline(
-	deps: ApiChannelsDependencies & ApiNoteDependencies,
+	deps: ApiChannelsDependencies & NoteDependencies,
 	me: MiLocalUser | null,
 	params: ApiParams<typeof channelTimelineParamDef>,
 ): Promise<Packed<'Note'>[]> {

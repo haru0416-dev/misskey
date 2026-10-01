@@ -10,7 +10,7 @@ import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createQueueWorkers } from '@/queue/worker.js';
 import type { QueueShellDependencies } from '@/queue/worker.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 import { queueReadyRef, readyRef } from '@/boot/ready.js';
 import { createHealthApp } from '@/server/health.js';
 import { enqueueDbJobInOutbox, waitForDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';

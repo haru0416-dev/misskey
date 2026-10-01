@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { endpointMetas } from '@/server/api/endpoint-metas.js';
+import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 import type { EndpointGuardMeta } from '@/server/rest/endpoint-guards.js';
 
 /*

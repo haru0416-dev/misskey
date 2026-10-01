@@ -23,14 +23,14 @@ import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { ChartWriters } from '../../server/chart-runtime.js';
-import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
+import type { ChartWriters } from '../../core/chart/chart-runtime.js';
+import type { InternalEventPublisher } from '../../core/events.js';
 
 export type QueueSystemDependencies = {
 	config: Pick<Config, 'maintenance'>;
 	db: MiDrizzleDatabase;
 	chartWriters: ChartWriters;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 /** DBへの同時接続を避けるため直列に実行する。 */

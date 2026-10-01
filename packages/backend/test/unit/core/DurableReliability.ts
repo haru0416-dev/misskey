@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { loadConfig } from '@/config.js';
 import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { note as noteTable } from '@/db/schema/note.js';
-import { FanoutTimelinePush } from '@/server/rest/note/fanout-timeline-push.js';
+import { FanoutTimelinePush } from '@/core/note/fanout-timeline-push.js';
 import { createNotePostProcessing } from '@/core/note/NotePostProcessing.js';
 import { createAntennaInDatabase, deleteAntennaFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
@@ -25,7 +25,7 @@ import { following } from '@/db/schema/following.js';
 import { runInRequestScope } from '@/misc/request-scope.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { DbQueue } from '@/core/queue/queues.js';
-import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
+import type { DbUserSuspensionPostEffectsJobData } from '@/core/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -41,13 +41,10 @@ import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleApiNotesCreate, notesCreateParamDef } from '@/server/rest/note/notes-create.js';
 import { parseApiParams } from '@/server/rest/validation.js';
 import { contractErrors } from '@/server/rest/endpoint-definition.js';
-import { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
-import {
-	resolveNotificationStreamId,
-	toXListId,
-	xaddApiNotification,
-} from '@/server/rest/notification/notification.js';
+import { toXListId, xaddNotification } from '@/core/notification/notification.js';
+import { resolveNotificationStreamId } from '@/server/rest/notification/notification.js';
 
 describe('durable reliability boundaries', () => {
 	let runtime: RuntimeDependencies;
@@ -390,12 +387,12 @@ describe('durable reliability boundaries', () => {
 		const key = `notificationTimeline:${user.id}`;
 
 		try {
-			const newerId = await xaddApiNotification(runtime, user.id, newer);
+			const newerId = await xaddNotification(runtime, user.id, newer);
 			expect(newerId).toBe(toXListId(newer.id));
-			await expect(xaddApiNotification(runtime, user.id, newer)).resolves.toBe(newerId);
+			await expect(xaddNotification(runtime, user.id, newer)).resolves.toBe(newerId);
 			expect(await runtime.redis.xlen(key)).toBe(1);
-			const appendedId = await xaddApiNotification(runtime, user.id, older);
-			await expect(xaddApiNotification(runtime, user.id, older)).resolves.toBe(appendedId);
+			const appendedId = await xaddNotification(runtime, user.id, older);
+			await expect(xaddNotification(runtime, user.id, older)).resolves.toBe(appendedId);
 			await expect(resolveNotificationStreamId(runtime, user.id, older.id)).resolves.toBe(appendedId);
 			expect(await runtime.redis.xlen(key)).toBe(2);
 		} finally {

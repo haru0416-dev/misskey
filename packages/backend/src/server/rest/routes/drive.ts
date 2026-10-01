@@ -6,7 +6,7 @@
 import type { Hono } from 'hono';
 import { assertCredential, authenticateApiToken } from '../auth/auth.js';
 import { applyEndpointGuards } from '../endpoint-guards.js';
-import { endpointMetas } from '@/server/api/endpoint-metas.js';
+import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 import { handleApiDriveFilesCreate, readApiMultipartRequest } from '../drive/drive-file-upload.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
 import { jsonResponse, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';

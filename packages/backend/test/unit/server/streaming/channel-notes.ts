@@ -17,7 +17,7 @@ import { createUserListMembershipInDatabase } from '@/core/user/UserListMembersh
 import { createAntennaInDatabase } from '@/core/antenna/AntennaStore.js';
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { packNoteForApi } from '@/server/rest/note/note.js';
+import { packNote } from '@/core/note/note-packing.js';
 import { StreamConnection } from '@/server/streaming/connection.js';
 import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
@@ -62,7 +62,7 @@ function channelNoteIds(raw: string[]): string[] {
 		});
 }
 
-// notesStream ハンドラは内部で filterNoteForStreamingHidingForApi 等の実DBクエリを await するため、
+// notesStream ハンドラは内部で filterNoteForStreamingHiding 等の実DBクエリを await するため、
 // emit() 呼び出し直後の同期チェックでは間に合わない。条件を満たすまで短時間ポーリングする。
 async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs = 20): Promise<void> {
 	await vi.waitFor(() => expect(condition()).toBe(true), { timeout: timeoutMs, interval: intervalMs });
@@ -107,8 +107,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 			visibility: 'public',
 			tags: ['bar'],
 		});
-		const otherPacked = await packNoteForApi(deps, otherNoteId, viewer);
-		const packed = await packNoteForApi(deps, noteId, viewer);
+		const otherPacked = await packNote(deps, otherNoteId, viewer);
+		const packed = await packNote(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
@@ -138,7 +138,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			visibility: 'public',
 			tags: ['foo'],
 		});
-		const packed = await packNoteForApi(deps, noteId, viewer);
+		const packed = await packNote(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
@@ -202,8 +202,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 			visibility: 'public',
 			channelId: otherChannelId,
 		});
-		const otherPacked = await packNoteForApi(deps, otherNoteId, viewer);
-		const packed = await packNoteForApi(deps, noteId, viewer);
+		const otherPacked = await packNote(deps, otherNoteId, viewer);
+		const packed = await packNote(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
@@ -260,8 +260,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await connection.connectChannel('conn1', { listId }, 'userList', true);
 		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
-		subscriber.emit('notesStream', await packNoteForApi(deps, memberNoteId, owner));
-		subscriber.emit('notesStream', await packNoteForApi(deps, nonMemberNoteId, owner));
+		subscriber.emit('notesStream', await packNote(deps, memberNoteId, owner));
+		subscriber.emit('notesStream', await packNote(deps, nonMemberNoteId, owner));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		const messages = channelMessages(raw);
@@ -299,8 +299,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'localTimeline', false);
-		subscriber.emit('notesStream', await packNoteForApi(deps, localNoteId, viewer));
-		subscriber.emit('notesStream', await packNoteForApi(deps, remoteNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, localNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, remoteNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		expect(channelMessages(raw)).toHaveLength(1);
@@ -337,8 +337,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'globalTimeline', false);
-		subscriber.emit('notesStream', await packNoteForApi(deps, publicNoteId, viewer));
-		subscriber.emit('notesStream', await packNoteForApi(deps, channelNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, publicNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, channelNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		expect(channelMessages(raw)).toHaveLength(1);
@@ -374,8 +374,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'homeTimeline', false);
-		subscriber.emit('notesStream', await packNoteForApi(deps, followeeNoteId, viewer));
-		subscriber.emit('notesStream', await packNoteForApi(deps, strangerNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, followeeNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, strangerNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		expect(channelMessages(raw)).toHaveLength(1);
@@ -410,8 +410,8 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'hybridTimeline', false);
-		subscriber.emit('notesStream', await packNoteForApi(deps, localNoteId, viewer));
-		subscriber.emit('notesStream', await packNoteForApi(deps, remoteNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, localNoteId, viewer));
+		subscriber.emit('notesStream', await packNote(deps, remoteNoteId, viewer));
 		await waitUntil(() => channelMessages(raw).length > 0);
 
 		// ローカル公開ノートは無関係でも受信、リモート無関係ノートは受信しない
@@ -439,7 +439,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			userHost: null,
 			visibility: 'public',
 		});
-		const packed = await packNoteForApi(deps, noteId, viewer);
+		const packed = await packNote(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
@@ -475,7 +475,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 			userHost: null,
 			visibility: 'public',
 		});
-		const packed = await packNoteForApi(deps, noteId, viewer);
+		const packed = await packNote(deps, noteId, viewer);
 
 		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();

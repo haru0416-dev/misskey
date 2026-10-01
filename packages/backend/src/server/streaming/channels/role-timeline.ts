@@ -6,16 +6,16 @@
 import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, requiresSigninForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
-async function isRoleExplorableForStream(deps: { db: ApiNoteDependencies['db'] }, roleId: string): Promise<boolean> {
+async function isRoleExplorableForStream(deps: { db: NoteDependencies['db'] }, roleId: string): Promise<boolean> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, roleId);
 	return role?.isExplorable ?? false;
 }
 
-export const honoStreamChannelRoleTimeline: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelRoleTimeline: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,

@@ -24,12 +24,12 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { queueRetentionOptions } from '@/queue/const.js';
-import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
+import type { DbUserSuspensionPostEffectsJobData } from '@/core/queue/types.js';
 import { addActivityContext, genLocalUserUri, renderUndo } from '../user/following.js';
-import { isApiModerator } from '../role/role-policy.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiCredentialEventPublisher } from '../events.js';
+import type { CredentialEventPublisher } from '../../../core/events.js';
 
 export type ApiAdminUserSuspensionDependencies = {
 	config: Config;
@@ -38,7 +38,7 @@ export type ApiAdminUserSuspensionDependencies = {
 	deliverQueue: DeliverQueue;
 	dbQueue: DbQueue;
 	relationshipQueue: RelationshipQueue;
-	publishCredentialEvent: ApiCredentialEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
 };
 
 export const adminUserSuspensionParamDef = z.object({
@@ -262,7 +262,7 @@ export async function handleApiAdminSuspendUser(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const user = await findSuspensionTarget(deps, body);
-	if (await isApiModerator(deps, user)) {
+	if (await userIsModerator(deps, user)) {
 		throw new Error('cannot suspend moderator account');
 	}
 

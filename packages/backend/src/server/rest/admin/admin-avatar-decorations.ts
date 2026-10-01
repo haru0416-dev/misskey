@@ -23,13 +23,13 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiInternalEventPublisher } from '../events.js';
+import type { InternalEventPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminAvatarDecorationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishInternalEvent?: ApiInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 type AdminAvatarDecoration = {

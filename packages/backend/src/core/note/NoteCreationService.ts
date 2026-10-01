@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { toPuny } from '@/misc/to-puny.js';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
-import { FanoutTimelinePush } from '@/server/rest/note/fanout-timeline-push.js';
+import { FanoutTimelinePush } from '@/core/note/fanout-timeline-push.js';
 import { DB_MAX_NOTE_CW_LENGTH, DB_MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
@@ -23,7 +23,7 @@ import { isReply } from '@/misc/is-reply.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { concat } from '@/misc/prelude/array.js';
 import type { Config } from '@/config.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { runInlineDbOutboxJobs, waitForDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { InlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { NotePostProcessingReservation } from '@/core/note/NotePostProcessing.js';
@@ -77,12 +77,12 @@ import {
 import { listMuterIdsByMuteeIdAndMuterIdsFromDatabase } from '@/core/user/MutingStore.js';
 import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
 import type { DbQueue, EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/queue/queues.js';
-import type { DbNotePostCreateJobData, DbNotePostCreateStage, UserWebhookDeliverJobData } from '@/queue/types.js';
+import type { DbNotePostCreateJobData, DbNotePostCreateStage, UserWebhookDeliverJobData } from '@/core/queue/types.js';
 import { createPollInDatabase, fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
 import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { addNoteToAntennasForApi } from '@/server/rest/antenna/antennas.js';
-import { formatHashtagUsersWindow } from '@/server/rest/hashtag/hashtags.js';
+import { addNoteToAntennas } from '@/core/antenna/antenna-delivery.js';
+import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
 import {
 	currentFeaturedWindow,
 	FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE,
@@ -91,49 +91,45 @@ import {
 } from '@/core/featured/FeaturedRanking.js';
 import type { FeaturedNoteTarget } from '@/core/featured/FeaturedRanking.js';
 import {
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
-	renderNoteOrRenoteActivityForApi,
+	deliverNoteActivity,
+	deliverToRelays,
+	renderNoteOrRenoteActivity,
 	renderOnce,
-	resolveRemoteRecipientForApi,
-} from '@/server/rest/activitypub/notes-ap.js';
-import type { ApiNoteApDependencies, ApiRelayDeliverDependencies } from '@/server/rest/activitypub/notes-ap.js';
+	resolveRemoteRecipient,
+} from '@/core/activitypub/notes-ap.js';
+import type { NoteApDependencies, RelayDeliverDependencies } from '@/core/activitypub/notes-ap.js';
 import {
-	createPackNoteHintsForUsersForApi,
-	createPackNoteStaticHintForApi,
-	packNoteForApi,
-	isVisibleForMeForApi,
-} from '@/server/rest/note/note.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+	createPackNoteHintsForUsers,
+	createPackNoteStaticHint,
+	packNote,
+	isVisibleForMe,
+} from '@/core/note/note-packing.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
-import { getApiRolePolicies, getApiUserRoles, ROLES_VERSION_MEMO_KEY } from '@/server/rest/role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '@/server/rest/role/role-policy.js';
+import { getRolePolicies, getUserRoles, ROLES_VERSION_MEMO_KEY } from '@/core/role/role-policy.js';
+import type { RolePolicyDependencies } from '@/core/role/role-policy.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
-import { pushSwNotificationForApi } from '@/server/rest/notification/push-notification.js';
-import type { ApiPushNotificationDependencies } from '@/server/rest/notification/push-notification.js';
-import { packNotificationForApi } from '@/server/rest/notification/notifications-list.js';
-import type { ApiNotificationsListDependencies } from '@/server/rest/notification/notifications-list.js';
-import {
-	scheduleUnreadNotification,
-	toXListId,
-	xaddApiNotifications,
-} from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
-import { packUserLiteForApi } from '@/server/rest/user/user.js';
+import { pushSwNotification } from '@/core/notification/push-notification.js';
+import type { PushNotificationDependencies } from '@/core/notification/push-notification.js';
+import { packNotification } from '@/core/notification/notification-packing.js';
+import type { NotificationsListDependencies } from '@/core/notification/notification-packing.js';
+import { scheduleUnreadNotification, toXListId, xaddNotifications } from '@/core/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
+import { packUserLite } from '@/core/user/user-packing.js';
 import type {
-	ApiAntennaStreamPublisher,
-	ApiMainStreamPublisher,
-	ApiNotesStreamPublisher,
-	ApiRoleTimelineStreamPublisher,
-} from '@/server/rest/events.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+	AntennaStreamPublisher,
+	MainStreamPublisher,
+	NotesStreamPublisher,
+	RoleTimelineStreamPublisher,
+} from '@/core/events.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 
-export type NoteCreationDependencies = ApiNoteDependencies &
-	ApiNoteApDependencies &
-	ApiRelayDeliverDependencies &
-	ApiRolePolicyDependencies &
-	ApiNotificationDependencies & {
+export type NoteCreationDependencies = NoteDependencies &
+	NoteApDependencies &
+	RelayDeliverDependencies &
+	RolePolicyDependencies &
+	NotificationDependencies & {
 		config: Config;
 		meta: MiMeta;
 		db: MiDrizzleDatabase;
@@ -143,10 +139,10 @@ export type NoteCreationDependencies = ApiNoteDependencies &
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
 		endedPollNotificationQueue: EndedPollNotificationQueue;
 		dbQueue: DbQueue;
-		publishNotesStream?: ApiNotesStreamPublisher;
-		publishMainStream?: ApiMainStreamPublisher;
-		publishAntennaStream?: ApiAntennaStreamPublisher;
-		publishRoleTimelineStream?: ApiRoleTimelineStreamPublisher;
+		publishNotesStream?: NotesStreamPublisher;
+		publishMainStream?: MainStreamPublisher;
+		publishAntennaStream?: AntennaStreamPublisher;
+		publishRoleTimelineStream?: RoleTimelineStreamPublisher;
 	};
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
@@ -286,7 +282,7 @@ function deterministicUuidv7(sourceId: string, key: string): string {
 }
 
 async function hydrateNotificationNoteRelations(
-	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
+	deps: NotificationDependencies & NotificationsListDependencies,
 	notes: MiNote[],
 ): Promise<MiNote[]> {
 	const roots = notes.map((note) => ({ ...note }) as MiNote);
@@ -347,10 +343,10 @@ async function hydrateNotificationNoteRelations(
 }
 
 async function createNoteNotifications(
-	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
+	deps: NotificationDependencies & NotificationsListDependencies,
 	notifierId: MiUser['id'],
 	requests: readonly NoteNotificationRequest[],
-	pushDeps: ApiPushNotificationDependencies = deps,
+	pushDeps: PushNotificationDependencies = deps,
 ): Promise<void> {
 	const pending = requests.filter((request) => request.notifieeId !== notifierId);
 	if (pending.length === 0) {
@@ -460,7 +456,7 @@ async function createNoteNotifications(
 			},
 		};
 	});
-	await xaddApiNotifications(
+	await xaddNotifications(
 		deps,
 		stored.map((item) => ({
 			userId: item.request.notifieeId,
@@ -491,9 +487,9 @@ async function createNoteNotifications(
 		return;
 	}
 	const notes = await hydrateNotificationNoteRelations(deps, fetchedNotes);
-	const notePackHint = await createPackNoteStaticHintForApi(deps, notes);
+	const notePackHint = await createPackNoteStaticHint(deps, notes);
 	const packedNotifier =
-		notePackHint.packedUsers.get(notifier.id) ?? (await packUserLiteForApi(deps, notifier).catch(() => null));
+		notePackHint.packedUsers.get(notifier.id) ?? (await packUserLite(deps, notifier).catch(() => null));
 	if (packedNotifier == null) {
 		return;
 	}
@@ -503,7 +499,7 @@ async function createNoteNotifications(
 	const batchSize = 1000;
 	for (let offset = 0; offset < publishable.length; offset += batchSize) {
 		const batch = publishable.slice(offset, offset + batchSize);
-		const notePackHintsByUserId = await createPackNoteHintsForUsersForApi(
+		const notePackHintsByUserId = await createPackNoteHintsForUsers(
 			deps,
 			notes,
 			batch.map((item) => item.request.notifieeId),
@@ -511,7 +507,7 @@ async function createNoteNotifications(
 		);
 		await Promise.all(
 			batch.map(async (item) => {
-				const packed = await packNotificationForApi(
+				const packed = await packNotification(
 					deps,
 					item.notification as unknown as MiNotification,
 					item.request.notifieeId,
@@ -524,8 +520,8 @@ async function createNoteNotifications(
 				);
 				if (packed != null) {
 					deps.publishMainStream?.(item.request.notifieeId, 'notification', packed);
-					void pushSwNotificationForApi(pushDeps, item.request.notifieeId, 'notification', packed);
-					// 保存は通知の ID から決まるストリーム ID で行う (xaddApiNotifications)。
+					void pushSwNotification(pushDeps, item.request.notifieeId, 'notification', packed);
+					// 保存は通知の ID から決まるストリーム ID で行う (xaddNotifications)。
 					scheduleUnreadNotification(deps, item.request.notifieeId, toXListId(item.notification.id), packed);
 				}
 			}),
@@ -534,7 +530,7 @@ async function createNoteNotifications(
 }
 
 export async function createNoteNotification(
-	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
+	deps: NotificationDependencies & NotificationsListDependencies,
 	notifieeId: MiUser['id'],
 	notifierId: MiUser['id'],
 	type: NoteNotificationType,
@@ -567,7 +563,7 @@ class NotificationManager {
 		}
 	}
 
-	async notify(deps: NoteCreationDependencies, pushDeps: ApiPushNotificationDependencies): Promise<void> {
+	async notify(deps: NoteCreationDependencies, pushDeps: PushNotificationDependencies): Promise<void> {
 		if (this.queue.size === 0) {
 			return;
 		}
@@ -635,13 +631,13 @@ async function enqueueUserWebhook(
 	deps: NoteCreationDependencies,
 	userId: MiUser['id'],
 	type: 'note' | 'reply' | 'renote' | 'mention',
-	packNote: () => Promise<unknown>,
+	packPayload: () => Promise<unknown>,
 	idempotencyKey?: string,
 ): Promise<void> {
 	const webhooks = await listActiveWebhooksByUserIdAndEventFromDatabase(deps.db, userId, type);
 	// 送り先がない場合は、通知本文の pack に伴う DB 取得を避ける。
 	if (webhooks.length === 0) return;
-	const note = await packNote();
+	const note = await packPayload();
 
 	await Promise.all(
 		webhooks.map((webhook) => {
@@ -1023,14 +1019,14 @@ async function postNoteCreated(
 	mentionedUsers: MiUser[],
 	silent: boolean,
 	stage: DbNotePostCreateStage,
-	pushDeps: ApiPushNotificationDependencies = deps,
+	pushDeps: PushNotificationDependencies = deps,
 ): Promise<void> {
 	if (stage === 'fanout' && deps.meta.enableFanoutTimeline) {
 		await pushNoteToFanoutTimelines(deps, note, user);
 	}
 
 	if (stage === 'antennas') {
-		await addNoteToAntennasForApi(deps, { ...note, channel: data.channel ?? null }, user);
+		await addNoteToAntennas(deps, { ...note, channel: data.channel ?? null }, user);
 	}
 
 	if (stage === 'followerNotifications' && data.reply == null) {
@@ -1068,13 +1064,13 @@ async function postNoteCreated(
 	}
 
 	if (!silent && stage === 'streamsAndRole') {
-		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		const noteObj = await packNote(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
 		await addNoteToRoleTimelines(deps, noteObj, note.user);
 		deps.publishNotesStream?.(noteObj);
 	}
 
 	if (!silent && stage === 'notifications') {
-		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		const noteObj = await packNote(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
 		const nm = new NotificationManager(user, note);
 		const publishMainStreamEvents: (() => void)[] = [];
 		const localMentionedUsers = mentionedUsers.filter((u) => u.host == null);
@@ -1089,7 +1085,7 @@ async function postNoteCreated(
 			localMentionedUsers
 				.filter((u) => !threadMutedUserIds.has(u.id))
 				.map(async (u) => {
-					const detailPackedNote = await packNoteForApi(deps, note, u, { detail: true });
+					const detailPackedNote = await packNote(deps, note, u, { detail: true });
 					publishMainStreamEvents.push(() => deps.publishMainStream?.(u.id, 'mention', detailPackedNote));
 					nm.push(u.id, 'mention');
 				}),
@@ -1128,7 +1124,7 @@ async function postNoteCreated(
 	if (!silent && stage === 'webhooks') {
 		let packed: Promise<Packed<'Note'>> | undefined;
 		const noteObj = () =>
-			(packed ??= packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true }));
+			(packed ??= packNote(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true }));
 		// webhook はローカルユーザーだけが持つ。リモートの投稿者について毎回検索しない。
 		if (user.host == null) await enqueueUserWebhook(deps, user.id, 'note', noteObj, note.id);
 		const localMentionedUsers = mentionedUsers.filter((mentioned) => mentioned.host == null);
@@ -1147,7 +1143,7 @@ async function postNoteCreated(
 						deps,
 						mentioned.id,
 						'mention',
-						() => packNoteForApi(deps, note, mentioned, { detail: true }),
+						() => packNote(deps, note, mentioned, { detail: true }),
 						note.id,
 					);
 				}),
@@ -1169,7 +1165,7 @@ async function postNoteCreated(
 
 	if (!silent && stage === 'federation' && !data.localOnly && user.host == null) {
 		const activity = renderOnce(() =>
-			renderNoteOrRenoteActivityForApi(
+			renderNoteOrRenoteActivity(
 				deps,
 				{
 					localOnly: data.localOnly,
@@ -1182,32 +1178,30 @@ async function postNoteCreated(
 
 		const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;
 		const directRecipients = (
-			await Promise.all(
-				recipientUsers.filter((u) => u.host != null).map((u) => resolveRemoteRecipientForApi(deps, u.id)),
-			)
+			await Promise.all(recipientUsers.filter((u) => u.host != null).map((u) => resolveRemoteRecipient(deps, u.id)))
 		).filter((u): u is NonNullable<typeof u> => u != null);
 
 		if (data.reply && data.reply.userHost !== null) {
-			const u = await resolveRemoteRecipientForApi(deps, data.reply.userId);
+			const u = await resolveRemoteRecipient(deps, data.reply.userId);
 			if (u) {
 				directRecipients.push(u);
 			}
 		}
 		if (data.renote && data.renote.userHost !== null) {
-			const u = await resolveRemoteRecipientForApi(deps, data.renote.userId);
+			const u = await resolveRemoteRecipient(deps, data.renote.userId);
 			if (u) {
 				directRecipients.push(u);
 			}
 		}
 
-		await deliverNoteActivityForApi(deps, user, activity, {
+		await deliverNoteActivity(deps, user, activity, {
 			directRecipients,
 			deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
 			jobIdPrefix: `note-create-${note.id}`,
 		});
 
 		if (note.visibility === 'public') {
-			await deliverToRelaysForApi(deps, { id: user.id, host: null }, activity, `note-relay-${note.id}`);
+			await deliverToRelays(deps, { id: user.id, host: null }, activity, `note-relay-${note.id}`);
 		}
 	}
 }
@@ -1265,7 +1259,7 @@ async function runNotePostCreateStage(
 	deps: NoteCreationDependencies,
 	context: NotePostCreateContext,
 	stage: DbNotePostCreateStage,
-	pushDeps: ApiPushNotificationDependencies,
+	pushDeps: PushNotificationDependencies,
 ): Promise<void> {
 	await postNoteCreated(
 		deps,
@@ -1283,7 +1277,7 @@ async function runNotePostCreateStage(
 export async function handleQueueNotePostCreate(
 	deps: NoteCreationDependencies,
 	data: DbNotePostCreateJobData,
-	pushDeps: ApiPushNotificationDependencies = deps,
+	pushDeps: PushNotificationDependencies = deps,
 ): Promise<void> {
 	const context = await loadNotePostCreateContext(deps, data);
 	if (context != null) await runNotePostCreateStage(deps, context, data.stage, pushDeps);
@@ -1345,7 +1339,7 @@ async function addNoteToRoleTimelines(
 ): Promise<void> {
 	// コンディショナルロールの評価には full MiUser が要る。投稿経路では note.user に載っている。
 	const user = author ?? (await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId));
-	const roles = await getApiUserRoles(deps, user);
+	const roles = await getUserRoles(deps, user);
 	if (roles.length === 0) {
 		return;
 	}
@@ -1501,7 +1495,7 @@ export async function createNote(
 	}
 
 	// ロールポリシーはこの関数内で2箇所 (canPublicNote / mentionLimit) から参照するため1回だけ解決する。
-	const policies = await getApiRolePolicies(deps, user);
+	const policies = await getRolePolicies(deps, user);
 
 	if (data.visibility === 'public' && data.channel == null) {
 		if (isKeywordIncluded(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) || policies.canPublicNote === false) {
@@ -1755,7 +1749,7 @@ export async function prepareRemoteNoteEdit(
 		throw new IdentifiableError('689ee33f-f97c-479a-ac49-1b9f8140af99', 'Note contains prohibited words');
 	}
 
-	const policies = await getApiRolePolicies(deps, user);
+	const policies = await getRolePolicies(deps, user);
 	let visibility = existing.visibility;
 	if (
 		visibility === 'public' &&
@@ -1889,7 +1883,7 @@ export async function fetchAndCreateNote(
 		if (isRenote(reply) && !isQuote(reply)) {
 			throw new IdentifiableError('3ac74a84-8fd5-4bb0-870f-01804f82ce15', 'You can not reply to a pure Renote.');
 		}
-		if (!(await isVisibleForMeForApi(deps, reply, user.id))) {
+		if (!(await isVisibleForMe(deps, reply, user.id))) {
 			throw new IdentifiableError('b98980fa-3780-406c-a935-b6d0eeee10d1', 'You cannot reply to an invisible Note.');
 		}
 		if (reply.visibility === 'specified' && data.visibility !== 'specified') {

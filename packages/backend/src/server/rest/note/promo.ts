@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
-import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
+import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';

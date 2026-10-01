@@ -18,7 +18,7 @@ import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
 import { traceHttpRequest } from '@/telemetry.js';
 import { startQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
 import { startServerStatsDaemon } from '@/server/daemons/server-stats.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 
 export type ServerRuntime = {
 	server: Bun.Server;

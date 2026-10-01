@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as galleryContracts } from '@/server/api/metas/gallery.js';
+import type { endpointMetas as galleryContracts } from '@/server/rest/contracts/gallery.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import type * as Redis from 'ioredis';
@@ -40,12 +40,12 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { packDriveFileManyByIdsForApi } from '../drive/drive-file.js';
-import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { packDriveFileManyByIds } from '../../../core/drive/drive-file-packing.js';
+import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
 import { ApiError } from '../error.js';
-import { isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import {
 	GALLERY_POSTS_RANKING_WINDOW,
@@ -54,8 +54,8 @@ import {
 } from '@/core/featured/FeaturedRanking.js';
 import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
-export type ApiGalleryDependencies = ApiDriveFileDependencies &
-	ApiRolePolicyDependencies & {
+export type ApiGalleryDependencies = DriveFileDependencies &
+	RolePolicyDependencies & {
 		redis: Redis.Redis;
 	};
 
@@ -107,8 +107,8 @@ export async function packGalleryPostForApi(
 	const post = typeof src === 'object' ? src : await fetchGalleryPostByIdOrFailFromDatabase(deps.db, src);
 
 	const [user, files, isLiked] = await Promise.all([
-		hint?.packedUser ?? packUserLiteForApi(deps, post.userId),
-		hint?.packedFiles ?? packDriveFileManyByIdsForApi(deps, post.fileIds),
+		hint?.packedUser ?? packUserLite(deps, post.userId),
+		hint?.packedFiles ?? packDriveFileManyByIds(deps, post.fileIds),
 		hint?.isLiked ?? (meId ? galleryLikeExistsInDatabase(deps.db, meId, post.id) : Promise.resolve(undefined)),
 	]);
 
@@ -142,8 +142,8 @@ async function packGalleryPostsManyForApi(
 	const fileIds = [...new Set(posts.flatMap((post) => post.fileIds))];
 	const postIds = posts.map((post) => post.id);
 	const [packedUsers, packedFiles, likedPostIds] = await Promise.all([
-		packUserLiteManyForApi(deps, userIds),
-		packDriveFileManyByIdsForApi(deps, fileIds),
+		packUserLiteMany(deps, userIds),
+		packDriveFileManyByIds(deps, fileIds),
 		me ? listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(deps.db, me.id, postIds) : Promise.resolve([]),
 	]);
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
@@ -312,7 +312,7 @@ export async function handleApiGalleryPostsDelete(
 		throw errors.noSuchPost();
 	}
 
-	if (!(await isApiModerator(deps, me)) && post.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && post.userId !== me.id) {
 		throw errors.accessDenied();
 	}
 

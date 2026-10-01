@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as galleryContracts } from '@/server/api/metas/gallery.js';
+import { endpointMetas as galleryContracts } from '@/server/rest/contracts/gallery.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

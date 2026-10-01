@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/User.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
-import { packNoteForApi } from './note.js';
+import { packNote } from '../../../core/note/note-packing.js';
 
 /**
  * renoteId/fileIds/mediaIds/poll がすべて null または未指定の場合だけ、空白でない text を必須にする。
@@ -104,7 +104,7 @@ export async function handleApiNotesCreate(
 				omitUndefined({ reservation, signal }),
 			);
 
-			return { createdNote: await packNoteForApi(deps, note, me) };
+			return { createdNote: await packNote(deps, note, me) };
 		}, signal);
 	} catch (err) {
 		if (err instanceof NotePostProcessingUnavailableError) {

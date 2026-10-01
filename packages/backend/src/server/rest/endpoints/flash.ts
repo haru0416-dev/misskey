@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as flashContracts } from '@/server/api/metas/flash.js';
+import { endpointMetas as flashContracts } from '@/server/rest/contracts/flash.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { handleApiFlashLike, handleApiFlashUnlike } from '../favorite/favorites.js';

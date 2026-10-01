@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as chartsContracts } from '@/server/api/metas/charts.js';
+import { endpointMetas as chartsContracts } from '@/server/rest/contracts/charts.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

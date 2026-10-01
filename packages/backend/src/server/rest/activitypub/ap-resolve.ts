@@ -36,7 +36,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import { addActivityContext, renderCreateForApi, renderLikeForApi, renderNoteForApi } from './notes-ap.js';
+import { addActivityContext, renderCreate, renderLike, renderNote } from '../../../core/activitypub/notes-ap.js';
 import { renderPersonForApi } from '../account/account-update.js';
 import type { ApiAccountUpdateDependencies } from '../account/account-update.js';
 
@@ -232,10 +232,10 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 		case 'notes': {
 			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
 			if (parsed.rest === 'activity') {
-				const rendered = await renderNoteForApi(deps, note, true);
-				return addActivityContext(deps.config, renderCreateForApi(deps.config, rendered, note)) as unknown as IObject;
+				const rendered = await renderNote(deps, note, true);
+				return addActivityContext(deps.config, renderCreate(deps.config, rendered, note)) as unknown as IObject;
 			}
-			return (await renderNoteForApi(deps, note, true)) as unknown as IObject;
+			return (await renderNote(deps, note, true)) as unknown as IObject;
 		}
 		case 'users': {
 			const user = await fetchUserByIdOrFailFromDatabase(deps.db, parsed.id);
@@ -250,7 +250,7 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 			const reaction = await fetchNoteReactionByIdOrFailFromDatabase(deps.db, parsed.id);
 			return addActivityContext(
 				deps.config,
-				await renderLikeForApi(deps, reaction, { uri: null, id: reaction.noteId }),
+				await renderLike(deps, reaction, { uri: null, id: reaction.noteId }),
 			) as unknown as IObject;
 		}
 		case 'follows': {

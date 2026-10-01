@@ -23,64 +23,64 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 
-export type ApiInternalEventPublisher = <K extends keyof InternalEventTypes>(
+export type InternalEventPublisher = <K extends keyof InternalEventTypes>(
 	type: K,
 	value?: InternalEventTypes[K],
 ) => void;
 
-export type ApiCredentialEventPublisher = <
+export type CredentialEventPublisher = <
 	K extends 'accessTokenRevoked' | 'userTokenRegenerated' | 'userChangeSuspendedState',
 >(
 	type: K,
 	value: InternalEventTypes[K],
 ) => Promise<void>;
 
-export type ApiAdminStreamPublisher = <K extends keyof AdminEventTypes>(
+export type AdminStreamPublisher = <K extends keyof AdminEventTypes>(
 	userId: MiUser['id'],
 	type: K,
 	value?: AdminEventTypes[K],
 ) => void;
 
-export type ApiBroadcastStreamPublisher = <K extends keyof BroadcastTypes>(type: K, value?: unknown) => void;
+export type BroadcastStreamPublisher = <K extends keyof BroadcastTypes>(type: K, value?: unknown) => void;
 
-export type ApiMainStreamPublisher = (userId: MiUser['id'], type: keyof MainEventTypes, value?: unknown) => void;
+export type MainStreamPublisher = (userId: MiUser['id'], type: keyof MainEventTypes, value?: unknown) => void;
 
-export type ApiDriveStreamPublisher = <K extends keyof DriveEventTypes>(
+export type DriveStreamPublisher = <K extends keyof DriveEventTypes>(
 	userId: MiUser['id'],
 	type: K,
 	value?: DriveEventTypes[K],
 ) => void;
 
-export type ApiUserListStreamPublisher = <K extends keyof UserListEventTypes>(
+export type UserListStreamPublisher = <K extends keyof UserListEventTypes>(
 	listId: MiUserList['id'],
 	type: K,
 	value?: UserListEventTypes[K],
 ) => void;
 
-export type ApiAntennaStreamPublisher = <K extends keyof AntennaEventTypes>(
+export type AntennaStreamPublisher = <K extends keyof AntennaEventTypes>(
 	antennaId: MiAntenna['id'],
 	type: K,
 	value?: AntennaEventTypes[K],
 ) => void;
 
-export type ApiChatUserStreamPublisher = <K extends keyof ChatEventTypes>(
+export type ChatUserStreamPublisher = <K extends keyof ChatEventTypes>(
 	fromUserId: MiUser['id'],
 	toUserId: MiUser['id'],
 	type: K,
 	value?: ChatEventTypes[K],
 ) => void;
 
-export type ApiChatRoomStreamPublisher = <K extends keyof ChatEventTypes>(
+export type ChatRoomStreamPublisher = <K extends keyof ChatEventTypes>(
 	toRoomId: MiChatRoom['id'],
 	type: K,
 	value?: ChatEventTypes[K],
 ) => void;
 
-export type ApiNotesStreamPublisher = (note: Packed<'Note'>) => void;
+export type NotesStreamPublisher = (note: Packed<'Note'>) => void;
 
-export type ApiRoleTimelineStreamPublisher = (roleId: MiRole['id'], type: 'note', value: Packed<'Note'>) => void;
+export type RoleTimelineStreamPublisher = (roleId: MiRole['id'], type: 'note', value: Packed<'Note'>) => void;
 
-export type ApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
+export type NoteStreamPublisher = <K extends keyof NoteEventTypes>(
 	note: Pick<MiNote, 'id' | 'userId' | 'visibility' | 'visibleUserIds'>,
 	type: K,
 	value?: NoteEventTypes[K],
@@ -111,19 +111,19 @@ function publishToChannel(
 }
 
 export type EventPublishers = {
-	publishInternalEvent: ApiInternalEventPublisher;
-	publishCredentialEvent: ApiCredentialEventPublisher;
-	publishBroadcastStream: ApiBroadcastStreamPublisher;
-	publishMainStream: ApiMainStreamPublisher;
-	publishAdminStream: ApiAdminStreamPublisher;
-	publishDriveStream: ApiDriveStreamPublisher;
-	publishUserListStream: ApiUserListStreamPublisher;
-	publishAntennaStream: ApiAntennaStreamPublisher;
-	publishChatUserStream: ApiChatUserStreamPublisher;
-	publishChatRoomStream: ApiChatRoomStreamPublisher;
-	publishNotesStream: ApiNotesStreamPublisher;
-	publishNoteStream: ApiNoteStreamPublisher;
-	publishRoleTimelineStream: ApiRoleTimelineStreamPublisher;
+	publishInternalEvent: InternalEventPublisher;
+	publishCredentialEvent: CredentialEventPublisher;
+	publishBroadcastStream: BroadcastStreamPublisher;
+	publishMainStream: MainStreamPublisher;
+	publishAdminStream: AdminStreamPublisher;
+	publishDriveStream: DriveStreamPublisher;
+	publishUserListStream: UserListStreamPublisher;
+	publishAntennaStream: AntennaStreamPublisher;
+	publishChatUserStream: ChatUserStreamPublisher;
+	publishChatRoomStream: ChatRoomStreamPublisher;
+	publishNotesStream: NotesStreamPublisher;
+	publishNoteStream: NoteStreamPublisher;
+	publishRoleTimelineStream: RoleTimelineStreamPublisher;
 };
 
 export function createEventPublishers(deps: RedisEventPublisherDependencies): EventPublishers {

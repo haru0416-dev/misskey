@@ -17,12 +17,12 @@ import type { Packed } from '@/misc/json-schema.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 import { uniqueByKey } from '@/misc/unique-by-key.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import { packDriveFolderForApi, packDriveFoldersManyForApi } from './drive.js';
-import type { ApiDriveDependencies } from './drive.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import { packDriveFolder, packDriveFoldersMany } from './drive-folder-packing.js';
+import type { DriveDependencies } from './drive-folder-packing.js';
+import { packUserLite, packUserLiteMany } from '../user/user-packing.js';
+import type { UserPackingDependencies } from '../user/user-packing.js';
 
-export type ApiDriveFileDependencies = ApiDriveDependencies & UserPackingDependencies;
+export type DriveFileDependencies = DriveDependencies & UserPackingDependencies;
 
 type DriveFilePackOptions = {
 	detail?: boolean;
@@ -68,7 +68,7 @@ function getPublicProperties(file: MiDriveFile): MiDriveFile['properties'] {
 	return file.properties;
 }
 
-function getThumbnailUrl(deps: ApiDriveFileDependencies, file: MiDriveFile): string | null {
+function getThumbnailUrl(deps: DriveFileDependencies, file: MiDriveFile): string | null {
 	if (file.type.startsWith('video')) {
 		if (file.thumbnailUrl) {
 			return file.thumbnailUrl;
@@ -88,8 +88,8 @@ function getThumbnailUrl(deps: ApiDriveFileDependencies, file: MiDriveFile): str
 	return file.thumbnailUrl ?? (isMimeImage(file.type, 'sharp-convertible-image') ? url : null);
 }
 
-export async function packDriveFileForApi(
-	deps: ApiDriveFileDependencies,
+export async function packDriveFile(
+	deps: DriveFileDependencies,
 	src: MiDriveFile['id'] | MiDriveFile,
 	options?: DriveFilePackOptions,
 	hint?: {
@@ -110,10 +110,9 @@ export async function packDriveFileForApi(
 
 	const folder =
 		opts.detail && file.folderId
-			? (hint?.packedFolder ?? (await packDriveFolderForApi(deps, file.folderId, { detail: true })))
+			? (hint?.packedFolder ?? (await packDriveFolder(deps, file.folderId, { detail: true })))
 			: null;
-	const user =
-		opts.withUser && file.userId ? (hint?.packedUser ?? (await packUserLiteForApi(deps, file.userId))) : null;
+	const user = opts.withUser && file.userId ? (hint?.packedUser ?? (await packUserLite(deps, file.userId))) : null;
 
 	return {
 		id: file.id,
@@ -135,21 +134,21 @@ export async function packDriveFileForApi(
 	};
 }
 
-export async function packDriveFileOrFailForApi(
-	deps: ApiDriveFileDependencies,
+export async function packDriveFileOrFail(
+	deps: DriveFileDependencies,
 	src: MiDriveFile['id'] | MiDriveFile,
 	options?: DriveFilePackOptions,
 ): Promise<Packed<'DriveFile'>> {
 	const file = typeof src === 'object' ? src : await fetchDriveFileByIdOrFailFromDatabase(deps.db, src);
-	const packed = await packDriveFileForApi(deps, file, options);
+	const packed = await packDriveFile(deps, file, options);
 	if (packed == null) {
 		throw new Error(`DriveFile not found: ${typeof src === 'object' ? src.id : src}`);
 	}
 	return packed;
 }
 
-export async function packDriveFileManyForApi(
-	deps: ApiDriveFileDependencies,
+export async function packDriveFileMany(
+	deps: DriveFileDependencies,
 	files: MiDriveFile[],
 	options?: DriveFilePackOptions,
 ): Promise<Packed<'DriveFile'>[]> {
@@ -160,7 +159,7 @@ export async function packDriveFileManyForApi(
 			files.map((f) => f.userId).filter((id): id is string => id != null),
 			(id) => id,
 		);
-		const packedUsers = await packUserLiteManyForApi(deps, userIds);
+		const packedUsers = await packUserLiteMany(deps, userIds);
 		userMap = new Map(packedUsers.map((user) => [user.id, user]));
 	}
 	if (options?.detail) {
@@ -168,13 +167,13 @@ export async function packDriveFileManyForApi(
 			files.map((f) => f.folderId).filter((id): id is string => id != null),
 			(id) => id,
 		);
-		const packedFolders = await packDriveFoldersManyForApi(deps, folderIds, { detail: true });
+		const packedFolders = await packDriveFoldersMany(deps, folderIds, { detail: true });
 		folderMap = new Map(packedFolders.map((folder) => [folder.id, folder]));
 	}
 
 	const items = await Promise.all(
 		files.map((file) =>
-			packDriveFileForApi(
+			packDriveFile(
 				deps,
 				file,
 				options,
@@ -189,8 +188,8 @@ export async function packDriveFileManyForApi(
 	return items.filter((item): item is Packed<'DriveFile'> => item != null);
 }
 
-export async function packDriveFileManyByIdsForApi(
-	deps: ApiDriveFileDependencies,
+export async function packDriveFileManyByIds(
+	deps: DriveFileDependencies,
 	fileIds: MiDriveFile['id'][],
 	options?: DriveFilePackOptions,
 ): Promise<Packed<'DriveFile'>[]> {
@@ -198,6 +197,6 @@ export async function packDriveFileManyByIdsForApi(
 		return [];
 	}
 	const files = await listDriveFilesByIdsFromDatabase(deps.db, fileIds);
-	const packedById = new Map((await packDriveFileManyForApi(deps, files, options)).map((f) => [f.id, f]));
+	const packedById = new Map((await packDriveFileMany(deps, files, options)).map((f) => [f.id, f]));
 	return fileIds.map((id) => packedById.get(id)).filter((f): f is Packed<'DriveFile'> => f != null);
 }

@@ -22,13 +22,13 @@ const {
 	listUserNotePiningsByUserIdFromDatabaseMock: vi.fn(),
 }));
 
-vi.mock('@/server/rest/role/role-policy.js', () => ({
-	computeApiUserRoles: vi.fn(),
-	getApiRolePolicies: getApiRolePoliciesMock,
-	getApiUserProfilePolicies: vi.fn(),
-	getApiUserRoles: getApiUserRolesMock,
-	isApiAdministrator: isApiAdministratorMock,
-	isApiModerator: isApiModeratorMock,
+vi.mock('@/core/role/role-policy.js', () => ({
+	computeUserRoles: vi.fn(),
+	getRolePolicies: getApiRolePoliciesMock,
+	getUserProfilePolicies: vi.fn(),
+	getUserRoles: getApiUserRolesMock,
+	userIsAdministrator: isApiAdministratorMock,
+	userIsModerator: isApiModeratorMock,
 }));
 
 vi.mock('@/core/user/UserMemoStore.js', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/core/user/UserNotePiningStore.js', () => ({
 	listUserNotePiningsByUserIdsFromDatabase: vi.fn(),
 }));
 
-vi.mock('@/server/rest/note/note.js', () => ({
+vi.mock('@/core/note/note-packing.js', () => ({
 	packNoteManyForApi: vi.fn(async () => []),
 	populateEmojis: vi.fn(async () => ({})),
 	populateEmojisMany: vi.fn(async () => []),

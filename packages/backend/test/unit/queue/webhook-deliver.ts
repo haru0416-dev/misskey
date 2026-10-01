@@ -21,7 +21,7 @@ import {
 } from '@/core/webhook/SystemWebhookStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from '@/queue/handlers/webhook-deliver.js';
-import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/queue/types.js';
+import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/core/queue/types.js';
 
 describe('hono-queue-webhook-deliver', () => {
 	let pool: NativeSqlClient;

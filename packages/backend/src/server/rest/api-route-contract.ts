@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { endpointMetas } from '@/server/api/endpoint-metas.js';
+import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 
 const metadataFreeRoutes = new Set([
 	'GET /v1/instance/peers',

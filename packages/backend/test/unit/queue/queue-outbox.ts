@@ -33,7 +33,7 @@ import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { baseWorkerOptions, QUEUE } from '@/queue/const.js';
+import { baseWorkerOptions, QUEUE } from '@/core/queue/const.js';
 
 const waitForNextPoll = async () => await new Promise((resolve) => setTimeout(resolve, 1100));
 

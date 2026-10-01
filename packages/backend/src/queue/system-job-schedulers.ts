@@ -5,7 +5,7 @@
 
 import type { SystemQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 
 export const systemJobSchedulers = [
 	{ name: 'tickCharts', pattern: '55 * * * *' },

@@ -14,7 +14,7 @@ import {
 	countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/UserStore.js';
-import { chartDefinitions } from '@/server/chart-definitions.js';
+import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';

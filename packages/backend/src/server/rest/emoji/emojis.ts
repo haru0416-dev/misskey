@@ -33,7 +33,7 @@ import {
 import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import { addDbJob } from '@/core/queue/queues.js';
 import type { DbQueue } from '@/core/queue/queues.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { listRoleSummariesByIdsFromDatabase } from '@/core/role/RoleStore.js';
 import type { RoleSummary } from '@/core/role/RoleStore.js';
 import type { Config } from '@/config.js';
@@ -43,7 +43,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiBroadcastStreamPublisher } from '../events.js';
+import type { BroadcastStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
@@ -52,7 +52,7 @@ export type ApiEmojiDependencies = DriveFileUploadDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
-	publishBroadcastStream?: ApiBroadcastStreamPublisher;
+	publishBroadcastStream?: BroadcastStreamPublisher;
 };
 
 export const emojiParamDef = z.object({

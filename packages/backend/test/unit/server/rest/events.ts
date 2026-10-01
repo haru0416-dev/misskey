@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 
 describe('createEventPublishers', () => {
 	test('publishNotesStream は note をラップせずそのまま message にする (GlobalEventService#publish の type=null 挙動と一致)', () => {

@@ -7,9 +7,9 @@ import { randomUUID } from 'node:crypto';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import type { SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { SystemWebhookDeliverJobData } from '@/core/queue/types.js';
 import type { Config } from '@/config.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 
 export function enqueueSystemWebhookDeliverJob<T extends SystemWebhookEventType>(
 	queue: SystemWebhookDeliverQueue,

@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({
 	consumerOpen: false,
 }));
 vi.mock('slacc', () => ({ init: () => {} }));
-vi.mock('@/server/rest/events.js', () => ({ createEventPublishers: () => ({}) }));
+vi.mock('@/core/events.js', () => ({ createEventPublishers: () => ({}) }));
 vi.mock('@/queue/system-job-schedulers.js', () => ({
 	syncSystemJobSchedulers: async () => {
 		if (state.failure === 'scheduler') throw new Error('scheduler failed');

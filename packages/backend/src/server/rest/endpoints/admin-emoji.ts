@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as adminEmojiContracts } from '@/server/api/metas/admin-emoji.js';
+import { endpointMetas as adminEmojiContracts } from '@/server/rest/contracts/admin-emoji.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

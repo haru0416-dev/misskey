@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as pagesContracts } from '@/server/api/metas/pages.js';
+import { endpointMetas as pagesContracts } from '@/server/rest/contracts/pages.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { handleApiPagesLike, handleApiPagesUnlike } from '../favorite/favorites.js';

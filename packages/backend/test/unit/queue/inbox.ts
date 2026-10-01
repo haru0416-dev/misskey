@@ -19,7 +19,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { handleQueueInbox, flushQueueInboxUpdateInstanceQueue } from '@/queue/handlers/inbox.js';
 import type { QueueInboxDependencies } from '@/queue/handlers/inbox.js';
-import type { InboxJobData } from '@/queue/types.js';
+import type { InboxJobData } from '@/core/queue/types.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { MiUser } from '@/models/User.js';
 

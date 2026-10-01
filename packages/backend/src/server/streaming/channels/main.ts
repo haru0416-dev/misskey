@@ -6,8 +6,8 @@
 import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packNoteForApi } from '@/server/rest/note/note.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packNote } from '@/core/note/note-packing.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
@@ -16,7 +16,7 @@ type MainStreamNotificationBody = {
 	note?: { id: string; isHidden?: boolean } & Record<string, unknown>;
 } & Record<string, unknown>;
 
-export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelMain: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: true,
 	requireCredential: true,
 	kind: 'read:account',
@@ -39,7 +39,7 @@ export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies>
 					}
 
 					if (body.note?.isHidden) {
-						const note = await packNoteForApi(deps, body.note.id, user, { detail: true });
+						const note = await packNote(deps, body.note.id, user, { detail: true });
 						data = { type: data.type, body: { ...body, note } };
 					}
 					break;
@@ -56,7 +56,7 @@ export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies>
 						return;
 					}
 					if (note.isHidden) {
-						const packed = await packNoteForApi(deps, note.id, user, { detail: true });
+						const packed = await packNote(deps, note.id, user, { detail: true });
 						data = { type: data.type, body: packed as unknown as JsonValue };
 					}
 					break;

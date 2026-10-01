@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminContracts } from '@/server/api/metas/admin.js';
+import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { hashPasswordSync } from '@/misc/password.js';
@@ -22,7 +22,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isApiAdministrator } from '../role/role-policy.js';
+import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminUserMaintenanceDependencies = {
@@ -63,7 +63,7 @@ async function assertCanTakeOverUser(
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
-	if (me.id !== user.id && (await isApiAdministrator(deps, user))) {
+	if (me.id !== user.id && (await userIsAdministrator(deps, user))) {
 		throw accessDeniedError();
 	}
 }

@@ -31,8 +31,8 @@ import {
 	listActiveMutedChannelIdsByUserIdFromDatabase,
 } from '@/core/channel/ChannelMutingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createChartWriters } from '@/server/chart-runtime.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import { createChartWriters } from '@/core/chart/chart-runtime.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import Logger from '@/logger.js';
 import {
 	handleQueueAggregateRetention,

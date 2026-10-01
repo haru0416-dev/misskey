@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -28,9 +28,9 @@ import type { ApiApNoteDependencies } from './ap-note.js';
 import { createPersonForApi } from './ap-person.js';
 import type { ApiApPersonDependencies } from './ap-person.js';
 import { packUserDetailedNotMeForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
-import { packNoteForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import { packNote } from '../../../core/note/note-packing.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 
 export const apGetParamDef = z.object({
@@ -45,7 +45,7 @@ export async function handleApiApGet(deps: ApiApResolveDependencies, body: Recor
 export type ApiApShowDependencies = ApiApNoteDependencies &
 	ApiApPersonDependencies &
 	UserPackingDependencies &
-	ApiNoteDependencies;
+	NoteDependencies;
 
 export const apShowParamDef = z.object({
 	uri: z.string(),
@@ -53,7 +53,7 @@ export const apShowParamDef = z.object({
 
 type ApShowResult =
 	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMeForApi>> }
-	| { type: 'Note'; object: Awaited<ReturnType<typeof packNoteForApi>> };
+	| { type: 'Note'; object: Awaited<ReturnType<typeof packNote>> };
 
 function apShowFederationNotAllowedError(): ApiError {
 	return new ApiError({
@@ -111,7 +111,7 @@ async function mergePackForApi(
 		try {
 			return {
 				type: 'Note',
-				object: await packNoteForApi(deps, note, me, { detail: true }),
+				object: await packNote(deps, note, me, { detail: true }),
 			};
 		} catch {
 			return null;

@@ -7,7 +7,7 @@ import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteVisibleForMeForStream, requiresSigninForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelContext, StreamChannelDefinition } from '../channel.js';
 
@@ -42,7 +42,7 @@ function isNoteMutedOrBlockedForChannelChannel(
 	return false;
 }
 
-export const honoStreamChannelChannel: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelChannel: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,

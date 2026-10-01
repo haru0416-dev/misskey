@@ -19,7 +19,7 @@ import {
 	moderatorRequiredError,
 } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { isApiAdministrator, isApiModerator } from './role/role-policy.js';
+import { userIsAdministrator, userIsModerator } from '../../core/role/role-policy.js';
 import type { ApiSigninFlowResult } from './auth/signin.js';
 import type { ApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
@@ -254,7 +254,7 @@ export async function assertApiModerator(
 	deps: ApiShellDependencies,
 	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await isApiModerator(deps, auth.user))) {
+	if (!(await userIsModerator(deps, auth.user))) {
 		throw moderatorRequiredError();
 	}
 }
@@ -263,7 +263,7 @@ export async function assertApiAdmin(
 	deps: ApiShellDependencies,
 	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await isApiAdministrator(deps, auth.user))) {
+	if (!(await userIsAdministrator(deps, auth.user))) {
 		throw administratorRequiredError();
 	}
 }

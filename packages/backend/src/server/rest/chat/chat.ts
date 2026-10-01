@@ -33,7 +33,6 @@ import {
 	fetchChatRoomByIdAndOwnerIdOrFailFromDatabase,
 	fetchChatRoomByIdFromDatabase,
 	fetchChatRoomByIdOrFailFromDatabase,
-	fetchChatRoomInvitationByIdOrFailFromDatabase,
 	fetchChatRoomInvitationFromDatabase,
 	fetchChatRoomMembershipByIdOrFailFromDatabase,
 	fetchChatRoomMembershipFromDatabase,
@@ -78,27 +77,20 @@ import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js'
 import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { xaddApiNotification } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
+import { xaddNotification } from '../../../core/notification/notification.js';
 import { ApiError, invalidParamError } from '../error.js';
-import type { ApiChatRoomStreamPublisher, ApiChatUserStreamPublisher, ApiMainStreamPublisher } from '../events.js';
-import { packDriveFileForApi, packDriveFileManyByIdsForApi } from '../drive/drive-file.js';
-import type { ApiDriveFileDependencies } from '../drive/drive-file.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseApiParams } from '../validation.js';
-import { pushSwNotificationForApi } from '../notification/push-notification.js';
+import { packDriveFile, packDriveFileManyByIds } from '../../../core/drive/drive-file-packing.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
+import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
+import { pushSwNotification } from '../../../core/notification/push-notification.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import { resolveDateIdPagination, resolveIdPagination } from '@/misc/id-pagination.js';
-
-export type ApiChatDependencies = ApiDriveFileDependencies &
-	ApiRolePolicyDependencies &
-	ApiNotificationDependencies & {
-		publishChatUserStream?: ApiChatUserStreamPublisher;
-		publishChatRoomStream?: ApiChatRoomStreamPublisher;
-		publishMainStream?: ApiMainStreamPublisher;
-	};
+import type {
+	ChatDependencies,
+	ChatRoomInvitationPackable,
+	ChatRoomMembershipPackable,
+} from '@/core/chat/chat-packing.js';
+import { packChatRoom, packChatRoomInvitation } from '@/core/chat/chat-packing.js';
 
 const MAX_ROOM_MEMBERS = 50;
 const MAX_REACTIONS_PER_MESSAGE = 100;
@@ -114,18 +106,8 @@ function normalizeEmojiStringForApi(x: string): string {
 	throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 }
 
-type ChatRoomInvitationPackable = ChatRoomInvitationRow & {
-	user?: MiUser | null;
-	room?: MiChatRoom | null;
-};
-
-type ChatRoomMembershipPackable = ChatRoomMembershipRow & {
-	user?: MiUser | null;
-	room?: MiChatRoom | null;
-};
-
 async function packChatMessageUsersForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messages: MiChatMessage[],
 	packedUserHint?: Map<MiUser['id'], Packed<'UserLite'>>,
 	missingUserIdHint?: Set<MiUser['id']>,
@@ -163,7 +145,7 @@ async function packChatMessageUsersForApi(
 		throw new EntityNotFoundError('MiUser', { id: missingRequiredUserId });
 	}
 
-	const newlyPackedUsers = await packUserLiteManyForApi(
+	const newlyPackedUsers = await packUserLiteMany(
 		deps,
 		[...userById.values()].filter((user) => !packedUsers.has(user.id)),
 	);
@@ -179,7 +161,7 @@ async function packChatMessageUsersForApi(
 }
 
 export async function packChatMessageDetailedForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	me?: { id: MiUser['id'] },
 	options?: {
@@ -217,25 +199,25 @@ export async function packChatMessageDetailedForApi(
 		text: message.text,
 		fromUserId: message.fromUserId,
 		fromUser:
-			packedUsers?.get(message.fromUserId) ?? (await packUserLiteForApi(deps, message.fromUser ?? message.fromUserId)),
+			packedUsers?.get(message.fromUserId) ?? (await packUserLite(deps, message.fromUser ?? message.fromUserId)),
 		toUserId: message.toUserId,
 		toUser: message.toUserId
-			? (packedUsers?.get(message.toUserId) ?? (await packUserLiteForApi(deps, message.toUser ?? message.toUserId)))
+			? (packedUsers?.get(message.toUserId) ?? (await packUserLite(deps, message.toUser ?? message.toUserId)))
 			: undefined,
 		toRoomId: message.toRoomId,
 		toRoom: message.toRoomId
-			? (packedRooms?.get(message.toRoomId) ?? (await packChatRoomForApi(deps, message.toRoom ?? message.toRoomId, me)))
+			? (packedRooms?.get(message.toRoomId) ?? (await packChatRoom(deps, message.toRoom ?? message.toRoomId, me)))
 			: undefined,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFile(deps, message.file ?? message.fileId)))
 			: null,
 		reactions: reactions.filter((r): r is { user: Packed<'UserLite'>; reaction: string } => r.user != null),
 	} as Packed<'ChatMessage'>;
 }
 
 export async function packChatMessagesDetailedForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messages: MiChatMessage[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatMessage'>[]> {
@@ -245,7 +227,7 @@ export async function packChatMessagesDetailedForApi(
 
 	const [packedUserData, packedFiles, packedRooms] = await Promise.all([
 		packChatMessageUsersForApi(deps, messages),
-		packDriveFileManyByIdsForApi(
+		packDriveFileManyByIds(
 			deps,
 			messages.map((m) => m.fileId).filter((x): x is string => x != null),
 		).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null]))),
@@ -264,7 +246,7 @@ export async function packChatMessagesDetailedForApi(
 }
 
 async function packChatMessageLiteFor1on1ForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: { _hint_?: { packedFiles: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null> } },
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
@@ -285,21 +267,21 @@ async function packChatMessageLiteFor1on1ForApi(
 		toUserId: message.toUserId!,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFile(deps, message.file ?? message.fileId)))
 			: null,
 		reactions,
 	} as Packed<'ChatMessageLiteFor1on1'>;
 }
 
 async function packChatMessagesLiteFor1on1ForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
 	if (messages.length === 0) {
 		return [];
 	}
 
-	const packedFiles = await packDriveFileManyByIdsForApi(
+	const packedFiles = await packDriveFileManyByIds(
 		deps,
 		messages.map((m) => m.fileId).filter((x): x is string => x != null),
 	).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null])));
@@ -310,7 +292,7 @@ async function packChatMessagesLiteFor1on1ForApi(
 }
 
 async function packChatMessageLiteForRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: {
 		_hint_?: {
@@ -327,7 +309,7 @@ async function packChatMessageLiteForRoomForApi(
 	for (const record of message.reactions) {
 		const [userId, reaction] = record.split('/') as [string, string];
 		reactions.push({
-			user: packedUsers?.get(userId) ?? (await packUserLiteForApi(deps, userId).catch(() => null)),
+			user: packedUsers?.get(userId) ?? (await packUserLite(deps, userId).catch(() => null)),
 			reaction,
 		});
 	}
@@ -338,18 +320,18 @@ async function packChatMessageLiteForRoomForApi(
 		text: message.text,
 		fromUserId: message.fromUserId,
 		fromUser:
-			packedUsers?.get(message.fromUserId) ?? (await packUserLiteForApi(deps, message.fromUser ?? message.fromUserId)),
+			packedUsers?.get(message.fromUserId) ?? (await packUserLite(deps, message.fromUser ?? message.fromUserId)),
 		toRoomId: message.toRoomId!,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFile(deps, message.file ?? message.fileId)))
 			: null,
 		reactions: reactions.filter((r): r is { user: Packed<'UserLite'>; reaction: string } => r.user != null),
 	} as Packed<'ChatMessageLiteForRoom'>;
 }
 
 async function packChatMessagesLiteForRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
 	if (messages.length === 0) {
@@ -367,8 +349,8 @@ async function packChatMessagesLiteForRoomForApi(
 	}
 
 	const [packedUsers, packedFiles] = await Promise.all([
-		packUserLiteManyForApi(deps, users).then((users) => new Map(users.map((u) => [u.id, u]))),
-		packDriveFileManyByIdsForApi(
+		packUserLiteMany(deps, users).then((users) => new Map(users.map((u) => [u.id, u]))),
+		packDriveFileManyByIds(
 			deps,
 			messages.map((m) => m.fileId).filter((x): x is string => x != null),
 		).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null]))),
@@ -381,48 +363,8 @@ async function packChatMessagesLiteForRoomForApi(
 	);
 }
 
-async function packChatRoomForApi(
-	deps: ApiChatDependencies,
-	src: MiChatRoom['id'] | MiChatRoom,
-	me?: { id: MiUser['id'] },
-	options?: {
-		_hint_?: {
-			packedOwners: Map<MiChatRoom['id'], Packed<'UserLite'>>;
-			myMemberships?: Map<MiChatRoom['id'], ChatRoomMembershipPackable | null | undefined>;
-			myInvitations?: Map<MiChatRoom['id'], ChatRoomInvitationPackable | null | undefined>;
-		};
-	},
-): Promise<Packed<'ChatRoom'>> {
-	const room = typeof src === 'object' ? src : await fetchChatRoomByIdOrFailFromDatabase(deps.db, src);
-
-	const membership =
-		me && me.id !== room.ownerId
-			? options?._hint_?.myMemberships?.has(room.id)
-				? (options._hint_.myMemberships.get(room.id) ?? null)
-				: await fetchChatRoomMembershipFromDatabase(deps.db, room.id, me.id)
-			: null;
-	const invitation =
-		me && me.id !== room.ownerId
-			? options?._hint_?.myInvitations?.has(room.id)
-				? (options._hint_.myInvitations.get(room.id) ?? null)
-				: await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id)
-			: null;
-
-	return {
-		id: room.id,
-		createdAt: parseId(room.id).date.toISOString(),
-		name: room.name,
-		description: room.description,
-		ownerId: room.ownerId,
-		owner:
-			options?._hint_?.packedOwners.get(room.ownerId) ?? (await packUserLiteForApi(deps, room.owner ?? room.ownerId)),
-		isMuted: membership != null ? membership.isMuted : false,
-		invitationExists: invitation != null,
-	} as Packed<'ChatRoom'>;
-}
-
 async function packChatRoomsForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	rooms: (MiChatRoom | MiChatRoom['id'])[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoom'>[]> {
@@ -445,7 +387,7 @@ async function packChatRoomsForApi(
 	const owners = _rooms.map((x) => x.owner ?? x.ownerId);
 
 	const [packedOwners, myMemberships, myInvitations] = await Promise.all([
-		packUserLiteManyForApi(deps, owners).then((users) => new Map(users.map((u) => [u.id, u]))),
+		packUserLiteMany(deps, owners).then((users) => new Map(users.map((u) => [u.id, u]))),
 		listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase(
 			deps.db,
 			_rooms.map((x) => x.id),
@@ -465,42 +407,12 @@ async function packChatRoomsForApi(
 	]);
 
 	return await Promise.all(
-		_rooms.map((room) =>
-			packChatRoomForApi(deps, room, me, { _hint_: { packedOwners, myMemberships, myInvitations } }),
-		),
+		_rooms.map((room) => packChatRoom(deps, room, me, { _hint_: { packedOwners, myMemberships, myInvitations } })),
 	);
 }
 
-export async function packChatRoomInvitationForApi(
-	deps: ApiChatDependencies,
-	src: ChatRoomInvitationRow['id'] | ChatRoomInvitationPackable,
-	me: { id: MiUser['id'] },
-	options?: {
-		_hint_?: {
-			packedRooms: Map<ChatRoomInvitationRow['roomId'], Packed<'ChatRoom'>>;
-			packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
-		};
-	},
-): Promise<Packed<'ChatRoomInvitation'>> {
-	const invitation: ChatRoomInvitationPackable =
-		typeof src === 'object' ? src : await fetchChatRoomInvitationByIdOrFailFromDatabase(deps.db, src);
-
-	return {
-		id: invitation.id,
-		createdAt: parseId(invitation.id).date.toISOString(),
-		roomId: invitation.roomId,
-		room:
-			options?._hint_?.packedRooms.get(invitation.roomId) ??
-			(await packChatRoomForApi(deps, invitation.room ?? invitation.roomId, me)),
-		userId: invitation.userId,
-		user:
-			options?._hint_?.packedUsers.get(invitation.userId) ??
-			(await packUserLiteForApi(deps, invitation.user ?? invitation.userId)),
-	} as Packed<'ChatRoomInvitation'>;
-}
-
 export async function packChatRoomInvitationsForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	invitations: ChatRoomInvitationPackable[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
@@ -514,7 +426,7 @@ export async function packChatRoomInvitationsForApi(
 			invitations.map((invitation) => invitation.room ?? invitation.roomId),
 			me,
 		).then((rooms) => new Map(rooms.map((room) => [room.id, room]))),
-		packUserLiteManyForApi(
+		packUserLiteMany(
 			deps,
 			invitations.map((invitation) => invitation.user ?? invitation.userId),
 		).then((users) => new Map(users.map((user) => [user.id, user]))),
@@ -522,13 +434,13 @@ export async function packChatRoomInvitationsForApi(
 
 	return await Promise.all(
 		invitations.map((invitation) =>
-			packChatRoomInvitationForApi(deps, invitation, me, { _hint_: { packedRooms, packedUsers } }),
+			packChatRoomInvitation(deps, invitation, me, { _hint_: { packedRooms, packedUsers } }),
 		),
 	);
 }
 
 async function packChatRoomMembershipForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	src: ChatRoomMembershipRow['id'] | ChatRoomMembershipPackable,
 	me: { id: MiUser['id'] },
 	options?: {
@@ -549,18 +461,18 @@ async function packChatRoomMembershipForApi(
 		userId: membership.userId,
 		user: options?.populateUser
 			? (options._hint_?.packedUsers?.get(membership.userId) ??
-				(await packUserLiteForApi(deps, membership.user ?? membership.userId)))
+				(await packUserLite(deps, membership.user ?? membership.userId)))
 			: undefined,
 		roomId: membership.roomId,
 		room: options?.populateRoom
 			? (options._hint_?.packedRooms?.get(membership.roomId) ??
-				(await packChatRoomForApi(deps, membership.room ?? membership.roomId, me)))
+				(await packChatRoom(deps, membership.room ?? membership.roomId, me)))
 			: undefined,
 	} as Packed<'ChatRoomMembership'>;
 }
 
 async function packChatRoomMembershipsForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	memberships: ChatRoomMembershipPackable[],
 	me: { id: MiUser['id'] },
 	options: { populateUser?: boolean; populateRoom?: boolean } = {},
@@ -571,7 +483,7 @@ async function packChatRoomMembershipsForApi(
 
 	const [packedUsers, packedRooms] = await Promise.all([
 		options.populateUser
-			? packUserLiteManyForApi(
+			? packUserLiteMany(
 					deps,
 					memberships.map((x) => x.user ?? x.userId),
 				).then((users) => new Map(users.map((u) => [u.id, u])))
@@ -596,11 +508,11 @@ async function packChatRoomMembershipsForApi(
 }
 
 async function getChatAvailabilityForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 ): Promise<{ read: boolean; write: boolean }> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	const policies = await getApiRolePolicies(deps, user);
+	const policies = await getRolePolicies(deps, user);
 
 	switch (policies.chatAvailability) {
 		case 'available':
@@ -615,7 +527,7 @@ async function getChatAvailabilityForApi(
 }
 
 export async function checkChatAvailabilityForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	permission: 'read' | 'write',
 ): Promise<void> {
@@ -632,17 +544,17 @@ export async function checkChatAvailabilityForApi(
 }
 
 async function pushChatNotificationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	body: Packed<'ChatMessage'>,
 ): Promise<void> {
-	await pushSwNotificationForApi(deps, userId, 'newChatMessage', body);
+	await pushSwNotification(deps, userId, 'newChatMessage', body);
 }
 
 // notifierId を考慮したフィルタ (never/following/follower/mutualFollow/
 // followingOrFollower と mute 判定) を DB から直接読み、現在の関係で通知可否を判定する。
 async function createChatRoomInvitationNotificationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	notifieeId: MiUser['id'],
 	invitationId: string,
 	notifierId: MiUser['id'],
@@ -692,14 +604,14 @@ async function createChatRoomInvitationNotificationForApi(
 		notifierId,
 		invitationId,
 	};
-	await xaddApiNotification(deps, notifieeId, notification);
+	await xaddNotification(deps, notifieeId, notification);
 
 	deps.publishMainStream?.(notifieeId, 'notification', notification);
-	void pushSwNotificationForApi(deps, notifieeId, 'notification', notification);
+	void pushSwNotification(deps, notifieeId, 'notification', notification);
 }
 
 async function createChatMessageToUserForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toUser: MiUser,
 	params: { text?: string | null; file?: MiDriveFile | null; uri?: string | null },
@@ -799,7 +711,7 @@ async function createChatMessageToUserForApi(
 }
 
 async function createChatMessageToRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toRoom: MiChatRoom,
 	params: { text?: string | null; file?: MiDriveFile | null; uri?: string | null },
@@ -873,7 +785,7 @@ async function createChatMessageToRoomForApi(
 }
 
 export async function readUserChatMessageForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	readerId: MiUser['id'],
 	senderId: MiUser['id'],
 ): Promise<void> {
@@ -885,7 +797,7 @@ export async function readUserChatMessageForApi(
 }
 
 export async function readRoomChatMessageForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	readerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -896,22 +808,22 @@ export async function readRoomChatMessageForApi(
 		.exec();
 }
 
-async function readAllChatMessagesForApi(deps: ApiChatDependencies, readerId: MiUser['id']): Promise<void> {
+async function readAllChatMessagesForApi(deps: ChatDependencies, readerId: MiUser['id']): Promise<void> {
 	await deps.redis.pipeline().del(`newChatMessagesExists:${readerId}`).exec();
 }
 
 export async function hasPermissionToViewRoomTimelineForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
 	if (await isChatRoomMemberForApi(deps, room, me.id)) {
 		return true;
 	}
-	return await isApiModerator(deps, me);
+	return await userIsModerator(deps, me);
 }
 
-async function deleteChatMessageForApi(deps: ApiChatDependencies, message: MiChatMessage): Promise<void> {
+async function deleteChatMessageForApi(deps: ChatDependencies, message: MiChatMessage): Promise<void> {
 	await deleteChatMessageByIdFromDatabase(deps.db, message.id);
 
 	if (message.toUserId) {
@@ -932,7 +844,7 @@ async function deleteChatMessageForApi(deps: ApiChatDependencies, message: MiCha
 }
 
 async function chatUserTimelineForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	meId: MiUser['id'],
 	otherId: MiUser['id'],
 	limit: number,
@@ -946,7 +858,7 @@ async function chatUserTimelineForApi(
 }
 
 async function chatRoomTimelineForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: MiChatMessage['id'] | null,
@@ -959,7 +871,7 @@ async function chatRoomTimelineForApi(
 }
 
 async function chatUserHistoryForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
 ): Promise<MiChatMessage[]> {
@@ -967,7 +879,7 @@ async function chatUserHistoryForApi(
 }
 
 async function chatRoomHistoryForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
 ): Promise<MiChatMessage[]> {
@@ -975,7 +887,7 @@ async function chatRoomHistoryForApi(
 }
 
 async function getUserChatReadStateMapForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	otherIds: MiUser['id'][],
 ): Promise<Record<MiUser['id'], boolean>> {
@@ -998,7 +910,7 @@ async function getUserChatReadStateMapForApi(
 }
 
 async function getRoomChatReadStateMapForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomIds: MiChatRoom['id'][],
 ): Promise<Record<MiChatRoom['id'], boolean>> {
@@ -1021,7 +933,7 @@ async function getRoomChatReadStateMapForApi(
 }
 
 export async function createChatRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	owner: MiUser,
 	params: Partial<{ name: string; description: string }>,
 ): Promise<MiChatRoom> {
@@ -1034,7 +946,7 @@ export async function createChatRoomForApi(
 }
 
 async function hasPermissionToViewRoomInfoForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
@@ -1047,21 +959,17 @@ async function hasPermissionToViewRoomInfoForApi(
 	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id)) {
 		return true;
 	}
-	return await isApiModerator(deps, me);
+	return await userIsModerator(deps, me);
 }
 
-async function hasPermissionToDeleteRoomForApi(
-	deps: ApiChatDependencies,
-	me: MiUser,
-	room: MiChatRoom,
-): Promise<boolean> {
+async function hasPermissionToDeleteRoomForApi(deps: ChatDependencies, me: MiUser, room: MiChatRoom): Promise<boolean> {
 	if (room.ownerId === me.id) {
 		return true;
 	}
-	return await isApiModerator(deps, me);
+	return await userIsModerator(deps, me);
 }
 
-async function deleteChatRoomForApi(deps: ApiChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
+async function deleteChatRoomForApi(deps: ChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
 	const memberships = (await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, room.id))
 		.map((m) => ({ userId: m.userId }))
 		.concat({ userId: room.ownerId });
@@ -1076,7 +984,7 @@ async function deleteChatRoomForApi(deps: ApiChatDependencies, room: MiChatRoom,
 	await deleteChatRoomByIdFromDatabase(deps.db, room.id);
 
 	if (deleter) {
-		if (await isApiModerator(deps, deleter)) {
+		if (await userIsModerator(deps, deleter)) {
 			await logModerationEventInDatabase(deps, deleter, 'deleteChatRoom', {
 				roomId: room.id,
 				room,
@@ -1086,19 +994,19 @@ async function deleteChatRoomForApi(deps: ApiChatDependencies, room: MiChatRoom,
 }
 
 async function findMyChatRoomByIdForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	ownerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdAndOwnerIdFromDatabase(deps.db, roomId, ownerId);
 }
 
-async function findChatRoomByIdForApi(deps: ApiChatDependencies, roomId: MiChatRoom['id']): Promise<MiChatRoom | null> {
+async function findChatRoomByIdForApi(deps: ChatDependencies, roomId: MiChatRoom['id']): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 }
 
 async function isChatRoomMemberForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	room: MiChatRoom,
 	userId: MiUser['id'],
 ): Promise<boolean> {
@@ -1109,7 +1017,7 @@ async function isChatRoomMemberForApi(
 }
 
 async function createChatRoomInvitationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	inviterId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 	inviteeId: MiUser['id'],
@@ -1146,7 +1054,7 @@ async function createChatRoomInvitationForApi(
 }
 
 async function getSentChatRoomInvitationsWithPaginationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1159,7 +1067,7 @@ async function getSentChatRoomInvitationsWithPaginationForApi(
 }
 
 async function getOwnedChatRoomsWithPaginationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	ownerId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1172,7 +1080,7 @@ async function getOwnedChatRoomsWithPaginationForApi(
 }
 
 async function getReceivedChatRoomInvitationsWithPaginationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1186,7 +1094,7 @@ async function getReceivedChatRoomInvitationsWithPaginationForApi(
 }
 
 async function joinToChatRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1216,7 +1124,7 @@ async function joinToChatRoomForApi(
 }
 
 async function ignoreChatRoomInvitationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1228,7 +1136,7 @@ async function ignoreChatRoomInvitationForApi(
 }
 
 async function leaveChatRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1246,7 +1154,7 @@ async function leaveChatRoomForApi(
 }
 
 async function muteChatRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 	mute: boolean,
@@ -1259,7 +1167,7 @@ async function muteChatRoomForApi(
 }
 
 async function updateChatRoomForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	room: MiChatRoom,
 	params: { name?: string; description?: string },
 ): Promise<MiChatRoom> {
@@ -1267,7 +1175,7 @@ async function updateChatRoomForApi(
 }
 
 async function getRoomChatMembershipsWithPaginationForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1280,7 +1188,7 @@ async function getRoomChatMembershipsWithPaginationForApi(
 }
 
 async function searchChatMessagesForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	meId: MiUser['id'],
 	query: string,
 	limit: number,
@@ -1290,7 +1198,7 @@ async function searchChatMessagesForApi(
 }
 
 async function resolveChatReactionForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	reactionInput: string,
 	requireExists: boolean,
 ): Promise<string> {
@@ -1308,7 +1216,7 @@ async function resolveChatReactionForApi(
 }
 
 async function reactToChatMessageForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
@@ -1354,7 +1262,7 @@ async function reactToChatMessageForApi(
 	if (room) {
 		deps.publishChatRoomStream?.(room.id, 'react', {
 			messageId: message.id,
-			user: await packUserLiteForApi(deps, userId),
+			user: await packUserLite(deps, userId),
 			reaction,
 		});
 	} else {
@@ -1364,7 +1272,7 @@ async function reactToChatMessageForApi(
 }
 
 async function unreactToChatMessageForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
@@ -1388,7 +1296,7 @@ async function unreactToChatMessageForApi(
 	if (room) {
 		deps.publishChatRoomStream?.(room.id, 'unreact', {
 			messageId: message.id,
-			user: await packUserLiteForApi(deps, userId),
+			user: await packUserLite(deps, userId),
 			reaction,
 		});
 	} else {
@@ -1398,7 +1306,7 @@ async function unreactToChatMessageForApi(
 }
 
 async function getMyChatMembershipsForApi(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1458,7 +1366,7 @@ function cannotJoinChatRoomError(): ApiError {
 	});
 }
 
-async function getUserForApiChat(deps: ApiChatDependencies, userId: string): Promise<MiUser> {
+async function getUserForApiChat(deps: ChatDependencies, userId: string): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (user == null) {
 		throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
@@ -1472,7 +1380,7 @@ export const chatHistoryParamDef = z.object({
 });
 
 export async function handleApiChatHistory(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatHistoryParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
@@ -1503,7 +1411,7 @@ export async function handleApiChatHistory(
 
 const chatReadAllParamDef = z.object({});
 
-export async function handleApiChatReadAll(deps: ApiChatDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiChatReadAll(deps: ChatDependencies, me: MiLocalUser): Promise<void> {
 	await checkChatAvailabilityForApi(deps, me.id, 'read');
 	await readAllChatMessagesForApi(deps, me.id);
 }
@@ -1515,7 +1423,7 @@ export const chatMessagesCreateToUserParamDef = z.object({
 });
 
 export async function handleApiChatMessagesCreateToUser(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesCreateToUserParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
@@ -1564,7 +1472,7 @@ export const chatMessagesCreateToRoomParamDef = z.object({
 });
 
 export async function handleApiChatMessagesCreateToRoom(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesCreateToRoomParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>> {
@@ -1605,7 +1513,7 @@ export const chatMessagesDeleteParamDef = z.object({
 });
 
 export async function handleApiChatMessagesDelete(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesDeleteParamDef>,
 ): Promise<void> {
@@ -1625,7 +1533,7 @@ export const chatMessagesReactParamDef = z.object({
 });
 
 export async function handleApiChatMessagesReact(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesReactParamDef>,
 ): Promise<void> {
@@ -1639,7 +1547,7 @@ export const chatMessagesUnreactParamDef = z.object({
 });
 
 export async function handleApiChatMessagesUnreact(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesUnreactParamDef>,
 ): Promise<void> {
@@ -1654,7 +1562,7 @@ export const chatMessagesRoomTimelineParamDef = z.object({
 });
 
 export async function handleApiChatMessagesRoomTimeline(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesRoomTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
@@ -1686,7 +1594,7 @@ export const chatMessagesSearchParamDef = z.object({
 });
 
 export async function handleApiChatMessagesSearch(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesSearchParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
@@ -1718,7 +1626,7 @@ export const chatMessagesShowParamDef = z.object({
 });
 
 export async function handleApiChatMessagesShow(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesShowParamDef>,
 ): Promise<Packed<'ChatMessage'>> {
@@ -1728,7 +1636,7 @@ export async function handleApiChatMessagesShow(
 	if (message == null) {
 		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
 	}
-	if (message.fromUserId !== me.id && message.toUserId !== me.id && !(await isApiModerator(deps, me))) {
+	if (message.fromUserId !== me.id && message.toUserId !== me.id && !(await userIsModerator(deps, me))) {
 		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
 	}
 
@@ -1742,7 +1650,7 @@ export const chatMessagesUserTimelineParamDef = z.object({
 });
 
 export async function handleApiChatMessagesUserTimeline(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatMessagesUserTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
@@ -1765,14 +1673,14 @@ export const chatRoomsCreateParamDef = z.object({
 });
 
 export async function handleApiChatRoomsCreate(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsCreateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
 	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const room = await createChatRoomForApi(deps, me, { name: params.name, description: params.description ?? '' });
-	return await packChatRoomForApi(deps, room);
+	return await packChatRoom(deps, room);
 }
 
 export const chatRoomsDeleteParamDef = z.object({
@@ -1780,7 +1688,7 @@ export const chatRoomsDeleteParamDef = z.object({
 });
 
 export async function handleApiChatRoomsDelete(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsDeleteParamDef>,
 ): Promise<void> {
@@ -1805,7 +1713,7 @@ export const chatRoomsUpdateParamDef = z.object({
 });
 
 export async function handleApiChatRoomsUpdate(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsUpdateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
@@ -1821,7 +1729,7 @@ export async function handleApiChatRoomsUpdate(
 		room,
 		omitUndefined({ name: params.name, description: params.description }),
 	);
-	return await packChatRoomForApi(deps, updated, me);
+	return await packChatRoom(deps, updated, me);
 }
 
 export const chatRoomsShowParamDef = z.object({
@@ -1829,7 +1737,7 @@ export const chatRoomsShowParamDef = z.object({
 });
 
 export async function handleApiChatRoomsShow(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsShowParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
@@ -1844,7 +1752,7 @@ export async function handleApiChatRoomsShow(
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 	}
 
-	return await packChatRoomForApi(deps, room, me);
+	return await packChatRoom(deps, room, me);
 }
 
 export const chatRoomsOwnedParamDef = z.object({
@@ -1853,7 +1761,7 @@ export const chatRoomsOwnedParamDef = z.object({
 });
 
 export async function handleApiChatRoomsOwned(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsOwnedParamDef>,
 ): Promise<Packed<'ChatRoom'>[]> {
@@ -1870,7 +1778,7 @@ export const chatRoomsJoinParamDef = z.object({
 });
 
 export async function handleApiChatRoomsJoin(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsJoinParamDef>,
 ): Promise<void> {
@@ -1884,7 +1792,7 @@ export const chatRoomsJoiningParamDef = z.object({
 });
 
 export async function handleApiChatRoomsJoining(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsJoiningParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
@@ -1901,7 +1809,7 @@ export const chatRoomsLeaveParamDef = z.object({
 });
 
 export async function handleApiChatRoomsLeave(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsLeaveParamDef>,
 ): Promise<void> {
@@ -1916,7 +1824,7 @@ export const chatRoomsMembersParamDef = z.object({
 });
 
 export async function handleApiChatRoomsMembers(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsMembersParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
@@ -1943,7 +1851,7 @@ export const chatRoomsMuteParamDef = z.object({
 });
 
 export async function handleApiChatRoomsMute(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsMuteParamDef>,
 ): Promise<void> {
@@ -1957,7 +1865,7 @@ export const chatRoomsInvitationsCreateParamDef = z.object({
 });
 
 export async function handleApiChatRoomsInvitationsCreate(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsInvitationsCreateParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>> {
@@ -1969,7 +1877,7 @@ export async function handleApiChatRoomsInvitationsCreate(
 	}
 
 	const invitation = await createChatRoomInvitationForApi(deps, me.id, room.id, params.userId);
-	return await packChatRoomInvitationForApi(deps, invitation, me);
+	return await packChatRoomInvitation(deps, invitation, me);
 }
 
 export const chatRoomsInvitationsIgnoreParamDef = z.object({
@@ -1977,7 +1885,7 @@ export const chatRoomsInvitationsIgnoreParamDef = z.object({
 });
 
 export async function handleApiChatRoomsInvitationsIgnore(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsInvitationsIgnoreParamDef>,
 ): Promise<void> {
@@ -1991,7 +1899,7 @@ export const chatRoomsInvitationsInboxParamDef = z.object({
 });
 
 export async function handleApiChatRoomsInvitationsInbox(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsInvitationsInboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
@@ -2016,7 +1924,7 @@ export const chatRoomsInvitationsOutboxParamDef = z.object({
 });
 
 export async function handleApiChatRoomsInvitationsOutbox(
-	deps: ApiChatDependencies,
+	deps: ChatDependencies,
 	me: MiLocalUser,
 	params: ApiParams<typeof chatRoomsInvitationsOutboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {

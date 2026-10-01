@@ -10,9 +10,9 @@ import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseApiParams } from '@/server/rest/validation.js';
-import { xaddApiNotification } from '@/server/rest/notification/notification.js';
+import { xaddNotification } from '@/core/notification/notification.js';
 import { handleApiINotifications, notificationsParamDef } from '@/server/rest/notification/notifications-list.js';
-import type { ApiNotificationsListDependencies } from '@/server/rest/notification/notifications-list.js';
+import type { NotificationsListDependencies } from '@/core/notification/notification-packing.js';
 import type { MiUser } from '@/models/User.js';
 
 // 日時で指定した境界は、日時から作った ID (ストリームに存在しない) で引くので完全一致の検索が必ず外れる。
@@ -43,10 +43,10 @@ describe('i/notifications の日時による境界', () => {
 			const at = base + i * 60_000;
 			const id = genId(at);
 			ids.push(id);
-			await xaddApiNotification(runtime, user.id, { id, type: 'test', createdAt: new Date(at).toISOString() });
+			await xaddNotification(runtime, user.id, { id, type: 'test', createdAt: new Date(at).toISOString() });
 		}
 		const xrevrange = vi.spyOn(runtime.redis, 'xrevrange');
-		const deps = runtime as unknown as ApiNotificationsListDependencies;
+		const deps = runtime as unknown as NotificationsListDependencies;
 
 		const until = await handleApiINotifications(
 			deps,

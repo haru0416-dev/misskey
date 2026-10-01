@@ -16,7 +16,7 @@ import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
 import { markAllApiNotificationsAsRead } from '@/server/rest/notification/notification.js';
-import type { ApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import type { NotificationDependencies } from '@/core/notification/notification.js';
 import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -100,7 +100,7 @@ class StreamChannelSubscriberScope implements StreamChannelSubscriber {
 	}
 }
 
-export type StreamConnectionDependencies = ApiNotificationDependencies &
+export type StreamConnectionDependencies = NotificationDependencies &
 	Parameters<typeof honoStreamChannelMain.init>[0] &
 	Parameters<typeof honoStreamChannelChatRoom.init>[0] &
 	Parameters<typeof honoStreamChannelHashtag.init>[0] &

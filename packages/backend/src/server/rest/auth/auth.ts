@@ -12,7 +12,7 @@ import {
 	fetchLocalUserByNativeTokenWithRolesVersionFromDatabase,
 } from '@/core/user/UserStore.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
-import { ROLES_VERSION_MEMO_KEY } from '@/server/rest/role/role-policy.js';
+import { ROLES_VERSION_MEMO_KEY } from '@/core/role/role-policy.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { isNativeUserToken } from '@/misc/token.js';

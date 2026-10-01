@@ -5,7 +5,7 @@
 
 import * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
-import type { DeliverJobData } from '@/queue/types.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 
 /**
  * 宛先ホストへの投入が 10 分間途切れたら投入数を数え直す。リセット直後のジョブは

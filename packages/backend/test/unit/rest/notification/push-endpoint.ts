@@ -13,7 +13,7 @@ import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/sw/SwSubscriptionStore.js';
-import { pushSwNotificationForApi } from '@/server/rest/notification/push-notification.js';
+import { pushSwNotification } from '@/core/notification/push-notification.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 // push の送信先は利用者が登録した任意 URL。送信が SSRF 検査付きの HttpRequestService を通り、
@@ -90,7 +90,7 @@ test('内部アドレス宛ての push は検査で弾かれ、接続しない',
 	});
 
 	const vapid = push.generateVAPIDKeys();
-	await pushSwNotificationForApi(
+	await pushSwNotification(
 		{
 			config: { ...config, instance: { ...config.instance, url: 'https://misskey.local' } },
 			meta: { enableServiceWorker: true, swPublicKey: vapid.publicKey, swPrivateKey: vapid.privateKey },

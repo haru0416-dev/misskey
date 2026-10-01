@@ -25,12 +25,7 @@ import {
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 } from '@/core/user/UserStore.js';
-import {
-	renderEmoji,
-	renderLikeForApi,
-	renderNoteForApi,
-	renderNoteOrRenoteActivityForApi,
-} from '@/server/rest/activitypub/notes-ap.js';
+import { renderEmoji, renderLike, renderNote, renderNoteOrRenoteActivity } from '@/core/activitypub/notes-ap.js';
 import { getUserUri, isRemoteUser, renderFollow } from '@/server/rest/user/following.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
@@ -108,7 +103,7 @@ function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Promise<Record<string, unknown> | null> {
 	const pureRenote = isRenote(note) && !isQuote(note);
 	const renote = pureRenote ? await fetchNoteByIdFromDatabase(deps.db, note.renoteId!) : null;
-	return await renderNoteOrRenoteActivityForApi(
+	return await renderNoteOrRenoteActivity(
 		deps,
 		{
 			localOnly: note.localOnly,
@@ -163,7 +158,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return c.redirect(note.uri);
 		}
 
-		return apJson(c, withApContext(await renderNoteForApi(deps, note, false)));
+		return apJson(c, withApContext(await renderNote(deps, note, false)));
 	});
 
 	app.get('/notes/:note/activity', async (c) => {
@@ -388,7 +383,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			.filter((note): note is MiNote => note != null)
 			.filter((note) => !note.localOnly && (note.visibility === 'public' || note.visibility === 'home'));
 
-		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNoteForApi(deps, note, true)));
+		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNote(deps, note, true)));
 
 		return apJson(
 			c,
@@ -460,7 +455,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return apError(404);
 		}
 
-		return apJson(c, withApContext(await renderLikeForApi(deps, reaction, note)));
+		return apJson(c, withApContext(await renderLike(deps, reaction, note)));
 	});
 
 	// フォロー成立前にも参照されるため、following の存在は確認しない。

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as adminSystemWebhookContracts } from '@/server/api/metas/admin-system-webhook.js';
+import { endpointMetas as adminSystemWebhookContracts } from '@/server/rest/contracts/admin-system-webhook.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

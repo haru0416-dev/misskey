@@ -14,7 +14,7 @@ import { muting } from '@/db/schema/muting.js';
 import { note } from '@/db/schema/note.js';
 import { countDatabaseQueries } from '../../../query-counter.js';
 import { createApiShellApp } from '@/server/rest/shell.js';
-import { createEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/core/events.js';
 
 function expectApiHeaders(response: Response): void {
 	expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');

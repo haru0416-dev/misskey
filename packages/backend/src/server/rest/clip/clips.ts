@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as clipsContracts } from '@/server/api/metas/clips.js';
+import type { endpointMetas as clipsContracts } from '@/server/rest/contracts/clips.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -43,18 +43,18 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { packNoteManyForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiClipDependencies = UserPackingDependencies & ApiRolePolicyDependencies;
+export type ApiClipDependencies = UserPackingDependencies & RolePolicyDependencies;
 
-export type ApiClipNotesDependencies = ApiNoteDependencies & {
+export type ApiClipNotesDependencies = NoteDependencies & {
 	meta: MiMeta;
 };
 
@@ -127,7 +127,7 @@ export async function packClipForApi(
 	const meId = me ? me.id : null;
 
 	const [user, favoritedCount, isFavorited, notesCount] = await Promise.all([
-		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLiteForApi(deps, clip.userId),
+		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLite(deps, clip.userId),
 		hint?.favoritedCount !== undefined
 			? Promise.resolve(hint.favoritedCount)
 			: countClipFavoritesFromDatabase(deps.db, clip.id),
@@ -168,7 +168,7 @@ export async function packClipsManyForApi(
 	const meId = me?.id ?? null;
 	const ownedClipIds = meId == null ? [] : clips.filter((clip) => clip.userId === meId).map((clip) => clip.id);
 	const [packedUsers, favoriteCounts, favoritedClipIds, noteCounts] = await Promise.all([
-		packUserLiteManyForApi(deps, userIds),
+		packUserLiteMany(deps, userIds),
 		countClipFavoritesByClipIdsFromDatabase(deps.db, clipIds),
 		meId == null ? Promise.resolve([]) : listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(deps.db, meId, clipIds),
 		countClipNotesByClipIdsFromDatabase(deps.db, ownedClipIds),
@@ -254,7 +254,7 @@ export async function handleApiClipsCreate(
 			isPublic: params.isPublic,
 			description: params.description || null,
 		},
-		(await getApiRolePolicies(deps, me)).clipLimit,
+		(await getRolePolicies(deps, me)).clipLimit,
 	);
 	if (clip == null) {
 		throw errors.tooManyClips();
@@ -320,7 +320,7 @@ export async function handleApiClipsAddNote(
 				noteId: params.noteId,
 				clipId: clip.id,
 			},
-			(await getApiRolePolicies(deps, me)).noteEachClipsLimit,
+			(await getRolePolicies(deps, me)).noteEachClipsLimit,
 		);
 		if (result === 'tooManyClipNotes') {
 			throw errors.tooManyClipNotes();

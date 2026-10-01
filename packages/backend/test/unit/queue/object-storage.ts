@@ -16,7 +16,7 @@ import {
 	handleQueueDeleteFile,
 } from '@/queue/handlers/object-storage.js';
 import type { QueueObjectStorageDependencies } from '@/queue/handlers/object-storage.js';
-import type { ObjectStorageFileJobData } from '@/queue/types.js';
+import type { ObjectStorageFileJobData } from '@/core/queue/types.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 

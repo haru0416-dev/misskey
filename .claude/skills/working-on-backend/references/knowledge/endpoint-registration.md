@@ -4,8 +4,8 @@
 
 | 入口 | 責務 |
 | --- | --- |
-| `server/api/metas/` → [endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts) | endpoint 名と meta・入力 schema を集約する |
-| [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts) → [OpenAPI 生成](../../../../../packages/backend/src/server/api/openapi/gen-spec.ts) | API 情報と SDK 生成の入力を作る |
+| `server/rest/contracts/` → [endpoint-metas.ts](../../../../../packages/backend/src/server/rest/endpoint-metas.ts) | endpoint 名と meta・入力 schema を集約する |
+| [endpoint-catalog.ts](../../../../../packages/backend/src/server/rest/endpoint-catalog.ts) → [OpenAPI 生成](../../../../../packages/backend/src/server/rest/openapi/gen-spec.ts) | API 情報と SDK 生成の入力を作る |
 | `server/rest/endpoints/` → [shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) | 契約ごとの実装を HTTP method/path に登録する |
 | [endpoint-guards.ts](../../../../../packages/backend/src/server/rest/endpoint-guards.ts) | meta から認証・認可・回数制限を実行する |
 | `server/rest/routes/` | 契約から登録できない手書きルート (multipart・サインイン系など) |
@@ -25,7 +25,7 @@ JSON API はすべて、`api/metas/<category>.ts` の `defineContract` (meta・�
 
 ## 手書きのルート
 
-新カテゴリでは、meta の集約 ([endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts)) と実装の集約 ([endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts)) の両方に追加する。endpoint-metas のキー順は既存の UTF-16 コード単位順を維持する。
+新カテゴリでは、meta の集約 ([endpoint-metas.ts](../../../../../packages/backend/src/server/rest/endpoint-metas.ts)) と実装の集約 ([endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts)) の両方に追加する。endpoint-metas のキー順は既存の UTF-16 コード単位順を維持する。
 
 multipart の [drive/files/create](../../../../../packages/backend/src/server/rest/routes/drive.ts) のように契約から登録できないルートは `routes/` に残る。これらは `applyEndpointGuards` を直接呼び、meta の条件を手で揃える。ファイルの `cleanup()` は成功・失敗とも `finally` で呼ぶ。認証・認可の拒否境界は [e2e/api.ts](../../../../../packages/backend/test/e2e/api.ts) で実 HTTP を通して確認する。共通登録経路の回数制限は [endpoint-definition](../../../../../packages/backend/test/unit/server/rest/endpoint-definition.ts) で、認証済みの最初の要求が成功し、次の要求が 429 になることを確認する。
 

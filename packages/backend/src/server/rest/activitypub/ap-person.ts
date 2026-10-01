@@ -76,7 +76,7 @@ import { uploadDriveFileFromUrlForApi } from '../drive/drive-file-upload.js';
 import { parseDeclaredMedia } from './declared-media.js';
 import type { ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
 import { updateUsertagsForApi } from '../account/account-update.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
@@ -357,7 +357,7 @@ async function resolveAvatarAndBannerForApi(
 
 	if (
 		((avatar != null && avatar.id != null) || (banner != null && banner.id != null)) &&
-		!(await getApiRolePolicies(deps, user)).canUpdateBioMedia
+		!(await getRolePolicies(deps, user)).canUpdateBioMedia
 	) {
 		return {};
 	}

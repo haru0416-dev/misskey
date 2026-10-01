@@ -34,16 +34,17 @@ import type { MiMeta, MiRole } from '@/models/_.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {
-	computeApiUserRoles,
-	getApiRolePolicies,
-	getApiUserRoles,
-	isApiAdministrator,
-	isApiModerator,
-} from '../role/role-policy.js';
+	computeUserRoles,
+	getRolePolicies,
+	getUserRoles,
+	userIsAdministrator,
+	userIsModerator,
+} from '../../../core/role/role-policy.js';
 import { packApiRoles } from '../role/roles.js';
 import { packApiSignin } from '../account/i.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
-import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiAdminUsersDependencies = UserPackingDependencies & {
@@ -74,7 +75,7 @@ type AdminShowUserResponse = {
 	lastActiveDate: string | null;
 	moderationNote: string;
 	signins: ReturnType<typeof packApiSignin>[];
-	policies: Awaited<ReturnType<typeof getApiRolePolicies>>;
+	policies: Awaited<ReturnType<typeof getRolePolicies>>;
 	roles: Packed<'Role'>[];
 	roleAssigns: {
 		createdAt: string;
@@ -205,14 +206,14 @@ async function packAdminUserDetailedForApi(
 	hint?: {
 		profile?: Awaited<ReturnType<typeof fetchUserProfileByUserIdOrFailFromDatabase>>;
 		roles?: MiRole[];
-		policies?: Awaited<ReturnType<typeof getApiRolePolicies>>;
+		policies?: Awaited<ReturnType<typeof getRolePolicies>>;
 	},
 ): Promise<UserDetailedNotMeApiResponse> {
 	const [profile, roles] = await Promise.all([
 		hint?.profile ?? fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
-		hint?.roles ?? getApiUserRoles(deps, user),
+		hint?.roles ?? getUserRoles(deps, user),
 	]);
-	const policies = hint?.policies ?? (await getApiRolePolicies(deps, user, roles));
+	const policies = hint?.policies ?? (await getRolePolicies(deps, user, roles));
 	const publicRoles = roles
 		.filter((role) => role.isPublic)
 		.sort((a, b) => b.displayOrder - a.displayOrder)
@@ -254,8 +255,8 @@ async function packAdminUsersDetailedForApi(
 
 	return await Promise.all(
 		users.map(async (user, index) => {
-			const userRoles = computeApiUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
-			const policies = await getApiRolePolicies(deps, user, userRoles);
+			const userRoles = computeUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
+			const policies = await getRolePolicies(deps, user, userRoles);
 			const profile = profileByUserId.get(user.id);
 			return await packAdminUserDetailedForApi(deps, user, baseUsers[index]!, {
 				...(profile === undefined ? {} : { profile }),
@@ -281,16 +282,16 @@ export async function handleApiAdminShowUser(
 	}
 
 	const freshMe = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
-	if (!(await isApiAdministrator(deps, freshMe)) && (await isApiAdministrator(deps, user))) {
+	if (!(await userIsAdministrator(deps, freshMe)) && (await userIsAdministrator(deps, user))) {
 		throw new Error('cannot show info of admin');
 	}
 
 	const [policies, signins, assigns, roles, isModerator] = await Promise.all([
-		getApiRolePolicies(deps, user),
+		getRolePolicies(deps, user),
 		listSigninsByUserIdFromDatabase(deps.db, user.id),
 		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id).then((result) => result.filter(isActiveRoleAssignment)),
-		getApiUserRoles(deps, user),
-		isApiModerator(deps, user),
+		getUserRoles(deps, user),
+		userIsModerator(deps, user),
 	]);
 
 	return {

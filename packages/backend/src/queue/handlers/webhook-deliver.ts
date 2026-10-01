@@ -10,7 +10,7 @@ import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { StatusError } from '@/misc/status-error.js';
 import { updateWebhookInDatabase } from '@/core/webhook/WebhookStore.js';
 import { updateSystemWebhookInDatabase } from '@/core/webhook/SystemWebhookStore.js';
-import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/core/queue/types.js';
 
 export type QueueWebhookDeliverDependencies = {
 	config: Pick<Config, 'runtime' | 'instance'>;

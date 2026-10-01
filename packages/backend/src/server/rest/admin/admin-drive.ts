@@ -16,7 +16,7 @@ import {
 import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import type { ObjectStorageQueue } from '@/core/queue/queues.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -26,20 +26,20 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
-import { packDriveFoldersManyForApi } from '../drive/drive.js';
-import { packUserLiteManyForApi } from '../user/user.js';
-import type { ApiDriveStreamPublisher } from '../events.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import { isApiModerator } from '../role/role-policy.js';
+import { packDriveFoldersMany } from '../../../core/drive/drive-folder-packing.js';
+import { packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { DriveStreamPublisher } from '../../../core/events.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
-export type ApiAdminDriveDependencies = ApiRolePolicyDependencies & {
+export type ApiAdminDriveDependencies = RolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
 	dbQueue: import('@/core/queue/queues.js').DbQueue;
-	publishDriveStream?: ApiDriveStreamPublisher;
+	publishDriveStream?: DriveStreamPublisher;
 };
 
 const adminDriveNoParamsDef = z.object({});
@@ -198,14 +198,14 @@ async function packAdminDriveFilesForApi(
 	const uniqueUserRefs = Array.from(
 		new Map(userRefs.map((user) => [typeof user === 'string' ? user : user.id, user])).values(),
 	);
-	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteManyForApi(deps, uniqueUserRefs) : [];
+	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteMany(deps, uniqueUserRefs) : [];
 	const userMap = new Map(packedUsers.map((user) => [user.id, user]));
 
 	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter((x) => x != null);
 	const uniqueFolderRefs = Array.from(
 		new Map(folderRefs.map((folder) => [typeof folder === 'string' ? folder : folder.id, folder])).values(),
 	);
-	const packedFolders = await packDriveFoldersManyForApi(deps, uniqueFolderRefs, { detail: true });
+	const packedFolders = await packDriveFoldersMany(deps, uniqueFolderRefs, { detail: true });
 	const folderMap = new Map(packedFolders.map((folder) => [folder.id, folder]));
 
 	return files.map((file) => ({
@@ -297,7 +297,7 @@ export async function handleApiAdminDriveShowFile(
 	}
 
 	const owner = file.userId == null ? null : await fetchUserByIdOrFailFromDatabase(deps.db, file.userId);
-	const [iAmModerator, ownerIsModerator] = await Promise.all([isApiModerator(deps, me), isApiModerator(deps, owner)]);
+	const [iAmModerator, ownerIsModerator] = await Promise.all([userIsModerator(deps, me), userIsModerator(deps, owner)]);
 
 	return {
 		id: file.id,

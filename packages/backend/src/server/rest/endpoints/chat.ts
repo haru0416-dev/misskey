@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as chatContracts } from '@/server/api/metas/chat.js';
+import { endpointMetas as chatContracts } from '@/server/rest/contracts/chat.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

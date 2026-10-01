@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as clipsContracts } from '@/server/api/metas/clips.js';
+import { endpointMetas as clipsContracts } from '@/server/rest/contracts/clips.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

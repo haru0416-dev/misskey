@@ -28,7 +28,7 @@ import {
 } from '@/core/moderation/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/note/NoteStore.js';
 import type { DbQueue, ObjectStorageQueue } from '@/core/queue/queues.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -36,22 +36,22 @@ import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi } from '../chat/chat.js';
-import type { ApiChatDependencies } from '../chat/chat.js';
-import { packDriveFileManyForApi, packDriveFileOrFailForApi } from './drive-file.js';
-import type { ApiDriveFileDependencies } from './drive-file.js';
+import type { ChatDependencies } from '../../../core/chat/chat-packing.js';
+import { packDriveFileMany, packDriveFileOrFail } from '../../../core/drive/drive-file-packing.js';
+import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
 import { packNoteManyForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
-import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiDriveFilesDependencies = ApiNoteDependencies &
-	ApiDriveFileDependencies &
-	ApiRolePolicyDependencies &
-	ApiChatDependencies & {
+export type ApiDriveFilesDependencies = NoteDependencies &
+	DriveFileDependencies &
+	RolePolicyDependencies &
+	ChatDependencies & {
 		objectStorageQueue: ObjectStorageQueue;
 		dbQueue: DbQueue;
 		internalStorageService: Pick<InternalStorageService, 'del'>;
@@ -101,7 +101,7 @@ export async function handleApiDriveFilesList(
 		}),
 	);
 
-	return await packDriveFileManyForApi(deps, files, { detail: false, self: true });
+	return await packDriveFileMany(deps, files, { detail: false, self: true });
 }
 
 export const driveStreamParamDef = z.object({
@@ -131,7 +131,7 @@ export async function handleApiDriveStream(
 		}),
 	);
 
-	return await packDriveFileManyForApi(deps, files, { detail: false, self: true });
+	return await packDriveFileMany(deps, files, { detail: false, self: true });
 }
 
 export const driveFilesShowParamDef = z.union([z.object({ fileId: misskeyId() }), z.object({ url: z.string() })]);
@@ -150,11 +150,11 @@ export async function handleApiDriveFilesShow(
 		throw noSuchFileError('067bc436-2718-4795-b0fb-ecbe43949e31');
 	}
 
-	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('25b73c73-68b1-41d0-bad1-381cfdf6579f');
 	}
 
-	return await packDriveFileOrFailForApi(deps, file, { detail: true, withUser: true, self: true });
+	return await packDriveFileOrFail(deps, file, { detail: true, withUser: true, self: true });
 }
 
 export const driveFilesFindParamDef = z.object({
@@ -173,7 +173,7 @@ export async function handleApiDriveFilesFind(
 		folderId: params.folderId ?? null,
 	});
 
-	return await packDriveFileManyForApi(deps, files, { self: true });
+	return await packDriveFileMany(deps, files, { self: true });
 }
 
 export const driveFilesFindByHashParamDef = z.object({
@@ -187,7 +187,7 @@ export async function handleApiDriveFilesFindByHash(
 ): Promise<Packed<'DriveFile'>[]> {
 	const files = await listDriveFilesByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 
-	return await packDriveFileManyForApi(deps, files, { self: true });
+	return await packDriveFileMany(deps, files, { self: true });
 }
 
 export const driveFilesAttachedNotesParamDef = z.object({
@@ -201,7 +201,7 @@ export async function handleApiDriveFilesAttachedNotes(
 	me: MiLocalUser,
 	params: ApiParams<typeof driveFilesAttachedNotesParamDef>,
 ): Promise<Packed<'Note'>[]> {
-	const isModerator = await isApiModerator(deps, me);
+	const isModerator = await userIsModerator(deps, me);
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 
 	if (file == null || (!isModerator && file.userId !== me.id)) {
@@ -241,7 +241,7 @@ export function buildDriveFileDeletionDependencies(deps: ApiDriveFilesDependenci
 		updatePerUserDriveChart: (file, isAdditional) => deps.chartWriters.perUserDriveChart.update(file, isAdditional),
 		updateInstanceDriveChart: (file, isAdditional) => deps.chartWriters.instanceChart.updateDrive(file, isAdditional),
 		publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
-		isModerator: (user) => isApiModerator(deps, user),
+		isModerator: (user) => userIsModerator(deps, user),
 		logDriveFileDeletion: (db, deleter, logId, info) =>
 			logModerationEventWithIdInDatabase({ db }, deleter, 'deleteDriveFile', info, logId),
 	};
@@ -261,7 +261,7 @@ export async function handleApiDriveFilesDelete(
 		throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
 	}
 
-	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('5eb8d909-2540-4970-90b8-dd6f86088121');
 	}
 
@@ -286,12 +286,12 @@ export async function handleApiDriveFilesUpdate(
 		throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
 	}
 
-	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await userIsModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('01a53b27-82fc-445b-a0c1-b558465a8ed2');
 	}
 
 	const owner = file.userId != null ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
-	const policies = await getApiRolePolicies(deps, owner);
+	const policies = await getRolePolicies(deps, owner);
 
 	if (params.name != null && !validateDriveFileName(params.name)) {
 		throw new ApiError({
@@ -336,13 +336,13 @@ export async function handleApiDriveFilesUpdate(
 	});
 	await updateDriveFileInDatabase(deps.db, file.id, values);
 
-	const packed = await packDriveFileOrFailForApi(deps, file.id, { self: true });
+	const packed = await packDriveFileOrFail(deps, file.id, { self: true });
 
 	if (file.userId) {
 		deps.publishDriveStream?.(file.userId, 'fileUpdated', packed);
 	}
 
-	if ((await isApiModerator(deps, me)) && file.userId !== me.id) {
+	if ((await userIsModerator(deps, me)) && file.userId !== me.id) {
 		if (params.isSensitive !== undefined && params.isSensitive !== file.isSensitive) {
 			await logModerationEventInDatabase(
 				deps,
@@ -397,7 +397,7 @@ export async function handleApiDriveFilesAttachedChatMessages(
 	me: MiLocalUser,
 	params: ApiParams<typeof driveFilesAttachedChatMessagesParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const isModerator = await isApiModerator(deps, me);
+	const isModerator = await userIsModerator(deps, me);
 
 	if (!isModerator) {
 		await checkChatAvailabilityForApi(deps, me.id, 'read');

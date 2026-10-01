@@ -11,7 +11,7 @@ import type { Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updateHashtagsRanking, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
-import { formatHashtagUsersWindow } from '@/server/rest/hashtag/hashtags.js';
+import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
 import { currentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/core/featured/FeaturedRanking.js';
 
 describe('updateHashtagsRanking', () => {

@@ -16,7 +16,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
-import type { DbUserDeleteJobData } from '@/queue/types.js';
+import type { DbUserDeleteJobData } from '@/core/queue/types.js';
 import { deletePageForApi } from '@/server/rest/page/pages.js';
 import type { ApiPageDependencies } from '@/server/rest/page/pages.js';
 import { deleteFileSyncForApi } from './object-storage.js';

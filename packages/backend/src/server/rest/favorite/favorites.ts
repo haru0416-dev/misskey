@@ -57,8 +57,9 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { packNoteForApi, packNoteManyForApi } from '../note/note.js';
-import type { ApiNoteDependencies } from '../note/note.js';
+import { packNote } from '../../../core/note/note-packing.js';
+import { packNoteManyForApi } from '../note/note.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFavoriteDependencies = {
@@ -66,7 +67,7 @@ export type ApiFavoriteDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-export type ApiIFavoritesDependencies = ApiNoteDependencies;
+export type ApiIFavoritesDependencies = NoteDependencies;
 
 export const userListParamDef = z.object({
 	listId: misskeyId(),
@@ -439,7 +440,7 @@ export async function handleApiIFavorites(
 			id: favorite.id,
 			createdAt: parseId(favorite.id).date.toISOString(),
 			noteId: favorite.noteId,
-			note: packedNoteMap.get(favorite.noteId) ?? (await packNoteForApi(deps, favorite.noteId, me)),
+			note: packedNoteMap.get(favorite.noteId) ?? (await packNote(deps, favorite.noteId, me)),
 		})),
 	);
 }

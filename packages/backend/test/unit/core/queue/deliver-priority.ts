@@ -8,8 +8,8 @@ import type * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { DELIVER_HOST_IDLE_RESET_MS, HostFairDeliverQueue } from '@/core/queue/deliver-priority.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import { baseQueueOptions, QUEUE } from '@/core/queue/const.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
 
 function job(host: string): { name: string; data: DeliverJobData } {
 	return {

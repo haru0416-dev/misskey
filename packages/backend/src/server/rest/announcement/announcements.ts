@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as miscContracts } from '@/server/api/metas/misc.js';
+import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
@@ -34,17 +34,17 @@ import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
 import { normalizeReactionForApi } from '../note/notes-reactions.js';
-import { getApiUserRoles } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getUserRoles } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { ApiError } from '../error.js';
-import type { ApiMainStreamPublisher } from '../events.js';
+import type { MainStreamPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiAnnouncementDependencies = ApiRolePolicyDependencies & {
+export type ApiAnnouncementDependencies = RolePolicyDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 export const announcementsParamDef = z.object({
@@ -245,7 +245,7 @@ async function normalizeAnnouncementReaction(
 	}
 
 	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
-		const roles = await getApiUserRoles(deps, me);
+		const roles = await getUserRoles(deps, me);
 		const allowed = roles.some((role) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(role.id));
 		if (!allowed) {
 			return normalizeReactionForApi(null);

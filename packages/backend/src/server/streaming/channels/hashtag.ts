@@ -5,7 +5,7 @@
 
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import {
 	isNoteMutedOrBlockedForStream,
 	isNoteVisibleForMeForStream,
@@ -18,7 +18,7 @@ const MAX_TAG_GROUPS = 100;
 const MAX_TAGS_PER_GROUP = 10;
 const MAX_TAG_LENGTH = 128;
 
-export const honoStreamChannelHashtag: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelHashtag: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,

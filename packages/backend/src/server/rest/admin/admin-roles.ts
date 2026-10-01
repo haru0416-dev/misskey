@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as adminRolesContracts } from '@/server/api/metas/admin-roles.js';
+import type { endpointMetas as adminRolesContracts } from '@/server/rest/contracts/admin-roles.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { ApiParams } from '../validation.js';
 import {
@@ -30,13 +30,14 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import type { InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
-import { createRoleAssignedNotification } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
-import { isApiAdministrator } from '../role/role-policy.js';
+import { createRoleAssignedNotification } from '../../../core/notification/notification.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
+import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
-import { packApiRole, packApiRoles } from '../role/roles.js';
+import { packRole } from '../../../core/role/role-packing.js';
+import { packApiRoles } from '../role/roles.js';
 import { packUserDetailedNotMeManyForApi } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -46,9 +47,9 @@ export type ApiAdminRoleDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis;
-	httpRequestService: ApiNotificationDependencies['httpRequestService'];
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
+	httpRequestService: NotificationDependencies['httpRequestService'];
+	publishInternalEvent?: InternalEventPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 // policies は jsonb へそのまま保存され、ロール適用のたびに読まれる。
@@ -174,7 +175,7 @@ export async function handleApiAdminRolesAssign(
 		throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
 	}
 
-	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
+	if (!role.canEditMembersByModerator && !(await userIsAdministrator(deps, me))) {
 		throw accessDeniedError('25b5bc31-dc79-4ebd-9bd2-c84978fd052c');
 	}
 
@@ -236,7 +237,7 @@ export async function handleApiAdminRolesCreate(
 		me,
 	);
 
-	return await packApiRole(deps, created);
+	return await packRole(deps, created);
 }
 
 export async function handleApiAdminRolesList(deps: ApiAdminRoleDependencies): Promise<Packed<'Role'>[]> {
@@ -274,7 +275,7 @@ export async function handleApiAdminRolesShow(
 		throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
 	}
 
-	return await packApiRole(deps, role);
+	return await packRole(deps, role);
 }
 
 export async function handleApiAdminRolesUnassign(
@@ -288,7 +289,7 @@ export async function handleApiAdminRolesUnassign(
 		throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
 	}
 
-	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
+	if (!role.canEditMembersByModerator && !(await userIsAdministrator(deps, me))) {
 		throw accessDeniedError('24636eee-e8c1-493e-94b2-e16ad401e262');
 	}
 

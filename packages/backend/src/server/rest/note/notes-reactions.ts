@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { endpointMetas as notesContracts } from '@/server/api/metas/notes.js';
+import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { toPuny } from '@/misc/to-puny.js';
@@ -36,33 +36,33 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForApi,
-	renderLikeForApi,
+	deliverNoteActivity,
+	renderLike,
 	renderOnce,
-	renderUndoForApi,
-	resolveRemoteRecipientForApi,
-} from '../activitypub/notes-ap.js';
-import type { ApiNoteApDependencies } from '../activitypub/notes-ap.js';
+	renderUndoActivity,
+	resolveRemoteRecipient,
+} from '../../../core/activitypub/notes-ap.js';
+import type { NoteApDependencies } from '../../../core/activitypub/notes-ap.js';
 import { createNoteNotification } from '@/core/note/NoteCreationService.js';
 import { isNoteContentVisibleForMeForApi } from './note.js';
-import type { ApiNoteDependencies } from './note.js';
-import { packUserLiteManyForApi } from '../user/user.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
-import { getApiUserRoles } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { ApiNoteStreamPublisher } from '../events.js';
-import type { ChartWriters } from '@/server/chart-runtime.js';
+import type { NoteDependencies } from '../../../core/note/note-packing.js';
+import { packUserLiteMany } from '../../../core/user/user-packing.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
+import { getUserRoles } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
+import type { NoteStreamPublisher } from '../../../core/events.js';
+import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
 import type { ApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE, recordFeaturedNoteEngagement } from '@/core/featured/FeaturedRanking.js';
 
-export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
-	ApiNoteDependencies &
-	ApiRolePolicyDependencies &
-	ApiNotificationDependencies & {
+export type ApiNotesReactionsDependencies = NoteApDependencies &
+	NoteDependencies &
+	RolePolicyDependencies &
+	NotificationDependencies & {
 		chartWriters: ChartWriters;
-		publishNoteStream?: ApiNoteStreamPublisher;
+		publishNoteStream?: NoteStreamPublisher;
 	};
 
 const FALLBACK = '❤';
@@ -150,8 +150,7 @@ export async function createNoteReactionForApi(
 			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, reacterHost);
 
 			if (emoji) {
-				const roles =
-					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getApiUserRoles(deps, user);
+				const roles = emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getUserRoles(deps, user);
 				const allowed =
 					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ||
 					roles.some((r) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id));
@@ -247,13 +246,11 @@ export async function createNoteReactionForApi(
 
 	if (user.host == null && !note.localOnly) {
 		(async () => {
-			const content = renderOnce(async () =>
-				addActivityContext(deps.config, await renderLikeForApi(deps, record, note)),
-			);
+			const content = renderOnce(async () => addActivityContext(deps.config, await renderLike(deps, record, note)));
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
-				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
+				const reactee = await resolveRemoteRecipient(deps, note.userId);
 				if (reactee) {
 					directRecipients.push(reactee);
 				}
@@ -269,7 +266,7 @@ export async function createNoteReactionForApi(
 				}
 			}
 
-			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers });
+			await deliverNoteActivity(deps, user, content, { directRecipients, deliverToFollowers });
 		})().catch(() => {});
 	}
 }
@@ -305,18 +302,18 @@ export async function deleteNoteReactionForApi(
 	if (user.host == null && !note.localOnly) {
 		(async () => {
 			const content = renderOnce(async () =>
-				addActivityContext(deps.config, renderUndoForApi(deps.config, await renderLikeForApi(deps, exist, note), user)),
+				addActivityContext(deps.config, renderUndoActivity(deps.config, await renderLike(deps, exist, note), user)),
 			);
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
-				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
+				const reactee = await resolveRemoteRecipient(deps, note.userId);
 				if (reactee) {
 					directRecipients.push(reactee);
 				}
 			}
 
-			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers: true });
+			await deliverNoteActivity(deps, user, content, { directRecipients, deliverToFollowers: true });
 		})().catch(() => {});
 	}
 }
@@ -417,7 +414,7 @@ export async function handleApiNotesReactions(
 		type,
 	});
 
-	const packedUsers = await packUserLiteManyForApi(
+	const packedUsers = await packUserLiteMany(
 		deps,
 		reactions.map((r) => r.userId),
 	);

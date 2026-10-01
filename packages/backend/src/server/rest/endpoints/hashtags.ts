@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { endpointMetas as hashtagsContracts } from '@/server/api/metas/hashtags.js';
+import { endpointMetas as hashtagsContracts } from '@/server/rest/contracts/hashtags.js';
 import { implementEndpoints } from '../endpoint-definition.js';
 import type { ApiShellDependencies } from '../shell.js';
 import {

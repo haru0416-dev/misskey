@@ -6,53 +6,59 @@
 /*
  * 公開 `/api.json` のエンドポイント順序はこの宣言順で決まる。カテゴリ別定義の並びに依存させない。
  */
-import { endpointMetas as adminMetas } from './metas/admin.js';
-import { endpointMetas as adminAbuseReportMetas } from './metas/admin-abuse-report.js';
-import { endpointMetas as adminEmojiMetas } from './metas/admin-emoji.js';
-import { endpointMetas as adminQueueMetas } from './metas/admin-queue.js';
-import { endpointMetas as adminRolesMetas } from './metas/admin-roles.js';
-import { endpointMetas as adminSystemWebhookMetas } from './metas/admin-system-webhook.js';
-import { endpointMetas as antennasMetas } from './metas/antennas.js';
-import { endpointMetas as channelsMetas } from './metas/channels.js';
-import { endpointMetas as chartsMetas } from './metas/charts.js';
-import { endpointMetas as chatMetas } from './metas/chat.js';
-import { endpointMetas as clipsMetas } from './metas/clips.js';
-import { endpointMetas as driveMetas } from './metas/drive.js';
-import { endpointMetas as federationMetas } from './metas/federation.js';
-import { endpointMetas as flashMetas } from './metas/flash.js';
-import { endpointMetas as followingMetas } from './metas/following.js';
-import { endpointMetas as galleryMetas } from './metas/gallery.js';
-import { endpointMetas as hashtagsMetas } from './metas/hashtags.js';
-import { endpointMetas as iMetas } from './metas/i.js';
-import { endpointMetas as miscMetas } from './metas/misc.js';
-import { endpointMetas as notesMetas } from './metas/notes.js';
-import { endpointMetas as pagesMetas } from './metas/pages.js';
-import { endpointMetas as usersMetas } from './metas/users.js';
+import { endpointMetas as adminMetas } from './contracts/admin.js';
+import { endpointMetas as adminAbuseReportMetas } from './contracts/admin-abuse-report.js';
+import { endpointMetas as adminEmojiMetas } from './contracts/admin-emoji.js';
+import { endpointMetas as adminQueueMetas } from './contracts/admin-queue.js';
+import { endpointMetas as adminRolesMetas } from './contracts/admin-roles.js';
+import { endpointMetas as adminSystemWebhookMetas } from './contracts/admin-system-webhook.js';
+import { endpointMetas as antennasMetas } from './contracts/antennas.js';
+import { endpointMetas as channelsMetas } from './contracts/channels.js';
+import { endpointMetas as chartsMetas } from './contracts/charts.js';
+import { endpointMetas as chatMetas } from './contracts/chat.js';
+import { endpointMetas as clipsMetas } from './contracts/clips.js';
+import { endpointMetas as driveMetas } from './contracts/drive.js';
+import { endpointMetas as federationMetas } from './contracts/federation.js';
+import { endpointMetas as flashMetas } from './contracts/flash.js';
+import { endpointMetas as followingMetas } from './contracts/following.js';
+import { endpointMetas as galleryMetas } from './contracts/gallery.js';
+import { endpointMetas as hashtagsMetas } from './contracts/hashtags.js';
+import { endpointMetas as iMetas } from './contracts/i.js';
+import { endpointMetas as miscMetas } from './contracts/misc.js';
+import { endpointMetas as notesMetas } from './contracts/notes.js';
+import { endpointMetas as pagesMetas } from './contracts/pages.js';
+import { endpointMetas as usersMetas } from './contracts/users.js';
 
-const endpointMetaGroups = [
-	adminMetas,
-	adminAbuseReportMetas,
-	adminEmojiMetas,
-	adminQueueMetas,
-	adminRolesMetas,
-	adminSystemWebhookMetas,
-	antennasMetas,
-	channelsMetas,
-	chartsMetas,
-	chatMetas,
-	clipsMetas,
-	driveMetas,
-	federationMetas,
-	flashMetas,
-	followingMetas,
-	galleryMetas,
-	hashtagsMetas,
-	iMetas,
-	miscMetas,
-	notesMetas,
-	pagesMetas,
-	usersMetas,
-] as const;
+/** 契約ファイル名 (`contracts/<名前>.ts`) ごとの定義。 */
+const endpointMetaGroups = {
+	admin: adminMetas,
+	'admin-abuse-report': adminAbuseReportMetas,
+	'admin-emoji': adminEmojiMetas,
+	'admin-queue': adminQueueMetas,
+	'admin-roles': adminRolesMetas,
+	'admin-system-webhook': adminSystemWebhookMetas,
+	antennas: antennasMetas,
+	channels: channelsMetas,
+	charts: chartsMetas,
+	chat: chatMetas,
+	clips: clipsMetas,
+	drive: driveMetas,
+	federation: federationMetas,
+	flash: flashMetas,
+	following: followingMetas,
+	gallery: galleryMetas,
+	hashtags: hashtagsMetas,
+	i: iMetas,
+	misc: miscMetas,
+	notes: notesMetas,
+	pages: pagesMetas,
+	users: usersMetas,
+} as const;
+
+/** エンドポイントを定義している契約ファイル名。公開仕様のソースへのリンクに使う。 */
+export function endpointContractFile(name: string): string | undefined {
+	return Object.entries(endpointMetaGroups).find(([, group]) => Object.hasOwn(group, name))?.[0];
+}
 
 export const endpointMetas = {
 	'admin/abuse-report/notification-recipient/create':
@@ -489,7 +495,7 @@ export const endpointMetas = {
 	'verify-email': miscMetas['verify-email'],
 };
 
-const groupedEndpointNames = endpointMetaGroups.flatMap((group) => Object.keys(group));
+const groupedEndpointNames = Object.values(endpointMetaGroups).flatMap((group) => Object.keys(group));
 const duplicateEndpointNames = groupedEndpointNames.filter(
 	(name, index) => groupedEndpointNames.indexOf(name) !== index,
 );

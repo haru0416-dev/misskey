@@ -18,20 +18,19 @@ import { ApiError } from '../error.js';
 import { genLocalUserUri } from '../user/following.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForApi,
-	deliverToRelaysForApi,
+	deliverNoteActivity,
+	deliverToRelays,
 	renderOnce,
-} from '../activitypub/notes-ap.js';
-import type { ApiRelayDeliverDependencies } from '../activitypub/notes-ap.js';
-import { getApiRolePolicies } from '../role/role-policy.js';
-import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+} from '../../../core/activitypub/notes-ap.js';
+import type { RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
+import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { MeDetailedApiResponse, UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAccountPinDependencies = ApiRolePolicyDependencies &
-	ApiRelayDeliverDependencies &
-	UserPackingDependencies;
+export type ApiAccountPinDependencies = RolePolicyDependencies & RelayDeliverDependencies & UserPackingDependencies;
 
 function iPinNoSuchNoteError(): ApiError {
 	return new ApiError({
@@ -105,9 +104,9 @@ async function deliverPinnedChangeForApi(
 		),
 	);
 
-	await deliverNoteActivityForApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivity(deps, user, content, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、ピン留め処理の完了を待たせない。
-	void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
+	void deliverToRelays(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
 export async function addPinnedForApi(deps: ApiAccountPinDependencies, user: MiUser, noteId: string): Promise<void> {
@@ -116,7 +115,7 @@ export async function addPinnedForApi(deps: ApiAccountPinDependencies, user: MiU
 		throw iPinNoSuchNoteError();
 	}
 
-	const policies = await getApiRolePolicies(deps, user);
+	const policies = await getRolePolicies(deps, user);
 	const result = await createUserNotePiningWithinLimitInDatabase(
 		deps.db,
 		{

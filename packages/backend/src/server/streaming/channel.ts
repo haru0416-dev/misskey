@@ -10,8 +10,8 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { filterNoteForStreamingHidingForApi, populateMyReactionForApi } from '@/server/rest/note/note.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { filterNoteForStreamingHiding, populateMyReaction } from '@/core/note/note-packing.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
@@ -104,11 +104,11 @@ export function requiresSigninForStream(ctx: StreamChannelContext, note: Packed<
 
 /** 非表示の処理を通し、リノート元への自分のリアクションを埋めてから送る。 */
 export async function sendNoteToStream(
-	deps: ApiNoteDependencies,
+	deps: NoteDependencies,
 	ctx: StreamChannelContext,
 	note: Packed<'Note'>,
 ): Promise<void> {
-	const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
+	const filtered = await filterNoteForStreamingHiding(deps, note, ctx.user?.id ?? null);
 	if (!filtered) return;
 	const renote = filtered.renote;
 	if (
@@ -118,7 +118,7 @@ export async function sendNoteToStream(
 		renote &&
 		Object.keys(renote.reactions).length > 0
 	) {
-		renote.myReaction = await populateMyReactionForApi(
+		renote.myReaction = await populateMyReaction(
 			deps,
 			{ id: renote.id, reactions: renote.reactions, reactionAndUserPairCache: renote.reactionAndUserPairCache ?? [] },
 			ctx.user.id,

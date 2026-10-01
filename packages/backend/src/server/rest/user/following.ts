@@ -61,14 +61,14 @@ import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listFollowingUsersByBirthdayDateFromDatabase,
 } from '@/core/user/UserProfileStore.js';
-import { isApiModerator } from '../role/role-policy.js';
+import { userIsModerator } from '../../../core/role/role-policy.js';
 import { fetchOrRegisterFederatedInstance } from '../activitypub/federation.js';
 import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
 import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
-import { queueRetentionOptions } from '@/queue/const.js';
+import { queueRetentionOptions } from '@/core/queue/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -81,20 +81,20 @@ import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import type { UserWebhookDeliverJobData } from '@/queue/types.js';
+import type { UserWebhookDeliverJobData } from '@/core/queue/types.js';
 import { ApiError, clientError } from '../error.js';
-import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
-import { scheduleUnreadNotification, xaddApiNotification } from '../notification/notification.js';
-import type { ApiNotificationDependencies } from '../notification/notification.js';
+import type { InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
+import { scheduleUnreadNotification, xaddNotification } from '../../../core/notification/notification.js';
+import type { NotificationDependencies } from '../../../core/notification/notification.js';
+import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import {
 	packMeDetailedForApi,
 	packUserDetailedNotMeForApi,
 	packUserDetailedNotMeManyForApi,
-	packUserLiteForApi,
-	packUserLiteManyForApi,
 	resolveAlsoKnownAsForApi,
 } from './user.js';
-import type { UserDetailedNotMeApiResponse, UserPackingDependencies } from './user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
+import type { UserDetailedNotMeApiResponse } from './user.js';
 import { parseApiParams } from '../validation.js';
 
 export type ApiFollowingDependencies = UserPackingDependencies & {
@@ -104,9 +104,9 @@ export type ApiFollowingDependencies = UserPackingDependencies & {
 	meta: MiMeta;
 	redis: Redis.Redis;
 	userWebhookDeliverQueue: UserWebhookDeliverQueue;
-	httpRequestService: ApiNotificationDependencies['httpRequestService'];
-	publishInternalEvent?: ApiInternalEventPublisher;
-	publishMainStream?: ApiMainStreamPublisher;
+	httpRequestService: NotificationDependencies['httpRequestService'];
+	publishInternalEvent?: InternalEventPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 const ACCEPT_FOLLOW_REQUEST_CONCURRENCY = 8;
@@ -366,13 +366,13 @@ async function createFollowingNotification(
 		notifierId: notifier.id,
 		...(type === 'followRequestAccepted' ? { message: options.message ?? null } : {}),
 	};
-	const redisId = await xaddApiNotification(deps, notifieeId, notification);
+	const redisId = await xaddNotification(deps, notifieeId, notification);
 	const packed = {
 		id: notification.id,
 		createdAt: notification.createdAt,
 		type: notification.type,
 		userId: notifier.id,
-		user: await packUserLiteForApi(deps, notifier),
+		user: await packUserLite(deps, notifier),
 		...(notification.type === 'followRequestAccepted' ? { message: notification.message ?? null } : {}),
 	};
 
@@ -385,7 +385,7 @@ export type FollowEventPublishDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	userWebhookDeliverQueue: UserWebhookDeliverQueue;
-	publishMainStream?: ApiMainStreamPublisher;
+	publishMainStream?: MainStreamPublisher;
 };
 
 async function enqueueUserWebhook(
@@ -444,7 +444,7 @@ async function publishFollowedToLocalFollowee(
 		return;
 	}
 
-	const packedFollower = await packUserLiteForApi(deps, follower);
+	const packedFollower = await packUserLite(deps, follower);
 	deps.publishMainStream?.(followee.id, 'followed', packedFollower);
 	await enqueueUserWebhook(deps, followee.id, 'followed', packedFollower);
 	const notification = createFollowingNotification(deps, followee.id, 'follow', follower);
@@ -507,7 +507,7 @@ export async function createFollowRequestWithSideEffects(
 	});
 
 	if (isLocalUser(followee)) {
-		const packedFollower = await packUserLiteForApi(deps, follower);
+		const packedFollower = await packUserLite(deps, follower);
 		deps.publishMainStream?.(followee.id, 'receiveFollowRequest', packedFollower);
 		deps.publishMainStream?.(
 			followee.id,
@@ -787,7 +787,7 @@ export async function handleApiFollowingCreate(
 
 		if (!autoAccept) {
 			await createFollowRequestWithSideEffects(deps, follower, followee, params.withReplies);
-			return await packUserLiteForApi(deps, followee);
+			return await packUserLite(deps, followee);
 		}
 	}
 
@@ -801,7 +801,7 @@ export async function handleApiFollowingCreate(
 		}),
 	);
 
-	return await packUserLiteForApi(deps, followee);
+	return await packUserLite(deps, followee);
 }
 
 export async function handleApiFollowingUpdateAll(
@@ -844,7 +844,7 @@ export async function handleApiFollowingDelete(
 		throw followingDeleteNotFollowingError();
 	}
 
-	return await packUserLiteForApi(deps, followee);
+	return await packUserLite(deps, followee);
 }
 
 export async function handleApiFollowingUpdate(
@@ -881,7 +881,7 @@ export async function handleApiFollowingUpdate(
 		});
 	}
 
-	return await packUserLiteForApi(deps, follower);
+	return await packUserLite(deps, follower);
 }
 
 export async function handleApiFollowingInvalidate(
@@ -906,7 +906,7 @@ export async function handleApiFollowingInvalidate(
 		throw followingInvalidateNotFollowingError();
 	}
 
-	return await packUserLiteForApi(deps, follower);
+	return await packUserLite(deps, follower);
 }
 
 /** フォローリクエストが存在しない場合は例外を投げる。 */
@@ -1051,7 +1051,7 @@ export async function handleApiFollowingRequestsCancel(
 		);
 	}
 
-	return await packUserLiteForApi(deps, followee);
+	return await packUserLite(deps, followee);
 }
 
 export async function handleApiFollowingRequestsReject(
@@ -1091,7 +1091,7 @@ async function packFollowRequestsForApi(
 	me: MiLocalUser,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const userIds = [...new Set([...requests.map((r) => r.followerId), ...requests.map((r) => r.followeeId)])];
-	const packedUsers = await packUserLiteManyForApi(deps, userIds);
+	const packedUsers = await packUserLiteMany(deps, userIds);
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
 	return requests.map((request) => ({
@@ -1313,7 +1313,7 @@ export async function handleApiUsersFollowers(
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
-	if (profile.followersVisibility !== 'public' && !(await isApiModerator(deps, me))) {
+	if (profile.followersVisibility !== 'public' && !(await userIsModerator(deps, me))) {
 		if (profile.followersVisibility === 'private') {
 			if (me == null || me.id !== user.id) {
 				throw usersFollowersForbiddenError();
@@ -1357,7 +1357,7 @@ export async function handleApiUsersFollowing(
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
-	if (profile.followingVisibility !== 'public' && !(await isApiModerator(deps, me))) {
+	if (profile.followingVisibility !== 'public' && !(await userIsModerator(deps, me))) {
 		if (profile.followingVisibility === 'private') {
 			if (me == null || me.id !== user.id) {
 				throw usersFollowingForbiddenError();
@@ -1454,7 +1454,7 @@ export async function handleApiUsersGetFollowingUsersByBirthday(
 
 	const users = new Map<string, Packed<'UserLite'>>(
 		(
-			await packUserLiteManyForApi(
+			await packUserLiteMany(
 				deps,
 				birthdayUsers.map((u) => u.userId),
 			)

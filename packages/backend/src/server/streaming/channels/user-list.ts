@@ -7,7 +7,7 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
 import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
@@ -16,7 +16,7 @@ type MembershipCacheEntry = {
 	withReplies: boolean | undefined;
 };
 
-export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,

@@ -5,12 +5,12 @@
 
 import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import { packNoteForApi } from '@/server/rest/note/note.js';
-import type { ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packNote } from '@/core/note/note-packing.js';
+import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependencies> = {
+export const honoStreamChannelAntenna: StreamChannelDefinition<NoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:account',
@@ -31,7 +31,7 @@ export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependenci
 
 		const handler = async (data: { type: string; body: JsonValue & { id?: string } }) => {
 			if (data.type === 'note' && typeof data.body.id === 'string') {
-				const note = await packNoteForApi(deps, data.body.id, user, { detail: true });
+				const note = await packNote(deps, data.body.id, user, { detail: true });
 
 				if (!isNoteVisibleForMeForStream(ctx, note)) {
 					return;

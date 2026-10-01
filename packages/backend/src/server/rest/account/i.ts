@@ -16,7 +16,7 @@ import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { userDeletedError } from '../error.js';
 import { packMeDetailedForApi } from '../user/user.js';
-import type { UserPackingDependencies } from '../user/user.js';
+import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
