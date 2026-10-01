@@ -16,7 +16,6 @@ import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { MiMeta } from '@/models/_.js';
-import type { achievementTypes } from 'misskey-js/consts.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
 import { packRole } from '../role/role-packing.js';
@@ -72,13 +71,6 @@ export type TestNotification = {
 	type: 'test';
 };
 
-export type AchievementEarnedNotification = {
-	id: string;
-	createdAt: string;
-	type: 'achievementEarned';
-	achievement: (typeof achievementTypes)[number];
-};
-
 type ScheduledNotePostedNotification = {
 	id: string;
 	createdAt: string;
@@ -113,7 +105,6 @@ type StoredNotification =
 	| RoleAssignedNotification
 	| AppNotification
 	| TestNotification
-	| AchievementEarnedNotification
 	| ScheduledNotePostedNotification
 	| ScheduledNotePostFailedNotification
 	| PollEndedNotification

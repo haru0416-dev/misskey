@@ -44,8 +44,6 @@ const MkEmojiPickerDialog = defineAsyncComponent(
 );
 const MkCropperDialog = defineAsyncComponent(() => import('@/features/image-editor/components/MkCropperDialog.vue'));
 
-export const openingWindowsCount = ref(0);
-
 export type ApiWithDialogCustomErrors = Record<string, { title?: string; text: string }>;
 
 /**

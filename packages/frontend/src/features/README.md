@@ -20,5 +20,5 @@ feature外から利用する型や処理は、安定した少数の入口へ寄�
 | Communication | `chat`, `notifications`, `announcements`, `sound` |
 | Emoji and images | `custom-emojis`, `emoji-picker`, `image-editor`, `drive` |
 | Administration | `abuse-reports`, `instances`, `charts`, `webhooks`, `server-setup`, `admin-tools` |
-| Extensions and project | `extensions`, `themes`, `achievements`, `support` |
+| Extensions and project | `extensions`, `themes`, `support` |
 | Application UI | `dynamic-form`, `ui-preview`, `cache-management` |

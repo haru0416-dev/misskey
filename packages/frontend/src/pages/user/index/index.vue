@@ -10,7 +10,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<XNotes v-else-if="tab === 'notes'" :user="user"/>
 		<XFiles v-else-if="tab === 'files'" :user="user"/>
 		<XActivity v-else-if="tab === 'activity'" :user="user"/>
-		<XAchievements v-else-if="tab === 'achievements'" :user="user"/>
 		<XReactions v-else-if="tab === 'reactions'" :user="user"/>
 		<XClips v-else-if="tab === 'clips'" :user="user"/>
 		<XLists v-else-if="tab === 'lists'" :user="user"/>
@@ -38,7 +37,6 @@ const XHome = defineAsyncComponent(() => import('../home.vue'));
 const XNotes = defineAsyncComponent(() => import('../notes.vue'));
 const XFiles = defineAsyncComponent(() => import('../files.vue'));
 const XActivity = defineAsyncComponent(() => import('../activity/index.vue'));
-const XAchievements = defineAsyncComponent(() => import('../achievements.vue'));
 const XReactions = defineAsyncComponent(() => import('../reactions.vue'));
 const XClips = defineAsyncComponent(() => import('../clips.vue'));
 const XLists = defineAsyncComponent(() => import('../lists.vue'));
@@ -119,15 +117,6 @@ const headerTabs = computed(() =>
 					title: i18n.ts.activity,
 					icon: 'ti ti-chart-line',
 				},
-				...(user.value.host == null
-					? [
-							{
-								key: 'achievements',
-								title: i18n.ts.achievements,
-								icon: 'ti ti-medal',
-							},
-						]
-					: []),
 				...(($i && ($i.id === user.value.id || $i.isAdmin || $i.isModerator)) || user.value.publicReactions
 					? [
 							{

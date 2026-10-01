@@ -203,7 +203,6 @@ export const iUpdateParamDef = z.object({
 			followRequestAccepted: notificationRecieveConfigZodSchema.optional(),
 			roleAssigned: notificationRecieveConfigZodSchema.optional(),
 			chatRoomInvitationReceived: notificationRecieveConfigZodSchema.optional(),
-			achievementEarned: notificationRecieveConfigZodSchema.optional(),
 			app: notificationRecieveConfigZodSchema.optional(),
 			test: notificationRecieveConfigZodSchema.optional(),
 		})

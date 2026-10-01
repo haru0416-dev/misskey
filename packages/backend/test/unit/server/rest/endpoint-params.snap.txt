@@ -789,8 +789,6 @@ i/2fa/update-key.name: minLength=1 maxLength=30
 i/apps.sort: enum=["+createdAt","-createdAt","+lastUsedAt","-lastUsedAt"]
 i/change-password: required=["currentPassword","newPassword"]
 i/change-password.newPassword: minLength=1
-i/claim-achievement: required=["name"]
-i/claim-achievement.name: enum=["notes1","notes10","notes100","notes500","notes1000","notes5000","notes10000","notes20000","notes30000","notes40000","notes50000","notes60000","notes70000","notes80000","notes90000","notes100000","login3","login7","login15","login30","login60","login100","login200","login300","login400","login500","login600","login700","login800","login900","login1000","passedSinceAccountCreated1","passedSinceAccountCreated2","passedSinceAccountCreated3","loggedInOnBirthday","loggedInOnNewYearsDay","noteClipped1","noteFavorited1","myNoteFavorited1","profileFilled","markedAsCat","following1","following10","following50","following100","following300","followers1","followers10","followers50","followers100","followers300","followers500","followers1000","collectAchievements30","viewAchievements3min","iLoveMisskey","foundTreasure","client30min","client60min","noteDeletedWithin1min","postedAtLateNight","postedAt0min0sec","selfQuote","htl20npm","viewInstanceChart","outputHelloWorldOnScratchpad","open3windows","driveFolderCircularReference","reactWithoutRead","clickedClickHere","justPlainLucky","setNameToSyuilo","brainDiver","smashTestNotificationButton","tutorialCompleted"]
 i/delete-account: required=["password"]
 i/favorites.limit: minimum=1 maximum=100
 i/favorites.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
@@ -823,15 +821,15 @@ i/notifications.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/notifications.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/notifications.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
 i/notifications.untilDate: minimum=-9007199254740991 maximum=9007199254740991
-i/notifications.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
-i/notifications.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/notifications.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","exportCompleted","login","createToken","app","test","pollVote","groupInvited","achievementEarned"]
+i/notifications.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","exportCompleted","login","createToken","app","test","pollVote","groupInvited","achievementEarned"]
 i/notifications-grouped.limit: minimum=1 maximum=100
 i/notifications-grouped.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/notifications-grouped.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/notifications-grouped.sinceDate: minimum=-9007199254740991 maximum=9007199254740991
 i/notifications-grouped.untilDate: minimum=-9007199254740991 maximum=9007199254740991
-i/notifications-grouped.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
-i/notifications-grouped.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","achievementEarned","exportCompleted","login","createToken","app","test","pollVote","groupInvited"]
+i/notifications-grouped.includeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","exportCompleted","login","createToken","app","test","pollVote","groupInvited","achievementEarned"]
+i/notifications-grouped.excludeTypes[]: enum=["note","follow","mention","reply","renote","quote","reaction","pollEnded","scheduledNotePosted","scheduledNotePostFailed","receiveFollowRequest","followRequestAccepted","roleAssigned","chatRoomInvitationReceived","exportCompleted","login","createToken","app","test","pollVote","groupInvited","achievementEarned"]
 i/page-likes.limit: minimum=1 maximum=100
 i/page-likes.sinceId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/page-likes.untilId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
@@ -963,11 +961,6 @@ i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf0>.type: enum
 i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>: required=["type","userListId"]
 i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>.type: const="list"
 i/update.notificationRecieveConfig.chatRoomInvitationReceived<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
-i/update.notificationRecieveConfig.achievementEarned<anyOf0>: required=["type"]
-i/update.notificationRecieveConfig.achievementEarned<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
-i/update.notificationRecieveConfig.achievementEarned<anyOf1>: required=["type","userListId"]
-i/update.notificationRecieveConfig.achievementEarned<anyOf1>.type: const="list"
-i/update.notificationRecieveConfig.achievementEarned<anyOf1>.userListId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 i/update.notificationRecieveConfig.app<anyOf0>: required=["type"]
 i/update.notificationRecieveConfig.app<anyOf0>.type: enum=["all","following","follower","mutualFollow","followingOrFollower","never"]
 i/update.notificationRecieveConfig.app<anyOf1>: required=["type","userListId"]
@@ -1278,8 +1271,6 @@ users.offset: minimum=0 maximum=9007199254740991
 users.sort: enum=["+follower","-follower","+createdAt","-createdAt","+updatedAt","-updatedAt"]
 users.state: enum=["all","alive"]
 users.origin: enum=["combined","local","remote"]
-users/achievements: required=["userId"]
-users/achievements.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 users/clips: required=["userId"]
 users/clips.userId: pattern="^[a-zA-Z0-9]+$" format="misskey:id"
 users/clips.limit: minimum=1 maximum=100

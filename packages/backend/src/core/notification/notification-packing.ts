@@ -190,7 +190,6 @@ export async function packNotification<T extends MiNotification | MiGroupedNotif
 		...(src.type === 'roleAssigned' ? { role } : {}),
 		...(src.type === 'chatRoomInvitationReceived' ? { invitation: chatRoomInvitation } : {}),
 		...(src.type === 'followRequestAccepted' ? { message: src.message } : {}),
-		...(src.type === 'achievementEarned' ? { achievement: src.achievement } : {}),
 		...(src.type === 'exportCompleted' ? { exportedEntity: src.exportedEntity, fileId: src.fileId } : {}),
 		...(src.type === 'app' ? { body: src.customBody, header: src.customHeader, icon: src.customIcon } : {}),
 	};

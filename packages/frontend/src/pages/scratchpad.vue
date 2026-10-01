@@ -72,7 +72,6 @@ import { definePage } from '@/page.js';
 import { registerAsUiLib } from '@/aiscript/ui.js';
 import MkAsUi from '@/aiscript/components/MkAsUi.vue';
 import { miLocalStorage } from '@/local-storage.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 
 const parser = new Parser();
 let aiscript: Interpreter;
@@ -127,9 +126,6 @@ async function run() {
 		{
 			in: aiScriptReadline,
 			out: (value) => {
-				if (value.type === 'str' && value.value.toLowerCase().replace(',', '').includes('hello world')) {
-					claimAchievement('outputHelloWorldOnScratchpad');
-				}
 				logs.value.push({
 					id: Math.random(),
 					text: value.type === 'str' ? value.value : utils.valToString(value),

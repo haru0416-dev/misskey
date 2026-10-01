@@ -39,7 +39,6 @@ export { moderationLogTypes };
  * followRequestAccepted - 自分の送ったフォローリクエストが承認された
  * roleAssigned - ロールが付与された
  * chatRoomInvitationReceived - チャットルームに招待された
- * achievementEarned - 実績を獲得
  * exportCompleted - エクスポートが完了
  * login - ログイン
  * createToken - トークン作成
@@ -61,7 +60,6 @@ export const notificationTypes = [
 	'followRequestAccepted',
 	'roleAssigned',
 	'chatRoomInvitationReceived',
-	'achievementEarned',
 	'exportCompleted',
 	'login',
 	'createToken',
@@ -69,7 +67,8 @@ export const notificationTypes = [
 	'test',
 ] as const;
 
-export const obsoleteNotificationTypes = ['pollVote', 'groupInvited'] as const;
+// 廃止した種別。古いクライアントが includeTypes/excludeTypes に送っても拒否しない。
+export const obsoleteNotificationTypes = ['pollVote', 'groupInvited', 'achievementEarned'] as const;
 
 export const noteVisibilities = ['public', 'home', 'followers', 'specified'] as const;
 

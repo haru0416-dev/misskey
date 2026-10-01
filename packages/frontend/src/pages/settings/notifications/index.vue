@@ -155,7 +155,6 @@ const configurableNotificationTypes = notificationTypes.filter(
 
 const onlyOnOrOffNotificationTypes = [
 	'app',
-	'achievementEarned',
 	'login',
 	'createToken',
 	'scheduledNotePosted',

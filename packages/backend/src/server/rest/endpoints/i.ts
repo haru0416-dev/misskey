@@ -37,7 +37,6 @@ import {
 	handleApiIImportMuting,
 	handleApiIImportUserLists,
 } from '../job/import-jobs.js';
-import { handleApiIClaimAchievement } from '../notification/notification.js';
 import { handleApiINotifications, handleApiINotificationsGrouped } from '../notification/notifications-list.js';
 import { handleApiIPageLikes, handleApiIPages } from '../page/pages.js';
 import {
@@ -88,9 +87,6 @@ export const iEndpoints = implementEndpoints<ApiShellDependencies>()(iContracts,
 	'i/apps': async ({ deps, input, me }) => await handleApiIApps(deps, me, input),
 	'i/change-password': async ({ deps, input, me }) => {
 		await handleApiIChangePassword(deps, me, input);
-	},
-	'i/claim-achievement': async ({ deps, input, me }) => {
-		await handleApiIClaimAchievement(deps, me, input);
 	},
 	'i/delete-account': async ({ deps, input, me }) => {
 		await handleApiIDeleteAccount(deps, me, input);

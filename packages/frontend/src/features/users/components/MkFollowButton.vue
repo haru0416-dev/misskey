@@ -41,7 +41,6 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
@@ -151,20 +150,6 @@ async function onClick() {
 				return;
 			}
 
-			claimAchievement('following1');
-
-			if ($i.followingCount >= 10) {
-				claimAchievement('following10');
-			}
-			if ($i.followingCount >= 50) {
-				claimAchievement('following50');
-			}
-			if ($i.followingCount >= 100) {
-				claimAchievement('following100');
-			}
-			if ($i.followingCount >= 300) {
-				claimAchievement('following300');
-			}
 		}
 	} catch (err) {
 		console.error(err);

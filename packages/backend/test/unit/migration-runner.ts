@@ -194,10 +194,22 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		const hash = createHash('sha256');
 		for (const file of manifest.files) hash.update(await readFile(join(sourceDirectory, 'baseline', file)));
 		const checkpoint = { hash: hash.digest('hex'), when: manifest.migrations.at(-1)!.when };
+		// baseline より後に追加した migration は、新規 DB でも baseline の後に通常どおり 1 本ずつ記録される。
+		const expectedHistory = [
+			checkpoint,
+			...(await Promise.all(
+				journal.entries
+					.filter((entry) => entry.when > checkpoint.when)
+					.map(async (entry) => ({
+						hash: sha256(await readFile(join(sourceDirectory, `${entry.tag}.sql`))),
+						when: entry.when,
+					})),
+			)),
+		];
 
 		expect(await listPendingMigrations(config)).toEqual(pendingEntries(journal.entries));
 		expect(await runMigrations(config)).toEqual(pendingEntries(journal.entries));
-		expect(await history()).toEqual([checkpoint]);
+		expect(await history()).toEqual(expectedHistory);
 		expect(await queryRows(`SELECT "key", "version" FROM "cache_version"`)).toEqual([{ key: 'roles', version: 0 }]);
 		expect(await queryRows(`SELECT get_birthday_date('2000-12-31') AS birthday`)).toEqual([{ birthday: 1231 }]);
 		const chart = await queryRows(
@@ -215,7 +227,7 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		expect(await queryRows(`SELECT "id", "___local_total" FROM "__chart__notes" WHERE "date" = 123`)).toEqual([
 			{ id: 1, ___local_total: 0 },
 		]);
-		expect(await history()).toEqual([checkpoint]);
+		expect(await history()).toEqual(expectedHistory);
 	});
 
 	test('default baseline accepts pg_trgm preinstalled by another role in a non-public schema', async () => {

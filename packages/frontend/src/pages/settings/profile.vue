@@ -179,7 +179,6 @@ import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
 import { langmap } from 'misskey-js/langmap.js';
 import { definePage } from '@/page.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { store } from '@/store.js';
 import MkInfo from '@/components/display/MkInfo.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
@@ -263,13 +262,6 @@ function save() {
 			},
 		},
 	);
-	claimAchievement('profileFilled');
-	if (profile.name === 'syuilo' || profile.name === 'しゅいろ') {
-		claimAchievement('setNameToSyuilo');
-	}
-	if (profile.isCat) {
-		claimAchievement('markedAsCat');
-	}
 }
 
 // アイコンとバナーの変更メニュー。removeText が null のときは、設定済みの画像が無いので削除を出さない。
@@ -337,7 +329,6 @@ function changeAvatar(ev: PointerEvent) {
 		});
 		$i.avatarId = i.avatarId;
 		$i.avatarUrl = i.avatarUrl;
-		claimAchievement('profileFilled');
 	}
 
 	popupProfileImageMenu(ev, {

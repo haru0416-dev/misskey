@@ -24,6 +24,8 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { NotificationsListDependencies } from '@/core/notification/notification-packing.js';
 import { filterValidNotifiers, packNotification } from '@/core/notification/notification-packing.js';
 
+const currentNotificationTypes: ReadonlySet<string> = new Set(notificationTypes);
+
 async function getApiNotifications(
 	deps: NotificationsListDependencies,
 	userId: MiUser['id'],
@@ -84,7 +86,10 @@ async function getApiNotifications(
 
 		notifications = notificationsRes.flatMap(([, fields]) => {
 			const data = fields[1];
-			return data == null ? [] : [JSON.parse(data) as MiNotification];
+			if (data == null) return [];
+			const notification = JSON.parse(data) as MiNotification;
+			// 廃止した種別の通知は保存期間が過ぎるまで Redis に残るので、読み出し時に除く。
+			return currentNotificationTypes.has(notification.type) ? [notification] : [];
 		});
 
 		if (includeTypeSet != null) {

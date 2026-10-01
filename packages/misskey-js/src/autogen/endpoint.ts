@@ -412,7 +412,6 @@ import type {
     IAppsRequest,
     IAppsResponse,
     IChangePasswordRequest,
-    IClaimAchievementRequest,
     IDeleteAccountRequest,
     IExportFollowingRequest,
     IFavoritesRequest,
@@ -588,8 +587,6 @@ import type {
     UsernameAvailableResponse,
     UsersRequest,
     UsersResponse,
-    UsersAchievementsRequest,
-    UsersAchievementsResponse,
     UsersClipsRequest,
     UsersClipsResponse,
     UsersFeaturedNotesRequest,
@@ -4205,19 +4202,6 @@ export type Endpoints = {
             | 'TWO_FACTOR_AUTHENTICATION_FAILED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
-    'i/claim-achievement': {
-        req: IClaimAchievementRequest;
-        res: EmptyResponse;
-        err:
-            | 'AUTHENTICATION_FAILED'
-            | 'CREDENTIAL_REQUIRED'
-            | 'INTERNAL_ERROR'
-            | 'INVALID_PARAM'
-            | 'PAYLOAD_TOO_LARGE'
-            | 'PERMISSION_DENIED'
-            | 'YOUR_ACCOUNT_MOVED'
-            | 'YOUR_ACCOUNT_SUSPENDED';
-    };
     'i/delete-account': {
         req: IDeleteAccountRequest;
         res: EmptyResponse;
@@ -5894,11 +5878,6 @@ export type Endpoints = {
             | 'PAYLOAD_TOO_LARGE'
             | 'YOUR_ACCOUNT_SUSPENDED';
         reqOptional: true;
-    };
-    'users/achievements': {
-        req: UsersAchievementsRequest;
-        res: UsersAchievementsResponse;
-        err: 'INTERNAL_ERROR' | 'INVALID_PARAM' | 'PAYLOAD_TOO_LARGE';
     };
     'users/clips': {
         req: UsersClipsRequest;

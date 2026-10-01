@@ -5,21 +5,14 @@
 
 import type { ApiParams } from '../validation.js';
 import { z } from 'zod';
-import { appendUserAchievementInDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
-import { achievementTypes } from 'misskey-js/consts.js';
 import { pushSwNotification } from '../../../core/notification/push-notification.js';
 import { parseApiParams } from '../validation.js';
-import type {
-	AchievementEarnedNotification,
-	NotificationDependencies,
-	AppNotification,
-	TestNotification,
-} from '@/core/notification/notification.js';
+import type { NotificationDependencies, AppNotification, TestNotification } from '@/core/notification/notification.js';
 import { publishNotification, receivesNotification, toXListId } from '@/core/notification/notification.js';
 
 type PackedAppNotification = {
@@ -40,10 +33,6 @@ export const notificationsCreateParamDef = z.object({
 export const notificationsDeleteParamDef = z.object({
 	notificationId: misskeyId(),
 	grouped: z.boolean().optional().default(false),
-});
-
-export const claimAchievementParamDef = z.object({
-	name: z.enum(achievementTypes),
 });
 
 export async function resolveNotificationStreamId(
@@ -131,52 +120,6 @@ function createTestNotification(deps: NotificationDependencies, userId: MiUser['
 			await publishNotification(deps, userId, notification, undefined, { delayUnread: false });
 		})(),
 	);
-}
-
-function createAchievementEarnedNotification(
-	deps: NotificationDependencies,
-	userId: MiUser['id'],
-	achievement: (typeof achievementTypes)[number],
-): void {
-	trackPromise(
-		(async () => {
-			if (!(await receivesNotification(deps, userId, 'achievementEarned'))) {
-				return;
-			}
-
-			const notification = {
-				id: genId(),
-				createdAt: new Date().toISOString(),
-				type: 'achievementEarned',
-				achievement,
-			} satisfies AchievementEarnedNotification;
-			await publishNotification(deps, userId, notification);
-		})(),
-	);
-}
-
-export async function grantAchievementForApi(
-	deps: NotificationDependencies,
-	userId: MiUser['id'],
-	name: (typeof achievementTypes)[number],
-): Promise<void> {
-	if (!(achievementTypes as readonly string[]).includes(name)) {
-		return;
-	}
-
-	if (!(await appendUserAchievementInDatabase(deps.db, userId, { name, unlockedAt: Date.now() }))) {
-		return;
-	}
-
-	createAchievementEarnedNotification(deps, userId, name);
-}
-
-export async function handleApiIClaimAchievement(
-	deps: NotificationDependencies,
-	me: MiUser,
-	params: ApiParams<typeof claimAchievementParamDef>,
-): Promise<void> {
-	await grantAchievementForApi(deps, me.id, params.name);
 }
 
 async function flushAllApiNotifications(deps: NotificationDependencies, userId: MiUser['id']): Promise<void> {

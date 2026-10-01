@@ -750,7 +750,6 @@ export const packedMeDetailedOnlySchema = {
 				followRequestAccepted: { optional: true, ...notificationRecieveConfig },
 				roleAssigned: { optional: true, ...notificationRecieveConfig },
 				chatRoomInvitationReceived: { optional: true, ...notificationRecieveConfig },
-				achievementEarned: { optional: true, ...notificationRecieveConfig },
 				app: { optional: true, ...notificationRecieveConfig },
 				test: { optional: true, ...notificationRecieveConfig },
 				login: { optional: true, ...notificationRecieveConfig },
@@ -766,14 +765,6 @@ export const packedMeDetailedOnlySchema = {
 				type: 'string',
 				nullable: false,
 				optional: false,
-			},
-		},
-		achievements: {
-			type: 'array',
-			nullable: false,
-			optional: false,
-			items: {
-				ref: 'Achievement',
 			},
 		},
 		loggedInDays: {

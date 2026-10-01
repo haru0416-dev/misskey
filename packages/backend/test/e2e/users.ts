@@ -144,7 +144,6 @@ describe('ユーザー', () => {
 			mutedInstances: user.mutedInstances,
 			notificationRecieveConfig: user.notificationRecieveConfig,
 			emailNotificationTypes: user.emailNotificationTypes,
-			achievements: user.achievements,
 			loggedInDays: user.loggedInDays,
 			policies: user.policies,
 			twoFactorEnabled: user.twoFactorEnabled,
@@ -426,7 +425,6 @@ describe('ユーザー', () => {
 		expect(response.mutedInstances).toStrictEqual([]);
 		expect(response.notificationRecieveConfig).toStrictEqual({});
 		expect(response.emailNotificationTypes).toStrictEqual(['follow', 'receiveFollowRequest']);
-		expect(response.achievements).toStrictEqual([]);
 		expect(response.loggedInDays).toBe(0);
 		expect(response.policies).toStrictEqual(DEFAULT_POLICIES);
 		expect(response.twoFactorEnabled).toBe(false);

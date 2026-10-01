@@ -11,7 +11,6 @@ import {
 	hasLocalDraftContent,
 	mayBeAnnoyingPublicPost,
 	parseLocalDraft,
-	postAchievements,
 	replyMentionText,
 	serializeLocalDraft,
 	visibilityForReply,
@@ -142,17 +141,5 @@ describe('返信', () => {
 		expect(visibilityForReply('home', 'followers')).toBe('followers');
 		expect(visibilityForReply('followers', 'specified')).toBe('specified');
 		expect(visibilityForReply('specified', 'public')).toBe('specified');
-	});
-});
-
-describe('実績', () => {
-	test('内容と時刻から得られる実績を返す', () => {
-		expect(
-			postAchievements('I love Toneriko https://youtu.be/Efrlqw8ytg4', {
-				quotesOwnNote: true,
-				postedAt: new Date(2026, 0, 1, 2, 0, 0),
-			}),
-		).toEqual(['iLoveMisskey', 'brainDiver', 'selfQuote', 'postedAtLateNight', 'postedAt0min0sec']);
-		expect(postAchievements('', { quotesOwnNote: true, postedAt: new Date(2026, 0, 1, 12, 1, 0) })).toEqual([]);
 	});
 });

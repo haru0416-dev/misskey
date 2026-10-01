@@ -1356,20 +1356,6 @@ describe('Endpoints', () => {
 			]);
 		});
 
-		test('users/achievements returns profile achievements without credentials', async () => {
-			const achievements = [
-				{
-					name: 'notes1' as const,
-					unlockedAt: Date.now(),
-				},
-			];
-			await updateUserProfileInDatabase(db, alice.id, { achievements });
-
-			const res = await api('users/achievements', { userId: alice.id });
-			expect(res.status).toBe(200);
-			expect(res.body).toStrictEqual(achievements);
-		});
-
 		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
 			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
 			const webhook = await createWebhookInDatabase(db, {
@@ -1548,49 +1534,28 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('i/claim-achievement', () => {
-		test('達成を記録しachievementEarned通知を作成、二重取得しない', async () => {
-			const config = fixtureConfig;
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hca${suffix}` });
-
-			const res = await api('i/claim-achievement', { name: 'notes1' }, user);
-			expect(res.status).toBe(204);
-
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.ok(profile.achievements.some((a) => a.name === 'notes1'));
-
-			const redis = createRedisClient(config);
+	describe('廃止した実績通知', () => {
+		test('Redis に残った実績通知は返さず、古いクライアントの excludeTypes も拒否しない', async () => {
+			const user = await signup({ username: `hobs${Date.now().toString(36).slice(-8)}` });
+			const redis = createRedisClient(fixtureConfig);
 			try {
-				await vi.waitFor(async () => {
-					const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
-					const notifications = entries.map(([, values]) => {
-						const dataIndex = values.findIndex((value) => value === 'data');
-						return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
-					});
-					assert.ok(notifications.some((n) => n.type === 'achievementEarned' && n.achievement === 'notes1'));
-				}, POLL);
+				for (const notification of [
+					{ id: genId(), createdAt: new Date().toISOString(), type: 'achievementEarned', achievement: 'notes1' },
+					{ id: genId(), createdAt: new Date().toISOString(), type: 'test' },
+				]) {
+					await redis.xadd(`notificationTimeline:${user.id}`, '*', 'data', JSON.stringify(notification));
+				}
 			} finally {
 				await closeRedisConnection(redis);
 			}
 
-			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
-			expect(again.status).toBe(204);
-			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profileAfter.achievements.filter((a) => a.name === 'notes1')).toHaveLength(1);
-		});
+			const all = await api('i/notifications', { markAsRead: false }, user);
+			expect(all.status).toBe(200);
+			expect(all.body.map((n) => n.type)).toEqual(['test']);
 
-		test('同時に付与しても、別の実績を消さず同じ実績を二重に入れない', async () => {
-			const user = await signup({ username: `hcap${Date.now().toString(36).slice(-8)}` });
-			const names = ['notes1', 'notes10', 'notes100', 'login3', 'login7'] as const;
-			const results = await Promise.all([
-				...names.map((name) => api('i/claim-achievement', { name }, user)),
-				...Array.from({ length: 5 }, () => api('i/claim-achievement', { name: 'following1' }, user)),
-			]);
-			expect(results.every((res) => res.status === 204)).toBe(true);
-
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			expect(profile.achievements.map((a) => a.name).sort()).toEqual([...names, 'following1'].sort());
+			const excluded = await api('i/notifications', { markAsRead: false, excludeTypes: ['achievementEarned'] }, user);
+			expect(excluded.status).toBe(200);
+			expect(excluded.body.map((n) => n.type)).toEqual(['test']);
 		});
 	});
 

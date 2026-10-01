@@ -928,7 +928,6 @@ import { prefer } from '@/preferences.js';
 import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
 import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { globalEvents } from '@/events.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
 import { genId } from '@/utility/id.js';
@@ -1171,9 +1170,6 @@ watch(
 	},
 );
 
-let smashCount = 0;
-let smashTimer: number | null = null;
-
 function testNotification(): void {
 	const notification: Misskey.entities.Notification = {
 		id: genId(),
@@ -1182,19 +1178,6 @@ function testNotification(): void {
 	};
 
 	globalEvents.emit('clientNotification', notification);
-
-	// 300 ms の無操作で連打回数をリセットし、10 回ごとに実績を申請する。
-	smashCount++;
-	if (smashCount >= 10) {
-		claimAchievement('smashTestNotificationButton');
-		smashCount = 0;
-	}
-	if (smashTimer) {
-		window.clearTimeout(smashTimer);
-	}
-	smashTimer = window.setTimeout(() => {
-		smashCount = 0;
-	}, 300);
 }
 
 const headerActions = computed(() => []);

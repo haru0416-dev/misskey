@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="[$style.root, { [$style.contentVisibilityAuto]: contentVisibilityAuto }]">
 	<div :class="$style.head">
 		<MkAvatar v-if="['pollEnded', 'note'].includes(notification.type) && 'note' in notification" :class="$style.icon" :user="notification.note.user" link preview/>
-		<MkAvatar v-else-if="['roleAssigned', 'achievementEarned', 'exportCompleted', 'login', 'createToken', 'scheduledNotePosted', 'scheduledNotePostFailed'].includes(notification.type)" :class="$style.icon" :user="$i" link preview/>
+		<MkAvatar v-else-if="['roleAssigned', 'exportCompleted', 'login', 'createToken', 'scheduledNotePosted', 'scheduledNotePostFailed'].includes(notification.type)" :class="$style.icon" :user="$i" link preview/>
 		<div v-else-if="notification.type === 'reaction:grouped' && notification.note.reactionAcceptance === 'likeOnly'" :class="[$style.icon, $style.icon_reactionGroupHeart]"><i class="ti ti-heart" aria-hidden="true"></i></div>
 		<div v-else-if="notification.type === 'reaction:grouped'" :class="[$style.icon, $style.icon_reactionGroup]"><i class="ti ti-plus" aria-hidden="true"></i></div>
 		<div v-else-if="notification.type === 'renote:grouped'" :class="[$style.icon, $style.icon_renoteGroup]"><i class="ti ti-repeat" aria-hidden="true"></i></div>
@@ -25,7 +25,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 				[$style.t_pollEnded]: notification.type === 'pollEnded',
 				[$style.t_scheduledNotePosted]: notification.type === 'scheduledNotePosted',
 				[$style.t_scheduledNotePostFailed]: notification.type === 'scheduledNotePostFailed',
-				[$style.t_achievementEarned]: notification.type === 'achievementEarned',
 				[$style.t_exportCompleted]: notification.type === 'exportCompleted',
 				[$style.t_login]: notification.type === 'login',
 				[$style.t_createToken]: notification.type === 'createToken',
@@ -43,7 +42,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i v-else-if="notification.type === 'pollEnded'" class="ti ti-chart-arrows" aria-hidden="true"></i>
 			<i v-else-if="notification.type === 'scheduledNotePosted'" class="ti ti-send" aria-hidden="true"></i>
 			<i v-else-if="notification.type === 'scheduledNotePostFailed'" class="ti ti-alert-triangle" aria-hidden="true"></i>
-			<i v-else-if="notification.type === 'achievementEarned'" class="ti ti-medal" aria-hidden="true"></i>
 			<i v-else-if="notification.type === 'exportCompleted'" class="ti ti-archive" aria-hidden="true"></i>
 			<i v-else-if="notification.type === 'login'" class="ti ti-login-2" aria-hidden="true"></i>
 			<i v-else-if="notification.type === 'createToken'" class="ti ti-key" aria-hidden="true"></i>
@@ -69,7 +67,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<span v-else-if="notification.type === 'note'">{{ i18n.ts._notification.newNote }}: <MkUserName :user="notification.note.user"/></span>
 			<span v-else-if="notification.type === 'roleAssigned'">{{ i18n.ts._notification.roleAssigned }}</span>
 			<span v-else-if="notification.type === 'chatRoomInvitationReceived'">{{ i18n.ts._notification.chatRoomInvitationReceived }}</span>
-			<span v-else-if="notification.type === 'achievementEarned'">{{ i18n.ts._notification.achievementEarned }}</span>
 			<span v-else-if="notification.type === 'login'">{{ i18n.ts._notification.login }}</span>
 			<span v-else-if="notification.type === 'createToken'">{{ i18n.ts._notification.createToken }}</span>
 			<span v-else-if="notification.type === 'test'">{{ i18n.ts._notification.testNotification }}</span>
@@ -111,9 +108,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-else-if="notification.type === 'chatRoomInvitationReceived'" :class="$style.text">
 				{{ notification.invitation.room.name }}
 			</div>
-			<MkA v-else-if="notification.type === 'achievementEarned'" :class="$style.text" to="/my/achievements">
-				{{ i18n.ts._achievements._types[`_${notification.achievement}`].title }}
-			</MkA>
 			<MkA v-else-if="notification.type === 'exportCompleted'" :class="$style.text" :to="`/my/drive/file/${notification.fileId}`">
 				{{ i18n.ts.showFile }}
 			</MkA>
@@ -250,7 +244,6 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	--eventReply: var(--MI_THEME-accent);
 	--eventReactionHeart: var(--MI_THEME-love);
 	--eventReaction: var(--MI_THEME-warn);
-	--eventAchievement: var(--MI_THEME-hashtag);
 	--eventLogin: var(--MI_THEME-accent);
 	--eventOther: color-mix(in oklab, var(--MI_THEME-fg) 45%, var(--MI_THEME-panel));
 }
@@ -362,11 +355,6 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 .t_createToken,
 .t_chatRoomInvitationReceived {
 	background: var(--eventOther);
-	pointer-events: none;
-}
-
-.t_achievementEarned {
-	background: var(--eventAchievement);
 	pointer-events: none;
 }
 

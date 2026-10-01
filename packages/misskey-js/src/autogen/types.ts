@@ -2435,15 +2435,6 @@ export type paths = {
          */
         post: operations['i___change-password'];
     };
-    '/i/claim-achievement': {
-        /**
-         * i/claim-achievement
-         * @description No description provided.
-         *
-         *     **Credential required**: *Yes* / **Permission**: *write:account*
-         */
-        post: operations['i___claim-achievement'];
-    };
     '/i/delete-account': {
         /**
          * i/delete-account
@@ -3594,15 +3585,6 @@ export type paths = {
          */
         post: operations['users'];
     };
-    '/users/achievements': {
-        /**
-         * users/achievements
-         * @description No description provided.
-         *
-         *     **Credential required**: *No*
-         */
-        post: operations['users___achievements'];
-    };
     '/users/clips': {
         /**
          * users/clips
@@ -4221,17 +4203,6 @@ export type components = {
                           /** Format: misskey:id */
                           userListId: string;
                       };
-                achievementEarned?:
-                    | {
-                          /** @enum {string} */
-                          type: 'all' | 'following' | 'follower' | 'mutualFollow' | 'followingOrFollower' | 'never';
-                      }
-                    | {
-                          /** @enum {string} */
-                          type: 'list';
-                          /** Format: misskey:id */
-                          userListId: string;
-                      };
                 app?:
                     | {
                           /** @enum {string} */
@@ -4289,7 +4260,6 @@ export type components = {
                       };
             };
             emailNotificationTypes: string[];
-            achievements: components['schemas']['Achievement'][];
             loggedInDays: number;
             policies: components['schemas']['RolePolicies'];
             /** @default false */
@@ -4329,87 +4299,6 @@ export type components = {
             userIds?: string[];
             isPublic: boolean;
         };
-        Achievement: {
-            name: components['schemas']['AchievementName'];
-            unlockedAt: number;
-        };
-        /** @enum {string} */
-        AchievementName:
-            | 'notes1'
-            | 'notes10'
-            | 'notes100'
-            | 'notes500'
-            | 'notes1000'
-            | 'notes5000'
-            | 'notes10000'
-            | 'notes20000'
-            | 'notes30000'
-            | 'notes40000'
-            | 'notes50000'
-            | 'notes60000'
-            | 'notes70000'
-            | 'notes80000'
-            | 'notes90000'
-            | 'notes100000'
-            | 'login3'
-            | 'login7'
-            | 'login15'
-            | 'login30'
-            | 'login60'
-            | 'login100'
-            | 'login200'
-            | 'login300'
-            | 'login400'
-            | 'login500'
-            | 'login600'
-            | 'login700'
-            | 'login800'
-            | 'login900'
-            | 'login1000'
-            | 'passedSinceAccountCreated1'
-            | 'passedSinceAccountCreated2'
-            | 'passedSinceAccountCreated3'
-            | 'loggedInOnBirthday'
-            | 'loggedInOnNewYearsDay'
-            | 'noteClipped1'
-            | 'noteFavorited1'
-            | 'myNoteFavorited1'
-            | 'profileFilled'
-            | 'markedAsCat'
-            | 'following1'
-            | 'following10'
-            | 'following50'
-            | 'following100'
-            | 'following300'
-            | 'followers1'
-            | 'followers10'
-            | 'followers50'
-            | 'followers100'
-            | 'followers300'
-            | 'followers500'
-            | 'followers1000'
-            | 'collectAchievements30'
-            | 'viewAchievements3min'
-            | 'iLoveMisskey'
-            | 'foundTreasure'
-            | 'client30min'
-            | 'client60min'
-            | 'noteDeletedWithin1min'
-            | 'postedAtLateNight'
-            | 'postedAt0min0sec'
-            | 'selfQuote'
-            | 'htl20npm'
-            | 'viewInstanceChart'
-            | 'outputHelloWorldOnScratchpad'
-            | 'open3windows'
-            | 'driveFolderCircularReference'
-            | 'reactWithoutRead'
-            | 'clickedClickHere'
-            | 'justPlainLucky'
-            | 'setNameToSyuilo'
-            | 'brainDiver'
-            | 'smashTestNotificationButton'
-            | 'tutorialCompleted';
         Ad: {
             /**
              * Format: id
@@ -4780,15 +4669,6 @@ export type components = {
                   /** @enum {string} */
                   type: 'chatRoomInvitationReceived';
                   invitation: components['schemas']['ChatRoomInvitation'];
-              }
-            | {
-                  /** Format: id */
-                  id: string;
-                  /** Format: date-time */
-                  createdAt: string;
-                  /** @enum {string} */
-                  type: 'achievementEarned';
-                  achievement: components['schemas']['AchievementName'];
               }
             | {
                   /** Format: id */
@@ -12524,23 +12404,6 @@ export interface operations {
                                       userListId: string;
                                   };
                             chatRoomInvitationReceived?:
-                                | {
-                                      /** @enum {string} */
-                                      type:
-                                          | 'all'
-                                          | 'following'
-                                          | 'follower'
-                                          | 'mutualFollow'
-                                          | 'followingOrFollower'
-                                          | 'never';
-                                  }
-                                | {
-                                      /** @enum {string} */
-                                      type: 'list';
-                                      /** Format: misskey:id */
-                                      userListId: string;
-                                  };
-                            achievementEarned?:
                                 | {
                                       /** @enum {string} */
                                       type:
@@ -25472,144 +25335,6 @@ export interface operations {
             };
         };
     };
-    'i___claim-achievement': {
-        requestBody: {
-            content: {
-                'application/json': {
-                    /** @enum {string} */
-                    name:
-                        | 'notes1'
-                        | 'notes10'
-                        | 'notes100'
-                        | 'notes500'
-                        | 'notes1000'
-                        | 'notes5000'
-                        | 'notes10000'
-                        | 'notes20000'
-                        | 'notes30000'
-                        | 'notes40000'
-                        | 'notes50000'
-                        | 'notes60000'
-                        | 'notes70000'
-                        | 'notes80000'
-                        | 'notes90000'
-                        | 'notes100000'
-                        | 'login3'
-                        | 'login7'
-                        | 'login15'
-                        | 'login30'
-                        | 'login60'
-                        | 'login100'
-                        | 'login200'
-                        | 'login300'
-                        | 'login400'
-                        | 'login500'
-                        | 'login600'
-                        | 'login700'
-                        | 'login800'
-                        | 'login900'
-                        | 'login1000'
-                        | 'passedSinceAccountCreated1'
-                        | 'passedSinceAccountCreated2'
-                        | 'passedSinceAccountCreated3'
-                        | 'loggedInOnBirthday'
-                        | 'loggedInOnNewYearsDay'
-                        | 'noteClipped1'
-                        | 'noteFavorited1'
-                        | 'myNoteFavorited1'
-                        | 'profileFilled'
-                        | 'markedAsCat'
-                        | 'following1'
-                        | 'following10'
-                        | 'following50'
-                        | 'following100'
-                        | 'following300'
-                        | 'followers1'
-                        | 'followers10'
-                        | 'followers50'
-                        | 'followers100'
-                        | 'followers300'
-                        | 'followers500'
-                        | 'followers1000'
-                        | 'collectAchievements30'
-                        | 'viewAchievements3min'
-                        | 'iLoveMisskey'
-                        | 'foundTreasure'
-                        | 'client30min'
-                        | 'client60min'
-                        | 'noteDeletedWithin1min'
-                        | 'postedAtLateNight'
-                        | 'postedAt0min0sec'
-                        | 'selfQuote'
-                        | 'htl20npm'
-                        | 'viewInstanceChart'
-                        | 'outputHelloWorldOnScratchpad'
-                        | 'open3windows'
-                        | 'driveFolderCircularReference'
-                        | 'reactWithoutRead'
-                        | 'clickedClickHere'
-                        | 'justPlainLucky'
-                        | 'setNameToSyuilo'
-                        | 'brainDiver'
-                        | 'smashTestNotificationButton'
-                        | 'tutorialCompleted';
-                };
-            };
-        };
-        responses: {
-            /** @description OK (without any results) */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-            };
-            /** @description Client error */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Payload too large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-        };
-    };
     'i___delete-account': {
         requestBody: {
             content: {
@@ -26911,7 +26636,6 @@ export interface operations {
                         | 'followRequestAccepted'
                         | 'roleAssigned'
                         | 'chatRoomInvitationReceived'
-                        | 'achievementEarned'
                         | 'exportCompleted'
                         | 'login'
                         | 'createToken'
@@ -26919,6 +26643,7 @@ export interface operations {
                         | 'test'
                         | 'pollVote'
                         | 'groupInvited'
+                        | 'achievementEarned'
                     )[];
                     excludeTypes?: (
                         | 'note'
@@ -26935,7 +26660,6 @@ export interface operations {
                         | 'followRequestAccepted'
                         | 'roleAssigned'
                         | 'chatRoomInvitationReceived'
-                        | 'achievementEarned'
                         | 'exportCompleted'
                         | 'login'
                         | 'createToken'
@@ -26943,6 +26667,7 @@ export interface operations {
                         | 'test'
                         | 'pollVote'
                         | 'groupInvited'
+                        | 'achievementEarned'
                     )[];
                 };
             };
@@ -27050,7 +26775,6 @@ export interface operations {
                         | 'followRequestAccepted'
                         | 'roleAssigned'
                         | 'chatRoomInvitationReceived'
-                        | 'achievementEarned'
                         | 'exportCompleted'
                         | 'login'
                         | 'createToken'
@@ -27058,6 +26782,7 @@ export interface operations {
                         | 'test'
                         | 'pollVote'
                         | 'groupInvited'
+                        | 'achievementEarned'
                     )[];
                     excludeTypes?: (
                         | 'note'
@@ -27074,7 +26799,6 @@ export interface operations {
                         | 'followRequestAccepted'
                         | 'roleAssigned'
                         | 'chatRoomInvitationReceived'
-                        | 'achievementEarned'
                         | 'exportCompleted'
                         | 'login'
                         | 'createToken'
@@ -27082,6 +26806,7 @@ export interface operations {
                         | 'test'
                         | 'pollVote'
                         | 'groupInvited'
+                        | 'achievementEarned'
                     )[];
                 };
             };
@@ -28752,23 +28477,6 @@ export interface operations {
                                   userListId: string;
                               };
                         chatRoomInvitationReceived?:
-                            | {
-                                  /** @enum {string} */
-                                  type:
-                                      | 'all'
-                                      | 'following'
-                                      | 'follower'
-                                      | 'mutualFollow'
-                                      | 'followingOrFollower'
-                                      | 'never';
-                              }
-                            | {
-                                  /** @constant */
-                                  type: 'list';
-                                  /** Format: misskey:id */
-                                  userListId: string;
-                              };
-                        achievementEarned?:
                             | {
                                   /** @enum {string} */
                                   type:
@@ -35157,54 +34865,6 @@ export interface operations {
             };
             /** @description Forbidden error */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Payload too large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-        };
-    };
-    users___achievements: {
-        requestBody: {
-            content: {
-                'application/json': {
-                    /** Format: misskey:id */
-                    userId: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK (with results) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Achievement'][];
-                };
-            };
-            /** @description Client error */
-            400: {
                 headers: {
                     [name: string]: unknown;
                 };

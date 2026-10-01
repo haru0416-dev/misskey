@@ -118,24 +118,6 @@ export async function listUserProfilesByUserIdsFromDatabase(
  * 実績をまだ持っていなければ末尾に足す。持っていた、またはプロフィールが無ければ false。
  * 読んで配列を作り直してから丸ごと書くと、同時に付与された別の実績が消え、同じ実績は二重に入る。
  */
-export async function appendUserAchievementInDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-	achievement: { name: string; unlockedAt: number },
-): Promise<boolean> {
-	const added = await db
-		.update(userProfile)
-		.set({ achievements: sql`${userProfile.achievements} || jsonb_build_array(${JSON.stringify(achievement)}::jsonb)` })
-		.where(
-			and(
-				eq(userProfile.userId, userId),
-				sql`NOT (${userProfile.achievements} @> jsonb_build_array(jsonb_build_object('name', ${achievement.name}::text)))`,
-			),
-		)
-		.returning({ userId: userProfile.userId });
-	return added.length > 0;
-}
-
 export async function updateUserProfileInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],

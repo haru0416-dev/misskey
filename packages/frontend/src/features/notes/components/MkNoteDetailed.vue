@@ -287,7 +287,6 @@ import { noteEvents, noteRenderKey, useNoteCapture } from '@/features/notes/useN
 import { useNoteEdits } from '@/features/notes/useNoteEdits.js';
 import { deepClone } from '@/utility/clone.js';
 import { useTooltip } from '@/composables/useTooltip.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
 import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
@@ -580,13 +579,6 @@ async function react() {
 						reaction,
 					});
 				});
-				if (
-					appearNote.text &&
-					appearNote.text.length > 100 &&
-					Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3
-				) {
-					claimAchievement('reactWithoutRead');
-				}
 			},
 			() => {
 				focus();

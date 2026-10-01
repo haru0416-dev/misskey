@@ -15,7 +15,6 @@ import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { instance } from '@/instance.js';
 import { globalEvents } from '@/events.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';
 import { genId } from '@/utility/id.js';
 
@@ -297,7 +296,6 @@ export function moveDriveFolderToFolder(
 export function alertDriveMoveError(err: { code?: string }) {
 	switch (err.code) {
 		case 'RECURSIVE_NESTING':
-			claimAchievement('driveFolderCircularReference');
 			os.alert({
 				type: 'error',
 				title: i18n.ts.unableToProcess,

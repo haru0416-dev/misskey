@@ -150,7 +150,7 @@ import { store } from '@/store.js';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { ensureSignin, notesCount, incNotesCount } from '@/i.js';
+import { ensureSignin } from '@/i.js';
 import { getAccounts, getAccountMenu } from '@/accounts.js';
 import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
@@ -162,7 +162,6 @@ import {
 	hasLocalDraftContent,
 	mayBeAnnoyingPublicPost,
 	parseLocalDraft,
-	postAchievements,
 	replyMentionText,
 	serializeLocalDraft,
 	visibilityForReply,
@@ -170,7 +169,6 @@ import {
 import type { PostFormFields } from '@/features/post-composer/post-form-logic.js';
 import { usePostFormFileInput } from '@/features/post-composer/use-post-form-file-input.js';
 import type { LocalDraftScope } from '@/features/post-composer/local-drafts.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
 import { mfmFunctionPicker } from '@/features/post-composer/mfm-function-picker.js';
 import { prefer } from '@/preferences.js';
@@ -1052,17 +1050,6 @@ async function post(ev?: PointerEvent) {
 				}
 				posting.value = false;
 				postAccount.value = null;
-
-				incNotesCount();
-				if (notesCount === 1) {
-					claimAchievement('notes1');
-				}
-				for (const achievement of postAchievements(postData.text ?? '', {
-					quotesOwnNote: renoteTargetNote.value != null && renoteTargetNote.value.userId === $i.id,
-					postedAt: new Date(),
-				})) {
-					claimAchievement(achievement);
-				}
 
 				if (serverDraftId.value != null) {
 					misskeyApi('notes/drafts/delete', { draftId: serverDraftId.value });

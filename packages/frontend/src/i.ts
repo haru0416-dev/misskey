@@ -24,11 +24,6 @@ export function ensureSignin() {
 	return $i;
 }
 
-export let notesCount = $i == null ? 0 : $i.notesCount;
-export function incNotesCount() {
-	notesCount++;
-}
-
 if (_DEV_) {
 	(window as any).$i = $i;
 }

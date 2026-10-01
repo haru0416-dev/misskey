@@ -109,12 +109,6 @@ export type MiNotification =
 			invitationId: string;
 	  }
 	| {
-			type: 'achievementEarned';
-			id: string;
-			createdAt: string;
-			achievement: string;
-	  }
-	| {
 			type: 'exportCompleted';
 			id: string;
 			createdAt: string;

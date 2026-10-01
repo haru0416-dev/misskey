@@ -148,7 +148,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, useTemplateRef, watch } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 import { host } from '@shared/utility/config.js';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import MkButton from '@/components/form/MkButton.vue';
@@ -159,7 +159,6 @@ import XSensitive from '@/features/onboarding/components/MkTutorialDialog.Sensit
 import MkAnimBg from '@/components/display/MkAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import * as os from '@/os.js';
 
 const props = defineProps<{
@@ -173,13 +172,6 @@ const emit = defineEmits<{
 const dialog = useTemplateRef('dialog');
 
 const page = ref(props.initialPage ?? 0);
-
-watch(page, (to) => {
-	// 最終ページの番号。チュートリアルのページ数を変えたらここも合わせる。
-	if (to === 6) {
-		claimAchievement('tutorialCompleted');
-	}
-});
 
 const isReactionTutorialPushed = ref<boolean>(false);
 const isSensitiveTutorialSucceeded = ref<boolean>(false);

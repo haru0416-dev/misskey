@@ -65,7 +65,6 @@ import { ApiError } from '../error.js';
 import { fetchNoteDiffs, filterVisibleNotes, packNote } from '../../../core/note/note-packing.js';
 import { packNoteManyForApi } from './note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
-import { grantAchievementForApi } from '../notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import { getRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
@@ -286,10 +285,6 @@ export async function handleApiNotesFavoritesCreate(
 			throw errors.alreadyFavorited();
 		}
 		throw error;
-	}
-
-	if (note.userHost == null && note.userId !== me.id) {
-		await grantAchievementForApi(deps, note.userId, 'myNoteFavorited1');
 	}
 }
 

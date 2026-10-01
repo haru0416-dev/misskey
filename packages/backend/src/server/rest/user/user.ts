@@ -649,7 +649,6 @@ export async function packMeDetailedForApi(
 		mutedInstances: profile.mutedInstances,
 		notificationRecieveConfig: profile.notificationRecieveConfig,
 		emailNotificationTypes: profile.emailNotificationTypes,
-		achievements: profile.achievements,
 		loggedInDays: profile.loggedInDates.length,
 		policies,
 		...(options.includeSecrets

@@ -52,10 +52,6 @@ export type ApiPackedUserListShow = ApiPackedUserList & {
 	isLiked?: boolean;
 };
 
-export const usersAchievementsParamDef = z.object({
-	userId: misskeyId(),
-});
-
 export const usersListsDeleteParamDef = z.object({
 	listId: misskeyId(),
 });
@@ -110,14 +106,6 @@ async function packUserListsManyForApi(
 			}),
 		),
 	);
-}
-
-export async function handleApiUsersAchievements(
-	deps: ApiUsersDependencies,
-	params: ApiParams<typeof usersAchievementsParamDef>,
-): Promise<MiUserProfile['achievements']> {
-	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
-	return profile.achievements;
 }
 
 export async function handleApiUsersListsList(

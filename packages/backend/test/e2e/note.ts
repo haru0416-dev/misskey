@@ -55,9 +55,6 @@ describe('Note', () => {
 		expect(favoritedState.status).toBe(200);
 		expect(favoritedState.body.isFavorited).toBe(true);
 
-		const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(database, bob.id);
-		expect(authorProfile.achievements.some((a) => a.name === 'myNoteFavorited1')).toBe(true);
-
 		const duplicate = await api('notes/favorites/create', { noteId: note.id }, alice);
 		expect(duplicate.status).toBe(400);
 		expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_FAVORITED');

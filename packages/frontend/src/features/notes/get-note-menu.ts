@@ -5,7 +5,6 @@
 
 import type * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
-import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import type { Ref, ShallowRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import { $i } from '@/i.js';
@@ -43,7 +42,6 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 		...clips.map((clip) => ({
 			text: getClipName(clip),
 			action: () => {
-				claimAchievement('noteClipped1');
 				os.promiseDialog(
 					misskeyApi('clips/add-note', { clipId: clip.id, noteId: appearNote.id }),
 					null,
@@ -131,7 +129,6 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 
 				clipsCache.delete();
 
-				claimAchievement('noteClipped1');
 				os.apiWithDialog('clips/add-note', { clipId: clip.id, noteId: appearNote.id });
 			},
 		},
@@ -221,10 +218,6 @@ export function getNoteMenu(props: {
 			}).then(() => {
 				globalEvents.emit('noteDeleted', appearNote.id);
 			});
-
-			if (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 60 && appearNote.userId === $i.id) {
-				claimAchievement('noteDeletedWithin1min');
-			}
 		});
 	}
 
@@ -252,15 +245,10 @@ export function getNoteMenu(props: {
 				...(appearNote.reply === undefined ? {} : { reply: appearNote.reply }),
 				...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 			});
-
-			if (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 60 && appearNote.userId === $i.id) {
-				claimAchievement('noteDeletedWithin1min');
-			}
 		});
 	}
 
 	function toggleFavorite(favorite: boolean): void {
-		claimAchievement('noteFavorited1');
 		os.apiWithDialog(favorite ? 'notes/favorites/create' : 'notes/favorites/delete', {
 			noteId: appearNote.id,
 		});

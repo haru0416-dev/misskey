@@ -221,17 +221,6 @@ async function composeNotification(
 						},
 					];
 
-				case 'achievementEarned':
-					return [
-						i18n.ts._notification.achievementEarned,
-						{
-							body: i18n.ts._achievements._types[`_${data.body.achievement}`].title,
-							badge: iconUrl('medal'),
-							data,
-							tag: `achievement:${data.body.achievement}`,
-						},
-					];
-
 				case 'login':
 					return [
 						i18n.ts._notification.login,

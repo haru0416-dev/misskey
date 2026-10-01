@@ -35,7 +35,6 @@ import {
 	updateMembershipParamDef,
 } from '@/server/rest/user/users-lists.js';
 import {
-	usersAchievementsParamDef,
 	usersListsDeleteParamDef,
 	usersListsListParamDef,
 	usersListsShowParamDef,
@@ -64,20 +63,6 @@ export const endpointMetas = {
 			},
 		},
 		paramDef: usersParamDef,
-	}),
-	'users/achievements': defineContract({
-		meta: {
-			allowQuery: true,
-			requireCredential: false,
-
-			res: {
-				type: 'array',
-				items: {
-					ref: 'Achievement',
-				},
-			},
-		},
-		paramDef: usersAchievementsParamDef,
 	}),
 	'users/clips': defineContract({
 		meta: {

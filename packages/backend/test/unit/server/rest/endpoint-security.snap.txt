@@ -266,7 +266,6 @@ i/2fa/unregister: credential secure
 i/2fa/update-key: credential secure
 i/apps: credential secure
 i/change-password: credential secure
-i/claim-achievement: credential prohibit-moved kind=write:account
 i/delete-account: credential secure
 i/export-antennas: credential secure
 i/export-blocking: credential secure
@@ -392,7 +391,6 @@ sw/update-registration: credential secure
 test: anonymous
 username/available: anonymous
 users: anonymous
-users/achievements: anonymous
 users/clips: anonymous
 users/featured-notes: anonymous
 users/flashs: anonymous

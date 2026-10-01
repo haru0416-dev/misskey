@@ -168,9 +168,6 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		}
 
 		const createdAt = new Date($i.createdAt);
-		void import('@/features/achievements/initialize-achievements.js').then(({ initializeAchievements }) =>
-			initializeAchievements(),
-		);
 
 		const latestDonationInfoShownAt = miLocalStorage.getItem('latestDonationInfoShownAt');
 		const neverShowDonationInfo = miLocalStorage.getItem('neverShowDonationInfo');

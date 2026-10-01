@@ -119,7 +119,6 @@ function createProfile(): MiUserProfile {
 		mutedInstances: [],
 		notificationRecieveConfig: {},
 		emailNotificationTypes: [],
-		achievements: [],
 		loggedInDates: [],
 		moderationNote: '',
 	} as unknown as MiUserProfile;

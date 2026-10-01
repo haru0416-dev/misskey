@@ -29,6 +29,7 @@
 - Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
+- Enhance: 実績機能を削除 (`i/claim-achievement`・`users/achievements` と実績の通知を廃止。保存済みの実績と実績通知の受信設定は migration で削除し、残っている実績通知は通知一覧に出さない。`includeTypes`/`excludeTypes` の `achievementEarned` は引き続き受け付ける)
 - Enhance: メンション抽出処理を共通化し、同一アカウントへの重複した検索や処理を抑制
 - Enhance: ストリーミングのRedisイベント振り分けを接続数に比例しないよう最適化
 - Enhance: 前段に置く nginx の設定例と手順を `deploy/` に追加

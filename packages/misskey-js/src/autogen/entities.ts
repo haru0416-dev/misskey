@@ -979,9 +979,6 @@ export type IAppsResponse = operations['i___apps']['responses']['200']['content'
 export type IChangePasswordRequest = NonNullable<
     operations['i___change-password']['requestBody']
 >['content']['application/json'];
-export type IClaimAchievementRequest = NonNullable<
-    operations['i___claim-achievement']['requestBody']
->['content']['application/json'];
 export type IDeleteAccountRequest = NonNullable<
     operations['i___delete-account']['requestBody']
 >['content']['application/json'];
@@ -1340,11 +1337,6 @@ export type UsernameAvailableResponse =
     operations['username___available']['responses']['200']['content']['application/json'];
 export type UsersRequest = NonNullable<operations['users']['requestBody']>['content']['application/json'];
 export type UsersResponse = operations['users']['responses']['200']['content']['application/json'];
-export type UsersAchievementsRequest = NonNullable<
-    operations['users___achievements']['requestBody']
->['content']['application/json'];
-export type UsersAchievementsResponse =
-    operations['users___achievements']['responses']['200']['content']['application/json'];
 export type UsersClipsRequest = NonNullable<operations['users___clips']['requestBody']>['content']['application/json'];
 export type UsersClipsResponse = operations['users___clips']['responses']['200']['content']['application/json'];
 export type UsersFeaturedNotesRequest = NonNullable<

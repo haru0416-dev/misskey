@@ -38,7 +38,6 @@ import {
 	handleApiUsersListsUpdateMembership,
 } from '../user/users-lists.js';
 import {
-	handleApiUsersAchievements,
 	handleApiUsersListsDelete,
 	handleApiUsersListsList,
 	handleApiUsersListsShow,
@@ -48,7 +47,6 @@ import { resolveUserForApi } from '../activitypub/ap-person.js';
 
 export const usersEndpoints = implementEndpoints<ApiShellDependencies>()(usersContracts, {
 	users: async ({ deps, input, me }) => await handleApiUsers(deps, me, input),
-	'users/achievements': async ({ deps, input }) => await handleApiUsersAchievements(deps, input),
 	'users/clips': async ({ deps, input, me }) => await handleApiUsersClips(deps, me, input),
 	'users/featured-notes': async ({ deps, input, me }) => await handleApiUsersFeaturedNotes(deps, me, input),
 	'users/flashs': async ({ deps, input }) => await handleApiUsersFlashs(deps, input),

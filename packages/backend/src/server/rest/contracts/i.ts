@@ -36,7 +36,6 @@ import {
 	importMutingParamDef,
 	importUserListsParamDef,
 } from '@/server/rest/job/import-jobs.js';
-import { claimAchievementParamDef } from '@/server/rest/notification/notification.js';
 import { notificationsParamDef } from '@/server/rest/notification/notifications-list.js';
 import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/page/pages.js';
 import {
@@ -389,14 +388,6 @@ export const endpointMetas = {
 			},
 		},
 		paramDef: changePasswordParamDef,
-	}),
-	'i/claim-achievement': defineContract({
-		meta: {
-			requireCredential: true,
-			prohibitMoved: true,
-			kind: 'write:account',
-		},
-		paramDef: claimAchievementParamDef,
 	}),
 	'i/delete-account': defineContract({
 		meta: {

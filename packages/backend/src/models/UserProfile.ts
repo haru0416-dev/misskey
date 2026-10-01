@@ -7,7 +7,6 @@ import type { followingVisibilities, followersVisibilities, notificationTypes } 
 import type { MiUser } from './User.js';
 import type { MiPage } from './Page.js';
 import type { MiUserList } from './UserList.js';
-import type { achievementTypes } from 'misskey-js/consts.js';
 
 export class MiUserProfile {
 	public userId: MiUser['id'];
@@ -119,11 +118,6 @@ export class MiUserProfile {
 	};
 
 	public loggedInDates: string[];
-
-	public achievements: {
-		name: (typeof achievementTypes)[number];
-		unlockedAt: number;
-	}[];
 
 	public userHost: string | null;
 

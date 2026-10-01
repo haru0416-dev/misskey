@@ -70,7 +70,6 @@ export const userProfile = pgTable(
 		mutedInstances: jsonb().$type<MiUserProfile['mutedInstances']>().default([]).notNull(),
 		notificationRecieveConfig: jsonb().$type<MiUserProfile['notificationRecieveConfig']>().default({}).notNull(),
 		loggedInDates: varchar({ length: 32 }).array().default(emptyVarcharArray).notNull(),
-		achievements: jsonb().$type<MiUserProfile['achievements']>().default([]).notNull(),
 		userHost: varchar({ length: 128 }),
 	},
 	(table) => [

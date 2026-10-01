@@ -204,12 +204,6 @@ export const navbarItemDef = reactive<{
 			);
 		},
 	},
-	achievements: {
-		title: i18n.ts.achievements,
-		icon: 'ti ti-medal',
-		show: computed(() => $i != null),
-		to: '/my/achievements',
-	},
 	ui: {
 		title: i18n.ts.switchUi,
 		icon: 'ti ti-devices',

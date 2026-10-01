@@ -15,7 +15,6 @@ export const followersVisibilities = consts.followersVisibilities;
 export const moderationLogTypes = consts.moderationLogTypes;
 export const rolePolicies = consts.rolePolicies;
 export const queueTypes = consts.queueTypes;
-export const achievementTypes = consts.achievementTypes;
 
 import * as api from './api.js';
 import * as entities from './entities.js';

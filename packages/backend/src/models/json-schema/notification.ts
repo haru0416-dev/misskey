@@ -121,11 +121,6 @@ export const packedNotificationSchema = {
 				nullable: false,
 			},
 		}),
-		notificationVariant('achievementEarned', {
-			achievement: {
-				ref: 'AchievementName',
-			},
-		}),
 		notificationVariant('exportCompleted', {
 			exportedEntity: {
 				type: 'string',

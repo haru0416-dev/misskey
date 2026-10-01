@@ -18,7 +18,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<MkEmoji v-else class="emoji unicode" :emoji="emoji.emoji" :normal="true" :noStyle="true"/>
 						</span>
 					</div>
-					<button v-if="thereIsTreasure" class="_button treasure" @click="getTreasure"><img src="/fluent-emoji/1f3c6.png" class="treasureImg" alt=""></button>
 				</div>
 				<div style="text-align: center;">
 					{{ i18n.ts._aboutMisskey.about }}<br><a href="https://misskey-hub.net/docs/about-misskey/" target="_blank" class="_link">{{ i18n.ts.learnMore }}</a>
@@ -148,7 +147,6 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import { definePage } from '@/page.js';
-import { claimAchievement, claimedAchievements } from '@/features/achievements/achievements.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 
@@ -471,8 +469,6 @@ const patrons = [
 	'忍猫',
 ];
 
-const thereIsTreasure = ref($i && !claimedAchievements.includes('foundTreasure'));
-
 let easterEggReady = false;
 const easterEggEmojis = ref<
 	{
@@ -532,11 +528,6 @@ function iLoveMisskey() {
 	});
 }
 
-function getTreasure() {
-	thereIsTreasure.value = false;
-	claimAchievement('foundTreasure');
-}
-
 onBeforeUnmount(() => {
 	if (easterEggEngine.value) {
 		easterEggEngine.value.stop();
@@ -558,20 +549,6 @@ definePage(() => ({
 	> .about {
 		position: relative;
 		border-radius: var(--MI-radius);
-
-		> .treasure {
-			position: absolute;
-			top: 60px;
-			left: 0;
-			right: 0;
-			margin: 0 auto;
-			width: min-content;
-
-			> .treasureImg {
-				width: 25px;
-				vertical-align: bottom;
-			}
-		}
 
 		> .container {
 			position: relative;
