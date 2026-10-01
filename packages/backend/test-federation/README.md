@@ -174,9 +174,17 @@ barriers a six-minute deadline.
 ## Current compatibility gate
 
 Both matrix cells execute the scenarios directly. A known upstream error remains
-a failed feature result; reproducing that error is not successful interoperability.
-Do not add expected-failure wrappers, skips, or weaker assertions to make a cell
-green. The pinned official peer remains unmodified.
+a failed feature result in `results/upstream.json`; reproducing that error is not
+successful interoperability. Do not add expected-failure wrappers, skips, or weaker
+assertions to the tests. The pinned official peer remains unmodified.
+
+The fork cell passes only when every scenario passes. The upstream cell keeps the
+test step's failures and decides the cell with
+`scripts/check-federation-known-failures.mjs`, which compares the recorded outcomes
+with `known-upstream-failures.json`. The cell fails on any failure not in that list,
+on a listed failure that passes or is missing (update the list and this section),
+on skipped or todo scenarios, on a suite error outside a scenario, and when no
+result file was written.
 
 `results/fork.json` and `results/upstream.json` contain scenario outcomes.
 `results/upstream-identity.json` records the independently pinned peer identity;

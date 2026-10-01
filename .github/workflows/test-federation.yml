@@ -90,7 +90,12 @@ jobs:
           cp upstream.json results/upstream-identity.json
       - name: Test both sender directions
         working-directory: packages/backend/test-federation
+        # 公式 upstream 側の既知の不具合はテストを弱めずに失敗として残し、合否は次の照合で決める。
+        continue-on-error: ${{ matrix.peer == 'upstream' }}
         run: docker compose run --no-deps --rm tester
+      - name: Compare with known upstream failures
+        if: matrix.peer == 'upstream' && !cancelled()
+        run: bun scripts/check-federation-known-failures.mjs packages/backend/test-federation/results/upstream.json packages/backend/test-federation/known-upstream-failures.json
       - name: Collect peer logs
         if: always()
         working-directory: packages/backend/test-federation

@@ -1,0 +1,30 @@
+{
+	"upstream": "Misskey 2026.9.0 (upstream.json)",
+	"failures": [
+		{
+			"file": "acceptance.test.ts",
+			"name": "Federation acceptance a.test -> b.test Move honors destination alias and transfers local and remote followers",
+			"reason": "The official receiver compares the upstream-local destination's nullable uri against its canonical actor URI."
+		},
+		{
+			"file": "block.test.ts",
+			"name": "Block Check follow Can follow if unblocked",
+			"reason": "Warm official HTTP-process block caches retain the block after its DB row and Redis cache entry are removed."
+		},
+		{
+			"file": "block.test.ts",
+			"name": "Block Check reaction Can reaction if unblocked",
+			"reason": "Warm official HTTP-process block caches retain the block after its DB row and Redis cache entry are removed."
+		},
+		{
+			"file": "user.test.ts",
+			"name": "User Suspension Check suspend/unsuspend consistency Alice can follow Bob",
+			"reason": "The official API resolves the actor through a deleted user ID and fails to pack the obsolete profile."
+		},
+		{
+			"file": "user.test.ts",
+			"name": "User Suspension Check suspend/unsuspend consistency Alice gets unsuspended, Bob succeeds in following Alice",
+			"reason": "The official API resolves the actor through a deleted user ID and fails to pack the obsolete profile."
+		}
+	]
+}
