@@ -133,7 +133,7 @@ import {
 } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import { host, url } from '@shared/utility/config.js';
+import { host } from '@shared/utility/config.js';
 import type { ShallowRef } from 'vue';
 import type { PostFormProps } from '@/types/post-form.js';
 import type { MenuItem } from '@/types/menu.js';
@@ -142,7 +142,6 @@ import type { UploaderItem } from '@/features/drive/useUploader.js';
 import XTextCounter from '@/features/post-composer/components/MkPostForm.TextCounter.vue';
 import MkNoteSimple from '@/features/notes/components/MkNoteSimple.vue';
 import { erase, unique } from '@/utility/array.js';
-import { formatTimeString } from '@/utility/format-time-string.js';
 import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -155,8 +154,21 @@ import { ensureSignin, notesCount, incNotesCount } from '@/i.js';
 import { getAccounts, getAccountMenu } from '@/accounts.js';
 import { deepClone } from '@/utility/clone.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
-import { isJsonObject, isStringArray, miLocalStorage } from '@/local-storage.js';
+import { isStringArray, miLocalStorage } from '@/local-storage.js';
 import { deleteLocalDraft, readLocalDraft, writeLocalDraft } from '@/features/post-composer/local-drafts.js';
+import {
+	buildNotesCreateRequest,
+	extractHashtags,
+	hasLocalDraftContent,
+	mayBeAnnoyingPublicPost,
+	parseLocalDraft,
+	postAchievements,
+	replyMentionText,
+	serializeLocalDraft,
+	visibilityForReply,
+} from '@/features/post-composer/post-form-logic.js';
+import type { PostFormFields } from '@/features/post-composer/post-form-logic.js';
+import { usePostFormFileInput } from '@/features/post-composer/use-post-form-file-input.js';
 import type { LocalDraftScope } from '@/features/post-composer/local-drafts.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
@@ -165,7 +177,6 @@ import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { DI } from '@/di.js';
 import { globalEvents } from '@/events.js';
-import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
 import { useUploader } from '@/features/drive/useUploader.js';
 import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
@@ -236,7 +247,6 @@ const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
 initialVisibleUsers.forEach((u) => pushVisibleUser(u));
 const reactionAcceptance = ref(store.reactionAcceptance);
 const scheduledAt = ref<number | null>(null);
-const draghover = ref(false);
 const quoteId = ref<string | null>(null);
 const hasNotSpecifiedMentions = ref(false);
 
@@ -279,6 +289,33 @@ uploader.events.on('itemUploaded', (ctx) => {
 	files.value.push(ctx.item.uploaded!);
 	uploader.removeItem(ctx.item);
 });
+
+const { draghover, onPaste, onDragover, onDragenter, onDragleave, onDrop } = usePostFormFileInput({
+	mock,
+	textareaEl,
+	uploader,
+	files,
+	quoteId,
+	hasRenoteTarget: () => renoteTargetNote.value != null,
+	insertTextAtCursor,
+});
+
+/** 端末下書き・サーバー下書き・投稿が読む、現在の入力内容。 */
+function currentFields(): PostFormFields {
+	return {
+		text: text.value,
+		useCw: useCw.value,
+		cw: cw.value,
+		visibility: visibility.value,
+		localOnly: localOnly.value,
+		files: files.value,
+		poll: poll.value,
+		visibleUserIds: visibleUsers.value.map((x) => x.id),
+		quoteId: quoteId.value,
+		reactionAcceptance: reactionAcceptance.value,
+		scheduledAt: scheduledAt.value,
+	};
+}
 
 // 送信先として選ぶ postAccount ではなく、フォームを開いたログイン主体が端末下書きを所有する。
 const localDraftScope = computed((): LocalDraftScope => ({
@@ -402,35 +439,8 @@ if (props.mention) {
 	text.value += ' ';
 }
 
-if (
-	replyTargetNote.value &&
-	(replyTargetNote.value.user.username !== $i.username ||
-		(replyTargetNote.value.user.host != null && replyTargetNote.value.user.host !== host))
-) {
-	text.value = `@${replyTargetNote.value.user.username}${replyTargetNote.value.user.host != null ? '@' + replyTargetNote.value.user.host : ''} `;
-}
-
-if (replyTargetNote.value && replyTargetNote.value.text != null) {
-	const ast = mfm.parse(replyTargetNote.value.text);
-	const otherHost = replyTargetNote.value.user.host;
-
-	for (const x of mfm.extractMentions(ast)) {
-		const mention = x.host
-			? `@${x.username}@${x.host}`
-			: otherHost == null || otherHost === host
-				? `@${x.username}`
-				: `@${x.username}@${otherHost}`;
-
-		if ($i.username === x.username && (x.host == null || x.host === host)) {
-			continue;
-		}
-
-		if (text.value.includes(`${mention} `)) {
-			continue;
-		}
-
-		text.value += `${mention} `;
-	}
+if (replyTargetNote.value) {
+	text.value = replyMentionText(replyTargetNote.value, $i, host, text.value);
 }
 
 if ($i.isSilenced && visibility.value === 'public') {
@@ -442,15 +452,8 @@ if (targetChannel.value) {
 	localOnly.value = true; // チャンネル投稿は現時点で連合しないため、ローカル限定にする。
 }
 
-// 返信先の公開範囲を上限とし、既に選ばれた狭い公開範囲は広げない。
 if (replyTargetNote.value && ['home', 'followers', 'specified'].includes(replyTargetNote.value.visibility)) {
-	if (replyTargetNote.value.visibility === 'home' && visibility.value === 'followers') {
-		visibility.value = 'followers';
-	} else if (['home', 'followers'].includes(replyTargetNote.value.visibility) && visibility.value === 'specified') {
-		visibility.value = 'specified';
-	} else {
-		visibility.value = replyTargetNote.value.visibility;
-	}
+	visibility.value = visibilityForReply(replyTargetNote.value.visibility, visibility.value);
 
 	if (visibility.value === 'specified') {
 		if (replyTargetNote.value.visibleUserIds) {
@@ -873,184 +876,13 @@ function onCompositionEnd(ev: CompositionEvent) {
 	justEndedComposition.value = true;
 }
 
-const pastedFileName = 'yyyy-MM-dd HH-mm-ss [{{number}}]';
-
-async function onPaste(ev: ClipboardEvent) {
-	if (mock) {
-		return;
-	}
-	if (ev.clipboardData == null) {
-		return;
-	}
-	if (textareaEl.value == null) {
-		return;
-	}
-
-	let pastedFiles: File[] = [];
-	for (const { item, i } of Array.from(ev.clipboardData.items, (data, x) => ({ item: data, i: x }))) {
-		if (item.kind === 'file') {
-			const file = item.getAsFile();
-			if (!file) {
-				continue;
-			}
-			const lio = file.name.lastIndexOf('.');
-			const ext = lio !== -1 ? file.name.slice(lio) : '';
-			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll('{{number}}', `${i + 1}`)}${ext}`;
-			const renamedFile = new File([file], formattedName, { type: file.type });
-			pastedFiles.push(renamedFile);
-		}
-	}
-	if (pastedFiles.length > 0) {
-		ev.preventDefault();
-		uploader.addFiles(pastedFiles);
-		return;
-	}
-
-	const paste = ev.clipboardData.getData('text');
-
-	if (!renoteTargetNote.value && !quoteId.value && paste.startsWith(url + '/notes/')) {
-		ev.preventDefault();
-
-		const { canceled } = await os.confirm({
-			type: 'info',
-			text: i18n.ts.quoteQuestion,
-		});
-
-		if (canceled) {
-			insertTextAtCursor(textareaEl.value, paste);
-			return;
-		}
-
-		quoteId.value = paste.substring(url.length).match(/^\/notes\/(.+?)\/?$/)?.[1] ?? null;
-	}
-
-	if (paste.length > 1000) {
-		ev.preventDefault();
-
-		const { canceled } = await os.confirm({
-			type: 'info',
-			text: i18n.ts.attachAsFileQuestion,
-		});
-
-		if (canceled) {
-			insertTextAtCursor(textareaEl.value, paste);
-			return;
-		}
-
-		const fileName = formatTimeString(new Date(), pastedFileName).replaceAll('{{number}}', '0');
-		const file = new File([paste], `${fileName}.txt`, { type: 'text/plain' });
-		uploader.addFiles([file]);
-	}
-}
-
-function onDragover(ev: DragEvent) {
-	if (ev.dataTransfer == null) {
-		return;
-	}
-	if (ev.dataTransfer.items[0] == null) {
-		return;
-	}
-
-	const isFile = ev.dataTransfer.items[0].kind === 'file';
-	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
-		ev.preventDefault();
-		draghover.value = true;
-		ev.dataTransfer.dropEffect = getDropEffect(ev.dataTransfer.effectAllowed);
-	}
-}
-
-function onDragenter() {
-	draghover.value = true;
-}
-
-function onDragleave() {
-	draghover.value = false;
-}
-
-function onDrop(ev: DragEvent): void {
-	draghover.value = false;
-
-	if (ev.dataTransfer && ev.dataTransfer.files.length > 0) {
-		ev.preventDefault();
-		uploader.addFiles(Array.from(ev.dataTransfer.files));
-		return;
-	}
-
-	//#region ドライブのファイル
-	{
-		const droppedData = getDragData(ev, 'driveFiles');
-		if (droppedData != null) {
-			files.value.push(...droppedData);
-			ev.preventDefault();
-		}
-	}
-	//#endregion
-}
-
-type StoredDraft = {
-	updatedAt: string;
-	data: {
-		text: string;
-		useCw: boolean;
-		cw: string | null;
-		visibility: 'public' | 'home' | 'followers' | 'specified';
-		localOnly: boolean;
-		files: Misskey.entities.DriveFile[];
-		poll: PollEditorModelValue | null;
-		visibleUserIds?: string[];
-		quoteId: string | null;
-		reactionAcceptance:
-			| 'likeOnly'
-			| 'likeOnlyForRemote'
-			| 'nonSensitiveOnly'
-			| 'nonSensitiveOnlyForLocalLikeOnlyForRemote'
-			| null;
-		scheduledAt: number | null;
-	};
-};
-
-type StoredDraftCandidate = Record<string, unknown> & {
-	data?: unknown;
-};
-
-type StoredDraftDataCandidate = Record<string, unknown> & {
-	text?: unknown;
-	useCw?: unknown;
-	cw?: unknown;
-	visibility?: unknown;
-	localOnly?: unknown;
-	files?: unknown;
-	poll?: unknown;
-	visibleUserIds?: unknown;
-	quoteId?: unknown;
-	reactionAcceptance?: unknown;
-	scheduledAt?: unknown;
-};
-
 function saveDraft() {
 	if (props.instant || mock) {
 		return;
 	}
 
-	const draft: StoredDraft = {
-		updatedAt: new Date().toISOString(),
-		data: {
-			text: text.value,
-			useCw: useCw.value,
-			cw: cw.value,
-			visibility: visibility.value,
-			localOnly: localOnly.value,
-			files: files.value,
-			poll: poll.value,
-			...(visibleUsers.value.length > 0 ? { visibleUserIds: visibleUsers.value.map((x) => x.id) } : {}),
-			quoteId: quoteId.value,
-			reactionAcceptance: reactionAcceptance.value,
-			scheduledAt: scheduledAt.value,
-		},
-	};
-	const hasContent =
-		text.value.trim() !== '' || (useCw.value && (cw.value ?? '') !== '') || files.value.length > 0 || poll.value != null;
-	writeLocalDraft(localDraftScope.value, draft, hasContent);
+	const fields = currentFields();
+	writeLocalDraft(localDraftScope.value, serializeLocalDraft(fields, new Date()), hasLocalDraftContent(fields));
 }
 
 function deleteDraft() {
@@ -1079,16 +911,6 @@ async function saveServerDraft(
 		scheduledAt: scheduledAt.value,
 		isActuallyScheduled: options.isActuallyScheduled ?? false,
 	});
-}
-
-function isAnnoying(text: string): boolean {
-	return (
-		text.includes('$[x2') ||
-		text.includes('$[x3') ||
-		text.includes('$[x4') ||
-		text.includes('$[scale') ||
-		text.includes('$[position')
-	);
 }
 
 async function uploadFiles() {
@@ -1136,14 +958,7 @@ async function post(ev?: PointerEvent) {
 		return;
 	}
 
-	if (
-		visibility.value === 'public' &&
-		((useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) ||
-			((!useCw.value || cw.value == null || cw.value.trim() === '') &&
-				text.value != null &&
-				text.value.trim() !== '' &&
-				isAnnoying(text.value)))
-	) {
+	if (mayBeAnnoyingPublicPost(currentFields())) {
 		const { canceled, result } = await os.actions({
 			type: 'warning',
 			text: i18n.ts.thisPostMayBeAnnoying,
@@ -1183,44 +998,12 @@ async function post(ev?: PointerEvent) {
 		}
 	}
 
-	let postData: Misskey.entities.NotesCreateRequest = {
-		text: text.value === '' ? null : text.value,
-		...(files.value.length > 0 ? { fileIds: files.value.map((f) => f.id) } : {}),
-		...(replyTargetNote.value ? { replyId: replyTargetNote.value.id } : {}),
-		...(renoteTargetNote.value
-			? { renoteId: renoteTargetNote.value.id }
-			: quoteId.value
-				? { renoteId: quoteId.value }
-				: {}),
-		...(targetChannel.value ? { channelId: targetChannel.value.id } : {}),
-		poll: poll.value,
-		cw: useCw.value ? (cw.value ?? '') : null,
-		localOnly: visibility.value === 'specified' ? false : localOnly.value,
-		visibility: visibility.value,
-		...(visibility.value === 'specified' ? { visibleUserIds: visibleUsers.value.map((u) => u.id) } : {}),
-		reactionAcceptance: reactionAcceptance.value,
-	};
-
-	if (withHashtags.value && hashtags.value && hashtags.value.trim() !== '') {
-		const hashtags_ = hashtags.value
-			.trim()
-			.split(' ')
-			.map((x) => (x.startsWith('#') ? x : '#' + x))
-			.join(' ');
-		if (!postData.text) {
-			postData.text = hashtags_;
-		} else {
-			const postTextLines = postData.text.split('\n');
-			const lastLineIndex = postTextLines.length - 1;
-			const lastLine = postTextLines[lastLineIndex] ?? '';
-			if (lastLine.trim() === '') {
-				postTextLines[lastLineIndex] = lastLine + hashtags_;
-			} else {
-				postTextLines[lastLineIndex] = lastLine + ' ' + hashtags_;
-			}
-			postData.text = postTextLines.join('\n');
-		}
-	}
+	let postData = buildNotesCreateRequest(currentFields(), {
+		replyId: replyTargetNote.value?.id ?? null,
+		renoteId: renoteTargetNote.value?.id ?? null,
+		channelId: targetChannel.value?.id ?? null,
+		hashtags: withHashtags.value ? hashtags.value : null,
+	});
 
 	const notePostInterruptors = getPluginHandlers('note_post_interruptor');
 	if (notePostInterruptors.length > 0) {
@@ -1264,12 +1047,8 @@ async function post(ev?: PointerEvent) {
 				deleteDraft();
 				emit('posted');
 				if (postData.text && postData.text !== '') {
-					const hashtags_ = mfm
-						.parse(postData.text)
-						.map((x) => x.type === 'hashtag' && x.props.hashtag)
-						.filter((x) => x) as string[];
 					const history = miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? [];
-					miLocalStorage.setItemAsJson('hashtags', unique(hashtags_.concat(history)));
+					miLocalStorage.setItemAsJson('hashtags', unique(extractHashtags(postData.text).concat(history)));
 				}
 				posting.value = false;
 				postAccount.value = null;
@@ -1278,47 +1057,11 @@ async function post(ev?: PointerEvent) {
 				if (notesCount === 1) {
 					claimAchievement('notes1');
 				}
-
-				const text = postData.text ?? '';
-				const lowerCase = text.toLowerCase();
-				if (
-					(lowerCase.includes('love') || lowerCase.includes('❤')) &&
-					(lowerCase.includes('toneriko') || lowerCase.includes('misskey'))
-				) {
-					claimAchievement('iLoveMisskey');
-				}
-				if (
-					[
-						'https://youtu.be/Efrlqw8ytg4',
-						'https://www.youtube.com/watch?v=Efrlqw8ytg4',
-						'https://m.youtube.com/watch?v=Efrlqw8ytg4',
-
-						'https://youtu.be/XVCwzwxdHuA',
-						'https://www.youtube.com/watch?v=XVCwzwxdHuA',
-						'https://m.youtube.com/watch?v=XVCwzwxdHuA',
-
-						'https://open.spotify.com/track/3Cuj0mZrlLoXx9nydNi7RB',
-						'https://open.spotify.com/track/7anfcaNPQWlWCwyCHmZqNy',
-						'https://open.spotify.com/track/5Odr16TvEN4my22K9nbH7l',
-						'https://open.spotify.com/album/5bOlxyl4igOrp2DwVQxBco',
-					].some((url) => text.includes(url))
-				) {
-					claimAchievement('brainDiver');
-				}
-
-				if (renoteTargetNote.value && renoteTargetNote.value.userId === $i.id && text.length > 0) {
-					claimAchievement('selfQuote');
-				}
-
-				const date = new Date();
-				const h = date.getHours();
-				const m = date.getMinutes();
-				const s = date.getSeconds();
-				if (h >= 0 && h <= 3) {
-					claimAchievement('postedAtLateNight');
-				}
-				if (m === 0 && s === 0) {
-					claimAchievement('postedAt0min0sec');
+				for (const achievement of postAchievements(postData.text ?? '', {
+					quotesOwnNote: renoteTargetNote.value != null && renoteTargetNote.value.userId === $i.id,
+					postedAt: new Date(),
+				})) {
+					claimAchievement(achievement);
 				}
 
 				if (serverDraftId.value != null) {
@@ -1644,15 +1387,10 @@ async function restoreLocalDraft(): Promise<void> {
 		return;
 	}
 
-	const draft = readLocalDraft(localDraftScope.value);
-	if (!isJsonObject(draft)) {
+	const data = parseLocalDraft(readLocalDraft(localDraftScope.value));
+	if (data == null) {
 		return;
 	}
-	const candidate = draft as StoredDraftCandidate;
-	if (!isJsonObject(candidate.data)) {
-		return;
-	}
-	const data = candidate.data as StoredDraftDataCandidate;
 
 	if (prefer.draftRestoreMode === 'ask') {
 		const { canceled } = await os.confirm({
@@ -1666,52 +1404,21 @@ async function restoreLocalDraft(): Promise<void> {
 		}
 	}
 
-	if (typeof data.text === 'string') {
-		text.value = data.text;
-	}
-	if (typeof data.useCw === 'boolean') {
-		useCw.value = data.useCw;
-	}
-	if (typeof data.cw === 'string' || data.cw === null) {
-		cw.value = data.cw;
-	}
-	if (
-		data.visibility === 'public' ||
-		data.visibility === 'home' ||
-		data.visibility === 'followers' ||
-		data.visibility === 'specified'
-	) {
-		visibility.value = data.visibility;
-	}
-	if (typeof data.localOnly === 'boolean') {
-		localOnly.value = data.localOnly;
-	}
-	if (Array.isArray(data.files)) {
-		files.value = data.files.filter(isJsonObject) as Misskey.entities.DriveFile[];
-	}
-	if (isJsonObject(data.poll)) {
-		poll.value = data.poll as PollEditorModelValue;
-	}
-	if (isStringArray(data.visibleUserIds)) {
+	if (data.text !== undefined) text.value = data.text;
+	if (data.useCw !== undefined) useCw.value = data.useCw;
+	if (data.cw !== undefined) cw.value = data.cw;
+	if (data.visibility !== undefined) visibility.value = data.visibility;
+	if (data.localOnly !== undefined) localOnly.value = data.localOnly;
+	if (data.files !== undefined) files.value = data.files;
+	if (data.poll !== undefined) poll.value = data.poll;
+	if (data.visibleUserIds !== undefined) {
 		misskeyApi('users/show', { userIds: data.visibleUserIds }).then((users) => {
 			users.forEach((u) => pushVisibleUser(u));
 		});
 	}
-	if (typeof data.quoteId === 'string' || data.quoteId === null) {
-		quoteId.value = data.quoteId;
-	}
-	if (
-		data.reactionAcceptance === 'likeOnly' ||
-		data.reactionAcceptance === 'likeOnlyForRemote' ||
-		data.reactionAcceptance === 'nonSensitiveOnly' ||
-		data.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote' ||
-		data.reactionAcceptance === null
-	) {
-		reactionAcceptance.value = data.reactionAcceptance;
-	}
-	if ((typeof data.scheduledAt === 'number' && Number.isFinite(data.scheduledAt)) || data.scheduledAt === null) {
-		scheduledAt.value = data.scheduledAt;
-	}
+	if (data.quoteId !== undefined) quoteId.value = data.quoteId;
+	if (data.reactionAcceptance !== undefined) reactionAcceptance.value = data.reactionAcceptance;
+	if (data.scheduledAt !== undefined) scheduledAt.value = data.scheduledAt;
 }
 
 onMounted(() => {
