@@ -111,6 +111,8 @@ jobs:
         # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
         run: bun run --filter slacc build
       - run: bun run lint:ox
+      # ルートの補助スクリプトのテスト。optimization-environment は backend の比較 CLI を起動するので依存の導入後に回す。
+      - run: bun test scripts/dependency-inventory.test.mjs scripts/optimization-environment.test.mjs scripts/spawn-checked.test.mjs
       # knip は vite / drizzle の設定ファイルを実行して入口を集める。i18n の built と compile 済みの設定が
       # 無いと読み込みに失敗し、そこから辿る schema の enum などを未使用と誤って報告する。
       - run: bun run --filter i18n build

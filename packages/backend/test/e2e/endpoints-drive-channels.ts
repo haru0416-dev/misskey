@@ -106,7 +106,19 @@ import {
 	userListMembershipExistsInDatabase,
 } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import { api, castAsError, origin, POLL, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
+import {
+	api,
+	castAsError,
+	createAppToken,
+	origin,
+	POLL,
+	post,
+	relativeFetch,
+	role,
+	signup,
+	simpleGet,
+	uploadFile,
+} from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createEndpointsContext, getAt } from '../endpoints-context.js';
 import type { EndpointsContext } from '../endpoints-context.js';
@@ -858,6 +870,20 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			expect(res.body!.name).toBe('Belmond.png.jpg');
+		});
+
+		test('multipart の手書き経路も meta どおりに認証と scope を検査する', async () => {
+			const anonymous = await uploadFile(undefined);
+			expect(anonymous.status).toBe(401);
+			expect(castAsError(anonymous.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
+
+			const readOnly = await uploadFile({ token: await createAppToken(alice, ['read:drive']) } as typeof alice);
+			expect(readOnly.status).toBe(403);
+			expect(castAsError(readOnly.body as any).error.code).toBe('PERMISSION_DENIED');
+
+			const writable = await uploadFile({ token: await createAppToken(alice, ['write:drive']) } as typeof alice);
+			expect(writable.status).toBe(200);
+			expect(writable.body!.userId).toBe(alice.id);
 		});
 
 		test('ファイル無しで怒られる', async () => {

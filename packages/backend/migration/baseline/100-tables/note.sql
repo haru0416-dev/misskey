@@ -60,7 +60,7 @@ CREATE INDEX "IDX_NOTE_REPLY_ID" ON "public"."note" USING "btree" ("replyId");
 CREATE INDEX "IDX_NOTE_TAGS" ON "public"."note" USING "gin" ("tags") WITH ("fastupdate"='false');
 
 -- INDEX: IDX_NOTE_TEXT_TRGM
-CREATE INDEX "IDX_NOTE_TEXT_TRGM" ON "public"."note" USING "gin" ("lower"("text") "public"."gin_trgm_ops") WITH ("fastupdate"='off');
+CREATE INDEX "IDX_NOTE_TEXT_TRGM" ON "public"."note" USING "gin" ("lower"("text") "gin_trgm_ops") WITH ("fastupdate"='off');
 
 -- INDEX: IDX_NOTE_THREAD_ID
 CREATE INDEX "IDX_NOTE_THREAD_ID" ON "public"."note" USING "btree" ("threadId");

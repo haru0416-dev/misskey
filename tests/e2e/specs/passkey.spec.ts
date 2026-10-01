@@ -24,8 +24,27 @@ test.use({
 
 const password = 'alice1234';
 
-/** RFC 6238 の TOTP (SHA-1・6 桁・30 秒)。 */
-function totp(base32Secret: string): string {
+const usedTotpSteps = new Map<string, Set<number>>();
+
+/**
+ * RFC 6238 の TOTP (SHA-1・6 桁・30 秒)。サーバーは前後 1 枠を受け付け、同じ枠のトークンの再利用を拒否する。
+ * 前の枠は送信までに受付範囲から外れ得るので、まだ使っていない現在か次の枠を使い、どちらも使用済みなら次の枠まで待つ。
+ */
+async function totp(base32Secret: string): Promise<string> {
+	const used = usedTotpSteps.get(base32Secret) ?? new Set<number>();
+	usedTotpSteps.set(base32Secret, used);
+	for (;;) {
+		const current = Math.floor(Date.now() / 30_000);
+		const step = [current, current + 1].find((candidate) => !used.has(candidate));
+		if (step != null) {
+			used.add(step);
+			return totpAt(base32Secret, step);
+		}
+		await new Promise((resolve) => setTimeout(resolve, (current + 1) * 30_000 - Date.now() + 50));
+	}
+}
+
+function totpAt(base32Secret: string, step: number): string {
 	const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 	let bits = '';
 	for (const char of base32Secret.replace(/=+$/, '').toUpperCase()) {
@@ -33,7 +52,7 @@ function totp(base32Secret: string): string {
 	}
 	const key = Buffer.from(bits.match(/.{8}/g)!.map((byte) => Number.parseInt(byte, 2)));
 	const counter = Buffer.alloc(8);
-	counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+	counter.writeBigUInt64BE(BigInt(step));
 	const hmac = createHmac('sha1', key).update(counter).digest();
 	const offset = hmac[hmac.length - 1]! & 0xf;
 	return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0');
@@ -42,10 +61,11 @@ function totp(base32Secret: string): string {
 async function answerPasswordDialog(page: Page, secret: string): Promise<void> {
 	await expect(page.getByText('続けるには認証を行ってください')).toBeVisible();
 	const submit = page.getByRole('button', { name: '続ける' }).last();
+	const token = await totp(secret);
 	// 開いた直後に入力すると、ダイアログの表示が終わる時点で値が消えることがある。入力が効いて送信できるまで入れ直す。
 	await expect(async () => {
 		await page.getByPlaceholder('パスワード').last().fill(password);
-		await page.locator('input[autocomplete="one-time-code"]').last().fill(totp(secret));
+		await page.locator('input[autocomplete="one-time-code"]').last().fill(token);
 		await expect(submit).toBeEnabled({ timeout: 1_000 });
 	}).toPass();
 	await submit.click();
@@ -61,9 +81,9 @@ test('パスキーを画面から登録し、そのパスキーでログイン�
 		await page.request.post('/api/i/2fa/register', { data: { i: alice.token, password } })
 	).json();
 	const secret = registered.secret as string;
-	expect((await page.request.post('/api/i/2fa/done', { data: { i: alice.token, token: totp(secret) } })).ok()).toBe(
-		true,
-	);
+	expect(
+		(await page.request.post('/api/i/2fa/done', { data: { i: alice.token, token: await totp(secret) } })).ok(),
+	).toBe(true);
 
 	const cdp = await page.context().newCDPSession(page);
 	await cdp.send('WebAuthn.enable');

@@ -1,8 +1,5 @@
 -- EXTENSION: pg_trgm
-CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "public";
-
--- COMMENT: EXTENSION "pg_trgm"
-COMMENT ON EXTENSION "pg_trgm" IS 'text similarity measurement and index searching based on trigrams';
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- TYPE: antenna_src_enum
 CREATE TYPE "public"."antenna_src_enum" AS ENUM (

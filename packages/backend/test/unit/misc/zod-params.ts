@@ -37,6 +37,16 @@ describe('misc:zod-params', () => {
 	});
 
 	describe('paginationParams', () => {
+		test('4 つとも OpenAPI に説明が載る', () => {
+			// ここが空になると、生成される misskey-js の型から since/until の意味が消える。
+			const json = z.toJSONSchema(z.object({ ...paginationParams }), { io: 'input' }) as {
+				properties?: Record<string, { description?: string }>;
+			};
+			for (const key of ['sinceId', 'untilId', 'sinceDate', 'untilDate']) {
+				expect(json.properties?.[key]?.description, key).toBeTruthy();
+			}
+		});
+
 		test('4 つとも省略可能', () => {
 			expect(z.object({ ...paginationParams }).safeParse({}).success).toBe(true);
 		});

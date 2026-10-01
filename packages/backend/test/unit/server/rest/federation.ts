@@ -22,6 +22,10 @@ describe('federation metadata lock', () => {
 				tryLockFetchInstanceMetadata({ redis: second }, host),
 			]);
 			expect(results.filter((result) => result === null)).toHaveLength(1);
+			// 取得したプロセスが解除前に落ちても、ロックは期限で消える。
+			const ttl = await first.ttl(`fetchInstanceMetadata:mutex:v2:${host}`);
+			expect(ttl).toBeGreaterThan(0);
+			expect(ttl).toBeLessThanOrEqual(30);
 			expect(await tryLockFetchInstanceMetadata({ redis: first }, host)).not.toBeNull();
 			expect(await tryLockFetchInstanceMetadata({ redis: second }, host)).not.toBeNull();
 

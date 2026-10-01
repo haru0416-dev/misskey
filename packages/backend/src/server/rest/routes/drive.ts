@@ -4,12 +4,15 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
+import { assertCredential, authenticateApiToken } from '../auth/auth.js';
+import { applyEndpointGuards } from '../endpoint-guards.js';
+import { endpointMetas } from '@/server/api/endpoint-metas.js';
 import { handleApiDriveFilesCreate, readApiMultipartRequest } from '../drive/drive-file-upload.js';
-import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
 import { jsonResponse, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+
+const driveFilesCreateMeta = endpointMetas['drive/files/create'].meta;
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/drive/files/create', async (c) => {
@@ -25,18 +28,11 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			const { file, cleanup, fields } = parsed;
 			try {
 				const auth = await authenticateApiToken(deps, tokenFromRequest(c, fields));
-				assertCredential(auth);
-				assertProhibitMoved(auth.user);
-				assertTokenPermission(auth, 'write:drive');
-				await assertApiRateLimitForUser(
-					deps,
-					'drive/files/create',
-					{
-						duration: 60 * 60 * 1000,
-						max: 120,
-					},
-					auth.user,
+				// multipart の本文から token を読むため登録は手書きだが、検査は契約と同じく meta から組み立てる。
+				await applyEndpointGuards(deps, 'drive/files/create', driveFilesCreateMeta, auth, () =>
+					getRequestIp(c, deps.config),
 				);
+				assertCredential(auth);
 
 				const ip = getRequestIp(c, deps.config);
 				const headers = Object.fromEntries(c.req.raw.headers.entries());

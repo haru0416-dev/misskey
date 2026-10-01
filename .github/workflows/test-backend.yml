@@ -5,23 +5,21 @@ on:
     branches:
       - master
       - develop
-    paths:
+    # backend の workspace 依存 (i18n / mfm-js / misskey-js / slacc) と Bun の版を変えたときも走らせる。
+    paths: &backend-paths
       - packages/backend/**
+      - packages/i18n/**
       - packages/mfm-js/**
       - packages/misskey-js/**
+      - packages/slacc/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
       - bun.lock
+      - bunfig.toml
+      - .bun-version
       - package.json
   pull_request:
-    paths:
-      - packages/backend/**
-      - packages/mfm-js/**
-      - packages/misskey-js/**
-      - .github/workflows/test-backend.yml
-      - .github/misskey/test.yml
-      - bun.lock
-      - package.json
+    paths: *backend-paths
   workflow_dispatch:
 
 concurrency:

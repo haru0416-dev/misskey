@@ -6,10 +6,11 @@
 import * as assert from 'node:assert';
 import * as crypto from 'node:crypto';
 import { encode as encodeToCbor } from 'cbor2';
+import * as Redis from 'ioredis';
 import * as OTPAuth from 'otpauth';
 import { fixtureConfig, openTestDatabase, updateUserInDatabase, updateUserProfileInDatabase } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import { api, castAsError, signup, sendEnvUpdateRequest } from '../utils.js';
+import { api, castAsError, signup } from '../utils.js';
 import type {
 	AuthenticationResponseJSON,
 	AuthenticatorAssertionResponseJSON,
@@ -19,7 +20,7 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import type * as misskey from 'misskey-js';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 // 判別可能ユニオンの分岐を確定させる箇所だけ node:assert を使う。expect の matcher は `asserts` 述語を持たず、
 // 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
@@ -48,11 +49,27 @@ describe('2要素認証', () => {
 		'M0c+PVy4WGvCyMQ6SUWklvzo2+2osjqwsQ==\n' +
 		'-----END EC PRIVATE KEY-----\n';
 
-	const otpToken = (secret: string): string => {
+	let redis: Redis.Redis;
+
+	const currentOtpToken = (secret: string): string => {
 		return OTPAuth.TOTP.generate({
 			secret: OTPAuth.Secret.fromBase32(secret),
 			digits: 6,
 		});
+	};
+
+	// サーバーは同じ時間枠のトークンの再利用を拒否する。テストは同じ枠で何度も認証するので、
+	// 使うたびにその秘密鍵の使用済み記録を消してから現在のトークンを作る。
+	const otpToken = async (secret: string): Promise<string> => {
+		const fingerprint = crypto.createHash('sha256').update(secret).digest('base64url');
+		const pattern = `${config.valkey.primary.keyPrefix}2fa:used:*:${fingerprint}:*`;
+		let cursor = '0';
+		do {
+			const [next, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 1000);
+			if (keys.length > 0) await redis.del(...keys);
+			cursor = next;
+		} while (cursor !== '0');
+		return currentOtpToken(secret);
 	};
 
 	const enableTotp = async (user: misskey.entities.SignupResponse): Promise<string> => {
@@ -68,7 +85,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			user,
 		);
@@ -78,7 +95,7 @@ describe('2要素認証', () => {
 	};
 
 	const invalidOtpToken = (secret: string): string => {
-		return otpToken(secret) === '000000' ? '000001' : '000000';
+		return currentOtpToken(secret) === '000000' ? '000001' : '000000';
 	};
 
 	const rpIdHash = (): Buffer => {
@@ -221,6 +238,8 @@ describe('2要素認証', () => {
 	beforeAll(
 		async () => {
 			database = openTestDatabase();
+			// 使用済み記録はキーを直接列挙して消すため、prefix を付けない接続を使う。
+			redis = new Redis.Redis({ ...config.valkey.primary, keyPrefix: '' });
 			alice = await signup({ username, password });
 		},
 		1000 * 60 * 2,
@@ -228,14 +247,7 @@ describe('2要素認証', () => {
 
 	afterAll(async () => {
 		await database.close();
-	});
-
-	beforeEach(async () => {
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-	});
-
-	afterEach(async () => {
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+		redis.disconnect();
 	});
 
 	test('が設定でき、OTPでログインでき、解除後はパスワードのみでログインできる。', async () => {
@@ -257,7 +269,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -280,7 +292,7 @@ describe('2要素認証', () => {
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
-			token: otpToken(registerResponse.body.secret),
+			token: await otpToken(registerResponse.body.secret),
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
@@ -290,7 +302,7 @@ describe('2要素認証', () => {
 			'i/2fa/unregister',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -318,7 +330,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -328,7 +340,7 @@ describe('2要素認証', () => {
 			'i/2fa/register-key',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -341,7 +353,7 @@ describe('2要素認証', () => {
 		const keyDoneResponse = await api(
 			'i/2fa/key-done',
 			keyDoneParam({
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				keyName,
 				credentialId,
 				creationOptions: registerKeyResponse.body,
@@ -380,7 +392,7 @@ describe('2要素認証', () => {
 			'i/2fa/unregister',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -399,7 +411,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -408,7 +420,7 @@ describe('2要素認証', () => {
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				password,
 			},
 			alice,
@@ -420,7 +432,7 @@ describe('2要素認証', () => {
 		const keyDoneResponse = await api(
 			'i/2fa/key-done',
 			keyDoneParam({
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				keyName,
 				credentialId,
 				creationOptions: registerKeyResponse.body,
@@ -468,7 +480,7 @@ describe('2要素認証', () => {
 			'i/2fa/unregister',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -482,7 +494,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			passkeyUser,
 		);
@@ -492,7 +504,7 @@ describe('2要素認証', () => {
 			'i/2fa/register-key',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			passkeyUser,
 		);
@@ -502,7 +514,7 @@ describe('2要素認証', () => {
 		const keyDoneResponse = await api(
 			'i/2fa/key-done',
 			keyDoneParam({
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				keyName: 'dedicated-signin-key',
 				credentialId,
 				creationOptions: registerKeyResponse.body,
@@ -594,7 +606,7 @@ describe('2要素認証', () => {
 				'i/2fa/unregister',
 				{
 					password,
-					token: otpToken(registerResponse.body.secret),
+					token: await otpToken(registerResponse.body.secret),
 				},
 				passkeyUser,
 			);
@@ -614,7 +626,7 @@ describe('2要素認証', () => {
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -623,7 +635,7 @@ describe('2要素認証', () => {
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
 			{
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				password,
 			},
 			alice,
@@ -635,7 +647,7 @@ describe('2要素認証', () => {
 		const keyDoneResponse = await api(
 			'i/2fa/key-done',
 			keyDoneParam({
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 				keyName,
 				credentialId,
 				creationOptions: registerKeyResponse.body,
@@ -675,7 +687,7 @@ describe('2要素認証', () => {
 			const removeKeyResponse = await api(
 				'i/2fa/remove-key',
 				{
-					token: otpToken(registerResponse.body.secret),
+					token: await otpToken(registerResponse.body.secret),
 					password,
 					credentialId: key.id,
 				},
@@ -690,7 +702,7 @@ describe('2要素認証', () => {
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
-			token: otpToken(registerResponse.body.secret),
+			token: await otpToken(registerResponse.body.secret),
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
@@ -700,7 +712,7 @@ describe('2要素認証', () => {
 			'i/2fa/unregister',
 			{
 				password,
-				token: otpToken(registerResponse.body.secret),
+				token: await otpToken(registerResponse.body.secret),
 			},
 			alice,
 		);
@@ -713,25 +725,19 @@ describe('2要素認証', () => {
 		expect(notStarted.status).toBe(400);
 		expect(castAsError(notStarted.body as any).error.code).toBe('TWO_FACTOR_NOT_STARTED');
 
-		// テスト環境の TOTP 検証は既定で常に通るので、この間だけ実際に検証させる。
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-		try {
-			const registered = await api('i/2fa/register', { password }, user);
-			expect(registered.status).toBe(200);
-			const wrongDone = await api('i/2fa/done', { token: invalidOtpToken(registered.body.secret) }, user);
-			expect(wrongDone.status).toBe(400);
-			expect(castAsError(wrongDone.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
+		const registered = await api('i/2fa/register', { password }, user);
+		expect(registered.status).toBe(200);
+		const wrongDone = await api('i/2fa/done', { token: invalidOtpToken(registered.body.secret) }, user);
+		expect(wrongDone.status).toBe(400);
+		expect(castAsError(wrongDone.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 
-			const secret = await enableTotp(user);
-			for (const endpoint of ['i/2fa/unregister', 'i/2fa/register'] as const) {
-				const res = await api(endpoint, { password, token: invalidOtpToken(secret) }, user);
-				expect(res.status).toBe(400);
-				expect(castAsError(res.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
-			}
-			expect((await api('i', {}, user)).body.twoFactorEnabled).toBe(true);
-		} finally {
-			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
+		const secret = await enableTotp(user);
+		for (const endpoint of ['i/2fa/unregister', 'i/2fa/register'] as const) {
+			const res = await api(endpoint, { password, token: invalidOtpToken(secret) }, user);
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 		}
+		expect((await api('i', {}, user)).body.twoFactorEnabled).toBe(true);
 	});
 
 	test('が有効な場合、パスワード変更はTOTPなしまたは不正なTOTPでは失敗し、パスワードを変更しない。', async () => {
@@ -743,7 +749,7 @@ describe('2要素認証', () => {
 			const oldPasswordResponse = await api('signin-flow', {
 				username: user.username,
 				password,
-				token: otpToken(secret),
+				token: await otpToken(secret),
 			});
 			expect(oldPasswordResponse.status).toBe(200);
 			assert.strictEqual(oldPasswordResponse.body.finished, true);
@@ -769,29 +775,24 @@ describe('2要素認証', () => {
 			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertPasswordUnchanged();
 
-			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-			try {
-				const invalidTokenResponse = await api(
-					'i/change-password',
-					{
-						currentPassword: password,
-						newPassword,
-						token: invalidOtpToken(secret),
-					},
-					user,
-				);
-				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
-				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
-			} finally {
-				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-			}
+			const invalidTokenResponse = await api(
+				'i/change-password',
+				{
+					currentPassword: password,
+					newPassword,
+					token: invalidOtpToken(secret),
+				},
+				user,
+			);
+			expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+			expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertPasswordUnchanged();
 		} finally {
 			await api(
 				'i/2fa/unregister',
 				{
 					password,
-					token: otpToken(secret),
+					token: await otpToken(secret),
 				},
 				user,
 			);
@@ -824,29 +825,24 @@ describe('2要素認証', () => {
 			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertEmailUnchanged();
 
-			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-			try {
-				const invalidTokenResponse = await api(
-					'i/update-email',
-					{
-						password,
-						email: 'invalid-token@example.com',
-						token: invalidOtpToken(secret),
-					},
-					user,
-				);
-				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
-				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
-			} finally {
-				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-			}
+			const invalidTokenResponse = await api(
+				'i/update-email',
+				{
+					password,
+					email: 'invalid-token@example.com',
+					token: invalidOtpToken(secret),
+				},
+				user,
+			);
+			expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+			expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertEmailUnchanged();
 		} finally {
 			await api(
 				'i/2fa/unregister',
 				{
 					password,
-					token: otpToken(secret),
+					token: await otpToken(secret),
 				},
 				user,
 			);
@@ -875,28 +871,23 @@ describe('2要素認証', () => {
 			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertAccountNotDeleted();
 
-			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-			try {
-				const invalidTokenResponse = await api(
-					'i/delete-account',
-					{
-						password,
-						token: invalidOtpToken(secret),
-					},
-					user,
-				);
-				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
-				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
-			} finally {
-				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
-			}
+			const invalidTokenResponse = await api(
+				'i/delete-account',
+				{
+					password,
+					token: invalidOtpToken(secret),
+				},
+				user,
+			);
+			expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+			expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertAccountNotDeleted();
 		} finally {
 			await api(
 				'i/2fa/unregister',
 				{
 					password,
-					token: otpToken(secret),
+					token: await otpToken(secret),
 				},
 				user,
 			);
@@ -904,8 +895,6 @@ describe('2要素認証', () => {
 	});
 
 	test('のTOTPトークンは一度使うと同じトークンは再利用できない。', async () => {
-		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
-
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
@@ -915,7 +904,7 @@ describe('2要素認証', () => {
 		);
 		expect(registerResponse.status).toBe(200);
 
-		const sharedOtpToken = otpToken(registerResponse.body.secret);
+		const sharedOtpToken = await otpToken(registerResponse.body.secret);
 		const doneResponse = await api(
 			'i/2fa/done',
 			{
@@ -932,12 +921,11 @@ describe('2要素認証', () => {
 			});
 			expect(signinResponse.status).toBe(403);
 		} finally {
-			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			await api(
 				'i/2fa/unregister',
 				{
 					password,
-					token: otpToken(registerResponse.body.secret),
+					token: await otpToken(registerResponse.body.secret),
 				},
 				alice,
 			);

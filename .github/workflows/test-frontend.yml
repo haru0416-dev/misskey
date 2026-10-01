@@ -16,6 +16,7 @@ on:
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**
+      - packages/slacc/**
       - tests/e2e/**
       - package.json
       - bun.lock
@@ -33,6 +34,7 @@ on:
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**
+      - packages/slacc/**
       - tests/e2e/**
       - package.json
       - bun.lock

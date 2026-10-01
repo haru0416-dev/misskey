@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
 import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { enqueueDbJobInOutbox } from '@/core/queue/QueueOutboxStore.js';
 import {
 	followAcceptanceKey,
 	hasAcceptedFollowInDatabase,
@@ -938,13 +939,14 @@ export async function handleApiFollowingRequestsAccept(
 	await acceptFollowRequestForApi(deps, me, follower);
 }
 
+/** 1件以上承認したら true。承認できなかった申請があれば、承認済みの分を確定したうえで AggregateError を投げる。 */
 export async function acceptAllFollowRequestsForApi(
 	deps: ApiFollowingDependencies,
 	followee: MiLocalUser,
-): Promise<void> {
+): Promise<boolean> {
 	const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(deps.db, followee.id);
 	if (requests.length === 0) {
-		return;
+		return false;
 	}
 
 	const followerIds = [...new Set(requests.map((request) => request.followerId))];
@@ -992,6 +994,26 @@ export async function acceptAllFollowRequestsForApi(
 		);
 	}
 	if (failures.length > 0) throw new AggregateError(failures, 'Some follow requests could not be approved');
+	return accepted;
+}
+
+// 申請の件数に比例する承認を応答から切り離し、失敗した分は再試行で残りだけを承認する。
+const ACCEPT_ALL_FOLLOW_REQUESTS_JOB_OPTIONS = {
+	attempts: 4,
+	backoff: { type: 'exponential', delay: 60_000 },
+} as const;
+
+export async function enqueueAcceptAllFollowRequestsInOutbox(
+	db: MiDrizzleDatabase,
+	config: Pick<Config, 'queues'>,
+	followee: Pick<MiLocalUser, 'id'>,
+): Promise<string> {
+	return await enqueueDbJobInOutbox(
+		db,
+		'acceptAllFollowRequests',
+		{ user: { id: followee.id } },
+		{ ...queueRetentionOptions(config), ...ACCEPT_ALL_FOLLOW_REQUESTS_JOB_OPTIONS },
+	);
 }
 
 export async function handleApiFollowingRequestsCancel(

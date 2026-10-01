@@ -218,6 +218,50 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		expect(await history()).toEqual([checkpoint]);
 	});
 
+	test('default baseline accepts pg_trgm preinstalled by another role in a non-public schema', async () => {
+		// マネージド PostgreSQL では管理者が拡張を先に入れ、アプリのロールは DB だけを所有する。
+		const role = `migration_app_${randomUUID().replaceAll('-', '')}`;
+		await admin.unsafe(`CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE`);
+		try {
+			await pool!
+				.unsafe(`
+				CREATE SCHEMA extensions;
+				CREATE EXTENSION pg_trgm SCHEMA extensions;
+				GRANT USAGE ON SCHEMA extensions TO "${role}";
+				ALTER DATABASE "${databaseName}" OWNER TO "${role}";
+				ALTER DATABASE "${databaseName}" SET search_path = "$user", public, extensions;
+			`)
+				.simple();
+			const appConfig: Config = {
+				...config,
+				database: { ...config.database, primary: { ...config.database.primary, user: role } },
+			};
+			const journal = JSON.parse(await readFile(join(sourceDirectory, 'meta/_journal.json'), 'utf-8')) as {
+				entries: TestJournalEntry[];
+			};
+
+			expect(await runMigrations(appConfig)).toEqual(pendingEntries(journal.entries));
+			expect(
+				await queryRows(`
+					SELECT n.nspname AS schema, pg_get_userbyid(e.extowner) <> '${role}' AS foreign_owner
+					FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace WHERE e.extname = 'pg_trgm'
+				`),
+			).toEqual([{ schema: 'extensions', foreign_owner: true }]);
+			expect(
+				await queryRows(`
+					SELECT count(*)::integer AS valid FROM pg_index
+					WHERE indexrelid IN ('"IDX_NOTE_TEXT_TRGM"'::regclass, '"IDX_USER_NAME_TRGM"'::regclass) AND indisvalid
+				`),
+			).toEqual([{ valid: 2 }]);
+		} finally {
+			await pool!.close({ timeout: 0 });
+			pool = undefined;
+			await admin.unsafe(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
+			databaseName = undefined;
+			await admin.unsafe(`DROP ROLE "${role}"`);
+		}
+	});
+
 	test.each([true, false])(
 		'a future migration runs normally when present before baseline initialization: %s',
 		async (initialFuture) => {

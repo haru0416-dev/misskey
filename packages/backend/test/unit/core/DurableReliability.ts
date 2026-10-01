@@ -83,12 +83,20 @@ describe('durable reliability boundaries', () => {
 			await expect(handleApiAdminSuspendUser(deps, moderator, { userId: target.id })).rejects.toThrow(
 				'injected authorization publish failure',
 			);
-			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isSuspended).toBe(true);
-			const [suspendOutbox] = await runtime.db
-				.select()
-				.from(queueOutbox)
-				.where(eq(queueOutbox.name, 'userSuspensionPostEffects'));
-			expect(suspendOutbox).toBeDefined();
+			const suspended = await fetchUserByIdOrFailFromDatabase(runtime.db, target.id);
+			expect(suspended.isSuspended).toBe(true);
+			// 接続への反映が失敗しても、確定済みの連合用 outbox 行は lease 期限を待たずに処理されている。
+			expect(
+				(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'userSuspensionPostEffects'))).filter(
+					(row) => (row.data as DbUserSuspensionPostEffectsJobData).userId === target.id,
+				),
+			).toEqual([]);
+			const suspendJob: DbUserSuspensionPostEffectsJobData = {
+				userId: target.id,
+				isSuspended: true,
+				transitionedAt: suspended.updatedAt!.toISOString(),
+				transitionId: suspended.suspensionTransitionId!,
+			};
 
 			await handleApiAdminUnsuspendUser(deps, moderator, { userId: target.id });
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isSuspended).toBe(false);
@@ -117,10 +125,10 @@ describe('durable reliability boundaries', () => {
 			});
 			publishCredentialEvent.mockClear();
 
-			await handleQueueUserSuspensionPostEffects(deps, suspendOutbox!.data as DbUserSuspensionPostEffectsJobData);
+			await handleQueueUserSuspensionPostEffects(deps, suspendJob);
 			expect(publishCredentialEvent).not.toHaveBeenCalled();
 
-			const guard = suspendOutbox!.data as DbUserSuspensionPostEffectsJobData;
+			const guard = suspendJob;
 			await expect(
 				handleQueueDeliver(deps as unknown as Parameters<typeof handleQueueDeliver>[0], {
 					user: { id: target.id },

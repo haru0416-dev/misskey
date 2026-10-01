@@ -78,6 +78,7 @@ export type DbJobMap = {
 	importCustomEmojis: DbUserImportJobData;
 	deleteAccount: DbUserDeleteJobData;
 	userSuspensionPostEffects: DbUserSuspensionPostEffectsJobData;
+	acceptAllFollowRequests: DbJobDataWithUser;
 	notePostCreate: DbNotePostCreateJobData;
 };
 

@@ -241,15 +241,18 @@ async function changeSuspensionState(
 		const outboxJob = await enqueueInlineDbJobInOutbox(tx, 'userSuspensionPostEffects', data, opts);
 		return { data, ...outboxJob };
 	});
-	// 連合用 outbox の遅延・失敗とは独立に、保存された停止状態を既存接続へ反映する。
-	await deps.publishCredentialEvent('userChangeSuspendedState', { id: user.id, isSuspended });
-
 	try {
-		await runInlineDbOutboxJobs(deps.db, [result], async (db) => {
-			await handleQueueUserSuspensionPostEffects({ ...deps, db }, result.data);
-		});
-	} catch {
-		// 解放済みの outbox 行は次回のポーリングで再処理される。
+		// 連合用 outbox の遅延・失敗とは独立に、保存された停止状態を既存接続へ反映する。
+		// 反映の失敗は呼出元へ返すが、確定済みの outbox 行は lease 期限を待たせず処理する。
+		await deps.publishCredentialEvent('userChangeSuspendedState', { id: user.id, isSuspended });
+	} finally {
+		try {
+			await runInlineDbOutboxJobs(deps.db, [result], async (db) => {
+				await handleQueueUserSuspensionPostEffects({ ...deps, db }, result.data);
+			});
+		} catch {
+			// 解放済みの outbox 行は次回のポーリングで再処理される。
+		}
 	}
 }
 

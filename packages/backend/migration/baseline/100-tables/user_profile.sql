@@ -51,7 +51,7 @@ ALTER TABLE ONLY "public"."user_profile"
 CREATE INDEX "IDX_USERPROFILE_BIRTHDAY_DATE" ON "public"."user_profile" USING "btree" ("public"."get_birthday_date"(("birthday")::"text"));
 
 -- INDEX: IDX_USER_PROFILE_DESCRIPTION_TRGM
-CREATE INDEX "IDX_USER_PROFILE_DESCRIPTION_TRGM" ON "public"."user_profile" USING "gin" ("description" "public"."gin_trgm_ops");
+CREATE INDEX "IDX_USER_PROFILE_DESCRIPTION_TRGM" ON "public"."user_profile" USING "gin" ("description" "gin_trgm_ops");
 
 -- INDEX: IDX_USER_PROFILE_ENABLE_WORD_MUTE
 CREATE INDEX "IDX_USER_PROFILE_ENABLE_WORD_MUTE" ON "public"."user_profile" USING "btree" ("enableWordMute");

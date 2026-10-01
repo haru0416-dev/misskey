@@ -260,6 +260,24 @@ export async function splitDump(dump, sql) {
 	`)
 		).map((row) => [row.name, row.table_name]),
 	);
+	// 拡張は管理者が別 schema・別所有者で先に入れている場合がある。履歴の SQL と同じく
+	// schema を固定せず search_path で解決し、所有者だけが実行できる COMMENT ON EXTENSION は出力しない。
+	const extensionMembers = new Set(
+		(
+			await sql.unsafe(`
+		SELECT o.opcname AS name FROM pg_opclass o
+		JOIN pg_depend d ON d.classid = 'pg_opclass'::regclass AND d.objid = o.oid AND d.deptype = 'e'
+		UNION SELECT p.proname FROM pg_proc p
+		JOIN pg_depend d ON d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'
+		UNION SELECT t.typname FROM pg_type t
+		JOIN pg_depend d ON d.classid = 'pg_type'::regclass AND d.objid = t.oid AND d.deptype = 'e'
+	`)
+		).map((row) => row.name),
+	);
+	const unqualifyExtensionMembers = (body) =>
+		body.replaceAll(/"public"\.("(?:[^"]|"")+")/g, (match, quoted) =>
+			extensionMembers.has(quoted.slice(1, -1).replaceAll('""', '"')) ? quoted : match,
+		);
 	for (const name of tables) {
 		if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error(`Unsupported baseline table filename: ${name}`);
 	}
@@ -268,7 +286,7 @@ export async function splitDump(dump, sql) {
 	const add = (file, object) => {
 		if (object.body === '') return;
 		const blocks = files.get(file) ?? [];
-		blocks.push(`-- ${object.type}: ${object.name}\n${object.body}\n`);
+		blocks.push(`-- ${object.type}: ${object.name}\n${unqualifyExtensionMembers(object.body)}\n`);
 		files.set(file, blocks);
 	};
 	const tableName = (object) => {
@@ -288,7 +306,12 @@ export async function splitDump(dump, sql) {
 			throw new Error(`Unsupported dump object schema: ${object.schema} (${object.type}: ${object.name})`);
 		}
 		switch (object.type) {
-			case 'EXTENSION':
+			case 'EXTENSION': {
+				const extension = /^CREATE EXTENSION IF NOT EXISTS ("(?:[^"]|"")+") WITH SCHEMA "public";$/.exec(object.body);
+				if (!extension) throw new Error(`Unsupported dump extension: ${object.name}`);
+				add('000-prerequisites.sql', { ...object, body: `CREATE EXTENSION IF NOT EXISTS ${extension[1]};` });
+				break;
+			}
 			case 'TYPE':
 			case 'FUNCTION':
 				add('000-prerequisites.sql', object);
@@ -296,7 +319,6 @@ export async function splitDump(dump, sql) {
 			case 'COMMENT':
 				if (!object.body.startsWith('COMMENT ON EXTENSION '))
 					throw new Error(`Unsupported dump comment: ${object.name}`);
-				add('000-prerequisites.sql', object);
 				break;
 			case 'TABLE':
 				seenTables.add(tableName(object));

@@ -62,7 +62,7 @@ CREATE INDEX "IDX_USER_IS_EXPLORABLE" ON "public"."user" USING "btree" ("isExplo
 CREATE INDEX "IDX_USER_LAST_ACTIVE_DATE" ON "public"."user" USING "btree" ("lastActiveDate");
 
 -- INDEX: IDX_USER_NAME_TRGM
-CREATE INDEX "IDX_USER_NAME_TRGM" ON "public"."user" USING "gin" ("name" "public"."gin_trgm_ops");
+CREATE INDEX "IDX_USER_NAME_TRGM" ON "public"."user" USING "gin" ("name" "gin_trgm_ops");
 
 -- INDEX: IDX_USER_TAGS
 CREATE INDEX "IDX_USER_TAGS" ON "public"."user" USING "btree" ("tags");
@@ -89,7 +89,7 @@ CREATE UNIQUE INDEX "IDX_USER_USERNAME_LOWER_HOST_UNIQUE" ON "public"."user" USI
 CREATE INDEX "IDX_USER_USERNAME_LOWER_PATTERN" ON "public"."user" USING "btree" ("usernameLower" "varchar_pattern_ops");
 
 -- INDEX: IDX_USER_USERNAME_LOWER_TRGM
-CREATE INDEX "IDX_USER_USERNAME_LOWER_TRGM" ON "public"."user" USING "gin" ("usernameLower" "public"."gin_trgm_ops");
+CREATE INDEX "IDX_USER_USERNAME_LOWER_TRGM" ON "public"."user" USING "gin" ("usernameLower" "gin_trgm_ops");
 
 -- INDEX: REL_58f5c71eaab331645112cf8cfa
 CREATE UNIQUE INDEX "REL_58f5c71eaab331645112cf8cfa" ON "public"."user" USING "btree" ("avatarId");

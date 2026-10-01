@@ -68,6 +68,7 @@ import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
 import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
+import { handleQueueAcceptAllFollowRequests } from '@/server/rest/account/account-update.js';
 import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
 import { handleQueueNotePostCreate } from '@/core/note/NoteCreationService.js';
 
@@ -488,6 +489,7 @@ export function createQueueWorkers(
 		importCustomEmojis: (job) => handleQueueImportCustomEmojis(deps, job.data),
 		deleteAccount: (job) => handleQueueDeleteAccount(deps, job.data),
 		userSuspensionPostEffects: (job) => handleQueueUserSuspensionPostEffects(deps, job.data),
+		acceptAllFollowRequests: (job) => handleQueueAcceptAllFollowRequests(deps, job.data),
 		notePostCreate: (job) => {
 			if (job.id?.startsWith('outbox-') && (job.data.stage === 'fanout' || job.data.stage === 'antennas')) {
 				return runQueuedDbOutboxJob(

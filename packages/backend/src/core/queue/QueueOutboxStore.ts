@@ -34,7 +34,12 @@ const RECONCILE_BATCH_SIZE = 500;
 // 待機元が終了した場合も実行結果を蓄積し続けない。期限切れは成功ではなく結果不明とする。
 const EXECUTION_OUTCOME_TTL_MS = 60 * 60 * 1000;
 
-type OutboxDbJobName = 'deleteAccount' | 'deleteDriveFile' | 'userSuspensionPostEffects' | 'notePostCreate';
+type OutboxDbJobName =
+	| 'deleteAccount'
+	| 'deleteDriveFile'
+	| 'userSuspensionPostEffects'
+	| 'acceptAllFollowRequests'
+	| 'notePostCreate';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -171,6 +176,10 @@ function parseDbJobData(name: OutboxDbJobName, value: SerializedDbJobData): DbJo
 				typeof value['transitionId'] === 'string'
 				? (value as DbJobMap['userSuspensionPostEffects'])
 				: null;
+		case 'acceptAllFollowRequests':
+			return isRecord(value['user']) && typeof value['user']['id'] === 'string'
+				? (value as DbJobMap['acceptAllFollowRequests'])
+				: null;
 		case 'notePostCreate':
 			return typeof value['noteId'] === 'string' &&
 				typeof value['silent'] === 'boolean' &&
@@ -209,7 +218,15 @@ function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput | null {
 	if (row.queue !== QUEUE.DB || !isRecord(row.data) || !isRecord(row.opts)) {
 		return null;
 	}
-	if (!['deleteAccount', 'deleteDriveFile', 'userSuspensionPostEffects', 'notePostCreate'].includes(row.name)) {
+	if (
+		![
+			'deleteAccount',
+			'deleteDriveFile',
+			'userSuspensionPostEffects',
+			'acceptAllFollowRequests',
+			'notePostCreate',
+		].includes(row.name)
+	) {
 		return null;
 	}
 	const name = row.name as OutboxDbJobName;
@@ -270,6 +287,8 @@ function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput | null {
 			return { name, data: parsedData as DbJobMap['deleteDriveFile'], opts };
 		case 'userSuspensionPostEffects':
 			return { name, data: parsedData as DbJobMap['userSuspensionPostEffects'], opts };
+		case 'acceptAllFollowRequests':
+			return { name, data: parsedData as DbJobMap['acceptAllFollowRequests'], opts };
 		case 'notePostCreate':
 			return { name, data: parsedData as DbJobMap['notePostCreate'], opts };
 		default:

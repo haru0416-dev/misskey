@@ -125,6 +125,28 @@ $function$;`;
 		}
 	});
 
+	test('extension objects resolve through search_path and keep schema-qualified application objects', async () => {
+		const source = owned[0]!.client!;
+		await source.unsafe('CREATE EXTENSION pg_trgm SCHEMA public');
+		await source.unsafe('CREATE TABLE "public"."baseline_probe" ("value" text)');
+		const index =
+			'CREATE INDEX "baseline_probe_trgm" ON "public"."baseline_probe" USING "gin" ("value" "public"."gin_trgm_ops");';
+		await source.unsafe(index);
+		const dump =
+			object('pg_trgm', 'EXTENSION', 'CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "public";') +
+			object('EXTENSION "pg_trgm"', 'COMMENT', `COMMENT ON EXTENSION "pg_trgm" IS 'trigram';`) +
+			object('baseline_probe', 'TABLE', 'CREATE TABLE "public"."baseline_probe" ("value" text);') +
+			object('baseline_probe_trgm', 'INDEX', index);
+		const files = await splitDump(dump, source);
+		// 拡張の所有者でないロールは COMMENT ON EXTENSION を実行できない。
+		expect(files.get('000-prerequisites.sql')).toBe(
+			'-- EXTENSION: pg_trgm\nCREATE EXTENSION IF NOT EXISTS "pg_trgm";\n',
+		);
+		expect(files.get('100-tables/baseline_probe.sql')).toContain(
+			'ON "public"."baseline_probe" USING "gin" ("value" "gin_trgm_ops");',
+		);
+	});
+
 	test('unrecognized psql directives between statements refuse generation', async () => {
 		const source = owned[0]!.client!;
 		await source.unsafe('CREATE TABLE "public"."baseline_probe" ("id" integer)');

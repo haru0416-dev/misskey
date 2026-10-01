@@ -24,10 +24,6 @@ export function createUserAuthService(redisClient: Redis.Redis, db: MiDrizzleDat
 	}
 
 	async function validateOtp(userId: MiUserProfile['userId'], twoFactorSecret: string, token: string) {
-		if (process.env['NODE_ENV'] === 'test' && process.env['MISSKEY_TEST_CHECK_DUPLICATED_TOTP'] !== '1') {
-			return true;
-		}
-
 		const now = Date.now();
 		const normalizedToken = token.trim();
 		const validationWindow = 1;

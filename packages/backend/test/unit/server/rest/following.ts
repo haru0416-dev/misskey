@@ -23,10 +23,14 @@ import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { endpointMetas } from '@/server/api/metas/i.js';
-import { handleApiIUpdate, iUpdateParamDef } from '@/server/rest/account/account-update.js';
+import {
+	handleApiIUpdate,
+	handleQueueAcceptAllFollowRequests,
+	iUpdateParamDef,
+} from '@/server/rest/account/account-update.js';
 import type { ContractErrors } from '@/server/rest/endpoint-contract.js';
 import { ApiError } from '@/server/rest/error.js';
-import type { DeliverJobData } from '@/queue/types.js';
+import type { DbJobMap, DeliverJobData } from '@/queue/types.js';
 import { parseApiParams } from '@/server/rest/validation.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -122,7 +126,26 @@ test('一括承認は通知の保存待ちを含めて並行数を制限し、�
 	expect(updates).toMatchObject([{ id: followee.id, followersCount: 19 }]);
 });
 
-test('解除時の一括承認失敗でも保存済み actor 更新を配送し、残る要求は手動で再承認できる', async () => {
+async function updatesFor(followeeId: string) {
+	const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
+	return jobs
+		.filter((deliver) => deliver.data.user.id === followeeId)
+		.map((deliver) => JSON.parse(deliver.data.content))
+		.filter((activity) => activity.type === 'Update');
+}
+
+async function takeAcceptAllJob(followeeId: string) {
+	const jobs = await runtime.dbQueue.getJobs(['waiting', 'prioritized', 'delayed']);
+	const matched = jobs.filter(
+		(job) =>
+			job.name === 'acceptAllFollowRequests' &&
+			(job.data as DbJobMap['acceptAllFollowRequests']).user.id === followeeId,
+	);
+	await Promise.all(matched.map((job) => job.remove()));
+	return matched;
+}
+
+test('鍵の解除は保存して即応答し、一括承認ジョブの失敗分は再試行で残りだけを承認する', async () => {
 	const followee = (await createUser()) as MiLocalUser;
 	const [failedFollower, successfulFollower] = await Promise.all([createUser(true), createUser(true)]);
 	const failedRequest = await request(failedFollower!, followee);
@@ -152,28 +175,19 @@ test('解除時の一括承認失敗でも保存済み actor 更新を配送し�
 				runtime,
 				followee,
 				null,
-				parseApiParams(iUpdateParamDef, { isLocked: false, name: 'Saved despite approval failure' }),
+				parseApiParams(iUpdateParamDef, { isLocked: false, name: 'Saved before approval' }),
 				errors,
 			),
+		).resolves.toMatchObject({ isLocked: false, name: 'Saved before approval' });
+		// 応答の時点では承認していない。申請の件数に応答時間が比例しない。
+		expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(0);
+		const [job, ...extra] = await takeAcceptAllJob(followee.id);
+		expect(extra).toEqual([]);
+		expect(job!.opts).toMatchObject({ attempts: 4, backoff: { type: 'exponential' } });
+		// 1件でも失敗したらジョブを失敗させ、BullMQ の再試行に回す。
+		await expect(
+			handleQueueAcceptAllFollowRequests(runtime, job!.data as DbJobMap['acceptAllFollowRequests']),
 		).rejects.toBeInstanceOf(AggregateError);
-		expect(await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).toMatchObject({
-			isLocked: false,
-			name: 'Saved despite approval failure',
-		});
-		await vi.waitFor(async () => {
-			const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
-			const activities = jobs.map((job) => JSON.parse(job.data.content));
-			expect(activities).toContainEqual(
-				expect.objectContaining({
-					type: 'Update',
-					object: expect.objectContaining({
-						id: `${runtime.config.instance.url}/users/${followee.id}`,
-						name: 'Saved despite approval failure',
-						manuallyApprovesFollowers: false,
-					}),
-				}),
-			);
-		});
 		expect(
 			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, failedFollower!.id, followee.id),
 		).toBeNull();
@@ -184,12 +198,26 @@ test('解除時の一括承認失敗でも保存済み actor 更新を配送し�
 			await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, successfulFollower!.id, followee.id),
 		).not.toBeNull();
 		expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(1);
-	} finally {
+
+		await vi.waitFor(async () => expect(await updatesFor(followee.id)).toHaveLength(1));
+		expect((await updatesFor(followee.id))[0]).toMatchObject({
+			object: { name: 'Saved before approval', manuallyApprovesFollowers: false },
+		});
+
 		await runtime.db.execute(sql.raw(`ALTER TABLE queue_outbox DROP CONSTRAINT "${constraint}"`));
+		await expect(
+			handleQueueAcceptAllFollowRequests(runtime, job!.data as DbJobMap['acceptAllFollowRequests']),
+		).resolves.toBe('ok');
+		// 承認したリモートのフォロワーへ、鍵を外した actor の Update を送る (一部失敗した 1 回目と成功した 2 回目の両方)。
+		await vi.waitFor(async () => expect(await updatesFor(followee.id)).toHaveLength(2));
+	} finally {
+		await runtime.db.execute(sql.raw(`ALTER TABLE queue_outbox DROP CONSTRAINT IF EXISTS "${constraint}"`));
+		await takeAcceptAllJob(followee.id);
 		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
-		await Promise.all(jobs.filter((job) => job.data.user.id === followee.id).map((job) => job.remove()));
+		await Promise.all(
+			jobs.filter((deliver) => deliver.data.user.id === followee.id).map((deliver) => deliver.remove()),
+		);
 	}
-	await acceptFollowRequestForApi(runtime, followee, failedFollower!);
 	expect(await fetchFollowRequestFromDatabase(runtime.db, failedFollower!.id, followee.id)).toBeNull();
 	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, followee.id)).followersCount).toBe(2);
 	const deliveries = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.queue, 'deliver'));
@@ -198,4 +226,29 @@ test('解除時の一括承認失敗でも保存済み actor 更新を配送し�
 		return activity.type === 'Accept' && activity.actor === `${runtime.config.instance.url}/users/${followee.id}`;
 	});
 	expect(accepts).toHaveLength(2);
+});
+
+test('一括承認ジョブは削除処理中のユーザーの申請を承認しない', async () => {
+	const followee = (await createUser()) as MiLocalUser;
+	const follower = await createUser(true);
+	await request(follower!, followee);
+	await updateUserInDatabase(runtime.db, followee.id, { isDeleted: true });
+
+	await expect(handleQueueAcceptAllFollowRequests(runtime, { user: { id: followee.id } })).resolves.toBe(
+		'skip: followee is suspended or deleted',
+	);
+	expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower!.id, followee.id)).toBeNull();
+});
+
+test('一括承認ジョブは処理前に鍵を掛け直したユーザーの申請を承認しない', async () => {
+	const followee = (await createUser()) as MiLocalUser;
+	const follower = await createUser(true);
+	await request(follower!, followee);
+	await updateUserInDatabase(runtime.db, followee.id, { isLocked: true });
+
+	await expect(handleQueueAcceptAllFollowRequests(runtime, { user: { id: followee.id } })).resolves.toBe(
+		'skip: followee is locked again',
+	);
+	expect(await fetchFollowRequestFromDatabase(runtime.db, follower!.id, followee.id)).not.toBeNull();
+	expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower!.id, followee.id)).toBeNull();
 });

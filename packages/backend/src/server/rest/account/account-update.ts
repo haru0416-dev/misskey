@@ -31,7 +31,11 @@ import {
 	updateUserProfileInDatabase,
 } from '@/core/user/UserProfileStore.js';
 import type { UserProfileUpdate } from '@/core/user/UserProfileStore.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import {
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	updateUserInDatabase,
+} from '@/core/user/UserStore.js';
 import type { UserUpdate } from '@/core/user/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -58,7 +62,15 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import { acceptAllFollowRequestsForApi, genLocalUserUri } from '../user/following.js';
+import {
+	acceptAllFollowRequestsForApi,
+	enqueueAcceptAllFollowRequestsInOutbox,
+	genLocalUserUri,
+} from '../user/following.js';
+import type { DbJobMap } from '@/queue/types.js';
+import { publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
+import type { DbQueue } from '@/core/queue/queues.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { ApiFollowingDependencies } from '../user/following.js';
 import { ApiError } from '../error.js';
 import {
@@ -412,6 +424,29 @@ async function publishAccountUpdateToFollowersForApi(
 	await deliverNoteActivityForApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
 }
 
+export async function handleQueueAcceptAllFollowRequests(
+	deps: ApiAccountUpdateDependencies,
+	data: DbJobMap['acceptAllFollowRequests'],
+): Promise<string> {
+	const followee = await fetchUserByIdFromDatabase(deps.db, data.user.id);
+	if (followee == null || followee.host != null) return 'skip: followee not found';
+	// 処理前に鍵を掛け直した場合、その時点の申請は手動承認の対象として残す。
+	if (followee.isLocked) return 'skip: followee is locked again';
+	// 削除処理中の actor から Accept を送らない。
+	if (followee.isSuspended || followee.isDeleted) return 'skip: followee is suspended or deleted';
+	let accepted = false;
+	try {
+		accepted = await acceptAllFollowRequestsForApi(deps, followee as MiLocalUser);
+	} catch (error) {
+		// 一部だけ承認できた場合も、新しいフォロワーへ鍵を外した actor を届けてから再試行に回す。
+		await publishAccountUpdateToFollowersForApi(deps, followee.id);
+		throw error;
+	}
+	// 応答時の Update は承認前のフォロワーにしか届かないため、承認したフォロワーへ送り直す。
+	if (accepted) await publishAccountUpdateToFollowersForApi(deps, followee.id);
+	return 'ok';
+}
+
 async function resolveAlsoKnownAsUserForApi(deps: ApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost = host == null || toPuny(host) === toPuny(deps.config.runtime.host) ? null : toPuny(host);
@@ -487,7 +522,7 @@ export async function verifyLinkForApi(
 }
 
 export async function handleApiIUpdate(
-	deps: ApiAccountUpdateDependencies,
+	deps: ApiAccountUpdateDependencies & { dbQueue: DbQueue },
 	me: MiLocalUser,
 	token: MiAccessToken | null,
 	ps: ApiParams<typeof iUpdateParamDef>,
@@ -793,7 +828,16 @@ export async function handleApiIUpdate(
 
 	void updateUsertagsForApi(deps, user, tags).catch(() => {});
 
-	if (Object.keys(updates).length > 0) {
+	const unlocking = user.isLocked && ps.isLocked === false;
+	let acceptAllOutboxId: string | null = null;
+	if (unlocking) {
+		// 鍵の解除と一括承認ジョブは同じ transaction で確定し、どちらか一方だけが残らないようにする。
+		acceptAllOutboxId = await deps.db.transaction(async (tx) => {
+			await updateUserInDatabase(tx as MiDrizzleDatabase, user.id, updates);
+			return await enqueueAcceptAllFollowRequestsInOutbox(tx as MiDrizzleDatabase, deps.config, user);
+		});
+		deps.publishInternalEvent?.('localUserUpdated', { id: user.id });
+	} else if (Object.keys(updates).length > 0) {
 		await updateUserInDatabase(deps.db, user.id, updates);
 		deps.publishInternalEvent?.('localUserUpdated', { id: user.id });
 	}
@@ -811,14 +855,9 @@ export async function handleApiIUpdate(
 
 	deps.publishMainStream?.(user.id, 'meUpdated', iObj);
 
-	try {
-		if (user.isLocked && ps.isLocked === false) {
-			await acceptAllFollowRequestsForApi(deps, user);
-		}
-	} finally {
-		// 承認の一部が失敗しても、保存済みの actor 更新は既存フォロワーへ配送する。
-		void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
-	}
+	if (acceptAllOutboxId != null) await publishDbOutboxRowEagerly(deps.db, deps.dbQueue, acceptAllOutboxId);
+
+	void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
 
 	const urls = updatedProfile.fields.filter((x) => x.value.startsWith('https://'));
 	for (const url of urls) {
