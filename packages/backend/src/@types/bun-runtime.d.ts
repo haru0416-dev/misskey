@@ -86,6 +86,7 @@ declare module 'bun' {
 
 	interface SQLQuery extends Promise<unknown[]> {
 		values(): Promise<unknown[][]>;
+		simple(): this;
 	}
 
 	interface SQLOptions {
