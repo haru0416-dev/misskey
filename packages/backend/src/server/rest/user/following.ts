@@ -267,7 +267,7 @@ export function renderReject(config: Config, object: string | IObject, user: { i
 	};
 }
 
-export function renderAccept(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IAccept {
+function renderAccept(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IAccept {
 	return {
 		type: 'Accept',
 		actor: genLocalUserUri(config, user.id),
