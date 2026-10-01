@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-// ネイティブモジュールは CJS でしか読めないので、ESM からは createRequire で橋渡しする。
+// Node.js の ESM import は .node をサポートしないため、createRequire を使う。
 import { createRequire } from 'node:module';
 
 const binding = createRequire(import.meta.url)('./index.cjs');

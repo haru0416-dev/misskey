@@ -11,7 +11,6 @@ import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 
 // AiService は HttpRequestService.send() 経由で外部サービスへ送信する (SSRF/proxy/size 制限は send 側に一元化)。
-// send をモックして、送信内容とレスポンス解釈を検証する。
 const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
 
 const DEFAULT_META = {

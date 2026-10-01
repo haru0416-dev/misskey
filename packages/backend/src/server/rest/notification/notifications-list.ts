@@ -390,7 +390,7 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 
 // 後段の除外 (ミュート・凍結・見られないノート・取り下げられたフォロー申請) は通知を作ったあとの状況で決まるので、
 // 1 ページが全件落ちることがある。空を返すとクライアントが終端とみなし、その先の見られる通知が表示されなくなるため、
-// 見られる通知が出るまで先へ進む。走査は MAX_SCANNED_PAGES ページ (limit 最大 100 で生の通知 1000 件) までに抑える。
+// 可視性判定は MAX_SCANNED_PAGES ページまでに抑える。種別で全件除外されたページの走査はこの上限に含まれない。
 const MAX_SCANNED_PAGES = 10;
 
 async function fetchVisibleNotificationPage(

@@ -8,9 +8,7 @@
 
 const extraArgs = process.argv.slice(2);
 
-// `run` を明示しないと、非対話実行でも vitest が
-// watch モードに入ってしまい、プロセスが終了せず残り続ける (ビルド成果物の変化等で
-// 再起動を繰り返し、プロセスが際限なく積み上がる)。
+// watch モードでプロセスを残さないよう、`run` を明示する。
 const test = Bun.spawn(
 	[process.execPath, 'run', '--bun', 'vitest', 'run', '--config', 'vitest.config.unit.ts', ...extraArgs],
 	{

@@ -1,4 +1,4 @@
-// Misskey のチャンネル購読は接続完了前に connect メッセージを送るため、未接続時の送信キューを破棄してはならない。
+// 接続完了前のチャンネル購読も送信キューで待機するが、件数・バイト上限を超えた場合は古いメッセージから破棄する。
 
 type WebSocketEventMap = {
 	open: unknown;
@@ -101,7 +101,7 @@ export class ReconnectingWebSocket {
 		this.listeners[type].delete(listener);
 	}
 
-	/** 未接続時の送信データはキューに保持し、open時にまとめて送信する。 */
+	/** 未接続時は上限内の送信データを保持し、open リスナーの実行後に送信する。 */
 	public send(data: string): void {
 		if (this.ws != null && this.ws.readyState === WS_OPEN) {
 			this.ws.send(data);

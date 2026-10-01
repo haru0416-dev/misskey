@@ -154,8 +154,7 @@ const showIndicator = ref(false);
 const timelineEl = useTemplateRef('timelineEl');
 const timeline = makeDateSeparatedTimelineComputedRef(messages);
 
-// 表示順 (古い順) に並べ、同一送信者の連続メッセージ (=直前の行も同じ送信者) を grouped として
-// マークする。grouped 行はアバター/送信者名を省略し行間を詰めて、連投を1つの束として見せる
+// 日付区切りを挟むと同一送信者でも連投扱いにしない。
 const rows = computed(() => {
 	const arr = timeline.value.toReversed();
 	return arr.map((item, i) => {
@@ -169,8 +168,7 @@ const rows = computed(() => {
 
 const SCROLL_HEAD_THRESHOLD = 200;
 
-// column-reverseなので本来はスクロール位置の最下部への追従は不要なはずだが、おそらくブラウザのバグにより、最下部にスクロールした状態でも追従されない場合がある(スクロール位置が少数になることがあるのが関わっていそう)
-// そのため補助としてMutationObserverを使って追従を行う
+// 過去のメッセージを読んでいる位置は動かさず、最下部付近にいるときだけ DOM 更新後も新着へ追従させる。
 useMutationObserver(
 	timelineEl,
 	{
@@ -574,14 +572,10 @@ definePage(
 					icon: 'ti ti-users',
 				};
 			}
-			return {
-				title: i18n.ts.directMessage,
-			};
 		}
-			return {
-				title: i18n.ts.directMessage,
-			};
-		
+		return {
+			title: i18n.ts.directMessage,
+		};
 	}),
 );
 </script>
@@ -614,8 +608,7 @@ definePage(
 	margin: 0 auto;
 }
 
-// _gaps の一律 gap の代わりに行間を自前で管理する。
-// 通常の行間は xl、同一送信者の連投 (timelineRowGrouped) は sm に詰めて束として見せる
+// 同一送信者の連投だけ行間を縮めるため、_gaps の一律 gap は使わない。
 .timeline {
 	display: flex;
 	flex-direction: column;

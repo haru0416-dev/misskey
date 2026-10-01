@@ -6,8 +6,7 @@ precision mediump float;
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// colorClamp, colorClampAdvanced共通
-// colorClampではmax, minがすべて同じ値となる
+// colorClamp と colorClampAdvanced で共有する。colorClamp は上限・下限をそれぞれ RGB 全成分に共通で渡す。
 
 in vec2 in_uv;
 uniform sampler2D in_texture;

@@ -5,10 +5,10 @@
 
 /*
  * BlurHash を WebGL2 で描画する。misskey-dev/buraha (MIT, Copyright (c) 2023 Misskey) の実装を
- * 取り込んだもの。原典の MIT 表示は上記のとおり保持する。
+ * 取り込んだもの。
  *
  * 視覚的な忠実さより速度を優先しており、参照実装 (blurhash パッケージの decode) とは出力が一致しない。
- * バイキュービック補間をフラグメントシェーダで行うため、CPU 側は係数の復元までしか担わない。
+ * バイキュービック補間をフラグメントシェーダで行い、CPU 側は係数の復元と低解像度テクスチャの合成を担う。
  */
 
 const BASE83_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';

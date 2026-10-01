@@ -674,7 +674,7 @@ defineExpose({
 }
 
 .new {
-	--gapFill: 0.5px; // 上位ヘッダーの高さにフォントの関係などで少数が含まれると、レンダリングエンジンによっては隙間が表示されてしまうため、隙間を隠すために少しずらす
+	--gapFill: 0.5px; // ヘッダーの高さが小数になる場合の丸め誤差で隙間が見えないよう、少し重ねる。
 
 	position: sticky;
 	top: calc(var(--MI-stickyTop, 0px) - var(--gapFill));
@@ -684,7 +684,6 @@ defineExpose({
 	padding: calc(10px + var(--gapFill)) 0 10px 0;
 }
 
-/* 疑似progressive blur */
 .newBg1, .newBg2 {
 	position: absolute;
 	top: 0;
@@ -697,7 +696,7 @@ defineExpose({
 	height: 100%;
 	-webkit-backdrop-filter: var(--MI-blur, blur(2px));
 	backdrop-filter: var(--MI-blur, blur(2px));
-	mask-image: linear-gradient( /* 疑似Easing Linear Gradients */
+	mask-image: linear-gradient(
 		to top,
 		rgb(0 0 0 / 0%) 0%,
 		rgb(0 0 0 / 4.9%) 7.75%,
@@ -714,7 +713,7 @@ defineExpose({
 	height: 75%;
 	-webkit-backdrop-filter: var(--MI-blur, blur(4px));
 	backdrop-filter: var(--MI-blur, blur(4px));
-	mask-image: linear-gradient( /* 疑似Easing Linear Gradients */
+	mask-image: linear-gradient(
 		to top,
 		rgb(0 0 0 / 0%) 0%,
 		rgb(0 0 0 / 4.9%) 15.5%,

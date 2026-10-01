@@ -56,9 +56,7 @@ export function onScrollTop(el: HTMLElement, cb: (topVisible: boolean) => unknow
 
 	const container = getScrollContainer(el) ?? window;
 
-	// 以下のケースにおいて、cbが何度も呼び出されてしまって具合が悪いので1回呼んだら以降は無視するようにする
-	// - スクロールイベントは1回のスクロールで複数回発生することがある
-	// - toleranceの範囲内に収まる程度の微量なスクロールが発生した
+	// tolerance 内の微小なスクロールで同じ状態を繰り返し通知せず、上端の可視状態が変わったときだけ通知する。
 	let prevTopVisible = firstTopVisible;
 	const onScroll = () => {
 		if (!window.document.body.contains(el)) {

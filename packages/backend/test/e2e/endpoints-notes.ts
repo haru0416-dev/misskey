@@ -145,7 +145,6 @@ describe('Endpoints', () => {
 
 	describe('hashtag endpoints', () => {
 		test('list, search, and show return packed hashtag data', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const primary = `hono_hashtag_primary_${now}`;
 			const secondary = `hono_hashtag_secondary_${now}`;
@@ -204,7 +203,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files, drive/files/show, drive/files/find, and drive/files/find-by-hash scope results to the caller', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-files-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -249,7 +247,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hdsm${suffix}` });
 			const otherUser = await signup({ username: `hdso${suffix}` });
@@ -303,7 +300,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `achatsend${suffix}` });
 			const recipient = await signup({ username: `achatrecv${suffix}` });
@@ -335,7 +331,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-update-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -395,7 +390,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/delete removes a file, rejecting foreign access and missing files', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-delete-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -432,7 +426,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/move-bulk moves multiple files into a folder', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5A = createHash('md5').update(`hono-drive-move-a-${suffix}`).digest('hex');
 			const fileA = await createDriveFileInDatabase(db, {
@@ -853,7 +846,7 @@ describe('Endpoints', () => {
 			expect(negativeOffset.status).toBe(400);
 			expect(castAsError(negativeOffset.body as any).error.code).toBe('INVALID_PARAM');
 
-			// タグはパラメータとして渡すので、% や ' を含んでもそのまま引ける (以前は 500 だった)。
+			// タグは SQL パラメータとして渡すので、% や ' もタグの一部として検索する。
 			const symbolTag = `50%_it's_${suffix}`;
 			await updateUserInDatabase(db, tagged.id, { tags: [symbolTag] });
 			const symbolFound = await api('hashtags/users', { tag: symbolTag, sort: '+follower' });
@@ -946,7 +939,6 @@ describe('Endpoints', () => {
 
 	describe('notes/show', () => {
 		test('基本フィールド、reply/renote、poll、reactionを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hns${suffix}` });
 			const reactor = await signup({ username: `hnsr${suffix}` });
@@ -1066,7 +1058,6 @@ describe('Endpoints', () => {
 
 	describe('notes relations (children/conversation/mentions/replies/renotes)', () => {
 		test('reply/renoteの親子関係とmentionsを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnr${suffix}` });
 			const mentioned = await signup({ username: `hnrm${suffix}` });
@@ -1159,7 +1150,6 @@ describe('Endpoints', () => {
 
 	describe('notes/state and notes/favorites', () => {
 		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `htm${suffix}` });
 			const muter = await signup({ username: `htmm${suffix}` });
@@ -1324,7 +1314,6 @@ describe('Endpoints', () => {
 
 	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {
 		test('publicかつlocalOnly=falseなノートのみ返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hn${suffix}` });
 
@@ -1362,7 +1351,6 @@ describe('Endpoints', () => {
 		});
 
 		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnf${suffix}` });
 			const file = await uploadFile(author);
@@ -1462,7 +1450,6 @@ describe('Endpoints', () => {
 		});
 
 		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnm${suffix}` });
 			const reactor = await signup({ username: `hnmr${suffix}` });
@@ -1486,7 +1473,6 @@ describe('Endpoints', () => {
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnp${suffix}` });
 
@@ -1521,7 +1507,6 @@ describe('Endpoints', () => {
 
 	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
 		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hncl${suffix}` });
 			const noteId = genId();
@@ -1556,7 +1541,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/search-by-tag はtagで検索する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnst${suffix}` });
 			const tag = `hono-tag-${suffix}`;
@@ -1583,7 +1567,7 @@ describe('Endpoints', () => {
 			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
 			expect(res.body.some((n: any) => n.id === untaggedNoteId)).toBe(false);
 
-			// 以前は % を含むタグを黙って空配列にしていた。パラメータとして渡すので、そのまま引ける。
+			// % を SQL のワイルドカードとして扱わず、タグの一部として検索する。
 			const symbolTag = `50%_${tag.toLowerCase()}`;
 			const symbolNoteId = genId();
 			await createNoteInDatabase(db, {
@@ -1600,7 +1584,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnsp${suffix}` });
 			const noteId = genId();
@@ -1689,7 +1672,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/polls/recommendation は未投票のpublic pollのみ返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnpr${suffix}` });
 			const voter = await signup({ username: `hnprv${suffix}` });
@@ -1796,7 +1778,6 @@ describe('Endpoints', () => {
 
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hpp${suffix}` });
 			const pusher = await signup({ username: `hppp${suffix}` });

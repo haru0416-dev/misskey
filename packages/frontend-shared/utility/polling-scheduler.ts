@@ -5,7 +5,8 @@
 
 /**
  * task完了後から一定間隔を空けて実行し、処理の重複を防ぐ。
- * documentが非表示の間は停止し、再表示時も即時実行せず次のintervalを待つ。
+ * document が非表示の間は次の実行を予約せず、再表示時も即時実行せず次の interval を待つ。
+ * 非表示・stop・dispose でも、実行中の task は中断しない。
  */
 export class PollingScheduler {
 	#timerId: number | null = null;

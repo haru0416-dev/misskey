@@ -15,8 +15,8 @@ type RssWidgetProps = {
 };
 
 /**
- * フィードの項目は `<a :href="item.link">` として出るので、`javascript:` などのスキームを
- * そのまま通すと悪意あるフィードを購読しただけでスクリプトを踏まされる。表示前に落とす。
+ * 項目のリンクは a 要素の href に渡すため、スクリプトを実行できるスキームを除き、
+ * 相対 URL を解決した結果が HTTP(S) のものだけを表示する。
  */
 export function filterSafeRssItems(
 	items: Misskey.entities.FetchRssResponse['items'],

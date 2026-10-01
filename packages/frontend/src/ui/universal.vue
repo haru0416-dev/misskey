@@ -70,9 +70,9 @@ const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
 const DESKTOP_THRESHOLD = 1100;
 const MOBILE_THRESHOLD = 500;
 
-// デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
 const showWidgetsSide = window.innerWidth >= DESKTOP_THRESHOLD;
 
+// スマートフォンでは幅にかかわらず、その他の端末でも狭いウィンドウではモバイル UI を使う。
 const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
 function onResize() {
 	isMobile.value = deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD;

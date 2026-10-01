@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { writeZip } from '@/misc/zip-writer.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
-import type { RuntimeDependencies, RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import {
@@ -32,7 +32,7 @@ import type { MiUser } from '@/models/User.js';
 
 // 書き出した ZIP は Drive に保存する。基本ポリシーでは application/zip をアップロードできないため、
 // MIME 制限を受けないモデレーターを使い、書き出しと取り込みを検証する。
-async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Promise<MiUser> {
+async function createModeratorTestUser(runtime: RuntimeDependencies, prefix: string): Promise<MiUser> {
 	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },

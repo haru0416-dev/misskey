@@ -48,7 +48,7 @@ import { i18n } from '@/i18n.js';
 const props = defineProps<{
 	value: NotificationConfig;
 	userLists: Misskey.entities.UserList[];
-	configurableTypes?: NotificationConfig['type'][]; // 未指定時はすべての通知種別を設定できる。
+	configurableTypes?: NotificationConfig['type'][]; // 未指定時はすべての通知対象の条件を選べる。
 }>();
 
 const emit = defineEmits<{

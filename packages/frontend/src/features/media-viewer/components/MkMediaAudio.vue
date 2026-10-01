@@ -145,7 +145,6 @@ const keymap = {
 	},
 } as const satisfies Keymap;
 
-// PlayerElもしくはその子要素にフォーカスがあるかどうか
 function hasFocus() {
 	if (!playerEl.value) {
 		return false;

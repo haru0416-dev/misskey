@@ -11,10 +11,8 @@ export type HeightTransitionOptions = {
 };
 
 /**
- * v-show と組み合わせた <Transition> で、要素の高さをアニメーションさせるための
- * enter/afterEnter/leave/afterLeave ハンドラを提供する。
- * height: auto はそのままではtransitionできないため、reflowを挟んで実際の高さ(px)を
- * 一時的に指定することでアニメーションを成立させている。
+ * v-show 用の高さアニメーション。height: auto は直接アニメーションできないため、
+ * 遷移中だけ実測した高さを指定し、終了後は自然高さへ戻す。
  */
 export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	function enter(el: Element) {
@@ -47,7 +45,7 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 
 		const elementHeight = el.getBoundingClientRect().height;
 		el.style.height = `${elementHeight}px`;
-		el.offsetHeight; // reflow
+		el.offsetHeight; // 開始時の高さを確定させてから、折りたたみ先の高さを指定する。
 		el.style.height = '0';
 	}
 

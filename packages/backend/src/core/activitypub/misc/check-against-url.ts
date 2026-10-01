@@ -21,8 +21,8 @@ export enum FetchAllowSoftFailMask {
  * candidate host が request host の管理下にあるかを緩やかに判定する。
  *
  * @param requestHost リクエスト対象リソースのホスト
- * @param candidateHost 最終レスポンスのホスト
- * @returns candidate host が request host を管理しているか、または一致に softfail が必要な場合のフラグ
+ * @param candidateHost オブジェクト ID のホスト
+ * @returns ホストの一致からの逸脱を許可するために必要な softfail フラグ。一致時は Strict。
  */
 function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowSoftFailMask {
 	const requestFqdn = requestHost.endsWith('.') ? requestHost : `${requestHost}.`;

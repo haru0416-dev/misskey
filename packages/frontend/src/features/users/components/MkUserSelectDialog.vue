@@ -131,7 +131,6 @@ async function ok() {
 
 	dialogEl.value?.close();
 
-	// 最近使ったユーザー更新
 	let recents = store.recentlyUsedUsers;
 	recents = recents.filter((x) => x !== selected.value?.id);
 	recents.unshift(selected.value.id);

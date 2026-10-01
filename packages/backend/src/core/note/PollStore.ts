@@ -14,7 +14,7 @@ import { MiPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
-// MiPoll.note は必須だが、この Store の利用側は noteId 以外の relation を参照しない。
+// MiPoll 型では note が必須だが、ここでは poll の列だけを返す。関連投稿が必要な利用側は noteId で別途取得する。
 function deserializePoll(row: PollRow): MiPoll {
 	return row as MiPoll;
 }
@@ -92,7 +92,7 @@ export async function incrementPollVoteInDatabase(
 	await db.execute(sql`UPDATE "poll" SET "votes"[${index}] = "votes"[${index}] + 1 WHERE "noteId" = ${noteId}`);
 }
 
-/** notes/polls/recommendation 向け。自分が投票していない、公開範囲 public の投票中アンケートの noteId 一覧。 */
+/** 自分の投稿・投票済み・ミュート対象を除いた、ローカルの public な投票中アンケートの noteId 一覧。 */
 export async function listUnvotedPublicPollNoteIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {

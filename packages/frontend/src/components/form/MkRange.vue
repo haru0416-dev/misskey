@@ -302,7 +302,6 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 	}
 	const now = Date.now();
 	if (now - lastClickTime < 300) {
-		// 300ms以内のクリックはダブルクリックとみなす
 		lastClickTime = null;
 		emit('thumbDoubleClicked');
 		return;

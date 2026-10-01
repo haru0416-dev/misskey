@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * ランタイムへ YAML パーサーを含めないため、ビルド時に設定を JSON へ変換する。
- */
+// アプリ本体へ YAML パーサーを含めないため、起動・migration 前に設定を JSON へ変換する。
 
 import fs from 'node:fs';
 import { resolve, dirname } from 'node:path';

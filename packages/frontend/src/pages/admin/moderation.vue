@@ -300,7 +300,7 @@ function save_hiddenTags() {
 
 function save_blockedHosts() {
 	os.apiWithDialog('admin/update-meta', {
-		blockedHosts: blockedHosts.value.split('\n') || [],
+		blockedHosts: blockedHosts.value.split('\n'),
 	}).then(() => {
 		fetchInstance(true);
 	});
@@ -308,7 +308,7 @@ function save_blockedHosts() {
 
 function save_silencedHosts() {
 	os.apiWithDialog('admin/update-meta', {
-		silencedHosts: silencedHosts.value.split('\n') || [],
+		silencedHosts: silencedHosts.value.split('\n'),
 	}).then(() => {
 		fetchInstance(true);
 	});
@@ -316,7 +316,7 @@ function save_silencedHosts() {
 
 function save_mediaSilencedHosts() {
 	os.apiWithDialog('admin/update-meta', {
-		mediaSilencedHosts: mediaSilencedHosts.value.split('\n') || [],
+		mediaSilencedHosts: mediaSilencedHosts.value.split('\n'),
 	}).then(() => {
 		fetchInstance(true);
 	});

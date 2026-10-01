@@ -16,8 +16,7 @@ const base = getConfig();
 const baseAlias = (base.resolve?.alias ?? {}) as Record<string, string>;
 
 /**
- * story の play を実ブラウザで走らせる。jsdom / happy-dom では layout も pointer も無く、
- * userEvent.click / hover を伴う検証が成立しない。
+ * layout や pointer 操作を伴う story の play は実ブラウザで検証する。
  */
 export default defineConfig({
 	...base,

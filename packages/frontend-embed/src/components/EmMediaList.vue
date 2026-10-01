@@ -134,7 +134,7 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 }
 
 .media {
-	overflow: hidden; // clipにするとバグる
+	overflow: hidden; // overflow: clip での表示不具合を避ける。
 	border-radius: 8px;
 	position: relative;
 

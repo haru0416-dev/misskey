@@ -187,14 +187,9 @@ function buildErrorResponses(
 	);
 }
 
-/**
- * Zod スキーマを JSON Schema (OpenAPI 互換) に変換する。
- * Misskey 独自拡張 (optional/ref/selfRef 等) を持たないため schemas.ts の変換は不要で、
- * zod の `toJSONSchema` 出力(標準 JSON Schema)をそのまま使える。`$schema` キーだけ落とす。
- */
+/** 入力スキーマには Misskey 独自拡張がないため、JSON Schema の出力を使い `$schema` だけ除く。 */
 function convertZodParamsToOpenApiSchema(schema: z.ZodType): OpenApiSchemaObject {
-	// io: 'input' — .default() を持つフィールドはリクエストでは省略可能なので required に含めない
-	// (省略時はサーバー側でデフォルト値が補完される。'output' だと補完後の値の存在を前提に required 扱いになってしまう)。
+	// default のある入力は省略可能なので、補完後の必須項目を表す output モードは使わない。
 	const { $schema, ...rest } = z.toJSONSchema(schema, { io: 'input' });
 	return rest as OpenApiSchemaObject;
 }
@@ -279,7 +274,6 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		}
 
 		if (schema.required && schema.required.length <= 0) {
-			// 空配列は許可されない
 			delete schema.required;
 		}
 

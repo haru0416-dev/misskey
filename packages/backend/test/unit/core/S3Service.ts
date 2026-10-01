@@ -76,7 +76,6 @@ describe('S3Service', () => {
 			expect(requests).toHaveLength(1);
 			const req = requests[0]!;
 			expect(req.method).toBe('PUT');
-			// forcePathStyle なのでバケットはパスに入る。
 			expect(req.url).toBe('/fake/dir/file.png');
 			expect(req.headers['content-type']).toBe('image/png');
 			expect(req.headers['authorization']).toMatch(/^AWS4-HMAC-SHA256 /);
@@ -122,7 +121,6 @@ describe('S3Service', () => {
 			});
 
 			expect(requests).toHaveLength(1);
-			// 仮想ホスト形式ではバケットはホスト名側に付き、パスからは消える。
 			expect(requests[0]!.url).toBe('/a');
 			expect(requests[0]!.headers['host']).toBe(`fake.${endpoint}`);
 		});

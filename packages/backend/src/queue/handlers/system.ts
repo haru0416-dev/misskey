@@ -105,7 +105,7 @@ export async function handleQueueAggregateRetention(deps: QueueSystemDependencie
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueError(err)) {
-			// 既に他のワーカーによって処理済み
+			// 同じ日付の集計行が既にある場合は、既存の処理に任せる。
 			return;
 		}
 		throw err;

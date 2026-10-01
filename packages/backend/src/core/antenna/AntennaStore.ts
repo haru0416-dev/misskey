@@ -174,10 +174,7 @@ const antennaActivePlan = defineCachedQueryPlan((db) => {
 	};
 });
 
-/**
- * isActive な Antenna を全件取得する。ノート配信時のアンテナ照合で使うホットパスなので、
- * フィルタ条件・全件取得の挙動を変えないこと。
- */
+/** ノート配信時の照合対象として、有効なアンテナを件数制限なしで取得する。 */
 export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
 	const rows = await antennaActivePlan.execute(db);
 

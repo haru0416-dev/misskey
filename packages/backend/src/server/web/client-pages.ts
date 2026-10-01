@@ -209,8 +209,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/embed/user-timeline/:user', async (c, next) => {
 		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
 
-		// 通常のユーザーページ (/@:user) と同じ可視性判定にする。
-		// 埋め込みだけ緩いと、非公開設定を迂回する経路になってしまう。
+		// 埋め込みのユーザータイムラインは、停止されておらずインスタンス設定で匿名閲覧が許可されたローカルユーザーのみ対象にする。
 		if (user == null || user.host != null || user.isSuspended || !isUgcVisibleToVisitor(deps, user.host)) {
 			await next();
 			return;
@@ -234,9 +233,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 				? await fetchUserByIdFromDatabase(deps.db, note.userId)
 				: null;
 
-		// 通常のノートページ (/notes/:note) と同じ可視性判定にする。
-		// requireSigninToViewContents (ユーザー設定) と ugcVisibilityForVisitor
-		// (インスタンス設定) を見ないと、埋め込みが非公開設定の抜け道になる。
+		// 埋め込みから閲覧制限を迂回できないよう、投稿の公開範囲・投稿者の停止状態・ユーザーとインスタンスの閲覧設定を確認する。
 		if (
 			note == null ||
 			noteUser == null ||
@@ -396,7 +393,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			);
 		}
 
-		// リモートユーザー等: モデレータがAPI経由で参照可能にするために404にはせず汎用ページへ
+		// SSR の条件を満たさない場合も、資格情報付きの API から参照できるよう汎用ページへ渡す。
 		await next();
 		return;
 	});

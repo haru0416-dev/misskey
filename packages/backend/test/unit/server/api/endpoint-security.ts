@@ -8,10 +8,9 @@ import { endpointMetas } from '@/server/api/endpoint-metas.js';
 import type { EndpointGuardMeta } from '@/server/rest/endpoint-guards.js';
 
 /*
- * 認証・権限・移行済みの拒否・scope は、meta から共通の門 (applyEndpointGuards) が組み立てる。
- * エンドポイントごとの e2e で拒否を確かめる代わりに、全エンドポイントの宣言をここで表として固定する。
- * 宣言を変えたら `vitest -u` で endpoint-security.snap.txt を更新し、差分をレビューで確かめること。
- * 門そのものの挙動 (拒否の順序やエラーの id) は e2e/api.ts が見る。
+ * meta が宣言する認証・権限・移行済み利用者の拒否・scope を固定し、意図しない API 契約の変更を検出する。
+ * この表だけでは実際の拒否を保証できない。共通 guard の拒否条件・順序・エラーは e2e/api.ts 等で確かめる。
+ * 宣言を変更する場合は endpoint-security.snap.txt の差分を認可契約の変更としてレビューする。
  */
 
 function describeGuards(meta: EndpointGuardMeta): string {

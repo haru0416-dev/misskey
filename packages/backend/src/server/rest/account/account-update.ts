@@ -234,8 +234,7 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 			if (pattern == null || flags == null) {
 				throw iUpdateInvalidRegexpError();
 			}
-			// 正規表現として妥当かどうかだけを見る (不正なら throw する)。
-			// ミュートを実際に適用するのはクライアントなので、そちらと同じエンジンで検査する。
+			// 保存前にパターンとフラグの構文だけを検査し、マッチングは行わない。
 			void new RegExp(pattern, flags);
 		} catch {
 			throw iUpdateInvalidRegexpError();

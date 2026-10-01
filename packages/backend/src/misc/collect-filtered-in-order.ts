@@ -7,10 +7,10 @@
 const DEFAULT_MAX_BATCHES = 10;
 
 /**
- * 並び順の決まった候補 ID を limit 件ずつ filter へ渡し、残ったものを候補の順に limit 件そろうまで集める。
- * 候補が ID だけのタイムラインやランキングでは、ミュート・ブロック・公開範囲・削除済みを後から DB で落とす。
- * 先に limit 件で切ってから落とすと、先頭が全部落ちたときに後ろの候補が残っていても空のページになり、
- * クライアントはそこで読み込みをやめる。次のページはここで返した最後の ID から続くので、途中で切っても抜けない。
+ * 候補 ID を limit 件ずつ filter へ渡し、残ったものを候補の順に最大 limit 件集める。
+ * ID だけのタイムラインやランキングでは、ミュート・ブロック・公開範囲・削除済みを後から DB で落とすため、
+ * 最初のバッチが全て除外されても後続の候補を調べる。ただし filter の呼び出しは maxBatches 回で打ち切るので、
+ * 後続に候補が残っていても limit 件未満や空の結果になりうる。
  */
 export async function collectFilteredInOrder<T extends { id: string }>(
 	candidates: readonly string[],

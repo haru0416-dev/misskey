@@ -85,7 +85,6 @@ import {
 	fetchUserListByNameAndUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	fetchWebhookByIdAndUserIdFromDatabase,
-	fixtureConfig,
 	flashLikeExistsInDatabase,
 	genId,
 	insertEmojiInDatabase,
@@ -135,7 +134,6 @@ describe('Endpoints', () => {
 
 	describe('channel read endpoints', () => {
 		test('featured, owned, followed, and my-favorites preserve caller-scoped flags', async () => {
-			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const owned = await createChannelInDatabase(db, {
 				id: genId(),
@@ -213,7 +211,6 @@ describe('Endpoints', () => {
 
 	describe('channel write endpoints', () => {
 		const createOwnedDriveFile = async (userId: string, seed: string) => {
-			const config = fixtureConfig;
 			const md5 = createHash('md5').update(seed).digest('hex');
 			return await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -284,7 +281,6 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy channel create file validation errors', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const requester = await signup({ username: `honochreq${now.toString(36)}` });
 			const fileOwner = await signup({ username: `honochfile${now.toString(36)}` });
@@ -302,7 +298,6 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy channel update authorization and file errors', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const owner = await signup({ username: `hcupown${now.toString(36)}` });
 			const intruder = await signup({ username: `honochupintr${now.toString(36)}` });
@@ -394,7 +389,6 @@ describe('Endpoints', () => {
 
 	describe('channel follow endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
-			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -444,7 +438,6 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy validation errors', async () => {
-			const config = fixtureConfig;
 			const missingFollow = await api(
 				'channels/follow',
 				{
@@ -469,7 +462,6 @@ describe('Endpoints', () => {
 
 	describe('channel mute endpoints', () => {
 		test('create, list, and delete preserve channel mute behavior', async () => {
-			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
@@ -553,7 +545,6 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy validation errors', async () => {
-			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -607,7 +598,6 @@ describe('Endpoints', () => {
 				return channelSearchFixture;
 			}
 
-			const config = fixtureConfig;
 			const prefix = `hono-search-${Date.now().toString(36)}`;
 			const aaa = await createChannelInDatabase(db, {
 				id: genId(),
@@ -736,7 +726,6 @@ describe('Endpoints', () => {
 
 	describe('channels/show and channels/timeline', () => {
 		test('channels/show はpinnedNotesを含み、channels/timelineはNO_SUCH_CHANNELと投稿一覧を維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcs${suffix}` });
 			const channel = await createChannelInDatabase(db, {
@@ -1110,7 +1099,6 @@ describe('Endpoints', () => {
 
 	describe('drive/folders/delete', () => {
 		test('空フォルダを削除できる', async () => {
-			const config = fixtureConfig;
 			const folder = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1131,7 +1119,6 @@ describe('Endpoints', () => {
 		});
 
 		test('他人のフォルダを削除できない', async () => {
-			const config = fixtureConfig;
 			const folder = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1153,7 +1140,6 @@ describe('Endpoints', () => {
 		});
 
 		test('子フォルダがあるフォルダを削除できない', async () => {
-			const config = fixtureConfig;
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1181,7 +1167,6 @@ describe('Endpoints', () => {
 		});
 
 		test('子ファイルがあるフォルダを削除できない', async () => {
-			const config = fixtureConfig;
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,

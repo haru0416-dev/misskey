@@ -9,9 +9,9 @@ import { hashtag } from './hashtag.js';
 import { user } from './user.js';
 
 /**
- * タグを使った利用者。hashtag の *UsersCount を重複なく数えるためだけに持つ。
- * 以前は hashtag の行に利用者 ID の配列を持たせていたが、同じ人がまた使うだけでも配列全体を書き直し、
- * 5 万人のタグで 1 件あたり 1.1 MB の WAL と 136 ms がかかっていた。行にすれば、既に数えた人は索引を引くだけで済む。
+ * hashtag の *UsersCount を重複なく数えるための対応表。同じ利用者の再利用では hashtag 行を書き換えない。
+ * 利用者 ID の配列を更新する方式は、5 万人のタグで 1 件あたり 1.1 MB の WAL と 136 ms を要したため、
+ * 複合主キーによる重複検出で配列全体の書き換えを避ける。
  */
 export const hashtagUser = pgTable(
 	'hashtag_user',

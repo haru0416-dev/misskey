@@ -15,7 +15,7 @@ export type SwMessage = {
 	[x: string]: unknown;
 };
 
-// packages/backend/src/server/rest/push-notification.tsのPushNotificationsTypesと同期する。
+// packages/backend/src/server/rest/notification/push-notification.ts の PushNotificationsTypes と同期する。
 type PushNotificationDataSourceMap = {
 	notification: Misskey.entities.Notification;
 	unreadAntennaNote: {

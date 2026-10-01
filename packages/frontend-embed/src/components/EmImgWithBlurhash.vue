@@ -17,7 +17,7 @@ import { WorkerMultiDispatch } from '@shared/utility/worker-multi-dispatch.js';
 import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
 
 const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>((resolve) => {
-	// テスト環境で Web Worker インスタンスは作成できない
+	// テストでは Worker の代わりに DOM の canvas を使う。
 	if (import.meta.env.MODE === 'test') {
 		const canvas = window.document.createElement('canvas');
 		canvas.width = 64;

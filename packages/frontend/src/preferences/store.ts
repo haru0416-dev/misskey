@@ -385,12 +385,12 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 		state: () => createPreferencesStoreState(io, currentAccount),
 		actions: {
 			_rewriteRawState<K extends keyof PREF>(key: K, value: ValueOf<K>) {
-				const v = deepClone(value as Cloneable) as ValueOf<K>; // deep copy 兼 vueのプロキシ解除
+				const v = deepClone(value as Cloneable) as ValueOf<K>; // Vue のプロキシと入力値の参照共有を避ける。
 				(this.$state[key] as unknown) = v;
 			},
 
 			commit<K extends keyof PREF>(key: K, value: ValueOf<K>) {
-				const v = deepClone(value as Cloneable) as ValueOf<K>; // deep copy 兼 vueのプロキシ解除
+				const v = deepClone(value as Cloneable) as ValueOf<K>; // Vue のプロキシと入力値の参照共有を避ける。
 
 				if (deepEqual(this.$state[key], v)) {
 					if (_DEV_) {
@@ -606,7 +606,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 							mergedValue = merge(local, remote) as ValueOf<K> | undefined;
 						}
 					} catch {
-						// nop
+						// 統合できない場合も、リモート値か端末の値を選べるようにする。
 					}
 					const { canceled, result: choice } = await os.select({
 						title: i18n.ts.preferenceSyncConflictTitle,
@@ -658,7 +658,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					const resolvedValue = await resolveConflict(record[1], existing.value);
 					if (resolvedValue === undefined) {
 						return { enabled: false };
-					} // canceled
+					}
 					newValue = resolvedValue;
 				}
 

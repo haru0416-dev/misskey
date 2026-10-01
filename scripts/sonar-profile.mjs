@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// dev/sonarqube/rule-overrides.json の定義を SonarQube の Quality Profile へ適用する。
-// 'Sonar way' を複製した 'Misskey way' を作り、ノイズ・誤検出のルールだけを無効化して
-// misskey プロジェクトに割り当てる。既に存在する場合は無効化状態を貼り直す。
+// rule-overrides.json を Quality Profile の正本とし、既存 profile でも無効化・復帰を同期する。
 
 import { readFileSync } from 'node:fs';
 

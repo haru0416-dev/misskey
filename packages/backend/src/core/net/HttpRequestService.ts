@@ -16,7 +16,7 @@ import { URL } from 'node:url';
 /**
  * `send()` の戻り値。通信経路の `Response` から、呼び出し側が実際に使う表面
  * (ok/status/statusText/url/headers と json()/text()/bytes()) だけを取り出したラッパー。
- * ボディは size 上限付きで読み切った上でメモリに保持しているため json()/text() は同期的に解決する。
+ * ボディは size 上限付きで読み切って保持するため、各読み取りメソッドは追加の通信を行わない。
  */
 export type HttpRequestSendResponse = {
 	ok: boolean;
@@ -37,7 +37,7 @@ export type HttpRequestSendOptions = {
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const textDecoder = new TextDecoder();
 
-/** リダイレクト先へ引き継がない (安全側に倒す) ヘッダ。cross-origin では Authorization も別途落とす。 */
+/** GET への変換時にボディとともに落とすヘッダ。cross-origin では資格情報も別途落とす。 */
 const CONTENT_HEADERS = ['content-type', 'content-length', 'content-encoding', 'content-language', 'content-location'];
 
 function deleteHeaderCaseInsensitive(headers: Record<string, string>, name: string): void {
@@ -262,7 +262,7 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 	 * fetch の `redirect: 'follow'` に任せると、リダイレクト先が assertUrlAllowed を通らず、Bun では
 	 * Agent の socket レベル遮断も効かないため、`302 -> http://169.254.169.254/` 等で private アドレスへ
 	 * 誘導する SSRF が成立してしまう。そのため `redirect: 'manual'` で 1 ホップずつ検査しながら追跡する。
-	 * メソッド/ボディの引き継ぎは WHATWG fetch の既定と同じ (303 と POST への 301/302 は GET 化して body を落とす)。
+	 * 303 と POST への 301/302 は GET に変換し、body と本文関連のヘッダを落とす。
 	 */
 	async function fetchFollowingRedirects(
 		initialUrl: string,
@@ -333,7 +333,6 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 			// リダイレクトレスポンス自体のボディは不要なので破棄し、keep-alive ソケットを解放する。
 			await res.body?.cancel().catch(() => {});
 
-			// メソッド/ボディの変換 (WHATWG fetch 準拠)。
 			if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
 				method = 'GET';
 				body = undefined;

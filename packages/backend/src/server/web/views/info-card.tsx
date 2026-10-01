@@ -12,7 +12,7 @@ export function InfoCardPage(
 		meta: MiMeta;
 	}>,
 ) {
-	// 変数名をsafeで始めることでエラーをスキップ
+	// インスタンス説明は HTML として出力する。safe 接頭辞は XSS 検査への指定で、エスケープは行わない。
 	const safeDescription = props.meta.description;
 
 	return (

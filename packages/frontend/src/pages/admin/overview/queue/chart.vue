@@ -14,7 +14,18 @@ import { chartText } from '@/features/charts/chart-i18n.js';
 
 const props = defineProps<{ type: string }>();
 const values = ref<number[]>([]);
-const label = computed(() => props.type === 'process' ? chartText('process') : props.type === 'active' ? chartText('active') : props.type === 'delayed' ? chartText('delayed') : chartText('waiting'));
+const label = computed(() => {
+	switch (props.type) {
+		case 'process':
+			return chartText('process');
+		case 'active':
+			return chartText('active');
+		case 'delayed':
+			return chartText('delayed');
+		default:
+			return chartText('waiting');
+	}
+});
 const series = computed(() => [{
 	name: label.value,
 	type: 'area' as const,

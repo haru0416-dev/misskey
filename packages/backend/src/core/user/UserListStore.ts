@@ -187,7 +187,7 @@ export async function createUserListWithinLimitInDatabase(
 	});
 }
 
-/** 両所有者のロックを呼び出し完了まで保持するため、トランザクション内で呼ぶ。 */
+/** 所有者の作成上限ロックと行ロックを後続の作成まで保持するため、トランザクション内で呼ぶ。 */
 export async function lockUserListOwnerForCreationInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],

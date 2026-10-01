@@ -74,8 +74,8 @@ function evaluateRoleCondition(user: MiUser, assignedRoles: MiRole[], value: Rol
 }
 
 /**
- * 取得済みの role 全件 + そのユーザーの assignment 群からユーザーの保持ロールを計算する純粋部分。
- * ユーザー一覧のpackで assignments をIN句一括取得した上でユーザー毎に呼べるよう分離してある。
+ * 取得済みのロールと割り当てから、現在有効な割り当てと条件付きロールを解決する。
+ * 一覧の pack は一括取得した割り当てを渡し、ユーザーごとの DB 問い合わせを避ける。
  */
 export function computeApiUserRoles(
 	deps: ApiRolePolicyDependencies,
@@ -104,9 +104,8 @@ export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiU
 		return [];
 	}
 
-	// 同一リクエスト内で複数箇所から呼ばれる (notes/create と users/show でそれぞれ3回)。
-	// ロール定義は全員で共通、割り当てはユーザーごとなので、キーを分けて memo する。
-	// 同じsnapshotで取得済みならmemoを使い、世代番号をまだ読んでいない経路だけ問い合わせる。
+	// 認証などで取得済みの世代番号をリクエスト内で共有する。
+	// ロール定義とユーザーごとの割り当ては、この世代番号でプロセス内キャッシュの新旧を判定する。
 	const version = await memoizeInRequest(ROLES_VERSION_MEMO_KEY, () => fetchRolesCacheVersionFromDatabase(deps.db));
 	const [roles, assignments] = await Promise.all([
 		listRolesFromDatabaseCachedByVersion(deps.db, version),

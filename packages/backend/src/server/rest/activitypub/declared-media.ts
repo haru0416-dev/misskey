@@ -7,7 +7,7 @@ import type { DeclaredRemoteFile } from '../drive/drive-file-upload.js';
 
 const BASE83 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
 
-// type/subtype だけを受け付ける (パラメータ付きや空白入りは申告として扱わない)。列は varchar(128)。
+// 前後の空白を除去した type/subtype だけを受け付ける (パラメータ付きや内部の空白は不可)。列は varchar(128)。
 const MIME_PATTERN = /^[a-z0-9][a-z0-9!#$&^_.+-]{0,62}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,62}$/;
 
 // 画面の blurhash デコーダは形式の正しさを前提にするので、文字種と「先頭 1 文字が決める成分数」と全体の長さを照合する。

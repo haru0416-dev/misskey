@@ -245,7 +245,7 @@ export async function fetchLocalUserByNativeTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: NonNullable<MiLocalUser['token']>,
 ): Promise<MiLocalUser | null> {
-	// 認証で全リクエストが通る。user は42列あり、毎回組み立てると 167µs かかる。
+	// 列の多い user の取得クエリは、トークンだけを差し替えて組み立て済みの計画を再利用する。
 	const [row] = await userByNativeTokenPlan.execute(db, { token });
 
 	return row ? (deserializeUser(row) as MiLocalUser) : null;

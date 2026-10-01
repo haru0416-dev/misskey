@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 withDefaults(defineProps<{
-	/** 発言者のいる側。その側の上角だけ鋭角 (ドッキングコーナー) になる。none は全角均一 */
+	/** 発言者のいる側。テール装飾ではなく、その側の上角だけを小さな角丸にする。none は全角均一。 */
 	tail?: 'left' | 'right' | 'none';
 	accented?: boolean;
 	fullWidth?: boolean;
@@ -34,7 +34,6 @@ withDefaults(defineProps<{
 </script>
 
 <style module lang="scss">
-// テール装飾を持たず、発言者側の上角だけを鋭角 (radius-xs) にして向きを示す。
 .root {
 	--fukidashi-radius: var(--MI-radius-lg);
 	--fukidashi-dock-radius: var(--MI-radius-xs);

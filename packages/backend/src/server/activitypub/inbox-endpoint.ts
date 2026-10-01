@@ -41,7 +41,7 @@ function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, s
 }
 
 /**
- * `POST /inbox` / `POST /users/:user/inbox` では署名パラメータの構造と Digest だけを検証してキューに積む。
+ * `POST /inbox` / `POST /users/:user/inbox` では署名パラメータ・必須署名ヘッダ・時刻・Host・Digest を検査してキューに積む。
  * 署名者の解決と署名検証は、キューが混雑していても受付を速く返せるよう queue/handlers/inbox.ts で行う。
  */
 export async function handleInboxRequest(deps: InboxEndpointDependencies, request: Request): Promise<Response> {
@@ -76,12 +76,10 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 	}
 
 	if (headers['host'] !== deps.config.runtime.host) {
-		// Host が署名対象に含まれない、または設定値と一致しない。
 		return rawStatus(401);
 	}
 
 	if (!signature.headers.includes('digest')) {
-		// Digest が署名対象に含まれない。
 		return rawStatus(401);
 	}
 

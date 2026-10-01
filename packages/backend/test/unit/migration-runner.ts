@@ -10,8 +10,7 @@ import type { Config } from '@/config.js';
 import { createBunSqlClient } from '@/db/bun-sql.js';
 import { reconcileNoteTextIndex } from '@/migration-runner.js';
 
-// 本文の trigram index は設定 (search.noteTextIndex) に合わせて起動時に作る・消す。
-// 書き込みの 8 割以上がこの index なので、SD カード等では外せる必要がある。
+// 本文の trigram index は更新時の書き込み負担を伴うため、search.noteTextIndex で起動時の有無を制御する。
 describe('reconcileNoteTextIndex', () => {
 	let config: Config;
 	let pool: NativeSqlClient;

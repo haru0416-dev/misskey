@@ -56,7 +56,7 @@ export async function fetchDriveFolderByIdAndUserIdFromDatabase(
 	return row ?? null;
 }
 
-/** フォルダ一覧の pack 向け。フォルダ本体と先祖フォルダをまとめて取得する。 */
+/** フォルダ一覧の pack 向け。祖先の探索は呼び出し側で行い、ここでは指定された ID の行だけを取得する。 */
 export async function listDriveFoldersByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: DriveFolderRow['id'][],

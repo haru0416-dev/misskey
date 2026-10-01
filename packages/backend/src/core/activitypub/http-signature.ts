@@ -152,13 +152,13 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
 	};
 }
 
-/** 署名の時刻と受信時刻のずれの許容幅。以前使っていた @peertube/http-signature の clockSkew 既定値と同じ。 */
+/** リクエスト時刻のずれと期限切れに対する許容幅。 */
 const SIGNATURE_CLOCK_SKEW_MS = 300 * 1000;
 
 /**
- * 署名された Date と (created) / (expires) が受信時刻から許容幅に収まっているかを確かめる。
- * 署名が正しくても、以前に届いたリクエストをそのまま送り直されたものとは区別できないので、時刻で古いものを弾く。
- * 署名の検証より前に呼んでよい (時刻の値は署名対象なので、改ざんされていれば検証で落ちる)。
+ * Date が署名対象なら受信時刻との差を検査し、created / expires が指定されていれば時刻のずれ・期限切れを検査する。
+ * 許容幅内の再送は区別できないため、この検査だけではリプレイを防げない。
+ * 暗号学的な署名検証より前に呼べるが、時刻検査は署名検証の代わりにはならない。
  */
 export function assertSignatureFresh(
 	request: SignatureTargetRequest,

@@ -61,7 +61,7 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 	return promise;
 }
 
-// Implements Misskey.api.ApiClient.request
+// Misskey.api.ApiClient.request と同じ条件付き応答型を使う。
 export function misskeyApi<
 	ResT = void,
 	E extends OptionalEndpoint = OptionalEndpoint,
@@ -123,7 +123,7 @@ export function prepareMisskeyApiRequest<
 	};
 }
 
-// Implements Misskey.api.ApiClient.request
+// Misskey.api.ApiClient.request と同じ条件付き応答型を使う。
 export function misskeyApiGet<
 	ResT = void,
 	E extends OptionalEndpoint = OptionalEndpoint,

@@ -12,7 +12,6 @@ const clickHandlers = new WeakMap<HTMLElement, () => void>();
 
 export const rippleDirective = {
 	mounted(el, binding) {
-		// 明示的に false であればバインドしない
 		if (binding.value === false) {
 			return;
 		}

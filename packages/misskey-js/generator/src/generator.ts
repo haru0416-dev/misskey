@@ -12,7 +12,6 @@ import type {
 import ts from 'typescript';
 import { removeNeverPropertiesFromAST } from './ast-transformer.js';
 
-// 'admin/accounts/create' + 'Request' のパスから型名 'AdminAccountsCreateRequest' を作る。
 function toPascalCase(term: string): string {
 	return term
 		.replace(/^([A-Z])/, (m) => m.toLowerCase())
@@ -20,10 +19,10 @@ function toPascalCase(term: string): string {
 		.replace(/^([a-z])/, (m) => m.toUpperCase());
 }
 
-async function generateBaseTypes(openApiDocs: OpenAPI3, openApiJsonPath: string, typeFileName: string) {
+async function generateBaseTypes(openApiJsonPath: string, typeFileName: string) {
 	const lines: string[] = [];
 
-	// GETとPOSTでoperationIdを揃え、型定義の重複を防ぐ。
+	// POST の operationId からメソッド接頭辞を除き、GET の定義は生成対象から外す。
 	const openApi = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
 	for (const [key, item] of Object.entries(openApi.paths!)) {
 		assert('post' in item);
@@ -149,7 +148,7 @@ async function generateEndpoints(
 	entitiesOutputLine.push(new EmptyTypeAlias(OperationsAliasType.RESPONSE).toLine());
 	entitiesOutputLine.push('');
 
-	const entities = endpoints.flatMap((it) => [it.request, it.response].filter((i) => i)).filter(filterUndefined);
+	const entities = endpoints.flatMap((it) => [it.request, it.response]).filter(filterUndefined);
 	entitiesOutputLine.push(...entities.map((it) => it.toLine()));
 	entitiesOutputLine.push('');
 
@@ -359,7 +358,7 @@ async function main() {
 	const openApiDocs = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
 
 	const typeFileName = './built/autogen/types.ts';
-	await generateBaseTypes(openApiDocs, openApiJsonPath, typeFileName);
+	await generateBaseTypes(openApiJsonPath, typeFileName);
 
 	const modelFileName = `${generatePath}/models.ts`;
 	await generateSchemaEntities(openApiDocs, typeFileName, modelFileName);

@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-// napi-rs が生成する 13 プラットフォーム対応のローダーは、公開パッケージから
-// プラットフォーム別パッケージを探すためのもの。ここではリポジトリ内でビルドするので、
-// 隣に置かれた成果物だけを読む。
+// リポジトリ内でビルドした成果物だけを読み、プラットフォーム別の npm パッケージは参照しない。
 const { existsSync, readFileSync } = require('node:fs');
 const { join } = require('node:path');
 

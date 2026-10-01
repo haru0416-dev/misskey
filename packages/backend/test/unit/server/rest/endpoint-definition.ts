@@ -4,15 +4,21 @@
  */
 
 import { Hono } from 'hono';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, expectTypeOf, test } from 'vitest';
 import type * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
-import { createRedisClient } from '@/runtime-dependencies.js';
+import { createRedisClient, createRuntimeDependencies } from '@/runtime-dependencies.js';
 import { z } from 'zod';
 import { defineContract } from '@/server/rest/endpoint-contract.js';
 import { implementEndpoints, registerEndpoints } from '@/server/rest/endpoint-definition.js';
 import { ApiError } from '@/server/rest/error.js';
+import { createEventPublishers } from '@/server/rest/events.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { createRoleInDatabase, deleteRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { generateNativeUserToken } from '@/misc/token.js';
 
 const contracts = {
 	'probe/show': defineContract({
@@ -155,25 +161,99 @@ describe('registerEndpoints', () => {
 	});
 
 	test('実装の戻り値・実装の漏れ・宣言に無いエラーは型エラーになる', () => {
-		// 型の検査は @ts-expect-error が使われなければ typecheck で落ちる。実行時は登録される名前だけ確かめる。
+		// 型契約の破れは、下の @ts-expect-error が未使用になれば typecheck で検出される。
 		const show = { 'probe/show': contracts['probe/show'] };
-		const wrongResult = implementEndpoints<object>()(show, {
+		implementEndpoints<object>()(show, {
+			'probe/show': async ({ input }) => {
+				expectTypeOf(input.id).toEqualTypeOf<string>();
+				return { id: input.id };
+			},
+		});
+		implementEndpoints<object>()(show, {
 			// @ts-expect-error meta.res の id は string
 			'probe/show': async () => ({ id: 1 }),
 		});
 		// @ts-expect-error 契約に対する実装が無い
-		const missing = implementEndpoints<object>()(show, {});
-		const undeclared = implementEndpoints<object>()(show, {
+		implementEndpoints<object>()(show, {});
+		implementEndpoints<object>()(show, {
 			'probe/show': async ({ errors }) => {
 				// @ts-expect-error meta.errors に無いキー
 				throw errors.notDeclared();
 			},
 		});
-		expect([wrongResult, missing, undeclared].map((list) => list.map((endpoint) => endpoint.name))).toStrictEqual([
-			['probe/show'],
-			['probe/show'],
-			['probe/show'],
-		]);
+	});
+
+	test('認証済みのリクエストも meta.limit を 1 回だけ数え、次の要求を 429 で拒否する', async () => {
+		const config = loadConfig();
+		const runtime = await createRuntimeDependencies(config);
+		const db = runtime.db;
+		const userId = genId();
+		const roleId = genId();
+		const token = generateNativeUserToken();
+		process.env['NODE_ENV'] = 'production';
+
+		try {
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: { id: userId, username: `limited${userId}`, usernameLower: `limited${userId}`, token },
+				profile: { userId },
+			});
+			// 共有 DB の条件付きロールが制限を無効にしていても、この利用者だけには正の倍率を適用する。
+			await createRoleInDatabase(db, {
+				id: roleId,
+				updatedAt: new Date(),
+				lastUsedAt: new Date(),
+				name: `limited-${roleId}`,
+				description: '',
+				policies: { rateLimitFactor: { useDefault: false, priority: 2, value: 1 } },
+			});
+			await createRoleAssignmentInDatabase(db, { id: genId(), roleId, userId, expiresAt: null });
+
+			const deps = {
+				...runtime,
+				logger: runtime.loggerService.getLogger('test-endpoint-definition'),
+				...createEventPublishers({
+					config,
+					publish: (channel, message) => runtime.redisForPub.publish(channel, message),
+				}),
+			};
+			const limited = {
+				'probe/authenticated-limited': defineContract({
+					meta: {
+						requireCredential: true,
+						kind: 'read:account',
+						limit: { minInterval: 60_000 },
+						res: { type: 'object', optional: false, nullable: false, properties: { id: { type: 'string' } } },
+					},
+					paramDef: z.object({}),
+				}),
+			};
+			const app = new Hono();
+			registerEndpoints(
+				app,
+				deps,
+				implementEndpoints<typeof deps>()(limited, {
+					'probe/authenticated-limited': async ({ me }) => ({ id: me!.id }),
+				}),
+			);
+
+			const first = await post(app, '/probe/authenticated-limited', { i: token });
+			expect(first.status).toBe(200);
+			expect(await first.json()).toStrictEqual({ id: userId });
+			const second = await post(app, '/probe/authenticated-limited', { i: token });
+			expect(second.status).toBe(429);
+			expect((await errorOf(second)).code).toBe('RATE_LIMIT_EXCEEDED');
+		} finally {
+			try {
+				const keys = await redis.keys(`limit:${userId}:*`);
+				await Promise.all([
+					deleteRoleInDatabase(db, roleId),
+					deleteUserByIdFromDatabase(db, userId),
+					...(keys.length === 0 ? [] : [redis.del(...keys)]),
+				]);
+			} finally {
+				await runtime.dispose();
+			}
+		}
 	});
 
 	test('匿名のリクエストは meta.limit を IP 単位で 1 回だけ数える', async () => {

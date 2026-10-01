@@ -111,7 +111,6 @@ describe('Timeline', () => {
 	}
 
 	describe('homeTimeline', () => {
-		// コピー＆ペーストによる対象漏れを防ぐため、homeTimeline のみを対象にする。
 		const homeTimeline = 'homeTimeline';
 
 		describe("Check reception of remote followee's Note", () => {

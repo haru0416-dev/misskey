@@ -28,7 +28,7 @@ export async function generateSubsettedFont(ttfPath: string, unicodeRangeValues:
 		}
 
 		const fontBuffer = harfbuzzWasm.malloc(ttf.byteLength);
-		heapu8.set(new Uint8Array(ttf), fontBuffer);
+		heapu8.set(ttf, fontBuffer);
 
 		const blob = harfbuzzWasm.hb_blob_create(fontBuffer, ttf.byteLength, 2, 0, 0);
 		const face = harfbuzzWasm.hb_face_create(blob, 0);

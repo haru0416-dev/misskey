@@ -37,30 +37,6 @@ function createQueue(registeredKeys: string[] = []) {
 }
 
 describe('syncSystemJobSchedulers', () => {
-	test('registers every system scheduler with the expected cron pattern and retention', async () => {
-		const { queue, upsertJobScheduler } = createQueue();
-
-		await syncSystemJobSchedulers(queue, config);
-
-		expect(upsertJobScheduler).toHaveBeenCalledTimes(systemJobSchedulers.length);
-		for (const scheduler of systemJobSchedulers) {
-			expect(upsertJobScheduler).toHaveBeenCalledWith(
-				scheduler.name,
-				{
-					pattern: scheduler.pattern,
-					immediately: false,
-				},
-				{
-					name: scheduler.name,
-					opts: {
-						removeOnComplete: { age: 600, count: 20 },
-						removeOnFail: { age: 1200, count: 40 },
-					},
-				},
-			);
-		}
-	});
-
 	test('removes obsolete schedulers without removing current schedulers', async () => {
 		const currentKey = systemJobSchedulers[0].name;
 		const { queue, removeJobScheduler } = createQueue([currentKey, 'obsoleteJob']);

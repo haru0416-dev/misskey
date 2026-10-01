@@ -63,7 +63,7 @@ const assignmentsByUserId = new Map<MiUser['id'], { version: number; assignments
 /**
  * ユーザーの割り当てを世代番号付きで使い回す (世代は fetchRolesCacheVersionFromDatabase 参照)。
  * 期限切れの判定は呼び出し側が expiresAt で行うので、期限が過ぎても世代は変わらない。
- * 上限に達したら全て捨てる (ユーザー数に対する割合は小さく、次の要求で読み直せばよい)。
+ * 保持するユーザー数を制限するため、上限に達したら全て捨てて次の要求で読み直す。
  */
 export async function listRoleAssignmentsByUserIdFromDatabaseCachedByVersion(
 	db: MiDrizzleDatabase,

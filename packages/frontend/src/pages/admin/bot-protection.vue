@@ -216,24 +216,26 @@ const botProtectionForm = useForm({
 			errorHandler,
 		);
 	} else {
-		const sitekey = provider === 'hcaptcha'
-			? state.hcaptchaSiteKey
-			: provider === 'cap'
-				? state.capSiteKey
-				: provider === 'recaptcha'
-					? state.recaptchaSiteKey
-					: provider === 'turnstile'
-						? state.turnstileSiteKey
-						: null;
-		const secret = provider === 'hcaptcha'
-			? state.hcaptchaSecretKey
-			: provider === 'cap'
-				? state.capSecretKey
-				: provider === 'recaptcha'
-					? state.recaptchaSecretKey
-					: provider === 'turnstile'
-						? state.turnstileSecretKey
-						: null;
+		let sitekey: string | null = null;
+		let secret: string | null = null;
+		switch (provider) {
+			case 'hcaptcha':
+				sitekey = state.hcaptchaSiteKey;
+				secret = state.hcaptchaSecretKey;
+				break;
+			case 'cap':
+				sitekey = state.capSiteKey;
+				secret = state.capSecretKey;
+				break;
+			case 'recaptcha':
+				sitekey = state.recaptchaSiteKey;
+				secret = state.recaptchaSecretKey;
+				break;
+			case 'turnstile':
+				sitekey = state.turnstileSiteKey;
+				secret = state.turnstileSecretKey;
+				break;
+		}
 
 		await os.apiWithDialog(
 			'admin/captcha/save',

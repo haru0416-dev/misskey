@@ -90,9 +90,9 @@ const scannerInstance = shallowRef<QrScanner | null>(null);
 
 const tab = ref<'users' | 'notes' | 'all'>('users');
 
-// 先頭ほど新しい結果。
+// 重複を除き初回読み取り順を保つ。表示時は逆順にする。
 const results = ref(new Set<string>());
-// 末尾ほど新しい URI。
+// 再読み取りした URI も先頭へ移し、最新の読み取り順に保つ。
 const uris = ref<string[]>([]);
 const sources = new Map<string, ApShowResponse | null>();
 const users = ref<misskey.entities.UserDetailed[]>([]);

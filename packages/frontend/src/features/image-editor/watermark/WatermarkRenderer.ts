@@ -264,9 +264,7 @@ export class WatermarkRenderer {
 		this.compositor.changeResolution(width, height);
 	}
 
-	/*
-	 * disposeCanvas = true だとloseContextを呼ぶため、コンストラクタで渡されたcanvasも再利用不可になるので注意
-	 */
+	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true): void {
 		this.compositor.destroy(disposeCanvas);
 	}

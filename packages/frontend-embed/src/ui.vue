@@ -72,7 +72,8 @@ const rootEl = shallowRef<HTMLElement | null>(null);
 
 let previousHeight = 0;
 const resizeObserver = new ResizeObserver(() => {
-	const height = rootEl.value!.scrollHeight + (embedNoBorder.value ? 0 : 2); // border 上下1px
+	// scrollHeight に含まれない上下の border (各 1px) を通知する高さに加える。
+	const height = rootEl.value!.scrollHeight + (embedNoBorder.value ? 0 : 2);
 	if (Math.abs(previousHeight - height) < 1) {
 		return;
 	}

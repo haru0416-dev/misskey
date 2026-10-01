@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// Simple と Detailed で同じ意味を持つ名前と分類。
 const emojiNamingProperties = {
 	aliases: {
 		type: 'array',

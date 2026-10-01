@@ -44,8 +44,8 @@ function toDosDateTime(value: Date): { time: number; date: number } {
 
 /**
  * entries を順に zip として outPath へ書く。本文は deflate の level 0 (実質無圧縮) で格納する。
- * 本文は 1 件ずつ書き出すので、同時に持つ本文は 1 件ぶん (元データと格納用の 2 つ) だけ。中央ディレクトリ用の
- * ファイル名とメタデータは件数分保持する。書き込みの失敗はそのまま投げる。
+ * 書き込み側では各本文とその格納用データを 1 件ずつ処理し、中央ディレクトリ用の名前とメタデータだけを
+ * 件数分保持する。呼び出し元が entries に保持する元データは別途必要。書き込みの失敗はそのまま投げる。
  */
 export async function writeZip(outPath: string, entries: Iterable<ZipEntry> | AsyncIterable<ZipEntry>): Promise<void> {
 	const file = await open(outPath, 'w');

@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 全 .vue の template を Vue のコンパイラに通し、パースエラーを検出する。oxlint も vue-tsc も
-// template の構文 (属性の重複など) は見ないため。フルビルドは重いので、パースだけを lint に組み込む。
+// SFC の構文エラーをフルビルド前に検出する。型検査とは独立した検査として lint から実行する。
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { parse } from '@vue/compiler-sfc';
 
-// シェルを経由しないよう execFile 形式で呼ぶ (glob は git の pathspec が解釈する)
 const files = execFileSync('git', ['ls-files', 'packages/**/*.vue'], { encoding: 'utf8' })
 	.trim()
 	.split('\n')

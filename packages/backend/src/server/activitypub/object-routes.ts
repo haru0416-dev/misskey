@@ -58,7 +58,6 @@ const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystr
 const HTML_TYPE = 'text/html';
 
 /**
- * `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])` によるルート分岐を実装する。
  * q 値 (q=0 の明示拒否を含む) と優先順位を評価し、`Accept: text/html, application/activity+json`
  * のような複合ヘッダでも正しい形式を返す。
  */

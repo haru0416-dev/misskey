@@ -356,24 +356,29 @@ async function fetchJobs() {
 	}
 	jobsFetching.value = true;
 	const state = jobState.value;
+	let states: Misskey.entities.AdminQueueJobsRequest['state'];
+	switch (state) {
+		case 'all':
+			states = ['completed', 'failed', 'active', 'delayed', 'wait', 'prioritized'];
+			break;
+		case 'latest':
+			states = ['completed', 'failed'];
+			break;
+		case 'wait':
+			states = ['wait', 'prioritized'];
+			break;
+		default:
+			states = [state];
+	}
 	const fetched = await misskeyApi('admin/queue/jobs', {
 		queue,
-		state:
-			state === 'all'
-				? ['completed', 'failed', 'active', 'delayed', 'wait', 'prioritized']
-				: state === 'latest'
-					? ['completed', 'failed']
-					: state === 'wait'
-						? ['wait', 'prioritized']
-						: [state],
+		state: states,
 		...(searchQuery.value.trim() === '' ? {} : { search: searchQuery.value }),
 	}).then((res: Misskey.entities.AdminQueueJobsResponse) => {
-		if (state === 'all') {
+		if (state === 'all' || state === 'delayed') {
 			res.sort((a, b) => ((a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1));
 		} else if (state === 'latest') {
 			res.sort((a, b) => (a.processedOn! > b.processedOn! ? -1 : 1));
-		} else if (state === 'delayed') {
-			res.sort((a, b) => ((a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1));
 		}
 		return res;
 	});

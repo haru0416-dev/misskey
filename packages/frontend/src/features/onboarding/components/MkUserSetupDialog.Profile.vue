@@ -46,8 +46,7 @@ const $i = ensureSignin();
 
 const name = ref($i.name ?? '');
 const description = ref($i.description ?? '');
-// 保存済みの値。入力のたびには保存せず、ステップを離れるときにまとめて保存する (入力のたびに保存の知らせを出すと、
-// その間は次の欄に入力が届かず、保存ボタンを押し忘れると入力が捨てられていた)。
+// 入力中の保存通知でフォーカスを遮らないよう、ステップを離れるときに未保存の変更をまとめて保存する。
 let savedName = name.value;
 let savedDescription = description.value;
 

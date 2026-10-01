@@ -31,7 +31,7 @@ jobs:
   test:
     name: Federation fork ↔ ${{ matrix.peer }}
     runs-on: ubuntu-latest
-    # 通常は 4〜9 分。相手の起動待ちで止まったときに既定の 6 時間まで待たない。
+    # 相手の起動や配送が進まない場合も、CI の既定上限まで滞留させない。
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -63,7 +63,7 @@ jobs:
           cd packages/backend/test-federation
           bash ./setup.sh
           sudo chmod 644 ./certificates/*.test.key
-      # 相手のイメージの取得 (upstream は約 40 秒) をビルドと並行させる。起動の直前で終わりを待つ。
+      # イメージ取得をビルドと並行させ、起動前に取得完了を待つ。
       - name: Pull peer images in the background
         working-directory: packages/backend/test-federation
         run: |

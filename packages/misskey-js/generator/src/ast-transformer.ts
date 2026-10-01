@@ -97,8 +97,7 @@ export function removeNeverPropertiesFromAST(astNodes: readonly ts.Node[]): ts.N
 			}
 		}
 		if (ts.isInterfaceDeclaration(node) && node.name.escapedText === 'operations') {
-			const result = interfaceRecursiveVisitor(node);
-			return result;
+			return interfaceRecursiveVisitor(node);
 		}
 		return ts.visitEachChild(node, topLevelVisitor, undefined);
 	}

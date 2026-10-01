@@ -221,7 +221,6 @@ const align = () => {
 	}
 
 	if (fixed.value) {
-		// 画面から横にはみ出る場合
 		if (left + width > window.innerWidth - SCROLLBAR_THICKNESS) {
 			left = window.innerWidth - SCROLLBAR_THICKNESS - width;
 		}
@@ -229,7 +228,6 @@ const align = () => {
 		const underSpace = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - top;
 		const upperSpace = anchorRect.top - MARGIN;
 
-		// 画面から縦にはみ出る場合
 		if (top + height > window.innerHeight - SCROLLBAR_THICKNESS - MARGIN) {
 			if (props.noOverlap && props.anchor.x === 'center') {
 				if (underSpace >= upperSpace / 3) {
@@ -245,7 +243,6 @@ const align = () => {
 			maxHeight.value = underSpace;
 		}
 	} else {
-		// 画面から横にはみ出る場合
 		if (left + width - window.scrollX > window.innerWidth - SCROLLBAR_THICKNESS) {
 			left = window.innerWidth - SCROLLBAR_THICKNESS - width + window.scrollX - 1;
 		}
@@ -253,7 +250,6 @@ const align = () => {
 		const underSpace = window.innerHeight - SCROLLBAR_THICKNESS - MARGIN - (top - window.scrollY);
 		const upperSpace = anchorRect.top - MARGIN;
 
-		// 画面から縦にはみ出る場合
 		if (top + height - window.scrollY > window.innerHeight - SCROLLBAR_THICKNESS - MARGIN) {
 			if (props.noOverlap && props.anchor.x === 'center') {
 				if (underSpace >= upperSpace / 3) {
@@ -319,7 +315,7 @@ const onOpened = () => {
 				window.addEventListener(
 					'mouseup',
 					(ev) => {
-						// click イベントより先に mouseup イベントが発生するかもしれないのでちょっと待つ
+						// mouseup 後の click まで背景クリックの抑止を維持する。
 						window.setTimeout(() => {
 							contentClicking = false;
 						}, 100);

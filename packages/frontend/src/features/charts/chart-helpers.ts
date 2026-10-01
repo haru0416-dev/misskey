@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * dateTimeAxisLabel系のday単位チャートで使う、「now から ago 日前」の日付を返す
- */
+// 日単位の軸は端末のタイムゾーンの午前 0 時を基準にする。
 function getDateDaysAgo(now: Date, ago: number): Date {
 	const y = now.getFullYear();
 	const m = now.getMonth();

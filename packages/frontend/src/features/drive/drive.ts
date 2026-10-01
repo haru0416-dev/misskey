@@ -87,7 +87,7 @@ export function uploadFile(
 			return reject(new Error('not signed in'));
 		}
 
-		// こっち側で検出するMIME typeとサーバーで検出するMIME typeは異なる場合があるため、こっち側ではやらないことにする
+		// ブラウザとサーバーで MIME type の検出結果が異なる場合があるため、種類の許可判定はサーバーに任せる。
 		// https://github.com/misskey-dev/misskey/issues/16091
 
 		if (file.size > instance.maxFileSize || file.size > $i.policies.maxFileSizeMb * 1024 * 1024) {

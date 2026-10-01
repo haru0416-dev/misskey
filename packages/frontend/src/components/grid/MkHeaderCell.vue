@@ -147,7 +147,6 @@ function emitContentSizeChanged() {
 	const clientWidth = contentEl.value?.clientWidth ?? 0;
 	const clientHeight = contentEl.value?.clientHeight ?? 0;
 	emit('change:contentSize', column.value, {
-		// バーの横幅も考慮したいので、+3px
 		width: clientWidth + 3 + 3,
 		height: clientHeight,
 	});

@@ -18,8 +18,8 @@ type PatchableClient = {
 };
 
 /**
- * 組み立て済みクエリではビルダの呼び出し回数と DB 往復回数が一致しないため、Bun SQL の `unsafe` を差し替えて
- * ドライバのクエリ発行を数える。QueryPlan の文が回る計画を使い回す接続 (db/prepared.ts) も合わせて数える。
+ * ビルダの呼び出し回数ではなく、Bun SQL の `unsafe` でドライバのクエリ発行を数える。
+ * defineCachedQueryPlan が使う名前付き文用の接続 (db/prepared.ts) も対象にする。
  * transaction 内は専用クライアントを通るため数えない。
  * クライアントを差し替えるので、`beforeAll` で 1 つだけ作り `afterAll` で `restore()` すること。
  */

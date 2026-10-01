@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// FirefoxのプライベートモードなどではindexedDBが使用不可能なので、
-// indexedDBが使えない環境ではlocalStorageを使う
-import { get as iget, set as iset, update as iupdate, del as idel, clear as iclear } from 'idb-keyval';
+// IndexedDB が存在していても書き込みに失敗する環境があるため、起動時に確認して localStorage へ切り替える。
+import { get as iget, set as iset, update as iupdate, clear as iclear } from 'idb-keyval';
 import { miLocalStorage } from '@/local-storage.js';
 
 const PREFIX = 'idbfallback::';
@@ -58,13 +57,6 @@ export async function update(key: string, updater: (value: unknown) => unknown) 
 		return navigator.locks.request(storageKey, write);
 	}
 	write();
-}
-
-async function del(key: string) {
-	if (idbAvailable) {
-		return idel(key);
-	}
-	return miLocalStorage.removeItem(`${PREFIX}${key}`);
 }
 
 export async function clear() {

@@ -92,7 +92,7 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 		const anchorRect = scrollAnchorEl.getBoundingClientRect();
 		// anchorContentY: コンテンツ先頭からのアンカー要素上端の距離（scrollTopに依存しない）
 		const anchorContentY = scrollContainer.scrollTop + anchorRect.top - scrollContainer.getBoundingClientRect().top;
-		// キャプチャ時と同じ scrollTop になるよう直接セット（コンテナ高さ変化に依存しない）
+		// アンカー上端とコンテナ上端の距離をキャプチャ時と揃える。上方の要素の高さが変わる場合、scrollTop 自体は変わる。
 		scrollContainer.scrollTop = anchorContentY - anchorContainerLocalY;
 	};
 
@@ -116,7 +116,7 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				restoreTimer = null;
 				restore();
 
-				// anchorId が null か要素が見つからず anchor 方式で復元できなかった場合のフォールバック。
+				// アンカー方式で復元しても先頭に留まった場合は、保存した scrollTop を使う。
 				const el = scrollContainerRef.value;
 				if (el?.scrollTop === 0 && savedScrollTop > 0) {
 					el.scrollTop = savedScrollTop;

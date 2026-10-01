@@ -107,7 +107,6 @@ export const countryDict = [
 export function text(length = 10, seed?: string): string {
 	let result = '';
 
-	// シード指定時は同じ乱数値が続くが、テスト用文字列としての要件を満たす。
 	const rand = seed ? seedrandom(seed)() : Math.random();
 	while (result.length < length) {
 		result += rand.toString(36).substring(2);

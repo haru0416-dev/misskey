@@ -5,7 +5,7 @@
 
 import type { MiUser } from './User.js';
 
-// (domain, scope, key) の一意性は DB 制約で保証されていない。
+// 同じ userId・domain・scope・key の組は DB 制約で一意。domain が null の行も対象になる。
 export class MiRegistryItem {
 	public id: string;
 

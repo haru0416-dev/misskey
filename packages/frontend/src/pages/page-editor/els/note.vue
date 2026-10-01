@@ -46,12 +46,11 @@ const emit = defineEmits<{
 const id = ref(props.modelValue.note);
 const note = ref<Misskey.entities.Note | null>(null);
 
-// 詳細表示のノートは編集の合図を受けるので (MkNoteDetailed)、編集後の中身を当てて描き直させる。
+// 詳細表示は noteRenderKey で再生成するため、編集通知を手元の note にも反映する。
 useGlobalEvent('noteEdited', (edited) => {
 	if (note.value != null) note.value = applyEditedNote(note.value, edited);
 });
 
-// props を直接書き換えず update:modelValue で親に返す (id 側と同じ経路に揃える)
 const detailed = computed({
 	get: () => props.modelValue.detailed,
 	set: (value: boolean) => emit('update:modelValue', { ...props.modelValue, detailed: value }),

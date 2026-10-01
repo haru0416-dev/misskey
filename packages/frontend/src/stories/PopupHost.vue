@@ -16,6 +16,5 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { popups } from '@/os.js';
 
-// story が os.popup / os.popupMenu を呼ぶと popups へ積まれるだけなので、
-// 描画側 (本体では app shell) をここで肩代わりする。
+// os.popup / os.popupMenu は popups に登録するだけなので、story にも描画ホストが必要。
 </script>

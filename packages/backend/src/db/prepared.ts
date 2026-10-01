@@ -125,11 +125,6 @@ function compileRowMapper(
 }
 
 /**
- * 宣言は静的な query 形状だけを閉じ込め、実行値・接続・認証状態は保持しない。
- * selection は同じ recipe 内で select / returning にも渡す。任意の prepared object の抽出や
- * all() の raw row 実行は扱わない。SQL と mapping の再利用と、session の寿命を分離する。
- */
-/**
  * 計画を使い回してよい文。値によって最適な計画が変わらないもの (キーの等号・キーの配列・存在確認で引く読み取りと、
  * 条件の無い全件の読み取り) だけに使う。範囲や絞り込みで一致件数が大きく変わる文に使うと、generic plan に
  * 固定されて遅くなる (公開ノート一覧の絞り込みで 55〜72 → 127〜170 ms、冷えたキャッシュで 117 → 3,069 ms)。
@@ -142,6 +137,11 @@ export function defineQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecip
 	return createQueryPlan(recipe, false);
 }
 
+/**
+ * 宣言は静的な query 形状だけを閉じ込め、実行値・接続・認証状態は保持しない。
+ * selection は同じ recipe 内で select / returning にも渡す。任意の prepared object の抽出や
+ * all() の raw row 実行は扱わない。SQL と mapping の再利用と、session の寿命を分離する。
+ */
 function createQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>, cachePlan: boolean): QueryPlan<T> {
 	let compiled: CompiledQuery | undefined;
 	return Object.freeze({
@@ -165,7 +165,7 @@ function createQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>, c
 				);
 				if (!dynamicDefaults) compiled = plan;
 			}
-			// 現在の transaction / savepoint の session に結び付ける。ルートの db なら計画を使い回す接続へ回す。
+			// transaction / savepoint の session を保ち、計画キャッシュが有効な登録済みルート db だけ別接続へ回す。
 			const run = (target: MiDrizzleDatabase) =>
 				target._.session
 					.prepareQuery<{ execute: T; all: unknown; values: unknown }>(

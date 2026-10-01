@@ -177,7 +177,6 @@ export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: D
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
 			}
 
-			// 再試行可能な HTTP エラーは BullMQ に再試行させる。
 			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
 			throw res;

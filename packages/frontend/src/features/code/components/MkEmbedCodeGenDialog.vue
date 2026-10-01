@@ -132,7 +132,6 @@ const phase = ref<'input' | 'result'>('input');
 
 //#region 埋め込みURL生成・カスタマイズ
 
-// 本URL生成用params
 const paramsForUrl = computed<EmbedParams>(() => ({
 	header: header.value,
 	...(typeof maxHeight.value === 'number' ? { maxHeight: Math.max(0, maxHeight.value) } : {}),
@@ -182,7 +181,6 @@ function applyToPreview() {
 
 	nextTick().then(() => {
 		if (currentPreviewUrl === embedPreviewUrl.value) {
-			// URLが変わらなくてもリロード
 			iframeEl.value?.contentWindow?.window.location.reload();
 		}
 	});
@@ -231,7 +229,7 @@ function windowEventHandler(event: MessageEvent) {
 		iframeEl.value!.contentWindow?.postMessage({
 			type: 'misskey:embedParent:registerIframeId',
 			payload: {
-				iframeId: 'embedCodeGen', // 同じタイミングで複数のembed iframeがある際の区別用なのでここではなんでもいい
+				iframeId: 'embedCodeGen', // このダイアログのプレビュー iframe は 1 つだけなので固定 ID を使う。
 			},
 		});
 	}
@@ -267,7 +265,6 @@ function reset() {
 	window.removeEventListener('message', windowEventHandler);
 	resizeObserver.disconnect();
 
-	// プレビューのリセット
 	iframeHeight.value = 0;
 	iframeScale.value = 1;
 	iframeLoading.value = true;

@@ -246,7 +246,6 @@ async function followFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUse
 		return 'skip: フォローしようとしているユーザーはローカルユーザーではありません';
 	}
 
-	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	await followWithSideEffectsForApi(deps, actor, followee, activity.id === undefined ? {} : { requestId: activity.id });
 	return 'ok';
 }
@@ -292,7 +291,7 @@ async function acceptFollowFromApForApi(
 	actor: MiRemoteUser,
 	activity: IFollow,
 ): Promise<string> {
-	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
+	// 応答が参照する Follow の actor は、送信済みフォロー要求のローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
 	if (follower == null) {
 		return 'skip: follower not found';
@@ -702,7 +701,7 @@ async function rejectFollowFromApForApi(
 	actor: MiRemoteUser,
 	activity: IFollow,
 ): Promise<string> {
-	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
+	// 応答が参照する Follow の actor は、送信済みフォロー要求のローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
 	if (follower == null) {
 		return 'skip: follower not found';
@@ -785,7 +784,6 @@ async function undoFromApForApi(
 		return 'invalid actor';
 	}
 
-	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	const object = await resolveApObjectForApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
 	if (isFollow(object)) {
@@ -889,11 +887,14 @@ async function undoFollowFromApForApi(
 	}
 
 	const result = await undoFollowForApi(deps, actor, followee);
-	return result === 'request'
-		? 'ok: follow request canceled'
-		: result === 'following'
-			? 'ok: unfollowed'
-			: 'skip: リクエストもフォローもされていない';
+	switch (result) {
+		case 'request':
+			return 'ok: follow request canceled';
+		case 'following':
+			return 'ok: unfollowed';
+		default:
+			return 'skip: リクエストもフォローもされていない';
+	}
 }
 
 async function undoLikeFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: ILike): Promise<string> {

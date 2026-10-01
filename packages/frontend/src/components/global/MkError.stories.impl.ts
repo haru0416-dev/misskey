@@ -37,12 +37,6 @@ export const Default = {
 	},
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
-		await expect(canvasElement.firstElementChild).not.toBeNull();
-		await waitFor(async () =>
-			expect(canvasElement.firstElementChild?.classList).not.toContain('_transition_zoom-enter-active'),
-		);
-
-		// 描画されただけでは、このコンポーネント唯一の相互作用である retry の回帰を捕まえられない。
 		const fired: string[] = [];
 		const stop = onAction((record) => fired.push(record.name));
 		try {

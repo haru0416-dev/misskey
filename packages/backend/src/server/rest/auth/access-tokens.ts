@@ -72,8 +72,8 @@ export async function handleApiIApps(
 }
 
 /**
- * 自分のトークンだけを消す。他人のトークンや存在しないトークンの指定は何もしない。
- * アプリのトークンで呼ばれたときは、そのトークン自身だけを消せる (アプリがログアウト時に後始末できるように)。
+ * DB から消すのは自分のトークンだけ。削除済みのトークンでも失効イベントを発行し、残った接続を切断する。
+ * アプリのトークンで対象を指定したときは、そのトークン自身だけを消せる。
  */
 export async function handleApiIRevokeToken(
 	deps: ApiAccessTokenDependencies,

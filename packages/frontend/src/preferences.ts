@@ -50,7 +50,6 @@ const io: StorageProvider = {
 				return null;
 			}
 			return {
-				// レジストリから読み出した生データなので、期待される値の型であることをここで表明する
 				value: target[1] as ValueOf<K>,
 			};
 		} catch (err) {

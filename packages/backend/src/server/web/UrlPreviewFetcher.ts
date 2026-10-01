@@ -121,7 +121,7 @@ function isUtf8(bytes: Uint8Array): boolean {
 }
 
 /**
- * ブラウザと同じ優先順位で文字コードを決める: BOM → HTTP ヘッダ → 先頭 1024 バイトの meta → 正しい UTF-8 → 推定。
+ * 文字コードの宣言を推定より優先する: BOM → HTTP ヘッダ → 先頭 1024 バイトの meta → 正しい UTF-8 → 推定。
  * 推定を先にすると、文字コードを宣言した短い Shift_JIS のページ (538 バイト) が windows-1252 (確信度 33、Shift_JIS は 10) と判定されて化ける。
  */
 async function decodeHtml(response: HttpRequestSendResponse): Promise<string> {

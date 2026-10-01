@@ -4,7 +4,7 @@
  */
 
 /*
- * 公開 `/api.json` のエンドポイント順序に使うため、以下のキーは UTF-16 コード単位順を維持する。
+ * 公開 `/api.json` のエンドポイント順序はこの宣言順で決まる。カテゴリ別定義の並びに依存させない。
  */
 import { endpointMetas as adminMetas } from './metas/admin.js';
 import { endpointMetas as adminAbuseReportMetas } from './metas/admin-abuse-report.js';

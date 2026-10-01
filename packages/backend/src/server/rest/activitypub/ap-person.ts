@@ -462,11 +462,7 @@ async function processRemoteMoveForApi(
 	return 'ok';
 }
 
-/**
- * updateFeatured に必要なノート作成・解決の依存を持たないため、この経路では実行しない。
- * リモートユーザーの再取得だけではピン留めノート一覧は更新されない。
- * uriPersonCache はプロセス内メモリキャッシュのため、この経路では更新しない。
- */
+/** リモートユーザーの再取得だけではピン留めノート一覧は更新しない。 */
 export async function updatePersonForApi(
 	deps: ApiUpdatePersonDependencies,
 	uri: string,
@@ -617,9 +613,8 @@ export async function updatePersonForApi(
 }
 
 /**
- * updateFeatured に必要なノート作成の依存を持たないため、この経路では実行しない。
- * インスタンスメタデータ取得とチャート更新は分析用の副作用なので、ユーザー作成経路には含めない。
- * インスタンス行の作成とユーザー数更新は、この経路内で完了させる。
+ * ピン留めノート一覧・インスタンスメタデータ・チャートは、この経路では取得・更新しない。
+ * 連合統計が有効な場合のインスタンス登録とユーザー数更新は、ユーザー作成の完了を待たせずに行う。
  */
 export async function createPersonForApi(
 	deps: ApiApPersonDependencies,
@@ -769,7 +764,6 @@ export async function createPersonForApi(
 	return user;
 }
 
-/** uriPersonCache はプロセス内キャッシュのため、この経路では更新しない。 */
 export async function fetchPersonForApi(
 	deps: ApiApPersonDependencies,
 	uri: string,
@@ -799,7 +793,7 @@ export async function resolvePersonForApi(
 	return await createPersonForApi(deps, uri, history);
 }
 
-/** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
+/** inbox の署名者解決で使う。未登録の Person は取得・登録し、削除済みユーザーは返さない。 */
 export async function getAuthUserFromApIdForApi(
 	deps: ApiApPersonDependencies,
 	uri: string,

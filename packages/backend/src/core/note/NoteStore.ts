@@ -136,9 +136,8 @@ function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
 }
 
 /**
- * blockedHostCondition の reply/renote 版。reply/renote 行へのセルフJOINの代わりに、
- * note 行へ非正規化済みの replyUserId/replyUserHost (renote も同様) を参照する。
- * fanout-timeline.ts の blockedHost 判定と同じデータソースで、JOIN 1つ分軽くなる。
+ * ホストの判定には非正規化済みの replyUserId/replyUserHost (renote も同様) を使い、
+ * 返信・リノート先の行を追加取得しない。fanout-timeline.ts も同じ列で判定する。
  */
 function blockedRelatedHostCondition(idColumn: keyof NoteRow, hostColumn: keyof NoteRow, blockedHosts: string[]): SQL {
 	if (blockedHosts.length === 0) {
@@ -1022,14 +1021,13 @@ export async function listRenoteNotesFromDatabase(
 	return result.rows.map((row) => deserializeNote(row));
 }
 
-/** ファイルを持つノートに絞る。 */
 function hasFilesCondition(): SQL {
 	return sql`${note.fileIds} != '{}'`;
 }
 
 /**
- * ファイルの有無で絞る。二値の `withFiles` と違い、false を「ファイルを持たないノートだけ」と解釈する。
- * 未指定のときは呼び出し側で条件そのものを積まないこと。
+ * true でのみ絞るタイムラインの `withFiles` と異なり、false はファイルのない投稿だけを選ぶ。
+ * 未指定なら呼び出し側で条件を追加しない。
  */
 function fileCountCondition(withFiles: boolean): SQL {
 	return withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`;
@@ -1301,8 +1299,8 @@ export async function listHydratedNotesByIdsFromDatabase(
 }
 
 /**
- * pg_trgm は LIKE パターン中の 3 文字以上続く英数字からしか trigram を取れない。取れない語は
- * IDX_NOTE_TEXT_TRGM が使えず主キーの全件走査になり、100 万件・一致なしで 1.45 秒かかった。
+ * 3 文字以上連続する Unicode の文字・数字を、LIKE パターンから trigram を抽出できる目安にする。
+ * 抽出できない語は IDX_NOTE_TEXT_TRGM を使えず、100 万件・一致なしの主キー走査で 1.45 秒かかった。
  */
 const TRIGRAM_RUN = /[\p{L}\p{N}]{3}/u;
 
@@ -1479,9 +1477,7 @@ export async function searchNotesByTextFromDatabase(
 }
 
 /**
- * タイムライン系クエリで共通の SELECT + JOIN + WHERE + ORDER + LIMIT。
- * 展開前と生成 SQL が完全に同一であることを前提にした集約なので、
- * 結合順・別名・ORDER BY の形をここで変えないこと (クエリプランが変わる)。
+ * 結合順・別名・ORDER BY の式はクエリプランに影響するため、共通化だけを理由に変えない。
  * source は読み取り範囲を副問い合わせで限る検索だけが差し替える。sortWithoutIdIndex も検索専用。
  */
 async function executeTimelineNoteQuery(
@@ -1874,11 +1870,7 @@ export async function listUserTimelineNotesFromDatabase(
 	return result.rows.map((row) => deserializeNote(row));
 }
 
-/**
- * フォローを起点にするタイムライン (home / hybrid / userList) が共通で持つ絞り込み。
- *
- * いずれも AND で結合されるので、条件を積む順序は結果に影響しない。
- */
+/** フォローを起点にするタイムライン (home / hybrid / userList) の共通の絞り込み。 */
 function renoteAndFileConditions(options: {
 	me: { id: MiUser['id'] };
 	includeMyRenotes: boolean;

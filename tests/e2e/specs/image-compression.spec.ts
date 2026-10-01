@@ -10,8 +10,8 @@ import { expect, test } from '../support/fixtures.js';
 import { visitHome } from '../support/helpers.js';
 
 /**
- * 圧縮処理は `createImageBitmap` / `OffscreenCanvas` に依存するため jsdom では動かせず、
- * frontend の vitest からは寸法計算しか検証できない。実ブラウザへソースを持ち込んで当てる。
+ * `createImageBitmap` / `OffscreenCanvas` による縮小品質は DOM エミュレータでは検証できない。
+ * 寸法計算の unit test とは別に、実ブラウザへ同じ実装を読み込んで検証する。
  */
 // Playwright は spec を CJS へ落とすので import.meta が使えない。
 const modulePath = path.join(__dirname, '../../../packages/frontend/src/features/drive/image-compression.ts');

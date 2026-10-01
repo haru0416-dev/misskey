@@ -167,7 +167,7 @@ async function run() {
 	try {
 		await aiscript.exec(ast);
 	} catch (err) {
-		// ランタイムエラーは error callback で処理されるため、ここで捕捉するのは AiScript 内部エラーである。
+		// 実行時エラーは err コールバックで通知するため、ここで捕捉するのは AiScript 内部エラーだけ。
 		os.alert({
 			type: 'error',
 			title: 'Internal Error',

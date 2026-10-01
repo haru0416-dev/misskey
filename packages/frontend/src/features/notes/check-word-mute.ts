@@ -46,7 +46,6 @@ export function checkWordMute(
 	me: Misskey.entities.UserLite | null | undefined,
 	mutedWords: (string | string[])[],
 ): (string | string[])[] | false {
-	// 自分自身
 	if (me && note.userId === me.id) {
 		return false;
 	}

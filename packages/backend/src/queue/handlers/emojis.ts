@@ -46,7 +46,6 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-// 書き出し用の一時ディレクトリにある通常ファイルを、1 件ずつ読んで zip のエントリにする。
 async function* directoryEntries(dir: string): AsyncGenerator<ZipEntry> {
 	for (const name of (await fs.promises.readdir(dir)).sort()) {
 		const filePath = dir + '/' + name;
@@ -91,7 +90,7 @@ export async function handleQueueExportCustomEmojis(
 		let downloaded = false;
 
 		try {
-			// ローカルの絵文字の原本は自分のドライブにあるので、自分の URL を取得せず保存場所から写す。
+			// ドライブの原本が見つかる場合は保存場所からコピーし、自インスタンスへの HTTP 取得を避ける。
 			const driveFile = await fetchDriveFileByUrlFromDatabase(deps.db, emoji.originalUrl);
 			if (driveFile != null && driveFile.url === emoji.originalUrl) {
 				await withDriveFileContent(deps, driveFile, (source) => fs.promises.copyFile(source, emojiPath));
@@ -116,7 +115,7 @@ export async function handleQueueExportCustomEmojis(
 	}
 
 	await writeToFile(metaStream, ']}');
-	// 次に meta.json を読むので、書き込みが終わるのを待つ。
+	// アーカイブ作成前に meta.json の書き込み完了を待つ。
 	await new Promise<void>((resolve, reject) => {
 		metaStream.on('error', reject);
 		metaStream.end(resolve);

@@ -117,15 +117,12 @@ async function subscribe() {
 					});
 				},
 				async (err) => {
-					// 通知が許可されていなかったとき
 					if (err?.name === 'NotAllowedError') {
 						console.info('User denied the notification permission request.');
 						return;
 					}
 
-					// 違うapplicationServerKey (または gcm_sender_id)のサブスクリプションが
-					// 既に存在していることが原因でエラーになった可能性があるので、
-					// そのサブスクリプションを解除しておく
+					// 異なる applicationServerKey や gcm_sender_id の既存購読が登録を妨げている可能性がある。
 					await unsubscribe();
 				},
 			),

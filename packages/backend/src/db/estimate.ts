@@ -8,8 +8,8 @@ import type { SQL } from 'drizzle-orm';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 /**
- * 問い合わせが返す行数のプランナーの見積もり。実行はしないので 1 ms 未満で返る。
- * LIKE の一致件数は、多い語ではよく合い、少ない語では少なめに外れる (実測は呼び出し元に書く)。
+ * EXPLAIN の行数見積もりを返し、対象の問い合わせ自体は実行しない。
+ * 実際の一致件数ではないため、件数の確定には使わない。
  */
 export async function estimateRows(db: MiDrizzleDatabase, query: SQL): Promise<number> {
 	const result = await db.execute<{ 'QUERY PLAN': unknown }>(sql`EXPLAIN (FORMAT JSON) ${query}`);

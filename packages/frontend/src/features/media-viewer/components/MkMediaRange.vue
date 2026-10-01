@@ -3,7 +3,6 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-<!-- Media系専用のinput range -->
 <template>
 <div :style="sliderBgWhite ? '--sliderBg: rgba(255,255,255,.25);' : '--sliderBg: var(--MI_THEME-scrollbarHandle);'">
 	<div :class="$style.controlsSeekbar">

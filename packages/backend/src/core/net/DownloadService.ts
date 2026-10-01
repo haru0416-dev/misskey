@@ -38,7 +38,7 @@ export function createDownloadService(
 	}
 
 	/**
-	 * 本文を取らずに、取得した場合と同じファイル名を得る (HEAD 1 回)。中身を取得せずに登録するリモートのファイルで使う。
+	 * 本文を取らずに HEAD でファイル名を調べる。中身を取得せずに登録するリモートのファイルで使う。
 	 * HEAD に応じないサーバーもあるので、失敗したら URL のパス末尾を返す。
 	 */
 	async function fetchFileName(url: string): Promise<string> {

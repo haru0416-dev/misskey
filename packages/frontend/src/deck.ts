@@ -84,7 +84,7 @@ if (prefer['deck.profile'] == null) {
 	addProfile('Main');
 }
 
-function forceSaveCurrentDeckProfile() {
+function saveCurrentDeckProfile(): void {
 	const currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 	if (currentProfile == null) {
 		return;
@@ -99,16 +99,12 @@ function forceSaveCurrentDeckProfile() {
 	prefer.commit('deck.profiles', newProfiles);
 }
 
-const saveCurrentDeckProfile = () => {
-	forceSaveCurrentDeckProfile();
-};
-
 function switchProfile(profile: DeckProfile) {
 	prefer.commit('deck.profile', profile.name);
 	const currentProfile = deepClone(profile);
 	columns.value = currentProfile.columns;
 	layout.value = currentProfile.layout;
-	forceSaveCurrentDeckProfile();
+	saveCurrentDeckProfile();
 }
 
 function addProfile(name: string) {

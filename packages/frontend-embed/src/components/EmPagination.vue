@@ -65,7 +65,6 @@ import type { MisskeyEntity as MisskeyEntityBase } from '@shared/utility/misskey
 
 const SECOND_FETCH_LIMIT = 30;
 const TOLERANCE = 16;
-const APPEAR_MINIMUM_INTERVAL = 600;
 
 export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> = {
 	endpoint: E;
@@ -75,9 +74,7 @@ export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> 
 	/** 検索 API のような、ページング不可なエンドポイントを利用する場合に指定する。 */
 	noPaging?: boolean;
 
-	/**
-	 * items 配列の中身を逆順にする(新しい方が最後)
-	 */
+	/** 追加読み込みボタンを上端に置き、初期表示を末尾へスクロールする。 */
 	reversed?: boolean;
 
 	offsetMode?: boolean;
@@ -139,8 +136,6 @@ const fetching = ref(true);
 
 const moreFetching = ref(false);
 const more = ref(false);
-const preventAppearFetchMore = ref(false);
-const preventAppearFetchMoreTimer = ref<number | null>(null);
 const isBackTop = ref(false);
 const empty = computed(() => items.value.size === 0);
 const error = ref(false);
@@ -319,28 +314,16 @@ const fetchMore = async (): Promise<void> => {
 				});
 			};
 
-			if (res.length === 0) {
-				if (props.pagination.reversed) {
-					reverseConcat(res).then(() => {
-						more.value = false;
-						moreFetching.value = false;
-					});
-				} else {
-					items.value = concatMapWithArray(items.value, res);
-					more.value = false;
+			const hasMore = res.length !== 0;
+			if (props.pagination.reversed) {
+				reverseConcat(res).then(() => {
+					more.value = hasMore;
 					moreFetching.value = false;
-				}
+				});
 			} else {
-				if (props.pagination.reversed) {
-					reverseConcat(res).then(() => {
-						more.value = true;
-						moreFetching.value = false;
-					});
-				} else {
-					items.value = concatMapWithArray(items.value, res);
-					more.value = true;
-					moreFetching.value = false;
-				}
+				items.value = concatMapWithArray(items.value, res);
+				more.value = hasMore;
+				moreFetching.value = false;
 			}
 			offset.value += res.length;
 		},
@@ -381,35 +364,6 @@ const fetchMoreAhead = async (): Promise<void> => {
 			moreFetching.value = false;
 		},
 	);
-};
-
-/**
- * Appear（IntersectionObserver）によってfetchMoreが呼ばれる場合、
- * APPEAR_MINIMUM_INTERVALミリ秒以内に2回fetchMoreが呼ばれるのを防ぐ
- */
-const fetchMoreApperTimeoutFn = (): void => {
-	preventAppearFetchMore.value = false;
-	preventAppearFetchMoreTimer.value = null;
-};
-const fetchMoreAppearTimeout = (): void => {
-	preventAppearFetchMore.value = true;
-	preventAppearFetchMoreTimer.value = window.setTimeout(fetchMoreApperTimeoutFn, APPEAR_MINIMUM_INTERVAL);
-};
-
-const appearFetchMore = async (): Promise<void> => {
-	if (preventAppearFetchMore.value) {
-		return;
-	}
-	await fetchMore();
-	fetchMoreAppearTimeout();
-};
-
-const appearFetchMoreAhead = async (): Promise<void> => {
-	if (preventAppearFetchMore.value) {
-		return;
-	}
-	await fetchMoreAhead();
-	fetchMoreAppearTimeout();
 };
 
 const isTop = (): boolean =>
@@ -518,8 +472,7 @@ onBeforeMount(() => {
 			nextTick(() => {
 				window.setTimeout(toBottom, 800);
 
-				// scrollToBottomでmoreFetchingボタンが画面外まで出るまで
-				// more = trueを遅らせる
+				// 初期スクロール中は追加読み込みボタンをローディング表示に保つ。
 				window.setTimeout(() => {
 					moreFetching.value = false;
 				}, 2000);
@@ -532,10 +485,6 @@ onBeforeUnmount(() => {
 	if (timerForSetPause) {
 		window.clearTimeout(timerForSetPause);
 		timerForSetPause = null;
-	}
-	if (preventAppearFetchMoreTimer.value) {
-		window.clearTimeout(preventAppearFetchMoreTimer.value);
-		preventAppearFetchMoreTimer.value = null;
 	}
 	scrollObserver.value?.disconnect();
 });

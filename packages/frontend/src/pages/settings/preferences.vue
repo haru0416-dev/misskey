@@ -1045,8 +1045,6 @@ watch(
 		mediaListWithOneImageAppearance,
 		reactionsDisplaySize,
 		limitWidthOfReaction,
-		mediaListWithOneImageAppearance,
-		limitWidthOfReaction,
 		instanceTicker,
 		squareAvatars,
 		highlightSensitiveMedia,
@@ -1076,8 +1074,9 @@ watch(
 const emojiIndexLangs = ['en-US', 'ja-JP', 'ja-JP_hira'] as const;
 
 function getEmojiIndexLangName(targetLang: (typeof emojiIndexLangs)[number]) {
-	if (langs.some((x) => x[0] === targetLang)) {
-		return langs.find((x) => x[0] === targetLang)![1];
+	const language = langs.find((x) => x[0] === targetLang);
+	if (language) {
+		return language[1];
 	}
 	// 絵文字辞書限定の言語定義
 	switch (targetLang) {
@@ -1184,7 +1183,7 @@ function testNotification(): void {
 
 	globalEvents.emit('clientNotification', notification);
 
-	// セルフ通知破壊 実績関連
+	// 300 ms の無操作で連打回数をリセットし、10 回ごとに実績を申請する。
 	smashCount++;
 	if (smashCount >= 10) {
 		claimAchievement('smashTestNotificationButton');

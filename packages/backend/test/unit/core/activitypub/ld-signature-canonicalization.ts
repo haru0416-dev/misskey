@@ -88,7 +88,7 @@ describe('LD signature option canonicalization (property)', () => {
 	);
 	const realisticNonce = fc.stringMatching(/^[0-9a-f]{32}$/u);
 	// 既定の fc.date は西暦 ±27万年まで振り、toISOString が拡張年表記 (+275760-09-13T…) になる。
-	// 署名の created は常に現在時刻近傍なので、その範囲に絞る。
+	// 通常形式の生成器では、拡張年表記を避けて 4 桁の年を持つ日時に絞る。
 	const realisticCreated = fc
 		.date({ min: new Date('2000-01-01T00:00:00.000Z'), max: new Date('2100-01-01T00:00:00.000Z'), noInvalidDate: true })
 		.map((d) => d.toISOString());

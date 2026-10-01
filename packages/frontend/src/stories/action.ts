@@ -13,7 +13,6 @@ type Listener = (record: ActionRecord) => void;
 const listeners = new Set<Listener>();
 
 /**
- * story が component へ渡すイベントハンドラを作る。呼ばれた内容はカタログの一覧へ流す。
  * 購読者が居ない場面 (テスト実行時など) では何も起きない。
  */
 export function action(name: string): (...args: unknown[]) => void {

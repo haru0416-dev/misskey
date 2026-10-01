@@ -40,8 +40,7 @@ export function resolveDateIdPagination(idGenerator: IdGenerator, options: DateI
 		return resolveIdPagination(options);
 	}
 
-	// 0 は「エポック」であって「指定なし」ではない。真偽で見ると untilDate: 0 が
-	// 上限なしに化け、エポック以前を求めた呼び出しへ全件を返してしまう。
+	// 日時の 0 も指定値として ID 生成器へ渡し、null / undefined の場合だけ境界を省略する。
 	return resolveIdPagination({
 		sinceId: options.sinceDate != null ? idGenerator.gen(options.sinceDate) : null,
 		untilId: options.untilDate != null ? idGenerator.gen(options.untilDate) : null,

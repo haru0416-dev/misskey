@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div ref="rootEl">
-	<!-- 小数が含まれるとレンダリングが高頻度になりすぎパフォーマンスが悪化するためround -->
+	<!-- 高さを整数 px に丸め、丸めた値が変わる場合だけ style を更新する。 -->
 	<div v-if="isPulling" :class="$style.frame" :style="`--frame-min-height: ${Math.round(pullDistance / (PULL_BRAKE_BASE + (pullDistance / PULL_BRAKE_FACTOR)))}px;`">
 		<div :class="$style.frameContent">
 			<MkLoading v-if="isRefreshing" :class="$style.loader" :em="true"/>
@@ -256,9 +256,7 @@ function onTouchEnd() {
 }
 
 /**
- * emit(refresh)が完了したことを知らせる関数
- *
- * タイムアウトがないのでこれを最終的に実行しないと出たままになる
+ * refresher の Promise が解決した場合だけ表示を閉じる。タイムアウトによる自動終了は行わない。
  */
 function refreshFinished() {
 	closeContent().then(() => {

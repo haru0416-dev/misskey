@@ -98,8 +98,7 @@ function format(args: unknown[]): string {
 	}
 }
 
-// 切り替えが速いと select() が重なり、描画途中の component を作り直して Vue が壊れる。
-// 最後に始めた選択だけを反映する。
+// 読み込み完了の順序が選択順と異なる場合も、最後に始めた選択だけを表示する。
 let selectionToken = 0;
 
 async function select(id: string): Promise<void> {

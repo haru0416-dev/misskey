@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, nextTick, ref, watch, computed, toRefs, useTemplateRef } from 'vue';
+import { onMounted, onUnmounted, nextTick, ref, watch, toRefs, useTemplateRef } from 'vue';
 import { debounce as createDebounced } from 'throttle-debounce';
 import type { SuggestionType } from '@/features/autocomplete/autocomplete.js';
 import MkButton from '@/components/form/MkButton.vue';
@@ -84,7 +84,6 @@ const v = ref<string>(modelValue.value ?? '');
 const focused = ref(false);
 const changed = ref(false);
 const invalid = ref(false);
-const filled = computed(() => v.value !== '' && v.value != null);
 const inputEl = useTemplateRef('inputEl');
 const preview = ref(false);
 const id = genId();

@@ -30,7 +30,7 @@ export const noteEvents = new EventEmitter<{
 	[ev: `pollVoted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; choice: number }) => void;
 }>();
 
-// 同じノートを何か所に表示していても、1 回の編集につき取り直しは 1 回にする。
+// 同じ編集通知が複数の表示から届くため、取得中と取得終了後の 10 秒間は重複取得を抑える。
 const editedNoteFetches = new Set<string>();
 
 function refetchEditedNote(noteId: Misskey.entities.Note['id'], updatedAt: string): void {
@@ -155,9 +155,9 @@ const POLLING_INTERVAL =
 
 const pollingScheduler = new PollingScheduler(async () => {
 	const ids = [...pollingQueue.entries()]
-		.filter(([, data]) => Date.now() - data.lastAddedAt < 1000 * 60 * 5) // 追加されてから一定時間経過したものは省く
+		.filter(([, data]) => Date.now() - data.lastAddedAt < 1000 * 60 * 5)
 		.map(([id]) => id)
-		.sort((a, b) => (a > b ? -1 : 1)) // 新しいものを優先するためにIDで降順ソート
+		.sort((a, b) => (a > b ? -1 : 1))
 		.slice(0, CAPTURE_MAX);
 
 	if (ids.length === 0) {
@@ -227,7 +227,6 @@ function pollingSubscribe(props: {
 	};
 }
 
-/** 購読を始め、解除する関数を返す。 */
 function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'createdAt'> }): () => void {
 	const note = props.note;
 	const connection = useStream();
@@ -300,7 +299,7 @@ const SUBSCRIBE_WINDOW = 1000 * 60 * 5;
 
 /**
  * 編集の合図だけを購読し、解除する関数を返す。リアクション等は受け取らないので、投稿の新しさを問わず表示中のノートすべてに使える。
- * リアルタイムモードでなければ、リアクションと一緒にポーリングで届く最終の編集日時の変化で編集を見つける。
+ * リアルタイムモードでなければ、リアクション用とは別のポーリングで最終の編集日時の変化を調べる。
  */
 export function subscribeNoteEdits(note: Pick<Misskey.entities.Note, 'id' | 'createdAt' | 'updatedAt'>): () => void {
 	if ($i && store.realtimeMode) {

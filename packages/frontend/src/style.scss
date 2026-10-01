@@ -160,7 +160,7 @@ rt {
 	width: 100%;
 	max-width: min(var(--MI_SPACER-w, 100%), calc(100% - (var(--MI_SPACER-max, 24px) * 2)));
 
-	/* margin の包含規則を避けるため、上下の余白は padding で指定する。 */
+	/* 上下の margin が相殺されないよう、余白は padding で指定する。 */
 	padding: var(--MI_SPACER-max, 24px) 0;
 	margin: 0 auto;
 
@@ -275,7 +275,7 @@ rt {
 	appearance: none;
 	display: inline-block;
 	padding: 0;
-	margin: 0; // for Safari
+	margin: 0; // Safari のボタン既定余白を打ち消す。
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -571,8 +571,6 @@ rt {
   }
 }
 
-// MFM -----------------------------
-
 ._mfm_blur_ {
 	filter: blur(6px);
 	transition: filter 0.3s;
@@ -598,7 +596,7 @@ rt {
 	font-size: var(--mfm-zoom-size);
 
 	.mfm-x2, .mfm-x3, .mfm-x4 {
-		/* 入れ子の拡大率は半分だけ適用する。 */
+		/* 入れ子では 100% からの拡大分を半分に抑える。 */
 		font-size: calc(var(--mfm-zoom-size) / 2 + 50%);
 
 		.mfm-x2, .mfm-x3, .mfm-x4 {

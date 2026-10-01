@@ -209,7 +209,7 @@ export async function updateHashtagsRankings(
 		return;
 	}
 
-	// YYYYMMDDHHmm (10分間隔)
+	// ハッシュタグのチャート読み取りと同じ 10 分単位のキーを使う。
 	const now = new Date();
 	now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
 	const window = formatHashtagUsersWindow(now);
@@ -639,7 +639,7 @@ async function enqueueUserWebhook(
 	idempotencyKey?: string,
 ): Promise<void> {
 	const webhooks = await listActiveWebhooksByUserIdAndEventFromDatabase(deps.db, userId, type);
-	// 大半のユーザーは webhook を持たない。送り先があるときだけ pack する。
+	// 送り先がない場合は、通知本文の pack に伴う DB 取得を避ける。
 	if (webhooks.length === 0) return;
 	const note = await packNote();
 
@@ -708,8 +708,8 @@ const notePostCreateStages = [
 ] as const satisfies readonly DbNotePostCreateStage[];
 
 /**
- * enqueue 時点で no-op と確定するステージ。条件は postNoteCreated の
- * 各ステージ冒頭ガードの鏡像に保つこと。DB 参照が要る判定はここに置かない。
+ * enqueue 時点で no-op と確定する条件を、postNoteCreated の各ステージの実行条件と一致させる。
+ * DB 参照が要る判定はここに置かない。
  */
 function isNoopPostCreateStage(
 	stage: DbNotePostCreateStage,
@@ -1297,8 +1297,8 @@ async function runNotePostCreateBatch(
 ): Promise<void> {
 	if (jobs.length === 0) return;
 	try {
-		// 投稿後の段は Redis・queue・通知の冪等キーで結果を残し、transaction 内で書くのは outbox 行の削除だけ。
-		// 削除の COMMIT で fsync を待つと、応答前に投稿の保存と合わせて 2 回待つ (この VPS で 1 回 6.5〜7.1 ms)。
+		// transaction 内の書き込みは outbox 行の削除だけなので、COMMIT で WAL の書き出しを待たない。
+		// クラッシュで削除が失われても、Redis・queue・通知の冪等キーで同じステージを再実行できる。
 		const ownedIds = await runInlineDbOutboxJobs(
 			deps.db,
 			jobs,
@@ -1331,7 +1331,7 @@ function deferredNotePostCreateTask(
 	jobs: PersistedNote['outboxJobs'],
 	analytics: NoteAnalyticsEvent,
 ): () => Promise<void> {
-	// HTTP のモデル群や memo ではなく、業務payloadと作成イベントだけを保持する。
+	// リクエスト内のモデルや memo を保持せず、outbox ジョブと集計に必要な作成イベントだけを残す。
 	return async () => {
 		await runNoteAnalytics(deps, analytics);
 		await runNotePostCreateBatch(deps, jobs, false);

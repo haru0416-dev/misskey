@@ -134,7 +134,6 @@ const { def: selectDef, model: selectedValue } = useMkSelect({
 	initialValue: props.select?.default ?? null,
 });
 
-// overload function を使いたいので lint エラーを無視する
 function done(canceled: true): void;
 function done(canceled: false, result: Result): void;
 

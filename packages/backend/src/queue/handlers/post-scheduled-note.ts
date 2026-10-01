@@ -92,8 +92,8 @@ export async function handleQueuePostScheduledNote(
 			},
 			async (insert) =>
 				deps.db.transaction(async (transaction) => {
-					// draftをlockしてrevisionを再検証し、note作成とdraft削除を同一transactionで確定する。
-					// この順序により、編集前のjobや並行jobによる二重投稿を防ぐ。
+					// 下書きをロックして投稿内容と予約状態を再検証し、投稿作成と下書き削除を同じ transaction で確定する。
+					// 編集済み・削除済みの下書きからの投稿や、並行ジョブによる二重投稿を防ぐ。
 					const [currentDraft] = await transaction
 						.select()
 						.from(noteDraft)

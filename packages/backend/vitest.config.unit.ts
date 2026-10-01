@@ -6,15 +6,13 @@ import { baseConfig } from './vitest.config.js';
 const include = ['test/unit/**/*.ts', 'src/**/*.test.ts'];
 
 // ファイルごとにモジュールを読み直す分離では、全体 95 秒のうち import だけで 32.7 秒かかる。
-// 分離が要るのは vi.mock でモジュールを差し替えるファイルで、分離を外すと差し替えが他のファイルへ
-// 漏れて落ちる。これらだけ分離して実行し、残りはワーカー内でモジュールを使い回す。
+// vi.mock / vi.doMock の差し替えが他ファイルへ漏れないよう、該当ファイルは分離する。
 const moduleMockingFiles = include
 	.flatMap((pattern) => globSync(pattern, { cwd: import.meta.dirname }))
 	.filter((file) => /\bvi\.(?:mock|doMock)\(/.test(readFileSync(resolve(import.meta.dirname, file), 'utf8')));
 
-// outbox 全体を配送し、全体の件数を検査するファイル。同じテスト DB を使う前のファイルが投稿の後処理を途中で
-// 置いていくと、その行 (publishing のままの notePostCreate) で件数がずれる (シャッフル実行の seed 405 /
-// 10941656 / 10941658 で再現)。別の組 (groupOrder 1) にして、unit の組が終わってから単独で走らせる。
+// outbox 全体の件数を検査するため、他ファイルが残す publishing 状態の notePostCreate に影響される。
+// groupOrder 1 で他の unit プロジェクトの完了後に実行する。
 const wholeOutboxFiles = ['test/unit/queue/queue-outbox.ts'];
 
 export default mergeConfig(

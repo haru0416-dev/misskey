@@ -25,7 +25,7 @@ import { ensureSignin } from '@/i';
 import MkButton from '@/components/form/MkButton.vue';
 import MkPolkadots from '@/components/display/MkPolkadots.vue';
 
-// router definitionでloginRequiredが設定されているためエラーハンドリングしない
+// ルートの loginRequired で未認証の遷移を止めるため、ここでは ensureSignin の失敗を捕捉しない。
 const $i = ensureSignin();
 
 const read = ref(false);

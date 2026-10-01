@@ -77,9 +77,9 @@ export type SoundType = (typeof soundsTypes)[number];
 export type OperationType = (typeof operationTypes)[number];
 
 /**
- * 音声を読み込む
- * @param url url
- * @param options `useCache`: デフォルトは`true` 一度再生した音声はキャッシュする
+ * 音声を読み込む。
+ * @param url 音声ファイルの URL
+ * @param options `useCache`: 既定は `true`。読み込み・デコードが完了した音声をキャッシュする。
  */
 export async function loadAudio(url: string, options?: { useCache?: boolean }) {
 	if (ctx == null) {
@@ -132,7 +132,7 @@ export function playMisskeySfx(operationType: OperationType) {
 	const sound = prefer[`sound.on.${operationType}`];
 	playMisskeySfxFile(sound).then((succeed) => {
 		if (!succeed && sound.type === '_driveFile_') {
-			// ドライブファイルが存在しない場合はデフォルトのサウンドを再生する
+			// ドライブ音声の再生が成功扱いでない場合は、操作ごとの既定音を使う。
 			const default_ = getInitialPrefValue(`sound.on.${operationType}`);
 			const soundName = default_.type as Exclude<SoundType, '_driveFile_'>;
 			if (_DEV_) {
@@ -150,7 +150,7 @@ export async function playMisskeySfxFile(soundStore: SoundStore): Promise<boolea
 	if (!canPlay) {
 		return false;
 	}
-	// ユーザーアクティベーションが必要な場合はそれがない場合は再生しない
+	// 一度もユーザー操作がない場合は、再生を試みない。
 	if ('userActivation' in navigator && !navigator.userActivation.hasBeenActive) {
 		return false;
 	}

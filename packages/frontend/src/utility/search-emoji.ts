@@ -87,7 +87,7 @@ export function searchEmoji(query: string | null, emojiDb: EmojiDef[], max = 30)
 				hit++;
 			}
 
-			// 文字数の半分を切り上げた数より多く、名前に順に含まれる候補だけを採る。
+			// 名前内の一致位置を戻さずに照合し、クエリの半数（切り上げ）より多く一致した候補を採る。同じ位置の再利用は許す。
 			if (hit > Math.ceil(queryChars.length / 2) && !matched.has(canonicalName(x))) {
 				hitEmojis.set(canonicalName(x), { emoji: x, score: hit - 2 });
 			}

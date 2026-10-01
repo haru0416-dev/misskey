@@ -5,7 +5,7 @@
 
 /**
  * ノートが指定された時間条件に基づいて非表示対象かどうかを判定する
- * @param hiddenBefore 非表示条件（負の値: 作成からの経過秒数、正の値: UNIXタイムスタンプ秒、null: 判定しない）
+ * @param hiddenBefore 非表示条件（0以下: 作成からの経過秒数、正の値: UNIXタイムスタンプ秒、null/undefined: 判定しない）
  * @param createdAt ノートの作成日時（ISO 8601形式の文字列 または Date オブジェクト）
  * @returns 非表示にすべき場合は true
  */

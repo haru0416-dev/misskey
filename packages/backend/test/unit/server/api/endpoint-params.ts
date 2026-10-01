@@ -8,10 +8,9 @@ import { z } from 'zod';
 import { endpointMetas } from '@/server/api/endpoint-metas.js';
 
 /*
- * 入力の制約 (長さ・件数・範囲・形式・必須) は各契約の paramDef が宣言し、zod が検査する。検査そのものは zod の保証なので
- * エンドポイントごとの e2e では確かめず、全エンドポイントの宣言をここで表として固定する (生成物の api.json は
- * リポジトリに無く、宣言を外しても他では見えない)。宣言を変えたら `vitest -u` で endpoint-params.snap.txt を更新し、
- * 差分をレビューで確かめること。
+ * paramDef が宣言する入力制約 (長さ・件数・範囲・形式・必須) を固定し、意図しない API 契約の変更を検出する。
+ * この表は実際のリクエストの検証を代替しない。共通の検証経路は e2e/api.ts、個別の挙動は各 e2e で確かめる。
+ * 宣言を変更する場合は endpoint-params.snap.txt の差分を API 契約の変更としてレビューする。
  */
 
 const constraintKeys = [

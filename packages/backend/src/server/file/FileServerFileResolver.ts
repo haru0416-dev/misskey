@@ -29,8 +29,7 @@ export type DownloadedBufferResult = {
 	filename: string;
 };
 
-// 並行 6 本 (ブラウザの同時接続数) がすべて上限いっぱいでも 96MiB に収まる大きさ。
-// リモートの写真はほとんど数 MB (Mastodon は 8.3MP の JPEG に再圧縮する) なので、超えるものだけ一時ファイルに逃がす。
+// 16 MiB を超える取得は一時ファイルへ切り替える。これは取得 1 件の上限で、全接続の合計メモリ上限ではない。
 const PROXY_MEMORY_LIMIT_BYTES = 16 * 1024 * 1024;
 
 export type FileResolveResult =

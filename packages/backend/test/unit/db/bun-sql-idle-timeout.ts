@@ -8,8 +8,8 @@ import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { createBunSqlClient } from '@/db/bun-sql.js';
 
-// Bun.sql の idleTimeout は応答待ちのクエリの途中でも接続を切る。migration の接続は無効にしないと、
-// 数十秒かかる DDL (30 万件の投稿への trigram index の作成など) が途中で失敗する。
+// Bun.sql の idleTimeout は応答待ちのクエリの途中でも接続を切るため、
+// 長時間の DDL を実行する migration 接続では無効化が必要。
 describe('createBunSqlClient idle timeout', () => {
 	const config = loadConfig();
 	const withIdleTimeout = (ms: number): Config => ({

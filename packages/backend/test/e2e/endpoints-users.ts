@@ -152,7 +152,6 @@ describe('Endpoints', () => {
 
 	describe('account data endpoints', () => {
 		test('drive/files/check-existence returns ownership-scoped md5 existence', async () => {
-			const config = fixtureConfig;
 			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
 			await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -180,7 +179,6 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/folders list, find, and show preserve ownership and detail fields', async () => {
-			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
@@ -275,7 +273,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
-			const config = fixtureConfig;
 			const before = await api('notes/drafts/count', {}, alice);
 			expect(before.status).toBe(200);
 
@@ -307,7 +304,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
-			const config = fixtureConfig;
 			const channel = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -445,7 +441,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
-			const config = fixtureConfig;
 			const draft = await createNoteDraftInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -555,7 +550,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/delete removes a draft and its schedule, rejecting missing drafts', async () => {
-			const config = fixtureConfig;
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
 			const draft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -597,7 +591,6 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/list paginates and filters by scheduled state', async () => {
-			const config = fixtureConfig;
 			const scheduledDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -650,7 +643,6 @@ describe('Endpoints', () => {
 		});
 
 		test('charts/instance groups results by the given host', async () => {
-			const config = fixtureConfig;
 			const host = `chart-${Date.now().toString(36)}.example.com`;
 			await createInstanceInDatabase(db, {
 				id: genId(),
@@ -894,7 +886,6 @@ describe('Endpoints', () => {
 		});
 
 		test('pages/update updates a page and rejects missing pages, foreign pages, and name conflicts', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const other = await createPageInDatabase(db, {
 				id: genId(),
@@ -978,7 +969,6 @@ describe('Endpoints', () => {
 		});
 
 		test("pages/delete removes a page, rejects foreign pages, and allows moderators to delete others' pages", async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -1025,7 +1015,6 @@ describe('Endpoints', () => {
 		});
 
 		test('pages/show finds a page by id or by name and username, and pages/featured lists liked pages', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -1065,7 +1054,6 @@ describe('Endpoints', () => {
 		});
 
 		test("i/pages lists the caller's pages and i/page-likes lists liked pages", async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -1099,7 +1087,6 @@ describe('Endpoints', () => {
 		});
 
 		test("users/pages lists only a user's public pages without credentials", async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const publicPage = await createPageInDatabase(db, {
 				id: genId(),
@@ -1124,7 +1111,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -1164,7 +1150,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/pull removes a member and rejects missing lists or users', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -1196,7 +1181,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/update-membership toggles withReplies for a member', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -1236,7 +1220,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/get-memberships supports forPublic without credentials', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -1264,7 +1247,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/create-from-public copies members from an existing public list', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			// alice はこのファイルの他テストでリストを作り続けるので、リスト数上限に達していると
 			// ブロック判定より先に TOO_MANY_USERLISTS が返る。コピー元は共有し、コピーする側は専用ユーザーにする
@@ -1389,7 +1371,6 @@ describe('Endpoints', () => {
 		});
 
 		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
-			const config = fixtureConfig;
 			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
 			const webhook = await createWebhookInDatabase(db, {
 				id: genId(),
@@ -1472,7 +1453,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
-			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1495,7 +1475,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
-			const config = fixtureConfig;
 			const privateList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1688,7 +1667,6 @@ describe('Endpoints', () => {
 		}
 
 		async function makeDriveFile(userId: string, suffix: string, size: number) {
-			const config = fixtureConfig;
 			const md5 = createHash('md5').update(`hono-import-${suffix}-${size}`).digest('hex');
 			return await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -1756,7 +1734,6 @@ describe('Endpoints', () => {
 
 		// i/import-antennas はファイル内容を自分自身のURL(config.instance.url)からHTTPダウンロードする。
 		test('i/import-antennas はファイル検証とダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hia${suffix}` });
 
@@ -1968,7 +1945,6 @@ describe('Endpoints', () => {
 		});
 
 		test('users/gallery/posts はページングして投稿を返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hug${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-users-gallery-${suffix}`).digest('hex');
@@ -2403,7 +2379,6 @@ describe('Endpoints', () => {
 
 	describe('users/notes', () => {
 		test('可視性フィルタとwithFiles/withRenotesフィルタを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hun${suffix}` });
 			const stranger = await signup({ username: `huns${suffix}` });
@@ -2466,7 +2441,6 @@ describe('Endpoints', () => {
 		});
 
 		test('withChannelNotesとミュート済みチャンネルの除外を維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunc${suffix}` });
 			const viewer = await signup({ username: `huncv${suffix}` });
@@ -2526,7 +2500,6 @@ describe('Endpoints', () => {
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunp${suffix}` });
 

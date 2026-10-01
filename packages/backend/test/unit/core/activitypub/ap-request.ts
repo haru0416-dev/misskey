@@ -96,7 +96,6 @@ describe('ap-request', () => {
 			'validation should pass with hash in request URL',
 		).not.toThrow();
 
-		// www サブドメインを含む URL の組合せを検証する。
 		// https://github.com/misskey-dev/misskey/issues/15039
 		const withOrWithoutWWW = ['https://alice.example.com/abc', 'https://www.alice.example.com/abc'];
 

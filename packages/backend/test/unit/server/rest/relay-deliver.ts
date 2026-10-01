@@ -67,7 +67,6 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 
 		const render = vi.fn(async () => activity);
 		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, render);
-		// 配送先が無いときは activity を組み立てない。
 		expect(render).not.toHaveBeenCalled();
 
 		// 共有 redis 上の deliver キューには他テストの残骸ジョブが混在し得るため、
@@ -87,7 +86,6 @@ describe('deliverToRelaysForApi (RelayService#deliverToRelays 相当)', () => {
 		const inbox = `https://relay.example.com/inbox-${genId()}`;
 		const relay = await createRelayInDatabase(runtime.db, { id: genId(), inbox, status: 'accepted' });
 		createdRelayIds.push(relay.id);
-		// requesting 状態のリレーには配送されないことも同時に確認する
 		const pendingInbox = `https://relay.example.com/pending-${genId()}`;
 		const pendingRelay = await createRelayInDatabase(runtime.db, {
 			id: genId(),

@@ -27,7 +27,7 @@ describe('acceptsActivityPub', () => {
 	});
 
 	test('長い Accept も入力長に比例する時間で判定する', () => {
-		// `ld\\+json.+activitystreams` の形だと長さの 2 乗で伸び、32 KB で約 42 ms かかる。
+		// ld+json が繰り返され、activitystreams が無い入力では、貪欲な正規表現による後方探索が増大する。
 		const started = performance.now();
 		expect(acceptsActivityPub('application/ld+json;'.repeat(16_384))).toBe(false);
 		expect(performance.now() - started).toBeLessThan(50);

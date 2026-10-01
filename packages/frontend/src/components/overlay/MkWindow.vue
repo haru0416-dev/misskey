@@ -145,9 +145,10 @@ const emit = defineEmits<{
 
 const INITIAL_WINDOW_WIDTH_RATIO = 0.5;
 const INITIAL_WINDOW_HEIGHT_RATIO = 0.75;
-const INITIAL_WINDOW_WIDTH_MIN = 400; // スクリーンの最小幅に合わせるのはapplyTransformWidthの担当
-const INITIAL_WINDOW_WIDTH_MAX = 1000; // 画面幅いっぱいに広がるのを防止するための最大幅
-const INITIAL_WINDOW_HEIGHT_MIN = 500; // スクリーンの最小高に合わせるのはapplyTransformHeightの担当
+// 画面サイズを超える初期値は applyTransformWidth / applyTransformHeight で制限する。
+const INITIAL_WINDOW_WIDTH_MIN = 400;
+const INITIAL_WINDOW_WIDTH_MAX = 1000;
+const INITIAL_WINDOW_HEIGHT_MIN = 500;
 
 provide('inWindow', true);
 
@@ -425,13 +426,11 @@ function onBottomHandlePointerdown(evt: PointerEvent) {
 				applyTransformHeight(minHeight);
 			}
 		} else {
-			// 下のはみ出し時
 			applyTransformHeight(browserHeight - top);
 		}
 	});
 }
 
-// 左ハンドル掴み時
 function onLeftHandlePointerdown(evt: PointerEvent) {
 	capturePointer(evt);
 
@@ -445,7 +444,6 @@ function onLeftHandlePointerdown(evt: PointerEvent) {
 	const width = Number.parseInt(computedStyle.width, 10);
 	const left = Number.parseInt(computedStyle.left, 10);
 
-	// 動かした時
 	dragListen((me) => {
 		const move = getPositionX(me) - base;
 		if (left + move > 0) {
@@ -453,37 +451,31 @@ function onLeftHandlePointerdown(evt: PointerEvent) {
 				applyTransformWidth(width + -move);
 				applyTransformLeft(left + move);
 			} else {
-				// 最小の幅より小さくなろうとした時
 				applyTransformWidth(minWidth);
 				applyTransformLeft(left + (width - minWidth));
 			}
 		} else {
-			// 左のはみ出し時
 			applyTransformWidth(left + width);
 			applyTransformLeft(0);
 		}
 	});
 }
 
-// 左上ハンドル掴み時
 function onTopLeftHandlePointerdown(evt: PointerEvent) {
 	onTopHandlePointerdown(evt);
 	onLeftHandlePointerdown(evt);
 }
 
-// 右上ハンドル掴み時
 function onTopRightHandlePointerdown(evt: PointerEvent) {
 	onTopHandlePointerdown(evt);
 	onRightHandlePointerdown(evt);
 }
 
-// 右下ハンドル掴み時
 function onBottomRightHandlePointerdown(evt: PointerEvent) {
 	onBottomHandlePointerdown(evt);
 	onRightHandlePointerdown(evt);
 }
 
-// 左下ハンドル掴み時
 function onBottomLeftHandlePointerdown(evt: PointerEvent) {
 	onBottomHandlePointerdown(evt);
 	onLeftHandlePointerdown(evt);
@@ -594,7 +586,7 @@ defineExpose({
 }
 
 .root {
-	// universal.vueとかで直接--MI-stickyBottomが定義されていたりするのでリセット
+	// ウィンドウ内の sticky 要素へ、背後のページのオフセットを継承させない。
 	--MI-stickyTop: 0;
 	--MI-stickyBottom: 0;
 

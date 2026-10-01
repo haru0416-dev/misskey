@@ -67,7 +67,7 @@ function applied(reactions: Record<string, number>, myReaction: string | null): 
 	return { ...props.announcement, reactions, myReaction };
 }
 
-/** 楽観的に反映する。件数が 0 になったリアクションは表示から落とす。 */
+/** API 成功後の件数を反映する。0 件以下になったリアクションは表示から除く。 */
 function withDelta(reaction: string, delta: number): Record<string, number> {
 	const reactions = { ...props.announcement.reactions };
 	const next = (reactions[reaction] ?? 0) + delta;

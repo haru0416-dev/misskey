@@ -327,7 +327,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 					message: `${err}`,
 					isError: true,
 				});
-				throw err; // インストール側の try-catch で処理する。
+				throw err;
 			},
 		},
 	);

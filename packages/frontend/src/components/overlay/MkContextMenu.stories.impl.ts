@@ -38,7 +38,6 @@ export const Empty = {
 		const target = canvas.getByText('Right Click Here');
 		await userEvent.pointer({ keys: '[MouseRight>]', target });
 
-		// 右クリックしただけでは何も主張していない。メニューが開き、渡した項目が並ぶまで見る。
 		// os.contextMenu は MkContextMenu を動的 import してから popup するので同期では取れない。
 		const menu = await canvas.findByRole('menu');
 		for (const item of args.items ?? []) {

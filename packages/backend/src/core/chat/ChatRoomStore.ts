@@ -286,7 +286,7 @@ export async function createChatRoomMembershipInDatabase(
 	return row;
 }
 
-// 招待の作成と参加では、ユーザー単位のロックより先にルームのロックを取得する。
+// 招待の作成と参加では、ルームと利用者の組を鍵とする招待ロックより先に、ルームの参加人数用ロックを取得する。
 export async function joinChatRoomFromInvitationInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChatRoomMembershipInsert,

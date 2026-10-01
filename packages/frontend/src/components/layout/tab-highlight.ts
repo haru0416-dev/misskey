@@ -40,7 +40,7 @@ export function useTabHighlight(opts: {
 		const tabEl = activeKey ? tabRefs[activeKey] : undefined;
 		const highlightEl = opts.highlightEl.value;
 		if (tabEl && highlightEl && highlightEl.parentElement) {
-			// offsetWidth や offsetLeft は少数を丸めてしまうため getBoundingClientRect を使う必要がある
+			// offsetWidth や offsetLeft は小数を丸めるため、getBoundingClientRect で座標を取得する。
 			// https://developer.mozilla.org/ja/docs/Web/API/HTMLElement/offsetWidth#%E5%80%A4
 			const parentRect = highlightEl.parentElement.getBoundingClientRect();
 			const rect = tabEl.getBoundingClientRect();

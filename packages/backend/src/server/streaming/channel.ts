@@ -23,7 +23,7 @@ export type StreamChannelSubscriber = {
 };
 
 /**
- * channel 初期化時点のフォロー・ミュート・ブロック関係を保持するスナップショット。
+ * channel 初期化時点の関係オブジェクトへの参照を保持する。内容の変更は共有するが、接続側の参照の置換には追従しない。
  */
 export type StreamChannelContext = {
 	id: string;
@@ -133,7 +133,7 @@ export type StreamChannelHandle = {
 };
 
 /**
- * `init` が `false` を返す/初期化不可の場合は接続を拒否する。
+ * `init` が `false` を返すとチャンネルの購読を拒否する。`void` はハンドルなしの購読として登録する。
  */
 export type StreamChannelDefinition<Deps> = {
 	shouldShare: boolean;

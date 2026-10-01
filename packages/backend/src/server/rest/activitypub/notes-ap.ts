@@ -393,8 +393,7 @@ export async function deliverNoteActivityForApi(
 		return;
 	}
 
-	// JSON.stringify + digest はフォロワー数に比例するホットパスのため、
-	// inbox ごとの投入を避けて addBulk で一括投入する。
+	// 本文の JSON 化と digest の計算は宛先によらないため一度だけ行い、ジョブは addBulk で一括投入する。
 	const contentBody = JSON.stringify(activity);
 	const digest = ApRequestCreator.createDigest(contentBody);
 	const opts = {
@@ -643,7 +642,7 @@ async function attachLdSignatureForApi(
 	);
 }
 
-/** accepted リレーを直接 DB から読み、リレー未設定インスタンスでは空配列で終了する。 */
+/** accepted リレーが無ければ、activity の生成と LD 署名を省く。 */
 export async function deliverToRelaysForApi(
 	deps: ApiRelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },

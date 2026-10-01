@@ -312,7 +312,7 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		},
 		g: {
 			callback: () => {
-				// mを5回押すとセーフモードに入る
+				// 300 ms 以上間隔を空けずに g を 5 回入力すると、セーフモードで再起動する。
 				safemodeRequestCount++;
 				if (safemodeRequestCount >= 5) {
 					miLocalStorage.setItem('isSafeMode', 'true');

@@ -166,8 +166,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							if (!useAnim) {
 								return genEl(token.children, scale);
 							}
-							// 子はここで 1 度だけ作る。slot の中で作ると、MkSparkle の再描画 (約 1 秒ごと) のたびに
-							// nextKey() が新しいキーを振り、中のカスタム絵文字が付け直されてアニメーションが先頭に戻る。
+							// slot 内で子を生成すると再描画ごとに nextKey() が変わり、カスタム絵文字のアニメーションが先頭に戻る。
+							// MkSparkle の再描画でも同じ子を使うため、slot の外で生成する。
 							const sparkleChildren = genEl(token.children, scale);
 							return h(MkSparkle, {}, { default: () => sparkleChildren });
 						}

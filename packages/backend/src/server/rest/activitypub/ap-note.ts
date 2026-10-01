@@ -349,7 +349,6 @@ export async function voteFromApForApi(
 	deps.publishNoteStream?.(note, 'pollVoted', { choice, userId: actor.id });
 }
 
-/** 禁止ワードは actor 解決後、ノート作成前に createNote 内で必ず検査する。 */
 /** ノートの本文を MFM で取り出す。Misskey 系の元の MFM があればそれを、無ければ HTML から変換する。 */
 function extractNoteTextForApi(deps: ApiApNoteDependencies, note: IPost): string | null {
 	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
@@ -559,17 +558,17 @@ export async function createNoteFromApForApi(
 	}
 }
 
+function parseApUpdated(note: IPost): Date | null {
+	const updated = note.updated == null ? Number.NaN : new Date(note.updated).getTime();
+	return Number.isFinite(updated) ? new Date(updated) : null;
+}
+
 /**
  * Update(Note) を受け取り、既に取り込んだリモートのノートの内容を書き換える。未知のノートは作らない (Create で届く)。
  * 本文・CW・添付・絵文字・タグ・メンションを取り込みと同じ規則で作り直し、編集の日時 (updated) を残す。
  * 返信先・引用先・公開範囲の宛先・アンケートの選択肢は変えない (票は Update(Question) の集計で反映する)。
  * 編集履歴は持たない。
  */
-function parseApUpdated(note: IPost): Date | null {
-	const updated = note.updated == null ? Number.NaN : new Date(note.updated).getTime();
-	return Number.isFinite(updated) ? new Date(updated) : null;
-}
-
 export async function updateNoteFromApForApi(
 	deps: ApiApNoteDependencies,
 	actor: MiRemoteUser,

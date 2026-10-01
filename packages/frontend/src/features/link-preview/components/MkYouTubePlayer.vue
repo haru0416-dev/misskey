@@ -69,7 +69,6 @@ async function ytFetch() {
 	}
 
 	if (info.url == null || info.player?.url == null) {
-		// URL かプレイヤー情報が無い
 		fetching.value = false;
 		return;
 	}

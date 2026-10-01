@@ -19,7 +19,7 @@ export const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
 export const GALLERY_POSTS_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
 export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
 
-/** リアクション・リノートのうちランキングに数える割合。Redis への書き込みを減らすための抽出で、upstream と同じ値。 */
+/** リアクション・リノートを抽出してランキングに数える割合。Redis への書き込みを抑える。 */
 export const FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE = 0.3;
 
 export function currentFeaturedWindow(windowRange: number, now: number = Date.now()): number {

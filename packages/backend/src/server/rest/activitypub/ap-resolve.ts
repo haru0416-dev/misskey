@@ -129,7 +129,6 @@ export function parseLocalApUri(
 	};
 }
 
-/** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getNoteFromApIdForApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
@@ -144,7 +143,6 @@ export async function getNoteFromApIdForApi(
 	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
 }
 
-/** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getUserFromApIdForApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
@@ -166,7 +164,6 @@ export type ApiAuthUser = {
 	key: MiUserPublickey | null;
 };
 
-/** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getAuthUserFromKeyIdForApi(
 	deps: { db: MiDrizzleDatabase },
 	keyId: string,
@@ -328,7 +325,7 @@ async function signedGetForApi(
 				}
 			}
 		} catch {
-			// HTML の解析に失敗したため、全体を無視する。
+			// 解析・URL 検証・alternate の取得に失敗した場合も、元の応答の Content-Type 検証へ進む。
 		}
 	}
 

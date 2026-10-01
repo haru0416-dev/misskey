@@ -274,7 +274,7 @@ export class ImageFrameRenderer {
 				);
 				qrImageBitmap.close();
 			} catch {
-				// nop
+				// QR コードを描画できなくても、ラベルの残りは出力する。
 			}
 		}
 
@@ -357,9 +357,7 @@ export class ImageFrameRenderer {
 		]);
 	}
 
-	/*
-	 * disposeCanvas = true だとloseContextを呼ぶため、コンストラクタで渡されたcanvasも再利用不可になるので注意
-	 */
+	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true): void {
 		this.compositor.destroy(disposeCanvas);
 	}

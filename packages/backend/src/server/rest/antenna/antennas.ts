@@ -222,8 +222,6 @@ export async function onMoveAccountForApi(
 	src: MiUser,
 	dst: MiUser,
 ): Promise<void> {
-	// srcUser が自分のアンテナに含まれる可能性は低いため、移行対象として確認しない。
-
 	const srcUserAcct = getFullApAccount(deps.config, src.username, src.host).toLowerCase();
 	const antennasToMigrate = (await listActiveAntennasFromDatabase(deps.db)).filter((antenna) => {
 		return antenna.users.some((user) => {

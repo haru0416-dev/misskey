@@ -32,7 +32,7 @@ function anchorToMfm(
 
 	if (txt.startsWith('@') && !(rel != null && rel.startsWith('me '))) {
 		const part = txt.split('@');
-		// user@host 形式は href のホストを補って acct にする。既に3片なら補う必要がない。
+		// ホストのない @user 形式には href のホストを補い、@user@host 形式はそのまま扱う。
 		if (part.length === 2 && href) {
 			return `${txt}@${new URL(href).hostname}`;
 		}

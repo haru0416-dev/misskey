@@ -8,10 +8,9 @@ import { Buffer } from 'node:buffer';
 /**
  * リクエストボディを上限バイト数つきで読み切る。上限超過時は makeLimitError() の戻り値を throw する。
  *
- * Hono の `c.req.json()` / `c.req.formData()` は無制限にボディをメモリへ読むため、上限は呼び出し側が
- * 用途ごとに渡す (JSON API / inbox / OAuth / ドライブアップロードで異なる)。content-length ヘッダは
- * chunked 転送や虚偽申告で回避できるので、事前チェックに加えて実バイト数を数えながら読み、
- * 超過した時点で読み込みを打ち切る。
+ * 上限は用途ごとに呼び出し側が渡す。Transfer-Encoding がなく安全な Content-Length がある場合は、
+ * 申告値を先に検査して一括取得し、実サイズも取得後に検査する。それ以外はチャンクごとに
+ * 実バイト数を数え、上限を超えた時点で読み込みを打ち切る。
  */
 export async function readRequestBodyWithLimit(
 	request: Request,

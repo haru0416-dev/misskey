@@ -154,8 +154,7 @@ function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string 
 
 function customStringify(obj: unknown): string {
 	return JSON.stringify(obj).replaceAll(/"(.*?)"/g, (all, group) => {
-		// propertyAccessProxy が生成する ${i18n.xxx} を実行時の参照として保持する。
-		// オブジェクトキーではテンプレートリテラルを使えないため、${ を含む値だけ置換する。
+		// SearchIndexItem のキーは固定名なので、${ を含むロケール参照の値をテンプレートリテラルへ戻す。
 		return group.includes('${') ? '`' + group + '`' : all;
 	});
 }
@@ -331,7 +330,6 @@ function getStringArrayProp(attr: AttributeNode | DirectiveNode | null, id: stri
 
 function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: string): SearchIndexItem[] {
 	const allMarkers: SearchIndexItem[] = [];
-	const markerMap = new Map<string, SearchIndexItem>();
 
 	if (!templateAst) {
 		return allMarkers;
@@ -384,7 +382,7 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 			markerInfo.texts = texts;
 		}
 
-		// path 未指定時は管理画面・設定画面の index.vue に対応する URL を補う。
+		// 最上位の marker で path が未指定なら、管理・設定ページのファイルパスから URL を補う。
 		if (markerInfo.path == null && parentId == null) {
 			const m = id.match(/\/(admin|settings)\/([^/]+)\/index\.vue$/) ?? id.match(/\/(admin|settings)\/([^/]+)\.vue$/);
 			if (m) {
@@ -409,7 +407,6 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 			logger.warn(`No label found for ${markerId} at ${id}:${node.loc.start.line}`);
 		}
 
-		markerMap.set(markerId, markerInfo);
 		allMarkers.push(markerInfo);
 		return markerId;
 	});
@@ -618,7 +615,7 @@ export class MarkerIdAssigner {
 				}
 
 				const newValue: string[] = [...childrenValue];
-				for (const childId of [...childIds]) {
+				for (const childId of childIds) {
 					if (!newValue.includes(childId)) {
 						newValue.push(childId);
 					}

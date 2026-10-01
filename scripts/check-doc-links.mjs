@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 追跡下の Markdown が張っているリポジトリ内リンクの参照先が実在するかを検査する。ドキュメントはコードの移動に
-// 追従せず、リンク切れはレビューでも気づかれない (frontend の components/ 再編で 30 箇所が同時に切れた)。
-// 外部 URL の到達性は見ず、ネットワークに触らずミリ秒で終わる範囲に限る。
+// リポジトリ内リンクの実在性だけを検査し、外部 URL へのネットワーク接続は行わない。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -18,7 +16,6 @@ const skippedSchemes = /^(https?:|mailto:|tel:|data:|\/\/)/;
 
 // [text](target) と [text](<target>)。target 内の丸括弧は扱わない (Markdown 側で避ける)
 const inlineLinkRegexp = /\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))/g;
-// 参照定義 [label]: target
 const referenceDefRegexp = /^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]*)>|(\S+))/;
 
 function targetsInLine(line) {
@@ -34,7 +31,6 @@ function targetsInLine(line) {
 }
 
 function resolveTarget(target, mdPath) {
-	// アンカー・クエリを落とす。パス部分が空ならページ内リンクなので検査対象外
 	const path = decodeURIComponent(target.split('#')[0].split('?')[0]);
 	if (path === '') {
 		return null;

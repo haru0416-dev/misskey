@@ -42,7 +42,7 @@ export async function api<E extends keyof Misskey.Endpoints, P extends Misskey.E
 	)(endpoint, requestParams, account?.token);
 }
 
-// mark-all-as-read送出を1秒間隔に制限する
+// 同じユーザーの呼び出しを 1 秒間まとめ、その後に既読化を 1 回送る。送信開始後の呼び出しは別に受け付ける。
 const readBlockingStatus = new Set<string>();
 export function sendMarkAllAsRead(userId: string): Promise<null | undefined | void> {
 	if (readBlockingStatus.has(userId)) {

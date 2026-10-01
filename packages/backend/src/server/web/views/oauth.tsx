@@ -14,7 +14,7 @@ export function OAuthPage(
 		scope: string[];
 	}>,
 ) {
-	// OAuth ページの読み込み後にメタ要素を削除し、画面遷移後に残さない。
+	// クライアントは transaction-id のメタ要素を読み取って削除するため、画面遷移後に再利用されない。
 	function metaBlock() {
 		return (
 			<>

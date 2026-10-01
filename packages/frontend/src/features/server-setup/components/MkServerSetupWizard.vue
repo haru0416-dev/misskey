@@ -365,7 +365,6 @@ function applySettings() {
 </script>
 
 <style lang="scss" module>
-// 推奨設定サマリ: label と value を1行に収めた定義リスト行
 .recommendList > div {
 	display: flex;
 	align-items: baseline;

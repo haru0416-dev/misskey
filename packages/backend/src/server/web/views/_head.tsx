@@ -37,7 +37,7 @@ export function BootConstantsScript(props: { version: string; viteFiles: ViteFil
 }
 
 export function JsonDataScript(props: { id: string; json: string | undefined; generatedAt: number }) {
-	// 変数名をsafeで始めることでエラーをスキップ
+	// 呼び出し側で htmlSafeJsonStringify を適用した JSON をそのまま出力する。safe 接頭辞は XSS 検査への指定で、エスケープは行わない。
 	const safeJson = props.json;
 	return safeJson != null ? (
 		<script type="application/json" id={props.id} data-generated-at={props.generatedAt}>

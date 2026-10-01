@@ -32,9 +32,10 @@ export function useTooltip(
 			return;
 		}
 		const el = elRef.value instanceof Element ? elRef.value : elRef.value.$el;
+		// 表示待ちの間に元要素が DOM から取り除かれる場合がある。
 		if (!window.document.body.contains(el)) {
 			return;
-		} // openしようとしたときに既に元要素がDOMから消えている場合があるため
+		}
 
 		const showing = ref(true);
 		onShow(showing);

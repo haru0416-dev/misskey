@@ -91,7 +91,7 @@ test('パスキーを画面から登録し、そのパスキーでログイン�
 	await page.getByText('セキュリティキー・パスキー', { exact: true }).click();
 	await page.getByRole('button', { name: 'セキュリティキー・パスキーを登録する' }).click();
 	await answerPasswordDialog(page, secret);
-	// 名前の入力欄はラベルと結び付いていないが、開いた時点でフォーカスされている。
+	// ダイアログが名前の入力欄へフォーカスを移すため、キーボードで入力する。
 	await expect(page.getByText('キーの名前を入力')).toBeVisible();
 	await page.keyboard.type('virtual key');
 	await page.locator('[data-cy-modal-dialog-ok]').click();

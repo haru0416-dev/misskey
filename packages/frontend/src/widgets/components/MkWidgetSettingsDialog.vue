@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
 	z-index: 100;
 	top: var(--MI-space-sm);
 	left: var(--MI-space-sm);
-	padding: 6px 10px; /* トークン未定義の領域では既存の間隔を使う。 */
+	padding: 6px 10px;
 	border-radius: var(--MI-radius-md);
 	font-size: 85%;
 }

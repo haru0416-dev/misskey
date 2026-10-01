@@ -12,8 +12,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vite
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { loadConfig } from '@/config.js';
 
-// 検査と接続で別々に名前解決すると、その間に応答を差し替える (DNS rebinding) 余地が残る。名前解決を差し替えて
-// 検査時と接続時で違う IP を返す状況を作り、接続先が SSRF 検査時の IP に固定されることを実サーバーで確かめる。
+// 検査後の再解決は DNS rebinding を許すため、接続先の IP と論理ホスト名は分けて扱う。
+// 検査後に DNS 応答を別の IP へ変え、承認した接続先と元の Host・URL が維持されることを実通信で確かめる。
 describe('core:net:HttpRequestService の接続先固定', () => {
 	let allowed: Server;
 	let blocked: Server;
@@ -86,8 +86,7 @@ describe('core:net:HttpRequestService の接続先固定', () => {
 		let call = 0;
 		vi.spyOn(dns.promises, 'lookup').mockImplementation((async () => {
 			call++;
-			// 1 回目 (検査) は allowed、2 回目以降 (接続時に再解決されたら) は blocked を返す。
-			return [{ address: '127.0.0.1', family: 4 }];
+			return [{ address: call === 1 ? '127.0.0.1' : '127.0.0.2', family: 4 }];
 		}) as unknown as typeof dns.promises.lookup);
 
 		const service = serviceWith(['127.0.0.0/8']);
@@ -102,7 +101,6 @@ describe('core:net:HttpRequestService の接続先固定', () => {
 		await expect(res.text()).resolves.toBe('allowed');
 		// Host には元のホスト名 (とポート) が入る。IP は入らない。
 		expect(hits).toStrictEqual([`allowed:pinned.test:${allowedPort}`]);
-		expect(call).toBeGreaterThan(0);
 	});
 
 	test('接続先を固定しても ActivityPub の ID を元の URL と照合できる', async () => {

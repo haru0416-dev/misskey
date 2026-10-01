@@ -38,7 +38,6 @@ export async function loadStories(): Promise<StoryEntry[]> {
 			}
 
 			for (const [name, value] of Object.entries(module)) {
-				// 既定 story を持たないスタブや、型だけの export を弾く。
 				if (value == null || typeof value !== 'object') {
 					continue;
 				}

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-type EndoRelation<T> = (a: T, b: T) => boolean;
 type Predicate<T> = (x: T) => boolean;
 
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {
@@ -14,10 +13,6 @@ export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 		}
 	}
 	return count;
-}
-
-function count<T>(a: T, xs: T[]): number {
-	return countIf((x) => x === a, xs);
 }
 
 export function concat<T>(xss: T[][]): T[] {
@@ -75,46 +70,4 @@ export function maximum(xs: number[]): number {
 		}
 	}
 	return result;
-}
-
-function lessThan(xs: number[], ys: number[]): boolean {
-	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
-		const x = xs[i];
-		const y = ys[i];
-		if (x == null || y == null) {
-			continue;
-		}
-		if (x < y) {
-			return true;
-		}
-		if (x > y) {
-			return false;
-		}
-	}
-	return xs.length < ys.length;
-}
-
-function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
-	const ys: T[] = [];
-	for (const x of xs) {
-		if (f(x)) {
-			ys.push(x);
-		} else {
-			break;
-		}
-	}
-	return ys;
-}
-
-function cumulativeSum(xs: number[]): number[] {
-	let total = 0;
-	return xs.map((x) => (total += x));
-}
-
-function toArray<T>(x: T | T[] | undefined): T[] {
-	return Array.isArray(x) ? x : x != null ? [x] : [];
-}
-
-function toSingle<T>(x: T | T[] | undefined): T | undefined {
-	return Array.isArray(x) ? x[0] : x;
 }

@@ -5,7 +5,7 @@
 
 'use strict';
 
-// ブロックの中に入れないと、定義した変数がブラウザのグローバルスコープに登録されてしまい邪魔なので
+// 通常の script として読み込むため、起動用の変数を関数スコープへ閉じ込める。
 (async () => {
 	window.onerror = (e) => {
 		console.error(e);
@@ -67,7 +67,7 @@
 		);
 	}
 
-	// タイミングによっては、この時点でDOMの構築が済んでいる場合とそうでない場合とがある
+	// DOMContentLoaded が発火済みなら、イベント待ちで起動を止めない。
 	if (document.readyState !== 'loading') {
 		importAppScript();
 	} else {
@@ -139,7 +139,7 @@
 	}
 
 	async function renderError(code, details) {
-		// Cannot set property 'innerHTML' of null を回避
+		// DOM 構築前のエラーでも、body が利用可能になってから表示する。
 		if (document.readyState === 'loading') {
 			await new Promise((resolve) => window.addEventListener('DOMContentLoaded', resolve));
 		}

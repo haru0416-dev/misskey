@@ -49,6 +49,7 @@ export function resolveHostProcessCounts(config: Config): HostProcessCounts {
  * `maximumConnectionsPerHost` はホスト全体の予算なので、DBプールを持つプロセス数で割る。
  * fork専任のメインプロセスはDBを触らないので割る数から外れ、逆に cluster 無効時は
  * 1プロセスがHTTPとキューを兼ねる (プールも1つ) ので、その1つが予算を丸ごと使う。
+ * 各プールは最低 1 接続とするため、予算が DB 利用プロセス数を下回る場合は合計が予算を超える。
  *
  * これを怠って各プロセスが上限いっぱい張ると、`httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
  * PostgreSQL の既定 `max_connections = 100` に張り付いて溢れる (実測で確認済)。

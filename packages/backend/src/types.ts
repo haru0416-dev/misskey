@@ -84,11 +84,7 @@ export const noteReactionAcceptances = [
 export const followingVisibilities = ['public', 'followers', 'private'] as const;
 export const followersVisibilities = ['public', 'followers', 'private'] as const;
 
-/**
- * ユーザーがエクスポートできるものの種類
- *
- * （主にエクスポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
- */
+/** エクスポート完了通知の種別であり、DB のテーブル名とは必ずしも一致しない。 */
 export const userExportableEntities = [
 	'antenna',
 	'blocking',

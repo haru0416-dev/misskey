@@ -9,23 +9,23 @@ precision mediump float;
 const float PI = 3.141592653589793;
 
 in vec2 in_uv;                       // 0..1
-uniform sampler2D in_texture;        // 背景
+uniform sampler2D in_texture;
 uniform vec2 in_resolution;          // 出力解像度(px)
 
-uniform sampler2D u_watermark;       // ウォーターマーク
+uniform sampler2D u_watermark;
 uniform vec2 u_wmResolution;         // ウォーターマーク元解像度(px)
 
 uniform float u_opacity;             // 0..1
-uniform float u_scale;               // watermarkのスケール
+uniform float u_scale;
 uniform float u_angle;               // -1..1 (PI倍)
-uniform bool u_cover;                // cover基準 or fit基準
-uniform bool u_repeat;               // タイル敷き詰め
-uniform int u_alignX;                // 0:left 1:center 2:right
-uniform int u_alignY;                // 0:top 1:center 2:bottom
+uniform bool u_cover;                // true は cover、false は fit を基準にする。
+uniform bool u_repeat;
+uniform int u_alignX;                // 0: 左、1: 中央、2: 右
+uniform int u_alignY;                // 0: 上、1: 中央、2: 下
 uniform float u_margin;              // 余白(比率)
 uniform float u_repeatMargin;        // 敷き詰め時の余白(比率)
-uniform bool u_noBBoxExpansion;      // 回転時のBounding Box拡張を抑止
-uniform bool u_wmEnabled;            // watermark有効
+uniform bool u_noBBoxExpansion;
+uniform bool u_wmEnabled;
 
 out vec4 out_color;
 
@@ -34,7 +34,6 @@ mat2 rot(float a) {
 	return mat2(c, -s, s, c);
 }
 
-// cover/fitとscaleから、最終的なサイズ(px)を計算
 vec2 computeWmSize(vec2 outSize, vec2 wmSize, bool cover, float scale) {
 	float wmAspect = wmSize.x / wmSize.y;
 	float outAspect = outSize.x / outSize.y;
@@ -73,7 +72,6 @@ void main() {
 	vec2 wmSize = computeWmSize(outSize, u_wmResolution, u_cover, u_scale);
 	vec2 margin = u_repeat ? wmSize * u_repeatMargin : outSize * u_margin;
 
-	// アライメントに基づく回転中心を計算
 	float rotateX = 0.0;
 	float rotateY = 0.0;
 	if (abs(theta) > 1e-6 && !u_noBBoxExpansion) {

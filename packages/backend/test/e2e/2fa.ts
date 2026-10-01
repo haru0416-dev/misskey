@@ -563,7 +563,6 @@ describe('2要素認証', () => {
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
 
 			// パスワード後の 2FA で発行された challenge を、context にユーザー ID を入れてパスキー側で使わせない。
-			// 以前は両フローが同じキーに challenge を置いていたため、この組み合わせで検証まで進めた。
 			const twoFactorChallenge = await api('signin-flow', {
 				username: passkeyUser.username,
 				password,

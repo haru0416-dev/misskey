@@ -14,7 +14,6 @@ const chatMessageHeaderProperties = {
 	},
 } as const;
 
-// 4 種の表現で同じ意味を持つ本文と添付。
 const chatMessageContentProperties = {
 	text: {
 		type: 'string',

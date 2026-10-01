@@ -178,7 +178,15 @@ const rolePermissionDef = [
 ] as const satisfies MkSelectItem[];
 
 const rolePermission = computed<GetMkSelectValueTypesFromDef<typeof rolePermissionDef>>({
-	get: () => role.value.isAdministrator ? 'administrator' : role.value.isModerator ? 'moderator' : 'normal',
+	get: () => {
+		if (role.value.isAdministrator) {
+			return 'administrator';
+		}
+		if (role.value.isModerator) {
+			return 'moderator';
+		}
+		return 'normal';
+	},
 	set: (val) => {
 		role.value.isAdministrator = (val === 'administrator');
 		role.value.isModerator = (val === 'moderator');

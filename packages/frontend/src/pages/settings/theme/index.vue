@@ -258,9 +258,9 @@ const darkThemeId = computed({
 		return darkTheme.value ? darkTheme.value.id : defaultDarkTheme.id;
 	},
 	set(id) {
+		// 選択した ID が一覧にない場合は現在のテーマを保持する。
 		const t = themes.value.find((x) => x.id === id);
 		if (t) {
-			// テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
 			prefer.commit('darkTheme', t);
 		}
 	},
@@ -271,9 +271,9 @@ const lightThemeId = computed({
 		return lightTheme.value ? lightTheme.value.id : defaultLightTheme.id;
 	},
 	set(id) {
+		// 選択した ID が一覧にない場合は現在のテーマを保持する。
 		const t = themes.value.find((x) => x.id === id);
 		if (t) {
-			// テーマエディタでテーマを作成したときなどは、themesに反映されないため undefined になる
 			prefer.commit('lightTheme', t);
 		}
 	},

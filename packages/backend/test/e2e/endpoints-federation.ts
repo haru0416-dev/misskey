@@ -160,7 +160,6 @@ describe('Endpoints', () => {
 
 	describe('federation endpoints', () => {
 		test('instances, show-instance, and stats return packed federation instances', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const alpha = await createInstanceInDatabase(db, {
 				id: genId(now),
@@ -336,7 +335,6 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const host = `hono-remove-following-${suffix}.example`;
 			const follower = await signup({ username: `hafr${suffix}` });
@@ -368,7 +366,6 @@ describe('Endpoints', () => {
 		});
 
 		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-fed-users-${suffix}.example`;
@@ -401,7 +398,6 @@ describe('Endpoints', () => {
 		});
 
 		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const remoteFollowerHost = `hono-fed-follower-${suffix}.example`;
 			const remoteFolloweeHost = `hono-fed-followee-${suffix}.example`;
@@ -550,7 +546,6 @@ describe('Endpoints', () => {
 
 	describe('federation/update-remote-user', () => {
 		test('リモートアクターを再フェッチしてプロフィールを更新する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36);
 
@@ -681,7 +676,6 @@ describe('Endpoints', () => {
 		});
 
 		test('連合が許可されていないホストはFEDERATION_NOT_ALLOWEDを維持する', async () => {
-			const config = fixtureConfig;
 			const blockedHost = `ap-show-blocked-${Date.now().toString(36)}.example`;
 
 			const before = await api('admin/meta', {}, alice);
@@ -704,7 +698,6 @@ describe('Endpoints', () => {
 		});
 
 		test('未知のリモートUser/Noteを新規作成して返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 
 			const originalMeta = await fetchMetaFromDatabase(db);

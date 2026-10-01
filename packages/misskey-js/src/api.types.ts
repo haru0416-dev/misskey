@@ -66,17 +66,15 @@ export type Endpoints = Overwrite<
 				};
 			};
 		},
-		// api.jsonには載せないものなのでここで定義
+		// api.json に含まれない認証ルートは、生成型とは別に宣言する。
 		'signup': {
 			req: SignupRequest;
 			res: SignupResponse;
 		},
-		// api.jsonには載せないものなのでここで定義
 		'signup-pending': {
 			req: SignupPendingRequest;
 			res: SignupPendingResponse;
 		},
-		// api.jsonには載せないものなのでここで定義
 		'signin-flow': {
 			req: SigninFlowRequest;
 			res: SigninFlowResponse;

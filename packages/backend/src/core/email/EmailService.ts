@@ -57,7 +57,6 @@ export function renderEmailHtml(params: {
 	const safeHtml = sanitizeHtml(params.html);
 	const safeSubject = escapeHtml(params.subject);
 
-	// 本文のリンクにも共通の装飾を適用し、呼び出し側のインライン指定を優先する。
 	const styledHtml = new HTMLRewriter()
 		.on('a', {
 			element(element) {

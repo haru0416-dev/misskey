@@ -168,7 +168,8 @@ watch(
 			if (scrollContainer == null) {
 				return;
 			}
-			scrollContainer.addEventListener('scroll', onScrollContainerScroll, { passive: true }); // ほんとはscrollendにしたいけどiosが非対応
+			// 先頭へ戻った時点で新着キューを解放するため、スクロール中も位置を判定する。
+			scrollContainer.addEventListener('scroll', onScrollContainerScroll, { passive: true });
 		}
 	},
 	{ immediate: true },
@@ -181,7 +182,6 @@ watch(visibility, () => {
 	if (visibility.value === 'hidden') {
 		isPausingUpdate = true;
 	} else {
-		// 'visible'
 		isPausingUpdate = false;
 		if (isTop()) {
 			releaseQueue();

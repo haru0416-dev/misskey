@@ -32,8 +32,8 @@ import { $i } from '@/i.js';
 import { launchPlugins } from '@/plugin.js';
 
 /**
- * beforeEmojis は絵文字一覧の取得を待つ前に呼ぶ。画面の骨組みの読み込みをここで始めると、取得と並行できる
- * (往復 150 ms の回線で約 0.4 秒)。ストアとアカウントの初期化は済んでいる。
+ * beforeEmojis は端末ストアの復元後、絵文字一覧の取得前に呼ぶ。
+ * 画面の骨組みをここで読み込み始めると、絵文字の取得と並行できる。
  */
 export async function common(app: App<Element>, prepareVue: () => Promise<void>, beforeEmojis?: () => void) {
 	console.info(`Toneriko v${version}`);
@@ -165,7 +165,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>,
 		}
 	}
 
-	// クライアント更新、端末のダークモード、サーバーテーマの反映後に監視を開始する。
+	// 端末のダークモードと保存済みのサーバーテーマを反映してから監視を開始する。
 	// see: https://github.com/misskey-dev/misskey/issues/16562
 	watch(
 		() => store.darkMode,

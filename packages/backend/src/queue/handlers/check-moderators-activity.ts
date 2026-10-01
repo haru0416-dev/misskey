@@ -217,7 +217,7 @@ export async function handleQueueCheckModeratorsActivity(
 	const remainingTime = evaluateResult.remainingTime;
 	if (remainingTime.asDays <= MODERATOR_INACTIVITY_WARNING_REMAINING_DAYS) {
 		if (remainingTime.asHours % MODERATOR_INACTIVITY_WARNING_NOTIFY_INTERVAL_HOURS === 0) {
-			// 過剰送信を避けるため、警告通知は 6 時間間隔に制限する。
+			// 残り時間を切り捨てた時間数が 6 の倍数になる回だけ警告する。
 			await notifyInactiveModeratorsWarning(deps, remainingTime);
 		}
 	}

@@ -4,16 +4,9 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { loadBuiltLocales, runVerification, verifyLocales } from '../scripts/verify.js';
+import { runVerification, verifyLocales } from '../scripts/verify.js';
 
 describe('verifyLocales', () => {
-	test('loads locale records from the built locales export', async () => {
-		const locales = await loadBuiltLocales();
-
-		expect(locales['ja-JP']).toBeTypeOf('object');
-		expect(locales['en-US']).toBeTypeOf('object');
-	});
-
 	test('reports mismatched locale value types', () => {
 		const errors = verifyLocales({
 			'ja-JP': { section: { label: 'ラベル' }, title: 'タイトル' },

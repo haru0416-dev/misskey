@@ -67,7 +67,7 @@ type ModelValueType<T extends SupportedTypes> = T extends 'number'
 </script>
 
 <script lang="ts" setup generic="T extends SupportedTypes = 'text'">
-import { onMounted, onUnmounted, nextTick, ref, useTemplateRef, watch, computed, toRefs } from 'vue';
+import { onMounted, onUnmounted, nextTick, ref, useTemplateRef, watch, toRefs } from 'vue';
 import { throttle as createThrottled, debounce as createDebounced } from 'throttle-debounce';
 import type { InputHTMLAttributes } from 'vue';
 import type { SuggestionType } from '@/features/autocomplete/autocomplete.js';
@@ -124,7 +124,6 @@ const id = genId();
 const focused = ref(false);
 const changed = ref(false);
 const invalid = ref(false);
-const filled = computed(() => v.value !== '' && v.value != null);
 const inputEl = useTemplateRef('inputEl');
 const prefixEl = useTemplateRef('prefixEl');
 const suffixEl = useTemplateRef('suffixEl');

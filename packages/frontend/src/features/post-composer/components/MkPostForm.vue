@@ -202,7 +202,7 @@ const emit = defineEmits<{
 	(ev: 'cancel'): void;
 	(ev: 'esc'): void;
 
-	// Mock用
+	// 見本表示では API の代わりにイベントで添付ファイルの変更を反映する。
 	(ev: 'fileChangeSensitive', fileId: string, to: boolean): void;
 }>();
 
@@ -442,7 +442,7 @@ if (targetChannel.value) {
 	localOnly.value = true; // チャンネル投稿は現時点で連合しないため、ローカル限定にする。
 }
 
-// 公開以外へのリプライ時は元の公開範囲を引き継ぐ
+// 返信先の公開範囲を上限とし、既に選ばれた狭い公開範囲は広げない。
 if (replyTargetNote.value && ['home', 'followers', 'specified'].includes(replyTargetNote.value.visibility)) {
 	if (replyTargetNote.value.visibility === 'home' && visibility.value === 'followers') {
 		visibility.value = 'followers';
@@ -476,7 +476,6 @@ if (props.specified) {
 	pushVisibleUser(props.specified);
 }
 
-// 返信時に返信先の CW を引き継ぐ
 if (prefer.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
 	useCw.value = true;
 	cw.value = replyTargetNote.value.cw;
@@ -1139,11 +1138,11 @@ async function post(ev?: PointerEvent) {
 
 	if (
 		visibility.value === 'public' &&
-		((useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) || // CWが迷惑になる場合
+		((useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) ||
 			((!useCw.value || cw.value == null || cw.value.trim() === '') &&
 				text.value != null &&
 				text.value.trim() !== '' &&
-				isAnnoying(text.value))) // CWが無い かつ 本文が迷惑になる場合
+				isAnnoying(text.value)))
 	) {
 		const { canceled, result } = await os.actions({
 			type: 'warning',
@@ -1737,7 +1736,6 @@ onMounted(() => {
 	nextTick().then(async () => {
 		await restoreLocalDraft();
 
-		// 削除して編集
 		if (props.initialNote) {
 			const init = props.initialNote;
 			text.value = init.text ? init.text : '';

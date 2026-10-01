@@ -6,8 +6,7 @@
 import { beforeAll } from 'vitest';
 import { sendEnvResetRequest } from './utils.js';
 
-// DBリセット + アプリ再起動はCIランナーの負荷次第でvitest既定のhookTimeout (10秒) を超えることがあり、
-// 超えるとそのファイルの全テストがskipされてしまうため、余裕を持ったタイムアウトを指定する
+// CI 負荷で時間が延びる DB リセット・アプリ再起動には、個別の hookTimeout を設定する。
 beforeAll(async () => {
 	await sendEnvResetRequest();
 }, 60_000);

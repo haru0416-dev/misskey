@@ -74,7 +74,7 @@ export function getDatabaseErrorCode(error: unknown): string | undefined {
 	return undefined;
 }
 
-/** statement_timeout で打ち切られた (57014 query_canceled)。 */
+/** statement_timeout などによる query_canceled (57014)。SQLSTATE だけでは中断理由を区別できない。 */
 export function isStatementTimeoutError(error: unknown): boolean {
 	return getDatabaseErrorCode(error) === '57014';
 }

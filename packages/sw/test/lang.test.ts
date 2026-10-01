@@ -61,7 +61,7 @@ describe('SwLang', () => {
 
 		const i18n = await swLang.setLang('ja-JP');
 
-		expect(i18n).toBeDefined();
+		expect(i18n.ts._lang_).toBe('ja-JP');
 		await expect(swLang.i18n).resolves.toBe(i18n);
 		expect(fetch).toHaveBeenCalledOnce();
 	});
@@ -77,7 +77,8 @@ describe('SwLang', () => {
 		const { SwLang } = await import('@/scripts/lang.js');
 		const swLang = new SwLang();
 
-		await expect(swLang.setLang('ja-JP')).resolves.toBeDefined();
+		const i18n = await swLang.setLang('ja-JP');
+		expect(i18n.ts._lang_).toBe('ja-JP');
 		expect(fetch).toHaveBeenCalledWith('/assets/locales/ja-JP.test.json', expect.any(Object));
 	});
 });

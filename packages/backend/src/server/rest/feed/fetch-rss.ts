@@ -27,9 +27,9 @@ const rssParser = new Parser({
 	},
 });
 
-/** 同一URLへの同時リクエストは1本にまとめて、その結果を全員で共有する。 */
 type FetchedFeed = Awaited<ReturnType<typeof rssParser.parseString>>;
 
+/** 同一URLへの同時リクエストは1本にまとめて、その結果を全員で共有する。 */
 const inFlightRequests = new Map<string, Promise<FetchedFeed>>();
 
 export type ApiFetchRssDependencies = {

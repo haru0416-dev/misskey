@@ -94,7 +94,8 @@ function buildPushRequest(
 }
 
 /**
- * fire-and-forget (配信失敗はエンドポイント失効時の購読削除以外は握りつぶす) なので await 不要。
+ * 購読の読み出しは待つが、送信と失効した購読の削除の完了は待たない。
+ * 通信失敗は呼び出し側へ返さないが、購読の読み出しに失敗すると reject する。
  */
 export async function pushSwNotificationForApi<T extends keyof PushNotificationsTypes>(
 	deps: ApiPushNotificationDependencies,
@@ -111,7 +112,6 @@ export async function pushSwNotificationForApi<T extends keyof PushNotifications
 	const subscriptions = await listSwSubscriptionsByUserIdFromDatabase(deps.db, userId);
 
 	for (const subscription of subscriptions) {
-		// 「通知が既読になったことを送信する」をオフにしている購読には readAllNotifications を送らない
 		if (type === 'readAllNotifications' && !subscription.sendReadMessage) {
 			continue;
 		}

@@ -29,9 +29,7 @@ async function main() {
 
 main()
 	.then(() => {
-		// zod 等が ESM 経由で `node:process` を import すると、facade 生成の副作用で
-		// process.stdin が実体化され open socket として残り、プロセスが自然終了しない
-		// (Node の既知の挙動)。明示的に exit してハングを防ぐ。
+		// 生成完了後に依存モジュールのハンドルで待ち続けないよう、明示的に終了する。
 		process.exit(0);
 	})
 	.catch((e) => {

@@ -33,8 +33,7 @@ describe('hono-queue-deliver', () => {
 			{ db: runtime.db, meta: runtime.meta, genId: () => genId() },
 			'actor',
 		);
-		// enableStatsForFederatedInstances が true だと、配送成功時に fetchInstanceMetadataWithSideEffects が実在しない
-		// テストホストへ HTTP 要求を fire-and-forget で送り、テスト終了後に unhandled rejection になるため無効化する。
+		// 配送成功後の非同期メタデータ取得が、実在しないテストホストへ接続しないよう無効化する。
 		federatedDeps = {
 			...runtime,
 			meta: { ...runtime.meta, federation: 'all', enableStatsForFederatedInstances: false },

@@ -18,8 +18,8 @@ import type { MiUser } from '@/models/User.js';
 import { packUserDetailedNotMeManyForApi } from '@/server/rest/user/user.js';
 import { packFollowingsForApi } from '@/server/rest/user/following.js';
 
-// 一覧のクエリでユーザーを読んだ後、整形の前に削除が確定することがある (削除は user 行の DELETE で、
-// プロフィールやフォローも cascade で同時に消える)。連合テストで users/following が 500 になった競合を固定で再現する。
+// 一覧の取得後、整形前に user 行の削除が確定すると、プロフィールやフォローも cascade で消える。
+// 取得時の行が残っていても、削除された相手を一覧から除外する必要がある。
 describe('一覧の取得後に削除が確定したユーザーの整形', () => {
 	let runtime: RuntimeDependencies;
 

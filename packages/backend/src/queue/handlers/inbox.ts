@@ -49,8 +49,8 @@ function collapseUpdateInstanceJobs(oldJob: UpdateInstanceJob, newJob: UpdateIns
 	};
 }
 
-// インスタンス更新はプロセス内シングルトンの CollapsedQueue でまとめて 5 分間隔で反映する。
-// deps は初回呼び出し時のものに固定されるが、db/redis 等の実体は起動時から不変である。
+// インスタンスごとに最初の更新から 5 分間の要求をプロセス内で集約する（テストでは遅延なし）。
+// キューは初回の deps を保持するため、同じプロセス内では同じ DB 接続を使う必要がある。
 let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
 function getUpdateInstanceQueue(deps: QueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
@@ -89,9 +89,7 @@ async function verifyAndResolveAuthUser(
 	const signature = data.signature;
 	let activity = data.activity;
 
-	// actor はリモート入力なので欠ける場合がある。ここで拒否しないと以降の
-	// getApId() が「cannot determine id」を投げ、UnrecoverableError ではないため
-	// 不正な activity が再試行され続ける。
+	// actor の欠落は再試行で回復しないため、getApId() の通常エラーではなく再試行不能なエラーにする。
 	if (activity.actor == null) {
 		throw new Bull.UnrecoverableError('skip: activity has no actor');
 	}
@@ -99,7 +97,7 @@ async function verifyAndResolveAuthUser(
 	{
 		let userExistenceCheckApId: string | null = null;
 
-		// actor と object が同一の Delete は Actor の削除として存在確認する。
+		// object が Actor、または actor と同一 ID の Delete は、対象ユーザーが存在するときだけ処理する。
 		if (
 			isDelete(activity) &&
 			typeof activity.object === 'object' &&
@@ -158,7 +156,7 @@ async function verifyAndResolveAuthUser(
 			throw new Bull.UnrecoverableError(`skip: unsupported LD-signature type ${ldSignature.type}`);
 		}
 
-		// creator のフラグメントを除いた Person を解決し、公開鍵を取得する。
+		// 公開鍵が未登録でも検証できるよう、creator のフラグメントを除いた Person の解決を試みる。
 		if (ldSignature.creator) {
 			const candicate = ldSignature.creator.replace(/#.*/, '');
 			await resolvePersonForApi(deps, candicate).catch(() => null);
@@ -250,8 +248,7 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, data: Inbox
 	void deps.chartWriters.apRequestChart.inbox();
 	void deps.chartWriters.federationChart.inbox(authUser.user.host!);
 
-	// 受信したホストの記録は本処理を待たせない。失敗しても受信の結果は変わらないのでログに残すだけにする
-	// (catch が無いと未処理の rejection になる)。
+	// インスタンス情報の記録は受信処理を待たせず、失敗はログに残して受信結果と切り離す。
 	process.nextTick(
 		() =>
 			void recordInboxInstance().catch((error: unknown) =>

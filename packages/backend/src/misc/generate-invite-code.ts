@@ -5,7 +5,7 @@
 
 import { secureRndstr } from './secure-rndstr.js';
 
-const CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 0、1、I、O を除く32文字
+const CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 読み違えやすい 0、1、I、O を除く。
 
 export function generateInviteCode(): string {
 	const code = secureRndstr(8, {

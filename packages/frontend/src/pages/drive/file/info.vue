@@ -122,8 +122,7 @@ async function _fetch_() {
 	}).then((res) => {
 		file.value = res;
 	}, (err: { code?: string } | undefined) => {
-		// 無い・見られないファイルは空として出す。それ以外 (通信の失敗など) は、表示中の内容を消さずに
-		// 読み込み直せる状態にする (更新の後の読み直しで失敗しても、ファイルが消えたようには見せない)。
+		// 存在しない・閲覧権限のないファイルだけ表示を消す。通信失敗では、更新後の再取得でも既存の表示を保つ。
 		if (err?.code === 'NO_SUCH_FILE' || err?.code === 'ACCESS_DENIED') {
 			file.value = undefined;
 		} else if (file.value == null) {
@@ -268,7 +267,6 @@ onMounted(async () => {
 .filePreviewRoot {
 	background: var(--MI_THEME-panel);
 	border-radius: var(--MI-radius);
-	// MkMediaList 内の上部マージン 4px
 	padding: calc(1rem - 4px) 1rem 1rem;
 }
 

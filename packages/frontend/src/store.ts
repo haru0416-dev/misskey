@@ -47,9 +47,9 @@ function createBaseState() {
 		postFormWithHashtags: false,
 		postFormHashtags: '',
 		additionalUnicodeEmojiIndexes: {} as Record<string, Record<string, string[]>>,
-		pluginTokens: {} as Record<string, string>, // plugin id, token
-		accountTokens: {} as Record<string, string>, // host/userId, token
-		accountInfos: {} as Record<string, Misskey.entities.MeDetailed>, // host/userId, user
+		pluginTokens: {} as Record<string, string>, // キーはプラグインの installId。
+		accountTokens: {} as Record<string, string>, // キーは host/userId。
+		accountInfos: {} as Record<string, Misskey.entities.MeDetailed>, // accountTokens と同じキーを使う。
 		enablePreferencesAutoCloudBackup: false,
 		showPreferencesAutoCloudBackupSuggestion: true,
 		showStoragePersistenceSuggestion: true,

@@ -26,7 +26,7 @@ export function convertSchemaToOpenApiSchema(
 	type: 'param' | 'res',
 	includeSelfRef: boolean,
 ): OpenApiSchemaObject {
-	// optional・nullable・ref はスキーマ定義に含まれないため分離する。
+	// Misskey 独自の optional・nullable・ref・selfRef は、そのまま OpenAPI に出力しない。
 	const { optional, nullable, ref, selfRef, ...res1 } = schema as Schema & Record<string, unknown>;
 	const res = deepClone(res1 as unknown as Cloneable) as OpenApiSchemaObject;
 
@@ -36,7 +36,6 @@ export function convertSchemaToOpenApiSchema(
 				.filter(([k, v]) => !v.optional)
 				.map(([k]) => k);
 			if (required.length > 0) {
-				// 空配列は許可されない
 				res.required = required;
 			}
 		}

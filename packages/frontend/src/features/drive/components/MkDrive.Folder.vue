@@ -9,8 +9,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	draggable="true"
 	:title="title"
 	@contextmenu.stop="onContextmenu"
-	@mouseover="onMouseover"
-	@mouseout="onMouseout"
 	@dragover.prevent.stop="onDragover"
 	@dragenter.prevent="onDragenter"
 	@dragleave="onDragleave"
@@ -64,7 +62,6 @@ const emit = defineEmits<{
 	(ev: 'dragend'): void;
 }>();
 
-const hover = ref(false);
 const draghover = ref(false);
 const isDragging = ref(false);
 
@@ -76,14 +73,6 @@ function checkboxClicked() {
 	} else {
 		emit('chosen', props.folder);
 	}
-}
-
-function onMouseover() {
-	hover.value = true;
-}
-
-function onMouseout() {
-	hover.value = false;
 }
 
 function onDragover(ev: DragEvent) {
@@ -241,10 +230,6 @@ function deleteFolder() {
 					});
 			}
 		});
-}
-
-function setAsUploadFolder() {
-	prefer.commit('uploadFolder', props.folder.id);
 }
 
 function onContextmenu(ev: PointerEvent) {

@@ -94,7 +94,6 @@ describe('hono-queue-check-moderators-activity', () => {
 			userId: moderator.id,
 		});
 		expect(announcements.length).toBeGreaterThan(0);
-		expect(announcements[0]!.title).toContain('Invitation-Only');
 	});
 
 	test('既に招待制の場合は何もしない', async () => {

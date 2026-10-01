@@ -352,7 +352,6 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 			});
 		}
 
-		// フォローしたとしても user.isFollowing はリアルタイム更新されないので不便なため
 		const withRepliesRef = ref(user.withReplies ?? false);
 
 		menuItems.push(

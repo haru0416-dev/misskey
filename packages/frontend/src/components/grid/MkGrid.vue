@@ -95,7 +95,7 @@ const rootSetting: Required<GridSetting['root']> = {
 	...props.settings.root,
 };
 
-// 設定は初期値として固定し、リアクティブに追従させない。
+// 行設定は初期値をコピーし、props.settings.row の差し替えには追従しない。
 const rowSetting: Required<GridRowSetting> = {
 	...defaultGridRowSetting,
 	...props.settings.row,
@@ -119,11 +119,8 @@ const bus = new GridEventEmitter();
  */
 const resizeTimeoutIds = new Set<number>();
 /**
- * テーブルコンポーネントのリサイズイベントを監視するための{@link ResizeObserver}。
- * 表示切替を検知し、サイズの再計算要求を発行するために使用する（マウント時にコンテンツが表示されていない場合、初手のサイズの自動計算が正常に働かないため）
- *
- * {@link setTimeout}を経由している理由は、{@link onResize}の中でサイズ再計算要求→サイズ変更が発生するとループとみなされ、
- * 「ResizeObserver loop completed with undelivered notifications.」という警告が発生するため（再計算が完全に終われば通知は発生しなくなるので実際にはループしない）
+ * 非表示からの復帰時にコンテンツサイズを再計算する。
+ * 同じ ResizeObserver 通知内でサイズを書き換えると未配信通知の警告が出るため、{@link setTimeout} で次のタスクへ送る。
  *
  * @see {@link onResize}
  */
@@ -138,7 +135,7 @@ const resizeObserver = new ResizeObserver((entries) => {
 const rootEl = useTemplateRef('rootEl');
 const state = ref<GridState>('normal');
 /**
- * グリッドの列定義。列定義の元の設定値は非リアクティブなので、初期値を生成して以降は変更しない。
+ * 列は初期設定から生成し直さず、列幅とコンテンツサイズを更新する。
  */
 const columns = ref<GridColumn[]>(columnSettings.map(createColumn));
 const rows = ref<GridRow[]>([]);
@@ -589,7 +586,6 @@ function onMouseMove(ev: MouseEvent) {
 
 	const targetCellAddress = getCellAddress(ev.target as HTMLElement);
 	if (equalCellAddress(previousCellAddress.value, targetCellAddress)) {
-		// セルが変わるまでイベントを起こしたくない
 		return;
 	}
 
@@ -601,7 +597,6 @@ function onMouseMove(ev: MouseEvent) {
 		case 'cellSelecting': {
 			const selectedCellAddress = selectedCell.value?.address;
 			if (!availableCellAddress(targetCellAddress) || !selectedCellAddress) {
-				// 正しいセル範囲ではない
 				return;
 			}
 
@@ -615,7 +610,6 @@ function onMouseMove(ev: MouseEvent) {
 				row: Math.max(targetCellAddress.row, selectedCellAddress.row),
 			};
 
-			// 範囲外のセルは選択解除し、範囲内のセルは選択状態にする
 			unSelectionOutOfRange(leftTop, rightBottom);
 			expandCellRange(leftTop, rightBottom);
 			previousCellAddress.value = targetCellAddress;
@@ -624,7 +618,6 @@ function onMouseMove(ev: MouseEvent) {
 		}
 		case 'colSelecting': {
 			if (!isColumnHeaderCellAddress(targetCellAddress) || previousCellAddress.value.col === targetCellAddress.col) {
-				// セルが変わるまでイベントを起こしたくない
 				return;
 			}
 
@@ -638,7 +631,6 @@ function onMouseMove(ev: MouseEvent) {
 				row: cells.value.length - 1,
 			};
 
-			// 範囲外のセルは選択解除し、範囲内のセルは選択状態にする
 			unSelectionOutOfRange(leftTop, rightBottom);
 			expandCellRange(leftTop, rightBottom);
 			previousCellAddress.value = targetCellAddress;
@@ -650,7 +642,6 @@ function onMouseMove(ev: MouseEvent) {
 		}
 		case 'rowSelecting': {
 			if (!isRowNumberCellAddress(targetCellAddress) || previousCellAddress.value.row === targetCellAddress.row) {
-				// セルが変わるまでイベントを起こしたくない
 				return;
 			}
 
@@ -664,11 +655,9 @@ function onMouseMove(ev: MouseEvent) {
 				row: Math.max(targetCellAddress.row, firstSelectionRowIdx.value),
 			};
 
-			// 範囲外のセルは選択解除し、範囲内のセルは選択状態にする
 			unSelectionOutOfRange(leftTop, rightBottom);
 			expandCellRange(leftTop, rightBottom);
 
-			// 行も同様に
 			const targetRow = rows.value[targetCellAddress.row];
 			if (targetRow == null) {
 				return;
@@ -752,7 +741,6 @@ function onCellEditBegin(sender: GridCell) {
 	editingCellAddress.value = sender.address;
 	for (const cell of cells.value.flatMap((it) => it.cells)) {
 		if (cell.address.col !== sender.address.col || cell.address.row !== sender.address.row) {
-			// 編集状態となったセル以外は全部選択解除
 			cell.selected = false;
 		}
 	}
@@ -773,7 +761,6 @@ function onChangeCellContentSize(sender: GridCell, contentSize: Size) {
 	if (cell != null) {
 		const currentSize = cell.contentSize;
 		if (currentSize.width !== contentSize.width || currentSize.height !== contentSize.height) {
-			// 通常セルのセル幅が確定したら、そのサイズを保持しておく（内容に引っ張られて想定よりも大きいセルサイズにならないようにするためのCSS作成に使用）
 			cell.contentSize = contentSize;
 
 			if (sender.column.setting.width === 'auto') {
@@ -822,7 +809,6 @@ function onHeaderCellChangeContentSize(sender: GridColumn, newSize: Size) {
 			}
 			const currentSize = column.contentSize;
 			if (currentSize.width !== newSize.width || currentSize.height !== newSize.height) {
-				// ヘッダセルのセル幅が確定したら、そのサイズを保持しておく（内容に引っ張られて想定よりも大きいセルサイズにならないようにするためのCSS作成に使用）
 				column.contentSize = newSize;
 
 				if (sender.setting.width === 'auto') {
@@ -849,9 +835,6 @@ function onHeaderCellWidthLargest(sender: GridColumn) {
 // #region Methods
 // region Methods
 
-/**
- * カラム内のコンテンツを表示しきるために必要な横幅と、各セルのコンテンツを表示しきるために必要な横幅を比較し、大きい方を列全体の横幅として採用する。
- */
 function calcLargestCellWidth(column: GridColumn) {
 	const _cells = cells.value;
 	const currentColumn = columns.value[column.index];
@@ -1002,9 +985,6 @@ function expandRowRange(top: number, bottom: number) {
 	}
 }
 
-/**
- * 特定の条件下でのみ適用されるCSSを反映する。
- */
 function applyRowRules(targetCells: GridCell[]) {
 	const _rows = rows.value;
 	const targetRowIdxes = [...new Set(targetCells.map((it) => it.address.row))];

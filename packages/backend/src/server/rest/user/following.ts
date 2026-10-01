@@ -1391,7 +1391,7 @@ const birthdayMonthDaySchema = z
 		month: z.int().min(1).max(12),
 		day: z.int().min(1).max(31),
 	})
-	// 月と日の組み合わせは JSON Schema で表現できないので、生成されるドキュメントには出ない。
+	// refine による月日の組み合わせ検証は、生成される JSON Schema に含まれない。
 	.refine(({ month, day }) => day <= MAX_DAY_OF_MONTH[month - 1]!, {
 		message: 'must be an existing month and day',
 	});

@@ -123,7 +123,7 @@ export const api = async <E extends keyof misskey.Endpoints, P extends misskey.E
 	return {
 		status: res.status,
 		headers: res.headers,
-		// 空レスポンスの型を表現できるようになるまで non-null assertion を使う。
+		// 非 JSON 応答では実際の body は null だが、このヘルパーの戻り値型は成功時の SDK 型に合わせる。
 		body: body!,
 	};
 };
@@ -354,7 +354,6 @@ export const role = async (
 			name: 'New Role',
 			target: 'manual',
 			policies: {
-				// API の policies は配列ではなくオブジェクトとして展開する。
 				...Object.fromEntries(
 					Object.entries(DEFAULT_POLICIES).map(([k, v]) => [
 						k,
@@ -668,12 +667,12 @@ export const simpleGet = async (
 };
 
 /**
- * あるAPIエンドポイントのPaginationが複数の条件で一貫した挙動であることをテストする。
- * (sinceId, untilId, sinceDate, untilDate, offset, limit)
- * @param expected 期待値となるEntityの並び（例：Note[]）昇順降順が一致している必要がある
- * @param fetchEntities Entity[]を返却するテスト対象のAPIを呼び出す関数
- * @param offsetBy 何をキーとしてPaginationするか。
- * @param ordering 昇順・降順
+ * ページサイズを変えて取得結果と expected の順序・内容を照合する。
+ * 降順では until カーソルを、offsetBy === 'offset' では数値 offset も検証する。
+ * @param expected API の返却順と一致する期待値
+ * @param fetchEntities ページング条件を受け取る API 呼び出し
+ * @param offsetBy カーソルに使うキー、または数値 offset
+ * @param ordering 'desc' の場合だけ until カーソルの検証を実行する
  */
 export async function testPaginationConsistency<Entity extends { id: string; createdAt?: string }>(
 	expected: Entity[],
@@ -766,8 +765,7 @@ export async function sendEnvResetRequest() {
 	}
 }
 
-// 与えられた値を強制的にエラーとみなす。この関数は型安全性を破壊するため、異常系のアサーション以外で用いられるべきではない。
-// misskey-js がエラー情報を公開していないため、このキャストが必要になる。
+// 実行時の検証は行わないため、エラーレスポンスを確認する異常系アサーションに限って使う。
 export function castAsError(obj: unknown): ApiErrorBody {
 	return obj as ApiErrorBody;
 }

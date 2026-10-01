@@ -374,8 +374,7 @@ async function moveFromLocalForApi(
 
 /** ローカルからの引っ越しとリモートアクターの movedToUri 検知の両方から呼ぶ。 */
 export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
-	// 個々のカスケードは独立しているので、1つ失敗しても残りは完走させる (Promise.all だと先頭の失敗で
-	// 残りの結果が捨てられ、その rejection が unhandledRejection にしか残らない)。
+	// 各処理の終了を待ち、失敗を個別に記録してからフォロー移行へ進む。
 	const cascades = [
 		['copyBlocking', copyBlockingForApi(deps, src, dst)],
 		['copyMutings', copyMutingsForApi(deps, src, dst)],

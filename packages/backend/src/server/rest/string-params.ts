@@ -58,11 +58,8 @@ function acceptsOf(field: z.ZodType): Accepts {
 }
 
 /**
- * クエリ文字列を、paramDef が期待する型のリクエストボディへ直す。
- * 変換規則はスキーマから導くので、パラメータを足したときに取りこぼしが起きない。
- *
- * 型が合わない値はそのまま渡す。ここで弾かず、zod に「何が期待されていたか」を
- * 含むエラーを出させるため。
+ * 数値は整数として解釈できる文字列だけ変換し、真偽値・null はスキーマが許可する場合だけ変換する。
+ * 変換できない値は文字列のまま渡し、型の不一致は Zod の検証で報告する。
  */
 export function queryToApiBody(schema: z.ZodObject, query: Record<string, string>): Record<string, unknown> {
 	const shape = schema.shape as Record<string, z.ZodType | undefined>;
@@ -92,9 +89,8 @@ export function queryToApiBody(schema: z.ZodObject, query: Record<string, string
 }
 
 /**
- * multipart フォームの値を、paramDef が期待する型へ直す。
- * クエリ文字列と違い、数値・真偽値として宣言されているのに解釈できない値は
- * 文字列のまま渡さず、ここでエラーにする。
+ * 数値・真偽値を許可するフィールドの文字列を JSON として解釈し、フォームを直接更新する。
+ * 不正な JSON はここで拒否し、変換後の型・値の検証は Zod に任せる。
  */
 export function castMultipartFields(schema: z.ZodObject, fields: Record<string, unknown>): void {
 	const shape = schema.shape as Record<string, z.ZodType | undefined>;

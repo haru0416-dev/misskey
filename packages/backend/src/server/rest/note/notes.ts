@@ -781,10 +781,8 @@ export async function handleApiNotesSearch(
 	return await packNoteManyForApi(deps, notes, me);
 }
 
-// anyOf の各分岐は互いのプロパティを検証しないため、tag/query 自体は z.unknown() とする。
-// 一方が有効なら他方が不正でも許可する互換性を superRefine で維持する。
-// tag か query のどちらかを必須にする。両方あれば tag を使い、正しくない側は union の分岐で捨てる。
-// この定義がそのまま実行時の検証と OpenAPI / misskey-js の型になる。
+// tag/query の一方が有効なら、他方が不正でも受理する。両方が有効なら先頭の tag 分岐を使い、
+// 選ばれなかったプロパティは z.object が取り除く。
 const notesSearchByTagCommonFieldsSchema = z.object({
 	reply: z.boolean().nullable().optional().default(null),
 	renote: z.boolean().nullable().optional().default(null),

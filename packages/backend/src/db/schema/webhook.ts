@@ -37,7 +37,7 @@ export const webhook = pgTable(
 export type WebhookRow = typeof webhook.$inferSelect;
 export type WebhookInsert = typeof webhook.$inferInsert;
 
-/** `user` リレーションはどの経路でも読み込まないため、常に `user: null` を補って MiWebhook に揃える。 */
+/** DB 行に含まれない `user` リレーションは null として扱う。 */
 export function deserializeWebhook(row: WebhookRow): MiWebhook {
 	return {
 		...row,

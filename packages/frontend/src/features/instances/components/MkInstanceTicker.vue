@@ -41,7 +41,7 @@ const props = withDefaults(
 	},
 );
 
-// instance がない場合はローカルインスタンスを表示する。
+// host が null の場合はローカルインスタンスを表示する。
 const instanceName = computed(() => (props.host == null ? localInstanceName : (props.instance?.name ?? props.host)));
 
 const faviconUrl = computed(() => {

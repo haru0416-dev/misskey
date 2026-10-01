@@ -479,7 +479,6 @@ describe('Endpoints', () => {
 
 	describe('retention endpoint', () => {
 		test('retention supports GET and returns latest aggregation data', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			await createRetentionAggregationInDatabase(db, {
 				id: genId(now),
@@ -515,7 +514,6 @@ describe('Endpoints', () => {
 
 	describe('announcement endpoints', () => {
 		test('announcements list and show respect user-specific visibility', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const globalAnnouncement = await createAnnouncementInDatabase(db, {
 				id: genId(now),
@@ -722,7 +720,6 @@ describe('Endpoints', () => {
 		});
 
 		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const reader = await signup({ username: `hra${suffix}` });
@@ -817,7 +814,6 @@ describe('Endpoints', () => {
 
 	describe('promo/read endpoint', () => {
 		test('admin/promo/create はpromo note作成と重複を維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const noteId = genId();
 			await createNoteInDatabase(db, {
@@ -844,7 +840,6 @@ describe('Endpoints', () => {
 		});
 
 		test('promo/read records a promoted note as read idempotently', async () => {
-			const config = fixtureConfig;
 			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
@@ -870,7 +865,6 @@ describe('Endpoints', () => {
 
 	describe('favorite and like endpoints', () => {
 		async function createFavoriteFixtures(prefix: string) {
-			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -1036,7 +1030,6 @@ describe('Endpoints', () => {
 		});
 
 		test('following/update は notify/withReplies 変更とエラーを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hfu${suffix}` });
 			const followee = await signup({ username: `hfue${suffix}` });
@@ -1148,7 +1141,6 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hra${suffix}` });
 			const follower = await signup({ username: `hrae${suffix}` });
@@ -1183,7 +1175,6 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/cancel は送信済みリクエストを取消しUserLiteを返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hrc${suffix}` });
 			const followee = await signup({ username: `hrce${suffix}` });
@@ -1209,7 +1200,6 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hrr${suffix}` });
 			const follower = await signup({ username: `hrre${suffix}` });
@@ -1287,7 +1277,6 @@ describe('Endpoints', () => {
 		});
 
 		test('following/update-all updates only the caller followings', async () => {
-			const config = fixtureConfig;
 			// 共有 fixture (alice/bob) に DB 直接の following 行を残すと、後続の blocking 系テストの unfollow が
 			// 共有 fixture のカウンタを負値にするため、使い捨てユーザーで完結させる。
 			const suffix = Date.now().toString(36).slice(-8);
@@ -1338,7 +1327,6 @@ describe('Endpoints', () => {
 		});
 
 		test('flash/update updates own flash and preserves ownership errors', async () => {
-			const config = fixtureConfig;
 			const flash = await createFlashInDatabase(db, {
 				id: genId(),
 				updatedAt: new Date(),
@@ -1630,7 +1618,6 @@ describe('Endpoints', () => {
 
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgc${suffix}` });
 			const stranger = await signup({ username: `hgcs${suffix}` });
@@ -1783,7 +1770,6 @@ describe('Endpoints', () => {
 		});
 
 		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgl${suffix}` });
 			const liker = await signup({ username: `hgll${suffix}` });
@@ -1851,7 +1837,6 @@ describe('Endpoints', () => {
 		});
 
 		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgp${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-gallery-list-${suffix}`).digest('hex');
@@ -1894,7 +1879,6 @@ describe('Endpoints', () => {
 		});
 
 		test('i/gallery/posts は自分の投稿のみをページングして返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `higp${suffix}` });
 			const other = await signup({ username: `higpo${suffix}` });
@@ -1959,7 +1943,6 @@ describe('Endpoints', () => {
 		});
 
 		test('i/gallery/likes はいいねした投稿一覧を返す', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `higl${suffix}` });
 			const liker = await signup({ username: `higll${suffix}` });
@@ -2188,7 +2171,6 @@ describe('Endpoints', () => {
 		});
 
 		test('モデレータは他人のFlashを削除でき、モデレーションログが記録される', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflmd${suffix}` });
 			const created = await api(

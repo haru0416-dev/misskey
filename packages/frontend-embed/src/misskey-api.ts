@@ -43,7 +43,7 @@ function requestMisskeyApi<T>(
 		if (status === 200 || status === 204) {
 			return body as T;
 		}
-		// 構造化されたエラーは APIError に、それ以外は不正な本文を成功や別の API エラーに変換せずそのまま投げる。
+		// 非構造化の応答は汎用 APIError に置き換えず、body.error を参照する既存の失敗経路を維持する。
 		throw Misskey.api.parseAPIError(endpoint, status, body) ?? (body as { error: unknown }).error;
 	});
 	promise.then(onFinally, onFinally);

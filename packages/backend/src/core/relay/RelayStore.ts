@@ -24,8 +24,8 @@ function invalidateRelayCache(): void {
 
 /**
  * 公開ノート作成毎の accepted リレー解決と inbox のリレーアクター判定に限って使う
- * プロセスローカル短命キャッシュ。リレーは管理者操作でしか変化せず、このプロセスの書き込みは
- * RelayStore の書き込み関数内で同期無効化される。管理系一覧は非キャッシュ版を使うこと。
+ * プロセスローカル短命キャッシュ。管理者操作と受信した Accept / Reject によるこのプロセスの書き込みは
+ * RelayStore 内で同期無効化される。別プロセスの書き込みは TTL で反映するため、管理系一覧は非キャッシュ版を使うこと。
  */
 export async function listRelaysByStatusFromDatabaseCached(
 	db: MiDrizzleDatabase,

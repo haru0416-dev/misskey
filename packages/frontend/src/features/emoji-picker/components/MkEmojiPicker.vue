@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@paste.stop="paste"
 		@keydown="onKeydown"
 	>
-	<!-- FirefoxのTabフォーカスが想定外の挙動となるためtabindex="-1"を追加 https://github.com/misskey-dev/misskey/issues/10744 -->
+	<!-- Firefox の Tab フォーカスを安定させるため、絵文字一覧を tabindex="-1" にする。https://github.com/misskey-dev/misskey/issues/10744 -->
 	<div ref="emojisEl" class="emojis" tabindex="-1">
 		<section class="result">
 			<div v-if="searchResultCustom.length > 0" class="body">
@@ -238,10 +238,9 @@ watch(q, () => {
 		}
 
 		if (newQ.includes(' ')) {
-			// AND検索
 			const keywords = newQ.split(' ');
 
-			// 名前にキーワードが含まれている
+			// エイリアスでの一致より、名前だけで一致した絵文字を先に表示する。
 			for (const emoji of emojis) {
 				if (keywords.every((keyword) => emoji.name.includes(keyword))) {
 					matches.add(emoji);
@@ -254,7 +253,6 @@ watch(q, () => {
 				return matches;
 			}
 
-			// 名前またはエイリアスにキーワードが含まれている
 			for (const emoji of emojis) {
 				if (
 					keywords.every(
@@ -347,7 +345,6 @@ watch(q, () => {
 		}
 
 		if (newQ.includes(' ')) {
-			// AND検索
 			const keywords = newQ.split(' ');
 
 			for (const emoji of emojis) {
@@ -462,7 +459,7 @@ function getKey(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef):
 
 function getDef(emoji: string): string | Misskey.entities.EmojiSimple | UnicodeEmojiDef {
 	if (emoji.includes(':')) {
-		// 情報がないカスタム絵文字は名前を返し、undefined によるエラーを避ける。
+		// 未知のカスタム絵文字は入力文字列を保持し、undefined によるエラーを避ける。
 		const name = emoji.replaceAll(':', '');
 		return customEmojisMap.get(name) ?? emoji;
 	}

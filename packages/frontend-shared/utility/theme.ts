@@ -258,7 +258,7 @@ export function parseThemeValue(value: unknown): Theme {
 
 /**
  * サーバーが渡す既定テーマ (meta の defaultLightTheme / defaultDarkTheme) を読む。サーバーが JSON5 から JSON に
- * 変換して渡すので JSON として読み、起動時の読み込みに JSON5 (gzip で約 10 KB) を乗せない。
+ * 変換して渡すので JSON として読み、起動時の読み込みに JSON5 パーサーを乗せない。
  * 利用者が書いたテーマは theme-code.ts で読む。
  */
 export function parseThemeJsonOrNull(json: string | null | undefined): Theme | null {

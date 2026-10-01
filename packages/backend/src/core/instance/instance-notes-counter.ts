@@ -11,7 +11,8 @@ import { adjustInstanceNotesCountFromDatabase } from './InstanceStore.js';
  * リモートの投稿数 (instance.notesCount) を、投稿のトランザクションの外でサーバーごとにまとめて反映する。
  * 同じサーバーからの投稿は同じ行を更新するので、トランザクションの中で +1 すると行ロックを確定まで持ち続け、
  * 並行した受信がここで直列になっていた (1 サーバーから並列 16 で 800 件受信し、この UPDATE が平均 42 ms・最大 614 ms)。
- * 数は統計なので数秒遅れてよい。正常な終了では flush で反映し、強制終了で失うのは最大でも FLUSH_DELAY_MS 分。
+ * 数は統計なので反映を遅延できる。終了時に flush を試みるが、強制終了では未反映の増分を失う。
+ * DB 障害時は増分を戻して再試行するため、未反映期間は FLUSH_DELAY_MS より長くなり得る。
  */
 const FLUSH_DELAY_MS = process.env['NODE_ENV'] === 'test' ? 0 : 5_000;
 

@@ -357,9 +357,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		this.gl.viewport(0, 0, this.renderWidth, this.renderHeight);
 	}
 
-	/*
-	 * disposeCanvas = true だとloseContextを呼ぶため、コンストラクタで渡されたcanvasも再利用不可になるので注意
-	 */
+	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true) {
 		this.gl.deleteBuffer(this.vertexBuffer);
 		this.gl.deleteProgram(this.nopProgram);

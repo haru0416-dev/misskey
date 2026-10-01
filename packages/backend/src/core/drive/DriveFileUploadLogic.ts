@@ -47,15 +47,11 @@ type DriveFileAltsDependencies = Pick<
 >;
 
 export function driveSensitiveMediaThreshold(meta: Pick<MiMeta, 'sensitiveMediaDetectionSensitivity'>): number {
-	return meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
-		? 0.1
-		: meta.sensitiveMediaDetectionSensitivity === 'high'
-			? 0.3
-			: meta.sensitiveMediaDetectionSensitivity === 'low'
-				? 0.7
-				: meta.sensitiveMediaDetectionSensitivity === 'veryLow'
-					? 0.9
-					: 0.5;
+	if (meta.sensitiveMediaDetectionSensitivity === 'veryHigh') return 0.1;
+	if (meta.sensitiveMediaDetectionSensitivity === 'high') return 0.3;
+	if (meta.sensitiveMediaDetectionSensitivity === 'low') return 0.7;
+	if (meta.sensitiveMediaDetectionSensitivity === 'veryLow') return 0.9;
+	return 0.5;
 }
 
 // サムネイル (最大 498px) は smartSubsample を使わない。Pi 5 相当の枠で変換 CPU が 3〜4 割減り、

@@ -19,7 +19,6 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { ICreate, IObject, IUpdate } from '@/core/activitypub/type.js';
 
-// リモートで編集されたノート (Update(Note)) を受け取り、既に取り込んだノートの中身を書き換える。
 describe('Update(Note) の受信', () => {
 	let runtime: RuntimeDependencies;
 	let deps: ApiInboxDependencies;

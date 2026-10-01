@@ -374,12 +374,9 @@ function outboxJobId(row: QueueOutboxRow): string {
 type DeliverJobState = 'completed' | 'failed' | 'unknown' | 'inFlight' | 'pollError';
 
 /**
- * 配送ジョブの終了状態をまとめて1往復で判定する。
- *
- * Queue#getJobState は1ジョブ毎にLuaスクリプトを1往復させるので、outbox の突合ポーリングでは
- * 行数分のラウンドトリップになる (100行で100往復 / Redisコマンド701回)。outbox 由来の配送ジョブは
- * 必ず removeOnComplete/removeOnFail=false で積むため、完了・失敗は completed / failed の ZSET に
- * 残り続ける。よって「終了しているか」だけならキー参照3つで判定でき、pipeline で1往復に畳める。
+ * outbox 由来の配送ジョブは removeOnComplete/removeOnFail=false で投入し、終了状態を
+ * completed / failed の ZSET に保持する。ジョブごとの Lua 呼び出しを避け、
+ * ジョブキーの存在確認と両 ZSET の参照を pipeline でまとめる。
  */
 async function resolveDeliverJobStates(
 	deliverQueue: DeliverQueue,
@@ -595,8 +592,7 @@ export async function releaseDbOutboxJobs(
 		.where(or(...Array.from(idsByToken, ([token, ids]) => claimedWhere(ids, 'publishing', token))));
 }
 
-// id と lease token の組を配列で渡して照合する。行数ごとに OR を連ねると件数の分だけ SQL の形が増え、
-// 2 組で 0.14ms / 3 組で 0.18ms と組数に比例して重くなる。unnest なら行数によらず 1 つの形になる。
+// id と lease token の組を unnest で照合し、行数によらず SQL の形を固定する。
 const inlineJobDeletionPlan = defineQueryPlan((db) => {
 	const selection = { id: queueOutbox.id };
 	return {

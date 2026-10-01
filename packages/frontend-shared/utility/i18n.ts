@@ -106,7 +106,7 @@ export class I18n<T extends ILocale> {
 					}
 
 					// パラメータ付きの文字列を .ts で取得して <I18n :src> のスロットで埋めるのは正規の用法。
-					// ここでは充足を判定できないため警告せず、引数を渡す .tsx/.t() 側で検査する。
+					// ここでは充足を判定できないため警告せず、引数を渡す .tsx 側で検査する。
 					if (typeof value === 'string') {
 						return value;
 					}

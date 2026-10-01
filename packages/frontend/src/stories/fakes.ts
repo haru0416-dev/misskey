@@ -459,14 +459,10 @@ export function emoji(
 }
 
 /**
- * `instance` の初期値。本体は localStorage にキャッシュした meta から `reactive(meta)` を作るため、
- * 何も入れないと全フィールドが undefined になり、`instance.serverRules.length` のような
- * 実運用では起きない参照で story が落ちる。実 API の必須フィールドを埋めておく。
- *
- * MetaDetailed は項目が多く、ここでは story が触る範囲だけを持つ。
+ * story が参照する meta の項目だけを持つ。resetLocalStorage が instance キャッシュの初期値に使い、
+ * serverRules などが未定義の状態で描画されるのを避ける。
  */
 export function meta(): entities.MetaDetailed {
-	// 項目を網羅していないので直接は代入できない。story 用に足りる範囲だけ持つ。
 	const partial: Partial<entities.MetaDetailed> = {
 		maintainerName: 'Toneriko',
 		maintainerEmail: 'maintainer@example.com',

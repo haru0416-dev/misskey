@@ -118,8 +118,8 @@ export function publicCacheHeadersWhenAnonymous(auth: ApiAuthenticated, seconds:
 function apiErrorResponse(c: Context, err: ApiError): Response {
 	setApiHeaders(c);
 
-	// 401以外のclient系エラーには invalid_request の WWW-Authenticate を付ける。
-	// 401系・permission系は error.ts のファクトリが個別に設定する。
+	// 401・レート制限・独自ヘッダ指定を除く client エラーには invalid_request を付ける。
+	// 401・permission エラーの WWW-Authenticate は error.ts のファクトリが設定する。
 	const extraHeaders: Record<string, string> = {};
 	if (
 		err.kind === 'client' &&
@@ -145,7 +145,7 @@ function apiErrorResponse(c: Context, err: ApiError): Response {
 	});
 }
 
-// JSONエンドポイントの 1 MiB 上限を、実バイト数を数えながら適用する (超過は 413)。
+// JSON 本文の上限は 1 MiB。実サイズの検査は readRequestBodyWithLimit が行い、超過時は 413 を返す。
 const JSON_BODY_LIMIT = 1024 * 1024;
 const textDecoder = new TextDecoder();
 

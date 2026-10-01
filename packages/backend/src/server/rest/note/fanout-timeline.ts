@@ -56,8 +56,7 @@ async function listFanoutTimelineNotesByIds(
 			userIds.add(note.renoteUserId);
 		}
 		if (hydrateChannels) {
-			// renoteChannelId は note 作成時に renote 先の channelId を非正規化したもの。
-			// リノート経由でチャンネルの素性を判定する側は relations を待たずにここで引ける
+			// renoteChannelId は作成時に非正規化済みなので、リノート先の取得を待たずにチャンネルを一括取得できる。
 			if (note.channelId != null) {
 				channelIds.add(note.channelId);
 			}
@@ -70,8 +69,7 @@ async function listFanoutTimelineNotesByIds(
 	const [relations, users, channels] = await Promise.all([
 		listNotesByIdsFromDatabase(db, [...relationIds]),
 		listUsersByIdsFromDatabase(db, [...userIds], { includeSuspended: true }),
-		// 空配列なら listChannelsByIdsFromDatabase 側で早期 return されるので、
-		// note.channel を読まない呼び出し元にクエリ1本を課金せずに済む
+		// 空配列なら DB クエリを発行しないため、チャンネル情報が不要な呼び出し元には取得コストを課さない。
 		listChannelsByIdsFromDatabase(db, [...channelIds]),
 	]);
 	const relationById = new Map(relations.map((note) => [note.id, note]));
@@ -110,18 +108,16 @@ export type FanoutTimelineReadOptions = {
 	allowPartial: boolean;
 	me?: { id: MiUser['id'] } | undefined | null;
 	/**
-	 * 呼び出し元が既に閲覧者コンテキストを取っているなら渡す。無ければここで1本引く。
-	 * タイムライン系のハンドラは followee 一覧などを先に読んでいるので、渡さないと同じ行を2度引くことになる。
+	 * fanoutViewerRelationKinds を満たす取得済みのコンテキストなら再利用する。不足していれば取り直す。
 	 */
 	viewerRelation?: ViewerRelationSnapshot | undefined;
 	useDbFallback: boolean;
 	redisTimelines: string[];
 	noteFilter?: NoteFilter;
 	/**
-	 * noteFilter が `note.channel` / `note.renote.channel` を読むなら必ず true にすること。
-	 * false のままだと両方 undefined となり、チャンネル起因の除外が欠落する。
-	 * 逆に読まない呼び出し元で true にすると、捨てるだけのチャンネル取得が1本増える
-	 * (`note.channelId` / `note.renoteChannelId` を見るだけの判定にはhydrate不要)。
+	 * noteFilter が `note.channel` / `note.renote.channel` を読むなら true にすること。
+	 * false では関連を取得せず null のままなので、チャンネル属性による除外が欠落する。
+	 * ID 列だけで判定する場合は取得不要。
 	 */
 	hydrateChannels?: boolean;
 	alwaysIncludeMyNotes?: boolean;

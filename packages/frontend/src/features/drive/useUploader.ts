@@ -667,7 +667,7 @@ export function useUploader(
 	}
 
 	async function upload() {
-		// エラーハンドリングなどを考慮してシーケンシャルにやる
+		// 通常のアップロード失敗は後続へ進めず、呼び出し元へ返す。
 		items.value = items.value.map((item) => ({
 			...item,
 			aborted: false,
@@ -676,7 +676,7 @@ export function useUploader(
 		}));
 
 		for (const item of items.value) {
-			// アップロード処理途中で値が変わる場合（途中で全キャンセルされたりなど）もあるので、事前にfilterしない
+			// 待機中に全キャンセルされる場合があるため、各アップロードの直前に判定する。
 			if (item.uploaded != null || item.aborted) {
 				continue;
 			}
@@ -712,8 +712,6 @@ export function useUploader(
 				await preprocessForImage(item);
 			} catch (err) {
 				console.error('Failed to preprocess image', err);
-
-				// nop
 			}
 		}
 
@@ -722,8 +720,6 @@ export function useUploader(
 				await preprocessForVideo(item);
 			} catch (err) {
 				console.error('Failed to preprocess video', err);
-
-				// nop
 			}
 		}
 

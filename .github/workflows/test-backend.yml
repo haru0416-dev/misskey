@@ -73,8 +73,7 @@ jobs:
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build
-        # backend単体テストにフロントエンドのviteビルドは不要。backendが参照する
-        # i18n / misskey-js だけをビルドする (backend本体はテストスクリプトがビルドする)
+        # backend とその依存だけをビルドし、単体テストに不要な frontend の Vite ビルドを省く。
         run: bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Test
         # CI ではカバレッジを取らない (手元では test-and-coverage で Bun 上でも取れる)
@@ -169,9 +168,8 @@ jobs:
       - name: Build
         run: bun run build
       - name: Test
-        # e2e ジョブは vitest と同じ Node.js プロセスにサーバーを立てるため、本番の
-        # bun ランタイム + Bun.sql ドライバの経路が一切通らない。こちらはサーバーだけ
-        # bun の別プロセスとして起動し、本番と同じ構成で e2e を通す
+        # 通常の e2e は Bun 上のテストプロセス内でサーバーを起動する。
+        # 別プロセスで起動し、設定・起動終了・HTTP 通信のプロセス境界も検証する。
         run: bun run --bun --filter backend test:e2e:bun
 
   migration:

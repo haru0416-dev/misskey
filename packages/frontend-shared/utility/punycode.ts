@@ -109,7 +109,7 @@ export function decodePunycodeLabel(input: string): string | null {
 	return String.fromCodePoint(...output);
 }
 
-/** 1 ラベルを Punycode へ符号化する。非 ASCII を含まない場合はそのまま返す。 */
+/** 1 ラベルを Punycode へ符号化する。ASCII だけの非空入力にも RFC 3492 の区切り文字を末尾に付ける。 */
 export function encodePunycodeLabel(input: string): string | null {
 	const codePoints = Array.from(input, (c) => c.codePointAt(0) as number);
 	const basic = codePoints.filter((c) => c < 0x80);
@@ -226,7 +226,7 @@ function scriptsOf(label: string): Set<string> | null {
 }
 
 function allowedScriptsFor(locales: readonly string[]): Set<string> {
-	// ASCII と地続きの Latin は常に許可する。
+	// Latin は閲覧者の言語にかかわらず許可する。
 	const allowed = new Set<string>(['Latin']);
 	for (const locale of locales) {
 		let iso: string | undefined;
@@ -250,7 +250,7 @@ function defaultLocales(): readonly string[] {
 }
 
 /**
- * ホスト名の Punycode ラベルを、表示しても紛らわしくない場合に限って Unicode へ戻す。
+ * ホスト名の Punycode ラベルを、閲覧者の言語と script の条件に応じて Unicode へ戻す。
  *
  * ブラウザのアドレスバーが `xn--` のまま見せることがあるのと同じ理由で、無条件には戻さない。
  * 例えば `xn--80ak6aa92e.com` は全てキリル文字の `аррӏе.com` に戻り、`apple.com` と見分けが付かない。
@@ -258,9 +258,9 @@ function defaultLocales(): readonly string[] {
  *
  * 1. 復号したものを符号化し直すと元に戻る (非正規な符号化を弾く)
  * 2. ラベル内の文字が単一の script に収まっている (script の混在を弾く)
- * 3. その script が、閲覧者の言語から見て自然なものである
+ * 3. その script が Latin、または閲覧者の言語に対応するものである
  *
- * DNS のラベルは大小を区別しないため、判定も出力も小文字化した形で行う。
+ * Punycode の判定は小文字化して行い、変換しないラベルは元の表記を保つ。
  */
 export function toUnicodeHost(host: string, locales: readonly string[] = defaultLocales()): string {
 	if (!host.includes(PREFIX)) {

@@ -8,7 +8,8 @@ import { PollingScheduler } from './polling-scheduler.js';
 
 /**
  * PollingSchedulerをVue lifecycleへ接続する。
- * KeepAliveの非アクティブ中は停止し、unmountまたは返却した関数の呼び出しで完全に破棄する。
+ * KeepAlive の非アクティブ中は次の実行を停止し、unmount または返却した関数の呼び出しで予約と購読を破棄する。
+ * 実行中の fn は中断しない。
  */
 export function useInterval(
 	fn: () => void | Promise<void>,

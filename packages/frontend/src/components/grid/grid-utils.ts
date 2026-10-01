@@ -174,14 +174,13 @@ export async function pasteToGridFromClipboard(
 			}
 		}
 	} else {
-		// 表形式文字列の場合は表形式にパースし、選択範囲に合うように貼り付ける
+		// 表形式は選択範囲の左上を起点に貼り付け、クリップボードの範囲を超えるセルは更新しない。
 		const offsetRow = bounds.leftTop.row;
 		const offsetCol = bounds.leftTop.col;
 		const { columns, rows } = context;
 		for (let row = bounds.leftTop.row; row <= bounds.rightBottom.row; row++) {
 			const rowIdx = row - offsetRow;
 			if (lines.length <= rowIdx) {
-				// クリップボードから読んだ二次元配列よりも選択範囲の方が大きい場合、貼り付け操作を打ち切る
 				break;
 			}
 
@@ -192,7 +191,6 @@ export async function pasteToGridFromClipboard(
 			for (let col = bounds.leftTop.col; col <= bounds.rightBottom.col; col++) {
 				const colIdx = col - offsetCol;
 				if (items.length <= colIdx) {
-					// クリップボードから読んだ二次元配列よりも選択範囲の方が大きい場合、貼り付け操作を打ち切る
 					break;
 				}
 

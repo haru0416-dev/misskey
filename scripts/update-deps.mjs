@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 各ワークスペースの依存を、同じメジャー (0.x は同じマイナー) の範囲で最新の版へ上げる。
-// Dependabot は bun.lock の lockfileVersion 3 を読めず、bunfig の exact = true で全依存が版固定のため
-// `bun update` も何も上げない。メジャーの更新は破壊的変更の確認が要るので書き換えず、一覧だけを出す。
-// package.json を書き換えたあとの bun.lock の更新は `bun install` に任せる。
+// メジャー更新は適用せず、同じ互換範囲で公開後の経過期間を満たす版だけを選ぶ。
+// --write は package.json のみを更新し、bun.lock は後続の bun install で更新する。
 //
 // 使い方: bun scripts/update-deps.mjs [--write] [--report <path>]
 
@@ -16,8 +14,7 @@ const dependencyGroups = ['dependencies', 'devDependencies', 'optionalDependenci
 const exactVersion = /^\d+\.\d+\.\d+$/;
 const DEFAULT_MIN_AGE_SECONDS = 7 * 24 * 60 * 60;
 
-// 上げられない理由が分かっているメジャー更新。そのメジャーの間は「据え置き」に分けて毎週の判断対象から外し、
-// 次のメジャーが出たら再び判断対象に戻す。理由が解消したら行ごと消す。
+// 対応できないメジャーを明示し、次のメジャーが出た場合は再び判断対象にする。
 const heldMajors = {
 	typescript: {
 		major: 7,

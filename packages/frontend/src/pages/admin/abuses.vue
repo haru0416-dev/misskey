@@ -83,8 +83,6 @@ const {
 	],
 	initialValue: 'combined',
 });
-const searchUsername = ref('');
-const searchHost = ref('');
 
 const paginator = markRaw(new Paginator('admin/abuse-user-reports', {
 	limit: 10,

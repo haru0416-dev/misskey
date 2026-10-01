@@ -299,7 +299,7 @@ export async function listDriveFilesForUserFromDatabase(
 		folderId?: MiDriveFile['folderId'] | undefined;
 		type?: MiDriveFile['type'] | null;
 		sort?: DriveFileListSort;
-		/** 名前・サイズ順の続き。ID の範囲はこの並びと関係が無いので、指定したら sinceId / untilId は見ない。 */
+		/** 名前・サイズ順の続きに使う。指定時は sinceId / untilId の ID 範囲条件を適用しない。 */
 		offset?: number;
 	},
 ): Promise<MiDriveFile[]> {

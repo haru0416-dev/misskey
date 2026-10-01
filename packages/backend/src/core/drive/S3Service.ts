@@ -5,10 +5,6 @@
 
 import type { MiMeta } from '@/models/Meta.js';
 
-/**
- * オブジェクトストレージへ書き込む 1 オブジェクト。
- * AWS SDK の PutObjectCommandInput の代わりに、実際に使う分だけを持つ。
- */
 export type S3PutObject = {
 	key: string;
 	body: Blob | Uint8Array;

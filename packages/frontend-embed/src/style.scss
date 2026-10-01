@@ -326,7 +326,7 @@ rt {
 	font-size: var(--mfm-zoom-size);
 
 	.mfm-x2, .mfm-x3, .mfm-x4 {
-		/* 入れ子では拡大率を半分にする */
+		/* 入れ子では 100% からの拡大分を半分にする */
 		font-size: calc(var(--mfm-zoom-size) / 2 + 50%);
 
 		.mfm-x2, .mfm-x3, .mfm-x4 {

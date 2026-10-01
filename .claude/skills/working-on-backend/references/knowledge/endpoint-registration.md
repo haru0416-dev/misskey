@@ -27,7 +27,7 @@ JSON API はすべて、`api/metas/<category>.ts` の `defineContract` (meta・�
 
 新カテゴリでは、meta の集約 ([endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts)) と実装の集約 ([endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts)) の両方に追加する。endpoint-metas のキー順は既存の UTF-16 コード単位順を維持する。
 
-multipart の [drive/files/create](../../../../../packages/backend/src/server/rest/routes/drive.ts) のように契約から登録できないルートは `routes/` に残る。これらは `applyEndpointGuards` を直接呼び、meta の条件を手で揃える。ファイルの `cleanup()` は成功・失敗とも `finally` で呼ぶ。手書きルートの検査漏れと、契約の実装が meta の回数制限を数え直すことは [api-guard-drift](../../../../../packages/backend/test/unit/server/rest/api-guard-drift.ts) がソースを読んで検出する。
+multipart の [drive/files/create](../../../../../packages/backend/src/server/rest/routes/drive.ts) のように契約から登録できないルートは `routes/` に残る。これらは `applyEndpointGuards` を直接呼び、meta の条件を手で揃える。ファイルの `cleanup()` は成功・失敗とも `finally` で呼ぶ。認証・認可の拒否境界は [e2e/api.ts](../../../../../packages/backend/test/e2e/api.ts) で実 HTTP を通して確認する。共通登録経路の回数制限は [endpoint-definition](../../../../../packages/backend/test/unit/server/rest/endpoint-definition.ts) で、認証済みの最初の要求が成功し、次の要求が 429 になることを確認する。
 
 ## 完了の観測
 

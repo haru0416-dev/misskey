@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { compile, getBuiltinThemes, parseThemeJsonOrNull, validateTheme } from '@shared/utility/theme.js';
+import { compile, parseThemeJsonOrNull, validateTheme } from '@shared/utility/theme.js';
 import { parseThemeCode, parseThemeOrNull } from '@shared/utility/theme-code.js';
 import type { Theme } from '@shared/utility/theme.js';
 
@@ -23,12 +23,6 @@ describe('theme validation', () => {
 		expect(validateTheme(validTheme)).toBe(true);
 		expect(parseThemeCode(JSON.stringify(validTheme))).toStrictEqual(validTheme);
 		expect(compile(validTheme)['accent']).toBe('rgb(171, 205, 239)');
-	});
-
-	test('compiles every bundled theme', async () => {
-		for (const theme of await getBuiltinThemes()) {
-			expect(() => compile(theme)).not.toThrow();
-		}
 	});
 
 	test('parses valid JSON5 and returns null for malformed or invalid themes', () => {

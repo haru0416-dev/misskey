@@ -85,7 +85,7 @@ export async function followWithSideEffectsForApi(
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 		return followee.isSuspended ? 'rejected: suspended' : 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
-		// ブロックしていたリモートの相手がフォローしてきたので、Undo Block が届かず残っている相手側のブロックを消す。
+		// リモート側のフォロー要求を解除の意思とみなし、このサーバーに残る相手からのブロック行を削除する。
 		await unblockForApi(deps, follower, followee);
 	} else {
 		if (blocking) {
@@ -130,7 +130,7 @@ export async function followWithSideEffectsForApi(
 			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
 		}
 
-		// フォロワーが移行済みアカウントで、非公開のフォロー先が旧アカウントを承認済みなら自動承認する。
+		// 移行元からこの鍵アカウントへのフォロー関係があり、移行元・移行先の参照が一致する場合は自動承認する。
 		if (!autoAccept && followee.isLocked) {
 			autoAccept = !!(await validateAlsoKnownAsForApi(
 				deps,

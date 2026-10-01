@@ -337,11 +337,10 @@ function disposeBannerParallaxResizeObserver() {
 let narrowResizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-	// rootEl自身の幅はnarrow値 (spacerの--MI_SPACER-w) に依存しフィードバックループになるため、
-	// spacerの親 (キャップされていないコンテナ) を計測・観測する
+	// 自身の幅は narrow に応じた --MI_SPACER-w に制限されるため、判定にはスペーサーの親の幅を使う。
 	const narrowMeasureEl = rootEl.value?.parentElement?.parentElement ?? rootEl.value;
 	const updateNarrow = () => {
-		// keep-alive非活性時はROが0サイズを報告するため無視する
+		// keep-alive の非活性化で DOM から切り離された間は、幅の判定を更新しない。
 		if (narrowMeasureEl && window.document.body.contains(narrowMeasureEl)) {
 			narrow.value = narrowMeasureEl.clientWidth < 1000;
 		}
@@ -407,7 +406,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						width: 100%;
 						height: 100%;
 						background-size: cover;
-						/* バナー未設定時のフォールバック (ブランドのアクセント色を暗く落としたグラデーション)。画像があればinline styleのbackground-imageが優先される */
+						/* 設定済みのバナー画像は inline の background-image が優先する。 */
 						background-color: #121320;
 						background-image: linear-gradient(135deg, #34366b 0%, #1e1f3a 45%, #121320 100%);
 						background-repeat: repeat-y;
@@ -651,7 +650,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 							text-overflow: ellipsis;
 							font-weight: bold;
 
-							/* 行頭アイコンはラベル文字より一段沈めてマーカーとして扱う */
 							> i {
 								opacity: 0.6;
 							}

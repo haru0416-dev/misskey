@@ -214,7 +214,7 @@ watch(
 	},
 );
 
-const fields = ref($i.fields.map((field) => ({ id: genId(), name: field.name, value: field.value })) ?? []);
+const fields = ref($i.fields.map((field) => ({ id: genId(), name: field.name, value: field.value })));
 const fieldEditMode = ref(false);
 
 function addField() {

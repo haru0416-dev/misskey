@@ -4,7 +4,6 @@
  */
 
 :root {
-	/* 基礎値: 共通スケール。 */
 	--MI-space-2xs: 2px;
 	--MI-space-xs: 4px;
 	--MI-space-sm: 8px;
@@ -29,7 +28,6 @@
 	--MI-control-md: 44px;
 	--MI-control-lg: 52px;
 
-	/* 意味値: テーマに応じた面、境界線、影。 */
 	--MI-surface-page: var(--MI_THEME-bg);
 	--MI-surface-panel: var(--MI_THEME-panel);
 	--MI-surface-panel-hover: color-mix(in oklab, var(--MI_THEME-panel) 94%, var(--MI_THEME-fg));

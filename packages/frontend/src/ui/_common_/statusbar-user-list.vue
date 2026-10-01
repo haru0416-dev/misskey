@@ -51,7 +51,7 @@ const notes = ref<Misskey.entities.Note[]>([]);
 const fetching = ref(true);
 const key = ref(0);
 
-// リストを切り替えた後に前のリストの応答が届いても、今のリストの表示に入れない。
+// 新しい取得を開始した後は、それ以前の取得結果を表示に反映しない。
 let tickGeneration = 0;
 
 const tick = () => {

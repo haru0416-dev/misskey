@@ -81,8 +81,7 @@ export function getEmojiName(char: string): string {
  * テキストスタイル絵文字（U+260Eなどの1文字で表現される絵文字）をカラースタイル絵文字に変換する（VS16:U+FE0Fを付与）。
  */
 export function colorizeEmoji(char: string) {
-	// <文字列>.length はコードポイント数ではなくUTF-16コードユニット数を返すため、サロゲートペアを含む絵文字で誤動作する。
-	// そのため、配列に変換してコードポイント数を数える方法を取る。
+	// サロゲートペアを 2 文字と数えないよう、UTF-16 コードユニット数ではなくコードポイント数で判定する。
 	return Array.from(char).length === 1 ? `${char}\uFE0F` : char;
 }
 
@@ -90,8 +89,7 @@ export function colorizeEmoji(char: string) {
  * 文字種にかかわらず、カラースタイル絵文字への変換を試みる（本ファイルにある検索プログラム用・フォールバックが必須）。
  */
 function forceColorizeEmoji(char: string) {
-	// <文字列>.length はコードポイント数ではなくUTF-16コードユニット数を返すため、サロゲートペアを含む絵文字で誤動作する。
-	// そのため、配列に変換してコードポイント数を数える方法を取る。
+	// サロゲートペアの途中へ VS16 を挿入しないよう、コードポイント単位で分割する。
 	const chars = Array.from(char);
 	if (chars.includes('\uFE0F')) {
 		return char;

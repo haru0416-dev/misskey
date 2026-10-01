@@ -27,8 +27,8 @@ async function fetchUserKeypairFromDatabase(db: MiDrizzleDatabase, userId: MiUse
 	return deserializeUserKeypair(row);
 }
 
-// userKeypair は signup 時に1回作られるのみで、更新・削除する経路が存在しない (不変データ) ため
-// invalidation不要な上限付きキャッシュで安全に運用できる。AP配送ジョブ毎の鍵再取得を避けるのが目的。
+// 作成後の鍵を更新する経路はないため、AP 配送で再利用する。ユーザー削除時は DB の cascade で消えるが、
+// このキャッシュには残るため、保持件数に上限を設ける。
 const MAX_USER_KEYPAIR_CACHE_SIZE = 5000;
 const userKeypairCache = new Map<MiUser['id'], MiUserKeypair>();
 

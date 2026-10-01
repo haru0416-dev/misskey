@@ -117,7 +117,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<div :class="$style.footer">
 						<div>
-							<!-- レイアウト調整用のスペース -->
+							<!-- ページ切り替えを中央列に置くため、操作ボタンと対になる左列を空ける。 -->
 						</div>
 
 						<div :class="$style.center">
@@ -482,7 +482,7 @@ onMounted(async () => {
 	left:0;
 	bottom:0;
 	z-index: 1;
-	// stickyで追従させる都合上、フッター自身でpaddingを持つ必要があるため、親要素で画一的に指定している分をネガティブマージンで相殺している
+	// sticky フッター自身に上下の余白を持たせ、負のマージンで外側の余白と相殺する。
 	margin-top: calc(var(--MI-margin) * -1);
 	margin-bottom: calc(var(--MI-margin) * -1);
 	padding-top: var(--MI-margin);

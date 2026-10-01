@@ -210,10 +210,10 @@ async function run() {
 			in: aiScriptReadline,
 			err: alertAiScriptError,
 			out: () => {
-				// nop
+				// Play では標準出力を表示しない。
 			},
 			log: () => {
-				// nop
+				// Play では実行ログを表示しない。
 			},
 		},
 	);

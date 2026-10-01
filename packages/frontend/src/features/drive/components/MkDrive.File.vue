@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import bytes from '@/filters/bytes.js';
@@ -61,8 +61,6 @@ const emit = defineEmits<{
 	(ev: 'dragend'): void;
 }>();
 
-const isDragging = ref(false);
-
 const title = computed(() => `${props.file.name}\n${props.file.type} ${bytes(props.file.size)}`);
 
 function onContextmenu(ev: PointerEvent) {
@@ -74,13 +72,11 @@ function onDragstart(ev: DragEvent) {
 		ev.dataTransfer.effectAllowed = 'move';
 		setDragData(ev, 'driveFiles', [props.file]);
 	}
-	isDragging.value = true;
 
 	emit('dragstart', ev);
 }
 
 function onDragend() {
-	isDragging.value = false;
 	emit('dragend');
 }
 </script>

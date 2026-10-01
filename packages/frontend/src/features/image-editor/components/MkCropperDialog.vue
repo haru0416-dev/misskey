@@ -57,7 +57,7 @@ let cropper: Cropper | null = null;
 const loading = ref(true);
 
 async function ok() {
-	// 呼び出し元はテンプレートの @ok なので、ここで捕まえないと失敗が誰にも伝わらない
+	// テンプレートのイベントから呼ばれるため、エラー表示をこのコンポーネントが担当する。
 	try {
 		await crop();
 	} catch (err) {
@@ -78,13 +78,13 @@ async function crop() {
 	const croppedImage = await cropper.getCropperImage()!;
 	const croppedSection = await cropper.getCropperSelection()!;
 
-	// 拡大率を計算し、(ほぼ)元の大きさに戻す
+	// 画面上の選択幅を拡大率で割り、元画像の画素数に合わせて出力する。
 	const zoomedRate = croppedImage.getBoundingClientRect().width / croppedImage.clientWidth;
 	const widthToRender = croppedSection.getBoundingClientRect().width / zoomedRate;
 
 	const croppedCanvas = await croppedSection.$toCanvas({ width: widthToRender });
 
-	// executor を async にすると throw も toBlob の失敗も握り潰され、await が永久に解決しなくなる
+	// Promise executor を async にすると、executor 内の例外が外側の Promise を reject しない。
 	const f = await new Promise<Blob>((res, rej) => {
 		croppedCanvas.toBlob((blob) => {
 			if (blob == null) {

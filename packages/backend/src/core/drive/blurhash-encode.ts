@@ -6,8 +6,8 @@
 /*
  * blurhash パッケージの encode と同じ出力を返す。
  * 上流実装はピクセル×成分ごとに Math.cos と Math.pow を呼ぶため 64×64・5×5 で 1 枚 7ms かかる。
- * ここでは sRGB→linear を 256 要素の表に、cos を軸ごとの表に落とし、DCT を行→列の 2 段に分離して
- * 超越関数の呼び出しを (w + h) × 成分数 + 256 回に抑える。
+ * sRGB→linear の 256 要素の表を共有し、cos を軸ごとの表に落とし、DCT を行→列の 2 段に分離する。
+ * 余弦計算は width × componentX + height × componentY 回で済み、画素ごと・成分ごとには繰り返さない。
  */
 
 const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';

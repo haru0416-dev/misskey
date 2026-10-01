@@ -48,7 +48,7 @@ describe('queue:emoji-zip', () => {
 		expect(open(join(dir, 'plain.zip')).readFile('meta.json', 1024)).toBeNull();
 	});
 
-	// symlink のまま格納された meta.json を読ませると、展開していた頃はサーバー上の任意のファイルが取り込まれた。
+	// アップロードされた ZIP の symlink を辿ると、サーバー上のファイルを読み出されるため拒否する。
 	test('symlink のエントリは読まない', () => {
 		symlinkSync('/etc/hostname', join(dir, 'link.json'));
 		zipCli(['--symlinks', 'symlink.zip', 'link.json']);

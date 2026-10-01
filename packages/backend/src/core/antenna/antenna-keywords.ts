@@ -12,7 +12,6 @@ import { z } from 'zod';
  */
 export const antennaKeywordMatrixSchema = z.array(z.array(z.string().max(200)).max(10)).max(100);
 
-/** 空の語と空のまとまりを除く。 */
 export function compactAntennaKeywords(matrix: string[][]): string[][] {
 	return matrix.map((group) => group.filter((keyword) => keyword !== '')).filter((group) => group.length > 0);
 }

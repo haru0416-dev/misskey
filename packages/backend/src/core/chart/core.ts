@@ -70,8 +70,8 @@ type RawRecord<S extends Schema> = {
 	Columns<S>;
 
 /**
- * 列の型 (smallint / integer) の範囲。超える値を書くと UPDATE ごと失敗し、そのグループの記録が
- * 以後ずっと止まる (instance の requests.* などは smallint で、日次の行は 32767 を超えうる)。
+ * 列の型 (smallint / integer) の範囲。超える値を書くと UPDATE ごと失敗し、
+ * 値が範囲外のままでは再試行も失敗する (instance の requests.* などは smallint で、日次の行は 32767 を超えうる)。
  * bigint は実質超えないので範囲を持たない。
  */
 function columnRange(range: Schema[string]['range']): { min: number; max: number } | null {
@@ -259,16 +259,11 @@ export default abstract class Chart<T extends Schema> {
 					array: true,
 					default: '{}',
 				};
-				columns[COLUMN_PREFIX + name] = {
-					type,
-					default: 0,
-				};
-			} else {
-				columns[COLUMN_PREFIX + name] = {
-					type,
-					default: 0,
-				};
 			}
+			columns[COLUMN_PREFIX + name] = {
+				type,
+				default: 0,
+			};
 		}
 		return columns;
 	}

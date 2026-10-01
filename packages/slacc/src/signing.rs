@@ -61,32 +61,32 @@ pub struct Signer {
 impl Signer {
   #[napi(factory)]
   pub fn from_pkcs8_der(suite: SignatureAlgorithm, der: Buffer) -> Result<Self> {
-    Self::from_pkcs8(suite, der.to_vec())
+    Self::from_pkcs8(suite, der.as_ref())
   }
 
   #[napi(factory)]
   pub fn from_pkcs8_pem(suite: SignatureAlgorithm, pem: String) -> Result<Self> {
     Self::from_pkcs8(
       suite,
-      pkcs8::der::pem::decode_vec(pem.as_bytes())
+      &pkcs8::der::pem::decode_vec(pem.as_bytes())
         .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?
         .1,
     )
   }
 
-  fn from_pkcs8(suite: SignatureAlgorithm, pkcs8_der: Vec<u8>) -> Result<Self> {
+  fn from_pkcs8(suite: SignatureAlgorithm, pkcs8_der: &[u8]) -> Result<Self> {
     Ok(Self {
       inner: Arc::new(match suite {
         SignatureAlgorithm::Mldsa44 => KeyPair::Mldsa44(
-          PqdsaKeyPair::from_pkcs8(&ML_DSA_44_SIGNING, &pkcs8_der)
+          PqdsaKeyPair::from_pkcs8(&ML_DSA_44_SIGNING, pkcs8_der)
             .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
         SignatureAlgorithm::Eddsa => KeyPair::Ed25519(
-          signature::Ed25519KeyPair::from_pkcs8(&pkcs8_der)
+          signature::Ed25519KeyPair::from_pkcs8(pkcs8_der)
             .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
         SignatureAlgorithm::Rsa2048_8192 => KeyPair::Rsa(
-          signature::RsaKeyPair::from_pkcs8(&pkcs8_der)
+          signature::RsaKeyPair::from_pkcs8(pkcs8_der)
             .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
       }),

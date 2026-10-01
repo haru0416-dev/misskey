@@ -230,11 +230,9 @@ const shouldEnableInfiniteScroll = computed(() => {
 const folder = ref<Misskey.entities.DriveFolder | null>(null);
 const hierarchyFolders = ref<Misskey.entities.DriveFolder[]>([]);
 
-// ドロップされようとしているか
 const draghover = ref(false);
 
-// 自身の所有するアイテムがドラッグをスタートさせたか
-// (自分自身の階層にドロップできないようにするためのフラグ)
+// 表示中の階層からのドラッグでは、同じ階層への移動を受け付けない。
 const isDragSource = ref(false);
 
 const isEditMode = ref(false);
@@ -391,9 +389,7 @@ function onDragover(ev: DragEvent) {
 		return;
 	}
 
-	// ドラッグ元が自分自身の所有するアイテムだったら
 	if (isDragSource.value) {
-		// 自分自身にはドロップさせない
 		ev.dataTransfer.dropEffect = 'none';
 		return;
 	}
@@ -425,7 +421,6 @@ function onDrop(ev: DragEvent): void | boolean {
 		return;
 	}
 
-	// ドロップされてきたものがファイルだったら
 	if (ev.dataTransfer.files.length > 0) {
 		os.launchUploader(Array.from(ev.dataTransfer.files), {
 			folderId: folder.value?.id ?? null,
@@ -450,7 +445,6 @@ function onDrop(ev: DragEvent): void | boolean {
 			if (droppedFolder == null) {
 				return;
 			}
-			// 移動先が自分自身ならreject
 			if (folder.value && droppedFolder.id === folder.value.id) {
 				return false;
 			}
@@ -523,7 +517,6 @@ function deleteFolder(folderToDelete: Misskey.entities.DriveFolder) {
 		folderId: folderToDelete.id,
 	})
 		.then(() => {
-			// 削除時に親フォルダに移動
 			cd(folderToDelete.parentId);
 			globalEvents.emit('driveFoldersDeleted', [folderToDelete]);
 		})

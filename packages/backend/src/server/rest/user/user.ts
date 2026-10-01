@@ -295,7 +295,7 @@ async function buildUserDetailedExtrasForApi(
 	hint?: {
 		iAmModerator?: boolean;
 		relation?: UserRelationForPack | null;
-		/** 一覧pack用の事前計算値。ユーザー毎の roles(2クエリ)/pins(1クエリ) を回避する */
+		/** 一覧の一括取得結果を渡し、ユーザーごとのロール・ピン取得を避ける。 */
 		userRoles?: MiRole[];
 		policies?: Pick<RolePolicies, 'canPublicNote' | 'chatAvailability'>;
 		pins?: MiUserNotePining[];
@@ -418,8 +418,7 @@ export async function packUserDetailedNotMeManyForApi(
 				)
 			: null;
 
-	// ロール・割り当て・ピンは一覧単位の3クエリで取得する。
-	// ユーザー単位で取得すると、3分間に role_assignment/role 各68k回、pining 54k回のクエリが発生する。
+	// ロール・割り当て・ピンを一覧単位で取得し、ユーザーごとの問い合わせを避ける。
 	const [allRoles, allAssignments, allPins] = await Promise.all([
 		listRolesFromDatabase(deps.db),
 		listRoleAssignmentsByUserIdsFromDatabase(deps.db, userIds),
@@ -903,7 +902,7 @@ const usersShowHostSchema = z.string().nullable().optional().describe('The local
 
 export const usersShowParamDef = z.union([
 	z.object({ userId: misskeyId(), host: usersShowHostSchema }),
-	// 1 件ずつ詳細を pack するので件数に上限を置く。クライアントが渡すのは DM の宛先や引っ越し元 (いずれも数十件まで)。
+	// 詳細取得に伴う DB 問い合わせと応答サイズを制限する。
 	z.object({ userIds: uniqueItems(z.array(misskeyId()).max(100)), host: usersShowHostSchema }),
 	z.object({ username: z.string(), host: usersShowHostSchema }),
 ]);

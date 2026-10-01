@@ -105,16 +105,15 @@ process.on('SIGTERM', () => {
 try {
 	await runBun(['run', 'clean']);
 
-	// アセットのビルドで依存しているので一番最初に必要
+	// アセット生成が locale のビルド結果を読むため、先に完了させる。
 	await runBun(['run', '--bun', '--filter', 'i18n', 'build']);
 
-	// build:backend-deps (= i18n + misskey-js build) は、i18n が直前で・misskey-js がこの
-	// Promise.all 内でそれぞれビルドされるため呼ばない (同一 built/ への並行二重ビルドになる)
+	// 依存 package はここで個別にビルドする。同じ built/ への二重実行は避ける。
 	await Promise.all([
 		runBun(['run', 'build-pre']),
 		runBun(['run', 'build-assets']),
 		runBun(['run', '--bun', '--filter', 'mfm-js', 'build']),
-		// icons-subsetterは開発段階では使用されないが、型エラーを抑制するためにはじめの一度だけビルドする
+		// 開発時も生成済みの型を参照するため、一度はビルドする。
 		runBun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
 		runBun(['run', '--bun', '--filter', 'misskey-js', 'build']),
 	]);

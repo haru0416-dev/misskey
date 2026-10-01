@@ -131,14 +131,9 @@ describe('hono-inbox-endpoint', () => {
 			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host } },
 		};
 
-		const before = await runtime.inboxQueue.getJobCounts();
 		const response = await handleInboxRequest(depsWithFixtureHost, request);
 		expect(response.status).toBe(202);
 
-		const after = await runtime.inboxQueue.getJobCounts();
-		expect((after['waiting'] ?? 0) + (after['active'] ?? 0) + (after['delayed'] ?? 0)).toBeGreaterThan(
-			(before['waiting'] ?? 0) + (before['active'] ?? 0) + (before['delayed'] ?? 0) - 1,
-		);
 		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed'])).find(
 			(job) => job.data.activity.id === activityId,
 		);

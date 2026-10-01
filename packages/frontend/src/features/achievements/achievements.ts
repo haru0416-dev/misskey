@@ -383,13 +383,6 @@ export const ACHIEVEMENT_BADGES = {
 		bg: 'linear-gradient(0deg, rgb(220 223 225), rgb(172 192 207))',
 		frame: 'bronze',
 	},
-	/* @see <https://github.com/misskey-dev/misskey/pull/10365#discussion_r1155511107>
-} as const satisfies Record<typeof achievementTypes[number], {
-	img: string;
-	bg: string | null;
-	frame: 'bronze' | 'silver' | 'gold' | 'platinum';
-}>;
- */
 } as const;
 
 export const claimedAchievements: (typeof achievementTypes)[number][] = $i?.achievements

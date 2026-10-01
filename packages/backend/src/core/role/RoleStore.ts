@@ -46,8 +46,7 @@ const cacheVersionRolesPlan = defineCachedQueryPlan((db) => {
 /**
  * role / role_assignment の世代番号。両テーブルのトリガが書き込みのたびに進める (migration 0016)。
  * 書き込みが API 経由でも Store 関数直呼びでも生 SQL でも進むので、プロセスをまたぐキャッシュの
- * 新旧判定に使える。認証クエリが同じ値を副問い合わせで一緒に返すため、通常のリクエストでは
- * この関数は呼ばれない。
+ * 新旧判定に使える。ネイティブトークン認証で取得済みなら、その値をリクエスト内で共有する。
  */
 export async function fetchRolesCacheVersionFromDatabase(db: MiDrizzleDatabase): Promise<number> {
 	const [row] = await cacheVersionRolesPlan.execute(db);
@@ -57,7 +56,7 @@ export async function fetchRolesCacheVersionFromDatabase(db: MiDrizzleDatabase):
 let rolesByVersion: { version: number; roles: readonly MiRole[] } | null = null;
 
 /**
- * 全ロール定義を世代番号付きで使い回す。全認証リクエストが通る経路なので、世代が同じ間は DB を読まない。
+ * 全ロール定義を世代番号付きで使い回し、世代が同じ間は DB を読まない。
  * 返す配列と要素は共有物なので凍結する。書き換えが要る呼び出し側は listRolesFromDatabase を使うこと。
  */
 export async function listRolesFromDatabaseCachedByVersion(

@@ -41,7 +41,7 @@ export class MiNote {
 
 	public clippedCount: number;
 
-	// このノートを参照する Pages ブロック数。リモートノート削除処理が手動で更新し、trigger では更新しない。
+	// このノートを参照する Pages の件数。同じページ内の重複参照は数えず、ページの作成・更新・削除時に更新する。
 	public pageCount: number;
 
 	public reactions: Record<string, number>;

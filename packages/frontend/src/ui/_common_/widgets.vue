@@ -33,9 +33,7 @@ import { prefer } from '@/preferences.js';
 
 const props = withDefaults(
 	defineProps<{
-		// null = 全てのウィジェットを表示
-		// left = place: leftだけを表示
-		// right = rightとnullを表示
+		// null は全件、left は左側だけ、right は左側に指定されていないものを表示する。
 		place?: 'left' | null | 'right';
 	}>(),
 	{

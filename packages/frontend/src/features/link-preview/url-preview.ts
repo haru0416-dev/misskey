@@ -18,7 +18,7 @@ export function transformPlayerUrl(url: string): string {
 	const urlParams = new URLSearchParams(urlObj.search);
 
 	if (urlObj.hostname === 'player.twitch.tv' || urlObj.hostname === 'clips.twitch.tv') {
-		// TwitchはCSPの制約あり
+		// Twitch の埋め込みには、表示するページのホスト名を parent に指定する必要がある。
 		// https://dev.twitch.tv/docs/embed/video-and-clips/
 		urlParams.set('parent', hostname);
 		urlParams.set('allowfullscreen', '');

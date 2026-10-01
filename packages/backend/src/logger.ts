@@ -49,8 +49,8 @@ function shouldLog(level: Level): boolean {
 }
 
 /**
- * Logger.debug が実際にログを出すかどうか。production では既定でdebugログを破棄するため、
- * 呼び出し側でメッセージ文字列の構築自体を省略したい場合 (高頻度呼び出し箇所) にこれで事前判定できる。
+ * 高頻度の呼び出し元で debug メッセージの構築を省くための事前判定。
+ * true の場合も、最終的な出力は log() のログレベル判定に従う。
  */
 export function isDebugLoggingEnabled(): boolean {
 	return (

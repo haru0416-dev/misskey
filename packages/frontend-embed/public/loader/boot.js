@@ -5,7 +5,7 @@
 
 'use strict';
 
-// ブロックの中に入れないと、定義した変数がブラウザのグローバルスコープに登録されてしまい邪魔なので
+// classic script の変数をグローバルスコープへ公開しない。
 (async () => {
 	window.onerror = (e) => {
 		console.error(e);
@@ -46,7 +46,6 @@
 		}
 	}
 
-	// localStorage の lang が不正な値になる場合があるため、文字列化可能性と "null" を検査する。
 	if (lang == null || lang.toString == null || lang.toString() === 'null') {
 		console.error('invalid lang value detected!!!', typeof lang, lang);
 		lang = 'en-US';

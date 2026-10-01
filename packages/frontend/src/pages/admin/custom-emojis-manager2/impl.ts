@@ -44,7 +44,7 @@ export function emptyStrToEmptyArray(value: string) {
 }
 
 function roleIdsParser(text: string): { id: string; name: string }[] {
-	// idとnameのペア配列をJSONで受け取る。それ以外の形式は許容しない
+	// 貼り付けでは id と name を持つオブジェクトの JSON 配列だけを受け付ける。
 	try {
 		const obj = JSON.parse(text);
 		if (!Array.isArray(obj)) {
@@ -74,7 +74,6 @@ export function createRoleColumnSetting(
 		editable: true,
 		width: 140,
 		valueTransformer: (row) => {
-			// バックエンドからは ID と名前のペア配列で受け取るが、表示には名前だけを使う。
 			return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? []).map((it) => it.name).join(',');
 		},
 		customValueEditor: async (row) => {
@@ -118,13 +117,10 @@ export function settleEmojiRequest<T>(item: T, request: Promise<unknown>): Promi
 	return request.then(() => ({ item, success: true, err: undefined })).catch((err) => ({ item, success: false, err }));
 }
 
-// 失敗が1件でもあれば通知してから、全件の結果をログ表示用に変換する。
 export async function toRequestLogs<T extends { url: string; name: string }>(
 	result: EmojiRequestResult<T>[],
 ): Promise<RequestLogItem[]> {
-	const failedItems = result.filter((it) => !it.success);
-
-	if (failedItems.length > 0) {
+	if (result.some((it) => !it.success)) {
 		await os.alert({
 			type: 'error',
 			title: i18n.ts.somethingHappened,

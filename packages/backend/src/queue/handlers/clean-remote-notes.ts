@@ -203,7 +203,6 @@ export async function handleQueueCleanRemoteNotes(
 		};
 	}
 
-	// 控えめな上限から始め、クエリ時間に応じて調整する。
 	const minimumLimit = 10;
 	let currentLimit = 100;
 	const savedCursor = await deps.redis.get(CURSOR_KEY);

@@ -84,7 +84,6 @@ import {
 	fetchUserListByNameAndUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	fetchWebhookByIdAndUserIdFromDatabase,
-	fixtureConfig,
 	flashLikeExistsInDatabase,
 	genId,
 	insertEmojiInDatabase,
@@ -247,7 +246,6 @@ describe('Endpoints', () => {
 
 	describe('signup-pending', () => {
 		test('pending user can complete signup and sign in', async () => {
-			const config = fixtureConfig;
 			const password = 'pending-password';
 			const pending = await createUserPendingInDatabase(db, {
 				id: genId(),
@@ -296,7 +294,6 @@ describe('Endpoints', () => {
 
 	describe('signin history endpoints', () => {
 		test('i/signin-history returns own signin records', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const older = await createSigninInDatabase(db, {
 				id: genId(now - 2000),
@@ -815,7 +812,6 @@ describe('Endpoints', () => {
 
 	describe('invite', () => {
 		test('invite/limit keeps remaining count semantics', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const inviter = await signup({ username: `honoinv${now.toString(36)}` });
 			const inviterRole = await createRoleInDatabase(db, {
@@ -880,7 +876,6 @@ describe('Endpoints', () => {
 		});
 
 		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const inviterRole = await createRoleInDatabase(db, {
 				id: genId(now + 10),

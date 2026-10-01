@@ -138,16 +138,10 @@ export type MiNotification =
 
 			customBody: string;
 
-			/**
-			 * アプリ通知のheader
-			 * (省略時はアプリ名で表示されることを期待)
-			 */
+			/** API の header 省略時はアクセストークンの name、どちらも無ければ null。 */
 			customHeader: string | null;
 
-			/**
-			 * アプリ通知のicon(URL)
-			 * (省略時はアプリアイコンで表示されることを期待)
-			 */
+			/** API の icon 省略時はアクセストークンの iconUrl、どちらも無ければ null。 */
 			customIcon: string | null;
 
 			appAccessTokenId: MiAccessToken['id'] | null;

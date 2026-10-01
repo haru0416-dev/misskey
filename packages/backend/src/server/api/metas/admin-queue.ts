@@ -268,8 +268,7 @@ export const endpointMetas = {
 						},
 						lastError: { type: 'object', optional: false, nullable: true, additionalProperties: true },
 						revision: { type: 'number', optional: false, nullable: false },
-						// deadLetterReason='invalidPayload' の行は「data / opts がジョブとして解釈できない値だった」ことが隔離理由そのものなので、
-						// 配列・文字列・null など object 以外もそのまま入っている。object と宣言すると生成SDKの型が実物と食い違う
+						// invalidPayload では配列・文字列・null 等も隔離するため、data / opts を object 型に限定しない。
 						data: { optional: false, nullable: true },
 						opts: { optional: false, nullable: true },
 						createdAt: { type: 'string', optional: false, nullable: false, format: 'date-time' },

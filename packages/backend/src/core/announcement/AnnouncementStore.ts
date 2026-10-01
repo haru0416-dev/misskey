@@ -113,7 +113,7 @@ export async function listUnreadAnnouncementsForUserFromDatabase(
 }
 
 /**
- * 「お知らせ」画面 (未認証含む) 向けの一覧。有効なお知らせのうち、全体向け + (ログイン中なら) 自分向けのものを対象にする。
+ * 「お知らせ」画面 (未認証含む) 向けの一覧。指定された有効・終了状態で絞り、全体向けとログイン中なら自分向けのものを対象にする。
  */
 export async function listAnnouncementsForUserFromDatabase(
 	db: MiDrizzleDatabase,

@@ -144,7 +144,6 @@ export function collectModifications(
 					return;
 				}
 				if (node.name === localI18nIdentifier) {
-					// i18n の識別子を直接参照するか、未対応の名前衝突がある場合は import を保持する。
 					fileLogger.error(
 						`${lineCol(sourceCode, node)}: Using i18n identifier "${localI18nIdentifier}" directly. Skipping inlining.`,
 					);
@@ -171,7 +170,6 @@ export function collectModifications(
 					});
 					this.skip();
 				} else if (i18nPath != null && i18nPath.length >= 2 && i18nPath[0] === 'tsx') {
-					// パラメーター化されたロケール置換では引数にオブジェクトリテラルを要求する。
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n function access (object) ${i18nPath.join('.')}`);
 					codeModifications.push({
 						type: 'parameterized-function',
@@ -372,7 +370,7 @@ function findFunctionScopeDecls(fn: ESTree.Function | ESTree.ArrowFunctionExpres
 	const decls: string[] = [];
 	walk(fn.body, {
 		enter(node) {
-			// strict mode では var、非 strict mode では関数宣言も関数スコープに属する。
+			// 解析対象は strict mode の ES モジュールなので、関数宣言はブロックスコープ側で扱う。
 			if (node.type === 'VariableDeclaration' && node.kind === 'var') {
 				decls.push(...node.declarations.flatMap((x) => declsOfPattern(x.id)));
 			}

@@ -355,7 +355,7 @@ const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 	url: `https://${host}/notes/${appearNote.id}`,
 }));
 
-/** checkOnlyでは純粋なワードミュート結果をbooleanで返却する */
+/** checkOnly はセンシティブ設定を判定せず、ノート・返信先・リノート先のワードミュート結果だけを返す。 */
 function checkMute(
 	noteToCheck: Misskey.entities.Note,
 	mutedWords: (string | string[])[] | undefined | null,

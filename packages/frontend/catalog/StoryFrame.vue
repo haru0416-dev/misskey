@@ -21,8 +21,7 @@ const props = defineProps<{
 
 const error = ref<string | null>(null);
 
-// story が setup で throw すると、隔離しない限り描画木ごと壊れて以降の story も出せなくなる。
-// ここで止めて、壊れた部分木を捨てる。
+// story のエラーをカタログへ伝播させず、次の story を選択できる状態を保つ。
 onErrorCaptured((err) => {
 	error.value = err instanceof Error ? (err.stack ?? err.message) : String(err);
 	return false;

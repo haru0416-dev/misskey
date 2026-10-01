@@ -66,7 +66,6 @@ function writeLocales(): void {
 	console.log(`[${_package.name}] locales written (${files.length} files).`);
 }
 
-// Service Worker が HTTP で取得するため、frontend 側へ locale JSON を書き出す。
 async function writeFrontendLocalesJson(useCachedLocales = false): Promise<void> {
 	// locale生成・コピー後の、今回ビルドしたモジュールを読む必要があるため動的importする。
 	const { locales, writeFrontendLocalesJson: write } = await import('./built/index.js');

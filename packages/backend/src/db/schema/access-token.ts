@@ -38,7 +38,7 @@ export const accessToken = pgTable(
 export type AccessTokenRow = typeof accessToken.$inferSelect;
 export type AccessTokenInsert = typeof accessToken.$inferInsert;
 
-/** `user` リレーションはどの経路でも読み込まないため、常に `user: null` を補って MiAccessToken に揃える。 */
+/** DB 行に含まれない `user` リレーションは null として扱う。 */
 export function deserializeAccessToken(row: AccessTokenRow): MiAccessToken {
 	return {
 		...row,

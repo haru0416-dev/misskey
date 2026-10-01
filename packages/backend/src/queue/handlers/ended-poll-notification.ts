@@ -16,8 +16,7 @@ export type QueueEndedPollNotificationDependencies = ApiNotificationDependencies
 };
 
 /**
- * キュープロセッサーは認証・レート制限の境界外で動作するため、
- * ユーザープロフィールをプロセスローカルキャッシュに保持せず直接DBから読む。
+ * 通知設定はジョブ実行時に DB から取得し、受信可否の判定に渡す。
  */
 export async function handleQueueEndedPollNotification(
 	deps: QueueEndedPollNotificationDependencies,

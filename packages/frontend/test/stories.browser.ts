@@ -66,7 +66,7 @@ for (const [path, load] of Object.entries(modules)) {
 				resetLocalStorage();
 				applyStoryHandlers(worker, story.parameters?.msw);
 
-				// setup 中の例外は Vue が握り潰すので、拾って落とす。
+				// Vue が処理したエラーもテスト失敗として扱う。
 				const errors: unknown[] = [];
 				const context = createStoryContext(story, container);
 				const app = createApp(buildStoryComponent(story, context));

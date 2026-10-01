@@ -3,26 +3,37 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, expect, test, vi } from 'vitest';
-import type * as Redis from 'ioredis';
+import { describe, expect, test } from 'vitest';
+import { loadConfig } from '@/config.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { createRedisClient } from '@/runtime-dependencies.js';
 import { tryLockFetchInstanceMetadata, unlockFetchInstanceMetadata } from '@/server/rest/activitypub/federation.js';
 
 describe('federation metadata lock', () => {
-	test('uses only the expiring v2 lock key', async () => {
-		const set = vi.fn(async () => null);
-		const redis = { set } as unknown as Pick<Redis.Redis, 'set'>;
+	test('独立したクライアントのうち一方だけが取得でき、解除後は再取得できる', async () => {
+		const config = loadConfig();
+		const first = createRedisClient(config);
+		const second = createRedisClient(config);
+		const host = `mutex-${genId()}.example.test`;
 
-		await expect(tryLockFetchInstanceMetadata({ redis }, 'example.com')).resolves.toBeNull();
-		expect(set).toHaveBeenCalledOnce();
-		expect(set).toHaveBeenCalledWith('fetchInstanceMetadata:mutex:v2:example.com', '1', 'EX', 30, 'GET');
-	});
+		try {
+			const results = await Promise.all([
+				tryLockFetchInstanceMetadata({ redis: first }, host),
+				tryLockFetchInstanceMetadata({ redis: second }, host),
+			]);
+			expect(results.filter((result) => result === null)).toHaveLength(1);
+			expect(await tryLockFetchInstanceMetadata({ redis: first }, host)).not.toBeNull();
+			expect(await tryLockFetchInstanceMetadata({ redis: second }, host)).not.toBeNull();
 
-	test('deletes the v2 lock key when unlocking', async () => {
-		const del = vi.fn(async () => 1);
-		const redis = { del } as unknown as Pick<Redis.Redis, 'del'>;
-
-		await expect(unlockFetchInstanceMetadata({ redis }, 'example.com')).resolves.toBe(1);
-		expect(del).toHaveBeenCalledOnce();
-		expect(del).toHaveBeenCalledWith('fetchInstanceMetadata:mutex:v2:example.com');
+			await unlockFetchInstanceMetadata({ redis: first }, host);
+			expect(await tryLockFetchInstanceMetadata({ redis: second }, host)).toBeNull();
+		} finally {
+			try {
+				await unlockFetchInstanceMetadata({ redis: first }, host);
+			} finally {
+				first.disconnect();
+				second.disconnect();
+			}
+		}
 	});
 });

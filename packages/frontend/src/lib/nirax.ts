@@ -183,7 +183,7 @@ function buildFullPath(args: {
 	return fullPath;
 }
 
-// ルート定義のパスは静的なので、解析結果を使い回す (解決のたびに全ルートを解析し直していた)。
+// ルート定義のパスは静的なので、解析結果を使い回す。
 const parsedPathCache = new Map<string, ParsedPath>();
 
 function parsePath(path: string): ParsedPath {

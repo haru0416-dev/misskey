@@ -11,7 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { fetchOrRegisterFederatedInstance } from '@/server/rest/activitypub/federation.js';
 
-// 新しいホストからの初回の受信は並行して届く。確認してから挿入する形だと、2 件目以降が一意制約で失敗していた。
+// 初回の受信も並行して届くため、同じホストの登録は一意制約違反を起こさず同じ行を返す必要がある。
 describe('fetchOrRegisterFederatedInstance', () => {
 	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;

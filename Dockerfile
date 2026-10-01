@@ -68,9 +68,8 @@ ARG NODE_ENV=production
 RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 	bun install --frozen-lockfile --production --filter backend
 
-# backend の本番バンドル (built/) は大半の依存を取り込み済み。実行時に node_modules から読むもの
-# (runtime-externals.mjs) とその依存だけを残す (実測で 180 → 114 MiB)。sharp の musl 版は任意依存として
-# 残るので別に消す。刈り込み後に残した全パッケージの依存が解決できなければ失敗する。
+# 実行時に読む依存は runtime-externals.mjs とその依存に限る。刈り込み後も全依存が解決できることを検査する。
+# glibc 環境では不要な sharp の musl 版は、任意依存として残るため別に削除する。
 COPY --link ["packages/backend/runtime-externals.mjs", "./packages/backend/"]
 COPY --link ["packages/backend/scripts/prune-runtime-modules.mjs", "./packages/backend/scripts/"]
 RUN bun packages/backend/scripts/prune-runtime-modules.mjs /misskey \
@@ -115,10 +114,8 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 	&& touch packages/slacc/index.d.ts \
 	&& bun run --filter slacc build
 
-# ffmpeg は動画の長さ・サムネイル・センシティブ判定のフレーム抽出にだけ使う。Debian の ffmpeg は X11・音声出力・
-# 多数のコーデックの共有ライブラリを引き込み、apt の層が約 450 MB になる。使う部品だけを Debian trixie と同じ版の
-# ソースから組み、ffmpeg / ffprobe で約 17 MB にする (見本 17 種で Debian 版と probe・サムネイル画素・抽出枚数が一致)。
-# blackframe フィルタが GPL の部品なので --enable-gpl にする (Debian 版も GPL で組まれている)。
+# ffmpeg/ffprobe は動画のメタデータ取得・サムネイル・フレーム抽出に必要な部品だけを有効にする。
+# blackframe が GPL 対象なので --enable-gpl を指定し、実行用イメージにもライセンスとソースの所在を含める。
 FROM oven/bun:${BUN_VERSION}-debian AS ffmpeg-builder
 
 ARG FFMPEG_VERSION=7.1.5

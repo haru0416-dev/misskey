@@ -97,7 +97,6 @@ import {
 	fetchUserListByNameAndUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	fetchWebhookByIdAndUserIdFromDatabase,
-	fixtureConfig,
 	flashLikeExistsInDatabase,
 	genId,
 	insertEmojiInDatabase,
@@ -160,7 +159,6 @@ describe('Endpoints', () => {
 
 	describe('emoji endpoints', () => {
 		test('emojis and emoji return packed local emoji data', async () => {
-			const config = fixtureConfig;
 			const emoji = await insertEmojiInDatabase(db, {
 				id: genId(),
 				name: 'hono_emoji',
@@ -221,7 +219,6 @@ describe('Endpoints', () => {
 
 	describe('avatar decoration endpoints', () => {
 		test('get-avatar-decorations filters unavailable role ids', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
 				id: genId(now),
@@ -269,7 +266,6 @@ describe('Endpoints', () => {
 
 	describe('admin/emoji', () => {
 		test('admin/emoji/list と list-remote は filter、pagination、packingを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haem${suffix}` });
@@ -431,7 +427,6 @@ describe('Endpoints', () => {
 		});
 
 		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPagesを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `hav2${suffix}` });
@@ -1110,7 +1105,6 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/emoji/import-zip は import jobを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemi${suffix}` });

@@ -60,17 +60,14 @@ async function save() {
 			const regexp = line.match(/^\/(.+)\/(.*)$/);
 			if (regexp) {
 				try {
-					// 正規表現として妥当かどうかだけを見る (不正なら throw する)
-					// 正規表現の行は空白で分割しない。
+					// 正規表現は空白を含む一つの条件として保持し、保存前に構文だけを検証する。
 					void new RegExp(regexp[1] ?? '', regexp[2] ?? '');
 				} catch (err) {
-					// 構文が不正な場合は保存せず、変更状態も維持する。
 					os.alert({
 						type: 'error',
 						title: i18n.ts.regexpError,
 						text: i18n.tsx.regexpErrorDescription({ tab: 'word mute', line: i + 1 }) + '\n' + String(err),
 					});
-					// 不正な設定を保存しないため、エラーを再送出する。
 					throw err;
 				}
 			} else {

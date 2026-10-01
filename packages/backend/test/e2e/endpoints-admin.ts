@@ -520,7 +520,6 @@ describe('Endpoints', () => {
 
 	describe('admin/drive', () => {
 		test('admin/drive/files は filter、pagination、DriveFile packingを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const fileType = 'application/x-hono-admin-drive';
@@ -648,7 +647,6 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/drive/show-file は fileId/url、秘匿 header、404を維持する', async () => {
-			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const bobMd5 = createHash('md5').update(`hono-admin-drive-bob-${suffix}`).digest('hex');
 			const bobFile = await createDriveFileInDatabase(db, {
@@ -753,7 +751,6 @@ describe('Endpoints', () => {
 		});
 
 		test('admin drive deletion endpoints は DB削除とobjectStorage jobを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const remoteHost = `hono-drive-delete-${suffix}.remote`;
@@ -881,7 +878,6 @@ describe('Endpoints', () => {
 
 	describe('role endpoints', () => {
 		test('roles/list and roles/show return packed public role data', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
 				id: genId(now - 1000),
@@ -938,7 +934,6 @@ describe('Endpoints', () => {
 		});
 
 		test('roles/users は explorable な role のみ users を一覧しUserDetailedを返す', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const explorableRole = await createRoleInDatabase(db, {
@@ -1870,7 +1865,6 @@ describe('Endpoints', () => {
 			suffix: string,
 			values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {},
 		) {
-			const config = fixtureConfig;
 			return await createAbuseUserReportInDatabase(db, {
 				id: genId(),
 				targetUserId: bob.id,
@@ -1910,7 +1904,6 @@ describe('Endpoints', () => {
 		test('admin/abuse-user-reports は一覧とfilterを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = fixtureConfig;
 			const unresolved = await createReport(`${suffix}unresolved`, {
 				id: genId(now - 2000),
 				comment: `abuse report list unresolved ${suffix}`,
@@ -2083,7 +2076,6 @@ describe('Endpoints', () => {
 		test('admin/forward-abuse-user-report は配送、forwarded、ログ、404を維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = fixtureConfig;
 			const targetId = genId(now - 1000);
 			const targetHost = `hono-abuse-forward-${suffix}.example`;
 			const targetInbox = `https://${targetHost}/inbox`;
@@ -2260,7 +2252,6 @@ describe('Endpoints', () => {
 		test('admin/show-user と admin/show-users は詳細とfilterを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = fixtureConfig;
 			const target = await signup({ username: `hashow${suffix}` });
 			await updateUserProfileInDatabase(db, target.id, {
 				email: `hashow-${suffix}@example.test`,
@@ -2495,7 +2486,6 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const target = await signup({ username: `haum${suffix}` });
-			const config = fixtureConfig;
 			const avatarMd5 = createHash('md5').update(`hono-admin-avatar-${suffix}`).digest('hex');
 			const bannerMd5 = createHash('md5').update(`hono-admin-banner-${suffix}`).digest('hex');
 			const avatarFile = await createDriveFileInDatabase(db, {
@@ -2642,7 +2632,6 @@ describe('Endpoints', () => {
 			// 共有 fixture の bob を followee にすると、suspend 時の unfollow ジョブが共有 fixture のカウンタを
 			// 負値にするため、使い捨てユーザーを用いる。
 			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
-			const config = fixtureConfig;
 			const following = await createFollowingInDatabase(db, {
 				id: genId(),
 				followerId: target.id,
@@ -2761,7 +2750,6 @@ describe('Endpoints', () => {
 		}
 
 		test('admin/relays/list はrelay一覧を返す', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const relays = await Promise.all(
 				(
@@ -3193,7 +3181,6 @@ describe('Endpoints', () => {
 
 	describe('admin/show-moderation-logs', () => {
 		test('admin/show-moderation-logs は検索とユーザー packを維持する', async () => {
-			const config = fixtureConfig;
 			const now = Date.now();
 			const marker = `hono moderation log ${now}`;
 			const id = genId(now);
@@ -3366,7 +3353,6 @@ describe('Endpoints', () => {
 		test('admin/avatar-decorations は作成、一覧、更新、削除、ログを維持する', async () => {
 			const now = Date.now();
 			const manager = await signup({ username: `honoavmgr${now.toString(36)}` });
-			const config = fixtureConfig;
 			const managerRole = await createRoleInDatabase(db, {
 				id: genId(now),
 				updatedAt: new Date(now),

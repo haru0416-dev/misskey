@@ -316,8 +316,7 @@ describe('User', () => {
 
 				await alice.client.request('i/delete-account', { password: alice.password });
 
-				// 削除に伴う Delete の配送は outbox のディスパッチャ (1秒周期) を経由するため、
-				// sleep() の既定 250ms では届かない (実測で約1秒)。条件が満たされるまで待つ。
+				// Delete の配送は非同期の outbox ディスパッチャを経由するため、フォロー解除の反映まで待つ。
 				await waitFor(async () => (await bob.client.request('users/following', { userId: bob.id })).length === 0);
 
 				await rejects(
