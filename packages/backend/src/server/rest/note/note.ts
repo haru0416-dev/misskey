@@ -11,20 +11,23 @@ import { z } from 'zod';
 import {
 	followingExistsInDatabase,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	listFeaturedNotesByIdsFromDatabase,
 	listNotesByIdsFromDatabase,
 	listUserTimelineNotesFromDatabase,
-} from '@/core/note/NoteStore.js';
-import { listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/note/NoteReactionStore.js';
-import { listPollVotesByNoteIdsAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
-import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase } from '@/core/user/ViewerRelationStore.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+} from '@/core/note/note-store.js';
+import { listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/note/note-reaction-store.js';
+import { listPollVotesByNoteIdsAndUserFromDatabase } from '@/core/note/poll-vote-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/blocking-store.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/muting-store.js';
+import {
+	fanoutViewerRelationKinds,
+	fetchViewerRelationSnapshotFromDatabase,
+} from '@/core/user/viewer-relation-store.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
@@ -34,13 +37,13 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
+import { fetchFanoutTimelineNotes } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
-import { PER_USER_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { PER_USER_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/featured-ranking.js';
 import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 import type { NoteDependencies, PackNoteBatchHint } from '@/core/note/note-packing.js';
 import {
@@ -57,7 +60,7 @@ import {
  * 「過去の投稿をフォロワー限定にする」と設定した投稿を、pack が隠すのと同じ条件で見えないものとして扱う。
  * (isVisibleForMe は公開範囲の列しか見ないので、pack を通らない経路ではこちらを使う)
  */
-export async function isNoteContentVisibleForMeForApi(
+export async function isNoteContentVisibleForMe(
 	deps: NoteDependencies,
 	note: MiNote,
 	meId: MiUser['id'] | null,
@@ -82,7 +85,7 @@ export async function isNoteContentVisibleForMeForApi(
 	return await isVisibleForMe(deps, note, meId);
 }
 
-export async function packNoteManyForApi(
+export async function packNoteMany(
 	deps: NoteDependencies,
 	notes: MiNote[],
 	me: { id: MiUser['id'] } | null | undefined,
@@ -236,7 +239,7 @@ export async function handleApiUsersFeaturedNotes(
 		),
 	);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 function notesTranslateUnavailableError(): ApiError {
@@ -253,7 +256,7 @@ export const notesTranslateParamDef = z.object({
 	targetLang: z.string(),
 });
 
-export type ApiNotesTranslateDependencies = NoteDependencies &
+export type NotesTranslateDependencies = NoteDependencies &
 	RolePolicyDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'send'>;
 	};
@@ -278,8 +281,8 @@ const libreTranslateResponse = z.object({
 		.optional(),
 });
 
-export async function translateTextForApi(
-	deps: Pick<ApiNotesTranslateDependencies, 'meta' | 'httpRequestService'>,
+export async function translateText(
+	deps: Pick<NotesTranslateDependencies, 'meta' | 'httpRequestService'>,
 	text: string,
 	targetLang: string,
 ): Promise<{ sourceLang: string; text: string }> {
@@ -357,12 +360,12 @@ export async function translateTextForApi(
 }
 
 export async function handleApiNotesTranslate(
-	deps: ApiNotesTranslateDependencies,
+	deps: NotesTranslateDependencies,
 	me: MiUser,
-	params: ApiParams<typeof notesTranslateParamDef>,
+	params: Params<typeof notesTranslateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/translate']>,
 ): Promise<{ sourceLang: string; text: string } | undefined> {
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!policies.canUseTranslator) {
 		throw errors.unavailable();
 	}
@@ -372,7 +375,7 @@ export async function handleApiNotesTranslate(
 		throw errors.noSuchNote();
 	}
 
-	if (!(await isNoteContentVisibleForMeForApi(deps, note, me.id))) {
+	if (!(await isNoteContentVisibleForMe(deps, note, me.id))) {
 		throw errors.cannotTranslateInvisibleNote();
 	}
 
@@ -387,7 +390,7 @@ export async function handleApiNotesTranslate(
 		targetLang = targetLang.split('-')[0]!;
 	}
 
-	return await translateTextForApi(deps, text, targetLang);
+	return await translateText(deps, text, targetLang);
 }
 
 export const usersNotesParamDef = z.object({
@@ -404,7 +407,7 @@ export const usersNotesParamDef = z.object({
 export async function handleApiUsersNotes(
 	deps: NoteDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersNotesParamDef>,
+	params: Params<typeof usersNotesParamDef>,
 	errors: ContractErrors<(typeof usersContracts)['users/notes']>,
 ): Promise<Packed<'Note'>[]> {
 	if (params.withReplies && params.withFiles) {
@@ -453,7 +456,7 @@ export async function handleApiUsersNotes(
 
 		const isFollowing = me != null && (await followingExistsInDatabase(deps.db, me.id, params.userId));
 
-		const notes = await getFanoutTimelineNotesForApi(
+		const notes = await fetchFanoutTimelineNotes(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -493,10 +496,10 @@ export async function handleApiUsersNotes(
 			},
 		);
 
-		return await packNoteManyForApi(deps, notes, me);
+		return await packNoteMany(deps, notes, me);
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }

@@ -4,7 +4,7 @@
  */
 
 import type { JsonValue } from '@/misc/json-value.js';
-import { readUserChatMessageForApi } from '@/server/rest/chat/chat.js';
+import { readUserChatMessage } from '@/server/rest/chat/chat.js';
 import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
@@ -38,7 +38,7 @@ export const honoStreamChannelChatUser: StreamChannelDefinition<ChatDependencies
 			},
 			onMessage: (type) => {
 				if (type === 'read') {
-					void readUserChatMessageForApi(deps, user.id, otherId);
+					void readUserChatMessage(deps, user.id, otherId);
 				}
 			},
 		};

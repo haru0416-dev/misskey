@@ -10,9 +10,9 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { createDownloadService } from '@/core/net/DownloadService.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createLoggerService } from '@/core/LoggerService.js';
+import { createDownloadService } from '@/core/net/download-service.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
+import { createLoggerService } from '@/core/logger-service.js';
 import { loadConfig } from '@/config.js';
 
 // リモートの Content-Disposition は相手が自由に決められるので、不正なヘッダで例外にせず URL 由来の名前へ

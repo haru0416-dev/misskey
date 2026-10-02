@@ -5,7 +5,7 @@
 
 import type { Hono } from 'hono';
 import { registerEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { adminEndpoints } from './admin.js';
 import { adminAbuseReportEndpoints } from './admin-abuse-report.js';
 import { adminEmojiEndpoints } from './admin-emoji.js';
@@ -30,7 +30,7 @@ import { pagesEndpoints } from './pages.js';
 import { usersEndpoints } from './users.js';
 
 /** 契約 (rest/contracts) から登録するカテゴリ。ここに並べたエンドポイントは routes/ に手書きの登録を持たない。 */
-export function registerContractEndpoints(app: Hono, deps: ApiShellDependencies): void {
+export function registerContractEndpoints(app: Hono, deps: ShellDependencies): void {
 	registerEndpoints(app, deps, [
 		...adminEndpoints,
 		...adminAbuseReportEndpoints,

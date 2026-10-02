@@ -4,35 +4,35 @@
  */
 
 import * as Redis from 'ioredis';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createBunSqlRuntime } from '@/db/bun-sql.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { createAiService } from '@/core/ai/AiService.js';
-import { createDownloadService } from '@/core/net/DownloadService.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
-import { createFileInfoService } from '@/core/drive/FileInfoService.js';
-import type { FileInfoService } from '@/core/drive/FileInfoService.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import { createInternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import { createLoggerService } from '@/core/LoggerService.js';
-import type { LoggerService } from '@/core/LoggerService.js';
-import { createS3Service } from '@/core/drive/S3Service.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
-import { createEmailService } from '@/core/email/EmailService.js';
-import type { EmailService } from '@/core/email/EmailService.js';
-import { createUserAuthService } from '@/core/account/UserAuthService.js';
-import type { UserAuthService } from '@/core/account/UserAuthService.js';
-import { createUtilityService } from '@/core/net/UtilityService.js';
-import { createWebAuthnService } from '@/core/account/WebAuthnService.js';
-import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
+import { createAiService } from '@/core/ai/ai-service.js';
+import { createDownloadService } from '@/core/net/download-service.js';
+import type { DownloadService } from '@/core/net/download-service.js';
+import { createFileInfoService } from '@/core/drive/file-info-service.js';
+import type { FileInfoService } from '@/core/drive/file-info-service.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { createImageProcessingService } from '@/core/drive/image-processing-service.js';
+import type { ImageProcessingService } from '@/core/drive/image-processing-service.js';
+import { createInternalStorageService } from '@/core/drive/internal-storage-service.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
+import { createLoggerService } from '@/core/logger-service.js';
+import type { LoggerService } from '@/core/logger-service.js';
+import { createS3Service } from '@/core/drive/s3-service.js';
+import type { S3Service } from '@/core/drive/s3-service.js';
+import { createEmailService } from '@/core/email/email-service.js';
+import type { EmailService } from '@/core/email/email-service.js';
+import { createUserAuthService } from '@/core/account/user-auth-service.js';
+import type { UserAuthService } from '@/core/account/user-auth-service.js';
+import { createUtilityService } from '@/core/net/utility-service.js';
+import { createWebAuthnService } from '@/core/account/webauthn-service.js';
+import type { WebAuthnService } from '@/core/account/webauthn-service.js';
 import {
 	createDbQueue,
 	createDeliverQueue,
@@ -57,16 +57,16 @@ import type {
 	SystemWebhookDeliverQueue,
 	UserWebhookDeliverQueue,
 } from '@/core/queue/queues.js';
-import { createVideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import type { UrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import { createVideoProcessingService } from '@/core/drive/video-processing-service.js';
+import type { VideoProcessingService } from '@/core/drive/video-processing-service.js';
+import { createUrlPreviewService } from '@/server/web/url-preview-service.js';
+import type { UrlPreviewService } from '@/server/web/url-preview-service.js';
 import { createChartWriters, saveChartWriters, startChartWriterSaveInterval } from '@/core/chart/chart-runtime.js';
 import { flushInstanceNoteCounts } from '@/core/instance/instance-notes-counter.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
-import { createNotePostProcessing, notePostProcessingConcurrency } from '@/core/note/NotePostProcessing.js';
+import { createNotePostProcessing, notePostProcessingConcurrency } from '@/core/note/note-post-processing.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
-import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
+import type { NotePostProcessing } from '@/core/note/note-post-processing.js';
 
 export type RuntimeDependencies = {
 	config: Config;

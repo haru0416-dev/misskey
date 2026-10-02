@@ -3,28 +3,28 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import {
 	countUserListFavoritesFromDatabase,
 	userListFavoriteExistsInDatabase,
-} from '@/core/user/UserListFavoriteStore.js';
+} from '@/core/user/user-list-favorite-store.js';
 import {
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdsFromDatabase,
-} from '@/core/user/UserListMembershipStore.js';
+} from '@/core/user/user-list-membership-store.js';
 import {
-	deleteUserListByIdInDatabase,
+	deleteUserListByIdFromDatabase,
 	fetchPublicUserListByIdFromDatabase,
 	fetchUserListByIdAndUserIdFromDatabase,
 	fetchUserListByIdOrFailFromDatabase,
 	listUserListsByUserIdFromDatabase,
 	updateUserListInDatabase,
-} from '@/core/user/UserListStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/user/user-list-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -34,12 +34,12 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiUsersDependencies = {
+export type UsersDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-export type ApiPackedUserList = {
+export type PackedUserList = {
 	id: string;
 	createdAt: string;
 	name: string;
@@ -47,7 +47,7 @@ export type ApiPackedUserList = {
 	isPublic: boolean;
 };
 
-export type ApiPackedUserListShow = ApiPackedUserList & {
+export type PackedUserListShow = PackedUserList & {
 	likedCount?: number;
 	isLiked?: boolean;
 };
@@ -71,13 +71,13 @@ export const usersListsUpdateParamDef = z.object({
 	isPublic: z.boolean().optional(),
 });
 
-async function packUserListForApi(
-	deps: ApiUsersDependencies,
+async function packUserList(
+	deps: UsersDependencies,
 	src: MiUserList['id'] | MiUserList,
 	options?: {
 		userIds?: string[];
 	},
-): Promise<ApiPackedUserList> {
+): Promise<PackedUserList> {
 	const userList = typeof src === 'object' ? src : await fetchUserListByIdOrFailFromDatabase(deps.db, src);
 	const userIds =
 		options?.userIds ?? (await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id));
@@ -91,17 +91,14 @@ async function packUserListForApi(
 	};
 }
 
-async function packUserListsManyForApi(
-	deps: ApiUsersDependencies,
-	userLists: MiUserList[],
-): Promise<ApiPackedUserList[]> {
+async function packUserListsMany(deps: UsersDependencies, userLists: MiUserList[]): Promise<PackedUserList[]> {
 	const userIdsByListId = await listUserListMembershipUserIdsByUserListIdsFromDatabase(
 		deps.db,
 		userLists.map((userList) => userList.id),
 	);
 	return await Promise.all(
 		userLists.map((userList) =>
-			packUserListForApi(deps, userList, {
+			packUserList(deps, userList, {
 				userIds: userIdsByListId.get(userList.id) ?? [],
 			}),
 		),
@@ -109,10 +106,10 @@ async function packUserListsManyForApi(
 }
 
 export async function handleApiUsersListsList(
-	deps: ApiUsersDependencies,
+	deps: UsersDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof usersListsListParamDef>,
-): Promise<ApiPackedUserList[]> {
+	params: Params<typeof usersListsListParamDef>,
+): Promise<PackedUserList[]> {
 	if (params.userId !== undefined) {
 		const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 		if (user == null) {
@@ -145,14 +142,14 @@ export async function handleApiUsersListsList(
 			? await listUserListsByUserIdFromDatabase(deps.db, me!.id)
 			: await listUserListsByUserIdFromDatabase(deps.db, params.userId, { publicOnly: true });
 
-	return await packUserListsManyForApi(deps, userLists);
+	return await packUserListsMany(deps, userLists);
 }
 
 export async function handleApiUsersListsShow(
-	deps: ApiUsersDependencies,
+	deps: UsersDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof usersListsShowParamDef>,
-): Promise<ApiPackedUserListShow> {
+	params: Params<typeof usersListsShowParamDef>,
+): Promise<PackedUserListShow> {
 	const userList =
 		!params.forPublic && me !== null
 			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
@@ -167,7 +164,7 @@ export async function handleApiUsersListsShow(
 		});
 	}
 
-	const packed: ApiPackedUserListShow = await packUserListForApi(deps, userList);
+	const packed: PackedUserListShow = await packUserList(deps, userList);
 	if (params.forPublic && userList.isPublic) {
 		packed.likedCount = await countUserListFavoritesFromDatabase(deps.db, params.listId);
 		packed.isLiked = me !== null ? await userListFavoriteExistsInDatabase(deps.db, me.id, params.listId) : false;
@@ -177,9 +174,9 @@ export async function handleApiUsersListsShow(
 }
 
 export async function handleApiUsersListsDelete(
-	deps: ApiUsersDependencies,
+	deps: UsersDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof usersListsDeleteParamDef>,
+	params: Params<typeof usersListsDeleteParamDef>,
 ): Promise<void> {
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
@@ -192,14 +189,14 @@ export async function handleApiUsersListsDelete(
 		});
 	}
 
-	await deleteUserListByIdInDatabase(deps.db, userList.id);
+	await deleteUserListByIdFromDatabase(deps.db, userList.id);
 }
 
 export async function handleApiUsersListsUpdate(
-	deps: ApiUsersDependencies,
+	deps: UsersDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof usersListsUpdateParamDef>,
-): Promise<ApiPackedUserList> {
+	params: Params<typeof usersListsUpdateParamDef>,
+): Promise<PackedUserList> {
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {
@@ -220,5 +217,5 @@ export async function handleApiUsersListsUpdate(
 		}),
 	);
 
-	return await packUserListForApi(deps, userList.id);
+	return await packUserList(deps, userList.id);
 }

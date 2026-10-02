@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	createUserNotePiningWithinLimitInDatabase,
 	deleteUserNotePiningFromDatabase,
-} from '@/core/user/UserNotePiningStore.js';
-import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/user/user-note-pining-store.js';
+import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/note/note-store.js';
 import type { Config } from '@/config.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -23,14 +23,14 @@ import {
 	renderOnce,
 } from '../../../core/activitypub/notes-ap.js';
 import type { RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAccountPinDependencies = RolePolicyDependencies & RelayDeliverDependencies & UserPackingDependencies;
+export type AccountPinDependencies = RolePolicyDependencies & RelayDeliverDependencies & UserPackingDependencies;
 
 function iPinNoSuchNoteError(): ApiError {
 	return new ApiError({
@@ -69,7 +69,7 @@ export const iPinOrUnpinParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-function renderAddForApi(
+function renderAdd(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	target: string,
@@ -78,7 +78,7 @@ function renderAddForApi(
 	return { type: 'Add', actor: genLocalUserUri(config, user.id), target, object };
 }
 
-function renderRemoveForApi(
+function renderRemove(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	target: string,
@@ -87,8 +87,8 @@ function renderRemoveForApi(
 	return { type: 'Remove', actor: genLocalUserUri(config, user.id), target, object };
 }
 
-async function deliverPinnedChangeForApi(
-	deps: ApiAccountPinDependencies,
+async function deliverPinnedChange(
+	deps: AccountPinDependencies,
 	user: MiLocalUser,
 	noteId: string,
 	isAddition: boolean,
@@ -98,9 +98,7 @@ async function deliverPinnedChangeForApi(
 	const content = renderOnce(() =>
 		addActivityContext(
 			deps.config,
-			isAddition
-				? renderAddForApi(deps.config, user, target, item)
-				: renderRemoveForApi(deps.config, user, target, item),
+			isAddition ? renderAdd(deps.config, user, target, item) : renderRemove(deps.config, user, target, item),
 		),
 	);
 
@@ -109,13 +107,13 @@ async function deliverPinnedChangeForApi(
 	void deliverToRelays(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
-export async function addPinnedForApi(deps: ApiAccountPinDependencies, user: MiUser, noteId: string): Promise<void> {
+export async function addPinned(deps: AccountPinDependencies, user: MiUser, noteId: string): Promise<void> {
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
 	if (note == null) {
 		throw iPinNoSuchNoteError();
 	}
 
-	const policies = await getRolePolicies(deps, user);
+	const policies = await fetchRolePolicies(deps, user);
 	const result = await createUserNotePiningWithinLimitInDatabase(
 		deps.db,
 		{
@@ -133,12 +131,12 @@ export async function addPinnedForApi(deps: ApiAccountPinDependencies, user: MiU
 	}
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForApi(deps, user as MiLocalUser, note.id, true).catch(() => {});
+		void deliverPinnedChange(deps, user as MiLocalUser, note.id, true).catch(() => {});
 	}
 }
 
-export async function removePinnedForApi(
-	deps: ApiAccountPinDependencies,
+export async function removePinned(
+	deps: AccountPinDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 	noteId: string,
 ): Promise<void> {
@@ -150,26 +148,26 @@ export async function removePinnedForApi(
 	await deleteUserNotePiningFromDatabase(deps.db, { userId: user.id, noteId: note.id });
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForApi(deps, user as MiLocalUser, note.id, false).catch(() => {});
+		void deliverPinnedChange(deps, user as MiLocalUser, note.id, false).catch(() => {});
 	}
 }
 
 export async function handleApiIPin(
-	deps: ApiAccountPinDependencies,
+	deps: AccountPinDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iPinOrUnpinParamDef>,
+	params: Params<typeof iPinOrUnpinParamDef>,
 ): Promise<MeDetailedApiResponse> {
-	await addPinnedForApi(deps, me, params.noteId);
+	await addPinned(deps, me, params.noteId);
 
-	return await packMeDetailedForApi(deps, me, { includeSecrets: false });
+	return await packMeDetailed(deps, me, { includeSecrets: false });
 }
 
 export async function handleApiIUnpin(
-	deps: ApiAccountPinDependencies,
+	deps: AccountPinDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iPinOrUnpinParamDef>,
+	params: Params<typeof iPinOrUnpinParamDef>,
 ): Promise<MeDetailedApiResponse> {
-	await removePinnedForApi(deps, me, params.noteId);
+	await removePinned(deps, me, params.noteId);
 
-	return await packMeDetailedForApi(deps, me, { includeSecrets: false });
+	return await packMeDetailed(deps, me, { includeSecrets: false });
 }

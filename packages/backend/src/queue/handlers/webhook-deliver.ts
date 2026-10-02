@@ -6,10 +6,10 @@
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { StatusError } from '@/misc/status-error.js';
-import { updateWebhookInDatabase } from '@/core/webhook/WebhookStore.js';
-import { updateSystemWebhookInDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import { updateWebhookInDatabase } from '@/core/webhook/webhook-store.js';
+import { updateSystemWebhookInDatabase } from '@/core/webhook/system-webhook-store.js';
 import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/core/queue/types.js';
 
 export type QueueWebhookDeliverDependencies = {

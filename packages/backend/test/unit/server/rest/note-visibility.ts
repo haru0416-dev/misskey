@@ -18,13 +18,13 @@ const {
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabaseMock: vi.fn(),
 }));
 
-vi.mock('@/core/user/FollowingStore.js', () => ({
+vi.mock('@/core/user/following-store.js', () => ({
 	followingExistsInDatabase: followingExistsInDatabaseMock,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase: listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabaseMock,
 	listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase: vi.fn(),
 }));
 
-vi.mock('@/core/user/UserStore.js', () => ({
+vi.mock('@/core/user/user-store.js', () => ({
 	fetchUserByIdOrFailFromDatabase: fetchUserByIdOrFailFromDatabaseMock,
 }));
 

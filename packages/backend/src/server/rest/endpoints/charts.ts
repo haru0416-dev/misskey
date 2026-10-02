@@ -5,7 +5,7 @@
 
 import { endpointMetas as chartsContracts } from '@/server/rest/contracts/charts.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiChartsActiveUsers,
 	handleApiChartsApRequest,
@@ -21,7 +21,7 @@ import {
 	handleApiChartsUsers,
 } from '../chart/charts.js';
 
-export const chartsEndpoints = implementEndpoints<ApiShellDependencies>()(chartsContracts, {
+export const chartsEndpoints = implementEndpoints<ShellDependencies>()(chartsContracts, {
 	'charts/active-users': async ({ deps, input }) => await handleApiChartsActiveUsers(deps, input),
 	'charts/ap-request': async ({ deps, input }) => await handleApiChartsApRequest(deps, input),
 	'charts/drive': async ({ deps, input }) => await handleApiChartsDrive(deps, input),

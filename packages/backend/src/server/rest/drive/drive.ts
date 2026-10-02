@@ -5,13 +5,13 @@
 
 import type { endpointMetas as driveContracts } from '@/server/rest/contracts/drive.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	countDriveFilesByFolderIdFromDatabase,
 	driveFileExistsByMd5AndUserIdFromDatabase,
 	sumDriveFileSizeByUserIdFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
+} from '@/core/drive/drive-file-store.js';
 import {
 	countDriveFoldersByParentIdFromDatabase,
 	createDriveFolderInDatabase,
@@ -21,12 +21,12 @@ import {
 	listDriveFoldersByUserIdFromDatabase,
 	moveDriveFolderInDatabase,
 	updateDriveFolderInDatabase,
-} from '@/core/drive/DriveFolderStore.js';
+} from '@/core/drive/drive-folder-store.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { DriveDependencies, PackedDriveFolder } from '@/core/drive/drive-folder-packing.js';
@@ -69,7 +69,7 @@ export const driveFoldersDeleteParamDef = z.object({
 export async function handleApiDriveFilesCheckExistence(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesCheckExistenceParamDef>,
+	params: Params<typeof driveFilesCheckExistenceParamDef>,
 ): Promise<boolean> {
 	return await driveFileExistsByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 }
@@ -77,7 +77,7 @@ export async function handleApiDriveFilesCheckExistence(
 export async function handleApiDriveFoldersCreate(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersCreateParamDef>,
+	params: Params<typeof driveFoldersCreateParamDef>,
 	errors: ContractErrors<(typeof driveContracts)['drive/folders/create']>,
 ): Promise<PackedDriveFolder> {
 	let parent: DriveFolderRow | null = null;
@@ -106,7 +106,7 @@ export async function handleApiDriveFoldersCreate(
 export async function handleApiDriveFolders(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersParamDef>,
+	params: Params<typeof driveFoldersParamDef>,
 ): Promise<PackedDriveFolder[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const folders = await listDriveFoldersByUserIdFromDatabase(deps.db, me.id, {
@@ -121,7 +121,7 @@ export async function handleApiDriveFolders(
 export async function handleApiDriveFoldersFind(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersFindParamDef>,
+	params: Params<typeof driveFoldersFindParamDef>,
 ): Promise<PackedDriveFolder[]> {
 	const folders = await listDriveFoldersByNameFromDatabase(deps.db, {
 		name: params.name,
@@ -135,7 +135,7 @@ export async function handleApiDriveFoldersFind(
 export async function handleApiDriveFoldersShow(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersShowParamDef>,
+	params: Params<typeof driveFoldersShowParamDef>,
 	errors: ContractErrors<(typeof driveContracts)['drive/folders/show']>,
 ): Promise<PackedDriveFolder> {
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
@@ -152,7 +152,7 @@ export async function handleApiDriveFoldersShow(
 export async function handleApiDriveFoldersUpdate(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersUpdateParamDef>,
+	params: Params<typeof driveFoldersUpdateParamDef>,
 	errors: ContractErrors<(typeof driveContracts)['drive/folders/update']>,
 ): Promise<PackedDriveFolder> {
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
@@ -200,7 +200,7 @@ export async function handleApiDriveFoldersUpdate(
 export async function handleApiDriveFoldersDelete(
 	deps: DriveDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFoldersDeleteParamDef>,
+	params: Params<typeof driveFoldersDeleteParamDef>,
 	errors: ContractErrors<(typeof driveContracts)['drive/folders/delete']>,
 ): Promise<void> {
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
@@ -227,7 +227,7 @@ export async function handleApiDrive(
 	me: MiLocalUser,
 ): Promise<{ capacity: number; usage: number }> {
 	const usage = await sumDriveFileSizeByUserIdFromDatabase(deps.db, me.id);
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 
 	return {
 		capacity: 1024 * 1024 * policies.driveCapacityMb,

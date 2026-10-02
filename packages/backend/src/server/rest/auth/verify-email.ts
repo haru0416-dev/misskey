@@ -4,19 +4,19 @@
  */
 
 import { z } from 'zod';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import {
 	fetchUserProfileByEmailVerifyCodeFromDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { ApiError } from '../error.js';
 import type { MainStreamPublisher } from '../../../core/notification/notification.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiVerifyEmailDependencies = UserPackingDependencies & {
+export type VerifyEmailDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 	publishMainStream?: MainStreamPublisher;
 };
@@ -35,7 +35,7 @@ function noSuchCodeError(): ApiError {
 }
 
 export async function handleApiVerifyEmail(
-	deps: ApiVerifyEmailDependencies,
+	deps: VerifyEmailDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(verifyEmailParamDef, body);
@@ -54,7 +54,7 @@ export async function handleApiVerifyEmail(
 	deps.publishMainStream?.(
 		profile.userId,
 		'meUpdated',
-		await packMeDetailedForApi(deps, user, {
+		await packMeDetailed(deps, user, {
 			includeSecrets: true,
 			profile: {
 				...profile,

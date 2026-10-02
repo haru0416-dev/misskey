@@ -5,7 +5,7 @@
 
 import { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAdminFederationDeleteAllFiles,
 	handleApiAdminFederationRefreshRemoteInstanceMetadata,
@@ -74,7 +74,7 @@ import { handleApiAdminPromoCreate } from '../note/promo.js';
 import { handleApiAdminMeta, handleApiAdminUpdateMeta } from '../meta/meta.js';
 import { handleApiAdminGetIndexStats, handleApiAdminGetTableStats } from '../admin/admin-stats.js';
 
-export const adminEndpoints = implementEndpoints<ApiShellDependencies>()(adminContracts, {
+export const adminEndpoints = implementEndpoints<ShellDependencies>()(adminContracts, {
 	'admin/abuse-user-reports': async ({ deps, input }) => await handleApiAdminAbuseUserReports(deps, input),
 	'admin/accounts/create': async ({ auth, deps, input }) => await handleApiAdminAccountsCreate(deps, auth, input),
 	'admin/accounts/delete': async ({ deps, input, me }) => {

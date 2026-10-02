@@ -15,7 +15,7 @@ import * as htmlParser from 'node-html-parser';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import type { ApiErrorBody } from '@/server/rest/error.js';
+import type { ErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { resolveStreamingUrl, resolveTargetUrl, startJobQueue, testTarget } from './target.js';
 import { expect } from 'vitest';
@@ -766,8 +766,8 @@ export async function sendEnvResetRequest() {
 }
 
 // 実行時の検証は行わないため、エラーレスポンスを確認する異常系アサーションに限って使う。
-export function castAsError(obj: unknown): ApiErrorBody {
-	return obj as ApiErrorBody;
+export function castAsError(obj: unknown): ErrorBody {
+	return obj as ErrorBody;
 }
 
 /**

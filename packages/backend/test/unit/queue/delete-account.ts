@@ -11,10 +11,10 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	deleteUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
-} from '@/core/user/UserStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
+} from '@/core/user/user-store.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/page/page-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueDeleteAccount } from '@/queue/handlers/delete-account.js';
 import type { QueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';

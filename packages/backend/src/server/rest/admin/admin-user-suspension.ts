@@ -5,19 +5,19 @@
 
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { createDeliverJob } from '@/core/queue/DeliverQueue.js';
-import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJobs } from '@/core/queue/QueueOutboxStore.js';
+import { createDeliverJob } from '@/core/queue/deliver-queue.js';
+import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJobs } from '@/core/queue/queue-outbox-store.js';
 import {
 	deleteFollowRequestsByFolloweeIdFromDatabase,
 	deleteFollowRequestsByFollowerIdFromDatabase,
-} from '@/core/user/FollowRequestStore.js';
+} from '@/core/user/follow-request-store.js';
 import {
 	listFollowingsForUnfollowByFollowerIdFromDatabase,
-	listSharedInboxesFromFollowingsInDatabase,
-} from '@/core/user/FollowingStore.js';
-import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+	listSharedInboxesOfFollowingsFromDatabase,
+} from '@/core/user/following-store.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { DbQueue, DeliverQueue, RelationshipQueue } from '@/core/queue/queues.js';
-import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -31,7 +31,7 @@ import { userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import type { CredentialEventPublisher } from '../../../core/events.js';
 
-export type ApiAdminUserSuspensionDependencies = {
+export type AdminUserSuspensionDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -60,7 +60,7 @@ function suspensionDeliveryJobId(prefix: string, userId: MiUser['id'], transitio
 }
 
 async function enqueueSharedInboxDelete(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -74,7 +74,7 @@ async function enqueueSharedInboxDelete(
 		deps.config,
 		renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser),
 	);
-	const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
+	const inboxes = await listSharedInboxesOfFollowingsFromDatabase(deps.db);
 
 	for (const inbox of inboxes) {
 		const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
@@ -93,7 +93,7 @@ async function enqueueSharedInboxDelete(
 }
 
 async function enqueueSharedInboxUndoDelete(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -111,7 +111,7 @@ async function enqueueSharedInboxUndoDelete(
 			localUser,
 		),
 	);
-	const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
+	const inboxes = await listSharedInboxesOfFollowingsFromDatabase(deps.db);
 
 	for (const inbox of inboxes) {
 		const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
@@ -130,7 +130,7 @@ async function enqueueSharedInboxUndoDelete(
 }
 
 async function enqueueUnfollowAllJobs(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	follower: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -156,7 +156,7 @@ async function enqueueUnfollowAllJobs(
 }
 
 async function postSuspend(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -167,7 +167,7 @@ async function postSuspend(
 }
 
 async function postUnsuspend(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -178,7 +178,7 @@ async function postUnsuspend(
 }
 
 async function findSuspensionTarget(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUser> {
 	const params = parseApiParams(adminUserSuspensionParamDef, body);
@@ -191,7 +191,7 @@ async function findSuspensionTarget(
 }
 
 export async function handleQueueUserSuspensionPostEffects(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	data: DbUserSuspensionPostEffectsJobData,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, data.userId);
@@ -208,7 +208,7 @@ export async function handleQueueUserSuspensionPostEffects(
 }
 
 async function changeSuspensionState(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	user: MiUser,
 	isSuspended: boolean,
@@ -257,7 +257,7 @@ async function changeSuspensionState(
 }
 
 export async function handleApiAdminSuspendUser(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
@@ -270,7 +270,7 @@ export async function handleApiAdminSuspendUser(
 }
 
 export async function handleApiAdminUnsuspendUser(
-	deps: ApiAdminUserSuspensionDependencies,
+	deps: AdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {

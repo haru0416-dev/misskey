@@ -5,13 +5,13 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
-import { RootUserAlreadyAssignedError } from '@/core/account/SignupStore.js';
+import { RootUserAlreadyAssignedError } from '@/core/account/signup-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { handleApiAdminAccountsCreate } from '@/server/rest/admin/admin-accounts.js';
-import type { ApiAdminAccountsDependencies } from '@/server/rest/admin/admin-accounts.js';
+import type { AdminAccountsDependencies } from '@/server/rest/admin/admin-accounts.js';
 import type { SignupResponse } from '@/server/rest/auth/signup.js';
 
 const {
@@ -30,17 +30,17 @@ const {
 	packSignupUserMock: vi.fn(),
 }));
 
-vi.mock('@/core/meta/MetaStore.js', () => ({
+vi.mock('@/core/meta/meta-store.js', () => ({
 	fetchMetaFromDatabase: fetchMetaFromDatabaseMock,
 }));
 
-vi.mock('@/core/role/RoleStore.js', () => ({
+vi.mock('@/core/role/role-store.js', () => ({
 	fetchRolesCacheVersionFromDatabase: vi.fn(async () => 0),
 	listRolesFromDatabase: listRolesFromDatabaseMock,
 	listRolesFromDatabaseCachedByVersion: listRolesFromDatabaseMock,
 }));
 
-vi.mock('@/core/role/RoleAssignmentStore.js', () => ({
+vi.mock('@/core/role/role-assignment-store.js', () => ({
 	listRoleAssignmentsByUserIdFromDatabase: listRoleAssignmentsByUserIdFromDatabaseMock,
 	listRoleAssignmentsByUserIdFromDatabaseCachedByVersion: listRoleAssignmentsByUserIdFromDatabaseMock,
 }));
@@ -54,12 +54,12 @@ vi.mock('@/server/rest/auth/signup.js', () => ({
 	packSignupUser: packSignupUserMock,
 }));
 
-function createDeps(setupPassword: string | null = null): ApiAdminAccountsDependencies {
+function createDeps(setupPassword: string | null = null): AdminAccountsDependencies {
 	return {
 		config: { instance: { setupPassword } } as unknown as Config,
 		db: {} as MiDrizzleDatabase,
 		meta: { id: 'x', rootUserId: null, rootUser: null } as MiMeta,
-	} as ApiAdminAccountsDependencies;
+	} as AdminAccountsDependencies;
 }
 
 describe('handleApiAdminAccountsCreate', () => {

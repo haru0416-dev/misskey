@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -180,7 +180,7 @@ function notificationGroupKey(notification: Record<string, unknown>): string | n
 export async function handleApiNotificationsDelete(
 	deps: NotificationDependencies,
 	me: MiUser,
-	params: ApiParams<typeof notificationsDeleteParamDef>,
+	params: Params<typeof notificationsDeleteParamDef>,
 ): Promise<void> {
 	const streamKey = `notificationTimeline:${me.id}`;
 	const redisId = await resolveNotificationStreamId(deps, me.id, params.notificationId);

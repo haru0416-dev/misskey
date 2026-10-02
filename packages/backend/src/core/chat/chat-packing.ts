@@ -8,7 +8,7 @@ import {
 	fetchChatRoomInvitationByIdOrFailFromDatabase,
 	fetchChatRoomInvitationFromDatabase,
 	fetchChatRoomMembershipFromDatabase,
-} from '@/core/chat/ChatRoomStore.js';
+} from '@/core/chat/chat-room-store.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';

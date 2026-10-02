@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { verifyCap } from '@/core/captcha/CaptchaLogic.js';
+import { verifyCap } from '@/core/captcha/captcha-logic.js';
 import { comparePassword } from '@/misc/password.js';
 import type * as Misskey from 'misskey-js';
 import type * as Redis from 'ioredis';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createSigninInDatabase } from '@/core/account/SigninStore.js';
-import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/account/UserSecurityKeyStore.js';
-import type { UserAuthService } from '@/core/account/UserAuthService.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
-import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/UserStore.js';
-import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { createSigninInDatabase } from '@/core/account/signin-store.js';
+import { countUserSecurityKeysByUserIdFromDatabase } from '@/core/account/user-security-key-store.js';
+import type { UserAuthService } from '@/core/account/user-auth-service.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/user-store.js';
+import type { WebAuthnService } from '@/core/account/webauthn-service.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -29,9 +29,9 @@ import type Logger from '@/logger.js';
 import { createLoginNotification } from '../../../core/notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import { isApiRateLimited } from '../rate-limit.js';
-import type { ApiErrorBody, ApiErrorKind } from '../error.js';
+import type { ErrorBody, ErrorKind } from '../error.js';
 
-export type ApiSigninDependencies = NotificationDependencies & {
+export type SigninDependencies = NotificationDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -49,7 +49,7 @@ export type ApiSigninDependencies = NotificationDependencies & {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-type ApiSigninBody = Record<string, unknown> & {
+type SigninBody = Record<string, unknown> & {
 	username?: unknown;
 	password?: unknown;
 	token?: unknown;
@@ -58,22 +58,22 @@ type ApiSigninBody = Record<string, unknown> & {
 	code?: unknown;
 };
 
-export type ApiSigninRequest = {
-	body: ApiSigninBody;
+export type SigninRequest = {
+	body: SigninBody;
 	headers: Headers;
 	ip: string;
 };
 
-export type ApiSigninErrorBody = ApiErrorBody;
+export type SigninErrorBody = ErrorBody;
 
-export type ApiSigninFlowResult = {
+export type SigninFlowResult = {
 	status: number;
-	body?: Misskey.entities.SigninFlowResponse | ApiSigninErrorBody;
+	body?: Misskey.entities.SigninFlowResponse | SigninErrorBody;
 };
 
-export type ApiSigninErrorResult = {
+export type SigninErrorResult = {
 	status: number;
-	body: ApiSigninErrorBody;
+	body: SigninErrorBody;
 };
 
 type CaptchaResponse = {
@@ -81,10 +81,10 @@ type CaptchaResponse = {
 	'error-codes'?: string[];
 };
 
-export function honoApiSigninError(status: number, id: string): ApiSigninErrorResult {
+export function honoApiSigninError(status: number, id: string): SigninErrorResult {
 	let message = 'Invalid param.';
 	let code = 'INVALID_PARAM';
-	let kind: ApiErrorKind = 'client';
+	let kind: ErrorKind = 'client';
 	if (status === 403) {
 		message = 'Authentication failed.';
 		code = 'AUTHENTICATION_FAILED';
@@ -102,7 +102,7 @@ export function honoApiSigninError(status: number, id: string): ApiSigninErrorRe
 	};
 }
 
-export function tooManyAuthenticationFailures(): ApiSigninErrorResult {
+export function tooManyAuthenticationFailures(): SigninErrorResult {
 	return {
 		status: 429,
 		body: {
@@ -124,7 +124,7 @@ function headersObject(headers: Headers): Record<string, string> {
 	return result;
 }
 
-async function isSigninRateLimited(deps: ApiSigninDependencies, ip: string): Promise<boolean> {
+async function isSigninRateLimited(deps: SigninDependencies, ip: string): Promise<boolean> {
 	return await isApiRateLimited(
 		deps,
 		{
@@ -137,8 +137,8 @@ async function isSigninRateLimited(deps: ApiSigninDependencies, ip: string): Pro
 	);
 }
 
-async function getCaptchaResponse(
-	deps: ApiSigninDependencies,
+async function fetchCaptchaResponse(
+	deps: SigninDependencies,
 	url: string,
 	secret: string,
 	response: string | null | undefined,
@@ -172,33 +172,38 @@ async function getCaptchaResponse(
 }
 
 async function verifyRecaptcha(
-	deps: ApiSigninDependencies,
+	deps: SigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
-	const result = await getCaptchaResponse(deps, 'https://www.recaptcha.net/recaptcha/api/siteverify', secret, response);
+	const result = await fetchCaptchaResponse(
+		deps,
+		'https://www.recaptcha.net/recaptcha/api/siteverify',
+		secret,
+		response,
+	);
 	if (result.success !== true) {
 		throw new Error(`recaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
 	}
 }
 
 async function verifyHcaptcha(
-	deps: ApiSigninDependencies,
+	deps: SigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
-	const result = await getCaptchaResponse(deps, 'https://hcaptcha.com/siteverify', secret, response);
+	const result = await fetchCaptchaResponse(deps, 'https://hcaptcha.com/siteverify', secret, response);
 	if (result.success !== true) {
 		throw new Error(`hcaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
 	}
 }
 
 async function verifyTurnstile(
-	deps: ApiSigninDependencies,
+	deps: SigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
-	const result = await getCaptchaResponse(
+	const result = await fetchCaptchaResponse(
 		deps,
 		'https://challenges.cloudflare.com/turnstile/v0/siteverify',
 		secret,
@@ -215,7 +220,7 @@ function verifyTestcaptcha(response: string | null | undefined): void {
 	}
 }
 
-async function verifyEnabledCaptchas(deps: ApiSigninDependencies, body: Record<string, unknown>): Promise<void> {
+async function verifyEnabledCaptchas(deps: SigninDependencies, body: Record<string, unknown>): Promise<void> {
 	if (process.env['NODE_ENV'] === 'test') {
 		return;
 	}
@@ -264,11 +269,7 @@ function packSignin(config: Config, src: MiSignin): Record<string, unknown> {
 	};
 }
 
-async function appendFailedSignin(
-	deps: ApiSigninDependencies,
-	request: ApiSigninRequest,
-	user: MiLocalUser,
-): Promise<void> {
+async function appendFailedSignin(deps: SigninDependencies, request: SigninRequest, user: MiLocalUser): Promise<void> {
 	await createSigninInDatabase(deps.db, {
 		id: genId(),
 		userId: user.id,
@@ -279,10 +280,10 @@ async function appendFailedSignin(
 }
 
 export function completeApiSignin(
-	deps: ApiSigninDependencies,
-	request: ApiSigninRequest,
+	deps: SigninDependencies,
+	request: SigninRequest,
 	user: MiLocalUser,
-): ApiSigninFlowResult {
+): SigninFlowResult {
 	trackPromise(
 		(async () => {
 			try {
@@ -324,20 +325,17 @@ export function completeApiSignin(
 }
 
 export async function failApiSignin(
-	deps: ApiSigninDependencies,
-	request: ApiSigninRequest,
+	deps: SigninDependencies,
+	request: SigninRequest,
 	user: MiLocalUser,
 	status: number,
 	id: string,
-): Promise<ApiSigninErrorResult> {
+): Promise<SigninErrorResult> {
 	await appendFailedSignin(deps, request, user);
 	return honoApiSigninError(status, id);
 }
 
-export async function handleApiSigninFlow(
-	deps: ApiSigninDependencies,
-	request: ApiSigninRequest,
-): Promise<ApiSigninFlowResult> {
+export async function handleApiSigninFlow(deps: SigninDependencies, request: SigninRequest): Promise<SigninFlowResult> {
 	const body = request.body;
 	const username = body.username;
 	const password = body.password;

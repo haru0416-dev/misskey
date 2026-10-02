@@ -8,21 +8,21 @@ import { Hono } from 'hono';
 import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
+import type { NotePostProcessing } from '@/core/note/note-post-processing.js';
 import type { MiMeta } from '@/models/_.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
-import type { FileInfoService } from '@/core/drive/FileInfoService.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
-import type { UserAuthService } from '@/core/account/UserAuthService.js';
-import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { DownloadService } from '@/core/net/download-service.js';
+import type { FileInfoService } from '@/core/drive/file-info-service.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import type { ImageProcessingService } from '@/core/drive/image-processing-service.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
+import type { S3Service } from '@/core/drive/s3-service.js';
+import type { UserAuthService } from '@/core/account/user-auth-service.js';
+import type { VideoProcessingService } from '@/core/drive/video-processing-service.js';
+import type { WebAuthnService } from '@/core/account/webauthn-service.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import type Logger from '@/logger.js';
-import type { ApiAdminQueueDependencies } from './admin/admin-queue.js';
+import type { AdminQueueEndpointDependencies } from './admin/admin-queue.js';
 import type { MainStreamPublisher } from '../../core/notification/notification.js';
 import type {
 	AdminStreamPublisher,
@@ -41,14 +41,14 @@ import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerDriveRoutes } from './routes/drive.js';
 import { registerUsersRoutes } from './routes/users.js';
 
-export type ApiShellDependencies = ApiAdminQueueDependencies & {
+export type ShellDependencies = AdminQueueEndpointDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
-	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
+	fileInfoService: Pick<FileInfoService, 'fetchFileInfo'>;
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 	internalStorageService: Pick<InternalStorageService, 'del' | 'resolvePath' | 'saveFromBuffer' | 'saveFromPath'>;
@@ -90,7 +90,7 @@ const unknownApiEndpoint = {
 	},
 };
 
-export function createApiShellApp(deps: ApiShellDependencies): Hono {
+export function createApiShellApp(deps: ShellDependencies): Hono {
 	const app = new Hono();
 
 	app.options('*', (c) => {

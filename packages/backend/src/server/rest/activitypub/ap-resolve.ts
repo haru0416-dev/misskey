@@ -7,40 +7,40 @@ import { toPuny } from '@/misc/to-puny.js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import { isCollectionOrOrderedCollection, getApId } from '@/core/activitypub/type.js';
 import type { ICollection, IObject, IOrderedCollection } from '@/core/activitypub/type.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
-import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/system-account-logic.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/follow-request-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
 	fetchNoteByUriFromDatabase,
-} from '@/core/note/NoteStore.js';
-import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/note/NoteReactionStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/note/PollStore.js';
+} from '@/core/note/note-store.js';
+import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/note/note-reaction-store.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/note/poll-store.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUriFromDatabase,
-} from '@/core/user/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
-import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/user/UserPublickeyStore.js';
+} from '@/core/user/user-store.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/user-keypair-store.js';
+import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/user/user-publickey-store.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import { addActivityContext, renderCreate, renderLike, renderNote } from '../../../core/activitypub/notes-ap.js';
-import { renderPersonForApi } from '../account/account-update.js';
-import type { ApiAccountUpdateDependencies } from '../account/account-update.js';
+import { renderPerson } from '../account/account-update.js';
+import type { AccountUpdateDependencies } from '../account/account-update.js';
 
-export type ApiApResolveDependencies = ApiAccountUpdateDependencies & {
+export type ApResolveDependencies = AccountUpdateDependencies & {
 	httpRequestService: HttpRequestService;
 };
 
@@ -129,7 +129,7 @@ export function parseLocalApUri(
 	};
 }
 
-export async function getNoteFromApIdForApi(
+export async function fetchNoteFromApId(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
 ): Promise<MiNote | null> {
@@ -143,7 +143,7 @@ export async function getNoteFromApIdForApi(
 	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
 }
 
-export async function getUserFromApIdForApi(
+export async function fetchUserFromApId(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
 ): Promise<MiLocalUser | MiRemoteUser | null> {
@@ -159,15 +159,12 @@ export async function getUserFromApIdForApi(
 	return user == null || user.isDeleted ? null : (user as MiRemoteUser);
 }
 
-export type ApiAuthUser = {
+export type AuthUser = {
 	user: MiRemoteUser;
 	key: MiUserPublickey | null;
 };
 
-export async function getAuthUserFromKeyIdForApi(
-	deps: { db: MiDrizzleDatabase },
-	keyId: string,
-): Promise<ApiAuthUser | null> {
+export async function fetchAuthUserFromKeyId(deps: { db: MiDrizzleDatabase }, keyId: string): Promise<AuthUser | null> {
 	const key = await fetchUserPublickeyByKeyIdFromDatabase(deps.db, keyId);
 	if (key == null) {
 		return null;
@@ -181,7 +178,7 @@ export async function getAuthUserFromKeyIdForApi(
 	return { user: user as MiRemoteUser, key };
 }
 
-function renderQuestionForApi(
+function renderQuestion(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	note: { id: string; text: string | null },
@@ -203,7 +200,7 @@ function renderQuestionForApi(
 	};
 }
 
-function renderFollowForApi(
+function renderFollow(
 	config: Pick<Config, 'instance'>,
 	follower: MiLocalUser | MiRemoteUser,
 	followee: MiLocalUser | MiRemoteUser,
@@ -219,7 +216,7 @@ function renderFollowForApi(
 	};
 }
 
-async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: string): Promise<IObject> {
+async function resolveLocalApObject(deps: ApResolveDependencies, url: string): Promise<IObject> {
 	const parsed = parseLocalApUri(deps.config, url);
 	if (!parsed.local) {
 		throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
@@ -239,12 +236,12 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 		}
 		case 'users': {
 			const user = await fetchUserByIdOrFailFromDatabase(deps.db, parsed.id);
-			return (await renderPersonForApi(deps, user as MiLocalUser)) as unknown as IObject;
+			return (await renderPerson(deps, user as MiLocalUser)) as unknown as IObject;
 		}
 		case 'questions': {
 			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
 			const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, parsed.id);
-			return renderQuestionForApi(deps.config, { id: note.userId }, note, poll) as unknown as IObject;
+			return renderQuestion(deps.config, { id: note.userId }, note, poll) as unknown as IObject;
 		}
 		case 'likes': {
 			const reaction = await fetchNoteReactionByIdOrFailFromDatabase(deps.db, parsed.id);
@@ -268,10 +265,7 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 					'resolveLocal: follower or followee does not exist',
 				);
 			}
-			return addActivityContext(
-				deps.config,
-				renderFollowForApi(deps.config, follower, followee, url),
-			) as unknown as IObject;
+			return addActivityContext(deps.config, renderFollow(deps.config, follower, followee, url)) as unknown as IObject;
 		}
 		default:
 			throw new IdentifiableError(
@@ -281,8 +275,8 @@ async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: s
 	}
 }
 
-async function signedGetForApi(
-	deps: ApiApResolveDependencies,
+async function signedGet(
+	deps: ApResolveDependencies,
 	url: string,
 	user: { id: MiUser['id'] },
 	allowSoftfail: FetchAllowSoftFailMask,
@@ -321,7 +315,7 @@ async function signedGetForApi(
 			if (alternate) {
 				const href = alternate.getAttribute('href');
 				if (href && punyHost(url) === punyHost(href)) {
-					return await signedGetForApi(deps, href, user, allowSoftfail, false);
+					return await signedGet(deps, href, user, allowSoftfail, false);
 				}
 			}
 		} catch {
@@ -337,14 +331,14 @@ async function signedGetForApi(
 	return activity;
 }
 
-export type ApiSignedPostDependencies = {
+export type SignedPostDependencies = {
 	config: Pick<Config, 'instance'>;
 	db: MiDrizzleDatabase;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
-export async function signedPostForApi(
-	deps: ApiSignedPostDependencies,
+export async function signedPost(
+	deps: SignedPostDependencies,
 	user: { id: MiUser['id'] },
 	url: string,
 	object: unknown,
@@ -376,8 +370,8 @@ export async function signedPostForApi(
  * 複数回の解決を跨いで再帰を防ぐ呼び出し元は、同じ `history` Set を明示的に使い回すこと。
  * 省略時は呼び出しごとに新しい Set を使うため、単発解決に限って使用できる。
  */
-export async function resolveApObjectForApi(
-	deps: ApiApResolveDependencies,
+export async function resolveApObject(
+	deps: ApResolveDependencies,
 	value: string | IObject,
 	allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
 	history = new Set<string>(),
@@ -400,7 +394,7 @@ export async function resolveApObjectForApi(
 
 	const host = extractDbHost(value);
 	if (isSelfHost(deps.config, host)) {
-		return await resolveLocalApObjectForApi(deps, value);
+		return await resolveLocalApObject(deps, value);
 	}
 
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
@@ -408,7 +402,7 @@ export async function resolveApObjectForApi(
 	}
 
 	const object = deps.meta.signToActivityPubGet
-		? await signedGetForApi(
+		? await signedGet(
 				deps,
 				value,
 				await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'actor'),
@@ -426,15 +420,13 @@ export async function resolveApObjectForApi(
 	return object;
 }
 
-export async function resolveCollectionForApi(
-	deps: ApiApResolveDependencies,
+export async function resolveCollection(
+	deps: ApResolveDependencies,
 	value: string | IObject,
 	history = new Set<string>(),
 ): Promise<ICollection | IOrderedCollection> {
 	const collection =
-		typeof value === 'string'
-			? await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history)
-			: value;
+		typeof value === 'string' ? await resolveApObject(deps, value, FetchAllowSoftFailMask.Strict, history) : value;
 
 	if (isCollectionOrOrderedCollection(collection)) {
 		return collection;

@@ -6,7 +6,7 @@
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { isKeywordIncluded, isSupportedKeywordFilter } from '@/misc/is-keyword-included.js';
-import { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaParamDef } from '@/server/rest/admin/admin-update-meta-logic.js';
 
 // 正規表現形式 (/…/) と誤認されず、空白 AND 区切りとも衝突しない語だけを作る。
 const word = fc

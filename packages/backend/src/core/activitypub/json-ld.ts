@@ -6,7 +6,7 @@
 import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
 
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { bindThis } from '@/decorators.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getCachedSigner } from './signer-cache.js';

@@ -6,7 +6,7 @@
 import { endpointMetas as driveContracts } from '@/server/rest/contracts/drive.js';
 import { pickContracts } from '../endpoint-contract.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiDriveFilesAttachedChatMessages,
 	handleApiDriveFilesAttachedNotes,
@@ -31,7 +31,7 @@ import {
 } from '../drive/drive.js';
 import { handleApiDriveFilesUploadFromUrl } from '../drive/drive-file-upload.js';
 
-export const driveEndpoints = implementEndpoints<ApiShellDependencies>()(
+export const driveEndpoints = implementEndpoints<ShellDependencies>()(
 	pickContracts(driveContracts, [
 		'drive',
 		'drive/files',

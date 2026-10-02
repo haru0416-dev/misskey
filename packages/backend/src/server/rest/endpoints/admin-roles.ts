@@ -5,7 +5,7 @@
 
 import { endpointMetas as adminRolesContracts } from '@/server/rest/contracts/admin-roles.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAdminRolesAssign,
 	handleApiAdminRolesCreate,
@@ -18,7 +18,7 @@ import {
 	handleApiAdminRolesUsers,
 } from '../admin/admin-roles.js';
 
-export const adminRolesEndpoints = implementEndpoints<ApiShellDependencies>()(adminRolesContracts, {
+export const adminRolesEndpoints = implementEndpoints<ShellDependencies>()(adminRolesContracts, {
 	'admin/roles/assign': async ({ deps, input, me }) => {
 		await handleApiAdminRolesAssign(deps, me, input);
 	},

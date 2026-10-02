@@ -109,9 +109,9 @@ onUnmounted(() => {
 });
 
 if (window.innerWidth > 1024) {
-	const tempUI = miLocalStorage.getItem('ui_temp');
-	if (tempUI) {
-		miLocalStorage.setItem('ui', tempUI);
+	const tempUi = miLocalStorage.getItem('ui_temp');
+	if (tempUi) {
+		miLocalStorage.setItem('ui', tempUi);
 		miLocalStorage.removeItem('ui_temp');
 		window.location.reload();
 	}

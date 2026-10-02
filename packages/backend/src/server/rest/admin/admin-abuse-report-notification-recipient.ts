@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -12,15 +12,15 @@ import {
 	fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase,
 	listAbuseReportNotificationRecipientsFromDatabase,
 	updateAbuseReportNotificationRecipientInDatabase,
-} from '@/core/abuse/AbuseReportNotificationRecipientStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+} from '@/core/abuse/abuse-report-notification-recipient-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/role-assignment-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
 import {
 	fetchSystemWebhookByIdOrFailFromDatabase,
 	listSystemWebhooksFromDatabase,
-} from '@/core/webhook/SystemWebhookStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/webhook/system-webhook-store.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/user-profile-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -32,7 +32,7 @@ import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
+export type AdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
 
 export const adminAbuseReportNotificationRecipientListParamDef = z.object({
 	method: z.array(z.enum(['email', 'webhook'])).optional(),
@@ -108,7 +108,7 @@ function emailAddressNotSetError(): ApiError {
 }
 
 async function listModeratorIdsForAbuseReportNotification(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 ): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
 	const moderatorRoleIds = roles.filter((role) => role.isModerator || role.isAdministrator).map((role) => role.id);
@@ -126,7 +126,7 @@ async function listModeratorIdsForAbuseReportNotification(
 }
 
 async function removeUnauthorizedRecipientUsers(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
@@ -160,7 +160,7 @@ async function removeUnauthorizedRecipientUsers(
 }
 
 async function fetchRecipients(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	params?: {
 		ids?: MiAbuseReportNotificationRecipient['id'][];
 		method?: RecipientMethod[];
@@ -181,7 +181,7 @@ async function fetchRecipients(
 }
 
 async function assertRecipientCorrelation(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	params: Pick<AdminAbuseReportNotificationRecipientCreateParams, 'method' | 'userId' | 'systemWebhookId'>,
 ): Promise<void> {
 	if (params.method === 'email') {
@@ -202,7 +202,7 @@ async function assertRecipientCorrelation(
 }
 
 async function packApiAbuseReportNotificationRecipient(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	recipient: MiAbuseReportNotificationRecipient,
 	refs?: {
 		users: Map<string, Packed<'UserLite'>>;
@@ -233,7 +233,7 @@ async function packApiAbuseReportNotificationRecipient(
 }
 
 async function packApiAbuseReportNotificationRecipients(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
 	const userIds = recipients.map((recipient) => recipient.userId).filter((x) => x != null);
@@ -258,8 +258,8 @@ async function packApiAbuseReportNotificationRecipients(
 }
 
 export async function handleApiAdminAbuseReportNotificationRecipientList(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
-	params: ApiParams<typeof adminAbuseReportNotificationRecipientListParamDef>,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
+	params: Params<typeof adminAbuseReportNotificationRecipientListParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
 	const recipients = await fetchRecipients(deps, omitUndefined({ method: params.method }));
 
@@ -267,8 +267,8 @@ export async function handleApiAdminAbuseReportNotificationRecipientList(
 }
 
 export async function handleApiAdminAbuseReportNotificationRecipientShow(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
-	params: ApiParams<typeof adminAbuseReportNotificationRecipientShowParamDef>,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
+	params: Params<typeof adminAbuseReportNotificationRecipientShowParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
 	if (recipients.length === 0) {
@@ -283,9 +283,9 @@ export async function handleApiAdminAbuseReportNotificationRecipientShow(
 }
 
 export async function handleApiAdminAbuseReportNotificationRecipientCreate(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAbuseReportNotificationRecipientCreateParamDef>,
+	params: Params<typeof adminAbuseReportNotificationRecipientCreateParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
 	await assertRecipientCorrelation(deps, params);
 
@@ -307,9 +307,9 @@ export async function handleApiAdminAbuseReportNotificationRecipientCreate(
 }
 
 export async function handleApiAdminAbuseReportNotificationRecipientUpdate(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAbuseReportNotificationRecipientUpdateParamDef>,
+	params: Params<typeof adminAbuseReportNotificationRecipientUpdateParamDef>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
 	await assertRecipientCorrelation(deps, params);
 
@@ -336,9 +336,9 @@ export async function handleApiAdminAbuseReportNotificationRecipientUpdate(
 }
 
 export async function handleApiAdminAbuseReportNotificationRecipientDelete(
-	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: AdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAbuseReportNotificationRecipientDeleteParamDef>,
+	params: Params<typeof adminAbuseReportNotificationRecipientDeleteParamDef>,
 ): Promise<void> {
 	const recipient = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, { ids: [params.id] });
 

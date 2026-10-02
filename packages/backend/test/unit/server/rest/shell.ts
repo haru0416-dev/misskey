@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { muting } from '@/db/schema/muting.js';

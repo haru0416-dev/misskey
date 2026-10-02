@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
-import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/chat/ChatApprovalStore.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
+import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/chat/chat-approval-store.js';
 import {
 	addChatMessageReactionInDatabase,
 	createChatMessageInDatabase,
@@ -20,7 +20,7 @@ import {
 	listUserChatHistoryFromDatabase,
 	removeChatMessageReactionInDatabase,
 	searchChatMessagesFromDatabase,
-} from '@/core/chat/ChatMessageStore.js';
+} from '@/core/chat/chat-message-store.js';
 import {
 	ChatRoomCapacityExceededError,
 	ChatRoomInvitationConflictError,
@@ -46,25 +46,25 @@ import {
 	listChatRoomsByIdsFromDatabase,
 	listChatRoomsByOwnerIdFromDatabase,
 	updateChatRoomInDatabase,
-	updateChatRoomInvitationIgnoredFromDatabase,
-	updateChatRoomMembershipMuteFromDatabase,
-} from '@/core/chat/ChatRoomStore.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+	updateChatRoomInvitationIgnoredInDatabase,
+	updateChatRoomMembershipMuteInDatabase,
+} from '@/core/chat/chat-room-store.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/drive-file-store.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/emoji-store.js';
 import {
 	followingExistsInDatabase,
 	countMutualFollowingsBetweenUsersFromDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
-import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { mutingExistsInDatabase } from '@/core/user/muting-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/user-profile-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -81,7 +81,7 @@ import { xaddNotification } from '../../../core/notification/notification.js';
 import { ApiError, invalidParamError } from '../error.js';
 import { packDriveFile, packDriveFileManyByIds } from '../../../core/drive/drive-file-packing.js';
 import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
-import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
 import { pushSwNotification } from '../../../core/notification/push-notification.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import { resolveDateIdPagination, resolveIdPagination } from '@/misc/id-pagination.js';
@@ -96,7 +96,7 @@ const MAX_ROOM_MEMBERS = 50;
 const MAX_REACTIONS_PER_MESSAGE = 100;
 const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 
-function normalizeEmojiStringForApi(x: string): string {
+function normalizeEmojiString(x: string): string {
 	const match = emojiRegex.exec(x);
 	if (match) {
 		const unicode = match[0];
@@ -106,7 +106,7 @@ function normalizeEmojiStringForApi(x: string): string {
 	throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 }
 
-async function packChatMessageUsersForApi(
+async function packChatMessageUsers(
 	deps: ChatDependencies,
 	messages: MiChatMessage[],
 	packedUserHint?: Map<MiUser['id'], Packed<'UserLite'>>,
@@ -160,7 +160,7 @@ async function packChatMessageUsersForApi(
 	return { packedUsers, missingUserIds };
 }
 
-export async function packChatMessageDetailedForApi(
+export async function packChatMessageDetailed(
 	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	me?: { id: MiUser['id'] },
@@ -177,7 +177,7 @@ export async function packChatMessageDetailedForApi(
 	const packedRooms = options?._hint_?.packedRooms;
 
 	const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(deps.db, src);
-	const { packedUsers } = await packChatMessageUsersForApi(
+	const { packedUsers } = await packChatMessageUsers(
 		deps,
 		[message],
 		options?._hint_?.packedUsers,
@@ -216,7 +216,7 @@ export async function packChatMessageDetailedForApi(
 	} as Packed<'ChatMessage'>;
 }
 
-export async function packChatMessagesDetailedForApi(
+export async function packChatMessagesDetailed(
 	deps: ChatDependencies,
 	messages: MiChatMessage[],
 	me: { id: MiUser['id'] },
@@ -226,12 +226,12 @@ export async function packChatMessagesDetailedForApi(
 	}
 
 	const [packedUserData, packedFiles, packedRooms] = await Promise.all([
-		packChatMessageUsersForApi(deps, messages),
+		packChatMessageUsers(deps, messages),
 		packDriveFileManyByIds(
 			deps,
 			messages.map((m) => m.fileId).filter((x): x is string => x != null),
 		).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null]))),
-		packChatRoomsForApi(
+		packChatRooms(
 			deps,
 			messages.map((m) => m.toRoom ?? m.toRoomId).filter((x): x is MiChatRoom | string => x != null),
 			me,
@@ -240,12 +240,12 @@ export async function packChatMessagesDetailedForApi(
 
 	return await Promise.all(
 		messages.map((message) =>
-			packChatMessageDetailedForApi(deps, message, me, { _hint_: { ...packedUserData, packedFiles, packedRooms } }),
+			packChatMessageDetailed(deps, message, me, { _hint_: { ...packedUserData, packedFiles, packedRooms } }),
 		),
 	);
 }
 
-async function packChatMessageLiteFor1on1ForApi(
+async function packChatMessageLiteFor1on1(
 	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: { _hint_?: { packedFiles: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null> } },
@@ -273,7 +273,7 @@ async function packChatMessageLiteFor1on1ForApi(
 	} as Packed<'ChatMessageLiteFor1on1'>;
 }
 
-async function packChatMessagesLiteFor1on1ForApi(
+async function packChatMessagesLiteFor1on1(
 	deps: ChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
@@ -287,11 +287,11 @@ async function packChatMessagesLiteFor1on1ForApi(
 	).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null])));
 
 	return await Promise.all(
-		messages.map((message) => packChatMessageLiteFor1on1ForApi(deps, message, { _hint_: { packedFiles } })),
+		messages.map((message) => packChatMessageLiteFor1on1(deps, message, { _hint_: { packedFiles } })),
 	);
 }
 
-async function packChatMessageLiteForRoomForApi(
+async function packChatMessageLiteForRoom(
 	deps: ChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: {
@@ -330,7 +330,7 @@ async function packChatMessageLiteForRoomForApi(
 	} as Packed<'ChatMessageLiteForRoom'>;
 }
 
-async function packChatMessagesLiteForRoomForApi(
+async function packChatMessagesLiteForRoom(
 	deps: ChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
@@ -357,13 +357,11 @@ async function packChatMessagesLiteForRoomForApi(
 	]);
 
 	return await Promise.all(
-		messages.map((message) =>
-			packChatMessageLiteForRoomForApi(deps, message, { _hint_: { packedFiles, packedUsers } }),
-		),
+		messages.map((message) => packChatMessageLiteForRoom(deps, message, { _hint_: { packedFiles, packedUsers } })),
 	);
 }
 
-async function packChatRoomsForApi(
+async function packChatRooms(
 	deps: ChatDependencies,
 	rooms: (MiChatRoom | MiChatRoom['id'])[],
 	me: { id: MiUser['id'] },
@@ -411,7 +409,7 @@ async function packChatRoomsForApi(
 	);
 }
 
-export async function packChatRoomInvitationsForApi(
+export async function packChatRoomInvitations(
 	deps: ChatDependencies,
 	invitations: ChatRoomInvitationPackable[],
 	me: { id: MiUser['id'] },
@@ -421,7 +419,7 @@ export async function packChatRoomInvitationsForApi(
 	}
 
 	const [packedRooms, packedUsers] = await Promise.all([
-		packChatRoomsForApi(
+		packChatRooms(
 			deps,
 			invitations.map((invitation) => invitation.room ?? invitation.roomId),
 			me,
@@ -439,7 +437,7 @@ export async function packChatRoomInvitationsForApi(
 	);
 }
 
-async function packChatRoomMembershipForApi(
+async function packChatRoomMembership(
 	deps: ChatDependencies,
 	src: ChatRoomMembershipRow['id'] | ChatRoomMembershipPackable,
 	me: { id: MiUser['id'] },
@@ -471,7 +469,7 @@ async function packChatRoomMembershipForApi(
 	} as Packed<'ChatRoomMembership'>;
 }
 
-async function packChatRoomMembershipsForApi(
+async function packChatRoomMemberships(
 	deps: ChatDependencies,
 	memberships: ChatRoomMembershipPackable[],
 	me: { id: MiUser['id'] },
@@ -489,7 +487,7 @@ async function packChatRoomMembershipsForApi(
 				).then((users) => new Map(users.map((u) => [u.id, u])))
 			: Promise.resolve(undefined),
 		options.populateRoom
-			? packChatRoomsForApi(
+			? packChatRooms(
 					deps,
 					memberships.map((x) => x.room ?? x.roomId),
 					me,
@@ -499,7 +497,7 @@ async function packChatRoomMembershipsForApi(
 
 	return await Promise.all(
 		memberships.map((membership) =>
-			packChatRoomMembershipForApi(deps, membership, me, {
+			packChatRoomMembership(deps, membership, me, {
 				...options,
 				_hint_: omitUndefined({ packedUsers, packedRooms }),
 			}),
@@ -507,12 +505,12 @@ async function packChatRoomMembershipsForApi(
 	);
 }
 
-async function getChatAvailabilityForApi(
+async function fetchChatAvailability(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 ): Promise<{ read: boolean; write: boolean }> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	const policies = await getRolePolicies(deps, user);
+	const policies = await fetchRolePolicies(deps, user);
 
 	switch (policies.chatAvailability) {
 		case 'available':
@@ -526,12 +524,12 @@ async function getChatAvailabilityForApi(
 	}
 }
 
-export async function checkChatAvailabilityForApi(
+export async function checkChatAvailability(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	permission: 'read' | 'write',
 ): Promise<void> {
-	const policy = await getChatAvailabilityForApi(deps, userId);
+	const policy = await fetchChatAvailability(deps, userId);
 	if (policy[permission] === false) {
 		throw new ApiError({
 			status: 403,
@@ -543,7 +541,7 @@ export async function checkChatAvailabilityForApi(
 	}
 }
 
-async function pushChatNotificationForApi(
+async function pushChatNotification(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	body: Packed<'ChatMessage'>,
@@ -553,7 +551,7 @@ async function pushChatNotificationForApi(
 
 // notifierId を考慮したフィルタ (never/following/follower/mutualFollow/
 // followingOrFollower と mute 判定) を DB から直接読み、現在の関係で通知可否を判定する。
-async function createChatRoomInvitationNotificationForApi(
+async function createChatRoomInvitationNotification(
 	deps: ChatDependencies,
 	notifieeId: MiUser['id'],
 	invitationId: string,
@@ -610,7 +608,7 @@ async function createChatRoomInvitationNotificationForApi(
 	void pushSwNotification(deps, notifieeId, 'notification', notification);
 }
 
-async function createChatMessageToUserForApi(
+async function createChatMessageToUser(
 	deps: ChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toUser: MiUser,
@@ -643,7 +641,7 @@ async function createChatMessageToUserForApi(
 		}
 	}
 
-	if (!(await getChatAvailabilityForApi(deps, toUser.id)).write) {
+	if (!(await fetchChatAvailability(deps, toUser.id)).write) {
 		throw chatNotAvailableError();
 	}
 
@@ -676,7 +674,7 @@ async function createChatMessageToUserForApi(
 		});
 	}
 
-	const packedMessage = await packChatMessageLiteFor1on1ForApi(deps, inserted);
+	const packedMessage = await packChatMessageLiteFor1on1(deps, inserted);
 
 	if (toUser.host == null) {
 		await deps.redis
@@ -701,16 +699,16 @@ async function createChatMessageToUserForApi(
 				return;
 			}
 
-			const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted, toUser);
+			const packedMessageForTo = await packChatMessageDetailed(deps, inserted, toUser);
 			deps.publishMainStream?.(toUser.id, 'newChatMessage', packedMessageForTo);
-			void pushChatNotificationForApi(deps, toUser.id, packedMessageForTo);
+			void pushChatNotification(deps, toUser.id, packedMessageForTo);
 		}, 3000);
 	}
 
 	return packedMessage;
 }
 
-async function createChatMessageToRoomForApi(
+async function createChatMessageToRoom(
 	deps: ChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toRoom: MiChatRoom,
@@ -740,7 +738,7 @@ async function createChatMessageToRoomForApi(
 	};
 
 	const inserted = await createChatMessageInDatabase(deps.db, message);
-	const packedMessage = await packChatMessageLiteForRoomForApi(deps, inserted);
+	const packedMessage = await packChatMessageLiteForRoom(deps, inserted);
 
 	deps.publishChatRoomStream?.(toRoom.id, 'message', packedMessage);
 
@@ -768,7 +766,7 @@ async function createChatMessageToRoomForApi(
 			return;
 		}
 
-		const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted);
+		const packedMessageForTo = await packChatMessageDetailed(deps, inserted);
 
 		for (let i = 0; i < membershipsOtherThanMe.length; i++) {
 			const marker = markers[i]![1];
@@ -777,14 +775,14 @@ async function createChatMessageToRoomForApi(
 			}
 
 			deps.publishMainStream?.(membershipsOtherThanMe[i]!.userId, 'newChatMessage', packedMessageForTo);
-			void pushChatNotificationForApi(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
+			void pushChatNotification(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
 		}
 	}, 3000);
 
 	return packedMessage;
 }
 
-export async function readUserChatMessageForApi(
+export async function readUserChatMessage(
 	deps: ChatDependencies,
 	readerId: MiUser['id'],
 	senderId: MiUser['id'],
@@ -796,7 +794,7 @@ export async function readUserChatMessageForApi(
 		.exec();
 }
 
-export async function readRoomChatMessageForApi(
+export async function readRoomChatMessage(
 	deps: ChatDependencies,
 	readerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -808,22 +806,22 @@ export async function readRoomChatMessageForApi(
 		.exec();
 }
 
-async function readAllChatMessagesForApi(deps: ChatDependencies, readerId: MiUser['id']): Promise<void> {
+async function readAllChatMessages(deps: ChatDependencies, readerId: MiUser['id']): Promise<void> {
 	await deps.redis.pipeline().del(`newChatMessagesExists:${readerId}`).exec();
 }
 
-export async function hasPermissionToViewRoomTimelineForApi(
+export async function hasPermissionToViewRoomTimeline(
 	deps: ChatDependencies,
 	me: MiUser,
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (await isChatRoomMemberForApi(deps, room, me.id)) {
+	if (await isChatRoomMember(deps, room, me.id)) {
 		return true;
 	}
 	return await userIsModerator(deps, me);
 }
 
-async function deleteChatMessageForApi(deps: ChatDependencies, message: MiChatMessage): Promise<void> {
+async function deleteChatMessage(deps: ChatDependencies, message: MiChatMessage): Promise<void> {
 	await deleteChatMessageByIdFromDatabase(deps.db, message.id);
 
 	if (message.toUserId) {
@@ -843,7 +841,7 @@ async function deleteChatMessageForApi(deps: ChatDependencies, message: MiChatMe
 	}
 }
 
-async function chatUserTimelineForApi(
+async function chatUserTimeline(
 	deps: ChatDependencies,
 	meId: MiUser['id'],
 	otherId: MiUser['id'],
@@ -857,7 +855,7 @@ async function chatUserTimelineForApi(
 	});
 }
 
-async function chatRoomTimelineForApi(
+async function chatRoomTimeline(
 	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -870,23 +868,15 @@ async function chatRoomTimelineForApi(
 	});
 }
 
-async function chatUserHistoryForApi(
-	deps: ChatDependencies,
-	meId: MiUser['id'],
-	limit: number,
-): Promise<MiChatMessage[]> {
+async function chatUserHistory(deps: ChatDependencies, meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
 	return await listUserChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-async function chatRoomHistoryForApi(
-	deps: ChatDependencies,
-	meId: MiUser['id'],
-	limit: number,
-): Promise<MiChatMessage[]> {
+async function chatRoomHistory(deps: ChatDependencies, meId: MiUser['id'], limit: number): Promise<MiChatMessage[]> {
 	return await listRoomChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-async function getUserChatReadStateMapForApi(
+async function fetchUserChatReadStateMap(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	otherIds: MiUser['id'][],
@@ -909,7 +899,7 @@ async function getUserChatReadStateMapForApi(
 	return readStateMap;
 }
 
-async function getRoomChatReadStateMapForApi(
+async function fetchRoomChatReadStateMap(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomIds: MiChatRoom['id'][],
@@ -932,7 +922,7 @@ async function getRoomChatReadStateMapForApi(
 	return readStateMap;
 }
 
-export async function createChatRoomForApi(
+export async function createChatRoom(
 	deps: ChatDependencies,
 	owner: MiUser,
 	params: Partial<{ name: string; description: string }>,
@@ -945,15 +935,11 @@ export async function createChatRoomForApi(
 	});
 }
 
-async function hasPermissionToViewRoomInfoForApi(
-	deps: ChatDependencies,
-	me: MiUser,
-	room: MiChatRoom,
-): Promise<boolean> {
+async function hasPermissionToViewRoomInfo(deps: ChatDependencies, me: MiUser, room: MiChatRoom): Promise<boolean> {
 	if (room.ownerId === me.id) {
 		return true;
 	}
-	if (await isChatRoomMemberForApi(deps, room, me.id)) {
+	if (await isChatRoomMember(deps, room, me.id)) {
 		return true;
 	}
 	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, me.id)) {
@@ -962,14 +948,14 @@ async function hasPermissionToViewRoomInfoForApi(
 	return await userIsModerator(deps, me);
 }
 
-async function hasPermissionToDeleteRoomForApi(deps: ChatDependencies, me: MiUser, room: MiChatRoom): Promise<boolean> {
+async function hasPermissionToDeleteRoom(deps: ChatDependencies, me: MiUser, room: MiChatRoom): Promise<boolean> {
 	if (room.ownerId === me.id) {
 		return true;
 	}
 	return await userIsModerator(deps, me);
 }
 
-async function deleteChatRoomForApi(deps: ChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
+async function deleteChatRoom(deps: ChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
 	const memberships = (await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, room.id))
 		.map((m) => ({ userId: m.userId }))
 		.concat({ userId: room.ownerId });
@@ -993,7 +979,7 @@ async function deleteChatRoomForApi(deps: ChatDependencies, room: MiChatRoom, de
 	}
 }
 
-async function findMyChatRoomByIdForApi(
+async function findMyChatRoomById(
 	deps: ChatDependencies,
 	ownerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1001,22 +987,18 @@ async function findMyChatRoomByIdForApi(
 	return await fetchChatRoomByIdAndOwnerIdFromDatabase(deps.db, roomId, ownerId);
 }
 
-async function findChatRoomByIdForApi(deps: ChatDependencies, roomId: MiChatRoom['id']): Promise<MiChatRoom | null> {
+async function findChatRoomById(deps: ChatDependencies, roomId: MiChatRoom['id']): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 }
 
-async function isChatRoomMemberForApi(
-	deps: ChatDependencies,
-	room: MiChatRoom,
-	userId: MiUser['id'],
-): Promise<boolean> {
+async function isChatRoomMember(deps: ChatDependencies, room: MiChatRoom, userId: MiUser['id']): Promise<boolean> {
 	if (room.ownerId === userId) {
 		return true;
 	}
 	return (await fetchChatRoomMembershipFromDatabase(deps.db, room.id, userId)) != null;
 }
 
-async function createChatRoomInvitationForApi(
+async function createChatRoomInvitation(
 	deps: ChatDependencies,
 	inviterId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1048,12 +1030,12 @@ async function createChatRoomInvitationForApi(
 		throw error;
 	});
 
-	void createChatRoomInvitationNotificationForApi(deps, inviteeId, invitation.id, inviterId);
+	void createChatRoomInvitationNotification(deps, inviteeId, invitation.id, inviterId);
 
 	return created;
 }
 
-async function getSentChatRoomInvitationsWithPaginationForApi(
+async function fetchSentChatRoomInvitationsWithPagination(
 	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -1066,7 +1048,7 @@ async function getSentChatRoomInvitationsWithPaginationForApi(
 	});
 }
 
-async function getOwnedChatRoomsWithPaginationForApi(
+async function fetchOwnedChatRoomsWithPagination(
 	deps: ChatDependencies,
 	ownerId: MiUser['id'],
 	limit: number,
@@ -1079,7 +1061,7 @@ async function getOwnedChatRoomsWithPaginationForApi(
 	});
 }
 
-async function getReceivedChatRoomInvitationsWithPaginationForApi(
+async function fetchReceivedChatRoomInvitationsWithPagination(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
@@ -1093,11 +1075,7 @@ async function getReceivedChatRoomInvitationsWithPaginationForApi(
 	});
 }
 
-async function joinToChatRoomForApi(
-	deps: ChatDependencies,
-	userId: MiUser['id'],
-	roomId: MiChatRoom['id'],
-): Promise<void> {
+async function joinToChatRoom(deps: ChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
 	const invitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, userId);
 	if (invitation == null) {
 		throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
@@ -1123,7 +1101,7 @@ async function joinToChatRoomForApi(
 	});
 }
 
-async function ignoreChatRoomInvitationForApi(
+async function ignoreChatRoomInvitation(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1132,14 +1110,10 @@ async function ignoreChatRoomInvitationForApi(
 	if (invitation == null) {
 		throw noSuchRoomError('5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
 	}
-	await updateChatRoomInvitationIgnoredFromDatabase(deps.db, invitation.id, true);
+	await updateChatRoomInvitationIgnoredInDatabase(deps.db, invitation.id, true);
 }
 
-async function leaveChatRoomForApi(
-	deps: ChatDependencies,
-	userId: MiUser['id'],
-	roomId: MiChatRoom['id'],
-): Promise<void> {
+async function leaveChatRoom(deps: ChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
 	const membership = await fetchChatRoomMembershipFromDatabase(deps.db, roomId, userId);
 	if (membership == null) {
 		throw noSuchRoomError('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
@@ -1153,7 +1127,7 @@ async function leaveChatRoomForApi(
 		.exec();
 }
 
-async function muteChatRoomForApi(
+async function muteChatRoom(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1163,10 +1137,10 @@ async function muteChatRoomForApi(
 	if (membership == null) {
 		throw noSuchRoomError('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
 	}
-	await updateChatRoomMembershipMuteFromDatabase(deps.db, membership.id, mute);
+	await updateChatRoomMembershipMuteInDatabase(deps.db, membership.id, mute);
 }
 
-async function updateChatRoomForApi(
+async function updateChatRoom(
 	deps: ChatDependencies,
 	room: MiChatRoom,
 	params: { name?: string; description?: string },
@@ -1174,7 +1148,7 @@ async function updateChatRoomForApi(
 	return await updateChatRoomInDatabase(deps.db, room.id, params);
 }
 
-async function getRoomChatMembershipsWithPaginationForApi(
+async function fetchRoomChatMembershipsWithPagination(
 	deps: ChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -1187,7 +1161,7 @@ async function getRoomChatMembershipsWithPaginationForApi(
 	});
 }
 
-async function searchChatMessagesForApi(
+async function searchChatMessages(
 	deps: ChatDependencies,
 	meId: MiUser['id'],
 	query: string,
@@ -1197,7 +1171,7 @@ async function searchChatMessagesForApi(
 	return await searchChatMessagesFromDatabase(deps.db, meId, query, limit, params);
 }
 
-async function resolveChatReactionForApi(
+async function resolveChatReaction(
 	deps: ChatDependencies,
 	reactionInput: string,
 	requireExists: boolean,
@@ -1205,7 +1179,7 @@ async function resolveChatReactionForApi(
 	const custom = reactionInput.match(isCustomEmojiRegexp);
 
 	if (custom == null) {
-		return normalizeEmojiStringForApi(reactionInput);
+		return normalizeEmojiString(reactionInput);
 	}
 	const name = custom[1]!;
 	if (requireExists) {
@@ -1215,13 +1189,13 @@ async function resolveChatReactionForApi(
 	return `:${name}:`;
 }
 
-async function reactToChatMessageForApi(
+async function reactToChatMessage(
 	deps: ChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
 ): Promise<void> {
-	const reaction = await resolveChatReactionForApi(deps, reactionInput, true);
+	const reaction = await resolveChatReaction(deps, reactionInput, true);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
 	if (message == null) {
@@ -1239,7 +1213,7 @@ async function reactToChatMessageForApi(
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
 
 	if (room) {
-		if (!(await isChatRoomMemberForApi(deps, room, userId))) {
+		if (!(await isChatRoomMember(deps, room, userId))) {
 			throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 		}
 	}
@@ -1271,13 +1245,13 @@ async function reactToChatMessageForApi(
 	}
 }
 
-async function unreactToChatMessageForApi(
+async function unreactToChatMessage(
 	deps: ChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
 ): Promise<void> {
-	const reaction = await resolveChatReactionForApi(deps, reactionInput, false);
+	const reaction = await resolveChatReaction(deps, reactionInput, false);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
 	if (message == null) {
@@ -1287,7 +1261,7 @@ async function unreactToChatMessageForApi(
 		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
 	}
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
-	if (room && !(await isChatRoomMemberForApi(deps, room, userId))) {
+	if (room && !(await isChatRoomMember(deps, room, userId))) {
 		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
 	}
 
@@ -1305,7 +1279,7 @@ async function unreactToChatMessageForApi(
 	}
 }
 
-async function getMyChatMembershipsForApi(
+async function fetchMyChatMemberships(
 	deps: ChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
@@ -1366,7 +1340,7 @@ function cannotJoinChatRoomError(): ApiError {
 	});
 }
 
-async function getUserForApiChat(deps: ChatDependencies, userId: string): Promise<MiUser> {
+async function fetchChatUser(deps: ChatDependencies, userId: string): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (user == null) {
 		throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
@@ -1382,24 +1356,24 @@ export const chatHistoryParamDef = z.object({
 export async function handleApiChatHistory(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatHistoryParamDef>,
+	params: Params<typeof chatHistoryParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
 	const history = params.room
-		? await chatRoomHistoryForApi(deps, me.id, params.limit)
-		: await chatUserHistoryForApi(deps, me.id, params.limit);
-	const packedMessages = await packChatMessagesDetailedForApi(deps, history, me);
+		? await chatRoomHistory(deps, me.id, params.limit)
+		: await chatUserHistory(deps, me.id, params.limit);
+	const packedMessages = await packChatMessagesDetailed(deps, history, me);
 
 	if (params.room) {
 		const roomIds = history.map((m) => m.toRoomId!);
-		const readStateMap = await getRoomChatReadStateMapForApi(deps, me.id, roomIds);
+		const readStateMap = await fetchRoomChatReadStateMap(deps, me.id, roomIds);
 		for (const message of packedMessages) {
 			message.isRead = readStateMap[message.toRoomId!] ?? false;
 		}
 	} else {
 		const otherIds = history.map((m) => (m.fromUserId === me.id ? m.toUserId! : m.fromUserId!));
-		const readStateMap = await getUserChatReadStateMapForApi(deps, me.id, otherIds);
+		const readStateMap = await fetchUserChatReadStateMap(deps, me.id, otherIds);
 		for (const message of packedMessages) {
 			const otherId = message.fromUserId === me.id ? message.toUserId! : message.fromUserId!;
 			message.isRead = readStateMap[otherId] ?? false;
@@ -1412,8 +1386,8 @@ export async function handleApiChatHistory(
 const chatReadAllParamDef = z.object({});
 
 export async function handleApiChatReadAll(deps: ChatDependencies, me: MiLocalUser): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
-	await readAllChatMessagesForApi(deps, me.id);
+	await checkChatAvailability(deps, me.id, 'read');
+	await readAllChatMessages(deps, me.id);
 }
 
 export const chatMessagesCreateToUserParamDef = z.object({
@@ -1425,9 +1399,9 @@ export const chatMessagesCreateToUserParamDef = z.object({
 export async function handleApiChatMessagesCreateToUser(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesCreateToUserParamDef>,
+	params: Params<typeof chatMessagesCreateToUserParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
 	let file = null;
 	if (params.fileId != null) {
@@ -1460,9 +1434,9 @@ export async function handleApiChatMessagesCreateToUser(
 		});
 	}
 
-	const toUser = await getUserForApiChat(deps, params.toUserId);
+	const toUser = await fetchChatUser(deps, params.toUserId);
 
-	return await createChatMessageToUserForApi(deps, me, toUser, omitUndefined({ text: params.text, file }));
+	return await createChatMessageToUser(deps, me, toUser, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesCreateToRoomParamDef = z.object({
@@ -1474,11 +1448,11 @@ export const chatMessagesCreateToRoomParamDef = z.object({
 export async function handleApiChatMessagesCreateToRoom(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesCreateToRoomParamDef>,
+	params: Params<typeof chatMessagesCreateToRoomParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
-	const room = await findChatRoomByIdForApi(deps, params.toRoomId);
+	const room = await findChatRoomById(deps, params.toRoomId);
 	if (room == null) {
 		throw noSuchRoomError('8098520d-2da5-4e8f-8ee1-df78b55a4ec6');
 	}
@@ -1505,7 +1479,7 @@ export async function handleApiChatMessagesCreateToRoom(
 		});
 	}
 
-	return await createChatMessageToRoomForApi(deps, me, room, omitUndefined({ text: params.text, file }));
+	return await createChatMessageToRoom(deps, me, room, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesDeleteParamDef = z.object({
@@ -1515,16 +1489,16 @@ export const chatMessagesDeleteParamDef = z.object({
 export async function handleApiChatMessagesDelete(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesDeleteParamDef>,
+	params: Params<typeof chatMessagesDeleteParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
 	const message = await fetchChatMessageByIdAndFromUserIdFromDatabase(deps.db, params.messageId, me.id);
 	if (message == null) {
 		throw noSuchMessageError('36b67f0e-66a6-414b-83df-992a55294f17');
 	}
 
-	await deleteChatMessageForApi(deps, message);
+	await deleteChatMessage(deps, message);
 }
 
 export const chatMessagesReactParamDef = z.object({
@@ -1535,10 +1509,10 @@ export const chatMessagesReactParamDef = z.object({
 export async function handleApiChatMessagesReact(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesReactParamDef>,
+	params: Params<typeof chatMessagesReactParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await reactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
+	await checkChatAvailability(deps, me.id, 'write');
+	await reactToChatMessage(deps, params.messageId, me.id, params.reaction);
 }
 
 export const chatMessagesUnreactParamDef = z.object({
@@ -1549,10 +1523,10 @@ export const chatMessagesUnreactParamDef = z.object({
 export async function handleApiChatMessagesUnreact(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesUnreactParamDef>,
+	params: Params<typeof chatMessagesUnreactParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await unreactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
+	await checkChatAvailability(deps, me.id, 'write');
+	await unreactToChatMessage(deps, params.messageId, me.id, params.reaction);
 }
 
 export const chatMessagesRoomTimelineParamDef = z.object({
@@ -1564,26 +1538,26 @@ export const chatMessagesRoomTimelineParamDef = z.object({
 export async function handleApiChatMessagesRoomTimeline(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesRoomTimelineParamDef>,
+	params: Params<typeof chatMessagesRoomTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForApi(deps, params.roomId);
+	const room = await findChatRoomById(deps, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 	}
 
-	if (!(await hasPermissionToViewRoomTimelineForApi(deps, me, room))) {
+	if (!(await hasPermissionToViewRoomTimeline(deps, me, room))) {
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 	}
 
-	const messages = await chatRoomTimelineForApi(deps, room.id, params.limit, sinceId, untilId);
+	const messages = await chatRoomTimeline(deps, room.id, params.limit, sinceId, untilId);
 
-	void readRoomChatMessageForApi(deps, me.id, room.id);
+	void readRoomChatMessage(deps, me.id, room.id);
 
-	return await packChatMessagesLiteForRoomForApi(deps, messages);
+	return await packChatMessagesLiteForRoom(deps, messages);
 }
 
 export const chatMessagesSearchParamDef = z.object({
@@ -1596,21 +1570,21 @@ export const chatMessagesSearchParamDef = z.object({
 export async function handleApiChatMessagesSearch(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesSearchParamDef>,
+	params: Params<typeof chatMessagesSearchParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
 	if (params.roomId != null) {
-		const room = await findChatRoomByIdForApi(deps, params.roomId);
+		const room = await findChatRoomById(deps, params.roomId);
 		if (room == null) {
 			throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
 		}
-		if (!(await isChatRoomMemberForApi(deps, room, me.id))) {
+		if (!(await isChatRoomMember(deps, room, me.id))) {
 			throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
 		}
 	}
 
-	const messages = await searchChatMessagesForApi(
+	const messages = await searchChatMessages(
 		deps,
 		me.id,
 		params.query,
@@ -1618,7 +1592,7 @@ export async function handleApiChatMessagesSearch(
 		omitUndefined({ userId: params.userId, roomId: params.roomId }),
 	);
 
-	return await packChatMessagesDetailedForApi(deps, messages, me);
+	return await packChatMessagesDetailed(deps, messages, me);
 }
 
 export const chatMessagesShowParamDef = z.object({
@@ -1628,9 +1602,9 @@ export const chatMessagesShowParamDef = z.object({
 export async function handleApiChatMessagesShow(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesShowParamDef>,
+	params: Params<typeof chatMessagesShowParamDef>,
 ): Promise<Packed<'ChatMessage'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, params.messageId);
 	if (message == null) {
@@ -1640,7 +1614,7 @@ export async function handleApiChatMessagesShow(
 		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
 	}
 
-	return await packChatMessageDetailedForApi(deps, message, me);
+	return await packChatMessageDetailed(deps, message, me);
 }
 
 export const chatMessagesUserTimelineParamDef = z.object({
@@ -1652,19 +1626,19 @@ export const chatMessagesUserTimelineParamDef = z.object({
 export async function handleApiChatMessagesUserTimeline(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatMessagesUserTimelineParamDef>,
+	params: Params<typeof chatMessagesUserTimelineParamDef>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const other = await getUserForApiChat(deps, params.userId);
+	const other = await fetchChatUser(deps, params.userId);
 
-	const messages = await chatUserTimelineForApi(deps, me.id, other.id, params.limit, sinceId, untilId);
+	const messages = await chatUserTimeline(deps, me.id, other.id, params.limit, sinceId, untilId);
 
-	void readUserChatMessageForApi(deps, me.id, other.id);
+	void readUserChatMessage(deps, me.id, other.id);
 
-	return await packChatMessagesLiteFor1on1ForApi(deps, messages);
+	return await packChatMessagesLiteFor1on1(deps, messages);
 }
 
 export const chatRoomsCreateParamDef = z.object({
@@ -1675,11 +1649,11 @@ export const chatRoomsCreateParamDef = z.object({
 export async function handleApiChatRoomsCreate(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsCreateParamDef>,
+	params: Params<typeof chatRoomsCreateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
-	const room = await createChatRoomForApi(deps, me, { name: params.name, description: params.description ?? '' });
+	const room = await createChatRoom(deps, me, { name: params.name, description: params.description ?? '' });
 	return await packChatRoom(deps, room);
 }
 
@@ -1690,20 +1664,20 @@ export const chatRoomsDeleteParamDef = z.object({
 export async function handleApiChatRoomsDelete(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsDeleteParamDef>,
+	params: Params<typeof chatRoomsDeleteParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
-	const room = await findChatRoomByIdForApi(deps, params.roomId);
+	const room = await findChatRoomById(deps, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 	}
 
-	if (!(await hasPermissionToDeleteRoomForApi(deps, me, room))) {
+	if (!(await hasPermissionToDeleteRoom(deps, me, room))) {
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 	}
 
-	await deleteChatRoomForApi(deps, room, me);
+	await deleteChatRoom(deps, room, me);
 }
 
 export const chatRoomsUpdateParamDef = z.object({
@@ -1715,16 +1689,16 @@ export const chatRoomsUpdateParamDef = z.object({
 export async function handleApiChatRoomsUpdate(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsUpdateParamDef>,
+	params: Params<typeof chatRoomsUpdateParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
-	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomById(deps, me.id, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('fcdb0f92-bda6-47f9-bd05-343e0e020932');
 	}
 
-	const updated = await updateChatRoomForApi(
+	const updated = await updateChatRoom(
 		deps,
 		room,
 		omitUndefined({ name: params.name, description: params.description }),
@@ -1739,16 +1713,16 @@ export const chatRoomsShowParamDef = z.object({
 export async function handleApiChatRoomsShow(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsShowParamDef>,
+	params: Params<typeof chatRoomsShowParamDef>,
 ): Promise<Packed<'ChatRoom'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForApi(deps, params.roomId);
+	const room = await findChatRoomById(deps, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 	}
 
-	if (!(await hasPermissionToViewRoomInfoForApi(deps, me, room))) {
+	if (!(await hasPermissionToViewRoomInfo(deps, me, room))) {
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 	}
 
@@ -1763,14 +1737,14 @@ export const chatRoomsOwnedParamDef = z.object({
 export async function handleApiChatRoomsOwned(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsOwnedParamDef>,
+	params: Params<typeof chatRoomsOwnedParamDef>,
 ): Promise<Packed<'ChatRoom'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const rooms = await getOwnedChatRoomsWithPaginationForApi(deps, me.id, params.limit, sinceId, untilId);
-	return await packChatRoomsForApi(deps, rooms, me);
+	const rooms = await fetchOwnedChatRoomsWithPagination(deps, me.id, params.limit, sinceId, untilId);
+	return await packChatRooms(deps, rooms, me);
 }
 
 export const chatRoomsJoinParamDef = z.object({
@@ -1780,10 +1754,10 @@ export const chatRoomsJoinParamDef = z.object({
 export async function handleApiChatRoomsJoin(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsJoinParamDef>,
+	params: Params<typeof chatRoomsJoinParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await joinToChatRoomForApi(deps, me.id, params.roomId);
+	await checkChatAvailability(deps, me.id, 'write');
+	await joinToChatRoom(deps, me.id, params.roomId);
 }
 
 export const chatRoomsJoiningParamDef = z.object({
@@ -1794,14 +1768,14 @@ export const chatRoomsJoiningParamDef = z.object({
 export async function handleApiChatRoomsJoining(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsJoiningParamDef>,
+	params: Params<typeof chatRoomsJoiningParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const memberships = await getMyChatMembershipsForApi(deps, me.id, params.limit, sinceId, untilId);
-	return await packChatRoomMembershipsForApi(deps, memberships, me, { populateUser: false, populateRoom: true });
+	const memberships = await fetchMyChatMemberships(deps, me.id, params.limit, sinceId, untilId);
+	return await packChatRoomMemberships(deps, memberships, me, { populateUser: false, populateRoom: true });
 }
 
 export const chatRoomsLeaveParamDef = z.object({
@@ -1811,10 +1785,10 @@ export const chatRoomsLeaveParamDef = z.object({
 export async function handleApiChatRoomsLeave(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsLeaveParamDef>,
+	params: Params<typeof chatRoomsLeaveParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await leaveChatRoomForApi(deps, me.id, params.roomId);
+	await checkChatAvailability(deps, me.id, 'write');
+	await leaveChatRoom(deps, me.id, params.roomId);
 }
 
 export const chatRoomsMembersParamDef = z.object({
@@ -1826,23 +1800,23 @@ export const chatRoomsMembersParamDef = z.object({
 export async function handleApiChatRoomsMembers(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsMembersParamDef>,
+	params: Params<typeof chatRoomsMembersParamDef>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForApi(deps, params.roomId);
+	const room = await findChatRoomById(deps, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
 	}
 
-	if (!(await isChatRoomMemberForApi(deps, room, me.id))) {
+	if (!(await isChatRoomMember(deps, room, me.id))) {
 		throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
 	}
 
-	const memberships = await getRoomChatMembershipsWithPaginationForApi(deps, room.id, params.limit, sinceId, untilId);
-	return await packChatRoomMembershipsForApi(deps, memberships, me, { populateUser: true, populateRoom: false });
+	const memberships = await fetchRoomChatMembershipsWithPagination(deps, room.id, params.limit, sinceId, untilId);
+	return await packChatRoomMemberships(deps, memberships, me, { populateUser: true, populateRoom: false });
 }
 
 export const chatRoomsMuteParamDef = z.object({
@@ -1853,10 +1827,10 @@ export const chatRoomsMuteParamDef = z.object({
 export async function handleApiChatRoomsMute(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsMuteParamDef>,
+	params: Params<typeof chatRoomsMuteParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await muteChatRoomForApi(deps, me.id, params.roomId, params.mute);
+	await checkChatAvailability(deps, me.id, 'write');
+	await muteChatRoom(deps, me.id, params.roomId, params.mute);
 }
 
 export const chatRoomsInvitationsCreateParamDef = z.object({
@@ -1867,16 +1841,16 @@ export const chatRoomsInvitationsCreateParamDef = z.object({
 export async function handleApiChatRoomsInvitationsCreate(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsInvitationsCreateParamDef>,
+	params: Params<typeof chatRoomsInvitationsCreateParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await checkChatAvailability(deps, me.id, 'write');
 
-	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomById(deps, me.id, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('916f9507-49ba-4e90-b57f-1fd4deaa47a5');
 	}
 
-	const invitation = await createChatRoomInvitationForApi(deps, me.id, room.id, params.userId);
+	const invitation = await createChatRoomInvitation(deps, me.id, room.id, params.userId);
 	return await packChatRoomInvitation(deps, invitation, me);
 }
 
@@ -1887,10 +1861,10 @@ export const chatRoomsInvitationsIgnoreParamDef = z.object({
 export async function handleApiChatRoomsInvitationsIgnore(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsInvitationsIgnoreParamDef>,
+	params: Params<typeof chatRoomsInvitationsIgnoreParamDef>,
 ): Promise<void> {
-	await checkChatAvailabilityForApi(deps, me.id, 'write');
-	await ignoreChatRoomInvitationForApi(deps, me.id, params.roomId);
+	await checkChatAvailability(deps, me.id, 'write');
+	await ignoreChatRoomInvitation(deps, me.id, params.roomId);
 }
 
 export const chatRoomsInvitationsInboxParamDef = z.object({
@@ -1901,20 +1875,14 @@ export const chatRoomsInvitationsInboxParamDef = z.object({
 export async function handleApiChatRoomsInvitationsInbox(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsInvitationsInboxParamDef>,
+	params: Params<typeof chatRoomsInvitationsInboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const invitations = await getReceivedChatRoomInvitationsWithPaginationForApi(
-		deps,
-		me.id,
-		params.limit,
-		sinceId,
-		untilId,
-	);
-	return await packChatRoomInvitationsForApi(deps, invitations, me);
+	const invitations = await fetchReceivedChatRoomInvitationsWithPagination(deps, me.id, params.limit, sinceId, untilId);
+	return await packChatRoomInvitations(deps, invitations, me);
 }
 
 export const chatRoomsInvitationsOutboxParamDef = z.object({
@@ -1926,23 +1894,17 @@ export const chatRoomsInvitationsOutboxParamDef = z.object({
 export async function handleApiChatRoomsInvitationsOutbox(
 	deps: ChatDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof chatRoomsInvitationsOutboxParamDef>,
+	params: Params<typeof chatRoomsInvitationsOutboxParamDef>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await checkChatAvailability(deps, me.id, 'read');
 
-	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomById(deps, me.id, params.roomId);
 	if (room == null) {
 		throw noSuchRoomError('a3c6b309-9717-4316-ae94-a69b53437237');
 	}
 
-	const invitations = await getSentChatRoomInvitationsWithPaginationForApi(
-		deps,
-		room.id,
-		params.limit,
-		sinceId,
-		untilId,
-	);
-	return await packChatRoomInvitationsForApi(deps, invitations, me);
+	const invitations = await fetchSentChatRoomInvitationsWithPagination(deps, room.id, params.limit, sinceId, untilId);
+	return await packChatRoomInvitations(deps, invitations, me);
 }

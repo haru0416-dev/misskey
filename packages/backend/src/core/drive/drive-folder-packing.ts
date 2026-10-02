@@ -7,13 +7,13 @@ import type { Config } from '@/config.js';
 import {
 	countDriveFilesByFolderIdFromDatabase,
 	countDriveFilesGroupedByFolderIdsFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
+} from '@/core/drive/drive-file-store.js';
 import {
 	countChildDriveFoldersGroupedByParentIdsFromDatabase,
 	countDriveFoldersByParentIdFromDatabase,
 	fetchDriveFolderByIdOrFailFromDatabase,
 	listDriveFoldersByIdsFromDatabase,
-} from '@/core/drive/DriveFolderStore.js';
+} from '@/core/drive/drive-folder-store.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';

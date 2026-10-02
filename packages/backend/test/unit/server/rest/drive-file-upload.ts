@@ -13,18 +13,18 @@ import type { Config } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
-import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addDriveFile } from '@/server/rest/drive/drive-file-upload.js';
+import type { DriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 
-describe('addDriveFileForApi quota serialization', () => {
+describe('addDriveFile quota serialization', () => {
 	let config: Config;
 	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
@@ -108,7 +108,7 @@ describe('addDriveFileForApi quota serialization', () => {
 			db,
 			meta,
 			fileInfoService: {
-				getFileInfo: vi.fn(async (filePath: string) => ({
+				fetchFileInfo: vi.fn(async (filePath: string) => ({
 					size: fileSize,
 					md5: filePath.endsWith('first.bin') ? '11111111111111111111111111111111' : '22222222222222222222222222222222',
 					type: { mime: 'text/plain', ext: 'txt' },
@@ -130,11 +130,11 @@ describe('addDriveFileForApi quota serialization', () => {
 				instanceChart: { updateDrive: update },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as ApiDriveFileUploadDependencies;
+		} as unknown as DriveFileUploadDependencies;
 
 		const results = await Promise.allSettled(
 			paths.map((filePath) =>
-				addDriveFileForApi(deps, {
+				addDriveFile(deps, {
 					user: quotaUser,
 					path: filePath,
 					force: true,
@@ -187,7 +187,7 @@ describe('addDriveFileForApi quota serialization', () => {
 			meta,
 			dbQueue: { addBulk: vi.fn().mockRejectedValue(new Error('injected queue outage')) } as unknown as DbQueue,
 			fileInfoService: {
-				getFileInfo: vi.fn(async (filePath: string) => ({
+				fetchFileInfo: vi.fn(async (filePath: string) => ({
 					size: 700 * 1024,
 					md5: filePath.endsWith('remote-first.bin')
 						? '55555555555555555555555555555555'
@@ -219,11 +219,11 @@ describe('addDriveFileForApi quota serialization', () => {
 				instanceChart: { updateDrive: vi.fn() },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as ApiDriveFileUploadDependencies;
+		} as unknown as DriveFileUploadDependencies;
 
 		try {
-			await addDriveFileForApi(deps, { user: remoteUser, path: paths[0]!, force: true });
-			const second = await addDriveFileForApi(deps, { user: remoteUser, path: paths[1]!, force: true });
+			await addDriveFile(deps, { user: remoteUser, path: paths[0]!, force: true });
+			const second = await addDriveFile(deps, { user: remoteUser, path: paths[1]!, force: true });
 			const files = await listAllDriveFilesByUserIdFromDatabase(db, remoteUser.id);
 			const outboxRows = await db.select().from(queueOutbox).where(eq(queueOutbox.name, 'deleteDriveFile'));
 
@@ -274,7 +274,7 @@ describe('addDriveFileForApi quota serialization', () => {
 				publishMainStream,
 				publishDriveStream,
 				fileInfoService: {
-					getFileInfo: vi.fn(async () => ({
+					fetchFileInfo: vi.fn(async () => ({
 						size: 16,
 						md5,
 						type: { mime: 'text/plain', ext: 'txt' },
@@ -299,7 +299,7 @@ describe('addDriveFileForApi quota serialization', () => {
 					instanceChart: { updateDrive: update },
 				},
 				logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-			}) as unknown as ApiDriveFileUploadDependencies;
+			}) as unknown as DriveFileUploadDependencies;
 
 		const remotePath = path.join(tempDir, 'stream-remote.bin');
 		const localPath = path.join(tempDir, 'stream-local.bin');
@@ -307,7 +307,7 @@ describe('addDriveFileForApi quota serialization', () => {
 		await fs.writeFile(localPath, Buffer.alloc(16));
 
 		try {
-			await addDriveFileForApi(buildDeps('77777777777777777777777777777777'), {
+			await addDriveFile(buildDeps('77777777777777777777777777777777'), {
 				user: remoteUser,
 				path: remotePath,
 				force: true,
@@ -317,7 +317,7 @@ describe('addDriveFileForApi quota serialization', () => {
 			expect(publishMainStream, 'リモート宛には流さない').not.toHaveBeenCalled();
 			expect(publishDriveStream, 'リモート宛には流さない').not.toHaveBeenCalled();
 
-			await addDriveFileForApi(buildDeps('88888888888888888888888888888888'), {
+			await addDriveFile(buildDeps('88888888888888888888888888888888'), {
 				user,
 				path: localPath,
 				force: true,
@@ -352,7 +352,7 @@ describe('addDriveFileForApi quota serialization', () => {
 			db,
 			meta,
 			fileInfoService: {
-				getFileInfo: vi.fn(async () => ({
+				fetchFileInfo: vi.fn(async () => ({
 					size: 1024,
 					md5: '33333333333333333333333333333333',
 					type: { mime: 'text/plain', ext: 'txt' },
@@ -374,11 +374,9 @@ describe('addDriveFileForApi quota serialization', () => {
 				instanceChart: { updateDrive: update },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as ApiDriveFileUploadDependencies;
+		} as unknown as DriveFileUploadDependencies;
 
-		await expect(addDriveFileForApi(deps, { user, path: filePath, force: true })).rejects.toThrow(
-			'object storage is down',
-		);
+		await expect(addDriveFile(deps, { user, path: filePath, force: true })).rejects.toThrow('object storage is down');
 
 		const after = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
 		expect(after).toHaveLength(before.length);

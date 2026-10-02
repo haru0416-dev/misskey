@@ -6,8 +6,8 @@
 import { readRequestBodyWithLimit } from '../body-limit.js';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { parseUrlEncodedParameters, toRequestParameters } from './OAuthProviderRuntime.js';
-import type { OAuthProviderRuntime, OAuthRequestParameters } from './OAuthProviderRuntime.js';
+import { parseUrlEncodedParameters, toRequestParameters } from './oauth-provider-runtime.js';
+import type { OAuthProviderRuntime, OAuthRequestParameters } from './oauth-provider-runtime.js';
 
 export type OAuthDependencies = {
 	runtime: OAuthProviderRuntime;

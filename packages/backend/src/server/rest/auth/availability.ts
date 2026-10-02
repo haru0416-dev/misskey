@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import type { EmailService } from '@/core/email/EmailService.js';
-import { isUsedUsername } from '@/core/account/UsedUsernameStore.js';
-import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/user/UserStore.js';
+import type { EmailService } from '@/core/email/email-service.js';
+import { isUsedUsername } from '@/core/account/used-username-store.js';
+import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/user/user-store.js';
 import { USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { localUsernameSchema } from '@/models/User.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAvailabilityDependencies = {
+export type AvailabilityDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	emailService: Pick<EmailService, 'validateEmailForAccount'>;
@@ -29,8 +29,8 @@ export const emailAddressAvailableParamDef = z.object({
 });
 
 export async function handleApiUsernameAvailable(
-	deps: ApiAvailabilityDependencies,
-	params: ApiParams<typeof usernameAvailableParamDef>,
+	deps: AvailabilityDependencies,
+	params: Params<typeof usernameAvailableParamDef>,
 ): Promise<{ available: boolean }> {
 	const [exists, used] = await Promise.all([
 		isLocalUsernameTaken(deps.db, params.username),
@@ -46,13 +46,13 @@ export async function handleApiUsernameAvailable(
 }
 
 export async function handleApiEmailAddressAvailable(
-	deps: ApiAvailabilityDependencies,
-	params: ApiParams<typeof emailAddressAvailableParamDef>,
+	deps: AvailabilityDependencies,
+	params: Params<typeof emailAddressAvailableParamDef>,
 ): ReturnType<EmailService['validateEmailForAccount']> {
 	return await deps.emailService.validateEmailForAccount(params.emailAddress);
 }
 
-export async function handleApiGetOnlineUsersCount(deps: ApiAvailabilityDependencies): Promise<{ count: number }> {
+export async function handleApiGetOnlineUsersCount(deps: AvailabilityDependencies): Promise<{ count: number }> {
 	const count = await countUsersActiveAfterFromDatabase(deps.db, new Date(Date.now() - USER_ONLINE_THRESHOLD));
 	return {
 		count,

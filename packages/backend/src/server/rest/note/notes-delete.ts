@@ -6,14 +6,14 @@
 import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
-import { adjustInstanceNotesCountFromDatabase } from '@/core/instance/InstanceStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { adjustInstanceNotesCountInDatabase } from '@/core/instance/instance-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import {
-	deleteNoteAndDecrementParentRepliesCountInDatabase,
+	deleteNoteAndDecrementParentRepliesCountFromDatabase,
 	fetchNoteByIdFromDatabase,
 	listNotesByUserIdAndRenoteIdFromDatabase,
-} from '@/core/note/NoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/note/note-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -27,14 +27,14 @@ import {
 	resolveMentionedAndInvolvedRemoteUsers,
 } from '../../../core/activitypub/notes-ap.js';
 import type { RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
-import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
+import { fetchOrRegisterInstance } from '@/core/note/note-creation-service.js';
 import { userIsModerator } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 
-export type ApiNotesDeleteDependencies = RelayDeliverDependencies &
+export type NotesDeleteDependencies = RelayDeliverDependencies &
 	RolePolicyDependencies & {
 		chartWriters: ChartWriters;
 		publishNoteStream?: NoteStreamPublisher;
@@ -44,8 +44,8 @@ export const notesDeleteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-export async function deleteNoteForApi(
-	deps: ApiNotesDeleteDependencies,
+export async function deleteNote(
+	deps: NotesDeleteDependencies,
 	user: { id: MiUser['id']; uri: MiUser['uri']; host: MiUser['host']; isBot: MiUser['isBot'] },
 	note: MiNote,
 	deleter?: { id: MiUser['id'] },
@@ -77,7 +77,7 @@ export async function deleteNoteForApi(
 	if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
 		fetchOrRegisterInstance(deps, user.host)
 			.then(async (i) => {
-				await adjustInstanceNotesCountFromDatabase(deps.db, i.id, -1);
+				await adjustInstanceNotesCountInDatabase(deps.db, i.id, -1);
 				if (deps.meta.enableChartsForFederatedInstances) {
 					void deps.chartWriters.instanceChart.updateNote(i.host, note, false);
 				}
@@ -85,7 +85,7 @@ export async function deleteNoteForApi(
 			.catch(() => {});
 	}
 
-	await deleteNoteAndDecrementParentRepliesCountInDatabase(deps.db, note.id, user.id);
+	await deleteNoteAndDecrementParentRepliesCountFromDatabase(deps.db, note.id, user.id);
 
 	if (deleter && note.userId !== deleter.id) {
 		const noteOwner = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
@@ -100,9 +100,9 @@ export async function deleteNoteForApi(
 }
 
 export async function handleApiNotesDelete(
-	deps: ApiNotesDeleteDependencies,
+	deps: NotesDeleteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesDeleteParamDef>,
+	params: Params<typeof notesDeleteParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/delete']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -116,7 +116,7 @@ export async function handleApiNotesDelete(
 
 	const noteAuthor = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 
-	await deleteNoteForApi(deps, noteAuthor, note, me);
+	await deleteNote(deps, noteAuthor, note, me);
 }
 
 export const notesUnrenoteParamDef = z.object({
@@ -124,9 +124,9 @@ export const notesUnrenoteParamDef = z.object({
 });
 
 export async function handleApiNotesUnrenote(
-	deps: ApiNotesDeleteDependencies,
+	deps: NotesDeleteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesUnrenoteParamDef>,
+	params: Params<typeof notesUnrenoteParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/unrenote']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -137,5 +137,5 @@ export async function handleApiNotesUnrenote(
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
-	await Promise.all(renotes.map((renote) => deleteNoteForApi(deps, user, renote)));
+	await Promise.all(renotes.map((renote) => deleteNote(deps, user, renote)));
 }

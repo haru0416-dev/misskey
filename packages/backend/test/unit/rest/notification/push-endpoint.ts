@@ -8,11 +8,11 @@ import type { AddressInfo, Server } from 'node:net';
 import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest';
 import push from 'web-push';
 import { loadConfig } from '@/config.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createSwSubscriptionInDatabase } from '@/core/sw/SwSubscriptionStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createSwSubscriptionInDatabase } from '@/core/sw/sw-subscription-store.js';
 import { pushSwNotification } from '@/core/notification/push-notification.js';
 import { genId } from '@/misc/id/gen-id.js';
 

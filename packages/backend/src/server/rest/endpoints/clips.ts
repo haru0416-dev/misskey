@@ -5,7 +5,7 @@
 
 import { endpointMetas as clipsContracts } from '@/server/rest/contracts/clips.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiClipsAddNote,
 	handleApiClipsCreate,
@@ -19,7 +19,7 @@ import {
 } from '../clip/clips.js';
 import { handleApiClipsFavorite, handleApiClipsUnfavorite } from '../favorite/favorites.js';
 
-export const clipsEndpoints = implementEndpoints<ApiShellDependencies>()(clipsContracts, {
+export const clipsEndpoints = implementEndpoints<ShellDependencies>()(clipsContracts, {
 	'clips/add-note': async ({ deps, errors, input, me }) => {
 		await handleApiClipsAddNote(deps, me, input, errors);
 	},

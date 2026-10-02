@@ -54,7 +54,7 @@ import {
 	DEFAULT_POLICIES,
 	deleteBlockingByIdFromDatabase,
 	deleteQueueOutboxesByIds,
-	deleteUserListByIdInDatabase,
+	deleteUserListByIdFromDatabase,
 	dispatchQueueOutbox,
 	fetchAbuseUserReportByIdOrFailFromDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,

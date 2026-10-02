@@ -27,31 +27,31 @@ const {
 	listRenoteMuteesMock: vi.fn(),
 }));
 
-vi.mock('@/core/user/FollowingStore.js', () => ({
+vi.mock('@/core/user/following-store.js', () => ({
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase: vi.fn(),
 	followingExistsInDatabase: vi.fn(),
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase: listFollowersMock,
 	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase: listFollowingsMock,
 }));
 
-vi.mock('@/core/user/FollowRequestStore.js', () => ({
+vi.mock('@/core/user/follow-request-store.js', () => ({
 	followRequestExistsInDatabase: vi.fn(),
 	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase: listOutgoingRequestsMock,
 	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase: listIncomingRequestsMock,
 }));
 
-vi.mock('@/core/user/BlockingStore.js', () => ({
+vi.mock('@/core/user/blocking-store.js', () => ({
 	blockingExistsInDatabase: vi.fn(),
 	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase: listBlockeesMock,
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase: listBlockersMock,
 }));
 
-vi.mock('@/core/user/MutingStore.js', () => ({
+vi.mock('@/core/user/muting-store.js', () => ({
 	mutingExistsInDatabase: vi.fn(),
 	listMuteeIdsByMuterIdAndMuteeIdsFromDatabase: listMuteesMock,
 }));
 
-vi.mock('@/core/user/RenoteMutingStore.js', () => ({
+vi.mock('@/core/user/renote-muting-store.js', () => ({
 	renoteMutingExistsInDatabase: vi.fn(),
 	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase: listRenoteMuteesMock,
 }));

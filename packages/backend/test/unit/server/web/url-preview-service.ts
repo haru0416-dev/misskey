@@ -6,10 +6,10 @@
 import type { UrlPreviewSummary } from 'misskey-js/entities.js';
 import { describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import type { LoggerService } from '@/core/LoggerService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import type { LoggerService } from '@/core/logger-service.js';
 import type { MiMeta } from '@/models/Meta.js';
-import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';
+import { createUrlPreviewService } from '@/server/web/url-preview-service.js';
 
 const config = {
 	instance: { url: 'https://misskey.test' },

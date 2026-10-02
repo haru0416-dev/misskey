@@ -12,7 +12,7 @@ import type { MiMeta } from '@/models/_.js';
 import {
 	createOrFetchSystemAccountInDatabase,
 	fetchSystemAccountUserFromDatabase,
-} from '@/core/system-account/SystemAccountStore.js';
+} from '@/core/system-account/system-account-store.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';

@@ -1,0 +1,278 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import * as fs from 'node:fs';
+import sharp from 'sharp';
+import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
+import type { Config } from '@/config.js';
+import { FILE_TYPE_BROWSERSAFE, PROXY_LOOP_USER_AGENT_TOKENS } from '@/const.js';
+import { StatusError } from '@/misc/status-error.js';
+import { contentDisposition } from '@/misc/content-disposition.js';
+import { correctFilename } from '@/misc/correct-filename.js';
+import { isMimeImage } from '@/misc/is-mime-image.js';
+import type { IImageStreamable, ImageProcessingService } from '@/core/drive/image-processing-service.js';
+import { webpDefault } from '@/core/drive/image-processing-service.js';
+import type { WebpOptions } from 'sharp';
+import { createRangeStream, attachStreamCleanup, needsCleanup } from './file-server-utils.js';
+import type {
+	DownloadedBufferResult,
+	DownloadedFileResult,
+	FileResolveResult,
+	FileServerFileResolver,
+} from './file-server-file-resolver.js';
+import { getFileServerHeader } from './file-server-types.js';
+import type { FileServerReply, FileServerRequest } from './file-server-types.js';
+
+type ProxySource = DownloadedFileResult | DownloadedBufferResult | Exclude<FileResolveResult, { kind: 'remote' }>;
+type AvailableFile = Exclude<ProxySource, { kind: 'not-found' | 'unavailable' }>;
+// 縮小版は一時的でいつでも作り直せるので、smartSubsample (高画質な色差の間引き) を切る。
+// 変換の CPU が大きく減る。保存するサムネイル等は webpDefault のまま。
+const proxyWebp: WebpOptions = { ...webpDefault, smartSubsample: false };
+
+function sourceOf(file: AvailableFile): Buffer | string {
+	return 'data' in file ? file.data : file.path;
+}
+
+type ProxyQuery = {
+	emoji?: string;
+	avatar?: string;
+	static?: string;
+	preview?: string;
+	badge?: string;
+	origin?: string;
+	url?: string;
+};
+
+export class FileServerProxyHandler {
+	constructor(
+		private config: Config,
+		private fileResolver: FileServerFileResolver,
+		private assetsPath: string,
+		private imageProcessingService: ImageProcessingService,
+	) {}
+
+	public async handle(request: FileServerRequest<{ url: string }, ProxyQuery>, reply: FileServerReply) {
+		const url = 'url' in request.query ? request.query.url : 'https://' + request.params.url;
+
+		if (typeof url !== 'string') {
+			reply.code(400);
+			return;
+		}
+
+		// クロップ処理などオリジン画像が必要な要求は外部プロキシへ転送しない。
+		const mustOrigin = 'origin' in request.query;
+
+		if (this.config.media.externalProxyEnabled && !mustOrigin) {
+			return await this.redirectToExternalProxy(request, reply);
+		}
+
+		this.validateUserAgent(request);
+
+		const file = await this.getStreamAndTypeFromUrl(url);
+		if (file.kind === 'not-found') {
+			reply.code(404);
+			reply.header('Cache-Control', 'max-age=86400');
+			return reply.sendFile('/dummy.png', this.assetsPath);
+		}
+
+		if (file.kind === 'unavailable') {
+			reply.code(204);
+			reply.header('Cache-Control', 'max-age=86400');
+			return;
+		}
+
+		try {
+			const image = await this.processImage(file, request, reply);
+
+			if (needsCleanup(file)) {
+				attachStreamCleanup(image.data, file.cleanup);
+			}
+
+			reply.header('Content-Type', image.type);
+			reply.header('Cache-Control', 'max-age=31536000, immutable');
+			reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
+			return image.data;
+		} catch (e) {
+			if (needsCleanup(file)) {
+				file.cleanup();
+			}
+			throw e;
+		}
+	}
+
+	private async redirectToExternalProxy(
+		request: FileServerRequest<{ url: string }, ProxyQuery>,
+		reply: FileServerReply,
+	) {
+		reply.header('Cache-Control', 'public, max-age=259200');
+
+		const url = new URL(`${this.config.media.proxyUrl}/${request.params.url || ''}`);
+
+		for (const [key, value] of Object.entries(request.query)) {
+			url.searchParams.append(key, value);
+		}
+
+		return reply.redirect(url.toString(), 301);
+	}
+
+	private validateUserAgent(request: FileServerRequest): void {
+		const userAgent = getFileServerHeader(request.headers, 'user-agent');
+		if (!userAgent) {
+			throw new StatusError('User-Agent is required', 400, 'User-Agent is required');
+		}
+		const normalizedUserAgent = userAgent.toLowerCase();
+		if (PROXY_LOOP_USER_AGENT_TOKENS.some((token) => normalizedUserAgent.includes(token))) {
+			throw new StatusError('Refusing to proxy a request from another proxy', 403, 'Proxy is recursive');
+		}
+	}
+
+	private async processImage(
+		file: AvailableFile,
+		request: FileServerRequest<{ url: string }, ProxyQuery>,
+		reply: FileServerReply,
+	): Promise<IImageStreamable> {
+		const query = request.query;
+
+		const requiresImageConversion =
+			'emoji' in query || 'avatar' in query || 'static' in query || 'preview' in query || 'badge' in query;
+		const isConvertibleImage = isMimeImage(file.mime, 'sharp-convertible-image-with-bmp');
+		if (requiresImageConversion && !isConvertibleImage) {
+			throw new StatusError('Unexpected mime', 404);
+		}
+
+		if ('emoji' in query || 'avatar' in query) {
+			return this.processEmojiOrAvatar(file, query);
+		}
+
+		if ('static' in query) {
+			return this.imageProcessingService.convertSharpToWebpStream(
+				await sharpBmp(sourceOf(file), file.mime),
+				498,
+				422,
+				proxyWebp,
+			);
+		}
+
+		if ('preview' in query) {
+			return this.imageProcessingService.convertSharpToWebpStream(
+				await sharpBmp(sourceOf(file), file.mime),
+				200,
+				200,
+				proxyWebp,
+			);
+		}
+
+		if ('badge' in query) {
+			return this.processBadge(file);
+		}
+
+		if (file.mime === 'image/svg+xml') {
+			return this.imageProcessingService.convertSharpToWebpStream(sharp(sourceOf(file)), 2048, 2048, proxyWebp);
+		}
+
+		if (!file.mime.startsWith('image/') || !FILE_TYPE_BROWSERSAFE.includes(file.mime)) {
+			throw new StatusError('Rejected type', 403, 'Rejected type');
+		}
+
+		return this.createDefaultStream(file, request, reply);
+	}
+
+	private async processEmojiOrAvatar(
+		file: AvailableFile,
+		query: Pick<ProxyQuery, 'emoji' | 'avatar' | 'static'>,
+	): Promise<IImageStreamable> {
+		const isAnimationConvertibleImage = isMimeImage(file.mime, 'sharp-animation-convertible-image-with-bmp');
+		if (!isAnimationConvertibleImage && !('static' in query)) {
+			return 'data' in file
+				? { data: file.data, ext: file.ext, type: file.mime }
+				: { data: fs.createReadStream(file.path), ext: file.ext, type: file.mime };
+		}
+
+		const data = (await sharpBmp(sourceOf(file), file.mime, { animated: !('static' in query) }))
+			.resize({
+				height: 'emoji' in query ? 128 : 320,
+				withoutEnlargement: true,
+			})
+			.webp(proxyWebp);
+
+		return {
+			data,
+			ext: 'webp',
+			type: 'image/webp',
+		};
+	}
+
+	private async processBadge(file: AvailableFile): Promise<IImageStreamable> {
+		const mask = (await sharpBmp(sourceOf(file), file.mime))
+			.resize(96, 96, {
+				fit: 'contain',
+				position: 'centre',
+				withoutEnlargement: false,
+			})
+			.greyscale()
+			.normalise()
+			.linear(1.75, -(128 * 1.75) + 128) // 中間輝度128を維持してコントラストを1.75倍にする。
+			.flatten({ background: '#000' })
+			.toColorspace('b-w');
+
+		const stats = await mask.clone().stats();
+
+		if (stats.entropy < 0.1) {
+			throw new StatusError('Skip to provide badge', 404);
+		}
+
+		const data = sharp({
+			create: { width: 96, height: 96, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+		})
+			.pipelineColorspace('b-w')
+			.boolean(await mask.png().toBuffer(), 'eor');
+
+		return {
+			data: await data.png().toBuffer(),
+			ext: 'png',
+			type: 'image/png',
+		};
+	}
+
+	private createDefaultStream(
+		file: AvailableFile,
+		request: FileServerRequest,
+		reply: FileServerReply,
+	): IImageStreamable {
+		const range = getFileServerHeader(request.headers, 'range');
+		if (range && 'file' in file && file.file.size > 0) {
+			const { stream, start, end, chunksize } = createRangeStream(range, file.file.size, file.path);
+
+			reply.header('Content-Range', `bytes ${start}-${end}/${file.file.size}`);
+			reply.header('Accept-Ranges', 'bytes');
+			reply.header('Content-Length', chunksize);
+			reply.code(206);
+
+			return {
+				data: stream,
+				ext: file.ext,
+				type: file.mime,
+			};
+		}
+
+		return 'data' in file
+			? { data: file.data, ext: file.ext, type: file.mime }
+			: { data: fs.createReadStream(file.path), ext: file.ext, type: file.mime };
+	}
+
+	private async getStreamAndTypeFromUrl(url: string): Promise<ProxySource> {
+		if (url.startsWith(`${this.config.instance.url}/files/`)) {
+			const key = url.replace(`${this.config.instance.url}/files/`, '').split('/').shift();
+			if (!key) {
+				throw new StatusError('Invalid File Key', 400, 'Invalid File Key');
+			}
+
+			const resolved = await this.fileResolver.resolveFileByAccessKey(key);
+			return resolved.kind === 'remote' ? await this.fileResolver.downloadForProxy(resolved.url) : resolved;
+		}
+
+		return await this.fileResolver.downloadForProxy(url);
+	}
+}

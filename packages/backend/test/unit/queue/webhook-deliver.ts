@@ -12,13 +12,13 @@ import { loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/webhook/WebhookStore.js';
-import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
+import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/webhook/webhook-store.js';
+import { createUserInDatabase } from '@/core/user/user-store.js';
 import {
 	createSystemWebhookInDatabase,
 	fetchSystemWebhookByIdOrFailFromDatabase,
-} from '@/core/webhook/SystemWebhookStore.js';
+} from '@/core/webhook/system-webhook-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from '@/queue/handlers/webhook-deliver.js';
 import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/core/queue/types.js';

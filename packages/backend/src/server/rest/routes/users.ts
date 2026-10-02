@@ -6,9 +6,9 @@
 import type { Hono } from 'hono';
 import { handleApiMiauthCheck } from '../auth/miauth.js';
 import { jsonResponse, runApiEndpoint } from '../shell-helpers.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 
-export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void {
+export function registerUsersRoutes(app: Hono, deps: ShellDependencies): void {
 	// URL は MiAuth プロトコルの公開仕様 (`/api/miauth/{session}/check`) なので変えられないが、
 	// `/miauth/gen-token` (static) と `/miauth/:session/check` (param) の同一位置共存は
 	// RegExpRouter 非対応で、この1ルートのせいでアプリ全体が TrieRouter へフォールバックする。

@@ -3,24 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	fetchDriveFileByIdAndUserIdFromDatabase,
 	listDriveFilesByIdsFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { adjustNotesPageCountInDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { adjustNotesPageCountInDatabase } from '@/core/note/note-store.js';
 import {
 	fetchPageLikeByIdOrFailFromDatabase,
 	listLikedPageIdsByUserIdAndPageIdsFromDatabase,
 	listPageLikesByUserIdFromDatabase,
 	pageLikeExistsInDatabase,
-} from '@/core/page/PageLikeStore.js';
+} from '@/core/page/page-like-store.js';
 import {
 	createPageInDatabase,
-	deletePageInDatabase,
+	deletePageFromDatabase,
 	fetchPageByIdFromDatabase,
 	fetchPageByIdOrFailFromDatabase,
 	fetchPageByNameAndUserIdFromDatabase,
@@ -30,8 +30,8 @@ import {
 	pageNameExistsForUserInDatabase,
 	updatePageContentInDatabase,
 	updatePageInDatabase,
-} from '@/core/page/PageStore.js';
-import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/page/page-store.js';
+import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -53,9 +53,9 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
-export type ApiPageDependencies = DriveFileDependencies & RolePolicyDependencies;
+export type PageDependencies = DriveFileDependencies & RolePolicyDependencies;
 
-function collectReferencedNotesForApi(content: MiPage['content']): string[] {
+function collectReferencedNotes(content: MiPage['content']): string[] {
 	const referencingNotes = new Set<string>();
 	const recursiveCollect = (items: unknown[]): void => {
 		for (const item of items) {
@@ -73,7 +73,7 @@ function collectReferencedNotesForApi(content: MiPage['content']): string[] {
 	return [...referencingNotes];
 }
 
-function collectAttachedFileIdsForApi(content: MiPage['content']): string[] {
+function collectAttachedFileIds(content: MiPage['content']): string[] {
 	const attachedFiles: string[] = [];
 	const collectFiles = (items: MiPageContentBlock[]): void => {
 		for (const item of items) {
@@ -89,8 +89,8 @@ function collectAttachedFileIdsForApi(content: MiPage['content']): string[] {
 	return attachedFiles;
 }
 
-export async function packPageForApi(
-	deps: ApiPageDependencies,
+export async function packPage(
+	deps: PageDependencies,
 	src: MiPage['id'] | MiPage,
 	me?: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -103,7 +103,7 @@ export async function packPageForApi(
 	const meId = me ? me.id : null;
 	const pageEntity = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(deps.db, src);
 
-	const attachedFiles = collectAttachedFileIdsForApi(pageEntity.content);
+	const attachedFiles = collectAttachedFileIds(pageEntity.content);
 
 	let migrated = false;
 	const migrate = (items: MiPageContentBlock[]): void => {
@@ -172,8 +172,8 @@ export async function packPageForApi(
 	};
 }
 
-async function packPageManyForApi(
-	deps: ApiPageDependencies,
+async function packPageMany(
+	deps: PageDependencies,
 	pages: MiPage[],
 	me?: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Page'>[]> {
@@ -187,7 +187,7 @@ async function packPageManyForApi(
 		...new Set(
 			pages.flatMap((pageEntity) => [
 				...(pageEntity.eyeCatchingImageId ? [pageEntity.eyeCatchingImageId] : []),
-				...collectAttachedFileIdsForApi(pageEntity.content),
+				...collectAttachedFileIds(pageEntity.content),
 			]),
 		),
 	];
@@ -204,8 +204,8 @@ async function packPageManyForApi(
 
 	return await Promise.all(
 		pages.map((pageEntity) => {
-			const attachedFileIds = collectAttachedFileIdsForApi(pageEntity.content);
-			return packPageForApi(
+			const attachedFileIds = collectAttachedFileIds(pageEntity.content);
+			return packPage(
 				deps,
 				pageEntity,
 				me,
@@ -227,8 +227,8 @@ async function packPageManyForApi(
 	);
 }
 
-async function packPageLikeForApi(
-	deps: ApiPageDependencies,
+async function packPageLike(
+	deps: PageDependencies,
 	src: PageLikeRow['id'] | (PageLikeRow & { page?: MiPage | null }),
 	me?: { id: MiUser['id'] } | null | undefined,
 ): Promise<{ id: string; page: Packed<'Page'> }> {
@@ -237,7 +237,7 @@ async function packPageLikeForApi(
 
 	return {
 		id: like.id,
-		page: await packPageForApi(deps, pageSrc, me),
+		page: await packPage(deps, pageSrc, me),
 	};
 }
 
@@ -255,9 +255,9 @@ export const pagesCreateParamDef = z.object({
 });
 
 export async function handleApiPagesCreate(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pagesCreateParamDef>,
+	params: Params<typeof pagesCreateParamDef>,
 ): Promise<Packed<'Page'>> {
 	let eyeCatchingImage = null;
 	if (params.eyeCatchingImageId != null) {
@@ -309,12 +309,12 @@ export async function handleApiPagesCreate(
 		throw error;
 	});
 
-	const referencedNotes = collectReferencedNotesForApi(pageEntity.content);
+	const referencedNotes = collectReferencedNotes(pageEntity.content);
 	if (referencedNotes.length > 0) {
 		await adjustNotesPageCountInDatabase(deps.db, referencedNotes, 1);
 	}
 
-	return await packPageForApi(deps, pageEntity);
+	return await packPage(deps, pageEntity);
 }
 
 export const pagesUpdateParamDef = z.object({
@@ -332,9 +332,9 @@ export const pagesUpdateParamDef = z.object({
 });
 
 export async function handleApiPagesUpdate(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pagesUpdateParamDef>,
+	params: Params<typeof pagesUpdateParamDef>,
 ): Promise<void> {
 	let eyeCatchingImageId = params.eyeCatchingImageId;
 	if (params.eyeCatchingImageId !== undefined && params.eyeCatchingImageId != null) {
@@ -396,8 +396,8 @@ export async function handleApiPagesUpdate(
 	const { before } = result;
 
 	if (params.content != null) {
-		const beforeReferencedNotes = collectReferencedNotesForApi(before.content);
-		const afterReferencedNotes = collectReferencedNotesForApi(params.content);
+		const beforeReferencedNotes = collectReferencedNotes(before.content);
+		const afterReferencedNotes = collectReferencedNotes(params.content);
 		const beforeReferencedNoteSet = new Set(beforeReferencedNotes);
 		const afterReferencedNoteSet = new Set(afterReferencedNotes);
 
@@ -418,14 +418,14 @@ export const pagesDeleteParamDef = z.object({
 });
 
 /** not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
-export async function deletePageForApi(
-	deps: ApiPageDependencies,
+export async function deletePage(
+	deps: PageDependencies,
 	me: MiUser,
 	pageId: MiPage['id'],
 ): Promise<{ status: 'not-found' | 'forbidden' } | { status: 'ok'; page: MiPage }> {
 	const isModerator = await userIsModerator(deps, me);
 
-	const result = await deletePageInDatabase(deps.db, pageId, { userId: me.id, isModerator });
+	const result = await deletePageFromDatabase(deps.db, pageId, { userId: me.id, isModerator });
 
 	if (result.status !== 'ok') {
 		return result;
@@ -443,7 +443,7 @@ export async function deletePageForApi(
 		});
 	}
 
-	const referencedNotes = collectReferencedNotesForApi(deletedPage.content);
+	const referencedNotes = collectReferencedNotes(deletedPage.content);
 	if (referencedNotes.length > 0) {
 		await adjustNotesPageCountInDatabase(deps.db, referencedNotes, -1);
 	}
@@ -452,11 +452,11 @@ export async function deletePageForApi(
 }
 
 export async function handleApiPagesDelete(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pagesDeleteParamDef>,
+	params: Params<typeof pagesDeleteParamDef>,
 ): Promise<void> {
-	const result = await deletePageForApi(deps, me, params.pageId);
+	const result = await deletePage(deps, me, params.pageId);
 
 	if (result.status === 'not-found') {
 		throw new ApiError({
@@ -486,9 +486,9 @@ export const pagesShowParamDef = z.union([
 ]);
 
 export async function handleApiPagesShow(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof pagesShowParamDef>,
+	params: Params<typeof pagesShowParamDef>,
 ): Promise<Packed<'Page'>> {
 	let pageEntity: MiPage | null = null;
 	if ('pageId' in params) {
@@ -509,18 +509,18 @@ export async function handleApiPagesShow(
 		});
 	}
 
-	return await packPageForApi(deps, pageEntity, me);
+	return await packPage(deps, pageEntity, me);
 }
 
 export const pagesFeaturedParamDef = z.object({});
 
 export async function handleApiPagesFeatured(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Page'>[]> {
 	const pages = await listFeaturedPagesFromDatabase(deps.db);
 
-	return await packPageManyForApi(deps, pages, me);
+	return await packPageMany(deps, pages, me);
 }
 
 export const iPagesParamDef = z.object({
@@ -529,9 +529,9 @@ export const iPagesParamDef = z.object({
 });
 
 export async function handleApiIPages(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iPagesParamDef>,
+	params: Params<typeof iPagesParamDef>,
 ): Promise<Packed<'Page'>[]> {
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
@@ -542,7 +542,7 @@ export async function handleApiIPages(
 		untilId,
 	});
 
-	return await packPageManyForApi(deps, pages);
+	return await packPageMany(deps, pages);
 }
 
 export const iPageLikesParamDef = z.object({
@@ -551,9 +551,9 @@ export const iPageLikesParamDef = z.object({
 });
 
 export async function handleApiIPageLikes(
-	deps: ApiPageDependencies,
+	deps: PageDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iPageLikesParamDef>,
+	params: Params<typeof iPageLikesParamDef>,
 ): Promise<{ id: string; page: Packed<'Page'> }[]> {
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
@@ -572,7 +572,7 @@ export async function handleApiIPageLikes(
 	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds).then(
 		(pages) => new Map(pages.map((pageEntity) => [pageEntity.id, pageEntity])),
 	);
-	const packedPages = await packPageManyForApi(
+	const packedPages = await packPageMany(
 		deps,
 		likes.map((like) => pageById.get(like.pageId)).filter((page) => page != null),
 		me,
@@ -582,7 +582,7 @@ export async function handleApiIPageLikes(
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			page: packedPageById.get(like.pageId) ?? (await packPageLikeForApi(deps, like, me)).page,
+			page: packedPageById.get(like.pageId) ?? (await packPageLike(deps, like, me)).page,
 		})),
 	);
 }
@@ -594,8 +594,8 @@ export const usersPagesParamDef = z.object({
 });
 
 export async function handleApiUsersPages(
-	deps: ApiPageDependencies,
-	params: ApiParams<typeof usersPagesParamDef>,
+	deps: PageDependencies,
+	params: Params<typeof usersPagesParamDef>,
 ): Promise<Packed<'Page'>[]> {
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
@@ -607,5 +607,5 @@ export async function handleApiUsersPages(
 		publicOnly: true,
 	});
 
-	return await packPageManyForApi(deps, pages);
+	return await packPageMany(deps, pages);
 }

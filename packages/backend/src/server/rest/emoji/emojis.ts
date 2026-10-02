@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { uploadSystemDriveFileFromUrl } from '@/core/drive/DriveFileUploadLogic.js';
-import type { DriveFileUploadDependencies } from '@/core/drive/DriveFileUploadLogic.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { uploadSystemDriveFileFromUrl } from '@/core/drive/drive-file-upload-logic.js';
+import type { DriveFileUploadDependencies } from '@/core/drive/drive-file-upload-logic.js';
 import {
 	addAliasesToEmojisByIdsInDatabase,
 	deleteEmojiByIdFromDatabase,
@@ -28,14 +28,14 @@ import {
 	listRemoteEmojisPageFromDatabase,
 	removeAliasesFromEmojisByIdsInDatabase,
 	updateEmojiInDatabase,
-	updateEmojisByIdsReturningFromDatabase,
-} from '@/core/emoji/EmojiStore.js';
-import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+	updateEmojisByIdsReturningInDatabase,
+} from '@/core/emoji/emoji-store.js';
+import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import { addDbJob } from '@/core/queue/queues.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { listRoleSummariesByIdsFromDatabase } from '@/core/role/RoleStore.js';
-import type { RoleSummary } from '@/core/role/RoleStore.js';
+import { listRoleSummariesByIdsFromDatabase } from '@/core/role/role-store.js';
+import type { RoleSummary } from '@/core/role/role-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -48,7 +48,7 @@ import { ApiError } from '../error.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiEmojiDependencies = DriveFileUploadDependencies & {
+export type EmojiDependencies = DriveFileUploadDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
@@ -242,7 +242,7 @@ function adminSameNameEmojiExistsError(): ApiError {
 	);
 }
 
-async function publishApiEmojiUpdated(deps: ApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
+async function publishApiEmojiUpdated(deps: EmojiDependencies, emojis: MiEmoji[]): Promise<void> {
 	if (deps.publishBroadcastStream == null) {
 		return;
 	}
@@ -252,7 +252,7 @@ async function publishApiEmojiUpdated(deps: ApiEmojiDependencies, emojis: MiEmoj
 	});
 }
 
-async function finishApiEmojiBulkUpdate(deps: ApiEmojiDependencies, ids: MiEmoji['id'][]): Promise<void> {
+async function finishApiEmojiBulkUpdate(deps: EmojiDependencies, ids: MiEmoji['id'][]): Promise<void> {
 	invalidateEmojiCache();
 	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
 	await publishApiEmojiUpdated(deps, emojis);
@@ -270,7 +270,7 @@ function orderEmojisByRequestedIds(ids: MiEmoji['id'][], emojis: MiEmoji[]): MiE
 }
 
 async function updateEmojisAtomically(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	ids: MiEmoji['id'][],
 	update: (db: MiDrizzleDatabase) => Promise<MiEmoji[]>,
 ): Promise<void> {
@@ -281,7 +281,7 @@ async function updateEmojisAtomically(
 	await finishApiEmojiBulkUpdate(deps, ids);
 }
 
-async function publishApiEmojiDeleted(deps: ApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
+async function publishApiEmojiDeleted(deps: EmojiDependencies, emojis: MiEmoji[]): Promise<void> {
 	if (deps.publishBroadcastStream == null) {
 		return;
 	}
@@ -291,7 +291,7 @@ async function publishApiEmojiDeleted(deps: ApiEmojiDependencies, emojis: MiEmoj
 	});
 }
 
-async function publishApiEmojiAdded(deps: ApiEmojiDependencies, emoji: MiEmoji): Promise<void> {
+async function publishApiEmojiAdded(deps: EmojiDependencies, emoji: MiEmoji): Promise<void> {
 	if (deps.publishBroadcastStream == null) {
 		return;
 	}
@@ -301,8 +301,8 @@ async function publishApiEmojiAdded(deps: ApiEmojiDependencies, emoji: MiEmoji):
 	});
 }
 
-export async function addCustomEmojiForApi(
-	deps: ApiEmojiDependencies,
+export async function addCustomEmoji(
+	deps: EmojiDependencies,
 	data: {
 		originalUrl: string;
 		publicUrl: string;
@@ -348,7 +348,7 @@ export async function addCustomEmojiForApi(
 	return emoji;
 }
 
-export async function handleApiEmojis(deps: ApiEmojiDependencies): Promise<{
+export async function handleApiEmojis(deps: EmojiDependencies): Promise<{
 	emojis: Packed<'EmojiSimple'>[];
 }> {
 	const emojis = await listLocalEmojisOrderedByCategoryAndNameFromDatabase(deps.db);
@@ -358,7 +358,7 @@ export async function handleApiEmojis(deps: ApiEmojiDependencies): Promise<{
 }
 
 export async function handleApiEmoji(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'EmojiDetailed'>> {
 	const params = parseApiParams(emojiParamDef, body);
@@ -371,8 +371,8 @@ export async function handleApiEmoji(
 }
 
 export async function handleApiAdminEmojiList(
-	deps: ApiEmojiDependencies,
-	params: ApiParams<typeof adminEmojiListParamDef>,
+	deps: EmojiDependencies,
+	params: Params<typeof adminEmojiListParamDef>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
 	const { order, sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -400,9 +400,9 @@ export async function handleApiAdminEmojiList(
 }
 
 export async function handleApiAdminEmojiAdd(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminEmojiAddParamDef>,
+	params: Params<typeof adminEmojiAddParamDef>,
 ): Promise<Packed<'EmojiDetailed'>> {
 	const driveFile = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (driveFile == null) {
@@ -441,7 +441,7 @@ export async function handleApiAdminEmojiAdd(
 }
 
 export async function handleApiAdminEmojiAddAliasesBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiAliasesBulkParamDef, body);
@@ -452,9 +452,9 @@ export async function handleApiAdminEmojiAddAliasesBulk(
 }
 
 export async function handleApiAdminEmojiDelete(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminEmojiDeleteParamDef>,
+	params: Params<typeof adminEmojiDeleteParamDef>,
 ): Promise<void> {
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.id);
 	if (emoji == null) {
@@ -469,7 +469,7 @@ export async function handleApiAdminEmojiDelete(
 }
 
 export async function handleApiAdminEmojiDeleteBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
@@ -494,9 +494,9 @@ export async function handleApiAdminEmojiDeleteBulk(
 }
 
 export async function handleApiAdminEmojiCopy(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminEmojiCopyParamDef>,
+	params: Params<typeof adminEmojiCopyParamDef>,
 ): Promise<Packed<'EmojiDetailed'>> {
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.emojiId);
 	if (emoji == null) {
@@ -537,9 +537,9 @@ export async function handleApiAdminEmojiCopy(
 }
 
 export async function handleApiAdminEmojiImportZip(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminEmojiImportZipParamDef>,
+	params: Params<typeof adminEmojiImportZipParamDef>,
 ): Promise<void> {
 	await addDbJob(deps.dbQueue, {
 		name: 'importCustomEmojis',
@@ -549,9 +549,9 @@ export async function handleApiAdminEmojiImportZip(
 }
 
 export async function handleApiAdminEmojiUpdate(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminEmojiUpdateParamDef>,
+	params: Params<typeof adminEmojiUpdateParamDef>,
 ): Promise<void> {
 	let driveFile;
 	if (params.fileId) {
@@ -609,13 +609,13 @@ export async function handleApiAdminEmojiUpdate(
 }
 
 export async function handleApiAdminEmojiSetAliasesBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiAliasesBulkParamDef, body);
 	const updatedAt = new Date();
 	await updateEmojisAtomically(deps, params.ids, (db) =>
-		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updateEmojisByIdsReturningInDatabase(db, params.ids, {
 			updatedAt,
 			aliases: params.aliases,
 		}),
@@ -623,7 +623,7 @@ export async function handleApiAdminEmojiSetAliasesBulk(
 }
 
 export async function handleApiAdminEmojiRemoveAliasesBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiAliasesBulkParamDef, body);
@@ -634,13 +634,13 @@ export async function handleApiAdminEmojiRemoveAliasesBulk(
 }
 
 export async function handleApiAdminEmojiSetCategoryBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiSetCategoryBulkParamDef, body);
 	const updatedAt = new Date();
 	await updateEmojisAtomically(deps, params.ids, (db) =>
-		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updateEmojisByIdsReturningInDatabase(db, params.ids, {
 			updatedAt,
 			category: params.category ?? null,
 		}),
@@ -648,13 +648,13 @@ export async function handleApiAdminEmojiSetCategoryBulk(
 }
 
 export async function handleApiAdminEmojiSetLicenseBulk(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(adminEmojiSetLicenseBulkParamDef, body);
 	const updatedAt = new Date();
 	await updateEmojisAtomically(deps, params.ids, (db) =>
-		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updateEmojisByIdsReturningInDatabase(db, params.ids, {
 			updatedAt,
 			license: params.license ?? null,
 		}),
@@ -662,8 +662,8 @@ export async function handleApiAdminEmojiSetLicenseBulk(
 }
 
 export async function handleApiAdminEmojiListRemote(
-	deps: ApiEmojiDependencies,
-	params: ApiParams<typeof adminEmojiListRemoteParamDef>,
+	deps: EmojiDependencies,
+	params: Params<typeof adminEmojiListRemoteParamDef>,
 ): Promise<Packed<'EmojiDetailed'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 	const emojis = await listRemoteEmojisPageFromDatabase(deps.db, {
@@ -736,7 +736,7 @@ export const v2AdminEmojiListParamDef = z.object({
 });
 
 async function packEmojiDetailedAdmin(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	emoji: MiEmoji,
 	hintRoles: ReadonlyMap<RoleSummary['id'], RoleSummary>,
 ): Promise<Packed<'EmojiDetailedAdmin'>> {
@@ -774,7 +774,7 @@ async function packEmojiDetailedAdmin(
 }
 
 async function packEmojiDetailedAdminMany(
-	deps: ApiEmojiDependencies,
+	deps: EmojiDependencies,
 	emojis: MiEmoji[],
 ): Promise<Packed<'EmojiDetailedAdmin'>[]> {
 	const roleIds = [...new Set(emojis.flatMap((emoji) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction))];
@@ -785,8 +785,8 @@ async function packEmojiDetailedAdminMany(
 }
 
 export async function handleApiV2AdminEmojiList(
-	deps: ApiEmojiDependencies,
-	params: ApiParams<typeof v2AdminEmojiListParamDef>,
+	deps: EmojiDependencies,
+	params: Params<typeof v2AdminEmojiListParamDef>,
 ): Promise<{ emojis: Packed<'EmojiDetailedAdmin'>[]; count: number; allCount: number; allPages: number }> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 

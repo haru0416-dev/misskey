@@ -5,9 +5,9 @@
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createPollInDatabase } from '@/core/note/PollStore.js';
+import { createFollowingInDatabase } from '@/core/user/following-store.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createPollInDatabase } from '@/core/note/poll-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -15,7 +15,7 @@ import { countDatabaseQueries } from '../../../query-counter.js';
 import type { QueryCounter } from '../../../query-counter.js';
 import { createApObjectRoutesApp } from '@/server/activitypub/object-routes.js';
 import type { ApObjectRoutesDependencies } from '@/server/activitypub/object-routes.js';
-import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/note-store.js';
 import { deliverQuestionUpdate, renderNote } from '@/core/activitypub/notes-ap.js';
 
 describe('ActivityPub object routes', () => {

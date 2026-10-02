@@ -10,9 +10,9 @@ import {
 	fetchEmojiByIdOrFailFromDatabase,
 	fetchEmojiByNameAndHostFromDatabaseCached,
 	insertEmojiInDatabase,
-} from '@/core/emoji/EmojiStore.js';
-import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+} from '@/core/emoji/emoji-store.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/moderation-log-store.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -26,7 +26,7 @@ import {
 	handleApiAdminEmojiSetCategoryBulk,
 	handleApiAdminEmojiSetLicenseBulk,
 } from '@/server/rest/emoji/emojis.js';
-import type { ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
+import type { EmojiDependencies } from '@/server/rest/emoji/emojis.js';
 
 describe('emoji bulk operations', () => {
 	let runtime: RuntimeDependencies;
@@ -57,8 +57,8 @@ describe('emoji bulk operations', () => {
 		});
 	}
 
-	function createDeps(publishBroadcastStream = vi.fn()): ApiEmojiDependencies {
-		return { ...runtime, publishBroadcastStream } as unknown as ApiEmojiDependencies;
+	function createDeps(publishBroadcastStream = vi.fn()): EmojiDependencies {
+		return { ...runtime, publishBroadcastStream } as unknown as EmojiDependencies;
 	}
 
 	test('updates aliases and metadata atomically while preserving alias order', async () => {

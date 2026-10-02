@@ -6,7 +6,7 @@
 import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
@@ -15,12 +15,12 @@ import {
 	createRegistrationTicketInDatabase,
 	createRegistrationTicketWithinLimitInDatabase,
 	createRegistrationTicketsInDatabase,
-	deleteRegistrationTicketInDatabase,
+	deleteRegistrationTicketFromDatabase,
 	fetchRegistrationTicketByIdFromDatabase,
 	listRegistrationTicketsCreatedByFromDatabase,
 	listRegistrationTicketsForAdminFromDatabase,
-} from '@/core/invite/RegistrationTicketStore.js';
-import { createModerationLogInDatabase } from '@/core/moderation/ModerationLogStore.js';
+} from '@/core/invite/registration-ticket-store.js';
+import { createModerationLogInDatabase } from '@/core/moderation/moderation-log-store.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -37,7 +37,7 @@ import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiInviteDependencies = {
+export type InviteDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -75,8 +75,8 @@ function inviteCreateExceededCreateLimitError(): ApiError {
 	});
 }
 
-async function packInviteCodesForApi(
-	deps: ApiInviteDependencies,
+async function packInviteCodes(
+	deps: InviteDependencies,
 	tickets: RegistrationTicketRow[],
 ): Promise<Packed<'InviteCode'>[]> {
 	const userIds = [
@@ -99,11 +99,8 @@ async function packInviteCodesForApi(
 	}));
 }
 
-async function packInviteCodeForApi(
-	deps: ApiInviteDependencies,
-	ticket: RegistrationTicketRow,
-): Promise<Packed<'InviteCode'>> {
-	const packed = (await packInviteCodesForApi(deps, [ticket]))[0];
+async function packInviteCode(deps: InviteDependencies, ticket: RegistrationTicketRow): Promise<Packed<'InviteCode'>> {
+	const packed = (await packInviteCodes(deps, [ticket]))[0];
 	if (packed == null) {
 		throw new Error('Packed invite code is missing');
 	}
@@ -111,9 +108,9 @@ async function packInviteCodeForApi(
 }
 
 export async function handleApiAdminInviteCreate(
-	deps: ApiInviteDependencies,
+	deps: InviteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminInviteCreateParamDef>,
+	params: Params<typeof adminInviteCreateParamDef>,
 	errors: ContractErrors<(typeof adminContracts)['admin/invite/create']>,
 ): Promise<Packed<'InviteCode'>[]> {
 	if (params.expiresAt && isNaN(Date.parse(params.expiresAt))) {
@@ -139,12 +136,12 @@ export async function handleApiAdminInviteCreate(
 		},
 	});
 
-	return await packInviteCodesForApi(deps, tickets);
+	return await packInviteCodes(deps, tickets);
 }
 
 export async function handleApiAdminInviteList(
-	deps: ApiInviteDependencies,
-	params: ApiParams<typeof adminInviteListParamDef>,
+	deps: InviteDependencies,
+	params: Params<typeof adminInviteListParamDef>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const tickets = await listRegistrationTicketsForAdminFromDatabase(
 		deps.db,
@@ -156,11 +153,11 @@ export async function handleApiAdminInviteList(
 		}),
 	);
 
-	return await packInviteCodesForApi(deps, tickets);
+	return await packInviteCodes(deps, tickets);
 }
 
 export async function handleApiInviteCreate(
-	deps: ApiInviteDependencies,
+	deps: InviteDependencies,
 	me: MiLocalUser,
 	policies: RolePolicies,
 	body: Record<string, unknown>,
@@ -183,13 +180,13 @@ export async function handleApiInviteCreate(
 		throw inviteCreateExceededCreateLimitError();
 	}
 
-	return await packInviteCodeForApi(deps, ticket);
+	return await packInviteCode(deps, ticket);
 }
 
 export async function handleApiInviteDelete(
-	deps: ApiInviteDependencies,
+	deps: InviteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof inviteDeleteParamDef>,
+	params: Params<typeof inviteDeleteParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['invite/delete']>,
 ): Promise<void> {
 	const ticket = await fetchRegistrationTicketByIdFromDatabase(deps.db, params.inviteId);
@@ -207,11 +204,11 @@ export async function handleApiInviteDelete(
 		throw errors.cantDelete();
 	}
 
-	await deleteRegistrationTicketInDatabase(deps.db, ticket.id);
+	await deleteRegistrationTicketFromDatabase(deps.db, ticket.id);
 }
 
 export async function handleApiInviteLimit(
-	deps: ApiInviteDependencies,
+	deps: InviteDependencies,
 	me: MiLocalUser,
 	policies: RolePolicies,
 	body: Record<string, unknown>,
@@ -231,9 +228,9 @@ export async function handleApiInviteLimit(
 }
 
 export async function handleApiInviteList(
-	deps: ApiInviteDependencies,
+	deps: InviteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof inviteListParamDef>,
+	params: Params<typeof inviteListParamDef>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const { sinceId, untilId, order } = resolveDateIdPagination({ gen: genId }, params);
 
@@ -245,5 +242,5 @@ export async function handleApiInviteList(
 		untilId,
 	});
 
-	return await packInviteCodesForApi(deps, tickets);
+	return await packInviteCodes(deps, tickets);
 }

@@ -4,12 +4,12 @@
  */
 
 import * as Bull from 'bullmq';
-import type { EmailService } from '@/core/email/EmailService.js';
-import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/page/PageStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/note/NoteStore.js';
-import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import type { EmailService } from '@/core/email/email-service.js';
+import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/page/page-store.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/drive-file-store.js';
+import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/note/note-store.js';
+import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import type { Config } from '@/config.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -17,13 +17,13 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/core/queue/types.js';
-import { deletePageForApi } from '@/server/rest/page/pages.js';
-import type { ApiPageDependencies } from '@/server/rest/page/pages.js';
-import { deleteFileSyncForApi } from './object-storage.js';
+import { deletePage } from '@/server/rest/page/pages.js';
+import type { PageDependencies } from '@/server/rest/page/pages.js';
+import { deleteFileSync } from './object-storage.js';
 import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDeleteAccountDependencies = QueueObjectStorageDependencies &
-	ApiPageDependencies & {
+	PageDependencies & {
 		db: MiDrizzleDatabase;
 		config: Config;
 		meta: Pick<MiMeta, 'rootUserId'>;
@@ -86,7 +86,7 @@ export async function handleQueueDeleteAccount(
 			cursor = files.at(-1)?.id ?? null;
 
 			for (const file of files) {
-				await deleteFileSyncForApi(deps, file);
+				await deleteFileSync(deps, file);
 			}
 		}
 	}
@@ -105,7 +105,7 @@ export async function handleQueueDeleteAccount(
 			}
 
 			for (const page of pages) {
-				const result = await deletePageForApi(deps, user, page.id);
+				const result = await deletePage(deps, user, page.id);
 				if (result.status !== 'ok') {
 					throw new Error(`failed to delete page ${page.id}: ${result.status}`);
 				}

@@ -1,0 +1,403 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { loadConfig } from '@/config.js';
+import {
+	createNoteInDatabase,
+	listChildNotesFromDatabase,
+	listGlobalTimelineNotesFromDatabase,
+	listHybridTimelineNotesFromDatabase,
+	listHydratedNotesByIdsFromDatabase,
+	listLocalTimelineNotesFromDatabase,
+	listUserTimelineNotesFromDatabase,
+	searchNotesByTextFromDatabase,
+} from '@/core/note/note-store.js';
+import { createRenoteMutingInDatabase } from '@/core/user/renote-muting-store.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { genId } from '@/misc/id/gen-id.js';
+import { createRuntimeDependencies } from '@/runtime-dependencies.js';
+import type { RuntimeDependencies } from '@/runtime-dependencies.js';
+import { channel } from '@/db/schema/channel.js';
+import { countDatabaseQueries } from '../../query-counter.js';
+
+describe('NoteStore renote filtering', () => {
+	let runtime: RuntimeDependencies;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('ユーザーのタイムラインは withReplies が false なら他人への返信だけを除く', async () => {
+		const createUser = async () => {
+			const id = genId();
+			return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+				user: { id, username: `replies${id}`, usernameLower: `replies${id}` },
+				profile: { userId: id },
+			});
+		};
+		const [user, other] = await Promise.all([createUser(), createUser()]);
+		const note = (id: string, values: { replyId?: string; replyUserId?: string } = {}) =>
+			createNoteInDatabase(runtime.db, {
+				id,
+				userId: user.id,
+				userHost: null,
+				visibility: 'public',
+				text: 'x',
+				...values,
+			});
+		const otherNoteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: otherNoteId,
+			userId: other.id,
+			userHost: null,
+			visibility: 'public',
+			text: 'x',
+		});
+		const [plainId, selfReplyId, otherReplyId] = [genId(), genId(), genId()];
+		await note(plainId);
+		await note(selfReplyId, { replyId: plainId, replyUserId: user.id });
+		await note(otherReplyId, { replyId: otherNoteId, replyUserId: other.id });
+
+		const list = async (withReplies: boolean) =>
+			(
+				await listUserTimelineNotesFromDatabase(runtime.db, {
+					userId: user.id,
+					limit: 20,
+					withChannelNotes: false,
+					withFiles: false,
+					withRenotes: true,
+					withReplies,
+					me: null,
+					blockedHosts: [],
+					mutingChannelIds: [],
+				})
+			)
+				.map((row) => row.id)
+				.sort();
+
+		expect(await list(false)).toEqual([plainId, selfReplyId].sort());
+		expect(await list(true)).toEqual([plainId, selfReplyId, otherReplyId].sort());
+	});
+
+	test('treats CW-only and reply-only renotes as quotes in database queries', async () => {
+		const userId = genId();
+		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: userId, username: `notestorerenote${userId}`, usernameLower: `notestorerenote${userId}` },
+			profile: { userId },
+		});
+		const sourceId = genId();
+		const replyTargetId = genId();
+		const pureRenoteId = genId();
+		const cwQuoteId = genId();
+		const replyQuoteId = genId();
+		const fileQuoteId = genId();
+		const pollQuoteId = genId();
+
+		await createNoteInDatabase(runtime.db, {
+			id: sourceId,
+			text: 'source',
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: replyTargetId,
+			text: 'reply target',
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: pureRenoteId,
+			renoteId: sourceId,
+			renoteUserId: user.id,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: cwQuoteId,
+			cw: 'content warning',
+			renoteId: sourceId,
+			renoteUserId: user.id,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: replyQuoteId,
+			replyId: replyTargetId,
+			replyUserId: user.id,
+			renoteId: sourceId,
+			renoteUserId: user.id,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: fileQuoteId,
+			fileIds: [genId()],
+			renoteId: sourceId,
+			renoteUserId: user.id,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: pollQuoteId,
+			hasPoll: true,
+			renoteId: sourceId,
+			renoteUserId: user.id,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+		});
+
+		const timeline = await listUserTimelineNotesFromDatabase(runtime.db, {
+			userId: user.id,
+			limit: 20,
+			withChannelNotes: false,
+			withFiles: false,
+			withRenotes: false,
+			withReplies: false,
+			me: null,
+			blockedHosts: [],
+			mutingChannelIds: [],
+		});
+		const timelineIds = new Set(timeline.map((note) => note.id));
+		expect(timelineIds.has(pureRenoteId)).toBe(false);
+		expect(timelineIds.has(cwQuoteId)).toBe(true);
+		expect(timelineIds.has(replyQuoteId)).toBe(true);
+		expect(timelineIds.has(fileQuoteId)).toBe(true);
+		expect(timelineIds.has(pollQuoteId)).toBe(true);
+
+		const children = await listChildNotesFromDatabase(runtime.db, {
+			noteId: sourceId,
+			limit: 20,
+			me: null,
+			blockedHosts: [],
+		});
+		const childIds = new Set(children.map((note) => note.id));
+		expect(childIds.has(pureRenoteId)).toBe(false);
+		expect(childIds.has(cwQuoteId)).toBe(true);
+		expect(childIds.has(replyQuoteId)).toBe(true);
+		expect(childIds.has(fileQuoteId)).toBe(true);
+		expect(childIds.has(pollQuoteId)).toBe(true);
+
+		const localTimeline = await listLocalTimelineNotesFromDatabase(runtime.db, {
+			limit: 20,
+			withFiles: false,
+			withReplies: true,
+			withRenotes: false,
+			me: null,
+			blockedHosts: [],
+		});
+		const localTimelineIds = new Set(localTimeline.map((note) => note.id));
+		expect(localTimelineIds.has(pureRenoteId)).toBe(false);
+		expect(localTimelineIds.has(cwQuoteId)).toBe(true);
+		expect(localTimelineIds.has(replyQuoteId)).toBe(true);
+
+		const hybridTimeline = await listHybridTimelineNotesFromDatabase(runtime.db, {
+			me: user,
+			followeeIds: [],
+			followingChannelIds: [],
+			mutingChannelIds: [],
+			limit: 20,
+			includeMyRenotes: true,
+			includeRenotedMyNotes: true,
+			includeLocalRenotes: true,
+			withFiles: false,
+			withRenotes: false,
+			withReplies: true,
+			blockedHosts: [],
+		});
+		const hybridTimelineIds = new Set(hybridTimeline.map((note) => note.id));
+		expect(hybridTimelineIds.has(pureRenoteId)).toBe(false);
+		expect(hybridTimelineIds.has(cwQuoteId)).toBe(true);
+		expect(hybridTimelineIds.has(replyQuoteId)).toBe(true);
+	});
+
+	test('renote muting excludes only pure renotes', async () => {
+		const viewerId = genId();
+		const authorId = genId();
+		const viewer = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: viewerId, username: `notestoreviewer${viewerId}`, usernameLower: `notestoreviewer${viewerId}` },
+			profile: { userId: viewerId },
+		});
+		const author = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: authorId, username: `notestoreauthor${authorId}`, usernameLower: `notestoreauthor${authorId}` },
+			profile: { userId: authorId },
+		});
+		await createRenoteMutingInDatabase(runtime.db, {
+			id: genId(),
+			muterId: viewer.id,
+			muteeId: author.id,
+		});
+		const sourceId = genId();
+		const pureRenoteId = genId();
+		const cwQuoteId = genId();
+		const replyQuoteId = genId();
+		const fileQuoteId = genId();
+		const pollQuoteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: sourceId,
+			text: 'muted source',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+		});
+		for (const values of [
+			{ id: pureRenoteId },
+			{ id: cwQuoteId, cw: 'content warning' },
+			{ id: replyQuoteId, replyId: sourceId, replyUserId: author.id },
+			{ id: fileQuoteId, fileIds: [genId()] },
+			{ id: pollQuoteId, hasPoll: true },
+		]) {
+			await createNoteInDatabase(runtime.db, {
+				...values,
+				renoteId: sourceId,
+				renoteUserId: author.id,
+				userId: author.id,
+				userHost: null,
+				visibility: 'public',
+			});
+		}
+
+		const timeline = await listGlobalTimelineNotesFromDatabase(runtime.db, {
+			limit: 20,
+			withFiles: false,
+			withRenotes: true,
+			me: viewer,
+			blockedHosts: [],
+		});
+		const timelineIds = new Set(timeline.map((note) => note.id));
+		expect(timelineIds.has(pureRenoteId)).toBe(false);
+		expect(timelineIds.has(cwQuoteId)).toBe(true);
+		expect(timelineIds.has(replyQuoteId)).toBe(true);
+		expect(timelineIds.has(fileQuoteId)).toBe(true);
+		expect(timelineIds.has(pollQuoteId)).toBe(true);
+	});
+});
+
+describe('NoteStore hydrated note lookup', () => {
+	let runtime: RuntimeDependencies;
+	let userId: string;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+		userId = genId();
+		await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: userId, username: `hydrate${userId}`, usernameLower: `hydrate${userId}` },
+			profile: { userId },
+		});
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('loads joined records and uses the current IDs on repeated calls', async () => {
+		const parentId = genId();
+		const childId = genId();
+		const channelId = genId();
+		await runtime.db.insert(channel).values({ id: channelId, userId, name: 'hydrated channel' });
+		await createNoteInDatabase(runtime.db, {
+			id: parentId,
+			userId,
+			text: 'parent',
+			visibility: 'followers',
+		});
+		await createNoteInDatabase(runtime.db, {
+			id: childId,
+			userId,
+			text: 'child',
+			visibility: 'public',
+			replyId: parentId,
+			replyUserId: userId,
+			renoteId: parentId,
+			renoteUserId: userId,
+			channelId,
+			tags: ['test'],
+			reactions: { '👍': 2 },
+		});
+
+		const queries = countDatabaseQueries(runtime.db);
+		try {
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [])).toEqual([]);
+			expect(queries.count()).toBe(0);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [childId, childId, genId()])).toMatchObject([
+				{
+					id: childId,
+					text: 'child',
+					tags: ['test'],
+					reactions: { '👍': 2 },
+					user: { id: userId },
+					reply: { id: parentId, visibility: 'followers', user: { id: userId } },
+					renote: { id: parentId, visibility: 'followers', user: { id: userId } },
+					channel: { id: channelId, name: 'hydrated channel' },
+				},
+			]);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [parentId])).toMatchObject([
+				{ id: parentId, reply: null, renote: null, channel: null, user: { id: userId } },
+			]);
+			expect(await listHydratedNotesByIdsFromDatabase(runtime.db, [genId()])).toEqual([]);
+			expect(queries.count()).toBe(3);
+		} finally {
+			queries.restore();
+		}
+	});
+});
+
+// search.noteTextIndex: false では trigram index を持たないので、どの語も 1 ページの走査範囲を区切る経路に回す。
+// 経路が変わっても、同じ語で同じ投稿が見つかることを見る。
+describe('NoteStore text search without the trigram index', () => {
+	let runtime: RuntimeDependencies;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('finds the same notes whether or not the trigram index is used', async () => {
+		const userId = genId();
+		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: userId, username: `notestoresearch${userId}`, usernameLower: `notestoresearch${userId}` },
+			profile: { userId },
+		});
+		const marker = `zq${userId.slice(-8)}`;
+		const ids: string[] = [];
+		for (const text of [
+			`first ${marker} note`,
+			'unrelated',
+			`second ${marker.toUpperCase()} note`,
+			`日本語 ${marker}`,
+		]) {
+			const id = genId();
+			await createNoteInDatabase(runtime.db, { id, text, userId: user.id, userHost: null, visibility: 'public' });
+			if (text.toLowerCase().includes(marker)) ids.push(id);
+		}
+
+		const search = (useTextIndex: boolean) =>
+			searchNotesByTextFromDatabase(runtime.db, {
+				query: marker,
+				usePgroonga: false,
+				useTextIndex,
+				me: null,
+				blockedHosts: [],
+				limit: 10,
+			});
+		const expected = [...ids].reverse();
+		expect((await search(true)).map((note) => note.id)).toStrictEqual(expected);
+		expect((await search(false)).map((note) => note.id)).toStrictEqual(expected);
+	});
+});

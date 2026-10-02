@@ -5,7 +5,7 @@
 
 import { endpointMetas as flashContracts } from '@/server/rest/contracts/flash.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { handleApiFlashLike, handleApiFlashUnlike } from '../favorite/favorites.js';
 import {
 	handleApiFlashCreate,
@@ -18,7 +18,7 @@ import {
 	handleApiFlashUpdate,
 } from '../flash/flash.js';
 
-export const flashEndpoints = implementEndpoints<ApiShellDependencies>()(flashContracts, {
+export const flashEndpoints = implementEndpoints<ShellDependencies>()(flashContracts, {
 	'flash/create': async ({ deps, input, me }) => await handleApiFlashCreate(deps, me, input),
 	'flash/delete': async ({ deps, input, me }) => {
 		await handleApiFlashDelete(deps, me, input);

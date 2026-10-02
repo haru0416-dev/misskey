@@ -12,7 +12,7 @@ import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
 import { ErrorPage } from '@/server/web/views/error.js';
 import { createApiShellApp } from './rest/shell.js';
-import type { ApiShellDependencies } from './rest/shell.js';
+import type { ShellDependencies } from './rest/shell.js';
 import { createClientBaseApp } from './web/client-base.js';
 import type { ClientBaseDependencies } from './web/client-base.js';
 import { createFeedApp } from './web/feed.js';
@@ -54,7 +54,7 @@ type HttpMiddlewareDependencies = {
 
 export type MisskeyAppDependencies = {
 	http: HttpMiddlewareDependencies;
-	apiShell: ApiShellDependencies;
+	apiShell: ShellDependencies;
 	clientBase: ClientBaseDependencies;
 	feed: FeedDependencies;
 	file: FileServerDependencies;

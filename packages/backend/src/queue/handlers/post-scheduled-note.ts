@@ -4,14 +4,14 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
+import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/note/note-draft-store.js';
 import { noteDraft } from '@/db/schema/note-draft.js';
 import type { NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/core/queue/types.js';
-import { fetchAndCreateNote } from '@/core/note/NoteCreationService.js';
-import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
+import { fetchAndCreateNote } from '@/core/note/note-creation-service.js';
+import type { NoteCreationDependencies } from '@/core/note/note-creation-service.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,

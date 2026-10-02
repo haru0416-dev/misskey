@@ -15,21 +15,21 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/emoji-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	decrementNoteReactionInDatabase,
 	incrementNoteReactionInDatabase,
-} from '@/core/note/NoteStore.js';
+} from '@/core/note/note-store.js';
 import {
 	createNoteReactionInDatabase,
 	deleteNoteReactionByIdFromDatabase,
 	fetchNoteReactionByUserAndNoteFromDatabase,
 	fetchNoteReactionByUserAndNoteOrFailFromDatabase,
 	listNoteReactionsByNoteIdFromDatabase,
-} from '@/core/note/NoteReactionStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/note/note-reaction-store.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -43,21 +43,24 @@ import {
 	resolveRemoteRecipient,
 } from '../../../core/activitypub/notes-ap.js';
 import type { NoteApDependencies } from '../../../core/activitypub/notes-ap.js';
-import { createNoteNotification } from '@/core/note/NoteCreationService.js';
-import { isNoteContentVisibleForMeForApi } from './note.js';
+import { createNoteNotification } from '@/core/note/note-creation-service.js';
+import { isNoteContentVisibleForMe } from './note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
-import { getUserRoles } from '../../../core/role/role-policy.js';
+import { fetchUserRoles } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import type { NoteStreamPublisher } from '../../../core/events.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
-import { FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE, recordFeaturedNoteEngagement } from '@/core/featured/FeaturedRanking.js';
+import {
+	FEATURED_NOTE_ENGAGEMENT_SAMPLE_RATE,
+	recordFeaturedNoteEngagement,
+} from '@/core/featured/featured-ranking.js';
 
-export type ApiNotesReactionsDependencies = NoteApDependencies &
+export type NotesReactionsDependencies = NoteApDependencies &
 	NoteDependencies &
 	RolePolicyDependencies &
 	NotificationDependencies & {
@@ -85,7 +88,7 @@ const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 /** Unicode 絵文字とレガシー名を、保存できる 1 つの絵文字へ寄せる。該当しなければフォールバック。 */
-export function normalizeReactionForApi(reaction: string | null): string {
+export function normalizeReaction(reaction: string | null): string {
 	if (reaction == null) {
 		return FALLBACK;
 	}
@@ -102,7 +105,7 @@ export function normalizeReactionForApi(reaction: string | null): string {
 	return FALLBACK;
 }
 
-export function decodeReactionForApi(str: string): { reaction: string; name?: string; host?: string | null } {
+export function decodeReaction(str: string): { reaction: string; name?: string; host?: string | null } {
 	const custom = str.match(decodeCustomEmojiRegexp);
 	if (custom) {
 		const name = custom[1]!;
@@ -112,8 +115,8 @@ export function decodeReactionForApi(str: string): { reaction: string; name?: st
 	return { reaction: str };
 }
 
-export async function createNoteReactionForApi(
-	deps: ApiNotesReactionsDependencies,
+export async function createNoteReaction(
+	deps: NotesReactionsDependencies,
 	user: MiUser,
 	note: MiNote,
 	requestedReaction: string | null | undefined,
@@ -125,7 +128,7 @@ export async function createNoteReactionForApi(
 		}
 	}
 
-	if (!(await isNoteContentVisibleForMeForApi(deps, note, user.id))) {
+	if (!(await isNoteContentVisibleForMe(deps, note, user.id))) {
 		throw new IdentifiableError('68e9d2d1-48bf-42c2-b90a-b20e09fd3d48', 'Note not accessible for you.');
 	}
 
@@ -150,7 +153,8 @@ export async function createNoteReactionForApi(
 			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, reacterHost);
 
 			if (emoji) {
-				const roles = emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getUserRoles(deps, user);
+				const roles =
+					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await fetchUserRoles(deps, user);
 				const allowed =
 					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ||
 					roles.some((r) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id));
@@ -176,7 +180,7 @@ export async function createNoteReactionForApi(
 				reaction = FALLBACK;
 			}
 		} else {
-			reaction = normalizeReactionForApi(reaction);
+			reaction = normalizeReaction(reaction);
 		}
 	}
 
@@ -196,7 +200,7 @@ export async function createNoteReactionForApi(
 		if (isDuplicateKeyValueDatabaseError(err)) {
 			const exists = await fetchNoteReactionByUserAndNoteOrFailFromDatabase(deps.db, user.id, note.id);
 			if (exists.reaction !== reaction) {
-				await deleteNoteReactionForApi(deps, user, note);
+				await deleteNoteReaction(deps, user, note);
 				await deps.db.transaction(async (transaction) => {
 					await createNoteReactionInDatabase(transaction as typeof deps.db, record);
 					await incrementNoteReactionInDatabase(
@@ -222,7 +226,7 @@ export async function createNoteReactionForApi(
 		deps.chartWriters.perUserReactionsChart.update(user, note);
 	}
 
-	const decoded = decodeReactionForApi(reaction);
+	const decoded = decodeReaction(reaction);
 	const customEmoji: MiEmoji | null =
 		decoded.name == null
 			? null
@@ -271,11 +275,7 @@ export async function createNoteReactionForApi(
 	}
 }
 
-export async function deleteNoteReactionForApi(
-	deps: ApiNotesReactionsDependencies,
-	user: MiUser,
-	note: MiNote,
-): Promise<void> {
+export async function deleteNoteReaction(deps: NotesReactionsDependencies, user: MiUser, note: MiNote): Promise<void> {
 	const exist = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, user.id, note.id);
 	if (exist == null) {
 		throw new IdentifiableError('60527ec9-b4cb-4a88-a6bd-32d3ad26817d', 'not reacted');
@@ -295,7 +295,7 @@ export async function deleteNoteReactionForApi(
 	});
 
 	deps.publishNoteStream?.(note, 'unreacted', {
-		reaction: decodeReactionForApi(exist.reaction).reaction,
+		reaction: decodeReaction(exist.reaction).reaction,
 		userId: user.id,
 	});
 
@@ -324,9 +324,9 @@ export const reactionsCreateParamDef = z.object({
 });
 
 export async function handleApiNotesReactionsCreate(
-	deps: ApiNotesReactionsDependencies,
+	deps: NotesReactionsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof reactionsCreateParamDef>,
+	params: Params<typeof reactionsCreateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/reactions/create']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -335,7 +335,7 @@ export async function handleApiNotesReactionsCreate(
 	}
 
 	try {
-		await createNoteReactionForApi(deps, me, note, params.reaction);
+		await createNoteReaction(deps, me, note, params.reaction);
 	} catch (err) {
 		if (err instanceof IdentifiableError) {
 			if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') {
@@ -360,9 +360,9 @@ export const reactionsDeleteParamDef = z.object({
 });
 
 export async function handleApiNotesReactionsDelete(
-	deps: ApiNotesReactionsDependencies,
+	deps: NotesReactionsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof reactionsDeleteParamDef>,
+	params: Params<typeof reactionsDeleteParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/reactions/delete']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -371,7 +371,7 @@ export async function handleApiNotesReactionsDelete(
 	}
 
 	try {
-		await deleteNoteReactionForApi(deps, me, note);
+		await deleteNoteReaction(deps, me, note);
 	} catch (err) {
 		if (err instanceof IdentifiableError && err.id === '60527ec9-b4cb-4a88-a6bd-32d3ad26817d') {
 			throw errors.notReacted();
@@ -388,13 +388,13 @@ export const notesReactionsParamDef = z.object({
 });
 
 export async function handleApiNotesReactions(
-	deps: ApiNotesReactionsDependencies,
+	deps: NotesReactionsDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesReactionsParamDef>,
+	params: Params<typeof notesReactionsParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/reactions']>,
 ): Promise<{ id: string; createdAt: string; user: Packed<'UserLite'>; type: string }[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null || !(await isNoteContentVisibleForMeForApi(deps, note, me?.id ?? null))) {
+	if (note == null || !(await isNoteContentVisibleForMe(deps, note, me?.id ?? null))) {
 		throw errors.noSuchNote();
 	}
 
@@ -430,7 +430,7 @@ export async function handleApiNotesReactions(
 						id: r.id,
 						createdAt: parseId(r.id).date.toISOString(),
 						user,
-						type: decodeReactionForApi(r.reaction).reaction,
+						type: decodeReaction(r.reaction).reaction,
 					},
 				];
 	});

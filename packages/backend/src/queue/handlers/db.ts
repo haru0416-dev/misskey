@@ -11,7 +11,7 @@ import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type {
 	QueueProgressReporter,
-	DBExportAntennasData,
+	DbExportAntennasData,
 	DbExportFollowingData,
 	DbDeleteDriveFileJobData,
 	DbJobDataWithUser,
@@ -19,56 +19,56 @@ import type {
 	DbUserImportToDbJobData,
 	RelationshipJobData,
 } from '@/core/queue/types.js';
-import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
-import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
+import { listAntennasByUserIdFromDatabase } from '@/core/antenna/antenna-store.js';
+import type { ExportedAntenna } from '@/core/antenna/antenna-import.js';
 import {
 	countDriveFilesByUserIdFromDatabase,
 	fetchDriveFileByIdFromDatabase,
 	listDriveFilesByUserIdWithPaginationFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { finishEnqueuedDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
-import { listFollowingsByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { finishEnqueuedDriveFileDeletion } from '@/core/drive/drive-file-deletion-logic.js';
+import { listFollowingsByFollowerIdFromDatabase } from '@/core/user/following-store.js';
 import {
 	countMutingsByMuterIdFromDatabase,
 	createMutingInDatabase,
 	listMuteeIdsByMuterIdFromDatabase,
 	listPermanentMutingsByMuterIdFromDatabase,
-} from '@/core/user/MutingStore.js';
+} from '@/core/user/muting-store.js';
 import {
 	countBlockingsByBlockerIdFromDatabase,
 	listBlockingsByBlockerIdFromDatabase,
-} from '@/core/user/BlockingStore.js';
+} from '@/core/user/blocking-store.js';
 import {
 	createUserListInDatabase,
 	fetchUserListByNameAndUserIdFromDatabase,
 	listUserListsByUserIdFromDatabase,
-} from '@/core/user/UserListStore.js';
+} from '@/core/user/user-list-store.js';
 import {
 	listUserListMembershipsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/user/UserListMembershipStore.js';
+} from '@/core/user/user-list-membership-store.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
-} from '@/core/note/NoteFavoriteStore.js';
-import { listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
+} from '@/core/note/note-favorite-store.js';
+import { listPollsByNoteIdsFromDatabase } from '@/core/note/poll-store.js';
 import {
 	countNotesByUserIdFromDatabase,
 	listNotesByUserIdWithPaginationFromDatabase,
 	listVisibleNotesWithUsersByIdsFromDatabase,
-} from '@/core/note/NoteStore.js';
-import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/clip/ClipStore.js';
-import { listClipNotesByClipIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
+} from '@/core/note/note-store.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/clip/clip-store.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/clip/clip-note-store.js';
+import type { DownloadService } from '@/core/net/download-service.js';
 import { createTemp } from '@/misc/create-temp.js';
-import { readDriveFileText, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
-import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
+import { readDriveFileText, withDriveFileContent } from '@/core/drive/drive-file-content.js';
+import type { DriveFileContentDependencies } from '@/core/drive/drive-file-content.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
@@ -82,29 +82,29 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
 import { addDbJobs } from '@/core/queue/queues.js';
 import type { DbJobBulkInput, DbQueue, RelationshipQueue } from '@/core/queue/queues.js';
-import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
-import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addDriveFile } from '@/server/rest/drive/drive-file-upload.js';
+import type { DriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import { packDriveFileManyByIds } from '@/core/drive/drive-file-packing.js';
 import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
-import { resolveUserForApi } from '@/server/rest/activitypub/ap-person.js';
-import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUser } from '@/server/rest/activitypub/ap-person.js';
+import type { ApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { InternalEventPublisher } from '../../core/events.js';
 import { createExportCompletedNotification } from '@/core/notification/notification.js';
 import type { NotificationDependencies } from '@/core/notification/notification.js';
-import { addUserListMemberForApi } from '@/server/rest/user/users-lists.js';
-import type { ApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
+import { addUserListMember } from '@/server/rest/user/users-lists.js';
+import type { UsersListsDependencies } from '@/server/rest/user/users-lists.js';
 import { userIsModerator } from '@/core/role/role-policy.js';
-import { deleteFileSyncForApi, deleteObjectStorageFileForApi } from './object-storage.js';
+import { deleteFileSync, deleteObjectStorageFile } from './object-storage.js';
 import type { QueueObjectStorageDependencies } from './object-storage.js';
 
 export type QueueDbDependencies = QueueObjectStorageDependencies &
 	DriveFileContentDependencies &
-	ApiDriveFileUploadDependencies &
+	DriveFileUploadDependencies &
 	NotificationDependencies &
-	ApiApPersonDependencies &
-	ApiUsersListsDependencies & {
+	ApPersonDependencies &
+	UsersListsDependencies & {
 		db: MiDrizzleDatabase;
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 		dbQueue: DbQueue;
@@ -117,7 +117,7 @@ const importLineJobOptions = {
 	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
 };
 
-function toRelationshipJobForApi(
+function toRelationshipJob(
 	config: Pick<Config, 'queues'>,
 	name: 'follow' | 'unfollow' | 'block' | 'unblock',
 	data: RelationshipJobData,
@@ -135,7 +135,7 @@ function toRelationshipJobForApi(
 	};
 }
 
-function getFullApAccountForApi(config: Pick<Config, 'runtime'>, username: string, host: string | null): string {
+function getFullApAccount(config: Pick<Config, 'runtime'>, username: string, host: string | null): string {
 	return host ? `${username}@${toPuny(host)}` : `${username}@${toPuny(config.runtime.host)}`;
 }
 
@@ -192,7 +192,7 @@ export async function handleQueueDeleteDriveFiles(
 		cursor = files.at(-1)?.id ?? null;
 
 		for (const file of files) {
-			await deleteFileSyncForApi(deps, file);
+			await deleteFileSync(deps, file);
 			deletedCount++;
 		}
 
@@ -209,7 +209,7 @@ export async function handleQueueDeleteDriveFile(
 		{
 			...deps,
 			deleteInternalFile: (key) => deps.internalStorageService.del(key),
-			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForApi(deps, key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFile(deps, key),
 			isModerator: (user) => userIsModerator(deps, user),
 			logDriveFileDeletion: (db, moderator, logId, info) =>
 				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
@@ -265,7 +265,7 @@ export async function handleQueueExportMuting(
 					continue;
 				}
 
-				await writeLineToStream(stream, getFullApAccountForApi(deps.config, u.username, u.host));
+				await writeLineToStream(stream, getFullApAccount(deps.config, u.username, u.host));
 				exportedCount++;
 			}
 
@@ -275,7 +275,7 @@ export async function handleQueueExportMuting(
 		stream.end();
 
 		const fileName = 'mute-' + formatDateTimeForFileName(new Date()) + '.csv';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'muting', driveFile.id);
 	} finally {
@@ -329,7 +329,7 @@ export async function handleQueueExportBlocking(
 					continue;
 				}
 
-				await writeLineToStream(stream, getFullApAccountForApi(deps.config, u.username, u.host));
+				await writeLineToStream(stream, getFullApAccount(deps.config, u.username, u.host));
 				exportedCount++;
 			}
 
@@ -339,7 +339,7 @@ export async function handleQueueExportBlocking(
 		stream.end();
 
 		const fileName = 'blocking-' + formatDateTimeForFileName(new Date()) + '.csv';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'blocking', driveFile.id);
 	} finally {
@@ -370,7 +370,7 @@ export async function handleQueueExportUserLists(deps: QueueDbDependencies, data
 			const usersWithReplies = new Set(memberships.filter((m) => m.withReplies).map((m) => m.userId));
 
 			for (const u of users) {
-				const acct = getFullApAccountForApi(deps.config, u.username, u.host);
+				const acct = getFullApAccount(deps.config, u.username, u.host);
 				// 3 列目以降は key=value 形式にする。
 				await writeLineToStream(stream, `${list.name},${acct},withReplies=${usersWithReplies.has(u.id)}`);
 			}
@@ -379,7 +379,7 @@ export async function handleQueueExportUserLists(deps: QueueDbDependencies, data
 		stream.end();
 
 		const fileName = 'user-lists-' + formatDateTimeForFileName(new Date()) + '.csv';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'userList', driveFile.id);
 	} finally {
@@ -387,7 +387,7 @@ export async function handleQueueExportUserLists(deps: QueueDbDependencies, data
 	}
 }
 
-export async function handleQueueExportAntennas(deps: QueueDbDependencies, data: DBExportAntennasData): Promise<void> {
+export async function handleQueueExportAntennas(deps: QueueDbDependencies, data: DbExportAntennasData): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, data.user.id);
 	if (user == null) {
 		return;
@@ -415,7 +415,7 @@ export async function handleQueueExportAntennas(deps: QueueDbDependencies, data:
 					excludeKeywords: antenna.excludeKeywords,
 					users: antenna.users,
 					userListAccts:
-						users !== undefined ? users.map((u) => getFullApAccountForApi(deps.config, u.username, u.host)) : null,
+						users !== undefined ? users.map((u) => getFullApAccount(deps.config, u.username, u.host)) : null,
 					caseSensitive: antenna.caseSensitive,
 					localOnly: antenna.localOnly,
 					excludeBots: antenna.excludeBots,
@@ -432,7 +432,7 @@ export async function handleQueueExportAntennas(deps: QueueDbDependencies, data:
 		stream.end();
 
 		const fileName = 'antennas-' + formatDateTimeForFileName(new Date()) + '.json';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'antenna', driveFile.id);
 	} finally {
@@ -487,7 +487,7 @@ export async function handleQueueExportFollowing(
 					continue;
 				}
 
-				const userAcct = getFullApAccountForApi(deps.config, u.username, u.host);
+				const userAcct = getFullApAccount(deps.config, u.username, u.host);
 				await writeLineToStream(stream, `${userAcct},withReplies=${following.withReplies}`);
 			}
 		}
@@ -495,7 +495,7 @@ export async function handleQueueExportFollowing(
 		stream.end();
 
 		const fileName = 'following-' + formatDateTimeForFileName(new Date()) + '.csv';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'csv' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'csv' });
 
 		createExportCompletedNotification(deps, user.id, 'following', driveFile.id);
 	} finally {
@@ -503,7 +503,7 @@ export async function handleQueueExportFollowing(
 	}
 }
 
-async function resolveImportTargetUserForApi(
+async function resolveImportTargetUser(
 	deps: QueueDbDependencies,
 	acct: string,
 ): Promise<import('@/models/User.js').MiUser | null> {
@@ -519,7 +519,7 @@ async function resolveImportTargetUserForApi(
 	);
 
 	if (target == null) {
-		target = await resolveUserForApi(deps, username, host);
+		target = await resolveUser(deps, username, host);
 	}
 
 	return target;
@@ -544,7 +544,7 @@ export async function handleQueueImportMuting(deps: QueueDbDependencies, data: D
 			if (!acct) {
 				continue;
 			}
-			const target = await resolveImportTargetUserForApi(deps, acct);
+			const target = await resolveImportTargetUser(deps, acct);
 
 			if (target == null) {
 				throw new Error(`cannot resolve user: ${acct}`);
@@ -617,14 +617,14 @@ export async function handleQueueImportUserLists(deps: QueueDbDependencies, data
 			);
 
 			if (target == null) {
-				target = await resolveUserForApi(deps, username, host);
+				target = await resolveUser(deps, username, host);
 			}
 
 			if (await userListMembershipExistsInDatabase(deps.db, target.id, list.id)) {
 				continue;
 			}
 
-			await addUserListMemberForApi(deps, target, list, user, { withReplies });
+			await addUserListMember(deps, target, list, user, { withReplies });
 		} catch {
 			// 1行の失敗でインポート全体を中断しない。
 		}
@@ -690,7 +690,7 @@ export async function handleQueueImportBlockingToDb(
 		if (!acct) {
 			return;
 		}
-		const target = await resolveImportTargetUserForApi(deps, acct);
+		const target = await resolveImportTargetUser(deps, acct);
 
 		if (target == null) {
 			throw new Error(`Unable to resolve user: ${acct}`);
@@ -701,7 +701,7 @@ export async function handleQueueImportBlockingToDb(
 		}
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
+			toRelationshipJob(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
 		]);
 	} catch {
 		// 1行の失敗でインポート全体を中断しない。
@@ -758,7 +758,7 @@ export async function handleQueueImportFollowingToDb(
 			}
 		}
 
-		const target = await resolveImportTargetUserForApi(deps, acct);
+		const target = await resolveImportTargetUser(deps, acct);
 
 		if (target == null) {
 			throw new Error(`Unable to resolve user: ${acct}`);
@@ -769,7 +769,7 @@ export async function handleQueueImportFollowingToDb(
 		}
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForApi(
+			toRelationshipJob(
 				deps.config,
 				'follow',
 				omitUndefined({
@@ -785,7 +785,7 @@ export async function handleQueueImportFollowingToDb(
 	}
 }
 
-function serializeFavoriteForApi(
+function serializeFavorite(
 	deps: Pick<QueueDbDependencies, 'config'>,
 	favorite: NoteFavoriteRow & { note: MiNote & { user: MiUser } },
 	poll: MiPoll | null = null,
@@ -875,7 +875,7 @@ export async function handleQueueExportFavorites(
 				}
 
 				const poll = pollMap.get(note.id);
-				const content = JSON.stringify(serializeFavoriteForApi(deps, { ...favorite, note }, poll ?? null));
+				const content = JSON.stringify(serializeFavorite(deps, { ...favorite, note }, poll ?? null));
 				const isFirst = exportedFavoritesCount === 0;
 				await writeToStream(stream, isFirst ? content : ',\n' + content);
 				exportedFavoritesCount++;
@@ -888,7 +888,7 @@ export async function handleQueueExportFavorites(
 		stream.end();
 
 		const fileName = 'favorites-' + formatDateTimeForFileName(new Date()) + '.json';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'favorite', driveFile.id);
 	} finally {
@@ -896,7 +896,7 @@ export async function handleQueueExportFavorites(
 	}
 }
 
-function serializeNoteForApi(
+function serializeNote(
 	deps: Pick<QueueDbDependencies, 'config'>,
 	note: MiNote,
 	poll: MiPoll | null,
@@ -970,7 +970,7 @@ export async function handleQueueExportNotes(
 				const files = note.fileIds
 					.map((fileId) => packedFileMap.get(fileId))
 					.filter((file): file is NonNullable<typeof file> => file != null);
-				const content = JSON.stringify(serializeNoteForApi(deps, note, poll, files));
+				const content = JSON.stringify(serializeNote(deps, note, poll, files));
 
 				const isFirst = exportedNotesCount === 0;
 				await writeToStream(stream, isFirst ? content : ',\n' + content);
@@ -984,7 +984,7 @@ export async function handleQueueExportNotes(
 		stream.end();
 
 		const fileName = 'notes-' + formatDateTimeForFileName(new Date()) + '.json';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'note', driveFile.id);
 	} finally {
@@ -992,7 +992,7 @@ export async function handleQueueExportNotes(
 	}
 }
 
-function serializeClipForApi(clip: MiClip): Record<string, unknown> {
+function serializeClip(clip: MiClip): Record<string, unknown> {
 	return {
 		id: clip.id,
 		name: clip.name,
@@ -1002,7 +1002,7 @@ function serializeClipForApi(clip: MiClip): Record<string, unknown> {
 	};
 }
 
-function serializeClipNoteForApi(
+function serializeClipNote(
 	deps: Pick<QueueDbDependencies, 'config'>,
 	clip: MiClipNote & { note: MiNote & { user: MiUser } },
 	poll: MiPoll | undefined,
@@ -1036,7 +1036,7 @@ function serializeClipNoteForApi(
 	};
 }
 
-async function processClipNotesForApi(
+async function processClipNotes(
 	deps: QueueDbDependencies,
 	writer: WritableStreamDefaultWriter,
 	clipId: MiClip['id'],
@@ -1077,7 +1077,7 @@ async function processClipNotesForApi(
 			}
 
 			const poll = pollMap.get(note.id);
-			const content = JSON.stringify(serializeClipNoteForApi(deps, { ...clipNote, note }, poll));
+			const content = JSON.stringify(serializeClipNote(deps, { ...clipNote, note }, poll));
 			const isFirst = exportedClipNotesCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);
 
@@ -1086,7 +1086,7 @@ async function processClipNotesForApi(
 	}
 }
 
-async function processClipsForApi(
+async function processClips(
 	deps: QueueDbDependencies,
 	writer: WritableStreamDefaultWriter,
 	user: MiUser,
@@ -1112,11 +1112,11 @@ async function processClipsForApi(
 
 		for (const clip of clips) {
 			// 末尾の `]}` を除いて書き、ノートを足した後で閉じる。
-			const content = JSON.stringify(serializeClipForApi(clip)).slice(0, -2);
+			const content = JSON.stringify(serializeClip(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);
 
-			await processClipNotesForApi(deps, writer, clip.id, user.id);
+			await processClipNotes(deps, writer, clip.id, user.id);
 
 			await writer.write(']}');
 			exportedClipsCount++;
@@ -1145,13 +1145,13 @@ export async function handleQueueExportClips(
 
 		await writer.write('[');
 
-		await processClipsForApi(deps, writer, user, updateProgress);
+		await processClips(deps, writer, user, updateProgress);
 
 		await writer.write(']');
 		await writer.close();
 
 		const fileName = 'clips-' + formatDateTimeForFileName(new Date()) + '.json';
-		const driveFile = await addDriveFileForApi(deps, { user, path, name: fileName, force: true, ext: 'json' });
+		const driveFile = await addDriveFile(deps, { user, path, name: fileName, force: true, ext: 'json' });
 
 		createExportCompletedNotification(deps, user.id, 'clip', driveFile.id);
 	} finally {

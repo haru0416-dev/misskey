@@ -14,15 +14,15 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { StatusError } from '@/misc/status-error.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
-import type { FileInfoService } from '@/core/drive/FileInfoService.js';
-import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
-import { FileServerDriveHandler } from './FileServerDriveHandler.js';
-import { FileServerFileResolver } from './FileServerFileResolver.js';
-import { FileServerProxyHandler } from './FileServerProxyHandler.js';
-import type { FileServerHeaders, FileServerReply, FileServerRequest } from './FileServerTypes.js';
+import type { DownloadService } from '@/core/net/download-service.js';
+import type { FileInfoService } from '@/core/drive/file-info-service.js';
+import type { ImageProcessingService } from '@/core/drive/image-processing-service.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
+import type { VideoProcessingService } from '@/core/drive/video-processing-service.js';
+import { FileServerDriveHandler } from './file-server-drive-handler.js';
+import { FileServerFileResolver } from './file-server-file-resolver.js';
+import { FileServerProxyHandler } from './file-server-proxy-handler.js';
+import type { FileServerHeaders, FileServerReply, FileServerRequest } from './file-server-types.js';
 
 type FileBody = {
 	type: 'file';

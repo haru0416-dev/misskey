@@ -7,28 +7,28 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { createPollInDatabase, fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
+import { createPollInDatabase, fetchPollByNoteIdFromDatabase } from '@/core/note/poll-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updateQuestionFromApForApi, voteFromApForApi } from '@/server/rest/activitypub/ap-note.js';
-import { createBlockingInDatabase } from '@/core/user/BlockingStore.js';
-import { listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
+import { updateQuestionFromAp, voteFromAp } from '@/server/rest/activitypub/ap-note.js';
+import { createBlockingInDatabase } from '@/core/user/blocking-store.js';
+import { listPollVotesByNoteAndUserFromDatabase } from '@/core/note/poll-vote-store.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import type { ApiApNoteDependencies } from '@/server/rest/activitypub/ap-note.js';
+import type { ApNoteDependencies } from '@/server/rest/activitypub/ap-note.js';
 import type { IObject } from '@/core/activitypub/type.js';
 
-describe('updateQuestionFromApForApi', () => {
+describe('updateQuestionFromAp', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiApNoteDependencies;
+	let deps: ApNoteDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = {
 			...runtime,
 			logger: runtime.loggerService.getLogger('test-ap-note-poll'),
-		} as unknown as ApiApNoteDependencies;
+		} as unknown as ApNoteDependencies;
 	});
 
 	afterAll(async () => {
@@ -86,7 +86,7 @@ describe('updateQuestionFromApForApi', () => {
 
 	test('選択肢の名前で票数を更新し、同名の選択肢は先頭の票数を使う', async () => {
 		const { noteId, noteUri, userUri } = await createRemotePoll(['a', 'b', 'a']);
-		const changed = await updateQuestionFromApForApi(
+		const changed = await updateQuestionFromAp(
 			deps,
 			question(noteUri, userUri, [
 				{ name: 'a', count: 5 },
@@ -100,23 +100,23 @@ describe('updateQuestionFromApForApi', () => {
 
 	test('保存済みの選択肢が相手に無ければ更新しない', async () => {
 		const { noteId, noteUri, userUri } = await createRemotePoll(['a', 'b']);
-		await expect(
-			updateQuestionFromApForApi(deps, question(noteUri, userUri, [{ name: 'a', count: 1 }])),
-		).rejects.toThrow('invalid newCount');
+		await expect(updateQuestionFromAp(deps, question(noteUri, userUri, [{ name: 'a', count: 1 }]))).rejects.toThrow(
+			'invalid newCount',
+		);
 		expect((await fetchPollByNoteIdFromDatabase(deps.db, noteId))?.votes).toStrictEqual([0, 0]);
 	});
 });
 
-describe('voteFromApForApi', () => {
+describe('voteFromAp', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiApNoteDependencies;
+	let deps: ApNoteDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = {
 			...runtime,
 			logger: runtime.loggerService.getLogger('test-ap-note-vote'),
-		} as unknown as ApiApNoteDependencies;
+		} as unknown as ApNoteDependencies;
 	});
 
 	afterAll(async () => {
@@ -159,7 +159,7 @@ describe('voteFromApForApi', () => {
 		const voter = await createUser('vote-blocked.example');
 		await createBlockingInDatabase(deps.db, { id: genId(), blockerId: owner.id, blockeeId: voter.id });
 
-		await expect(voteFromApForApi(deps, voter, note, 0)).rejects.toThrow();
+		await expect(voteFromAp(deps, voter, note, 0)).rejects.toThrow();
 		expect(await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, voter.id)).toHaveLength(0);
 	});
 
@@ -167,7 +167,7 @@ describe('voteFromApForApi', () => {
 		const { note } = await createLocalPoll('followers');
 		const voter = await createUser('vote-outsider.example');
 
-		await expect(voteFromApForApi(deps, voter, note, 0)).rejects.toThrow();
+		await expect(voteFromAp(deps, voter, note, 0)).rejects.toThrow();
 		expect(await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, voter.id)).toHaveLength(0);
 	});
 
@@ -176,10 +176,10 @@ describe('voteFromApForApi', () => {
 		const voter = await createUser('vote-parallel.example');
 
 		const results = await Promise.allSettled([
-			voteFromApForApi(deps, voter, note, 0),
-			voteFromApForApi(deps, voter, note, 1),
-			voteFromApForApi(deps, voter, note, 0),
-			voteFromApForApi(deps, voter, note, 1),
+			voteFromAp(deps, voter, note, 0),
+			voteFromAp(deps, voter, note, 1),
+			voteFromAp(deps, voter, note, 0),
+			voteFromAp(deps, voter, note, 1),
 		]);
 		expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
 		expect(await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, voter.id)).toHaveLength(1);

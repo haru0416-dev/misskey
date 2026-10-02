@@ -9,7 +9,7 @@ import type { Server } from 'node:http';
 import { connect } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
 import { loadConfig } from '@/config.js';
 
 // 検査後の再解決は DNS rebinding を許すため、接続先の IP と論理ホスト名は分けて扱う。

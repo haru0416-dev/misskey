@@ -10,22 +10,25 @@ import {
 	countAntennasByUserIdFromDatabase,
 	createAntennasWithinLimitInDatabase,
 	listAntennasByUserIdFromDatabase,
-} from '@/core/antenna/AntennaStore.js';
-import { countClipNotesByClipIdFromDatabase, createClipNoteWithinLimitInDatabase } from '@/core/clip/ClipNoteStore.js';
+} from '@/core/antenna/antenna-store.js';
+import {
+	countClipNotesByClipIdFromDatabase,
+	createClipNoteWithinLimitInDatabase,
+} from '@/core/clip/clip-note-store.js';
 import {
 	countClipsByUserIdFromDatabase,
 	createClipInDatabase,
 	createClipWithinLimitInDatabase,
-} from '@/core/clip/ClipStore.js';
-import { fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/clip/clip-store.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/note/note-store.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
 	createRegistrationTicketWithinLimitInDatabase,
-} from '@/core/invite/RegistrationTicketStore.js';
+} from '@/core/invite/registration-ticket-store.js';
 import {
 	createUserNotePiningWithinLimitInDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
-} from '@/core/user/UserNotePiningStore.js';
+} from '@/core/user/user-note-pining-store.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

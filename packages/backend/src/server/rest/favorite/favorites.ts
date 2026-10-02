@@ -3,52 +3,52 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	createChannelFavoriteInDatabase,
 	deleteChannelFavoriteFromDatabase,
-} from '@/core/channel/ChannelFavoriteStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
+} from '@/core/channel/channel-favorite-store.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/channel-store.js';
 import {
 	clipFavoriteExistsInDatabase,
 	createClipFavoriteInDatabase,
 	deleteClipFavoriteByIdFromDatabase,
 	fetchClipFavoriteFromDatabase,
-} from '@/core/clip/ClipFavoriteStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
+} from '@/core/clip/clip-favorite-store.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/clip-store.js';
 import {
 	createFlashLikeInDatabase,
 	deleteFlashLikeByIdFromDatabase,
 	fetchFlashLikeFromDatabase,
 	flashLikeExistsInDatabase,
-} from '@/core/flash/FlashLikeStore.js';
+} from '@/core/flash/flash-like-store.js';
 import {
 	decrementFlashLikedCountInDatabase,
 	fetchFlashByIdFromDatabase,
 	incrementFlashLikedCountInDatabase,
-} from '@/core/flash/FlashStore.js';
-import { listNoteFavoritesByUserIdFromDatabase } from '@/core/note/NoteFavoriteStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/flash/flash-store.js';
+import { listNoteFavoritesByUserIdFromDatabase } from '@/core/note/note-favorite-store.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import {
 	createPageLikeInDatabase,
 	deletePageLikeByIdFromDatabase,
 	fetchPageLikeFromDatabase,
 	pageLikeExistsInDatabase,
-} from '@/core/page/PageLikeStore.js';
+} from '@/core/page/page-like-store.js';
 import {
 	decrementPageLikedCountInDatabase,
 	fetchPageByIdFromDatabase,
 	incrementPageLikedCountInDatabase,
-} from '@/core/page/PageStore.js';
+} from '@/core/page/page-store.js';
 import {
 	createUserListFavoriteInDatabase,
 	deleteUserListFavoriteByIdFromDatabase,
 	fetchUserListFavoriteFromDatabase,
 	userListFavoriteExistsInDatabase,
-} from '@/core/user/UserListFavoriteStore.js';
-import { userListExistsByIdAndPublicFromDatabase } from '@/core/user/UserListStore.js';
+} from '@/core/user/user-list-favorite-store.js';
+import { userListExistsByIdAndPublicFromDatabase } from '@/core/user/user-list-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -58,16 +58,16 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
 import { packNote } from '../../../core/note/note-packing.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiFavoriteDependencies = {
+export type FavoriteDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-export type ApiIFavoritesDependencies = NoteDependencies;
+export type IFavoritesDependencies = NoteDependencies;
 
 export const userListParamDef = z.object({
 	listId: misskeyId(),
@@ -90,7 +90,7 @@ export const flashParamDef = z.object({
 });
 
 export async function handleApiUsersListsFavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
@@ -129,9 +129,9 @@ export async function handleApiUsersListsFavorite(
 }
 
 export async function handleApiUsersListsUnfavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof userListParamDef>,
+	params: Params<typeof userListParamDef>,
 ): Promise<void> {
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
@@ -152,7 +152,7 @@ export async function handleApiUsersListsUnfavorite(
 }
 
 export async function handleApiClipsFavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
@@ -191,9 +191,9 @@ export async function handleApiClipsFavorite(
 }
 
 export async function handleApiClipsUnfavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipParamDef>,
+	params: Params<typeof clipParamDef>,
 ): Promise<void> {
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
@@ -214,9 +214,9 @@ export async function handleApiClipsUnfavorite(
 }
 
 export async function handleApiChannelsFavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelParamDef>,
+	params: Params<typeof channelParamDef>,
 ): Promise<void> {
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
@@ -231,9 +231,9 @@ export async function handleApiChannelsFavorite(
 }
 
 export async function handleApiChannelsUnfavorite(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelParamDef>,
+	params: Params<typeof channelParamDef>,
 ): Promise<void> {
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
@@ -244,9 +244,9 @@ export async function handleApiChannelsUnfavorite(
 }
 
 export async function handleApiPagesLike(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pageParamDef>,
+	params: Params<typeof pageParamDef>,
 ): Promise<void> {
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
@@ -289,9 +289,9 @@ export async function handleApiPagesLike(
 }
 
 export async function handleApiPagesUnlike(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pageParamDef>,
+	params: Params<typeof pageParamDef>,
 ): Promise<void> {
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
@@ -323,9 +323,9 @@ export async function handleApiPagesUnlike(
 }
 
 export async function handleApiFlashLike(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashParamDef>,
+	params: Params<typeof flashParamDef>,
 ): Promise<void> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
@@ -373,9 +373,9 @@ export async function handleApiFlashLike(
 }
 
 export async function handleApiFlashUnlike(
-	deps: ApiFavoriteDependencies,
+	deps: FavoriteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashParamDef>,
+	params: Params<typeof flashParamDef>,
 ): Promise<void> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
@@ -412,9 +412,9 @@ export const iFavoritesParamDef = z.object({
 });
 
 export async function handleApiIFavorites(
-	deps: ApiIFavoritesDependencies,
+	deps: IFavoritesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iFavoritesParamDef>,
+	params: Params<typeof iFavoritesParamDef>,
 ) {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
@@ -432,7 +432,7 @@ export async function handleApiIFavorites(
 					deps.db,
 					favorites.map((f) => f.noteId),
 				);
-	const packedNotes = await packNoteManyForApi(deps, notes, me);
+	const packedNotes = await packNoteMany(deps, notes, me);
 	const packedNoteMap = new Map(packedNotes.map((note) => [note.id, note]));
 
 	return await Promise.all(

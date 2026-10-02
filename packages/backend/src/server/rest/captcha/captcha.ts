@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	captchaErrorCodes,
 	getCaptchaSetting,
 	saveCaptchaSetting,
 	supportedCaptchaProviders,
-} from '@/core/captcha/CaptchaLogic.js';
-import type { CaptchaError } from '@/core/captcha/CaptchaLogic.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+} from '@/core/captcha/captcha-logic.js';
+import type { CaptchaError } from '@/core/captcha/captcha-logic.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/meta-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -22,7 +22,7 @@ import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiCaptchaDependencies = {
+export type CaptchaDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
@@ -90,13 +90,13 @@ function captchaErrorToApiError(error: CaptchaError): ApiError {
 	}
 }
 
-export async function handleApiAdminCaptchaCurrent(deps: ApiCaptchaDependencies) {
+export async function handleApiAdminCaptchaCurrent(deps: CaptchaDependencies) {
 	return getCaptchaSetting(await fetchMetaFromDatabase(deps.db));
 }
 
 export async function handleApiAdminCaptchaSave(
-	deps: ApiCaptchaDependencies,
-	params: ApiParams<typeof captchaSaveParamDef>,
+	deps: CaptchaDependencies,
+	params: Params<typeof captchaSaveParamDef>,
 ): Promise<void> {
 	const result = await saveCaptchaSetting(
 		{

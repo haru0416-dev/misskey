@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { antennaKeywordMatrixSchema } from '@/core/antenna/antenna-keywords.js';
@@ -14,11 +14,11 @@ import {
 	fetchAntennaByIdOrFailFromDatabase,
 	listAntennasByUserIdFromDatabase,
 	updateAntennaInDatabase,
-} from '@/core/antenna/AntennaStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
-import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/antenna/antenna-store.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/channel-muting-store.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/note-store.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/user-list-store.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -29,14 +29,14 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import { ApiError } from '../error.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { collectRedisListTimelineNotes } from '../note/redis-list-timeline.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 
-export type ApiAntennaDependencies = NoteDependencies &
+export type AntennaDependencies = NoteDependencies &
 	RolePolicyDependencies & {
 		publishInternalEvent?: InternalEventPublisher;
 	};
@@ -58,8 +58,8 @@ function emptyKeywordError(id: string): ApiError {
 	});
 }
 
-async function packAntennaForApi(
-	deps: { db: ApiAntennaDependencies['db']; config: ApiAntennaDependencies['config'] },
+async function packAntenna(
+	deps: { db: AntennaDependencies['db']; config: AntennaDependencies['config'] },
 	src: MiAntenna['id'] | MiAntenna,
 ): Promise<Packed<'Antenna'>> {
 	const antenna = typeof src === 'object' ? src : await fetchAntennaByIdOrFailFromDatabase(deps.db, src);
@@ -113,9 +113,9 @@ export const antennasCreateParamDef = z
 	});
 
 export async function handleApiAntennasCreate(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasCreateParamDef>,
+	params: Params<typeof antennasCreateParamDef>,
 ): Promise<Packed<'Antenna'>> {
 	if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
@@ -162,7 +162,7 @@ export async function handleApiAntennasCreate(
 			if (currentUser == null) {
 				throw new Error('Authenticated user no longer exists');
 			}
-			return (await getRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
+			return (await fetchRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
 		},
 	);
 	if (result.status === 'limitExceeded') {
@@ -180,7 +180,7 @@ export async function handleApiAntennasCreate(
 	}
 	deps.publishInternalEvent?.('antennaCreated', antenna);
 
-	return await packAntennaForApi(deps, antenna);
+	return await packAntenna(deps, antenna);
 }
 
 export const antennasUpdateParamDef = z
@@ -210,9 +210,9 @@ export const antennasUpdateParamDef = z
 	});
 
 export async function handleApiAntennasUpdate(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasUpdateParamDef>,
+	params: Params<typeof antennasUpdateParamDef>,
 ): Promise<Packed<'Antenna'>> {
 	if (params.keywords && params.excludeKeywords) {
 		if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
@@ -272,7 +272,7 @@ export async function handleApiAntennasUpdate(
 
 	deps.publishInternalEvent?.('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(deps.db, antenna.id));
 
-	return await packAntennaForApi(deps, antenna.id);
+	return await packAntenna(deps, antenna.id);
 }
 
 export const antennasDeleteParamDef = z.object({
@@ -280,9 +280,9 @@ export const antennasDeleteParamDef = z.object({
 });
 
 export async function handleApiAntennasDelete(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasDeleteParamDef>,
+	params: Params<typeof antennasDeleteParamDef>,
 ): Promise<void> {
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
@@ -296,13 +296,10 @@ export async function handleApiAntennasDelete(
 
 export const antennasListParamDef = z.object({});
 
-export async function handleApiAntennasList(
-	deps: ApiAntennaDependencies,
-	me: MiLocalUser,
-): Promise<Packed<'Antenna'>[]> {
+export async function handleApiAntennasList(deps: AntennaDependencies, me: MiLocalUser): Promise<Packed<'Antenna'>[]> {
 	const antennas = await listAntennasByUserIdFromDatabase(deps.db, me.id);
 
-	return await Promise.all(antennas.map((x) => packAntennaForApi(deps, x)));
+	return await Promise.all(antennas.map((x) => packAntenna(deps, x)));
 }
 
 export const antennasShowParamDef = z.object({
@@ -310,16 +307,16 @@ export const antennasShowParamDef = z.object({
 });
 
 export async function handleApiAntennasShow(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasShowParamDef>,
+	params: Params<typeof antennasShowParamDef>,
 ): Promise<Packed<'Antenna'>> {
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
 		throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
 	}
 
-	return await packAntennaForApi(deps, antenna);
+	return await packAntenna(deps, antenna);
 }
 
 export const antennasRemoveNoteParamDef = z.object({
@@ -328,9 +325,9 @@ export const antennasRemoveNoteParamDef = z.object({
 });
 
 export async function handleApiAntennasRemoveNote(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasRemoveNoteParamDef>,
+	params: Params<typeof antennasRemoveNoteParamDef>,
 ): Promise<void> {
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) {
@@ -348,9 +345,9 @@ export const antennasNotesParamDef = z.object({
 });
 
 export async function handleApiAntennasNotes(
-	deps: ApiAntennaDependencies,
+	deps: AntennaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof antennasNotesParamDef>,
+	params: Params<typeof antennasNotesParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
@@ -392,5 +389,5 @@ export async function handleApiAntennasNotes(
 			}),
 	);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }

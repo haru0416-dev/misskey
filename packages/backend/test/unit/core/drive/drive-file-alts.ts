@@ -8,8 +8,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import { generateDriveFileAlts } from '@/core/drive/DriveFileUploadLogic.js';
-import { createImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import { generateDriveFileAlts } from '@/core/drive/drive-file-upload-logic.js';
+import { createImageProcessingService } from '@/core/drive/image-processing-service.js';
 import type { Config } from '@/config.js';
 
 // Web 用画像 (拡大表示用) は設定で画質と CPU を選び、サムネイルは常に smartSubsample を使わない。

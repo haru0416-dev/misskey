@@ -6,14 +6,14 @@
 import type { Packed } from '@/misc/json-schema.js';
 import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
-import { listVisibleNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { listNoteReactionsByUserIdFromDatabase } from '@/core/note/NoteReactionStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/blocking-store.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/muting-store.js';
+import { listVisibleNotesByIdsFromDatabase } from '@/core/note/note-store.js';
+import { listNoteReactionsByUserIdFromDatabase } from '@/core/note/note-reaction-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
@@ -21,9 +21,9 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import { decodeReactionForApi } from '../note/notes-reactions.js';
+import { decodeReaction } from '../note/notes-reactions.js';
 import { packNote } from '../../../core/note/note-packing.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import { ApiError } from '../error.js';
@@ -32,7 +32,7 @@ import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiUserReactionsDependencies = NoteDependencies & RolePolicyDependencies;
+export type UserReactionsDependencies = NoteDependencies & RolePolicyDependencies;
 
 export const usersReactionsParamDef = z.object({
 	userId: misskeyId(),
@@ -40,8 +40,8 @@ export const usersReactionsParamDef = z.object({
 	...paginationParams,
 });
 
-async function packNoteReactionWithNoteForApi(
-	deps: ApiUserReactionsDependencies,
+async function packNoteReactionWithNote(
+	deps: UserReactionsDependencies,
 	reaction: NoteReactionRow & { note: MiNote },
 	me: { id: MiUser['id'] } | null | undefined,
 	packedUser: Packed<'UserLite'>,
@@ -51,15 +51,15 @@ async function packNoteReactionWithNoteForApi(
 		id: reaction.id,
 		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
-		type: decodeReactionForApi(reaction.reaction).reaction,
+		type: decodeReaction(reaction.reaction).reaction,
 		note: packedNote ?? (await packNote(deps, reaction.note, me)),
 	};
 }
 
 export async function handleApiUsersReactions(
-	deps: ApiUserReactionsDependencies,
+	deps: UserReactionsDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersReactionsParamDef>,
+	params: Params<typeof usersReactionsParamDef>,
 	errors: ContractErrors<(typeof usersContracts)['users/reactions']>,
 ) {
 	const userIdsWhoBlockingMe = me
@@ -150,7 +150,7 @@ export async function handleApiUsersReactions(
 	const userIds = [...new Set(collected.map((r) => r.userId))];
 	const packedUsers = await packUserLiteMany(deps, userIds);
 	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
-	const packedNotes = await packNoteManyForApi(
+	const packedNotes = await packNoteMany(
 		deps,
 		collected.map((reaction) => reaction.note),
 		me,
@@ -160,7 +160,7 @@ export async function handleApiUsersReactions(
 	return await Promise.all(
 		collected.flatMap((reaction, index) => {
 			const user = userMap.get(reaction.userId);
-			return user == null ? [] : [packNoteReactionWithNoteForApi(deps, reaction, me, user, packedNotes[index])];
+			return user == null ? [] : [packNoteReactionWithNote(deps, reaction, me, user, packedNotes[index])];
 		}),
 	);
 }

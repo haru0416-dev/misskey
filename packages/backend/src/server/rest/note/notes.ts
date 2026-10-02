@@ -7,17 +7,17 @@ import type { endpointMetas as notesContracts } from '@/server/rest/contracts/no
 import type { ContractErrors } from '../endpoint-contract.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
-import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
-import { listClipsByIdsFromDatabase } from '@/core/clip/ClipStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/blocking-store.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/channel-muting-store.js';
+import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/clip/clip-note-store.js';
+import { listClipsByIdsFromDatabase } from '@/core/clip/clip-store.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/muting-store.js';
 import {
 	createNoteFavoriteInDatabase,
 	deleteNoteFavoriteByIdFromDatabase,
 	fetchNoteFavoriteFromDatabase,
 	noteFavoriteExistsInDatabase,
-} from '@/core/note/NoteFavoriteStore.js';
+} from '@/core/note/note-favorite-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
@@ -35,20 +35,20 @@ import {
 	listReplyNotesFromDatabase,
 	listUserListTimelineNotesFromDatabase,
 	searchNotesByTextFromDatabase,
-} from '@/core/note/NoteStore.js';
+} from '@/core/note/note-store.js';
 import {
 	createNoteThreadMutingInDatabase,
 	deleteNoteThreadMutingFromDatabase,
 	noteThreadMutingExistsInDatabase,
-} from '@/core/note/NoteThreadMutingStore.js';
-import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/note/PollStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
+} from '@/core/note/note-thread-muting-store.js';
+import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/note/poll-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/user-list-store.js';
 import {
 	fanoutViewerRelationKinds,
 	fetchViewerRelationSnapshotFromDatabase,
 	homeTimelineViewerRelationKinds,
-} from '@/core/user/ViewerRelationStore.js';
+} from '@/core/user/viewer-relation-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isStatementTimeoutError } from '@/misc/db-errors.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -59,23 +59,23 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packClipsManyForApi } from '../clip/clips.js';
-import type { ApiClipDependencies } from '../clip/clips.js';
+import { packClipsMany } from '../clip/clips.js';
+import type { ClipDependencies } from '../clip/clips.js';
 import { ApiError } from '../error.js';
 import { fetchNoteDiffs, filterVisibleNotes, packNote } from '../../../core/note/note-packing.js';
-import { packNoteManyForApi } from './note.js';
+import { packNoteMany } from './note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
+import { fetchFanoutTimelineNotes } from './fanout-timeline.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { resolveApiDateIdBounds, resolveApiDateIdPagination } from '../date-id-pagination.js';
-import { GLOBAL_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { GLOBAL_NOTES_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/featured-ranking.js';
 import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
-export type ApiNotesDependencies = NoteDependencies &
+export type NotesDependencies = NoteDependencies &
 	NotificationDependencies & {
 		meta: MiMeta;
 		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
@@ -93,9 +93,9 @@ export const noteIdPaginationParamDef = z.object({
 });
 
 export async function handleApiNotesChildren(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof noteIdPaginationParamDef>,
+	params: Params<typeof noteIdPaginationParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -108,7 +108,7 @@ export async function handleApiNotesChildren(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 export const notesConversationParamDef = z.object({
@@ -118,9 +118,9 @@ export const notesConversationParamDef = z.object({
 });
 
 export async function handleApiNotesConversation(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesConversationParamDef>,
+	params: Params<typeof notesConversationParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/conversation']>,
 ): Promise<Packed<'Note'>[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -155,7 +155,7 @@ export async function handleApiNotesConversation(
 		await get(note.replyId);
 	}
 
-	return await packNoteManyForApi(
+	return await packNoteMany(
 		deps,
 		conversation.filter((n) => n != null),
 		me,
@@ -170,9 +170,9 @@ export const notesMentionsParamDef = z.object({
 });
 
 export async function handleApiNotesMentions(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesMentionsParamDef>,
+	params: Params<typeof notesMentionsParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -189,13 +189,13 @@ export async function handleApiNotesMentions(
 		}),
 	);
 
-	return await packNoteManyForApi(deps, mentions, me);
+	return await packNoteMany(deps, mentions, me);
 }
 
 export async function handleApiNotesReplies(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof noteIdPaginationParamDef>,
+	params: Params<typeof noteIdPaginationParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -208,13 +208,13 @@ export async function handleApiNotesReplies(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForApi(deps, timeline, me);
+	return await packNoteMany(deps, timeline, me);
 }
 
 export async function handleApiNotesRenotes(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof noteIdPaginationParamDef>,
+	params: Params<typeof noteIdPaginationParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/renotes']>,
 ): Promise<Packed<'Note'>[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -233,7 +233,7 @@ export async function handleApiNotesRenotes(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForApi(deps, renotes, me);
+	return await packNoteMany(deps, renotes, me);
 }
 
 export const noteIdOnlyParamDef = z.object({
@@ -241,9 +241,9 @@ export const noteIdOnlyParamDef = z.object({
 });
 
 export async function handleApiNotesState(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 ): Promise<{ isFavorited: boolean; isMutedThread: boolean }> {
 	const note = await fetchNoteByIdOrFailFromDatabase(deps.db, params.noteId);
 
@@ -259,9 +259,9 @@ export async function handleApiNotesState(
 }
 
 export async function handleApiNotesFavoritesCreate(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/favorites/create']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -289,9 +289,9 @@ export async function handleApiNotesFavoritesCreate(
 }
 
 export async function handleApiNotesFavoritesDelete(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/favorites/delete']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -308,9 +308,9 @@ export async function handleApiNotesFavoritesDelete(
 }
 
 export async function handleApiNotesThreadMutingCreate(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/thread-muting/create']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -334,9 +334,9 @@ export async function handleApiNotesThreadMutingCreate(
 }
 
 export async function handleApiNotesThreadMutingDelete(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/thread-muting/delete']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -348,9 +348,9 @@ export async function handleApiNotesThreadMutingDelete(
 }
 
 export async function handleApiNotesShow(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesShowParamDef>,
+	params: Params<typeof notesShowParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/show']>,
 ): Promise<Packed<'Note'>> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -385,12 +385,12 @@ export const notesGlobalTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesGlobalTimeline(
-	deps: ApiNotesDependencies & RolePolicyDependencies,
+	deps: NotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof notesGlobalTimelineParamDef>,
+	params: Params<typeof notesGlobalTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/global-timeline']>,
 ): Promise<Packed<'Note'>[]> {
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!policies.gtlAvailable) {
 		throw errors.gtlDisabled();
 	}
@@ -407,7 +407,7 @@ export async function handleApiNotesGlobalTimeline(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForApi(deps, timeline, me);
+	return await packNoteMany(deps, timeline, me);
 }
 
 export const notesParamDef = z.object({
@@ -421,8 +421,8 @@ export const notesParamDef = z.object({
 });
 
 export async function handleApiNotes(
-	deps: ApiNotesDependencies,
-	params: ApiParams<typeof notesParamDef>,
+	deps: NotesDependencies,
+	params: Params<typeof notesParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -441,7 +441,7 @@ export async function handleApiNotes(
 	);
 
 	// 公開 API のため、閲覧者固有情報を含めない。
-	return await packNoteManyForApi(deps, notes, null);
+	return await packNoteMany(deps, notes, null);
 }
 
 export const notesLocalTimelineParamDef = z.object({
@@ -457,14 +457,14 @@ export const notesLocalTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesLocalTimeline(
-	deps: ApiNotesDependencies & RolePolicyDependencies,
+	deps: NotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof notesLocalTimelineParamDef>,
+	params: Params<typeof notesLocalTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/local-timeline']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
 		throw errors.ltlDisabled();
 	}
@@ -492,7 +492,7 @@ export async function handleApiNotesLocalTimeline(
 		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForApi(
+		const notes = await fetchFanoutTimelineNotes(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -515,12 +515,12 @@ export async function handleApiNotesLocalTimeline(
 			},
 		);
 
-		return await packNoteManyForApi(deps, notes, me);
+		return await packNoteMany(deps, notes, me);
 	}
 
 	const timeline = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForApi(deps, timeline, me);
+	return await packNoteMany(deps, timeline, me);
 }
 
 export const notesHybridTimelineParamDef = z.object({
@@ -536,14 +536,14 @@ export const notesHybridTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesHybridTimeline(
-	deps: ApiNotesDependencies & RolePolicyDependencies,
+	deps: NotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesHybridTimelineParamDef>,
+	params: Params<typeof notesHybridTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/hybrid-timeline']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!policies.ltlAvailable) {
 		throw errors.stlDisabled();
 	}
@@ -593,7 +593,7 @@ export async function handleApiNotesHybridTimeline(
 			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', `localTimelineWithReplyTo:${me.id}`];
 		}
 
-		const notes = await getFanoutTimelineNotesForApi(
+		const notes = await fetchFanoutTimelineNotes(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -619,12 +619,12 @@ export async function handleApiNotesHybridTimeline(
 			},
 		);
 
-		return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
+		return await packNoteMany(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
+	return await packNoteMany(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
 let globalNotesRankingCache: string[] = [];
@@ -637,9 +637,9 @@ export const notesFeaturedParamDef = z.object({
 });
 
 export async function handleApiNotesFeatured(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesFeaturedParamDef>,
+	params: Params<typeof notesFeaturedParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	let noteIds: string[];
 	if (params.channelId) {
@@ -686,13 +686,13 @@ export async function handleApiNotesFeatured(
 		),
 	);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 export async function handleApiNotesClips(
-	deps: ApiNotesDependencies & ApiClipDependencies,
+	deps: NotesDependencies & ClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof noteIdOnlyParamDef>,
+	params: Params<typeof noteIdOnlyParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/clips']>,
 ): Promise<Packed<'Clip'>[]> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
@@ -707,7 +707,7 @@ export async function handleApiNotesClips(
 
 	const clips = await listClipsByIdsFromDatabase(deps.db, clipIds, { isPublic: true });
 
-	return await packClipsManyForApi(deps, clips, me);
+	return await packClipsMany(deps, clips, me);
 }
 
 export const notesSearchParamDef = z.object({
@@ -729,14 +729,14 @@ export const notesSearchParamDef = z.object({
 });
 
 export async function handleApiNotesSearch(
-	deps: ApiNotesDependencies & RolePolicyDependencies,
+	deps: NotesDependencies & RolePolicyDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof notesSearchParamDef>,
+	params: Params<typeof notesSearchParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/search']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!policies.canSearchNotes) {
 		throw errors.unavailable();
 	}
@@ -774,7 +774,7 @@ export async function handleApiNotesSearch(
 		throw err;
 	}
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 // tag/query の一方が有効なら、他方が不正でも受理する。両方が有効なら先頭の tag 分岐を使い、
@@ -796,9 +796,9 @@ export const notesSearchByTagParamDef = z.intersection(
 );
 
 export async function handleApiNotesSearchByTag(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesSearchByTagParamDef>,
+	params: Params<typeof notesSearchByTagParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 	// タグはパラメータとして束縛するので、文字種で弾く必要はない。
@@ -823,7 +823,7 @@ export async function handleApiNotesSearchByTag(
 		}),
 	);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 export const notesShowPartialBulkParamDef = z.object({
@@ -831,9 +831,9 @@ export const notesShowPartialBulkParamDef = z.object({
 });
 
 export async function handleApiNotesShowPartialBulk(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof notesShowPartialBulkParamDef>,
+	params: Params<typeof notesShowPartialBulkParamDef>,
 ): Promise<
 	{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string>; updatedAt?: string }[]
 > {
@@ -854,9 +854,9 @@ export const notesTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesTimeline(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesTimelineParamDef>,
+	params: Params<typeof notesTimelineParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -891,7 +891,7 @@ export async function handleApiNotesTimeline(
 		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForApi(
+		const notes = await fetchFanoutTimelineNotes(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -917,12 +917,12 @@ export async function handleApiNotesTimeline(
 			},
 		);
 
-		return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
+		return await packNoteMany(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
+	return await packNoteMany(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
 export const notesUserListTimelineParamDef = z.object({
@@ -938,9 +938,9 @@ export const notesUserListTimelineParamDef = z.object({
 });
 
 export async function handleApiNotesUserListTimeline(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesUserListTimelineParamDef>,
+	params: Params<typeof notesUserListTimelineParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/user-list-timeline']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
@@ -967,7 +967,7 @@ export async function handleApiNotesUserListTimeline(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 export const notesPollsRecommendationParamDef = z.object({
@@ -977,9 +977,9 @@ export const notesPollsRecommendationParamDef = z.object({
 });
 
 export async function handleApiNotesPollsRecommendation(
-	deps: ApiNotesDependencies,
+	deps: NotesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesPollsRecommendationParamDef>,
+	params: Params<typeof notesPollsRecommendationParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(deps.db, {
 		meId: me.id,
@@ -995,7 +995,7 @@ export async function handleApiNotesPollsRecommendation(
 	const notes = await listNotesByIdsFromDatabase(deps.db, noteIds);
 	notes.sort((a, b) => b.id.localeCompare(a.id));
 
-	return await packNoteManyForApi(deps, notes, me, {
+	return await packNoteMany(deps, notes, me, {
 		detail: true,
 	});
 }

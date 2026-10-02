@@ -97,10 +97,10 @@ export type CompleteInfo = {
 
 const lib = emojilist.filter((x) => x.category !== 'flags');
 
-const unicodeEmojiDB = computed(() => {
+const unicodeEmojiDb = computed(() => {
 	const char2path = prefer.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
 
-	const unicodeEmojiDB: EmojiDef[] = lib.map((x) => ({
+	const unicodeEmojiDb: EmojiDef[] = lib.map((x) => ({
 		emoji: x.char,
 		name: x.name,
 		url: char2path(x.char),
@@ -109,7 +109,7 @@ const unicodeEmojiDB = computed(() => {
 	for (const index of Object.values(store.additionalUnicodeEmojiIndexes)) {
 		for (const [emoji, keywords] of Object.entries(index)) {
 			for (const k of keywords) {
-				unicodeEmojiDB.push({
+				unicodeEmojiDb.push({
 					emoji,
 					name: k,
 					aliasOf: getEmojiName(emoji),
@@ -119,18 +119,18 @@ const unicodeEmojiDB = computed(() => {
 		}
 	}
 
-	unicodeEmojiDB.sort((a, b) => a.name.length - b.name.length);
+	unicodeEmojiDb.sort((a, b) => a.name.length - b.name.length);
 
-	return unicodeEmojiDB;
+	return unicodeEmojiDb;
 });
 
 const emojiDb = computed(() => {
 
 	//#region Custom Emoji
-	const customEmojiDB: EmojiDef[] = [];
+	const customEmojiDb: EmojiDef[] = [];
 
 	for (const x of customEmojis.value) {
-		customEmojiDB.push({
+		customEmojiDb.push({
 			name: x.name,
 			emoji: `:${x.name}:`,
 			isCustomEmoji: true,
@@ -138,7 +138,7 @@ const emojiDb = computed(() => {
 
 		if (x.aliases) {
 			for (const alias of x.aliases) {
-				customEmojiDB.push({
+				customEmojiDb.push({
 					name: alias,
 					aliasOf: x.name,
 					emoji: `:${x.name}:`,
@@ -148,10 +148,10 @@ const emojiDb = computed(() => {
 		}
 	}
 
-	customEmojiDB.sort((a, b) => a.name.length - b.name.length);
+	customEmojiDb.sort((a, b) => a.name.length - b.name.length);
 	//#endregion
 
-	return markRaw([...customEmojiDB, ...unicodeEmojiDB.value]);
+	return markRaw([...customEmojiDb, ...unicodeEmojiDb.value]);
 });
 
 export default {
@@ -330,7 +330,7 @@ function exec() {
 
 		emojis.value = searchEmoji(props.q, emojiDb.value);
 	} else if (props.type === 'emojiComplete') {
-		emojis.value = searchEmojiExact(props.q, unicodeEmojiDB.value);
+		emojis.value = searchEmojiExact(props.q, unicodeEmojiDb.value);
 	} else if (props.type === 'mfmTag') {
 		if (!props.q || props.q === '') {
 			mfmTags.value = MFM_TAGS;

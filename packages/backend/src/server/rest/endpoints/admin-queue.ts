@@ -5,7 +5,7 @@
 
 import { endpointMetas as adminQueueContracts } from '@/server/rest/contracts/admin-queue.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAdminQueueAbandonOutboxDeadLetter,
 	handleApiAdminQueueClear,
@@ -26,7 +26,7 @@ import {
 	handleApiAdminQueueStats,
 } from '../admin/admin-queue.js';
 
-export const adminQueueEndpoints = implementEndpoints<ApiShellDependencies>()(adminQueueContracts, {
+export const adminQueueEndpoints = implementEndpoints<ShellDependencies>()(adminQueueContracts, {
 	'admin/queue/clear': async ({ deps, input, me }) => {
 		await handleApiAdminQueueClear(deps, me, input);
 	},

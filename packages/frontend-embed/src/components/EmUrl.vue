@@ -29,7 +29,7 @@ import EmA from './EmA.vue';
 import { url as local } from '@shared/utility/config.js';
 import { isSameOrigin } from '@shared/utility/url.js';
 
-function safeURIDecode(str: string): string {
+function safeUriDecode(str: string): string {
 	try {
 		return decodeURIComponent(str);
 	} catch {
@@ -52,9 +52,9 @@ const localPath = url.pathname + url.search + url.hash;
 const schema = url.protocol;
 const hostname = decodePunycode(url.hostname);
 const port = url.port;
-const pathname = safeURIDecode(url.pathname);
-const query = safeURIDecode(url.search);
-const hash = safeURIDecode(url.hash);
+const pathname = safeUriDecode(url.pathname);
+const query = safeUriDecode(url.search);
+const hash = safeUriDecode(url.hash);
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 </script>

@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseApiParams } from '@/server/rest/validation.js';
 import { xaddNotification } from '@/core/notification/notification.js';

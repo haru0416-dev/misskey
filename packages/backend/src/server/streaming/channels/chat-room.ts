@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchChatRoomByIdFromDatabase } from '@/core/chat/ChatRoomStore.js';
+import { fetchChatRoomByIdFromDatabase } from '@/core/chat/chat-room-store.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import { hasPermissionToViewRoomTimelineForApi, readRoomChatMessageForApi } from '@/server/rest/chat/chat.js';
+import { hasPermissionToViewRoomTimeline, readRoomChatMessage } from '@/server/rest/chat/chat.js';
 import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
@@ -28,7 +28,7 @@ export const honoStreamChannelChatRoom: StreamChannelDefinition<ChatDependencies
 		if (room == null) {
 			return false;
 		}
-		if (!(await hasPermissionToViewRoomTimelineForApi(deps, user, room))) {
+		if (!(await hasPermissionToViewRoomTimeline(deps, user, room))) {
 			return false;
 		}
 
@@ -44,7 +44,7 @@ export const honoStreamChannelChatRoom: StreamChannelDefinition<ChatDependencies
 			},
 			onMessage: (type) => {
 				if (type === 'read') {
-					void readRoomChatMessageForApi(deps, user.id, roomId);
+					void readRoomChatMessage(deps, user.id, roomId);
 				}
 			},
 		};

@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/UserIpStore.js';
-import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/AntennaStore.js';
-import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/user-ip-store.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/antenna-store.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/role-assignment-store.js';
 import {
 	createRetentionAggregationInDatabase,
 	listActiveLocalUserIdsAfter,
 	listLocalUserIdsCreatedAfter,
 	listRetentionAggregationsCreatedAfter,
 	updateRetentionAggregationDataInDatabase,
-} from '@/core/retention/RetentionAggregationStore.js';
-import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/user/MutingStore.js';
+} from '@/core/retention/retention-aggregation-store.js';
+import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/user/muting-store.js';
 import {
 	deleteChannelMutingsByIdsFromDatabase,
 	listExpiredChannelMutingsFromDatabase,
-} from '@/core/channel/ChannelMutingStore.js';
+} from '@/core/channel/channel-muting-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';

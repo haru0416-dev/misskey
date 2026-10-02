@@ -6,7 +6,7 @@
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'drizzle-orm';
 import type { QueueMaintenanceReporter } from '@/core/queue/types.js';
-import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { deleteNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { getDatabaseErrorCode, isStatementTimeoutError } from '@/misc/db-errors.js';

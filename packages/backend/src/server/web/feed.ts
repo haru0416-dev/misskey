@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import type { Feed } from 'feed';
 import type { Config } from '@/config.js';
-import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import type { MiMeta } from '@/models/_.js';

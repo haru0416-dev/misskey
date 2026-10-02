@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { countActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { countActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/role/role-assignment-store.js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

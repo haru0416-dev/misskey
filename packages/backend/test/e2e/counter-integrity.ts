@@ -6,7 +6,7 @@
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

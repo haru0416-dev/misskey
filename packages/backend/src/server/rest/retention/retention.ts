@@ -4,18 +4,18 @@
  */
 
 import { z } from 'zod';
-import { listLatestRetentionAggregations } from '@/core/retention/RetentionAggregationStore.js';
+import { listLatestRetentionAggregations } from '@/core/retention/retention-aggregation-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiRetentionDependencies = {
+export type RetentionDependencies = {
 	db: MiDrizzleDatabase;
 };
 
 export const retentionParamDef = z.object({});
 
 export async function handleApiRetention(
-	deps: ApiRetentionDependencies,
+	deps: RetentionDependencies,
 	body: Record<string, unknown>,
 ): Promise<
 	{

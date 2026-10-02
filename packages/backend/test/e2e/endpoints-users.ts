@@ -68,7 +68,7 @@ import {
 	DEFAULT_POLICIES,
 	deleteBlockingByIdFromDatabase,
 	deleteQueueOutboxesByIds,
-	deleteUserListByIdInDatabase,
+	deleteUserListByIdFromDatabase,
 	dispatchQueueOutbox,
 	fetchAbuseUserReportByIdOrFailFromDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
@@ -1350,9 +1350,9 @@ describe('Endpoints', () => {
 			expect(new Set(firstCopy.body.userIds)).toStrictEqual(new Set([copier.id, bob.id]));
 			expect(new Set(secondCopy.body.userIds)).toStrictEqual(new Set([copier.id, bob.id]));
 			await Promise.all([
-				deleteUserListByIdInDatabase(db, firstCopy.body.id),
-				deleteUserListByIdInDatabase(db, copied.body.id),
-				deleteUserListByIdInDatabase(db, secondCopy.body.id),
+				deleteUserListByIdFromDatabase(db, firstCopy.body.id),
+				deleteUserListByIdFromDatabase(db, copied.body.id),
+				deleteUserListByIdFromDatabase(db, secondCopy.body.id),
 			]);
 		});
 

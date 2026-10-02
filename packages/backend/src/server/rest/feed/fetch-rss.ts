@@ -5,7 +5,7 @@
 
 import Parser from 'rss-parser';
 import { z } from 'zod';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
@@ -32,7 +32,7 @@ type FetchedFeed = Awaited<ReturnType<typeof rssParser.parseString>>;
 /** 同一URLへの同時リクエストは1本にまとめて、その結果を全員で共有する。 */
 const inFlightRequests = new Map<string, Promise<FetchedFeed>>();
 
-export type ApiFetchRssDependencies = {
+export type FetchRssDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
@@ -49,7 +49,7 @@ function invalidUrlError(): ApiError {
 	});
 }
 
-function fetchRssFailedError(): ApiError {
+function createRssFetchFailedError(): ApiError {
 	return new ApiError({
 		status: 422,
 		message: 'Failed to fetch RSS.',
@@ -59,7 +59,7 @@ function fetchRssFailedError(): ApiError {
 	});
 }
 
-function fetchRssUnavailableError(): ApiError {
+function createRssUnavailableError(): ApiError {
 	return new ApiError({
 		status: 503,
 		message: 'RSS fetching is temporarily unavailable.',
@@ -96,7 +96,7 @@ function normalizeFetchRssUrl(input: string): string {
 	return url.href;
 }
 
-async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<FetchedFeed> {
+async function fetchRss(deps: FetchRssDependencies, url: string): Promise<FetchedFeed> {
 	const res = await deps.httpRequestService.send(url, {
 		method: 'GET',
 		headers: {
@@ -115,7 +115,7 @@ async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<Fet
 }
 
 export async function handleApiFetchRss(
-	deps: ApiFetchRssDependencies,
+	deps: FetchRssDependencies,
 	body: Record<string, unknown>,
 ): Promise<FetchedFeed> {
 	const params = parseApiParams(fetchRssParamDef, body);
@@ -127,13 +127,13 @@ export async function handleApiFetchRss(
 	}
 
 	if (inFlightRequests.size >= FETCH_RSS_MAX_CONCURRENCY) {
-		throw fetchRssUnavailableError();
+		throw createRssUnavailableError();
 	}
 
 	const request = fetchRss(deps, url)
 		.catch(() => {
 			// 取得先の詳細 (接続拒否か、private アドレス遮断か等) を呼び出し元へ漏らさない
-			throw fetchRssFailedError();
+			throw createRssFetchFailedError();
 		})
 		.finally(() => {
 			inFlightRequests.delete(url);

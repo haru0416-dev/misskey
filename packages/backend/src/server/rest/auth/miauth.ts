@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	createAccessTokenInDatabase,
 	fetchAccessTokenBySessionFromDatabase,
 	markAccessTokenFetchedInDatabase,
-} from '@/core/app/AccessTokenStore.js';
+} from '@/core/app/access-token-store.js';
 import type { Config } from '@/config.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
@@ -20,10 +20,10 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createTokenNotification } from '../../../core/notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
-import { packUserDetailedNotMeForApi } from '../user/user.js';
+import { packUserDetailedNotMe } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiMiauthDependencies = NotificationDependencies & {
+export type MiauthDependencies = NotificationDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -38,9 +38,9 @@ export const miauthGenTokenParamDef = z.object({
 });
 
 export async function handleApiMiauthGenToken(
-	deps: ApiMiauthDependencies,
+	deps: MiauthDependencies,
 	user: MiLocalUser,
-	params: ApiParams<typeof miauthGenTokenParamDef>,
+	params: Params<typeof miauthGenTokenParamDef>,
 ): Promise<{ token: string }> {
 	const accessToken = secureRndstr(32);
 	const now = new Date();
@@ -65,7 +65,7 @@ export async function handleApiMiauthGenToken(
 }
 
 export async function handleApiMiauthCheck(
-	deps: ApiMiauthDependencies,
+	deps: MiauthDependencies,
 	session: string,
 ): Promise<
 	| {
@@ -90,6 +90,6 @@ export async function handleApiMiauthCheck(
 	return {
 		ok: true,
 		token: token.token,
-		user: await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, token.userId)),
+		user: await packUserDetailedNotMe(deps, await fetchUserByIdOrFailFromDatabase(deps.db, token.userId)),
 	};
 }

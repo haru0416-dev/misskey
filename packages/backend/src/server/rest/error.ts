@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type ApiErrorKind = 'client' | 'server' | 'permission';
+export type ErrorKind = 'client' | 'server' | 'permission';
 
-export type ApiErrorBody = {
+export type ErrorBody = {
 	error: {
 		message: string;
 		code: string;
 		id: string;
-		kind: ApiErrorKind;
+		kind: ErrorKind;
 		info?: unknown;
 	};
 };
@@ -19,7 +19,7 @@ export class ApiError extends Error {
 	public readonly status: number;
 	public readonly code: string;
 	public readonly id: string;
-	public readonly kind: ApiErrorKind;
+	public readonly kind: ErrorKind;
 	public readonly headers: Record<string, string>;
 	public readonly info?: unknown;
 
@@ -28,7 +28,7 @@ export class ApiError extends Error {
 		message: string;
 		code: string;
 		id: string;
-		kind?: ApiErrorKind;
+		kind?: ErrorKind;
 		headers?: Record<string, string>;
 		info?: unknown;
 	}) {
@@ -41,7 +41,7 @@ export class ApiError extends Error {
 		this.info = params.info;
 	}
 
-	public toBody(): ApiErrorBody {
+	public toBody(): ErrorBody {
 		return {
 			error: {
 				message: this.message,

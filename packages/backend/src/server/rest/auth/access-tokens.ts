@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -11,8 +11,8 @@ import {
 	deleteAccessTokenByIdAndUserIdFromDatabase,
 	fetchAccessTokenByTokenFromDatabase,
 	listAccessTokensByUserIdFromDatabase,
-} from '@/core/app/AccessTokenStore.js';
-import type { AccessTokenOrderField } from '@/core/app/AccessTokenStore.js';
+} from '@/core/app/access-token-store.js';
+import type { AccessTokenOrderField } from '@/core/app/access-token-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -22,7 +22,7 @@ import { permissionDeniedError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import type { CredentialEventPublisher } from '../../../core/events.js';
 
-export type ApiAccessTokenDependencies = {
+export type AccessTokenDependencies = {
 	db: MiDrizzleDatabase;
 	publishCredentialEvent: CredentialEventPublisher;
 };
@@ -39,9 +39,9 @@ export const iRevokeTokenParamDef = z.union([
 
 /** MiAuth・OAuth で発行した自分のアクセストークンの一覧。 */
 export async function handleApiIApps(
-	deps: ApiAccessTokenDependencies,
+	deps: AccessTokenDependencies,
 	user: { id: MiUser['id'] },
-	params: ApiParams<typeof iAppsParamDef>,
+	params: Params<typeof iAppsParamDef>,
 ): Promise<
 	{
 		id: string;
@@ -76,10 +76,10 @@ export async function handleApiIApps(
  * アプリのトークンで対象を指定したときは、そのトークン自身だけを消せる。
  */
 export async function handleApiIRevokeToken(
-	deps: ApiAccessTokenDependencies,
+	deps: AccessTokenDependencies,
 	user: { id: MiUser['id'] },
 	token: { id: MiAccessToken['id'] } | null,
-	params: ApiParams<typeof iRevokeTokenParamDef>,
+	params: Params<typeof iRevokeTokenParamDef>,
 ): Promise<void> {
 	let target: { id: MiAccessToken['id'] } | null;
 	if ('tokenId' in params) {

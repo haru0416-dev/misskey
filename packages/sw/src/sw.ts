@@ -37,7 +37,7 @@ async function respondToNavigation(request: Request): Promise<Response> {
 	}
 
 	// fetchの失敗・timeout・5xx応答時にoffline pageへフォールバックする。
-	const html = await offlineContentHTML();
+	const html = await offlineContentHtml();
 	return new Response(html, {
 		status: 200,
 		headers: {
@@ -46,7 +46,7 @@ async function respondToNavigation(request: Request): Promise<Response> {
 	});
 }
 
-async function offlineContentHTML() {
+async function offlineContentHtml() {
 	let i18n: Partial<I18n<Locale>>;
 	try {
 		i18n = (await (swLang.i18n ?? (await swLang.fetchLocale()))) as Partial<I18n<Locale>>;
@@ -96,12 +96,12 @@ globalThis.addEventListener('activate', (ev) => {
 });
 
 globalThis.addEventListener('fetch', (ev) => {
-	const isHTMLRequest =
+	const isHtmlRequest =
 		ev.request.headers.get('sec-fetch-dest') === 'document' ||
 		(ev.request.headers.get('accept')?.includes('/html') ?? false) ||
 		ev.request.url.endsWith('/');
 
-	if (!isHTMLRequest) {
+	if (!isHtmlRequest) {
 		return;
 	}
 	ev.respondWith(respondToNavigation(ev.request));

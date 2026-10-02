@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
-import type { DriveFileDeletionDependencies } from '@/core/drive/DriveFileDeletionLogic.js';
+import { startDriveFileDeletion } from '@/core/drive/drive-file-deletion-logic.js';
+import type { DriveFileDeletionDependencies } from '@/core/drive/drive-file-deletion-logic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByUrlFromDatabase,
@@ -16,39 +16,39 @@ import {
 	listDriveFilesForUserFromDatabase,
 	updateDriveFileInDatabase,
 	updateDriveFilesFolderByIdsAndUserIdInDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import type { DriveFileUpdate } from '@/core/drive/DriveFileStore.js';
+} from '@/core/drive/drive-file-store.js';
+import type { DriveFileUpdate } from '@/core/drive/drive-file-store.js';
 import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
-import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
-import { listChatMessagesByFileIdFromDatabase } from '@/core/chat/ChatMessageStore.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/drive-folder-store.js';
+import { listChatMessagesByFileIdFromDatabase } from '@/core/chat/chat-message-store.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
 import {
 	logModerationEventInDatabase,
 	logModerationEventWithIdInDatabase,
-} from '@/core/moderation/ModerationLogLogic.js';
-import { listNotesByAttachedFileIdFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/moderation/moderation-log-logic.js';
+import { listNotesByAttachedFileIdFromDatabase } from '@/core/note/note-store.js';
 import type { DbQueue, ObjectStorageQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi } from '../chat/chat.js';
+import { checkChatAvailability, packChatMessagesDetailed } from '../chat/chat.js';
 import type { ChatDependencies } from '../../../core/chat/chat-packing.js';
 import { packDriveFileMany, packDriveFileOrFail } from '../../../core/drive/drive-file-packing.js';
 import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
-import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiDriveFilesDependencies = NoteDependencies &
+export type DriveFilesDependencies = NoteDependencies &
 	DriveFileDependencies &
 	RolePolicyDependencies &
 	ChatDependencies & {
@@ -81,9 +81,9 @@ export const driveFilesParamDef = z.object({
 });
 
 export async function handleApiDriveFilesList(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesParamDef>,
+	params: Params<typeof driveFilesParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -114,9 +114,9 @@ export const driveStreamParamDef = z.object({
 });
 
 export async function handleApiDriveStream(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveStreamParamDef>,
+	params: Params<typeof driveStreamParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -137,9 +137,9 @@ export async function handleApiDriveStream(
 export const driveFilesShowParamDef = z.union([z.object({ fileId: misskeyId() }), z.object({ url: z.string() })]);
 
 export async function handleApiDriveFilesShow(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesShowParamDef>,
+	params: Params<typeof driveFilesShowParamDef>,
 ): Promise<Packed<'DriveFile'>> {
 	const file =
 		'fileId' in params
@@ -163,9 +163,9 @@ export const driveFilesFindParamDef = z.object({
 });
 
 export async function handleApiDriveFilesFind(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesFindParamDef>,
+	params: Params<typeof driveFilesFindParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const files = await listDriveFilesByNameUserIdAndFolderIdFromDatabase(deps.db, {
 		name: params.name,
@@ -181,9 +181,9 @@ export const driveFilesFindByHashParamDef = z.object({
 });
 
 export async function handleApiDriveFilesFindByHash(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesFindByHashParamDef>,
+	params: Params<typeof driveFilesFindByHashParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const files = await listDriveFilesByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 
@@ -197,9 +197,9 @@ export const driveFilesAttachedNotesParamDef = z.object({
 });
 
 export async function handleApiDriveFilesAttachedNotes(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesAttachedNotesParamDef>,
+	params: Params<typeof driveFilesAttachedNotesParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const isModerator = await userIsModerator(deps, me);
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
@@ -216,10 +216,10 @@ export async function handleApiDriveFilesAttachedNotes(
 		untilId,
 	});
 
-	return await packNoteManyForApi(deps, notes, me, { detail: true });
+	return await packNoteMany(deps, notes, me, { detail: true });
 }
 
-export function buildDriveFileDeletionDependencies(deps: ApiDriveFilesDependencies): DriveFileDeletionDependencies {
+export function buildDriveFileDeletionDependencies(deps: DriveFilesDependencies): DriveFileDeletionDependencies {
 	return {
 		db: deps.db,
 		config: deps.config,
@@ -252,9 +252,9 @@ export const driveFilesDeleteParamDef = z.object({
 });
 
 export async function handleApiDriveFilesDelete(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesDeleteParamDef>,
+	params: Params<typeof driveFilesDeleteParamDef>,
 ): Promise<void> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) {
@@ -277,9 +277,9 @@ export const driveFilesUpdateParamDef = z.object({
 });
 
 export async function handleApiDriveFilesUpdate(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesUpdateParamDef>,
+	params: Params<typeof driveFilesUpdateParamDef>,
 ): Promise<Packed<'DriveFile'>> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) {
@@ -291,7 +291,7 @@ export async function handleApiDriveFilesUpdate(
 	}
 
 	const owner = file.userId != null ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
-	const policies = await getRolePolicies(deps, owner);
+	const policies = await fetchRolePolicies(deps, owner);
 
 	if (params.name != null && !validateDriveFileName(params.name)) {
 		throw new ApiError({
@@ -367,9 +367,9 @@ export const driveFilesMoveBulkParamDef = z.object({
 });
 
 export async function handleApiDriveFilesMoveBulk(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesMoveBulkParamDef>,
+	params: Params<typeof driveFilesMoveBulkParamDef>,
 ): Promise<void> {
 	const folder = params.folderId
 		? await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id)
@@ -393,14 +393,14 @@ export const driveFilesAttachedChatMessagesParamDef = z.object({
 });
 
 export async function handleApiDriveFilesAttachedChatMessages(
-	deps: ApiDriveFilesDependencies,
+	deps: DriveFilesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof driveFilesAttachedChatMessagesParamDef>,
+	params: Params<typeof driveFilesAttachedChatMessagesParamDef>,
 ): Promise<Packed<'ChatMessage'>[]> {
 	const isModerator = await userIsModerator(deps, me);
 
 	if (!isModerator) {
-		await checkChatAvailabilityForApi(deps, me.id, 'read');
+		await checkChatAvailability(deps, me.id, 'read');
 	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
@@ -414,5 +414,5 @@ export async function handleApiDriveFilesAttachedChatMessages(
 		...resolveDateIdPagination({ gen: genId }, params),
 	});
 
-	return await packChatMessagesDetailedForApi(deps, messages, me);
+	return await packChatMessagesDetailed(deps, messages, me);
 }

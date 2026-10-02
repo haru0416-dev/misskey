@@ -6,7 +6,7 @@
 import * as Redis from 'ioredis';
 import { createRedactedConfig, loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
-import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { updateMetaInDatabase } from '@/core/meta/meta-store.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
 import { createEventPublishers } from '@/core/events.js';
 

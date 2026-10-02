@@ -210,11 +210,11 @@ describe('2要素認証', () => {
 			}),
 			'utf-8',
 		);
-		const hashedclientDataJSON = crypto.createHash('sha256').update(clientDataJSONBuffer).digest();
+		const hashedClientDataJson = crypto.createHash('sha256').update(clientDataJSONBuffer).digest();
 		const privateKey = crypto.createPrivateKey(pemToSign);
 		const signature = crypto
 			.createSign('SHA256')
-			.update(Buffer.concat([authenticatorData, hashedclientDataJSON]))
+			.update(Buffer.concat([authenticatorData, hashedClientDataJson]))
 			.sign(privateKey);
 		return {
 			username,

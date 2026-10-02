@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
-import { getRolePolicies, getUserProfilePolicies } from '@/core/role/role-policy.js';
+import { fetchRolePolicies, getUserProfilePolicies } from '@/core/role/role-policy.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
@@ -23,9 +23,9 @@ function role(policies: Record<string, unknown>): MiRole {
 	return { id: 'test', target: 'manual', policies } as unknown as MiRole;
 }
 
-describe('getRolePolicies', () => {
+describe('fetchRolePolicies', () => {
 	test('正しい値のロールポリシーはそのまま採用される', async () => {
-		const policies = await getRolePolicies(deps(), null, [
+		const policies = await fetchRolePolicies(deps(), null, [
 			role({
 				driveCapacityMb: { useDefault: false, priority: 1, value: 512 },
 				canInvite: { useDefault: false, priority: 1, value: true },
@@ -41,7 +41,7 @@ describe('getRolePolicies', () => {
 	});
 
 	test('型の合わない値は既定値へ落とす (Math.max が NaN を返さない)', async () => {
-		const policies = await getRolePolicies(deps(), null, [
+		const policies = await fetchRolePolicies(deps(), null, [
 			role({
 				driveCapacityMb: { useDefault: false, priority: 1, value: '512' },
 				antennaLimit: { useDefault: false, priority: 1, value: null },
@@ -59,7 +59,7 @@ describe('getRolePolicies', () => {
 	});
 
 	test('value を持たない / useDefault のポリシーはインスタンス既定値になる', async () => {
-		const policies = await getRolePolicies(deps({ antennaLimit: 30 }), null, [
+		const policies = await fetchRolePolicies(deps({ antennaLimit: 30 }), null, [
 			role({
 				antennaLimit: { useDefault: true, priority: 1, value: 999 },
 				clipLimit: { useDefault: false, priority: 1 },
@@ -73,18 +73,18 @@ describe('getRolePolicies', () => {
 	test('インスタンス既定値 (meta.policies) が壊れていてもコード側の既定値へ落とす', async () => {
 		const brokenMeta = deps({ antennaLimit: 'unlimited', gtlAvailable: 1 });
 
-		const withoutRoles = await getRolePolicies(brokenMeta, null, []);
+		const withoutRoles = await fetchRolePolicies(brokenMeta, null, []);
 		expect(withoutRoles.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(withoutRoles.gtlAvailable).toBe(DEFAULT_POLICIES.gtlAvailable);
 
-		const withRole = await getRolePolicies(brokenMeta, null, [
+		const withRole = await fetchRolePolicies(brokenMeta, null, [
 			role({ antennaLimit: { useDefault: true, priority: 1 } }),
 		]);
 		expect(withRole.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 	});
 
 	test('ロールが壊れたポリシーオブジェクトを持っていても例外にならない', async () => {
-		const policies = await getRolePolicies(deps(), null, [role({ antennaLimit: 'broken', driveCapacityMb: null })]);
+		const policies = await fetchRolePolicies(deps(), null, [role({ antennaLimit: 'broken', driveCapacityMb: null })]);
 
 		expect(policies.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(policies.driveCapacityMb).toBe(DEFAULT_POLICIES.driveCapacityMb);
@@ -142,7 +142,7 @@ describe('getRolePolicies', () => {
 			const dependencies = deps(entry.meta);
 			const profile = getUserProfilePolicies(dependencies, entry.roles);
 			expect(profile).toEqual(entry.expected);
-			const all = await getRolePolicies(dependencies, null, entry.roles);
+			const all = await fetchRolePolicies(dependencies, null, entry.roles);
 			expect(profile).toEqual({ canPublicNote: all.canPublicNote, chatAvailability: all.chatAvailability });
 		}
 	});

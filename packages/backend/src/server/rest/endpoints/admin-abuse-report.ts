@@ -5,7 +5,7 @@
 
 import { endpointMetas as adminAbuseReportContracts } from '@/server/rest/contracts/admin-abuse-report.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAdminAbuseReportNotificationRecipientCreate,
 	handleApiAdminAbuseReportNotificationRecipientDelete,
@@ -14,7 +14,7 @@ import {
 	handleApiAdminAbuseReportNotificationRecipientUpdate,
 } from '../admin/admin-abuse-report-notification-recipient.js';
 
-export const adminAbuseReportEndpoints = implementEndpoints<ApiShellDependencies>()(adminAbuseReportContracts, {
+export const adminAbuseReportEndpoints = implementEndpoints<ShellDependencies>()(adminAbuseReportContracts, {
 	'admin/abuse-report/notification-recipient/create': async ({ deps, input, me }) =>
 		await handleApiAdminAbuseReportNotificationRecipientCreate(deps, me, input),
 	'admin/abuse-report/notification-recipient/delete': async ({ deps, input, me }) => {

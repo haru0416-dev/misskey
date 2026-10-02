@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/fetch-instance-metadata-logic.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 import {
 	createInstanceIfNotExistsInDatabase,
@@ -20,17 +20,17 @@ import {
 	listInstancesOrderByFollowersCountDescFromDatabase,
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
-} from '@/core/instance/InstanceStore.js';
-import type { FederationInstancesSort } from '@/core/instance/InstanceStore.js';
-import { listAllDriveFilesByUserHostFromDatabase } from '@/core/drive/DriveFileStore.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+} from '@/core/instance/instance-store.js';
+import type { FederationInstancesSort } from '@/core/instance/instance-store.js';
+import { listAllDriveFilesByUserHostFromDatabase } from '@/core/drive/drive-file-store.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
 	listFollowingsByFollowerHostFromDatabase,
 	listFollowingsByHostWithPaginationFromDatabase,
-} from '@/core/user/FollowingStore.js';
-import { listUsersByHostWithPaginationFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/user/following-store.js';
+import { listUsersByHostWithPaginationFromDatabase } from '@/core/user/user-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -43,23 +43,23 @@ import type { RelationshipJobData } from '@/core/queue/types.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
 import type Logger from '@/logger.js';
 import { startApiAdminDriveFileDeletion } from '../admin/admin-drive.js';
-import type { ApiAdminDriveDependencies } from '../admin/admin-drive.js';
-import { packFollowingsForApi } from '../user/following.js';
+import type { AdminDriveDependencies } from '../admin/admin-drive.js';
+import { packFollowings } from '../user/following.js';
 import type { FollowingListItem } from '../user/following.js';
 import { userIsModerator } from '../../../core/role/role-policy.js';
-import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import { packUserDetailedNotMeMany } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
-export type ApiFederationDependencies = {
+export type FederationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 };
 
-export type ApiAdminFederationDependencies = ApiFederationDependencies &
-	ApiAdminDriveDependencies & {
+export type AdminFederationDependencies = FederationDependencies &
+	AdminDriveDependencies & {
 		redis: Redis.Redis;
 		httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
 		logger: Pick<Logger, 'error' | 'info'>;
@@ -262,7 +262,7 @@ function packApiFederationInstance(
 }
 
 async function packApiFederationInstances(
-	deps: ApiFederationDependencies,
+	deps: FederationDependencies,
 	instances: MiInstance[],
 	user: MiLocalUser | null,
 	meta: MiMeta,
@@ -280,7 +280,7 @@ function packApiFederationInstancesWithModerator(
 }
 
 export async function handleApiFederationInstances(
-	deps: ApiFederationDependencies,
+	deps: FederationDependencies,
 	user: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'FederationInstance'>[]> {
@@ -312,9 +312,9 @@ export async function handleApiFederationInstances(
 }
 
 export async function handleApiFederationShowInstance(
-	deps: ApiFederationDependencies,
+	deps: FederationDependencies,
 	user: MiLocalUser | null,
-	params: ApiParams<typeof federationShowInstanceParamDef>,
+	params: Params<typeof federationShowInstanceParamDef>,
 ): Promise<Packed<'FederationInstance'> | null> {
 	const found = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 	if (found == null) {
@@ -326,9 +326,9 @@ export async function handleApiFederationShowInstance(
 }
 
 export async function handleApiAdminFederationUpdateInstance(
-	deps: ApiAdminFederationDependencies,
+	deps: AdminFederationDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminFederationUpdateInstanceParamDef>,
+	params: Params<typeof adminFederationUpdateInstanceParamDef>,
 ): Promise<void> {
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
@@ -371,8 +371,8 @@ export async function handleApiAdminFederationUpdateInstance(
 }
 
 export async function handleApiAdminFederationRefreshRemoteInstanceMetadata(
-	deps: ApiAdminFederationDependencies,
-	params: ApiParams<typeof adminFederationHostParamDef>,
+	deps: AdminFederationDependencies,
+	params: Params<typeof adminFederationHostParamDef>,
 ): Promise<void> {
 	const instance = await fetchInstanceByHostFromDatabase(deps.db, toPuny(params.host));
 
@@ -397,8 +397,8 @@ export async function handleApiAdminFederationRefreshRemoteInstanceMetadata(
 }
 
 export async function handleApiAdminFederationDeleteAllFiles(
-	deps: ApiAdminFederationDependencies,
-	params: ApiParams<typeof adminFederationHostParamDef>,
+	deps: AdminFederationDependencies,
+	params: Params<typeof adminFederationHostParamDef>,
 ): Promise<void> {
 	const files = await listAllDriveFilesByUserHostFromDatabase(deps.db, params.host);
 
@@ -408,8 +408,8 @@ export async function handleApiAdminFederationDeleteAllFiles(
 }
 
 export async function handleApiAdminFederationRemoveAllFollowing(
-	deps: ApiAdminFederationDependencies,
-	params: ApiParams<typeof adminFederationHostParamDef>,
+	deps: AdminFederationDependencies,
+	params: Params<typeof adminFederationHostParamDef>,
 ): Promise<void> {
 	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
 	const jobs = followings.map((following) =>
@@ -426,7 +426,7 @@ export async function handleApiAdminFederationRemoveAllFollowing(
 }
 
 export async function handleApiFederationStats(
-	deps: ApiFederationDependencies,
+	deps: FederationDependencies,
 	user: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<{
@@ -462,9 +462,9 @@ export const federationUsersParamDef = z.object({
 });
 
 export async function handleApiFederationUsers(
-	deps: ApiFederationDependencies,
+	deps: FederationDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof federationUsersParamDef>,
+	params: Params<typeof federationUsersParamDef>,
 ): Promise<UserDetailedNotMeApiResponse[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -475,7 +475,7 @@ export async function handleApiFederationUsers(
 		untilId,
 	});
 
-	return (await packUserDetailedNotMeManyForApi(deps, users, me)).filter((user) => user != null);
+	return (await packUserDetailedNotMeMany(deps, users, me)).filter((user) => user != null);
 }
 
 export const federationHostFollowingParamDef = z.object({
@@ -485,8 +485,8 @@ export const federationHostFollowingParamDef = z.object({
 });
 
 export async function handleApiFederationFollowers(
-	deps: ApiFederationDependencies,
-	params: ApiParams<typeof federationHostFollowingParamDef>,
+	deps: FederationDependencies,
+	params: Params<typeof federationHostFollowingParamDef>,
 ): Promise<FollowingListItem[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
@@ -496,12 +496,12 @@ export async function handleApiFederationFollowers(
 		untilId: pagination.untilId,
 	});
 
-	return await packFollowingsForApi(deps, followings);
+	return await packFollowings(deps, followings);
 }
 
 export async function handleApiFederationFollowing(
-	deps: ApiFederationDependencies,
-	params: ApiParams<typeof federationHostFollowingParamDef>,
+	deps: FederationDependencies,
+	params: Params<typeof federationHostFollowingParamDef>,
 ): Promise<FollowingListItem[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
@@ -511,5 +511,5 @@ export async function handleApiFederationFollowing(
 		untilId: pagination.untilId,
 	});
 
-	return await packFollowingsForApi(deps, followings);
+	return await packFollowings(deps, followings);
 }

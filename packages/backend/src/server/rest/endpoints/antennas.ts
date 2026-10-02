@@ -5,7 +5,7 @@
 
 import { endpointMetas as antennasContracts } from '@/server/rest/contracts/antennas.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAntennasCreate,
 	handleApiAntennasDelete,
@@ -16,7 +16,7 @@ import {
 	handleApiAntennasUpdate,
 } from '../antenna/antennas.js';
 
-export const antennasEndpoints = implementEndpoints<ApiShellDependencies>()(antennasContracts, {
+export const antennasEndpoints = implementEndpoints<ShellDependencies>()(antennasContracts, {
 	'antennas/create': async ({ deps, input, me }) => await handleApiAntennasCreate(deps, me, input),
 	'antennas/delete': async ({ deps, input, me }) => {
 		await handleApiAntennasDelete(deps, me, input);

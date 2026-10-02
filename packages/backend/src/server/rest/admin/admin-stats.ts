@@ -8,7 +8,7 @@ import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminStatsDependencies = {
+export type AdminStatsDependencies = {
 	db: MiDrizzleDatabase;
 };
 
@@ -28,7 +28,7 @@ type TableStatsResponse = Record<
 export const adminStatsParamDef = z.object({});
 
 export async function handleApiAdminGetIndexStats(
-	deps: ApiAdminStatsDependencies,
+	deps: AdminStatsDependencies,
 	body: Record<string, unknown>,
 ): Promise<IndexStatsResponse> {
 	parseApiParams(adminStatsParamDef, body);
@@ -45,7 +45,7 @@ export async function handleApiAdminGetIndexStats(
 }
 
 export async function handleApiAdminGetTableStats(
-	deps: ApiAdminStatsDependencies,
+	deps: AdminStatsDependencies,
 	body: Record<string, unknown>,
 ): Promise<TableStatsResponse> {
 	parseApiParams(adminStatsParamDef, body);

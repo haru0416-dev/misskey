@@ -14,17 +14,20 @@ import {
 	fetchNoteByIdFromDatabase,
 	fetchNotePostCreateSnapshotFromDatabase,
 	listHydratedNotesByIdsFromDatabase,
-} from '@/core/note/NoteStore.js';
+} from '@/core/note/note-store.js';
 import {
 	runInlineDbOutboxJobs,
 	enqueueInlineDbJobsInOutbox,
 	fetchQueueOutboxByIdFromDatabase,
-} from '@/core/queue/QueueOutboxStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/queue/queue-outbox-store.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchUserByIdOrFailFromDatabase,
+} from '@/core/user/user-store.js';
 import {
 	createWebhookInDatabase,
 	listActiveWebhooksByUserIdAndEventFromDatabase,
-} from '@/core/webhook/WebhookStore.js';
+} from '@/core/webhook/webhook-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';

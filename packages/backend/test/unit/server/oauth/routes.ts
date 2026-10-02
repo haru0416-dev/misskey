@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { createOAuthApp } from '@/server/oauth/routes.js';
-import type { OAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
+import type { OAuthProviderRuntime } from '@/server/oauth/oauth-provider-runtime.js';
 
 function createRuntime(overrides: Partial<OAuthProviderRuntime> = {}): OAuthProviderRuntime {
 	return {

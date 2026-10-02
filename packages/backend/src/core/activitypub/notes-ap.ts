@@ -9,30 +9,30 @@ import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { shouldOmitOutgoingReplyReference } from '@/core/activitypub/interop/reply.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
-import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/queue/queues.js';
-import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { getDriveFilePublicUrl } from '@/core/drive/drive-file-public-url.js';
 import {
 	fetchEmojiByNameAndHostFromDatabaseCached,
 	fetchEmojisByNamesAndHostsFromDatabaseCached,
-} from '@/core/emoji/EmojiStore.js';
+} from '@/core/emoji/emoji-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase,
-} from '@/core/note/NoteStore.js';
-import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { listRelaysByStatusFromDatabaseCached } from '@/core/relay/RelayStore.js';
+} from '@/core/note/note-store.js';
+import { fetchPollByNoteIdFromDatabase } from '@/core/note/poll-store.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/drive/drive-file-store.js';
+import { listRelaysByStatusFromDatabaseCached } from '@/core/relay/relay-store.js';
 import {
 	fetchUserByIdFromDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
-} from '@/core/user/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
-import { listFollowersForNoteDeliveryForRequest } from '@/core/user/FollowingStore.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createMfmService } from '@/core/mfm/MfmService.js';
+} from '@/core/user/user-store.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/user-keypair-store.js';
+import { listFollowersForNoteDeliveryForRequest } from '@/core/user/following-store.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { createMfmService } from '@/core/mfm/mfm-service.js';
 import type { Config } from '@/config.js';
 import { deepClone } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';

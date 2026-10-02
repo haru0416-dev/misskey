@@ -5,7 +5,7 @@
 
 import { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { handleApiIMove } from '../account/account-move.js';
 import { handleApiIPin, handleApiIUnpin } from '../account/account-pin.js';
 import {
@@ -67,11 +67,11 @@ import {
 	handleApiIExportNotes,
 	handleApiIExportUserLists,
 } from '../job/export-jobs.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { HOUR } from '@/const.js';
 
-export const iEndpoints = implementEndpoints<ApiShellDependencies>()(iContracts, {
+export const iEndpoints = implementEndpoints<ShellDependencies>()(iContracts, {
 	'i/2fa/done': async ({ deps, input, me }) => await handleApiI2faDone(deps, me, input),
 	'i/2fa/key-done': async ({ deps, input, me }) => await handleApiI2faKeyDone(deps, me, input),
 	'i/2fa/password-less': async ({ deps, input, me }) => {
@@ -183,5 +183,5 @@ export const iEndpoints = implementEndpoints<ApiShellDependencies>()(iContracts,
 		);
 	},
 	'i/webhooks/create': async ({ deps, me, input }) =>
-		await handleApiIWebhooksCreate(deps, me, (await getRolePolicies(deps, me)).webhookLimit, input),
+		await handleApiIWebhooksCreate(deps, me, (await fetchRolePolicies(deps, me)).webhookLimit, input),
 });

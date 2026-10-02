@@ -44,7 +44,7 @@ import EmTagPage from '@/pages/tag.vue';
 import XNotFound from '@/pages/not-found.vue';
 import EmLoading from '@/components/EmLoading.vue';
 
-function safeURIDecode(str: string): string {
+function safeUriDecode(str: string): string {
 	try {
 		return decodeURIComponent(str);
 	} catch {
@@ -54,7 +54,7 @@ function safeURIDecode(str: string): string {
 
 const pathSegments = window.location.pathname.split('/');
 const page = pathSegments[2] ?? '';
-const contentId = safeURIDecode(pathSegments[3] ?? '');
+const contentId = safeUriDecode(pathSegments[3] ?? '');
 if (_DEV_) {
 	console.log(page, contentId);
 }

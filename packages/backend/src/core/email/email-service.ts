@@ -1,0 +1,382 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { promises as dns } from 'node:dns';
+import * as nodemailer from 'nodemailer';
+import sanitizeHtml from 'sanitize-html';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
+import { isDisposableEmailDomain } from 'disposable-email-domains-js';
+import type { UtilityService } from '@/core/net/utility-service.js';
+import type { Config } from '@/config.js';
+import type { MiMeta } from '@/models/_.js';
+import type { LoggerService } from '@/core/logger-service.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/user/user-profile-store.js';
+import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { escapeHtml } from '@/misc/escape-html.js';
+
+/** 使い捨てドメインの一覧照合と MX の存在確認。一覧で弾ける宛先へは問い合わせを飛ばさない。 */
+export async function validateEmailDeliverability(emailAddress: string): Promise<{
+	valid: boolean;
+	reason: 'disposable' | 'mx' | null;
+}> {
+	const domain = emailAddress.split('@')[1]?.toLowerCase();
+	if (!domain) {
+		return { valid: false, reason: 'mx' };
+	}
+
+	if (isDisposableEmailDomain(domain)) {
+		return { valid: false, reason: 'disposable' };
+	}
+
+	try {
+		const records = await dns.resolveMx(domain);
+		if (records.length === 0) {
+			return { valid: false, reason: 'mx' };
+		}
+	} catch {
+		return { valid: false, reason: 'mx' };
+	}
+
+	return { valid: true, reason: null };
+}
+
+/** 通知メールの HTML を組み立てる。本文は無害化し、差し込む値はエスケープする。 */
+export function renderEmailHtml(params: {
+	subject: string;
+	html: string;
+	logoUrl: string;
+	emailSettingUrl: string;
+	instanceUrl: string;
+	host: string;
+}): string {
+	// 本文はモデレーターの入力 (admin/send-email) も入るので、サーバー名義で任意の HTML を送らせないよう無害化する。
+	// デフォルトの許可タグ・スキーム (http/https/mailto など) で、既存の通知メールの <br> と <a> は通る。
+	const safeHtml = sanitizeHtml(params.html);
+	const safeSubject = escapeHtml(params.subject);
+
+	const styledHtml = new HTMLRewriter()
+		.on('a', {
+			element(element) {
+				element.setAttribute('style', `text-decoration: none; color: #5c62d8; ${element.getAttribute('style') ?? ''}`);
+			},
+		})
+		.transform(safeHtml);
+
+	return `<!doctype html>
+<html style="background: #eee;">
+	<head>
+		<meta charset="utf-8">
+		<title>${safeSubject}</title>
+		<style>
+			a:hover {
+				text-decoration: underline;
+			}
+		</style>
+	</head>
+	<body style="padding: 16px; margin: 0; font-family: sans-serif; font-size: 14px;">
+		<main style="max-width: 500px; margin: 0 auto; background: #fff; color: #555;">
+			<header style="padding: 32px; background: #191b2e;">
+				<img src="${escapeHtml(params.logoUrl)}" style="max-width: 128px; max-height: 28px; vertical-align: bottom;">
+			</header>
+			<article style="padding: 32px;">
+				<h1 style="margin: 0 0 1em 0;">${safeSubject}</h1>
+				<div>${styledHtml}</div>
+			</article>
+			<footer style="padding: 32px; border-top: solid 1px #eee;">
+				<a href="${escapeHtml(params.emailSettingUrl)}" style="text-decoration: none; color: #5c62d8;">${'Email setting'}</a>
+			</footer>
+		</main>
+		<nav style="box-sizing: border-box; max-width: 500px; margin: 16px auto 0 auto; padding: 0 32px;">
+			<a href="${escapeHtml(params.instanceUrl)}" style="text-decoration: none; color: #888;">${escapeHtml(params.host)}</a>
+		</nav>
+	</body>
+</html>`;
+}
+
+export function createEmailService(
+	config: Config,
+	meta: MiMeta,
+	drizzle: MiDrizzleDatabase,
+	loggerService: LoggerService,
+	utilityService: UtilityService,
+	httpRequestService: HttpRequestService,
+) {
+	const logger = loggerService.getLogger('email');
+
+	async function sendEmail(to: string, subject: string, html: string, text: string) {
+		if (!meta.enableEmail) {
+			return;
+		}
+
+		const iconUrl = `${config.instance.url}/static-assets/mi-white.png`;
+		const emailSettingUrl = `${config.instance.url}/settings/email`;
+
+		const enableAuth = meta.smtpUser != null && meta.smtpUser !== '';
+
+		const options: SMTPTransport.Options = {
+			...(meta.smtpHost == null ? {} : { host: meta.smtpHost }),
+			...(meta.smtpPort == null ? {} : { port: meta.smtpPort }),
+			secure: meta.smtpSecure,
+			ignoreTLS: !enableAuth,
+			...(config.outboundNetwork.proxy.smtpUrl == null ? {} : { proxy: config.outboundNetwork.proxy.smtpUrl }),
+			...(enableAuth
+				? {
+						auth: {
+							user: meta.smtpUser ?? '',
+							...(meta.smtpPass == null ? {} : { pass: meta.smtpPass }),
+						},
+					}
+				: {}),
+		};
+		const transporter = nodemailer.createTransport(options);
+
+		const htmlContent = renderEmailHtml({
+			subject,
+			html,
+			logoUrl: meta.logoImageUrl ?? meta.iconUrl ?? iconUrl,
+			emailSettingUrl,
+			instanceUrl: config.instance.url,
+			host: config.runtime.host,
+		});
+
+		try {
+			const info = await transporter.sendMail({
+				from: meta.name
+					? {
+							name: meta.name,
+							address: meta.email!,
+						}
+					: meta.email!,
+				to,
+				subject,
+				text,
+				html: htmlContent,
+			});
+
+			logger.info(`Message sent: ${info.messageId}`);
+		} catch (err) {
+			logger.error(err as Error);
+			throw err;
+		}
+	}
+
+	async function validateEmailForAccount(emailAddress: string): Promise<{
+		available: boolean;
+		reason: null | 'used' | 'format' | 'disposable' | 'mx' | 'smtp' | 'banned' | 'network' | 'blacklist';
+	}> {
+		if (!utilityService.validateEmailFormat(emailAddress)) {
+			return {
+				available: false,
+				reason: 'format',
+			};
+		}
+
+		const exist = await countVerifiedUserProfilesByEmailFromDatabase(drizzle, emailAddress);
+
+		if (exist !== 0) {
+			return {
+				available: false,
+				reason: 'used',
+			};
+		}
+
+		let validated: {
+			valid: boolean;
+			reason?: string | null;
+		} = { valid: true, reason: null };
+
+		if (meta.enableActiveEmailValidation) {
+			if (meta.enableVerifymailApi && meta.verifymailAuthKey != null) {
+				validated = await verifyMail(emailAddress, meta.verifymailAuthKey);
+			} else if (meta.enableTruemailApi && meta.truemailInstance && meta.truemailAuthKey != null) {
+				validated = await trueMail(meta.truemailInstance, emailAddress, meta.truemailAuthKey);
+			} else {
+				// regex は validateEmailFormat で確認済みのため、ここでは配送可能性を検査する。
+				// SMTP 検査は日本だと25ポートが殆どのプロバイダーで塞がれていてタイムアウトになるのでしない
+				validated = await validateEmailDeliverability(emailAddress);
+			}
+		}
+
+		if (!validated.valid) {
+			const formatReason: Record<
+				string,
+				'format' | 'disposable' | 'mx' | 'smtp' | 'network' | 'blacklist' | undefined
+			> = {
+				regex: 'format',
+				disposable: 'disposable',
+				mx: 'mx',
+				smtp: 'smtp',
+				network: 'network',
+				blacklist: 'blacklist',
+			};
+
+			return {
+				available: false,
+				reason: validated.reason ? (formatReason[validated.reason] ?? null) : null,
+			};
+		}
+
+		const emailDomain = emailAddress.slice(emailAddress.lastIndexOf('@') + 1);
+		const isBanned = utilityService.isBlockedHost(meta.bannedEmailDomains, emailDomain);
+
+		if (isBanned) {
+			return {
+				available: false,
+				reason: 'banned',
+			};
+		}
+
+		return {
+			available: true,
+			reason: null,
+		};
+	}
+
+	async function verifyMail(
+		emailAddress: string,
+		verifymailAuthKey: string,
+	): Promise<{
+		valid: boolean;
+		reason: 'used' | 'format' | 'disposable' | 'mx' | 'smtp' | null;
+	}> {
+		const endpoint = 'https://verifymail.io/api/' + emailAddress + '?key=' + verifymailAuthKey;
+		const res = await httpRequestService.send(endpoint, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Accept: 'application/json, */*',
+			},
+		});
+
+		const json = (await res.json()) as Partial<{
+			message: string;
+			block: boolean;
+			catch_all: boolean;
+			deliverable_email: boolean;
+			disposable: boolean;
+			domain: string;
+			email_address: string;
+			email_provider: string;
+			mx: boolean;
+			mx_fallback: boolean;
+			mx_host: string[];
+			mx_ip: string[];
+			mx_priority: { [key: string]: number };
+			privacy: boolean;
+			related_domains: string[];
+		}>;
+
+		// message だけの応答は API エラーを表す。
+		if (Object.keys(json).length === 1 && Reflect.has(json, 'message')) {
+			return {
+				valid: false,
+				reason: null,
+			};
+		}
+		if (json.email_address === undefined) {
+			return {
+				valid: false,
+				reason: 'format',
+			};
+		}
+		if (json.deliverable_email !== undefined && !json.deliverable_email) {
+			return {
+				valid: false,
+				reason: 'smtp',
+			};
+		}
+		if (json.disposable) {
+			return {
+				valid: false,
+				reason: 'disposable',
+			};
+		}
+		if (json.mx !== undefined && !json.mx) {
+			return {
+				valid: false,
+				reason: 'mx',
+			};
+		}
+
+		return {
+			valid: true,
+			reason: null,
+		};
+	}
+
+	async function trueMail<T>(
+		truemailInstance: string,
+		emailAddress: string,
+		truemailAuthKey: string,
+	): Promise<{
+		valid: boolean;
+		reason: 'used' | 'format' | 'blacklist' | 'mx' | 'smtp' | 'network' | T | null;
+	}> {
+		const endpoint = truemailInstance + '?email=' + emailAddress;
+		try {
+			const res = await httpRequestService.send(endpoint, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: truemailAuthKey,
+				},
+				isLocalAddressAllowed: true,
+			});
+
+			const json = (await res.json()) as {
+				email: string;
+				success: boolean;
+				error?: string;
+				errors?: {
+					list_match?: string;
+					regex?: string;
+					mx?: string;
+					smtp?: string;
+				} | null;
+			};
+
+			if (json.email === undefined || json.errors?.regex) {
+				return {
+					valid: false,
+					reason: 'format',
+				};
+			}
+			if (json.errors?.smtp) {
+				return {
+					valid: false,
+					reason: 'smtp',
+				};
+			}
+			if (json.errors?.mx) {
+				return {
+					valid: false,
+					reason: 'mx',
+				};
+			}
+			if (!json.success) {
+				return {
+					valid: false,
+					reason: (json.errors?.list_match as T) || 'blacklist',
+				};
+			}
+
+			return {
+				valid: true,
+				reason: null,
+			};
+		} catch {
+			return {
+				valid: false,
+				reason: 'network',
+			};
+		}
+	}
+
+	return { sendEmail, validateEmailForAccount };
+}
+
+export type EmailService = ReturnType<typeof createEmailService>;

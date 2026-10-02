@@ -12,8 +12,8 @@ import {
 	createChatRoomInvitationInDatabase,
 	createChatRoomMembershipInDatabase,
 	joinChatRoomFromInvitationInDatabase,
-} from '@/core/chat/ChatRoomStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+} from '@/core/chat/chat-room-store.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';
@@ -21,7 +21,7 @@ import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { countDatabaseQueries } from '../../../query-counter.js';
 import type { QueryCounter } from '../../../query-counter.js';
-import { packChatMessageDetailedForApi, packChatMessagesDetailedForApi } from '@/server/rest/chat/chat.js';
+import { packChatMessageDetailed, packChatMessagesDetailed } from '@/server/rest/chat/chat.js';
 import type { ChatDependencies } from '@/core/chat/chat-packing.js';
 
 describe('chat message packing', () => {
@@ -73,7 +73,7 @@ describe('chat message packing', () => {
 		const deps = runtime as unknown as ChatDependencies;
 
 		queries.reset();
-		const packedSingle = await packChatMessageDetailedForApi(deps, message, sender);
+		const packedSingle = await packChatMessageDetailed(deps, message, sender);
 		expect(queries.count()).toBe(1);
 		expect(packedSingle.reactions.map((reaction) => [reaction.user.id, reaction.reaction])).toEqual([
 			[reactor1.id, '👍'],
@@ -82,20 +82,20 @@ describe('chat message packing', () => {
 
 		queries.reset();
 		const secondMessage = { ...message, id: genId(), reactions: [`${reactor2.id}/⭐`, `${reactor1.id}/👍`] };
-		const [packedMany, packedSecond] = await packChatMessagesDetailedForApi(deps, [message, secondMessage], sender);
+		const [packedMany, packedSecond] = await packChatMessagesDetailed(deps, [message, secondMessage], sender);
 		expect(queries.count()).toBe(1);
 		expect(packedMany!.reactions).toEqual(packedSingle.reactions);
 		expect(packedSecond!.reactions.map((reaction) => reaction.user.id)).toEqual([reactor2.id, reactor1.id]);
 
 		queries.reset();
-		const packedWithPartialHint = await packChatMessageDetailedForApi(deps, message, sender, {
+		const packedWithPartialHint = await packChatMessageDetailed(deps, message, sender, {
 			_hint_: { packedUsers: new Map([[reactor1.id, packedSingle.reactions[0]!.user]]) },
 		});
 		expect(queries.count()).toBe(1);
 		expect(packedWithPartialHint.reactions).toEqual(packedSingle.reactions);
 
 		const explicitSenderMessage = { ...message, fromUser: sender, reactions: [`${sender.id}/👍`] };
-		const packedWithStaleMissingHint = await packChatMessageDetailedForApi(deps, explicitSenderMessage, sender, {
+		const packedWithStaleMissingHint = await packChatMessageDetailed(deps, explicitSenderMessage, sender, {
 			_hint_: { missingUserIds: new Set([sender.id]) },
 		});
 		expect(packedWithStaleMissingHint.reactions[0]!.user.id).toBe(sender.id);
@@ -122,7 +122,7 @@ describe('chat message packing', () => {
 		const deps = runtime as unknown as ChatDependencies;
 
 		queries.reset();
-		await expect(packChatMessageDetailedForApi(deps, message, sender)).rejects.toMatchObject({
+		await expect(packChatMessageDetailed(deps, message, sender)).rejects.toMatchObject({
 			name: 'EntityNotFoundError',
 		});
 		expect(queries.count()).toBe(1);

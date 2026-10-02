@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -13,7 +13,7 @@ import {
 	isDuplicateKeyValueDatabaseError,
 	updateSwSubscriptionByUserAndEndpointInDatabase,
 	updateSwSubscriptionInDatabase,
-} from '@/core/sw/SwSubscriptionStore.js';
+} from '@/core/sw/sw-subscription-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiMeta } from '@/models/_.js';
@@ -21,7 +21,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiSwDependencies = {
+export type SwDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -89,9 +89,9 @@ function assertValidPushEndpoint(endpoint: string): void {
 }
 
 export async function handleApiSwRegister(
-	deps: ApiSwDependencies,
+	deps: SwDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof swRegisterParamDef>,
+	params: Params<typeof swRegisterParamDef>,
 ): Promise<SwRegisterResponse> {
 	assertValidPushEndpoint(params.endpoint);
 
@@ -151,9 +151,9 @@ export async function handleApiSwRegister(
 }
 
 export async function handleApiSwShowRegistration(
-	deps: ApiSwDependencies,
+	deps: SwDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof swShowRegistrationParamDef>,
+	params: Params<typeof swShowRegistrationParamDef>,
 ): Promise<SwShowRegistrationResponse | null> {
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
@@ -169,17 +169,17 @@ export async function handleApiSwShowRegistration(
 }
 
 export async function handleApiSwUnregister(
-	deps: ApiSwDependencies,
+	deps: SwDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof swShowRegistrationParamDef>,
+	params: Params<typeof swShowRegistrationParamDef>,
 ): Promise<void> {
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 }
 
 export async function handleApiSwUpdateRegistration(
-	deps: ApiSwDependencies,
+	deps: SwDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof swUpdateRegistrationParamDef>,
+	params: Params<typeof swUpdateRegistrationParamDef>,
 ): Promise<SwShowRegistrationResponse> {
 	const swSubscription = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 

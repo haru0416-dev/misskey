@@ -5,7 +5,7 @@
 
 import { endpointMetas as followingContracts } from '@/server/rest/contracts/following.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiFollowingCreate,
 	handleApiFollowingDelete,
@@ -20,7 +20,7 @@ import {
 	handleApiFollowingUpdateAll,
 } from '../user/following.js';
 
-export const followingEndpoints = implementEndpoints<ApiShellDependencies>()(followingContracts, {
+export const followingEndpoints = implementEndpoints<ShellDependencies>()(followingContracts, {
 	'following/create': async ({ deps, input, me }) => await handleApiFollowingCreate(deps, me, input),
 	'following/delete': async ({ deps, input, me }) => await handleApiFollowingDelete(deps, me, input),
 	'following/invalidate': async ({ deps, input, me }) => await handleApiFollowingInvalidate(deps, me, input),

@@ -6,12 +6,12 @@
 import type { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import type { ContractErrors } from '../endpoint-contract.js';
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
-import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/channel-store.js';
 import {
 	listDriveFilesByIdsFromDatabase,
 	listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
+} from '@/core/drive/drive-file-store.js';
 import {
 	countNoteDraftsByUserIdFromDatabase,
 	createNoteDraftInDatabase,
@@ -19,11 +19,11 @@ import {
 	fetchNoteDraftByIdAndUserIdFromDatabase,
 	listNoteDraftsByUserIdFromDatabase,
 	updateNoteDraftInDatabase,
-} from '@/core/note/NoteDraftStore.js';
-import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/note/note-draft-store.js';
+import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import type { PostScheduledNoteQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -37,24 +37,24 @@ import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiError } from '../error.js';
 import { isVisibleForMe, packNote } from '../../../core/note/note-packing.js';
-import { packNoteManyForApi } from './note.js';
+import { packNoteMany } from './note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { packDriveFileManyByIds, packDriveFileMany } from '../../../core/drive/drive-file-packing.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiNoteDraftDependencies = NoteDependencies &
+export type NoteDraftDependencies = NoteDependencies &
 	RolePolicyDependencies & {
 		postScheduledNoteQueue: PostScheduledNoteQueue;
 	};
 
 export const countNoteDraftsParamDef = z.object({});
 
-export async function handleApiNotesDraftsCount(deps: ApiNoteDraftDependencies, me: MiLocalUser): Promise<number> {
+export async function handleApiNotesDraftsCount(deps: NoteDraftDependencies, me: MiLocalUser): Promise<number> {
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
@@ -136,7 +136,7 @@ type DraftValidationErrorMap = {
 };
 
 async function validateNoteDraft(
-	deps: ApiNoteDraftDependencies,
+	deps: NoteDraftDependencies,
 	me: MiLocalUser,
 	data: {
 		isActuallyScheduled?: boolean;
@@ -240,7 +240,7 @@ async function validateNoteDraft(
 	}
 }
 
-async function scheduleNoteDraft(deps: ApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
+async function scheduleNoteDraft(deps: NoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
 	if (!draft.isActuallyScheduled) {
 		return;
 	}
@@ -271,7 +271,7 @@ async function scheduleNoteDraft(deps: ApiNoteDraftDependencies, draft: MiNoteDr
 	);
 }
 
-async function clearNoteDraftSchedule(deps: ApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
+async function clearNoteDraftSchedule(deps: NoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
 	if (draft.scheduledAt != null) {
 		const job = await deps.postScheduledNoteQueue.getJob(`scheduled-${draft.id}-${draft.scheduledAt.getTime()}`);
 		if (job != null && !(await job.isActive())) {
@@ -282,8 +282,8 @@ async function clearNoteDraftSchedule(deps: ApiNoteDraftDependencies, draft: MiN
 	// 古い revision は worker が拒否するため、リクエスト処理でキュー全体を走査しない。
 }
 
-async function packNoteDraftForApi(
-	deps: ApiNoteDraftDependencies,
+async function packNoteDraft(
+	deps: NoteDraftDependencies,
 	draft: MiNoteDraft,
 	me: { id: string } | null | undefined,
 	hint?: {
@@ -372,8 +372,8 @@ async function packNoteDraftForApi(
 	} satisfies Packed<'NoteDraft'>;
 }
 
-async function packNoteDraftManyForApi(
-	deps: ApiNoteDraftDependencies,
+async function packNoteDraftMany(
+	deps: NoteDraftDependencies,
 	drafts: MiNoteDraft[],
 	me: { id: string } | null | undefined,
 ): Promise<Packed<'NoteDraft'>[]> {
@@ -397,8 +397,8 @@ async function packNoteDraftManyForApi(
 
 	const [packedFiles, packedReplies, packedRenotes] = await Promise.all([
 		packDriveFileMany(deps, files),
-		packNoteManyForApi(deps, replyNotes, me, { detail: false }),
-		packNoteManyForApi(deps, renoteNotes, me, { detail: true }),
+		packNoteMany(deps, replyNotes, me, { detail: false }),
+		packNoteMany(deps, renoteNotes, me, { detail: true }),
 	]);
 
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
@@ -409,7 +409,7 @@ async function packNoteDraftManyForApi(
 
 	return await Promise.all(
 		drafts.map((draft) =>
-			packNoteDraftForApi(
+			packNoteDraft(
 				deps,
 				draft,
 				me,
@@ -426,12 +426,12 @@ async function packNoteDraftManyForApi(
 }
 
 export async function handleApiNotesDraftsCreate(
-	deps: ApiNoteDraftDependencies,
+	deps: NoteDraftDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesDraftsCreateParamDef>,
+	params: Params<typeof notesDraftsCreateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/drafts/create']>,
 ): Promise<{ createdDraft: Packed<'NoteDraft'> }> {
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= policies.noteDraftLimit) {
 		throw errors.tooManyDrafts();
@@ -509,13 +509,13 @@ export async function handleApiNotesDraftsCreate(
 		await scheduleNoteDraft(deps, draft);
 	}
 
-	return { createdDraft: await packNoteDraftForApi(deps, draft, me) };
+	return { createdDraft: await packNoteDraft(deps, draft, me) };
 }
 
 export async function handleApiNotesDraftsUpdate(
-	deps: ApiNoteDraftDependencies,
+	deps: NoteDraftDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesDraftsUpdateParamDef>,
+	params: Params<typeof notesDraftsUpdateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/drafts/update']>,
 ): Promise<{ updatedDraft: Packed<'NoteDraft'> }> {
 	const existing = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
@@ -523,7 +523,7 @@ export async function handleApiNotesDraftsUpdate(
 		throw errors.noSuchNoteDraft();
 	}
 
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	if (!existing.isActuallyScheduled && params.isActuallyScheduled) {
 		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
 			isActuallyScheduled: true,
@@ -600,13 +600,13 @@ export async function handleApiNotesDraftsUpdate(
 		await scheduleNoteDraft(deps, updatedDraft);
 	}
 
-	return { updatedDraft: await packNoteDraftForApi(deps, updatedDraft, me) };
+	return { updatedDraft: await packNoteDraft(deps, updatedDraft, me) };
 }
 
 export async function handleApiNotesDraftsDelete(
-	deps: ApiNoteDraftDependencies,
+	deps: NoteDraftDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesDraftsDeleteParamDef>,
+	params: Params<typeof notesDraftsDeleteParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/drafts/delete']>,
 ): Promise<void> {
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
@@ -619,9 +619,9 @@ export async function handleApiNotesDraftsDelete(
 }
 
 export async function handleApiNotesDraftsList(
-	deps: ApiNoteDraftDependencies,
+	deps: NoteDraftDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesDraftsListParamDef>,
+	params: Params<typeof notesDraftsListParamDef>,
 ): Promise<Packed<'NoteDraft'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 
@@ -635,5 +635,5 @@ export async function handleApiNotesDraftsList(
 		}),
 	);
 
-	return await packNoteDraftManyForApi(deps, drafts, me);
+	return await packNoteDraftMany(deps, drafts, me);
 }

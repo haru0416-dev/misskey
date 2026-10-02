@@ -5,7 +5,7 @@
 
 import { endpointMetas as adminEmojiContracts } from '@/server/rest/contracts/admin-emoji.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiAdminEmojiAdd,
 	handleApiAdminEmojiAddAliasesBulk,
@@ -22,7 +22,7 @@ import {
 	handleApiAdminEmojiUpdate,
 } from '../emoji/emojis.js';
 
-export const adminEmojiEndpoints = implementEndpoints<ApiShellDependencies>()(adminEmojiContracts, {
+export const adminEmojiEndpoints = implementEndpoints<ShellDependencies>()(adminEmojiContracts, {
 	'admin/emoji/add': async ({ deps, input, me }) => await handleApiAdminEmojiAdd(deps, me, input),
 	'admin/emoji/add-aliases-bulk': async ({ deps, input }) => {
 		await handleApiAdminEmojiAddAliasesBulk(deps, input);

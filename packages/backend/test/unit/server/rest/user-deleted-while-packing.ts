@@ -11,12 +11,12 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	deleteUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
-} from '@/core/user/UserStore.js';
-import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+} from '@/core/user/user-store.js';
+import { createFollowingInDatabase } from '@/core/user/following-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiUser } from '@/models/User.js';
-import { packUserDetailedNotMeManyForApi } from '@/server/rest/user/user.js';
-import { packFollowingsForApi } from '@/server/rest/user/following.js';
+import { packUserDetailedNotMeMany } from '@/server/rest/user/user.js';
+import { packFollowings } from '@/server/rest/user/following.js';
 
 // 一覧の取得後、整形前に user 行の削除が確定すると、プロフィールやフォローも cascade で消える。
 // 取得時の行が残っていても、削除された相手を一覧から除外する必要がある。
@@ -52,7 +52,7 @@ describe('一覧の取得後に削除が確定したユーザーの整形', () =
 		];
 		await deleteUserByIdFromDatabase(runtime.db, deleted.id);
 
-		const packed = await packFollowingsForApi(runtime, rows);
+		const packed = await packFollowings(runtime, rows);
 
 		expect(packed.map((item) => item.followeeId)).toEqual([alive.id]);
 		expect(packed[0]!.followee.id).toBe(alive.id);
@@ -62,7 +62,7 @@ describe('一覧の取得後に削除が確定したユーザーの整形', () =
 		const [viewer, deleted, alive] = await Promise.all([createUser(), createUser(), createUser()]);
 		await deleteUserByIdFromDatabase(runtime.db, deleted.id);
 
-		const packed = await packUserDetailedNotMeManyForApi(runtime, [deleted.id, alive.id], viewer);
+		const packed = await packUserDetailedNotMeMany(runtime, [deleted.id, alive.id], viewer);
 
 		expect(packed[0]).toBeNull();
 		expect(packed[1]?.id).toBe(alive.id);

@@ -5,7 +5,7 @@
 
 import { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiBlockingCreate,
 	handleApiBlockingDelete,
@@ -67,9 +67,9 @@ import { handleApiRetention } from '../retention/retention.js';
 import { handleApiExportCustomEmojis } from '../job/export-jobs.js';
 import { handleApiFetchRss } from '../feed/fetch-rss.js';
 import { handleApiVerifyEmail } from '../auth/verify-email.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 
-export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscContracts, {
+export const miscEndpoints = implementEndpoints<ShellDependencies>()(miscContracts, {
 	announcements: async ({ deps, input, me }) => await handleApiAnnouncements(deps, me, input),
 	'announcements/show': async ({ deps, errors, input, me }) => await handleApiAnnouncementShow(deps, me, input, errors),
 	'announcements/react': async ({ deps, errors, input, me }) => {
@@ -151,11 +151,11 @@ export const miscEndpoints = implementEndpoints<ApiShellDependencies>()(miscCont
 	'fetch-rss': async ({ deps, input }) => await handleApiFetchRss(deps, input),
 	'ap/get': async ({ deps, input }) => await handleApiApGet(deps, input),
 	'invite/create': async ({ deps, me, input }) => {
-		const policies = await getRolePolicies(deps, me);
+		const policies = await fetchRolePolicies(deps, me);
 		return await handleApiInviteCreate(deps, me, policies, input);
 	},
 	'invite/limit': async ({ deps, me, input }) => {
-		const policies = await getRolePolicies(deps, me);
+		const policies = await fetchRolePolicies(deps, me);
 		return await handleApiInviteLimit(deps, me, policies, input);
 	},
 	'notifications/flush': async ({ deps, me }) => {

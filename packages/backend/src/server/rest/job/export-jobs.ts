@@ -12,7 +12,7 @@ import { parseApiParams } from '../validation.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ThinUser } from '@/core/queue/types.js';
 
-export type ApiExportJobDependencies = {
+export type ExportJobDependencies = {
 	config: Config;
 	dbQueue: DbQueue;
 };
@@ -33,7 +33,7 @@ type SimpleExportJobName =
 	| 'exportAntennas';
 
 async function enqueueSimpleExportJob(
-	deps: ApiExportJobDependencies,
+	deps: ExportJobDependencies,
 	jobName: SimpleExportJobName,
 	user: ThinUser,
 ): Promise<void> {
@@ -44,40 +44,40 @@ async function enqueueSimpleExportJob(
 	});
 }
 
-export async function handleApiExportCustomEmojis(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiExportCustomEmojis(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportCustomEmojis', me);
 }
 
-export async function handleApiIExportNotes(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportNotes(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportNotes', me);
 }
 
-export async function handleApiIExportClips(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportClips(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportClips', me);
 }
 
-export async function handleApiIExportFavorites(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportFavorites(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportFavorites', me);
 }
 
-export async function handleApiIExportMute(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportMute(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportMuting', me);
 }
 
-export async function handleApiIExportBlocking(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportBlocking(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportBlocking', me);
 }
 
-export async function handleApiIExportUserLists(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportUserLists(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportUserLists', me);
 }
 
-export async function handleApiIExportAntennas(deps: ApiExportJobDependencies, me: MiLocalUser): Promise<void> {
+export async function handleApiIExportAntennas(deps: ExportJobDependencies, me: MiLocalUser): Promise<void> {
 	await enqueueSimpleExportJob(deps, 'exportAntennas', me);
 }
 
 export async function handleApiIExportFollowing(
-	deps: ApiExportJobDependencies,
+	deps: ExportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {

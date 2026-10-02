@@ -5,18 +5,18 @@
 
 import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { hashPassword, comparePassword } from '@/misc/password.js';
-import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import { deleteAccountWithSideEffects } from '@/core/account/delete-account-logic.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
-import type { UserAuthService } from '@/core/account/UserAuthService.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import type { UserAuthService } from '@/core/account/user-auth-service.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/user-store.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -27,12 +27,12 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
 import type { CredentialEventPublisher, InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAccountSecurityDependencies = UserPackingDependencies & {
+export type AccountSecurityDependencies = UserPackingDependencies & {
 	config: Config;
 	meta: MiMeta;
 	db: MiDrizzleDatabase;
@@ -61,7 +61,7 @@ function twoFactorAuthenticationFailedError(id: string): ApiError {
 }
 
 async function assertApiTwoFactorIfEnabled(
-	deps: Pick<ApiAccountSecurityDependencies, 'userAuthService'>,
+	deps: Pick<AccountSecurityDependencies, 'userAuthService'>,
 	profile: MiUserProfile,
 	token: string | null | undefined,
 	errorId: string,
@@ -88,9 +88,9 @@ export const changePasswordParamDef = z.object({
 });
 
 export async function handleApiIChangePassword(
-	deps: ApiAccountSecurityDependencies,
+	deps: AccountSecurityDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof changePasswordParamDef>,
+	params: Params<typeof changePasswordParamDef>,
 ): Promise<void> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
@@ -113,9 +113,9 @@ export const regenerateTokenParamDef = z.object({
 });
 
 export async function handleApiIRegenerateToken(
-	deps: ApiAccountSecurityDependencies,
+	deps: AccountSecurityDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof regenerateTokenParamDef>,
+	params: Params<typeof regenerateTokenParamDef>,
 ): Promise<void> {
 	const freshUser = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	const oldToken = freshUser.token!;
@@ -143,9 +143,9 @@ export const deleteAccountParamDef = z.object({
 });
 
 export async function handleApiIDeleteAccount(
-	deps: ApiAccountSecurityDependencies,
+	deps: AccountSecurityDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof deleteAccountParamDef>,
+	params: Params<typeof deleteAccountParamDef>,
 ): Promise<void> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
@@ -171,9 +171,9 @@ export const updateEmailParamDef = z.object({
 });
 
 export async function handleApiIUpdateEmail(
-	deps: ApiAccountSecurityDependencies,
+	deps: AccountSecurityDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof updateEmailParamDef>,
+	params: Params<typeof updateEmailParamDef>,
 	errors: ContractErrors<(typeof iContracts)['i/update-email']>,
 ): Promise<MeDetailedApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
@@ -204,7 +204,7 @@ export async function handleApiIUpdateEmail(
 		}),
 	);
 
-	const iObj = await packMeDetailedForApi(deps, me, { includeSecrets: true });
+	const iObj = await packMeDetailed(deps, me, { includeSecrets: true });
 
 	deps.publishMainStream?.(me.id, 'meUpdated', iObj);
 

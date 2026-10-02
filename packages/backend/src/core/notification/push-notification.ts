@@ -8,12 +8,12 @@ import { getNoteSummary } from '@/misc/get-note-summary.js';
 import {
 	deleteSwSubscriptionForPushEndpointFromDatabase,
 	listSwSubscriptionsByUserIdFromDatabase,
-} from '@/core/sw/SwSubscriptionStore.js';
+} from '@/core/sw/sw-subscription-store.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 

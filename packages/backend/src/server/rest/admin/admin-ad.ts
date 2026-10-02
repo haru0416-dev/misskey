@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -12,8 +12,8 @@ import {
 	fetchAdByIdFromDatabase,
 	listAdsFromDatabase,
 	updateAdInDatabase,
-} from '@/core/ad/AdStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+} from '@/core/ad/ad-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -25,7 +25,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminAdDependencies = {
+export type AdminAdDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
@@ -76,7 +76,7 @@ function noSuchAdError(id: string): ApiError {
 	});
 }
 
-function packAdForApi(ad: MiAd): Packed<'Ad'> {
+function packAd(ad: MiAd): Packed<'Ad'> {
 	return {
 		id: ad.id,
 		expiresAt: ad.expiresAt.toISOString(),
@@ -93,9 +93,9 @@ function packAdForApi(ad: MiAd): Packed<'Ad'> {
 }
 
 export async function handleApiAdminAdCreate(
-	deps: ApiAdminAdDependencies,
+	deps: AdminAdDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAdCreateParamDef>,
+	params: Params<typeof adminAdCreateParamDef>,
 ): Promise<Packed<'Ad'>> {
 	const ad = await createAdInDatabase(deps.db, {
 		id: genId(),
@@ -116,13 +116,13 @@ export async function handleApiAdminAdCreate(
 		ad,
 	});
 
-	return packAdForApi(ad);
+	return packAd(ad);
 }
 
 export async function handleApiAdminAdDelete(
-	deps: ApiAdminAdDependencies,
+	deps: AdminAdDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAdDeleteParamDef>,
+	params: Params<typeof adminAdDeleteParamDef>,
 ): Promise<void> {
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
@@ -139,8 +139,8 @@ export async function handleApiAdminAdDelete(
 }
 
 export async function handleApiAdminAdList(
-	deps: ApiAdminAdDependencies,
-	params: ApiParams<typeof adminAdListParamDef>,
+	deps: AdminAdDependencies,
+	params: Params<typeof adminAdListParamDef>,
 ): Promise<Packed<'Ad'>[]> {
 	const { sinceId, untilId } = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const ads = await listAdsFromDatabase(deps.db, {
@@ -150,13 +150,13 @@ export async function handleApiAdminAdList(
 		publishing: params.publishing,
 	});
 
-	return ads.map(packAdForApi);
+	return ads.map(packAd);
 }
 
 export async function handleApiAdminAdUpdate(
-	deps: ApiAdminAdDependencies,
+	deps: AdminAdDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAdUpdateParamDef>,
+	params: Params<typeof adminAdUpdateParamDef>,
 ): Promise<void> {
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 

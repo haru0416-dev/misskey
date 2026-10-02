@@ -10,12 +10,12 @@ import type { Config } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { uploadDriveFileFromUrlForApi } from '@/server/rest/drive/drive-file-upload.js';
-import type { ApiDriveFileUploadDependencies, DeclaredRemoteFile } from '@/server/rest/drive/drive-file-upload.js';
+import { uploadDriveFileFromUrl } from '@/server/rest/drive/drive-file-upload.js';
+import type { DriveFileUploadDependencies, DeclaredRemoteFile } from '@/server/rest/drive/drive-file-upload.js';
 import { isValidBlurhash, parseDeclaredMedia } from '@/server/rest/activitypub/declared-media.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
@@ -71,7 +71,7 @@ describe('parseDeclaredMedia', () => {
 	});
 });
 
-describe('uploadDriveFileFromUrlForApi の保存しないリモートのファイル', () => {
+describe('uploadDriveFileFromUrl の保存しないリモートのファイル', () => {
 	let config: Config;
 	let pool: NativeSqlClient;
 	let db: MiDrizzleDatabase;
@@ -115,7 +115,7 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 			meta: { ...meta, ...overrides },
 			downloadService: { downloadUrl, fetchFileName },
 			fileInfoService: {
-				getFileInfo: vi.fn(async () => ({
+				fetchFileInfo: vi.fn(async () => ({
 					size: 16,
 					md5: '99999999999999999999999999999999',
 					type: { mime: 'text/plain', ext: 'txt' },
@@ -133,7 +133,7 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 			},
 			chartWriters: { driveChart: { update }, perUserDriveChart: { update }, instanceChart: { updateDrive: update } },
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as ApiDriveFileUploadDependencies;
+		} as unknown as DriveFileUploadDependencies;
 		return { deps, downloadUrl, fetchFileName };
 	}
 
@@ -144,11 +144,11 @@ describe('uploadDriveFileFromUrlForApi の保存しないリモートのファ�
 		blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
 	};
 	const register = (
-		deps: ApiDriveFileUploadDependencies,
+		deps: DriveFileUploadDependencies,
 		url: string,
 		options: { isLink?: boolean; declared?: DeclaredRemoteFile | null } = {},
 	) =>
-		uploadDriveFileFromUrlForApi(deps, {
+		uploadDriveFileFromUrl(deps, {
 			url,
 			uri: url,
 			user: remote,

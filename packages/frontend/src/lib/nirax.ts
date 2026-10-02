@@ -7,7 +7,7 @@ import { onBeforeUnmount, shallowRef } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import type { Component, ShallowRef } from 'vue';
 
-function safeURIDecode(str: string): string {
+function safeUriDecode(str: string): string {
 	try {
 		return decodeURIComponent(str);
 	} catch {
@@ -296,7 +296,7 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 						}
 						if (p.wildcard) {
 							if (parts.length !== 0) {
-								props.set(p.name, safeURIDecode(parts.join('/')));
+								props.set(p.name, safeUriDecode(parts.join('/')));
 								parts = [];
 							}
 							break pathMatchLoop;
@@ -306,11 +306,11 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 									continue forEachRouteLoop;
 								}
 
-								props.set(p.name, safeURIDecode(parts[0].substring(p.startsWith.length)));
+								props.set(p.name, safeUriDecode(parts[0].substring(p.startsWith.length)));
 								parts.shift();
 							} else {
 								if (parts[0]) {
-									props.set(p.name, safeURIDecode(parts[0]));
+									props.set(p.name, safeUriDecode(parts[0]));
 								}
 								parts.shift();
 							}
@@ -333,7 +333,7 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 					}
 
 					if (route.hash != null && hash != null) {
-						props.set(route.hash, safeURIDecode(hash));
+						props.set(route.hash, safeUriDecode(hash));
 					}
 
 					if (route.query != null && queryString != null) {
@@ -343,7 +343,7 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 							const as = route.query[q];
 							const value = queryObject[q];
 							if (as != null && value != null) {
-								props.set(as, safeURIDecode(value));
+								props.set(as, safeUriDecode(value));
 							}
 						}
 					}

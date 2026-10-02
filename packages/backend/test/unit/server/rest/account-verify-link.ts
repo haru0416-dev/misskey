@@ -7,15 +7,15 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { verifyLinkForApi } from '@/server/rest/account/account-update.js';
-import type { ApiAccountUpdateDependencies } from '@/server/rest/account/account-update.js';
+import { verifyLink } from '@/server/rest/account/account-update.js';
+import type { AccountUpdateDependencies } from '@/server/rest/account/account-update.js';
 import type { MiLocalUser } from '@/models/User.js';
 
 // プロフィールのリンク検証。値は SQL へパラメータで渡すので、% や ' を含む URL も検証の対象にする。
-describe('verifyLinkForApi', () => {
+describe('verifyLink', () => {
 	let runtime: RuntimeDependencies;
 
 	beforeAll(async () => {
@@ -38,8 +38,8 @@ describe('verifyLinkForApi', () => {
 			httpRequestService: {
 				getHtml: async () => `<a rel="me" href="${runtime.config.instance.url}/@${username}">me</a>`,
 			},
-		} as unknown as ApiAccountUpdateDependencies;
-		await verifyLinkForApi(deps, url, user);
+		} as unknown as AccountUpdateDependencies;
+		await verifyLink(deps, url, user);
 		return (await fetchUserProfileByUserIdOrFailFromDatabase(runtime.db, id)).verifiedLinks;
 	};
 

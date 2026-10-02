@@ -10,9 +10,9 @@ import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updateHashtagsRanking, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
+import { updateHashtagsRanking, updateHashtagsRankings } from '@/core/note/note-creation-service.js';
 import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
-import { currentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/core/featured/FeaturedRanking.js';
+import { currentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/core/featured/featured-ranking.js';
 
 describe('updateHashtagsRanking', () => {
 	let config: Config;

@@ -5,19 +5,19 @@
 
 import type { endpointMetas as channelsContracts } from '@/server/rest/contracts/channels.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	listFavoritedChannelIdsByUserIdFromDatabase,
-} from '@/core/channel/ChannelFavoriteStore.js';
+} from '@/core/channel/channel-favorite-store.js';
 import {
 	createChannelFollowingInDatabase,
 	deleteChannelFollowingFromDatabase,
 	fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	listChannelFollowingsByFollowerIdFromDatabase,
-} from '@/core/channel/ChannelFollowingStore.js';
+} from '@/core/channel/channel-following-store.js';
 import {
 	channelMutingExistsInDatabase,
 	createChannelMutingInDatabase,
@@ -25,7 +25,7 @@ import {
 	listActiveMutedChannelIdsByUserIdFromDatabase,
 	fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	updateChannelMutingExpirationInDatabase,
-} from '@/core/channel/ChannelMutingStore.js';
+} from '@/core/channel/channel-muting-store.js';
 import {
 	createChannelInDatabase,
 	listChannelsByIdsFromDatabase,
@@ -34,13 +34,13 @@ import {
 	listRecentlyActiveChannelsFromDatabase,
 	fetchChannelByIdFromDatabase,
 	updateChannelInDatabase,
-} from '@/core/channel/ChannelStore.js';
-import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+} from '@/core/channel/channel-store.js';
+import { getDriveFilePublicUrl } from '@/core/drive/drive-file-public-url.js';
 import {
 	fetchDriveFileByIdAndUserIdFromDatabase,
 	listDriveFilesByIdsFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -54,21 +54,21 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import { userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiChannelsDependencies = {
+export type ChannelsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	publishInternalEvent?: InternalEventPublisher;
 };
 
-type ApiPackedChannel = Packed<'Channel'>;
+type PackedChannel = Packed<'Channel'>;
 
 export const channelsListParamDef = z.object({
 	...paginationParams,
@@ -145,7 +145,7 @@ type ChannelPackHint = {
 };
 
 async function buildChannelPackHint(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	channels: MiChannel[],
 	me: MiLocalUser | null,
 ): Promise<ChannelPackHint> {
@@ -174,12 +174,12 @@ async function buildChannelPackHint(
 	};
 }
 
-function packChannelForApi(
-	deps: ApiChannelsDependencies,
+function packChannel(
+	deps: ChannelsDependencies,
 	channel: MiChannel,
 	me: MiLocalUser | null,
 	hint: ChannelPackHint,
-): ApiPackedChannel {
+): PackedChannel {
 	const bannerFile = channel.bannerId == null ? null : (hint.bannerFiles.get(channel.bannerId) ?? null);
 
 	return {
@@ -209,35 +209,35 @@ function packChannelForApi(
 	};
 }
 
-async function packChannelsForApi(
-	deps: ApiChannelsDependencies,
+async function packChannels(
+	deps: ChannelsDependencies,
 	channels: MiChannel[],
 	me: MiLocalUser | null,
-): Promise<ApiPackedChannel[]> {
+): Promise<PackedChannel[]> {
 	const hint = await buildChannelPackHint(deps, channels, me);
-	return channels.map((channel) => packChannelForApi(deps, channel, me, hint));
+	return channels.map((channel) => packChannel(deps, channel, me, hint));
 }
 
 /**
  * SSR (web/client-pages.ts の /channels/:channel) から使う。
  * 未ログイン閲覧者向けなので me は常に null で、hint も単体分だけ組む。
  */
-export async function packChannelForSsr(deps: ApiChannelsDependencies, channel: MiChannel): Promise<ApiPackedChannel> {
+export async function packChannelForSsr(deps: ChannelsDependencies, channel: MiChannel): Promise<PackedChannel> {
 	const hint = await buildChannelPackHint(deps, [channel], null);
-	return packChannelForApi(deps, channel, null, hint);
+	return packChannel(deps, channel, null, hint);
 }
 
-async function packChannelDetailedForApi(
-	deps: ApiChannelsDependencies & NoteDependencies,
+async function packChannelDetailed(
+	deps: ChannelsDependencies & NoteDependencies,
 	channel: MiChannel,
 	me: MiLocalUser | null,
-): Promise<ApiPackedChannel> {
+): Promise<PackedChannel> {
 	const hint = await buildChannelPackHint(deps, [channel], me);
-	const packed = packChannelForApi(deps, channel, me, hint);
+	const packed = packChannel(deps, channel, me, hint);
 
 	const pinnedNotes =
 		channel.pinnedNoteIds.length > 0 ? await listNotesByIdsFromDatabase(deps.db, channel.pinnedNoteIds) : [];
-	const packedPinnedNotes = (await packNoteManyForApi(deps, pinnedNotes, me)).sort(
+	const packedPinnedNotes = (await packNoteMany(deps, pinnedNotes, me)).sort(
 		(a, b) => channel.pinnedNoteIds.indexOf(a.id) - channel.pinnedNoteIds.indexOf(b.id),
 	);
 
@@ -248,18 +248,18 @@ async function packChannelDetailedForApi(
 }
 
 export async function handleApiChannelsFeatured(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser | null,
-): Promise<ApiPackedChannel[]> {
+): Promise<PackedChannel[]> {
 	const channels = await listRecentlyActiveChannelsFromDatabase(deps.db, 10);
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsSearch(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof channelsSearchParamDef>,
-): Promise<ApiPackedChannel[]> {
+	params: Params<typeof channelsSearchParamDef>,
+): Promise<PackedChannel[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
 		query: sqlLikeEscape(params.query),
@@ -270,27 +270,27 @@ export async function handleApiChannelsSearch(
 		order: sinceId != null && untilId == null ? 'asc' : 'desc',
 	});
 
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsOwned(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelsListParamDef>,
-): Promise<ApiPackedChannel[]> {
+	params: Params<typeof channelsListParamDef>,
+): Promise<PackedChannel[]> {
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
 		...resolveDateIdPagination({ gen: genId }, params),
 		limit: params.limit,
 	});
 
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsFollowed(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelsListParamDef>,
-): Promise<ApiPackedChannel[]> {
+	params: Params<typeof channelsListParamDef>,
+): Promise<PackedChannel[]> {
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveDateIdPagination({ gen: genId }, params),
@@ -303,13 +303,13 @@ export async function handleApiChannelsFollowed(
 		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsMyFavorites(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-): Promise<ApiPackedChannel[]> {
+): Promise<PackedChannel[]> {
 	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
 	if (channelIds.length === 0) {
 		return [];
@@ -322,15 +322,15 @@ export async function handleApiChannelsMyFavorites(
 		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsCreate(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelCreateParamDef>,
+	params: Params<typeof channelCreateParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/create']>,
-): Promise<ApiPackedChannel> {
+): Promise<PackedChannel> {
 	let bannerId: string | null = null;
 	if (params.bannerId != null) {
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
@@ -351,15 +351,15 @@ export async function handleApiChannelsCreate(
 		allowRenoteToExternal: params.allowRenoteToExternal ?? true,
 	});
 
-	return packChannelForApi(deps, channel, me, await buildChannelPackHint(deps, [channel], me));
+	return packChannel(deps, channel, me, await buildChannelPackHint(deps, [channel], me));
 }
 
 export async function handleApiChannelsUpdate(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelUpdateParamDef>,
+	params: Params<typeof channelUpdateParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/update']>,
-): Promise<ApiPackedChannel> {
+): Promise<PackedChannel> {
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw errors.noSuchChannel();
@@ -398,13 +398,13 @@ export async function handleApiChannelsUpdate(
 		throw errors.noSuchChannel();
 	}
 
-	return packChannelForApi(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
+	return packChannel(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
 }
 
 export async function handleApiChannelsFollow(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelFollowParamDef>,
+	params: Params<typeof channelFollowParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/follow']>,
 ): Promise<void> {
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
@@ -433,9 +433,9 @@ export async function handleApiChannelsFollow(
 }
 
 export async function handleApiChannelsUnfollow(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelFollowParamDef>,
+	params: Params<typeof channelFollowParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/unfollow']>,
 ): Promise<void> {
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
@@ -451,9 +451,9 @@ export async function handleApiChannelsUnfollow(
 }
 
 export async function handleApiChannelsMuteCreate(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelMuteCreateParamDef>,
+	params: Params<typeof channelMuteCreateParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/mute/create']>,
 ): Promise<void> {
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
@@ -492,9 +492,9 @@ export async function handleApiChannelsMuteCreate(
 }
 
 export async function handleApiChannelsMuteDelete(
-	deps: ApiChannelsDependencies,
+	deps: ChannelsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof channelMuteDeleteParamDef>,
+	params: Params<typeof channelMuteDeleteParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/mute/delete']>,
 ): Promise<void> {
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
@@ -514,10 +514,7 @@ export async function handleApiChannelsMuteDelete(
 	});
 }
 
-export async function handleApiChannelsMuteList(
-	deps: ApiChannelsDependencies,
-	me: MiLocalUser,
-): Promise<ApiPackedChannel[]> {
+export async function handleApiChannelsMuteList(deps: ChannelsDependencies, me: MiLocalUser): Promise<PackedChannel[]> {
 	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 	if (channelIds.length === 0) {
 		return [];
@@ -531,27 +528,27 @@ export async function handleApiChannelsMuteList(
 		.filter((channel): channel is MiChannel => channel != null)
 		.sort((a, b) => a.id.localeCompare(b.id));
 
-	return await packChannelsForApi(deps, channels, me);
+	return await packChannels(deps, channels, me);
 }
 
 export async function handleApiChannelsShow(
-	deps: ApiChannelsDependencies & NoteDependencies,
+	deps: ChannelsDependencies & NoteDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof channelShowParamDef>,
+	params: Params<typeof channelShowParamDef>,
 	errors: ContractErrors<(typeof channelsContracts)['channels/show']>,
-): Promise<ApiPackedChannel> {
+): Promise<PackedChannel> {
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw errors.noSuchChannel();
 	}
 
-	return await packChannelDetailedForApi(deps, channel, me);
+	return await packChannelDetailed(deps, channel, me);
 }
 
 export async function handleApiChannelsTimeline(
-	deps: ApiChannelsDependencies & NoteDependencies,
+	deps: ChannelsDependencies & NoteDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof channelTimelineParamDef>,
+	params: Params<typeof channelTimelineParamDef>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
 
@@ -577,5 +574,5 @@ export async function handleApiChannelsTimeline(
 		mutedChannelIds: mutingChannelIds,
 	});
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }

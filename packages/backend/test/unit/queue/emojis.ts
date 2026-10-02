@@ -14,16 +14,16 @@ import { writeZip } from '@/misc/zip-writer.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import {
 	createDriveFileInDatabase,
 	listDriveFilesByUserIdWithPaginationFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
-import { createRoleInDatabase } from '@/core/role/RoleStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/emoji-store.js';
+import { createRoleInDatabase } from '@/core/role/role-store.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/role-assignment-store.js';
 import { createTemp } from '@/misc/create-temp.js';
-import { readDriveFileBuffer } from '@/core/drive/DriveFileContent.js';
+import { readDriveFileBuffer } from '@/core/drive/drive-file-content.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueExportCustomEmojis, handleQueueImportCustomEmojis } from '@/queue/handlers/emojis.js';
 import type { QueueEmojisDependencies } from '@/queue/handlers/emojis.js';

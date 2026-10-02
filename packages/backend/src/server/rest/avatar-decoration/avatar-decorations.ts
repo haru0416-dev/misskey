@@ -4,18 +4,18 @@
  */
 
 import { z } from 'zod';
-import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/avatar-decoration-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAvatarDecorationDependencies = {
+export type AvatarDecorationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
 export const getAvatarDecorationsParamDef = z.object({});
 
-export async function handleApiGetAvatarDecorations(deps: ApiAvatarDecorationDependencies): Promise<
+export async function handleApiGetAvatarDecorations(deps: AvatarDecorationDependencies): Promise<
 	{
 		id: string;
 		name: string;

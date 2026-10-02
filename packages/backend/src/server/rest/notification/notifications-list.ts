@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/chat/ChatRoomStore.js';
-import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/user/FollowRequestStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { listRolesByIdsFromDatabase } from '@/core/role/RoleStore.js';
+import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/chat/chat-room-store.js';
+import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/user/follow-request-store.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
+import { listRolesByIdsFromDatabase } from '@/core/role/role-store.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { paginationParams } from '@/misc/zod-params.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';
 import type { MiUser } from '@/models/User.js';
 import { notificationTypes, obsoleteNotificationTypes } from '@/types.js';
-import { packChatRoomInvitationsForApi } from '../chat/chat.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packChatRoomInvitations } from '../chat/chat.js';
+import { packNoteMany } from '../note/note.js';
 import { packApiRoles } from '../role/roles.js';
 import { packUserLiteMany } from '../../../core/user/user-packing.js';
 import { toXListId } from '../../../core/notification/notification.js';
@@ -26,7 +26,7 @@ import { filterValidNotifiers, packNotification } from '@/core/notification/noti
 
 const currentNotificationTypes: ReadonlySet<string> = new Set(notificationTypes);
 
-async function getApiNotifications(
+async function fetchApiNotifications(
 	deps: NotificationsListDependencies,
 	userId: MiUser['id'],
 	options: {
@@ -116,7 +116,7 @@ async function getApiNotifications(
 	return notifications;
 }
 
-async function packNotificationsForApi<T extends MiNotification | MiGroupedNotification>(
+async function packNotifications<T extends MiNotification | MiGroupedNotification>(
 	deps: NotificationsListDependencies,
 	notifications: T[],
 	meId: MiUser['id'],
@@ -132,7 +132,7 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 		.map((x) => ('noteId' in x ? x.noteId : null))
 		.filter((x): x is string => x != null);
 	const notes = noteIds.length > 0 ? await listNotesByIdsFromDatabase(deps.db, noteIds) : [];
-	const packedNotesArray = await packNoteManyForApi(deps, notes, { id: meId }, { detail: true });
+	const packedNotesArray = await packNoteMany(deps, notes, { id: meId }, { detail: true });
 	const packedNotes = new Map(packedNotesArray.map((p) => [p.id, p]));
 
 	validNotifications = validNotifications.filter((x) => !('noteId' in x) || packedNotes.has(x.noteId));
@@ -172,7 +172,7 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 		chatRoomInvitationIds.length > 0
 			? await listChatRoomInvitationsByIdsFromDatabase(deps.db, [...new Set(chatRoomInvitationIds)])
 			: [];
-	const packedChatRoomInvitationArray = await packChatRoomInvitationsForApi(deps, chatRoomInvitations, {
+	const packedChatRoomInvitationArray = await packChatRoomInvitations(deps, chatRoomInvitations, {
 		id: meId,
 	});
 	const packedChatRoomInvitations = new Map(
@@ -234,7 +234,7 @@ async function fetchVisibleNotificationPage(
 	let untilDate = untilId == null ? options.untilDate || null : null;
 	const ascending = (sinceId != null || sinceDate != null) && untilId == null && untilDate == null;
 	for (let page = 0; page < MAX_SCANNED_PAGES; page++) {
-		const notifications = await getApiNotifications(
+		const notifications = await fetchApiNotifications(
 			deps,
 			meId,
 			omitUndefined({
@@ -249,7 +249,7 @@ async function fetchVisibleNotificationPage(
 		);
 		const last = notifications.at(-1);
 		if (last == null) return [];
-		const packed = await packNotificationsForApi(deps, shape(notifications), meId);
+		const packed = await packNotifications(deps, shape(notifications), meId);
 		if (packed.length > 0) return packed;
 		if (ascending) {
 			sinceId = last.id;
@@ -275,7 +275,7 @@ export const notificationsParamDef = z.object({
 async function listApiNotifications(
 	deps: NotificationsListDependencies,
 	me: MiUser,
-	params: ApiParams<typeof notificationsParamDef>,
+	params: Params<typeof notificationsParamDef>,
 	shape: (notifications: MiNotification[]) => (MiNotification | MiGroupedNotification)[],
 ): Promise<Record<string, unknown>[]> {
 	if (params.includeTypes?.length === 0) {
@@ -315,7 +315,7 @@ async function listApiNotifications(
 export async function handleApiINotifications(
 	deps: NotificationsListDependencies,
 	me: MiUser,
-	params: ApiParams<typeof notificationsParamDef>,
+	params: Params<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
 	return await listApiNotifications(deps, me, params, (notifications) => notifications);
 }
@@ -384,7 +384,7 @@ function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotifi
 export async function handleApiINotificationsGrouped(
 	deps: NotificationsListDependencies,
 	me: MiUser,
-	params: ApiParams<typeof notificationsParamDef>,
+	params: Params<typeof notificationsParamDef>,
 ): Promise<Record<string, unknown>[]> {
 	return await listApiNotifications(deps, me, params, (notifications) =>
 		groupApiNotifications(notifications).slice(0, params.limit),

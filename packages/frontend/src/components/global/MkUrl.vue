@@ -34,7 +34,7 @@ import * as os from '@/os.js';
 import { useTooltip } from '@/composables/useTooltip.js';
 import { isEnabledUrlPreview } from '@/features/link-preview/url-preview.js';
 
-function safeURIDecode(str: string): string {
+function safeUriDecode(str: string): string {
 	try {
 		return decodeURIComponent(str);
 	} catch {
@@ -81,9 +81,9 @@ if (props.showUrlPreview && isEnabledUrlPreview.value) {
 const schema = url.protocol;
 const hostname = decodePunycode(url.hostname);
 const port = url.port;
-const pathname = safeURIDecode(url.pathname);
-const query = safeURIDecode(url.search);
-const hash = safeURIDecode(url.hash);
+const pathname = safeUriDecode(url.pathname);
+const query = safeUriDecode(url.search);
+const hash = safeUriDecode(url.hash);
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 </script>

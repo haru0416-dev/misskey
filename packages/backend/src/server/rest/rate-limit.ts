@@ -8,22 +8,22 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
-import { getRolePolicies } from '../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../core/role/role-policy.js';
 
-export type ApiRateLimitDependencies = {
+export type RateLimitDependencies = {
 	config: Config;
 	redis: Redis.Redis;
 };
 
-export type ApiRateLimit = {
+export type RateLimit = {
 	key: string;
 	duration?: number;
 	max?: number;
 	minInterval?: number;
 };
 
-export type ApiEndpointRateLimit = Omit<ApiRateLimit, 'key'> & {
+export type EndpointRateLimit = Omit<RateLimit, 'key'> & {
 	key?: string;
 };
 
@@ -95,8 +95,8 @@ async function checkLimiter(options: {
 }
 
 export async function isApiRateLimited(
-	deps: ApiRateLimitDependencies,
-	limitation: ApiRateLimit,
+	deps: RateLimitDependencies,
+	limitation: RateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<boolean> {
@@ -108,8 +108,8 @@ export async function isApiRateLimited(
 }
 
 export async function isApiRateLimitedForUser(
-	deps: ApiRateLimitDependencies,
-	limitation: ApiRateLimit,
+	deps: RateLimitDependencies,
+	limitation: RateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<boolean> {
@@ -155,9 +155,9 @@ export async function isApiRateLimitedForUser(
 }
 
 export async function assertApiRateLimit(
-	deps: ApiRateLimitDependencies,
+	deps: RateLimitDependencies,
 	endpointName: string,
-	limitation: ApiEndpointRateLimit,
+	limitation: EndpointRateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<void> {
@@ -181,12 +181,12 @@ export async function assertApiRateLimit(
  * factor <= 0 はレート制限なし、1 未満は緩和、1 超は強化 (minInterval/max に反映される)。
  */
 export async function assertApiRateLimitForUser(
-	deps: ApiRateLimitDependencies & RolePolicyDependencies,
+	deps: RateLimitDependencies & RolePolicyDependencies,
 	endpointName: string,
-	limitation: ApiEndpointRateLimit,
+	limitation: EndpointRateLimit,
 	user: MiUser,
 ): Promise<void> {
-	const factor = (await getRolePolicies(deps, user)).rateLimitFactor;
+	const factor = (await fetchRolePolicies(deps, user)).rateLimitFactor;
 	if (factor <= 0) {
 		return;
 	}

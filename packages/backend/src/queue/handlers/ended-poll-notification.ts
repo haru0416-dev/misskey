@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/PollVoteStore.js';
-import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
+import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/poll-vote-store.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { EndedPollNotificationJobData } from '@/core/queue/types.js';
 import { createPollEndedNotification } from '@/core/notification/notification.js';

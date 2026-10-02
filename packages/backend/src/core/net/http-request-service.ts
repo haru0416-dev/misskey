@@ -1,0 +1,424 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import ipaddr from 'ipaddr.js';
+import { createAgentHttpClient } from '@/core/net/agent-http-client.js';
+import { createCachedResolver } from '@/core/net/dns-cache.js';
+import type { Config } from '@/config.js';
+import { StatusError } from '@/misc/status-error.js';
+import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
+import { assertActivityMatchesUrl, FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
+import type { IObject } from '@/core/activitypub/type.js';
+import { URL } from 'node:url';
+
+/**
+ * `send()` の戻り値。通信経路の `Response` から、呼び出し側が実際に使う表面
+ * (ok/status/statusText/url/headers と json()/text()/bytes()) だけを取り出したラッパー。
+ * ボディは size 上限付きで読み切って保持するため、各読み取りメソッドは追加の通信を行わない。
+ */
+export type HttpRequestSendResponse = {
+	ok: boolean;
+	status: number;
+	statusText: string;
+	url: string;
+	headers: Headers;
+	json: () => Promise<unknown>;
+	text: () => Promise<string>;
+	bytes: () => Promise<Uint8Array>;
+};
+
+export type HttpRequestSendOptions = {
+	throwErrorWhenResponseNotOk: boolean;
+	validators?: ((res: HttpRequestSendResponse) => void)[];
+};
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const textDecoder = new TextDecoder();
+
+/** GET への変換時にボディとともに落とすヘッダ。cross-origin では資格情報も別途落とす。 */
+const CONTENT_HEADERS = ['content-type', 'content-length', 'content-encoding', 'content-language', 'content-location'];
+
+function deleteHeaderCaseInsensitive(headers: Record<string, string>, name: string): void {
+	for (const key of Object.keys(headers)) {
+		if (key.toLowerCase() === name) {
+			delete headers[key];
+		}
+	}
+}
+
+/**
+ * ip が private / non-unicast かどうか。allowedPrivateNetworks に含まれる CIDR は許可 (= private ではない扱い)。
+ * send() とストリーミングダウンロードの事前 DNS チェックで使う。
+ */
+function isPrivateIp(ip: string, allowedPrivateNetworks: [ipaddr.IPv4 | ipaddr.IPv6, number][]): boolean {
+	const parsedIp = ipaddr.parse(ip);
+	const kind = parsedIp.kind();
+
+	for (const cidr of allowedPrivateNetworks) {
+		if (cidr[0].kind() === kind && parsedIp.match(cidr)) {
+			return false;
+		}
+	}
+
+	return parsedIp.range() !== 'unicast';
+}
+
+/**
+ * fetch のレスポンスボディを最大 limit バイトまで読み取る。超過したら例外を投げる。
+ * グローバル fetch にはレスポンスサイズ制限がないため、読み取り中にも上限を検査する。
+ */
+async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Array> {
+	const contentLength = res.headers.get('content-length');
+	if (contentLength != null) {
+		const declared = Number(contentLength);
+		if (Number.isFinite(declared) && declared > limit) {
+			await res.body?.cancel();
+			throw new StatusError(`Response body exceeds size limit (${limit} bytes)`, 400, 'Payload Too Large');
+		}
+	}
+
+	if (res.body == null) {
+		return new Uint8Array(0);
+	}
+
+	const reader = res.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			if (value == null) {
+				continue;
+			}
+			total += value.byteLength;
+			if (total > limit) {
+				throw new StatusError(`Response body exceeds size limit (${limit} bytes)`, 400, 'Payload Too Large');
+			}
+			chunks.push(value);
+		}
+	} catch (err) {
+		await reader.cancel().catch(() => {});
+		throw err;
+	} finally {
+		reader.releaseLock();
+	}
+
+	const out = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		out.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return out;
+}
+
+function buildSendResponse(res: Response, body: Uint8Array): HttpRequestSendResponse {
+	let text: string | undefined;
+	const decode = () => (text ??= textDecoder.decode(body));
+	return {
+		ok: res.ok,
+		status: res.status,
+		statusText: res.statusText,
+		url: res.url,
+		headers: res.headers,
+		json: async () => JSON.parse(decode()),
+		text: async () => decode(),
+		bytes: async () => body,
+	};
+}
+
+export function createHttpRequestService(config: Config, useAgent = false) {
+	const agentClient = useAgent ? createAgentHttpClient(config) : undefined;
+	// 設定の CIDR は初回の SSRF 検査時だけパースし、以降の DNS 候補にも使い回す。
+	let allowedPrivateNetworks: [ipaddr.IPv4 | ipaddr.IPv6, number][] | undefined;
+	// SSRF検査で見た IP へそのまま接続するため、解決結果を呼び出し側へ返せるリゾルバを使う。
+	const dnsCache = createCachedResolver({
+		successTtlMs: config.outboundNetwork.dnsCache.successTtlSeconds * 1000,
+		failureTtlMs: config.outboundNetwork.dnsCache.failureTtlSeconds * 1000,
+	});
+
+	/**
+	 * 宛先が private / non-unicast でないことを確かめ、検査した IP を返す。
+	 * 返した IP へそのまま接続することで、検査と接続の間に名前解決が差し替わる
+	 * (DNS rebinding) 余地を無くす。検査しない場合は null。
+	 */
+	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<string[] | null> {
+		if (isLocalAddressAllowed) {
+			return null;
+		}
+		if (process.env['NODE_ENV'] !== 'production') {
+			return null;
+		}
+
+		const host = url.hostname.replace(/^\[/, '').replace(/\]$/, '');
+
+		let addresses: string[];
+		if (ipaddr.isValid(host)) {
+			addresses = [host];
+		} else {
+			addresses = (await dnsCache.resolve(host)).map((entry) => entry.address);
+		}
+
+		for (const address of addresses) {
+			if (!ipaddr.isValid(address)) continue;
+			allowedPrivateNetworks ??= config.outboundNetwork.privateNetworkAccess.allowedNetworks.map((net) =>
+				ipaddr.parseCIDR(net),
+			);
+			if (isPrivateIp(address, allowedPrivateNetworks)) {
+				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
+			}
+		}
+
+		return addresses;
+	}
+
+	/**
+	 * 検査済みの IP へ直接繋ぐためのリクエスト先を組み立てる。
+	 * ホスト名は `Host` ヘッダと TLS の SNI/証明書検証に残すので、接続先だけが IP に変わる。
+	 */
+	function pinToAddress(url: URL, address: string): { url: URL; host: string; serverName: string } {
+		const pinned = new URL(url);
+		pinned.hostname = address.includes(':') ? `[${address}]` : address;
+		return { url: pinned, host: url.host, serverName: url.hostname };
+	}
+
+	async function getActivityJson(
+		url: string,
+		isLocalAddressAllowed = false,
+		allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
+	): Promise<IObject> {
+		const res = await send(
+			url,
+			{
+				method: 'GET',
+				headers: {
+					Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+				},
+				timeout: 5000,
+				size: 1024 * 256,
+				isLocalAddressAllowed,
+			},
+			{
+				throwErrorWhenResponseNotOk: true,
+				validators: [validateContentTypeSetAsActivityPub],
+			},
+		);
+
+		const finalUrl = res.url;
+		const activity = (await res.json()) as IObject;
+
+		assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);
+
+		return activity;
+	}
+
+	async function getJson<T = unknown>(
+		url: string,
+		accept = 'application/json, */*',
+		headers?: Record<string, string>,
+		isLocalAddressAllowed = false,
+	): Promise<T> {
+		const res = await send(url, {
+			method: 'GET',
+			headers: {
+				Accept: accept,
+				...(headers ?? {}),
+			},
+			timeout: 5000,
+			size: 1024 * 256,
+			isLocalAddressAllowed,
+		});
+
+		return (await res.json()) as T;
+	}
+
+	async function getHtml(
+		url: string,
+		accept = 'text/html, */*',
+		headers?: Record<string, string>,
+		isLocalAddressAllowed = false,
+	): Promise<string> {
+		const res = await send(url, {
+			method: 'GET',
+			headers: {
+				Accept: accept,
+				...(headers ?? {}),
+			},
+			timeout: 5000,
+			isLocalAddressAllowed,
+		});
+
+		return await res.text();
+	}
+
+	/**
+	 * リダイレクトを手動追跡し、各ホップの宛先を assertUrlAllowed で検査する。
+	 *
+	 * fetch の `redirect: 'follow'` に任せると、リダイレクト先が assertUrlAllowed を通らず、Bun では
+	 * Agent の socket レベル遮断も働かないため、`302 -> http://169.254.169.254/` 等で private アドレスへ
+	 * 誘導する SSRF が成立してしまう。そのため `redirect: 'manual'` で 1 ホップずつ検査しながら追跡する。
+	 * 303 と POST への 301/302 は GET に変換し、body と本文関連のヘッダを落とす。
+	 */
+	async function fetchFollowingRedirects(
+		initialUrl: string,
+		baseInit: { method: string; headers: Record<string, string>; body: RequestInit['body']; signal: AbortSignal },
+		isLocalAddressAllowed: boolean,
+		followRedirects = true,
+	): Promise<Response> {
+		let currentUrl = new URL(initialUrl);
+		let method = baseInit.method;
+		let body = baseInit.body;
+		const headers = { ...baseInit.headers };
+
+		for (let redirects = 0; ; redirects++) {
+			if (currentUrl.protocol !== 'http:' && currentUrl.protocol !== 'https:') {
+				throw new StatusError('Unsupported URL protocol', 400, 'Bad Request');
+			}
+			let allowedAddresses = await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
+
+			const proxyUrl = config.outboundNetwork.proxy.url;
+			const useProxy =
+				proxyUrl != null && !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
+			if (agentClient && allowedAddresses && config.outboundNetwork.addressFamily !== 'dualStack') {
+				const kind = config.outboundNetwork.addressFamily;
+				allowedAddresses = allowedAddresses.filter((address) => ipaddr.parse(address).kind() === kind);
+				if (allowedAddresses.length === 0) throw new Error(`No ${kind} address for ${currentUrl.hostname}`);
+			}
+
+			// proxy 経由でも検査した IP を宛先にする。ホスト名のまま渡すと proxy が改めて名前を引き、
+			// 検査後に DNS の応答が変われば検査していない (内部の) アドレスへ繋がりうる。
+			// ホスト名は Host ヘッダと TLS の SNI・証明書検証に残す (http は絶対 URI、https は CONNECT の宛先が IP になる)。
+			const pinned =
+				allowedAddresses != null && allowedAddresses.length > 0 ? pinToAddress(currentUrl, allowedAddresses[0]!) : null;
+
+			const init: RequestInit & { proxy?: string; tls?: { serverName: string } } = {
+				method,
+				headers: pinned == null ? headers : { ...headers, host: pinned.host },
+				...(body === undefined ? {} : { body }),
+				redirect: 'manual',
+				signal: baseInit.signal,
+				// 検査した IP へ繋ぎつつ、証明書は元のホスト名で検証する。
+				...(pinned != null && currentUrl.protocol === 'https:' ? { tls: { serverName: pinned.serverName } } : {}),
+			};
+			if (useProxy) {
+				init.proxy = proxyUrl;
+			}
+
+			const res = agentClient
+				? await agentClient.request(pinned?.url ?? currentUrl, init, useProxy)
+				: await fetch(pinned?.url ?? currentUrl, init);
+
+			const location = res.headers.get('location');
+			if (!followRedirects || !REDIRECT_STATUSES.has(res.status) || location == null) {
+				if (pinned != null) {
+					// ActivityPub の ID 照合には接続用 IP ではなく、最終取得先のホスト名が必要。
+					const responseUrl = new URL(currentUrl);
+					responseUrl.hash = '';
+					Object.defineProperty(res, 'url', { value: responseUrl.href });
+				}
+				return res;
+			}
+
+			if (redirects >= config.outboundNetwork.http.maximumRedirects) {
+				await res.body?.cancel().catch(() => {});
+				throw new StatusError('Too many redirects', 400, 'Too Many Redirects');
+			}
+
+			const nextUrl = new URL(location, currentUrl);
+			// リダイレクトレスポンス自体のボディは不要なので破棄し、keep-alive ソケットを解放する。
+			await res.body?.cancel().catch(() => {});
+
+			if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
+				method = 'GET';
+				body = undefined;
+				for (const h of CONTENT_HEADERS) {
+					deleteHeaderCaseInsensitive(headers, h);
+				}
+			}
+
+			// cross-origin リダイレクトでは資格情報を引き継がない。
+			if (nextUrl.origin !== currentUrl.origin) {
+				deleteHeaderCaseInsensitive(headers, 'authorization');
+				deleteHeaderCaseInsensitive(headers, 'cookie');
+			}
+
+			currentUrl = nextUrl;
+		}
+	}
+
+	async function send(
+		url: string,
+		args: {
+			method?: string;
+			body?: RequestInit['body'];
+			headers?: Record<string, string>;
+			timeout?: number;
+			size?: number;
+			isLocalAddressAllowed?: boolean;
+			followRedirects?: boolean;
+		} = {},
+		extra: HttpRequestSendOptions = {
+			throwErrorWhenResponseNotOk: true,
+			validators: [],
+		},
+	): Promise<HttpRequestSendResponse> {
+		const timeout = args.timeout ?? config.outboundNetwork.http.requestTimeoutMs;
+		const isLocalAddressAllowed = args.isLocalAddressAllowed ?? false;
+
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeout);
+
+		let res: Response;
+		let body: Uint8Array;
+		try {
+			res = await fetchFollowingRedirects(
+				url,
+				{
+					method: args.method ?? 'GET',
+					headers: {
+						'User-Agent': config.runtime.userAgent,
+						...args.headers,
+					},
+					body: args.body,
+					signal: controller.signal,
+				},
+				isLocalAddressAllowed,
+				args.followRedirects,
+			);
+			body = await readBodyWithLimit(res, args.size ?? config.outboundNetwork.http.maximumResponseSizeBytes);
+		} finally {
+			clearTimeout(timer);
+		}
+
+		const wrapped = buildSendResponse(res, body);
+
+		if (!res.ok && extra.throwErrorWhenResponseNotOk) {
+			throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
+		}
+
+		if (res.ok) {
+			for (const validator of extra.validators ?? []) {
+				validator(wrapped);
+			}
+		}
+
+		return wrapped;
+	}
+
+	return {
+		dispose: () => agentClient?.dispose(),
+		assertUrlAllowed,
+		fetchFollowingRedirects,
+		getActivityJson,
+		getJson,
+		getHtml,
+		send,
+	};
+}
+
+export type HttpRequestService = ReturnType<typeof createHttpRequestService>;

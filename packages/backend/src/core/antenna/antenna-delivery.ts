@@ -10,15 +10,15 @@ import {
 	appendUserToAntennasInDatabase,
 	listActiveAntennasFromDatabase,
 	listAntennasByIdsFromDatabase,
-} from '@/core/antenna/AntennaStore.js';
+} from '@/core/antenna/antenna-store.js';
 import {
 	followingExistsInDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import {
 	listUserListIdsContainingUserFromDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/user/UserListMembershipStore.js';
+} from '@/core/user/user-list-membership-store.js';
 import * as Acct from '@/misc/acct.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

@@ -7,11 +7,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { DB_MAX_NOTE_CW_LENGTH } from '@/const.js';
-import { createNote } from '@/core/note/NoteCreationService.js';
-import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
+import { createNote } from '@/core/note/note-creation-service.js';
+import type { NoteCreationDependencies } from '@/core/note/note-creation-service.js';
 import type { MiLocalUser } from '@/models/User.js';
 
 // note.cw は varchar(512)。ローカル API は paramDef で 100 文字に制限しているが、ActivityPub 経由の summary には

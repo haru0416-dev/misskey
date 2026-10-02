@@ -5,7 +5,7 @@
 
 import { endpointMetas as hashtagsContracts } from '@/server/rest/contracts/hashtags.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiHashtagsList,
 	handleApiHashtagsSearch,
@@ -14,7 +14,7 @@ import {
 	handleApiHashtagsUsers,
 } from '../hashtag/hashtags.js';
 
-export const hashtagsEndpoints = implementEndpoints<ApiShellDependencies>()(hashtagsContracts, {
+export const hashtagsEndpoints = implementEndpoints<ShellDependencies>()(hashtagsContracts, {
 	'hashtags/list': async ({ deps, input }) => await handleApiHashtagsList(deps, input),
 	'hashtags/search': async ({ deps, input }) => await handleApiHashtagsSearch(deps, input),
 	'hashtags/show': async ({ deps, errors, input }) => await handleApiHashtagsShow(deps, input, errors),

@@ -10,11 +10,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vite
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
+import { signedPost } from '@/server/rest/activitypub/ap-resolve.js';
 import { handleInboxRequest } from '@/server/activitypub/inbox-endpoint.js';
 import type { InboxEndpointDependencies } from '@/server/activitypub/inbox-endpoint.js';
 import type { MiUser } from '@/models/User.js';
@@ -42,7 +42,7 @@ async function createTestUserWithKeypair(
 	return user;
 }
 
-// 実際に自分自身へ signedPostForApi で配送させ、送信された生のHTTPリクエストを
+// 実際に自分自身へ signedPost で配送させ、送信された生のHTTPリクエストを
 // ローカルHTTPフィクスチャで捕捉することで、本物のHTTP-Signature/Digestヘッダーを持つ
 // リクエストを作る。
 function captureRequestServer(): Promise<{ server: Server; url: string; capture: () => Promise<CapturedRequest> }> {
@@ -106,7 +106,7 @@ describe('hono-inbox-endpoint', () => {
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 		const activityId = `https://${host}/activities/${genId()}`;
 
-		await signedPostForApi(
+		await signedPost(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,
@@ -151,7 +151,7 @@ describe('hono-inbox-endpoint', () => {
 			inboxQueue: runtime.inboxQueue,
 		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
-		await signedPostForApi(
+		await signedPost(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,
@@ -244,7 +244,7 @@ describe('hono-inbox-endpoint', () => {
 		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForApi(
+		await signedPost(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,
@@ -279,7 +279,7 @@ describe('hono-inbox-endpoint', () => {
 		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForApi(
+		await signedPost(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,

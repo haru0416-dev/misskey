@@ -12,16 +12,16 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CollapsedQueue } from '@/misc/collapsed-queue.js';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/fetch-instance-metadata-logic.js';
 import type { InboxJobData } from '@/core/queue/types.js';
 import {
 	extractDbHost,
-	getAuthUserFromKeyIdForApi,
-	getUserFromApIdForApi,
+	fetchAuthUserFromKeyId,
+	fetchUserFromApId,
 	isFederationAllowedHost,
 } from '@/server/rest/activitypub/ap-resolve.js';
-import type { ApiAuthUser } from '@/server/rest/activitypub/ap-resolve.js';
-import { getAuthUserFromApIdForApi, resolvePersonForApi } from '@/server/rest/activitypub/ap-person.js';
+import type { AuthUser } from '@/server/rest/activitypub/ap-resolve.js';
+import { fetchAuthUserFromApId, resolvePerson } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
@@ -29,10 +29,10 @@ import {
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
 } from '@/server/rest/activitypub/federation.js';
-import { performActivityForApi } from '../../server/activitypub/inbox-dispatch.js';
-import type { ApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
+import { performActivity } from '../../server/activitypub/inbox-dispatch.js';
+import type { InboxDispatchDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
-export type QueueInboxDependencies = ApiInboxDependencies;
+export type QueueInboxDependencies = InboxDispatchDependencies;
 
 type UpdateInstanceJob = {
 	latestRequestReceivedAt: Date;
@@ -85,7 +85,7 @@ export async function flushQueueInboxUpdateInstanceQueue(): Promise<void> {
 async function verifyAndResolveAuthUser(
 	deps: QueueInboxDependencies,
 	data: InboxJobData,
-): Promise<{ authUser: ApiAuthUser; activity: IActivity } | string> {
+): Promise<{ authUser: AuthUser; activity: IActivity } | string> {
 	const signature = data.signature;
 	let activity = data.activity;
 
@@ -107,18 +107,18 @@ async function verifyAndResolveAuthUser(
 		}
 
 		if (userExistenceCheckApId != null) {
-			const user = await getUserFromApIdForApi(deps, userExistenceCheckApId);
+			const user = await fetchUserFromApId(deps, userExistenceCheckApId);
 			if (user == null) {
 				return `skip: user not found for delete activity. ${getApId(userExistenceCheckApId)}`;
 			}
 		}
 	}
 
-	let authUser: ApiAuthUser | null = await getAuthUserFromKeyIdForApi(deps, signature.keyId);
+	let authUser: AuthUser | null = await fetchAuthUserFromKeyId(deps, signature.keyId);
 
 	if (authUser == null) {
 		try {
-			authUser = await getAuthUserFromApIdForApi(deps, getApId(activity.actor));
+			authUser = await fetchAuthUserFromApId(deps, getApId(activity.actor));
 		} catch (err) {
 			if (err instanceof StatusError) {
 				if (!err.isRetryable) {
@@ -159,10 +159,10 @@ async function verifyAndResolveAuthUser(
 		// 公開鍵が未登録でも検証できるよう、creator のフラグメントを除いた Person の解決を試みる。
 		if (ldSignature.creator) {
 			const candicate = ldSignature.creator.replace(/#.*/, '');
-			await resolvePersonForApi(deps, candicate).catch(() => null);
+			await resolvePerson(deps, candicate).catch(() => null);
 		}
 
-		authUser = await getAuthUserFromKeyIdForApi(deps, ldSignature.creator);
+		authUser = await fetchAuthUserFromKeyId(deps, ldSignature.creator);
 		if (authUser == null) {
 			throw new Bull.UnrecoverableError('skip: LD-Signatureのユーザーが取得できませんでした');
 		}
@@ -290,7 +290,7 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, data: Inbox
 	}
 
 	try {
-		const result = await performActivityForApi(deps, authUser.user, activity);
+		const result = await performActivity(deps, authUser.user, activity);
 		if (result && !result.startsWith('ok')) {
 			return result;
 		}

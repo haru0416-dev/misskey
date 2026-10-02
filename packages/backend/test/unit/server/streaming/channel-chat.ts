@@ -8,8 +8,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createChatRoomForApi } from '@/server/rest/chat/chat.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createChatRoom } from '@/server/rest/chat/chat.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StreamConnection } from '@/server/streaming/connection.js';
 import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
@@ -77,7 +77,7 @@ describe('hono-stream-connection: chat channels', () => {
 		const owner = await createTestUser(deps, 'honostreamchatroomowner');
 		const connection = new StreamConnection(deps, owner, null);
 		await connection.init();
-		const room = await createChatRoomForApi(deps, owner, { name: 'test room' });
+		const room = await createChatRoom(deps, owner, { name: 'test room' });
 
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();
@@ -96,7 +96,7 @@ describe('hono-stream-connection: chat channels', () => {
 	test('chatRoom: 権限のないユーザーは接続できない', async () => {
 		const owner = await createTestUser(deps, 'honostreamchatroomowner2');
 		const stranger = await createTestUser(deps, 'honostreamchatroomstranger');
-		const room = await createChatRoomForApi(deps, owner, { name: 'private room' });
+		const room = await createChatRoom(deps, owner, { name: 'private room' });
 
 		const connection = new StreamConnection(deps, stranger, null);
 		await connection.init();

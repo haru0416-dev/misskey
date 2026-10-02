@@ -12,8 +12,8 @@ import {
 	createInstanceInDatabase,
 	fetchInstanceByHostFromDatabase,
 	updateInstanceInDatabase,
-} from '@/core/instance/InstanceStore.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
+} from '@/core/instance/instance-store.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/system-account-logic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';

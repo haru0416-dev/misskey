@@ -5,7 +5,7 @@
 
 import { endpointMetas as channelsContracts } from '@/server/rest/contracts/channels.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiChannelsCreate,
 	handleApiChannelsFeatured,
@@ -24,7 +24,7 @@ import {
 } from '../channel/channels.js';
 import { handleApiChannelsFavorite, handleApiChannelsUnfavorite } from '../favorite/favorites.js';
 
-export const channelsEndpoints = implementEndpoints<ApiShellDependencies>()(channelsContracts, {
+export const channelsEndpoints = implementEndpoints<ShellDependencies>()(channelsContracts, {
 	'channels/create': async ({ deps, errors, input, me }) => await handleApiChannelsCreate(deps, me, input, errors),
 	'channels/favorite': async ({ deps, input, me }) => {
 		await handleApiChannelsFavorite(deps, me, input);

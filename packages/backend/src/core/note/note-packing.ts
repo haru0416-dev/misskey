@@ -5,25 +5,25 @@
 
 import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
-import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
-import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/channel-store.js';
+import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/emoji/emoji-store.js';
 import {
 	followingExistsInDatabase,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase,
-} from '@/core/user/FollowingStore.js';
-import { fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/user/following-store.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/note/note-store.js';
 import {
 	fetchNoteReactionByUserAndNoteFromDatabase,
 	listNoteReactionsByNoteIdsAndUserIdsFromDatabase,
-} from '@/core/note/NoteReactionStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
+} from '@/core/note/note-reaction-store.js';
+import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/note/poll-store.js';
 import {
 	fetchPollVoteByNoteAndUserFromDatabase,
 	listPollVotesByNoteAndUserFromDatabase,
 	listPollVotesByNoteIdsAndUserIdsFromDatabase,
-} from '@/core/note/PollVoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/note/poll-vote-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import type { Config } from '@/config.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -454,7 +454,7 @@ export async function filterVisibleNotes(
 type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFromDatabase>>>;
 
 /**
- * packNoteManyForApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
+ * packNoteMany が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
  * 各 Map の内容を信頼してよい。含まれないノートは個別取得にフォールバックする。
  */
 export type PackNoteBatchHint = {

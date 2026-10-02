@@ -7,18 +7,18 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createMutingInDatabase } from '@/core/user/MutingStore.js';
-import { createBlockingInDatabase } from '@/core/user/BlockingStore.js';
-import { createUserListInDatabase } from '@/core/user/UserListStore.js';
-import { createUserListMembershipInDatabase } from '@/core/user/UserListMembershipStore.js';
-import { createAntennaInDatabase } from '@/core/antenna/AntennaStore.js';
-import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
-import { createNoteInDatabase } from '@/core/note/NoteStore.js';
-import { createNoteFavoriteInDatabase } from '@/core/note/NoteFavoriteStore.js';
-import { createClipInDatabase } from '@/core/clip/ClipStore.js';
-import { createClipNoteInDatabase } from '@/core/clip/ClipNoteStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createMutingInDatabase } from '@/core/user/muting-store.js';
+import { createBlockingInDatabase } from '@/core/user/blocking-store.js';
+import { createUserListInDatabase } from '@/core/user/user-list-store.js';
+import { createUserListMembershipInDatabase } from '@/core/user/user-list-membership-store.js';
+import { createAntennaInDatabase } from '@/core/antenna/antenna-store.js';
+import { createFollowingInDatabase } from '@/core/user/following-store.js';
+import { createNoteInDatabase } from '@/core/note/note-store.js';
+import { createNoteFavoriteInDatabase } from '@/core/note/note-favorite-store.js';
+import { createClipInDatabase } from '@/core/clip/clip-store.js';
+import { createClipNoteInDatabase } from '@/core/clip/clip-note-store.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/drive-file-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleQueueExportAntennas,
@@ -31,7 +31,7 @@ import {
 	handleQueueExportUserLists,
 } from '@/queue/handlers/db.js';
 import type { QueueDbDependencies } from '@/queue/handlers/db.js';
-import type { DBExportAntennasData, DbExportFollowingData } from '@/core/queue/types.js';
+import type { DbExportAntennasData, DbExportFollowingData } from '@/core/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(runtime: RuntimeDependencies, prefix: string): Promise<MiUser> {
@@ -110,7 +110,7 @@ describe('hono-queue-db (export)', () => {
 			lastUsedAt: new Date(),
 		});
 
-		await handleQueueExportAntennas(deps, { user: { id: owner.id } } satisfies DBExportAntennasData);
+		await handleQueueExportAntennas(deps, { user: { id: owner.id } } satisfies DbExportAntennasData);
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, owner.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('antennas-') && f.name.endsWith('.json'))).toBe(true);

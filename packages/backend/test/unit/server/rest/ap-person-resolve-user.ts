@@ -7,14 +7,14 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { resolveUserForApi } from '@/server/rest/activitypub/ap-person.js';
-import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUser } from '@/server/rest/activitypub/ap-person.js';
+import type { ApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
-describe('resolveUserForApi', () => {
+describe('resolveUser', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiApPersonDependencies;
+	let deps: ApPersonDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -31,14 +31,14 @@ describe('resolveUserForApi', () => {
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
 		for (const host of [null, runtime.config.runtime.host]) {
-			const resolved = await resolveUserForApi(deps, username, host);
+			const resolved = await resolveUser(deps, username, host);
 			expect(resolved.id).toBe(id);
 			expect(resolved.host).toBeNull();
 		}
 	});
 
 	test('存在しないローカルユーザーはエラーを投げる', async () => {
-		await expect(resolveUserForApi(deps, 'nonexistent-user-xyz', null)).rejects.toThrow('user not found');
+		await expect(resolveUser(deps, 'nonexistent-user-xyz', null)).rejects.toThrow('user not found');
 	});
 
 	test('lastFetchedAtが新しいリモートユーザーはWebFingerせずそのまま返す', async () => {
@@ -57,7 +57,7 @@ describe('resolveUserForApi', () => {
 			profile: { userId: id },
 		});
 
-		const resolved = await resolveUserForApi(deps, username, host);
+		const resolved = await resolveUser(deps, username, host);
 		expect(resolved.id).toBe(remoteUser.id);
 	});
 });

@@ -12,8 +12,8 @@ import type { KVs } from '@/core/chart/core.js';
 import {
 	countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase,
 	countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase,
-} from '@/core/user/FollowingStore.js';
-import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/user/following-store.js';
+import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/user-store.js';
 import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';

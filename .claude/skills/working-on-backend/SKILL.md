@@ -18,6 +18,7 @@ description: packages/backend の API・サービス・DB・migration・テス�
 | 認可・入力・応答の宣言 | [meta・paramDef・res](references/knowledge/api-meta-paramdef.md) |
 | HTTP ルートとメタデータの配線 | [API 登録](references/knowledge/endpoint-registration.md) |
 | 実行環境・既存テスト・観測方法 | [backend 検証](references/knowledge/backend-testing.md) |
+| ファイル・関数・型の名前の付け方 | [名前の付け方](references/knowledge/naming.md) |
 
 Hono のルート、明示的な依存を受ける関数・factory、drizzle の既存構成に合わせる。新しい層や共通化は、守る契約と所有者を明確にするときに設ける。
 

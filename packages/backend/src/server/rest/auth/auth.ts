@@ -6,11 +6,11 @@
 import {
 	fetchAccessTokenByTokenFromDatabase,
 	updateAccessTokenLastUsedAtInDatabase,
-} from '@/core/app/AccessTokenStore.js';
+} from '@/core/app/access-token-store.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchLocalUserByNativeTokenWithRolesVersionFromDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
 import { ROLES_VERSION_MEMO_KEY } from '@/core/role/role-policy.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
@@ -27,19 +27,19 @@ import {
 	userSuspendedError,
 } from '../error.js';
 
-export type ApiAuthDependencies = {
+export type AuthDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-export type ApiAuthenticated = {
+export type Authenticated = {
 	user: MiLocalUser | null;
 	token: MiAccessToken | null;
 };
 
 export async function authenticateApiToken(
-	deps: ApiAuthDependencies,
+	deps: AuthDependencies,
 	token: string | null | undefined,
-): Promise<ApiAuthenticated> {
+): Promise<Authenticated> {
 	if (token == null) {
 		return { user: null, token: null };
 	}
@@ -74,7 +74,7 @@ export async function authenticateApiToken(
 	};
 }
 
-export function assertCredential(auth: ApiAuthenticated): asserts auth is {
+export function assertCredential(auth: Authenticated): asserts auth is {
 	user: MiLocalUser;
 	token: MiAccessToken | null;
 } {
@@ -86,7 +86,7 @@ export function assertCredential(auth: ApiAuthenticated): asserts auth is {
 	}
 }
 
-export function assertOptionalCredential(auth: ApiAuthenticated): void {
+export function assertOptionalCredential(auth: Authenticated): void {
 	if (auth.user?.isSuspended) {
 		throw userSuspendedError();
 	}

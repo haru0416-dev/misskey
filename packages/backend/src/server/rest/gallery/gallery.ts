@@ -5,11 +5,11 @@
 
 import type { endpointMetas as galleryContracts } from '@/server/rest/contracts/gallery.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/drive/drive-file-store.js';
 import {
 	createGalleryLikeInDatabase,
 	deleteGalleryLikeByIdFromDatabase,
@@ -17,7 +17,7 @@ import {
 	galleryLikeExistsInDatabase,
 	listGalleryLikesByUserIdFromDatabase,
 	listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase,
-} from '@/core/gallery/GalleryLikeStore.js';
+} from '@/core/gallery/gallery-like-store.js';
 import {
 	createGalleryPostInDatabase,
 	decrementGalleryPostLikedCountInDatabase,
@@ -29,9 +29,9 @@ import {
 	listGalleryPostsWithPaginationFromDatabase,
 	listPopularGalleryPostsFromDatabase,
 	updateGalleryPostByIdAndUserIdInDatabase,
-} from '@/core/gallery/GalleryPostStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/gallery/gallery-post-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -51,10 +51,10 @@ import {
 	GALLERY_POSTS_RANKING_WINDOW,
 	incrementFeaturedRanking,
 	readFeaturedRanking,
-} from '@/core/featured/FeaturedRanking.js';
+} from '@/core/featured/featured-ranking.js';
 import { collectFilteredInOrder } from '@/misc/collect-filtered-in-order.js';
 
-export type ApiGalleryDependencies = DriveFileDependencies &
+export type GalleryDependencies = DriveFileDependencies &
 	RolePolicyDependencies & {
 		redis: Redis.Redis;
 	};
@@ -93,8 +93,8 @@ export const galleryPostsPostIdParamDef = z.object({
 	postId: misskeyId(),
 });
 
-export async function packGalleryPostForApi(
-	deps: ApiGalleryDependencies,
+export async function packGalleryPost(
+	deps: GalleryDependencies,
 	src: MiGalleryPost['id'] | MiGalleryPost,
 	me: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -129,8 +129,8 @@ export async function packGalleryPostForApi(
 	};
 }
 
-async function packGalleryPostsManyForApi(
-	deps: ApiGalleryDependencies,
+async function packGalleryPostsMany(
+	deps: GalleryDependencies,
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>[]> {
@@ -152,7 +152,7 @@ async function packGalleryPostsManyForApi(
 
 	return await Promise.all(
 		posts.map((post) =>
-			packGalleryPostForApi(
+			packGalleryPost(
 				deps,
 				post,
 				me,
@@ -169,9 +169,9 @@ async function packGalleryPostsManyForApi(
 }
 
 export async function handleApiGalleryFeatured(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof galleryFeaturedParamDef>,
+	params: Params<typeof galleryFeaturedParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	let postIds: string[];
 	if (
@@ -196,21 +196,21 @@ export async function handleApiGalleryFeatured(
 		params.limit,
 		async (ids) => await listGalleryPostsByIdsFromDatabase(deps.db, ids),
 	);
-	return await packGalleryPostsManyForApi(deps, posts, me);
+	return await packGalleryPostsMany(deps, posts, me);
 }
 
 export async function handleApiGalleryPopular(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const posts = await listPopularGalleryPostsFromDatabase(deps.db);
-	return await packGalleryPostsManyForApi(deps, posts, me);
+	return await packGalleryPostsMany(deps, posts, me);
 }
 
 export async function handleApiGalleryPosts(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof galleryPostsParamDef>,
+	params: Params<typeof galleryPostsParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
@@ -220,13 +220,13 @@ export async function handleApiGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForApi(deps, posts, me);
+	return await packGalleryPostsMany(deps, posts, me);
 }
 
 export async function handleApiGalleryPostsShow(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	params: Params<typeof galleryPostsPostIdParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/show']>,
 ): Promise<Packed<'GalleryPost'>> {
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
@@ -234,13 +234,13 @@ export async function handleApiGalleryPostsShow(
 		throw errors.noSuchPost();
 	}
 
-	return await packGalleryPostForApi(deps, post, me);
+	return await packGalleryPost(deps, post, me);
 }
 
 export async function handleApiGalleryPostsCreate(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof galleryPostsCreateParamDef>,
+	params: Params<typeof galleryPostsCreateParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/create']>,
 ): Promise<Packed<'GalleryPost'>> {
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
@@ -258,13 +258,13 @@ export async function handleApiGalleryPostsCreate(
 		fileIds: files.map((file) => file.id),
 	});
 
-	return await packGalleryPostForApi(deps, post, me);
+	return await packGalleryPost(deps, post, me);
 }
 
 export async function handleApiGalleryPostsUpdate(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof galleryPostsUpdateParamDef>,
+	params: Params<typeof galleryPostsUpdateParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/update']>,
 ): Promise<Packed<'GalleryPost'>> {
 	// 更新は userId 付きの UPDATE なので、他人の投稿を指定すると 0 行のまま相手の投稿を返してしまう。先に確かめる。
@@ -298,13 +298,13 @@ export async function handleApiGalleryPostsUpdate(
 	);
 
 	const post = await fetchGalleryPostByIdOrFailFromDatabase(deps.db, params.postId);
-	return await packGalleryPostForApi(deps, post, me);
+	return await packGalleryPost(deps, post, me);
 }
 
 export async function handleApiGalleryPostsDelete(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	params: Params<typeof galleryPostsPostIdParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/delete']>,
 ): Promise<void> {
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
@@ -330,9 +330,9 @@ export async function handleApiGalleryPostsDelete(
 }
 
 export async function handleApiGalleryPostsLike(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	params: Params<typeof galleryPostsPostIdParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/like']>,
 ): Promise<void> {
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
@@ -369,9 +369,9 @@ export async function handleApiGalleryPostsLike(
 }
 
 export async function handleApiGalleryPostsUnlike(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof galleryPostsPostIdParamDef>,
+	params: Params<typeof galleryPostsPostIdParamDef>,
 	errors: ContractErrors<(typeof galleryContracts)['gallery/posts/unlike']>,
 ): Promise<void> {
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
@@ -413,9 +413,9 @@ export const iGalleryPostsParamDef = z.object({
 });
 
 export async function handleApiIGalleryPosts(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iGalleryPostsParamDef>,
+	params: Params<typeof iGalleryPostsParamDef>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
@@ -426,7 +426,7 @@ export async function handleApiIGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForApi(deps, posts, me);
+	return await packGalleryPostsMany(deps, posts, me);
 }
 
 export const iGalleryLikesParamDef = z.object({
@@ -435,9 +435,9 @@ export const iGalleryLikesParamDef = z.object({
 });
 
 export async function handleApiIGalleryLikes(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof iGalleryLikesParamDef>,
+	params: Params<typeof iGalleryLikesParamDef>,
 ) {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
@@ -454,13 +454,13 @@ export async function handleApiIGalleryLikes(
 
 	const postIds = likes.map((like) => like.postId);
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
-	const packedPosts = await packGalleryPostsManyForApi(deps, posts, me);
+	const packedPosts = await packGalleryPostsMany(deps, posts, me);
 	const packedPostById = new Map(packedPosts.map((post) => [post.id, post]));
 
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			post: packedPostById.get(like.postId) ?? (await packGalleryPostForApi(deps, like.postId, me)),
+			post: packedPostById.get(like.postId) ?? (await packGalleryPost(deps, like.postId, me)),
 		})),
 	);
 }
@@ -472,9 +472,9 @@ export const usersGalleryPostsParamDef = z.object({
 });
 
 export async function handleApiUsersGalleryPosts(
-	deps: ApiGalleryDependencies,
+	deps: GalleryDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersGalleryPostsParamDef>,
+	params: Params<typeof usersGalleryPostsParamDef>,
 ) {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
@@ -485,5 +485,5 @@ export async function handleApiUsersGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForApi(deps, posts, me);
+	return await packGalleryPostsMany(deps, posts, me);
 }

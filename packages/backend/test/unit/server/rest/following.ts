@@ -13,13 +13,13 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import {
 	createFollowRequestInDatabase,
 	deleteFollowRequestByIdFromDatabase,
 	fetchFollowRequestFromDatabase,
-} from '@/core/user/FollowRequestStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
+} from '@/core/user/follow-request-store.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/following-store.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { endpointMetas } from '@/server/rest/contracts/i.js';
@@ -42,7 +42,7 @@ vi.mock('@/core/notification/notification.js', async (importOriginal) => ({
 	xaddNotification: notificationSink,
 }));
 
-import { acceptAllFollowRequestsForApi, acceptFollowRequestForApi } from '@/server/rest/user/following.js';
+import { acceptAllFollowRequests, acceptFollowRequest } from '@/server/rest/user/following.js';
 
 let runtime: RuntimeDependencies;
 beforeAll(async () => {
@@ -97,7 +97,7 @@ test('一括承認は通知の保存待ちを含めて並行数を制限し、�
 	});
 	const updates: unknown[] = [];
 	let settled = false;
-	const completion = acceptAllFollowRequestsForApi(
+	const completion = acceptAllFollowRequests(
 		{
 			...runtime,
 			publishMainStream: (id, type, body) => {

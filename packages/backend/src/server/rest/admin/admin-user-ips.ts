@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
+import { listUserIpsFromDatabase } from '@/core/user/user-ip-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminUserIpsDependencies = {
+export type AdminUserIpsDependencies = {
 	db: MiDrizzleDatabase;
 };
 
@@ -24,8 +24,8 @@ type AdminGetUserIpsResponse = {
 }[];
 
 export async function handleApiAdminGetUserIps(
-	deps: ApiAdminUserIpsDependencies,
-	params: ApiParams<typeof adminGetUserIpsParamDef>,
+	deps: AdminUserIpsDependencies,
+	params: Params<typeof adminGetUserIpsParamDef>,
 ): Promise<AdminGetUserIpsResponse> {
 	const ips = await listUserIpsFromDatabase(deps.db, params.userId, 30);
 

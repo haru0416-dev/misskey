@@ -5,7 +5,7 @@
 
 import { endpointMetas as chatContracts } from '@/server/rest/contracts/chat.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiChatHistory,
 	handleApiChatMessagesCreateToRoom,
@@ -34,7 +34,7 @@ import {
 	handleApiChatRoomsUpdate,
 } from '../chat/chat.js';
 
-export const chatEndpoints = implementEndpoints<ApiShellDependencies>()(chatContracts, {
+export const chatEndpoints = implementEndpoints<ShellDependencies>()(chatContracts, {
 	'chat/messages/create-to-user': async ({ deps, input, me }) =>
 		await handleApiChatMessagesCreateToUser(deps, me, input),
 	'chat/messages/create-to-room': async ({ deps, input, me }) =>

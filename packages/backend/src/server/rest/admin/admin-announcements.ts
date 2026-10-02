@@ -3,22 +3,22 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
 	createAnnouncementWithSideEffects,
 	deleteAnnouncementWithModerationLog,
 	updateAnnouncementWithModerationLog,
-} from '@/core/announcement/AnnouncementLogic.js';
-import type { AnnouncementCreateValues, AnnouncementUpdateValues } from '@/core/announcement/AnnouncementLogic.js';
-import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/announcement/AnnouncementReadStore.js';
+} from '@/core/announcement/announcement-logic.js';
+import type { AnnouncementCreateValues, AnnouncementUpdateValues } from '@/core/announcement/announcement-logic.js';
+import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/announcement/announcement-read-store.js';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForAdminFromDatabase,
-} from '@/core/announcement/AnnouncementStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+} from '@/core/announcement/announcement-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -31,7 +31,7 @@ import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiAdminAnnouncementDependencies = {
+export type AdminAnnouncementDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	publishMainStream?: MainStreamPublisher;
@@ -83,7 +83,7 @@ function noSuchAnnouncementError(id: string): ApiError {
 	});
 }
 
-export function packAnnouncementForApi(
+export function packAnnouncement(
 	config: Config,
 	announcement: MiAnnouncement & { isRead?: boolean | null; reactions?: Record<string, number> },
 	me?: { id: MiUser['id'] } | null,
@@ -107,7 +107,7 @@ export function packAnnouncementForApi(
 	};
 }
 
-function packAdminAnnouncementForApi(config: Config, announcement: MiAnnouncement, reads: number) {
+function packAdminAnnouncement(config: Config, announcement: MiAnnouncement, reads: number) {
 	return {
 		id: announcement.id,
 		createdAt: parseId(announcement.id).date.toISOString(),
@@ -127,15 +127,15 @@ function packAdminAnnouncementForApi(config: Config, announcement: MiAnnouncemen
 }
 
 export async function handleApiAdminAnnouncementsCreate(
-	deps: ApiAdminAnnouncementDependencies,
+	deps: AdminAnnouncementDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAnnouncementsCreateParamDef>,
+	params: Params<typeof adminAnnouncementsCreateParamDef>,
 ): Promise<Packed<'Announcement'>> {
 	const { packed } = await createAnnouncementWithSideEffects(
 		{
 			db: deps.db,
 			genId,
-			packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForApi(deps.config, announcement)),
+			packAnnouncement: (announcement) => Promise.resolve(packAnnouncement(deps.config, announcement)),
 			publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
 			publishBroadcastStream: (type, value) => deps.publishBroadcastStream?.(type, value),
 			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
@@ -159,9 +159,9 @@ export async function handleApiAdminAnnouncementsCreate(
 }
 
 export async function handleApiAdminAnnouncementsDelete(
-	deps: ApiAdminAnnouncementDependencies,
+	deps: AdminAnnouncementDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAnnouncementsDeleteParamDef>,
+	params: Params<typeof adminAnnouncementsDeleteParamDef>,
 ): Promise<void> {
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 
@@ -180,8 +180,8 @@ export async function handleApiAdminAnnouncementsDelete(
 }
 
 export async function handleApiAdminAnnouncementsList(
-	deps: ApiAdminAnnouncementDependencies,
-	params: ApiParams<typeof adminAnnouncementsListParamDef>,
+	deps: AdminAnnouncementDependencies,
+	params: Params<typeof adminAnnouncementsListParamDef>,
 ) {
 	const announcements = await listAnnouncementsForAdminFromDatabase(
 		deps.db,
@@ -198,14 +198,14 @@ export async function handleApiAdminAnnouncementsList(
 	);
 
 	return announcements.map((announcement) =>
-		packAdminAnnouncementForApi(deps.config, announcement, reads.get(announcement.id) ?? 0),
+		packAdminAnnouncement(deps.config, announcement, reads.get(announcement.id) ?? 0),
 	);
 }
 
 export async function handleApiAdminAnnouncementsUpdate(
-	deps: ApiAdminAnnouncementDependencies,
+	deps: AdminAnnouncementDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAnnouncementsUpdateParamDef>,
+	params: Params<typeof adminAnnouncementsUpdateParamDef>,
 ): Promise<void> {
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.id);
 

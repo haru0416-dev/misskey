@@ -5,8 +5,8 @@
 
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
-import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/user-list-membership-store.js';
+import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/user-list-store.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';

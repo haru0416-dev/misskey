@@ -7,8 +7,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserInDatabase } from '@/core/user/UserStore.js';
-import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
+import { createUserInDatabase } from '@/core/user/user-store.js';
+import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/note/note-draft-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueuePostScheduledNote } from '@/queue/handlers/post-scheduled-note.js';
 

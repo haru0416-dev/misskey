@@ -5,7 +5,7 @@
 
 import { endpointMetas as federationContracts } from '@/server/rest/contracts/federation.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { handleApiFederationUpdateRemoteUser } from '../activitypub/ap-person.js';
 import {
 	handleApiFederationFollowers,
@@ -16,7 +16,7 @@ import {
 	handleApiFederationUsers,
 } from '../activitypub/federation.js';
 
-export const federationEndpoints = implementEndpoints<ApiShellDependencies>()(federationContracts, {
+export const federationEndpoints = implementEndpoints<ShellDependencies>()(federationContracts, {
 	'federation/followers': async ({ deps, input }) => await handleApiFederationFollowers(deps, input),
 	'federation/following': async ({ deps, input }) => await handleApiFederationFollowing(deps, input),
 	'federation/instances': async ({ deps, input, me }) => await handleApiFederationInstances(deps, me, input),

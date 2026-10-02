@@ -12,24 +12,24 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/user/UserStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
-import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
-import { fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-store.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/following-store.js';
+import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/blocking-store.js';
+import { fetchFollowRequestFromDatabase } from '@/core/user/follow-request-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import { followAcceptance } from '@/db/schema/follow-acceptance.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { performOneActivityForApi } from '@/server/activitypub/inbox-dispatch.js';
-import type { ApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.js';
+import { performOneActivity } from '@/server/activitypub/inbox-dispatch.js';
+import type { InboxDispatchDependencies } from '@/server/activitypub/inbox-dispatch.js';
 import { isRemoteUser, insertFollowingWithSideEffects } from '@/server/rest/user/following.js';
-import { blockForApi, undoFollowForApi } from '@/server/rest/account/account-blocking.js';
+import { blockUser, undoFollow } from '@/server/rest/account/account-blocking.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import type { DeliverJobData } from '@/core/queue/types.js';
 import type { IFollow } from '@/core/activitypub/type.js';
 
 let runtime: RuntimeDependencies;
-let deps: ApiInboxDependencies;
+let deps: InboxDispatchDependencies;
 beforeAll(async () => {
 	runtime = await createRuntimeDependencies(loadConfig());
 	deps = { ...runtime, logger: runtime.loggerService.getLogger('test-follow-acceptance') };
@@ -85,8 +85,8 @@ async function deliveries(followeeId: string) {
 
 test('同時・逐次の同じ Follow は関係・集計・Accept の配送登録を重複させない', async () => {
 	const { follower, followee, activity } = await pair();
-	await Promise.all(Array.from({ length: 3 }, () => performOneActivityForApi(deps, follower, activity, new Set())));
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await Promise.all(Array.from({ length: 3 }, () => performOneActivity(deps, follower, activity, new Set())));
+	await performOneActivity(deps, follower, activity, new Set());
 	expect(
 		await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower.id, followee.id),
 	).not.toBeNull();
@@ -106,17 +106,17 @@ test('同時・逐次の同じ Follow は関係・集計・Accept の配送登�
 
 test('Undo 後の古い Follow を再承認せず、配送待ちの古い Accept も送らない', async () => {
 	const { follower, followee, activity } = await pair();
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await performOneActivity(deps, follower, activity, new Set());
 	const [delivery] = await deliveries(followee.id);
 	expect(delivery).toBeDefined();
-	await undoFollowForApi(deps, follower, followee);
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await undoFollow(deps, follower, followee);
+	await performOneActivity(deps, follower, activity, new Set());
 	expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower.id, followee.id)).toBeNull();
 	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, follower.id)).followingCount).toBe(0);
 	expect(await deliveries(followee.id)).toHaveLength(1);
 	expect(await handleQueueDeliver(runtime, delivery!)).toBe('skip (stale follow acceptance)');
 	const next = { ...activity, id: `https://receipt.example.test/follows/${genId()}` };
-	await performOneActivityForApi(deps, follower, next, new Set());
+	await performOneActivity(deps, follower, next, new Set());
 	expect(await handleQueueDeliver(runtime, delivery!)).toBe('skip (stale follow acceptance)');
 	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, follower.id)).followingCount).toBe(1);
 	expect(await deliveries(followee.id)).toHaveLength(2);
@@ -124,13 +124,13 @@ test('Undo 後の古い Follow を再承認せず、配送待ちの古い Accept
 
 test('古い Follow replay は後発 Block を消さず、新しい Follow ID だけを新たに承認する', async () => {
 	const { follower, followee, activity } = await pair();
-	await performOneActivityForApi(deps, follower, activity, new Set());
-	await blockForApi(deps, follower, followee);
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await performOneActivity(deps, follower, activity, new Set());
+	await blockUser(deps, follower, followee);
+	await performOneActivity(deps, follower, activity, new Set());
 	expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(runtime.db, follower.id, followee.id)).not.toBeNull();
 	expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower.id, followee.id)).toBeNull();
 	const next = { ...activity, id: `https://receipt.example.test/follows/${genId()}` };
-	await performOneActivityForApi(deps, follower, next, new Set());
+	await performOneActivity(deps, follower, next, new Set());
 	expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(runtime.db, follower.id, followee.id)).toBeNull();
 	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, follower.id)).followingCount).toBe(1);
 	const requests = (await deliveries(followee.id)).map((delivery) => JSON.parse(delivery.content).object.id);
@@ -147,7 +147,7 @@ test('outbox 保存失敗で承認記録・関係・集計を残さず、再試�
 		),
 	);
 	try {
-		await expect(performOneActivityForApi(deps, follower, activity, new Set())).rejects.toThrow();
+		await expect(performOneActivity(deps, follower, activity, new Set())).rejects.toThrow();
 		expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(runtime.db, follower.id, followee.id)).toBeNull();
 		expect((await fetchUserByIdOrFailFromDatabase(runtime.db, follower.id)).followingCount).toBe(0);
 		expect(
@@ -156,7 +156,7 @@ test('outbox 保存失敗で承認記録・関係・集計を残さず、再試�
 	} finally {
 		await runtime.db.execute(sql.raw(`ALTER TABLE queue_outbox DROP CONSTRAINT "${constraint}"`));
 	}
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await performOneActivity(deps, follower, activity, new Set());
 	expect((await fetchUserByIdOrFailFromDatabase(runtime.db, follower.id)).followingCount).toBe(1);
 	expect(await deliveries(followee.id)).toHaveLength(1);
 });
@@ -164,10 +164,10 @@ test('outbox 保存失敗で承認記録・関係・集計を残さず、再試�
 test('取り消された pending request の保存済み snapshot から後で承認しない', async () => {
 	const { follower, followee, activity } = await pair();
 	await updateUserInDatabase(runtime.db, followee.id, { isLocked: true });
-	await performOneActivityForApi(deps, follower, activity, new Set());
+	await performOneActivity(deps, follower, activity, new Set());
 	const request = await fetchFollowRequestFromDatabase(runtime.db, follower.id, followee.id);
 	expect(request).not.toBeNull();
-	await undoFollowForApi(deps, follower, followee);
+	await undoFollow(deps, follower, followee);
 	await expect(
 		insertFollowingWithSideEffects(deps, follower, followee, {
 			followeeProfile: await fetchUserProfileByUserIdOrFailFromDatabase(runtime.db, followee.id),

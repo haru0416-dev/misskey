@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -13,7 +13,7 @@ import {
 	fetchWebhookByIdAndUserIdFromDatabase,
 	listWebhooksByUserIdFromDatabase,
 	updateWebhookInDatabase,
-} from '@/core/webhook/WebhookStore.js';
+} from '@/core/webhook/webhook-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -39,18 +39,18 @@ import { populateEmojis } from '../../../core/note/note-packing.js';
 import type { EmojiPopulateDependencies } from '../../../core/note/note-packing.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiWebhookDependencies = {
+export type WebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	publishInternalEvent?: InternalEventPublisher;
 };
 
-export type ApiWebhookTestDependencies = ApiWebhookDependencies &
+export type WebhookTestDependencies = WebhookDependencies &
 	EmojiPopulateDependencies & {
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
 	};
 
-export type ApiUserWebhook = {
+export type UserWebhook = {
 	id: string;
 	userId: string;
 	name: string;
@@ -88,7 +88,7 @@ export const webhooksUpdateParamDef = z.object({
 	active: z.boolean().optional(),
 });
 
-function packUserWebhook(webhook: MiWebhook): ApiUserWebhook {
+function packUserWebhook(webhook: MiWebhook): UserWebhook {
 	return {
 		id: webhook.id,
 		userId: webhook.userId,
@@ -102,16 +102,16 @@ function packUserWebhook(webhook: MiWebhook): ApiUserWebhook {
 	};
 }
 
-export async function handleApiIWebhooksList(deps: ApiWebhookDependencies, me: MiLocalUser): Promise<ApiUserWebhook[]> {
+export async function handleApiIWebhooksList(deps: WebhookDependencies, me: MiLocalUser): Promise<UserWebhook[]> {
 	const webhooks = await listWebhooksByUserIdFromDatabase(deps.db, me.id);
 	return webhooks.map((webhook) => packUserWebhook(webhook));
 }
 
 export async function handleApiIWebhooksShow(
-	deps: ApiWebhookDependencies,
+	deps: WebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof webhooksShowParamDef>,
-): Promise<ApiUserWebhook> {
+	params: Params<typeof webhooksShowParamDef>,
+): Promise<UserWebhook> {
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
@@ -127,9 +127,9 @@ export async function handleApiIWebhooksShow(
 }
 
 export async function handleApiIWebhooksDelete(
-	deps: ApiWebhookDependencies,
+	deps: WebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof webhooksDeleteParamDef>,
+	params: Params<typeof webhooksDeleteParamDef>,
 ): Promise<void> {
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
@@ -147,9 +147,9 @@ export async function handleApiIWebhooksDelete(
 }
 
 export async function handleApiIWebhooksUpdate(
-	deps: ApiWebhookDependencies,
+	deps: WebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof webhooksUpdateParamDef>,
+	params: Params<typeof webhooksUpdateParamDef>,
 ): Promise<void> {
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
@@ -182,11 +182,11 @@ export async function handleApiIWebhooksUpdate(
 }
 
 export async function handleApiIWebhooksCreate(
-	deps: ApiWebhookDependencies,
+	deps: WebhookDependencies,
 	me: MiLocalUser,
 	webhookLimit: number,
 	body: Record<string, unknown>,
-): Promise<ApiUserWebhook> {
+): Promise<UserWebhook> {
 	const params = parseApiParams(webhooksCreateParamDef, body);
 
 	const webhook = await createWebhookWithinLimitInDatabase(
@@ -381,7 +381,7 @@ async function toWebhookTestPackedNote(
 }
 
 export async function handleApiIWebhooksTest(
-	deps: ApiWebhookTestDependencies,
+	deps: WebhookTestDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {

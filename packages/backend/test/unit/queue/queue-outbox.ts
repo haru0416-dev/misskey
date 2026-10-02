@@ -9,12 +9,17 @@ import * as Bull from 'bullmq';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { memoizeInRequest, runInRequestScope } from '@/misc/request-scope.js';
-import { clearQueue, removeQueueJob, retryQueueJob, retryQueueOutboxDeadLetter } from '@/core/queue/QueueAdminLogic.js';
+import {
+	clearQueue,
+	removeQueueJob,
+	retryQueueJob,
+	retryQueueOutboxDeadLetter,
+} from '@/core/queue/queue-admin-logic.js';
 import {
 	createNotePostProcessing,
 	NotePostProcessingUnavailableError,
 	notePostProcessingConcurrency,
-} from '@/core/note/NotePostProcessing.js';
+} from '@/core/note/note-post-processing.js';
 import {
 	dispatchQueueOutbox,
 	enqueueAccountDeleteCoordinatorInOutbox,
@@ -22,13 +27,13 @@ import {
 	enqueueDeliverJobInOutbox,
 	enqueueInlineDbJobInOutbox,
 	enqueueInlineDbJobsInOutbox,
-	getQueueOutboxStats,
+	fetchQueueOutboxStats,
 	publishDbOutboxRowEagerly,
 	releaseDbOutboxJobs,
 	runInlineDbOutboxJobs,
 	runQueuedDbOutboxJob,
 	waitForDbOutboxJob,
-} from '@/core/queue/QueueOutboxStore.js';
+} from '@/core/queue/queue-outbox-store.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -41,7 +46,7 @@ const waitForNextPoll = async () => await new Promise((resolve) => setTimeout(re
  * outbox 全体の件数を読む。ずれたときに出所を追えるよう、検査の失敗メッセージに今ある行を添える。
  */
 async function readOutboxStats(db: RuntimeDependencies['db']) {
-	const stats = await getQueueOutboxStats(db);
+	const stats = await fetchQueueOutboxStats(db);
 	const rows = await db
 		.select({
 			id: queueOutbox.id,

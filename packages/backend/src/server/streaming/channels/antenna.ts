@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { antennaExistsForUserFromDatabase } from '@/core/antenna/antenna-store.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import { packNote } from '@/core/note/note-packing.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';

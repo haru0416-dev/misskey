@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from './validation.js';
+import type { Params } from './validation.js';
 import { z } from 'zod';
 import { parseApiParams } from './validation.js';
 
-type ApiEndpoints = typeof import('./endpoint-catalog.js').default;
+type Endpoints = typeof import('./endpoint-catalog.js').default;
 
-let endpointsPromise: Promise<ApiEndpoints> | undefined;
+let endpointsPromise: Promise<Endpoints> | undefined;
 
-function getEndpoints(): Promise<ApiEndpoints> {
+function getEndpoints(): Promise<Endpoints> {
 	return (endpointsPromise ??= import('./endpoint-catalog.js').then((module) => module.default));
 }
 
@@ -62,7 +62,7 @@ export async function handleApiEndpoints(): Promise<string[]> {
 	return endpoints.map((endpoint) => endpoint.name);
 }
 
-export async function handleApiEndpoint(params: ApiParams<typeof endpointParamDef>): Promise<{
+export async function handleApiEndpoint(params: Params<typeof endpointParamDef>): Promise<{
 	params: {
 		name: string;
 		type: string;

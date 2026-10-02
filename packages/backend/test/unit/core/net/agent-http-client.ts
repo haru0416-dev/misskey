@@ -10,7 +10,7 @@ import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
 
 describe('Bun HTTP Agent network settings', () => {
 	const clients: ReturnType<typeof createHttpRequestService>[] = [];

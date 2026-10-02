@@ -5,7 +5,7 @@
 
 import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -15,7 +15,7 @@ import {
 	listRegistryKeysOfScopeFromDatabase,
 	listRegistryScopeAndDomainsFromDatabase,
 	setRegistryItemInDatabase,
-} from '@/core/registry/RegistryItemStore.js';
+} from '@/core/registry/registry-item-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -24,7 +24,7 @@ import { ApiError } from '../error.js';
 import type { MainStreamPublisher } from '../../../core/notification/notification.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiRegistryDependencies = {
+export type RegistryDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	publishMainStream?: MainStreamPublisher;
@@ -57,10 +57,10 @@ function registryDomain(token: MiAccessToken | null, bodyDomain: string | null |
 }
 
 export async function handleApiRegistryGet(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryGetParamDef>,
+	params: Params<typeof registryGetParamDef>,
 	errors: ContractErrors<(typeof iContracts)['i/registry/get']>,
 ): Promise<unknown> {
 	const item = await fetchRegistryItemFromDatabase(
@@ -78,10 +78,10 @@ export async function handleApiRegistryGet(
 }
 
 export async function handleApiRegistryGetAll(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryScopeParamDef>,
+	params: Params<typeof registryScopeParamDef>,
 ): Promise<Record<string, unknown>> {
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
@@ -99,10 +99,10 @@ export async function handleApiRegistryGetAll(
 }
 
 export async function handleApiRegistryGetDetail(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryGetParamDef>,
+	params: Params<typeof registryGetParamDef>,
 	errors: ContractErrors<(typeof iContracts)['i/registry/get-detail']>,
 ): Promise<{
 	updatedAt: string;
@@ -126,10 +126,10 @@ export async function handleApiRegistryGetDetail(
 }
 
 export async function handleApiRegistryKeys(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryScopeParamDef>,
+	params: Params<typeof registryScopeParamDef>,
 ): Promise<string[]> {
 	return await listRegistryKeysOfScopeFromDatabase(
 		deps.db,
@@ -140,10 +140,10 @@ export async function handleApiRegistryKeys(
 }
 
 export async function handleApiRegistryKeysWithType(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryScopeParamDef>,
+	params: Params<typeof registryScopeParamDef>,
 ): Promise<Record<string, string>> {
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
@@ -175,10 +175,10 @@ export async function handleApiRegistryKeysWithType(
 }
 
 export async function handleApiRegistryRemove(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registryGetParamDef>,
+	params: Params<typeof registryGetParamDef>,
 ): Promise<void> {
 	await deleteRegistryItemFromDatabase(
 		deps.db,
@@ -190,7 +190,7 @@ export async function handleApiRegistryRemove(
 }
 
 export async function handleApiRegistryScopesWithDomain(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 ): Promise<{ domain: string | null; scopes: string[][] }[]> {
 	const items = await listRegistryScopeAndDomainsFromDatabase(deps.db, user.id);
@@ -223,10 +223,10 @@ export async function handleApiRegistryScopesWithDomain(
 }
 
 export async function handleApiRegistrySet(
-	deps: ApiRegistryDependencies,
+	deps: RegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
-	params: ApiParams<typeof registrySetParamDef>,
+	params: Params<typeof registrySetParamDef>,
 ): Promise<void> {
 	const domain = registryDomain(token, params.domain);
 	const itemDomain = domain || null;

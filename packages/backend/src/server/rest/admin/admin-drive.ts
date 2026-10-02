@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -12,12 +12,12 @@ import {
 	listAllDriveFilesByUserIdFromDatabase,
 	listDriveFilesForAdminFromDatabase,
 	listOrphanDriveFilesFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+} from '@/core/drive/drive-file-store.js';
+import { startDriveFileDeletion } from '@/core/drive/drive-file-deletion-logic.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
 import type { ObjectStorageQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
@@ -35,7 +35,7 @@ import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
-export type ApiAdminDriveDependencies = RolePolicyDependencies & {
+export type AdminDriveDependencies = RolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
 	dbQueue: import('@/core/queue/queues.js').DbQueue;
@@ -110,7 +110,7 @@ function noSuchFileError(): ApiError {
 	});
 }
 
-function getProxiedUrl(deps: ApiAdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
+function getProxiedUrl(deps: AdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
 	return appendQuery(
 		`${deps.config.media.proxyUrl}/${mode ?? 'image'}.webp`,
 		query({
@@ -120,7 +120,7 @@ function getProxiedUrl(deps: ApiAdminDriveDependencies, url: string, mode?: 'sta
 	);
 }
 
-function getExternalVideoThumbnailUrl(deps: ApiAdminDriveDependencies, url: string): string | null {
+function getExternalVideoThumbnailUrl(deps: AdminDriveDependencies, url: string): string | null {
 	if (deps.config.media.videoThumbnailGeneratorUrl == null) {
 		return null;
 	}
@@ -134,7 +134,7 @@ function getExternalVideoThumbnailUrl(deps: ApiAdminDriveDependencies, url: stri
 	);
 }
 
-function getAdminDriveFileThumbnailUrl(deps: ApiAdminDriveDependencies, file: MiDriveFile): string | null {
+function getAdminDriveFileThumbnailUrl(deps: AdminDriveDependencies, file: MiDriveFile): string | null {
 	if (file.type.startsWith('video')) {
 		if (file.thumbnailUrl) {
 			return file.thumbnailUrl;
@@ -171,10 +171,7 @@ function enqueueDeleteObjectStorageFile(
 	);
 }
 
-export async function startApiAdminDriveFileDeletion(
-	deps: ApiAdminDriveDependencies,
-	file: MiDriveFile,
-): Promise<void> {
+export async function startApiAdminDriveFileDeletion(deps: AdminDriveDependencies, file: MiDriveFile): Promise<void> {
 	await startDriveFileDeletion(
 		{
 			db: deps.db,
@@ -190,10 +187,7 @@ export async function startApiAdminDriveFileDeletion(
 	);
 }
 
-async function packAdminDriveFilesForApi(
-	deps: ApiAdminDriveDependencies,
-	files: MiDriveFile[],
-): Promise<Packed<'DriveFile'>[]> {
+async function packAdminDriveFiles(deps: AdminDriveDependencies, files: MiDriveFile[]): Promise<Packed<'DriveFile'>[]> {
 	const userRefs = files.map(({ user, userId }) => user ?? userId).filter((x) => x != null);
 	const uniqueUserRefs = Array.from(
 		new Map(userRefs.map((user) => [typeof user === 'string' ? user : user.id, user])).values(),
@@ -228,7 +222,7 @@ async function packAdminDriveFilesForApi(
 	}));
 }
 
-export async function handleApiAdminDriveCleanRemoteFiles(deps: ApiAdminDriveDependencies): Promise<void> {
+export async function handleApiAdminDriveCleanRemoteFiles(deps: AdminDriveDependencies): Promise<void> {
 	await deps.objectStorageQueue.add(
 		'cleanRemoteFiles',
 		{},
@@ -241,7 +235,7 @@ export async function handleApiAdminDriveCleanRemoteFiles(deps: ApiAdminDriveDep
 	);
 }
 
-export async function handleApiAdminDriveCleanup(deps: ApiAdminDriveDependencies): Promise<void> {
+export async function handleApiAdminDriveCleanup(deps: AdminDriveDependencies): Promise<void> {
 	const files = await listOrphanDriveFilesFromDatabase(deps.db);
 
 	for (const file of files) {
@@ -250,8 +244,8 @@ export async function handleApiAdminDriveCleanup(deps: ApiAdminDriveDependencies
 }
 
 export async function handleApiAdminDeleteAllFilesOfAUser(
-	deps: ApiAdminDriveDependencies,
-	params: ApiParams<typeof adminDriveUserParamDef>,
+	deps: AdminDriveDependencies,
+	params: Params<typeof adminDriveUserParamDef>,
 ): Promise<void> {
 	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
 
@@ -261,8 +255,8 @@ export async function handleApiAdminDeleteAllFilesOfAUser(
 }
 
 export async function handleApiAdminDriveFiles(
-	deps: ApiAdminDriveDependencies,
-	params: ApiParams<typeof adminDriveFilesParamDef>,
+	deps: AdminDriveDependencies,
+	params: Params<typeof adminDriveFilesParamDef>,
 ): Promise<Packed<'DriveFile'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdPagination(params);
 
@@ -279,13 +273,13 @@ export async function handleApiAdminDriveFiles(
 		}),
 	);
 
-	return await packAdminDriveFilesForApi(deps, files);
+	return await packAdminDriveFiles(deps, files);
 }
 
 export async function handleApiAdminDriveShowFile(
-	deps: ApiAdminDriveDependencies,
+	deps: AdminDriveDependencies,
 	me: MiUser,
-	params: ApiParams<typeof adminDriveShowFileParamDef>,
+	params: Params<typeof adminDriveShowFileParamDef>,
 ): Promise<AdminDriveFileResponse> {
 	const file =
 		params.fileId !== undefined

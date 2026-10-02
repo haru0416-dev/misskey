@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import * as os from 'node:os';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { Config } from '@/config.js';
-import { packMetaDetailed, packMetaLite } from '@/core/meta/MetaEntityPacker.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { packMetaDetailed, packMetaLite } from '@/core/meta/meta-entity-packer.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/meta-store.js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -18,13 +18,13 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
-import type { adminUpdateMetaParamDef } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
+import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/admin-update-meta-logic.js';
+import type { adminUpdateMetaParamDef } from '@/server/rest/admin/admin-update-meta-logic.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
-import { HASHTAG_RANKING_WINDOW, removeFromFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { HASHTAG_RANKING_WINDOW, removeFromFeaturedRanking } from '@/core/featured/featured-ranking.js';
 
-export type ApiMetaDependencies = {
+export type MetaDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -47,7 +47,7 @@ export const testParamDef = z.object({
 type TestParams = z.infer<typeof testParamDef>;
 
 function scheduleHiddenTagsRankingRemoval(
-	deps: ApiMetaDependencies,
+	deps: MetaDependencies,
 	before: MiMeta | undefined,
 	hiddenTags: MiMeta['hiddenTags'] | undefined,
 ): void {
@@ -70,13 +70,13 @@ function scheduleHiddenTagsRankingRemoval(
 }
 
 export async function handleApiMeta(
-	deps: ApiMetaDependencies,
-	params: ApiParams<typeof metaParamDef>,
+	deps: MetaDependencies,
+	params: Params<typeof metaParamDef>,
 ): Promise<Packed<'MetaLite'> | Packed<'MetaDetailed'>> {
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 
-export async function handleApiAdminMeta(deps: ApiMetaDependencies) {
+export async function handleApiAdminMeta(deps: MetaDependencies) {
 	const instance = await fetchMetaFromDatabase(deps.db);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, instance, 'proxy');
 
@@ -224,9 +224,9 @@ export async function handleApiAdminMeta(deps: ApiMetaDependencies) {
 }
 
 export async function handleApiAdminUpdateMeta(
-	deps: ApiMetaDependencies,
+	deps: MetaDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUpdateMetaParamDef>,
+	params: Params<typeof adminUpdateMetaParamDef>,
 ): Promise<void> {
 	const before = await fetchMetaFromDatabase(deps.db);
 	// clientOptions は既存の値に重ねるので、プロセス内の meta (他のワーカーの更新が未反映の場合がある) ではなく DB の値に重ねる。

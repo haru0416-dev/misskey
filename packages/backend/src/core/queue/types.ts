@@ -61,7 +61,7 @@ export type DbJobMap = {
 	deleteDriveFile: DbDeleteDriveFileJobData;
 	deleteDriveFiles: DbJobDataWithUser;
 	exportCustomEmojis: DbJobDataWithUser;
-	exportAntennas: DBExportAntennasData;
+	exportAntennas: DbExportAntennasData;
 	exportNotes: DbJobDataWithUser;
 	exportClips: DbJobDataWithUser;
 	exportFavorites: DbJobDataWithUser;
@@ -94,7 +94,7 @@ export type DbExportFollowingData = {
 	excludeInactive: boolean;
 };
 
-export type DBExportAntennasData = {
+export type DbExportAntennasData = {
 	user: ThinUser;
 };
 

@@ -266,13 +266,13 @@ async function clickAccept() {
 	emit('accept', token);
 }
 
-function showUI(state: 'success' | 'denied' | 'failed') {
+function showUi(state: 'success' | 'denied' | 'failed') {
 	phase.value = state;
 	waiting.value = false;
 }
 
 defineExpose({
-	showUI,
+	showUi,
 });
 </script>
 

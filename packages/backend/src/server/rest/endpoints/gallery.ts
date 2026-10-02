@@ -5,7 +5,7 @@
 
 import { endpointMetas as galleryContracts } from '@/server/rest/contracts/gallery.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiGalleryFeatured,
 	handleApiGalleryPopular,
@@ -18,7 +18,7 @@ import {
 	handleApiGalleryPostsUpdate,
 } from '../gallery/gallery.js';
 
-export const galleryEndpoints = implementEndpoints<ApiShellDependencies>()(galleryContracts, {
+export const galleryEndpoints = implementEndpoints<ShellDependencies>()(galleryContracts, {
 	'gallery/featured': async ({ deps, input, me }) => await handleApiGalleryFeatured(deps, me, input),
 	'gallery/popular': async ({ deps, me }) => await handleApiGalleryPopular(deps, me),
 	'gallery/posts': async ({ deps, input, me }) => await handleApiGalleryPosts(deps, me, input),

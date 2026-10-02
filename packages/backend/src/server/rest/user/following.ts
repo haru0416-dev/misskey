@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { randomUUID } from 'node:crypto';
 import { toPunyNullable } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
-import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
-import { enqueueDbJobInOutbox } from '@/core/queue/QueueOutboxStore.js';
+import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
+import { enqueueDbJobInOutbox } from '@/core/queue/queue-outbox-store.js';
 import {
 	followAcceptanceKey,
 	hasAcceptedFollowInDatabase,
 	registerFollowAcceptanceDeliveryInDatabase,
-} from '@/core/user/FollowAcceptanceStore.js';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+} from '@/core/user/follow-acceptance-store.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
 import {
 	createFollowRequestInDatabase,
 	deleteFollowRequestByIdFromDatabase,
@@ -26,13 +26,13 @@ import {
 	listAllFollowRequestsByFolloweeIdFromDatabase,
 	listFollowRequestsByFolloweeIdFromDatabase,
 	listFollowRequestsByFollowerIdFromDatabase,
-} from '@/core/user/FollowRequestStore.js';
+} from '@/core/user/follow-request-store.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import {
 	countNonMovedFolloweesByFollowerIdFromDatabase,
 	countNonMovedFollowersByFolloweeIdFromDatabase,
 	createFollowingInDatabase,
-	deleteFollowingAndUpdateUserCountsByIdInDatabase,
+	deleteFollowingAndUpdateUserCountsByIdFromDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
 	followingExistsInDatabase,
 	listFollowersByFolloweeIdWithPaginationFromDatabase,
@@ -41,12 +41,12 @@ import {
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
 	updateFollowingByIdInDatabase,
 	updateFollowingsByFollowerIdInDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import {
-	adjustInstanceFollowersCountFromDatabase,
-	adjustInstanceFollowingCountFromDatabase,
-} from '@/core/instance/InstanceStore.js';
-import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+	adjustInstanceFollowersCountInDatabase,
+	adjustInstanceFollowingCountInDatabase,
+} from '@/core/instance/instance-store.js';
+import { mutingExistsInDatabase } from '@/core/user/muting-store.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import {
 	adjustUserFollowersCountInDatabase,
@@ -56,15 +56,15 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 	updateUserInDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listFollowingUsersByBirthdayDateFromDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import { userIsModerator } from '../../../core/role/role-policy.js';
 import { fetchOrRegisterFederatedInstance } from '../activitypub/federation.js';
-import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
-import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/WebhookStore.js';
+import { userListMembershipExistsInDatabase } from '@/core/user/user-list-membership-store.js';
+import { listActiveWebhooksByUserIdAndEventFromDatabase } from '@/core/webhook/webhook-store.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
@@ -87,17 +87,12 @@ import type { InternalEventPublisher, MainStreamPublisher } from '../../../core/
 import { scheduleUnreadNotification, xaddNotification } from '../../../core/notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
-import {
-	packMeDetailedForApi,
-	packUserDetailedNotMeForApi,
-	packUserDetailedNotMeManyForApi,
-	resolveAlsoKnownAsForApi,
-} from './user.js';
+import { packMeDetailed, packUserDetailedNotMe, packUserDetailedNotMeMany, resolveAlsoKnownAs } from './user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { UserDetailedNotMeApiResponse } from './user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiFollowingDependencies = UserPackingDependencies & {
+export type FollowingDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
@@ -287,8 +282,8 @@ export function addActivityContext<T extends IObject>(
 	return { '@context': CONTEXT, ...(activity as T & { id: string }) };
 }
 
-async function getTargetUserOrThrow(
-	deps: ApiFollowingDependencies,
+async function fetchTargetUserOrThrow(
+	deps: FollowingDependencies,
 	userId: MiUser['id'],
 	errorFactory: () => ApiError = followingCreateNoSuchUserError,
 ): Promise<MiUser> {
@@ -301,7 +296,7 @@ async function getTargetUserOrThrow(
 }
 
 async function isNotificationAllowed(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	notifieeId: MiUser['id'],
 	type: FollowingNotificationType,
 	notifierId: MiUser['id'],
@@ -347,7 +342,7 @@ async function isNotificationAllowed(
 }
 
 async function createFollowingNotification(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	notifieeId: MiUser['id'],
 	type: FollowingNotificationType,
 	notifier: MiUser,
@@ -421,7 +416,7 @@ async function enqueueUserWebhook(
 }
 
 async function publishFollowToLocalFollower(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 ): Promise<void> {
@@ -429,13 +424,13 @@ async function publishFollowToLocalFollower(
 		return;
 	}
 
-	const packedFollowee = (await packUserDetailedNotMeForApi(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = (await packUserDetailedNotMe(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'follow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'follow', packedFollowee);
 }
 
 async function publishFollowedToLocalFollowee(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	followee: MiUser,
 	follower: MiUser,
 	awaitNotification = false,
@@ -464,13 +459,13 @@ export async function publishUnfollowToLocalFollower(
 		return;
 	}
 
-	const packedFollowee = (await packUserDetailedNotMeForApi(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = (await packUserDetailedNotMe(deps, followee, follower)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }
 
 async function deliverFollowActivity(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	requestId?: string | null,
@@ -484,7 +479,7 @@ async function deliverFollowActivity(
 }
 
 export async function createFollowRequestWithSideEffects(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	withReplies?: boolean,
@@ -512,7 +507,7 @@ export async function createFollowRequestWithSideEffects(
 		deps.publishMainStream?.(
 			followee.id,
 			'meUpdated',
-			await packMeDetailedForApi(deps, followee, {
+			await packMeDetailed(deps, followee, {
 				includeSecrets: false,
 			}),
 		);
@@ -529,7 +524,7 @@ export async function createFollowRequestWithSideEffects(
 	}
 }
 
-async function incrementFollowing(deps: ApiFollowingDependencies, follower: MiUser, followee: MiUser): Promise<void> {
+async function incrementFollowing(deps: FollowingDependencies, follower: MiUser, followee: MiUser): Promise<void> {
 	if (!follower.movedToUri && !followee.movedToUri) {
 		await Promise.all([
 			adjustUserFollowingCountInDatabase(deps.db, follower.id, 1),
@@ -538,7 +533,7 @@ async function incrementFollowing(deps: ApiFollowingDependencies, follower: MiUs
 
 		if (deps.meta.enableStatsForFederatedInstances && isLocalUser(follower) && isRemoteUser(followee)) {
 			const instance = await fetchOrRegisterFederatedInstance(deps, followee.host);
-			await adjustInstanceFollowersCountFromDatabase(deps.db, instance.id, 1);
+			await adjustInstanceFollowersCountInDatabase(deps.db, instance.id, 1);
 		}
 		return;
 	}
@@ -559,17 +554,17 @@ async function incrementFollowing(deps: ApiFollowingDependencies, follower: MiUs
 	}
 }
 
-async function decrementFollowing(deps: ApiFollowingDependencies, follower: MiUser, followee: MiUser): Promise<void> {
+async function decrementFollowing(deps: FollowingDependencies, follower: MiUser, followee: MiUser): Promise<void> {
 	deps.publishInternalEvent?.('unfollow', { followerId: follower.id, followeeId: followee.id });
 
 	if (!follower.movedToUri && !followee.movedToUri) {
 		if (deps.meta.enableStatsForFederatedInstances) {
 			if (isRemoteUser(follower) && isLocalUser(followee)) {
 				const instance = await fetchOrRegisterFederatedInstance(deps, follower.host);
-				await adjustInstanceFollowingCountFromDatabase(deps.db, instance.id, -1);
+				await adjustInstanceFollowingCountInDatabase(deps.db, instance.id, -1);
 			} else if (isLocalUser(follower) && isRemoteUser(followee)) {
 				const instance = await fetchOrRegisterFederatedInstance(deps, followee.host);
-				await adjustInstanceFollowersCountFromDatabase(deps.db, instance.id, -1);
+				await adjustInstanceFollowersCountInDatabase(deps.db, instance.id, -1);
 			}
 		}
 		return;
@@ -577,12 +572,12 @@ async function decrementFollowing(deps: ApiFollowingDependencies, follower: MiUs
 }
 
 async function deleteFollowingWithSideEffects(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	followingId: string,
 ): Promise<boolean> {
-	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(
+	const deleted = await deleteFollowingAndUpdateUserCountsByIdFromDatabase(
 		deps.db,
 		followingId,
 		follower.id,
@@ -615,7 +610,7 @@ async function deleteFollowingWithSideEffects(
 }
 
 export async function insertFollowingWithSideEffects(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	options: {
@@ -687,7 +682,7 @@ export async function insertFollowingWithSideEffects(
 }
 
 export async function deliverAcceptForFollow(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	requestId?: string,
@@ -712,12 +707,12 @@ export async function deliverAcceptForFollow(
 
 // 移行前に承認済みのフォローは、移行後の鍵アカウントでも自動承認する。
 // この経路へ到達する follower はローカルユーザーに限られるため、AP 再取得は不要。
-async function checkAutoAcceptIfMovedForApi(
-	deps: ApiFollowingDependencies,
+async function checkAutoAcceptIfMoved(
+	deps: FollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
 ): Promise<boolean> {
-	const oldSelfIds = await resolveAlsoKnownAsForApi(deps, follower.alsoKnownAs);
+	const oldSelfIds = await resolveAlsoKnownAs(deps, follower.alsoKnownAs);
 	if (!oldSelfIds || oldSelfIds.length === 0) {
 		return false;
 	}
@@ -738,17 +733,17 @@ async function checkAutoAcceptIfMovedForApi(
 }
 
 export async function handleApiFollowingCreate(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingCreateParamDef>,
+	params: Params<typeof followingCreateParamDef>,
 ): Promise<Packed<'UserLite'>> {
-	const follower = await getTargetUserOrThrow(deps, me.id);
+	const follower = await fetchTargetUserOrThrow(deps, me.id);
 
 	if (follower.id === params.userId) {
 		throw clientError('Followee is yourself.', 'FOLLOWEE_IS_YOURSELF', '26fbe7bb-a331-4857-af17-205b426669a9');
 	}
 
-	const followee = await getTargetUserOrThrow(deps, params.userId);
+	const followee = await fetchTargetUserOrThrow(deps, params.userId);
 	const [blocking, blocked] = await Promise.all([
 		blockingExistsInDatabase(deps.db, follower.id, followee.id),
 		blockingExistsInDatabase(deps.db, followee.id, follower.id),
@@ -782,7 +777,7 @@ export async function handleApiFollowingCreate(
 		}
 
 		if (!autoAccept && followee.isLocked) {
-			autoAccept = await checkAutoAcceptIfMovedForApi(deps, follower, followee);
+			autoAccept = await checkAutoAcceptIfMoved(deps, follower, followee);
 		}
 
 		if (!autoAccept) {
@@ -805,9 +800,9 @@ export async function handleApiFollowingCreate(
 }
 
 export async function handleApiFollowingUpdateAll(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUpdateAllParamDef>,
+	params: Params<typeof followingUpdateAllParamDef>,
 ): Promise<void> {
 	await updateFollowingsByFollowerIdInDatabase(
 		deps.db,
@@ -823,9 +818,9 @@ export async function handleApiFollowingUpdateAll(
 }
 
 export async function handleApiFollowingDelete(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUserIdParamDef>,
+	params: Params<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
 	const follower = me;
 
@@ -833,7 +828,7 @@ export async function handleApiFollowingDelete(
 		throw followingDeleteFolloweeIsYourselfError();
 	}
 
-	const followee = await getTargetUserOrThrow(deps, params.userId, followingDeleteNoSuchUserError);
+	const followee = await fetchTargetUserOrThrow(deps, params.userId, followingDeleteNoSuchUserError);
 
 	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 	if (following == null) {
@@ -848,9 +843,9 @@ export async function handleApiFollowingDelete(
 }
 
 export async function handleApiFollowingUpdate(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUpdateParamDef>,
+	params: Params<typeof followingUpdateParamDef>,
 ): Promise<Packed<'UserLite'>> {
 	const follower = me;
 
@@ -858,7 +853,7 @@ export async function handleApiFollowingUpdate(
 		throw followingUpdateFolloweeIsYourselfError();
 	}
 
-	const followee = await getTargetUserOrThrow(deps, params.userId, followingUpdateNoSuchUserError);
+	const followee = await fetchTargetUserOrThrow(deps, params.userId, followingUpdateNoSuchUserError);
 
 	const exist = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 	if (exist == null) {
@@ -885,9 +880,9 @@ export async function handleApiFollowingUpdate(
 }
 
 export async function handleApiFollowingInvalidate(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUserIdParamDef>,
+	params: Params<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
 	const followee = me;
 
@@ -895,7 +890,7 @@ export async function handleApiFollowingInvalidate(
 		throw followingInvalidateFollowerIsYourselfError();
 	}
 
-	const follower = await getTargetUserOrThrow(deps, params.userId, followingInvalidateNoSuchUserError);
+	const follower = await fetchTargetUserOrThrow(deps, params.userId, followingInvalidateNoSuchUserError);
 
 	const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 	if (following == null) {
@@ -910,8 +905,8 @@ export async function handleApiFollowingInvalidate(
 }
 
 /** フォローリクエストが存在しない場合は例外を投げる。 */
-export async function acceptFollowRequestForApi(
-	deps: ApiFollowingDependencies,
+export async function acceptFollowRequest(
+	deps: FollowingDependencies,
 	followee: MiUser,
 	follower: MiUser,
 ): Promise<void> {
@@ -930,20 +925,17 @@ export async function acceptFollowRequestForApi(
 }
 
 export async function handleApiFollowingRequestsAccept(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUserIdParamDef>,
+	params: Params<typeof followingUserIdParamDef>,
 ): Promise<void> {
-	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
+	const follower = await fetchTargetUserOrThrow(deps, params.userId, followingRequestsAcceptNoSuchUserError);
 
-	await acceptFollowRequestForApi(deps, me, follower);
+	await acceptFollowRequest(deps, me, follower);
 }
 
 /** 1件以上承認したら true。承認できなかった申請があれば、承認済みの分を確定したうえで AggregateError を投げる。 */
-export async function acceptAllFollowRequestsForApi(
-	deps: ApiFollowingDependencies,
-	followee: MiLocalUser,
-): Promise<boolean> {
+export async function acceptAllFollowRequests(deps: FollowingDependencies, followee: MiLocalUser): Promise<boolean> {
 	const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(deps.db, followee.id);
 	if (requests.length === 0) {
 		return false;
@@ -990,7 +982,7 @@ export async function acceptAllFollowRequestsForApi(
 		deps.publishMainStream?.(
 			followee.id,
 			'meUpdated',
-			await packMeDetailedForApi(deps, freshFollowee, { includeSecrets: false }),
+			await packMeDetailed(deps, freshFollowee, { includeSecrets: false }),
 		);
 	}
 	if (failures.length > 0) throw new AggregateError(failures, 'Some follow requests could not be approved');
@@ -1017,12 +1009,12 @@ export async function enqueueAcceptAllFollowRequestsInOutbox(
 }
 
 export async function handleApiFollowingRequestsCancel(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUserIdParamDef>,
+	params: Params<typeof followingUserIdParamDef>,
 ): Promise<Packed<'UserLite'>> {
 	const follower = me;
-	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
+	const followee = await fetchTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
 
 	if (isRemoteUser(followee)) {
 		const content = addActivityContext(
@@ -1045,7 +1037,7 @@ export async function handleApiFollowingRequestsCancel(
 		deps.publishMainStream?.(
 			followee.id,
 			'meUpdated',
-			await packMeDetailedForApi(deps, followee, {
+			await packMeDetailed(deps, followee, {
 				includeSecrets: false,
 			}),
 		);
@@ -1055,12 +1047,12 @@ export async function handleApiFollowingRequestsCancel(
 }
 
 export async function handleApiFollowingRequestsReject(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingUserIdParamDef>,
+	params: Params<typeof followingUserIdParamDef>,
 ): Promise<void> {
 	const followee = me;
-	const follower = await getTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
+	const follower = await fetchTargetUserOrThrow(deps, params.userId, followingRequestsRejectNoSuchUserError);
 
 	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 
@@ -1085,8 +1077,8 @@ export async function handleApiFollowingRequestsReject(
 	}
 }
 
-async function packFollowRequestsForApi(
-	deps: ApiFollowingDependencies,
+async function packFollowRequests(
+	deps: FollowingDependencies,
 	requests: FollowRequestRow[],
 	me: MiLocalUser,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
@@ -1102,9 +1094,9 @@ async function packFollowRequestsForApi(
 }
 
 export async function handleApiFollowingRequestsList(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingRequestsListParamDef>,
+	params: Params<typeof followingRequestsListParamDef>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
@@ -1114,13 +1106,13 @@ export async function handleApiFollowingRequestsList(
 		untilId: pagination.untilId,
 	});
 
-	return await packFollowRequestsForApi(deps, requests, me);
+	return await packFollowRequests(deps, requests, me);
 }
 
 export async function handleApiFollowingRequestsSent(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingRequestsListParamDef>,
+	params: Params<typeof followingRequestsListParamDef>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
@@ -1130,14 +1122,14 @@ export async function handleApiFollowingRequestsSent(
 		untilId: pagination.untilId,
 	});
 
-	return await packFollowRequestsForApi(deps, requests, me);
+	return await packFollowRequests(deps, requests, me);
 }
 
-export async function packFollowingsForApi(
+export async function packFollowings(
 	deps: UserPackingDependencies,
 	followings: MiFollowing[],
 ): Promise<FollowingListItem[]> {
-	const packedFollowees = await packUserDetailedNotMeManyForApi(
+	const packedFollowees = await packUserDetailedNotMeMany(
 		deps,
 		followings.map((f) => f.followee ?? f.followeeId),
 	);
@@ -1161,9 +1153,9 @@ export async function packFollowingsForApi(
 }
 
 export async function handleApiFollowingList(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof followingListParamDef>,
+	params: Params<typeof followingListParamDef>,
 ): Promise<FollowingListItem[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
@@ -1174,7 +1166,7 @@ export async function handleApiFollowingList(
 		notification: params.notification,
 	});
 
-	return await packFollowingsForApi(deps, followings);
+	return await packFollowings(deps, followings);
 }
 
 export type FollowerListItem = {
@@ -1185,11 +1177,8 @@ export type FollowerListItem = {
 	follower: UserDetailedNotMeApiResponse;
 };
 
-async function packFollowersForApi(
-	deps: UserPackingDependencies,
-	followings: MiFollowing[],
-): Promise<FollowerListItem[]> {
-	const packedFollowers = await packUserDetailedNotMeManyForApi(
+async function packFollowers(deps: UserPackingDependencies, followings: MiFollowing[]): Promise<FollowerListItem[]> {
+	const packedFollowers = await packUserDetailedNotMeMany(
 		deps,
 		followings.map((f) => f.follower ?? f.followerId),
 	);
@@ -1299,7 +1288,7 @@ function usersFollowingBirthdayInvalidError(): ApiError {
 }
 
 export async function handleApiUsersFollowers(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser | null,
 	params: UsersFollowersOrFollowingParams,
 ): Promise<FollowerListItem[]> {
@@ -1339,11 +1328,11 @@ export async function handleApiUsersFollowers(
 		untilId: pagination.untilId,
 	});
 
-	return await packFollowersForApi(deps, followings);
+	return await packFollowers(deps, followings);
 }
 
 export async function handleApiUsersFollowing(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser | null,
 	params: UsersFollowingParams,
 ): Promise<FollowingListItem[]> {
@@ -1405,7 +1394,7 @@ export async function handleApiUsersFollowing(
 		});
 	}
 
-	return await packFollowingsForApi(deps, followings);
+	return await packFollowings(deps, followings);
 }
 
 const birthdayMonthDaySchema = z
@@ -1432,9 +1421,9 @@ export const usersGetFollowingUsersByBirthdayParamDef = z.object({
 });
 
 export async function handleApiUsersGetFollowingUsersByBirthday(
-	deps: ApiFollowingDependencies,
+	deps: FollowingDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof usersGetFollowingUsersByBirthdayParamDef>,
+	params: Params<typeof usersGetFollowingUsersByBirthdayParamDef>,
 ): Promise<{ id: string; birthday: string; user: Packed<'UserLite'> }[]> {
 	let condition: { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
 	if (Object.hasOwn(params.birthday, 'begin') && Object.hasOwn(params.birthday, 'end')) {

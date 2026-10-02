@@ -5,7 +5,7 @@
 
 import { endpointMetas as pagesContracts } from '@/server/rest/contracts/pages.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { handleApiPagesLike, handleApiPagesUnlike } from '../favorite/favorites.js';
 import {
 	handleApiPagesCreate,
@@ -15,7 +15,7 @@ import {
 	handleApiPagesUpdate,
 } from '../page/pages.js';
 
-export const pagesEndpoints = implementEndpoints<ApiShellDependencies>()(pagesContracts, {
+export const pagesEndpoints = implementEndpoints<ShellDependencies>()(pagesContracts, {
 	'pages/create': async ({ deps, input, me }) => await handleApiPagesCreate(deps, me, input),
 	'pages/delete': async ({ deps, input, me }) => {
 		await handleApiPagesDelete(deps, me, input);

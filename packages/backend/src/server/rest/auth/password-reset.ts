@@ -5,20 +5,20 @@
 
 import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import {
 	consumePasswordResetRequestInDatabase,
 	createPasswordResetRequestInDatabase,
 	fetchPasswordResetRequestByTokenFromDatabase,
 	isPasswordResetRequestExpired,
-} from '@/core/account/PasswordResetRequestStore.js';
-import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/account/password-reset-request-store.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
@@ -27,7 +27,7 @@ import { passwordSchema } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiPasswordResetDependencies = {
+export type PasswordResetDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
@@ -45,7 +45,7 @@ export const resetPasswordParamDef = z.object({
 });
 
 export async function handleApiRequestResetPassword(
-	deps: ApiPasswordResetDependencies,
+	deps: PasswordResetDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseApiParams(requestResetPasswordParamDef, body);
@@ -86,8 +86,8 @@ export async function handleApiRequestResetPassword(
 }
 
 export async function handleApiResetPassword(
-	deps: ApiPasswordResetDependencies,
-	params: ApiParams<typeof resetPasswordParamDef>,
+	deps: PasswordResetDependencies,
+	params: Params<typeof resetPasswordParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['reset-password']>,
 ): Promise<void> {
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);

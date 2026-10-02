@@ -6,7 +6,7 @@
 import type { z } from 'zod';
 import type { Schema, SchemaType } from '@/misc/json-schema.js';
 import type { IEndpointMeta } from '@/server/rest/endpoint-catalog.js';
-import type { ApiAuthenticated } from './auth/auth.js';
+import type { Authenticated } from './auth/auth.js';
 import type { AuthedCredential } from './endpoint-guards.js';
 import type { ApiError } from './error.js';
 import type { parseApiParams } from './validation.js';
@@ -43,7 +43,7 @@ type RequiresCredential<M> = M extends { readonly requireCredential: true }
 			? true
 			: false;
 
-type EndpointAuth<M extends IEndpointMeta> = RequiresCredential<M> extends true ? AuthedCredential : ApiAuthenticated;
+type EndpointAuth<M extends IEndpointMeta> = RequiresCredential<M> extends true ? AuthedCredential : Authenticated;
 
 /** meta.res から導いた応答の型。res を宣言しないエンドポイントは 204 を返す。 */
 type EndpointResult<M extends IEndpointMeta> = M extends { readonly res: infer R extends Schema }

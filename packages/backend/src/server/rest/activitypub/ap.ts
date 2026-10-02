@@ -5,7 +5,7 @@
 
 import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { getApId, isActor, isPost } from '@/core/activitypub/type.js';
 import type { IObject } from '@/core/activitypub/type.js';
@@ -16,18 +16,18 @@ import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 import {
 	extractDbHost,
-	getNoteFromApIdForApi,
-	getUserFromApIdForApi,
+	fetchNoteFromApId,
+	fetchUserFromApId,
 	isFederationAllowedUri,
 	isSelfHost,
-	resolveApObjectForApi,
+	resolveApObject,
 } from './ap-resolve.js';
-import type { ApiApResolveDependencies } from './ap-resolve.js';
-import { createNoteFromApForApi } from './ap-note.js';
-import type { ApiApNoteDependencies } from './ap-note.js';
-import { createPersonForApi } from './ap-person.js';
-import type { ApiApPersonDependencies } from './ap-person.js';
-import { packUserDetailedNotMeForApi } from '../user/user.js';
+import type { ApResolveDependencies } from './ap-resolve.js';
+import { createNoteFromAp } from './ap-note.js';
+import type { ApNoteDependencies } from './ap-note.js';
+import { createPerson } from './ap-person.js';
+import type { ApPersonDependencies } from './ap-person.js';
+import { packUserDetailedNotMe } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { packNote } from '../../../core/note/note-packing.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
@@ -37,22 +37,19 @@ export const apGetParamDef = z.object({
 	uri: z.string(),
 });
 
-export async function handleApiApGet(deps: ApiApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
+export async function handleApiApGet(deps: ApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
 	const params = parseApiParams(apGetParamDef, body);
-	return await resolveApObjectForApi(deps, params.uri);
+	return await resolveApObject(deps, params.uri);
 }
 
-export type ApiApShowDependencies = ApiApNoteDependencies &
-	ApiApPersonDependencies &
-	UserPackingDependencies &
-	NoteDependencies;
+export type ApShowDependencies = ApNoteDependencies & ApPersonDependencies & UserPackingDependencies & NoteDependencies;
 
 export const apShowParamDef = z.object({
 	uri: z.string(),
 });
 
 type ApShowResult =
-	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMeForApi>> }
+	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMe>> }
 	| { type: 'Note'; object: Awaited<ReturnType<typeof packNote>> };
 
 function apShowFederationNotAllowedError(): ApiError {
@@ -96,8 +93,8 @@ function apShowNoSuchObjectError(): ApiError {
 	});
 }
 
-async function mergePackForApi(
-	deps: ApiApShowDependencies,
+async function mergePack(
+	deps: ApShowDependencies,
 	me: MiLocalUser | null | undefined,
 	user: MiUser | null | undefined,
 	note: MiNote | null | undefined,
@@ -105,7 +102,7 @@ async function mergePackForApi(
 	if (user != null) {
 		return {
 			type: 'User',
-			object: await packUserDetailedNotMeForApi(deps, user, me),
+			object: await packUserDetailedNotMe(deps, user, me),
 		};
 	} else if (note != null) {
 		try {
@@ -121,8 +118,8 @@ async function mergePackForApi(
 	return null;
 }
 
-async function fetchAnyForApi(
-	deps: ApiApShowDependencies,
+async function fetchAny(
+	deps: ApShowDependencies,
 	uri: string,
 	me: MiLocalUser | null | undefined,
 ): Promise<ApShowResult | null> {
@@ -130,10 +127,10 @@ async function fetchAnyForApi(
 		throw apShowFederationNotAllowedError();
 	}
 
-	let local = await mergePackForApi(
+	let local = await mergePack(
 		deps,
 		me,
-		...(await Promise.all([getUserFromApIdForApi(deps, uri), getNoteFromApIdForApi(deps, uri)])),
+		...(await Promise.all([fetchUserFromApId(deps, uri), fetchNoteFromApId(deps, uri)])),
 	);
 	if (local != null) {
 		return local;
@@ -146,7 +143,7 @@ async function fetchAnyForApi(
 	}
 
 	const history = new Set<string>();
-	const object = await resolveApObjectForApi(
+	const object = await resolveApObject(
 		deps,
 		uri,
 		FetchAllowSoftFailMask.CrossOrigin | FetchAllowSoftFailMask.NonCanonicalId,
@@ -181,31 +178,31 @@ async function fetchAnyForApi(
 	}
 
 	if (uri !== object.id) {
-		local = await mergePackForApi(
+		local = await mergePack(
 			deps,
 			me,
-			...(await Promise.all([getUserFromApIdForApi(deps, object.id), getNoteFromApIdForApi(deps, object.id)])),
+			...(await Promise.all([fetchUserFromApId(deps, object.id), fetchNoteFromApId(deps, object.id)])),
 		);
 		if (local != null) {
 			return local;
 		}
 	}
 
-	return await mergePackForApi(
+	return await mergePack(
 		deps,
 		me,
-		isActor(object) ? await createPersonForApi(deps, getApId(object)) : null,
-		isPost(object) ? await createNoteFromApForApi(deps, getApId(object), undefined, new Set(), true) : null,
+		isActor(object) ? await createPerson(deps, getApId(object)) : null,
+		isPost(object) ? await createNoteFromAp(deps, getApId(object), undefined, new Set(), true) : null,
 	);
 }
 
 export async function handleApiApShow(
-	deps: ApiApShowDependencies,
+	deps: ApShowDependencies,
 	me: MiLocalUser | null | undefined,
-	params: ApiParams<typeof apShowParamDef>,
+	params: Params<typeof apShowParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['ap/show']>,
 ): Promise<ApShowResult> {
-	const object = await fetchAnyForApi(deps, params.uri, me);
+	const object = await fetchAny(deps, params.uri, me);
 	if (object) {
 		return object;
 	}

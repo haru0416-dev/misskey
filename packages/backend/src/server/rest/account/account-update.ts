@@ -5,39 +5,39 @@
 
 import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { createPublicKey } from 'node:crypto';
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
-import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
-import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
-import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/avatar-decoration-store.js';
+import { getDriveFilePublicUrl } from '@/core/drive/drive-file-public-url.js';
+import { getIdenticonUrl } from '@/core/drive/identicon-url.js';
 import {
 	fetchDriveFileByIdAndUserIdFromDatabase,
 	fetchDriveFileByIdFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { listLocalEmojisFromDatabase } from '@/core/emoji/EmojiStore.js';
-import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createMfmService } from '@/core/mfm/MfmService.js';
-import { fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { listLocalEmojisFromDatabase } from '@/core/emoji/emoji-store.js';
+import { recordHashtagUsagesInDatabase } from '@/core/hashtag/hashtag-store.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
+import { createMfmService } from '@/core/mfm/mfm-service.js';
+import { fetchPageByIdFromDatabase } from '@/core/page/page-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
 import {
 	appendVerifiedLinkToUserProfileInDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/user/UserProfileStore.js';
-import type { UserProfileUpdate } from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
+import type { UserProfileUpdate } from '@/core/user/user-profile-store.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/user/UserStore.js';
-import type { UserUpdate } from '@/core/user/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+} from '@/core/user/user-store.js';
+import type { UserUpdate } from '@/core/user/user-store.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/user-keypair-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import * as Acct from '@/misc/acct.js';
@@ -62,16 +62,12 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import {
-	acceptAllFollowRequestsForApi,
-	enqueueAcceptAllFollowRequestsInOutbox,
-	genLocalUserUri,
-} from '../user/following.js';
+import { acceptAllFollowRequests, enqueueAcceptAllFollowRequestsInOutbox, genLocalUserUri } from '../user/following.js';
 import type { DbJobMap } from '@/core/queue/types.js';
-import { publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
+import { publishDbOutboxRowEagerly } from '@/core/queue/queue-outbox-store.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { ApiFollowingDependencies } from '../user/following.js';
+import type { FollowingDependencies } from '../user/following.js';
 import { ApiError } from '../error.js';
 import {
 	addActivityContext,
@@ -81,19 +77,19 @@ import {
 	renderUpdate,
 } from '../../../core/activitypub/notes-ap.js';
 import type { NoteApDependencies } from '../../../core/activitypub/notes-ap.js';
-import { updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
+import { updateHashtagsRankings } from '@/core/note/note-creation-service.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { getRolePolicies, getUserRoles, userIsModerator } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies, fetchUserRoles, userIsModerator } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-import { resolveUserForApi } from '../activitypub/ap-person.js';
-import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { resolveUser } from '../activitypub/ap-person.js';
+import type { ApPersonDependencies } from '../activitypub/ap-person.js';
 
-export type ApiAccountUpdateDependencies = RolePolicyDependencies &
-	ApiFollowingDependencies &
+export type AccountUpdateDependencies = RolePolicyDependencies &
+	FollowingDependencies &
 	UserPackingDependencies &
 	NoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
@@ -273,7 +269,7 @@ function tryRewriteUrl(maybeUrl: string): string {
 	}
 }
 
-export function renderKeyForApi(
+export function renderKey(
 	config: Pick<Config, 'instance'>,
 	user: MiLocalUser,
 	key: MiUserKeypair,
@@ -287,8 +283,8 @@ export function renderKeyForApi(
 	};
 }
 
-export async function renderPersonForApi(
-	deps: ApiAccountUpdateDependencies,
+export async function renderPerson(
+	deps: AccountUpdateDependencies,
 	user: MiLocalUser,
 ): Promise<Record<string, unknown>> {
 	const id = genLocalUserUri(deps.config, user.id);
@@ -382,7 +378,7 @@ export async function renderPersonForApi(
 		tag,
 		manuallyApprovesFollowers: user.isLocked,
 		discoverable: user.isExplorable,
-		publicKey: renderKeyForApi(deps.config, user, keypair, '#main-key'),
+		publicKey: renderKey(deps.config, user, keypair, '#main-key'),
 		isCat: user.isCat,
 		attachment: attachment.length ? attachment : undefined,
 	};
@@ -403,10 +399,7 @@ export async function renderPersonForApi(
 	return person;
 }
 
-async function publishAccountUpdateToFollowersForApi(
-	deps: ApiAccountUpdateDependencies,
-	userId: MiUser['id'],
-): Promise<void> {
+async function publishAccountUpdateToFollowers(deps: AccountUpdateDependencies, userId: MiUser['id']): Promise<void> {
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, userId);
 	if (user.host != null) {
 		return;
@@ -414,7 +407,7 @@ async function publishAccountUpdateToFollowersForApi(
 
 	const localUser = user as MiLocalUser;
 	const content = renderOnce(async () =>
-		addActivityContext(deps.config, renderUpdate(deps.config, await renderPersonForApi(deps, localUser), localUser)),
+		addActivityContext(deps.config, renderUpdate(deps.config, await renderPerson(deps, localUser), localUser)),
 	);
 
 	// リレー配送には LD-signature が必要なため、署名しないこの経路ではフォロワー配送だけを行う。
@@ -422,7 +415,7 @@ async function publishAccountUpdateToFollowersForApi(
 }
 
 export async function handleQueueAcceptAllFollowRequests(
-	deps: ApiAccountUpdateDependencies,
+	deps: AccountUpdateDependencies,
 	data: DbJobMap['acceptAllFollowRequests'],
 ): Promise<string> {
 	const followee = await fetchUserByIdFromDatabase(deps.db, data.user.id);
@@ -433,37 +426,33 @@ export async function handleQueueAcceptAllFollowRequests(
 	if (followee.isSuspended || followee.isDeleted) return 'skip: followee is suspended or deleted';
 	let accepted = false;
 	try {
-		accepted = await acceptAllFollowRequestsForApi(deps, followee as MiLocalUser);
+		accepted = await acceptAllFollowRequests(deps, followee as MiLocalUser);
 	} catch (error) {
 		// 一部だけ承認できた場合も、新しいフォロワーへ鍵を外した actor を届けてから再試行に回す。
-		await publishAccountUpdateToFollowersForApi(deps, followee.id);
+		await publishAccountUpdateToFollowers(deps, followee.id);
 		throw error;
 	}
 	// 応答時の Update は承認前のフォロワーにしか届かないため、承認したフォロワーへ送り直す。
-	if (accepted) await publishAccountUpdateToFollowersForApi(deps, followee.id);
+	if (accepted) await publishAccountUpdateToFollowers(deps, followee.id);
 	return 'ok';
 }
 
-async function resolveAlsoKnownAsUserForApi(deps: ApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
+async function resolveAlsoKnownAsUser(deps: AccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost = host == null || toPuny(host) === toPuny(deps.config.runtime.host) ? null : toPuny(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
-	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
+	// deps の型に ApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
-	return await resolveUserForApi(deps as unknown as ApiApPersonDependencies, username, normalizedHost).catch(() => {
+	return await resolveUser(deps as unknown as ApPersonDependencies, username, normalizedHost).catch(() => {
 		throw iUpdateNoSuchUserError();
 	});
 }
 
-function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
+function getUserUri(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-export async function updateUsertagsForApi(
-	deps: ApiAccountUpdateDependencies,
-	user: MiUser,
-	tags: string[],
-): Promise<void> {
+export async function updateUsertags(deps: AccountUpdateDependencies, user: MiUser, tags: string[]): Promise<void> {
 	const attachedNames = [...new Set(tags.map((tag) => normalizeForSearch(tag)))];
 	const detachedNames = [
 		...new Set(user.tags.filter((tag) => !tags.includes(tag)).map((tag) => normalizeForSearch(tag))),
@@ -488,11 +477,7 @@ export async function updateUsertagsForApi(
 	});
 }
 
-export async function verifyLinkForApi(
-	deps: ApiAccountUpdateDependencies,
-	url: string,
-	user: MiLocalUser,
-): Promise<void> {
+export async function verifyLink(deps: AccountUpdateDependencies, url: string, user: MiLocalUser): Promise<void> {
 	if (!URL.canParse(url)) {
 		return;
 	}
@@ -519,10 +504,10 @@ export async function verifyLinkForApi(
 }
 
 export async function handleApiIUpdate(
-	deps: ApiAccountUpdateDependencies & { dbQueue: DbQueue },
+	deps: AccountUpdateDependencies & { dbQueue: DbQueue },
 	me: MiLocalUser,
 	token: MiAccessToken | null,
-	ps: ApiParams<typeof iUpdateParamDef>,
+	ps: Params<typeof iUpdateParamDef>,
 	errors: ContractErrors<(typeof iContracts)['i/update']>,
 ): Promise<MeDetailedApiResponse> {
 	const user = (await fetchUserByIdOrFailFromDatabase(deps.db, me.id)) as MiLocalUser;
@@ -532,7 +517,7 @@ export async function handleApiIUpdate(
 	const profileUpdates: UserProfileUpdate = {};
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	let policies: Awaited<ReturnType<typeof getRolePolicies>> | null = null;
+	let policies: Awaited<ReturnType<typeof fetchRolePolicies>> | null = null;
 
 	if (ps.name !== undefined) {
 		if (ps.name === null) {
@@ -568,7 +553,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.mutedWords !== undefined) {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		checkMuteWordCount(ps.mutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.mutedWords);
 
@@ -576,7 +561,7 @@ export async function handleApiIUpdate(
 		profileUpdates.enableWordMute = ps.mutedWords.length > 0;
 	}
 	if (ps.hardMutedWords !== undefined) {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		checkMuteWordCount(ps.hardMutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.hardMutedWords);
 		profileUpdates.hardMutedWords = ps.hardMutedWords;
@@ -633,7 +618,7 @@ export async function handleApiIUpdate(
 		profileUpdates.receiveAnnouncementEmail = ps.receiveAnnouncementEmail;
 	}
 	if (typeof ps.alwaysMarkNsfw === 'boolean') {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		if (policies.alwaysMarkNsfw) {
 			throw errors.restrictedByRole();
 		}
@@ -647,7 +632,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.avatarId) {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
 			throw errors.restrictedByRole();
 		}
@@ -675,7 +660,7 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.bannerId) {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) {
 			throw errors.restrictedByRole();
 		}
@@ -699,10 +684,10 @@ export async function handleApiIUpdate(
 	}
 
 	if (ps.avatarDecorations) {
-		policies ??= await getRolePolicies(deps, user);
+		policies ??= await fetchRolePolicies(deps, user);
 		const [decorations, myRoles, allRoles] = await Promise.all([
 			listAvatarDecorationsFromDatabase(deps.db),
-			getUserRoles(deps, user),
+			fetchUserRoles(deps, user),
 			listRolesFromDatabase(deps.db),
 		]);
 		const allRoleIds = new Set(allRoles.map((role) => role.id));
@@ -763,12 +748,12 @@ export async function handleApiIUpdate(
 				throw errors.noSuchUser();
 			}
 
-			const knownAs = await resolveAlsoKnownAsUserForApi(deps, line);
+			const knownAs = await resolveAlsoKnownAsUser(deps, line);
 			if (knownAs.id === me.id) {
 				throw errors.forbiddenToSetYourself();
 			}
 
-			const toUrl = getUserUriForApi(deps.config, knownAs);
+			const toUrl = getUserUri(deps.config, knownAs);
 			if (!toUrl) {
 				throw errors.uriNull();
 			}
@@ -823,7 +808,7 @@ export async function handleApiIUpdate(
 	updates.emojis = emojis;
 	updates.tags = tags;
 
-	void updateUsertagsForApi(deps, user, tags).catch(() => {});
+	void updateUsertags(deps, user, tags).catch(() => {});
 
 	const unlocking = user.isLocked && ps.isLocked === false;
 	let acceptAllOutboxId: string | null = null;
@@ -845,7 +830,7 @@ export async function handleApiIUpdate(
 	});
 
 	const freshUser = (await fetchUserByIdOrFailFromDatabase(deps.db, user.id)) as MiLocalUser;
-	const iObj = await packMeDetailedForApi(deps, freshUser, { includeSecrets: isSecure });
+	const iObj = await packMeDetailed(deps, freshUser, { includeSecrets: isSecure });
 
 	const updatedProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	deps.publishInternalEvent?.('updateUserProfile', updatedProfile);
@@ -854,11 +839,11 @@ export async function handleApiIUpdate(
 
 	if (acceptAllOutboxId != null) await publishDbOutboxRowEagerly(deps.db, deps.dbQueue, acceptAllOutboxId);
 
-	void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
+	void publishAccountUpdateToFollowers(deps, user.id).catch(() => {});
 
 	const urls = updatedProfile.fields.filter((x) => x.value.startsWith('https://'));
 	for (const url of urls) {
-		void verifyLinkForApi(deps, url.value, user);
+		void verifyLink(deps, url.value, user);
 	}
 
 	return iObj;

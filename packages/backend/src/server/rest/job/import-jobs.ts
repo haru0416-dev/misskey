@@ -3,37 +3,40 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { addDbJob } from '@/core/queue/queues.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { readDriveFileText } from '@/core/drive/DriveFileContent.js';
-import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
+import { readDriveFileText } from '@/core/drive/drive-file-content.js';
+import type { DriveFileContentDependencies } from '@/core/drive/drive-file-content.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase } from '@/core/antenna/AntennaStore.js';
-import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/antenna/AntennaImport.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
+import {
+	countAntennasByUserIdFromDatabase,
+	createAntennasWithinLimitInDatabase,
+} from '@/core/antenna/antenna-store.js';
+import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/antenna/antenna-import.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError, rolePolicyRequiredError } from '../error.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
-import { getRolePolicies, hasRequiredRolePolicy } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies, hasRequiredRolePolicy } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { resolveAlsoKnownAsForApi } from '../user/user.js';
+import { resolveAlsoKnownAs } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiImportJobDependencies = UserPackingDependencies & {
+export type ImportJobDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
 };
 
-export type ApiIImportAntennasDependencies = RolePolicyDependencies &
+export type IImportAntennasDependencies = RolePolicyDependencies &
 	DriveFileContentDependencies & {
 		publishInternalEvent?: InternalEventPublisher;
 	};
@@ -47,8 +50,8 @@ const importJobOptions = (config: Pick<Config, 'queues'>) => ({
 	...queueRetentionOptions(config),
 });
 
-async function checkRecentlyMovedForApi(deps: ApiImportJobDependencies, me: MiLocalUser): Promise<boolean> {
-	const oldSelfIds = await resolveAlsoKnownAsForApi(deps, me.alsoKnownAs);
+async function checkRecentlyMoved(deps: ImportJobDependencies, me: MiLocalUser): Promise<boolean> {
+	const oldSelfIds = await resolveAlsoKnownAs(deps, me.alsoKnownAs);
 	if (!oldSelfIds || oldSelfIds.length === 0) {
 		return false;
 	}
@@ -75,7 +78,7 @@ type ImportFileErrors = {
 };
 
 async function validateImportFile(
-	deps: ApiImportJobDependencies,
+	deps: ImportJobDependencies,
 	me: MiLocalUser,
 	fileId: string,
 	errors: ImportFileErrors,
@@ -89,7 +92,7 @@ async function validateImportFile(
 		throw new ApiError({ status: 400, kind: 'client', ...errors.emptyFile });
 	}
 
-	const checkMoving = await checkRecentlyMovedForApi(deps, me);
+	const checkMoving = await checkRecentlyMoved(deps, me);
 	if (checkMoving ? file.size > 32 * 1024 * 1024 : file.size > 64 * 1024) {
 		throw new ApiError({ status: 400, kind: 'client', ...errors.tooBigFile });
 	}
@@ -102,9 +105,9 @@ export const importBlockingParamDef = z.object({
 });
 
 export async function handleApiIImportBlocking(
-	deps: ApiImportJobDependencies,
+	deps: ImportJobDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof importBlockingParamDef>,
+	params: Params<typeof importBlockingParamDef>,
 ): Promise<void> {
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e' },
@@ -125,9 +128,9 @@ export const importFollowingParamDef = z.object({
 });
 
 export async function handleApiIImportFollowing(
-	deps: ApiImportJobDependencies,
+	deps: ImportJobDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof importFollowingParamDef>,
+	params: Params<typeof importFollowingParamDef>,
 ): Promise<void> {
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'b98644cf-a5ac-4277-a502-0b8054a709a3' },
@@ -151,9 +154,9 @@ export const importMutingParamDef = z.object({
 });
 
 export async function handleApiIImportMuting(
-	deps: ApiImportJobDependencies,
+	deps: ImportJobDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof importMutingParamDef>,
+	params: Params<typeof importMutingParamDef>,
 ): Promise<void> {
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a' },
@@ -173,9 +176,9 @@ export const importUserListsParamDef = z.object({
 });
 
 export async function handleApiIImportUserLists(
-	deps: ApiImportJobDependencies,
+	deps: ImportJobDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof importUserListsParamDef>,
+	params: Params<typeof importUserListsParamDef>,
 ): Promise<void> {
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049' },
@@ -240,7 +243,7 @@ function invalidAntennaImportFileError(): ApiError {
 }
 
 export async function handleApiIImportAntennas(
-	deps: ApiIImportAntennasDependencies,
+	deps: IImportAntennasDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	/**
@@ -278,7 +281,7 @@ export async function handleApiIImportAntennas(
 
 	// 上限超過で1件も作られないのに実行枠 (1回/時) を消費すると、アンテナを整理しても
 	// 1時間再試行できなくなる。先に概算で弾いておく (競合を考慮した厳密な判定は下の transaction 内)
-	const policies = await getRolePolicies(deps, user);
+	const policies = await fetchRolePolicies(deps, user);
 	const currentCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount + validated.data.length > policies.antennaLimit) {
 		throw importAntennasTooManyAntennasError();
@@ -301,7 +304,7 @@ export async function handleApiIImportAntennas(
 			if (!(await hasRequiredRolePolicy(txDeps, currentUser, 'canImportAntennas'))) {
 				throw rolePolicyRequiredError();
 			}
-			return (await getRolePolicies(txDeps, currentUser)).antennaLimit;
+			return (await fetchRolePolicies(txDeps, currentUser)).antennaLimit;
 		},
 	);
 	if (result.status === 'limitExceeded') {

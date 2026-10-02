@@ -5,7 +5,7 @@
 
 import type { endpointMetas as clipsContracts } from '@/server/rest/contracts/clips.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
@@ -14,24 +14,24 @@ import {
 	countClipFavoritesFromDatabase,
 	listFavoritedClipIdsByUserIdFromDatabase,
 	listFavoritedClipIdsByUserIdAndClipIdsFromDatabase,
-} from '@/core/clip/ClipFavoriteStore.js';
+} from '@/core/clip/clip-favorite-store.js';
 import {
 	countClipNotesByClipIdFromDatabase,
 	countClipNotesByClipIdsFromDatabase,
 	createClipNoteWithinLimitInDatabase,
-	deleteClipNoteAndDecrementNoteClippedCountInDatabase,
-} from '@/core/clip/ClipNoteStore.js';
+	deleteClipNoteAndDecrementNoteClippedCountFromDatabase,
+} from '@/core/clip/clip-note-store.js';
 import {
 	createClipWithinLimitInDatabase,
-	deleteClipInDatabase,
+	deleteClipFromDatabase,
 	fetchClipByIdAndUserIdFromDatabase,
 	fetchClipByIdFromDatabase,
 	fetchClipByIdOrFailFromDatabase,
 	listClipsByIdsFromDatabase,
 	listClipsWithPaginationFromDatabase,
 	updateClipInDatabase,
-} from '@/core/clip/ClipStore.js';
-import { fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/clip/clip-store.js';
+import { fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/note/note-store.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -42,9 +42,9 @@ import type { MiClip } from '@/models/Clip.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
@@ -52,9 +52,9 @@ import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiClipDependencies = UserPackingDependencies & RolePolicyDependencies;
+export type ClipDependencies = UserPackingDependencies & RolePolicyDependencies;
 
-export type ApiClipNotesDependencies = NoteDependencies & {
+export type ClipNotesDependencies = NoteDependencies & {
 	meta: MiMeta;
 };
 
@@ -113,8 +113,8 @@ export const clipsNoteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-export async function packClipForApi(
-	deps: ApiClipDependencies,
+export async function packClip(
+	deps: ClipDependencies,
 	clip: MiClip,
 	me: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -158,8 +158,8 @@ export async function packClipForApi(
 	};
 }
 
-export async function packClipsManyForApi(
-	deps: ApiClipDependencies,
+export async function packClipsMany(
+	deps: ClipDependencies,
 	clips: MiClip[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Clip'>[]> {
@@ -178,7 +178,7 @@ export async function packClipsManyForApi(
 
 	return await Promise.all(
 		clips.map((clip) =>
-			packClipForApi(
+			packClip(
 				deps,
 				clip,
 				me,
@@ -194,9 +194,9 @@ export async function packClipsManyForApi(
 }
 
 export async function handleApiClipsList(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipsListParamDef>,
+	params: Params<typeof clipsListParamDef>,
 ): Promise<Packed<'Clip'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
@@ -207,13 +207,13 @@ export async function handleApiClipsList(
 		untilId: pagination.untilId,
 	});
 
-	return await packClipsManyForApi(deps, clips, me);
+	return await packClipsMany(deps, clips, me);
 }
 
 export async function handleApiClipsShow(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof clipIdParamDef>,
+	params: Params<typeof clipIdParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/show']>,
 ): Promise<Packed<'Clip'>> {
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
@@ -224,10 +224,10 @@ export async function handleApiClipsShow(
 		throw errors.noSuchClip();
 	}
 
-	return await packClipForApi(deps, clip, me);
+	return await packClip(deps, clip, me);
 }
 
-export async function handleApiClipsMyFavorites(deps: ApiClipDependencies, me: MiLocalUser): Promise<Packed<'Clip'>[]> {
+export async function handleApiClipsMyFavorites(deps: ClipDependencies, me: MiLocalUser): Promise<Packed<'Clip'>[]> {
 	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
 	if (clipIds.length === 0) {
 		return [];
@@ -236,13 +236,13 @@ export async function handleApiClipsMyFavorites(deps: ApiClipDependencies, me: M
 	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map((clip) => [clip.id, clip]));
 	const clips = clipIds.map((id) => clipById.get(id)).filter((clip): clip is MiClip => clip != null);
 
-	return await packClipsManyForApi(deps, clips, me);
+	return await packClipsMany(deps, clips, me);
 }
 
 export async function handleApiClipsCreate(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipsCreateParamDef>,
+	params: Params<typeof clipsCreateParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/create']>,
 ): Promise<Packed<'Clip'>> {
 	const clip = await createClipWithinLimitInDatabase(
@@ -254,19 +254,19 @@ export async function handleApiClipsCreate(
 			isPublic: params.isPublic,
 			description: params.description || null,
 		},
-		(await getRolePolicies(deps, me)).clipLimit,
+		(await fetchRolePolicies(deps, me)).clipLimit,
 	);
 	if (clip == null) {
 		throw errors.tooManyClips();
 	}
 
-	return await packClipForApi(deps, clip, me);
+	return await packClip(deps, clip, me);
 }
 
 export async function handleApiClipsUpdate(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipsUpdateParamDef>,
+	params: Params<typeof clipsUpdateParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/update']>,
 ): Promise<Packed<'Clip'>> {
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
@@ -284,13 +284,13 @@ export async function handleApiClipsUpdate(
 		}),
 	);
 
-	return await packClipForApi(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
+	return await packClip(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
 }
 
 export async function handleApiClipsDelete(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipIdParamDef>,
+	params: Params<typeof clipIdParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/delete']>,
 ): Promise<void> {
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
@@ -298,13 +298,13 @@ export async function handleApiClipsDelete(
 		throw errors.noSuchClip();
 	}
 
-	await deleteClipInDatabase(deps.db, clip.id);
+	await deleteClipFromDatabase(deps.db, clip.id);
 }
 
 export async function handleApiClipsAddNote(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipsNoteParamDef>,
+	params: Params<typeof clipsNoteParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/add-note']>,
 ): Promise<void> {
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
@@ -320,7 +320,7 @@ export async function handleApiClipsAddNote(
 				noteId: params.noteId,
 				clipId: clip.id,
 			},
-			(await getRolePolicies(deps, me)).noteEachClipsLimit,
+			(await fetchRolePolicies(deps, me)).noteEachClipsLimit,
 		);
 		if (result === 'tooManyClipNotes') {
 			throw errors.tooManyClipNotes();
@@ -343,9 +343,9 @@ export async function handleApiClipsAddNote(
 }
 
 export async function handleApiClipsRemoveNote(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof clipsNoteParamDef>,
+	params: Params<typeof clipsNoteParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/remove-note']>,
 ): Promise<void> {
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
@@ -358,13 +358,13 @@ export async function handleApiClipsRemoveNote(
 		throw errors.noSuchNote();
 	}
 
-	await deleteClipNoteAndDecrementNoteClippedCountInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
+	await deleteClipNoteAndDecrementNoteClippedCountFromDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 }
 
 export async function handleApiClipsNotes(
-	deps: ApiClipNotesDependencies,
+	deps: ClipNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof clipNotesParamDef>,
+	params: Params<typeof clipNotesParamDef>,
 	errors: ContractErrors<(typeof clipsContracts)['clips/notes']>,
 ): Promise<Packed<'Note'>[]> {
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
@@ -396,7 +396,7 @@ export async function handleApiClipsNotes(
 		}),
 	);
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }
 
 export const usersClipsParamDef = z.object({
@@ -406,9 +406,9 @@ export const usersClipsParamDef = z.object({
 });
 
 export async function handleApiUsersClips(
-	deps: ApiClipDependencies,
+	deps: ClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof usersClipsParamDef>,
+	params: Params<typeof usersClipsParamDef>,
 ): Promise<Packed<'Clip'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
@@ -420,5 +420,5 @@ export async function handleApiUsersClips(
 		untilId: pagination.untilId,
 	});
 
-	return await packClipsManyForApi(deps, clips, me);
+	return await packClipsMany(deps, clips, me);
 }

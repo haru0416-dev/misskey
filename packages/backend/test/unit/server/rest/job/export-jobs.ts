@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { handleApiIExportFollowing, handleApiIExportNotes } from '@/server/rest/job/export-jobs.js';
-import type { ApiExportJobDependencies } from '@/server/rest/job/export-jobs.js';
+import type { ExportJobDependencies } from '@/server/rest/job/export-jobs.js';
 import type { MiLocalUser } from '@/models/User.js';
 
 describe('export jobs', () => {
@@ -25,7 +25,7 @@ describe('export jobs', () => {
 				throw new Error('queue unavailable');
 			},
 		},
-	} as unknown as ApiExportJobDependencies;
+	} as unknown as ExportJobDependencies;
 	const me = { id: 'exporter' } as MiLocalUser;
 
 	test('キューへの登録に失敗したら、受け付けたことにせず失敗を返す', async () => {

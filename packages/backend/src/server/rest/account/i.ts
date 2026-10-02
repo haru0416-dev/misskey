@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
-import { listSigninHistoryFromDatabase } from '@/core/account/SigninStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/user-profile-store.js';
+import { listSigninHistoryFromDatabase } from '@/core/account/signin-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { paginationParams } from '@/misc/zod-params.js';
@@ -15,12 +15,12 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { userDeletedError } from '../error.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import { parseApiParams } from '../validation.js';
 import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 
-export type ApiIDependencies = UserPackingDependencies & {
+export type IDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
 
@@ -30,7 +30,7 @@ export const iSigninHistoryParamDef = z.object({
 });
 
 export function packApiSignin(
-	deps: ApiIDependencies,
+	deps: IDependencies,
 	src: MiSignin,
 ): {
 	id: string;
@@ -48,7 +48,7 @@ export function packApiSignin(
 	};
 }
 
-export async function handleApiI(deps: ApiIDependencies, user: MiLocalUser, token: MiAccessToken | null) {
+export async function handleApiI(deps: IDependencies, user: MiLocalUser, token: MiAccessToken | null) {
 	const now = new Date();
 	const today = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
 
@@ -68,16 +68,16 @@ export async function handleApiI(deps: ApiIDependencies, user: MiLocalUser, toke
 		});
 	}
 
-	return await packMeDetailedForApi(deps, freshUser, {
+	return await packMeDetailed(deps, freshUser, {
 		includeSecrets: token == null,
 		profile: userProfile,
 	});
 }
 
 export async function handleApiISigninHistory(
-	deps: ApiIDependencies,
+	deps: IDependencies,
 	user: MiLocalUser,
-	params: ApiParams<typeof iSigninHistoryParamDef>,
+	params: Params<typeof iSigninHistoryParamDef>,
 ): Promise<ReturnType<typeof packApiSignin>[]> {
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 

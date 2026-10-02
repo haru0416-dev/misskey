@@ -5,33 +5,33 @@
 
 import type { endpointMetas as iContracts } from '@/server/rest/contracts/i.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
-import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/role/RoleLogic.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
-import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/system-account-logic.js';
+import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/role/role-logic.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
+import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/role-assignment-store.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/blocking-store.js';
 import {
 	createMutingsInDatabase,
 	listActiveMutingsByMuteeIdFromDatabase,
 	listPermanentMuterIdsByMuteeIdFromDatabase,
-} from '@/core/user/MutingStore.js';
+} from '@/core/user/muting-store.js';
 import {
 	createUserListMembershipsInDatabase,
 	listUserListMembershipsByUserIdFromDatabase,
-} from '@/core/user/UserListMembershipStore.js';
+} from '@/core/user/user-list-membership-store.js';
 import {
 	decrementUsersFollowersCountInDatabase,
 	decrementUsersFollowingCountInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import {
 	listAllFollowingsByFollowerIdFromDatabase,
 	listLocalFollowerFollowingsByFolloweeIdFromDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 import type { RelationshipJobData, ThinUser } from '@/core/queue/types.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
@@ -50,28 +50,28 @@ import {
 } from '../../../core/activitypub/notes-ap.js';
 import type { NoteApDependencies, RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
 import { onMoveAccount } from '../../../core/antenna/antenna-delivery.js';
-import { renderPersonForApi } from './account-update.js';
-import type { ApiAccountUpdateDependencies } from './account-update.js';
+import { renderPerson } from './account-update.js';
+import type { AccountUpdateDependencies } from './account-update.js';
 import { createRoleAssignedNotification } from '../../../core/notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse } from '../user/user.js';
 import { genLocalUserUri } from '../user/following.js';
-import type { ApiFollowingDependencies } from '../user/following.js';
+import type { FollowingDependencies } from '../user/following.js';
 import { parseApiParams } from '../validation.js';
-import { resolveUserForApi } from '../activitypub/ap-person.js';
-import type { ApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { resolveUser } from '../activitypub/ap-person.js';
+import type { ApPersonDependencies } from '../activitypub/ap-person.js';
 
 const accountMoveLogger = new Logger('account-move', 'yellow');
 
-export type ApiAccountMoveDependencies = RolePolicyDependencies &
-	ApiFollowingDependencies &
+export type AccountMoveDependencies = RolePolicyDependencies &
+	FollowingDependencies &
 	NotificationDependencies &
 	NoteApDependencies &
 	RelayDeliverDependencies &
-	ApiAccountUpdateDependencies &
+	AccountUpdateDependencies &
 	UserPackingDependencies & {
 		relationshipQueue: RelationshipQueue;
 	};
@@ -96,38 +96,34 @@ export const iMoveParamDef = z.object({
 	moveToAccount: z.string(),
 });
 
-function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
+function getUserUri(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-async function resolveMoveDestinationUserForApi(deps: ApiAccountMoveDependencies, acct: string): Promise<MiUser> {
+async function resolveMoveDestinationUser(deps: AccountMoveDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost = host == null || toPuny(host) === toPuny(deps.config.runtime.host) ? null : toPuny(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
-	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
+	// deps の型に ApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
-	return await resolveUserForApi(deps as unknown as ApiApPersonDependencies, username, normalizedHost).catch(() => {
+	return await resolveUser(deps as unknown as ApPersonDependencies, username, normalizedHost).catch(() => {
 		throw iMoveNoSuchUserError();
 	});
 }
 
-function renderMoveForApi(
-	config: Pick<Config, 'instance'>,
-	src: { id: MiUser['id'] },
-	dst: MiUser,
-): Record<string, unknown> {
+function renderMove(config: Pick<Config, 'instance'>, src: { id: MiUser['id'] }, dst: MiUser): Record<string, unknown> {
 	const srcUri = genLocalUserUri(config, src.id);
 	return {
 		id: `${config.instance.url}/moves/${src.id}/${dst.id}`,
 		actor: srcUri,
 		type: 'Move',
 		object: srcUri,
-		target: getUserUriForApi(config, dst),
+		target: getUserUri(config, dst),
 	};
 }
 
-async function enqueueRelationshipJobForApi(
-	deps: ApiAccountMoveDependencies,
+async function enqueueRelationshipJob(
+	deps: AccountMoveDependencies,
 	name: 'follow' | 'unfollow' | 'block',
 	rels: { from: ThinUser; to: ThinUser }[],
 	opts: { delay?: number } = {},
@@ -151,7 +147,7 @@ async function enqueueRelationshipJobForApi(
 	return await deps.relationshipQueue.addBulk(jobs);
 }
 
-async function copyBlockingForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
+async function copyBlocking(deps: AccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
 	const [srcBlockerIds, dstBlockerIds] = await Promise.all([
 		listBlockerIdsByBlockeeIdFromDatabase(deps.db, src.id),
 		listBlockerIdsByBlockeeIdFromDatabase(deps.db, dst.id),
@@ -165,10 +161,10 @@ async function copyBlockingForApi(deps: ApiAccountMoveDependencies, src: ThinUse
 		}
 		blockJobs.push({ from: { id: blockerId }, to: { id: dst.id } });
 	}
-	await enqueueRelationshipJobForApi(deps, 'block', blockJobs);
+	await enqueueRelationshipJob(deps, 'block', blockJobs);
 }
 
-async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
+async function copyMutings(deps: AccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
 	const oldMutings = await listActiveMutingsByMuteeIdFromDatabase(deps.db, src.id, new Date());
 	if (oldMutings.length === 0) {
 		return;
@@ -205,7 +201,7 @@ async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser
 	}
 }
 
-async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
+async function copyRoles(deps: AccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldRoleAssignments = await listRoleAssignmentsByUserIdFromDatabase(deps.db, src.id);
 	if (oldRoleAssignments.length === 0) {
 		return;
@@ -252,7 +248,7 @@ async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, 
 	}
 }
 
-async function updateListsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
+async function updateLists(deps: AccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldMemberships = await listUserListMembershipsByUserIdFromDatabase(deps.db, src.id);
 	if (oldMemberships.length === 0) {
 		return;
@@ -289,12 +285,12 @@ async function updateListsForApi(deps: ApiAccountMoveDependencies, src: ThinUser
 
 	if (dst.host != null) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await enqueueRelationshipJobForApi(deps, 'follow', [{ from: { id: proxy.id }, to: { id: dst.id } }]);
+		await enqueueRelationshipJob(deps, 'follow', [{ from: { id: proxy.id }, to: { id: dst.id } }]);
 	}
 }
 
-async function adjustFollowingCountsForApi(
-	deps: ApiAccountMoveDependencies,
+async function adjustFollowingCounts(
+	deps: AccountMoveDependencies,
 	localFollowerIds: string[],
 	oldAccount: MiUser,
 ): Promise<void> {
@@ -318,12 +314,12 @@ async function adjustFollowingCountsForApi(
 	// フォロー・フォロワーカウントの実データ更新は上記で完了する。
 }
 
-async function moveFromLocalForApi(
-	deps: ApiAccountMoveDependencies,
+async function moveFromLocal(
+	deps: AccountMoveDependencies,
 	src: MiLocalUser,
 	dst: MiUser,
 ): Promise<MeDetailedApiResponse> {
-	const dstUri = getUserUriForApi(deps.config, dst);
+	const dstUri = getUserUri(deps.config, dst);
 	if (dstUri == null) {
 		throw iMoveUriNullError();
 	}
@@ -342,20 +338,20 @@ async function moveFromLocalForApi(
 	deps.publishInternalEvent?.('localUserUpdated', updatedSrc);
 
 	const updateAct = renderOnce(async () =>
-		addActivityContext(deps.config, renderUpdate(deps.config, await renderPersonForApi(deps, updatedSrc), updatedSrc)),
+		addActivityContext(deps.config, renderUpdate(deps.config, await renderPerson(deps, updatedSrc), updatedSrc)),
 	);
 	await deliverNoteActivity(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、アカウント移行の完了を待たせない。
 	void deliverToRelays(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
-	const moveAct = renderOnce(() => addActivityContext(deps.config, renderMoveForApi(deps.config, updatedSrc, dst)));
+	const moveAct = renderOnce(() => addActivityContext(deps.config, renderMove(deps.config, updatedSrc, dst)));
 	await deliverNoteActivity(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
 
-	const iObj = await packMeDetailedForApi(deps, updatedSrc, { includeSecrets: true });
+	const iObj = await packMeDetailed(deps, updatedSrc, { includeSecrets: true });
 	deps.publishMainStream?.(updatedSrc.id, 'meUpdated', iObj);
 
 	const followings = await listAllFollowingsByFollowerIdFromDatabase(deps.db, updatedSrc.id);
-	void enqueueRelationshipJobForApi(
+	void enqueueRelationshipJob(
 		deps,
 		'unfollow',
 		followings.map((f) => ({
@@ -365,19 +361,19 @@ async function moveFromLocalForApi(
 		{ delay: process.env['NODE_ENV'] === 'test' ? 10_000 : 1000 * 60 * 60 * 24 },
 	).catch(() => {});
 
-	await postMoveProcessForApi(deps, updatedSrc, dst);
+	await postMoveProcess(deps, updatedSrc, dst);
 
 	return iObj;
 }
 
 /** ローカルからの引っ越しとリモートアクターの movedToUri 検知の両方から呼ぶ。 */
-export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
+export async function postMoveProcess(deps: AccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
 	// 各処理の終了を待ち、失敗を個別に記録してからフォロー移行へ進む。
 	const cascades = [
-		['copyBlocking', copyBlockingForApi(deps, src, dst)],
-		['copyMutings', copyMutingsForApi(deps, src, dst)],
-		['copyRoles', copyRolesForApi(deps, src, dst)],
-		['updateLists', updateListsForApi(deps, src, dst)],
+		['copyBlocking', copyBlocking(deps, src, dst)],
+		['copyMutings', copyMutings(deps, src, dst)],
+		['copyRoles', copyRoles(deps, src, dst)],
+		['updateLists', updateLists(deps, src, dst)],
 		['onMoveAccount', onMoveAccount(deps, src, dst)],
 	] as const;
 	const results = await Promise.allSettled(cascades.map(([, promise]) => promise));
@@ -396,7 +392,7 @@ export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, sr
 	const followJobs = followings.map((f) => ({ from: { id: f.followerId }, to: { id: dst.id } }));
 
 	try {
-		await adjustFollowingCountsForApi(
+		await adjustFollowingCounts(
 			deps,
 			followJobs.map((job) => job.from.id),
 			src,
@@ -405,13 +401,13 @@ export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, sr
 		accountMoveLogger.error(`postMoveProcess: adjustFollowingCounts failed for ${src.id} -> ${dst.id}`, { error });
 	}
 
-	await enqueueRelationshipJobForApi(deps, 'follow', followJobs);
+	await enqueueRelationshipJob(deps, 'follow', followJobs);
 }
 
 export async function handleApiIMove(
-	deps: ApiAccountMoveDependencies,
+	deps: AccountMoveDependencies,
 	me: MiLocalUser,
-	ps: ApiParams<typeof iMoveParamDef>,
+	ps: Params<typeof iMoveParamDef>,
 	errors: ContractErrors<(typeof iContracts)['i/move']>,
 ): Promise<MeDetailedApiResponse> {
 	if (!ps.moveToAccount) {
@@ -424,7 +420,7 @@ export async function handleApiIMove(
 		throw errors.alreadyMoved();
 	}
 
-	let moveTo = await resolveMoveDestinationUserForApi(deps, ps.moveToAccount);
+	let moveTo = await resolveMoveDestinationUser(deps, ps.moveToAccount);
 	const destination = await fetchUserByIdOrFailFromDatabase(deps.db, moveTo.id);
 	moveTo = destination;
 
@@ -443,5 +439,5 @@ export async function handleApiIMove(
 		throw errors.destinationAccountForbids();
 	}
 
-	return await moveFromLocalForApi(deps, me, moveTo);
+	return await moveFromLocal(deps, me, moveTo);
 }

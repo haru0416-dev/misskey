@@ -8,13 +8,13 @@ import type { Config } from '@/config.js';
 import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { ApiWebhookTestDependencies } from '@/server/rest/webhook/webhooks.js';
+import type { WebhookTestDependencies } from '@/server/rest/webhook/webhooks.js';
 
 const { fetchWebhookMock } = vi.hoisted(() => ({
 	fetchWebhookMock: vi.fn(),
 }));
 
-vi.mock('@/core/webhook/WebhookStore.js', () => ({
+vi.mock('@/core/webhook/webhook-store.js', () => ({
 	fetchWebhookByIdAndUserIdFromDatabase: fetchWebhookMock,
 }));
 
@@ -60,7 +60,7 @@ describe('i/webhooks/test REST handler', () => {
 			config,
 			db: {} as MiDrizzleDatabase,
 			userWebhookDeliverQueue: { add } as unknown as UserWebhookDeliverQueue,
-		} as ApiWebhookTestDependencies;
+		} as WebhookTestDependencies;
 
 		await handleApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'reaction' });
 
@@ -93,7 +93,7 @@ describe('i/webhooks/test REST handler', () => {
 			userWebhookDeliverQueue: {
 				add: vi.fn().mockRejectedValue(queueError),
 			} as unknown as UserWebhookDeliverQueue,
-		} as ApiWebhookTestDependencies;
+		} as WebhookTestDependencies;
 
 		await expect(handleApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'note' })).rejects.toBe(queueError);
 	});

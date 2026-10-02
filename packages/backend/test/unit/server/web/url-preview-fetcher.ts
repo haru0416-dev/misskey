@@ -7,8 +7,8 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
-import { fetchUrlPreview } from '@/server/web/UrlPreviewFetcher.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
+import { fetchUrlPreview } from '@/server/web/url-preview-fetcher.js';
 
 const options = {
 	lang: 'ja-JP',

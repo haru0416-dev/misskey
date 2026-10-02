@@ -4,13 +4,13 @@
  */
 
 import type { QueueProgressReporter, ObjectStorageFileJobData } from '@/core/queue/types.js';
-import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
+import { finishDriveFileDeletionSync } from '@/core/drive/drive-file-deletion-logic.js';
 import {
 	countRemoteCachedDriveFilesFromDatabase,
 	listRemoteCachedDriveFilesWithPaginationFromDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
+} from '@/core/drive/drive-file-store.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
+import type { S3Service } from '@/core/drive/s3-service.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';
@@ -38,7 +38,7 @@ export type QueueObjectStorageDependencies = {
 	) => unknown;
 };
 
-export async function deleteObjectStorageFileForApi(deps: QueueObjectStorageDependencies, key: string): Promise<void> {
+export async function deleteObjectStorageFile(deps: QueueObjectStorageDependencies, key: string): Promise<void> {
 	try {
 		await deps.s3Service.delete(deps.meta as MiMeta, { key });
 	} catch (err) {
@@ -51,7 +51,7 @@ export async function deleteObjectStorageFileForApi(deps: QueueObjectStorageDepe
 	}
 }
 
-export async function deleteFileSyncForApi(
+export async function deleteFileSync(
 	deps: QueueObjectStorageDependencies,
 	file: MiDriveFile,
 	isExpired = false,
@@ -76,15 +76,15 @@ export async function deleteFileSyncForApi(
 		const promises: Promise<void>[] = [];
 
 		if (file.accessKey != null) {
-			promises.push(deleteObjectStorageFileForApi(deps, file.accessKey));
+			promises.push(deleteObjectStorageFile(deps, file.accessKey));
 		}
 
 		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
-			promises.push(deleteObjectStorageFileForApi(deps, file.thumbnailAccessKey));
+			promises.push(deleteObjectStorageFile(deps, file.thumbnailAccessKey));
 		}
 
 		if (file.webpublicUrl && file.webpublicAccessKey != null) {
-			promises.push(deleteObjectStorageFileForApi(deps, file.webpublicAccessKey));
+			promises.push(deleteObjectStorageFile(deps, file.webpublicAccessKey));
 		}
 
 		await Promise.all(promises);
@@ -95,7 +95,7 @@ export async function deleteFileSyncForApi(
 			db: deps.db,
 			meta: deps.meta,
 			deleteInternalFile: (key) => deps.internalStorageService.del(key),
-			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForApi(deps, key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFile(deps, key),
 			updateDriveChart: (f, isAdditional) => deps.chartWriters.driveChart.update(f, isAdditional),
 			updatePerUserDriveChart: (f, isAdditional) => deps.chartWriters.perUserDriveChart.update(f, isAdditional),
 			updateInstanceDriveChart: (f, isAdditional) => deps.chartWriters.instanceChart.updateDrive(f, isAdditional),
@@ -131,7 +131,7 @@ export async function handleQueueCleanRemoteFiles(
 
 		cursor = files.at(-1)?.id ?? null;
 
-		await Promise.all(files.map((file) => deleteFileSyncForApi(deps, file, true)));
+		await Promise.all(files.map((file) => deleteFileSync(deps, file, true)));
 
 		deletedCount += files.length;
 
@@ -143,6 +143,6 @@ export async function handleQueueDeleteFile(
 	deps: QueueObjectStorageDependencies,
 	data: ObjectStorageFileJobData,
 ): Promise<string> {
-	await deleteObjectStorageFileForApi(deps, data.key);
+	await deleteObjectStorageFile(deps, data.key);
 	return 'Success';
 }

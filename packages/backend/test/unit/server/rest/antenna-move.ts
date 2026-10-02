@@ -13,8 +13,8 @@ import {
 	createAntennaInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
-} from '@/core/antenna/AntennaStore.js';
-import { createUserInDatabase } from '@/core/user/UserStore.js';
+} from '@/core/antenna/antenna-store.js';
+import { createUserInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { onMoveAccount } from '@/core/antenna/antenna-delivery.js';
 import type { MiUser } from '@/models/User.js';

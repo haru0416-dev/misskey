@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
-import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/muting-store.js';
+import { fetchRoleByIdFromDatabase } from '@/core/role/role-store.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/user-profile-store.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';

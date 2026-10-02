@@ -9,7 +9,7 @@ import { loadConfig } from '@/config.js';
 import { createBunSqlClient, createBunSqlDatabase } from '@/db/bun-sql.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { countInstanceNote, flushInstanceNoteCounts } from '@/core/instance/instance-notes-counter.js';
-import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/instance/InstanceStore.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/instance/instance-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 // リモートの投稿数は投稿のトランザクションの外でまとめて反映する。同じサーバーの行を受信ごとに更新すると、

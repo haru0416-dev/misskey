@@ -3,25 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	blockingExistsInDatabase,
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
-} from '@/core/user/BlockingStore.js';
+} from '@/core/user/blocking-store.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/system-account-logic.js';
 import {
 	createUserListMembershipWithinLimitInDatabase,
-	deleteUserListMembershipInDatabase,
+	deleteUserListMembershipFromDatabase,
 	fetchUserListMembershipByUserIdAndUserListIdFromDatabase,
 	listUserListMembershipsByUserListIdWithPaginationFromDatabase,
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	updateUserListMembershipWithRepliesInDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/user/UserListMembershipStore.js';
+} from '@/core/user/user-list-membership-store.js';
 import {
 	createUserListWithinLimitInDatabase,
 	createUserListWithMembershipsWithinLimitsInDatabase,
@@ -30,8 +30,8 @@ import {
 	fetchPublicUserListByIdFromDatabase,
 	fetchUserListByIdAndUserIdFromDatabase,
 	lockUserListOwnerForCreationInDatabase,
-} from '@/core/user/UserListStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsForKeyShareFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/user/user-list-store.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsForKeyShareFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -43,12 +43,12 @@ import { ApiError } from '../error.js';
 import type { InternalEventPublisher, UserListStreamPublisher } from '../../../core/events.js';
 import { packUserLite, packUserLiteMany } from '../../../core/user/user-packing.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiUsersListsDependencies = UserPackingDependencies &
+export type UsersListsDependencies = UserPackingDependencies &
 	RolePolicyDependencies & {
 		relationshipQueue: RelationshipQueue;
 		publishInternalEvent?: InternalEventPublisher;
@@ -57,8 +57,8 @@ export type ApiUsersListsDependencies = UserPackingDependencies &
 
 class TooManyUsersError extends Error {}
 
-async function packUserListByRowForApi(
-	deps: ApiUsersListsDependencies,
+async function packUserListByRow(
+	deps: UsersListsDependencies,
 	userList: MiUserList,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
 	const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id);
@@ -72,8 +72,8 @@ async function packUserListByRowForApi(
 	};
 }
 
-async function packUserListMembershipsManyForApi(
-	deps: ApiUsersListsDependencies,
+async function packUserListMembershipsMany(
+	deps: UsersListsDependencies,
 	memberships: UserListMembershipRow[],
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
 	const packedUsers = await packUserLiteMany(
@@ -93,8 +93,8 @@ async function packUserListMembershipsManyForApi(
 	);
 }
 
-function createFollowJobForApi(
-	deps: ApiUsersListsDependencies,
+function createFollowJob(
+	deps: UsersListsDependencies,
 	followings: { from: { id: MiUser['id'] }; to: { id: MiUser['id'] } }[],
 ): Promise<unknown> {
 	const jobs = followings.map((rel) => ({
@@ -108,14 +108,14 @@ function createFollowJobForApi(
 	return deps.relationshipQueue.addBulk(jobs);
 }
 
-export async function addUserListMemberForApi(
-	deps: ApiUsersListsDependencies,
+export async function addUserListMember(
+	deps: UsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,
 	me: MiUser,
 	options: { withReplies?: boolean } = {},
 ): Promise<void> {
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	const created = await createUserListMembershipWithinLimitInDatabase(
 		deps.db,
 		{
@@ -136,23 +136,19 @@ export async function addUserListMemberForApi(
 
 	if (target.host != null) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await createFollowJobForApi(deps, [{ from: { id: proxy.id }, to: { id: target.id } }]);
+		await createFollowJob(deps, [{ from: { id: proxy.id }, to: { id: target.id } }]);
 	}
 }
 
-async function removeUserListMemberForApi(
-	deps: ApiUsersListsDependencies,
-	target: MiUser,
-	list: MiUserList,
-): Promise<void> {
-	await deleteUserListMembershipInDatabase(deps.db, target.id, list.id);
+async function removeUserListMember(deps: UsersListsDependencies, target: MiUser, list: MiUserList): Promise<void> {
+	await deleteUserListMembershipFromDatabase(deps.db, target.id, list.id);
 
 	deps.publishInternalEvent?.('userListMemberRemoved', { userListId: list.id, memberId: target.id });
 	deps.publishUserListStream?.(list.id, 'userRemoved', await packUserLite(deps, target));
 }
 
-async function updateUserListMembershipForApi(
-	deps: ApiUsersListsDependencies,
+async function updateUserListMembership(
+	deps: UsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,
 	options: { withReplies?: boolean },
@@ -174,11 +170,7 @@ function noSuchUserError(id: string): ApiError {
 	return new ApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
 }
 
-async function getUserForApi(
-	deps: ApiUsersListsDependencies,
-	userId: string,
-	noSuchUserErrorId: string,
-): Promise<MiUser> {
+async function fetchUser(deps: UsersListsDependencies, userId: string, noSuchUserErrorId: string): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (user == null) {
 		throw noSuchUserError(noSuchUserErrorId);
@@ -191,11 +183,11 @@ export const createParamDef = z.object({
 });
 
 export async function handleApiUsersListsCreate(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof createParamDef>,
+	params: Params<typeof createParamDef>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const policies = await getRolePolicies(deps, me);
+	const policies = await fetchRolePolicies(deps, me);
 	const userList = await createUserListWithinLimitInDatabase(
 		deps.db,
 		{
@@ -214,7 +206,7 @@ export async function handleApiUsersListsCreate(
 		});
 	}
 
-	return await packUserListByRowForApi(deps, userList);
+	return await packUserListByRow(deps, userList);
 }
 
 export const createFromPublicParamDef = z.object({
@@ -223,9 +215,9 @@ export const createFromPublicParamDef = z.object({
 });
 
 export async function handleApiUsersListsCreateFromPublic(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof createFromPublicParamDef>,
+	params: Params<typeof createFromPublicParamDef>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
 	const copied = await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
@@ -235,7 +227,7 @@ export async function handleApiUsersListsCreateFromPublic(
 			throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
 		}
 
-		const policies = await getRolePolicies({ ...deps, db }, me);
+		const policies = await fetchRolePolicies({ ...deps, db }, me);
 		if (!ownerExists || (await countUserListsByUserIdFromDatabase(db, me.id)) >= policies.userListLimit) {
 			throw new ApiError({
 				status: 400,
@@ -337,7 +329,7 @@ export async function handleApiUsersListsCreateFromPublic(
 	}
 	if (remoteUsers.length > 0) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await createFollowJobForApi(
+		await createFollowJob(
 			deps,
 			remoteUsers.map((user) => ({ from: { id: proxy.id }, to: { id: user.id } })),
 		);
@@ -358,18 +350,18 @@ export const pullParamDef = z.object({
 });
 
 export async function handleApiUsersListsPull(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pullParamDef>,
+	params: Params<typeof pullParamDef>,
 ): Promise<void> {
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 	}
 
-	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
+	const user = await fetchUser(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await removeUserListMemberForApi(deps, user, userList);
+	await removeUserListMember(deps, user, userList);
 }
 
 export const pushParamDef = z.object({
@@ -378,16 +370,16 @@ export const pushParamDef = z.object({
 });
 
 export async function handleApiUsersListsPush(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof pushParamDef>,
+	params: Params<typeof pushParamDef>,
 ): Promise<void> {
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
 	}
 
-	const user = await getUserForApi(deps, params.userId, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
+	const user = await fetchUser(deps, params.userId, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
 
 	if (user.id !== me.id) {
 		const blockExist = await blockingExistsInDatabase(deps.db, user.id, me.id);
@@ -412,7 +404,7 @@ export async function handleApiUsersListsPush(
 	}
 
 	try {
-		await addUserListMemberForApi(deps, user, userList, me);
+		await addUserListMember(deps, user, userList, me);
 	} catch (err) {
 		if (err instanceof TooManyUsersError) {
 			throw new ApiError({
@@ -434,9 +426,9 @@ export const getMembershipsParamDef = z.object({
 });
 
 export async function handleApiUsersListsGetMemberships(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser | null,
-	params: ApiParams<typeof getMembershipsParamDef>,
+	params: Params<typeof getMembershipsParamDef>,
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
 	const userList =
 		!params.forPublic && me != null
@@ -455,7 +447,7 @@ export async function handleApiUsersListsGetMemberships(
 		untilId: pagination.untilId,
 	});
 
-	return await packUserListMembershipsManyForApi(deps, memberships);
+	return await packUserListMembershipsMany(deps, memberships);
 }
 
 export const updateMembershipParamDef = z.object({
@@ -465,18 +457,18 @@ export const updateMembershipParamDef = z.object({
 });
 
 export async function handleApiUsersListsUpdateMembership(
-	deps: ApiUsersListsDependencies,
+	deps: UsersListsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof updateMembershipParamDef>,
+	params: Params<typeof updateMembershipParamDef>,
 ): Promise<void> {
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) {
 		throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 	}
 
-	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
+	const user = await fetchUser(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await updateUserListMembershipForApi(
+	await updateUserListMembership(
 		deps,
 		user,
 		userList,

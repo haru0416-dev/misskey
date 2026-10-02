@@ -5,20 +5,23 @@
 
 import type { endpointMetas as adminSystemWebhookContracts } from '@/server/rest/contracts/admin-system-webhook.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	createSystemWebhookWithSideEffects,
 	deleteSystemWebhookWithSideEffects,
 	updateSystemWebhookWithSideEffects,
-} from '@/core/webhook/SystemWebhookLogic.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
+} from '@/core/webhook/system-webhook-logic.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/system-webhook-queue.js';
 import {
 	fetchSystemWebhookByIdFromDatabase,
 	listSystemWebhooksFromDatabase,
-} from '@/core/webhook/SystemWebhookStore.js';
-import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/webhook/SystemWebhookTestLogic.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+} from '@/core/webhook/system-webhook-store.js';
+import {
+	NoSuchSystemWebhookForTestError,
+	testSystemWebhookWithQueue,
+} from '@/core/webhook/system-webhook-test-logic.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { Config } from '@/config.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -33,7 +36,7 @@ import type { InternalEventPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminSystemWebhookDependencies = {
+export type AdminSystemWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
@@ -110,9 +113,9 @@ function noSuchSystemWebhookError(): ApiError {
 }
 
 export async function handleApiAdminSystemWebhookCreate(
-	deps: ApiAdminSystemWebhookDependencies,
+	deps: AdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminSystemWebhookCreateParamDef>,
+	params: Params<typeof adminSystemWebhookCreateParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
 	const webhook = await createSystemWebhookWithSideEffects(
 		{
@@ -129,9 +132,9 @@ export async function handleApiAdminSystemWebhookCreate(
 }
 
 export async function handleApiAdminSystemWebhookDelete(
-	deps: ApiAdminSystemWebhookDependencies,
+	deps: AdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminSystemWebhookDeleteParamDef>,
+	params: Params<typeof adminSystemWebhookDeleteParamDef>,
 ): Promise<void> {
 	await deleteSystemWebhookWithSideEffects(
 		{
@@ -145,8 +148,8 @@ export async function handleApiAdminSystemWebhookDelete(
 }
 
 export async function handleApiAdminSystemWebhookList(
-	deps: ApiAdminSystemWebhookDependencies,
-	params: ApiParams<typeof adminSystemWebhookListParamDef>,
+	deps: AdminSystemWebhookDependencies,
+	params: Params<typeof adminSystemWebhookListParamDef>,
 ): Promise<Packed<'SystemWebhook'>[]> {
 	const webhooks = await listSystemWebhooksFromDatabase(
 		deps.db,
@@ -160,8 +163,8 @@ export async function handleApiAdminSystemWebhookList(
 }
 
 export async function handleApiAdminSystemWebhookShow(
-	deps: ApiAdminSystemWebhookDependencies,
-	params: ApiParams<typeof adminSystemWebhookShowParamDef>,
+	deps: AdminSystemWebhookDependencies,
+	params: Params<typeof adminSystemWebhookShowParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
 	const webhook = await fetchSystemWebhookByIdFromDatabase(deps.db, params.id);
 	if (webhook == null) {
@@ -172,8 +175,8 @@ export async function handleApiAdminSystemWebhookShow(
 }
 
 export async function handleApiAdminSystemWebhookTest(
-	deps: ApiAdminSystemWebhookDependencies,
-	params: ApiParams<typeof adminSystemWebhookTestParamDef>,
+	deps: AdminSystemWebhookDependencies,
+	params: Params<typeof adminSystemWebhookTestParamDef>,
 	errors: ContractErrors<(typeof adminSystemWebhookContracts)['admin/system-webhook/test']>,
 ): Promise<void> {
 	const testParams =
@@ -206,9 +209,9 @@ export async function handleApiAdminSystemWebhookTest(
 }
 
 export async function handleApiAdminSystemWebhookUpdate(
-	deps: ApiAdminSystemWebhookDependencies,
+	deps: AdminSystemWebhookDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminSystemWebhookUpdateParamDef>,
+	params: Params<typeof adminSystemWebhookUpdateParamDef>,
 ): Promise<Packed<'SystemWebhook'>> {
 	const webhook = await updateSystemWebhookWithSideEffects(
 		{

@@ -7,17 +7,17 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import {
 	createFollowingInDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
-} from '@/core/user/FollowingStore.js';
-import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
+} from '@/core/user/following-store.js';
+import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/user/follow-request-store.js';
 import {
 	createBlockingInDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
-} from '@/core/user/BlockingStore.js';
-import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/user/blocking-store.js';
+import { updateUserProfileInDatabase } from '@/core/user/user-profile-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleQueueRelationshipBlock,

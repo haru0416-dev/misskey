@@ -5,17 +5,17 @@
 
 import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { hashPasswordSync } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/user/user-store.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	unsetUserMfaInDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -25,7 +25,7 @@ import { ApiError } from '../error.js';
 import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminUserMaintenanceDependencies = {
+export type AdminUserMaintenanceDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -59,7 +59,7 @@ function accessDeniedError(): ApiError {
  * 管理者どうしの横取りも防ぐ。
  */
 async function assertCanTakeOverUser(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
@@ -69,9 +69,9 @@ async function assertCanTakeOverUser(
 }
 
 export async function handleApiAdminResetPassword(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	params: Params<typeof adminUserMaintenanceParamDef>,
 	errors: ContractErrors<(typeof adminContracts)['admin/reset-password']>,
 ): Promise<ResetPasswordResponse> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
@@ -95,9 +95,9 @@ export async function handleApiAdminResetPassword(
 }
 
 export async function handleApiAdminUnsetMfa(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	params: Params<typeof adminUserMaintenanceParamDef>,
 	errors: ContractErrors<(typeof adminContracts)['admin/unset-mfa']>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
@@ -115,9 +115,9 @@ export async function handleApiAdminUnsetMfa(
 }
 
 export async function handleApiAdminUnsetUserAvatar(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	params: Params<typeof adminUserMaintenanceParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
@@ -142,9 +142,9 @@ export async function handleApiAdminUnsetUserAvatar(
 }
 
 export async function handleApiAdminUnsetUserBanner(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUserMaintenanceParamDef>,
+	params: Params<typeof adminUserMaintenanceParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
@@ -169,9 +169,9 @@ export async function handleApiAdminUnsetUserBanner(
 }
 
 export async function handleApiAdminUpdateUserNote(
-	deps: ApiAdminUserMaintenanceDependencies,
+	deps: AdminUserMaintenanceDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUpdateUserNoteParamDef>,
+	params: Params<typeof adminUpdateUserNoteParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {

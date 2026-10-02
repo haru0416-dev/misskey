@@ -11,7 +11,7 @@ import { envOption } from '@/env.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createMisskeyApp } from '@/server/app.js';
-import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
+import { createOAuthProviderRuntime } from '@/server/oauth/oauth-provider-runtime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
 import type { StreamServerDependencies } from '@/server/streaming/runtime.js';
 import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';

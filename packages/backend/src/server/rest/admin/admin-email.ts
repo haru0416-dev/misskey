@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminEmailDependencies = {
+export type AdminEmailDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
@@ -19,8 +19,8 @@ export const adminSendEmailParamDef = z.object({
 });
 
 export async function handleApiAdminSendEmail(
-	deps: ApiAdminEmailDependencies,
-	params: ApiParams<typeof adminSendEmailParamDef>,
+	deps: AdminEmailDependencies,
+	params: Params<typeof adminSendEmailParamDef>,
 ): Promise<void> {
 	await deps.emailService.sendEmail(params.to, params.subject, params.text, params.text);
 }

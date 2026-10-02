@@ -4,17 +4,17 @@
  */
 
 import * as Bull from 'bullmq';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/fetch-instance-metadata-logic.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/core/queue/types.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/following-store.js';
 import MisskeyLogger from '@/logger.js';
-import { isFederationAllowedUri, signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
+import { isFederationAllowedUri, signedPost } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
@@ -88,7 +88,7 @@ export async function handleQueueDeliver(deps: QueueDeliverDependencies, data: D
 	}
 
 	try {
-		await signedPostForApi(deps, data.user, data.to, data.content, data.digest);
+		await signedPost(deps, data.user, data.to, data.content, data.digest);
 
 		void deps.chartWriters.apRequestChart.deliverSucc();
 		void deps.chartWriters.federationChart.deliverd(host, true);

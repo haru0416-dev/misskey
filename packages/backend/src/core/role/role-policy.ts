@@ -4,8 +4,8 @@
  */
 
 import type { Config } from '@/config.js';
-import { listRoleAssignmentsByUserIdFromDatabaseCachedByVersion } from '@/core/role/RoleAssignmentStore.js';
-import { fetchRolesCacheVersionFromDatabase, listRolesFromDatabaseCachedByVersion } from '@/core/role/RoleStore.js';
+import { listRoleAssignmentsByUserIdFromDatabaseCachedByVersion } from '@/core/role/role-assignment-store.js';
+import { fetchRolesCacheVersionFromDatabase, listRolesFromDatabaseCachedByVersion } from '@/core/role/role-store.js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -99,7 +99,7 @@ export function computeUserRoles(
 	];
 }
 
-export async function getUserRoles(deps: RolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
+export async function fetchUserRoles(deps: RolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
 	if (user == null) {
 		return [];
 	}
@@ -189,13 +189,13 @@ export function getUserProfilePolicies(
 	};
 }
 
-export async function getRolePolicies(
+export async function fetchRolePolicies(
 	deps: RolePolicyDependencies,
 	user: MiUser | null,
 	precomputedRoles?: MiRole[],
 ): Promise<RolePolicies> {
 	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
-	const roles = precomputedRoles ?? (await getUserRoles(deps, user));
+	const roles = precomputedRoles ?? (await fetchUserRoles(deps, user));
 	const calc = createPolicyCalculator(basePolicies, roles);
 	const serverMaxFileSizeMb = Math.floor(deps.config.limits.maximumFileSizeBytes / (1024 * 1024));
 
@@ -261,7 +261,7 @@ export async function userIsModerator(deps: RolePolicyDependencies, user: MiUser
 		return true;
 	}
 
-	const roles = await getUserRoles(deps, user);
+	const roles = await fetchUserRoles(deps, user);
 	return roles.some((role) => role.isModerator || role.isAdministrator);
 }
 
@@ -273,7 +273,7 @@ export async function userIsAdministrator(deps: RolePolicyDependencies, user: Mi
 		return true;
 	}
 
-	const roles = await getUserRoles(deps, user);
+	const roles = await fetchUserRoles(deps, user);
 	return roles.some((role) => role.isAdministrator);
 }
 
@@ -290,8 +290,8 @@ export async function hasRequiredRolePolicy(
 	if (user != null && deps.meta.rootUserId === user.id) {
 		return true;
 	}
-	const roles = await getUserRoles(deps, user);
-	if ((await getRolePolicies(deps, user, roles))[policy]) {
+	const roles = await fetchUserRoles(deps, user);
+	if ((await fetchRolePolicies(deps, user, roles))[policy]) {
 		return true;
 	}
 	return roles.some((role) => role.isAdministrator);

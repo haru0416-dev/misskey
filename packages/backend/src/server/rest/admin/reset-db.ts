@@ -6,7 +6,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { resetDb } from '@/misc/reset-db.js';
@@ -14,7 +14,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { SignupInternalEventPublisher } from '../auth/signup.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiResetDbDependencies = {
+export type ResetDbDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis.Redis;
@@ -24,7 +24,7 @@ export type ApiResetDbDependencies = {
 
 export const resetDbParamDef = z.object({});
 
-export async function handleApiResetDb(deps: ApiResetDbDependencies, body: Record<string, unknown>): Promise<void> {
+export async function handleApiResetDb(deps: ResetDbDependencies, body: Record<string, unknown>): Promise<void> {
 	parseApiParams(resetDbParamDef, body);
 
 	if (process.env['NODE_ENV'] !== 'test') {

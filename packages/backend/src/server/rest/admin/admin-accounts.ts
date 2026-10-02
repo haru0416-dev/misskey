@@ -5,34 +5,34 @@
 
 import type { endpointMetas as adminContracts } from '@/server/rest/contracts/admin.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { deleteAccountWithSideEffects } from '@/core/account/delete-account-logic.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
-import { RootUserAlreadyAssignedError } from '@/core/account/SignupStore.js';
+import { RootUserAlreadyAssignedError } from '@/core/account/signup-store.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
-import { updateSystemAccountUserInDatabase } from '@/core/system-account/SystemAccountStore.js';
-import { fetchUserProfileByEmailFromDatabase } from '@/core/user/UserProfileStore.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { updateSystemAccountUserInDatabase } from '@/core/system-account/system-account-store.js';
+import { fetchUserProfileByEmailFromDatabase } from '@/core/user/user-profile-store.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { hashPassword } from '@/misc/password.js';
 import { ApiError } from '../error.js';
-import type { ApiAuthenticated } from '../auth/auth.js';
+import type { Authenticated } from '../auth/auth.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
 import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { createLocalSignupAccount, packSignupUser } from '../auth/signup.js';
 import type { SignupDependencies, SignupResponse } from '../auth/signup.js';
-import { packMeDetailedForApi, packUserDetailedNotMeForApi } from '../user/user.js';
+import { packMeDetailed, packUserDetailedNotMe } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminAccountsDependencies = UserPackingDependencies &
+export type AdminAccountsDependencies = UserPackingDependencies &
 	SignupDependencies & {
 		dbQueue: DbQueue;
 		deliverQueue: DeliverQueue;
@@ -85,8 +85,8 @@ function adminAccountNoSuchUserError(id: string): ApiError {
 }
 
 export async function handleApiAdminAccountsCreate(
-	deps: ApiAdminAccountsDependencies,
-	auth: ApiAuthenticated,
+	deps: AdminAccountsDependencies,
+	auth: Authenticated,
 	body: Record<string, unknown>,
 ): Promise<SignupResponse> {
 	const params = parseApiParams(adminAccountCreateParamDef, body);
@@ -129,8 +129,8 @@ export async function handleApiAdminAccountsCreate(
 }
 
 export async function handleApiAdminAccountsFindByEmail(
-	deps: ApiAdminAccountsDependencies,
-	params: ApiParams<typeof adminAccountsFindByEmailParamDef>,
+	deps: AdminAccountsDependencies,
+	params: Params<typeof adminAccountsFindByEmailParamDef>,
 	errors: ContractErrors<(typeof adminContracts)['admin/accounts/find-by-email']>,
 ): Promise<UserDetailedNotMeApiResponse> {
 	const profile = await fetchUserProfileByEmailFromDatabase(deps.db, params.email);
@@ -139,13 +139,13 @@ export async function handleApiAdminAccountsFindByEmail(
 		throw errors.userNotFound();
 	}
 
-	return await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
+	return await packUserDetailedNotMe(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
 }
 
 export async function handleApiAdminAccountsDelete(
-	deps: ApiAdminAccountsDependencies,
+	deps: AdminAccountsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAccountDeleteParamDef>,
+	params: Params<typeof adminAccountDeleteParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 
@@ -157,9 +157,9 @@ export async function handleApiAdminAccountsDelete(
 }
 
 export async function handleApiAdminDeleteAccount(
-	deps: ApiAdminAccountsDependencies,
+	deps: AdminAccountsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAccountDeleteParamDef>,
+	params: Params<typeof adminAccountDeleteParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
@@ -173,9 +173,9 @@ export async function handleApiAdminDeleteAccount(
 }
 
 export async function handleApiAdminUpdateProxyAccount(
-	deps: ApiAdminAccountsDependencies,
+	deps: AdminAccountsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUpdateProxyAccountParamDef>,
+	params: Params<typeof adminUpdateProxyAccountParamDef>,
 ): Promise<MeDetailedApiResponse> {
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
 	const updated = await updateSystemAccountUserInDatabase(
@@ -193,7 +193,7 @@ export async function handleApiAdminUpdateProxyAccount(
 		});
 	}
 
-	return await packMeDetailedForApi(deps, updated, {
+	return await packMeDetailed(deps, updated, {
 		includeSecrets: false,
 	});
 }

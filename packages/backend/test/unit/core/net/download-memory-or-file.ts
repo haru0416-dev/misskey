@@ -8,9 +8,9 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createDownloadService } from '@/core/net/DownloadService.js';
-import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
-import { createLoggerService } from '@/core/LoggerService.js';
+import { createDownloadService } from '@/core/net/download-service.js';
+import { createHttpRequestService } from '@/core/net/http-request-service.js';
+import { createLoggerService } from '@/core/logger-service.js';
 import { loadConfig } from '@/config.js';
 
 // メディアプロキシは小さい画像をメモリに受け、上限を超えた分だけ一時ファイルに逃がす。

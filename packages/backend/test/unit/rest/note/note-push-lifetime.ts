@@ -9,10 +9,10 @@ import { StatusError } from '@/misc/status-error.js';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createSwSubscriptionInDatabase, fetchSwSubscriptionFromDatabase } from '@/core/sw/SwSubscriptionStore.js';
-import { createNote } from '@/core/note/NoteCreationService.js';
-import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createSwSubscriptionInDatabase, fetchSwSubscriptionFromDatabase } from '@/core/sw/sw-subscription-store.js';
+import { createNote } from '@/core/note/note-creation-service.js';
+import type { NoteCreationDependencies } from '@/core/note/note-creation-service.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
 

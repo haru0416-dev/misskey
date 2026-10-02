@@ -10,26 +10,26 @@ import { ZipArchiveReader } from 'slacc';
 import {
 	deleteEmojiByNameAndHostFromDatabase,
 	listLocalEmojisOrderedByIdFromDatabase,
-} from '@/core/emoji/EmojiStore.js';
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/emoji/emoji-store.js';
+import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase } from '@/core/drive/drive-file-store.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
 import { writeZip } from '@/misc/zip-writer.js';
 import type { ZipEntry } from '@/misc/zip-writer.js';
-import { readDriveFileBuffer, withDriveFileContent } from '@/core/drive/DriveFileContent.js';
-import type { DriveFileContentDependencies } from '@/core/drive/DriveFileContent.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
+import { readDriveFileBuffer, withDriveFileContent } from '@/core/drive/drive-file-content.js';
+import type { DriveFileContentDependencies } from '@/core/drive/drive-file-content.js';
+import type { DownloadService } from '@/core/net/download-service.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/core/queue/types.js';
-import { addDriveFileForApi } from '@/server/rest/drive/drive-file-upload.js';
-import type { ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
-import { addCustomEmojiForApi } from '@/server/rest/emoji/emojis.js';
-import type { ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
+import { addDriveFile } from '@/server/rest/drive/drive-file-upload.js';
+import type { DriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmoji } from '@/server/rest/emoji/emojis.js';
+import type { EmojiDependencies } from '@/server/rest/emoji/emojis.js';
 import { createExportCompletedNotification } from '@/core/notification/notification.js';
 import type { NotificationDependencies } from '@/core/notification/notification.js';
 
-export type QueueEmojisDependencies = ApiDriveFileUploadDependencies &
+export type QueueEmojisDependencies = DriveFileUploadDependencies &
 	DriveFileContentDependencies &
-	ApiEmojiDependencies &
+	EmojiDependencies &
 	NotificationDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 	};
@@ -125,7 +125,7 @@ export async function handleQueueExportCustomEmojis(
 	try {
 		await writeZip(archivePath, directoryEntries(path));
 		const fileName = 'custom-emojis-' + formatDateTimeForFileName(new Date()) + '.zip';
-		const driveFile = await addDriveFileForApi(deps, { user, path: archivePath, name: fileName, force: true });
+		const driveFile = await addDriveFile(deps, { user, path: archivePath, name: fileName, force: true });
 
 		createExportCompletedNotification(deps, user.id, 'customEmoji', driveFile.id);
 	} finally {
@@ -195,13 +195,13 @@ export async function handleQueueImportCustomEmojis(
 			await deleteEmojiByNameAndHostFromDatabase(deps.db, emojiInfo.name, null);
 
 			try {
-				const driveFile = await addDriveFileForApi(deps, {
+				const driveFile = await addDriveFile(deps, {
 					user: null,
 					path: emojiPath,
 					name: record.fileName,
 					force: true,
 				});
-				await addCustomEmojiForApi(deps, {
+				await addCustomEmoji(deps, {
 					originalUrl: driveFile.url,
 					publicUrl: driveFile.webpublicUrl ?? driveFile.url,
 					fileType: driveFile.webpublicType ?? driveFile.type,

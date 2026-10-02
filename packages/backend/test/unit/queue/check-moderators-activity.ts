@@ -10,11 +10,11 @@ import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	updateUserLastActiveDateInDatabase,
-} from '@/core/user/UserStore.js';
-import { createRoleInDatabase, deleteRoleInDatabase } from '@/core/role/RoleStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
-import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
+} from '@/core/user/user-store.js';
+import { createRoleInDatabase, deleteRoleFromDatabase } from '@/core/role/role-store.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/role-assignment-store.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/meta-store.js';
+import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/announcement-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleQueueCheckModeratorsActivity } from '@/queue/handlers/check-moderators-activity.js';
 import type { QueueCheckModeratorsActivityDependencies } from '@/queue/handlers/check-moderators-activity.js';
@@ -66,7 +66,7 @@ describe('hono-queue-check-moderators-activity', () => {
 
 	afterEach(async () => {
 		for (const roleId of createdRoleIds.splice(0)) {
-			await deleteRoleInDatabase(runtime.db, roleId);
+			await deleteRoleFromDatabase(runtime.db, roleId);
 		}
 		// disableRegistration をリセットし、テスト間の影響を防ぐ。
 		const { after } = await updateMetaInDatabase(runtime.db, { disableRegistration: false });

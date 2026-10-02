@@ -10,7 +10,7 @@ import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminServerInfoDependencies = {
+export type AdminServerInfoDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 };
@@ -39,7 +39,7 @@ type AdminServerInfoResponse = {
 
 export const adminServerInfoParamDef = z.object({});
 
-export async function handleApiAdminServerInfo(deps: ApiAdminServerInfoDependencies): Promise<AdminServerInfoResponse> {
+export async function handleApiAdminServerInfo(deps: AdminServerInfoDependencies): Promise<AdminServerInfoResponse> {
 	const si = await import('systeminformation');
 	const memStats = await si.mem();
 	const fsStats = await si.fsSize();

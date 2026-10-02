@@ -3,25 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	flashLikeExistsInDatabase,
 	listFlashLikesByUserIdFromDatabase,
 	listLikedFlashIdsByUserIdAndFlashIdsFromDatabase,
-} from '@/core/flash/FlashLikeStore.js';
+} from '@/core/flash/flash-like-store.js';
 import {
 	createFlashInDatabase,
-	deleteFlashInDatabase,
+	deleteFlashFromDatabase,
 	fetchFlashByIdFromDatabase,
 	fetchFlashByIdOrFailFromDatabase,
 	listFeaturedFlashesFromDatabase,
 	listFlashesWithPaginationFromDatabase,
 	updateFlashInDatabase,
-} from '@/core/flash/FlashStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/flash/flash-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -37,7 +37,7 @@ import { resolveApiDateIdPagination } from '../date-id-pagination.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiFlashDependencies = RolePolicyDependencies & UserPackingDependencies;
+export type FlashDependencies = RolePolicyDependencies & UserPackingDependencies;
 
 export const flashUpdateParamDef = z.object({
 	flashId: misskeyId(),
@@ -49,9 +49,9 @@ export const flashUpdateParamDef = z.object({
 });
 
 export async function handleApiFlashUpdate(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashUpdateParamDef>,
+	params: Params<typeof flashUpdateParamDef>,
 ): Promise<void> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
@@ -83,8 +83,8 @@ export async function handleApiFlashUpdate(
 	await updateFlashInDatabase(deps.db, flash.id, values);
 }
 
-export async function packFlashForApi(
-	deps: ApiFlashDependencies,
+export async function packFlash(
+	deps: FlashDependencies,
 	src: MiFlash['id'] | MiFlash,
 	me?: { id: MiUser['id'] } | null,
 	hint?: { packedUser?: Packed<'UserLite'>; likedFlashIds?: Set<MiFlash['id']> },
@@ -116,8 +116,8 @@ export async function packFlashForApi(
 	};
 }
 
-async function packFlashManyForApi(
-	deps: ApiFlashDependencies,
+async function packFlashMany(
+	deps: FlashDependencies,
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<Packed<'Flash'>[]> {
@@ -136,7 +136,7 @@ async function packFlashManyForApi(
 
 	return await Promise.all(
 		flashes.map((flash) =>
-			packFlashForApi(
+			packFlash(
 				deps,
 				flash,
 				me,
@@ -158,9 +158,9 @@ export const flashCreateParamDef = z.object({
 });
 
 export async function handleApiFlashCreate(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashCreateParamDef>,
+	params: Params<typeof flashCreateParamDef>,
 ): Promise<Packed<'Flash'>> {
 	const flash = await createFlashInDatabase(deps.db, {
 		id: genId(),
@@ -173,7 +173,7 @@ export async function handleApiFlashCreate(
 		visibility: params.visibility,
 	});
 
-	return await packFlashForApi(deps, flash);
+	return await packFlash(deps, flash);
 }
 
 export const flashDeleteParamDef = z.object({
@@ -181,9 +181,9 @@ export const flashDeleteParamDef = z.object({
 });
 
 export async function handleApiFlashDelete(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashDeleteParamDef>,
+	params: Params<typeof flashDeleteParamDef>,
 ): Promise<void> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
@@ -194,7 +194,7 @@ export async function handleApiFlashDelete(
 		throw clientErrorWithStatus(400, 'Access denied.', 'ACCESS_DENIED', '1036ad7b-9f92-4fff-89c3-0e50dc941704');
 	}
 
-	await deleteFlashInDatabase(deps.db, flash.id);
+	await deleteFlashFromDatabase(deps.db, flash.id);
 
 	if (flash.userId !== me.id) {
 		const user = await fetchUserByIdOrFailFromDatabase(deps.db, flash.userId);
@@ -213,16 +213,16 @@ export const flashFeaturedParamDef = z.object({
 });
 
 export async function handleApiFlashFeatured(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiUser | null,
-	params: ApiParams<typeof flashFeaturedParamDef>,
+	params: Params<typeof flashFeaturedParamDef>,
 ): Promise<Packed<'Flash'>[]> {
 	const result = await listFeaturedFlashesFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
 	});
 
-	return await packFlashManyForApi(deps, result, me);
+	return await packFlashMany(deps, result, me);
 }
 
 export const flashMyParamDef = z.object({
@@ -231,9 +231,9 @@ export const flashMyParamDef = z.object({
 });
 
 export async function handleApiFlashMy(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashMyParamDef>,
+	params: Params<typeof flashMyParamDef>,
 ): Promise<Packed<'Flash'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
@@ -244,7 +244,7 @@ export async function handleApiFlashMy(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForApi(deps, flashes);
+	return await packFlashMany(deps, flashes);
 }
 
 export const flashMyLikesParamDef = z.object({
@@ -254,9 +254,9 @@ export const flashMyLikesParamDef = z.object({
 });
 
 export async function handleApiFlashMyLikes(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof flashMyLikesParamDef>,
+	params: Params<typeof flashMyLikesParamDef>,
 ): Promise<{ id: string; flash: Packed<'Flash'> }[]> {
 	const { sinceId, untilId, order } = resolveApiDateIdPagination(params);
 
@@ -272,7 +272,7 @@ export async function handleApiFlashMyLikes(
 		}),
 	);
 
-	const packedFlashes = await packFlashManyForApi(
+	const packedFlashes = await packFlashMany(
 		deps,
 		likes.map((like) => like.flash),
 		me,
@@ -282,7 +282,7 @@ export async function handleApiFlashMyLikes(
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			flash: packedFlashById.get(like.flashId) ?? (await packFlashForApi(deps, like.flash, me)),
+			flash: packedFlashById.get(like.flashId) ?? (await packFlash(deps, like.flash, me)),
 		})),
 	);
 }
@@ -294,9 +294,9 @@ export const flashSearchParamDef = z.object({
 });
 
 export async function handleApiFlashSearch(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiUser | null,
-	params: ApiParams<typeof flashSearchParamDef>,
+	params: Params<typeof flashSearchParamDef>,
 ): Promise<Packed<'Flash'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
@@ -308,7 +308,7 @@ export async function handleApiFlashSearch(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForApi(deps, result, me);
+	return await packFlashMany(deps, result, me);
 }
 
 export const flashShowParamDef = z.object({
@@ -316,16 +316,16 @@ export const flashShowParamDef = z.object({
 });
 
 export async function handleApiFlashShow(
-	deps: ApiFlashDependencies,
+	deps: FlashDependencies,
 	me: MiUser | null,
-	params: ApiParams<typeof flashShowParamDef>,
+	params: Params<typeof flashShowParamDef>,
 ): Promise<Packed<'Flash'>> {
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
 	}
 
-	return await packFlashForApi(deps, flash, me);
+	return await packFlash(deps, flash, me);
 }
 
 export const usersFlashsParamDef = z.object({
@@ -335,8 +335,8 @@ export const usersFlashsParamDef = z.object({
 });
 
 export async function handleApiUsersFlashs(
-	deps: ApiFlashDependencies,
-	params: ApiParams<typeof usersFlashsParamDef>,
+	deps: FlashDependencies,
+	params: Params<typeof usersFlashsParamDef>,
 ): Promise<Packed<'Flash'>[]> {
 	const pagination = resolveDateIdPagination({ gen: genId }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
@@ -348,5 +348,5 @@ export async function handleApiUsersFlashs(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForApi(deps, flashes);
+	return await packFlashMany(deps, flashes);
 }

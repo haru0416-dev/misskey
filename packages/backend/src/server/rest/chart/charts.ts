@@ -9,15 +9,15 @@ import Chart from '@/core/chart/core.js';
 import type { KVs } from '@/core/chart/core.js';
 import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import { countNoteReactionsFromDatabase } from '@/core/note/NoteReactionStore.js';
-import { countInstancesFromDatabase } from '@/core/instance/InstanceStore.js';
+import { countNoteReactionsFromDatabase } from '@/core/note/note-reaction-store.js';
+import { countInstancesFromDatabase } from '@/core/instance/instance-store.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiChartDependencies = {
+export type ChartDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
@@ -46,7 +46,7 @@ class ReadOnlyChart<S extends ChartSchema> extends Chart<S> {
 }
 
 function createApiChart<S extends ChartSchema>(
-	deps: ApiChartDependencies,
+	deps: ChartDependencies,
 	definition: { name: string; schema: S; grouped: boolean },
 ): ReadOnlyChart<S> {
 	return new ReadOnlyChart(
@@ -79,73 +79,73 @@ export const instanceChartParamDef = z.object({
 	host: z.string(),
 });
 
-export async function handleApiChartsActiveUsers(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsActiveUsers(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.activeUsers);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsApRequest(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsApRequest(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.apRequest);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsDrive(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsDrive(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.drive);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsFederation(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsFederation(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.federation);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsInstance(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsInstance(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(instanceChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.instance);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.host);
 }
 
-export async function handleApiChartsNotes(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsNotes(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.notes);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsUsers(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUsers(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.users);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleApiChartsUserDrive(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUserDrive(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(perUserChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.perUserDrive);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleApiChartsUserFollowing(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUserFollowing(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(perUserChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.perUserFollowing);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleApiChartsUserNotes(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUserNotes(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(perUserChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.perUserNotes);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleApiChartsUserPv(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUserPv(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(perUserChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.perUserPv);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleApiChartsUserReactions(deps: ApiChartDependencies, body: Record<string, unknown>) {
+export async function handleApiChartsUserReactions(deps: ChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(perUserChartParamDef, body);
 	const chart = createApiChart(deps, chartDefinitions.perUserReactions);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
@@ -154,7 +154,7 @@ export async function handleApiChartsUserReactions(deps: ApiChartDependencies, b
 const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 
-export async function handleApiStats(deps: ApiChartDependencies) {
+export async function handleApiStats(deps: ChartDependencies) {
 	const notesChart = await createApiChart(deps, chartDefinitions.notes).getChart('hour', 1, null);
 	const originalNotesCount = notesChart.local.total[0] ?? 0;
 	const notesCount = originalNotesCount + (notesChart.remote.total[0] ?? 0);

@@ -5,13 +5,13 @@
 
 import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import {
 	deleteAbuseReportNotificationRecipientsFromDatabase,
 	listAbuseReportNotificationRecipientsFromDatabase,
-} from '@/core/abuse/AbuseReportNotificationRecipientStore.js';
+} from '@/core/abuse/abuse-report-notification-recipient-store.js';
 import {
 	createAbuseUserReportInDatabase,
 	fetchAbuseUserReportByIdFromDatabase,
@@ -19,19 +19,19 @@ import {
 	markAbuseUserReportForwardedInDatabase,
 	resolveAbuseUserReportInDatabase,
 	updateAbuseUserReportModerationNoteInDatabase,
-} from '@/core/abuse/AbuseUserReportStore.js';
-import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
-import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+} from '@/core/abuse/abuse-user-report-store.js';
+import { enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/role-assignment-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/system-webhook-queue.js';
+import { listSystemWebhooksFromDatabase } from '@/core/webhook/system-webhook-store.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import type { IActivity, IFlag, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -47,12 +47,12 @@ import { addActivityContext, genLocalUserUri } from '../user/following.js';
 import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { packUserLiteMany } from '../../../core/user/user-packing.js';
-import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import { packUserDetailedNotMeMany } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiAdminAbuseReportsDependencies = {
+export type AdminAbuseReportsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -60,7 +60,7 @@ export type ApiAdminAbuseReportsDependencies = {
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
 };
 
-export type ApiUsersReportAbuseDependencies = ApiAdminAbuseReportsDependencies &
+export type UsersReportAbuseDependencies = AdminAbuseReportsDependencies &
 	RolePolicyDependencies & {
 		emailService: Pick<EmailService, 'sendEmail'>;
 		publishAdminStream?: AdminStreamPublisher;
@@ -88,7 +88,7 @@ export const adminAbuseUserReportsParamDef = z.object({
 	targetUserOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
 });
 
-type ApiAbuseUserReport = {
+type AbuseUserReport = {
 	id: string;
 	createdAt: string;
 	comment: string;
@@ -144,7 +144,7 @@ function renderFlag(config: Config, user: MiLocalUser, object: IObject | string,
 }
 
 async function packAbuseReportsForSystemWebhook<T extends 'abuseReport' | 'abuseReportResolved'>(
-	deps: ApiAdminAbuseReportsDependencies,
+	deps: AdminAbuseReportsDependencies,
 	reports: MiAbuseUserReport[],
 ): Promise<SystemWebhookPayload<T>[]> {
 	const userIds = [
@@ -170,8 +170,8 @@ async function packAbuseReportsForSystemWebhook<T extends 'abuseReport' | 'abuse
 	);
 }
 
-async function notifyAbuseReportSystemWebhookForApi(
-	deps: ApiAdminAbuseReportsDependencies,
+async function notifyAbuseReportSystemWebhook(
+	deps: AdminAbuseReportsDependencies,
 	reports: MiAbuseUserReport[],
 	type: 'abuseReport' | 'abuseReportResolved',
 ): Promise<void> {
@@ -206,22 +206,22 @@ async function notifyAbuseReportSystemWebhookForApi(
 }
 
 async function notifyAbuseReportResolvedSystemWebhook(
-	deps: ApiAdminAbuseReportsDependencies,
+	deps: AdminAbuseReportsDependencies,
 	report: MiAbuseUserReport,
 ): Promise<void> {
-	await notifyAbuseReportSystemWebhookForApi(deps, [report], 'abuseReportResolved');
+	await notifyAbuseReportSystemWebhook(deps, [report], 'abuseReportResolved');
 }
 
-async function packAbuseUserReportsForApi(
-	deps: ApiAdminAbuseReportsDependencies,
+async function packAbuseUserReports(
+	deps: AdminAbuseReportsDependencies,
 	reports: MiAbuseUserReport[],
-): Promise<ApiAbuseUserReport[]> {
+): Promise<AbuseUserReport[]> {
 	const userRefs = [
 		...reports.map((report) => report.reporter ?? report.reporterId),
 		...reports.map((report) => report.targetUser ?? report.targetUserId),
 		...reports.map((report) => report.assignee ?? report.assigneeId).filter((x) => x != null),
 	];
-	const users = userRefs.length > 0 ? await packUserDetailedNotMeManyForApi(deps, userRefs) : [];
+	const users = userRefs.length > 0 ? await packUserDetailedNotMeMany(deps, userRefs) : [];
 	const userMap = new Map(users.filter((user) => user != null).map((user) => [String(user.id), user]));
 
 	// 一覧のクエリの後で削除が確定したユーザーは外部キーに合わせる: 通報者・対象が消えた通報は消える (cascade)、
@@ -254,9 +254,9 @@ async function packAbuseUserReportsForApi(
 }
 
 export async function handleApiAdminAbuseUserReports(
-	deps: ApiAdminAbuseReportsDependencies,
-	params: ApiParams<typeof adminAbuseUserReportsParamDef>,
-): Promise<ApiAbuseUserReport[]> {
+	deps: AdminAbuseReportsDependencies,
+	params: Params<typeof adminAbuseUserReportsParamDef>,
+): Promise<AbuseUserReport[]> {
 	const reports = await listAbuseUserReportsFromDatabase(deps.db, {
 		limit: params.limit,
 		...resolveDateIdPagination({ gen: genId }, params),
@@ -265,13 +265,13 @@ export async function handleApiAdminAbuseUserReports(
 		targetUserOrigin: params.targetUserOrigin,
 	});
 
-	return await packAbuseUserReportsForApi(deps, reports);
+	return await packAbuseUserReports(deps, reports);
 }
 
 export async function handleApiAdminForwardAbuseUserReport(
-	deps: ApiAdminAbuseReportsDependencies,
+	deps: AdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminForwardAbuseUserReportParamDef>,
+	params: Params<typeof adminForwardAbuseUserReportParamDef>,
 ): Promise<void> {
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
@@ -301,9 +301,9 @@ export async function handleApiAdminForwardAbuseUserReport(
 }
 
 export async function handleApiAdminResolveAbuseUserReport(
-	deps: ApiAdminAbuseReportsDependencies,
+	deps: AdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminResolveAbuseUserReportParamDef>,
+	params: Params<typeof adminResolveAbuseUserReportParamDef>,
 ): Promise<void> {
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
@@ -329,9 +329,9 @@ export async function handleApiAdminResolveAbuseUserReport(
 }
 
 export async function handleApiAdminUpdateAbuseUserReport(
-	deps: ApiAdminAbuseReportsDependencies,
+	deps: AdminAbuseReportsDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminUpdateAbuseUserReportParamDef>,
+	params: Params<typeof adminUpdateAbuseUserReportParamDef>,
 ): Promise<void> {
 	const report = await fetchAbuseUserReportByIdFromDatabase(deps.db, params.reportId);
 	if (report == null) {
@@ -354,7 +354,7 @@ export async function handleApiAdminUpdateAbuseUserReport(
 	}
 }
 
-async function getModeratorIdsExcludeExpireForApi(deps: ApiUsersReportAbuseDependencies): Promise<MiUser['id'][]> {
+async function fetchModeratorIdsExcludeExpire(deps: UsersReportAbuseDependencies): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
 	const moderatorRoles = roles.filter((role) => role.isModerator || role.isAdministrator);
 	const assigns =
@@ -375,15 +375,15 @@ async function getModeratorIdsExcludeExpireForApi(deps: ApiUsersReportAbuseDepen
 	];
 }
 
-async function notifyAbuseReportAdminStreamForApi(
-	deps: ApiUsersReportAbuseDependencies,
+async function notifyAbuseReportAdminStream(
+	deps: UsersReportAbuseDependencies,
 	reports: MiAbuseUserReport[],
 ): Promise<void> {
 	if (reports.length === 0 || deps.publishAdminStream == null) {
 		return;
 	}
 
-	const moderatorIds = await getModeratorIdsExcludeExpireForApi(deps);
+	const moderatorIds = await fetchModeratorIdsExcludeExpire(deps);
 
 	for (const moderatorId of moderatorIds) {
 		for (const report of reports) {
@@ -397,8 +397,8 @@ async function notifyAbuseReportAdminStreamForApi(
 	}
 }
 
-async function removeUnauthorizedRecipientUsersForApi(
-	deps: ApiUsersReportAbuseDependencies,
+async function removeUnauthorizedRecipientUsers(
+	deps: UsersReportAbuseDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
@@ -407,7 +407,7 @@ async function removeUnauthorizedRecipientUsersForApi(
 		return recipients;
 	}
 
-	const authorizedUserIds = await getModeratorIdsExcludeExpireForApi(deps);
+	const authorizedUserIds = await fetchModeratorIdsExcludeExpire(deps);
 	const authorizedSet = new Set(authorizedUserIds);
 	const authorizedUserRecipients: MiAbuseReportNotificationRecipient[] = [];
 	const unauthorizedUserRecipients: MiAbuseReportNotificationRecipient[] = [];
@@ -430,10 +430,7 @@ async function removeUnauthorizedRecipientUsersForApi(
 	return [...nonUserRecipients, ...authorizedUserRecipients].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-async function notifyAbuseReportMailForApi(
-	deps: ApiUsersReportAbuseDependencies,
-	reports: MiAbuseUserReport[],
-): Promise<void> {
+async function notifyAbuseReportMail(deps: UsersReportAbuseDependencies, reports: MiAbuseUserReport[]): Promise<void> {
 	if (reports.length === 0) {
 		return;
 	}
@@ -442,7 +439,7 @@ async function notifyAbuseReportMailForApi(
 		method: ['email'],
 		joinUser: true,
 	});
-	const emailRecipients = await removeUnauthorizedRecipientUsersForApi(deps, emailRecipientsRaw);
+	const emailRecipients = await removeUnauthorizedRecipientUsers(deps, emailRecipientsRaw);
 	const recipientEmailAddresses = emailRecipients
 		.filter((recipient) => recipient.isActive && recipient.userProfile?.emailVerified)
 		.map((recipient) => recipient.userProfile?.email)
@@ -469,8 +466,8 @@ async function notifyAbuseReportMailForApi(
 	}
 }
 
-export async function reportAbuseForApi(
-	deps: ApiUsersReportAbuseDependencies,
+export async function reportAbuse(
+	deps: UsersReportAbuseDependencies,
 	params: {
 		targetUserId: MiUser['id'];
 		targetUserHost: MiUser['host'];
@@ -493,9 +490,9 @@ export async function reportAbuseForApi(
 	}
 
 	await Promise.all([
-		notifyAbuseReportAdminStreamForApi(deps, reports),
-		notifyAbuseReportSystemWebhookForApi(deps, reports, 'abuseReport'),
-		notifyAbuseReportMailForApi(deps, reports),
+		notifyAbuseReportAdminStream(deps, reports),
+		notifyAbuseReportSystemWebhook(deps, reports, 'abuseReport'),
+		notifyAbuseReportMail(deps, reports),
 	]);
 }
 
@@ -505,9 +502,9 @@ export const usersReportAbuseParamDef = z.object({
 });
 
 export async function handleApiUsersReportAbuse(
-	deps: ApiUsersReportAbuseDependencies,
+	deps: UsersReportAbuseDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof usersReportAbuseParamDef>,
+	params: Params<typeof usersReportAbuseParamDef>,
 	errors: ContractErrors<(typeof usersContracts)['users/report-abuse']>,
 ): Promise<void> {
 	const targetUser = await fetchUserByIdFromDatabase(deps.db, params.userId);
@@ -523,7 +520,7 @@ export async function handleApiUsersReportAbuse(
 		throw errors.cannotReportAdmin();
 	}
 
-	await reportAbuseForApi(deps, [
+	await reportAbuse(deps, [
 		{
 			targetUserId: targetUser.id,
 			targetUserHost: targetUser.host,

@@ -6,7 +6,7 @@
 import { ReplyError } from 'ioredis';
 import type { Redis } from 'ioredis';
 import type { Config } from '@/config.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseUuidv7Full } from '@/misc/id/uuidv7.js';

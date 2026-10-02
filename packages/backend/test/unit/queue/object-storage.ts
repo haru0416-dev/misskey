@@ -8,13 +8,9 @@ import { loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/drive-file-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	deleteFileSyncForApi,
-	handleQueueCleanRemoteFiles,
-	handleQueueDeleteFile,
-} from '@/queue/handlers/object-storage.js';
+import { deleteFileSync, handleQueueCleanRemoteFiles, handleQueueDeleteFile } from '@/queue/handlers/object-storage.js';
 import type { QueueObjectStorageDependencies } from '@/queue/handlers/object-storage.js';
 import type { ObjectStorageFileJobData } from '@/core/queue/types.js';
 import type { Config } from '@/config.js';
@@ -74,7 +70,7 @@ describe('hono-queue-object-storage', () => {
 		expect(deleteMock).toHaveBeenCalledOnce();
 	});
 
-	test('deleteFileSyncForApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
+	test('deleteFileSync: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -90,14 +86,14 @@ describe('hono-queue-object-storage', () => {
 		const file = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(file).not.toBeNull();
 
-		await deleteFileSyncForApi(deps, file!, false);
+		await deleteFileSync(deps, file!, false);
 
 		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(after).toBeNull();
 		expect(deps.internalStorageService.del).toHaveBeenCalledWith(`access-${fileId}`);
 	});
 
-	test('deleteFileSyncForApi: storage削除失敗時はレコードを残し、再試行後にだけ消す', async () => {
+	test('deleteFileSync: storage削除失敗時はレコードを残し、再試行後にだけ消す', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -114,16 +110,16 @@ describe('hono-queue-object-storage', () => {
 		const del = deps.internalStorageService.del as ReturnType<typeof vi.fn>;
 		del.mockRejectedValueOnce(new Error('injected storage failure')).mockResolvedValue(undefined);
 
-		await expect(deleteFileSyncForApi(deps, file!, false)).rejects.toThrow('injected storage failure');
+		await expect(deleteFileSync(deps, file!, false)).rejects.toThrow('injected storage failure');
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).not.toBeNull();
 
-		await expect(deleteFileSyncForApi(deps, file!, false)).resolves.toBeUndefined();
+		await expect(deleteFileSync(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
-		await expect(deleteFileSyncForApi(deps, file!, false)).resolves.toBeUndefined();
+		await expect(deleteFileSync(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
 	});
 
-	test('deleteFileSyncForApi: 同じ削除の再試行ではチャートを重複減算しない', async () => {
+	test('deleteFileSync: 同じ削除の再試行ではチャートを重複減算しない', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -148,13 +144,13 @@ describe('hono-queue-object-storage', () => {
 			},
 		};
 
-		await deleteFileSyncForApi(retryDeps, file!, false);
-		await deleteFileSyncForApi(retryDeps, file!, false);
+		await deleteFileSync(retryDeps, file!, false);
+		await deleteFileSync(retryDeps, file!, false);
 
 		expect(driveUpdate).toHaveBeenCalledOnce();
 	});
 
-	test('deleteFileSyncForApi: moderatorによる削除を監査ログへ渡す', async () => {
+	test('deleteFileSync: moderatorによる削除を監査ログへ渡す', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -171,7 +167,7 @@ describe('hono-queue-object-storage', () => {
 		const deleter = { id: genId() } as MiUser;
 		const logDriveFileDeletion = vi.fn().mockResolvedValue(undefined);
 
-		await deleteFileSyncForApi(
+		await deleteFileSync(
 			{
 				...deps,
 				isModerator: vi.fn().mockResolvedValue(true),

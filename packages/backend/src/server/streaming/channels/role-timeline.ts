@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
+import { fetchRoleByIdFromDatabase } from '@/core/role/role-store.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';

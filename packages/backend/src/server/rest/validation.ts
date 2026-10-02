@@ -10,7 +10,7 @@ import { invalidParamError } from './error.js';
 
 type ExactOptionalProperties<T> = T extends Record<string, unknown> ? OmitUndefinedProperties<T> : T;
 
-export type ApiParams<Z extends z.ZodType> = ExactOptionalProperties<z.infer<Z>>;
+export type Params<Z extends z.ZodType> = ExactOptionalProperties<z.infer<Z>>;
 
 export function parseApiParams<Z extends z.ZodType>(
 	schema: Z,

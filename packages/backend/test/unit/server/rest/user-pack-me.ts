@@ -24,32 +24,32 @@ const {
 
 vi.mock('@/core/role/role-policy.js', () => ({
 	computeUserRoles: vi.fn(),
-	getRolePolicies: getApiRolePoliciesMock,
+	fetchRolePolicies: getApiRolePoliciesMock,
 	getUserProfilePolicies: vi.fn(),
-	getUserRoles: getApiUserRolesMock,
+	fetchUserRoles: getApiUserRolesMock,
 	userIsAdministrator: isApiAdministratorMock,
 	userIsModerator: isApiModeratorMock,
 }));
 
-vi.mock('@/core/user/UserMemoStore.js', () => ({
+vi.mock('@/core/user/user-memo-store.js', () => ({
 	deleteUserMemoFromDatabase: vi.fn(),
 	fetchUserMemoTextFromDatabase: vi.fn(async () => null),
 	listUserMemoTextsByUserIdFromDatabase: vi.fn(),
 	upsertUserMemoInDatabase: vi.fn(),
 }));
 
-vi.mock('@/core/user/UserNotePiningStore.js', () => ({
+vi.mock('@/core/user/user-note-pining-store.js', () => ({
 	listUserNotePiningsByUserIdFromDatabase: listUserNotePiningsByUserIdFromDatabaseMock,
 	listUserNotePiningsByUserIdsFromDatabase: vi.fn(),
 }));
 
 vi.mock('@/core/note/note-packing.js', () => ({
-	packNoteManyForApi: vi.fn(async () => []),
+	packNoteMany: vi.fn(async () => []),
 	populateEmojis: vi.fn(async () => ({})),
 	populateEmojisMany: vi.fn(async () => []),
 }));
 
-import { packMeDetailedForApi } from '@/server/rest/user/user.js';
+import { packMeDetailed } from '@/server/rest/user/user.js';
 
 const userId = '019f587c6bc4785ead8d511d603959f0';
 
@@ -133,7 +133,7 @@ async function packWithRoles(roles: MiRole[], rootUserId: string | null = null) 
 	getApiUserRolesMock.mockResolvedValue(roles);
 	getApiRolePoliciesMock.mockResolvedValue(policies);
 
-	return await packMeDetailedForApi(
+	return await packMeDetailed(
 		{
 			config: {
 				instance: { url: 'https://example.test/' },
@@ -154,7 +154,7 @@ async function packWithRoles(roles: MiRole[], rootUserId: string | null = null) 
 	);
 }
 
-describe('packMeDetailedForApi', () => {
+describe('packMeDetailed', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		listUserNotePiningsByUserIdFromDatabaseMock.mockResolvedValue([]);

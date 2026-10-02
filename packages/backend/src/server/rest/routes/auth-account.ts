@@ -4,12 +4,12 @@
  */
 
 import type { Hono } from 'hono';
-import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
+import { listActiveInstanceHostsFromDatabase } from '@/core/instance/instance-store.js';
 import { handleApiSigninFlow } from '../auth/signin.js';
 import { handleApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
 import { signupPendingWithApi, signupWithApi } from '../auth/signup.js';
 import { assertApiRateLimit } from '../rate-limit.js';
-import type { ApiEndpointRateLimit } from '../rate-limit.js';
+import type { EndpointRateLimit } from '../rate-limit.js';
 import {
 	jsonResponse,
 	signinFlowResponse,
@@ -18,9 +18,9 @@ import {
 	getRequestIp,
 	runApiEndpoint,
 } from '../shell-helpers.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 
-export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies): void {
+export function registerAuthAccountRoutes(app: Hono, deps: ShellDependencies): void {
 	app.get('/v1/instance/peers', async (c) => {
 		return jsonResponse(c, await listActiveInstanceHostsFromDatabase(deps.db));
 	});
@@ -82,7 +82,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 	});
 }
 
-export function getSignupRateLimit(meta: ApiShellDependencies['meta']): ApiEndpointRateLimit | null {
+export function getSignupRateLimit(meta: ShellDependencies['meta']): EndpointRateLimit | null {
 	const minInterval =
 		meta.signupRateLimitMinIntervalSeconds > 0 ? meta.signupRateLimitMinIntervalSeconds * 1000 : undefined;
 	const max = meta.signupRateLimitMaxPerHour > 0 ? meta.signupRateLimitMaxPerHour : undefined;

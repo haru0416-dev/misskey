@@ -11,7 +11,7 @@ import {
 	createMemoryOAuthEphemeralStore,
 	createOAuthProviderRuntime,
 	parseUrlEncodedParameters,
-} from '@/server/oauth/OAuthProviderRuntime.js';
+} from '@/server/oauth/oauth-provider-runtime.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { toArray, toSingle } from '@/misc/prelude/array.js';
@@ -13,8 +13,8 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
-import { createMfmService } from '@/core/mfm/MfmService.js';
-import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createMfmService } from '@/core/mfm/mfm-service.js';
+import { createApMfmService } from '@/core/activitypub/ap-mfm-service.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
 import {
 	getApId,
@@ -37,24 +37,24 @@ import {
 	updateUserLastFetchedAtInDatabase,
 	updateUserUriByUsernameAndHostInDatabase,
 	createUserWithProfileAndPublickeyInDatabase,
-} from '@/core/user/UserStore.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+} from '@/core/user/user-store.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import {
 	fetchUserPublickeyByUserIdFromDatabase,
 	updateUserPublickeyInDatabase,
-} from '@/core/user/UserPublickeyStore.js';
-import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
-import { updateFollowingsByFollowerIdInDatabase } from '@/core/user/FollowingStore.js';
+} from '@/core/user/user-publickey-store.js';
+import { updateUserProfileInDatabase } from '@/core/user/user-profile-store.js';
+import { updateFollowingsByFollowerIdInDatabase } from '@/core/user/following-store.js';
 import {
 	listEmojisByHostAndNamesFromDatabase,
 	updateEmojiByHostAndNameInDatabase,
 	insertEmojiInDatabase,
-} from '@/core/emoji/EmojiStore.js';
-import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
-import { adjustInstanceUsersCountFromDatabase } from '@/core/instance/InstanceStore.js';
+} from '@/core/emoji/emoji-store.js';
+import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/drive/drive-file-store.js';
+import { adjustInstanceUsersCountInDatabase } from '@/core/instance/instance-store.js';
 import { StatusError } from '@/misc/status-error.js';
-import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { getDriveFilePublicUrl } from '@/core/drive/drive-file-public-url.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -62,27 +62,27 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import {
 	extractDbHost,
-	getUserFromApIdForApi,
+	fetchUserFromApId,
 	isSelfHost,
 	parseLocalApUri,
-	resolveApObjectForApi,
-	resolveCollectionForApi,
+	resolveApObject,
+	resolveCollection,
 } from './ap-resolve.js';
-import type { ApiApResolveDependencies, ApiAuthUser } from './ap-resolve.js';
+import type { ApResolveDependencies, AuthUser } from './ap-resolve.js';
 import { ApiError } from '../error.js';
-import { postMoveProcessForApi } from '../account/account-move.js';
-import type { ApiAccountMoveDependencies } from '../account/account-move.js';
-import { uploadDriveFileFromUrlForApi } from '../drive/drive-file-upload.js';
+import { postMoveProcess } from '../account/account-move.js';
+import type { AccountMoveDependencies } from '../account/account-move.js';
+import { uploadDriveFileFromUrl } from '../drive/drive-file-upload.js';
 import { parseDeclaredMedia } from './declared-media.js';
-import type { ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
-import { updateUsertagsForApi } from '../account/account-update.js';
-import { getRolePolicies } from '../../../core/role/role-policy.js';
+import type { DriveFileUploadDependencies } from '../drive/drive-file-upload.js';
+import { updateUsertags } from '../account/account-update.js';
+import { fetchRolePolicies } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
-import { fetchOrRegisterInstance } from '@/core/note/NoteCreationService.js';
+import { fetchOrRegisterInstance } from '@/core/note/note-creation-service.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 
-export type ApiApPersonDependencies = ApiApResolveDependencies &
-	ApiDriveFileUploadDependencies & {
+export type ApPersonDependencies = ApResolveDependencies &
+	DriveFileUploadDependencies & {
 		relationshipQueue: RelationshipQueue;
 	};
 
@@ -93,8 +93,8 @@ function serializeAlsoKnownAs(value: string[] | null | undefined): string | null
 	return value == null ? value : value.join(',');
 }
 
-function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
-	const expectHost = punyHostForApi(uri);
+function validateActor(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
+	const expectHost = punyHostOfUrl(uri);
 
 	if (!isActor(x)) {
 		throw new Error(`invalid Actor type '${x.type}'`);
@@ -108,7 +108,7 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 		throw new Error('invalid Actor: wrong inbox');
 	}
 
-	if (punyHostForApi(x.inbox) !== expectHost) {
+	if (punyHostOfUrl(x.inbox) !== expectHost) {
 		throw new Error('invalid Actor: inbox has different host');
 	}
 
@@ -128,7 +128,7 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 		if (xCollection != null) {
 			const collectionUri = getApId(xCollection);
 			if (typeof collectionUri === 'string' && collectionUri.length > 0) {
-				if (punyHostForApi(collectionUri) !== expectHost) {
+				if (punyHostOfUrl(collectionUri) !== expectHost) {
 					throw new Error(`invalid Actor: ${collection} has different host`);
 				}
 			} else if (collectionUri != null) {
@@ -163,7 +163,7 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 		x.summary = truncate(x.summary, summaryLength);
 	}
 
-	const idHost = punyHostForApi(x.id);
+	const idHost = punyHostOfUrl(x.id);
 	if (idHost !== expectHost) {
 		throw new Error('invalid Actor: id has different host');
 	}
@@ -173,7 +173,7 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 			throw new Error('invalid Actor: publicKey.id is not a string');
 		}
 
-		const publicKeyIdHost = punyHostForApi(x.publicKey.id);
+		const publicKeyIdHost = punyHostOfUrl(x.publicKey.id);
 		if (publicKeyIdHost !== expectHost) {
 			throw new Error('invalid Actor: publicKey.id has different host');
 		}
@@ -182,12 +182,12 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 	return x;
 }
 
-function punyHostForApi(url: string): string {
+function punyHostOfUrl(url: string): string {
 	const urlObj = new URL(url);
 	return `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-function analyzeAttachmentsForApi(
+function analyzeAttachments(
 	config: Pick<Config, 'instance'>,
 	attachments: IObject | IObject[] | undefined,
 ): { name: string; value: string }[] {
@@ -205,8 +205,8 @@ function analyzeAttachmentsForApi(
 	return fields;
 }
 
-export async function extractEmojisForApi(
-	deps: ApiApPersonDependencies,
+export async function extractEmojis(
+	deps: ApPersonDependencies,
 	tags: IObject | IObject[],
 	host: string,
 ): Promise<MiEmoji[]> {
@@ -271,8 +271,8 @@ export async function extractEmojisForApi(
 	);
 }
 
-export async function resolveImageForApi(
-	deps: ApiApPersonDependencies,
+export async function resolveImage(
+	deps: ApPersonDependencies,
 	actor: MiRemoteUser,
 	value: string | IObject,
 	/**
@@ -292,7 +292,7 @@ export async function resolveImageForApi(
 		throw new Error('actor has been suspended');
 	}
 
-	const image = await resolveApObjectForApi(deps, value);
+	const image = await resolveApObject(deps, value);
 
 	if (!isDocument(image)) {
 		return null;
@@ -308,7 +308,7 @@ export async function resolveImageForApi(
 
 	const comment = truncate(image.name ?? undefined, 512);
 	try {
-		const file = await uploadDriveFileFromUrlForApi(
+		const file = await uploadDriveFileFromUrl(
 			deps,
 			omitUndefined({
 				url: image.url,
@@ -333,8 +333,8 @@ export async function resolveImageForApi(
 	}
 }
 
-async function resolveAvatarAndBannerForApi(
-	deps: ApiApPersonDependencies,
+async function resolveAvatarAndBanner(
+	deps: ApPersonDependencies,
 	user: MiRemoteUser,
 	icon: unknown,
 	image: unknown,
@@ -351,13 +351,13 @@ async function resolveAvatarAndBannerForApi(
 				return { id: null, url: null, blurhash: null };
 			}
 
-			return await resolveImageForApi(deps, user, img as string | IObject).catch(() => null);
+			return await resolveImage(deps, user, img as string | IObject).catch(() => null);
 		}),
 	);
 
 	if (
 		((avatar != null && avatar.id != null) || (banner != null && banner.id != null)) &&
-		!(await getRolePolicies(deps, user)).canUpdateBioMedia
+		!(await fetchRolePolicies(deps, user)).canUpdateBioMedia
 	) {
 		return {};
 	}
@@ -386,13 +386,13 @@ async function resolveAvatarAndBannerForApi(
 	>;
 }
 
-async function isPublicCollectionForApi(
-	deps: ApiApPersonDependencies,
+async function isPublicCollection(
+	deps: ApPersonDependencies,
 	collection: string | IObject | undefined,
 	history: Set<string>,
 ): Promise<boolean> {
 	if (collection) {
-		const resolved = await resolveCollectionForApi(deps, collection, history);
+		const resolved = await resolveCollection(deps, collection, history);
 		const rec = resolved as { first?: unknown; items?: unknown; orderedItems?: unknown };
 		if (rec.first || rec.items || rec.orderedItems) {
 			return true;
@@ -402,14 +402,14 @@ async function isPublicCollectionForApi(
 	return false;
 }
 
-export type ApiUpdatePersonDependencies = ApiApPersonDependencies & ApiAccountMoveDependencies;
+export type UpdatePersonDependencies = ApPersonDependencies & AccountMoveDependencies;
 
 /**
- * updatePersonForApi が movedToUri の新規出現・変更を検知したときに呼ぶ。
+ * updatePerson が movedToUri の新規出現・変更を検知したときに呼ぶ。
  * 移行先が移行元を alsoKnownAs で承認している場合だけ移行カスケードを実行する。
  */
-async function processRemoteMoveForApi(
-	deps: ApiUpdatePersonDependencies,
+async function processRemoteMove(
+	deps: UpdatePersonDependencies,
 	src: MiRemoteUser,
 	movePreventUris: string[] = [],
 ): Promise<string> {
@@ -423,7 +423,7 @@ async function processRemoteMoveForApi(
 		return 'skip: too many moves';
 	}
 
-	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForApi(deps, src.movedToUri);
+	let dst: MiLocalUser | MiRemoteUser | null = await fetchPerson(deps, src.movedToUri);
 
 	if (dst && dst.host != null) {
 		if (movePreventUris.includes(src.movedToUri)) {
@@ -431,13 +431,13 @@ async function processRemoteMoveForApi(
 		}
 
 		// 連鎖移行を最新状態まで追跡し、循環検出用の URI を引き継ぐ。
-		await updatePersonForApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
-		dst = (await fetchPersonForApi(deps, src.movedToUri)) ?? dst;
+		await updatePerson(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
+		dst = (await fetchPerson(deps, src.movedToUri)) ?? dst;
 	} else if (dst == null) {
 		if (isSelfHost(deps.config, extractDbHost(src.movedToUri))) {
 			return 'failed: movedTo is local but not found';
 		}
-		dst = await resolvePersonForApi(deps, src.movedToUri);
+		dst = await resolvePerson(deps, src.movedToUri);
 	}
 
 	const dstUri = getUserUriForApPerson(deps.config, dst);
@@ -457,14 +457,14 @@ async function processRemoteMoveForApi(
 		return 'skip: alsoKnownAs does not include from.uri';
 	}
 
-	await postMoveProcessForApi(deps, src, dst);
+	await postMoveProcess(deps, src, dst);
 
 	return 'ok';
 }
 
 /** リモートユーザーの再取得だけではピン留めノート一覧は更新しない。 */
-export async function updatePersonForApi(
-	deps: ApiUpdatePersonDependencies,
+export async function updatePerson(
+	deps: UpdatePersonDependencies,
 	uri: string,
 	exist: MiRemoteUser,
 	movePreventUris: string[] = [],
@@ -472,31 +472,29 @@ export async function updatePersonForApi(
 ): Promise<void> {
 	const history = new Set<string>();
 	// Update に埋め込まれた Person を優先し、中間キャッシュから古い情報を再取得しない。
-	const object = hint ?? (await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
+	const object = hint ?? (await resolveApObject(deps, uri, FetchAllowSoftFailMask.Strict, history));
 
-	const person = validateActorForApi(deps.config, object, uri);
+	const person = validateActor(deps.config, object, uri);
 
-	const emojis = await extractEmojisForApi(deps, person.tag ?? [], exist.host).catch(() => [] as MiEmoji[]);
+	const emojis = await extractEmojis(deps, person.tag ?? [], exist.host).catch(() => [] as MiEmoji[]);
 	const emojiNames = emojis.map((emoji) => emoji.name);
 
-	const fields = analyzeAttachmentsForApi(deps.config, person.attachment ?? []);
+	const fields = analyzeAttachments(deps.config, person.attachment ?? []);
 
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 
 	const [followingVisibility, followersVisibility] = await Promise.all(
-		[
-			isPublicCollectionForApi(deps, person.following, history),
-			isPublicCollectionForApi(deps, person.followers, history),
-		].map((p): Promise<'public' | 'private' | undefined> =>
-			p
-				.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
-				.catch((err) => {
-					if (!(err instanceof StatusError) || err.isRetryable) {
-						// 一時的なエラーでは既存の公開設定を保持する。
-						return undefined;
-					}
-					return 'private';
-				}),
+		[isPublicCollection(deps, person.following, history), isPublicCollection(deps, person.followers, history)].map(
+			(p): Promise<'public' | 'private' | undefined> =>
+				p
+					.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
+					.catch((err) => {
+						if (!(err instanceof StatusError) || err.isRetryable) {
+							// 一時的なエラーでは既存の公開設定を保持する。
+							return undefined;
+						}
+						return 'private';
+					}),
 		),
 	);
 
@@ -513,7 +511,7 @@ export async function updatePersonForApi(
 			throw new Error('unexpected schema of person url: ' + url);
 		}
 
-		if (punyHostForApi(url) !== punyHostForApi(person.id)) {
+		if (punyHostOfUrl(url) !== punyHostOfUrl(person.id)) {
 			throw new Error(`person url <> uri host mismatch: ${url} <> ${person.id}`);
 		}
 	}
@@ -533,7 +531,7 @@ export async function updatePersonForApi(
 		movedToUri: person.movedTo ?? null,
 		alsoKnownAs: person.alsoKnownAs ? toArray(person.alsoKnownAs) : null,
 		isExplorable: person.discoverable,
-		...(await resolveAvatarAndBannerForApi(deps, exist, person.icon, person.image).catch(() => ({}))),
+		...(await resolveAvatarAndBanner(deps, exist, person.icon, person.image).catch(() => ({}))),
 	};
 
 	const moving = (() => {
@@ -595,7 +593,7 @@ export async function updatePersonForApi(
 
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: exist.id });
 
-	await updateUsertagsForApi(deps, exist, tags);
+	await updateUsertags(deps, exist, tags);
 
 	await updateFollowingsByFollowerIdInDatabase(deps.db, exist.id, {
 		followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
@@ -608,7 +606,7 @@ export async function updatePersonForApi(
 		mergedUpdated.movedAt &&
 		(exist.movedAt == null || exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime())
 	) {
-		await processRemoteMoveForApi(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
+		await processRemoteMove(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
 	}
 }
 
@@ -616,22 +614,22 @@ export async function updatePersonForApi(
  * ピン留めノート一覧・インスタンスメタデータ・チャートは、この経路では取得・更新しない。
  * 連合統計が有効な場合のインスタンス登録とユーザー数更新は、ユーザー作成の完了を待たせずに行う。
  */
-export async function createPersonForApi(
-	deps: ApiApPersonDependencies,
+export async function createPerson(
+	deps: ApPersonDependencies,
 	uri: string,
 	history = new Set<string>(),
 ): Promise<MiRemoteUser> {
-	const host = punyHostForApi(uri);
+	const host = punyHostOfUrl(uri);
 	if (host === toPuny(deps.config.runtime.host)) {
 		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
 	}
 
-	const object = await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
+	const object = await resolveApObject(deps, uri, FetchAllowSoftFailMask.Strict, history);
 	if (object.id == null) {
 		throw new Error('invalid object.id: ' + object.id);
 	}
 
-	const person = validateActorForApi(deps.config, object, uri);
+	const person = validateActor(deps.config, object, uri);
 
 	if (person.id == null) {
 		throw new Error('Refusing to create person without id');
@@ -640,16 +638,14 @@ export async function createPersonForApi(
 		throw new Error('Refusing to create person without preferredUsername');
 	}
 
-	const fields = analyzeAttachmentsForApi(deps.config, person.attachment ?? []);
+	const fields = analyzeAttachments(deps.config, person.attachment ?? []);
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 	const isBot = getApType(object) === 'Service' || getApType(object) === 'Application';
 
 	const [followingVisibility, followersVisibility] = await Promise.all(
-		[
-			isPublicCollectionForApi(deps, person.following, history),
-			isPublicCollectionForApi(deps, person.followers, history),
-		].map((p): Promise<'public' | 'private'> =>
-			p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
+		[isPublicCollection(deps, person.following, history), isPublicCollection(deps, person.followers, history)].map(
+			(p): Promise<'public' | 'private'> =>
+				p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
 		),
 	);
 
@@ -660,7 +656,7 @@ export async function createPersonForApi(
 		throw new Error('unexpected schema of person url: ' + url);
 	}
 
-	const emojis = await extractEmojisForApi(deps, person.tag ?? [], host)
+	const emojis = await extractEmojis(deps, person.tag ?? [], host)
 		.then((_emojis) => _emojis.map((emoji) => emoji.name))
 		.catch(() => [] as string[]);
 
@@ -746,15 +742,15 @@ export async function createPersonForApi(
 	if (deps.meta.enableStatsForFederatedInstances) {
 		fetchOrRegisterInstance(deps, host)
 			.then(async (i) => {
-				await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
+				await adjustInstanceUsersCountInDatabase(deps.db, i.id, 1);
 			})
 			.catch(() => {});
 	}
 
-	await updateUsertagsForApi(deps, user, tags);
+	await updateUsertags(deps, user, tags);
 
 	try {
-		const updates = await resolveAvatarAndBannerForApi(deps, user, person.icon, person.image);
+		const updates = await resolveAvatarAndBanner(deps, user, person.icon, person.image);
 		await updateUserInDatabase(deps.db, user.id, updates);
 		user = { ...user, ...updates };
 	} catch {
@@ -764,10 +760,7 @@ export async function createPersonForApi(
 	return user;
 }
 
-export async function fetchPersonForApi(
-	deps: ApiApPersonDependencies,
-	uri: string,
-): Promise<MiLocalUser | MiRemoteUser | null> {
+export async function fetchPerson(deps: ApPersonDependencies, uri: string): Promise<MiLocalUser | MiRemoteUser | null> {
 	if (uri.startsWith(`${deps.config.instance.url}/`)) {
 		const id = uri.split('/').pop();
 		if (id == null) {
@@ -780,25 +773,22 @@ export async function fetchPersonForApi(
 	return (await fetchUserByUriFromDatabase(deps.db, uri)) as MiLocalUser | MiRemoteUser | null;
 }
 
-export async function resolvePersonForApi(
-	deps: ApiApPersonDependencies,
+export async function resolvePerson(
+	deps: ApPersonDependencies,
 	uri: string,
 	history = new Set<string>(),
 ): Promise<MiLocalUser | MiRemoteUser> {
-	const exist = await fetchPersonForApi(deps, uri);
+	const exist = await fetchPerson(deps, uri);
 	if (exist) {
 		return exist;
 	}
 
-	return await createPersonForApi(deps, uri, history);
+	return await createPerson(deps, uri, history);
 }
 
 /** inbox の署名者解決で使う。未登録の Person は取得・登録し、削除済みユーザーは返さない。 */
-export async function getAuthUserFromApIdForApi(
-	deps: ApiApPersonDependencies,
-	uri: string,
-): Promise<ApiAuthUser | null> {
-	const user = (await resolvePersonForApi(deps, uri)) as MiRemoteUser;
+export async function fetchAuthUserFromApId(deps: ApPersonDependencies, uri: string): Promise<AuthUser | null> {
+	const user = (await resolvePerson(deps, uri)) as MiRemoteUser;
 	if (user.isDeleted) {
 		return null;
 	}
@@ -814,8 +804,8 @@ function getUserUriForApPerson(config: Pick<Config, 'instance'>, user: MiLocalUs
 /**
  * dst の alsoKnownAs を辿り、movedToUri が dst を指す旧アカウントが実在するかを調べる。
  */
-export async function validateAlsoKnownAsForApi(
-	deps: ApiApPersonDependencies,
+export async function validateAlsoKnownAs(
+	deps: ApPersonDependencies,
 	dstInput: MiLocalUser | MiRemoteUser,
 	check: (
 		oldUser: MiLocalUser | MiRemoteUser | null,
@@ -828,9 +818,9 @@ export async function validateAlsoKnownAsForApi(
 
 	if (dst.host != null) {
 		if (Date.now() - (dst.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
-			await updatePersonForApi(deps, dst.uri, dst);
+			await updatePerson(deps, dst.uri, dst);
 		}
-		dst = (await fetchPersonForApi(deps, dst.uri)) ?? dst;
+		dst = (await fetchPerson(deps, dst.uri)) ?? dst;
 	}
 
 	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) {
@@ -841,7 +831,7 @@ export async function validateAlsoKnownAsForApi(
 
 	for (const srcUri of dst.alsoKnownAs) {
 		try {
-			let src = await fetchPersonForApi(deps, srcUri);
+			let src = await fetchPerson(deps, srcUri);
 			// このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
 			if (!src) {
 				continue;
@@ -849,9 +839,9 @@ export async function validateAlsoKnownAsForApi(
 
 			if (dst.host != null && src.host != null) {
 				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
-					await updatePersonForApi(deps, srcUri, src);
+					await updatePerson(deps, srcUri, src);
 				}
-				src = (await fetchPersonForApi(deps, srcUri)) ?? src;
+				src = (await fetchPerson(deps, srcUri)) ?? src;
 			}
 
 			if (src.movedToUri === dstUri) {
@@ -875,8 +865,8 @@ export const federationUpdateRemoteUserParamDef = z.object({
 });
 
 export async function handleApiFederationUpdateRemoteUser(
-	deps: ApiApPersonDependencies,
-	params: ApiParams<typeof federationUpdateRemoteUserParamDef>,
+	deps: ApPersonDependencies,
+	params: Params<typeof federationUpdateRemoteUserParamDef>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	// runApiEndpoint が 500 に変換しないよう、入力不備は明示的な API エラーにする。
@@ -897,7 +887,7 @@ export async function handleApiFederationUpdateRemoteUser(
 		});
 	}
 
-	await updatePersonForApi(deps, user.uri!, user as MiRemoteUser);
+	await updatePerson(deps, user.uri!, user as MiRemoteUser);
 }
 
 type WebfingerLink = {
@@ -913,7 +903,7 @@ type WebfingerResult = {
 const webfingerUrlRegex = /^https?:\/\//;
 const webfingerAcctRegex = /^([^@]+)@(.*)/;
 
-async function webfingerForApi(
+async function webfinger(
 	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
 	query: string,
 ): Promise<WebfingerResult> {
@@ -935,11 +925,11 @@ async function webfingerForApi(
 	return await deps.httpRequestService.getJson<WebfingerResult>(url, 'application/jrd+json, application/json');
 }
 
-async function resolveSelfForApi(
+async function resolveSelf(
 	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
 	acctLower: string,
 ): Promise<WebfingerLink> {
-	const finger = await webfingerForApi(deps, acctLower).catch((err) => {
+	const finger = await webfinger(deps, acctLower).catch((err) => {
 		throw new Error(`Failed to WebFinger for ${acctLower}: ${err.statusCode ?? err.message}`);
 	});
 	const self = finger.links.find((link) => link.rel != null && link.rel.toLowerCase() === 'self');
@@ -953,8 +943,8 @@ async function resolveSelfForApi(
  * リモートユーザーが未登録ならWebFingerで解決して作成し、登録済みかつ
  * 24時間以上再取得していなければWebFinger→updatePersonForApiで再同期する。
  */
-export async function resolveUserForApi(
-	deps: ApiApPersonDependencies,
+export async function resolveUser(
+	deps: ApPersonDependencies,
 	username: string,
 	host: string | null,
 ): Promise<MiLocalUser | MiRemoteUser> {
@@ -974,12 +964,12 @@ export async function resolveUserForApi(
 	const acctLower = `${usernameLower}@${punyHost}`;
 
 	if (user == null) {
-		const self = await resolveSelfForApi(deps, acctLower);
+		const self = await resolveSelf(deps, acctLower);
 
-		if (punyHostForApi(self.href) === toPuny(deps.config.runtime.host)) {
+		if (punyHostOfUrl(self.href) === toPuny(deps.config.runtime.host)) {
 			const local = parseLocalApUri(deps.config, self.href);
 			if (local.local && local.type === 'users') {
-				const u = await getUserFromApIdForApi(deps, self.href);
+				const u = await fetchUserFromApId(deps, self.href);
 				if (u == null) {
 					throw new Error('local user not found');
 				}
@@ -987,14 +977,14 @@ export async function resolveUserForApi(
 			}
 		}
 
-		return await createPersonForApi(deps, self.href);
+		return await createPerson(deps, self.href);
 	}
 
 	if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
 		// 到達不能なホストへの連続再試行を防ぐため、通信前に最終取得日時を更新する。
 		await updateUserLastFetchedAtInDatabase(deps.db, user.id, new Date());
 
-		const self = await resolveSelfForApi(deps, acctLower);
+		const self = await resolveSelf(deps, acctLower);
 
 		if (user.uri !== self.href) {
 			// WebFinger の応答が変わった場合は acct と Person ID の対応を更新する。
@@ -1006,7 +996,7 @@ export async function resolveUserForApi(
 			await updateUserUriByUsernameAndHostInDatabase(deps.db, usernameLower, punyHost, self.href);
 		}
 
-		await updatePersonForApi(deps, self.href, user);
+		await updatePerson(deps, self.href, user);
 
 		const resynced = await fetchUserByUriFromDatabase(deps.db, self.href);
 		if (resynced == null) {

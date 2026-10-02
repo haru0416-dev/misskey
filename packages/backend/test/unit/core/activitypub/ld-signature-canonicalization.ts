@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { JsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import fc from 'fast-check';
 
 // 署名オプションの正規化には jsonld.normalize を通さない高速経路がある。参照実装と 1 バイトでも

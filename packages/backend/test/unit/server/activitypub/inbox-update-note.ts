@@ -7,21 +7,21 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase, fetchNoteByUriFromDatabase } from '@/core/note/NoteStore.js';
-import { createPollInDatabase } from '@/core/note/PollStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
-import { fetchHashtagByNameFromDatabase } from '@/core/hashtag/HashtagStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase, fetchNoteByUriFromDatabase } from '@/core/note/note-store.js';
+import { createPollInDatabase } from '@/core/note/poll-store.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/drive-file-store.js';
+import { fetchHashtagByNameFromDatabase } from '@/core/hashtag/hashtag-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { performOneActivityForApi } from '@/server/activitypub/inbox-dispatch.js';
-import type { ApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.js';
+import { performOneActivity } from '@/server/activitypub/inbox-dispatch.js';
+import type { InboxDispatchDependencies } from '@/server/activitypub/inbox-dispatch.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { ICreate, IObject, IUpdate } from '@/core/activitypub/type.js';
 
 describe('Update(Note) の受信', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiInboxDependencies;
+	let deps: InboxDispatchDependencies;
 	const published = vi.fn();
 
 	beforeAll(async () => {
@@ -30,7 +30,7 @@ describe('Update(Note) の受信', () => {
 			...runtime,
 			logger: runtime.loggerService.getLogger('test-ap-update-note'),
 			publishNoteStream: published,
-		} as ApiInboxDependencies;
+		} as InboxDispatchDependencies;
 		// 新規テスト DB の meta.federation はデフォルトで 'none' で、全ホストを拒否する。
 		runtime.meta.federation = 'all';
 	});
@@ -102,7 +102,7 @@ describe('Update(Note) の受信', () => {
 		const note = await createRemoteNote(actor);
 		published.mockClear();
 
-		const result = await performOneActivityForApi(
+		const result = await performOneActivity(
 			deps,
 			actor,
 			update(
@@ -129,7 +129,7 @@ describe('Update(Note) の受信', () => {
 
 		// 別の利用者が同じホストの他人のノートを書き換えようとする。
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				other,
 				update(other, editedNote(other, note, { content: 'hijacked', updated: '2026-01-02T00:00:00Z' })),
@@ -137,16 +137,11 @@ describe('Update(Note) の受信', () => {
 			),
 		).toMatch(/^skip:/);
 		expect(
-			await performOneActivityForApi(
-				deps,
-				actor,
-				update(actor, editedNote(actor, note, { content: 'no date' })),
-				new Set(),
-			),
+			await performOneActivity(deps, actor, update(actor, editedNote(actor, note, { content: 'no date' })), new Set()),
 		).toBe('skip: not an edit (no updated)');
 		const unknownUri = `https://${actor.host}/notes/${genId()}`;
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, {
@@ -176,7 +171,7 @@ describe('Update(Note) の受信', () => {
 		const publicNote = await createRemoteNote(actor);
 
 		for (const note of [followersOnly, publicNote]) {
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, editedNote(actor, note, { content: 'hi', tag: [mention], updated: '2026-01-02T00:00:00Z' })),
@@ -195,7 +190,7 @@ describe('Update(Note) の受信', () => {
 		const prohibitedWords = runtime.meta.prohibitedWords;
 		runtime.meta.prohibitedWords = ['forbiddenword'];
 		try {
-			const result = await performOneActivityForApi(
+			const result = await performOneActivity(
 				deps,
 				actor,
 				update(actor, editedNote(actor, note, { content: 'a forbiddenword here', updated: '2026-01-02T00:00:00Z' })),
@@ -231,13 +226,13 @@ describe('Update(Note) の受信', () => {
 				...values,
 			});
 
-		expect(
-			await performOneActivityForApi(deps, actor, update(actor, question({ content: 'votes only' })), new Set()),
-		).toBe('ok: Question updated');
+		expect(await performOneActivity(deps, actor, update(actor, question({ content: 'votes only' })), new Set())).toBe(
+			'ok: Question updated',
+		);
 		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('original');
 
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, question({ content: 'edited poll', updated: '2026-01-02T00:00:00Z' })),
@@ -255,7 +250,7 @@ describe('Update(Note) の受信', () => {
 		const quoteReply = await createRemoteNote(actor, { renoteId: target.id, replyId: replied.id, text: 'quote reply' });
 
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(
@@ -268,7 +263,7 @@ describe('Update(Note) の受信', () => {
 		expect((await fetchNoteByIdFromDatabase(deps.db, quote.id))!.text).toBe('quote');
 
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, editedNote(actor, quoteReply, { content: '', updated: '2026-01-02T00:00:00Z' })),
@@ -285,16 +280,16 @@ describe('Update(Note) の受信', () => {
 		const earlier = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 		const newer = update(actor, editedNote(actor, note, { content: 'newer', updated: later }));
 
-		expect(await performOneActivityForApi(deps, actor, newer, new Set())).toBe('ok: Note updated');
+		expect(await performOneActivity(deps, actor, newer, new Set())).toBe('ok: Note updated');
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, editedNote(actor, note, { content: 'older', updated: earlier })),
 				new Set(),
 			),
 		).toBe('skip: older or same edit');
-		expect(await performOneActivityForApi(deps, actor, newer, new Set())).toBe('skip: older or same edit');
+		expect(await performOneActivity(deps, actor, newer, new Set())).toBe('skip: older or same edit');
 
 		const saved = (await fetchNoteByIdFromDatabase(deps.db, note.id))!;
 		expect(saved.text).toBe('newer');
@@ -321,15 +316,15 @@ describe('Update(Note) の受信', () => {
 		const editedUri = `https://${actor.host}/notes/${genId()}`;
 		const uneditedUri = `https://${actor.host}/notes/${genId()}`;
 
-		await performOneActivityForApi(deps, actor, create(editedUri, '2026-01-03T00:00:00Z'), new Set());
+		await performOneActivity(deps, actor, create(editedUri, '2026-01-03T00:00:00Z'), new Set());
 		// 編集していなくても published と同じ updated を付ける実装がある。
-		await performOneActivityForApi(deps, actor, create(uneditedUri, '2026-01-01T00:00:00Z'), new Set());
+		await performOneActivity(deps, actor, create(uneditedUri, '2026-01-01T00:00:00Z'), new Set());
 
 		const edited = (await fetchNoteByUriFromDatabase(deps.db, editedUri))!;
 		expect(new Date(edited.updatedAt!).toISOString()).toBe('2026-01-03T00:00:00.000Z');
 		expect((await fetchNoteByUriFromDatabase(deps.db, uneditedUri))!.updatedAt).toBeNull();
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(actor, editedNote(actor, edited, { content: 'v1', updated: '2026-01-02T00:00:00Z' })),
@@ -373,16 +368,16 @@ describe('Update(Note) の受信', () => {
 		const prohibitedWords = runtime.meta.prohibitedWords;
 		runtime.meta.prohibitedWords = ['forbiddenalt'];
 		try {
-			expect(
-				await performOneActivityForApi(deps, actor, altOnly('forbiddenalt', '2026-01-01T00:00:00Z'), new Set()),
-			).toBe('skip: Note contains prohibited words');
+			expect(await performOneActivity(deps, actor, altOnly('forbiddenalt', '2026-01-01T00:00:00Z'), new Set())).toBe(
+				'skip: Note contains prohibited words',
+			);
 		} finally {
 			runtime.meta.prohibitedWords = prohibitedWords;
 		}
 		expect((await fetchDriveFileByIdFromDatabase(deps.db, fileId))!.comment).toBe('old alt');
 
 		expect(
-			await performOneActivityForApi(
+			await performOneActivity(
 				deps,
 				actor,
 				update(
@@ -421,7 +416,7 @@ describe('Update(Note) の受信', () => {
 		const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
 		published.mockClear();
 		try {
-			const result = await performOneActivityForApi(
+			const result = await performOneActivity(
 				{ ...deps, redis: failingRedis },
 				actor,
 				update(

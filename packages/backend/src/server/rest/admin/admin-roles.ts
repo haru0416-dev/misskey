@@ -5,7 +5,7 @@
 
 import type { endpointMetas as adminRolesContracts } from '@/server/rest/contracts/admin-roles.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import {
 	assignRoleWithSideEffects,
 	createRoleWithSideEffects,
@@ -13,13 +13,13 @@ import {
 	RoleNotAssignedError,
 	updateRoleWithSideEffects,
 	unassignRoleWithSideEffects,
-} from '@/core/role/RoleLogic.js';
-import type { RoleCreateOptions, RoleUpdateOptions } from '@/core/role/RoleLogic.js';
-import { listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/role/RoleStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/role/role-logic.js';
+import type { RoleCreateOptions, RoleUpdateOptions } from '@/core/role/role-logic.js';
+import { listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/role/role-assignment-store.js';
+import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/role/role-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/meta-store.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -38,11 +38,11 @@ import { userIsAdministrator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 import { packRole } from '../../../core/role/role-packing.js';
 import { packApiRoles } from '../role/roles.js';
-import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import { packUserDetailedNotMeMany } from '../user/user.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiAdminRoleDependencies = {
+export type AdminRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -166,9 +166,9 @@ function accessDeniedError(id: string): ApiError {
 }
 
 export async function handleApiAdminRolesAssign(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesAssignParamDef>,
+	params: Params<typeof adminRolesAssignParamDef>,
 ): Promise<void> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
@@ -206,9 +206,9 @@ export async function handleApiAdminRolesAssign(
 }
 
 export async function handleApiAdminRolesCreate(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesCreateParamDef>,
+	params: Params<typeof adminRolesCreateParamDef>,
 ): Promise<Packed<'Role'>> {
 	const created = await createRoleWithSideEffects(
 		{
@@ -240,15 +240,15 @@ export async function handleApiAdminRolesCreate(
 	return await packRole(deps, created);
 }
 
-export async function handleApiAdminRolesList(deps: ApiAdminRoleDependencies): Promise<Packed<'Role'>[]> {
+export async function handleApiAdminRolesList(deps: AdminRoleDependencies): Promise<Packed<'Role'>[]> {
 	const roles = await listRolesOrderByLastUsedAtDescFromDatabase(deps.db);
 	return await packApiRoles(deps, roles);
 }
 
 export async function handleApiAdminRolesDelete(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesDeleteParamDef>,
+	params: Params<typeof adminRolesDeleteParamDef>,
 ): Promise<void> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
@@ -267,8 +267,8 @@ export async function handleApiAdminRolesDelete(
 }
 
 export async function handleApiAdminRolesShow(
-	deps: ApiAdminRoleDependencies,
-	params: ApiParams<typeof adminRolesShowParamDef>,
+	deps: AdminRoleDependencies,
+	params: Params<typeof adminRolesShowParamDef>,
 ): Promise<Packed<'Role'>> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
@@ -279,9 +279,9 @@ export async function handleApiAdminRolesShow(
 }
 
 export async function handleApiAdminRolesUnassign(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesUnassignParamDef>,
+	params: Params<typeof adminRolesUnassignParamDef>,
 	errors: ContractErrors<(typeof adminRolesContracts)['admin/roles/unassign']>,
 ): Promise<void> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
@@ -320,9 +320,9 @@ export async function handleApiAdminRolesUnassign(
 }
 
 export async function handleApiAdminRolesUpdate(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesUpdateParamDef>,
+	params: Params<typeof adminRolesUpdateParamDef>,
 ): Promise<void> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
@@ -358,9 +358,9 @@ export async function handleApiAdminRolesUpdate(
 }
 
 export async function handleApiAdminRolesUpdateDefaultPolicies(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminRolesUpdateDefaultPoliciesParamDef>,
+	params: Params<typeof adminRolesUpdateDefaultPoliciesParamDef>,
 ): Promise<void> {
 	const before = await fetchMetaFromDatabase(deps.db);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, {
@@ -381,9 +381,9 @@ export async function handleApiAdminRolesUpdateDefaultPolicies(
 }
 
 export async function handleApiAdminRolesUsers(
-	deps: ApiAdminRoleDependencies,
+	deps: AdminRoleDependencies,
 	me: { id: MiUser['id'] },
-	params: ApiParams<typeof adminRolesUsersParamDef>,
+	params: Params<typeof adminRolesUsersParamDef>,
 ): Promise<AdminRoleUser[]> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) {
@@ -395,7 +395,7 @@ export async function handleApiAdminRolesUsers(
 		...resolveDateIdPagination({ gen: genId }, params),
 	});
 
-	const packedUsers = await packUserDetailedNotMeManyForApi(
+	const packedUsers = await packUserDetailedNotMeMany(
 		deps,
 		assigns.map((assign) => assign.userId),
 		me,

@@ -10,27 +10,30 @@ import {
 	verifyRecaptcha,
 	verifyTurnstile,
 	verifyTestcaptcha,
-} from '@/core/captcha/CaptchaLogic.js';
+} from '@/core/captcha/captcha-logic.js';
 import { toPuny } from '@/misc/to-puny.js';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
 import {
 	createSignupAccountInDatabase,
 	DuplicatedUsernameError,
 	RootUserAlreadyAssignedError,
 	UsedUsernameError,
-} from '@/core/account/SignupStore.js';
+} from '@/core/account/signup-store.js';
 import {
 	fetchRegistrationTicketByPendingUserIdFromDatabase,
 	updateRegistrationTicketInDatabase,
-} from '@/core/invite/RegistrationTicketStore.js';
-import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/account/UserPendingStore.js';
+} from '@/core/invite/registration-ticket-store.js';
+import {
+	deleteUserPendingFromDatabase,
+	fetchUserPendingByCodeFromDatabase,
+} from '@/core/account/user-pending-store.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -39,14 +42,14 @@ import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
-import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/system-webhook-queue.js';
+import { listSystemWebhooksFromDatabase } from '@/core/webhook/system-webhook-store.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import { ApiError, signupValidationError } from '../error.js';
 import { completeApiSignin } from './signin.js';
-import type { ApiSigninDependencies, ApiSigninFlowResult, ApiSigninRequest } from './signin.js';
+import type { SigninDependencies, SigninFlowResult, SigninRequest } from './signin.js';
 import { packUserLite } from '../../../core/user/user-packing.js';
-import { packMeDetailedForApi } from '../user/user.js';
+import { packMeDetailed } from '../user/user.js';
 
 type SignupBody = {
 	'cap-response'?: unknown;
@@ -129,7 +132,7 @@ function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string):
 
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	// MeDetailed は交差型なので、展開すると片方の省略可能な項目の型が混ざる。組み立てたものに token だけを足す。
-	return Object.assign(await packMeDetailedForApi(deps, user, { includeSecrets: true }), { token });
+	return Object.assign(await packMeDetailed(deps, user, { includeSecrets: true }), { token });
 }
 
 export async function createLocalSignupAccount(
@@ -231,7 +234,7 @@ export async function createLocalSignupAccount(
 }
 
 export async function signupWithApi(
-	deps: SignupDependencies & Pick<ApiSigninDependencies, 'httpRequestService'>,
+	deps: SignupDependencies & Pick<SigninDependencies, 'httpRequestService'>,
 	body: SignupBody,
 ): Promise<SignupResponse> {
 	assertSignupGateOpen(deps.meta);
@@ -311,9 +314,9 @@ export async function signupWithApi(
 }
 
 export async function signupPendingWithApi(
-	deps: SignupDependencies & ApiSigninDependencies,
-	request: ApiSigninRequest,
-): Promise<ApiSigninFlowResult> {
+	deps: SignupDependencies & SigninDependencies,
+	request: SigninRequest,
+): Promise<SigninFlowResult> {
 	const code = request.body.code;
 	if (typeof code !== 'string') {
 		throw signupValidationError('INVALID_PARAM');

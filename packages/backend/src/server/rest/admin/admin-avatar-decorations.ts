@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	createAvatarDecorationWithSideEffects,
 	deleteAvatarDecorationWithSideEffects,
 	updateAvatarDecorationWithSideEffects,
-} from '@/core/avatar-decoration/AvatarDecorationLogic.js';
+} from '@/core/avatar-decoration/avatar-decoration-logic.js';
 import type {
 	AvatarDecorationCreateOptions,
 	AvatarDecorationUpdateOptions,
-} from '@/core/avatar-decoration/AvatarDecorationLogic.js';
-import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
-import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+} from '@/core/avatar-decoration/avatar-decoration-logic.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/avatar-decoration-store.js';
+import { logModerationEventInDatabase } from '@/core/moderation/moderation-log-logic.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -26,7 +26,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminAvatarDecorationDependencies = {
+export type AdminAvatarDecorationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	publishInternalEvent?: InternalEventPublisher;
@@ -70,7 +70,7 @@ export const adminAvatarDecorationsUpdateParamDef = z.object({
 	category: z.string().nullable().optional(),
 });
 
-function packAdminAvatarDecorationForApi(config: Config, decoration: MiAvatarDecoration): AdminAvatarDecoration {
+function packAdminAvatarDecoration(config: Config, decoration: MiAvatarDecoration): AdminAvatarDecoration {
 	return {
 		id: decoration.id,
 		createdAt: parseId(decoration.id).date.toISOString(),
@@ -84,9 +84,9 @@ function packAdminAvatarDecorationForApi(config: Config, decoration: MiAvatarDec
 }
 
 export async function handleApiAdminAvatarDecorationsCreate(
-	deps: ApiAdminAvatarDecorationDependencies,
+	deps: AdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAvatarDecorationsCreateParamDef>,
+	params: Params<typeof adminAvatarDecorationsCreateParamDef>,
 ): Promise<AdminAvatarDecoration> {
 	const created = await createAvatarDecorationWithSideEffects(
 		{
@@ -105,13 +105,13 @@ export async function handleApiAdminAvatarDecorationsCreate(
 		me,
 	);
 
-	return packAdminAvatarDecorationForApi(deps.config, created);
+	return packAdminAvatarDecoration(deps.config, created);
 }
 
 export async function handleApiAdminAvatarDecorationsDelete(
-	deps: ApiAdminAvatarDecorationDependencies,
+	deps: AdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAvatarDecorationsDeleteParamDef>,
+	params: Params<typeof adminAvatarDecorationsDeleteParamDef>,
 ): Promise<void> {
 	await deleteAvatarDecorationWithSideEffects(
 		{
@@ -125,19 +125,17 @@ export async function handleApiAdminAvatarDecorationsDelete(
 }
 
 export async function handleApiAdminAvatarDecorationsList(
-	deps: ApiAdminAvatarDecorationDependencies,
+	deps: AdminAvatarDecorationDependencies,
 ): Promise<AdminAvatarDecoration[]> {
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 
-	return decorations.map((decoration) =>
-		packAdminAvatarDecorationForApi(deps.config, decoration as MiAvatarDecoration),
-	);
+	return decorations.map((decoration) => packAdminAvatarDecoration(deps.config, decoration as MiAvatarDecoration));
 }
 
 export async function handleApiAdminAvatarDecorationsUpdate(
-	deps: ApiAdminAvatarDecorationDependencies,
+	deps: AdminAvatarDecorationDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminAvatarDecorationsUpdateParamDef>,
+	params: Params<typeof adminAvatarDecorationsUpdateParamDef>,
 ): Promise<void> {
 	await updateAvatarDecorationWithSideEffects(
 		{

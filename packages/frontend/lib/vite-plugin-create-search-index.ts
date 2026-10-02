@@ -441,7 +441,7 @@ const propertyAccessProxyHandler: ProxyHandler<AccessProxy> = {
 			return (target as any)[p];
 		}
 		if (p == 'toJSON' || p == Symbol.toPrimitive) {
-			return propertyAccessProxyToJSON;
+			return propertyAccessProxyToJson;
 		}
 		if (typeof p == 'string') {
 			return (target[p] = propertyAccessProxy([...target[propertyAccessProxySymbol], p]));
@@ -450,7 +450,7 @@ const propertyAccessProxyHandler: ProxyHandler<AccessProxy> = {
 	},
 };
 
-function propertyAccessProxyToJSON(this: AccessProxy, hint: string) {
+function propertyAccessProxyToJson(this: AccessProxy, hint: string) {
 	const expression = this[propertyAccessProxySymbol].reduce((prev, current) => {
 		if (/^[a-z][0-9a-z]*$/i.test(current)) {
 			return `${prev}.${current}`;

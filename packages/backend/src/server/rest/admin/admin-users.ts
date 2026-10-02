@@ -3,26 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	listRoleAssignmentsByRoleIdsFromDatabase,
 	listRoleAssignmentsByUserIdFromDatabase,
 	listRoleAssignmentsByUserIdsFromDatabase,
-} from '@/core/role/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
-import { listSigninsByUserIdFromDatabase } from '@/core/account/SigninStore.js';
+} from '@/core/role/role-assignment-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
+import { listSigninsByUserIdFromDatabase } from '@/core/account/signin-store.js';
 import {
 	fetchUserProfileByUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	listAdminUsersFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -35,19 +35,19 @@ import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {
 	computeUserRoles,
-	getRolePolicies,
-	getUserRoles,
+	fetchRolePolicies,
+	fetchUserRoles,
 	userIsAdministrator,
 	userIsModerator,
 } from '../../../core/role/role-policy.js';
 import { packApiRoles } from '../role/roles.js';
 import { packApiSignin } from '../account/i.js';
-import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import { packUserDetailedNotMeMany } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminUsersDependencies = UserPackingDependencies & {
+export type AdminUsersDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -75,7 +75,7 @@ type AdminShowUserResponse = {
 	lastActiveDate: string | null;
 	moderationNote: string;
 	signins: ReturnType<typeof packApiSignin>[];
-	policies: Awaited<ReturnType<typeof getRolePolicies>>;
+	policies: Awaited<ReturnType<typeof fetchRolePolicies>>;
 	roles: Packed<'Role'>[];
 	roleAssigns: {
 		createdAt: string;
@@ -117,7 +117,7 @@ function isActiveRoleAssignment(assign: MiRoleAssignment): boolean {
 	return assign.expiresAt == null || assign.expiresAt.getTime() > Date.now();
 }
 
-async function getAdministratorIds(deps: ApiAdminUsersDependencies): Promise<MiUser['id'][]> {
+async function fetchAdministratorIds(deps: AdminUsersDependencies): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
 	const administratorRoles = roles.filter((role) => role.isAdministrator);
 	const assigns =
@@ -131,8 +131,8 @@ async function getAdministratorIds(deps: ApiAdminUsersDependencies): Promise<MiU
 	return [...new Set(assigns.map((assign) => assign.userId))].sort((a, b) => a.localeCompare(b));
 }
 
-async function getModeratorIdsForApi(
-	deps: Pick<ApiAdminUsersDependencies, 'db' | 'meta'>,
+async function fetchModeratorIds(
+	deps: Pick<AdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;
 		includeRoot?: boolean;
@@ -165,15 +165,15 @@ async function getModeratorIdsForApi(
 	return [...resultSet].sort((a, b) => a.localeCompare(b));
 }
 
-export async function getModeratorsForApi(
-	deps: Pick<ApiAdminUsersDependencies, 'db' | 'meta'>,
+export async function fetchModerators(
+	deps: Pick<AdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;
 		includeRoot?: boolean;
 		excludeExpire?: boolean;
 	},
 ): Promise<MiUser[]> {
-	const ids = await getModeratorIdsForApi(deps, options);
+	const ids = await fetchModeratorIds(deps, options);
 	return ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
 }
 
@@ -199,21 +199,21 @@ function packPublicUserRole(role: MiRole): {
 	};
 }
 
-async function packAdminUserDetailedForApi(
-	deps: ApiAdminUsersDependencies,
+async function packAdminUserDetailed(
+	deps: AdminUsersDependencies,
 	user: MiUser,
 	base: UserDetailedNotMeApiResponse,
 	hint?: {
 		profile?: Awaited<ReturnType<typeof fetchUserProfileByUserIdOrFailFromDatabase>>;
 		roles?: MiRole[];
-		policies?: Awaited<ReturnType<typeof getRolePolicies>>;
+		policies?: Awaited<ReturnType<typeof fetchRolePolicies>>;
 	},
 ): Promise<UserDetailedNotMeApiResponse> {
 	const [profile, roles] = await Promise.all([
 		hint?.profile ?? fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
-		hint?.roles ?? getUserRoles(deps, user),
+		hint?.roles ?? fetchUserRoles(deps, user),
 	]);
-	const policies = hint?.policies ?? (await getRolePolicies(deps, user, roles));
+	const policies = hint?.policies ?? (await fetchRolePolicies(deps, user, roles));
 	const publicRoles = roles
 		.filter((role) => role.isPublic)
 		.sort((a, b) => b.displayOrder - a.displayOrder)
@@ -231,8 +231,8 @@ async function packAdminUserDetailedForApi(
 	};
 }
 
-async function packAdminUsersDetailedForApi(
-	deps: ApiAdminUsersDependencies,
+async function packAdminUsersDetailed(
+	deps: AdminUsersDependencies,
 	users: MiUser[],
 	baseUsers: UserDetailedNotMeApiResponse[],
 ): Promise<UserDetailedNotMeApiResponse[]> {
@@ -256,9 +256,9 @@ async function packAdminUsersDetailedForApi(
 	return await Promise.all(
 		users.map(async (user, index) => {
 			const userRoles = computeUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
-			const policies = await getRolePolicies(deps, user, userRoles);
+			const policies = await fetchRolePolicies(deps, user, userRoles);
 			const profile = profileByUserId.get(user.id);
-			return await packAdminUserDetailedForApi(deps, user, baseUsers[index]!, {
+			return await packAdminUserDetailed(deps, user, baseUsers[index]!, {
 				...(profile === undefined ? {} : { profile }),
 				roles: userRoles,
 				policies,
@@ -268,9 +268,9 @@ async function packAdminUsersDetailedForApi(
 }
 
 export async function handleApiAdminShowUser(
-	deps: ApiAdminUsersDependencies,
+	deps: AdminUsersDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminShowUserParamDef>,
+	params: Params<typeof adminShowUserParamDef>,
 ): Promise<AdminShowUserResponse> {
 	const [user, profile] = await Promise.all([
 		fetchUserByIdFromDatabase(deps.db, params.userId),
@@ -287,10 +287,10 @@ export async function handleApiAdminShowUser(
 	}
 
 	const [policies, signins, assigns, roles, isModerator] = await Promise.all([
-		getRolePolicies(deps, user),
+		fetchRolePolicies(deps, user),
 		listSigninsByUserIdFromDatabase(deps.db, user.id),
 		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id).then((result) => result.filter(isActiveRoleAssignment)),
-		getUserRoles(deps, user),
+		fetchUserRoles(deps, user),
 		userIsModerator(deps, user),
 	]);
 
@@ -327,29 +327,29 @@ export async function handleApiAdminShowUser(
 }
 
 export async function handleApiAdminShowUsers(
-	deps: ApiAdminUsersDependencies,
+	deps: AdminUsersDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof adminShowUsersParamDef>,
+	params: Params<typeof adminShowUsersParamDef>,
 ): Promise<UserDetailedNotMeApiResponse[]> {
 	let roleUserIds: MiUser['id'][] | null = null;
 
 	switch (params.state) {
 		case 'admin': {
-			roleUserIds = await getAdministratorIds(deps);
+			roleUserIds = await fetchAdministratorIds(deps);
 			if (roleUserIds.length === 0) {
 				return [];
 			}
 			break;
 		}
 		case 'moderator': {
-			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: false });
+			roleUserIds = await fetchModeratorIds(deps, { includeAdmins: false });
 			if (roleUserIds.length === 0) {
 				return [];
 			}
 			break;
 		}
 		case 'adminOrModerator': {
-			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: true });
+			roleUserIds = await fetchModeratorIds(deps, { includeAdmins: true });
 			if (roleUserIds.length === 0) {
 				return [];
 			}
@@ -370,14 +370,14 @@ export async function handleApiAdminShowUsers(
 			roleUserIds,
 		}),
 	);
-	const baseUsers = await packUserDetailedNotMeManyForApi(deps, users, me);
+	const baseUsers = await packUserDetailedNotMeMany(deps, users, me);
 	// 一覧のクエリの後で削除が確定したユーザーは返さない。
 	const live = users.flatMap((user, index) => {
 		const base = baseUsers[index];
 		return base == null ? [] : [{ user, base }];
 	});
 
-	return await packAdminUsersDetailedForApi(
+	return await packAdminUsersDetailed(
 		deps,
 		live.map((entry) => entry.user),
 		live.map((entry) => entry.base),

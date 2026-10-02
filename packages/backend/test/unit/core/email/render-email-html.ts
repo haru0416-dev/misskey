@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { renderEmailHtml } from '@/core/email/EmailService.js';
+import { renderEmailHtml } from '@/core/email/email-service.js';
 
 // admin/send-email はモデレーターが書いた本文と件名をそのまま渡すので、サーバー名義のメールに
 // 任意の HTML を混ぜられないことを見る。

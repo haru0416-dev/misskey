@@ -8,16 +8,16 @@ import type { ContractErrors } from '../endpoint-contract.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { z } from 'zod';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
-import { fetchAndCreateNote } from '@/core/note/NoteCreationService.js';
-import type { NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
-import type { NotePostProcessing } from '@/core/note/NotePostProcessing.js';
-import { NotePostProcessingUnavailableError } from '@/core/note/NotePostProcessing.js';
+import { fetchAndCreateNote } from '@/core/note/note-creation-service.js';
+import type { NoteCreationDependencies } from '@/core/note/note-creation-service.js';
+import type { NotePostProcessing } from '@/core/note/note-post-processing.js';
+import { NotePostProcessingUnavailableError } from '@/core/note/note-post-processing.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiUser } from '@/models/User.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { packNote } from '../../../core/note/note-packing.js';
 
 /**
@@ -64,7 +64,7 @@ export const notesCreateParamDef = z
 export async function handleApiNotesCreate(
 	deps: NoteCreationDependencies & { notePostProcessing: NotePostProcessing },
 	me: MiUser,
-	ps: ApiParams<typeof notesCreateParamDef>,
+	ps: Params<typeof notesCreateParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/create']>,
 	signal?: AbortSignal,
 ): Promise<{ createdNote: Packed<'Note'> }> {

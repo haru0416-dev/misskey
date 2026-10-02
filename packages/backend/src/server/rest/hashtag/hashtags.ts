@@ -5,28 +5,28 @@
 
 import type { endpointMetas as hashtagsContracts } from '@/server/rest/contracts/hashtags.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import {
 	fetchHashtagByNameFromDatabase,
 	listHashtagsFromDatabase,
 	searchHashtagNamesFromDatabase,
-} from '@/core/hashtag/HashtagStore.js';
-import type { HashtagSort } from '@/core/hashtag/HashtagStore.js';
-import { listUsersByTagFromDatabase } from '@/core/user/UserStore.js';
+} from '@/core/hashtag/hashtag-store.js';
+import type { HashtagSort } from '@/core/hashtag/hashtag-store.js';
+import { listUsersByTagFromDatabase } from '@/core/user/user-store.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
-import { packUserDetailedManyForApi } from '../user/user.js';
+import { packUserDetailedMany } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
-import { HASHTAG_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/FeaturedRanking.js';
+import { HASHTAG_RANKING_WINDOW, readFeaturedRanking } from '@/core/featured/featured-ranking.js';
 import { formatHashtagUsersWindow } from '@/core/hashtag/hashtag-ranking.js';
 
-export type ApiHashtagDependencies = UserPackingDependencies & {
+export type HashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
@@ -63,7 +63,7 @@ export const hashtagsShowParamDef = z.object({
 	tag: z.string(),
 });
 
-async function getHashtagCharts(
+async function fetchHashtagCharts(
 	redis: Redis.Redis,
 	hashtags: string[],
 	range: number,
@@ -122,7 +122,7 @@ function packApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 }
 
 export async function handleApiHashtagsTrend(
-	deps: ApiHashtagDependencies,
+	deps: HashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<
 	{
@@ -133,7 +133,7 @@ export async function handleApiHashtagsTrend(
 > {
 	parseApiParams(hashtagsTrendParamDef, body);
 	const ranking = await readFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
-	const charts = ranking.length === 0 ? {} : await getHashtagCharts(deps.redis, ranking, 20);
+	const charts = ranking.length === 0 ? {} : await fetchHashtagCharts(deps.redis, ranking, 20);
 
 	return ranking.map((tag) => {
 		const chart = charts[tag];
@@ -150,8 +150,8 @@ export async function handleApiHashtagsTrend(
 }
 
 export async function handleApiHashtagsList(
-	deps: ApiHashtagDependencies,
-	params: ApiParams<typeof hashtagsListParamDef>,
+	deps: HashtagDependencies,
+	params: Params<typeof hashtagsListParamDef>,
 ): Promise<Packed<'Hashtag'>[]> {
 	const tags = await listHashtagsFromDatabase(deps.db, {
 		limit: params.limit,
@@ -165,8 +165,8 @@ export async function handleApiHashtagsList(
 }
 
 export async function handleApiHashtagsSearch(
-	deps: ApiHashtagDependencies,
-	params: ApiParams<typeof hashtagsSearchParamDef>,
+	deps: HashtagDependencies,
+	params: Params<typeof hashtagsSearchParamDef>,
 ): Promise<string[]> {
 	return await searchHashtagNamesFromDatabase(deps.db, {
 		query: params.query,
@@ -176,8 +176,8 @@ export async function handleApiHashtagsSearch(
 }
 
 export async function handleApiHashtagsShow(
-	deps: ApiHashtagDependencies,
-	params: ApiParams<typeof hashtagsShowParamDef>,
+	deps: HashtagDependencies,
+	params: Params<typeof hashtagsShowParamDef>,
 	errors: ContractErrors<(typeof hashtagsContracts)['hashtags/show']>,
 ): Promise<Packed<'Hashtag'>> {
 	const hashtag = await fetchHashtagByNameFromDatabase(deps.db, normalizeForSearch(params.tag));
@@ -198,9 +198,9 @@ export const hashtagsUsersParamDef = z.object({
 });
 
 export async function handleApiHashtagsUsers(
-	deps: ApiHashtagDependencies,
+	deps: HashtagDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof hashtagsUsersParamDef>,
+	params: Params<typeof hashtagsUsersParamDef>,
 ): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
 	const tag = normalizeForSearch(params.tag);
 
@@ -213,5 +213,5 @@ export async function handleApiHashtagsUsers(
 		origin: params.origin,
 	});
 
-	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
+	return (await packUserDetailedMany(deps, users, me)).filter((user) => user != null);
 }

@@ -65,12 +65,12 @@ import type { QueueEmojisDependencies } from './handlers/emojis.js';
 import { handleQueueDeleteAccount } from './handlers/delete-account.js';
 import type { QueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
-import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
+import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
 import type { DbJobData, DbJobName } from '@/core/queue/types.js';
 import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
 import { handleQueueAcceptAllFollowRequests } from '@/server/rest/account/account-update.js';
-import type { ApiAdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
-import { handleQueueNotePostCreate } from '@/core/note/NoteCreationService.js';
+import type { AdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
+import { handleQueueNotePostCreate } from '@/core/note/note-creation-service.js';
 
 export type QueueShellDependencies = QueueWebhookDeliverDependencies &
 	QueueRelationshipDependencies &
@@ -85,7 +85,7 @@ export type QueueShellDependencies = QueueWebhookDeliverDependencies &
 	QueueEmojisDependencies &
 	QueueDeleteAccountDependencies &
 	QueueCheckModeratorsActivityDependencies &
-	ApiAdminUserSuspensionDependencies & {
+	AdminUserSuspensionDependencies & {
 		config: Config;
 		logger: Logger;
 	};

@@ -5,7 +5,7 @@
 
 import { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import { handleApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
 import { handleApiUsersClips } from '../clip/clips.js';
 import { handleApiUsersListsFavorite, handleApiUsersListsUnfavorite } from '../favorite/favorites.js';
@@ -43,9 +43,9 @@ import {
 	handleApiUsersListsShow,
 	handleApiUsersListsUpdate,
 } from '../user/users.js';
-import { resolveUserForApi } from '../activitypub/ap-person.js';
+import { resolveUser } from '../activitypub/ap-person.js';
 
-export const usersEndpoints = implementEndpoints<ApiShellDependencies>()(usersContracts, {
+export const usersEndpoints = implementEndpoints<ShellDependencies>()(usersContracts, {
 	users: async ({ deps, input, me }) => await handleApiUsers(deps, me, input),
 	'users/clips': async ({ deps, input, me }) => await handleApiUsersClips(deps, me, input),
 	'users/featured-notes': async ({ deps, input, me }) => await handleApiUsersFeaturedNotes(deps, me, input),
@@ -99,7 +99,7 @@ export const usersEndpoints = implementEndpoints<ApiShellDependencies>()(usersCo
 	},
 	'users/show': async ({ deps, me, input, requestIp }) =>
 		await handleApiUsersShow(
-			{ ...deps, resolveUser: (username, host) => resolveUserForApi(deps, username, host) },
+			{ ...deps, resolveUser: (username, host) => resolveUser(deps, username, host) },
 			me,
 			input,
 			requestIp(),

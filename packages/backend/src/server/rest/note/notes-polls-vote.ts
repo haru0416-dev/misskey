@@ -7,16 +7,16 @@ import type { endpointMetas as notesContracts } from '@/server/rest/contracts/no
 import type { ContractErrors } from '../endpoint-contract.js';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/note/PollStore.js';
-import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
+import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/note/poll-store.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/poll-vote-store.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
-import { isNoteContentVisibleForMeForApi } from './note.js';
+import { isNoteContentVisibleForMe } from './note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import {
 	addActivityContext,
@@ -27,9 +27,9 @@ import {
 import type { NoteApDependencies, RelayDeliverDependencies } from '../../../core/activitypub/notes-ap.js';
 import type { NoteStreamPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 
-export type ApiNotesPollsVoteDependencies = RelayDeliverDependencies &
+export type NotesPollsVoteDependencies = RelayDeliverDependencies &
 	NoteDependencies & {
 		config: NoteApDependencies['config'];
 		publishNoteStream?: NoteStreamPublisher;
@@ -41,16 +41,16 @@ export const notesPollsVoteParamDef = z.object({
 });
 
 export async function handleApiNotesPollsVote(
-	deps: ApiNotesPollsVoteDependencies,
+	deps: NotesPollsVoteDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof notesPollsVoteParamDef>,
+	params: Params<typeof notesPollsVoteParamDef>,
 	errors: ContractErrors<(typeof notesContracts)['notes/polls/vote']>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) {
 		throw errors.noSuchNote();
 	}
-	if (!(await isNoteContentVisibleForMeForApi(deps, note, me.id))) {
+	if (!(await isNoteContentVisibleForMe(deps, note, me.id))) {
 		throw errors.noSuchNote();
 	}
 

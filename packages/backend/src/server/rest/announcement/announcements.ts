@@ -5,25 +5,25 @@
 
 import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	countAnnouncementReactionsByAnnouncementIdsFromDatabase,
 	createAnnouncementReactionInDatabase,
-	deleteAnnouncementReactionInDatabase,
+	deleteAnnouncementReactionFromDatabase,
 	listMyAnnouncementReactionsFromDatabase,
-} from '@/core/announcement/AnnouncementReactionStore.js';
+} from '@/core/announcement/announcement-reaction-store.js';
 import {
 	announcementReadExistsInDatabase,
 	createAnnouncementReadInDatabase,
 	listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase,
-} from '@/core/announcement/AnnouncementReadStore.js';
+} from '@/core/announcement/announcement-read-store.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForUserFromDatabase,
 	listUnreadAnnouncementsForUserFromDatabase,
 	updateAnnouncementInDatabase,
-} from '@/core/announcement/AnnouncementStore.js';
+} from '@/core/announcement/announcement-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -32,16 +32,16 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
-import { normalizeReactionForApi } from '../note/notes-reactions.js';
-import { getUserRoles } from '../../../core/role/role-policy.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/emoji-store.js';
+import { normalizeReaction } from '../note/notes-reactions.js';
+import { fetchUserRoles } from '../../../core/role/role-policy.js';
 import type { RolePolicyDependencies } from '../../../core/role/role-policy.js';
 import { ApiError } from '../error.js';
 import type { MainStreamPublisher } from '../../../core/events.js';
 import { parseApiParams } from '../validation.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 
-export type ApiAnnouncementDependencies = RolePolicyDependencies & {
+export type AnnouncementDependencies = RolePolicyDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	publishMainStream?: MainStreamPublisher;
@@ -71,7 +71,7 @@ export const announcementUnreactParamDef = z.object({
 });
 
 async function packApiAnnouncement(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	announcement: MiAnnouncement & {
 		isRead?: boolean | null;
 		reactions?: Record<string, number>;
@@ -118,9 +118,9 @@ async function packApiAnnouncement(
 }
 
 export async function handleApiAnnouncements(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
-	params: ApiParams<typeof announcementsParamDef>,
+	params: Params<typeof announcementsParamDef>,
 ): Promise<Packed<'Announcement'>[]> {
 	const announcements = await listAnnouncementsForUserFromDatabase(
 		deps.db,
@@ -161,9 +161,9 @@ export async function handleApiAnnouncements(
 }
 
 export async function handleApiAnnouncementShow(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
-	params: ApiParams<typeof announcementShowParamDef>,
+	params: Params<typeof announcementShowParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['announcements/show']>,
 ): Promise<Packed<'Announcement'>> {
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
@@ -178,9 +178,9 @@ export async function handleApiAnnouncementShow(
 }
 
 export async function handleApiIReadAnnouncement(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	me: MiUser,
-	params: ApiParams<typeof readAnnouncementParamDef>,
+	params: Params<typeof readAnnouncementParamDef>,
 ): Promise<void> {
 	const created = await createAnnouncementReadInDatabase(deps.db, {
 		id: genId(),
@@ -229,26 +229,26 @@ const isCustomEmojiReaction = /^:([\w+-]+)(?:@\.)?:$/;
  * 使えないものが来たら弾かずにフォールバックへ寄せる (ノートのリアクションと同じ扱い)。
  */
 async function normalizeAnnouncementReaction(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	me: MiUser,
 	requested: string,
 ): Promise<string> {
 	const custom = requested.match(isCustomEmojiReaction);
 	if (custom == null) {
-		return normalizeReactionForApi(requested);
+		return normalizeReaction(requested);
 	}
 
 	const name = custom[1]!;
 	const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
 	if (emoji == null) {
-		return normalizeReactionForApi(null);
+		return normalizeReaction(null);
 	}
 
 	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
-		const roles = await getUserRoles(deps, me);
+		const roles = await fetchUserRoles(deps, me);
 		const allowed = roles.some((role) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(role.id));
 		if (!allowed) {
-			return normalizeReactionForApi(null);
+			return normalizeReaction(null);
 		}
 	}
 
@@ -256,7 +256,7 @@ async function normalizeAnnouncementReaction(
 }
 
 async function fetchReactableAnnouncement(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	me: MiUser,
 	announcementId: MiAnnouncement['id'],
 ): Promise<MiAnnouncement> {
@@ -276,9 +276,9 @@ async function fetchReactableAnnouncement(
 }
 
 export async function handleApiAnnouncementReact(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	me: MiUser,
-	params: ApiParams<typeof announcementReactParamDef>,
+	params: Params<typeof announcementReactParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['announcements/react']>,
 ): Promise<void> {
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
@@ -296,14 +296,14 @@ export async function handleApiAnnouncementReact(
 }
 
 export async function handleApiAnnouncementUnreact(
-	deps: ApiAnnouncementDependencies,
+	deps: AnnouncementDependencies,
 	me: MiUser,
-	params: ApiParams<typeof announcementUnreactParamDef>,
+	params: Params<typeof announcementUnreactParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['announcements/unreact']>,
 ): Promise<void> {
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
-	const deleted = await deleteAnnouncementReactionInDatabase(deps.db, me.id, params.announcementId);
+	const deleted = await deleteAnnouncementReactionFromDatabase(deps.db, me.id, params.announcementId);
 	if (!deleted) {
 		throw errors.notReacted();
 	}

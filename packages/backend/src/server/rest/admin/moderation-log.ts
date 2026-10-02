@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
-import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/moderation-log-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
@@ -14,17 +14,17 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
-import { packUserDetailedNotMeManyForApi } from '../user/user.js';
+import { packUserDetailedNotMeMany } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { UserDetailedNotMeApiResponse } from '../user/user.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiModerationLogDependencies = UserPackingDependencies & {
+export type ModerationLogDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-type ApiModerationLogResponse = {
+type ModerationLogResponse = {
 	id: string;
 	createdAt: string;
 	type: string;
@@ -41,11 +41,11 @@ export const adminShowModerationLogsParamDef = z.object({
 	search: z.string().nullable().optional(),
 });
 
-async function packModerationLogsForApi(
-	deps: ApiModerationLogDependencies,
+async function packModerationLogs(
+	deps: ModerationLogDependencies,
 	logs: MiModerationLog[],
-): Promise<ApiModerationLogResponse[]> {
-	const users = await packUserDetailedNotMeManyForApi(
+): Promise<ModerationLogResponse[]> {
+	const users = await packUserDetailedNotMeMany(
 		deps,
 		logs.map((log) => log.user ?? log.userId),
 	);
@@ -70,9 +70,9 @@ async function packModerationLogsForApi(
 }
 
 export async function handleApiAdminShowModerationLogs(
-	deps: ApiModerationLogDependencies,
-	params: ApiParams<typeof adminShowModerationLogsParamDef>,
-): Promise<ApiModerationLogResponse[]> {
+	deps: ModerationLogDependencies,
+	params: Params<typeof adminShowModerationLogsParamDef>,
+): Promise<ModerationLogResponse[]> {
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const logs = await listModerationLogsFromDatabase(
 		deps.db,
@@ -87,5 +87,5 @@ export async function handleApiAdminShowModerationLogs(
 		}),
 	);
 
-	return await packModerationLogsForApi(deps, logs);
+	return await packModerationLogs(deps, logs);
 }

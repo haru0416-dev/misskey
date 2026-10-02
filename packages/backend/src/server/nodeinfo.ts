@@ -6,9 +6,9 @@
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
-import { countNotesByUserHostFromDatabase } from '@/core/note/NoteStore.js';
+import { countNotesByUserHostFromDatabase } from '@/core/note/note-store.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
-import { countUsersByHostFromDatabase } from '@/core/user/UserStore.js';
+import { countUsersByHostFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';

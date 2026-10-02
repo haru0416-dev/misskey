@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
-import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/relay/RelayLogic.js';
+import { enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
+import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/relay/relay-logic.js';
 import {
 	listRelaysByStatusFromDatabaseCached,
 	listRelaysFromDatabase,
 	updateRelayStatusInDatabase,
-} from '@/core/relay/RelayStore.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
+} from '@/core/relay/relay-store.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/system-account-logic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiRelay } from '@/models/Relay.js';
@@ -22,7 +22,7 @@ import type { DeliverQueue } from '@/core/queue/queues.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiAdminRelaysDependencies = {
+export type AdminRelaysDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -69,8 +69,8 @@ function senderInboxesOf(sender: RelaySender): string[] {
 	return [sender.inbox, sender.sharedInbox].filter((inbox): inbox is string => inbox != null);
 }
 
-export async function relayAcceptedForApi(
-	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
+export async function relayAccepted(
+	deps: Pick<AdminRelaysDependencies, 'db'>,
 	id: string,
 	sender: RelaySender,
 ): Promise<string> {
@@ -78,8 +78,8 @@ export async function relayAcceptedForApi(
 	return JSON.stringify(result);
 }
 
-export async function relayRejectedForApi(
-	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
+export async function relayRejected(
+	deps: Pick<AdminRelaysDependencies, 'db'>,
 	id: string,
 	sender: RelaySender,
 ): Promise<string> {
@@ -88,8 +88,8 @@ export async function relayRejectedForApi(
 }
 
 /** accepted リレーの短命キャッシュを使い、actor がリレーか判定する。 */
-export async function isRelayActorForApi(
-	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
+export async function isRelayActor(
+	deps: Pick<AdminRelaysDependencies, 'db'>,
 	actor: { inbox: string | null; sharedInbox: string | null },
 ): Promise<boolean> {
 	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
@@ -100,7 +100,7 @@ export async function isRelayActorForApi(
 	);
 }
 
-export async function handleApiAdminRelaysList(deps: ApiAdminRelaysDependencies): Promise<AdminRelaysListResponse> {
+export async function handleApiAdminRelaysList(deps: AdminRelaysDependencies): Promise<AdminRelaysListResponse> {
 	const relays = await listRelaysFromDatabase(deps.db);
 
 	return relays.map((relay) => ({
@@ -111,8 +111,8 @@ export async function handleApiAdminRelaysList(deps: ApiAdminRelaysDependencies)
 }
 
 export async function handleApiAdminRelaysAdd(
-	deps: ApiAdminRelaysDependencies,
-	ps: ApiParams<typeof adminRelaysWriteParamDef>,
+	deps: AdminRelaysDependencies,
+	ps: Params<typeof adminRelaysWriteParamDef>,
 ): Promise<MiRelay> {
 	assertHttpsUrl(ps.inbox);
 
@@ -138,8 +138,8 @@ export async function handleApiAdminRelaysAdd(
 }
 
 export async function handleApiAdminRelaysRemove(
-	deps: ApiAdminRelaysDependencies,
-	ps: ApiParams<typeof adminRelaysWriteParamDef>,
+	deps: AdminRelaysDependencies,
+	ps: Params<typeof adminRelaysWriteParamDef>,
 ): Promise<void> {
 	await removeRelayWithSideEffects(
 		{

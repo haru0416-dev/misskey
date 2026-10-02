@@ -5,37 +5,37 @@
 
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/announcement/AnnouncementStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
-import { fetchFlashByIdFromDatabase } from '@/core/flash/FlashStore.js';
-import { fetchGalleryPostByIdFromDatabase } from '@/core/gallery/GalleryPostStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
-import { fetchPageByNameAndUserIdFromDatabase } from '@/core/page/PageStore.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/announcement/announcement-store.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/channel-store.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/clip-store.js';
+import { fetchFlashByIdFromDatabase } from '@/core/flash/flash-store.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/gallery/gallery-post-store.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/note-store.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/page/page-store.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
-} from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
+import { packAnnouncement } from '@/server/rest/admin/admin-announcements.js';
 import { packChannelForSsr } from '@/server/rest/channel/channels.js';
-import type { ApiChannelsDependencies } from '@/server/rest/channel/channels.js';
-import { packClipForApi } from '@/server/rest/clip/clips.js';
-import type { ApiClipDependencies } from '@/server/rest/clip/clips.js';
-import { packFlashForApi } from '@/server/rest/flash/flash.js';
-import type { ApiFlashDependencies } from '@/server/rest/flash/flash.js';
-import { packGalleryPostForApi } from '@/server/rest/gallery/gallery.js';
-import type { ApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
+import type { ChannelsDependencies } from '@/server/rest/channel/channels.js';
+import { packClip } from '@/server/rest/clip/clips.js';
+import type { ClipDependencies } from '@/server/rest/clip/clips.js';
+import { packFlash } from '@/server/rest/flash/flash.js';
+import type { FlashDependencies } from '@/server/rest/flash/flash.js';
+import { packGalleryPost } from '@/server/rest/gallery/gallery.js';
+import type { GalleryDependencies } from '@/server/rest/gallery/gallery.js';
 import { packNote } from '@/core/note/note-packing.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';
-import { packPageForApi } from '@/server/rest/page/pages.js';
-import type { ApiPageDependencies } from '@/server/rest/page/pages.js';
-import { packUserDetailedNotMeForApi } from '@/server/rest/user/user.js';
+import { packPage } from '@/server/rest/page/pages.js';
+import type { PageDependencies } from '@/server/rest/page/pages.js';
+import { packUserDetailedNotMe } from '@/server/rest/user/user.js';
 import type { CommonData } from './views/_.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { ChannelPage } from './views/channel.js';
@@ -48,11 +48,11 @@ import { PagePage } from './views/page.js';
 import { UserPage } from './views/user.js';
 
 export type ClientPagesDependencies = NoteDependencies &
-	ApiClipDependencies &
-	ApiFlashDependencies &
-	ApiGalleryDependencies &
-	ApiPageDependencies &
-	ApiChannelsDependencies & {
+	ClipDependencies &
+	FlashDependencies &
+	GalleryDependencies &
+	PageDependencies &
+	ChannelsDependencies & {
 		getCommonData: () => Promise<CommonData>;
 	};
 
@@ -145,7 +145,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 		// 非公開 Play のタイトル等が匿名訪問者へ漏れるため、public のみ SSR する (非公開は汎用ページへ)。
 		if (flash?.visibility === 'public') {
-			const packedFlash = (await packFlashForApi(deps, flash, null)) as unknown as Packed<'Flash'>;
+			const packedFlash = (await packFlash(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
 			return htmlResponse(
@@ -166,7 +166,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
 
 		if (clip?.isPublic) {
-			const packedClip = await packClipForApi(deps, clip, null);
+			const packedClip = await packClip(deps, clip, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, clip.userId);
 
 			return htmlResponse(
@@ -188,7 +188,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const post = await fetchGalleryPostByIdFromDatabase(deps.db, c.req.param('post'));
 
 		if (post != null) {
-			const packedPost = await packGalleryPostForApi(deps, post, null);
+			const packedPost = await packGalleryPost(deps, post, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, post.userId);
 
 			return htmlResponse(
@@ -215,7 +215,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedUser = await packUserDetailedNotMeForApi(deps, user, null);
+		const packedUser = await packUserDetailedNotMe(deps, user, null);
 
 		return embedHtmlResponse(
 			BaseEmbed({
@@ -267,7 +267,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedClip = await packClipForApi(deps, clip, null);
+		const packedClip = await packClip(deps, clip, null);
 
 		return embedHtmlResponse(
 			BaseEmbed({
@@ -309,7 +309,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const announcement = await fetchGlobalAnnouncementByIdFromDatabase(deps.db, c.req.param('announcement'));
 
 		if (announcement != null) {
-			const packedAnnouncement = packAnnouncementForApi(deps.config, announcement, null);
+			const packedAnnouncement = packAnnouncement(deps.config, announcement, null);
 
 			return htmlResponse(
 				AnnouncementPage({
@@ -359,7 +359,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 				return;
 			}
 
-			const packedPage = await packPageForApi(deps, page, null);
+			const packedPage = await packPage(deps, page, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, page.userId);
 
 			return htmlResponse(
@@ -379,7 +379,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 		if (user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)) {
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-			const packedUser = (await packUserDetailedNotMeForApi(deps, user, null)) as unknown as Packed<'UserDetailed'>;
+			const packedUser = (await packUserDetailedNotMe(deps, user, null)) as unknown as Packed<'UserDetailed'>;
 
 			return htmlResponse(
 				UserPage({

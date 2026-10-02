@@ -12,7 +12,7 @@ import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
 import type { Config } from '@/config.js';
-import type { DownloadService } from '@/core/net/DownloadService.js';
+import type { DownloadService } from '@/core/net/download-service.js';
 import {
 	buildObjectStoragePutObject,
 	driveSensitiveMediaThreshold,
@@ -20,7 +20,7 @@ import {
 	generateDriveFileAlts,
 	planObjectStorageUploads,
 	saveDriveFileToInternalStorage,
-} from '@/core/drive/DriveFileUploadLogic.js';
+} from '@/core/drive/drive-file-upload-logic.js';
 import { validateDriveFileName } from '@/core/drive/drive-file-name.js';
 import {
 	createDriveFileInDatabase,
@@ -30,21 +30,21 @@ import {
 	listDriveFilesByIdsFromDatabase,
 	sumDriveFileSizeByUserIdFromDatabase,
 	updateDriveFileInDatabase,
-} from '@/core/drive/DriveFileStore.js';
-import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
+} from '@/core/drive/drive-file-store.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/drive-folder-store.js';
 import {
 	enqueueDriveFileDeletion,
 	publishEnqueuedDriveFileDeletion,
 	startDriveFileDeletion,
-} from '@/core/drive/DriveFileDeletionLogic.js';
-import type { FileInfo, FileInfoService } from '@/core/drive/FileInfoService.js';
+} from '@/core/drive/drive-file-deletion-logic.js';
+import type { FileInfo, FileInfoService } from '@/core/drive/file-info-service.js';
 import mime from 'mime-types';
-import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
-import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import type { ImageProcessingService } from '@/core/drive/image-processing-service.js';
+import type { InternalStorageService } from '@/core/drive/internal-storage-service.js';
+import type { S3Service } from '@/core/drive/s3-service.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/user-profile-store.js';
+import type { VideoProcessingService } from '@/core/drive/video-processing-service.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -62,15 +62,15 @@ import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { packDriveFileOrFail } from '../../../core/drive/drive-file-packing.js';
 import type { DriveFileDependencies } from '../../../core/drive/drive-file-packing.js';
 import { buildDriveFileDeletionDependencies } from './drive-files.js';
-import type { ApiDriveFilesDependencies } from './drive-files.js';
+import type { DriveFilesDependencies } from './drive-files.js';
 import type { DriveStreamPublisher, MainStreamPublisher } from '../../../core/events.js';
-import { getRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
+import { fetchRolePolicies, userIsModerator } from '../../../core/role/role-policy.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'internalStorageService'> &
+export type DriveFileUploadDependencies = Omit<DriveFilesDependencies, 'internalStorageService'> &
 	DriveFileDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl' | 'fetchFileName'>;
-		fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
+		fileInfoService: Pick<FileInfoService, 'fetchFileInfo'>;
 		imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 		internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
 		s3Service: Pick<S3Service, 'upload' | 'delete'>;
@@ -81,7 +81,7 @@ export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'in
 	};
 
 // ファイル欠如・サイズ超過は、API互換性のためエラーボディ無しの生ステータスとして呼び出し元へ返す。
-export type ApiMultipartResult =
+export type MultipartResult =
 	| { status: 'missing-file' }
 	| { status: 'too-large' }
 	| { status: 'ok'; file: { name: string | null; path: string }; cleanup: () => void; fields: Record<string, unknown> };
@@ -89,7 +89,7 @@ export type ApiMultipartResult =
 // multipart のフィールド・境界文字列ぶんの余裕。ファイル本体の上限は maxFileSize で別途判定する。
 const MULTIPART_OVERHEAD = 1024 * 1024;
 
-export async function readApiMultipartRequest(c: Context, config: Pick<Config, 'limits'>): Promise<ApiMultipartResult> {
+export async function readApiMultipartRequest(c: Context, config: Pick<Config, 'limits'>): Promise<MultipartResult> {
 	// c.req.formData() はボディ全体を上限なしでメモリに読むため、先に上限つきで読み切る。
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
@@ -156,7 +156,7 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 	};
 }
 
-function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
+function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) {
 		return false;
 	}
@@ -173,8 +173,8 @@ function driveFileInternalError(): ApiError {
 	});
 }
 
-async function uploadDriveFileToObjectStorageForApi(
-	deps: ApiDriveFileUploadDependencies,
+async function uploadDriveFileToObjectStorage(
+	deps: DriveFileUploadDependencies,
 	key: string,
 	body: Blob | Uint8Array,
 	type: string,
@@ -189,7 +189,7 @@ async function uploadDriveFileToObjectStorageForApi(
 	deps.logger.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);
 }
 
-async function deleteDriveFileObjectsForApi(deps: ApiDriveFileUploadDependencies, keys: string[]): Promise<void> {
+async function deleteDriveFileObjects(deps: DriveFileUploadDependencies, keys: string[]): Promise<void> {
 	await Promise.all(
 		keys.map(async (accessKey) => {
 			try {
@@ -206,8 +206,8 @@ type StoredDriveFile = {
 	cleanup: () => Promise<void>;
 };
 
-async function saveDriveFileForApi(
-	deps: ApiDriveFileUploadDependencies,
+async function saveDriveFile(
+	deps: DriveFileUploadDependencies,
 	file: MiDriveFile,
 	path: string,
 	name: string,
@@ -228,12 +228,12 @@ async function saveDriveFileForApi(
 		try {
 			await Promise.all(
 				uploads.map((upload) =>
-					uploadDriveFileToObjectStorageForApi(deps, upload.key, upload.body, upload.type, upload.ext, upload.filename),
+					uploadDriveFileToObjectStorage(deps, upload.key, upload.body, upload.type, upload.ext, upload.filename),
 				),
 			);
 		} catch (err) {
 			// 一部成功時も DB に紐付かないオブジェクトを残さないよう、削除してから中断する。
-			await deleteDriveFileObjectsForApi(deps, keys);
+			await deleteDriveFileObjects(deps, keys);
 			throw err;
 		}
 
@@ -241,7 +241,7 @@ async function saveDriveFileForApi(
 
 		return {
 			file,
-			cleanup: () => deleteDriveFileObjectsForApi(deps, keys),
+			cleanup: () => deleteDriveFileObjects(deps, keys),
 		};
 	}
 
@@ -264,8 +264,8 @@ async function saveDriveFileForApi(
 	};
 }
 
-async function persistStoredDriveFileForApi(
-	deps: ApiDriveFileUploadDependencies,
+async function persistStoredDriveFile(
+	deps: DriveFileUploadDependencies,
 	stored: StoredDriveFile,
 	user: MiUser | null,
 	force: boolean,
@@ -300,7 +300,7 @@ async function persistStoredDriveFileForApi(
 			let expiredFiles: MiDriveFile[] = [];
 
 			if (!stored.file.isLink && !isModerator) {
-				const policies = await getRolePolicies({ ...deps, db: transaction }, user);
+				const policies = await fetchRolePolicies({ ...deps, db: transaction }, user);
 				const driveCapacity = 1024 * 1024 * policies.driveCapacityMb;
 				const usage = await sumDriveFileSizeByUserIdFromDatabase(transaction, user.id);
 
@@ -341,8 +341,8 @@ async function persistStoredDriveFileForApi(
 	}
 }
 
-async function expireOldDriveFileForApi(
-	deps: ApiDriveFileUploadDependencies,
+async function expireOldDriveFile(
+	deps: DriveFileUploadDependencies,
 	user: MiUser,
 	driveCapacity: number,
 ): Promise<void> {
@@ -411,8 +411,8 @@ export type AddDriveFileArgs = {
 	requestHeaders?: Record<string, string> | null;
 };
 
-export async function addDriveFileForApi(
-	deps: ApiDriveFileUploadDependencies,
+export async function addDriveFile(
+	deps: DriveFileUploadDependencies,
 	{
 		user,
 		path,
@@ -433,7 +433,7 @@ export async function addDriveFileForApi(
 	if (path == null && (!isLink || declared == null)) {
 		throw new Error('A drive file without content must be a link with declared metadata');
 	}
-	const userRoleNSFW = user != null && (await getRolePolicies(deps, user)).alwaysMarkNsfw;
+	const userRoleNSFW = user != null && (await fetchRolePolicies(deps, user)).alwaysMarkNsfw;
 	let skipNsfwCheck = user == null || userRoleNSFW;
 	if (deps.meta.sensitiveMediaDetection === 'none') {
 		skipNsfwCheck = true;
@@ -448,7 +448,7 @@ export async function addDriveFileForApi(
 	const info: Omit<FileInfo, 'md5'> & { md5: string | null } =
 		path == null
 			? declaredFileInfo(declared!)
-			: await deps.fileInfoService.getFileInfo(path, {
+			: await deps.fileInfoService.fetchFileInfo(path, {
 					fileName: name,
 					skipSensitiveDetection: skipNsfwCheck,
 					sensitiveThreshold: driveSensitiveMediaThreshold(deps.meta),
@@ -477,7 +477,7 @@ export async function addDriveFileForApi(
 		const isLocalUser = user.host == null;
 		const isModerator = isLocalUser ? await userIsModerator(deps, user) : false;
 		if (!isModerator) {
-			const policies = await getRolePolicies(deps, user);
+			const policies = await fetchRolePolicies(deps, user);
 
 			const allowedMimeTypes = policies.uploadableFileTypes;
 			const isAllowed = allowedMimeTypes.some((mimeType) => {
@@ -508,7 +508,7 @@ export async function addDriveFileForApi(
 				if (isLocalUser) {
 					throw new IdentifiableError('c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6', 'No free space.');
 				}
-				await expireOldDriveFileForApi(
+				await expireOldDriveFile(
 					deps,
 					await fetchUserByIdOrFailFromDatabase(deps.db, user.id),
 					driveCapacity - info.size,
@@ -568,7 +568,7 @@ export async function addDriveFileForApi(
 		isSensitive: user ? (user.host == null && profile!.alwaysMarkNsfw ? true : (sensitive ?? false)) : false,
 	} as MiDriveFile;
 
-	if (user != null && isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) {
+	if (user != null && isMediaSilencedHost(deps.meta.mediaSilencedHosts, user.host)) {
 		file.isSensitive = true;
 	}
 	if (info.sensitive && profile!.autoSensitive) {
@@ -619,8 +619,8 @@ export async function addDriveFileForApi(
 		}
 	} else {
 		if (path == null || info.md5 == null) throw new Error('A stored drive file needs its content');
-		const stored = await saveDriveFileForApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
-		const persisted = await persistStoredDriveFileForApi(deps, stored, user, force, sensitive);
+		const stored = await saveDriveFile(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
+		const persisted = await persistStoredDriveFile(deps, stored, user, force, sensitive);
 		if (!persisted.inserted) {
 			return persisted.file;
 		}
@@ -657,7 +657,7 @@ export const driveFilesCreateParamDef = z.object({
 });
 
 export async function handleApiDriveFilesCreate(
-	deps: ApiDriveFileUploadDependencies,
+	deps: DriveFileUploadDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	file: { name: string | null; path: string },
@@ -686,7 +686,7 @@ export async function handleApiDriveFilesCreate(
 	}
 
 	try {
-		const driveFile = await addDriveFileForApi(deps, {
+		const driveFile = await addDriveFile(deps, {
 			user: me,
 			path: file.path,
 			name,
@@ -744,8 +744,8 @@ export const driveFilesUploadFromUrlParamDef = z.object({
 	force: z.boolean().optional().default(false),
 });
 
-export async function uploadDriveFileFromUrlForApi(
-	deps: ApiDriveFileUploadDependencies,
+export async function uploadDriveFileFromUrl(
+	deps: DriveFileUploadDependencies,
 	{
 		url,
 		user,
@@ -788,7 +788,7 @@ export async function uploadDriveFileFromUrlForApi(
 	// 保存しないファイルは相手の申告で登録し、センシティブ判定に中身が必要な場合だけ取得する。
 	// 中身を取得せずに登録すると、取得と書き込みを省ける。
 	if (isLink && declared != null && !sensitiveDetectionApplies(deps.meta, user)) {
-		const driveFile = await addDriveFileForApi(deps, {
+		const driveFile = await addDriveFile(deps, {
 			user,
 			path: null,
 			declared,
@@ -816,7 +816,7 @@ export async function uploadDriveFileFromUrlForApi(
 			comment = null;
 		}
 
-		const driveFile = await addDriveFileForApi(deps, {
+		const driveFile = await addDriveFile(deps, {
 			user,
 			path,
 			name,
@@ -841,7 +841,7 @@ export async function uploadDriveFileFromUrlForApi(
 }
 
 export function handleApiDriveFilesUploadFromUrl(
-	deps: ApiDriveFileUploadDependencies,
+	deps: DriveFileUploadDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	ip: string | null,
@@ -849,7 +849,7 @@ export function handleApiDriveFilesUploadFromUrl(
 ): void {
 	const params = parseApiParams(driveFilesUploadFromUrlParamDef, body);
 
-	uploadDriveFileFromUrlForApi(deps, {
+	uploadDriveFileFromUrl(deps, {
 		url: params.url,
 		user: me,
 		folderId: params.folderId,

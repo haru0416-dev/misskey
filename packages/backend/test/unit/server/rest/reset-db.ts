@@ -8,7 +8,7 @@ import type * as Redis from 'ioredis';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { createApiShellApp } from '@/server/rest/shell.js';
-import type { ApiShellDependencies } from '@/server/rest/shell.js';
+import type { ShellDependencies } from '@/server/rest/shell.js';
 import { handleApiResetDb } from '@/server/rest/admin/reset-db.js';
 
 const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({
@@ -16,7 +16,7 @@ const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({
 	resetDbMock: vi.fn(),
 }));
 
-vi.mock('@/core/meta/MetaStore.js', () => ({
+vi.mock('@/core/meta/meta-store.js', () => ({
 	fetchMetaFromDatabase: fetchMetaFromDatabaseMock,
 }));
 
@@ -75,7 +75,7 @@ describe('handleApiResetDb', () => {
 		} as MiMeta);
 		resetDbMock.mockResolvedValue(undefined);
 
-		const app = createApiShellApp(deps as unknown as ApiShellDependencies);
+		const app = createApiShellApp(deps as unknown as ShellDependencies);
 		const response = app.request('/reset-db', {
 			method: 'POST',
 			headers: {

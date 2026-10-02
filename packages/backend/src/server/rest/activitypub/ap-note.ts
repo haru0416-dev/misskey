@@ -31,14 +31,14 @@ import {
 	fetchPollByNoteIdOrFailFromDatabase,
 	incrementPollVoteInDatabase,
 	updatePollVotesInDatabase,
-} from '@/core/note/PollStore.js';
-import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
-import { fetchNoteByUriFromDatabase, updateRemoteNoteContentInDatabase } from '@/core/note/NoteStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
-import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+} from '@/core/note/poll-store.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/poll-vote-store.js';
+import { fetchNoteByUriFromDatabase, updateRemoteNoteContentInDatabase } from '@/core/note/note-store.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
+import { blockingExistsInDatabase } from '@/core/user/blocking-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createMfmService } from '@/core/mfm/MfmService.js';
-import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
+import { createMfmService } from '@/core/mfm/mfm-service.js';
+import { createApMfmService } from '@/core/activitypub/ap-mfm-service.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -48,31 +48,31 @@ import { isQuote, isRenote } from '@/misc/is-renote.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import {
 	extractDbHost,
-	getNoteFromApIdForApi,
+	fetchNoteFromApId,
 	isFederationAllowedUri,
 	isSelfHost,
 	parseLocalApUri,
-	resolveApObjectForApi,
+	resolveApObject,
 } from './ap-resolve.js';
-import type { ApiApResolveDependencies } from './ap-resolve.js';
-import { extractEmojisForApi, fetchPersonForApi, resolveImageForApi, resolvePersonForApi } from './ap-person.js';
-import type { ApiApPersonDependencies } from './ap-person.js';
+import type { ApResolveDependencies } from './ap-resolve.js';
+import { extractEmojis, fetchPerson, resolveImage, resolvePerson } from './ap-person.js';
+import type { ApPersonDependencies } from './ap-person.js';
 import { deliverQuestionUpdate } from '../../../core/activitypub/notes-ap.js';
-import { createNote, prepareRemoteNoteEdit, updateHashtagsRankings } from '@/core/note/NoteCreationService.js';
-import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
-import { updateDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
-import { isNoteContentVisibleForMeForApi } from '../note/note.js';
-import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/NoteCreationService.js';
+import { createNote, prepareRemoteNoteEdit, updateHashtagsRankings } from '@/core/note/note-creation-service.js';
+import { recordHashtagUsagesInDatabase } from '@/core/hashtag/hashtag-store.js';
+import { updateDriveFileInDatabase } from '@/core/drive/drive-file-store.js';
+import { isNoteContentVisibleForMe } from '../note/note.js';
+import type { CreateNoteData, NoteCreationDependencies } from '@/core/note/note-creation-service.js';
 import type { NoteStreamPublisher } from '../../../core/events.js';
 
-export type ApiApNoteDependencies = ApiApPersonDependencies &
-	ApiApResolveDependencies &
+export type ApNoteDependencies = ApPersonDependencies &
+	ApResolveDependencies &
 	NoteCreationDependencies & {
 		redis: Redis.Redis;
 		publishNoteStream?: NoteStreamPublisher;
 	};
 
-function validateNoteForApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
+function validateNote(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
 	const expectHost = extractDbHost(uri);
 	const apType = (x as { type?: string }).type;
 
@@ -121,8 +121,8 @@ function validateNoteForApi(x: IObject, uri: string, actor?: MiRemoteUser): Erro
 	return null;
 }
 
-export async function parseAudienceForApi(
-	deps: ApiApNoteDependencies,
+export async function parseAudience(
+	deps: ApNoteDependencies,
 	actor: MiRemoteUser,
 	to: ApObject | undefined,
 	cc: ApObject | undefined,
@@ -152,7 +152,7 @@ export async function parseAudienceForApi(
 
 	const limit = promiseLimit<MiUser | null>(2);
 	const mentionedUsers = (
-		await Promise.all(others.map((id) => limit(() => resolvePersonForApi(deps, id, history).catch(() => null))))
+		await Promise.all(others.map((id) => limit(() => resolvePerson(deps, id, history).catch(() => null))))
 	).filter((x): x is MiUser => x != null);
 
 	if (toGroups.public.length > 0) {
@@ -168,24 +168,24 @@ export async function parseAudienceForApi(
 	return { visibility: 'specified', visibleUsers: mentionedUsers };
 }
 
-function extractApMentionObjectsForApi(tags: IObject | IObject[] | null | undefined): IApMention[] {
+function extractApMentionObjects(tags: IObject | IObject[] | null | undefined): IApMention[] {
 	if (tags == null) {
 		return [];
 	}
 	return toArray(tags).filter(isMention);
 }
 
-async function extractApMentionsForApi(
-	deps: ApiApNoteDependencies,
+async function extractApMentions(
+	deps: ApNoteDependencies,
 	tags: IObject | IObject[] | null | undefined,
 	history: Set<string>,
 ): Promise<MiUser[]> {
-	const hrefs = unique(extractApMentionObjectsForApi(tags).map((x) => x.href));
+	const hrefs = unique(extractApMentionObjects(tags).map((x) => x.href));
 	const limit = promiseLimit<MiUser | null>(2);
 	return (
 		await Promise.all(
 			hrefs.map((href) =>
-				href == null ? Promise.resolve(null) : limit(() => resolvePersonForApi(deps, href, history).catch(() => null)),
+				href == null ? Promise.resolve(null) : limit(() => resolvePerson(deps, href, history).catch(() => null)),
 			),
 		)
 	).filter((x): x is MiUser => x != null);
@@ -193,12 +193,12 @@ async function extractApMentionsForApi(
 
 const MAX_REMOTE_POLL_CHOICES = 100;
 
-async function extractPollFromQuestionForApi(
-	deps: ApiApNoteDependencies,
+async function extractPollFromQuestion(
+	deps: ApNoteDependencies,
 	source: string | IObject,
 	history: Set<string>,
 ): Promise<IPoll> {
-	const question = await resolveApObjectForApi(deps, source, FetchAllowSoftFailMask.Strict, history);
+	const question = await resolveApObject(deps, source, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) {
 		throw new Error('invalid type');
 	}
@@ -224,8 +224,8 @@ async function extractPollFromQuestionForApi(
 	return { choices, votes, multiple, expiresAt };
 }
 
-export async function updateQuestionFromApForApi(
-	deps: ApiApNoteDependencies,
+export async function updateQuestionFromAp(
+	deps: ApNoteDependencies,
 	value: string | IObject,
 	actor?: MiRemoteUser,
 	history = new Set<string>(),
@@ -254,7 +254,7 @@ export async function updateQuestionFromApForApi(
 		throw new Error('Question is not registered');
 	}
 
-	const question = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
+	const question = await resolveApObject(deps, value, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) {
 		throw new Error('object is not a Question');
 	}
@@ -306,16 +306,11 @@ export async function updateQuestionFromApForApi(
  * 既存の票を読み直す。投票ノートの URI ごとの inbox ロックだけでは、別々の URI で同時に届いた
  * 単一選択の票が両方とも入る。
  */
-export async function voteFromApForApi(
-	deps: ApiApNoteDependencies,
-	actor: MiUser,
-	note: MiNote,
-	choice: number,
-): Promise<void> {
+export async function voteFromAp(deps: ApNoteDependencies, actor: MiUser, note: MiNote, choice: number): Promise<void> {
 	if (note.userId !== actor.id && (await blockingExistsInDatabase(deps.db, note.userId, actor.id))) {
 		throw new Error('blocked by the poll author');
 	}
-	if (!(await isNoteContentVisibleForMeForApi(deps, note, actor.id))) {
+	if (!(await isNoteContentVisibleForMe(deps, note, actor.id))) {
 		throw new Error('poll is not visible to the voter');
 	}
 
@@ -350,7 +345,7 @@ export async function voteFromApForApi(
 }
 
 /** ノートの本文を MFM で取り出す。Misskey 系の元の MFM があればそれを、無ければ HTML から変換する。 */
-function extractNoteTextForApi(deps: ApiApNoteDependencies, note: IPost): string | null {
+function extractNoteText(deps: ApNoteDependencies, note: IPost): string | null {
 	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
 		return note.source.content;
 	}
@@ -364,8 +359,8 @@ function extractNoteTextForApi(deps: ApiApNoteDependencies, note: IPost): string
 }
 
 /** 添付を解決する。添付ごとの sensitive が無ければノートの sensitive を引き継ぐ。 */
-async function resolveNoteAttachmentsForApi(
-	deps: ApiApNoteDependencies,
+async function resolveNoteAttachments(
+	deps: ApNoteDependencies,
 	actor: MiRemoteUser,
 	note: IPost,
 	options: { declaredComments?: Map<MiDriveFile['id'], string | null> } = {},
@@ -379,22 +374,22 @@ async function resolveNoteAttachmentsForApi(
 		}
 	}
 	const resolvedFiles = await Promise.all(
-		attachments.map((attach) => resolveImageForApi(deps, actor, attach, { useDeclaredMetadata: true, ...options })),
+		attachments.map((attach) => resolveImage(deps, actor, attach, { useDeclaredMetadata: true, ...options })),
 	);
 	return resolvedFiles.filter((file) => file != null);
 }
 
-export async function createNoteFromApForApi(
-	deps: ApiApNoteDependencies,
+export async function createNoteFromAp(
+	deps: ApNoteDependencies,
 	value: string | IObject,
 	actor: MiRemoteUser | undefined,
 	history = new Set<string>(),
 	silent = false,
 ): Promise<MiNote | null> {
-	const object = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
+	const object = await resolveApObject(deps, value, FetchAllowSoftFailMask.Strict, history);
 
 	const entryUri = getApId(value);
-	const err = validateNoteForApi(object, entryUri, actor);
+	const err = validateNote(object, entryUri, actor);
 	if (err) {
 		throw err;
 	}
@@ -418,27 +413,27 @@ export async function createNoteFromApForApi(
 	}
 	const uri = getOneApId(note.attributedTo as ApObject);
 
-	actor ??= (await fetchPersonForApi(deps, uri)) as MiRemoteUser | undefined;
+	actor ??= (await fetchPerson(deps, uri)) as MiRemoteUser | undefined;
 	if (actor?.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const apMentionRawCount = new Set(extractApMentionObjectsForApi(note.tag).map((x) => x.href)).size;
-	const apMentions = await extractApMentionsForApi(deps, note.tag, history);
+	const apMentionRawCount = new Set(extractApMentionObjects(note.tag).map((x) => x.href)).size;
+	const apMentions = await extractApMentions(deps, note.tag, history);
 	const apHashtags = extractApHashtags(note.tag);
 
 	const cw = note.summary === '' ? null : (note.summary ?? null);
-	const text = extractNoteTextForApi(deps, note);
+	const text = extractNoteText(deps, note);
 
-	const poll = await extractPollFromQuestionForApi(deps, note, history).catch(() => undefined);
+	const poll = await extractPollFromQuestion(deps, note, history).catch(() => undefined);
 
-	actor ??= (await resolvePersonForApi(deps, uri, history)) as MiRemoteUser;
+	actor ??= (await resolvePerson(deps, uri, history)) as MiRemoteUser;
 
 	if (actor.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const noteAudience = await parseAudienceForApi(
+	const noteAudience = await parseAudience(
 		deps,
 		actor,
 		note.to as ApObject | undefined,
@@ -454,10 +449,10 @@ export async function createNoteFromApForApi(
 		}
 	}
 
-	const files = await resolveNoteAttachmentsForApi(deps, actor, note);
+	const files = await resolveNoteAttachments(deps, actor, note);
 
 	const reply = await resolveIncomingReply(note.inReplyTo, (target) =>
-		resolveNoteForApi(deps, target, {
+		resolveNote(deps, target, {
 			sentFrom: new URL(actor.uri),
 			resolver: history,
 		}),
@@ -474,7 +469,7 @@ export async function createNoteFromApForApi(
 				return { status: 'permerror' };
 			}
 			try {
-				const res = await resolveNoteForApi(deps, u);
+				const res = await resolveNote(deps, u);
 				if (res == null) {
 					return { status: 'permerror' };
 				}
@@ -506,14 +501,14 @@ export async function createNoteFromApForApi(
 			if (replyPoll.expiresAt && Date.now() > new Date(replyPoll.expiresAt).getTime()) {
 				return null;
 			} else if (index !== -1) {
-				await voteFromApForApi(deps, actor, reply, index);
+				await voteFromAp(deps, actor, reply, index);
 				void deliverQuestionUpdate(deps, reply.id).catch(() => {});
 			}
 			return null;
 		}
 	}
 
-	const emojis = await extractEmojisForApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
+	const emojis = await extractEmojis(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
 	const apEmojis = emojis.map((emoji) => emoji.name);
 
 	const createdAt = note.published ? new Date(note.published) : null;
@@ -546,7 +541,7 @@ export async function createNoteFromApForApi(
 		return await createNote(deps, actor, data, silent);
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
-			const duplicate = await getNoteFromApIdForApi(deps, value);
+			const duplicate = await fetchNoteFromApId(deps, value);
 			if (!duplicate) {
 				throw new Error('The note creation failed with duplication error even when there is no duplication', {
 					cause: err,
@@ -569,8 +564,8 @@ function parseApUpdated(note: IPost): Date | null {
  * 返信先・引用先・公開範囲の宛先・アンケートの選択肢は変えない (票は Update(Question) の集計で反映する)。
  * 編集履歴は持たない。
  */
-export async function updateNoteFromApForApi(
-	deps: ApiApNoteDependencies,
+export async function updateNoteFromAp(
+	deps: ApNoteDependencies,
 	actor: MiRemoteUser,
 	object: IObject,
 	history: Set<string>,
@@ -579,7 +574,7 @@ export async function updateNoteFromApForApi(
 	if (note.id == null) {
 		return 'skip: note without id';
 	}
-	const invalid = validateNoteForApi(object, note.id, actor);
+	const invalid = validateNote(object, note.id, actor);
 	if (invalid) {
 		return `skip: ${invalid.message}`;
 	}
@@ -605,12 +600,12 @@ export async function updateNoteFromApForApi(
 		return 'skip: older or same edit';
 	}
 
-	const text = extractNoteTextForApi(deps, note);
+	const text = extractNoteText(deps, note);
 	const cw = note.summary === '' ? null : (note.summary ?? null);
 	// 代替テキストの書き換えは、編集を受け入れると決まってから行う (禁止ワード等で捨てる編集では変えない)。
 	// 今の値との差分ではなく申告どおりに書く。並行した別の編集が先にコミットして値が変わっても、後の編集の値に揃う。
 	const declaredComments = new Map<MiDriveFile['id'], string | null>();
-	const files = await resolveNoteAttachmentsForApi(deps, actor, note, { declaredComments });
+	const files = await resolveNoteAttachments(deps, actor, note, { declaredComments });
 
 	let values;
 	try {
@@ -618,12 +613,10 @@ export async function updateNoteFromApForApi(
 			text,
 			cw,
 			files,
-			apMentions: await extractApMentionsForApi(deps, note.tag, history),
-			apMentionRawCount: new Set(extractApMentionObjectsForApi(note.tag).map((x) => x.href)).size,
+			apMentions: await extractApMentions(deps, note.tag, history),
+			apMentionRawCount: new Set(extractApMentionObjects(note.tag).map((x) => x.href)).size,
 			apHashtags: extractApHashtags(note.tag),
-			apEmojis: (await extractEmojisForApi(deps, note.tag ?? [], actor.host).catch(() => [])).map(
-				(emoji) => emoji.name,
-			),
+			apEmojis: (await extractEmojis(deps, note.tag ?? [], actor.host).catch(() => [])).map((emoji) => emoji.name),
 		});
 	} catch (err) {
 		if (err instanceof IdentifiableError) {
@@ -681,8 +674,8 @@ export async function updateNoteFromApForApi(
 	return 'ok: Note updated';
 }
 
-export async function resolveNoteForApi(
-	deps: ApiApNoteDependencies,
+export async function resolveNote(
+	deps: ApNoteDependencies,
 	value: string | IObject,
 	options: { sentFrom?: URL; resolver?: Set<string> } = {},
 ): Promise<MiNote | null> {
@@ -694,7 +687,7 @@ export async function resolveNoteForApi(
 
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
-		const exist = await getNoteFromApIdForApi(deps, uri);
+		const exist = await fetchNoteFromApId(deps, uri);
 		if (exist) {
 			return exist;
 		}
@@ -704,7 +697,7 @@ export async function resolveNoteForApi(
 		}
 
 		const createFrom = options.sentFrom?.origin === new URL(uri).origin ? value : uri;
-		return await createNoteFromApForApi(deps, createFrom, undefined, options.resolver ?? new Set(), true);
+		return await createNoteFromAp(deps, createFrom, undefined, options.resolver ?? new Set(), true);
 	} finally {
 		await unlock();
 	}

@@ -14,14 +14,14 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUriFromDatabase,
-} from '@/core/user/UserStore.js';
-import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+} from '@/core/user/user-store.js';
+import { createFollowingInDatabase } from '@/core/user/following-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updatePersonForApi } from '@/server/rest/activitypub/ap-person.js';
-import type { ApiUpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { updatePerson } from '@/server/rest/activitypub/ap-person.js';
+import type { UpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { MiRemoteUser } from '@/models/User.js';
-import { packUserDetailedNotMeForApi, packUserDetailedNotMeManyForApi } from '@/server/rest/user/user.js';
-import { listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/user/UserMemoStore.js';
+import { packUserDetailedNotMe, packUserDetailedNotMeMany } from '@/server/rest/user/user.js';
+import { listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/user/user-memo-store.js';
 import { countDatabaseQueries } from '../../../query-counter.js';
 
 /**
@@ -43,9 +43,9 @@ function actorFixtureServer(getPerson: () => Record<string, unknown>): Promise<{
 	});
 }
 
-describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => {
+describe('updatePerson の引っ越し (processRemoteMove) 処理', () => {
 	let runtime: RuntimeDependencies;
-	let deps: ApiUpdatePersonDependencies;
+	let deps: UpdatePersonDependencies;
 	const servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -110,14 +110,14 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			counter.restore();
 		}
 		const ids = [absent.id, target.id, target.id];
-		const packed = await packUserDetailedNotMeManyForApi(deps, ids, viewer);
+		const packed = await packUserDetailedNotMeMany(deps, ids, viewer);
 		expect(packed.map((item) => ({ id: item!.id, memo: item!['memo'] }))).toEqual([
 			{ id: absent.id, memo: null },
 			{ id: target.id, memo: '日本語メモ' },
 			{ id: target.id, memo: '日本語メモ' },
 		]);
 		await upsertUserMemoInDatabase(deps.db, { id: memoId, userId: viewer.id, targetUserId: target.id, memo: '' });
-		expect(await packUserDetailedNotMeManyForApi(deps, [target.id], viewer)).toMatchObject([{ memo: '' }]);
+		expect(await packUserDetailedNotMeMany(deps, [target.id], viewer)).toMatchObject([{ memo: '' }]);
 	});
 
 	test('移行先と別名の一覧取得は件数・順序・欠損を維持し、人数分のDB照会を行わない', async () => {
@@ -153,14 +153,14 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			}),
 		);
 		const input = [...sources].reverse().concat(sources[0]!);
-		const expected = await Promise.all(input.map((source) => packUserDetailedNotMeForApi(deps, source)));
-		await packUserDetailedNotMeManyForApi(deps, [sources[0]!]);
+		const expected = await Promise.all(input.map((source) => packUserDetailedNotMe(deps, source)));
+		await packUserDetailedNotMeMany(deps, [sources[0]!]);
 		const queries = countDatabaseQueries(deps.db);
 		try {
-			await packUserDetailedNotMeManyForApi(deps, [sources[0]!]);
+			await packUserDetailedNotMeMany(deps, [sources[0]!]);
 			const singleCount = queries.count();
 			queries.reset();
-			const packed = await packUserDetailedNotMeManyForApi(deps, input);
+			const packed = await packUserDetailedNotMeMany(deps, input);
 			expect(packed).toEqual(expected);
 			expect(packed.map((entry) => entry!.id)).toEqual(input.map((entry) => entry.id));
 			expect(queries.count()).toBe(singleCount);
@@ -183,7 +183,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			},
 			profile: { userId: sourceId },
 		});
-		expect(await packUserDetailedNotMeManyForApi(deps, [source])).toMatchObject([{ movedTo: null, alsoKnownAs: [] }]);
+		expect(await packUserDetailedNotMeMany(deps, [source])).toMatchObject([{ movedTo: null, alsoKnownAs: [] }]);
 		await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
 				id: targetId,
@@ -194,7 +194,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			},
 			profile: { userId: targetId },
 		});
-		expect(await packUserDetailedNotMeManyForApi(deps, [source])).toMatchObject([
+		expect(await packUserDetailedNotMeMany(deps, [source])).toMatchObject([
 			{ movedTo: targetId, alsoKnownAs: [targetId] },
 		]);
 	});
@@ -245,7 +245,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			followeeHost: srcFixture.host,
 		});
 
-		await updatePersonForApi(deps, srcUri, srcUser);
+		await updatePerson(deps, srcUri, srcUser);
 
 		const updatedSrc = await fetchUserByIdOrFailFromDatabase(deps.db, srcUser.id);
 		expect(updatedSrc.movedToUri).toBe(dstUri);
@@ -307,7 +307,7 @@ describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => 
 			followeeHost: srcFixture.host,
 		});
 
-		await updatePersonForApi(deps, srcUri, srcUser);
+		await updatePerson(deps, srcUri, srcUser);
 
 		const updatedSrc = await fetchUserByIdOrFailFromDatabase(deps.db, srcUser.id);
 		expect(updatedSrc.movedToUri).toBe(dstUri);

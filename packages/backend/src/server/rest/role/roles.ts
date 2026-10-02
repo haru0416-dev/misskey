@@ -5,28 +5,28 @@
 
 import type { endpointMetas as miscContracts } from '@/server/rest/contracts/misc.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { z } from 'zod';
 import {
 	countActiveRoleAssignmentsByRoleIdsFromDatabase,
 	listActiveRoleAssignmentsByRoleIdFromDatabase,
-} from '@/core/role/RoleAssignmentStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
-import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+} from '@/core/role/role-assignment-store.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/channel-muting-store.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import {
 	fetchPublicExplorableRoleByIdFromDatabase,
 	fetchPublicRoleByIdFromDatabase,
 	listPublicExplorableRolesFromDatabase,
-} from '@/core/role/RoleStore.js';
+} from '@/core/role/role-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
-import { packUserDetailedManyForApi } from '../user/user.js';
+import { packUserDetailedMany } from '../user/user.js';
 import type { UserPackingDependencies } from '../../../core/user/user-packing.js';
 import type { MeDetailedApiResponse, UserDetailedNotMeApiResponse } from '../user/user.js';
 import { collectRedisListTimelineNotes } from '../note/redis-list-timeline.js';
@@ -34,7 +34,7 @@ import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import type { RoleDependencies } from '@/core/role/role-packing.js';
 import { packRole } from '@/core/role/role-packing.js';
 
-export type ApiRoleNotesDependencies = NoteDependencies;
+export type RoleNotesDependencies = NoteDependencies;
 
 export const rolesListParamDef = z.object({});
 
@@ -75,7 +75,7 @@ export async function handleApiRolesList(deps: RoleDependencies): Promise<Packed
 
 export async function handleApiRolesShow(
 	deps: RoleDependencies,
-	params: ApiParams<typeof rolesShowParamDef>,
+	params: Params<typeof rolesShowParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['roles/show']>,
 ): Promise<Packed<'Role'>> {
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
@@ -89,7 +89,7 @@ export async function handleApiRolesShow(
 export async function handleApiRolesUsers(
 	deps: RoleDependencies & UserPackingDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
-	params: ApiParams<typeof rolesUsersParamDef>,
+	params: Params<typeof rolesUsersParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['roles/users']>,
 ): Promise<{ id: string; user: MeDetailedApiResponse | UserDetailedNotMeApiResponse }[]> {
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
@@ -105,7 +105,7 @@ export async function handleApiRolesUsers(
 		untilId: pagination.untilId,
 	});
 
-	const packedUsers = await packUserDetailedManyForApi(
+	const packedUsers = await packUserDetailedMany(
 		deps,
 		assigns.map((assign) => assign.userId),
 		me,
@@ -118,9 +118,9 @@ export async function handleApiRolesUsers(
 }
 
 export async function handleApiRolesNotes(
-	deps: ApiRoleNotesDependencies,
+	deps: RoleNotesDependencies,
 	me: { id: MiUser['id'] },
-	params: ApiParams<typeof rolesNotesParamDef>,
+	params: Params<typeof rolesNotesParamDef>,
 	errors: ContractErrors<(typeof miscContracts)['roles/notes']>,
 ): Promise<Packed<'Note'>[]> {
 	const { sinceId, untilId } = resolveApiDateIdBounds(params);
@@ -155,5 +155,5 @@ export async function handleApiRolesNotes(
 	// sinceId だけの指定でも新しい順で返す。
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
-	return await packNoteManyForApi(deps, notes, me);
+	return await packNoteMany(deps, notes, me);
 }

@@ -11,8 +11,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vite
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/RelayStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/relay-store.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';

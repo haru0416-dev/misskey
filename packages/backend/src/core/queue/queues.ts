@@ -52,7 +52,7 @@ export type SystemWebhookDeliverQueue = Bull.Queue<SystemWebhookDeliverJobData>;
  * 配送キューは宛先ホストの公平化のため全ジョブに優先度を付け、未処理のジョブは BullMQ の wait ではなく
  * prioritized に入る。管理画面の「待機」は処理待ちの総数として両方を合算する。
  */
-export async function getQueueJobCounts(queue: {
+export async function fetchQueueJobCounts(queue: {
 	getJobCounts: () => Promise<Record<string, number>>;
 }): Promise<Record<string, number>> {
 	const counts = await queue.getJobCounts();

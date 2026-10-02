@@ -5,7 +5,7 @@
 
 import { endpointMetas as notesContracts } from '@/server/rest/contracts/notes.js';
 import { implementEndpoints } from '../endpoint-definition.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 import {
 	handleApiNotesDraftsCount,
 	handleApiNotesDraftsCreate,
@@ -48,7 +48,7 @@ import {
 	handleApiNotesReactionsDelete,
 } from '../note/notes-reactions.js';
 
-export const notesEndpoints = implementEndpoints<ApiShellDependencies>()(notesContracts, {
+export const notesEndpoints = implementEndpoints<ShellDependencies>()(notesContracts, {
 	notes: async ({ deps, input }) => await handleApiNotes(deps, input),
 	'notes/children': async ({ deps, me, input }) => await handleApiNotesChildren(deps, me, input),
 	'notes/clips': async ({ deps, me, input, errors }) => await handleApiNotesClips(deps, me, input, errors),

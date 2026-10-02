@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { createHash } from 'node:crypto';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError, rateLimitExceededError } from '../error.js';
 import { isApiRateLimitedForUser } from '../rate-limit.js';
 import { parseApiParams } from '../validation.js';
 
-export type ApiFetchExternalResourcesDependencies = {
+export type FetchExternalResourcesDependencies = {
 	config: Config;
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
@@ -52,9 +52,9 @@ function clientError(error: { message: string; code: string; id: string }): ApiE
 }
 
 export async function handleApiFetchExternalResources(
-	deps: ApiFetchExternalResourcesDependencies,
+	deps: FetchExternalResourcesDependencies,
 	me: MiLocalUser,
-	params: ApiParams<typeof fetchExternalResourcesParamDef>,
+	params: Params<typeof fetchExternalResourcesParamDef>,
 ): Promise<ExternalResourceResponse> {
 	if (
 		await isApiRateLimitedForUser(

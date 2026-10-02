@@ -10,7 +10,7 @@ import { recordException } from '@/telemetry.js';
 import { gzipApiBody } from '@/server/compress.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import type { ApiAuthenticated } from './auth/auth.js';
+import type { Authenticated } from './auth/auth.js';
 import {
 	ApiError,
 	invalidJsonBody,
@@ -20,9 +20,9 @@ import {
 } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { userIsAdministrator, userIsModerator } from '../../core/role/role-policy.js';
-import type { ApiSigninFlowResult } from './auth/signin.js';
-import type { ApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
-import type { ApiShellDependencies } from './shell.js';
+import type { SigninFlowResult } from './auth/signin.js';
+import type { SigninWithPasskeyResult } from './auth/signin-with-passkey.js';
+import type { ShellDependencies } from './shell.js';
 import { runInRequestScope } from '@/misc/request-scope.js';
 
 export function setApiHeaders(c: Context): void {
@@ -70,7 +70,7 @@ export function emptyResponse(c: Context): Response {
 	});
 }
 
-export function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: ApiSigninFlowResult): Response {
+export function signinFlowResponse(c: Context, deps: ShellDependencies, result: SigninFlowResult): Response {
 	setApiHeaders(c);
 	const headers: Record<string, string> = {
 		'Access-Control-Allow-Origin': deps.config.instance.url,
@@ -96,8 +96,8 @@ export function signinFlowResponse(c: Context, deps: ApiShellDependencies, resul
 
 export function signinWithPasskeyResponse(
 	c: Context,
-	deps: ApiShellDependencies,
-	result: ApiSigninWithPasskeyResult,
+	deps: ShellDependencies,
+	result: SigninWithPasskeyResult,
 ): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(result.body), {
@@ -111,7 +111,7 @@ export function signinWithPasskeyResponse(
 	});
 }
 
-export function publicCacheHeadersWhenAnonymous(auth: ApiAuthenticated, seconds: number): Record<string, string> {
+export function publicCacheHeadersWhenAnonymous(auth: Authenticated, seconds: number): Record<string, string> {
 	return auth.user == null ? { 'Cache-Control': `public, max-age=${seconds}` } : {};
 }
 
@@ -251,8 +251,8 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 }
 
 export async function assertApiModerator(
-	deps: ApiShellDependencies,
-	auth: { user: NonNullable<ApiAuthenticated['user']> },
+	deps: ShellDependencies,
+	auth: { user: NonNullable<Authenticated['user']> },
 ): Promise<void> {
 	if (!(await userIsModerator(deps, auth.user))) {
 		throw moderatorRequiredError();
@@ -260,8 +260,8 @@ export async function assertApiModerator(
 }
 
 export async function assertApiAdmin(
-	deps: ApiShellDependencies,
-	auth: { user: NonNullable<ApiAuthenticated['user']> },
+	deps: ShellDependencies,
+	auth: { user: NonNullable<Authenticated['user']> },
 ): Promise<void> {
 	if (!(await userIsAdministrator(deps, auth.user))) {
 		throw administratorRequiredError();

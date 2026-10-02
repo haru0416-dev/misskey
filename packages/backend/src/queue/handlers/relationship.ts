@@ -3,24 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import {
 	blockingExistsInDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
-} from '@/core/user/BlockingStore.js';
-import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
-import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
-import { hasAcceptedFollowInDatabase } from '@/core/user/FollowAcceptanceStore.js';
+} from '@/core/user/blocking-store.js';
+import { followingExistsInDatabase } from '@/core/user/following-store.js';
+import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/follow-request-store.js';
+import { hasAcceptedFollowInDatabase } from '@/core/user/follow-acceptance-store.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/core/queue/types.js';
-import { blockForApi, unblockForApi, unfollow } from '@/server/rest/account/account-blocking.js';
-import type { ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
+import { blockUser, unblock, unfollow } from '@/server/rest/account/account-blocking.js';
+import type { AccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
@@ -31,13 +31,11 @@ import {
 	renderFollow,
 	renderReject,
 } from '@/server/rest/user/following.js';
-import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
-import { validateAlsoKnownAsForApi } from '@/server/rest/activitypub/ap-person.js';
-import type { ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import type { FollowingDependencies } from '@/server/rest/user/following.js';
+import { validateAlsoKnownAs } from '@/server/rest/activitypub/ap-person.js';
+import type { ApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
-export type QueueRelationshipDependencies = ApiAccountBlockingDependencies &
-	ApiFollowingDependencies &
-	ApiApPersonDependencies;
+export type QueueRelationshipDependencies = AccountBlockingDependencies & FollowingDependencies & ApPersonDependencies;
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) {
@@ -47,7 +45,7 @@ function isSilencedHost(silencedHosts: string[] | undefined, host: string | null
 	return silencedHosts.some((x) => normalizedHost.endsWith(`.${x}`));
 }
 
-export async function followWithSideEffectsForApi(
+export async function followWithSideEffects(
 	deps: QueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
 	followee: MiLocalUser | MiRemoteUser,
@@ -86,7 +84,7 @@ export async function followWithSideEffectsForApi(
 		return followee.isSuspended ? 'rejected: suspended' : 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
 		// リモート側のフォロー要求を解除の意思とみなし、このサーバーに残る相手からのブロック行を削除する。
-		await unblockForApi(deps, follower, followee);
+		await unblock(deps, follower, followee);
 	} else {
 		if (blocking) {
 			throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
@@ -132,7 +130,7 @@ export async function followWithSideEffectsForApi(
 
 		// 移行元からこの鍵アカウントへのフォロー関係があり、移行元・移行先の参照が一致する場合は自動承認する。
 		if (!autoAccept && followee.isLocked) {
-			autoAccept = !!(await validateAlsoKnownAsForApi(
+			autoAccept = !!(await validateAlsoKnownAs(
 				deps,
 				follower,
 				(_oldSrc, newSrc) => followingExistsInDatabase(deps.db, newSrc.id, followee.id),
@@ -176,7 +174,7 @@ export async function handleQueueRelationshipFollow(
 		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	])) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
-	return followWithSideEffectsForApi(
+	return followWithSideEffects(
 		deps,
 		follower,
 		followee,
@@ -218,7 +216,7 @@ export async function handleQueueRelationshipBlock(
 		fetchUserByIdOrFailFromDatabase(deps.db, data.to.id),
 	]);
 
-	await blockForApi(deps, blocker, blockee, data.silent);
+	await blockUser(deps, blocker, blockee, data.silent);
 
 	return 'ok';
 }
@@ -237,7 +235,7 @@ export async function handleQueueRelationshipUnblock(
 		return 'skip: not blocking';
 	}
 
-	await unblockForApi(deps, blocker, blockee);
+	await unblock(deps, blocker, blockee);
 
 	return 'ok';
 }

@@ -5,7 +5,7 @@
 
 import type { endpointMetas as usersContracts } from '@/server/rest/contracts/users.js';
 import type { ContractErrors } from '../endpoint-contract.js';
-import type { ApiParams } from '../validation.js';
+import type { Params } from '../validation.js';
 import { DAY } from '@/const.js';
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
@@ -14,23 +14,23 @@ import type { SQL } from 'drizzle-orm';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
-import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
+import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/note/note-store.js';
+import { getIdenticonUrl } from '@/core/drive/identicon-url.js';
 import {
 	listUserNotePiningsByUserIdFromDatabase,
 	listUserNotePiningsByUserIdsFromDatabase,
-} from '@/core/user/UserNotePiningStore.js';
-import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+} from '@/core/user/user-note-pining-store.js';
+import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/role/role-assignment-store.js';
+import { listRolesFromDatabase } from '@/core/role/role-store.js';
 import {
 	countUserSecurityKeysByUserIdFromDatabase,
 	listUserIdsWithSecurityKeysFromDatabase,
 	listUserSecurityKeySummariesByUserIdFromDatabase,
-} from '@/core/account/UserSecurityKeyStore.js';
+} from '@/core/account/user-security-key-store.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
-} from '@/core/user/UserProfileStore.js';
+} from '@/core/user/user-profile-store.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
 import {
 	deserializeUser,
@@ -41,34 +41,34 @@ import {
 	listUsersByIdsFromDatabase,
 	listUsersByUsernamesAndHostsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import {
 	blockingExistsInDatabase,
 	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase,
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
-} from '@/core/user/BlockingStore.js';
+} from '@/core/user/blocking-store.js';
 import {
 	followRequestExistsInDatabase,
 	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/user/FollowRequestStore.js';
+} from '@/core/user/follow-request-store.js';
 import {
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
 	followingExistsInDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase,
-} from '@/core/user/FollowingStore.js';
-import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+} from '@/core/user/following-store.js';
+import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/user/muting-store.js';
 import {
 	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase,
 	renoteMutingExistsInDatabase,
-} from '@/core/user/RenoteMutingStore.js';
+} from '@/core/user/renote-muting-store.js';
 import {
 	deleteUserMemoFromDatabase,
 	fetchUserMemoTextFromDatabase,
 	listUserMemoTextsByUserIdFromDatabase,
 	upsertUserMemoInDatabase,
-} from '@/core/user/UserMemoStore.js';
+} from '@/core/user/user-memo-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -83,13 +83,13 @@ import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';
 import { populateEmojis } from '../../../core/note/note-packing.js';
-import { packNoteManyForApi } from '../note/note.js';
+import { packNoteMany } from '../note/note.js';
 import type { NoteDependencies } from '../../../core/note/note-packing.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
 import {
 	computeUserRoles,
-	getRolePolicies,
-	getUserRoles,
+	fetchRolePolicies,
+	fetchUserRoles,
 	getUserProfilePolicies,
 	userIsModerator,
 } from '../../../core/role/role-policy.js';
@@ -115,7 +115,7 @@ type PackMeDetailedOptions = {
  * srcs を MiUser へ解決する。一覧のクエリの後で削除が確定したユーザーは null にする (並びは srcs と同じ)。
  * ユーザーの削除は user 行の DELETE で、プロフィールやフォロー等も同じ文の cascade で消える。
  */
-async function resolveUsersOrNullFromSrcsForApi(
+async function resolveUsersOrNullFromSrcs(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 ): Promise<(MiUser | null)[]> {
@@ -125,7 +125,7 @@ async function resolveUsersOrNullFromSrcsForApi(
 	return srcs.map((src) => (typeof src === 'object' ? src : (userById.get(src) ?? null)));
 }
 
-type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForApi>>;
+type UserRelationForPack = Awaited<ReturnType<typeof fetchUserRelation>>;
 
 type UserDetailedExtras = {
 	roles: {
@@ -152,7 +152,7 @@ type UserDetailedExtras = {
 /**
  * relation は me が別ユーザーの場合のみ、twoFactor は本人またはモデレーターが閲覧する場合のみ返す。
  */
-async function buildUserDetailedExtrasForApi(
+async function buildUserDetailedExtras(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
@@ -175,7 +175,7 @@ async function buildUserDetailedExtrasForApi(
 		iAmModerator = meUser != null && (await userIsModerator(deps, meUser));
 	}
 
-	const userRoles = hint?.userRoles ?? (await getUserRoles(deps, user));
+	const userRoles = hint?.userRoles ?? (await fetchUserRoles(deps, user));
 	const policies = hint?.policies ?? getUserProfilePolicies(deps, userRoles);
 
 	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
@@ -185,7 +185,7 @@ async function buildUserDetailedExtrasForApi(
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = pinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
-		pinnedNotes = await packNoteManyForApi(deps as UserPackingDependencies & NoteDependencies, orderedNotes, me, {
+		pinnedNotes = await packNoteMany(deps as UserPackingDependencies & NoteDependencies, orderedNotes, me, {
 			detail: true,
 		});
 	}
@@ -194,7 +194,7 @@ async function buildUserDetailedExtrasForApi(
 		hint?.relation !== undefined
 			? hint.relation
 			: me != null && !isMe
-				? await getUserRelationForApi(deps, me.id, user.id)
+				? await fetchUserRelation(deps, me.id, user.id)
 				: null;
 
 	const twoFactor =
@@ -240,28 +240,28 @@ async function buildUserDetailedExtrasForApi(
 	};
 }
 
-export async function packUserDetailedNotMeForApi(
+export async function packUserDetailedNotMe(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	me?: { id: MiUser['id'] } | null,
 ): Promise<UserDetailedNotMeApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const memo = me ? await fetchUserMemoTextFromDatabase(deps.db, me.id, user.id) : null;
-	const extras = await buildUserDetailedExtrasForApi(deps, user, profile, me);
+	const extras = await buildUserDetailedExtras(deps, user, profile, me);
 
-	return packUserDetailedNotMeCoreForApi(deps, user, profile, memo, extras);
+	return packUserDetailedNotMeCore(deps, user, profile, memo, extras);
 }
 
 /**
  * srcs と同じ並びで詳細を返す。一覧のクエリの後で削除が確定したユーザー (行もプロフィールも無い) は null にするので、
  * 呼び出し側はその要素 (と対応する関係の行) を返さない。
  */
-export async function packUserDetailedNotMeManyForApi(
+export async function packUserDetailedNotMeMany(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<(UserDetailedNotMeApiResponse | null)[]> {
-	const resolved = await resolveUsersOrNullFromSrcsForApi(deps, srcs);
+	const resolved = await resolveUsersOrNullFromSrcs(deps, srcs);
 	const candidates = resolved.filter((user) => user != null);
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, [
 		...new Set(candidates.map((user) => user.id)),
@@ -276,7 +276,7 @@ export async function packUserDetailedNotMeManyForApi(
 	const iAmModerator = meUser != null && (await userIsModerator(deps, meUser));
 	const relationByUserId =
 		me != null
-			? await getUserRelationsForApi(
+			? await fetchUserRelations(
 					deps,
 					me.id,
 					users.filter((user) => user.id !== me.id).map((user) => user.id),
@@ -298,7 +298,7 @@ export async function packUserDetailedNotMeManyForApi(
 						.map((user) => user.id),
 				)
 			: Promise.resolve([]),
-		resolveMigrationIdsManyForApi(deps, users),
+		resolveMigrationIdsMany(deps, users),
 		populateUserEmojisMany(deps, users),
 	]);
 	const securityKeyUserIdSet = new Set(securityKeyUserIds);
@@ -326,12 +326,9 @@ export async function packUserDetailedNotMeManyForApi(
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, allPinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = allPinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
-		const packedPinnedNotes = await packNoteManyForApi(
-			deps as UserPackingDependencies & NoteDependencies,
-			orderedNotes,
-			me,
-			{ detail: true },
-		);
+		const packedPinnedNotes = await packNoteMany(deps as UserPackingDependencies & NoteDependencies, orderedNotes, me, {
+			detail: true,
+		});
 		for (const note of packedPinnedNotes) {
 			packedPinnedNoteById.set(note.id, note);
 		}
@@ -347,7 +344,7 @@ export async function packUserDetailedNotMeManyForApi(
 				me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
 					? securityKeyUserIdSet.has(user.id)
 					: undefined;
-			const extras = await buildUserDetailedExtrasForApi(
+			const extras = await buildUserDetailedExtras(
 				deps,
 				user,
 				profile,
@@ -361,7 +358,7 @@ export async function packUserDetailedNotMeManyForApi(
 					hasSecurityKey,
 				}),
 			);
-			return packUserDetailedNotMeCoreForApi(
+			return packUserDetailedNotMeCore(
 				deps,
 				user,
 				profile,
@@ -379,7 +376,7 @@ export async function packUserDetailedNotMeManyForApi(
 	return resolved.map((user) => (user == null ? null : (packedById.get(user.id) ?? null)));
 }
 
-export async function resolveAlsoKnownAsForApi(
+export async function resolveAlsoKnownAs(
 	deps: UserPackingDependencies,
 	alsoKnownAs: string[] | null,
 ): Promise<string[] | null> {
@@ -403,7 +400,7 @@ type UserMigrationIds = {
 	movedTo: string | null;
 };
 
-async function resolveMigrationIdsManyForApi(
+async function resolveMigrationIdsMany(
 	deps: UserPackingDependencies,
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], UserMigrationIds>> {
@@ -436,7 +433,7 @@ async function resolveMigrationIdsManyForApi(
 	return resolvedByUserId;
 }
 
-async function packUserDetailedNotMeCoreForApi(
+async function packUserDetailedNotMeCore(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
@@ -452,7 +449,7 @@ async function packUserDetailedNotMeCoreForApi(
 	// DB の値は id と表示位置だけなので、UserLite と同じく画像の url を補ってから返す。
 	const avatarDecorations = hint?.avatarDecorations ?? (await buildAvatarDecorations(deps, [user])).get(user.id) ?? [];
 	const alsoKnownAs =
-		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
+		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAs(deps, user.alsoKnownAs);
 	const emojis = hint?.emojis ?? (await populateEmojis(deps, user.emojis, user.host));
 
 	return {
@@ -477,7 +474,7 @@ async function packUserDetailedNotMeCoreForApi(
 		movedTo:
 			hint?.movedTo !== undefined
 				? hint.movedTo
-				: ((await resolveAlsoKnownAsForApi(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null),
+				: ((await resolveAlsoKnownAs(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null),
 		alsoKnownAs,
 		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
@@ -535,20 +532,20 @@ function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
 	return count > 0 ? 'partial' : 'none';
 }
 
-export async function packMeDetailedForApi(
+export async function packMeDetailed(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	options: PackMeDetailedOptions,
 ): Promise<MeDetailedApiResponse> {
 	const profile = options.profile ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
-	const userRoles = await getUserRoles(deps, user);
-	const policies = await getRolePolicies(deps, user, userRoles);
+	const userRoles = await fetchUserRoles(deps, user);
+	const policies = await fetchRolePolicies(deps, user, userRoles);
 	const isRoot = deps.meta.rootUserId === user.id;
 	const isAdmin = isRoot || userRoles.some((role) => role.isAdministrator);
 	const isModerator = isRoot || userRoles.some((role) => role.isModerator || role.isAdministrator);
-	const alsoKnownAs = await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
+	const alsoKnownAs = await resolveAlsoKnownAs(deps, user.alsoKnownAs);
 	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
-	const extras = await buildUserDetailedExtrasForApi(
+	const extras = await buildUserDetailedExtras(
 		deps,
 		user,
 		profile,
@@ -582,7 +579,7 @@ export async function packMeDetailedForApi(
 		badgeRoles: extras.badgeRoles,
 		url: profile.url,
 		uri: user.uri,
-		movedTo: (await resolveAlsoKnownAsForApi(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null,
+		movedTo: (await resolveAlsoKnownAs(deps, user.movedToUri == null ? null : [user.movedToUri]))?.[0] ?? null,
 		alsoKnownAs,
 		createdAt: parseId(user.id).date.toISOString(),
 		updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
@@ -667,38 +664,38 @@ export async function packMeDetailedForApi(
 	};
 }
 
-export async function packUserDetailedForApi(
+export async function packUserDetailed(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<MeDetailedApiResponse | UserDetailedNotMeApiResponse> {
 	if (me != null && me.id === user.id) {
-		return await packMeDetailedForApi(deps, user, { includeSecrets: false });
+		return await packMeDetailed(deps, user, { includeSecrets: false });
 	}
 
-	return await packUserDetailedNotMeForApi(deps, user, me);
+	return await packUserDetailedNotMe(deps, user, me);
 }
 
-/** packUserDetailedNotMeManyForApi と同じく srcs の並びで返し、削除が確定したユーザーは null にする。 */
-export async function packUserDetailedManyForApi(
+/** packUserDetailedNotMeMany と同じく srcs の並びで返し、削除が確定したユーザーは null にする。 */
+export async function packUserDetailedMany(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse | null)[]> {
 	if (me == null) {
-		return await packUserDetailedNotMeManyForApi(deps, srcs);
+		return await packUserDetailedNotMeMany(deps, srcs);
 	}
 
 	const isMe = (src: MiUser['id'] | MiUser) => (typeof src === 'object' ? src.id : src) === me.id;
 	const others = srcs.filter((src) => !isMe(src));
-	const packedOthers = await packUserDetailedNotMeManyForApi(deps, others, me);
+	const packedOthers = await packUserDetailedNotMeMany(deps, others, me);
 	const meSrc = srcs.find(isMe);
 	if (meSrc == null) {
 		return packedOthers;
 	}
 
 	const meUser = typeof meSrc === 'object' ? meSrc : await fetchUserByIdFromDatabase(deps.db, me.id);
-	const packedMe = meUser != null ? await packMeDetailedForApi(deps, meUser, { includeSecrets: false }) : null;
+	const packedMe = meUser != null ? await packMeDetailed(deps, meUser, { includeSecrets: false }) : null;
 	let otherIndex = 0;
 	return srcs.map((src) => (isMe(src) ? packedMe : (packedOthers[otherIndex++] ?? null)));
 }
@@ -716,10 +713,10 @@ export async function handleApiPinnedUsers(
 		.map((account) => userByAccount.get(`${account.username.toLowerCase()}@${account.host ?? ''}`))
 		.filter((user) => user != null);
 
-	return (await packUserDetailedManyForApi(deps, orderedUsers, me)).filter((user) => user != null);
+	return (await packUserDetailedMany(deps, orderedUsers, me)).filter((user) => user != null);
 }
 
-export type ApiUsersShowDependencies = UserPackingDependencies &
+export type UsersShowDependencies = UserPackingDependencies &
 	RolePolicyDependencies & {
 		chartWriters: ChartWriters;
 		resolveUser: (username: string, host: string) => Promise<MiUser>;
@@ -758,7 +755,7 @@ export const usersShowParamDef = z.union([
 ]);
 
 export async function handleApiUsersShow(
-	deps: ApiUsersShowDependencies,
+	deps: UsersShowDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 	ip: string | null,
@@ -790,7 +787,7 @@ export async function handleApiUsersShow(
 			}
 		}
 
-		return (await packUserDetailedManyForApi(deps, ordered, me)).filter((user) => user != null);
+		return (await packUserDetailedMany(deps, ordered, me)).filter((user) => user != null);
 	}
 
 	let user: MiUser | null;
@@ -825,18 +822,18 @@ export async function handleApiUsersShow(
 		}
 	}
 
-	return await packUserDetailedForApi(deps, user, me);
+	return await packUserDetailed(deps, user, me);
 }
 
 export const usersRelationParamDef = z.object({
 	userId: z.union([misskeyId(), z.array(misskeyId())]),
 });
 
-export type ApiUsersRelationDependencies = {
+export type UsersRelationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-async function getUserRelationForApi(deps: ApiUsersRelationDependencies, me: MiUser['id'], target: MiUser['id']) {
+async function fetchUserRelation(deps: UsersRelationDependencies, me: MiUser['id'], target: MiUser['id']) {
 	const [
 		following,
 		isFollowed,
@@ -871,7 +868,7 @@ async function getUserRelationForApi(deps: ApiUsersRelationDependencies, me: MiU
 	};
 }
 
-async function getUserRelationsForApi(deps: ApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
+async function fetchUserRelations(deps: UsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
 	const targetIds = [...new Set(targets)];
 	if (targetIds.length === 0) {
 		return new Map();
@@ -922,18 +919,18 @@ async function getUserRelationsForApi(deps: ApiUsersRelationDependencies, me: Mi
 }
 
 export async function handleApiUsersRelation(
-	deps: ApiUsersRelationDependencies,
+	deps: UsersRelationDependencies,
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ) {
 	const params = parseApiParams(usersRelationParamDef, body);
 
 	return Array.isArray(params.userId)
-		? await getUserRelationsForApi(deps, me.id, params.userId).then((it) => [...it.values()])
-		: await getUserRelationForApi(deps, me.id, params.userId).then((it) => [it]);
+		? await fetchUserRelations(deps, me.id, params.userId).then((it) => [...it.values()])
+		: await fetchUserRelation(deps, me.id, params.userId).then((it) => [it]);
 }
 
-function limitOffsetSqlForApi(options: { limit?: number; offset?: number }): SQL {
+function limitOffsetSql(options: { limit?: number; offset?: number }): SQL {
 	return sql.join(
 		[
 			options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
@@ -954,7 +951,7 @@ const SPARSE_USER_SEARCH_ESTIMATED_MATCHES = 5_000;
 // 名前 (とユーザー名) の一致を先に、自己紹介だけの一致を後に並べた 1 本の列から offset / limit で切り出す。
 // 2 本の問い合わせにそれぞれ offset / limit をかけて連結すると、両方に一致する利用者が 2 回入り、
 // ページを進めたときに抜けや重複が出る。
-async function searchUsersForApi(
+async function searchUsers(
 	deps: { db: MiDrizzleDatabase },
 	query: string,
 	meId: MiUser['id'] | null,
@@ -1009,7 +1006,7 @@ async function searchUsersForApi(
 		FROM "user"
 		WHERE ${sql.join(conditions, sql` AND `)}
 		ORDER BY (${nameMatch}) IS TRUE DESC, "user"."updatedAt" DESC NULLS LAST, "user"."id" DESC
-		${limitOffsetSqlForApi(options)}
+		${limitOffsetSql(options)}
 	`);
 	return result.rows.map((row) => deserializeUser(row));
 }
@@ -1025,20 +1022,20 @@ export const usersSearchParamDef = z.object({
 export async function handleApiUsersSearch(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersSearchParamDef>,
+	params: Params<typeof usersSearchParamDef>,
 ) {
-	const users = await searchUsersForApi(deps, params.query.trim(), me?.id ?? null, {
+	const users = await searchUsers(deps, params.query.trim(), me?.id ?? null, {
 		offset: params.offset,
 		limit: params.limit,
 		origin: params.origin,
 	});
 
 	return params.detail
-		? (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null)
+		? (await packUserDetailedMany(deps, users, me)).filter((user) => user != null)
 		: await packUserLiteMany(deps, users);
 }
 
-function buildBaseUserSearchConditionsForApi(
+function buildBaseUserSearchConditions(
 	config: Config,
 	params: { username?: string | null; host?: string | null },
 ): SQL[] {
@@ -1061,18 +1058,18 @@ function buildBaseUserSearchConditionsForApi(
 	return conditions;
 }
 
-function defaultActiveThresholdForApi(): Date {
+function defaultActiveThreshold(): Date {
 	return new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
 }
 
-function buildSearchUserQueriesForApi(
+function buildSearchUserQueries(
 	config: Config,
 	me: MiUser,
 	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
 ): SQL[][] {
-	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForApi();
+	const activeThreshold = params.activeThreshold ?? defaultActiveThreshold();
 	const followingUserQuery = sql`SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id}`;
-	const baseConditions = buildBaseUserSearchConditionsForApi(config, params);
+	const baseConditions = buildBaseUserSearchConditions(config, params);
 
 	return [
 		[...baseConditions, sql`"user"."id" IN (${followingUserQuery})`, sql`"user"."updatedAt" > ${activeThreshold}`],
@@ -1086,12 +1083,12 @@ function buildSearchUserQueriesForApi(
 	];
 }
 
-function buildSearchUserNoLoginQueriesForApi(
+function buildSearchUserNoLoginQueries(
 	config: Config,
 	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
 ): SQL[][] {
-	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForApi();
-	const baseConditions = buildBaseUserSearchConditionsForApi(config, params);
+	const activeThreshold = params.activeThreshold ?? defaultActiveThreshold();
+	const baseConditions = buildBaseUserSearchConditions(config, params);
 
 	return [
 		[...baseConditions, sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`],
@@ -1099,7 +1096,7 @@ function buildSearchUserNoLoginQueriesForApi(
 	];
 }
 
-async function selectSearchUserIdsForApi(
+async function selectSearchUserIds(
 	deps: { db: MiDrizzleDatabase },
 	conditions: SQL[],
 	limit: number,
@@ -1135,7 +1132,7 @@ export const usersSearchByUsernameAndHostParamDef = z.union([
 export async function handleApiUsersSearchByUsernameAndHost(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersSearchByUsernameAndHostParamDef>,
+	params: Params<typeof usersSearchByUsernameAndHostParamDef>,
 ) {
 	const searchParams = omitUndefined({
 		username: 'username' in params ? params.username : undefined,
@@ -1143,13 +1140,13 @@ export async function handleApiUsersSearchByUsernameAndHost(
 	});
 
 	const queries = me
-		? buildSearchUserQueriesForApi(deps.config, me, searchParams)
-		: buildSearchUserNoLoginQueriesForApi(deps.config, searchParams);
+		? buildSearchUserQueries(deps.config, me, searchParams)
+		: buildSearchUserNoLoginQueries(deps.config, searchParams);
 
 	let resultSet = new Set<MiUser['id']>();
 	const limit = params.limit;
 	for (const conditions of queries) {
-		const ids = await selectSearchUserIdsForApi(deps, conditions, limit - resultSet.size);
+		const ids = await selectSearchUserIds(deps, conditions, limit - resultSet.size);
 		resultSet = new Set([...resultSet, ...ids]);
 		if (resultSet.size >= limit) {
 			break;
@@ -1158,7 +1155,7 @@ export async function handleApiUsersSearchByUsernameAndHost(
 
 	const ids = [...resultSet].slice(0, limit);
 	return params.detail
-		? (await packUserDetailedManyForApi(deps, ids, me)).filter((user) => user != null)
+		? (await packUserDetailedMany(deps, ids, me)).filter((user) => user != null)
 		: await packUserLiteMany(deps, ids);
 }
 
@@ -1170,7 +1167,7 @@ export const usersRecommendationParamDef = z.object({
 export async function handleApiUsersRecommendation(
 	deps: UserPackingDependencies,
 	me: MiUser,
-	params: ApiParams<typeof usersRecommendationParamDef>,
+	params: Params<typeof usersRecommendationParamDef>,
 ) {
 	const users = await listRecommendedUsersFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -1178,7 +1175,7 @@ export async function handleApiUsersRecommendation(
 		updatedAfter: new Date(Date.now() - 7 * DAY),
 	});
 
-	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
+	return (await packUserDetailedMany(deps, users, me)).filter((user) => user != null);
 }
 
 export const usersGetFrequentlyRepliedUsersParamDef = z.object({
@@ -1189,7 +1186,7 @@ export const usersGetFrequentlyRepliedUsersParamDef = z.object({
 export async function handleApiUsersGetFrequentlyRepliedUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersGetFrequentlyRepliedUsersParamDef>,
+	params: Params<typeof usersGetFrequentlyRepliedUsersParamDef>,
 	errors: ContractErrors<(typeof usersContracts)['users/get-frequently-replied-users']>,
 ) {
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
@@ -1206,7 +1203,7 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 	const topRepliedUserIds = repliedUsers.map((row) => row.userId);
 	const repliedUserCounts = new Map(repliedUsers.map((row) => [row.userId, row.count]));
 
-	const packedUsers = await packUserDetailedManyForApi(deps, topRepliedUserIds, me);
+	const packedUsers = await packUserDetailedMany(deps, topRepliedUserIds, me);
 	return topRepliedUserIds.flatMap((userId, index) => {
 		const user = packedUsers[index];
 		return user == null ? [] : [{ user, weight: repliedUserCounts.get(userId)! / peak }];
@@ -1225,7 +1222,7 @@ export const usersParamDef = z.object({
 export async function handleApiUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
-	params: ApiParams<typeof usersParamDef>,
+	params: Params<typeof usersParamDef>,
 ) {
 	const users = await listExplorableUsersFromDatabase(
 		deps.db,
@@ -1240,7 +1237,7 @@ export async function handleApiUsers(
 		}),
 	);
 
-	return (await packUserDetailedManyForApi(deps, users, me)).filter((user) => user != null);
+	return (await packUserDetailedMany(deps, users, me)).filter((user) => user != null);
 }
 
 export const usersUpdateMemoParamDef = z.object({
@@ -1251,7 +1248,7 @@ export const usersUpdateMemoParamDef = z.object({
 export async function handleApiUsersUpdateMemo(
 	deps: UserPackingDependencies,
 	me: MiUser,
-	params: ApiParams<typeof usersUpdateMemoParamDef>,
+	params: Params<typeof usersUpdateMemoParamDef>,
 	errors: ContractErrors<(typeof usersContracts)['users/update-memo']>,
 ): Promise<void> {
 	const target = await fetchUserByIdFromDatabase(deps.db, params.userId);

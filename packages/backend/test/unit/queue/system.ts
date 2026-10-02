@@ -11,25 +11,25 @@ import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { retentionAggregation } from '@/db/schema/retention-aggregation.js';
-import { createUserInDatabase } from '@/core/user/UserStore.js';
-import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
-import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
-import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createUserInDatabase } from '@/core/user/user-store.js';
+import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/user-ip-store.js';
+import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/antenna-store.js';
+import { createRoleInDatabase } from '@/core/role/role-store.js';
 import {
 	createRoleAssignmentInDatabase,
 	listRoleAssignmentsByUserIdFromDatabase,
-} from '@/core/role/RoleAssignmentStore.js';
+} from '@/core/role/role-assignment-store.js';
 import {
 	createRetentionAggregationInDatabase,
 	listRetentionAggregationsCreatedAfter,
-} from '@/core/retention/RetentionAggregationStore.js';
-import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
-import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
-import { createChannelInDatabase } from '@/core/channel/ChannelStore.js';
+} from '@/core/retention/retention-aggregation-store.js';
+import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
+import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/user/muting-store.js';
+import { createChannelInDatabase } from '@/core/channel/channel-store.js';
 import {
 	createChannelMutingInDatabase,
 	listActiveMutedChannelIdsByUserIdFromDatabase,
-} from '@/core/channel/ChannelMutingStore.js';
+} from '@/core/channel/channel-muting-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createChartWriters } from '@/core/chart/chart-runtime.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';

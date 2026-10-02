@@ -7,19 +7,19 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
-import type { EmailService } from '@/core/email/EmailService.js';
+import type { EmailService } from '@/core/email/email-service.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
-import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
-import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
-import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
+import { updateMetaInDatabase } from '@/core/meta/meta-store.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/user-profile-store.js';
+import { listSystemWebhooksFromDatabase } from '@/core/webhook/system-webhook-store.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/system-webhook-queue.js';
 import type { ModeratorInactivityRemainingTime, SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
-import { createAnnouncementWithSideEffects } from '@/core/announcement/AnnouncementLogic.js';
-import type { AnnouncementCreateValues } from '@/core/announcement/AnnouncementLogic.js';
+import { createAnnouncementWithSideEffects } from '@/core/announcement/announcement-logic.js';
+import type { AnnouncementCreateValues } from '@/core/announcement/announcement-logic.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { getModeratorsForApi } from '@/server/rest/admin/admin-users.js';
-import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
+import { fetchModerators } from '@/server/rest/admin/admin-users.js';
+import { packAnnouncement } from '@/server/rest/admin/admin-announcements.js';
 import type { InternalEventPublisher, MainStreamPublisher } from '../../core/events.js';
 
 export type QueueCheckModeratorsActivityDependencies = {
@@ -89,7 +89,7 @@ function generateInvitationOnlyChangedMail() {
 }
 
 async function fetchModeratorsForCheck(deps: QueueCheckModeratorsActivityDependencies): Promise<MiUser[]> {
-	return getModeratorsForApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
+	return fetchModerators(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
 }
 
 async function evaluateModeratorsInactiveDays(
@@ -174,7 +174,7 @@ async function notifyChangeToInvitationOnly(deps: QueueCheckModeratorsActivityDe
 			{
 				db: deps.db,
 				genId,
-				packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForApi(deps.config, announcement)),
+				packAnnouncement: (announcement) => Promise.resolve(packAnnouncement(deps.config, announcement)),
 				publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
 			},
 			{

@@ -4,14 +4,14 @@
  */
 
 import type * as Redis from 'ioredis';
-import { listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
+import { listChannelsByIdsFromDatabase } from '@/core/channel/channel-store.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import {
 	fanoutViewerRelationKinds,
 	fetchViewerRelationSnapshotFromDatabase,
 	viewerRelationSnapshotCovers,
-} from '@/core/user/ViewerRelationStore.js';
+} from '@/core/user/viewer-relation-store.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
@@ -22,7 +22,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import type { ViewerRelationSnapshot } from '@/core/user/ViewerRelationStore.js';
+import type { ViewerRelationSnapshot } from '@/core/user/viewer-relation-store.js';
 
 export type FanoutTimelineReadDependencies = {
 	db: MiDrizzleDatabase;
@@ -139,7 +139,7 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-async function getMultiFromRedis(
+async function fetchMultiFromRedis(
 	redisForTimelines: Redis.Redis,
 	names: string[],
 	untilId?: string | null,
@@ -165,7 +165,7 @@ async function getMultiFromRedis(
 	);
 }
 
-export async function getFanoutTimelineNotesForApi(
+export async function fetchFanoutTimelineNotes(
 	deps: FanoutTimelineReadDependencies,
 	ps: FanoutTimelineReadOptions,
 ): Promise<MiNote[]> {
@@ -176,7 +176,7 @@ export async function getFanoutTimelineNotesForApi(
 		? (a, b) => (a < b ? -1 : 1)
 		: (a, b) => (a > b ? -1 : 1);
 
-	const redisResult = await getMultiFromRedis(deps.redisForTimelines, ps.redisTimelines, ps.untilId, ps.sinceId);
+	const redisResult = await fetchMultiFromRedis(deps.redisForTimelines, ps.redisTimelines, ps.untilId, ps.sinceId);
 
 	const redisResultIds = Array.from(new Set(redisResult.flat(1))).sort(idCompare);
 

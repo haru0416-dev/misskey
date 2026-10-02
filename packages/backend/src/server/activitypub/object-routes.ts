@@ -11,12 +11,12 @@ import type * as Redis from 'ioredis';
 import {
 	listFollowersByFolloweeIdWithPaginationFromDatabase,
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
-} from '@/core/user/FollowingStore.js';
+} from '@/core/user/following-store.js';
 import {
 	fetchNoteByIdFromDatabase,
 	listActivityPubOutboxNotesByUserIdFromDatabase,
 	listNotesByIdsFromDatabase,
-} from '@/core/note/NoteStore.js';
+} from '@/core/note/note-store.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
@@ -24,26 +24,26 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
-} from '@/core/user/UserStore.js';
+} from '@/core/user/user-store.js';
 import { renderEmoji, renderLike, renderNote, renderNoteOrRenoteActivity } from '@/core/activitypub/notes-ap.js';
 import { getUserUri, isRemoteUser, renderFollow } from '@/server/rest/user/following.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
-import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
-import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/user/UserNotePiningStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/emoji-store.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/follow-request-store.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/note/note-reaction-store.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/user-keypair-store.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/user/user-note-pining-store.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { getFanoutTimelineNotesForApi } from '@/server/rest/note/fanout-timeline.js';
-import { renderKeyForApi, renderPersonForApi } from '@/server/rest/account/account-update.js';
-import type { ApiAccountUpdateDependencies } from '@/server/rest/account/account-update.js';
+import { fetchFanoutTimelineNotes } from '@/server/rest/note/fanout-timeline.js';
+import { renderKey, renderPerson } from '@/server/rest/account/account-update.js';
+import type { AccountUpdateDependencies } from '@/server/rest/account/account-update.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
-export type ApObjectRoutesDependencies = ApiAccountUpdateDependencies & {
+export type ApObjectRoutesDependencies = AccountUpdateDependencies & {
 	redisForTimelines: Redis.Redis;
 };
 
@@ -126,7 +126,7 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 		return c.redirect(user.uri, 301);
 	}
 
-	return apJson(c, withApContext(await renderPersonForApi(deps, user as MiLocalUser)));
+	return apJson(c, withApContext(await renderPerson(deps, user as MiLocalUser)));
 }
 
 /**
@@ -215,7 +215,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 				});
 
 			const notes = deps.meta.enableFanoutTimeline
-				? await getFanoutTimelineNotesForApi(
+				? await fetchFanoutTimelineNotes(
 						{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 						{
 							sinceId,
@@ -408,7 +408,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 
 		const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
-		return apJson(c, withApContext(renderKeyForApi(deps.config, user, keypair)));
+		return apJson(c, withApContext(renderKey(deps.config, user, keypair)));
 	});
 
 	app.get('/users/:user', async (c, next) => {

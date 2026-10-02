@@ -5,7 +5,7 @@
 
 import { promises as dns } from 'node:dns';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { validateEmailDeliverability } from '@/core/email/EmailService.js';
+import { validateEmailDeliverability } from '@/core/email/email-service.js';
 
 describe('core:email:validateEmailDeliverability', () => {
 	afterEach(() => {

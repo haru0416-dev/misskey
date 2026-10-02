@@ -8,10 +8,10 @@ import { eq } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/RelayStore.js';
+import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/relay-store.js';
 import { relay } from '@/db/schema/relay.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { relayAcceptedForApi, relayRejectedForApi } from '@/server/rest/admin/admin-relays.js';
+import { relayAccepted, relayRejected } from '@/server/rest/admin/admin-relays.js';
 
 describe('relay Accept / Reject', () => {
 	let runtime: RuntimeDependencies;
@@ -32,11 +32,11 @@ describe('relay Accept / Reject', () => {
 		const inbox = `https://relay-${id}.example/inbox`;
 		await createRelayInDatabase(runtime.db, { id, inbox, status: 'requesting' });
 		try {
-			await relayAcceptedForApi(runtime, id, { inbox: 'https://someone.example/inbox', sharedInbox: null });
-			await relayRejectedForApi(runtime, id, { inbox: null, sharedInbox: 'https://someone.example/shared' });
+			await relayAccepted(runtime, id, { inbox: 'https://someone.example/inbox', sharedInbox: null });
+			await relayRejected(runtime, id, { inbox: null, sharedInbox: 'https://someone.example/shared' });
 			expect(await statusOf(id)).toBe('requesting');
 
-			await relayAcceptedForApi(runtime, id, { inbox: 'https://relay-actor.example/inbox', sharedInbox: inbox });
+			await relayAccepted(runtime, id, { inbox: 'https://relay-actor.example/inbox', sharedInbox: inbox });
 			expect(await statusOf(id)).toBe('accepted');
 		} finally {
 			await deleteRelayFromDatabase(runtime.db, id);

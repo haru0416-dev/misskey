@@ -5,7 +5,7 @@
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiInstance } from '@/models/Instance.js';
-import { adjustInstanceNotesCountFromDatabase } from './InstanceStore.js';
+import { adjustInstanceNotesCountInDatabase } from './instance-store.js';
 
 /**
  * リモートの投稿数 (instance.notesCount) を、投稿のトランザクションの外でサーバーごとにまとめて反映する。
@@ -53,7 +53,7 @@ export async function flushInstanceNoteCounts(): Promise<void> {
 	pending.clear();
 	const run = inflight.then(async () => {
 		const results = await Promise.allSettled(
-			entries.map(([id, delta]) => adjustInstanceNotesCountFromDatabase(db, id, delta)),
+			entries.map(([id, delta]) => adjustInstanceNotesCountInDatabase(db, id, delta)),
 		);
 		results.forEach((result, index) => {
 			if (result.status === 'rejected') {

@@ -6,7 +6,7 @@
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';
-import { getRolePolicies } from '@/core/role/role-policy.js';
+import { fetchRolePolicies } from '@/core/role/role-policy.js';
 import type { RolePolicyDependencies } from '@/core/role/role-policy.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
@@ -21,7 +21,7 @@ export const honoStreamChannelHybridTimeline: StreamChannelDefinition<NoteDepend
 		}
 		const user = ctx.user;
 
-		const policies = await getRolePolicies(deps, user);
+		const policies = await fetchRolePolicies(deps, user);
 		if (!policies.ltlAvailable) {
 			return;
 		}

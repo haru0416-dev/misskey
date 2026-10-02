@@ -5,7 +5,7 @@
 
 import { EventEmitter } from 'node:events';
 import type * as Redis from 'ioredis';
-import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/user-store.js';
 import { refreshStreamConnections } from './connection.js';
 import type { StreamConnection, StreamConnectionDependencies } from './connection.js';
 

@@ -14,9 +14,9 @@ import { implementEndpoints, registerEndpoints } from '@/server/rest/endpoint-de
 import { ApiError } from '@/server/rest/error.js';
 import { createEventPublishers } from '@/core/events.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
-import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
-import { createRoleInDatabase, deleteRoleInDatabase } from '@/core/role/RoleStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/role-assignment-store.js';
+import { createRoleInDatabase, deleteRoleFromDatabase } from '@/core/role/role-store.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 
@@ -246,7 +246,7 @@ describe('registerEndpoints', () => {
 			try {
 				const keys = await redis.keys(`limit:${userId}:*`);
 				await Promise.all([
-					deleteRoleInDatabase(db, roleId),
+					deleteRoleFromDatabase(db, roleId),
 					deleteUserByIdFromDatabase(db, userId),
 					...(keys.length === 0 ? [] : [redis.del(...keys)]),
 				]);

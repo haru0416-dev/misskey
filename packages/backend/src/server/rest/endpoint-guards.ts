@@ -13,10 +13,10 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 } from './auth/auth.js';
-import type { ApiAuthenticated, authenticateApiToken } from './auth/auth.js';
+import type { Authenticated, authenticateApiToken } from './auth/auth.js';
 import { assertApiAdmin, assertApiModerator } from './shell-helpers.js';
 import { assertApiRateLimit, assertApiRateLimitForUser } from './rate-limit.js';
-import type { ApiEndpointRateLimit } from './rate-limit.js';
+import type { EndpointRateLimit } from './rate-limit.js';
 import { rolePolicyRequiredError } from './error.js';
 import { hasRequiredRolePolicy } from '../../core/role/role-policy.js';
 
@@ -35,7 +35,7 @@ export type EndpointGuardMeta = {
 	readonly prohibitMoved?: boolean;
 	readonly requiredRolePolicy?: string;
 	readonly kind?: string;
-	readonly limit?: ApiEndpointRateLimit;
+	readonly limit?: EndpointRateLimit;
 };
 
 /**
@@ -46,7 +46,7 @@ export async function applyEndpointGuards(
 	deps: EndpointGuardDependencies,
 	name: string,
 	meta: EndpointGuardMeta,
-	auth: ApiAuthenticated,
+	auth: Authenticated,
 	/** 匿名で回数制限があるときだけ呼ぶ。 */
 	requestIp: () => string,
 ): Promise<void> {

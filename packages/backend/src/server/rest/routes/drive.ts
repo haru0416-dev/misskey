@@ -10,11 +10,11 @@ import { endpointMetas } from '@/server/rest/endpoint-metas.js';
 import { handleApiDriveFilesCreate, readApiMultipartRequest } from '../drive/drive-file-upload.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
 import { jsonResponse, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
-import type { ApiShellDependencies } from '../shell.js';
+import type { ShellDependencies } from '../shell.js';
 
 const driveFilesCreateMeta = endpointMetas['drive/files/create'].meta;
 
-export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
+export function registerDriveRoutes(app: Hono, deps: ShellDependencies): void {
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const parsed = await readApiMultipartRequest(c, deps.config);

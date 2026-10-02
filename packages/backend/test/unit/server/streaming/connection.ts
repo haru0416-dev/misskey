@@ -8,12 +8,12 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createChatRoomInDatabase } from '@/core/chat/ChatRoomStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import { createChatRoomInDatabase } from '@/core/chat/chat-room-store.js';
+import { createUserWithProfileAndPublickeyInDatabase, updateUserInDatabase } from '@/core/user/user-store.js';
 import {
 	createAccessTokenInDatabase,
 	deleteAccessTokenByIdAndUserIdFromDatabase,
-} from '@/core/app/AccessTokenStore.js';
+} from '@/core/app/access-token-store.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
 import { createStreamRuntime } from '@/server/streaming/runtime.js';
 import { genId } from '@/misc/id/gen-id.js';

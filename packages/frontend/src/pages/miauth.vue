@@ -58,7 +58,7 @@ async function onAccept(token: string) {
 		try {
 			redirectTo = setAuthCallbackUrlParameter(props.callback, 'session', props.session);
 		} catch {
-			authRoot.value?.showUI('failed');
+			authRoot.value?.showUi('failed');
 			return;
 		}
 	}
@@ -72,15 +72,15 @@ async function onAccept(token: string) {
 		if (redirectTo != null) {
 			window.location.href = redirectTo;
 		} else {
-			authRoot.value?.showUI('success');
+			authRoot.value?.showUi('success');
 		}
 	}).catch(() => {
-		authRoot.value?.showUI('failed');
+		authRoot.value?.showUi('failed');
 	});
 }
 
 function onDeny() {
-	authRoot.value?.showUI('denied');
+	authRoot.value?.showUi('denied');
 }
 
 definePage(() => ({

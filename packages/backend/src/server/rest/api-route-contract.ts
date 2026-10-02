@@ -16,7 +16,7 @@ const metadataFreeRoutes = new Set([
 	'ALL /clear-browser-cache',
 ]);
 
-type ApiRoute = {
+type Route = {
 	method: string;
 	path: string;
 };
@@ -56,7 +56,7 @@ export function assertApiRouteContract(app: Pick<Hono, 'routes'>): void {
 		}
 	}
 
-	for (const route of routes as ApiRoute[]) {
+	for (const route of routes as Route[]) {
 		const routeKey = `${route.method} ${route.path}`;
 		if (metadataFreeRoutes.has(routeKey)) {
 			continue;

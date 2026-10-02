@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { parseTheme } from '@/core/meta/MetaEntityPacker.js';
+import { parseTheme } from '@/core/meta/meta-entity-packer.js';
 
 describe('core:meta:parseTheme', () => {
 	test('JSON5 の記法を受け付ける', () => {

@@ -13,7 +13,7 @@ import type { QueueShellDependencies } from '@/queue/worker.js';
 import { createEventPublishers } from '@/core/events.js';
 import { queueReadyRef, readyRef } from '@/boot/ready.js';
 import { createHealthApp } from '@/server/health.js';
-import { enqueueDbJobInOutbox, waitForDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
+import { enqueueDbJobInOutbox, waitForDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
 
