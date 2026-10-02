@@ -79,7 +79,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	try {
 		await syncSystemJobSchedulers(deps.systemQueue, deps.config);
 		// publisher を渡さないと、inbox で作成したノート・通知のストリーム配信が optional チェーンで
-		// 黙って無効になり、リモート発のイベントが WebSocket に流れない。
+		// エラーを出さずに無効になり、リモート発のイベントが WebSocket に流れない。
 		const workerDeps = {
 			config,
 			db: deps.db,

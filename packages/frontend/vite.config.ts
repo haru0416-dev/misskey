@@ -96,7 +96,7 @@ const externalPackages = [
 export function getConfig(): UserConfig {
 	const localesHash = toBase62(hash(JSON.stringify(locales)));
 
-	// tailscale などで別のポートから開くときに、既定のポートと HMR の接続先を環境変数で変える。
+	// tailscale などで別のポートから開くときに、デフォルトのポートと HMR の接続先を環境変数で変える。
 	const devServerPort = Number(process.env['MISSKEY_VITE_PORT'] ?? 5173);
 	const hmrClientPort = Number(process.env['MISSKEY_VITE_HMR_CLIENT_PORT'] ?? devServerPort);
 

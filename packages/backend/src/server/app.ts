@@ -169,7 +169,7 @@ export function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependenci
 export function createMisskeyApp(deps: MisskeyAppDependencies): Hono {
 	const app = new Hono();
 
-	// API 以外のルート (web SSR / file / well-known / oauth 等) の未捕捉例外は、Hono の既定では
+	// API 以外のルート (web SSR / file / well-known / oauth 等) の未捕捉例外は、Hono のデフォルトでは
 	// ログ無しの 500 テキストになる。API は runApiEndpoint が捕捉する。
 	app.onError((err, c) => {
 		const errId = randomUUID();

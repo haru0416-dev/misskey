@@ -18,6 +18,6 @@
 - 配信 JSON と package の型を含めて更新する: `bun run --bun --filter i18n build`
 - 参照側の型確認: `bun run --bun --filter frontend typecheck`
 
-コマンドの正本は [i18n/package.json](../../../../../packages/i18n/package.json) と [build.ts](../../../../../packages/i18n/build.ts)。`generate` と配信資産の build は別なので、新しいキーが型検査に現れたことだけで画面への反映を判断しない。開発時は既に動いている i18n watcher の結果を利用する。
+コマンドは [i18n/package.json](../../../../../packages/i18n/package.json) と [build.ts](../../../../../packages/i18n/build.ts) に書かれている。`generate` と配信資産の build は別なので、新しいキーが型検査に現れたことだけで画面への反映を判断しない。開発時は既に動いている i18n watcher の結果を利用する。
 
 対象画面で文言、補間結果、改行、長さによるレイアウト、アクセシブル名を確認する。型エラーはキー・引数・生成物のどこが不一致かを直し、型 assertion で隠さない。最終的な locale 差分確認と変更記録は共通契約に従う。

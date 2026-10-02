@@ -245,8 +245,8 @@ export async function handleApiIImportAntennas(
 	body: Record<string, unknown>,
 	/**
 	 * ファイルが妥当だと分かってから (= 実際にアンテナを作る直前に) 呼ばれる。
-	 * 他の import と違いこの endpoint は同期的に検証まで行うので、レート制限を入口で消費すると
-	 * 壊れたファイルを1回投げただけで1時間ロックアウトされてしまう。消費はここまで遅らせる。
+	 * 他の import と違いこの endpoint は同期的に検証まで行うので、レート制限を検証の前に消費すると
+	 * 不正なファイルを1回送っただけで1時間ロックアウトされてしまう。消費はここまで遅らせる。
 	 */
 	consumeRateLimit?: () => Promise<void>,
 ): Promise<void> {

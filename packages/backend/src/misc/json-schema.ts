@@ -220,7 +220,7 @@ type NullOrUndefined<p extends Schema, T> =
 
 // https://stackoverflow.com/questions/54938141/typescript-convert-union-to-intersection
 // Union から intersection を得る。
-// `U extends unknown` (`any` ではない) は、U の union 分配と intersection の推論を両立する any-free の定石。
+// `U extends unknown` は `any` を使わずに、U の union 分配と intersection の推論を両立できる。
 type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
 type ArrayToIntersection<T extends readonly Schema[]> = T extends readonly [infer Head, ...infer Tail]
@@ -235,8 +235,8 @@ type ArrayToIntersection<T extends readonly Schema[]> = T extends readonly [infe
 
 // https://github.com/misskey-dev/misskey/pull/8144#discussion_r785287552
 // Union を得るために `Foo extends any ? Hoge<Foo> : never` の分配を使う。
-// `a[number]` が X の既定値 (Schema / ReadonlyArray<keyof s> に制約) になるため、`a` は `any[]` のままにする。
-// `unknown[]` に狭めるとこの制約検査が壊れる。
+// `a[number]` が X のデフォルト値 (Schema / ReadonlyArray<keyof s> に制約) になるため、`a` は `any[]` のままにする。
+// `unknown[]` に狭めるとこの制約検査を満たせなくなる。
 type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown
 	? SchemaType<X>
 	: never;
@@ -261,7 +261,7 @@ type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
 			: p['allOf'] extends readonly Schema[]
 				? ArrayToIntersection<p['allOf']>
 				: // この分岐の型を持つフィールドには、外部ライブラリの具体的な設定オブジェクトを代入する。
-					// Record<string, unknown> に狭めると構造的代入が壊れるため、any を使用する。
+					// Record<string, unknown> に狭めると構造的代入が型エラーになるため、any を使用する。
 					p['additionalProperties'] extends true
 					? Record<string, any>
 					: p['additionalProperties'] extends Schema

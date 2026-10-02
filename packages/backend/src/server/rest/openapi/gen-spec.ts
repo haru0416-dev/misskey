@@ -59,7 +59,6 @@ const unauthenticatedEndpoints = new Set([
 	'test',
 	'get-online-users-count',
 	'get-avatar-decorations',
-	'users/achievements',
 	'users/pages',
 	'users/flashs',
 	'username/available',

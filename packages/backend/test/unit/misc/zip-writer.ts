@@ -15,7 +15,7 @@ import { writeZip } from '@/misc/zip-writer.js';
 import type { ZipEntry } from '@/misc/zip-writer.js';
 
 // 自前の書き出しを、取り込み側 (slacc の ZipArchiveReader) だけでなく、別実装の unzip でも読めることで確かめる。
-// 自分の reader とだけ突き合わせると、両者が同じ誤りを持っていても通ってしまう。
+// 自分の reader とだけ照合すると、両者が同じ誤りを持っていても通ってしまう。
 describe('misc:zip-writer', () => {
 	let dir = '';
 	let seq = 0;

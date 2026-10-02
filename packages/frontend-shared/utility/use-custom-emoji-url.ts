@@ -7,7 +7,7 @@ import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
 
 // frontend の MkCustomEmoji と embed の EmCustomEmoji が、同じ規則でカスタム絵文字の画像 URL を決めるための共通処理。
-// 絵文字一覧とメディアプロキシはアプリごとに別物なので呼び出し側から渡す。
+// 絵文字一覧とメディアプロキシはアプリごとに異なるので呼び出し側から渡す。
 
 type CustomEmojiUrlProps = {
 	readonly name: string;

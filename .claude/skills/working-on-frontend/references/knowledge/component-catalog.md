@@ -16,7 +16,7 @@
 | 配信物の build | `bun run --filter frontend catalog:build` |
 | Chromium で mount と play を実行 | `bun run --bun --filter frontend test:stories` |
 
-[設定](../../../../../packages/frontend/vite.catalog.config.ts) の既定は `127.0.0.1:6006`。ポートが使用中なら変わるため、起動ログの URL を使う。依存 package とブラウザの準備は [frontend-testing.md](frontend-testing.md) を参照する。
+[設定](../../../../../packages/frontend/vite.catalog.config.ts) のデフォルトは `127.0.0.1:6006`。ポートが使用中なら変わるため、起動ログの URL を使う。依存 package とブラウザの準備は [frontend-testing.md](frontend-testing.md) を参照する。
 
 ## ハーネスの境界
 

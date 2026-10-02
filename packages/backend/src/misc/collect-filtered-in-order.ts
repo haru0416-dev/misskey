@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/** filter を呼ぶ回数の既定の上限。候補を最大 limit × この回数だけ見る。 */
+/** filter を呼ぶ回数のデフォルトの上限。候補を最大 limit × この回数だけ見る。 */
 const DEFAULT_MAX_BATCHES = 10;
 
 /**

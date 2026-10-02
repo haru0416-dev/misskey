@@ -2,7 +2,7 @@
 
 ## 依存の所有者を追う
 
-backend は DI コンテナではなく、明示的な引数と factory で依存を渡す。
+backend は明示的な引数と factory で依存を渡す。DI コンテナは使わない。
 
 - DB 操作の例は [UserStore.ts](../../../../../packages/backend/src/core/user/UserStore.ts)。呼び出し元の `db` を受け取り、必要な transaction を同じ接続経路に渡す。
 - 設定や状態を閉じ込める例は [MfmService.ts](../../../../../packages/backend/src/core/mfm/MfmService.ts) の `createMfmService` と `ReturnType`。

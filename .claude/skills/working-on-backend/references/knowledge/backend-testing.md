@@ -21,7 +21,7 @@
 
 [vitest.config.e2e.ts](../../../../../packages/backend/vitest.config.e2e.ts) は global setup に [test/target.ts](../../../../../packages/backend/test/target.ts)、各ファイルの setup に [setup.e2e.ts](../../../../../packages/backend/test/setup.e2e.ts) を指定する。
 
-- 既定の local mode は Vitest 側で `built-test/entry.js` を import し、controller を起動する。
+- デフォルトの local mode は Vitest 側で `built-test/entry.js` を import し、controller を起動する。
 - external mode は [e2e_external_target.mjs](../../../../../packages/backend/scripts/e2e_external_target.mjs) が同じ `built-test/entry.js` を別の Bun プロセスで読み込む。Vitest は controller と HTTP で通信する。
 - `built-test/entry.js` は [rolldown.config.ts](../../../../../packages/backend/rolldown.config.ts) が [test-server/entry.ts](../../../../../packages/backend/test-server/entry.ts) から生成する。controller の準備完了だけではアプリは起動していない。各ファイルの `/env-reset` がアプリ停止、DB リセット・migration、Valkey 初期化を行い、`boot/common` の `server()` でアプリを起動する。
 

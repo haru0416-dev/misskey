@@ -14,7 +14,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 
 const props = defineProps<{
-	/** 省略すると MkResult の既定 (問題が発生しました) を出す。 */
+	/** 省略すると MkResult のデフォルト (問題が発生しました) を出す。 */
 	text?: string | undefined;
 }>();
 

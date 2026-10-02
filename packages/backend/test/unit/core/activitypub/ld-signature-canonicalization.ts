@@ -9,7 +9,7 @@ import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import fc from 'fast-check';
 
 // 署名オプションの正規化には jsonld.normalize を通さない高速経路がある。参照実装と 1 バイトでも
-// 違えば署名が壊れ、リレー購読側で検証に失敗する。壊れても例外は出ず連合が黙って劣化するため、
+// 違えば署名が無効になり、リレー購読側で検証に失敗する。無効になっても例外は出ず、連合の動作が通知なしに劣化するため、
 // 両者の一致をテストで固定する。
 describe('LD signature option canonicalization', () => {
 	// 高速経路は外部リクエストを行わないので、HttpRequestService は使われない。
@@ -87,7 +87,7 @@ describe('LD signature option canonicalization (property)', () => {
 		realisticSegment.map((s) => `http://example.com:8443/users/${s}?a=1&b=2#main-key`),
 	);
 	const realisticNonce = fc.stringMatching(/^[0-9a-f]{32}$/u);
-	// 既定の fc.date は西暦 ±27万年まで振り、toISOString が拡張年表記 (+275760-09-13T…) になる。
+	// デフォルトの fc.date は西暦 ±27万年まで振り、toISOString が拡張年表記 (+275760-09-13T…) になる。
 	// 通常形式の生成器では、拡張年表記を避けて 4 桁の年を持つ日時に絞る。
 	const realisticCreated = fc
 		.date({ min: new Date('2000-01-01T00:00:00.000Z'), max: new Date('2100-01-01T00:00:00.000Z'), noInvalidDate: true })

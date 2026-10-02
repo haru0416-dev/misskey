@@ -3,7 +3,7 @@ import { BaseSequencer } from 'vitest/node';
 import type { TestSpecification } from 'vitest/node';
 import { baseConfig } from './vitest.config.js';
 
-// vitest の既定はdurationキャッシュ順でファイル実行順が毎回変わる。共有DBを使うe2eは
+// vitest のデフォルトはdurationキャッシュ順でファイル実行順が毎回変わる。共有DBを使うe2eは
 // 順序依存の失敗が「run毎に別の場所」に出て追えなくなるため、常にパス順で固定する。
 // bun ランタイムでは多数のファイル引数を渡すと vitest が起動後にハングするため、
 // include glob と sequencer を使う。

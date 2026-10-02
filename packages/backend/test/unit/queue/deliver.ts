@@ -23,7 +23,7 @@ import type { MiLocalUser } from '@/models/User.js';
 describe('hono-queue-deliver', () => {
 	let runtime: RuntimeDependencies;
 	let actor: MiLocalUser;
-	// meta.federation の既定値は 'none' なので、配送経路を検証するテストは
+	// meta.federation のデフォルト値は 'none' なので、配送経路を検証するテストは
 	// 'all'に上書きする。
 	let federatedDeps: QueueDeliverDependencies;
 

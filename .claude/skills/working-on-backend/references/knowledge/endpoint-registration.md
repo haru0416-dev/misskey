@@ -14,7 +14,7 @@ meta はドキュメント専用ではない。一方、meta の追加だけで 
 
 ## 契約から登録する
 
-JSON API はすべて、`api/metas/<category>.ts` の `defineContract` (meta・入力) と [rest/endpoints/](../../../../../packages/backend/src/server/rest/endpoints/) の `implementEndpoints` (実装) を、[endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts) の `registerContractEndpoints` がまとめて登録する (登録の本体は [endpoint-definition.ts](../../../../../packages/backend/src/server/rest/endpoint-definition.ts))。
+JSON API はすべて、`rest/contracts/<category>.ts` の `defineContract` (meta・入力) と [rest/endpoints/](../../../../../packages/backend/src/server/rest/endpoints/) の `implementEndpoints` (実装) を、[endpoints/index.ts](../../../../../packages/backend/src/server/rest/endpoints/index.ts) の `registerContractEndpoints` がまとめて登録する (登録の本体は [endpoint-definition.ts](../../../../../packages/backend/src/server/rest/endpoint-definition.ts))。
 
 - HTTP メソッドは `allowGet`・`allowQuery`、匿名の公開キャッシュは `cacheSec` から決まる。wrapper の選択や `app.on` の手書きは無い。
 - 認証・権限・回数制限は meta からだけ掛かる。ルートで同じ枠を数え直さない。

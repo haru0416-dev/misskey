@@ -651,7 +651,7 @@ describe('OAuth', () => {
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-3.3
 	describe('Scope', () => {
-		// scope が省略された場合、既定値で処理するか invalid_scope を示して失敗させる。
+		// scope が省略された場合、デフォルト値で処理するか invalid_scope を示して失敗させる。
 		test('Missing scope', async () => {
 			const client = new AuthorizationCode(clientConfig);
 

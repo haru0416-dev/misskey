@@ -6,7 +6,7 @@
 import type * as Misskey from 'misskey-js';
 
 // frontend の MkAvatar と embed の EmAvatar が、アバターデコレーションの配置を同じ見た目にするための計算。
-// 既定値のときは undefined を返し、style 属性にプロパティを出さない。
+// デフォルト値のときは undefined を返し、style 属性にプロパティを出さない。
 
 type DecorationPlacement = Pick<
 	Misskey.entities.UserDetailed['avatarDecorations'][number],

@@ -10,9 +10,9 @@ import type { MenuItem } from '@/types/menu.js';
 /**
  * ハッシュタグのミュートを表すミュートワードの 1 行を組み立てる。
  *
- * 語の配列 (AND 条件) にすると `String#includes` の素朴な部分一致になり、
+ * 語の配列 (AND 条件) にすると `String#includes` の単純な部分一致になり、
  * `#cat` のミュートが `#cats` まで巻き込むうえ、大小の違い (`#Misskey` と `#misskey`)
- * も別物になる。サーバーはタグを NFKC + 小文字で同一視するので、それに寄せるため
+ * も別のタグとして扱われる。サーバーはタグを NFKC + 小文字で同一視するので、それに寄せるため
  * 正規表現の行として持つ。
  */
 export function toHashtagMute(hashtag: string): string {

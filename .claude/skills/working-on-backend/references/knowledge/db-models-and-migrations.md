@@ -11,7 +11,7 @@
 
 [access-token.ts](../../../../../packages/backend/src/db/schema/access-token.ts) は `pgTable`、型付き列、外部キー、index、`$inferSelect`・`$inferInsert`、モデルへの変換の実例。モデルのフィールド追加だけでは DB は変わらず、schema の変更だけでは既存 DB は更新されない。関連する deserialize・packing・API schema への波及も確認する。
 
-外部キーの削除時挙動、null の意味、既定値、時刻・ID の型を既存定義に合わせる。循環・自己参照の列は近い schema の `AnyPgColumn` 注釈を使う。既存データを保持すべき rename を drop/add に置換しない。
+外部キーの削除時挙動、null の意味、デフォルト値、時刻・ID の型を既存定義に合わせる。循環・自己参照の列は近い schema の `AnyPgColumn` 注釈を使う。既存データを保持すべき rename を drop/add に置換しない。
 
 ## 生成結果で判断する
 

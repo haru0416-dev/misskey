@@ -12,7 +12,7 @@ import { ZipArchiveReader } from 'slacc';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 // 絵文字パックの取り込み (slacc の ZipArchiveReader)。ZipArchiveReader は deflate だけを持ち bzip2 や lzma は持たないので、
-// 一般的な zip が読めることと、持たない方式が黙って壊れず明示的に失敗することを見る。取り込みはアップロードされた zip を
+// 一般的な zip が読めることと、持たない方式が誤った結果を返さず、明示的に失敗することを見る。取り込みはアップロードされた zip を
 // 読むので、通常ファイル以外と上限超えも拒否する。自前の書き出しとの往復は misc/zip-writer.ts が見る。
 describe('queue:emoji-zip', () => {
 	let dir = '';

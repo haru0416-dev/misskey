@@ -6,7 +6,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { nextTick } from 'vue';
 // テスト本体で import すると、@/os.js 以下の読み込みが 5 秒の制限に含まれ、負荷次第で落ちる。
-// vi.mock は import より先に実行されるので、ここで読み込んでもモックが効く。
+// vi.mock は import より先に実行されるので、ここで読み込んでもモックが適用される。
 import { useRoleRestriction } from '@/composables/useRoleRestriction.js';
 
 const flushPromises = () => new Promise<void>((resolve) => setTimeout(resolve, 0)).then(() => nextTick());

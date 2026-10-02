@@ -64,7 +64,7 @@ function getReactionName(reaction: string): string {
 	display: block;
 	width: 60px;
 	max-height: 60px;
-	font-size: 60px; // unicodeな絵文字についてはwidthが効かないため
+	font-size: 60px; // unicodeな絵文字についてはwidthが適用されないため
 	object-fit: contain;
 	margin: 0 auto;
 }

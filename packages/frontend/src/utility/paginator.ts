@@ -37,7 +37,7 @@ export type PaginatorFailure = {
 	code: string | null;
 };
 
-/** 理由が分かると次の操作が変わる失敗だけ、一覧に出す文言を返す。それ以外は undefined (画面の既定の文言)。 */
+/** 理由が分かると次の操作が変わる失敗だけ、一覧に出す文言を返す。それ以外は undefined (画面のデフォルトの文言)。 */
 export function paginatorErrorText(code: string | null): string | undefined {
 	if (code === 'SEARCH_TIMED_OUT') return i18n.ts.searchTimedOut;
 	if (code === 'RATE_LIMIT_EXCEEDED') return i18n.ts.cannotPerformTemporaryDescription;

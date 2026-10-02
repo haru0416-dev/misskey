@@ -38,7 +38,7 @@ export type FrontendTelemetryConfig = {
 };
 
 // ioredis 6 の Redis は ReplyMapping をクラスの型引数に取り、コンストラクタは
-// `RedisOptions & { replyMapping?: ReplyMapping }` (既定 "legacy") を要求する。
+// `RedisOptions & { replyMapping?: ReplyMapping }` (デフォルト "legacy") を要求する。
 // RedisOptions.replyMapping は "legacy" | "resp3" なので、この型の変数をそのまま
 // 渡すと型引数を推論できず全 overload が外れる。設定側では指定しないので型から除く。
 export type RuntimeValkeyConnection = Omit<RedisOptions, 'replyMapping'> & {
@@ -292,7 +292,7 @@ function resolveTelemetry(config: CompiledConfigV2): Config['observability']['te
 	};
 }
 
-/** キュー既定値の穴埋め。未指定の起動レートと再試行回数はキューごとに異なる。 */
+/** キューデフォルト値の穴埋め。未指定の起動レートと再試行回数はキューごとに異なる。 */
 function resolveQueues(queues: CompiledConfigV2['queues']): Config['queues'] {
 	const withDefaults = <K extends keyof CompiledConfigV2['queues']>(
 		name: K,
@@ -314,7 +314,7 @@ function resolveQueues(queues: CompiledConfigV2['queues']): Config['queues'] {
 		database: queues.database,
 		system: queues.system,
 		objectStorage: queues.objectStorage,
-		// webhook 系は既定の起動レートを持たず、ワーカーあたりの同時実行数をそのまま上限にする
+		// webhook 系はデフォルトの起動レートを持たず、ワーカーあたりの同時実行数をそのまま上限にする
 		userWebhooks: withDefaults('userWebhooks', queues.userWebhooks.concurrencyPerWorker),
 		systemWebhooks: withDefaults('systemWebhooks', queues.systemWebhooks.concurrencyPerWorker),
 		backoff: {

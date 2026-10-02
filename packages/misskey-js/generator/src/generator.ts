@@ -202,7 +202,7 @@ function isResponseObject(value: unknown): value is ResponseObject {
 }
 
 // 仕様書のエラー例 (examples.*.value.error.code) から、そのエンドポイントが返しうるエラーコードを集める。
-// 例に無いコードは型に現れないため、サーバー側で例を省くとクライアントの網羅が壊れる。
+// 例に無いコードは型に現れないため、サーバー側で例を省くと、クライアントの型がエラーコードを網羅できなくなる。
 function collectErrorCodes(responses: ResponsesObject | undefined): string[] {
 	const codes = new Set<string>();
 	for (const [status, response] of Object.entries(responses ?? {})) {

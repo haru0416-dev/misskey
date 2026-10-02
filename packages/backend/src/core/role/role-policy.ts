@@ -119,7 +119,7 @@ export async function getUserRoles(deps: RolePolicyDependencies, user: MiUser | 
  * policies は jsonb で、role.policies も meta.policies も管理APIから任意の JSON を書き込めてしまう
  * (`admin/roles/update-default-policies` の paramDef は値を検証していない)。
  * 数値ポリシーに文字列や null が入ると `Math.max(...)` が NaN を返し、
- * 「上限0」でも「無制限」でもない壊れた制限値が全ユーザーへ適用されるため、
+ * 「上限0」でも「無制限」でもない不正な制限値が全ユーザーへ適用されるため、
  * コード側の DEFAULT_POLICIES と形が一致しない値は採用しない。
  */
 function isValidPolicyValue<T extends keyof RolePolicies>(name: T, value: unknown): value is RolePolicies[T] {
@@ -148,14 +148,14 @@ function createPolicyCalculator(basePolicies: RolePolicies, roles: MiRole[]) {
 		name: T,
 		aggregate: (values: RolePolicies[T][]) => RolePolicies[T],
 	): RolePolicies[T] {
-		// meta.policies 側も検証を通っていないので、インスタンス既定値も同様に形を確かめる
+		// meta.policies 側も検証を通っていないので、インスタンスデフォルト値も同様に形を確かめる
 		const baseValue = isValidPolicyValue(name, basePolicies[name]) ? basePolicies[name] : DEFAULT_POLICIES[name];
 		if (roles.length === 0) {
 			return aggregate([baseValue]);
 		}
 
-		// policies は jsonb なので、壊れた形で保存された値が入っていることがある。
-		// ここで例外を投げるとそのロールを持つユーザーの全APIが500になるため、既定値へフォールバックする。
+		// policies は jsonb なので、想定外の形で保存された値が入っていることがある。
+		// ここで例外を投げるとそのロールを持つユーザーの全APIが500になるため、デフォルト値へフォールバックする。
 		const policies = roles.map((role) => {
 			const policy = role.policies[name] as unknown;
 			return typeof policy === 'object' && policy !== null

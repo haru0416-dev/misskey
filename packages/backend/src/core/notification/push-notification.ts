@@ -150,7 +150,7 @@ export async function pushSwNotification<T extends keyof PushNotificationsTypes>
 				followRedirects: false,
 			})
 			.catch((err: unknown) => {
-				// 失効した購読 (404/410) だけ削除する。それ以外の失敗 (SSRF 遮断・一時障害) は握りつぶす。
+				// 失効した購読 (404/410) だけ削除する。それ以外の失敗 (SSRF 遮断・一時障害) は無視する。
 				const status = err instanceof StatusError ? err.statusCode : undefined;
 				if (status === 404 || status === 410) {
 					void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {

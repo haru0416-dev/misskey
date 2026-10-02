@@ -129,7 +129,7 @@ export class ImageEffector {
 		this.compositor.changeResolution(width, height);
 	}
 
-	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
+	/** デフォルトでは WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true) {
 		this.compositor.destroy(disposeCanvas);
 	}

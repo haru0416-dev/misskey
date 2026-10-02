@@ -19,7 +19,7 @@ const VERSION_NEEDED = 20;
 // 名前を UTF-8 で書いたことを示す (一般用途ビット 11)。
 const FLAG_UTF8_NAME = 0x08_00;
 const METHOD_DEFLATE = 8;
-// ZIP64 を持たないので、各サイズ・位置・件数はこの範囲に収める。超えたら黙って壊さず失敗させる。
+// ZIP64 を持たないので、各サイズ・位置・件数はこの範囲に収める。超えたら不正な ZIP を書き出さず、エラーにする。
 const MAX_UINT32 = 0xff_ff_ff_ff;
 const MAX_UINT16 = 0xff_ff;
 

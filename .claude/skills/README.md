@@ -2,11 +2,11 @@
 
 共通の判断と保護条件は [AGENTS.md](../../AGENTS.md)、配置と評価の仕様は [開発エージェント運用仕様](../../docs/agent-workflow-spec.md) を参照する。
 
-`.claude/skills/<name>/SKILL.md` が作業別の正本。description は対象操作を短く表し、本文は今回読むべき参照と固有の判断を案内する。細部は実装・設定・検証へのリンクを持つ参照文書に置く。共通規則の全文や、モデルごとの未検証な推奨は再掲しない。
+`.claude/skills/<name>/SKILL.md` が作業別の元になる文書。description は対象操作を短く表し、本文は今回読むべき参照と固有の判断を案内する。細部は実装・設定・検証へのリンクを持つ参照文書に置く。共通規則の全文や、モデルごとの未検証な推奨は再掲しない。
 
 配置しただけで自動適用されたとは扱わない。共通指針の対象表または明示呼び出しから必要な Skill を読み、評価時は実際に渡された内容を確認する。同じ変更内で既読の未変更文書を繰り返し開く必要はない。
 
-Codex の `.agents/skills/` は同じ name/description と正本への参照を生成した入口。正本の更新後は `bun run sync:agent-instructions`、差分検査は `bun run lint:agent-instructions` を実行する。新しい Skill を追加するときは同期スクリプトの対象も更新する。
+Codex の `.agents/skills/` は同じ name/description と元の文書への参照を生成した入口。元の文書を更新した後は `bun run sync:agent-instructions`、差分検査は `bun run lint:agent-instructions` を実行する。新しい Skill を追加するときは同期スクリプトの対象も更新する。
 
 規則の変更では目的、現行実装との整合、検証方法を確認する。文書が短くなったことと、エージェントの品質・費用が改善したことは別に評価する。[harness-audit](../commands/harness-audit.md) はこの照合の手動入口であり、効果を自動で保証しない。
 

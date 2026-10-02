@@ -53,7 +53,7 @@ export function renderEmailHtml(params: {
 	host: string;
 }): string {
 	// 本文はモデレーターの入力 (admin/send-email) も入るので、サーバー名義で任意の HTML を送らせないよう無害化する。
-	// 既定の許可タグ・スキーム (http/https/mailto など) で、既存の通知メールの <br> と <a> は通る。
+	// デフォルトの許可タグ・スキーム (http/https/mailto など) で、既存の通知メールの <br> と <a> は通る。
 	const safeHtml = sanitizeHtml(params.html);
 	const safeSubject = escapeHtml(params.subject);
 

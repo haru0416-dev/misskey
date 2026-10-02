@@ -5,7 +5,7 @@ description: Misskey の変更を利用者へ返す前、コミット・プッ�
 
 # 変更を返す前の確認
 
-共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) を正本とする。この Skill は変更境界に応じた実行先を選ぶための手順であり、送信や DB 操作の許可を与えない。既に読んだ規則や、同じ変更状態で得た検証結果は使い回す。
+共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) に従う。この Skill は変更境界に応じた実行先を選ぶための手順であり、送信や DB 操作の許可を与えない。既に読んだ規則や、同じ変更状態で得た検証結果は使い回す。
 
 ## 変更と証拠を対応させる
 
@@ -29,7 +29,7 @@ description: Misskey の変更を利用者へ返す前、コミット・プッ�
 | `packages/backend/src/db/schema/`・migration | 下記の DB 確認 |
 | 新規ファイル・locale・利用者影響 | AGENTS.md の SPDX・locale・CHANGELOG 条件を差分に適用する。CHANGELOG の編集先は [追記手順](references/tasks/changelog-update.md) |
 
-`bun run lint` の対象は package script を正本とする。失敗時には失敗した検査と原因を記録し、関係ない期待値や設定を緩めない。
+`bun run lint` の対象は package script に書かれたものを使う。失敗時には失敗した検査と原因を記録し、関係ない期待値や設定を緩めない。
 
 挙動の確認は変更に近い既存テストから選び、通信・連合・実ランタイムが契約なら対応する E2E まで含める。backend の `test` / `test:e2e` / `test:e2e:bun` / `test:fed` は `bun run --bun --filter backend <script>` で実行する。`.config/test.yml` が無い場合だけ `.github/misskey/test.yml` をコピーし、専用 DB 等の依存先を確認する。各 script が設定をコンパイルする。参照先は [backend CI](../../../.github/workflows/test-backend.yml) と [連合 CI](../../../.github/workflows/test-federation.yml)。
 

@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 # フロントエンドの差分レビュー
 
-読み取り専用でレビューする。ファイルの修正、formatter、生成処理、コミットは行わない。共通契約は [AGENTS.md](../../AGENTS.md)、作業固有の正本は [working-on-frontend](../skills/working-on-frontend/SKILL.md)。変更に関係する参照だけを使い、規則の派生コピーや採点表を作らない。
+読み取り専用でレビューする。ファイルの修正、formatter、生成処理、コミットは行わない。共通契約は [AGENTS.md](../../AGENTS.md)、作業固有の元になる文書は [working-on-frontend](../skills/working-on-frontend/SKILL.md)。変更に関係する参照だけを使い、規則の派生コピーや採点表を作らない。
 
 ## 対象と根拠
 

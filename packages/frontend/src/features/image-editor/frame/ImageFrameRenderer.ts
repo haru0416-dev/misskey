@@ -357,7 +357,7 @@ export class ImageFrameRenderer {
 		]);
 	}
 
-	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
+	/** デフォルトでは WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true): void {
 		this.compositor.destroy(disposeCanvas);
 	}

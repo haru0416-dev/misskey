@@ -5,7 +5,7 @@ description: packages/backend の API・サービス・DB・migration・テス�
 
 # Backend の変更
 
-共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) を正本とする。この Skill は backend 固有の実装・検証先を案内する。
+共通の安全条件と完了条件は [AGENTS.md](../../../AGENTS.md) に従う。この Skill は backend 固有の実装・検証先を案内する。
 
 変更する入力、認可、保存、非同期処理、応答を特定し、同じ処理を使う REST・ActivityPub・queue の経路を追う。既に読んだ情報は再利用し、以下から関係する節だけを読む。
 

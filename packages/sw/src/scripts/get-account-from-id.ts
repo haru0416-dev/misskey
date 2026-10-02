@@ -9,7 +9,7 @@ import type * as Misskey from 'misskey-js';
 type SavedAccount = Pick<Misskey.entities.SignupResponse, 'id' | 'token'>;
 
 async function getAccountTokens(): Promise<Record<string, string>> {
-	// Pinia base の device 保存が正本。別ホストの資格情報はこの SW で使わない。
+	// Pinia base の device 保存が元のデータ。別ホストの資格情報はこの SW で使わない。
 	const state = await get<{ accountTokens?: Record<string, string> }>('pinia::base::device');
 	return state?.accountTokens ?? {};
 }

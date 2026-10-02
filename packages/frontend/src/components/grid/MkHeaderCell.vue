@@ -195,7 +195,7 @@ $cellHeight: 28px;
 	}
 
 	.left {
-		// rightのぶんだけズレるのでそれを相殺するためのネガティブマージン
+		// right の幅の分だけ位置がずれるので、それを打ち消す負のマージン
 		margin-left: -$handleWidth;
 		margin-right: auto;
 		width: $handleWidth;

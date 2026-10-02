@@ -16,7 +16,7 @@ test.describe('チャットの入力欄', () => {
 		await resetState(page);
 		const alice = await registerUser(page, 'alice', 'alice1234', true);
 		bob = await registerUser(page, 'bob', 'bob12345');
-		// 既定のチャットの相手は相互フォローに限られる。
+		// デフォルトのチャットの相手は相互フォローに限られる。
 		await page.request.post('/api/following/create', { data: { i: alice.token, userId: bob.id } });
 		await page.request.post('/api/following/create', { data: { i: bob.token, userId: alice.id } });
 		await login(page, 'alice', 'alice1234');
@@ -34,7 +34,7 @@ test.describe('チャットの入力欄', () => {
 		await page.goto(`/chat/user/${bob.id}`);
 		const input = page.getByRole('textbox', { name: 'ここにメッセージを入力' });
 		await input.fill('hello');
-		// 既定では Enter は改行で、Ctrl+Enter で送る。
+		// デフォルトでは Enter は改行で、Ctrl+Enter で送る。
 		await input.press('Control+Enter');
 		await input.press('Control+Enter');
 		await input.press('Control+Enter');

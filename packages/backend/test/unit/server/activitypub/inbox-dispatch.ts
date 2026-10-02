@@ -81,7 +81,7 @@ describe('hono-ap-inbox performOneActivityForApi', () => {
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-ap-inbox') };
-		// 新規テスト DB の meta.federation は既定で 'none' で、isFederationAllowedUri が全ホストを拒否し
+		// 新規テスト DB の meta.federation はデフォルトで 'none' で、isFederationAllowedUri が全ホストを拒否し
 		// updatePersonForApi 経由の再取得が "Instance is blocked" で失敗するため、全許可へ上書きする。
 		runtime.meta.federation = 'all';
 	});

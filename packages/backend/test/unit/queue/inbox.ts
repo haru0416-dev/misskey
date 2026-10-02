@@ -67,7 +67,7 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-queue-inbox') };
 		keyPair = await genRsaKeyPair();
-		// 新規テストDBでは meta.federation が既定で 'none' になっており、そのままだと
+		// 新規テストDBでは meta.federation がデフォルトで 'none' になっており、そのままだと
 		// isFederationAllowedHost がすべてのホストを拒否してしまう。
 		runtime.meta.federation = 'all';
 	});
@@ -209,7 +209,7 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	});
 
 	// actor はリモートが送ってくる値で、欠けていても不思議ではない。UnrecoverableError にしないと
-	// 「壊れた activity が再試行され続ける」形になる。
+	// 不正な activity が再試行され続ける。
 	test('activity.actor が無い場合は再試行せずスキップする', async () => {
 		const host = `hono-queue-inbox-noactor-${genId()}.example.com`;
 		const { data } = await createSignedInboxPayload(host);

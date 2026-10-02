@@ -429,7 +429,7 @@ function attachScrollElement(el: HTMLElement | null) {
 	}
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	scrollElement.value = nextScrollElement;
-	// 先頭へ戻った瞬間にキューを開放するため、スクロール中も軽量な位置判定だけを行う。
+	// 先頭へ戻った時点でキューを開放するため、スクロール中も軽量な位置判定だけを行う。
 	scrollElement.value.addEventListener('scroll', onScrollContainerScroll, { passive: true });
 	nextTick().then(scheduleScrollMarginUpdate);
 }

@@ -4,7 +4,7 @@
  */
 
 // 利用者が書いたテーマ (JSON5) を読む。テーマの編集・導入の画面から使い、起動時の読み込みには乗せない。
-// サーバーが渡す既定テーマは JSON に変換済みなので theme.ts の parseThemeJsonOrNull で読む。
+// サーバーが渡すデフォルトテーマは JSON に変換済みなので theme.ts の parseThemeJsonOrNull で読む。
 
 import JSON5 from 'json5';
 import { parseThemeValue } from '@shared/utility/theme.js';

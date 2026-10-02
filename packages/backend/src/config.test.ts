@@ -54,7 +54,7 @@ describe('configVersion 2 schema', () => {
 		expect(materialize({ webpublicSmartSubsample: false })).toBe(false);
 	});
 
-	// 本文の trigram index は既定で持つ。他の検索では使われず書き込みだけが増えるので、sqlLike 以外では持たない。
+	// 本文の trigram index はデフォルトで持つ。他の検索では使われず書き込みだけが増えるので、sqlLike 以外では持たない。
 	test('keeps the note text index only for sqlLike unless it is disabled', () => {
 		const materialize = (search?: unknown) =>
 			materializeConfig(
@@ -96,7 +96,7 @@ describe('configVersion 2 schema', () => {
 	});
 
 	test('rejects the removed meilisearch search provider', () => {
-		// 検索は SQL だけ。以前の設定が残っていても黙って別の検索へ切り替えず、起動時に失敗させる。
+		// 検索は SQL だけ。以前の設定が残っていても別の検索へ自動で切り替えず、起動時に失敗させる。
 		expect(() =>
 			sourceConfigV2Schema.parse({
 				...createSourceConfig(),

@@ -62,7 +62,7 @@ export function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 
 	if (entryFile.imports != null && Array.isArray(entryFile.imports)) {
 		// ブラウザによる依存の再帰的な先読みを前提にせず、静的 import を奥まで modulepreload に含める。
-		// 直下だけの先読みでは依存の発見ごとに往復待ちが増える (往復 150 ms の回線で入口の後に 3 段、約 570 ms)。
+		// 直下だけの先読みでは依存の発見ごとに往復待ちが増える (往復 150 ms の回線でエントリーファイルの後に 3 段、約 570 ms)。
 		function collectImports(imports: string[]) {
 			for (const importId of imports) {
 				if (seenChunkIds.has(importId)) {
@@ -144,7 +144,7 @@ export function createClientCommonDataLoader(deps: ClientCommonDataDependencies)
 			icon: deps.meta.iconUrl,
 			appleTouchIcon: deps.meta.app512IconUrl,
 			themeColor: deps.meta.themeColor,
-			// 設定された画像だけを先読みする。未設定ではクライアントも画像を出さないので、外部の既定画像
+			// 設定された画像だけを先読みする。未設定ではクライアントも画像を出さないので、外部のデフォルト画像
 			// (3 枚 73 KB) を先読みしても使われず、起動に要る読み込みと帯域を取り合うだけになる。
 			serverErrorImageUrl: deps.meta.serverErrorImageUrl,
 			infoImageUrl: deps.meta.infoImageUrl,

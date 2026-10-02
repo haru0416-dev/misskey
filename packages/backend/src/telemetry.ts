@@ -40,7 +40,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 				[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
 				'service.instance.id': `${config.runtime.hostname}:${process.pid}`,
 			})
-			// NodeSDK の既定と同じ検出器・同じ優先順位 (衝突時は検出側)。OTEL_RESOURCE_ATTRIBUTES などの環境変数と、
+			// NodeSDK のデフォルトと同じ検出器・同じ優先順位 (衝突時は検出側)。OTEL_RESOURCE_ATTRIBUTES などの環境変数と、
 			// プロセス・ホストの属性を付ける。
 			.merge(
 				resources.detectResources({
@@ -78,7 +78,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 		candidates.push(errorProvider);
 
 		// metrics の送り先は traces とは別に明示したときだけ使う。未設定なら計装を作らず何も送らない
-		// (SDK 既定の localhost:4318 へ黙って送らない)。
+		// (SDK デフォルトの localhost:4318 へは送らない)。
 		if (telemetry.metricsEndpoint != null) {
 			const meterProvider = await createMeterProvider(telemetry, telemetry.metricsEndpoint, resource, headers);
 			if (meterProvider != null) {

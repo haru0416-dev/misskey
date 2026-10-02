@@ -54,7 +54,7 @@ export type ApiRequest<
 	user: UserToken | undefined;
 };
 
-/** ポーリングの既定値。timeout は問い合わせ時間ぶんの余裕を含む。待ちが長い対象は timeout だけ上書きする。 */
+/** ポーリングのデフォルト値。timeout は問い合わせ時間ぶんの余裕を含む。待ちが長い対象は timeout だけ上書きする。 */
 export const POLL = { timeout: 5000, interval: 100 } as const;
 
 export const successfulApiCall = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(

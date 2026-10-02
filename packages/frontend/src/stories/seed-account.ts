@@ -5,7 +5,7 @@
 
 import { resetLocalStorage, startMockServiceWorker } from './environment.js';
 
-// `@/i.ts` と `@/instance.ts` は import された瞬間に localStorage を読む。
+// `@/i.ts` と `@/instance.ts` は import されたときに localStorage を読む。
 // 本体のモジュールより先に評価される位置で置く必要がある
 // (ES モジュールは import 文の順に評価されるので、これを最初の import にすること)。
 resetLocalStorage();

@@ -66,7 +66,7 @@ export function createCachedResolver(options: { successTtlMs: number; failureTtl
 
 		let addresses: ResolvedAddress[];
 		try {
-			// verbatim: DNS が返した順序を保つ (Node 17 以降の既定)。
+			// verbatim: DNS が返した順序を保つ (Node 17 以降のデフォルト)。
 			const found = await dns.promises.lookup(hostname, { all: true, verbatim: true });
 			addresses = found.map((entry) => ({ address: entry.address, family: entry.family as 4 | 6 }));
 		} catch (err) {

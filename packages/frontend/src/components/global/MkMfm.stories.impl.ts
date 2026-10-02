@@ -78,7 +78,7 @@ export const IsNotNote = {
 	},
 } satisfies StoryObj<typeof MkMfm>;
 
-// ハッシュタグの右クリックはリンク既定のメニューでなく、ミュート導線を持つ専用メニューを出す。
+// ハッシュタグの右クリックはリンクデフォルトのメニューでなく、ミュート導線を持つ専用メニューを出す。
 export const HashtagMenu = {
 	...Default,
 	async play({ canvasElement }) {

@@ -75,7 +75,7 @@ async function listRelaysByStatusFromDatabase(db: MiDrizzleDatabase, status: MiR
 	return db.select().from(relay).where(eq(relay.status, status));
 }
 
-/** senderInboxes に、そのリレーの inbox が含まれるときだけ状態を変える (他のアクターからの Accept / Reject を効かせない)。 */
+/** senderInboxes に、そのリレーの inbox が含まれるときだけ状態を変える (他のアクターからの Accept / Reject を反映しない)。 */
 export async function updateRelayStatusInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiRelay['id'],

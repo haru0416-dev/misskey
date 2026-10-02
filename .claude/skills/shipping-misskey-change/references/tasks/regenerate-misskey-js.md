@@ -6,7 +6,7 @@ API の追加・削除、`meta`・`paramDef`・`res`、公開 schema、OpenAPI �
 
 ## 実行
 
-リポジトリルートから:
+リポジトリルートから次を実行する。
 
 ```bash
 bun run build-misskey-js-with-types

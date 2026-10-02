@@ -137,7 +137,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		);
 
 		// VAO の属性の設定は位置の番号で共有される。どの頂点シェーダーも position を
-		// layout(location = POSITION_ATTRIBUTE_LOCATION) で同じ番号に固定しているので、1 回の設定で全プログラムに効く。
+		// layout(location = POSITION_ATTRIBUTE_LOCATION) で同じ番号に固定しているので、1 回の設定が全プログラムに適用される。
 		gl.vertexAttribPointer(POSITION_ATTRIBUTE_LOCATION, 2, gl.FLOAT, false, 0, 0);
 		gl.enableVertexAttribArray(POSITION_ATTRIBUTE_LOCATION);
 
@@ -357,7 +357,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		this.gl.viewport(0, 0, this.renderWidth, this.renderHeight);
 	}
 
-	/** 既定では WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
+	/** デフォルトでは WebGL コンテキストも破棄するため、canvas を使い回す場合は false を渡す。 */
 	public destroy(disposeCanvas = true) {
 		this.gl.deleteBuffer(this.vertexBuffer);
 		this.gl.deleteProgram(this.nopProgram);

@@ -224,7 +224,7 @@ $avatarSize: 58px;
 </style>
 
 <style lang="scss">
-/* useCssModule 経由の $style は rollup の unwind 処理で壊れるため、グローバルなクラスで定義する。 */
+/* useCssModule 経由の $style は rollup の unwind 処理で正しく解決されないため、グローバルなクラスで定義する。 */
 ._qrShowFlip {
 	transition: rotate .3s linear, scale .3s .15s step-start;
 }

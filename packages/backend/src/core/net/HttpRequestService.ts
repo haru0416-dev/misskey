@@ -260,7 +260,7 @@ export function createHttpRequestService(config: Config, useAgent = false) {
 	 * リダイレクトを手動追跡し、各ホップの宛先を assertUrlAllowed で検査する。
 	 *
 	 * fetch の `redirect: 'follow'` に任せると、リダイレクト先が assertUrlAllowed を通らず、Bun では
-	 * Agent の socket レベル遮断も効かないため、`302 -> http://169.254.169.254/` 等で private アドレスへ
+	 * Agent の socket レベル遮断も働かないため、`302 -> http://169.254.169.254/` 等で private アドレスへ
 	 * 誘導する SSRF が成立してしまう。そのため `redirect: 'manual'` で 1 ホップずつ検査しながら追跡する。
 	 * 303 と POST への 301/302 は GET に変換し、body と本文関連のヘッダを落とす。
 	 */

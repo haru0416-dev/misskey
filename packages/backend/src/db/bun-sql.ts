@@ -161,7 +161,7 @@ export function createBunSqlClient(
 		max: maxConnections,
 		idleTimeout: options.idleTimeoutSeconds ?? Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
-		// 既定は無名の文で、実行のたびに値に合わせて計画する。名前付き (prepare: true) は計画を使い回すので、
+		// デフォルトは無名の文で、実行のたびに値に合わせて計画する。名前付き (prepare: true) は計画を使い回すので、
 		// 値で最適な計画が変わる文では generic plan に落ちて遅くなる (ホームタイムラインの DB 読みが 9 → 82〜91 ms)。
 		prepare: options.prepare ?? false,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),

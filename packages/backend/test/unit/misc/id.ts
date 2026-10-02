@@ -8,7 +8,7 @@ import { genUuidv7, parseUuidv7, parseUuidv7Full, uuidv7RegExp } from '@/misc/id
 import fc from 'fast-check';
 
 /*
- * ID は全ページングのソートキーで、順序が崩れるとタイムラインが静かに壊れる。
+ * ID は全ページングのソートキーで、順序が崩れると、エラーが出ないままタイムラインの並びが狂う。
  * 例で押さえられるのは代表値だけなので、生成した時刻で往復と単調性を確かめる。
  */
 describe('uuidv7 (property)', () => {

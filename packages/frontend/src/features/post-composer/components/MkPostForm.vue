@@ -1103,7 +1103,7 @@ async function insertEmoji(ev: PointerEvent) {
 	}
 
 	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
-	// focustrapをかけているとinsertTextAtCursorが効かない
+	// focustrapをかけているとinsertTextAtCursorが動作しない
 	// そのため、投稿フォームのテキストに直接注入する
 	// See: https://github.com/misskey-dev/misskey/pull/14282
 	//      https://github.com/misskey-dev/misskey/issues/14274

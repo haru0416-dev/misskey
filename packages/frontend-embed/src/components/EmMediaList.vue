@@ -70,7 +70,7 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 	&.n1 {
 		grid-template-rows: 1fr;
 
-		// コンテナクエリが使えない場合の既定値
+		// コンテナクエリが使えない場合のデフォルト値
 		min-height: 64px;
 		max-height: clamp(
 			64px,

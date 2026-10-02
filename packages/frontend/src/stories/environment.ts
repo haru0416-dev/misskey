@@ -24,7 +24,7 @@ function themeOf(id: string): Record<string, unknown> | undefined {
 }
 
 /**
- * story は「ログイン済みで既定設定」の前提で書かれている。毎回同じ状態から始めるため、
+ * story は「ログイン済みでデフォルト設定」の前提で書かれている。毎回同じ状態から始めるため、
  * story を切り替えるたびに localStorage を作り直す。
  */
 export function resetLocalStorage(): void {
@@ -74,7 +74,7 @@ let workerPromise: Promise<SetupWorker> | null = null;
  *
  * **テストファイルより先に呼ぶこと** (setupFile から)。本体には module scope で API を叩く
  * ページがあり (settings/profiles.vue の `await listCloudBackups()` など)、
- * worker が上がる前に import されるとモックを素通りして 404 の空応答になり、
+ * worker が上がる前に import されるとモックを経由せずに 404 の空応答になり、
  * `res.json()` が未捕捉の SyntaxError になる。
  */
 export function startMockServiceWorker(): Promise<SetupWorker> {

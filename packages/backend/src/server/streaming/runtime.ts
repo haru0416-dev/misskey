@@ -16,7 +16,7 @@ export type StreamServerDependencies = StreamConnectionDependencies & {
 const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 /**
- * Redis pub/sub の payload はプロセス外から来るので、形が壊れている前提で扱う。
+ * Redis pub/sub の payload はプロセス外から来るので、形が不正な前提で扱う。
  * この関数は ioredis の 'message' リスナーとして同期的に呼ばれるため、ここで例外を投げると
  * 誰も捕捉できずストリーミングサーバーのプロセスごと落ちる。
  * また EventEmitter は listener の無い 'error' を emit すると throw するので、チャンネル名としては通さない。

@@ -40,7 +40,7 @@ export function createAgentHttpClient(config: Config) {
 		: undefined;
 
 	const agents = [direct.http, direct.https, proxy?.http, proxy?.https];
-	// Agentのコンストラクタは0を既定値へ置換するため、待機ソケット数は生成後にも適用する。
+	// Agentのコンストラクタは0をデフォルト値へ置換するため、待機ソケット数は生成後にも適用する。
 	for (const agent of agents) if (agent) agent.maxFreeSockets = network.http.maximumFreeSockets;
 
 	async function request(

@@ -27,7 +27,7 @@ function escapeNQuadLiteral(value: string): string {
  *
  * jsonld は IRI 中の `<` `>` `"` `\` と制御文字を `\uXXXX` へ退避し、空白を含む IRI や
  * 相対 IRI は safe mode の検証で例外にする。高速経路はこの処理を行わないため、対象に含めると
- * 出力が食い違う。creator はリモート入力であり、`>` と改行を混ぜられると N-Quads の
+ * 出力が一致しない。creator はリモート入力であり、`>` と改行を混ぜられると N-Quads の
  * 行そのものを注入できる。
  *
  * 退避が不要な部分集合だけを受け付け、範囲外の入力は null を返して jsonld.normalize で処理する。

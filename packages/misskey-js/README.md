@@ -7,7 +7,7 @@ TypeScript 用の Misskey SDK。ブラウザ / Node.js / Bun 上で動作する�
 バックエンドの API 定義から `src/autogen/` を生成しているため、バックエンドの API を変更したら
 ルートで `bun run build-misskey-js-with-types` を実行する。開発時の決まりごとは [CONTRIBUTING.md](./CONTRIBUTING.md) を参照。
 
-以下が提供されている:
+次の機能を提供している。
 - ユーザー認証
 - APIリクエスト
 - ストリーミング

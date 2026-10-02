@@ -28,7 +28,7 @@ describe('組み込みテーマ', () => {
 		});
 	}
 
-	// themeProps に無いキーは compile が黙って捨てる (theme.ts の filter)。
+	// themeProps に無いキーは compile がエラーなしに捨てる (theme.ts の filter)。
 	// 型も `props: Record<string, string>` なので、プロパティ名を 1 文字間違えても
 	// エラーも警告も出ないまま「なぜか色が変わらない」状態になる。ここで止める。
 	//

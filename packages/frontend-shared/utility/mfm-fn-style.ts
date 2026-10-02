@@ -12,7 +12,7 @@ type MfmFnArgs = Record<string, string | true>;
 export type MfmFnStyleOptions = {
 	/** アニメーションを付けるか。 */
 	useAnim: boolean;
-	/** 位置・拡大・x2 などの装飾を効かせるか (frontend の advancedMfm 設定)。 */
+	/** 位置・拡大・x2 などの装飾を適用するか (frontend の advancedMfm 設定)。 */
 	advanced: boolean;
 };
 

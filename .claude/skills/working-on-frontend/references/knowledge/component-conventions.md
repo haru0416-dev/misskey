@@ -2,7 +2,7 @@
 
 ## コンポーネントの型
 
-Composition API と `<script setup lang="ts">` を使う。属性順は問わない。props・emits は型引数形式で宣言し、既定値には `withDefaults` を使える。新しい Options API や runtime object 形式の props を持ち込まない。
+Composition API と `<script setup lang="ts">` を使う。属性順は問わない。props・emits は型引数形式で宣言し、デフォルト値には `withDefaults` を使える。新しい Options API や runtime object 形式の props を持ち込まない。
 
 既存の契約を見て v-model の型、null、必須性、イベントのタイミングを維持する。[MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) は入力種別に応じた generic と `modelValue`/emit、[MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue) は候補の値型を制約する `defineModel` を使う。行数のために一方へ統一しない。型 export が必要な場合は通常の `<script lang="ts">` を併用する。
 

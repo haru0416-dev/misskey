@@ -31,7 +31,7 @@ export function resolveApiDateIdPagination(params: {
 
 /**
  * 境界ごとに ID を優先し、無ければ日時から作る。resolveApiDateIdPagination と違い、
- * sinceId と untilDate のように片側を ID・もう片側を日時で指定しても両方が効く。
+ * sinceId と untilDate のように片側を ID・もう片側を日時で指定しても、両方が境界として使われる。
  * 並び順は呼び出し先 (タイムライン等) が決める。
  */
 export function resolveApiDateIdBounds(params: {

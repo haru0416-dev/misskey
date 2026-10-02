@@ -1,6 +1,6 @@
 # `os.*` の UI と結果
 
-確認・入力・通知は [os.ts](../../../../../packages/frontend/src/os.ts) の既存 helper を使い、ブラウザ標準の alert/confirm/prompt を新しく直接呼ばない。型と返り値は実装を正本とする。
+確認・入力・通知は [os.ts](../../../../../packages/frontend/src/os.ts) の既存 helper を使い、ブラウザ標準の alert/confirm/prompt を新しく直接呼ばない。型と返り値は実装に合わせる。
 
 | 操作 | 選ぶ入口と注意 |
 | --- | --- |

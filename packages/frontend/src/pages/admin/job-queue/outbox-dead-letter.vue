@@ -121,7 +121,7 @@ async function request(endpoint: 'admin/queue/retry-outbox-dead-letter' | 'admin
 	try {
 		await os.apiWithDialog(endpoint, { outboxId: props.deadLetter.id, revision: props.deadLetter.revision });
 	} catch {
-		// エラーダイアログは apiWithDialog 側が出すのでここでは握り潰す。
+		// エラーダイアログは apiWithDialog 側が出すのでここでは無視する。
 		// 他の管理者やワーカーが先に触っていた場合 (QUEUE_OUTBOX_STATE_CHANGED) もここに来るため、
 		// 成否に関わらず一覧を取り直して、次の操作が最新の revision で行われるようにする
 	}

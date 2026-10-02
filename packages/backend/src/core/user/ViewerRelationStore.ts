@@ -72,7 +72,7 @@ export const homeTimelineViewerRelationKinds = [
 
 /**
  * union の各枝。どれが先頭に来ても外側から同じ名前で読めるよう、全枝に `kind` / `id` の別名を付けてある
- * (PostgreSQLは union の列名を先頭の枝から取るため、一部の枝にしか別名が無いと種別の指定次第で壊れる)。
+ * (PostgreSQLは union の列名を先頭の枝から取るため、一部の枝にしか別名が無いと種別の指定次第でクエリが成り立たない)。
  */
 const branchByKind: Record<ViewerRelationKind, () => SQL> = {
 	following: () => sql`
@@ -166,7 +166,7 @@ const viewerRelationPlans = new Map<number, ReturnType<typeof createViewerRelati
  *
  * 分割して投げると、SQL1本あたり73µsの固定CPU (プール貸出のタイマ/リスナ登録、RowDescription処理、
  * 結果オブジェクトの組み立て) を本数ぶん払うことになる。実測でこの固定費はDBクライアントCPUの76%を
- * 占めており、行数・列数を削るより往復を削る方が効く。
+ * 占めており、行数・列数を減らすより往復を減らすほうが、削れる CPU は大きい。
  *
  * ただし `following` は最大4500行になり得るので、要る種別だけを指定すること。使わない枝を混ぜると
  * 往復1本ぶん (73µs) より行の転送 (0.24µs/行) の方が高くつく。

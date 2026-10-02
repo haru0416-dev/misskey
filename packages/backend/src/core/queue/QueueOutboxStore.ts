@@ -831,7 +831,7 @@ async function claimReadyRows(db: MiDrizzleDatabase, outboxId?: string): Promise
 		db
 			.select()
 			.from(queueOutbox)
-			// availableAt の既定値と同じ DB 時計で判定し、JS のミリ秒丸めや時計差で即時発行を遅らせない。
+			// availableAt のデフォルト値と同じ DB 時計で判定し、JS のミリ秒丸めや時計差で即時発行を遅らせない。
 			.where(
 				and(
 					outboxId == null ? undefined : eq(queueOutbox.id, outboxId),
@@ -1371,7 +1371,7 @@ export async function abandonDeadLetterOutboxInDatabase(
 
 /**
  * id (時系列順) の降順で返す。updatedAt 順にすると retry/abandon のたびに並びが変わって
- * ページングが破綻するうえ、古いデッドレターに到達できなくなる。
+ * ページングが成り立たなくなるうえ、古いデッドレターに到達できなくなる。
  */
 export async function listDeadLetterQueueOutboxFromDatabase(
 	db: MiDrizzleDatabase,

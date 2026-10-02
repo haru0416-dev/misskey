@@ -20,7 +20,7 @@ const FETCH_RSS_MAX_URL_LENGTH = 8192;
  */
 const FETCH_RSS_MAX_CONCURRENCY = 32;
 
-/** xml2js を非同期モードで回す。既定の同期パースは 1MiB のXMLでイベントループを止めるため。 */
+/** xml2js を非同期モードで回す。デフォルトの同期パースは 1MiB のXMLでイベントループを止めるため。 */
 const rssParser = new Parser({
 	xml2js: {
 		async: true,
@@ -74,7 +74,7 @@ function fetchRssUnavailableError(): ApiError {
  *
  * `HttpRequestService` がホップごとに private アドレスを弾くので SSRF 自体はそちらで止まるが、
  * ここでは (1) スキームを http(s) に限る (2) URLに埋め込まれた認証情報を拒否する
- * (3) フラグメント違いを同一URLとして畳んで in-flight 共有を効かせる、の3点を担う。
+ * (3) フラグメント違いを同一URLとして畳んで in-flight 共有を有効にする、の3点を担う。
  */
 function normalizeFetchRssUrl(input: string): string {
 	if (input.length === 0 || input.length > FETCH_RSS_MAX_URL_LENGTH) {

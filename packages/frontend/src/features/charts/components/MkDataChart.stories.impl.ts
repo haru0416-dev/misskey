@@ -62,7 +62,7 @@ export const Default = {
 		// 図形が出ていれば描画自体は成立している。
 		expect(svg.querySelectorAll('path, rect').length).toBeGreaterThan(0);
 
-		// detailed の既定は true なので軸ラベルが出る。時刻の目盛りで確かめる。
+		// detailed のデフォルトは true なので軸ラベルが出る。時刻の目盛りで確かめる。
 		const axisLabels = [...svg.querySelectorAll('text')].map((t) => t.textContent ?? '');
 		expect(
 			axisLabels.some((t) => /^\d{2}:\d{2}$/.test(t)),
@@ -92,7 +92,7 @@ export const Default = {
 
 /**
  * `detailed: false` は MkChart が使う形。軸ラベルと dataZoom が落ちる。
- * 既定は true なので、落ちることを見るにはこちらを明示する必要がある。
+ * デフォルトは true なので、落ちることを見るにはこちらを明示する必要がある。
  */
 export const Compact = {
 	...Base,

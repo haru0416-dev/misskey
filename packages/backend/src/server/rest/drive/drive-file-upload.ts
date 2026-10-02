@@ -183,7 +183,7 @@ async function uploadDriveFileToObjectStorageForApi(
 ): Promise<void> {
 	const object = buildObjectStoragePutObject(deps.meta, key, body, type, ext, filename);
 
-	// 失敗を握りつぶすと実体の無いオブジェクトを指す DriveFile が DB に入り、API は成功したのに
+	// 失敗を無視すると実体の無いオブジェクトを指す DriveFile が DB に入り、API は成功したのに
 	// ファイル URL が 404 になる。
 	await deps.s3Service.upload(deps.meta, object);
 	deps.logger.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);

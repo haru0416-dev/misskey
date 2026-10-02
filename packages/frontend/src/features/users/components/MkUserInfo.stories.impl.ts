@@ -10,7 +10,7 @@ import MkUserInfo from './MkUserInfo.vue';
 import { userDetailed } from '@/stories/fakes.js';
 import { commonHandlers } from '@/stories/mocks.js';
 
-// story のログインアカウントは userDetailed() の既定 id なので、他人として別 id にする。
+// story のログインアカウントは userDetailed() のデフォルト id なので、他人として別 id にする。
 const other = userDetailed('otheruserid', 'someone', null, 'Someone');
 
 export const Default = {

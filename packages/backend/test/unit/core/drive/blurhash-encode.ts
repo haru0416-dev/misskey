@@ -41,7 +41,7 @@ describe('encodeBlurhash', () => {
 				fc.integer({ min: 1, max: 9 }),
 				fc.integer({ min: 0, max: 0xff_ff_ff_ff }),
 				(width, height, cx, cy, seed) => {
-					// xorshift で決定的にピクセルを埋める (fc.uint8Array だと縮小時に長さの制約が壊れる)
+					// xorshift で決定的にピクセルを埋める (fc.uint8Array だと縮小時に長さの制約を満たせなくなる)
 					let s = seed || 1;
 					const pixels = new Uint8ClampedArray(width * height * 4);
 					for (let i = 0; i < pixels.length; i++) {

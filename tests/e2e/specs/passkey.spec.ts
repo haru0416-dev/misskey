@@ -10,7 +10,7 @@ import { closeInitialUserSetup, registerUser, resetState } from '../support/help
 
 // WebAuthn の RP ID はテスト設定の instance.url (http://misskey.local) のホスト名になり、ページのオリジンと一致しないと
 // 登録も認証も失敗する。画面は misskey.local で開き、http でも WebAuthn が使えるよう安全なオリジンとして扱わせる。
-// 既定の headless shell はこのフラグを無視して isSecureContext が false のままなので、通常の Chromium で動かす。
+// デフォルトの headless shell はこのフラグを無視して isSecureContext が false のままなので、通常の Chromium で動かす。
 const origin = 'http://misskey.local';
 test.use({
 	channel: 'chromium',
@@ -62,7 +62,7 @@ async function answerPasswordDialog(page: Page, secret: string): Promise<void> {
 	await expect(page.getByText('続けるには認証を行ってください')).toBeVisible();
 	const submit = page.getByRole('button', { name: '続ける' }).last();
 	const token = await totp(secret);
-	// 開いた直後に入力すると、ダイアログの表示が終わる時点で値が消えることがある。入力が効いて送信できるまで入れ直す。
+	// 開いた直後に入力すると、ダイアログの表示が終わる時点で値が消えることがある。入力が反映されて送信できるまで入れ直す。
 	await expect(async () => {
 		await page.getByPlaceholder('パスワード').last().fill(password);
 		await page.locator('input[autocomplete="one-time-code"]').last().fill(token);

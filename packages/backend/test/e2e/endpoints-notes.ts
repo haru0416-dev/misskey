@@ -808,7 +808,7 @@ describe('Endpoints', () => {
 			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
 			expect(ignored.status).toBe(204);
 
-			// ignore 済みの招待は既定の一覧（ignored: false）から除外されるが、招待自体は取り消されない。
+			// ignore 済みの招待はデフォルトの一覧（ignored: false）から除外されるが、招待自体は取り消されない。
 			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
 			expect(inboxAfterIgnore.status).toBe(200);
 			expect((inboxAfterIgnore.body as any[]).some((i) => i.id === invitation.body.id)).toBe(false);

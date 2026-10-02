@@ -28,7 +28,7 @@ async function project() {
 	]) {
 		const path = join(root, `.claude/skills/${name}/SKILL.md`);
 		await mkdir(dirname(path), { recursive: true });
-		await writeFile(path, `---\nname: ${name}\ndescription: "対象: ${name}"\n---\n\n# 正本\n`);
+		await writeFile(path, `---\nname: ${name}\ndescription: "対象: ${name}"\n---\n\n# 元の文書\n`);
 	}
 	return root;
 }

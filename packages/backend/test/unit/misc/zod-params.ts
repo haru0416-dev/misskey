@@ -25,7 +25,7 @@ describe('misc:zod-params', () => {
 
 		test('重複禁止が JSON Schema に載る', () => {
 			// refine の中身は toJSONSchema からは見えないので、meta 経由で載っていることを見る。
-			// ここが落ちると OpenAPI (/api.json) から制約が黙って消える。
+			// ここが落ちると OpenAPI (/api.json) から制約がエラーなしに消える。
 			const json = z.toJSONSchema(schema, { io: 'input' });
 			expect(json).toMatchObject({ type: 'array', minItems: 1, maxItems: 3, uniqueItems: true });
 		});

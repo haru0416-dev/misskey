@@ -22,9 +22,9 @@
 
 unit と catalog は通常 backend に接続しない。未準備なら CI 同様に `bun run build-pre` と `bun run build:frontend-deps` で依存を準備する。catalog の browser 検証には `bun run playwright:install` も必要。
 
-E2E はテスト用 DB・Valkey と全体 build が必要。[packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml) のテスト用構成を使い、開発・本番データへ接続しない。Playwright の webServer は既定で `bun run start:test` を起動する。この script はテスト設定を `.config/test.yml` に配置し、migration を適用して起動するため、既存設定と接続先を確認してから実行する。
+E2E はテスト用 DB・Valkey と全体 build が必要。[packages/backend/test/compose.yml](../../../../../packages/backend/test/compose.yml) のテスト用構成を使い、開発・本番データへ接続しない。Playwright の webServer はデフォルトで `bun run start:test` を起動する。この script はテスト設定を `.config/test.yml` に配置し、migration を適用して起動するため、既存設定と接続先を確認してから実行する。
 
-既定の接続先は `http://localhost:61812`。`MISSKEY_TEST_BASE_URL` と `MISSKEY_TEST_START_COMMAND` で変更でき、ローカルでは既存サーバーを再利用する設定なので、対象がテスト用か確認する。
+デフォルトの接続先は `http://localhost:61812`。`MISSKEY_TEST_BASE_URL` と `MISSKEY_TEST_START_COMMAND` で変更でき、ローカルでは既存サーバーを再利用する設定なので、対象がテスト用か確認する。
 
 ## 実ブラウザで残す証拠
 

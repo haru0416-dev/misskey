@@ -43,7 +43,7 @@ function isStory(value: unknown): value is StoryObj {
 /**
  * すべての story を mount し、play を持つものはそれも走らせる。
  *
- * play が無い story も mount だけはする。コンポーネントが既定の args で例外を投げる退行は
+ * play が無い story も mount だけはする。コンポーネントがデフォルトの args で例外を投げる退行は
  * それだけで捕まるし、カタログを開かないと分からない状態を CI に載せられる。
  */
 for (const [path, load] of Object.entries(modules)) {

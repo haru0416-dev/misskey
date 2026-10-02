@@ -287,7 +287,7 @@ describe('アンテナ', () => {
 		expect(response.userListId).toBeNull();
 	});
 
-	// 作成・変更とも入力を保存して返すだけなので、全項目を既定値以外にした往復で取りこぼしを見る。
+	// 作成・変更とも入力を保存して返すだけなので、全項目をデフォルト値以外にした往復で取りこぼしを見る。
 	// 変更は作成時と逆の値に戻し、変更が無視されると作成時の値が残って落ちるようにしている。
 	test('を全項目既定値以外で作成し、別の値に変更できること', async () => {
 		const createParameters = {
@@ -480,7 +480,7 @@ describe('アンテナ', () => {
 			if (expectedCount === 0) {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 			} else {
-				// 期待件数が既定 limit の 10 を超える場合も全件取得する。
+				// 期待件数がデフォルト limit の 10 を超える場合も全件取得する。
 				await vi.waitFor(
 					async () => {
 						const counted = await successfulApiCall({

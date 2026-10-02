@@ -29,7 +29,7 @@ import { notesEndpoints } from './notes.js';
 import { pagesEndpoints } from './pages.js';
 import { usersEndpoints } from './users.js';
 
-/** 契約 (api/metas) から登録するカテゴリ。ここに並べたエンドポイントは routes/ に手書きの登録を持たない。 */
+/** 契約 (rest/contracts) から登録するカテゴリ。ここに並べたエンドポイントは routes/ に手書きの登録を持たない。 */
 export function registerContractEndpoints(app: Hono, deps: ApiShellDependencies): void {
 	registerEndpoints(app, deps, [
 		...adminEndpoints,

@@ -5,7 +5,7 @@ SFC の新しいスタイルは `<style lang="scss" module>` と `$style` を使
 ## 値の参照先
 
 - テーマ色: [frontend-shared/themes/_light.json5](../../../../../packages/frontend-shared/themes/_light.json5) と [_dark.json5](../../../../../packages/frontend-shared/themes/_dark.json5)。`--MI_THEME-*` を使い、背景と前景の意味を揃える。
-- 余白・角丸・時間・コントロール寸法・意味付きの面や影: [design-tokens.scss](../../../../../packages/frontend/src/design-tokens.scss) の `--MI-*`。既存の `--MI-radius`、`--MI-margin` もここで定義される。固定の既定値を文書から写さず、定義を確認する。
+- 余白・角丸・時間・コントロール寸法・意味付きの面や影: [design-tokens.scss](../../../../../packages/frontend/src/design-tokens.scss) の `--MI-*`。既存の `--MI-radius`、`--MI-margin` もここで定義される。固定のデフォルト値を文書から写さず、定義を確認する。
 - グローバル utility class: [style.scss](../../../../../packages/frontend/src/style.scss)。`_button`、`_panel`、`_gaps` など、実装と用途が合うものを再利用する。
 
 テーマに従う色を固定の白・黒・RGB 値へ置き換えない。透明度調整には既存の color-mix パターンを使える。寸法をすべて変数にするためだけに新トークンを増やさず、既存の共通値と部品固有の計算を区別する。

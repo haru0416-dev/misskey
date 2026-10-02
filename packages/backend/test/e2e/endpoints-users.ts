@@ -1745,7 +1745,7 @@ describe('Endpoints', () => {
 			const brokenAntennasUrl = `http://127.0.0.1:${address.port}/${suffix}-broken.json`;
 
 			try {
-				// 壊れたファイルは INVALID_ANTENNA_IMPORT_FILE を返し、かつ 1回/時 の実行枠を消費しない
+				// 不正なファイルは INVALID_ANTENNA_IMPORT_FILE を返し、かつ 1回/時 の実行枠を消費しない
 				// (消費してしまうと、ファイルを直してもその1時間は再試行できなくなる)
 				const brokenFile = await createDriveFileInDatabase(db, {
 					id: genId(),

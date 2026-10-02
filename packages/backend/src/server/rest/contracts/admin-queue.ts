@@ -259,7 +259,7 @@ export const endpointMetas = {
 						name: { type: 'string', optional: false, nullable: false },
 						coordinatorId: { type: 'string', optional: false, nullable: true },
 						externalJobId: { type: 'string', optional: false, nullable: true },
-						// 隔離する 2 つの経路はどちらも理由を書くが、列は null を許す。壊れた行でも一覧を返せるよう null を宣言する。
+						// 隔離する 2 つの経路はどちらも理由を書くが、列は null を許す。理由が空の行でも一覧を返せるよう null を宣言する。
 						deadLetterReason: {
 							type: 'string',
 							optional: false,

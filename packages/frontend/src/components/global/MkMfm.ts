@@ -329,7 +329,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								key: nextKey(),
 								to: isNote ? `/tags/${encodeURIComponent(hashtag)}` : `/user-tags/${encodeURIComponent(hashtag)}`,
 								style: 'color:var(--MI_THEME-hashtag);',
-								// ハッシュタグはリンクだが「タグ」としての操作も要るので、既定のリンクメニューを差し替える。
+								// ハッシュタグはリンクだが「タグ」としての操作も要るので、デフォルトのリンクメニューを差し替える。
 								contextMenu: () => getHashtagMenu(hashtag),
 								...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
 							},

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const CHARS = 'abcdefghijklmnopqrstuvwxyz'; // CSS の <custom-ident> にも使えるよう、既定の文字集合は a-z に限定する。
+const CHARS = 'abcdefghijklmnopqrstuvwxyz'; // CSS の <custom-ident> にも使えるよう、デフォルトの文字集合は a-z に限定する。
 
 export function randomId(length = 32, characters = CHARS) {
 	let result = '';

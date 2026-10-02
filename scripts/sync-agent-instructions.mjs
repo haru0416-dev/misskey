@@ -29,7 +29,7 @@ if (!/^@AGENTS\.md\s*$/m.test(claude)) {
 	throw new Error('CLAUDE.md must import the canonical instructions with @AGENTS.md');
 }
 
-// 正本の検証がすべて終わるまで生成先を更新しない。
+// 元の文書の検証がすべて終わるまで生成先を更新しない。
 const generated = [
 	{
 		path: '.github/copilot-instructions.md',
@@ -43,7 +43,7 @@ const generated = [
 		}
 		return {
 			path: `.agents/skills/${name}/SKILL.md`,
-			content: `---\nname: ${JSON.stringify(name)}\ndescription: ${JSON.stringify(metadata.description)}\n---\n\n<!-- .claude/skills/ から生成。更新: bun run sync:agent-instructions -->\n\n# ${name}\n\n[作業別の正本](../../../.claude/skills/${name}/SKILL.md) を読んで適用する。共通の判断と保護条件は [AGENTS.md](../../../AGENTS.md) を参照する。本文の参照文書は、今回の変更に必要なものだけ読む。\n`,
+			content: `---\nname: ${JSON.stringify(name)}\ndescription: ${JSON.stringify(metadata.description)}\n---\n\n<!-- .claude/skills/ から生成。更新: bun run sync:agent-instructions -->\n\n# ${name}\n\n[作業別の元の文書](../../../.claude/skills/${name}/SKILL.md) を読んで適用する。共通の判断と保護条件は [AGENTS.md](../../../AGENTS.md) を参照する。本文の参照文書は、今回の変更に必要なものだけ読む。\n`,
 		};
 	}),
 ];
@@ -67,7 +67,7 @@ for (const entry of generated) {
 
 if (changed.length > 0 && !writing) {
 	console.error(
-		`指示の生成先が正本と不一致:\n${changed.join('\n')}\nbun run sync:agent-instructions を実行してください。`,
+		`指示の生成先が元の文書と不一致:\n${changed.join('\n')}\nbun run sync:agent-instructions を実行してください。`,
 	);
 	process.exitCode = 1;
 } else {

@@ -31,7 +31,7 @@ describe('Update(Note) の受信', () => {
 			logger: runtime.loggerService.getLogger('test-ap-update-note'),
 			publishNoteStream: published,
 		} as ApiInboxDependencies;
-		// 新規テスト DB の meta.federation は既定で 'none' で、全ホストを拒否する。
+		// 新規テスト DB の meta.federation はデフォルトで 'none' で、全ホストを拒否する。
 		runtime.meta.federation = 'all';
 	});
 

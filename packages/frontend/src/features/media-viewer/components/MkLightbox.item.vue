@@ -158,7 +158,7 @@ export function resolveSwipeAxis(totalX: number, totalY: number): 'vertical' | '
 
 /**
  * 単発の pointermove の増分から速度を求めると、表示のリフレッシュレートを超える頻度で pointermove を
- * 発火する環境では値が暴れるため、直近 VELOCITY_WINDOW ms の平均を取る。
+ * 発火する環境では値が大きくばらつくため、直近 VELOCITY_WINDOW ms の平均を取る。
  * 指を止めたまま離した場合、pointermove が発火しなくなる環境 (iOS・マウス) では直前のフリックの速度が
  * 残り続けてしまうので、最後のサンプルが古ければ速度なしとして扱う。
  */
@@ -399,7 +399,7 @@ let clickAction: 'hidden' | 'video' | null = null;
 let pointerId: number | null = null;
 let start = { x: 0, y: 0 };
 let last = { x: 0, y: 0 };
-/** 軸が確定した時点のポインタ位置。ここを基準に描画することで、確定した瞬間に表示が飛ぶのを防ぐ */
+/** 軸が確定した時点のポインタ位置。ここを基準に描画することで、確定した時点で表示位置が急に変わるのを防ぐ */
 let swipeOrigin = { x: 0, y: 0 };
 let horizontal = false;
 let vertical = false;
@@ -490,7 +490,7 @@ function onPointermove(ev: PointerEvent) {
 	} else {
 		const axis = resolveSwipeAxis(ev.clientX - start.x, ev.clientY - start.y);
 		if (axis != null) {
-			// 確定した地点を描画の基準に置き直すことで、ヒステリシス分だけ表示が飛ぶのを防ぐ
+			// 確定した地点を描画の基準に置き直すことで、ヒステリシス分だけ表示位置が急に変わるのを防ぐ
 			swipeOrigin = { x: ev.clientX, y: ev.clientY };
 			if (axis === 'vertical') {
 				vertical = true;
@@ -712,7 +712,7 @@ function openMenu(ev: PointerEvent) {
 	const menu: MenuItem[] = [
 		{ type: 'component', component: markRaw(XFileInfo), props: { content: props.content } },
 		{ type: 'divider' },
-		// 画素を保ったまま拡大する指定は画像にしか効かない。
+		// 画素を保ったまま拡大する指定は画像にしか適用されない。
 		...(props.content.type === 'image'
 			? [
 					{

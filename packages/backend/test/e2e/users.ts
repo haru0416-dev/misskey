@@ -528,7 +528,7 @@ describe('ユーザー', () => {
 		});
 		expect(response.mutedWords).toStrictEqual([pattern]);
 
-		// 後続のテストは alice のフィクスチャと突き合わせるので、状態を戻す。
+		// 後続のテストは alice のフィクスチャと比較するので、状態を戻す。
 		await successfulApiCall({ endpoint: 'i/update', parameters: { mutedWords: [] }, user: alice });
 	});
 

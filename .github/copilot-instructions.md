@@ -2,7 +2,7 @@
 
 # Misskey 開発エージェント指針
 
-このファイルはリポジトリ共通の判断と保護条件の正本。パスはリポジトリルート起点。詳細な設計意図と評価条件は `docs/agent-workflow-spec.md`、製品の内部最適化計画は `docs/optimization-plan.md` に置く。
+このファイルは、リポジトリ共通の判断と保護条件の元になる文書。パスはリポジトリルート起点。詳細な設計意図と評価条件は `docs/agent-workflow-spec.md`、製品の内部最適化計画は `docs/optimization-plan.md` に置く。
 
 ## 目的と変更の判断
 
@@ -34,7 +34,7 @@
 
 ## 作業に応じて読む場所
 
-Skills の正本は `.claude/skills/`。対象を編集する前に該当 Skill を読む。既に読んだ内容は変更されていなければ再読不要で、参照文書は今回の境界に必要なものだけ開く。description は索引であり、読まれたことの保証ではない。
+Skills の元になる文書は `.claude/skills/`。対象を編集する前に該当 Skill を読む。既に読んだ内容は変更されていなければ再読不要で、参照文書は今回の境界に必要なものだけ開く。description は索引であり、読まれたことの保証ではない。
 
 | 対象 | 入口 |
 | --- | --- |
@@ -44,7 +44,7 @@ Skills の正本は `.claude/skills/`。対象を編集する前に該当 Skill 
 | Issue/PR の作成・外部送信 | `.claude/skills/creating-issues-and-prs/SKILL.md` |
 | 指示の読込範囲・重複・常駐量の調査 | `.claude/skills/context-budget/SKILL.md` |
 
-backend は Bun/Hono/drizzle と明示的な依存の組み立て、frontend は Vue を使用する。現在の入口は `packages/backend/src/runtime-dependencies.ts`、`packages/backend/src/server/rest/endpoint-definition.ts`、`packages/frontend/src/_boot_.ts`。過去の説明より現行コード・設定・テストに照合し、不一致を黙って無視せず正本を修正する。
+backend は Bun/Hono/drizzle と明示的な依存の組み立て、frontend は Vue を使用する。現在の入口は `packages/backend/src/runtime-dependencies.ts`、`packages/backend/src/server/rest/endpoint-definition.ts`、`packages/frontend/src/_boot_.ts`。過去の説明より現行コード・設定・テストに照合し、不一致を無視せず、元の文書を修正する。
 
 ## 検証と引き渡し
 
@@ -55,11 +55,11 @@ backend は Bun/Hono/drizzle と明示的な依存の組み立て、frontend は
 - `bun run lint` を通す。API の `meta` / `paramDef` / `res` 変更時は `bun run build-misskey-js-with-types` を実行し、生成差分を含める。
 - schema/migration 変更時は生成 SQL を確認して専用 DB へ適用し、`bun run --bun --filter backend check-migrations` で未適用 migration がないことを確認する。これは実 DB schema との完全一致の検査ではない。
 - ユーザーに見える機能・挙動変更は `CHANGELOG.md` の `## Unreleased` 配下の General/Client/Server に `- <Feat|Enhance|Fix>: <概要>` を追記する。
-- 実行コマンドの正本はルートと各 package の `package.json`。backend テスト前に `.config/test.yml` を用意し、未作成時だけ `.github/misskey/test.yml` からコピーする。必要な unit/e2e/external e2e/federation は変更境界で選び、lint の成功で代用しない。
+- 実行コマンドは、ルートと各 package の `package.json` に書かれたものを使う。backend テスト前に `.config/test.yml` を用意し、未作成時だけ `.github/misskey/test.yml` からコピーする。必要な unit/e2e/external e2e/federation は変更境界で選び、lint の成功で代用しない。
 - 成果物、実行結果、未実行・失敗・残存リスクを区別して報告する。文面の短さのために要件や根拠を落とさず、求められた分析・説明は省略しない。
 
 ## 入口の同期
 
 Claude は `CLAUDE.md` から本書を取り込み、Codex は本書と `.agents/skills/` の参照入口を読む。Copilot 用 `.github/copilot-instructions.md` は本書から生成し、単体でも共通条件を渡す。
 
-正本変更後は `bun run sync:agent-instructions`、差分検査は `bun run lint:agent-instructions`。後者は `bun run lint` に含む。生成先を独立に編集しない。既存のプラグイン・個人設定・上位指示はこの生成処理で変更しない。
+元の文書を変更した後は `bun run sync:agent-instructions`、差分検査は `bun run lint:agent-instructions`。後者は `bun run lint` に含む。生成先を独立に編集しない。既存のプラグイン・個人設定・上位指示はこの生成処理で変更しない。

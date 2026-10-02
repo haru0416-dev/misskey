@@ -78,7 +78,7 @@ const reactionAcceptances: readonly unknown[] = [
 ];
 
 /**
- * 端末に保存された下書きのうち、型が合う項目だけを返す。端末の値は古い版や手書きで壊れていることがあるため、
+ * 端末に保存された下書きのうち、型が合う項目だけを返す。端末の値は古い版や手書きで不正な形になっていることがあるため、
  * 型の合わない項目は無視してフォームの現在値を残す。
  */
 export function parseLocalDraft(raw: unknown): Partial<PostFormFields> | null {

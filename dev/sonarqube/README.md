@@ -20,7 +20,7 @@ oxlint では拾えない種類の問題 — 認知的複雑度、重複コー�
 docker compose -f dev/sonarqube/compose.yml up -d
 ```
 
-初回起動は 2 分ほどかかる。`{"status":"UP"}` になるまで待つ:
+初回起動は 2 分ほどかかる。`{"status":"UP"}` になるまで待つ。
 
 ```sh
 until curl -sf http://127.0.0.1:9000/api/system/status | grep -q '"status":"UP"'; do sleep 5; done
@@ -28,7 +28,7 @@ until curl -sf http://127.0.0.1:9000/api/system/status | grep -q '"status":"UP"'
 
 ## 認証情報
 
-`dev/sonarqube/.env` (mode 600 / gitignore 済) に置く。初回のみ以下で初期化する:
+`dev/sonarqube/.env` (mode 600 / gitignore 済) に置く。初回のみ以下で初期化する。
 
 ```sh
 # 1. 初期パスワード admin/admin を変更 (SonarQube は大小英字・数字・記号を要求する)
@@ -61,7 +61,7 @@ sonar-scanner-cli をコンテナで走らせるので、ホストに Java や s
 列挙してある。`Sonar way` を複製した `Misskey way` プロファイルからそれらだけを落とす方式なので、
 **現状 0 件のルールは有効なまま残り、将来の退行を検出できる**。
 
-JSON を編集したら反映する:
+JSON を編集したら反映する。
 
 ```sh
 bun run lint:sonar:profile   # プロファイルへ適用 (サーバー側の状態を書き換える)
@@ -70,7 +70,7 @@ bun run lint:sonar           # 再スキャン
 
 無効化するほどではないが特定のファイル種別でだけ誤検出するものは、プロファイルではなく
 `sonar-project.properties` の `sonar.issue.ignore.multicriteria` で絞る。
-リモートから見る場合は SSH ポートフォワード:
+リモートから見る場合は SSH ポートフォワードを使う。
 
 ```sh
 ssh -L 9000:127.0.0.1:9000 <this-vps>

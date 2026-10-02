@@ -34,8 +34,8 @@ function resolveImport(importer: string, specifier: string): string | null {
 }
 
 test('core・db・misc・models は HTTP・queue・起動の層を import しない', () => {
-	// 投稿処理などの共有処理は REST・ActivityPub・queue の各入口から呼ばれる。下位の層が入口側の
-	// モジュールに依存すると、入口の都合 (HTTP エラー・入力検証・ハンドラ) が共有処理へ入り込む。
+	// 投稿処理などの共有処理は REST・ActivityPub・queue の各層から呼ばれる。下位の層が上位の層の
+	// モジュールに依存すると、上位の都合 (HTTP エラー・入力検証・ハンドラ) が共有処理へ入り込む。
 	const files = lowerLayers.flatMap(sourceFiles);
 	const violations: string[] = [];
 	let resolved = 0;

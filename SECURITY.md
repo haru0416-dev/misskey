@@ -12,7 +12,7 @@ Please report vulnerabilities privately through this repository's
 [Security advisories](https://github.com/haru0416-dev/misskey/security/advisories/new),
 **not** through public Issues or Pull Requests.
 
-報告に含めてほしい内容:
+報告には次の内容を含めてください。
 
 - 影響を受ける箇所 (エンドポイント / ファイル / バージョン)
 - 再現手順、または再現コード

@@ -52,7 +52,7 @@ export function resolveHostProcessCounts(config: Config): HostProcessCounts {
  * 各プールは最低 1 接続とするため、予算が DB 利用プロセス数を下回る場合は合計が予算を超える。
  *
  * これを怠って各プロセスが上限いっぱい張ると、`httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
- * PostgreSQL の既定 `max_connections = 100` に張り付いて溢れる (実測で確認済)。
+ * PostgreSQL のデフォルト `max_connections = 100` に張り付いて溢れる (実測で確認済)。
  */
 export function resolveDatabasePoolSize(config: Config): number {
 	const counts = resolveHostProcessCounts(config);

@@ -53,7 +53,7 @@ export type ApiAdminRoleDependencies = {
 };
 
 // policies は jsonb へそのまま保存され、ロール適用のたびに読まれる。
-// ここで形を保証しないと、壊れた値がそのロールを持つ全ユーザーの全APIを500にする。
+// ここで形を保証しないと、形の違う値がそのロールを持つ全ユーザーの全APIを500にする。
 const rolePoliciesRecord = z.record(
 	z.string(),
 	z.object({

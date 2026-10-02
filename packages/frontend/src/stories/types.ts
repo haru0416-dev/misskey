@@ -32,7 +32,7 @@ export type Decorator<Args = Record<string, unknown>> = (
 
 export type StoryObj<C = unknown, Args = ComponentProps<C> & Record<string, unknown>> = {
 	name?: string;
-	/** 一部だけ指定して残りは既定値、という書き方をするので Partial。 */
+	/** 一部だけ指定して残りはデフォルト値、という書き方をするので Partial。 */
 	args?: Partial<Args>;
 	/** render が受け取る時点では args は解決済みとして扱う。 */
 	render?: (args: Args, context: StoryContext<Args>) => Component;

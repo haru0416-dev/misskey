@@ -5,7 +5,7 @@
 ## API レポート (API Extractor)
 
 `etc/misskey-js.api.md` は、このパッケージが export している関数・型のスナップショット。
-export に変更を加えたら再生成してコミットする:
+export に変更を加えたら再生成してコミットする。
 
 ```sh
 bun run --filter misskey-js api

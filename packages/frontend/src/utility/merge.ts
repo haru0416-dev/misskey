@@ -15,7 +15,7 @@ function isPureObject(value: unknown): value is Record<PropertyKey, unknown> {
 }
 
 /**
- * 欠けているキーと undefined を再帰的に既定値で補い、明示的な null は保持する。
+ * 欠けているキーと undefined を再帰的にデフォルト値で補い、明示的な null は保持する。
  */
 export function deepMerge<X extends Record<PropertyKey, unknown>>(value: DeepPartial<X>, def: X): X {
 	if (isPureObject(value) && isPureObject(def)) {

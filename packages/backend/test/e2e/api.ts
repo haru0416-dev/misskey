@@ -394,7 +394,7 @@ describe('API', () => {
 		beforeAll(async () => {
 			admin = await signup({ username: 'roleguardadmin' });
 			noSearch = await signup({ username: 'roleguardnosearch' });
-			// 管理者ロールは canManageCustomEmojis を明示しない (既定値 false のまま)。
+			// 管理者ロールは canManageCustomEmojis を明示しない (デフォルト値 false のまま)。
 			const adminRole = await role(alice, { isAdministrator: true });
 			await successfulApiCall({
 				endpoint: 'admin/roles/assign',

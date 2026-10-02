@@ -191,7 +191,7 @@ function registerStaticMount(app: Hono, mount: StaticMount): void {
 
 /**
  * frontend の vite ビルド成果物が無い開発時は、vite dev サーバーへ HTTP プロキシする。
- * HMR の WebSocket は vite.config.ts の `hmr.clientPort` (既定 5173、MISSKEY_VITE_HMR_CLIENT_PORT で変更) によりクライアントが
+ * HMR の WebSocket は vite.config.ts の `hmr.clientPort` (デフォルト 5173、MISSKEY_VITE_HMR_CLIENT_PORT で変更) によりクライアントが
  * vite サーバーへ直接張るため、ここでは HTTP のみ転送すればよい。
  */
 function registerViteDevProxy(app: Hono, opts: { prefix: string; upstream: string }): void {

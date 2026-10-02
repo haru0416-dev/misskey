@@ -27,7 +27,7 @@ export function parseTheme(theme: string | null): string | null {
 	}
 
 	try {
-		// 実行環境は bun 固定 (backend の engines)。Bun の型だけ undefined を許しているので潰す。
+		// 実行環境は bun 固定 (backend の engines)。Bun の型だけ undefined を許しているため、非 null アサーションで型から外す。
 		return JSON.stringify(Bun!.JSON5.parse(theme));
 	} catch {
 		return null;

@@ -228,7 +228,7 @@ function showNodejsVersion(): void {
 type Topology = {
 	httpWorkers: number;
 	queueWorkers: number;
-	/** メインプロセス自身が担う役割。null なら fork のみ行い、自分では何も捌かない。 */
+	/** メインプロセス自身が担う役割。null なら fork のみ行い、自分では何も処理しない。 */
 	masterRole: WorkerRole | null;
 	workerAssignments: WorkerAssignment[];
 };

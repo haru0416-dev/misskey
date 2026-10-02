@@ -140,7 +140,7 @@ async function readMigrationBaseline(
 async function withMigrationSession<T>(config: Config, operation: (client: ReservedSQL) => Promise<T>): Promise<T> {
 	// Bun 専用ドライバは実行時に読み込み、Node 側のモジュール読み込みを妨げない。
 	const { createBunSqlClient, normalizeDatabaseError } = await import('./db/bun-sql.js');
-	// migration と index の作成は数十秒〜数分かかる。idleTimeout が効くと実行中に接続を切られる。
+	// migration と index の作成は数十秒〜数分かかる。idleTimeout が有効だと実行中に接続を切られる。
 	const sql = createBunSqlClient(config, 1, { idleTimeoutSeconds: 0 });
 	let client: ReservedSQL | undefined;
 	let locked = false;

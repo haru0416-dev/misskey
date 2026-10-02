@@ -683,7 +683,7 @@ describe('Note', () => {
 			expect(prohibited.status).toBe(204);
 
 			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
-			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			// 却下される呼び出しはノートを作らないので、反映されるまで投げ直して待つ。
 			await vi.waitFor(async () => {
 				const rejected = await api(
 					'notes/create',
@@ -761,7 +761,7 @@ describe('Note', () => {
 			expect(assign.status).toBe(204);
 
 			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
-			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			// 却下される呼び出しはノートを作らないので、反映されるまで投げ直して待つ。
 			await vi.waitFor(async () => {
 				const rejected = await api(
 					'notes/create',
@@ -838,7 +838,7 @@ describe('Note', () => {
 			expect(assign.status).toBe(204);
 
 			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
-			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			// 却下される呼び出しはノートを作らないので、反映されるまで投げ直して待つ。
 			await vi.waitFor(async () => {
 				const rejected = await api(
 					'notes/create',

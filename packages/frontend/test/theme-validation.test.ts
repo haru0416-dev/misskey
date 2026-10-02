@@ -97,7 +97,7 @@ describe('theme validation', () => {
 	});
 });
 
-// 起動時はサーバーが JSON に変換した既定テーマを読む。JSON5 を読み込まずに、同じ検証を通す。
+// 起動時はサーバーが JSON に変換したデフォルトテーマを読む。JSON5 を読み込まずに、同じ検証を通す。
 describe('parseThemeJsonOrNull', () => {
 	test('reads a theme delivered as JSON', () => {
 		expect(parseThemeJsonOrNull(JSON.stringify(validTheme))).toStrictEqual(validTheme);

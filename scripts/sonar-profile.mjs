@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// rule-overrides.json を Quality Profile の正本とし、既存 profile でも無効化・復帰を同期する。
+// rule-overrides.json を Quality Profile の唯一の定義とし、既存 profile でも無効化・復帰を同期する。
 
 import { readFileSync } from 'node:fs';
 

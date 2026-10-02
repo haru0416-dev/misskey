@@ -1060,8 +1060,8 @@ describe('Endpoints', () => {
 				expect(notes.body).toHaveLength(1);
 				expect(getAt(notes.body, 0).id).toBe(publicNoteId);
 
-				// 配布の再試行で list に同じ ID が二重に入っても、1 回だけ返し limit の枠を食わない。
-				// 公開範囲の絞り込みは切り出しの後なので、重複が枠を食うと上位 3 件に olderPublicNoteId が入らない。
+				// 配布の再試行で list に同じ ID が二重に入っても、1 回だけ返し limit の枠を消費しない。
+				// 公開範囲の絞り込みは切り出しの後なので、重複が枠を消費すると上位 3 件に olderPublicNoteId が入らない。
 				const olderPublicNoteId = genId(now - 3000);
 				await createNoteInDatabase(db, {
 					id: olderPublicNoteId,

@@ -1,6 +1,6 @@
 # 領域別レビューの入口
 
-[API reviewer](misskey-api-reviewer.md) と [Vue reviewer](vue-component-reviewer.md) は、対象差分の利用側の結果と保護する契約を調べる。規約の正本は [AGENTS.md](../../AGENTS.md) と該当する作業別 Skill。レビュー本文にその全文の派生コピーを置かない。
+[API reviewer](misskey-api-reviewer.md) と [Vue reviewer](vue-component-reviewer.md) は、対象差分の利用側の結果と保護する契約を調べる。規約の元になる文書は [AGENTS.md](../../AGENTS.md) と該当する作業別 Skill。レビュー本文にその全文の派生コピーを置かない。
 
 呼び出し元は対象、比較元、意図した挙動変更、実行済みの検証を渡す。PR レビューではコミット済みの変更を含む比較元を確認し、未コミット差分だけで対象なしとしない。必要な関連呼び出し元も読むが、無関係な全体監査へ広げない。
 
