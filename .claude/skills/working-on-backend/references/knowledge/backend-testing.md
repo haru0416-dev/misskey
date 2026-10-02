@@ -27,7 +27,7 @@
 
 したがって external e2e はプロセス境界の検証だが、本番の `built/entry.js` を起動する経路の検証ではない。通常 e2e の準備として root の `start:test` を別に立てない。queue worker の所有者は `test/target.ts` の worker mode と、対象テストの `startJobQueue()` 呼び出しで確認する。
 
-DB ドライバは [runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts) の選択条件に従う。Bun 上で `MK_DB_DRIVER=pg` でなく接続予算が 2 以上なら Bun.sql、それ以外は pg 経路となる。migration とリセットには pg pool も使われる。実行ランタイム・環境変数・予算を記録し、テスト名だけで使用ドライバを断定しない。
+DB ドライバは Bun.sql だけで、[runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts) が [db/bun-sql.ts](../../../../../packages/backend/src/db/bun-sql.ts) の共有 pool を作る。migration・リセット・テストのヘルパーも `createBunSqlClient` を使う。`pg` は連合テスト ([test-federation/test/utils.ts](../../../../../packages/backend/test-federation/test/utils.ts)) と計測用 observer が、アプリから独立して DB を観測するためにだけ使う。実行ランタイム・環境変数・接続予算を記録する。
 
 [vitest.config.ts](../../../../../packages/backend/vitest.config.ts) の zod inline、e2e のファイル逐次実行・固定順序、テスト設定の接続予算には起動と共有 DB の制約がある。設定を変えるなら理由に対応する実行を確認する。e2e の include は `test/e2e/**/*.ts` なので共通ヘルパーはその外へ置く。
 

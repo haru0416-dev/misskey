@@ -4,7 +4,7 @@
  */
 
 // 実行方法:
-// bun run test:e2e -- e2e/timelines.ts
+// bun run --bun --filter backend test:e2e -- e2e/timelines.ts
 
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';

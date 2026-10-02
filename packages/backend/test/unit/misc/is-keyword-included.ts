@@ -130,7 +130,7 @@ describe('isKeywordIncluded', () => {
 	});
 
 	test('破滅的なバックトラックを起こすパターンも入力長に比例する時間で照合する', () => {
-		// JS の RegExp では a が 24 個で 174 ms、2 個増えるごとに約 4 倍になるパターン。
+		// JS の RegExp では a が 2 個増えるごとに所要時間が約 4 倍になるパターン。
 		const started = performance.now();
 		expect(isKeywordIncluded(`${'a'.repeat(4096)}b`, ['/(a+)+$/'])).toBe(false);
 		expect(performance.now() - started).toBeLessThan(100);

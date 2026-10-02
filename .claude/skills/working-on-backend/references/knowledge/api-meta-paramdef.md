@@ -12,7 +12,7 @@
 | `secure` | サードパーティ token の利用を拒否する。呼び出し元 UI の身元保証ではない |
 | `kind` | `server` 以外の指定 scope を検査する |
 | `prohibitMoved` | 移行済み利用者を拒否する |
-| `requireRolePolicy` | 指定 policy または root を要求する |
+| `requiredRolePolicy` | 指定 policy または root を要求する |
 | `requireAdmin` / `requireModerator` | 対応する役割を検査する |
 | `limit` | ログイン中は利用者単位 (ロールの倍率つき)、匿名は IP 単位 (IPv6 は /64) で数える |
 

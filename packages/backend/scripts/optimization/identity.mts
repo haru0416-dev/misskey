@@ -61,7 +61,7 @@ const processes = await Promise.all(
 		commandLine: (await readFile(`/proc/${pid}/cmdline`, 'utf8')).split('\0').filter(Boolean),
 		environment: (await readFile(`/proc/${pid}/environ`, 'utf8'))
 			.split('\0')
-			.filter((entry) => /^(NODE_ENV|MK_DB_DRIVER|MK_DISABLE_CLUSTERING|MK_ONLY_SERVER|MK_NO_DAEMONS)=/.test(entry)),
+			.filter((entry) => /^(NODE_ENV|MK_DISABLE_CLUSTERING|MK_ONLY_SERVER|MK_NO_DAEMONS)=/.test(entry)),
 	})),
 );
 console.log(

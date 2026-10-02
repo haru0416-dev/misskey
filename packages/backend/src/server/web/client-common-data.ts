@@ -62,7 +62,7 @@ export function collectViteAssetFiles(manifest: Manifest): ViteFiles {
 
 	if (entryFile.imports != null && Array.isArray(entryFile.imports)) {
 		// ブラウザによる依存の再帰的な先読みを前提にせず、静的 import を奥まで modulepreload に含める。
-		// 直下だけの先読みでは依存の発見ごとに往復待ちが増える (往復 150 ms の回線でエントリーファイルの後に 3 段、約 570 ms)。
+		// 直下だけの先読みでは依存の発見ごとに往復待ちが増える (往復が遅い回線ほど、段数ぶんだけ初回表示が遅れる)。
 		function collectImports(imports: string[]) {
 			for (const importId of imports) {
 				if (seenChunkIds.has(importId)) {

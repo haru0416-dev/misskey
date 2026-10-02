@@ -35,7 +35,7 @@ function padNumber(value: number, length = 2): string {
 }
 
 // Bun.sql は Date を `toString()` (例: `Fri Aug 07 2026 03:29:40 GMT+0900 (Japan Standard Time)`) で送るため
-// PostgreSQL が `time zone "gmt+0900" not recognized` で拒否する。node-postgres と同じローカル時刻 +
+// PostgreSQL が `time zone "gmt+0900" not recognized` で拒否する。ローカル時刻 +
 // オフセット表記へ変換する。
 function encodeDate(value: Date): string {
 	const offsetMinutes = -value.getTimezoneOffset();
@@ -62,7 +62,7 @@ function encodePostgresArray(values: readonly unknown[]): string {
 }
 
 // Bun.sql は JS の配列を PostgreSQL の配列パラメータへ変換しないため、`= ANY($1)` に配列を渡すと
-// `malformed array literal` で落ちる。ドライバ境界で配列リテラルへ変換して node-postgres と揃える。
+// `malformed array literal` で落ちる。ドライバ境界で配列リテラルへ変換する。
 function toBunSqlParameter(param: unknown): unknown {
 	if (Array.isArray(param)) {
 		return encodePostgresArray(param);
@@ -73,9 +73,9 @@ function toBunSqlParameter(param: unknown): unknown {
 	return param;
 }
 
-// node-postgres は `{ rows, rowCount }` を返すが Bun.sql は行の配列そのものを返す。
-// `db.execute()` の戻り値を `result.rows` で読む既存コードのために、配列側へ形を合わせる。
-function withNodePostgresResultShape(rows: unknown): unknown {
+// Bun.sql は行の配列そのものを返す。`db.execute()` の戻り値を `result.rows` / `result.rowCount` で読む
+// コード (DatabaseQueryResult) のために、その配列へ `rows` と `rowCount` を足す。
+function withRowsResultShape(rows: unknown): unknown {
 	if (!Array.isArray(rows)) {
 		return rows;
 	}
@@ -86,7 +86,7 @@ function withNodePostgresResultShape(rows: unknown): unknown {
 }
 
 // Bun.sql の PostgresError は SQLSTATE を `errno` に入れ、`code` には `ERR_POSTGRES_SERVER_ERROR` を入れる。
-// 一意制約違反 (23505) やタイムアウト (57014) を `code` で判定している呼び出し側のために node-postgres へ寄せる。
+// 一意制約違反 (23505) やタイムアウト (57014) を `code` で判定している呼び出し側のために、`code` を SQLSTATE へ置き換える。
 export function normalizeDatabaseError(error: unknown): unknown {
 	if (error == null || typeof error !== 'object') {
 		return error;
@@ -114,7 +114,7 @@ function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
 						throw normalizeDatabaseError(error);
 					}),
 				then: (onFulfilled, onRejected) =>
-					(query.then(withNodePostgresResultShape) as Promise<unknown[]>).then(onFulfilled, (error: unknown) => {
+					(query.then(withRowsResultShape) as Promise<unknown[]>).then(onFulfilled, (error: unknown) => {
 						const normalized = normalizeDatabaseError(error);
 						if (onRejected != null) {
 							return onRejected(normalized);
@@ -149,8 +149,7 @@ function buildConnectionUrl(config: Config): string {
 }
 
 /**
- * Bun.sql の idleTimeout は、応答を待っているクエリの途中でも接続を切る (Bun 1.4.2 で、idleTimeout 2 秒・
- * pg_sleep(4) が 2 秒で失敗することを確認)。数十秒かかる DDL を流す接続では 0 (無効) を渡す。
+ * Bun.sql の idleTimeout は、応答を待っているクエリの途中でも接続を切る。数十秒かかる DDL を流す接続では 0 (無効) を渡す。
  */
 export function createBunSqlClient(
 	config: Config,
@@ -162,7 +161,7 @@ export function createBunSqlClient(
 		idleTimeout: options.idleTimeoutSeconds ?? Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
 		// デフォルトは無名の文で、実行のたびに値に合わせて計画する。名前付き (prepare: true) は計画を使い回すので、
-		// 値で最適な計画が変わる文では generic plan に落ちて遅くなる (ホームタイムラインの DB 読みが 9 → 82〜91 ms)。
+		// 値で最適な計画が変わる文では generic plan に落ちて遅くなる (ホームタイムラインの DB 読みなど)。
 		prepare: options.prepare ?? false,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
 	});

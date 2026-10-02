@@ -275,7 +275,7 @@ export async function updateQuestionFromApForApi(
 	let changed = false;
 
 	// 名前ごとの票数は 1 度だけ引けるようにする。選択肢ごとに find すると選択肢数の 2 乗
-	// (8,000 個で 134 ms) になる。同名があれば find と同じく先頭を使う。
+	// になる。同名があれば find と同じく先頭を使う。
 	const countsByName = new Map<string, number | undefined>();
 	for (const ap of apChoices) {
 		if (ap.name != null && !countsByName.has(ap.name)) countsByName.set(ap.name, ap.replies?.totalItems);

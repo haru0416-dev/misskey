@@ -12,7 +12,7 @@ backend は明示的な引数と factory で依存を渡す。DI コンテナは
 
 ## DB 接続と transaction
 
-[runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts) は Bun の有無、`MK_DB_DRIVER`、解決済みの接続予算から DB 実装を選ぶ。Bun 上でも `pg` 指定または予算が 2 未満なら [drizzle.ts](../../../../../packages/backend/src/drizzle.ts) 側となり、それ以外の Bun 経路は [db/bun-sql.ts](../../../../../packages/backend/src/db/bun-sql.ts) を使う。型名や起動コマンドだけから実ドライバを断定しない。
+[runtime-dependencies.ts](../../../../../packages/backend/src/runtime-dependencies.ts) は [db/bun-sql.ts](../../../../../packages/backend/src/db/bun-sql.ts) の `createBunSqlRuntime` で DB 接続を 1 つ作り、全体で共有する。[drizzle.ts](../../../../../packages/backend/src/drizzle.ts) は型と query logger だけを持ち、ドライバは持たない。1 プロセスあたりの接続数は [process-topology.ts](../../../../../packages/backend/src/misc/process-topology.ts) の `resolveDatabasePoolSize` が決める。
 
 transaction 内の操作を通常の `deps.db` に戻すと原子性を失う。変更する store、ネストした処理、outbox への書込みまで渡す DB を追う。接続予算・セッション状態・dispose の責務は composition root と各ドライバを確認する。
 

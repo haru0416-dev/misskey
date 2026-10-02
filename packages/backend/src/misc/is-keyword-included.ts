@@ -16,7 +16,7 @@ const MAX_COMPILED = 1000;
 
 /**
  * 照合対象の text は相手が自由に選べるので、線形時間の RE2 で照合する。JS の RegExp では
- * `(a+)+$` のような設定で a が 2 個増えるごとに約 4 倍 (24 個で 174 ms) になり、未認証の入力からサーバーを
+ * `(a+)+$` のような設定で a が 2 個増えるごとに約 4 倍になり、未認証の入力からサーバーを
  * 止められる。フラグは i・m・s を RE2 の設定へ変換し、g・y・u は受理するが無視する。
  */
 function compileRegexp(pattern: string, flags: string): RE2JS | null {

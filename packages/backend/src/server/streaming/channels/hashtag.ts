@@ -25,7 +25,7 @@ export const honoStreamChannelHashtag: StreamChannelDefinition<NoteDependencies>
 	init: async (deps, ctx, params) => {
 		const query = params['q'];
 		// ログイン不要のチャンネルで、照合は流れる投稿ごとに走る。問い合わせの大きさを制限し、正規化は 1 度だけにする
-		// (投稿ごとに全タグを正規化し直すと、1,600 まとまりで 1 投稿 170 µs かかる)。
+		// (投稿ごとに全タグを正規化し直すと、まとまりの数に比例して投稿ごとの時間が増える)。
 		if (!Array.isArray(query) || query.length > MAX_TAG_GROUPS) {
 			return false;
 		}

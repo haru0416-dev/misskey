@@ -39,8 +39,8 @@ type ValidateViolationItem = {
 };
 
 /**
- * 列ごとに、値 → その値を持つ行の index。unique の検査でセルごとに全セルを走査すると行数の 2 乗になる
- * (1,000 行 8 列で 1 回の検証に 66 ms、3,000 行で 370 ms)。MkGrid は検証のたびに allCells を作り直し、
+ * 列ごとに、値 → その値を持つ行の index。unique の検査でセルごとに全セルを走査すると行数の 2 乗になる。
+ * MkGrid は検証のたびに allCells を作り直し、
  * 検証中はセルの値を変えないので、配列ごとに 1 回だけ作る。
  */
 const valueIndexes = new WeakMap<GridCell[], Map<string, Map<CellValue, number[]>>>();

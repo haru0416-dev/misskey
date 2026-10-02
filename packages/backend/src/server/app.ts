@@ -75,7 +75,7 @@ export type MisskeyAppDependencies = {
 
 /**
  * Accept に ActivityPub の取得が含まれるか。メディア型ごとに見る。`ld+json.+activitystreams` の正規表現だと
- * ld+json が現れるたびに末尾まで読み、ヘッダ長の 2 乗 (32 KB で 42 ms) になる。
+ * ld+json が現れるたびに末尾まで読み、ヘッダ長の 2 乗になる。
  */
 export function acceptsActivityPub(accept: string): boolean {
 	return accept

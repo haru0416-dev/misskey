@@ -31,7 +31,7 @@ jobs:
   test:
     name: Federation fork ↔ ${{ matrix.peer }}
     runs-on: ubuntu-latest
-    # 相手の起動や配送が進まない場合も、CI の既定上限まで滞留させない。
+    # 相手の起動や配送が進まない場合も、CI のデフォルトの上限まで滞留させない。
     timeout-minutes: 30
     strategy:
       fail-fast: false

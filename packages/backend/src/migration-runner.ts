@@ -138,7 +138,7 @@ async function readMigrationBaseline(
 }
 
 async function withMigrationSession<T>(config: Config, operation: (client: ReservedSQL) => Promise<T>): Promise<T> {
-	// Bun 専用ドライバは実行時に読み込み、Node 側のモジュール読み込みを妨げない。
+	// ドライバは接続を張る時点で読み込む。
 	const { createBunSqlClient, normalizeDatabaseError } = await import('./db/bun-sql.js');
 	// migration と index の作成は数十秒〜数分かかる。idleTimeout が有効だと実行中に接続を切られる。
 	const sql = createBunSqlClient(config, 1, { idleTimeoutSeconds: 0 });
@@ -289,7 +289,7 @@ export async function runMigrations(
 			appliedThrough = baseline.checkpoint;
 		}
 		if (pending.some((entry) => entry.when > appliedThrough)) {
-			// このモジュール自体は Node からも読み込まれるため、Bun 専用 migrator は遅延読み込みする。
+			// 適用する migration があるときだけ、drizzle の Bun 用 migrator を読み込む。
 			const [{ drizzle }, { migrate }] = await Promise.all([
 				import('drizzle-orm/bun-sql'),
 				import('drizzle-orm/bun-sql/migrator'),

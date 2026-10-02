@@ -26,7 +26,7 @@ import type {
 } from '@simplewebauthn/server';
 
 /*
- * @simplewebauthn/server は読み込むだけで RSS が約 8MB 増えるが、
+ * @simplewebauthn/server は読み込むだけで RSS が増えるが、
  * 使うのはパスキーの登録・認証時だけなので、最初の要求まで読み込まない。
  */
 const loadWebAuthn = () => import('@simplewebauthn/server');

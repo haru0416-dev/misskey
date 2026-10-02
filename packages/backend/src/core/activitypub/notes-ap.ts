@@ -521,7 +521,7 @@ export async function resolveMentionedAndInvolvedRemoteUsers(
 	});
 	const renotedOrReplied = await listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(deps.db, note.id);
 
-	// 先に現れた方を残して id で重複を除く。findIndex で除くと件数の 2 乗 (2 万件で約 100 ms) になる。
+	// 先に現れた方を残して id で重複を除く。findIndex で除くと件数の 2 乗になる。
 	const byId = new Map<MiUser['id'], MiUser>();
 	for (const user of [...byUriOrId, ...renotedOrReplied]) {
 		if (!byId.has(user.id)) byId.set(user.id, user);

@@ -4,7 +4,7 @@
 ジョブキュー、ActivityPub 連合処理を含む。DI コンテナは使わず、`createXxx()` ファクトリで
 サービスを組み立てる。
 
-- REST エンドポイント: `src/server/`
+- REST エンドポイント: `src/server/rest/` (契約は `contracts/`、実装は `endpoints/`)
 - DB スキーマ: `src/db/schema/` (変更後は `bun run --filter backend db:generate` で migration を生成)
 - テスト: `test/unit`、`test/e2e`、`test-federation/`
 

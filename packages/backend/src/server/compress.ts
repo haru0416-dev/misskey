@@ -8,8 +8,8 @@ import { parseAccept } from 'hono/utils/accept';
 
 // app.ts の hono/compress のデフォルトと同じ下限。
 const MINIMUM_BYTES = 1024;
-// これ以下は同期で圧縮する。同期の圧縮は終わるまで他の処理を止めるので、大きい応答 (1 万件の絵文字一覧で
-// 約 2.3MB・8ms) は hono/compress のストリーム経路に任せる。
+// これ以下は同期で圧縮する。同期の圧縮は終わるまで他の処理を止めるので、大きい応答 (1 万件の絵文字一覧など) は
+// hono/compress のストリーム経路に任せる。
 const MAXIMUM_SYNC_BYTES = 1024 * 1024;
 // hono/compress の CompressionStream と同じレベルで、出力の大きさは変わらない。
 const GZIP_LEVEL = 6;

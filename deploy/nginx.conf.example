@@ -1,6 +1,6 @@
 # Misskey の前段に置く nginx の設定例 (手順は nginx.md)。
 # example.tld は公開するドメインに、証明書のパスは取得したものに置き換える。
-# アプリは compose.example.yml の既定どおり 127.0.0.1:3000 で待ち受けている前提。
+# アプリは compose.example.yml のデフォルトどおり 127.0.0.1:3000 で待ち受けている前提。
 
 # WebSocket (/streaming) だけ Upgrade を渡す。通常のリクエストは Connection を空にし、
 # 下の keepalive でアプリへの接続を使い回す (close にすると毎回 TCP をつなぎ直す)。
@@ -40,14 +40,14 @@ server {
 	ssl_protocols TLSv1.2 TLSv1.3;
 	ssl_session_cache shared:SSL:10m;
 
-	# HTTP/3 を使うなら次の 3 行を有効にし、UDP 443 を開ける。損失 2% の回線で初回表示が
-	# 3.2〜7.7 秒とばらついた (HTTP/2 は 3.3〜4.8 秒) ので、既定では HTTP/2 までにしている。
+	# HTTP/3 を使うなら次の 3 行を有効にし、UDP 443 を開ける。パケット損失のある回線では
+	# HTTP/3 の初回表示が HTTP/2 よりばらつくので、デフォルトでは HTTP/2 までにしている。
 	# listen 443 quic reuseport;
 	# listen [::]:443 quic reuseport;
 	# add_header Alt-Svc 'h3=":443"; ma=86400' always;
 
-	# アプリ側の server.http.maximumRequestBodySize (既定 251MiB) に合わせる。
-	# nginx の既定 1m のままだと、1MB を超える添付のアップロードが 413 で落ちる。
+	# アプリ側の server.http.maximumRequestBodySize (デフォルト 251MiB) に合わせる。
+	# nginx のデフォルトの 1m のままだと、1MB を超える添付のアップロードが 413 で落ちる。
 	client_max_body_size 251m;
 
 	location / {

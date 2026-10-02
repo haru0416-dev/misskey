@@ -5,7 +5,7 @@
 
 /*
  * blurhash パッケージの encode と同じ出力を返す。
- * 上流実装はピクセル×成分ごとに Math.cos と Math.pow を呼ぶため 64×64・5×5 で 1 枚 7ms かかる。
+ * 上流実装はピクセル×成分ごとに Math.cos と Math.pow を呼ぶため遅い。
  * sRGB→linear の 256 要素の表を共有し、cos を軸ごとの表に落とし、DCT を行→列の 2 段に分離する。
  * 余弦計算は width × componentX + height × componentY 回で済み、画素ごと・成分ごとには繰り返さない。
  */

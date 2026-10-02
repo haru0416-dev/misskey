@@ -5,7 +5,7 @@ import { baseConfig } from './vitest.config.js';
 
 const include = ['test/unit/**/*.ts', 'src/**/*.test.ts'];
 
-// ファイルごとにモジュールを読み直す分離では、全体 95 秒のうち import だけで 32.7 秒かかる。
+// ファイルごとにモジュールを読み直す分離では、import に時間がかかる。
 // vi.mock / vi.doMock の差し替えが他ファイルへ漏れないよう、該当ファイルは分離する。
 const moduleMockingFiles = include
 	.flatMap((pattern) => globSync(pattern, { cwd: import.meta.dirname }))

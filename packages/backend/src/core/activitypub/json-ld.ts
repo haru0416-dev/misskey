@@ -203,7 +203,7 @@ export class JsonLd {
 	@bindThis
 	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
-		// jsonld は読み込むだけで RSS +18.7 MB・30 ms かかる。使うのは LD 署名付きの受信と
+		// jsonld は読み込むだけで RSS が増え、読み込みに時間がかかる。使うのは LD 署名付きの受信と
 		// 署名の作成だけなので、プロセス起動時ではなく必要になった時点で読み込む。
 		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
 			documentLoader: customLoader,

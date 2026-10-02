@@ -53,8 +53,8 @@ function safeResolve(root: string, path: string): string | null {
 
 /*
  * 文字の多い静的ファイルは、最初の要求で 1 度だけ圧縮して保持する。/vite/ の成果物はハッシュ付きで変わらず、
- * 1 言語分の JS・CSS 5.2 MB は brotli で 30%・gzip で 32% になる (起動時の読み込みは非圧縮で 868 KB)。
- * ビルド時に全言語分 (186 MB) を作ると 1 言語 0.4〜0.6 秒 × 30 かかるので、要求された分だけにする。
+ * 1 言語分の JS・CSS は brotli でも gzip でも 3 割ほどに縮む。
+ * ビルド時に全言語分を作ると言語数に比例して時間がかかるので、要求された分だけにする。
  */
 const COMPRESSIBLE_EXTENSIONS = new Set([
 	'.js',
