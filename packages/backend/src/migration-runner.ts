@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createHash } from 'node:crypto';
-import { lstat, readFile, realpath, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { resolve } from 'node:path';
 import type { ReservedSQL } from 'bun';
 import { loadConfig } from './config.js';
 import type { Config } from './config.js';
@@ -26,17 +25,6 @@ type PendingMigration = {
 	when: number;
 };
 
-type BaselineManifest = {
-	version: 1;
-	migrations: (Pick<JournalEntry, 'idx' | 'when' | 'tag'> & { hash: string })[];
-	files: string[];
-};
-
-type MigrationBaseline = {
-	checkpoint: number;
-	files: string[];
-};
-
 function defaultMigrationDirectory(): string {
 	return fileURLToPath(new URL('../migration/', import.meta.url));
 }
@@ -44,97 +32,6 @@ function defaultMigrationDirectory(): string {
 async function readJournalEntries(migrationDir: string): Promise<JournalEntry[]> {
 	const raw = await readFile(resolve(migrationDir, 'meta/_journal.json'), 'utf-8');
 	return (JSON.parse(raw) as { entries: JournalEntry[] }).entries;
-}
-
-async function readMigrationBaseline(
-	migrationDir: string,
-	entries: JournalEntry[],
-): Promise<MigrationBaseline | undefined> {
-	const baselineDir = resolve(migrationDir, 'baseline');
-	let directory;
-	try {
-		directory = await lstat(baselineDir);
-	} catch (error) {
-		if (error != null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-			if (resolve(migrationDir) !== resolve(defaultMigrationDirectory())) return undefined;
-			throw new Error(`Missing required migration baseline: ${baselineDir}`, { cause: error });
-		}
-		throw error;
-	}
-	if (!directory.isDirectory()) throw new Error(`Invalid migration baseline directory: ${baselineDir}`);
-
-	const manifestPath = resolve(baselineDir, 'manifest.json');
-	const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as BaselineManifest | null;
-	if (
-		manifest == null ||
-		typeof manifest !== 'object' ||
-		manifest.version !== 1 ||
-		!Array.isArray(manifest.migrations) ||
-		manifest.migrations.length === 0 ||
-		manifest.migrations.length > entries.length ||
-		!Array.isArray(manifest.files) ||
-		manifest.files.length === 0
-	) {
-		throw new Error(`Invalid migration baseline manifest: ${manifestPath}`);
-	}
-
-	for (const [index, covered] of manifest.migrations.entries()) {
-		const entry = entries[index]!;
-		if (
-			covered == null ||
-			typeof covered !== 'object' ||
-			!Number.isSafeInteger(covered.idx) ||
-			covered.idx < 0 ||
-			!Number.isSafeInteger(covered.when) ||
-			covered.when <= 0 ||
-			covered.idx !== entry.idx ||
-			covered.when !== entry.when ||
-			covered.tag !== entry.tag ||
-			typeof covered.hash !== 'string' ||
-			!/^[a-f0-9]{64}$/.test(covered.hash) ||
-			(index > 0 && covered.when <= manifest.migrations[index - 1]!.when)
-		) {
-			throw new Error(`Migration baseline journal prefix mismatch at entry ${index}: ${manifestPath}`);
-		}
-		// 履歴の SQL は変更せず、baseline 作成時に覆った元ファイルの全バイトを照合する。
-		const original = await readFile(resolve(migrationDir, `${entry.tag}.sql`));
-		if (createHash('sha256').update(original).digest('hex') !== covered.hash) {
-			throw new Error(`Migration baseline source hash mismatch: ${entry.tag}`);
-		}
-	}
-
-	const root = await realpath(baselineDir);
-	let previousPath: string | undefined;
-	for (const path of manifest.files) {
-		if (
-			typeof path !== 'string' ||
-			!path.endsWith('.sql') ||
-			isAbsolute(path) ||
-			path.includes('\\') ||
-			path.includes('\0') ||
-			path.split('/').some((part) => part === '' || part === '.' || part === '..') ||
-			(previousPath != null && path <= previousPath)
-		) {
-			throw new Error(`Invalid migration baseline SQL path or order: ${String(path)}`);
-		}
-		previousPath = path;
-	}
-
-	const files: MigrationBaseline['files'] = [];
-	const resolvedFiles = new Set<string>();
-	for (const path of manifest.files) {
-		const actualPath = await realpath(resolve(baselineDir, path));
-		const fromRoot = relative(root, actualPath);
-		if (fromRoot === '..' || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
-			throw new Error(`Migration baseline SQL path escapes its directory: ${path}`);
-		}
-		if (resolvedFiles.has(actualPath)) throw new Error(`Duplicate migration baseline SQL file: ${path}`);
-		if (!(await stat(actualPath)).isFile())
-			throw new Error(`Migration baseline SQL path is not a regular file: ${path}`);
-		resolvedFiles.add(actualPath);
-		files.push(actualPath);
-	}
-	return { checkpoint: manifest.migrations.at(-1)!.when, files };
 }
 
 async function withMigrationSession<T>(config: Config, operation: (client: ReservedSQL) => Promise<T>): Promise<T> {
@@ -200,7 +97,7 @@ async function withMigrationSession<T>(config: Config, operation: (client: Reser
 
 // drizzle-ormのmigrate()自体と同じ判定則(pg-core/dialect.js PgDialect.migrate)を再現する。
 // hashは監査用の記録に過ぎず、適用済み判定は最新1行のcreated_atとjournalのwhenの比較のみで行われる。
-async function appliedMigrationState(client: ReservedSQL): Promise<{ createdAt: number; hasRows: boolean }> {
+async function appliedMigrationCreatedAt(client: ReservedSQL): Promise<number> {
 	await client.unsafe('CREATE SCHEMA IF NOT EXISTS "drizzle"');
 	await client.unsafe(`
 		CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
@@ -215,53 +112,14 @@ async function appliedMigrationState(client: ReservedSQL): Promise<{ createdAt: 
 	)) as { created_at: string | null }[];
 
 	const createdAt = result[0]?.created_at;
-	// NULL や 0 の履歴行も既存 DB とみなし、fresh baseline で上書きしない。
-	return { createdAt: createdAt != null ? Number(createdAt) : 0, hasRows: result.length > 0 };
+	return createdAt != null ? Number(createdAt) : 0;
 }
 
 async function pendingMigrations(client: ReservedSQL, migrationDir: string): Promise<PendingMigration[]> {
 	const entries = await readJournalEntries(migrationDir);
-	const { createdAt } = await appliedMigrationState(client);
+	const createdAt = await appliedMigrationCreatedAt(client);
 
 	return entries.filter((entry) => entry.when > createdAt).map((entry) => ({ tag: entry.tag, when: entry.when }));
-}
-
-async function applyMigrationBaseline(client: ReservedSQL, baseline: MigrationBaseline): Promise<void> {
-	const [schema] = (await client.unsafe(`
-		SELECT EXISTS (
-			SELECT 1 FROM pg_depend AS namespace_dependency
-			JOIN pg_namespace AS namespace ON namespace.oid = namespace_dependency.refobjid
-			WHERE namespace_dependency.refclassid = 'pg_namespace'::regclass
-				AND namespace.nspname = 'public'
-				AND namespace_dependency.classid <> 'pg_extension'::regclass
-				AND NOT EXISTS (
-					SELECT 1 FROM pg_depend AS extension_dependency
-					WHERE extension_dependency.classid = namespace_dependency.classid
-						AND extension_dependency.objid = namespace_dependency.objid
-						AND extension_dependency.refclassid = 'pg_extension'::regclass
-						AND extension_dependency.deptype = 'e'
-				)
-		) AS nonempty
-	`)) as { nonempty: boolean }[];
-	if (schema!.nonempty) {
-		throw new Error('Cannot apply migration baseline to a nonempty public schema without migration history.');
-	}
-
-	// pg_trgm などの拡張所有オブジェクトだけなら既存の CREATE EXTENSION IF NOT EXISTS で再利用できる。
-	// 分割 SQL と checkpoint は、advisory lock を持つ同一セッションの transaction で確定する。
-	await client.begin(async (transaction) => {
-		const hash = createHash('sha256');
-		for (const path of baseline.files) {
-			const sql = await readFile(path);
-			hash.update(sql);
-			// 関数本文のセミコロンを壊さず、各ファイルを複数文のまま実行する。
-			await transaction.unsafe(sql.toString('utf-8')).simple();
-		}
-		await transaction.unsafe('INSERT INTO "drizzle"."__drizzle_migrations" ("hash", "created_at") VALUES ($1, $2)', [
-			hash.digest('hex'),
-			baseline.checkpoint,
-		]);
-	});
 }
 
 export async function listPendingMigrations(
@@ -277,18 +135,8 @@ export async function runMigrations(
 	migrationDir = defaultMigrationDirectory(),
 ): Promise<PendingMigration[]> {
 	return withMigrationSession(config, async (client) => {
-		const entries = await readJournalEntries(migrationDir);
-		const baseline = await readMigrationBaseline(migrationDir, entries);
-		const { createdAt, hasRows } = await appliedMigrationState(client);
-		const pending = entries
-			.filter((entry) => entry.when > createdAt)
-			.map((entry) => ({ tag: entry.tag, when: entry.when }));
-		let appliedThrough = createdAt;
-		if (!hasRows && baseline != null) {
-			await applyMigrationBaseline(client, baseline);
-			appliedThrough = baseline.checkpoint;
-		}
-		if (pending.some((entry) => entry.when > appliedThrough)) {
+		const pending = await pendingMigrations(client, migrationDir);
+		if (pending.length > 0) {
 			// 適用する migration があるときだけ、drizzle の Bun 用 migrator を読み込む。
 			const [{ drizzle }, { migrate }] = await Promise.all([
 				import('drizzle-orm/bun-sql'),

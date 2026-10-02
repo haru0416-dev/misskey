@@ -1,5 +1,5 @@
 {
-  "id": "8672024d-b7e5-49c3-a371-84c98625b5fd",
+  "id": "daa68978-54e1-4bf0-b9ee-60ca5a35f879",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -468,23 +468,11 @@
           "primaryKey": false,
           "notNull": false
         },
-        "hash": {
-          "name": "hash",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
         "userId": {
           "name": "userId",
           "type": "varchar(32)",
           "primaryKey": false,
           "notNull": true
-        },
-        "appId": {
-          "name": "appId",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
         },
         "name": {
           "name": "name",
@@ -550,41 +538,11 @@
           "method": "btree",
           "with": {}
         },
-        "IDX_ACCESS_TOKEN_HASH": {
-          "name": "IDX_ACCESS_TOKEN_HASH",
-          "columns": [
-            {
-              "expression": "hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "IDX_ACCESS_TOKEN_USER_ID": {
           "name": "IDX_ACCESS_TOKEN_USER_ID",
           "columns": [
             {
               "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "IDX_ACCESS_TOKEN_APP_ID": {
-          "name": "IDX_ACCESS_TOKEN_APP_ID",
-          "columns": [
-            {
-              "expression": "appId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -603,19 +561,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "access_token_appId_app_id_fk": {
-          "name": "access_token_appId_app_id_fk",
-          "tableFrom": "access_token",
-          "tableTo": "app",
-          "columnsFrom": [
-            "appId"
           ],
           "columnsTo": [
             "id"
@@ -738,6 +683,107 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.announcement_reaction": {
+      "name": "announcement_reaction",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(32)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "announcementId": {
+          "name": "announcementId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reaction": {
+          "name": "reaction",
+          "type": "varchar(260)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "IDX_ANNOUNCEMENT_REACTION_ANNOUNCEMENT_ID": {
+          "name": "IDX_ANNOUNCEMENT_REACTION_ANNOUNCEMENT_ID",
+          "columns": [
+            {
+              "expression": "announcementId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "IDX_ANNOUNCEMENT_REACTION_USER_ID_ANNOUNCEMENT_ID_UNIQUE": {
+          "name": "IDX_ANNOUNCEMENT_REACTION_USER_ID_ANNOUNCEMENT_ID_UNIQUE",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "announcementId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "announcement_reaction_userId_user_id_fk": {
+          "name": "announcement_reaction_userId_user_id_fk",
+          "tableFrom": "announcement_reaction",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "announcement_reaction_announcementId_announcement_id_fk": {
+          "name": "announcement_reaction_announcementId_announcement_id_fk",
+          "tableFrom": "announcement_reaction",
+          "tableTo": "announcement",
+          "columnsFrom": [
+            "announcementId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1230,217 +1276,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.app": {
-      "name": "app",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(32)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "secret": {
-          "name": "secret",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(512)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "permission": {
-          "name": "permission",
-          "type": "varchar(64)[]",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "callbackUrl": {
-          "name": "callbackUrl",
-          "type": "varchar(512)",
-          "primaryKey": false,
-          "notNull": false
+      "checkConstraints": {
+        "CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST": {
+          "name": "CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST",
+          "value": "\"antenna\".\"src\" <> 'list' OR \"antenna\".\"userListId\" IS NOT NULL"
         }
       },
-      "indexes": {
-        "IDX_APP_USER_ID": {
-          "name": "IDX_APP_USER_ID",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "IDX_APP_SECRET": {
-          "name": "IDX_APP_SECRET",
-          "columns": [
-            {
-              "expression": "secret",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "app_userId_user_id_fk": {
-          "name": "app_userId_user_id_fk",
-          "tableFrom": "app",
-          "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.auth_session": {
-      "name": "auth_session",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(32)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "appId": {
-          "name": "appId",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "IDX_AUTH_SESSION_TOKEN": {
-          "name": "IDX_AUTH_SESSION_TOKEN",
-          "columns": [
-            {
-              "expression": "token",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "IDX_AUTH_SESSION_USER_ID": {
-          "name": "IDX_AUTH_SESSION_USER_ID",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "IDX_AUTH_SESSION_APP_ID": {
-          "name": "IDX_AUTH_SESSION_APP_ID",
-          "columns": [
-            {
-              "expression": "appId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "auth_session_userId_user_id_fk": {
-          "name": "auth_session_userId_user_id_fk",
-          "tableFrom": "auth_session",
-          "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "auth_session_appId_app_id_fk": {
-          "name": "auth_session_appId_app_id_fk",
-          "tableFrom": "auth_session",
-          "tableTo": "app",
-          "columnsFrom": [
-            "appId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.avatar_decoration": {
@@ -1603,6 +1444,32 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cache_version": {
+      "name": "cache_version",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -3119,7 +2986,7 @@
           "name": "md5",
           "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -4028,6 +3895,79 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.follow_acceptance": {
+      "name": "follow_acceptance",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "actorUri": {
+          "name": "actorUri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "followeeId": {
+          "name": "followeeId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "followingId": {
+          "name": "followingId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "IDX_FOLLOW_ACCEPTANCE_FOLLOWEE_ID": {
+          "name": "IDX_FOLLOW_ACCEPTANCE_FOLLOWEE_ID",
+          "columns": [
+            {
+              "expression": "followeeId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "follow_acceptance_followeeId_user_id_fk": {
+          "name": "follow_acceptance_followeeId_user_id_fk",
+          "tableFrom": "follow_acceptance",
+          "tableTo": "user",
+          "columnsFrom": [
+            "followeeId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.follow_request": {
       "name": "follow_request",
       "schema": "",
@@ -4753,6 +4693,89 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.hashtag_user": {
+      "name": "hashtag_user",
+      "schema": "",
+      "columns": {
+        "hashtagId": {
+          "name": "hashtagId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attached": {
+          "name": "attached",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "IDX_HASHTAG_USER_USER_ID": {
+          "name": "IDX_HASHTAG_USER_USER_ID",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "hashtag_user_hashtagId_hashtag_id_fk": {
+          "name": "hashtag_user_hashtagId_hashtag_id_fk",
+          "tableFrom": "hashtag_user",
+          "tableTo": "hashtag",
+          "columnsFrom": [
+            "hashtagId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "hashtag_user_userId_user_id_fk": {
+          "name": "hashtag_user_userId_user_id_fk",
+          "tableFrom": "hashtag_user",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "PK_HASHTAG_USER": {
+          "name": "PK_HASHTAG_USER",
+          "columns": [
+            "hashtagId",
+            "attached",
+            "userId"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.hashtag": {
       "name": "hashtag",
       "schema": "",
@@ -4769,24 +4792,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "mentionedUserIds": {
-          "name": "mentionedUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
-        },
         "mentionedUsersCount": {
           "name": "mentionedUsersCount",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "mentionedLocalUserIds": {
-          "name": "mentionedLocalUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
         },
         "mentionedLocalUsersCount": {
           "name": "mentionedLocalUsersCount",
@@ -4795,24 +4806,12 @@
           "notNull": true,
           "default": 0
         },
-        "mentionedRemoteUserIds": {
-          "name": "mentionedRemoteUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
-        },
         "mentionedRemoteUsersCount": {
           "name": "mentionedRemoteUsersCount",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "attachedUserIds": {
-          "name": "attachedUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
         },
         "attachedUsersCount": {
           "name": "attachedUsersCount",
@@ -4821,24 +4820,12 @@
           "notNull": true,
           "default": 0
         },
-        "attachedLocalUserIds": {
-          "name": "attachedLocalUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
-        },
         "attachedLocalUsersCount": {
           "name": "attachedLocalUsersCount",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "attachedRemoteUserIds": {
-          "name": "attachedRemoteUserIds",
-          "type": "varchar(32)[]",
-          "primaryKey": false,
-          "notNull": true
         },
         "attachedRemoteUsersCount": {
           "name": "attachedRemoteUsersCount",
@@ -5220,6 +5207,20 @@
           "notNull": true,
           "default": true
         },
+        "signupRateLimitMinIntervalSeconds": {
+          "name": "signupRateLimitMinIntervalSeconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "signupRateLimitMaxPerHour": {
+          "name": "signupRateLimitMaxPerHour",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "langs": {
           "name": "langs",
           "type": "varchar(1024)[]",
@@ -5389,27 +5390,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "enableMcaptcha": {
-          "name": "enableMcaptcha",
+        "enableCap": {
+          "name": "enableCap",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "mcaptchaSitekey": {
-          "name": "mcaptchaSitekey",
+        "capSiteKey": {
+          "name": "capSiteKey",
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false
         },
-        "mcaptchaSecretKey": {
-          "name": "mcaptchaSecretKey",
+        "capSecretKey": {
+          "name": "capSecretKey",
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false
         },
-        "mcaptchaInstanceUrl": {
-          "name": "mcaptchaInstanceUrl",
+        "capInstanceUrl": {
+          "name": "capInstanceUrl",
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false
@@ -5591,6 +5592,25 @@
           "notNull": true,
           "default": false
         },
+        "translatorProvider": {
+          "name": "translatorProvider",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'deepl'"
+        },
+        "libreTranslateApiUrl": {
+          "name": "libreTranslateApiUrl",
+          "type": "varchar(1024)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "libreTranslateApiKey": {
+          "name": "libreTranslateApiKey",
+          "type": "varchar(1024)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "termsOfServiceUrl": {
           "name": "termsOfServiceUrl",
           "type": "varchar(1024)",
@@ -5602,14 +5622,14 @@
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false,
-          "default": "'https://github.com/misskey-dev/misskey'"
+          "default": "'https://github.com/haru0416-dev/misskey'"
         },
         "feedbackUrl": {
           "name": "feedbackUrl",
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false,
-          "default": "'https://github.com/misskey-dev/misskey/issues/new'"
+          "default": "'https://github.com/haru0416-dev/misskey/issues/new'"
         },
         "impressumUrl": {
           "name": "impressumUrl",
@@ -5882,13 +5902,6 @@
           "notNull": true,
           "default": 300
         },
-        "enableReactionsBuffering": {
-          "name": "enableReactionsBuffering",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "notesPerOneAd": {
           "name": "notesPerOneAd",
           "type": "integer",
@@ -5942,6 +5955,13 @@
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false
+        },
+        "urlPreviewSensitiveList": {
+          "name": "urlPreviewSensitiveList",
+          "type": "varchar(3072)[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::character varying[]"
         },
         "federation": {
           "name": "federation",
@@ -7136,6 +7156,12 @@
           "type": "varchar(32)",
           "primaryKey": false,
           "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -8201,6 +8227,212 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.queue_outbox": {
+      "name": "queue_outbox",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(32)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "queue": {
+          "name": "queue",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'job'"
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ready'"
+        },
+        "coordinatorId": {
+          "name": "coordinatorId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opts": {
+          "name": "opts",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "externalJobId": {
+          "name": "externalJobId",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "availableAt": {
+          "name": "availableAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "leaseToken": {
+          "name": "leaseToken",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "leaseExpiresAt": {
+          "name": "leaseExpiresAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pollIntervalMs": {
+          "name": "pollIntervalMs",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1000
+        },
+        "deadLetterReason": {
+          "name": "deadLetterReason",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastError": {
+          "name": "lastError",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "IDX_QUEUE_OUTBOX_STATE_AVAILABLE_AT": {
+          "name": "IDX_QUEUE_OUTBOX_STATE_AVAILABLE_AT",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "availableAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "IDX_QUEUE_OUTBOX_COORDINATOR_ID": {
+          "name": "IDX_QUEUE_OUTBOX_COORDINATOR_ID",
+          "columns": [
+            {
+              "expression": "coordinatorId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "IDX_QUEUE_OUTBOX_STATE_ID": {
+          "name": "IDX_QUEUE_OUTBOX_STATE_ID",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "queue_outbox_coordinatorId_queue_outbox_id_fk": {
+          "name": "queue_outbox_coordinatorId_queue_outbox_id_fk",
+          "tableFrom": "queue_outbox",
+          "tableTo": "queue_outbox",
+          "columnsFrom": [
+            "coordinatorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.registration_ticket": {
       "name": "registration_ticket",
       "schema": "",
@@ -8456,7 +8688,18 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "UQ_REGISTRY_ITEM_USER_ID_DOMAIN_SCOPE_KEY": {
+          "name": "UQ_REGISTRY_ITEM_USER_ID_DOMAIN_SCOPE_KEY",
+          "nullsNotDistinct": true,
+          "columns": [
+            "userId",
+            "domain",
+            "scope",
+            "key"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -10367,13 +10610,6 @@
           "notNull": true,
           "default": "'{}'::character varying[]"
         },
-        "achievements": {
-          "name": "achievements",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
         "userHost": {
           "name": "userHost",
           "type": "varchar(128)",
@@ -10793,6 +11029,12 @@
           "notNull": true,
           "default": false
         },
+        "suspensionTransitionId": {
+          "name": "suspensionTransitionId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "isLocked": {
           "name": "isLocked",
           "type": "boolean",
@@ -10934,6 +11176,21 @@
               "expression": "updatedAt",
               "isExpression": false,
               "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "IDX_USER_UPDATED_AT_DESC_NULLS_LAST": {
+          "name": "IDX_USER_UPDATED_AT_DESC_NULLS_LAST",
+          "columns": [
+            {
+              "expression": "updatedAt",
+              "isExpression": false,
+              "asc": false,
               "nulls": "last"
             }
           ],

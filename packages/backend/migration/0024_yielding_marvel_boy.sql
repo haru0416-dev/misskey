@@ -1,1 +1,0 @@
-ALTER TABLE "drive_file" ALTER COLUMN "md5" DROP NOT NULL;

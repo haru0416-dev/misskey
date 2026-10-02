@@ -1,1 +1,0 @@
-ALTER TABLE "note" ADD COLUMN "updatedAt" timestamp with time zone;

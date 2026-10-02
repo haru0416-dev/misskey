@@ -12,7 +12,6 @@
 		"migrate": "bun run compile-config && bun ./built/migration-runner.js up",
 		"db:generate": "bun run compile-config && drizzle-kit generate",
 		"db:generate:custom": "bun run compile-config && drizzle-kit generate --custom",
-		"db:generate:baseline": "bun ./scripts/generate-baseline.mjs",
 		"cli": "bun run compile-config && bun ./built/cli.js",
 		"check:connect": "bun run compile-config && bun ./built/cli.js config doctor",
 		"compile-config": "bun ./scripts/compile_config.js",

@@ -10,21 +10,9 @@
 
 開発環境の準備・テストの走らせ方は [ルートの CONTRIBUTING.md](/CONTRIBUTING.md) を参照。
 
-## 新規 DB の初期化と migration
+## migration
 
-`bun run migrate` は、適用履歴がなく public schema が空の DB に限り、`migration/baseline/manifest.json` の順序で分割 SQL を実行する。
-baseline は履歴の追加・ALTER・削除を反映した最終状態で、拡張機能・enum・関数、テーブルとローカル制約・index、外部キー、初期データ、トリガに分けている。
-SQL と実際に実行した内容のハッシュを持つ checkpoint は、同じ advisory lock セッションの transaction で確定する。
+`migration/0000_init.sql` が schema 全体を作る。拡張機能・enum・関数、テーブルとローカル制約・index、外部キー、初期データ、トリガの順に並べ、`drizzle-kit` で出力できない DDL (チャート表・関数 index・trigram index・トリガ) も含む。
+`bun run migrate` は、`migration/meta/_journal.json` の順に未適用の migration を、advisory lock を持つ 1 つのセッションで適用する。履歴のない既存 schema には適用できず、エラーになる。
 
-適用履歴がある DB では baseline を実行せず、従来の SQL を順に適用する。`migration/*.sql`、`meta/`、`_legacy/` は履歴として保持し、統合のために書換・削除しない。
-baseline が覆う履歴より後の migration は、新規 DB でも通常どおり適用される。履歴のない既存 schema は初期化せず、エラーにする。
-
-schema 変更時は引き続き `db:generate`、特殊 DDL は `db:generate:custom` で新しい migration を追加する。
-新規初期化用 baseline の更新には、接続先と同じ major version に対応する `pg_dump` と、scratch DB を作成・削除できる管理接続が必要になる。
-
-```sh
-bun run --bun --filter backend db:generate:baseline 'postgresql://USER@HOST:PORT/postgres'
-```
-
-生成処理はランダム名の専用 DB に履歴を適用して最終 schema と初期データを取得し、その DB だけを削除する。既存のアプリ DB や設定ファイルは読み書きしない。
-接続情報は生成物に保存しない。実行後は分割 SQL の差分を確認し、専用 DB で初期化、旧履歴との一致、再実行、`check-migrations` を検証する。
+schema を変えるときは `db:generate`、特殊 DDL は `db:generate:custom` で新しい migration を足す。適用済みの SQL は書き換えない。`migration/_legacy/` は、drizzle-kit へ移る前の手書き JS の記録で、実行には使わない。

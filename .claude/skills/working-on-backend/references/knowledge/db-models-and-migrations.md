@@ -7,7 +7,7 @@
 | drizzle のテーブル・列・index・外部キー | [src/db/schema](../../../../../packages/backend/src/db/schema/) |
 | アプリ内のモデル | [src/models](../../../../../packages/backend/src/models/) |
 | 生成する SQL・journal・snapshot | [migration](../../../../../packages/backend/migration/) と [drizzle.config.ts](../../../../../packages/backend/drizzle.config.ts) |
-| 新規 DB の初期化 SQL | [migration/baseline](../../../../../packages/backend/migration/baseline/)。生成と適用の規則は [backend README](../../../../../packages/backend/README.md) |
+| 初期 schema の SQL | [migration/0000_init.sql](../../../../../packages/backend/migration/0000_init.sql)。構成と適用の規則は [backend README](../../../../../packages/backend/README.md) |
 | 適用と未適用検査 | [migration-runner.ts](../../../../../packages/backend/src/migration-runner.ts) |
 
 [access-token.ts](../../../../../packages/backend/src/db/schema/access-token.ts) は `pgTable`、型付き列、外部キー、index、`$inferSelect`・`$inferInsert`、モデルへの変換の実例。モデルのフィールド追加だけでは DB は変わらず、schema の変更だけでは既存 DB は更新されない。関連する deserialize・packing・API schema への波及も確認する。
@@ -34,4 +34,4 @@ runner は `reserve()` で確保した同一接続上で advisory lock、pending
 
 標準 migrator の transaction では `CREATE INDEX CONCURRENTLY` は使えない。手動の concurrent 作成と通常 migration の同一 `CREATE` を併記する方式を手順化しない。オンライン DDL が必要なら適用識別・index 有効性・再実行・失敗回復・journal 整合の運用設計を先に確定する。
 
-forward-only の適用履歴を保ち、訂正は新しい migration にする。適用履歴のない空の DB は baseline の分割 SQL で初期化され、baseline より後の migration だけが続けて適用される。schema を変えるときは通常どおり新しい migration を足し、baseline は手で書き換えない。`migration/_legacy/` は実行手順の見本にしない。`check-migrations` は journal と DB 最新適用時刻の比較であり、schema 差分や SQL 改変の検査ではない。管理 schema/table の作成も起こり得る。生成・適用・検査の具体的な順序は [migration 作業](../tasks/creating-migration.md) にまとめる。
+forward-only の適用履歴を保ち、訂正は新しい migration にする。schema 全体を作る初期 migration は `0000_init.sql` で、以降の変更は `db:generate` か `db:generate:custom` で `0001` 以降として足す。`migration/_legacy/` は実行手順の見本にしない。`check-migrations` は journal と DB 最新適用時刻の比較であり、schema 差分や SQL 改変の検査ではない。管理 schema/table の作成も起こり得る。生成・適用・検査の具体的な順序は [migration 作業](../tasks/creating-migration.md) にまとめる。

@@ -4,7 +4,7 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -63,13 +63,8 @@ describe('reconcileNoteTextIndex', () => {
 });
 
 type TestJournalEntry = { idx: number; when: number; tag: string; breakpoints: boolean };
-type TestBaselineManifest = {
-	version: number;
-	migrations: { idx: number; when: number; tag: string; hash: string }[];
-	files: string[];
-};
 
-describe('runMigrations baseline', () => {
+describe('runMigrations', () => {
 	let admin: NativeSqlClient;
 	let baseConfig: Config;
 	let config: Config;
@@ -78,17 +73,12 @@ describe('runMigrations baseline', () => {
 	let directory: string | undefined;
 	const sourceDirectory = fileURLToPath(new URL('../../migration/', import.meta.url));
 	const originalSql = [
-		`CREATE TABLE "baseline_probe" ("id" integer PRIMARY KEY, "value" text NOT NULL);
+		`CREATE TABLE "migration_probe" ("id" integer PRIMARY KEY, "value" text NOT NULL);
 --> statement-breakpoint
-INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
-		`ALTER TABLE "baseline_probe" ADD COLUMN "enabled" boolean NOT NULL DEFAULT true;`,
+INSERT INTO "migration_probe" ("id", "value") VALUES (1, 'initial');`,
+		`ALTER TABLE "migration_probe" ADD COLUMN "enabled" boolean NOT NULL DEFAULT true;`,
 	];
-	const baselineTable = `CREATE TABLE "baseline_probe" ("id" integer PRIMARY KEY, "value" text NOT NULL, "enabled" boolean NOT NULL DEFAULT true);`;
-	const baselineSeed = `INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`;
 	const sha256 = (sql: string | Buffer) => createHash('sha256').update(sql).digest('hex');
-	const manifestPath = () => join(directory!, 'baseline/manifest.json');
-	const readManifest = async () => JSON.parse(await readFile(manifestPath(), 'utf-8')) as TestBaselineManifest;
-	const writeManifest = (manifest: TestBaselineManifest) => writeFile(manifestPath(), JSON.stringify(manifest));
 	const queryRows = async (query: string) => Array.from(await pool!.unsafe(query));
 	const history = async () => {
 		const [table] = (await pool!.unsafe(
@@ -103,47 +93,35 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		).map((row) => ({ hash: row.hash, when: Number(row.created_at) }));
 	};
 	const probeRows = async () =>
-		(await queryRows(`SELECT id, value, enabled FROM "baseline_probe" ORDER BY id`)) as {
+		(await queryRows(`SELECT id, value, enabled FROM "migration_probe" ORDER BY id`)) as {
 			id: number;
 			value: string;
 			enabled: boolean;
 		}[];
 	const pendingEntries = (entries: TestJournalEntry[]) => entries.map(({ tag, when }) => ({ tag, when }));
+	const heldAdvisoryLocks = async () =>
+		await queryRows(`
+			SELECT count(*)::integer AS held FROM pg_locks
+			WHERE locktype = 'advisory' AND granted
+				AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+		`);
 
-	async function writeFixture(futureSql?: string, withBaseline = true): Promise<TestJournalEntry[]> {
+	/** originalSql を 0000・0001 として書き、futureSql があれば 0002 として足す。 */
+	async function writeFixture(sqls: string[] = originalSql): Promise<TestJournalEntry[]> {
 		await mkdir(join(directory!, 'meta'), { recursive: true });
-		const entries = originalSql.map((_, idx) => ({
+		const entries = sqls.map((sql, idx) => ({
 			idx,
 			when: (idx + 1) * 100,
 			tag: `000${idx}_history`,
 			breakpoints: true,
 		}));
-		for (const [index, sql] of originalSql.entries()) {
+		for (const [index, sql] of sqls.entries()) {
 			await writeFile(join(directory!, `${entries[index]!.tag}.sql`), sql);
-		}
-		if (futureSql != null) {
-			entries.push({ idx: 2, when: 300, tag: '0002_future', breakpoints: true });
-			await writeFile(join(directory!, '0002_future.sql'), futureSql);
 		}
 		await writeFile(
 			join(directory!, 'meta/_journal.json'),
 			JSON.stringify({ version: '7', dialect: 'postgresql', entries }),
 		);
-		if (withBaseline) {
-			await mkdir(join(directory!, 'baseline'), { recursive: true });
-			await writeFile(join(directory!, 'baseline/00-table.sql'), baselineTable);
-			await writeFile(join(directory!, 'baseline/01-seed.sql'), baselineSeed);
-			await writeManifest({
-				version: 1,
-				migrations: entries.slice(0, originalSql.length).map(({ idx, when, tag }) => ({
-					idx,
-					when,
-					tag,
-					hash: sha256(originalSql[idx]!),
-				})),
-				files: ['00-table.sql', '01-seed.sql'],
-			});
-		}
 		return entries;
 	}
 
@@ -162,7 +140,7 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 			database: { ...baseConfig.database, primary: { ...baseConfig.database.primary, name: ownedName } },
 		};
 		pool = createBunSqlClient(config, 2, { idleTimeoutSeconds: 0 });
-		directory = await mkdtemp(join(tmpdir(), 'misskey-migration-baseline-'));
+		directory = await mkdtemp(join(tmpdir(), 'misskey-migration-runner-'));
 	});
 
 	afterEach(async () => {
@@ -184,28 +162,16 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		await admin.close({ timeout: 0 });
 	});
 
-	test('default baseline initializes the application schema and seed with one actual content checkpoint', async () => {
-		const manifest = JSON.parse(
-			await readFile(join(sourceDirectory, 'baseline/manifest.json'), 'utf-8'),
-		) as TestBaselineManifest;
+	test('the shipped migrations initialize the application schema and seed, and a rerun does nothing', async () => {
 		const journal = JSON.parse(await readFile(join(sourceDirectory, 'meta/_journal.json'), 'utf-8')) as {
 			entries: TestJournalEntry[];
 		};
-		const hash = createHash('sha256');
-		for (const file of manifest.files) hash.update(await readFile(join(sourceDirectory, 'baseline', file)));
-		const checkpoint = { hash: hash.digest('hex'), when: manifest.migrations.at(-1)!.when };
-		// baseline より後に追加した migration は、新規 DB でも baseline の後に通常どおり 1 本ずつ記録される。
-		const expectedHistory = [
-			checkpoint,
-			...(await Promise.all(
-				journal.entries
-					.filter((entry) => entry.when > checkpoint.when)
-					.map(async (entry) => ({
-						hash: sha256(await readFile(join(sourceDirectory, `${entry.tag}.sql`))),
-						when: entry.when,
-					})),
-			)),
-		];
+		const expectedHistory = await Promise.all(
+			journal.entries.map(async (entry) => ({
+				hash: sha256(await readFile(join(sourceDirectory, `${entry.tag}.sql`))),
+				when: entry.when,
+			})),
+		);
 
 		expect(await listPendingMigrations(config)).toEqual(pendingEntries(journal.entries));
 		expect(await runMigrations(config)).toEqual(pendingEntries(journal.entries));
@@ -230,7 +196,7 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		expect(await history()).toEqual(expectedHistory);
 	});
 
-	test('default baseline accepts pg_trgm preinstalled by another role in a non-public schema', async () => {
+	test('the shipped migrations accept pg_trgm preinstalled by another role in a non-public schema', async () => {
 		// マネージド PostgreSQL では管理者が拡張を先に入れ、アプリのロールは DB だけを所有する。
 		const role = `migration_app_${randomUUID().replaceAll('-', '')}`;
 		await admin.unsafe(`CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE`);
@@ -274,186 +240,60 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		}
 	});
 
-	test.each([true, false])(
-		'a future migration runs normally when present before baseline initialization: %s',
-		async (initialFuture) => {
-			const futureSql = `UPDATE "baseline_probe" SET "value" = 'future-applied' WHERE "id" = 1;`;
-			if (!initialFuture) {
-				await writeFixture();
-				await runMigrations(config, directory);
-			}
-			const entries = await writeFixture(futureSql);
-			expect(await runMigrations(config, directory)).toEqual(
-				pendingEntries(initialFuture ? entries : entries.slice(2)),
-			);
-			expect(await probeRows()).toEqual([{ id: 1, value: 'future-applied', enabled: true }]);
-			expect(await history()).toEqual([
-				{ hash: sha256(baselineTable + baselineSeed), when: 200 },
-				{ hash: sha256(futureSql), when: 300 },
-			]);
-			expect(await runMigrations(config, directory)).toEqual([]);
-			expect(await listPendingMigrations(config, directory)).toEqual([]);
-		},
-	);
+	test('a fresh database applies every journal entry in order and records each file hash', async () => {
+		const entries = await writeFixture();
+		expect(await listPendingMigrations(config, directory)).toEqual(pendingEntries(entries));
+		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries));
+		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
+		expect(await history()).toEqual(originalSql.map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })));
+		expect(await runMigrations(config, directory)).toEqual([]);
+		expect(await listPendingMigrations(config, directory)).toEqual([]);
+	});
 
-	test('an existing partial original history keeps its execution hashes and user data', async () => {
-		const entries = await writeFixture(undefined, false);
-		await writeFile(
-			join(directory!, 'meta/_journal.json'),
-			JSON.stringify({
-				version: '7',
-				dialect: 'postgresql',
-				entries: entries.slice(0, 1),
-			}),
-		);
-		await runMigrations(config, directory);
-		await pool!.unsafe(`UPDATE "baseline_probe" SET "value" = 'user-data' WHERE "id" = 1`);
-		await pool!.unsafe(`INSERT INTO "baseline_probe" ("id", "value") VALUES (2, 'another-user')`);
-
+	test('a migration appended later runs alone and keeps existing data', async () => {
 		await writeFixture();
-		// SQL 本体を適用しないことを、既存 schema では必ず失敗する baseline で確認する。
-		await writeFile(join(directory!, 'baseline/00-table.sql'), `SELECT 1 / 0;\n${baselineTable}`);
-		expect(await listPendingMigrations(config, directory)).toEqual(pendingEntries(entries.slice(1)));
-		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries.slice(1)));
+		await runMigrations(config, directory);
+		await pool!.unsafe(`UPDATE "migration_probe" SET "value" = 'user-data' WHERE "id" = 1`);
+		await pool!.unsafe(`INSERT INTO "migration_probe" ("id", "value") VALUES (2, 'another-user')`);
+
+		const futureSql = `UPDATE "migration_probe" SET "enabled" = false WHERE "id" = 2;`;
+		const entries = await writeFixture([...originalSql, futureSql]);
+		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries.slice(2)));
 		expect(await probeRows()).toEqual([
 			{ id: 1, value: 'user-data', enabled: true },
-			{ id: 2, value: 'another-user', enabled: true },
+			{ id: 2, value: 'another-user', enabled: false },
 		]);
-		expect(await history()).toEqual(originalSql.map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })));
+		expect(await history()).toEqual(
+			[...originalSql, futureSql].map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })),
+		);
 		expect(await runMigrations(config, directory)).toEqual([]);
 	});
 
-	test('custom migration directories without baseline still use the original stream', async () => {
-		const entries = await writeFixture(undefined, false);
-		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries));
-		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
-		expect(await history()).toEqual(originalSql.map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })));
-	});
-
-	test('a failed split SQL rolls back DDL and checkpoint, releases its lock, and can be retried', async () => {
-		const entries = await writeFixture();
-		await writeFile(join(directory!, 'baseline/01-seed.sql'), `${baselineSeed}\nSELECT 1 / 0;`);
-		await expect(runMigrations(config, directory)).rejects.toMatchObject({ code: '22012' });
-		expect(await queryRows(`SELECT to_regclass('public.baseline_probe') AS relation`)).toEqual([{ relation: null }]);
+	test('a failed migration rolls back its DDL and history, releases its lock, and can be retried', async () => {
+		const failing = `${originalSql[0]}\n--> statement-breakpoint\nSELECT 1 / 0;`;
+		await writeFixture([failing]);
+		await expect(runMigrations(config, directory)).rejects.toMatchObject({ cause: { code: '22012' } });
+		expect(await queryRows(`SELECT to_regclass('public.migration_probe') AS relation`)).toEqual([{ relation: null }]);
 		expect(await history()).toEqual([]);
-		expect(
-			await queryRows(`
-			SELECT count(*)::integer AS held FROM pg_locks
-			WHERE locktype = 'advisory' AND granted
-				AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
-		`),
-		).toEqual([{ held: 0 }]);
+		expect(await heldAdvisoryLocks()).toEqual([{ held: 0 }]);
 
-		await writeFile(join(directory!, 'baseline/01-seed.sql'), baselineSeed);
-		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries));
-		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
-		expect(await history()).toEqual([{ hash: sha256(baselineTable + baselineSeed), when: 200 }]);
-	});
-
-	test.each([
-		[
-			'table',
-			`CREATE TABLE untracked (value text); INSERT INTO untracked VALUES ('keep');`,
-			`SELECT value AS retained FROM untracked`,
-			'keep',
-		],
-		['type', `CREATE TYPE untracked AS ENUM ('keep');`, `SELECT 'keep'::untracked::text AS retained`, 'keep'],
-		[
-			'function',
-			`CREATE FUNCTION untracked() RETURNS text LANGUAGE sql AS $$ SELECT 'keep'::text $$;`,
-			`SELECT untracked() AS retained`,
-			'keep',
-		],
-	])(
-		'an untracked public %s refuses baseline without altering existing data or stamping history',
-		async (_, sql, query, retained) => {
-			await writeFixture();
-			await pool!.unsafe(sql).simple();
-			await expect(runMigrations(config, directory)).rejects.toThrow('nonempty public schema');
-			expect(await queryRows(query)).toEqual([{ retained }]);
-			expect(await queryRows(`SELECT to_regclass('public.baseline_probe') AS relation`)).toEqual([{ relation: null }]);
-			expect(await history()).toEqual([]);
-		},
-	);
-
-	test('extension-owned pg_trgm objects do not make a fresh database untracked', async () => {
-		await pool!.unsafe('CREATE EXTENSION pg_trgm');
 		const entries = await writeFixture();
 		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries));
 		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
-		expect(await queryRows(`SELECT similarity('misskey', 'misskey') AS similarity`)).toEqual([{ similarity: 1 }]);
 	});
 
-	test.each(['metadata', 'original SQL', 'file order', 'duplicate file', 'traversal'])(
-		'rejects baseline %s drift before applying SQL',
-		async (kind) => {
-			await writeFixture();
-			const manifest = await readManifest();
-			switch (kind) {
-				case 'metadata':
-					manifest.migrations[0]!.when++;
-					break;
-				case 'original SQL':
-					await writeFile(join(directory!, '0000_history.sql'), `${originalSql[0]}\nSELECT 1;`);
-					break;
-				case 'file order':
-					manifest.files.reverse();
-					break;
-				case 'duplicate file':
-					manifest.files.push(manifest.files.at(-1)!);
-					break;
-				case 'traversal':
-					manifest.files[0] = '../outside.sql';
-					break;
-			}
-			await writeManifest(manifest);
-			await expect(runMigrations(config, directory)).rejects.toThrow(/baseline.*(mismatch|path|order)/);
-			expect(await queryRows(`SELECT to_regclass('public.baseline_probe') AS relation`)).toEqual([{ relation: null }]);
-			expect(await history()).toEqual([]);
-		},
-	);
-
-	test('a present manifest is still validated for an already-applied database', async () => {
-		await writeFixture();
-		await runMigrations(config, directory);
-		await pool!.unsafe(`UPDATE "baseline_probe" SET "value" = 'retained' WHERE "id" = 1`);
-		const manifest = await readManifest();
-		manifest.migrations[1]!.hash = '0'.repeat(64);
-		await writeManifest(manifest);
-
-		await expect(runMigrations(config, directory)).rejects.toThrow('source hash mismatch');
-		expect(await probeRows()).toEqual([{ id: 1, value: 'retained', enabled: true }]);
-		expect(await history()).toEqual([{ hash: sha256(baselineTable + baselineSeed), when: 200 }]);
-	});
-
-	test('rejects a baseline symlink escaping its directory before executing its SQL', async () => {
-		await writeFixture();
-		const manifest = await readManifest();
-		await writeFile(join(directory!, 'outside.sql'), `CREATE TABLE escaped (id integer);`);
-		await symlink(join(directory!, 'outside.sql'), join(directory!, 'baseline/02-escape.sql'));
-		manifest.files.push('02-escape.sql');
-		await writeManifest(manifest);
-		await expect(runMigrations(config, directory)).rejects.toThrow('escapes its directory');
-		expect(await queryRows(`SELECT to_regclass('public.escaped') AS relation`)).toEqual([{ relation: null }]);
-		expect(await queryRows(`SELECT to_regclass('public.baseline_probe') AS relation`)).toEqual([{ relation: null }]);
+	test('the shipped migrations refuse a schema that already has the application tables, without stamping history', async () => {
+		await pool!.unsafe(`CREATE TABLE "user" (value text); INSERT INTO "user" VALUES ('keep');`).simple();
+		await expect(runMigrations(config)).rejects.toMatchObject({ cause: { code: '42P07' } });
+		expect(await queryRows(`SELECT value AS retained FROM "user"`)).toEqual([{ retained: 'keep' }]);
 		expect(await history()).toEqual([]);
+		expect(await heldAdvisoryLocks()).toEqual([{ held: 0 }]);
 	});
 
-	test('a present baseline directory with missing manifest must not silently replay history', async () => {
-		await writeFixture();
-		await rm(manifestPath());
-		await expect(runMigrations(config, directory)).rejects.toMatchObject({ code: 'ENOENT' });
-		expect(await queryRows(`SELECT to_regclass('public.baseline_probe') AS relation`)).toEqual([{ relation: null }]);
-		expect(await history()).toEqual([]);
-	});
-
-	test('competing runners serialize baseline execution on the reserved advisory-lock session', async () => {
-		const entries = await writeFixture();
+	test('competing runners serialize on the reserved advisory-lock session', async () => {
 		const blockerKey = 987654321;
-		await writeFile(
-			join(directory!, 'baseline/00-table.sql'),
-			`SELECT pg_advisory_xact_lock(${blockerKey});\n${baselineTable}`,
-		);
+		const blocked = [`SELECT pg_advisory_xact_lock(${blockerKey});\n${originalSql[0]}`, originalSql[1]!];
+		const entries = await writeFixture(blocked);
 		const blocker = await pool!.reserve();
 		await blocker.unsafe('SELECT pg_advisory_lock($1)', [blockerKey]);
 		const runners = Promise.allSettled([runMigrations(config, directory), runMigrations(config, directory)]);
@@ -485,11 +325,6 @@ INSERT INTO "baseline_probe" ("id", "value") VALUES (1, 'initial');`,
 		expect(completed.filter((result) => result.length > 0)).toEqual([pendingEntries(entries)]);
 		expect(completed.filter((result) => result.length === 0)).toEqual([[]]);
 		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
-		expect(await history()).toEqual([
-			{
-				hash: sha256(`SELECT pg_advisory_xact_lock(${blockerKey});\n${baselineTable}${baselineSeed}`),
-				when: 200,
-			},
-		]);
+		expect(await history()).toEqual(blocked.map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })));
 	});
 });
