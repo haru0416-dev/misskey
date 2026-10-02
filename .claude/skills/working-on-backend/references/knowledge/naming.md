@@ -29,7 +29,7 @@
 - 先頭が `_` のファイルは、Sass の partial(`_avatar.scss`)と、`server/web/views/` の部分テンプレート(`_head.tsx`)に限る。名前の前後を `_` で囲まない。
 - テストのファイルは、`.test.ts` で終える。backend の `test/unit/` と `test/e2e/` では、vitest の `include` が `*.test.ts` を探すので、テストでないファイルはここに置かない。
 - コンポーネントに付ける補助のファイルは、コンポーネント名の PascalCase に拡張子を足す(`MkButton.stories.impl.ts`、`MkSortOrderEditor.define.ts`)。
-- `scripts/` と `packages/*/scripts/` のファイルは kebab-case にする(`run-unit.js`)。
+- `scripts/` と `packages/*/scripts/` のファイルは kebab-case にする(`run-vitest.js`)。
 
 ## 識別子の形式
 

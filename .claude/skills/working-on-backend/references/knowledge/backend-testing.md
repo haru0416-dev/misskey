@@ -12,8 +12,8 @@
 
 | コマンド | 起動するもの |
 | --- | --- |
-| `bun run --bun --filter backend test` | unit 用 build、config compile、[run-unit.js](../../../../../packages/backend/scripts/run-unit.js) |
-| `bun run --bun --filter backend test:e2e` | e2e 用 build、config compile、[run-e2e.js](../../../../../packages/backend/scripts/run-e2e.js) による Bun 上の Vitest |
+| `bun run --bun --filter backend test` | unit 用 build、config compile、[run-vitest.js](../../../../../packages/backend/scripts/run-vitest.js) の `unit` |
+| `bun run --bun --filter backend test:e2e` | e2e 用 build、config compile、[run-vitest.js](../../../../../packages/backend/scripts/run-vitest.js) の `e2e` による Bun 上の Vitest |
 | `bun run --bun --filter backend test:e2e:bun` | 同じ e2e 用 build とテストを [run-e2e-bun.js](../../../../../packages/backend/scripts/run-e2e-bun.js) の別プロセスターゲットへ接続 |
 | `bun run --bun --filter backend test:fed --run` | 連合用 Vitest。対向サーバー等は [連合テストの準備](../../../../../packages/backend/test-federation/README.md) に従う |
 

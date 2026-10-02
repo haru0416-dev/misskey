@@ -61,7 +61,7 @@ let exitCode = 1;
 try {
 	await waitForController(controlUrl, target);
 
-	const test = Bun.spawn([process.execPath, resolve(scriptDir, 'run-e2e.js'), ...process.argv.slice(2)], {
+	const test = Bun.spawn([process.execPath, resolve(scriptDir, 'run-vitest.js'), 'e2e', ...process.argv.slice(2)], {
 		cwd: backendDir,
 		env: {
 			...process.env,
