@@ -109,7 +109,7 @@ export async function masterMain(config: Config) {
 			disposers.push(() => runtime.close());
 		}
 		// Bun の node:cluster は SO_REUSEPORT を使うため、masterRole が null ならワーカーだけが listen する。
-		// 実測では httpWorkers=3 の各ワーカーが :3000 を LISTEN し、master は LISTEN しない。
+		// httpWorkers=3 では各ワーカーが :3000 を LISTEN し、master は LISTEN しない。
 
 		try {
 			await spawnWorkers(topology.workerAssignments);

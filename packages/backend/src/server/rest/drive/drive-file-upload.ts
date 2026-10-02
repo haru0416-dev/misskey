@@ -786,7 +786,7 @@ export async function uploadDriveFileFromUrlForApi(
 	}
 
 	// 保存しないファイルは相手の申告で登録し、センシティブ判定に中身が必要な場合だけ取得する。
-	// Pi 5 相当の枠での実測では、写真 4 枚のノート 50 件の取得・SD 書き込みが 355MiB あり、保存所要時間は 13 倍。
+	// 中身を取得せずに登録すると、取得と書き込みを省ける。
 	if (isLink && declared != null && !sensitiveDetectionApplies(deps.meta, user)) {
 		const driveFile = await addDriveFileForApi(deps, {
 			user,

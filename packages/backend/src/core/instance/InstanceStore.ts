@@ -50,7 +50,7 @@ export async function fetchInstanceByHostFromDatabase(
 	host: MiInstance['host'],
 ): Promise<MiInstance | null> {
 	// 配送ジョブは宛先ごとにこの参照を行うため、同一ホストへ大量配送すると呼び出し回数が
-	// 配送件数に比例する (実測: 60投稿=12,060配送で 14,251回、発行クエリ全体の79%)。
+	// 配送件数に比例する。
 	// 23列の SELECT を毎回組み立て直すコストが無視できないので prepared query を使い回す。
 	const [row] = await instanceByHostPlan.execute(db, { host });
 

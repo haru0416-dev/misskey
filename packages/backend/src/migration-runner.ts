@@ -325,7 +325,7 @@ export async function reconcileNoteTextIndex(config: Config): Promise<'created' 
 		}
 		if (!wanted) return 'dropped';
 		// 式は検索側 (NoteStore の LOWER("note"."text") LIKE) と完全に一致させる。fastupdate=off は、保留リストの
-		// 反映で投稿の挿入が秒単位で止まるのを避けるため (SD カード相当の I/O で最大 3.8 秒を実測)。
+		// 反映で投稿の挿入が秒単位で止まるのを避けるため。
 		await client.unsafe(
 			`CREATE INDEX CONCURRENTLY IF NOT EXISTS "${NOTE_TEXT_INDEX}" ON "note" USING gin (lower("text") gin_trgm_ops) WITH (fastupdate = off)`,
 		);
@@ -370,7 +370,7 @@ export async function captureDatabaseSeed(config: Config): Promise<DatabaseSeed>
 
 /**
  * スキーマを作り直さずに全テーブルを空にし、初期データを戻す。migration 済みの同じスキーマでの初期化に限る。
- * 作り直し (DROP + migration) は 1 回約 0.5 秒、こちらは約 0.1 秒だった。
+ * 作り直し (DROP + migration) より速い。
  */
 export async function truncateDatabase(config: Config, seed: DatabaseSeed): Promise<void> {
 	if (process.env['NODE_ENV'] !== 'test') {

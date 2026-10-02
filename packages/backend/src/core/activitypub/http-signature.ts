@@ -13,8 +13,7 @@ import type { SignatureAlgorithm } from 'slacc';
  * 実際に流れてくる範囲だけを扱う。
  *
  * 署名の生成は slacc の Signer を使っているので、検証も同じ実装に揃える。
- * 検証は連合先から並列に届くため、スレッドプールで処理できる分だけ node:crypto より速い
- * (実測: RSA-2048 の並列 50 で node:crypto の 3.2 倍)。
+ * 検証は連合先から並列に届くため、スレッドプールで処理できる分だけ node:crypto より速い。
  */
 
 export type ParsedSignature = {

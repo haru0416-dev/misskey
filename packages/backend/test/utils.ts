@@ -541,7 +541,7 @@ export function connectStream<C extends keyof misskey.Channels>(
 
 /**
  * 流れないことを確かめるときの待ち時間。trgr の完了から数える。流れる場合の到着は trgr の完了から
- * 最大 9.4 ms だった (streaming・mute・api の 74 回)。
+ * 数 ms 以内に収まる。
  */
 const STREAM_ABSENCE_WAIT_MS = 500;
 
@@ -772,7 +772,7 @@ export function castAsError(obj: unknown): ApiErrorBody {
 
 /**
  * 送出されないことを確かめるときの待ち時間。操作の完了から数える。送出される場合の到着は
- * 操作の開始から最大 132 ms だった (scenario の 18 回)。
+ * 操作の開始から百数十 ms 以内に収まる。
  */
 const WEBHOOK_ABSENCE_WAIT_MS = 1000;
 

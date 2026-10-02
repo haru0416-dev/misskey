@@ -1070,7 +1070,7 @@ export const endpointMetas = {
 				},
 
 				// 一致が多いのに直近にほとんど無い語は、ディスクから数千ページ読むことになり、キャッシュが冷えていると
-				// statement_timeout (デフォルト 10 秒) を超える (55 万件で 3〜7 秒の実測)。問い合わせの形では読む量が減らない。
+				// statement_timeout (デフォルト 10 秒) を超える。問い合わせの形では読む量が減らない。
 				timedOut: {
 					message: 'The search took too long. Try more specific words or a narrower period.',
 					code: 'SEARCH_TIMED_OUT',

@@ -22,7 +22,7 @@
 
 ## 編集・データ・外部操作の制約
 
-- 説明コメントは日本語で、現在の制約・不変条件・実測値・非自明な選択理由を書く。処理の言い換え、概念メタファー、変更履歴は残さない。SPDX、検査指示、仕様識別子、コメント構文 fixture は別扱い。
+- 説明コメントは日本語で、現在の制約・不変条件・非自明な選択理由と、その根拠になる現在の特性値を書く。測定日・測定時の状態・変更前後の比較・「〜だった」という過去の記録は書かない。処理の言い換え、概念メタファー、変更履歴は残さない。SPDX、検査指示、仕様識別子、コメント構文 fixture は別扱い。
 - 新規コードの SPDX 対象と除外は `.github/workflows/check-spdx-license-id.yml` を確認する。AGPL 対象には `SPDX-FileCopyrightText: syuilo and misskey-project` と `SPDX-License-Identifier: AGPL-3.0-only` を付ける。Vue/HTML は HTML コメント、TS/JS/SCSS はブロックコメント。MIT の `packages/misskey-js` 等は固有のライセンスに従い、既存の権利表記を消さない。
 - locale YAML の手動変更は `locales/ja-JP.yml` のみ。他言語は Crowdin 管理。対象ブランチとの差分で他言語変更があれば、手動変更か自動配信かを区別する。
 - マージ済の `packages/backend/migration/*.sql` と `_legacy/` は変更しない。通常の schema 変更は `db:generate`、特殊 DDL は `db:generate:custom` で新規 migration を作る。forward-only。DB 初期化・既存データ削除は内部互換廃止とは別の操作であり、無断で実施しない。

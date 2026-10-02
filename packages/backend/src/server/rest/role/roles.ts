@@ -152,7 +152,7 @@ export async function handleApiRolesNotes(
 				)),
 			}),
 	);
-	// sinceId だけの指定でも新しい順で返す (このエンドポイントの従来の並び)。
+	// sinceId だけの指定でも新しい順で返す。
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
 	return await packNoteManyForApi(deps, notes, me);

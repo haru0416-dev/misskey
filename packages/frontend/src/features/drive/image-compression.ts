@@ -35,7 +35,7 @@ export function calculateTargetSize(
  * 縮小は `createImageBitmap` の resize に任せる。`resizeQuality` のデフォルトは 'low' なので
  * 明示が要る。canvas の `drawImage` で縮める道もあるが、品質の指定手段である
  * `imageSmoothingQuality` を Firefox が実装していないため、そちらへ寄せると Firefox だけ
- * 品質が落ちる (実測: 4032x3024 → 1125px で 43.8dB → 39.3dB)。
+ * 品質が落ちる。
  *
  * `resizeQuality` を実装していない環境 (Firefox 149 未満) ではデフォルトの 'low' で縮小される。
  * 寸法は正しく出るが品質は上がらない。

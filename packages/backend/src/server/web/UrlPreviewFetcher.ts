@@ -194,7 +194,7 @@ export async function fetchUrlPreview(
 	}
 
 	// リダイレクトは本文の取得で追い、最終 URL は応答から取る。先に HEAD で解決すると、ボット UA に 1 往復 2〜3 秒かける
-	// サイト (NHK/Akamai で実測) では往復の数だけ遅れて 10 秒の制限を超える。
+	// サイト (NHK/Akamai など) では往復の数だけ遅れて 10 秒の制限を超える。
 	const requested = new URL(input);
 	if (isWikipedia(requested)) return await fetchWikipedia(requested, input);
 	if (/^[a-zA-Z0-9]+\.app\.link$/.test(requested.hostname) || requested.hostname === 'spotify.link') {

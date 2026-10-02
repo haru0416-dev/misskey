@@ -127,7 +127,7 @@ function compileRowMapper(
 /**
  * 計画を使い回してよい文。値によって最適な計画が変わらないもの (キーの等号・キーの配列・存在確認で引く読み取りと、
  * 条件の無い全件の読み取り) だけに使う。範囲や絞り込みで一致件数が大きく変わる文に使うと、generic plan に
- * 固定されて遅くなる (公開ノート一覧の絞り込みで 55〜72 → 127〜170 ms、冷えたキャッシュで 117 → 3,069 ms)。
+ * 固定されて遅くなる。
  */
 export function defineCachedQueryPlan<T>(recipe: (db: MiDrizzleDatabase) => QueryRecipe<T>): QueryPlan<T> {
 	return createQueryPlan(recipe, true);

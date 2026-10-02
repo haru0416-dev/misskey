@@ -118,7 +118,7 @@ jobs:
       - run: bun run --filter i18n build
       - name: Compile config
         run: cp .github/misskey/test.yml .config/default.yml && bun run --filter backend compile-config
-      # 使われていない export・依存・ファイルは lint にも CI にも掛からず溜まっていた。
+      # 使われていない export・依存・ファイルは oxlint などでは検出できないので、knip で検査する。
       - run: bun run lint:knip
 
   oxfmt:

@@ -39,7 +39,7 @@ describe('grid cell validators', () => {
 		expect(check(name, 1, 'a')).toBe(false);
 	});
 
-	// セルごとに全セルを走査すると、3,000 行 8 列の検証 1 回に 370 ms かかる (実測)。
+	// セルごとに全セルを走査すると、検証 1 回の時間がセル数の 2 乗で増える。
 	test('unique の検証 1 回は行数に比例した時間で終わる', () => {
 		const validator = validators.unique();
 		const allCells = Array.from({ length: 20_000 }, (_, i) => cell(name, i, `v${i}`)) as Params['allCells'];

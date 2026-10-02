@@ -129,7 +129,7 @@ export const sourceConfigV2Schema = z.strictObject({
 					/**
 					 * HTTP を捌くプロセス数。1 ならメインプロセス自身が listen し、2 以上ならメインプロセスは
 					 * listen せず fork したワーカーだけが listen する (bun の node:cluster は SO_REUSEPORT 実装)。
-					 * このVPS (6コア) での実測では 1→3 で rps +42% だが CPU効率は 730→609 rps/core へ落ちる。
+					 * 増やすと rps は上がるが、1 コアあたりの rps は下がる。
 					 */
 					httpWorkers: nonNegativeIntegerSchema.default(1),
 					/** ジョブキューを捌くプロセス数。0 にするとこのホストではキューを処理しない。 */
@@ -158,12 +158,11 @@ export const sourceConfigV2Schema = z.strictObject({
 					 * 各プールは最低 1 接続なので、DB 利用プロセス数を下回る予算では合計が予算を超える。
 					 *
 					 * プロセスごとの指定にすると `httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
-					 * PostgreSQL のデフォルト `max_connections = 100` に張り付いて溢れる (実測で確認)。
+					 * PostgreSQL のデフォルト `max_connections = 100` に張り付いて溢れる。
 					 *
 					 * デフォルトの 60 は「デフォルトトポロジ (HTTP 1 + キュー 1) で 1プロセスあたり 30」になる値。
-					 * 実測 (同時128接続、/api/notes): HTTP1プロセスでは 15/プロセスだと 1023 rps に対し
-					 * 30/プロセスで 1154 rps (+12.8%)。HTTP3プロセスでは 7/プロセスで 1336 rps に対し
-					 * 24/プロセスでも 1383 rps (+3.5%) と、分割後は少ない接続数でほぼ頭打ちになる。
+					 * HTTP が 1 プロセスのときは接続数を増やすほど rps が上がるが、HTTP を 3 プロセスに分けると
+					 * 少ない接続数でほぼ頭打ちになる。
 					 */
 					maximumConnectionsPerHost: positiveIntegerSchema.default(60),
 					connectionTimeout: durationSchema.default('5s'),
@@ -211,7 +210,7 @@ export const sourceConfigV2Schema = z.strictObject({
 			z.strictObject({
 				provider: z.literal('sqlLike').default('sqlLike'),
 				// 本文の trigram index。検索は速くなるが、受信・投稿のたびに index のページを数十枚書き換える
-				// (実測で書き込み全体の 8 割以上)。書き込みを抑えたい環境 (SD カード等) では false にする。
+				// (書き込みの大半を占める)。書き込みを抑えたい環境 (SD カード等) では false にする。
 				noteTextIndex: z.boolean().default(true),
 			}),
 			z.strictObject({ provider: z.literal('sqlPgroonga') }),

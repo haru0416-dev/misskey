@@ -259,9 +259,8 @@ async function launchServerWithDependencies(
 				}
 			}
 
-			// CPUプロファイル上は requestIP() が全体の 6.4% を占めるが、これを遅延化 (server を env で
-			// 渡し getRequestIp() 側で解決) しても rps / CPU per req はどちらも変わらなかった。
-			// 実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
+			// requestIP() の呼び出しは遅延化 (server を env で渡し getRequestIp() 側で解決) しても
+			// rps / CPU per req が変わらない。実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
 			const remoteAddress = bunServerInstance.requestIP(request)?.address;
 			if (remoteAddress != null) {
 				request.headers.set('x-misskey-remote-address', remoteAddress);

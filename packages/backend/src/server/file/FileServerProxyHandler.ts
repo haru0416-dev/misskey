@@ -28,7 +28,7 @@ import type { FileServerReply, FileServerRequest } from './FileServerTypes.js';
 type ProxySource = DownloadedFileResult | DownloadedBufferResult | Exclude<FileResolveResult, { kind: 'remote' }>;
 type AvailableFile = Exclude<ProxySource, { kind: 'not-found' | 'unavailable' }>;
 // 縮小版は一時的でいつでも作り直せるので、smartSubsample (高画質な色差の間引き) を切る。
-// Pi 5 相当の枠で TL 5 画面分 (240 要求) の変換 CPU が 5.4→3.3 秒になる。保存するサムネイル等は webpDefault のまま。
+// 変換の CPU が大きく減る。保存するサムネイル等は webpDefault のまま。
 const proxyWebp: WebpOptions = { ...webpDefault, smartSubsample: false };
 
 function sourceOf(file: AvailableFile): Buffer | string {

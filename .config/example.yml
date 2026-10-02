@@ -100,7 +100,7 @@ outboundNetwork:
 
 media:
   # アップロードした画像の Web 用画像 (拡大表示に使う最大 2048px の WebP) で、色差を高画質に間引くか。
-  # false にすると変換の CPU が約半分になる (Pi 5 相当の枠で 4032x3024 の写真 1 枚 892→424ms) が、
+  # false にすると変換の CPU が約半分になるが、
   # 実写真では PSNR が約 0.6dB 下がり、赤い文字の縁など色の境界がわずかににじむことがある。図版・スクリーンショットはほぼ変わらない。
   # CPU の弱い機械 (Raspberry Pi など) で投稿が重いときに false を検討する。サムネイルは設定によらず間引かない。
   webpublicSmartSubsample: true

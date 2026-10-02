@@ -27,7 +27,7 @@ export class MemoryKVCache<T> {
 	public set(key: string, value: T): void {
 		if (this.limit !== Infinity) {
 			// 期限切れの掃除は interval の gc() に任せる。ここで gc() を呼ぶと set のたびに全件走査になり、
-			// 常に満杯の MFM パースキャッシュ (1000 件) では notes/create の CPU の 2.7% を占めていた (2026-09-03 実測)。
+			// 常に満杯の MFM パースキャッシュ (1000 件) では notes/create の CPU を無視できない割合で消費する。
 			// 上限超過分は挿入順の先頭 (最も古く参照されたもの) から落とす。
 			this.cache.delete(key);
 

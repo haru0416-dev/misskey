@@ -47,8 +47,7 @@ function isSafeNQuadLiteral(value: string): boolean {
  *
  * このオブジェクトは creator / nonce / created (と任意の domain) だけの固定構造で、正規形は
  * 述語の辞書順に並んだ3〜4行にしかならない。jsonld.normalize のコストは文書の大きさではなく
- * 固定費が主体で、実測ではこの極小オブジェクトの正規化が活動本体と同じだけかかっていた
- * (1回あたり options 0.318ms / data 0.333ms)。
+ * 固定費が主体なので、この極小オブジェクトの正規化にも活動本体と同程度の時間がかかる。
  *
  * 想定外の形は null を返し、呼び出し側で jsonld.normalize を実行する。
  * 署名不一致が例外なしの連合失敗になるため、既知の形以外は組み立てない。
@@ -204,7 +203,7 @@ export class JsonLd {
 	@bindThis
 	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
-		// jsonld は読み込むだけで RSS +18.7 MB・30 ms かかる (Bun 1.4.2 実測)。使うのは LD 署名付きの受信と
+		// jsonld は読み込むだけで RSS +18.7 MB・30 ms かかる。使うのは LD 署名付きの受信と
 		// 署名の作成だけなので、プロセス起動時ではなく必要になった時点で読み込む。
 		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
 			documentLoader: customLoader,

@@ -52,7 +52,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			propagators: [new core.W3CTraceContextPropagator(), new core.W3CBaggagePropagator()],
 		});
 		// 受信した trace context は取り込むが、送信側へは付けない。Bun では node:http / fetch / ioredis の
-		// 自動計装が span を出さない (実測で 0 件) ため、送信への伝播は行っていない。
+		// 自動計装が span を出さないため、送信への伝播は行っていない。
 		const extractionOnlyPropagator: TextMapPropagator = {
 			inject: () => {},
 			extract: (context, carrier, getter) => standardPropagator.extract(context, carrier, getter),

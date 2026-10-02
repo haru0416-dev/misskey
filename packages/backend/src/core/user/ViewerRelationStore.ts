@@ -165,14 +165,11 @@ const viewerRelationPlans = new Map<number, ReturnType<typeof createViewerRelati
  * 閲覧者コンテキストを1往復で取る。
  *
  * 分割して投げると、SQL1本あたり73µsの固定CPU (プール貸出のタイマ/リスナ登録、RowDescription処理、
- * 結果オブジェクトの組み立て) を本数ぶん払うことになる。実測でこの固定費はDBクライアントCPUの76%を
+ * 結果オブジェクトの組み立て) を本数ぶん払うことになる。この固定費はDBクライアントCPUの76%を
  * 占めており、行数・列数を減らすより往復を減らすほうが、削れる CPU は大きい。
  *
  * ただし `following` は最大4500行になり得るので、要る種別だけを指定すること。使わない枝を混ぜると
  * 往復1本ぶん (73µs) より行の転送 (0.24µs/行) の方が高くつく。
- *
- * 実測 (base/after 各3回・90秒・並列8): 全体で467.4→521.1 rps (+11.5%)、加重p50 16.40→14.73ms (-10.2%)。
- * まとめた側のp50は `users/notes` -25.4% / `notes/timeline` -24.6% / `notes/hybrid-timeline` -20.4%。
  */
 export async function fetchViewerRelationSnapshotFromDatabase(
 	db: MiDrizzleDatabase,

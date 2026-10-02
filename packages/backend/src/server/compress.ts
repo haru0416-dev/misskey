@@ -37,7 +37,7 @@ function selectEncoding(header: string | undefined): 'gzip' | 'deflate' | undefi
 
 /**
  * API の JSON 本文を、手元のバイト列のまま同期で gzip する。hono/compress の CompressionStream は 1 件ごとの
- * 準備が重く、実際の API 応答 (1〜36KB) で同期圧縮の 2〜4 倍の CPU を使っていた (混合負荷でアプリ CPU の約 13%)。
+ * 準備が重く、API 応答のような小さい本文では同期圧縮より CPU を多く使う。
  * 圧縮しないとき (gzip を受け付けない・小さい・大きい・HEAD) は null を返し、判断を hono/compress に任せる。
  * 本文がストリームの応答はここを通さない (読み切ると途中の失敗が接続断ではなくエラー応答になる)。
  */

@@ -180,8 +180,8 @@ export function createBunSqlDatabase(client: SQL, config: Config): MiDrizzleData
 
 /**
  * defineCachedQueryPlan の文に接続総数の 1/4 を割り当てる。値によらず計画が同じ文だけを名前付きで実行する。
- * 混合負荷では PostgreSQL の時間の約 4 割が計画作成で、主キーの 1 行取得でも実行 0.10 ms に対して
- * 計画 0.32 ms かかっていた。通常用と計画キャッシュ用を合わせた接続総数は変えない。
+ * 混合負荷では PostgreSQL の時間の約 4 割が計画作成で、主キーの 1 行取得でも実行より計画の作成のほうが
+ * 数倍かかる。通常用と計画キャッシュ用を合わせた接続総数は変えない。
  */
 const PLAN_CACHE_CONNECTION_SHARE = 4;
 
