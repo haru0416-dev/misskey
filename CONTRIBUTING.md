@@ -5,7 +5,7 @@ Issue / PR はこのリポジトリに対して出すこと (upstream の Issue�
 
 ここには開発環境の作り方と、コードを書くうえでの決まりごとをまとめている。
 AI コーディングエージェント向けの規約は [AGENTS.md](./AGENTS.md) にある。
-計画・調査記録・過去の履歴の入口は [docs/README.md](./docs/README.md) を参照。
+upstream の旧リリース履歴 (2026.6.0 まで) は [docs/archive/upstream-changelog.md](./docs/archive/upstream-changelog.md) にある。
 
 ## Issues
 

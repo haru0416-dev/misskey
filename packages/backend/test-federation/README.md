@@ -152,7 +152,7 @@ barriers a six-minute deadline.
 
 ## Acceptance mapping
 
-| Plan criterion | Scenario / evidence |
+| Acceptance criterion | Scenario / evidence |
 | --- | --- |
 | A2 independent pinned peer, fork-fork retained, isolated state/artifacts | `compose.matrix.yml`, `compose.matrix.{fork,upstream}.yml`, `upstream.json`; CI's two independent cells |
 | A3 identical semantics with both sender roles, setup differences only in driver | both new files' `describe.each` directions; `utils.ts` bootstrap; per-kind JSON reports |
@@ -279,8 +279,4 @@ barrier settles; they are not passing notification or recovery evidence.
 The baseline state capture was late: the same duplicate Accept jobs exhausted
 their retries there, while the immediate final capture still had them delayed.
 Failure-time counts come from the original reports, not an equal-time assumption
-about those snapshots. See the plan's final comparison for the exact limits.
-
-Exact evidence boundaries, pinned identity, observed failures versus inferred
-causes, and the decision to retain the official target are recorded in
-[the optimization plan](../../../docs/optimization-plan.md#実行記録と保留条件).
+about those snapshots.

@@ -11,7 +11,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - docs/agent-workflow-spec.md
       - packages/aiscript/**
       - packages/mfm-js/**
       - packages/backend/**
@@ -45,7 +44,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - docs/agent-workflow-spec.md
       - packages/aiscript/**
       - packages/mfm-js/**
       - packages/backend/**

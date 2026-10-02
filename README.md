@@ -10,8 +10,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development and testing instruction
 
 ## Documentation
 
-See [Documentation](./docs/README.md) for development rules, plans, research records, and archives.
-For security reports, follow [SECURITY.md](./SECURITY.md). For this fork's changes, see [CHANGELOG.md](./CHANGELOG.md).
+For security reports, follow [SECURITY.md](./SECURITY.md). For this fork's changes, see [CHANGELOG.md](./CHANGELOG.md). Upstream's release history up to 2026.6.0 is kept in [docs/archive/upstream-changelog.md](./docs/archive/upstream-changelog.md).
 
 ## Upstream
 

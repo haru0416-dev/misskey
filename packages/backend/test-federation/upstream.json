@@ -13,5 +13,5 @@
 		"https://api.github.com/repos/misskey-dev/misskey/git/ref/tags/2026.9.0",
 		"https://registry-1.docker.io/v2/misskey/misskey/manifests/2026.9.0"
 	],
-	"verification": "GitHub release ref, registry Docker-Content-Digest and linux/amd64 image org.opencontainers.image.revision label resolved independently and agree. This records identity provenance; runtime interoperability outcomes are recorded separately in docs/optimization-plan.md."
+	"verification": "GitHub release ref, registry Docker-Content-Digest and linux/amd64 image org.opencontainers.image.revision label resolved independently and agree. This records identity provenance; runtime interoperability outcomes are recorded separately in the test results (results/upstream.json)."
 }
