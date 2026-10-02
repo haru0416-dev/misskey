@@ -68,6 +68,7 @@ tsdoc-metadata.json
 /packages/frontend/catalog-dist/
 /packages/frontend/.vitest-attachments/
 /packages/frontend/test/__screenshots__/
+/packages/frontend/.vitest/
 /packages/misskey-js/generator/api.json
 
 # Storybook generated files
