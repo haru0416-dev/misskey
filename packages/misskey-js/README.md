@@ -1,150 +1,129 @@
 # misskey-js
 
-TypeScript 用の Misskey SDK。ブラウザ / Node.js / Bun 上で動作する。
+ブラウザ、Node.js、Bun で動く、API とストリーミングの TypeScript SDK です。
 
-このリポジトリではワークスペース内のパッケージとして扱っており、npm には公開していない
-(`npm i misskey-js` で入るのは upstream の misskey-dev/misskey.js であり、このパッケージではない)。
-バックエンドの API 定義から `src/autogen/` を生成しているため、バックエンドの API を変更したら
-ルートで `bun run build-misskey-js-with-types` を実行する。開発時の決まりごとは [CONTRIBUTING.md](./CONTRIBUTING.md) を参照。
+このリポジトリのワークスペースの内部で使うパッケージで、npm には公開していません。`npm i misskey-js` で入るのは upstream の [misskey-dev/misskey.js](https://github.com/misskey-dev/misskey.js) で、このパッケージではありません。
 
-次の機能を提供している。
-- ユーザー認証
-- APIリクエスト
-- ストリーミング
-- ユーティリティ関数
-- 各種型定義
+`src/autogen/` の型は、バックエンドの API の定義から生成しています。バックエンドの API を変えたら、リポジトリのルートで `bun run build-misskey-js-with-types` を実行してください。開発の決まりは [CONTRIBUTING.md](./CONTRIBUTING.md) にあります。
 
-# Usage
-インポートは以下のようにまとめて行うと便利です。
+提供するものは次のとおりです。
 
-``` ts
+- API のリクエスト(`api.APIClient`)
+- ストリーミング(`Stream`)
+- ユーティリティ(`acct`、`note`、`nyaize`)
+- エンティティと API の型(`entities`、`Endpoints`、`Channels`)
+- 定数(`permissions`、`notificationTypes`、`noteVisibilities` など)
+
+## 使い方
+
+次のようにまとめて import できます。以降の例は、この形で import している前提です。
+
+```ts
 import * as Misskey from 'misskey-js';
 ```
 
-便宜上、以後のコード例は上記のように`* as Misskey`としてインポートしている前提のものになります。
+この形ではツリーシェイキングが効かないので、コードのサイズが重要な場合は、個別に import します。
 
-ただし、このインポート方法だとTree-Shakingできなくなるので、コードサイズが重要なユースケースでは以下のような個別インポートをお勧めします。
-
-``` ts
+```ts
 import { api as misskeyApi } from 'misskey-js';
 ```
 
-## Authenticate
-todo
+## 認証
 
-## API request
-APIを利用する際は、利用するサーバーの情報とアクセストークンを与えて`APIClient`クラスのインスタンスを初期化し、そのインスタンスの`request`メソッドを呼び出してリクエストを行います。
+API とストリーミングには、アクセストークンを渡します。トークンは、設定の「連携」のページ(`/settings/connect`)で発行するか、MiAuth(`miauth/gen-token`)で取得します。
 
-``` ts
-const cli = new Misskey.api.APIClient({
-	origin: 'https://misskey.test',
+## API のリクエスト
+
+利用するサーバーの `origin` と、アクセストークン(`credential`)を渡して `APIClient` を作り、`request` を呼びます。`credential` は省略すると、認証なしのリクエストになります。
+
+```ts
+const client = new Misskey.api.APIClient({
+	origin: 'https://example.tld',
 	credential: 'TOKEN',
 });
 
-const meta = await cli.request('meta', { detail: true });
+const meta = await client.request('meta', { detail: true });
 ```
 
-`request`の第一引数には呼び出すエンドポイント名、第二引数にはパラメータオブジェクトを渡します。レスポンスはPromiseとして返ります。
+`request` の引数は、エンドポイント名、パラメータのオブジェクトの順です。3 番目に、このリクエストだけに使う `credential` を、4 番目に中断用の `AbortSignal` を渡せます。結果は Promise で返ります。エンドポイント名から、パラメータと結果の型が決まります。
 
-## Streaming
-misskey.jsのストリーミングでは、二つのクラスが提供されます。
-ひとつは、ストリーミングのコネクション自体を司る`Stream`クラスと、もうひとつはストリーミング上のチャンネルの概念を表す`Channel`クラスです。
-ストリーミングを利用する際は、まず`Stream`クラスのインスタンスを初期化し、その後で`Stream`インスタンスのメソッドを利用して`Channel`クラスのインスタンスを取得する形になります。
+エラーは `Misskey.api.APIError` として投げられます。`Misskey.api.isAPIError(error)` で判別できます。
 
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
-const mainChannel = stream.useChannel('main');
-mainChannel.on('notification', notification => {
+## ストリーミング
+
+ストリーミングには、2 つのクラスがあります。接続そのものを持つ `Stream` と、接続の上のチャンネルを表す `ChannelConnection` です。`Stream` を作り、`useChannel` でチャンネルに接続します。
+
+```ts
+const stream = new Misskey.Stream('https://example.tld', { token: 'TOKEN' });
+const main = stream.useChannel('main');
+main.on('notification', (notification) => {
 	console.log('notification received', notification);
 });
 ```
 
-コネクションが途切れても自動で再接続されます。
+`Stream` の第 2 引数は、`{ token }` か、認証なしの場合の `null` です。接続が切れると、自動で再接続します。
 
-### チャンネルへの接続
-チャンネルへの接続は`Stream`クラスの`useChannel`メソッドを使用します。
+### チャンネルに接続する
 
-パラメータなし
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
+パラメータのないチャンネルは、名前だけを渡します。
 
-const mainChannel = stream.useChannel('main');
+```ts
+const main = stream.useChannel('main');
 ```
 
-パラメータあり
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
+パラメータのあるチャンネルは、第 2 引数に渡します。
 
-const chatChannel = stream.useChannel('chat', {
-	other: 'xxxxxxxxxx',
-});
+```ts
+const chat = stream.useChannel('chatUser', { otherId: 'xxxxxxxxxx' });
 ```
 
-### チャンネルから切断
-`Channel`クラスの`dispose`メソッドを呼び出します。
+チャンネルの名前、パラメータ、受け取るイベント、送れるメッセージは、`Channels` の型にあります。
 
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
+### チャンネルから切断する
 
-const mainChannel = stream.useChannel('main');
+`dispose` を呼びます。
 
-mainChannel.dispose();
+```ts
+main.dispose();
 ```
 
-### メッセージの受信
-`Channel`クラスはEventEmitterを継承しており、メッセージがサーバーから受信されると受け取ったイベント名でペイロードをemitします。
+### メッセージを受け取る
 
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
-const mainChannel = stream.useChannel('main');
-mainChannel.on('notification', notification => {
+`ChannelConnection` は EventEmitter を継承しています。サーバーからメッセージが届くと、そのイベント名でペイロードを `emit` します。
+
+```ts
+main.on('notification', (notification) => {
 	console.log('notification received', notification);
 });
 ```
 
-### メッセージの送信
-`Channel`クラスの`send`メソッドを使用してメッセージをサーバーに送信することができます。
+### メッセージを送る
 
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
-const chatChannel = stream.useChannel('chat', {
-	other: 'xxxxxxxxxx',
-});
+`send` で、サーバーにメッセージを送れます。
 
-chatChannel.send('read', {
-	id: 'xxxxxxxxxx'
-});
+```ts
+chat.send('read', { id: 'xxxxxxxxxx' });
 ```
 
-### コネクション確立イベント
-`Stream`クラスの`_connected_`イベントが利用可能です。
+### 接続のイベント
 
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
+`Stream` は、接続が確立したときに `_connected_`、切れたときに `_disconnected_` を `emit` します。
+
+```ts
 stream.on('_connected_', () => {
 	console.log('connected');
 });
-```
-
-### コネクション切断イベント
-`Stream`クラスの`_disconnected_`イベントが利用可能です。
-
-``` ts
-const stream = new Misskey.Stream('https://misskey.test', { token: 'TOKEN' });
 stream.on('_disconnected_', () => {
 	console.log('disconnected');
 });
 ```
 
-### コネクションの状態
-`Stream`クラスの`state`プロパティで確認できます。
+### 接続の状態
 
-- `initializing`: 接続確立前
-- `connected`: 接続完了
-- `reconnecting`: 再接続中
+`Stream` の `state` で確かめられます。
 
----
-
-<div align="center">
-	<a href="https://github.com/misskey-dev/misskey/blob/develop/CONTRIBUTING.md"><img src="https://assets.misskey-hub.net/public/i-want-you.png" width="300"></a>
-</div>
+| 値 | 意味 |
+| --- | --- |
+| `initializing` | 接続を確立する前 |
+| `connected` | 接続が完了している |
+| `reconnecting` | 再接続している |

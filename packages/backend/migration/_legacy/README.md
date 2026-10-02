@@ -1,5 +1,5 @@
-# 旧migration形式のアーカイブ
+# 旧形式の migration の記録
 
-このディレクトリのファイルは、drizzle-kit移行(migration/0000_baseline.sql以降)前に使われていた手書きJS形式(`up(queryRunner)`/`down(queryRunner)`)のmigrationです。
+drizzle-kit に移る前に使っていた、手書きの JavaScript 形式(`up(queryRunner)` と `down(queryRunner)`)の migration です。
 
-**実行系からは完全に外れています** — `migration-runner.ts`はこのディレクトリを読みません。これらが作ったスキーマの内容は `migration/0000_baseline.sql` と `migration/0001_chart_tables_and_manual_ddl.sql` に統合済みです。過去にどんなDDLを当てたかの歴史的参照としてのみ保持しています。
+実行には使いません。`src/migration-runner.ts` はこのディレクトリを読みません。これらが作った schema は、現在の [`0000_init.sql`](../0000_init.sql) に含まれています。過去にどんな DDL を当てていたかを調べるための記録として残しています。

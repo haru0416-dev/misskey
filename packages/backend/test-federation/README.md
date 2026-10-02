@@ -1,46 +1,47 @@
-# Federation regression matrix
+# 連合テスト
 
-The matrix retains fork ↔ fork and adds fork ↔ an independently built upstream.
-Host identities remain `a.test` and `b.test`. `a.test` always runs this checkout;
-`FEDERATION_PEER_B_KIND=fork|upstream` selects `b.test` explicitly.
-`acceptance.test.ts` and `resilience.test.ts` run the same scenarios in both
-sender directions. Every pre-existing `*.test.ts` remains enabled in both jobs.
-The suite also parses public actors, notes, replies and polls with `@fedify/vocab`.
+Docker の中に 2 台のサーバー(`a.test` と `b.test`)を立てて、ActivityPub の連合を実際の通信で確かめるテストです。TLS、nginx、inbox、ジョブキューまでを通ります。
 
-## Pinned upstream and guarantee boundary
+- `a.test` は、常にこのチェックアウトのコードです。
+- `b.test` の相手は、環境変数 `FEDERATION_PEER_B_KIND` で選びます。`fork` は `a.test` と同じコード、`upstream` は独立してビルドされた公式の Misskey です。
+- `fork` と `upstream` は、別々の実行(セル)として行います。同じシナリオを、`a.test` から `b.test` への向きと、`b.test` から `a.test` への向きの両方で実行します。
 
-`upstream.json` records Misskey **2026.9.0**, commit
-`bd9eb7c77942ef11749a04e7a5f24bee935d764b`, and the registry OCI index:
+同じ fork どうしのテストが通っても、独立した実装との互換性の証明にはなりません。そのため、upstream の相手との実行を別に持っています。
 
-```
-misskey/misskey:2026.9.0@sha256:13ea3b432adbe29bf3699da5c7c0bd54775a9c237339ea47c6ec220094dba59a
-```
+## 構成
 
-The [release tag reference](https://api.github.com/repos/misskey-dev/misskey/git/ref/tags/2026.9.0),
-[release](https://github.com/misskey-dev/misskey/releases/tag/2026.9.0), registry
-`Docker-Content-Digest`, and linux/amd64 image
-`org.opencontainers.image.revision` label were independently read on 2026-09-09.
-The image revision label agrees with the GitHub commit. The architecture-specific
-manifests and image-config digest are also recorded. No execution uses `latest`.
+| ファイル | 内容 |
+| --- | --- |
+| `test/*.test.ts` | シナリオ。`acceptance.test.ts` と `resilience.test.ts` が、連合の主な挙動と、障害からの回復を確かめる |
+| `test/utils.ts` | ヘルパー(管理者の用意、アカウントの作成、配送の完了待ち、署名付きリクエスト、障害の注入) |
+| `compose.matrix.yml` | 2 台のサーバー、DB、Valkey、nginx、障害を注入するプロキシ、テストの実行役(`tester`)の構成 |
+| `compose.matrix.fork.yml` `compose.matrix.upstream.yml` | `b.test` の相手の定義 |
+| `upstream.json` `upstream.config.yml` | 固定した公式 Misskey の識別情報と、その設定 |
+| `known-upstream-failures.json` | upstream の実装側の不具合で、いま失敗する既知のシナリオ |
+| `fault-proxy.ts` | inbox への配送に、障害を起こすプロキシ |
+| `setup.sh` | テスト用の CA と証明書、各サーバーの設定の生成 |
+| `results/` | 実行の結果の出力先。git では追跡しない |
+| `compose.yml` `compose.a.yml` `compose.b.yml` `compose.tpl.yml` | 旧来の、fork どうしの 2 台の構成。`compose.matrix.yml` が、`tester` と共通の定義を使う |
 
-Resolving provenance is not a compatibility result. Only the revisions and
-sender directions in a completed, passing result are covered. Unexecuted tests,
-missing prerequisites, timeouts, failures and skips must remain distinct.
-No performance or successful interoperability result is asserted by these files.
+署名やキューの観測には、DB への私的な接続が要ります。障害を注入するテストには、`FEDERATION_FAULT_URL` が要ります。どちらも `compose.matrix.yml` が用意するので、すべてのシナリオを動かすには `compose.matrix.yml` を使ってください。
 
-## Prerequisites and ordering
+## 保証の範囲
 
-Use the exact Bun version in the root `.bun-version`, Docker Engine and Docker
-Compose with `include`/`extends` support (Compose 2.20 or newer), OpenSSL and FFmpeg.
-The current topology reserves the Docker subnets `172.20.0.0/16` (federation) and
-`10.231.0.0/22` (database, internet and default networks); do not run the two
-matrix cells concurrently on one Docker daemon. CI puts them on separate runners.
-Every matrix network has an explicit subnet because Compose creates networks
-concurrently, and an automatically assigned network can otherwise take
-`172.20.0.0/16` from Docker's default pool first.
-No host application/database ports are published.
+公式の upstream は、`upstream.json` で、Misskey の特定のリリース、コミット、コンテナイメージのダイジェストに固定しています。`latest` は使いません。固定しているのは相手の身元で、互換性の結果ではありません。
 
-From the repository root, after preserving the starting-revision baseline:
+結果が保証するのは、成功した実行が対象にした、リビジョンと送信の向きだけです。実行していないテスト、前提の不足、タイムアウト、失敗、スキップは、区別して扱います。
+
+## 準備
+
+必要なものは次のとおりです。
+
+- ルートの `.bun-version` と同じ Bun
+- Docker Engine と、`include` と `extends` が使える Docker Compose(2.20 以上)
+- OpenSSL
+
+Docker のサブネットとして `172.20.0.0/16`(連合用)と `10.231.0.0/22`(DB、インターネット、デフォルトの各ネットワーク)を使います。2 つのセルを、同じ Docker デーモンで同時に動かさないでください。CI では別々のランナーで動かします。Compose はネットワークを並行して作るので、自動で割り当てられるネットワークが `172.20.0.0/16` を先に取らないよう、すべてのネットワークに明示的なサブネットを指定しています。ホストのポートは公開しません。
+
+リポジトリのルートで、次の順に実行します。
 
 ```sh
 bun install --frozen-lockfile
@@ -53,230 +54,121 @@ cd packages/backend/test-federation
 bash ./setup.sh
 ```
 
-The tester mounts the federation dummy configuration as `/misskey/.config/test.yml`;
-it does not change your repository `.config/test.yml`. Stop all peers using this
-checkout before setup: it regenerates the test CA and peer certificates with
-explicit CA/server key usages and DNS SANs, then generates peer JSON and nginx
-configurations. The CA must be readable by every container;
-on fresh CI certificates, `chmod 644 certificates/*.test.key` permits the upstream
-image's non-root user to read test keys where necessary. These are test-only keys.
-Never use production credentials or keys in this topology.
+`setup.sh` は、テスト用の CA と、各サーバーの証明書、サーバーごとの設定を作り直します。実行する前に、このチェックアウトを使っているサーバーをすべて止めてください。CI の新しい証明書では、upstream のイメージの非 root のユーザーが鍵を読めるよう、`chmod 644 certificates/*.test.key` が要ります。これらはテスト専用の鍵です。本番の認証情報や鍵を、この構成に入れないでください。テストの設定ファイルは、`tester` のコンテナに `/misskey/.config/test.yml` としてマウントします。リポジトリの `.config/test.yml` は変更しません。
 
-Run **each** peer kind, sequentially, with a fresh project name:
+## 実行
+
+セルごとに、順番に、新しいプロジェクト名で実行します。
 
 ```sh
-export FEDERATION_PEER_B_KIND=fork # repeat with upstream after completing this cell
+export FEDERATION_PEER_B_KIND=fork  # 終わったら upstream でも繰り返す
 export COMPOSE_FILE=compose.matrix.yml
-export COMPOSE_PROJECT_NAME=federation-fork-baseline # use a distinct name for upstream
+export COMPOSE_PROJECT_NAME=federation-fork  # upstream では別の名前にする
 
 docker compose config
 docker compose up -d --wait --wait-timeout 240 --scale tester=0
 docker compose run --no-deps --rm tester
 ```
 
-For one scenario file, keep the same environment and topology:
+1 つのファイルだけを動かすときは、同じ環境と構成のまま、`tester` にコマンドを渡します。
 
 ```sh
 docker compose run --no-deps --rm tester bun run --bun --filter backend test:fed test-federation/test/acceptance.test.ts
-docker compose run --no-deps --rm tester bun run --bun --filter backend test:fed test-federation/test/resilience.test.ts
 ```
 
-Record `git rev-parse HEAD`, `docker compose config`, `docker compose images
---format json`, `upstream.json`, test exit status and `docker compose logs
---no-color` alongside `results/<peer-kind>.json`. CI uploads those records even
-when a cell fails. Capture logs before `docker compose down`. To discard only a
-completed matrix project's test state, use `docker compose down --volumes` with
-that exact project environment. Do not point cleanup at an existing deployment.
+結果は `results/<相手の種類>.json` に出力されます。あとで再現できるよう、次の記録も一緒に残します。CI は、セルが失敗しても、これらをアップロードします。
 
-The older `compose.yml` remains available for legacy topology users. The complete
-A2–A4 suite requires `compose.matrix.yml`: its signing/queue observations need
-private DB connectivity and its fault trials require `FEDERATION_FAULT_URL`.
+- `git rev-parse HEAD`
+- `docker compose config`
+- `docker compose images --format json`
+- `upstream.json`
+- テストの終了コード
+- `docker compose logs --no-color`(`docker compose down` の前に取る)
 
-## Isolation and driver
+実行したプロジェクトのテストの状態を捨てるときは、そのプロジェクトの環境変数のまま `docker compose down --volumes` を実行します。既存のデプロイに向けて実行しないでください。
 
-Matrix DB, media and Valkey volumes are project-scoped named volumes, separate
-from the existing `./volumes` bind directories. Each peer has its own database
-service and config. Upstream has a dedicated Valkey service and only mounts its
-YAML config, test CA and media volume: no checkout backend, dependencies, generated
-config or other fork build artifacts are mounted over its published image.
-Fork peers share immutable checkout artifacts and installation volumes, but have
-separate compiled-config mounts, media and DB state. The setup service installs
-fork dependencies before either fork starts.
+## 合否の判定
 
-`test/utils.ts` retains existing public helper signatures. Upstream's explicit
-setup password is supplied only by `hostKind()`-selected admin bootstrap. Both
-pinned peers use `signin-flow` with the same finished response shape; account
-creation uses the token returned by the real authenticated admin endpoint rather
-than repeatedly signing in. No protocol operation is substituted in the driver.
-The test daemon's existing fork signin-rate-limit cleanup remains test-only;
-upstream uses its supported `enableIpRateLimit: false` test configuration.
+fork のセルは、すべてのシナリオが成功したときだけ合格です。
 
-`assertNoteContent`, `assertUserProfile` and `assertAttachment` replace whole
-internal entity comparisons at the old consistency assertions with observable
-content/profile/media contracts. Existing activity-specific counters, IDs,
-visibility, Fedify parsing and all other scenarios remain in place.
+upstream のセルは、テストの失敗をそのまま残したうえで、`scripts/check-federation-known-failures.mjs` が、結果と `known-upstream-failures.json` を突き合わせて合否を決めます。次のどれかに当たると、セルは失敗です。
 
-`deliveryBarrier()` observes both peers' actual deliver/inbox/db/relationship
-queue counts (including delayed work), fork durable outbox states and proxy
-in-flight requests, then rechecks the sender after receiver processing. Unexpected
-fork dead-letter entries fail the barrier. A delayed inbox job with a failure
-reason (receiver processing failed and is being retried) fails the barrier at once
-with the job's activity and reason instead of waiting for backoff; the fork cell
-never retries inbox jobs, so this only fires on real receiver failures. Jobs created
-before the current test file loaded were reported by an earlier file and are not
-waited on again. Resilience tests promote the sender's delayed deliver jobs
-(`admin/queue/promote-jobs`) while waiting for a retry: the same job is retried, so
-redelivery and idempotency stay under test, and only the backoff delay is skipped.
-Receiver-state assertions follow the
-barrier; HTTP 202 alone never proves a final effect. Polling intervals are not
-absence proofs. Existing permanent-failure/dead-letter/account-delete coordinator
-regressions remain in `test/unit/queue/{deliver,queue-outbox,delete-account}.ts` and
-must pass as part of A1; the federation matrix does not replace them.
+- 一覧にない失敗がある。
+- 一覧にある失敗が、成功した、または結果に現れない(一覧と、この README を直す)。
+- スキップまたは todo のシナリオがある。
+- シナリオの外でスイートがエラーになった。
+- 結果のファイルが書かれていない。
 
-`signedRequest()` reads the signing actor's real key from the isolated peer DB
-and sends ordinary RSA HTTP signatures through TLS/nginx/inbox. It does not
-change keys or expose a production signing endpoint. Post-signature body, actor,
-ID and Host tampering are separate from validly signed actor/ID mismatches.
+upstream の既知のエラーは、機能として失敗した結果のままです。そのエラーを再現できても、互換性が確かめられたことにはなりません。期待される失敗として包んだり、スキップしたり、アサーションを弱めたりしないでください。公式の相手には手を加えません。
 
-`fault-proxy.ts` forwards only inbox POSTs. The separate control listener is
-reachable only on the private Docker network, with no host port or Docker socket.
-`outage` returns 503 without forwarding. `response-loss` consumes a successful
-upstream response and closes the downstream socket, so nginx/sender observes a
-transport failure even though the peer accepted the activity. Tests require two
-such successful forwards and real retries before restoring normal delivery.
-Control transitions to `pass` retain counters; starting a new fault resets them.
-Files run serially because a fault filter selects a destination and activity type.
-No production retry schedule is shortened: upstream's 60s then 180s backoff plus
-up to 20% jitter gives resilience cases an eight-minute deadline and queue
-barriers a six-minute deadline.
+`results/upstream-identity.json` は、固定した相手の識別情報の記録です。テストのレポーターが上書きしてはいけません。
 
-## Acceptance mapping
+### いまの既知の失敗
 
-| Acceptance criterion | Scenario / evidence |
+原因は、いずれも upstream の受信側にあります。詳しい理由は `known-upstream-failures.json` にあります。
+
+- Move で、upstream 側にある移行先を指定したとき。公式の受信側が、移行先の `uri`(null になりうる)と、正規の actor の URI を比べる。
+- ブロックを解除したあとの Follow と Reaction。公式の HTTP プロセスのブロックのキャッシュが、DB の行と Redis のキャッシュが消えたあとも残る。
+- 凍結を解除したあとの Follow。公式の API が、削除済みのユーザー ID を通して actor を引き、古いプロフィールを組み立てられずに失敗する。
+
+## テストの仕組み
+
+### 相手の違いの吸収
+
+`hostKind()` が、ホストが fork か upstream かを返します。upstream の管理者の用意は、明示したセットアップのパスワードで行います。どちらの相手も、同じ形の `signin-flow` の応答を返し、アカウントの作成には、管理者の API が返したトークンを使います。プロトコルの操作は、ドライバ側で置き換えません。
+
+テストの管理用のデーモンが、fork のサインインのレート制限を消す処理は、テスト専用です。upstream では、サポートされているテスト用の設定(`enableIpRateLimit: false`)を使います。
+
+内部のエンティティ全体を比べる代わりに、`assertNoteContent`、`assertUserProfile`、`assertAttachment` が、外から観測できるノート・プロフィール・添付の内容を比べます。
+
+### 配送の完了待ち
+
+`deliveryBarrier(senderHost)` は、次をすべて観測して、配送が落ち着いたことを確かめます。
+
+- 両方のサーバーの deliver、inbox、db、relationship の各キューの件数(遅延しているジョブも含む)
+- fork の outbox の状態(`deadLetter` があれば失敗にする)
+- 障害を注入するプロキシで処理中のリクエスト
+
+受信側の処理が終わったあとに、送信側をもう一度確かめます。受信側の処理の失敗で再試行を待っている inbox のジョブがあると、バックオフを待たず、そのジョブの内容と理由を付けてすぐに失敗にします。現在のテストファイルより前に作られたジョブは、前のファイルの結果として扱い、待ち直しません。
+
+受信側の状態のアサーションは、完了待ちのあとに行います。HTTP の 202 だけで、最終的な効果が出たとは判断しません。ポーリングの間隔が空いても、何も起きなかったことの証明にはなりません。
+
+障害からの回復のテストは、送信側の遅延した deliver のジョブを `admin/queue/promote-jobs` で前倒しします。同じジョブが再試行されるので、再配送と冪等性を確かめたまま、バックオフの待ち時間だけを省けます。本番の再試行のスケジュールは変えません。そのため、回復のテストは 8 分、キューの完了待ちは 6 分を上限にします。
+
+fork の永続的な配送の失敗、dead-letter、アカウント削除の調整役は、`test/unit/queue/{deliver,queue-outbox,delete-account}.ts` が守ります。連合のテストでは代わりになりません。
+
+### 署名付きのリクエスト
+
+`signedRequest()` は、署名する側のアクターの本物の鍵を、隔離した相手の DB から読み、通常の RSA の HTTP 署名つきのリクエストを、TLS、nginx、inbox を通して送ります。鍵を変更せず、本番の署名用のエンドポイントも作りません。署名後の本文、アクター、ID、Host の改変と、正しく署名された、アクターと ID の食い違いは、別のケースです。
+
+### 障害の注入
+
+`fault-proxy.ts` は、inbox への POST だけを転送します。制御用の待ち受けは、Docker の私的なネットワークからしか届かず、ホストのポートも Docker のソケットも使いません。
+
+| モード | 動作 |
 | --- | --- |
-| A2 independent pinned peer, fork-fork retained, isolated state/artifacts | `compose.matrix.yml`, `compose.matrix.{fork,upstream}.yml`, `upstream.json`; CI's two independent cells |
-| A3 identical semantics with both sender roles, setup differences only in driver | both new files' `describe.each` directions; `utils.ts` bootstrap; per-kind JSON reports |
-| A4 actor resolution | `acceptance`: `resolves the actor by handle and canonical URI...` |
-| Follow/Accept/Undo | `acceptance`: `locked Follow remains pending until explicit Accept...` |
-| Attachments/replies | `acceptance`: `delivers attachments and replies...`; existing drive/note/Fedify cases |
-| Reaction/Undo | `acceptance`: `Reaction and Undo converge...` |
-| Announce/Undo/Delete | `acceptance`: `Announce and Undo remove only the renote...`; existing note deletion cases |
-| Profile Update | `acceptance`: `profile Update changes the cached remote actor...` |
-| Move/alias/follower migration | `acceptance`: `Move honors destination alias and transfers local and remote followers`; existing Move cases |
-| Every visibility, allowed/denied recipients, unsigned/signed fetch, outbox and featured | `acceptance`: five `%s preserves allowed delivery...` cases, `outbox pagination retains public/home notes...` |
-| Private parent exposure | `acceptance`: `reply visibility and public collections never expose an inaccessible parent or attachment`; `specified reply reaches its own recipient...` |
-| Valid signatures and tampered signatures without final effects | `resilience`: valid signed GET/POST and six `%s causes no final side effect...` variants per direction |
-| Temporary outage and response-loss/retry convergence | `resilience`: `outage` and `response-loss`, each `Note`, `Follow`, `Reaction`, `Delete` in both directions |
-| Negative proof uses progress/final state | queue/outbox/proxy observations plus exact remote notes, reactions, followers and deletion checks |
-| Existing regression contracts remain gates | all original federation files still included; A1 unit/e2e suites remain mandatory |
-| CI includes lock/runtime/native dependency changes | workflow paths include lock, Bun version/config, root manifests, patches, native slacc, backend dependencies and build scripts |
+| `outage` | 転送せずに 503 を返す |
+| `response-loss` | 相手が受け付けた成功の応答を読み捨て、送信側へ向かうソケットを閉じる。nginx と送信側からは通信の失敗に見えるが、相手は活動を受け付けている |
 
-## Current compatibility gate
+テストは、`response-loss` で成功した転送が 2 回あり、実際に再試行されてから、通常の配送に戻します。`pass` に戻しても、カウンタは保たれます。新しい障害を始めると、リセットされます。障害の絞り込みは、宛先と活動の種類で選ぶため、ファイルは直列に動かします。
 
-Both matrix cells execute the scenarios directly. A known upstream error remains
-a failed feature result in `results/upstream.json`; reproducing that error is not
-successful interoperability. Do not add expected-failure wrappers, skips, or weaker
-assertions to the tests. The pinned official peer remains unmodified.
+## 確かめる項目とテスト
 
-The fork cell passes only when every scenario passes. The upstream cell keeps the
-test step's failures and decides the cell with
-`scripts/check-federation-known-failures.mjs`, which compares the recorded outcomes
-with `known-upstream-failures.json`. The cell fails on any failure not in that list,
-on a listed failure that passes or is missing (update the list and this section),
-on skipped or todo scenarios, on a suite error outside a scenario, and when no
-result file was written.
+| 確かめること | テスト |
+| --- | --- |
+| 独立した固定の相手、fork どうし、状態と成果物の分離 | `compose.matrix.yml`、`compose.matrix.{fork,upstream}.yml`、`upstream.json`。CI の 2 つの独立したセル |
+| 2 つの送信の向きで、同じ意味になること | `acceptance` と `resilience` の `describe.each`。相手の種類ごとの JSON のレポート |
+| actor の解決 | `acceptance`: `resolves the actor by handle and canonical URI...` |
+| Follow、Accept、Undo | `acceptance`: `locked Follow remains pending until explicit Accept...` |
+| 添付と返信 | `acceptance`: `delivers attachments and replies...`。既存の drive・note の各ケース |
+| Reaction と Undo | `acceptance`: `Reaction and Undo converge...` |
+| Announce、Undo、Delete | `acceptance`: `Announce and Undo remove only the renote...`。既存のノート削除のケース |
+| プロフィールの Update | `acceptance`: `profile Update changes the cached remote actor...` |
+| Move、alias、フォロワーの移行 | `acceptance`: `Move honors destination alias and transfers local and remote followers`。既存の Move のケース |
+| すべての公開範囲、許可された宛先と拒否された宛先、署名つきと署名なしの取得、outbox、featured | `acceptance`: `%s preserves allowed delivery...`、`outbox pagination retains public/home notes...` |
+| 非公開の親を露出しないこと | `acceptance`: `reply visibility and public collections never expose an inaccessible parent or attachment`、`specified reply reaches its own recipient...` |
+| 正しい署名と、改変された署名が、最終的な副作用を生まないこと | `resilience`: 正しい署名の GET と POST、`%s causes no final side effect...` |
+| 一時的な障害と、応答の喪失からの収束 | `resilience`: `outage` と `response-loss`。それぞれ `Note`、`Follow`、`Reaction`、`Delete` を、両方の向きで |
+| 何も起きなかったことは、進行と最終状態で示す | キュー、outbox、プロキシの観測。正確なリモートのノート、リアクション、フォロワー、削除の確認 |
 
-`results/fork.json` and `results/upstream.json` contain scenario outcomes.
-`results/upstream-identity.json` records the independently pinned peer identity;
-it must not be overwritten by the test reporter.
-
-The strict run after durable Follow acceptance registration reports **144 passed,
-5 failed, 0 skipped** (149 scenarios). Follow response loss from official upstream
-to the fork now converges without duplicate Accept delivery. The preceding strict
-run reported 143 passed and 6 failed; neither result certifies the whole matrix.
-
-The remaining failures are unchanged:
-
-- Move to an upstream-local destination: the official receiver looks up and
-  compares the local destination's nullable `uri` against its canonical actor URI.
-- Follow and Reaction after unblock: warm official HTTP-process block caches
-  retain the block after its DB row and Redis cache entry have been removed.
-  The same operations succeed when that process cache was not warmed.
-- Both Follow checks after unsuspension: the official API resolves the actor
-  through a deleted user ID although its recreated canonical actor and profile
-  exist in the DB; packing the obsolete profile fails.
-
-The official image, actor identities and feature assertions remain unchanged.
-Receiver-side defects cannot be counted as successful interoperability or hidden
-by sender-side protocol substitutions.
-
-The fork stores each ID-bearing accepted Follow together with its Accept delivery
-in a single DB transaction. Replays do not recreate a relationship after Undo
-or produce another Accept; queued Accepts carry the relationship generation and
-are discarded if that generation has ended. Manual approval rechecks the pending
-request under the same ordered user-pair lock as received Undo cancellation. ID-less Follow
-deduplication is limited to the current relationship generation.
-
-## Historical verification status
-
-The official pinned image and acceptance conditions remain unchanged. B–E
-cutovers are on hold until phase A passes; tests must not be skipped or weakened
-to work around upstream failures.
-
-The original fork-fork baseline passed 102 tests with 10 existing skips after
-repairing TLS and authentication fixtures. The added upstream suite initially
-reported 124 passes, 12 failures and 10 skips, including fixture defects corrected
-after that run. This is not a final failure count for the current source.
-
-The fork's inaccessible-parent reply reference was reproduced and fixed.
-Four targeted private-reply cases passed with the official upstream in both
-directions, including child delivery and absence of private parent/attachment
-content. Same-author followers replies retain their parent reference.
-Both implementations' private GET policy is unchanged; authorized private push
-delivery is checked separately.
-
-Move to an upstream-local destination and recovery after remote unblock or
-unsuspend still have unresolved upstream failures. After fixing duplicate Accept
-handling in the fork, all 32 fork-fork signature/recovery cases passed. The pinned
-upstream run completed with 29 passes and 3 failures: duplicate Accepts remain
-delayed with `No follow request.` on the official receiver after Follow response
-loss, preventing that case and the next two cases from reaching the completion
-barrier. The official image remains unmodified.
-
-The first full fork-fork run reported 166 passes, 2 failures and 10 existing skips.
-Delivery barriers fixed its media/notification fixture failures; the affected
-drive, notification and block files then passed 21 tests with 2 existing skips.
-A subsequent full run exposed three more fixed-wait races in pin propagation,
-Follow/Accept completion before remote moderation, and poll updates
-(165 passes, 3 failures, 10 existing skips). These and equivalent federation
-waits now use sender-specific delivery barriers. Existing state polling,
-assertion expectations, skips and timeout bounds are preserved. A missing await
-on the localOnly rejection assertion and a non-comparing identity assertion were
-also corrected.
-
-After 40 targeted passes with 4 existing skips, the complete fork-fork matrix
-passed all 11 files on fresh dedicated PostgreSQL/Valkey instances:
-168 passes, no failures and 10 existing skips, including all 34 acceptance and
-32 signature/recovery cases. Repository lint passed. This is fork-fork evidence,
-not proof of compatibility with the pinned upstream.
-Neither the added upstream matrix nor its fault-recovery gate is certified as passing.
-
-During the earlier internal-optimization cutover, the user approved proceeding
-while recording existing upstream defects. That historical exception is not the
-current compatibility gate: all current feature failures must remain failures.
-Before/after comparisons must distinguish the same observed upstream failure
-from a new cause or a regression, using direction, persisted state, errors and
-remaining jobs rather than only matching test names or failure counts.
-
-The final full matrices after the B/C/E cutover retain 168/0/10
-(passed/failed/existing skips) for fork-fork and 108/23/47 for pinned upstream.
-Every assertion status matches the approved baseline. The comparison also
-checked actor/relationship/object state, endpoint and worker errors, and actual
-queue membership; no new regression or worsening was observed in those checks.
-The upstream Move and unsuspension defects remain. Some later failures occur
-before their intended operation or after a persisted effect but before a shared
-barrier settles; they are not passing notification or recovery evidence.
-The baseline state capture was late: the same duplicate Accept jobs exhausted
-their retries there, while the immediate final capture still had them delayed.
-Failure-time counts come from the original reports, not an equal-time assumption
-about those snapshots.
+CI は、ロックファイル、Bun のバージョンと設定、ルートの manifest、パッチ、ネイティブの slacc、backend の依存、ビルドのスクリプトが変わったときにも、このテストを動かします([.github/workflows/test-federation.yml](../../../.github/workflows/test-federation.yml))。

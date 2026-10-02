@@ -1,24 +1,26 @@
-# Feature modules
+# features
 
-`features/` はユーザー機能ごとの縦割り構造を置く。
+`features/` には、ユーザー機能ごとの縦割りのモジュールを置きます。配置の考え方は [`src/README.md`](../README.md) にあります。
 
-各featureは必要に応じて次のサブディレクトリを持つ。
+各機能は、必要に応じて次のサブディレクトリを持ちます。
 
-- `components/`: feature専用Vue components
-- `core/`: frameworkに依存しない中心ロジック
-- feature固有の処理群 (`effects/`, `frame/` など)
+- `components/` その機能専用の Vue コンポーネント
+- `core/` フレームワークに依存しない、中心の処理
+- 機能に固有の処理のまとまり(`effects/`、`frame/` など)
 
-feature外から利用する型や処理は、安定した少数の入口へ寄せる。内部ファイルへのimportが必要な場合でも、別featureの内部実装へ依存しない。
+機能の外から使う型や処理は、少数の安定した入口にまとめます。内部のファイルを import する必要があるときも、別の機能の内部の実装には依存しません。
 
-## Feature index
+## 機能の一覧
 
-| Area | Features |
+| 分野 | 機能 |
 | --- | --- |
-| Account | `auth`, `onboarding`, `users`, `roles`, `invitations` |
-| Content | `notes`, `post-composer`, `media-viewer`, `link-preview`, `page-content`, `code`, `autocomplete` |
-| Discovery | `search`, `channels`, `antennas`, `clips`, `gallery`, `flash` |
-| Communication | `chat`, `notifications`, `announcements`, `sound` |
-| Emoji and images | `custom-emojis`, `emoji-picker`, `image-editor`, `drive` |
-| Administration | `abuse-reports`, `instances`, `charts`, `webhooks`, `server-setup`, `admin-tools` |
-| Extensions and project | `extensions`, `themes`, `support` |
-| Application UI | `dynamic-form`, `ui-preview`, `cache-management` |
+| アカウント | `auth`、`onboarding`、`users`、`roles`、`invitations` |
+| コンテンツ | `notes`、`post-composer`、`media-viewer`、`link-preview`、`page-content`、`code`、`autocomplete` |
+| 発見 | `search`、`channels`、`antennas`、`clips`、`gallery`、`flash` |
+| コミュニケーション | `chat`、`notifications`、`announcements`、`sound` |
+| 絵文字と画像 | `custom-emojis`、`emoji-picker`、`image-editor`、`drive` |
+| 管理 | `abuse-reports`、`instances`、`charts`、`webhooks`、`server-setup`、`admin-tools` |
+| 拡張とプロジェクト | `extensions`、`themes`、`support` |
+| アプリの UI | `dynamic-form`、`ui-preview`、`cache-management` |
+
+機能を足したり消したりしたときは、この表も更新します。

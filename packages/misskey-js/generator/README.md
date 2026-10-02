@@ -1,19 +1,33 @@
-## misskey-js向け型生成モジュール
+# misskey-js-type-generator
 
-バックエンドが吐き出すOpenAPI準拠のapi.jsonからmisskey-jsで使用される型エイリアスを生成するためのモジュールです。
-このモジュールはmisskey-jsそのものにバンドルされることは想定しておらず、生成物をmisskey-jsのsrc配下にコピーして使用することを想定しています。
+バックエンドが出力する OpenAPI の `api.json` から、misskey-js が使う型を生成するモジュールです。misskey-js 本体にはバンドルしません。生成したファイルを `packages/misskey-js/src/autogen/` に置いて使います。
 
-## 使い方
+通常は、リポジトリのルートで次のコマンドを実行します。バックエンドをビルドして `api.json` を出力し、型を生成して `src/autogen/` を入れ替え、misskey-js のビルドと API レポートの更新まで行います。
 
-まず、Misskeyのバックエンドからapi.jsonを取得する必要があります。任意のMisskeyインスタンスの/api-docからダウンロードしても良いですし、
-backendモジュール配下で`bun run generate-api-json`を実行しても良いでしょう。
+```sh
+bun run build-misskey-js-with-types
+```
 
-api.jsonを入手したら、このファイルがあるディレクトリに置いてください。
+バックエンドの API の `meta`・`paramDef`・`res` を変えたときは、このコマンドを実行して、`src/autogen/` の差分も同じ変更に含めてください。
 
-その後、以下コマンドを実行します。
+## 単独で実行する
 
-```shell
+`api.json` を入手して、このディレクトリに置きます。稼働中のサーバーの `/api.json` からダウンロードするか、`packages/backend` で次を実行します。
+
+```sh
+bun run generate-api-json
+```
+
+そのあと、このディレクトリで次を実行します。
+
+```sh
 bun run generate
 ```
 
-上記を実行することで、`./built`ディレクトリ配下にtsファイルが生成されます。
+`./built/autogen/` に TypeScript のファイルができます。misskey-js に取り込むには、`packages/misskey-js` で次を実行します。
+
+```sh
+bun run update-autogen-code
+```
+
+`src/autogen/` は生成物で、手で編集しません。

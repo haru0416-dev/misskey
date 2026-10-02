@@ -1,48 +1,49 @@
-# Frontend source layout
+# frontend/src の構成
 
-`src/` は次の責務で分割する。新しいコードは、まず機能固有か横断的かを判断して配置する。
+`src/` は次の責務で分けています。新しいコードは、特定の機能のためのものか、横断して使うものかを先に判断して置きます。
 
-| Directory | Responsibility |
+| ディレクトリ | 内容 |
 | --- | --- |
-| `boot/` | アプリケーション起動と初期化順序 |
-| `features/` | 1つのユーザー機能として変更・削除できる縦割りモジュール |
-| `pages/` | ルート単位の画面。データ取得や機能モジュールの組み立てを担当 |
-| `components/` | 複数featureから使う、ドメインに依存しないUI部品 |
-| `composables/` | 複数featureから使うVueライフサイクル・リアクティビティ処理 |
-| `directives/` | グローバルまたは横断的なVue directive |
-| `query/` | API query cacheの共通基盤 |
-| `filters/` | 表示用の値整形 (バイト数・日時・数値など) |
-| `store/`, `preferences/` | アプリケーション横断stateと永続化 |
-| `utility/` | Vueや特定featureに依存しない小さな横断処理 |
-| `lib/` | Vueにもfeatureにも依存しない自前ライブラリ (現在はルーターの `nirax.ts` のみ) |
-| `types/` | 複数の層から参照する型定義だけを置く |
-| `ui/` | アプリケーションシェルとレイアウト |
-| `widgets/` | widgetランタイムと各widget |
-| `aiscript/` | AiScript実行環境との接続 (API・UI定義) |
-| `shaders/` | WebGLで使うGLSL |
-| `workers/` | Web Worker entrypoints |
+| `boot/` | アプリの起動と、初期化の順序 |
+| `features/` | 1 つのユーザー機能として変更・削除できる、縦割りのモジュール |
+| `pages/` | ルート単位の画面。データの取得と、機能モジュールの組み立てを担当する |
+| `components/` | 複数の機能から使う、特定の機能を知らない UI 部品 |
+| `composables/` | 複数の機能から使う、Vue のライフサイクルとリアクティビティの処理 |
+| `directives/` | グローバルに、または横断して使う Vue の directive |
+| `query/` | API のクエリキャッシュの共通基盤([README](query/README.md)) |
+| `filters/` | 表示用の値の整形(バイト数、日時、数値など) |
+| `store/` `preferences/` | アプリ全体の状態と、その永続化 |
+| `utility/` | Vue にも特定の機能にも依存しない、小さな横断の処理 |
+| `lib/` | 機能に依存しない自前のライブラリ。ルーターの `nirax.ts` だけが入っている |
+| `types/` | 複数の層から参照する型だけ |
+| `ui/` | アプリのシェルとレイアウト |
+| `widgets/` | ウィジェットの実行環境と、各ウィジェット |
+| `aiscript/` | AiScript の実行環境との接続(API と UI の定義) |
+| `stories/` | コンポーネントのカタログとテストで使う、story の共通部品 |
+| `shaders/` | WebGL で使う GLSL |
+| `workers/` | Web Worker の入口 |
 
-## Shared component categories
+## 共通のコンポーネントの分類
 
-`components/` の直下にはglobal登録entrypointだけを置き、共通UIは責務別のsubdirectoryへ置く。
+`components/` の直下には、グローバル登録の入口だけを置きます。共通の UI は、責務ごとのサブディレクトリに置きます。
 
-| Directory | Responsibility |
+| ディレクトリ | 内容 |
 | --- | --- |
-| `components/form/` | input、button、select、switch、form補助、並べ替えeditor |
+| `components/form/` | input、button、select、switch、フォームの補助、並べ替えのエディタ |
 | `components/overlay/` | dialog、modal、menu、tooltip、toast、window |
-| `components/layout/` | container、pagination、tab、folder、drag、scroll layout |
-| `components/display/` | 値・状態・時計・previewなど読み取り中心の表示部品 |
-| `components/effects/` | ripple、sparkleなど一時的な視覚effect |
-| `components/global/` | Vueへglobal登録するrendererとapp adapter |
-| `components/grid/` | data grid基盤 |
+| `components/layout/` | container、pagination、tab、folder、drag、スクロールのレイアウト |
+| `components/display/` | 値・状態・時計・プレビューなど、読み取りが中心の表示部品 |
+| `components/effects/` | ripple、sparkle など、一時的な視覚効果 |
+| `components/global/` | Vue にグローバル登録する、レンダラーとアプリ用のアダプタ |
+| `components/grid/` | データグリッドの基盤 |
 
-componentを追加するとき、特定のユーザー機能を知っている場合は `components/` ではなく `features/<feature>/components/` を選ぶ。共通UI category間の依存は絶対pathで明示し、同じcategory内の密結合な補助componentだけ相対importを許可する。
+コンポーネントが特定のユーザー機能を知っているなら、`features/<機能名>/components/` に置きます。共通 UI の分類をまたぐ依存は絶対パスで書き、同じ分類の中の、結びつきの強い補助コンポーネントだけは相対パスの import を許します。
 
-`MkInput` と `MkTextarea` は入力補助として `features/autocomplete/` を利用する。この統合点以外の共通form primitiveはfeatureへ依存させない。
+`MkInput` と `MkTextarea` は、入力補助のために `features/autocomplete/` を使います。この結びつき以外で、共通のフォームの部品を機能に依存させません。
 
-## Dependency direction
+## 依存の方向
 
-基本の依存方向は次の通り。
+依存は、次の向きにだけ流します。
 
 ```text
 boot / ui / pages
@@ -54,14 +55,14 @@ components / composables / query / store
       utility
 ```
 
-- `utility/` から `features/` や `pages/` をimportしない。
-- feature固有のVue component、型、renderer、補助処理は同じfeature内に置く。
-- `components/` に置くのは、機能名を知らなくても利用できるUI部品だけにする。
-- `components/global/` はglobal component登録のadapter層なので、描画を委譲するfeatureをimportしてよい。featureのstateや業務処理は持たせない。
-- `pages/` は再利用ロジックの保管場所にせず、featureや共通層を組み立てる。
-- feature間の直接importは最小限にし、循環依存を作らない。
-- 動的importが必要なcomponentは、bundle分割を維持するためfeature内の実ファイルを直接指定してよい。
+- `utility/` は、`features/` と `pages/` を import しません。
+- 機能に固有の Vue コンポーネント、型、レンダラー、補助の処理は、同じ機能の中に置きます。
+- `components/` に置くのは、機能の名前を知らなくても使える UI 部品だけです。
+- `components/global/` は、グローバル登録のアダプタです。描画を任せる機能を import してかまいませんが、機能の状態や業務の処理は持たせません。
+- `pages/` は、再利用する処理の置き場にしません。機能と共通の層を組み立てるだけにします。
+- 機能どうしの直接の import は最小限にし、循環する依存を作りません。
+- 動的に import するコンポーネントは、バンドルの分割を保つために、機能の中の実ファイルを直接指定してかまいません。
 
-## Moving existing code
+## コードを移すとき
 
-配置変更は機能単位で行い、実装・型・shader・テスト・Storybookを同じ変更で移動する。互換用の旧パスre-exportは恒久化させず、同じ変更で全importを更新する。
+移すのは機能の単位で行い、実装、型、シェーダー、テスト、Storybook を同じ変更の中で移します。移動前のパスからの再エクスポートは残さず、同じ変更で、すべての import を更新します。

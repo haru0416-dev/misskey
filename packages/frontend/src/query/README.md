@@ -1,30 +1,47 @@
-# TanStack Query integration
+# query
 
-TanStack Query owns remote server state. Pinia continues to own client state and persisted preferences.
+[TanStack Query](https://tanstack.com/query) を使った、サーバーの状態の共有キャッシュです。クライアントだけの状態と、永続化する設定は、Pinia(`store/`、`preferences/`)が持ちます。
 
-## Query keys
+| ファイル | 内容 |
+| --- | --- |
+| `client.ts` | `QueryClient` の設定と、Vue への登録 |
+| `keys.ts` | クエリキー(`queryKeys`) |
+| `api.ts` | キャッシュの対象にするエンドポイントと、変更後の無効化 |
+| `mutation.ts` | 変更(mutation)の実行 |
+| `streaming.ts` | ストリーミングのイベントによる、キャッシュの更新 |
+| `cache.ts` | クエリのキャッシュを、リアクティブな値として読む `QueryCacheView` |
 
-All keys are created by `queryKeys` and have this shape:
+## クエリキー
+
+キーは、すべて `queryKeys` で作ります。形は次のとおりです。
 
 ```text
 ['misskey', host, accountId | 'anonymous', 'endpoint', endpoint, params]
 ```
 
-Explicit-token requests bypass the shared query cache. This prevents data returned for another account from being stored under the active account's key.
+アカウントごとにキーを分けるので、別のアカウントで取得した結果が、いま使っているアカウントのキーに入りません。トークンを明示したリクエスト、本文に `i` を持つリクエスト、中断用の `signal` を持つリクエストは、共有キャッシュを使いません。
 
-## Streaming
+## キャッシュの対象
 
-Streaming events update entity queries through `query/streaming.ts`. A stream-backed timeline remains owned by `Paginator` until its complete behavior can be represented without regressions.
+共有キャッシュを使うのは、`api.ts` の `QUERY_STALE_TIMES` に挙げた、`meta`、`users/show`、`emoji`、`emojis` の 4 つのエンドポイントです。それぞれに、データを新鮮とみなす時間を定めています。ほかのエンドポイントは、キャッシュを通らず、そのまま取得します。
 
-## Paginator decision
+ユーザーや絵文字を変更する API を呼んだあとは、関係するクエリを無効にします。ユーザーの更新と絵文字の追加・更新・削除のストリーミングのイベントは、`streaming.ts` がキャッシュ上のデータに直接反映します。
 
-Keep the existing `Paginator` for now. Replacing it wholesale with `useInfiniteQuery` has a negative cost/benefit ratio at the current boundary:
+## Paginator は置き換えない
 
-- There are 110 production `Paginator` constructions across 61 files.
-- It supports newer and older cursor directions, date and ID cursors, offset mode, bounded item trimming, queued items, live stream insertion, ad markers, partial-result handling, and manual entity updates.
-- `useInfiniteQuery` covers page caching and bidirectional page parameters, but the queue, trimming, live insertion, item mutation, and current `IPaginator` component contract would still require a substantial adapter.
-- Migrating now would temporarily create two timeline cache authorities: TanStack pages and the existing stream-driven item list.
+一覧とタイムラインの取得には、`utility/paginator.ts` の `Paginator` を使い続けます。`useInfiniteQuery` への全面的な置き換えは、いまの境界では費用に見合わないためです。
 
-Reconsider migration when a tested adapter can preserve `IPaginator`, streaming updates can write directly to infinite-query pages, and at least the timeline and list component suites cover cursor direction, trimming, queue release, and reconnect behavior. Until then, use TanStack Query for entity/detail queries and bounded shared lists, and retain `Paginator` for stream-oriented collections.
+- 多くの画面が `Paginator` を直接使っていて、コンポーネント側の契約(`IPaginator`)に依存しています。
+- 新しい方向と古い方向のカーソル、日時と ID のカーソル、オフセット方式、件数の上限での切り詰め、待ち行列、ストリーミングでの挿入、広告の挿入位置、部分的な結果、個別のエンティティの更新に対応しています。
+- `useInfiniteQuery` が担うのは、ページのキャッシュと、双方向のページ指定までです。待ち行列、切り詰め、ストリーミングでの挿入、要素の更新、`IPaginator` の契約を保つには、大きな変換の層が要ります。
+- いま置き換えると、TanStack のページと、ストリーミングで更新する既存の一覧の、2 つの権威が同じタイムラインに並びます。
 
-The retained paginator uses shallow collection reactivity, linear cursor and duplicate detection, immutable single-notification array updates, and abortable/coalesced page requests. These optimizations keep its stream-oriented behavior without introducing a second infinite-list cache authority.
+`Paginator` は、コレクションの浅いリアクティビティ(`shallowRef`)を使い、リクエストごとに `AbortController` で中断できます。
+
+置き換えを再検討するのは、次の条件がそろったときです。
+
+- `IPaginator` を保つ変換の層が、テストつきで用意できている。
+- ストリーミングのイベントを、無限クエリのページに直接書き込める。
+- タイムラインとリストのコンポーネントのテストが、カーソルの向き、切り詰め、待ち行列の解放、再接続を網羅している。
+
+それまでは、エンティティの詳細と、件数に上限のある共有の一覧には TanStack Query を使い、ストリーミングで更新するコレクションには `Paginator` を使います。

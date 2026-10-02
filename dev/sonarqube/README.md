@@ -1,18 +1,20 @@
-# SonarQube (SonarJS) ローカル解析
+# SonarQube のローカル解析
 
-oxlint では拾えない種類の問題 — 認知的複雑度、重複コード、コピペ関数、到達不能な分岐、
-セキュリティ hotspot — を SonarJS で検出するためのローカル環境。CI には組み込んでいない。
+oxlint では見つけにくい種類の問題を、SonarJS で調べるためのローカル環境です。見つけるのは、認知的複雑度、重複したコード、コピー&ペーストされた関数、到達できない分岐、セキュリティ上の hotspot です。CI には組み込んでいません。
 
-解析対象の定義はリポジトリルートの [`sonar-project.properties`](../../sonar-project.properties)。
+解析の対象は、リポジトリのルートにある [`sonar-project.properties`](../../sonar-project.properties) で定義しています。
 
 ## 前提
 
-- Docker / Docker Compose
-- 空きメモリ 3GB 程度 (Elasticsearch + Web + Compute Engine の常駐分)
-- `vm.max_map_count >= 524288` (このVPSは 1048576 で設定済み)
+- Docker と Docker Compose
+- 空きメモリ 3GB ほど(Elasticsearch、Web、Compute Engine が常駐します)
+- ホストの `vm.max_map_count` が 524288 以上(Elasticsearch の要件です)
 
-サーバーは `127.0.0.1:9000` にのみバインドしている。Docker の `-p` は ufw を素通りするため、
-外部公開したい場合でもポートを開けず Tailscale か SSH ポートフォワードを使うこと。
+SonarQube は `127.0.0.1:9000` にだけ待ち受けます。Docker の `-p` は、ufw などのホストのファイアウォールの設定を通りません。外部に公開したいときも、ポートは開けず、Tailscale か SSH のポートフォワードを使ってください。
+
+```sh
+ssh -L 9000:127.0.0.1:9000 <サーバー>
+```
 
 ## 起動
 
@@ -20,7 +22,7 @@ oxlint では拾えない種類の問題 — 認知的複雑度、重複コー�
 docker compose -f dev/sonarqube/compose.yml up -d
 ```
 
-初回起動は 2 分ほどかかる。`{"status":"UP"}` になるまで待つ。
+初回の起動には 2 分ほどかかります。次のコマンドは、`{"status":"UP"}` になるまで待ちます。
 
 ```sh
 until curl -sf http://127.0.0.1:9000/api/system/status | grep -q '"status":"UP"'; do sleep 5; done
@@ -28,57 +30,50 @@ until curl -sf http://127.0.0.1:9000/api/system/status | grep -q '"status":"UP"'
 
 ## 認証情報
 
-`dev/sonarqube/.env` (mode 600 / gitignore 済) に置く。初回のみ以下で初期化する。
+認証情報は `dev/sonarqube/.env` に置きます。ファイルの権限は 600 にします。`.gitignore` に入っているので、コミットされません。初回に、次の手順で用意します。
 
 ```sh
-# 1. 初期パスワード admin/admin を変更 (SonarQube は大小英字・数字・記号を要求する)
+# 1. 初期パスワード(admin/admin)を変更する。SonarQube は、大文字・小文字・数字・記号を要求する
 curl -sf -u admin:admin -X POST http://127.0.0.1:9000/api/users/change_password \
   --data-urlencode login=admin \
   --data-urlencode previousPassword=admin \
   --data-urlencode "password=$NEW_PASSWORD"
 
-# 2. スキャナ用トークンを発行
+# 2. スキャナ用のトークンを発行する
 curl -sf -u "admin:$NEW_PASSWORD" -X POST http://127.0.0.1:9000/api/user_tokens/generate \
   --data-urlencode name=misskey-local-scanner
 ```
 
-生成された値を `.env` に `SONARQUBE_ADMIN_PASSWORD` / `SONAR_TOKEN` として保存する。
+出力された値を、`.env` に `SONARQUBE_ADMIN_PASSWORD` と `SONAR_TOKEN` として保存します。
 
-## 解析
+## 解析する
 
 ```sh
 bun run lint:sonar
 ```
 
-実体はリポジトリルートの [`scripts/sonar-scan.sh`](../../scripts/sonar-scan.sh)。
-sonar-scanner-cli をコンテナで走らせるので、ホストに Java や scanner を入れる必要はない。
+実体は [`scripts/sonar-scan.sh`](../../scripts/sonar-scan.sh) です。sonar-scanner-cli をコンテナで実行するので、ホストに Java やスキャナを入れる必要はありません。SonarQube が起動していなければ、自動で起動して待ちます。
 
-結果は http://127.0.0.1:9000/dashboard?id=misskey で確認する。
+結果は http://127.0.0.1:9000/dashboard?id=misskey で見られます。
 
-## 有効ルールの調整
+## 有効にするルールの調整
 
-このリポジトリでノイズ・誤検出になるルールは [`rule-overrides.json`](rule-overrides.json) に理由付きで
-列挙してある。`Sonar way` を複製した `Misskey way` プロファイルからそれらだけを落とす方式なので、
-**現状 0 件のルールは有効なまま残り、将来の退行を検出できる**。
+このリポジトリでノイズや誤検出になるルールは、理由を付けて [`rule-overrides.json`](rule-overrides.json) に並べてあります。`Sonar way` を複製した `Misskey way` のプロファイルから、そこに挙げたルールだけを外す方式です。いまは 0 件のルールも有効のまま残るので、将来の退行を検出できます。
 
-JSON を編集したら反映する。
+JSON を編集したら、次のコマンドで SonarQube に反映して、再度スキャンします。
 
 ```sh
-bun run lint:sonar:profile   # プロファイルへ適用 (サーバー側の状態を書き換える)
-bun run lint:sonar           # 再スキャン
+bun run lint:sonar:profile  # プロファイルへ適用する。サーバー側の状態を書き換える
+bun run lint:sonar          # 再スキャン
 ```
 
-無効化するほどではないが特定のファイル種別でだけ誤検出するものは、プロファイルではなく
-`sonar-project.properties` の `sonar.issue.ignore.multicriteria` で絞る。
-リモートから見る場合は SSH ポートフォワードを使う。
+無効にするほどではなくても、特定の種類のファイルでだけ誤検出するルールは、`sonar-project.properties` の `sonar.issue.ignore.multicriteria` で絞ります。プロファイルからは外しません。
+
+## 停止と破棄
 
 ```sh
-ssh -L 9000:127.0.0.1:9000 <this-vps>
+docker compose -f dev/sonarqube/compose.yml stop     # 常駐しているメモリを解放する
+docker compose -f dev/sonarqube/compose.yml down -v  # 解析の履歴ごと破棄する
 ```
 
-## 停止 / 破棄
-
-```sh
-docker compose -f dev/sonarqube/compose.yml stop          # 常駐メモリを解放
-docker compose -f dev/sonarqube/compose.yml down -v       # 解析履歴ごと破棄
-```
+再起動後は、自動では復帰しません。
