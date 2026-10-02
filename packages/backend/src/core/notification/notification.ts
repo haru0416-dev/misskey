@@ -15,7 +15,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
 import { packRole } from '../role/role-packing.js';

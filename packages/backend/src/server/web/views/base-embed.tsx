@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { comment } from '@/server/web/views/_.js';
-import type { CommonProps } from '@/server/web/views/_.js';
+import { comment } from '@/server/web/views/common.js';
+import type { CommonProps } from '@/server/web/views/common.js';
 import { Splash } from '@/server/web/views/_splash.js';
 import { BootConstantsScript, CommonHeadMeta, JsonDataScript, NoScriptNotice } from '@/server/web/views/_head.js';
 import type { PropsWithChildren, Children } from '@kitajs/html';

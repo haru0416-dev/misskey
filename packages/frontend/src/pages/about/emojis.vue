@@ -36,7 +36,7 @@ import XEmoji from '../emojis/emoji.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
-import { customEmojis, customEmojiCategories, customEmojisByCategory } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojis, customEmojiCategories, customEmojisByCategory } from '@/features/custom-emoji/custom-emojis.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 

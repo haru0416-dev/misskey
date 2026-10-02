@@ -80,7 +80,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import MkSwitch from '@/components/form/MkSwitch.vue';
-import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/role/components/MkRolePreview.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import { ensureSignin } from '@/i.js';
 import { useRoleRestriction } from '@/composables/useRoleRestriction.js';

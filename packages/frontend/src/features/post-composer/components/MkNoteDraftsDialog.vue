@@ -164,7 +164,7 @@ import * as Misskey from 'misskey-js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
-import { getNoteSummary } from '@/features/notes/get-note-summary.js';
+import { getNoteSummary } from '@/features/note/get-note-summary.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';

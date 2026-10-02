@@ -22,7 +22,7 @@ Composition API と `<script setup lang="ts">` を使う。属性順は問わな
 
 条件変更・再読込・unmount のどこで所有権が終わるかを決める。AbortSignal を受ける既存 API には signal を渡し、古い応答が新しい state を上書きしないようにする。取消と実際の取得失敗は別に扱う。Paginator の reload 時の取消を、unmount 時の解放まで保証するものと解釈しない。
 
-stream 接続、イベント購読、timer、observer、animation frame は所有者が解除する。既存 composable の自動解放範囲を確認して再利用し、手動登録には対応する解除を持たせる。[MkStreamingNotesTimeline.vue](../../../../../packages/frontend/src/features/notes/components/MkStreamingNotesTimeline.vue) では Paginator と接続を別に管理し、条件変更時に接続し直し、unmount 時に接続や描画用資源を解放する。共有接続の利用者が別利用者の接続全体を閉じないようにする。
+stream 接続、イベント購読、timer、observer、animation frame は所有者が解除する。既存 composable の自動解放範囲を確認して再利用し、手動登録には対応する解除を持たせる。[MkStreamingNotesTimeline.vue](../../../../../packages/frontend/src/features/note/components/MkStreamingNotesTimeline.vue) では Paginator と接続を別に管理し、条件変更時に接続し直し、unmount 時に接続や描画用資源を解放する。共有接続の利用者が別利用者の接続全体を閉じないようにする。
 
 ## 操作性
 

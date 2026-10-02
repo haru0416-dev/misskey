@@ -56,7 +56,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { packClipsMany } from '../clip/clips.js';

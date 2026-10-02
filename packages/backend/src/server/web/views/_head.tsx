@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { CommonData, ViteFiles } from '@/server/web/views/_.js';
+import type { CommonData, ViteFiles } from '@/server/web/views/common.js';
 
 // 通常画面と埋め込み画面で同一の head 要素。アイコンの既定値の扱い (|| と ??) は両者で異なるため含めない。
 export function CommonHeadMeta(props: Pick<CommonData, 'themeColor' | 'instanceName' | 'instanceUrl'>) {

@@ -22,7 +22,7 @@ import { getIpHash } from '@/misc/get-ip-hash.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';

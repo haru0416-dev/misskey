@@ -10,7 +10,7 @@ import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import type { RolePolicies } from '@/core/role/role-policies.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { MiMeta, MiRole } from '@/models/_.js';
+import type { MiMeta, MiRole } from '@/models/entities.js';
 import type { RoleCondFormulaValue } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';

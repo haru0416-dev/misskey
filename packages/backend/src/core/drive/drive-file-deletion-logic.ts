@@ -16,7 +16,7 @@ import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';

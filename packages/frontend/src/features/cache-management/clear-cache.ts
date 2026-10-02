@@ -6,7 +6,7 @@
 import { unisonReload } from '@/utility/unison-reload.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import * as os from '@/os.js';
-import { fetchCustomEmojis } from '@/features/custom-emojis/custom-emojis.js';
+import { fetchCustomEmojis } from '@/features/custom-emoji/custom-emojis.js';
 import { clearInstanceCache, fetchInstance } from '@/instance.js';
 import { clearAppliedThemeCache } from '@/theme.js';
 

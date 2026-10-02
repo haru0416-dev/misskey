@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { MiDriveFile } from '@/models/_.js';
+import type { MiDriveFile } from '@/models/entities.js';
 import { createTemp } from '@/misc/create-temp.js';
 import type { DownloadService } from '@/core/net/download-service.js';
 import type { FileInfoService } from '@/core/drive/file-info-service.js';

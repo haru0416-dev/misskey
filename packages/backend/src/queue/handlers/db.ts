@@ -75,7 +75,7 @@ import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import * as Acct from '@/misc/acct.js';
 import type { NoteFavoriteRow } from '@/db/schema/note-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiBlocking, MiClip, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/_.js';
+import type { MiBlocking, MiClip, MiFollowing, MiMuting, MiNote, MiUser } from '@/models/entities.js';
 import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';

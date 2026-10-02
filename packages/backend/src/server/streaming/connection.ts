@@ -21,7 +21,7 @@ import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
-import type { MiFollowing, MiUserProfile } from '@/models/_.js';
+import type { MiFollowing, MiUserProfile } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import type {
 	StreamChannelContext,

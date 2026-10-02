@@ -63,7 +63,7 @@ import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkInput from '@/components/form/MkInput.vue';
-import MkNotesTimeline from '@/features/notes/components/MkNotesTimeline.vue';
+import MkNotesTimeline from '@/features/note/components/MkNotesTimeline.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import { Paginator } from '@/utility/paginator.js';
 import { parseHashtagQuery } from '@/features/search/hashtag-query.js';

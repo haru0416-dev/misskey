@@ -57,7 +57,7 @@ import MkSelect from '@/components/form/MkSelect.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import MkInviteCode from '@/features/invitations/components/MkInviteCode.vue';
+import MkInviteCode from '@/features/invitation/components/MkInviteCode.vue';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { Paginator } from '@/utility/paginator.js';

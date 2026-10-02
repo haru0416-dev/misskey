@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { MiUser } from '@/models/_.js';
+import type { MiUser } from '@/models/entities.js';
 
 interface NoteLike {
 	userId: MiUser['id'];

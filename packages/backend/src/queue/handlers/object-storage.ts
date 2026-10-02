@@ -13,7 +13,7 @@ import type { InternalStorageService } from '@/core/drive/internal-storage-servi
 import type { S3Service } from '@/core/drive/s3-service.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import type { ChartWriters } from '../../core/chart/chart-runtime.js';
 

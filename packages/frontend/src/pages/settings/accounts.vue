@@ -24,7 +24,7 @@ import * as os from '@/os.js';
 import { switchAccount, removeAccount, login, getAccountWithSigninDialog, getAccountWithSignupDialog, getAccounts } from '@/accounts.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 
 const accounts = await getAccounts();
 

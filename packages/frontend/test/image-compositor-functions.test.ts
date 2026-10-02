@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { fn as blockNoise } from '@/features/image-editor/effects/blockNoise.js';
+import { fn as blockNoise } from '@/features/image-editor/effects/block-noise.js';
 import { fn as tearing } from '@/features/image-editor/effects/tearing.js';
 
 describe('image compositor functions', () => {

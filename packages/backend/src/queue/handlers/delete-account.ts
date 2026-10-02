@@ -14,7 +14,7 @@ import type { Config } from '@/config.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import type { MiMeta, MiUser } from '@/models/_.js';
+import type { MiMeta, MiUser } from '@/models/entities.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/core/queue/types.js';
 import { deletePage } from '@/server/rest/page/pages.js';

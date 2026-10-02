@@ -15,9 +15,9 @@ import { onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { toChartSeries } from '@/features/charts/chart-helpers.js';
-import MkDataChart from '@/features/charts/components/MkDataChart.vue';
-import type { DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
+import { toChartSeries } from '@/features/chart/chart-helpers.js';
+import MkDataChart from '@/features/chart/components/MkDataChart.vue';
+import type { DataChartSeries } from '@/features/chart/components/MkDataChart.vue';
 
 const props = defineProps<{ user: Misskey.entities.User }>();
 const series = ref<DataChartSeries[]>([]);

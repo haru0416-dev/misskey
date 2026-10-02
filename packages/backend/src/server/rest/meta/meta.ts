@@ -16,7 +16,7 @@ import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { buildAdminUpdateMetaPatch } from '@/server/rest/admin/admin-update-meta-logic.js';
 import type { adminUpdateMetaParamDef } from '@/server/rest/admin/admin-update-meta-logic.js';

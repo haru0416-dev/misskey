@@ -47,7 +47,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useUserWebhookEventToggles } from '@/features/webhooks/user-webhook-events.js';
+import { useUserWebhookEventToggles } from '@/features/webhook/user-webhook-events.js';
 
 const name = ref('');
 const url = ref('');

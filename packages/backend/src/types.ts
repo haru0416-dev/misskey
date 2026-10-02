@@ -14,7 +14,7 @@ import type {
 	MiNote,
 	MiPage,
 	MiRole,
-} from '@/models/_.js';
+} from '@/models/entities.js';
 import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';

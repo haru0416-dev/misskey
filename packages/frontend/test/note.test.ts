@@ -11,7 +11,7 @@ import type * as Misskey from 'misskey-js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
-import { requireReactionCount } from '@/features/notes/components/MkReactionsViewer.vue';
+import { requireReactionCount } from '@/features/note/components/MkReactionsViewer.vue';
 
 describe('MkMediaImage', () => {
 	const renderMediaImage = (image: Partial<Misskey.entities.DriveFile>): RenderResult => {

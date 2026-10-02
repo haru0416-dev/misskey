@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { inject, nextTick, onMounted, provide, ref, shallowRef, useTemplateRef } from 'vue';
 import type { Router } from '@/router.js';
 import { prefer } from '@/preferences.js';
-import MkLoadingPage from '@/pages/_loading_.vue';
+import MkLoadingPage from '@/pages/loading.vue';
 import { DI } from '@/di.js';
 import { randomId } from '@/utility/random-id.js';
 import { deepEqual } from '@/utility/deep-equal.js';

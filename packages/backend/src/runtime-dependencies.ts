@@ -6,7 +6,7 @@
 import * as Redis from 'ioredis';
 import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
 import type { Config } from '@/config.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { createBunSqlRuntime } from '@/db/bun-sql.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { allSettled } from '@/misc/promise-tracker.js';

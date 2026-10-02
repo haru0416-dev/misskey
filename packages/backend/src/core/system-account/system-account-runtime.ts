@@ -8,7 +8,7 @@ import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import {
 	createOrFetchSystemAccountInDatabase,
 	fetchSystemAccountUserFromDatabase,

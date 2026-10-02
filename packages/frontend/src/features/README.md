@@ -14,13 +14,13 @@
 
 | 分野 | 機能 |
 | --- | --- |
-| アカウント | `auth`、`onboarding`、`users`、`roles`、`invitations` |
-| コンテンツ | `notes`、`post-composer`、`media-viewer`、`link-preview`、`page-content`、`code`、`autocomplete` |
-| 発見 | `search`、`channels`、`antennas`、`clips`、`gallery`、`flash` |
-| コミュニケーション | `chat`、`notifications`、`announcements`、`sound` |
-| 絵文字と画像 | `custom-emojis`、`emoji-picker`、`image-editor`、`drive` |
-| 管理 | `abuse-reports`、`instances`、`charts`、`webhooks`、`server-setup`、`admin-tools` |
-| 拡張とプロジェクト | `extensions`、`themes`、`support` |
+| アカウント | `auth`、`onboarding`、`user`、`role`、`invitation` |
+| コンテンツ | `note`、`post-composer`、`media-viewer`、`link-preview`、`page-content`、`code`、`autocomplete` |
+| 発見 | `search`、`channel`、`antenna`、`clip`、`gallery`、`flash` |
+| コミュニケーション | `chat`、`notification`、`announcement`、`sound` |
+| 絵文字と画像 | `custom-emoji`、`emoji-picker`、`image-editor`、`drive` |
+| 管理 | `abuse-report`、`instance`、`chart`、`webhook`、`server-setup`、`admin-tool` |
+| 拡張とプロジェクト | `extension`、`theme`、`support` |
 | アプリの UI | `dynamic-form`、`ui-preview`、`cache-management` |
 
 機能を足したり消したりしたときは、この表も更新します。

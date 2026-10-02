@@ -8,12 +8,28 @@
 | --- | --- | --- |
 | `packages/backend/src` の `core/` `server/` `queue/` `db/` `misc/` | kebab-case | `user-store.ts`、`file-info-service.ts` |
 | `packages/backend/src/models/` | PascalCase。エンティティ型の `Mi` を除いた名前 | `User.ts`(`MiUser`) |
-| `packages/backend/test` | 対象のファイル名に合わせる | `test/unit/core/user-store.ts` |
+| `packages/backend/test` | 対象のファイル名に `.test.ts` を付ける | `test/unit/core/user-store.test.ts` |
 | `packages/frontend` の Vue コンポーネント(`components/`) | PascalCase | `MkButton.vue` |
 | `packages/frontend` の画面(`pages/`)と、コンポーネントでない `.ts` | kebab-case | `about-toneriko.vue`、`get-note-menu.ts` |
 | composable | camelCase で `use` から始める | `useTooltip.ts` |
 
 `core/` のファイル名は、役割を表す語尾で終える。DB を読み書きする関数は `-store`、依存を受けて関数群を返す factory は `-service`、状態を持たない処理は `-logic` とする。クラスや `Error` のサブクラスを含んでいても、関数を中心とするファイルなら kebab-case にする。クラスをエンティティとして定義する `models/` だけが PascalCase。
+
+### フォルダ名
+
+小文字で書き、複数の語はハイフンでつなぐ(`avatar-decoration`)。大文字とアンダースコアは使わない。例外は、TypeScript の型の置き場の `@types` と、先頭が数字の `2fa` だけ。
+
+領域(1 つの機能やエンティティ)を表すフォルダは、単数形にする。backend の `core/note`、`server/rest/clip`、frontend の `features/note`、`features/custom-emoji` がこれにあたる。同じ種類のファイルを集めたフォルダは、複数形にする(`components/`、`composables/`、`types/`、`contracts/`、`handlers/`)。
+
+`frontend/src/pages/` は、一覧の画面を複数形、1 件の画面を単数形にして区別する(`channels.vue` と `channel.vue`、`my-clips/` と `clip.vue`)。
+
+### 特別な名前
+
+- `index.ts` と `index.vue` は、パッケージの入口と、`pages/` で、そのディレクトリのルートの画面を表す場合だけに使う。理由は [CONTRIBUTING.md](../../../../../CONTRIBUTING.md) の「indexというファイル名は、入口にだけ使う」にある。バレルのファイルには、中身を表す名前を付ける(`models/entities.ts`)。
+- 先頭が `_` のファイルは、Sass の partial(`_avatar.scss`)と、`server/web/views/` の部分テンプレート(`_head.tsx`)に限る。名前の前後を `_` で囲まない。
+- テストのファイルは、`.test.ts` で終える。backend の `test/unit/` と `test/e2e/` では、vitest の `include` が `*.test.ts` を探すので、テストでないファイルはここに置かない。
+- コンポーネントに付ける補助のファイルは、コンポーネント名の PascalCase に拡張子を足す(`MkButton.stories.impl.ts`、`MkSortOrderEditor.define.ts`)。
+- `scripts/` と `packages/*/scripts/` のファイルは kebab-case にする(`run-unit.js`)。
 
 ## 識別子の形式
 

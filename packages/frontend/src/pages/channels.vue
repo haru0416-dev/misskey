@@ -63,8 +63,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, markRaw, onMounted, ref, shallowRef } from 'vue';
-import MkChannelPreview from '@/features/channels/components/MkChannelPreview.vue';
-import MkChannelList from '@/features/channels/components/MkChannelList.vue';
+import MkChannelPreview from '@/features/channel/components/MkChannelPreview.vue';
+import MkChannelList from '@/features/channel/components/MkChannelList.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkRadios from '@/components/form/MkRadios.vue';

@@ -58,7 +58,7 @@ import type { MenuItem } from '@/types/menu.js';
 import XSigninDialog from '@/features/auth/components/MkSigninDialog.vue';
 import XSignupDialog from '@/features/auth/components/MkSignupDialog.vue';
 import MkButton from '@/components/form/MkButton.vue';
-import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -66,7 +66,7 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import MkNumber from '@/components/display/MkNumber.vue';
 import XActiveUsersChart from './MkVisitorDashboard.ActiveUsersChart.vue';
-import { openInstanceMenu } from '@/ui/_common_/common.js';
+import { openInstanceMenu } from '@/ui/common/common.js';
 
 const stats = ref<Misskey.entities.StatsResponse | null>(null);
 

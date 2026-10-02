@@ -931,7 +931,7 @@ import { globalEvents } from '@/events.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
 import { genId } from '@/utility/id.js';
-import { suggestReload } from '@/ui/_common_/reload-suggest.js';
+import { suggestReload } from '@/ui/common/reload-suggest.js';
 import { searchEngines } from '@/features/search/search-engine.js';
 
 const $i = ensureSignin();

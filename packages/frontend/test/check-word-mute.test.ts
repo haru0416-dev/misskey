@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { checkWordMute } from '@/features/notes/check-word-mute.js';
+import { checkWordMute } from '@/features/note/check-word-mute.js';
 
 function note(text: string) {
 	return { userId: 'other', text, cw: null } as any;

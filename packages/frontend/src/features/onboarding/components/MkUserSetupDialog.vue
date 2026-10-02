@@ -142,7 +142,7 @@ import XPrivacy from '@/features/onboarding/components/MkUserSetupDialog.Privacy
 import MkAnimBg from '@/components/display/MkAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import MkPushNotificationAllowButton from '@/features/notifications/components/MkPushNotificationAllowButton.vue';
+import MkPushNotificationAllowButton from '@/features/notification/components/MkPushNotificationAllowButton.vue';
 import { store } from '@/store.js';
 import * as os from '@/os.js';
 

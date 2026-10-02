@@ -29,7 +29,7 @@ import { definePage } from '@/page.js';
 const XOverview = defineAsyncComponent(() => import('@/pages/about/overview.vue'));
 const XEmojis = defineAsyncComponent(() => import('@/pages/about/emojis.vue'));
 const XFederation = defineAsyncComponent(() => import('@/pages/about/federation.vue'));
-const MkInstanceStats = defineAsyncComponent(() => import('@/features/instances/components/MkInstanceStats.vue'));
+const MkInstanceStats = defineAsyncComponent(() => import('@/features/instance/components/MkInstanceStats.vue'));
 
 const props = withDefaults(defineProps<{
 	initialTab?: string;

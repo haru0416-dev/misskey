@@ -16,7 +16,7 @@ import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 import type { OptionValue } from '@/types/option-value.js';
 import type { MkDialogReturnType } from '@/components/overlay/MkDialog.vue';
 import type { OverloadToUnion } from '@/types/overload-to-union.js';
-import type MkRoleSelectDialog_TypeReferenceOnly from '@/features/roles/components/MkRoleSelectDialog.vue';
+import type MkRoleSelectDialog_TypeReferenceOnly from '@/features/role/components/MkRoleSelectDialog.vue';
 import type MkEmojiPickerDialog_TypeReferenceOnly from '@/features/emoji-picker/components/MkEmojiPickerDialog.vue';
 import type MkPopupMenu_TypeReferenceOnly from '@/components/overlay/MkPopupMenu.vue';
 import type MkContextMenu_TypeReferenceOnly from '@/components/overlay/MkContextMenu.vue';
@@ -31,14 +31,14 @@ import MkToast from '@/components/overlay/MkToast.vue';
 import MkDialog from '@/components/overlay/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
-import { showMovedDialog } from '@/features/users/show-moved-dialog.js';
+import { showMovedDialog } from '@/features/user/show-moved-dialog.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
 
 const MkPasswordDialog = defineAsyncComponent(() => import('@/features/auth/components/MkPasswordDialog.vue'));
 const MkFormDialog = defineAsyncComponent(() => import('@/features/dynamic-form/components/MkFormDialog.vue'));
-const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/users/components/MkUserSelectDialog.vue'));
-const MkRoleSelectDialog = defineAsyncComponent(() => import('@/features/roles/components/MkRoleSelectDialog.vue'));
+const MkUserSelectDialog = defineAsyncComponent(() => import('@/features/user/components/MkUserSelectDialog.vue'));
+const MkRoleSelectDialog = defineAsyncComponent(() => import('@/features/role/components/MkRoleSelectDialog.vue'));
 const MkEmojiPickerDialog = defineAsyncComponent(
 	() => import('@/features/emoji-picker/components/MkEmojiPickerDialog.vue'),
 );

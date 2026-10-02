@@ -168,8 +168,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, watch, ref, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
-import type { ChartSrc } from '@/features/charts/components/MkChart.vue';
-import MkChart from '@/features/charts/components/MkChart.vue';
+import type { ChartSrc } from '@/features/chart/components/MkChart.vue';
+import MkChart from '@/features/chart/components/MkChart.vue';
 import MkObjectView from '@/components/display/MkObjectView.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
@@ -189,7 +189,7 @@ import { i18n } from '@/i18n.js';
 import { selectExpiry } from '@/utility/select-expiry.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { ensureSignin, iAmAdmin, iAmModerator } from '@/i.js';
-import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/role/components/MkRolePreview.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import { Paginator } from '@/utility/paginator.js';
 
@@ -472,7 +472,7 @@ function toggleRoleItem(role: (typeof info.value.roles)[number]) {
 
 async function createAnnouncement() {
 	const { dispose } = await os.popupAsyncWithDialog(
-		import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
+		import('@/features/announcement/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
 		{
 			user: user.value,
 		},
@@ -484,7 +484,7 @@ async function createAnnouncement() {
 
 async function editAnnouncement(announcement: Misskey.entities.AdminAnnouncementsListResponse[number]) {
 	const { dispose } = await os.popupAsyncWithDialog(
-		import('@/features/announcements/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
+		import('@/features/announcement/components/MkUserAnnouncementEditDialog.vue').then((x) => x.default),
 		{
 			user: user.value,
 			announcement,

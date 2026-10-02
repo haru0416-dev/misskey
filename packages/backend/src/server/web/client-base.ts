@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
-import type { CommonData } from './views/_.js';
+import type { CommonData } from './views/common.js';
 import { BasePage } from './views/base.js';
 import { createClientCommonDataLoader } from './client-common-data.js';
 

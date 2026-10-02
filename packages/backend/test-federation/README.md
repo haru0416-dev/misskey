@@ -135,7 +135,7 @@ upstream の既知のエラーは、機能として失敗した結果のまま�
 
 障害からの回復のテストは、送信側の遅延した deliver のジョブを `admin/queue/promote-jobs` で前倒しします。同じジョブが再試行されるので、再配送と冪等性を確かめたまま、バックオフの待ち時間だけを省けます。本番の再試行のスケジュールは変えません。そのため、回復のテストは 8 分、キューの完了待ちは 6 分を上限にします。
 
-fork の永続的な配送の失敗、dead-letter、アカウント削除の調整役は、`test/unit/queue/{deliver,queue-outbox,delete-account}.ts` が守ります。連合のテストでは代わりになりません。
+fork の永続的な配送の失敗、dead-letter、アカウント削除の調整役は、`test/unit/queue/{deliver,queue-outbox,delete-account}.test.ts` が守ります。連合のテストでは代わりになりません。
 
 ### 署名付きのリクエスト
 

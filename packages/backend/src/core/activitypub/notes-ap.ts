@@ -37,7 +37,7 @@ import type { Config } from '@/config.js';
 import { deepClone } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';

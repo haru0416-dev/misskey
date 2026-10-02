@@ -17,7 +17,7 @@ import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/syst
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiRelay } from '@/models/Relay.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { DeliverQueue } from '@/core/queue/queues.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';

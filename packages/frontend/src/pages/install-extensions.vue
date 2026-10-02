@@ -42,10 +42,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref, computed, nextTick } from 'vue';
-import type { Extension } from '@/features/extensions/components/MkExtensionInstaller.vue';
+import type { Extension } from '@/features/extension/components/MkExtensionInstaller.vue';
 import type { AiScriptPluginMeta } from '@/plugin.js';
 import MkLoading from '@/components/global/MkLoading.vue';
-import MkExtensionInstaller from '@/features/extensions/components/MkExtensionInstaller.vue';
+import MkExtensionInstaller from '@/features/extension/components/MkExtensionInstaller.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import MkUrl from '@/components/global/MkUrl.vue';

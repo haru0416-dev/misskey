@@ -23,7 +23,7 @@ import { markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkStickyContainer from '@/components/global/MkStickyContainer.vue';
-import MkAvatars from '@/features/users/components/MkAvatars.vue';
+import MkAvatars from '@/features/user/components/MkAvatars.vue';
 import { Paginator } from '@/utility/paginator.js';
 
 const props = defineProps<{

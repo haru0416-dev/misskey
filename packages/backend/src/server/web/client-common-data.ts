@@ -12,7 +12,7 @@ import { packMetaDetailed } from '@/core/meta/meta-entity-packer.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { MiMeta } from '@/models/Meta.js';
-import type { CommonData, ViteFiles } from './views/_.js';
+import type { CommonData, ViteFiles } from './views/common.js';
 
 export type ClientCommonDataDependencies = {
 	config: Config;

@@ -95,10 +95,10 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { customEmojiCategories } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojiCategories } from '@/features/custom-emoji/custom-emojis.js';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import { selectFile } from '@/features/drive/drive.js';
-import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/role/components/MkRolePreview.vue';
 import { useRoleRestriction } from '@/composables/useRoleRestriction.js';
 
 const props = defineProps<{

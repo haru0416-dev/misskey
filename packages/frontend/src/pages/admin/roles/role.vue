@@ -64,7 +64,7 @@ import { i18n } from '@/i18n.js';
 import { selectExpiry } from '@/utility/select-expiry.js';
 import { definePage } from '@/page.js';
 import MkButton from '@/components/form/MkButton.vue';
-import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import { useRouter } from '@/router.js';

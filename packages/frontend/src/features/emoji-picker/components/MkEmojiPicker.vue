@@ -134,9 +134,9 @@ import { isTouchUsing } from '@/utility/touch.js';
 import { deviceKind } from '@/utility/device-kind.js';
 import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
-import { customEmojiCategories, customEmojis, customEmojisByCategory, customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojiCategories, customEmojis, customEmojisByCategory, customEmojisMap } from '@/features/custom-emoji/custom-emojis.js';
 import { $i } from '@/i.js';
-import { checkReactionPermissions } from '@/features/notes/check-reaction-permissions.js';
+import { checkReactionPermissions } from '@/features/note/check-reaction-permissions.js';
 import { prefer } from '@/preferences.js';
 import { useRouter } from '@/router.js';
 

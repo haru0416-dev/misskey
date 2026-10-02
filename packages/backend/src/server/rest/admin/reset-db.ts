@@ -10,7 +10,7 @@ import { fetchMetaFromDatabase } from '@/core/meta/meta-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { resetDb } from '@/misc/reset-db.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { SignupInternalEventPublisher } from '../auth/signup.js';
 import { parseApiParams } from '../validation.js';
 

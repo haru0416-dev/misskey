@@ -11,7 +11,7 @@ import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/
 import { USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { localUsernameSchema } from '@/models/User.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { parseApiParams } from '../validation.js';
 
 export type AvailabilityDependencies = {

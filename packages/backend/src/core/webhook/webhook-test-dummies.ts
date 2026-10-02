@@ -4,7 +4,7 @@
  */
 
 import type { Packed } from '@/misc/json-schema.js';
-import type { MiUser } from '@/models/_.js';
+import type { MiUser } from '@/models/entities.js';
 
 const webhookTestDayMillis = 24 * 60 * 60 * 1000;
 

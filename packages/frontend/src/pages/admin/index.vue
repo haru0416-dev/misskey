@@ -41,7 +41,7 @@ import { instance } from '@/instance.js';
 import { lookup } from '@/features/search/lookup.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { lookupUser, lookupUserByEmail, lookupFile } from '@/features/admin-tools/admin-lookup.js';
+import { lookupUser, lookupUserByEmail, lookupFile } from '@/features/admin-tool/admin-lookup.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { useRouter } from '@/router.js';
 import { genSearchIndexes } from '@/features/search/inapp-search.js';

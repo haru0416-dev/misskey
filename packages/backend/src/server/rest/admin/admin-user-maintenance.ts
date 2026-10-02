@@ -19,7 +19,7 @@ import {
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { userIsAdministrator } from '../../../core/role/role-policy.js';

@@ -28,7 +28,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { InternalEventPublisher, MainStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';

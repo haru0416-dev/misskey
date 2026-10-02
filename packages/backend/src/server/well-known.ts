@@ -10,7 +10,7 @@ import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } fro
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import { escapeAttribute, escapeValue } from '@/misc/prelude/xml.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import { getNodeinfoLinks } from './nodeinfo-links.js';
 

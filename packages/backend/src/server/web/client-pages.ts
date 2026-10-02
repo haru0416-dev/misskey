@@ -36,7 +36,7 @@ import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { packPage } from '@/server/rest/page/pages.js';
 import type { PageDependencies } from '@/server/rest/page/pages.js';
 import { packUserDetailedNotMe } from '@/server/rest/user/user.js';
-import type { CommonData } from './views/_.js';
+import type { CommonData } from './views/common.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { ChannelPage } from './views/channel.js';
 import { BaseEmbed } from './views/base-embed.js';

@@ -30,7 +30,7 @@ import { i18n } from '@/i18n.js';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
-import MkNote from '@/features/notes/components/MkNote.vue';
+import MkNote from '@/features/note/components/MkNote.vue';
 import { $i } from '@/i.js';
 
 const emit = defineEmits<{

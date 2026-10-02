@@ -28,7 +28,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { generateInviteCode } from '@/misc/generate-invite-code.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';

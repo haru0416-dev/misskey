@@ -40,11 +40,11 @@ import { computed } from 'vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import MkInstanceCardMini from '@/features/instances/components/MkInstanceCardMini.vue';
+import MkInstanceCardMini from '@/features/instance/components/MkInstanceCardMini.vue';
 import FormSplit from '@/components/form/split.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useFederationInstanceSearch } from '@/features/instances/federation-instance-search.js';
+import { useFederationInstanceSearch } from '@/features/instance/federation-instance-search.js';
 
 const { host, state, stateDef, sort, sortDef, paginator } = useFederationInstanceSearch([
 	{ label: i18n.ts.all, value: 'all' },

@@ -4,10 +4,10 @@
  */
 
 import * as checker from '../effects/checker.js';
-import * as chromaticAberration from '../effects/chromaticAberration.js';
-import * as colorAdjust from '../effects/colorAdjust.js';
-import * as colorClamp from '../effects/colorClamp.js';
-import * as colorClampAdvanced from '../effects/colorClampAdvanced.js';
+import * as chromaticAberration from '../effects/chromatic-aberration.js';
+import * as colorAdjust from '../effects/color-adjust.js';
+import * as colorClamp from '../effects/color-clamp.js';
+import * as colorClampAdvanced from '../effects/color-clamp-advanced.js';
 import * as distort from '../effects/distort.js';
 import * as polkadot from '../effects/polkadot.js';
 import * as tearing from '../effects/tearing.js';
@@ -16,8 +16,8 @@ import * as invert from '../effects/invert.js';
 import * as mirror from '../effects/mirror.js';
 import * as stripe from '../effects/stripe.js';
 import * as threshold from '../effects/threshold.js';
-import * as zoomLines from '../effects/zoomLines.js';
-import * as blockNoise from '../effects/blockNoise.js';
+import * as zoomLines from '../effects/zoom-lines.js';
+import * as blockNoise from '../effects/block-noise.js';
 import * as fill from '../effects/fill.js';
 import * as blur from '../effects/blur.js';
 import * as pixelate from '../effects/pixelate.js';

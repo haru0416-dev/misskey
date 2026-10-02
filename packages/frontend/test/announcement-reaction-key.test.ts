@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { toStoredAnnouncementReaction } from '@/features/announcements/reaction-key.js';
+import { toStoredAnnouncementReaction } from '@/features/announcement/reaction-key.js';
 
 describe('toStoredAnnouncementReaction', () => {
 	test('ローカルのカスタム絵文字はホスト部を落とす', () => {

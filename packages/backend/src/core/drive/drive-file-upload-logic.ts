@@ -26,7 +26,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import type Logger from '@/logger.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 
 export type DriveFileUploadDependencies = {
 	config: Config;

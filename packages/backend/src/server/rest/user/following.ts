@@ -78,7 +78,7 @@ import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import { promiseLimit } from '@/misc/promise-limit.js';
 import { trackPromise, unrefDelay } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserWebhookDeliverJobData } from '@/core/queue/types.js';

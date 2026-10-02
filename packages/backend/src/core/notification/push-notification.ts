@@ -14,7 +14,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 
 // packages/sw/src/types.ts の pushNotificationDataMap と形式を揃える。

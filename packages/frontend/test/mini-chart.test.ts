@@ -16,7 +16,7 @@ vi.mock('@/theme.js', () => ({
 	},
 }));
 
-import MkMiniChart from '@/features/charts/components/MkMiniChart.vue';
+import MkMiniChart from '@/features/chart/components/MkMiniChart.vue';
 
 describe('MkMiniChart', () => {
 	afterEach(() => {

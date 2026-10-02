@@ -65,7 +65,7 @@ import { getEmojiName } from '@shared/utility/emojilist.js';
 import type { Ref } from 'vue';
 import type { CustomEmojiFolderTree } from '@shared/utility/emojilist.js';
 import { i18n } from '@/i18n.js';
-import { customEmojisByCategory } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojisByCategory } from '@/features/custom-emoji/custom-emojis.js';
 import MkEmojiPickerSection from '@/features/emoji-picker/components/MkEmojiPicker.Section.vue';
 
 const props = defineProps<{

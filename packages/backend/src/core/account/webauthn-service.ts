@@ -5,7 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import type { AttestationFormat } from '@simplewebauthn/server/helpers';
-import type { MiMeta, MiUser } from '@/models/_.js';
+import type { MiMeta, MiUser } from '@/models/entities.js';
 import type { Config } from '@/config.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

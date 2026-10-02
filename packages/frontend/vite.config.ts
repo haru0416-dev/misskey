@@ -180,7 +180,7 @@ export function getConfig(): UserConfig {
 				},
 				input: {
 					i18n: './src/i18n.ts',
-					entry: './src/_boot_.ts',
+					entry: './src/boot/entry.ts',
 				},
 				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',

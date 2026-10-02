@@ -43,12 +43,12 @@ import { computed, defineAsyncComponent, inject, ref } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import { useCustomEmojiUrl } from '@shared/utility/use-custom-emoji-url.js';
 import { getProxiedImageUrl, getStaticImageUrl } from '@/utility/media-proxy.js';
-import { customEmojisMap } from '@/features/custom-emojis/custom-emojis.js';
+import { customEmojisMap } from '@/features/custom-emoji/custom-emojis.js';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
-import MkCustomEmojiDetailedDialog from '@/features/custom-emojis/components/MkCustomEmojiDetailedDialog.vue';
+import MkCustomEmojiDetailedDialog from '@/features/custom-emoji/components/MkCustomEmojiDetailedDialog.vue';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
@@ -57,7 +57,7 @@ import {
 	mute as muteEmoji,
 	unmute as unmuteEmoji,
 	checkMuted as checkEmojiMuted,
-} from '@/features/custom-emojis/emoji-mute.js';
+} from '@/features/custom-emoji/emoji-mute.js';
 import { addToEmojiPalette } from '@/features/emoji-picker/emoji-palette.js';
 
 const props = defineProps<{

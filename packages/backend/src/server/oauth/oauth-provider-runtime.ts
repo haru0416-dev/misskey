@@ -22,7 +22,7 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { verifyS256CodeChallenge } from '@/misc/pkce.js';
 import { StatusError } from '@/misc/status-error.js';
 import type Logger from '@/logger.js';
-import type { CommonData } from '@/server/web/views/_.js';
+import type { CommonData } from '@/server/web/views/common.js';
 import { OAuthPage } from '@/server/web/views/oauth.js';
 import {
 	AccessDeniedError,

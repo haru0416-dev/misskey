@@ -18,7 +18,7 @@ export default mergeConfig(
 	defineConfig({
 		test: {
 			fileParallelism: false,
-			include: ['./test/e2e/**/*.ts'],
+			include: ['./test/e2e/**/*.test.ts'],
 			globalSetup: './test/target.ts',
 			setupFiles: ['./test/setup.e2e.ts'],
 			sequence: {

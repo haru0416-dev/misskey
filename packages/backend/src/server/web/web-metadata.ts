@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 
 export type WebMetadataDependencies = {
 	config: Config;

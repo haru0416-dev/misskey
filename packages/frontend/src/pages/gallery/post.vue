@@ -66,7 +66,7 @@ import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
-import { getOthersContentMenuItems } from '@/features/abuse-reports/get-others-content-menu.js';
+import { getOthersContentMenuItems } from '@/features/abuse-report/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';

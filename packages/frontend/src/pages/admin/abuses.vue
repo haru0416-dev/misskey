@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, markRaw } from 'vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import XAbuseReport from '@/features/abuse-reports/components/MkAbuseReport.vue';
+import XAbuseReport from '@/features/abuse-report/components/MkAbuseReport.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';

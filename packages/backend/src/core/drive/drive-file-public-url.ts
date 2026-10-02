@@ -5,7 +5,7 @@
 
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 
 export function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'): string {

@@ -21,7 +21,7 @@ import type { notificationTypes as notificationTypes_typeReferenceOnly } from 'm
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
-import MkStreamingNotificationsTimeline from '@/features/notifications/components/MkStreamingNotificationsTimeline.vue';
+import MkStreamingNotificationsTimeline from '@/features/notification/components/MkStreamingNotificationsTimeline.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 
@@ -57,7 +57,7 @@ const { widgetProps, configure, save } = useWidgetPropsManager(name,
 );
 
 const configureNotification = async () => {
-	const { dispose } = await os.popupAsyncWithDialog(import('@/features/notifications/components/MkNotificationSelectWindow.vue').then(x => x.default), {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/features/notification/components/MkNotificationSelectWindow.vue').then(x => x.default), {
 		excludeTypes: widgetProps.excludeTypes,
 	}, {
 		done: async (res) => {

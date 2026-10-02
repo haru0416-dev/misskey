@@ -152,10 +152,10 @@ import { ensureSignin } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
-import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/role/components/MkRolePreview.vue';
 import { signout } from '@/signout.js';
 import { hideAllTips as _hideAllTips, resetAllTips as _resetAllTips } from '@/tips.js';
-import { suggestReload } from '@/ui/_common_/reload-suggest.js';
+import { suggestReload } from '@/ui/common/reload-suggest.js';
 import { cloudBackup } from '@/preferences/utility.js';
 
 const $i = ensureSignin();

@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render } from '@testing-library/vue';
 import { computed } from 'vue';
 import './init';
 
-vi.mock('@/features/custom-emojis/custom-emojis.js', () => ({
+vi.mock('@/features/custom-emoji/custom-emojis.js', () => ({
 	customEmojisByCategory: computed(() => ({
 		byCategory: new Map([['x/sub', [{ name: 'c' }, { name: 'd' }]]]),
 		uncategorized: [],

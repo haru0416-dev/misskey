@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 vi.mock('@/os.js', () => ({ post: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: vi.fn() }));
 vi.mock('@/i.js', () => ({ $i: { id: 'account-a' } }));
-vi.mock('@/features/users/get-account-from-id.js', () => ({ getAccountFromId: vi.fn() }));
+vi.mock('@/features/user/get-account-from-id.js', () => ({ getAccountFromId: vi.fn() }));
 vi.mock('@/accounts.js', () => ({ login: vi.fn() }));
 vi.mock('@/router.js', () => ({
 	mainRouter: {
@@ -26,7 +26,7 @@ describe('swInject', () => {
 	test('registers the service worker listener only once', async () => {
 		const addEventListener = vi.fn();
 		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
-		const { swInject } = await import('@/ui/_common_/sw-inject.js');
+		const { swInject } = await import('@/ui/common/sw-inject.js');
 
 		swInject();
 		swInject();
@@ -40,7 +40,7 @@ describe('swInject', () => {
 			listener = callback;
 		});
 		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
-		const { swInject } = await import('@/ui/_common_/sw-inject.js');
+		const { swInject } = await import('@/ui/common/sw-inject.js');
 		const postMessage = vi.fn();
 
 		swInject();
@@ -55,9 +55,9 @@ describe('swInject', () => {
 			listener = callback;
 		});
 		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
-		const { getAccountFromId } = await import('@/features/users/get-account-from-id.js');
+		const { getAccountFromId } = await import('@/features/user/get-account-from-id.js');
 		const { login } = await import('@/accounts.js');
-		const { swInject } = await import('@/ui/_common_/sw-inject.js');
+		const { swInject } = await import('@/ui/common/sw-inject.js');
 
 		swInject();
 		await listener?.({
@@ -74,9 +74,9 @@ describe('swInject', () => {
 			listener = callback;
 		});
 		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
-		const { getAccountFromId } = await import('@/features/users/get-account-from-id.js');
+		const { getAccountFromId } = await import('@/features/user/get-account-from-id.js');
 		const { login } = await import('@/accounts.js');
-		const { swInject } = await import('@/ui/_common_/sw-inject.js');
+		const { swInject } = await import('@/ui/common/sw-inject.js');
 
 		swInject();
 		await listener?.({

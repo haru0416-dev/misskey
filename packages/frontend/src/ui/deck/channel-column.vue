@@ -26,7 +26,7 @@ import type { Column } from '@/deck.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { SoundStore } from '@/preferences/def.js';
 import { updateColumn } from '@/deck.js';
-import MkStreamingNotesTimeline from '@/features/notes/components/MkStreamingNotesTimeline.vue';
+import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { favoritedChannelsCache } from '@/cache.js';

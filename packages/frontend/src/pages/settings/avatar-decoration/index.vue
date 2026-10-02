@@ -59,7 +59,7 @@ import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { definePage } from '@/page.js';
-import { groupAvatarDecorations } from '@/features/users/group-avatar-decorations.js';
+import { groupAvatarDecorations } from '@/features/user/group-avatar-decorations.js';
 
 const $i = ensureSignin();
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { getFollowRelationBadge } from '@/features/users/follow-relation.js';
+import { getFollowRelationBadge } from '@/features/user/follow-relation.js';
 
 const me = { id: 'me' };
 

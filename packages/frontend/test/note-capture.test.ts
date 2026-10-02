@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe('useNoteCapture', () => {
 	test('クリック時に始めた購読も、アンマウントで解除する', async () => {
-		const { useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		const { useNoteCapture } = await import('@/features/note/useNoteCapture.js');
 		// 5 分より前の投稿は自動では購読しない。
 		const note = {
 			id: 'old-note',
@@ -66,7 +66,7 @@ describe('useNoteCapture', () => {
 	});
 
 	test('未接続の間に始めた購読は、接続したときに 1 回だけ送る (解除 1 回でサーバーに残らない)', async () => {
-		const { useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		const { useNoteCapture } = await import('@/features/note/useNoteCapture.js');
 		const note = {
 			id: 'offline-note',
 			createdAt: new Date().toISOString(),
@@ -102,7 +102,7 @@ describe('useNoteCapture', () => {
 	});
 
 	test('編集の合図を受けたら、同じノートを何か所に出していても 1 回だけ取り直して配る', async () => {
-		const { useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		const { useNoteCapture } = await import('@/features/note/useNoteCapture.js');
 		const { globalEvents } = await import('@/events.js');
 		const note = {
 			id: 'edited-note',
@@ -163,7 +163,7 @@ describe('applyEditedNote', () => {
 	} as unknown as Misskey.entities.Note;
 
 	test('そのノート・リノートの中・返信の中を書き換え、編集で消えた列は消し、一覧の印は残す', async () => {
-		const { applyEditedNote } = await import('@/features/notes/useNoteCapture.js');
+		const { applyEditedNote } = await import('@/features/note/useNoteCapture.js');
 		const self = applyEditedNote(base, edited) as Misskey.entities.Note & { _shouldInsertAd_?: boolean };
 		expect(self).toMatchObject({ text: 'after', cw: 'cw', visibility: 'home', updatedAt: edited.updatedAt });
 		expect('tags' in self).toBe(false);
@@ -176,13 +176,13 @@ describe('applyEditedNote', () => {
 	});
 
 	test('関係のない項目は同じ参照のまま返す (一覧を無駄に描き直さない)', async () => {
-		const { applyEditedNote } = await import('@/features/notes/useNoteCapture.js');
+		const { applyEditedNote } = await import('@/features/note/useNoteCapture.js');
 		const other = { id: 'other', text: 'x' } as unknown as Misskey.entities.Note;
 		expect(applyEditedNote(other, edited)).toBe(other);
 	});
 
 	test('リアクションは取り直した時点の値にする (描き直しで読み込み時の値に戻さない)', async () => {
-		const { applyEditedNote } = await import('@/features/notes/useNoteCapture.js');
+		const { applyEditedNote } = await import('@/features/note/useNoteCapture.js');
 		const stale = { ...base, reactions: {}, reactionCount: 0, myReaction: null } as unknown as Misskey.entities.Note;
 		expect(applyEditedNote(stale, edited)).toMatchObject({
 			reactions: { '👍': 5 },
@@ -197,7 +197,7 @@ describe('noteRenderKey', () => {
 	const editedTarget = { ...target, updatedAt: '2026-01-02T00:00:00.000Z' } as Misskey.entities.Note;
 
 	test('ノート自身か、単なるリノートのリノート先が編集されたら変わる', async () => {
-		const { noteRenderKey } = await import('@/features/notes/useNoteCapture.js');
+		const { noteRenderKey } = await import('@/features/note/useNoteCapture.js');
 		expect(noteRenderKey(editedTarget)).not.toBe(noteRenderKey(target));
 		const renote = (renoted: Misskey.entities.Note) =>
 			({
@@ -216,7 +216,7 @@ describe('noteRenderKey', () => {
 	});
 
 	test('引用先・返信先の編集では変わらない (外側のノートの状態を作り直さない)', async () => {
-		const { noteRenderKey } = await import('@/features/notes/useNoteCapture.js');
+		const { noteRenderKey } = await import('@/features/note/useNoteCapture.js');
 		const quote = (renoted: Misskey.entities.Note) =>
 			({ id: 'q1', text: 'quote', fileIds: [], renoteId: 't1', renote: renoted }) as unknown as Misskey.entities.Note;
 		const reply = (replied: Misskey.entities.Note) =>
@@ -228,7 +228,7 @@ describe('noteRenderKey', () => {
 
 describe('useNoteEdits', () => {
 	async function mountNested(source: Misskey.entities.Note) {
-		const { useNoteEdits } = await import('@/features/notes/useNoteEdits.js');
+		const { useNoteEdits } = await import('@/features/note/useNoteEdits.js');
 		const viewed = pluginState.interrupt ? pluginState.interrupt(structuredClone(source))! : source;
 		let nested!: ReturnType<typeof useNoteEdits>;
 		render(
@@ -310,7 +310,7 @@ describe('useNoteEdits', () => {
 	});
 
 	test('投稿の新しさを問わず、表示するノートと引用先の編集の合図だけを購読し、合図で取り直して差し替える', async () => {
-		const { useNoteEdits } = await import('@/features/notes/useNoteEdits.js');
+		const { useNoteEdits } = await import('@/features/note/useNoteEdits.js');
 		const old = {
 			...outer,
 			id: 'old',
@@ -344,7 +344,7 @@ describe('useNoteEdits', () => {
 	});
 
 	test('未接続の間は購読を送らず、接続したときに 1 回だけ送る (接続時の送り直しと重ねない)', async () => {
-		const { subscribeNoteEdits } = await import('@/features/notes/useNoteCapture.js');
+		const { subscribeNoteEdits } = await import('@/features/note/useNoteCapture.js');
 		stream.send.mockClear();
 		stream.state = 'reconnecting';
 		try {
@@ -359,7 +359,7 @@ describe('useNoteEdits', () => {
 	});
 
 	test('リアルタイムモードでなければ、ポーリングで届く編集日時の変化で 1 回だけ取り直す (表示から時間が経っても)', async () => {
-		const { subscribeNoteEdits } = await import('@/features/notes/useNoteCapture.js');
+		const { subscribeNoteEdits } = await import('@/features/note/useNoteCapture.js');
 		const { globalEvents } = await import('@/events.js');
 		vi.useFakeTimers();
 		storeState.realtimeMode = false;
@@ -400,7 +400,7 @@ describe('useNoteEdits', () => {
 	});
 
 	test('ポーリングの問い合わせが失敗しても、未処理のエラーにせず次の回で編集を拾う', async () => {
-		const { subscribeNoteEdits } = await import('@/features/notes/useNoteCapture.js');
+		const { subscribeNoteEdits } = await import('@/features/note/useNoteCapture.js');
 		const { globalEvents } = await import('@/events.js');
 		vi.useFakeTimers();
 		storeState.realtimeMode = false;
@@ -435,7 +435,7 @@ describe('useNoteEdits', () => {
 	});
 
 	test('ポーリングでの編集の検出は、リアクションの問い合わせ (新しい順に 30 件) からノートを押し出さない', async () => {
-		const { subscribeNoteEdits, useNoteCapture } = await import('@/features/notes/useNoteCapture.js');
+		const { subscribeNoteEdits, useNoteCapture } = await import('@/features/note/useNoteCapture.js');
 		vi.useFakeTimers();
 		storeState.realtimeMode = false;
 		misskeyApiMock.mockReset();

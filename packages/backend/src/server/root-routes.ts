@@ -9,7 +9,7 @@ import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/emoji-store.js
 import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/user-store.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiUser } from '@/models/User.js';
 import * as Acct from '@/misc/acct.js';

@@ -27,7 +27,7 @@ Toneriko のサーバー本体です。Bun の上で、Hono の HTTP サーバ�
 ## 設計の決まり
 
 - DI コンテナは使いません。依存は引数で明示的に渡します。API のハンドラは、必要な依存を `deps` として第一引数で受け取ります。状態や設定を持つサービスは `createXxx()` の関数で作ります。
-- 依存は下から上へだけ流れます。`core/`、`db/`、`misc/`、`models/` は、`server/`、`queue/`、`boot/` を import しません。HTTP のエラーや入力の検証が、共有の処理に入り込むのを防ぐためで、[test/unit/layer-boundaries.ts](./test/unit/layer-boundaries.ts) が検査します。
+- 依存は下から上へだけ流れます。`core/`、`db/`、`misc/`、`models/` は、`server/`、`queue/`、`boot/` を import しません。HTTP のエラーや入力の検証が、共有の処理に入り込むのを防ぐためで、[test/unit/layer-boundaries.test.ts](./test/unit/layer-boundaries.test.ts) が検査します。
 - API の契約は `server/rest/contracts/` に `defineContract` で宣言します。認証、権限、レートリミットは、契約の `meta` からガードを組み立てます。ハンドラにこれらを手で書き足しません。
 
 API を足すときの手順は [`.claude/skills/working-on-backend`](../../.claude/skills/working-on-backend/SKILL.md) にあります。

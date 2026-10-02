@@ -59,7 +59,7 @@
 	}
 
 	async function importAppScript() {
-		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/_boot_.ts').catch(
+		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/boot/entry.ts').catch(
 			async (e) => {
 				console.error(e);
 				renderError('APP_IMPORT', e);

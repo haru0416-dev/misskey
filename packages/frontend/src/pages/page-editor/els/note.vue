@@ -26,10 +26,10 @@ import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
-import MkNote from '@/features/notes/components/MkNote.vue';
-import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
+import MkNote from '@/features/note/components/MkNote.vue';
+import MkNoteDetailed from '@/features/note/components/MkNoteDetailed.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { applyEditedNote, noteRenderKey } from '@/features/notes/useNoteCapture.js';
+import { applyEditedNote, noteRenderKey } from '@/features/note/useNoteCapture.js';
 import { useGlobalEvent } from '@/events.js';
 import { i18n } from '@/i18n.js';
 

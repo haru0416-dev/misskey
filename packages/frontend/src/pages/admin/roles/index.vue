@@ -49,7 +49,7 @@ import { computed, reactive, ref } from 'vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkButton from '@/components/form/MkButton.vue';
-import MkRolePreview from '@/features/roles/components/MkRolePreview.vue';
+import MkRolePreview from '@/features/role/components/MkRolePreview.vue';
 import XPolicyEditor from './policy-editor/index.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

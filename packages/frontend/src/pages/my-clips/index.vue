@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed, markRaw } from 'vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkButton from '@/components/form/MkButton.vue';
-import MkClipPreview from '@/features/clips/components/MkClipPreview.vue';
+import MkClipPreview from '@/features/clip/components/MkClipPreview.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';

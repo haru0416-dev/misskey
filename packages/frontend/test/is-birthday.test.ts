@@ -5,7 +5,7 @@
 
 import type * as Misskey from 'misskey-js';
 import { describe, test, expect } from 'vitest';
-import { isBirthday } from '@/features/users/is-birthday.js';
+import { isBirthday } from '@/features/user/is-birthday.js';
 
 describe('isBirthday', () => {
 	test('通常の誕生日', () => {

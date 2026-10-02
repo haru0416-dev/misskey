@@ -58,7 +58,7 @@ import {
 	profileFieldValueSchema,
 } from '@/models/User.js';
 import { notificationRecieveConfigZodSchema } from '@/models/json-schema/user.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';

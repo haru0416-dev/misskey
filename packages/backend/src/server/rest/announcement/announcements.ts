@@ -30,7 +30,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
-import type { MiAnnouncement, MiUser } from '@/models/_.js';
+import type { MiAnnouncement, MiUser } from '@/models/entities.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/emoji-store.js';
 import { normalizeReaction } from '../note/notes-reactions.js';

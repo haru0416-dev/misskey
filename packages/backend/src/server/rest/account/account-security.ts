@@ -22,7 +22,7 @@ import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { ApiError } from '../error.js';

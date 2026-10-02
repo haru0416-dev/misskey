@@ -138,8 +138,8 @@ bun run --bun --filter backend test:e2e # single-server E2E tests
 ```
 If you want to run a specific test, run as a following command:
 ```sh
-bun run --bun --filter backend test -- test/unit/misc/cache.ts
-bun run --bun --filter backend test:e2e -- test/e2e/nodeinfo.ts
+bun run --bun --filter backend test -- test/unit/misc/cache.test.ts
+bun run --bun --filter backend test:e2e -- test/e2e/api.test.ts
 ```
 
 `test` and `test:e2e` run vitest on the Bun runtime, with the application under test in the same process. `test:e2e:bun` runs the same E2E suite against a server booted as a separate process, so the assertions go through a real HTTP boundary:
@@ -425,8 +425,13 @@ function showData(a, b) {
 ### HTMLのクラス名で follow という単語は使わない
 広告ブロッカーで誤ってブロックされる
 
-### indexというファイル名を使うな
-ESMではディレクトリインポートは廃止されているのと、ディレクトリインポートせずともファイル名が index だと何故か一部のライブラリ？でディレクトリインポートだと見做されてエラーになる
+### indexというファイル名は、入口にだけ使う
+ESMではディレクトリインポートは廃止されているのと、ディレクトリインポートせずともファイル名が index だと何故か一部のライブラリ？でディレクトリインポートだと見做されてエラーになる。
+
+そのため、次の2つ以外では `index` というファイル名を使わない。
+
+- パッケージの入口。`package.json` の `main` や `exports` が指す `index.ts`
+- `packages/frontend/src/pages/` で、そのディレクトリのルートの画面を表す `index.vue`。`.vue` は拡張子まで書いて import するので、ディレクトリインポートの問題は起きない
 
 ## CSS Recipe
 

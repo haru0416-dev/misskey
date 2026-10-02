@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render } from '@testing-library/vue';
 import { nextTick } from 'vue';
 import WidgetActivityChart from '@/widgets/WidgetActivity.chart.vue';
 import { createActivityData } from '@/widgets/WidgetActivity.vue';
-import { sumChartSeries } from '@/features/charts/components/MkChart.vue';
+import { sumChartSeries } from '@/features/chart/components/MkChart.vue';
 
 const activity = Array.from({ length: 200 }, (_, index) => ({
 	total: index + 4,

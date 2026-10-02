@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { CommonProps } from '@/server/web/views/_.js';
+import type { CommonProps } from '@/server/web/views/common.js';
 import { Layout } from '@/server/web/views/base.js';
 
 export function OAuthPage(

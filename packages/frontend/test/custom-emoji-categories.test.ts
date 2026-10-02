@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import type * as Misskey from 'misskey-js';
-import { groupCustomEmojisByCategory } from '@/features/custom-emojis/group-by-category.js';
+import { groupCustomEmojisByCategory } from '@/features/custom-emoji/group-by-category.js';
 
 const categories = [null, '', 'null', 'a', 'b', 'a/c', 'a/c/d', 'Null'] as const;
 const emojis: Misskey.entities.EmojiSimple[] = Array.from({ length: 200 }, (_, i) => ({

@@ -167,7 +167,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkColorInput from '@/components/form/MkColorInput.vue';
 import MkRadios from '@/components/form/MkRadios.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
-import { normalizeBrandingJsonSettings } from '@/features/admin-tools/admin-branding.js';
+import { normalizeBrandingJsonSettings } from '@/features/admin-tool/admin-branding.js';
 
 const meta = await misskeyApi('admin/meta');
 

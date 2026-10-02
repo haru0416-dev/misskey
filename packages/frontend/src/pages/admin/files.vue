@@ -36,7 +36,7 @@ import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkFileListForAdmin from '@/features/drive/components/MkFileListForAdmin.vue';
 import * as os from '@/os.js';
-import { lookupFile } from '@/features/admin-tools/admin-lookup.js';
+import { lookupFile } from '@/features/admin-tool/admin-lookup.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';

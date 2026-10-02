@@ -209,7 +209,7 @@ COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/pac
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/package.json ./packages/i18n/package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/mfm-js/package.json ./packages/mfm-js/package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/package.json ./packages/misskey-js/package.json
-COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scripts/compile_config.js ./packages/backend/scripts/compile_config.js
+COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scripts/compile-config.js ./packages/backend/scripts/compile-config.js
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration/*.sql ./packages/backend/migration/
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration/meta/_journal.json ./packages/backend/migration/meta/_journal.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/assets ./packages/backend/assets

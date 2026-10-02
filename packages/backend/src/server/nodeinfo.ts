@@ -12,7 +12,7 @@ import { countUsersByHostFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { nodeinfo2_0path, nodeinfo2_1path } from './nodeinfo-links.js';
 
 export type NodeinfoDependencies = {

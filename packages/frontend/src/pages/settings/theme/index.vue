@@ -218,7 +218,7 @@ import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormSection from '@/components/form/section.vue';
 import FormLink from '@/components/form/link.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
-import MkThemePreview from '@/features/themes/components/MkThemePreview.vue';
+import MkThemePreview from '@/features/theme/components/MkThemePreview.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { handleThemeInstallError, installTheme, removeTheme } from '@/theme.js';
 import { isDeviceDarkmode } from '@/utility/is-device-darkmode.js';

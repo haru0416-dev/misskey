@@ -61,8 +61,8 @@ services:
         target: /misskey/packages/frontend-shared/package.json
         read_only: true
       - type: bind
-        source: ../scripts/compile_config.js
-        target: /misskey/packages/backend/scripts/compile_config.js
+        source: ../scripts/compile-config.js
+        target: /misskey/packages/backend/scripts/compile-config.js
         read_only: true
       - type: bind
         source: ../../icons-subsetter/package.json

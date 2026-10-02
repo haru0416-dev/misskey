@@ -34,7 +34,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import MkInviteCode from '@/features/invitations/components/MkInviteCode.vue';
+import MkInviteCode from '@/features/invitation/components/MkInviteCode.vue';
 import { definePage } from '@/page.js';
 import { instance } from '@/instance.js';
 import { $i } from '@/i.js';

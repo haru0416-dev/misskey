@@ -18,7 +18,7 @@ import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { isReply } from '@/misc/is-reply.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';

@@ -9,7 +9,7 @@ import { clearCache } from '@/features/cache-management/clear-cache.js';
 import type { ComputedRef } from 'vue';
 import { $i } from '@/i.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { openInstanceMenu, openToolsMenu } from '@/ui/_common_/common.js';
+import { openInstanceMenu, openToolsMenu } from '@/ui/common/common.js';
 import { lookup } from '@/features/search/lookup.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';

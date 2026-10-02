@@ -5,7 +5,7 @@
 
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import type { LoggerService } from '@/core/logger-service.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 
 /**
  * 正規化済み画像に対する nsfwjs 互換の予測値。

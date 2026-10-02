@@ -39,7 +39,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { AdminStreamPublisher } from '../../../core/events.js';
 import { ApiError } from '../error.js';

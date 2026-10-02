@@ -191,7 +191,7 @@ const projectBuiltDir = resolve(rootDir, 'built');
 // 連合テストのコンテナが共有の built に重ねてマウントする設定。あればそれを優先する。
 const mountedConfigFilePath = resolve(projectBuiltDir, '._config_.json');
 
-// テスト (NODE_ENV=test) は別ファイルに書き・読む (scripts/compile_config.js と同じ規則)。同じファイルだと、
+// テスト (NODE_ENV=test) は別ファイルに書き・読む (scripts/compile-config.js と同じ規則)。同じファイルだと、
 // テストのコンパイルが動作中の dev・計測サーバーの設定を上書きし、再起動時にテスト DB へつながってしまう。
 export const compiledConfigFilePath = fs.existsSync(mountedConfigFilePath)
 	? mountedConfigFilePath

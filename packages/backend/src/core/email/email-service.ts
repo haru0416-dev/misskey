@@ -10,7 +10,7 @@ import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { isDisposableEmailDomain } from 'disposable-email-domains-js';
 import type { UtilityService } from '@/core/net/utility-service.js';
 import type { Config } from '@/config.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { LoggerService } from '@/core/logger-service.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/user/user-profile-store.js';

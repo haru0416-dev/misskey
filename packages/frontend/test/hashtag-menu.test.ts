@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { isSameMute, toHashtagMute } from '@/features/notes/get-hashtag-menu.js';
-import { checkWordMute } from '@/features/notes/check-word-mute.js';
+import { isSameMute, toHashtagMute } from '@/features/note/get-hashtag-menu.js';
+import { checkWordMute } from '@/features/note/check-word-mute.js';
 import type * as Misskey from 'misskey-js';
 
 const noteWith = (text: string) => ({ id: 'n', userId: 'other', text, cw: null }) as Misskey.entities.Note;

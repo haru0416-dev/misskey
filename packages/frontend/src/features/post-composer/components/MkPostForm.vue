@@ -140,7 +140,7 @@ import type { MenuItem } from '@/types/menu.js';
 import type { PollEditorModelValue } from '@/features/post-composer/components/MkPollEditor.vue';
 import type { UploaderItem } from '@/features/drive/useUploader.js';
 import XTextCounter from '@/features/post-composer/components/MkPostForm.TextCounter.vue';
-import MkNoteSimple from '@/features/notes/components/MkNoteSimple.vue';
+import MkNoteSimple from '@/features/note/components/MkNoteSimple.vue';
 import { erase, unique } from '@/utility/array.js';
 import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import * as os from '@/os.js';

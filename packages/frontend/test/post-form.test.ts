@@ -37,7 +37,7 @@ vi.mock('@/features/auth/please-login.js', () => ({
 	pleaseLogin: vi.fn(async () => true),
 }));
 
-vi.mock('@/features/users/show-moved-dialog.js', () => ({
+vi.mock('@/features/user/show-moved-dialog.js', () => ({
 	showMovedDialog: vi.fn(),
 }));
 

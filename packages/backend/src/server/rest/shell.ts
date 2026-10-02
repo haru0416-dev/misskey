@@ -9,7 +9,7 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { NotePostProcessing } from '@/core/note/note-post-processing.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { DownloadService } from '@/core/net/download-service.js';
 import type { FileInfoService } from '@/core/drive/file-info-service.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';

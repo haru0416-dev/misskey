@@ -39,7 +39,7 @@ import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { InternalEventPublisher } from '../../../core/events.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/queue/system-webhook-queue.js';

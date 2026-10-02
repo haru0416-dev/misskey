@@ -28,7 +28,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import { i18n } from '@/i18n.js';
-import MkNoteMediaGrid from '@/features/notes/components/MkNoteMediaGrid.vue';
+import MkNoteMediaGrid from '@/features/note/components/MkNoteMediaGrid.vue';
 
 const props = defineProps<{
 	user: Misskey.entities.UserDetailed;

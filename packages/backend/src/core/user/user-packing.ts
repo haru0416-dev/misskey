@@ -10,7 +10,7 @@ import { getIdenticonUrl } from '@/core/drive/identicon-url.js';
 import { fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import { populateEmojis, populateEmojisMany } from '../note/note-packing.js';
 

@@ -92,15 +92,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { defineAsyncComponent, onUnmounted, ref, useTemplateRef } from 'vue';
 import { storeToRefs } from 'pinia';
-import XCommon from './_common_/common.vue';
+import XCommon from './common/common.vue';
 import { genId } from '@/utility/id.js';
-import XSidebar from '@/ui/_common_/navbar.vue';
-import XNavbarH from '@/ui/_common_/navbar-h.vue';
-import XMobileFooterMenu from '@/ui/_common_/mobile-footer-menu.vue';
-import XTitlebar from '@/ui/_common_/titlebar.vue';
-import XPreferenceRestore from '@/ui/_common_/PreferenceRestore.vue';
-import XReloadSuggestion from '@/ui/_common_/ReloadSuggestion.vue';
-import XThemePreviewing from '@/ui/_common_/ThemePreviewing.vue';
+import XSidebar from '@/ui/common/navbar.vue';
+import XNavbarH from '@/ui/common/navbar-h.vue';
+import XMobileFooterMenu from '@/ui/common/mobile-footer-menu.vue';
+import XTitlebar from '@/ui/common/titlebar.vue';
+import XPreferenceRestore from '@/ui/common/PreferenceRestore.vue';
+import XReloadSuggestion from '@/ui/common/ReloadSuggestion.vue';
+import XThemePreviewing from '@/ui/common/ThemePreviewing.vue';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
@@ -130,12 +130,12 @@ import {
 	deleteProfile as deleteProfile_,
 } from '@/deck.js';
 import { shouldSuggestRestoreBackup } from '@/preferences/utility.js';
-import { shouldSuggestReload } from '@/ui/_common_/reload-suggest.js';
+import { shouldSuggestReload } from '@/ui/common/reload-suggest.js';
 import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
 
-const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));
-const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announcements.vue'));
+const XStatusBars = defineAsyncComponent(() => import('@/ui/common/statusbars.vue'));
+const XAnnouncements = defineAsyncComponent(() => import('@/ui/common/announcements.vue'));
 
 const columnComponents = {
 	main: XMainColumn,

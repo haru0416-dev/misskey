@@ -11,7 +11,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { getDatabaseErrorCode, isStatementTimeoutError } from '@/misc/db-errors.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiNote } from '@/models/Note.js';
 
 export type QueueCleanRemoteNotesDependencies = {

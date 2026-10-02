@@ -29,7 +29,7 @@
 				"@shared/*": ["../frontend-shared/*"]
 			},
 			"entry": [
-				"src/_boot_.ts",
+				"src/boot/entry.ts",
 				"src/workers/*.ts",
 				"builder/**/*.ts",
 				"lib/**/*.ts",

@@ -7,8 +7,8 @@ import { defineAsyncComponent } from 'vue';
 import type { AsyncComponentLoader } from 'vue';
 import type { RouteDef } from '@/lib/nirax.js';
 import { $i, iAmModerator } from '@/i.js';
-import MkLoading from '@/pages/_loading_.vue';
-import MkError from '@/pages/_error_.vue';
+import MkLoading from '@/pages/loading.vue';
+import MkError from '@/pages/error.vue';
 import PageTimeline from '@/pages/timeline.vue';
 
 export const page = (loader: AsyncComponentLoader) =>
@@ -240,7 +240,7 @@ export const ROUTE_DEF = [
 			},
 			{
 				path: '/',
-				component: page(() => import('@/pages/_empty_.vue')),
+				component: page(() => import('@/pages/empty.vue')),
 			},
 		],
 	},
@@ -497,7 +497,7 @@ export const ROUTE_DEF = [
 			{
 				path: '/emojis2',
 				name: 'emojis2',
-				component: page(() => import('@/pages/admin/custom-emojis-manager2/index.vue')),
+				component: page(() => import('@/pages/admin/custom-emojis-manager/index.vue')),
 			},
 			{
 				path: '/avatar-decorations',
@@ -631,7 +631,7 @@ export const ROUTE_DEF = [
 			},
 			{
 				path: '/',
-				component: page(() => import('@/pages/_empty_.vue')),
+				component: page(() => import('@/pages/empty.vue')),
 			},
 		],
 	},

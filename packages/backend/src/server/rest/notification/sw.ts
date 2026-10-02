@@ -16,7 +16,7 @@ import {
 } from '@/core/sw/sw-subscription-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { parseApiParams } from '../validation.js';

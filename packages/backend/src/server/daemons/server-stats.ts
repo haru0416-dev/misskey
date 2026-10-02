@@ -5,7 +5,7 @@
 
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import os from 'node:os';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 
 const ev = globalEventBus;
 

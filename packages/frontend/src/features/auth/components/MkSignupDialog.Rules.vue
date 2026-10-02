@@ -64,7 +64,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import { instance } from '@/instance.js';
-import MkServerRules from '@/features/instances/components/MkServerRules.vue';
+import MkServerRules from '@/features/instance/components/MkServerRules.vue';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';

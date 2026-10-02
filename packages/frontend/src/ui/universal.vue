@@ -40,14 +40,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { defineAsyncComponent, provide, onMounted, onUnmounted, computed, ref } from 'vue';
 import { instanceName } from '@shared/utility/config.js';
 import { isLink } from '@shared/utility/is-link.js';
-import XCommon from './_common_/common.vue';
+import XCommon from './common/common.vue';
 import type { PageMetadata } from '@/page.js';
-import XMobileFooterMenu from '@/ui/_common_/mobile-footer-menu.vue';
-import XPreferenceRestore from '@/ui/_common_/PreferenceRestore.vue';
-import XReloadSuggestion from '@/ui/_common_/ReloadSuggestion.vue';
-import XThemePreviewing from '@/ui/_common_/ThemePreviewing.vue';
-import XTitlebar from '@/ui/_common_/titlebar.vue';
-import XSidebar from '@/ui/_common_/navbar.vue';
+import XMobileFooterMenu from '@/ui/common/mobile-footer-menu.vue';
+import XPreferenceRestore from '@/ui/common/PreferenceRestore.vue';
+import XReloadSuggestion from '@/ui/common/ReloadSuggestion.vue';
+import XThemePreviewing from '@/ui/common/ThemePreviewing.vue';
+import XTitlebar from '@/ui/common/titlebar.vue';
+import XSidebar from '@/ui/common/navbar.vue';
 import { isPreviewMode as isThemePreviewMode } from '@/theme.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
@@ -59,11 +59,11 @@ import { mainRouter } from '@/router.js';
 import { prefer } from '@/preferences.js';
 import { shouldSuggestRestoreBackup } from '@/preferences/utility.js';
 import { DI } from '@/di.js';
-import { shouldSuggestReload } from '@/ui/_common_/reload-suggest.js';
+import { shouldSuggestReload } from '@/ui/common/reload-suggest.js';
 
-const XWidgets = defineAsyncComponent(() => import('./_common_/widgets.vue'));
-const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));
-const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announcements.vue'));
+const XWidgets = defineAsyncComponent(() => import('./common/widgets.vue'));
+const XStatusBars = defineAsyncComponent(() => import('@/ui/common/statusbars.vue'));
+const XAnnouncements = defineAsyncComponent(() => import('@/ui/common/announcements.vue'));
 
 const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
 

@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { PollEditorModelValue } from '@/features/post-composer/components/MkPollEditor.vue';
-import MkCwButton from '@/features/notes/components/MkCwButton.vue';
+import MkCwButton from '@/features/note/components/MkCwButton.vue';
 
 const showContent = ref(false);
 

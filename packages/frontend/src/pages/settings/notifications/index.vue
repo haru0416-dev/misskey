@@ -101,12 +101,12 @@ import { ensureSignin } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkPushNotificationAllowButton from '@/features/notifications/components/MkPushNotificationAllowButton.vue';
+import MkPushNotificationAllowButton from '@/features/notification/components/MkPushNotificationAllowButton.vue';
 import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import { userPage } from '@/filters/user.js';
-import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 
 const $i = ensureSignin();
 

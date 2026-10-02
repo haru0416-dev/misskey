@@ -82,7 +82,7 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 
 export function isFederationAllowedHost(
 	config: Pick<Config, 'runtime'>,
-	meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
+	meta: Pick<import('@/models/entities.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
 	host: string,
 ): boolean {
 	if (isSelfHost(config, host)) {
@@ -105,7 +105,7 @@ export function isFederationAllowedHost(
 
 export function isFederationAllowedUri(
 	config: Pick<Config, 'runtime'>,
-	meta: Pick<import('@/models/_.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
+	meta: Pick<import('@/models/entities.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
 	uri: string,
 ): boolean {
 	return isFederationAllowedHost(config, meta, extractDbHost(uri));

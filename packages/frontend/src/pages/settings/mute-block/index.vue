@@ -181,7 +181,7 @@ import MkPagination from '@/components/layout/MkPagination.vue';
 import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkUserCardMini from '@/features/users/components/MkUserCardMini.vue';
+import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 import * as os from '@/os.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
@@ -191,7 +191,7 @@ import MkSwitch from '@/components/form/MkSwitch.vue';
 import { prefer } from '@/preferences.js';
 import MkFeatureBanner from '@/components/display/MkFeatureBanner.vue';
 import { Paginator } from '@/utility/paginator.js';
-import { suggestReload } from '@/ui/_common_/reload-suggest.js';
+import { suggestReload } from '@/ui/common/reload-suggest.js';
 
 const $i = ensureSignin();
 

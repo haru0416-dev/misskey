@@ -9,7 +9,7 @@ import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { DeliverJobData } from '@/core/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/following-store.js';

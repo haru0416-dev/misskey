@@ -15,7 +15,7 @@ import type { CaptchaError } from '@/core/captcha/captcha-logic.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/meta-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { recordException } from '@/telemetry.js';
 import type { InternalEventPublisher } from '../../../core/events.js';

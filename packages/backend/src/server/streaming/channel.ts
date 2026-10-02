@@ -12,7 +12,7 @@ import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { filterNoteForStreamingHiding, populateMyReaction } from '@/core/note/note-packing.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';
-import type { MiFollowing, MiUserProfile } from '@/models/_.js';
+import type { MiFollowing, MiUserProfile } from '@/models/entities.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import type { Awaitable } from '@/types.js';

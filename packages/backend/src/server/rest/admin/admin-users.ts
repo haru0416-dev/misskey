@@ -30,7 +30,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { MiMeta, MiRole } from '@/models/_.js';
+import type { MiMeta, MiRole } from '@/models/entities.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {

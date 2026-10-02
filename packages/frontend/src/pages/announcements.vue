@@ -54,7 +54,7 @@ import * as Misskey from 'misskey-js';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
-import MkAnnouncementReactions from '@/features/announcements/components/MkAnnouncementReactions.vue';
+import MkAnnouncementReactions from '@/features/announcement/components/MkAnnouncementReactions.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

@@ -13,7 +13,7 @@ import { listDriveFilesByIdsFromDatabase } from '@/core/drive/drive-file-store.j
 import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/note/note-store.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import { parseId } from '@/misc/id/parse-id.js';
 

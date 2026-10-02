@@ -27,7 +27,7 @@ import { queueRetentionOptions } from '@/core/queue/const.js';
 import { runInlineDbOutboxJobs, waitForDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
 import type { InlineDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
 import type { NotePostProcessingReservation } from '@/core/note/note-post-processing.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';

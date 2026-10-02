@@ -110,7 +110,7 @@ import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
 import { selectFile } from '@/features/drive/drive.js';
-import { suggestReload } from '@/ui/_common_/reload-suggest.js';
+import { suggestReload } from '@/ui/common/reload-suggest.js';
 
 const navWindow = prefer.model('deck.navWindow');
 const useSimpleUiForNonRootPages = prefer.model('deck.useSimpleUiForNonRootPages');

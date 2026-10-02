@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe('MkHeatmap', () => {
 	test('切り替え前の条件の応答が後から届いても、今の条件の表示を上書きしない', async () => {
-		const MkHeatmap = (await import('@/features/charts/components/MkHeatmap.vue')).default;
+		const MkHeatmap = (await import('@/features/chart/components/MkHeatmap.vue')).default;
 		const { rerender, container } = render(MkHeatmap, { props: { src: 'active-users' } });
 		await vi.waitFor(() => expect(pending.has('charts/active-users')).toBe(true));
 
@@ -39,7 +39,7 @@ describe('MkHeatmap', () => {
 	});
 
 	test('取得に失敗したら読み込み中を終える', async () => {
-		const MkHeatmap = (await import('@/features/charts/components/MkHeatmap.vue')).default;
+		const MkHeatmap = (await import('@/features/chart/components/MkHeatmap.vue')).default;
 		const { container } = render(MkHeatmap, { props: { src: 'active-users' } });
 		await vi.waitFor(() => expect(pending.has('charts/active-users')).toBe(true));
 		pending.get('charts/active-users')!.reject(new TypeError('Failed to fetch'));

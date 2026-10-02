@@ -5,7 +5,7 @@
 
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { MiMeta } from '@/models/_.js';
+import type { MiMeta } from '@/models/entities.js';
 import type { MiUser } from '@/models/User.js';
 import type { EmailService } from '@/core/email/email-service.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';

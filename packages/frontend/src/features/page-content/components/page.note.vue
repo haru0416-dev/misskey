@@ -13,10 +13,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import MkNote from '@/features/notes/components/MkNote.vue';
-import MkNoteDetailed from '@/features/notes/components/MkNoteDetailed.vue';
+import MkNote from '@/features/note/components/MkNote.vue';
+import MkNoteDetailed from '@/features/note/components/MkNoteDetailed.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { applyEditedNote, noteRenderKey } from '@/features/notes/useNoteCapture.js';
+import { applyEditedNote, noteRenderKey } from '@/features/note/useNoteCapture.js';
 import { useGlobalEvent } from '@/events.js';
 
 const props = defineProps<{

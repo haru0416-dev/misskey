@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { inject, provide, ref, shallowRef } from 'vue';
 import type { Router } from '@/router.js';
 import type { PathResolvedResult } from '@/lib/nirax.js';
-import MkLoadingPage from '@/pages/_loading_.vue';
+import MkLoadingPage from '@/pages/loading.vue';
 import { DI } from '@/di.js';
 
 const props = defineProps<{

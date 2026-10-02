@@ -6,7 +6,7 @@
 import type * as Redis from 'ioredis';
 import * as OTPAuth from 'otpauth';
 import { createHash } from 'node:crypto';
-import type { MiUserProfile } from '@/models/_.js';
+import type { MiUserProfile } from '@/models/entities.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { updateUserProfileInDatabase } from '@/core/user/user-profile-store.js';
 
