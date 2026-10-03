@@ -3,7 +3,6 @@
 .idea/
 *.code-workspace
 .DS_Store
-.favorites.json
 *.af~lock~
 *.blend1
 *.blend2
@@ -19,10 +18,6 @@ node_modules/
 !/.yarn/releases
 !/.yarn/sdks
 !/.yarn/versions
-/packages/backend/.yarn/cache/
-/packages/frontend/.yarn/cache/
-/packages/sw/.yarn/cache/
-.pnpm-store/
 
 # Reports and test output
 report.*.json
@@ -43,7 +38,6 @@ coverage/
 /dev/sonarqube/.env
 /packages/backend/.config/
 *.pem
-ormconfig.json
 /docker-compose.yml
 /compose.yml
 
@@ -52,19 +46,13 @@ ormconfig.json
 /db/
 /files/
 /redis/
-misskey-assets/
 temp/
 
 # Build output and generated code
-/build/
 built/
 built-test/
-js-built/
-src-js/
-/.cache-loader/
 api-docs.json
 tsdoc-metadata.json
-/packages/frontend/build/
 /packages/frontend/catalog-dist/
 /packages/frontend/.vitest-attachments/
 /packages/frontend/test/__screenshots__/
@@ -75,9 +63,7 @@ tsdoc-metadata.json
 /packages/frontend/stats.json
 
 # Tool temporary files
-npm-debug.log
 *.log
-run.bat
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 vite.config.local-dev.js.timestamp-*

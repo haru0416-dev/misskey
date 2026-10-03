@@ -6,15 +6,19 @@ on:
       - master
       - develop
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  check_copyright_year:
+  check-copyright-year:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: |
           if [ "$(grep Copyright COPYING | sed -e 's/.*2014-\([0-9]*\) .*/\1/g')" -ne "$(date +%Y)" ]; then
             echo "Please change copyright year!"

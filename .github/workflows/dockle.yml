@@ -14,6 +14,9 @@ on:
   pull_request:
     paths-ignore: *docs-only
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -21,6 +24,7 @@ concurrency:
 jobs:
   dockle:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     services:
       postgres:

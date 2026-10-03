@@ -1,11 +1,7 @@
 {
 	"compilerOptions": {
 		"allowJs": true,
-		"noEmitOnError": false,
-		"noImplicitAny": true,
 		"noImplicitReturns": true,
-		"noUnusedParameters": false,
-		"noUnusedLocals": false,
 		"allowUnusedLabels": false,
 		"allowUnreachableCode": false,
 		"noFallthroughCasesInSwitch": true,
@@ -14,20 +10,13 @@
 		"noPropertyAccessFromIndexSignature": true,
 		"exactOptionalPropertyTypes": true,
 		"noUncheckedSideEffectImports": true,
-		"declaration": false,
 		"sourceMap": true,
 		"target": "ES2022",
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
-		"allowSyntheticDefaultImports": true,
-		"removeComments": false,
-		"noLib": false,
 		"strict": true,
-		"strictNullChecks": true,
 		"strictPropertyInitialization": false,
 		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"experimentalDecorators": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
@@ -39,6 +28,5 @@
 		"lib": ["esnext"],
 		"types": ["node"]
 	},
-	"compileOnSave": false,
 	"include": ["./**/*.ts", "../src/**/*.test.ts", "../src/@types/**/*.ts"]
 }

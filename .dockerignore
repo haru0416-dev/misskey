@@ -1,33 +1,19 @@
-.autogen
 .agents/
 .claude/
 .git
 .github
 .playwright-mcp/
-.travis
-.vscode
 .config
 dev/sonarqube/.env
 Dockerfile
-build/
 built/
-src-js/
-db/
 .devcontainer/compose.yml
 node_modules/
 packages/*/node_modules
 packages/slacc/*.node
 # cargo のビルド作業ディレクトリ (数百 MB)。イメージの中では毎回ビルドし直す。
 packages/slacc/target/
-redis/
 files/
-fluent-emojis/
-.pnp.*
-
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
 !.yarn/sdks
 !.yarn/versions
 

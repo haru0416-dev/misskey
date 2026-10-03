@@ -2,6 +2,7 @@
 	"type": "module",
 	"name": "misskey-js",
 	"version": "0.1.0",
+	"private": true,
 	"description": "Misskey SDK for JavaScript",
 	"license": "MIT",
 	"main": "./built/index.js",
@@ -51,7 +52,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/misskey-dev/misskey.git",
+		"url": "https://github.com/haru0416-dev/misskey.git",
 		"directory": "packages/misskey-js"
 	},
 	"devDependencies": {

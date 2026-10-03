@@ -13,6 +13,10 @@ on:
       - packages/misskey-js/package.json
       - package.json
       - .github/workflows/check-misskey-js-version.yml
+
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -22,9 +26,10 @@ jobs:
     # ルートの package.json と packages/misskey-js/package.json のバージョンが一致しているかを確認する
     name: Check version
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check version
         run: |
           if [ "$(jq -r '.version' package.json)" != "$(jq -r '.version' packages/misskey-js/package.json)" ]; then
