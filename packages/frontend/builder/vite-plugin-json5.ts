@@ -24,28 +24,32 @@ export default function json5(options: Json5PluginOptions = {}): Plugin {
 	return {
 		name: 'json5',
 
-		transform(json, id) {
-			if (id.slice(-6) !== '.json5' || !filter(id)) {
-				return null;
-			}
-
-			try {
-				const parsed = JSON5.parse(json);
-				// オブジェクトリテラルではなく JSON.parse で復元する。読み込み側は default しか
-				// 使っておらず、大きなリテラルより構文解析が軽い。
-				return {
-					code: `export default /* @__PURE__ */ JSON.parse(${JSON.stringify(JSON.stringify(parsed))});\n`,
-					map: { mappings: '' },
-				};
-			} catch (err) {
-				if (!(err instanceof SyntaxError)) {
-					throw err;
+		transform: {
+			// filter に合わないモジュールでは handler を呼ばない (全モジュールで JS を呼び出す負担を避ける)。
+			filter: { id: /\.json5$/ },
+			handler(json, id) {
+				if (!filter(id)) {
+					return null;
 				}
-				const message = 'Could not parse JSON5 file';
-				const { lineNumber, columnNumber } = err as Json5SyntaxError;
-				this.warn({ message, id, loc: { line: lineNumber, column: columnNumber } });
-				return null;
-			}
+
+				try {
+					const parsed = JSON5.parse(json);
+					// オブジェクトリテラルではなく JSON.parse で復元する。読み込み側は default しか
+					// 使っておらず、大きなリテラルより構文解析が軽い。
+					return {
+						code: `export default /* @__PURE__ */ JSON.parse(${JSON.stringify(JSON.stringify(parsed))});\n`,
+						map: { mappings: '' },
+					};
+				} catch (err) {
+					if (!(err instanceof SyntaxError)) {
+						throw err;
+					}
+					const message = 'Could not parse JSON5 file';
+					const { lineNumber, columnNumber } = err as Json5SyntaxError;
+					this.warn({ message, id, loc: { line: lineNumber, column: columnNumber } });
+					return null;
+				}
+			},
 		},
 	};
 }

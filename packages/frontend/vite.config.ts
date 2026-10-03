@@ -11,12 +11,13 @@ import { parse } from 'yaml';
 import locales from 'i18n';
 import meta from '../../package.json' with { type: 'json' };
 import packageInfo from './package.json' with { type: 'json' };
-import pluginUnwindCssModuleClassName from './builder/rollup-plugin-unwind-css-module-class-name.js';
+import { unwindCssModules } from './builder/unwind-css-module-class-name.js';
 import pluginJson5 from './builder/vite-plugin-json5.js';
 import type { Options as SearchIndexOptions } from './builder/vite-plugin-create-search-index.js';
 import pluginCreateSearchIndex from './builder/vite-plugin-create-search-index.js';
 import pluginWatchLocales from './builder/vite-plugin-watch-locales.js';
-import { pluginRemoveUnrefI18n } from './builder/rollup-plugin-remove-unref-i18n.js';
+import { removeUnrefI18n } from './builder/remove-unref-i18n.js';
+import { pluginRewriteChunks } from './builder/rewrite-chunks.js';
 import { Features } from 'lightningcss';
 import { hash, toBase62 } from './builder/utils.js';
 
@@ -27,8 +28,6 @@ const url =
 				.instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
-
-const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
 
 function getBundleVisualizerPlugin(): PluginOption[] {
 	if (process.env.FRONTEND_BUNDLE_VISUALIZER !== 'true') {
@@ -143,7 +142,6 @@ export function getSharedConfig() {
 		clearScreen: false,
 
 		resolve: {
-			extensions,
 			alias: {
 				'@/': `${path.join(import.meta.dirname, 'src')}/`,
 				'/client-assets/': `${path.join(import.meta.dirname, 'assets')}/`,
@@ -213,14 +211,17 @@ export function getConfig(): UserConfig {
 			headers: {
 				'X-Frame-Options': 'DENY',
 			},
+			// 起動処理から届くモジュールを、サーバーの起動直後に変換しておく。最初にページを開いたときの待ちが減る。
+			warmup: {
+				clientFiles: ['./src/boot/entry.ts', './src/boot/main-boot.ts'],
+			},
 		},
 
 		plugins: [
 			pluginWatchLocales(),
 			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
 			pluginVue(),
-			pluginRemoveUnrefI18n(),
-			pluginUnwindCssModuleClassName(),
+			pluginRewriteChunks([removeUnrefI18n(), unwindCssModules]),
 			pluginJson5(),
 			pluginGlsl({ minify: true }),
 			...getBundleVisualizerPlugin(),

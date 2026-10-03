@@ -22,7 +22,7 @@ import { computed, inject, onMounted, useTemplateRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@/utility/emojilist.js';
 import MkCustomEmojiDetailedDialog from '@/features/custom-emoji/components/MkCustomEmojiDetailedDialog.vue';
-import type { MenuItem } from '@/types/menu';
+import type { MenuItem } from '@/types/menu.js';
 import MkReactionIcon from '@/features/note/components/MkReactionIcon.vue';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';

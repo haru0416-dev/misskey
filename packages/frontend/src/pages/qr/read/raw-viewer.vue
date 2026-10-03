@@ -39,7 +39,7 @@ import { ref, computed } from 'vue';
 import * as mfm from 'mfm-js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkTabs from '@/components/layout/MkTabs.vue';
-import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm';
+import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
 import MkCode from '@/features/code/components/MkCode.vue';
 import MkUrlPreview from '@/features/link-preview/components/MkUrlPreview.vue';
 import { i18n } from '@/i18n.js';

@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, onUnmounted, useTemplateRef, ref } from 'vue';
 import MkModal from '@/components/overlay/MkModal.vue';
 import MkButton from '@/components/form/MkButton.vue';
-import { i18n } from '@/i18n';
+import { i18n } from '@/i18n.js';
 import { deviceKind } from '@/utility/device-kind.js';
 
 const props = withDefaults(defineProps<{

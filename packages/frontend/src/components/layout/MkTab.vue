@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-export type Tab<T = string> = {
+type Tab<T = string> = {
 	key: T;
 	icon?: string;
 	label?: string;

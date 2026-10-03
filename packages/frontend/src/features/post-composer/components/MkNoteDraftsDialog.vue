@@ -168,7 +168,7 @@ import { getNoteSummary } from '@/features/note/get-note-summary.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
-import { misskeyApi } from '@/utility/misskey-api';
+import { misskeyApi } from '@/utility/misskey-api.js';
 import { Paginator } from '@/utility/paginator.js';
 import { toDatetimeLocalValue } from '@/utility/datetime-local.js';
 import MkTabs from '@/components/layout/MkTabs.vue';

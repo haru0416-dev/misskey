@@ -21,7 +21,7 @@ import { defineAsyncComponent, ref, shallowRef } from 'vue';
 import MkQrShow from './show.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import { ensureSignin } from '@/i';
+import { ensureSignin } from '@/i.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkPolkadots from '@/components/display/MkPolkadots.vue';
 

@@ -680,16 +680,16 @@ function createSearchIndex(options: Options, assigner: MarkerIdAssigner): Plugin
 			assigner.onInvalidate(id);
 		},
 
-		async transform(code, id) {
-			if (!id.endsWith('.vue')) {
-				return;
-			}
+		transform: {
+			// filter に合わないモジュールでは handler を呼ばない (全モジュールで JS を呼び出す負担を避ける)。
+			filter: { id: /\.vue$/ },
+			async handler(code, id) {
+				if (!isTargetFile(id)) {
+					return;
+				}
 
-			if (!isTargetFile(id)) {
-				return;
-			}
-
-			return assigner.processFile(id, code);
+				return assigner.processFile(id, code);
+			},
 		},
 	};
 }
@@ -712,48 +712,60 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 		return null;
 	}
 
+	const escapeRegExp = (s: string) => s.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	// 仮想モジュール (全体と、ファイルごと) の ID だけを hook に渡す。
+	const virtualIdFilter = {
+		id: new RegExp(`^(?:\0?${escapeRegExp(allSearchIndexFile)}$|${escapeRegExp(searchIndexPrefix)})`),
+	};
+
 	return {
 		name: 'generateSearchIndexVirtualModule',
 		// vite:vue の後に hotUpdate hook を実行する必要があるため、enforce を post にする。
 		enforce: 'post',
 
-		async resolveId(id) {
-			if (id == allSearchIndexFile) {
-				return '\0' + allSearchIndexFile;
-			}
+		resolveId: {
+			filter: virtualIdFilter,
+			async handler(id) {
+				if (id == allSearchIndexFile) {
+					return '\0' + allSearchIndexFile;
+				}
 
-			const searchIndexFilePath = parseSearchIndexFileId(id);
-			if (searchIndexFilePath != null) {
-				return id;
-			}
-			return undefined;
+				const searchIndexFilePath = parseSearchIndexFileId(id);
+				if (searchIndexFilePath != null) {
+					return id;
+				}
+				return undefined;
+			},
 		},
 
-		async load(id) {
-			if (id == '\0' + allSearchIndexFile) {
-				const files = options.targetFilePaths.flatMap((filePathPattern) => fs.globSync(filePathPattern));
-				let generatedFile = '';
-				let arrayElements = '';
-				for (const file of files) {
-					const normalizedRelative = normalizePath(file);
-					const absoluteId = normalizePath(path.join(process.cwd(), normalizedRelative)) + searchIndexSuffix;
-					const variableName = normalizedRelative.replaceAll(/[\/.-]/g, '_');
-					generatedFile += `import { searchIndexes as ${variableName} } from '${searchIndexPrefix}${absoluteId}';\n`;
-					arrayElements += `  ...${variableName},\n`;
+		load: {
+			filter: virtualIdFilter,
+			async handler(id) {
+				if (id == '\0' + allSearchIndexFile) {
+					const files = options.targetFilePaths.flatMap((filePathPattern) => fs.globSync(filePathPattern));
+					let generatedFile = '';
+					let arrayElements = '';
+					for (const file of files) {
+						const normalizedRelative = normalizePath(file);
+						const absoluteId = normalizePath(path.join(process.cwd(), normalizedRelative)) + searchIndexSuffix;
+						const variableName = normalizedRelative.replaceAll(/[\/.-]/g, '_');
+						generatedFile += `import { searchIndexes as ${variableName} } from '${searchIndexPrefix}${absoluteId}';\n`;
+						arrayElements += `  ...${variableName},\n`;
+					}
+					generatedFile += `export let searchIndexes = [\n${arrayElements}];\n`;
+					return generatedFile;
 				}
-				generatedFile += `export let searchIndexes = [\n${arrayElements}];\n`;
-				return generatedFile;
-			}
 
-			const searchIndexFilePath = parseSearchIndexFileId(id);
-			if (searchIndexFilePath != null) {
-				// 対象ファイルの変更時に検索インデックスを再生成する。
-				this.addWatchFile(searchIndexFilePath);
+				const searchIndexFilePath = parseSearchIndexFileId(id);
+				if (searchIndexFilePath != null) {
+					// 対象ファイルの変更時に検索インデックスを再生成する。
+					this.addWatchFile(searchIndexFilePath);
 
-				const code = await asigner.getOrLoad(searchIndexFilePath);
-				return generateJavaScriptCode(collectFileMarkers(searchIndexFilePath, code));
-			}
-			return null;
+					const code = await asigner.getOrLoad(searchIndexFilePath);
+					return generateJavaScriptCode(collectFileMarkers(searchIndexFilePath, code));
+				}
+				return null;
+			},
 		},
 
 		hotUpdate(this: { environment: { moduleGraph: EnvironmentModuleGraph } }, { file, modules }) {

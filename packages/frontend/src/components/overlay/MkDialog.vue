@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-export type Result = string | number | true | null;
+type Result = string | number | true | null;
 export type MkDialogReturnType<T = Result> = { canceled: true; result: undefined } | { canceled: false; result: T };
 </script>
 

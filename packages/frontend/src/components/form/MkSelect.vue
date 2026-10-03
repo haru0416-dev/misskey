@@ -58,7 +58,7 @@ export type ItemOption<T extends OptionValue = OptionValue> = {
 	caption?: string;
 };
 
-export type ItemGroup<T extends OptionValue = OptionValue> = {
+type ItemGroup<T extends OptionValue = OptionValue> = {
 	type: 'group';
 	label?: string;
 	items: ItemOption<T>[];
@@ -66,7 +66,7 @@ export type ItemGroup<T extends OptionValue = OptionValue> = {
 
 export type MkSelectItem<T extends OptionValue = OptionValue> = ItemOption<T> | ItemGroup<T>;
 
-export type GetMkSelectValueType<T extends MkSelectItem> = T extends ItemGroup
+type GetMkSelectValueType<T extends MkSelectItem> = T extends ItemGroup
 	? T['items'][number]['value']
 	: T extends ItemOption
 		? T['value']

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { normalizeClass, unwindCssModuleClassName } from './rollup-plugin-unwind-css-module-class-name.js';
+import { normalizeClass, unwindCssModuleClassName } from './unwind-css-module-class-name.js';
 import { parseAst } from 'rolldown/parseAst';
 import type { ESTree } from 'rolldown/utils';
 import { RolldownMagicString } from 'rolldown';

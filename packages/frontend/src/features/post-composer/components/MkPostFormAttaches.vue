@@ -42,8 +42,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { inject } from 'vue';
 import * as Misskey from 'misskey-js';
-import type { MenuItem } from '@/types/menu';
-import { copyToClipboard } from '@/utility/copy-to-clipboard';
+import type { MenuItem } from '@/types/menu.js';
+import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import MkDriveFileThumbnail from '@/features/drive/components/MkDriveFileThumbnail.vue';
 import MkDraggable from '@/components/layout/MkDraggable.vue';
 import * as os from '@/os.js';

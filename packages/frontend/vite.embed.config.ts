@@ -10,7 +10,8 @@ import pluginVue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
 import pluginJson5 from './builder/vite-plugin-json5.js';
-import { pluginRemoveUnrefI18n } from './builder/rollup-plugin-remove-unref-i18n.js';
+import { removeUnrefI18n } from './builder/remove-unref-i18n.js';
+import { pluginRewriteChunks } from './builder/rewrite-chunks.js';
 import { getDevServerConfig, getSharedConfig } from './vite.config.js';
 
 export function getEmbedConfig(): UserConfig {
@@ -23,9 +24,15 @@ export function getEmbedConfig(): UserConfig {
 		// 本体の Vite と同じ root なので、依存の事前バンドルの置き場を分ける。共有すると、設定の違いを理由に互いのキャッシュを消し合う。
 		cacheDir: 'node_modules/.vite-embed',
 
-		server: getDevServerConfig('MISSKEY_EMBED_VITE_PORT', 'MISSKEY_EMBED_VITE_HMR_CLIENT_PORT', 5174),
+		server: {
+			...getDevServerConfig('MISSKEY_EMBED_VITE_PORT', 'MISSKEY_EMBED_VITE_HMR_CLIENT_PORT', 5174),
+			// 起動処理から届くモジュールを、サーバーの起動直後に変換しておく。
+			warmup: {
+				clientFiles: ['./src/embed/boot.ts'],
+			},
+		},
 
-		plugins: [pluginVue(), pluginRemoveUnrefI18n(), pluginJson5()],
+		plugins: [pluginVue(), pluginRewriteChunks([removeUnrefI18n()]), pluginJson5()],
 
 		build: {
 			...shared.build,

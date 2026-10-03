@@ -40,7 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import type { MenuItem } from '@/types/menu';
+import type { MenuItem } from '@/types/menu.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import * as os from '@/os.js';

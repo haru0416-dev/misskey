@@ -9,7 +9,7 @@ import { version, lang, apiUrl, isSafeMode } from '@/shared/utility/config.js';
 import defaultLightTheme from '@/shared/themes/l-toneriko.json5';
 import defaultDarkTheme from '@/shared/themes/d-toneriko.json5';
 import { parseThemeJsonOrNull } from '@/shared/utility/theme.js';
-import { storeBootloaderErrors } from '@/shared/utility/store-boot-errors';
+import { storeBootloaderErrors } from '@/shared/utility/store-boot-errors.js';
 import type { App } from 'vue';
 import widgets from '@/widgets/index.js';
 import directives from '@/directives/index.js';

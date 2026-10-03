@@ -41,7 +41,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import type { MkSelectItem } from '@/components/form/MkSelect.vue';
-import { prefer } from '@/preferences';
+import { prefer } from '@/preferences.js';
 
 const { themes: installedThemes } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);
