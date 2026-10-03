@@ -1,1 +1,1 @@
-This directory contains the build scripts shared by the main client (vite.config.ts) and the embed client (vite.embed.config.ts).
+Build-time code: the Vite/rollup plugins and the locale inliner used by vite.config.ts (main client), vite.embed.config.ts (embed) and vite.catalog.config.ts / vitest.stories.config.ts (component catalog).

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { createTargetFileMatcher } from '../lib/search-index-target-matcher.js';
+import { createTargetFileMatcher } from '../builder/search-index-target-matcher.js';
 
 describe('createTargetFileMatcher', () => {
 	const matches = createTargetFileMatcher('/project', ['src/pages/settings/**/*.vue', 'src/pages/admin/**/*.vue']);

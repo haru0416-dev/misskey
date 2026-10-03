@@ -9,7 +9,7 @@ import path from 'node:path';
 import pluginVue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
-import pluginJson5 from './lib/vite-plugin-json5.js';
+import pluginJson5 from './builder/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from './builder/rollup-plugin-remove-unref-i18n.js';
 import { getDevServerConfig, getSharedConfig } from './vite.config.js';
 

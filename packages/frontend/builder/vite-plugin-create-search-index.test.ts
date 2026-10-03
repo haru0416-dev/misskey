@@ -13,7 +13,7 @@ describe('search index plugin initialization', () => {
 			'bun',
 			[
 				'-e',
-				`import { MarkerIdAssigner } from './lib/vite-plugin-create-search-index.ts';
+				`import { MarkerIdAssigner } from './builder/vite-plugin-create-search-index.ts';
 const result = new MarkerIdAssigner().processFile(
   '/project/packages/frontend/src/pages/settings/test.vue',
   '<template><SearchMarker><SearchLabel>Test</SearchLabel></SearchMarker></template>',

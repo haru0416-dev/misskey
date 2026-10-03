@@ -59,7 +59,6 @@ jobs:
             "packages/frontend/catalog"
             "packages/frontend/@types"
             "packages/frontend/builder"
-            "packages/frontend/lib"
             "packages/frontend/public"
             "packages/frontend/public-embed"
             "packages/frontend/src"

@@ -135,13 +135,14 @@ function findVariableDeclaration(program: ESTree.Program, name: string): ESTree.
 		if (x.type !== 'VariableDeclaration') {
 			return false;
 		}
-		if (x.declarations.length !== 1) {
+		const declarator = x.declarations[0];
+		if (x.declarations.length !== 1 || declarator === undefined) {
 			return false;
 		}
-		if (x.declarations[0].id.type !== 'Identifier') {
+		if (declarator.id.type !== 'Identifier') {
 			return false;
 		}
-		return x.declarations[0].id.name === name;
+		return declarator.id.name === name;
 	}) as ESTree.VariableDeclaration | null;
 }
 
@@ -152,29 +153,24 @@ function resolveObjectExpression(program: ESTree.Program, tree: ESTree.Expressio
 	if (tree.type !== 'Identifier') {
 		return null;
 	}
-	const declaration = findVariableDeclaration(program, tree.name);
-	if (declaration?.declarations[0].init?.type !== 'ObjectExpression') {
-		return null;
-	}
-	return declaration.declarations[0].init;
+	const init = findVariableDeclaration(program, tree.name)?.declarations[0]?.init;
+	return init?.type === 'ObjectExpression' ? init : null;
 }
 
 function resolveComponentOptions(program: ESTree.Program, tree: ESTree.Expression): ESTree.ObjectExpression | null {
 	const target =
-		tree.type === 'Identifier' ? (findVariableDeclaration(program, tree.name)?.declarations[0].init ?? null) : tree;
+		tree.type === 'Identifier' ? (findVariableDeclaration(program, tree.name)?.declarations[0]?.init ?? null) : tree;
 	if (target?.type === 'ObjectExpression') {
 		return target;
 	}
 	if (target?.type !== 'CallExpression') {
 		return null;
 	}
-	if (target.arguments.length !== 1) {
+	const [options] = target.arguments;
+	if (target.arguments.length !== 1 || options?.type !== 'ObjectExpression') {
 		return null;
 	}
-	if (target.arguments[0].type !== 'ObjectExpression') {
-		return null;
-	}
-	return target.arguments[0];
+	return options;
 }
 
 function resolveModuleTree(program: ESTree.Program, tree: ESTree.Expression): Map<string, string> | null {
@@ -195,13 +191,11 @@ function resolveModuleTree(program: ESTree.Program, tree: ESTree.Expression): Ma
 				return typeof property.value.value === 'string' ? [[actualKey, property.value.value]] : [];
 			}
 			if (property.value.type === 'Identifier') {
-				const actualValue = findVariableDeclaration(program, property.value.name);
-				if (actualValue?.declarations[0].init?.type !== 'Literal') {
+				const init = findVariableDeclaration(program, property.value.name)?.declarations[0]?.init;
+				if (init?.type !== 'Literal') {
 					return [];
 				}
-				return typeof actualValue.declarations[0].init.value === 'string'
-					? [[actualKey, actualValue.declarations[0].init.value]]
-					: [];
+				return typeof init.value === 'string' ? [[actualKey, init.value]] : [];
 			}
 			return [];
 		}),
@@ -303,20 +297,23 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 			if (node.type !== 'VariableDeclaration') {
 				return;
 			}
-			if (node.declarations.length !== 1) {
+			const declarator = node.declarations[0];
+			if (node.declarations.length !== 1 || declarator === undefined) {
 				return;
 			}
-			if (node.declarations[0].id.type !== 'Identifier') {
+			if (declarator.id.type !== 'Identifier') {
 				return;
 			}
-			const name = node.declarations[0].id.name;
-			if (node.declarations[0].init?.type !== 'CallExpression') {
+			const name = declarator.id.name;
+			const init = declarator.init;
+			if (init?.type !== 'CallExpression') {
 				return;
 			}
-			if (node.declarations[0].init.arguments.length !== 2) {
+			// _export_sfc(component, [[key, value], ...]) の形
+			const [componentNode, sfcEntries] = init.arguments;
+			if (init.arguments.length !== 2 || componentNode === undefined || sfcEntries === undefined) {
 				return;
 			}
-			const componentNode = node.declarations[0].init.arguments[0];
 			if (
 				componentNode.type !== 'Identifier' &&
 				componentNode.type !== 'CallExpression' &&
@@ -324,13 +321,13 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 			) {
 				return;
 			}
-			if (node.declarations[0].init.arguments[1].type !== 'ArrayExpression') {
+			if (sfcEntries.type !== 'ArrayExpression') {
 				return;
 			}
-			if (node.declarations[0].init.arguments[1].elements.length === 0) {
+			if (sfcEntries.elements.length === 0) {
 				return;
 			}
-			const cssModulesEntry = node.declarations[0].init.arguments[1].elements.find((x) => {
+			const cssModulesEntry = sfcEntries.elements.find((x) => {
 				if (x?.type !== 'ArrayExpression') {
 					return false;
 				}
@@ -345,7 +342,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				}
 				return true;
 			}) as ESTree.ArrayExpression | undefined;
-			const __cssModulesIndex = node.declarations[0].init.arguments[1].elements.indexOf(cssModulesEntry ?? null);
+			const __cssModulesIndex = sfcEntries.elements.indexOf(cssModulesEntry ?? null);
 			if (cssModulesEntry === undefined || __cssModulesIndex === -1) {
 				return;
 			}
@@ -369,13 +366,14 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				return;
 			}
 			const ctx = render.params[0];
-			if (ctx.type !== 'Identifier') {
+			if (ctx?.type !== 'Identifier') {
 				return;
 			}
+			const ctxName = ctx.name;
 			for (const [key, moduleTree] of moduleForest) {
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleReference(childNode, ctx.name, key)) {
+						if (!isCssModuleReference(childNode, ctxName, key)) {
 							return;
 						}
 						const actualKey = getMemberPropertyName(childNode.property, childNode.computed);
@@ -398,7 +396,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				});
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleReference(childNode, ctx.name, key)) {
+						if (!isCssModuleReference(childNode, ctxName, key)) {
 							return;
 						}
 						const actualKey = getMemberPropertyName(childNode.property, childNode.computed);
@@ -414,7 +412,8 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 						if (childNode.type !== 'CallExpression') {
 							return;
 						}
-						if (childNode.arguments.length !== 1) {
+						const [classArgument] = childNode.arguments;
+						if (childNode.arguments.length !== 1 || classArgument === undefined) {
 							return;
 						}
 						if (
@@ -427,7 +426,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 						if (childNode.callee.type !== 'Identifier' && !isClassProperty(childParent)) {
 							return;
 						}
-						const normalized = normalizeClass(childNode.arguments[0], name);
+						const normalized = normalizeClass(classArgument, name);
 						if (normalized === null) {
 							return;
 						}
@@ -439,7 +438,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 				let found = false;
 				walk(render.body, {
 					enter(childNode: ESTree.Node) {
-						if (!isCssModuleAccess(childNode, ctx.name, key)) {
+						if (!isCssModuleAccess(childNode, ctxName, key)) {
 							return;
 						}
 						found = true;
@@ -451,7 +450,7 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 			if (hasRemainingCssModuleReference) {
 				return;
 			}
-			if (node.declarations[0].init.arguments[1].elements.length === 1) {
+			if (sfcEntries.elements.length === 1) {
 				if (componentNode.type === 'Identifier') {
 					walk(ast, {
 						enter(childNode: ESTree.Node) {
@@ -467,16 +466,16 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 					magicString.remove(node.start, node.end);
 				} else {
 					const removeStart = cssModulesEntry.start;
-					const removeEnd = node.declarations[0].init.arguments[1].end - 1;
+					const removeEnd = sfcEntries.end - 1;
 					magicString.remove(removeStart, removeEnd);
 				}
 				/* この削除処理は、コンポーネント識別子がモジュール内で一意であり、
 				 * _export_sfc の第2引数が空配列なら副作用を持たない場合に成立する。
 				 */
 			} else {
-				const nextElement = node.declarations[0].init.arguments[1].elements[__cssModulesIndex + 1];
-				const removeStart = node.declarations[0].init.arguments[1].elements[__cssModulesIndex]!.start;
-				const removeEnd = nextElement ? nextElement.start : node.declarations[0].init.arguments[1].end - 1;
+				const nextElement = sfcEntries.elements[__cssModulesIndex + 1];
+				const removeStart = cssModulesEntry.start;
+				const removeEnd = nextElement ? nextElement.start : sfcEntries.end - 1;
 				magicString.remove(removeStart, removeEnd);
 			}
 		},

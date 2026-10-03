@@ -6,7 +6,7 @@
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { defineConfig } from 'vite';
-import { serveLocales } from './lib/vite-plugin-serve-locales.js';
+import { serveLocales } from './builder/vite-plugin-serve-locales.js';
 import { getConfig } from './vite.config.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -19,7 +19,7 @@ export default defineConfig({
 	plugins: [...(base.plugins ?? []), serveLocales()],
 	base: '/',
 	root: path.join(__dirname, 'catalog'),
-	publicDir: path.join(__dirname, 'public'),
+	publicDir: path.join(__dirname, 'catalog/public'),
 
 	resolve: {
 		...base.resolve,

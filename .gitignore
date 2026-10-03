@@ -1,5 +1,5 @@
 # Editors, OS, and design tool state
-/.vscode/
+.vscode/
 .idea/
 *.code-workspace
 .DS_Store

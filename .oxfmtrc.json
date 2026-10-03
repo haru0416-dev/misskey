@@ -48,6 +48,6 @@
 		"packages/frontend/**/*.vue",
 		"packages/frontend/js-built/**",
 		"packages/frontend/assets/**",
-		"packages/frontend/public/mockServiceWorker.js"
+		"packages/frontend/catalog/public/mockServiceWorker.js"
 	]
 }

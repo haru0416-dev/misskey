@@ -13,7 +13,7 @@ import JSON5 from 'json5';
 import { RolldownMagicString } from 'rolldown';
 import type { TransformResult } from 'rolldown';
 import path from 'node:path';
-import { hash, toBase62 } from '../builder/utils.js';
+import { hash, toBase62 } from './utils.js';
 import { createTargetFileMatcher } from './search-index-target-matcher.js';
 import { ElementTypes, NodeTypes } from '@vue/compiler-core';
 import type {
@@ -134,9 +134,10 @@ function findAttribute(props: (AttributeNode | DirectiveNode)[], name: string): 
 }
 
 function findEndOfStartTagAttributes(node: ElementNode): number {
-	if (node.children.length > 0) {
+	const firstChild = node.children[0];
+	if (firstChild !== undefined) {
 		const nodeStart = node.loc.start.offset;
-		const firstChildStart = node.children[0].loc.start.offset;
+		const firstChildStart = firstChild.loc.start.offset;
 		const endOfStartTag = node.loc.source.lastIndexOf('>', firstChildStart - nodeStart);
 		if (endOfStartTag === -1) {
 			throw new Error('Bug: Failed to find end of start tag');
@@ -263,7 +264,7 @@ function extractSugarTags(
 				}
 
 				const iconNode = node.children[0];
-				if (iconNode.type !== NodeTypes.ELEMENT) {
+				if (iconNode?.type !== NodeTypes.ELEMENT) {
 					logger.error(`SearchIcon must have a child element at ${id}:${node.loc.start.line}`);
 					return;
 				}
@@ -350,7 +351,7 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 
 		const markerInfo: SearchIndexItem = {
 			id: markerId,
-			parentId: parentId ?? undefined,
+			...(parentId == null ? {} : { parentId }),
 			label: '',
 			keywords: [],
 			texts: [],
@@ -400,7 +401,9 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 			}
 			markerInfo.label = extracted.label ?? markerInfo.label ?? '';
 			markerInfo.texts = [...extracted.texts, ...markerInfo.texts];
-			markerInfo.icon = extracted.icon ?? markerInfo.icon ?? undefined;
+			if (extracted.icon != null) {
+				markerInfo.icon = extracted.icon;
+			}
 		}
 
 		if (!markerInfo.label) {
@@ -576,7 +579,7 @@ export class MarkerIdAssigner {
 			}
 
 			markerRelations.push({
-				parentId: parentId ?? undefined,
+				...(parentId == null ? {} : { parentId }),
 				markerId: nodeMarkerId,
 				node,
 			});
@@ -699,7 +702,7 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 	const isTargetFile = createTargetFileMatcher(root, options.targetFilePaths);
 
 	function parseSearchIndexFileId(id: string): string | null {
-		const noQuery = id.split('?')[0];
+		const [noQuery = id] = id.split('?');
 		if (noQuery.startsWith(searchIndexPrefix) && noQuery.endsWith(searchIndexSuffix)) {
 			const filePath = id.slice(searchIndexPrefix.length).slice(0, -searchIndexSuffix.length);
 			if (isTargetFile(filePath)) {

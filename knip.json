@@ -5,6 +5,7 @@
 		"packages/backend/assets/**",
 		"packages/frontend/assets/**",
 		"packages/frontend/public/**",
+		"packages/frontend/catalog/public/**",
 		"**/public/**",
 		"packages/frontend/public-embed/**",
 		"packages/misskey-js/src/autogen/**"
@@ -31,7 +32,6 @@
 				"src/embed/boot.ts",
 				"src/workers/*.ts",
 				"builder/**/*.ts",
-				"lib/**/*.ts",
 				"test/**/*.ts",
 				"src/**/*.stories.impl.ts",
 				"src/**/*.stories.meta.ts",
