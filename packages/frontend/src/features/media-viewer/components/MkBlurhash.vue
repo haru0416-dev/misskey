@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts">
 import DrawBlurhash from '@/workers/draw-blurhash?worker';
 import TestWebGL2 from '@/workers/test-webgl2?worker';
-import { WorkerMultiDispatch } from '@shared/utility/worker-multi-dispatch.js';
+import { WorkerMultiDispatch } from '@/shared/utility/worker-multi-dispatch.js';
 
 const isTest = import.meta.env.MODE === 'test' || window.localStorage.getItem('__MISSKEY_E2E_TEST__') === 'true';
 
@@ -50,9 +50,9 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>((reso
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
-import { render } from '@shared/utility/render-blurhash.js';
-import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
-import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
+import { render } from '@/shared/utility/render-blurhash.js';
+import { calculateBlurhashDimensions } from '@/shared/utility/blurhash.js';
+import { extractAvgColorFromBlurhash } from '@/shared/utility/extract-avg-color-from-blurhash.js';
 import { genId } from '@/utility/id.js';
 
 const props = withDefaults(

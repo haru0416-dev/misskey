@@ -5,7 +5,7 @@
 
 import type { StoryObj } from '@/stories/types.js';
 import MkExtensionInstaller from './MkExtensionInstaller.vue';
-import lightTheme from '@shared/themes/_light.json5';
+import lightTheme from '@/shared/themes/_light.json5';
 
 export const Plugin = {
 	render(args) {

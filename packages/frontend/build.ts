@@ -7,21 +7,24 @@ import { LocaleInliner } from './builder/locale-inliner.js';
 import { createLogger } from './builder/logger';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const outputDir = __dirname + '/../../built/_frontend_vite_';
 
-async function viteBuild() {
-	await spawnChecked([process.execPath, 'run', '--bun', 'vite', 'build'], {
-		cwd: __dirname,
-	});
-}
+// 本体と埋め込み (/embed/*) は別のバンドル。互いに依存しないので並行してビルドする。
+const targets = [
+	{ config: 'vite.config.ts', outputDir: `${__dirname}/../../built/_frontend_vite_`, i18nFile: 'src/i18n.ts' },
+	{
+		config: 'vite.embed.config.ts',
+		outputDir: `${__dirname}/../../built/_frontend_embed_vite_`,
+		i18nFile: 'src/i18n.ts',
+	},
+];
 
-async function buildAllLocale() {
+async function buildAllLocale(outputDir: string, i18nFile: string) {
 	const logger = createLogger();
 	const inliner = await LocaleInliner.create({
 		outputDir,
 		logger,
 		scriptsDir: 'scripts',
-		i18nFile: 'src/i18n.ts',
+		i18nFile,
 	});
 
 	await inliner.loadFiles();
@@ -35,10 +38,12 @@ async function buildAllLocale() {
 	}
 }
 
-async function build() {
-	await fs.rm(outputDir, { recursive: true, force: true });
-	await viteBuild();
-	await buildAllLocale();
-}
-
-await build();
+await Promise.all(
+	targets.map(async ({ config, outputDir, i18nFile }) => {
+		await fs.rm(outputDir, { recursive: true, force: true });
+		await spawnChecked([process.execPath, 'run', '--bun', 'vite', 'build', '--config', config], {
+			cwd: __dirname,
+		});
+		await buildAllLocale(outputDir, i18nFile);
+	}),
+);

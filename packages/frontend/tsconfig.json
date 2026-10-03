@@ -16,8 +16,7 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"paths": {
-			"@/*": ["./src/*"],
-			"@shared/*": ["../frontend-shared/*"]
+			"@/*": ["./src/*"]
 		},
 		"typeRoots": ["./@types", "./node_modules/@types", "./node_modules/@vue-macros", "./node_modules"],
 		"types": ["vite/client", "vite-plugin-glsl/ext", "vitest/importMeta"],
@@ -30,8 +29,6 @@
 		"./test/**/*.ts",
 		"./test/**/*.vue",
 		"./@types/**/*.ts",
-		"../frontend-shared/utility/**/*.ts",
-		"../frontend-shared/@types/**/*.ts",
 		"./builder/**/*.ts"
 	],
 	"exclude": ["./src/**/*.stories.ts"]

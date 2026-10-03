@@ -3,7 +3,7 @@ import path from 'node:path';
 import pluginVue from '@vitejs/plugin-vue';
 import pluginGlsl from 'vite-plugin-glsl';
 import { visualizer } from 'rollup-plugin-visualizer';
-import type { PluginOption, UserConfig } from 'vite';
+import type { PluginOption, ServerOptions, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import { promises as fsp } from 'node:fs';
 import { parse } from 'yaml';
@@ -114,51 +114,38 @@ function isStartupModule(
 	return startupModuleIds.has(id);
 }
 
-export function getConfig(): UserConfig {
-	const localesHash = toBase62(hash(JSON.stringify(locales)));
-
+/** 開発サーバーの設定。本体と埋め込みは、ポートと HMR の接続先を別の環境変数で変える。 */
+export function getDevServerConfig(portEnv: string, hmrClientPortEnv: string, defaultPort: number): ServerOptions {
 	// tailscale などで別のポートから開くときに、デフォルトのポートと HMR の接続先を環境変数で変える。
-	const devServerPort = Number(process.env['MISSKEY_VITE_PORT'] ?? 5173);
-	const hmrClientPort = Number(process.env['MISSKEY_VITE_HMR_CLIENT_PORT'] ?? devServerPort);
+	const port = Number(process.env[portEnv] ?? defaultPort);
+	const hmrClientPort = Number(process.env[hmrClientPortEnv] ?? port);
 
 	return {
-		base: '/vite/',
+		// バックエンドが任意のアドレスからの接続を受け付けるため、Vite も全アドレスで待ち受ける。
+		host: '0.0.0.0',
+		allowedHosts: host ? [host] : undefined,
+		port,
+		strictPort: true,
+		hmr: {
+			// バックエンド経由ではアセットが 3000 から配信され、HMR の WS がバックエンドの WS サーバーに吸収される。
+			// 接続先を Vite のポートに固定する。
+			clientPort: hmrClientPort,
+		},
+	};
+}
 
+/** 本体と埋め込み (vite.embed.config.ts) のビルドで共通の設定。 */
+export function getSharedConfig() {
+	const localesHash = toBase62(hash(JSON.stringify(locales)));
+
+	return {
 		// Vite のログ出力はバックエンドと共有されるため、コンソールをクリアしない。
 		clearScreen: false,
-
-		server: {
-			// バックエンドが任意のアドレスからの接続を受け付けるため、Vite も全アドレスで待ち受ける。
-			host: '0.0.0.0',
-			allowedHosts: host ? [host] : undefined,
-			port: devServerPort,
-			strictPort: true,
-			hmr: {
-				// バックエンド経由ではアセットが 3000 から配信され、HMR の WS がバックエンドの WS サーバーに吸収される。
-				// 接続先を Vite のポートに固定する。
-				clientPort: hmrClientPort,
-			},
-			headers: {
-				'X-Frame-Options': 'DENY',
-			},
-		},
-
-		plugins: [
-			pluginWatchLocales(),
-			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
-			pluginVue(),
-			pluginRemoveUnrefI18n(),
-			pluginUnwindCssModuleClassName(),
-			pluginJson5(),
-			pluginGlsl({ minify: true }),
-			...getBundleVisualizerPlugin(),
-		],
 
 		resolve: {
 			extensions,
 			alias: {
 				'@/': `${path.join(import.meta.dirname, 'src')}/`,
-				'@shared/': `${path.join(import.meta.dirname, '../frontend-shared')}/`,
 				'/client-assets/': `${path.join(import.meta.dirname, 'assets')}/`,
 				'/static-assets/': `${path.join(import.meta.dirname, '../backend/assets')}/`,
 				'/fluent-emoji/': '@misskey-dev/emoji-assets/fluent-emoji/',
@@ -170,7 +157,7 @@ export function getConfig(): UserConfig {
 				exclude: Features.LightDark,
 			},
 			modules: {
-				generateScopedName(name, filename, _css): string {
+				generateScopedName(name: string, filename: string, _css: string): string {
 					const id = (path.relative(import.meta.dirname, filename.split('?')[0]) + '-' + name)
 						.replaceAll(/[\\\/\.\?&=]/g, '-')
 						.replaceAll(/(src-|vue-)/g, '');
@@ -195,6 +182,52 @@ export function getConfig(): UserConfig {
 		build: {
 			target: ['chrome130', 'firefox132', 'safari18.2'],
 			manifest: 'manifest.json',
+			cssCodeSplit: true,
+			assetsDir: '.',
+			emptyOutDir: false,
+			sourcemap: process.env.NODE_ENV === 'development',
+			reportCompressedSize: false,
+		},
+
+		output: {
+			entryFileNames: `scripts/${localesHash}-[hash:8].js`,
+			chunkFileNames: `scripts/${localesHash}-[hash:8].js`,
+			assetFileNames: `assets/${localesHash}-[hash:8][extname]`,
+		},
+
+		worker: {
+			format: 'es',
+		},
+	} satisfies UserConfig & { output: object };
+}
+
+export function getConfig(): UserConfig {
+	const { output, ...shared } = getSharedConfig();
+
+	return {
+		...shared,
+		base: '/vite/',
+
+		server: {
+			...getDevServerConfig('MISSKEY_VITE_PORT', 'MISSKEY_VITE_HMR_CLIENT_PORT', 5173),
+			headers: {
+				'X-Frame-Options': 'DENY',
+			},
+		},
+
+		plugins: [
+			pluginWatchLocales(),
+			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
+			pluginVue(),
+			pluginRemoveUnrefI18n(),
+			pluginUnwindCssModuleClassName(),
+			pluginJson5(),
+			pluginGlsl({ minify: true }),
+			...getBundleVisualizerPlugin(),
+		],
+
+		build: {
+			...shared.build,
 			rolldownOptions: {
 				experimental: {
 					nativeMagicString: true,
@@ -206,6 +239,7 @@ export function getConfig(): UserConfig {
 				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',
 				output: {
+					...output,
 					codeSplitting: {
 						groups: [
 							{
@@ -231,9 +265,6 @@ export function getConfig(): UserConfig {
 							},
 						],
 					},
-					entryFileNames: `scripts/${localesHash}-[hash:8].js`,
-					chunkFileNames: `scripts/${localesHash}-[hash:8].js`,
-					assetFileNames: `assets/${localesHash}-[hash:8][extname]`,
 					paths(id) {
 						for (const p of externalPackages) {
 							if (p.match.test(id)) {
@@ -245,16 +276,7 @@ export function getConfig(): UserConfig {
 					},
 				},
 			},
-			cssCodeSplit: true,
 			outDir: path.join(import.meta.dirname, '../../built/_frontend_vite_'),
-			assetsDir: '.',
-			emptyOutDir: false,
-			sourcemap: process.env.NODE_ENV === 'development',
-			reportCompressedSize: false,
-		},
-
-		worker: {
-			format: 'es',
 		},
 
 		test: {

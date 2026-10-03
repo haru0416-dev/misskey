@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
+import { calculateBlurhashDimensions } from '@/shared/utility/blurhash.js';
 
 describe('calculateBlurhashDimensions', () => {
 	test.each([

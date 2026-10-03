@@ -6,7 +6,7 @@
 import { onActivated, onDeactivated, onMounted, onScopeDispose, shallowRef, watch } from 'vue';
 import type { ShallowRef } from 'vue';
 import type * as Misskey from 'misskey-js';
-import { PollingScheduler } from '@shared/utility/polling-scheduler.js';
+import { PollingScheduler } from '@/utility/polling-scheduler.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import { Paginator } from '@/utility/paginator.js';
 import type { IPaginator, MisskeyEntity } from '@/utility/paginator.js';

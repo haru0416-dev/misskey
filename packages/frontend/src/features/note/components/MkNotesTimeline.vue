@@ -63,7 +63,7 @@ import { useVirtualizer } from '@tanstack/vue-virtual';
 import * as Misskey from 'misskey-js';
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
-import { getScrollContainer } from '@shared/utility/scroll.js';
+import { getScrollContainer } from '@/shared/utility/scroll.js';
 import type { MkPaginationOptions } from '@/components/layout/MkPagination.vue';
 import type { IPaginator } from '@/utility/paginator.js';
 import MkNote from '@/features/note/components/MkNote.vue';

@@ -53,14 +53,6 @@ services:
         target: /misskey/packages/frontend/package.json
         read_only: true
       - type: bind
-        source: ../../frontend-embed/package.json
-        target: /misskey/packages/frontend-embed/package.json
-        read_only: true
-      - type: bind
-        source: ../../frontend-shared/package.json
-        target: /misskey/packages/frontend-shared/package.json
-        read_only: true
-      - type: bind
         source: ../scripts/compile-config.js
         target: /misskey/packages/backend/scripts/compile-config.js
         read_only: true

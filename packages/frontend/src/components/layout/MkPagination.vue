@@ -65,7 +65,7 @@ export type MkPaginationOptions = {
 </script>
 
 <script lang="ts" setup generic="T extends IPaginator">
-import { isLink } from '@shared/utility/is-link.js';
+import { isLink } from '@/shared/utility/is-link.js';
 import { onMounted, computed, watch, unref } from 'vue';
 import type { UnwrapRef } from 'vue';
 import { paginatorErrorText } from '@/utility/paginator.js';

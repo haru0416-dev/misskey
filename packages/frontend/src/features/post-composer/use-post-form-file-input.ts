@@ -4,7 +4,7 @@
  */
 
 import { ref } from 'vue';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import type { Ref, ShallowRef } from 'vue';
 import type * as Misskey from 'misskey-js';
 import type { useUploader } from '@/features/drive/useUploader.js';

@@ -9,7 +9,6 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
-		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"idb-keyval": "6.3.0",
 		"misskey-js": "workspace:*"

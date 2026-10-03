@@ -8,7 +8,7 @@
 | `{name}` などを文字列へ補間 | `i18n.tsx.<key>({ name })` |
 | リンクや強調など Vue の要素を差し込む | [I18n.vue](../../../../../packages/frontend/src/components/global/I18n.vue) に `i18n.ts.<key>` を src として渡し、対応する slot を使う |
 
-[共有実装](../../../../../packages/frontend-shared/utility/i18n.ts) の `ts` は元の文字列を返す。パラメータ付きキーを `ts` で直接表示すると未展開の `{name}` が残るが、I18n コンポーネントへ渡す用途では正しい。`tsx` の型にはパラメータ付きキーだけがあり、値は string または number。補間は単純置換で、ICU の plural/select や HTML エスケープを行わない。
+[共有実装](../../../../../packages/frontend/src/shared/utility/i18n.ts) の `ts` は元の文字列を返す。パラメータ付きキーを `ts` で直接表示すると未展開の `{name}` が残るが、I18n コンポーネントへ渡す用途では正しい。`tsx` の型にはパラメータ付きキーだけがあり、値は string または number。補間は単純置換で、ICU の plural/select や HTML エスケープを行わない。
 
 動的なキーは候補を型で絞り、各候補に必要な引数を満たす。変わる値に応じた表示には既存の computed 等を使い、型 assertion や存在しないキーへの fallback で不一致を隠さない。
 

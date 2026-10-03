@@ -126,7 +126,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { host, version } from '@shared/utility/config.js';
+import { host, version } from '@/shared/utility/config.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import MkServerRules from '@/features/instance/components/MkServerRules.vue';

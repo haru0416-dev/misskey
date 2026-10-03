@@ -5,9 +5,9 @@
 
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
-import { url as base } from '@shared/utility/config.js';
-import { PollingScheduler } from '@shared/utility/polling-scheduler.js';
-import { tryParseUrl } from '@shared/utility/url.js';
+import { url as base } from '@/shared/utility/config.js';
+import { PollingScheduler } from '@/utility/polling-scheduler.js';
+import { tryParseUrl } from '@/shared/utility/url.js';
 
 type RssWidgetProps = {
 	url: string;

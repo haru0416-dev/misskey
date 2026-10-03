@@ -16,7 +16,7 @@
 		"isolatedModules": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"@shared/*": ["../frontend-shared/*"]
+			"@frontend-shared/*": ["../frontend/src/shared/*"]
 		},
 		"typeRoots": [
 			"./node_modules/@types",

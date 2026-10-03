@@ -118,7 +118,7 @@ import {
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import * as Misskey from 'misskey-js';
-import { getScrollContainer, scrollToTop } from '@shared/utility/scroll.js';
+import { getScrollContainer, scrollToTop } from '@/shared/utility/scroll.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import type { SoundStore } from '@/preferences/def.js';
 import MkPullToRefresh from '@/components/layout/MkPullToRefresh.vue';

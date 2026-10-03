@@ -4,10 +4,10 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { compile, themeProps } from '@shared/utility/theme.js';
-import type { Theme } from '@shared/utility/theme.js';
+import { compile, themeProps } from '@/shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
 
-const builtins = import.meta.glob<Theme>('../../frontend-shared/themes/*.json5', {
+const builtins = import.meta.glob<Theme>('../src/shared/themes/*.json5', {
 	eager: true,
 	import: 'default',
 });
@@ -45,7 +45,7 @@ describe('組み込みテーマ', () => {
 
 	test('色は sRGB 表記に解決される', () => {
 		// テーマの記法は hex に統一してある。compile はそれを rgb()/rgba() へ落とす。
-		const compiled = compile(builtins['../../frontend-shared/themes/l-toneriko.json5']!);
+		const compiled = compile(builtins['../src/shared/themes/l-toneriko.json5']!);
 		expect(compiled['accent']).toBe('rgb(92, 98, 216)');
 		expect(compiled['bg']).toBe('rgb(246, 247, 250)');
 	});

@@ -15,7 +15,7 @@ export type MkABehavior = 'window' | 'browser' | null;
 
 <script lang="ts" setup>
 import { computed, inject, useTemplateRef } from 'vue';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import * as os from '@/os.js';
 import type { MenuItem } from '@/types/menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';

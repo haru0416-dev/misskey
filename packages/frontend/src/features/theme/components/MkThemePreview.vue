@@ -41,8 +41,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type { Theme } from '@shared/utility/theme.js';
-import { compile } from '@shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
+import { compile } from '@/shared/utility/theme.js';
 
 const props = defineProps<{
 	theme: Theme;

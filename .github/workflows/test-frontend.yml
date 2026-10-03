@@ -9,7 +9,6 @@ on:
       - packages/aiscript/**
       - packages/mfm-js/**
       - packages/frontend/**
-      - packages/frontend-shared/**
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**
@@ -27,7 +26,6 @@ on:
       - packages/aiscript/**
       - packages/mfm-js/**
       - packages/frontend/**
-      - packages/frontend-shared/**
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**

@@ -5,7 +5,7 @@
 
 import { createPinia } from 'pinia';
 import { describe, expect, test } from 'vitest';
-import { host } from '@shared/utility/config.js';
+import { host } from '@/shared/utility/config.js';
 import type {
 	PREF,
 	PossiblyNonNormalizedPreferencesProfile,

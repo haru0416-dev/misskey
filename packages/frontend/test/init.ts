@@ -11,7 +11,7 @@ import { ref } from 'vue';
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-// ロケールは読み込み時の top-level await で取得される (frontend-shared/utility/locale.ts)。下の import より前に
+// ロケールは読み込み時の top-level await で取得される (src/shared/utility/locale.ts)。下の import より前に
 // 応答を差し替えないと、localhost:3000 へ実際に取りに行き、そこで動いているサーバー次第で結果が変わる。
 // 照合する URL は絶対 URL になるので、先頭には固定しない。
 function mockLocaleFetch(): void {

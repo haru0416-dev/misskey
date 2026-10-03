@@ -4,14 +4,14 @@
 
 ## 仕組み
 
-1. `packages/frontend/src` と `packages/frontend-embed/src` の `.ts` と `.vue` を走査し、`ti-` で始まるクラス名を集めます。
-2. `vendor/tabler-icons/` のフォントから、集めたアイコンの文字だけを含むサブセットを作ります。frontend と frontend-embed で別々に作ります。
+1. `.ts` と `.vue` を走査し、`ti-` で始まるクラス名を集めます。本体は `packages/frontend/src` のうち `embed/` を除くすべてを、埋め込みは `src/embed/boot.ts` から import をたどって届くファイル (`src/embed/` の外にある本体の部品を含む) を走査します。型だけの import はバンドルに入らないので、たどりません。
+2. `vendor/tabler-icons/` のフォントから、集めたアイコンの文字だけを含むサブセットを作ります。本体と埋め込みで別々に作ります。
 3. `built/` に、サブセットのフォントと CSS を出力します。
 
 | 出力 | 内容 |
 | --- | --- |
 | `tabler-icons-frontend.css` / `.woff2` | frontend 用のサブセット |
-| `tabler-icons-frontendEmbed.css` / `.woff2` | frontend-embed 用のサブセット |
+| `tabler-icons-frontendEmbed.css` / `.woff2` | 埋め込み表示 (`/embed/*`) 用のサブセット |
 | `tabler-icons.woff2` | 全アイコンを含むフォント |
 
 出力した CSS は、全アイコンのフォントを先に宣言し、そのあとに `unicode-range` つきでサブセットを宣言します。サブセットにないアイコンを呼び出したときは、`unicode-range` に合わないので、全アイコンのフォントから読み込まれます。

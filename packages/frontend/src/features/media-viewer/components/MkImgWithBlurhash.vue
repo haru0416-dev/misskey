@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, onMounted, onUnmounted, useCssModule, useTemplateRef, watch, ref } from 'vue';
-import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
+import { calculateBlurhashDimensions } from '@/shared/utility/blurhash.js';
 import { prefer } from '@/preferences.js';
 import MkBlurhash from '@/features/media-viewer/components/MkBlurhash.vue';
 

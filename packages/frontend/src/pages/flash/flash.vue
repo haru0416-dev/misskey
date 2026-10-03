@@ -64,7 +64,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, onDeactivated, onUnmounted, ref, watch, shallowRef, defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
 import { Interpreter, Parser, values } from '@syuilo/aiscript';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import type { Ref } from 'vue';
 import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
 import MkButton from '@/components/form/MkButton.vue';

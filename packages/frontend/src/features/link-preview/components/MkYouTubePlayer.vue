@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { versatileLang } from '@shared/utility/intl-const.js';
+import { versatileLang } from '@/shared/utility/intl-const.js';
 import MkWindow from '@/components/overlay/MkWindow.vue';
 import { transformPlayerUrl } from '@/features/link-preview/url-preview.js';
 import type { UrlPreviewSummary } from 'misskey-js/entities.js';

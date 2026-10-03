@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import type * as Misskey from 'misskey-js';
-import { MediaProxy } from '@shared/utility/media-proxy.js';
+import { MediaProxy } from '@/shared/utility/media-proxy.js';
 
 describe('MediaProxy', () => {
 	test('extracts the source URL from a relative local proxy URL', () => {

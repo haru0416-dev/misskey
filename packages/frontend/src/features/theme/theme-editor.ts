@@ -5,8 +5,8 @@
 
 import { genId } from '@/utility/id.js';
 
-import type { Theme } from '@shared/utility/theme.js';
-import { themeProps } from '@shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
+import { themeProps } from '@/shared/utility/theme.js';
 
 type Default = null;
 export type Color = string;

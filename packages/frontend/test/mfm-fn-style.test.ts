@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { mfmFnStyle } from '@shared/utility/mfm-fn-style.js';
+import { mfmFnStyle } from '@/shared/utility/mfm-fn-style.js';
 
 const on = { useAnim: true, advanced: true };
 const off = { useAnim: false, advanced: false };

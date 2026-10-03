@@ -8,9 +8,59 @@ import path from 'node:path';
 import { generateSubsettedFont } from './subsetter.js';
 import { runWriteTasks } from './write-tasks.js';
 
-const filesToScan = {
-	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
+const repoRoot = path.resolve(process.cwd(), '../../');
+const frontendSrc = path.join(repoRoot, 'packages/frontend/src');
+const embedDir = path.join(frontendSrc, 'embed');
+
+async function* globFiles(pattern: string): AsyncGenerator<string> {
+	for await (const file of fsp.glob(pattern, { cwd: repoRoot })) {
+		yield path.resolve(repoRoot, file);
+	}
+}
+
+// import 文・export ... from・動的 import の読み込み先。型だけの import (import type / export type) はバンドルに入らないので外す。
+const importRegex =
+	/^\s*(?:import|export)\s+(?!type\b)(?:[^'";]*?\bfrom\s*)?['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/gm;
+
+function resolveImport(from: string, specifier: string): string | null {
+	const spec = specifier.split('?')[0]!;
+	let base: string;
+	if (spec.startsWith('@/')) {
+		base = path.join(frontendSrc, spec.slice(2));
+	} else if (spec.startsWith('.')) {
+		base = path.resolve(path.dirname(from), spec);
+	} else {
+		return null;
+	}
+	const candidates = [base, base.replace(/\.js$/, '.ts'), `${base}.ts`, `${base}.vue`, path.join(base, 'index.ts')];
+	return candidates.find((c) => /\.(ts|vue)$/.test(c) && existsSync(c)) ?? null;
+}
+
+// 埋め込みは src/embed/ の外にある本体の部品も使うので、起動コードから import でたどれるファイルを走査する。
+async function* reachableFiles(entry: string): AsyncGenerator<string> {
+	const seen = new Set<string>();
+	const stack = [entry];
+	for (let file = stack.pop(); file !== undefined; file = stack.pop()) {
+		if (seen.has(file)) continue;
+		seen.add(file);
+		yield file;
+		const content = await fsp.readFile(file, 'utf-8');
+		for (const [, staticSpecifier, dynamicSpecifier] of content.matchAll(importRegex)) {
+			const resolved = resolveImport(file, (staticSpecifier ?? dynamicSpecifier)!);
+			if (resolved !== null) stack.push(resolved);
+		}
+	}
+}
+
+async function* frontendFiles(): AsyncGenerator<string> {
+	for await (const file of globFiles('packages/frontend/src/**/*.{ts,vue}')) {
+		if (!file.startsWith(embedDir + path.sep)) yield file;
+	}
+}
+
+const filesToScan: Record<string, () => AsyncGenerator<string>> = {
+	frontend: frontendFiles,
+	frontendEmbed: () => reachableFiles(path.join(embedDir, 'boot.ts')),
 };
 
 async function main() {
@@ -52,15 +102,13 @@ async function main() {
 	await fsp.copyFile(fontPath + 'tabler-icons.woff2', './built/tabler-icons.woff2');
 
 	const unicodeRangeValues = new Map<string, number[]>();
-	for (const [key, dir] of Object.entries(filesToScan)) {
+	for (const [key, listFiles] of Object.entries(filesToScan)) {
 		console.log(`Scanning ${key}...`);
 
 		const iconsToPack = new Set<string>();
 
-		const cwd = path.resolve(process.cwd(), '../../');
-		const files = fsp.glob(dir, { cwd });
-		for await (const file of files) {
-			const content = await fsp.readFile(path.resolve(cwd, file), 'utf-8');
+		for await (const file of listFiles()) {
+			const content = await fsp.readFile(file, 'utf-8');
 			const classRegex = /ti-[a-z0-9-]+/g;
 			let matches: RegExpExecArray | null;
 			while ((matches = classRegex.exec(content)) !== null) {

@@ -4,8 +4,8 @@
  */
 
 import type * as Misskey from 'misskey-js';
-import { apiUrl } from '@shared/utility/config.js';
-import { parseJsonObject } from '@shared/utility/server-context.js';
+import { apiUrl } from '@/shared/utility/config.js';
+import { parseJsonObject } from '@/shared/utility/server-context.js';
 import type { UploaderFeatures } from '@/features/drive/useUploader.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

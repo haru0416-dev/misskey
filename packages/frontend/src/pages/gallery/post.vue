@@ -63,7 +63,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch, ref, defineAsyncComponent, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { post as openPostForm } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';

@@ -204,9 +204,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, inject, onMounted, ref, useTemplateRef, provide } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import { isLink } from '@shared/utility/is-link.js';
-import { shouldCollapsed } from '@shared/utility/collapsed.js';
-import { host } from '@shared/utility/config.js';
+import { isLink } from '@/shared/utility/is-link.js';
+import { shouldCollapsed } from '@/shared/utility/collapsed.js';
+import { host } from '@/shared/utility/config.js';
 import type { Ref } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { OpenOnRemoteOptions } from '@/features/auth/please-login.js';

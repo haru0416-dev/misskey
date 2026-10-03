@@ -5,7 +5,7 @@
 
 import { defineAsyncComponent, ref } from 'vue';
 import type * as Misskey from 'misskey-js';
-import { apiUrl, host } from '@shared/utility/config.js';
+import { apiUrl, host } from '@/shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';

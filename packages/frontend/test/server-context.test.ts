@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'vitest';
-import { parseJsonObject, readServerContext } from '@shared/utility/server-context.js';
+import { parseJsonObject, readServerContext } from '@/shared/utility/server-context.js';
 
 afterEach(() => {
 	document.getElementById('test-server-context')?.remove();

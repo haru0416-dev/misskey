@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { I18n } from '@shared/utility/i18n.js';
+import { I18n } from '@/shared/utility/i18n.js';
 import type { ILocale, ParameterizedString } from 'i18n';
 
 describe('i18n', () => {

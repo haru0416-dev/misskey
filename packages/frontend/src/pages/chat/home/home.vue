@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onActivated, onDeactivated, onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { useInterval } from '@/composables/useInterval.js';
 import MessageItem from '../message-item.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';

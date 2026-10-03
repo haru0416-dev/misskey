@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import fc from 'fast-check';
-import { decodePunycodeLabel, encodePunycodeLabel, toUnicodeHost } from '@shared/utility/punycode.js';
+import { decodePunycodeLabel, encodePunycodeLabel, toUnicodeHost } from '@/shared/utility/punycode.js';
 
 /** RFC 3492 §7.1 のテストベクタ (符号化後 → 元)。仕様そのものへの適合を見る。 */
 const RFC3492_VECTORS: readonly (readonly [string, string])[] = [

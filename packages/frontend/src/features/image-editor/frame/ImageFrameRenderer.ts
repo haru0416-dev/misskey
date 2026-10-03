@@ -4,7 +4,7 @@
  */
 
 import QRCodeStyling from 'qr-code-styling';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import type ExifReader from 'exifreader';
 import { FN_frame } from './frame.js';
 import { ImageCompositor } from '@/features/image-editor/core/ImageCompositor.js';

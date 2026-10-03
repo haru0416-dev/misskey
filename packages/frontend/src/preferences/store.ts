@@ -6,7 +6,7 @@
 import { computed, ref, watch } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { defineStore } from 'pinia';
-import { host, version } from '@shared/utility/config.js';
+import { host, version } from '@/shared/utility/config.js';
 import { PREF_DEF } from './def.js';
 import type { Ref } from 'vue';
 import type { Pinia } from 'pinia';

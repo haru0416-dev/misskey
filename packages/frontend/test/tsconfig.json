@@ -16,8 +16,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"paths": {
-			"@/*": ["../src/*"],
-			"@shared/*": ["../../frontend-shared/*"]
+			"@/*": ["../src/*"]
 		},
 		"typeRoots": ["../node_modules/@types"],
 		"lib": ["esnext", "dom"],

@@ -1,0 +1,91 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<template>
+<div :class="$style.root">
+	<XReaction v-for="[reaction, count] in reactions" :key="reaction" :reaction="reaction" :count="count" :note="note"/>
+	<slot v-if="hasMoreReactions" name="more"></slot>
+</div>
+</template>
+
+<script lang="ts" setup>
+import * as Misskey from 'misskey-js';
+import { watch, ref } from 'vue';
+import XReaction from '@/embed/components/EmReactionsViewer.reaction.vue';
+
+const props = withDefaults(
+	defineProps<{
+		note: Misskey.entities.Note;
+		maxNumber?: number;
+	}>(),
+	{
+		maxNumber: Infinity,
+	},
+);
+
+const reactions = ref<[string, number][]>([]);
+const hasMoreReactions = ref(false);
+
+watch(
+	[() => props.note.reactions, () => props.maxNumber],
+	([newSource, maxNumber]) => {
+		let newReactions: [string, number][] = [];
+		hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
+
+		for (const current of reactions.value) {
+			const reaction = current[0];
+			const count = newSource[reaction];
+			if (count !== undefined && count !== 0) {
+				current[1] = count;
+				newReactions.push(current);
+			}
+		}
+
+		const newReactionsNames = new Set(newReactions.map(([x]) => x));
+		newReactions = [
+			...newReactions,
+			...Object.entries(newSource)
+				.sort(([, a], [, b]) => b - a)
+				.filter(([y], i) => i < maxNumber && !newReactionsNames.has(y)),
+		];
+
+		newReactions = newReactions.slice(0, props.maxNumber);
+
+		if (props.note.myReaction && !newReactions.some(([name]) => name === props.note.myReaction)) {
+			newReactions.push([props.note.myReaction, newSource[props.note.myReaction] ?? 0]);
+		}
+
+		reactions.value = newReactions;
+	},
+	{ immediate: true, deep: true },
+);
+</script>
+
+<style lang="scss" module>
+.transition_x_move,
+.transition_x_enterActive,
+.transition_x_leaveActive {
+	transition: opacity 0.2s cubic-bezier(0,.5,.5,1), transform 0.2s cubic-bezier(0,.5,.5,1) !important;
+}
+.transition_x_enterFrom,
+.transition_x_leaveTo {
+	opacity: 0;
+	transform: scale(0.7);
+}
+.transition_x_leaveActive {
+	position: absolute;
+}
+
+.root {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	margin: 4px -2px 0 -2px;
+
+	&:empty {
+		display: none;
+	}
+}
+</style>

@@ -1,1 +1,1 @@
-This package contains the common scripts that are used to build the frontend and frontend-embed packages.
+This directory contains the build scripts shared by the main client (vite.config.ts) and the embed client (vite.embed.config.ts).

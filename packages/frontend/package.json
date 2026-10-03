@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"watch": "vite",
+		"watch:embed": "vite --config vite.embed.config.ts",
 		"build": "bun build.ts",
 		"catalog": "vite --config vite.catalog.config.ts",
 		"catalog:build": "vite build --config vite.catalog.config.ts",
@@ -34,7 +35,6 @@
 		"echarts": "6.1.0",
 		"eventemitter3": "5.0.4",
 		"exifreader": "4.45.2",
-		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
 		"idb-keyval": "6.3.0",

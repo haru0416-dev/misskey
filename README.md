@@ -11,9 +11,7 @@ Misskey の upstream には追従しない、独立した製品です。連合�
 | ディレクトリ | 内容 |
 | --- | --- |
 | [packages/backend](./packages/backend) | サーバー本体。REST API、ActivityPub、ストリーミング、ジョブキュー、DB のスキーマと migration |
-| [packages/frontend](./packages/frontend) | Web クライアント |
-| [packages/frontend-embed](./packages/frontend-embed) | 投稿・ユーザー・クリップを外部サイトに埋め込む表示 |
-| [packages/frontend-shared](./packages/frontend-shared) | frontend と frontend-embed が共有するテーマ・スタイル・ユーティリティ |
+| [packages/frontend](./packages/frontend) | Web クライアント。投稿・ユーザー・クリップを外部サイトに埋め込む表示 (`src/embed/`、別のバンドル) と、本体・埋め込み・Service Worker が共有するテーマ・スタイル・ユーティリティ (`src/shared/`) を含む |
 | [packages/sw](./packages/sw) | Service Worker(プッシュ通知など) |
 | [packages/misskey-js](./packages/misskey-js) | API とストリーミングの TypeScript SDK。型はバックエンドの API 定義から生成する |
 | [packages/mfm-js](./packages/mfm-js) | MFM(投稿の装飾記法)のパーサー |

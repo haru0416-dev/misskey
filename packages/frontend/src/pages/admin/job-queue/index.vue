@@ -226,7 +226,7 @@ import { ref, computed, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { QueueJob } from './queue-job.js';
 import { debounce } from 'throttle-debounce';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { useInterval } from '@/composables/useInterval.js';
 import XChart from './chart.vue';
 import XJob from './job.vue';
 import XOutboxDeadLetter from './outbox-dead-letter.vue';

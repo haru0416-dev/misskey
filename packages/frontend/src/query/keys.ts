@@ -5,7 +5,7 @@
 
 import type * as Misskey from 'misskey-js';
 import type { QueryKey } from '@tanstack/vue-query';
-import { host } from '@shared/utility/config.js';
+import { host } from '@/shared/utility/config.js';
 
 export type QueryAccountId = string | null;
 

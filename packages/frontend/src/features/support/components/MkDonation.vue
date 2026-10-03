@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { host } from '@shared/utility/config.js';
+import { host } from '@/shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkLink from '@/features/link-preview/components/MkLink.vue';
 import { i18n } from '@/i18n.js';

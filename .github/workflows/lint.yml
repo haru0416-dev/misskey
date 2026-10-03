@@ -15,8 +15,6 @@ on:
       - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
-      - packages/frontend-embed/**
-      - packages/frontend-shared/**
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/sw/**
@@ -48,8 +46,6 @@ on:
       - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
-      - packages/frontend-embed/**
-      - packages/frontend-shared/**
       - packages/i18n/**
       - packages/icons-subsetter/**
       - packages/sw/**
@@ -183,7 +179,6 @@ jobs:
           - mfm-js
           - backend
           - frontend
-          - frontend-embed
           - i18n
           - icons-subsetter
           - sw

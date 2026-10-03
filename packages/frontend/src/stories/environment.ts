@@ -9,7 +9,7 @@ import type { SetupWorker } from 'msw/browser';
 import { apiFallbackHandler, commonHandlers, onUnhandledRequest } from './mocks.js';
 import { meta, userDetailed } from './fakes.js';
 
-const themeModules = import.meta.glob<Record<string, unknown>>('@shared/themes/*.json5', {
+const themeModules = import.meta.glob<Record<string, unknown>>('@/shared/themes/*.json5', {
 	eager: true,
 	import: 'default',
 });

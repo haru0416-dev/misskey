@@ -4,9 +4,9 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { compile, parseThemeJsonOrNull, validateTheme } from '@shared/utility/theme.js';
-import { parseThemeCode, parseThemeOrNull } from '@shared/utility/theme-code.js';
-import type { Theme } from '@shared/utility/theme.js';
+import { compile, parseThemeJsonOrNull, validateTheme } from '@/shared/utility/theme.js';
+import { parseThemeCode, parseThemeOrNull } from '@/utility/theme-code.js';
+import type { Theme } from '@/shared/utility/theme.js';
 
 const validTheme = {
 	id: 'test-theme',

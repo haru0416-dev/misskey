@@ -81,7 +81,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { version } from '@shared/utility/config.js';
+import { version } from '@/shared/utility/config.js';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
 import MkButton from '@/components/form/MkButton.vue';

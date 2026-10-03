@@ -6,6 +6,7 @@
 		"packages/frontend/assets/**",
 		"packages/frontend/public/**",
 		"**/public/**",
+		"packages/frontend/public-embed/**",
 		"packages/misskey-js/src/autogen/**"
 	],
 	"workspaces": {
@@ -25,11 +26,9 @@
 			"ignoreDependencies": ["@misskey-dev/emoji-assets"]
 		},
 		"packages/frontend": {
-			"paths": {
-				"@shared/*": ["../frontend-shared/*"]
-			},
 			"entry": [
 				"src/boot/entry.ts",
+				"src/embed/boot.ts",
 				"src/workers/*.ts",
 				"builder/**/*.ts",
 				"lib/**/*.ts",
@@ -40,24 +39,11 @@
 				"src/stories/*.{ts,vue}",
 				"catalog/**/*.{ts,vue}"
 			],
-			"ignoreDependencies": ["frontend-shared", "@misskey-dev/emoji-assets", "vue-tsc", "search-index"]
-		},
-		"packages/frontend-embed": {
-			"paths": {
-				"@shared/*": ["../frontend-shared/*"]
-			},
-			"entry": ["src/boot.ts", "src/workers/*.ts"],
-			"ignoreDependencies": ["frontend-shared", "frontend", "vue-tsc"]
+			"ignoreDependencies": ["@misskey-dev/emoji-assets", "vue-tsc", "search-index"]
 		},
 		"packages/sw": {
 			"entry": ["src/sw.ts"],
-			"ignoreDependencies": ["frontend-shared", "@typescript/lib-webworker"]
-		},
-		"packages/frontend-shared": {
-			"entry": ["utility/**/*.ts", "@types/**/*.ts"],
-			"paths": {
-				"@shared/*": ["./*"]
-			}
+			"ignoreDependencies": ["@typescript/lib-webworker"]
 		},
 		"packages/misskey-js": {
 			"entry": ["test/**/*.ts", "test-d/**/*.ts"]

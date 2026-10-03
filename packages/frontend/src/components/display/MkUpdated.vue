@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, useTemplateRef } from 'vue';
-import { version } from '@shared/utility/config.js';
+import { version } from '@/shared/utility/config.js';
 import MkModal from '@/components/overlay/MkModal.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkSparkle from '@/components/effects/MkSparkle.vue';

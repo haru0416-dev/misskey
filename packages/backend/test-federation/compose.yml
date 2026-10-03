@@ -40,14 +40,6 @@ services:
         target: /misskey/packages/frontend/package.json
         read_only: true
       - type: bind
-        source: ../../frontend-embed/package.json
-        target: /misskey/packages/frontend-embed/package.json
-        read_only: true
-      - type: bind
-        source: ../../frontend-shared/package.json
-        target: /misskey/packages/frontend-shared/package.json
-        read_only: true
-      - type: bind
         source: ../test/resources
         target: /misskey/packages/backend/test/resources
         read_only: true
@@ -161,14 +153,6 @@ services:
       - type: bind
         source: ../../frontend/package.json
         target: /misskey/packages/frontend/package.json
-        read_only: true
-      - type: bind
-        source: ../../frontend-embed/package.json
-        target: /misskey/packages/frontend-embed/package.json
-        read_only: true
-      - type: bind
-        source: ../../frontend-shared/package.json
-        target: /misskey/packages/frontend-shared/package.json
         read_only: true
       - type: bind
         source: ../../i18n/package.json

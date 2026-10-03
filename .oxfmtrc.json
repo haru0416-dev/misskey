@@ -41,7 +41,6 @@
 		"packages/backend/migration/**",
 		"packages/backend/built/**",
 		"packages/backend/built-test/**",
-		"packages/frontend-embed/**",
 		"packages/i18n/**",
 		"packages/icons-subsetter/**",
 		"packages/misskey-js/**",

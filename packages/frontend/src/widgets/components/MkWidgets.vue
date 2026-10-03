@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed } from 'vue';
 import type { StoredWidget } from '@/preferences/def.js';
-import { isLink } from '@shared/utility/is-link.js';
+import { isLink } from '@/shared/utility/is-link.js';
 import type { Component } from 'vue';
 import { genId } from '@/utility/id.js';
 import MkSelect from '@/components/form/MkSelect.vue';

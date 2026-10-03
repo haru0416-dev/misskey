@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { isEmojiSimple, isEmojiSimpleArray } from '@shared/utility/custom-emojis.js';
+import { isEmojiSimple, isEmojiSimpleArray } from '@/shared/utility/custom-emojis.js';
 
 const emoji = {
 	aliases: ['party'],

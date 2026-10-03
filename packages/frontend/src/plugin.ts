@@ -5,7 +5,7 @@
 
 import { ref } from 'vue';
 import { compareVersions } from 'compare-versions';
-import { isSafeMode } from '@shared/utility/config.js';
+import { isSafeMode } from '@/shared/utility/config.js';
 import type * as Misskey from 'misskey-js';
 import type { Plugin } from '@/preferences/def.js';
 import type { Parser, Interpreter, values, utils as utils_TypeReferenceOnly } from '@syuilo/aiscript';

@@ -40,7 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { shouldCollapsed } from '@shared/utility/collapsed.js';
+import { shouldCollapsed } from '@/shared/utility/collapsed.js';
 import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
 import MkPoll from '@/features/note/components/MkPoll.vue';
 import { i18n } from '@/i18n.js';
@@ -55,7 +55,7 @@ const collapsed = ref(isLong);
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/_note-content.scss' as note-content;
+@use '@/shared/styles/_note-content.scss' as note-content;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .collapsed, .fade, .fadeLabel, .reply, .root, .rp, .showLess, .showLessLabel {}

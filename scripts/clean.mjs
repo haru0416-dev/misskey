@@ -12,7 +12,6 @@ const buildOutputs = [
 	'packages/backend/built-test',
 	'packages/backend/src-js',
 	'packages/frontend/built',
-	'packages/frontend-embed/built',
 	'packages/icons-subsetter/built',
 	'packages/mfm-js/built',
 	'packages/i18n/built',

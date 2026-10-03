@@ -208,11 +208,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import JSON5 from 'json5';
-import defaultLightTheme from '@shared/themes/l-light.json5';
-import defaultDarkTheme from '@shared/themes/d-green-lime.json5';
-import { isSafeMode } from '@shared/utility/config.js';
-import { getBuiltinThemes, parseThemeJsonOrNull } from '@shared/utility/theme.js';
-import type { Theme } from '@shared/utility/theme.js';
+import defaultLightTheme from '@/shared/themes/l-light.json5';
+import defaultDarkTheme from '@/shared/themes/d-green-lime.json5';
+import { isSafeMode } from '@/shared/utility/config.js';
+import { getBuiltinThemes, parseThemeJsonOrNull } from '@/shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
 import * as os from '@/os.js';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormSection from '@/components/form/section.vue';

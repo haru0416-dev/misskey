@@ -100,7 +100,7 @@ export type SuperMenuDef = {
 
 <script lang="ts" setup>
 import { useTemplateRef, ref, watch, nextTick, computed } from 'vue';
-import { getScrollContainer } from '@shared/utility/scroll.js';
+import { getScrollContainer } from '@/shared/utility/scroll.js';
 import type { SearchIndexItem } from '@/features/search/inapp-search.js';
 import MkInput from '@/components/form/MkInput.vue';
 import { i18n } from '@/i18n.js';

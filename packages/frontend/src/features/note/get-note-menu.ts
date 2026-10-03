@@ -4,7 +4,7 @@
  */
 
 import type * as Misskey from 'misskey-js';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import type { Ref, ShallowRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import { $i } from '@/i.js';

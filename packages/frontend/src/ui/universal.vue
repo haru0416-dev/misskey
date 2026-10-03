@@ -38,8 +38,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { defineAsyncComponent, provide, onMounted, onUnmounted, computed, ref } from 'vue';
-import { instanceName } from '@shared/utility/config.js';
-import { isLink } from '@shared/utility/is-link.js';
+import { instanceName } from '@/shared/utility/config.js';
+import { isLink } from '@/shared/utility/is-link.js';
 import XCommon from './common/common.vue';
 import type { PageMetadata } from '@/page.js';
 import XMobileFooterMenu from '@/ui/common/mobile-footer-menu.vue';

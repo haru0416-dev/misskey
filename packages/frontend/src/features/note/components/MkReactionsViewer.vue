@@ -41,7 +41,7 @@ export function requireReactionCount(reactions: Record<string, number>, reaction
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { inject, watch, ref,TransitionGroup } from 'vue';
-import { isSupportedEmoji } from '@shared/utility/emojilist.js';
+import { isSupportedEmoji } from '@/utility/emojilist.js';
 import XReaction from '@/features/note/components/MkReactionsViewer.Reaction.vue';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';

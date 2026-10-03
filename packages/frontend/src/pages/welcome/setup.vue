@@ -127,7 +127,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { host, version } from '@shared/utility/config.js';
+import { host, version } from '@/shared/utility/config.js';
 import tonerikoWordmark from '/client-assets/toneriko.svg';
 import MkButton from '@/components/form/MkButton.vue';
 import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';

@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import { defineComponent, h } from 'vue';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { useInterval } from '@/composables/useInterval.js';
 
 function createTimers() {
 	let timerId = 0;

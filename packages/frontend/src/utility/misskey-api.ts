@@ -5,7 +5,7 @@
 
 import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
-import { apiUrl } from '@shared/utility/config.js';
+import { apiUrl } from '@/shared/utility/config.js';
 import { $i } from '@/i.js';
 import { fetchMisskeyQuery, invalidateAfterMutation, isCachedEndpoint } from '@/query/api.js';
 import type { QueryAccountId } from '@/query/keys.js';

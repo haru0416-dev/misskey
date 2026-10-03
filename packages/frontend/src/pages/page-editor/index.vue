@@ -63,7 +63,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, provide, watch, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { url } from '@shared/utility/config.js';
+import { url } from '@/shared/utility/config.js';
 import XBlocks from './blocks.vue';
 import { genId } from '@/utility/id.js';
 import MkButton from '@/components/form/MkButton.vue';

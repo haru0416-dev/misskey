@@ -4,7 +4,7 @@
  */
 
 import { describe, test, assert, afterEach } from 'vitest';
-import { onScrollBottom, onScrollTop } from '@shared/utility/scroll.js';
+import { onScrollBottom, onScrollTop } from '@/shared/utility/scroll.js';
 
 describe('Scroll', () => {
 	afterEach(() => {

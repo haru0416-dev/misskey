@@ -45,8 +45,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { watch, ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
-import { getDecorationAngle, getDecorationOffset, getDecorationScale } from '@shared/utility/avatar-decoration.js';
+import { extractAvgColorFromBlurhash } from '@/shared/utility/extract-avg-color-from-blurhash.js';
+import { getDecorationAngle, getDecorationOffset, getDecorationScale } from '@/shared/utility/avatar-decoration.js';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
 import MkA from './MkA.vue';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
@@ -131,7 +131,7 @@ watch(
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/_avatar.scss' as avatar;
+@use '@/shared/styles/_avatar.scss' as avatar;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .decoration, .indicator, .layer, .plot, .root {}

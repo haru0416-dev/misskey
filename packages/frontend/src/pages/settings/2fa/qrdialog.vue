@@ -106,7 +106,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { hostname, port } from '@shared/utility/config';
+import { hostname, port } from '@/shared/utility/config';
 import QRCodeStyling from 'qr-code-styling';
 import { useTemplateRef, ref, onMounted } from 'vue';
 import MkButton from '@/components/form/MkButton.vue';

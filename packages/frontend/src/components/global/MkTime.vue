@@ -15,8 +15,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
-import { dateTimeFormat } from '@shared/utility/intl-const.js';
-import { toTimeMs } from '@shared/utility/time-input.js';
+import { dateTimeFormat } from '@/shared/utility/intl-const.js';
+import { toTimeMs } from '@/shared/utility/time-input.js';
 import { useLowresTime } from '@/composables/useLowresTime.js';
 
 const props = withDefaults(

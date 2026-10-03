@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { instanceName } from '@shared/utility/config.js';
+import { instanceName } from '@/shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import XSigninDialog from '@/features/auth/components/MkSigninDialog.vue';
 import XSignupDialog from '@/features/auth/components/MkSignupDialog.vue';

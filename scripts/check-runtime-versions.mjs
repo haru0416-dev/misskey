@@ -11,7 +11,6 @@ const readText = (path) => readFileSync(path, 'utf8').trim();
 const packageJson = readJson('package.json');
 const backendPackageJson = readJson('packages/backend/package.json');
 const frontendPackageJson = readJson('packages/frontend/package.json');
-const frontendEmbedPackageJson = readJson('packages/frontend-embed/package.json');
 const changelogCheckerPackageJson = readJson('scripts/changelog-checker/package.json');
 const devcontainerJson = readJson('.devcontainer/devcontainer.json');
 const bunVersion = readText('.bun-version');
@@ -74,10 +73,6 @@ const checks = [
 	[
 		'frontend typecheck must use Bun-compatible vue-tsc runner',
 		(frontendPackageJson.scripts?.typecheck ?? '').startsWith('bun ../../scripts/vue-tsc-bun.cjs --noEmit'),
-	],
-	[
-		'frontend-embed typecheck must use Bun-compatible vue-tsc runner',
-		frontendEmbedPackageJson.scripts?.typecheck === 'bun ../../scripts/vue-tsc-bun.cjs --noEmit',
 	],
 ];
 

@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, inject, onMounted, useTemplateRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
-import { getUnicodeEmojiOrNull } from '@shared/utility/emojilist.js';
+import { getUnicodeEmojiOrNull } from '@/utility/emojilist.js';
 import MkCustomEmojiDetailedDialog from '@/features/custom-emoji/components/MkCustomEmojiDetailedDialog.vue';
 import type { MenuItem } from '@/types/menu';
 import MkReactionIcon from '@/features/note/components/MkReactionIcon.vue';
@@ -293,7 +293,7 @@ if (!mock) {
 </script>
 
 <style lang="scss" module>
-@use '@shared/styles/_reaction.scss' as reaction;
+@use '@/shared/styles/_reaction.scss' as reaction;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
 .canToggle, .count, .large, .limitWidth, .reacted, .root, .small {}

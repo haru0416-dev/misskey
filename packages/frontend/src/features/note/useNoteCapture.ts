@@ -14,7 +14,7 @@ import { store } from '@/store.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
-import { PollingScheduler } from '@shared/utility/polling-scheduler.js';
+import { PollingScheduler } from '@/utility/polling-scheduler.js';
 
 export const noteEvents = new EventEmitter<{
 	[ev: `reacted:${string}`]: (ctx: {

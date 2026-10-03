@@ -170,7 +170,7 @@ import {
 	useTemplateRef,
 } from 'vue';
 import * as Misskey from 'misskey-js';
-import { getScrollContainer } from '@shared/utility/scroll.js';
+import { getScrollContainer } from '@/shared/utility/scroll.js';
 import MkNote from '@/features/note/components/MkNote.vue';
 import MkFollowButton from '@/features/user/components/MkFollowButton.vue';
 import MkAccountMoved from '@/features/user/components/MkAccountMoved.vue';

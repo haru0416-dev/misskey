@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { isSameOrigin, tryParseUrl } from '@shared/utility/url.js';
+import { isSameOrigin, tryParseUrl } from '@/shared/utility/url.js';
 
 describe('tryParseUrl', () => {
 	test('相対URLはbaseから解決する', () => {

@@ -19,7 +19,7 @@ vi.mock('@/i.js', () => ({
 	$i: null,
 }));
 
-vi.mock('@shared/utility/config.js', () => ({
+vi.mock('@/shared/utility/config.js', () => ({
 	wsOrigin: 'ws://example.test',
 }));
 

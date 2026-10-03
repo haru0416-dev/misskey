@@ -47,7 +47,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, watch, ref, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
-import { host } from '@shared/utility/config.js';
+import { host } from '@/shared/utility/config.js';
 import MkNoteDetailed from '@/features/note/components/MkNoteDetailed.vue';
 import MkNotesTimeline from '@/features/note/components/MkNotesTimeline.vue';
 import MkRemoteCaution from '@/features/user/components/MkRemoteCaution.vue';

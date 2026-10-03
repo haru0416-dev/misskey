@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import * as config from '@shared/utility/config.js';
+import * as config from '@/shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';

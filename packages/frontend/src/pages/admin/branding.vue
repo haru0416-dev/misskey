@@ -155,7 +155,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
-import { host } from '@shared/utility/config.js';
+import { host } from '@/shared/utility/config.js';
 import MkInput from '@/components/form/MkInput.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import * as os from '@/os.js';

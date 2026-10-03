@@ -22,6 +22,6 @@ description: フロントエンドの画面・状態管理・UI文言・カタ�
 
 起点の `.vue` だけでなく、結果を決める呼び出し元、composable、state、API wrapper を辿る。画面の変更が状態の保存・復元、アカウント切替、cache、購読に触れるなら、その所有者と終了条件を先に特定する。
 
-共有描画・テーマ・locale を変える場合は [frontend-shared](../../../packages/frontend-shared/) と [frontend-embed](../../../packages/frontend-embed/src/) の利用側も対象にする。通知・認証状態・配信資産に触れる場合は [sw](../../../packages/sw/src/) との接続を確認する。関係しない領域の全体監査には広げない。
+共有描画・テーマ・locale を変える場合は [src/shared](../../../packages/frontend/src/shared/) と、外部サイトへの埋め込み表示 [src/embed](../../../packages/frontend/src/embed/) の利用側も対象にする。埋め込みは [vite.embed.config.ts](../../../packages/frontend/vite.embed.config.ts) で別のバンドルになり、本体の部品は `src/embed/` から import したものだけが入る。`prefer`・`os`・ルーターに届く部品を埋め込みから import すると、本体の大半がバンドルに入る。通知・認証状態・配信資産に触れる場合は [sw](../../../packages/sw/src/) との接続を確認する。関係しない領域の全体監査には広げない。
 
 レビューを分担する必要があれば [vue-component-reviewer](../../agents/vue-component-reviewer.md) に対象差分、守る挙動、実行結果を渡す。別のチェックリストを複製せず、この Skill の該当参照を共有する。

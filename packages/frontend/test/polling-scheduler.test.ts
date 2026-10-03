@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { PollingScheduler } from '@shared/utility/polling-scheduler.js';
+import { PollingScheduler } from '@/utility/polling-scheduler.js';
 
 function createTimers() {
 	let timerId = 0;

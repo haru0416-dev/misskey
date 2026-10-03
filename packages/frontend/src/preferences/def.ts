@@ -4,11 +4,11 @@
  */
 
 import type * as Misskey from 'misskey-js';
-import { hemisphere } from '@shared/utility/intl-const.js';
-import { DEFAULT_EMOJIS } from '@shared/utility/const.js';
-import { prefersReducedMotion } from '@shared/utility/config.js';
+import { hemisphere } from '@/shared/utility/intl-const.js';
+import { DEFAULT_EMOJIS } from '@/shared/utility/const.js';
+import { prefersReducedMotion } from '@/shared/utility/config.js';
 import { definePreferences } from './define.js';
-import type { Theme } from '@shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
 import type { SoundType } from '@/features/sound/sound.js';
 import type { FormWithDefault } from '@/utility/form.js';
 import type { BasicTimelineType } from '@/timelines.js';

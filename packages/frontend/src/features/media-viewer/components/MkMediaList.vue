@@ -46,7 +46,7 @@ export function singleFlight<TArgs extends unknown[]>(
 <script lang="ts" setup>
 import { computed, markRaw, onBeforeUnmount, onMounted, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
-import { FILE_TYPE_BROWSERSAFE } from '@shared/utility/const.js';
+import { FILE_TYPE_BROWSERSAFE } from '@/shared/utility/const.js';
 import type { LightboxContent } from '@/features/media-viewer/components/MkLightbox.item.vue';
 import XBanner from '@/features/media-viewer/components/MkMediaBanner.vue';
 import XImage from '@/features/media-viewer/components/MkMediaImage.vue';

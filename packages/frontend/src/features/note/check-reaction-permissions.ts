@@ -4,7 +4,7 @@
  */
 
 import type * as Misskey from 'misskey-js';
-import type { UnicodeEmojiDef } from '@shared/utility/emojilist.js';
+import type { UnicodeEmojiDef } from '@/utility/emojilist.js';
 
 export function checkReactionPermissions(
 	me: Misskey.entities.MeDetailed,

@@ -6,7 +6,7 @@
 import { errors, utils, values } from '@syuilo/aiscript';
 import type { Interpreter, Parser } from '@syuilo/aiscript';
 import * as Misskey from 'misskey-js';
-import { url, lang } from '@shared/utility/config.js';
+import { url, lang } from '@/shared/utility/config.js';
 import { assertStringAndIsIn } from './common.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';

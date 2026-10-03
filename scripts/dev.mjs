@@ -121,7 +121,7 @@ try {
 	startBun(['run', 'build-pre', '--watch']);
 	startBun(['run', '--bun', '--filter', 'backend', 'dev']);
 	startBun(['run', '--bun', '--filter', 'frontend', 'watch']);
-	startBun(['run', '--bun', '--filter', 'frontend-embed', 'watch']);
+	startBun(['run', '--bun', '--filter', 'frontend', 'watch:embed']);
 	startBun(['run', '--bun', '--filter', 'sw', 'watch']);
 	startBun(['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean']);
 	startBun(['run', '--bun', '--filter', 'mfm-js', 'watch']);

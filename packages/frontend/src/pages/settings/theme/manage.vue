@@ -28,13 +28,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import JSON5 from 'json5';
-import type { Theme } from '@shared/utility/theme.js';
+import type { Theme } from '@/shared/utility/theme.js';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { removeTheme } from '@/theme.js';
-import { getBuiltinThemes } from '@shared/utility/theme.js';
+import { getBuiltinThemes } from '@/shared/utility/theme.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';

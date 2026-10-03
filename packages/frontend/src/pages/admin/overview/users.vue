@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { useInterval } from '@/composables/useInterval.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 import { prefer } from '@/preferences.js';

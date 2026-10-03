@@ -6,7 +6,7 @@
 import { toUnicode } from '@/utility/punycode.js';
 import { ref, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
-import { host, url } from '@shared/utility/config.js';
+import { host, url } from '@/shared/utility/config.js';
 import type { Router } from '@/router.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';

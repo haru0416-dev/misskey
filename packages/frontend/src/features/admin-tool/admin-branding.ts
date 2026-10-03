@@ -4,7 +4,7 @@
  */
 
 import JSON5 from 'json5';
-import { parseThemeOrNull } from '@shared/utility/theme-code.js';
+import { parseThemeOrNull } from '@/utility/theme-code.js';
 
 type BrandingJsonField = 'defaultLightTheme' | 'defaultDarkTheme' | 'manifestJsonOverride';
 

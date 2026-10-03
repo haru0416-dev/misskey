@@ -58,9 +58,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onUnmounted, onMounted, computed, useTemplateRef, TransitionGroup, markRaw, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { notificationTypes } from 'misskey-js';
-import { useInterval } from '@shared/utility/use-interval.js';
-import { useDocumentVisibility } from '@shared/utility/use-document-visibility.js';
-import { getScrollContainer, scrollToTop } from '@shared/utility/scroll.js';
+import { useInterval } from '@/composables/useInterval.js';
+import { useDocumentVisibility } from '@/shared/utility/use-document-visibility.js';
+import { getScrollContainer, scrollToTop } from '@/shared/utility/scroll.js';
 import XNotification from '@/features/notification/components/MkNotification.vue';
 import MkNote from '@/features/note/components/MkNote.vue';
 import { useStream } from '@/stream.js';

@@ -906,7 +906,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, ref, toRef, watch } from 'vue';
-import { langs } from '@shared/utility/config.js';
+import { langs } from '@/shared/utility/config.js';
 import * as Misskey from 'misskey-js';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkSelect from '@/components/form/MkSelect.vue';

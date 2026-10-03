@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { toUnicodeHost } from '@shared/utility/punycode.js';
+import { toUnicodeHost } from '@/shared/utility/punycode.js';
 import { miLocalStorage } from '@/local-storage.js';
 
 /**

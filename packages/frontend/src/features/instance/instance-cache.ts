@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { parseJsonObject } from '@shared/utility/server-context.js';
+import { parseJsonObject } from '@/shared/utility/server-context.js';
 
 type CacheAction = 'clear' | 'none' | 'store';
 
