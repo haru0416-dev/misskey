@@ -5,7 +5,8 @@
 
 import { serve } from 'bun';
 import * as fs from 'node:fs';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { Config } from '@/config.js';
 import { envOption } from '@/env.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
@@ -46,7 +47,7 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 
 export async function launchServer(
 	config: Config,
-	logger = new Logger('hono', 'cyan'),
+	logger = createLogger('hono', 'cyan'),
 	dependencies?: RuntimeDependencies,
 	options?: { daemons?: boolean },
 ): Promise<ServerRuntime> {

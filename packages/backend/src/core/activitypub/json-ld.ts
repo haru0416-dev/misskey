@@ -7,7 +7,6 @@ import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
 
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
-import { bindThis } from '@/decorators.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getCachedSigner } from './signer-cache.js';
 import { CONTEXT, PRELOADED_CONTEXTS } from './misc/contexts.js';
@@ -111,207 +110,49 @@ class JsonLdForbiddenDirectiveError extends JsonLdError {
 	}
 }
 
-export class JsonLd {
-	private static forbiddenDirectives = new Set(['@included', '@graph', '@reverse']);
+const FORBIDDEN_DIRECTIVES = new Set(['@included', '@graph', '@reverse']);
+const LOADER_TIMEOUT = 5000;
 
-	private frozen = false;
-	private cache = new Map<string, RemoteDocument>();
+export function createJsonLd(httpRequestService: HttpRequestService) {
+	let frozen = false;
+	const cache = new Map<string, RemoteDocument>();
 
-	public debug = false;
-	public preLoad = true;
-	public loderTimeout = 5000;
-
-	constructor(private httpRequestService: HttpRequestService) {}
-
-	@bindThis
-	public async signRsaSignature2017(
-		data: unknown,
-		privateKey: string,
-		creator: string,
-		domain?: string,
-		created?: Date,
-	): Promise<Record<string, unknown>> {
-		const options: {
-			type: string;
-			creator: string;
-			domain?: string;
-			nonce: string;
-			created: string;
-		} = {
-			type: 'RsaSignature2017',
-			creator,
-			nonce: crypto.randomBytes(16).toString('hex'),
-			created: (created ?? new Date()).toISOString(),
-		};
-
-		if (domain) {
-			options.domain = domain;
-		}
-
-		const toBeSigned = await this.createVerifyData(data, options);
-
-		const signer = getCachedSigner(privateKey);
-		const sign = promisify(signer.signRaw).bind(signer);
-
-		const signature = await sign(Buffer.from(toBeSigned));
-
-		return {
-			...(data as Record<string, unknown>),
-			signature: {
-				...options,
-				signatureValue: signature.toString('base64'),
-			},
-		};
+	function sha256(data: string): string {
+		const hash = crypto.createHash('sha256');
+		hash.update(data);
+		return hash.digest('hex');
 	}
 
-	@bindThis
-	public async verifyRsaSignature2017(data: unknown, publicKey: string): Promise<boolean> {
-		const signed = data as { signature?: { signatureValue: string } };
-		if (signed.signature == null) {
-			throw new Error('verifyRsaSignature2017: data.signature is required');
-		}
-		const toBeSigned = await this.createVerifyData(data, signed.signature);
-		const verifier = crypto.createVerify('sha256');
-		verifier.update(toBeSigned);
-		return verifier.verify(publicKey, signed.signature.signatureValue, 'base64');
-	}
-
-	@bindThis
-	public async createVerifyData(data: unknown, options: unknown): Promise<string> {
-		const transformedOptions: Record<string, unknown> = {
-			...(options as Record<string, unknown>),
-			'@context': 'https://w3id.org/identity/v1',
-		};
-		delete transformedOptions['type'];
-		delete transformedOptions['id'];
-		delete transformedOptions['signatureValue'];
-		const canonizedOptions =
-			canonicalizeSignatureOptions(transformedOptions) ??
-			(await this.normalize(transformedOptions as unknown as JsonLdDocument)).toString();
-		const optionsHash = this.sha256(canonizedOptions);
-		const transformedData: Record<string, unknown> = { ...(data as Record<string, unknown>) };
-		delete transformedData['signature'];
-		const cannonizedData = await this.normalize(transformedData as unknown as JsonLdDocument);
-		if (this.debug) {
-			console.debug(`cannonizedData: ${cannonizedData}`);
-		}
-		const documentHash = this.sha256(cannonizedData.toString());
-		const verifyData = `${optionsHash}${documentHash}`;
-		return verifyData;
-	}
-
-	@bindThis
-	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
-		const customLoader = this.getLoader();
-		// jsonld は読み込むだけで RSS が増え、読み込みに時間がかかる。使うのは LD 署名付きの受信と
-		// 署名の作成だけなので、プロセス起動時ではなく必要になった時点で読み込む。
-		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
-			documentLoader: customLoader,
-		});
-	}
-
-	@bindThis
-	public async normalize(data: JsonLdDocument): Promise<string> {
-		const customLoader = this.getLoader();
-		return (await import('jsonld')).default.normalize(data, {
-			documentLoader: customLoader,
-		});
-	}
-
-	/** JSON-LD 署名検証のための追加 HTTP リクエストを発生させない。 */
-	@bindThis
-	public freeze(): void {
-		this.frozen = true;
-	}
-
-	@bindThis
-	public checkForForbiddenDirectives(value: unknown): void {
+	function checkForForbiddenDirectives(value: unknown): void {
 		if (typeof value === 'object' && value !== null) {
 			if (Array.isArray(value)) {
 				for (const item of value) {
-					this.checkForForbiddenDirectives(item);
+					checkForForbiddenDirectives(item);
 				}
 			} else {
 				const object = value;
 				for (const [key, value] of Object.entries(object)) {
-					if (JsonLd.forbiddenDirectives.has(key)) {
+					if (FORBIDDEN_DIRECTIVES.has(key)) {
 						throw new JsonLdForbiddenDirectiveError(key);
 					}
 
 					if (typeof value === 'object' && value !== null) {
-						this.checkForForbiddenDirectives(value);
+						checkForForbiddenDirectives(value);
 					}
 				}
 			}
 		}
 	}
 
-	@bindThis
-	private getLoader() {
-		return async (url: string): Promise<RemoteDocument> => {
-			if (!/^https?:\/\//.test(url)) {
-				throw new Error(`Invalid URL ${url}`);
-			}
-
-			if (this.preLoad) {
-				if (url in PRELOADED_CONTEXTS) {
-					const document = PRELOADED_CONTEXTS[url];
-					if (document == null) {
-						throw new Error(`Preloaded JSON-LD context is missing for ${url}`);
-					}
-					if (this.debug) {
-						console.debug(`HIT: ${url}`);
-					}
-					return {
-						contextUrl: undefined,
-						document,
-						documentUrl: url,
-					};
-				}
-			}
-
-			const cached = this.cache.get(url);
-			if (cached) {
-				if (this.debug) {
-					console.debug(`HIT: ${url}`);
-				}
-				return cached;
-			}
-
-			if (this.debug) {
-				console.debug(`MISS: ${url}`);
-			}
-
-			if (this.frozen) {
-				throw new JsonLdCacheFrozenError();
-			}
-
-			const document = await this.fetchDocument(url);
-			this.checkForForbiddenDirectives(document);
-
-			const remoteDocument = {
-				contextUrl: undefined,
-				document,
-				documentUrl: url,
-			};
-			this.cache.set(url, remoteDocument);
-			if (this.cache.size > 256) {
-				throw new JsonLdCacheOverflowError();
-			}
-			return remoteDocument;
-		};
-	}
-
-	@bindThis
-	private async fetchDocument(url: string): Promise<JsonLdObject> {
-		const json = await this.httpRequestService
+	async function fetchDocument(url: string): Promise<JsonLdObject> {
+		const json = await httpRequestService
 			.send(
 				url,
 				{
 					headers: {
 						Accept: 'application/ld+json, application/json',
 					},
-					timeout: this.loderTimeout,
+					timeout: LOADER_TIMEOUT,
 				},
 				{
 					throwErrorWhenResponseNotOk: false,
@@ -329,10 +170,144 @@ export class JsonLd {
 		return json as JsonLdObject;
 	}
 
-	@bindThis
-	public sha256(data: string): string {
-		const hash = crypto.createHash('sha256');
-		hash.update(data);
-		return hash.digest('hex');
+	function getLoader() {
+		return async (url: string): Promise<RemoteDocument> => {
+			if (!/^https?:\/\//.test(url)) {
+				throw new Error(`Invalid URL ${url}`);
+			}
+
+			if (url in PRELOADED_CONTEXTS) {
+				const document = PRELOADED_CONTEXTS[url];
+				if (document == null) {
+					throw new Error(`Preloaded JSON-LD context is missing for ${url}`);
+				}
+				return {
+					contextUrl: undefined,
+					document,
+					documentUrl: url,
+				};
+			}
+
+			const cached = cache.get(url);
+			if (cached) {
+				return cached;
+			}
+
+			if (frozen) {
+				throw new JsonLdCacheFrozenError();
+			}
+
+			const document = await fetchDocument(url);
+			checkForForbiddenDirectives(document);
+
+			const remoteDocument = {
+				contextUrl: undefined,
+				document,
+				documentUrl: url,
+			};
+			cache.set(url, remoteDocument);
+			if (cache.size > 256) {
+				throw new JsonLdCacheOverflowError();
+			}
+			return remoteDocument;
+		};
 	}
+
+	async function normalize(data: JsonLdDocument): Promise<string> {
+		const customLoader = getLoader();
+		return (await import('jsonld')).default.normalize(data, {
+			documentLoader: customLoader,
+		});
+	}
+
+	async function createVerifyData(data: unknown, options: unknown): Promise<string> {
+		const transformedOptions: Record<string, unknown> = {
+			...(options as Record<string, unknown>),
+			'@context': 'https://w3id.org/identity/v1',
+		};
+		delete transformedOptions['type'];
+		delete transformedOptions['id'];
+		delete transformedOptions['signatureValue'];
+		const canonizedOptions =
+			canonicalizeSignatureOptions(transformedOptions) ??
+			(await normalize(transformedOptions as unknown as JsonLdDocument)).toString();
+		const optionsHash = sha256(canonizedOptions);
+		const transformedData: Record<string, unknown> = { ...(data as Record<string, unknown>) };
+		delete transformedData['signature'];
+		const cannonizedData = await normalize(transformedData as unknown as JsonLdDocument);
+		const documentHash = sha256(cannonizedData.toString());
+		return `${optionsHash}${documentHash}`;
+	}
+
+	return {
+		sha256,
+		checkForForbiddenDirectives,
+		normalize,
+		createVerifyData,
+
+		async signRsaSignature2017(
+			data: unknown,
+			privateKey: string,
+			creator: string,
+			domain?: string,
+			created?: Date,
+		): Promise<Record<string, unknown>> {
+			const options: {
+				type: string;
+				creator: string;
+				domain?: string;
+				nonce: string;
+				created: string;
+			} = {
+				type: 'RsaSignature2017',
+				creator,
+				nonce: crypto.randomBytes(16).toString('hex'),
+				created: (created ?? new Date()).toISOString(),
+			};
+
+			if (domain) {
+				options.domain = domain;
+			}
+
+			const toBeSigned = await createVerifyData(data, options);
+
+			const signer = getCachedSigner(privateKey);
+			const sign = promisify(signer.signRaw).bind(signer);
+
+			const signature = await sign(Buffer.from(toBeSigned));
+
+			return {
+				...(data as Record<string, unknown>),
+				signature: {
+					...options,
+					signatureValue: signature.toString('base64'),
+				},
+			};
+		},
+
+		async verifyRsaSignature2017(data: unknown, publicKey: string): Promise<boolean> {
+			const signed = data as { signature?: { signatureValue: string } };
+			if (signed.signature == null) {
+				throw new Error('verifyRsaSignature2017: data.signature is required');
+			}
+			const toBeSigned = await createVerifyData(data, signed.signature);
+			const verifier = crypto.createVerify('sha256');
+			verifier.update(toBeSigned);
+			return verifier.verify(publicKey, signed.signature.signatureValue, 'base64');
+		},
+
+		async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
+			const customLoader = getLoader();
+			// jsonld は読み込むだけで RSS が増え、読み込みに時間がかかる。使うのは LD 署名付きの受信と
+			// 署名の作成だけなので、プロセス起動時ではなく必要になった時点で読み込む。
+			return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
+				documentLoader: customLoader,
+			});
+		},
+
+		/** JSON-LD 署名検証のための追加 HTTP リクエストを発生させない。 */
+		freeze(): void {
+			frozen = true;
+		},
+	};
 }

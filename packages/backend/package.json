@@ -83,7 +83,6 @@
 	"devDependencies": {
 		"@fedify/vocab": "2.3.7",
 		"@kitajs/ts-html-plugin": "4.1.4",
-		"@oxc-project/runtime": "0.150.0",
 		"@types/jsonld": "1.5.15",
 		"@types/mime-types": "3.0.1",
 		"@types/node": "26.6.2",

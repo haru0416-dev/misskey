@@ -9,7 +9,7 @@ import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import { createHttpRequestService } from '@/core/net/http-request-service.js';
 import { deepClone } from '@/misc/clone.js';
-import { MemoryKVCache } from '@/misc/cache.js';
+import { createMemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { query } from '@/misc/prelude/url.js';
 import type { LoggerService } from '@/core/logger-service.js';
@@ -37,7 +37,7 @@ export function createUrlPreviewService(
 	const logger = loggerService.getLogger('url-preview');
 	let previewHttp: HttpRequestService | undefined;
 	const defaultUserAgent = config.runtime.userAgent;
-	const summaryCache = new MemoryKVCache<UrlPreviewSummary>(1000 * 60 * 60, 100);
+	const summaryCache = createMemoryKVCache<UrlPreviewSummary>(1000 * 60 * 60, 100);
 
 	function wrap(url?: string | null): string | null {
 		return url != null

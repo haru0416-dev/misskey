@@ -25,7 +25,7 @@ import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiMeta } from '@/models/entities.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import { createLoginNotification } from '../../../core/notification/notification.js';
 import type { NotificationDependencies } from '../../../core/notification/notification.js';
 import { isApiRateLimited } from '../rate-limit.js';

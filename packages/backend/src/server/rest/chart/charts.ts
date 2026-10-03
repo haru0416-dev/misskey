@@ -5,14 +5,14 @@
 
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import Chart from '@/core/chart/core.js';
-import type { KVs } from '@/core/chart/core.js';
+import { createChart } from '@/core/chart/core.js';
+import type { Chart } from '@/core/chart/core.js';
 import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { countNoteReactionsFromDatabase } from '@/core/note/note-reaction-store.js';
 import { countInstancesFromDatabase } from '@/core/instance/instance-store.js';
-import { MemoryKVCache } from '@/misc/cache.js';
-import type Logger from '@/logger.js';
+import { createMemoryKVCache } from '@/misc/cache.js';
+import type { Logger } from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { parseApiParams } from '../validation.js';
@@ -33,30 +33,19 @@ type ChartSchema = Record<
 	}
 >;
 
-// getChart()/getChartRaw() は tickMajor/tickMinor を呼ばないため、読み取り専用の stub は
-// 各チャートの書き込み側依存なしで Chart.getChart() を呼び出せる。
-class ReadOnlyChart<S extends ChartSchema> extends Chart<S> {
-	protected async tickMajor(): Promise<Partial<KVs<S>>> {
-		return {};
-	}
-
-	protected async tickMinor(): Promise<Partial<KVs<S>>> {
-		return {};
-	}
-}
-
+// getChart()/getChartRaw() は tickMajor/tickMinor を呼ばないため、読み取り専用の集計は
+// 各チャートの書き込み側依存なしで getChart() を呼び出せる。
 function createApiChart<S extends ChartSchema>(
 	deps: ChartDependencies,
 	definition: { name: string; schema: S; grouped: boolean },
-): ReadOnlyChart<S> {
-	return new ReadOnlyChart(
-		deps.db,
-		(key) => acquireChartInsertLock(deps.redis, key),
-		deps.logger as Logger,
-		definition.name,
-		definition.schema,
-		definition.grouped,
-	);
+): Chart<S> {
+	return createChart({
+		db: deps.db,
+		lock: (key) => acquireChartInsertLock(deps.redis, key),
+		logger: deps.logger as Logger,
+		name: definition.name,
+		schema: definition.schema,
+	});
 }
 
 export const chartParamDef = z.object({
@@ -151,8 +140,8 @@ export async function handleApiChartsUserReactions(deps: ChartDependencies, body
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
-const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
+const statsReactionsCountCache = createMemoryKVCache<number>(1000 * 60 * 60);
+const statsInstancesCountCache = createMemoryKVCache<number>(1000 * 60 * 60);
 
 export async function handleApiStats(deps: ChartDependencies) {
 	const notesChart = await createApiChart(deps, chartDefinitions.notes).getChart('hour', 1, null);

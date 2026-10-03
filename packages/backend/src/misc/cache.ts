@@ -3,220 +3,212 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { bindThis } from '@/decorators.js';
+export type MemoryKVCache<T> = ReturnType<typeof createMemoryKVCache<T>>;
 
-export class MemoryKVCache<T> {
-	private readonly cache = new Map<string, { date: number; value: T }>();
-	private readonly pendingFetches = new Map<string, Promise<T | undefined>>();
-	private readonly gcIntervalHandle: NodeJS.Timeout;
-	private readonly limit: number;
-
-	constructor(
-		private readonly lifetime: number,
-		limit?: number,
-	) {
-		if (limit !== undefined && (!Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0)) {
-			throw new TypeError('limit must be a positive finite integer');
-		}
-		this.limit = limit ?? Infinity;
-		// 期限は get でも検査するため、メモリ回収だけのタイマーでプロセスを生存させない。
-		this.gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3).unref();
+export function createMemoryKVCache<T>(lifetime: number, limit?: number) {
+	if (limit !== undefined && (!Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0)) {
+		throw new TypeError('limit must be a positive finite integer');
 	}
+	const maxEntries = limit ?? Infinity;
+	const cache = new Map<string, { date: number; value: T }>();
+	const pendingFetches = new Map<string, Promise<T | undefined>>();
 
-	@bindThis
-	public set(key: string, value: T): void {
-		if (this.limit !== Infinity) {
+	function set(key: string, value: T): void {
+		if (maxEntries !== Infinity) {
 			// 期限切れの掃除は interval の gc() に任せる。ここで gc() を呼ぶと set のたびに全件走査になり、
 			// 常に満杯の MFM パースキャッシュ (1000 件) では notes/create の CPU を無視できない割合で消費する。
 			// 上限超過分は挿入順の先頭 (最も古く参照されたもの) から落とす。
-			this.cache.delete(key);
+			cache.delete(key);
 
-			while (this.cache.size >= this.limit) {
-				const oldestKey = this.cache.keys().next().value;
+			while (cache.size >= maxEntries) {
+				const oldestKey = cache.keys().next().value;
 				if (oldestKey === undefined) {
 					break;
 				}
-				this.cache.delete(oldestKey);
+				cache.delete(oldestKey);
 			}
 		}
 
-		this.cache.set(key, {
+		cache.set(key, {
 			date: Date.now(),
 			value,
 		});
 	}
 
-	@bindThis
-	public get(key: string): T | undefined {
-		const cached = this.cache.get(key);
+	function get(key: string): T | undefined {
+		const cached = cache.get(key);
 		if (cached == null) {
 			return undefined;
 		}
-		if (Date.now() - cached.date > this.lifetime) {
-			this.cache.delete(key);
+		if (Date.now() - cached.date > lifetime) {
+			cache.delete(key);
 			return undefined;
 		}
-		if (this.limit !== Infinity) {
-			this.cache.delete(key);
-			this.cache.set(key, cached);
+		if (maxEntries !== Infinity) {
+			cache.delete(key);
+			cache.set(key, cached);
 		}
 		return cached.value;
 	}
 
-	@bindThis
-	public delete(key: string): void {
-		this.cache.delete(key);
-	}
-
-	@bindThis
-	public async fetch(key: string, fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
-		const cachedValue = this.get(key);
-		if (cachedValue !== undefined) {
-			if (validator) {
-				if (validator(cachedValue)) {
-					return cachedValue;
-				}
-			} else {
-				return cachedValue;
-			}
-		}
-
-		const value = await fetcher();
-		this.set(key, value);
-		return value;
-	}
-
-	@bindThis
-	public async fetchMaybe(
-		key: string,
-		fetcher: () => Promise<T | undefined>,
-		validator?: (cachedValue: T) => boolean,
-	): Promise<T | undefined> {
-		const cachedValue = this.get(key);
-		if (cachedValue !== undefined) {
-			if (validator) {
-				if (validator(cachedValue)) {
-					return cachedValue;
-				}
-			} else {
-				return cachedValue;
-			}
-		}
-
-		const pendingFetch = this.pendingFetches.get(key);
-		if (pendingFetch !== undefined) {
-			return pendingFetch;
-		}
-
-		const fetchPromise = fetcher()
-			.then((value) => {
-				if (value !== undefined) {
-					this.set(key, value);
-				}
-				return value;
-			})
-			.finally(() => {
-				if (this.pendingFetches.get(key) === fetchPromise) {
-					this.pendingFetches.delete(key);
-				}
-			});
-		this.pendingFetches.set(key, fetchPromise);
-		return fetchPromise;
-	}
-
-	@bindThis
-	public gc(): void {
+	function gc(): void {
 		const now = Date.now();
 
-		for (const [key, { date }] of this.cache.entries()) {
+		for (const [key, { date }] of cache.entries()) {
 			const age = now - date;
-			if (age >= this.lifetime) {
-				this.cache.delete(key);
+			if (age >= lifetime) {
+				cache.delete(key);
 			}
 		}
 	}
 
-	@bindThis
-	public dispose(): void {
-		clearInterval(this.gcIntervalHandle);
-	}
+	// 期限は get でも検査するため、メモリ回収だけのタイマーでプロセスを生存させない。
+	const gcIntervalHandle = setInterval(gc, 1000 * 60 * 3).unref();
 
-	public get entries() {
-		return this.cache.entries();
-	}
+	return {
+		set,
+		get,
+		gc,
+
+		delete(key: string): void {
+			cache.delete(key);
+		},
+
+		async fetch(key: string, fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
+			const cachedValue = get(key);
+			if (cachedValue !== undefined) {
+				if (validator) {
+					if (validator(cachedValue)) {
+						return cachedValue;
+					}
+				} else {
+					return cachedValue;
+				}
+			}
+
+			const value = await fetcher();
+			set(key, value);
+			return value;
+		},
+
+		async fetchMaybe(
+			key: string,
+			fetcher: () => Promise<T | undefined>,
+			validator?: (cachedValue: T) => boolean,
+		): Promise<T | undefined> {
+			const cachedValue = get(key);
+			if (cachedValue !== undefined) {
+				if (validator) {
+					if (validator(cachedValue)) {
+						return cachedValue;
+					}
+				} else {
+					return cachedValue;
+				}
+			}
+
+			const pendingFetch = pendingFetches.get(key);
+			if (pendingFetch !== undefined) {
+				return pendingFetch;
+			}
+
+			const fetchPromise = fetcher()
+				.then((value) => {
+					if (value !== undefined) {
+						set(key, value);
+					}
+					return value;
+				})
+				.finally(() => {
+					if (pendingFetches.get(key) === fetchPromise) {
+						pendingFetches.delete(key);
+					}
+				});
+			pendingFetches.set(key, fetchPromise);
+			return fetchPromise;
+		},
+
+		dispose(): void {
+			clearInterval(gcIntervalHandle);
+		},
+
+		get entries() {
+			return cache.entries();
+		},
+	};
 }
 
-export class MemorySingleCache<T> {
-	private cachedAt: number | null = null;
-	private value: T | undefined;
+export type MemorySingleCache<T> = ReturnType<typeof createMemorySingleCache<T>>;
 
-	constructor(private lifetime: number) {}
+export function createMemorySingleCache<T>(lifetime: number) {
+	let cachedAt: number | null = null;
+	let value: T | undefined;
 
-	@bindThis
-	public set(value: T): void {
-		this.cachedAt = Date.now();
-		this.value = value;
+	function set(newValue: T): void {
+		cachedAt = Date.now();
+		value = newValue;
 	}
 
-	@bindThis
-	public get(): T | undefined {
-		if (this.cachedAt == null) {
+	function get(): T | undefined {
+		if (cachedAt == null) {
 			return undefined;
 		}
-		if (Date.now() - this.cachedAt > this.lifetime) {
-			this.value = undefined;
-			this.cachedAt = null;
+		if (Date.now() - cachedAt > lifetime) {
+			value = undefined;
+			cachedAt = null;
 			return undefined;
 		}
-		return this.value;
-	}
-
-	@bindThis
-	public delete() {
-		this.value = undefined;
-		this.cachedAt = null;
-	}
-
-	/** validator が false を返した既存値は再利用しない。 */
-	@bindThis
-	public async fetch(fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
-		const cachedValue = this.get();
-		if (cachedValue !== undefined) {
-			if (validator) {
-				if (validator(cachedValue)) {
-					return cachedValue;
-				}
-			} else {
-				return cachedValue;
-			}
-		}
-
-		const value = await fetcher();
-		this.set(value);
 		return value;
 	}
 
-	/** validator が false を返した既存値は再利用しない。 */
-	@bindThis
-	public async fetchMaybe(
-		fetcher: () => Promise<T | undefined>,
-		validator?: (cachedValue: T) => boolean,
-	): Promise<T | undefined> {
-		const cachedValue = this.get();
-		if (cachedValue !== undefined) {
-			if (validator) {
-				if (validator(cachedValue)) {
+	return {
+		set,
+		get,
+
+		delete(): void {
+			value = undefined;
+			cachedAt = null;
+		},
+
+		/** validator が false を返した既存値は再利用しない。 */
+		async fetch(fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
+			const cachedValue = get();
+			if (cachedValue !== undefined) {
+				if (validator) {
+					if (validator(cachedValue)) {
+						return cachedValue;
+					}
+				} else {
 					return cachedValue;
 				}
-			} else {
-				return cachedValue;
 			}
-		}
 
-		const value = await fetcher();
-		if (value !== undefined) {
-			this.set(value);
-		}
-		return value;
-	}
+			const fetched = await fetcher();
+			set(fetched);
+			return fetched;
+		},
+
+		/** validator が false を返した既存値は再利用しない。 */
+		async fetchMaybe(
+			fetcher: () => Promise<T | undefined>,
+			validator?: (cachedValue: T) => boolean,
+		): Promise<T | undefined> {
+			const cachedValue = get();
+			if (cachedValue !== undefined) {
+				if (validator) {
+					if (validator(cachedValue)) {
+						return cachedValue;
+					}
+				} else {
+					return cachedValue;
+				}
+			}
+
+			const fetched = await fetcher();
+			if (fetched !== undefined) {
+				set(fetched);
+			}
+			return fetched;
+		},
+	};
 }

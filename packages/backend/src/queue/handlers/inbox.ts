@@ -6,7 +6,7 @@
 import { toPuny } from '@/misc/to-puny.js';
 import { verifyRequestSignature } from '@/core/activitypub/http-signature.js';
 import * as Bull from 'bullmq';
-import { JsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
+import { createJsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
 import { getApId, isActor, isDelete } from '@/core/activitypub/type.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import { StatusError } from '@/misc/status-error.js';
@@ -171,7 +171,7 @@ async function verifyAndResolveAuthUser(
 			throw new Bull.UnrecoverableError('skip: LD-SignatureのユーザーはpublicKeyを持っていませんでした');
 		}
 
-		const jsonLd = new JsonLd(deps.httpRequestService);
+		const jsonLd = createJsonLd(deps.httpRequestService);
 
 		delete activity.signature;
 		try {

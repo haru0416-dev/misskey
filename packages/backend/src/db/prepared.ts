@@ -9,7 +9,7 @@ import { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { SelectedFields, SelectedFieldsOrdered } from 'drizzle-orm/pg-core';
 import type { WithCacheConfig } from 'drizzle-orm/cache/core/types';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 
 type QueryRecipe<T> = {
 	query: { toSQL(): Query; then: PromiseLike<T>['then'] };
@@ -38,7 +38,7 @@ type CompiledQuery = Readonly<{
  */
 const planCacheDatabases = new WeakMap<MiDrizzleDatabase, MiDrizzleDatabase>();
 
-const logger = new Logger('db').createSubLogger('prepared', 'gray');
+const logger = createLogger('db').createSubLogger('prepared', 'gray');
 
 /**
  * 名前付きの文は、準備した後に列の型が変わると (動作中に ALTER COLUMN ... TYPE を当てる等) その接続で失敗し続け、

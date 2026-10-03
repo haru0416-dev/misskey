@@ -8,7 +8,7 @@ import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { shouldOmitOutgoingReplyReference } from '@/core/activitypub/interop/reply.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import { JsonLd } from '@/core/activitypub/json-ld.js';
+import { createJsonLd } from '@/core/activitypub/json-ld.js';
 import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/deliver-queue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/queue/queues.js';
@@ -623,8 +623,7 @@ async function attachLdSignature(
 ): Promise<Record<string, unknown>> {
 	const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
-	const jsonLd = new JsonLd(deps.httpRequestService);
-	jsonLd.debug = false;
+	const jsonLd = createJsonLd(deps.httpRequestService);
 	return await jsonLd.signRsaSignature2017(
 		activity,
 		keypair.privateKey,

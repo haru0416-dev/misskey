@@ -16,12 +16,12 @@ import { fetchLocalUserByNativeTokenFromDatabase } from '@/core/user/user-store.
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { CredentialEventPublisher } from '@/core/events.js';
-import { MemoryKVCache } from '@/misc/cache.js';
+import { createMemoryKVCache } from '@/misc/cache.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { verifyS256CodeChallenge } from '@/misc/pkce.js';
 import { StatusError } from '@/misc/status-error.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { CommonData } from '@/server/web/views/common.js';
 import { OAuthPage } from '@/server/web/views/oauth.js';
 import {
@@ -488,8 +488,8 @@ return 'issued'
 `;
 
 export function createMemoryOAuthEphemeralStore(): OAuthEphemeralStore {
-	const authorizationTransactions = new MemoryKVCache<AuthorizationTransaction>(OAUTH_STATE_TTL);
-	const grantCodes = new MemoryKVCache<AuthorizationCodeGrantState>(OAUTH_STATE_TTL);
+	const authorizationTransactions = createMemoryKVCache<AuthorizationTransaction>(OAUTH_STATE_TTL);
+	const grantCodes = createMemoryKVCache<AuthorizationCodeGrantState>(OAUTH_STATE_TTL);
 	return {
 		async setAuthorizationTransaction(id, value) {
 			authorizationTransactions.set(id, value);

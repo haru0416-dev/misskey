@@ -13,7 +13,7 @@ import type { MiMeta } from '@/models/entities.js';
 import type { DeliverJobData } from '@/core/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/user-store.js';
 import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/following-store.js';
-import MisskeyLogger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import { isFederationAllowedUri, signedPost } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	fetchFederatedInstance,
@@ -43,7 +43,7 @@ export type QueueDeliverDependencies = {
 };
 
 // 配送後のインスタンス情報更新は非同期のため、失敗を unhandled rejection にしない。
-const logger = new MisskeyLogger('queue').createSubLogger('deliver');
+const logger = createLogger('queue').createSubLogger('deliver');
 const logBackgroundInstanceUpdateError = (error: unknown): void => {
 	logger.error('background federated-instance update failed', { error });
 };

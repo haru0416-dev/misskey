@@ -4,7 +4,7 @@
  */
 
 import * as mfm from 'mfm-js';
-import { MemoryKVCache } from '@/misc/cache.js';
+import { createMemoryKVCache } from '@/misc/cache.js';
 
 /**
  * 同じ本文の MFM パース結果を使い回す。
@@ -16,7 +16,7 @@ import { MemoryKVCache } from '@/misc/cache.js';
  * 書き換え後の木を受け取る。凍結してあれば、書き換えはその場で例外になる
  * (凍結の費用はパース代に対して測定限界以下)。
  */
-const cache = new MemoryKVCache<readonly mfm.MfmNode[]>(1000 * 60 * 5, 1000);
+const cache = createMemoryKVCache<readonly mfm.MfmNode[]>(1000 * 60 * 5, 1000);
 
 function deepFreeze(node: unknown): void {
 	if (Array.isArray(node)) {

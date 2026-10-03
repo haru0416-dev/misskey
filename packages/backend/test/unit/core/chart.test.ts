@@ -6,11 +6,15 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import type * as Redis from 'ioredis';
-import Chart, { mergeChartDiffs } from '@/core/chart/core.js';
-import TestChart from '../../chart-fixtures/test.js';
-import TestGroupedChart from '../../chart-fixtures/test-grouped.js';
-import TestUniqueChart from '../../chart-fixtures/test-unique.js';
-import TestIntersectionChart from '../../chart-fixtures/test-intersection.js';
+import { entityToCreateTableSql, mergeChartDiffs } from '@/core/chart/core.js';
+import { createTestChart } from '../../chart-fixtures/test.js';
+import type { TestChart } from '../../chart-fixtures/test.js';
+import { createTestGroupedChart } from '../../chart-fixtures/test-grouped.js';
+import type { TestGroupedChart } from '../../chart-fixtures/test-grouped.js';
+import { createTestUniqueChart } from '../../chart-fixtures/test-unique.js';
+import type { TestUniqueChart } from '../../chart-fixtures/test-unique.js';
+import { createTestIntersectionChart } from '../../chart-fixtures/test-intersection.js';
+import type { TestIntersectionChart } from '../../chart-fixtures/test-intersection.js';
 import { entity as TestChartEntity } from '../../chart-fixtures/entities/test.js';
 import { entity as TestGroupedChartEntity } from '../../chart-fixtures/entities/test-grouped.js';
 import { entity as TestUniqueChartEntity } from '../../chart-fixtures/entities/test-unique.js';
@@ -19,7 +23,7 @@ import { loadConfig } from '@/config.js';
 import { createBunSqlDatabase, createBunSqlClient } from '@/db/bun-sql.js';
 import type { SQL as NativeSqlClient } from 'bun';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 
 describe('Chart', () => {
 	const config = loadConfig();
@@ -54,7 +58,7 @@ describe('Chart', () => {
 		drizzlePool = createBunSqlClient(config);
 		await drizzlePool.unsafe(`DROP TABLE IF EXISTS ${fixtureTables}`);
 		for (const entity of fixtureEntities) {
-			for (const statement of Chart.entityToCreateTableSql(entity)) {
+			for (const statement of entityToCreateTableSql(entity)) {
 				await drizzlePool.unsafe(statement);
 			}
 		}
@@ -64,11 +68,11 @@ describe('Chart', () => {
 	beforeEach(async () => {
 		await drizzlePool!.unsafe(`TRUNCATE ${fixtureTables}`);
 
-		const logger = new Logger('chart');
-		testChart = new TestChart(drizzle!, redisClient, logger);
-		testGroupedChart = new TestGroupedChart(drizzle!, redisClient, logger);
-		testUniqueChart = new TestUniqueChart(drizzle!, redisClient, logger);
-		testIntersectionChart = new TestIntersectionChart(drizzle!, redisClient, logger);
+		const logger = createLogger('chart');
+		testChart = createTestChart(drizzle!, redisClient, logger);
+		testGroupedChart = createTestGroupedChart(drizzle!, redisClient, logger);
+		testUniqueChart = createTestUniqueChart(drizzle!, redisClient, logger);
+		testIntersectionChart = createTestIntersectionChart(drizzle!, redisClient, logger);
 
 		vi.useFakeTimers({
 			toFake: ['Date'],
@@ -89,7 +93,7 @@ describe('Chart', () => {
 
 	// 列の型を超える値で UPDATE が失敗すると、そのグループの差分が保存されず蓄積する。
 	test('列の範囲を超える差分は範囲に丸めて保存し、以後の保存も止まらない', async () => {
-		const commit = (diff: Record<string, number>) => (testChart as any).commit(diff);
+		const commit = (diff: Record<string, number>) => testChart.commit(diff);
 		commit({ 'foo.inc': 3_000_000_000, 'foo.total': -3_000_000_000 });
 		await testChart.save();
 		commit({ 'foo.inc': 1, 'foo.dec': 1 });
@@ -99,7 +103,10 @@ describe('Chart', () => {
 		expect(chartHours).toStrictEqual({
 			foo: { dec: [1], inc: [2147483647], total: [-2147483648] },
 		});
-		expect((testChart as any).buffer).toHaveLength(0);
+
+		// 保存済みの差分は積み残されない。もう 1 度保存しても、集計は変わらない。
+		await testChart.save();
+		expect(await testChart.getChart('hour', 1, null)).toStrictEqual(chartHours);
 	});
 
 	test('Can updates (dec)', async () => {
@@ -344,6 +351,33 @@ describe('Chart', () => {
 		});
 	});
 
+	/**
+	 * 保存中の UPDATE (トランザクション) を、テストが解放するまで止める DB を渡した集計。
+	 * 保存の途中で差分が積まれる場合と、保存が重なる場合の挙動を確かめるのに使う。
+	 */
+	function createGatedGroupedChart() {
+		const updateStarted = Promise.withResolvers<void>();
+		const continueUpdate = Promise.withResolvers<void>();
+		const gatedDb = new Proxy(drizzle!, {
+			get(target, property) {
+				if (property === 'transaction') {
+					return async (...args: Parameters<MiDrizzleDatabase['transaction']>) => {
+						updateStarted.resolve();
+						await continueUpdate.promise;
+						return await target.transaction(...args);
+					};
+				}
+				const value = Reflect.get(target, property, target);
+				return typeof value === 'function' ? value.bind(target) : value;
+			},
+		});
+		return {
+			chart: createTestGroupedChart(gatedDb, redisClient, createLogger('chart')),
+			updateStarted,
+			continueUpdate,
+		};
+	}
+
 	describe('Grouped', () => {
 		test('Can updates', async () => {
 			await testGroupedChart.increment('alice');
@@ -388,17 +422,7 @@ describe('Chart', () => {
 		});
 
 		test('同じgroupのsave中に追加されたdiffは次のsaveまで保持される', async () => {
-			type UpdateLogById = (span: 'hour' | 'day', id: number, values: Record<string, unknown>) => Promise<void>;
-			const chartInternals = testGroupedChart as unknown as { updateLogById: UpdateLogById };
-			const updateLogById = chartInternals.updateLogById.bind(testGroupedChart);
-			const updateStarted = Promise.withResolvers<void>();
-			const continueUpdate = Promise.withResolvers<void>();
-
-			vi.spyOn(chartInternals, 'updateLogById').mockImplementation(async (...args) => {
-				updateStarted.resolve();
-				await continueUpdate.promise;
-				await updateLogById(...args);
-			});
+			const { chart: testGroupedChart, updateStarted, continueUpdate } = createGatedGroupedChart();
 
 			await testGroupedChart.increment('alice');
 			const firstSave = testGroupedChart.save();
@@ -429,17 +453,7 @@ describe('Chart', () => {
 		});
 
 		test('重複したsaveは同じdiffを二重に保存しない', async () => {
-			type UpdateLogById = (span: 'hour' | 'day', id: number, values: Record<string, unknown>) => Promise<void>;
-			const chartInternals = testGroupedChart as unknown as { updateLogById: UpdateLogById };
-			const updateLogById = chartInternals.updateLogById.bind(testGroupedChart);
-			const updateStarted = Promise.withResolvers<void>();
-			const continueUpdate = Promise.withResolvers<void>();
-
-			vi.spyOn(chartInternals, 'updateLogById').mockImplementation(async (...args) => {
-				updateStarted.resolve();
-				await continueUpdate.promise;
-				await updateLogById(...args);
-			});
+			const { chart: testGroupedChart, updateStarted, continueUpdate } = createGatedGroupedChart();
 
 			await testGroupedChart.increment('alice');
 			const firstSave = testGroupedChart.save();

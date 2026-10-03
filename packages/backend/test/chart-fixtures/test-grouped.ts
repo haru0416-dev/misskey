@@ -5,49 +5,45 @@
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type * as Redis from 'ioredis';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
+import type { Logger } from '@/logger.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import Chart from '@/core/chart/core.js';
+import { createChart } from '@/core/chart/core.js';
 import { name, schema } from './entities/test-grouped.js';
-import type { KVs } from '@/core/chart/core.js';
 
-export default class TestGroupedChart extends Chart<typeof schema> {
-	private total = {} as Record<string, number>;
+export function createTestGroupedChart(db: MiDrizzleDatabase, redisClient: Redis.Redis, logger: Logger) {
+	const totals = {} as Record<string, number>;
 
-	constructor(
-		private db: MiDrizzleDatabase,
+	const { commit, ...chart } = createChart({
+		db,
+		lock: (k) => acquireChartInsertLock(redisClient, k),
+		logger,
+		name,
+		schema,
+		tickMajor: async (group) => {
+			const total = group == null ? undefined : totals[group];
+			return total === undefined ? {} : { 'foo.total': total };
+		},
+	});
 
-		private redisClient: Redis.Redis,
+	return {
+		...chart,
 
-		logger: Logger,
-	) {
-		super(db, (k) => acquireChartInsertLock(redisClient, k), logger, name, schema, true);
-	}
+		async increment(group: string): Promise<void> {
+			if (totals[group] == null) {
+				totals[group] = 0;
+			}
 
-	protected async tickMajor(group: string): Promise<Partial<KVs<typeof schema>>> {
-		const total = this.total[group];
-		return total === undefined ? {} : { 'foo.total': total };
-	}
+			totals[group]++;
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
-
-	@bindThis
-	public async increment(group: string): Promise<void> {
-		if (this.total[group] == null) {
-			this.total[group] = 0;
-		}
-
-		this.total[group]++;
-
-		this.commit(
-			{
-				'foo.total': 1,
-				'foo.inc': 1,
-			},
-			group,
-		);
-	}
+			commit(
+				{
+					'foo.total': 1,
+					'foo.inc': 1,
+				},
+				group,
+			);
+		},
+	};
 }
+
+export type TestGroupedChart = ReturnType<typeof createTestGroupedChart>;

@@ -5,7 +5,7 @@
 
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import { isDebugLoggingEnabled } from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/core/queue/const.js';
 import { createBackgroundExecutionScope } from '@/misc/request-scope.js';

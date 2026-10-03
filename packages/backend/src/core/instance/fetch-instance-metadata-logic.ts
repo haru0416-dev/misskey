@@ -6,7 +6,7 @@
 import { URL } from 'node:url';
 import * as htmlParser from 'node-html-parser';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { MiInstance } from '@/models/Instance.js';
 
 type NodeInfo = {

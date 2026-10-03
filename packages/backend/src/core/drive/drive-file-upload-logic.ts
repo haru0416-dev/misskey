@@ -24,7 +24,7 @@ import { correctFilename } from '@/misc/correct-filename.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/entities.js';
 

@@ -9,10 +9,10 @@ import type { Config } from '@/config.js';
 import { createDrizzleQueryLogger } from '@/drizzle.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
-import MisskeyLogger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import { registerPlanCacheDatabase } from '@/db/prepared.js';
 
-const logger = new MisskeyLogger('db').createSubLogger('bun-sql', 'gray');
+const logger = createLogger('db').createSubLogger('bun-sql', 'gray');
 
 export type BunSqlRuntime = {
 	db: MiDrizzleDatabase;

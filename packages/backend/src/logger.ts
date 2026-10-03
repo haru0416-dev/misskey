@@ -5,7 +5,6 @@
 
 import cluster from 'node:cluster';
 import { styleText } from 'node:util';
-import { bindThis } from '@/decorators.js';
 import { formatTime } from '@/misc/format-date-time.js';
 import { envOption } from './env.js';
 import type { Config } from './config.js';
@@ -59,46 +58,46 @@ export function isDebugLoggingEnabled(): boolean {
 	);
 }
 
-export default class Logger {
-	private context: Context;
-	private parentLogger: Logger | null = null;
+type LogData = Record<string, unknown> | Error | unknown[] | null;
 
-	constructor(context: string, color?: LogColor) {
-		this.context = {
-			name: context,
-			...(color === undefined ? {} : { color }),
-		};
-	}
+type Emit = (
+	level: Level,
+	message: string,
+	data: LogData | undefined,
+	important: boolean,
+	subContexts: Context[],
+) => void;
 
-	@bindThis
-	public createSubLogger(context: string, color?: LogColor): Logger {
-		const logger = new Logger(context, color);
-		logger.parentLogger = this;
-		return logger;
-	}
+export type Logger = {
+	createSubLogger(context: string, color?: LogColor): Logger;
+	error(x: string | Error, data?: LogData, important?: boolean): void;
+	warn(message: string, data?: LogData, important?: boolean): void;
+	succ(message: string, data?: LogData, important?: boolean): void;
+	debug(message: string, data?: LogData, important?: boolean): void;
+	info(message: string, data?: LogData, important?: boolean): void;
+};
 
-	@bindThis
-	private log(
-		level: Level,
-		message: string,
-		data?: Record<string, unknown> | Error | unknown[] | null,
-		important = false,
-		subContexts: Context[] = [],
-	): void {
+export function createLogger(name: string, color?: LogColor): Logger {
+	return createLoggerNode({ name, ...(color === undefined ? {} : { color }) }, null);
+}
+
+/** 親があれば出力を親へ渡し、親の文脈の後ろにこのロガーの文脈を足す。出力するのは根のロガーだけ。 */
+function createLoggerNode(context: Context, parentEmit: Emit | null): Logger {
+	const emit: Emit = (level, message, data, important, subContexts) => {
 		// NODE_ENV=test は暗黙に quiet になるが、MK_VERBOSE を明示した時だけはそれより優先させる
 		// (e2e で発生したサーバー側例外を追うにはログを出せる手段が要る)。
 		if ((envOption.quiet && !envOption.verbose) || !shouldLog(level)) {
 			return;
 		}
 
-		if (this.parentLogger) {
-			this.parentLogger.log(level, message, data, important, [this.context].concat(subContexts));
+		if (parentEmit) {
+			parentEmit(level, message, data, important, [context].concat(subContexts));
 			return;
 		}
 
 		const time = formatTime(new Date());
 		const worker = cluster.isPrimary ? '*' : cluster.worker!.id;
-		const contextNames = [this.context].concat(subContexts).map((context) => context.name);
+		const contextNames = [context].concat(subContexts).map((context) => context.name);
 		if (loggingConfig.format === 'json') {
 			console.log(
 				JSON.stringify({
@@ -128,7 +127,7 @@ export default class Logger {
 							: level === 'info'
 								? styleText('blue', 'INFO')
 								: null;
-		const contexts = [this.context]
+		const contexts = [context]
 			.concat(subContexts)
 			.map((d) => (d.color ? colorize(d.color, d.name) : styleText('white', d.name)));
 		const m =
@@ -154,39 +153,40 @@ export default class Logger {
 			args.push(data);
 		}
 		console.log(...args);
-	}
+	};
 
-	@bindThis
-	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		if (x instanceof Error) {
-			const record: Record<string, unknown> & { e?: Error } =
-				data instanceof Error || Array.isArray(data) ? { data } : (data ?? {});
-			record.e = x;
-			this.log('error', x.toString(), record, important);
-		} else {
-			this.log('error', `${x}`, data, important);
-		}
-	}
+	return {
+		createSubLogger(subContext, subColor) {
+			return createLoggerNode({ name: subContext, ...(subColor === undefined ? {} : { color: subColor }) }, emit);
+		},
 
-	@bindThis
-	public warn(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		this.log('warning', message, data, important);
-	}
+		error(x, data, important = false) {
+			if (x instanceof Error) {
+				const record: Record<string, unknown> & { e?: Error } =
+					data instanceof Error || Array.isArray(data) ? { data } : (data ?? {});
+				record.e = x;
+				emit('error', x.toString(), record, important, []);
+			} else {
+				emit('error', `${x}`, data, important, []);
+			}
+		},
 
-	@bindThis
-	public succ(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		this.log('success', message, data, important);
-	}
+		warn(message, data, important = false) {
+			emit('warning', message, data, important, []);
+		},
 
-	@bindThis
-	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		if (isDebugLoggingEnabled()) {
-			this.log('debug', message, data, important);
-		}
-	}
+		succ(message, data, important = false) {
+			emit('success', message, data, important, []);
+		},
 
-	@bindThis
-	public info(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		this.log('info', message, data, important);
-	}
+		debug(message, data, important = false) {
+			if (isDebugLoggingEnabled()) {
+				emit('debug', message, data, important, []);
+			}
+		},
+
+		info(message, data, important = false) {
+			emit('info', message, data, important, []);
+		},
+	};
 }

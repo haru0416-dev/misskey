@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import cluster from 'node:cluster';
 import { styleText } from 'node:util';
-import Logger, { colorize } from '@/logger.js';
+import { createLogger, colorize } from '@/logger.js';
 import type { Config } from '@/config.js';
 import { showMachineInfo } from '@/misc/show-machine-info.js';
 import { resolveHostProcessCounts } from '@/misc/process-topology.js';
@@ -37,7 +37,7 @@ function publishQueueReadiness() {
 		}
 	}
 }
-const logger = new Logger('core', 'cyan');
+const logger = createLogger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
 
 const themeColor = (text: string) => colorize('#8185f2', text);

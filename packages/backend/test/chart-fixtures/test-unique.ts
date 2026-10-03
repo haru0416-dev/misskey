@@ -5,36 +5,29 @@
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type * as Redis from 'ioredis';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
+import type { Logger } from '@/logger.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import Chart from '@/core/chart/core.js';
+import { createChart } from '@/core/chart/core.js';
 import { name, schema } from './entities/test-unique.js';
-import type { KVs } from '@/core/chart/core.js';
 
-export default class TestUniqueChart extends Chart<typeof schema> {
-	constructor(
-		private db: MiDrizzleDatabase,
+export function createTestUniqueChart(db: MiDrizzleDatabase, redisClient: Redis.Redis, logger: Logger) {
+	const { commit, ...chart } = createChart({
+		db,
+		lock: (k) => acquireChartInsertLock(redisClient, k),
+		logger,
+		name,
+		schema,
+	});
 
-		private redisClient: Redis.Redis,
+	return {
+		...chart,
 
-		logger: Logger,
-	) {
-		super(db, (k) => acquireChartInsertLock(redisClient, k), logger, name, schema);
-	}
-
-	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
-
-	protected async tickMinor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
-
-	@bindThis
-	public async uniqueIncrement(key: string): Promise<void> {
-		this.commit({
-			foo: [key],
-		});
-	}
+		async uniqueIncrement(key: string): Promise<void> {
+			commit({
+				foo: [key],
+			});
+		},
+	};
 }
+
+export type TestUniqueChart = ReturnType<typeof createTestUniqueChart>;

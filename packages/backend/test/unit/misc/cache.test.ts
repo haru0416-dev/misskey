@@ -6,7 +6,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { MemoryKVCache, MemorySingleCache } from '@/misc/cache.js';
+import { createMemoryKVCache, createMemorySingleCache } from '@/misc/cache.js';
 
 test('MemoryKVCache permits process exit while cached values remain', async () => {
 	const moduleUrl = new URL('../../../src/misc/cache.ts', import.meta.url).href;
@@ -14,8 +14,8 @@ test('MemoryKVCache permits process exit while cached values remain', async () =
 		process.execPath,
 		[
 			'--eval',
-			`import { MemoryKVCache } from ${JSON.stringify(moduleUrl)};
-			const cache = new MemoryKVCache(60_000);
+			`import { createMemoryKVCache } from ${JSON.stringify(moduleUrl)};
+			const cache = createMemoryKVCache(60_000);
 			cache.set('key', 'cached');
 			console.log(cache.get('key'));`,
 		],
@@ -34,7 +34,7 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test('get returns undefined after lifetime expires', () => {
-		const cache = new MemoryKVCache<string>(1000);
+		const cache = createMemoryKVCache<string>(1000);
 		cache.set('key', 'value');
 		vi.advanceTimersByTime(1001);
 		expect(cache.get('key')).toBeUndefined();
@@ -42,7 +42,7 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test('delete removes the entry', () => {
-		const cache = new MemoryKVCache<string>(1000);
+		const cache = createMemoryKVCache<string>(1000);
 		cache.set('key', 'value');
 		cache.delete('key');
 		expect(cache.get('key')).toBeUndefined();
@@ -50,7 +50,7 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test('keeps current behavior when limit is omitted', () => {
-		const cache = new MemoryKVCache<number>(1000 * 60);
+		const cache = createMemoryKVCache<number>(1000 * 60);
 		cache.set('a', 1);
 		cache.set('b', 2);
 		cache.set('c', 3);
@@ -62,7 +62,7 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test('evicts the least recently used entry when limit is reached', () => {
-		const cache = new MemoryKVCache<number>(1000 * 60, 2);
+		const cache = createMemoryKVCache<number>(1000 * 60, 2);
 		cache.set('a', 1);
 		cache.set('b', 2);
 		expect(cache.get('a')).toBe(1);
@@ -74,12 +74,12 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test.each([0, -1, 1.5, Infinity, Number.NaN])('rejects invalid limit %s', (limit) => {
-		expect(() => new MemoryKVCache(1000, limit)).toThrow(TypeError);
+		expect(() => createMemoryKVCache(1000, limit)).toThrow(TypeError);
 	});
 
 	describe('gc()', () => {
 		test('removes expired entries', () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			cache.set('a', '1');
 			cache.set('b', '2');
 			vi.advanceTimersByTime(1001);
@@ -90,7 +90,7 @@ describe('misc:MemoryKVCache', () => {
 		});
 
 		test('removes only expired entries when mixed with live entries', () => {
-			const cache = new MemoryKVCache<string>(2000);
+			const cache = createMemoryKVCache<string>(2000);
 			cache.set('old', 'oldValue');
 			vi.advanceTimersByTime(2001);
 			cache.set('new', 'newValue');
@@ -105,7 +105,7 @@ describe('misc:MemoryKVCache', () => {
 		// 後続の期限切れキーを残す。get() の判定とは別に Map から削除されることを確認する。
 		test('correctly expires old entries after a key is updated (issue #15500)', () => {
 			const lifetime = 1000;
-			const cache = new MemoryKVCache<string>(lifetime);
+			const cache = createMemoryKVCache<string>(lifetime);
 
 			cache.set('a', 'v1');
 			cache.set('b', 'v1');
@@ -125,7 +125,7 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	test('set does not cause active entries iteration to revisit the same key', () => {
-		const cache = new MemoryKVCache<{ id: string }>(1000);
+		const cache = createMemoryKVCache<{ id: string }>(1000);
 		cache.set('key', { id: 'user-1' });
 
 		let iterations = 0;
@@ -144,7 +144,7 @@ describe('misc:MemoryKVCache', () => {
 
 	describe('fetch()', () => {
 		test('calls fetcher on cache miss', async () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch('key', fetcher);
 			expect(fetcher).toHaveBeenCalledOnce();
@@ -153,7 +153,7 @@ describe('misc:MemoryKVCache', () => {
 		});
 
 		test('does not call fetcher on cache hit', async () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			cache.set('key', 'cached');
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch('key', fetcher);
@@ -163,7 +163,7 @@ describe('misc:MemoryKVCache', () => {
 		});
 
 		test('respects validator and bypasses cache when validator returns false', async () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			cache.set('key', 'cached');
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch('key', fetcher, () => false);
@@ -175,7 +175,7 @@ describe('misc:MemoryKVCache', () => {
 
 	describe('fetchMaybe()', () => {
 		test('does not cache undefined returned by fetcher', async () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			const fetcher = vi.fn().mockResolvedValue(undefined);
 			const result = await cache.fetchMaybe('key', fetcher);
 			expect(result).toBeUndefined();
@@ -185,7 +185,7 @@ describe('misc:MemoryKVCache', () => {
 		});
 
 		test('shares an in-flight fetch for the same key', async () => {
-			const cache = new MemoryKVCache<string>(1000);
+			const cache = createMemoryKVCache<string>(1000);
 			let resolveFetch!: (value: string) => void;
 			const fetcher = vi.fn(
 				() =>
@@ -215,20 +215,20 @@ describe('misc:MemorySingleCache', () => {
 	});
 
 	test('set and get returns the value within lifetime', () => {
-		const cache = new MemorySingleCache<string>(1000);
+		const cache = createMemorySingleCache<string>(1000);
 		cache.set('value');
 		expect(cache.get()).toBe('value');
 	});
 
 	test('get returns undefined after lifetime expires', () => {
-		const cache = new MemorySingleCache<string>(1000);
+		const cache = createMemorySingleCache<string>(1000);
 		cache.set('value');
 		vi.advanceTimersByTime(1001);
 		expect(cache.get()).toBeUndefined();
 	});
 
 	test('delete removes the cached value', () => {
-		const cache = new MemorySingleCache<string>(1000);
+		const cache = createMemorySingleCache<string>(1000);
 		cache.set('value');
 		cache.delete();
 		expect(cache.get()).toBeUndefined();
@@ -236,7 +236,7 @@ describe('misc:MemorySingleCache', () => {
 
 	describe('fetch()', () => {
 		test('calls fetcher on cache miss', async () => {
-			const cache = new MemorySingleCache<string>(1000);
+			const cache = createMemorySingleCache<string>(1000);
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch(fetcher);
 			expect(fetcher).toHaveBeenCalledOnce();
@@ -244,7 +244,7 @@ describe('misc:MemorySingleCache', () => {
 		});
 
 		test('does not call fetcher on cache hit', async () => {
-			const cache = new MemorySingleCache<string>(1000);
+			const cache = createMemorySingleCache<string>(1000);
 			cache.set('cached');
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch(fetcher);
@@ -253,7 +253,7 @@ describe('misc:MemorySingleCache', () => {
 		});
 
 		test('respects validator and bypasses cache when validator returns false', async () => {
-			const cache = new MemorySingleCache<string>(1000);
+			const cache = createMemorySingleCache<string>(1000);
 			cache.set('cached');
 			const fetcher = vi.fn().mockResolvedValue('fetched');
 			const result = await cache.fetch(fetcher, () => false);

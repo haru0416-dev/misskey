@@ -14,7 +14,7 @@ import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/relay-store.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
-import { JsonLd } from '@/core/activitypub/json-ld.js';
+import { createJsonLd } from '@/core/activitypub/json-ld.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
@@ -173,7 +173,7 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 					type: 'RsaSignature2017',
 					creator: `${runtime.config.instance.url}/users/${user.id}#main-key`,
 				});
-				expect(await new JsonLd(runtime.httpRequestService).verifyRsaSignature2017(content, publicKey)).toBe(true);
+				expect(await createJsonLd(runtime.httpRequestService).verifyRsaSignature2017(content, publicKey)).toBe(true);
 				const { signature: _signature, ...unsigned } = content;
 				expect(unsigned).toEqual(activity);
 				expect(activity).toEqual(original);
@@ -272,7 +272,7 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 					expect(entry.digest).toBe(`SHA-256=${createHash('sha256').update(entry.body).digest('base64')}`);
 					expect(entry.body).toBe(localJobs[0]!.data.content);
 					expect(
-						await new JsonLd(runtime.httpRequestService).verifyRsaSignature2017(JSON.parse(entry.body), publicKey),
+						await createJsonLd(runtime.httpRequestService).verifyRsaSignature2017(JSON.parse(entry.body), publicKey),
 					).toBe(true);
 				}
 			} finally {

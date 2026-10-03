@@ -80,7 +80,6 @@
       "devDependencies": {
         "@fedify/vocab": "2.3.7",
         "@kitajs/ts-html-plugin": "4.1.4",
-        "@oxc-project/runtime": "0.150.0",
         "@types/jsonld": "1.5.15",
         "@types/mime-types": "3.0.1",
         "@types/node": "26.6.2",
@@ -839,8 +838,6 @@
     "@oxc-parser/binding-win32-ia32-msvc": ["@oxc-parser/binding-win32-ia32-msvc@0.150.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-EPqJfeZ4Pgg2BJSsCV8GozxV0FDltRzpVtGVa1r2noJu1iu+opOw3gtBWXwIo9odCT/MdFfyHxdy0/CRqs3OqA=="],
 
     "@oxc-parser/binding-win32-x64-msvc": ["@oxc-parser/binding-win32-x64-msvc@0.150.0", "", { "os": "win32", "cpu": "x64" }, "sha512-n5YMzbqwPQqozbkrexi0lNZrUz5cnPHalYpFWe6Dau7AmKIWNo+y24IwzDuZEQtEdUHuKhXmMMih/MPjOI+CMw=="],
-
-    "@oxc-project/runtime": ["@oxc-project/runtime@0.150.0", "", {}, "sha512-vC4tN4n2c+gVq69Oi6CoZxGk/1mYjLiN4hVEYwvtuns/S4QwUBiJYViwLGLxPaLQnsY5FQDgGs+h6moAmSedvA=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.144.0", "", {}, "sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg=="],
 

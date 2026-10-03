@@ -21,7 +21,7 @@ import type { VideoProcessingService } from '@/core/drive/video-processing-servi
 import type { WebAuthnService } from '@/core/account/webauthn-service.js';
 import type { EmailService } from '@/core/email/email-service.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { AdminQueueEndpointDependencies } from './admin/admin-queue.js';
 import type { MainStreamPublisher } from '../../core/notification/notification.js';
 import type {

@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import { gzipApiBody } from '@/server/compress.js';
 import type { Context } from 'hono';
@@ -216,7 +216,7 @@ export function getRequestIp(c: Context, config: Config): string {
 	return addresses[0] ?? remoteAddress;
 }
 
-const apiLogger = new Logger('api', 'gray');
+const apiLogger = createLogger('api', 'gray');
 
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
 	try {

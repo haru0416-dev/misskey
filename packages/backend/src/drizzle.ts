@@ -6,9 +6,9 @@
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';
 import type { Config } from '@/config.js';
-import MisskeyLogger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 
-const dbLogger = new MisskeyLogger('db');
+const dbLogger = createLogger('db');
 const sqlLogger = dbLogger.createSubLogger('drizzle', 'gray');
 
 export type DatabaseQueryResult<Row> = {

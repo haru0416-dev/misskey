@@ -7,8 +7,7 @@ import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { dateUTC, isTimeSame, isTimeBefore, subtractTime, addTime } from '@/misc/prelude/time.js';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
+import type { Logger } from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 /** `chartDb` 本体でもトランザクションでも同じように使えるよう、必要な口だけ切り出したもの */
@@ -223,197 +222,188 @@ export function mergeChartDiffs(diffs: Iterable<Record<string, number | string[]
 	return merged;
 }
 
-export default abstract class Chart<T extends Schema> {
-	private logger: Logger;
+function convertSchemaToColumnDefinitions(schema: Schema): Record<string, ChartColumnDefinition> {
+	const columns = {} as Record<string, ChartColumnDefinition>;
+	for (const [k, v] of Object.entries(schema)) {
+		const name = k.replaceAll('.', COLUMN_DELIMITER);
+		const type = v.range === 'big' ? 'bigint' : v.range === 'small' ? 'smallint' : 'integer';
+		if (v.uniqueIncrement) {
+			columns[UNIQUE_TEMP_COLUMN_PREFIX + name] = {
+				type: 'varchar',
+				array: true,
+				default: '{}',
+			};
+		}
+		columns[COLUMN_PREFIX + name] = {
+			type,
+			default: 0,
+		};
+	}
+	return columns;
+}
 
-	public schema: T;
+function dateToTimestamp(x: Date): number {
+	return Math.floor(x.getTime() / 1000);
+}
 
-	private name: string;
-	private buffer: {
-		diff: Commit<T>;
-		group: string | null;
-	}[] = [];
-	private saveTail: Promise<void> = Promise.resolve();
-	private tableForHour: string;
-	private tableForDay: string;
-	private chartDb: MiDrizzleDatabase;
+function parseDate(date: Date): [number, number, number, number, number, number, number] {
+	const y = date.getUTCFullYear();
+	const m = date.getUTCMonth();
+	const d = date.getUTCDate();
+	const h = date.getUTCHours();
+	const _m = date.getUTCMinutes();
+	const _s = date.getUTCSeconds();
+	const _ms = date.getUTCMilliseconds();
 
+	return [y, m, d, h, _m, _s, _ms];
+}
+
+function getCurrentDate() {
+	return parseDate(new Date());
+}
+
+function defaultValueSql(value: string | number): string {
+	return typeof value === 'number' ? value.toString() : `'${value.replaceAll("'", "''")}'`;
+}
+
+function columnDefinitionSql(name: string, definition: ChartColumnDefinition): string {
+	const type = definition.generated
+		? 'SERIAL'
+		: definition.array
+			? `${definition.type}[]`
+			: definition.type === 'varchar' && definition.length != null
+				? `character varying(${definition.length})`
+				: definition.type;
+	const defaultValue = definition.default == null ? '' : ` DEFAULT ${defaultValueSql(definition.default)}`;
+
+	return `${quoteIdentifier(name)} ${type} NOT NULL${defaultValue}`;
+}
+
+export function entityToCreateTableSql(entity: ChartEntity): string[] {
+	const uniqueColumns = entity.uniqueColumns.map((column) => quoteIdentifier(column)).join(', ');
+	const tableName = quoteIdentifier(entity.tableName);
+	const columns = Object.entries(entity.columns).map(([name, definition]) => columnDefinitionSql(name, definition));
+	const relationKey = [entity.tableName, ...entity.uniqueColumns].join(':');
+
+	return [
+		`CREATE TABLE ${tableName} (${[
+			...columns,
+			`CONSTRAINT ${quoteIdentifier(hashedRelationName('UQ', relationKey))} UNIQUE (${uniqueColumns})`,
+			`CONSTRAINT ${quoteIdentifier(hashedRelationName('PK', entity.tableName, 'id'))} PRIMARY KEY ("id")`,
+		].join(', ')})`,
+		`CREATE UNIQUE INDEX ${quoteIdentifier(hashedRelationName('IDX', relationKey))} ON ${tableName} (${uniqueColumns})`,
+	];
+}
+
+export function schemaToEntity(
+	name: string,
+	schema: Schema,
+	grouped = false,
+): {
+	hour: ChartEntity;
+	day: ChartEntity;
+} {
+	const createEntity = (span: 'hour' | 'day'): ChartEntity => ({
+		name: span === 'hour' ? `ChartX${name}` : span === 'day' ? `ChartDayX${name}` : (new Error('not happen') as never),
+		tableName:
+			span === 'hour'
+				? `__chart__${camelToSnake(name)}`
+				: span === 'day'
+					? `__chart_day__${camelToSnake(name)}`
+					: (new Error('not happen') as never),
+		columns: {
+			id: {
+				type: 'integer',
+				generated: true,
+			},
+			date: {
+				type: 'integer',
+			},
+			...(grouped
+				? {
+						group: {
+							type: 'varchar',
+							length: 128,
+						},
+					}
+				: {}),
+			...convertSchemaToColumnDefinitions(schema),
+		},
+		uniqueColumns: grouped ? ['date', 'group'] : ['date'],
+	});
+
+	return {
+		hour: createEntity('hour'),
+		day: createEntity('day'),
+	};
+}
+
+export type ChartOptions<T extends Schema> = {
+	db: MiDrizzleDatabase;
+	lock: (key: string) => Promise<() => void>;
+	logger: Logger;
+	name: string;
+	schema: T;
 	/**
 	 * 1日に一回程度実行されれば良いような計算処理を入れる(主にCASCADE削除などアプリケーション側で感知できない変動によるズレの修正用)
 	 */
-	protected abstract tickMajor(group: string | null): Promise<Partial<KVs<T>>>;
-
+	tickMajor?: (group: string | null) => Promise<Partial<KVs<T>>>;
 	/**
 	 * 少なくとも最小スパン内に1回は実行されて欲しい計算処理を入れる
 	 */
-	protected abstract tickMinor(group: string | null): Promise<Partial<KVs<T>>>;
+	tickMinor?: (group: string | null) => Promise<Partial<KVs<T>>>;
+};
 
-	private static convertSchemaToColumnDefinitions(schema: Schema): Record<string, ChartColumnDefinition> {
-		const columns = {} as Record<string, ChartColumnDefinition>;
-		for (const [k, v] of Object.entries(schema)) {
-			const name = k.replaceAll('.', COLUMN_DELIMITER);
-			const type = v.range === 'big' ? 'bigint' : v.range === 'small' ? 'smallint' : 'integer';
-			if (v.uniqueIncrement) {
-				columns[UNIQUE_TEMP_COLUMN_PREFIX + name] = {
-					type: 'varchar',
-					array: true,
-					default: '{}',
-				};
-			}
-			columns[COLUMN_PREFIX + name] = {
-				type,
-				default: 0,
-			};
-		}
-		return columns;
+/** commit を含む。commit は差分を積む側 (各集計の書き込み関数) だけが持ち、外へは渡さない。 */
+type ChartCore<T extends Schema> = ReturnType<typeof createChart<T>>;
+
+/** 集計を保存・読み出す側から見える操作。 */
+export type Chart<T extends Schema> = Omit<ChartCore<T>, 'commit'>;
+
+export function createChart<T extends Schema>({
+	db: chartDb,
+	lock,
+	logger,
+	name: chartName,
+	schema: chartSchema,
+	tickMajor = async () => ({}),
+	tickMinor = async () => ({}),
+}: ChartOptions<T>) {
+	const tableForHour = `__chart__${camelToSnake(chartName)}`;
+	const tableForDay = `__chart_day__${camelToSnake(chartName)}`;
+	let pendingBuffer: {
+		diff: Commit<T>;
+		group: string | null;
+	}[] = [];
+	let saveTail: Promise<void> = Promise.resolve();
+
+	function getTable(span: 'hour' | 'day'): string {
+		return span === 'hour' ? tableForHour : tableForDay;
 	}
 
-	private static dateToTimestamp(x: Date): number {
-		return Math.floor(x.getTime() / 1000);
-	}
-
-	private static parseDate(date: Date): [number, number, number, number, number, number, number] {
-		const y = date.getUTCFullYear();
-		const m = date.getUTCMonth();
-		const d = date.getUTCDate();
-		const h = date.getUTCHours();
-		const _m = date.getUTCMinutes();
-		const _s = date.getUTCSeconds();
-		const _ms = date.getUTCMilliseconds();
-
-		return [y, m, d, h, _m, _s, _ms];
-	}
-
-	private static getCurrentDate() {
-		return Chart.parseDate(new Date());
-	}
-
-	private static defaultValueSql(value: string | number): string {
-		return typeof value === 'number' ? value.toString() : `'${value.replaceAll("'", "''")}'`;
-	}
-
-	private static columnDefinitionSql(name: string, definition: ChartColumnDefinition): string {
-		const type = definition.generated
-			? 'SERIAL'
-			: definition.array
-				? `${definition.type}[]`
-				: definition.type === 'varchar' && definition.length != null
-					? `character varying(${definition.length})`
-					: definition.type;
-		const defaultValue = definition.default == null ? '' : ` DEFAULT ${Chart.defaultValueSql(definition.default)}`;
-
-		return `${quoteIdentifier(name)} ${type} NOT NULL${defaultValue}`;
-	}
-
-	public static entityToCreateTableSql(entity: ChartEntity): string[] {
-		const uniqueColumns = entity.uniqueColumns.map((column) => quoteIdentifier(column)).join(', ');
-		const tableName = quoteIdentifier(entity.tableName);
-		const columns = Object.entries(entity.columns).map(([name, definition]) =>
-			Chart.columnDefinitionSql(name, definition),
-		);
-		const relationKey = [entity.tableName, ...entity.uniqueColumns].join(':');
-
-		return [
-			`CREATE TABLE ${tableName} (${[
-				...columns,
-				`CONSTRAINT ${quoteIdentifier(hashedRelationName('UQ', relationKey))} UNIQUE (${uniqueColumns})`,
-				`CONSTRAINT ${quoteIdentifier(hashedRelationName('PK', entity.tableName, 'id'))} PRIMARY KEY ("id")`,
-			].join(', ')})`,
-			`CREATE UNIQUE INDEX ${quoteIdentifier(hashedRelationName('IDX', relationKey))} ON ${tableName} (${uniqueColumns})`,
-		];
-	}
-
-	public static schemaToEntity(
-		name: string,
-		schema: Schema,
-		grouped = false,
-	): {
-		hour: ChartEntity;
-		day: ChartEntity;
-	} {
-		const createEntity = (span: 'hour' | 'day'): ChartEntity => ({
-			name:
-				span === 'hour' ? `ChartX${name}` : span === 'day' ? `ChartDayX${name}` : (new Error('not happen') as never),
-			tableName:
-				span === 'hour'
-					? `__chart__${camelToSnake(name)}`
-					: span === 'day'
-						? `__chart_day__${camelToSnake(name)}`
-						: (new Error('not happen') as never),
-			columns: {
-				id: {
-					type: 'integer',
-					generated: true,
-				},
-				date: {
-					type: 'integer',
-				},
-				...(grouped
-					? {
-							group: {
-								type: 'varchar',
-								length: 128,
-							},
-						}
-					: {}),
-				...Chart.convertSchemaToColumnDefinitions(schema),
-			},
-			uniqueColumns: grouped ? ['date', 'group'] : ['date'],
-		});
-
-		return {
-			hour: createEntity('hour'),
-			day: createEntity('day'),
-		};
-	}
-
-	private lock: (key: string) => Promise<() => void>;
-
-	constructor(
-		db: MiDrizzleDatabase,
-		lock: (key: string) => Promise<() => void>,
-		logger: Logger,
-		name: string,
-		schema: T,
-		grouped = false,
-	) {
-		this.name = name;
-		this.schema = schema;
-		this.lock = lock;
-		this.logger = logger;
-		this.chartDb = db;
-
-		this.tableForHour = `__chart__${camelToSnake(name)}`;
-		this.tableForDay = `__chart_day__${camelToSnake(name)}`;
-	}
-
-	private getTable(span: 'hour' | 'day'): string {
-		return span === 'hour' ? this.tableForHour : this.tableForDay;
-	}
-
-	private groupCondition(group: string | null): SQL {
+	function groupCondition(group: string | null): SQL {
 		return group ? sql`AND "group" = ${group}` : sql``;
 	}
 
-	private async getLogByDate(group: string | null, span: 'hour' | 'day', date: number): Promise<RawRecord<T> | null> {
-		const result = await this.chartDb.execute(sql`
+	async function getLogByDate(group: string | null, span: 'hour' | 'day', date: number): Promise<RawRecord<T> | null> {
+		const result = await chartDb.execute(sql`
 			SELECT *
-			FROM ${identifierSql(this.getTable(span))}
+			FROM ${identifierSql(getTable(span))}
 			WHERE "date" = ${date}
-				${this.groupCondition(group)}
+				${groupCondition(group)}
 			LIMIT 1
 		`);
 
 		return (result.rows[0] as RawRecord<T> | undefined) ?? null;
 	}
 
-	private async insertLog(
+	async function insertLog(
 		span: 'hour' | 'day',
 		values: Record<string, number | string | null | unknown[]>,
 	): Promise<RawRecord<T>> {
 		const entries = Object.entries(values);
-		const result = await this.chartDb.execute(sql`
-			INSERT INTO ${identifierSql(this.getTable(span))}
+		const result = await chartDb.execute(sql`
+			INSERT INTO ${identifierSql(getTable(span))}
 				(${sql.join(
 					entries.map(([column]) => identifierSql(column)),
 					sql`, `,
@@ -429,11 +419,11 @@ export default abstract class Chart<T extends Schema> {
 		return result.rows[0] as RawRecord<T>;
 	}
 
-	private async updateLogById(
+	async function updateLogById(
 		span: 'hour' | 'day',
 		id: number,
 		values: Record<string, number | SQL | unknown[]>,
-		executor: ChartQueryExecutor = this.chartDb,
+		executor: ChartQueryExecutor = chartDb,
 	): Promise<void> {
 		const entries = Object.entries(values);
 		if (entries.length === 0) {
@@ -441,7 +431,7 @@ export default abstract class Chart<T extends Schema> {
 		}
 
 		await executor.execute(sql`
-			UPDATE ${identifierSql(this.getTable(span))}
+			UPDATE ${identifierSql(getTable(span))}
 			SET ${sql.join(
 				entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`),
 				sql`, `,
@@ -450,7 +440,7 @@ export default abstract class Chart<T extends Schema> {
 		`);
 	}
 
-	private async updateLogsByDateRange(
+	async function updateLogsByDateRange(
 		span: 'hour' | 'day',
 		gt: number,
 		lt: number,
@@ -461,8 +451,8 @@ export default abstract class Chart<T extends Schema> {
 			return;
 		}
 
-		await this.chartDb.execute(sql`
-			UPDATE ${identifierSql(this.getTable(span))}
+		await chartDb.execute(sql`
+			UPDATE ${identifierSql(getTable(span))}
 			SET ${sql.join(
 				entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`),
 				sql`, `,
@@ -472,8 +462,7 @@ export default abstract class Chart<T extends Schema> {
 		`);
 	}
 
-	@bindThis
-	private convertRawRecord(x: RawRecord<T>): KVs<T> {
+	function convertRawRecord(x: RawRecord<T>): KVs<T> {
 		const kvs = {} as Record<string, number>;
 		for (const k of Object.keys(x).filter((k) => k.startsWith(COLUMN_PREFIX)) as (keyof Columns<T>)[]) {
 			kvs[(k as string).substring(COLUMN_PREFIX.length).split(COLUMN_DELIMITER).join('.')] = x[k] as unknown as number;
@@ -481,10 +470,9 @@ export default abstract class Chart<T extends Schema> {
 		return kvs as KVs<T>;
 	}
 
-	@bindThis
-	private getNewLog(latest: KVs<T> | null): KVs<T> {
+	function getNewLog(latest: KVs<T> | null): KVs<T> {
 		const log = {} as Record<keyof T, number>;
-		for (const [k, v] of Object.entries(this.schema) as [keyof (typeof this)['schema'], this['schema'][string]][]) {
+		for (const [k, v] of Object.entries(chartSchema) as [keyof T, T[string]][]) {
 			if (v.accumulate && latest) {
 				log[k] = latest[k];
 			} else {
@@ -494,29 +482,27 @@ export default abstract class Chart<T extends Schema> {
 		return log as KVs<T>;
 	}
 
-	@bindThis
-	private getLatestLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T> | null> {
-		return this.chartDb
+	function getLatestLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T> | null> {
+		return chartDb
 			.execute(sql`
 			SELECT *
-			FROM ${identifierSql(this.getTable(span))}
+			FROM ${identifierSql(getTable(span))}
 			WHERE TRUE
-				${this.groupCondition(group)}
+				${groupCondition(group)}
 			ORDER BY "date" DESC
 			LIMIT 1
 		`)
 			.then((result) => (result.rows[0] as RawRecord<T> | undefined) ?? null);
 	}
 
-	@bindThis
-	private async claimCurrentLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T>> {
-		const [y, m, d, h] = Chart.getCurrentDate();
+	async function claimCurrentLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T>> {
+		const [y, m, d, h] = getCurrentDate();
 
 		const current = dateUTC(
 			span === 'hour' ? [y, m, d, h] : span === 'day' ? [y, m, d] : (new Error('not happen') as never),
 		);
 
-		const currentLog = await this.getLogByDate(group, span, Chart.dateToTimestamp(current));
+		const currentLog = await getLogByDate(group, span, dateToTimestamp(current));
 
 		if (currentLog != null) {
 			return currentLog;
@@ -526,23 +512,23 @@ export default abstract class Chart<T extends Schema> {
 		let data: KVs<T>;
 
 		// 更新の無い集計期間にはログが存在しないため、直前区間ではなく最新ログを引き継ぐ。
-		const latest = await this.getLatestLog(group, span);
+		const latest = await getLatestLog(group, span);
 
 		if (latest != null) {
-			data = this.getNewLog(this.convertRawRecord(latest));
+			data = getNewLog(convertRawRecord(latest));
 		} else {
-			data = this.getNewLog(null);
+			data = getNewLog(null);
 
-			this.logger.info(`${this.name + (group ? `:${group}` : '')}(${span}): Initial commit created`);
+			logger.info(`${chartName + (group ? `:${group}` : '')}(${span}): Initial commit created`);
 		}
 
-		const date = Chart.dateToTimestamp(current);
-		const lockKey = group ? `${this.name}:${date}:${span}:${group}` : `${this.name}:${date}:${span}`;
+		const date = dateToTimestamp(current);
+		const lockKey = group ? `${chartName}:${date}:${span}:${group}` : `${chartName}:${date}:${span}`;
 
-		const unlock = await this.lock(lockKey);
+		const unlock = await lock(lockKey);
 		try {
 			// 同じ区間を重複作成しないため、ロック取得後に再確認する。
-			const currentLog = await this.getLogByDate(group, span, date);
+			const currentLog = await getLogByDate(group, span, date);
 
 			if (currentLog != null) {
 				return currentLog;
@@ -554,13 +540,13 @@ export default abstract class Chart<T extends Schema> {
 				columns[COLUMN_PREFIX + name] = v;
 			}
 
-			log = await this.insertLog(span, {
+			log = await insertLog(span, {
 				date,
 				...(group ? { group } : {}),
 				...columns,
 			});
 
-			this.logger.info(`${this.name + (group ? `:${group}` : '')}(${span}): New commit created`);
+			logger.info(`${chartName + (group ? `:${group}` : '')}(${span}): New commit created`);
 
 			return log;
 		} finally {
@@ -568,33 +554,32 @@ export default abstract class Chart<T extends Schema> {
 		}
 	}
 
-	protected commit(diff: Commit<T>, group: string | null = null): void {
+	function commit(diff: Commit<T>, group: string | null = null): void {
 		for (const [k, v] of Object.entries(diff)) {
 			if (v == null || v === 0 || (Array.isArray(v) && v.length === 0)) {
 				delete diff[k];
 			}
 		}
-		this.buffer.push({
+		pendingBuffer.push({
 			diff,
 			group,
 		});
 	}
 
-	@bindThis
-	public save(): Promise<void> {
-		const save = this.saveTail.then(() => this.saveBuffer());
-		this.saveTail = save.catch(() => undefined);
+	function save(): Promise<void> {
+		const save = saveTail.then(() => saveBuffer());
+		saveTail = save.catch(() => undefined);
 		return save;
 	}
 
-	private async saveBuffer(): Promise<void> {
-		if (this.buffer.length === 0) {
-			this.logger.info(`${this.name}: Write skipped`);
+	async function saveBuffer(): Promise<void> {
+		if (pendingBuffer.length === 0) {
+			logger.info(`${chartName}: Write skipped`);
 			return;
 		}
 
 		// バッファは保存時刻の区間へ集約されるため、保存間隔をまたいだ差分を発生時刻の区間へ戻せない。
-		const buffer = this.buffer.slice();
+		const buffer = pendingBuffer.slice();
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			const bufferedDiffs = [...ungrouped, ...(byGroup.get(logHour.group ?? null) ?? [])];
@@ -607,7 +592,7 @@ export default abstract class Chart<T extends Schema> {
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (typeof v === 'number') {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string & keyof Columns<T>;
-					const bounds = columnRange(this.schema[k]?.range);
+					const bounds = columnRange(chartSchema[k]?.range);
 					// bigint で計算してから列の範囲に丸める。列の型のままだと丸める前に桁あふれで失敗する。
 					const delta =
 						v > 0
@@ -642,7 +627,7 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			for (const [k, v] of Object.entries(finalDiffs)) {
-				const schema = this.schema[k];
+				const schema = chartSchema[k];
 				if (schema == null) {
 					throw new Error(`Unknown chart field: ${k}`);
 				}
@@ -660,7 +645,7 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			// intersection が別の intersection を参照する構成には対応していない。
-			for (const [k, v] of Object.entries(this.schema)) {
+			for (const [k, v] of Object.entries(chartSchema)) {
 				const intersection = v.intersection;
 				if (intersection) {
 					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
@@ -709,12 +694,12 @@ export default abstract class Chart<T extends Schema> {
 
 			// hour と day を別トランザクションで書くと、片方だけ成功したときも buffer が残り、
 			// 次回 save で成功済みの span へ同じ diff が再加算される。
-			await this.chartDb.transaction(async (transaction) => {
-				await this.updateLogById('hour', logHour.id, queryForHour, transaction);
-				await this.updateLogById('day', logDay.id, queryForDay, transaction);
+			await chartDb.transaction(async (transaction) => {
+				await updateLogById('hour', logHour.id, queryForHour, transaction);
+				await updateLogById('day', logDay.id, queryForDay, transaction);
 			});
 
-			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
+			logger.info(`${chartName + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
 			for (const entry of bufferedDiffs) savedEntries.add(entry);
 		};
@@ -737,24 +722,23 @@ export default abstract class Chart<T extends Schema> {
 		const savedEntries = new Set<(typeof buffer)[number]>();
 		const results = await Promise.allSettled(
 			groups.map((group) =>
-				Promise.all([this.claimCurrentLog(group, 'hour'), this.claimCurrentLog(group, 'day')]).then(
-					([logHour, logDay]) => update(logHour, logDay),
+				Promise.all([claimCurrentLog(group, 'hour'), claimCurrentLog(group, 'day')]).then(([logHour, logDay]) =>
+					update(logHour, logDay),
 				),
 			),
 		);
-		this.buffer = this.buffer.filter((q) => !savedEntries.has(q));
+		pendingBuffer = pendingBuffer.filter((q) => !savedEntries.has(q));
 		const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
 		if (failure != null) throw failure.reason;
 	}
 
-	@bindThis
-	public async tick(major: boolean, group: string | null = null): Promise<void> {
-		const data = major ? await this.tickMajor(group) : await this.tickMinor(group);
+	async function tick(major: boolean, group: string | null = null): Promise<void> {
+		const data = major ? await tickMajor(group) : await tickMinor(group);
 
 		const columns = {} as Record<keyof Columns<T>, number>;
 		for (const [k, v] of Object.entries(data) as [keyof typeof data, number][]) {
 			const name = (COLUMN_PREFIX + (k as string).replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
-			columns[name] = clampToColumn(v, this.schema[k as string]?.range);
+			columns[name] = clampToColumn(v, chartSchema[k as string]?.range);
 		}
 
 		if (Object.keys(columns).length === 0) {
@@ -763,31 +747,29 @@ export default abstract class Chart<T extends Schema> {
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			// hour と day の片方だけが更新された状態を残さない。
-			await this.chartDb.transaction(async (transaction) => {
-				await this.updateLogById('hour', logHour.id, columns, transaction);
-				await this.updateLogById('day', logDay.id, columns, transaction);
+			await chartDb.transaction(async (transaction) => {
+				await updateLogById('hour', logHour.id, columns, transaction);
+				await updateLogById('day', logDay.id, columns, transaction);
 			});
 		};
 
-		return Promise.all([this.claimCurrentLog(group, 'hour'), this.claimCurrentLog(group, 'day')]).then(
-			([logHour, logDay]) => update(logHour, logDay),
+		return Promise.all([claimCurrentLog(group, 'hour'), claimCurrentLog(group, 'day')]).then(([logHour, logDay]) =>
+			update(logHour, logDay),
 		);
 	}
 
-	@bindThis
-	public resync(group: string | null = null): Promise<void> {
-		return this.tick(true, group);
+	function resync(group: string | null = null): Promise<void> {
+		return tick(true, group);
 	}
 
-	@bindThis
-	public async clean(): Promise<void> {
-		const current = dateUTC(Chart.getCurrentDate());
+	async function clean(): Promise<void> {
+		const current = dateUTC(getCurrentDate());
 
-		const gt = Chart.dateToTimestamp(current) - 60 * 60 * 24 * 3;
-		const lt = Chart.dateToTimestamp(current) - 60 * 60 * 24;
+		const gt = dateToTimestamp(current) - 60 * 60 * 24 * 3;
+		const lt = dateToTimestamp(current) - 60 * 60 * 24;
 
 		const columns = {} as Record<keyof TempColumnsForUnique<T>, []>;
-		for (const [k, v] of Object.entries(this.schema)) {
+		for (const [k, v] of Object.entries(chartSchema)) {
 			if (v.uniqueIncrement) {
 				const name = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
 				columns[name] = [];
@@ -798,23 +780,17 @@ export default abstract class Chart<T extends Schema> {
 			return;
 		}
 
-		await Promise.all([
-			this.updateLogsByDateRange('hour', gt, lt, columns),
-			this.updateLogsByDateRange('day', gt, lt, columns),
-		]);
+		await Promise.all([updateLogsByDateRange('hour', gt, lt, columns), updateLogsByDateRange('day', gt, lt, columns)]);
 	}
 
-	@bindThis
-	public async getChartRaw(
+	async function getChartRaw(
 		span: 'hour' | 'day',
 		amount: number,
 		cursor: Date | null,
 		group: string | null = null,
 	): Promise<ChartResult<T>> {
-		const [y, m, d, h, _m, _s, _ms] = cursor
-			? Chart.parseDate(subtractTime(addTime(cursor, 1, span), 1))
-			: Chart.getCurrentDate();
-		const [y2, m2, d2, h2] = cursor ? Chart.parseDate(addTime(cursor, 1, span)) : ([] as never);
+		const [y, m, d, h, _m, _s, _ms] = cursor ? parseDate(subtractTime(addTime(cursor, 1, span), 1)) : getCurrentDate();
+		const [y2, m2, d2, h2] = cursor ? parseDate(addTime(cursor, 1, span)) : ([] as never);
 
 		const lt = dateUTC([y, m, d, h, _m, _s, _ms]);
 
@@ -826,18 +802,18 @@ export default abstract class Chart<T extends Schema> {
 					: (new Error('not happen') as never);
 
 		let logs = (
-			await this.chartDb.execute(sql`
+			await chartDb.execute(sql`
 			SELECT *
-			FROM ${identifierSql(this.getTable(span))}
-			WHERE "date" BETWEEN ${Chart.dateToTimestamp(gt)} AND ${Chart.dateToTimestamp(lt)}
-				${this.groupCondition(group)}
+			FROM ${identifierSql(getTable(span))}
+			WHERE "date" BETWEEN ${dateToTimestamp(gt)} AND ${dateToTimestamp(lt)}
+				${groupCondition(group)}
 			ORDER BY "date" DESC
 		`)
 		).rows as RawRecord<T>[];
 
 		if (logs.length === 0) {
 			// 補間の起点として最新ログを 1 件確保する。
-			const recentLog = await this.getLatestLog(group, span);
+			const recentLog = await getLatestLog(group, span);
 
 			if (recentLog) {
 				logs = [recentLog];
@@ -845,11 +821,11 @@ export default abstract class Chart<T extends Schema> {
 		} else if (!isTimeSame(new Date(logs.at(-1)!.date * 1000), gt)) {
 			// 範囲先頭を補間できるよう、範囲より前の最新ログを追加する。
 			const outdatedLog = (
-				await this.chartDb.execute(sql`
+				await chartDb.execute(sql`
 				SELECT *
-				FROM ${identifierSql(this.getTable(span))}
-				WHERE "date" < ${Chart.dateToTimestamp(gt)}
-					${this.groupCondition(group)}
+				FROM ${identifierSql(getTable(span))}
+				WHERE "date" < ${dateToTimestamp(gt)}
+					${groupCondition(group)}
 				ORDER BY "date" DESC
 				LIMIT 1
 			`)
@@ -873,11 +849,11 @@ export default abstract class Chart<T extends Schema> {
 			const log = logs.find((l) => isTimeSame(new Date(l.date * 1000), current));
 
 			if (log) {
-				chart.unshift(this.convertRawRecord(log));
+				chart.unshift(convertRawRecord(log));
 			} else {
 				const latest = logs.find((l) => isTimeBefore(new Date(l.date * 1000), current));
-				const data = latest ? this.convertRawRecord(latest) : null;
-				chart.unshift(this.getNewLog(data));
+				const data = latest ? convertRawRecord(latest) : null;
+				chart.unshift(getNewLog(data));
 			}
 		}
 
@@ -896,14 +872,13 @@ export default abstract class Chart<T extends Schema> {
 		return res;
 	}
 
-	@bindThis
-	public async getChart(
+	async function getChart(
 		span: 'hour' | 'day',
 		amount: number,
 		cursor: Date | null,
 		group: string | null = null,
 	): Promise<Unflatten<ChartResult<T>>> {
-		const result = await this.getChartRaw(span, amount, cursor, group);
+		const result = await getChartRaw(span, amount, cursor, group);
 		const object: Record<string, unknown> = {};
 		for (const [k, v] of Object.entries(result)) {
 			const keys = k.split('.');
@@ -915,4 +890,6 @@ export default abstract class Chart<T extends Schema> {
 		}
 		return object as Unflatten<ChartResult<T>>;
 	}
+
+	return { schema: chartSchema, commit, save, tick, resync, clean, getChartRaw, getChart };
 }

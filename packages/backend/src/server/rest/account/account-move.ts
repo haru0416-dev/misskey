@@ -37,7 +37,7 @@ import type { RelationshipJobData, ThinUser } from '@/core/queue/types.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import type { Config } from '@/config.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
@@ -64,7 +64,7 @@ import { parseApiParams } from '../validation.js';
 import { resolveUser } from '../activitypub/ap-person.js';
 import type { ApPersonDependencies } from '../activitypub/ap-person.js';
 
-const accountMoveLogger = new Logger('account-move', 'yellow');
+const accountMoveLogger = createLogger('account-move', 'yellow');
 
 export type AccountMoveDependencies = RolePolicyDependencies &
 	FollowingDependencies &

@@ -33,7 +33,7 @@ import {
 import { genId } from '@/misc/id/gen-id.js';
 import { createChartWriters } from '@/core/chart/chart-runtime.js';
 import type { ChartWriters } from '@/core/chart/chart-runtime.js';
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import {
 	handleQueueAggregateRetention,
 	handleQueueCheckExpiredMutings,
@@ -59,7 +59,7 @@ describe('hono-queue-system', () => {
 		db = createBunSqlDatabase(pool, config);
 		redis = new Redis.Redis(config.valkey.primary);
 		const meta = await fetchMetaFromDatabase(db);
-		chartWriters = createChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
+		chartWriters = createChartWriters({ db, redis, meta, logger: createLogger('test-chart') });
 		deps = { config, db, chartWriters };
 	});
 

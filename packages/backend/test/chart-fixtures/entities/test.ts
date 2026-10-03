@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '@/core/chart/core.js';
+import { schemaToEntity } from '@/core/chart/core.js';
 
 export const name = 'test';
 
@@ -13,4 +13,4 @@ export const schema = {
 	'foo.dec': {},
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema);
+export const entity = schemaToEntity(name, schema);

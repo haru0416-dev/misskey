@@ -10,7 +10,7 @@ import { countNotesByUserHostFromDatabase } from '@/core/note/note-store.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
 import { countUsersByHostFromDatabase } from '@/core/user/user-store.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { MemorySingleCache } from '@/misc/cache.js';
+import { createMemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiMeta } from '@/models/entities.js';
 import { nodeinfo2_0path, nodeinfo2_1path } from './nodeinfo-links.js';
@@ -123,8 +123,8 @@ async function createNodeinfoDocument(
 
 export function createNodeinfoApp(deps: NodeinfoDependencies): Hono {
 	const app = new Hono();
-	const cache20 = new MemorySingleCache<Record<string, unknown>>(1000 * 60 * 10);
-	const cache21 = new MemorySingleCache<Record<string, unknown>>(1000 * 60 * 10);
+	const cache20 = createMemorySingleCache<Record<string, unknown>>(1000 * 60 * 10);
+	const cache21 = createMemorySingleCache<Record<string, unknown>>(1000 * 60 * 10);
 
 	app.get(nodeinfo2_1path, async () => {
 		const document = await cache21.fetch(() => createNodeinfoDocument(deps, '2.1'));

@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import { compress } from 'hono/compress';
 import { recordException } from '@/telemetry.js';
 import type { Config } from '@/config.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { MiMeta } from '@/models/entities.js';
 import { ErrorPage } from '@/server/web/views/error.js';
 import { createApiShellApp } from './rest/shell.js';

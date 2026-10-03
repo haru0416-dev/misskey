@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import mime from 'mime-types';
 import type { Config } from '@/config.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { DownloadService } from '@/core/net/download-service.js';

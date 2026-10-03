@@ -5,53 +5,55 @@
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type * as Redis from 'ioredis';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
+import type { Logger } from '@/logger.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import Chart from '@/core/chart/core.js';
+import { createChart } from '@/core/chart/core.js';
 import { name, schema } from './entities/test.js';
-import type { KVs } from '@/core/chart/core.js';
 
-export default class TestChart extends Chart<typeof schema> {
-	public total = 0;
+export function createTestChart(db: MiDrizzleDatabase, redisClient: Redis.Redis, logger: Logger) {
+	let total = 0;
 
-	constructor(
-		private db: MiDrizzleDatabase,
+	const { commit, ...chart } = createChart({
+		db,
+		lock: (k) => acquireChartInsertLock(redisClient, k),
+		logger,
+		name,
+		schema,
+		tickMajor: async () => ({ 'foo.total': total }),
+	});
 
-		private redisClient: Redis.Redis,
+	return {
+		...chart,
 
-		logger: Logger,
-	) {
-		super(db, (k) => acquireChartInsertLock(redisClient, k), logger, name, schema);
-	}
+		// 範囲を超える差分など、increment / decrement では作れない差分を積むための入口。
+		commit,
 
-	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
-		return {
-			'foo.total': this.total,
-		};
-	}
+		get total(): number {
+			return total;
+		},
 
-	protected async tickMinor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
+		set total(value: number) {
+			total = value;
+		},
 
-	@bindThis
-	public async increment(): Promise<void> {
-		this.total++;
+		async increment(): Promise<void> {
+			total++;
 
-		this.commit({
-			'foo.total': 1,
-			'foo.inc': 1,
-		});
-	}
+			commit({
+				'foo.total': 1,
+				'foo.inc': 1,
+			});
+		},
 
-	@bindThis
-	public async decrement(): Promise<void> {
-		this.total--;
+		async decrement(): Promise<void> {
+			total--;
 
-		this.commit({
-			'foo.total': -1,
-			'foo.dec': 1,
-		});
-	}
+			commit({
+				'foo.total': -1,
+				'foo.dec': 1,
+			});
+		},
+	};
 }
+
+export type TestChart = ReturnType<typeof createTestChart>;

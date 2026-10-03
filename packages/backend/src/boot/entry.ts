@@ -8,7 +8,7 @@ import { EventEmitter } from 'node:events';
 import { writeHeapSnapshot } from 'node:v8';
 import { styleText } from 'node:util';
 import { globalEventBus } from '@/misc/global-event-bus.js';
-import Logger, { configureLogger } from '@/logger.js';
+import { createLogger, configureLogger } from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import { envOption } from '../env.js';
 import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
@@ -24,7 +24,7 @@ process.title = `Toneriko (${cluster.isPrimary ? 'master' : 'worker'})`;
 Error.stackTraceLimit = Infinity;
 EventEmitter.defaultMaxListeners = 128;
 
-const logger = new Logger('core', 'cyan');
+const logger = createLogger('core', 'cyan');
 const clusterLogger = logger.createSubLogger('cluster', 'orange');
 let shuttingDown = false;
 let disposeRuntime: (() => Promise<void>) | undefined;

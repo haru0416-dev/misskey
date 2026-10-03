@@ -52,7 +52,7 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

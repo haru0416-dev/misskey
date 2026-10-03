@@ -41,7 +41,7 @@ import type { MiInstance, MiMeta } from '@/models/entities.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/core/queue/types.js';
 import { queueRetentionOptions } from '@/core/queue/const.js';
-import type Logger from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import { startApiAdminDriveFileDeletion } from '../admin/admin-drive.js';
 import type { AdminDriveDependencies } from '../admin/admin-drive.js';
 import { packFollowings } from '../user/following.js';

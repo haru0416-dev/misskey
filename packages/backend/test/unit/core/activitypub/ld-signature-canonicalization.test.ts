@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { JsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld.js';
+import { createJsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld.js';
 import type { HttpRequestService } from '@/core/net/http-request-service.js';
 import fc from 'fast-check';
 
@@ -13,7 +13,7 @@ import fc from 'fast-check';
 // 両者の一致をテストで固定する。
 describe('LD signature option canonicalization', () => {
 	// 高速経路は外部リクエストを行わないので、HttpRequestService は使われない。
-	const service = new JsonLd(null as unknown as HttpRequestService);
+	const service = createJsonLd(null as unknown as HttpRequestService);
 
 	const creators = [
 		'https://example.com/users/9abc#main-key',
@@ -53,7 +53,7 @@ describe('LD signature option canonicalization', () => {
 // 高速経路の入力は相手が自由に選べる。生成した入力で参照実装と比較し、高速経路が null を返さなかった回数にも下限を設ける。
 describe('LD signature option canonicalization (property)', () => {
 	// 高速経路も normalize も外部リクエストを行わない入力だけを与える。
-	const service = new JsonLd(null as unknown as HttpRequestService);
+	const service = createJsonLd(null as unknown as HttpRequestService);
 
 	// N-Quads の区切り文字・エスケープ対象・制御文字・非 BMP を検査する。
 	const hostileChar = fc.constantFrom(

@@ -5,43 +5,35 @@
 
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type * as Redis from 'ioredis';
-import type Logger from '@/logger.js';
-import { bindThis } from '@/decorators.js';
+import type { Logger } from '@/logger.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import Chart from '@/core/chart/core.js';
+import { createChart } from '@/core/chart/core.js';
 import { name, schema } from './entities/test-intersection.js';
-import type { KVs } from '@/core/chart/core.js';
 
-export default class TestIntersectionChart extends Chart<typeof schema> {
-	constructor(
-		private db: MiDrizzleDatabase,
+export function createTestIntersectionChart(db: MiDrizzleDatabase, redisClient: Redis.Redis, logger: Logger) {
+	const { commit, ...chart } = createChart({
+		db,
+		lock: (k) => acquireChartInsertLock(redisClient, k),
+		logger,
+		name,
+		schema,
+	});
 
-		private redisClient: Redis.Redis,
+	return {
+		...chart,
 
-		logger: Logger,
-	) {
-		super(db, (k) => acquireChartInsertLock(redisClient, k), logger, name, schema);
-	}
+		async addA(key: string): Promise<void> {
+			commit({
+				a: [key],
+			});
+		},
 
-	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
-
-	protected async tickMinor(): Promise<Partial<KVs<typeof schema>>> {
-		return {};
-	}
-
-	@bindThis
-	public async addA(key: string): Promise<void> {
-		this.commit({
-			a: [key],
-		});
-	}
-
-	@bindThis
-	public async addB(key: string): Promise<void> {
-		this.commit({
-			b: [key],
-		});
-	}
+		async addB(key: string): Promise<void> {
+			commit({
+				b: [key],
+			});
+		},
+	};
 }
+
+export type TestIntersectionChart = ReturnType<typeof createTestIntersectionChart>;

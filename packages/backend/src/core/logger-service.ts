@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Logger from '@/logger.js';
+import { createLogger } from '@/logger.js';
 import type { LogColor } from '@/logger.js';
 
 export function createLoggerService() {
 	function getLogger(domain: string, color?: LogColor | undefined) {
-		return new Logger(domain, color);
+		return createLogger(domain, color);
 	}
 
 	return { getLogger };
