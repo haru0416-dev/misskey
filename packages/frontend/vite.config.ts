@@ -18,6 +18,7 @@ import pluginCreateSearchIndex from './builder/vite-plugin-create-search-index.j
 import pluginWatchLocales from './builder/vite-plugin-watch-locales.js';
 import { removeUnrefI18n } from './builder/remove-unref-i18n.js';
 import { pluginRewriteChunks } from './builder/rewrite-chunks.js';
+import { pluginBootLoader } from './builder/vite-plugin-boot-loader.js';
 import { Features } from 'lightningcss';
 import { hash, toBase62 } from './builder/utils.js';
 
@@ -222,6 +223,7 @@ export function getConfig(): UserConfig {
 			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
 			pluginVue(),
 			pluginRewriteChunks([removeUnrefI18n(), unwindCssModules]),
+			pluginBootLoader({ entry: 'src/loader/main.ts', css: 'src/loader/main.css' }),
 			pluginJson5(),
 			pluginGlsl({ minify: true }),
 			...getBundleVisualizerPlugin(),

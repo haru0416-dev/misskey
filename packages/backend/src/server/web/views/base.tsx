@@ -87,7 +87,7 @@ export function Layout(
 						<link rel="stylesheet" href="/vite/loader/style.css" />
 					)}
 
-					<BootConstantsScript version={props.version} viteFiles={props.frontendViteFiles} langs={props.langs} />
+					<BootConstantsScript viteFiles={props.frontendViteFiles} langs={props.langs} />
 
 					<JsonDataScript id="misskey_meta" json={props.metaJson} generatedAt={now} />
 					<JsonDataScript id="misskey_clientCtx" json={props.clientCtxJson} generatedAt={now} />

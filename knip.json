@@ -4,10 +4,8 @@
 		"packages/backend/migration/_legacy/**",
 		"packages/backend/assets/**",
 		"packages/frontend/assets/**",
-		"packages/frontend/public/**",
 		"packages/frontend/catalog/public/**",
 		"**/public/**",
-		"packages/frontend/public-embed/**",
 		"packages/misskey-js/src/autogen/**"
 	],
 	"workspaces": {
@@ -30,6 +28,8 @@
 			"entry": [
 				"src/boot/entry.ts",
 				"src/embed/boot.ts",
+				"src/loader/main.ts",
+				"src/loader/embed.ts",
 				"src/workers/*.ts",
 				"builder/**/*.ts",
 				"test/**/*.ts",

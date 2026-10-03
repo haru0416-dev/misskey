@@ -59,8 +59,6 @@ jobs:
             "packages/frontend/catalog"
             "packages/frontend/@types"
             "packages/frontend/builder"
-            "packages/frontend/public"
-            "packages/frontend/public-embed"
             "packages/frontend/src"
             "packages/frontend/test"
             "packages/icons-subsetter/src"

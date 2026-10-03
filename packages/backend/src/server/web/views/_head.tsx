@@ -25,13 +25,12 @@ export function CommonHeadMeta(props: Pick<CommonData, 'themeColor' | 'instanceN
 	);
 }
 
-// ブートローダーが読む定数。変数名はフロントエンドのローダーと一致させる必要がある。
-export function BootConstantsScript(props: { version: string; viteFiles: ViteFiles | null; langs: string[] }) {
+// ブートローダーが読む定数。名前と型は packages/frontend/src/loader/common.ts の declare const と揃える。
+export function BootConstantsScript(props: { viteFiles: ViteFiles | null; langs: string[] }) {
 	return (
 		<script>
-			const VERSION = '{props.version}'; const CLIENT_ENTRY = {JSON.stringify(props.viteFiles?.entryJs ?? null)}; const
-			CLIENT_PRELOADS = {JSON.stringify(props.viteFiles?.modulePreloads ?? [])}; const LANGS ={' '}
-			{JSON.stringify(props.langs)};
+			const CLIENT_ENTRY = {JSON.stringify(props.viteFiles?.entryJs ?? null)}; const CLIENT_PRELOADS ={' '}
+			{JSON.stringify(props.viteFiles?.modulePreloads ?? [])}; const LANGS = {JSON.stringify(props.langs)};
 		</script>
 	);
 }

@@ -61,7 +61,7 @@ export function BaseEmbed(
 						<link rel="stylesheet" href="/embed_vite/loader/style.css" />
 					)}
 
-					<BootConstantsScript version={props.version} viteFiles={props.frontendEmbedViteFiles} langs={props.langs} />
+					<BootConstantsScript viteFiles={props.frontendEmbedViteFiles} langs={props.langs} />
 
 					<JsonDataScript id="misskey_meta" json={props.metaJson} generatedAt={now} />
 					<JsonDataScript id="misskey_embedCtx" json={props.embedCtxJson} generatedAt={now} />

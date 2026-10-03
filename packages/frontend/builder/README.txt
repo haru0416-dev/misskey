@@ -1,1 +1,1 @@
-Build-time code: the Vite/rollup plugins and the locale inliner used by vite.config.ts (main client), vite.embed.config.ts (embed) and vite.catalog.config.ts / vitest.stories.config.ts (component catalog).
+Build-time code: the Vite/rollup plugins used by vite.config.ts (main client), vite.embed.config.ts (embed) and vite.catalog.config.ts / vitest.stories.config.ts (component catalog), the boot loader bundler (vite-plugin-boot-loader.ts, sources in src/loader/), and the locale inliner.

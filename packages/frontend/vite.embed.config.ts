@@ -12,6 +12,7 @@ import type { UserConfig } from 'vite';
 import pluginJson5 from './builder/vite-plugin-json5.js';
 import { removeUnrefI18n } from './builder/remove-unref-i18n.js';
 import { pluginRewriteChunks } from './builder/rewrite-chunks.js';
+import { pluginBootLoader } from './builder/vite-plugin-boot-loader.js';
 import { getDevServerConfig, getSharedConfig } from './vite.config.js';
 
 export function getEmbedConfig(): UserConfig {
@@ -20,7 +21,6 @@ export function getEmbedConfig(): UserConfig {
 	return {
 		...shared,
 		base: '/embed_vite/',
-		publicDir: 'public-embed',
 		// 本体の Vite と同じ root なので、依存の事前バンドルの置き場を分ける。共有すると、設定の違いを理由に互いのキャッシュを消し合う。
 		cacheDir: 'node_modules/.vite-embed',
 
@@ -32,7 +32,12 @@ export function getEmbedConfig(): UserConfig {
 			},
 		},
 
-		plugins: [pluginVue(), pluginRewriteChunks([removeUnrefI18n()]), pluginJson5()],
+		plugins: [
+			pluginVue(),
+			pluginRewriteChunks([removeUnrefI18n()]),
+			pluginBootLoader({ entry: 'src/loader/embed.ts', css: 'src/loader/embed.css' }),
+			pluginJson5(),
+		],
 
 		build: {
 			...shared.build,
