@@ -93,6 +93,27 @@ const externalPackages = [
 	},
 ];
 
+// 起動処理 (main-boot) から静的にたどれるモジュールの集合。ビルドごとに 1 度だけ求める。
+let startupModuleIds: Set<string> | null = null;
+function isStartupModule(
+	id: string,
+	ctx: { getModuleInfo(id: string): { importedIds: readonly string[] } | null },
+): boolean {
+	if (startupModuleIds == null) {
+		const ids = new Set<string>();
+		const stack = [path.resolve(import.meta.dirname, 'src/boot/main-boot.ts')];
+		for (let current = stack.pop(); current != null; current = stack.pop()) {
+			if (ids.has(current)) continue;
+			const info = ctx.getModuleInfo(current);
+			if (info == null) continue;
+			ids.add(current);
+			stack.push(...info.importedIds);
+		}
+		startupModuleIds = ids;
+	}
+	return startupModuleIds.has(id);
+}
+
 export function getConfig(): UserConfig {
 	const localesHash = toBase62(hash(JSON.stringify(locales)));
 
@@ -202,6 +223,11 @@ export function getConfig(): UserConfig {
 								name: 'i18n',
 								includeDependenciesRecursively: false,
 								test: /i18n\.ts|locale\.ts/,
+							},
+							{
+								// 自動の分割は、到達元の組み合わせごとにチャンクを分ける。起動時に必ず読むコードも数十の小さな
+								// チャンクに割れ、チャンク間の import と先読みの一覧が増える。起動時に読むものは 1 つにまとめる。
+								name: (id, ctx) => (isStartupModule(id, ctx) ? 'startup' : null),
 							},
 						],
 					},
