@@ -197,7 +197,7 @@ import { alertDriveMoveError, chooseFileFromPcAndUpload, moveDriveFilesToFolder,
 import { store } from '@/store.js';
 import { makeDateGroupedTimelineComputedRef } from '@/features/note/timeline-date-separate.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
-import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/utility/drag-and-drop.js';
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
 import { Paginator } from '@/utility/paginator.js';
 

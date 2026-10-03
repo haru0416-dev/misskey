@@ -343,7 +343,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>,
 
 	if (instance.telemetryForFrontend) {
 		try {
-			const { initializeFrontendTelemetry } = await import('@/telemetry.js');
+			const { initializeFrontendTelemetry } = await import('@/boot/telemetry.js');
 			initializeFrontendTelemetry(instance.telemetryForFrontend, app, version, apiUrl);
 		} catch (error) {
 			console.error('Failed to initialize frontend OpenTelemetry; continuing without telemetry.', error);

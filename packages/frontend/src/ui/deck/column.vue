@@ -61,7 +61,7 @@ import {
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, setDragData } from '@/utility/drag-and-drop.js';
 
 provide('shouldHeaderThin', true);
 provide('shouldOmitHeaderTitle', true);

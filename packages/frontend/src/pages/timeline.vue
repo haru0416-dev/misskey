@@ -40,7 +40,7 @@ import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { definePage } from '@/page.js';
-import { antennasCache, userListsCache, favoritedChannelsCache } from '@/cache.js';
+import { antennasCache, userListsCache, favoritedChannelsCache } from '@/query/account-caches.js';
 import { deviceKind } from '@/utility/device-kind.js';
 import { deepMerge } from '@/utility/merge.js';
 import { miLocalStorage } from '@/local-storage.js';

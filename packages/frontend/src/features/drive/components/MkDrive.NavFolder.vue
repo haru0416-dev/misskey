@@ -21,7 +21,7 @@ import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { i18n } from '@/i18n.js';
 import { alertDriveMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder } from '@/features/drive/drive.js';
-import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/utility/drag-and-drop.js';
 
 const props = defineProps<{
 	folder?: Misskey.entities.DriveFolder;

@@ -39,7 +39,7 @@ import { i18n } from '@/i18n.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { prefer } from '@/preferences.js';
 import { globalEvents } from '@/events.js';
-import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, setDragData, getDropEffect } from '@/utility/drag-and-drop.js';
 import { alertDriveMoveError, moveDriveFilesToFolder, moveDriveFolderToFolder, selectDriveFolder } from '@/features/drive/drive.js';
 
 const props = withDefaults(

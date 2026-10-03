@@ -29,7 +29,7 @@ import { updateColumn } from '@/deck.js';
 import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
-import { favoritedChannelsCache } from '@/cache.js';
+import { favoritedChannelsCache } from '@/query/account-caches.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { soundSettingsButton } from '@/ui/deck/tl-note-notification.js';

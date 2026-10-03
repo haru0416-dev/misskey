@@ -27,8 +27,8 @@ import { SVGRenderer } from 'echarts/renderers';
 import { i18n } from '@/i18n.js';
 
 use([PieChart, AriaComponent, TooltipComponent, SVGRenderer]);
-export type InstanceForPie = { name: string; color: string | null; value: number; onClick?: () => void };
-const props = defineProps<{ data: InstanceForPie[] }>();
+export type PieChartItem = { name: string; color: string | null; value: number; onClick?: () => void };
+const props = defineProps<{ data: PieChartItem[] }>();
 const chartEl = useTemplateRef('chartEl');
 const numberFormat = new Intl.NumberFormat();
 const ariaLabel = computed(

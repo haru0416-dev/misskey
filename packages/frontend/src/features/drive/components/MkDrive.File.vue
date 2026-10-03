@@ -46,7 +46,7 @@ import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
-import { setDragData } from '@/drag-and-drop.js';
+import { setDragData } from '@/utility/drag-and-drop.js';
 
 const props = withDefaults(defineProps<{
 	file: Misskey.entities.DriveFile;

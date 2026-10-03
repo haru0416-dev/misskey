@@ -64,7 +64,7 @@ import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkInput from '@/components/form/MkInput.vue';
-import { userListsCache } from '@/cache.js';
+import { userListsCache } from '@/query/account-caches.js';
 import { ensureSignin } from '@/i.js';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import { useRouter } from '@/router.js';

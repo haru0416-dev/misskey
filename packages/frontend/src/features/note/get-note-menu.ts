@@ -16,7 +16,7 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { store } from '@/store.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { getUserMenu } from '@/features/user/get-user-menu.js';
-import { clipsCache, favoritedChannelsCache } from '@/cache.js';
+import { clipsCache, favoritedChannelsCache } from '@/query/account-caches.js';
 import MkRippleEffect from '@/components/effects/MkRippleEffect.vue';
 import { isSupportShare } from '@/utility/navigator.js';
 import { getAppearNote } from '@/features/note/get-appear-note.js';

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData } from '@/utility/drag-and-drop.js';
 
 function dragEvent(data: Record<string, string>, types = Object.keys(data)): DragEvent {
 	return {

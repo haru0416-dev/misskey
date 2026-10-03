@@ -26,7 +26,7 @@ import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNote
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { antennasCache } from '@/cache.js';
+import { antennasCache } from '@/query/account-caches.js';
 import { soundSettingsButton } from '@/ui/deck/tl-note-notification.js';
 
 const props = defineProps<{

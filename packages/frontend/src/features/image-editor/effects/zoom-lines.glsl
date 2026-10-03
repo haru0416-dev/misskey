@@ -7,7 +7,7 @@ precision mediump float;
  */
 
 // エイリアスを解決してくれないので、プロジェクトルートからの絶対パスにする必要がある
-#include /src/shaders/snoise;
+#include /src/features/image-editor/effects/snoise;
 
 in vec2 in_uv;
 uniform sampler2D in_texture;

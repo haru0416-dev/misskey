@@ -16,7 +16,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';
 import { notesSearchAvailable } from '@/utility/check-permissions.js';
-import { antennasCache, rolesCache, userListsCache } from '@/cache.js';
+import { antennasCache, rolesCache, userListsCache } from '@/query/account-caches.js';
 import { mainRouter } from '@/router.js';
 import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { prefer } from '@/preferences.js';

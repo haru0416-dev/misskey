@@ -47,7 +47,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, markRaw, ref, watchEffect } from 'vue';
 import * as Misskey from 'misskey-js';
-import { defaultMemoryStorage } from '@/memory-storage';
+import { defaultMemoryStorage } from '@/utility/memory-storage.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';

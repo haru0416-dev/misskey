@@ -48,16 +48,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import XPie from './pie.vue';
-import type { InstanceForPie } from './pie.vue';
+import XPie from '@/components/display/MkPieChart.vue';
+import type { PieChartItem } from '@/components/display/MkPieChart.vue';
 import * as os from '@/os.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import number from '@/filters/number.js';
 import MkNumberDiff from '@/components/display/MkNumberDiff.vue';
 import { i18n } from '@/i18n.js';
 
-const topSubInstancesForPie = ref<InstanceForPie[] | null>(null);
-const topPubInstancesForPie = ref<InstanceForPie[] | null>(null);
+const topSubInstancesForPie = ref<PieChartItem[] | null>(null);
+const topPubInstancesForPie = ref<PieChartItem[] | null>(null);
 const federationPubActive = ref<number | null>(null);
 const federationPubActiveDiff = ref<number | null>(null);
 const federationSubActive = ref<number | null>(null);

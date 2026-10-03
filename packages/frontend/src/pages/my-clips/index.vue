@@ -33,7 +33,7 @@ import MkClipPreview from '@/features/clip/components/MkClipPreview.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { clipsCache } from '@/cache.js';
+import { clipsCache } from '@/query/account-caches.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const tab = ref('my');

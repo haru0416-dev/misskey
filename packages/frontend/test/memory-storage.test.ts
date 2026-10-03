@@ -4,8 +4,8 @@
  */
 
 import { beforeEach, describe, expect, test } from 'vitest';
-import { createMemoryStorage } from '@/memory-storage.js';
-import type { MemoryStorage } from '@/memory-storage.js';
+import { createMemoryStorage } from '@/utility/memory-storage.js';
+import type { MemoryStorage } from '@/utility/memory-storage.js';
 
 let storage: MemoryStorage;
 

@@ -16,7 +16,7 @@ import MkAntennaEditor from '@/features/antenna/components/MkAntennaEditor.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { antennasCache } from '@/cache.js';
+import { antennasCache } from '@/query/account-caches.js';
 import { useRouter } from '@/router.js';
 
 const router = useRouter();

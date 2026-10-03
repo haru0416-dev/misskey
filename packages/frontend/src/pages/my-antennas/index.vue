@@ -26,7 +26,7 @@ import { onActivated, computed } from 'vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { antennasCache } from '@/cache.js';
+import { antennasCache } from '@/query/account-caches.js';
 
 const antennas = computed(() => antennasCache.value.value ?? []);
 

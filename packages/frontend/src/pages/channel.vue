@@ -89,7 +89,7 @@ import { selectExpiry } from '@/utility/select-expiry.js';
 import { definePage } from '@/page.js';
 import { deviceKind } from '@/utility/device-kind.js';
 import MkNotesTimeline from '@/features/note/components/MkNotesTimeline.vue';
-import { favoritedChannelsCache } from '@/cache.js';
+import { favoritedChannelsCache } from '@/query/account-caches.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import { prefer } from '@/preferences.js';

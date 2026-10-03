@@ -67,7 +67,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkDraggable from '@/components/layout/MkDraggable.vue';
 import { i18n } from '@/i18n.js';
 import { deepClone } from '@/utility/clone.js';
-import { rolesCache } from '@/cache.js';
+import { rolesCache } from '@/query/account-caches.js';
 
 defineOptions({
 	name: 'RolesEditorFormula',

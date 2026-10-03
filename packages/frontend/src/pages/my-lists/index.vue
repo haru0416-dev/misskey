@@ -33,7 +33,7 @@ import MkAvatars from '@/features/user/components/MkAvatars.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { userListsCache } from '@/cache.js';
+import { userListsCache } from '@/query/account-caches.js';
 import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();

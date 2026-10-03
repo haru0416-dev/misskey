@@ -8,7 +8,7 @@ import { url } from '@shared/utility/config.js';
 import type { Ref, ShallowRef } from 'vue';
 import type * as Misskey from 'misskey-js';
 import type { useUploader } from '@/features/drive/useUploader.js';
-import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/utility/drag-and-drop.js';
 import { formatTimeString } from '@/utility/format-time-string.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';

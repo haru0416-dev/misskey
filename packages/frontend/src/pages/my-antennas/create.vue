@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { antennasCache } from '@/cache.js';
+import { antennasCache } from '@/query/account-caches.js';
 import { useRouter } from '@/router.js';
 import MkAntennaEditor from '@/features/antenna/components/MkAntennaEditor.vue';
 

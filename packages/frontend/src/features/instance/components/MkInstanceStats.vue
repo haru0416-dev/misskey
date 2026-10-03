@@ -70,8 +70,8 @@ import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkRetentionHeatmap from '@/features/chart/components/MkRetentionHeatmap.vue';
 import MkRetentionLineChart from '@/features/chart/components/MkRetentionLineChart.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import MkPieChart from '@/pages/admin/overview/pie.vue';
-import type { InstanceForPie } from '@/pages/admin/overview/pie.vue';
+import MkPieChart from '@/components/display/MkPieChart.vue';
+import type { PieChartItem } from '@/components/display/MkPieChart.vue';
 
 const shouldShowFederation = computed(() => instance.federation !== 'none' || $i?.isModerator);
 
@@ -152,8 +152,8 @@ const { model: heatmapSrc, def: heatmapSrcDef } = useMkSelect({
 	]),
 	initialValue: 'active-users',
 });
-const subs = ref<InstanceForPie[]>([]);
-const pubs = ref<InstanceForPie[]>([]);
+const subs = ref<PieChartItem[]>([]);
+const pubs = ref<PieChartItem[]>([]);
 
 onMounted(() => {
 	misskeyApiGet('federation/stats', { limit: 30 }).then((fedStats) => {

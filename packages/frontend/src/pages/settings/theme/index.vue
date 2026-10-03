@@ -229,7 +229,7 @@ import { uniqueBy } from '@/utility/array.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { checkDragDataType, getDragData, getPlainDragData, setDragData, setPlainDragData } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getPlainDragData, setDragData, setPlainDragData } from '@/utility/drag-and-drop.js';
 
 const { themes: installedThemes, darkTheme, lightTheme } = storeToRefs(prefer);
 const builtinThemes = ref<Theme[]>([]);

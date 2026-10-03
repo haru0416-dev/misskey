@@ -29,7 +29,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkButton from '@/components/form/MkButton.vue';
-import { rolesCache } from '@/cache.js';
+import { rolesCache } from '@/query/account-caches.js';
 import { useRouter } from '@/router.js';
 
 const router = useRouter();

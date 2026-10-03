@@ -47,7 +47,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
 import { Autocomplete } from '@/features/autocomplete/autocomplete.js';
 import { emojiPicker } from '@/features/emoji-picker/emoji-picker.js';
-import { checkDragDataType, getDragData, getDropEffect } from '@/drag-and-drop.js';
+import { checkDragDataType, getDragData, getDropEffect } from '@/utility/drag-and-drop.js';
 
 const props = defineProps<{
 	user?: Misskey.entities.UserDetailed | null;
