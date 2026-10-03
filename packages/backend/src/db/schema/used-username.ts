@@ -9,6 +9,3 @@ export const usedUsername = pgTable('used_username', {
 	username: varchar({ length: 128 }).primaryKey().notNull(),
 	createdAt: timestamp({ withTimezone: true }).notNull(),
 });
-
-export type UsedUsernameRow = typeof usedUsername.$inferSelect;
-export type UsedUsernameInsert = typeof usedUsername.$inferInsert;

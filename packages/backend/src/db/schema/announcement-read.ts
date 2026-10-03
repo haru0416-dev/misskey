@@ -29,5 +29,4 @@ export const announcementRead = pgTable(
 	],
 );
 
-export type AnnouncementReadRow = typeof announcementRead.$inferSelect;
 export type AnnouncementReadInsert = typeof announcementRead.$inferInsert;

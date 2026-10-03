@@ -28,5 +28,4 @@ export const userMemo = pgTable(
 	],
 );
 
-export type UserMemoRow = typeof userMemo.$inferSelect;
 export type UserMemoInsert = typeof userMemo.$inferInsert;

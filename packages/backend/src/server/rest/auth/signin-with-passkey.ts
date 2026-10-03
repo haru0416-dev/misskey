@@ -12,14 +12,15 @@ import { getIpHash } from '@/misc/get-ip-hash.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
 import { completeApiSignin, failApiSignin, honoApiSigninError, tooManyAuthenticationFailures } from './signin.js';
-import type { SigninDependencies, SigninErrorBody, SigninRequest } from './signin.js';
+import type { SigninDependencies, SigninRequest } from './signin.js';
+import type { ErrorBody } from '../error.js';
 import { isApiRateLimited } from '../rate-limit.js';
 
 const PASSKEY_CONTEXT_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export type SigninWithPasskeyResult = {
 	status: number;
-	body: Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse | SigninErrorBody;
+	body: Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse | ErrorBody;
 };
 
 async function isPasskeySigninRateLimited(deps: SigninDependencies, ip: string): Promise<boolean> {

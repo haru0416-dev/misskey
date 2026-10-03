@@ -15,5 +15,3 @@ export const cacheVersion = pgTable('cache_version', {
 	key: varchar({ length: 64 }).primaryKey().notNull(),
 	version: integer().default(0).notNull(),
 });
-
-export type CacheVersionRow = typeof cacheVersion.$inferSelect;

@@ -164,6 +164,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
+import type { QueueJob } from './queue-job.js';
 import JSON5 from 'json5';
 import type { TlEvent } from '@/components/layout/MkTl.vue';
 import * as os from '@/os.js';
@@ -177,12 +178,6 @@ import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkTl from '@/components/layout/MkTl.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 
-type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
-	opts: Misskey.entities.QueueJob['opts'] & {
-		repeat?: unknown;
-		attempts?: number;
-	};
-};
 
 function msSMH(v: number | null) {
 	if (v == null) {

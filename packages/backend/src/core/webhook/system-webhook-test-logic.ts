@@ -18,8 +18,6 @@ import {
 } from '@/core/webhook/webhook-test-dummies.js';
 import type { PopulateWebhookTestEmojis } from '@/core/webhook/webhook-test-dummies.js';
 
-type PopulateDummyEmojis = PopulateWebhookTestEmojis;
-
 export type SystemWebhookTestDependencies = {
 	fetchSystemWebhooksByIds: (ids: MiSystemWebhook['id'][]) => Promise<MiSystemWebhook[]>;
 	enqueueSystemWebhookDeliver: <T extends SystemWebhookEventType>(
@@ -28,13 +26,13 @@ export type SystemWebhookTestDependencies = {
 		content: SystemWebhookPayload<T>,
 		opts?: { attempts?: number },
 	) => void | Promise<unknown>;
-	populateEmojis: PopulateDummyEmojis;
+	populateEmojis: PopulateWebhookTestEmojis;
 };
 
 export class NoSuchSystemWebhookForTestError extends Error {}
 
 async function generateSystemWebhookTestAbuseReport(
-	populateEmojis: PopulateDummyEmojis,
+	populateEmojis: PopulateWebhookTestEmojis,
 	override?: Partial<MiAbuseUserReport>,
 ): Promise<AbuseReportPayload> {
 	const result: MiAbuseUserReport = {
@@ -64,7 +62,7 @@ async function generateSystemWebhookTestAbuseReport(
 }
 
 async function createSystemWebhookTestPayload<T extends SystemWebhookEventType>(
-	populateEmojis: PopulateDummyEmojis,
+	populateEmojis: PopulateWebhookTestEmojis,
 	type: T,
 ): Promise<SystemWebhookPayload<T>> {
 	switch (type) {

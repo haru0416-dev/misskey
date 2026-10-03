@@ -5,7 +5,7 @@
 
 import * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
-import type { DeliverJobData } from '@/core/queue/types.js';
+import type { DeliverJobBulkInput, DeliverJobData } from '@/core/queue/types.js';
 
 /**
  * 宛先ホストへの投入が 10 分間途切れたら投入数を数え直す。リセット直後のジョブは
@@ -32,8 +32,6 @@ for i, key in ipairs(KEYS) do
 end
 return priorities
 `;
-
-type DeliverBulkJob = { name: string; data: DeliverJobData; opts?: Bull.BulkJobOptions };
 
 const COMMAND_NAME = 'tonerikoReserveDeliverPriorities';
 type ReserveCommander = {
@@ -62,7 +60,7 @@ export class HostFairDeliverQueue extends Bull.Queue<DeliverJobData> {
 		return await super.add(name, data, { ...opts, priority: priority! });
 	}
 
-	override async addBulk(jobs: DeliverBulkJob[]) {
+	override async addBulk(jobs: DeliverJobBulkInput[]) {
 		if (jobs.length === 0) return [];
 		const priorities = await this.reserveHostPriorities(jobs.map((job) => job.data));
 		return await super.addBulk(

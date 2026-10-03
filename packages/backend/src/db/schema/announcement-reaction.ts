@@ -31,5 +31,4 @@ export const announcementReaction = pgTable(
 	],
 );
 
-export type AnnouncementReactionRow = typeof announcementReaction.$inferSelect;
 export type AnnouncementReactionInsert = typeof announcementReaction.$inferInsert;

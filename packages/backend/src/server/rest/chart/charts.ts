@@ -6,7 +6,7 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { createChart } from '@/core/chart/core.js';
-import type { Chart } from '@/core/chart/core.js';
+import type { Chart, ChartSchema } from '@/core/chart/core.js';
 import { chartDefinitions } from '@/core/chart/chart-definitions.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { countNoteReactionsFromDatabase } from '@/core/note/note-reaction-store.js';
@@ -22,16 +22,6 @@ export type ChartDependencies = {
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
-
-type ChartSchema = Record<
-	string,
-	{
-		uniqueIncrement?: boolean;
-		intersection?: string[] | readonly string[];
-		range?: 'big' | 'small' | 'medium';
-		accumulate?: boolean;
-	}
->;
 
 // getChart()/getChartRaw() は tickMajor/tickMinor を呼ばないため、読み取り専用の集計は
 // 各チャートの書き込み側依存なしで getChart() を呼び出せる。

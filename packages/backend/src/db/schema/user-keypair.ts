@@ -16,4 +16,3 @@ export const userKeypair = pgTable('user_keypair', {
 });
 
 export type UserKeypairRow = typeof userKeypair.$inferSelect;
-export type UserKeypairInsert = typeof userKeypair.$inferInsert;

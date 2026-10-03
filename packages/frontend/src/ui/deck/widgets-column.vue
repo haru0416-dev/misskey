@@ -15,10 +15,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
+import type { Column, StoredWidget } from '@/preferences/def.js';
 import { ref } from 'vue';
 import XColumn from './column.vue';
-import type { Column } from '@/preferences/def.js';
-import type { Widget } from '@/widgets/components/MkWidgets.vue';
 import { addColumnWidget, removeColumnWidget, setColumnWidgets, updateColumnWidget } from '@/deck.js';
 import XWidgets from '@/widgets/components/MkWidgets.vue';
 import { i18n } from '@/i18n.js';
@@ -30,19 +29,19 @@ const props = defineProps<{
 
 const edit = ref(false);
 
-function addWidget(widget: Widget) {
+function addWidget(widget: StoredWidget) {
 	addColumnWidget(props.column.id, widget);
 }
 
-function removeWidget(widget: Widget) {
+function removeWidget(widget: StoredWidget) {
 	removeColumnWidget(props.column.id, widget);
 }
 
-function updateWidget(widget: { id: Widget['id']; data: Widget['data']; }) {
+function updateWidget(widget: { id: StoredWidget['id']; data: StoredWidget['data']; }) {
 	updateColumnWidget(props.column.id, widget.id, widget.data);
 }
 
-function updateWidgets(widgets: Widget[]) {
+function updateWidgets(widgets: StoredWidget[]) {
 	setColumnWidgets(props.column.id, widgets);
 }
 

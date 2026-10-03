@@ -3,7 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { verifyCap } from '@/core/captcha/captcha-logic.js';
+import {
+	verifyCap,
+	verifyHcaptcha,
+	verifyRecaptcha,
+	verifyTestcaptcha,
+	verifyTurnstile,
+} from '@/core/captcha/captcha-logic.js';
 import { comparePassword } from '@/misc/password.js';
 import type * as Misskey from 'misskey-js';
 import type * as Redis from 'ioredis';
@@ -64,21 +70,14 @@ export type SigninRequest = {
 	ip: string;
 };
 
-export type SigninErrorBody = ErrorBody;
-
 export type SigninFlowResult = {
 	status: number;
-	body?: Misskey.entities.SigninFlowResponse | SigninErrorBody;
+	body?: Misskey.entities.SigninFlowResponse | ErrorBody;
 };
 
 export type SigninErrorResult = {
 	status: number;
-	body: SigninErrorBody;
-};
-
-type CaptchaResponse = {
-	success: boolean;
-	'error-codes'?: string[];
+	body: ErrorBody;
 };
 
 export function honoApiSigninError(status: number, id: string): SigninErrorResult {
@@ -137,96 +136,17 @@ async function isSigninRateLimited(deps: SigninDependencies, ip: string): Promis
 	);
 }
 
-async function fetchCaptchaResponse(
-	deps: SigninDependencies,
-	url: string,
-	secret: string,
-	response: string | null | undefined,
-): Promise<CaptchaResponse> {
-	if (response == null) {
-		throw new Error('captcha response missing');
-	}
-
-	const params = new URLSearchParams({
-		secret,
-		response,
-	});
-
-	const res = await deps.httpRequestService.send(
-		url,
-		{
-			method: 'POST',
-			body: params.toString(),
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-		},
-		{ throwErrorWhenResponseNotOk: false },
-	);
-
-	if (!res.ok) {
-		throw new Error(`captcha request failed: ${res.status}`);
-	}
-
-	return (await res.json()) as CaptchaResponse;
-}
-
-async function verifyRecaptcha(
-	deps: SigninDependencies,
-	secret: string,
-	response: string | null | undefined,
-): Promise<void> {
-	const result = await fetchCaptchaResponse(
-		deps,
-		'https://www.recaptcha.net/recaptcha/api/siteverify',
-		secret,
-		response,
-	);
-	if (result.success !== true) {
-		throw new Error(`recaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
-	}
-}
-
-async function verifyHcaptcha(
-	deps: SigninDependencies,
-	secret: string,
-	response: string | null | undefined,
-): Promise<void> {
-	const result = await fetchCaptchaResponse(deps, 'https://hcaptcha.com/siteverify', secret, response);
-	if (result.success !== true) {
-		throw new Error(`hcaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
-	}
-}
-
-async function verifyTurnstile(
-	deps: SigninDependencies,
-	secret: string,
-	response: string | null | undefined,
-): Promise<void> {
-	const result = await fetchCaptchaResponse(
-		deps,
-		'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-		secret,
-		response,
-	);
-	if (result.success !== true) {
-		throw new Error(`turnstile failed: ${result['error-codes']?.join(', ') ?? ''}`);
-	}
-}
-
-function verifyTestcaptcha(response: string | null | undefined): void {
-	if (response !== 'testcaptcha-passed') {
-		throw new Error('testcaptcha failed');
-	}
-}
-
 async function verifyEnabledCaptchas(deps: SigninDependencies, body: Record<string, unknown>): Promise<void> {
 	if (process.env['NODE_ENV'] === 'test') {
 		return;
 	}
 
 	if (deps.meta.enableHcaptcha && deps.meta.hcaptchaSecretKey) {
-		await verifyHcaptcha(deps, deps.meta.hcaptchaSecretKey, body['hcaptcha-response'] as string | null | undefined);
+		await verifyHcaptcha(
+			deps.httpRequestService,
+			deps.meta.hcaptchaSecretKey,
+			body['hcaptcha-response'] as string | null | undefined,
+		);
 	}
 
 	if (deps.meta.enableCap) {
@@ -244,18 +164,22 @@ async function verifyEnabledCaptchas(deps: SigninDependencies, body: Record<stri
 
 	if (deps.meta.enableRecaptcha && deps.meta.recaptchaSecretKey) {
 		await verifyRecaptcha(
-			deps,
+			deps.httpRequestService,
 			deps.meta.recaptchaSecretKey,
 			body['g-recaptcha-response'] as string | null | undefined,
 		);
 	}
 
 	if (deps.meta.enableTurnstile && deps.meta.turnstileSecretKey) {
-		await verifyTurnstile(deps, deps.meta.turnstileSecretKey, body['turnstile-response'] as string | null | undefined);
+		await verifyTurnstile(
+			deps.httpRequestService,
+			deps.meta.turnstileSecretKey,
+			body['turnstile-response'] as string | null | undefined,
+		);
 	}
 
 	if (deps.meta.enableTestcaptcha) {
-		verifyTestcaptcha(body['testcaptcha-response'] as string | null | undefined);
+		await verifyTestcaptcha(body['testcaptcha-response'] as string | null | undefined);
 	}
 }
 

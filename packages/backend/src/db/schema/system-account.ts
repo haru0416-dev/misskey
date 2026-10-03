@@ -20,6 +20,3 @@ export const systemAccount = pgTable(
 		uniqueIndex('IDX_SYSTEM_ACCOUNT_TYPE_UNIQUE').on(table.type),
 	],
 );
-
-export type SystemAccountRow = typeof systemAccount.$inferSelect;
-export type SystemAccountInsert = typeof systemAccount.$inferInsert;

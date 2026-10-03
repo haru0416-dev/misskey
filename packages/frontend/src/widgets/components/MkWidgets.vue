@@ -35,19 +35,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </div>
 </template>
 
-<script lang="ts">
-export type Widget = {
-	name: string;
-	id: string;
-	data: Record<string, any>;
-};
-export type DefaultStoredWidget = {
-	place: string | null;
-} & Widget;
-</script>
-
 <script lang="ts" setup>
 import { computed } from 'vue';
+import type { StoredWidget } from '@/preferences/def.js';
 import { isLink } from '@shared/utility/is-link.js';
 import type { Component } from 'vue';
 import { genId } from '@/utility/id.js';
@@ -61,7 +51,7 @@ import { instance } from '@/instance.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 
 const props = defineProps<{
-	widgets: Widget[];
+	widgets: StoredWidget[];
 	edit: boolean;
 }>();
 
@@ -75,10 +65,10 @@ const _widgetDefs = computed(() => {
 const _widgets = computed(() => props.widgets.filter((x) => _widgetDefs.value.includes(x.name as any)));
 
 const emit = defineEmits<{
-	(ev: 'updateWidgets', widgets: Widget[]): void;
-	(ev: 'addWidget', widget: Widget): void;
-	(ev: 'removeWidget', widget: Widget): void;
-	(ev: 'updateWidget', widget: { id: Widget['id']; data: Widget['data'] }): void;
+	(ev: 'updateWidgets', widgets: StoredWidget[]): void;
+	(ev: 'addWidget', widget: StoredWidget): void;
+	(ev: 'removeWidget', widget: StoredWidget): void;
+	(ev: 'updateWidget', widget: { id: StoredWidget['id']; data: StoredWidget['data'] }): void;
 	(ev: 'exit'): void;
 }>();
 
@@ -110,15 +100,15 @@ function addWidget() {
 	widgetAdderSelected.value = null;
 }
 
-function removeWidget(widget: Widget) {
+function removeWidget(widget: StoredWidget) {
 	emit('removeWidget', widget);
 }
 
-function updateWidget(id: Widget['id'], data: Widget['data']) {
+function updateWidget(id: StoredWidget['id'], data: StoredWidget['data']) {
 	emit('updateWidget', { id, data });
 }
 
-function onContextmenu(widget: Widget, ev: PointerEvent) {
+function onContextmenu(widget: StoredWidget, ev: PointerEvent) {
 	const element = ev.target as HTMLElement | null;
 	if (element && isLink(element)) {
 		return;

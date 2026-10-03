@@ -29,5 +29,4 @@ export const promoRead = pgTable(
 	],
 );
 
-export type PromoReadRow = typeof promoRead.$inferSelect;
 export type PromoReadInsert = typeof promoRead.$inferInsert;

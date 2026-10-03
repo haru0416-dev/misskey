@@ -338,9 +338,7 @@ export const compiledConfigEnvelopeSchema = z.strictObject({
 });
 
 export type SecretSource = z.infer<typeof secretSourceSchema>;
-export type SourceConfigV2 = z.input<typeof sourceConfigV2Schema>;
 export type CompiledConfigV2 = z.output<typeof sourceConfigV2Schema>;
-export type CompiledConfigEnvelope = z.output<typeof compiledConfigEnvelopeSchema>;
 
 export function parseDuration(value: string): number {
 	const match = /^(0|[1-9][0-9]*)(ms|s|m|h|d)$/.exec(value);

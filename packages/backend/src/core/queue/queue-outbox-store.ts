@@ -8,13 +8,7 @@ import { defineQueryPlan } from '@/db/prepared.js';
 import type * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
 import { addDbJobs, addDeliverJobs } from '@/core/queue/queues.js';
-import type {
-	DbJobBulkInput,
-	DbQueue,
-	DeliverJobBulkInput,
-	DeliverJobInput,
-	DeliverQueue,
-} from '@/core/queue/queues.js';
+import type { DbJobBulkInput, DbQueue, DeliverJobInput, DeliverQueue } from '@/core/queue/queues.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type {
 	QueueOutboxDeadLetterReason,
@@ -25,7 +19,7 @@ import type {
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { QUEUE } from '@/core/queue/const.js';
-import type { DbJobMap, DeliverJobData } from '@/core/queue/types.js';
+import type { DbJobMap, DeliverJobBulkInput, DeliverJobData } from '@/core/queue/types.js';
 
 const CLAIM_LEASE_MS = 30_000;
 const MAX_POLL_INTERVAL_MS = 30_000;

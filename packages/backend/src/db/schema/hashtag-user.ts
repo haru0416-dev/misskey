@@ -31,5 +31,3 @@ export const hashtagUser = pgTable(
 		index('IDX_HASHTAG_USER_USER_ID').on(table.userId),
 	],
 );
-
-export type HashtagUserRow = typeof hashtagUser.$inferSelect;

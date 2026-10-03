@@ -73,10 +73,17 @@ export type DeckProfile = {
 	layout: Column['id'][][];
 };
 
-export type ColumnWidget = {
+// 配置したウィジェット。デッキの列とサイドバーの両方が使う。
+// ウィジェットごとにデータ形状が異なり、フォーム値との相互変換が設定値の union 型にも波及するため、data は具体化しない。
+export type StoredWidget = {
 	name: string;
 	id: string;
 	data: Record<string, any>;
+};
+
+/** サイドバーのウィジェット。place は左右どちらに置くか。 */
+export type SidebarWidget = StoredWidget & {
+	place: string | null;
 };
 
 export type Column = {
@@ -84,7 +91,7 @@ export type Column = {
 	type: ColumnType;
 	name: string | null;
 	width: number;
-	widgets?: ColumnWidget[];
+	widgets?: StoredWidget[];
 	active?: boolean;
 	flexible?: boolean;
 	antennaId?: string;
@@ -186,13 +193,7 @@ export const PREF_DEF = definePreferences({
 					place: 'right',
 					data: {},
 				},
-			] as {
-				name: string;
-				id: string;
-				place: string | null;
-				// ウィジェットごとにデータ形状が異なり、フォーム値との相互変換が設定値の union 型にも波及するため、data は具体化しない。
-				data: Record<string, any>;
-			}[],
+			] as SidebarWidget[],
 	},
 	'deck.profile': {
 		accountDependent: true,

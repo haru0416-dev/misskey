@@ -22,5 +22,4 @@ export const promoNote = pgTable(
 	(table) => [index('IDX_PROMO_NOTE_USER_ID').on(table.userId)],
 );
 
-export type PromoNoteRow = typeof promoNote.$inferSelect;
 export type PromoNoteInsert = typeof promoNote.$inferInsert;

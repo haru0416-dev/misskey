@@ -17,7 +17,7 @@ import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 
-export const SYSTEM_ACCOUNT_TYPES = ['actor', 'relay', 'proxy'] as const;
+const SYSTEM_ACCOUNT_TYPES = ['actor', 'relay', 'proxy'] as const;
 
 export type SystemAccountType = (typeof SYSTEM_ACCOUNT_TYPES)[number];
 

@@ -26,7 +26,7 @@ const editMode = ref(false);
 </script>
 
 <script lang="ts" setup>
-import type { DefaultStoredWidget, Widget } from '@/widgets/components/MkWidgets.vue';
+import type { SidebarWidget, StoredWidget } from '@/preferences/def.js';
 import XWidgets from '@/widgets/components/MkWidgets.vue';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
@@ -51,7 +51,7 @@ const widgets = computed(() => {
 	return prefer.widgets.filter((w) => w.place !== 'left');
 });
 
-function addWidget(widget: Widget) {
+function addWidget(widget: StoredWidget) {
 	prefer.commit('widgets', [
 		{
 			...widget,
@@ -61,14 +61,14 @@ function addWidget(widget: Widget) {
 	]);
 }
 
-function removeWidget(widget: Widget) {
+function removeWidget(widget: StoredWidget) {
 	prefer.commit(
 		'widgets',
 		prefer.widgets.filter((w) => w.id !== widget.id),
 	);
 }
 
-function updateWidget(widget: { id: Widget['id']; data: Widget['data'] }) {
+function updateWidget(widget: { id: StoredWidget['id']; data: StoredWidget['data'] }) {
 	prefer.commit(
 		'widgets',
 		prefer.widgets.map((w) =>
@@ -83,9 +83,9 @@ function updateWidget(widget: { id: Widget['id']; data: Widget['data'] }) {
 	);
 }
 
-function updateWidgets(thisWidgets: Widget[]) {
+function updateWidgets(thisWidgets: StoredWidget[]) {
 	if (props.place === null) {
-		prefer.commit('widgets', thisWidgets as DefaultStoredWidget[]);
+		prefer.commit('widgets', thisWidgets as SidebarWidget[]);
 		return;
 	}
 

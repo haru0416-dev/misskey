@@ -36,4 +36,3 @@ export const registryItem = pgTable(
 );
 
 export type RegistryItemRow = typeof registryItem.$inferSelect;
-export type RegistryItemInsert = typeof registryItem.$inferInsert;

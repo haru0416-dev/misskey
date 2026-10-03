@@ -24,5 +24,4 @@ export const noteThreadMuting = pgTable(
 	],
 );
 
-export type NoteThreadMutingRow = typeof noteThreadMuting.$inferSelect;
 export type NoteThreadMutingInsert = typeof noteThreadMuting.$inferInsert;

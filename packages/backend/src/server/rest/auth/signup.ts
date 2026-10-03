@@ -68,13 +68,11 @@ export type SignupResponse = MeDetailedApiResponse & {
 	token: string;
 };
 
-export type SignupInternalEventPublisher = InternalEventPublisher;
-
 export type SignupDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
-	publishInternalEvent?: SignupInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 	/** userCreated system webhook の配送に必要。省略時は通知しない。 */
 	systemWebhookDeliverQueue?: SystemWebhookDeliverQueue;
 };

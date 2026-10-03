@@ -11,7 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Logger } from '@/logger.js';
 import { resetDb } from '@/misc/reset-db.js';
 import type { MiMeta } from '@/models/entities.js';
-import type { SignupInternalEventPublisher } from '../auth/signup.js';
+import type { InternalEventPublisher } from '@/core/events.js';
 import { parseApiParams } from '../validation.js';
 
 export type ResetDbDependencies = {
@@ -19,7 +19,7 @@ export type ResetDbDependencies = {
 	meta: MiMeta;
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'info'>;
-	publishInternalEvent?: SignupInternalEventPublisher;
+	publishInternalEvent?: InternalEventPublisher;
 };
 
 export const resetDbParamDef = z.object({});

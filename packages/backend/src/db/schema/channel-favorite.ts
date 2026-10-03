@@ -29,5 +29,4 @@ export const channelFavorite = pgTable(
 	],
 );
 
-export type ChannelFavoriteRow = typeof channelFavorite.$inferSelect;
 export type ChannelFavoriteInsert = typeof channelFavorite.$inferInsert;

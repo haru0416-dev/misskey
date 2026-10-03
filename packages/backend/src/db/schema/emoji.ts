@@ -37,5 +37,4 @@ export const emoji = pgTable(
 	],
 );
 
-export type EmojiRow = typeof emoji.$inferSelect;
 export type EmojiInsert = typeof emoji.$inferInsert;

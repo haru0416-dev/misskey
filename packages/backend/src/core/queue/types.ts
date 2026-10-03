@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type * as Bull from 'bullmq';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 import type { MiNote } from '@/models/Note.js';
@@ -32,6 +33,12 @@ export type DeliverJobData = {
 		followeeId: MiUser['id'];
 		followingId: string;
 	};
+};
+
+export type DeliverJobBulkInput = {
+	name: string;
+	data: DeliverJobData;
+	opts?: Bull.BulkJobOptions;
 };
 
 export type InboxJobData = {
@@ -130,12 +137,8 @@ export type DbDeleteDriveFileJobData = {
 	deleterId?: MiUser['id'];
 };
 
-export type DbUserSuspensionPostEffectsJobData = {
-	userId: MiUser['id'];
-	isSuspended: boolean;
-	transitionedAt: string;
-	transitionId: string;
-};
+// 凍結の後処理は、凍結状態の遷移そのものを渡し、実行時にまだその状態かを確かめる。
+export type DbUserSuspensionPostEffectsJobData = UserStateGuard;
 
 export type DbNotePostCreateJobData = {
 	noteId: MiNote['id'];

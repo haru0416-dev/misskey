@@ -6,7 +6,7 @@
 import { ref } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { i18n } from './i18n.js';
-import type { Column, ColumnType, ColumnWidget, DeckProfile } from '@/preferences/def.js';
+import type { Column, ColumnType, StoredWidget, DeckProfile } from '@/preferences/def.js';
 import type { MenuItem } from '@/types/menu.js';
 import { genId } from '@/utility/id.js';
 import { deepClone } from '@/utility/clone.js';
@@ -272,7 +272,7 @@ export function popRightColumn(id: Column['id']) {
 	saveCurrentDeckProfile();
 }
 
-export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
+export function addColumnWidget(id: Column['id'], widget: StoredWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
@@ -288,7 +288,7 @@ export function addColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	saveCurrentDeckProfile();
 }
 
-export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
+export function removeColumnWidget(id: Column['id'], widget: StoredWidget) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];
@@ -304,7 +304,7 @@ export function removeColumnWidget(id: Column['id'], widget: ColumnWidget) {
 	saveCurrentDeckProfile();
 }
 
-export function setColumnWidgets(id: Column['id'], widgets: ColumnWidget[]) {
+export function setColumnWidgets(id: Column['id'], widgets: StoredWidget[]) {
 	const newColumns = deepClone(columns.value);
 	const columnIndex = columns.value.findIndex((c) => c.id === id);
 	const column = newColumns[columnIndex];

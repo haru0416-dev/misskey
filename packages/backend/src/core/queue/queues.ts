@@ -11,6 +11,7 @@ import type {
 	DbJobData,
 	DbJobMap,
 	DbJobName,
+	DeliverJobBulkInput,
 	DeliverJobData,
 	EndedPollNotificationJobData,
 	InboxJobData,
@@ -28,11 +29,6 @@ export type DeliverJobInput = {
 	name: string;
 	data: DeliverJobData;
 	opts?: Bull.JobsOptions;
-};
-export type DeliverJobBulkInput = {
-	name: string;
-	data: DeliverJobData;
-	opts?: Bull.BulkJobOptions;
 };
 export type InboxQueue = Bull.Queue<InboxJobData>;
 type RawDbQueue = Bull.Queue<DbJobData<DbJobName>, unknown, DbJobName>;

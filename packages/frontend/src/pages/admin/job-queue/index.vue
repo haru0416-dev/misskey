@@ -224,6 +224,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
 import * as Misskey from 'misskey-js';
+import type { QueueJob } from './queue-job.js';
 import { debounce } from 'throttle-debounce';
 import { useInterval } from '@shared/utility/use-interval.js';
 import XChart from './chart.vue';
@@ -256,12 +257,6 @@ type CurrentQueueInfo = Omit<Misskey.entities.AdminQueueQueueStatsResponse, 'cou
 	counts: QueueCounts;
 };
 
-type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
-	opts: Misskey.entities.QueueJob['opts'] & {
-		repeat?: unknown;
-		attempts?: number;
-	};
-};
 
 const tab = ref<(typeof Misskey.queueTypes)[number] | '-' | 'outbox'>('-');
 const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait'>('all');

@@ -17,7 +17,7 @@ const COLUMN_PREFIX = '___' as const;
 const UNIQUE_TEMP_COLUMN_PREFIX = 'unique_temp___' as const;
 const COLUMN_DELIMITER = '_' as const;
 
-type Schema = Record<
+export type ChartSchema = Record<
 	string,
 	{
 		uniqueIncrement?: boolean;
@@ -49,17 +49,17 @@ type KeyToColumnName<T extends string> = T extends `${infer R1}.${infer R2}`
 	? `${R1}${typeof COLUMN_DELIMITER}${KeyToColumnName<R2>}`
 	: T;
 
-type Columns<S extends Schema> = {
+type Columns<S extends ChartSchema> = {
 	[K in keyof S as `${typeof COLUMN_PREFIX}${KeyToColumnName<string & K>}`]: number;
 };
 
-type TempColumnsForUnique<S extends Schema> = {
+type TempColumnsForUnique<S extends ChartSchema> = {
 	[
 		K in keyof S as `${typeof UNIQUE_TEMP_COLUMN_PREFIX}${KeyToColumnName<string & K>}`
 	]: S[K]['uniqueIncrement'] extends true ? string[] : never;
 };
 
-type RawRecord<S extends Schema> = {
+type RawRecord<S extends ChartSchema> = {
 	id: number;
 
 	group?: string | null;
@@ -73,13 +73,13 @@ type RawRecord<S extends Schema> = {
  * 値が範囲外のままでは再試行も失敗する (instance の requests.* などは smallint で、日次の行は 32767 を超えうる)。
  * bigint は実質超えないので範囲を持たない。
  */
-function columnRange(range: Schema[string]['range']): { min: number; max: number } | null {
+function columnRange(range: ChartSchema[string]['range']): { min: number; max: number } | null {
 	if (range === 'big') return null;
 	if (range === 'small') return { min: -32768, max: 32767 };
 	return { min: -2147483648, max: 2147483647 };
 }
 
-function clampToColumn(value: number, range: Schema[string]['range']): number {
+function clampToColumn(value: number, range: ChartSchema[string]['range']): number {
 	const bounds = columnRange(range);
 	return bounds == null ? value : Math.min(Math.max(value, bounds.min), bounds.max);
 }
@@ -114,15 +114,15 @@ const assignmentValueSql = (value: number | SQL | unknown[]): SQL => {
 	return sql`${value}`;
 };
 
-type Commit<S extends Schema> = {
+type Commit<S extends ChartSchema> = {
 	[K in keyof S]?: S[K]['uniqueIncrement'] extends true ? string[] : number;
 };
 
-export type KVs<S extends Schema> = {
+export type KVs<S extends ChartSchema> = {
 	[K in keyof S]: number;
 };
 
-type ChartResult<T extends Schema> = {
+type ChartResult<T extends ChartSchema> = {
 	[P in keyof T]: number[];
 };
 
@@ -153,7 +153,7 @@ type JsonSchemaBuilderNode = {
 	required?: string[];
 };
 
-export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatten<ChartResult<S>>> {
+export function getJsonSchema<S extends ChartSchema>(schema: S): ToJsonSchema<Unflatten<ChartResult<S>>> {
 	const unflatten = (str: string, parent: JsonSchemaBuilderNode) => {
 		const keys = str.split('.');
 		const key = keys.shift();
@@ -222,7 +222,7 @@ export function mergeChartDiffs(diffs: Iterable<Record<string, number | string[]
 	return merged;
 }
 
-function convertSchemaToColumnDefinitions(schema: Schema): Record<string, ChartColumnDefinition> {
+function convertSchemaToColumnDefinitions(schema: ChartSchema): Record<string, ChartColumnDefinition> {
 	const columns = {} as Record<string, ChartColumnDefinition>;
 	for (const [k, v] of Object.entries(schema)) {
 		const name = k.replaceAll('.', COLUMN_DELIMITER);
@@ -297,7 +297,7 @@ export function entityToCreateTableSql(entity: ChartEntity): string[] {
 
 export function schemaToEntity(
 	name: string,
-	schema: Schema,
+	schema: ChartSchema,
 	grouped = false,
 ): {
 	hour: ChartEntity;
@@ -338,7 +338,7 @@ export function schemaToEntity(
 	};
 }
 
-export type ChartOptions<T extends Schema> = {
+export type ChartOptions<T extends ChartSchema> = {
 	db: MiDrizzleDatabase;
 	lock: (key: string) => Promise<() => void>;
 	logger: Logger;
@@ -355,12 +355,12 @@ export type ChartOptions<T extends Schema> = {
 };
 
 /** commit を含む。commit は差分を積む側 (各集計の書き込み関数) だけが持ち、外へは渡さない。 */
-type ChartCore<T extends Schema> = ReturnType<typeof createChart<T>>;
+type ChartCore<T extends ChartSchema> = ReturnType<typeof createChart<T>>;
 
 /** 集計を保存・読み出す側から見える操作。 */
-export type Chart<T extends Schema> = Omit<ChartCore<T>, 'commit'>;
+export type Chart<T extends ChartSchema> = Omit<ChartCore<T>, 'commit'>;
 
-export function createChart<T extends Schema>({
+export function createChart<T extends ChartSchema>({
 	db: chartDb,
 	lock,
 	logger,
