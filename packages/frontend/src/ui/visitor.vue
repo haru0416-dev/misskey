@@ -33,7 +33,6 @@ import { onMounted, onUnmounted, provide, ref, computed } from 'vue';
 import { instanceName } from '@shared/utility/config.js';
 import XCommon from './common/common.vue';
 import type { PageMetadata } from '@/page.js';
-import * as os from '@/os.js';
 import { instance } from '@/instance.js';
 import { provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { i18n } from '@/i18n.js';

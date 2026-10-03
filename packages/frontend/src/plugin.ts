@@ -7,6 +7,7 @@ import { ref } from 'vue';
 import { compareVersions } from 'compare-versions';
 import { isSafeMode } from '@shared/utility/config.js';
 import type * as Misskey from 'misskey-js';
+import type { Plugin } from '@/preferences/def.js';
 import type { Parser, Interpreter, values, utils as utils_TypeReferenceOnly } from '@syuilo/aiscript';
 import type { FormWithDefault } from '@/utility/form.js';
 import { genId } from '@/utility/id.js';
@@ -15,19 +16,6 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-
-export type Plugin = {
-	installId: string;
-	name: string;
-	active: boolean;
-	config?: FormWithDefault;
-	configData: Record<string, any>;
-	src: string | null;
-	version: string;
-	author?: string;
-	description?: string;
-	permissions?: (typeof Misskey.permissions)[number][];
-};
 
 export type AiScriptPluginMeta = {
 	name: string;

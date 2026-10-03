@@ -23,10 +23,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { calcPopupPosition } from '@/utility/popup-position.js';
-import * as os from '@/os.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -56,7 +56,7 @@ function next() {
 }
 
 const bodyEl = useTemplateRef('bodyEl');
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 const spotX = ref(0);
 const spotY = ref(0);
 const spotWidth = ref(0);

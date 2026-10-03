@@ -23,8 +23,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 defineProps<{
 	message: string;
@@ -34,7 +34,7 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 const showing = ref(true);
 
 onMounted(() => {

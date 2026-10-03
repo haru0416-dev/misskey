@@ -3,12 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { notificationTypes } from 'misskey-js';
 import { ref } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { i18n } from './i18n.js';
-import type { BasicTimelineType } from '@/timelines.js';
-import type { SoundStore } from '@/preferences/def.js';
+import type { Column, ColumnType, ColumnWidget, DeckProfile } from '@/preferences/def.js';
 import type { MenuItem } from '@/types/menu.js';
 import { genId } from '@/utility/id.js';
 import { deepClone } from '@/utility/clone.js';
@@ -22,19 +20,7 @@ type DeckEvents = {
 
 export const deckGlobalEvents = new EventEmitter<DeckEvents>();
 
-export type DeckProfile = {
-	name: string;
-	id: string;
-	columns: Column[];
-	layout: Column['id'][][];
-};
-
-type ColumnWidget = {
-	name: string;
-	id: string;
-	data: Record<string, any>;
-};
-
+// 列の種類の一覧。保存する形の型 (ColumnType) は preferences/def.ts が持ち、ここで過不足なく列挙する。
 export const columnTypes = [
 	'main',
 	'widgets',
@@ -47,33 +33,10 @@ export const columnTypes = [
 	'direct',
 	'roleTimeline',
 	'chat',
-] as const;
+] as const satisfies readonly ColumnType[];
 
-type ColumnType = (typeof columnTypes)[number];
-
-export type Column = {
-	id: string;
-	type: ColumnType;
-	name: string | null;
-	width: number;
-	widgets?: ColumnWidget[];
-	active?: boolean;
-	flexible?: boolean;
-	antennaId?: string;
-	listId?: string;
-	channelId?: string;
-	roleId?: string;
-	excludeTypes?: (typeof notificationTypes)[number][];
-	tl?: BasicTimelineType;
-	withRenotes?: boolean;
-	withReplies?: boolean;
-	withSensitive?: boolean;
-	onlyFiles?: boolean;
-	mediaView?: boolean;
-	soundSetting?: SoundStore;
-	// アンテナ・チャンネル・リスト・ロールの名前をキャッシュする。
-	timelineNameCache?: string;
-};
+// ColumnType のうち columnTypes に無いものがあれば、ここで型エラーになる。
+const _allColumnTypesListed: Exclude<ColumnType, (typeof columnTypes)[number]> extends never ? true : never = true;
 
 const _currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 const __currentProfile = _currentProfile ? deepClone(_currentProfile) : null;

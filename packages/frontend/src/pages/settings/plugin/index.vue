@@ -98,7 +98,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { nextTick, ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { isSafeMode } from '@shared/utility/config.js';
-import type { Plugin } from '@/plugin.js';
+import type { Plugin } from '@/preferences/def.js';
 import FormLink from '@/components/form/link.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import FormSection from '@/components/form/section.vue';

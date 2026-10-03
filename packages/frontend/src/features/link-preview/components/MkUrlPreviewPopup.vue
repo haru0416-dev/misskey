@@ -14,8 +14,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 import MkUrlPreview from '@/features/link-preview/components/MkUrlPreview.vue';
-import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = defineProps<{
 	showing: boolean;
@@ -27,7 +27,7 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const zIndex = os.claimZIndex('middle');
+const zIndex = claimZIndex('middle');
 const top = ref(0);
 const left = ref(0);
 

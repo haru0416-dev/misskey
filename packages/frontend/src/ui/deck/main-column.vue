@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { provide, useTemplateRef, ref } from 'vue';
 import { isLink } from '@shared/utility/is-link.js';
 import XColumn from './column.vue';
-import type { Column } from '@/deck.js';
+import type { Column } from '@/preferences/def.js';
 import type { PageMetadata } from '@/page.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';

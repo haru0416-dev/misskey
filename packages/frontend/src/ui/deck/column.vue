@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted, provide, watch, useTemplateRef, ref, computed } from 'vue';
-import type { Column } from '@/deck.js';
+import type { Column } from '@/preferences/def.js';
 import type { MenuItem } from '@/types/menu.js';
 import {
 	deckGlobalEvents,

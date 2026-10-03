@@ -59,6 +59,7 @@ import { elementContains } from '@/utility/element-contains.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 type WindowButton = {
 	title: string;
@@ -182,7 +183,7 @@ function onContextmenu(ev: PointerEvent) {
 
 function top() {
 	if (rootEl.value) {
-		rootEl.value.style.zIndex = os.claimZIndex(props.front ? 'middle' : 'low').toString();
+		rootEl.value.style.zIndex = claimZIndex(props.front ? 'middle' : 'low').toString();
 	}
 }
 

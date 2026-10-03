@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { defineAsyncComponent, useTemplateRef } from 'vue';
 import XColumn from './column.vue';
-import type { Column } from '@/deck.js';
+import type { Column } from '@/preferences/def.js';
 import { updateColumn } from '@/deck.js';
 import MkStreamingNotificationsTimeline from '@/features/notification/components/MkStreamingNotificationsTimeline.vue';
 import * as os from '@/os.js';

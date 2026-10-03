@@ -62,6 +62,7 @@ import { customEmojis } from '@/features/custom-emoji/custom-emojis.js';
 import { searchEmoji, searchEmojiExact } from '@/utility/search-emoji.js';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 export type CompleteInfo = {
 	user: {
@@ -197,7 +198,7 @@ const items = ref<Element[] | HTMLCollection>([]);
 const mfmTags = ref<string[]>([]);
 const mfmParams = ref<string[]>([]);
 const select = ref(-1);
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 
 function isUserArray(value: unknown): value is Misskey.entities.User[] {
 	return (

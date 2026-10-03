@@ -82,7 +82,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue';
-import { openInstanceMenu } from './common.js';
+import { openInstanceMenu } from '@/features/instance/instance-menu.js';
 import * as os from '@/os.js';
 import { navbarItemDef } from '@/navbar.js';
 import { store } from '@/store.js';

@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ensureSignin } from '@/i.js';
 import { i18n } from '../../i18n.js';
 import XColumn from './column.vue';
-import type { Column } from '@/deck.js';
+import type { Column } from '@/preferences/def.js';
 import MkInfo from '@/components/display/MkInfo.vue';
 import MkChatHistories from '@/features/chat/components/MkChatHistories.vue';
 

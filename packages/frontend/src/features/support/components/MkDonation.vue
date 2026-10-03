@@ -35,14 +35,14 @@ import { host } from '@shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkLink from '@/features/link-preview/components/MkLink.vue';
 import { i18n } from '@/i18n.js';
-import * as os from '@/os.js';
 import { miLocalStorage } from '@/local-storage.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const zIndex = os.claimZIndex('low');
+const zIndex = claimZIndex('low');
 
 function close() {
 	miLocalStorage.setItem('latestDonationInfoShownAt', Date.now().toString());

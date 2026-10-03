@@ -18,11 +18,11 @@ import { onUnmounted, ref } from 'vue';
 import { useStream } from '@/stream.js';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
-import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 
 const hasDisconnected = ref(false);
 

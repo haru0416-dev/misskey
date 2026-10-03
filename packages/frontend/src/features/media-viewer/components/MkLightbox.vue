@@ -48,11 +48,11 @@ import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from
 import XItem from '@/features/media-viewer/components/MkLightbox.item.vue';
 import type { LightboxContent } from '@/features/media-viewer/components/MkLightbox.item.vue';
 import type { Keymap } from '@/utility/hotkey.js';
-import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 import { isTouchUsing } from '@/utility/touch.js';
 import { i18n } from '@/i18n.js';
 import { focusTrap } from '@/utility/focus-trap.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = defineProps<{ defaultIndex?: number; contents: LightboxContent[] }>();
 const emit = defineEmits<{ (ev: 'closed'): void }>();
@@ -60,7 +60,7 @@ const rootEl = useTemplateRef('rootEl');
 const openAnimDuration = 200;
 const closeAnimDuration = 200;
 const slideAnimDuration = 300;
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 const showing = ref(true);
 const activatedIndexes = ref(new Set<number>());
 const items = new Map<number, InstanceType<typeof XItem>>();

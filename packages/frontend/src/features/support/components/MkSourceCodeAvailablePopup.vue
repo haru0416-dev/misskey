@@ -45,13 +45,13 @@ import { host } from '@shared/utility/config.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { miLocalStorage } from '@/local-storage.js';
-import * as os from '@/os.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const zIndex = os.claimZIndex('low');
+const zIndex = claimZIndex('low');
 
 function close() {
 	miLocalStorage.setItem('modifiedVersionMustProminentlyOfferInAgplV3Section13Read', 'true');

@@ -63,7 +63,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted } from 'vue';
-import * as os from '@/os.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = withDefaults(defineProps<{
 	x: number;
@@ -87,7 +87,7 @@ const particles: {
 }[] = [];
 const origin = 64;
 const colors = ['#FF1493', '#00FFFF', '#FFE202'];
-const zIndex = os.claimZIndex('high');
+const zIndex = claimZIndex('high');
 
 if (props.particle) {
 	for (let i = 0; i < 12; i++) {

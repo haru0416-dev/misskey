@@ -7,7 +7,6 @@ import { defineAsyncComponent, ref } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { apiUrl, host } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
-import { showSuspendedDialog } from '@/features/user/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { popup, success, alert } from '@/os.js';
@@ -113,6 +112,8 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 					if (res.error.id === 'a8c724b3-6e9c-4b46-b1a8-bc3ed6258370') {
 						// SUSPENDED
 						if (forceShowDialog || ($i && (token === $i.token || id === $i.id))) {
+							// 機能の部品へ静的に依存しないよう、凍結を知らせるときにだけ読み込む。
+							const { showSuspendedDialog } = await import('@/features/user/show-suspended-dialog.js');
 							await showSuspendedDialog();
 						}
 					} else if (res.error.id === 'e5b3b9f0-2b8f-4b9f-9c1f-8c5c1b2e1b1a') {

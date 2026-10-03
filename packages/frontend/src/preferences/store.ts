@@ -14,7 +14,6 @@ import type { MenuItem } from '@/types/menu.js';
 import { genId } from '@/utility/id.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
-import * as os from '@/os.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import { deepClone } from '@/utility/clone.js';
 import type { Cloneable } from '@/utility/clone.js';
@@ -596,6 +595,9 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 				if (this.isSyncEnabled(key)) {
 					return null;
 				}
+
+				// os.ts はダイアログの部品を通して設定を読むので、静的に import すると循環する。
+				const os = await import('@/os.js');
 
 				// undefined はキャンセルを表す。
 				async function resolveConflict(local: ValueOf<K>, remote: ValueOf<K>): Promise<ValueOf<K> | undefined> {

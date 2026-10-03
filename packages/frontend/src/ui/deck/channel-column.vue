@@ -19,12 +19,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
+import type { Column, SoundStore } from '@/preferences/def.js';
 import { onMounted, ref, shallowRef, watch, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import XColumn from './column.vue';
-import type { Column } from '@/deck.js';
 import type { MenuItem } from '@/types/menu.js';
-import type { SoundStore } from '@/preferences/def.js';
 import { updateColumn } from '@/deck.js';
 import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import MkButton from '@/components/form/MkButton.vue';

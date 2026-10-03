@@ -66,7 +66,7 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import MkNumber from '@/components/display/MkNumber.vue';
 import XActiveUsersChart from './MkVisitorDashboard.ActiveUsersChart.vue';
-import { openInstanceMenu } from '@/ui/common/common.js';
+import { openInstanceMenu } from '@/features/instance/instance-menu.js';
 
 const stats = ref<Misskey.entities.StatsResponse | null>(null);
 

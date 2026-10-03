@@ -4,8 +4,8 @@
  */
 
 import _confetti from 'canvas-confetti';
-import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 export function confetti(options: { duration?: number } = {}) {
 	if (!prefer.animation) {
@@ -18,7 +18,7 @@ export function confetti(options: { duration?: number } = {}) {
 		startVelocity: 30,
 		spread: 360,
 		ticks: 60,
-		zIndex: os.claimZIndex('high'),
+		zIndex: claimZIndex('high'),
 	} satisfies _confetti.Options;
 
 	function randomInRange(min: number, max: number) {

@@ -23,7 +23,7 @@ import MkMenu from './MkMenu.vue';
 import type { MenuItem } from '@/types/menu.js';
 import { elementContains } from '@/utility/element-contains.js';
 import { prefer } from '@/preferences.js';
-import * as os from '@/os.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = defineProps<{
 	items: MenuItem[];
@@ -36,7 +36,7 @@ const emit = defineEmits<{
 
 const rootEl = useTemplateRef('rootEl');
 
-const zIndex = ref<number>(os.claimZIndex('high'));
+const zIndex = ref<number>(claimZIndex('high'));
 
 const SCROLLBAR_THICKNESS = 16;
 

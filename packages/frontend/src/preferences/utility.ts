@@ -10,11 +10,13 @@ import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { prefer } from '@/preferences.js';
-import * as os from '@/os.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { unisonReload } from '@/utility/unison-reload.js';
+
+// os.ts はダイアログの部品を通して設定を読むので、静的に import すると循環する。ダイアログを出す時点で読み込む。
+const loadOs = () => import('@/os.js');
 
 function canAutoBackup() {
 	return prefer.profile.name != null && prefer.profile.name.trim() !== '';
@@ -27,10 +29,12 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 		if (autoBackupEnabled.value) {
 			if (!canAutoBackup()) {
 				autoBackupEnabled.value = false;
-				os.alert({
-					type: 'warning',
-					title: i18n.ts._preferencesBackup.youNeedToNameYourProfileToEnableAutoBackup,
-				});
+				void loadOs().then((os) =>
+					os.alert({
+						type: 'warning',
+						title: i18n.ts._preferencesBackup.youNeedToNameYourProfileToEnableAutoBackup,
+					}),
+				);
 				return;
 			}
 
@@ -109,6 +113,7 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 }
 
 async function renameProfile() {
+	const os = await loadOs();
 	const { canceled, result: name } = await os.inputText({
 		title: i18n.ts._preferencesProfile.profileName,
 		text:
@@ -137,6 +142,7 @@ function importProfile() {
 	input.type = 'file';
 	input.accept = '.misskeypreferences';
 	input.onchange = async () => {
+		const os = await loadOs();
 		if (input.files == null || input.files.length === 0) {
 			return;
 		}
@@ -193,6 +199,7 @@ export async function listCloudBackups() {
 }
 
 export async function deleteCloudBackup(key: string) {
+	const os = await loadOs();
 	await os.apiWithDialog('i/registry/remove', {
 		scope: ['client', 'preferences', 'backups'],
 		key,
@@ -200,6 +207,7 @@ export async function deleteCloudBackup(key: string) {
 }
 
 export async function restoreFromCloudBackup() {
+	const os = await loadOs();
 	if ($i == null) {
 		return;
 	}

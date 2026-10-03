@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import { claimZIndex } from '@/os.js';
+import { claimZIndex } from '@/utility/z-index.js';
 import { prefer } from '@/preferences.js';
 
 const props = withDefaults(defineProps<{

@@ -10,9 +10,9 @@ import { prefersReducedMotion } from '@shared/utility/config.js';
 import { definePreferences } from './store.js';
 import type { Theme } from '@shared/utility/theme.js';
 import type { SoundType } from '@/features/sound/sound.js';
-import type { Plugin } from '@/plugin.js';
+import type { FormWithDefault } from '@/utility/form.js';
+import type { BasicTimelineType } from '@/timelines.js';
 import type { DeviceKind } from '@/utility/device-kind.js';
-import type { DeckProfile } from '@/deck.js';
 import type { WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { genId } from '@/utility/id.js';
@@ -37,6 +37,71 @@ export type SoundStore =
 
 			volume: number;
 	  };
+
+// プラグインの保存する形。読み込みと実行は plugin.ts が行う。
+export type Plugin = {
+	installId: string;
+	name: string;
+	active: boolean;
+	config?: FormWithDefault;
+	configData: Record<string, any>;
+	src: string | null;
+	version: string;
+	author?: string;
+	description?: string;
+	permissions?: (typeof Misskey.permissions)[number][];
+};
+
+// デッキの保存する形。操作は deck.ts が行う。
+export type ColumnType =
+	| 'main'
+	| 'widgets'
+	| 'notifications'
+	| 'tl'
+	| 'antenna'
+	| 'list'
+	| 'channel'
+	| 'mentions'
+	| 'direct'
+	| 'roleTimeline'
+	| 'chat';
+
+export type DeckProfile = {
+	name: string;
+	id: string;
+	columns: Column[];
+	layout: Column['id'][][];
+};
+
+export type ColumnWidget = {
+	name: string;
+	id: string;
+	data: Record<string, any>;
+};
+
+export type Column = {
+	id: string;
+	type: ColumnType;
+	name: string | null;
+	width: number;
+	widgets?: ColumnWidget[];
+	active?: boolean;
+	flexible?: boolean;
+	antennaId?: string;
+	listId?: string;
+	channelId?: string;
+	roleId?: string;
+	excludeTypes?: (typeof Misskey.notificationTypes)[number][];
+	tl?: BasicTimelineType;
+	withRenotes?: boolean;
+	withReplies?: boolean;
+	withSensitive?: boolean;
+	onlyFiles?: boolean;
+	mediaView?: boolean;
+	soundSetting?: SoundStore;
+	// アンテナ・チャンネル・リスト・ロールの名前をキャッシュする。
+	timelineNameCache?: string;
+};
 
 export type StatusbarStore = {
 	name: string | null;

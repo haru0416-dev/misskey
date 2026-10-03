@@ -195,17 +195,6 @@ export const popups = ref<
 	}[]
 >([]);
 
-const zIndexes = {
-	veryLow: 500_000,
-	low: 1_000_000,
-	middle: 2_000_000,
-	high: 3_000_000,
-};
-export function claimZIndex(priority: keyof typeof zIndexes = 'low'): number {
-	zIndexes[priority] += 100;
-	return zIndexes[priority];
-}
-
 type FilterSpecificFunc<T> = T extends (...args: any[]) => void ? (any[] extends Parameters<T> ? never : T) : T;
 
 type CleanFunctions<T> = {

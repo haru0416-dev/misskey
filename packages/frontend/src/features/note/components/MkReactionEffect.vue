@@ -13,8 +13,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import * as os from '@/os.js';
 import MkReactionIcon from '@/features/note/components/MkReactionIcon.vue';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = withDefaults(defineProps<{
 	reaction: string;
@@ -28,7 +28,7 @@ const emit = defineEmits<{
 }>();
 
 const up = ref(false);
-const zIndex = os.claimZIndex('middle');
+const zIndex = claimZIndex('middle');
 const angle = (90 - (Math.random() * 180)) + 'deg';
 
 onMounted(() => {

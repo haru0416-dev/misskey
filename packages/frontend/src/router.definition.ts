@@ -8,8 +8,10 @@ import type { AsyncComponentLoader } from 'vue';
 import type { RouteDef } from '@/lib/nirax.js';
 import { $i, iAmModerator } from '@/i.js';
 import MkLoading from '@/pages/loading.vue';
-import MkError from '@/pages/error.vue';
 import PageTimeline from '@/pages/timeline.vue';
+
+// エラー画面は読み込みに失敗したときだけ要る。静的に import すると、ルート定義が部品を通して router.ts へ戻る循環になる。
+const MkError = defineAsyncComponent(() => import('@/pages/error.vue'));
 
 export const page = (loader: AsyncComponentLoader) =>
 	defineAsyncComponent({

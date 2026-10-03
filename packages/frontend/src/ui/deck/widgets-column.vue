@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import XColumn from './column.vue';
-import type { Column } from '@/deck.js';
+import type { Column } from '@/preferences/def.js';
 import type { Widget } from '@/widgets/components/MkWidgets.vue';
 import { addColumnWidget, removeColumnWidget, setColumnWidgets, updateColumnWidget } from '@/deck.js';
 import XWidgets from '@/widgets/components/MkWidgets.vue';

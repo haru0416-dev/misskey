@@ -128,7 +128,6 @@ import MkRadios from '@/components/form/MkRadios.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import FormSection from '@/components/form/section.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
-import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkFolder from '@/components/layout/MkFolder.vue';

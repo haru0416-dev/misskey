@@ -72,6 +72,7 @@ import { $i } from '@/i.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/user/is-ff-visible-for-me.js';
 import { getFollowRelationBadge } from '@/features/user/follow-relation.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
+import { claimZIndex } from '@/utility/z-index.js';
 
 const props = defineProps<{
 	showing: boolean;
@@ -85,7 +86,7 @@ const emit = defineEmits<{
 	(ev: 'mouseleave'): void;
 }>();
 
-const zIndex = os.claimZIndex('middle');
+const zIndex = claimZIndex('middle');
 const user = ref<Misskey.entities.UserDetailed | null>(null);
 const followRelation = computed(() => (user.value == null ? null : getFollowRelationBadge($i, user.value)));
 const top = ref(0);
