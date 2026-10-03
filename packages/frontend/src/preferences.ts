@@ -4,7 +4,6 @@
  */
 
 import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/store.js';
-import { cloudBackup } from '@/preferences/utility.js';
 import { miLocalStorage } from '@/local-storage.js';
 import {
 	createPreferencesStore,
@@ -180,6 +179,8 @@ const backupScheduler = new DeferredTaskScheduler(
 
 		const backedUpModifiedAt = prefer.profile.modifiedAt;
 		try {
+			// utility.ts は prefer を使うので、静的に import すると循環する。バックアップする時点で読み込む。
+			const { cloudBackup } = await import('@/preferences/utility.js');
 			await cloudBackup();
 			latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
 		} catch {
@@ -206,5 +207,8 @@ void store.$persistReady.then(requestBackup);
 //#endregion
 
 if (_DEV_) {
-	Object.assign(window, { prefer, cloudBackup });
+	Object.assign(window, {
+		prefer,
+		cloudBackup: async () => (await import('@/preferences/utility.js')).cloudBackup(),
+	});
 }

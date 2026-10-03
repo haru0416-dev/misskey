@@ -169,7 +169,7 @@ export type StorageProvider = {
 	cloudSet: <K extends keyof PREF>(ctx: { key: K; scope: Scope; value: ValueOf<K> }) => Promise<void>;
 };
 
-type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R : Default> = {
+export type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R : Default> = {
 	default: Default;
 	accountDependent?: boolean;
 	serverDependent?: boolean;
@@ -184,14 +184,6 @@ type PreferencesStoreEvents = {
 };
 
 export const preferencesEvents = new EventEmitter<PreferencesStoreEvents>();
-
-export function definePreferences<T extends Record<string, unknown>>(x: {
-	[K in keyof T]: PreferencesDefinitionRecord<T[K]>;
-}): {
-	[K in keyof T]: PreferencesDefinitionRecord<T[K]>;
-} {
-	return x;
-}
 
 export function getInitialPrefValue<K extends keyof PREF>(k: K): ValueOf<K> {
 	const _default = PREF_DEF[k].default;
