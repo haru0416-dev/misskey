@@ -34,7 +34,7 @@ misskeyApiGet('charts/instance', { host: props.instance.host, limit: 16 + 1, spa
 });
 
 function getInstanceIcon(instance: Misskey.entities.FederationInstance): string {
-	return getProxiedImageUrlNullable(instance.iconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ?? '/client-assets/dummy.png';
+	return getProxiedImageUrlNullable(instance.iconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ?? '/static-assets/dummy.png';
 }
 </script>
 

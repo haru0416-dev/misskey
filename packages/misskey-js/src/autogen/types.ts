@@ -5388,8 +5388,7 @@ export type components = {
             enableTestcaptcha: boolean;
             googleAnalyticsMeasurementId: string | null;
             swPublickey: string | null;
-            /** @default /assets/ai.png */
-            mascotImageUrl: string;
+            mascotImageUrl: string | null;
             bannerUrl: string | null;
             serverErrorImageUrl: string | null;
             infoImageUrl: string | null;
@@ -9396,7 +9395,6 @@ export interface operations {
                         enableTestcaptcha: boolean;
                         googleAnalyticsMeasurementId: string | null;
                         swPublickey: string | null;
-                        /** @default /assets/ai.png */
                         mascotImageUrl: string | null;
                         bannerUrl: string | null;
                         serverErrorImageUrl: string | null;

@@ -1346,7 +1346,6 @@ export const endpointMetas = {
 						type: 'string',
 						optional: false,
 						nullable: true,
-						default: '/assets/ai.png',
 					},
 					bannerUrl: {
 						type: 'string',

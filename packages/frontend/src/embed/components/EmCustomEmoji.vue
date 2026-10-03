@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:alt="alt"
 	v-if="errored && fallbackToImage"
 	:class="[$style.root, { [$style.normal]: normal, [$style.noStyle]: noStyle }]"
-	src="/client-assets/dummy.png"
+	src="/static-assets/dummy.png"
 	:title="alt"
 />
 <span v-else-if="errored">:{{ customEmojiName }}:</span>

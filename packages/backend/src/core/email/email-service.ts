@@ -111,7 +111,7 @@ export function createEmailService(
 			return;
 		}
 
-		const iconUrl = `${config.instance.url}/static-assets/mi-white.png`;
+		const iconUrl = `${config.instance.url}/static-assets/toneriko-icon-white.png`;
 		const emailSettingUrl = `${config.instance.url}/settings/email`;
 
 		const enableAuth = meta.smtpUser != null && meta.smtpUser !== '';

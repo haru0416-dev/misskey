@@ -78,7 +78,7 @@ function getInstanceIcon(instance: Misskey.entities.FederationInstance): string 
 	return (
 		getProxiedImageUrlNullable(instance.iconUrl, 'preview') ??
 		getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ??
-		'/client-assets/dummy.png'
+		'/static-assets/dummy.png'
 	);
 }
 

@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:alt="alt"
 	v-else-if="errored && fallbackToImage"
 	:class="[$style.root, { [$style.normal]: normal, [$style.noStyle]: noStyle }]"
-	src="/client-assets/dummy.png"
+	src="/static-assets/dummy.png"
 	:title="alt"
 	draggable="false"
 	style="-webkit-user-drag: none;"

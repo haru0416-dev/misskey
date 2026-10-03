@@ -163,8 +163,7 @@ export const packedMetaLiteSchema = {
 		mascotImageUrl: {
 			type: 'string',
 			optional: false,
-			nullable: false,
-			default: '/assets/ai.png',
+			nullable: true,
 		},
 		bannerUrl: {
 			type: 'string',

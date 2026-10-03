@@ -80,7 +80,7 @@ useInterval(fetchInstances, 1000 * 60, {
 });
 
 function getInstanceIcon(instance: Misskey.entities.FederationInstance): string {
-	return getProxiedImageUrlNullable(instance.iconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ?? '/client-assets/dummy.png';
+	return getProxiedImageUrlNullable(instance.iconUrl, 'preview') ?? getProxiedImageUrlNullable(instance.faviconUrl, 'preview') ?? '/static-assets/dummy.png';
 }
 
 defineExpose<WidgetComponentExpose>({

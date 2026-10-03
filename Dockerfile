@@ -207,7 +207,6 @@ COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scr
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration/*.sql ./packages/backend/migration/
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration/meta/_journal.json ./packages/backend/migration/meta/_journal.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/assets ./packages/backend/assets
-COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/src/server/assets ./packages/backend/src/server/assets
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/frontend/assets ./packages/frontend/assets
 COPY --chown=misskey:misskey --from=native-builder /misskey/deploy/healthcheck.sh ./deploy/healthcheck.sh
 

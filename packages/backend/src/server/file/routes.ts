@@ -207,7 +207,7 @@ async function errorHandler(
 
 export function createFileServerApp(deps: FileServerDependencies): Hono {
 	const app = new Hono();
-	const assetsPath = resolve(deps.config.runtime.rootDir, 'packages/backend/src/server/assets');
+	const assetsPath = resolve(deps.config.runtime.rootDir, 'packages/backend/assets');
 	const fileResolver = new FileServerFileResolver(
 		deps.db,
 		deps.fileInfoService,

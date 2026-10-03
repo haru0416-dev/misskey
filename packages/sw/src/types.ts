@@ -45,11 +45,9 @@ export type BadgeNames =
 	| 'bell'
 	| 'chart-arrows'
 	| 'circle-check'
-	| 'medal'
 	| 'messages'
 	| 'plus'
 	| 'quote'
 	| 'repeat'
 	| 'user-plus'
-	| 'users'
 	| 'login-2';

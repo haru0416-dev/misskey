@@ -70,7 +70,7 @@ export async function packMetaLite(deps: MetaEntityPackerDependencies, meta = de
 		googleAnalyticsMeasurementId: meta.googleAnalyticsMeasurementId,
 		swPublickey: meta.swPublicKey,
 		themeColor: meta.themeColor,
-		mascotImageUrl: meta.mascotImageUrl ?? '/assets/ai.png',
+		mascotImageUrl: meta.mascotImageUrl,
 		bannerUrl: meta.bannerUrl,
 		infoImageUrl: meta.infoImageUrl,
 		serverErrorImageUrl: meta.serverErrorImageUrl,
