@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-vi.mock('@/os.js', () => ({ post: vi.fn() }));
+vi.mock('@/features/post-composer/post.js', () => ({ post: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: vi.fn() }));
 vi.mock('@/i.js', () => ({ $i: { id: 'account-a' } }));
 vi.mock('@/features/user/get-account-from-id.js', () => ({ getAccountFromId: vi.fn() }));

@@ -67,7 +67,7 @@ import MkInput from '@/components/form/MkInput.vue';
 import { userListsCache } from '@/query/account-caches.js';
 import { ensureSignin } from '@/i.js';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const $i = ensureSignin();

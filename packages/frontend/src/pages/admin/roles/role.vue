@@ -67,7 +67,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();

@@ -191,7 +191,7 @@ import { confetti } from '@/utility/confetti.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/user/is-ff-visible-for-me.js';
 import { getFollowRelationBadge } from '@/features/user/follow-relation.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import MkSparkle from '@/components/effects/MkSparkle.vue';
 import { prefer } from '@/preferences.js';

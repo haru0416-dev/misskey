@@ -51,7 +51,7 @@ import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 
 const PRESET_DEFAULT = `/// @ ${AISCRIPT_VERSION}
 

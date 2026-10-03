@@ -65,6 +65,7 @@ import { computed, watch, ref, defineAsyncComponent, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { url } from '@shared/utility/config.js';
 import MkButton from '@/components/form/MkButton.vue';
+import { post as openPostForm } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { getOthersContentMenuItems } from '@/features/abuse-report/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -77,7 +78,7 @@ import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { isSupportShare } from '@/utility/navigator.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();
@@ -132,7 +133,7 @@ function shareWithNote() {
 	if (!post.value) {
 		return;
 	}
-	os.post({
+	openPostForm({
 		initialText: `${post.value.title} ${url}/gallery/${post.value.id}`,
 		instant: true,
 	});

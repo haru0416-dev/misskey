@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { inject } from 'vue';
 import { page, ROUTE_DEF } from '@/router.definition.js';
 import { $i } from '@/i.js';
 import { Nirax } from '@/lib/nirax.js';
 import { analytics } from '@/analytics.js';
-import { DI } from '@/di.js';
+import { registerMainRouter } from '@/composables/useRouter.js';
 
 export type Router = Nirax<typeof ROUTE_DEF>;
 
@@ -22,6 +21,7 @@ export function createRouter(fullPath: string): Router {
 }
 
 export const mainRouter = createRouter(window.location.pathname + window.location.search + window.location.hash);
+registerMainRouter(mainRouter);
 
 window.addEventListener('popstate', (event) => {
 	mainRouter.replaceByPath(window.location.pathname + window.location.search + window.location.hash);
@@ -54,7 +54,3 @@ mainRouter.addListener('change', (ctx) => {
 });
 
 mainRouter.init();
-
-export function useRouter(): Router {
-	return inject(DI.router, null) ?? mainRouter;
-}

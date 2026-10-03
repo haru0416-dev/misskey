@@ -43,7 +43,8 @@ vi.mock('@/features/user/show-moved-dialog.js', () => ({
 
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkPostFormDialog from '@/features/post-composer/components/MkPostFormDialog.vue';
-import { popups, post } from '@/os.js';
+import { popups } from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { prefer } from '@/preferences.js';
 
 describe('post form defaults', () => {

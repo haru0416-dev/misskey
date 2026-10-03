@@ -78,9 +78,10 @@ import MkMediaList from '@/features/media-viewer/components/MkMediaList.vue';
 import MkKeyValue from '@/components/display/MkKeyValue.vue';
 import bytes from '@/filters/bytes.js';
 import { i18n } from '@/i18n.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { selectDriveFolder } from '@/features/drive/drive.js';
 import { globalEvents } from '@/events.js';
 
@@ -138,7 +139,7 @@ function postThis() {
 		return;
 	}
 
-	os.post({
+	post({
 		initialFiles: [file.value],
 		instant: true,
 	});

@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 		</MkUserCardMini>
 	</MkA>
-	<button v-tooltip.noDelay="i18n.ts.note" class="_button" :class="$style.post" :aria-label="i18n.ts.note" @click="os.post({initialText: `@${item.user.username}${item.user.host ? `@${item.user.host}` : ''} `, instant: true})">
+	<button v-tooltip.noDelay="i18n.ts.note" class="_button" :class="$style.post" :aria-label="i18n.ts.note" @click="post({initialText: `@${item.user.username}${item.user.host ? `@${item.user.host}` : ''} `, instant: true})">
 		<i class="ti-fw ti ti-confetti" :class="$style.postIcon"></i>
 	</button>
 </div>
@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkUserCardMini from '@/features/user/components/MkUserCardMini.vue';
-import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { i18n } from '@/i18n.js';
 import { useLowresTime } from '@/composables/useLowresTime.js';
 import { userPage, acct } from '@/filters/user.js';

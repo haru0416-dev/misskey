@@ -17,7 +17,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { antennasCache } from '@/query/account-caches.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 
 const router = useRouter();
 

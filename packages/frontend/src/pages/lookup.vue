@@ -24,7 +24,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { mainRouter } from '@/router.js';
+import { getMainRouter } from '@/composables/useRouter.js';
 import MkButton from '@/components/form/MkButton.vue';
 
 const state = ref<'fetching' | 'done'>('fetching');
@@ -46,13 +46,13 @@ function _fetch_() {
 			uri,
 		}).then(res => {
 			if (res.type === 'User') {
-				mainRouter.replace('/@:acct/:page?', {
+				getMainRouter().replace('/@:acct/:page?', {
 					params: {
 						acct: res.object.host != null ? `${res.object.username}@${res.object.host}` : res.object.username,
 					},
 				});
 			} else if (res.type === 'Note') {
-				mainRouter.replace('/notes/:noteId/:initialTab?', {
+				getMainRouter().replace('/notes/:noteId/:initialTab?', {
 					params: {
 						noteId: res.object.id,
 					},
@@ -69,7 +69,7 @@ function _fetch_() {
 			uri = uri.slice(5);
 		}
 		promise = misskeyApi('users/show', Misskey.acct.parse(uri)).then(user => {
-			mainRouter.replace('/@:acct/:page?', {
+			getMainRouter().replace('/@:acct/:page?', {
 				params: {
 					acct: user.host != null ? `${user.username}@${user.host}` : user.username,
 				},

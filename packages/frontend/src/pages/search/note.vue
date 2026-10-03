@@ -152,7 +152,7 @@ import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { apLookup, openSearchShortcut } from '@/features/search/lookup.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkInput from '@/components/form/MkInput.vue';

@@ -8,6 +8,7 @@ import { selectDriveFolder } from './drive.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
@@ -147,7 +148,7 @@ export function getDriveFileMenu(
 			text: i18n.ts.createNoteFromTheFile,
 			icon: 'ti ti-pencil',
 			action: () =>
-				os.post({
+				post({
 					initialFiles: [file],
 					instant: true,
 				}),

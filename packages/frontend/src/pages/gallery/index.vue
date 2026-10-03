@@ -50,7 +50,7 @@ import MkPagination from '@/components/layout/MkPagination.vue';
 import MkGalleryPostPreview from '@/features/gallery/components/MkGalleryPostPreview.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();

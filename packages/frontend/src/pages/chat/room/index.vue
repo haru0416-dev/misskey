@@ -115,7 +115,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
 import MkButton from '@/components/form/MkButton.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { useMutationObserver } from '@/composables/useMutationObserver.js';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { makeDateSeparatedTimelineComputedRef } from '@/features/note/timeline-date-separate.js';

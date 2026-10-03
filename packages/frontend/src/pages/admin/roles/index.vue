@@ -57,7 +57,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { instance, fetchInstance } from '@/instance.js';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { deepClone } from '@/utility/clone.js';
 
 const router = useRouter();

@@ -274,6 +274,7 @@ import { checkWordMute } from '@/features/note/check-word-mute.js';
 import { userPage } from '@/filters/user.js';
 import { notePage } from '@/filters/note.js';
 import number from '@/filters/number.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
 import * as sound from '@/features/sound/sound.js';
@@ -511,7 +512,7 @@ async function reply() {
 	}
 
 	showMovedDialog();
-	os.post({
+	post({
 		reply: appearNote,
 		...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 	}).then(() => {

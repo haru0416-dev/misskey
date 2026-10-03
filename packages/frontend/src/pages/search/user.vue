@@ -42,7 +42,7 @@ import { instance } from '@/instance.js';
 import * as os from '@/os.js';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 import { openSearchShortcut } from '@/features/search/lookup.js';
 

@@ -138,7 +138,7 @@ import { customEmojiCategories, customEmojis, customEmojisByCategory, customEmoj
 import { $i } from '@/i.js';
 import { checkReactionPermissions } from '@/features/note/check-reaction-permissions.js';
 import { prefer } from '@/preferences.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 
 const router = useRouter();
 

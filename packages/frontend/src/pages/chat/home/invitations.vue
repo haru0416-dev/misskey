@@ -39,7 +39,7 @@ import * as Misskey from 'misskey-js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 
 const router = useRouter();

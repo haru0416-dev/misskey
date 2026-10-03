@@ -80,7 +80,7 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
-import { popupShareMenu } from '@/utility/popup-share-menu.js';
+import { popupShareMenu } from '@/features/post-composer/share-menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { pleaseLogin } from '@/features/auth/please-login.js';
 

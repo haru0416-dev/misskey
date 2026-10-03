@@ -14,7 +14,7 @@ import { computed } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { antennasCache } from '@/query/account-caches.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import MkAntennaEditor from '@/features/antenna/components/MkAntennaEditor.vue';
 
 const router = useRouter();

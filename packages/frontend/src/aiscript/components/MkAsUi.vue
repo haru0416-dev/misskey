@@ -60,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, computed } from 'vue';
 import type { Ref } from 'vue';
 import type { AsUiButton, AsUiComponent, AsUiRoot, AsUiPostFormButton } from '@/aiscript/ui.js';
-import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
@@ -183,7 +183,7 @@ function openPostForm() {
 		return;
 	}
 
-	os.post({
+	post({
 		initialText: form.text,
 		...(form.cw === undefined ? {} : { initialCw: form.cw }),
 		...(form.visibility === undefined ? {} : { initialVisibility: form.visibility }),

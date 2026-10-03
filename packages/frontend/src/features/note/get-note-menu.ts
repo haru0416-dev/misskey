@@ -10,6 +10,7 @@ import type { MenuItem } from '@/types/menu.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
@@ -239,7 +240,7 @@ export function getNoteMenu(props: {
 				globalEvents.emit('noteDeleted', appearNote.id);
 			});
 
-			os.post({
+			post({
 				initialNote: appearNote,
 				...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }),
 				...(appearNote.reply === undefined ? {} : { reply: appearNote.reply }),
@@ -718,7 +719,7 @@ export function getRenoteMenu(props: {
 				icon: 'ti ti-quote',
 				action: () => {
 					if (!props.mock) {
-						os.post({
+						post({
 							renote: appearNote,
 							...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 						});
@@ -776,7 +777,7 @@ export function getRenoteMenu(props: {
 							text: i18n.ts.quote,
 							icon: 'ti ti-quote',
 							action: () => {
-								os.post({
+								post({
 									renote: appearNote,
 								});
 							},

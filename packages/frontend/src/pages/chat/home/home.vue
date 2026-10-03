@@ -48,7 +48,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { ensureSignin } from '@/i.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import * as os from '@/os.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
 import MkInput from '@/components/form/MkInput.vue';

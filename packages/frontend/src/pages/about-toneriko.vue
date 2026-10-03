@@ -88,12 +88,12 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';
 
 function iLoveToneriko() {
-	os.post({
+	post({
 		initialText: 'I $[jelly ❤] #Toneriko',
 		instant: true,
 	});

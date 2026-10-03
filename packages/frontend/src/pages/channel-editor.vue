@@ -82,7 +82,7 @@ import MkFolder from '@/components/layout/MkFolder.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkDraggable from '@/components/layout/MkDraggable.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 
 const router = useRouter();
 

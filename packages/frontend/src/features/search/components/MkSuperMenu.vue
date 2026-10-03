@@ -104,7 +104,7 @@ import { getScrollContainer } from '@shared/utility/scroll.js';
 import type { SearchIndexItem } from '@/features/search/inapp-search.js';
 import MkInput from '@/components/form/MkInput.vue';
 import { i18n } from '@/i18n.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { initIntlString, compareStringIncludes } from '@/utility/intl-string.js';
 
 const props = defineProps<{

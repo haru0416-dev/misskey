@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-if="$i" v-click-anime :class="[$style.item, $style.account]" class="_button" @click="openAccountMenu">
 				<MkAvatar :user="$i" :class="$style.avatar"/><MkAcct :class="$style.acct" :user="$i"/>
 			</button>
-			<div :class="$style.post" @click="os.post()">
+			<div :class="$style.post" @click="post()">
 				<MkButton :class="$style.postButton" gradate rounded>
 					<i class="ti ti-pencil ti-fw"></i>
 				</MkButton>
@@ -49,6 +49,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue';
 import { openInstanceMenu } from '@/features/instance/instance-menu.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { navbarItemDef } from '@/navbar.js';
 import MkButton from '@/components/form/MkButton.vue';

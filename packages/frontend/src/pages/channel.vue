@@ -81,6 +81,7 @@ import type { PageHeaderItem } from '@/types/page-header.js';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import XChannelFollowButton from '@/features/channel/components/MkChannelFollowButton.vue';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';
@@ -100,7 +101,7 @@ import { isSupportShare } from '@/utility/navigator.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();
@@ -178,7 +179,7 @@ function edit() {
 }
 
 function openPostForm() {
-	os.post({
+	post({
 		channel: channel.value,
 	});
 }

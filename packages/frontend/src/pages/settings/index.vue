@@ -49,7 +49,7 @@ import { clearCache } from '@/features/cache-management/clear-cache.js';
 import { instance } from '@/instance.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import * as os from '@/os.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { enableAutoBackup, getPreferencesProfileMenu } from '@/preferences/utility.js';
 import { store } from '@/store.js';
 import { signout } from '@/signout.js';

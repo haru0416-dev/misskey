@@ -27,6 +27,7 @@ import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { store } from '@/store.js';
+import { post as openPostForm } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { Paginator } from '@/utility/paginator.js';
@@ -45,7 +46,7 @@ const paginator = markRaw(new Paginator('notes/search-by-tag', {
 async function post() {
 	store.set('postFormHashtags', props.tag);
 	store.set('postFormWithHashtags', true);
-	await os.post();
+	await openPostForm();
 	store.set('postFormHashtags', '');
 	store.set('postFormWithHashtags', false);
 	paginator.reload();

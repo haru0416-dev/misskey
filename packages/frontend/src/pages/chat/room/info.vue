@@ -35,7 +35,7 @@ import { ensureSignin } from '@/i.js';
 import MkInput from '@/components/form/MkInput.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkSwitch from '@/components/form/MkSwitch.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 
 const router = useRouter();
 const $i = ensureSignin();

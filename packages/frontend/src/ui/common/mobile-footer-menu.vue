@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</button>
 
-	<button type="button" :aria-label="i18n.ts.note" :class="[$style.item, $style.post]" class="_button" @click="os.post()">
+	<button type="button" :aria-label="i18n.ts.note" :class="[$style.item, $style.post]" class="_button" @click="post()">
 		<div :class="$style.itemInner">
 			<i :class="$style.itemIcon" class="ti ti-pencil"></i>
 			<span :class="$style.itemLabel">{{ i18n.ts.note }}</span>
@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, useTemplateRef, watch } from 'vue';
 import { $i } from '@/i.js';
-import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { mainRouter } from '@/router.js';
 import { navbarItemDef } from '@/navbar.js';
 import { i18n } from '@/i18n.js';

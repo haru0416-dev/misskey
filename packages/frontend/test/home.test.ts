@@ -10,6 +10,8 @@ import './init';
 import type * as Misskey from 'misskey-js';
 import { directives } from '@/directives/index.js';
 import { components } from '@/components/index.js';
+// 画面は useRouter() で既定のルーターを使う。既定のルーターは router.ts の読み込み時に登録される。
+import '@/router.js';
 import XHome from '@/pages/user/home.vue';
 
 describe('XHome', () => {

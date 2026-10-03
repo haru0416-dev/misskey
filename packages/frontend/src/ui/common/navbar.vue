@@ -68,7 +68,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i v-if="store.realtimeMode" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
-			<button v-tooltip.noDelay.right="iconOnly ? i18n.ts.note : null" class="_button" :class="[$style.post]" data-cy-open-post-form @click="() => { os.post(); }">
+			<button v-tooltip.noDelay.right="iconOnly ? i18n.ts.note : null" class="_button" :class="[$style.post]" data-cy-open-post-form @click="() => { post(); }">
 				<i class="ti ti-pencil ti-fw" :class="$style.postIcon"></i><span :class="$style.postText">{{ i18n.ts.note }}</span>
 			</button>
 			<button v-if="$i != null" v-tooltip.noDelay.right="iconOnly ? `${i18n.ts.account}: @${$i.username}` : null" class="_button" :class="[$style.account]" @click="openAccountMenu">
@@ -83,13 +83,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue';
 import { openInstanceMenu } from '@/features/instance/instance-menu.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { navbarItemDef } from '@/navbar.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { prefer } from '@/preferences.js';
 import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';

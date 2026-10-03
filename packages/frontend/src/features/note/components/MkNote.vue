@@ -225,6 +225,7 @@ import { checkWordMute } from '@/features/note/check-word-mute.js';
 import { notePage } from '@/filters/note.js';
 import { userPage } from '@/filters/user.js';
 import number from '@/filters/number.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import * as sound from '@/features/sound/sound.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
@@ -573,7 +574,7 @@ async function reply() {
 		return;
 	}
 
-	os.post({
+	post({
 		reply: appearNote,
 		...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 	}).then(() => {

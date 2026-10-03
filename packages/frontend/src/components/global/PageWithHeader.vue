@@ -32,7 +32,7 @@ import { scrollInContainer } from '@shared/utility/scroll.js';
 import type { PageHeaderProps } from './MkPageHeader.vue';
 import { useScrollPositionKeeper } from '@/composables/useScrollPositionKeeper.js';
 import MkSwiper from '@/components/layout/MkSwiper.vue';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { prefer } from '@/preferences.js';
 import MkTabs from '@/components/layout/MkTabs.vue';
 

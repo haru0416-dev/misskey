@@ -5,6 +5,7 @@
 
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { i18n } from '@/i18n.js';
 import { isSupportShare } from '@/utility/navigator.js';
 
@@ -16,7 +17,7 @@ export function popupShareMenu(ev: PointerEvent, opts: { noteText: string; share
 		text: i18n.ts.shareWithNote,
 		icon: 'ti ti-pencil',
 		action: () => {
-			os.post({
+			void post({
 				initialText: opts.noteText,
 				instant: true,
 			});

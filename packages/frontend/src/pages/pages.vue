@@ -41,7 +41,7 @@ import MkPagination from '@/components/layout/MkPagination.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { useRouter } from '@/router.js';
+import { useRouter } from '@/composables/useRouter.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();

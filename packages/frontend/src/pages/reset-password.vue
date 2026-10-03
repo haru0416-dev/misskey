@@ -25,7 +25,7 @@ import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { mainRouter } from '@/router.js';
+import { getMainRouter } from '@/composables/useRouter.js';
 
 const props = defineProps<{
 	token?: string;
@@ -41,7 +41,7 @@ async function save() {
 		token: props.token,
 		password: password.value,
 	});
-	mainRouter.push('/');
+	getMainRouter().push('/');
 }
 
 onMounted(async () => {
@@ -53,7 +53,7 @@ onMounted(async () => {
 				closed: () => dispose(),
 			},
 		);
-		mainRouter.push('/');
+		getMainRouter().push('/');
 	}
 });
 

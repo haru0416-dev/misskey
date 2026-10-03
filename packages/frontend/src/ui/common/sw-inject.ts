@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { post } from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i } from '@/i.js';
 import { getAccountFromId } from '@/features/user/get-account-from-id.js';

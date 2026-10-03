@@ -27,6 +27,7 @@ import type { MenuItem } from '@/types/menu.js';
 import { updateColumn } from '@/deck.js';
 import MkStreamingNotesTimeline from '@/features/note/components/MkStreamingNotesTimeline.vue';
 import MkButton from '@/components/form/MkButton.vue';
+import { post as openPostForm } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { favoritedChannelsCache } from '@/query/account-caches.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -90,7 +91,7 @@ async function post() {
 		return;
 	}
 
-	os.post({
+	openPostForm({
 		channel: targetChannel,
 	});
 }

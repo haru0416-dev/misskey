@@ -76,7 +76,7 @@ import { selectFile } from '@/features/drive/drive.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';
-import { mainRouter } from '@/router.js';
+import { getMainRouter } from '@/composables/useRouter.js';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { getPageBlockList } from '@/pages/page-editor/common.js';
 
@@ -163,7 +163,7 @@ async function save() {
 
 		pageId.value = created.id;
 		currentName.value = name.value.trim();
-		mainRouter.replace('/pages/edit/:initPageId', {
+		getMainRouter().replace('/pages/edit/:initPageId', {
 			params: {
 				initPageId: pageId.value,
 			},
@@ -189,7 +189,7 @@ async function del() {
 		pageId: pageId.value,
 	});
 
-	mainRouter.replace('/pages');
+	getMainRouter().replace('/pages');
 }
 
 async function duplicate() {
@@ -217,7 +217,7 @@ async function duplicate() {
 	pageId.value = created.id;
 	currentName.value = options.name;
 
-	mainRouter.push('/pages/edit/:initPageId', {
+	getMainRouter().push('/pages/edit/:initPageId', {
 		params: {
 			initPageId: pageId.value,
 		},

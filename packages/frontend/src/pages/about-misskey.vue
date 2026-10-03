@@ -145,7 +145,7 @@ import MkInfo from '@/components/display/MkInfo.vue';
 import { physics } from '@/utility/physics.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import * as os from '@/os.js';
+import { post } from '@/features/post-composer/post.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
@@ -522,7 +522,7 @@ function gravity() {
 }
 
 function iLoveMisskey() {
-	os.post({
+	post({
 		initialText: 'I $[jelly ❤] #Misskey',
 		instant: true,
 	});

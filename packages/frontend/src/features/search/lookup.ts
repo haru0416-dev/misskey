@@ -8,11 +8,11 @@ import type { Router } from '@/router.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { mainRouter } from '@/router.js';
+import { getMainRouter } from '@/composables/useRouter.js';
 import { acct } from '@/filters/user';
 
 export async function lookup(router?: Router) {
-	const _router = router ?? mainRouter;
+	const _router = router ?? getMainRouter();
 
 	const { canceled, result: temp } = await os.inputText({
 		title: i18n.ts.lookup,

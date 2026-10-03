@@ -12,17 +12,18 @@ import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
 import { selectExpiry } from '@/utility/select-expiry.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import { post } from '@/features/post-composer/post.js';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { $i, iAmModerator } from '@/i.js';
 import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { antennasCache, rolesCache, userListsCache } from '@/query/account-caches.js';
-import { mainRouter } from '@/router.js';
+import { getMainRouter } from '@/composables/useRouter.js';
 import { genEmbedCode } from '@/features/code/get-embed-code.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 
-export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router = mainRouter) {
+export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router = getMainRouter()) {
 	const meId = $i ? $i.id : null;
 
 	const cleanups = [] as (() => void)[];
@@ -384,7 +385,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 				text: i18n.ts.createUserSpecifiedNote,
 				action: () => {
 					const canonical = user.host === null ? `@${user.username}` : `@${user.username}@${user.host}`;
-					os.post({ specified: user, initialText: `${canonical} ` });
+					post({ specified: user, initialText: `${canonical} ` });
 				},
 			},
 		);
