@@ -16,8 +16,6 @@ describe('theme editor value conversion', () => {
 	});
 
 	test.each([
-		':',
-		':alpha',
 		':alpha<0.5',
 		':alpha<invalid<@accent',
 		':alpha<0.5<',

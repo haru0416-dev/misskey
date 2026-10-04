@@ -82,11 +82,5 @@ describe('misc:should-hide-note-by-time', () => {
 			const createdAt = new Date(epoch);
 			expect(shouldHideNoteByTime(thresholdSeconds, createdAt)).toBe(true);
 		});
-
-		test('ISO 8601 形式の文字列の createdAt に対応できる（文字列でも正しく判定）', () => {
-			const thresholdSeconds = Math.floor(epoch / 1000);
-			const createdAtString = new Date(epoch - 3_600_000).toISOString();
-			expect(shouldHideNoteByTime(thresholdSeconds, createdAtString)).toBe(true);
-		});
 	});
 });

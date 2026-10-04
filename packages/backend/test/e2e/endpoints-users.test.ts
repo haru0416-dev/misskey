@@ -109,7 +109,6 @@ import {
 	isPromoReadExists,
 	listModerationLogsFromDatabase,
 	listPollVotesByNoteAndUserFromDatabase,
-	listUserNotePiningsByUserIdFromDatabase,
 	openTestDatabase,
 	pageLikeExistsInDatabase,
 	RootUserAlreadyAssignedError,
@@ -625,21 +624,18 @@ describe('Endpoints', () => {
 			expect(limited.body as any[]).toHaveLength(1);
 		});
 
-		test('charts/notes returns a chart shaped array of the requested length', async () => {
+		test('charts/notes はPOSTのdayと匿名GETのhourで指定長を返し、GETを公開キャッシュできる', async () => {
 			const res = await api('charts/notes', { span: 'day', limit: 5 });
 			expect(res.status).toBe(200);
 			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
 			expect(body.local.total).toHaveLength(5);
 			expect(body.remote.total).toHaveLength(5);
 			expect(body.local.total.every((v) => typeof v === 'number')).toBe(true);
-		});
-
-		test('charts/notes via GET sets a public cache-control header for anonymous requests', async () => {
-			const res = await relativeFetch('api/charts/notes?span=hour&limit=3');
-			expect(res.status).toBe(200);
-			expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
-			const body = (await res.json()) as { local: { total: number[] } };
-			expect(body.local.total).toHaveLength(3);
+			const hourly = await relativeFetch('api/charts/notes?span=hour&limit=3');
+			expect(hourly.status).toBe(200);
+			expect(hourly.headers.get('cache-control')).toBe('public, max-age=3600');
+			const hourlyBody = (await hourly.json()) as typeof body;
+			expect(hourlyBody.local.total).toHaveLength(3);
 		});
 
 		test('charts/instance groups results by the given host', async () => {
@@ -2153,21 +2149,26 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hgfr${suffix}` });
 			const frequentTarget = await signup({ username: `hgfrf${suffix}` });
 			const rareTarget = await signup({ username: `hgfrr${suffix}` });
+			const middleTarget = await signup({ username: `hgfrm${suffix}` });
 			const neverReplied = await signup({ username: `hgfrn${suffix}` });
 
-			const frequentNote1 = await post(frequentTarget, { text: 'freq target 1' });
-			const frequentNote2 = await post(frequentTarget, { text: 'freq target 2' });
-			const rareNote = await post(rareTarget, { text: 'rare target' });
+			for (const [target, count] of [
+				[frequentTarget, 3],
+				[middleTarget, 2],
+				[rareTarget, 1],
+			] as const) {
+				for (let i = 0; i < count; i++) {
+					const targetNote = await post(target, { text: `target ${i}` });
+					await post(author, { text: `reply ${i}`, replyId: targetNote.id });
+				}
+			}
 
-			await post(author, { text: 'reply 1', replyId: frequentNote1.id });
-			await post(author, { text: 'reply 2', replyId: frequentNote2.id });
-			await post(author, { text: 'reply 3', replyId: rareNote.id });
-
-			const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 100 });
+			const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 2 });
 			expect(res.status).toBe(200);
-			const byUserId = new Map(res.body.map((r: any) => [r.user.id, r.weight]));
-			expect(byUserId.get(frequentTarget.id)).toBe(1);
-			expect(byUserId.get(rareTarget.id)).toBe(0.5);
+			expect(res.body.map((entry) => ({ id: entry.user.id, weight: entry.weight }))).toStrictEqual([
+				{ id: frequentTarget.id, weight: 1 },
+				{ id: middleTarget.id, weight: 2 / 3 },
+			]);
 
 			const empty = await api('users/get-frequently-replied-users', { userId: neverReplied.id });
 			expect(empty.status).toBe(200);
@@ -2696,56 +2697,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('i/pin, i/unpin', () => {
-		test('ノートをピン留めできる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnpin${suffix}` });
-			const note = await post(user, { text: 'test' });
-
-			const res = await api('i/pin', { noteId: note.id }, user);
-
-			expect(res.status).toBe(200);
-			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			expect(pinings).toHaveLength(1);
-			expect(getAt(pinings, 0).noteId).toBe(note.id);
-		});
-
-		test('同じノートを二重にピン留めできない', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnpin2${suffix}` });
-			const note = await post(user, { text: 'test' });
-			await api('i/pin', { noteId: note.id }, user);
-
-			const res = await api('i/pin', { noteId: note.id }, user);
-
-			expect(res.status).toBe(400);
-			expect(castAsError(res.body).error.code).toBe('ALREADY_PINNED');
-		});
-
-		test('存在しないノートはピン留めできない', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnpin3${suffix}` });
-
-			const res = await api('i/pin', { noteId: '000000000000000000000000' }, user);
-
-			expect(res.status).toBe(400);
-			expect(castAsError(res.body).error.code).toBe('NO_SUCH_NOTE');
-		});
-
-		test('ピン留めを解除できる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnunpin${suffix}` });
-			const note = await post(user, { text: 'test' });
-			await api('i/pin', { noteId: note.id }, user);
-
-			const res = await api('i/unpin', { noteId: note.id }, user);
-
-			expect(res.status).toBe(200);
-			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			expect(pinings).toHaveLength(0);
-		});
-	});
-
 	describe('i/notifications', () => {
 		test('includeTypes・excludeTypes で種別を絞り込み、includeTypes が空配列なら空配列を返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2809,18 +2760,6 @@ describe('Endpoints', () => {
 			);
 			const renoteGroup = res.body.find((n: any) => n.type === 'renote:grouped') as any;
 			expect(new Set(renoteGroup.users.map((u: any) => u.id))).toStrictEqual(new Set([renoter1.id, renoter2.id]));
-		});
-	});
-
-	describe('i/favorites', () => {
-		test('お気に入りがない場合は空配列が返る', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnfav2${suffix}` });
-
-			const res = await api('i/favorites', {}, user);
-
-			expect(res.status).toBe(200);
-			expect(res.body).toStrictEqual([]);
 		});
 	});
 

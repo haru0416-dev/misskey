@@ -19,6 +19,37 @@ import type { StoryObj } from '@/stories/types.js';
 
 const modules = import.meta.glob<Record<string, unknown>>('../src/**/*.stories.impl.ts');
 
+// 見た目・文言だけの展示は登録しない。独立した初期化経路の smoke と操作シナリオは残す。
+const catalogOnlyStories: Record<string, readonly string[]> = {
+	'components/form/MkButton': ['Default', 'Primary', 'Gradate', 'Rounded', 'Danger', 'Small', 'Large'],
+	'components/global/MkLoading': ['Inline', 'Colored', 'Mini', 'Em', 'Static'],
+	'components/global/MkEllipsis': ['Static'],
+	'components/global/MkAvatar': ['ProfilePageCat'],
+	'components/global/MkCondensedLine': ['ContainerIs100px'],
+	'components/global/MkMfm': ['Nowrap'],
+	'components/global/MkUserName': ['Wrap'],
+	'components/global/MkAd': ['Horizontal', 'HorizontalBig'],
+	'components/global/MkAcct': ['Long', 'VeryLong'],
+	'components/overlay/MkDialog': ['Success', 'Error', 'Warning', 'Info', 'Question', 'Waiting'],
+	'features/role/components/MkRoleSelectDialog': ['InfoMessage', 'Title'],
+	'components/global/MkCustomEmoji': ['Normal'],
+	'features/drive/components/MkDrive': ['TypeFilter'],
+	'components/global/MkTime': [
+		'AbsoluteFuture',
+		'DetailFuture',
+		'AbsoluteOneHourAgo',
+		'DetailOneHourAgo',
+		'AbsoluteOneDayAgo',
+		'DetailOneDayAgo',
+		'AbsoluteOneWeekAgo',
+		'DetailOneWeekAgo',
+		'AbsoluteOneMonthAgo',
+		'DetailOneMonthAgo',
+		'AbsoluteOneYearAgo',
+		'DetailOneYearAgo',
+	],
+};
+
 const worker = await startMockServiceWorker();
 const runtime = await createAppRuntime();
 
@@ -41,15 +72,16 @@ function isStory(value: unknown): value is StoryObj {
 }
 
 /**
- * すべての story を mount し、play を持つものはそれも走らせる。
+ * 展示専用として列挙したもの以外を mount し、play を持つものはそれも走らせる。
  *
- * play が無い story も mount だけはする。コンポーネントがデフォルトの args で例外を投げる退行は
- * それだけで捕まるし、カタログを開かないと分からない状態を CI に載せられる。
+ * play が無い story の初期化 smoke も残し、Vue の errorHandler へ届く例外を検出する。
  */
 for (const [path, load] of Object.entries(modules)) {
 	const title = path.replace(/^\.\.\/src\//, '').replace(/\.stories\.impl\.ts$/, '');
 	const module = await load();
-	const stories = Object.entries(module).filter(([, value]) => isStory(value)) as [string, StoryObj][];
+	const stories = Object.entries(module).filter(
+		([name, value]) => isStory(value) && !catalogOnlyStories[title]?.includes(name),
+	) as [string, StoryObj][];
 
 	if (stories.length === 0) {
 		continue;

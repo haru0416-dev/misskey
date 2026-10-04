@@ -14,7 +14,6 @@ describe('Scroll', () => {
 	describe('onScrollTop', () => {
 		test('Initial onScrollTop callback for connected elements', () => {
 			const div = window.document.createElement('div');
-			assert.strictEqual(div.scrollTop, 0);
 
 			window.document.body.append(div);
 
@@ -26,7 +25,6 @@ describe('Scroll', () => {
 
 		test('No onScrollTop callback for disconnected elements', () => {
 			const div = window.document.createElement('div');
-			assert.strictEqual(div.scrollTop, 0);
 
 			let called = false;
 			onScrollTop(div as any as HTMLElement, () => (called = true));
@@ -38,7 +36,6 @@ describe('Scroll', () => {
 	describe('onScrollBottom', () => {
 		test('Initial onScrollBottom callback for connected elements', () => {
 			const div = window.document.createElement('div');
-			assert.strictEqual(div.scrollTop, 0);
 
 			window.document.body.append(div);
 
@@ -50,7 +47,6 @@ describe('Scroll', () => {
 
 		test('No onScrollBottom callback for disconnected elements', () => {
 			const div = window.document.createElement('div');
-			assert.strictEqual(div.scrollTop, 0);
 
 			let called = false;
 			onScrollBottom(div as any as HTMLElement, () => (called = true));

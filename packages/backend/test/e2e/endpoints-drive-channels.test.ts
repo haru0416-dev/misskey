@@ -658,22 +658,6 @@ describe('Endpoints', () => {
 			expect(ids.has(fixture.ccc1.id)).toBe(true);
 			expect(ids.has(fixture.ccc2.id)).toBe(true);
 		});
-		test('名前のみの検索で名前を検索できる', async () => {
-			const fixture = await ensureChannelSearchFixture();
-			const res = await api(
-				'channels/search',
-				{
-					query: fixture.aaa.name,
-					type: 'nameOnly',
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(1);
-			expect(getAt(res.body, 0).id).toBe(fixture.aaa.id);
-		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
 			const res = await api(
@@ -686,8 +670,7 @@ describe('Endpoints', () => {
 			);
 
 			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
-			expect(res.body).toHaveLength(2);
+			expect(new Set(res.body.map((channel) => channel.id))).toStrictEqual(new Set([fixture.ccc1.id, fixture.ccc2.id]));
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -944,26 +927,6 @@ describe('Endpoints', () => {
 			});
 		}
 
-		test('uploadableFileTypes が */* なら任意のファイルをアップロードできる', async () => {
-			const createdRole = await assignRole(bob.id, {
-				uploadableFileTypes: {
-					useDefault: false,
-					priority: 1,
-					value: ['*/*'],
-				},
-			});
-
-			try {
-				const res = await uploadFile(bob, {
-					blob: new Blob([new Uint8Array(10)]),
-				});
-
-				expect(res.status).toBe(200);
-			} finally {
-				await cleanupRole(bob.id, createdRole.id);
-			}
-		});
-
 		test('uploadableFileTypes に含まれない MIME type は拒否される', async () => {
 			const createdRole = await assignRole(bob.id, {
 				uploadableFileTypes: {
@@ -984,7 +947,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('maxFileSizeMb 制限付きロールでも制限内ならアップロードできる', async () => {
+		test('ワイルドカード許可とmaxFileSizeMbの境界で10バイトは受理し11バイトは拒否する', async () => {
 			const allowAllTypesRole = await assignRole(bob.id, {
 				uploadableFileTypes: {
 					useDefault: false,
@@ -1006,36 +969,11 @@ describe('Endpoints', () => {
 				});
 
 				expect(res.status).toBe(200);
-			} finally {
-				await cleanupRole(bob.id, tinyAttachmentRole.id);
-				await cleanupRole(bob.id, allowAllTypesRole.id);
-			}
-		});
 
-		test('maxFileSizeMb 制限を超えると 413 になる', async () => {
-			const allowAllTypesRole = await assignRole(bob.id, {
-				uploadableFileTypes: {
-					useDefault: false,
-					priority: 1,
-					value: ['*/*'],
-				},
-			});
-			const tinyAttachmentRole = await assignRole(bob.id, {
-				maxFileSizeMb: {
-					useDefault: false,
-					priority: 1,
-					value: 10 / 1024 / 1024, // 10バイト
-				},
-			});
-
-			try {
-				const res = await uploadFile(bob, {
-					blob: new Blob([new Uint8Array(11)]),
-				});
-
-				expect(res.status).toBe(413);
-				assert.ok(res.body);
-				expect(castAsError(res.body).error.code).toBe('MAX_FILE_SIZE_EXCEEDED');
+				const oversized = await uploadFile(bob, { blob: new Blob([new Uint8Array(11)]) });
+				expect(oversized.status).toBe(413);
+				assert.ok(oversized.body);
+				expect(castAsError(oversized.body).error.code).toBe('MAX_FILE_SIZE_EXCEEDED');
 			} finally {
 				await cleanupRole(bob.id, tinyAttachmentRole.id);
 				await cleanupRole(bob.id, allowAllTypesRole.id);
@@ -1099,22 +1037,6 @@ describe('Endpoints', () => {
 				{
 					fileId: file!.id,
 					folderId: folder.id,
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(400);
-		});
-
-		test('不正なファイル名で怒られる', async () => {
-			const file = (await uploadFile(alice)).body;
-			const newName = '';
-
-			const res = await api(
-				'drive/files/update',
-				{
-					fileId: file!.id,
-					name: newName,
 				},
 				alice,
 			);
@@ -1313,7 +1235,7 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 
-		test('親フォルダを更新できる', async () => {
+		test('親フォルダを付けてから無しに更新できる', async () => {
 			const folder = (
 				await api(
 					'drive/folders/create',
@@ -1332,8 +1254,7 @@ describe('Endpoints', () => {
 					alice,
 				)
 			).body;
-
-			const res = await api(
+			const moved = await api(
 				'drive/folders/update',
 				{
 					folderId: folder.id,
@@ -1341,39 +1262,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
-			expect(res.body.parentId).toBe(parentFolder.id);
-		});
-
-		test('親フォルダを無しに更新できる', async () => {
-			const folder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'test',
-					},
-					alice,
-				)
-			).body;
-			const parentFolder = (
-				await api(
-					'drive/folders/create',
-					{
-						name: 'parent',
-					},
-					alice,
-				)
-			).body;
-			await api(
-				'drive/folders/update',
-				{
-					folderId: folder.id,
-					parentId: parentFolder.id,
-				},
-				alice,
-			);
+			expect(moved.status).toBe(200);
+			expect(moved.body.parentId).toBe(parentFolder.id);
 
 			const res = await api(
 				'drive/folders/update',

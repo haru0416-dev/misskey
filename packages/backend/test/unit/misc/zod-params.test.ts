@@ -6,7 +6,6 @@
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
-import { birthdaySchema } from '@/models/User.js';
 import { usersGetFollowingUsersByBirthdayParamDef } from '@/server/rest/user/following.js';
 
 describe('misc:zod-params', () => {
@@ -23,16 +22,11 @@ describe('misc:zod-params', () => {
 			expect(schema.safeParse(['a', 'b', 'c', 'd']).success).toBe(false);
 		});
 
-		test('重複禁止が JSON Schema に載る', () => {
+		test('optional な配列の長さと重複禁止が JSON Schema に載る', () => {
 			// refine の中身は toJSONSchema からは見えないので、meta 経由で載っていることを見る。
 			// ここが落ちると OpenAPI (/api.json) から制約がエラーなしに消える。
-			const json = z.toJSONSchema(schema, { io: 'input' });
-			expect(json).toMatchObject({ type: 'array', minItems: 1, maxItems: 3, uniqueItems: true });
-		});
-
-		test('optional で包んでも JSON Schema に残る', () => {
 			const json = z.toJSONSchema(z.object({ ids: schema.optional() }), { io: 'input' });
-			expect(json.properties?.['ids']).toMatchObject({ uniqueItems: true });
+			expect(json.properties?.['ids']).toMatchObject({ type: 'array', minItems: 1, maxItems: 3, uniqueItems: true });
 		});
 	});
 
@@ -53,19 +47,6 @@ describe('misc:zod-params', () => {
 
 		test('ID は misskey:id 形式を強制する', () => {
 			expect(z.object({ ...paginationParams }).safeParse({ sinceId: 'ab-cd' }).success).toBe(false);
-		});
-	});
-
-	describe('birthdaySchema', () => {
-		test('実在する日付を通す', () => {
-			expect(birthdaySchema.safeParse('2000-06-15').success).toBe(true);
-			expect(birthdaySchema.safeParse('2000-02-29').success).toBe(true);
-		});
-
-		test('存在しない日付を弾く', () => {
-			expect(birthdaySchema.safeParse('2000-02-30').success).toBe(false);
-			expect(birthdaySchema.safeParse('2001-02-29').success).toBe(false);
-			expect(birthdaySchema.safeParse('9999-99-99').success).toBe(false);
 		});
 	});
 

@@ -38,8 +38,9 @@ describe('openClient', () => {
 		const otherAccount = createClient('https://misskey.example/home', 'account-b');
 		const requestedAccount = createClient('https://misskey.example/notifications', 'account-a');
 		const openWindow = vi.fn();
+		const matchAll = vi.fn().mockResolvedValue([otherAccount, requestedAccount]);
 		vi.stubGlobal('clients', {
-			matchAll: vi.fn().mockResolvedValue([otherAccount, requestedAccount]),
+			matchAll,
 			openWindow,
 		});
 		const { openClient } = await import('@/scripts/operations.js');
@@ -47,6 +48,7 @@ describe('openClient', () => {
 		const result = await openClient('push', '/notes/note-id', 'account-a');
 
 		expect(result).toBe(requestedAccount);
+		expect(matchAll).toHaveBeenCalledWith({ includeUncontrolled: false, type: 'window' });
 		expect(otherAccount.postMessage).toHaveBeenCalledOnce();
 		expect(requestedAccount.postMessage).toHaveBeenLastCalledWith({
 			type: 'order',
@@ -72,18 +74,6 @@ describe('openClient', () => {
 		expect(result).toBe(openedClient);
 		expect(otherAccount.postMessage).toHaveBeenCalledOnce();
 		expect(openWindow).toHaveBeenCalledWith('https://misskey.example/notes/note-id?loginId=account-a');
-	});
-
-	test('only reuses clients controlled by the current service worker', async () => {
-		const openWindow = vi.fn().mockResolvedValue(null);
-		const matchAll = vi.fn().mockResolvedValue([]);
-		vi.stubGlobal('clients', { matchAll, openWindow });
-		const { openClient } = await import('@/scripts/operations.js');
-
-		await openClient('push', '/notes/note-id', 'account-a');
-
-		expect(matchAll).toHaveBeenCalledWith({ includeUncontrolled: false, type: 'window' });
-		expect(openWindow).toHaveBeenCalledOnce();
 	});
 
 	test('does not trust a loginId URL hint before the client listener is ready', async () => {

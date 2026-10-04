@@ -27,69 +27,11 @@ describe('updateHashtagsRanking', () => {
 		redis.disconnect();
 	});
 
-	/** featured ランキング更新は fire-and-forget なので、zscore が現れるまで有界ポーリングする。 */
-	async function pollFeaturedScore(tag: string): Promise<number | null> {
-		const key = `featuredHashtagsRanking:${currentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`;
-		for (let i = 0; i < 20; i++) {
-			const score = await redis.zscore(key, tag);
-			if (score != null) {
-				return Number(score);
-			}
-			await sleep(100);
-		}
-		return null;
-	}
-
 	function uniqueTag(): string {
 		return `testtag${genId()}`.toLowerCase();
 	}
 
-	test('featured ランキング (zincrby)・チャート用 pfadd・ユニークカウント用 sadd が書き込まれる', async () => {
-		const tag = uniqueTag();
-		const userId = genId();
-
-		const now = new Date();
-		now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
-		const window = formatHashtagUsersWindow(now);
-
-		await updateHashtagsRanking({ meta: { hiddenTags: [], sensitiveWords: [] }, redis }, tag, userId);
-
-		expect(await pollFeaturedScore(tag)).toBe(1);
-		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(1);
-		expect(await redis.pfcount(`hashtagUsers:${tag}:${window}`)).toBe(1);
-	});
-
-	test('同一ユーザーの2回目はランキングを加算しない (sismember スキップ)', async () => {
-		const tag = uniqueTag();
-		const userId = genId();
-		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
-
-		await updateHashtagsRanking(deps, tag, userId);
-		expect(await pollFeaturedScore(tag)).toBe(1);
-
-		await updateHashtagsRanking(deps, tag, userId);
-		await sleep(300);
-		expect(await pollFeaturedScore(tag)).toBe(1);
-	});
-
-	test('別ユーザーからの更新はランキングを加算する', async () => {
-		const tag = uniqueTag();
-		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
-
-		await updateHashtagsRanking(deps, tag, genId());
-		expect(await pollFeaturedScore(tag)).toBe(1);
-
-		await updateHashtagsRanking(deps, tag, genId());
-		for (let i = 0; i < 20; i++) {
-			if ((await pollFeaturedScore(tag)) === 2) {
-				break;
-			}
-			await sleep(100);
-		}
-		expect(await pollFeaturedScore(tag)).toBe(2);
-	});
-
-	test('複数タグを一括更新し、重複入力は1回だけ加算する', async () => {
+	test('単一・一括更新で重複タグと同一ユーザーを除き、別ユーザーだけランキングに加算する', async () => {
 		const tags = [uniqueTag(), uniqueTag()];
 		const [firstTag, secondTag] = tags;
 		if (firstTag == null || secondTag == null) {
@@ -97,15 +39,29 @@ describe('updateHashtagsRanking', () => {
 		}
 		const userId = genId();
 
-		await updateHashtagsRankings(
-			{ meta: { hiddenTags: [], sensitiveWords: [] }, redis },
-			[firstTag, secondTag, firstTag],
-			userId,
-		);
+		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
+		const now = new Date();
+		now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
+		const window = formatHashtagUsersWindow(now);
+		const featuredKey = `featuredHashtagsRanking:${currentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`;
+
+		await updateHashtagsRanking(deps, firstTag, userId);
+		await updateHashtagsRankings(deps, [firstTag, secondTag, secondTag], userId);
 
 		for (const tag of tags) {
-			expect(await pollFeaturedScore(tag)).toBe(1);
+			expect(Number(await redis.zscore(featuredKey, tag))).toBe(1);
 			expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(1);
+			expect(await redis.pfcount(`hashtagUsers:${tag}:${window}`)).toBe(1);
+		}
+
+		await updateHashtagsRankings(deps, tags, userId);
+		for (const tag of tags) {
+			expect(Number(await redis.zscore(featuredKey, tag))).toBe(1);
+		}
+
+		await updateHashtagsRankings(deps, tags, genId());
+		for (const tag of tags) {
+			expect(Number(await redis.zscore(featuredKey, tag))).toBe(2);
 		}
 	});
 

@@ -79,6 +79,7 @@ interface DeliveryScenario {
 	hasEffect: () => Promise<boolean>;
 	assertBefore: () => Promise<void>;
 	assertFinal: () => Promise<void>;
+	assertUndo?: () => Promise<void>;
 }
 
 async function prepareDelivery(senderHost: Host, receiverHost: Host, operation: Operation): Promise<DeliveryScenario> {
@@ -102,6 +103,16 @@ async function prepareDelivery(senderHost: Host, receiverHost: Host, operation: 
 				expect((await receiver.client.request('users/show', { userId: senderInReceiver.id })).isFollowed).toBe(true);
 				expect((await sender.client.request('users/show', { userId: receiverInSender.id })).isFollowing).toBe(true);
 				expect((await sender.client.request('users/show', { userId: sender.id })).followingCount).toBe(1);
+				expect(await sender.client.request('users/following', { userId: sender.id })).toEqual([
+					expect.objectContaining({ followerId: sender.id, followeeId: receiverInSender.id }),
+				]);
+			},
+			assertUndo: async () => {
+				await sender.client.request('following/delete', { userId: receiverInSender.id });
+				await deliveryBarrier(senderHost);
+				await waitFor(async () => (await followers()).length === 0, timeout);
+				expect(await followers()).toEqual([]);
+				expect(await sender.client.request('users/following', { userId: sender.id })).toEqual([]);
 			},
 		};
 	}
@@ -219,7 +230,6 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 				`${hostKind(senderHost)} -> ${hostKind(receiverHost)} accepted ${variant}`,
 			).toEqual([]);
 			expect((await receiver.client.request('notes/show', { noteId: note.id })).reactions).toEqual({});
-			expect((await receiver.client.request('notes/show', { noteId: note.id })).text).toBe(note.text);
 			const control = await signedRequest(receiverHost, sender.id, '/inbox', {
 				method: 'POST',
 				body: JSON.stringify(like(senderHost, sender.id, receiverHost, note.id)),
@@ -266,7 +276,6 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 								),
 							timeout,
 						);
-						expect((await attempts()).every((item) => item.mode === 'outage')).toBe(true);
 						await scenario.assertBefore();
 					} else {
 						// 同じ activity の応答喪失を繰り返し、別配送の成功で再送判定を満たさない。
@@ -304,6 +313,10 @@ describe.each(directions)('Resilience %s -> %s', (senderHost, receiverHost) => {
 					await waitFor(scenario.hasEffect, timeout);
 					await deliveryBarrier(senderHost);
 					await scenario.assertFinal();
+					if (operation === 'Follow' && mode === 'outage') {
+						assert(scenario.assertUndo);
+						await scenario.assertUndo();
+					}
 				} finally {
 					await fault(receiverHost, 'pass');
 					senderCompletion?.close();

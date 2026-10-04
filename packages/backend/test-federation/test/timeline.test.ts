@@ -48,6 +48,7 @@ describe('Timeline', () => {
 		expect: boolean,
 		noteParams: Misskey.entities.NotesCreateRequest = {},
 		channelParams: Misskey.Channels[C]['params'] = {},
+		checkDeletionEvent = false,
 	) {
 		let note: Misskey.entities.Note | undefined;
 		const text = noteParams.text ?? crypto.randomUUID();
@@ -88,14 +89,18 @@ describe('Timeline', () => {
 		strictEqual(endpointFired, expect);
 
 		if (expect) {
-			const streamingFired = await isNoteUpdatedEventFired(
-				'b.test',
-				bob,
-				noteInB!.id,
-				async () => await alice.client.request('notes/delete', { noteId: note!.id }),
-				(msg) => msg.type === 'deleted' && msg.id === noteInB!.id,
-			);
-			strictEqual(streamingFired, true);
+			if (checkDeletionEvent) {
+				const streamingFired = await isNoteUpdatedEventFired(
+					'b.test',
+					bob,
+					noteInB!.id,
+					() => alice.client.request('notes/delete', { noteId: note!.id }),
+					(msg) => msg.type === 'deleted' && msg.id === noteInB!.id,
+				);
+				strictEqual(streamingFired, true);
+			} else {
+				await alice.client.request('notes/delete', { noteId: note!.id });
+			}
 
 			let notes = await (bob.client.request as Request)(endpoint, params);
 			if (notes.some(({ uri }) => uri === `https://a.test/notes/${note!.id}`)) {
@@ -115,7 +120,7 @@ describe('Timeline', () => {
 
 		describe("Check reception of remote followee's Note", () => {
 			test("Receive remote followee's Note", async () => {
-				await postAndCheckReception(homeTimeline, true);
+				await postAndCheckReception(homeTimeline, true, {}, {}, true);
 			});
 
 			test("Receive remote followee's home-only Note", async () => {
@@ -123,11 +128,17 @@ describe('Timeline', () => {
 			});
 
 			test("Receive remote followee's followers-only Note", async () => {
-				await postAndCheckReception(homeTimeline, true, { visibility: 'followers' });
+				await postAndCheckReception(homeTimeline, true, { visibility: 'followers' }, {}, true);
 			});
 
 			test("Receive remote followee's visible specified-only Note", async () => {
-				await postAndCheckReception(homeTimeline, true, { visibility: 'specified', visibleUserIds: [bobInA.id] });
+				await postAndCheckReception(
+					homeTimeline,
+					true,
+					{ visibility: 'specified', visibleUserIds: [bobInA.id] },
+					{},
+					true,
+				);
 			});
 
 			test("Don't receive remote followee's localOnly Note", async () => {

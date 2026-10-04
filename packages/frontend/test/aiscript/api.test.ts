@@ -108,25 +108,13 @@ describe('AiScript common API', () => {
 				};
 			});
 
-			test.concurrent('USER_ID', async () => {
-				const [res] = await exe(`
+			test.concurrent('exposes account constants', async () => {
+				const res = await exe(`
 					<: USER_ID
-				`);
-				expect(res).toStrictEqual(values.STR('xxxxxxxx'));
-			});
-
-			test.concurrent('USER_NAME', async () => {
-				const [res] = await exe(`
 					<: USER_NAME
-				`);
-				expect(res).toStrictEqual(values.STR('藍'));
-			});
-
-			test.concurrent('USER_USERNAME', async () => {
-				const [res] = await exe(`
 					<: USER_USERNAME
 				`);
-				expect(res).toStrictEqual(values.STR('ai'));
+				expect(res).toStrictEqual([values.STR('xxxxxxxx'), values.STR('藍'), values.STR('ai')]);
 			});
 		});
 
@@ -135,25 +123,13 @@ describe('AiScript common API', () => {
 				$iMock = null;
 			});
 
-			test.concurrent('USER_ID', async () => {
-				const [res] = await exe(`
+			test.concurrent('exposes null account constants', async () => {
+				const res = await exe(`
 					<: USER_ID
-				`);
-				expect(res).toStrictEqual(values.NULL);
-			});
-
-			test.concurrent('USER_NAME', async () => {
-				const [res] = await exe(`
 					<: USER_NAME
-				`);
-				expect(res).toStrictEqual(values.NULL);
-			});
-
-			test.concurrent('USER_USERNAME', async () => {
-				const [res] = await exe(`
 					<: USER_USERNAME
 				`);
-				expect(res).toStrictEqual(values.NULL);
+				expect(res).toStrictEqual([values.NULL, values.NULL, values.NULL]);
 			});
 		});
 	});
@@ -345,30 +321,16 @@ describe('AiScript common API', () => {
 			);
 		});
 
-		test('not value found to load', { concurrent: false }, async () => {
-			const [res] = await exe(`
-				<: Mk:load('key')
-			`);
-			expect(res).toStrictEqual(values.NULL);
-		});
-
-		test('remove existing', { concurrent: false }, async () => {
+		test('remove existing and missing', { concurrent: false }, async () => {
 			const res = await exe(`
 				Mk:save('key', 'value')
 				<: Mk:load('key')
 				<: Mk:remove('key')
 				<: Mk:load('key')
-			`);
-			expect(res).toStrictEqual([values.STR('value'), values.NULL, values.NULL]);
-		});
-
-		test('remove nothing', { concurrent: false }, async () => {
-			const res = await exe(`
-				<: Mk:load('key')
 				<: Mk:remove('key')
 				<: Mk:load('key')
 			`);
-			expect(res).toStrictEqual([values.NULL, values.NULL, values.NULL]);
+			expect(res).toStrictEqual([values.STR('value'), values.NULL, values.NULL, values.NULL, values.NULL]);
 		});
 	});
 

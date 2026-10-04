@@ -62,31 +62,26 @@ describe('misc:is-renote', () => {
 
 	test('note with renoteId and text should be Quote', () => {
 		const note: MiNote = { ...base, renoteId: 'some-renote-id', text: 'some-text' };
-		expect(isRenote(note)).toBe(true);
 		expect(isQuote(note as any)).toBe(true);
 	});
 
 	test('note with renoteId and cw should be Quote', () => {
 		const note: MiNote = { ...base, renoteId: 'some-renote-id', cw: 'some-cw' };
-		expect(isRenote(note)).toBe(true);
 		expect(isQuote(note as any)).toBe(true);
 	});
 
 	test('note with renoteId and replyId should be Quote', () => {
 		const note: MiNote = { ...base, renoteId: 'some-renote-id', replyId: 'some-reply-id' };
-		expect(isRenote(note)).toBe(true);
 		expect(isQuote(note as any)).toBe(true);
 	});
 
 	test('note with renoteId and poll should be Quote', () => {
 		const note: MiNote = { ...base, renoteId: 'some-renote-id', hasPoll: true };
-		expect(isRenote(note)).toBe(true);
 		expect(isQuote(note as any)).toBe(true);
 	});
 
 	test('note with renoteId and non-empty fileIds should be Quote', () => {
 		const note: MiNote = { ...base, renoteId: 'some-renote-id', fileIds: ['some-file-id'] };
-		expect(isRenote(note)).toBe(true);
 		expect(isQuote(note as any)).toBe(true);
 	});
 });

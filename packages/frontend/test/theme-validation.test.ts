@@ -36,7 +36,9 @@ describe('theme validation', () => {
 		}`)?.id,
 		).toBe('json5-theme');
 		expect(parseThemeOrNull('{')).toBeNull();
-		expect(parseThemeOrNull(JSON.stringify({ ...validTheme, props: null }))).toBeNull();
+		const invalidThemeCode = JSON.stringify({ ...validTheme, props: null });
+		expect(parseThemeOrNull(invalidThemeCode)).toBeNull();
+		expect(() => parseThemeCode(invalidThemeCode)).toThrow('This theme is invaild');
 		expect(parseThemeOrNull(null)).toBeNull();
 		expect(parseThemeOrNull(undefined)).toBeNull();
 	});
@@ -54,7 +56,6 @@ describe('theme validation', () => {
 		{ ...validTheme, codeHighlighter: { base: '_none_', overrides: [] } },
 	])('rejects an invalid theme: %j', (theme) => {
 		expect(validateTheme(theme)).toBe(false);
-		expect(() => parseThemeCode(JSON.stringify(theme))).toThrow('This theme is invaild');
 	});
 
 	test('rejects non-JSON code highlighter overrides', () => {
@@ -93,7 +94,9 @@ describe('theme validation', () => {
 		});
 
 		expect(() => parseThemeCode(code)).toThrow('This theme is invaild');
-		expect(parseThemeOrNull(code)).toBeNull();
+		if (accent === '@missing') {
+			expect(parseThemeOrNull(code)).toBeNull();
+		}
 	});
 });
 

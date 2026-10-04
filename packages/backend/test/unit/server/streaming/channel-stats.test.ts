@@ -66,13 +66,14 @@ describe('hono-stream-connection: stats channels', () => {
 	test('queueStats: requestLog要求に対しstatsLogを返す', async () => {
 		// 実際にはデーモン (server/daemons/queue-stats.ts) が 'requestQueueStatsLog' を購読して
 		// 'queueStatsLog:<id>' で応答する。ここではデーモンを起動しないため、その応答側を模擬する。
-		const onRequest = (x: { id: string; length?: number }) => {
-			testEv.emit(`queueStatsLog:${x.id}`, [{ deliver: {}, inbox: {} }]);
-		};
+		const log = [{ deliver: { active: 3 }, inbox: { active: 4 } }];
+		const onRequest = vi.fn((x: { id: string; length?: number }) => {
+			testEv.emit(`queueStatsLog:${x.id}`, log);
+		});
 		testEv.on('requestQueueStatsLog', onRequest);
+		const connection = new StreamConnection(deps, null, null);
 
 		try {
-			const connection = new StreamConnection(deps, null, null);
 			await connection.init();
 			const subscriber = new EventEmitter();
 			const { raw, send } = collectSentMessages();
@@ -86,46 +87,41 @@ describe('hono-stream-connection: stats channels', () => {
 				}),
 			);
 
-			await waitUntil(() => channelMessages(raw).some((m) => (m as { type: string }).type === 'statsLog'));
+			await waitUntil(() => channelMessages(raw).some((m) => m.type === 'statsLog'));
 
-			const statsLog = channelMessages(raw).find((m) => (m as { type: string }).type === 'statsLog');
-			expect(statsLog).toBeDefined();
+			expect(onRequest).toHaveBeenCalledOnce();
+			expect(onRequest).toHaveBeenCalledWith({ id: 'req1', length: 10 });
+			expect(channelMessages(raw)).toEqual([{ id: 'conn1', type: 'statsLog', body: log }]);
 		} finally {
 			testEv.off('requestQueueStatsLog', onRequest);
+			connection.dispose();
 		}
 	});
 
-	test('serverStats: 未ログインでも接続でき、serverStatsイベントを受け取れる', async () => {
+	test('serverStats: 未ログインでもイベントを受け取り、切断後は購読を解放する', async () => {
 		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();
 		connection.listen(subscriber, send);
 
-		await connection.connectChannel('conn1', {}, 'serverStats', false);
+		const listenersBefore = testEv.listeners('serverStats');
+		try {
+			await connection.connectChannel('conn1', {}, 'serverStats', false);
 
-		testEv.emit('serverStats', { cpu: 0.1, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
-		await waitUntil(() => channelMessages(raw).length > 0);
+			testEv.emit('serverStats', { cpu: 0.1, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
+			await waitUntil(() => channelMessages(raw).length > 0);
 
-		const messages = channelMessages(raw);
-		expect(messages).toHaveLength(1);
-		expect((messages[0] as { type: string }).type).toBe('stats');
-	});
-
-	test('serverStats: dispose後はイベントを受け取らない', async () => {
-		const connection = new StreamConnection(deps, null, null);
-		await connection.init();
-		const subscriber = new EventEmitter();
-		const { raw, send } = collectSentMessages();
-		connection.listen(subscriber, send);
-
-		await connection.connectChannel('conn1', {}, 'serverStats', false);
-		connection.disconnectChannel('conn1');
-
-		testEv.emit('serverStats', { cpu: 0.2, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
-		// 「届かないこと」を見るので、届くだけの猶予を置いてから確認する
-		await new Promise((resolve) => setTimeout(resolve, 100));
-
-		expect(channelMessages(raw)).toHaveLength(0);
+			const messages = channelMessages(raw);
+			expect(messages).toHaveLength(1);
+			expect(messages[0]?.type).toBe('stats');
+			connection.disconnectChannel('conn1');
+			expect(testEv.listeners('serverStats')).toEqual(listenersBefore);
+			raw.length = 0;
+			testEv.emit('serverStats', { cpu: 0.2, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
+			expect(channelMessages(raw)).toEqual([]);
+		} finally {
+			connection.dispose();
+		}
 	});
 });

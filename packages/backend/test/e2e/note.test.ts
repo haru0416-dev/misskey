@@ -47,6 +47,9 @@ describe('Note', () => {
 		const initialState = await api('notes/state', { noteId: note.id }, alice);
 		expect(initialState.status).toBe(200);
 		expect(initialState.body.isFavorited).toBe(false);
+		const initialFavorites = await api('i/favorites', {}, alice);
+		expect(initialFavorites.status).toBe(200);
+		expect(initialFavorites.body).toStrictEqual([]);
 
 		const create = await api('notes/favorites/create', { noteId: note.id }, alice);
 		expect(create.status).toBe(204);
@@ -74,7 +77,7 @@ describe('Note', () => {
 
 		const removedFavorites = await api('i/favorites', { limit: 10 }, alice);
 		expect(removedFavorites.status).toBe(200);
-		expect(removedFavorites.body.some((favorite) => favorite.noteId === note.id)).toBe(false);
+		expect(removedFavorites.body).toStrictEqual([]);
 
 		const duplicateRemove = await api('notes/favorites/delete', { noteId: note.id }, alice);
 		expect(duplicateRemove.status).toBe(400);

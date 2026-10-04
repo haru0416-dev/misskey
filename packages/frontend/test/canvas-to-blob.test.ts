@@ -4,19 +4,13 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { canvasToBlob, renderCanvasToBlob } from '@/utility/canvas-to-blob.js';
+import { renderCanvasToBlob } from '@/utility/canvas-to-blob.js';
 
 function createCanvas(result: Blob | null): HTMLCanvasElement {
 	return {
 		toBlob: (callback: BlobCallback) => callback(result),
 	} as HTMLCanvasElement;
 }
-
-describe('canvasToBlob', () => {
-	test('rejects when the browser returns null', async () => {
-		await expect(canvasToBlob(createCanvas(null), 'image/png')).rejects.toThrow('Failed to convert canvas to blob');
-	});
-});
 
 describe('renderCanvasToBlob', () => {
 	test('returns the blob and destroys the renderer after success', async () => {
@@ -28,7 +22,9 @@ describe('renderCanvasToBlob', () => {
 
 	test('always destroys the renderer when conversion fails', async () => {
 		const destroy = vi.fn();
-		await expect(renderCanvasToBlob(createCanvas(null), async () => {}, destroy, 'image/png')).rejects.toThrow();
+		await expect(renderCanvasToBlob(createCanvas(null), async () => {}, destroy, 'image/png')).rejects.toThrow(
+			'Failed to convert canvas to blob',
+		);
 		expect(destroy).toHaveBeenCalledOnce();
 	});
 

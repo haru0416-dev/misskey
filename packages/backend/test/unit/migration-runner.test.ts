@@ -240,19 +240,14 @@ INSERT INTO "migration_probe" ("id", "value") VALUES (1, 'initial');`,
 		}
 	});
 
-	test('a fresh database applies every journal entry in order and records each file hash', async () => {
-		const entries = await writeFixture();
-		expect(await listPendingMigrations(config, directory)).toEqual(pendingEntries(entries));
-		expect(await runMigrations(config, directory)).toEqual(pendingEntries(entries));
+	test('a migration appended later runs alone and keeps existing data', async () => {
+		const initialEntries = await writeFixture();
+		expect(await listPendingMigrations(config, directory)).toEqual(pendingEntries(initialEntries));
+		expect(await runMigrations(config, directory)).toEqual(pendingEntries(initialEntries));
 		expect(await probeRows()).toEqual([{ id: 1, value: 'initial', enabled: true }]);
 		expect(await history()).toEqual(originalSql.map((sql, index) => ({ hash: sha256(sql), when: (index + 1) * 100 })));
 		expect(await runMigrations(config, directory)).toEqual([]);
 		expect(await listPendingMigrations(config, directory)).toEqual([]);
-	});
-
-	test('a migration appended later runs alone and keeps existing data', async () => {
-		await writeFixture();
-		await runMigrations(config, directory);
 		await pool!.unsafe(`UPDATE "migration_probe" SET "value" = 'user-data' WHERE "id" = 1`);
 		await pool!.unsafe(`INSERT INTO "migration_probe" ("id", "value") VALUES (2, 'another-user')`);
 

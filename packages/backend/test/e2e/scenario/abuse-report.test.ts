@@ -230,37 +230,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			expect(webhookBody2).toBe('timeout');
 		});
 
-		test('通報を受けた -> abuseReportが未許可の場合は送出されない -> 解決 -> abuseReportResolvedが未許可の場合は送出されない', async () => {
-			const webhook = await createSystemWebhook({
-				on: [],
-				isActive: true,
-			});
-			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
-
-			const abuse = {
-				userId: alice.id,
-				comment: randomString(),
-			};
-			const webhookBody1 = await captureWebhook(async () => {
-				await createAbuseReport(abuse, bob);
-			}).catch((e) => e.message);
-
-			expect(webhookBody1).toBe('timeout');
-
-			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
-
-			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport(
-					{
-						reportId: abuseReportId,
-					},
-					admin,
-				);
-			}).catch((e) => e.message);
-
-			expect(webhookBody2).toBe('timeout');
-		});
-
 		test('通報を受けた -> Webhookが無効の場合は送出されない', async () => {
 			const webhook = await createSystemWebhook({
 				on: ['abuseReport', 'abuseReportResolved'],

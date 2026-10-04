@@ -70,29 +70,6 @@ describe('hono-queue-object-storage', () => {
 		expect(deleteMock).toHaveBeenCalledOnce();
 	});
 
-	test('deleteFileSync: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
-		const fileId = genId();
-		await createDriveFileInDatabase(db, {
-			id: fileId,
-			md5: 'dummy',
-			name: 'test.png',
-			type: 'image/png',
-			size: 100,
-			storedInternal: true,
-			url: 'http://example.com/test.png',
-			accessKey: `access-${fileId}`,
-			userHost: null,
-		});
-		const file = await fetchDriveFileByIdFromDatabase(db, fileId);
-		expect(file).not.toBeNull();
-
-		await deleteFileSync(deps, file!, false);
-
-		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
-		expect(after).toBeNull();
-		expect(deps.internalStorageService.del).toHaveBeenCalledWith(`access-${fileId}`);
-	});
-
 	test('deleteFileSync: storage削除失敗時はレコードを残し、再試行後にだけ消す', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
@@ -115,6 +92,7 @@ describe('hono-queue-object-storage', () => {
 
 		await expect(deleteFileSync(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
+		expect(del).toHaveBeenLastCalledWith(`retry-access-${fileId}`);
 		await expect(deleteFileSync(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
 	});

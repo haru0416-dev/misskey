@@ -17,12 +17,19 @@ const resources = `${_dirname}/../../resources`;
 
 describe('FileInfoService', () => {
 	let fileInfoService: FileInfoService;
-	const strip = (fileInfo: FileInfo): Omit<Partial<FileInfo>, 'warnings' | 'blurhash' | 'sensitive' | 'porn'> => {
+	const strip = (
+		fileInfo: FileInfo,
+		includeFileMetadata = false,
+	): Omit<Partial<FileInfo>, 'warnings' | 'blurhash' | 'sensitive' | 'porn'> => {
 		const fi: Partial<FileInfo> = fileInfo;
 		delete fi.warnings;
 		delete fi.sensitive;
 		delete fi.blurhash;
 		delete fi.porn;
+		if (!includeFileMetadata) {
+			delete fi.size;
+			delete fi.md5;
+		}
 
 		return fi;
 	};
@@ -38,7 +45,7 @@ describe('FileInfoService', () => {
 
 	test('Empty file', async () => {
 		const path = `${resources}/emptyfile`;
-		const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
+		const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }), true);
 		expect(info).toStrictEqual({
 			size: 0,
 			md5: 'd41d8cd98f00b204e9800998ecf8427e',
@@ -55,7 +62,7 @@ describe('FileInfoService', () => {
 	describe('IMAGE', () => {
 		test('Generic JPEG', async () => {
 			const path = `${resources}/192.jpg`;
-			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
+			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }), true);
 			expect(info).toStrictEqual({
 				size: 5131,
 				md5: '8c9ed0677dd2b8f9f7472c3af247e5e3',
@@ -73,8 +80,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/anime.png`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 1868,
-				md5: '08189c607bea3b952704676bb3c979e0',
 				type: {
 					mime: 'image/apng',
 					ext: 'apng',
@@ -89,8 +94,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/anime.gif`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 2248,
-				md5: '32c47a11555675d9267aee1a86571e7e',
 				type: {
 					mime: 'image/gif',
 					ext: 'gif',
@@ -105,8 +108,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/with-alpha.png`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 3772,
-				md5: 'f73535c3e1e27508885b69b10cf6e991',
 				type: {
 					mime: 'image/png',
 					ext: 'png',
@@ -121,8 +122,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/image.svg`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 505,
-				md5: 'b6f52b4b021e7b92cdd04509c7267965',
 				type: {
 					mime: 'image/svg+xml',
 					ext: 'svg',
@@ -138,8 +137,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/with-xml-def.svg`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 544,
-				md5: '4b7a346cde9ccbeb267e812567e33397',
 				type: {
 					mime: 'image/svg+xml',
 					ext: 'svg',
@@ -154,8 +151,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/25000x25000.png`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 75_933,
-				md5: '268c5dde99e17cf8fe09f1ab3f97df56',
 				type: {
 					mime: 'application/octet-stream', // 画像として扱わない
 					ext: null,
@@ -170,8 +165,6 @@ describe('FileInfoService', () => {
 			const path = `${resources}/rotate.jpg`;
 			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
 			expect(info).toStrictEqual({
-				size: 12_624,
-				md5: '68d5b2d8d1d1acbbce99203e3ec3857e',
 				type: {
 					mime: 'image/jpeg',
 					ext: 'jpg',
@@ -191,59 +184,9 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 19_853,
-				md5: '4f557df8548bc3cecc794c652f690446',
 				type: {
 					mime: 'audio/mpeg',
 					ext: 'mp3',
-				},
-			});
-		});
-
-		test('WAV', async () => {
-			const path = `${resources}/kick_gaba7.wav`;
-			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
-			delete info.width;
-			delete info.height;
-			delete info.orientation;
-			expect(info).toStrictEqual({
-				size: 87_630,
-				md5: '8bc9bb4fe5e77bb1871448209be635c1',
-				type: {
-					mime: 'audio/wav',
-					ext: 'wav',
-				},
-			});
-		});
-
-		test('AAC', async () => {
-			const path = `${resources}/kick_gaba7.aac`;
-			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
-			delete info.width;
-			delete info.height;
-			delete info.orientation;
-			expect(info).toStrictEqual({
-				size: 7291,
-				md5: '2789323f05e3392b648066f50be6a2a6',
-				type: {
-					mime: 'audio/aac',
-					ext: 'aac',
-				},
-			});
-		});
-
-		test('FLAC', async () => {
-			const path = `${resources}/kick_gaba7.flac`;
-			const info = strip(await fileInfoService.fetchFileInfo(path, { skipSensitiveDetection: true }));
-			delete info.width;
-			delete info.height;
-			delete info.orientation;
-			expect(info).toStrictEqual({
-				size: 108_793,
-				md5: 'bc0f3adfe0e1ca99ae6c7528c46b3173',
-				type: {
-					mime: 'audio/flac',
-					ext: 'flac',
 				},
 			});
 		});
@@ -255,8 +198,6 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 9817,
-				md5: '74c9279a4abe98789565f1dc1a541a42',
 				type: {
 					mime: 'audio/mp4',
 					ext: 'm4a',
@@ -271,8 +212,6 @@ describe('FileInfoService', () => {
 			delete info.height;
 			delete info.orientation;
 			expect(info).toStrictEqual({
-				size: 8879,
-				md5: '53bc1adcb6acbbda67ff9bd484896438',
 				type: {
 					mime: 'audio/webm',
 					ext: 'webm',

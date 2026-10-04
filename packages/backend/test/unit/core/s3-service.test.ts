@@ -65,11 +65,12 @@ describe('S3Service', () => {
 		}) as MiMeta;
 
 	describe('upload', () => {
-		test('PUT でオブジェクトを書き、Content-Type を送る', async () => {
+		test('PUT でオブジェクトを書き、Content-Type と Content-Disposition を送る', async () => {
 			await s3Service.upload(meta(), {
 				key: 'dir/file.png',
 				body: new TextEncoder().encode('x'),
 				contentType: 'image/png',
+				contentDisposition: 'inline; filename="x.png"',
 				publicRead: false,
 			});
 
@@ -78,6 +79,7 @@ describe('S3Service', () => {
 			expect(req.method).toBe('PUT');
 			expect(req.url).toBe('/fake/dir/file.png');
 			expect(req.headers['content-type']).toBe('image/png');
+			expect(req.headers['content-disposition']).toBe('inline; filename="x.png"');
 			expect(req.headers['authorization']).toMatch(/^AWS4-HMAC-SHA256 /);
 			expect(req.body).toBe('x');
 		});
@@ -99,17 +101,6 @@ describe('S3Service', () => {
 				publicRead: true,
 			});
 			expect(requests[0]!.headers['x-amz-acl']).toBe('public-read');
-		});
-
-		test('contentDisposition を送る', async () => {
-			await s3Service.upload(meta(), {
-				key: 'a',
-				body: new Uint8Array([1]),
-				contentType: 'text/plain',
-				contentDisposition: 'inline; filename="x.txt"',
-				publicRead: false,
-			});
-			expect(requests[0]!.headers['content-disposition']).toBe('inline; filename="x.txt"');
 		});
 
 		test('forcePathStyle を切るとバケットがパスから外れる', async () => {

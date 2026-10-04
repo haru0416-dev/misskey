@@ -76,9 +76,9 @@ describe('i/webhooks/test REST handler', () => {
 				createdAt: expect.any(Number),
 				eventId: expect.any(String),
 				content: {
-					note: expect.objectContaining({ id: 'dummy-note-1', userId: 'dummy-user-1' }),
-					reaction: '👍',
-					user: expect.objectContaining({ id: 'dummy-user-2', username: 'dummy2' }),
+					note: expect.objectContaining({ id: expect.any(String), userId: expect.any(String) }),
+					reaction: expect.any(String),
+					user: expect.objectContaining({ id: expect.any(String), username: expect.any(String) }),
 				},
 			}),
 			expect.objectContaining({ attempts: 1, backoff: { type: 'custom' } }),

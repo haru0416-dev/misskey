@@ -5,7 +5,7 @@
 
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { api, castAsError, role, signup } from '../utils.js';
+import { api, castAsError, createAppToken, role, signup } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
 
@@ -21,6 +21,17 @@ describe('Chat', () => {
 	});
 
 	test('room invitations and memberships work', async () => {
+		const noSuchRoomId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
+		const joinMissing = await api('chat/rooms/join', { roomId: noSuchRoomId }, bob);
+		expect(joinMissing.status).toBe(400);
+		expect(castAsError(joinMissing.body).error.id).toBe('84416476-5ce8-4a2c-b568-9569f1b10733');
+		const leaveMissing = await api('chat/rooms/leave', { roomId: noSuchRoomId }, bob);
+		expect(leaveMissing.status).toBe(400);
+		expect(castAsError(leaveMissing.body).error.id).toBe('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
+		const muteMissing = await api('chat/rooms/mute', { roomId: noSuchRoomId, mute: true }, bob);
+		expect(muteMissing.status).toBe(400);
+		expect(castAsError(muteMissing.body).error.id).toBe('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
+
 		const roomRes = await api(
 			'chat/rooms/create',
 			{
@@ -34,6 +45,12 @@ describe('Chat', () => {
 		expect(roomRes.body.ownerId).toBe(alice.id);
 
 		const roomId = roomRes.body.id;
+		const missingInvitee = await api('chat/rooms/invitations/create', { roomId, userId: noSuchRoomId }, alice);
+		expect(missingInvitee.status).toBe(400);
+		expect(castAsError(missingInvitee.body).error.id).toBe('0f451b9e-fc21-491a-b2bf-46331103a945');
+		const outsider = await api('chat/rooms/show', { roomId }, bob);
+		expect(outsider.status).toBe(400);
+		expect(castAsError(outsider.body).error.id).toBe('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 
 		const owned = await api(
 			'chat/rooms/owned',
@@ -79,6 +96,31 @@ describe('Chat', () => {
 		expect(inviteBob.status).toBe(200);
 		expect(inviteBob.body.roomId).toBe(roomId);
 		expect(inviteBob.body.userId).toBe(bob.id);
+
+		const duplicateInvitation = await api('chat/rooms/invitations/create', { roomId, userId: bob.id }, alice);
+		expect(duplicateInvitation.status).toBe(400);
+		expect(castAsError(duplicateInvitation.body).error.code).toBe('CANNOT_CREATE_INVITATION');
+		const selfInvitation = await api('chat/rooms/invitations/create', { roomId, userId: alice.id }, alice);
+		expect(selfInvitation.status).toBe(400);
+		expect(castAsError(selfInvitation.body).error.code).toBe('INVALID_PARAM');
+
+		const parallelInvitations = await Promise.all([
+			api('chat/rooms/invitations/create', { roomId, userId: carol.id }, alice),
+			api('chat/rooms/invitations/create', { roomId, userId: carol.id }, alice),
+		]);
+		expect(parallelInvitations.filter((result) => result.status === 200)).toHaveLength(1);
+		const parallelDuplicate = parallelInvitations.find((result) => result.status === 400);
+		assert.ok(parallelDuplicate);
+		expect(castAsError(parallelDuplicate.body).error.code).toBe('CANNOT_CREATE_INVITATION');
+		const [parallelJoin, invitationDuringJoin] = await Promise.all([
+			api('chat/rooms/join', { roomId }, carol),
+			api('chat/rooms/invitations/create', { roomId, userId: carol.id }, alice),
+		]);
+		expect(parallelJoin.status).toBe(204);
+		expect(invitationDuringJoin.status).toBe(400);
+		expect(castAsError(invitationDuringJoin.body).error.code).toBe('CANNOT_CREATE_INVITATION');
+		const parallelLeave = await api('chat/rooms/leave', { roomId }, carol);
+		expect(parallelLeave.status).toBe(204);
 
 		const outbox = await api(
 			'chat/rooms/invitations/outbox',
@@ -129,6 +171,10 @@ describe('Chat', () => {
 		expect(members.status).toBe(200);
 		assert.ok(members.body.some((membership) => membership.userId === bob.id && membership.user?.username === 'bob'));
 
+		const readOnlyToken = await createAppToken(alice, ['read:chat']);
+		const membersWithReadOnlyToken = await api('chat/rooms/members', { roomId }, { token: readOnlyToken });
+		expect(membersWithReadOnlyToken.status).toBe(403);
+
 		const mute = await api(
 			'chat/rooms/mute',
 			{
@@ -172,6 +218,13 @@ describe('Chat', () => {
 		expect(timeline.status).toBe(200);
 		assert.ok(timeline.body.some((item) => item.id === message.body.id && item.text === 'hello room'));
 
+		const ownerMessage = await api('chat/messages/create-to-room', { toRoomId: roomId, text: 'owner message' }, alice);
+		expect(ownerMessage.status).toBe(200);
+		expect(ownerMessage.body.toRoomId).toBe(roomId);
+		const memberTimeline = await api('chat/messages/room-timeline', { roomId }, bob);
+		expect(memberTimeline.status).toBe(200);
+		expect(memberTimeline.body.some((item) => item.id === ownerMessage.body.id)).toBe(true);
+
 		const search = await api(
 			'chat/messages/search',
 			{
@@ -182,6 +235,10 @@ describe('Chat', () => {
 		);
 		expect(search.status).toBe(200);
 		assert.ok(search.body.some((item) => item.id === message.body.id && item.toRoomId === roomId));
+
+		const roomSearch = await api('chat/messages/search', { query: 'hello room', roomId }, alice);
+		expect(roomSearch.status).toBe(200);
+		expect(roomSearch.body.some((item) => item.id === message.body.id)).toBe(true);
 
 		const inviteCarol = await api(
 			'chat/rooms/invitations/create',
@@ -224,6 +281,10 @@ describe('Chat', () => {
 		);
 		expect(afterLeave.status).toBe(200);
 		expect(afterLeave.body.some((membership) => membership.roomId === roomId)).toBe(false);
+
+		const deniedDelete = await api('chat/rooms/delete', { roomId }, bob);
+		expect(deniedDelete.status).toBe(400);
+		expect(castAsError(deniedDelete.body).error.id).toBe('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 
 		const remove = await api('chat/rooms/delete', { roomId }, alice);
 		expect(remove.status).toBe(204);

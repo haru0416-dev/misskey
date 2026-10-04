@@ -10,15 +10,11 @@ import { dateUTC } from '@/misc/prelude/time.js';
 import { parseLocalApUri } from '@/server/rest/activitypub/ap-resolve.js';
 
 describe('misc:content-disposition', () => {
-	test('inline', () => {
+	test('passes through disposition types and replaces spaces in the fallback', () => {
 		expect(contentDisposition('inline', 'foo bar')).toMatch(
 			/^inline; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/,
 		);
-	});
-	test('attachment', () => {
-		expect(contentDisposition('attachment', 'foo bar')).toMatch(
-			/^attachment; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/,
-		);
+		expect(contentDisposition('attachment', 'foo bar')).toMatch(/^attachment;/);
 	});
 	test('non ascii', () => {
 		expect(contentDisposition('attachment', 'ファイル名')).toMatch(

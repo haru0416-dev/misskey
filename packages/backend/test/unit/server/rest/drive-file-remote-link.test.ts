@@ -16,7 +16,7 @@ import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase
 import { genId } from '@/misc/id/gen-id.js';
 import { uploadDriveFileFromUrl } from '@/server/rest/drive/drive-file-upload.js';
 import type { DriveFileUploadDependencies, DeclaredRemoteFile } from '@/server/rest/drive/drive-file-upload.js';
-import { isValidBlurhash, parseDeclaredMedia } from '@/server/rest/activitypub/declared-media.js';
+import { parseDeclaredMedia } from '@/server/rest/activitypub/declared-media.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -61,13 +61,9 @@ describe('parseDeclaredMedia', () => {
 			height: null,
 			blurhash: null,
 		});
-	});
-
-	test('blurhash は文字種と先頭文字が決める長さを照合する', () => {
-		expect(isValidBlurhash('LEHV6nWB2yk8pyo0adR*.7kCMdnj')).toBe(true);
-		expect(isValidBlurhash('LEHV6nWB2yk8pyo0adR*.7kCMdn')).toBe(false);
-		expect(isValidBlurhash('LEHV6nWB2yk8pyo0adR*.7kCMd\n')).toBe(false);
-		expect(isValidBlurhash('')).toBe(false);
+		for (const blurhash of ['LEHV6nWB2yk8pyo0adR*.7kCMd\n', '']) {
+			expect(parseDeclaredMedia({ ...mastodonDocument, blurhash })).toMatchObject({ blurhash: null });
+		}
 	});
 });
 

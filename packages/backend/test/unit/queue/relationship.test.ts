@@ -87,19 +87,24 @@ describe('hono-queue-relationship', () => {
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).toBeNull();
-	});
 
-	test('handleQueueRelationshipUnfollow は既にフォローしていない場合は何もしない', async () => {
-		const follower = await createTestUser(deps);
-		const followee = await createTestUser(deps);
-
-		const result = await handleQueueRelationshipUnfollow(deps, { from: follower, to: followee, silent: true });
-		expect(result).toBe('ok');
+		expect(await handleQueueRelationshipUnfollow(deps, { from: follower, to: followee, silent: true })).toBe('ok');
+		expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id)).toBeNull();
 	});
 
 	test('handleQueueRelationshipBlock はフォロー解除・フォローリクエスト取消・ブロック作成を行う', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
+
+		await createFollowRequestInDatabase(deps.db, {
+			id: genId(),
+			followerId: blockee.id,
+			followeeId: blocker.id,
+		});
+		expect(await handleQueueRelationshipBlock(deps, { from: blocker, to: blockee, silent: true })).toBe('ok');
+		expect(await fetchFollowRequestFromDatabase(deps.db, blockee.id, blocker.id)).toBeNull();
+		expect(await handleQueueRelationshipUnblock(deps, { from: blocker, to: blockee, silent: true })).toBe('ok');
+		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)).toBeNull();
 
 		await createFollowingInDatabase(deps.db, {
 			id: genId(),
@@ -128,22 +133,6 @@ describe('hono-queue-relationship', () => {
 		expect(blocking!.blockeeId).toBe(blockee.id);
 	});
 
-	test('handleQueueRelationshipBlock は保留中のフォローリクエストも取り消す', async () => {
-		const blocker = await createTestUser(deps);
-		const blockee = await createTestUser(deps);
-
-		await createFollowRequestInDatabase(deps.db, {
-			id: genId(),
-			followerId: blockee.id,
-			followeeId: blocker.id,
-		});
-
-		await handleQueueRelationshipBlock(deps, { from: blocker, to: blockee, silent: true });
-
-		const request = await fetchFollowRequestFromDatabase(deps.db, blockee.id, blocker.id);
-		expect(request).toBeNull();
-	});
-
 	test('handleQueueRelationshipUnblock はブロックを削除する', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
@@ -155,14 +144,11 @@ describe('hono-queue-relationship', () => {
 		expect(result).toBe('ok');
 
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)).toBeNull();
-	});
 
-	test('handleQueueRelationshipUnblock はブロックしていない場合はskipする', async () => {
-		const blocker = await createTestUser(deps);
-		const blockee = await createTestUser(deps);
-
-		const result = await handleQueueRelationshipUnblock(deps, { from: blocker, to: blockee, silent: true });
-		expect(result).toBe('skip: not blocking');
+		expect(await handleQueueRelationshipUnblock(deps, { from: blocker, to: blockee, silent: true })).toBe(
+			'skip: not blocking',
+		);
+		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)).toBeNull();
 	});
 
 	test('handleQueueRelationshipFollow はローカル同士なら即フォロー関係を作る', async () => {

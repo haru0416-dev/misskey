@@ -27,14 +27,24 @@ describe('parseChangeLog', () => {
 		return parseChangeLog(file);
 	}
 
-	it('リリース・カテゴリ・トップレベル項目を構造として読み取れる', () => {
+	it('リリース構造を読み取り、カテゴリ外・ネスト・コードフェンス・不正な区切りの項目を除く', () => {
 		const releases = parse(
 			[
 				'## Unreleased',
+				'- カテゴリ外の項目',
 				'',
 				'### General',
 				'- Feat: A',
+				'  - ネストされた詳細1',
+				'  - ネストされた詳細2',
 				'- Fix: B',
+				'```',
+				'- これは項目ではない',
+				'## これはリリースではない',
+				'```',
+				'-',
+				'-　全角スペース区切りは項目ではない',
+				'--- これも項目ではない',
 				'',
 				'### Server',
 				'- Enhance: C',
@@ -46,67 +56,23 @@ describe('parseChangeLog', () => {
 			].join('\n'),
 		);
 
-		expect(releases.map((r) => r.releaseName)).toEqual(['Unreleased', '1.0.0']);
-		expect(releases[0].categories.map((c) => c.categoryName)).toEqual(['General', 'Server']);
-		expect(releases[0].categories[0].items).toEqual(['Feat: A', 'Fix: B']);
-		expect(releases[1].categories[0].items).toEqual(['Fix: D']);
-	});
-
-	it('インデントされたネスト項目は数えない', () => {
-		const releases = parse(
-			[
-				'## Unreleased',
-				'### General',
-				'- Fix: 親項目',
-				'  - ネストされた詳細1',
-				'  - ネストされた詳細2',
-				'- Feat: 次の項目',
-			].join('\n'),
-		);
-
-		expect(releases[0].categories[0].items).toHaveLength(2);
-	});
-
-	it('コードフェンス内の行は無視する', () => {
-		const releases = parse(
-			[
-				'## Unreleased',
-				'### General',
-				'- Fix: 項目',
-				'```',
-				'- これは項目ではない',
-				'## これはリリースではない',
-				'```',
-			].join('\n'),
-		);
-
-		expect(releases).toHaveLength(1);
-		expect(releases[0].categories[0].items).toHaveLength(1);
-	});
-
-	it('中身が空の bullet も 1 項目として数える', () => {
-		const releases = parse(['## Unreleased', '### General', '-'].join('\n'));
-
-		expect(releases[0].categories[0].items).toEqual(['']);
-	});
-
-	it('bullet の直後が ASCII 空白でない行は項目として数えない', () => {
-		const releases = parse(
-			[
-				'## Unreleased',
-				'### General',
-				'- 通常の項目',
-				'-　全角スペース区切りは項目ではない',
-				'--- これも項目ではない',
-			].join('\n'),
-		);
-
-		expect(releases[0].categories[0].items).toHaveLength(1);
-	});
-
-	it('カテゴリより前の箇条書きは無視する', () => {
-		const releases = parse(['## Unreleased', '- カテゴリ外の項目', '### General', '- カテゴリ内の項目'].join('\n'));
-
-		expect(releases[0].categories[0].items).toEqual(['カテゴリ内の項目']);
+		expect(
+			releases.map((release) => ({
+				name: release.releaseName,
+				categories: release.categories.map((category) => ({
+					name: category.categoryName,
+					items: category.items,
+				})),
+			})),
+		).toEqual([
+			{
+				name: 'Unreleased',
+				categories: [
+					{ name: 'General', items: ['Feat: A', 'Fix: B', ''] },
+					{ name: 'Server', items: ['Enhance: C'] },
+				],
+			},
+			{ name: '1.0.0', categories: [{ name: 'Client', items: ['Fix: D'] }] },
+		]);
 	});
 });

@@ -136,7 +136,7 @@ describe('Pinia persisted state plugin', () => {
 		expect(fixture.storage.get('pinia::test::device')).toEqual({ nested: { existing: true } });
 	});
 
-	test('batches same-tick writes into one storage operation', async () => {
+	test('batches same-tick writes to different keys and retains the latest value', async () => {
 		const fixture = createTestIo({ sourceId: 'tab-a' });
 		const store = createStore(
 			'batched-writes',
@@ -152,11 +152,13 @@ describe('Pinia persisted state plugin', () => {
 		);
 		await store.$persistReady;
 
-		store.$patch({ first: 1, second: 2 });
+		store.$patch({ first: 1 });
+		store.$patch({ first: 2 });
+		store.$patch({ second: 3 });
 		await store.$persistFlush();
 
 		expect(fixture.setCalls).toHaveLength(1);
-		expect(fixture.storage.get('pinia::batch::device')).toEqual({ first: 1, second: 2 });
+		expect(fixture.storage.get('pinia::batch::device')).toEqual({ first: 2, second: 3 });
 	});
 
 	test('preserves different keys written concurrently by multiple tabs', async () => {
@@ -180,28 +182,6 @@ describe('Pinia persisted state plugin', () => {
 		await Promise.all([first.$persistFlush(), second.$persistFlush()]);
 
 		expect(storage.get('pinia::concurrent::device')).toEqual({ first: 1, second: 2 });
-	});
-
-	test('coalesces a burst of writes to the latest value', async () => {
-		const fixture = createTestIo({ sourceId: 'tab-a' });
-		const store = createStore(
-			'burst-writes',
-			() => ({ value: 0 }),
-			{
-				namespace: 'burst',
-				properties: { value: { where: 'device' } },
-			},
-			fixture.io,
-		);
-		await store.$persistReady;
-
-		for (let i = 1; i <= 100; i++) {
-			store.$patch({ value: i });
-		}
-		await store.$persistFlush();
-
-		expect(fixture.setCalls).toHaveLength(1);
-		expect(fixture.storage.get('pinia::burst::device')).toEqual({ value: 100 });
 	});
 
 	test('continues processing writes after a storage failure', async () => {

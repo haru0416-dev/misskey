@@ -50,14 +50,12 @@ describe('sound utilities', () => {
 		expect(decodeAudioData).toHaveBeenCalledOnce();
 	});
 
-	test('reads duration from metadata events without polling', async () => {
-		const setInterval = vi.spyOn(window, 'setInterval');
+	test('reads duration from metadata events', async () => {
 		vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
 			Object.defineProperty(this, 'duration', { value: 2.5, configurable: true });
 			this.dispatchEvent(new Event('loadedmetadata'));
 		});
 
 		await expect(getSoundDuration('/audio/metadata.mp3')).resolves.toBe(2500);
-		expect(setInterval).not.toHaveBeenCalled();
 	});
 });

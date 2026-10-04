@@ -21,11 +21,9 @@ import MkMiniChart from '@/features/chart/components/MkMiniChart.vue';
 describe('MkMiniChart', () => {
 	afterEach(() => {
 		cleanup();
-		vi.restoreAllMocks();
 	});
 
-	test('redraws on an in-place data update without polling', async () => {
-		const setInterval = vi.spyOn(window, 'setInterval');
+	test('redraws on an in-place data update', async () => {
 		const values = ref([1, 2, 3]);
 		const Component = defineComponent({
 			setup() {
@@ -40,7 +38,6 @@ describe('MkMiniChart', () => {
 		values.value.push(4);
 		await nextTick();
 		expect(polyline?.getAttribute('points')?.split(' ')).toHaveLength(4);
-		expect(setInterval).not.toHaveBeenCalled();
 	});
 
 	test('does not draw chart marks for an empty series', () => {

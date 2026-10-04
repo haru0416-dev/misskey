@@ -162,6 +162,9 @@ describe.each<[Host, Host]>([
 			expect(
 				(await author.client.request('users/followers', { userId: author.id })).map((relation) => relation.followerId),
 			).toEqual([followerOnPeer.id]);
+			expect(await follower.client.request('users/following', { userId: follower.id })).toEqual([
+				expect.objectContaining({ followerId: follower.id, followeeId: authorOnSource.id }),
+			]);
 			expect(await author.client.request('following/requests/list', {})).toEqual([]);
 
 			await follower.client.request('following/delete', { userId: authorOnSource.id });
@@ -261,7 +264,7 @@ describe.each<[Host, Host]>([
 			const reactorOnPeer = await resolveRemoteUser(sourceHost, reactor.id, author);
 			const original = (await author.client.request('notes/create', { text: crypto.randomUUID() })).createdNote;
 			const remote = await resolveRemoteNote(peerHost, original.id, reactor);
-			const reaction = '\u2764';
+			const reaction = '😅';
 			await reactor.client.request('notes/reactions/create', { noteId: remote.id, reaction });
 			await waitFor(
 				async () => (await author.client.request('notes/reactions', { noteId: original.id })).length === 1,
@@ -271,6 +274,7 @@ describe.each<[Host, Host]>([
 			expect(await author.client.request('notes/reactions', { noteId: original.id })).toEqual([
 				expect.objectContaining({ type: reaction, user: expect.objectContaining({ id: reactorOnPeer.id }) }),
 			]);
+			expect((await author.client.request('notes/show', { noteId: original.id })).reactions).toEqual({ [reaction]: 1 });
 			await reactor.client.request('notes/reactions/delete', { noteId: remote.id });
 			await deliveryBarrier(sourceHost);
 			await waitFor(
@@ -362,16 +366,38 @@ describe.each<[Host, Host]>([
 			const destinationActor = await document(await unsignedRequest(peerHost, `/users/${destination.id}`));
 			expect(destinationActor['alsoKnownAs']).toContain(`https://${sourceHost}/users/${source.id}`);
 			await source.client.request('i/move', { moveToAccount: `@${destination.username}@${peerHost}` });
-			await waitFor(async () => {
-				const [localFollowing, remoteFollowing] = await Promise.all([
-					sourceFollower.client.request('users/following', { userId: sourceFollower.id }),
-					destinationFollower.client.request('users/following', { userId: destinationFollower.id }),
-				]);
-				return (
-					localFollowing.some((relation) => relation.followeeId === destinationOnSource.id) &&
-					remoteFollowing.some((relation) => relation.followeeId === destination.id)
-				);
-			}, convergenceTimeout);
+			expect((await source.client.request('i', {})).movedTo).toBe(destinationOnSource.id);
+			await waitFor(
+				async () =>
+					(await sourceFollower.client.request('users/following', { userId: sourceFollower.id })).some(
+						(relation) => relation.followeeId === destinationOnSource.id,
+					),
+				convergenceTimeout,
+			);
+			const localFollowing = await sourceFollower.client.request('users/following', { userId: sourceFollower.id });
+			expect(localFollowing).toHaveLength(2);
+			expect(localFollowing).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						followeeId: source.id,
+						followee: expect.objectContaining({ id: source.id, url: null }),
+					}),
+					expect.objectContaining({
+						followeeId: destinationOnSource.id,
+						followee: expect.objectContaining({
+							id: destinationOnSource.id,
+							url: `https://${peerHost}/@${destination.username}`,
+						}),
+					}),
+				]),
+			);
+			await waitFor(
+				async () =>
+					(await destinationFollower.client.request('users/following', { userId: destinationFollower.id })).some(
+						(relation) => relation.followeeId === destination.id,
+					),
+				convergenceTimeout,
+			);
 			await deliveryBarrier(sourceHost);
 			const sourceFollowerOnPeer = await resolveRemoteUser(sourceHost, sourceFollower.id, destination);
 			expect(
@@ -379,7 +405,6 @@ describe.each<[Host, Host]>([
 					.map((relation) => relation.followerId)
 					.sort(),
 			).toEqual([sourceFollowerOnPeer.id, destinationFollower.id].sort());
-			expect((await source.client.request('i', {})).movedTo).toBe(destinationOnSource.id);
 			expect((await destinationFollower.client.request('users/show', { userId: sourceOnPeer.id })).movedTo).toBe(
 				destination.id,
 			);
@@ -444,6 +469,7 @@ describe.each<[Host, Host]>([
 						(item) => item.uri === uri,
 					),
 				).toBe(false);
+				await expect(allowed.client.request('ap/show', { uri })).rejects.toMatchObject({ code: 'REQUEST_FAILED' });
 			} else {
 				assert(remote);
 				if (publiclyFetchable) {
@@ -492,7 +518,23 @@ describe.each<[Host, Host]>([
 			}
 			const cachedActor = await allowed.client.request('users/show', { userId: authorOnPeer.id });
 			expect(cachedActor.pinnedNotes.some((item) => item.uri === uri)).toBe(publiclyFetchable);
-			if (!publiclyFetchable) expect(JSON.stringify(cachedActor.pinnedNotes)).not.toContain(text);
+			if (!publiclyFetchable) {
+				expect(cachedActor.pinnedNoteIds).toEqual([]);
+				expect(JSON.stringify(cachedActor.pinnedNotes)).not.toContain(text);
+			} else {
+				assert(remote);
+				expect(cachedActor.pinnedNoteIds).toEqual([remote.id]);
+				expect(cachedActor.pinnedNotes.map((item) => item.id)).toEqual([remote.id]);
+			}
+			if (visibility === 'public') {
+				await author.client.request('i/unpin', { noteId: note.id });
+				await deliveryBarrier(sourceHost);
+				const unpinnedActor = await allowed.client.request('users/show', { userId: authorOnPeer.id });
+				expect(unpinnedActor.pinnedNoteIds).toEqual([]);
+				expect(unpinnedActor.pinnedNotes).toEqual([]);
+				const featured = await document(await unsignedRequest(sourceHost, `/users/${author.id}/collections/featured`));
+				expect(orderedItems(featured)).toEqual([]);
+			}
 		},
 		testTimeout,
 	);

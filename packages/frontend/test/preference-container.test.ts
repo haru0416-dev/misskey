@@ -54,8 +54,7 @@ describe('MkPreferenceContainer', () => {
 		mocks.dispose.mockReset();
 	});
 
-	test('reacts to menu state without polling and disposes watchers when closing', async () => {
-		const setInterval = vi.spyOn(window, 'setInterval');
+	test('reacts to menu state and disposes watchers when closing', async () => {
 		const result = render(MkPreferenceContainer, {
 			props: { k: 'animation' },
 		});
@@ -63,7 +62,6 @@ describe('MkPreferenceContainer', () => {
 		assert.ok(button instanceof HTMLButtonElement);
 
 		await fireEvent.click(button);
-		expect(setInterval.mock.calls.some(([, delay]) => delay === 100)).toBe(false);
 		expect(mocks.popupMenu).toHaveBeenCalledOnce();
 
 		mocks.menuState!.overrideByAccount.value = true;

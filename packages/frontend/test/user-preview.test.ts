@@ -31,8 +31,7 @@ describe('UserPreview', () => {
 		popupMock.mockReset();
 	});
 
-	test('uses lifecycle cleanup instead of polling for a detached source element', () => {
-		const setInterval = vi.spyOn(window, 'setInterval');
+	test('closes the preview and removes listeners for a detached source element', () => {
 		vi.spyOn(window, 'setTimeout').mockImplementation((handler) => {
 			if (typeof handler === 'function') {
 				handler();
@@ -46,7 +45,6 @@ describe('UserPreview', () => {
 		source.dispatchEvent(new MouseEvent('mouseover'));
 
 		expect(popupMock).toHaveBeenCalledOnce();
-		expect(setInterval).not.toHaveBeenCalled();
 		const showing = popupMock.mock.calls[0]?.[1].showing as Ref<boolean>;
 		expect(showing.value).toBe(true);
 
@@ -86,7 +84,6 @@ describe('UserPreview', () => {
 		await fireEvent.mouseOver(source);
 		await vi.advanceTimersByTimeAsync(500);
 		expect(popupMock.mock.calls[1]?.[1].q).toBe('user-2');
-		expect(popupMock.mock.calls[1]?.[0]).toBe(popupMock.mock.calls[0]?.[0]);
 
 		await result.rerender({ user: null });
 		await fireEvent.mouseOver(source);

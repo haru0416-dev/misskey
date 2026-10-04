@@ -20,7 +20,7 @@
 
 ## ハーネスの境界
 
-[stories.browser.ts](../../../../../packages/frontend/test/stories.browser.ts) は検出した全 story を mount し、ある場合だけ play を実行する。カタログ本体は play を実行しないので、画面を開いたことと play 成功を区別する。
+[stories.browser.ts](../../../../../packages/frontend/test/stories.browser.ts) は、`catalogOnlyStories` に列挙した表示 variation を除いて story を mount し、ある場合だけ play を実行する。独立した初期化 smoke と操作シナリオは残す。カタログ専用の export は表示できるが自動検証の対象ではない。除外した story に操作・結果の保証を追加するときは除外一覧から外す。カタログ本体は play を実行しないので、画面を開いたことと play 成功を区別する。
 
 [environment.ts](../../../../../packages/frontend/src/stories/environment.ts) と [seed-account.ts](../../../../../packages/frontend/src/stories/seed-account.ts) が mock、account、instance、popup の初期化を担う。module import 時の初期化順を崩さない。ログイン済み fixture の成功を、匿名や別 account での非漏洩の証拠にしない。
 

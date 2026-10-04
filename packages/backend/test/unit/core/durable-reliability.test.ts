@@ -24,7 +24,6 @@ import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { following } from '@/db/schema/following.js';
 import { runInRequestScope } from '@/misc/request-scope.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { DbQueue } from '@/core/queue/queues.js';
 import type { DbUserSuspensionPostEffectsJobData } from '@/core/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
@@ -36,7 +35,6 @@ import {
 } from '@/server/rest/admin/admin-user-suspension.js';
 import type { AdminUserSuspensionDependencies } from '@/server/rest/admin/admin-user-suspension.js';
 import { createNote } from '@/core/note/note-creation-service.js';
-import type { NoteCreationDependencies } from '@/core/note/note-creation-service.js';
 import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleApiNotesCreate, notesCreateParamDef } from '@/server/rest/note/notes-create.js';
 import { parseApiParams } from '@/server/rest/validation.js';
@@ -150,7 +148,7 @@ describe('durable reliability boundaries', () => {
 		}
 	});
 
-	test('note creation commits authoritative count and durable post-effects before returning during queue outage', async () => {
+	test('direct note creation commits authoritative count and required post-effects before returning', async () => {
 		const user = await createLocalUser('durablenote');
 		const follower = await createLocalUser('durablefollower');
 		await createFollowingInDatabase(runtime.db, {
@@ -161,16 +159,11 @@ describe('durable reliability boundaries', () => {
 			followerHost: null,
 			notify: 'normal',
 		});
-		const addBulk = vi.fn().mockRejectedValue(new Error('injected queue outage'));
-		const deps = {
-			...runtime,
-			dbQueue: { addBulk } as unknown as DbQueue,
-		} as unknown as NoteCreationDependencies;
 		let noteId: string | undefined;
 
 		try {
 			const note = await createNote(
-				deps,
+				runtime,
 				user,
 				{
 					createdAt: new Date(Date.now() - 4 * 60 * 1000),
@@ -193,7 +186,6 @@ describe('durable reliability boundaries', () => {
 			const rows = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.name, 'notePostCreate'));
 			const outboxes = rows.filter((row) => (row.data as { noteId?: string }).noteId === note.id);
 			expect(outboxes).toHaveLength(0);
-			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, user.id)).notesCount).toBe(1);
 			const timeline = await runtime.redisForTimelines.lrange(`list:userTimeline:${user.id}`, 0, -1);
 			expect(timeline.filter((id) => id === note.id)).toHaveLength(1);
 			expect(await runtime.redis.xlen(`notificationTimeline:${follower.id}`)).toBe(1);

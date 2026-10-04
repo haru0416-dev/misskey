@@ -22,10 +22,6 @@ export const buildParsedSignature = (signingString: string, signature: string, a
 	};
 };
 
-function cartesianProduct<T, U>(a: T[], b: U[]): [T, U][] {
-	return a.flatMap((a) => b.map((b) => [a, b] as [T, U]));
-}
-
 describe('ap-request', () => {
 	test('createSignedPost with verify', async () => {
 		const keypair = await genRsaKeyPair();
@@ -97,9 +93,16 @@ describe('ap-request', () => {
 		).not.toThrow();
 
 		// https://github.com/misskey-dev/misskey/issues/15039
-		const withOrWithoutWWW = ['https://alice.example.com/abc', 'https://www.alice.example.com/abc'];
+		const canonicalUrl = 'https://alice.example.com/abc';
+		const wwwUrl = 'https://www.alice.example.com/abc';
+		const wwwCases = [
+			[canonicalUrl, canonicalUrl, canonicalUrl],
+			[wwwUrl, canonicalUrl, canonicalUrl],
+			[canonicalUrl, wwwUrl, canonicalUrl],
+			[canonicalUrl, canonicalUrl, wwwUrl],
+		] as const;
 
-		cartesianProduct(cartesianProduct(withOrWithoutWWW, withOrWithoutWWW), withOrWithoutWWW).forEach(([[a, b], c]) => {
+		wwwCases.forEach(([a, b, c]) => {
 			expect(
 				() => assertActivityMatchesUrl(a, { id: b } as IObject, c, FetchAllowSoftFailMask.Strict),
 				'validation should pass with or without www. subdomain',

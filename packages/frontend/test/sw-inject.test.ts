@@ -23,30 +23,22 @@ describe('swInject', () => {
 		vi.resetModules();
 	});
 
-	test('registers the service worker listener only once', async () => {
-		const addEventListener = vi.fn();
-		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
-		const { swInject } = await import('@/ui/common/sw-inject.js');
-
-		swInject();
-		swInject();
-
-		expect(addEventListener).toHaveBeenCalledOnce();
-	});
-
-	test('reports the account represented by the client', async () => {
-		let listener: ((event: MessageEvent) => void) | undefined;
+	test('reports the client account once after repeated injection', async () => {
+		const listeners: ((event: MessageEvent) => Promise<void>)[] = [];
 		const addEventListener = vi.fn((_type, callback) => {
-			listener = callback;
+			listeners.push(callback);
 		});
 		vi.stubGlobal('navigator', { serviceWorker: { addEventListener } });
 		const { swInject } = await import('@/ui/common/sw-inject.js');
 		const postMessage = vi.fn();
 
 		swInject();
-		listener?.({ data: { type: 'requestClientAccount' }, ports: [{ postMessage }] } as unknown as MessageEvent);
+		swInject();
+		const event = { data: { type: 'requestClientAccount' }, ports: [{ postMessage }] } as unknown as MessageEvent;
+		await Promise.all(listeners.map((listener) => listener(event)));
 
 		expect(postMessage).toHaveBeenCalledWith({ loginId: 'account-a' });
+		expect(postMessage).toHaveBeenCalledOnce();
 	});
 
 	test('does not switch accounts for an invalid order message', async () => {

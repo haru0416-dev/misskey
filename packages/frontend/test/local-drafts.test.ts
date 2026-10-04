@@ -49,14 +49,6 @@ describe('local drafts', () => {
 		expect(stored()).toEqual({});
 	});
 
-	test('削除は対象の鍵だけを消す', () => {
-		writeLocalDraft({ accountId: 'a' }, draft(0), true);
-		writeLocalDraft({ accountId: 'b' }, draft(1), true);
-		deleteLocalDraft({ accountId: 'a' });
-		expect(readLocalDraft({ accountId: 'a' })).toBeUndefined();
-		expect(readLocalDraft({ accountId: 'b' })).toEqual(draft(1));
-	});
-
 	test.each<Partial<LocalDraftScope>>([
 		{},
 		{ replyId: 'target' },

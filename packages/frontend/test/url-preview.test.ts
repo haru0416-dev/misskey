@@ -70,17 +70,10 @@ describe('MkUrlPreview', () => {
 		cleanup();
 	});
 
-	test('Should render the description', async () => {
+	test('renders the description and sets up the player iframe', async () => {
 		const mkUrlPreview = await renderPreviewBy({
 			url: 'https://example.local',
 			description: 'Mocked description',
-		});
-		mkUrlPreview.getByText('Mocked description');
-	});
-
-	test('Having a player should setup the iframe', async () => {
-		const mkUrlPreview = await renderPreviewBy({
-			url: 'https://example.local',
 			player: {
 				url: 'https://example.local/player',
 				width: null,
@@ -88,8 +81,8 @@ describe('MkUrlPreview', () => {
 				allow: [],
 			},
 		});
+		mkUrlPreview.getByText('Mocked description');
 		const buttons = mkUrlPreview.getAllByRole('button');
-		assert.strictEqual(buttons.length, 2, 'two buttons');
 		const playerButton = buttons[0];
 		assert.exists(playerButton, 'player button should exist');
 		playerButton.click();
@@ -101,20 +94,6 @@ describe('MkUrlPreview', () => {
 			iframe?.sandbox.toString(),
 			'allow-popups allow-popups-to-escape-sandbox allow-scripts allow-storage-access-by-user-activation allow-same-origin',
 		);
-	});
-
-	test('Having a player with `allow` field should set permissions', async () => {
-		const iframe = await renderAndOpenPreview({
-			url: 'https://example.local',
-			player: {
-				url: 'https://example.local/player',
-				width: null,
-				height: null,
-				allow: ['fullscreen', 'web-share'],
-			},
-		});
-		assert.exists(iframe, 'iframe should exist');
-		assert.strictEqual(iframe?.allow, 'fullscreen;web-share');
 	});
 
 	test('A Summaly proxy response without allow falls back to the default', async () => {
@@ -138,11 +117,11 @@ describe('MkUrlPreview', () => {
 				url: 'https://example.local/player',
 				width: null,
 				height: null,
-				allow: ['autoplay', 'camera', 'fullscreen'],
+				allow: ['autoplay', 'camera', 'fullscreen', 'web-share'],
 			},
 		});
 		assert.exists(iframe, 'iframe should exist');
-		assert.strictEqual(iframe?.allow, 'autoplay;fullscreen');
+		assert.strictEqual(iframe?.allow, 'autoplay;fullscreen;web-share');
 	});
 
 	test('Having a player width should keep the fixed aspect ratio', async () => {

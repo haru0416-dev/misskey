@@ -57,16 +57,14 @@ describe('splitHeldMajors', () => {
 			[
 				{ name: 'typescript', from: '6.0.3', to: '7.0.2' },
 				{ name: 'vitest', from: '4.1.11', to: '5.0.1' },
+				{ name: 'typescript', from: '6.0.3', to: '8.0.0' },
 			],
 			held,
 		);
-		expect(pending).toEqual([{ name: 'vitest', from: '4.1.11', to: '5.0.1' }]);
+		expect(pending).toEqual([
+			{ name: 'vitest', from: '4.1.11', to: '5.0.1' },
+			{ name: 'typescript', from: '6.0.3', to: '8.0.0' },
+		]);
 		expect(kept).toEqual([{ name: 'typescript', from: '6.0.3', to: '7.0.2', reason: 'API がない' }]);
-	});
-
-	test('次のメジャーが出たら判断対象に戻す', () => {
-		const { pending, held: kept } = splitHeldMajors([{ name: 'typescript', from: '6.0.3', to: '8.0.0' }], held);
-		expect(pending).toHaveLength(1);
-		expect(kept).toHaveLength(0);
 	});
 });

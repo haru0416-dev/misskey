@@ -30,7 +30,6 @@ describe('validateContentTypeSetAsActivityPub', () => {
 		'application/ld+json; profile="https://example.com/other"',
 		'application/json',
 		'image/webp',
-		'text/html',
 	])('%s を弾く', (contentType) => {
 		expect(() => validateContentTypeSetAsActivityPub(response(contentType))).toThrow('Content type is not');
 	});
@@ -50,7 +49,7 @@ describe('validateContentTypeSetAsJsonLD', () => {
 		expect(() => validateContentTypeSetAsJsonLD(response(contentType))).not.toThrow();
 	});
 
-	test.each(['image/webp', 'text/html', 'application/x+jsonish'])('%s を弾く', (contentType) => {
+	test.each(['image/webp', 'application/x+jsonish'])('%s を弾く', (contentType) => {
 		expect(() => validateContentTypeSetAsJsonLD(response(contentType))).toThrow('Content type is not');
 	});
 

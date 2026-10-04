@@ -161,27 +161,22 @@ describe('Endpoints', () => {
 	});
 
 	describe('api metadata', () => {
-		test('endpoints returns known endpoint names', async () => {
-			const res = await api('endpoints', {});
-
-			expect(res.status).toBe(200);
-			assert.ok(Array.isArray(res.body));
-			assert.ok(res.body.includes('endpoint'));
-			assert.ok(res.body.includes('endpoints'));
-			assert.ok(res.body.includes('i'));
-		});
-
-		test('endpoint returns parameter metadata and null for missing endpoint', async () => {
-			const res = await api('endpoint', {
-				endpoint: 'i/update',
-			});
+		test('endpoint一覧からパラメータ情報を取得でき、存在しないendpointはnullを返す', async () => {
+			const endpoints = await api('endpoints', {});
+			expect(endpoints.status).toBe(200);
+			const endpoint = endpoints.body.find((name) => name === 'i/update');
+			expect(endpoint).toBe('i/update');
+			assert.ok(endpoint);
+			const res = await api('endpoint', { endpoint });
 
 			expect(res.status).toBe(200);
 			if (res.body == null) {
 				expect.unreachable('endpoint metadata is missing');
 			}
 			assert.ok(Array.isArray(res.body.params));
-			assert.ok(res.body.params.some((param) => param.name === 'name' && param.type === 'String'));
+			expect(res.body.params).toEqual(
+				expect.arrayContaining([expect.objectContaining({ name: 'name', type: 'String' })]),
+			);
 
 			const missing = await api('endpoint', {
 				endpoint: 'missing/endpoint',
@@ -217,17 +212,6 @@ describe('Endpoints', () => {
 			}
 			expect(detailedBody.features.miauth).toBe(true);
 			expect(typeof detailedBody.proxyAccountName).toBe('string');
-		});
-
-		test('ping returns current timestamp', async () => {
-			const before = Date.now();
-			const res = await api('ping', {});
-			const after = Date.now();
-
-			expect(res.status).toBe(200);
-			expect(typeof res.body.pong).toBe('number');
-			assert.ok(res.body.pong >= before);
-			assert.ok(res.body.pong <= after);
 		});
 
 		test('server-info supports GET and cache header', async () => {
@@ -2018,7 +2002,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('flash', () => {
-		test('作成できる', async () => {
+		test('Flashを作成して取得し、自分の一覧に表示できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflc${suffix}` });
 
@@ -2037,52 +2021,20 @@ describe('Endpoints', () => {
 			expect(res.body.title).toBe('test flash');
 			expect(res.body.userId).toBe(user.id);
 			expect(res.body.visibility).toBe('public');
-		});
 
-		test('作成したFlashを取得できる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnfls${suffix}` });
-			const created = await api(
-				'flash/create',
-				{
-					title: 'test flash',
-					summary: 'summary',
-					script: 'Ui:render([])',
-					permissions: [],
-				},
-				user,
-			);
+			const shown = await api('flash/show', { flashId: res.body.id }, user);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(res.body.id);
 
-			const res = await api('flash/show', { flashId: created.body.id }, user);
-
-			expect(res.status).toBe(200);
-			expect(res.body.id).toBe(created.body.id);
+			const mine = await api('flash/my', {}, user);
+			expect(mine.status).toBe(200);
+			expect(mine.body.map((flash) => flash.id)).toEqual([res.body.id]);
 		});
 
 		test('存在しないFlashの取得は怒られる', async () => {
 			const res = await api('flash/show', { flashId: '000000000000000000000000' });
 			expect(res.status).toBe(400);
 			expect(castAsError(res.body).error.code).toBe('NO_SUCH_FLASH');
-		});
-
-		test('自分のFlash一覧が取得できる', async () => {
-			const suffix = Date.now().toString(36).slice(-8);
-			const user = await signup({ username: `hnflm${suffix}` });
-			await api(
-				'flash/create',
-				{
-					title: 'test flash',
-					summary: 'summary',
-					script: 'Ui:render([])',
-					permissions: [],
-				},
-				user,
-			);
-
-			const res = await api('flash/my', {}, user);
-
-			expect(res.status).toBe(200);
-			expect(res.body).toHaveLength(1);
 		});
 
 		test('削除できる', async () => {

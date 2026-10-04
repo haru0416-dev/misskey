@@ -147,10 +147,9 @@ describe('media lightbox', () => {
 		const open = singleFlight(task);
 		const first = open('first');
 		const second = open('second');
-		assert.equal(first, second);
 		assert.equal(task.mock.calls.length, 1);
 		resolve?.();
-		await first;
+		await Promise.all([first, second]);
 		task.mockImplementation((_id: string) => Promise.resolve());
 		await open('third');
 		assert.equal(task.mock.calls.length, 2);

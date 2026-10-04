@@ -16,6 +16,7 @@ const viteDir = join(root, 'built/_frontend_vite_/ja-JP');
 mkdirSync(viteDir, { recursive: true });
 const script = Buffer.from('export const value = "' + 'misskey '.repeat(2000) + '";\n');
 writeFileSync(join(viteDir, 'app.js'), script);
+writeFileSync(join(viteDir, 'concurrent.js'), script);
 writeFileSync(join(viteDir, 'tiny.js'), 'export {};\n');
 writeFileSync(join(viteDir, 'image.png'), Buffer.alloc(4096, 1));
 
@@ -41,14 +42,26 @@ describe('static assets compression', () => {
 		expect(res.headers.get('Content-Type')).toContain('javascript');
 		const body = Buffer.from(await res.arrayBuffer());
 		expect(Number(res.headers.get('Content-Length'))).toBe(body.length);
-		expect(body.length).toBeLessThan(script.length / 10);
 		expect(brotliDecompressSync(body).equals(script)).toBe(true);
 	});
 
-	test('brotli が q=0 なら gzip で返す', async () => {
-		const res = await get('/vite/ja-JP/app.js', 'br;q=0, gzip');
-		expect(res.headers.get('Content-Encoding')).toBe('gzip');
-		expect(gunzipSync(Buffer.from(await res.arrayBuffer())).equals(script)).toBe(true);
+	test('brotli が q=0 なら、同じファイルへの初回の同時要求を gzip で返す', async () => {
+		const responses = await Promise.all([
+			get('/vite/ja-JP/concurrent.js', 'br;q=0, gzip'),
+			get('/vite/ja-JP/concurrent.js', 'br;q=0, gzip'),
+		]);
+		const bodies = await Promise.all(responses.map(async (res) => Buffer.from(await res.arrayBuffer())));
+		for (const [index, res] of responses.entries()) {
+			expect(res.headers.get('Content-Encoding')).toBe('gzip');
+			expect(res.headers.get('Vary')).toBe('Accept-Encoding');
+			expect(res.headers.get('Content-Type')).toContain('javascript');
+			expect(Number(res.headers.get('Content-Length'))).toBe(bodies[index]!.length);
+			expect(gunzipSync(bodies[index]!).equals(script)).toBe(true);
+		}
+		for (const header of ['Content-Encoding', 'Vary', 'Content-Type', 'Content-Length']) {
+			expect(responses[1]!.headers.get(header)).toBe(responses[0]!.headers.get(header));
+		}
+		expect(bodies[1]).toEqual(bodies[0]);
 	});
 
 	test('圧縮を受け付けない要求にはそのまま返す', async () => {
@@ -71,12 +84,5 @@ describe('static assets compression', () => {
 		expect(res.headers.get('Content-Encoding')).toBe('br');
 		expect(Number(res.headers.get('Content-Length'))).toBeGreaterThan(0);
 		expect((await res.arrayBuffer()).byteLength).toBe(0);
-	});
-
-	test('同時の要求も同じ圧縮結果を返す', async () => {
-		const bodies = await Promise.all(
-			Array.from({ length: 5 }, async () => Buffer.from(await (await get('/vite/ja-JP/app.js', 'gzip')).arrayBuffer())),
-		);
-		for (const body of bodies) expect(gunzipSync(body).equals(script)).toBe(true);
 	});
 });

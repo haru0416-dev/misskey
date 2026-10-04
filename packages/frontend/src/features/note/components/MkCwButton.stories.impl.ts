@@ -54,6 +54,7 @@ export const Default = {
 		await userEvent.click(buttonElement);
 		await expect(buttonElement).toHaveTextContent(i18n.ts._cw.hide);
 		await userEvent.click(buttonElement);
+		await expect(buttonElement).toHaveTextContent(i18n.ts._cw.show);
 	},
 	parameters: {
 		layout: 'centered',
@@ -69,7 +70,6 @@ export const IncludesTextAndDriveFile = {
 		const canvas = within(canvasElement);
 		const buttonElement = canvas.getByRole<HTMLButtonElement>('button');
 		await expect(buttonElement).toHaveTextContent(i18n.tsx._cw.chars({ count: 15 }));
-		await expect(buttonElement).toHaveTextContent(' / ');
 		await expect(buttonElement).toHaveTextContent(i18n.tsx._cw.files({ count: 1 }));
 	},
 } satisfies StoryObj<typeof MkCwButton>;

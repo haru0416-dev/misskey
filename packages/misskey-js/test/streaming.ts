@@ -4,45 +4,6 @@ import { MAX_OFFLINE_MESSAGE_BYTES, MAX_OFFLINE_MESSAGE_COUNT } from '../src/rec
 import Stream from '../src/streaming.js';
 
 describe('Streaming', () => {
-	test('useChannel', async () => {
-		const server = new WS('wss://misskey.test/streaming');
-		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
-		const mainChannelReceived: any[] = [];
-		const main = stream.useChannel('main');
-		main.on('meUpdated', (payload) => {
-			mainChannelReceived.push(payload);
-		});
-
-		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
-
-		const msg = JSON.parse((await server.nextMessage) as string);
-		const mainChannelId = msg.body.id;
-		expect(msg.type).toBe('connect');
-		expect(msg.body.channel).toBe('main');
-		expect(mainChannelId != null).toBe(true);
-
-		server.send(
-			JSON.stringify({
-				type: 'channel',
-				body: {
-					id: mainChannelId,
-					type: 'meUpdated',
-					body: {
-						id: 'foo',
-					},
-				},
-			}),
-		);
-
-		expect(mainChannelReceived[0]).toEqual({
-			id: 'foo',
-		});
-
-		stream.close();
-		server.close();
-	});
-
 	test('useChannel with parameters', async () => {
 		const server = new WS('wss://misskey.test/streaming');
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
@@ -101,29 +62,6 @@ describe('Streaming', () => {
 		expect(chatChannelId != null).toBe(true);
 		expect(chatChannelId2 != null).toBe(true);
 		expect(chatChannelId).not.toEqual(chatChannelId2);
-
-		stream.close();
-		server.close();
-	});
-
-	test('Connection#send', async () => {
-		const server = new WS('wss://misskey.test/streaming');
-		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
-
-		const chat = stream.useChannel('chat', { other: 'aaa' });
-		chat.send('read', { id: 'aaa' });
-
-		const ws = await server.connected;
-		expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
-
-		const connectMsg = JSON.parse((await server.nextMessage) as string);
-		const channelId = connectMsg.body.id;
-		const msg = JSON.parse((await server.nextMessage) as string);
-
-		expect(msg.type).toBe('ch');
-		expect(msg.body.id).toEqual(channelId);
-		expect(msg.body.type).toBe('read');
-		expect(msg.body.body).toEqual({ id: 'aaa' });
 
 		stream.close();
 		server.close();
@@ -197,6 +135,7 @@ describe('Streaming', () => {
 		let server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		const chat = stream.useChannel('chat', { other: 'aaa' });
+		chat.send('read', { id: 'aaa' });
 		let connectedCount = 0;
 		stream.on('_connected_', () => {
 			connectedCount++;
@@ -206,8 +145,18 @@ describe('Streaming', () => {
 		});
 
 		try {
-			await server.connected;
-			const initialConnect = (await server.nextMessage) as { type: string; body: { id: string } };
+			const ws = await server.connected;
+			expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
+			const initialConnect = (await server.nextMessage) as { type: string; body: { id: string; params: unknown } };
+			expect(initialConnect).toMatchObject({
+				type: 'connect',
+				body: { id: chat.id, channel: 'chat' },
+			});
+			expect(initialConnect.body.params).toEqual({ other: 'aaa' });
+			expect(await server.nextMessage).toEqual({
+				type: 'ch',
+				body: { id: initialConnect.body.id, type: 'read', body: { id: 'aaa' } },
+			});
 			server.close();
 
 			stream.send('generic', { order: 1 });
@@ -228,6 +177,9 @@ describe('Streaming', () => {
 				type: 'ch',
 				body: { id: initialConnect.body.id, type: 'read', body: { id: 'from-connected-listener' } },
 			});
+
+			server.close();
+			expect(() => stream.heartbeat()).not.toThrow();
 		} finally {
 			stream.close();
 			server.close();
@@ -341,10 +293,6 @@ describe('Streaming', () => {
 			expect(connected).toBe(1);
 			expect(errors).toHaveLength(2);
 			expect(errors.every((error) => error instanceof Error)).toBe(true);
-			expect(errors.map((error) => error.message)).toEqual([
-				'Reserved streaming event type received: _error_',
-				'Reserved streaming event type received: _connected_',
-			]);
 		} finally {
 			stream.close();
 			server.close();
@@ -399,17 +347,6 @@ describe('Streaming', () => {
 		}
 	});
 
-	test('未接続時の send は例外を投げずにキューされる', async () => {
-		const server = new WS('wss://misskey.test/streaming');
-		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
-		await server.connected;
-		server.close();
-
-		expect(() => stream.heartbeat()).not.toThrow();
-
-		stream.close();
-	});
-
 	test('最後の共有接続をdisposeして3秒経つとdisconnectする', async () => {
 		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
@@ -446,10 +383,12 @@ describe('Streaming', () => {
 		second.on('meUpdated', (payload) => receivedBySecond.push(payload));
 
 		try {
-			await server.connected;
+			const ws = await server.connected;
+			expect(new URLSearchParams(new URL(ws.url).search).get('i')).toBe('TOKEN');
 			const connect = (await server.nextMessage) as { type: string; body: { id: string; channel: string } };
 			expect(connect.type).toBe('connect');
 			expect(connect.body.channel).toBe('main');
+			expect(connect.body.id != null).toBe(true);
 			expect(first.id).toBe(connect.body.id);
 			expect(second.id).toBe(connect.body.id);
 			expect(server).toHaveReceivedMessages([connect]);

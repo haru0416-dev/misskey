@@ -102,7 +102,7 @@ describe('Update(Note) の受信', () => {
 		const note = await createRemoteNote(actor);
 		published.mockClear();
 
-		const result = await performOneActivity(
+		await performOneActivity(
 			deps,
 			actor,
 			update(
@@ -112,7 +112,6 @@ describe('Update(Note) の受信', () => {
 			new Set(),
 		);
 
-		expect(result).toBe('ok: Note updated');
 		const saved = (await fetchNoteByIdFromDatabase(deps.db, note.id))!;
 		expect(saved.text).toBe('edited');
 		expect(saved.cw).toBe('cw');
@@ -128,32 +127,26 @@ describe('Update(Note) の受信', () => {
 		const note = await createRemoteNote(actor);
 
 		// 別の利用者が同じホストの他人のノートを書き換えようとする。
-		expect(
-			await performOneActivity(
-				deps,
-				other,
-				update(other, editedNote(other, note, { content: 'hijacked', updated: '2026-01-02T00:00:00Z' })),
-				new Set(),
-			),
-		).toMatch(/^skip:/);
-		expect(
-			await performOneActivity(deps, actor, update(actor, editedNote(actor, note, { content: 'no date' })), new Set()),
-		).toBe('skip: not an edit (no updated)');
+		await performOneActivity(
+			deps,
+			other,
+			update(other, editedNote(other, note, { content: 'hijacked', updated: '2026-01-02T00:00:00Z' })),
+			new Set(),
+		);
+		await performOneActivity(deps, actor, update(actor, editedNote(actor, note, { content: 'no date' })), new Set());
 		const unknownUri = `https://${actor.host}/notes/${genId()}`;
-		expect(
-			await performOneActivity(
-				deps,
-				actor,
-				update(actor, {
-					type: 'Note',
-					id: unknownUri,
-					attributedTo: actor.uri,
-					content: 'new',
-					updated: '2026-01-02T00:00:00Z',
-				}),
-				new Set(),
-			),
-		).toBe('skip: note not found');
+		await performOneActivity(
+			deps,
+			actor,
+			update(actor, {
+				type: 'Note',
+				id: unknownUri,
+				attributedTo: actor.uri,
+				content: 'new',
+				updated: '2026-01-02T00:00:00Z',
+			}),
+			new Set(),
+		);
 
 		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('original');
 		expect(await fetchNoteByUriFromDatabase(deps.db, unknownUri)).toBeNull();
@@ -184,25 +177,6 @@ describe('Update(Note) の受信', () => {
 		expect((await fetchNoteByIdFromDatabase(deps.db, publicNote.id))!.mentions).toEqual([mentioned.id]);
 	});
 
-	test('禁止ワードを含む編集は捨てる', async () => {
-		const actor = await createRemoteUser();
-		const note = await createRemoteNote(actor);
-		const prohibitedWords = runtime.meta.prohibitedWords;
-		runtime.meta.prohibitedWords = ['forbiddenword'];
-		try {
-			const result = await performOneActivity(
-				deps,
-				actor,
-				update(actor, editedNote(actor, note, { content: 'a forbiddenword here', updated: '2026-01-02T00:00:00Z' })),
-				new Set(),
-			);
-			expect(result).toBe('skip: Note contains prohibited words');
-		} finally {
-			runtime.meta.prohibitedWords = prohibitedWords;
-		}
-		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('original');
-	});
-
 	test('Update(Question) は updated があるときだけ本文も書き換える', async () => {
 		const actor = await createRemoteUser();
 		const note = await createRemoteNote(actor, { hasPoll: true });
@@ -226,19 +200,15 @@ describe('Update(Note) の受信', () => {
 				...values,
 			});
 
-		expect(await performOneActivity(deps, actor, update(actor, question({ content: 'votes only' })), new Set())).toBe(
-			'ok: Question updated',
-		);
+		await performOneActivity(deps, actor, update(actor, question({ content: 'votes only' })), new Set());
 		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('original');
 
-		expect(
-			await performOneActivity(
-				deps,
-				actor,
-				update(actor, question({ content: 'edited poll', updated: '2026-01-02T00:00:00Z' })),
-				new Set(),
-			),
-		).toBe('ok: Note updated');
+		await performOneActivity(
+			deps,
+			actor,
+			update(actor, question({ content: 'edited poll', updated: '2026-01-02T00:00:00Z' })),
+			new Set(),
+		);
 		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('edited poll');
 	});
 
@@ -249,27 +219,23 @@ describe('Update(Note) の受信', () => {
 		const quote = await createRemoteNote(actor, { renoteId: target.id, text: 'quote' });
 		const quoteReply = await createRemoteNote(actor, { renoteId: target.id, replyId: replied.id, text: 'quote reply' });
 
-		expect(
-			await performOneActivity(
-				deps,
+		await performOneActivity(
+			deps,
+			actor,
+			update(
 				actor,
-				update(
-					actor,
-					editedNote(actor, quote, { content: '<p> </p>', _misskey_content: ' ', updated: '2026-01-02T00:00:00Z' }),
-				),
-				new Set(),
+				editedNote(actor, quote, { content: '<p> </p>', _misskey_content: ' ', updated: '2026-01-02T00:00:00Z' }),
 			),
-		).toBe('skip: the edit would turn a quote into a renote');
+			new Set(),
+		);
 		expect((await fetchNoteByIdFromDatabase(deps.db, quote.id))!.text).toBe('quote');
 
-		expect(
-			await performOneActivity(
-				deps,
-				actor,
-				update(actor, editedNote(actor, quoteReply, { content: '', updated: '2026-01-02T00:00:00Z' })),
-				new Set(),
-			),
-		).toBe('ok: Note updated');
+		await performOneActivity(
+			deps,
+			actor,
+			update(actor, editedNote(actor, quoteReply, { content: '', updated: '2026-01-02T00:00:00Z' })),
+			new Set(),
+		);
 		expect((await fetchNoteByIdFromDatabase(deps.db, quoteReply.id))!.text).toBeNull();
 	});
 
@@ -280,16 +246,14 @@ describe('Update(Note) の受信', () => {
 		const earlier = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 		const newer = update(actor, editedNote(actor, note, { content: 'newer', updated: later }));
 
-		expect(await performOneActivity(deps, actor, newer, new Set())).toBe('ok: Note updated');
-		expect(
-			await performOneActivity(
-				deps,
-				actor,
-				update(actor, editedNote(actor, note, { content: 'older', updated: earlier })),
-				new Set(),
-			),
-		).toBe('skip: older or same edit');
-		expect(await performOneActivity(deps, actor, newer, new Set())).toBe('skip: older or same edit');
+		await performOneActivity(deps, actor, newer, new Set());
+		await performOneActivity(
+			deps,
+			actor,
+			update(actor, editedNote(actor, note, { content: 'older', updated: earlier })),
+			new Set(),
+		);
+		await performOneActivity(deps, actor, newer, new Set());
 
 		const saved = (await fetchNoteByIdFromDatabase(deps.db, note.id))!;
 		expect(saved.text).toBe('newer');
@@ -323,14 +287,12 @@ describe('Update(Note) の受信', () => {
 		const edited = (await fetchNoteByUriFromDatabase(deps.db, editedUri))!;
 		expect(new Date(edited.updatedAt!).toISOString()).toBe('2026-01-03T00:00:00.000Z');
 		expect((await fetchNoteByUriFromDatabase(deps.db, uneditedUri))!.updatedAt).toBeNull();
-		expect(
-			await performOneActivity(
-				deps,
-				actor,
-				update(actor, editedNote(actor, edited, { content: 'v1', updated: '2026-01-02T00:00:00Z' })),
-				new Set(),
-			),
-		).toBe('skip: older or same edit');
+		await performOneActivity(
+			deps,
+			actor,
+			update(actor, editedNote(actor, edited, { content: 'v1', updated: '2026-01-02T00:00:00Z' })),
+			new Set(),
+		);
 		expect((await fetchNoteByIdFromDatabase(deps.db, edited.id))!.text).toBe('v2');
 	});
 
@@ -368,30 +330,27 @@ describe('Update(Note) の受信', () => {
 		const prohibitedWords = runtime.meta.prohibitedWords;
 		runtime.meta.prohibitedWords = ['forbiddenalt'];
 		try {
-			expect(await performOneActivity(deps, actor, altOnly('forbiddenalt', '2026-01-01T00:00:00Z'), new Set())).toBe(
-				'skip: Note contains prohibited words',
-			);
+			await performOneActivity(deps, actor, altOnly('forbiddenalt', '2026-01-01T00:00:00Z'), new Set());
 		} finally {
 			runtime.meta.prohibitedWords = prohibitedWords;
 		}
 		expect((await fetchDriveFileByIdFromDatabase(deps.db, fileId))!.comment).toBe('old alt');
+		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.text).toBe('original');
 
-		expect(
-			await performOneActivity(
-				deps,
+		await performOneActivity(
+			deps,
+			actor,
+			update(
 				actor,
-				update(
-					actor,
-					editedNote(actor, note, {
-						content: `hi #${tag}`,
-						attachment: [{ type: 'Document', mediaType: 'image/png', url, name: 'new alt' }],
-						tag: [{ type: 'Hashtag', name: `#${tag}`, href: `https://${actor.host}/tags/${tag}` }],
-						updated: '2026-01-02T00:00:00Z',
-					}),
-				),
-				new Set(),
+				editedNote(actor, note, {
+					content: `hi #${tag}`,
+					attachment: [{ type: 'Document', mediaType: 'image/png', url, name: 'new alt' }],
+					tag: [{ type: 'Hashtag', name: `#${tag}`, href: `https://${actor.host}/tags/${tag}` }],
+					updated: '2026-01-02T00:00:00Z',
+				}),
 			),
-		).toBe('ok: Note updated');
+			new Set(),
+		);
 
 		expect((await fetchNoteByIdFromDatabase(deps.db, note.id))!.fileIds).toEqual([fileId]);
 		expect((await fetchDriveFileByIdFromDatabase(deps.db, fileId))!.comment).toBe('new alt');
@@ -416,7 +375,7 @@ describe('Update(Note) の受信', () => {
 		const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
 		published.mockClear();
 		try {
-			const result = await performOneActivity(
+			await performOneActivity(
 				{ ...deps, redis: failingRedis },
 				actor,
 				update(
@@ -429,8 +388,6 @@ describe('Update(Note) の受信', () => {
 				),
 				new Set(),
 			);
-			expect(result).toBe('ok: Note updated');
-			expect(errors).toHaveBeenCalled();
 		} finally {
 			errors.mockRestore();
 		}

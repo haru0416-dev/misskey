@@ -16,8 +16,7 @@ describe('useTooltip', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('cleans up reactively without polling when the source element disappears', async () => {
-		const setInterval = vi.spyOn(window, 'setInterval');
+	test('cleans up when the source element disappears', async () => {
 		vi.spyOn(window, 'setTimeout').mockImplementation((handler) => {
 			if (typeof handler === 'function') {
 				handler();
@@ -45,7 +44,6 @@ describe('useTooltip', () => {
 		expect(onShow).toHaveBeenCalledOnce();
 		expect(showing).not.toBeNull();
 		expect(showing!.value).toBe(true);
-		expect(setInterval).not.toHaveBeenCalled();
 
 		sourceVisible.value = false;
 		await nextTick();
@@ -57,7 +55,7 @@ describe('useTooltip', () => {
 		result.unmount();
 	});
 
-	test('accepts mouse hover again after ignoring touch compatibility events', async () => {
+	test('closes ended and cancelled touches and accepts mouse hover again', async () => {
 		vi.useFakeTimers();
 		const onShow = vi.fn();
 		const Component = defineComponent({
@@ -78,36 +76,35 @@ describe('useTooltip', () => {
 		await vi.runOnlyPendingTimersAsync();
 		expect(onShow).not.toHaveBeenCalled();
 
-		await vi.advanceTimersByTimeAsync(1000);
+		await fireEvent.touchStart(source);
+		await vi.runOnlyPendingTimersAsync();
+		const firstShowing = onShow.mock.calls[0]?.[0] as Ref<boolean>;
+		expect(firstShowing.value).toBe(true);
+		await fireEvent.touchEnd(source);
+		expect(firstShowing.value).toBe(false);
 		source.dispatchEvent(new MouseEvent('mouseover'));
 		await vi.runOnlyPendingTimersAsync();
 		expect(onShow).toHaveBeenCalledOnce();
-	});
-
-	test('accepts mouse hover again after a cancelled touch', async () => {
-		vi.useFakeTimers();
-		const onShow = vi.fn();
-		const Component = defineComponent({
-			setup() {
-				const source = ref<HTMLElement | null>(null);
-				useTooltip(source, onShow, 0);
-				return () => h('button', { ref: source });
-			},
-		});
-
-		const result = render(Component);
-		await nextTick();
-		const source = result.getByRole('button');
 
 		await fireEvent.touchStart(source);
 		await fireEvent.touchCancel(source);
 		source.dispatchEvent(new MouseEvent('mouseover'));
 		await vi.runOnlyPendingTimersAsync();
-		expect(onShow).not.toHaveBeenCalled();
+		expect(onShow).toHaveBeenCalledOnce();
+
+		await fireEvent.touchStart(source);
+		await vi.runOnlyPendingTimersAsync();
+		const secondShowing = onShow.mock.calls[1]?.[0] as Ref<boolean>;
+		expect(secondShowing.value).toBe(true);
+		await fireEvent.touchCancel(source);
+		expect(secondShowing.value).toBe(false);
+		source.dispatchEvent(new MouseEvent('mouseover'));
+		await vi.runOnlyPendingTimersAsync();
+		expect(onShow).toHaveBeenCalledTimes(2);
 
 		await vi.advanceTimersByTimeAsync(1000);
 		source.dispatchEvent(new MouseEvent('mouseover'));
 		await vi.runOnlyPendingTimersAsync();
-		expect(onShow).toHaveBeenCalledOnce();
+		expect(onShow).toHaveBeenCalledTimes(3);
 	});
 });

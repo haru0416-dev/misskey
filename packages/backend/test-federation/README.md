@@ -164,7 +164,7 @@ fork の永続的な配送の失敗、dead-letter、アカウント削除の調�
 | Reaction と Undo | `acceptance`: `Reaction and Undo converge...` |
 | Announce、Undo、Delete | `acceptance`: `Announce and Undo remove only the renote...`。既存のノート削除のケース |
 | プロフィールの Update | `acceptance`: `profile Update changes the cached remote actor...` |
-| Move、alias、フォロワーの移行 | `acceptance`: `Move honors destination alias and transfers local and remote followers`。既存の Move のケース |
+| Move、alias、フォロワーの移行 | `acceptance`: `Move honors destination alias and transfers local and remote followers`。source の移行先、local/remote の関係と正規 URL を同じ移行シナリオで確認 |
 | すべての公開範囲、許可された宛先と拒否された宛先、署名つきと署名なしの取得、outbox、featured | `acceptance`: `%s preserves allowed delivery...`、`outbox pagination retains public/home notes...` |
 | 非公開の親を露出しないこと | `acceptance`: `reply visibility and public collections never expose an inaccessible parent or attachment`、`specified reply reaches its own recipient...` |
 | 正しい署名と、改変された署名が、最終的な副作用を生まないこと | `resilience`: 正しい署名の GET と POST、`%s causes no final side effect...` |

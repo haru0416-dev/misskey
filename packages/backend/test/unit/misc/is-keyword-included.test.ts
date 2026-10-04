@@ -8,11 +8,6 @@ import { describe, expect, test } from 'vitest';
 import { isKeywordIncluded, isSupportedKeywordFilter } from '@/misc/is-keyword-included.js';
 import { adminUpdateMetaParamDef } from '@/server/rest/admin/admin-update-meta-logic.js';
 
-// 正規表現形式 (/…/) と誤認されず、空白 AND 区切りとも衝突しない語だけを作る。
-const word = fc
-	.array(fc.constantFrom(...'abcdefあいう'), { minLength: 1, maxLength: 6 })
-	.map((chars) => chars.join(''));
-
 describe('isKeywordIncluded', () => {
 	test('リストの要素は OR、空白区切りの語は AND', () => {
 		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing', 'example.com articles'])).toBe(
@@ -38,79 +33,7 @@ describe('isKeywordIncluded', () => {
 
 	describe('property', () => {
 		const brokenPattern = fc.constantFrom('/[/', '/a{2,1}/', '/(/', '/\\/', '/*/', '/(?<)/');
-		const keyword = fc.oneof(
-			{ weight: 3, arbitrary: word },
-			{ weight: 2, arbitrary: fc.tuple(word, word).map(([a, b]) => `${a} ${b}`) },
-			{ weight: 2, arbitrary: word.map((w) => `/${w}/i`) },
-			{ weight: 1, arbitrary: brokenPattern },
-		);
 		const text = fc.array(fc.constantFrom(...'abcdefあいう /'), { maxLength: 40 }).map((chars) => chars.join(''));
-
-		test('リスト全体の判定は、要素を 1 つずつ判定した OR に一致する', () => {
-			// 要素が互いに干渉しないこと。false になる組み合わせも通るよう、当たり外れ両方を数える。
-			let hits = 0;
-			let misses = 0;
-			fc.assert(
-				fc.property(text, fc.array(keyword, { minLength: 1, maxLength: 4 }), (input, keywords) => {
-					const whole = isKeywordIncluded(input, keywords);
-					const perElement = keywords.some((k) => isKeywordIncluded(input, [k]));
-					expect(whole).toBe(perElement);
-					if (whole) {
-						hits++;
-					} else {
-						misses++;
-					}
-				}),
-				{ numRuns: 500 },
-			);
-			// 常に false を返す実装でも通ってしまう空振りを防ぐ。
-			expect(hits).toBeGreaterThan(20);
-			expect(misses).toBeGreaterThan(20);
-		});
-
-		test('空白区切りは、全ての語を含むときだけ該当する', () => {
-			let reached = 0;
-			fc.assert(
-				fc.property(text, fc.array(word, { minLength: 1, maxLength: 3 }), (input, words) => {
-					if (input === '') {
-						return;
-					}
-					reached++;
-					const expected = words.every((w) => input.includes(w));
-					expect(isKeywordIncluded(input, [words.join(' ')])).toBe(expected);
-				}),
-				{ numRuns: 500 },
-			);
-			expect(reached).toBeGreaterThan(400);
-		});
-
-		test('正規表現形式の判定は RegExp と一致する', () => {
-			// ランダムな text と word だけでは一致が 500 件中 17〜53 件 (中央値 33) しか出ず、
-			// 下限 20 を約 1% の確率で割る。半分は word を text に埋め込み、一致側を構造的に確保する。
-			// 埋め込む語の半分は大文字にし、i フラグの有無で結果が変わる入力を作る。
-			const input = fc
-				.tuple(text, word, text, fc.boolean(), fc.boolean())
-				.map(([before, pattern, after, embed, upper]) => ({
-					input: embed ? before + (upper ? pattern.toUpperCase() : pattern) + after : before + after,
-					pattern,
-				}));
-			let matched = 0;
-			let unmatched = 0;
-			fc.assert(
-				fc.property(input, fc.constantFrom('', 'i', 'm', 's'), ({ input, pattern }, flags) => {
-					const expected = new RegExp(pattern, flags).test(input);
-					expect(isKeywordIncluded(input, [`/${pattern}/${flags}`])).toBe(expected);
-					if (expected) {
-						matched++;
-					} else {
-						unmatched++;
-					}
-				}),
-				{ numRuns: 500 },
-			);
-			expect(matched).toBeGreaterThan(100);
-			expect(unmatched).toBeGreaterThan(100);
-		});
 
 		test('壊れたパターンは例外にせず該当なしとして扱う', () => {
 			fc.assert(

@@ -128,8 +128,16 @@ describe('ThemeManager', () => {
 		assert.strictEqual(window.localStorage.getItem('themeId'), cachedThemeId);
 	});
 
-	test('プレビュー解除で元のテーマと DOM 状態が復元される', async () => {
+	test('プレビュー解除で元のテーマと DOM 状態が復元され、テーマ変更イベントが順に発火する', async () => {
 		const { themeManager, isPreviewMode } = await loadThemeModule();
+		const events: string[] = [];
+
+		themeManager.on('themeChanging', () => {
+			events.push('themeChanging');
+		});
+		themeManager.on('themeChanged', () => {
+			events.push('themeChanged');
+		});
 
 		themeManager.updateTheme(primaryTheme);
 		const originalCompiledThemeColor = themeManager.currentCompiledTheme?.['htmlThemeColor'];
@@ -156,6 +164,14 @@ describe('ThemeManager', () => {
 			originalCompiledThemeColor,
 		);
 		assert.strictEqual(window.localStorage.getItem('themeId'), primaryTheme.id);
+		assert.deepStrictEqual(events, [
+			'themeChanging',
+			'themeChanged',
+			'themeChanging',
+			'themeChanged',
+			'themeChanging',
+			'themeChanged',
+		]);
 	});
 
 	test('プレビュー中に通常テーマを更新するとプレビューを抜けて新しい通常テーマが適用される', async () => {
@@ -175,31 +191,6 @@ describe('ThemeManager', () => {
 			themeManager.currentCompiledTheme?.['accent'],
 		);
 		assert.strictEqual(window.localStorage.getItem('themeId'), replacementTheme.id);
-	});
-
-	test('themeChanging と themeChanged はプレビュー適用と復帰のたびに発火する', async () => {
-		const { themeManager } = await loadThemeModule();
-		const events: string[] = [];
-
-		themeManager.on('themeChanging', () => {
-			events.push('themeChanging');
-		});
-		themeManager.on('themeChanged', () => {
-			events.push('themeChanged');
-		});
-
-		themeManager.updateTheme(primaryTheme);
-		themeManager.previewTheme(previewTheme);
-		themeManager.clearPreview();
-
-		assert.deepStrictEqual(events, [
-			'themeChanging',
-			'themeChanged',
-			'themeChanging',
-			'themeChanged',
-			'themeChanging',
-			'themeChanged',
-		]);
 	});
 
 	test.each(['ready', 'finished'] as const)(

@@ -1,4 +1,4 @@
-import { describe, test, beforeAll, expect } from 'vitest';
+import { describe, test, beforeAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Person } from '@fedify/vocab';
 import type * as Misskey from 'misskey-js';
@@ -8,7 +8,6 @@ import {
 	deliveryBarrier,
 	fetchActivityPubObject,
 	fetchAdmin,
-	resolveRemoteNote,
 	resolveRemoteUser,
 	waitFor,
 } from './utils.js';
@@ -93,118 +92,6 @@ describe('User', () => {
 				}
 			});
 		});
-
-		describe('Pinning Notes', () => {
-			let alice: LoginUser, bob: LoginUser;
-			let aliceInB: Misskey.entities.UserDetailedNotMe;
-
-			beforeAll(async () => {
-				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-				aliceInB = await resolveRemoteUser('a.test', alice.id, bob);
-
-				await bob.client.request('following/create', { userId: aliceInB.id });
-				await deliveryBarrier('b.test');
-			});
-
-			test('Pinning localOnly Note is not delivered', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a', localOnly: true })).createdNote;
-				await alice.client.request('i/pin', { noteId: note.id });
-				await deliveryBarrier('a.test');
-
-				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
-				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
-			});
-
-			test('Pinning followers-only Note is not delivered', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a', visibility: 'followers' })).createdNote;
-				await alice.client.request('i/pin', { noteId: note.id });
-				await deliveryBarrier('a.test');
-
-				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
-				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
-			});
-
-			let pinnedNote: Misskey.entities.Note;
-
-			test('Pinning normal Note is delivered', async () => {
-				pinnedNote = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
-				await alice.client.request('i/pin', { noteId: pinnedNote.id });
-				await deliveryBarrier('a.test');
-
-				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
-				strictEqual(_aliceInB.pinnedNoteIds.length, 1);
-				const pinnedNoteInB = await resolveRemoteNote('a.test', pinnedNote.id, bob);
-				strictEqual(getAt(_aliceInB.pinnedNotes, 0).id, pinnedNoteInB.id);
-			});
-
-			test('Unpinning normal Note is delivered', async () => {
-				await alice.client.request('i/unpin', { noteId: pinnedNote.id });
-				await deliveryBarrier('a.test');
-
-				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
-				strictEqual(_aliceInB.pinnedNoteIds.length, 0);
-			});
-		});
-	});
-
-	describe('Follow / Unfollow', () => {
-		let alice: LoginUser, bob: LoginUser;
-		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
-
-		beforeAll(async () => {
-			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-
-			[bobInA, aliceInB] = await Promise.all([
-				resolveRemoteUser('b.test', bob.id, alice),
-				resolveRemoteUser('a.test', alice.id, bob),
-			]);
-		});
-
-		describe('Follow a.test ==> b.test', () => {
-			beforeAll(async () => {
-				await alice.client.request('following/create', { userId: bobInA.id });
-
-				await deliveryBarrier('a.test');
-			});
-
-			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
-				await Promise.all([
-					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id })).some(
-							(v) => v.followeeId === bobInA.id,
-						),
-						true,
-					),
-					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
-						true,
-					),
-				]);
-			});
-		});
-
-		describe('Unfollow a.test ==> b.test', () => {
-			beforeAll(async () => {
-				await alice.client.request('following/delete', { userId: bobInA.id });
-
-				await deliveryBarrier('a.test');
-			});
-
-			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
-				await Promise.all([
-					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id })).some(
-							(v) => v.followeeId === bobInA.id,
-						),
-						false,
-					),
-					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
-						false,
-					),
-				]);
-			});
-		});
 	});
 
 	describe('Follow requests', () => {
@@ -272,23 +159,6 @@ describe('User', () => {
 			test("Bob doesn't follow Alice", async () => {
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 0);
-			});
-		});
-
-		describe('Send follow request from Bob to Alice and accept', () => {
-			beforeAll(async () => {
-				await bob.client.request('following/create', { userId: aliceInB.id });
-				await deliveryBarrier('b.test');
-
-				await alice.client.request('following/requests/accept', { userId: bobInA.id });
-				await deliveryBarrier('a.test');
-			});
-
-			test('Bob follows Alice', async () => {
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 1);
-				strictEqual(getAt(following, 0).followeeId, aliceInB.id);
-				strictEqual(getAt(following, 0).followerId, bob.id);
 			});
 		});
 	});

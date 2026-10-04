@@ -7,12 +7,8 @@ import { describe, expect, test } from 'vitest';
 import { parseHashtagQuery } from '@/features/search/hashtag-query.js';
 
 describe('parseHashtagQuery', () => {
-	test('空白区切りを AND 条件の並びにする', () => {
-		expect(parseHashtagQuery('猫 写真')).toEqual(['猫', '写真']);
-	});
-
-	test('全角空白でも区切る', () => {
-		expect(parseHashtagQuery('猫　写真')).toEqual(['猫', '写真']);
+	test('半角・全角の空白区切りを AND 条件の並びにする', () => {
+		expect(parseHashtagQuery('猫 写真　絵')).toEqual(['猫', '写真', '絵']);
 	});
 
 	test('先頭の # を落とす', () => {
@@ -26,7 +22,6 @@ describe('parseHashtagQuery', () => {
 
 	test('全角の ＃ も剥がす', () => {
 		// IME で「＃猫」と入力すると全角になる。剥がさないと常に 0 件になる。
-		expect(parseHashtagQuery('＃猫')).toEqual(['猫']);
 		expect(parseHashtagQuery('＃猫 ＃写真')).toEqual(['猫', '写真']);
 	});
 

@@ -55,25 +55,6 @@ describe('core:net:dns-cache', () => {
 	});
 
 	describe('lookup (http.Agent 用)', () => {
-		test('コールバック形式で先頭の結果を返す', async () => {
-			mockLookup(async () => [
-				{ address: '1.2.3.4', family: 4 },
-				{ address: '5.6.7.8', family: 4 },
-			]);
-			const resolver = createCachedResolver({ successTtlMs: 1000, failureTtlMs: 1000 });
-
-			const result = await new Promise<[string, number]>((resolve, reject) => {
-				resolver.lookup('example.com', {}, (err, address, family) => {
-					if (err) {
-						reject(err);
-					} else {
-						resolve([address as string, family as number]);
-					}
-				});
-			});
-			expect(result).toStrictEqual(['1.2.3.4', 4]);
-		});
-
 		test('all: true では全件返す', async () => {
 			mockLookup(async () => [
 				{ address: '1.2.3.4', family: 4 },
@@ -96,12 +77,23 @@ describe('core:net:dns-cache', () => {
 			]);
 		});
 
-		test('family 指定で絞る', async () => {
+		test('先頭の結果をコールバックへ返し、family 指定では絞る', async () => {
 			mockLookup(async () => [
 				{ address: '1.2.3.4', family: 4 },
 				{ address: '::1', family: 6 },
 			]);
 			const resolver = createCachedResolver({ successTtlMs: 1000, failureTtlMs: 1000 });
+
+			const defaultResult = await new Promise<[string, number]>((resolve, reject) => {
+				resolver.lookup('example.com', {}, (err, address, family) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve([address as string, family as number]);
+					}
+				});
+			});
+			expect(defaultResult).toStrictEqual(['1.2.3.4', 4]);
 
 			const result = await new Promise<[string, number]>((resolve, reject) => {
 				resolver.lookup('example.com', { family: 6 }, (err, address, family) => {

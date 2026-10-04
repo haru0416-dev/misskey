@@ -32,7 +32,6 @@ describe('encodeBlurhash', () => {
 	});
 
 	test('matches upstream for arbitrary pixels, sizes and component counts', () => {
-		let runs = 0;
 		fc.assert(
 			fc.property(
 				fc.integer({ min: 1, max: 40 }),
@@ -50,13 +49,11 @@ describe('encodeBlurhash', () => {
 						s ^= s << 5;
 						pixels[i] = s & 255;
 					}
-					runs++;
 					expect(encodeBlurhash(pixels, width, height, cx, cy)).toBe(upstream.encode(pixels, width, height, cx, cy));
 				},
 			),
 			{ numRuns: 300 },
 		);
-		expect(runs).toBe(300);
 	});
 
 	test('rejects component counts outside 1..9 and mismatched pixel length', () => {

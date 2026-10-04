@@ -180,6 +180,15 @@ describe('Endpoints', () => {
 			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			expect(res.body.username).toBe(me.username);
 
+			const signin = await api('signin-flow', me);
+			expect(signin.status).toBe(200);
+			const signedIn = signin.body as misskey.entities.SigninFlowResponse & { finished: true };
+			expect(signedIn.finished).toBe(true);
+			expect(typeof signedIn.i).toBe('string');
+			const current = await api('i', {}, { token: signedIn.i });
+			expect(current.status).toBe(200);
+			expect(current.body.id).toBe(res.body.id);
+
 			const duplicate = await api('signup', me);
 			expect(duplicate.status).toBe(400);
 		});
@@ -280,15 +289,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(403);
 			expect(castAsError(res.body as any).error.code).toBe('AUTHENTICATION_FAILED');
 			expect(castAsError(res.body as any).error.kind).toBe('permission');
-		});
-
-		test('正しい情報でサインインできる', async () => {
-			const res = await api('signin-flow', {
-				username: 'test1',
-				password: 'test1',
-			});
-
-			expect(res.status).toBe(200);
 		});
 	});
 

@@ -6,11 +6,18 @@
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { inspect } from 'node:util';
-import { DEFAULT_POLICIES, createUserWithProfileAndPublickeyInDatabase, genId, openTestDatabase } from '../fixtures.js';
+import {
+	DEFAULT_POLICIES,
+	createUserWithProfileAndPublickeyInDatabase,
+	genId,
+	listUserNotePiningsByUserIdFromDatabase,
+	openTestDatabase,
+} from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
 import {
 	api,
 	failedApiCall,
+	castAsError,
 	POLL,
 	post,
 	role,
@@ -169,8 +176,6 @@ describe('ユーザー', () => {
 
 	let carol: misskey.entities.SignupResponse;
 
-	let usersReplying: misskey.entities.SignupResponse[];
-
 	let userNoNote: misskey.entities.SignupResponse;
 	let userNotExplorable: misskey.entities.SignupResponse;
 	let userLocking: misskey.entities.SignupResponse;
@@ -245,22 +250,6 @@ describe('ユーザー', () => {
 			bob = await signup({ username: 'bob' });
 			bobNote = await post(bob, { text: 'test' });
 			carol = await signup({ username: 'carol' });
-
-			// 並行作成ではタイムアウトするため、リプライを直列に作成する。
-			usersReplying = await [...Array(10)]
-				.map((_, i) => i)
-				.reduce(
-					async (acc, i) => {
-						const u = await signup({ username: `replying${i}` });
-						for (let j = 0; j < 10 - i; j++) {
-							const p = await post(u, { text: `test${j}` });
-							await post(alice, { text: `@${u.username} test${j}`, replyId: p.id });
-						}
-
-						return (await acc).concat(u);
-					},
-					Promise.resolve([] as misskey.entities.SignupResponse[]),
-				);
 
 			userNoNote = await signup({ username: 'userNoNote' });
 			userNotExplorable = await signup({ username: 'userNotExplorable' });
@@ -633,10 +622,20 @@ describe('ユーザー', () => {
 		const response = await successfulApiCall({ endpoint: 'i/pin', parameters, user: alice });
 		const expected = { ...meDetailed(alice, false), pinnedNoteIds: [aliceNote.id], pinnedNotes: [aliceNote] };
 		expect(response).toStrictEqual(expected);
+		expect((await listUserNotePiningsByUserIdFromDatabase(database, alice.id)).map((pin) => pin.noteId)).toStrictEqual([
+			aliceNote.id,
+		]);
+		const duplicate = await api('i/pin', parameters, alice);
+		expect(duplicate.status).toBe(400);
+		expect(castAsError(duplicate.body).error.code).toBe('ALREADY_PINNED');
+		const missing = await api('i/pin', { noteId: '000000000000000000000000' }, alice);
+		expect(missing.status).toBe(400);
+		expect(castAsError(missing.body).error.code).toBe('NO_SUCH_NOTE');
 
 		const response2 = await successfulApiCall({ endpoint: 'i/unpin', parameters, user: alice });
 		const expected2 = meDetailed(alice, false);
 		expect(response2).toStrictEqual(expected2);
+		expect(await listUserNotePiningsByUserIdFromDatabase(database, alice.id)).toStrictEqual([]);
 	});
 
 	test.each([
@@ -1138,21 +1137,6 @@ describe('ユーザー', () => {
 		expect(response).toStrictEqual(expected);
 	});
 
-	test('がよくリプライをするユーザーのリストを取得できる', async () => {
-		const parameters = { userId: alice.id, limit: 5 };
-		const response = await successfulApiCall({
-			endpoint: 'users/get-frequently-replied-users',
-			parameters,
-			user: alice,
-		});
-		const expected = await Promise.all(
-			usersReplying.slice(0, parameters.limit).map(async (s, i) => ({
-				user: await show(s.id, alice),
-				weight: (usersReplying.length - i) / usersReplying.length,
-			})),
-		);
-		expect(response).toStrictEqual(expected);
-	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
 		{ label: 'ミュートユーザーが含まれる', user: () => userMutedByAlice },
@@ -1235,14 +1219,6 @@ describe('ユーザー', () => {
 		const parameters = { tag: hashtag, limit: 100, sort: '-follower', origin: 'remote' } as const;
 		const response = await successfulApiCall({ endpoint: 'hashtags/users', parameters, user: alice });
 		const expected = [await show(remote.id, alice)];
-		expect(response).toStrictEqual(expected);
-	});
-
-	test('のオススメを取得することができる', async () => {
-		const parameters = {};
-		const response = await successfulApiCall({ endpoint: 'users/recommendation', parameters, user: alice });
-		expect(response).not.toHaveLength(0);
-		const expected = await Promise.all(response.map((u) => show(u.id, alice)));
 		expect(response).toStrictEqual(expected);
 	});
 

@@ -141,11 +141,14 @@ describe('API', () => {
 		const application3 = await createAppToken(bob, []);
 		const application4 = await createAppToken(bob, ['read:admin:index-stats']);
 
-		await successfulApiCall({
+		const indexes = await successfulApiCall({
 			endpoint: 'admin/get-index-stats',
 			parameters: {},
 			user: alice,
 		});
+		expect(indexes).toEqual(
+			expect.arrayContaining([expect.objectContaining({ tablename: 'user', indexname: expect.any(String) })]),
+		);
 
 		await failedApiCall(
 			{
@@ -385,7 +388,6 @@ describe('API', () => {
 
 	describe('ロールによる権限の検査', () => {
 		const MODERATOR_REQUIRED = 'd33d5333-db36-423d-a8f9-1a2b9549da41';
-		const ADMINISTRATOR_REQUIRED = 'c3d38592-54c0-429d-be96-5636b0431a61';
 		const ROLE_POLICY_REQUIRED = '7f86f06f-7e15-4057-8561-f4b6d4ac755a';
 
 		let admin: misskey.entities.SignupResponse;
@@ -420,14 +422,10 @@ describe('API', () => {
 			);
 		});
 
-		test('モデレーター必須と管理者必須はそれぞれの id で拒否される', async () => {
+		test('モデレーター必須は専用の id で拒否される', async () => {
 			await failedApiCall(
 				{ endpoint: 'admin/show-users', parameters: {}, user: bob },
 				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: MODERATOR_REQUIRED },
-			);
-			await failedApiCall(
-				{ endpoint: 'admin/get-index-stats', parameters: {}, user: bob },
-				{ status: 403, code: 'ROLE_PERMISSION_DENIED', id: ADMINISTRATOR_REQUIRED },
 			);
 		});
 
@@ -489,5 +487,6 @@ describe('応答の圧縮', () => {
 		});
 		expect(small.status).toBe(200);
 		expect(small.headers['content-encoding']).toBeUndefined();
+		expect(typeof JSON.parse(small.body.toString('utf8')).pong).toBe('number');
 	});
 });

@@ -4,10 +4,9 @@
  */
 
 import { describe, test, assert, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/vue';
+import { render, cleanup, fireEvent } from '@testing-library/vue';
 import type { RenderResult } from '@testing-library/vue';
 import { preferState } from './init.js';
-import { getEmojiName } from '@/utility/emojilist.js';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkEmoji from '@/components/global/MkEmoji.vue';
@@ -26,17 +25,14 @@ describe('Emoji', () => {
 	});
 
 	describe('MkEmoji', () => {
-		test('Should render selector-less heart with color in native mode', async () => {
+		test('Should render selector-less heart with color and its name on hover in native mode', async () => {
 			preferState.emojiStyle = 'native';
 			const mkEmoji = await renderEmoji('\u2764'); // 単色のハート
-			assert.ok(mkEmoji.queryByText('\u2764\uFE0F')); // カラー絵文字のハート
+			const heart = mkEmoji.getByText('\u2764\uFE0F');
+			assert.ok(heart); // カラー絵文字のハート
 			assert.ok(!mkEmoji.queryByText('\u2764'));
-		});
-	});
-
-	describe('Emoji list', () => {
-		test('Should get the name of the heart', () => {
-			assert.strictEqual(getEmojiName('\u2764'), 'heart');
+			await fireEvent.pointerEnter(heart);
+			assert.strictEqual(heart.title, 'heart');
 		});
 	});
 });

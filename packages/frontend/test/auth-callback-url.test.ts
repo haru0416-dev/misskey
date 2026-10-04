@@ -7,16 +7,10 @@ import { describe, expect, test } from 'vitest';
 import { setAuthCallbackUrlParameter } from '@/pages/auth/callback-url.js';
 
 describe('setAuthCallbackUrlParameter', () => {
-	test('preserves existing query parameters and fragment', () => {
-		expect(setAuthCallbackUrlParameter('https://example.com/callback?foo=bar#result', 'session', 'a b')).toBe(
-			'https://example.com/callback?foo=bar&session=a+b#result',
-		);
-	});
-
-	test('replaces an existing parameter of the same name', () => {
-		expect(setAuthCallbackUrlParameter('https://example.com/callback?session=old', 'session', 'new')).toBe(
-			'https://example.com/callback?session=new',
-		);
+	test('replaces the parameter while preserving other query parameters and fragment', () => {
+		expect(
+			setAuthCallbackUrlParameter('https://example.com/callback?foo=bar&session=old#result', 'session', 'a b'),
+		).toBe('https://example.com/callback?foo=bar&session=a+b#result');
 	});
 
 	test('rejects unsafe protocols', () => {

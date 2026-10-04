@@ -15,24 +15,14 @@ describe('core:email:validateEmailDeliverability', () => {
 	const spyMx = (impl: () => Promise<{ exchange: string; priority: number }[]>) =>
 		vi.spyOn(dns, 'resolveMx').mockImplementation(impl as unknown as typeof dns.resolveMx);
 
-	test('使い捨てドメインは弾く', async () => {
+	test('大文字混じりの使い捨てドメインを DNS 問い合わせ前に弾く', async () => {
 		const mx = spyMx(async () => [{ exchange: 'mx.example.com', priority: 10 }]);
-		await expect(validateEmailDeliverability('a@mailinator.com')).resolves.toStrictEqual({
+		await expect(validateEmailDeliverability('a@MailInator.Com')).resolves.toStrictEqual({
 			valid: false,
 			reason: 'disposable',
 		});
 		// 一覧で弾けた時点で返る。相手側へ問い合わせを飛ばさない。
 		expect(mx).not.toHaveBeenCalled();
-	});
-
-	test('大文字混じりのドメインでも使い捨てとして弾く', async () => {
-		spyMx(async () => [{ exchange: 'mx.example.com', priority: 10 }]);
-		for (const address of ['a@MAILINATOR.COM', 'a@MailInator.Com']) {
-			await expect(validateEmailDeliverability(address)).resolves.toStrictEqual({
-				valid: false,
-				reason: 'disposable',
-			});
-		}
 	});
 
 	test('使い捨てでなければ MX の有無で判定する', async () => {

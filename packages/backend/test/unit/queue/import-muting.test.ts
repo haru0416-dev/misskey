@@ -63,11 +63,13 @@ describe('hono-queue-db (importMuting)', () => {
 		});
 	}
 
-	test('CSVに記載されたローカルユーザーをミュートする', async () => {
+	test('CSVに記載されたローカルユーザーをミュートし、自分自身のacctはスキップする', async () => {
 		const muter = await createTestUser('honoqueueimpmuteme');
 		const target = await createTestUser('honoqueueimpmutetarget');
 
-		const { url, server } = await serveText(`${target.username}@${runtime.config.runtime.host}\n`);
+		const { url, server } = await serveText(
+			`${muter.username}@${runtime.config.runtime.host}\n${target.username}@${runtime.config.runtime.host}\n`,
+		);
 		servers.push(server);
 
 		const fileId = genId();
@@ -86,29 +88,6 @@ describe('hono-queue-db (importMuting)', () => {
 		await handleQueueImportMuting(deps, { user: { id: muter.id }, fileId });
 
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, target.id)).toBe(true);
-	});
-
-	test('自分自身のacctはスキップされる', async () => {
-		const muter = await createTestUser('honoqueueimpmuteself');
-
-		const { url, server } = await serveText(`${muter.username}@${runtime.config.runtime.host}\n`);
-		servers.push(server);
-
-		const fileId = genId();
-		await createDriveFileInDatabase(runtime.db, {
-			id: fileId,
-			md5: 'dummy',
-			name: 'muting.csv',
-			type: 'text/csv',
-			size: url.length,
-			storedInternal: false,
-			url,
-			userId: muter.id,
-			userHost: null,
-		});
-
-		await handleQueueImportMuting(deps, { user: { id: muter.id }, fileId });
-
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, muter.id)).toBe(false);
 	});
 

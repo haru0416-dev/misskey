@@ -1915,19 +1915,6 @@ describe('Timelines', () => {
 				});
 
 				describe('Channel', () => {
-					test('チャンネルミュートなし　＝　TLに流れる', async () => {
-						const [alice, bob] = await Promise.all([signup(), signup()]);
-
-						const channel = await createChannel('channel', bob);
-
-						const aliceNote = await post(alice, { text: 'hi' });
-						const bobNote = await post(bob, { text: 'ok', channelId: channel.id });
-
-						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
-
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
-					});
-
 					test('チャンネルミュート　＝　TLに流れない', async () => {
 						const [alice, bob] = await Promise.all([signup(), signup()]);
 

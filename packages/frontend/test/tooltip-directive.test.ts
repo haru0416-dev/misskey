@@ -57,14 +57,13 @@ describe('tooltipDirective', () => {
 		await result.rerender({ text: 'Second' });
 		await fireEvent.mouseEnter(target);
 		expect(popupMock.mock.calls[1]?.[1].text).toBe('Second');
-		expect(popupMock.mock.calls[1]?.[0]).toBe(popupMock.mock.calls[0]?.[0]);
 
 		result.unmount();
 		await fireEvent.mouseEnter(target);
 		expect(popupMock).toHaveBeenCalledTimes(2);
 	});
 
-	test('supports touch followed by mouse input', async () => {
+	test('closes ended and cancelled touches and accepts mouse input again', async () => {
 		vi.useFakeTimers();
 		const Component = defineComponent({
 			template: '<button v-tooltip.noDelay="\'Tooltip\'">Target</button>',
@@ -77,32 +76,20 @@ describe('tooltipDirective', () => {
 		const firstShowing = popupMock.mock.calls[0]?.[1].showing;
 		await fireEvent.touchEnd(target);
 		expect(firstShowing.value).toBe(false);
-
 		await fireEvent.mouseEnter(target);
 		expect(popupMock).toHaveBeenCalledOnce();
-		await vi.advanceTimersByTimeAsync(1000);
-		await fireEvent.mouseEnter(target);
-		expect(popupMock).toHaveBeenCalledTimes(2);
-	});
-
-	test('recovers from cancelled touch input', async () => {
-		vi.useFakeTimers();
-		const Component = defineComponent({
-			template: '<button v-tooltip.noDelay="\'Tooltip\'">Target</button>',
-		});
-		const result = render(Component, { global });
-		const target = result.getByRole('button');
 
 		await fireEvent.touchStart(target);
-		const firstShowing = popupMock.mock.calls[0]?.[1].showing;
+		expect(popupMock).toHaveBeenCalledTimes(2);
+		const secondShowing = popupMock.mock.calls[1]?.[1].showing;
 		await fireEvent.touchCancel(target);
-		expect(firstShowing.value).toBe(false);
+		expect(secondShowing.value).toBe(false);
 
 		await fireEvent.mouseEnter(target);
-		expect(popupMock).toHaveBeenCalledOnce();
+		expect(popupMock).toHaveBeenCalledTimes(2);
 		await vi.advanceTimersByTimeAsync(1000);
 		await fireEvent.mouseEnter(target);
-		expect(popupMock).toHaveBeenCalledTimes(2);
+		expect(popupMock).toHaveBeenCalledTimes(3);
 	});
 
 	test('shows on keyboard focus and dismisses with Escape', async () => {

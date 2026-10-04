@@ -154,7 +154,7 @@ describe('Chart', () => {
 		});
 	});
 
-	test('Can updates at multiple times at same time', async () => {
+	test('同一区間の差分を累積し、複数回saveしても再加算しない', async () => {
 		await testChart.increment();
 		await testChart.increment();
 		await testChart.increment();
@@ -178,32 +178,11 @@ describe('Chart', () => {
 				total: [3, 0, 0],
 			},
 		});
-	});
 
-	test('複数回saveされてもデータの更新は一度だけ', async () => {
-		await testChart.increment();
 		await testChart.save();
 		await testChart.save();
-		await testChart.save();
-
-		const chartHours = await testChart.getChart('hour', 3, null);
-		const chartDays = await testChart.getChart('day', 3, null);
-
-		expect(chartHours).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [1, 0, 0],
-				total: [1, 0, 0],
-			},
-		});
-
-		expect(chartDays).toStrictEqual({
-			foo: {
-				dec: [0, 0, 0],
-				inc: [1, 0, 0],
-				total: [1, 0, 0],
-			},
-		});
+		expect(await testChart.getChart('hour', 3, null)).toStrictEqual(chartHours);
+		expect(await testChart.getChart('day', 3, null)).toStrictEqual(chartDays);
 	});
 
 	test('Can updates at different times', async () => {
@@ -264,38 +243,27 @@ describe('Chart', () => {
 		});
 	});
 
-	test('Can padding from past range', async () => {
+	// https://github.com/misskey-dev/misskey/issues/3190
+	test('範囲外の過去値を読み取り、新差分の保存後も引き継ぐ', async () => {
 		await testChart.increment();
 		await testChart.save();
 
 		vi.advanceTimersByTime(5 * 60 * 60 * 1000);
 
-		const chartHours = await testChart.getChart('hour', 3, null);
-		const chartDays = await testChart.getChart('day', 3, null);
-
-		expect(chartHours).toStrictEqual({
+		expect(await testChart.getChart('hour', 3, null)).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [0, 0, 0],
 				total: [1, 1, 1],
 			},
 		});
-
-		expect(chartDays).toStrictEqual({
+		expect(await testChart.getChart('day', 3, null)).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
 				total: [1, 0, 0],
 			},
 		});
-	});
-
-	// https://github.com/misskey-dev/misskey/issues/3190
-	test('Can padding from past range 2', async () => {
-		await testChart.increment();
-		await testChart.save();
-
-		vi.advanceTimersByTime(5 * 60 * 60 * 1000);
 
 		await testChart.increment();
 		await testChart.save();
@@ -505,29 +473,7 @@ describe('Chart', () => {
 		});
 
 		describe('Intersection', () => {
-			test('条件が満たされていない場合はカウントされない', async () => {
-				await testIntersectionChart.addA('alice');
-				await testIntersectionChart.addA('bob');
-				await testIntersectionChart.addB('carol');
-				await testIntersectionChart.save();
-
-				const chartHours = await testIntersectionChart.getChart('hour', 3, null);
-				const chartDays = await testIntersectionChart.getChart('day', 3, null);
-
-				expect(chartHours).toStrictEqual({
-					a: [2, 0, 0],
-					b: [1, 0, 0],
-					aAndB: [0, 0, 0],
-				});
-
-				expect(chartDays).toStrictEqual({
-					a: [2, 0, 0],
-					b: [1, 0, 0],
-					aAndB: [0, 0, 0],
-				});
-			});
-
-			test('条件が満たされている場合にカウントされる', async () => {
+			test('同一save内の共通利用者を数え、交差のない区間は数えない', async () => {
 				await testIntersectionChart.addA('alice');
 				await testIntersectionChart.addA('bob');
 				await testIntersectionChart.addB('carol');
@@ -547,6 +493,23 @@ describe('Chart', () => {
 					a: [2, 0, 0],
 					b: [2, 0, 0],
 					aAndB: [1, 0, 0],
+				});
+
+				vi.advanceTimersByTime(24 * 60 * 60 * 1000);
+				await testIntersectionChart.addA('dave');
+				await testIntersectionChart.addA('erin');
+				await testIntersectionChart.addB('frank');
+				await testIntersectionChart.save();
+
+				expect(await testIntersectionChart.getChart('hour', 3, null)).toStrictEqual({
+					a: [2, 0, 0],
+					b: [1, 0, 0],
+					aAndB: [0, 0, 0],
+				});
+				expect(await testIntersectionChart.getChart('day', 3, null)).toStrictEqual({
+					a: [2, 2, 0],
+					b: [1, 2, 0],
+					aAndB: [0, 1, 0],
 				});
 			});
 		});

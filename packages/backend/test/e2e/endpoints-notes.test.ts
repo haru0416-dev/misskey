@@ -358,6 +358,12 @@ describe('Endpoints', () => {
 			const invalidName = await api('drive/files/update', { fileId: file.id, name: 'has/slash' }, alice);
 			expect(invalidName.status).toBe(400);
 			expect(castAsError(invalidName.body as any).error.id).toBe('395e7156-f9f0-475e-af89-53c3c23080c2');
+			const emptyName = await api('drive/files/update', { fileId: file.id, name: '' }, alice);
+			expect(emptyName.status).toBe(400);
+			expect(castAsError(emptyName.body).error.id).toBe('395e7156-f9f0-475e-af89-53c3c23080c2');
+			const unchanged = await api('drive/files/show', { fileId: file.id }, alice);
+			expect(unchanged.status).toBe(200);
+			expect(unchanged.body.name).toBe(file.name);
 
 			const noSuchFolder = await api(
 				'drive/files/update',
@@ -629,157 +635,6 @@ describe('Endpoints', () => {
 
 			const readAll = await api('chat/read-all', {}, recipient);
 			expect(readAll.status).toBe(204);
-		});
-
-		test('chat/rooms lifecycle: create, invite, join, message, members, mute, and leave', async () => {
-			const suffix = Date.now().toString(36);
-			const owner = await signup({ username: `chatrmown${suffix}` });
-			const invitee = await signup({ username: `chatrminv${suffix}` });
-			const parallelInvitee = await signup({ username: `chatrmpar${suffix}` });
-			const noSuchRoomId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
-
-			const joinMissing = await api('chat/rooms/join', { roomId: noSuchRoomId }, invitee);
-			expect(joinMissing.status).toBe(400);
-			expect(castAsError(joinMissing.body as any).error.id).toBe('84416476-5ce8-4a2c-b568-9569f1b10733');
-
-			const leaveMissing = await api('chat/rooms/leave', { roomId: noSuchRoomId }, invitee);
-			expect(leaveMissing.status).toBe(400);
-			expect(castAsError(leaveMissing.body as any).error.id).toBe('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
-
-			const muteMissing = await api('chat/rooms/mute', { roomId: noSuchRoomId, mute: true }, invitee);
-			expect(muteMissing.status).toBe(400);
-			expect(castAsError(muteMissing.body as any).error.id).toBe('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
-
-			const room = await api(
-				'chat/rooms/create',
-				{ name: `hono-chat-room-${suffix}`, description: 'test room' },
-				owner,
-			);
-			expect(room.status).toBe(200);
-			const missingInvitee = await api(
-				'chat/rooms/invitations/create',
-				{ roomId: room.body.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
-				owner,
-			);
-			expect(missingInvitee.status).toBe(400);
-			expect(castAsError(missingInvitee.body as any).error.id).toBe('0f451b9e-fc21-491a-b2bf-46331103a945');
-			expect(room.body.name).toBe(`hono-chat-room-${suffix}`);
-
-			const shown = await api('chat/rooms/show', { roomId: room.body.id }, owner);
-			expect(shown.status).toBe(200);
-			expect(shown.body.id).toBe(room.body.id);
-
-			const shownByOutsider = await api('chat/rooms/show', { roomId: room.body.id }, invitee);
-			expect(shownByOutsider.status).toBe(400);
-			expect(castAsError(shownByOutsider.body as any).error.id).toBe('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
-
-			const owned = await api('chat/rooms/owned', {}, owner);
-			expect(owned.status).toBe(200);
-			expect((owned.body as any[]).some((r) => r.id === room.body.id)).toBe(true);
-
-			const invitation = await api(
-				'chat/rooms/invitations/create',
-				{ roomId: room.body.id, userId: invitee.id },
-				owner,
-			);
-			expect(invitation.status).toBe(200);
-			expect(invitation.body.userId).toBe(invitee.id);
-			const parallelInvitations = await Promise.all([
-				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
-				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
-			]);
-			expect(parallelInvitations.filter((result) => result.status === 200)).toHaveLength(1);
-			const parallelDuplicate = parallelInvitations.find((result) => result.status === 400);
-			assert.ok(parallelDuplicate);
-			expect(castAsError(parallelDuplicate.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
-			const [parallelJoin, invitationDuringJoin] = await Promise.all([
-				api('chat/rooms/join', { roomId: room.body.id }, parallelInvitee),
-				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
-			]);
-			expect(parallelJoin.status).toBe(204);
-			expect(invitationDuringJoin.status).toBe(400);
-			expect(castAsError(invitationDuringJoin.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
-
-			const duplicateInvitation = await api(
-				'chat/rooms/invitations/create',
-				{ roomId: room.body.id, userId: invitee.id },
-				owner,
-			);
-			expect(duplicateInvitation.status).toBe(400);
-			expect(castAsError(duplicateInvitation.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
-
-			const selfInvitation = await api(
-				'chat/rooms/invitations/create',
-				{ roomId: room.body.id, userId: owner.id },
-				owner,
-			);
-			expect(selfInvitation.status).toBe(400);
-			expect(castAsError(selfInvitation.body as any).error.code).toBe('INVALID_PARAM');
-
-			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
-			expect(outbox.status).toBe(200);
-			expect((outbox.body as any[]).some((i) => i.id === invitation.body.id)).toBe(true);
-
-			const inbox = await api('chat/rooms/invitations/inbox', {}, invitee);
-			expect(inbox.status).toBe(200);
-			expect((inbox.body as any[]).some((i) => i.id === invitation.body.id)).toBe(true);
-
-			const joined = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
-			expect(joined.status).toBe(204);
-
-			const joining = await api('chat/rooms/joining', {}, invitee);
-			expect(joining.status).toBe(200);
-			expect((joining.body as any[]).some((m) => m.roomId === room.body.id)).toBe(true);
-
-			const roomMessage = await api(
-				'chat/messages/create-to-room',
-				{ text: 'hello room', toRoomId: room.body.id },
-				owner,
-			);
-			expect(roomMessage.status).toBe(200);
-			expect(roomMessage.body.toRoomId).toBe(room.body.id);
-
-			const roomTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id }, invitee);
-			expect(roomTimeline.status).toBe(200);
-			expect((roomTimeline.body as any[]).some((m) => m.id === roomMessage.body.id)).toBe(true);
-
-			const members = await api('chat/rooms/members', { roomId: room.body.id }, owner);
-			expect(members.status).toBe(200);
-			expect((members.body as any[]).some((m) => m.user.id === invitee.id)).toBe(true);
-
-			// chat/rooms/members は write:chat を要求し、read:chat では利用できない。
-			const readOnlyToken = await createAppToken(owner, ['read:chat']);
-			const membersWithReadOnlyToken = await api(
-				'chat/rooms/members',
-				{ roomId: room.body.id },
-				{ token: readOnlyToken },
-			);
-			expect(membersWithReadOnlyToken.status).toBe(403);
-
-			const muted = await api('chat/rooms/mute', { roomId: room.body.id, mute: true }, invitee);
-			expect(muted.status).toBe(204);
-
-			const searchResult = await api('chat/messages/search', { query: 'hello room', roomId: room.body.id }, owner);
-			expect(searchResult.status).toBe(200);
-			expect((searchResult.body as any[]).some((m) => m.id === roomMessage.body.id)).toBe(true);
-
-			const updated = await api(
-				'chat/rooms/update',
-				{ roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` },
-				owner,
-			);
-			expect(updated.status).toBe(200);
-			expect(updated.body.name).toBe(`hono-chat-room-renamed-${suffix}`);
-
-			const left = await api('chat/rooms/leave', { roomId: room.body.id }, invitee);
-			expect(left.status).toBe(204);
-
-			const deniedDelete = await api('chat/rooms/delete', { roomId: room.body.id }, invitee);
-			expect(deniedDelete.status).toBe(400);
-			expect(castAsError(deniedDelete.body as any).error.id).toBe('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
-
-			const deleted = await api('chat/rooms/delete', { roomId: room.body.id }, owner);
-			expect(deleted.status).toBe(204);
 		});
 
 		test('chat/rooms/invitations/ignore lets a user decline without joining', async () => {
@@ -1186,7 +1041,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('notes timelines (global/local/hybrid/featured)', () => {
-		test('global-timeline と local-timeline は可視性・ホスト条件を維持する', async () => {
+		test('匿名global/local-timelineはpublicを含めhomeを含めない', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `htl${suffix}` });
 
@@ -1203,8 +1058,8 @@ describe('Endpoints', () => {
 
 			const local = await api('notes/local-timeline', { limit: 100 });
 			expect(local.status).toBe(200);
-			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
-			expect(local.body.some((n: any) => n.id === homeNoteId)).toBe(false);
+			assert.ok(local.body.some((note: { id: string }) => note.id === publicNoteId));
+			expect(local.body.some((note: { id: string }) => note.id === homeNoteId)).toBe(false);
 		});
 
 		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {

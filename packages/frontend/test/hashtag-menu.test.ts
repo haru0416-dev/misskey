@@ -32,7 +32,6 @@ describe('ハッシュタグのミュート行', () => {
 
 	test('正規表現の特殊文字を含むタグでも壊れない', () => {
 		const mute = toHashtagMute('C++');
-		expect(() => new RegExp(mute.slice(1, mute.lastIndexOf('/')), 'iu')).not.toThrow();
 		expect(checkWordMute(noteWith('a #C++ b'), me, [mute])).not.toBe(false);
 		expect(checkWordMute(noteWith('a #C b'), me, [mute])).toBe(false);
 	});

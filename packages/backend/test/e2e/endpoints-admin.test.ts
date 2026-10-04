@@ -3538,18 +3538,10 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin database stats', () => {
-		test('admin/get-index-stats と admin/get-table-stats はDB統計を返す', async () => {
-			const indexes = await api('admin/get-index-stats', {}, alice);
-			expect(indexes.status).toBe(200);
-			assert.ok(Array.isArray(indexes.body));
-			assert.ok(indexes.body.some((row) => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
-
+		test('admin/get-table-stats はユーザーテーブルのDB統計を返す', async () => {
 			const tables = await api('admin/get-table-stats', {}, alice);
 			expect(tables.status).toBe(200);
-			assert.ok(Object.keys(tables.body).length > 0);
-			assert.ok(
-				Object.values(tables.body).some((row) => typeof row.count === 'number' && typeof row.size === 'number'),
-			);
+			expect(tables.body['user']).toEqual({ count: expect.any(Number), size: expect.any(Number) });
 		});
 	});
 });

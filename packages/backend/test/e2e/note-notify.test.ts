@@ -22,7 +22,7 @@ describe('following/list', () => {
 		1000 * 60 * 2,
 	);
 
-	test('通知設定なしのフォローのみの場合、空配列が返る', async () => {
+	test('通知対象を0件から1件、複数件へ変更し、limitと通知OFFを反映する', async () => {
 		await api('following/create', { userId: bob.id }, alice);
 
 		const res1 = await api('following/list', { notification: true }, alice);
@@ -36,20 +36,12 @@ describe('following/list', () => {
 		expect(Array.isArray(res2.body)).toBe(true);
 		expect(res2.body).toHaveLength(1);
 		expect(res2.body[0]?.followeeId).toBe(bob.id);
-	});
-
-	test('通知設定ありのフォローがある場合、そのユーザーが返る', async () => {
 		await api('following/create', { userId: carol.id, withReplies: false }, alice);
 		await api('following/update', { userId: carol.id, notify: 'normal' }, alice);
 
-		const res = await api('following/list', { notification: true }, alice);
-
-		expect(res.status).toBe(200);
-		expect(res.body).toHaveLength(1);
-		expect(res.body[0]?.followeeId).toBe(carol.id);
-	});
-
-	test('複数ユーザーで通知設定ありの場合、全員返る', async () => {
+		const one = await api('following/list', { notification: true }, alice);
+		expect(one.status).toBe(200);
+		expect(one.body.map((u) => u.followeeId)).toStrictEqual([carol.id]);
 		await api('following/update', { userId: bob.id, notify: 'normal' }, alice);
 
 		const res = await api('following/list', { notification: true }, alice);
@@ -59,22 +51,18 @@ describe('following/list', () => {
 
 		const ids = res.body.map((u) => u.followeeId).sort();
 		expect(ids).toStrictEqual([bob.id, carol.id].sort());
-	});
 
-	test('通知設定をOFF（none）にすると notification: true な一覧から外れる', async () => {
+		const limited = await api('following/list', { notification: true, limit: 1 }, alice);
+		expect(limited.status).toBe(200);
+		expect(limited.body).toHaveLength(1);
 		await api('following/update', { userId: bob.id, notify: 'none' }, alice);
 
-		const res1 = await api('following/list', { notification: true }, alice);
-		const res2 = await api('following/list', {}, alice);
-
-		expect(res1.status).toBe(200);
-		expect(res1.body).toHaveLength(1);
-		expect(res1.body[0]?.followeeId).toBe(carol.id);
-
-		expect(res2.status).toBe(200);
-		expect(res2.body).toHaveLength(2);
-		const ids = res2.body.map((u) => u.followeeId).sort();
-		expect(ids).toStrictEqual([bob.id, carol.id].sort());
+		const remaining = await api('following/list', { notification: true }, alice);
+		const all = await api('following/list', {}, alice);
+		expect(remaining.status).toBe(200);
+		expect(remaining.body.map((u) => u.followeeId)).toStrictEqual([carol.id]);
+		expect(all.status).toBe(200);
+		expect(all.body.map((u) => u.followeeId).sort()).toStrictEqual([bob.id, carol.id].sort());
 	});
 
 	test('他のユーザーの通知対象は見えない', async () => {
@@ -118,17 +106,5 @@ describe('following/list', () => {
 
 		await api('following/update', { userId: bob.id, notify: 'none' }, alice);
 		await api('notifications/mark-all-as-read', {}, alice);
-	});
-
-	test('limit パラメータが効く', async () => {
-		await api('following/update', { userId: bob.id, notify: 'normal' }, alice);
-
-		const allRes = await api('following/list', { notification: true }, alice);
-		expect(allRes.status).toBe(200);
-		expect(allRes.body).toHaveLength(2);
-
-		const res = await api('following/list', { notification: true, limit: 1 }, alice);
-		expect(res.status).toBe(200);
-		expect(res.body).toHaveLength(1);
 	});
 });

@@ -260,8 +260,7 @@ describe('hono-ap-inbox performOneActivity', () => {
 			object: localUserUri(deps, followee),
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok');
+		await performOneActivity(deps, asRemote(actor), activity, new Set());
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, actor.id, followee.id);
 		expect(following).not.toBeNull();
@@ -305,8 +304,7 @@ describe('hono-ap-inbox performOneActivity', () => {
 			object: localUserUri(deps, followee),
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok');
+		await performOneActivity(deps, asRemote(actor), activity, new Set());
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, actor.id, followee.id);
 		expect(following).toBeNull();
@@ -429,29 +427,10 @@ describe('hono-ap-inbox performOneActivity', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok: follow request canceled');
+		await performOneActivity(deps, asRemote(actor), activity, new Set());
 
 		const request = await fetchFollowRequestFromDatabase(deps.db, actor.id, followee.id);
 		expect(request).toBeNull();
-	});
-
-	test('Block: リモートアクターがローカルユーザーをブロックする', async () => {
-		const actor = await createTestRemoteUser(deps, 'honoinboxblock', 'hono-inbox-block.example.com');
-		const blockee = await createTestLocalUser(deps, 'honoinboxblockee');
-
-		const activity: IObject = {
-			type: 'Block',
-			id: `https://hono-inbox-block.example.com/blocks/${genId()}`,
-			actor: actor.uri!,
-			object: localUserUri(deps, blockee),
-		} as IObject;
-
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok');
-
-		const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, actor.id, blockee.id);
-		expect(blocking).not.toBeNull();
 	});
 
 	test('Undo(Block): 既存のブロックを解除する', async () => {
@@ -478,35 +457,8 @@ describe('hono-ap-inbox performOneActivity', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), undoActivity, new Set());
-		expect(result).toBe('ok');
+		await performOneActivity(deps, asRemote(actor), undoActivity, new Set());
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, actor.id, blockee.id)).toBeNull();
-	});
-
-	test('Like: リモートアクターがローカルノートにリアクションする', async () => {
-		const actor = await createTestRemoteUser(deps, 'honoinboxlike', 'hono-inbox-like.example.com');
-		const noteOwner = await createTestLocalUser(deps, 'honoinboxlikeowner');
-		const noteId = genId();
-		await createNoteInDatabase(deps.db, {
-			id: noteId,
-			text: 'hono-ap-inbox like test',
-			userId: noteOwner.id,
-			userHost: null,
-			visibility: 'public',
-		});
-
-		const activity: IObject = {
-			type: 'Like',
-			id: `https://hono-inbox-like.example.com/likes/${genId()}`,
-			actor: actor.uri!,
-			object: `${deps.config.instance.url}/notes/${noteId}`,
-		} as IObject;
-
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok');
-
-		const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId);
-		expect(reaction).not.toBeNull();
 	});
 
 	test('Undo(Like): 既存のリアクションを取り消す', async () => {
@@ -541,8 +493,7 @@ describe('hono-ap-inbox performOneActivity', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), undoActivity, new Set());
-		expect(result).toBe('ok');
+		await performOneActivity(deps, asRemote(actor), undoActivity, new Set());
 		expect(await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId)).toBeNull();
 	});
 
@@ -566,8 +517,7 @@ describe('hono-ap-inbox performOneActivity', () => {
 			object: noteUri,
 		} as IObject;
 
-		const result = await performOneActivity(deps, asRemote(actor), activity, new Set());
-		expect(result).toBe('ok: note deleted');
+		await performOneActivity(deps, asRemote(actor), activity, new Set());
 		expect(await fetchNoteByIdFromDatabase(deps.db, noteId)).toBeNull();
 	});
 

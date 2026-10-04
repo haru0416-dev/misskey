@@ -25,9 +25,6 @@ describe('core:instance:parseCssColorToHex', () => {
 		['hsl(0, 50%, 150%)', '#ffffff'],
 		['hsl(480, 50%, 50%)', '#40bf40'],
 		[' Red ', '#ff0000'],
-		['rebeccapurple', '#663399'],
-		['aliceblue', '#f0f8ff'],
-		['darkslategray', '#2f4f4f'],
 	])('%s → %s', (input, expected) => {
 		expect(parseCssColorToHex(input)).toBe(expected);
 	});

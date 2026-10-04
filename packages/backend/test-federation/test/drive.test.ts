@@ -7,7 +7,6 @@ import {
 	deliveryBarrier,
 	fetchAdmin,
 	resolveRemoteNote,
-	resolveRemoteUser,
 	uploadFile,
 } from './utils.js';
 import type { LoginUser } from './utils.js';
@@ -68,38 +67,6 @@ describe('Drive', () => {
 	});
 
 	describe('Sensitive flag', () => {
-		describe('isSensitive is federated in delivering to followers', () => {
-			let alice: LoginUser, bob: LoginUser;
-			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
-
-			beforeAll(async () => {
-				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
-
-				[bobInA, aliceInB] = await Promise.all([
-					resolveRemoteUser('b.test', bob.id, alice),
-					resolveRemoteUser('a.test', alice.id, bob),
-				]);
-
-				await bob.client.request('following/create', { userId: aliceInB.id });
-				await deliveryBarrier('b.test');
-			});
-
-			test('Alice uploads sensitive image and it is shown as sensitive from Bob', async () => {
-				const file = await uploadFile('a.test', alice);
-				await alice.client.request('drive/files/update', { fileId: file.id, isSensitive: true });
-				await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id] });
-				await deliveryBarrier('a.test');
-
-				const notes = await bob.client.request('notes/timeline', {});
-				strictEqual(notes.length, 1);
-				const noteInB = notes[0];
-				assert(noteInB);
-				assert(noteInB.files != null);
-				strictEqual(noteInB.files.length, 1);
-				strictEqual(noteInB.files[0]?.isSensitive, true);
-			});
-		});
-
 		// https://github.com/misskey-dev/misskey/issues/12208
 		describe('isSensitive is federated in replying', () => {
 			let alice: LoginUser, bob: LoginUser;

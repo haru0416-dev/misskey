@@ -130,6 +130,7 @@ const clientConfig: ModuleOptions<'client_id'> = {
 	},
 	options: {
 		authorizationMethod: 'body',
+		bodyFormat: 'form',
 	},
 };
 
@@ -505,28 +506,6 @@ describe('OAuth', () => {
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-4.1.2
 	// 認可コードが複数回使われた場合、要求を拒否し、可能ならそのコードに基づく発行済みトークンを失効させる。
 	describe('Revoking authorization code', () => {
-		test('On success', async () => {
-			const { code_challenge, code_verifier } = await pkceChallenge(128);
-			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
-
-			await client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended);
-
-			await expect(
-				client.getToken({
-					code,
-					redirect_uri,
-					code_verifier,
-				} as AuthorizationTokenConfigExtended),
-			).rejects.toSatisfy((err: GetTokenError) => {
-				expect(err.data.payload.error).toBe('invalid_grant');
-				return true;
-			});
-		});
-
 		test('On failure', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
@@ -684,13 +663,12 @@ describe('OAuth', () => {
 		});
 
 		// 要求と異なる scope を認可した場合、実際に付与した scope を response parameter で通知する。
-		test('Partially known scopes', async () => {
+		test('Unknown scopes are removed and known scopes are deduplicated', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 
-			// このケースでは既知の scope だけを取得する。
 			const { client, code } = await fetchAuthorizationCode(
 				alice,
-				'write:notes test:unknown test:unknown2',
+				'write:notes test:unknown read:account write:notes test:unknown2 read:account',
 				code_challenge,
 			);
 
@@ -700,23 +678,6 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			expect(token.token['scope']).toBe('write:notes');
-		});
-
-		test('Duplicated scopes', async () => {
-			const { code_challenge, code_verifier } = await pkceChallenge(128);
-
-			const { client, code } = await fetchAuthorizationCode(
-				alice,
-				'write:notes write:notes read:account read:account',
-				code_challenge,
-			);
-
-			const token = await client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended);
 			expect(token.token['scope']).toBe('write:notes read:account');
 		});
 
@@ -967,35 +928,6 @@ describe('OAuth', () => {
 					'content-type': 'application/json',
 				},
 				body: JSON.stringify({
-					grant_type: 'authorization_code',
-					code,
-					client_id: clientConfig.client.id,
-					redirect_uri,
-					code_verifier,
-				}),
-			});
-
-			expect(response.status).toBe(200);
-			const tokenResponse = (await response.json()) as {
-				access_token: string;
-				token_type: string;
-				scope: string;
-			};
-			expect(typeof tokenResponse.access_token).toBe('string');
-			expect(tokenResponse.token_type).toBe('Bearer');
-			expect(tokenResponse.scope).toBe('write:notes');
-		});
-
-		test('Accept x-www-form-urlencoded payload', async () => {
-			const { code_challenge, code_verifier } = await pkceChallenge(128);
-			const { code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
-
-			const response = await fetch(new URL('/oauth/token', host), {
-				method: 'post',
-				headers: {
-					'content-type': 'application/x-www-form-urlencoded',
-				},
-				body: new URLSearchParams({
 					grant_type: 'authorization_code',
 					code,
 					client_id: clientConfig.client.id,

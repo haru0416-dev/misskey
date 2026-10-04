@@ -12,17 +12,10 @@ import { trailingMentionCandidate } from '@/features/autocomplete/mention-candid
 import MkAutocomplete from '@/features/autocomplete/components/MkAutocomplete.vue';
 
 describe('emoji autocomplete', () => {
-	test('名前の部分一致はタグの部分一致より優先される', async () => {
-		const result = searchEmoji('oooo', [
-			{ emoji: ':foooo:', name: 'foooo' },
-			{ emoji: ':baaar:', name: 'foooo', aliasOf: 'baaar' },
-		]);
-		assert.equal(result[0]?.emoji, ':foooo:');
-	});
-
 	test('一致種別の優先順位とDB内の順序を維持する', () => {
 		const result = searchEmoji('foo', [
 			{ name: 'xfoo', emoji: '部分一致' },
+			{ name: 'yfoo', emoji: '部分一致エイリアス', aliasOf: 'partial-original' },
 			{ name: 'foo-alias', emoji: '前方一致エイリアス', aliasOf: 'original' },
 			{ name: 'foobar', emoji: '前方一致' },
 			{ name: 'foo', emoji: '完全一致エイリアス', aliasOf: 'another' },
@@ -31,7 +24,7 @@ describe('emoji autocomplete', () => {
 
 		assert.deepEqual(
 			result.map((x) => x.emoji),
-			['完全一致', '完全一致エイリアス', '前方一致', '前方一致エイリアス', '部分一致'],
+			['完全一致', '完全一致エイリアス', '前方一致', '前方一致エイリアス', '部分一致', '部分一致エイリアス'],
 		);
 	});
 

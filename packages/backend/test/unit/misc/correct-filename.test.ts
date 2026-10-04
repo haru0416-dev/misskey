@@ -8,7 +8,7 @@ import { correctFilename } from '@/misc/correct-filename.js';
 
 describe(correctFilename, () => {
 	test('no ext to null', () => {
-		expect(correctFilename('test', null)).toBe('test.unknown');
+		expect(correctFilename('ファイル 名前', null)).toBe('ファイル 名前.unknown');
 	});
 	test('jpg to webp', () => {
 		expect(correctFilename('test.jpg', 'webp')).toBe('test.jpg.webp');
@@ -19,9 +19,6 @@ describe(correctFilename, () => {
 	test('JPEG to jpg', () => {
 		expect(correctFilename('test.JPEG', 'jpg')).toBe('test.JPEG');
 	});
-	test('JPG to jpg', () => {
-		expect(correctFilename('test.JPG', 'jpg')).toBe('test.JPG');
-	});
 	test('tiff to tif', () => {
 		expect(correctFilename('test.tiff', 'tif')).toBe('test.tiff');
 	});
@@ -31,9 +28,6 @@ describe(correctFilename, () => {
 	test('skip text file', () => {
 		expect(correctFilename('test.txt', null)).toBe('test.txt');
 	});
-	test('non ascii with space', () => {
-		expect(correctFilename('ファイル 名前', 'jpg')).toBe('ファイル 名前.jpg');
-	});
 
 	// dll と exe はどちらも portable executable で file-type が判別しきれない。
 	test('dll to exe', () => {
@@ -42,6 +36,6 @@ describe(correctFilename, () => {
 
 	// 拡張子の判定は末尾だけを見る。途中のドットを拾うと二重付与になる。
 	test('multiple dots, matching last ext', () => {
-		expect(correctFilename('test.tar.jpg', 'jpg')).toBe('test.tar.jpg');
+		expect(correctFilename('test.tar.JPG', 'jpg')).toBe('test.tar.JPG');
 	});
 });

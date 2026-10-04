@@ -83,7 +83,6 @@ test.describe('Product flows', () => {
 			await expect(nameInput).toHaveValue(displayName);
 
 			await descriptionInput.fill(description);
-			await expect(descriptionInput).toHaveValue(description);
 			await saveProfileField(alicePage, descriptionInput);
 
 			await alicePage.reload();

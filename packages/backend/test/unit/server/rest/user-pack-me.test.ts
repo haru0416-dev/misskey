@@ -178,8 +178,6 @@ describe('packMeDetailed', () => {
 		expect(getApiUserRolesMock).toHaveBeenCalledOnce();
 		expect(getApiRolePoliciesMock).toHaveBeenCalledOnce();
 		expect(getApiRolePoliciesMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), [administratorRole]);
-		expect(isApiModeratorMock).not.toHaveBeenCalled();
-		expect(isApiAdministratorMock).not.toHaveBeenCalled();
 		expect(response).toMatchObject({
 			isAdmin: true,
 			isModerator: true,

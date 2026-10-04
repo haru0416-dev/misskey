@@ -48,12 +48,8 @@ describe('MfmService', () => {
 			expect(mfmService.fromHtml('<p>a</p><p>b</p>')).toBe('a\n\nb');
 		});
 
-		test('block element', () => {
-			expect(mfmService.fromHtml('<div>a</div><div>b</div>')).toBe('a\nb');
-		});
-
-		test('inline element', () => {
-			expect(mfmService.fromHtml('<ul><li>a</li><li>b</li></ul>')).toBe('a\nb');
+		test('block elements and list items', () => {
+			expect(mfmService.fromHtml('<div>a</div><div>b</div><ul><li>c</li><li>d</li></ul>')).toBe('a\nb\nc\nd');
 		});
 
 		test('block code', () => {
@@ -106,10 +102,6 @@ describe('MfmService', () => {
 
 		test('link without text', () => {
 			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b"></a> d</p>')).toBe('a https://example.com/b d');
-		});
-
-		test('link without both', () => {
-			expect(mfmService.fromHtml('<p>a <a></a> d</p>')).toBe('a  d');
 		});
 
 		test('ruby', () => {

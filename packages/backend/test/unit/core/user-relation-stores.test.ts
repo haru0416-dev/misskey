@@ -98,47 +98,7 @@ describe('targeted user relation stores', () => {
 		expect(renoteMutees).toEqual(targetIds);
 	});
 
-	test('decrements counters only once when the same following is deleted concurrently', async () => {
-		const followerId = genId();
-		const followeeId = genId();
-		const [follower, followee] = await Promise.all([
-			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: {
-					id: followerId,
-					username: `deletefollower${followerId}`,
-					usernameLower: `deletefollower${followerId}`,
-					followingCount: 1,
-				},
-				profile: { userId: followerId },
-			}),
-			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: {
-					id: followeeId,
-					username: `deletefollowee${followeeId}`,
-					usernameLower: `deletefollowee${followeeId}`,
-					followersCount: 1,
-				},
-				profile: { userId: followeeId },
-			}),
-		]);
-		const followingId = genId();
-		await createFollowingInDatabase(runtime.db, { id: followingId, followerId, followeeId });
-
-		const deleted = await Promise.all([
-			deleteFollowingAndUpdateUserCountsByIdFromDatabase(runtime.db, followingId, follower.id, followee.id),
-			deleteFollowingAndUpdateUserCountsByIdFromDatabase(runtime.db, followingId, follower.id, followee.id),
-		]);
-		const [updatedFollower, updatedFollowee] = await Promise.all([
-			fetchUserByIdOrFailFromDatabase(runtime.db, followerId),
-			fetchUserByIdOrFailFromDatabase(runtime.db, followeeId),
-		]);
-
-		expect(deleted.sort()).toEqual([false, true]);
-		expect(updatedFollower.followingCount).toBe(0);
-		expect(updatedFollowee.followersCount).toBe(0);
-	});
-
-	test('runs block/unfollow shared deletion side effects only once', async () => {
+	test('concurrent store and consumer deletions update counters and shared side effects only once', async () => {
 		const followerId = genId();
 		const followeeId = genId();
 		const [follower, followee] = await Promise.all([
@@ -148,6 +108,7 @@ describe('targeted user relation stores', () => {
 					username: `blockfollower${followerId}`,
 					usernameLower: `blockfollower${followerId}`,
 					followingCount: 1,
+					followersCount: 1,
 				},
 				profile: { userId: followerId },
 			}),
@@ -157,11 +118,24 @@ describe('targeted user relation stores', () => {
 					username: `blockfollowee${followeeId}`,
 					usernameLower: `blockfollowee${followeeId}`,
 					followersCount: 1,
+					followingCount: 1,
 				},
 				profile: { userId: followeeId },
 			}),
 		]);
-		await createFollowingInDatabase(runtime.db, { id: genId(), followerId, followeeId });
+		const followingId = genId();
+		await createFollowingInDatabase(runtime.db, { id: followingId, followerId, followeeId });
+		const reverseFollowingId = genId();
+		await createFollowingInDatabase(runtime.db, {
+			id: reverseFollowingId,
+			followerId: followeeId,
+			followeeId: followerId,
+		});
+		const deleted = await Promise.all([
+			deleteFollowingAndUpdateUserCountsByIdFromDatabase(runtime.db, reverseFollowingId, followee.id, follower.id),
+			deleteFollowingAndUpdateUserCountsByIdFromDatabase(runtime.db, reverseFollowingId, followee.id, follower.id),
+		]);
+		expect(deleted.sort()).toEqual([false, true]);
 		const publishInternalEvent = vi.fn();
 		const deps = {
 			db: runtime.db,
@@ -183,5 +157,10 @@ describe('targeted user relation stores', () => {
 		expect(publishInternalEvent).toHaveBeenCalledWith('unfollow', { followerId, followeeId });
 		expect(updatedFollower.followingCount).toBe(0);
 		expect(updatedFollowee.followersCount).toBe(0);
+		expect(updatedFollowee.followingCount).toBe(0);
+		expect(updatedFollower.followersCount).toBe(0);
+		expect(
+			await deleteFollowingAndUpdateUserCountsByIdFromDatabase(runtime.db, followingId, follower.id, followee.id),
+		).toBe(false);
 	});
 });

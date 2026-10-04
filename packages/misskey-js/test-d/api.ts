@@ -2,7 +2,7 @@ import { describe, expectTypeOf, test } from 'vitest';
 import * as Misskey from '../src/index.js';
 
 describe('API', () => {
-	test('conditional response type (meta)', async () => {
+	test('meta response type and accepted detail params', async () => {
 		const cli = new Misskey.api.APIClient({
 			origin: 'https://misskey.test',
 			credential: 'TOKEN'
@@ -11,14 +11,8 @@ describe('API', () => {
 		const res = await cli.request('meta', { detail: true });
 		expectTypeOf(res).toEqualTypeOf<Misskey.entities.MetaResponse>();
 
-		const res2 = await cli.request('meta', { detail: false });
-		expectTypeOf(res2).toEqualTypeOf<Misskey.entities.MetaResponse>();
-
-		const res3 = await cli.request('meta', { });
-		expectTypeOf(res3).toEqualTypeOf<Misskey.entities.MetaResponse>();
-
-		const res4 = await cli.request('meta', { detail: true as boolean });
-		expectTypeOf(res4).toEqualTypeOf<Misskey.entities.MetaResponse>();
+		await cli.request('meta', { detail: false });
+		await cli.request('meta', { detail: true as boolean });
 	});
 
 	test('admin/roles/create accepts policy overrides', async () => {

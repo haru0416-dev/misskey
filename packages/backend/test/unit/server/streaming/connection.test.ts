@@ -335,40 +335,29 @@ describe('hono-stream-connection', () => {
 		expect(noteUpdated[0].body.id).toBe('note2');
 	});
 
-	test('unsubNote 後は noteStream イベントを受け取らない', async () => {
-		const viewer = await createTestUser(deps, 'honostreamviewer3');
-		const author = await createTestUser(deps, 'honostreamauthor3');
-		const connection = new StreamConnection(deps, viewer, null);
-		await connection.init();
-
-		const subscriber = new EventEmitter();
-		const { raw, send } = collectSentMessages();
-		connection.listen(subscriber, send);
-
-		connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'note3' } }));
-		connection.handleClientMessage(JSON.stringify({ type: 'unsubNote', body: { id: 'note3' } }));
-
-		subscriber.emit('noteStream:note3', {
-			type: 'updated',
-			body: { id: 'note3', userId: author.id, visibility: 'public', body: {} },
-		});
-
-		expect(raw).toHaveLength(0);
-	});
-
 	test('同じノートを重ねて購読したときは、購読した回数だけ unsubNote されるまで外さない', async () => {
 		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 		const subscriber = new EventEmitter();
-		connection.listen(subscriber, () => {});
+		const { raw, send } = collectSentMessages();
+		connection.listen(subscriber, send);
+		const event = {
+			type: 'updated',
+			body: { id: 'twice', userId: 'author', visibility: 'public', body: { text: 'hello' } },
+		};
 
 		connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'twice' } }));
 		connection.handleClientMessage(JSON.stringify({ type: 'subNote', body: { id: 'twice' } }));
-		expect(subscriber.listenerCount('noteStream:twice')).toBe(1);
 		connection.handleClientMessage(JSON.stringify({ type: 'unsubNote', body: { id: 'twice' } }));
-		expect(subscriber.listenerCount('noteStream:twice')).toBe(1);
+		subscriber.emit('noteStream:twice', event);
+		expect(raw.map((message) => JSON.parse(message))).toEqual([
+			{ type: 'noteUpdated', body: { id: 'twice', type: 'updated', body: { text: 'hello' } } },
+		]);
 		connection.handleClientMessage(JSON.stringify({ type: 'unsubNote', body: { id: 'twice' } }));
 		expect(subscriber.listenerCount('noteStream:twice')).toBe(0);
+		raw.length = 0;
+		subscriber.emit('noteStream:twice', event);
+		expect(raw).toEqual([]);
 		connection.dispose();
 	});
 

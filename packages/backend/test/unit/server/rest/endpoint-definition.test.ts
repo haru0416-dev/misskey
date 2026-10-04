@@ -101,21 +101,6 @@ describe('registerEndpoints', () => {
 		process.env['NODE_ENV'] = 'test';
 	});
 
-	test('meta の allowQuery / allowGet どおりにメソッドを登録する', () => {
-		const routes = createApp().routes.map((route) => `${route.method} ${route.path}`);
-		expect(routes.toSorted()).toStrictEqual(
-			[
-				'POST /probe/show',
-				'QUERY /probe/show',
-				'POST /probe/featured',
-				'GET /probe/featured',
-				'POST /probe/delete',
-				'POST /probe/touch',
-				'POST /probe/limited',
-			].toSorted(),
-		);
-	});
-
 	test('入力を検証してから実装に渡し、応答を JSON で返す', async () => {
 		const app = createApp();
 		const ok = await post(app, '/probe/show', { id: 'a' });

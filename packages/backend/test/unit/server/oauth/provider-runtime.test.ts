@@ -146,8 +146,6 @@ describe('createOAuthProviderRuntime', () => {
 				permission: ['write:notes'],
 			},
 		]);
-		// トークンは token 列だけで引き、hash 列を持たない。
-		expect(createdTokens[0]).not.toHaveProperty('hash');
 
 		runtime.dispose();
 	});

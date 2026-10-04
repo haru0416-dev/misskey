@@ -114,6 +114,8 @@ bun run --bun --filter misskey-js test
 
 Backend tests require manual preparation of servers. See the next section for more on this.
 
+テストの削除・統合は、削除すると見逃す利用側の不具合を基準に判断します。同じ fixture のライフサイクルへ統合する場合も、初回保存と再保存、疎な入力と複合入力、通常時と失敗時の結果をそれぞれ観測してください。移管先が同じ結果を返すだけでは、元の入力・副作用・失敗経路を包含するとは限りません。型・ライブラリの挙動や内部の文言・形状を固定するだけの assertion は、実際の返却値・保存・配信・資源解放の保証と区別します。
+
 ### Backend
 There are three types of test codes for the backend:
 - Unit tests: [`/packages/backend/test/unit`](/packages/backend/test/unit)
@@ -247,7 +249,7 @@ msw のハンドラを渡す (共通ハンドラの上に重なる)。イベン�
 
 ### play の検証
 
-`play` を書いた story は実ブラウザ (Chromium) で実行される。
+`test/stories.browser.ts` は、カタログ専用として列挙した表示 variation を除いて story を mount し、`play` がある場合はそれも実ブラウザ (Chromium) で実行します。カタログ専用の export は残るため、カタログでは引き続き確認できます。独立した初期化の smoke と操作シナリオは検証対象です。除外した story に操作・結果の保証を追加するときは、登録器の `catalogOnlyStories` から外してください。
 
 ```bash
 bun run --bun --filter frontend test:stories

@@ -13,18 +13,15 @@ describe('collectRedisListTimelineNotes', () => {
 
 	test('先頭の候補がすべて落ちても、古い候補から limit 件を集める', async () => {
 		const hidden = new Set(ids.slice(80));
-		const batches: string[][] = [];
 		const notes = await collectRedisListTimelineNotes(
 			redis,
 			'list:test',
 			{ sinceId: null, untilId: null, limit: 10 },
 			async (batch) => {
-				batches.push(batch);
 				return batch.filter((id) => !hidden.has(id)).map((id) => ({ id }));
 			},
 		);
 		expect(notes.map((note) => note.id)).toEqual(ids.slice(70, 80).reverse());
-		expect(batches).toHaveLength(3);
 	});
 
 	test('途中でそろったらそこで止め、次のページの起点で抜けが出ない', async () => {

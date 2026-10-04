@@ -12,26 +12,16 @@ import {
 	compareStringIncludes,
 } from '@/utility/intl-string.js';
 
-const runCommonTests = (normalizeFn: (str: string) => string) => {
-	// 全角の半角化と濁点の結合は、どちらも NFKC 正規化による。
+describe('normalize string', () => {
 	test('全角英数字が半角の小文字になり、濁点が結合される', () => {
-		assert.strictEqual(normalizeFn('Ｂ１２３'), 'b123');
-		assert.strictEqual(normalizeFn('か\u3099'), 'が');
-	});
-	test('小文字に揃う', () => {
-		const input = 'tSt';
-		const expected = 'tst';
-		assert.strictEqual(normalizeFn(input), expected);
+		assert.strictEqual(normalizeString('Ｂ１２３'), 'b123');
+		assert.strictEqual(normalizeString('か\u3099'), 'が');
 	});
 	test('文字列の前後の空白が削除される', () => {
 		const input = '   tst   ';
 		const expected = 'tst';
-		assert.strictEqual(normalizeFn(input), expected);
+		assert.strictEqual(normalizeString(input), expected);
 	});
-};
-
-describe('normalize string', () => {
-	runCommonTests(normalizeString);
 
 	test('合字と半角カタカナを NFKC で正規化する', () => {
 		assert.strictEqual(normalizeString('ﬁ'), 'fi');
@@ -44,13 +34,9 @@ describe('normalize string with hiragana', () => {
 		await initIntlString(true);
 	});
 
-	describe('共通のnormalizeStringテスト', () => {
-		runCommonTests(normalizeStringWithHiragana);
-	});
-
-	test('半角カタカナがひらがなに変換される', () => {
-		const input = 'ｶﾀｶﾅ';
-		const expected = 'かたかな';
+	test('前後の空白と全角英数字を正規化し、半角カタカナがひらがなに変換される', () => {
+		const input = '  Ｂ１２３ ｶﾞｶﾀｶﾅ か\u3099  ';
+		const expected = 'b123 がかたかな が';
 		assert.strictEqual(normalizeStringWithHiragana(input), expected);
 	});
 

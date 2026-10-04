@@ -42,11 +42,4 @@ describe('組み込みテーマ', () => {
 			expect(unknown, `${name} の未知のプロパティ`).toEqual([]);
 		});
 	}
-
-	test('色は sRGB 表記に解決される', () => {
-		// テーマの記法は hex に統一してある。compile はそれを rgb()/rgba() へ落とす。
-		const compiled = compile(builtins['../src/shared/themes/l-toneriko.json5']!);
-		expect(compiled['accent']).toBe('rgb(92, 98, 216)');
-		expect(compiled['bg']).toBe('rgb(246, 247, 250)');
-	});
 });

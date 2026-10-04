@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { isShallow, watch } from 'vue';
+import { watch } from 'vue';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const { misskeyApiMock } = vi.hoisted(() => ({
@@ -32,13 +32,12 @@ describe('Paginator', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('uses shallow reactivity by default', async () => {
+	test('preserves the initial response order and completes fetching', async () => {
 		misskeyApiMock.mockResolvedValueOnce([item('b'), item('a')]);
 		const paginator = createPaginator();
 
 		await paginator.init();
 
-		expect(isShallow(paginator.items)).toBe(true);
 		expect(paginator.items.value.map((value) => value.id)).toEqual(['b', 'a']);
 		expect(paginator.fetching.value).toBe(false);
 	});
@@ -74,7 +73,7 @@ describe('Paginator', () => {
 		expect(existingIdReads).toBeLessThanOrEqual(500);
 	});
 
-	test('finds cursor extremes without sorting the collection', async () => {
+	test('finds cursor extremes in linear time while preserving collection order', async () => {
 		const paginator = createPaginator();
 		let idReads = 0;
 		const items = Array.from({ length: 500 }, (_, index) => ({
@@ -85,16 +84,17 @@ describe('Paginator', () => {
 		})) as any[];
 		paginator.pushItems(items);
 		paginator.fetching.value = false;
+		const expectedOrder = Array.from({ length: 500 }, (_, index) => String(500 - index).padStart(4, '0'));
+		expect(paginator.items.value.map((value) => value.id)).toEqual(expectedOrder);
 		paginator.canFetchOlder.value = true;
 		idReads = 0;
-		const sort = vi.spyOn(Array.prototype, 'sort');
 		misskeyApiMock.mockResolvedValueOnce([]);
 
 		await paginator.fetchOlder();
 
 		expect(misskeyApiMock.mock.calls[0]?.[1]).toMatchObject({ untilId: '0001' });
 		expect(idReads).toBeLessThanOrEqual(1000);
-		expect(sort).not.toHaveBeenCalled();
+		expect(paginator.items.value.map((value) => value.id)).toEqual(expectedOrder);
 	});
 
 	test('coalesces concurrent newer-page requests', async () => {

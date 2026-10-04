@@ -29,7 +29,10 @@ describe('server:rest:string-params', () => {
 	});
 
 	test('null 可のパラメータだけ "null" を null にする', () => {
-		expect(queryToApiBody(schema, { offset: 'null' })).toStrictEqual({ offset: null });
+		expect(queryToApiBody(schema, { offset: 'null', host: 'example.com' })).toStrictEqual({
+			offset: null,
+			host: 'example.com',
+		});
 		expect(queryToApiBody(schema, { host: 'null' })).toStrictEqual({ host: null });
 		// limit は null 可でないので文字列のまま (スキーマ側で弾かれる)
 		expect(queryToApiBody(schema, { limit: 'null' })).toStrictEqual({ limit: 'null' });
@@ -50,10 +53,6 @@ describe('server:rest:string-params', () => {
 		expect(queryToApiBody(schema, { userId: 'abc', unknown: '1' })).toStrictEqual({ userId: 'abc', unknown: '1' });
 	});
 
-	test('null 可の string に "null" 以外を渡しても壊さない', () => {
-		expect(queryToApiBody(schema, { host: 'example.com' })).toStrictEqual({ host: 'example.com' });
-	});
-
 	describe('castMultipartFields', () => {
 		const schema = z.object({
 			folderId: z.string().nullable().optional(),
@@ -63,9 +62,9 @@ describe('server:rest:string-params', () => {
 		});
 
 		test('真偽値と数値だけ型を戻す', () => {
-			const fields: Record<string, unknown> = { isSensitive: 'true', count: '3', name: 'a.png' };
+			const fields: Record<string, unknown> = { isSensitive: 'true', count: '3', name: 'a.png', unknown: 'true' };
 			castMultipartFields(schema, fields);
-			expect(fields).toStrictEqual({ isSensitive: true, count: 3, name: 'a.png' });
+			expect(fields).toStrictEqual({ isSensitive: true, count: 3, name: 'a.png', unknown: 'true' });
 		});
 
 		test('文字列パラメータは JSON として解釈しない', () => {
@@ -90,12 +89,6 @@ describe('server:rest:string-params', () => {
 				reason: 'cannot cast to boolean',
 			});
 			expect(reasonOf({ count: 'abc' })).toStrictEqual({ param: 'count', reason: 'cannot cast to number' });
-		});
-
-		test('スキーマに無いキーは触らない', () => {
-			const fields: Record<string, unknown> = { unknown: 'true' };
-			castMultipartFields(schema, fields);
-			expect(fields).toStrictEqual({ unknown: 'true' });
 		});
 	});
 });

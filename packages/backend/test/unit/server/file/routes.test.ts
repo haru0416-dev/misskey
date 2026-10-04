@@ -497,28 +497,7 @@ describe('createFileServerApp', () => {
 			expect(res.headers['content-length']).toBe('4');
 			expect(res.headers['content-type']).toBe('image/png');
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
-		});
-
-		test('GET /files/:key thumbnail のファイル名を整形する', async () => {
-			const accessKey = randomString();
-			const thumbnailKey = randomString();
-			writeInternalFile(thumbnailKey);
-			await insertDriveFile({
-				accessKey,
-				thumbnailAccessKey: thumbnailKey,
-				storedInternal: true,
-				isLink: false,
-				name: 'sample.png',
-			});
-
-			const res = await inject(app, {
-				method: 'GET',
-				url: `/files/${thumbnailKey}`,
-			});
-
-			expect(res.statusCode).toBe(200);
-			expect(res.headers['content-type']).toBe('image/png');
-			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
+			expect(await res.body()).toStrictEqual(dummyBuffer.subarray(0, 4));
 			expect(res.headers['content-disposition'] ?? '').toContain('sample-thumb.png');
 		});
 

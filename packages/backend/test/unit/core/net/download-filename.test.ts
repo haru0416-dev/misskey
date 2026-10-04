@@ -101,11 +101,6 @@ describe('core:net:DownloadService のファイル名決定', () => {
 		await expect(download('/dir/from-url.bin')).resolves.toBe('from-url.bin');
 	});
 
-	test('パラメータの無い壊れたヘッダでも例外にしない', async () => {
-		header = 'attachment;;;';
-		await expect(download('/dir/from-url.bin')).resolves.toBe('from-url.bin');
-	});
-
 	// 保存しないリモートのファイルは中身を取得せずに登録するが、名前は取得した場合と同じにする。
 	test('fetchFileName は HEAD だけで Content-Disposition の名前を得る', async () => {
 		header = "attachment; filename*=UTF-8''%E7%8C%AB.png";

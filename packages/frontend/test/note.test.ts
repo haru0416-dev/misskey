@@ -14,25 +14,26 @@ import MkMediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
 import { requireReactionCount } from '@/features/note/components/MkReactionsViewer.vue';
 
 describe('MkMediaImage', () => {
+	const createImage = (image: Partial<Misskey.entities.DriveFile>): Misskey.entities.DriveFile =>
+		({
+			id: 'xxxxxxxx',
+			createdAt: new Date().toJSON(),
+			isSensitive: false,
+			name: 'example.png',
+			thumbnailUrl: null,
+			url: '',
+			type: 'application/octet-stream',
+			size: 1,
+			md5: '15eca7fba0480996e2245f5185bf39f2',
+			blurhash: null,
+			comment: null,
+			properties: {},
+			...image,
+		}) as Misskey.entities.DriveFile;
+
 	const renderMediaImage = (image: Partial<Misskey.entities.DriveFile>): RenderResult => {
 		return render(MkMediaImage, {
-			props: {
-				image: {
-					id: 'xxxxxxxx',
-					createdAt: new Date().toJSON(),
-					isSensitive: false,
-					name: 'example.png',
-					thumbnailUrl: null,
-					url: '',
-					type: 'application/octet-stream',
-					size: 1,
-					md5: '15eca7fba0480996e2245f5185bf39f2',
-					blurhash: null,
-					comment: null,
-					properties: {},
-					...image,
-				} as Misskey.entities.DriveFile,
-			},
+			props: { image: createImage(image) },
 			global: { directives, components },
 		});
 	};
@@ -50,15 +51,6 @@ describe('MkMediaImage', () => {
 		assert.ok(!alt);
 	});
 
-	test('Attaching GIF should show a GIF indicator', async () => {
-		const mkMediaImage = renderMediaImage({
-			type: 'image/gif',
-		});
-		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
-		assert.ok(gif);
-		assert.ok(!alt);
-	});
-
 	test('Attaching APNG should show a GIF indicator', async () => {
 		const mkMediaImage = renderMediaImage({
 			type: 'image/apng',
@@ -68,24 +60,23 @@ describe('MkMediaImage', () => {
 		assert.ok(!alt);
 	});
 
-	test('Attaching image with an alt message should show an ALT indicator', async () => {
-		const mkMediaImage = renderMediaImage({
-			type: 'image/png',
-			comment: 'Misskeyのロゴです',
-		});
-		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
-		assert.ok(!gif);
-		assert.ok(alt);
-	});
+	test('GIF and ALT indicators follow their independent image properties', async () => {
+		const image = createImage({ type: 'image/gif' });
+		const mkMediaImage = renderMediaImage(image);
+		assert.ok(mkMediaImage.queryByText('GIF'));
+		assert.ok(!mkMediaImage.queryByText('ALT'));
 
-	test('Attaching GIF image with an alt message should show a GIF and an ALT indicator', async () => {
-		const mkMediaImage = renderMediaImage({
-			type: 'image/gif',
-			comment: 'Misskeyのロゴです',
+		await mkMediaImage.rerender({
+			image: { ...image, type: 'image/png', comment: 'Misskeyのロゴです' },
 		});
-		const [gif, alt] = await Promise.all([mkMediaImage.queryByText('GIF'), mkMediaImage.queryByText('ALT')]);
-		assert.ok(gif);
-		assert.ok(alt);
+		assert.ok(!mkMediaImage.queryByText('GIF'));
+		assert.ok(mkMediaImage.queryByText('ALT'));
+
+		await mkMediaImage.rerender({
+			image: { ...image, type: 'image/gif', comment: 'Misskeyのロゴです' },
+		});
+		assert.ok(mkMediaImage.queryByText('GIF'));
+		assert.ok(mkMediaImage.queryByText('ALT'));
 	});
 
 	test('Icon-only media controls have accessible names', () => {

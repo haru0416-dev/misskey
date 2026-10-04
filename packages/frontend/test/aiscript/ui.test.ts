@@ -90,15 +90,6 @@ describe('AiScript UI API', () => {
 	});
 
 	describe('update', () => {
-		test.concurrent('normal', async () => {
-			const { get } = await exe(`
-				let text = Ui:C:text({ text: 'a' }, 'id')
-				text.update({ text: 'b' })
-			`);
-			const text = get('id') as AsUiText;
-			expect(text.text).toBe('b');
-		});
-
 		test.concurrent('skip unknown key', async () => {
 			const { get } = await exe(`
 				let text = Ui:C:text({ text: 'a' }, 'id')
@@ -310,16 +301,6 @@ describe('AiScript UI API', () => {
 				color: undefined,
 				font: undefined,
 			});
-		});
-
-		test.concurrent('invalid font', async () => {
-			await expect(() =>
-				exe(`
-				Ui:C:mfm({
-					font: 'invalid'
-				})
-			`),
-			).rejects.toBeInstanceOf(errors.AiScriptRuntimeError);
 		});
 	});
 

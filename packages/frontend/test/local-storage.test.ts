@@ -49,13 +49,15 @@ describe('miLocalStorage JSON values', () => {
 		expect(isStringArray(['one', 2])).toBe(false);
 	});
 
-	test('safely reads and repairs another Web Storage implementation', () => {
+	test('reads and repairs only the supplied Web Storage implementation', () => {
 		window.sessionStorage.setItem('test-cache', '["one","two"]');
+		window.localStorage.setItem('test-cache', '["other"]');
 		expect(getStorageItemAsJson(window.sessionStorage, 'test-cache', isStringArray)).toStrictEqual(['one', 'two']);
 
 		window.sessionStorage.setItem('test-cache', '{');
 		expect(getStorageItemAsJson(window.sessionStorage, 'test-cache')).toBeUndefined();
 		expect(window.sessionStorage.getItem('test-cache')).toBeNull();
+		expect(window.localStorage.getItem('test-cache')).toBe('["other"]');
 	});
 
 	test('removes a key when the value cannot be represented in JSON', () => {

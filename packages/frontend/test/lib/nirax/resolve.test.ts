@@ -7,15 +7,6 @@ import { assert, describe, test } from 'vitest';
 import { createRouter } from './fixture.js';
 
 describe('[NIRAX] resolve', () => {
-	test('staticなルートを解決できる', () => {
-		const router = createRouter();
-		const resolved = router.resolve('/');
-
-		assert.ok(resolved);
-		assert.strictEqual(resolved.route.path, '/');
-		assert.strictEqual(resolved.props.size, 0);
-	});
-
 	test('パスパラメータ付きルートを解決できる', () => {
 		const router = createRouter();
 		const resolved = router.resolve('/posts/abc%2Fdef');

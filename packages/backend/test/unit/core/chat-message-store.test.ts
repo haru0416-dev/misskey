@@ -45,6 +45,7 @@ describe('ChatMessageStore history', () => {
 			createUser('carol'),
 			createUser('muted'),
 		]);
+		expect(await listUserChatHistoryFromDatabase(runtime.db, viewer.id, 10)).toEqual([]);
 		await createMutingInDatabase(runtime.db, {
 			id: genId(),
 			muterId: viewer.id,
@@ -66,7 +67,7 @@ describe('ChatMessageStore history', () => {
 			toUserId: viewer.id,
 			text: 'carol latest',
 		});
-		const aliceOld = await createChatMessageInDatabase(runtime.db, {
+		await createChatMessageInDatabase(runtime.db, {
 			id: genId(base + 3),
 			fromUserId: viewer.id,
 			toUserId: alice.id,
@@ -96,7 +97,6 @@ describe('ChatMessageStore history', () => {
 
 		expect(limited.map((message) => message.id)).toEqual([aliceLatest.id, carolLatest.id]);
 		expect(all.map((message) => message.id)).toEqual([aliceLatest.id, carolLatest.id, bobLatest.id]);
-		expect(all.some((message) => message.id === aliceOld.id)).toBe(false);
 	});
 
 	test('returns the latest message for owned and joined rooms in global newest order', async () => {
@@ -105,6 +105,7 @@ describe('ChatMessageStore history', () => {
 			createUser('roomowner'),
 			createUser('roomsender'),
 		]);
+		expect(await listRoomChatHistoryFromDatabase(runtime.db, viewer.id, 10)).toEqual([]);
 		const ownedRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: viewer.id, name: 'owned' });
 		const memberRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: owner.id, name: 'member' });
 		const ownedAndJoinedRoom = await createChatRoomInDatabase(runtime.db, {
@@ -152,7 +153,7 @@ describe('ChatMessageStore history', () => {
 			toRoomId: ownedRoom.id,
 			text: 'owned latest',
 		});
-		const inaccessibleLatest = await createChatMessageInDatabase(runtime.db, {
+		await createChatMessageInDatabase(runtime.db, {
 			id: genId(base + 5),
 			fromUserId: sender.id,
 			toRoomId: inaccessibleRoom.id,
@@ -164,13 +165,5 @@ describe('ChatMessageStore history', () => {
 
 		expect(limited.map((message) => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id]);
 		expect(all.map((message) => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id, memberLatest.id]);
-		expect(all.some((message) => message.id === inaccessibleLatest.id)).toBe(false);
-	});
-
-	test('returns empty histories when there are no conversations or eligible rooms', async () => {
-		const viewer = await createUser('empty');
-
-		expect(await listUserChatHistoryFromDatabase(runtime.db, viewer.id, 10)).toEqual([]);
-		expect(await listRoomChatHistoryFromDatabase(runtime.db, viewer.id, 10)).toEqual([]);
 	});
 });

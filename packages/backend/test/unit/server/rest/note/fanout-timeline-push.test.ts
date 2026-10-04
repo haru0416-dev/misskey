@@ -40,6 +40,13 @@ describe('FanoutTimelinePush', () => {
 	});
 
 	test('pushes a fresh note to the head of every list and keeps each list within its limit', async () => {
+		const unusedRedis = new Proxy({} as Parameters<FanoutTimelinePush['flush']>[0], {
+			get() {
+				throw new Error('Empty fanout must not access Redis');
+			},
+		});
+		await expect(new FanoutTimelinePush(genId()).flush(unusedRedis)).resolves.toBeUndefined();
+
 		const home = timeline('home');
 		const withFiles = timeline('withFiles');
 		const ids: string[] = [];
@@ -88,9 +95,5 @@ describe('FanoutTimelinePush', () => {
 
 		expect(await list(timelines[0]!)).toEqual([id]);
 		expect(await list(timelines[500]!)).toEqual([id]);
-	});
-
-	test('does nothing without targets', async () => {
-		await expect(new FanoutTimelinePush(genId()).flush(runtime.redisForTimelines)).resolves.toBeUndefined();
 	});
 });

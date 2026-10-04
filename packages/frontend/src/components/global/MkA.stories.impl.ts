@@ -36,7 +36,6 @@ export const Default = {
 		await userEvent.pointer({ keys: '[MouseRight]', target: a });
 		// os.contextMenu は MkContextMenu を動的 import してから popup するので同期では取れない。
 		const menu = await canvas.findByRole('menu');
-		await expect(menu).toBeInTheDocument();
 		await userEvent.click(a);
 		a.blur();
 		await expect(menu).not.toBeInTheDocument();

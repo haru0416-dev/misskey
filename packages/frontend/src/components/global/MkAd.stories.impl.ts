@@ -33,15 +33,12 @@ const common = {
 		const canvas = within(canvasElement);
 		const a = canvas.getByRole<HTMLAnchorElement>('link');
 		await expect(a.href).toMatch(/^https?:\/\/.*#test$/);
-		const img = within(a).getByRole('img');
-		await expect(img).toBeInTheDocument();
+		within(a).getByRole('img');
 		let buttons = canvas.getAllByRole<HTMLButtonElement>('button');
 		await expect(buttons).toHaveLength(1);
 		const i = buttons[0];
 		if (i == null) throw new Error('Ad details button was not found');
-		await expect(i).toBeInTheDocument();
 		await userEvent.click(i);
-		await expect(canvasElement).toHaveTextContent(i18n.ts._ad.back);
 		await expect(a).not.toBeInTheDocument();
 		await expect(i).not.toBeInTheDocument();
 		buttons = canvas.getAllByRole<HTMLButtonElement>('button');
@@ -51,10 +48,8 @@ const common = {
 		const back = buttons[hasReduceFrequency ? 1 : 0];
 		if (back == null) throw new Error('Ad back button was not found');
 		if (reduce) {
-			await expect(reduce).toBeInTheDocument();
 			await expect(reduce).toHaveTextContent(i18n.ts._ad.reduceFrequencyOfThisAd);
 		}
-		await expect(back).toBeInTheDocument();
 		await expect(back).toHaveTextContent(i18n.ts._ad.back);
 		await userEvent.click(back);
 		await waitFor(() => expect(canvas.queryByRole('img')).toBeTruthy());
@@ -63,9 +58,7 @@ const common = {
 		}
 		await expect(back).not.toBeInTheDocument();
 		const aAgain = canvas.getByRole<HTMLAnchorElement>('link');
-		await expect(aAgain).toBeInTheDocument();
-		const imgAgain = within(aAgain).getByRole('img');
-		await expect(imgAgain).toBeInTheDocument();
+		within(aAgain).getByRole('img');
 	},
 	args: {
 		preferForms: [],

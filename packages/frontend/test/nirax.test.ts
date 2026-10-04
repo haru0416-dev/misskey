@@ -25,7 +25,6 @@ describe('Nirax', () => {
 		expect(componentOf(anonymous.current.route)).toBe(NotFound);
 		expect(anonymous.current.props.get('showLoginPopup')).toBe(true);
 
-		expect(componentOf(routes[0]!)).toBe(Secret);
 		const loggedIn = new Nirax(routes, '/secret', true, NotFound);
 		loggedIn.init();
 		expect(componentOf(loggedIn.current.route)).toBe(Secret);

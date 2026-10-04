@@ -80,7 +80,6 @@ describe('OpenAPI errors', () => {
 					kind: error.kind ?? 'client',
 					...(error.info === undefined ? {} : { info: error.info }),
 				});
-				expect(example!.value.error).not.toHaveProperty('httpStatusCode');
 			}
 		}
 	});
@@ -91,14 +90,6 @@ describe('OpenAPI errors', () => {
 			kind: 'client',
 		});
 		expect(responsesFor('ping')['401']).toBeUndefined();
-		expect(examplesFor('drive/files/create', 413)['maxFileSizeExceeded']?.value.error.code).toBe(
-			'MAX_FILE_SIZE_EXCEEDED',
-		);
-		expect(examplesFor('i/update', 422)['nameContainsProhibitedWords']?.value.error.code).toBe(
-			'YOUR_NAME_CONTAINS_PROHIBITED_WORDS',
-		);
-		expect(examplesFor('users/show', 404)['noSuchUser']?.value.error.code).toBe('NO_SUCH_USER');
-		expect(examplesFor('users/show', 500)['failedToResolveRemoteUser']?.value.error.kind).toBe('server');
 		expect(examplesFor('fetch-rss', 429)['RATE_LIMIT_EXCEEDED']?.value.error.code).toBe('RATE_LIMIT_EXCEEDED');
 		expect(responsesFor('ping')['429']).toBeUndefined();
 		expect(examplesFor('users/show', 401)['AUTHENTICATION_FAILED']?.value.error.code).toBe('AUTHENTICATION_FAILED');

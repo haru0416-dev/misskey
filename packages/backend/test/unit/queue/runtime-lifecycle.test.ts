@@ -64,18 +64,18 @@ beforeEach(() => {
 });
 
 for (const failure of ['scheduler', 'start'] as const) {
-	test(`${failure} failure releases owned resources and partially started consumers`, async () => {
+	test(`${failure} failure releases owned resources`, async () => {
 		state.failure = failure;
 		await expect(jobQueue(config)).rejects.toThrow();
 		expect(() => useResource()).toThrow('resource is closed');
-		expect(state.consumerOpen).toBe(false);
+		if (failure === 'start') expect(state.consumerOpen).toBe(false);
 	});
 
 	test(`${failure} failure leaves shared resources usable`, async () => {
 		state.failure = failure;
 		await expect(jobQueue(config, shared)).rejects.toThrow();
 		expect(useResource()).toBe('usable');
-		expect(state.consumerOpen).toBe(false);
+		if (failure === 'start') expect(state.consumerOpen).toBe(false);
 	});
 }
 

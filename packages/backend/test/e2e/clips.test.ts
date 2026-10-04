@@ -203,11 +203,16 @@ describe('クリップ', () => {
 		expect(res.isFavorited).toBe(false);
 	});
 
-	test('の作成はポリシーで定められた数以上はできない。', async () => {
+	test('作成上限までのクリップを順序通り一覧取得でき、上限を超えて作成できない', async () => {
 		const clipLimit = DEFAULT_POLICIES.clipLimit;
-		for (let i = 0; i < clipLimit; i++) {
-			await create();
-		}
+		const clips = await createMany({}, clipLimit);
+		const listed = await list({ parameters: { limit: clipLimit } });
+		expect(listed.map((clip) => clip.id)).toStrictEqual(
+			clips
+				.map((clip) => clip.id)
+				.sort()
+				.toReversed(),
+		);
 
 		await failedApiCall(
 			{
@@ -379,21 +384,6 @@ describe('クリップ', () => {
 			},
 		),
 	);
-
-	test('の一覧(clips/list)が取得できる(空)', async () => {
-		const res = await list({});
-		expect(res).toStrictEqual([]);
-	});
-
-	test('の一覧(clips/list)が取得できる(上限いっぱい)', async () => {
-		const clipLimit = DEFAULT_POLICIES.clipLimit;
-		const clips = await createMany({}, clipLimit);
-		const res = await list({
-			parameters: { limit: clips.length },
-		});
-
-		expect(res.toReversed()).toStrictEqual(clips.sort(compareBy((s) => s.id)));
-	});
 
 	test('の一覧が取得できる(空)', async () => {
 		const res = await usersClips({
@@ -852,23 +842,6 @@ describe('クリップ', () => {
 				},
 			);
 		});
-
-		test('は他人のクリップへ追加できない。', async () =>
-			await failedApiCall(
-				{
-					endpoint: 'clips/add-note',
-					parameters: {
-						clipId: aliceClip.id,
-						noteId: aliceNote.id,
-					},
-					user: bob,
-				},
-				{
-					status: 400,
-					code: 'NO_SUCH_CLIP',
-					id: 'd6e76cc0-a1b5-4c7c-a287-73fa9c716dcf',
-				},
-			));
 
 		test.each([
 			{ label: 'clipId未指定', parameters: { clipId: undefined } },

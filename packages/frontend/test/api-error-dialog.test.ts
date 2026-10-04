@@ -13,16 +13,10 @@ describe('apiErrorDialogContent', () => {
 			title: i18n.ts.somethingHappened,
 			text: i18n.ts.serverIsDead,
 		});
-		for (const message of [
-			'Unexpected token < in JSON at position 0',
-			'JSON Parse error: Unrecognized token',
-			'JSON.parse: unexpected character',
-		]) {
-			expect(apiErrorDialogContent(new SyntaxError(message))).toEqual({
-				title: i18n.ts.gotInvalidResponseError,
-				text: i18n.ts.gotInvalidResponseErrorDescription,
-			});
-		}
+		expect(apiErrorDialogContent(new SyntaxError('Unexpected token < in JSON at position 0'))).toEqual({
+			title: i18n.ts.gotInvalidResponseError,
+			text: i18n.ts.gotInvalidResponseErrorDescription,
+		});
 	});
 
 	test('利用者の中断では何も出さない', () => {

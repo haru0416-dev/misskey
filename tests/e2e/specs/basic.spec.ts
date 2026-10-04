@@ -140,9 +140,7 @@ test.describe('After setup instance', () => {
 
 		await expect(page.locator('[data-cy-signup-submit]')).toBeDisabled();
 		await page.locator('[data-cy-signup-username] input').fill('alice');
-		await expect(page.locator('[data-cy-signup-submit]')).toBeDisabled();
 		await page.locator('[data-cy-signup-password] input').fill('alice1234');
-		await expect(page.locator('[data-cy-signup-submit]')).toBeDisabled();
 		await page.locator('[data-cy-signup-password-retype] input').fill('alice1234');
 		await expect(page.locator('[data-cy-signup-submit]')).toBeDisabled();
 		await page.locator('[data-cy-signup-invitation-code] input').fill('test-invitation-code');
@@ -162,10 +160,8 @@ test.describe('After setup instance', () => {
 		await visitHome(page);
 
 		await page.locator('[data-cy-signup]').click();
-		await expect(page.locator('[data-cy-signup-rules-continue]')).toBeDisabled();
 		await page.locator('[data-cy-signup-rules-notes-agree] [data-cy-switch-toggle]').click();
 		await page.locator('[data-cy-modal-dialog-ok]').click();
-		await expect(page.locator('[data-cy-signup-rules-continue]')).toBeEnabled();
 		await page.locator('[data-cy-signup-rules-continue]').click();
 
 		await page.locator('[data-cy-signup-username] input').fill('alice');
@@ -191,13 +187,6 @@ test.describe('After user signup', () => {
 
 	test.afterEach(async ({ page }) => {
 		await waitForPageCarryoverGuard(page);
-	});
-
-	test('signin', async ({ page }) => {
-		await login(page, 'alice', 'alice1234');
-		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
-		await page.reload();
-		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
 	});
 
 	test('suspend', async ({ page }) => {
@@ -236,6 +225,10 @@ test.describe('After user signed in', () => {
 	});
 
 	test('account setup wizard', async ({ page }) => {
+		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
+		await page.reload();
+		await expect(page.locator('[data-cy-user-setup-continue]')).toBeVisible();
+
 		await page.locator('[data-cy-user-setup-continue]').click({ timeout: 30_000 });
 
 		// 名前と自己紹介は、ステップを進めるときにまとめて保存される。

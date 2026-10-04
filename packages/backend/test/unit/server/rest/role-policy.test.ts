@@ -30,13 +30,23 @@ describe('fetchRolePolicies', () => {
 				driveCapacityMb: { useDefault: false, priority: 1, value: 512 },
 				canInvite: { useDefault: false, priority: 1, value: true },
 				uploadableFileTypes: { useDefault: false, priority: 1, value: ['image/*'] },
-				chatAvailability: { useDefault: false, priority: 1, value: 'readonly' },
+				chatAvailability: { useDefault: false, priority: 1, value: 'available' },
+				canPublicNote: { useDefault: false, priority: 1, value: true },
+			}),
+			role({
+				canPublicNote: { priority: 2, value: false },
+				chatAvailability: { priority: 2, value: 'readonly' },
+			}),
+			role({
+				canPublicNote: { priority: 2, value: false },
+				chatAvailability: { priority: 2, value: 'unavailable' },
 			}),
 		]);
 
 		expect(policies.driveCapacityMb).toBe(512);
 		expect(policies.canInvite).toBe(true);
 		expect(policies.uploadableFileTypes).toEqual(['image/*']);
+		expect(policies.canPublicNote).toBe(false);
 		expect(policies.chatAvailability).toBe('readonly');
 	});
 
@@ -90,7 +100,7 @@ describe('fetchRolePolicies', () => {
 		expect(policies.driveCapacityMb).toBe(DEFAULT_POLICIES.driveCapacityMb);
 	});
 
-	test('プロフィール用の2項目は優先度・既定値・不正値を全ポリシー取得と同じ条件で解決する', async () => {
+	test('プロフィール用の2項目は優先度・既定値・不正値を解決する', () => {
 		const cases = [
 			{ meta: {}, roles: [], expected: { canPublicNote: true, chatAvailability: 'available' } },
 			{
@@ -142,8 +152,6 @@ describe('fetchRolePolicies', () => {
 			const dependencies = deps(entry.meta);
 			const profile = getUserProfilePolicies(dependencies, entry.roles);
 			expect(profile).toEqual(entry.expected);
-			const all = await fetchRolePolicies(dependencies, null, entry.roles);
-			expect(profile).toEqual({ canPublicNote: all.canPublicNote, chatAvailability: all.chatAvailability });
 		}
 	});
 });

@@ -39,12 +39,10 @@ test('creates a missing configuration and preserves it across concurrent initial
 	expect(readFileSync(join(directory, '.config/test.yml'), 'utf8')).toBe('database: custom-test-db\n');
 });
 
-test('uses the requested template without replacing an existing configuration', async () => {
+test('uses the requested template for a missing configuration', async () => {
 	const directory = fixture();
 	writeFileSync(join(directory, 'devcontainer.yml'), 'database: devcontainer-test-db\n');
 	expect(await initialize(directory, ['devcontainer.yml']).exited).toBe(0);
-	expect(readFileSync(join(directory, '.config/test.yml'), 'utf8')).toBe('database: devcontainer-test-db\n');
-	expect(await initialize(directory, []).exited).toBe(0);
 	expect(readFileSync(join(directory, '.config/test.yml'), 'utf8')).toBe('database: devcontainer-test-db\n');
 });
 

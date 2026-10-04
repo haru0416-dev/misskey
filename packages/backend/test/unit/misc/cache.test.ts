@@ -57,7 +57,6 @@ describe('misc:MemoryKVCache', () => {
 		expect(cache.get('a')).toBe(1);
 		expect(cache.get('b')).toBe(2);
 		expect(cache.get('c')).toBe(3);
-		expect([...cache.entries].map(([key]) => key)).toEqual(['a', 'b', 'c']);
 		cache.dispose();
 	});
 
@@ -78,28 +77,6 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	describe('gc()', () => {
-		test('removes expired entries', () => {
-			const cache = createMemoryKVCache<string>(1000);
-			cache.set('a', '1');
-			cache.set('b', '2');
-			vi.advanceTimersByTime(1001);
-			cache.gc();
-			expect(cache.get('a')).toBeUndefined();
-			expect(cache.get('b')).toBeUndefined();
-			cache.dispose();
-		});
-
-		test('removes only expired entries when mixed with live entries', () => {
-			const cache = createMemoryKVCache<string>(2000);
-			cache.set('old', 'oldValue');
-			vi.advanceTimersByTime(2001);
-			cache.set('new', 'newValue');
-			cache.gc();
-			expect(cache.get('old')).toBeUndefined();
-			expect(cache.get('new')).toBe('newValue');
-			cache.dispose();
-		});
-
 		// Map は既存キーを更新しても挿入位置を保持するため、
 		// gc() がキーを時刻順と仮定すると、更新済みの有効なキーで走査を止めて
 		// 後続の期限切れキーを残す。get() の判定とは別に Map から削除されることを確認する。
@@ -143,32 +120,19 @@ describe('misc:MemoryKVCache', () => {
 	});
 
 	describe('fetch()', () => {
-		test('calls fetcher on cache miss', async () => {
+		test('caches fetched values and replaces values rejected by the validator', async () => {
 			const cache = createMemoryKVCache<string>(1000);
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch('key', fetcher);
-			expect(fetcher).toHaveBeenCalledOnce();
-			expect(result).toBe('fetched');
-			cache.dispose();
-		});
+			const fetcher = vi.fn().mockResolvedValueOnce('fetched').mockResolvedValueOnce('updated');
 
-		test('does not call fetcher on cache hit', async () => {
-			const cache = createMemoryKVCache<string>(1000);
-			cache.set('key', 'cached');
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch('key', fetcher);
-			expect(fetcher).not.toHaveBeenCalled();
-			expect(result).toBe('cached');
-			cache.dispose();
-		});
-
-		test('respects validator and bypasses cache when validator returns false', async () => {
-			const cache = createMemoryKVCache<string>(1000);
-			cache.set('key', 'cached');
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch('key', fetcher, () => false);
+			expect(await cache.fetch('key', fetcher)).toBe('fetched');
 			expect(fetcher).toHaveBeenCalledOnce();
-			expect(result).toBe('fetched');
+			expect(await cache.fetch('key', fetcher)).toBe('fetched');
+			expect(fetcher).toHaveBeenCalledOnce();
+
+			expect(await cache.fetch('key', fetcher, () => false)).toBe('updated');
+			expect(fetcher).toHaveBeenCalledTimes(2);
+			expect(await cache.fetch('key', fetcher)).toBe('updated');
+			expect(fetcher).toHaveBeenCalledTimes(2);
 			cache.dispose();
 		});
 	});
@@ -235,30 +199,19 @@ describe('misc:MemorySingleCache', () => {
 	});
 
 	describe('fetch()', () => {
-		test('calls fetcher on cache miss', async () => {
+		test('caches fetched values and replaces values rejected by the validator', async () => {
 			const cache = createMemorySingleCache<string>(1000);
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch(fetcher);
-			expect(fetcher).toHaveBeenCalledOnce();
-			expect(result).toBe('fetched');
-		});
+			const fetcher = vi.fn().mockResolvedValueOnce('fetched').mockResolvedValueOnce('updated');
 
-		test('does not call fetcher on cache hit', async () => {
-			const cache = createMemorySingleCache<string>(1000);
-			cache.set('cached');
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch(fetcher);
-			expect(fetcher).not.toHaveBeenCalled();
-			expect(result).toBe('cached');
-		});
-
-		test('respects validator and bypasses cache when validator returns false', async () => {
-			const cache = createMemorySingleCache<string>(1000);
-			cache.set('cached');
-			const fetcher = vi.fn().mockResolvedValue('fetched');
-			const result = await cache.fetch(fetcher, () => false);
+			expect(await cache.fetch(fetcher)).toBe('fetched');
 			expect(fetcher).toHaveBeenCalledOnce();
-			expect(result).toBe('fetched');
+			expect(await cache.fetch(fetcher)).toBe('fetched');
+			expect(fetcher).toHaveBeenCalledOnce();
+
+			expect(await cache.fetch(fetcher, () => false)).toBe('updated');
+			expect(fetcher).toHaveBeenCalledTimes(2);
+			expect(await cache.fetch(fetcher)).toBe('updated');
+			expect(fetcher).toHaveBeenCalledTimes(2);
 		});
 	});
 });

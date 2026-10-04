@@ -31,21 +31,16 @@ export const Default = {
 	async play({ canvasElement, args }) {
 		const canvas = within(canvasElement);
 		if (args.plain) {
-			const aiHelloMiskist = canvas.getByText('@ai *Hello*, #Miskist!');
-			await expect(aiHelloMiskist).toBeInTheDocument();
+			canvas.getByText('@ai *Hello*, #Miskist!');
 		} else {
 			const ai = canvas.getByText('@ai');
-			await expect(ai).toBeInTheDocument();
 			await expect(ai.closest('a')).toHaveAttribute('href', '/@ai');
 			const hello = canvas.getByText('Hello');
-			await expect(hello).toBeInTheDocument();
 			await expect(hello.style.fontStyle).toBe('oblique');
 			const miskist = canvas.getByText('#Miskist');
-			await expect(miskist).toBeInTheDocument();
 			await expect(miskist).toHaveAttribute('href', (args.isNote ?? true) ? '/tags/Miskist' : '/user-tags/Miskist');
 		}
 		const heart = canvas.getByAltText('❤');
-		await expect(heart).toBeInTheDocument();
 		await expect(heart).toHaveAttribute('src', '/twemoji/2764.svg');
 	},
 	args: {

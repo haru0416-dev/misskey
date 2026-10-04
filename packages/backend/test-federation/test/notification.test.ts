@@ -30,25 +30,19 @@ describe('Notification', () => {
 			await deliveryBarrier('b.test');
 		});
 
-		test('Get notification when follow', async () => {
+		test('Get follow notifications on both peers', async () => {
 			await assertNotificationReceived(
 				'b.test',
 				bob,
-				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
+				() =>
+					assertNotificationReceived(
+						'a.test',
+						alice,
+						() => bob.client.request('following/create', { userId: aliceInB.id }),
+						(notification) => notification.type === 'follow' && notification.userId === bobInA.id,
+						true,
+					),
 				(notification) => notification.type === 'followRequestAccepted' && notification.userId === aliceInB.id,
-				true,
-			);
-
-			await bob.client.request('following/delete', { userId: aliceInB.id });
-			await deliveryBarrier('b.test');
-		});
-
-		test('Get notification when get followed', async () => {
-			await assertNotificationReceived(
-				'a.test',
-				alice,
-				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
-				(notification) => notification.type === 'follow' && notification.userId === bobInA.id,
 				true,
 			);
 		});

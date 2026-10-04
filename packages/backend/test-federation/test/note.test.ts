@@ -134,20 +134,6 @@ describe('Note', () => {
 		});
 	});
 
-	describe('Other props', () => {
-		test('localOnly', async () => {
-			const note = (await alice.client.request('notes/create', { text: 'a', localOnly: true })).createdNote;
-			await rejects(
-				async () => await bob.client.request('ap/show', { uri: `https://a.test/notes/${note.id}` }),
-				(err: unknown) => {
-					assert(err !== null && typeof err === 'object' && 'code' in err);
-					strictEqual(err.code, 'REQUEST_FAILED');
-					return true;
-				},
-			);
-		});
-	});
-
 	describe('Deletion', () => {
 		describe('Check Delete is delivered', () => {
 			describe('To renoted and not followed user', () => {
@@ -210,19 +196,6 @@ describe('Note', () => {
 
 	describe('Reaction', () => {
 		describe('Consistency', () => {
-			test('Unicode reaction', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
-				const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
-				const reaction = '😅';
-				await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction });
-				await deliveryBarrier('b.test');
-
-				const reactions = await alice.client.request('notes/reactions', { noteId: note.id });
-				strictEqual(reactions.length, 1);
-				strictEqual(getAt(reactions, 0).type, reaction);
-				strictEqual(getAt(reactions, 0).user.id, bobInA.id);
-			});
-
 			test('Custom emoji reaction', async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 				const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);

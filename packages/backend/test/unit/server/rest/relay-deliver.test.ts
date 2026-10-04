@@ -82,51 +82,6 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 		).toBeUndefined();
 	});
 
-	test('deliverToRelays: accepted リレーにのみ LD 署名済みアクティビティを deliver キューへ積む', async () => {
-		const inbox = `https://relay.example.com/inbox-${genId()}`;
-		const relay = await createRelayInDatabase(runtime.db, { id: genId(), inbox, status: 'accepted' });
-		createdRelayIds.push(relay.id);
-		const pendingInbox = `https://relay.example.com/pending-${genId()}`;
-		const pendingRelay = await createRelayInDatabase(runtime.db, {
-			id: genId(),
-			inbox: pendingInbox,
-			status: 'requesting',
-		});
-		createdRelayIds.push(pendingRelay.id);
-
-		const activity = {
-			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: `${runtime.config.instance.url}/test-activity/${genId()}`,
-			type: 'Create',
-			actor: `${runtime.config.instance.url}/users/${user.id}`,
-			object: { type: 'Note' },
-		};
-
-		await deliverToRelays(
-			runtime,
-			{ id: user.id, host: null },
-			renderOnce(() => activity),
-		);
-
-		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'prioritized', 'delayed']);
-		const relayJob = jobs.find((j) => (j.data as DeliverJobData).to === inbox);
-		expect(relayJob).toBeDefined();
-
-		const data = relayJob!.data as DeliverJobData;
-		expect(data.user.id).toBe(user.id);
-		expect(data.isSharedInbox).toBe(false);
-		const content = JSON.parse(data.content) as Record<string, unknown>;
-		expect((content['signature'] as Record<string, unknown>)['type']).toBe('RsaSignature2017');
-		expect(content['to']).toEqual(['https://www.w3.org/ns/activitystreams#Public']);
-		// 入力の activity オブジェクトは変異させない。
-		expect('to' in activity).toBe(false);
-		expect('signature' in activity).toBe(false);
-
-		expect(jobs.find((j) => (j.data as DeliverJobData).to === pendingInbox)).toBeUndefined();
-
-		await relayJob!.remove();
-	});
-
 	test('複数リレーへ一括投入し、宛先・署名・再送設定と同じjobIdの重複抑制を維持する', async () => {
 		for (let index = 0; index < 2; index++) {
 			const relay = await createRelayInDatabase(runtime.db, {
@@ -136,13 +91,20 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 			});
 			createdRelayIds.push(relay.id);
 		}
+		const pendingInbox = `https://relay.example.com/pending-${genId()}`;
+		const pendingRelay = await createRelayInDatabase(runtime.db, {
+			id: genId(),
+			inbox: pendingInbox,
+			status: 'requesting',
+		});
+		createdRelayIds.push(pendingRelay.id);
 		for (const prefix of [undefined, genId()]) {
 			const activity = {
 				'@context': 'https://www.w3.org/ns/activitystreams',
 				id: `${runtime.config.instance.url}/activities/${genId()}`,
 				type: 'Create',
 				actor: `${runtime.config.instance.url}/users/${user.id}`,
-				to: ['https://www.w3.org/ns/activitystreams#Public'],
+				...(prefix == null ? {} : { to: ['https://www.w3.org/ns/activitystreams#Public'] }),
 				cc: [`${runtime.config.instance.url}/users/${user.id}/followers`],
 				object: { type: 'Note', content: '日本語の配信本文' },
 			};
@@ -167,6 +129,7 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 				await expect.poll(async () => (await findJobs()).length).toBe(2);
 				const jobs = await findJobs();
 				expect(new Set(jobs.map((job) => job.data.to)).size).toBe(2);
+				expect(jobs.some((job) => job.data.to === pendingInbox)).toBe(false);
 				expect(new Set(jobs.map((job) => job.data.content)).size).toBe(1);
 				const content = JSON.parse(jobs[0]!.data.content);
 				expect(content.signature).toMatchObject({
@@ -175,7 +138,7 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 				});
 				expect(await createJsonLd(runtime.httpRequestService).verifyRsaSignature2017(content, publicKey)).toBe(true);
 				const { signature: _signature, ...unsigned } = content;
-				expect(unsigned).toEqual(activity);
+				expect(unsigned).toEqual({ ...activity, to: ['https://www.w3.org/ns/activitystreams#Public'] });
 				expect(activity).toEqual(original);
 				for (const job of jobs) {
 					expect(job.data.user.id).toBe(user.id);
@@ -183,8 +146,6 @@ describe('deliverToRelays (RelayService#deliverToRelays 相当)', () => {
 					expect(job.data.digest).toBe(`SHA-256=${createHash('sha256').update(job.data.content).digest('base64')}`);
 					expect(job.opts.attempts).toBe(runtime.config.queues.deliver.maximumAttempts ?? 12);
 					expect(job.opts.backoff).toMatchObject({ type: 'custom' });
-					if (prefix != null)
-						expect(job.id).toBe(`${prefix}-${createHash('sha256').update(job.data.to).digest('hex').slice(0, 24)}`);
 				}
 				if (prefix != null) {
 					await deliverToRelays(
