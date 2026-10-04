@@ -25,7 +25,7 @@ Misskey の upstream には追従しない、独立した製品です。連合�
 
 ## 動かす
 
-必要なものは、[`.bun-version`](./.bun-version) の Bun、PostgreSQL 18、Valkey 8、FFmpeg です。開発用の PostgreSQL と Valkey は、次のコマンドで起動できます。
+実行に必要なものは、[`.bun-version`](./.bun-version) の Bun、PostgreSQL 18、Valkey 8、FFmpeg です。ソースからビルドする開発環境には、[slacc](./packages/slacc/README.md) のネイティブモジュールを作るための Rust ツールチェーンと C/C++ のビルドツールも必要です。Docker イメージのビルドでは Dockerfile 内でこれらを導入するので、ホストへの Rust の導入は不要です。開発用の PostgreSQL と Valkey は、次のコマンドで起動できます。
 
 ```sh
 bun install --frozen-lockfile

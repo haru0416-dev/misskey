@@ -155,7 +155,7 @@ export const sourceConfigV2Schema = z.strictObject({
 					minimumConnections: nonNegativeIntegerSchema.default(0),
 					/**
 					 * ホスト全体の DB 接続予算。DBを使うプロセス数 (HTTP + キュー) で割って各プールに配分する。
-					 * 各プールは最低 1 接続なので、DB 利用プロセス数を下回る予算では合計が予算を超える。
+					 * 各プールは最低 1 接続なので、DB 利用プロセス数を下回る予算は起動時に拒否する。
 					 *
 					 * プロセスごとの指定にすると `httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
 					 * PostgreSQL のデフォルト `max_connections = 100` に張り付いて溢れる。

@@ -49,7 +49,7 @@ export function resolveHostProcessCounts(config: Config): HostProcessCounts {
  * `maximumConnectionsPerHost` はホスト全体の予算なので、DBプールを持つプロセス数で割る。
  * fork専任のメインプロセスはDBを触らないので割る数から外れ、逆に cluster 無効時は
  * 1プロセスがHTTPとキューを兼ねる (プールも1つ) ので、その1つが予算を丸ごと使う。
- * 各プールは最低 1 接続とするため、予算が DB 利用プロセス数を下回る場合は合計が予算を超える。
+ * 各プールは最低 1 接続なので、DB 利用プロセス数を下回る予算は接続前に拒否する。
  *
  * これを怠って各プロセスが上限いっぱい張ると、`httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
  * PostgreSQL のデフォルト `max_connections = 100` に張り付いて溢れる。
@@ -57,5 +57,11 @@ export function resolveHostProcessCounts(config: Config): HostProcessCounts {
 export function resolveDatabasePoolSize(config: Config): number {
 	const counts = resolveHostProcessCounts(config);
 	const databaseUsers = Math.max(Math.min(counts.http + counts.queue, counts.total), 1);
-	return Math.max(Math.floor(config.database.pool.maximumConnectionsPerHost / databaseUsers), 1);
+	const budget = config.database.pool.maximumConnectionsPerHost;
+	if (budget < databaseUsers) {
+		throw new Error(
+			`database.pool.maximumConnectionsPerHost (${budget}) must be at least the number of DB-using processes (${databaseUsers}); increase the budget or reduce server.process.httpWorkers/queueWorkers`,
+		);
+	}
+	return Math.floor(budget / databaseUsers);
 }

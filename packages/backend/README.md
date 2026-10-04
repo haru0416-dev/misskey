@@ -34,7 +34,25 @@ API を足すときの手順は [`.claude/skills/working-on-backend`](../../.cla
 
 ## プロセスの構成
 
-master は、設定の `server.process.httpWorkers` と `queueWorkers` の数だけ、HTTP 担当とキュー担当のワーカーを fork します。ワーカーが落ちると、同じ役割で作り直します。環境変数 `MK_ONLY_SERVER` と `MK_ONLY_QUEUE` で、このホストでは片方の役割だけを動かすこともできます(HTTP 用のホストとキュー用のホストを分ける構成)。統計の配信などのデーモンは、全体で 1 つのプロセスだけが持ちます。DB の接続数の上限は、ホスト全体のプロセス数から割り振ります([misc/process-topology.ts](./src/misc/process-topology.ts))。
+master は、設定の `server.process.httpWorkers` と `queueWorkers` に従って、HTTP 担当とキュー担当を配置します。HTTP が 1 プロセスなら master 自身が担当し、2 プロセス以上なら HTTP ワーカーを fork します。HTTP が 0 なら master がキューを担当します。ワーカーが落ちると、同じ役割で作り直します。環境変数 `MK_ONLY_SERVER` と `MK_ONLY_QUEUE` で、このホストでは片方の役割だけを動かすこともできます。統計の配信などのデーモンは、ホスト内で 1 つのプロセスだけが持ちます。
+
+### 接続予算と分離運用の監視
+
+`database.pool.maximumConnectionsPerHost` は、ホスト単位の DB 接続予算です。CPU 数で制限した HTTP・キュープロセス数の合計で割り、端数は使いません。fork 専任の master は配分から除き、`MK_DISABLE_CLUSTERING` で HTTP とキューを同じプロセスに置く場合は 1 つのプールに配分します。各プールに最低 1 接続が必要なので、予算が DB 利用プロセス数を下回る設定は、fork や接続を始める前にエラーになります([misc/process-topology.ts](./src/misc/process-topology.ts))。
+
+複数ホストでは各ホストの予算を合計し、migration・管理 CLI・監視用接続と PostgreSQL の予約接続を加えて、`max_connections` 内に収めてください。キューの `concurrencyPerWorker` は worker ごとの値なので、全ホストの worker 数を掛けた配送並列数を、DB・Valkey・外部通信の容量に合わせます。`maximumStartsPerSecond` は BullMQ の limiter に渡す値で、同じ Valkey・キューを使う worker 全体で共有する開始レートです。worker を増やしても開始レートは倍増しません。各ホストで同じ値を設定してください([BullMQ の rate limiting](https://docs.bullmq.io/guide/rate-limiting))。
+
+`/healthz` は、その HTTP ホストの起動状態、同じ master が管理するキューの readiness、DB と Valkey の接続を確認します。`MK_ONLY_SERVER` で別ホストへキューを分離した場合、外部の consumer が停止しても HTTP の health は成功し得ます。HTTP の health だけで配送の稼働を判断せず、キューホストのプロセス監視と、管理画面の「ジョブキュー」または次の API を併用してください。
+
+| API・項目 | 監視する状態 |
+| --- | --- |
+| `admin/queue/queues`、`admin/queue/queue-stats` | `counts.waiting`、`active`、`delayed`、`failed`、`isPaused` と `metrics.completed` の進行。`waiting` は `prioritized` を含むため、二重に加算しません |
+| 上記の `db` キューの `outbox` | `pending`、`oldestPendingAgeMs`、`deadLetter`、`deliveryFailed`、`invalidPayload` |
+| `admin/queue/outbox-dead-letters` | 処理を諦めたジョブの理由と内容 |
+
+これらの API は moderator の認証と `read:admin:queue` 権限が必要です。監視用トークンを公開 health URL やログへ含めないでください。処理待ちがあるのに完了が進まない状態、最古の pending の経過時間、failed・dead-letter の増加を継続して観測し、通常のバックオフと保守時の一時停止を踏まえて通知条件を決めます。件数 0 だけでは consumer の稼働を証明できません。配送の最終確認には、管理する別サーバーとの送受信と反映の確認も必要です。
+
+DB 保存、キュー受理、相手サーバーへの反映は別の完了条件です。再試行では同じ処理が再実行されるため、新しい後処理を追加する場合は、重複実行と途中停止からの回復を確認してください。
 
 ## コマンド
 

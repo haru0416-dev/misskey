@@ -34,95 +34,108 @@ export function fetchMisskeyQuery<T>(options: {
 	});
 }
 
-const USER_MUTATIONS = new Set<string>([
-	'admin/suspend-user',
-	'admin/unsuspend-user',
-	'admin/unset-user-avatar',
-	'admin/unset-user-banner',
-	'blocking/create',
-	'blocking/delete',
-	'following/create',
-	'following/delete',
-	'following/invalidate',
-	'following/requests/accept',
-	'following/requests/cancel',
-	'following/requests/reject',
-	'following/update',
-	'i/update',
-	'mute/create',
-	'mute/delete',
-	'renote-mute/create',
-	'renote-mute/delete',
-	'users/update-memo',
-]);
-
-const CLIP_MUTATIONS = new Set<string>([
-	'clips/add-note',
-	'clips/create',
-	'clips/delete',
-	'clips/favorite',
-	'clips/remove-note',
-	'clips/unfavorite',
-	'clips/update',
-]);
-const ROLE_MUTATIONS = new Set<string>([
-	'admin/roles/assign',
-	'admin/roles/create',
-	'admin/roles/delete',
-	'admin/roles/unassign',
-	'admin/roles/update',
-	'admin/roles/update-default-policies',
-]);
-const USER_LIST_MUTATIONS = new Set<string>([
-	'users/lists/create',
-	'users/lists/create-from-public',
-	'users/lists/delete',
-	'users/lists/favorite',
-	'users/lists/pull',
-	'users/lists/push',
-	'users/lists/unfavorite',
-	'users/lists/update',
-	'users/lists/update-membership',
-]);
-const ANTENNA_MUTATIONS = new Set<string>([
-	'antennas/create',
-	'antennas/delete',
-	'antennas/remove-note',
-	'antennas/update',
-]);
+const MUTATION_INVALIDATIONS: readonly {
+	mutations: Readonly<Partial<Record<keyof Misskey.Endpoints, true>>> | 'admin/emoji/';
+	targets: readonly (keyof Misskey.Endpoints)[];
+	scope: 'account' | 'allAccounts';
+}[] = [
+	{
+		mutations: {
+			'admin/suspend-user': true,
+			'admin/unsuspend-user': true,
+			'admin/unset-user-avatar': true,
+			'admin/unset-user-banner': true,
+			'blocking/create': true,
+			'blocking/delete': true,
+			'following/create': true,
+			'following/delete': true,
+			'following/invalidate': true,
+			'following/requests/accept': true,
+			'following/requests/cancel': true,
+			'following/requests/reject': true,
+			'following/update': true,
+			'i/update': true,
+			'mute/create': true,
+			'mute/delete': true,
+			'renote-mute/create': true,
+			'renote-mute/delete': true,
+			'users/update-memo': true,
+		},
+		targets: ['users/show'],
+		scope: 'account',
+	},
+	{ mutations: 'admin/emoji/', targets: ['emoji', 'emojis'], scope: 'allAccounts' },
+	{
+		mutations: {
+			'clips/add-note': true,
+			'clips/create': true,
+			'clips/delete': true,
+			'clips/favorite': true,
+			'clips/remove-note': true,
+			'clips/unfavorite': true,
+			'clips/update': true,
+		},
+		targets: ['clips/list'],
+		scope: 'account',
+	},
+	{
+		mutations: {
+			'admin/roles/assign': true,
+			'admin/roles/create': true,
+			'admin/roles/delete': true,
+			'admin/roles/unassign': true,
+			'admin/roles/update': true,
+			'admin/roles/update-default-policies': true,
+		},
+		targets: ['admin/roles/list'],
+		scope: 'account',
+	},
+	{
+		mutations: {
+			'users/lists/create': true,
+			'users/lists/create-from-public': true,
+			'users/lists/delete': true,
+			'users/lists/favorite': true,
+			'users/lists/pull': true,
+			'users/lists/push': true,
+			'users/lists/unfavorite': true,
+			'users/lists/update': true,
+			'users/lists/update-membership': true,
+		},
+		targets: ['users/lists/list'],
+		scope: 'account',
+	},
+	{
+		mutations: {
+			'antennas/create': true,
+			'antennas/delete': true,
+			'antennas/remove-note': true,
+			'antennas/update': true,
+		},
+		targets: ['antennas/list'],
+		scope: 'account',
+	},
+	{
+		mutations: { 'channels/favorite': true, 'channels/unfavorite': true },
+		targets: ['channels/my-favorites'],
+		scope: 'account',
+	},
+];
 
 export function invalidateAfterMutation(
 	accountId: QueryAccountId | undefined,
 	endpoint: keyof Misskey.Endpoints,
 ): void {
-	const invalidateEndpoint = <E extends keyof Misskey.Endpoints>(target: E) => {
-		if (accountId === undefined) return;
-		void queryClient.invalidateQueries({ queryKey: queryKeys.endpointRoot(accountId, target) });
-	};
-	const invalidateEndpointForAllAccounts = <E extends keyof Misskey.Endpoints>(target: E) => {
-		void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, target) });
-	};
-
-	if (USER_MUTATIONS.has(endpoint)) {
-		invalidateEndpoint('users/show');
-	}
-	if (endpoint.startsWith('admin/emoji/')) {
-		invalidateEndpointForAllAccounts('emoji');
-		invalidateEndpointForAllAccounts('emojis');
-	}
-	if (CLIP_MUTATIONS.has(endpoint)) {
-		invalidateEndpoint('clips/list');
-	}
-	if (ROLE_MUTATIONS.has(endpoint)) {
-		invalidateEndpoint('admin/roles/list');
-	}
-	if (USER_LIST_MUTATIONS.has(endpoint)) {
-		invalidateEndpoint('users/lists/list');
-	}
-	if (ANTENNA_MUTATIONS.has(endpoint)) {
-		invalidateEndpoint('antennas/list');
-	}
-	if (endpoint === 'channels/favorite' || endpoint === 'channels/unfavorite') {
-		invalidateEndpoint('channels/my-favorites');
+	for (const rule of MUTATION_INVALIDATIONS) {
+		const matches =
+			typeof rule.mutations === 'string' ? endpoint.startsWith(rule.mutations) : rule.mutations[endpoint] === true;
+		if (!matches) continue;
+		for (const target of rule.targets) {
+			if (rule.scope === 'allAccounts') {
+				void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, target) });
+			} else if (accountId !== undefined) {
+				void queryClient.invalidateQueries({ queryKey: queryKeys.endpointRoot(accountId, target) });
+			}
+		}
 	}
 }

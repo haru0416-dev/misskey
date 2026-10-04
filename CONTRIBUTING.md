@@ -47,6 +47,7 @@ upstream の旧リリース履歴 (2026.6.0 まで) は [docs/archive/upstream-c
 
 Use the Bun version specified in [package.json](./package.json). Install dependencies with `bun install --frozen-lockfile`.
 The application needs PostgreSQL, Valkey, and FFmpeg.
+Building from source also requires a Rust toolchain and C/C++ build tools for the native [slacc module](./packages/slacc/README.md). `bun run build` includes the slacc build; when building only the backend or running backend tests after a fresh install, run `bun run --filter slacc build` first. Docker image builds install the toolchain inside the build stages, so the host does not need Rust.
 
 #### Use system-wide software
 
@@ -122,8 +123,10 @@ There are three types of test codes for the backend:
 #### Running Unit Tests or Single-server E2E Tests
 1. If `.config/test.yml` does not exist, copy the dedicated test configuration. Do not overwrite an existing test configuration:
 ```sh
-test -e .config/test.yml || cp .github/misskey/test.yml .config/test.yml
+bun scripts/ensure-test-config.mjs
 ```
+
+The browser E2E startup commands also preserve an existing `.config/test.yml`. For a fresh Devcontainer setup, `bun scripts/ensure-test-config.mjs .config/playwright-devcontainer.yml` selects that template. If the test configuration already exists, check its connection settings before switching environments; startup does not replace it.
 
 2. Start DB and Valkey servers for testing:
 ```sh

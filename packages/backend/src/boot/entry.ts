@@ -10,12 +10,15 @@ import { styleText } from 'node:util';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import { createLogger, configureLogger } from '@/logger.js';
 import { loadConfig } from '@/config.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import { envOption } from '../env.js';
 import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
 import { assignmentByWorkerId } from './cluster-roles.js';
 import { readyRef } from './ready.js';
 
 const config = loadConfig();
+// fork や接続を始める前に、ホスト全体の接続予算を検査する。
+resolveDatabasePoolSize(config);
 configureLogger(config);
 await initializeTelemetry(config);
 

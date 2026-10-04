@@ -104,6 +104,55 @@ describe('TanStack Query integration', () => {
 		expect(queryClient.getQueryState(channelsKey)?.isInvalidated).toBe(true);
 	});
 
+	test('refreshes user queries only for the account that performed the mutation', async () => {
+		let name = 'Before';
+		const read = (accountId: string | null, userId: string) =>
+			fetchMisskeyQuery({
+				accountId,
+				endpoint: 'users/show',
+				params: { userId },
+				queryFn: async () => ({ id: userId, name }),
+			});
+		await read('account-a', 'user-a');
+		await read('account-a', 'user-b');
+		await read('account-b', 'user-a');
+		await read(null, 'user-a');
+		name = 'After';
+		invalidateAfterMutation('account-a', 'i/update');
+
+		expect((await read('account-a', 'user-a')).name).toBe('After');
+		expect((await read('account-a', 'user-b')).name).toBe('After');
+		expect((await read('account-b', 'user-a')).name).toBe('Before');
+		expect((await read(null, 'user-a')).name).toBe('Before');
+	});
+
+	test('does not invalidate account queries for an unidentified credential owner', () => {
+		const key = queryKeys.endpoint('account-a', 'users/show', { userId: 'user-a' });
+		queryClient.setQueryData(key, { id: 'user-a', name: 'Before' });
+		invalidateAfterMutation(undefined, 'i/update');
+		expect(queryClient.getQueryState(key)?.isInvalidated).toBe(false);
+	});
+
+	test('invalidates emoji data across accounts without invalidating unrelated profiles', () => {
+		const accounts = ['account-a', 'account-b', null];
+		for (const account of accounts) {
+			queryClient.setQueryData(queryKeys.endpoint(account, 'emoji', { name: 'blobcat' }), { name: 'blobcat' });
+			queryClient.setQueryData(queryKeys.endpoint(account, 'emojis', {}), { emojis: [] });
+			queryClient.setQueryData(queryKeys.endpoint(account, 'users/show', { userId: 'user-a' }), { id: 'user-a' });
+		}
+		invalidateAfterMutation(undefined, 'admin/emoji/update');
+
+		for (const account of accounts) {
+			expect(queryClient.getQueryState(queryKeys.endpoint(account, 'emoji', { name: 'blobcat' }))?.isInvalidated).toBe(
+				true,
+			);
+			expect(queryClient.getQueryState(queryKeys.endpoint(account, 'emojis', {}))?.isInvalidated).toBe(true);
+			expect(
+				queryClient.getQueryState(queryKeys.endpoint(account, 'users/show', { userId: 'user-a' }))?.isInvalidated,
+			).toBe(false);
+		}
+	});
+
 	test('patches cached users from streaming updates', () => {
 		const singleKey = queryKeys.endpoint('account-a', 'users/show', { userId: 'user-a' });
 		const bulkKey = queryKeys.endpoint('account-a', 'users/show', { userIds: ['user-a', 'user-b'] });
