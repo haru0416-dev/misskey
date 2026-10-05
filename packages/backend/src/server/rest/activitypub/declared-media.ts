@@ -11,7 +11,7 @@ const BASE83 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$
 const MIME_PATTERN = /^[a-z0-9][a-z0-9!#$&^_.+-]{0,62}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,62}$/;
 
 // 画面の blurhash デコーダは形式の正しさを前提にするので、文字種と「先頭 1 文字が決める成分数」と全体の長さを照合する。
-export function isValidBlurhash(value: string): boolean {
+function isValidBlurhash(value: string): boolean {
 	if (value.length < 6 || value.length > 4 + 2 * 81) return false;
 	for (const char of value) {
 		if (!BASE83.includes(char)) return false;

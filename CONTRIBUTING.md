@@ -116,6 +116,8 @@ Backend tests require manual preparation of servers. See the next section for mo
 
 テストの削除・統合は、削除すると見逃す利用側の不具合を基準に判断します。同じ fixture のライフサイクルへ統合する場合も、初回保存と再保存、疎な入力と複合入力、通常時と失敗時の結果をそれぞれ観測してください。移管先が同じ結果を返すだけでは、元の入力・副作用・失敗経路を包含するとは限りません。型・ライブラリの挙動や内部の文言・形状を固定するだけの assertion は、実際の返却値・保存・配信・資源解放の保証と区別します。
 
+テストを削除したら、本体にテスト専用の export が残っていないか `bun run lint:knip` でも確認します。この検査は `bun run lint` とは別で、i18n の build 成果物とコンパイル済みの設定が必要です。未生成なら `bun run --filter i18n build` と `bun run --filter backend compile-config` を先に実行し、既存の設定ファイルは上書きしないでください。
+
 ### Backend
 There are three types of test codes for the backend:
 - Unit tests: [`/packages/backend/test/unit`](/packages/backend/test/unit)
