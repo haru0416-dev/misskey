@@ -1425,6 +1425,7 @@ export type Endpoints = {
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
+            | 'QUEUE_JOB_NOT_TERMINAL'
             | 'ROLE_PERMISSION_DENIED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
@@ -1506,6 +1507,8 @@ export type Endpoints = {
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
+            | 'QUEUE_JOB_ALREADY_ACKNOWLEDGED'
+            | 'QUEUE_JOB_NOT_TERMINAL'
             | 'ROLE_PERMISSION_DENIED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
@@ -1546,6 +1549,7 @@ export type Endpoints = {
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
+            | 'QUEUE_JOB_NOT_TERMINAL'
             | 'ROLE_PERMISSION_DENIED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };
@@ -1572,6 +1576,8 @@ export type Endpoints = {
             | 'INVALID_PARAM'
             | 'PAYLOAD_TOO_LARGE'
             | 'PERMISSION_DENIED'
+            | 'QUEUE_JOB_ALREADY_ACKNOWLEDGED'
+            | 'QUEUE_JOB_NOT_TERMINAL'
             | 'ROLE_PERMISSION_DENIED'
             | 'YOUR_ACCOUNT_SUSPENDED';
     };

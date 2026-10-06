@@ -35,6 +35,8 @@ import {
 	waitForDbOutboxJob,
 } from '@/core/queue/queue-outbox-store.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { deliveryQueueCleanup } from '@/db/schema/delivery-queue-cleanup.js';
+import { runDeliveryQueueCleanup } from '@/core/queue/delivery-queue-cleanup-store.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -719,7 +721,88 @@ describe('queue outbox', () => {
 				.from(queueOutbox)
 				.where(inArray(queueOutbox.id, [deliveryId, coordinatorId])),
 		).toHaveLength(0);
+		expect(await runtime.deliverQueue.getJobState(deliveryJobId)).toBe('completed');
+		expect(
+			await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, deliveryJobId)),
+		).toMatchObject([{ jobId: deliveryJobId }]);
+		await runDeliveryQueueCleanup(runtime.db, runtime.deliverQueue);
+		expect(await runtime.deliverQueue.getJob(deliveryJobId)).toBeUndefined();
 		await dbJob?.remove();
+	});
+
+	test('SQL acknowledgement rollback preserves completion and recovery never repeats the delivery effect', async () => {
+		const coordinatorId = await enqueueAccountDeleteCoordinatorInOutbox(
+			runtime.db,
+			{ user: { id: 'queue-outbox-acknowledgement-user' }, soft: false },
+			{ removeOnComplete: true },
+		);
+		const deliveryId = await enqueueDeliverJobInOutbox(
+			runtime.db,
+			deliveryInput('queue-outbox-acknowledgement-user'),
+			coordinatorId,
+		);
+		const jobId = `outbox-${deliveryId}`;
+		const coordinatorJobId = `outbox-${coordinatorId}`;
+		const effectKey = `outbox-acknowledgement-effect-${deliveryId}`;
+		const worker = new Bull.Worker(QUEUE.DELIVER, async () => runtime.redis.incr(effectKey), {
+			...baseWorkerOptions(runtime.config, QUEUE.DELIVER),
+		});
+		const transaction = runtime.db.transaction.bind(runtime.db);
+		const failure = new Error('acknowledgement commit failed');
+		try {
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			await vi.waitFor(async () => expect(await runtime.deliverQueue.getJobState(jobId)).toBe('completed'));
+			await runtime.db
+				.update(queueOutbox)
+				.set({ availableAt: new Date(0) })
+				.where(eq(queueOutbox.id, deliveryId));
+			const failedCommit = vi.spyOn(runtime.db, 'transaction').mockImplementationOnce(async (task, options) =>
+				transaction(async (tx) => {
+					await task(tx);
+					expect(await tx.select().from(queueOutbox).where(eq(queueOutbox.id, deliveryId))).toEqual([]);
+					expect(
+						await tx.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId)),
+					).toMatchObject([{ jobId }]);
+					expect(await runtime.deliverQueue.getJobState(jobId)).toBe('completed');
+					throw failure;
+				}, options),
+			);
+			await expect(dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).rejects.toBe(failure);
+			failedCommit.mockRestore();
+			expect(await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId))).toEqual(
+				[],
+			);
+			expect((await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, deliveryId)))[0]?.state).toBe(
+				'reconciling',
+			);
+			expect(await runtime.deliverQueue.getJobState(jobId)).toBe('completed');
+			expect(await runtime.dbQueue.getJob(coordinatorJobId)).toBeUndefined();
+			await runtime.db
+				.update(queueOutbox)
+				.set({ availableAt: new Date(0), leaseExpiresAt: new Date(0) })
+				.where(eq(queueOutbox.id, deliveryId));
+			await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+			expect(await runtime.redis.get(effectKey)).toBe('1');
+			expect((await runtime.dbQueue.getJob(coordinatorJobId))?.data).toMatchObject({
+				accountDeleteCoordinatorId: coordinatorId,
+			});
+			expect(await runtime.deliverQueue.getJobState(jobId)).toBe('completed');
+			await runDeliveryQueueCleanup(runtime.db, runtime.deliverQueue);
+			expect(await runtime.deliverQueue.getJob(jobId)).toBeUndefined();
+			expect(await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId))).toEqual(
+				[],
+			);
+			expect(await runtime.redis.get(effectKey)).toBe('1');
+		} finally {
+			vi.restoreAllMocks();
+			await worker.close();
+			await runtime.deliverQueue.remove(jobId);
+			await runtime.dbQueue.remove(coordinatorJobId);
+			await runtime.db.delete(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId));
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, deliveryId));
+			await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, coordinatorId));
+			await runtime.redis.del(effectKey);
+		}
 	});
 
 	test('quarantines malformed child and requires explicit abandon before coordinator dispatch', async () => {
@@ -752,10 +835,12 @@ describe('queue outbox', () => {
 			await removeQueueJob(runtime, 'deliver', `outbox-${invalidId}`);
 			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
 			const dbJob = await runtime.dbQueue.getJob(`outbox-${coordinatorId}`);
-			expect(dbJob).toBeDefined();
+			expect(dbJob?.data).toMatchObject({ accountDeleteCoordinatorId: coordinatorId });
 			await dbJob?.remove();
+			await runDeliveryQueueCleanup(runtime.db, runtime.deliverQueue);
 		} finally {
 			await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, [invalidId, coordinatorId]));
+			await runtime.db.delete(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, `outbox-${invalidId}`));
 		}
 	});
 

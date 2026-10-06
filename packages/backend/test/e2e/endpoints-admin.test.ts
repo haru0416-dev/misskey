@@ -2894,12 +2894,19 @@ describe('Endpoints', () => {
 				expect(typeof deliverQueueInfo.isPaused).toBe('boolean');
 				expect(typeof deliverQueueInfo.counts).toBe('object');
 				expect(typeof deliverQueueInfo.metrics.completed.count).toBe('number');
+				assert.ok(deliverQueueInfo.cleanup);
+				expect(typeof deliverQueueInfo.cleanup.pending).toBe('number');
+				expect(typeof deliverQueueInfo.cleanup.retrying).toBe('number');
+				for (const queue of queues.body.filter((queue) => queue.name !== 'deliver')) expect(queue.cleanup).toBeNull();
 
 				const queueStats = await api('admin/queue/queue-stats', { queue: 'deliver' }, alice);
 				expect(queueStats.status).toBe(200);
 				expect(queueStats.body.name).toBe('deliver');
 				expect(typeof queueStats.body.qualifiedName).toBe('string');
 				expect(typeof queueStats.body.db.version).toBe('string');
+				assert.ok(queueStats.body.cleanup);
+				expect(queueStats.body.cleanup.pending).toBe(deliverQueueInfo.cleanup.pending);
+				expect(queueStats.body.outbox).toBeNull();
 
 				const queueScopeToken = await createAppToken(alice, ['read:admin:queue']);
 				const legacyStats = await api('admin/queue/stats', {}, { token: queueScopeToken });

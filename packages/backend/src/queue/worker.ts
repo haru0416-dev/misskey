@@ -66,6 +66,7 @@ import { handleQueueDeleteAccount } from './handlers/delete-account.js';
 import type { QueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox, runQueuedDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
+import { runDeliveryQueueCleanup } from '@/core/queue/delivery-queue-cleanup-store.js';
 import type { DbJobData, DbJobName } from '@/core/queue/types.js';
 import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
 import { handleQueueAcceptAllFollowRequests } from '@/server/rest/account/account-update.js';
@@ -135,14 +136,27 @@ function getJobInfo(job: Bull.Job | undefined, increment = false): string {
 	return `id=${job.id} attempts=${currentAttempts}/${maxAttempts} age=${formated}`;
 }
 
-function renderError(e?: Error): unknown {
+function renderError(e?: Error, seen?: Set<Error>): unknown {
 	if (!e) {
 		return '?';
 	}
 	if (e instanceof Bull.UnrecoverableError || e.name === 'AbortError') {
 		return `${e.name}: ${e.message}`;
 	}
-	return { stack: e.stack, message: e.message, name: e.name };
+	const detail: Record<string, unknown> = { stack: e.stack, message: e.message, name: e.name };
+	if (!(e instanceof AggregateError) && e.cause === undefined) return detail;
+	const visited = seen ?? new Set<Error>();
+	if (visited.has(e)) return { name: e.name, message: e.message };
+	visited.add(e);
+	if (e instanceof AggregateError) {
+		detail['errors'] = e.errors.map((error: unknown) =>
+			renderError(error instanceof Error ? error : new Error(String(error)), visited),
+		);
+	}
+	if (e.cause !== undefined) {
+		detail['cause'] = renderError(e.cause instanceof Error ? e.cause : new Error(String(e.cause)), visited);
+	}
+	return detail;
 }
 
 export function createQueueWorkers(
@@ -155,6 +169,7 @@ export function createQueueWorkers(
 	let stopping = false;
 	let publicationStopped = false;
 	let outboxDispatch: Promise<void> | undefined;
+	let cleanupDispatch: Promise<void> | undefined;
 	let stopPromise: Promise<void> | undefined;
 	let startPromise: Promise<void> | undefined;
 	let ready = false;
@@ -180,6 +195,21 @@ export function createQueueWorkers(
 				outboxDispatch = undefined;
 			});
 		return outboxDispatch;
+	};
+	const dispatchCleanup = (): Promise<void> => {
+		if (publicationStopped) return Promise.resolve();
+		if (cleanupDispatch != null) return cleanupDispatch;
+		cleanupDispatch = runDeliveryQueueCleanup(deps.db, deps.deliverQueue)
+			.then(() => {})
+			.catch((error) => {
+				outboxLogger.error('Failed to clean acknowledged delivery jobs', {
+					e: renderError(error instanceof Error ? error : new Error(String(error))),
+				});
+			})
+			.finally(() => {
+				cleanupDispatch = undefined;
+			});
+		return cleanupDispatch;
 	};
 	const userWebhookDeliverQueueWorker = new Bull.Worker(
 		QUEUE.USER_WEBHOOK_DELIVER,
@@ -591,7 +621,7 @@ export function createQueueWorkers(
 				clearInterval(outboxTimer);
 				outboxTimer = undefined;
 			}
-			results.push(...(await Promise.allSettled([outboxDispatch])));
+			results.push(...(await Promise.allSettled([outboxDispatch, cleanupDispatch])));
 			results.push(...(await Promise.allSettled([dbQueueWorker.close(force), deliverQueueWorker.close(force)])));
 			const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 			if (errors.length > 0)
@@ -629,9 +659,14 @@ export function createQueueWorkers(
 					deps.logger.error('Queue consumer stopped unexpectedly', { e: error });
 				};
 				try {
+					if (stopping) return;
+					void dispatchCleanup();
+					outboxTimer = setInterval(() => {
+						void dispatchOutbox();
+						void dispatchCleanup();
+					}, 1000);
 					await dispatchOutbox();
 					if (stopping) return;
-					outboxTimer = setInterval(() => void dispatchOutbox(), 1000);
 					for (const consumer of consumers) {
 						void consumer
 							.run()

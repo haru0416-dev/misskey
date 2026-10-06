@@ -5,6 +5,7 @@
 
 import { afterAll, beforeAll, expect, test, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
+import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -15,6 +16,8 @@ import { queueReadyRef, readyRef } from '@/boot/ready.js';
 import { createHealthApp } from '@/server/health.js';
 import { enqueueDbJobInOutbox, waitForDbOutboxJob } from '@/core/queue/queue-outbox-store.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { deliveryQueueCleanup } from '@/db/schema/delivery-queue-cleanup.js';
+import { enqueueDeliveryQueueCleanupInDatabase } from '@/core/queue/delivery-queue-cleanup-store.js';
 import { genId } from '@/misc/id/gen-id.js';
 
 const handler = vi.hoisted(() => ({ run: async (): Promise<void> => {} }));
@@ -104,6 +107,46 @@ test('shutdown drains a parent that still needs outbox publication and the DB co
 	}
 });
 
+test('shutdown finishes an in-flight delivery cleanup before closing its dependencies', async () => {
+	const jobId = `shutdown-cleanup-${genId()}`;
+	await enqueueDeliveryQueueCleanupInDatabase(runtime.db, [jobId]);
+	const entered = Promise.withResolvers<void>();
+	const resume = Promise.withResolvers<void>();
+	const getJobState = runtime.deliverQueue.getJobState.bind(runtime.deliverQueue);
+	const blockedRead = vi.spyOn(runtime.deliverQueue, 'getJobState').mockImplementation(async (id) => {
+		if (id === jobId) {
+			entered.resolve();
+			await resume.promise;
+		}
+		return await getJobState(id);
+	});
+	const workers = createQueueWorkers(workerDependencies);
+	let stopped = false;
+	let stopping: Promise<void> | undefined;
+	try {
+		await workers.start();
+		await entered.promise;
+		stopping = workers.stop().then(() => {
+			stopped = true;
+		});
+		expect(
+			await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId)),
+		).toMatchObject([{ jobId }]);
+		expect(stopped).toBe(false);
+		resume.resolve();
+		await stopping;
+		expect(await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId))).toEqual(
+			[],
+		);
+		expect(workers.dbQueueWorker.getBackend().connection.status).toBe('closed');
+	} finally {
+		resume.resolve();
+		await (stopping ?? workers.stop());
+		blockedRead.mockRestore();
+		await runtime.db.delete(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, jobId));
+	}
+});
+
 test('stop racing initial publication does not start consumers after they close', async () => {
 	const workers = createQueueWorkers({
 		...workerDependencies,
@@ -115,6 +158,47 @@ test('stop racing initial publication does not start consumers after they close'
 	await stopping;
 	await running;
 	expect(workers.dbQueueWorker.isRunning()).toBe(false);
+});
+
+test('cleanup progresses while initial outbox publication is blocked', async () => {
+	const cleanupJobId = `startup-cleanup-${genId()}`;
+	await enqueueDeliveryQueueCleanupInDatabase(runtime.db, [cleanupJobId]);
+	const outboxId = await enqueueDbJobInOutbox(
+		runtime.db,
+		'deleteAccount',
+		{ user: { id: 'startup-publication-no-user' }, soft: true },
+		{ removeOnComplete: true },
+	);
+	const entered = Promise.withResolvers<void>();
+	const resume = Promise.withResolvers<void>();
+	const dbQueue = runtime.dbQueue as unknown as Bull.Queue;
+	const addBulk = dbQueue.addBulk.bind(dbQueue);
+	const blockedPublication = vi.spyOn(dbQueue, 'addBulk').mockImplementationOnce(async (jobs) => {
+		entered.resolve();
+		await resume.promise;
+		return await addBulk(jobs);
+	});
+	const workers = createQueueWorkers(workerDependencies);
+	const starting = workers.start();
+	try {
+		await entered.promise;
+		await vi.waitFor(async () => {
+			expect(
+				await runtime.db.select().from(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, cleanupJobId)),
+			).toEqual([]);
+		});
+		expect(await runtime.dbQueue.getJob(`outbox-${outboxId}`)).toBeUndefined();
+		resume.resolve();
+		await starting;
+	} finally {
+		resume.resolve();
+		await workers.stop();
+		await starting;
+		blockedPublication.mockRestore();
+		await runtime.dbQueue.remove(`outbox-${outboxId}`);
+		await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
+		await runtime.db.delete(deliveryQueueCleanup).where(eq(deliveryQueueCleanup.jobId, cleanupJobId));
+	}
 });
 
 test('consumer startup rejection closes consumers instead of reporting readiness', async () => {

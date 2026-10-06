@@ -8,6 +8,7 @@ import { defineQueryPlan } from '@/db/prepared.js';
 import type * as Bull from 'bullmq';
 import type * as Redis from 'ioredis';
 import { addDbJobs, addDeliverJobs } from '@/core/queue/queues.js';
+import { enqueueDeliveryQueueCleanupInDatabase } from '@/core/queue/delivery-queue-cleanup-store.js';
 import type { DbJobBulkInput, DbQueue, DeliverJobInput, DeliverQueue } from '@/core/queue/queues.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type {
@@ -1189,8 +1190,8 @@ async function reconcilePublishedDeliveries(
 				}
 			}
 
-			await Promise.all(completed.map((row) => deliverQueue.remove(outboxJobId(row))));
 			if (completed.length > 0) {
+				await enqueueDeliveryQueueCleanupInDatabase(db, completed.map(outboxJobId));
 				await db.delete(queueOutbox).where(
 					claimedWhere(
 						completed.map((row) => row.id),

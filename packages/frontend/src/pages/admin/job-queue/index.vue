@@ -31,6 +31,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #key>Dead</template>
 							<template #value><span style="color: var(--MI_THEME-error);">{{ kmg(q.outbox.deadLetter, 2) }}</span></template>
 						</MkKeyValue>
+						<MkKeyValue v-if="q.cleanup">
+							<template #key>{{ i18n.ts._queueOutbox.cleanupPending }}</template>
+							<template #value>{{ kmg(q.cleanup.pending, 2) }}</template>
+						</MkKeyValue>
+						<MkKeyValue v-if="q.cleanup">
+							<template #key>{{ i18n.ts._queueOutbox.cleanupRetrying }}</template>
+							<template #value><span :style="q.cleanup.retrying > 0 ? 'color: var(--MI_THEME-warn);' : ''">{{ kmg(q.cleanup.retrying, 2) }}</span></template>
+						</MkKeyValue>
 					</div>
 					<XChart :dataSet="{ completed: q.metrics.completed.data, failed: q.metrics.failed.data }"/>
 				</div>
@@ -94,6 +102,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #value>{{ kmg(queueInfo.counts.waiting ?? null, 2) }}</template>
 						</MkKeyValue>
 					</div>
+					<div v-if="queueInfo.name === 'deliver'">{{ i18n.ts._queueOutbox.adminOperationsDescription }}</div>
 					<template v-if="queueInfo.outbox">
 						<hr>
 						<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
@@ -111,6 +120,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 									<span :style="queueInfo.outbox.deadLetter > 0 ? 'color: var(--MI_THEME-error);' : ''">{{ kmg(queueInfo.outbox.deadLetter, 2) }}</span>
 									<span v-if="queueInfo.outbox.deadLetter > 0" style="margin-left: 0.5em;">(<button class="_textButton" @click="tab = 'outbox'">{{ i18n.ts._queueOutbox.deadLetters }}</button>)</span>
 								</template>
+							</MkKeyValue>
+						</div>
+					</template>
+					<template v-if="queueInfo.cleanup">
+						<hr>
+						<div>{{ i18n.ts._queueOutbox.cleanupDescription }}</div>
+						<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+							<MkKeyValue>
+								<template #key>{{ i18n.ts._queueOutbox.cleanupPending }}</template>
+								<template #value>{{ kmg(queueInfo.cleanup.pending, 2) }}</template>
+							</MkKeyValue>
+							<MkKeyValue>
+								<template #key>{{ i18n.ts._queueOutbox.cleanupRetrying }}</template>
+								<template #value><span :style="queueInfo.cleanup.retrying > 0 ? 'color: var(--MI_THEME-warn);' : ''">{{ kmg(queueInfo.cleanup.retrying, 2) }}</span></template>
+							</MkKeyValue>
+							<MkKeyValue>
+								<template #key>{{ i18n.ts._queueOutbox.cleanupOldestPending }}</template>
+								<template #value>{{ queueInfo.cleanup.oldestPendingAgeMs == null ? 'N/A' : `${Math.floor(queueInfo.cleanup.oldestPendingAgeMs / 1000)}s` }}</template>
 							</MkKeyValue>
 						</div>
 					</template>

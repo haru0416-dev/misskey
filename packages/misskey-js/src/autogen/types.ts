@@ -10253,6 +10253,11 @@ export interface operations {
                             invalidPayload: number;
                             oldestPendingAgeMs: number | null;
                         } | null;
+                        cleanup: {
+                            pending: number;
+                            retrying: number;
+                            oldestPendingAgeMs: number | null;
+                        } | null;
                         metrics: {
                             completed: components['schemas']['QueueMetrics'];
                             failed: components['schemas']['QueueMetrics'];
@@ -10357,6 +10362,11 @@ export interface operations {
                             deadLetter: number;
                             deliveryFailed: number;
                             invalidPayload: number;
+                            oldestPendingAgeMs: number | null;
+                        } | null;
+                        cleanup: {
+                            pending: number;
+                            retrying: number;
                             oldestPendingAgeMs: number | null;
                         } | null;
                         metrics: {

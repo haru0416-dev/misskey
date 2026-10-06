@@ -20,6 +20,8 @@ import {
 	pauseQueue,
 	promoteQueueJobs,
 	QUEUE_TYPES,
+	QueueJobAlreadyAcknowledgedError,
+	QueueJobNotTerminalError,
 	removeQueueJob,
 	resumeQueue,
 	retryQueueJob,
@@ -131,6 +133,26 @@ function outboxStateChangedError(): ApiError {
 	});
 }
 
+function throwQueueJobApiError(error: unknown): never {
+	if (error instanceof QueueJobAlreadyAcknowledgedError) {
+		throw new ApiError({
+			status: 409,
+			message: 'The delivery job has already been acknowledged.',
+			code: 'QUEUE_JOB_ALREADY_ACKNOWLEDGED',
+			id: '6c686b34-f64a-4b1b-b159-cd5de1870184',
+		});
+	}
+	if (error instanceof QueueJobNotTerminalError) {
+		throw new ApiError({
+			status: 409,
+			message: 'Unresolved delivery outbox work cannot be changed by this queue operation.',
+			code: 'QUEUE_JOB_NOT_TERMINAL',
+			id: '083a9bb0-6285-45f6-9733-95e8a3b44c20',
+		});
+	}
+	throw error;
+}
+
 export async function handleApiAdminQueueRetryOutboxDeadLetter(
 	deps: AdminQueueEndpointDependencies,
 	ps: Params<typeof adminQueueOutboxJobParamDef>,
@@ -168,7 +190,11 @@ export async function handleApiAdminQueueClear(
 	moderator: { id: MiUser['id'] },
 	ps: Params<typeof adminQueueClearParamDef>,
 ): Promise<void> {
-	await clearQueue(deps, ps.queue, ps.state);
+	try {
+		await clearQueue(deps, ps.queue, ps.state);
+	} catch (error) {
+		throwQueueJobApiError(error);
+	}
 	await logModerationEventInDatabase(deps, moderator, 'clearQueue');
 }
 
@@ -195,7 +221,11 @@ export async function handleApiAdminQueuePromoteJobs(
 	moderator: { id: MiUser['id'] },
 	ps: Params<typeof adminQueueSelectParamDef>,
 ): Promise<void> {
-	await promoteQueueJobs(deps, ps.queue);
+	try {
+		await promoteQueueJobs(deps, ps.queue);
+	} catch (error) {
+		throwQueueJobApiError(error);
+	}
 	await logModerationEventInDatabase(deps, moderator, 'promoteQueue');
 }
 
@@ -203,12 +233,20 @@ export async function handleApiAdminQueueRetryJob(
 	deps: AdminQueueEndpointDependencies,
 	ps: Params<typeof adminQueueJobParamDef>,
 ): Promise<void> {
-	await retryQueueJob(deps, ps.queue, ps.jobId);
+	try {
+		await retryQueueJob(deps, ps.queue, ps.jobId);
+	} catch (error) {
+		throwQueueJobApiError(error);
+	}
 }
 
 export async function handleApiAdminQueueRemoveJob(
 	deps: AdminQueueEndpointDependencies,
 	ps: Params<typeof adminQueueJobParamDef>,
 ): Promise<void> {
-	await removeQueueJob(deps, ps.queue, ps.jobId);
+	try {
+		await removeQueueJob(deps, ps.queue, ps.jobId);
+	} catch (error) {
+		throwQueueJobApiError(error);
+	}
 }

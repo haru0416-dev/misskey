@@ -48,11 +48,18 @@ master は、設定の `server.process.httpWorkers` と `queueWorkers` に従っ
 | --- | --- |
 | `admin/queue/queues`、`admin/queue/queue-stats` | `counts.waiting`、`active`、`delayed`、`failed`、`isPaused` と `metrics.completed` の進行。`waiting` は `prioritized` を含むため、二重に加算しません |
 | 上記の `db` キューの `outbox` | `pending`、`oldestPendingAgeMs`、`deadLetter`、`deliveryFailed`、`invalidPayload` |
+| 上記の `deliver` キューの `cleanup` | 配送 outbox 由来の、処理完了・明示破棄後のジョブ削除待ち `pending`、削除失敗後の `retrying`、`oldestPendingAgeMs`。配送の未完了件数には加算しません |
 | `admin/queue/outbox-dead-letters` | 処理を諦めたジョブの理由と内容 |
 
 これらの API は moderator の認証と `read:admin:queue` 権限が必要です。監視用トークンを公開 health URL やログへ含めないでください。処理待ちがあるのに完了が進まない状態、最古の pending の経過時間、failed・dead-letter の増加を継続して観測し、通常のバックオフと保守時の一時停止を踏まえて通知条件を決めます。件数 0 だけでは consumer の稼働を証明できません。配送の最終確認には、管理する別サーバーとの送受信と反映の確認も必要です。
 
 DB 保存、キュー受理、相手サーバーへの反映は別の完了条件です。再試行では同じ処理が再実行されるため、新しい後処理を追加する場合は、重複実行と途中停止からの回復を確認してください。
+
+配送 outbox を持つジョブの正常終了またはデッドレターの明示破棄を記録するとき、`delivery_queue_cleanup` への保存と配送 outbox の子行削除を同じ transaction で確定します。削除待ちの記録には配送本文や coordinator への参照を持たせず、アカウント削除などはジョブの資源回収を待ちません。キューへの正常終了記録は、相手サーバーでの反映完了を保証するものではありません。
+
+資源回収は配送の発行とは別に進みます。1 回に最大 500 件を claim し、30 秒のリースと行ロックで所有者を確認して最大 16 件を並行処理します。削除失敗は記録を残して 1～30 秒のバックオフで再試行し、削除後の SQL 失敗も記録から再開します。ジョブが不在なら削除済みとして完了しますが、削除待ちから配送を再発行することはありません。
+
+管理 API の通常の削除・一括削除は、未解決の配送 outbox を含む場合に `409 QUEUE_JOB_NOT_TERMINAL` で拒否します。完了済みのキュージョブまたは削除待ち記録が残る配送の再試行は `409 QUEUE_JOB_ALREADY_ACKNOWLEDGED` です。遅延ジョブの昇格は利用でき、失敗した配送の再試行・破棄はデッドレターの操作を使います。認証と `write:admin:queue` 権限は引き続き必要です。
 
 ## コマンド
 

@@ -69,6 +69,16 @@ const queueStateProperties = {
 			oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
 		},
 	},
+	cleanup: {
+		type: 'object',
+		optional: false,
+		nullable: true,
+		properties: {
+			pending: { type: 'number', optional: false, nullable: false },
+			retrying: { type: 'number', optional: false, nullable: false },
+			oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
+		},
+	},
 	metrics: {
 		type: 'object',
 		optional: false,
@@ -88,6 +98,12 @@ const queueStateProperties = {
 	},
 } as const;
 
+const queueJobNotTerminalError = {
+	message: 'Unresolved delivery outbox work cannot be changed by this queue operation.',
+	code: 'QUEUE_JOB_NOT_TERMINAL',
+	id: '083a9bb0-6285-45f6-9733-95e8a3b44c20',
+} as const;
+
 export const endpointMetas = {
 	'admin/queue/clear': defineContract({
 		meta: {
@@ -96,6 +112,9 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
+			errors: {
+				notTerminal: queueJobNotTerminalError,
+			},
 		},
 		paramDef: adminQueueClearParamDef,
 	}),
@@ -132,6 +151,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
+			errors: {
+				notTerminal: queueJobNotTerminalError,
+				alreadyAcknowledged: {
+					message: 'The delivery job has already been acknowledged.',
+					code: 'QUEUE_JOB_ALREADY_ACKNOWLEDGED',
+					id: '6c686b34-f64a-4b1b-b159-cd5de1870184',
+				},
+			},
 		},
 		paramDef: adminQueueJobParamDef,
 	}),
@@ -142,6 +169,9 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
+			errors: {
+				notTerminal: queueJobNotTerminalError,
+			},
 		},
 		paramDef: adminQueueJobParamDef,
 	}),
@@ -191,6 +221,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'write:admin:queue',
+			errors: {
+				notTerminal: queueJobNotTerminalError,
+				alreadyAcknowledged: {
+					message: 'The delivery job has already been acknowledged.',
+					code: 'QUEUE_JOB_ALREADY_ACKNOWLEDGED',
+					id: '6c686b34-f64a-4b1b-b159-cd5de1870184',
+				},
+			},
 		},
 		paramDef: adminQueueSelectParamDef,
 	}),
