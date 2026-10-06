@@ -10,6 +10,7 @@ import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { createNoteInDatabase } from '@/core/note/note-store.js';
+import { createDriveFileInDatabase } from '@/core/drive/drive-file-store.js';
 import { createFollowingInDatabase } from '@/core/user/following-store.js';
 import { createChannelInDatabase } from '@/core/channel/channel-store.js';
 import { createUserListInDatabase } from '@/core/user/user-list-store.js';
@@ -17,10 +18,11 @@ import { createUserListMembershipInDatabase } from '@/core/user/user-list-member
 import { createAntennaInDatabase } from '@/core/antenna/antenna-store.js';
 import { createRoleInDatabase } from '@/core/role/role-store.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { packNote } from '@/core/note/note-packing.js';
+import { filterNoteForStreamingHiding, packNote } from '@/core/note/note-packing.js';
 import { StreamConnection } from '@/server/streaming/connection.js';
 import type { StreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
+import type { Packed } from '@/misc/json-schema.js';
 
 async function createTestUser(deps: StreamConnectionDependencies, prefix: string): Promise<MiUser> {
 	const id = genId();
@@ -175,6 +177,136 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await connection.connectChannel('conn1', { q: Array.from({ length: 100 }, () => ['a']) }, 'hashtag', true);
 		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 		connection.dispose();
+	});
+
+	test.each(['reply', 'quote', 'quotedReply', 'renotedReply'] as const)(
+		'hashtag: %s の非公開埋め込みを隠し、別の閲覧者には元の内容を届ける',
+		async (kind) => {
+			const author = await createTestUser(deps, 'streamprivateauthor');
+			const recipient = await createTestUser(deps, 'streamprivaterecipient');
+			const viewer = await createTestUser(deps, 'streamprivateviewer');
+			const fileId = genId();
+			await createDriveFileInDatabase(deps.db, {
+				id: fileId,
+				userId: author.id,
+				md5: '00000000000000000000000000000000',
+				name: 'private.txt',
+				type: 'text/plain',
+				size: 7,
+				url: `${runtime.config.instance.url}/files/${fileId}`,
+				properties: {},
+				isLink: true,
+				storedInternal: false,
+			});
+			const privateId = genId();
+			await createNoteInDatabase(deps.db, {
+				id: privateId,
+				text: 'private body',
+				cw: 'private warning',
+				userId: author.id,
+				visibility: 'specified',
+				visibleUserIds: [recipient.id],
+				fileIds: [fileId],
+			});
+			const childId = genId();
+			await createNoteInDatabase(deps.db, {
+				id: childId,
+				text: '#privateembedded visible child',
+				tags: ['privateembedded'],
+				userId: recipient.id,
+				visibility: 'specified',
+				visibleUserIds: [author.id, viewer.id],
+				...(kind === 'quote' ? { renoteId: privateId } : { replyId: privateId, replyUserId: author.id }),
+			});
+			let noteId = childId;
+			if (kind === 'quotedReply' || kind === 'renotedReply') {
+				noteId = genId();
+				await createNoteInDatabase(deps.db, {
+					id: noteId,
+					text: kind === 'renotedReply' ? null : '#privateembedded visible quote',
+					tags: ['privateembedded'],
+					userId: recipient.id,
+					visibility: 'specified',
+					visibleUserIds: [author.id, viewer.id],
+					renoteId: childId,
+				});
+			}
+			const packed = await packNote(deps, noteId, null, { skipHide: true });
+			const subscriber = new EventEmitter();
+			const hiddenMessages = collectSentMessages();
+			const visibleMessages = collectSentMessages();
+			const hiddenConnection = new StreamConnection(deps, viewer, null);
+			const visibleConnection = new StreamConnection(deps, author, null);
+			try {
+				await hiddenConnection.init();
+				await visibleConnection.init();
+				hiddenConnection.listen(subscriber, hiddenMessages.send);
+				visibleConnection.listen(subscriber, visibleMessages.send);
+				await hiddenConnection.connectChannel('hidden', { q: [['privateembedded']] }, 'hashtag', false);
+				await visibleConnection.connectChannel('visible', { q: [['privateembedded']] }, 'hashtag', false);
+				subscriber.emit('notesStream', packed);
+				await waitUntil(
+					() =>
+						channelNoteIds(hiddenMessages.raw).includes(noteId) && channelNoteIds(visibleMessages.raw).includes(noteId),
+				);
+				const hidden = channelMessages(hiddenMessages.raw).find((message) => message.type === 'note')!
+					.body as Packed<'Note'>;
+				const visible = channelMessages(visibleMessages.raw).find((message) => message.type === 'note')!
+					.body as Packed<'Note'>;
+				const embedded = (note: Packed<'Note'>) =>
+					kind === 'quote'
+						? note.renote
+						: kind === 'quotedReply' || kind === 'renotedReply'
+							? note.renote?.reply
+							: note.reply;
+				expect(hidden.text).toBe(packed.text);
+				expect(embedded(hidden)).toMatchObject({
+					id: privateId,
+					text: null,
+					cw: null,
+					isHidden: true,
+					files: [],
+					fileIds: [],
+				});
+				expect(embedded(hidden)?.visibleUserIds).toBeUndefined();
+				expect(embedded(visible)).toMatchObject({
+					id: privateId,
+					text: 'private body',
+					cw: 'private warning',
+					fileIds: [fileId],
+					files: [expect.objectContaining({ id: fileId, name: 'private.txt' })],
+				});
+			} finally {
+				hiddenConnection.dispose();
+				visibleConnection.dispose();
+			}
+		},
+	);
+
+	test('閲覧できない投稿の純粋リノートは配送せず、作者には元の本文を届ける', async () => {
+		const author = await createTestUser(deps, 'streamrenoteauthor');
+		const viewer = await createTestUser(deps, 'streamrenoteviewer');
+		const privateId = genId();
+		await createNoteInDatabase(deps.db, {
+			id: privateId,
+			text: 'private renote body',
+			userId: author.id,
+			visibility: 'specified',
+			visibleUserIds: [],
+		});
+		const renoteId = genId();
+		await createNoteInDatabase(deps.db, {
+			id: renoteId,
+			userId: author.id,
+			renoteId: privateId,
+			visibility: 'public',
+		});
+		const packed = await packNote(deps, renoteId, null, { skipHide: true });
+		expect(await filterNoteForStreamingHiding(deps, packed, viewer.id)).toBeNull();
+		expect(await filterNoteForStreamingHiding(deps, packed, author.id)).toMatchObject({
+			id: renoteId,
+			renote: { id: privateId, text: 'private renote body' },
+		});
 	});
 
 	test('channel (misskeyチャンネル): 指定したchannelIdのノートのみ同じ接続で受け取る', async () => {

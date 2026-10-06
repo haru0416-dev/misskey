@@ -8,7 +8,16 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import { createFollowingInDatabase, findHashtagsByName, genId, openTestDatabase } from '../fixtures.js';
 import type { TestDatabase } from '../fixtures.js';
-import { api, createAppToken, initTestDb, post, resolveStreamingUrl, signup, waitFire } from '../utils.js';
+import {
+	api,
+	connectStream,
+	createAppToken,
+	initTestDb,
+	post,
+	resolveStreamingUrl,
+	signup,
+	waitFire,
+} from '../utils.js';
 import type { StreamMessage, UserToken } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -908,6 +917,56 @@ describe('Streaming', () => {
 				expect(await receives(query, '#streamingmixedpiyo')).toBe(true);
 				expect(await doesNotReceive(query, '#streamingmixedfoo')).toBe(false);
 				expect(await doesNotReceive(query, '#streamingmixedwaaa')).toBe(false);
+			});
+
+			test('指定公開返信の受信者が読めない親投稿は本文と CW を隠す', async () => {
+				const parent = await post(chitose, {
+					text: 'private parent body',
+					cw: 'private parent warning',
+					visibility: 'specified',
+					visibleUserIds: [kyoko.id],
+				});
+				const direct = await api('notes/show', { noteId: parent.id }, ayano);
+				expect(direct.body).toMatchObject({ id: parent.id, text: null, cw: null, isHidden: true });
+				let streamed: StreamMessage | undefined;
+				const socket = await connectStream(
+					ayano,
+					'hashtag',
+					(message) => {
+						if (message.type === 'note' && message.body['replyId'] === parent.id) streamed = message;
+					},
+					{ q: [['streamingprivatereply']] },
+				);
+				try {
+					const reply = await api(
+						'notes/create',
+						{
+							text: '#streamingprivatereply visible reply',
+							replyId: parent.id,
+							visibility: 'specified',
+							visibleUserIds: [chitose.id, ayano.id],
+						},
+						kyoko,
+					);
+					expect(reply.status).toBe(200);
+					const replyId = reply.body.createdNote!.id;
+					await vi.waitFor(() => expect(streamed?.body['id']).toBe(replyId), { timeout: 5000 });
+					expect(streamed?.body['text']).toBe('#streamingprivatereply visible reply');
+					expect(streamed?.body['reply']).toMatchObject({
+						id: parent.id,
+						text: null,
+						cw: null,
+						isHidden: true,
+					});
+					const authorView = await api('notes/show', { noteId: replyId }, chitose);
+					expect(authorView.body.reply).toMatchObject({
+						id: parent.id,
+						text: 'private parent body',
+						cw: 'private parent warning',
+					});
+				} finally {
+					socket.close();
+				}
 			});
 
 			test('同名タグの並行作成でユーザー情報を失わない', async () => {

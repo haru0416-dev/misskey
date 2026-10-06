@@ -330,12 +330,41 @@ function hideNote(packedNote: Packed<'Note'>): void {
 	packedNote.isHidden = true;
 }
 
-function collectRenoteChain(note: Packed<'Note'>): Packed<'Note'>[] {
-	const renoteChain: Packed<'Note'>[] = [];
-	for (let current: Packed<'Note'> | null | undefined = note; current != null; current = current.renote) {
-		renoteChain.push(current);
+function collectEmbeddedNotes(note: Packed<'Note'>): Packed<'Note'>[] {
+	const notes = [note];
+	for (const current of notes) {
+		if (current.reply) notes.push(current.reply);
+		if (current.renote) notes.push(current.renote);
 	}
-	return renoteChain;
+	return notes;
+}
+
+function shouldDropRenoteChain(note: Packed<'Note'>, hiddenNotes: Set<Packed<'Note'>>): boolean {
+	let hasHiddenNote = false;
+	let hasPureRenote = false;
+	for (let current: Packed<'Note'> | null | undefined = note; current != null; current = current.renote) {
+		hasHiddenNote ||= hiddenNotes.has(current);
+		hasPureRenote ||= isRenotePacked(current) && !isQuotePacked(current);
+	}
+	return hasHiddenNote && hasPureRenote;
+}
+
+function hideEmbeddedNotes(
+	note: Packed<'Note'>,
+	clonedNote: Packed<'Note'>,
+	hiddenNotes: Set<Packed<'Note'>>,
+): Packed<'Note'> {
+	let currentCloned = clonedNote;
+	for (let current: Packed<'Note'> | null | undefined = note; current != null; current = current.renote) {
+		if (hiddenNotes.has(current)) hideNote(currentCloned);
+		if (current.reply && currentCloned.reply) {
+			currentCloned.reply = shouldDropRenoteChain(current.reply, hiddenNotes)
+				? null
+				: hideEmbeddedNotes(current.reply, currentCloned.reply, hiddenNotes);
+		}
+		currentCloned = currentCloned.renote!;
+	}
+	return clonedNote;
 }
 
 export async function filterNoteForStreamingHiding(
@@ -343,28 +372,15 @@ export async function filterNoteForStreamingHiding(
 	note: Packed<'Note'>,
 	meId: MiUser['id'] | null,
 ): Promise<Packed<'Note'> | null> {
-	const renoteChain = collectRenoteChain(note);
-	const shouldHide = await Promise.all(renoteChain.map((n) => shouldHideNote(deps, n, meId)));
+	const notes = collectEmbeddedNotes(note);
+	const shouldHide = await Promise.all(notes.map((n) => shouldHideNote(deps, n, meId)));
+	if (!shouldHide.some(Boolean)) return note;
 
-	if (!shouldHide.some((h) => h)) {
-		return note;
-	}
+	const hiddenNotes = new Set(notes.filter((_, i) => shouldHide[i]));
+	if (shouldDropRenoteChain(note, hiddenNotes)) return null;
 
-	if (renoteChain.some((n) => isRenotePacked(n) && !isQuotePacked(n))) {
-		return null;
-	}
-
-	const clonedNote = deepClone(note);
-	let currentCloned: Packed<'Note'> | undefined = clonedNote;
-
-	for (let i = 0; i < renoteChain.length; i++) {
-		if (shouldHide[i] && currentCloned) {
-			hideNote(currentCloned);
-		}
-		currentCloned = currentCloned?.renote ?? undefined;
-	}
-
-	return clonedNote;
+	// Pub/Sub の投稿は接続間で共有するため、閲覧者ごとのマスクは複製にだけ適用する。
+	return hideEmbeddedNotes(note, deepClone(note), hiddenNotes);
 }
 
 export async function isVisibleForMe(
