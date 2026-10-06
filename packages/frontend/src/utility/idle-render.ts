@@ -49,7 +49,7 @@ export class IdlingRenderScheduler {
 		if (!this.#isActive() || this.#ricId != null || this.#rafId != null) {
 			return;
 		}
-		this.#ricId = this.#requestIdleCallback((deadline) => {
+		this.#ricId = this.#requestIdleCallback.call(globalThis, (deadline) => {
 			this.#ricId = null;
 			if (!this.#isActive()) {
 				return;
@@ -81,7 +81,7 @@ export class IdlingRenderScheduler {
 			this.#rafId = null;
 		}
 		if (this.#ricId != null) {
-			this.#cancelIdleCallback(this.#ricId);
+			this.#cancelIdleCallback.call(globalThis, this.#ricId);
 			this.#ricId = null;
 		}
 	}

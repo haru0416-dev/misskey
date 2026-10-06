@@ -8,7 +8,7 @@ import type { Plugin } from 'vite';
 
 /**
  * 本体は `/assets/locales/<lang>.<version>.json` をバックエンドから受け取る。
- * バックエンドを立てないカタログ / story テストでは、ここで同じ形の応答を返す。
+ * バックエンドを立てないブラウザーテストとカタログでは、ここで同じ形の応答を返す。
  */
 export function serveLocales(): Plugin {
 	return {

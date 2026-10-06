@@ -112,6 +112,19 @@ bun run --bun --filter frontend test
 bun run --bun --filter misskey-js test
 ```
 
+frontend の `test` は Node と Playwright Chromium の両 project を実行します。初回は `bun run playwright:install` で Chromium を準備してください。バックエンド・DB は不要です。
+
+DOM を使わないテストは `*.test.ts`、Vue の mount・DOM・ブラウザーの状態を扱うテストは `*.browser.test.ts` に置きます。DOM 環境の代替実装は使わず、ブラウザー側ではネイティブの DOM と Storage を使います。通信の応答は各テストで用意し、テストサーバーと異なる origin への HTTP 通信は遮断します。
+
+共通の初期化は `vitest.config.ts` の `setupFiles` から実行します。テストから `test/init.ts` を直接 import せず、設定値や通信 fixture の操作には `test/fixtures.ts` を使ってください。
+
+project を個別に実行する場合は、次のコマンドを使います。
+
+```sh
+bun run --bun --filter frontend test:node
+bun run --bun --filter frontend test:browser
+```
+
 Backend tests require manual preparation of servers. See the next section for more on this.
 
 テストの削除・統合は、削除すると見逃す利用側の不具合を基準に判断します。同じ fixture のライフサイクルへ統合する場合も、初回保存と再保存、疎な入力と複合入力、通常時と失敗時の結果をそれぞれ観測してください。移管先が同じ結果を返すだけでは、元の入力・副作用・失敗経路を包含するとは限りません。型・ライブラリの挙動や内部の文言・形状を固定するだけの assertion は、実際の返却値・保存・配信・資源解放の保証と区別します。

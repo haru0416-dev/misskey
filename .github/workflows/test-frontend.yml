@@ -48,7 +48,7 @@ concurrency:
 
 jobs:
   vitest:
-    name: Unit tests (frontend)
+    name: Node and browser tests (frontend)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -76,6 +76,8 @@ jobs:
         # フロントエンド単体テストはviteの本番ビルド成果物を使わない。
         # 参照される i18n / icons-subsetter / misskey-js だけをビルドする
         run: bun run build-pre && bun run build:frontend-deps
+      - name: Install Playwright browsers
+        run: bun run playwright:install
       - name: Test
         run: bun run --bun --filter frontend test
       - name: Test AiScript

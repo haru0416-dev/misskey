@@ -19,6 +19,7 @@ import type { Router } from '@/router.js';
 import type { PathResolvedResult } from '@/lib/nirax.js';
 import MkLoadingPage from '@/pages/loading.vue';
 import { DI } from '@/di.js';
+import { deepEqual } from '@/utility/deep-equal.js';
 
 const props = defineProps<{
 	router?: Router;
@@ -47,6 +48,8 @@ function resolveNested(current: PathResolvedResult, d = 0): PathResolvedResult |
 const current = resolveNested(router.current)!;
 const currentPageComponent = shallowRef('component' in current.route ? current.route.component : MkLoadingPage);
 const currentPageProps = ref(current.props);
+let currentRoute = current.route;
+let currentHash = current._parsedRoute.hash;
 const key = ref(router.getCurrentFullPath());
 
 router.useListener('change', ({ resolved }) => {
@@ -54,8 +57,19 @@ router.useListener('change', ({ resolved }) => {
 	if (current == null || 'redirect' in current.route) {
 		return;
 	}
+	// hash は SearchMarker の強調・スクロールにも使われるため、props が同じでも変更時は再生成する。
+	if (
+		current.route === currentRoute &&
+		current.route.component === currentPageComponent.value &&
+		current._parsedRoute.hash === currentHash &&
+		deepEqual(current.props, currentPageProps.value)
+	) {
+		return;
+	}
 	currentPageComponent.value = current.route.component;
 	currentPageProps.value = current.props;
 	key.value = router.getCurrentFullPath();
+	currentRoute = current.route;
+	currentHash = current._parsedRoute.hash;
 });
 </script>

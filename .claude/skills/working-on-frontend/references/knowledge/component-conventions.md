@@ -28,4 +28,4 @@ stream 接続、イベント購読、timer、observer、animation frame は所�
 
 アクションには button、遷移にはリンクや既存の MkA を使う。独自 role を使う必要がある場合は、keyboard 操作、フォーカス、disabled 時の実際の抑止まで実装する。`aria-disabled` や見た目だけでは操作を止められない。
 
-フォームの label と caption は実際の入力要素へ接続し、アイコンだけの操作にもアクセシブル名を付ける。既存の Tabler icon と共通部品を利用し、装飾と意味を持つ画像を区別する。モーダルは開閉時のフォーカス移動と復帰、入力は IME 変換中の Enter、無効状態と送信動作を確認する。[form-controls-accessibility.test.ts](../../../../../packages/frontend/test/form-controls-accessibility.test.ts) は既存の確認先であり、実ブラウザでの操作確認の代用ではない。
+フォームの label と caption は実際の入力要素へ接続し、アイコンだけの操作にもアクセシブル名を付ける。既存の Tabler icon と共通部品を利用し、装飾と意味を持つ画像を区別する。モーダルは開閉時のフォーカス移動と復帰、入力は IME 変換中の Enter、無効状態と送信動作を確認する。[form-controls-accessibility.browser.test.ts](../../../../../packages/frontend/test/form-controls-accessibility.browser.test.ts) は Chromium で実行する既存の確認先であり、対象画面での操作確認の代用ではない。

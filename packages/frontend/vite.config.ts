@@ -281,11 +281,6 @@ export function getConfig(): UserConfig {
 			},
 			outDir: path.join(import.meta.dirname, '../../built/_frontend_vite_'),
 		},
-
-		test: {
-			environment: 'happy-dom',
-			setupFiles: ['./test/init.ts'],
-		},
 	};
 }
 

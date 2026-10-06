@@ -46,6 +46,7 @@ export default defineConfig({
 		...base.server,
 		hmr: false,
 		// story は本体の起動処理を通らないので、本体用の warmup は要らない。
+		strictPort: false,
 		warmup: {},
 	},
 

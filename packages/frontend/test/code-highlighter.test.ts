@@ -5,7 +5,13 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-const createHighlighterCore = vi.fn();
+const { createHighlighterCore } = vi.hoisted(() => ({
+	createHighlighterCore: vi.fn(),
+}));
+
+vi.mock('@/preferences.js', () => ({
+	prefer: {},
+}));
 
 vi.mock('shiki/core', () => ({
 	createHighlighterCore,

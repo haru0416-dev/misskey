@@ -278,104 +278,102 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 			hash,
 		};
 
-		function check(routes: RouteDef[], _parts: string[]): PathResolvedResult | null {
-			forEachRouteLoop: for (const route of routes) {
-				let parts = [..._parts];
-				const props = new Map<string, string>();
+		const parts = path.split('/').filter((part) => part.length !== 0);
 
-				pathMatchLoop: for (const p of parsePath(route.path)) {
+		function createResult(
+			route: RouteDef,
+			parsedPath: ParsedPath,
+			start: number,
+			child?: PathResolvedResult,
+		): PathResolvedResult {
+			const props = new Map<string, string | boolean>();
+			let cursor = start;
+
+			// 子ルートまで一致してから値を取り出し、不採用の候補ではデコードも行わない。
+			for (const p of parsedPath) {
+				if (typeof p !== 'string') {
+					if (p.wildcard) {
+						if (cursor < parts.length) {
+							let value = parts[cursor]!;
+							for (let i = cursor + 1; i < parts.length; i++) {
+								value += '/' + parts[i];
+							}
+							props.set(p.name, safeUriDecode(value));
+						}
+						break;
+					}
+					if (p.startsWith) {
+						props.set(p.name, safeUriDecode(parts[cursor]!.substring(p.startsWith.length)));
+					} else if (parts[cursor]) {
+						props.set(p.name, safeUriDecode(parts[cursor]!));
+					}
+				}
+				if (cursor < parts.length) cursor++;
+			}
+
+			if (child) {
+				return { route, props, child, _parsedRoute };
+			}
+
+			if (route.hash != null && hash != null) {
+				props.set(route.hash, safeUriDecode(hash));
+			}
+
+			if (route.query != null && queryString != null) {
+				const queryObject = Object.fromEntries(new URLSearchParams(queryString));
+
+				for (const q in route.query) {
+					const as = route.query[q];
+					const value = queryObject[q];
+					if (as != null && value != null) {
+						props.set(as, safeUriDecode(value));
+					}
+				}
+			}
+
+			return { route, props, _parsedRoute };
+		}
+
+		function check(routes: RouteDef[], start: number): PathResolvedResult | null {
+			forEachRouteLoop: for (const route of routes) {
+				const parsedPath = parsePath(route.path);
+				let cursor = start;
+
+				for (const p of parsedPath) {
 					if (typeof p === 'string') {
-						if (p === parts[0]) {
-							parts.shift();
-						} else {
+						if (p !== parts[cursor]) {
 							continue forEachRouteLoop;
 						}
 					} else {
-						if (parts[0] == null && !p.optional) {
+						if (parts[cursor] == null && !p.optional) {
 							continue forEachRouteLoop;
 						}
 						if (p.wildcard) {
-							if (parts.length !== 0) {
-								props.set(p.name, safeUriDecode(parts.join('/')));
-								parts = [];
-							}
-							break pathMatchLoop;
-						} else {
-							if (p.startsWith) {
-								if (parts[0] == null || !parts[0].startsWith(p.startsWith)) {
-									continue forEachRouteLoop;
-								}
-
-								props.set(p.name, safeUriDecode(parts[0].substring(p.startsWith.length)));
-								parts.shift();
-							} else {
-								if (parts[0]) {
-									props.set(p.name, safeUriDecode(parts[0]));
-								}
-								parts.shift();
-							}
+							cursor = parts.length;
+							break;
+						}
+						if (p.startsWith && (parts[cursor] == null || !parts[cursor]!.startsWith(p.startsWith))) {
+							continue forEachRouteLoop;
 						}
 					}
+					// 空の配列への shift と同様に、省略可能な末尾では位置を進めない。
+					if (cursor < parts.length) cursor++;
 				}
 
-				if (parts.length === 0) {
-					if (route.children) {
-						const child = check(route.children, []);
-						if (child) {
-							return {
-								route,
-								props,
-								child,
-								_parsedRoute,
-							};
-						}
-						continue forEachRouteLoop;
-					}
-
-					if (route.hash != null && hash != null) {
-						props.set(route.hash, safeUriDecode(hash));
-					}
-
-					if (route.query != null && queryString != null) {
-						const queryObject = Object.fromEntries(new URLSearchParams(queryString));
-
-						for (const q in route.query) {
-							const as = route.query[q];
-							const value = queryObject[q];
-							if (as != null && value != null) {
-								props.set(as, safeUriDecode(value));
-							}
-						}
-					}
-
-					return {
-						route,
-						props,
-						_parsedRoute,
-					};
-				}
 				if (route.children) {
-					const child = check(route.children, parts);
+					const child = check(route.children, cursor);
 					if (child) {
-						return {
-							route,
-							props,
-							child,
-							_parsedRoute,
-						};
+						return createResult(route, parsedPath, start, child);
 					}
-					continue forEachRouteLoop;
-				} else {
-					continue forEachRouteLoop;
+				} else if (cursor === parts.length) {
+					return createResult(route, parsedPath, start);
 				}
 			}
 
 			return null;
 		}
 
-		const _parts = path.split('/').filter((part) => part.length !== 0);
-
-		return check(this.routes, _parts);
+		return check(this.routes, 0);
 	}
 
 	/** 通常のresolve + リダイレクト解決 */
