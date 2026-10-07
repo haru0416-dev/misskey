@@ -207,8 +207,14 @@ describe('media lightbox', () => {
 			},
 			global: { components, directives },
 		});
-		assert.ok(result.getByRole('button', { name: 'Menu' }));
-		await fireEvent.click(result.getByRole('button', { name: 'Hide' }));
+		// 操作ボタンをプレビューのボタンに入れ子にしない。入れ子は HTML として不正で、内側の操作が外側のクリックとしても扱われる。
+		const preview = result.getByRole('button', { name: 'example.mp4' });
+		const menu = result.getByRole('button', { name: 'Menu' });
+		const hideButton = result.getByRole('button', { name: 'Hide' });
+		assert.equal(result.container.querySelectorAll('button button').length, 0);
+		assert.equal(menu.parentElement, preview.parentElement);
+		assert.equal(hideButton.parentElement, preview.parentElement);
+		await fireEvent.click(hideButton);
 		assert.equal(result.queryByRole('button', { name: 'example.mp4' }), null);
 		assert.equal(result.emitted()['mediaClick'], undefined);
 

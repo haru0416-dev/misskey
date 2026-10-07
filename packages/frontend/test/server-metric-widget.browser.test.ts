@@ -87,12 +87,25 @@ describe('server metric widget', () => {
 
 		expect(sent[0]!.type).toBe('requestLog');
 
-		emit('stats', createStats(0, 0, 1024, 2048));
+		// 縦軸の上限は 64KiB か、表示中の最大値の大きいほう。rx と tx は別々の上限で描く。
+		emit('statsLog', [createStats(0, 0, 0, 65536), createStats(0, 0, 32768, 131072)]);
+		emit('stats', createStats(0, 0, 196608, 0));
 		await nextTick();
 
-		const polylines = [...result.container.querySelectorAll('polyline')];
-		expect(polylines).toHaveLength(2);
-		expect(polylines[0]!.getAttribute('points')).not.toBe('');
+		const [rx, tx] = [...result.container.querySelectorAll('svg')];
+		expect(rx!.querySelector('polyline')!.getAttribute('points')).toBe('48,25 49,30 50,0');
+		expect(tx!.querySelector('polyline')!.getAttribute('points')).toBe('48,0 49,15 50,30');
+		expect(rx!.querySelector('polygon')!.getAttribute('points')).toBe('48,30 48,25 49,30 50,0 50,30');
+		expect([rx!.querySelector('circle')!.getAttribute('cx'), rx!.querySelector('circle')!.getAttribute('cy')]).toEqual([
+			'50',
+			'0',
+		]);
+		expect([tx!.querySelector('circle')!.getAttribute('cx'), tx!.querySelector('circle')!.getAttribute('cy')]).toEqual([
+			'50',
+			'30',
+		]);
+		expect(rx!.textContent).toContain('192KB');
+		expect(tx!.textContent).toContain('NET tx 0');
 
 		result.unmount();
 		expect(listenerCount('stats')).toBe(0);

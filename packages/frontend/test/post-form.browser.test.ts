@@ -166,6 +166,12 @@ function localDraft(overrides: Partial<PostFormFields> = {}) {
 	);
 }
 
+/** 解決済みの Promise に繋がる処理と、それによる Vue の描画更新を全て終える。 */
+async function settleMicrotasks() {
+	await new Promise((resolve) => window.setTimeout(resolve, 0));
+	await nextTick();
+}
+
 function composerInput(container: Element) {
 	const input = container.querySelector<HTMLTextAreaElement>('[data-cy-post-form-text]');
 	if (!input) throw new Error('Composer textarea was not rendered');
@@ -263,10 +269,11 @@ describe('post form draft ownership', () => {
 		{ source: 'initialNote', recipientIds: [] },
 	])('古い宛先応答は後から復元した下書きに混ざらない: %j', async ({ source, recipientIds }) => {
 		const oldUsers = Promise.withResolvers<Misskey.entities.UserDetailed[]>();
+		const newUsers = Promise.withResolvers<Misskey.entities.UserDetailed[]>();
 		vi.mocked(misskeyApi).mockImplementation(async (_endpoint, params) => {
 			if (params && 'userIds' in params && Array.isArray(params.userIds) && params.userIds.includes('recipient-a'))
 				return await oldUsers.promise;
-			return [recipient('recipient-b')];
+			return await newUsers.promise;
 		});
 		if (source === 'local') writeLocalDraft(owner, localDraft({ visibleUserIds: ['recipient-a'] }), true);
 		const rendered = render(MkPostForm, {
@@ -289,15 +296,18 @@ describe('post form draft ownership', () => {
 		await waitFor(() => expect(misskeyApi).toHaveBeenCalledWith('users/show', { userIds: ['recipient-a'] }));
 		const restore = await serverRestorer(rendered.container);
 		await restore(serverDraft({ visibleUserIds: recipientIds }));
+		await waitFor(() => expect(composerInput(rendered.container).value).toBe('server draft'));
+		// 古い応答には現在の宛先と同じ id の別内容も混ぜる。宛先 id での絞り込みだけでは除けず、
+		// 先に届いた古い応答が後から届く現在の応答の表示を塞ぐ形にする。
+		oldUsers.resolve([recipient('recipient-a'), { ...recipient('recipient-b'), username: 'stale-recipient' }]);
+		await settleMicrotasks();
+		newUsers.resolve(recipientIds.map(recipient));
+		await settleMicrotasks();
 		if (recipientIds.length > 0) {
 			await waitFor(() => expect(rendered.container.textContent).toContain('recipient-b'));
-		} else {
-			await waitFor(() => expect(composerInput(rendered.container).value).toBe('server draft'));
 		}
-		oldUsers.resolve([recipient('recipient-a')]);
-		await nextTick();
-		await nextTick();
 		expect(rendered.container.textContent).not.toContain('recipient-a');
+		expect(rendered.container.textContent).not.toContain('stale-recipient');
 		expect(parseLocalDraft(readLocalDraft(owner))?.visibleUserIds ?? []).toEqual(recipientIds);
 	});
 
@@ -310,8 +320,7 @@ describe('post form draft ownership', () => {
 		await waitFor(() => expect(os.confirm).toHaveBeenCalled());
 		await fireEvent.update(composerInput(rendered.container), 'new intent');
 		answer.resolve({ canceled: false });
-		await nextTick();
-		await nextTick();
+		await settleMicrotasks();
 		expect(composerInput(rendered.container).value).toBe('new intent');
 		expect(parseLocalDraft(readLocalDraft(owner))?.text).toBe('new intent');
 	});
@@ -326,8 +335,7 @@ describe('post form draft ownership', () => {
 		first.unmount();
 		const beforeAnswer = readLocalDraft(owner);
 		answer.resolve({ canceled: false });
-		await nextTick();
-		await nextTick();
+		await settleMicrotasks();
 		expect(readLocalDraft(owner)).toEqual(beforeAnswer);
 		expect(misskeyApi).not.toHaveBeenCalled();
 
@@ -339,8 +347,7 @@ describe('post form draft ownership', () => {
 		second.unmount();
 		const beforeUsers = readLocalDraft(owner);
 		users.resolve([recipient('recipient-a'), recipient('recipient-b')]);
-		await nextTick();
-		await nextTick();
+		await settleMicrotasks();
 		expect(readLocalDraft(owner)).toEqual(beforeUsers);
 	});
 

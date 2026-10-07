@@ -78,7 +78,9 @@ describe('MkVideoControl', () => {
 
 	test('recovers state when play is rejected', async () => {
 		const video = window.document.createElement('video');
-		const play = vi.spyOn(video, 'play').mockRejectedValue(new DOMException('blocked'));
+		// 拒否の時点をテストが決める。即座に拒否すると一時停止表示を描く前に戻り、初期表示と区別できない。
+		const playback = Promise.withResolvers<void>();
+		const play = vi.spyOn(video, 'play').mockReturnValue(playback.promise);
 		const result = render(MkVideoControl, {
 			global: {
 				directives,
@@ -89,8 +91,12 @@ describe('MkVideoControl', () => {
 
 		const button = result.container.querySelector('button');
 		assert.ok(button instanceof HTMLButtonElement);
+		assert.match(button.innerHTML, /player-play/);
 		button.click();
 		assert.equal(play.mock.calls.length, 1);
+		await waitFor(() => assert.match(button.innerHTML, /player-pause/));
+
+		playback.reject(new DOMException('blocked'));
 		await waitFor(() => assert.match(button.innerHTML, /player-play/));
 	});
 

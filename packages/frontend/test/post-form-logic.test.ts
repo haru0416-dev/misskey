@@ -102,6 +102,11 @@ describe('端末下書き', () => {
 		expect(hasLocalDraftContent(fields({ text: '', useCw: false, cw: 'hidden' }))).toBe(false);
 		expect(hasLocalDraftContent(fields({ text: '', useCw: true, cw: 'cw' }))).toBe(true);
 		expect(hasLocalDraftContent(fields({ text: '', files: [file] }))).toBe(true);
+		expect(
+			hasLocalDraftContent(
+				fields({ text: '', poll: { choices: ['', ''], multiple: false, expiresAt: null, expiredAfter: null } }),
+			),
+		).toBe(true);
 	});
 });
 

@@ -89,38 +89,65 @@ describe('punycode: 生成した入力での性質', () => {
 describe('toUnicodeHost: 入力を壊さないこと', () => {
 	const locales = ['ja-JP', 'en-US'];
 
+	/** xn-- で始まらないラベル。大文字を含む ASCII を混ぜ、元の表記が保たれるかを見分けられるようにする。 */
+	const plainLabel = fc
+		.oneof(
+			fc.string({ unit: 'grapheme', minLength: 1, maxLength: 12 }),
+			fc.stringMatching(/^[A-Za-z0-9][A-Za-z0-9-]{0,11}$/),
+		)
+		.filter((l) => !l.includes('.') && !l.toLowerCase().startsWith(PREFIX));
+
+	/**
+	 * xn-- で始まるラベル。Unicode へ戻るもの (閲覧者の言語の script)、戻さないもの (キリル文字)、
+	 * 復号できない・非正規な後続を混ぜる。ランダムな文字列だけでは xn-- がほぼ現れず、
+	 * 先頭の `host.includes(PREFIX)` で返るだけになる。
+	 */
+	const punycodeLabel = fc.oneof(
+		singleScriptLabel(['Latin', 'Hiragana', 'Han', 'Cyrillic']).map(
+			(l) => `${PREFIX}${encodePunycodeLabel(l) as string}`,
+		),
+		fc
+			.string({ unit: 'grapheme', maxLength: 10 })
+			.filter((s) => !s.includes('.'))
+			.map((s) => `${PREFIX}${s}`),
+	);
+
+	const mixedLabels = fc.array(fc.oneof(plainLabel, punycodeLabel), { minLength: 1, maxLength: 4 });
+
 	test('ラベルの数を変えない', () => {
+		let converted = 0;
+		const numRuns = 300;
 		fc.assert(
-			fc.property(
-				fc.array(
-					fc.string({ unit: 'grapheme', minLength: 1, maxLength: 12 }).filter((s) => !s.includes('.')),
-					{
-						minLength: 1,
-						maxLength: 4,
-					},
-				),
-				(labels) => {
-					const host = labels.join('.');
-					expect(toUnicodeHost(host, locales).split('.')).toHaveLength(labels.length);
-				},
-			),
-			{ numRuns: 300 },
+			fc.property(mixedLabels, (labels) => {
+				const host = labels.join('.');
+				const result = toUnicodeHost(host, locales);
+				expect(result.split('.')).toHaveLength(labels.length);
+				if (result !== host) converted++;
+			}),
+			{ numRuns },
 		);
+		// 変換の本体まで届いた入力が十分にあること。
+		expect(converted).toBeGreaterThanOrEqual(numRuns / 4);
 	});
 
 	test('xn-- で始まらないラベルには一切触れない', () => {
+		let checked = 0;
+		const numRuns = 300;
 		fc.assert(
-			fc.property(
-				fc
-					.array(fc.string({ unit: 'grapheme', minLength: 1, maxLength: 12 }), { minLength: 1, maxLength: 4 })
-					.filter((labels) => labels.every((l) => !l.includes('.') && !l.toLowerCase().startsWith(PREFIX))),
-				(labels) => {
-					const host = labels.join('.');
-					expect(toUnicodeHost(host, locales)).toBe(host);
-				},
-			),
-			{ numRuns: 300 },
+			fc.property(mixedLabels, (labels) => {
+				const host = labels.join('.');
+				const result = toUnicodeHost(host, locales).split('.');
+				labels.forEach((label, i) => {
+					if (!label.toLowerCase().startsWith(PREFIX)) expect(result[i]).toBe(label);
+				});
+				// ホストに xn-- を含み、小文字化すると表記が変わる素のラベルがある入力だけが判定の本体を通る。
+				if (host.includes(PREFIX) && labels.some((l) => !l.toLowerCase().startsWith(PREFIX) && l !== l.toLowerCase())) {
+					checked++;
+				}
+			}),
+			{ numRuns },
 		);
+		expect(checked).toBeGreaterThanOrEqual(numRuns / 10);
 	});
 });
 

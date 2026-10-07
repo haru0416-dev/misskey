@@ -3,34 +3,27 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, assert, describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import { defineComponent, h, ref } from 'vue';
 import { useFormControlPadding } from '@/composables/useFormControlPadding.js';
+
+/** ResizeObserver の通知はレイアウト後・描画前に届くので、2 フレーム待てば済んだ変更の通知は全て終わっている。 */
+async function nextFrames(): Promise<void> {
+	for (let i = 0; i < 2; i++) {
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+	}
+}
 
 describe('useFormControlPadding', () => {
 	afterEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
-		vi.unstubAllGlobals();
 	});
 
-	test('updates only when decoration sizes change and disconnects on unmount', () => {
-		const resizeCallbacks: ResizeObserverCallback[] = [];
-		const observe = vi.fn();
-		const disconnect = vi.fn();
-		vi.stubGlobal(
-			'ResizeObserver',
-			class {
-				constructor(callback: ResizeObserverCallback) {
-					resizeCallbacks.push(callback);
-				}
-
-				observe = observe;
-				disconnect = disconnect;
-			},
-		);
+	test('updates only when decoration sizes change and disconnects on unmount', async () => {
 		const setInterval = vi.spyOn(window, 'setInterval');
+		const disconnect = vi.spyOn(ResizeObserver.prototype, 'disconnect');
 		const Component = defineComponent({
 			setup() {
 				const input = ref<HTMLElement | null>(null);
@@ -38,10 +31,10 @@ describe('useFormControlPadding', () => {
 				const suffix = ref<HTMLElement | null>(null);
 				useFormControlPadding(input, prefix, suffix);
 				return () =>
-					h('div', [
-						h('div', { ref: prefix, 'data-testid': 'prefix' }),
-						h('div', { ref: input, 'data-testid': 'input' }),
-						h('div', { ref: suffix, 'data-testid': 'suffix' }),
+					h('div', { style: 'display: flex' }, [
+						h('div', { ref: prefix, 'data-testid': 'prefix', style: 'flex: none; width: 32px; height: 10px' }),
+						h('div', { ref: input, 'data-testid': 'input', style: 'flex: none; width: 100px; height: 10px' }),
+						h('div', { ref: suffix, 'data-testid': 'suffix', style: 'flex: none; width: 24px; height: 10px' }),
 					]);
 			},
 		});
@@ -50,23 +43,30 @@ describe('useFormControlPadding', () => {
 		const input = result.getByTestId('input');
 		const prefix = result.getByTestId('prefix');
 		const suffix = result.getByTestId('suffix');
-		Object.defineProperty(prefix, 'offsetWidth', { configurable: true, value: 32 });
-		Object.defineProperty(suffix, 'offsetWidth', { configurable: true, value: 24 });
-		const resizeCallback = resizeCallbacks[0];
-		assert(resizeCallback != null);
-		resizeCallback([], {} as ResizeObserver);
-
+		await nextFrames();
 		expect(input.style.paddingLeft).toBe('32px');
 		expect(input.style.paddingRight).toBe('24px');
-		expect(observe).toHaveBeenCalledTimes(2);
 		expect(setInterval).not.toHaveBeenCalled();
 
-		Object.defineProperty(prefix, 'offsetWidth', { configurable: true, value: 0 });
-		Object.defineProperty(suffix, 'offsetWidth', { configurable: true, value: 0 });
-		resizeCallback([], {} as ResizeObserver);
+		// 入力欄自体の大きさが変わっても計算し直さない。書き換えられた値が残ることで確かめる。
+		input.style.paddingLeft = '1px';
+		input.style.width = '200px';
+		await nextFrames();
+		expect(input.style.paddingLeft).toBe('1px');
+
+		prefix.style.width = '48px';
+		await nextFrames();
+		expect(input.style.paddingLeft).toBe('48px');
+		expect(input.style.paddingRight).toBe('24px');
+
+		prefix.style.width = '0';
+		suffix.style.width = '0';
+		await nextFrames();
 		expect(input.style.paddingLeft).toBe('');
 		expect(input.style.paddingRight).toBe('');
 
+		// unmount 後は template ref が null になり書き込みは起きないので、監視の解除は呼び出しで確かめる。
+		expect(disconnect).not.toHaveBeenCalled();
 		result.unmount();
 		expect(disconnect).toHaveBeenCalledOnce();
 	});
