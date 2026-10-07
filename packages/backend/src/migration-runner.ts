@@ -198,8 +198,11 @@ export async function resetDatabase(config: Config): Promise<void> {
 /** migration 直後に行が入っているテーブルの内容 (migration が入れる初期データ)。 */
 export type DatabaseSeed = { table: string; rows: string }[];
 
+// cache_version は空にも初期値にも戻さない。動き続けるプロセスはモジュール内のキャッシュを世代番号で引くので、
+// 世代が初期値へ戻ると、前の世代番号で読んだ古い一覧が同じ番号の新しい内容として返る。
+// 残しておけば、TRUNCATE と初期データの INSERT で対象テーブルのトリガが世代を進める。
 const listPublicTablesQuery =
-	"SELECT format('%I', tablename) AS name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename";
+	"SELECT format('%I', tablename) AS name FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'cache_version' ORDER BY tablename";
 
 export async function captureDatabaseSeed(config: Config): Promise<DatabaseSeed> {
 	return await withMigrationSession(config, async (client) => {

@@ -16,12 +16,19 @@ export function compactAntennaKeywords(matrix: string[][]): string[][] {
 }
 
 /**
- * いずれかのまとまりの語がすべて本文に含まれるか。大文字小文字を区別しない場合は本文を 1 度だけ小文字にする
+ * 照合に使う形へ前処理する。空の語を除き、大文字小文字を区別しない場合は語を小文字にする。
+ * アンテナ一覧はキャッシュされて投稿をまたいで使われるので、前処理は投稿ごとに繰り返さない。
+ */
+export function compileAntennaKeywords(matrix: string[][], caseSensitive: boolean): string[][] {
+	const compact = compactAntennaKeywords(matrix);
+	return caseSensitive ? compact : compact.map((group) => group.map((keyword) => keyword.toLowerCase()));
+}
+
+/**
+ * いずれかのまとまりの語がすべて本文に含まれるか。keywords は compileAntennaKeywords の結果で、
+ * 大文字小文字を区別しない場合は呼び出し側が本文を 1 度だけ小文字にして渡す
  * (語ごとに本文を小文字にし直すと、語数に比例して本文の複写が増える)。
  */
-export function matchesAntennaKeywords(text: string, matrix: string[][], caseSensitive: boolean): boolean {
-	const haystack = caseSensitive ? text : text.toLowerCase();
-	return matrix.some((group) =>
-		group.every((keyword) => haystack.includes(caseSensitive ? keyword : keyword.toLowerCase())),
-	);
+export function matchesCompiledAntennaKeywords(haystack: string, keywords: string[][]): boolean {
+	return keywords.some((group) => group.every((keyword) => haystack.includes(keyword)));
 }

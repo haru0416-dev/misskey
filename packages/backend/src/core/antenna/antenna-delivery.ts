@@ -5,20 +5,15 @@
 
 import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
-import { compactAntennaKeywords, matchesAntennaKeywords } from '@/core/antenna/antenna-keywords.js';
+import { compileAntennaKeywords, matchesCompiledAntennaKeywords } from '@/core/antenna/antenna-keywords.js';
 import {
 	appendUserToAntennasInDatabase,
 	listActiveAntennasFromDatabase,
+	listActiveAntennasFromDatabaseCachedByVersion,
 	listAntennasByIdsFromDatabase,
 } from '@/core/antenna/antenna-store.js';
-import {
-	followingExistsInDatabase,
-	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/user/following-store.js';
-import {
-	listUserListIdsContainingUserFromDatabase,
-	userListMembershipExistsInDatabase,
-} from '@/core/user/user-list-membership-store.js';
+import { listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/user/following-store.js';
+import { listUserListIdsContainingUserFromDatabase } from '@/core/user/user-list-membership-store.js';
 import * as Acct from '@/misc/acct.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -81,16 +76,52 @@ function passesAntennaPreconditions(
 	return true;
 }
 
-export async function checkHitAntenna(
-	deps: Pick<AntennaFanoutDependencies, 'config' | 'db'>,
+type AntennaMatchKeywords = { keywords: string[][]; excludeKeywords: string[][] };
+
+// キャッシュした一覧のアンテナは凍結済みで、投稿をまたいで同じオブジェクトが渡る。
+// 空語の除去と小文字化をアンテナごとに 1 度で済ませるため、オブジェクトに結び付けて持つ。
+const antennaMatchKeywords = new WeakMap<MiAntenna, AntennaMatchKeywords>();
+
+function getAntennaMatchKeywords(antenna: MiAntenna): AntennaMatchKeywords {
+	let compiled = antennaMatchKeywords.get(antenna);
+	if (compiled == null) {
+		compiled = {
+			keywords: compileAntennaKeywords(antenna.keywords, antenna.caseSensitive),
+			excludeKeywords: compileAntennaKeywords(antenna.excludeKeywords, antenna.caseSensitive),
+		};
+		antennaMatchKeywords.set(antenna, compiled);
+	}
+	return compiled;
+}
+
+/** キーワード照合に使う本文 (本文 + 改行 + CW)。小文字の版は要るアンテナが現れたときに 1 度だけ作る。 */
+type AntennaNoteText = { raw: string; lower: () => string };
+
+function createAntennaNoteText(note: Pick<MiNote, 'text' | 'cw'>): AntennaNoteText | null {
+	if (note.text == null && note.cw == null) {
+		return null;
+	}
+	const raw = (note.text ?? '') + '\n' + (note.cw ?? '');
+	let lower: string | undefined;
+	return { raw, lower: () => (lower ??= raw.toLowerCase()) };
+}
+
+/**
+ * 投稿がアンテナに入るか。DB を引かずに判定するので、フォロー関係とリスト所属は hint で渡す。
+ * hint.followerIds は「投稿者をフォローしているアンテナ所有者」、hint.listMembershipUserListIds は
+ * 「投稿者が入っているリスト」で、どちらも照合するアンテナ一覧について addNoteToAntennas がまとめて引く。
+ */
+function checkHitAntenna(
+	config: { runtime: Pick<Config['runtime'], 'host'> },
 	antenna: MiAntenna,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
-	hint?: {
-		listMembershipUserListIds: Set<string>;
-		followerIds?: Set<MiUser['id']>;
+	hint: {
+		listMembershipUserListIds: ReadonlySet<string>;
+		followerIds: ReadonlySet<MiUser['id']>;
 	},
-): Promise<boolean> {
+	text: AntennaNoteText | null,
+): boolean {
 	if (!passesAntennaPreconditions(antenna, note, noteUser)) {
 		return false;
 	}
@@ -107,60 +138,42 @@ export async function checkHitAntenna(
 	}
 
 	if (note.visibility === 'followers') {
-		const isFollowing =
-			hint?.followerIds != null
-				? hint.followerIds.has(antenna.userId)
-				: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
-		if (!isFollowing && antenna.userId !== note.userId) {
+		if (!hint.followerIds.has(antenna.userId) && antenna.userId !== note.userId) {
 			return false;
 		}
 	}
 
 	if (antenna.src === 'home') {
 		// ホーム = アンテナ所有者のホームタイムラインに流れるノート (自分の投稿 + フォロー中ユーザーの投稿)。
-		// hint.followerIds は「note.userId をフォローしている候補ユーザー」なので所有者が居れば follow 済み。
-		if (note.userId !== antenna.userId) {
-			const isFollowing =
-				hint?.followerIds != null
-					? hint.followerIds.has(antenna.userId)
-					: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
-			if (!isFollowing) {
-				return false;
-			}
-		}
-	} else if (antenna.src === 'list') {
-		if (antenna.userListId == null) {
+		if (note.userId !== antenna.userId && !hint.followerIds.has(antenna.userId)) {
 			return false;
 		}
-		const exists = hint
-			? hint.listMembershipUserListIds.has(antenna.userListId)
-			: await userListMembershipExistsInDatabase(deps.db, note.userId, antenna.userListId);
-		if (!exists) {
+	} else if (antenna.src === 'list') {
+		if (antenna.userListId == null || !hint.listMembershipUserListIds.has(antenna.userListId)) {
 			return false;
 		}
 	} else if (antenna.src === 'users') {
-		if (!antennaUsersIncludes(deps.config, antenna.users, noteUser)) {
+		if (!antennaUsersIncludes(config, antenna.users, noteUser)) {
 			return false;
 		}
 	} else if (antenna.src === 'users_blacklist') {
-		if (antennaUsersIncludes(deps.config, antenna.users, noteUser)) {
+		if (antennaUsersIncludes(config, antenna.users, noteUser)) {
 			return false;
 		}
 	}
 
-	const keywords = compactAntennaKeywords(antenna.keywords);
-	const excludeKeywords = compactAntennaKeywords(antenna.excludeKeywords);
+	const { keywords, excludeKeywords } = getAntennaMatchKeywords(antenna);
 
 	if (keywords.length > 0 || excludeKeywords.length > 0) {
-		if (note.text == null && note.cw == null) {
+		if (text == null) {
 			return false;
 		}
 
-		const text = (note.text ?? '') + '\n' + (note.cw ?? '');
-		if (keywords.length > 0 && !matchesAntennaKeywords(text, keywords, antenna.caseSensitive)) {
+		const haystack = antenna.caseSensitive ? text.raw : text.lower();
+		if (keywords.length > 0 && !matchesCompiledAntennaKeywords(haystack, keywords)) {
 			return false;
 		}
-		if (excludeKeywords.length > 0 && matchesAntennaKeywords(text, excludeKeywords, antenna.caseSensitive)) {
+		if (excludeKeywords.length > 0 && matchesCompiledAntennaKeywords(haystack, excludeKeywords)) {
 			return false;
 		}
 	}
@@ -210,15 +223,21 @@ export async function onMoveAccount(
 }
 
 /**
- * アクティブなアンテナ一覧を DB から取得し、評価を分割して実行する。
+ * 有効なアンテナ一覧と照合し、当たったアンテナのタイムラインへ入れる。
+ * antennasVersion は投稿の保存時か post-create の snapshot と同じ文で読んだアンテナ一覧の世代で、
+ * 同じ世代の一覧はプロセス内で使い回す。null (世代の行が無い) なら毎回 DB から読む。
  * fanout-timeline-push.ts と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
 export async function addNoteToAntennas(
 	deps: AntennaFanoutDependencies,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
+	antennasVersion: number | null,
 ): Promise<void> {
-	const antennas = await listActiveAntennasFromDatabase(deps.db);
+	const antennas =
+		antennasVersion == null
+			? await listActiveAntennasFromDatabase(deps.db)
+			: await listActiveAntennasFromDatabaseCachedByVersion(deps.db, antennasVersion);
 
 	// src === 'list' なアンテナの userListId をまとめて1クエリで所属判定する (アンテナ毎の exists クエリを回避)。
 	const listAntennaUserListIds = [
@@ -247,23 +266,11 @@ export async function addNoteToAntennas(
 			? listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, note.userId, followerCandidateIds)
 			: Promise.resolve([]),
 	]);
-	const followerIdSet = new Set(followerIds);
-
-	const antennasWithMatchResult: (readonly [MiAntenna, boolean])[] = [];
-	for (let index = 0; index < antennas.length; index += 50) {
-		const batch = antennas.slice(index, index + 50);
-		antennasWithMatchResult.push(
-			...(await Promise.all(
-				batch.map((antenna) =>
-					checkHitAntenna(deps, antenna, note, noteUser, {
-						listMembershipUserListIds,
-						followerIds: followerIdSet,
-					}).then((hit) => [antenna, hit] as const),
-				),
-			)),
-		);
-	}
-	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
+	const hint = { listMembershipUserListIds, followerIds: new Set(followerIds) };
+	const text = createAntennaNoteText(note);
+	const matchedAntennas = antennas.filter((antenna) =>
+		checkHitAntenna(deps.config, antenna, note, noteUser, hint, text),
+	);
 
 	const push = new FanoutTimelinePush(note.id);
 	for (const antenna of matchedAntennas) {

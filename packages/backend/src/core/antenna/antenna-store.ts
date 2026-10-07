@@ -181,6 +181,33 @@ export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Pro
 	return rows.map(deserializeAntenna);
 }
 
+let activeAntennasByVersion: { version: number; antennas: readonly MiAntenna[] } | null = null;
+
+/**
+ * 有効なアンテナ一覧を世代番号付きで使い回し、世代が同じ間は DB を読まない。
+ * 世代は cache_version の antennas 行で、antenna への INSERT・DELETE・TRUNCATE と lastUsedAt 以外の UPDATE で
+ * トリガが進める。書き込みが API・Store 関数・生 SQL・外部キーの連鎖のどれでも進むので、別プロセスの書き込みも判る。
+ * version は一覧を読むより前の snapshot で取った値を渡すこと。後から読んだ一覧はその世代以上に新しいので、
+ * 古い一覧に新しい世代が付くことはない。返す配列と要素は共有物なので凍結する。
+ */
+export async function listActiveAntennasFromDatabaseCachedByVersion(
+	db: MiDrizzleDatabase,
+	version: number,
+): Promise<readonly MiAntenna[]> {
+	if (activeAntennasByVersion?.version === version) {
+		return activeAntennasByVersion.antennas;
+	}
+
+	const antennas = await listActiveAntennasFromDatabase(db);
+	for (const entry of antennas) {
+		Object.freeze(entry);
+	}
+	Object.freeze(antennas);
+	activeAntennasByVersion = { version, antennas };
+
+	return antennas;
+}
+
 export async function listAntennasByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiAntenna['id'][],

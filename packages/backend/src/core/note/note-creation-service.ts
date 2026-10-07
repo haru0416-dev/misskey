@@ -737,6 +737,7 @@ function isNoopPostCreateStage(
 
 type PersistedNote = {
 	note: MiNote;
+	antennasVersion: number | null;
 	outboxJobs: (InlineDbOutboxJob & { data: DbNotePostCreateJobData })[];
 };
 
@@ -874,7 +875,11 @@ async function insertNote(
 					silent,
 					stage,
 				}));
-			const { author, jobs: enqueued } = await createNoteWithAuthorAndInlineJobsInDatabase(tx, insert, jobDataList, {
+			const {
+				author,
+				jobs: enqueued,
+				antennasVersion,
+			} = await createNoteWithAuthorAndInlineJobsInDatabase(tx, insert, jobDataList, {
 				attempts: 12,
 				backoff: { type: 'exponential', delay: 1000 },
 				removeOnComplete: true,
@@ -934,7 +939,7 @@ async function insertNote(
 				...outboxJob,
 				data: jobDataList[index]!,
 			}));
-			return { note, outboxJobs };
+			return { note, antennasVersion, outboxJobs };
 		});
 		if (countedInstanceId != null) {
 			// db は呼び出し元のトランザクションのこともあるので、後で反映する接続にはしない。
@@ -1005,6 +1010,8 @@ type NotePostCreateContext = {
 	tags: string[];
 	mentionedUsers: MiUser[];
 	silent: boolean;
+	/** アンテナ一覧キャッシュの世代。投稿を書き込む文か post-create の snapshot を読む文で一緒に読む。 */
+	antennasVersion: number | null;
 };
 
 async function postNoteCreated(
@@ -1015,6 +1022,7 @@ async function postNoteCreated(
 	tags: string[],
 	mentionedUsers: MiUser[],
 	silent: boolean,
+	antennasVersion: number | null,
 	stage: DbNotePostCreateStage,
 	pushDeps: PushNotificationDependencies = deps,
 ): Promise<void> {
@@ -1023,7 +1031,7 @@ async function postNoteCreated(
 	}
 
 	if (stage === 'antennas') {
-		await addNoteToAntennas(deps, { ...note, channel: data.channel ?? null }, user);
+		await addNoteToAntennas(deps, { ...note, channel: data.channel ?? null }, user, antennasVersion);
 	}
 
 	if (stage === 'followerNotifications' && data.reply == null) {
@@ -1249,6 +1257,7 @@ async function loadNotePostCreateContext(
 		tags: note.tags,
 		mentionedUsers,
 		silent: data.silent,
+		antennasVersion: snapshot.antennasVersion,
 	};
 }
 
@@ -1266,6 +1275,7 @@ async function runNotePostCreateStage(
 		context.tags,
 		context.mentionedUsers,
 		context.silent,
+		context.antennasVersion,
 		stage,
 		pushDeps,
 	);
@@ -1655,6 +1665,7 @@ export async function createNote(
 		tags,
 		mentionedUsers: finalMentionedUsers,
 		silent,
+		antennasVersion: persisted.antennasVersion,
 	};
 	const analytics: NoteAnalyticsEvent = {
 		note: {

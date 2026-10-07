@@ -954,6 +954,28 @@ describe('アンテナ', () => {
 			},
 		);
 
+		// サーバーはアンテナ一覧をプロセス内に持つ。別プロセス (このテスト) から DB へ直接書いた条件の変更も、
+		// 次の投稿の照合に使われること。
+		test('の条件を別プロセスから DB で書き換えると、次の投稿から新しい条件で照合する', async () => {
+			const antenna = await successfulApiCall({
+				endpoint: 'antennas/create',
+				parameters: { ...defaultParam, keywords: [['cachedbefore']] },
+				user: alice,
+			});
+			const first = await post(bob, { text: 'cachedbefore 1' });
+			expect(await waitForAntennaNotes(alice, antenna.id, 1)).toStrictEqual([first]);
+
+			await updateAntennaInDatabase(database, antenna.id, { keywords: [['cachedafter']] });
+			await post(bob, { text: 'cachedbefore 2' });
+			const matched = await post(bob, { text: 'cachedafter 3' });
+			expect(await waitForAntennaNotes(alice, antenna.id, 2)).toStrictEqual([matched, first]);
+
+			await updateAntennaInDatabase(database, antenna.id, { isActive: false });
+			// notes/create はアンテナへの振り分けを終えてから応答する。
+			await post(bob, { text: 'cachedafter 4' });
+			expect(await waitForAntennaNotes(alice, antenna.id, 0)).toStrictEqual([matched, first]);
+		});
+
 		// 7 日未使用で無効になったアンテナは過去ノートを取得できないが、取得時に再び有効になる。
 		// https://github.com/misskey-dev/misskey/issues/10476
 		test('を取得したときActiveに戻る', async () => {

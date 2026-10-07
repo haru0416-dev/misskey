@@ -44,7 +44,7 @@ const cacheVersionRolesPlan = defineCachedQueryPlan((db) => {
 });
 
 /**
- * role / role_assignment の世代番号。両テーブルのトリガが書き込みのたびに進める (migration 0016)。
+ * role / role_assignment の世代番号。両テーブルのトリガが書き込みのたびに進める。
  * 書き込みが API 経由でも Store 関数直呼びでも生 SQL でも進むので、プロセスをまたぐキャッシュの
  * 新旧判定に使える。ネイティブトークン認証で取得済みなら、その値をリクエスト内で共有する。
  */

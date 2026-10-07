@@ -15,6 +15,13 @@
       "when": 1791272248688,
       "tag": "0001_plain_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791387706683,
+      "tag": "0002_antenna_cache_version",
+      "breakpoints": true
     }
   ]
 }

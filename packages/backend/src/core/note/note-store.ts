@@ -426,6 +426,14 @@ export async function createNoteInDatabase(db: MiDrizzleDatabase, values: NoteIn
 	await db.insert(note).values(values);
 }
 
+/**
+ * アンテナ一覧キャッシュの世代 (listActiveAntennasFromDatabaseCachedByVersion)。投稿を書き込む文と
+ * post-create の snapshot を読む文に同乗させ、照合のための往復を増やさない。行が無ければ null。
+ */
+const antennasCacheVersionSql = sql<
+	number | null
+>`(select ${cacheVersion.version} from ${cacheVersion} where ${cacheVersion.key} = 'antennas')`;
+
 const noteCreationPlaceholders = Object.fromEntries(
 	noteColumnKeys.map((key) => [key, notePlaceholder(key, `note_${key}`)]),
 ) as unknown as NoteInsert;
@@ -440,7 +448,11 @@ function noteCreationPlan(rowCount: number) {
 			rowCount > 0
 				? [insertedNote, db.$with('enqueued_jobs').as(createInlineDbOutboxInsert(db, rowCount))]
 				: [insertedNote];
-		const selection = getTableColumns(userTable);
+		const selection = {
+			...getTableColumns(userTable),
+			// 投稿行と同じ snapshot で読む。この後に読むアンテナ一覧は、この世代以上に新しい。
+			antennasVersion: antennasCacheVersionSql,
+		};
 		return {
 			query: db
 				.with(...writes)
@@ -468,13 +480,14 @@ export async function createNoteWithAuthorAndInlineJobsInDatabase(
 	noteValues: Required<NoteInsert>,
 	dataList: DbNotePostCreateJobData[],
 	opts: Parameters<typeof prepareInlineDbOutboxJobs>[2],
-): Promise<{ author: MiUser; jobs: InlineDbOutboxJob[] }> {
+): Promise<{ author: MiUser; jobs: InlineDbOutboxJob[]; antennasVersion: number | null }> {
 	const { jobs, values } = prepareInlineDbOutboxJobs('notePostCreate', dataList, opts);
 	for (const key of noteColumnKeys) values[`note_${key}`] = notePlanValue(key, noteValues[key]);
 	const plan = noteCreationPlans[dataList.length] ?? noteCreationPlan(dataList.length);
-	const [author] = await plan.execute(db, values);
-	if (author == null) throw new EntityNotFoundError('MiUser', { id: noteValues.userId });
-	return { author: deserializeUser(author), jobs };
+	const [row] = await plan.execute(db, values);
+	if (row == null) throw new EntityNotFoundError('MiUser', { id: noteValues.userId });
+	const { antennasVersion, ...author } = row;
+	return { author: deserializeUser(author), jobs, antennasVersion };
 }
 
 export async function createNoteWithPollInDatabase(
@@ -513,10 +526,12 @@ const notePostCreateSnapshotPlan = defineCachedQueryPlan((db) => {
 		sql`${key}::text`,
 		sql`${column}`,
 	]);
+	const antennasCacheVersion = alias(cacheVersion, 'antennas_cache_version');
 	const selection = {
 		note: getTableColumns(note),
 		user: getTableColumns(userTable),
 		rolesVersion: sql<number>`coalesce(${cacheVersion.version}, 0)`,
+		antennasVersion: antennasCacheVersion.version,
 		// 本文や著者行をフォロワー人数ぶん複製せず、同じsnapshotで配送先を取得する。
 		followers: sql<FollowerForNoteDelivery[]>`(
 			select coalesce(jsonb_agg(jsonb_build_object(${sql.join(followerFields, sql`, `)})), '[]'::jsonb)
@@ -529,6 +544,7 @@ const notePostCreateSnapshotPlan = defineCachedQueryPlan((db) => {
 			.from(note)
 			.innerJoin(userTable, eq(userTable.id, note.userId))
 			.leftJoin(cacheVersion, eq(cacheVersion.key, 'roles'))
+			.leftJoin(antennasCacheVersion, eq(antennasCacheVersion.key, 'antennas'))
 			.where(eq(note.id, sql.placeholder('id')))
 			.limit(1),
 		selection,
@@ -542,7 +558,13 @@ const notePostCreateSnapshotPlan = defineCachedQueryPlan((db) => {
 export async function fetchNotePostCreateSnapshotFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNote['id'],
-): Promise<{ note: MiNote; user: MiUser; followers: FollowerForNoteDelivery[]; rolesVersion: number } | null> {
+): Promise<{
+	note: MiNote;
+	user: MiUser;
+	followers: FollowerForNoteDelivery[];
+	rolesVersion: number;
+	antennasVersion: number | null;
+} | null> {
 	const [row] = await notePostCreateSnapshotPlan.execute(db, { id });
 	if (row == null) return null;
 	const user = deserializeUser(row.user);
@@ -551,6 +573,7 @@ export async function fetchNotePostCreateSnapshotFromDatabase(
 		user,
 		followers: row.followers,
 		rolesVersion: row.rolesVersion,
+		antennasVersion: row.antennasVersion,
 	};
 }
 

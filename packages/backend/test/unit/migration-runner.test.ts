@@ -14,7 +14,13 @@ import type { SQL as NativeSqlClient } from 'bun';
 import { loadConfig } from '@/config.js';
 import type { Config } from '@/config.js';
 import { createBunSqlClient } from '@/db/bun-sql.js';
-import { listPendingMigrations, reconcileNoteTextIndex, runMigrations } from '@/migration-runner.js';
+import {
+	captureDatabaseSeed,
+	listPendingMigrations,
+	reconcileNoteTextIndex,
+	runMigrations,
+	truncateDatabase,
+} from '@/migration-runner.js';
 
 // 本文の trigram index は更新時の書き込み負担を伴うため、search.noteTextIndex で起動時の有無を制御する。
 describe('reconcileNoteTextIndex', () => {
@@ -176,7 +182,10 @@ INSERT INTO "migration_probe" ("id", "value") VALUES (1, 'initial');`,
 		expect(await listPendingMigrations(config)).toEqual(pendingEntries(journal.entries));
 		expect(await runMigrations(config)).toEqual(pendingEntries(journal.entries));
 		expect(await history()).toEqual(expectedHistory);
-		expect(await queryRows(`SELECT "key", "version" FROM "cache_version"`)).toEqual([{ key: 'roles', version: 0 }]);
+		expect(await queryRows(`SELECT "key", "version" FROM "cache_version" ORDER BY "key"`)).toEqual([
+			{ key: 'antennas', version: 0 },
+			{ key: 'roles', version: 0 },
+		]);
 		expect(await queryRows(`SELECT get_birthday_date('2000-12-31') AS birthday`)).toEqual([{ birthday: 1231 }]);
 		const chart = await queryRows(
 			`INSERT INTO "__chart__notes" ("date") VALUES (123) RETURNING "id", "___local_total"`,
@@ -189,11 +198,36 @@ INSERT INTO "migration_probe" ("id", "value") VALUES (1, 'initial');`,
 		await pool!.unsafe(`UPDATE "role" SET "name" = "name" WHERE false`);
 		expect(await runMigrations(config)).toEqual([]);
 		expect(await listPendingMigrations(config)).toEqual([]);
-		expect(await queryRows(`SELECT "key", "version" FROM "cache_version"`)).toEqual([{ key: 'roles', version: 1 }]);
+		expect(await queryRows(`SELECT "key", "version" FROM "cache_version" ORDER BY "key"`)).toEqual([
+			{ key: 'antennas', version: 0 },
+			{ key: 'roles', version: 1 },
+		]);
 		expect(await queryRows(`SELECT "id", "___local_total" FROM "__chart__notes" WHERE "date" = 123`)).toEqual([
 			{ id: 1, ___local_total: 0 },
 		]);
 		expect(await history()).toEqual(expectedHistory);
+	});
+
+	// e2e のサーバーはファイルごとに truncateDatabase で初期化され、プロセスとモジュール内の世代キャッシュは残る。
+	// 世代が初期値に戻ると、前のファイルで同じ世代番号に結び付けた一覧が新しい内容の代わりに返る。
+	test('truncating to the seed keeps cache versions advancing instead of restoring them', async () => {
+		await runMigrations(config);
+		const seed = await captureDatabaseSeed(config);
+		await pool!.unsafe(`DELETE FROM "antenna" WHERE false`);
+		await pool!.unsafe(`DELETE FROM "role" WHERE false`);
+		const versions = async () =>
+			Object.fromEntries(
+				((await queryRows(`SELECT "key", "version" FROM "cache_version"`)) as { key: string; version: number }[]).map(
+					(row) => [row.key, row.version],
+				),
+			);
+		const before = await versions();
+		expect(before).toEqual({ antennas: 1, roles: 1 });
+
+		await truncateDatabase(config, seed);
+		const after = await versions();
+		expect(after['antennas']).toBeGreaterThan(before['antennas']!);
+		expect(after['roles']).toBeGreaterThan(before['roles']!);
 	});
 
 	test('the shipped migrations accept pg_trgm preinstalled by another role in a non-public schema', async () => {
