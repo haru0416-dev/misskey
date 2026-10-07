@@ -265,6 +265,25 @@ describe('hono-stream-connection', () => {
 		expect(channelMessages[0].body.body).toEqual({ hello: 'world' });
 	});
 
+	test('drive channel: 接続してdriveStreamイベントを受け取れる', async () => {
+		const user = await createTestUser(deps, 'honostreamdriverecv');
+		const connection = new StreamConnection(deps, user, null);
+		await connection.init();
+
+		const subscriber = new EventEmitter();
+		const { raw, send } = collectSentMessages();
+		connection.listen(subscriber, send);
+
+		await connection.connectChannel('conn1', {}, 'drive', false);
+		subscriber.emit(`driveStream:${user.id}`, { type: 'fileCreated', body: { id: 'file1' } });
+
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
+		expect(channelMessages).toEqual([
+			{ type: 'channel', body: { id: 'conn1', type: 'fileCreated', body: { id: 'file1' } } },
+		]);
+		connection.dispose();
+	});
+
 	test('drive channel: 切断後はdriveStreamイベントを受け取らない', async () => {
 		const user = await createTestUser(deps, 'honostreamdrive');
 		const connection = new StreamConnection(deps, user, null);
@@ -281,6 +300,7 @@ describe('hono-stream-connection', () => {
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages).toHaveLength(0);
+		expect(subscriber.listenerCount(`driveStream:${user.id}`)).toBe(0);
 	});
 
 	test('存在しないチャンネル名を要求すると例外になる', async () => {
@@ -556,12 +576,16 @@ describe('hono-stream-connection', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'admin', false);
+		expect(subscriber.listenerCount(`adminStream:${user.id}`)).toBe(1);
 		connection.dispose();
 
 		subscriber.emit(`adminStream:${user.id}`, { type: 'test', body: {} });
 
 		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages).toHaveLength(0);
+		// dispose 後は送信先も外れるので、送られないことだけでは購読の解除を確かめられない。
+		// 接続が終わっても購読が残ると subscriber にハンドラが溜まり続けるので、解除そのものを見る。
+		expect(subscriber.listenerCount(`adminStream:${user.id}`)).toBe(0);
 	});
 
 	test('チャンネル初期化中にdisposeしてもlistenerを残さない', async () => {
