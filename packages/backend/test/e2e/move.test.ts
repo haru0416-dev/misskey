@@ -26,6 +26,7 @@ describe('Account Move', () => {
 	let dave: misskey.entities.SignupResponse;
 	let eve: misskey.entities.SignupResponse;
 	let frank: misskey.entities.SignupResponse;
+	let grace: misskey.entities.SignupResponse;
 
 	let db: TestDatabase;
 
@@ -42,6 +43,7 @@ describe('Account Move', () => {
 			dave = await signup({ username: 'dave' });
 			eve = await signup({ username: 'eve' });
 			frank = await signup({ username: 'frank' });
+			grace = await signup({ username: 'grace' });
 		},
 		1000 * 60 * 2,
 	);
@@ -289,13 +291,15 @@ describe('Account Move', () => {
 			expect(castAsError(res.body).error.id).toBe('4362e8dc-731f-4ad8-a694-be2a88922a24');
 		});
 
+		// alice は下のシナリオで移行済みになり、以後の i/move は YOUR_ACCOUNT_MOVED で先に拒否される。
+		// 移行前の検査を実行順に関係なく確かめるため、移行しない grace で呼ぶ。
 		test('Unable to move to a nonexisting local account', async () => {
 			const res = await api(
 				'i/move',
 				{
 					moveToAccount: `@nonexist@${url.hostname}`,
 				},
-				alice,
+				grace,
 			);
 
 			expect(res.status).toBe(400);
@@ -303,13 +307,14 @@ describe('Account Move', () => {
 			expect(castAsError(res.body).error.id).toBe('fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 		});
 
+		// 移行しない grace で呼ぶ理由は前のテストと同じ。
 		test('Unable to move if alsoKnownAs is invalid', async () => {
 			const res = await api(
 				'i/move',
 				{
 					moveToAccount: `@carol@${url.hostname}`,
 				},
-				alice,
+				grace,
 			);
 
 			expect(res.status).toBe(400);
@@ -317,191 +322,195 @@ describe('Account Move', () => {
 			expect(castAsError(res.body).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f766282ba4');
 		});
 
-		test('Relationships have been properly migrated', async () => {
-			const move = await api(
-				'i/move',
-				{
-					moveToAccount: `@bob@${url.hostname}`,
-				},
-				alice,
-			);
-
-			expect(move.status).toBe(200);
-
-			await vi.waitFor(async () => {
-				const aliceFollowings = await api(
-					'users/following',
+		// 以下は「alice が bob へ移行する」1 つのシナリオの段階で、各テストは前の段階の状態
+		// (移行済み・関係の移し替え済み・遅延フォロー解除済み) を前提にする。シャッフル実行でもこの順で流す。
+		describe('alice moves to bob', { shuffle: false }, () => {
+			test('Relationships have been properly migrated', async () => {
+				const move = await api(
+					'i/move',
 					{
-						userId: alice.id,
+						moveToAccount: `@bob@${url.hostname}`,
 					},
 					alice,
 				);
-				expect(aliceFollowings.status).toBe(200);
-				expect(aliceFollowings.body).toHaveLength(3);
-			}, waitForMoveJobOptions);
 
-			await vi.waitFor(async () => {
-				const carolFollowings = await api(
-					'users/following',
-					{
-						userId: carol.id,
-					},
-					carol,
-				);
-				expect(carolFollowings.status).toBe(200);
-				expect(carolFollowings.body).toHaveLength(2);
-				expect(carolFollowings.body[0]?.followeeId).toBe(bob.id);
-				expect(carolFollowings.body[1]?.followeeId).toBe(alice.id);
-			}, waitForMoveJobOptions);
+				expect(move.status).toBe(200);
 
-			await vi.waitFor(async () => {
-				const blockings = await api('blocking/list', {}, dave);
-				expect(blockings.status).toBe(200);
-				expect(blockings.body).toHaveLength(2);
-				expect(blockings.body[0]?.blockeeId).toBe(bob.id);
-				expect(blockings.body[1]?.blockeeId).toBe(alice.id);
-			}, waitForMoveJobOptions);
+				await vi.waitFor(async () => {
+					const aliceFollowings = await api(
+						'users/following',
+						{
+							userId: alice.id,
+						},
+						alice,
+					);
+					expect(aliceFollowings.status).toBe(200);
+					expect(aliceFollowings.body).toHaveLength(3);
+				}, waitForMoveJobOptions);
 
-			await vi.waitFor(async () => {
-				const mutings = await api('mute/list', {}, dave);
-				expect(mutings.status).toBe(200);
-				expect(mutings.body).toHaveLength(2);
-				expect(mutings.body[0]?.muteeId).toBe(bob.id);
-				expect(mutings.body[1]?.muteeId).toBe(alice.id);
-			}, waitForMoveJobOptions);
+				await vi.waitFor(async () => {
+					const carolFollowings = await api(
+						'users/following',
+						{
+							userId: carol.id,
+						},
+						carol,
+					);
+					expect(carolFollowings.status).toBe(200);
+					expect(carolFollowings.body).toHaveLength(2);
+					expect(carolFollowings.body[0]?.followeeId).toBe(bob.id);
+					expect(carolFollowings.body[1]?.followeeId).toBe(alice.id);
+				}, waitForMoveJobOptions);
 
-			await vi.waitFor(async () => {
-				const rootLists = await api('users/lists/list', {}, root);
-				expect(rootLists.status).toBe(200);
-				const userIds = rootLists.body[0]?.userIds;
-				assert.ok(userIds);
-				expect(userIds).toHaveLength(2);
-				assert.ok(userIds.includes(bob.id));
-				assert.ok(userIds.includes(alice.id));
-			}, waitForMoveJobOptions);
+				await vi.waitFor(async () => {
+					const blockings = await api('blocking/list', {}, dave);
+					expect(blockings.status).toBe(200);
+					expect(blockings.body).toHaveLength(2);
+					expect(blockings.body[0]?.blockeeId).toBe(bob.id);
+					expect(blockings.body[1]?.blockeeId).toBe(alice.id);
+				}, waitForMoveJobOptions);
 
-			await vi.waitFor(async () => {
-				const eveLists = await api('users/lists/list', {}, eve);
-				expect(eveLists.status).toBe(200);
-				expect(eveLists.body[0]?.userIds).toStrictEqual([bob.id]);
-			}, waitForMoveJobOptions);
-		});
+				await vi.waitFor(async () => {
+					const mutings = await api('mute/list', {}, dave);
+					expect(mutings.status).toBe(200);
+					expect(mutings.body).toHaveLength(2);
+					expect(mutings.body[0]?.muteeId).toBe(bob.id);
+					expect(mutings.body[1]?.muteeId).toBe(alice.id);
+				}, waitForMoveJobOptions);
 
-		test('A locked account automatically accept the follow request if it had already accepted the old account.', async () => {
-			await successfulApiCall({
-				endpoint: 'following/create',
-				parameters: {
-					userId: frank.id,
-				},
-				user: bob,
+				await vi.waitFor(async () => {
+					const rootLists = await api('users/lists/list', {}, root);
+					expect(rootLists.status).toBe(200);
+					const userIds = rootLists.body[0]?.userIds;
+					assert.ok(userIds);
+					expect(userIds).toHaveLength(2);
+					assert.ok(userIds.includes(bob.id));
+					assert.ok(userIds.includes(alice.id));
+				}, waitForMoveJobOptions);
+
+				await vi.waitFor(async () => {
+					const eveLists = await api('users/lists/list', {}, eve);
+					expect(eveLists.status).toBe(200);
+					expect(eveLists.body[0]?.userIds).toStrictEqual([bob.id]);
+				}, waitForMoveJobOptions);
 			});
-			const followers = await api(
-				'users/followers',
-				{
-					userId: frank.id,
-				},
-				frank,
-			);
 
-			expect(followers.status).toBe(200);
-			expect(followers.body).toHaveLength(2);
-			expect(followers.body[0]?.followerId).toBe(bob.id);
-		});
+			test('A locked account automatically accept the follow request if it had already accepted the old account.', async () => {
+				await successfulApiCall({
+					endpoint: 'following/create',
+					parameters: {
+						userId: frank.id,
+					},
+					user: bob,
+				});
+				const followers = await api(
+					'users/followers',
+					{
+						userId: frank.id,
+					},
+					frank,
+				);
 
-		test('Unfollowed after 10 sec (24 hours in production).', async () => {
-			// 遅延は直前までのテストでフォローが残っていることで確かめている。ここでは遅延ジョブが
-			// フォロー解除を行うことだけを見るので、10 秒待たずに繰り上げる。
-			const promoted = await api('admin/queue/promote-jobs', { queue: 'relationship' }, root);
-			expect(promoted.status).toBe(204);
-			await vi.waitFor(async () => {
-				const following = await api(
-					'users/following',
+				expect(followers.status).toBe(200);
+				expect(followers.body).toHaveLength(2);
+				expect(followers.body[0]?.followerId).toBe(bob.id);
+			});
+
+			test('Unfollowed after 10 sec (24 hours in production).', async () => {
+				// 遅延は直前までのテストでフォローが残っていることで確かめている。ここでは遅延ジョブが
+				// フォロー解除を行うことだけを見るので、10 秒待たずに繰り上げる。
+				const promoted = await api('admin/queue/promote-jobs', { queue: 'relationship' }, root);
+				expect(promoted.status).toBe(204);
+				await vi.waitFor(async () => {
+					const following = await api(
+						'users/following',
+						{
+							userId: alice.id,
+						},
+						alice,
+					);
+
+					expect(following.status).toBe(200);
+					expect(following.body).toHaveLength(0);
+				}, waitForDelayedUnfollowJobOptions);
+			});
+
+			test('Unable to move if the destination account has already moved.', async () => {
+				const res = await api(
+					'i/move',
+					{
+						moveToAccount: `@alice@${url.hostname}`,
+					},
+					bob,
+				);
+
+				expect(res.status).toBe(400);
+				expect(castAsError(res.body).error.code).toBe('DESTINATION_ACCOUNT_FORBIDS');
+				expect(castAsError(res.body).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f766282ba4');
+			});
+
+			test('Follow and follower counts are properly adjusted', async () => {
+				await api(
+					'following/create',
 					{
 						userId: alice.id,
+					},
+					eve,
+				);
+				const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
+				const newCarol = await fetchUserByIdOrFailFromDatabase(db, carol.id);
+				let newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
+				expect(newAlice.movedToUri).toBe(`${url.origin}/users/${bob.id}`);
+				const self = await api('i', {}, alice);
+				expect(self.status).toBe(200);
+				expect(self.body.movedTo).toBe(bob.id);
+				const moved = await api('users/show', { userId: alice.id }, eve);
+				expect(moved.status).toBe(200);
+				expect(moved.body.movedTo).toBe(bob.id);
+				const destination = await api('users/show', { userId: moved.body.movedTo! }, eve);
+				expect(destination.status).toBe(200);
+				expect(destination.body.id).toBe(bob.id);
+				expect(newAlice.followingCount).toBe(0);
+				expect(newAlice.followersCount).toBe(0);
+				expect(newCarol.followingCount).toBe(1);
+				expect(newEve.followingCount).toBe(1);
+				expect(newEve.followersCount).toBe(1);
+
+				await api(
+					'following/delete',
+					{
+						userId: alice.id,
+					},
+					eve,
+				);
+				newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
+				expect(newEve.followingCount).toBe(1);
+				expect(newEve.followersCount).toBe(1);
+			});
+
+			test('Prohibit access after moving: /drive/files/create', async () => {
+				const res = await uploadFile(alice);
+
+				expect(res.status).toBe(403);
+				assert.ok(res.body);
+				expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
+				expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			});
+
+			test('Prohibit updating alsoKnownAs after moving', async () => {
+				const res = await api(
+					'i/update',
+					{
+						alsoKnownAs: [`@eve@${url.hostname}`],
 					},
 					alice,
 				);
 
-				expect(following.status).toBe(200);
-				expect(following.body).toHaveLength(0);
-			}, waitForDelayedUnfollowJobOptions);
-		});
-
-		test('Unable to move if the destination account has already moved.', async () => {
-			const res = await api(
-				'i/move',
-				{
-					moveToAccount: `@alice@${url.hostname}`,
-				},
-				bob,
-			);
-
-			expect(res.status).toBe(400);
-			expect(castAsError(res.body).error.code).toBe('DESTINATION_ACCOUNT_FORBIDS');
-			expect(castAsError(res.body).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f766282ba4');
-		});
-
-		test('Follow and follower counts are properly adjusted', async () => {
-			await api(
-				'following/create',
-				{
-					userId: alice.id,
-				},
-				eve,
-			);
-			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
-			const newCarol = await fetchUserByIdOrFailFromDatabase(db, carol.id);
-			let newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
-			expect(newAlice.movedToUri).toBe(`${url.origin}/users/${bob.id}`);
-			const self = await api('i', {}, alice);
-			expect(self.status).toBe(200);
-			expect(self.body.movedTo).toBe(bob.id);
-			const moved = await api('users/show', { userId: alice.id }, eve);
-			expect(moved.status).toBe(200);
-			expect(moved.body.movedTo).toBe(bob.id);
-			const destination = await api('users/show', { userId: moved.body.movedTo! }, eve);
-			expect(destination.status).toBe(200);
-			expect(destination.body.id).toBe(bob.id);
-			expect(newAlice.followingCount).toBe(0);
-			expect(newAlice.followersCount).toBe(0);
-			expect(newCarol.followingCount).toBe(1);
-			expect(newEve.followingCount).toBe(1);
-			expect(newEve.followersCount).toBe(1);
-
-			await api(
-				'following/delete',
-				{
-					userId: alice.id,
-				},
-				eve,
-			);
-			newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
-			expect(newEve.followingCount).toBe(1);
-			expect(newEve.followersCount).toBe(1);
-		});
-
-		test('Prohibit access after moving: /drive/files/create', async () => {
-			const res = await uploadFile(alice);
-
-			expect(res.status).toBe(403);
-			assert.ok(res.body);
-			expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-		});
-
-		test('Prohibit updating alsoKnownAs after moving', async () => {
-			const res = await api(
-				'i/update',
-				{
-					alsoKnownAs: [`@eve@${url.hostname}`],
-				},
-				alice,
-			);
-
-			expect(res.status).toBe(403);
-			expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
-			expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-			expect(castAsError(res.body).error.kind).toBe('permission');
+				expect(res.status).toBe(403);
+				expect(castAsError(res.body).error.code).toBe('YOUR_ACCOUNT_MOVED');
+				expect(castAsError(res.body).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+				expect(castAsError(res.body).error.kind).toBe('permission');
+			});
 		});
 	});
 });

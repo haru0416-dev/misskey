@@ -659,19 +659,28 @@ describe('Note', () => {
 
 			expect(sensitive.status).toBe(204);
 
-			// meta の伝播待ち。成功する呼び出しはノートを作るので、投げ直さず固定で待つ。
-			await new Promise((x) => setTimeout(x, 2));
+			try {
+				// reactive meta の伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+				// 反映前の呼び出しは public のノートを作るので、消してから投げ直す。
+				await vi.waitFor(async () => {
+					const note1 = await api(
+						'notes/create',
+						{
+							text: 'hogetesthuge',
+						},
+						alice,
+					);
 
-			const note1 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				alice,
-			);
-
-			expect(note1.status).toBe(200);
-			expect(note1.body.createdNote.visibility).toBe('home');
+					expect(note1.status).toBe(200);
+					if (note1.body.createdNote.visibility !== 'home') {
+						await api('notes/delete', { noteId: note1.body.createdNote.id }, alice);
+					}
+					expect(note1.body.createdNote.visibility).toBe('home');
+				}, POLL);
+			} finally {
+				// 'test' を含む投稿は他のテストにもあるので、実行順に関係なく既定値へ戻す。
+				await api('admin/update-meta', { sensitiveWords: [] }, root);
+			}
 		});
 
 		test('禁止ワードを含む投稿はエラーになる (単語指定)', async () => {
@@ -685,20 +694,25 @@ describe('Note', () => {
 
 			expect(prohibited.status).toBe(204);
 
-			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
-			// 却下される呼び出しはノートを作らないので、反映されるまで投げ直して待つ。
-			await vi.waitFor(async () => {
-				const rejected = await api(
-					'notes/create',
-					{
-						text: 'hogetesthuge',
-					},
-					alice,
-				);
+			try {
+				// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+				// 却下される呼び出しはノートを作らないので、反映されるまで投げ直して待つ。
+				await vi.waitFor(async () => {
+					const rejected = await api(
+						'notes/create',
+						{
+							text: 'hogetesthuge',
+						},
+						alice,
+					);
 
-				expect(rejected.status).toBe(400);
-				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
-			}, POLL);
+					expect(rejected.status).toBe(400);
+					expect(castAsError(rejected.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
+				}, POLL);
+			} finally {
+				// 'test' を含む投稿は他のテストにもあるので、実行順に関係なく既定値へ戻す。
+				await api('admin/update-meta', { prohibitedWords: [] }, root);
+			}
 		});
 
 		// 禁止ユーザー名の判定は notes/create の禁止ワード判定と同じ関数を通り、正規表現の解釈を一致させる。

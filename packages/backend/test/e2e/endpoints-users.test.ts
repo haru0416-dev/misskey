@@ -9,7 +9,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'node:assert';
 import type * as Bull from 'bullmq';
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import type {
 	DbJobData,
 	DeliverJobData,
@@ -447,6 +447,10 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				pollMultiple: false,
 			});
+			// 予約は scheduledNoteLimit (既定 1) を消費する。後続のテストの予約を妨げないよう、予約ジョブごと消す。
+			onTestFinished(async () => {
+				await api('notes/drafts/delete', { draftId: draft.id }, alice);
+			});
 
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
 			const updated = await api(
@@ -605,6 +609,11 @@ describe('Endpoints', () => {
 				text: 'list plain draft',
 				visibility: 'public',
 				pollMultiple: false,
+			});
+			// 予約は scheduledNoteLimit (既定 1) を消費する。後続のテストの予約を妨げないよう消す。
+			onTestFinished(async () => {
+				await api('notes/drafts/delete', { draftId: scheduledDraft.id }, alice);
+				await api('notes/drafts/delete', { draftId: plainDraft.id }, alice);
 			});
 
 			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);

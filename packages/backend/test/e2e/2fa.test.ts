@@ -25,12 +25,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 // 判別子を検査しても後続のプロパティアクセスが型エラーになる。
 
 describe('2要素認証', () => {
-	let alice: misskey.entities.SignupResponse;
 	let database: TestDatabase;
 
 	const config = fixtureConfig;
 	const password = 'test';
-	const username = 'alice';
 
 	// https://datatracker.ietf.org/doc/html/rfc8152
 	// 各値は上記規格に基づく固定 fixture とする。
@@ -92,6 +90,12 @@ describe('2要素認証', () => {
 		expect(doneResponse.status).toBe(200);
 
 		return registerResponse.body.secret;
+	};
+
+	// 2FA・セキュリティキーの登録は利用者に残り、次のテストのログイン手順を変える。
+	// 実行順に依存しないよう、テストごとに新しい利用者を作る。
+	const signupUser = async (prefix: string): Promise<misskey.entities.SignupResponse> => {
+		return await signup({ username: `${prefix}_${crypto.randomBytes(4).toString('hex')}`, password });
 	};
 
 	const invalidOtpToken = (secret: string): string => {
@@ -172,7 +176,9 @@ describe('2要素認証', () => {
 		};
 	};
 
-	const signinParam = (): {
+	const signinParam = (
+		username: string,
+	): {
 		username: string;
 		password: string;
 		'g-recaptcha-response'?: string | null;
@@ -187,6 +193,7 @@ describe('2要素認証', () => {
 	};
 
 	const signinWithSecurityKeyParam = (param: {
+		username: string;
 		keyName: string;
 		credentialId: Buffer;
 		requestOptions: PublicKeyCredentialRequestOptionsJSON;
@@ -217,7 +224,7 @@ describe('2要素認証', () => {
 			.update(Buffer.concat([authenticatorData, hashedClientDataJson]))
 			.sign(privateKey);
 		return {
-			username,
+			username: param.username,
 			password,
 			credential: {
 				id: param.credentialId.toString('base64url'),
@@ -240,7 +247,6 @@ describe('2要素認証', () => {
 			database = openTestDatabase();
 			// 使用済み記録はキーを直接列挙して消すため、prefix を付けない接続を使う。
 			redis = new Redis.Redis({ ...config.valkey.primary, keyPrefix: '' });
-			alice = await signup({ username, password });
 		},
 		1000 * 60 * 2,
 	);
@@ -251,19 +257,20 @@ describe('2要素認証', () => {
 	});
 
 	test('が設定でき、OTPでログインでき、解除後はパスワードのみでログインできる。', async () => {
+		const user = await signupUser('tfotp');
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerResponse.status).toBe(200);
 		// クライアントが QR を生成できるよう、URL は secret を含む otpauth 形式にする。
 		expect(registerResponse.body.url).toMatch(/^otpauth:\/\/totp\//);
 		expect(registerResponse.body.secret).toEqual(expect.anything());
 		expect(registerResponse.body.url).toContain(registerResponse.body.secret);
-		expect(registerResponse.body.label).toBe(username);
+		expect(registerResponse.body.label).toBe(user.username);
 		expect(registerResponse.body.issuer).toBe(config.runtime.host);
 
 		const doneResponse = await api(
@@ -271,18 +278,18 @@ describe('2要素認証', () => {
 			{
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(doneResponse.status).toBe(200);
 		// バックアップコードは完了時の応答でしか受け取れない
 		expect(doneResponse.body.backupCodes).toHaveLength(5);
 
-		const iResponse = await api('i', {}, alice);
+		const iResponse = await api('i', {}, user);
 		expect(iResponse.status).toBe(200);
 		expect(iResponse.body.twoFactorEnabled).toBe(true);
 
 		const signinWithoutTokenResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 		});
 		expect(signinWithoutTokenResponse.status).toBe(200);
 		expect(signinWithoutTokenResponse.body).toStrictEqual({
@@ -291,7 +298,7 @@ describe('2要素認証', () => {
 		});
 
 		const signinResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 			token: await otpToken(registerResponse.body.secret),
 		});
 		expect(signinResponse.status).toBe(200);
@@ -304,13 +311,13 @@ describe('2要素認証', () => {
 				password,
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(unregisterResponse.status).toBe(204);
 
 		// 解除後はパスワードだけでログインが完了する
 		const signinWithoutTwoFactorResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 		});
 		expect(signinWithoutTwoFactorResponse.status).toBe(200);
 		assert.strictEqual(signinWithoutTwoFactorResponse.body.finished, true);
@@ -318,12 +325,13 @@ describe('2要素認証', () => {
 	});
 
 	test('が設定でき、セキュリティキーでログインできる。', async () => {
+		const user = await signupUser('tfkey');
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerResponse.status).toBe(200);
 
@@ -332,7 +340,7 @@ describe('2要素認証', () => {
 			{
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(doneResponse.status).toBe(200);
 
@@ -342,7 +350,7 @@ describe('2要素認証', () => {
 				password,
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(registerKeyResponse.status).toBe(200);
 		expect(registerKeyResponse.body.rp).toEqual(expect.anything());
@@ -358,14 +366,14 @@ describe('2要素認証', () => {
 				credentialId,
 				creationOptions: registerKeyResponse.body,
 			} as any) as any,
-			alice,
+			user,
 		);
 		expect(keyDoneResponse.status).toBe(200);
 		expect(keyDoneResponse.body.id).toBe(credentialId.toString('base64url'));
 		expect(keyDoneResponse.body.name).toBe(keyName);
 
 		const signinResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, false);
@@ -379,6 +387,7 @@ describe('2要素認証', () => {
 		const signinResponse2 = await api(
 			'signin-flow',
 			signinWithSecurityKeyParam({
+				username: user.username,
 				keyName,
 				credentialId,
 				requestOptions: signinResponse.body.authRequest,
@@ -394,17 +403,18 @@ describe('2要素認証', () => {
 				password,
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 	});
 
 	test('が設定でき、セキュリティキーでパスワードレスログインできる。', async () => {
+		const user = await signupUser('tfpwl');
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerResponse.status).toBe(200);
 
@@ -413,7 +423,7 @@ describe('2要素認証', () => {
 			{
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(doneResponse.status).toBe(200);
 
@@ -423,7 +433,7 @@ describe('2要素認証', () => {
 				token: await otpToken(registerResponse.body.secret),
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerKeyResponse.status).toBe(200);
 
@@ -437,7 +447,7 @@ describe('2要素認証', () => {
 				credentialId,
 				creationOptions: registerKeyResponse.body,
 			} as any) as any,
-			alice,
+			user,
 		);
 		expect(keyDoneResponse.status).toBe(200);
 
@@ -446,16 +456,16 @@ describe('2要素認証', () => {
 			{
 				value: true,
 			},
-			alice,
+			user,
 		);
 		expect(passwordLessResponse.status).toBe(204);
 
-		const iResponse = await api('i', {}, alice);
+		const iResponse = await api('i', {}, user);
 		expect(iResponse.status).toBe(200);
 		expect(iResponse.body.usePasswordLessLogin).toBe(true);
 
 		const signinResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 			password: '',
 		});
 		expect(signinResponse.status).toBe(200);
@@ -466,6 +476,7 @@ describe('2要素認証', () => {
 
 		const signinResponse2 = await api('signin-flow', {
 			...signinWithSecurityKeyParam({
+				username: user.username,
 				keyName,
 				credentialId,
 				requestOptions: signinResponse.body.authRequest,
@@ -482,7 +493,7 @@ describe('2要素認証', () => {
 				password,
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 	});
 
@@ -538,6 +549,7 @@ describe('2要素認証', () => {
 			const init = await callPasskey({});
 			expect(init.status).toBe(200);
 			const request = signinWithSecurityKeyParam({
+				username: passkeyUser.username,
 				keyName: 'dedicated-signin-key',
 				credentialId: id,
 				requestOptions: init.body.option,
@@ -584,6 +596,7 @@ describe('2要素認証', () => {
 			assert.strictEqual(twoFactorChallenge.body.finished, false);
 			assert.strictEqual(twoFactorChallenge.body.next, 'passkey');
 			const crossFlow = signinWithSecurityKeyParam({
+				username: passkeyUser.username,
 				keyName: 'dedicated-signin-key',
 				credentialId,
 				requestOptions: twoFactorChallenge.body.authRequest,
@@ -614,12 +627,13 @@ describe('2要素認証', () => {
 	});
 
 	test('が設定でき、設定したセキュリティキーの名前を変更・削除できる。', async () => {
+		const user = await signupUser('tfren');
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerResponse.status).toBe(200);
 
@@ -628,7 +642,7 @@ describe('2要素認証', () => {
 			{
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 		expect(doneResponse.status).toBe(200);
 
@@ -638,7 +652,7 @@ describe('2要素認証', () => {
 				token: await otpToken(registerResponse.body.secret),
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerKeyResponse.status).toBe(200);
 
@@ -652,7 +666,7 @@ describe('2要素認証', () => {
 				credentialId,
 				creationOptions: registerKeyResponse.body,
 			} as any) as any,
-			alice,
+			user,
 		);
 		expect(keyDoneResponse.status).toBe(200);
 
@@ -663,11 +677,11 @@ describe('2要素認証', () => {
 				name: renamedKey,
 				credentialId: credentialId.toString('base64url'),
 			},
-			alice,
+			user,
 		);
 		expect(updateKeyResponse.status).toBe(200);
 
-		const iResponse = await api('i', {}, alice);
+		const iResponse = await api('i', {}, user);
 		expect(iResponse.status).toBe(200);
 		assert.ok(iResponse.body.securityKeysList);
 		const securityKeys = iResponse.body.securityKeysList.filter(
@@ -679,8 +693,8 @@ describe('2要素認証', () => {
 		expect(securityKey.name).toBe(renamedKey);
 		expect(securityKey.lastUsed).toEqual(expect.anything());
 
-		// テスト順に依存しないよう、残存する登録をすべて削除する。
-		const beforeIResponse = await api('i', {}, alice);
+		// 登録したキーをすべて削除すると、キー無しの状態に戻ることを確かめる。
+		const beforeIResponse = await api('i', {}, user);
 		expect(beforeIResponse.status).toBe(200);
 		assert.ok(beforeIResponse.body.securityKeysList);
 		for (const key of beforeIResponse.body.securityKeysList) {
@@ -691,17 +705,17 @@ describe('2要素認証', () => {
 					password,
 					credentialId: key.id,
 				},
-				alice,
+				user,
 			);
 			expect(removeKeyResponse.status).toBe(200);
 		}
 
-		const afterIResponse = await api('i', {}, alice);
+		const afterIResponse = await api('i', {}, user);
 		expect(afterIResponse.status).toBe(200);
 		expect(afterIResponse.body.securityKeys).toBe(false);
 
 		const signinResponse = await api('signin-flow', {
-			...signinParam(),
+			...signinParam(user.username),
 			token: await otpToken(registerResponse.body.secret),
 		});
 		expect(signinResponse.status).toBe(200);
@@ -714,7 +728,7 @@ describe('2要素認証', () => {
 				password,
 				token: await otpToken(registerResponse.body.secret),
 			},
-			alice,
+			user,
 		);
 	});
 
@@ -895,12 +909,13 @@ describe('2要素認証', () => {
 	});
 
 	test('のTOTPトークンは一度使うと同じトークンは再利用できない。', async () => {
+		const user = await signupUser('tfreu');
 		const registerResponse = await api(
 			'i/2fa/register',
 			{
 				password,
 			},
-			alice,
+			user,
 		);
 		expect(registerResponse.status).toBe(200);
 
@@ -910,13 +925,13 @@ describe('2要素認証', () => {
 			{
 				token: sharedOtpToken,
 			},
-			alice,
+			user,
 		);
 		expect(doneResponse.status).toBe(200);
 
 		try {
 			const signinResponse = await api('signin-flow', {
-				...signinParam(),
+				...signinParam(user.username),
 				token: sharedOtpToken,
 			});
 			expect(signinResponse.status).toBe(403);
@@ -927,7 +942,7 @@ describe('2要素認証', () => {
 					password,
 					token: await otpToken(registerResponse.body.secret),
 				},
-				alice,
+				user,
 			);
 		}
 	});
