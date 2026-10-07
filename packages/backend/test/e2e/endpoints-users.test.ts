@@ -2468,6 +2468,12 @@ describe('Endpoints', () => {
 			expect(castAsError(bothError.body as any).error.code).toBe('BOTH_WITH_REPLIES_AND_WITH_FILES');
 			expect(castAsError(bothError.body as any).error.id).toBe('91c8cb9f-36ed-46e7-9ca2-7df96ed6e222');
 
+			// 投稿が無いと空配列はブロックと無関係に返るので、ブロック前に見えていた投稿を置く。
+			const authorNote = await post(author, { text: 'users/notes before block' });
+			const beforeBlock = await api('users/notes', { userId: author.id, limit: 100 }, blockedViewer);
+			expect(beforeBlock.status).toBe(200);
+			expect(beforeBlock.body.map((n: any) => n.id)).toContain(authorNote.id);
+
 			await api('blocking/create', { userId: blockedViewer.id }, author);
 			const asBlockedViewer = await api('users/notes', { userId: author.id, limit: 100 }, blockedViewer);
 			expect(asBlockedViewer.status).toBe(200);
