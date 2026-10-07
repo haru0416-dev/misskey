@@ -107,6 +107,33 @@ suite('checkNewTopic', () => {
 		expect(result.success).toBe(true);
 	});
 
+	// 名前の比較は文字列そのもので行う。長さの同じ別名 (Server と Client など) も別物として扱う。
+	test('既存のカテゴリ名を書き換えたときはエラーになる', () => {
+		const base = [new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1'])])];
+		const head = [new Release('2024.12.1', [new ReleaseCategory('Client', ['feat1'])])];
+
+		const result = checkNewTopic(base, head);
+
+		expect(result.success).toBe(false);
+		expect(result.message).toBe('Category is different. base:Server, head:Client');
+	});
+
+	test('既存のリリース名を書き換えたときはエラーになる', () => {
+		const base = [
+			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1'])]),
+			new Release('2024.12.0', [new ReleaseCategory('Server', ['feat1'])]),
+		];
+		const head = [
+			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1'])]),
+			new Release('2024.11.0', [new ReleaseCategory('Server', ['feat1'])]),
+		];
+
+		const result = checkNewTopic(base, head);
+
+		expect(result.success).toBe(false);
+		expect(result.message).toBe('Release is different. base:2024.12.0, head:2024.11.0');
+	});
+
 	test('古いバージョンにカテゴリを追加したときはエラーになる', () => {
 		const base = [
 			new Release('2024.12.1', [new ReleaseCategory('Server', ['feat1', 'feat2'])]),

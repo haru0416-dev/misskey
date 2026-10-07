@@ -33,7 +33,8 @@ describe('SwLang', () => {
 		const swLang = new SwLang();
 
 		const settingLang = swLang.setLang('ja-JP');
-		await Promise.resolve();
+		// 永続化を止めたまま macrotask を跨ぐ。永続化を待たない実装なら、この間に cache の照会と fetch まで進む。
+		for (let i = 0; i < 3; i++) await new Promise((resolve) => setTimeout(resolve, 0));
 
 		expect(set).toHaveBeenCalledWith('lang', 'ja-JP');
 		expect(fetch).not.toHaveBeenCalled();
