@@ -175,39 +175,49 @@ describe('Timelines', () => {
 					},
 				);
 
-				test('withReplies: true でフォローしているユーザーの他人へのDM返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				// DB 経路 (fanout 無効) は withReplies に関係なく他人への返信を除外するので、
+				// この否定は fanout 経路でしか判定に効かない。
+				test.skipIf(!enableFanoutTimeline)(
+					'withReplies: true でフォローしているユーザーの他人へのDM返信が含まれない',
+					async () => {
+						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-					await api('following/create', { userId: bob.id }, alice);
-					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					const carolNote = await post(carol, { text: 'hi' });
-					const bobNote = await post(bob, {
-						text: 'hi',
-						replyId: carolNote.id,
-						visibility: 'specified',
-						visibleUserIds: [carol.id],
-					});
+						await api('following/create', { userId: bob.id }, alice);
+						await api('following/update', { userId: bob.id, withReplies: true }, alice);
+						const carolNote = await post(carol, { text: 'hi' });
+						const bobNote = await post(bob, {
+							text: 'hi',
+							replyId: carolNote.id,
+							visibility: 'specified',
+							visibleUserIds: [carol.id],
+						});
 
-					const res = await api('notes/timeline', { limit: 100 }, alice);
+						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-				});
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					},
+				);
 
-				test('withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				// DB 経路 (fanout 無効) は withReplies に関係なく他人への返信を除外するので、
+				// この否定は fanout 経路でしか判定に効かない。
+				test.skipIf(!enableFanoutTimeline)(
+					'withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない',
+					async () => {
+						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-					await api('following/create', { userId: carol.id }, bob);
-					await api('following/create', { userId: bob.id }, alice);
-					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
-					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
+						await api('following/create', { userId: carol.id }, bob);
+						await api('following/create', { userId: bob.id }, alice);
+						await api('following/update', { userId: bob.id, withReplies: true }, alice);
+						const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
+						const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					const res = await api('notes/timeline', { limit: 100 }, alice);
+						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-				});
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					},
+				);
 
 				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
@@ -249,25 +259,30 @@ describe('Timelines', () => {
 					},
 				);
 
-				test('withReplies: true でフォローしているユーザーの行った別のフォローしているユーザーの投稿への visibility: specified な返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				// DB 経路 (fanout 無効) は withReplies に関係なく他人への返信を除外するので、
+				// この否定は fanout 経路でしか判定に効かない。
+				test.skipIf(!enableFanoutTimeline)(
+					'withReplies: true でフォローしているユーザーの行った別のフォローしているユーザーの投稿への visibility: specified な返信が含まれない',
+					async () => {
+						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-					await api('following/create', { userId: bob.id }, alice);
-					await api('following/create', { userId: carol.id }, alice);
-					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					const carolNote = await post(carol, { text: 'hi' });
-					const bobNote = await post(bob, {
-						text: 'hi',
-						replyId: carolNote.id,
-						visibility: 'specified',
-						visibleUserIds: [carol.id],
-					});
+						await api('following/create', { userId: bob.id }, alice);
+						await api('following/create', { userId: carol.id }, alice);
+						await api('following/update', { userId: bob.id, withReplies: true }, alice);
+						const carolNote = await post(carol, { text: 'hi' });
+						const bobNote = await post(bob, {
+							text: 'hi',
+							replyId: carolNote.id,
+							visibility: 'specified',
+							visibleUserIds: [carol.id],
+						});
 
-					const res = await api('notes/timeline', { limit: 100 }, alice);
+						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
-				});
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+					},
+				);
 
 				test('withReplies: false でフォローしているユーザーのそのユーザー自身への返信が含まれる', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
@@ -409,20 +424,25 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
-				test('withReplies: true でフォローしているユーザーが行ったミュートしているユーザーの投稿への返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				// DB 経路 (fanout 無効) は withReplies に関係なく他人への返信を除外するので、
+				// この否定は fanout 経路でしか判定に効かない。
+				test.skipIf(!enableFanoutTimeline)(
+					'withReplies: true でフォローしているユーザーが行ったミュートしているユーザーの投稿への返信が含まれない',
+					async () => {
+						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-					await api('following/create', { userId: bob.id }, alice);
-					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					await api('mute/create', { userId: carol.id }, alice);
-					const carolNote = await post(carol, { text: 'hi' });
-					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
+						await api('following/create', { userId: bob.id }, alice);
+						await api('following/update', { userId: bob.id, withReplies: true }, alice);
+						await api('mute/create', { userId: carol.id }, alice);
+						const carolNote = await post(carol, { text: 'hi' });
+						const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					const res = await api('notes/timeline', { limit: 100 }, alice);
+						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
-					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
-				});
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					},
+				);
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによる引用ノートの、フォローしているユーザーによるリノートが含まれない', async () => {
 					const [alice, bob, carol, dave] = await Promise.all([signup(), signup(), signup(), signup()]);
@@ -1123,20 +1143,25 @@ describe('Timelines', () => {
 					},
 				);
 
-				test('withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない', async () => {
-					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				// DB 経路 (fanout 無効) は返信先の followers 公開範囲を判定せず、この返信を返す (fanout 経路・ストリームと不一致)。
+				// 判定のある fanout 経路だけで確かめる。
+				test.skipIf(!enableFanoutTimeline)(
+					'withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない',
+					async () => {
+						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-					await api('following/create', { userId: carol.id }, bob);
-					await api('following/create', { userId: bob.id }, alice);
-					await api('following/update', { userId: bob.id, withReplies: true }, alice);
-					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
-					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
+						await api('following/create', { userId: carol.id }, bob);
+						await api('following/create', { userId: bob.id }, alice);
+						await api('following/update', { userId: bob.id, withReplies: true }, alice);
+						const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
+						const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
+						const res = await api('notes/hybrid-timeline', { limit: 100, withReplies: true }, alice);
 
-					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-					expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
-				});
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
+						expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
+					},
+				);
 
 				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
