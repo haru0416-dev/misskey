@@ -90,6 +90,27 @@ describe('hono-queue-deliver', () => {
 		expect(result).toBe('skip (blocked)');
 	});
 
+	test("自インスタンスと配送先の URL がどちらもポートを含んでも、meta.federation が 'none' なら送らない", async () => {
+		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+		const deps: QueueDeliverDependencies = {
+			...runtime,
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host: 'localhost:3104' } },
+			meta: { ...runtime.meta, federation: 'none' },
+			httpRequestService: { ...runtime.httpRequestService, send },
+		};
+
+		const result = await handleQueueDeliver(deps, {
+			user: { id: actor.id },
+			content: '{}',
+			digest: 'SHA-256=dummy',
+			to: 'http://127.0.0.1:31040/users/r1/inbox',
+			isSharedInbox: false,
+		});
+
+		expect(result).toBe('skip (blocked)');
+		expect(send).not.toHaveBeenCalled();
+	});
+
 	test('meta.blockedHostsに含まれるホスト宛はskip (blocked)を返す', async () => {
 		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 

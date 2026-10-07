@@ -26,6 +26,15 @@ describe('misc:to-puny', () => {
 		expect(toPuny('exa­mple.com')).toBe('example.com');
 	});
 
+	test('ポートを残してホスト名だけを変換する', () => {
+		// ポート付きのホストどうしを同じ値にすると、自ホストの判定で別のホストを取り違える。
+		expect(toPuny('Example.COM:8080')).toBe('example.com:8080');
+		expect(toPuny('日本語.jp:443')).toBe('xn--wgv71a119e.jp:443');
+		expect(toPuny('localhost:3104')).not.toBe(toPuny('127.0.0.1:31040'));
+		expect(toPuny('[::1]:3000')).toBe('[::1]:3000');
+		expect(toPuny('a b.com:80')).toBe('');
+	});
+
 	test('ホスト名にできない入力は空文字列になる', () => {
 		// domainToASCII の仕様。呼び出し側はホストが空になりうる前提で扱う必要がある。
 		expect(toPuny('a b.com')).toBe('');
