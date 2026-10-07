@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { SQL } from 'bun';
 import { drizzle } from 'drizzle-orm/bun-sql';
 import type { Config } from '@/config.js';
@@ -99,6 +100,22 @@ export function normalizeDatabaseError(error: unknown): unknown {
 	return error;
 }
 
+/**
+ * Bun.sql の begin は、接続の空き待ちや新しい接続の確立を挟むと、callback を呼び出し元ではなく接続を返した
+ * 側の非同期文脈 (または空の文脈) で呼ぶ。AsyncLocalStorage に載るリクエスト内 memo や trace context が
+ * 他の同時リクエストのものに入れ替わるため、呼び出し時点の文脈を取っておき callback をその中で実行する。
+ * savepoint も同じ形で callback を受けるので同じく包む。
+ */
+function runTransactionCallback(
+	start: (callback: (tx: SQL) => Promise<unknown>) => Promise<unknown>,
+	callback: (client: DrizzleBunSqlClient) => Promise<unknown>,
+): Promise<unknown> {
+	const runInCallerContext = AsyncLocalStorage.snapshot();
+	return start((tx) => runInCallerContext(() => callback(wrapBunSqlClient(tx)))).catch((error: unknown) => {
+		throw normalizeDatabaseError(error);
+	});
+}
+
 function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
 	return {
 		unsafe: (queryText, params) => {
@@ -123,18 +140,8 @@ function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
 					}),
 			};
 		},
-		begin: (callback) =>
-			(client.begin((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
-				(error: unknown) => {
-					throw normalizeDatabaseError(error);
-				},
-			),
-		savepoint: (callback) =>
-			(client.savepoint((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
-				(error: unknown) => {
-					throw normalizeDatabaseError(error);
-				},
-			),
+		begin: (callback) => runTransactionCallback((wrapped) => client.begin(wrapped), callback),
+		savepoint: (callback) => runTransactionCallback((wrapped) => client.savepoint(wrapped), callback),
 	};
 }
 
