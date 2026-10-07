@@ -210,7 +210,7 @@ describe('ユーザー', () => {
 	// 取得するため互いに干渉しない。
 	let remoteUserCounter = 0;
 	const createRemoteUser = async (
-		options: { host?: string; tags?: string[] } = {},
+		options: { host?: string; tags?: string[]; followersCount?: number; updatedAt?: Date } = {},
 	): Promise<{ id: string; username: string; host: string }> => {
 		const suffix = `${Date.now().toString(36).slice(-6)}x${++remoteUserCounter}`;
 		const host = options.host ?? `users-remote-${suffix}.example`;
@@ -226,8 +226,9 @@ describe('ユーザー', () => {
 				uri: `https://${host}/users/${id}`,
 				// users/search-by-username-and-host は「非フォロー かつ updatedAt IS NULL」の
 				// ユーザーを返さないため、アクティブなユーザーとして用意する。
-				updatedAt: new Date(),
+				updatedAt: options.updatedAt ?? new Date(),
 				...(options.tags ? { tags: options.tags } : {}),
+				...(options.followersCount === undefined ? {} : { followersCount: options.followersCount }),
 			},
 			profile: {
 				userId: id,
@@ -650,48 +651,37 @@ describe('ユーザー', () => {
 		expect(response).toStrictEqual(expected);
 	});
 
+	// 並び順は共有 DB の他の利用者に左右されないよう、1 つのホストに閉じたリモートユーザーで確かめる。
+	// 3 人のフォロワー数・登録順・更新日時はどの並べ方でも順序が変わるようにし、フォロワー数には
+	// 文字列比較では逆転する 9 と 10 を含める。
+	let sortFixture: Promise<{ host: string; a: string; b: string; c: string }> | undefined;
+	const getSortFixture = () => {
+		sortFixture ??= (async () => {
+			const base = Date.now();
+			const a = await createRemoteUser({ followersCount: 10, updatedAt: new Date(base + 2000) });
+			const b = await createRemoteUser({ host: a.host, followersCount: 9, updatedAt: new Date(base) });
+			const c = await createRemoteUser({ host: a.host, followersCount: 1, updatedAt: new Date(base + 1000) });
+			return { host: a.host, a: a.id, b: b.id, c: c.id };
+		})();
+		return sortFixture;
+	};
+
 	test.each([
-		{ label: 'ID昇順', parameters: { limit: 5 }, selector: (u: misskey.entities.UserLite): string => u.id },
-		{
-			label: 'フォロワー昇順',
-			parameters: { sort: '+follower' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.followersCount),
-		},
-		{
-			label: 'フォロワー降順',
-			parameters: { sort: '-follower' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.followersCount),
-		},
-		{
-			label: '登録日時昇順',
-			parameters: { sort: '+createdAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => u.createdAt,
-		},
-		{
-			label: '登録日時降順',
-			parameters: { sort: '-createdAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => u.createdAt,
-		},
-		{
-			label: '投稿日時昇順',
-			parameters: { sort: '+updatedAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.updatedAt),
-		},
-		{
-			label: '投稿日時降順',
-			parameters: { sort: '-updatedAt' },
-			selector: (u: misskey.entities.UserDetailedNotMe): string => String(u.updatedAt),
-		},
-	] as const)('をリスト形式で取得することができる（$label）', async ({ parameters, selector }) => {
+		{ label: 'ID昇順', sort: undefined, order: ['a', 'b', 'c'] },
+		{ label: 'フォロワー数の多い順', sort: '+follower', order: ['a', 'b', 'c'] },
+		{ label: 'フォロワー数の少ない順', sort: '-follower', order: ['c', 'b', 'a'] },
+		{ label: '登録日時の新しい順', sort: '+createdAt', order: ['c', 'b', 'a'] },
+		{ label: '登録日時の古い順', sort: '-createdAt', order: ['a', 'b', 'c'] },
+		{ label: '更新日時の新しい順', sort: '+updatedAt', order: ['a', 'c', 'b'] },
+		{ label: '更新日時の古い順', sort: '-updatedAt', order: ['b', 'c', 'a'] },
+	] as const)('をリスト形式で取得することができる（$label）', async ({ sort, order }) => {
+		const fixture = await getSortFixture();
+		const parameters = { origin: 'remote', hostname: fixture.host, limit: 100, ...(sort ? { sort } : {}) } as const;
 		const response = await successfulApiCall({ endpoint: 'users', parameters, user: alice });
 
-		// 共有 DB の既存件数に依存するため、返却 ID とソート順だけを検証する。
-		const users = await Promise.all(response.map((u) => show(u.id, alice)));
-		const expected = users.sort((x, y) => {
-			const index = selector(x) < selector(y) ? -1 : selector(x) > selector(y) ? 1 : 0;
-			return index * (parameters.sort?.startsWith('+') ? -1 : 1);
-		});
-		expect(response).toStrictEqual(expected);
+		const expectedIds = order.map((key) => fixture[key]);
+		expect(response.map((u) => u.id)).toStrictEqual(expectedIds);
+		expect(response).toStrictEqual(await Promise.all(expectedIds.map((id) => show(id, alice))));
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれない', user: () => userNotExplorable, excluded: true },
