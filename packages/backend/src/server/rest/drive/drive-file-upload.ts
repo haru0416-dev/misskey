@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import * as streamPromises from 'node:stream/promises';
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
+import { isHostInExactDenyList } from '@/misc/host-list.js';
 import type { Context } from 'hono';
 import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
 import type { Config } from '@/config.js';
@@ -154,13 +155,6 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 		cleanup: () => fs.unlink(path, () => {}),
 		fields,
 	};
-}
-
-function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) {
-		return false;
-	}
-	return silencedHosts.includes(host.toLowerCase());
 }
 
 function driveFileInternalError(): ApiError {
@@ -568,7 +562,7 @@ export async function addDriveFile(
 		isSensitive: user ? (user.host == null && profile!.alwaysMarkNsfw ? true : (sensitive ?? false)) : false,
 	} as MiDriveFile;
 
-	if (user != null && isMediaSilencedHost(deps.meta.mediaSilencedHosts, user.host)) {
+	if (user != null && isHostInExactDenyList(deps.meta.mediaSilencedHosts, user.host)) {
 		file.isSensitive = true;
 	}
 	if (info.sensitive && profile!.autoSensitive) {

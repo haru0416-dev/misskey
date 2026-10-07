@@ -5,6 +5,7 @@
 
 import { createHash } from 'node:crypto';
 import { toPuny } from '@/misc/to-puny.js';
+import { isHostInDenyList, isHostInExactDenyList } from '@/misc/host-list.js';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
 import { FanoutTimelinePush } from '@/core/note/fanout-timeline-push.js';
@@ -149,18 +150,11 @@ export type NoteCreationDependencies = NoteDependencies &
 	};
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) {
-		return false;
-	}
-	const lowerHost = host.toLowerCase();
-	return silencedHosts.some((target) => `.${lowerHost}`.endsWith(`.${target}`));
+	return isHostInDenyList(silencedHosts, host);
 }
 
 function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) {
-		return false;
-	}
-	return silencedHosts.includes(host.toLowerCase());
+	return isHostInExactDenyList(silencedHosts, host);
 }
 
 function concatNoteContentsForKeyWordCheck(content: {

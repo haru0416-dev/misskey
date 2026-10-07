@@ -7,6 +7,7 @@ import type { endpointMetas as notesContracts } from '@/server/rest/contracts/no
 import type { ContractErrors } from '../endpoint-contract.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { toPuny } from '@/misc/to-puny.js';
+import { isHostInExactDenyList } from '@/misc/host-list.js';
 import { z } from 'zod';
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -170,7 +171,7 @@ export async function createNoteReaction(
 						reaction = FALLBACK;
 					}
 
-					if (reacterHost != null && (deps.meta.mediaSilencedHosts ?? []).includes(reacterHost)) {
+					if (reacterHost != null && isHostInExactDenyList(deps.meta.mediaSilencedHosts, reacterHost)) {
 						reaction = FALLBACK;
 					}
 				} else {

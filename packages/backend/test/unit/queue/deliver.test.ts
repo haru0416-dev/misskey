@@ -128,6 +128,50 @@ describe('hono-queue-deliver', () => {
 		expect(result).toBe('skip (blocked)');
 	});
 
+	test('meta.blockedHosts のホスト名はポートや下位ドメインを変えても送らない', async () => {
+		const host = `honoqueuedeliver-portblocked-${genId()}.example.com`;
+		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+		const deps: QueueDeliverDependencies = {
+			...federatedDeps,
+			meta: { ...federatedDeps.meta, blockedHosts: [host] },
+			httpRequestService: { ...federatedDeps.httpRequestService, send },
+		};
+
+		for (const to of [`https://${host}:8443/inbox`, `https://sub.${host}:8443/inbox`]) {
+			const result = await handleQueueDeliver(deps, {
+				user: { id: actor.id },
+				content: '{}',
+				digest: 'SHA-256=dummy',
+				to,
+				isSharedInbox: false,
+			});
+			expect(result).toBe('skip (blocked)');
+		}
+		expect(send).not.toHaveBeenCalled();
+	});
+
+	test("meta.federation が 'specified' のとき、ポートの無い項目はホスト名で、ポートのある項目はポートまで照合する", async () => {
+		const host = `honoqueuedeliver-allowed-${genId()}.example.com`;
+		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+		const deliverTo = (federationHosts: string[], to: string) =>
+			handleQueueDeliver(
+				{
+					...federatedDeps,
+					meta: { ...federatedDeps.meta, federation: 'specified', federationHosts },
+					httpRequestService: { ...federatedDeps.httpRequestService, send },
+				},
+				{ user: { id: actor.id }, content: '{}', digest: 'SHA-256=dummy', to, isSharedInbox: false },
+			);
+
+		expect(await deliverTo([host], `https://${host}:8443/inbox`)).toBe('Success');
+		expect(await deliverTo([`${host}:8443`], `https://${host}:8443/inbox`)).toBe('Success');
+		expect(send).toHaveBeenCalledTimes(2);
+		send.mockClear();
+		expect(await deliverTo([`${host}:8443`], `https://${host}:9443/inbox`)).toBe('skip (blocked)');
+		expect(await deliverTo([`${host}:8443`], `https://${host}/inbox`)).toBe('skip (blocked)');
+		expect(send).not.toHaveBeenCalled();
+	});
+
 	test('4xx(リトライ不可)エラーの場合はUnrecoverableErrorを投げる', async () => {
 		const host = `honoqueuedeliver-ng-${genId()}.example.com`;
 		const send = vi.fn().mockRejectedValue(new StatusError('Not Found', 404, 'Not Found'));

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { isHostInDenyList } from '@/misc/host-list.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/user-store.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/user-profile-store.js';
 import {
@@ -36,14 +37,6 @@ import { validateAlsoKnownAs } from '@/server/rest/activitypub/ap-person.js';
 import type { ApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 export type QueueRelationshipDependencies = AccountBlockingDependencies & FollowingDependencies & ApPersonDependencies;
-
-function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-	if (!silencedHosts || host == null) {
-		return false;
-	}
-	const normalizedHost = `.${host.toLowerCase()}`;
-	return silencedHosts.some((x) => normalizedHost.endsWith(`.${x}`));
-}
 
 export async function followWithSideEffects(
 	deps: QueueRelationshipDependencies,
@@ -114,7 +107,7 @@ export async function followWithSideEffects(
 		(isLocalUser(follower) &&
 			isRemoteUser(followee) &&
 			process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
-		(isLocalUser(followee) && isRemoteUser(follower) && isSilencedHost(deps.meta.silencedHosts, follower.host))
+		(isLocalUser(followee) && isRemoteUser(follower) && isHostInDenyList(deps.meta.silencedHosts, follower.host))
 	) {
 		let autoAccept = false;
 

@@ -19,16 +19,26 @@ const HOST_WITH_PORT = /^(\[[^\]]*\]|[^:]*)(?::(\d+))?$/;
  */
 export function toPuny(host: string): string {
 	const lower = host.toLowerCase();
-	const match = HOST_WITH_PORT.exec(lower);
-	if (match == null) {
+	const parts = splitHostPort(lower);
+	if (parts == null) {
 		return domainToASCII(lower);
 	}
-	const hostname = domainToASCII(match[1]!);
-	const port = match[2];
-	if (hostname === '' || port == null) {
+	const hostname = domainToASCII(parts.hostname);
+	if (hostname === '' || parts.port == null) {
 		return hostname;
 	}
-	return `${hostname}:${port}`;
+	return `${hostname}:${parts.port}`;
+}
+
+/**
+ * `URL.host` の形のホストをホスト名とポートに分ける。文字の変換はしない。形が合わなければ null。
+ */
+export function splitHostPort(host: string): { hostname: string; port: string | null } | null {
+	const match = HOST_WITH_PORT.exec(host);
+	if (match == null) {
+		return null;
+	}
+	return { hostname: match[1]!, port: match[2] ?? null };
 }
 
 export function toPunyNullable(host: string | null | undefined): string | null {

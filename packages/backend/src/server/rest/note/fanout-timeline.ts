@@ -13,6 +13,7 @@ import {
 	viewerRelationSnapshotCovers,
 } from '@/core/user/viewer-relation-store.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
+import { isHostInDenyList } from '@/misc/host-list.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { isReply } from '@/misc/is-reply.js';
@@ -133,10 +134,7 @@ export type FanoutTimelineReadOptions = {
 };
 
 function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-	if (host == null) {
-		return false;
-	}
-	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+	return isHostInDenyList(blockedHosts, host);
 }
 
 async function fetchMultiFromRedis(

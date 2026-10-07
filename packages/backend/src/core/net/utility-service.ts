@@ -5,6 +5,7 @@
 
 import { URL } from 'node:url';
 import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
+import { isHostInAllowList, isHostInDenyList, isHostInExactDenyList } from '@/misc/host-list.js';
 import semver from 'semver';
 import type { Config } from '@/config.js';
 import type { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
@@ -34,24 +35,15 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	}
 
 	function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-		if (host == null) {
-			return false;
-		}
-		return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+		return isHostInDenyList(blockedHosts, host);
 	}
 
 	function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-		if (!silencedHosts || host == null) {
-			return false;
-		}
-		return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+		return isHostInDenyList(silencedHosts, host);
 	}
 
 	function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
-		if (!silencedHosts || host == null) {
-			return false;
-		}
-		return silencedHosts.includes(host.toLowerCase());
+		return isHostInExactDenyList(silencedHosts, host);
 	}
 
 	function extractDbHost(uri: string): string {
@@ -72,10 +64,7 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 		if (meta.federation === 'none') {
 			return false;
 		}
-		if (
-			meta.federation === 'specified' &&
-			!meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`))
-		) {
+		if (meta.federation === 'specified' && !isHostInAllowList(meta.federationHosts, host)) {
 			return false;
 		}
 		if (isBlockedHost(meta.blockedHosts, host)) {

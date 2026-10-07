@@ -5,6 +5,7 @@
 
 import type { Params } from '../validation.js';
 import { toPuny } from '@/misc/to-puny.js';
+import { isHostInDenyList, isHostInExactDenyList } from '@/misc/host-list.js';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { z } from 'zod';
@@ -186,21 +187,17 @@ function toRelationshipJob(config: Pick<Config, 'queues'>, name: 'unfollow', dat
 	};
 }
 
-function isHostMatched(targetHosts: string[], host: string): boolean {
-	const lowerHost = host.toLowerCase();
-	return targetHosts.some((target) => `.${lowerHost}`.endsWith(`.${target}`));
-}
-
 function isBlockedHost(meta: MiMeta, host: string): boolean {
-	return isHostMatched(meta.blockedHosts, host);
+	return isHostInDenyList(meta.blockedHosts, host);
 }
 
 function isSilencedHost(meta: MiMeta, host: string): boolean {
-	return isHostMatched(meta.silencedHosts, host);
+	return isHostInDenyList(meta.silencedHosts, host);
 }
 
+// 投稿・リアクション・ドライブでのメディアサイレンスの適用と同じく、下位ドメインを含めない。
 function isMediaSilencedHost(meta: MiMeta, host: string): boolean {
-	return isHostMatched(meta.mediaSilencedHosts, host);
+	return isHostInExactDenyList(meta.mediaSilencedHosts, host);
 }
 
 export function isDeliverSuspendedSoftware(

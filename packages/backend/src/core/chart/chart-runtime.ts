@@ -4,6 +4,7 @@
  */
 
 import { toPuny } from '@/misc/to-puny.js';
+import { denyListLikePatterns } from '@/misc/host-list.js';
 import { sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
@@ -375,7 +376,7 @@ function createFederationChartWriter(core: ChartCoreDependencies, meta: Pick<MiM
 
 	const { commit, chart } = createChartWithCommit(core, 'federation', {
 		async tickMinor() {
-			const blocked = meta.blockedHosts.flatMap((x) => [x, `%.${x}`]);
+			const blocked = denyListLikePatterns(meta.blockedHosts);
 
 			const [sub, pub, pubsub, subActive, pubActive] = await Promise.all([
 				countQuery(sql`

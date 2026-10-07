@@ -286,6 +286,67 @@ describe('NoteStore renote filtering', () => {
 	});
 });
 
+describe('NoteStore blocked hosts', () => {
+	let runtime: RuntimeDependencies;
+
+	beforeAll(async () => {
+		runtime = await createRuntimeDependencies(loadConfig());
+	});
+
+	afterAll(async () => {
+		await runtime.dispose();
+	});
+
+	test('ブロックしたホスト名のノートと、そのノートへの返信は、ポートや下位ドメインが違っても除く', async () => {
+		const blockedHost = `blocked-${genId()}.example`;
+		const sinceId = genId();
+		const createUser = async (host: string | null) => {
+			const id = genId();
+			return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+				user: { id, username: `blocked${id}`, usernameLower: `blocked${id}`, host },
+				profile: { userId: id, userHost: host },
+			});
+		};
+		const [ported, subdomain, local] = await Promise.all([
+			createUser(`${blockedHost}:8443`),
+			createUser(`sub.${blockedHost}:8443`),
+			createUser(null),
+		]);
+		const [portedNoteId, subdomainNoteId, replyId, plainId] = [genId(), genId(), genId(), genId()];
+		const create = (id: string, user: { id: string; host: string | null }, values: Record<string, unknown> = {}) =>
+			createNoteInDatabase(runtime.db, {
+				id,
+				userId: user.id,
+				userHost: user.host,
+				visibility: 'public',
+				text: 'x',
+				...values,
+			});
+		await create(portedNoteId, ported);
+		await create(subdomainNoteId, subdomain);
+		await create(replyId, local, { replyId: portedNoteId, replyUserId: ported.id, replyUserHost: ported.host });
+		await create(plainId, local);
+
+		const ids = new Set(
+			(
+				await listGlobalTimelineNotesFromDatabase(runtime.db, {
+					limit: 100,
+					sinceId,
+					withFiles: false,
+					withRenotes: true,
+					me: null,
+					blockedHosts: [blockedHost],
+				})
+			).map((note) => note.id),
+		);
+
+		expect(ids.has(plainId)).toBe(true);
+		expect(ids.has(portedNoteId)).toBe(false);
+		expect(ids.has(subdomainNoteId)).toBe(false);
+		expect(ids.has(replyId)).toBe(false);
+	});
+});
+
 describe('NoteStore hydrated note lookup', () => {
 	let runtime: RuntimeDependencies;
 	let userId: string;

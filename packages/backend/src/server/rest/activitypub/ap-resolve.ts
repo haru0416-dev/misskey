@@ -4,6 +4,7 @@
  */
 
 import { toPuny } from '@/misc/to-puny.js';
+import { isHostInAllowList, isHostInDenyList } from '@/misc/host-list.js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -73,13 +74,6 @@ export function isSelfHost(config: Pick<Config, 'runtime'>, host: string | null)
 	return toPuny(config.runtime.host) === toPuny(host);
 }
 
-function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
-	if (host == null) {
-		return false;
-	}
-	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
-}
-
 export function isFederationAllowedHost(
 	config: Pick<Config, 'runtime'>,
 	meta: Pick<import('@/models/entities.js').MiMeta, 'federation' | 'federationHosts' | 'blockedHosts'>,
@@ -91,13 +85,10 @@ export function isFederationAllowedHost(
 	if (meta.federation === 'none') {
 		return false;
 	}
-	if (
-		meta.federation === 'specified' &&
-		!meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`))
-	) {
+	if (meta.federation === 'specified' && !isHostInAllowList(meta.federationHosts, host)) {
 		return false;
 	}
-	if (isBlockedHost(meta.blockedHosts, host)) {
+	if (isHostInDenyList(meta.blockedHosts, host)) {
 		return false;
 	}
 	return true;

@@ -3,22 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	gt,
-	inArray,
-	like,
-	ne,
-	notInArray,
-	or,
-	sql,
-	getTableColumns,
-	getTableName,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, like, ne, or, sql, getTableColumns, getTableName } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { instance } from '@/db/schema/instance.js';
 import type { InstanceInsert, InstanceRow } from '@/db/schema/instance.js';
@@ -26,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { defineCachedQueryPlan } from '@/db/prepared.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
+import { denyListLikePatterns } from '@/misc/host-list.js';
 import type { MiInstance } from '@/models/Instance.js';
 
 function deserializeInstance(row: InstanceRow): MiInstance {
@@ -230,13 +216,14 @@ export async function listFederationInstancesFromDatabase(
 	const conditions: SQL[] = [];
 
 	if (typeof options.blocked === 'boolean') {
+		const patterns = denyListLikePatterns(options.blockedHosts);
 		if (options.blocked) {
-			if (options.blockedHosts.length === 0) {
+			if (patterns.length === 0) {
 				return [];
 			}
-			conditions.push(inArray(instance.host, options.blockedHosts));
-		} else if (options.blockedHosts.length > 0) {
-			conditions.push(notInArray(instance.host, options.blockedHosts));
+			conditions.push(sql`${instance.host} ILIKE ANY(${sql.param(patterns)})`);
+		} else if (patterns.length > 0) {
+			conditions.push(sql`${instance.host} NOT ILIKE ALL(${sql.param(patterns)})`);
 		}
 	}
 
@@ -249,13 +236,14 @@ export async function listFederationInstancesFromDatabase(
 	}
 
 	if (typeof options.silenced === 'boolean') {
+		const patterns = denyListLikePatterns(options.silencedHosts);
 		if (options.silenced) {
-			if (options.silencedHosts.length === 0) {
+			if (patterns.length === 0) {
 				return [];
 			}
-			conditions.push(inArray(instance.host, options.silencedHosts));
-		} else if (options.silencedHosts.length > 0) {
-			conditions.push(notInArray(instance.host, options.silencedHosts));
+			conditions.push(sql`${instance.host} ILIKE ANY(${sql.param(patterns)})`);
+		} else if (patterns.length > 0) {
+			conditions.push(sql`${instance.host} NOT ILIKE ALL(${sql.param(patterns)})`);
 		}
 	}
 

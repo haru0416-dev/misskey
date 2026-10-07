@@ -23,6 +23,7 @@ import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { defineCachedQueryPlan, defineQueryPlan } from '@/db/prepared.js';
 import { note } from '@/db/schema/note.js';
+import { denyListLikePatterns } from '@/misc/host-list.js';
 import type { NoteInsert, NoteRow } from '@/db/schema/note.js';
 import { driveFile } from '@/db/schema/drive-file.js';
 import { poll } from '@/db/schema/poll.js';
@@ -124,7 +125,7 @@ function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
+	const patterns = denyListLikePatterns(blockedHosts);
 	return sql`(
 		${noteColumn(alias, 'userId')} IS NULL
 		OR ${noteColumn(alias, 'userHost')} IS NULL
@@ -144,7 +145,7 @@ function blockedRelatedHostCondition(idColumn: keyof NoteRow, hostColumn: keyof 
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
+	const patterns = denyListLikePatterns(blockedHosts);
 	return sql`(
 		${noteColumn('note', idColumn)} IS NULL
 		OR ${noteColumn('note', hostColumn)} IS NULL
@@ -251,7 +252,7 @@ function blockedHostConditionExcludeAuthor(blockedHosts: string[]): SQL {
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
+	const patterns = denyListLikePatterns(blockedHosts);
 	const nonBlockedHost = (column: SQL): SQL =>
 		sql`${column} NOT ILIKE ALL(ARRAY[${sql.join(
 			patterns.map((pattern) => sql`${pattern}`),
