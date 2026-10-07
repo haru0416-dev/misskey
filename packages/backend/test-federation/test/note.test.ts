@@ -2,6 +2,7 @@ import { describe, test, beforeAll, expect } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
 import type * as Misskey from 'misskey-js';
+import { isAPIError } from 'misskey-js/api.js';
 import {
 	addCustomEmoji,
 	createAccount,
@@ -20,6 +21,18 @@ function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
 	assert(value);
 	return value;
+}
+
+async function waitForDeletedNote(user: LoginUser, noteId: string): Promise<void> {
+	await waitFor(async () => {
+		try {
+			await user.client.request('notes/show', { noteId });
+			return false;
+		} catch (error) {
+			if (isAPIError(error, 'notes/show') && error.code === 'NO_SUCH_NOTE') return true;
+			throw error;
+		}
+	});
 }
 
 describe('Note', () => {
@@ -140,10 +153,20 @@ describe('Note', () => {
 				test('Check', async () => {
 					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, alice);
-					await alice.client.request('notes/create', { renoteId: noteInA.id });
+					const renote = (await alice.client.request('notes/create', { renoteId: noteInA.id })).createdNote;
 					await deliveryBarrier('a.test');
+					await waitFor(async () =>
+						(await bob.client.request('notes/renotes', { noteId: note.id })).some(
+							(remoteRenote) =>
+								remoteRenote.uri === `https://a.test/notes/${renote.id}/activity` &&
+								remoteRenote.renoteId === note.id &&
+								remoteRenote.userId === aliceInB.id,
+						),
+					);
 
 					await bob.client.request('notes/delete', { noteId: note.id });
+					// 公式版の宛先探索と queue への受理は Delete の API 応答に含まれない。
+					await waitForDeletedNote(alice, noteInA.id);
 					await deliveryBarrier('b.test');
 
 					await rejects(
@@ -164,6 +187,7 @@ describe('Note', () => {
 					await deliveryBarrier('a.test');
 
 					await bob.client.request('notes/delete', { noteId: note.id });
+					await waitForDeletedNote(alice, noteInA.id);
 					await deliveryBarrier('b.test');
 
 					await rejects(
