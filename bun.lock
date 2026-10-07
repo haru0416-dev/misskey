@@ -222,10 +222,12 @@
       "devDependencies": {
         "@microsoft/api-extractor": "7.59.1",
         "@types/node": "26.6.2",
+        "@types/ws": "8.18.1",
         "@vitest/coverage-v8": "5.0.1",
         "esbuild": "0.28.2",
         "vitest": "5.0.1",
         "vitest-websocket-mock": "0.8.0",
+        "ws": "8.21.3",
       },
     },
     "packages/misskey-js/generator": {

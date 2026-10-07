@@ -55,3 +55,15 @@ jobs:
         run: bun run --bun --filter misskey-js test
         env:
           CI: true
+
+      # WebSocket の実装は実行環境ごとに挙動が違う (Bun は ws を独自実装へ差し替え、Node の組み込み
+      # WebSocket は接続中の close() で close を同期に発火する)。同じテストを Node でも通す。
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Test (Node.js)
+        run: bun run --filter misskey-js test:node
+        env:
+          CI: true

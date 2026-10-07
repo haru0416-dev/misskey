@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { MAX_OFFLINE_MESSAGE_BYTES, MAX_OFFLINE_MESSAGE_COUNT, ReconnectingWebSocket } from '../src/reconnecting-ws.js';
 
 class FakeWebSocket {
@@ -32,7 +32,64 @@ class FakeWebSocket {
 	}
 }
 
+/** 'blob' を受け付けない実装 (Blob の無い環境の npm ws など) を模す。代入された値を記録する。 */
+class BloblessWebSocket {
+	public static instances: BloblessWebSocket[] = [];
+	public assigned: string[] = [];
+	public readyState = 0;
+	public onopen: ((event: unknown) => void) | null = null;
+	public onclose: ((event: unknown) => void) | null = null;
+	public onmessage: ((event: unknown) => void) | null = null;
+	public onerror: ((event: unknown) => void) | null = null;
+	private current = 'nodebuffer';
+
+	constructor() {
+		BloblessWebSocket.instances.push(this);
+	}
+
+	public get binaryType(): string {
+		return this.current;
+	}
+
+	public set binaryType(value: string) {
+		if (value === 'blob') throw new SyntaxError('The binaryType "blob" is not supported');
+		this.assigned.push(value);
+		this.current = value;
+	}
+
+	public send(): void {}
+
+	public close(): void {
+		this.readyState = 3;
+	}
+}
+
 describe('ReconnectingWebSocket', () => {
+	test('明示されるまでソケットの binaryType に触れず、明示した値は再接続後のソケットにも渡す', () => {
+		BloblessWebSocket.instances = [];
+		const socket = new ReconnectingWebSocket('wss://example.test', undefined, {
+			WebSocket: BloblessWebSocket,
+			minReconnectionDelay: 0,
+		});
+		const first = BloblessWebSocket.instances[0]!;
+		expect(first.assigned).toEqual([]);
+		expect(socket.binaryType).toBe('nodebuffer');
+
+		socket.binaryType = 'arraybuffer';
+		expect(first.assigned).toEqual(['arraybuffer']);
+
+		vi.useFakeTimers();
+		try {
+			first.onclose?.({});
+			vi.runOnlyPendingTimers();
+		} finally {
+			vi.useRealTimers();
+		}
+		const second = BloblessWebSocket.instances[1]!;
+		expect(second.assigned).toEqual(['arraybuffer']);
+		socket.close();
+	});
+
 	test('keeps only the newest offline messages within the count limit', () => {
 		FakeWebSocket.instances = [];
 		const socket = new ReconnectingWebSocket('wss://example.test', undefined, { WebSocket: FakeWebSocket });

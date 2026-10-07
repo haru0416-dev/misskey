@@ -47,7 +47,8 @@
 		"typecheck": "bun ../../scripts/tsc-native.mjs --noEmit",
 		"lint": "bun run --bun typecheck",
 		"vitest": "vitest run",
-		"test": "bun run --bun vitest && bun run --bun test-d",
+		"test": "MISSKEY_JS_TEST_RUNTIME=bun bun run --bun vitest && bun run --bun test-d",
+		"test:node": "MISSKEY_JS_TEST_RUNTIME=node vitest run",
 		"update-autogen-code": "bun run --filter misskey-js-type-generator generate && rm -rf src/autogen && cp -R generator/built/autogen src/autogen"
 	},
 	"repository": {
@@ -58,10 +59,12 @@
 	"devDependencies": {
 		"@microsoft/api-extractor": "7.59.1",
 		"@types/node": "26.6.2",
+		"@types/ws": "8.18.1",
 		"@vitest/coverage-v8": "5.0.1",
 		"esbuild": "0.28.2",
 		"vitest": "5.0.1",
-		"vitest-websocket-mock": "0.8.0"
+		"vitest-websocket-mock": "0.8.0",
+		"ws": "8.21.3"
 	},
 	"files": [
 		"built"
