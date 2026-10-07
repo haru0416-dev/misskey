@@ -88,6 +88,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["dependency-patches/", "./dependency-patches/"]
 COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]

@@ -15,7 +15,7 @@ on:
       - .bun-version
       - package.json
       - Dockerfile
-      - patches/**
+      - dependency-patches/**
       - scripts/**
       - deploy/healthcheck.sh
       - .github/workflows/test-federation.yml

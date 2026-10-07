@@ -121,8 +121,8 @@ services:
         target: /misskey/bunfig.toml
         read_only: true
       - type: bind
-        source: ../../../patches
-        target: /misskey/patches
+        source: ../../../dependency-patches
+        target: /misskey/dependency-patches
         read_only: true
       - type: bind
         source: ./certificates/rootCA.crt
@@ -211,8 +211,8 @@ services:
         target: /misskey/bunfig.toml
         read_only: true
       - type: bind
-        source: ../../../patches
-        target: /misskey/patches
+        source: ../../../dependency-patches
+        target: /misskey/dependency-patches
         read_only: true
     working_dir: /misskey
     command: >
