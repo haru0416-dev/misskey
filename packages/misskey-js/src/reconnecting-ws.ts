@@ -33,6 +33,7 @@ const WS_OPEN = 1;
 export const MAX_OFFLINE_MESSAGE_COUNT = 1000;
 export const MAX_OFFLINE_MESSAGE_BYTES = 1024 * 1024;
 const textEncoder = new TextEncoder();
+const ignoreError = (): void => {};
 
 export class ReconnectingWebSocket {
 	private url: string;
@@ -149,7 +150,9 @@ export class ReconnectingWebSocket {
 		ws.onopen = null;
 		ws.onclose = null;
 		ws.onmessage = null;
-		ws.onerror = null;
+		// npm の ws は接続中の close() で error を非同期に emit し、listener が無いと EventEmitter が
+		// 未捕捉の例外として投げてプロセスを落とす。切り離した後の error は捨てる。
+		ws.onerror = ignoreError;
 	}
 
 	private emit<K extends keyof WebSocketEventMap>(type: K, ev: WebSocketEventMap[K]): void {
