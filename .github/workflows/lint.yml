@@ -112,7 +112,7 @@ jobs:
         run: bun run --filter slacc build
       - run: bun run lint:ox
       # ルートの補助スクリプトのテスト。
-      - run: bun test scripts/dependency-inventory.test.mjs scripts/spawn-checked.test.mjs scripts/check-federation-known-failures.test.mjs
+      - run: bun test scripts/dependency-inventory.test.mjs scripts/spawn-checked.test.mjs scripts/check-federation-known-failures.test.mjs scripts/ensure-test-config.test.mjs scripts/update-deps.test.mjs
       # knip は vite / drizzle の設定ファイルを実行して入口を集める。i18n の built と compile 済みの設定が
       # 無いと読み込みに失敗し、そこから辿る schema の enum などを未使用と誤って報告する。
       - run: bun run --filter i18n build
