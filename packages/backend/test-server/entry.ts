@@ -50,7 +50,9 @@ async function startApplication() {
 	console.log('starting application...');
 
 	initExtraThreadPool(config);
-	runtime = await startServer();
+	// テストではデーモン自体は envOption.noDaemons で止まる。デーモン担当として起動するのは、本番と同じく
+	// タイムライン list の並べ直しを済ませ、範囲読みの経路を通すため。
+	runtime = await startServer(undefined, undefined, { daemons: true });
 
 	console.log('application initialized.');
 }

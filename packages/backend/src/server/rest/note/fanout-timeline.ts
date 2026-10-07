@@ -5,6 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import { listChannelsByIdsFromDatabase } from '@/core/channel/channel-store.js';
+import { isFanoutTimelineSortReady, sortFanoutTimelineLists } from '@/core/note/fanout-timeline-push.js';
 import { listNotesByIdsFromDatabase } from '@/core/note/note-store.js';
 import { listUsersByIdsFromDatabase } from '@/core/user/user-store.js';
 import {
@@ -137,30 +138,168 @@ function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	return isHostInDenyList(blockedHosts, host);
 }
 
-async function fetchMultiFromRedis(
-	redisForTimelines: Redis.Redis,
+const descending = (a: string, b: string) => (a > b ? -1 : 1);
+
+/** タイムラインの候補 ID を新しい順・重複なしで少しずつ渡す。 */
+export interface TimelineIdSource {
+	/** 次の最大 n 件。 */
+	take(n: number): Promise<string[]>;
+	hasMore(): Promise<boolean>;
+}
+
+/** 全 list を一度に読み、和集合を並べ替える。list の並び順に依存しない。 */
+export async function readWholeTimelineLists(
+	redis: Redis.Redis,
 	names: string[],
-	untilId?: string | null,
-	sinceId?: string | null,
-): Promise<string[][]> {
-	const pipeline = redisForTimelines.pipeline();
+	untilId: string | null,
+): Promise<TimelineIdSource> {
+	const pipeline = redis.pipeline();
 	for (const name of names) {
 		pipeline.lrange('list:' + name, 0, -1);
 	}
-	const res = await pipeline.exec();
-	if (res == null) {
-		return [];
+	const unique = new Set<string>();
+	for (const [error, ids] of (await pipeline.exec()) ?? []) {
+		if (error) {
+			throw error;
+		}
+		for (const id of ids as string[]) {
+			if (untilId == null || id < untilId) {
+				unique.add(id);
+			}
+		}
 	}
-	const tls = res.map((r) => r[1] as string[]);
-	return tls.map((ids) =>
-		untilId && sinceId
-			? ids.filter((id) => id < untilId && id > sinceId)
-			: untilId
-				? ids.filter((id) => id < untilId)
-				: sinceId
-					? ids.filter((id) => id > sinceId)
-					: ids,
-	);
+	const sorted = [...unique].sort(descending);
+	let read = 0;
+	return {
+		take: async (n) => {
+			const ids = sorted.slice(read, read + n);
+			read += ids.length;
+			return ids;
+		},
+		hasMore: async () => read < sorted.length,
+	};
+}
+
+/** 範囲読みした list に降順でない箇所があった。そのリクエストは全件読みでやり直す。 */
+export class UnsortedTimelineListError extends Error {
+	constructor(public readonly key: string) {
+		super(`Timeline list is not sorted: ${key}`);
+	}
+}
+
+type ListCursor = {
+	key: string;
+	/** 次に LRANGE で読む位置。 */
+	start: number;
+	/** 次に読む件数。 */
+	size: number;
+	/** これより古い ID だけを候補にする。初期値は untilId、以後はこの list から読んだ最古の ID。 */
+	bound: string | null;
+	buffer: string[];
+	offset: number;
+	exhausted: boolean;
+};
+
+/**
+ * 降順・重複なしの list (fanout-timeline-push.ts が保つ) を先頭から size 件ずつ読み、降順のまま併合する。
+ *
+ * 続きは位置で読み、値 (bound) で絞る。読む間に list へ入るのは降順の位置への挿入と末尾の切り詰めだけなので、
+ * 読んだ位置より前に入った ID の分だけ既読の ID が後ろへずれて再び読まれ (bound 以上なので捨てる)、未読の ID は
+ * 読む位置より前へ動かない。bound より古い ID は既読の ID より後ろにしか入らない。したがって抜けも重複も出ない。
+ * untilId より新しい部分は読み飛ばす。読み飛ばしが続くと 1 回に読む件数を倍にして往復を log 回に抑える。
+ */
+export class SortedTimelineListsReader implements TimelineIdSource {
+	private readonly cursors: ListCursor[];
+	private lastTaken: string | null = null;
+
+	constructor(
+		private readonly redis: Redis.Redis,
+		names: string[],
+		untilId: string | null,
+		size: number,
+	) {
+		this.cursors = names.map((name) => ({
+			key: 'list:' + name,
+			start: 0,
+			size,
+			bound: untilId,
+			buffer: [],
+			offset: 0,
+			exhausted: false,
+		}));
+	}
+
+	/** 読み切っていない list すべてに未出力の候補が 1 件以上ある状態にする。併合の比較にはそれが要る。 */
+	private async fill(): Promise<void> {
+		for (;;) {
+			const targets = this.cursors.filter((c) => !c.exhausted && c.offset >= c.buffer.length);
+			if (targets.length === 0) {
+				return;
+			}
+			const pipeline = this.redis.pipeline();
+			for (const c of targets) {
+				pipeline.lrange(c.key, c.start, c.start + c.size - 1);
+			}
+			const results = (await pipeline.exec()) ?? [];
+			targets.forEach((c, i) => {
+				const [error, value] = results[i] ?? [new Error('Missing pipeline result'), null];
+				if (error) {
+					throw error;
+				}
+				const ids = value as string[];
+				for (let j = 1; j < ids.length; j++) {
+					if (ids[j]! > ids[j - 1]!) {
+						throw new UnsortedTimelineListError(c.key);
+					}
+				}
+				c.start += ids.length;
+				c.exhausted = ids.length < c.size;
+				const bound = c.bound;
+				c.buffer = bound == null ? ids : ids.filter((id) => id < bound);
+				c.offset = 0;
+				if (c.buffer.length > 0) {
+					c.bound = c.buffer[c.buffer.length - 1]!;
+				} else if (!c.exhausted) {
+					c.size *= 2;
+				}
+			});
+		}
+	}
+
+	/** 次に出す ID の持ち主。複数の list にある同じ ID は 2 回目以降を読み飛ばす。 */
+	private async peek(): Promise<ListCursor | null> {
+		for (;;) {
+			await this.fill();
+			let best: ListCursor | null = null;
+			for (const c of this.cursors) {
+				if (c.offset < c.buffer.length && (best == null || c.buffer[c.offset]! > best.buffer[best.offset]!)) {
+					best = c;
+				}
+			}
+			if (best == null || best.buffer[best.offset] !== this.lastTaken) {
+				return best;
+			}
+			best.offset++;
+		}
+	}
+
+	public async take(n: number): Promise<string[]> {
+		const ids: string[] = [];
+		while (ids.length < n) {
+			const next = await this.peek();
+			if (next == null) {
+				break;
+			}
+			const id = next.buffer[next.offset++]!;
+			this.lastTaken = id;
+			ids.push(id);
+		}
+		return ids;
+	}
+
+	public async hasMore(): Promise<boolean> {
+		return (await this.peek()) != null;
+	}
 }
 
 export async function fetchFanoutTimelineNotes(
@@ -169,21 +308,43 @@ export async function fetchFanoutTimelineNotes(
 ): Promise<MiNote[]> {
 	const dbFallback = ps.useDbFallback ? ps.dbFallback : () => Promise.resolve([]);
 
-	const ascending = ps.sinceId && !ps.untilId;
-	const idCompare: (a: string, b: string) => number = ascending
-		? (a, b) => (a < b ? -1 : 1)
-		: (a, b) => (a > b ? -1 : 1);
+	// sinceId があると Redis の候補はすべて sinceId より新しいので、「候補が無い」か「候補の最古が sinceId より
+	// 新しい (間が抜けているかもしれない)」のどちらかになり、どちらでも DB だけで引く。Redis の候補は使われない。
+	if (ps.sinceId != null) {
+		return await dbFallback(ps.untilId, ps.sinceId, ps.limit);
+	}
 
-	const redisResult = await fetchMultiFromRedis(deps.redisForTimelines, ps.redisTimelines, ps.untilId, ps.sinceId);
+	if (await isFanoutTimelineSortReady(deps.redisForTimelines)) {
+		// 最初に 1.1 × limit 件を取り、絞り込みで落ちた分を後から足す。2 × limit 件ずつ読めば多くは 1 往復で済む。
+		const reader = new SortedTimelineListsReader(deps.redisForTimelines, ps.redisTimelines, ps.untilId, ps.limit * 2);
+		try {
+			return await collectFanoutTimelineNotes(deps, ps, dbFallback, reader);
+		} catch (error) {
+			if (!(error instanceof UnsortedTimelineListError)) {
+				throw error;
+			}
+			// 並べ直しの後に降順を保たない書き込み (旧版のプロセス、手作業) があった。その list を並べ直し、
+			// このリクエストは全件読みでやり直す。
+			await sortFanoutTimelineLists(deps.redisForTimelines, [error.key]);
+		}
+	}
+	return await collectFanoutTimelineNotes(
+		deps,
+		ps,
+		dbFallback,
+		await readWholeTimelineLists(deps.redisForTimelines, ps.redisTimelines, ps.untilId),
+	);
+}
 
-	const redisResultIds = Array.from(new Set(redisResult.flat(1))).sort(idCompare);
+async function collectFanoutTimelineNotes(
+	deps: FanoutTimelineReadDependencies,
+	ps: FanoutTimelineReadOptions,
+	dbFallback: (untilId: string | null, sinceId: string | null, limit: number) => Promise<MiNote[]>,
+	source: TimelineIdSource,
+): Promise<MiNote[]> {
+	let noteIds = await source.take(Math.ceil(ps.limit * 1.1));
 
-	let noteIds = redisResultIds.slice(0, ps.limit);
-	const oldestNoteId = ascending ? redisResultIds[0] : redisResultIds[redisResultIds.length - 1];
-	const shouldFallbackToDb =
-		noteIds.length === 0 || (ps.sinceId != null && oldestNoteId != null && ps.sinceId < oldestNoteId);
-
-	if (!shouldFallbackToDb) {
+	if (noteIds.length !== 0) {
 		let filter = ps.noteFilter ?? ((_note: MiNote) => true);
 
 		if (ps.alwaysIncludeMyNotes && ps.me) {
@@ -292,40 +453,27 @@ export async function fetchFanoutTimelineNotes(
 		}
 
 		const redisTimeline: MiNote[] = [];
-		let readFromRedis = 0;
-		let lastSuccessfulRate = 1;
-
-		while (redisResultIds.length - readFromRedis !== 0) {
-			const remainingToRead = ps.limit - redisTimeline.length;
-
-			const countToGet = Math.ceil(remainingToRead * Math.min(1.1 / lastSuccessfulRate, 3));
-			noteIds = redisResultIds.slice(readFromRedis, readFromRedis + countToGet);
-
-			readFromRedis += noteIds.length;
-
+		for (;;) {
 			const notes = (await listFanoutTimelineNotesByIds(deps.db, noteIds, ps.hydrateChannels ?? false)).filter(filter);
-			notes.sort((a, b) => idCompare(a.id, b.id));
+			notes.sort((a, b) => descending(a.id, b.id));
 			redisTimeline.push(...notes);
-			lastSuccessfulRate = notes.length / noteIds.length;
+			const lastSuccessfulRate = notes.length / noteIds.length;
 
 			if (ps.allowPartial ? redisTimeline.length !== 0 : redisTimeline.length >= ps.limit) {
 				return redisTimeline.slice(0, ps.limit);
 			}
+			if (!(await source.hasMore())) {
+				break;
+			}
+
+			const remainingToRead = ps.limit - redisTimeline.length;
+			noteIds = await source.take(Math.ceil(remainingToRead * Math.min(1.1 / lastSuccessfulRate, 3)));
 		}
 
-		const remainingToRead = ps.limit - redisTimeline.length;
-		let dbUntil: string | null;
-		let dbSince: string | null;
-		if (ascending) {
-			dbUntil = ps.untilId;
-			dbSince = noteIds[noteIds.length - 1] ?? null;
-		} else {
-			dbUntil = noteIds[noteIds.length - 1] ?? null;
-			dbSince = ps.sinceId;
-		}
-		const gotFromDb = await dbFallback(dbUntil, dbSince, remainingToRead);
+		// Redis の候補を読み切った。最古の候補より古い分を DB で補う。
+		const gotFromDb = await dbFallback(noteIds[noteIds.length - 1]!, null, ps.limit - redisTimeline.length);
 		return [...redisTimeline, ...gotFromDb];
 	}
 
-	return await dbFallback(ps.untilId, ps.sinceId, ps.limit);
+	return await dbFallback(ps.untilId, null, ps.limit);
 }

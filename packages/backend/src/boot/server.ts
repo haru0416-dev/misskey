@@ -20,6 +20,7 @@ import { traceHttpRequest } from '@/telemetry.js';
 import { startQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
 import { startServerStatsDaemon } from '@/server/daemons/server-stats.js';
 import { createEventPublishers } from '@/core/events.js';
+import { startFanoutTimelineSort } from '@/core/note/fanout-timeline-push.js';
 
 export type ServerRuntime = {
 	server: Bun.Server;
@@ -239,6 +240,11 @@ async function launchServerWithDependencies(
 		disposers.push(() => queueStatsDaemon.dispose());
 		const serverStatsDaemon = startServerStatsDaemon({ meta: deps.meta });
 		disposers.push(() => serverStatsDaemon.dispose());
+	}
+	// タイムライン list の並べ直しは常駐処理ではなく一度きりのデータ移行なので、noDaemons でもデーモン担当が走らせる。
+	if (daemons) {
+		const timelineSort = startFanoutTimelineSort(deps.redisForTimelines, deps.loggerService.getLogger('timeline'));
+		disposers.push(() => timelineSort.dispose());
 	}
 
 	const streamRuntime = createBunNativeStreamRuntime(streamDeps);
