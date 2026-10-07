@@ -33,7 +33,7 @@ export function BaseEmbed(
 		<>
 			{'<!DOCTYPE html>'}
 			{comment}
-			<html lang="en">
+			<html lang="en" class="embed">
 				<head>
 					<CommonHeadMeta
 						themeColor={props.themeColor}

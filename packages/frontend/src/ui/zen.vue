@@ -66,17 +66,4 @@ function goToDeck() {
 .deckNav {
 	padding: 4px;
 }
-
-.button {
-	padding: 0;
-	aspect-ratio: 1;
-	width: 100%;
-	max-width: 60px;
-	margin: auto;
-	border-radius: 100%;
-	background: var(--MI_THEME-panel);
-	color: var(--MI_THEME-fg);
-	right: var(--MI-margin);
-	bottom: calc(var(--MI-margin) + env(safe-area-inset-bottom, 0px));
-}
 </style>

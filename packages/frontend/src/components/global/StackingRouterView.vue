@@ -172,10 +172,6 @@ router.useListener('replace', ({ fullPath }) => {
 		transform: translateY(100px);
 	}
 }
-.transition_x_leaveActive {
-	.tabFg {
-	}
-}
 
 .tabs {
 	position: relative;

@@ -948,7 +948,9 @@ function emitUpdReaction(emoji: string, delta: number) {
 		}
 	}
 
-	&.showActionsOnlyHover:hover {
+	&.showActionsOnlyHover:hover,
+	&.showActionsOnlyHover:focus,
+	&.showActionsOnlyHover:focus-within {
 		.footer {
 			visibility: visible;
 		}

@@ -59,12 +59,6 @@ const toggle = () => {
 	transition: all 0.2s ease;
 	user-select: none;
 
-	&:hover {
-		> .button {
-			border-color: var(--MI_THEME-inputBorderHover) !important;
-		}
-	}
-
 	&.disabled {
 		opacity: 0.6;
 		cursor: not-allowed;

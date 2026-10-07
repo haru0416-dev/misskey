@@ -174,6 +174,8 @@ const collapsed = ref(appearNote.value.cw == null && isLong);
 </script>
 
 <style lang="scss" module>
+@use '@/shared/styles/_note-content.scss' as note-content;
+
 .root {
 	position: relative;
 	transition: box-shadow 0.1s ease;
@@ -358,19 +360,11 @@ const collapsed = ref(appearNote.value.cw == null && isLong);
 }
 
 .showLess {
-	width: 100%;
-	margin-top: 14px;
-	position: sticky;
-	bottom: calc(var(--MI-stickyBottom, 0px) + 14px);
+	@include note-content.show-less;
 }
 
 .showLessLabel {
-	display: inline-block;
-	background: var(--MI_THEME-popup);
-	padding: 6px 10px;
-	font-size: 0.8em;
-	border-radius: 999px;
-	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+	@include note-content.collapse-label(var(--MI_THEME-popup));
 }
 
 .contentCollapsed {
@@ -395,12 +389,7 @@ const collapsed = ref(appearNote.value.cw == null && isLong);
 }
 
 .collapsedLabel {
-	display: inline-block;
-	background: var(--MI_THEME-panel);
-	padding: 6px 10px;
-	font-size: 0.8em;
-	border-radius: 999px;
-	box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+	@include note-content.collapse-label(var(--MI_THEME-panel));
 }
 
 .noteFooterInfo {

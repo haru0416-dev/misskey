@@ -16,6 +16,8 @@ import {
 	whenBodyReady,
 } from './common.js';
 
+let errorStyleInstalled = false;
+
 const renderError = async (code: string, details?: unknown): Promise<void> => {
 	await whenBodyReady();
 
@@ -99,6 +101,10 @@ const renderError = async (code: string, details?: unknown): Promise<void> => {
 	detailText.textContent = `${String(details)} ${JSON.stringify(details)}`;
 	detailsElement.append(document.createElement('br'), summary, detailText);
 	errorsElement.appendChild(detailsElement);
+
+	if (errorStyleInstalled) {
+		return;
+	}
 
 	// 色は Toneriko のダークテーマ (src/shared/themes/d-toneriko.json5) に合わせる。
 	addStyle(`
@@ -208,6 +214,7 @@ const renderError = async (code: string, details?: unknown): Promise<void> => {
 				width: 50%;
 			}
 		}`);
+	errorStyleInstalled = true;
 };
 
 function applyDisplayPreferences(): void {

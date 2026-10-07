@@ -40,6 +40,7 @@ export type CompiledTheme = Record<string, string>;
 const MAX_THEME_REFERENCE_DEPTH = 8;
 
 export const themeProps = Object.keys(lightTheme.props).filter((key) => !key.startsWith('X'));
+const themePropSet = new Set(themeProps);
 
 export const getBuiltinThemes = () =>
 	Promise.all(
@@ -144,10 +145,14 @@ export function compile(theme: Theme): CompiledTheme {
 			continue;
 		}
 
-		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(resolvedTheme, v));
+		// 出力しない中間値や未知キーも評価し、参照・色のエラーを検出する。
+		const value = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(resolvedTheme, v));
+		if (themePropSet.has(k)) {
+			props[k] = value;
+		}
 	}
 
-	return Object.fromEntries(Object.entries(props).filter(([key]) => themeProps.includes(key))) as CompiledTheme;
+	return props;
 }
 
 function genValue(c: tinycolor.Instance): string {

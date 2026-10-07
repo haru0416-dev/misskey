@@ -833,10 +833,6 @@ function loadConversation() {
 .note {
 	padding: 32px;
 	font-size: 1.2em;
-
-	&:hover > .main > .footer > .button {
-		opacity: 1;
-	}
 }
 
 .noteHeader {

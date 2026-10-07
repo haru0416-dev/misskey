@@ -71,3 +71,13 @@ components / composables / query / store
 ## コードを移すとき
 
 移すのは機能の単位で行い、実装、型、シェーダー、テスト、Storybook を同じ変更の中で移します。移動前のパスからの再エクスポートは残さず、同じ変更で、すべての import を更新します。
+
+## スタイルの所有と配信
+
+- 画面・部品のスタイルは Vue の CSS Modules に置き、状態クラスも `$style` で結びます。局所的なルールを unscoped にして、別のルートへ残るグローバルな副作用を作りません。
+- キーボードの状態は `:focus-visible` や `:focus-within` で表します。hover だけに操作部品の表示を依存させず、共通のフォーカス表示を `outline: none` だけで消しません。
+- 本体の `style.scss` と `embed/style.scss` は別の入口です。テーマ・余白・文字サイズなどの各表示の契約を保ち、共有のために本体の stylesheet を embed へ読み込みません。
+- `shared/styles/` の Sass provider は、必要な場所で使う mixin を提供します。`_mfm.scss` は共有レンダラーが使う MFM の class と `global-*` keyframe を持ち、各入口が必要な位置で出力します。入れ子の倍率は、同じ class specificity を持つ `:is()` でセレクタの組合せ展開を避けます。
+- テーマ色は `--MI_THEME-*`、レイアウトの共通値は `design-tokens.scss` を使います。レスポンシブな grid の最小幅は、カードの希望幅だけでなくコンテナーに収まる上限も指定します。
+- embed の bootstrap・エラー表示は、サーバーが出力する `html.embed` を起点にします。loader のエラー用 stylesheet は各 loader が一度だけ挿入し、後続のエラー内容は引き続き更新します。
+- JavaScript のファイル名は locale の変更も反映します。CSS・font・画像は内容の hash で配信し、翻訳だけの変更で同じ内容の asset の URL を変えません。

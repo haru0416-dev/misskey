@@ -181,15 +181,6 @@ definePage(() => ({
 </script>
 
 <style lang="scss" module>
-.fade-enter-active,
-.fade-leave-active {
-	transition: opacity 0.125s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-	opacity: 0;
-}
-
 .loadNext,
 .loadPrev {
 	justify-content: center;

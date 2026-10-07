@@ -16,6 +16,8 @@ import {
 	whenBodyReady,
 } from './common.js';
 
+let errorStyleInstalled = false;
+
 const renderError = async (code: string): Promise<void> => {
 	await whenBodyReady();
 
@@ -29,6 +31,10 @@ const renderError = async (code: string): Promise<void> => {
 		<button onclick="location.reload(!0)">
 			<div>${reload}</div>
 		</button>`;
+
+	if (errorStyleInstalled) {
+		return;
+	}
 
 	// 色は Toneriko のダークテーマ (src/shared/themes/d-toneriko.json5) に合わせる。
 	addStyle(`
@@ -124,6 +130,7 @@ const renderError = async (code: string): Promise<void> => {
 		button:hover {
 			background-color: #9a9ef5;
 		}`);
+	errorStyleInstalled = true;
 };
 
 if (installErrorHandlers(renderError)) {

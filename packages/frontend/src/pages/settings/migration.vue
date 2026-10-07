@@ -130,10 +130,3 @@ async function save(): Promise<void> {
 
 init();
 </script>
-
-<style lang="scss">
-.description {
-	font-size: .85em;
-	padding: 1rem;
-}
-</style>

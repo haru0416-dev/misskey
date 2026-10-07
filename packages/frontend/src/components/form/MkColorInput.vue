@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div>
 	<div :class="$style.label"><slot name="label"></slot></div>
-	<div :class="[$style.input, { disabled }]">
+	<div :class="[$style.input, { [$style.disabled]: disabled, [$style.focused]: focused }]">
 		<input
 			ref="inputEl"
 			v-model="v"
@@ -16,6 +16,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:disabled="disabled"
 			:required="required"
 			:readonly="readonly"
+			@focus="focused = true"
+			@blur="focused = false"
 			@input="onInput"
 		>
 	</div>
@@ -39,6 +41,7 @@ const emit = defineEmits<{
 
 const { modelValue } = toRefs(props);
 const v = ref(modelValue.value);
+const focused = ref(false);
 const inputEl = useTemplateRef('inputEl');
 
 const onInput = () => {
@@ -101,6 +104,11 @@ const onInput = () => {
 	box-shadow: none;
 	box-sizing: border-box;
 	transition: border-color 0.1s ease-out;
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: 2px;
+	}
 
 	&:hover {
 		border-color: var(--MI_THEME-inputBorderHover) !important;

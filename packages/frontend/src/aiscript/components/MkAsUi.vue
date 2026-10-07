@@ -194,12 +194,7 @@ function openPostForm() {
 </script>
 
 <style lang="scss" module>
-.root {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
+.root,
 .container {
 	display: flex;
 	flex-direction: column;

@@ -503,15 +503,6 @@ defineExpose({
 </script>
 
 <style lang="scss" module>
-.transition_fade_enterActive,
-.transition_fade_leaveActive {
-	transition: opacity 0.125s ease;
-}
-.transition_fade_enterFrom,
-.transition_fade_leaveTo {
-	opacity: 0;
-}
-
 .more {
 	display: block;
 	margin-left: auto;

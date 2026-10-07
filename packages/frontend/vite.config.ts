@@ -189,9 +189,10 @@ export function getSharedConfig() {
 		},
 
 		output: {
+			// ロケールを埋め込む JS のみロケールハッシュを付け、CSS・画像・フォントは内容のハッシュで共有する。
 			entryFileNames: `scripts/${localesHash}-[hash:8].js`,
 			chunkFileNames: `scripts/${localesHash}-[hash:8].js`,
-			assetFileNames: `assets/${localesHash}-[hash:8][extname]`,
+			assetFileNames: 'assets/[hash:8][extname]',
 		},
 
 		worker: {

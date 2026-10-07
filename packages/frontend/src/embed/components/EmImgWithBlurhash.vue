@@ -269,13 +269,6 @@ onUnmounted(() => {
 	display: block;
 	width: 100%;
 	height: 100%;
-}
-
-.canvas {
-	object-fit: contain;
-}
-
-.img {
 	object-fit: contain;
 }
 </style>
