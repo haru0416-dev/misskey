@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkModal ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="success ? done() : () => {}" @closed="emit('closed')">
+<MkModal v-if="initiallyShowing" ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="success ? done() : () => {}" @closed="emit('closed')">
 	<div :class="[$style.root, { [$style.iconOnly]: (text == null) || success }]" role="status">
 		<i v-if="success" :class="[$style.icon, $style.success]" class="ti ti-check"></i>
 		<MkLoading v-else :class="[$style.icon, $style.waiting]" :em="true"/>
@@ -29,6 +29,12 @@ const emit = defineEmits<{
 	(ev: 'done'): void;
 	(ev: 'closed'): void;
 }>();
+
+// 終了済みの待機表示は、遅れてマウントされてもフォーカスを取得しない。
+const initiallyShowing = props.showing;
+if (!initiallyShowing) {
+	emit('closed');
+}
 
 function done() {
 	emit('done');

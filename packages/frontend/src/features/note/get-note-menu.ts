@@ -53,19 +53,7 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 								text: i18n.tsx.confirmToUnclipAlreadyClippedNote({ name: clip.name }),
 							});
 							if (!confirm.canceled) {
-								os.apiWithDialog('clips/remove-note', { clipId: clip.id, noteId: appearNote.id }).then(() => {
-									clipsCache.set(
-										clips.map((c) => {
-											if (c.id === clip.id) {
-												return {
-													...c,
-													notesCount: Math.max(0, (c.notesCount ?? 0) - 1),
-												};
-											}
-											return c;
-										}),
-									);
-								});
+								os.apiWithDialog('clips/remove-note', { clipId: clip.id, noteId: appearNote.id });
 							}
 						} else if (err.id === 'f0dba960-ff73-4615-8df4-d6ac5d9dc118') {
 							os.alert({
@@ -79,19 +67,7 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 							});
 						}
 					},
-				).then(() => {
-					clipsCache.set(
-						clips.map((c) => {
-							if (c.id === clip.id) {
-								return {
-									...c,
-									notesCount: (c.notesCount ?? 0) + 1,
-								};
-							}
-							return c;
-						}),
-					);
-				});
+				);
 			},
 		})),
 		{ type: 'divider' },
@@ -127,8 +103,6 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 					isPublic: result.isPublic,
 					...(result.description === undefined ? {} : { description: result.description }),
 				});
-
-				clipsCache.delete();
 
 				os.apiWithDialog('clips/add-note', { clipId: clip.id, noteId: appearNote.id });
 			},

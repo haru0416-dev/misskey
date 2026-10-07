@@ -7,6 +7,7 @@ import type * as Misskey from 'misskey-js';
 import type { QueryAccountId } from '@/query/keys.js';
 import { queryClient } from '@/query/client.js';
 import { isEndpointQuery, queryKeys } from '@/query/keys.js';
+import { fetchWithUpdates, invalidateQueries } from '@/query/updates.js';
 
 const QUERY_STALE_TIMES = {
 	meta: 1000 * 60 * 60,
@@ -27,9 +28,10 @@ export function fetchMisskeyQuery<T>(options: {
 	params: unknown;
 	queryFn: (signal: AbortSignal) => Promise<T>;
 }): Promise<T> {
+	const queryKey = [...queryKeys.endpointRoot(options.accountId, options.endpoint), options.params];
 	return queryClient.fetchQuery({
-		queryKey: [...queryKeys.endpointRoot(options.accountId, options.endpoint), options.params],
-		queryFn: ({ signal }) => options.queryFn(signal),
+		queryKey,
+		queryFn: ({ signal }) => fetchWithUpdates(queryKey, () => options.queryFn(signal)),
 		staleTime: QUERY_STALE_TIMES[options.endpoint],
 	});
 }
@@ -132,9 +134,9 @@ export function invalidateAfterMutation(
 		if (!matches) continue;
 		for (const target of rule.targets) {
 			if (rule.scope === 'allAccounts') {
-				void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, target) });
+				void invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, target) });
 			} else if (accountId !== undefined) {
-				void queryClient.invalidateQueries({ queryKey: queryKeys.endpointRoot(accountId, target) });
+				void invalidateQueries({ queryKey: queryKeys.endpointRoot(accountId, target) });
 			}
 		}
 	}

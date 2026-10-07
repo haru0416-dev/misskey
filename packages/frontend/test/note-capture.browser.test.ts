@@ -4,11 +4,17 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, nextTick } from 'vue';
 import { cleanup, render } from '@testing-library/vue';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type * as Misskey from 'misskey-js';
-import { applyEditedNote, noteRenderKey, subscribeNoteEdits, useNoteCapture } from '@/features/note/useNoteCapture.js';
+import {
+	applyEditedNote,
+	noteEvents,
+	noteRenderKey,
+	subscribeNoteEdits,
+	useNoteCapture,
+} from '@/features/note/useNoteCapture.js';
 import { useNoteEdits } from '@/features/note/useNoteEdits.js';
 import { globalEvents } from '@/events.js';
 
@@ -18,6 +24,7 @@ vi.mock('@/stream.js', () => ({ useStream: () => stream }));
 vi.mock('@/i.js', () => ({ $i: { id: 'me' } }));
 const { storeState } = vi.hoisted(() => ({ storeState: { realtimeMode: true } }));
 vi.mock('@/store.js', () => ({ store: storeState }));
+vi.mock('@/preferences.js', () => ({ prefer: { pollingInterval: 3 } }));
 const { misskeyApiMock } = vi.hoisted(() => ({ misskeyApiMock: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: misskeyApiMock }));
 // プラグイン (note_view_interruptor) が入っている状態を作る。
@@ -455,6 +462,232 @@ describe('useNoteEdits', () => {
 		} finally {
 			unmount();
 			for (const unsubscribe of unsubscribes) unsubscribe();
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test('late older edit responses cannot roll back nested rendered content or its version', async () => {
+		const first = Promise.withResolvers<Misskey.entities.Note>();
+		const second = Promise.withResolvers<Misskey.entities.Note>();
+		const old = {
+			id: 'ordered-edit',
+			text: 'initial',
+			createdAt: new Date().toISOString(),
+			fileIds: [],
+		} as unknown as Misskey.entities.Note;
+		const source = { ...outer, id: 'ordered-outer', renote: old } as Misskey.entities.Note;
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		const screen = render(
+			defineComponent({
+				setup() {
+					const nested = useNoteEdits(source, source, { subscribe: true });
+					return () => h('div', nested.quote.value?.text ?? '');
+				},
+			}),
+		);
+		stream.emit('noteUpdated', { id: old.id, type: 'edited', body: { updatedAt: '2026-01-01T00:00:00.000Z' } });
+		stream.emit('noteUpdated', { id: old.id, type: 'edited', body: { updatedAt: '2026-01-02T00:00:00.000Z' } });
+		second.resolve({ ...old, text: 'newer edit', updatedAt: '2026-01-02T00:00:00.000Z' });
+		await second.promise;
+		await nextTick();
+		expect(screen.getByText('newer edit')).toBeTruthy();
+		first.resolve({ ...old, text: 'older edit', updatedAt: '2026-01-01T00:00:00.000Z' });
+		await first.promise;
+		await nextTick();
+		expect(screen.getByText('newer edit')).toBeTruthy();
+		expect(screen.queryByText('older edit')).toBeNull();
+	});
+
+	test('partial success does not acknowledge an edit until the full note fetch succeeds', async () => {
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		let fullAttempts = 0;
+		const editedEvents = vi.fn();
+		globalEvents.on('noteEdited', editedEvents);
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockImplementation(async (endpoint: string) => {
+			if (endpoint === 'notes/show-partial-bulk') {
+				return [{ id: 'full-retry', updatedAt: '2026-01-06T00:00:00.000Z', reactions: {}, reactionEmojis: {} }];
+			}
+			fullAttempts++;
+			if (fullAttempts === 1) throw new TypeError('offline full note');
+			return { id: 'full-retry', text: 'recovered edit', updatedAt: '2026-01-06T00:00:00.000Z' };
+		});
+		const unsubscribe = subscribeNoteEdits({ id: 'full-retry', createdAt: new Date().toISOString() });
+		try {
+			await vi.advanceTimersByTimeAsync(60_000);
+			expect(editedEvents).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(60_000);
+			expect(editedEvents).toHaveBeenCalledWith(expect.objectContaining({ text: 'recovered edit' }));
+			await vi.advanceTimersByTimeAsync(120_000);
+			expect(fullAttempts).toBe(2);
+		} finally {
+			unsubscribe();
+			globalEvents.off('noteEdited', editedEvents);
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test.each(['reacted', 'unreacted'] as const)(
+		'a confirmed %s event survives its older polling snapshot',
+		async (event) => {
+			vi.useFakeTimers();
+			storeState.realtimeMode = false;
+			const held = Promise.withResolvers<Misskey.entities.NotesShowPartialBulkResponse>();
+			misskeyApiMock.mockReset();
+			misskeyApiMock.mockReturnValueOnce(held.promise);
+			const note = {
+				id: `reaction-race-${event}`,
+				createdAt: new Date().toISOString(),
+				reactions: event === 'unreacted' ? { '👍': 1 } : {},
+				reactionCount: event === 'unreacted' ? 1 : 0,
+				reactionEmojis: {},
+				myReaction: event === 'unreacted' ? '👍' : null,
+				poll: null,
+			} as unknown as Misskey.entities.Note;
+			const screen = render(
+				defineComponent({
+					setup() {
+						const { $note } = useNoteCapture({ note, parentNote: null });
+						return () => h('div', `${$note.myReaction ?? '-'}:${$note.reactions['👍'] ?? 0}:${$note.reactionCount}`);
+					},
+				}),
+			);
+			try {
+				await vi.advanceTimersByTimeAsync(10_000);
+				noteEvents.emit(`${event}:${note.id}`, { userId: 'me', reaction: '👍' });
+				held.resolve([{ id: note.id, reactions: note.reactions, reactionEmojis: {} }]);
+				await held.promise;
+				await nextTick();
+				expect(screen.getByText(event === 'reacted' ? '👍:1:1' : '-:0:0')).toBeTruthy();
+			} finally {
+				screen.unmount();
+				storeState.realtimeMode = true;
+				vi.useRealTimers();
+			}
+		},
+	);
+
+	test('offline reaction polling is consumed and the next cycle refreshes the rendered counts', async () => {
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		const note = {
+			id: 'reaction-offline',
+			createdAt: new Date().toISOString(),
+			reactions: {},
+			reactionCount: 0,
+			reactionEmojis: {},
+			myReaction: null,
+			poll: null,
+		} as unknown as Misskey.entities.Note;
+		misskeyApiMock.mockReset();
+		misskeyApiMock
+			.mockRejectedValueOnce(new TypeError('offline reactions'))
+			.mockResolvedValueOnce([{ id: note.id, reactions: { '👍': 2 }, reactionEmojis: {} }]);
+		const screen = render(
+			defineComponent({
+				setup() {
+					const { $note } = useNoteCapture({ note, parentNote: null });
+					return () => h('div', String($note.reactionCount));
+				},
+			}),
+		);
+		try {
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(screen.getByText('0')).toBeTruthy();
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(screen.getByText('2')).toBeTruthy();
+		} finally {
+			screen.unmount();
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test('an edit polling pass does not request later chunks after all those displays are removed', async () => {
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		const held = Promise.withResolvers<Misskey.entities.NotesShowPartialBulkResponse>();
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockReturnValueOnce(held.promise);
+		const unsubscribes = Array.from({ length: 201 }, (_, i) =>
+			subscribeNoteEdits({ id: `removed-chunk-${i}`, createdAt: new Date().toISOString() }),
+		);
+		try {
+			await vi.advanceTimersByTimeAsync(60_000);
+			for (const unsubscribe of unsubscribes) unsubscribe();
+			held.resolve([]);
+			await held.promise;
+			await vi.advanceTimersByTimeAsync(0);
+			expect(misskeyApiMock).toHaveBeenCalledTimes(1);
+			misskeyApiMock.mockResolvedValue([]);
+			const unsubscribe = subscribeNoteEdits({ id: 'resubscribed-chunk', createdAt: new Date().toISOString() });
+			await vi.advanceTimersByTimeAsync(60_000);
+			expect(misskeyApiMock.mock.lastCall?.[1]).toEqual({ noteIds: ['resubscribed-chunk'] });
+			unsubscribe();
+		} finally {
+			for (const unsubscribe of unsubscribes) unsubscribe();
+			storeState.realtimeMode = true;
+			vi.useRealTimers();
+		}
+	});
+
+	test('reaction polling selects newest eligible IDs and duplicate mounts refresh their expiry', async () => {
+		vi.useFakeTimers();
+		storeState.realtimeMode = false;
+		misskeyApiMock.mockReset();
+		misskeyApiMock.mockImplementation(async (_endpoint: string, params: { noteIds: string[] }) =>
+			params.noteIds.map((id) => ({ id, reactions: { '👍': 1 }, reactionEmojis: {} })),
+		);
+		const notes = Array.from(
+			{ length: 300 },
+			(_, i) =>
+				({
+					id: `selection-${String(i).padStart(4, '0')}`,
+					createdAt: new Date().toISOString(),
+					reactions: {},
+					reactionCount: 0,
+					reactionEmojis: {},
+					myReaction: null,
+					poll: null,
+				}) as unknown as Misskey.entities.Note,
+		);
+		const screen = render(
+			defineComponent({
+				setup() {
+					const captures = notes.map((note) => useNoteCapture({ note, parentNote: null }).$note);
+					return () => h('div', captures.filter((note) => note.reactionCount === 1).length);
+				},
+			}),
+		);
+		let duplicate: { unmount(): void } | undefined;
+		try {
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(misskeyApiMock.mock.lastCall?.[1]).toEqual({
+				noteIds: notes
+					.slice(-30)
+					.map((note) => note.id)
+					.reverse(),
+			});
+			expect(screen.getByText('30')).toBeTruthy();
+			await vi.advanceTimersByTimeAsync(280_000);
+			duplicate = render(
+				defineComponent({
+					setup() {
+						useNoteCapture({ note: notes[0]!, parentNote: null });
+						return () => h('span');
+					},
+				}),
+			);
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(misskeyApiMock.mock.lastCall?.[1]).toEqual({ noteIds: [notes[0]!.id] });
+			expect(screen.getByText('31')).toBeTruthy();
+		} finally {
+			duplicate?.unmount();
+			screen.unmount();
 			storeState.realtimeMode = true;
 			vi.useRealTimers();
 		}

@@ -51,7 +51,7 @@ const fetching = ref(true);
 const key = ref(0);
 
 const tick = () => {
-	misskeyApi('federation/instances', {
+	return misskeyApi('federation/instances', {
 		sort: '+latestRequestReceivedAt',
 		limit: 30,
 	}).then(res => {

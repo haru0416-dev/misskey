@@ -32,6 +32,7 @@ let resizeObserver: ResizeObserver | null = null;
 let intersectionObserver: IntersectionObserver | null = null;
 let stopAnimationWatch: (() => void) | null = null;
 let removeVisibilityListener: (() => void) | null = null;
+let releaseGpuResources: (() => void) | null = null;
 
 onMounted(() => {
 	const canvas = canvasEl.value!;
@@ -55,10 +56,18 @@ onMounted(() => {
 	const positionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-	const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
-	if (shaderProgram == null) {
-		return;
+	let shaderProgram: WebGLProgram;
+	try {
+		shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
+	} catch (error) {
+		gl.deleteBuffer(positionBuffer);
+		throw error;
 	}
+	releaseGpuResources = () => {
+		gl.useProgram(null);
+		gl.deleteBuffer(positionBuffer);
+		gl.deleteProgram(shaderProgram);
+	};
 
 	gl.useProgram(shaderProgram);
 	const u_resolution = gl.getUniformLocation(shaderProgram, 'u_resolution');
@@ -184,5 +193,7 @@ onUnmounted(() => {
 	stopAnimationWatch = null;
 	removeVisibilityListener?.();
 	removeVisibilityListener = null;
+	releaseGpuResources?.();
+	releaseGpuResources = null;
 });
 </script>

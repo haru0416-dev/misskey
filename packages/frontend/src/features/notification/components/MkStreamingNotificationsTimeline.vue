@@ -122,11 +122,7 @@ const POLLING_INTERVAL =
 
 if (!store.realtimeMode) {
 	useInterval(
-		async () => {
-			paginator.fetchNewer({
-				toQueue: false,
-			});
-		},
+		() => paginator.fetchNewer({ toQueue: false }),
 		POLLING_INTERVAL,
 		{
 			immediate: false,
@@ -250,6 +246,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+	paginator.dispose();
 	if (connection) {
 		connection.dispose();
 	}

@@ -43,6 +43,7 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 	let pendingRequest: AbortController | null = null;
 
 	const tick = () => {
+		if (!active) return;
 		pendingRequest?.abort();
 		pendingRequest = null;
 		if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) {
@@ -86,7 +87,11 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 		if (active) scheduler.start(true);
 	};
 
-	watch(fetchEndpoint, tick);
+	watch(fetchEndpoint, () => {
+		pendingRequest?.abort();
+		pendingRequest = null;
+		restartScheduler();
+	});
 	watch(() => widgetProps.refreshIntervalSec, restartScheduler);
 
 	onMounted(() => {

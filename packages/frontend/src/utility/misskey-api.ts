@@ -24,6 +24,18 @@ type OptionalEndpoint = {
 	[E in keyof Misskey.Endpoints]: Misskey.Endpoints[E] extends { reqOptional: true } ? E : never;
 }[keyof Misskey.Endpoints];
 
+export class APIResponseError extends Error {
+	public override readonly name = 'APIResponseError';
+
+	constructor(
+		public readonly endpoint: keyof Misskey.Endpoints,
+		public readonly status: number,
+		public readonly body: unknown,
+	) {
+		super(`Invalid API response (${status}, ${endpoint})`, { cause: body });
+	}
+}
+
 function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
 	method: 'GET' | 'POST',
 	endpoint: E,
@@ -53,8 +65,8 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 			if (status === 200 || status === 204) {
 				return body as _ResT;
 			}
-			// 構造化されたエラーは APIError に、それ以外は不正な本文を成功や別の API エラーに変換せずそのまま投げる。
-			throw Misskey.api.parseAPIError(endpoint, status, body) ?? (body as { error: unknown }).error;
+			// 不正な本文も保持し、null や文字列が catch 側のエラー表示を壊さないよう Error として返す。
+			throw Misskey.api.parseAPIError(endpoint, status, body) ?? new APIResponseError(endpoint, status, body);
 		});
 
 	promise.then(onFinally, onFinally);
@@ -99,7 +111,7 @@ export function prepareMisskeyApiRequest<
 	}
 	const accountId = $i?.id ?? null;
 	const accountToken = $i?.token;
-	const requestToken = token !== undefined ? token : (accountToken ?? data.i);
+	const requestToken = token !== undefined ? token : data.i !== undefined ? data.i : accountToken;
 	const requestAccountId = requestToken == null ? null : requestToken === accountToken ? accountId : undefined;
 	if (token === undefined && data.i === undefined && signal == null && isCachedEndpoint(endpoint)) {
 		return {

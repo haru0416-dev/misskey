@@ -23,7 +23,13 @@ function loadShader(gl: WebGL2RenderingContext, type: GLenum, source: string): W
 
 export function initShaderProgram(gl: WebGL2RenderingContext, vsSource: string, fsSource: string): WebGLProgram {
 	const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-	const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+	let fragmentShader: WebGLShader;
+	try {
+		fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+	} catch (error) {
+		gl.deleteShader(vertexShader);
+		throw error;
+	}
 
 	const shaderProgram = gl.createProgram();
 	if (shaderProgram == null) {

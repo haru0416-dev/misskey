@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-if="i > 0" :class="$style.tabBorder"></div>
 			<div :class="$style.tabContent" class="_pageContainer" @click.stop="">
 				<Suspense :timeout="0">
-					<component :is="tab.component" v-bind="Object.fromEntries(tab.props)"/>
+					<RouteScope :component="tab.component" :pageProps="tab.pageProps" :router="router" :active="i === tabs.length - 1"/>
 
 					<template #fallback>
 						<MkLoading/>
@@ -47,6 +47,7 @@ import { prefer } from '@/preferences.js';
 import MkLoadingPage from '@/pages/loading.vue';
 import { DI } from '@/di.js';
 import { deepEqual } from '@/utility/deep-equal.js';
+import RouteScope from './RouteScope.vue';
 
 const props = defineProps<{
 	router?: Router;
@@ -67,6 +68,7 @@ const tabs = shallowRef([
 		routePath: router.current.route.path,
 		component: 'component' in router.current.route ? router.current.route.component : MkLoadingPage,
 		props: router.current.props,
+		pageProps: Object.fromEntries(router.current.props),
 	},
 ]);
 
@@ -86,7 +88,6 @@ function back() {
 	if (prev == null) {
 		return;
 	}
-	tabs.value = tabs.value.slice(0, -1);
 	router?.replaceByPath(prev.fullPath);
 }
 
@@ -126,6 +127,7 @@ router.useListener('change', ({ resolved }) => {
 						routePath,
 						component: resolved.route.component,
 						props: resolved.props,
+						pageProps: Object.fromEntries(resolved.props),
 					},
 				]
 			: [
@@ -135,6 +137,7 @@ router.useListener('change', ({ resolved }) => {
 						routePath,
 						component: resolved.route.component,
 						props: resolved.props,
+						pageProps: Object.fromEntries(resolved.props),
 					},
 				];
 });

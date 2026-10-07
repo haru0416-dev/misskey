@@ -105,7 +105,19 @@ export function parseLocalDraft(raw: unknown): Partial<PostFormFields> | null {
 	if (Array.isArray(data['files'])) {
 		fields.files = data['files'].filter(isJsonObject) as Misskey.entities.DriveFile[];
 	}
-	if (isJsonObject(data['poll'])) {
+	if (data['poll'] === null) {
+		fields.poll = null;
+	} else if (
+		isJsonObject(data['poll']) &&
+		isStringArray(data['poll']['choices']) &&
+		typeof data['poll']['multiple'] === 'boolean' &&
+		(data['poll']['expiresAt'] === null ||
+			(typeof data['poll']['expiresAt'] === 'number' &&
+				Number.isFinite(data['poll']['expiresAt']) &&
+				!Number.isNaN(new Date(data['poll']['expiresAt']).getTime()))) &&
+		(data['poll']['expiredAfter'] === null ||
+			(typeof data['poll']['expiredAfter'] === 'number' && Number.isFinite(data['poll']['expiredAfter'])))
+	) {
 		fields.poll = data['poll'] as PollEditorModelValue;
 	}
 	if (isStringArray(data['visibleUserIds'])) {

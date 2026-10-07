@@ -77,9 +77,9 @@ export class SnowfallEffect {
 	private FRAGMENT_SOURCE = fragmentSource;
 
 	private gl: WebGLRenderingContext;
-	private program: WebGLProgram;
+	private program!: WebGLProgram;
 	private canvas: HTMLCanvasElement;
-	private buffers: Record<
+	private buffers!: Record<
 		string,
 		{
 			size: number;
@@ -96,7 +96,7 @@ export class SnowfallEffect {
 			location: WebGLUniformLocation;
 		}
 	>;
-	private texture: WebGLTexture;
+	private texture!: WebGLTexture;
 	private camera: {
 		fov: number;
 		near: number;
@@ -113,6 +113,8 @@ export class SnowfallEffect {
 		easing: number;
 	};
 	private animationScheduler: SnowfallAnimationScheduler;
+	private disposed = false;
+	private windStepRemaining = 0;
 
 	private density: number = 1 / 90;
 	private depth = 100;
@@ -193,20 +195,27 @@ export class SnowfallEffect {
 			throw new Error('Failed to get WebGL context');
 		}
 
-		window.document.body.append(canvas);
-
 		this.canvas = canvas;
 		this.gl = gl;
-		this.program = this.initProgram();
-		this.buffers = this.initBuffers();
-		this.uniforms = this.initUniforms();
-		this.texture = this.initTexture();
-		this.camera = this.initCamera();
-		this.wind = this.initWind();
-
-		this.update = this.update.bind(this);
-		this.animationScheduler = new SnowfallAnimationScheduler(this.update);
-
+		try {
+			this.program = this.initProgram();
+			this.buffers = this.initBuffers();
+			this.uniforms = this.initUniforms();
+			this.texture = this.initTexture();
+			this.camera = this.initCamera();
+			this.wind = this.initWind();
+			this.update = this.update.bind(this);
+			this.animationScheduler = new SnowfallAnimationScheduler(this.update);
+		} catch (error) {
+			gl.useProgram(null);
+			for (const buffer of Object.values(this.buffers ?? {})) {
+				if (buffer.ref) gl.deleteBuffer(buffer.ref);
+			}
+			if (this.texture) gl.deleteTexture(this.texture);
+			if (this.program) gl.deleteProgram(this.program);
+			throw error;
+		}
+		window.document.body.append(canvas);
 		window.addEventListener('resize', this.handleResize);
 	}
 
@@ -256,7 +265,13 @@ export class SnowfallEffect {
 	private initProgram(): WebGLProgram {
 		const { gl } = this;
 		const vertex = this.initShader(gl.VERTEX_SHADER, this.VERTEX_SOURCE);
-		const fragment = this.initShader(gl.FRAGMENT_SHADER, this.FRAGMENT_SOURCE);
+		let fragment: WebGLShader;
+		try {
+			fragment = this.initShader(gl.FRAGMENT_SHADER, this.FRAGMENT_SOURCE);
+		} catch (error) {
+			gl.deleteShader(vertex);
+			throw error;
+		}
 		const program = gl.createProgram();
 		if (program == null) {
 			gl.deleteShader(vertex);
@@ -282,10 +297,13 @@ export class SnowfallEffect {
 	private initBuffers(): SnowfallEffect['buffers'] {
 		const { gl, program } = this;
 		const buffers = this.INITIAL_BUFFERS() as unknown as SnowfallEffect['buffers'];
+		this.buffers = buffers;
 
 		for (const [name, buffer] of Object.entries(buffers)) {
 			buffer.location = gl.getAttribLocation(program, `a_${name}`);
-			buffer.ref = gl.createBuffer()!;
+			const ref = gl.createBuffer();
+			if (ref == null) throw new Error('Failed to create buffer');
+			buffer.ref = ref;
 
 			gl.bindBuffer(gl.ARRAY_BUFFER, buffer.ref);
 			gl.enableVertexAttribArray(buffer.location);
@@ -363,11 +381,13 @@ export class SnowfallEffect {
 			throw new Error('Failed to create texture');
 		}
 		const image = new Image();
+		this.texture = texture;
 
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
 
 		image.onload = () => {
+			if (this.disposed) return;
 			gl.bindTexture(gl.TEXTURE_2D, texture);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -381,7 +401,7 @@ export class SnowfallEffect {
 		return texture;
 	}
 
-	private initSnowflakes(vw: number, vh: number, dpi: number) {
+	private initSnowflakes(vw: number, vh: number, dpi: number, preserveParticles = false) {
 		const position: number[] = [];
 		const color: number[] = [];
 		const size: number[] = [];
@@ -393,19 +413,30 @@ export class SnowfallEffect {
 		const depth = this.depth;
 		const count = this.count;
 		const length = (vw / vh) * count;
+		const previousWidth = (this.uniforms['worldSize']!.value as number[])[0]!;
+		const previous = this.buffers;
+		const retained = preserveParticles ? previous['position']!.value.length / 3 : 0;
 
 		for (let i = 0; i < length; ++i) {
-			position.push(
-				-width + Math.random() * width * 2,
-				-height + Math.random() * height * 2,
-				Math.random() * depth * 2,
-			);
-
-			speed.push(1 + Math.random(), 1 + Math.random(), Math.random() * 10);
-
-			rotation.push(Math.random() * 2 * Math.PI, Math.random() * 20, Math.random() * 10);
-
-			color.push(...this.color, 0.1 + Math.random() * this.opacity);
+			if (i < retained) {
+				// 全 attribute を同じ粒子数で作るため、保持する index は各 buffer の範囲内になる。
+				const oldPosition = previous['position']!.value;
+				position.push((oldPosition[i * 3]! * width) / previousWidth, oldPosition[i * 3 + 1]!, oldPosition[i * 3 + 2]!);
+				for (let j = 0; j < 3; j++) {
+					speed.push(previous['speed']!.value[i * 3 + j]!);
+					rotation.push(previous['rotation']!.value[i * 3 + j]!);
+				}
+				for (let j = 0; j < 4; j++) color.push(previous['color']!.value[i * 4 + j]!);
+			} else {
+				position.push(
+					-width + Math.random() * width * 2,
+					-height + Math.random() * height * 2,
+					Math.random() * depth * 2,
+				);
+				speed.push(1 + Math.random(), 1 + Math.random(), Math.random() * 10);
+				rotation.push(Math.random() * 2 * Math.PI, Math.random() * 20, Math.random() * 10);
+				color.push(...this.color, 0.1 + Math.random() * this.opacity);
+			}
 			size.push((this.size * vh * dpi) / 1000);
 		}
 
@@ -456,6 +487,8 @@ export class SnowfallEffect {
 
 	public dispose(): void {
 		this.animationScheduler.dispose();
+		this.gl.useProgram(null);
+		this.disposed = true;
 		window.removeEventListener('resize', this.handleResize);
 		for (const buffer of Object.values(this.buffers)) {
 			this.gl.deleteBuffer(buffer.ref);
@@ -478,9 +511,7 @@ export class SnowfallEffect {
 		gl.viewport(0, 0, vw * dpi, vh * dpi);
 		gl.clearColor(0, 0, 0, 0);
 
-		if (updateSnowflakes === true) {
-			this.initSnowflakes(vw, vh, dpi);
-		}
+		this.initSnowflakes(vw, vh, dpi, !updateSnowflakes);
 
 		this.setUniform('projection', this.setProjection(aspect));
 	}
@@ -496,12 +527,21 @@ export class SnowfallEffect {
 		gl.clear(gl.COLOR_BUFFER_BIT);
 		gl.drawArrays(gl.POINTS, 0, positionBuffer.value.length / positionBuffer.size);
 
-		if (Math.random() > 0.995) {
-			wind.target = (wind.min + Math.random() * (wind.max - wind.min)) * (Math.random() > 0.5 ? -1 : 1);
+		// 風の確率過程と補間は 60 Hz の経過時間で進め、描画頻度には依存させない。
+		let remaining = delta;
+		while (remaining > 1e-8) {
+			if (this.windStepRemaining <= 1e-8) {
+				if (Math.random() > 0.995) {
+					wind.target = (wind.min + Math.random() * (wind.max - wind.min)) * (Math.random() > 0.5 ? -1 : 1);
+				}
+				wind.force += (wind.target - wind.force) * wind.easing;
+				this.windStepRemaining = 1000 / 60;
+			}
+			const step = Math.min(remaining, this.windStepRemaining);
+			wind.current += wind.force * (step * 0.2);
+			remaining -= step;
+			this.windStepRemaining -= step;
 		}
-
-		wind.force += (wind.target - wind.force) * wind.easing;
-		wind.current += wind.force * (delta * 0.2);
 
 		this.setUniform('wind', wind.current);
 		this.setUniform('time', elapsed);

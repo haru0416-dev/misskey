@@ -67,7 +67,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onActivated, onDeactivated, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import tinycolor from 'tinycolor2';
 import { themeManager } from '@/theme.js';
 import { ClockScheduler } from '@/utility/clock-scheduler.js';
@@ -134,6 +134,38 @@ const sAngle = ref<number>(0);
 const disableSAnimate = ref(false);
 let sOneRound = false;
 const sLine = ref<SVGPathElement>();
+let transitionElement: SVGPathElement | null = null;
+let resetFrame: number | null = null;
+let resumeFrame: number | null = null;
+
+function clearRollover() {
+	transitionElement?.removeEventListener('transitionend', finishRollover);
+	transitionElement?.removeEventListener('transitioncancel', finishRollover);
+	transitionElement = null;
+	if (resetFrame != null) window.cancelAnimationFrame(resetFrame);
+	if (resumeFrame != null) window.cancelAnimationFrame(resumeFrame);
+	resetFrame = null;
+	resumeFrame = null;
+}
+
+function finishRollover(event?: TransitionEvent) {
+	if (event && (event.target !== transitionElement || event.propertyName !== 'transform')) return;
+	clearRollover();
+	disableSAnimate.value = true;
+	resetFrame = window.requestAnimationFrame(() => {
+		resetFrame = null;
+		sAngle.value = (Math.PI * s.value) / 30;
+		resumeFrame = window.requestAnimationFrame(() => {
+			resumeFrame = null;
+			disableSAnimate.value = false;
+			if (enabled) clockScheduler.resume();
+		});
+	});
+}
+
+watch(() => props.sAnimation, (animation) => {
+	if (animation === 'none' && transitionElement) finishRollover();
+});
 
 function tick(): number | null {
 	const now = props.now();
@@ -155,22 +187,9 @@ function tick(): number | null {
 	if (sOneRound && sLine.value && props.sAnimation !== 'none') {
 		// 59 秒から 0 秒への遷移でも秒針の回転方向を維持する。
 		sAngle.value = (Math.PI * 60) / 30;
-		sLine.value.addEventListener(
-			'transitionend',
-			() => {
-				disableSAnimate.value = true;
-				requestAnimationFrame(() => {
-					sAngle.value = 0;
-					requestAnimationFrame(() => {
-						disableSAnimate.value = false;
-						if (enabled) {
-							clockScheduler.resume();
-						}
-					});
-				});
-			},
-			{ once: true },
-		);
+		transitionElement = sLine.value;
+		transitionElement.addEventListener('transitionend', finishRollover);
+		transitionElement.addEventListener('transitioncancel', finishRollover);
 		sOneRound = false;
 		return null;
 	}
@@ -201,8 +220,22 @@ onMounted(() => {
 	themeManager.on('themeChanged', calcColors);
 });
 
+onActivated(() => {
+	enabled = true;
+	clockScheduler.start();
+});
+
+onDeactivated(() => {
+	enabled = false;
+	clearRollover();
+	disableSAnimate.value = false;
+	sAngle.value = (Math.PI * s.value) / 30;
+	clockScheduler.stop();
+});
+
 onBeforeUnmount(() => {
 	enabled = false;
+	clearRollover();
 	clockScheduler.stop();
 	themeManager.off('themeChanged', calcColors);
 });

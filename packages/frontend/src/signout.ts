@@ -11,6 +11,7 @@ import { unisonReload } from '@/utility/unison-reload.js';
 import { clear } from '@/utility/idb-proxy.js';
 import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
+import { disposePreferences } from '@/preferences.js';
 
 export async function signout() {
 	if (!$i) {
@@ -18,6 +19,7 @@ export async function signout() {
 	}
 
 	waiting();
+	await Promise.all([store.$persistDispose(), disposePreferences()]);
 
 	if (store.enablePreferencesAutoCloudBackup) {
 		// バックアップは送れれば送るだけで、失敗 (トークン失効・通信の失敗・名前の無いプロファイル) でも
@@ -31,16 +33,20 @@ export async function signout() {
 	const idbAbortController = new AbortController();
 	const timeout = window.setTimeout(() => idbAbortController.abort(), 5000);
 
-	const idbPromises = ['MisskeyClient'].map(
-		(name, i, arr) =>
-			new Promise<void>((res, rej) => {
-				const delidb = indexedDB.deleteDatabase(name);
-				delidb.onsuccess = () => res();
-				delidb.onerror = (e) => rej(e);
-				delidb.onblocked = () => idbAbortController.signal.aborted && rej(new Error('Operation aborted'));
-			}),
-	);
+	const idbPromises = ['MisskeyClient'].map((name) => {
+		const deletion = Promise.withResolvers<void>();
+		const request = indexedDB.deleteDatabase(name);
+		request.onsuccess = () => deletion.resolve();
+		request.onerror = () => deletion.reject(request.error);
+		request.onblocked = () => {
+			if (idbAbortController.signal.aborted) deletion.reject(new Error('Operation aborted'));
+		};
+		return deletion.promise;
+	});
 
+	const timedOut = Promise.withResolvers<never>();
+	const rejectTimeout = () => timedOut.reject(new Error('Operation timed out'));
+	idbAbortController.signal.addEventListener('abort', rejectTimeout);
 	try {
 		await Promise.race([
 			Promise.all([
@@ -48,14 +54,13 @@ export async function signout() {
 				// idb keyval-storeはidb-keyvalライブラリによる別管理
 				clear(),
 			]),
-			new Promise((_, rej) =>
-				idbAbortController.signal.addEventListener('abort', () => rej(new Error('Operation timed out'))),
-			),
+			timedOut.promise,
 		]);
 	} catch {
 		// IndexedDB の削除失敗でもサインアウト処理を継続する。
 	} finally {
 		window.clearTimeout(timeout);
+		idbAbortController.signal.removeEventListener('abort', rejectTimeout);
 	}
 
 	//#region Service Worker の登録解除
@@ -85,5 +90,5 @@ export async function signout() {
 	}
 	//#endregion
 
-	unisonReload('/');
+	await unisonReload('/');
 }

@@ -15,7 +15,6 @@ export type Keys =
 	| 'modifiedVersionMustProminentlyOfferInAgplV3Section13Read'
 	| 'lastUsed'
 	| 'lang'
-	| 'drafts'
 	| 'hashtags'
 	| 'colorScheme'
 	| 'useSystemFont'
@@ -30,8 +29,6 @@ export type Keys =
 	| 'chatMessageDrafts'
 	| 'scratchpad'
 	| 'debug'
-	| 'preferences'
-	| 'latestPreferencesUpdate'
 	| 'hidePreferencesRestoreSuggestion'
 	| 'isSafeMode'
 	| `miux:${string}`

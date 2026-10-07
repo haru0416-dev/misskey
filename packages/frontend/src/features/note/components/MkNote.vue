@@ -289,6 +289,7 @@ const emit = defineEmits<{
 const inTimeline = inject<boolean>('inTimeline', false);
 const tl_withSensitive = inject<Ref<boolean>>('tl_withSensitive', ref(true));
 const inChannel = inject(DI.inChannel, null);
+const tooltipRouteActive = inject(DI.routeActive, ref(true));
 const currentClip = inject<Ref<Misskey.entities.Clip> | null>('currentClip', null);
 const currentAntenna = inject<Ref<Misskey.entities.Antenna | null> | null>('currentAntenna', null);
 
@@ -478,6 +479,7 @@ provide(DI.mfmEmojiReactCallback, (reaction) => {
 
 if (!props.mock) {
 	useTooltip(renoteButton, async (showing) => {
+		const anchorElement = renoteButton.value;
 		const [renotes, MkUsersTooltip] = await Promise.all([
 			misskeyApi('notes/renotes', {
 				noteId: appearNote.id,
@@ -485,10 +487,13 @@ if (!props.mock) {
 			}),
 			import('@/features/user/components/MkUsersTooltip.vue').then((x) => x.default),
 		]);
+		if (!showing.value || !tooltipRouteActive.value || anchorElement == null || !anchorElement.isConnected || renoteButton.value !== anchorElement) {
+			return;
+		}
 
 		const users = renotes.map((x) => x.user);
 
-		if (users.length < 1 || renoteButton.value == null) {
+		if (users.length < 1) {
 			return;
 		}
 
@@ -498,7 +503,7 @@ if (!props.mock) {
 				showing,
 				users,
 				count: appearNote.renoteCount,
-				anchorElement: renoteButton.value,
+				anchorElement,
 			},
 			{
 				closed: () => dispose(),
@@ -508,6 +513,7 @@ if (!props.mock) {
 
 	if (appearNote.reactionAcceptance === 'likeOnly') {
 		useTooltip(reactButton, async (showing) => {
+			const anchorElement = reactButton.value;
 			const [reactions, MkReactionsViewerDetails] = await Promise.all([
 				misskeyApiGet('notes/reactions', {
 					noteId: appearNote.id,
@@ -516,6 +522,9 @@ if (!props.mock) {
 				}),
 				import('@/features/note/components/MkReactionsViewer.Details.vue').then((x) => x.default),
 			]);
+			if (!showing.value || !tooltipRouteActive.value || anchorElement == null || !anchorElement.isConnected || reactButton.value !== anchorElement) {
+				return;
+			}
 
 			const users = reactions.map((x) => x.user);
 
@@ -530,7 +539,7 @@ if (!props.mock) {
 					reaction: '❤️',
 					users,
 					count: $appearNote.reactionCount,
-					anchorElement: reactButton.value!,
+					anchorElement,
 				},
 				{
 					closed: () => dispose(),

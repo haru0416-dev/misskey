@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/vue';
-import { defineComponent } from 'vue';
+import { defineComponent, nextTick, ref } from 'vue';
 
 const { alertMock, popupMock } = vi.hoisted(() => ({
 	alertMock: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock('@/os.js', () => ({
 }));
 
 import { tooltipDirective } from '@/directives/tooltip.js';
+import { DI } from '@/di.js';
 
 const global = {
 	directives: {
@@ -144,5 +145,24 @@ describe('tooltipDirective', () => {
 		await result.rerender({ text: 'Second' });
 		await fireEvent.click(target);
 		expect(alertMock.mock.calls[1]?.[0].text).toBe('Second');
+	});
+
+	test('clears an active description and cancels a connected background route hover', async () => {
+		vi.useFakeTimers();
+		const active = ref(true);
+		const Component = defineComponent({ template: '<button v-tooltip="\'Tooltip\'">Target</button>' });
+		const result = render(Component, { global: { ...global, provide: { [DI.routeActive as symbol]: active } } });
+		const source = result.getByRole('button', { name: 'Target' });
+		await fireEvent.mouseEnter(source);
+		await vi.advanceTimersByTimeAsync(100);
+		const showing = popupMock.mock.calls[0]![1].showing;
+		expect(source.getAttribute('aria-describedby')).not.toBeNull();
+		active.value = false;
+		await nextTick();
+		expect(source.getAttribute('aria-describedby')).toBeNull();
+		expect(showing.value).toBe(false);
+		await fireEvent.mouseEnter(source);
+		await vi.advanceTimersByTimeAsync(100);
+		expect(popupMock).toHaveBeenCalledOnce();
 	});
 });

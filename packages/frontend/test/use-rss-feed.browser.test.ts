@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
-import { defineComponent, h, nextTick, reactive } from 'vue';
+import { defineComponent, h, KeepAlive, nextTick, reactive, ref } from 'vue';
 import { resetFetchMocks } from './fixtures.js';
 import { useRssFeed } from '@/widgets/use-rss-feed.js';
 
@@ -140,5 +140,94 @@ describe('useRssFeed', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	test('defers URL changes while cached and fetches the latest URL on activation', async () => {
+		const widgetProps = reactive({ url: 'https://example.com/first', refreshIntervalSec: 60 });
+		const active = ref(true);
+		const onFetched = vi.fn();
+		let feed!: Feed;
+		const Child = defineComponent({
+			setup() {
+				feed = useRssFeed(widgetProps, onFetched);
+				return () => h('div');
+			},
+		});
+		for (let i = 0; i < 2; i++) {
+			fetchMock.mockOnceIf(
+				(req) => new URL(req.url).pathname === '/api/fetch-rss',
+				() => ({ status: 200, body: JSON.stringify({ items: [] }) }),
+			);
+		}
+		render(
+			defineComponent({
+				setup: () => () => h(KeepAlive, null, { default: () => (active.value ? h(Child) : null) }),
+			}),
+		);
+		await flush(() => feed);
+		active.value = false;
+		await nextTick();
+		widgetProps.url = 'https://example.com/latest';
+		widgetProps.refreshIntervalSec = 30;
+		await nextTick();
+		expect(fetchRssRequests()).toHaveLength(1);
+		expect(onFetched).toHaveBeenCalledTimes(1);
+
+		active.value = true;
+		await nextTick();
+		await vi.waitFor(() => expect(onFetched).toHaveBeenCalledTimes(2));
+		expect(fetchRssRequests().at(-1)!.searchParams.get('url')).toBe('https://example.com/latest');
+	});
+
+	test('invalidates a pending old URL without fetching offscreen or blocking activation', async () => {
+		const widgetProps = reactive({ url: 'https://example.com/old', refreshIntervalSec: 60 });
+		const active = ref(true);
+		const old = Promise.withResolvers<Response>();
+		const fetched = Promise.withResolvers<void>();
+		const onFetched = vi.fn(() => fetched.resolve());
+		let oldSignal: AbortSignal | undefined;
+		let feed!: Feed;
+		const fetch = vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
+			if (new URL(String(input)).searchParams.get('url') === widgetProps.url && widgetProps.url.endsWith('/old')) {
+				oldSignal = init?.signal ?? undefined;
+				return old.promise;
+			}
+			return Promise.resolve(
+				new Response(
+					JSON.stringify({
+						items: [{ title: 'latest entry', link: 'https://example.com/latest' }],
+					}),
+				),
+			);
+		});
+		const Child = defineComponent({
+			setup() {
+				feed = useRssFeed(widgetProps, onFetched);
+				return () => h('div');
+			},
+		});
+		render(
+			defineComponent({
+				setup: () => () => h(KeepAlive, null, { default: () => (active.value ? h(Child) : null) }),
+			}),
+		);
+		active.value = false;
+		await nextTick();
+		widgetProps.url = 'https://example.com/latest';
+		await nextTick();
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(oldSignal?.aborted).toBe(true);
+
+		active.value = true;
+		await nextTick();
+		await fetched.promise;
+		expect(fetch).toHaveBeenCalledTimes(2);
+		expect(feed.rawItems.value[0]!.title).toBe('latest entry');
+		old.resolve(new Response(JSON.stringify({ items: [{ title: 'old entry', link: 'https://example.com/old' }] })));
+		const frame = Promise.withResolvers<void>();
+		window.requestAnimationFrame(() => frame.resolve());
+		await frame.promise;
+		expect(feed.rawItems.value[0]!.title).toBe('latest entry');
+		expect(onFetched).toHaveBeenCalledTimes(1);
 	});
 });

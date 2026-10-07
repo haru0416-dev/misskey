@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { markRaw } from 'vue';
-import { MutationType } from 'pinia';
+import { markRaw, watch } from 'vue';
 import type { PiniaPlugin, StateTree, StoreGeneric } from 'pinia';
 import type { Cloneable } from '@/utility/clone.js';
 import { deepClone } from '@/utility/clone.js';
@@ -32,8 +31,8 @@ export type PersistedStateChannel = {
 export type PersistedStateIo = {
 	sourceId: string;
 	currentAccountId: () => string | null;
+	isCurrent?: () => boolean;
 	get: (key: string) => Promise<unknown>;
-	set: (key: string, value: unknown) => Promise<void>;
 	update: (key: string, updater: (value: unknown) => unknown) => Promise<void>;
 	loadAccount: (namespace: string) => Promise<Record<string, unknown>>;
 	saveAccount: (namespace: string, key: string, value: unknown) => Promise<void>;
@@ -45,7 +44,7 @@ export type PersistedStateApi = {
 	$persistReady: Promise<void>;
 	$persistLoaded: Promise<void>;
 	$persistFlush: () => Promise<void>;
-	$persistDispose: () => void;
+	$persistDispose: () => Promise<void>;
 };
 
 declare module 'pinia' {
@@ -57,7 +56,7 @@ declare module 'pinia' {
 		$persistReady: Promise<void>;
 		$persistLoaded: Promise<void>;
 		$persistFlush(): Promise<void>;
-		$persistDispose(): void;
+		$persistDispose(): Promise<void>;
 	}
 }
 
@@ -75,6 +74,11 @@ type PersistedStateChannelMessage = {
 };
 
 type PersistedStamp = PersistedStateChannelMessage['stamp'];
+
+type PersistedWrite = {
+	value: unknown;
+	stamp: PersistedStamp;
+};
 
 const controllers = new WeakMap<StoreGeneric, PersistedStateController>();
 
@@ -152,13 +156,16 @@ class PersistedStateController {
 	private readonly dirtyAccountKeys = new Set<string>();
 	private readonly channel: PersistedStateChannel | null;
 	private readonly channelListener: (event: MessageEvent<unknown>) => void;
-	private pendingWrites = new Map<string, unknown>();
+	private pendingWrites = new Map<string, PersistedWrite>();
+	private readonly failedWrites = new Map<string, PersistedWrite>();
+	private readonly latestWrites = new Map<string, PersistedWrite>();
 	private scheduledFlush: Promise<void> | null = null;
 	private currentJob: Promise<void> = Promise.resolve();
 	private stopSubscription: (() => void) | null = null;
 	private applyingExternalState = false;
 	private lastLocalStampTime = 0;
 	private disposed = false;
+	private disposal: Promise<void> | null = null;
 	private readonly accountId: string | null;
 
 	public readonly ready: Promise<void>;
@@ -202,15 +209,19 @@ class PersistedStateController {
 
 	private async initialize(): Promise<void> {
 		const accountId = this.accountId;
-		const [deviceStateRaw, deviceAccountStateRaw, registryCacheRaw] = await Promise.all([
+		const [deviceStateRaw, deviceAccountStateRaw, registryCacheRaw] = await Promise.allSettled([
 			this.io.get(this.deviceStateKeyName),
 			accountId == null ? Promise.resolve({}) : this.io.get(this.deviceAccountStateKeyName),
 			accountId == null ? Promise.resolve({}) : this.io.get(this.registryCacheKeyName),
 		]);
+		if (deviceStateRaw.status === 'rejected') throw deviceStateRaw.reason;
+		if (deviceAccountStateRaw.status === 'rejected') throw deviceAccountStateRaw.reason;
+		if (registryCacheRaw.status === 'rejected') throw registryCacheRaw.reason;
 		if (this.disposed) return;
-		const deviceState = toRecord(deviceStateRaw);
-		const deviceAccountState = toRecord(deviceAccountStateRaw);
-		const registryCache = toRecord(registryCacheRaw);
+		this.assertCurrentOwner();
+		const deviceState = toRecord(deviceStateRaw.value);
+		const deviceAccountState = toRecord(deviceAccountStateRaw.value);
+		const registryCache = toRecord(registryCacheRaw.value);
 		const patch: StateTree = {};
 
 		for (const [key, property] of Object.entries(this.definition.properties)) {
@@ -230,25 +241,34 @@ class PersistedStateController {
 
 		this.applyPatch(patch);
 		this.channel?.addEventListener('message', this.channelListener);
-		this.stopSubscription = this.store.$subscribe(
-			(mutation) => {
-				if (this.applyingExternalState || this.disposed) {
-					return;
-				}
-				this.captureChanges(mutation.type === MutationType.patchObject ? Object.keys(mutation.payload) : undefined);
-			},
-			{ detached: true, flush: 'sync' },
-		);
+		// 同期監視で外部適用の抑止を共有し、深い変更も対象のプロパティだけ比較する。
+		const stops: (() => void)[] = [];
+		for (const [key, property] of Object.entries(this.definition.properties)) {
+			if (property == null) continue;
+			stops.push(
+				watch(
+					() => this.store.$state[key],
+					() => {
+						if (!this.applyingExternalState && !this.disposed) this.captureChange(key);
+					},
+					{ deep: true, flush: 'sync' },
+				),
+			);
+		}
+		this.stopSubscription = () => {
+			for (const stop of stops) stop();
+		};
 	}
 
 	private async loadAccountState(): Promise<void> {
 		if (this.disposed || this.accountId == null) {
 			return;
 		}
+		this.assertCurrentOwner();
 		const values = await this.io.loadAccount(this.definition.namespace);
 		if (this.disposed) return;
+		this.assertCurrentOwner();
 		const patch: StateTree = {};
-		const cache: Record<string, unknown> = {};
 
 		for (const [key, property] of Object.entries(this.definition.properties)) {
 			if (property == null) {
@@ -258,75 +278,124 @@ class PersistedStateController {
 				continue;
 			}
 			if (this.dirtyAccountKeys.has(key)) {
-				cache[key] = cloneValue(this.store.$state[key]);
 				continue;
 			}
 			if (Object.hasOwn(values, key)) {
 				patch[key] = mergePersistedValue(values[key], this.defaults.get(key));
-				cache[key] = cloneValue(values[key]);
 			} else {
 				patch[key] = cloneValue(this.defaults.get(key));
 			}
 		}
 
 		this.applyPatch(patch);
-		await this.io.set(this.registryCacheKeyName, cache);
+		await this.queueJob(async () => {
+			if (this.disposed) return;
+			this.assertCurrentOwner();
+			await this.io.update(this.registryCacheKeyName, (current) => {
+				if (this.disposed) return current;
+				this.assertCurrentOwner();
+				const result = toRecord(current);
+				for (const [key, value] of Object.entries(patch)) {
+					if (this.dirtyAccountKeys.has(key)) continue;
+					if (Object.hasOwn(values, key)) {
+						result[key] = cloneValue(value);
+					} else {
+						delete result[key];
+					}
+				}
+				return result;
+			});
+		});
 	}
 
-	private captureChanges(candidateKeys?: readonly string[]): void {
-		const keys = candidateKeys ?? Object.keys(this.definition.properties);
-		for (const key of keys) {
-			const property = this.definition.properties[key];
-			if (property == null) {
-				continue;
-			}
-			const value = this.store.$state[key];
-			if (isSameValue(value, this.snapshots.get(key))) {
-				continue;
-			}
-			const cloned = cloneValue(value);
-			this.snapshots.set(key, cloned);
-			this.pendingWrites.set(key, cloned);
-			if (property.where === 'account') {
-				this.dirtyAccountKeys.add(key);
-			}
-		}
-		if (this.pendingWrites.size > 0) {
-			this.scheduleFlush();
-		}
+	private captureChange(key: string): void {
+		const property = this.definition.properties[key];
+		if (property == null) return;
+		const value = this.store.$state[key];
+		if (isSameValue(value, this.snapshots.get(key))) return;
+		const cloned = cloneValue(value);
+		this.snapshots.set(key, cloned);
+		const write = { value: cloned, stamp: this.nextLocalStamp(key) };
+		this.lastStamps.set(key, write.stamp);
+		this.latestWrites.set(key, write);
+		this.failedWrites.delete(key);
+		this.pendingWrites.set(key, write);
+		if (property.where === 'account') this.dirtyAccountKeys.add(key);
+		this.scheduleFlush();
 	}
 
-	// 同一tickの変更をまとめ、非同期batchをcurrentJobで直列化して古い書き込みの後勝ちを防ぐ。
+	// 未保存値はキーごとに一つだけ保持する。失敗値は明示的な flush まで再試行しない。
 	private scheduleFlush(): Promise<void> {
 		if (this.scheduledFlush != null) {
 			return this.scheduledFlush;
 		}
+		if (this.disposed) return Promise.resolve();
 
 		this.scheduledFlush = Promise.resolve().then(async () => {
-			const writes = this.pendingWrites;
-			this.pendingWrites = new Map();
-			const job = this.currentJob.catch(() => undefined).then(() => this.persistBatch(writes));
-			this.currentJob = job;
+			const job = this.queueJob(async () => {
+				if (this.disposed) return;
+				const writes = this.pendingWrites;
+				this.pendingWrites = new Map();
+				await this.persistBatch(writes);
+			});
 			try {
 				await job;
 			} finally {
 				this.scheduledFlush = null;
-				if (this.pendingWrites.size > 0) {
+				if (!this.disposed && this.pendingWrites.size > 0) {
 					this.scheduleFlush();
 				}
 			}
 		});
-
+		void this.scheduledFlush.catch((error) => this.io.onError?.(error));
 		return this.scheduledFlush;
 	}
 
-	private async persistBatch(writes: Map<string, unknown>): Promise<void> {
-		if (writes.size === 0) {
+	private queueJob(task: () => Promise<void>): Promise<void> {
+		const job = this.currentJob.then(task);
+		// 待機用の tail は失敗後も進める。呼び出し側には失敗する job 自体を返す。
+		this.currentJob = job.then(
+			() => undefined,
+			() => undefined,
+		);
+		return job;
+	}
+
+	private assertCurrentOwner(): void {
+		if (this.io.isCurrent?.() === false) {
+			throw new Error('Persisted state account is no longer selected');
+		}
+	}
+
+	private ownsWrite(key: string, write: PersistedWrite): boolean {
+		return !this.disposed && this.latestWrites.get(key) === write;
+	}
+
+	private async settleWrites(writes: Map<string, PersistedWrite>, task: () => Promise<void>): Promise<void> {
+		try {
+			await task();
+			for (const [key, write] of writes) {
+				if (this.latestWrites.get(key) === write) {
+					this.latestWrites.delete(key);
+					this.failedWrites.delete(key);
+				}
+			}
+		} catch (error) {
+			for (const [key, write] of writes) {
+				if (this.ownsWrite(key, write)) this.failedWrites.set(key, write);
+			}
+			throw error;
+		}
+	}
+
+	private async persistBatch(writes: Map<string, PersistedWrite>): Promise<void> {
+		if (writes.size === 0 || this.disposed) {
 			return;
 		}
-		const deviceWrites = new Map<string, unknown>();
-		const deviceAccountWrites = new Map<string, unknown>();
-		const accountWrites = new Map<string, unknown>();
+		this.assertCurrentOwner();
+		const deviceWrites = new Map<string, PersistedWrite>();
+		const deviceAccountWrites = new Map<string, PersistedWrite>();
+		const accountWrites = new Map<string, PersistedWrite>();
 
 		for (const [key, value] of writes) {
 			const property = this.definition.properties[key];
@@ -341,59 +410,100 @@ class PersistedStateController {
 			}
 		}
 
-		await Promise.all([
-			this.persistLocalBatch('device', this.deviceStateKeyName, deviceWrites),
-			this.accountId == null
-				? Promise.resolve()
-				: this.persistLocalBatch('deviceAccount', this.deviceAccountStateKeyName, deviceAccountWrites),
+		const results = await Promise.allSettled([
+			this.settleWrites(deviceWrites, () => this.persistLocalBatch('device', this.deviceStateKeyName, deviceWrites)),
+			this.settleWrites(deviceAccountWrites, () =>
+				this.accountId == null
+					? Promise.resolve()
+					: this.persistLocalBatch('deviceAccount', this.deviceAccountStateKeyName, deviceAccountWrites),
+			),
 			this.persistAccountBatch(accountWrites),
 		]);
+		this.throwFailures(results);
 	}
 
 	private async persistLocalBatch(
 		where: 'device' | 'deviceAccount',
 		storageKey: string,
-		writes: Map<string, unknown>,
+		writes: Map<string, PersistedWrite>,
 	): Promise<void> {
-		if (writes.size === 0) {
+		if (writes.size === 0 || this.disposed) {
 			return;
 		}
+		const committed = new Map<string, PersistedWrite>();
 		await this.io.update(storageKey, (current) => {
+			if (this.disposed) return current;
+			this.assertCurrentOwner();
 			const state = toRecord(current);
-			for (const [key, value] of writes) {
-				state[key] = cloneValue(value);
+			for (const [key, write] of writes) {
+				if (!this.ownsWrite(key, write)) continue;
+				state[key] = cloneValue(write.value);
+				committed.set(key, write);
 			}
 			return state;
 		});
+		if (this.disposed) return;
+		this.assertCurrentOwner();
 
-		for (const [key, value] of writes) {
-			const stamp = this.nextLocalStamp(key);
+		for (const [key, write] of committed) {
+			if (!this.ownsWrite(key, write)) continue;
 			const accountId = this.accountId;
-			this.lastStamps.set(key, stamp);
 			this.channel?.postMessage({
 				version: 1,
 				sourceId: this.io.sourceId,
 				where,
 				key,
-				value,
+				value: write.value,
 				...(where === 'deviceAccount' && accountId != null ? { accountId } : {}),
-				stamp,
+				stamp: write.stamp,
 			});
 		}
 	}
 
-	private async persistAccountBatch(writes: Map<string, unknown>): Promise<void> {
-		if (writes.size === 0 || this.accountId == null) {
+	private async persistAccountBatch(writes: Map<string, PersistedWrite>): Promise<void> {
+		if (writes.size === 0 || this.accountId == null || this.disposed) {
 			return;
 		}
-		await this.io.update(this.registryCacheKeyName, (current) => {
-			const cache = toRecord(current);
-			for (const [key, value] of writes) {
-				cache[key] = cloneValue(value);
+		try {
+			await this.io.update(this.registryCacheKeyName, (current) => {
+				if (this.disposed) return current;
+				this.assertCurrentOwner();
+				const cache = toRecord(current);
+				for (const [key, write] of writes) {
+					if (this.ownsWrite(key, write)) cache[key] = cloneValue(write.value);
+				}
+				return cache;
+			});
+		} catch (error) {
+			for (const [key, write] of writes) {
+				if (this.ownsWrite(key, write)) this.failedWrites.set(key, write);
 			}
-			return cache;
-		});
-		await Promise.all(Array.from(writes, ([key, value]) => this.io.saveAccount(this.definition.namespace, key, value)));
+			throw error;
+		}
+		const results = await Promise.allSettled(
+			Array.from(writes, async ([key, write]) => {
+				try {
+					if (this.ownsWrite(key, write)) {
+						this.assertCurrentOwner();
+						await this.io.saveAccount(this.definition.namespace, key, write.value);
+					}
+					if (this.latestWrites.get(key) === write) {
+						this.latestWrites.delete(key);
+						this.failedWrites.delete(key);
+					}
+				} catch (error) {
+					if (this.ownsWrite(key, write)) this.failedWrites.set(key, write);
+					throw error;
+				}
+			}),
+		);
+		this.throwFailures(results);
+	}
+
+	private throwFailures(results: PromiseSettledResult<void>[]): void {
+		const errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+		if (errors.length === 1) throw errors[0];
+		if (errors.length > 1) throw new AggregateError(errors, 'Failed to persist state');
 	}
 
 	private nextLocalStamp(key: string): PersistedStamp {
@@ -409,7 +519,7 @@ class PersistedStateController {
 	}
 
 	private receiveChannelMessage(data: unknown): void {
-		if (!isChannelMessage(data)) {
+		if (this.disposed || this.io.isCurrent?.() === false || !isChannelMessage(data)) {
 			return;
 		}
 		if (data.sourceId === this.io.sourceId) {
@@ -428,7 +538,10 @@ class PersistedStateController {
 		}
 
 		this.lastStamps.set(data.key, data.stamp);
-		this.applyPatch({ [data.key]: cloneValue(data.value) });
+		this.latestWrites.delete(data.key);
+		this.pendingWrites.delete(data.key);
+		this.failedWrites.delete(data.key);
+		this.applyPatch({ [data.key]: data.value });
 	}
 
 	private applyPatch(patch: StateTree): void {
@@ -437,31 +550,68 @@ class PersistedStateController {
 		}
 		this.applyingExternalState = true;
 		try {
-			this.store.$patch(patch);
-			for (const [key, value] of Object.entries(patch)) {
-				this.snapshots.set(key, cloneValue(value));
+			this.store.$patch((state) => {
+				for (const [key, value] of Object.entries(patch)) state[key] = cloneValue(value);
+			});
+			for (const key of Object.keys(patch)) {
+				this.snapshots.set(key, cloneValue(this.store.$state[key]));
 			}
 		} finally {
 			this.applyingExternalState = false;
 		}
 	}
 
+	public replaceProperty(key: string, value: unknown): void {
+		if (this.disposed) throw new Error('Persisted state is disposed');
+		this.assertCurrentOwner();
+		this.applyingExternalState = true;
+		try {
+			this.store.$patch((state) => {
+				state[key] = cloneValue(value);
+			});
+		} finally {
+			this.applyingExternalState = false;
+		}
+		if (this.stopSubscription != null) this.captureChange(key);
+	}
+
 	public async flush(): Promise<void> {
+		if (this.disposed) {
+			await this.disposal;
+			return;
+		}
+		this.assertCurrentOwner();
+		await this.ready;
+		if (this.disposed) {
+			await this.disposal;
+			return;
+		}
+		this.assertCurrentOwner();
+		for (const [key, write] of this.failedWrites) {
+			if (this.ownsWrite(key, write)) this.pendingWrites.set(key, write);
+		}
+		this.failedWrites.clear();
 		while (this.scheduledFlush != null || this.pendingWrites.size > 0) {
 			await (this.scheduledFlush ?? this.scheduleFlush());
 		}
 		await this.currentJob;
 	}
 
-	public dispose(): void {
-		if (this.disposed) {
-			return;
-		}
+	// 終了は保存の成功ではなく副作用の停止境界。既に開始した I/O が全て終わるまで clear してはいけない。
+	public dispose(): Promise<void> {
+		if (this.disposal != null) return this.disposal;
 		this.disposed = true;
 		this.stopSubscription?.();
 		this.stopSubscription = null;
+		this.pendingWrites.clear();
+		this.failedWrites.clear();
+		this.latestWrites.clear();
 		this.channel?.removeEventListener('message', this.channelListener);
 		this.channel?.close();
+		this.disposal = Promise.allSettled([this.ready, this.loaded, this.scheduledFlush, this.currentJob]).then(
+			() => undefined,
+		);
+		return this.disposal;
 	}
 }
 
@@ -490,11 +640,22 @@ export function attachPersistedState(
 	};
 }
 
+export function replacePersistedStateProperty(store: StoreGeneric, key: string, value: unknown): void {
+	const controller = controllers.get(store);
+	if (controller != null) {
+		controller.replaceProperty(key, value);
+	} else {
+		store.$patch((state) => {
+			state[key] = cloneValue(value);
+		});
+	}
+}
+
 const noPersistenceApi: PersistedStateApi = {
 	$persistReady: Promise.resolve(),
 	$persistLoaded: Promise.resolve(),
 	$persistFlush: () => Promise.resolve(),
-	$persistDispose: () => undefined,
+	$persistDispose: () => Promise.resolve(),
 };
 
 // プラグインが足す Promise はリアクティブにする意味がない。markRaw で明示しないと Pinia 4 が storeToRefs() の対象外だと警告する。

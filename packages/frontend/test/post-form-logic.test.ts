@@ -39,11 +39,10 @@ function fields(overrides: Partial<PostFormFields> = {}): PostFormFields {
 const noTargets = { replyId: null, renoteId: null, channelId: null, hashtags: null };
 
 describe('端末下書き', () => {
-	test('保存した内容をそのまま復元でき、宛先が無ければ visibleUserIds を書かない', () => {
-		const saved = serializeLocalDraft(fields({ files: [file], visibility: 'home' }), new Date(0));
-		expect(saved.data).not.toHaveProperty('visibleUserIds');
-		// 投票なし (null) はフォームの現在値を残すので、復元される項目に含めない。
-		const { visibleUserIds: _, poll: __, ...restored } = fields({ files: [file], visibility: 'home' });
+	test('保存した本文・添付・公開範囲・投票なしを復元できる', () => {
+		const original = fields({ files: [file], visibility: 'home' });
+		const saved = serializeLocalDraft(original, new Date(0));
+		const { visibleUserIds: _, ...restored } = original;
 		expect(parseLocalDraft(JSON.parse(JSON.stringify(saved)))).toEqual(restored);
 
 		const specified = serializeLocalDraft(fields({ visibility: 'specified', visibleUserIds: ['u1'] }), new Date(0));
@@ -74,6 +73,28 @@ describe('端末下書き', () => {
 		expect(parseLocalDraft(null)).toBeNull();
 		expect(parseLocalDraft({ data: 'text' })).toBeNull();
 		expect(parseLocalDraft([])).toBeNull();
+	});
+
+	test.each([
+		{},
+		{ choices: null, multiple: false, expiresAt: null, expiredAfter: null },
+		{ choices: [1, 'yes'], multiple: false, expiresAt: null, expiredAfter: null },
+		{ choices: ['yes', 'no'], multiple: 'false', expiresAt: null, expiredAfter: null },
+		{ choices: ['yes', 'no'], multiple: false, expiresAt: Infinity, expiredAfter: null },
+		{ choices: ['yes', 'no'], multiple: false, expiresAt: 1e30, expiredAfter: null },
+		{ choices: ['yes', 'no'], multiple: false, expiresAt: null, expiredAfter: NaN },
+	])('不正な投票だけを捨てて本文を復元する: %j', (poll) => {
+		expect(parseLocalDraft({ data: { text: 'keep', poll } })).toEqual({ text: 'keep' });
+	});
+
+	test('有効な投票の選択肢・複数選択・期限を復元する', () => {
+		const poll = { choices: ['yes', 'no'], multiple: true, expiresAt: 1700000000000, expiredAfter: null };
+		expect(parseLocalDraft(serializeLocalDraft(fields({ poll }), new Date(0)))?.poll).toEqual(poll);
+		expect(parseLocalDraft({ data: { poll: { ...poll, expiresAt: null, expiredAfter: 60000 } } })?.poll).toEqual({
+			...poll,
+			expiresAt: null,
+			expiredAfter: 60000,
+		});
 	});
 
 	test('本文・CW・ファイル・投票のどれかがあるときだけ内容ありとみなす', () => {

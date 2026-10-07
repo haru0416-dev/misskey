@@ -7,6 +7,7 @@ import * as path from 'node:path';
 import * as url from 'node:url';
 import { defineConfig } from 'vite';
 import { serveLocales } from './builder/vite-plugin-serve-locales.js';
+import { serveEmojiAssets } from './builder/vite-plugin-serve-emoji-assets.js';
 import { getConfig } from './vite.config.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ const baseAlias = (base.resolve?.alias ?? {}) as Record<string, string>;
 
 export default defineConfig({
 	...base,
-	plugins: [...(base.plugins ?? []), serveLocales()],
+	plugins: [...(base.plugins ?? []), serveLocales(), serveEmojiAssets()],
 	base: '/',
 	root: path.join(__dirname, 'catalog'),
 	publicDir: path.join(__dirname, 'catalog/public'),

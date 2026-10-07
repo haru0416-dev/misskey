@@ -5,6 +5,7 @@
 
 import type { StoryObj } from '@/stories/types.js';
 import MkDriveSelectDialog from './MkDriveFileSelectDialog.vue';
+import { http, HttpResponse } from 'msw';
 
 export const Default = {
 	render: (args) => ({
@@ -12,5 +13,13 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<MkDriveSelectDialog v-bind="args" />',
 	}),
-	args: {},
+	args: { multiple: false },
+	parameters: {
+		msw: {
+			handlers: [
+				http.post('/api/drive/folders', () => HttpResponse.json([])),
+				http.post('/api/drive/files', () => HttpResponse.json([])),
+			],
+		},
+	},
 } satisfies StoryObj<typeof MkDriveSelectDialog>;

@@ -51,5 +51,9 @@ updateI18n(enUsLocale);
 vi.mock('@/preferences.js', () => {
 	return {
 		prefer,
+		isPreferencesAccountCurrent: () => true,
+		disposePreferences: () => {
+			throw new Error('Unexpected preference disposal in a component fixture');
+		},
 	};
 });

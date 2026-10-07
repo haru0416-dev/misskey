@@ -8,6 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	ref="windowEl"
 	:canResize="true"
 	:closeButton="true"
+	:beforeClose="() => windowRouter.canLeave()"
 	:buttonsLeft="buttonsLeft"
 	:buttonsRight="buttonsRight"
 	:contextmenu="contextmenu"
@@ -163,8 +164,7 @@ const contextmenu = computed(() => [
 		icon: 'ti ti-external-link',
 		text: i18n.ts.openInNewTab,
 		action: () => {
-			window.open(url + windowRouter.getCurrentFullPath(), '_blank', 'noopener');
-			windowEl.value?.close();
+			if (windowEl.value?.close()) window.open(url + windowRouter.getCurrentFullPath(), '_blank', 'noopener');
 		},
 	},
 	{
@@ -177,11 +177,12 @@ const contextmenu = computed(() => [
 ]);
 
 function back() {
-	_history_.value.pop();
-	windowRouter.replaceByPath(_history_.value.at(-1)!.path);
+	const previous = _history_.value.at(-2);
+	if (previous != null && windowRouter.replaceByPath(previous.path)) _history_.value.pop();
 }
 
 function reload() {
+	if (!windowRouter.canLeave()) return;
 	reloadCount.value++;
 }
 
@@ -190,13 +191,12 @@ function close() {
 }
 
 function expand() {
-	mainRouter.pushByPath(windowRouter.getCurrentFullPath(), 'forcePage');
-	windowEl.value?.close();
+	if (windowEl.value?.close()) mainRouter.pushByPath(windowRouter.getCurrentFullPath(), 'forcePage');
 }
 
 function popout() {
-	_popout(windowRouter.getCurrentFullPath(), windowEl.value?.$el);
-	windowEl.value?.close();
+	const anchor = windowEl.value?.$el;
+	if (windowEl.value?.close()) _popout(windowRouter.getCurrentFullPath(), anchor);
 }
 
 onMounted(() => {

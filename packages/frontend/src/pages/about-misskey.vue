@@ -135,7 +135,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onBeforeUnmount, ref, useTemplateRef, computed } from 'vue';
+import { nextTick, onActivated, onDeactivated, onBeforeUnmount, ref, useTemplateRef, computed, inject, watch } from 'vue';
 import { host, version } from '@/shared/utility/config.js';
 import { DEFAULT_EMOJIS } from '@/shared/utility/const.js';
 import FormLink from '@/components/form/link.vue';
@@ -149,6 +149,7 @@ import { post } from '@/features/post-composer/post.js';
 import { definePage } from '@/page.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
+import { DI } from '@/di.js';
 
 const patronsWithIcon = [
 	{
@@ -478,8 +479,13 @@ const easterEggEmojis = ref<
 		emoji: string;
 	}[]
 >([]);
-const easterEggEngine = ref<{ stop: () => void } | null>(null);
+const easterEggEngine = ref<ReturnType<typeof physics> | null>(null);
 const containerEl = useTemplateRef('containerEl');
+const routeActive = inject(DI.routeActive, ref(true));
+watch(routeActive, (active) => {
+	if (active) easterEggEngine.value?.resume();
+	else easterEggEngine.value?.pause();
+});
 
 function iconLoaded() {
 	if (containerEl.value == null) {
@@ -519,6 +525,7 @@ function gravity() {
 	}
 	easterEggReady = false;
 	easterEggEngine.value = physics(containerEl.value);
+	if (!routeActive.value) easterEggEngine.value.pause();
 }
 
 function iLoveMisskey() {
@@ -527,6 +534,11 @@ function iLoveMisskey() {
 		instant: true,
 	});
 }
+
+onActivated(() => {
+	if (routeActive.value) easterEggEngine.value?.resume();
+});
+onDeactivated(() => easterEggEngine.value?.pause());
 
 onBeforeUnmount(() => {
 	if (easterEggEngine.value) {

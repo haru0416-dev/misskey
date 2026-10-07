@@ -8,14 +8,14 @@ import { createApp, nextTick } from 'vue';
 import {
 	applyStoryHandlers,
 	createAppRuntime,
-	resetIndexedDb,
-	resetLocalStorage,
-	resetPopups,
 	startMockServiceWorker,
+	getApiRequestEpoch,
+	waitForApiRequests,
 } from '@/stories/environment.js';
 import { buildStoryComponent, createStoryContext } from '@/stories/render.js';
 import PopupHost from '@/stories/PopupHost.vue';
 import type { StoryObj } from '@/stories/types.js';
+import { unexpectedApiRequests } from '@/stories/mocks.js';
 
 const modules = import.meta.glob<Record<string, unknown>>('../src/**/*.stories.impl.ts');
 
@@ -55,12 +55,17 @@ const runtime = await createAppRuntime();
 
 afterAll(() => worker.stop());
 
-/** 非同期の初期化が落ち着くまで待つ。 */
+/** 開始済みの API と Vue 更新を待ち、未開始の遅延処理は各 play の結果条件で確認する。 */
 async function settle(): Promise<void> {
-	for (let i = 0; i < 3; i++) {
+	let epoch: number;
+	do {
+		epoch = getApiRequestEpoch();
+		await waitForApiRequests();
 		await nextTick();
-		await new Promise((resolve) => setTimeout(resolve, 16));
-	}
+		const painted = Promise.withResolvers<void>();
+		requestAnimationFrame(() => painted.resolve());
+		await painted.promise;
+	} while (epoch !== getApiRequestEpoch());
 }
 
 function isStory(value: unknown): value is StoryObj {
@@ -93,15 +98,15 @@ for (const [path, load] of Object.entries(modules)) {
 				const container = document.createElement('div');
 				document.body.appendChild(container);
 
-				await resetIndexedDb();
-				await resetPopups();
-				resetLocalStorage();
+				await runtime.reset();
+				unexpectedApiRequests.length = 0;
 				applyStoryHandlers(worker, story.parameters?.msw);
 
 				// Vue が処理したエラーもテスト失敗として扱う。
 				const errors: unknown[] = [];
 				const context = createStoryContext(story, container);
-				const app = createApp(buildStoryComponent(story, context));
+				const ready = Promise.withResolvers<void>();
+				const app = createApp(buildStoryComponent(story, context, () => ready.resolve()));
 				app.config.errorHandler = (err) => errors.push(err);
 				runtime.install(app);
 				app.mount(container);
@@ -116,12 +121,13 @@ for (const [path, load] of Object.entries(modules)) {
 				popupApp.mount(popupRoot);
 
 				try {
-					// nextTick だけでは、モックした API の応答が解決した後に投げる例外を取り逃す。
-					// マクロタスクを数回回して落ち着かせてから判定する。
+					// 遅延ロードした子画面が API を開始する前に、初期化完了と判定しない。
+					await ready.promise;
 					await settle();
 					await story.play?.(context);
 					await settle();
 					expect(errors).toEqual([]);
+					expect(unexpectedApiRequests).toEqual([]);
 				} finally {
 					app.unmount();
 					popupApp.unmount();

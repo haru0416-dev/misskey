@@ -7,6 +7,7 @@ import type * as Misskey from 'misskey-js';
 import type { QueryAccountId } from '@/query/keys.js';
 import { queryClient } from '@/query/client.js';
 import { isEndpointQuery, queryKeys } from '@/query/keys.js';
+import { invalidateQueries, patchQueryData } from '@/query/updates.js';
 
 type UserUpdate = Partial<Misskey.entities.UserDetailed> & Pick<Misskey.entities.User, 'id'>;
 
@@ -21,9 +22,11 @@ function updateUserValue<T>(value: T, user: UserUpdate): T {
 }
 
 export function updateUserQueries(accountId: QueryAccountId, user: UserUpdate): void {
-	queryClient.setQueriesData({ queryKey: queryKeys.endpointRoot(accountId, 'users/show') }, (value) =>
-		updateUserValue(value, user),
-	);
+	for (const query of queryClient
+		.getQueryCache()
+		.findAll({ queryKey: queryKeys.endpointRoot(accountId, 'users/show') })) {
+		patchQueryData(query.queryKey, (value) => updateUserValue(value, user));
+	}
 }
 
 export function updateEmojiQueries(
@@ -38,14 +41,18 @@ export function updateEmojiQueries(
 	for (const query of queryClient
 		.getQueryCache()
 		.findAll({ predicate: (query) => isEndpointQuery(query.queryKey, 'emojis') })) {
-		queryClient.setQueryData<{ emojis: Misskey.entities.EmojiSimple[] }>(
+		patchQueryData<{ emojis: Misskey.entities.EmojiSimple[] }>(
 			query.queryKey,
 			(current) => {
 				if (current == null) {
 					return current;
 				}
 				if (change.type === 'add') {
-					return { ...current, emojis: [change.emoji, ...current.emojis] };
+					const emojis = [change.emoji];
+					for (const emoji of current.emojis) {
+						if (emoji.name !== change.emoji.name) emojis.push(emoji);
+					}
+					return { ...current, emojis };
 				}
 				if (change.type === 'update') {
 					return {
@@ -62,5 +69,5 @@ export function updateEmojiQueries(
 		);
 	}
 
-	void queryClient.invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, 'emoji') });
+	void invalidateQueries({ predicate: (query) => isEndpointQuery(query.queryKey, 'emoji') });
 }

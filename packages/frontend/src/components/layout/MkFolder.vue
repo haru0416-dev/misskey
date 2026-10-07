@@ -96,7 +96,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { inject, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { prefer } from '@/preferences.js';
 import { getBgColor } from '@/utility/get-bg-color.js';
 import { pageFolderTeleportCount, popup } from '@/os.js';
@@ -104,6 +104,7 @@ import { themeManager } from '@/theme.js';
 import MkFolderPage from '@/components/layout/MkFolderPage.vue';
 import { deviceKind } from '@/utility/device-kind.js';
 import { useHeightTransition } from '@/composables/useHeightTransition.js';
+import { DI } from '@/di.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -144,6 +145,12 @@ const asPage = props.canPage && deviceKind === 'smartphone' && prefer['experimen
 const bgSame = ref(false);
 const opened = ref(asPage ? false : props.defaultOpen);
 const openedAtLeastOnce = ref(opened.value);
+let disposePage: (() => void) | null = null;
+let active = true;
+const activated = ref(true);
+const routeActive = inject(DI.routeActive, ref(true));
+onActivated(() => { activated.value = true; });
+onDeactivated(() => { activated.value = false; });
 
 // CSS クラスだけではペイントのタイミングによって全高が一瞬表示されるため、高さは常に JS で指定する。
 const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
@@ -153,10 +160,13 @@ const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
 let pageId = pageFolderTeleportCount.value;
 pageFolderTeleportCount.value += 1000;
 
-async function toggle(ev: PointerEvent) {
+function toggle(ev: PointerEvent) {
+	if (!active) {
+		return;
+	}
 	if (asPage && !opened.value) {
 		pageId++;
-		const { dispose } = await popup(
+		const { dispose } = popup(
 			MkFolderPage,
 			{
 				pageId,
@@ -164,10 +174,12 @@ async function toggle(ev: PointerEvent) {
 			{
 				closed: () => {
 					opened.value = false;
+					disposePage = null;
 					dispose();
 				},
 			},
 		);
+		disposePage = dispose;
 	}
 
 	if (!opened.value) {
@@ -175,9 +187,26 @@ async function toggle(ev: PointerEvent) {
 	}
 
 	nextTick().then(() => {
-		opened.value = !opened.value;
+		if (active) {
+			opened.value = !opened.value;
+		}
 	});
 }
+
+function stopPage() {
+	disposePage?.();
+	disposePage = null;
+	if (asPage) {
+		opened.value = false;
+	}
+}
+
+watch([activated, routeActive], ([isActivated, isRouteActive]) => {
+	active = isActivated && isRouteActive;
+	if (!active) {
+		stopPage();
+	}
+}, { immediate: true, flush: 'sync' });
 
 function updateBgSame() {
 	const themeValue = themeManager.currentCompiledTheme;
@@ -195,6 +224,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+	active = false;
+	stopPage();
 	themeManager.off('themeChanged', updateBgSame);
 });
 

@@ -135,4 +135,47 @@ describe('IdlingRenderScheduler', () => {
 			scheduler.dispose();
 		}
 	});
+
+	test('renders in a fresh no-idle-API realm even when timer dispatch is delayed', async () => {
+		const completed = Promise.withResolvers<{ rendered: number; frames: number }>();
+		const frame = document.createElement('iframe');
+		// native API の有無は module 評価時に決まるため、別 realm で無効化してから読み込む。
+		const moduleUrl = new URL('../src/utility/idle-render.ts', import.meta.url).href;
+		const onMessage = (event: MessageEvent) => {
+			if (event.source !== frame.contentWindow || event.data?.type !== 'idle-fallback-result') return;
+			if (event.data.error) completed.reject(new Error(event.data.error));
+			else completed.resolve(event.data);
+		};
+		window.addEventListener('message', onMessage);
+		frame.srcdoc = `<script type="module">
+			Object.defineProperty(window, 'requestIdleCallback', { value: undefined });
+			Object.defineProperty(window, 'cancelIdleCallback', { value: undefined });
+			try {
+				const { IdlingRenderScheduler } = await import(${JSON.stringify(moduleUrl)});
+				const scheduler = new IdlingRenderScheduler();
+				let rendered = 0;
+				scheduler.add(() => rendered++);
+				for (let i = 0; i < 6; i++) {
+					const end = performance.now() + 60;
+					while (performance.now() < end) {}
+					const next = Promise.withResolvers();
+					window.requestAnimationFrame(next.resolve);
+					await next.promise;
+				}
+				scheduler.dispose();
+				parent.postMessage({ type: 'idle-fallback-result', rendered, frames: 6 }, '*');
+			} catch (error) {
+				parent.postMessage({ type: 'idle-fallback-result', error: String(error) }, '*');
+			}
+		</script>`;
+		document.body.append(frame);
+		try {
+			const result = await completed.promise;
+			expect(result.frames).toBe(6);
+			expect(result.rendered).toBeGreaterThan(0);
+		} finally {
+			window.removeEventListener('message', onMessage);
+			frame.remove();
+		}
+	});
 });

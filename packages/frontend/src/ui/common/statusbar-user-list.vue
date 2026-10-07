@@ -59,7 +59,7 @@ const tick = () => {
 		return;
 	}
 	const generation = ++tickGeneration;
-	misskeyApi('notes/user-list-timeline', {
+	return misskeyApi('notes/user-list-timeline', {
 		listId: props.userListId,
 	}).then(
 		(res) => {

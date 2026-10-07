@@ -31,18 +31,26 @@ export const noteEvents = new EventEmitter<{
 }>();
 
 // 同じ編集通知が複数の表示から届くため、取得中と取得終了後の 10 秒間は重複取得を抑える。
-const editedNoteFetches = new Set<string>();
+const editedNoteFetches = new Map<string, Promise<string | undefined>>();
 
-function refetchEditedNote(noteId: Misskey.entities.Note['id'], updatedAt: string): void {
+function refetchEditedNote(noteId: Misskey.entities.Note['id'], updatedAt: string): Promise<string | undefined> {
 	const key = `${noteId}:${updatedAt}`;
-	if (editedNoteFetches.has(key)) {
-		return;
-	}
-	editedNoteFetches.add(key);
-	misskeyApi('notes/show', { noteId })
-		.then((note) => globalEvents.emit('noteEdited', note))
-		.catch(() => {})
-		.finally(() => window.setTimeout(() => editedNoteFetches.delete(key), 10_000));
+	const existing = editedNoteFetches.get(key);
+	if (existing) return existing;
+	const request = misskeyApi('notes/show', { noteId }).then(
+		(note) => {
+			globalEvents.emit('noteEdited', note);
+			window.setTimeout(() => editedNoteFetches.delete(key), 10_000);
+			return note.updatedAt;
+		},
+		() => {
+			// 全文の取得に失敗した編集は確定しない。同じ日時の次のポーリングで再取得できるようにする。
+			editedNoteFetches.delete(key);
+			return undefined;
+		},
+	);
+	editedNoteFetches.set(key, request);
+	return request;
 }
 
 // 編集後の取り直しで当てる列。編集で変わりうる列に加え、リアクション・投票も取り直した時点の値にする
@@ -66,6 +74,12 @@ const refreshedNoteKeys = [
 ] as const;
 
 function withEditedFields<T extends Misskey.entities.Note>(target: T, edited: Misskey.entities.Note): T {
+	if (
+		target.updatedAt != null &&
+		(edited.updatedAt == null || Date.parse(edited.updatedAt) < Date.parse(target.updatedAt))
+	) {
+		return target;
+	}
 	const next: Record<string, unknown> = { ...target };
 	for (const key of refreshedNoteKeys) {
 		if (key in edited) {
@@ -111,6 +125,7 @@ const pollingQueue = new Map<
 	{
 		referenceCount: number;
 		lastAddedAt: number;
+		reactionVersion: number;
 	}
 >();
 
@@ -123,6 +138,7 @@ function pollingEnqueue(note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>) {
 		pollingQueue.set(note.id, {
 			referenceCount: 1,
 			lastAddedAt: Date.now(),
+			reactionVersion: 0,
 		});
 	}
 	pollingScheduler.start();
@@ -154,21 +170,48 @@ const POLLING_INTERVAL =
 			: MIN_POLLING_INTERVAL;
 
 const pollingScheduler = new PollingScheduler(async () => {
-	const ids = [...pollingQueue.entries()]
-		.filter(([, data]) => Date.now() - data.lastAddedAt < 1000 * 60 * 5)
-		.map(([id]) => id)
-		.sort((a, b) => (a > b ? -1 : 1))
-		.slice(0, CAPTURE_MAX);
+	const ids: string[] = [];
+	const now = Date.now();
+	for (const [id, data] of pollingQueue) {
+		if (now - data.lastAddedAt >= 1000 * 60 * 5) continue;
+		let low = 0;
+		let high = ids.length;
+		while (low < high) {
+			const middle = (low + high) >>> 1;
+			if (ids[middle]! > id) low = middle + 1;
+			else high = middle;
+		}
+		if (low >= CAPTURE_MAX) continue;
+		ids.splice(low, 0, id);
+		if (ids.length > CAPTURE_MAX) ids.pop();
+	}
 
 	if (ids.length === 0) {
 		pollingScheduler.stop();
 		return;
 	}
 
-	const items = await misskeyApi('notes/show-partial-bulk', {
-		noteIds: ids,
-	});
+	const requested = new Map(
+		ids.map((id) => {
+			const owner = pollingQueue.get(id)!;
+			return [id, { owner, reactionVersion: owner.reactionVersion }] as const;
+		}),
+	);
+	let items: Misskey.entities.NotesShowPartialBulkResponse;
+	try {
+		items = await misskeyApi('notes/show-partial-bulk', { noteIds: ids });
+	} catch {
+		// オフラインでも定期取得は続く。通信の失敗は未処理の Promise にせず、次の周期で問い合わせる。
+		return;
+	}
 	for (const item of items) {
+		const request = requested.get(item.id);
+		if (
+			!request ||
+			pollingQueue.get(item.id) !== request.owner ||
+			request.owner.reactionVersion !== request.reactionVersion
+		)
+			continue;
 		fetchEvent.emit(item.id, {
 			reactions: item.reactions,
 			reactionEmojis: item.reactionEmojis,
@@ -191,7 +234,9 @@ const editPollingScheduler = new PollingScheduler(async () => {
 	}
 	try {
 		for (let i = 0; i < ids.length; i += EDIT_POLLING_CHUNK) {
-			const items = await misskeyApi('notes/show-partial-bulk', { noteIds: ids.slice(i, i + EDIT_POLLING_CHUNK) });
+			const noteIds = ids.slice(i, i + EDIT_POLLING_CHUNK).filter((id) => editPollingTargets.has(id));
+			if (noteIds.length === 0) continue;
+			const items = await misskeyApi('notes/show-partial-bulk', { noteIds });
 			for (const item of items) {
 				editFetchEvent.emit(item.id, item.updatedAt);
 			}
@@ -328,9 +373,12 @@ export function subscribeNoteEdits(note: Pick<Misskey.entities.Note, 'id' | 'cre
 	// 差し替えた後も同じ購読が続くので、見つけた編集の日時を覚えて同じ編集で取り直し続けない。
 	let known = note.updatedAt;
 	function onFetched(updatedAt: string | undefined): void {
-		if (updatedAt != null && updatedAt !== known) {
-			known = updatedAt;
-			refetchEditedNote(note.id, updatedAt);
+		if (updatedAt != null && (known == null || Date.parse(updatedAt) > Date.parse(known))) {
+			void refetchEditedNote(note.id, updatedAt).then((fetchedVersion) => {
+				if (fetchedVersion != null && (known == null || Date.parse(fetchedVersion) >= Date.parse(known))) {
+					known = fetchedVersion;
+				}
+			});
 		}
 	}
 	editPollingTargets.set(note.id, (editPollingTargets.get(note.id) ?? 0) + 1);
@@ -402,6 +450,8 @@ export function useNoteCapture(props: {
 			return;
 		}
 		reactionUserMap.set(ctx.userId, normalizedName);
+		const polling = pollingQueue.get(note.id);
+		if (polling) polling.reactionVersion++;
 
 		if (ctx.emoji && !(ctx.emoji.name in $note.reactionEmojis)) {
 			$note.reactionEmojis[ctx.emoji.name] = ctx.emoji.url;
@@ -430,6 +480,8 @@ export function useNoteCapture(props: {
 			return;
 		}
 		reactionUserMap.set(ctx.userId, noReaction);
+		const polling = pollingQueue.get(note.id);
+		if (polling) polling.reactionVersion++;
 
 		const currentCount = $note.reactions[normalizedName] || 0;
 

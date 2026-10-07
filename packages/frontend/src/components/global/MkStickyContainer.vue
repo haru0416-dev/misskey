@@ -41,18 +41,25 @@ provide(DI.currentStickyBottom, childStickyBottom);
 
 const calc = () => {
 	if (headerEl.value != null) {
-		childStickyTop.value = parentStickyTop.value + headerEl.value.offsetHeight;
-		headerHeight.value = headerEl.value.offsetHeight.toString();
+		const height = headerEl.value.offsetHeight;
+		childStickyTop.value = parentStickyTop.value + height;
+		headerHeight.value = height.toString();
 	}
 
 	if (footerEl.value != null) {
-		childStickyBottom.value = parentStickyBottom.value + footerEl.value.offsetHeight;
-		footerHeight.value = footerEl.value.offsetHeight.toString();
+		const height = footerEl.value.offsetHeight;
+		childStickyBottom.value = parentStickyBottom.value + height;
+		footerHeight.value = height.toString();
 	}
 };
 
+let calcTimer: number | null = null;
 const observer = new ResizeObserver(() => {
-	window.setTimeout(() => {
+	if (calcTimer != null) {
+		return;
+	}
+	calcTimer = window.setTimeout(() => {
+		calcTimer = null;
 		calc();
 	}, 100);
 });
@@ -73,6 +80,10 @@ onMounted(() => {
 
 onUnmounted(() => {
 	observer.disconnect();
+	if (calcTimer != null) {
+		window.clearTimeout(calcTimer);
+		calcTimer = null;
+	}
 });
 
 defineExpose({

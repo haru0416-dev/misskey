@@ -227,4 +227,87 @@ describe('Paginator', () => {
 		expect(paginator.newerFailure.value).toBeNull();
 		expect(paginator.error.value).toBe(true);
 	});
+
+	test.each(['prepend', 'queue release'] as const)(
+		'keeps trimmed history recoverable during an older-page %s race',
+		async (delivery) => {
+			const held = Promise.withResolvers<{ id: string }[]>();
+			let signal: AbortSignal | undefined;
+			misskeyApiMock.mockImplementationOnce((_endpoint, _data, _token, requestSignal: AbortSignal) => {
+				signal = requestSignal;
+				return held.promise;
+			});
+			const paginator = createPaginator({ canFetchDetection: 'limit' });
+			const numbered = (id: number) => item(String(id).padStart(3, '0'));
+			paginator.pushItems(Array.from({ length: 30 }, (_, i) => numbered(100 - i)));
+			paginator.fetching.value = false;
+			paginator.canFetchOlder.value = true;
+
+			const older = paginator.fetchOlder();
+			if (delivery === 'prepend') {
+				paginator.prepend(numbered(101));
+			} else {
+				paginator.enqueue(numbered(101));
+				paginator.releaseQueue();
+			}
+			held.resolve([numbered(70)]);
+			await older;
+
+			expect(signal?.aborted).toBe(true);
+			expect(paginator.items.value.map((value) => value.id)).toEqual(
+				Array.from({ length: 30 }, (_, i) => String(101 - i).padStart(3, '0')),
+			);
+			expect(paginator.canFetchOlder.value).toBe(true);
+			misskeyApiMock.mockResolvedValueOnce([numbered(71), numbered(70)]);
+			await paginator.fetchOlder();
+			expect(misskeyApiMock.mock.lastCall?.[1]).toMatchObject({ untilId: '072' });
+			expect(paginator.items.value.slice(-3).map((value) => value.id)).toEqual(['072', '071', '070']);
+		},
+	);
+
+	test('keeps date-filtered oldest initialization and subsequent pages in one ascending order', async () => {
+		misskeyApiMock.mockResolvedValueOnce([item('002'), item('003'), item('004')]);
+		const paginator = createPaginator({ order: 'oldest', initialDirection: 'newer', initialDate: 1 });
+		await paginator.init();
+		misskeyApiMock.mockResolvedValueOnce([item('005'), item('006')]);
+		await paginator.fetchNewer();
+		expect(paginator.items.value.map((value) => value.id)).toEqual(['002', '003', '004', '005', '006']);
+	});
+
+	test.each([false, true])(
+		'routes a delayed newer page using the viewport at response time (initial queue: %s)',
+		async (initialQueue) => {
+			const held = Promise.withResolvers<{ id: string }[]>();
+			misskeyApiMock.mockReturnValueOnce(held.promise);
+			const paginator = createPaginator();
+			paginator.pushItems([item('001')]);
+			paginator.fetching.value = false;
+			let toQueue = initialQueue;
+			const newer = paginator.fetchNewer({ toQueue: () => toQueue });
+			toQueue = !initialQueue;
+			paginator.releaseQueue();
+			held.resolve([item('002')]);
+			await newer;
+			expect(paginator.items.value.map((value) => value.id)).toEqual(initialQueue ? ['002', '001'] : ['001']);
+			expect(paginator.queuedAheadItemsCount.value).toBe(initialQueue ? 0 : 1);
+		},
+	);
+
+	test('maps every visible and queued appearance while preserving unrelated rows and list metadata', () => {
+		const paginator = createPaginator();
+		const unchanged = item('unrelated');
+		paginator.pushItems([
+			unchanged,
+			item('visible', { renote: { id: 'target', text: 'old' }, _shouldInsertAd_: true }),
+		]);
+		paginator.enqueue(item('queued', { renote: { id: 'target', text: 'old' } }));
+		const original = paginator.items.value;
+		paginator.mapItems((value) => value);
+		expect(paginator.items.value).toBe(original);
+		paginator.mapItems((value) => (value.renote ? { ...value, renote: { ...value.renote, text: 'new' } } : value));
+		expect(paginator.items.value[0]).toBe(unchanged);
+		expect(paginator.items.value[1]).toMatchObject({ renote: { text: 'new' }, _shouldInsertAd_: true });
+		paginator.releaseQueue();
+		expect(paginator.items.value[0]).toMatchObject({ id: 'queued', renote: { text: 'new' } });
+	});
 });

@@ -8,7 +8,7 @@ import type * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { $i } from '@/i.js';
-import { queryClient } from '@/query/client.js';
+import { invalidateQueries } from '@/query/updates.js';
 import { queryKeys } from '@/query/keys.js';
 import { resolveInitialInstanceMeta } from '@/features/instance/instance-cache.js';
 import { QueryBackedCache } from '@/query/cache.js';
@@ -64,14 +64,14 @@ export function updateInstance(meta: Partial<Misskey.entities.MetaDetailed>): vo
 if (import.meta.hot) import.meta.hot.dispose(() => metaCache.dispose());
 
 export async function clearInstanceCache(): Promise<void> {
-	await queryClient.invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
+	await invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
 	miLocalStorage.removeItem('instance');
 	miLocalStorage.removeItem('instanceCachedAt');
 }
 
 export async function fetchInstance(force = false): Promise<Misskey.entities.MetaDetailed> {
 	if (force) {
-		await queryClient.invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
+		await invalidateQueries({ queryKey: metaQueryKey, exact: true, refetchType: 'none' });
 	}
 
 	return metaCache.fetch();

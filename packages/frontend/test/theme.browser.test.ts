@@ -7,6 +7,7 @@ import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vites
 import type { Theme } from '@/shared/utility/theme.js';
 import lightTheme from '@/shared/themes/_light.json5';
 import darkTheme from '@/shared/themes/_dark.json5';
+import { themeManager, isPreviewMode } from '@/theme.js';
 
 vi.mock('@/i18n.js', () => ({
 	i18n: {
@@ -76,11 +77,6 @@ const replacementTheme = createTheme('dark', {
 	fg: '#f6e7df',
 });
 
-const loadThemeModule = async () => {
-	vi.resetModules();
-	return await import('@/theme.js');
-};
-
 const originalThemeMeta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 const originalThemeMetaContent = originalThemeMeta?.getAttribute('content') ?? null;
 const originalRootClass = document.documentElement.className;
@@ -89,6 +85,7 @@ const originalColorScheme = document.documentElement.getAttribute('data-color-sc
 const originalViewTransition = Object.getOwnPropertyDescriptor(document, 'startViewTransition');
 const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 let themeMeta: HTMLMetaElement;
+let removeTestListeners: (() => void)[] = [];
 
 const resetDocument = () => {
 	window.localStorage.clear();
@@ -110,9 +107,18 @@ const resetDocument = () => {
 describe('ThemeManager', () => {
 	beforeEach(() => {
 		resetDocument();
+		const on = themeManager.on.bind(themeManager);
+		vi.spyOn(themeManager, 'on').mockImplementation((event, listener, context) => {
+			removeTestListeners.push(() => {
+				themeManager.off(event, listener, context);
+			});
+			return on(event, listener, context);
+		});
 	});
 
 	afterEach(() => {
+		for (const remove of removeTestListeners) remove();
+		removeTestListeners = [];
 		window.localStorage.clear();
 		vi.restoreAllMocks();
 		if (originalViewTransition) {
@@ -144,8 +150,6 @@ describe('ThemeManager', () => {
 	});
 
 	test('通常テーマ適用後のプレビューは現在テーマのみを切り替え、キャッシュは保持する', async () => {
-		const { themeManager, isPreviewMode } = await loadThemeModule();
-
 		themeManager.updateTheme(primaryTheme);
 		const cachedTheme = window.localStorage.getItem('theme');
 		const cachedThemeId = window.localStorage.getItem('themeId');
@@ -167,7 +171,6 @@ describe('ThemeManager', () => {
 	});
 
 	test('プレビュー解除で元のテーマと DOM 状態が復元され、テーマ変更イベントが順に発火する', async () => {
-		const { themeManager, isPreviewMode } = await loadThemeModule();
 		const events: string[] = [];
 
 		themeManager.on('themeChanging', () => {
@@ -213,8 +216,6 @@ describe('ThemeManager', () => {
 	});
 
 	test('プレビュー中に通常テーマを更新するとプレビューを抜けて新しい通常テーマが適用される', async () => {
-		const { themeManager, isPreviewMode } = await loadThemeModule();
-
 		themeManager.updateTheme(primaryTheme);
 		themeManager.previewTheme(previewTheme);
 		themeManager.updateTheme(replacementTheme);
@@ -253,7 +254,6 @@ describe('ThemeManager', () => {
 			});
 			const error = new Error('transition failed');
 			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-			const { themeManager } = await loadThemeModule();
 			const themeChanged = vi.fn();
 			themeManager.on('themeChanged', themeChanged);
 
@@ -277,7 +277,6 @@ describe('ThemeManager', () => {
 			}),
 		});
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const { themeManager } = await loadThemeModule();
 		const themeChanged = vi.fn();
 		themeManager.on('themeChanged', themeChanged);
 

@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/vue';
-import { defineComponent } from 'vue';
+import { defineComponent, nextTick, ref } from 'vue';
 import type { Ref } from 'vue';
 
 const { popupMock } = vi.hoisted(() => ({
@@ -17,6 +17,7 @@ vi.mock('@/os.js', () => ({
 }));
 
 import { UserPreview, userPreviewDirective } from '@/directives/user-preview.js';
+import { DI } from '@/di.js';
 
 describe('UserPreview', () => {
 	const sources: HTMLElement[] = [];
@@ -89,6 +90,32 @@ describe('UserPreview', () => {
 		expect(popupMock.mock.calls[1]?.[1].q).toBe('user-2');
 
 		await result.rerender({ user: null });
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(popupMock).toHaveBeenCalledTimes(2);
+	});
+
+	test('closes an open preview and cancels delayed shows while its connected route is inactive', async () => {
+		vi.useFakeTimers();
+		const active = ref(true);
+		const Component = defineComponent({ template: '<a v-user-preview="\'user-id\'">User</a>' });
+		const result = render(Component, {
+			global: { directives: { 'user-preview': userPreviewDirective }, provide: { [DI.routeActive as symbol]: active } },
+		});
+		const source = result.getByText('User');
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(500);
+		const showing = popupMock.mock.calls[0]![1].showing as Ref<boolean>;
+		expect(showing.value).toBe(true);
+		active.value = false;
+		await nextTick();
+		expect(source.isConnected).toBe(true);
+		expect(showing.value).toBe(false);
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(popupMock).toHaveBeenCalledOnce();
+		active.value = true;
+		await nextTick();
 		await fireEvent.mouseOver(source);
 		await vi.advanceTimersByTimeAsync(500);
 		expect(popupMock).toHaveBeenCalledTimes(2);

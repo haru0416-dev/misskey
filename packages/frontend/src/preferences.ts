@@ -3,170 +3,109 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { PREF, Scope, StorageProvider, ValueOf } from '@/preferences/store.js';
-import { miLocalStorage } from '@/local-storage.js';
-import {
-	createPreferencesStore,
-	isPossiblyNonNormalizedPreferencesProfile,
-	isSameScope,
-	preferencesEvents,
-} from '@/preferences/store.js';
+import type { StorageProvider } from '@/preferences/store.js';
+import { createPreferencesStore, preferencesEvents } from '@/preferences/store.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
-import { misskeyApi } from '@/utility/misskey-api.js';
 import { TAB_ID } from '@/tab-id.js';
 import { DeferredTaskScheduler } from '@/utility/deferred-task-scheduler.js';
 import { pinia } from '@/store/pinia.js';
+import {
+	createLocalPreferencesStorage,
+	preferencesActiveStorageKey,
+	preferencesStoragePrefix,
+} from '@/preferences/storage.js';
+import { createCloudPreferencesStorage } from '@/preferences/cloud.js';
+import { miLocalStorage } from '@/local-storage.js';
+import { isAccountWithToken } from '@/features/auth/account-data.js';
 
-const syncGroup = 'default';
 const account = $i == null ? null : { id: $i.id, token: $i.token };
 
-function isNoSuchKeyError(err: unknown): boolean {
-	return typeof err === 'object' && err !== null && 'code' in err && (err as { code: unknown }).code === 'NO_SUCH_KEY';
+export function isPreferencesAccountCurrent(): boolean {
+	const selected = miLocalStorage.getItemAsJson('account', isAccountWithToken);
+	return (selected?.id ?? null) === (account?.id ?? null) && (selected?.token ?? null) === (account?.token ?? null);
 }
 
+const localPreferencesStorage = createLocalPreferencesStorage(localStorage);
+let disposed = false;
+
+const cloudStorage = createCloudPreferencesStorage(account?.token ?? null);
 const io: StorageProvider = {
-	load: () => {
-		return miLocalStorage.getItemAsJson('preferences', isPossiblyNonNormalizedPreferencesProfile) ?? null;
-	},
-
+	...localPreferencesStorage,
+	...cloudStorage,
+	isCurrent: () => isPreferencesAccountCurrent() && localPreferencesStorage.isCurrent(),
 	save: (ctx) => {
-		miLocalStorage.setItem('preferences', JSON.stringify(ctx.profile));
+		if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
+		return localPreferencesStorage.save(ctx);
 	},
-
-	cloudGet: async <K extends keyof PREF>(ctx: { key: K; scope: Scope }) => {
-		try {
-			const cloudData = (await misskeyApi(
-				'i/registry/get',
-				{
-					scope: ['client', 'preferences', 'sync'],
-					key: syncGroup + ':' + ctx.key,
-				},
-				account?.token ?? null,
-			)) as [Scope, unknown][];
-			const target = cloudData.find(([scope]) => isSameScope(scope, ctx.scope));
-			if (target == null) {
-				return null;
-			}
-			return {
-				value: target[1] as ValueOf<K>,
-			};
-		} catch (err) {
-			if (isNoSuchKeyError(err)) {
-				return null;
-			}
-			throw err;
-		}
+	replace: (profile) => {
+		if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
+		return localPreferencesStorage.replace(profile);
 	},
-
-	cloudSet: async (ctx) => {
-		let cloudData: [Scope, unknown][] = [];
-		try {
-			cloudData = (await misskeyApi(
-				'i/registry/get',
-				{
-					scope: ['client', 'preferences', 'sync'],
-					key: syncGroup + ':' + ctx.key,
-				},
-				account?.token ?? null,
-			)) as [Scope, unknown][];
-		} catch (err) {
-			if (isNoSuchKeyError(err)) {
-				cloudData = [];
-			} else {
-				throw err;
-			}
-		}
-
-		const i = cloudData.findIndex(([scope]) => isSameScope(scope, ctx.scope));
-
-		if (i === -1) {
-			cloudData.push([ctx.scope, ctx.value]);
-		} else {
-			cloudData[i] = [ctx.scope, ctx.value];
-		}
-
-		await misskeyApi(
-			'i/registry/set',
-			{
-				scope: ['client', 'preferences', 'sync'],
-				key: syncGroup + ':' + ctx.key,
-				value: cloudData,
-			},
-			account?.token ?? null,
-		);
+	cloudGet: (ctx) => {
+		if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
+		return cloudStorage.cloudGet(ctx);
 	},
-
-	cloudGetBulk: async <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope }[] }) => {
-		const fetchings = ctx.needs.map((need) => io.cloudGet(need).then((res) => [need.key, res] as const));
-		const cloudDatas = await Promise.all(fetchings);
-
-		const res: Partial<Record<K, ValueOf<K>>> = {};
-		for (const cloudData of cloudDatas) {
-			if (cloudData[1] != null) {
-				res[cloudData[0]] = cloudData[1].value;
-			}
-		}
-
-		return res;
+	cloudGetBulk: (ctx) => {
+		if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
+		return cloudStorage.cloudGetBulk(ctx);
+	},
+	cloudSet: (ctx) => {
+		if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
+		return cloudStorage.cloudSet(ctx);
 	},
 };
 
 export const prefer = createPreferencesStore(io, account, pinia);
 
 //#region タブ間同期
-let latestPreferencesUpdate: {
-	tabId: string;
-	timestamp: number;
-} | null = null;
-
 type PreferencesChannelMessage = {
 	type: 'preferencesUpdate';
 	tabId: string;
-	timestamp: number;
 };
 
 const preferencesChannel = new BroadcastChannel('preferences');
 
-preferencesEvents.on('committed', () => {
-	latestPreferencesUpdate = {
-		tabId: TAB_ID,
-		timestamp: Date.now(),
-	};
-	preferencesChannel.postMessage({
-		type: 'preferencesUpdate',
-		tabId: TAB_ID,
-		timestamp: latestPreferencesUpdate.timestamp,
-	});
-});
+function notifyPreferencesSaved() {
+	if (!disposed) preferencesChannel.postMessage({ type: 'preferencesUpdate', tabId: TAB_ID });
+}
 
-preferencesChannel.addEventListener('message', (ev: MessageEvent<PreferencesChannelMessage>) => {
-	const msg = ev.data;
-	if (msg.type === 'preferencesUpdate') {
-		if (msg.tabId === TAB_ID) {
-			return;
-		}
-		if (latestPreferencesUpdate != null) {
-			if (msg.timestamp <= latestPreferencesUpdate.timestamp) {
-				return;
-			}
-		}
+function reloadPreferences() {
+	if (!disposed && isPreferencesAccountCurrent() && localStorage.getItem(preferencesActiveStorageKey) != null)
 		prefer.reloadProfile();
-		if (_DEV_) {
-			console.log('prefer:received update from other tab');
-		}
-		latestPreferencesUpdate = {
-			tabId: msg.tabId,
-			timestamp: msg.timestamp,
-		};
+}
+
+function receivePreferencesUpdate(ev: MessageEvent<PreferencesChannelMessage>) {
+	if (ev.data.type === 'preferencesUpdate' && ev.data.tabId !== TAB_ID) reloadPreferences();
+}
+
+function receivePreferencesStorage(ev: StorageEvent) {
+	const active = localStorage.getItem(preferencesActiveStorageKey);
+	if (
+		ev.key === preferencesActiveStorageKey ||
+		(active != null && ev.key?.startsWith(`${preferencesStoragePrefix}${active}:`))
+	) {
+		reloadPreferences();
 	}
-});
+}
+
+function resumePreferences() {
+	if (document.visibilityState === 'visible') reloadPreferences();
+}
+
+preferencesEvents.on('saved', notifyPreferencesSaved);
+preferencesChannel.addEventListener('message', receivePreferencesUpdate);
+window.addEventListener('storage', receivePreferencesStorage);
+document.addEventListener('visibilitychange', resumePreferences);
+window.addEventListener('pageshow', reloadPreferences);
 //#endregion
 
 //#region 遅延クラウドバックアップ
 let latestBackupAt = 0;
+let backupJob: Promise<void> | null = null;
 const backupScheduler = new DeferredTaskScheduler(
 	async () => {
+		if (disposed || !isPreferencesAccountCurrent()) return;
 		if ($i == null) {
 			return;
 		}
@@ -181,18 +120,24 @@ const backupScheduler = new DeferredTaskScheduler(
 		try {
 			// utility.ts は prefer を使うので、静的に import すると循環する。バックアップする時点で読み込む。
 			const { cloudBackup } = await import('@/preferences/utility.js');
-			await cloudBackup();
+			if (disposed || !isPreferencesAccountCurrent()) return;
+			backupJob = cloudBackup();
+			await backupJob;
 			latestBackupAt = Math.max(latestBackupAt, backedUpModifiedAt);
-		} catch {
-			if (store.enablePreferencesAutoCloudBackup) {
+		} catch (error) {
+			console.error('Automatic preferences backup failed', error);
+			if (!disposed && isPreferencesAccountCurrent() && store.enablePreferencesAutoCloudBackup) {
 				backupScheduler.request();
 			}
+		} finally {
+			backupJob = null;
 		}
 	},
 	1000 * 60 * 3,
 );
 
 function requestBackup(): void {
+	if (disposed || !isPreferencesAccountCurrent()) return;
 	if ($i == null) {
 		return;
 	}
@@ -205,6 +150,20 @@ function requestBackup(): void {
 preferencesEvents.on('saved', requestBackup);
 void store.$persistReady.then(requestBackup);
 //#endregion
+
+export async function disposePreferences(): Promise<void> {
+	disposed = true;
+	preferencesEvents.off('saved', notifyPreferencesSaved);
+	preferencesEvents.off('saved', requestBackup);
+	preferencesChannel.removeEventListener('message', receivePreferencesUpdate);
+	preferencesChannel.close();
+	window.removeEventListener('storage', receivePreferencesStorage);
+	document.removeEventListener('visibilitychange', resumePreferences);
+	window.removeEventListener('pageshow', reloadPreferences);
+	backupScheduler.dispose();
+	const [preferencesStopped] = await Promise.allSettled([prefer.$preferencesDispose(), backupJob]);
+	if (preferencesStopped.status === 'rejected') throw preferencesStopped.reason;
+}
 
 if (_DEV_) {
 	Object.assign(window, {

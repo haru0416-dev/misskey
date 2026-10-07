@@ -24,18 +24,6 @@ export function physics(container: HTMLElement) {
 
 	const world = engine.world;
 
-	const render = Matter.Render.create({
-		engine,
-		options: {
-			width: containerWidth,
-			height: containerHeight,
-			background: 'transparent',
-			wireframeBackground: 'transparent',
-		},
-	});
-
-	Matter.Render.run(render);
-
 	const runner = Matter.Runner.create();
 	Matter.Runner.run(runner, engine);
 
@@ -102,8 +90,6 @@ export function physics(container: HTMLElement) {
 
 	Matter.World.add(engine.world, mouseConstraint);
 
-	render.mouse = mouse;
-
 	for (const objEl of objEls) {
 		objEl.style.position = 'absolute';
 		objEl.style.top = '0';
@@ -111,10 +97,13 @@ export function physics(container: HTMLElement) {
 		objEl.style.margin = '0';
 	}
 
-	let stop = false;
-	let animationFrameId = window.requestAnimationFrame(update);
+	let stopped = false;
+	let paused = false;
+	let animationFrameId: number | null = window.requestAnimationFrame(update);
 
 	function update() {
+		animationFrameId = null;
+		if (stopped || paused) return;
 		for (const [i, objEl] of objEls.entries()) {
 			const obj = objs[i];
 			if (obj == null) {
@@ -126,31 +115,66 @@ export function physics(container: HTMLElement) {
 			objEl.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad)`;
 		}
 
-		if (!stop) {
+		if (!stopped && !paused) {
 			animationFrameId = window.requestAnimationFrame(update);
 		}
 	}
 
-	const intervalId = window.setInterval(() => {
+	let intervalId: number | null = window.setInterval(retireFallenBodies, 1000 * 10);
+
+	function retireFallenBodies() {
 		for (const obj of objs) {
 			if (obj.position.y > containerHeight + 1024) {
 				Matter.World.remove(world, obj);
 			}
 		}
-	}, 1000 * 10);
+	}
+
+	function removeMouseListeners() {
+		// clearSourceEvents は入力履歴だけを消し、Mouse.setElement が登録した native listener は残す。
+		const handlers = mouse as Matter.Mouse & {
+			mousemove: EventListener;
+			mousedown: EventListener;
+			mouseup: EventListener;
+			mousewheel: EventListener;
+		};
+		container.removeEventListener('mousemove', handlers.mousemove);
+		container.removeEventListener('mousedown', handlers.mousedown);
+		container.removeEventListener('mouseup', handlers.mouseup);
+		container.removeEventListener('wheel', handlers.mousewheel);
+		container.removeEventListener('touchmove', handlers.mousemove);
+		container.removeEventListener('touchstart', handlers.mousedown);
+		container.removeEventListener('touchend', handlers.mouseup);
+		mouse.button = -1;
+		Matter.Mouse.clearSourceEvents(mouse);
+	}
+
+	function pause() {
+		if (stopped || paused) return;
+		paused = true;
+		if (animationFrameId != null) window.cancelAnimationFrame(animationFrameId);
+		animationFrameId = null;
+		Matter.Runner.stop(runner);
+		if (intervalId != null) window.clearInterval(intervalId);
+		intervalId = null;
+		removeMouseListeners();
+	}
 
 	return {
+		pause,
+		resume: () => {
+			if (stopped || !paused) return;
+			paused = false;
+			Matter.Mouse.setElement(mouse, container);
+			Matter.Runner.run(runner, engine);
+			animationFrameId = window.requestAnimationFrame(update);
+			intervalId = window.setInterval(retireFallenBodies, 1000 * 10);
+		},
 		stop: () => {
-			if (stop) {
-				return;
-			}
-			stop = true;
-			window.cancelAnimationFrame(animationFrameId);
-			Matter.Render.stop(render);
-			Matter.Runner.stop(runner);
-			Matter.Mouse.clearSourceEvents(mouse);
+			if (stopped) return;
+			pause();
+			stopped = true;
 			Matter.Engine.clear(engine);
-			window.clearInterval(intervalId);
 		},
 	};
 }

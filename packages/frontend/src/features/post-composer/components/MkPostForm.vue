@@ -91,7 +91,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</MkTip>
 		<MkUploaderItems :items="uploader.items.value" @showMenu="(item, ev) => showPerUploadItemMenu(item, ev)" @showMenuViaContextmenu="(item, ev) => showPerUploadItemMenuViaContextmenu(item, ev)"/>
 	</div>
-	<MkPollEditor v-if="poll" v-model="poll" @destroyed="poll = null"/>
+	<MkPollEditor v-if="poll" :key="pollEditorRevision" v-model="poll" @destroyed="poll = null"/>
 	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" v-bind="poll == null ? {} : { poll }" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
 	<div v-if="showingOptions" style="padding: 8px 16px;">
 	</div>
@@ -229,6 +229,7 @@ const posted = ref(false);
 const text = ref(props.initialText ?? '');
 const files = ref(props.initialFiles ?? []);
 const poll = ref<PollEditorModelValue | null>(null);
+const pollEditorRevision = ref(0);
 const useCw = ref<boolean>(!!props.initialCw);
 const showPreview = ref(store.showPreview);
 watch(showPreview, () => store.set('showPreview', showPreview.value));
@@ -242,6 +243,10 @@ const visibility = ref(
 	props.initialVisibility ?? (prefer.rememberNoteVisibility ? store.visibility : prefer.defaultNoteVisibility),
 );
 const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
+const visibleUserIds = ref<string[]>([]);
+const removedVisibleUserIds = new Set<string>();
+let visibleUsersReplaceGeneration = 0;
+let disposed = false;
 initialVisibleUsers.forEach((u) => pushVisibleUser(u));
 const reactionAcceptance = ref(store.reactionAcceptance);
 const scheduledAt = ref<number | null>(null);
@@ -308,7 +313,7 @@ function currentFields(): PostFormFields {
 		localOnly: localOnly.value,
 		files: files.value,
 		poll: poll.value,
-		visibleUserIds: visibleUsers.value.map((x) => x.id),
+		visibleUserIds: [...visibleUserIds.value],
 		quoteId: quoteId.value,
 		reactionAcceptance: reactionAcceptance.value,
 		scheduledAt: scheduledAt.value,
@@ -316,8 +321,9 @@ function currentFields(): PostFormFields {
 }
 
 // 送信先として選ぶ postAccount ではなく、フォームを開いたログイン主体が端末下書きを所有する。
+const localDraftAccountId = $i.id;
 const localDraftScope = computed((): LocalDraftScope => ({
-	accountId: $i.id,
+	accountId: localDraftAccountId,
 	channelId: targetChannel.value?.id,
 	renoteId: renoteTargetNote.value?.id,
 	replyId: replyTargetNote.value?.id,
@@ -454,21 +460,11 @@ if (replyTargetNote.value && ['home', 'followers', 'specified'].includes(replyTa
 	visibility.value = visibilityForReply(replyTargetNote.value.visibility, visibility.value);
 
 	if (visibility.value === 'specified') {
-		if (replyTargetNote.value.visibleUserIds) {
-			misskeyApi('users/show', {
-				userIds: replyTargetNote.value.visibleUserIds.filter(
-					(uid) => uid !== $i.id && uid !== replyTargetNote.value?.userId,
-				),
-			}).then((users) => {
-				users.forEach((u) => pushVisibleUser(u));
-			});
+		const userIds = (replyTargetNote.value.visibleUserIds ?? []).filter((uid) => uid !== $i.id);
+		if (replyTargetNote.value.userId !== $i.id && !userIds.includes(replyTargetNote.value.userId)) {
+			userIds.push(replyTargetNote.value.userId);
 		}
-
-		if (replyTargetNote.value.userId !== $i.id) {
-			misskeyApi('users/show', { userId: replyTargetNote.value.userId }).then((user) => {
-				pushVisibleUser(user);
-			});
-		}
+		replaceVisibleUsers([...visibleUserIds.value, ...userIds]);
 	}
 }
 
@@ -482,18 +478,41 @@ if (prefer.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
 	cw.value = replyTargetNote.value.cw;
 }
 
-function watchForDraft() {
-	watch(text, () => saveDraft());
-	watch(useCw, () => saveDraft());
-	watch(cw, () => saveDraft());
-	watch(poll, () => saveDraft());
-	watch(files, () => saveDraft(), { deep: true });
-	watch(visibility, () => saveDraft());
-	watch(localOnly, () => saveDraft());
-	watch(quoteId, () => saveDraft());
-	watch(reactionAcceptance, () => saveDraft());
-	watch(scheduledAt, () => saveDraft());
+if (props.initialNote) {
+	const init = props.initialNote;
+	text.value = init.text ?? '';
+	useCw.value = init.cw != null;
+	cw.value = init.cw ?? null;
+	visibility.value = init.visibility;
+	localOnly.value = init.localOnly ?? false;
+	files.value = init.files ?? [];
+	poll.value = init.poll ? {
+		choices: init.poll.choices.map((x) => x.text),
+		multiple: init.poll.multiple,
+		expiresAt: init.poll.expiresAt ? new Date(init.poll.expiresAt).getTime() : null,
+		expiredAfter: null,
+	} : null;
+	replaceVisibleUsers(init.visibleUserIds ?? []);
+	quoteId.value = renoteTargetNote.value?.id ?? null;
+	reactionAcceptance.value = init.reactionAcceptance;
 }
+
+let formRevision = 0;
+let draftDirty = false;
+function draftWatchSources() {
+	return [
+		text.value, useCw.value, cw.value, poll.value, files.value, visibility.value,
+		localOnly.value, visibleUserIds.value, quoteId.value, reactionAcceptance.value,
+		scheduledAt.value, localDraftScope.value, hashtags.value, withHashtags.value,
+	];
+}
+
+// 復元確認中の編集も検出し、閉じる直前の未 flush の入力を同期保存できるようにする。
+const stopDraftRevision = watch(draftWatchSources, () => {
+	formRevision++;
+	draftDirty = true;
+}, { deep: true, flush: 'sync' });
+const stopDraftSave = watch(draftWatchSources, saveDraft, { deep: true });
 
 function checkMissingMention() {
 	if (visibility.value === 'specified') {
@@ -516,12 +535,15 @@ function checkMissingMention() {
 }
 
 function addMissingMention() {
+	const generation = visibleUsersReplaceGeneration;
 	const ast = mfm.parse(text.value);
 
 	for (const x of mfm.extractMentions(ast)) {
 		if (!visibleUsers.value.some((u) => u.username === x.username && u.host === x.host)) {
 			misskeyApi('users/show', { username: x.username, host: x.host }).then((user) => {
-				pushVisibleUser(user);
+				if (!disposed && generation === visibleUsersReplaceGeneration && !removedVisibleUserIds.has(user.id)) {
+					pushVisibleUser(user);
+				}
 			});
 		}
 	}
@@ -803,31 +825,32 @@ function showOtherSettings() {
 //#endregion
 
 function pushVisibleUser(user: Misskey.entities.UserDetailed) {
-	if (!visibleUsers.value.some((u) => u.username === user.username && u.host === user.host)) {
+	if (disposed) return;
+	if (!visibleUserIds.value.includes(user.id)) visibleUserIds.value.push(user.id);
+	if (!visibleUsers.value.some((u) => u.id === user.id)) {
 		visibleUsers.value.push(user);
 	}
 }
 
-// 宛先を丸ごと置き換える読み込みの世代。下書きを続けて復元したとき、前の下書きの宛先の応答が
-// 後から届いて今の下書きの宛先に混ざらないよう、最後の要求の応答だけを使う。
-let visibleUsersReplaceGeneration = 0;
-
+// 復元した ID は応答前も保存・投稿に使う。前の復元や削除済みの宛先の応答は反映しない。
 function replaceVisibleUsers(userIds: string[]) {
+	if (disposed) return;
 	const generation = ++visibleUsersReplaceGeneration;
+	removedVisibleUserIds.clear();
+	visibleUserIds.value = [...new Set(userIds)];
 	visibleUsers.value = [];
-	if (userIds.length === 0) {
-		return;
-	}
-	misskeyApi('users/show', { userIds }).then((users) => {
-		if (generation !== visibleUsersReplaceGeneration) {
-			return;
-		}
-		users.forEach((u) => pushVisibleUser(u));
+	if (userIds.length === 0) return;
+	misskeyApi('users/show', { userIds: visibleUserIds.value }).then((users) => {
+		if (disposed || generation !== visibleUsersReplaceGeneration) return;
+		users.filter((u) => visibleUserIds.value.includes(u.id)).forEach((u) => pushVisibleUser(u));
 	});
 }
 
 function addVisibleUser() {
+	const generation = visibleUsersReplaceGeneration;
 	os.selectUser().then((user) => {
+		if (disposed || generation !== visibleUsersReplaceGeneration) return;
+		removedVisibleUserIds.delete(user.id);
 		pushVisibleUser(user);
 
 		if (!text.value.toLowerCase().includes(`@${user.username.toLowerCase()}`)) {
@@ -837,6 +860,8 @@ function addVisibleUser() {
 }
 
 function removeVisibleUser(id: string) {
+	removedVisibleUserIds.add(id);
+	visibleUserIds.value = visibleUserIds.value.filter((userId) => userId !== id);
 	visibleUsers.value = visibleUsers.value.filter((u) => u.id !== id);
 }
 
@@ -875,15 +900,18 @@ function onCompositionEnd(ev: CompositionEvent) {
 }
 
 function saveDraft() {
-	if (props.instant || mock) {
+	if (disposed || !draftDirty || props.instant || mock) {
 		return;
 	}
 
 	const fields = currentFields();
 	writeLocalDraft(localDraftScope.value, serializeLocalDraft(fields, new Date()), hasLocalDraftContent(fields));
+	draftDirty = false;
 }
 
 function deleteDraft() {
+	if (disposed) return;
+	draftDirty = false;
 	deleteLocalDraft(localDraftScope.value);
 }
 
@@ -901,7 +929,7 @@ async function saveServerDraft(
 		hashtag: hashtags.value,
 		fileIds: files.value.map((f) => f.id),
 		poll: poll.value,
-		visibleUserIds: visibleUsers.value.map((x) => x.id),
+		visibleUserIds: [...visibleUserIds.value],
 		renoteId: renoteTargetNote.value ? renoteTargetNote.value.id : quoteId.value ? quoteId.value : null,
 		replyId: replyTargetNote.value ? replyTargetNote.value.id : null,
 		channelId: targetChannel.value ? targetChannel.value.id : null,
@@ -1205,6 +1233,7 @@ async function openAccountMenu(ev: PointerEvent) {
 			},
 			{
 				restore: async (draft: Misskey.entities.NoteDraft) => {
+					if (disposed) return;
 					text.value = draft.text ?? '';
 					useCw.value = draft.cw != null;
 					cw.value = draft.cw ?? null;
@@ -1215,26 +1244,19 @@ async function openAccountMenu(ev: PointerEvent) {
 					if (draft.hashtag) {
 						withHashtags.value = true;
 					}
-					if (draft.poll) {
-						// 投票を一時的に空にしないと反映されないため
-						poll.value = null;
-						nextTick().then(() => {
-							poll.value = {
-								choices: draft.poll!.choices,
-								multiple: draft.poll!.multiple,
-								expiresAt: draft.poll!.expiresAt ? new Date(draft.poll!.expiresAt).getTime() : null,
-								expiredAfter: null,
-							};
-						});
-					}
+					pollEditorRevision.value++;
+					poll.value = draft.poll ? {
+						choices: draft.poll.choices,
+						multiple: draft.poll.multiple,
+						expiresAt: draft.poll.expiresAt ? new Date(draft.poll.expiresAt).getTime() : null,
+						expiredAfter: null,
+					} : null;
 					quoteId.value = draft.renoteId ?? null;
 					renoteTargetNote.value = draft.renote;
 					replyTargetNote.value = draft.reply;
 					reactionAcceptance.value = draft.reactionAcceptance;
 					scheduledAt.value = draft.scheduledAt ?? null;
-					if (draft.channel) {
-						targetChannel.value = draft.channel as unknown as Misskey.entities.Channel;
-					}
+					targetChannel.value = (draft.channel as Misskey.entities.Channel | undefined) ?? undefined;
 
 					replaceVisibleUsers(draft.visibleUserIds ?? []);
 
@@ -1362,8 +1384,10 @@ function showTour() {
 	});
 }
 
-async function restoreLocalDraft(): Promise<void> {
+async function restoreLocalDraft(revision: number): Promise<void> {
 	if (
+		disposed ||
+		revision !== formRevision ||
 		props.instant ||
 		props.mention ||
 		props.specified ||
@@ -1390,6 +1414,7 @@ async function restoreLocalDraft(): Promise<void> {
 			return;
 		}
 	}
+	if (disposed || revision !== formRevision) return;
 
 	if (data.text !== undefined) text.value = data.text;
 	if (data.useCw !== undefined) useCw.value = data.useCw;
@@ -1397,12 +1422,11 @@ async function restoreLocalDraft(): Promise<void> {
 	if (data.visibility !== undefined) visibility.value = data.visibility;
 	if (data.localOnly !== undefined) localOnly.value = data.localOnly;
 	if (data.files !== undefined) files.value = data.files;
-	if (data.poll !== undefined) poll.value = data.poll;
-	if (data.visibleUserIds !== undefined) {
-		misskeyApi('users/show', { userIds: data.visibleUserIds }).then((users) => {
-			users.forEach((u) => pushVisibleUser(u));
-		});
+	if (data.poll !== undefined) {
+		pollEditorRevision.value++;
+		poll.value = data.poll;
 	}
+	replaceVisibleUsers(data.visibleUserIds ?? []);
 	if (data.quoteId !== undefined) quoteId.value = data.quoteId;
 	if (data.reactionAcceptance !== undefined) reactionAcceptance.value = data.reactionAcceptance;
 	if (data.scheduledAt !== undefined) scheduledAt.value = data.scheduledAt;
@@ -1427,39 +1451,16 @@ onMounted(() => {
 		hashtagAutocomplete = new Autocomplete(hashtagsInputEl.value, hashtags);
 	}
 
-	nextTick().then(async () => {
-		await restoreLocalDraft();
-
-		if (props.initialNote) {
-			const init = props.initialNote;
-			text.value = init.text ? init.text : '';
-			useCw.value = init.cw != null;
-			cw.value = init.cw ?? null;
-			visibility.value = init.visibility;
-			localOnly.value = init.localOnly ?? false;
-			files.value = init.files ?? [];
-			if (init.poll) {
-				poll.value = {
-					choices: init.poll.choices.map((x) => x.text),
-					multiple: init.poll.multiple,
-					expiresAt: init.poll.expiresAt ? new Date(init.poll.expiresAt).getTime() : null,
-					expiredAfter: null,
-				};
-			}
-			if (init.visibleUserIds) {
-				misskeyApi('users/show', { userIds: init.visibleUserIds }).then((users) => {
-					users.forEach((u) => pushVisibleUser(u));
-				});
-			}
-			quoteId.value = renoteTargetNote.value ? renoteTargetNote.value.id : null;
-			reactionAcceptance.value = init.reactionAcceptance;
-		}
-
-		nextTick().then(() => watchForDraft());
-	});
+	const revision = formRevision;
+	nextTick().then(() => restoreLocalDraft(revision));
 });
 
 onBeforeUnmount(() => {
+	saveDraft();
+	disposed = true;
+	visibleUsersReplaceGeneration++;
+	stopDraftRevision();
+	stopDraftSave();
 	uploader.abortAll();
 	if (textAutocomplete) {
 		textAutocomplete.detach();

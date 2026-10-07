@@ -66,7 +66,7 @@ export type MkPaginationOptions = {
 
 <script lang="ts" setup generic="T extends IPaginator">
 import { isLink } from '@/shared/utility/is-link.js';
-import { onMounted, computed, watch, unref } from 'vue';
+import { onMounted, onBeforeUnmount, computed, watch, unref } from 'vue';
 import type { UnwrapRef } from 'vue';
 import { paginatorErrorText } from '@/utility/paginator.js';
 import type { IPaginator } from '@/utility/paginator.js';
@@ -140,6 +140,10 @@ if (props.paginator.computedParams) {
 		{ immediate: false, deep: true },
 	);
 }
+
+onBeforeUnmount(() => {
+	props.paginator.dispose();
+});
 
 const upButtonVisible = computed(() => {
 	return props.paginator.order.value === 'oldest'

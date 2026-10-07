@@ -23,11 +23,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
+import { inject, onActivated, onDeactivated, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { getScrollContainer } from '@/shared/utility/scroll.js';
 import { i18n } from '@/i18n.js';
 import { isHorizontalSwipeSwiping } from '@/utility/touch.js';
 import { throttleByAnimationFrame } from '@/utility/throttle-by-animation-frame.js';
+import { DI } from '@/di.js';
 
 const SCROLL_STOP = 10;
 const MAX_PULL_DISTANCE = Infinity;
@@ -47,6 +48,12 @@ let releaseAnimationResolve: (() => void) | null = null;
 
 const rootEl = useTemplateRef('rootEl');
 let scrollEl: HTMLElement | null = null;
+let active = true;
+let releaseGeneration = 0;
+const activated = ref(true);
+const routeActive = inject(DI.routeActive, ref(true));
+onActivated(() => { activated.value = true; });
+onDeactivated(() => { activated.value = false; });
 
 const props = withDefaults(
 	defineProps<{
@@ -88,6 +95,9 @@ function unlockDownScroll() {
 }
 
 function moveStartByMouse(event: MouseEvent) {
+	if (!active) {
+		return;
+	}
 	if (event.button !== 1) {
 		return;
 	}
@@ -114,6 +124,9 @@ function moveStartByMouse(event: MouseEvent) {
 }
 
 function moveStartByTouch(event: TouchEvent) {
+	if (!active) {
+		return;
+	}
 	if (isRefreshing.value) {
 		return;
 	}
@@ -132,7 +145,7 @@ function moveStartByTouch(event: TouchEvent) {
 
 	window.addEventListener('touchmove', moving, { passive: true });
 	window.addEventListener('touchend', onTouchEnd, { passive: true, once: true });
-	window.addEventListener('touchcancel', onTouchEnd, { passive: true, once: true });
+	window.addEventListener('touchcancel', onTouchCancel, { passive: true, once: true });
 }
 
 function cancelReleaseAnimation() {
@@ -148,35 +161,35 @@ function cancelReleaseAnimation() {
 }
 
 function moveBySystem(to: number): Promise<void> {
-	return new Promise((r) => {
-		cancelReleaseAnimation();
-		const startHeight = pullDistance.value;
-		const overHeight = pullDistance.value - to;
-		if (overHeight < 1 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+	cancelReleaseAnimation();
+	const { promise, resolve } = Promise.withResolvers<void>();
+	const startHeight = pullDistance.value;
+	const overHeight = pullDistance.value - to;
+	if (overHeight < 1 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+		pullDistance.value = to;
+		resolve();
+		return promise;
+	}
+
+	releaseAnimationResolve = resolve;
+	const startTime = window.performance.now();
+	const animate = (timestamp: number) => {
+		const time = timestamp - startTime;
+		if (time >= RELEASE_TRANSITION_DURATION) {
 			pullDistance.value = to;
-			r();
+			releaseAnimationFrameId = null;
+			releaseAnimationResolve = null;
+			resolve();
 			return;
 		}
-
-		releaseAnimationResolve = r;
-		const startTime = window.performance.now();
-		const animate = (timestamp: number) => {
-			const time = timestamp - startTime;
-			if (time >= RELEASE_TRANSITION_DURATION) {
-				pullDistance.value = to;
-				releaseAnimationFrameId = null;
-				releaseAnimationResolve = null;
-				r();
-				return;
-			}
-			const nextHeight = startHeight - (overHeight / RELEASE_TRANSITION_DURATION) * time;
-			if (pullDistance.value >= nextHeight) {
-				pullDistance.value = nextHeight;
-			}
-			releaseAnimationFrameId = window.requestAnimationFrame(animate);
-		};
+		const nextHeight = startHeight - (overHeight / RELEASE_TRANSITION_DURATION) * time;
+		if (pullDistance.value >= nextHeight) {
+			pullDistance.value = nextHeight;
+		}
 		releaseAnimationFrameId = window.requestAnimationFrame(animate);
-	});
+	};
+	releaseAnimationFrameId = window.requestAnimationFrame(animate);
+	return promise;
 }
 
 async function fixOverContent() {
@@ -196,23 +209,36 @@ function onPullRelease() {
 	window.removeEventListener('mouseup', onMouseUp);
 	window.removeEventListener('touchmove', moving);
 	window.removeEventListener('touchend', onTouchEnd);
-	window.removeEventListener('touchcancel', onTouchEnd);
+	window.removeEventListener('touchcancel', onTouchCancel);
 	startScreenY = null;
+	const generation = ++releaseGeneration;
 	if (isPulledEnough.value) {
 		isPulledEnough.value = false;
 		isRefreshing.value = true;
 		fixOverContent().then(() => {
+			if (!active || generation !== releaseGeneration) {
+				return;
+			}
 			emit('refresh');
 			props.refresher().then(() => {
-				refreshFinished();
+				if (active && generation === releaseGeneration) {
+					refreshFinished();
+				}
 			});
 		});
 	} else {
-		closeContent().then(() => (isPulling.value = false));
+		closeContent().then(() => {
+			if (active && generation === releaseGeneration) {
+				isPulling.value = false;
+			}
+		});
 	}
 }
 
 function toggleScrollLockOnTouchEnd() {
+	if (!active) {
+		return;
+	}
 	const scrollPos = scrollEl!.scrollTop;
 	if (scrollPos === 0) {
 		lockDownScroll();
@@ -255,6 +281,14 @@ function onTouchEnd() {
 	onPullRelease();
 }
 
+function onTouchCancel() {
+	stopPulling();
+	if (activated.value && routeActive.value) {
+		active = true;
+		lockDownScroll();
+	}
+}
+
 /**
  * refresher の Promise が解決した場合だけ表示を閉じる。タイムアウトによる自動終了は行わない。
  */
@@ -264,34 +298,51 @@ function refreshFinished() {
 		isRefreshing.value = false;
 	});
 }
+watch([activated, routeActive], ([isActivated, isRouteActive]) => {
+	if (isActivated && isRouteActive) {
+		active = true;
+		lockDownScroll();
+	} else {
+		stopPulling();
+	}
+}, { immediate: true, flush: 'sync' });
 
 onMounted(() => {
 	if (rootEl.value == null) {
 		return;
 	}
 	scrollEl = getScrollContainer(rootEl.value);
-	lockDownScroll();
+	if (active) {
+		lockDownScroll();
+	}
 	rootEl.value.addEventListener('mousedown', moveStartByMouse, { passive: false }); // preventDefaultするため
 	rootEl.value.addEventListener('touchstart', moveStartByTouch, { passive: true });
 	rootEl.value.addEventListener('touchend', toggleScrollLockOnTouchEnd, { passive: true });
 });
 
-onUnmounted(() => {
+function stopPulling() {
+	active = false;
+	releaseGeneration++;
 	unlockDownScroll();
 	window.removeEventListener('mousemove', moving);
 	window.removeEventListener('mouseup', onMouseUp);
 	window.removeEventListener('touchmove', moving);
 	window.removeEventListener('touchend', onTouchEnd);
-	window.removeEventListener('touchcancel', onTouchEnd);
+	window.removeEventListener('touchcancel', onTouchCancel);
 	scheduleMoving.cancel();
 	cancelReleaseAnimation();
+	startScreenY = null;
+	pullDistance.value = 0;
+	isPulling.value = false;
+	isPulledEnough.value = false;
+	isRefreshing.value = false;
+}
+
+onUnmounted(() => {
+	stopPulling();
 	if (rootEl.value) {
 		rootEl.value.removeEventListener('mousedown', moveStartByMouse);
-	}
-	if (rootEl.value) {
 		rootEl.value.removeEventListener('touchstart', moveStartByTouch);
-	}
-	if (rootEl.value) {
 		rootEl.value.removeEventListener('touchend', toggleScrollLockOnTouchEnd);
 	}
 });

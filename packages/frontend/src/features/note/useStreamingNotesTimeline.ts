@@ -118,7 +118,7 @@ export function useStreamingNotesTimeline(options: TimelineOptions, effects: Tim
 		const owned = current;
 		let stopped = false;
 		const connections: { dispose(): void }[] = [];
-		const fetchNewer = (): Promise<void> => owned.fetchNewer({ toQueue: shouldQueue() });
+		const fetchNewer = (): Promise<void> => owned.fetchNewer({ toQueue: shouldQueue });
 
 		function prepend(note: Misskey.entities.Note & MisskeyEntity): void {
 			if (stopped) {
@@ -198,9 +198,7 @@ export function useStreamingNotesTimeline(options: TimelineOptions, effects: Tim
 					break;
 			}
 		} else {
-			polling = new PollingScheduler(() => {
-				void fetchNewer();
-			}, pollingInterval);
+			polling = new PollingScheduler(fetchNewer, pollingInterval);
 			if (mounted && active) {
 				polling.start();
 			}
@@ -281,7 +279,7 @@ export function useStreamingNotesTimeline(options: TimelineOptions, effects: Tim
 		if (current.items.value.length === 0) {
 			void current.init();
 		} else {
-			void current.fetchNewer({ toQueue: shouldQueue() });
+			void current.fetchNewer({ toQueue: shouldQueue });
 		}
 	});
 	onDeactivated(() => {

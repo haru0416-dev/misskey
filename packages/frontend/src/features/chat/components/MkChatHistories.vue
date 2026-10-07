@@ -28,7 +28,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</MkA>
 </div>
-<MkResult v-if="!initializing && history.length == 0" type="empty" :text="i18n.ts._chat.noHistory"/>
+<MkResult v-if="error" type="error"/>
+<MkResult v-else-if="!initializing && history.length == 0" type="empty" :text="i18n.ts._chat.noHistory"/>
 <MkLoading v-if="initializing"/>
 </template>
 
@@ -53,6 +54,7 @@ const history = ref<
 
 const initializing = ref(true);
 const fetching = ref(false);
+const error = ref(false);
 
 async function fetchHistory() {
 	if (fetching.value) {
@@ -61,22 +63,32 @@ async function fetchHistory() {
 
 	fetching.value = true;
 
-	const [userMessages, roomMessages] = await Promise.all([
-		misskeyApi('chat/history', { room: false }),
-		misskeyApi('chat/history', { room: true }),
-	]);
+	try {
+		const [userResult, roomResult] = await Promise.allSettled([
+			misskeyApi('chat/history', { room: false }),
+			misskeyApi('chat/history', { room: true }),
+		]);
+		if (userResult.status === 'rejected') throw userResult.reason;
+		if (roomResult.status === 'rejected') throw roomResult.reason;
+		const userMessages = userResult.value;
+		const roomMessages = roomResult.value;
 
-	history.value = [...userMessages, ...roomMessages]
-		.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-		.map((m) => ({
-			id: m.id,
-			message: m,
-			other: !('room' in m) || m.room == null ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
-			isMe: m.fromUserId === $i.id,
-		}));
-
-	fetching.value = false;
-	initializing.value = false;
+		history.value = [...userMessages, ...roomMessages]
+			.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+			.map((m) => ({
+				id: m.id,
+				message: m,
+				other: !('room' in m) || m.room == null ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
+				isMe: m.fromUserId === $i.id,
+			}));
+		error.value = false;
+	} catch {
+		// 定期更新の失敗では取得済みの履歴を残し、初回失敗は空の履歴と区別して表示する。
+		error.value = true;
+	} finally {
+		fetching.value = false;
+		initializing.value = false;
+	}
 }
 
 let isActivated = true;
@@ -91,9 +103,8 @@ onDeactivated(() => {
 
 useInterval(
 	() => {
-		if (!window.document.hidden && isActivated) {
-			fetchHistory();
-		}
+		if (window.document.hidden || !isActivated) return;
+		return fetchHistory();
 	},
 	1000 * 10,
 	{

@@ -313,6 +313,7 @@ const props = withDefaults(
 );
 
 const inChannel = inject(DI.inChannel, null);
+const tooltipRouteActive = inject(DI.routeActive, ref(true));
 
 let note = deepClone(props.note);
 
@@ -439,6 +440,9 @@ useTooltip(renoteButton, async (showing) => {
 		noteId: appearNote.id,
 		limit: 11,
 	});
+	if (!showing.value || !tooltipRouteActive.value || !anchorElement.isConnected || renoteButton.value !== anchorElement) {
+		return;
+	}
 
 	const users = renotes.map((x) => x.user);
 
@@ -462,11 +466,15 @@ useTooltip(renoteButton, async (showing) => {
 
 if (appearNote.reactionAcceptance === 'likeOnly') {
 	useTooltip(reactButton, async (showing) => {
+		const anchorElement = reactButton.value;
 		const reactions = await misskeyApiGet('notes/reactions', {
 			noteId: appearNote.id,
 			limit: 10,
 			_cacheKey_: $appearNote.reactionCount,
 		});
+		if (!showing.value || !tooltipRouteActive.value || anchorElement == null || !anchorElement.isConnected || reactButton.value !== anchorElement) {
+			return;
+		}
 
 		const users = reactions.map((x) => x.user);
 
@@ -481,7 +489,7 @@ if (appearNote.reactionAcceptance === 'likeOnly') {
 				reaction: '❤️',
 				users,
 				count: $appearNote.reactionCount,
-				anchorElement: reactButton.value!,
+				anchorElement,
 			},
 			{
 				closed: () => dispose(),

@@ -6,7 +6,7 @@
 import { vi } from 'vitest';
 import createFetchMock from 'vitest-fetch-mock';
 import type { Ref } from 'vue';
-import { ref } from 'vue';
+import { ref, shallowReactive } from 'vue';
 import type { Locale } from 'i18n';
 
 const fetchMocker = createFetchMock(vi);
@@ -39,37 +39,36 @@ export type TestPreferenceReactive = Record<string, Ref<unknown>> & {
 	emojiStyle?: Ref<string>;
 };
 
-export const preferState: TestPreferenceState = {
-	dataSaver: {
-		media: false,
-		avatar: false,
-		urlPreview: false,
-		code: false,
+export const preferReactive = shallowReactive<TestPreferenceReactive>({
+	dataSaver: ref({ media: false, avatar: false, urlPreview: false, code: false }),
+	mutingEmojis: ref([]),
+});
+
+export const preferState = new Proxy({} as TestPreferenceState, {
+	get(_target, key) {
+		return typeof key === 'string' ? preferReactive[key]?.value : undefined;
 	},
-	mutingEmojis: [],
-};
-
-export const preferReactive: TestPreferenceReactive = {};
-
-for (const key in preferState) {
-	if (preferState[key] !== undefined) {
-		preferReactive[key] = ref(preferState[key]);
-	}
-}
+	set(_target, key, value) {
+		if (typeof key !== 'string') return false;
+		if (preferReactive[key] == null) preferReactive[key] = ref(value);
+		else preferReactive[key].value = value;
+		return true;
+	},
+	ownKeys: () => Reflect.ownKeys(preferReactive),
+	getOwnPropertyDescriptor: (_target, key) =>
+		typeof key === 'string' && Object.hasOwn(preferReactive, key)
+			? { configurable: true, enumerable: true }
+			: undefined,
+});
 
 export const prefer = new Proxy(
 	{
 		commit(key: string, value: unknown) {
 			preferState[key] = value;
-			if (preferReactive[key] == null) {
-				preferReactive[key] = ref(value);
-			} else {
-				preferReactive[key].value = value;
-			}
 		},
 		model(key: string) {
 			if (preferReactive[key] == null) {
-				preferReactive[key] = ref(preferState[key]);
+				preferReactive[key] = ref(undefined);
 			}
 			return preferReactive[key];
 		},
@@ -77,7 +76,7 @@ export const prefer = new Proxy(
 	{
 		get(target, key, receiver) {
 			if (typeof key === 'string' && preferReactive[key] != null) {
-				return preferReactive[key].value;
+				return preferState[key];
 			}
 			if (typeof key === 'string' && Object.hasOwn(preferState, key)) {
 				return preferState[key];
@@ -89,11 +88,6 @@ export const prefer = new Proxy(
 				return false;
 			}
 			preferState[key] = value;
-			if (preferReactive[key] == null) {
-				preferReactive[key] = ref(value);
-			} else {
-				preferReactive[key].value = value;
-			}
 			return true;
 		},
 	},

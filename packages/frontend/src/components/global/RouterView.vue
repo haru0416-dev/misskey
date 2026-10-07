@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="_pageContainer" :class="$style.root">
 	<KeepAlive :max="prefer.numberOfPageCache">
 		<Suspense :timeout="0">
-			<component :is="currentPageComponent" :key="key" v-bind="Object.fromEntries(currentPageProps)"/>
+			<RouteScope :key="key" :component="currentPageComponent" :pageProps="pageProps" :router="currentRouter"/>
 
 			<template #fallback>
 				<MkLoading/>
@@ -18,13 +18,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { inject, nextTick, onMounted, provide, ref, shallowRef, useTemplateRef } from 'vue';
+import { computed, inject, provide, ref, shallowRef } from 'vue';
 import type { Router } from '@/router.js';
 import { prefer } from '@/preferences.js';
 import MkLoadingPage from '@/pages/loading.vue';
 import { DI } from '@/di.js';
-import { randomId } from '@/utility/random-id.js';
 import { deepEqual } from '@/utility/deep-equal.js';
+import RouteScope from './RouteScope.vue';
 
 const props = defineProps<{
 	router?: Router;
@@ -38,8 +38,6 @@ if (_router == null) {
 
 const currentRouter = _router;
 
-const viewId = randomId();
-provide(DI.viewId, viewId);
 
 const currentDepth = inject(DI.routerCurrentDepth, 0);
 provide(DI.routerCurrentDepth, currentDepth + 1);
@@ -47,21 +45,22 @@ provide(DI.routerCurrentDepth, currentDepth + 1);
 const current = currentRouter.current;
 const currentPageComponent = shallowRef('component' in current.route ? current.route.component : MkLoadingPage);
 const currentPageProps = ref(current.props);
-let currentRoutePath = current.route.path;
+const pageProps = computed(() => Object.fromEntries(currentPageProps.value));
+let currentRoute = current.route;
 const key = ref(currentRouter.getCurrentFullPath());
 
 currentRouter.useListener('change', ({ resolved }) => {
 	if (resolved == null || 'redirect' in resolved.route) {
 		return;
 	}
-	if (resolved.route.path === currentRoutePath && deepEqual(resolved.props, currentPageProps.value)) {
+	if (resolved.route === currentRoute && resolved.route.component === currentPageComponent.value && deepEqual(resolved.props, currentPageProps.value)) {
 		return;
 	}
 
 	currentPageComponent.value = resolved.route.component;
 	currentPageProps.value = resolved.props;
 	key.value = currentRouter.getCurrentFullPath();
-	currentRoutePath = resolved.route.path;
+	currentRoute = resolved.route;
 });
 </script>
 

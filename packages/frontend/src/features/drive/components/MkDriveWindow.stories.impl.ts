@@ -5,6 +5,7 @@
 
 import type { StoryObj } from '@/stories/types.js';
 import MkDriveWindow from './MkDriveWindow.vue';
+import { http, HttpResponse } from 'msw';
 
 export const Default = {
 	render: (args) => ({
@@ -13,4 +14,12 @@ export const Default = {
 		template: '<MkDriveWindow v-bind="args" />',
 	}),
 	args: {},
+	parameters: {
+		msw: {
+			handlers: [
+				http.post('/api/drive/folders', () => HttpResponse.json([])),
+				http.post('/api/drive/files', () => HttpResponse.json([])),
+			],
+		},
+	},
 } satisfies StoryObj<typeof MkDriveWindow>;

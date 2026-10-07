@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent, ref } from 'vue';
+import { defineAsyncComponent, ref, watch } from 'vue';
 import type { Directive } from 'vue';
 import { popup, alert } from '@/os.js';
 import { genId } from '@/utility/id.js';
+import { getRouteActive } from '@/di.js';
 
 const MOUSEENTER_IGNORE_DURATION = 1000;
 const MkTooltip = defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue'));
@@ -29,6 +30,7 @@ type TooltipDirectiveArg = 'dialog';
 
 export const tooltipDirective = {
 	mounted(el, binding) {
+		const routeActive = getRouteActive(binding.instance);
 		const delay = binding.modifiers.noDelay ? 0 : 100;
 		const tooltipId = genId();
 		const addDescription = () => {
@@ -67,7 +69,7 @@ export const tooltipDirective = {
 		};
 
 		self.show = () => {
-			if (!window.document.body.contains(el)) {
+			if (routeActive?.value === false || !window.document.body.contains(el)) {
 				return;
 			}
 			if (self.closePopup) {
@@ -125,6 +127,9 @@ export const tooltipDirective = {
 		let isTouching = false;
 		let isFocused = false;
 		const startTooltip = () => {
+			if (routeActive?.value === false) {
+				return;
+			}
 			clearShowTimer();
 			clearHideTimer();
 			if (delay === 0) {
@@ -201,6 +206,24 @@ export const tooltipDirective = {
 			clearHideTimer();
 			self.close();
 		};
+		const stopRouteWatch =
+			routeActive == null
+				? undefined
+				: watch(
+						routeActive,
+						(active) => {
+							if (active) {
+								return;
+							}
+							isMouseHovering = false;
+							isTouching = false;
+							isFocused = false;
+							clearShowTimer();
+							clearHideTimer();
+							self.close();
+						},
+						{ flush: 'sync' },
+					);
 
 		el.addEventListener('mouseenter', onMouseenter, { passive: true });
 		el.addEventListener('mouseleave', onMouseleave, { passive: true });
@@ -214,6 +237,7 @@ export const tooltipDirective = {
 		el.addEventListener('keydown', onKeydown);
 
 		self.cleanup = () => {
+			stopRouteWatch?.();
 			clearShowTimer();
 			clearHideTimer();
 			self.close();

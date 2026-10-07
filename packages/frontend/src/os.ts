@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { markRaw, ref, defineAsyncComponent, nextTick } from 'vue';
+import { markRaw, ref, defineAsyncComponent, nextTick, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
-import type { Component } from 'vue';
+import type { Component, Ref } from 'vue';
 import type { ComponentEmit } from 'vue-component-type-helpers';
 import type { Form, GetFormResultType } from '@/utility/form.js';
 import type { ComponentProps } from '@/utility/component-props.js';
@@ -30,6 +30,7 @@ import MkDialog from '@/components/overlay/MkDialog.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { focusParent } from '@/utility/focus.js';
+import { getRouteActiveForElement } from '@/di.js';
 
 const MkPasswordDialog = defineAsyncComponent(() => import('@/features/auth/components/MkPasswordDialog.vue'));
 const MkFormDialog = defineAsyncComponent(() => import('@/features/dynamic-form/components/MkFormDialog.vue'));
@@ -249,29 +250,53 @@ export async function popupAsyncWithDialog<T extends Component>(
 	return popup(component, props, events);
 }
 
-async function resolveComponentWithDialog<T extends Component>(componentFetching: Promise<T>): Promise<T> {
+async function resolveComponentWithDialog<T extends Component>(
+	componentFetching: Promise<T>,
+	ownerActive?: Readonly<Ref<boolean>>,
+	onOwnerInactive?: () => void,
+): Promise<T> {
 	let component: T;
-	let closeWaiting = () => {};
+	let closeWaiting: (() => void) | undefined;
 
 	const timer = window.setTimeout(() => {
-		closeWaiting = waiting();
+		if (ownerActive?.value !== false) {
+			closeWaiting = waiting();
+		}
 	}, 100); // コンポーネントがキャッシュされている場合にもwaitingが表示されて画面がちらつくのを防止するためにラグを追加
+	const finishWaiting = () => {
+		window.clearTimeout(timer);
+		closeWaiting?.();
+		closeWaiting = undefined;
+	};
+	let stopOwnerWatch: (() => void) | undefined;
+	if (ownerActive != null) {
+		stopOwnerWatch = watch(
+			ownerActive,
+			(active) => {
+				if (!active) {
+					onOwnerInactive?.();
+					finishWaiting();
+					stopOwnerWatch?.();
+				}
+			},
+			{ flush: 'sync' },
+		);
+	}
 
 	try {
 		component = await componentFetching;
 	} catch (err) {
-		window.clearTimeout(timer);
-		closeWaiting();
+		finishWaiting();
 		alert({
 			type: 'error',
 			title: i18n.ts.somethingHappened,
 			text: 'CODE: ASYNC_COMP_LOAD_FAIL',
 		});
 		throw err;
+	} finally {
+		stopOwnerWatch?.();
+		finishWaiting();
 	}
-
-	window.clearTimeout(timer);
-	closeWaiting();
 
 	return component;
 }
@@ -775,46 +800,89 @@ export async function popupMenu(
 	if (!(anchorElement instanceof HTMLElement)) {
 		anchorElement = null;
 	}
+	const ownerActive = getRouteActiveForElement(anchorElement);
+	let ownerCanceled = ownerActive?.value === false;
+	if (ownerCanceled) {
+		return;
+	}
 
 	let returnFocusTo = getHTMLElementOrNull(anchorElement) ?? getHTMLElementOrNull(window.document.activeElement);
 	let component: typeof MkPopupMenu_TypeReferenceOnly;
 	try {
-		component = await resolveComponentWithDialog(fetchPopupMenuComponent());
+		component = await resolveComponentWithDialog(
+			fetchPopupMenuComponent(),
+			ownerActive,
+			ownerActive == null
+				? undefined
+				: () => {
+						ownerCanceled = true;
+					},
+		);
 	} catch {
 		returnFocusTo = null;
 		return;
 	}
 
 	await nextTick();
-	return new Promise((resolve) => {
-		const { dispose } = popup(
-			component,
-			{
-				items: items.filter((x) => x != null),
-				anchorElement,
-				...(options?.width === undefined ? {} : { width: options.width }),
-				...(options?.align === undefined ? {} : { align: options.align }),
-				returnFocusTo,
-				...(options?.debugDisablePredictionCone === undefined
-					? {}
-					: { debugDisablePredictionCone: options.debugDisablePredictionCone }),
-				...(options?.debugShowPredictionCone === undefined
-					? {}
-					: { debugShowPredictionCone: options.debugShowPredictionCone }),
+	if (ownerCanceled || ownerActive?.value === false || (anchorElement != null && !anchorElement.isConnected)) {
+		returnFocusTo = null;
+		return;
+	}
+	const { promise, resolve } = Promise.withResolvers<void>();
+	let stopOwnerWatch: (() => void) | undefined;
+	let closing = false;
+	let settled = false;
+	const onClosing = () => {
+		if (closing) {
+			return;
+		}
+		closing = true;
+		options?.onClosing?.();
+	};
+	const finish = () => {
+		if (settled) {
+			return;
+		}
+		settled = true;
+		stopOwnerWatch?.();
+		resolve();
+		dispose();
+		returnFocusTo = null;
+		options?.onClosed?.();
+	};
+	const { dispose } = popup(
+		component,
+		{
+			items: items.filter((x) => x != null),
+			anchorElement,
+			...(options?.width === undefined ? {} : { width: options.width }),
+			...(options?.align === undefined ? {} : { align: options.align }),
+			returnFocusTo,
+			...(options?.debugDisablePredictionCone === undefined
+				? {}
+				: { debugDisablePredictionCone: options.debugDisablePredictionCone }),
+			...(options?.debugShowPredictionCone === undefined
+				? {}
+				: { debugShowPredictionCone: options.debugShowPredictionCone }),
+		},
+		{ closed: finish, closing: onClosing },
+	);
+	if (ownerActive != null) {
+		stopOwnerWatch = watch(
+			ownerActive,
+			(active) => {
+				if (!active) {
+					try {
+						onClosing();
+					} finally {
+						finish();
+					}
+				}
 			},
-			{
-				closed: () => {
-					resolve();
-					dispose();
-					returnFocusTo = null;
-					options?.onClosed?.();
-				},
-				closing: () => {
-					options?.onClosing?.();
-				},
-			},
+			{ flush: 'sync' },
 		);
-	});
+	}
+	return promise;
 }
 
 export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<void> {
@@ -822,38 +890,65 @@ export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<
 		return;
 	}
 
+	const anchorElement = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
+	const ownerActive = getRouteActiveForElement(anchorElement);
 	let returnFocusTo =
 		getHTMLElementOrNull(ev.currentTarget ?? ev.target) ?? getHTMLElementOrNull(window.document.activeElement);
 	ev.preventDefault();
+	let ownerCanceled = ownerActive?.value === false;
+	if (ownerCanceled) {
+		return;
+	}
 	let component: typeof MkContextMenu_TypeReferenceOnly;
 	try {
-		component = await resolveComponentWithDialog(fetchContextMenuComponent());
+		component = await resolveComponentWithDialog(
+			fetchContextMenuComponent(),
+			ownerActive,
+			ownerActive == null
+				? undefined
+				: () => {
+						ownerCanceled = true;
+					},
+		);
 	} catch {
 		returnFocusTo = null;
 		return;
 	}
 
 	await nextTick();
-	return new Promise((resolve) => {
-		const { dispose } = popup(
-			component,
-			{
-				items,
-				ev,
+	if (ownerCanceled || ownerActive?.value === false || (anchorElement != null && !anchorElement.isConnected)) {
+		returnFocusTo = null;
+		return;
+	}
+	const { promise, resolve } = Promise.withResolvers<void>();
+	let stopOwnerWatch: (() => void) | undefined;
+	let settled = false;
+	const finish = () => {
+		if (settled) {
+			return;
+		}
+		settled = true;
+		stopOwnerWatch?.();
+		resolve();
+		dispose();
+		if (returnFocusTo != null && ownerActive?.value !== false) {
+			focusParent(returnFocusTo, true, false);
+		}
+		returnFocusTo = null;
+	};
+	const { dispose } = popup(component, { items, ev }, { closed: finish });
+	if (ownerActive != null) {
+		stopOwnerWatch = watch(
+			ownerActive,
+			(active) => {
+				if (!active) {
+					finish();
+				}
 			},
-			{
-				closed: () => {
-					resolve();
-					dispose();
-
-					if (returnFocusTo != null) {
-						focusParent(returnFocusTo, true, false);
-						returnFocusTo = null;
-					}
-				},
-			},
+			{ flush: 'sync' },
 		);
-	});
+	}
+	return promise;
 }
 
 export function chooseFileFromPc(

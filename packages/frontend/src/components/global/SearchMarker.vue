@@ -11,15 +11,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import {
-	onActivated,
-	onDeactivated,
-	onMounted,
-	onBeforeUnmount,
-	watch,
-	computed,
-	ref,
-	useTemplateRef,
-	inject,
+	computed, inject, onActivated, onBeforeUnmount, onDeactivated, onMounted,
+	provide, ref, shallowReactive, useTemplateRef, watch,
 } from 'vue';
 import { DI } from '@/di.js';
 
@@ -33,56 +26,92 @@ const props = defineProps<{
 }>();
 
 const rootEl = useTemplateRef('root');
-const rootElMutationObserver = new MutationObserver(() => {
-	checkChildren();
-});
 const injectedSearchMarkerId = inject(DI.inAppSearchMarkerId, null);
-const searchMarkerId = computed(() => injectedSearchMarkerId?.value ?? window.location.hash.slice(1));
-const highlighted = ref(props.markerId === searchMarkerId.value);
-const isParentOfTarget = computed(() => props.children?.includes(searchMarkerId.value));
+const router = inject(DI.router, null);
+const routeActive = inject(DI.routeActive, null);
+const parentMarkers = inject(DI.searchMarkers, null);
+const markers = parentMarkers ?? shallowReactive(new Map<string, number>());
+if (parentMarkers == null) provide(DI.searchMarkers, markers);
 
-function checkChildren() {
-	if (isParentOfTarget.value) {
-		const el = window.document.querySelector(`[data-in-app-search-marker-id="${searchMarkerId.value}"]`);
-		highlighted.value = el == null;
+const windowHash = ref(window.location.hash.slice(1));
+const activated = ref(true);
+const active = computed(() => activated.value && (routeActive?.value ?? true));
+const searchMarkerId = computed(() => {
+	// null は「この view に対象がない」であり、メイン画面へ所有権を戻す値ではない。
+	if (injectedSearchMarkerId != null) return injectedSearchMarkerId.value;
+	if (router != null) return router.currentRef.value._parsedRoute.hash ?? null;
+	return windowHash.value || null;
+});
+const isParentOfTarget = computed(() => searchMarkerId.value != null && (props.children?.includes(searchMarkerId.value) ?? false));
+const highlighted = computed(() => active.value && searchMarkerId.value != null && (
+	props.markerId === searchMarkerId.value ||
+	(isParentOfTarget.value && (markers.get(searchMarkerId.value) ?? 0) === 0)
+));
+
+let mounted = false;
+let registeredId: string | null = null;
+let lastScrollTarget: string | null = null;
+
+function unregister() {
+	if (registeredId == null) return;
+	const count = (markers.get(registeredId) ?? 1) - 1;
+	if (count === 0) markers.delete(registeredId);
+	else markers.set(registeredId, count);
+	registeredId = null;
+}
+
+function register() {
+	const id = mounted && active.value ? props.markerId ?? null : null;
+	if (id === registeredId) return;
+	unregister();
+	if (id != null) {
+		markers.set(id, (markers.get(id) ?? 0) + 1);
+		registeredId = id;
 	}
 }
 
-watch([
-	searchMarkerId,
-	() => props.children,
-], () => {
-	if (props.children != null && props.children.length > 0) {
-		checkChildren();
+function scrollToTarget() {
+	if (!mounted || !highlighted.value) {
+		lastScrollTarget = null;
+		return;
 	}
-}, { flush: 'post' });
-
-function init() {
-	checkChildren();
-
-	if (highlighted.value) {
-		rootEl.value?.scrollIntoView({
-			behavior: 'smooth',
-			block: 'center',
-		});
-	}
-
-	if (rootEl.value != null) {
-		rootElMutationObserver.observe(rootEl.value, {
-			childList: true,
-			subtree: true,
-		});
-	}
+	if (lastScrollTarget === searchMarkerId.value) return;
+	lastScrollTarget = searchMarkerId.value;
+	rootEl.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function dispose() {
-	rootElMutationObserver.disconnect();
+function updateWindowHash() {
+	windowHash.value = window.location.hash.slice(1);
 }
 
-onMounted(init);
-onActivated(init);
-onDeactivated(dispose);
-onBeforeUnmount(dispose);
+watch([() => props.markerId, active], register, { flush: 'sync' });
+watch([searchMarkerId, highlighted], scrollToTarget, { flush: 'post' });
+
+onMounted(() => {
+	mounted = true;
+	register();
+	scrollToTarget();
+	if (injectedSearchMarkerId == null && router == null) {
+		window.addEventListener('hashchange', updateWindowHash);
+		window.addEventListener('popstate', updateWindowHash);
+	}
+});
+onActivated(() => {
+	activated.value = true;
+	register();
+	scrollToTarget();
+});
+onDeactivated(() => {
+	activated.value = false;
+	lastScrollTarget = null;
+	unregister();
+});
+onBeforeUnmount(() => {
+	mounted = false;
+	unregister();
+	window.removeEventListener('hashchange', updateWindowHash);
+	window.removeEventListener('popstate', updateWindowHash);
+});
 </script>
 
 <style lang="scss" module>

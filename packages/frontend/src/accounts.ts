@@ -11,7 +11,7 @@ import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { popup, success, alert } from '@/os.js';
 import { unisonReload, reloadChannel } from '@/utility/unison-reload.js';
-import { prefer } from '@/preferences.js';
+import { disposePreferences, prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import type { AccountWithToken } from '@/i.js';
@@ -48,26 +48,28 @@ export async function getAccounts(): Promise<
 }
 
 async function addAccount(host: string, user: Misskey.entities.MeDetailed, token: AccountWithToken['token']) {
+	const tokenSaved = store.set('accountTokens', { ...store.accountTokens, [host + '/' + user.id]: token });
+	const infoSaved = store.set('accountInfos', { ...store.accountInfos, [host + '/' + user.id]: user });
 	if (!prefer.accounts.some((x) => x[0] === host && x[1].id === user.id)) {
-		store.set('accountTokens', { ...store.accountTokens, [host + '/' + user.id]: token });
-		store.set('accountInfos', { ...store.accountInfos, [host + '/' + user.id]: user });
 		prefer.commit('accounts', [...prefer.accounts, [host, { id: user.id, username: user.username }]]);
 	}
+	await Promise.all([tokenSaved, infoSaved]);
 }
 
 export async function removeAccount(host: string, id: AccountWithToken['id']) {
 	const accountKey = host + '/' + id;
 	const tokens = { ...store.accountTokens };
 	delete tokens[accountKey];
-	store.set('accountTokens', tokens);
+	const tokenSaved = store.set('accountTokens', tokens);
 	const accountInfos = { ...store.accountInfos };
 	delete accountInfos[accountKey];
-	store.set('accountInfos', accountInfos);
+	const infoSaved = store.set('accountInfos', accountInfos);
 
 	prefer.commit(
 		'accounts',
 		prefer.accounts.filter((x) => x[0] !== host || x[1].id !== id),
 	);
+	await Promise.all([tokenSaved, infoSaved]);
 }
 
 // 凍結・削除・トークン失効のように、アカウントがもう使えないと応答が明示した場合だけ使う。
@@ -197,16 +199,14 @@ export async function refreshCurrentAccount() {
 		.then((account) => {
 			if ($i?.id === me.id && $i.token === me.token) updateCurrentAccount(account);
 		})
-		.catch((reason) => {
+		.catch(async (reason) => {
 			if (reason === isAccountDeleted && isSelectedAccount(me.id, me.token)) {
-				// 外したアカウントのトークンは、removeAccount の直後でもまだ store から読めることがある。
-				// それで再ログインすると同じエラーで止まり、サインアウトもされないので、切り替え先から明示的に除く。
 				const remainingToken = Object.entries(store.accountTokens).find(([key]) => key !== host + '/' + me.id)?.[1];
-				removeAccount(host, me.id);
+				await removeAccount(host, me.id);
 				if (remainingToken != null) {
-					login(remainingToken);
+					await login(remainingToken);
 				} else {
-					signout();
+					await signout();
 				}
 			}
 		});
@@ -230,15 +230,24 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 		throw reason;
 	});
 
-	miLocalStorage.setItem(
-		'account',
-		JSON.stringify({
-			...me,
-			token,
-		}),
-	);
-
-	await addAccount(host, me, token);
+	try {
+		await addAccount(host, me, token);
+		await Promise.all([store.$persistFlush(), prefer.$preferencesFlush()]);
+		miLocalStorage.setItem(
+			'account',
+			JSON.stringify({
+				...me,
+				token,
+			}),
+		);
+		// 選択の保存が失敗した場合は旧所有者を使い続ける。成功後は同じタスク内で所有者を停止してから待つ。
+		const storeDisposed = store.$persistDispose();
+		const preferencesDisposed = disposePreferences();
+		await Promise.all([storeDisposed, preferencesDisposed]);
+	} catch (reason) {
+		showing.value = false;
+		throw reason;
+	}
 
 	if (redirect) {
 		reloadChannel.postMessage(null);
@@ -246,21 +255,21 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 		return;
 	}
 
-	unisonReload();
+	await unisonReload();
 }
 
 export async function switchAccount(host: string, id: string) {
 	const token = store.accountTokens[host + '/' + id];
 	if (token) {
-		login(token);
+		await login(token);
 	} else {
 		const { dispose } = popup(
 			MkSigninDialog,
 			{},
 			{
 				done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-					store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
-					login(res.i);
+					await store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
+					await login(res.i);
 				},
 				closed: () => {
 					dispose();
@@ -332,7 +341,7 @@ export async function getAccountMenu(opts: {
 					},
 					{
 						done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-							store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
+							await store.set('accountTokens', { ...store.accountTokens, [host + '/' + res.id]: res.i });
 
 							if (callback) {
 								fetchAccount(res.i, id).then((account) => {

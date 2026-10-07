@@ -61,7 +61,7 @@ const stats = ref<Misskey.entities.HashtagsTrendResponse>([]);
 const fetching = ref(true);
 
 const fetch = () => {
-	misskeyApiGet('hashtags/trend').then(res => {
+	return misskeyApiGet('hashtags/trend').then(res => {
 		stats.value = res;
 		fetching.value = false;
 	});

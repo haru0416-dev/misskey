@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { h, defineComponent } from 'vue';
+import { h, defineComponent, Suspense } from 'vue';
 import type { Component } from 'vue';
 import type { StoryContext, StoryObj } from './types.js';
 
@@ -43,8 +43,10 @@ export function createStoryContext(story: StoryObj, canvasElement: HTMLElement):
  * `render` を持たない story は args を当てる先が無いので空要素になる。呼び出し側 (registry) が
  * そもそも一覧へ載せない前提。
  */
-export function buildStoryComponent(story: StoryObj, context: StoryContext): Component {
+export function buildStoryComponent(story: StoryObj, context: StoryContext, onReady?: () => void): Component {
 	const inner = story.render?.(context.args, context) ?? defineComponent({ render: () => h('div') });
-
-	return decorate(inner as Component, story, context);
+	const decorated = decorate(inner as Component, story, context);
+	return defineComponent({
+		render: () => h(Suspense, onReady == null ? null : { onResolve: onReady }, { default: () => h(decorated) }),
+	});
 }

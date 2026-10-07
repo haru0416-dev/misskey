@@ -57,7 +57,7 @@ function onInstanceClick(i: Misskey.entities.FederationInstance) {
 
 useInterval(
 	() => {
-		misskeyApi('federation/instances', {
+		return misskeyApi('federation/instances', {
 			sort: '+latestRequestReceivedAt',
 			limit: 25,
 		}).then((res) => {

@@ -6,8 +6,8 @@
 const requestIdleCallback: typeof globalThis.requestIdleCallback =
 	globalThis.requestIdleCallback ??
 	((callback) => {
-		const start = performance.now();
 		const timeoutId = window.setTimeout(() => {
+			const start = performance.now();
 			callback({
 				didTimeout: false, // polyfill でタイムアウト発火することはない
 				timeRemaining() {

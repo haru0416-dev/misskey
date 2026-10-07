@@ -191,3 +191,179 @@ describe('TanStack Query integration', () => {
 		expect(queryClient.getQueryState(listKey)?.dataUpdatedAt).toBe(100);
 	});
 });
+
+test('clearing queries removes projected account data and follows a later replacement query', () => {
+	const key = queryKeys.endpoint('account-a', 'users/lists/list', {});
+	const view = new QueryCacheView<{ id: string }[]>(key);
+	try {
+		queryClient.setQueryData(key, [{ id: 'before-signout' }]);
+		expect(view.value.value).toEqual([{ id: 'before-signout' }]);
+		queryClient.clear();
+		expect(view.value.value).toBeUndefined();
+		queryClient.setQueryData(key, [{ id: 'new-session' }]);
+		expect(view.value.value).toEqual([{ id: 'new-session' }]);
+	} finally {
+		view.dispose();
+		queryClient.clear();
+	}
+});
+
+describe('query read/write ordering', () => {
+	afterEach(() => {
+		queryClient.clear();
+	});
+
+	test('refreshes an already displayed list when a mutation completes', async () => {
+		let rows = [{ id: 'before' }];
+		const cache = new QueryBackedCache(
+			queryKeys.endpoint('account-a', 'users/lists/list', {}),
+			async () => rows,
+			60_000,
+		);
+		try {
+			await cache.fetch();
+			rows = [{ id: 'before' }, { id: 'created' }];
+			invalidateAfterMutation('account-a', 'users/lists/create');
+			await expect(cache.fetch()).resolves.toEqual(rows);
+			expect(cache.value.value).toEqual(rows);
+		} finally {
+			cache.dispose();
+		}
+	});
+
+	test('replaces a cold pending list read and ignores its eventual obsolete response', async () => {
+		const old = Promise.withResolvers<{ id: string }[]>();
+		const current = [{ id: 'created' }];
+		let calls = 0;
+		const cache = new QueryBackedCache(
+			queryKeys.endpoint('account-a', 'users/lists/list', {}),
+			async () => (++calls === 1 ? old.promise : current),
+			60_000,
+		);
+		try {
+			const obsolete = cache.fetch().then(
+				() => 'completed',
+				() => 'cancelled',
+			);
+			invalidateAfterMutation('account-a', 'users/lists/create');
+			await expect(cache.fetch()).resolves.toEqual(current);
+			old.resolve([{ id: 'before' }]);
+			expect(await obsolete).toBe('cancelled');
+			await old.promise;
+			expect(cache.value.value).toEqual(current);
+			expect(await cache.fetch()).toEqual(current);
+			expect(calls).toBe(2);
+		} finally {
+			cache.dispose();
+		}
+	});
+
+	test('keeps an inactive pending read invalidated until a fresh read succeeds', async () => {
+		const key = queryKeys.endpoint('account-a', 'users/show', { userId: 'user-a' });
+		const old = Promise.withResolvers<{ id: string; name: string }>();
+		const obsolete = fetchMisskeyQuery({
+			accountId: 'account-a',
+			endpoint: 'users/show',
+			params: { userId: 'user-a' },
+			queryFn: () => old.promise,
+		}).then(
+			() => 'completed',
+			() => 'cancelled',
+		);
+		invalidateAfterMutation('account-a', 'i/update');
+		old.resolve({ id: 'user-a', name: 'Before' });
+		expect(await obsolete).toBe('cancelled');
+		expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+		expect(
+			await fetchMisskeyQuery({
+				accountId: 'account-a',
+				endpoint: 'users/show',
+				params: { userId: 'user-a' },
+				queryFn: async () => ({ id: 'user-a', name: 'After' }),
+			}),
+		).toEqual({ id: 'user-a', name: 'After' });
+	});
+
+	test('applies ordered stream patches to a cold in-flight user response', async () => {
+		const held = Promise.withResolvers<{ id: string; name: string; description: string }>();
+		const read = fetchMisskeyQuery({
+			accountId: 'account-a',
+			endpoint: 'users/show',
+			params: { userId: 'user-a' },
+			queryFn: () => held.promise,
+		});
+		updateUserQueries('account-a', { id: 'user-a', name: 'First' });
+		updateUserQueries('account-a', { id: 'user-a', name: 'Latest' });
+		held.resolve({ id: 'user-a', name: 'Before', description: 'Retained' });
+		await expect(read).resolves.toEqual({ id: 'user-a', name: 'Latest', description: 'Retained' });
+	});
+
+	test('applies add/update/delete emoji events to an in-flight snapshot in delivery order', async () => {
+		const original = { name: 'original', aliases: [], category: null, url: 'before' };
+		const added = { name: 'added', aliases: [], category: 'cats', url: 'added' };
+		const held = Promise.withResolvers<{ emojis: (typeof original)[] }>();
+		const read = fetchMisskeyQuery({
+			accountId: null,
+			endpoint: 'emojis',
+			params: {},
+			queryFn: () => held.promise,
+		});
+		updateEmojiQueries({ type: 'add', emoji: added });
+		updateEmojiQueries({ type: 'update', emojis: [{ ...original, url: 'after' }] });
+		updateEmojiQueries({ type: 'delete', emojis: [added] });
+		held.resolve({ emojis: [original] });
+		await expect(read).resolves.toEqual({ emojis: [{ ...original, url: 'after' }] });
+	});
+
+	test('a stream patch does not clear an outstanding mutation invalidation', () => {
+		const key = queryKeys.endpoint('account-a', 'users/show', { userId: 'user-a' });
+		queryClient.setQueryData(key, { id: 'user-a', name: 'Before' });
+		invalidateAfterMutation('account-a', 'i/update');
+		updateUserQueries('account-a', { id: 'user-a', name: 'After' });
+		expect(queryClient.getQueryData(key)).toEqual({ id: 'user-a', name: 'After' });
+		expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+	});
+
+	test('view fetches return initial and refresh failures as error state without discarding rows', async () => {
+		const failure = new TypeError('offline');
+		let offline = true;
+		const cache = new QueryBackedCache(
+			queryKeys.endpoint('account-a', 'antennas/list', { limit: 30 }),
+			async () => {
+				if (offline) throw failure;
+				return [{ id: 'antenna-a' }];
+			},
+			60_000,
+		);
+		try {
+			expect(await cache.fetchResult()).toMatchObject({ isError: true, error: failure, data: undefined });
+			expect(cache.isError.value).toBe(true);
+			offline = false;
+			expect(await cache.fetchResult()).toMatchObject({ isSuccess: true, data: [{ id: 'antenna-a' }] });
+			offline = true;
+			cache.delete();
+			expect(await cache.fetchResult()).toMatchObject({ isError: true, error: failure, data: [{ id: 'antenna-a' }] });
+			expect(cache.value.value).toEqual([{ id: 'antenna-a' }]);
+		} finally {
+			cache.dispose();
+		}
+	});
+});
+
+test('an emoji add already included in a pending snapshot is not duplicated during replay', async () => {
+	const emoji = { name: 'created', aliases: [], category: null, url: 'current' };
+	const held = Promise.withResolvers<{ emojis: (typeof emoji)[] }>();
+	const read = fetchMisskeyQuery({
+		accountId: null,
+		endpoint: 'emojis',
+		params: {},
+		queryFn: () => held.promise,
+	});
+	try {
+		updateEmojiQueries({ type: 'add', emoji });
+		held.resolve({ emojis: [emoji] });
+		await expect(read).resolves.toEqual({ emojis: [emoji] });
+	} finally {
+		queryClient.clear();
+	}
+});

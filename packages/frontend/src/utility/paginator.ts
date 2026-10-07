@@ -76,7 +76,7 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	init(): Promise<void>;
 	reload(): Promise<void>;
 	fetchOlder(): Promise<void>;
-	fetchNewer(options?: { toQueue?: boolean }): Promise<void>;
+	fetchNewer(options?: { toQueue?: boolean | (() => boolean) }): Promise<void>;
 	trim(trigger?: boolean): void;
 	unshiftItems(newItems: _T[]): void;
 	pushItems(oldItems: _T[]): void;
@@ -87,6 +87,7 @@ export interface IPaginator<T = unknown, _T = T & MisskeyEntity> {
 	updateItem(id: string, updater: (item: _T) => _T): void;
 	/** 全項目 (先読みの分も) に mapper を当て、別のオブジェクトが返った項目だけ差し替える。 */
 	mapItems(mapper: (item: _T) => _T): void;
+	dispose(): void;
 }
 
 export class Paginator<
@@ -225,8 +226,10 @@ export class Paginator<
 		return result;
 	}
 
-	private getUniqueItems(items: readonly T[], existingItems: readonly T[]): T[] {
-		const ids = new Set(existingItems.map((item) => item.id));
+	private getUniqueItems(items: readonly T[], existingItems: readonly T[], queuedItems: readonly T[] = []): T[] {
+		const ids = new Set<string>();
+		for (const item of existingItems) ids.add(item.id);
+		for (const item of queuedItems) ids.add(item.id);
 		const uniqueItems: T[] = [];
 		for (const item of items) {
 			if (ids.has(item.id)) {
@@ -236,6 +239,24 @@ export class Paginator<
 			uniqueItems.push(item);
 		}
 		return uniqueItems;
+	}
+
+	private mergePrefix(first: readonly T[], second: readonly T[], limit: number): T[] {
+		const length = Math.min(limit, first.length + second.length);
+		const merged = new Array<T>(length);
+		for (let i = 0; i < length; i++) {
+			merged[i] = i < first.length ? first[i]! : second[i - first.length]!;
+		}
+		return merged;
+	}
+
+	private prepareHeadTrim(length: number): void {
+		if (length >= MAX_ITEMS) this.canFetchOlder.value = true;
+		if (length <= MAX_ITEMS) return;
+		// 切り詰めでカーソルより新しい項目を落とすと、取得中の古いページとの間に復元できない穴ができる。
+		this.olderAbortController?.abort();
+		this.olderAbortController = null;
+		this.fetchingOlder.value = false;
 	}
 
 	private abortPageRequests(): void {
@@ -320,7 +341,7 @@ export class Paginator<
 		}
 
 		// newer 方向の取得結果は古い順で返る。
-		if ((this.initialId || this.initialDate) && this.initialDirection === 'newer') {
+		if (this.initialDirection === 'newer' && this.order.value === 'newest') {
 			apiRes.reverse();
 		}
 
@@ -430,7 +451,7 @@ export class Paginator<
 
 	public async fetchNewer(
 		options: {
-			toQueue?: boolean;
+			toQueue?: boolean | (() => boolean);
 		} = {},
 	): Promise<void> {
 		if (this.disposed || this.fetching.value || this.fetchingNewer.value || this.items.value.length === 0) {
@@ -480,9 +501,9 @@ export class Paginator<
 			return;
 		}
 
-		if (options.toQueue) {
-			const queuedItems = this.getUniqueItems(apiRes.toReversed(), [...this.aheadQueue, ...this.items.value]);
-			this.aheadQueue = [...queuedItems, ...this.aheadQueue].slice(0, MAX_QUEUE_ITEMS);
+		if (typeof options.toQueue === 'function' ? options.toQueue() : options.toQueue) {
+			const queuedItems = this.getUniqueItems(apiRes.toReversed(), this.items.value, this.aheadQueue);
+			this.aheadQueue = this.mergePrefix(queuedItems, this.aheadQueue, MAX_QUEUE_ITEMS);
 			this.queuedAheadItemsCount.value = this.aheadQueue.length;
 		} else {
 			if (this.order.value === 'oldest') {
@@ -502,9 +523,7 @@ export class Paginator<
 	}
 
 	public trim(_trigger = true): void {
-		if (this.items.value.length >= MAX_ITEMS) {
-			this.canFetchOlder.value = true;
-		}
+		this.prepareHeadTrim(this.items.value.length);
 		if (this.items.value.length > MAX_ITEMS) {
 			this.items.value = this.items.value.slice(0, MAX_ITEMS);
 		}
@@ -515,14 +534,8 @@ export class Paginator<
 		if (uniqueItems.length === 0) {
 			return;
 		}
-		let items = [...uniqueItems, ...this.items.value];
-		if (trim && items.length >= MAX_ITEMS) {
-			this.canFetchOlder.value = true;
-		}
-		if (trim && items.length > MAX_ITEMS) {
-			items = items.slice(0, MAX_ITEMS);
-		}
-		this.items.value = items;
+		if (trim) this.prepareHeadTrim(uniqueItems.length + this.items.value.length);
+		this.items.value = this.mergePrefix(uniqueItems, this.items.value, trim ? MAX_ITEMS : Infinity);
 	}
 
 	public pushItems(oldItems: T[]): void {
@@ -537,11 +550,8 @@ export class Paginator<
 		if (this.items.value.some((x) => x.id === item.id)) {
 			return;
 		}
-		const items = [item, ...this.items.value];
-		if (items.length >= MAX_ITEMS) {
-			this.canFetchOlder.value = true;
-		}
-		this.items.value = items.length > MAX_ITEMS ? items.slice(0, MAX_ITEMS) : items;
+		this.prepareHeadTrim(this.items.value.length + 1);
+		this.items.value = this.mergePrefix([item], this.items.value, MAX_ITEMS);
 	}
 
 	public enqueue(item: T): void {
@@ -551,7 +561,7 @@ export class Paginator<
 		if (this.items.value.some((currentItem) => currentItem.id === item.id)) {
 			return;
 		}
-		this.aheadQueue = [item, ...this.aheadQueue].slice(0, MAX_QUEUE_ITEMS);
+		this.aheadQueue = this.mergePrefix([item], this.aheadQueue, MAX_QUEUE_ITEMS);
 		this.queuedAheadItemsCount.value = this.aheadQueue.length;
 	}
 
@@ -578,17 +588,24 @@ export class Paginator<
 		}
 	}
 
-	public mapItems(mapper: (item: T) => T): void {
-		let changed = false;
-		const items = this.items.value.map((item) => {
+	private mapChangedItems(items: T[], mapper: (item: T) => T): T[] {
+		let changed: T[] | undefined;
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i]!;
 			const mapped = mapper(item);
-			if (mapped !== item) changed = true;
-			return mapped;
-		});
-		if (changed) {
-			this.items.value = items;
+			if (changed) {
+				changed.push(mapped);
+			} else if (mapped !== item) {
+				changed = items.slice(0, i);
+				changed.push(mapped);
+			}
 		}
-		this.aheadQueue = this.aheadQueue.map(mapper);
+		return changed ?? items;
+	}
+
+	public mapItems(mapper: (item: T) => T): void {
+		this.items.value = this.mapChangedItems(this.items.value, mapper);
+		this.aheadQueue = this.mapChangedItems(this.aheadQueue, mapper);
 	}
 
 	public updateItem(id: string, updater: (item: T) => T): void {

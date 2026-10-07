@@ -3,69 +3,55 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-
-const matter = vi.hoisted(() => ({
-	Engine: {
-		create: vi.fn(() => ({ world: {} })),
-		clear: vi.fn(),
-	},
-	Render: {
-		create: vi.fn(() => ({ mouse: null })),
-		run: vi.fn(),
-		stop: vi.fn(),
-	},
-	Runner: {
-		create: vi.fn(() => ({})),
-		run: vi.fn(),
-		stop: vi.fn(),
-	},
-	Bodies: {
-		rectangle: vi.fn(() => ({ id: 1, position: { x: 0, y: 0 }, angle: 0 })),
-		circle: vi.fn(() => ({ id: 2, position: { x: 0, y: 0 }, angle: 0 })),
-	},
-	World: {
-		add: vi.fn(),
-		remove: vi.fn(),
-	},
-	Mouse: {
-		create: vi.fn(() => ({})),
-		clearSourceEvents: vi.fn(),
-	},
-	MouseConstraint: {
-		create: vi.fn(() => ({})),
-	},
-}));
-
-vi.mock('matter-js', () => matter);
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { physics } from '@/utility/physics.js';
 
 describe('physics', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
 	afterEach(() => {
 		vi.restoreAllMocks();
 	});
 
-	test('releases animation and Matter.js resources when stopped', async () => {
-		const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(42);
-		const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockReturnValue(undefined);
-		const container = window.document.createElement('div');
-		const child = window.document.createElement('div');
-		child.classList.add('_physics_circle_');
-		container.append(child);
-		const { physics } = await import('@/utility/physics.js');
-
+	test('stops native input capture and frame work, and remains stopped on resume', () => {
+		const frames = new Map<number, FrameRequestCallback>();
+		let nextFrame = 0;
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+			frames.set(++nextFrame, callback);
+			return nextFrame;
+		});
+		vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
+			frames.delete(id);
+		});
+		const container = document.createElement('div');
+		container.style.cssText = 'width: 300px; height: 300px';
+		container.innerHTML = '<div style="width: 20px; height: 20px">object</div>';
+		document.body.append(container);
 		const controller = physics(container);
-		controller.stop();
-		controller.stop();
+		try {
+			const captured = new WheelEvent('wheel', { cancelable: true });
+			container.dispatchEvent(captured);
+			expect(captured.defaultPrevented).toBe(true);
 
-		expect(requestAnimationFrame).toHaveBeenCalledOnce();
-		expect(cancelAnimationFrame).toHaveBeenCalledWith(42);
-		expect(matter.Render.stop).toHaveBeenCalledOnce();
-		expect(matter.Runner.stop).toHaveBeenCalledOnce();
-		expect(matter.Mouse.clearSourceEvents).toHaveBeenCalledOnce();
-		expect(matter.Engine.clear).toHaveBeenCalledOnce();
+			controller.pause();
+			const paused = new WheelEvent('wheel', { cancelable: true });
+			container.dispatchEvent(paused);
+			expect(paused.defaultPrevented).toBe(false);
+			expect(frames.size).toBe(0);
+
+			controller.resume();
+			const resumed = new WheelEvent('wheel', { cancelable: true });
+			container.dispatchEvent(resumed);
+			expect(resumed.defaultPrevented).toBe(true);
+
+			controller.stop();
+			controller.stop();
+			controller.resume();
+			const stopped = new WheelEvent('wheel', { cancelable: true });
+			container.dispatchEvent(stopped);
+			expect(stopped.defaultPrevented).toBe(false);
+			expect(frames.size).toBe(0);
+		} finally {
+			controller.stop();
+			container.remove();
+		}
 	});
 });

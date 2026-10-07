@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render } from '@testing-library/vue';
 import type { Ref } from 'vue';
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { useTooltip } from '@/composables/useTooltip.js';
+import { DI } from '@/di.js';
 
 describe('useTooltip', () => {
 	afterEach(() => {
@@ -106,5 +107,37 @@ describe('useTooltip', () => {
 		source.dispatchEvent(new MouseEvent('mouseover'));
 		await vi.runOnlyPendingTimersAsync();
 		expect(onShow).toHaveBeenCalledTimes(3);
+	});
+
+	test('closes a connected background route tooltip and starts a fresh hover after reactivation', async () => {
+		vi.useFakeTimers();
+		const active = ref(true);
+		const onShow = vi.fn();
+		const Component = defineComponent({
+			setup() {
+				const source = ref<HTMLElement | null>(null);
+				useTooltip(source, onShow, 100);
+				return () => h('button', { ref: source }, 'Tooltip owner');
+			},
+		});
+		const result = render(Component, { global: { provide: { [DI.routeActive as symbol]: active } } });
+		await nextTick();
+		const source = result.getByRole('button', { name: 'Tooltip owner' });
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(100);
+		const showing = onShow.mock.calls[0]![0] as Ref<boolean>;
+		expect(showing.value).toBe(true);
+		active.value = false;
+		await nextTick();
+		expect(source.isConnected).toBe(true);
+		expect(showing.value).toBe(false);
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(100);
+		expect(onShow).toHaveBeenCalledOnce();
+		active.value = true;
+		await nextTick();
+		await fireEvent.mouseOver(source);
+		await vi.advanceTimersByTimeAsync(100);
+		expect(onShow).toHaveBeenCalledTimes(2);
 	});
 });

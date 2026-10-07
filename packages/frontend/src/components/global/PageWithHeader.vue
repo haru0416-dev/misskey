@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, useTemplateRef } from 'vue';
+import { computed, inject, useTemplateRef } from 'vue';
 import { scrollInContainer } from '@/shared/utility/scroll.js';
 import type { PageHeaderProps } from './MkPageHeader.vue';
 import { useScrollPositionKeeper } from '@/composables/useScrollPositionKeeper.js';
@@ -35,6 +35,7 @@ import MkSwiper from '@/components/layout/MkSwiper.vue';
 import { useRouter } from '@/composables/useRouter.js';
 import { prefer } from '@/preferences.js';
 import MkTabs from '@/components/layout/MkTabs.vue';
+import { DI } from '@/di.js';
 
 const props = withDefaults(
 	defineProps<
@@ -65,9 +66,10 @@ const rootEl = useTemplateRef('rootEl');
 useScrollPositionKeeper(rootEl);
 
 const router = useRouter();
+const routeActive = inject(DI.routeActive, null);
 
 router.useListener('same', () => {
-	scrollToTop();
+	if (routeActive?.value ?? true) scrollToTop();
 });
 
 function scrollToTop() {

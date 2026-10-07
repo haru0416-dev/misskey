@@ -444,13 +444,9 @@ watch([searchQuery], () => {
 
 useInterval(
 	() => {
-		if (tab.value === '-') {
-			fetchQueues();
-		} else if (tab.value === 'outbox') {
-			fetchDeadLetters();
-		} else {
-			fetchCurrentQueue();
-		}
+		if (tab.value === '-') return fetchQueues();
+		if (tab.value === 'outbox') return fetchDeadLetters();
+		return fetchCurrentQueue();
 	},
 	1000 * 10,
 	{

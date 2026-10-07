@@ -8,7 +8,7 @@ import type * as Misskey from 'misskey-js';
 import { isEmojiSimpleArray } from '@/shared/utility/custom-emojis.js';
 import { misskeyApiGet } from '@/utility/misskey-api.js';
 import { get, set } from '@/utility/idb-proxy.js';
-import { queryClient } from '@/query/client.js';
+import { invalidateQueries } from '@/query/updates.js';
 import { queryKeys } from '@/query/keys.js';
 import { updateEmojiQueries } from '@/query/streaming.js';
 import { QueryCacheView } from '@/query/cache.js';
@@ -97,7 +97,7 @@ export function removeCustomEmojis(emojis: Misskey.entities.EmojiSimple[]) {
 
 export async function fetchCustomEmojis(force = false) {
 	if (force) {
-		await queryClient.invalidateQueries({ queryKey: emojisQueryKey, exact: true, refetchType: 'none' });
+		await invalidateQueries({ queryKey: emojisQueryKey, exact: true, refetchType: 'none' });
 	}
 	await misskeyApiGet('emojis', {});
 }

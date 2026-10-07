@@ -54,6 +54,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import {
 	computed,
 	defineAsyncComponent,
+	inject,
+	onActivated,
+	onDeactivated,
 	onMounted,
 	onUnmounted,
 	onBeforeUnmount,
@@ -64,6 +67,7 @@ import {
 } from 'vue';
 import { isTouchUsing } from '@/utility/touch.js';
 import * as os from '@/os.js';
+import { DI } from '@/di.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -93,6 +97,15 @@ const emit = defineEmits<{
 const containerEl = useTemplateRef('containerEl');
 const thumbEl = useTemplateRef('thumbEl');
 const labelId = useId();
+const activated = ref(true);
+const routeActive = inject(DI.routeActive, ref(true));
+onActivated(() => { activated.value = true; });
+onDeactivated(() => { activated.value = false; });
+watch([activated, routeActive], ([isActivated, isRouteActive]) => {
+	if (!isActivated || !isRouteActive) {
+		stopInteraction();
+	}
+}, { flush: 'sync' });
 
 const minRatio = computed(() => Math.abs(Math.min(0, props.min)) / (props.max + Math.abs(Math.min(0, props.min))));
 
@@ -180,14 +193,20 @@ const steps = computed(() => {
 
 const tooltipForDragShowing = ref(false);
 const tooltipForHoverShowing = ref(false);
+let cancelDrag: (() => void) | null = null;
 
-onBeforeUnmount(() => {
-	// 何らかの問題で表示されっぱなしでもコンポーネントを離れたら消えるように
+function stopInteraction() {
+	cancelDrag?.();
 	tooltipForDragShowing.value = false;
 	tooltipForHoverShowing.value = false;
-});
+}
+
+onBeforeUnmount(stopInteraction);
 
 function onMouseenter() {
+	if (!activated.value || !routeActive.value) {
+		return;
+	}
 	if (isTouchUsing) {
 		return;
 	}
@@ -224,9 +243,10 @@ function onMouseenter() {
 let lastClickTime: number | null = null;
 
 function onMousedown(ev: MouseEvent | TouchEvent) {
-	if (props.disabled) {
+	if (props.disabled || !activated.value || !routeActive.value) {
 		return;
 	}
+	cancelDrag?.();
 
 	ev.preventDefault();
 
@@ -259,6 +279,10 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 	const thumbWidth = getThumbWidth();
 
 	const onDrag = (ev: MouseEvent | TouchEvent) => {
+		if (containerEl.value == null) {
+			cancelDrag?.();
+			return;
+		}
 		ev.preventDefault();
 		let beforeValue = finalValue.value;
 		const containerRect = containerEl.value!.getBoundingClientRect();
@@ -275,26 +299,34 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		}
 	};
 
-	let beforeValue = finalValue.value;
+	const beforeValue = finalValue.value;
 
-	const onMouseup = () => {
-		window.document.head.removeChild(style);
+	const finishDrag = (commit: boolean) => {
+		style.remove();
 		tooltipForDragShowing.value = false;
 		window.removeEventListener('mousemove', onDrag);
 		window.removeEventListener('touchmove', onDrag);
 		window.removeEventListener('mouseup', onMouseup);
 		window.removeEventListener('touchend', onMouseup);
+		window.removeEventListener('touchcancel', onCancel);
+		cancelDrag = null;
 
-		if (beforeValue !== finalValue.value) {
+		if (commit && beforeValue !== finalValue.value) {
 			emit('update:modelValue', finalValue.value);
 			emit('dragEnded', finalValue.value);
+		} else if (!commit) {
+			rawValue.value = calcRawValue(props.modelValue);
 		}
 	};
+	const onMouseup = () => finishDrag(true);
+	const onCancel = () => finishDrag(false);
+	cancelDrag = onCancel;
 
 	window.addEventListener('mousemove', onDrag);
-	window.addEventListener('touchmove', onDrag);
+	window.addEventListener('touchmove', onDrag, { passive: false });
 	window.addEventListener('mouseup', onMouseup, { once: true });
 	window.addEventListener('touchend', onMouseup, { once: true });
+	window.addEventListener('touchcancel', onCancel, { once: true });
 
 	if (lastClickTime == null) {
 		lastClickTime = Date.now();

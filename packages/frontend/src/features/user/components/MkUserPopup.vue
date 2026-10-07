@@ -85,6 +85,9 @@ const emit = defineEmits<{
 	(ev: 'mouseover'): void;
 	(ev: 'mouseleave'): void;
 }>();
+if (!props.showing) {
+	emit('closed');
+}
 
 const zIndex = claimZIndex('middle');
 const user = ref<Misskey.entities.UserDetailed | null>(null);
@@ -126,6 +129,9 @@ async function fetchUser() {
 }
 
 onMounted(() => {
+	if (!props.showing) {
+		return;
+	}
 	fetchUser();
 
 	const rect = props.source.getBoundingClientRect();

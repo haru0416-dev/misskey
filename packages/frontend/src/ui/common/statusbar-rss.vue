@@ -48,8 +48,8 @@ const fetching = ref(true);
 const key = ref(0);
 
 const tick = () => {
-	window.fetch(`/api/fetch-rss?url=${encodeURIComponent(props.url)}`, {}).then(res => {
-		res.json().then((feed: Misskey.entities.FetchRssResponse) => {
+	return window.fetch(`/api/fetch-rss?url=${encodeURIComponent(props.url)}`, {}).then(res => {
+		return res.json().then((feed: Misskey.entities.FetchRssResponse) => {
 			if (props.shuffle) {
 				shuffleInPlace(feed.items);
 			}

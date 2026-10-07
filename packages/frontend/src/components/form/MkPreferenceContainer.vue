@@ -19,10 +19,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { inject, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from 'vue';
 import type { PREF_DEF } from '@/preferences/def.js';
 import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
+import { DI } from '@/di.js';
 
 const props = withDefaults(defineProps<{
 	k: keyof typeof PREF_DEF;
@@ -31,24 +32,53 @@ const props = withDefaults(defineProps<{
 
 const isAccountOverrided = ref(prefer.isAccountOverrided(props.k));
 const isSyncEnabled = ref(prefer.isSyncEnabled(props.k));
+const menuDisposers = new Set<() => void>();
+const activated = ref(true);
+const routeActive = inject(DI.routeActive, ref(true));
+function disposeMenus() {
+	for (const dispose of menuDisposers) {
+		dispose();
+	}
+}
+onActivated(() => { activated.value = true; });
+onDeactivated(() => {
+	activated.value = false;
+	disposeMenus();
+});
+onBeforeUnmount(disposeMenus);
+watch(routeActive, (active) => {
+	if (!active) {
+		disposeMenus();
+	}
+}, { flush: 'sync' });
 
 function showMenu(ev: PointerEvent, contextmenu?: boolean) {
+	if (!activated.value || !routeActive.value) {
+		return;
+	}
 	const menu = prefer.getPerPrefMenu(props.k);
 	const stopStatusWatcher = watch([menu.overrideByAccount, menu.sync], ([overrideByAccount, sync]) => {
 		isAccountOverrided.value = overrideByAccount;
 		isSyncEnabled.value = sync;
 	}, { immediate: true });
+	let disposed = false;
 	const dispose = () => {
+		if (disposed) {
+			return;
+		}
+		disposed = true;
 		stopStatusWatcher();
 		menu.dispose();
+		menuDisposers.delete(dispose);
 	};
+	menuDisposers.add(dispose);
 
 	if (contextmenu) {
 		os.contextMenu(menu.items, ev).finally(dispose);
 	} else {
 		os.popupMenu(menu.items, ev.currentTarget ?? ev.target, {
 			onClosing: dispose,
-		});
+		}).finally(dispose);
 	}
 }
 </script>

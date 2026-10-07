@@ -160,40 +160,29 @@ describe('Nirax', () => {
 		expect([...(defaultResult?.child?.props ?? [])]).toEqual([]);
 	});
 
-	test('hash と query の上書き順、重複 query の末尾値、挿入順を維持する', () => {
+	test('query は path/hash に優先し、重複したキーでは最後の値を使う', () => {
 		const route = {
 			path: '/:value/:keep',
 			component: Secret,
 			hash: 'value',
 			query: { first: 'value', second: 'extra', third: 'value', missing: 'unused' },
 		};
-		const router = new Nirax([route], '/path/keep?first=first&second=a+b&third=old&third=%252F#hash', true, NotFound);
-		expect([...router.current.props]).toEqual([
-			['value', '/'],
-			['keep', 'keep'],
-			['extra', 'a b'],
-		]);
-		expect(router.current._parsedRoute.queryString).toBe('first=first&second=a+b&third=old&third=%252F');
-		expect(router.current._parsedRoute.hash).toBe('hash');
+		const router = new Nirax([route], '/path/keep?first=first&second=a+b&third=old&third=%2F#hash', true, NotFound);
+		expect(router.current.props.get('value')).toBe('/');
+		expect(router.current.props.get('keep')).toBe('keep');
+		expect(router.current.props.get('extra')).toBe('a b');
+		expect(router.current.props.has('unused')).toBe(false);
 	});
 
-	test('不正な URI と二重エンコードを既存のデコード規則で扱う', () => {
+	test('不正な path/hash の文字列を保持し、hash 内の query 記号は分離しない', () => {
 		const route = { path: '/:id', component: Secret, query: { q: 'query' }, hash: 'hash' };
 		const router = new Nirax([route], '/%E0%A4%A?q=%25ZZ#%E0%A4%A', true, NotFound);
-		expect([...router.current.props]).toEqual([
-			['id', '%E0%A4%A'],
-			['hash', '%E0%A4%A'],
-			['query', '%ZZ'],
-		]);
-		const encoded = router.resolve('/%252F?q=%252F#%252F');
-		expect([...(encoded?.props ?? [])]).toEqual([
-			['id', '%2F'],
-			['hash', '%2F'],
-			['query', '/'],
-		]);
-		const hashQuery = router.resolve('/value#fragment?not=query');
-		expect(hashQuery?._parsedRoute.queryString).toBeNull();
-		expect(hashQuery?.props.get('hash')).toBe('fragment?not=query');
+		expect(router.current.props.get('id')).toBe('%E0%A4%A');
+		expect(router.current.props.get('hash')).toBe('%E0%A4%A');
+		expect(router.current.props.get('query')).toBe('%ZZ');
+		const fragment = router.resolve('/value#fragment?not=query');
+		expect(fragment?.props.get('hash')).toBe('fragment?not=query');
+		expect(fragment?.props.has('query')).toBe(false);
 	});
 
 	test('共有定義を使うルーターと各解決結果の Map は独立して変更できる', () => {
@@ -330,4 +319,69 @@ describe('Nirax', () => {
 			['optional', 'tail'],
 		]);
 	});
+});
+
+test.each([
+	['%2523tag', '%23tag'],
+	['%252F', '%2F'],
+	['%2525', '%25'],
+	['a+b', 'a b'],
+])('query %s is decoded exactly once', (encoded, expected) => {
+	const router = new Nirax([{ path: '/search', component: Secret, query: { q: 'query' } }], '/search', true, NotFound);
+	expect(router.resolve(`/search?q=${encoded}`)?.props.get('query')).toBe(expected);
+});
+
+test('leave guards protect both push and replace without changing the deck hook', () => {
+	const router = new Nirax(
+		[
+			{ path: '/first', component: Secret },
+			{ path: '/second', component: Secret },
+		],
+		'/first',
+		true,
+		NotFound,
+	);
+	let allow = false;
+	const remove = router.addLeaveGuard(() => allow);
+	let hookCalls = 0;
+	router.navHook = () => {
+		hookCalls++;
+		return false;
+	};
+	router.pushByPath('/second');
+	expect(router.getCurrentFullPath()).toBe('/first');
+	expect(router.replaceByPath('/second')).toBe(false);
+	expect(router.getCurrentFullPath()).toBe('/first');
+	allow = true;
+	router.pushByPath('/second');
+	expect(router.getCurrentFullPath()).toBe('/second');
+	expect(hookCalls).toBe(2);
+	remove();
+	router.replaceByPath('/first');
+	expect(router.getCurrentFullPath()).toBe('/first');
+});
+
+test('canonical redirect aliases do not add duplicate history entries', () => {
+	const router = new Nirax(
+		[
+			{ path: '/canonical', component: Secret },
+			{ path: '/alias', redirect: '/canonical' },
+		],
+		'/canonical',
+		true,
+		NotFound,
+	);
+	let pushes = 0;
+	let same = 0;
+	router.on('push', () => {
+		pushes++;
+	});
+	router.on('same', () => {
+		same++;
+	});
+	router.pushByPath('/alias');
+	router.pushByPath('/alias');
+	expect(router.getCurrentFullPath()).toBe('/canonical');
+	expect(pushes).toBe(0);
+	expect(same).toBe(2);
 });

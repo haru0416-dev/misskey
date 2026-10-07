@@ -118,6 +118,12 @@ DOM を使わないテストは `*.test.ts`、Vue の mount・DOM・ブラウザ
 
 共通の初期化は `vitest.config.ts` の `setupFiles` から実行します。テストから `test/init.ts` を直接 import せず、設定値や通信 fixture の操作には `test/fixtures.ts` を使ってください。
 
+ブラウザーの ESM export は `vi.spyOn` で置き換えられません。通信やダイアログなどの境界は、`vi.hoisted` と明示的な `vi.mock` の factory、または `spy: true` で用意してください。factory 内の `importOriginal` で循環 import を作らないよう、実装を読む必要がない境界は必要な export を明示します。
+
+非同期の復元・再取得・閉じるアニメーションは、リクエスト完了や DOM・所有者の状態を待って検証します。固定時間の sleep や入力の反復で同期せず、Vue の mount 後に登録される handler は `nextTick` を待ってから操作します。popup の資源解放とフォーカスを検証する場合は実際の `Transition` を使います。
+
+Story の未知の API は 500 応答にし、テストを失敗させます。カタログとテストは共通の `Suspense` で非同期の子画面を描画し、テストはその解決後に操作を開始します。使用する endpoint の応答は各 story に明示し、操作は一度だけ行って期待する項目の表示を待ちます。IndexedDB の reset は接続中の DB を削除せず、全 object store の clear transaction 完了を待ちます。絵文字画像は導入済み `@misskey-dev/emoji-assets` を配信し、別バージョンの CDN に依存しません。
+
 project を個別に実行する場合は、次のコマンドを使います。
 
 ```sh

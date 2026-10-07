@@ -121,6 +121,7 @@ const props = withDefaults(
 		initialHeight?: number | null;
 		canResize?: boolean;
 		closeButton?: boolean;
+		beforeClose?: () => boolean;
 		mini?: boolean;
 		front?: boolean;
 		contextmenu?: MenuItem[] | null;
@@ -164,7 +165,9 @@ let unResizedWidth = '';
 let unResizedHeight = '';
 
 function close() {
+	if (props.beforeClose != null && !props.beforeClose()) return false;
 	showing.value = false;
+	return true;
 }
 
 function onKeydown(evt: KeyboardEvent) {

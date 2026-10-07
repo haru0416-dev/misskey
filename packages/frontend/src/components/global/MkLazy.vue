@@ -11,32 +11,41 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onActivated, onBeforeUnmount, ref, useTemplateRef } from 'vue';
+import { nextTick, onMounted, onActivated, onDeactivated, onBeforeUnmount, ref, useTemplateRef } from 'vue';
 
 const rootEl = useTemplateRef('rootEl');
 const showing = ref(false);
+let active = true;
 
 const observer = new IntersectionObserver(
 	(entries) => {
 		if (entries.some((entry) => entry.isIntersecting)) {
 			showing.value = true;
+			observer.disconnect();
 		}
 	},
 );
 
-onMounted(() => {
+function observe() {
 	nextTick().then(() => {
-		observer.observe(rootEl.value!);
+		if (active && !showing.value && rootEl.value != null) {
+			observer.observe(rootEl.value);
+		}
 	});
-});
+}
 
+onMounted(observe);
 onActivated(() => {
-	nextTick().then(() => {
-		observer.observe(rootEl.value!);
-	});
+	active = true;
+	observe();
+});
+onDeactivated(() => {
+	active = false;
+	observer.disconnect();
 });
 
 onBeforeUnmount(() => {
+	active = false;
 	observer.disconnect();
 });
 </script>

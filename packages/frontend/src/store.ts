@@ -6,11 +6,9 @@
 import { defineStore } from 'pinia';
 import type * as Misskey from 'misskey-js';
 import type { StateTree } from 'pinia';
-import type { Cloneable } from '@/utility/clone.js';
 import type { TIPS } from '@/tips.js';
 import type { PersistedStateDefinition } from '@/store/persisted-state.js';
-import { deepClone } from '@/utility/clone.js';
-import { attachPersistedState } from '@/store/persisted-state.js';
+import { attachPersistedState, replacePersistedStateProperty } from '@/store/persisted-state.js';
 import { persistedStateIo } from '@/store/persisted-state-io.js';
 import { pinia } from '@/store/pinia.js';
 
@@ -91,7 +89,7 @@ const useBaseStore = defineStore('base', {
 	persist: basePersistedState,
 	actions: {
 		set<K extends keyof BaseState>(key: K, value: BaseState[K]): Promise<void> {
-			this.$patch({ [key]: deepClone(value as Cloneable) as BaseState[K] });
+			replacePersistedStateProperty(this, key, value);
 			return this.$persistFlush();
 		},
 		reset<K extends keyof BaseState>(key: K): Promise<void> {

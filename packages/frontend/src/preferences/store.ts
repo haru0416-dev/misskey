@@ -161,7 +161,9 @@ export function isPossiblyNonNormalizedPreferencesProfile(
 
 export type StorageProvider = {
 	load: () => PossiblyNonNormalizedPreferencesProfile | null;
-	save: (ctx: { profile: PreferencesProfile }) => void;
+	save: (ctx: { profile: PreferencesProfile }) => PreferencesProfile | void;
+	replace?: (profile: PreferencesProfile) => PreferencesProfile;
+	isCurrent?: () => boolean;
 	cloudGetBulk: <K extends keyof PREF>(ctx: {
 		needs: { key: K; scope: Scope }[];
 	}) => Promise<Partial<Record<K, ValueOf<K>>>>;
@@ -292,6 +294,15 @@ function normalizePreferences(
 	return data as PreferencesProfile['preferences'];
 }
 
+// 正規化で変更しない配列は共有するため、キー集合と配列の参照だけで保存の必要性を判断できる。
+function hasNormalizationChanges(
+	source: PossiblyNonNormalizedPreferencesProfile['preferences'],
+	normalized: Record<string, unknown>,
+): boolean {
+	const keys = Object.keys(normalized);
+	return keys.length !== Object.keys(source).length || keys.some((key) => source[key] !== normalized[key]);
+}
+
 function getMatchedRecordFromProfile<K extends keyof PREF>(
 	profile: PreferencesProfile,
 	currentAccount: { id: string } | null,
@@ -351,15 +362,23 @@ function generatePreferenceValues(
 function createPreferencesStoreState(
 	io: StorageProvider,
 	currentAccount: { id: string } | null,
+	onSaveError: () => void,
 ): PreferencesStoreState {
 	const loadedProfile = io.load() ?? createEmptyProfile();
-	const profile: PreferencesProfile = {
+	let profile: PreferencesProfile = {
 		...loadedProfile,
 		preferences: normalizePreferences(loadedProfile.preferences, currentAccount),
 	};
 
-	if (!deepEqual(loadedProfile as unknown as Parameters<typeof deepEqual>[0], profile)) {
-		io.save({ profile });
+	if (hasNormalizationChanges(loadedProfile.preferences, profile.preferences)) {
+		try {
+			const merged = io.save({ profile });
+			if (merged != null)
+				profile = { ...merged, preferences: normalizePreferences(merged.preferences, currentAccount) };
+		} catch (error) {
+			onSaveError();
+			console.error('Failed to initialize preferences storage', error);
+		}
 	}
 
 	return {
@@ -372,8 +391,78 @@ function createPreferencesStoreState(
 export function createPreferencesStore(io: StorageProvider, account: { id: string } | null, pinia: Pinia) {
 	const currentAccount = account == null ? null : { id: account.id };
 	const localRevisions = new Map<keyof PREF, number>();
+	const syncOperations = new Map<keyof PREF, symbol>();
+	const pendingCloudWrites = new Map<
+		string,
+		{
+			key: keyof PREF;
+			scope: Scope;
+			value: ValueOf<keyof PREF>;
+			isCurrent?: () => boolean;
+		}
+	>();
+	const cloudOperations = new Set<Promise<unknown>>();
+	let disposed = false;
+	let localSaveFailed = false;
+	let cloudJob: Promise<void> | null = null;
+	let profileEpoch = 0;
+
+	function trackCloud<T>(operation: Promise<T>): Promise<T> {
+		cloudOperations.add(operation);
+		void operation.then(
+			() => cloudOperations.delete(operation),
+			() => cloudOperations.delete(operation),
+		);
+		return operation;
+	}
+
+	async function flushCloudWrites(): Promise<void> {
+		if (cloudJob != null) await cloudJob;
+		if (disposed || pendingCloudWrites.size === 0) return;
+		cloudJob = (async () => {
+			while (pendingCloudWrites.size > 0) {
+				if (disposed) break;
+				const [id, write] = pendingCloudWrites.entries().next().value!;
+				pendingCloudWrites.delete(id);
+				if (write.isCurrent?.() === false) continue;
+				try {
+					await trackCloud(io.cloudSet({ key: write.key, scope: write.scope, value: write.value }));
+				} catch (error) {
+					if (!disposed && write.isCurrent?.() !== false && !pendingCloudWrites.has(id))
+						pendingCloudWrites.set(id, write);
+					throw error;
+				}
+			}
+		})();
+		try {
+			await cloudJob;
+		} finally {
+			cloudJob = null;
+		}
+	}
+
+	function queueCloudWrite<K extends keyof PREF>(
+		key: K,
+		record: PrefRecord<K>,
+		isCurrent?: () => boolean,
+	): Promise<void> {
+		const scope = deepClone(record[0]);
+		const id = JSON.stringify([key, scope.server ?? null, scope.account ?? null, scope.device ?? null]);
+		pendingCloudWrites.set(id, {
+			key,
+			scope,
+			value: deepClone(record[1]),
+			...(isCurrent == null ? {} : { isCurrent }),
+		});
+		const saved = flushCloudWrites();
+		void saved.catch((error) => console.error('Failed to save preferences to the cloud', error));
+		return saved;
+	}
 	const usePreferencesStore = defineStore('preferences', {
-		state: () => createPreferencesStoreState(io, currentAccount),
+		state: () =>
+			createPreferencesStoreState(io, currentAccount, () => {
+				localSaveFailed = true;
+			}),
 		actions: {
 			_rewriteRawState<K extends keyof PREF>(key: K, value: ValueOf<K>) {
 				const v = deepClone(value as Cloneable) as ValueOf<K>; // Vue のプロキシと入力値の参照共有を避ける。
@@ -381,32 +470,35 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			commit<K extends keyof PREF>(key: K, value: ValueOf<K>) {
-				const v = deepClone(value as Cloneable) as ValueOf<K>; // Vue のプロキシと入力値の参照共有を避ける。
-
-				if (deepEqual(this.$state[key], v)) {
-					if (_DEV_) {
-						console.log('(skip) prefer:commit', key, v);
+				if (disposed) throw new Error('Preferences store is disposed');
+				if (deepEqual(this.$state[key], value)) {
+					if (localSaveFailed) this.save();
+					const record = this.getMatchedRecordOf(key);
+					if (record[2].sync && pendingCloudWrites.size > 0) {
+						queueCloudWrite(key, record);
 					}
 					return;
 				}
 
-				if (_DEV_) {
-					console.log('prefer:commit', key, v);
-				}
-
-				const oldValue = deepClone(this.$state[key] as ValueOf<K>);
+				const v = deepClone(value as Cloneable) as ValueOf<K>;
+				const previousValue = this.$state[key] as ValueOf<K>;
+				const oldValue = deepClone(previousValue);
+				const previousRecords = this.profile.preferences[key].map((entry) => [...entry]) as PrefRecord<K>[];
 				localRevisions.set(key, (localRevisions.get(key) ?? 0) + 1);
 				this._rewriteRawState(key, v);
-
 				const record = this.getMatchedRecordOf(key);
 
 				const _save = () => {
-					this.save();
-					preferencesEvents.emit('committed', {
-						key,
-						value: v,
-						oldValue,
-					});
+					try {
+						this.save();
+					} catch (error) {
+						(this.profile.preferences[key] as PrefRecord<K>[]) = previousRecords;
+						(this.$state[key] as unknown) = previousValue;
+						throw error;
+					}
+					if (preferencesEvents.listenerCount('committed') > 0) {
+						preferencesEvents.emit('committed', { key, value: deepClone(v), oldValue });
+					}
 				};
 
 				if (parseScope(record[0]).account == null && isAccountDependentKey(key) && currentAccount != null) {
@@ -440,7 +532,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 				_save();
 
 				if (record[2].sync) {
-					io.cloudSet({ key, scope: record[0], value: record[1] });
+					queueCloudWrite(key, record);
 				}
 			},
 
@@ -463,41 +555,43 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			async fetchCloudValues() {
-				// 取得中に reloadProfile でプロファイルが差し替わったら、この応答は旧プロファイル向けなので捨てる
-				// (差し替え後のプロファイルは reloadProfile が改めて取得する)。
-				const profileAtStart = this.profile;
+				if (disposed) return;
+				const epochAtStart = profileEpoch;
 				const needs = [] as { key: keyof PREF; scope: Scope }[];
 				const revisionsAtStart = new Map<keyof PREF, number>();
+				const scopesAtStart = new Map<keyof PREF, Scope>();
 				for (const _key in PREF_DEF) {
 					const key = _key as keyof PREF;
 					const record = this.getMatchedRecordOf(key);
 					if (record[2].sync) {
 						revisionsAtStart.set(key, localRevisions.get(key) ?? 0);
-						needs.push({
-							key,
-							scope: record[0],
-						});
+						const scope = { ...record[0] };
+						scopesAtStart.set(key, scope);
+						needs.push({ key, scope });
 					}
 				}
-
-				const cloudValues = await io.cloudGetBulk({ needs });
-				if (this.profile !== profileAtStart) {
-					return;
-				}
-
+				if (needs.length === 0) return;
+				const cloudValues = await trackCloud(io.cloudGetBulk({ needs }));
+				if (disposed || profileEpoch !== epochAtStart || io.isCurrent?.() === false) return;
+				let changed = false;
 				for (const _key in PREF_DEF) {
 					const key = _key as keyof PREF;
 					const record = this.getMatchedRecordOf(key);
+					const scopeAtStart = scopesAtStart.get(key);
 					if (
 						record[2].sync &&
+						scopeAtStart != null &&
+						isSameScope(record[0], scopeAtStart) &&
 						(localRevisions.get(key) ?? 0) === (revisionsAtStart.get(key) ?? 0) &&
 						Object.hasOwn(cloudValues, key) &&
 						cloudValues[key] !== undefined
 					) {
 						const cloudValue = cloudValues[key];
 						if (!deepEqual(cloudValue, record[1])) {
-							this._rewriteRawState(key, cloudValue);
-							record[1] = cloudValue;
+							const value = deepClone(cloudValue);
+							(this.$state[key] as unknown) = value;
+							record[1] = value;
+							changed = true;
 							if (_DEV_) {
 								console.log('cloud fetched', key, cloudValue);
 							}
@@ -505,16 +599,43 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					}
 				}
 
-				this.save();
+				if (changed || localSaveFailed) this.save();
 				if (_DEV_) {
 					console.log('cloud fetch completed');
 				}
 			},
 
 			save() {
-				this.profile.modifiedAt = Date.now();
+				if (disposed) throw new Error('Preferences store is disposed');
+				localSaveFailed = true;
+				this.profile.modifiedAt = Math.max(Date.now(), this.profile.modifiedAt + 1);
 				this.profile.version = version;
-				io.save({ profile: this.profile });
+				const merged = io.save({ profile: this.profile });
+				localSaveFailed = false;
+				if (merged != null) this._applyProfile(merged);
+				preferencesEvents.emit('saved');
+			},
+
+			_applyProfile(profile: PossiblyNonNormalizedPreferencesProfile) {
+				const preferences = normalizePreferences(profile.preferences, currentAccount);
+				const changed = hasNormalizationChanges(profile.preferences, preferences);
+				this.profile = { ...profile, preferences };
+				const states = generatePreferenceValues(this.profile, currentAccount);
+				for (const _key in states) {
+					const key = _key as keyof PREF;
+					if (!deepEqual(this.$state[key], states[key])) this._rewriteRawState(key, states[key]);
+				}
+				return changed;
+			},
+
+			replaceProfile(profile: PossiblyNonNormalizedPreferencesProfile) {
+				if (disposed) throw new Error('Preferences store is disposed');
+				profileEpoch++;
+				syncOperations.clear();
+				pendingCloudWrites.clear();
+				const normalized = { ...profile, preferences: normalizePreferences(profile.preferences, currentAccount) };
+				if (io.replace == null) throw new Error('Preferences storage cannot replace profiles');
+				this._applyProfile(io.replace(normalized));
 				preferencesEvents.emit('saved');
 			},
 
@@ -532,6 +653,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			setAccountOverride<K extends keyof PREF>(key: K) {
+				if (disposed) throw new Error('Preferences store is disposed');
 				if (currentAccount == null) {
 					return;
 				}
@@ -539,9 +661,11 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					throw new Error('already account-dependent');
 				}
 				if (this.isAccountOverrided(key)) {
+					if (localSaveFailed) this.save();
 					return;
 				}
 
+				syncOperations.delete(key);
 				const records = this.profile.preferences[key] as PrefRecord<K>[];
 				records.push([
 					makeScope({
@@ -556,6 +680,7 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			clearAccountOverride<K extends keyof PREF>(key: K) {
+				if (disposed) throw new Error('Preferences store is disposed');
 				if (currentAccount == null) {
 					return;
 				}
@@ -569,9 +694,11 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					([scope, v]) => parseScope(scope).server === host && parseScope(scope).account === currentAccount.id,
 				);
 				if (index === -1) {
+					if (localSaveFailed) this.save();
 					return;
 				}
 
+				syncOperations.delete(key);
 				records.splice(index, 1);
 
 				this._rewriteRawState(key, this.getMatchedRecordOf(key)[1]);
@@ -584,12 +711,28 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			async enableSync<K extends keyof PREF>(key: K): Promise<{ enabled: boolean } | null> {
+				if (disposed) return null;
 				if (this.isSyncEnabled(key)) {
+					if (localSaveFailed) this.save();
 					return null;
 				}
+				const operation = Symbol();
+				syncOperations.set(key, operation);
+				const epoch = profileEpoch;
+				let revision = localRevisions.get(key) ?? 0;
+				const record = this.getMatchedRecordOf(key);
+				const ownsOperation = () =>
+					!disposed &&
+					profileEpoch === epoch &&
+					syncOperations.get(key) === operation &&
+					(localRevisions.get(key) ?? 0) === revision &&
+					isSameScope(record[0], this.getMatchedRecordOf(key)[0]) &&
+					io.isCurrent?.() !== false;
+				const localValue = deepClone(record[1]);
 
 				// os.ts はダイアログの部品を通して設定を読むので、静的に import すると循環する。
 				const os = await import('@/os.js');
+				if (!ownsOperation()) return { enabled: false };
 
 				// undefined はキャンセルを表す。
 				async function resolveConflict(local: ValueOf<K>, remote: ValueOf<K>): Promise<ValueOf<K> | undefined> {
@@ -643,27 +786,21 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					return undefined;
 				}
 
-				const record = this.getMatchedRecordOf(key);
-
-				let newValue = record[1];
-
-				const existing = await io.cloudGet({ key, scope: record[0] });
-				if (existing != null && !deepEqual(record[1], existing.value)) {
-					const resolvedValue = await resolveConflict(record[1], existing.value);
-					if (resolvedValue === undefined) {
-						return { enabled: false };
-					}
+				let newValue = localValue;
+				const existing = await trackCloud(io.cloudGet({ key, scope: record[0] }));
+				if (!ownsOperation()) return { enabled: false };
+				if (existing != null && !deepEqual(localValue, existing.value)) {
+					const resolvedValue = await resolveConflict(localValue, existing.value);
+					if (!ownsOperation() || resolvedValue === undefined) return { enabled: false };
 					newValue = resolvedValue;
 				}
 
-				this.commit(key, newValue);
-
 				const done = os.waiting();
-
 				try {
-					await io.cloudSet({ key, scope: record[0], value: newValue });
+					await queueCloudWrite(key, [record[0], newValue, {}], ownsOperation);
 				} catch (err) {
 					done();
+					if (!ownsOperation()) return { enabled: false };
 
 					os.alert({
 						type: 'error',
@@ -675,16 +812,24 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					return { enabled: false };
 				}
 
-				done({ success: true });
-
-				record[2].sync = true;
+				if (!ownsOperation()) {
+					done();
+					return { enabled: false };
+				}
+				this.commit(key, newValue);
+				revision = localRevisions.get(key) ?? 0;
+				this.getMatchedRecordOf(key)[2].sync = true;
 				this.save();
-
+				syncOperations.delete(key);
+				done({ success: true });
 				return { enabled: true };
 			},
 
 			disableSync<K extends keyof PREF>(key: K) {
+				if (disposed) throw new Error('Preferences store is disposed');
+				syncOperations.delete(key);
 				if (!this.isSyncEnabled(key)) {
+					if (localSaveFailed) this.save();
 					return;
 				}
 
@@ -694,29 +839,17 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 			},
 
 			renameProfile(name: string) {
+				if (disposed) throw new Error('Preferences store is disposed');
 				this.profile.name = name;
 				this.save();
 			},
 
 			reloadProfile() {
-				const newProfile = io.load();
-				if (newProfile == null) {
-					return;
-				}
-
-				this.profile = {
-					...newProfile,
-					preferences: normalizePreferences(newProfile.preferences, currentAccount),
-				};
-				const states = generatePreferenceValues(this.profile, currentAccount);
-				for (const _key in states) {
-					const key = _key as keyof PREF;
-					this._rewriteRawState(key, states[key]);
-				}
-
-				void this.fetchCloudValues().catch((error) => {
-					console.error('Failed to reload preferences from the cloud', error);
-				});
+				if (disposed) return;
+				syncOperations.clear();
+				profileEpoch++;
+				const newProfile = io.load() ?? createEmptyProfile();
+				if (this._applyProfile(newProfile)) this.save();
 			},
 
 			getPerPrefMenu<K extends keyof PREF>(
@@ -737,18 +870,20 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 				});
 
 				const sync = ref(this.isSyncEnabled(key));
-				const stopSyncWatcher = watch(sync, () => {
-					if (sync.value) {
-						this.enableSync(key).then((res) => {
-							if (res == null) {
-								return;
-							}
-							if (!res.enabled) {
-								sync.value = false;
-							}
-						});
-					} else {
+				let menuRevision = 0;
+				let menuDisposed = false;
+				const stopSyncWatcher = watch(sync, async () => {
+					const revision = ++menuRevision;
+					if (!sync.value) {
 						this.disableSync(key);
+						return;
+					}
+					try {
+						const result = await this.enableSync(key);
+						if (!menuDisposed && revision === menuRevision && result != null && !result.enabled) sync.value = false;
+					} catch (error) {
+						console.error('Failed to enable preference sync', error);
+						if (!menuDisposed && revision === menuRevision) sync.value = false;
 					}
 				});
 
@@ -788,6 +923,8 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 					overrideByAccount,
 					sync,
 					dispose: () => {
+						menuDisposed = true;
+						menuRevision++;
 						stopOverrideByAccountWatcher();
 						stopSyncWatcher();
 					},
@@ -800,5 +937,17 @@ export function createPreferencesStore(io: StorageProvider, account: { id: strin
 	const cloudReady = store.fetchCloudValues().catch((error) => {
 		console.error('Failed to load preferences from the cloud', error);
 	});
-	return Object.assign(store, { $preferencesCloudReady: cloudReady });
+	return Object.assign(store, {
+		$preferencesCloudReady: cloudReady,
+		$preferencesFlush: async () => {
+			if (localSaveFailed) store.save();
+			await flushCloudWrites();
+		},
+		$preferencesDispose: async () => {
+			disposed = true;
+			syncOperations.clear();
+			pendingCloudWrites.clear();
+			await Promise.allSettled([...cloudOperations, ...(cloudJob == null ? [] : [cloudJob])]);
+		},
+	});
 }

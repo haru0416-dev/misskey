@@ -222,6 +222,20 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 	private notFoundPageComponent: Component;
 
 	public navHook: ((fullPath: string, flag?: RouterFlag) => boolean) | null = null;
+	private readonly leaveGuards = new Set<(nextFullPath: string | null) => boolean>();
+
+	public addLeaveGuard(guard: (nextFullPath: string | null) => boolean): () => void {
+		this.leaveGuards.add(guard);
+		return () => {
+			this.leaveGuards.delete(guard);
+		};
+	}
+
+	public canLeave(nextFullPath: string | null = null): boolean {
+		if (nextFullPath === this.currentFullPath) return true;
+		for (const guard of this.leaveGuards) if (!guard(nextFullPath)) return false;
+		return true;
+	}
 
 	constructor(
 		routes: DEF,
@@ -326,7 +340,7 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 					const as = route.query[q];
 					const value = queryObject[q];
 					if (as != null && value != null) {
-						props.set(as, safeUriDecode(value));
+						props.set(as, value);
 					}
 				}
 			}
@@ -479,12 +493,17 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 			}
 		}
 		const res = this.resolveForNavigation(fullPath);
+		if (res._parsedRoute.fullPath === beforeFullPath) {
+			this.emit('same');
+			return;
+		}
 		if (res.route.path === '/:(*)') {
 			this.emit('forcePush', {
 				fullPath: res._parsedRoute.fullPath,
 				onInit: false,
 			});
 		} else {
+			if (!this.canLeave(res._parsedRoute.fullPath)) return;
 			this.navigate(res);
 			this.emit('push', {
 				beforeFullPath,
@@ -504,11 +523,13 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 				onInit: false,
 			});
 		} else {
+			if (!this.canLeave(res._parsedRoute.fullPath)) return false;
 			this.navigate(res);
 			this.emit('replace', {
 				fullPath: res._parsedRoute.fullPath,
 			});
 		}
+		return true;
 	}
 
 	public useListener<E extends keyof RouterEvents>(event: E, listener: EventEmitter.EventListener<RouterEvents, E>) {

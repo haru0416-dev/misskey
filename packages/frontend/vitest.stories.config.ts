@@ -8,6 +8,7 @@ import * as url from 'node:url';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 import { serveLocales } from './builder/vite-plugin-serve-locales.js';
+import { serveEmojiAssets } from './builder/vite-plugin-serve-emoji-assets.js';
 import { getConfig } from './vite.config.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -20,7 +21,7 @@ const baseAlias = (base.resolve?.alias ?? {}) as Record<string, string>;
  */
 export default defineConfig({
 	...base,
-	plugins: [...(base.plugins ?? []), serveLocales()],
+	plugins: [...(base.plugins ?? []), serveLocales(), serveEmojiAssets()],
 	// mockServiceWorker.js を配信する。
 	publicDir: path.join(__dirname, 'catalog/public'),
 

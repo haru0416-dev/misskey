@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent, ref } from 'vue';
-import type { Directive } from 'vue';
+import { defineAsyncComponent, ref, watch } from 'vue';
+import type { Directive, Ref } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { popup } from '@/os.js';
 import { isTouchUsing } from '@/utility/touch.js';
+import { getRouteActive } from '@/di.js';
 
 const MkUserPopup = defineAsyncComponent(() => import('@/features/user/components/MkUserPopup.vue'));
 
@@ -128,6 +129,14 @@ export class UserPreview {
 }
 
 const userPreviews = new WeakMap<HTMLElement, UserPreview>();
+const previewOwners = new WeakMap<
+	HTMLElement,
+	{
+		user: string | Misskey.entities.UserDetailed | null | undefined;
+		active: Readonly<Ref<boolean>> | undefined;
+		stop: (() => void) | undefined;
+	}
+>();
 
 function detachPreview(el: HTMLElement) {
 	const preview = userPreviews.get(el);
@@ -148,18 +157,46 @@ function attachPreview(el: HTMLElement, user: string | Misskey.entities.UserDeta
 
 export const userPreviewDirective = {
 	mounted(el, binding) {
-		attachPreview(el, binding.value);
+		const owner = {
+			user: binding.value,
+			active: getRouteActive(binding.instance),
+			stop: undefined as (() => void) | undefined,
+		};
+		previewOwners.set(el, owner);
+		if (owner.active == null) {
+			attachPreview(el, owner.user);
+		} else {
+			owner.stop = watch(
+				owner.active,
+				(active) => {
+					detachPreview(el);
+					if (active) {
+						attachPreview(el, owner.user);
+					}
+				},
+				{ immediate: true, flush: 'sync' },
+			);
+		}
 	},
 
 	updated(el, binding) {
 		if (binding.value === binding.oldValue) {
 			return;
 		}
+		const owner = previewOwners.get(el);
+		if (owner == null) {
+			return;
+		}
+		owner.user = binding.value;
 		detachPreview(el);
-		attachPreview(el, binding.value);
+		if (owner.active?.value !== false) {
+			attachPreview(el, owner.user);
+		}
 	},
 
 	unmounted(el) {
+		previewOwners.get(el)?.stop?.();
+		previewOwners.delete(el);
 		detachPreview(el);
 	},
 } as Directive<HTMLElement, string | Misskey.entities.UserDetailed | null | undefined>;

@@ -23,16 +23,44 @@ export function createRouter(fullPath: string): Router {
 export const mainRouter = createRouter(window.location.pathname + window.location.search + window.location.hash);
 registerMainRouter(mainRouter);
 
+const historyIndexKey = 'misskeyRouterIndex';
+let historyIndex = Number.isInteger(window.history.state?.[historyIndexKey])
+	? (window.history.state[historyIndexKey] as number)
+	: 0;
+let restoringHistory = false;
+window.history.replaceState({ ...window.history.state, [historyIndexKey]: historyIndex }, '');
+
 window.addEventListener('popstate', (event) => {
-	mainRouter.replaceByPath(window.location.pathname + window.location.search + window.location.hash);
+	if (restoringHistory) {
+		restoringHistory = false;
+		return;
+	}
+	const nextIndex = event.state?.[historyIndexKey] as number | undefined;
+	const path = window.location.pathname + window.location.search + window.location.hash;
+	const previousIndex = historyIndex;
+	if (Number.isInteger(nextIndex)) historyIndex = nextIndex!;
+	if (!mainRouter.replaceByPath(path)) {
+		historyIndex = previousIndex;
+		if (Number.isInteger(nextIndex) && nextIndex !== historyIndex) {
+			restoringHistory = true;
+			window.history.go(historyIndex - nextIndex!);
+		} else {
+			window.history.replaceState(
+				{ ...window.history.state, [historyIndexKey]: historyIndex },
+				'',
+				mainRouter.getCurrentFullPath(),
+			);
+		}
+		return;
+	}
 });
 
 mainRouter.addListener('push', (ctx) => {
-	window.history.pushState({}, '', ctx.fullPath);
+	window.history.pushState({ [historyIndexKey]: ++historyIndex }, '', ctx.fullPath);
 });
 
 mainRouter.addListener('replace', (ctx) => {
-	window.history.replaceState({}, '', ctx.fullPath);
+	window.history.replaceState({ ...window.history.state, [historyIndexKey]: historyIndex }, '', ctx.fullPath);
 });
 
 mainRouter.addListener('forceReplace', (ctx) => {

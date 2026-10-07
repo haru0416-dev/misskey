@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, assert, describe, expect, test, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/vue';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 import type { Ref } from 'vue';
+import { DI } from '@/di.js';
 
 const mocks = vi.hoisted(() => ({
 	popupMenu: vi.fn(),
@@ -46,6 +47,10 @@ vi.mock('@/os.js', () => ({
 import MkPreferenceContainer from '@/components/form/MkPreferenceContainer.vue';
 
 describe('MkPreferenceContainer', () => {
+	beforeEach(() => {
+		mocks.popupMenu.mockReturnValue(Promise.withResolvers<void>().promise);
+		mocks.contextMenu.mockReturnValue(Promise.withResolvers<void>().promise);
+	});
 	afterEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
@@ -81,5 +86,41 @@ describe('MkPreferenceContainer', () => {
 		await nextTick();
 		expect(result.container.querySelector('.ti-user-cog')).not.toBeNull();
 		expect(result.container.querySelector('.ti-cloud-cog')).not.toBeNull();
+	});
+
+	test('disposes a menu that finishes before opening, including a handled import failure', async () => {
+		mocks.popupMenu.mockResolvedValue(undefined);
+		const result = render(MkPreferenceContainer, { props: { k: 'animation' } });
+		await fireEvent.click(result.getByRole('button'));
+		await nextTick();
+		expect(mocks.dispose).toHaveBeenCalledOnce();
+	});
+
+	test('releases an unresolved opening when its owner is removed', async () => {
+		const pending = Promise.withResolvers<void>();
+		mocks.popupMenu.mockReturnValue(pending.promise);
+		const result = render(MkPreferenceContainer, { props: { k: 'animation' } });
+		await fireEvent.click(result.getByRole('button'));
+		result.unmount();
+		expect(mocks.dispose).toHaveBeenCalledOnce();
+		pending.resolve();
+		await nextTick();
+		expect(mocks.dispose).toHaveBeenCalledOnce();
+	});
+
+	test('releases pending menu observers immediately on a connected route exit', async () => {
+		const pending = Promise.withResolvers<void>();
+		mocks.popupMenu.mockReturnValue(pending.promise);
+		const active = ref(true);
+		const result = render(MkPreferenceContainer, {
+			props: { k: 'animation' },
+			global: { provide: { [DI.routeActive as symbol]: active } },
+		});
+		await fireEvent.click(result.getByRole('button'));
+		active.value = false;
+		expect(mocks.dispose).toHaveBeenCalledOnce();
+		pending.resolve();
+		await nextTick();
+		expect(mocks.dispose).toHaveBeenCalledOnce();
 	});
 });

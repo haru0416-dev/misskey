@@ -82,6 +82,8 @@ describe('MkAnimBg', () => {
 			bufferData: vi.fn(),
 			drawArrays: vi.fn(),
 			viewport: vi.fn(),
+			deleteBuffer: vi.fn(),
+			deleteProgram: vi.fn(),
 		};
 		vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(gl as unknown as WebGL2RenderingContext);
 

@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, onMounted, useTemplateRef, watch } from 'vue';
+import { computed, inject, onMounted, ref, useTemplateRef, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { getUnicodeEmojiOrNull } from '@/utility/emojilist.js';
 import MkCustomEmojiDetailedDialog from '@/features/custom-emoji/components/MkCustomEmojiDetailedDialog.vue';
@@ -53,6 +53,7 @@ const props = defineProps<{
 }>();
 
 const mock = inject(DI.mock, false);
+const tooltipRouteActive = inject(DI.routeActive, ref(true));
 
 const emit = defineEmits<{
 	(ev: 'reactionToggled', emoji: string, newCount: number): void;
@@ -257,7 +258,8 @@ if (!mock) {
 	useTooltip(
 		buttonEl,
 		async (showing) => {
-			if (buttonEl.value == null) {
+			const anchorElement = buttonEl.value;
+			if (anchorElement == null) {
 				return;
 			}
 
@@ -270,6 +272,9 @@ if (!mock) {
 				}),
 				import('@/features/note/components/MkReactionsViewer.Details.vue').then((x) => x.default),
 			]);
+			if (!showing.value || !tooltipRouteActive.value || !anchorElement.isConnected || buttonEl.value !== anchorElement) {
+				return;
+			}
 
 			const users = reactions.map((x) => x.user);
 
@@ -280,7 +285,7 @@ if (!mock) {
 					reaction: props.reaction,
 					users,
 					count: props.count,
-					anchorElement: buttonEl.value,
+					anchorElement,
 				},
 				{
 					closed: () => dispose(),

@@ -11,7 +11,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				{{ i18n.ts._userLists.tip }}
 			</MkTip>
 
-			<MkResult v-if="items.length === 0" type="empty"/>
+			<MkLoading v-if="isFetching && userListsCache.value.value == null"/>
+			<MkError v-else-if="isError" @retry="_fetch_"/>
+			<MkResult v-else-if="!isFetching && items.length === 0" type="empty"/>
 
 			<MkButton primary rounded style="margin: 0 auto;" @click="create"><i class="ti ti-plus"></i> {{ i18n.ts.createList }}</MkButton>
 
@@ -39,9 +41,11 @@ import { ensureSignin } from '@/i.js';
 const $i = ensureSignin();
 
 const items = computed(() => userListsCache.value.value ?? []);
+const isFetching = userListsCache.isFetching;
+const isError = userListsCache.isError;
 
 function _fetch_() {
-	userListsCache.fetch();
+	void userListsCache.fetchResult();
 }
 
 _fetch_();
@@ -54,8 +58,6 @@ async function create() {
 		return;
 	}
 	await os.apiWithDialog('users/lists/create', { name });
-	userListsCache.delete();
-	_fetch_();
 }
 
 const headerActions = computed(() => [

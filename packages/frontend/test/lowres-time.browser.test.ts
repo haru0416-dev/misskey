@@ -5,8 +5,11 @@
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+let cleanupClock: (() => void) | null = null;
 describe('lowres time', () => {
 	afterEach(() => {
+		cleanupClock?.();
+		cleanupClock = null;
 		vi.useRealTimers();
 		vi.restoreAllMocks();
 	});
@@ -17,9 +20,16 @@ describe('lowres time', () => {
 
 		let visibilityState: DocumentVisibilityState = 'visible';
 		vi.spyOn(window.document, 'visibilityState', 'get').mockImplementation(() => visibilityState);
-		vi.resetModules();
+		const listeners = vi.spyOn(window.document, 'addEventListener');
 
 		const { lowresTime, TIME_UPDATE_INTERVAL } = await import('@/composables/useLowresTime.js');
+		cleanupClock = () => {
+			visibilityState = 'hidden';
+			window.document.dispatchEvent(new Event('visibilitychange'));
+			for (const [type, listener] of listeners.mock.calls) {
+				if (type === 'visibilitychange') window.document.removeEventListener(type, listener);
+			}
+		};
 		expect(lowresTime.value).toBe(1000);
 
 		vi.advanceTimersByTime(TIME_UPDATE_INTERVAL);

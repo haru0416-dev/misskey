@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<a ref="el" :href="to" :class="active ? activeClass : null" @click="nav" @contextmenu.prevent.stop="onContextmenu">
+<a ref="el" :href="to" :class="active ? activeClass : null" @click="nav" @contextmenu="onContextmenu">
 	<slot></slot>
 </a>
 </template>
@@ -49,25 +49,26 @@ const el = useTemplateRef('el');
 defineExpose({ $el: el });
 
 const router = useRouter();
+const destinationRoute = computed(() => props.activeClass == null ? null : router.resolve(props.to)?.route ?? null);
 
 const active = computed(() => {
 	if (props.activeClass == null) {
 		return false;
 	}
-	const resolved = router.resolve(props.to);
-	if (resolved == null) {
+	const resolvedRoute = destinationRoute.value;
+	if (resolvedRoute == null) {
 		return false;
 	}
-	if (resolved.route.path === router.currentRoute.value.path) {
+	if (resolvedRoute.path === router.currentRoute.value.path) {
 		return true;
 	}
-	if (resolved.route.name == null) {
+	if (resolvedRoute.name == null) {
 		return false;
 	}
 	if (router.currentRoute.value.name == null) {
 		return false;
 	}
-	return resolved.route.name === router.currentRoute.value.name;
+	return resolvedRoute.name === router.currentRoute.value.name;
 });
 
 function onContextmenu(ev: PointerEvent) {
@@ -75,6 +76,8 @@ function onContextmenu(ev: PointerEvent) {
 	if (selection && selection.toString() !== '') {
 		return;
 	}
+	ev.preventDefault();
+	ev.stopPropagation();
 
 	if (props.contextMenu != null) {
 		void os.contextMenu(props.contextMenu(), ev);
@@ -150,6 +153,6 @@ function nav(ev: PointerEvent) {
 		return openWindow();
 	}
 
-	router.pushByPath(props.to, ev.ctrlKey ? 'forcePage' : null);
+	router.pushByPath(props.to);
 }
 </script>

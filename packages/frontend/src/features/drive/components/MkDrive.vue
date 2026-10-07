@@ -256,7 +256,8 @@ watch([selectedFolders, isRootSelected], () => {
 	emit('changeSelectedFolders', isRootSelected.value ? [null, ...selectedFolders.value] : selectedFolders.value);
 });
 
-const fetching = ref(true);
+const initializing = ref(true);
+const fetching = computed(() => initializing.value || filesPaginator.fetching.value || foldersPaginator.fetching.value);
 
 const sortModeSelect = ref<NonNullable<Misskey.entities.DriveFilesRequest['sort']>>('+createdAt');
 
@@ -328,37 +329,59 @@ const filesTimeline = makeDateGroupedTimelineComputedRef(filesPaginator.items);
 const shouldBeGroupedByDate = computed(() => ['+createdAt', '-createdAt'].includes(sortModeSelect.value));
 
 watch(folder, () => emit('cd', folder.value));
-watch([sortModeSelect, typeFilter], () => {
+watch([sortModeSelect, effectiveType], () => {
 	initialize();
 });
 
+let initializeGeneration = 0;
+
 async function initialize() {
-	fetching.value = true;
-	await foldersPaginator.reload();
+	const generation = ++initializeGeneration;
+	initializing.value = true;
 	filesPaginator.initialDirection = sortModeSelect.value === '-createdAt' ? 'newer' : 'older';
 	filesPaginator.order.value = sortModeSelect.value === '-createdAt' ? 'oldest' : 'newest';
-	await filesPaginator.reload();
-	fetching.value = false;
+	// フォルダーとファイルは独立した一覧なので、条件変更時に両方の旧リクエストを直ちに置き換える。
+	await Promise.all([foldersPaginator.reload(), filesPaginator.reload()]);
+	if (generation === initializeGeneration) {
+		initializing.value = false;
+	}
 }
 
-function onStreamDriveFileCreated(file: Misskey.entities.DriveFile) {
-	if (file.folderId !== (folder.value?.id ?? null)) {
+function matchesFileFilter(file: Misskey.entities.DriveFile): boolean {
+	return file.folderId === (folder.value?.id ?? null) &&
+		(effectiveType.value == null || matchesTypeFilter(file.type, effectiveType.value));
+}
+
+function usesFileOffset(): boolean {
+	return !['-createdAt', '+createdAt'].includes(sortModeSelect.value);
+}
+
+function onDriveFileCreated(file: Misskey.entities.DriveFile) {
+	if (!matchesFileFilter(file)) return;
+	if (filesPaginator.items.value.some((item) => item.id === file.id)) return;
+	// 名前・サイズ順では未取得部分の位置を確定できない。サーバーの先頭から取り直し、offset の基準を維持する。
+	if (usesFileOffset() || filesPaginator.fetching.value || filesPaginator.fetchingNewer.value) {
+		filesPaginator.reload();
 		return;
 	}
-	// 一覧は種類で絞り込めるので、絞り込みと合わない新着を差し込まない。
-	// 差し込むと「画像だけ」の表示に動画が混ざる。
-	if (effectiveType.value != null && !matchesTypeFilter(file.type, effectiveType.value)) {
-		return;
-	}
-	// 古い順では新着は末尾に並ぶ。先頭に差し込むと並びが崩れ、一覧の上限で切り詰めた分を読み直す手段も無い。
-	// 末尾まで読み終えているときだけ足し、続きがあるなら続きの取得に任せる。
+	// 古い順の未取得部分にある新着は次ページに任せ、読み終えた場合だけ末尾へ足す。
 	if (sortModeSelect.value === '-createdAt') {
 		if (!filesPaginator.canFetchNewer.value) {
-			filesPaginator.pushItems([file]);
+			const last = filesPaginator.items.value.at(-1);
+			if (last && file.id < last.id) {
+				filesPaginator.reload();
+			} else {
+				filesPaginator.pushItems([file]);
+			}
 		}
 		return;
 	}
-	filesPaginator.prepend(file);
+	const first = filesPaginator.items.value[0];
+	if (first && file.id < first.id) {
+		filesPaginator.reload();
+	} else {
+		filesPaginator.prepend(file);
+	}
 }
 
 /** `image/*` のようなワイルドカードを含む drive/files の type 指定に合うか。 */
@@ -601,7 +624,7 @@ function cd(target?: Misskey.entities.DriveFolder | Misskey.entities.DriveFolder
 		target = target.id;
 	}
 
-	fetching.value = true;
+	initializing.value = true;
 
 	misskeyApi('drive/folders/show', {
 		folderId: target,
@@ -820,33 +843,50 @@ function onContextmenu(ev: PointerEvent) {
 	os.contextMenu(getMenu(), ev);
 }
 
-useGlobalEvent('driveFileCreated', (file) => {
-	if (file.folderId === (folder.value?.id ?? null)) {
-		filesPaginator.prepend(file);
-	}
-});
+useGlobalEvent('driveFileCreated', onDriveFileCreated);
 
-useGlobalEvent('driveFilesUpdated', (files) => {
-	for (const f of files) {
-		if (filesPaginator.items.value.some((x) => x.id === f.id)) {
-			if (f.folderId === (folder.value?.id ?? null)) {
-				filesPaginator.updateItem(f.id, () => f);
+function onDriveFilesUpdated(files: Misskey.entities.DriveFile[]) {
+	// 取得中の応答には移動前・変更前の行が含まれ得るため、現在の条件で取り直す。
+	if (files.length > 0 && (filesPaginator.fetching.value || filesPaginator.fetchingOlder.value || filesPaginator.fetchingNewer.value)) {
+		filesPaginator.reload();
+		return;
+	}
+	let needsReload = false;
+	for (const file of files) {
+		const previous = filesPaginator.items.value.find((item) => item.id === file.id);
+		const matches = matchesFileFilter(file);
+		if (!previous && !matches) continue;
+		if (usesFileOffset()) {
+			needsReload = true;
+		} else if (previous) {
+			if (matches) {
+				filesPaginator.updateItem(file.id, () => file);
 			} else {
-				filesPaginator.removeItem(f.id);
+				filesPaginator.removeItem(file.id);
 			}
 		} else {
-			if (f.folderId === (folder.value?.id ?? null)) {
-				filesPaginator.prepend(f);
-			}
+			// 移動された既存ファイルの ID は新着とは限らないため、カーソル順の途中へ差し込まない。
+			needsReload = true;
 		}
 	}
-});
+	if (needsReload) filesPaginator.reload();
+}
 
-useGlobalEvent('driveFilesDeleted', (files) => {
-	for (const f of files) {
-		filesPaginator.removeItem(f.id);
+function onDriveFilesDeleted(ids: Misskey.entities.DriveFile['id'][]) {
+	if (ids.length === 0) return;
+	// 削除前の応答の復活と offset のずれを防ぐため、取得中または offset 順では先頭から取り直す。
+	if (usesFileOffset() || filesPaginator.fetching.value || filesPaginator.fetchingOlder.value || filesPaginator.fetchingNewer.value) {
+		filesPaginator.reload();
+		return;
 	}
-});
+	for (const id of ids) {
+		filesPaginator.removeItem(id);
+	}
+}
+
+useGlobalEvent('driveFilesDeleted', (files) => onDriveFilesDeleted(files.map((file) => file.id)));
+
+useGlobalEvent('driveFilesUpdated', onDriveFilesUpdated);
 
 useGlobalEvent('driveFoldersUpdated', (folders) => {
 	for (const f of folders) {
@@ -875,7 +915,9 @@ let connection: Misskey.IChannelConnection<Misskey.Channels['drive']> | null = n
 onMounted(() => {
 	if (store.realtimeMode) {
 		connection = useStream().useChannel('drive');
-		connection.on('fileCreated', onStreamDriveFileCreated);
+		connection.on('fileCreated', onDriveFileCreated);
+		connection.on('fileUpdated', (file) => onDriveFilesUpdated([file]));
+		connection.on('fileDeleted', (id) => onDriveFilesDeleted([id]));
 	}
 
 	if (props.initialFolder) {
@@ -888,6 +930,9 @@ onMounted(() => {
 onActivated(() => {});
 
 onBeforeUnmount(() => {
+	initializeGeneration++;
+	filesPaginator.dispose();
+	foldersPaginator.dispose();
 	if (connection != null) {
 		connection.dispose();
 	}

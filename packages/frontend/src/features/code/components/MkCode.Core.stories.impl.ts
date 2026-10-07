@@ -12,5 +12,8 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<MkCode_core v-bind="args" />',
 	}),
-	args: {},
+	args: {
+		code: 'const message = "Toneriko";\nconsole.log(message);',
+		lang: 'js',
+	},
 } satisfies StoryObj<typeof MkCode_core>;

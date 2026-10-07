@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ref, watch, onUnmounted } from 'vue';
+import { inject, ref, watch, onActivated, onDeactivated, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
+import { DI } from '@/di.js';
 
 const MOUSEOVER_IGNORE_DURATION = 1000;
 
@@ -13,6 +14,14 @@ export function useTooltip(
 	onShow: (showing: Ref<boolean>) => void,
 	delay = 300,
 ): void {
+	const activated = ref(true);
+	const routeActive = inject(DI.routeActive, ref(true));
+	onActivated(() => {
+		activated.value = true;
+	});
+	onDeactivated(() => {
+		activated.value = false;
+	});
 	let isHovering = false;
 
 	// タッチ直後にブラウザが互換mouseoverを発火する場合があるため、短時間だけ無視する。
@@ -25,7 +34,7 @@ export function useTooltip(
 
 	const open = () => {
 		close();
-		if (!isHovering) {
+		if (!isHovering || !activated.value || !routeActive.value) {
 			return;
 		}
 		if (elRef.value == null) {
@@ -91,9 +100,9 @@ export function useTooltip(
 	};
 
 	const stop = watch(
-		elRef,
-		(value, _oldValue, onCleanup) => {
-			if (value == null) {
+		[elRef, activated, routeActive],
+		([value, isActivated, isRouteActive], _oldValue, onCleanup) => {
+			if (value == null || !isActivated || !isRouteActive) {
 				return;
 			}
 			const el = value instanceof Element ? value : value.$el;

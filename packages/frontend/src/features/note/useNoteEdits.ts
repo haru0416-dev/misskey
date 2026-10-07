@@ -51,7 +51,9 @@ export function useNoteEdits(
 		if (reply.value?.id !== edited.id && quote.value?.id !== edited.id) {
 			return;
 		}
-		current = applyEditedNote(current, edited);
+		const updated = applyEditedNote(current, edited);
+		if (updated === current) return;
+		current = updated;
 		let next: Misskey.entities.Note | null = current;
 		// 最初の表示と同じく、プラグインにはノート全体を 1 回だけ通す (入れ子を書き換えるプラグインを二重にかけない)。
 		if (getPluginHandlers('note_view_interruptor').length > 0) {

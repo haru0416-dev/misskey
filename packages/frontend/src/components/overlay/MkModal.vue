@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { nextTick, normalizeClass, onMounted, onUnmounted, provide, watch, ref, useTemplateRef, computed } from 'vue';
+import { nextTick, normalizeClass, onBeforeUnmount, onMounted, onUnmounted, provide, watch, ref, useTemplateRef, computed } from 'vue';
 import type { Keymap } from '@/utility/hotkey.js';
 import { isTouchUsing } from '@/utility/touch.js';
 import { deviceKind } from '@/utility/device-kind.js';
@@ -144,15 +144,22 @@ const transitionDuration = computed(() =>
 
 let releaseFocusTrap: (() => void) | null = null;
 let contentClicking = false;
+let restoreAnchorPointerEvents: (() => void) | null = null;
+
+function releaseInteraction() {
+	restoreAnchorPointerEvents?.();
+	restoreAnchorPointerEvents = null;
+	releaseFocusTrap?.();
+	releaseFocusTrap = null;
+}
 
 function close(opts: { useSendAnimation?: boolean } = {}) {
 	if (opts.useSendAnimation) {
 		useSendAnime.value = true;
 	}
 
-	if (props.anchorElement) {
-		props.anchorElement.style.pointerEvents = 'auto';
-	}
+	restoreAnchorPointerEvents?.();
+	restoreAnchorPointerEvents = null;
 	showing.value = false;
 	emit('close');
 }
@@ -339,9 +346,15 @@ const alignObserver = new ResizeObserver((entries, observer) => {
 onMounted(() => {
 	watch(
 		() => props.anchorElement,
-		async () => {
-			if (props.anchorElement) {
-				props.anchorElement.style.pointerEvents = 'none';
+		async (anchorElement, _oldAnchorElement, onCleanup) => {
+			if (anchorElement) {
+				const pointerEvents = anchorElement.style.pointerEvents;
+				const restore = () => {
+					anchorElement.style.pointerEvents = pointerEvents;
+				};
+				restoreAnchorPointerEvents = restore;
+				anchorElement.style.pointerEvents = 'none';
+				onCleanup(restore);
 			}
 			fixed.value = type.value === 'drawer' || getFixedContainer(props.anchorElement) != null;
 
@@ -357,13 +370,14 @@ onMounted(() => {
 		([showing, manualShowing]) => {
 			if (manualShowing === true || (manualShowing == null && showing === true)) {
 				if (modalRootEl.value != null) {
+					releaseFocusTrap?.();
 					const { release } = focusTrap(modalRootEl.value, props.hasInteractionWithOtherFocusTrappedEls);
 
 					releaseFocusTrap = release;
 					modalRootEl.value.focus();
 				}
 			} else {
-				releaseFocusTrap?.();
+				releaseInteraction();
 				focusParent(props.returnFocusTo ?? props.anchorElement, true, false);
 			}
 		},
@@ -376,6 +390,7 @@ onMounted(() => {
 		}
 	});
 });
+onBeforeUnmount(releaseInteraction);
 
 onUnmounted(() => {
 	alignObserver.disconnect();

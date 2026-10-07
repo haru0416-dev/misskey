@@ -87,4 +87,40 @@ describe('lightweight directives', () => {
 		expect(disconnect).toHaveBeenCalledOnce();
 		expect(onAppear).toHaveBeenCalledTimes(callsBeforeUnmount);
 	});
+
+	test('uses the current appear binding when infinite scrolling is enabled, replaced, or disabled', async () => {
+		const first = vi.fn();
+		const second = vi.fn();
+		const Component = defineComponent({
+			props: ['callback', 'offscreen'],
+			template:
+				"<button v-appear=\"callback\" :style=\"{ position: 'fixed', top: offscreen ? '-1000px' : '0px' }\">Load more</button>",
+		});
+		const result = render(Component, {
+			props: { callback: null, offscreen: false },
+			global: { directives: { appear: appearDirective } },
+		});
+		await result.rerender({ callback: first });
+		await vi.waitFor(() => expect(first).toHaveBeenCalled());
+		await result.rerender({ callback: second });
+		await vi.waitFor(() => expect(second).toHaveBeenCalled());
+		await result.rerender({ callback: null });
+		const callsAfterDisable = second.mock.calls.length;
+		vi.useFakeTimers();
+		const target = result.getByRole('button', { name: 'Load more' });
+		const crossViewport = async (offscreen: boolean) => {
+			const crossed = Promise.withResolvers<void>();
+			const observer = new IntersectionObserver((entries) => {
+				if (entries.some((entry) => entry.isIntersecting !== offscreen)) crossed.resolve();
+			});
+			observer.observe(target);
+			await result.rerender({ callback: null, offscreen });
+			await crossed.promise;
+			observer.disconnect();
+		};
+		await crossViewport(true);
+		await crossViewport(false);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(second).toHaveBeenCalledTimes(callsAfterDisable);
+	});
 });

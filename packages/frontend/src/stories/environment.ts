@@ -51,23 +51,47 @@ export async function resetPopups(): Promise<void> {
 	popups.value = [];
 }
 
-/** story 間で IndexedDB の残留が漏れないようにする。 */
+/** 開いた接続を維持したまま全 store を空にし、story 間で IndexedDB の値を引き継がない。 */
 export async function resetIndexedDb(): Promise<void> {
-	if (globalThis.indexedDB?.databases == null) {
-		return;
-	}
-	try {
-		for (const db of await indexedDB.databases()) {
-			if (db.name != null) {
-				indexedDB.deleteDatabase(db.name);
-			}
+	if (globalThis.indexedDB?.databases == null) return;
+	for (const entry of await indexedDB.databases()) {
+		if (entry.name == null) continue;
+		const opened = Promise.withResolvers<IDBDatabase>();
+		const request = indexedDB.open(entry.name);
+		request.onsuccess = () => opened.resolve(request.result);
+		request.onerror = () => opened.reject(request.error);
+		const db = await opened.promise;
+		try {
+			const stores = Array.from(db.objectStoreNames);
+			if (stores.length === 0) continue;
+			const completed = Promise.withResolvers<void>();
+			const tx = db.transaction(stores, 'readwrite');
+			tx.oncomplete = () => completed.resolve();
+			tx.onabort = tx.onerror = () => completed.reject(tx.error);
+			for (const name of stores) tx.objectStore(name).clear();
+			await completed.promise;
+		} finally {
+			db.close();
 		}
-	} catch {
-		// プライベートモード等で列挙できない環境は諦める。
 	}
 }
 
 let workerPromise: Promise<SetupWorker> | null = null;
+
+const activeApiRequests = new Set<string>();
+const idleWaiters = new Set<() => void>();
+let apiRequestEpoch = 0;
+
+export function getApiRequestEpoch(): number {
+	return apiRequestEpoch;
+}
+
+export async function waitForApiRequests(): Promise<void> {
+	if (activeApiRequests.size === 0) return;
+	const idle = Promise.withResolvers<void>();
+	idleWaiters.add(idle.resolve);
+	await idle.promise;
+}
 
 /**
  * msw を起動する。二度目以降は同じ worker を返す。
@@ -80,6 +104,16 @@ let workerPromise: Promise<SetupWorker> | null = null;
 export function startMockServiceWorker(): Promise<SetupWorker> {
 	workerPromise ??= (async () => {
 		const worker = setupWorker(...commonHandlers, apiFallbackHandler);
+		worker.events.on('request:start', ({ request, requestId }) => {
+			if (!new URL(request.url).pathname.startsWith('/api/')) return;
+			activeApiRequests.add(requestId);
+			apiRequestEpoch++;
+		});
+		worker.events.on('request:end', ({ requestId }) => {
+			if (!activeApiRequests.delete(requestId) || activeApiRequests.size > 0) return;
+			for (const resolve of idleWaiters) resolve();
+			idleWaiters.clear();
+		});
 		await worker.start({ quiet: true, onUnhandledRequest });
 		return worker;
 	})();
@@ -111,6 +145,7 @@ export type MisskeyOs = typeof import('@/os.js');
 export type AppRuntime = {
 	os: MisskeyOs;
 	install: (app: App) => void;
+	reset: () => Promise<void>;
 };
 
 let observer: MutationObserver | null = null;
@@ -139,19 +174,37 @@ export function themeIds(): string[] {
  * これらが揃っている前提で書かれている。
  */
 export async function createAppRuntime(): Promise<AppRuntime> {
-	const [{ default: components }, { default: directives }, { default: widgets }, { themeManager }, os] =
-		await Promise.all([
-			import('@/components/index.js'),
-			import('@/directives/index.js'),
-			import('@/widgets/index.js'),
-			import('@/theme.js'),
-			import('@/os.js'),
-		]);
+	const [
+		{ default: components },
+		{ default: directives },
+		{ default: widgets },
+		{ themeManager },
+		os,
+		{ store },
+		{ prefer },
+	] = await Promise.all([
+		import('@/components/index.js'),
+		import('@/directives/index.js'),
+		import('@/widgets/index.js'),
+		import('@/theme.js'),
+		import('@/os.js'),
+		import('@/store.js'),
+		import('@/preferences.js'),
+	]);
 
 	watchTheme(themeManager);
 
 	return {
 		os,
+		reset: async () => {
+			await Promise.all([store.$persistFlush(), prefer.$preferencesFlush()]);
+			await resetIndexedDb();
+			await resetPopups();
+			resetLocalStorage();
+			store.$reset();
+			prefer.reloadProfile();
+			await store.$persistFlush();
+		},
 		install: (app: App) => {
 			components(app);
 			directives(app);

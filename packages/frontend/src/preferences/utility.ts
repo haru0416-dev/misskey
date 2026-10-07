@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { isPossiblyNonNormalizedPreferencesProfile } from './store.js';
 import type { MenuItem } from '@/types/menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { prefer } from '@/preferences.js';
+import { isPreferencesAccountCurrent, prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -23,12 +23,10 @@ function canAutoBackup() {
 }
 
 export function getPreferencesProfileMenu(): MenuItem[] {
-	const autoBackupEnabled = ref(store.enablePreferencesAutoCloudBackup);
-
-	watch(autoBackupEnabled, () => {
-		if (autoBackupEnabled.value) {
-			if (!canAutoBackup()) {
-				autoBackupEnabled.value = false;
+	const autoBackupEnabled = computed({
+		get: () => store.enablePreferencesAutoCloudBackup,
+		set: (enabled: boolean) => {
+			if (enabled && !canAutoBackup()) {
 				void loadOs().then((os) =>
 					os.alert({
 						type: 'warning',
@@ -37,13 +35,15 @@ export function getPreferencesProfileMenu(): MenuItem[] {
 				);
 				return;
 			}
-
-			store.set('enablePreferencesAutoCloudBackup', true);
-
-			cloudBackup();
-		} else {
-			store.set('enablePreferencesAutoCloudBackup', false);
-		}
+			void store
+				.set('enablePreferencesAutoCloudBackup', enabled)
+				.then(() => (enabled ? cloudBackup() : undefined))
+				.catch(async (error) => {
+					console.error('Failed to change automatic preferences backup', error);
+					const os = await loadOs();
+					await os.alert({ type: 'error', title: i18n.ts.somethingHappened });
+				});
+		},
 	});
 
 	const menu: MenuItem[] = [
@@ -164,10 +164,11 @@ function importProfile() {
 			return;
 		}
 
-		miLocalStorage.setItem('preferences', JSON.stringify(profile));
+		await prefer.$preferencesFlush();
+		prefer.replaceProfile(profile);
 		miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');
 		shouldSuggestRestoreBackup.value = false;
-		unisonReload();
+		await unisonReload();
 	};
 
 	input.click();
@@ -177,15 +178,20 @@ export async function cloudBackup() {
 	if ($i == null) {
 		return;
 	}
+	if (!isPreferencesAccountCurrent()) throw new Error('Preferences account is no longer selected');
 	if (!canAutoBackup()) {
 		throw new Error('cannot auto backup for this profile');
 	}
 
-	await misskeyApi('i/registry/set', {
-		scope: ['client', 'preferences', 'backups'],
-		key: prefer.profile.name,
-		value: prefer.profile,
-	});
+	await misskeyApi(
+		'i/registry/set',
+		{
+			scope: ['client', 'preferences', 'backups'],
+			key: prefer.profile.name,
+			value: prefer.profile,
+		},
+		$i.token,
+	);
 }
 
 export async function listCloudBackups() {
@@ -255,11 +261,12 @@ export async function restoreFromCloudBackup() {
 		return;
 	}
 
-	miLocalStorage.setItem('preferences', JSON.stringify(profile));
+	await prefer.$preferencesFlush();
+	prefer.replaceProfile(profile);
 	miLocalStorage.setItem('hidePreferencesRestoreSuggestion', 'true');
-	store.set('enablePreferencesAutoCloudBackup', true);
+	await store.set('enablePreferencesAutoCloudBackup', true);
 	shouldSuggestRestoreBackup.value = false;
-	unisonReload();
+	await unisonReload();
 }
 
 export async function enableAutoBackup() {
@@ -271,7 +278,7 @@ export async function enableAutoBackup() {
 		return;
 	}
 
-	store.set('enablePreferencesAutoCloudBackup', true);
+	await store.set('enablePreferencesAutoCloudBackup', true);
 }
 
 export const shouldSuggestRestoreBackup = ref(false);

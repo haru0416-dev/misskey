@@ -7,7 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader :actions="headerActions" :tabs="headerTabs">
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div>
-			<MkResult v-if="antennas.length === 0" type="empty"/>
+			<MkLoading v-if="isFetching && antennasCache.value.value == null"/>
+			<MkError v-else-if="isError" @retry="_fetch_"/>
+			<MkResult v-else-if="!isFetching && antennas.length === 0" type="empty"/>
 
 			<MkButton type="routerLink" to="/my/antennas/create" primary :class="$style.add"><i class="ti ti-plus"></i> {{ i18n.ts.add }}</MkButton>
 
@@ -29,9 +31,11 @@ import { definePage } from '@/page.js';
 import { antennasCache } from '@/query/account-caches.js';
 
 const antennas = computed(() => antennasCache.value.value ?? []);
+const isFetching = antennasCache.isFetching;
+const isError = antennasCache.isError;
 
 function _fetch_() {
-	antennasCache.fetch();
+	void antennasCache.fetchResult();
 }
 
 _fetch_();
@@ -54,7 +58,7 @@ definePage(() => ({
 }));
 
 onActivated(() => {
-	antennasCache.fetch();
+	_fetch_();
 });
 </script>
 
