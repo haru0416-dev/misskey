@@ -128,6 +128,16 @@ export async function listUserListMembershipUserIdsByUserListIdFromDatabase(
 	return rows.map((row) => row.userId);
 }
 
+export async function listUserListMembersWithRepliesByUserListIdFromDatabase(
+	db: MiDrizzleDatabase,
+	userListId: MiUserList['id'],
+): Promise<Pick<UserListMembershipRow, 'userId' | 'withReplies'>[]> {
+	return await db
+		.select({ userId: userListMembership.userId, withReplies: userListMembership.withReplies })
+		.from(userListMembership)
+		.where(eq(userListMembership.userListId, userListId));
+}
+
 export async function listUserListMembershipUserIdsByUserListIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	userListIds: MiUserList['id'][],

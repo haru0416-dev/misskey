@@ -228,6 +228,7 @@ export interface InternalEventTypes {
 	renoteUnmute: { muterId: MiUser['id']; muteeId: MiUser['id'] };
 	userListMemberAdded: { userListId: MiUserList['id']; memberId: MiUser['id'] };
 	userListMemberRemoved: { userListId: MiUserList['id']; memberId: MiUser['id'] };
+	userListMemberUpdated: { userListId: MiUserList['id']; memberId: MiUser['id'] };
 }
 
 type EventTypesToEventPayload<T> = EventUnionFromDictionary<UndefinedAsNullAll<SerializedAll<T>>>;

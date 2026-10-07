@@ -160,6 +160,8 @@ async function updateUserListMembership(
 	}
 
 	await updateUserListMembershipWithRepliesInDatabase(deps.db, membership.id, options.withReplies);
+
+	deps.publishInternalEvent?.('userListMemberUpdated', { userListId: list.id, memberId: target.id });
 }
 
 function noSuchListError(id: string): ApiError {

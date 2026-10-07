@@ -65,6 +65,7 @@ describe('Streaming', () => {
 		let kyokoNote: misskey.entities.Note;
 		let kanakoNote: misskey.entities.Note;
 		let takumiNote: misskey.entities.Note;
+		let erinNote: misskey.entities.Note;
 		let list: any;
 
 		beforeAll(
@@ -85,6 +86,7 @@ describe('Streaming', () => {
 				kyokoNote = await post(kyoko, { text: 'foo' });
 				kanakoNote = await post(kanako, { text: 'hoge' });
 				takumiNote = await post(takumi, { text: 'piyo' });
+				erinNote = await post(erin, { text: 'erin' });
 
 				await api('following/create', { userId: kyoko.id, withReplies: false }, ayano);
 
@@ -122,6 +124,9 @@ describe('Streaming', () => {
 					},
 					chitose,
 				);
+
+				// kyoko は他人宛ての返信も含め、ayano は含めない (withReplies の既定値)。
+				await api('users/lists/update-membership', { listId: list.id, userId: kyoko.id, withReplies: true }, chitose);
 
 				await api(
 					'users/lists/push',
@@ -630,6 +635,44 @@ describe('Streaming', () => {
 		});
 
 		describe('UserList Timeline', () => {
+			// 流れないことは、同じ接続で後から流れるはずのノートの到着を待ってから判定する。配信の遅れで
+			// 「流れなかった」と誤判定しないため。
+			const isReceivedBeforeControl = async (
+				trigger: () => Promise<misskey.entities.Note>,
+				control: () => Promise<misskey.entities.Note>,
+			): Promise<boolean> => {
+				const receivedIds = new Set<unknown>();
+				const controlArrived = Promise.withResolvers<void>();
+				let controlId: string | undefined;
+				const ws = await connectStream(
+					chitose,
+					'userList',
+					(msg) => {
+						if (msg.type !== 'note') return;
+						receivedIds.add(msg.body['id']);
+						if (controlId != null && msg.body['id'] === controlId) controlArrived.resolve();
+					},
+					{ listId: list.id },
+				);
+				let timer: ReturnType<typeof setTimeout> | undefined;
+				try {
+					const target = await trigger();
+					controlId = (await control()).id;
+					if (receivedIds.has(controlId)) controlArrived.resolve();
+					await Promise.race([
+						controlArrived.promise,
+						new Promise((_, reject) => {
+							timer = setTimeout(() => reject(new Error('control note did not arrive')), 5000);
+						}),
+					]);
+					await new Promise((resolve) => setTimeout(resolve, STREAMING_NEGATIVE_TIMEOUT_MS));
+					return receivedIds.has(target.id);
+				} finally {
+					clearTimeout(timer);
+					ws.terminate();
+				}
+			};
+
 			test('リストに入れているユーザーの投稿が流れる', async () => {
 				const fired = await waitFire(
 					chitose,
@@ -680,17 +723,65 @@ describe('Streaming', () => {
 				expect(fired).toBe(false);
 			});
 
-			// #10443
-			test('ミュートしているユーザへのリプライがリストTLに流れない', async () => {
-				const fired = await waitFireWithoutEvent(
+			test('withReplies が有効なメンバーの他人宛てのリプライが流れる', async () => {
+				const fired = await waitFire(
 					chitose,
 					'userList',
-					() => api('notes/create', { text: 'foo', replyId: kanakoNote.id }, kyoko),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
+					() => api('notes/create', { text: 'foo', replyId: erinNote.id }, kyoko),
+					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id && msg.body['replyId'] === erinNote.id,
 					{ listId: list.id },
+					5000,
 				);
 
-				expect(fired).toBe(false);
+				expect(fired).toBe(true);
+			});
+
+			test('withReplies が無効なメンバーの他人宛てのリプライは流れない', async () => {
+				const received = await isReceivedBeforeControl(
+					() => post(ayano, { text: 'foo', replyId: erinNote.id }),
+					() => post(ayano, { text: 'control' }),
+				);
+
+				expect(received).toBe(false);
+			});
+
+			test('メンバーの withReplies の変更が次のノートから反映される', async () => {
+				try {
+					// メンバーの定期的な読み直し (5 秒ごと) を待たずに反映されることを、接続から 5 秒以内に確かめる。
+					const fired = await waitFire(
+						chitose,
+						'userList',
+						async () => {
+							await api(
+								'users/lists/update-membership',
+								{ listId: list.id, userId: ayano.id, withReplies: true },
+								chitose,
+							);
+							await api('notes/create', { text: 'foo', replyId: erinNote.id }, ayano);
+						},
+						(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id && msg.body['replyId'] === erinNote.id,
+						{ listId: list.id },
+						2000,
+					);
+
+					expect(fired).toBe(true);
+				} finally {
+					await api(
+						'users/lists/update-membership',
+						{ listId: list.id, userId: ayano.id, withReplies: false },
+						chitose,
+					);
+				}
+			});
+
+			// #10443
+			test('ミュートしているユーザへのリプライがリストTLに流れない', async () => {
+				const received = await isReceivedBeforeControl(
+					() => post(kyoko, { text: 'foo', replyId: kanakoNote.id }),
+					() => post(kyoko, { text: 'control', replyId: erinNote.id }),
+				);
+
+				expect(received).toBe(false);
 			});
 
 			// #10443
@@ -737,15 +828,12 @@ describe('Streaming', () => {
 					chitose,
 				);
 
-				const fired = await waitFireWithoutEvent(
-					chitose,
-					'userList',
-					() => api('notes/create', { text: 'foo', replyId: takumiNote.id }, kyoko),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
-					{ listId: list.id },
+				const received = await isReceivedBeforeControl(
+					() => post(kyoko, { text: 'foo', replyId: takumiNote.id }),
+					() => post(kyoko, { text: 'control', replyId: erinNote.id }),
 				);
 
-				expect(fired).toBe(false);
+				expect(received).toBe(false);
 			});
 
 			// #10443

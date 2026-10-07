@@ -5,15 +5,15 @@
 
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/user-list-membership-store.js';
+import type { GlobalEvents } from '@/core/global-events.js';
+import { listUserListMembersWithRepliesByUserListIdFromDatabase } from '@/core/user/user-list-membership-store.js';
 import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/user-list-store.js';
 import type { NoteDependencies } from '@/core/note/note-packing.js';
 import { isNoteMutedOrBlockedForStream, isNoteVisibleForMeForStream, sendNoteToStream } from '../channel.js';
 import type { StreamChannelDefinition } from '../channel.js';
 
 type MembershipCacheEntry = {
-	// メンバーシップ取得クエリは withReplies を選択しないため、常に undefined になる。
-	withReplies: boolean | undefined;
+	withReplies: boolean;
 };
 
 export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies> = {
@@ -38,13 +38,48 @@ export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies
 
 		let membershipsMap: Record<string, MembershipCacheEntry | undefined> = {};
 
-		const updateListUsers = async () => {
-			const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, listId);
+		const loadListUsers = async () => {
+			const members = await listUserListMembersWithRepliesByUserListIdFromDatabase(deps.db, listId);
 			const updated: Record<string, MembershipCacheEntry | undefined> = {};
-			for (const userId of memberIds) {
-				updated[userId] = { withReplies: undefined };
+			for (const member of members) {
+				updated[member.userId] = { withReplies: member.withReplies };
 			}
 			membershipsMap = updated;
+		};
+
+		// 読み直しは直列に実行する。メンバー変更の通知はコミット後に届くので、通知時点で実行中の読み直しは
+		// 変更前の行を読んでいることがある。そのため実行中のものとは別に 1 回だけ後続を予約する。
+		let latestRefresh: Promise<void> = Promise.resolve();
+		let queuedRefresh: Promise<void> | null = null;
+		const refreshListUsers = (): Promise<void> => {
+			if (queuedRefresh != null) {
+				return queuedRefresh;
+			}
+			const refresh = latestRefresh
+				.catch(() => {})
+				.then(() => {
+					queuedRefresh = null;
+					return loadListUsers();
+				});
+			queuedRefresh = refresh;
+			latestRefresh = refresh;
+			return refresh;
+		};
+		const refreshListUsersInBackground = () =>
+			void refreshListUsers().catch((error) =>
+				// 読み直しに失敗しても前回のメンバーのまま配信を続け、次の周期で読み直す。
+				console.error(`Failed to refresh the members of user list ${listId}.`, error),
+			);
+
+		const onInternalEvent = (data: GlobalEvents['internal']['payload']) => {
+			if (
+				(data.type === 'userListMemberAdded' ||
+					data.type === 'userListMemberRemoved' ||
+					data.type === 'userListMemberUpdated') &&
+				data.body.userListId === listId
+			) {
+				refreshListUsersInBackground();
+			}
 		};
 
 		const onUserListStream = (data: { type: string; body: unknown }) => {
@@ -52,6 +87,9 @@ export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies
 		};
 
 		const onNote = async (note: Packed<'Note'>) => {
+			// メンバー変更の通知より後に届いたノートは、その変更を反映したメンバーで判定する。
+			await latestRefresh.catch(() => {});
+
 			const isMe = user.id === note.userId;
 
 			if (note.channelId) {
@@ -98,21 +136,17 @@ export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies
 
 		ctx.subscriber.on(`userListStream:${listId}`, onUserListStream);
 		ctx.subscriber.on('notesStream', onNote);
+		ctx.subscriber.on('internal', onInternalEvent);
 
-		await updateListUsers();
-		// 読み直しに失敗しても前回のメンバーのまま配信を続け、次の周期で読み直す。
-		const listUsersClock = setInterval(
-			() =>
-				void updateListUsers().catch((error) =>
-					console.error(`Failed to refresh the members of user list ${listId}.`, error),
-				),
-			5000,
-		);
+		await refreshListUsers();
+		// 通知を出さない経路 (利用者の削除による連鎖削除、リストのインポートなど) の変更は周期的な読み直しで反映する。
+		const listUsersClock = setInterval(refreshListUsersInBackground, 5000);
 
 		return {
 			dispose: () => {
 				ctx.subscriber.off(`userListStream:${listId}`, onUserListStream);
 				ctx.subscriber.off('notesStream', onNote);
+				ctx.subscriber.off('internal', onInternalEvent);
 				clearInterval(listUsersClock);
 			},
 		};
