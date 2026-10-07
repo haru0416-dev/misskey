@@ -4,7 +4,7 @@
  */
 
 import { beforeAll, describe, expect, test, vi } from 'vitest';
-import { api, post, react, signup, waitFire } from '../utils.js';
+import { api, POLL, post, react, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Mute', () => {
@@ -76,37 +76,63 @@ describe('Mute', () => {
 			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
+		// 陽性の対照は種別で絞る。bob の通知は他のテストのリアクション等でも作られ、種別を見ないと
+		// フォロー通知が作られなくても通ってしまう。フォロー通知は応答を待たずに作られるので、
+		// ミュート相手が先にフォローし、後からフォローした bob の通知が届くのを待ってから見る。
 		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
-			await api('following/create', { userId: alice.id }, bob);
-			await api('following/create', { userId: alice.id }, carol);
+			try {
+				await api('following/create', { userId: alice.id }, carol);
+				await api('following/create', { userId: alice.id }, bob);
 
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-
-			await api('following/delete', { userId: alice.id }, bob);
-			await api('following/delete', { userId: alice.id }, carol);
+				const res = await vi.waitFor(async () => {
+					const res = await api('i/notifications', { includeTypes: ['follow'] }, alice);
+					expect(res.status).toBe(200);
+					expect(
+						res.body.some(
+							(notification) =>
+								notification.type === 'follow' && 'userId' in notification && notification.userId === bob.id,
+						),
+					).toBe(true);
+					return res;
+				}, POLL);
+				expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(
+					false,
+				);
+			} finally {
+				await api('following/delete', { userId: alice.id }, bob);
+				await api('following/delete', { userId: alice.id }, carol);
+			}
 		});
 
+		// 陽性の対照の絞り方と待ち方はフォロー通知のテストと同じ。
 		test('通知にミュートしているユーザーからのフォローリクエストが含まれない', async () => {
 			await api('i/update', { isLocked: true }, alice);
-			await api('following/create', { userId: alice.id }, bob);
-			await api('following/create', { userId: alice.id }, carol);
+			try {
+				await api('following/create', { userId: alice.id }, carol);
+				await api('following/create', { userId: alice.id }, bob);
 
-			const res = await api('i/notifications', {}, alice);
-
-			expect(res.status).toBe(200);
-			expect(Array.isArray(res.body)).toBe(true);
-
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
-			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
-
-			await api('following/delete', { userId: alice.id }, bob);
-			await api('following/delete', { userId: alice.id }, carol);
+				const res = await vi.waitFor(async () => {
+					const res = await api('i/notifications', { includeTypes: ['receiveFollowRequest'] }, alice);
+					expect(res.status).toBe(200);
+					expect(
+						res.body.some(
+							(notification) =>
+								notification.type === 'receiveFollowRequest' &&
+								'userId' in notification &&
+								notification.userId === bob.id,
+						),
+					).toBe(true);
+					return res;
+				}, POLL);
+				expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(
+					false,
+				);
+			} finally {
+				// 鍵の有無とフォローリクエストは他のテストの前提を変えるので、実行順に関係なく戻す。
+				await api('following/requests/cancel', { userId: alice.id }, bob);
+				await api('following/requests/cancel', { userId: alice.id }, carol);
+				await api('i/update', { isLocked: false }, alice);
+			}
 		});
 
 		// 通知を受けたあとで相手をミュートすると、最新のページが全件除外されることがある。空のページは
