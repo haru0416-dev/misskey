@@ -325,4 +325,40 @@ describe('ActivityPub object routes', () => {
 			expect(nextBody.next).toBeUndefined();
 		}
 	});
+
+	// 他の実装でも同じ表示になる本文だけのときは、Misskey 固有の本文 (_misskey_content / source) を付けない。
+	test.each([
+		{
+			text: 'テキスト #タグ @mention 🍊 :emoji: https://example.com',
+			misskeyContent: false,
+			content:
+				'テキスト <a href="http://misskey.local/tags/%E3%82%BF%E3%82%B0" rel="tag">#タグ</a> <a href="http://misskey.local/@mention" class="u-url mention">@mention</a> 🍊 ​:emoji:​ <a href="https://example.com/">https://example.com</a>',
+		},
+		{ text: '$[tada foo]', misskeyContent: true, content: '<i>foo</i>' },
+	])('本文 $text の _misskey_content の有無と HTML', async ({ text, misskeyContent, content }) => {
+		const authorId = genId();
+		await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id: authorId, username: `content${authorId}`, usernameLower: `content${authorId}` },
+			profile: { userId: authorId },
+		});
+		const noteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: noteId,
+			userId: authorId,
+			userHost: null,
+			text,
+			visibility: 'public',
+		});
+
+		const rendered = await renderNote(runtime, await fetchNoteByIdOrFailFromDatabase(runtime.db, noteId), false);
+
+		expect(rendered['content']).toBe(content);
+		if (misskeyContent) {
+			expect(rendered['_misskey_content']).toBe(text);
+			expect(rendered['source']).toEqual({ content: text, mediaType: 'text/x.misskeymarkdown' });
+		} else {
+			expect(rendered).not.toHaveProperty('_misskey_content');
+			expect(rendered).not.toHaveProperty('source');
+		}
+	});
 });
