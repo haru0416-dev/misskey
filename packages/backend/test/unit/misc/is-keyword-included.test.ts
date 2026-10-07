@@ -43,6 +43,45 @@ describe('isKeywordIncluded', () => {
 				{ numRuns: 200 },
 			);
 		});
+
+		// 正規表現の特殊文字を混ぜ、/pattern/flags 形式でない語をリテラルとして照合しているかを text.includes と
+		// 突き合わせる。語は半分の確率で text の部分文字列から取り、該当する場合も十分に通す。
+		const specialChars = [...'.*+?^$|()[]{}\\/-'];
+		const haystack = fc
+			.array(fc.constantFrom(...'abあ', ...specialChars), { minLength: 1, maxLength: 30 })
+			.map((chars) => chars.join(''));
+		const haystackAndNeedle = haystack.chain((input) =>
+			fc.tuple(
+				fc.constant(input),
+				fc.oneof(
+					fc
+						.tuple(fc.nat({ max: input.length - 1 }), fc.integer({ min: 1, max: 5 }))
+						.map(([start, length]) => input.slice(start, start + length)),
+					fc
+						.array(fc.constantFrom(...'abあ', ...specialChars), { minLength: 1, maxLength: 5 })
+						.map((chars) => chars.join('')),
+				),
+			),
+		);
+
+		test('特殊文字を含む語はリテラルとして照合する', () => {
+			let matched = 0;
+			let checked = 0;
+			fc.assert(
+				fc.property(haystackAndNeedle, ([input, needle]) => {
+					// /pattern/flags 形式に見える語は正規表現として扱われるので、この性質の対象外。
+					if (/^\/(.+)\/(.*)$/.test(needle)) return;
+					checked++;
+					const expected = input.includes(needle);
+					if (expected) matched++;
+					expect(isKeywordIncluded(input, [needle])).toBe(expected);
+				}),
+				{ numRuns: 1000 },
+			);
+			// 早期 return と非該当ばかりで素通りしていないこと。
+			expect(checked).toBeGreaterThan(800);
+			expect(matched).toBeGreaterThan(300);
+		});
 	});
 
 	test('g フラグ付きの正規表現も、繰り返し呼んで結果が変わらない', () => {
