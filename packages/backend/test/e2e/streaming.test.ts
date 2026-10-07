@@ -57,6 +57,7 @@ describe('Streaming', () => {
 		let chitose: misskey.entities.SignupResponse;
 		let kanako: misskey.entities.SignupResponse;
 		let erin: misskey.entities.SignupResponse;
+		let sakurako: misskey.entities.SignupResponse;
 
 		let akari: misskey.entities.SignupResponse;
 		let chinatsu: misskey.entities.SignupResponse;
@@ -78,6 +79,7 @@ describe('Streaming', () => {
 				chitose = await signup({ username: 'chitose' });
 				kanako = await signup({ username: 'kanako' });
 				erin = await signup({ username: 'erin' });
+				sakurako = await signup({ username: 'sakurako' });
 
 				akari = await signup({ username: 'akari', host: 'example.com' });
 				chinatsu = await signup({ username: 'chinatsu', host: 'example.com' });
@@ -93,6 +95,9 @@ describe('Streaming', () => {
 				await follow(ayano, akari);
 
 				await api('following/create', { userId: chitose.id }, kyoko);
+				// ayano は kyoko を withReplies: false、sakurako は withReplies: true でフォローする。
+				// 返信の扱いは両方の分岐を通して確かめる。
+				await api('following/create', { userId: kyoko.id, withReplies: true }, sakurako);
 
 				await api('following/create', { userId: ayano.id, withReplies: true }, erin);
 				await api('following/create', { userId: erin.id, withReplies: false }, ayano);
@@ -239,14 +244,40 @@ describe('Streaming', () => {
 				expect(fired).toBe(true);
 			});
 
-			test('フォローしているユーザーのフォローしていないユーザーの visibility: followers な投稿への返信が流れない', async () => {
-				const chitoseNote = await post(chitose, { text: 'followers-only post', visibility: 'followers' });
+			test('withReplies: false のフォローでは、フォローしているユーザーの他人への返信が流れない', async () => {
+				const chitoseNote = await post(chitose, { text: 'public post' });
 
 				const fired = await waitFireWithoutEvent(
 					ayano,
 					'homeTimeline',
+					() => api('notes/create', { text: "reply to chitose's public post", replyId: chitoseNote.id }, kyoko),
+					(msg) => msg.type === 'note' && msg.body['replyId'] === chitoseNote.id,
+				);
+
+				expect(fired).toBe(false);
+			});
+
+			test('withReplies: true のフォローでは、フォローしているユーザーの他人への返信が流れる', async () => {
+				const chitoseNote = await post(chitose, { text: 'public post' });
+
+				const fired = await waitFire(
+					sakurako,
+					'homeTimeline',
+					() => api('notes/create', { text: "reply to chitose's public post", replyId: chitoseNote.id }, kyoko),
+					(msg) => msg.type === 'note' && msg.body['replyId'] === chitoseNote.id,
+				);
+
+				expect(fired).toBe(true);
+			});
+
+			test('withReplies: true でも、フォローしているユーザーのフォローしていないユーザーの visibility: followers な投稿への返信は流れない', async () => {
+				const chitoseNote = await post(chitose, { text: 'followers-only post', visibility: 'followers' });
+
+				const fired = await waitFireWithoutEvent(
+					sakurako,
+					'homeTimeline',
 					() => api('notes/create', { text: "reply to chitose's followers-only post", replyId: chitoseNote.id }, kyoko),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
+					(msg) => msg.type === 'note' && msg.body['replyId'] === chitoseNote.id,
 				);
 
 				expect(fired).toBe(false);
@@ -260,7 +291,8 @@ describe('Streaming', () => {
 					ayano,
 					'homeTimeline',
 					() => api('notes/create', { renoteId: kyokoReply.id }, kyoko),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
+					// 返信 kyokoReply 自体の配信が接続後に届くことがあるので、リノートだけを見る。
+					(msg) => msg.type === 'note' && msg.body['renoteId'] === kyokoReply.id,
 				);
 
 				expect(fired).toBe(false);
@@ -299,31 +331,40 @@ describe('Streaming', () => {
 				expect(fired).toBe(false);
 			});
 
-			test('visibility: specified な投稿に対するリプライで visibleUserIds が拡張されたとき、その拡張されたユーザーの HTL にはそのリプライが流れない', async () => {
+			// 返信自体は追加された宛先に公開されているので、返信先を読めなくても返信は届く。
+			// ストリームは REST のホーム TL と同じ結果を返す。
+			test('visibility: specified な投稿に対するリプライで visibleUserIds に追加されたユーザーには、withReplies: true のフォローならそのリプライが HTL に流れ、REST のホーム TL にも含まれる', async () => {
 				const chitoseToKyoko = await post(chitose, {
 					text: 'direct note from chitose to kyoko',
 					visibility: 'specified',
 					visibleUserIds: [kyoko.id],
 				});
 
-				const fired = await waitFireWithoutEvent(
-					ayano,
+				let replyId: string | undefined;
+				const fired = await waitFire(
+					sakurako,
 					'homeTimeline',
-					() =>
-						api(
+					async () => {
+						const res = await api(
 							'notes/create',
 							{
-								text: 'direct reply from kyoko to chitose and ayano',
+								text: 'direct reply from kyoko to chitose and sakurako',
 								replyId: chitoseToKyoko.id,
 								visibility: 'specified',
-								visibleUserIds: [chitose.id, ayano.id],
+								visibleUserIds: [chitose.id, sakurako.id],
 							},
 							kyoko,
-						),
-					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
+						);
+						expect(res.status).toBe(200);
+						replyId = res.body.createdNote.id;
+					},
+					(msg) => msg.type === 'note' && msg.body['replyId'] === chitoseToKyoko.id,
 				);
 
-				expect(fired).toBe(false);
+				const timeline = await api('notes/timeline', { limit: 100 }, sakurako);
+				expect(timeline.status).toBe(200);
+				expect(timeline.body.map((note) => note.id)).toContain(replyId);
+				expect(fired).toBe(true);
 			});
 
 			test('visibility: specified な投稿に対するリプライで visibleUserIds が収縮されたとき、その収縮されたユーザーの HTL にはそのリプライが流れない', async () => {
@@ -393,7 +434,7 @@ describe('Streaming', () => {
 				const erinNote = await post(erin, { text: 'hi', visibility: 'followers' });
 				const fired = await waitFire(
 					erin,
-					'hybridTimeline',
+					'homeTimeline',
 					() => api('notes/create', { text: 'hello', replyId: erinNote.id }, ayano),
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
@@ -405,7 +446,7 @@ describe('Streaming', () => {
 				const ayanoNote = await post(ayano, { text: 'hi', visibility: 'followers' });
 				const fired = await waitFire(
 					ayano,
-					'hybridTimeline',
+					'homeTimeline',
 					() => api('notes/create', { text: 'hello', replyId: ayanoNote.id }, erin),
 					(msg) => msg.type === 'note' && msg.body['userId'] === erin.id,
 				);
@@ -564,7 +605,7 @@ describe('Streaming', () => {
 				const erinNote = await post(erin, { text: 'hi', visibility: 'followers' });
 				const fired = await waitFire(
 					erin,
-					'homeTimeline',
+					'hybridTimeline',
 					() => api('notes/create', { text: 'hello', replyId: erinNote.id }, ayano),
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
@@ -576,9 +617,21 @@ describe('Streaming', () => {
 				const ayanoNote = await post(ayano, { text: 'hi', visibility: 'followers' });
 				const fired = await waitFire(
 					ayano,
-					'homeTimeline',
+					'hybridTimeline',
 					() => api('notes/create', { text: 'hello', replyId: ayanoNote.id }, erin),
 					(msg) => msg.type === 'note' && msg.body['userId'] === erin.id,
+				);
+
+				expect(fired).toBe(true);
+			});
+
+			test('withReplies: true のフォローでは、フォローしているユーザーの他人への返信が流れる', async () => {
+				// erin は ayano を withReplies: true でフォローしている。返信先 kanako は erin と無関係。
+				const fired = await waitFire(
+					erin,
+					'hybridTimeline',
+					() => api('notes/create', { text: 'reply to kanako', replyId: kanakoNote.id }, ayano),
+					(msg) => msg.type === 'note' && msg.body['replyId'] === kanakoNote.id && msg.body['userId'] === ayano.id,
 				);
 
 				expect(fired).toBe(true);
