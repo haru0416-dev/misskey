@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"exactOptionalPropertyTypes": true,
-		"lib": ["dom"],
+		"lib": ["es2024", "dom"],
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitOverride": true,
 		"noImplicitReturns": true,

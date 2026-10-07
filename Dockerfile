@@ -16,6 +16,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["dependency-patches/", "./dependency-patches/"]
 COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
@@ -47,6 +48,7 @@ FROM oven/bun:${BUN_VERSION}-debian AS target-builder
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["dependency-patches/", "./dependency-patches/"]
 COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]

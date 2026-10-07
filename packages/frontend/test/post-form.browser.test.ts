@@ -71,6 +71,17 @@ const composerGlobals = {
 	directives: { 'click-anime': clickAnimeDirective, tooltip: tooltipDirective },
 };
 
+const { popup: originalPopup } = await vi.importActual<typeof import('@/os.js')>('@/os.js');
+
+beforeEach(() => {
+	window.localStorage.clear();
+	vi.mocked(misskeyApi).mockReset().mockResolvedValue([]);
+	vi.mocked(os.popup).mockReset();
+	vi.mocked(os.popupMenu).mockReset();
+	vi.mocked(os.confirm).mockReset();
+	vi.mocked(Accounts.getAccountMenu).mockReset();
+});
+
 describe('post form defaults', () => {
 	beforeEach(() => {
 		popups.value = [];
@@ -188,9 +199,8 @@ async function serverRestorer(container: Element) {
 		menuOpened.resolve(items);
 	});
 	vi.mocked(os.popup).mockImplementation((_component, _props, events) => {
-		if (!events || !('restore' in events) || typeof events['restore'] !== 'function') {
-			throw new Error('Draft dialog restore callback was not supplied');
-		}
+		if (!events || !('restore' in events)) return originalPopup(_component, _props, events);
+		if (typeof events['restore'] !== 'function') throw new Error('Draft dialog restore callback was not supplied');
 		const restore = events['restore'] as (draft: Misskey.entities.NoteDraft) => Promise<void>;
 		dialogOpened.resolve(restore);
 		return { dispose: vi.fn() };
@@ -220,12 +230,6 @@ describe('post form draft ownership', () => {
 	beforeEach(() => {
 		previousMode = prefer.draftRestoreMode;
 		prefer.commit('draftRestoreMode', 'always');
-		window.localStorage.clear();
-		vi.mocked(misskeyApi).mockReset().mockResolvedValue([]);
-		vi.mocked(os.popup).mockReset();
-		vi.mocked(os.popupMenu).mockReset();
-		vi.mocked(os.confirm).mockReset();
-		vi.mocked(Accounts.getAccountMenu).mockReset();
 	});
 
 	afterEach(() => {

@@ -70,7 +70,7 @@ function makeScope(
 	return c;
 }
 
-export function isSameScope(a: Scope, b: Scope): boolean {
+function isSameScope(a: Scope, b: Scope): boolean {
 	// null と undefined (キー無し) は区別したくないので == で比較
 	return a.server == b.server && a.account == b.account && a.device == b.device;
 }

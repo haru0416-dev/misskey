@@ -97,6 +97,7 @@
 		"@hapi/wreck": "18.1.2",
 		"@oxc-project/types": "0.144.0",
 		"@xmldom/xmldom": "0.9.12",
+		"argparse@~1.0.9": "2.0.1",
 		"brace-expansion@^2": "2.1.7",
 		"brace-expansion@^5": "5.0.12",
 		"esbuild@~0.18.20": "0.28.2",
@@ -106,9 +107,11 @@
 		"js-cookie": "3.0.8",
 		"js-yaml@<4.3.2": "4.3.2",
 		"postcss": "8.5.26",
-		"sharp": "0.35.4",
-		"smol-toml": "1.8.0",
+		"sharp": "0.35.5",
 		"undici": "7.29.1",
 		"vitest": "5.0.1"
+	},
+	"patchedDependencies": {
+		"@rushstack/ts-command-line@5.3.14": "dependency-patches/@rushstack%2Fts-command-line@5.3.14.patch"
 	}
 }

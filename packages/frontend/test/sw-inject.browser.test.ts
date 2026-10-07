@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { swInject } from '@/ui/common/sw-inject.js';
+import { getAccountFromId } from '@/features/user/get-account-from-id.js';
+import { login } from '@/accounts.js';
+import { mainRouter } from '@/router.js';
 
 vi.mock('@/features/post-composer/post.js', () => ({ post: vi.fn() }));
 vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: vi.fn() }));
@@ -18,57 +22,55 @@ vi.mock('@/router.js', () => ({
 }));
 
 describe('swInject', () => {
-	afterEach(() => {
-		vi.restoreAllMocks();
-		vi.resetModules();
+	const listeners: ((event: MessageEvent) => unknown)[] = [];
+
+	beforeAll(() => {
+		vi.spyOn(navigator.serviceWorker, 'addEventListener').mockImplementation((type, callback) => {
+			if (type === 'message' && typeof callback === 'function') {
+				listeners.push(callback as (event: MessageEvent) => unknown);
+			}
+		});
+		swInject();
 	});
+	beforeEach(() => vi.clearAllMocks());
+	afterAll(() => vi.restoreAllMocks());
 
 	test('reports the client account once after repeated injection', async () => {
-		const listeners: EventListener[] = [];
-		vi.spyOn(navigator.serviceWorker, 'addEventListener').mockImplementation((_type, callback) => {
-			listeners.push(callback as EventListener);
-		});
-		const { swInject } = await import('@/ui/common/sw-inject.js');
-		const postMessage = vi.fn();
-
 		swInject();
 		swInject();
-		const event = { data: { type: 'requestClientAccount' }, ports: [{ postMessage }] } as unknown as MessageEvent;
-		await Promise.all(listeners.map((listener) => listener(event)));
-
-		expect(postMessage).toHaveBeenCalledWith({ loginId: 'account-a' });
-		expect(postMessage).toHaveBeenCalledOnce();
+		const channel = new MessageChannel();
+		const completed = Promise.withResolvers<unknown[]>();
+		const replies: unknown[] = [];
+		channel.port1.onmessage = (event) => {
+			if (event.data?.type === 'replyFence') completed.resolve(replies);
+			else replies.push(event.data);
+		};
+		try {
+			const event = new MessageEvent('message', {
+				data: { type: 'requestClientAccount' },
+				ports: [channel.port2],
+			});
+			await Promise.all(listeners.map((listener) => listener(event)));
+			channel.port2.postMessage({ type: 'replyFence' });
+			expect(await completed.promise).toEqual([{ loginId: 'account-a' }]);
+		} finally {
+			channel.port1.close();
+			channel.port2.close();
+		}
 	});
 
 	test('does not switch accounts for an invalid order message', async () => {
-		let listener: EventListener | undefined;
-		vi.spyOn(navigator.serviceWorker, 'addEventListener').mockImplementation((_type, callback) => {
-			listener = callback as EventListener;
-		});
-		const { getAccountFromId } = await import('@/features/user/get-account-from-id.js');
-		const { login } = await import('@/accounts.js');
-		const { swInject } = await import('@/ui/common/sw-inject.js');
-
-		swInject();
-		await listener?.({
+		const event = new MessageEvent('message', {
 			data: { type: 'order', order: 'push', loginId: 'account-b', url: 'https://attacker.example/' },
-		} as MessageEvent);
-
+		});
+		await Promise.all(listeners.map((listener) => listener(event)));
 		expect(getAccountFromId).not.toHaveBeenCalled();
 		expect(login).not.toHaveBeenCalled();
+		expect(mainRouter.pushByPath).not.toHaveBeenCalled();
 	});
 
 	test('validates post options before switching accounts', async () => {
-		let listener: EventListener | undefined;
-		vi.spyOn(navigator.serviceWorker, 'addEventListener').mockImplementation((_type, callback) => {
-			listener = callback as EventListener;
-		});
-		const { getAccountFromId } = await import('@/features/user/get-account-from-id.js');
-		const { login } = await import('@/accounts.js');
-		const { swInject } = await import('@/ui/common/sw-inject.js');
-
-		swInject();
-		await listener?.({
+		const event = new MessageEvent('message', {
 			data: {
 				type: 'order',
 				order: 'post',
@@ -76,8 +78,8 @@ describe('swInject', () => {
 				url: '/share',
 				options: { reply: { id: null } },
 			},
-		} as unknown as MessageEvent);
-
+		});
+		await Promise.all(listeners.map((listener) => listener(event)));
 		expect(getAccountFromId).not.toHaveBeenCalled();
 		expect(login).not.toHaveBeenCalled();
 	});

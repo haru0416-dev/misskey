@@ -10,7 +10,7 @@ import { closeInitialUserSetup, login, registerUser, resetState } from '../suppo
 // 起動時のアカウント情報の再取得 (/api/i) が失敗したとき、保存済みの認証情報を消すのは
 // アカウントがもう使えないと応答が明示した場合 (凍結・削除・トークン失効) だけにする。
 async function reloadWithAccountError(page: Page, status: number, error: { code: string; id: string }) {
-	// 失敗したアカウントを外したあと残りのトークンでログインし直す経路があるので、差し替えは最後まで外さない。
+	// 再取得の失敗を通知するまで待ち、認証情報を外す処理も同じ応答に従わせる。
 	await page.route('**/api/i', (route) =>
 		route.fulfill({
 			status,
@@ -18,30 +18,38 @@ async function reloadWithAccountError(page: Page, status: number, error: { code:
 			body: JSON.stringify({ error: { message: error.code, kind: 'client', ...error } }),
 		}),
 	);
+	const refreshed = page.waitForResponse('**/api/i');
 	await page.reload();
-	// 通知はログインし直しのたびにも出るので、出なくなるまで閉じる。
+	expect((await refreshed).status()).toBe(status);
 	const ok = page.locator('[data-cy-modal-dialog-ok]');
-	await ok.first().click({ timeout: 30_000 });
-	for (;;) {
-		try {
-			await ok.first().click({ timeout: 5_000 });
-		} catch {
-			break;
-		}
-	}
+	await ok.click({ timeout: 30_000 });
+	await expect(ok).toBeHidden();
 }
 
-const hasSavedAccount = (page: Page) => page.evaluate(() => window.localStorage.getItem('account') != null);
-// アカウント切り替えの一覧 (preferences の accounts) に残っているか。
+const readSavedAccount = (page: Page) =>
+	page.evaluate(() => {
+		const account = JSON.parse(window.localStorage.getItem('account') ?? 'null') as {
+			id: string;
+			token: string;
+		} | null;
+		return account == null ? null : { id: account.id, token: account.token };
+	});
+// accounts は端末共通の設定。選択中の世代のグローバルスコープだけを読む。
 const isInAccountList = (page: Page, userId: string) =>
-	page.evaluate(
-		(id) =>
-			JSON.stringify(
-				JSON.parse(window.localStorage.getItem('preferences') ?? '{}').preferences?.accounts ?? [],
-			).includes(id),
-		userId,
-	);
+	page.evaluate((id) => {
+		const generation = window.localStorage.getItem('preferences:active');
+		if (generation == null) return false;
+		const host = new URL(
+			document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href,
+		).host;
+		const identity = JSON.stringify(['accounts', JSON.stringify([null, null, null]), 0]);
+		const record = JSON.parse(window.localStorage.getItem(`preferences:${generation}:record:${identity}`) ?? 'null') as
+			| [unknown, [string, { id: string }][], unknown]
+			| null;
+		return record?.[1].some(([accountHost, user]) => accountHost === host && user.id === id) ?? false;
+	}, userId);
 let userId = '';
+let savedAccount: { id: string; token: string } | null = null;
 
 test.describe('起動時のアカウント再取得の失敗', () => {
 	test.beforeEach(async ({ page }) => {
@@ -49,7 +57,10 @@ test.describe('起動時のアカウント再取得の失敗', () => {
 		userId = (await registerUser(page, 'alice', 'alice1234', true)).id;
 		await login(page, 'alice', 'alice1234');
 		await closeInitialUserSetup(page);
-		expect(await hasSavedAccount(page)).toBe(true);
+		savedAccount = await readSavedAccount(page);
+		expect(savedAccount?.id).toBe(userId);
+		expect(savedAccount?.token).toBeTruthy();
+		expect(await isInAccountList(page, userId)).toBe(true);
 	});
 
 	test('一時的なエラー (回数制限) ではサインアウトしない', async ({ page }) => {
@@ -57,7 +68,7 @@ test.describe('起動時のアカウント再取得の失敗', () => {
 			code: 'RATE_LIMIT_EXCEEDED',
 			id: 'd5826d14-3982-4d2e-8011-b9e9f02499ef',
 		});
-		expect(await hasSavedAccount(page)).toBe(true);
+		expect(await readSavedAccount(page)).toEqual(savedAccount);
 		expect(await isInAccountList(page, userId)).toBe(true);
 		await expect(page.locator('[data-cy-signin]')).toHaveCount(0);
 	});
@@ -68,6 +79,7 @@ test.describe('起動時のアカウント再取得の失敗', () => {
 			id: 'b0a7f5f8-dc2f-4171-b91f-de88ad238e14',
 		});
 		await expect(page.locator('[data-cy-signin]')).toBeVisible({ timeout: 30_000 });
-		expect(await hasSavedAccount(page)).toBe(false);
+		expect(await readSavedAccount(page)).toBeNull();
+		expect(await isInAccountList(page, userId)).toBe(false);
 	});
 });

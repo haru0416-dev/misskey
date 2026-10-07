@@ -1,0 +1,115 @@
+diff --git a/lib-commonjs/providers/CommandLineParameterProvider.js b/lib-commonjs/providers/CommandLineParameterProvider.js
+index 573d86d839f5e5ed2ff3525353a1bb231e25e188..4a2af151be9260c131e98b540db86bc76648f0b0 100644
+--- a/lib-commonjs/providers/CommandLineParameterProvider.js
++++ b/lib-commonjs/providers/CommandLineParameterProvider.js
+@@ -582,6 +582,11 @@ class CommandLineParameterProvider {
+             action,
+             type
+         };
++        for (const key in argparseOptions) {
++            if (argparseOptions[key] === undefined) {
++                delete argparseOptions[key];
++            }
++        }
+         const argumentParser = this._getArgumentParser();
+         let argumentGroup;
+         if (parameterGroup) {
+diff --git a/lib-commonjs/providers/CommandLineParser.js b/lib-commonjs/providers/CommandLineParser.js
+index b9e2c8f770c67b36b92209773d2f6560c778151d..aed82bc6dc55499a1901185b5428318dd0ef4305 100644
+--- a/lib-commonjs/providers/CommandLineParser.js
++++ b/lib-commonjs/providers/CommandLineParser.js
+@@ -195,8 +195,8 @@ class CommandLineParser extends CommandLineParameterProvider_1.CommandLineParame
+                 }
+             };
+             function patchFormatUsageForArgumentParser(argumentParser) {
+-                const originalFormatUsage = argumentParser.formatUsage.bind(argumentParser);
+-                argumentParser.formatUsage = () => {
++                const originalFormatUsage = argumentParser.format_usage.bind(argumentParser);
++                argumentParser.format_usage = () => {
+                     postParse();
+                     return originalFormatUsage();
+                 };
+diff --git a/lib-esm/providers/AliasCommandLineAction.js b/lib-esm/providers/AliasCommandLineAction.js
+index aefcf7a1d203499593e94eb97660ba6163852c96..3822d7697cf50d55ef41c4c7aefed7ea9e134f48 100644
+--- a/lib-esm/providers/AliasCommandLineAction.js
++++ b/lib-esm/providers/AliasCommandLineAction.js
+@@ -90,7 +90,7 @@ export class AliasCommandLineAction extends CommandLineAction {
+         // key for this parameter is constant.
+         if (this.targetAction.remainder) {
+             this.defineCommandLineRemainder(this.targetAction.remainder);
+-            this.#parameterKeyMap.set(argparse.Const.REMAINDER, argparse.Const.REMAINDER);
++            this.#parameterKeyMap.set(argparse.REMAINDER, argparse.REMAINDER);
+         }
+         // Finally, register the parameters with the parser. We need to make sure that the target action
+         // is registered, since we need to re-use its parameters, and ambiguous parameters are discovered
+diff --git a/lib-esm/providers/CommandLineParameterProvider.js b/lib-esm/providers/CommandLineParameterProvider.js
+index e2c7e1fcc95500ff175f49f28f184da76e648de7..dbb8e1fa622a19ec02fd8e7937c1d796bef007cb 100644
+--- a/lib-esm/providers/CommandLineParameterProvider.js
++++ b/lib-esm/providers/CommandLineParameterProvider.js
+@@ -335,10 +335,10 @@ export class CommandLineParameterProvider {
+         if (this.#remainder) {
+             const argparseOptions = {
+                 help: this.#remainder.description,
+-                nargs: argparse.Const.REMAINDER,
++                nargs: argparse.REMAINDER,
+                 metavar: '"..."'
+             };
+-            this._getArgumentParser().addArgument(argparse.Const.REMAINDER, argparseOptions);
++            this._getArgumentParser().addArgument(argparse.REMAINDER, argparseOptions);
+         }
+         this.#parametersHaveBeenRegistered = true;
+     }
+@@ -436,7 +436,7 @@ export class CommandLineParameterProvider {
+             parameter._validateValue?.();
+         }
+         if (this.remainder) {
+-            this.remainder._setValue(data[argparse.Const.REMAINDER]);
++            this.remainder._setValue(data[argparse.REMAINDER]);
+         }
+         this.#parametersHaveBeenProcessed = true;
+     }
+@@ -546,6 +546,11 @@ export class CommandLineParameterProvider {
+             action,
+             type
+         };
++        for (const key in argparseOptions) {
++            if (argparseOptions[key] === undefined) {
++                delete argparseOptions[key];
++            }
++        }
+         const argumentParser = this._getArgumentParser();
+         let argumentGroup;
+         if (parameterGroup) {
+@@ -618,7 +623,7 @@ export class CommandLineParameterProvider {
+         if (undocumentedSynonyms?.length) {
+             argumentGroup.addArgument(undocumentedSynonyms, {
+                 ...argparseOptions,
+-                help: argparse.Const.SUPPRESS
++                help: argparse.SUPPRESS
+             });
+         }
+         // Register the parameter names so that we can detect ambiguous parameters
+@@ -633,7 +638,7 @@ export class CommandLineParameterProvider {
+             nargs: '*',
+             // Ensure that the argument is not shown in the help text, since these parameters are only included
+             // to inform the user that ambiguous parameters are present
+-            help: argparse.Const.SUPPRESS
++            help: argparse.SUPPRESS
+         });
+     }
+     #generateKey() {
+diff --git a/lib-esm/providers/CommandLineParser.js b/lib-esm/providers/CommandLineParser.js
+index 99b5590242b18a4df850b3b2d952e1144ade647f..ca8ceddb6c46664619bdf5874462078f28248f9f 100644
+--- a/lib-esm/providers/CommandLineParser.js
++++ b/lib-esm/providers/CommandLineParser.js
+@@ -192,8 +192,8 @@ export class CommandLineParser extends CommandLineParameterProvider {
+                 }
+             };
+             function patchFormatUsageForArgumentParser(argumentParser) {
+-                const originalFormatUsage = argumentParser.formatUsage.bind(argumentParser);
+-                argumentParser.formatUsage = () => {
++                const originalFormatUsage = argumentParser.format_usage.bind(argumentParser);
++                argumentParser.format_usage = () => {
+                     postParse();
+                     return originalFormatUsage();
+                 };

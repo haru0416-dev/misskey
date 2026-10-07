@@ -113,5 +113,7 @@ jobs:
         run: cp .github/misskey/test.yml .config
       - name: Build
         run: bun run build-pre && bun run build:frontend-deps
+      - name: Install Playwright browsers
+        run: bun run playwright:install
       - name: Test
         run: bun run --bun --filter frontend test --sequence.shuffle --sequence.seed="$SEED"

@@ -44,7 +44,11 @@ function renderPopups() {
 }
 
 describe('cold anchored menu lifetime', () => {
-	afterEach(cleanup);
+	afterEach(async () => {
+		cleanup();
+		popups.value = [];
+		await nextTick();
+	});
 
 	test('finishes a canceled popup opening without creating a menu or taking page input', async () => {
 		renderPopups();
