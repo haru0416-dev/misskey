@@ -56,10 +56,22 @@ services:
     shm_size: 256mb
     # 受信・投稿のたびに更新される index のページがキャッシュに収まらないと、1 件ごとに数十枚が書き出される。
     # キャッシュをメモリの 1/4 程度に増やしチェックポイントの間隔を延ばすと、同じページの書き出しがまとまる。
+    # 本文検索も、読むページ (本文と trigram index と主キー) がキャッシュに収まるかで速さが桁で変わる。
+    # デフォルトの 128MB では収まらず、512MB 以上で重い検索が 2〜3 割速くなる。
     # shared_buffers はサーバーのメモリに合わせて決めること (メモリを超えると起動しない)。目安はメモリの 1/4 で、
-    # メモリ 1GB なら 256MB、2GB なら 512MB、4GB なら 1GB。
+    # メモリ 1GB なら 256MB、2GB なら 512MB、4GB (Raspberry Pi 5 4GB を含む) なら 1GB。
     # jit と work_mem はデフォルトのままでよい。
-    # command: postgres -c shared_buffers=1GB -c checkpoint_timeout=15min
+    #
+    # pg_prewarm の autoprewarm は、停止時にキャッシュに載っていたページの一覧を保存し、次の起動の直後に裏で
+    # 読み戻す。再起動のたびにキャッシュが空になり、最初の検索がディスクから数千ページを読む (microSD 相当の
+    # 読み込みでは数秒、statement_timeout の 10 秒を超えると検索が時間切れになる) のを防ぐ。
+    # 読み戻しはキャッシュの大きさに比例し (microSD 相当で 300MB に約 15 秒)、その間の問い合わせは遅くなる。
+    # 一覧の保存はデフォルトで 5 分ごとに、変化が無くても書き直す (1GB のキャッシュが埋まると 1 回約 3MB)。
+    # microSD など書き込みを抑えたい環境では autoprewarm_interval=0 にして、停止時だけ保存する
+    # (電源断などで正しく停止しなかったときは、前回の停止時の一覧を読み戻す)。
+    # shared_preload_libraries を既に設定している場合は、pg_prewarm をカンマ区切りで足すこと
+    # (-c の指定は postgresql.conf と ALTER SYSTEM の値を上書きする)。
+    # command: postgres -c shared_buffers=1GB -c checkpoint_timeout=15min -c shared_preload_libraries=pg_prewarm -c pg_prewarm.autoprewarm_interval=0
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
