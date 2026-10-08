@@ -53,6 +53,8 @@ describe('[シナリオ] ユーザ作成', () => {
 			}
 		});
 
+		// 各テストの signup はユーザー名を毎回変える。同じ名前だと 2 回目以降の signup が重複で失敗し、
+		// Webhook が来ない理由が Webhook の設定と無関係になる (否定のテストが素通りし、肯定のテストは順序次第で落ちる)。
 		test('ユーザが作成された -> userCreatedが送出される', async () => {
 			const webhook = await createSystemWebhook({
 				on: ['userCreated'],
@@ -61,7 +63,7 @@ describe('[シナリオ] ユーザ作成', () => {
 
 			let alice: any = null;
 			const webhookBody = await captureWebhook(async () => {
-				alice = await signup({ username: 'alice' });
+				alice = await signup();
 			});
 
 			console.log(alice);
@@ -94,11 +96,11 @@ describe('[シナリオ] ユーザ作成', () => {
 
 			let alice: any = null;
 			const webhookBody = await captureWebhook(async () => {
-				alice = await signup({ username: 'alice' });
+				alice = await signup();
 			}).catch((e) => e.message);
 
 			expect(webhookBody).toBe('timeout');
-			expect(alice.id).not.toBeNull();
+			expect(alice?.id).toEqual(expect.any(String));
 		});
 
 		test('ユーザ作成 -> Webhookが無効の場合は送出されない', async () => {
@@ -109,11 +111,11 @@ describe('[シナリオ] ユーザ作成', () => {
 
 			let alice: any = null;
 			const webhookBody = await captureWebhook(async () => {
-				alice = await signup({ username: 'alice' });
+				alice = await signup();
 			}).catch((e) => e.message);
 
 			expect(webhookBody).toBe('timeout');
-			expect(alice.id).not.toBeNull();
+			expect(alice?.id).toEqual(expect.any(String));
 		});
 	});
 });
