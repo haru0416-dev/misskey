@@ -6,7 +6,7 @@
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
 import { openTestDatabase, updateUserInDatabase } from '../fixtures.js';
-import { api, castAsError, createAppToken, role, signup } from '../utils.js';
+import { api, castAsError, createAppToken, role, signup, waitFire } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
 
@@ -330,5 +330,30 @@ describe('Chat', () => {
 		expect(moderatorRemove.status).toBe(204);
 		const removed = await api('chat/rooms/show', { roomId: room.body.id }, alice);
 		expect(removed.status).toBe(400);
+	});
+
+	// 未読のまま 3 秒たつと、受け手の main ストリームへ newChatMessage を流す。
+	test('1 対 1 のメッセージが未読のままなら、受け手に newChatMessage が流れる', async () => {
+		const sender = await signup();
+		const recipient = await signup();
+		// chatScope の既定は相互フォロー。
+		await api('following/create', { userId: recipient.id }, sender);
+		await api('following/create', { userId: sender.id }, recipient);
+
+		let messageId: string | undefined;
+		const fired = await waitFire(
+			recipient,
+			'main',
+			async () => {
+				const sent = await api('chat/messages/create-to-user', { text: 'unread', toUserId: recipient.id }, sender);
+				expect(sent.status).toBe(200);
+				messageId = sent.body.id;
+			},
+			(msg) => msg.type === 'newChatMessage' && msg.body['id'] === messageId,
+			undefined,
+			6000,
+		);
+
+		expect(fired).toBe(true);
 	});
 });
