@@ -85,6 +85,7 @@ import { fetchRolePolicies, userIsModerator } from '../../../core/role/role-poli
 import { pushSwNotification } from '../../../core/notification/push-notification.js';
 import { resolveApiDateIdBounds } from '../date-id-pagination.js';
 import { resolveDateIdPagination, resolveIdPagination } from '@/misc/id-pagination.js';
+import { trackPromise, unrefDelay } from '@/misc/promise-tracker.js';
 import type {
 	ChatDependencies,
 	ChatRoomInvitationPackable,
@@ -693,16 +694,22 @@ async function createChatMessageToUser(
 	}
 
 	if (toUser.host == null) {
-		setTimeout(async () => {
-			const marker = await deps.redis.get(`newUserChatMessageExists:${toUser.id}:${fromUser.id}`);
-			if (marker == null) {
-				return;
-			}
+		// 3 秒たっても未読なら知らせる。応答の後に動く処理なので、終了・再起動で Redis が閉じた後に
+		// 満了しても未処理の reject にならないよう、通知の未読の知らせと同じく打ち切りと失敗を吸収する。
+		trackPromise(
+			unrefDelay(3000)
+				.then(async () => {
+					const marker = await deps.redis.get(`newUserChatMessageExists:${toUser.id}:${fromUser.id}`);
+					if (marker == null) {
+						return;
+					}
 
-			const packedMessageForTo = await packChatMessageDetailed(deps, inserted, toUser);
-			deps.publishMainStream?.(toUser.id, 'newChatMessage', packedMessageForTo);
-			void pushChatNotification(deps, toUser.id, packedMessageForTo);
-		}, 3000);
+					const packedMessageForTo = await packChatMessageDetailed(deps, inserted, toUser);
+					deps.publishMainStream?.(toUser.id, 'newChatMessage', packedMessageForTo);
+					void pushChatNotification(deps, toUser.id, packedMessageForTo);
+				})
+				.catch(() => {}),
+		);
 	}
 
 	return packedMessage;
@@ -752,32 +759,37 @@ async function createChatMessageToRoom(
 	}
 	await writePipeline.exec();
 
-	setTimeout(async () => {
-		const readPipeline = deps.redis.pipeline();
-		for (const membership of membershipsOtherThanMe) {
-			readPipeline.get(`newRoomChatMessageExists:${membership.userId}:${toRoom.id}`);
-		}
-		const markers = await readPipeline.exec();
-		if (markers == null) {
-			throw new Error('redis error');
-		}
+	// 1 対 1 のメッセージと同じく、遅延した未読の知らせは打ち切りと失敗を吸収する。
+	trackPromise(
+		unrefDelay(3000)
+			.then(async () => {
+				const readPipeline = deps.redis.pipeline();
+				for (const membership of membershipsOtherThanMe) {
+					readPipeline.get(`newRoomChatMessageExists:${membership.userId}:${toRoom.id}`);
+				}
+				const markers = await readPipeline.exec();
+				if (markers == null) {
+					throw new Error('redis error');
+				}
 
-		if (markers.every((marker) => marker[1] == null)) {
-			return;
-		}
+				if (markers.every((marker) => marker[1] == null)) {
+					return;
+				}
 
-		const packedMessageForTo = await packChatMessageDetailed(deps, inserted);
+				const packedMessageForTo = await packChatMessageDetailed(deps, inserted);
 
-		for (let i = 0; i < membershipsOtherThanMe.length; i++) {
-			const marker = markers[i]![1];
-			if (marker == null) {
-				continue;
-			}
+				for (let i = 0; i < membershipsOtherThanMe.length; i++) {
+					const marker = markers[i]![1];
+					if (marker == null) {
+						continue;
+					}
 
-			deps.publishMainStream?.(membershipsOtherThanMe[i]!.userId, 'newChatMessage', packedMessageForTo);
-			void pushChatNotification(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
-		}
-	}, 3000);
+					deps.publishMainStream?.(membershipsOtherThanMe[i]!.userId, 'newChatMessage', packedMessageForTo);
+					void pushChatNotification(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
+				}
+			})
+			.catch(() => {}),
+	);
 
 	return packedMessage;
 }
