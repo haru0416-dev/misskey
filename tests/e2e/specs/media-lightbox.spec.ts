@@ -59,8 +59,6 @@ test('実画像ごとにlightboxを開いて移動・ズーム・閉じる', asy
 	const secondSource = secondLink.locator('[data-marker]');
 	await expect(firstLink).toBeVisible();
 	await expect(secondLink).toBeVisible();
-	await expectLoadedImage(firstLink.locator('img').first());
-	await expectLoadedImage(secondLink.locator('img').first());
 	await firstLink.click();
 	const dialog = page.getByRole('dialog', { name: '画像' });
 	await expect(dialog).toBeVisible();

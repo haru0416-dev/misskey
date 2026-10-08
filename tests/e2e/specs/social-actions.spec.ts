@@ -114,9 +114,12 @@ test.describe('Social actions', () => {
 				return response.url().includes('/api/notes/show') && response.request().method() === 'POST';
 			});
 			await charliePage.goto(`/notes/${body.createdNote.id}`);
-			// 取得の失敗を表示し終えてから、本文が無いことを確かめる。読み込み中の空の画面では区別できない。
-			expect((await shown).status()).toBe(400);
-			await expect(charliePage.getByRole('button', { name: '再試行' })).toBeVisible();
+			// 宛先外の利用者には本文を伏せたノートが返る。その描画を待ってから本文が無いことを確かめる。
+			// 読み込み中の空の画面では区別できない。
+			const shownResponse = await shown;
+			expect(shownResponse.ok()).toBe(true);
+			expect(await shownResponse.json()).toMatchObject({ id: body.createdNote.id, isHidden: true, text: null });
+			await expect(charliePage.locator('article').first()).toBeVisible();
 			await expect(charliePage.getByText(directText, { exact: true })).toHaveCount(0);
 		} finally {
 			await charliePage
@@ -133,9 +136,10 @@ test.describe('Social actions', () => {
 		try {
 			await bobPage.goto(`/@${alice.username}`);
 
-			// 「フォロー」は「フォロー中」の部分文字列なので、完全一致で状態を区別する。
-			const followButton = bobPage.getByRole('button', { name: 'フォロー', exact: true });
-			const followingButton = bobPage.getByRole('button', { name: 'フォロー中', exact: true });
+			// 「フォロー」は「フォロー中」の部分文字列なので、部分一致では状態を区別できない。
+			// 名前の末尾にはアイコンの字形 (私用領域の文字) が付く。
+			const followButton = bobPage.getByRole('button', { name: /^フォロー\p{Co}*$/u });
+			const followingButton = bobPage.getByRole('button', { name: /^フォロー中\p{Co}*$/u });
 			const followed = bobPage.waitForResponse((response) => {
 				return response.url().includes('/api/following/create') && response.request().method() === 'POST';
 			});
