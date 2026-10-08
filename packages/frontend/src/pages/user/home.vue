@@ -295,7 +295,7 @@ async function updateMemo() {
 	isEditingMemo.value = false;
 }
 
-watch([props.user], () => {
+watch(() => props.user, () => {
 	memoDraft.value = props.user.memo;
 });
 
