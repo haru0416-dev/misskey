@@ -172,42 +172,47 @@ describe('export-clips', () => {
 	});
 
 	test("Clipping other user's note (followers only notes are included when following)", async () => {
-		await api('following/create', { userId: bob.id }, alice);
+		const followed = await api('following/create', { userId: bob.id }, alice);
+		expect(followed.status).toBe(200);
+		// フォローが残ると、フォローしていない場合を見るテストが前提を失うので、実行順に関係なく外す。
+		try {
+			const res = await api(
+				'clips/create',
+				{
+					name: 'kawaii',
+					description: 'kawaii',
+				},
+				alice,
+			);
+			expect(res.status).toBe(200);
+			const clip = res.body;
 
-		const res = await api(
-			'clips/create',
-			{
-				name: 'kawaii',
-				description: 'kawaii',
-			},
-			alice,
-		);
-		expect(res.status).toBe(200);
-		const clip = res.body;
+			const note = await post(bob, {
+				text: 'baz',
+				visibility: 'followers',
+			});
 
-		const note = await post(bob, {
-			text: 'baz',
-			visibility: 'followers',
-		});
+			const res2 = await api(
+				'clips/add-note',
+				{
+					clipId: clip.id,
+					noteId: note.id,
+				},
+				alice,
+			);
+			expect(res2.status).toBe(204);
 
-		const res2 = await api(
-			'clips/add-note',
-			{
-				clipId: clip.id,
-				noteId: note.id,
-			},
-			alice,
-		);
-		expect(res2.status).toBe(204);
+			const res3 = await api('i/export-clips', {}, alice);
+			expect(res3.status).toBe(204);
 
-		const res3 = await api('i/export-clips', {}, alice);
-		expect(res3.status).toBe(204);
-
-		const exported = await pollFirstDriveFile();
-		expect(exported[0].name).toBe('kawaii');
-		expect(exported[0].clipNotes).toHaveLength(1);
-		expect(exported[0].clipNotes[0].note.text).toBe('baz');
-		expect(exported[0].clipNotes[0].note.user.username).toBe('bob');
+			const exported = await pollFirstDriveFile();
+			expect(exported[0].name).toBe('kawaii');
+			expect(exported[0].clipNotes).toHaveLength(1);
+			expect(exported[0].clipNotes[0].note.text).toBe('baz');
+			expect(exported[0].clipNotes[0].note.user.username).toBe('bob');
+		} finally {
+			await api('following/delete', { userId: bob.id }, alice);
+		}
 	});
 
 	test('export favorites with notes', async () => {
