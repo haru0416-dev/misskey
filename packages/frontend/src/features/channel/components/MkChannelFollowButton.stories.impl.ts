@@ -5,16 +5,14 @@
 
 import { HttpResponse, http } from 'msw';
 import { action } from '@/stories/action.js';
-import { expect, userEvent, within } from '@/stories/test.js';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
 import { channel } from '@/stories/fakes.js';
 import { commonHandlers } from '@/stories/mocks.js';
 import MkChannelFollowButton from './MkChannelFollowButton.vue';
 import type { StoryObj } from '@/stories/types.js';
 import { i18n } from '@/i18n.js';
 
-function sleep(ms: number) {
-	return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
+const requests: { endpoint: string; body: unknown }[] = [];
 
 export const Default = {
 	render(args) {
@@ -42,13 +40,21 @@ export const Default = {
 		full: true,
 	},
 	async play({ canvasElement }) {
+		requests.length = 0;
 		const canvas = within(canvasElement);
 		const buttonElement = canvas.getByRole<HTMLButtonElement>('button');
-		await expect(buttonElement).toHaveTextContent(i18n.ts.follow);
+		// 「フォロー」は「フォロー解除」の部分文字列なので、部分一致では状態を区別できない。
+		const label = () => buttonElement.textContent?.trim();
+		await expect(label()).toBe(i18n.ts.follow);
+
 		await userEvent.click(buttonElement);
-		await sleep(1000);
-		await expect(buttonElement).toHaveTextContent(i18n.ts.unfollow);
+		await waitFor(() => expect(label()).toBe(i18n.ts.unfollow));
+		await expect(requests).toEqual([{ endpoint: 'channels/follow', body: { channelId: channel().id } }]);
+
 		await userEvent.click(buttonElement);
+		await waitFor(() => expect(label()).toBe(i18n.ts.follow));
+		await expect(requests.map((request) => request.endpoint)).toEqual(['channels/follow', 'channels/unfollow']);
+		await expect(requests[1]?.body).toEqual({ channelId: channel().id });
 	},
 	parameters: {
 		layout: 'centered',
@@ -56,12 +62,16 @@ export const Default = {
 			handlers: [
 				...commonHandlers,
 				http.post('/api/channels/follow', async ({ request }) => {
-					action('POST /api/channels/follow')(await request.json());
-					return HttpResponse.json({});
+					const body = await request.json();
+					requests.push({ endpoint: 'channels/follow', body });
+					action('POST /api/channels/follow')(body);
+					return new HttpResponse(null, { status: 204 });
 				}),
 				http.post('/api/channels/unfollow', async ({ request }) => {
-					action('POST /api/channels/unfollow')(await request.json());
-					return HttpResponse.json({});
+					const body = await request.json();
+					requests.push({ endpoint: 'channels/unfollow', body });
+					action('POST /api/channels/unfollow')(body);
+					return new HttpResponse(null, { status: 204 });
 				}),
 			],
 		},

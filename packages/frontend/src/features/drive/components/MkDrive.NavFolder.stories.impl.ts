@@ -12,5 +12,7 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<MkDrive_navFolder v-bind="args" />',
 	}),
-	args: {},
+	args: {
+		parentFolder: null,
+	},
 } satisfies StoryObj<typeof MkDrive_navFolder>;

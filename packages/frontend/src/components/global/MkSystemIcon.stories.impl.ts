@@ -12,5 +12,7 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<MkSystemIcon v-bind="args" />',
 	}),
-	args: {},
+	args: {
+		type: 'info',
+	},
 } satisfies StoryObj<typeof MkSystemIcon>;

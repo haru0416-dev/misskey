@@ -12,5 +12,7 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<MkTip v-bind="args" />',
 	}),
-	args: {},
+	args: {
+		k: 'drive',
+	},
 } satisfies StoryObj<typeof MkTip>;

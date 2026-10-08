@@ -35,7 +35,8 @@ const common = {
 					};
 				},
 			},
-			template: '<MkAutocomplete v-bind="props" v-on="events" :textarea="textarea" />',
+			// q と textarea は decorator が <story> に渡し、属性の継承で MkAutocomplete に届く。
+			template: '<MkAutocomplete v-bind="props" v-on="events" />',
 		};
 	},
 	args: {
@@ -50,7 +51,7 @@ const common = {
 			},
 			data() {
 				return {
-					q: context.args.q,
+					q: context.args.q ?? '',
 					textarea: null,
 				};
 			},

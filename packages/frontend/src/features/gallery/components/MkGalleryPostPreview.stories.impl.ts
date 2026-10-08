@@ -4,10 +4,22 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, waitFor, within } from '@/stories/test.js';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
 import type { StoryObj } from '@/stories/types.js';
 import { galleryPost } from '@/stories/fakes.js';
 import MkGalleryPostPreview from './MkGalleryPostPreview.vue';
+
+/** サムネイルはリンクのタイトルと重複する装飾扱い (alt="") なので role からは引けない。読み込みと復号の完了まで待つ。 */
+async function loadedThumbnail(canvasElement: HTMLElement): Promise<HTMLImageElement> {
+	const image = await waitFor(() => {
+		const found = canvasElement.querySelector<HTMLImageElement>('.thumbnail img');
+		expect(found?.complete).toBe(true);
+		expect(found?.naturalWidth).toBeGreaterThan(0);
+		return found!;
+	});
+	await image.decode();
+	return image;
+}
 export const Default = {
 	render(args) {
 		return {
@@ -35,10 +47,9 @@ export const Default = {
 		expect(links).toHaveLength(2);
 		expect(links[0]).toHaveAttribute('href', `/gallery/${galleryPost().id}`);
 		expect(links[1]).toHaveAttribute('href', `/@${galleryPost().user.username}@${galleryPost().user.host}`);
-		// サムネイルはリンクのタイトルと重複する装飾扱い (alt="") なので role からは引けない。
-		const images = [...canvasElement.querySelectorAll('img')];
-		expect(images.length).toBeGreaterThan(0);
-		await waitFor(() => expect(Promise.all(images.map((image) => image.decode()))).resolves.toBeDefined());
+		// 閲覧注意でない投稿は、読み込んだサムネイルをそのまま見せる。
+		const image = await loadedThumbnail(canvasElement);
+		await waitFor(() => expect(image).toBeVisible());
 	},
 	args: {
 		post: galleryPost(),
@@ -57,5 +68,19 @@ export const Sensitive = {
 	args: {
 		...Default.args,
 		post: galleryPost(true),
+	},
+	async play({ canvasElement }) {
+		const canvas = within(canvasElement);
+		const [postLink] = canvas.getAllByRole('link');
+		// 閲覧注意の投稿は、サムネイルを読み込んでもぼかし (blurhash の canvas) のまま見せる。
+		const image = await loadedThumbnail(canvasElement);
+		const blurhash = canvasElement.querySelector('.thumbnail canvas');
+		expect(image).not.toBeVisible();
+		expect(blurhash).toBeVisible();
+		// 指を乗せている間だけ本来の画像を見せる。
+		await userEvent.hover(postLink!);
+		await waitFor(() => expect(image).toBeVisible());
+		await userEvent.unhover(postLink!);
+		await waitFor(() => expect(image).not.toBeVisible());
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;

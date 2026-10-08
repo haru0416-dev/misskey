@@ -40,7 +40,9 @@ export const Empty = {
 	async play({ canvasElement }) {
 		await expect(canvasElement).toHaveTextContent(i18n.ts._ago.invalid);
 	},
-	args: {},
+	args: {
+		time: null,
+	},
 	parameters: {
 		layout: 'centered',
 	},

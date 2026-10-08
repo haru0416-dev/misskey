@@ -37,6 +37,7 @@ export const Default = {
 	},
 	args: {
 		file: file(),
+		folder: null,
 	},
 	parameters: {
 		layout: 'centered',
