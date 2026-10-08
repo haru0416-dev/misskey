@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchUserByIdOrFailFromDatabase,
+} from '@/core/user/user-store.js';
 import {
 	createFollowingInDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
@@ -27,6 +30,9 @@ import {
 } from '@/queue/handlers/relationship.js';
 import type { QueueRelationshipDependencies } from '@/queue/handlers/relationship.js';
 import type { MiUser } from '@/models/User.js';
+import type { DeliverQueue } from '@/core/queue/queues.js';
+import type { DeliverJobData } from '@/core/queue/types.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
 
 async function createTestUser(
 	deps: QueueRelationshipDependencies,
@@ -59,6 +65,20 @@ async function createTestRemoteUser(deps: QueueRelationshipDependencies, host: s
 	});
 }
 
+/** 配送ジョブの content は JSON 文字列で持つ。 */
+function activityType(content: string): unknown {
+	return (JSON.parse(content) as { type?: unknown }).type;
+}
+
+/** 直接 deliver queue に積まれた配送を記録する。 */
+function recordDeliverQueue(): { queue: DeliverQueue; jobs: DeliverJobData[] } {
+	const jobs: DeliverJobData[] = [];
+	const add = vi.fn(async (_name: string, data: DeliverJobData) => {
+		jobs.push(data);
+	});
+	return { queue: { add } as unknown as DeliverQueue, jobs };
+}
+
 describe('hono-queue-relationship', () => {
 	let runtime: RuntimeDependencies;
 	let deps: QueueRelationshipDependencies;
@@ -72,24 +92,44 @@ describe('hono-queue-relationship', () => {
 		await runtime.dispose();
 	});
 
+	/** outbox 経由で登録された、指定した inbox 宛ての配送の activity type。 */
+	async function outboxActivityTypesTo(inbox: string): Promise<unknown[]> {
+		const rows = await runtime.db.select().from(queueOutbox);
+		return rows.flatMap((row) => {
+			const raw = row.data;
+			if (typeof raw !== 'object' || raw === null || !('data' in raw)) return [];
+			const data = raw.data as Partial<DeliverJobData>;
+			if (data.to !== inbox) return [];
+			return typeof data.content === 'string' ? [activityType(data.content)] : [];
+		});
+	}
+
 	test('handleQueueRelationshipUnfollow はフォロー関係を削除しカウントを減らす', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
+		const counts = async () => {
+			const [a, b] = await Promise.all([
+				fetchUserByIdOrFailFromDatabase(deps.db, follower.id),
+				fetchUserByIdOrFailFromDatabase(deps.db, followee.id),
+			]);
+			return { following: a.followingCount, followers: b.followersCount };
+		};
 
-		await createFollowingInDatabase(deps.db, {
-			id: genId(),
-			followerId: follower.id,
-			followeeId: followee.id,
-		});
+		// フォローの経路で集計を進めてから解除し、集計が戻ることを見る。
+		expect(await handleQueueRelationshipFollow(deps, { from: follower, to: followee, silent: true })).toBe('ok');
+		expect(await counts()).toEqual({ following: 1, followers: 1 });
 
 		const result = await handleQueueRelationshipUnfollow(deps, { from: follower, to: followee, silent: true });
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).toBeNull();
+		expect(await counts()).toEqual({ following: 0, followers: 0 });
 
+		// 解除済みへの再実行は、関係も集計も変えない。
 		expect(await handleQueueRelationshipUnfollow(deps, { from: follower, to: followee, silent: true })).toBe('ok');
 		expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id)).toBeNull();
+		expect(await counts()).toEqual({ following: 0, followers: 0 });
 	});
 
 	test('handleQueueRelationshipBlock はフォロー解除・フォローリクエスト取消・ブロック作成を行う', async () => {
@@ -186,8 +226,16 @@ describe('hono-queue-relationship', () => {
 			followeeId: followee.id,
 		});
 
-		const result = await handleQueueRelationshipFollow(deps, { from: follower, to: followee, silent: true });
+		const direct = recordDeliverQueue();
+		const result = await handleQueueRelationshipFollow(
+			{ ...deps, deliverQueue: direct.queue },
+			{ from: follower, to: followee, silent: true },
+		);
 		expect(result).toBe('ok: already following');
+
+		// Accept は outbox に 1 件だけ登録し、他の配送はしない。
+		expect(await outboxActivityTypesTo(follower.inbox!)).toEqual(['Accept']);
+		expect(direct.jobs).toEqual([]);
 	});
 
 	test('handleQueueRelationshipFollow はブロックされていればRejectを配送して終了する', async () => {
@@ -200,8 +248,17 @@ describe('hono-queue-relationship', () => {
 			blockeeId: follower.id,
 		});
 
-		const result = await handleQueueRelationshipFollow(deps, { from: follower, to: followee, silent: true });
+		const direct = recordDeliverQueue();
+		const result = await handleQueueRelationshipFollow(
+			{ ...deps, deliverQueue: direct.queue },
+			{ from: follower, to: followee, silent: true },
+		);
 		expect(result).toBe('rejected: blocked');
+
+		expect(direct.jobs.map((job) => ({ to: job.to, type: activityType(job.content) }))).toEqual([
+			{ to: follower.inbox, type: 'Reject' },
+		]);
+		expect(await outboxActivityTypesTo(follower.inbox!)).toEqual([]);
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).toBeNull();
