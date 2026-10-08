@@ -164,8 +164,11 @@ describe('hono-queue-deliver', () => {
 			);
 
 		expect(await deliverTo([host], `https://${host}:8443/inbox`)).toBe('Success');
+		// 項目に書いた既定のポートや先頭のゼロは、URL の形 (省略・除去) と同じものとして扱う。
+		expect(await deliverTo([`${host}:443`], `https://${host}/inbox`)).toBe('Success');
+		expect(await deliverTo([`${host}:08443`], `https://${host}:8443/inbox`)).toBe('Success');
 		expect(await deliverTo([`${host}:8443`], `https://${host}:8443/inbox`)).toBe('Success');
-		expect(send).toHaveBeenCalledTimes(2);
+		expect(send).toHaveBeenCalledTimes(4);
 		send.mockClear();
 		expect(await deliverTo([`${host}:8443`], `https://${host}:9443/inbox`)).toBe('skip (blocked)');
 		expect(await deliverTo([`${host}:8443`], `https://${host}/inbox`)).toBe('skip (blocked)');
