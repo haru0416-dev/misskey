@@ -3,8 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { expect, test } from '../support/fixtures';
-import { closeInitialUserSetup, login, registerUser, resetState, waitForPageCarryoverGuard } from '../support/helpers';
+import { expect, newE2eContext, test } from '../support/fixtures';
+import {
+	closeInitialUserSetup,
+	expectLoadedImage,
+	login,
+	registerUser,
+	resetState,
+	waitForPageCarryoverGuard,
+} from '../support/helpers';
 import type { TestUser } from '../support/helpers';
 import type { Browser, Page } from '@playwright/test';
 
@@ -103,7 +110,13 @@ test.describe('Social actions', () => {
 
 		const charliePage = await loginAs(browser, charlie.username, passwords.charlie);
 		try {
+			const shown = charliePage.waitForResponse((response) => {
+				return response.url().includes('/api/notes/show') && response.request().method() === 'POST';
+			});
 			await charliePage.goto(`/notes/${body.createdNote.id}`);
+			// 取得の失敗を表示し終えてから、本文が無いことを確かめる。読み込み中の空の画面では区別できない。
+			expect((await shown).status()).toBe(400);
+			await expect(charliePage.getByRole('button', { name: '再試行' })).toBeVisible();
 			await expect(charliePage.getByText(directText, { exact: true })).toHaveCount(0);
 		} finally {
 			await charliePage
@@ -120,7 +133,9 @@ test.describe('Social actions', () => {
 		try {
 			await bobPage.goto(`/@${alice.username}`);
 
-			const followButton = bobPage.getByRole('button', { name: 'フォロー' });
+			// 「フォロー」は「フォロー中」の部分文字列なので、完全一致で状態を区別する。
+			const followButton = bobPage.getByRole('button', { name: 'フォロー', exact: true });
+			const followingButton = bobPage.getByRole('button', { name: 'フォロー中', exact: true });
 			const followed = bobPage.waitForResponse((response) => {
 				return response.url().includes('/api/following/create') && response.request().method() === 'POST';
 			});
@@ -128,16 +143,18 @@ test.describe('Social actions', () => {
 			await bobPage.locator('[data-cy-modal-dialog-ok]').click();
 			expect((await followed).ok()).toBe(true);
 			await bobPage.reload();
-			await expect(bobPage.getByRole('button', { name: 'フォロー中' })).toBeVisible();
+			await expect(followingButton).toBeVisible();
+			await expect(followButton).toHaveCount(0);
 
 			const unfollowed = bobPage.waitForResponse((response) => {
 				return response.url().includes('/api/following/delete') && response.request().method() === 'POST';
 			});
-			await bobPage.getByRole('button', { name: 'フォロー中' }).click();
+			await followingButton.click();
 			await bobPage.locator('[data-cy-modal-dialog-ok]').click();
 			expect((await unfollowed).ok()).toBe(true);
 			await bobPage.reload();
 			await expect(followButton).toBeVisible();
+			await expect(followingButton).toHaveCount(0);
 		} finally {
 			await bobPage
 				.context()
@@ -168,7 +185,9 @@ test.describe('Social actions', () => {
 			expect(body.createdNote.files).toHaveLength(1);
 
 			await alicePage.goto(`/notes/${body.createdNote.id}`);
-			await expect(alicePage.locator('[title*="hw.png"]').first()).toBeVisible();
+			const attachment = alicePage.locator('[title*="hw.png"]').first();
+			await expect(attachment).toBeVisible();
+			await expectLoadedImage(attachment.locator('img').first());
 		} finally {
 			await alicePage
 				.context()
@@ -185,12 +204,9 @@ async function setupAlice(page: Page): Promise<TestUser> {
 }
 
 async function loginAs(browser: Browser, username: string, password: string): Promise<Page> {
-	const context = await browser.newContext({ locale: 'ja-JP' });
+	const context = await newE2eContext(browser);
 	let ready = false;
 	try {
-		await context.addInitScript(() => {
-			window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
-		});
 		const page = await context.newPage();
 		await login(page, username, password);
 		await closeInitialUserSetup(page);

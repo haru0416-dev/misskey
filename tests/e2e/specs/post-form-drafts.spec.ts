@@ -5,7 +5,7 @@
 
 import type { Page, Route } from '@playwright/test';
 import { expect, test } from '../support/fixtures.js';
-import { closeInitialUserSetup, login, registerUser, resetState } from '../support/helpers.js';
+import { closeInitialUserSetup, login, registerUser, resetState, settlePage } from '../support/helpers.js';
 import type { TestUser } from '../support/helpers.js';
 
 async function switchAccount(page: Page, user: TestUser, firstUse = false) {
@@ -116,6 +116,8 @@ test.describe('投稿フォームの下書き', () => {
 		const response = await bobResponded;
 		expect(response.ok()).toBe(true);
 		expect(await response.finished()).toBeNull();
+		await settlePage(page);
+		await expect(recipients.getByText('@carol')).toBeVisible();
 		await expect(recipients.getByText('@bob')).toHaveCount(0);
 	});
 
@@ -147,6 +149,8 @@ test.describe('投稿フォームの下書き', () => {
 			// 同じ端末ストレージを保ったままログイン主体だけを切り替える。
 			await switchAccount(page, bob, true);
 			await openTargetComposer(page, kind);
+			// 下書きの復元は開いた後に非同期で走るので、終わるのを待ってから他人の下書きが無いことを確かめる。
+			await settlePage(page);
 			await expect(page.locator('[data-cy-post-form-text]')).not.toHaveValue(aliceText);
 			await writeLocalComposer(page, bobTarget, bobText);
 			expect(await readLocalDraftText(page, aliceTarget)).toBe(aliceText);
@@ -170,6 +174,7 @@ test.describe('投稿フォームの下書き', () => {
 			expect(await readLocalDraftText(page, aliceTarget)).toBe(aliceText);
 
 			await openTargetComposer(page, kind);
+			await settlePage(page);
 			await expect(page.locator('[data-cy-post-form-text]')).not.toHaveValue(bobText);
 			expect(await readLocalDraftText(page, bobTarget)).toBeNull();
 			await closeLocalComposer(page);

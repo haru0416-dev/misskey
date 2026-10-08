@@ -5,15 +5,8 @@
 
 import { devices } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { expect, test } from '../support/fixtures';
-import {
-	closeInitialUserSetup,
-	login,
-	registerUser,
-	resetState,
-	seedE2eLocalStorage,
-	waitForPageCarryoverGuard,
-} from '../support/helpers';
+import { expect, newE2eContext, test } from '../support/fixtures';
+import { closeInitialUserSetup, login, registerUser, resetState, waitForPageCarryoverGuard } from '../support/helpers';
 import type { TestUser } from '../support/helpers';
 
 const passwords = {
@@ -180,9 +173,8 @@ async function setupUsers(page: Page): Promise<{ admin: TestUser; alice: TestUse
 }
 
 async function loginAs(browser: Browser, username: string, password: string): Promise<Page> {
-	const context = await browser.newContext({ locale: 'ja-JP' });
+	const context = await newE2eContext(browser);
 	try {
-		await context.addInitScript(seedE2eLocalStorage);
 		const page = await context.newPage();
 		await login(page, username, password);
 		await closeInitialUserSetup(page);

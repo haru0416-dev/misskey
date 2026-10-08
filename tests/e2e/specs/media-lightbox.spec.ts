@@ -5,7 +5,7 @@
 
 import type { APIRequestContext } from '@playwright/test';
 import { expect, test } from '../support/fixtures.js';
-import { registerUser, resetState } from '../support/helpers.js';
+import { expectLoadedImage, registerUser, resetState } from '../support/helpers.js';
 
 type DriveFile = { id: string };
 
@@ -59,16 +59,20 @@ test('実画像ごとにlightboxを開いて移動・ズーム・閉じる', asy
 	const secondSource = secondLink.locator('[data-marker]');
 	await expect(firstLink).toBeVisible();
 	await expect(secondLink).toBeVisible();
+	await expectLoadedImage(firstLink.locator('img').first());
+	await expectLoadedImage(secondLink.locator('img').first());
 	await firstLink.click();
 	const dialog = page.getByRole('dialog', { name: '画像' });
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator('[aria-hidden="false"]')).toContainText('lightbox-first.svg');
 	await expect(dialog.locator('[aria-hidden="false"] img[src]').last()).toBeInViewport();
+	await expectLoadedImage(dialog.locator('[aria-hidden="false"] img[src]').last());
 	await expect(firstSource).toHaveCSS('visibility', 'hidden');
 	await dialog.getByRole('button', { name: '次' }).click();
 	await expect(dialog.locator('[aria-hidden="false"]')).toContainText('lightbox-second.svg');
 	const secondActiveImage = dialog.locator('[aria-hidden="false"] img[src]').last();
 	await expect(secondActiveImage).toBeInViewport({ ratio: 0.9 });
+	await expectLoadedImage(secondActiveImage);
 	await expect(secondSource).toHaveCSS('visibility', 'hidden');
 	const activeImage = dialog.locator('[aria-hidden="false"] img[src]').last();
 	await activeImage.hover();

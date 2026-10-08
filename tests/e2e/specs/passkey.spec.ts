@@ -12,11 +12,13 @@ import { closeInitialUserSetup, registerUser, resetState } from '../support/help
 // 登録も認証も失敗する。画面は misskey.local で開き、http でも WebAuthn が使えるよう安全なオリジンとして扱わせる。
 // デフォルトの headless shell はこのフラグを無視して isSecureContext が false のままなので、通常の Chromium で動かす。
 const origin = 'http://misskey.local';
+// テストサーバーの待ち受けは playwright.config.ts の baseURL と同じ。
+const serverPort = new URL(process.env['MISSKEY_TEST_BASE_URL'] ?? 'http://localhost:61812').port;
 test.use({
 	channel: 'chromium',
 	launchOptions: {
 		args: [
-			'--host-resolver-rules=MAP misskey.local:80 127.0.0.1:61812',
+			`--host-resolver-rules=MAP misskey.local:80 127.0.0.1:${serverPort}`,
 			`--unsafely-treat-insecure-origin-as-secure=${origin}`,
 		],
 	},

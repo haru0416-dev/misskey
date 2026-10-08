@@ -4,7 +4,7 @@
  */
 
 import { expect } from '@playwright/test';
-import type { APIResponse, Page } from '@playwright/test';
+import type { APIResponse, Locator, Page } from '@playwright/test';
 
 export type TestUser = {
 	id: string;
@@ -101,4 +101,23 @@ export async function closeInitialUserSetup(page: Page): Promise<void> {
 
 export async function waitForPageCarryoverGuard(page: Page): Promise<void> {
 	await page.goto('about:blank', { waitUntil: 'load' });
+}
+
+/** 表示された img が実際に画像を読み込めたことを確かめる。壊れた画像でも要素は表示されるので、表示だけでは足りない。 */
+export async function expectLoadedImage(image: Locator): Promise<void> {
+	await expect
+		.poll(() => image.evaluate((element: HTMLImageElement) => (element.complete ? element.naturalWidth : 0)))
+		.toBeGreaterThan(0);
+}
+
+/**
+ * 既に届いた応答の処理と、それに続く描画が終わるまで待つ。「何も起きない」ことを確かめる前に使う。
+ *
+ * 新しい要求の応答は、それより前に受信を終えた応答の後に処理される。その後の 2 フレームで描画も反映される。
+ */
+export async function settlePage(page: Page): Promise<void> {
+	await page.evaluate(async () => {
+		await fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+		for (let i = 0; i < 2; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+	});
 }

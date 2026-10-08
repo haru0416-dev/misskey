@@ -23,13 +23,26 @@ test.describe('ページのエディタ', () => {
 		await closeInitialUserSetup(page);
 
 		await page.goto(`/pages/edit/${original.id}`);
+		const duplicated = page.waitForResponse((response) => {
+			return response.url().includes('/api/pages/create') && response.request().method() === 'POST';
+		});
 		await page.getByRole('button', { name: '複製' }).click();
+		// 複製が名前の衝突で失敗し、その失敗を表示し終えてから保存する。
+		expect((await duplicated).status()).toBe(400);
+		await expect(page.getByText('指定されたページURLは既に存在しています')).toBeVisible();
 		await page.locator('[data-cy-modal-dialog-ok]').click();
 
-		const update = page.waitForRequest('**/api/pages/update');
+		const update = page.waitForResponse('**/api/pages/update');
 		await page.getByRole('button', { name: '保存' }).click();
-		const body = (await update).postDataJSON();
+		const updated = await update;
+		expect(updated.ok()).toBe(true);
+		const body = updated.request().postDataJSON();
+		expect(body.pageId).toBe(original.id);
 		expect(body.title).toBe('original');
 		expect(body.name).toBe('original');
+		const stored = await (
+			await page.request.post('/api/pages/show', { data: { i: alice.token, pageId: original.id } })
+		).json();
+		expect([stored.title, stored.name]).toEqual(['original', 'original']);
 	});
 });
