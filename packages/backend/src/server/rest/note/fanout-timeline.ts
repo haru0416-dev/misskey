@@ -206,7 +206,11 @@ type ListCursor = {
  * 続きは位置で読み、値 (bound) で絞る。読む間に list へ入るのは降順の位置への挿入と末尾の切り詰めだけなので、
  * 読んだ位置より前に入った ID の分だけ既読の ID が後ろへずれて再び読まれ (bound 以上なので捨てる)、未読の ID は
  * 読む位置より前へ動かない。bound より古い ID は既読の ID より後ろにしか入らない。したがって抜けも重複も出ない。
- * untilId より新しい部分は読み飛ばす。読み飛ばしが続くと 1 回に読む件数を倍にして往復を log 回に抑える。
+ * untilId より新しい部分は読み飛ばす。untilId はたいてい前のページの最後の ID で、その list にあれば最初の往復で
+ * LPOS が位置を返すので、2 往復目でその次から読む。無い list (他の list から来た ID、切り詰め済み) では、
+ * 読み飛ばしが続くたびに 1 回に読む件数を倍にして往復を log 回に抑える。
+ * 位置を値の二分探索 (Valkey 側の Lua) で求める方式は往復が 1 回で済むが、Lua の呼び出しが Valkey の単一スレッドを
+ * 1 回あたり約 50µs 占有し、アプリの CPU は変わらない。
  */
 export class SortedTimelineListsReader implements TimelineIdSource {
 	private readonly cursors: ListCursor[];
@@ -237,16 +241,28 @@ export class SortedTimelineListsReader implements TimelineIdSource {
 				return;
 			}
 			const pipeline = this.redis.pipeline();
+			const located: boolean[] = [];
 			for (const c of targets) {
 				pipeline.lrange(c.key, c.start, c.start + c.size - 1);
+				// untilId 付きの最初の読み取りでは、untilId の位置も同じ往復で聞いておく。
+				const locate = c.start === 0 && c.bound != null;
+				if (locate) {
+					pipeline.lpos(c.key, c.bound!);
+				}
+				located.push(locate);
 			}
 			const results = (await pipeline.exec()) ?? [];
-			targets.forEach((c, i) => {
-				const [error, value] = results[i] ?? [new Error('Missing pipeline result'), null];
+			let r = 0;
+			const next = (): unknown => {
+				const [error, value] = results[r++] ?? [new Error('Missing pipeline result'), null];
 				if (error) {
 					throw error;
 				}
-				const ids = value as string[];
+				return value;
+			};
+			targets.forEach((c, i) => {
+				const ids = next() as string[];
+				const untilPosition = located[i] ? (next() as number | null) : null;
 				for (let j = 1; j < ids.length; j++) {
 					if (ids[j]! > ids[j - 1]!) {
 						throw new UnsortedTimelineListError(c.key);
@@ -260,7 +276,12 @@ export class SortedTimelineListsReader implements TimelineIdSource {
 				if (c.buffer.length > 0) {
 					c.bound = c.buffer[c.buffer.length - 1]!;
 				} else if (!c.exhausted) {
-					c.size *= 2;
+					if (untilPosition != null && untilPosition >= c.start) {
+						// 降順・重複なしなので、untilId の次の位置からが untilId より古い。
+						c.start = untilPosition + 1;
+					} else {
+						c.size *= 2;
+					}
 				}
 			});
 		}
