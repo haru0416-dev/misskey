@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { pickUpdate, splitHeldMajors } from './update-deps.mjs';
+import { pickUpdate, splitHeldMajors, syncOverrides } from './update-deps.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.UTC(2026, 8, 28);
@@ -66,5 +66,27 @@ describe('splitHeldMajors', () => {
 			{ name: 'typescript', from: '6.0.3', to: '8.0.0' },
 		]);
 		expect(kept).toEqual([{ name: 'typescript', from: '6.0.3', to: '7.0.2', reason: 'API がない' }]);
+	});
+});
+
+describe('syncOverrides', () => {
+	test('直接の依存と同じ版に固定した override だけを一緒に上げる', () => {
+		const overrides = { vitest: '5.0.1', sharp: '0.35.5', 'argparse@~1.0.9': '2.0.1' };
+		const updated = [
+			{ name: 'vitest', from: '5.0.1', to: '5.0.3' },
+			{ name: 'sharp', from: '0.35.4', to: '0.35.6' },
+			{ name: 'argparse', from: '1.0.9', to: '1.0.10' },
+		];
+		expect(syncOverrides(overrides, updated)).toEqual({
+			vitest: '5.0.3',
+			sharp: '0.35.5',
+			'argparse@~1.0.9': '2.0.1',
+		});
+		expect(overrides.vitest).toBe('5.0.1');
+	});
+
+	test('変わらなければ null を返す', () => {
+		expect(syncOverrides({ sharp: '0.35.5' }, [{ name: 'vitest', from: '5.0.1', to: '5.0.3' }])).toBeNull();
+		expect(syncOverrides(undefined, [{ name: 'vitest', from: '5.0.1', to: '5.0.3' }])).toBeNull();
 	});
 });

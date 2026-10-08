@@ -134,6 +134,28 @@ export function splitHeldMajors(majors, held) {
 	return { pending, held: kept };
 }
 
+/**
+ * root の overrides のうち、直接の依存と同じ版に固定しているものを、その依存と一緒に上げる。
+ * 推移依存も同じ版にそろえるための override が旧版のまま残ると、直接の依存だけが上がって版が割れる
+ * (vitest と @vitest/browser のように版の一致を求める組で壊れる)。範囲付きの指定 (`name@range`) と、
+ * 旧版と違う値に固定した override (脆弱性対策など) は意図して選んだものなので触らない。
+ * @param {Record<string, string> | undefined} overrides
+ * @param {{ name: string, from: string, to: string }[]} updated
+ * @returns {Record<string, string> | null} 変わらなければ null
+ */
+export function syncOverrides(overrides, updated) {
+	if (overrides == null) return null;
+	let changed = false;
+	const next = { ...overrides };
+	for (const { name, from, to } of updated) {
+		if (Object.hasOwn(next, name) && next[name] === from) {
+			next[name] = to;
+			changed = true;
+		}
+	}
+	return changed ? next : null;
+}
+
 function renderReport({ updated, majors, held, failures, minAgeSeconds }) {
 	const lines = [];
 	const days = minAgeSeconds / 86400;
@@ -230,6 +252,13 @@ async function main() {
 						json[group][name] = target;
 						changed = true;
 					}
+				}
+			}
+			if (path === 'package.json') {
+				const overrides = syncOverrides(json.overrides, updated);
+				if (overrides != null) {
+					json.overrides = overrides;
+					changed = true;
 				}
 			}
 			if (changed) writeFileSync(path, `${JSON.stringify(json, null, '\t')}\n`);
