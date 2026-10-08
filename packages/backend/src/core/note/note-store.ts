@@ -1600,35 +1600,28 @@ async function searchDenseTermBeyondWindow(
 	if (options.sinceId && !options.untilId) return null;
 
 	const bounds = joinConditions(noteSearchBounds(options));
+	// 窓の幅 (時刻) と表の最も古い投稿。範囲の大きさと終わりを決めるだけで、どこから探すかには使わない。
 	const window = (
-		await db.execute<{
-			count: number;
-			newest: MiNote['id'] | null;
-			oldest: MiNote['id'] | null;
-			floor: MiNote['id'] | null;
-		}>(sql`
-			SELECT count(*)::int AS "count", max("id") AS "newest", min("id") AS "oldest",
+		await db.execute<{ newest: MiNote['id'] | null; oldest: MiNote['id'] | null; floor: MiNote['id'] | null }>(sql`
+			SELECT max("id") AS "newest", min("id") AS "oldest",
 				(SELECT "note"."id" FROM "note" WHERE ${bounds} ORDER BY "note"."id" ASC LIMIT 1) AS "floor"
 			FROM (SELECT "note"."id" FROM "note" WHERE ${bounds} ORDER BY "note"."id" DESC LIMIT ${windowSize}) AS "scanned"
 		`)
 	).rows[0];
-	// 窓が範囲の投稿を読み切っていれば、窓の一致が全て。
-	if (window?.newest == null || window.oldest == null || window.floor == null || window.count < windowSize) {
-		return recent;
-	}
+	if (window?.newest == null || window.oldest == null || window.floor == null) return recent;
 
-	// 窓の後に投稿が増えると、数え直した窓の下端は新しい側へずれる。窓で見つけた一致を二度数えないよう、
-	// それより古い側だけを探す。
-	const lastRecentId = recent.at(-1)?.id;
-	let upper = lastRecentId != null && lastRecentId < window.oldest ? lastRecentId : window.oldest;
-	if (window.floor >= upper) return recent;
+	// 窓の下端を数え直すと、窓を読んだ後に窓の中の投稿が消えたときに古い側へずれ、ずれた分を誰も判定しない。
+	// 範囲は窓で見つけた最後の一致のすぐ下 (無ければ窓の上端) から探し、窓の範囲も探し直す。窓で見つけた一致は
+	// それより新しいので二度数えず、窓の後に増えた投稿も、窓の一致より古いものだけが後ろにつながる。
+	let upper: MiNote['id'] | null = recent.at(-1)?.id ?? null;
+	if (upper != null && window.floor >= upper) return recent;
 	const floorTime = parseId(window.floor).date.getTime();
-	let upperTime = parseId(upper).date.getTime();
+	let upperTime = parseId(upper ?? window.newest).date.getTime();
 	const windowSpan = parseId(window.newest).date.getTime() - parseId(window.oldest).date.getTime();
 	// 範囲は id の先頭の時刻で区切る。時刻を読めない id があれば、範囲に区切らない。
 	if (!Number.isFinite(floorTime) || !Number.isFinite(upperTime) || !Number.isFinite(windowSpan)) return null;
 	// 窓の中の一致は 1 ページに足りなかったので、窓と同じ幅の範囲も一致が少ないことが多い。最初の範囲を窓の
-	// RANGE_GROWTH 倍にして、範囲ごとに trigram index の bitmap を作り直す回数を減らす。
+	// RANGE_GROWTH 倍にして (窓の範囲も含む)、範囲ごとに trigram index の bitmap を作り直す回数を減らす。
 	let span = Math.max(windowSpan * RANGE_GROWTH, minimumSpanMs);
 
 	const results = [...recent];
@@ -1636,13 +1629,13 @@ async function searchDenseTermBeyondWindow(
 	// 表全体に均等にあると見積もるので、許すと直近に一致の無い語でも範囲の行を全て読む計画を選ぶ。
 	// 設定はこのトランザクションの中だけで効く。集めた id から 1 ページを作る問い合わせは、結合と可視性の
 	// 判定に主キーの index を使うので、その前に戻す (別の接続で流すと、プールが 1 本のとき待ち合わせになる)。
-	const bitmapScansOnly = (tx: MiDrizzleDatabase, on: boolean) =>
-		tx.execute(
-			on
-				? sql`SELECT set_config('enable_indexscan', 'off', true), set_config('enable_indexonlyscan', 'off', true), set_config('enable_seqscan', 'off', true)`
-				: sql`SELECT set_config('enable_indexscan', 'on', true), set_config('enable_indexonlyscan', 'on', true), set_config('enable_seqscan', 'on', true)`,
-		);
 	return await db.transaction(async (tx) => {
+		const bitmapScansOnly = (on: boolean) =>
+			tx.execute(
+				on
+					? sql`SELECT set_config('enable_indexscan', 'off', true), set_config('enable_indexonlyscan', 'off', true), set_config('enable_seqscan', 'off', true)`
+					: sql`SELECT set_config('enable_indexscan', 'on', true), set_config('enable_indexonlyscan', 'on', true), set_config('enable_seqscan', 'on', true)`,
+			);
 		const need = () => options.limit - results.length;
 		// 集めた一致の id。新しい順に並ぶ。1 ページ分以上たまるか探し終えたら、先頭から可視性などを判定して results へ移す。
 		const pending: MiNote['id'][] = [];
@@ -1653,7 +1646,7 @@ async function searchDenseTermBeyondWindow(
 		};
 		const settle = async () => {
 			if (pending.length === 0) return;
-			await bitmapScansOnly(tx, false);
+			await bitmapScansOnly(false);
 			while (pending.length > 0 && need() > 0) {
 				checkDeadline();
 				const requested = need();
@@ -1665,9 +1658,9 @@ async function searchDenseTermBeyondWindow(
 				if (found.length < requested) factor *= 4;
 				results.push(...found);
 			}
-			await bitmapScansOnly(tx, true);
+			await bitmapScansOnly(true);
 		};
-		await bitmapScansOnly(tx, true);
+		await bitmapScansOnly(true);
 		for (;;) {
 			const lowerTime = upperTime - span;
 			const lower = lowerTime > floorTime ? uuidv7LowerBoundAt(lowerTime) : null;
@@ -1697,15 +1690,16 @@ async function searchDenseTermBeyondWindow(
 	});
 }
 
-/** [lower, upper) の範囲で本文が一致する投稿の id を新しい順に limit 件。 */
+/** [lower, upper) の範囲で本文が一致する投稿の id を新しい順に limit 件。null の端は検索の期間とページの起点で決まる。 */
 async function listTextMatchIdsInRange(
 	db: MiDrizzleDatabase,
 	matchConditions: SQL[],
-	upper: MiNote['id'],
+	upper: MiNote['id'] | null,
 	lower: MiNote['id'] | null,
 	limit: number,
 ): Promise<MiNote['id'][]> {
-	const range = [sql`"note"."id" < ${upper}`];
+	const range: SQL[] = [];
+	if (upper != null) range.push(sql`"note"."id" < ${upper}`);
 	if (lower != null) range.push(sql`"note"."id" >= ${lower}`);
 	const result = await db.execute<{ id: MiNote['id'] }>(sql`
 		SELECT "note"."id" FROM "note"

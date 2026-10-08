@@ -16,7 +16,6 @@ import { createBlockingInDatabase } from '@/core/user/blocking-store.js';
 import { createFollowingInDatabase } from '@/core/user/following-store.js';
 import { createMutingInDatabase } from '@/core/user/muting-store.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiNote } from '@/models/Note.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
@@ -123,25 +122,36 @@ describe('NoteStore text search paths', () => {
 			});
 		}
 
-		// 経路を通ったことを、発行した文と transaction の回数で確かめる。
-		const client = (db as unknown as { $client: { unsafe: (...args: unknown[]) => unknown } }).$client;
-		const unsafe = client.unsafe;
-		client.unsafe = function (this: unknown, ...args: unknown[]): unknown {
-			statements.push(String(args[0]));
-			return unsafe.apply(this, args);
+		// 経路を通ったことを、発行した文 (transaction の中を含む) と transaction の回数で確かめる。
+		type RecordedClient = {
+			unsafe: (...args: unknown[]) => unknown;
+			begin: (callback: (client: RecordedClient) => Promise<unknown>) => Promise<unknown>;
 		};
-		const transaction = db.transaction.bind(db);
-		(db as { transaction: MiDrizzleDatabase['transaction'] }).transaction = ((
-			...args: Parameters<MiDrizzleDatabase['transaction']>
-		) => {
+		const record = (client: RecordedClient) => {
+			const unsafe = client.unsafe;
+			client.unsafe = function (this: unknown, ...args: unknown[]): unknown {
+				statements.push(String(args[0]));
+				return unsafe.apply(this, args);
+			};
+		};
+		const client = (db as unknown as { $client: RecordedClient }).$client;
+		record(client);
+		const begin = client.begin;
+		client.begin = (callback) => {
 			transactions++;
-			return transaction(...args);
-		}) as MiDrizzleDatabase['transaction'];
+			return begin((tx) => {
+				record(tx);
+				return callback(tx);
+			});
+		};
 	}, 60_000);
 
 	afterAll(async () => {
 		await runtime.dispose();
 	});
+
+	// 範囲の一致の id を集める問い合わせ。
+	const isRangeMatchQuery = (statement: string) => /^\s*SELECT "note"\."id" FROM "note"\s+WHERE/.test(statement);
 
 	const tunings: Record<string, Partial<NoteTextSearchTuning>> = {
 		// 窓が全件を覆う
@@ -239,9 +249,34 @@ describe('NoteStore text search paths', () => {
 				{ ...defaultNoteTextSearchTuning, ...tuning },
 			);
 		expect((await search(false, {})).map((note) => note.id)).toStrictEqual([visibleMutedMarkerNoteId]);
-		for (const tuning of [tunings['ranges']!, tunings['rangesSmallBatch']!]) {
-			expect((await search(true, tuning)).map((note) => note.id)).toStrictEqual([visibleMutedMarkerNoteId]);
-		}
+		expect((await search(true, tunings['ranges']!)).map((note) => note.id)).toStrictEqual([visibleMutedMarkerNoteId]);
+		statements.length = 0;
+		expect((await search(true, tunings['rangesSmallBatch']!)).map((note) => note.id)).toStrictEqual([
+			visibleMutedMarkerNoteId,
+		]);
+		// 1 件ずつ集め始めても、同じ範囲を読み直すたびに集める件数を増やすので、40 件の一致を 1 件ずつ読み直さない。
+		expect(statements.filter(isRangeMatchQuery).length).toBeLessThan(12);
+	});
+
+	// 投稿の行だけで判定できる条件は範囲の一致を集める段にも載せ、全件が後段で落ちる読み直しを起こさない。
+	test('filters sensitive files while collecting range matches', async () => {
+		statements.length = 0;
+		const notes = await searchNotesByTextFromDatabase(
+			runtime.db,
+			{
+				me,
+				blockedHosts: [],
+				limit: 3,
+				query: marker,
+				usePgroonga: false,
+				useTextIndex: true,
+				withSensitiveFiles: true,
+			},
+			{ ...defaultNoteTextSearchTuning, ...tunings['ranges']! },
+		);
+		expect(notes).toStrictEqual([]);
+		expect(statements.some(isRangeMatchQuery)).toBe(true);
+		expect(statements.filter((statement) => statement.includes('"note"."id" = ANY('))).toHaveLength(0);
 	});
 
 	test('gives up with NoteSearchTimedOutError when the ranges exceed the time limit', async () => {
@@ -266,11 +301,12 @@ describe('NoteStore text search paths', () => {
 			return {
 				window: statements.some((statement) => statement.includes('(SELECT * FROM "note" WHERE')),
 				gin: statements.some((statement) => statement.includes(`("note"."id" || '')`)),
+				ranges: statements.some((statement) => statement.includes(`set_config('enable_indexscan', 'off', true)`)),
 				transactions,
 			};
 		};
-		expect(await run(tunings['window']!)).toStrictEqual({ window: true, gin: false, transactions: 0 });
-		expect(await run(tunings['gin']!)).toStrictEqual({ window: true, gin: true, transactions: 0 });
-		expect(await run(tunings['ranges']!)).toStrictEqual({ window: true, gin: false, transactions: 1 });
+		expect(await run(tunings['window']!)).toStrictEqual({ window: true, gin: false, ranges: false, transactions: 0 });
+		expect(await run(tunings['gin']!)).toStrictEqual({ window: true, gin: true, ranges: false, transactions: 0 });
+		expect(await run(tunings['ranges']!)).toStrictEqual({ window: true, gin: false, ranges: true, transactions: 1 });
 	});
 });
