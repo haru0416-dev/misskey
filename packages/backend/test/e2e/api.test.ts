@@ -448,45 +448,48 @@ describe('API', () => {
 			);
 		});
 	});
-});
 
-describe('応答の圧縮', () => {
-	let alice: misskey.entities.SignupResponse;
+	// API の describe の中に置き、その beforeAll の alice が最初の利用者 (root) になってから compressalice を作る。
+	// 外に置くとシャッフル実行でこちらの beforeAll が先に走り、compressalice が root になって管理者向けの検査が落ちる。
+	describe('応答の圧縮', () => {
+		let compressor: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'compressalice' });
-		for (let i = 0; i < 5; i++) await api('notes/create', { text: `圧縮の確認 ${i} ${'本文'.repeat(100)}` }, alice);
-	}, 1000 * 60);
+		beforeAll(async () => {
+			compressor = await signup({ username: 'compressalice' });
+			for (let i = 0; i < 5; i++)
+				await api('notes/create', { text: `圧縮の確認 ${i} ${'本文'.repeat(100)}` }, compressor);
+		}, 1000 * 60);
 
-	test('API の JSON は gzip を受け付ける要求に gzip で返し、展開すると同じ内容になる', async () => {
-		const body = JSON.stringify({ i: alice.token, limit: 5 });
-		const headers = { 'Content-Type': 'application/json' };
-		const plain = await requestRaw('api/notes/timeline', { method: 'POST', headers, body });
-		const gzipped = await requestRaw('api/notes/timeline', {
-			method: 'POST',
-			headers: { ...headers, 'Accept-Encoding': 'gzip' },
-			body,
+		test('API の JSON は gzip を受け付ける要求に gzip で返し、展開すると同じ内容になる', async () => {
+			const body = JSON.stringify({ i: compressor.token, limit: 5 });
+			const headers = { 'Content-Type': 'application/json' };
+			const plain = await requestRaw('api/notes/timeline', { method: 'POST', headers, body });
+			const gzipped = await requestRaw('api/notes/timeline', {
+				method: 'POST',
+				headers: { ...headers, 'Accept-Encoding': 'gzip' },
+				body,
+			});
+
+			expect(plain.headers['content-encoding']).toBeUndefined();
+			expect(gzipped.status).toBe(200);
+			expect(gzipped.headers['content-encoding']).toBe('gzip');
+			expect(gzipped.headers['vary']).toContain('Accept-Encoding');
+			expect(gzipped.body.length).toBeLessThan(plain.body.length);
+			const notes = JSON.parse(gunzipSync(gzipped.body).toString('utf8')) as misskey.entities.Note[];
+			expect(notes.map((note) => note.id)).toEqual(
+				(JSON.parse(plain.body.toString('utf8')) as misskey.entities.Note[]).map((note) => note.id),
+			);
 		});
 
-		expect(plain.headers['content-encoding']).toBeUndefined();
-		expect(gzipped.status).toBe(200);
-		expect(gzipped.headers['content-encoding']).toBe('gzip');
-		expect(gzipped.headers['vary']).toContain('Accept-Encoding');
-		expect(gzipped.body.length).toBeLessThan(plain.body.length);
-		const notes = JSON.parse(gunzipSync(gzipped.body).toString('utf8')) as misskey.entities.Note[];
-		expect(notes.map((note) => note.id)).toEqual(
-			(JSON.parse(plain.body.toString('utf8')) as misskey.entities.Note[]).map((note) => note.id),
-		);
-	});
-
-	test('小さい応答は圧縮しない', async () => {
-		const small = await requestRaw('api/ping', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Accept-Encoding': 'gzip' },
-			body: '{}',
+		test('小さい応答は圧縮しない', async () => {
+			const small = await requestRaw('api/ping', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Accept-Encoding': 'gzip' },
+				body: '{}',
+			});
+			expect(small.status).toBe(200);
+			expect(small.headers['content-encoding']).toBeUndefined();
+			expect(typeof JSON.parse(small.body.toString('utf8')).pong).toBe('number');
 		});
-		expect(small.status).toBe(200);
-		expect(small.headers['content-encoding']).toBeUndefined();
-		expect(typeof JSON.parse(small.body.toString('utf8')).pong).toBe('number');
 	});
 });

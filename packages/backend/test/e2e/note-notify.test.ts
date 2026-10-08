@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { setTimeout } from 'node:timers/promises';
-import { beforeAll, describe, expect, test } from 'vitest';
-import { api, signup } from '../utils.js';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
+import { api, POLL, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('following/list', () => {
@@ -80,31 +79,31 @@ describe('following/list', () => {
 		await api('following/delete', { userId: carol.id }, bob);
 	});
 
+	// 他のテストのフォロー状態に依存しないよう、この確認専用の利用者でフォローから作る。
 	test('normal通知設定時、投稿で通知が届く', async () => {
-		await api('following/update', { userId: bob.id, notify: 'normal' }, alice);
+		const follower = await signup();
+		const poster = await signup();
+		expect((await api('following/create', { userId: poster.id }, follower)).status).toBe(200);
+		expect((await api('following/update', { userId: poster.id, notify: 'normal' }, follower)).status).toBe(200);
 
-		await api('notifications/mark-all-as-read', {}, alice);
 		const textOnlyRes = await api(
 			'notes/create',
 			{
 				text: 'ファイルなしの投稿',
 			},
-			bob,
+			poster,
 		);
 		expect(textOnlyRes.status).toBe(200);
-		// Redis への反映を待つ。
-		await setTimeout(100);
 
-		const beforeRes = await api('i/notifications', {}, alice);
-		expect(beforeRes.status).toBe(200);
-		const noteNotif = beforeRes.body.filter(
-			(n: { type: string; note?: { id: string } }) =>
-				n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
-		);
-
-		expect(noteNotif).toHaveLength(1);
-
-		await api('following/update', { userId: bob.id, notify: 'none' }, alice);
-		await api('notifications/mark-all-as-read', {}, alice);
+		// 通知は応答の後に作られるので、届くまで待つ。
+		await vi.waitFor(async () => {
+			const res = await api('i/notifications', {}, follower);
+			expect(res.status).toBe(200);
+			const noteNotif = res.body.filter(
+				(n: { type: string; note?: { id: string } }) =>
+					n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
+			);
+			expect(noteNotif).toHaveLength(1);
+		}, POLL);
 	});
 });

@@ -5,12 +5,15 @@
 
 import * as assert from 'node:assert';
 import { describe, expect, test } from 'vitest';
-import { api, castAsError } from '../utils.js';
+import { api, castAsError, sendEnvResetRequest } from '../utils.js';
 
 const setupPassword = 'example_password_please_change_this_or_you_will_get_hacked';
 
 describe('Signup races', () => {
 	test('concurrent initial root claims return one success and one access denied error', async () => {
+		// 最初の root を作れるのは利用者が 1 人もいないときだけ。同じファイルの他のテストが先に signup しても
+		// 前提が崩れないよう、DB とアプリを作り直してから確かめる。
+		await sendEnvResetRequest();
 		const responses = await Promise.all([
 			api('admin/accounts/create', {
 				username: 'initialroota',

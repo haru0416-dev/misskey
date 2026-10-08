@@ -841,11 +841,12 @@ describe('Timelines', () => {
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 						bobRenote = await post(bob, { renoteId: carolNote.id });
 						carolRenote = await post(carol, { renoteId: bobNote.id });
-
-						await api('admin/suspend-user', { userId: carol.id }, root);
 					});
 
+					// 凍結と解除は各テストで行い、実行順に関係なく前提の状態を作る。
 					test('凍結後に凍結されたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えなくなる', async () => {
+						expect((await api('admin/suspend-user', { userId: carol.id }, root)).status).toBe(204);
+
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
 						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
@@ -855,7 +856,8 @@ describe('Timelines', () => {
 					});
 
 					test('凍結解除後に凍結されていたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えるようになる', async () => {
-						await api('admin/unsuspend-user', { userId: carol.id }, root);
+						expect((await api('admin/suspend-user', { userId: carol.id }, root)).status).toBe(204);
+						expect((await api('admin/unsuspend-user', { userId: carol.id }, root)).status).toBe(204);
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
@@ -1386,12 +1388,13 @@ describe('Timelines', () => {
 						bobNote = await post(bob, { text: 'yo' });
 						carolNote = await post(carol, { text: "kon'nichiwa" });
 						daveNote = await post(dave, { text: 'hello' });
-
-						await api('admin/suspend-user', { userId: carol.id }, root);
-						await api('admin/suspend-user', { userId: dave.id }, root);
 					});
 
+					// 凍結と解除は各テストで行い、実行順に関係なく前提の状態を作る。
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
+						expect((await api('admin/suspend-user', { userId: carol.id }, root)).status).toBe(204);
+						expect((await api('admin/suspend-user', { userId: dave.id }, root)).status).toBe(204);
+
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
 						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
@@ -1401,8 +1404,10 @@ describe('Timelines', () => {
 					});
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
-						await api('admin/unsuspend-user', { userId: carol.id }, root);
-						await api('admin/unsuspend-user', { userId: dave.id }, root);
+						expect((await api('admin/suspend-user', { userId: carol.id }, root)).status).toBe(204);
+						expect((await api('admin/suspend-user', { userId: dave.id }, root)).status).toBe(204);
+						expect((await api('admin/unsuspend-user', { userId: carol.id }, root)).status).toBe(204);
+						expect((await api('admin/unsuspend-user', { userId: dave.id }, root)).status).toBe(204);
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
