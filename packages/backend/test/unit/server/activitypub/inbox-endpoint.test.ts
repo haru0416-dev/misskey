@@ -267,6 +267,52 @@ describe('hono-inbox-endpoint', () => {
 		expect(response.status).toBe(401);
 	});
 
+	// 署名は Digest ヘッダーの値を覆うだけなので、本文との対応はここでしか確かめていない。
+	test('署名済みの Digest と一致しない本文に差し替えたリクエストは401でキューに積まない', async () => {
+		const { server, url, capture } = await captureRequestServer();
+		servers.push(server);
+		const host = new URL(url).host;
+
+		const add = vi.fn();
+		const deps: InboxEndpointDependencies = {
+			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host } },
+			meta: { federation: 'all' },
+			inboxQueue: { add } as unknown as InboxEndpointDependencies['inboxQueue'],
+		};
+		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
+		const activity = {
+			id: `https://${host}/activities/${genId()}`,
+			type: 'Follow',
+			actor: `https://${host}/users/${user.id}`,
+			object: `https://${host}/users/somebody`,
+		};
+
+		await signedPost(
+			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
+			user,
+			url,
+			activity,
+		);
+		const captured = await capture();
+		const { 'content-length': _contentLength, ...headers } = captured.headers;
+
+		const signedBody = await handleInboxRequest(
+			deps,
+			new Request(url, { method: captured.method, headers, body: captured.body }),
+		);
+		expect(signedBody.status).toBe(202);
+		expect(add).toHaveBeenCalledOnce();
+		add.mockClear();
+
+		const tampered = JSON.stringify({ ...activity, object: `https://${host}/users/someone-else` });
+		const response = await handleInboxRequest(
+			deps,
+			new Request(url, { method: captured.method, headers, body: tampered }),
+		);
+		expect(response.status).toBe(401);
+		expect(add).not.toHaveBeenCalled();
+	});
+
 	test('actorを持たない構造的に不正なアクティビティは400', async () => {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
