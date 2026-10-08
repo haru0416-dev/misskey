@@ -17,6 +17,9 @@ import { createFollowingInDatabase } from '@/core/user/following-store.js';
 import { createMutingInDatabase } from '@/core/user/muting-store.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/user-store.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { genUuidv7 } from '@/misc/id/uuidv7.js';
+import { note } from '@/db/schema/note.js';
+import { eq } from 'drizzle-orm';
 import type { MiNote } from '@/models/Note.js';
 import { createRuntimeDependencies } from '@/runtime-dependencies.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -287,6 +290,33 @@ describe('NoteStore text search paths', () => {
 				{ ...defaultNoteTextSearchTuning, ...tunings['ranges']! },
 			),
 		).rejects.toBeInstanceOf(NoteSearchTimedOutError);
+	});
+
+	// 未来の時刻の id を持つ投稿が窓に入っても、最初の範囲が表全体にならず、範囲を順に広げて探す。
+	test('keeps ranges narrow when the window holds a note dated in the future', async () => {
+		const futureId = genUuidv7(Date.now() + 365 * 24 * HOUR);
+		await createNoteInDatabase(runtime.db, {
+			id: futureId,
+			userId: me.id,
+			userHost: null,
+			visibility: 'public',
+			text: 'from the future',
+		});
+		try {
+			const options = { me, blockedHosts: [], limit: 3, query: marker, usePgroonga: false };
+			statements.length = 0;
+			const actual = await searchNotesByTextFromDatabase(
+				runtime.db,
+				{ ...options, useTextIndex: true },
+				{ ...defaultNoteTextSearchTuning, ...tunings['ranges']! },
+			);
+			const rangeQueries = statements.filter(isRangeMatchQuery);
+			const expected = await searchNotesByTextFromDatabase(runtime.db, { ...options, useTextIndex: false });
+			expect(actual.map((found) => found.id)).toStrictEqual(expected.map((found) => found.id));
+			expect(rangeQueries.length).toBeGreaterThan(1);
+		} finally {
+			await runtime.db.delete(note).where(eq(note.id, futureId));
+		}
 	});
 
 	test('each tuning takes its intended path', async () => {

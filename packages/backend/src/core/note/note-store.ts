@@ -1616,8 +1616,12 @@ async function searchDenseTermBeyondWindow(
 	let upper: MiNote['id'] | null = recent.at(-1)?.id ?? null;
 	if (upper != null && window.floor >= upper) return recent;
 	const floorTime = parseId(window.floor).date.getTime();
-	let upperTime = parseId(upper ?? window.newest).date.getTime();
-	const windowSpan = parseId(window.newest).date.getTime() - parseId(window.oldest).date.getTime();
+	// 時計の狂ったサーバーから届いた投稿などで id の時刻が未来にあっても、窓の幅と範囲の起点が膨らんで
+	// 最初の範囲が表全体にならないよう、現在時刻で抑える。範囲の上端は id そのもので区切るので結果は変わらない。
+	const now = Date.now();
+	let upperTime = Math.min(parseId(upper ?? window.newest).date.getTime(), now);
+	const windowSpan =
+		Math.min(parseId(window.newest).date.getTime(), now) - Math.min(parseId(window.oldest).date.getTime(), now);
 	// 範囲は id の先頭の時刻で区切る。時刻を読めない id があれば、範囲に区切らない。
 	if (!Number.isFinite(floorTime) || !Number.isFinite(upperTime) || !Number.isFinite(windowSpan)) return null;
 	// 窓の中の一致は 1 ページに足りなかったので、窓と同じ幅の範囲も一致が少ないことが多い。最初の範囲を窓の
