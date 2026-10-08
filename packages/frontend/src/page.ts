@@ -24,8 +24,9 @@ const RECEIVER_KEY = Symbol('ReceiverKey');
 const setReceiver = (v: PageMetadataReceiver): void => {
 	provide<PageMetadataReceiver>(RECEIVER_KEY, v);
 };
+// minimum UI のように受け手を持たない画面もあるので、受け手が無いことは正常として扱う。
 const getReceiver = (): PageMetadataReceiver | undefined => {
-	return inject<PageMetadataReceiver>(RECEIVER_KEY);
+	return inject<PageMetadataReceiver | undefined>(RECEIVER_KEY, undefined);
 };
 
 const METADATA_KEY = Symbol('MetadataKey');
