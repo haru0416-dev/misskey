@@ -111,8 +111,14 @@ export const honoStreamChannelUserList: StreamChannelDefinition<NoteDependencies
 			if (note.reply) {
 				const reply = note.reply;
 				if (membershipsMap[note.userId]?.withReplies) {
-					// withReplies で返信を含めても、返信先の followers 公開範囲は越えない。
-					if (reply.visibility === 'followers' && !Object.hasOwn(ctx.following, reply.userId)) {
+					// withReplies で返信を含めても、返信先の followers 公開範囲は越えない。所有者宛てと投稿者の
+					// 自己返信は withReplies が無効でも含めるので、ここでも除かない。
+					if (
+						reply.visibility === 'followers' &&
+						!Object.hasOwn(ctx.following, reply.userId) &&
+						reply.userId !== user.id &&
+						reply.userId !== note.userId
+					) {
 						return;
 					}
 				} else {

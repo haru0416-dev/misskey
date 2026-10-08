@@ -736,6 +736,36 @@ describe('Streaming', () => {
 				expect(fired).toBe(true);
 			});
 
+			// withReplies を有効にしても、無効のときに流れる返信 (所有者宛て・投稿者の自己返信) は減らさない。
+			test('withReplies が有効なメンバーによる、所有者のフォロワー限定ノートへのリプライが流れる', async () => {
+				const ownerNote = await post(chitose, { text: 'owner followers only', visibility: 'followers' });
+				const fired = await waitFire(
+					chitose,
+					'userList',
+					() => api('notes/create', { text: 'reply to owner', replyId: ownerNote.id }, kyoko),
+					(msg) => msg.type === 'note' && msg.body['replyId'] === ownerNote.id,
+					{ listId: list.id },
+					5000,
+				);
+
+				expect(fired).toBe(true);
+			});
+
+			// フォロワー限定ノートへの返信はフォロワー限定になるので、所有者に見えるのは所有者へのメンションを含むとき。
+			test('withReplies が有効で所有者がフォローしていないメンバーの、自分のフォロワー限定ノートへの自己返信が流れる', async () => {
+				const memberNote = await post(kyoko, { text: 'member followers only', visibility: 'followers' });
+				const fired = await waitFire(
+					chitose,
+					'userList',
+					() => api('notes/create', { text: '@chitose self reply', replyId: memberNote.id }, kyoko),
+					(msg) => msg.type === 'note' && msg.body['replyId'] === memberNote.id,
+					{ listId: list.id },
+					5000,
+				);
+
+				expect(fired).toBe(true);
+			});
+
 			test('withReplies が無効なメンバーの他人宛てのリプライは流れない', async () => {
 				const received = await isReceivedBeforeControl(
 					() => post(ayano, { text: 'foo', replyId: erinNote.id }),
