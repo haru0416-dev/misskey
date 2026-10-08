@@ -349,11 +349,8 @@ function invite() {
 				text: invite.code,
 			});
 		})
-		.catch((err) => {
-			os.alert({
-				type: 'error',
-				text: err,
-			});
+		.catch((err: unknown) => {
+			void os.alertApiError(err, { endpoint: 'admin/invite/create' });
 		});
 }
 

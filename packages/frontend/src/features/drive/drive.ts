@@ -373,10 +373,7 @@ export function requestUploadFromUrl(url: string, folderId: string | null): Prom
 			},
 			(err: unknown) => {
 				// 受け付けられなかった (URL の形式・回数制限・権限) ときは、受け付けた旨ではなく理由を出す。
-				const content = os.apiErrorDialogContent(err);
-				if (content != null) {
-					os.alert({ type: 'error', ...content });
-				}
+				void os.alertApiError(err);
 				fail(err);
 			},
 		);

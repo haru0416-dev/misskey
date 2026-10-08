@@ -194,17 +194,6 @@ function remove(ad: Misskey.entities.Ad) {
 // 保存中の広告。新しい広告は保存が終わるまで id が空なので、続けて押すと作成が重なる。
 const savingAds = shallowReactive(new Set<Misskey.entities.Ad>());
 
-// 失敗の理由を文字列にして見せる。エラーのオブジェクトをそのまま渡すと本文が空のダイアログになる。
-function showSaveError(err: unknown) {
-	const content = os.apiErrorDialogContent(err);
-	if (content == null) return;
-	os.alert({
-		type: 'error',
-		...(content.title === undefined ? {} : { title: content.title }),
-		text: content.text,
-	});
-}
-
 function save(ad: Misskey.entities.Ad) {
 	if (savingAds.has(ad)) {
 		return;
@@ -225,7 +214,7 @@ function save(ad: Misskey.entities.Ad) {
 				ad.id = created.id;
 			})
 			.catch((err) => {
-				showSaveError(err);
+				void os.alertApiError(err);
 			})
 			.finally(() => {
 				savingAds.delete(ad);
@@ -243,7 +232,7 @@ function save(ad: Misskey.entities.Ad) {
 				});
 			})
 			.catch((err) => {
-				showSaveError(err);
+				void os.alertApiError(err);
 			})
 			.finally(() => {
 				savingAds.delete(ad);

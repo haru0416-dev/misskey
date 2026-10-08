@@ -83,6 +83,47 @@ export function apiErrorDialogContent(
 	}
 	return { text: message + '\n' + id };
 }
+
+/**
+ * API などの失敗を、利用者に読める文言のダイアログで出す。エラーのオブジェクトをそのまま本文に渡すと
+ * 本文が空になる。サーバー内部のエラーは、報告に使える情報をコピーする操作も出す。
+ */
+export async function alertApiError(
+	err: unknown,
+	options: { endpoint?: string; customErrors?: ApiWithDialogCustomErrors } = {},
+): Promise<void> {
+	const content = apiErrorDialogContent(err, options.customErrors);
+	if (content == null) {
+		return;
+	}
+	const title = content.title === undefined ? {} : { title: content.title };
+	if (!content.internal) {
+		await alert({ type: 'error', ...title, text: content.text });
+		return;
+	}
+	const date = new Date().toISOString();
+	const { result } = await actions({
+		type: 'error',
+		...title,
+		text: content.text,
+		actions: [
+			{
+				value: 'ok',
+				text: i18n.ts.gotIt,
+				primary: true,
+			},
+			{
+				value: 'copy',
+				text: i18n.ts.copyErrorInfo,
+			},
+		],
+	});
+	if (result === 'copy') {
+		const info = (err as Partial<Misskey.api.APIError> | null | undefined)?.info;
+		copyToClipboard(`Endpoint: ${options.endpoint ?? '-'}\nInfo: ${JSON.stringify(info)}\nDate: ${date}`);
+	}
+}
+
 export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 	endpoint: E,
 	data: Misskey.Endpoints[E]['req'],
@@ -95,39 +136,8 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 		endpoint,
 		mutationFn: request.execute,
 	});
-	promiseDialog(promise, null, async (err) => {
-		const content = apiErrorDialogContent(err, customErrors);
-		if (content == null) {
-			return;
-		}
-		if (content.internal) {
-			const date = new Date().toISOString();
-			const { result } = await actions({
-				type: 'error',
-				...(content.title === undefined ? {} : { title: content.title }),
-				text: content.text,
-				actions: [
-					{
-						value: 'ok',
-						text: i18n.ts.gotIt,
-						primary: true,
-					},
-					{
-						value: 'copy',
-						text: i18n.ts.copyErrorInfo,
-					},
-				],
-			});
-			if (result === 'copy') {
-				copyToClipboard(`Endpoint: ${endpoint}\nInfo: ${JSON.stringify(err.info)}\nDate: ${date}`);
-			}
-			return;
-		}
-		alert({
-			type: 'error',
-			...(content.title === undefined ? {} : { title: content.title }),
-			text: content.text,
-		});
+	promiseDialog(promise, null, (err) => {
+		void alertApiError(err, { endpoint, ...(customErrors === undefined ? {} : { customErrors }) });
 	});
 
 	return promise;
@@ -159,10 +169,7 @@ export function promiseDialog<T extends Promise<unknown>>(
 			if (onFailure) {
 				onFailure(err);
 			} else {
-				alert({
-					type: 'error',
-					text: err,
-				});
+				void alertApiError(err);
 			}
 		});
 

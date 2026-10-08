@@ -239,10 +239,7 @@ async function _fetch_(): Promise<void> {
 }
 
 function showError(err: unknown) {
-	const content = os.apiErrorDialogContent(err);
-	if (content != null) {
-		os.alert({ type: 'error', ...content });
-	}
+	void os.alertApiError(err);
 }
 
 type HostListKey = 'blockedHosts' | 'silencedHosts' | 'mediaSilencedHosts';

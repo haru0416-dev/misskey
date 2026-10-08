@@ -149,12 +149,8 @@ async function unregisterTOTP(): Promise<void> {
 				twoFactorEnabled: false,
 			});
 		})
-		.catch((error) => {
-			os.alert({
-				type: 'error',
-				text: error,
-			});
-		});
+		// 失敗の理由は apiWithDialog が表示する。
+		.catch(() => {});
 }
 
 function renewTOTP(): void {
