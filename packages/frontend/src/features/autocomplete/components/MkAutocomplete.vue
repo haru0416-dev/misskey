@@ -164,7 +164,6 @@ export default {
 <script lang="ts" setup generic="T extends keyof CompleteInfo">
 type PropsType<T extends keyof CompleteInfo> = {
 	type: T;
-	q: CompleteInfo[T]['query'];
 	// union 型のままでは addEventListener/removeEventListener の呼び出しで型エラーになるため、HTMLElement と交差させる。
 	textarea: (HTMLTextAreaElement | HTMLInputElement) & HTMLElement;
 	close: () => void;
@@ -173,13 +172,15 @@ type PropsType<T extends keyof CompleteInfo> = {
 };
 
 // https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html#discriminated-unions
+// q は type ごとに具体的な型で書く。PropsType<T> の中で CompleteInfo[T]['query'] と書くと、
+// Vue のコンパイラは実行時の型を Object だけと推論し、文字列の q に警告を出す。
 const props = defineProps<
-	| PropsType<'user'>
-	| PropsType<'hashtag'>
-	| PropsType<'emoji'>
-	| PropsType<'emojiComplete'>
-	| PropsType<'mfmTag'>
-	| PropsType<'mfmParam'>
+	| (PropsType<'user'> & { q: CompleteInfo['user']['query'] })
+	| (PropsType<'hashtag'> & { q: CompleteInfo['hashtag']['query'] })
+	| (PropsType<'emoji'> & { q: CompleteInfo['emoji']['query'] })
+	| (PropsType<'emojiComplete'> & { q: CompleteInfo['emojiComplete']['query'] })
+	| (PropsType<'mfmTag'> & { q: CompleteInfo['mfmTag']['query'] })
+	| (PropsType<'mfmParam'> & { q: CompleteInfo['mfmParam']['query'] })
 >();
 
 const emit = defineEmits<{
