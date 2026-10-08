@@ -116,8 +116,9 @@ const FRESH_WINDOW_MS = 1000 * 60 * 3;
 
 /**
  * 既存の list をすべて降順・重複なしに並べ直し終えた印。読み取り側はこれがあるときだけ範囲読みをする。
- * 降順を保たない版の書き込みが並べ直しの後に走ると崩れが戻るので、版を入れ替えるときは旧版のプロセスを
- * すべて止めてから新しい版を起動する。
+ * 降順を保たない版の書き込みが並べ直しの後に走ると崩れが戻る。読み取り側が読んだ範囲の崩れは見つけて直すが、
+ * 読んでいない範囲の崩れは次の起動の並べ直しまで残るので、版を入れ替えるときは旧版のプロセスをすべて止めてから
+ * 新しい版を起動する。
  */
 const SORTED_MARKER_KEY = 'fanoutTimelineListsSorted';
 
@@ -198,23 +199,22 @@ export async function sortFanoutTimelineLists(redis: Redis.Redis, keys: string[]
 }
 
 /**
- * 既存の list をすべて並べ直し、終わったら印を付ける。印が既にあれば何もしない。
+ * 既存の list をすべて並べ直し、終わったら印を付ける。
  *
  * 鍵ごとの並べ直しは Valkey 上で原子的に行うので、走っている間の書き込みとは衝突しない。並べ直し前の list への
  * 書き込みは位置がずれて入るが、後でその list を並べ直すときに直る。SCAN は走査の間ずっと存在する鍵を必ず返し、
  * 走査中に新しくできた list は降順を保つ書き込みだけで作られるので、走査が一周すれば全 list が整っている。
  * 印を付けるまで読み取り側は全件読みを続けるので、途中で止まっても結果は崩れない。止まった場合は次の起動で
  * 最初からやり直す (整っている list は読むだけで書き換えない)。
+ *
+ * 印が既にあっても毎回走査する。印の後に降順を保たない書き込みが入る経路 (旧版へ戻してから入れ直す、印より前の
+ * RDB から戻す) では、どの list が崩れたかを知る手段が無いため。その間に読み取り側が崩れた範囲を読めば、
+ * 読み取り側が見つけてその list を並べ直す (fanout-timeline.ts)。
  */
 export async function sortAllFanoutTimelineLists(
 	redis: Redis.Redis,
 	isStopped: () => boolean = () => false,
 ): Promise<{ completed: boolean; keys: number; rewritten: number }> {
-	if ((await redis.exists(SORTED_MARKER_KEY)) === 1) {
-		sortedClients.add(redis);
-		return { completed: true, keys: 0, rewritten: 0 };
-	}
-
 	// SCAN の MATCH には ioredis の keyPrefix が付かず、返る鍵には付いている。スクリプトの KEYS には
 	// ioredis が keyPrefix を付けるので、返った鍵からは外して渡す。
 	const prefix = redis.options.keyPrefix ?? '';

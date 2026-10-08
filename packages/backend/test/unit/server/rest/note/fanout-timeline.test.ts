@@ -105,78 +105,178 @@ describe('fanout timeline reading', () => {
 		expect(deep).toBeGreaterThan(40);
 	});
 
-	test('notes inserted and lists trimmed between reads are neither skipped nor repeated', async () => {
-		let interleaved = 0;
-		const mutation = fc.record({
-			list: fc.nat(),
-			kind: fc.constantFrom('insert' as const, 'trim' as const),
-			value: fc.integer({ min: 1, max: 400 }),
-		});
+	// withOld では、並べ直しの後に旧版のプロセスが書き込む LPUSH (位置を問わず先頭へ入る) も混ぜる。
+	test.each([{ withOld: false }, { withOld: true }])(
+		'notes inserted and lists trimmed between reads are neither skipped nor repeated (old writers: $withOld)',
+		async ({ withOld }) => {
+			let interleaved = 0;
+			let reported = 0;
+			const mutation = fc.record({
+				list: fc.nat(),
+				kind: withOld
+					? fc.constantFrom('insert' as const, 'trim' as const, 'old' as const)
+					: fc.constantFrom('insert' as const, 'trim' as const),
+				value: fc.integer({ min: 1, max: 400 }),
+			});
+			await fc.assert(
+				fc.asyncProperty(
+					sortedLists,
+					fc.option(fc.integer({ min: 1, max: 401 })),
+					fc.integer({ min: 1, max: 6 }),
+					fc.array(fc.tuple(fc.integer({ min: 1, max: 10 }), fc.array(mutation, { maxLength: 4 })), {
+						minLength: 1,
+						maxLength: 10,
+					}),
+					async (lists, until, size, steps) => {
+						const names = await writeLists(lists.map((l) => l.toSorted((a, b) => b - a).map(hexId)));
+						const keys = names.map((name) => `list:${name}`);
+						// list ごとに、最初からあって最後まで一度も消されなかった ID。
+						const kept = lists.map((l) => new Set(l.map(hexId)));
+						const untilId = until == null ? null : hexId(until);
+						const reader = new SortedTimelineListsReader(redis, names, untilId, size);
+						const out: string[] = [];
+						let mutated = false;
+						let oldPushed = false;
+						for (const [n, mutations] of steps) {
+							for (const m of mutations) {
+								const index = m.list % keys.length;
+								const key = keys[index]!;
+								const current = await redis.lrange(key, 0, -1);
+								if (m.kind === 'trim') {
+									// 書き込みが上限を越えた分を末尾から切り詰めるのと同じ。
+									const keep = Math.max(current.length - 1 - (m.value % 4), 0);
+									for (const id of current.slice(keep)) {
+										kept[index]!.delete(id);
+									}
+									await (keep === 0 ? redis.del(key) : redis.ltrim(key, 0, keep - 1));
+								} else if (m.kind === 'old') {
+									await redis.lpush(key, hexId(m.value));
+									oldPushed = true;
+								} else if (!current.includes(hexId(m.value))) {
+									// 遅着・並行投稿の降順位置への挿入と同じ。
+									const pivot = current.find((id) => id < hexId(m.value));
+									if (pivot == null) {
+										await redis.rpush(key, hexId(m.value));
+									} else {
+										await redis.linsert(key, 'BEFORE', pivot, hexId(m.value));
+									}
+								}
+								mutated ||= out.length > 0;
+							}
+							try {
+								out.push(...(await reader.take(n)));
+							} catch (error) {
+								// 崩れを報告されたら、呼び出し側は全件読みでやり直すので、結果は正しい。
+								expect(error).toBeInstanceOf(UnsortedTimelineListError);
+								reported++;
+								return;
+							}
+						}
+						let exhausted: boolean;
+						try {
+							exhausted = !(await reader.hasMore());
+						} catch (error) {
+							expect(error).toBeInstanceOf(UnsortedTimelineListError);
+							reported++;
+							return;
+						}
+
+						// 崩れた list でも、出す順は降順で重複しない (併合は各 list の読んだ範囲の降順だけに頼る)。
+						expect(out).toEqual([...new Set(out)].sort(descending));
+						if (untilId != null) {
+							expect(out.every((id) => id < untilId)).toBe(true);
+						}
+						if (oldPushed) {
+							// まだ読んでいない位置の崩れ (先頭へ入った古い ID の後ろに残る新しい ID) は、読まずには見つけられない。
+							// 起動時の並べ直しが直す。読み切ったときに必ず見つかることは別の property で確かめる。
+							return;
+						}
+						const last = out.at(-1);
+						const missing = kept
+							.flatMap((ids) => [...ids])
+							.filter(
+								(id) =>
+									(untilId == null || id < untilId) && (exhausted || last == null || id > last) && !out.includes(id),
+							);
+						expect(missing).toEqual([]);
+						if (mutated && out.length > size) {
+							interleaved++;
+						}
+					},
+				),
+				{ numRuns: 300 },
+			);
+			if (withOld) {
+				// 崩れの報告が実際に起きていること (検査が空振りしていないこと)。
+				expect(reported).toBeGreaterThan(30);
+			} else {
+				expect(interleaved).toBeGreaterThan(40);
+			}
+		},
+	);
+
+	test('reading lists to the end reports a break in order exactly when one exists', async () => {
+		let broken = 0;
 		await fc.assert(
 			fc.asyncProperty(
 				sortedLists,
+				// 並べ直しの後に旧版のプロセスが LPUSH した ID (list ごと)
+				fc.array(fc.array(fc.integer({ min: 1, max: 400 }), { maxLength: 4 }), { minLength: 3, maxLength: 3 }),
 				fc.option(fc.integer({ min: 1, max: 401 })),
-				fc.integer({ min: 1, max: 6 }),
-				fc.array(fc.tuple(fc.integer({ min: 1, max: 10 }), fc.array(mutation, { maxLength: 4 })), {
-					minLength: 1,
-					maxLength: 10,
-				}),
-				async (lists, until, size, steps) => {
-					const names = await writeLists(lists.map((l) => l.toSorted((a, b) => b - a).map(hexId)));
-					const keys = names.map((name) => `list:${name}`);
-					// list ごとに、最初からあって最後まで一度も消されなかった ID。
-					const kept = lists.map((l) => new Set(l.map(hexId)));
+				fc.integer({ min: 1, max: 8 }),
+				async (lists, pushed, until, size) => {
+					const written = lists.map((l, i) => [
+						...pushed[i]!.map(hexId).reverse(),
+						...l.toSorted((a, b) => b - a).map(hexId),
+					]);
+					const names = await writeLists(written);
 					const untilId = until == null ? null : hexId(until);
+					const isBroken = written.some((ids) => ids.some((id, j) => j > 0 && id > ids[j - 1]!));
+					const expected = await drain(await readWholeTimelineLists(redis, names, untilId), [10_000]);
 					const reader = new SortedTimelineListsReader(redis, names, untilId, size);
-					const out: string[] = [];
-					let mutated = false;
-					for (const [n, mutations] of steps) {
-						for (const m of mutations) {
-							const index = m.list % keys.length;
-							const key = keys[index]!;
-							const current = await redis.lrange(key, 0, -1);
-							if (m.kind === 'trim') {
-								// 書き込みが上限を越えた分を末尾から切り詰めるのと同じ。
-								const keep = Math.max(current.length - 1 - (m.value % 4), 0);
-								for (const id of current.slice(keep)) {
-									kept[index]!.delete(id);
-								}
-								await (keep === 0 ? redis.del(key) : redis.ltrim(key, 0, keep - 1));
-							} else if (!current.includes(hexId(m.value))) {
-								// 遅着・並行投稿の降順位置への挿入と同じ。
-								const pivot = current.find((id) => id < hexId(m.value));
-								if (pivot == null) {
-									await redis.rpush(key, hexId(m.value));
-								} else {
-									await redis.linsert(key, 'BEFORE', pivot, hexId(m.value));
-								}
+					const ids: string[] = [];
+					let reportedBreak = false;
+					try {
+						for (;;) {
+							const taken = await reader.take(1 + (ids.length % 3));
+							if (taken.length === 0) {
+								break;
 							}
-							mutated ||= out.length > 0;
+							ids.push(...taken);
 						}
-						out.push(...(await reader.take(n)));
+					} catch (error) {
+						expect(error).toBeInstanceOf(UnsortedTimelineListError);
+						reportedBreak = true;
 					}
-					const exhausted = !(await reader.hasMore());
-
-					expect(out).toEqual([...new Set(out)].sort(descending));
-					if (untilId != null) {
-						expect(out.every((id) => id < untilId)).toBe(true);
+					expect(reportedBreak).toBe(isBroken);
+					if (!reportedBreak) {
+						expect(ids).toEqual(expected.ids);
 					}
-					const last = out.at(-1);
-					const missing = kept
-						.flatMap((ids) => [...ids])
-						.filter(
-							(id) =>
-								(untilId == null || id < untilId) && (exhausted || last == null || id > last) && !out.includes(id),
-						);
-					expect(missing).toEqual([]);
-					if (mutated && out.length > size) {
-						interleaved++;
+					if (isBroken) {
+						broken++;
 					}
 				},
 			),
 			{ numRuns: 300 },
 		);
-		expect(interleaved).toBeGreaterThan(40);
+		expect(broken).toBeGreaterThan(50);
+	});
+
+	test('a break in order between the first read and untilId is read and reported, not skipped', async () => {
+		// 2 件ずつ読むと 1 回目 [20, 19] はどちらも untilId (17) 以上。untilId の位置まで読み飛ばすと、
+		// 間の 15 (untilId より古いので返すべき) と崩れ (15 < 18) の両方を見落とす。
+		const names = await writeLists([[20, 19, 15, 18, 17, 3, 2, 1].map(hexId)]);
+		const reader = new SortedTimelineListsReader(redis, names, hexId(17), 2);
+		await expect(drain(reader, [10])).rejects.toBeInstanceOf(UnsortedTimelineListError);
+	});
+
+	test('a break in order at the boundary between two reads is reported', async () => {
+		// 並べ直しの後に旧版が、全件より古い遅着 L を先頭へ LPUSH し、その後に新しい 3 件を LPUSH した list。
+		// 4 件ずつ読むと L がちょうど 1 回目の最後に来る。
+		const n = Array.from({ length: 12 }, (_, i) => hexId(100 + i)).reverse();
+		const names = await writeLists([[hexId(203), hexId(202), hexId(201), hexId(1), ...n]]);
+		const reader = new SortedTimelineListsReader(redis, names, null, 4);
+		await expect(drain(reader, [3, 3, 3, 3, 3, 3])).rejects.toBeInstanceOf(UnsortedTimelineListError);
 	});
 
 	test('a range that is not descending is reported instead of being merged', async () => {
@@ -261,6 +361,28 @@ describe('fanout timeline reading', () => {
 			);
 			expect(dbFallback).toHaveBeenCalledWith(hexId(1), null, 1);
 			expect(await redis.lrange(`list:${names[0]}`, 0, -1)).toEqual([9, 8, 7, 5, 2, 1].map(hexId));
+		});
+
+		test('a break at a read boundary is sorted again and every note is still returned', async () => {
+			const n = await createNotes(15);
+			// n[0] が旧版に先頭へ LPUSH された遅着。limit 2 なら 4 件ずつ読むので、n[0] が 1 回目の最後に来る。
+			const listed = [n[15]!, n[14]!, n[13]!, n[0]!, ...n.slice(1, 13).reverse()];
+			const names = await writeLists([listed]);
+			const seen: string[] = [];
+			let untilId: string | null = null;
+			for (let page = 0; page < 10; page++) {
+				const notes = await fetchFanoutTimelineNotes(
+					{ db: runtime.db, meta: runtime.meta, redisForTimelines: redis },
+					options(names, { untilId, limit: 2, useDbFallback: false }),
+				);
+				if (notes.length === 0) {
+					break;
+				}
+				seen.push(...notes.map((note) => note.id));
+				untilId = notes.at(-1)!.id;
+			}
+			expect(seen).toEqual(n.toReversed());
+			expect(await redis.lrange(`list:${names[0]}`, 0, -1)).toEqual(n.toReversed());
 		});
 
 		test('paging through a full list returns every note, including newer ones next to a late arrival', async () => {

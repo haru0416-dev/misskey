@@ -253,10 +253,12 @@ describe('sortAllFanoutTimelineLists', () => {
 			expect(await redis.lrange(sorted, 0, -1)).toEqual(ids.slice(0, 10));
 			expect(await redis.get(notList)).toBe('x');
 
-			// 印があれば走査しない。
-			await redis.rpush(sorted, ids[0]!);
-			expect(await sortAllFanoutTimelineLists(redis)).toEqual({ completed: true, keys: 0, rewritten: 0 });
-			expect(await redis.lrange(sorted, 0, -1)).toEqual([...ids.slice(0, 10), ids[0]]);
+			// 印の後に降順を保たない書き込み (旧版) が入っても、次の起動の走査で直す。
+			await redis.lpush(sorted, ids[20]!);
+			const again = await sortAllFanoutTimelineLists(redis);
+			expect(again.completed).toBe(true);
+			expect(again.rewritten).toBeGreaterThanOrEqual(1);
+			expect(await redis.lrange(sorted, 0, -1)).toEqual([...ids.slice(0, 10), ids[20]]);
 		} finally {
 			await redis.del(unsorted, sorted, notList);
 			await redis.set('fanoutTimelineListsSorted', '1');

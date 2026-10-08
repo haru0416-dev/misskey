@@ -195,6 +195,8 @@ type ListCursor = {
 	size: number;
 	/** これより古い ID だけを候補にする。初期値は untilId、以後はこの list から読んだ最古の ID。 */
 	bound: string | null;
+	/** 前の回に読んだ範囲の最後の ID。次の回の先頭と比べ、回の境目の崩れも見つける。 */
+	lastRead: string | null;
 	buffer: string[];
 	offset: number;
 	exhausted: boolean;
@@ -206,9 +208,17 @@ type ListCursor = {
  * 続きは位置で読み、値 (bound) で絞る。読む間に list へ入るのは降順の位置への挿入と末尾の切り詰めだけなので、
  * 読んだ位置より前に入った ID の分だけ既読の ID が後ろへずれて再び読まれ (bound 以上なので捨てる)、未読の ID は
  * 読む位置より前へ動かない。bound より古い ID は既読の ID より後ろにしか入らない。したがって抜けも重複も出ない。
- * untilId より新しい部分は読み飛ばす。untilId はたいてい前のページの最後の ID で、その list にあれば最初の往復で
- * LPOS が位置を返すので、2 往復目でその次から読む。無い list (他の list から来た ID、切り詰め済み) では、
- * 読み飛ばしが続くたびに 1 回に読む件数を倍にして往復を log 回に抑える。
+ *
+ * 読んだ範囲は、回の境目も含めて降順であることを確かめ、崩れていれば UnsortedTimelineListError を投げる。
+ * 降順を保たない書き込み (旧版のプロセス) が並べ直しの後に混ざっても、読んだ範囲の崩れは必ず見つかる。
+ * 読む合間に読んだ位置より前へ 2 件以上入ると、再び読む既読の ID が境目で前の回の最後より新しくなり、崩れと
+ * 区別できないので同じく投げる。呼び出し側は全件読みでやり直すので結果は正しく、1 リクエストの往復の間に
+ * 同じ list へ 2 件以上入るときだけ起きる。
+ *
+ * untilId より新しい部分も読んで確かめる (位置だけ求めて読み飛ばすと、その間の崩れを見落とす)。untilId はたいてい
+ * 前のページの最後の ID で、その list にあれば最初の往復で LPOS が位置を返すので、2 往復目でそこまでまとめて
+ * 読む。無い list (他の list から来た ID、切り詰め済み) では、読み飛ばしが続くたびに 1 回に読む件数を倍にして
+ * 往復を log 回に抑える。
  * 位置を値の二分探索 (Valkey 側の Lua) で求める方式は往復が 1 回で済むが、Lua の呼び出しが Valkey の単一スレッドを
  * 1 回あたり約 50µs 占有し、アプリの CPU は変わらない。
  */
@@ -220,13 +230,14 @@ export class SortedTimelineListsReader implements TimelineIdSource {
 		private readonly redis: Redis.Redis,
 		names: string[],
 		untilId: string | null,
-		size: number,
+		private readonly size: number,
 	) {
 		this.cursors = names.map((name) => ({
 			key: 'list:' + name,
 			start: 0,
 			size,
 			bound: untilId,
+			lastRead: null,
 			buffer: [],
 			offset: 0,
 			exhausted: false,
@@ -263,11 +274,15 @@ export class SortedTimelineListsReader implements TimelineIdSource {
 			targets.forEach((c, i) => {
 				const ids = next() as string[];
 				const untilPosition = located[i] ? (next() as number | null) : null;
-				for (let j = 1; j < ids.length; j++) {
-					if (ids[j]! > ids[j - 1]!) {
+				// 同じ ID が続くのは、読む合間に 1 件入って既読の最後の ID を再び読んだときなので許す。
+				let previous = c.lastRead;
+				for (const id of ids) {
+					if (previous != null && id > previous) {
 						throw new UnsortedTimelineListError(c.key);
 					}
+					previous = id;
 				}
+				c.lastRead = previous;
 				c.start += ids.length;
 				c.exhausted = ids.length < c.size;
 				const bound = c.bound;
@@ -275,13 +290,11 @@ export class SortedTimelineListsReader implements TimelineIdSource {
 				c.offset = 0;
 				if (c.buffer.length > 0) {
 					c.bound = c.buffer[c.buffer.length - 1]!;
+					c.size = this.size;
 				} else if (!c.exhausted) {
-					if (untilPosition != null && untilPosition >= c.start) {
-						// 降順・重複なしなので、untilId の次の位置からが untilId より古い。
-						c.start = untilPosition + 1;
-					} else {
-						c.size *= 2;
-					}
+					// 降順・重複なしなので、untilId の次の位置からが untilId より古い。そこまでを次の回にまとめて読む。
+					c.size =
+						untilPosition != null && untilPosition >= c.start ? untilPosition + 1 - c.start + this.size : c.size * 2;
 				}
 			});
 		}
