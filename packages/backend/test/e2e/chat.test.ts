@@ -5,6 +5,7 @@
 
 import * as assert from 'node:assert';
 import { beforeAll, describe, expect, test } from 'vitest';
+import { openTestDatabase, updateUserInDatabase } from '../fixtures.js';
 import { api, castAsError, createAppToken, role, signup } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
@@ -291,7 +292,16 @@ describe('Chat', () => {
 	});
 
 	test('条件付きのモデレーターロールは、ユーザー本人の値で判定してからルームの閲覧・削除を許す', async () => {
-		// フォロワーが 1,000 人を超えるユーザーだけをモデレーターにする。carol (フォロワー 0) は該当しない。
+		// フォロワーが 1,000 人を超えるユーザーだけをモデレーターにする。carol (フォロワー 0) は該当せず、
+		// dave (フォロワー 1,001) は該当する。ルームの持ち主 alice はフォロワー 0 なので、持ち主など本人以外の
+		// 値で判定すると dave が拒まれ、条件を無視すると carol が通る。
+		const db = openTestDatabase();
+		const dave = await signup({ username: `chatmod${Date.now() % 100000}` });
+		try {
+			await updateUserInDatabase(db, dave.id, { followersCount: 1001 });
+		} finally {
+			await db.close();
+		}
 		const moderatorRole = await role(alice, {
 			isModerator: true,
 			target: 'conditional',
@@ -313,5 +323,12 @@ describe('Chat', () => {
 		expect(remove.status).toBe(400);
 		const show = await api('chat/rooms/show', { roomId: room.body.id }, alice);
 		expect(show.status).toBe(200);
+
+		const moderatorTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id, limit: 10 }, dave);
+		expect(moderatorTimeline.status).toBe(200);
+		const moderatorRemove = await api('chat/rooms/delete', { roomId: room.body.id }, dave);
+		expect(moderatorRemove.status).toBe(204);
+		const removed = await api('chat/rooms/show', { roomId: room.body.id }, alice);
+		expect(removed.status).toBe(400);
 	});
 });
