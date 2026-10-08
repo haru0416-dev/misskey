@@ -51,6 +51,8 @@ import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import { deserializeUser } from '@/core/user/user-store.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { estimateRows } from '@/db/estimate.js';
+import { parseId } from '@/misc/id/parse-id.js';
+import { uuidv7LowerBoundAt } from '@/misc/id/uuidv7.js';
 import { PER_NOTE_REACTION_USER_PAIR_CACHE_MAX } from '@/const.js';
 
 function deserializeNote(row: NoteRow): MiNote {
@@ -1330,25 +1332,60 @@ const TRIGRAM_RUN = /[\p{L}\p{N}]{3}/u;
 /** trigram の取れない検索が 1 ページで走査する投稿数。一致が無いときの 1 ページの走査時間を、この件数で抑える。 */
 const UNTRIGRAMMABLE_SEARCH_WINDOW = 100_000;
 
-/**
- * trigram の取れる語でも、一致件数の見積もりは統計の標本次第で大きく外れる。1 万件前後に一致する語を
- * 約 25 件と見積もると、一致全件のヒープ読みと結合・可視性判定の後に並べ替えるので遅い。先にこの件数 × 1 ページの件数だけ新しい順に読んで探し、1 ページ分そろえばそれを返す。
- */
-const DENSE_TERM_WINDOW_PER_RESULT = 500;
+/** trigram の取れる語の本文検索で、経路を分ける件数。テストは小さな値を渡して、少ない投稿で各経路を通す。 */
+export type NoteTextSearchTuning = {
+	/**
+	 * trigram の取れる語でも、一致件数の見積もりは統計の標本次第で大きく外れる。1 万件前後に一致する語を
+	 * 約 25 件と見積もると、一致全件のヒープ読みと結合・可視性判定の後に並べ替えるので遅い。先にこの件数 × 1 ページの件数だけ新しい順に読んで探し (窓)、1 ページ分そろえばそれを返す。
+	 */
+	windowPerResult: number;
+	/**
+	 * 窓でそろわなかった語の探し方を分ける、全体の一致件数の見積もり。窓を抜けた語は、主キーを逆に辿ると
+	 * 一致の位置次第で、trigram index で一致を集めて並べると一致の件数次第で費用が決まる。
+	 * - 一致が古い時期に固まった語: 逆に辿ると遅く、集めて並べると速い
+	 * - 全体では多いが直近の投稿に無い語: 逆に辿ると速く、集めて並べると遅い
+	 * 見積もりは多い語ではよく合い、少ない語では外れるが、少ない語はどちらにしても集めて並べる側なので
+	 * 判断を変えない。この件数までなら並べる費用は小さく収まる。この件数以上の語は、窓の外を範囲に区切って探す。
+	 */
+	denseTermEstimatedMatches: number;
+	/**
+	 * 窓の外を区切る最初の範囲の時間幅の下限 (ms)。窓の投稿が同じ時刻に集中していても、範囲の数が
+	 * 表の時間幅の対数で収まるようにする。
+	 */
+	minimumRangeSpanMs: number;
+};
 
-/**
- * 窓でそろわなかった語の探し方を分ける、全体の一致件数の見積もり。窓を抜けた語は、主キーを逆に辿ると
- * 一致の位置次第で、trigram index で一致を集めて並べると一致の件数次第で費用が決まる。
- * - 一致が古い時期に固まった語: 逆に辿ると遅く、集めて並べると速い
- * - 全体では多いが直近の投稿に無い語: 逆に辿ると速く、集めて並べると遅い
- * 見積もりは多い語ではよく合い、少ない語では外れるが、少ない語はどちらにしても集めて並べる側なので
- * 判断を変えない。この件数までなら並べる費用は小さく収まる。
- */
-const DENSE_TERM_ESTIMATED_MATCHES = 50_000;
+export const defaultNoteTextSearchTuning: NoteTextSearchTuning = {
+	windowPerResult: 500,
+	denseTermEstimatedMatches: 50_000,
+	minimumRangeSpanMs: 60_000,
+};
 
 /** 本文の LIKE に一致する投稿数のプランナーの見積もり。 */
 async function estimateNoteTextMatches(db: MiDrizzleDatabase, pattern: string): Promise<number> {
 	return await estimateRows(db, sql`SELECT 1 FROM "note" WHERE LOWER("note"."text") LIKE ${pattern}`);
+}
+
+type NoteSearchBoundsOptions = {
+	sinceId?: MiNote['id'] | null;
+	untilId?: MiNote['id'] | null;
+	rangeStartId?: MiNote['id'] | null;
+	rangeEndId?: MiNote['id'] | null;
+};
+
+/** ページの起点と、検索の期間指定 (rangeStartId / rangeEndId) で決まる id の範囲。 */
+function noteSearchBounds(options: NoteSearchBoundsOptions): SQL[] {
+	const bounds = [notePaginationCondition(options)];
+	if (options.rangeStartId) bounds.push(sql`"note"."id" > ${options.rangeStartId}`);
+	if (options.rangeEndId) bounds.push(sql`"note"."id" < ${options.rangeEndId}`);
+	return bounds;
+}
+
+function joinConditions(conditions: SQL[]): SQL {
+	return sql.join(
+		conditions.map((condition) => sql`(${condition})`),
+		sql` AND `,
+	);
 }
 
 /**
@@ -1356,19 +1393,8 @@ async function estimateNoteTextMatches(db: MiDrizzleDatabase, pattern: string): 
  * 先に数えると一致の多い語でも毎回窓全体を読むため、外側の LIMIT で読み取りを止められる並び順付きの
  * 副問い合わせにする。
  */
-function noteSearchWindow(
-	options: {
-		sinceId?: MiNote['id'] | null;
-		untilId?: MiNote['id'] | null;
-		rangeStartId?: MiNote['id'] | null;
-		rangeEndId?: MiNote['id'] | null;
-	},
-	size: number,
-): SQL {
-	const bounds = [notePaginationCondition(options)];
-	if (options.rangeStartId) bounds.push(sql`"id" > ${options.rangeStartId}`);
-	if (options.rangeEndId) bounds.push(sql`"id" < ${options.rangeEndId}`);
-	return sql`(SELECT * FROM "note" WHERE ${sql.join(bounds, sql` AND `)} ORDER BY "id" ${notePaginationOrder(options)} LIMIT ${size})`;
+function noteSearchWindow(options: NoteSearchBoundsOptions, size: number): SQL {
+	return sql`(SELECT * FROM "note" WHERE ${sql.join(noteSearchBounds(options), sql` AND `)} ORDER BY "note"."id" ${notePaginationOrder(options)} LIMIT ${size})`;
 }
 
 export async function searchNotesByTextFromDatabase(
@@ -1395,12 +1421,15 @@ export async function searchNotesByTextFromDatabase(
 		withCw?: boolean | null;
 		visibility?: MiNote['visibility'] | null;
 	},
+	tuning: NoteTextSearchTuning = defaultNoteTextSearchTuning,
 ): Promise<MiNote[]> {
 	const conditions: SQL[] = [
 		notePaginationCondition(options),
 		noteVisibilityCondition(options.me),
 		baseNoteFilteringCondition(options.me, options.blockedHosts),
 	];
+	// 投稿の行だけで判定できる条件。一致の id を先に集める問い合わせにも同じものを載せ、集める件数を減らす。
+	const noteRowConditions: SQL[] = [];
 
 	if (options.userId) {
 		conditions.push(sql`"note"."userId" = ${options.userId}`);
@@ -1409,19 +1438,18 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	let source = sql`"note"`;
-	let denseTermWindow: SQL | undefined;
+	let denseTermWindowSize: number | undefined;
 	let textPattern: string | undefined;
 	if (options.usePgroonga) {
 		conditions.push(sql`"note"."text" &@~ ${options.query}`);
 	} else {
 		if (options.useTextIndex && TRIGRAM_RUN.test(options.query)) {
 			textPattern = `%${sqlLikeEscape(options.query.toLowerCase())}%`;
-			conditions.push(sql`LOWER("note"."text") LIKE ${textPattern}`);
+			const textCondition = sql`LOWER("note"."text") LIKE ${textPattern}`;
+			conditions.push(textCondition);
+			noteRowConditions.push(textCondition);
 			if (options.userId == null && options.channelId == null) {
-				denseTermWindow = noteSearchWindow(
-					options,
-					Math.min(options.limit * DENSE_TERM_WINDOW_PER_RESULT, UNTRIGRAMMABLE_SEARCH_WINDOW),
-				);
+				denseTermWindowSize = Math.min(options.limit * tuning.windowPerResult, UNTRIGRAMMABLE_SEARCH_WINDOW);
 			}
 		} else {
 			// index が使えない (trigram の取れない語か、index を持たない設定) ときは、1 ページで読む件数を区切る。
@@ -1434,11 +1462,16 @@ export async function searchNotesByTextFromDatabase(
 		}
 	}
 
+	const pushNoteRowCondition = (condition: SQL) => {
+		conditions.push(condition);
+		noteRowConditions.push(condition);
+	};
+
 	if (options.host) {
 		if (options.host === '.') {
-			conditions.push(sql`"note"."userHost" IS NULL`);
+			pushNoteRowCondition(sql`"note"."userHost" IS NULL`);
 		} else {
-			conditions.push(sql`"note"."userHost" = ${options.host}`);
+			pushNoteRowCondition(sql`"note"."userHost" = ${options.host}`);
 		}
 	}
 
@@ -1451,7 +1484,7 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	if (options.withFiles != null) {
-		conditions.push(
+		pushNoteRowCondition(
 			// fileIds != '{}' は並列 Seq Scan になるため、cardinality で判定する。
 			options.withFiles ? sql`cardinality("note"."fileIds") > 0` : sql`cardinality("note"."fileIds") = 0`,
 		);
@@ -1468,34 +1501,186 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	if (options.withReplies != null) {
-		conditions.push(options.withReplies ? sql`"note"."replyId" IS NOT NULL` : sql`"note"."replyId" IS NULL`);
+		pushNoteRowCondition(options.withReplies ? sql`"note"."replyId" IS NOT NULL` : sql`"note"."replyId" IS NULL`);
 	}
 
 	const isQuote = quoteCondition('note');
 	if (options.withQuotes != null) {
-		conditions.push(options.withQuotes ? isQuote : sql`NOT (${isQuote})`);
+		pushNoteRowCondition(options.withQuotes ? isQuote : sql`NOT (${isQuote})`);
 	}
 
 	if (options.withCw != null) {
-		conditions.push(options.withCw ? sql`"note"."cw" IS NOT NULL` : sql`"note"."cw" IS NULL`);
+		pushNoteRowCondition(options.withCw ? sql`"note"."cw" IS NOT NULL` : sql`"note"."cw" IS NULL`);
 	}
 
 	if (options.visibility != null) {
-		conditions.push(sql`"note"."visibility" = ${options.visibility}`);
+		pushNoteRowCondition(sql`"note"."visibility" = ${options.visibility}`);
 	}
 
-	if (denseTermWindow != null) {
-		// 窓の中で 1 ページ分そろえば、それが起点から最新の一致そのもの。
-		const recent = await executeTimelineNoteQuery(db, conditions, options, denseTermWindow);
-		if (recent.length >= options.limit) return recent;
-		// 見積もりが少ない語は、並び順を index で出せない式にして trigram index で一致を集めてから並べる。
-		// 主キーで出せる形のままだと、プランナーは一致を全体に均等と見て逆に辿り、一致が古い時期に固まった語で
-		// 大量の行を読み捨てる。並べる値は同じ文字列なので順序は変わらない。
-		if (textPattern != null && (await estimateNoteTextMatches(db, textPattern)) < DENSE_TERM_ESTIMATED_MATCHES) {
-			return await executeTimelineNoteQuery(db, conditions, options, source, { sortWithoutIdIndex: true });
-		}
+	if (denseTermWindowSize == null || textPattern == null) {
+		return await executeTimelineNoteQuery(db, conditions, options, source);
 	}
-	return await executeTimelineNoteQuery(db, conditions, options, source);
+
+	const matchConditions = [...noteSearchBounds(options), ...noteRowConditions];
+
+	// 窓の中で 1 ページ分そろえば、それが起点から最新の一致そのもの。
+	const recent = await executeTimelineNoteQuery(
+		db,
+		conditions,
+		options,
+		noteSearchWindow(options, denseTermWindowSize),
+	);
+	if (recent.length >= options.limit) return recent;
+	// 見積もりが少ない語は、並び順を index で出せない式にして trigram index で一致を集めてから並べる。
+	// 主キーで出せる形のままだと、プランナーは一致を全体に均等と見て逆に辿り、一致が古い時期に固まった語で
+	// 大量の行を読み捨てる。並べる値は同じ文字列なので順序は変わらない。
+	if ((await estimateNoteTextMatches(db, textPattern)) < tuning.denseTermEstimatedMatches) {
+		return await executeTimelineNoteQuery(db, conditions, options, source, { sortWithoutIdIndex: true });
+	}
+	const ranged = await searchDenseTermBeyondWindow(db, conditions, matchConditions, options, {
+		windowSize: denseTermWindowSize,
+		recent,
+		minimumSpanMs: tuning.minimumRangeSpanMs,
+	});
+	return ranged ?? (await executeTimelineNoteQuery(db, conditions, options, source));
+}
+
+/**
+ * 範囲の一致の id を一度に集める上限。範囲の一致は件数によらず全て読んでから並べるので、上限に届いて同じ範囲を
+ * 続けて引くと、trigram index の bitmap (一致の多い語では約 10 万件で 10ms 前後) を作り直す。
+ */
+const RANGE_MATCH_BATCH = 1_000;
+
+/**
+ * 範囲の時間幅を広げる倍率。範囲ごとに trigram index の bitmap を作り直す費用 (一致の多い語で 10ms 前後) と、
+ * 最後の範囲で必要より古い一致まで読む量の釣り合いで決める。
+ */
+const RANGE_GROWTH = 4;
+
+/**
+ * 窓でそろわなかった一致の多い語を、窓の外を古い側へ RANGE_GROWTH 倍ずつ広げた id の範囲ごとに探す。
+ * 主キーを逆に辿ると、一致の無い直近の投稿まで 1 行ずつヒープを読む。範囲ごとに trigram index と主キーの
+ * bitmap を重ねると、範囲内で一致を含むページだけを読む。範囲は新しい側から順に重ならずに並ぶので、
+ * 範囲ごとに新しい順でそろえた結果をつなげると、全体を新しい順に並べたものと同じになる。
+ * 古い側から進むページ (sinceId だけの指定) は扱わず null を返す。
+ */
+async function searchDenseTermBeyondWindow(
+	db: MiDrizzleDatabase,
+	conditions: SQL[],
+	matchConditions: SQL[],
+	options: NoteSearchBoundsOptions & { limit: number },
+	{ windowSize, recent, minimumSpanMs }: { windowSize: number; recent: MiNote[]; minimumSpanMs: number },
+): Promise<MiNote[] | null> {
+	if (options.sinceId && !options.untilId) return null;
+
+	const bounds = joinConditions(noteSearchBounds(options));
+	const window = (
+		await db.execute<{
+			count: number;
+			newest: MiNote['id'] | null;
+			oldest: MiNote['id'] | null;
+			floor: MiNote['id'] | null;
+		}>(sql`
+			SELECT count(*)::int AS "count", max("id") AS "newest", min("id") AS "oldest",
+				(SELECT "note"."id" FROM "note" WHERE ${bounds} ORDER BY "note"."id" ASC LIMIT 1) AS "floor"
+			FROM (SELECT "note"."id" FROM "note" WHERE ${bounds} ORDER BY "note"."id" DESC LIMIT ${windowSize}) AS "scanned"
+		`)
+	).rows[0];
+	// 窓が範囲の投稿を読み切っていれば、窓の一致が全て。
+	if (window?.newest == null || window.oldest == null || window.floor == null || window.count < windowSize) {
+		return recent;
+	}
+
+	// 窓の後に投稿が増えると、数え直した窓の下端は新しい側へずれる。窓で見つけた一致を二度数えないよう、
+	// それより古い側だけを探す。
+	const lastRecentId = recent.at(-1)?.id;
+	let upper = lastRecentId != null && lastRecentId < window.oldest ? lastRecentId : window.oldest;
+	if (window.floor >= upper) return recent;
+	const floorTime = parseId(window.floor).date.getTime();
+	let upperTime = parseId(upper).date.getTime();
+	const windowSpan = parseId(window.newest).date.getTime() - parseId(window.oldest).date.getTime();
+	// 範囲は id の先頭の時刻で区切る。時刻を読めない id があれば、範囲に区切らない。
+	if (!Number.isFinite(floorTime) || !Number.isFinite(upperTime) || !Number.isFinite(windowSpan)) return null;
+	// 窓の中の一致は 1 ページに足りなかったので、窓と同じ幅の範囲も一致が少ないことが多い。最初の範囲を窓の
+	// RANGE_GROWTH 倍にして、範囲ごとに trigram index の bitmap を作り直す回数を減らす。
+	let span = Math.max(windowSpan * RANGE_GROWTH, minimumSpanMs);
+
+	const results = [...recent];
+	// 主キーの逆走査と全表走査を禁じ、trigram index と主キーの範囲の bitmap から読ませる。プランナーは一致が
+	// 表全体に均等にあると見積もるので、許すと直近に一致の無い語でも範囲の行を全て読む計画を選ぶ。
+	// 設定はこのトランザクションの中だけで効く。集めた id から 1 ページを作る問い合わせは、結合と可視性の
+	// 判定に主キーの index を使うので、その前に戻す (別の接続で流すと、プールが 1 本のとき待ち合わせになる)。
+	const bitmapScansOnly = (tx: MiDrizzleDatabase, on: boolean) =>
+		tx.execute(
+			on
+				? sql`SELECT set_config('enable_indexscan', 'off', true), set_config('enable_indexonlyscan', 'off', true), set_config('enable_seqscan', 'off', true)`
+				: sql`SELECT set_config('enable_indexscan', 'on', true), set_config('enable_indexonlyscan', 'on', true), set_config('enable_seqscan', 'on', true)`,
+		);
+	return await db.transaction(async (tx) => {
+		const need = () => options.limit - results.length;
+		// 集めた一致の id。新しい順に並ぶ。1 ページ分以上たまるか探し終えたら、先頭から可視性などを判定して results へ移す。
+		const pending: MiNote['id'][] = [];
+		// 一度に判定する件数は残りの件数のこの倍。ミュートや可視性で落ちる一致が多いと増やす。
+		let factor = 4;
+		const settle = async () => {
+			if (pending.length === 0) return;
+			await bitmapScansOnly(tx, false);
+			while (pending.length > 0 && need() > 0) {
+				const requested = need();
+				const batch = pending.splice(0, requested * factor);
+				const found = await executeTimelineNoteQuery(tx, [...conditions, sql`"note"."id" = ANY(${sql.param(batch)})`], {
+					...options,
+					limit: requested,
+				});
+				if (found.length < requested) factor *= 4;
+				results.push(...found);
+			}
+			await bitmapScansOnly(tx, true);
+		};
+		await bitmapScansOnly(tx, true);
+		for (;;) {
+			const lowerTime = upperTime - span;
+			const lower = lowerTime > floorTime ? uuidv7LowerBoundAt(lowerTime) : null;
+			let rangeUpper = upper;
+			for (;;) {
+				const ids = await listTextMatchIdsInRange(tx, matchConditions, rangeUpper, lower, RANGE_MATCH_BATCH);
+				pending.push(...ids);
+				if (pending.length >= need()) {
+					await settle();
+					if (results.length >= options.limit) return results;
+				}
+				// 範囲の一致を集めきった。届いたときは、集めた最後の id から同じ範囲を続ける。
+				if (ids.length < RANGE_MATCH_BATCH) break;
+				rangeUpper = ids.at(-1)!;
+			}
+			if (lower == null) {
+				await settle();
+				return results;
+			}
+			upper = lower;
+			upperTime = lowerTime;
+			span *= RANGE_GROWTH;
+		}
+	});
+}
+
+/** [lower, upper) の範囲で本文が一致する投稿の id を新しい順に limit 件。 */
+async function listTextMatchIdsInRange(
+	db: MiDrizzleDatabase,
+	matchConditions: SQL[],
+	upper: MiNote['id'],
+	lower: MiNote['id'] | null,
+	limit: number,
+): Promise<MiNote['id'][]> {
+	const range = [sql`"note"."id" < ${upper}`];
+	if (lower != null) range.push(sql`"note"."id" >= ${lower}`);
+	const result = await db.execute<{ id: MiNote['id'] }>(sql`
+		SELECT "note"."id" FROM "note"
+		WHERE ${joinConditions([...matchConditions, ...range])}
+		ORDER BY "note"."id" DESC
+		LIMIT ${limit}
+	`);
+	return result.rows.map((row) => row.id);
 }
 
 /**

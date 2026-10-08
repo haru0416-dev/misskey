@@ -37,6 +37,14 @@ export function genUuidv7(t: number): string {
 	return time + verAndRandA + randB.toString('hex');
 }
 
+/**
+ * 時刻 t (unix ミリ秒) 以降に生成した ID のどれよりも小さく、t より前の ID のどれよりも大きい文字列。
+ * ID の範囲を時刻で区切るときの境界に使い、ID としては保存しない。
+ */
+export function uuidv7LowerBoundAt(t: number): string {
+	return Math.max(0, Math.floor(t)).toString(16).padStart(TIME_LENGTH, '0').slice(-TIME_LENGTH).padEnd(32, '0');
+}
+
 export function parseUuidv7(id: string): { date: Date } {
 	return { date: new Date(Number.parseInt(id.slice(0, TIME_LENGTH), 16)) };
 }
