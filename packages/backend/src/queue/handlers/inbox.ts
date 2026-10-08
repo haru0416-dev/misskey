@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { toPuny } from '@/misc/to-puny.js';
 import { verifyRequestSignature } from '@/core/activitypub/http-signature.js';
 import * as Bull from 'bullmq';
 import { createJsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
@@ -229,7 +228,8 @@ async function verifyAndResolveAuthUser(
 }
 
 export async function handleQueueInbox(deps: QueueInboxDependencies, data: InboxJobData): Promise<string> {
-	const host = toPuny(new URL(data.signature.keyId).hostname);
+	// 一覧の照合はポート付きの項目 (許可リストの `host:port`) も扱うので、ポート込みのホストで判定する。
+	const host = extractDbHost(data.signature.keyId);
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
 		return `Blocked request: ${host}`;
 	}

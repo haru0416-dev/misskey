@@ -910,7 +910,7 @@ async function webfinger(
 	let url: string;
 	if (webfingerUrlRegex.test(query)) {
 		const u = new URL(query);
-		url = `${u.protocol}//${u.hostname}/.well-known/webfinger?${urlQuery({ resource: query })}`;
+		url = `${u.protocol}//${u.host}/.well-known/webfinger?${urlQuery({ resource: query })}`;
 	} else {
 		const m = query.match(webfingerAcctRegex);
 		if (!m) {
@@ -988,8 +988,8 @@ export async function resolveUser(
 
 		if (user.uri !== self.href) {
 			// WebFinger の応答が変わった場合は acct と Person ID の対応を更新する。
-			const uri = new URL(self.href);
-			if (uri.hostname !== punyHost) {
+			// DB のホストはポートを含むので、URL 側もポート込みの同じ形で比べる。
+			if (punyHostOfUrl(self.href) !== punyHost) {
 				throw new Error('Invalid uri');
 			}
 

@@ -238,6 +238,28 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		}
 	});
 
+	test('連合を許可する一覧のポート付きの項目は、keyId のポートまで含めて照合する', async () => {
+		const host = `hono-queue-inbox-ported-${genId()}.example.com`;
+		const { data } = await createSignedInboxPayload(host);
+		data.signature.keyId = `https://${host}:8443/users/someone#main-key`;
+
+		const originalFederation = runtime.meta.federation;
+		const originalFederationHosts = runtime.meta.federationHosts;
+		runtime.meta.federation = 'specified';
+		try {
+			// 許可された後の検証 (鍵の照合など) の結果は問わない。連合の判定で止まらないことだけを見る。
+			runtime.meta.federationHosts = [`${host}:8443`];
+			const allowed = await handleQueueInbox(deps, data).catch((error: unknown) => String(error));
+			expect(allowed).not.toContain('Blocked request');
+
+			runtime.meta.federationHosts = [`${host}:9443`];
+			expect(await handleQueueInbox(deps, data)).toContain('Blocked request');
+		} finally {
+			runtime.meta.federation = originalFederation;
+			runtime.meta.federationHosts = originalFederationHosts;
+		}
+	});
+
 	test('acct:形式の古いkeyIdはサポート対象外としてスキップされる', async () => {
 		const host = `hono-queue-inbox-oldkeyid-${genId()}.example.com`;
 		const { data } = await createSignedInboxPayload(host);
