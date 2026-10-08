@@ -10,8 +10,9 @@ import { splitHostPort, toPuny } from '@/misc/to-puny.js';
  * 管理者が設定するホストの一覧 (blockedHosts・silencedHosts・mediaSilencedHosts・federationHosts・
  * bannedEmailDomains) との照合。
  *
- * 照合するホストは DB の形 (`toPuny` 済みの `ホスト名[:ポート]`)。一覧の項目は保存時に正規化されて
- * いないものがあるので (大小・IDN・ポート)、`toPuny` を通して読む。
+ * 照合するホストは DB の形 (`toPuny` 済みの `ホスト名[:ポート]`)。一覧の項目は `normalizeHostListEntry` で
+ * 読む。保存時にも同じ関数で正規化するが、それ以前に保存された項目が残っているため照合時にも通す。
+ * ホストとして読めない項目は照合から除く。
  *
  * - 拒否側 (ブロック・サイレンス) は、ホスト名が項目かその下位ドメインならポートに関係なく該当する。
  *   同じホスト名の別ポートは同じ DNS の持ち主が立てたサーバーで、ポートを変えるだけで回避できては
@@ -31,6 +32,24 @@ function parseHost(host: string): HostListEntry | null {
 	return parts;
 }
 
+/**
+ * 一覧の項目をホストの形 (`toPuny` 済みの `ホスト名[:ポート]`) にする。`https://host/path` のような URL は
+ * ホスト部分を取る。ホストとして読めなければ null。
+ */
+export function normalizeHostListEntry(value: string): string | null {
+	const trimmed = value.trim();
+	let host = trimmed;
+	if (trimmed.includes('://')) {
+		try {
+			host = new URL(trimmed).host;
+		} catch {
+			return null;
+		}
+	}
+	const normalized = toPuny(host);
+	return normalized === '' ? null : normalized;
+}
+
 // meta の一覧は更新のたびに新しい配列に置き換わる (Object.assign)。配列をその場で書き換えない前提で、
 // 配列ごとに正規化した項目を使い回す。タイムラインではノートごと・関係ユーザーごとに照合するため。
 const compiledLists = new WeakMap<readonly string[], readonly HostListEntry[]>();
@@ -39,7 +58,8 @@ function compileHostList(list: readonly string[]): readonly HostListEntry[] {
 	let entries = compiledLists.get(list);
 	if (entries == null) {
 		entries = list.flatMap((item) => {
-			const entry = parseHost(toPuny(item.trim()));
+			const normalized = normalizeHostListEntry(item);
+			const entry = normalized == null ? null : parseHost(normalized);
 			return entry == null ? [] : [entry];
 		});
 		compiledLists.set(list, entries);

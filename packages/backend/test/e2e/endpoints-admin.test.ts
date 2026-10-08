@@ -198,6 +198,17 @@ describe('Endpoints', () => {
 			expect((res.body.policies as { canPublicNote?: boolean }).canPublicNote).toBe(true);
 		});
 
+		test('admin/update-meta はホストとして読めない項目を含むホストの一覧を拒否する', async () => {
+			const before = await fetchMetaFromDatabase(db);
+			for (const field of ['blockedHosts', 'silencedHosts', 'mediaSilencedHosts', 'federationHosts'] as const) {
+				const res = await api('admin/update-meta', { [field]: ['valid.example', 'a b.example'] }, alice);
+				expect(res.status, field).toBe(400);
+			}
+			const after = await fetchMetaFromDatabase(db);
+			expect(after.blockedHosts).toStrictEqual(before.blockedHosts);
+			expect(after.federationHosts).toStrictEqual(before.federationHosts);
+		});
+
 		test('admin/update-meta は設定変換とログを維持する', async () => {
 			const before = await fetchMetaFromDatabase(db);
 			const now = Date.now().toString(36);
@@ -217,7 +228,7 @@ describe('Endpoints', () => {
 						libreTranslateApiKey: 'test-key',
 						pinnedUsers: ['@alice', ''],
 						hiddenTags: [`hono-meta-${now}`, ''],
-						blockedHosts: ['Blocked.Example', ''],
+						blockedHosts: ['Blocked.Example', '', ' https://Url.Example/users/someone '],
 						silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
 						mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
 						langs: ['ja-JP', ''],
@@ -250,9 +261,10 @@ describe('Endpoints', () => {
 				expect(after.libreTranslateApiKey).toBe('test-key');
 				expect(after.pinnedUsers).toStrictEqual(['@alice']);
 				expect(after.hiddenTags).toStrictEqual([`hono-meta-${now}`]);
-				expect(after.blockedHosts).toStrictEqual(['blocked.example']);
-				expect(after.silencedHosts).toStrictEqual(['Blocked.Example', 'aaa.example', 'zzz.example']);
-				expect(after.mediaSilencedHosts).toStrictEqual(['Blocked.Example', 'media.example']);
+				// ホストの一覧は照合と同じ形で保存し、ブロック済みのホストはサイレンスの一覧から除く。
+				expect(after.blockedHosts).toStrictEqual(['blocked.example', 'url.example']);
+				expect(after.silencedHosts).toStrictEqual(['aaa.example', 'zzz.example']);
+				expect(after.mediaSilencedHosts).toStrictEqual(['media.example']);
 				expect(after.langs).toStrictEqual(['ja-JP']);
 				expect(after.capSiteKey).toBe(`cap-${now}`);
 				expect(after.googleAnalyticsMeasurementId).toBeNull();

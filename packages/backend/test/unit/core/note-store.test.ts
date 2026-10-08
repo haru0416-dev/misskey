@@ -297,6 +297,47 @@ describe('NoteStore blocked hosts', () => {
 		await runtime.dispose();
 	});
 
+	test('ホストとして読めない項目だけのブロック一覧でも、タイムラインの取得が失敗しない', async () => {
+		// 一致させる項目が 1 つも無いとき、空の配列を SQL に渡すと PostgreSQL が型を決められずに失敗する。
+		const blockedHosts = ['https://evil.example', ' ', 'a b.example'];
+		const id = genId();
+		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id, username: `invalidblocked${id}`, usernameLower: `invalidblocked${id}` },
+			profile: { userId: id },
+		});
+		const noteId = genId();
+		await createNoteInDatabase(runtime.db, {
+			id: noteId,
+			userId: user.id,
+			userHost: null,
+			visibility: 'public',
+			text: 'x',
+		});
+
+		const userTimeline = await listUserTimelineNotesFromDatabase(runtime.db, {
+			userId: user.id,
+			limit: 20,
+			withChannelNotes: false,
+			withFiles: false,
+			withRenotes: true,
+			withReplies: true,
+			me: null,
+			blockedHosts,
+			mutingChannelIds: [],
+		});
+		expect(userTimeline.map((note) => note.id)).toEqual([noteId]);
+
+		const globalTimeline = await listGlobalTimelineNotesFromDatabase(runtime.db, {
+			limit: 100,
+			sinceId: id,
+			withFiles: false,
+			withRenotes: true,
+			me: null,
+			blockedHosts,
+		});
+		expect(globalTimeline.map((note) => note.id)).toContain(noteId);
+	});
+
 	test('ブロックしたホスト名のノートと、そのノートへの返信は、ポートや下位ドメインが違っても除く', async () => {
 		const blockedHost = `blocked-${genId()}.example`;
 		const sinceId = genId();

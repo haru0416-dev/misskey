@@ -4,7 +4,13 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { denyListLikePatterns, isHostInAllowList, isHostInDenyList, isHostInExactDenyList } from '@/misc/host-list.js';
+import {
+	denyListLikePatterns,
+	isHostInAllowList,
+	isHostInDenyList,
+	isHostInExactDenyList,
+	normalizeHostListEntry,
+} from '@/misc/host-list.js';
 
 describe('misc:host-list', () => {
 	test('拒否側はホスト名と下位ドメインで照合し、ポートに関係なく該当する', () => {
@@ -41,6 +47,19 @@ describe('misc:host-list', () => {
 		expect(isHostInAllowList(['friend.example:8443'], 'friend.example:9443')).toBe(false);
 		expect(isHostInAllowList(['friend.example:8443'], 'friend.example')).toBe(false);
 		expect(isHostInAllowList(['friend.example'], 'stranger.example:8443')).toBe(false);
+	});
+
+	test('項目は URL ならホスト部分を取り、ホストとして読めなければ null にする', () => {
+		expect(normalizeHostListEntry(' https://Evil.Example:8443/users/x ')).toBe('evil.example:8443');
+		expect(normalizeHostListEntry('Evil.Example')).toBe('evil.example');
+		expect(normalizeHostListEntry('a b.example')).toBeNull();
+		expect(normalizeHostListEntry('https://')).toBeNull();
+		expect(normalizeHostListEntry(' ')).toBeNull();
+	});
+
+	test('読めない項目は照合から除き、URL の形の項目はホストとして照合する', () => {
+		expect(denyListLikePatterns(['https://', ' ', 'a b.example'])).toEqual([]);
+		expect(isHostInDenyList(['https://evil.example/users/x'], 'evil.example:8443')).toBe(true);
 	});
 
 	test('SQL のパターンはポート付きのホストにも一致し、LIKE の記号はそのまま照合する', () => {

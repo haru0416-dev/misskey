@@ -121,11 +121,12 @@ function noteVisibilityCondition(me: { id: MiUser['id'] } | null, alias = 'note'
 }
 
 function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
-	if (blockedHosts.length === 0) {
+	// ホストとして読めない項目は除かれるので、一覧が空でなくてもパターンが空になりうる。空の ARRAY[] は
+	// PostgreSQL が型を決められずに失敗するため、パターンの数で判定する。
+	const patterns = denyListLikePatterns(blockedHosts);
+	if (patterns.length === 0) {
 		return sql`TRUE`;
 	}
-
-	const patterns = denyListLikePatterns(blockedHosts);
 	return sql`(
 		${noteColumn(alias, 'userId')} IS NULL
 		OR ${noteColumn(alias, 'userHost')} IS NULL
@@ -141,11 +142,10 @@ function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
  * 返信・リノート先の行を追加取得しない。fanout-timeline.ts も同じ列で判定する。
  */
 function blockedRelatedHostCondition(idColumn: keyof NoteRow, hostColumn: keyof NoteRow, blockedHosts: string[]): SQL {
-	if (blockedHosts.length === 0) {
+	const patterns = denyListLikePatterns(blockedHosts);
+	if (patterns.length === 0) {
 		return sql`TRUE`;
 	}
-
-	const patterns = denyListLikePatterns(blockedHosts);
 	return sql`(
 		${noteColumn('note', idColumn)} IS NULL
 		OR ${noteColumn('note', hostColumn)} IS NULL
@@ -248,11 +248,10 @@ function noteHostAndSuspensionFilteringCondition(blockedHosts: string[]): SQL {
 }
 
 function blockedHostConditionExcludeAuthor(blockedHosts: string[]): SQL {
-	if (blockedHosts.length === 0) {
+	const patterns = denyListLikePatterns(blockedHosts);
+	if (patterns.length === 0) {
 		return sql`TRUE`;
 	}
-
-	const patterns = denyListLikePatterns(blockedHosts);
 	const nonBlockedHost = (column: SQL): SQL =>
 		sql`${column} NOT ILIKE ALL(ARRAY[${sql.join(
 			patterns.map((pattern) => sql`${pattern}`),

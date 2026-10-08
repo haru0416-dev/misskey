@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { isSupportedKeywordFilter } from '@/misc/is-keyword-included.js';
+import { normalizeHostListEntry } from '@/misc/host-list.js';
 import type { MiMeta } from '@/models/Meta.js';
 
 // 正規表現の形の項目は RE2 で扱えるものに限る (後方参照・先読みは照合時に使えない)。
@@ -18,13 +19,20 @@ const keywordFilterList = z
 	.nullable()
 	.optional();
 
+// ホストとして読めない項目は、照合で無視されて設定が効かないまま保存されるので受け付けない。空行は保存時に除く。
+const hostList = z.array(
+	z.string().refine((value) => value.trim() === '' || normalizeHostListEntry(value) != null, {
+		message: 'Each item must be a host name, optionally with a port.',
+	}),
+);
+
 export const adminUpdateMetaParamDef = z.object({
 	disableRegistration: z.boolean().nullable().optional(),
 	signupRateLimitMinIntervalSeconds: z.int().min(0).max(86_400).optional(),
 	signupRateLimitMaxPerHour: z.int().min(0).max(100_000).optional(),
 	pinnedUsers: z.array(z.string()).nullable().optional(),
 	hiddenTags: z.array(z.string()).nullable().optional(),
-	blockedHosts: z.array(z.string()).nullable().optional(),
+	blockedHosts: hostList.nullable().optional(),
 	sensitiveWords: keywordFilterList,
 	prohibitedWords: keywordFilterList,
 	prohibitedWordsForNameOfUser: keywordFilterList,
@@ -144,8 +152,8 @@ export const adminUpdateMetaParamDef = z.object({
 	perUserHomeTimelineCacheMax: z.int().optional(),
 	perUserListTimelineCacheMax: z.int().optional(),
 	notesPerOneAd: z.int().optional(),
-	silencedHosts: z.array(z.string()).nullable().optional(),
-	mediaSilencedHosts: z.array(z.string()).nullable().optional(),
+	silencedHosts: hostList.nullable().optional(),
+	mediaSilencedHosts: hostList.nullable().optional(),
 	urlPreviewEnabled: z.boolean().optional(),
 	urlPreviewAllowRedirect: z.boolean().optional(),
 	urlPreviewTimeout: z.int().optional(),
@@ -155,7 +163,7 @@ export const adminUpdateMetaParamDef = z.object({
 	urlPreviewSummaryProxyUrl: z.string().nullable().optional(),
 	urlPreviewSensitiveList: keywordFilterList,
 	federation: z.enum(['all', 'none', 'specified']).optional(),
-	federationHosts: z.array(z.string()).optional(),
+	federationHosts: hostList.optional(),
 	deliverSuspendedSoftware: z
 		.array(
 			z.object({
@@ -302,17 +310,23 @@ function filterTruthyStrings(values: string[]): string[] {
 	return values.filter(Boolean);
 }
 
+// 照合と同じ形 (`normalizeHostListEntry`) で保存する。読めない項目は paramDef で拒否済み。
 function normalizeHostList(values: string[]): string[] {
-	return values.filter(Boolean).map((x) => x.toLowerCase());
+	return values.flatMap((value) => {
+		const normalized = normalizeHostListEntry(value);
+		return normalized == null ? [] : [normalized];
+	});
 }
 
 function normalizeSilencedHosts(values: string[], blockedHosts: string[] | undefined): string[] {
 	let lastValue = '';
-	return [...values].sort().filter((h) => {
-		const lv = lastValue;
-		lastValue = h;
-		return h !== '' && h !== lv && !blockedHosts?.includes(h);
-	});
+	return normalizeHostList(values)
+		.sort()
+		.filter((h) => {
+			const lv = lastValue;
+			lastValue = h;
+			return h !== '' && h !== lv && !blockedHosts?.includes(h);
+		});
 }
 
 function emptyStringToNull(value: string | null): string | null {
