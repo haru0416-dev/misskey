@@ -1145,25 +1145,20 @@ describe('Timelines', () => {
 					},
 				);
 
-				// DB 経路 (fanout 無効) は返信先の followers 公開範囲を判定せず、この返信を返す (fanout 経路・ストリームと不一致)。
-				// 判定のある fanout 経路だけで確かめる。
-				test.skipIf(!enableFanoutTimeline)(
-					'withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない',
-					async () => {
-						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
+				test('withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない', async () => {
+					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
-						await api('following/create', { userId: carol.id }, bob);
-						await api('following/create', { userId: bob.id }, alice);
-						await api('following/update', { userId: bob.id, withReplies: true }, alice);
-						const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
-						const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
+					await api('following/create', { userId: carol.id }, bob);
+					await api('following/create', { userId: bob.id }, alice);
+					await api('following/update', { userId: bob.id, withReplies: true }, alice);
+					const carolNote = await post(carol, { text: 'hi', visibility: 'followers' });
+					const bobNote = await post(bob, { text: 'hi', replyId: carolNote.id });
 
-						const res = await api('notes/hybrid-timeline', { limit: 100, withReplies: true }, alice);
+					const res = await api('notes/hybrid-timeline', { limit: 100, withReplies: true }, alice);
 
-						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
-						expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
-					},
-				);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
+				});
 
 				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(

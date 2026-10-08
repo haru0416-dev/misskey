@@ -2314,6 +2314,19 @@ export async function listHybridTimelineNotesFromDatabase(
 		)`);
 	}
 
+	// 自分もフォロー先も書いていない followers 限定のノートへの返信を除く。fanout 経路の noteFilter と同じ判定で、
+	// DB から読んだ分はその絞り込みを通らないのでここで除く。返信先の公開範囲は note に写していないので、
+	// 返信先の行を主キーで引いて見る。
+	conditions.push(sql`(
+		"note"."replyId" IS NULL
+		OR "note"."replyUserId" = ANY(${sql.param(meOrFolloweeIds)})
+		OR NOT EXISTS (
+			SELECT 1 FROM "note" AS "replyTarget"
+			WHERE "replyTarget"."id" = "note"."replyId"
+				AND "replyTarget"."visibility" = 'followers'
+		)
+	)`);
+
 	conditions.push(...renoteAndFileConditions(options));
 
 	return await executeTimelineNoteQuery(db, conditions, options);

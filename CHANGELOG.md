@@ -297,6 +297,7 @@
 - Fix: 一覧の続きの読み込みに失敗すると、何も表示されずに止まる問題を修正 (理由と再試行ボタンを出す)
 
 ### Server
+- Fix: ソーシャルタイムラインを DB から読むとき (Redis の範囲外・fanout 無効時)、フォローしていない人の followers 限定ノートへの返信が含まれる問題を修正
 - Enhance: ノートの本文検索で、全体では一致が多いが直近には少ない語を id の範囲ごとに探すようにし、キャッシュが冷えた状態で読むページを約 1/4 に (検索全体の時間は statementTimeout で打ち切る)
 - Enhance: DB 接続を閉じるまでの時間 (`database.pool.idleConnectionTimeout`) の既定を 30s から 10m にし、間が空いた後の最初のリクエストの遅れをなくす。statementTimeout 以下の値は起動時に拒否する
 - Change: 使われていなかった `database.pool.minimumConnections` を削除 (設定ファイルに残っていると起動時の検証で止まるので、その行を削除すること)
