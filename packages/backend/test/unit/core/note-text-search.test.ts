@@ -8,6 +8,7 @@ import { loadConfig } from '@/config.js';
 import {
 	createNoteInDatabase,
 	defaultNoteTextSearchTuning,
+	NoteSearchTimedOutError,
 	searchNotesByTextFromDatabase,
 } from '@/core/note/note-store.js';
 import type { NoteTextSearchTuning } from '@/core/note/note-store.js';
@@ -34,6 +35,9 @@ const HOUR = 60 * 60 * 1000;
 describe('NoteStore text search paths', () => {
 	let runtime: RuntimeDependencies;
 	const marker = `qz${genId().slice(-10)}`;
+	// 一致のほとんどがミュート中の利用者の投稿で、見える一致は古い 1 件だけの語。
+	const mutedMarker = `qm${genId().slice(-10)}`;
+	let visibleMutedMarkerNoteId: string;
 	let me: { id: string };
 	const statements: string[] = [];
 	let transactions = 0;
@@ -91,6 +95,23 @@ describe('NoteStore text search paths', () => {
 				text: `filler ${index}`,
 			});
 		}
+		for (let index = 0; index < 40; index++) {
+			await createNoteInDatabase(db, {
+				id: genId(now - (index * 37 + 3) * HOUR),
+				userId: muted.id,
+				userHost: null,
+				visibility: 'public',
+				text: `muted ${mutedMarker} ${index}`,
+			});
+		}
+		visibleMutedMarkerNoteId = genId(now - 9_000 * HOUR);
+		await createNoteInDatabase(db, {
+			id: visibleMutedMarkerNoteId,
+			userId: plain.id,
+			userHost: null,
+			visibility: 'public',
+			text: `visible ${mutedMarker}`,
+		});
 		// 最新の投稿は一致しないので、小さい窓は一致を含まない。
 		for (let index = 0; index < 5; index++) {
 			await createNoteInDatabase(db, {
@@ -129,6 +150,13 @@ describe('NoteStore text search paths', () => {
 		// 範囲の幅を 1ms から広げるので、範囲の数が多く、一致の無い範囲も通る
 		ranges: { windowPerResult: 1, denseTermEstimatedMatches: 0, minimumRangeSpanMs: 1 },
 		rangesWide: { windowPerResult: 2, denseTermEstimatedMatches: 0, minimumRangeSpanMs: 2_000 * HOUR },
+		// 範囲の一致を 1 件ずつ集め始めるので、同じ範囲を読み直す
+		rangesSmallBatch: {
+			windowPerResult: 1,
+			denseTermEstimatedMatches: 0,
+			minimumRangeSpanMs: 2_000 * HOUR,
+			rangeMatchBatch: 1,
+		},
 	};
 
 	const searchPages = async (
@@ -183,6 +211,8 @@ describe('NoteStore text search paths', () => {
 			12,
 		],
 		['oldest first', { me, blockedHosts: [], limit: 3, sinceId: genId(Date.now() - 9_000 * HOUR) }, 12],
+		['without sensitive files', { me, blockedHosts: [], limit: 5, withSensitiveFiles: false }, 12],
+		['with sensitive files only', { me, blockedHosts: [], limit: 5, withSensitiveFiles: true }, 2],
 	];
 
 	for (const [name, tuning] of Object.entries(tunings)) {
@@ -199,6 +229,30 @@ describe('NoteStore text search paths', () => {
 			expect(compared).toBeGreaterThan(80);
 		});
 	}
+
+	// 前段の一致はほぼ全てミュートで落ちる。集める件数を増やしながら読み直して、古い 1 件にたどり着く。
+	test('reaches the only visible match behind matches that are all muted', async () => {
+		const search = (useTextIndex: boolean, tuning: Partial<NoteTextSearchTuning>) =>
+			searchNotesByTextFromDatabase(
+				runtime.db,
+				{ me, blockedHosts: [], limit: 3, query: mutedMarker, usePgroonga: false, useTextIndex, timeLimitMs: 10_000 },
+				{ ...defaultNoteTextSearchTuning, ...tuning },
+			);
+		expect((await search(false, {})).map((note) => note.id)).toStrictEqual([visibleMutedMarkerNoteId]);
+		for (const tuning of [tunings['ranges']!, tunings['rangesSmallBatch']!]) {
+			expect((await search(true, tuning)).map((note) => note.id)).toStrictEqual([visibleMutedMarkerNoteId]);
+		}
+	});
+
+	test('gives up with NoteSearchTimedOutError when the ranges exceed the time limit', async () => {
+		await expect(
+			searchNotesByTextFromDatabase(
+				runtime.db,
+				{ me, blockedHosts: [], limit: 3, query: mutedMarker, usePgroonga: false, useTextIndex: true, timeLimitMs: 0 },
+				{ ...defaultNoteTextSearchTuning, ...tunings['ranges']! },
+			),
+		).rejects.toBeInstanceOf(NoteSearchTimedOutError);
+	});
 
 	test('each tuning takes its intended path', async () => {
 		const run = async (tuning: Partial<NoteTextSearchTuning>) => {

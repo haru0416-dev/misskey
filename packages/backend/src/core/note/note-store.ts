@@ -1353,13 +1353,31 @@ export type NoteTextSearchTuning = {
 	 * 表の時間幅の対数で収まるようにする。
 	 */
 	minimumRangeSpanMs: number;
+	/**
+	 * 範囲の一致の id を一度に集める件数。範囲の一致は件数によらず全て読んでから並べるので、届いて同じ範囲を
+	 * 続けて引くたびに、trigram index の bitmap (一致の多い語では約 10 万件で 10ms 前後) とヒープを読み直す。
+	 * 読み直すときは件数を RANGE_GROWTH 倍にして、読み直しの回数を範囲の一致件数の対数に抑える。
+	 */
+	rangeMatchBatch: number;
 };
 
 export const defaultNoteTextSearchTuning: NoteTextSearchTuning = {
 	windowPerResult: 500,
 	denseTermEstimatedMatches: 50_000,
 	minimumRangeSpanMs: 60_000,
+	rangeMatchBatch: 1_000,
 };
+
+/**
+ * 窓の外を範囲に区切って探す検索が、合計の時間の上限 (timeLimitMs) を超えた。範囲ごとの問い合わせは
+ * statement_timeout より短くても、回数が重なると接続を長く握るので、全体で打ち切る。
+ */
+export class NoteSearchTimedOutError extends Error {
+	constructor() {
+		super('Note text search exceeded its time limit');
+		this.name = 'NoteSearchTimedOutError';
+	}
+}
 
 /** 本文の LIKE に一致する投稿数のプランナーの見積もり。 */
 async function estimateNoteTextMatches(db: MiDrizzleDatabase, pattern: string): Promise<number> {
@@ -1420,6 +1438,11 @@ export async function searchNotesByTextFromDatabase(
 		withQuotes?: boolean | null;
 		withCw?: boolean | null;
 		visibility?: MiNote['visibility'] | null;
+		/**
+		 * 窓の外を範囲に区切って探すときの、合計の時間の上限 (ms)。超えると NoteSearchTimedOutError。
+		 * 1 文で探す経路の statement_timeout と同じ値を渡す。
+		 */
+		timeLimitMs?: number | null;
 	},
 	tuning: NoteTextSearchTuning = defaultNoteTextSearchTuning,
 ): Promise<MiNote[]> {
@@ -1497,7 +1520,7 @@ export async function searchNotesByTextFromDatabase(
 			WHERE ${driveFile.id} = ANY("note"."fileIds")
 			AND ${driveFile.isSensitive} = TRUE
 		)`;
-		conditions.push(options.withSensitiveFiles ? hasSensitiveFiles : sql`NOT (${hasSensitiveFiles})`);
+		pushNoteRowCondition(options.withSensitiveFiles ? hasSensitiveFiles : sql`NOT (${hasSensitiveFiles})`);
 	}
 
 	if (options.withReplies != null) {
@@ -1521,6 +1544,7 @@ export async function searchNotesByTextFromDatabase(
 		return await executeTimelineNoteQuery(db, conditions, options, source);
 	}
 
+	const startedAt = Date.now();
 	const matchConditions = [...noteSearchBounds(options), ...noteRowConditions];
 
 	// 窓の中で 1 ページ分そろえば、それが起点から最新の一致そのもの。
@@ -1541,15 +1565,11 @@ export async function searchNotesByTextFromDatabase(
 		windowSize: denseTermWindowSize,
 		recent,
 		minimumSpanMs: tuning.minimumRangeSpanMs,
+		matchBatch: tuning.rangeMatchBatch,
+		deadline: options.timeLimitMs != null ? startedAt + options.timeLimitMs : Number.POSITIVE_INFINITY,
 	});
 	return ranged ?? (await executeTimelineNoteQuery(db, conditions, options, source));
 }
-
-/**
- * 範囲の一致の id を一度に集める上限。範囲の一致は件数によらず全て読んでから並べるので、上限に届いて同じ範囲を
- * 続けて引くと、trigram index の bitmap (一致の多い語では約 10 万件で 10ms 前後) を作り直す。
- */
-const RANGE_MATCH_BATCH = 1_000;
 
 /**
  * 範囲の時間幅を広げる倍率。範囲ごとに trigram index の bitmap を作り直す費用 (一致の多い語で 10ms 前後) と、
@@ -1569,7 +1589,13 @@ async function searchDenseTermBeyondWindow(
 	conditions: SQL[],
 	matchConditions: SQL[],
 	options: NoteSearchBoundsOptions & { limit: number },
-	{ windowSize, recent, minimumSpanMs }: { windowSize: number; recent: MiNote[]; minimumSpanMs: number },
+	{
+		windowSize,
+		recent,
+		minimumSpanMs,
+		matchBatch,
+		deadline,
+	}: { windowSize: number; recent: MiNote[]; minimumSpanMs: number; matchBatch: number; deadline: number },
 ): Promise<MiNote[] | null> {
 	if (options.sinceId && !options.untilId) return null;
 
@@ -1622,10 +1648,14 @@ async function searchDenseTermBeyondWindow(
 		const pending: MiNote['id'][] = [];
 		// 一度に判定する件数は残りの件数のこの倍。ミュートや可視性で落ちる一致が多いと増やす。
 		let factor = 4;
+		const checkDeadline = () => {
+			if (Date.now() >= deadline) throw new NoteSearchTimedOutError();
+		};
 		const settle = async () => {
 			if (pending.length === 0) return;
 			await bitmapScansOnly(tx, false);
 			while (pending.length > 0 && need() > 0) {
+				checkDeadline();
 				const requested = need();
 				const batch = pending.splice(0, requested * factor);
 				const found = await executeTimelineNoteQuery(tx, [...conditions, sql`"note"."id" = ANY(${sql.param(batch)})`], {
@@ -1642,16 +1672,19 @@ async function searchDenseTermBeyondWindow(
 			const lowerTime = upperTime - span;
 			const lower = lowerTime > floorTime ? uuidv7LowerBoundAt(lowerTime) : null;
 			let rangeUpper = upper;
+			let batch = matchBatch;
 			for (;;) {
-				const ids = await listTextMatchIdsInRange(tx, matchConditions, rangeUpper, lower, RANGE_MATCH_BATCH);
+				checkDeadline();
+				const ids = await listTextMatchIdsInRange(tx, matchConditions, rangeUpper, lower, batch);
 				pending.push(...ids);
 				if (pending.length >= need()) {
 					await settle();
 					if (results.length >= options.limit) return results;
 				}
 				// 範囲の一致を集めきった。届いたときは、集めた最後の id から同じ範囲を続ける。
-				if (ids.length < RANGE_MATCH_BATCH) break;
+				if (ids.length < batch) break;
 				rangeUpper = ids.at(-1)!;
+				batch *= RANGE_GROWTH;
 			}
 			if (lower == null) {
 				await settle();

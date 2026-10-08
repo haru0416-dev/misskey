@@ -1069,8 +1069,8 @@ export const endpointMetas = {
 					id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
 				},
 
-				// 一致が多いのに直近にほとんど無い語は、ディスクから数千ページ読むことになり、キャッシュが冷えていると
-				// statement_timeout (デフォルト 10 秒) を超える。問い合わせの形では読む量が減らない。
+				// 一致が多いのに直近にほとんど無い語は、キャッシュが冷えているとディスクから多くのページを読み、
+				// statement_timeout (デフォルト 10 秒) か、窓の外を範囲に区切って探す合計の上限 (同じ値) を超える。
 				timedOut: {
 					message: 'The search took too long. Try more specific words or a narrower period.',
 					code: 'SEARCH_TIMED_OUT',

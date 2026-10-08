@@ -34,6 +34,7 @@ import {
 	listRenoteNotesFromDatabase,
 	listReplyNotesFromDatabase,
 	listUserListTimelineNotesFromDatabase,
+	NoteSearchTimedOutError,
 	searchNotesByTextFromDatabase,
 } from '@/core/note/note-store.js';
 import {
@@ -767,10 +768,13 @@ export async function handleApiNotesSearch(
 				withQuotes: params.withQuotes,
 				withCw: params.withCw,
 				visibility: params.visibility,
+				// statement_timeout が 0 (無効) なら全体の上限も設けない。
+				timeLimitMs:
+					deps.config.database.pool.statementTimeoutMs > 0 ? deps.config.database.pool.statementTimeoutMs : null,
 			}),
 		);
 	} catch (err) {
-		if (isStatementTimeoutError(err)) throw errors.timedOut();
+		if (isStatementTimeoutError(err) || err instanceof NoteSearchTimedOutError) throw errors.timedOut();
 		throw err;
 	}
 
