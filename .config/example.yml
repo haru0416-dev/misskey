@@ -43,13 +43,16 @@ database:
       fromEnvironment: DATABASE_PASSWORD
     # ssl: true
   pool:
-    minimumConnections: 0
     # このホスト全体でPostgreSQLへ張る接続数の上限。プロセスごとではないので、
     # server.process.httpWorkers / queueWorkers を増やしてもここは増やさなくてよい
     # (DBを使うプロセス数で自動的に分割される)。PostgreSQL側の max_connections を超えないこと。
+    # 接続は使い始めると各プロセスの配分の上限までまとめて張られ、1 本あたり PostgreSQL 側で約 2MiB を使う。
+    # 同時に処理するリクエストが少ない小さなサーバー (Raspberry Pi など) では、16 などに下げるとメモリが減る。
     maximumConnectionsPerHost: 60
     connectionTimeout: 5s
-    idleConnectionTimeout: 30s
+    # 使われない接続を閉じるまでの時間 (0 は閉じない)。張り直した直後のリクエストは約 50ms 遅れる。
+    # statementTimeout より長くすること (短いと、長い問い合わせが時間切れではなく切断で失敗する)。
+    idleConnectionTimeout: 10m
     statementTimeout: 10s
 
 valkey:

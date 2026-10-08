@@ -152,7 +152,6 @@ export const sourceConfigV2Schema = z.strictObject({
 			}),
 			pool: z
 				.strictObject({
-					minimumConnections: nonNegativeIntegerSchema.default(0),
 					/**
 					 * ホスト全体の DB 接続予算。DBを使うプロセス数 (HTTP + キュー) で割って各プールに配分する。
 					 * 各プールは最低 1 接続なので、DB 利用プロセス数を下回る予算は起動時に拒否する。
@@ -166,15 +165,32 @@ export const sourceConfigV2Schema = z.strictObject({
 					 */
 					maximumConnectionsPerHost: positiveIntegerSchema.default(60),
 					connectionTimeout: durationSchema.default('5s'),
-					idleConnectionTimeout: durationSchema.default('30s'),
+					/**
+					 * 使われずにこの時間が過ぎた接続を閉じる。0 は閉じない。
+					 *
+					 * Bun.sql のプールは接続が無いと上限までまとめて張る。張り直した直後のリクエストは、接続の確立と
+					 * PostgreSQL 側のカタログの読み込みで約 50ms 遅れる。数分おきに使うおひとり様のサーバーでも
+					 * 張り直しが起きない長さにする。代償は残る接続 1 本あたり PostgreSQL 側で約 2MiB で、
+					 * プロセスあたりの本数は maximumConnectionsPerHost の配分で決まる。
+					 */
+					idleConnectionTimeout: durationSchema.default('10m'),
 					statementTimeout: durationSchema.default('10s'),
 				})
 				.prefault({}),
 		})
-		.refine((value) => value.pool.minimumConnections <= value.pool.maximumConnectionsPerHost, {
-			message: 'minimumConnections must not exceed maximumConnectionsPerHost',
-			path: ['pool', 'minimumConnections'],
-		}),
+		// Bun.sql の idleTimeout は通信の無い時間で切るので、応答を待っている問い合わせも途中で切る。
+		// statement_timeout が先に効く長さでないと、長い問い合わせが時間切れのエラーではなく切断で失敗する。
+		.refine(
+			(value) => {
+				const idle = parseDuration(value.pool.idleConnectionTimeout);
+				const statement = parseDuration(value.pool.statementTimeout);
+				return idle === 0 || (statement > 0 && statement < idle);
+			},
+			{
+				message: 'idleConnectionTimeout must be 0 or longer than a non-zero statementTimeout',
+				path: ['pool', 'idleConnectionTimeout'],
+			},
+		),
 	valkey: z
 		.strictObject({
 			connections: z

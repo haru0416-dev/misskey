@@ -86,6 +86,31 @@ describe('configVersion 2 schema', () => {
 		).toThrow();
 	});
 
+	// Bun.sql の idleTimeout は実行中の問い合わせも切るので、statement_timeout が先に効く組み合わせだけを受け付ける。
+	test('keeps idle connections longer than any statement can run', () => {
+		const parsePool = (pool: Record<string, string>) =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				database: { ...createSourceConfig().database, pool },
+			});
+
+		const config = materializeConfig(parsePool({}), { version: 'test' });
+		expect(config.database.pool.idleConnectionTimeoutMs).toBe(600_000);
+		expect(config.database.pool.idleConnectionTimeoutMs).toBeGreaterThan(config.database.pool.statementTimeoutMs);
+		expect(() => parsePool({ idleConnectionTimeout: '0s', statementTimeout: '0s' })).not.toThrow();
+		expect(() => parsePool({ idleConnectionTimeout: '30s', statementTimeout: '10s' })).not.toThrow();
+		expect(() => parsePool({ idleConnectionTimeout: '10s', statementTimeout: '10s' })).toThrow(/idleConnectionTimeout/);
+		expect(() => parsePool({ idleConnectionTimeout: '5s' })).toThrow(/idleConnectionTimeout/);
+		expect(() => parsePool({ statementTimeout: '0s' })).toThrow(/idleConnectionTimeout/);
+		// Bun.sql に最小接続数の設定は無い。使われない項目は受け付けない。
+		expect(() =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				database: { ...createSourceConfig().database, pool: { minimumConnections: 0 } },
+			}),
+		).toThrow();
+	});
+
 	test('rejects invalid network ranges', () => {
 		expect(() =>
 			sourceConfigV2Schema.parse({

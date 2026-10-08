@@ -89,7 +89,6 @@ export type Config = {
 			ssl?: boolean;
 		};
 		pool: {
-			minimumConnections: number;
 			maximumConnectionsPerHost: number;
 			connectionTimeoutMs: number;
 			idleConnectionTimeoutMs: number;
@@ -387,7 +386,6 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 				...optionalProperty('ssl', source.database.primary.ssl),
 			},
 			pool: {
-				minimumConnections: source.database.pool.minimumConnections,
 				maximumConnectionsPerHost: source.database.pool.maximumConnectionsPerHost,
 				connectionTimeoutMs: parseDuration(source.database.pool.connectionTimeout),
 				idleConnectionTimeoutMs: parseDuration(source.database.pool.idleConnectionTimeout),
