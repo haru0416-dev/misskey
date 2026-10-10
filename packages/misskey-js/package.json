@@ -41,10 +41,10 @@
 	"scripts": {
 		"build": "bun ./build.js",
 		"watch": "bun ./build.js --watch",
-		"test-d": "bun ../../scripts/tsc-native.mjs -p test-d --noEmit",
+		"test-d": "bun check -p test-d",
 		"api": "api-extractor run --local --verbose",
 		"api-prod": "api-extractor run --verbose",
-		"typecheck": "bun ../../scripts/tsc-native.mjs --noEmit",
+		"typecheck": "bun check",
 		"lint": "bun run --bun typecheck",
 		"vitest": "vitest run",
 		"test": "MISSKEY_JS_TEST_RUNTIME=bun bun run --bun vitest && bun run --bun test-d",

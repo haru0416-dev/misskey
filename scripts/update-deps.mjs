@@ -19,7 +19,7 @@ const heldMajors = {
 	typescript: {
 		major: 7,
 		reason:
-			'TypeScript 7 は JS API を持たず、vue-tsc・i18n の型生成・misskey-js の generator が 6 系を要する (型検査は typescript-native の 7 で実行済み)',
+			'TypeScript 7 は JS API を持たず、vue-tsc・i18n の型生成・misskey-js の generator が 6 系を要する (Vue 以外の型検査は bun check が内蔵する 7、d.ts 生成と連合テストのビルドは typescript-native の 7 で実行済み)',
 	},
 };
 const FETCH_CONCURRENCY = 8;

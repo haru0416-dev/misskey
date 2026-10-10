@@ -5,7 +5,7 @@
 		"watch": "bun build.js watch",
 		"build": "bun build.js",
 		"test": "vitest run",
-		"typecheck": "bun ../../scripts/tsc-native.mjs --noEmit && bun ../../scripts/tsc-native.mjs -p tsconfig.test.json --noEmit",
+		"typecheck": "bun check && bun check -p tsconfig.test.json",
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {

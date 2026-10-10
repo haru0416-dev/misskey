@@ -20,7 +20,7 @@
 		"build:e2e": "MISSKEY_BUILD_E2E=1 rolldown -c",
 		"restart": "bun run build && bun run start",
 		"dev": "bun run compile-config && bun run --bun rolldown -c --watch",
-		"typecheck": "bun ../../scripts/tsc-native.mjs -p test-server --noEmit && bun ../../scripts/tsc-native.mjs -p test --noEmit && bun ../../scripts/tsc-native.mjs -p test-federation --noEmit",
+		"typecheck": "bun check -p test-server && bun check -p test && bun check -p test-federation",
 		"lint": "bun run --bun typecheck",
 		"test": "bun run --bun build:unit && NODE_ENV=test bun run compile-config && bun ./scripts/run-vitest.js unit",
 		"test:e2e": "bun run --bun build:e2e && NODE_ENV=test bun run compile-config && bun ./scripts/run-vitest.js e2e",

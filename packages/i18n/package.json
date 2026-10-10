@@ -20,7 +20,7 @@
 		"test": "bun run build && vitest run test",
 		"build": "bun ./build.ts",
 		"watch": "bun ./build.ts --watch",
-		"typecheck": "bun ../../scripts/tsc-native.mjs --noEmit",
+		"typecheck": "bun check",
 		"lint": "bun run --bun typecheck"
 	},
 	"files": [
