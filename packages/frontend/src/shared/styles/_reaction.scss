@@ -11,11 +11,11 @@
 @mixin base($margin: null) {
 	.root {
 		display: inline-flex;
-		height: 42px;
+		height: var(--MI-step-6);
 		margin: $margin;
-		padding: 0 6px;
+		padding: 0 var(--MI-step-3);
 		font-size: 1.5em;
-		border-radius: 6px;
+		border-radius: var(--MI-radius-md);
 		align-items: center;
 		justify-content: center;
 
@@ -74,8 +74,8 @@
 	}
 
 	.count {
-		font-size: 0.7em;
-		line-height: 42px;
-		margin: 0 0 0 4px;
+		font-size: var(--MI-text-meta);
+		line-height: var(--MI-step-6);
+		margin: 0 0 0 var(--MI-step-2);
 	}
 }

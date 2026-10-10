@@ -4,15 +4,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="{ [$style.done]: closed || isVoted }">
+<div>
 	<ul :class="$style.choices">
-		<li v-for="(choice, i) in choices" :key="i" :class="$style.choice" @click="vote(i)">
-			<div :class="$style.bg" :style="{ 'width': `${showResult ? (choice.votes / total * 100) : 0}%` }"></div>
-			<span :class="$style.fg">
-				<template v-if="choice.isVoted"><i class="ti ti-check" style="margin-right: 4px; color: var(--MI_THEME-accent);"></i></template>
-				<Mfm :text="choice.text" :plain="true" v-bind="{ ...(author === undefined ? {} : { author }), ...(emojiUrls === undefined ? {} : { emojiUrls }) }"/>
-				<span v-if="showResult" style="margin-left: 4px; opacity: 0.7;">({{ i18n.tsx._poll.votesCount({ n: choice.votes }) }})</span>
-			</span>
+		<li v-for="(choice, i) in choices" :key="i">
+			<button type="button" :class="[$style.choice, { [$style.voted]: choice.isVoted }]" :disabled="readOnly || closed || isVoted" @click="vote(i)">
+				<span :class="$style.bg" :style="{ 'width': `${showResult ? (choice.votes / total * 100) : 0}%` }"></span>
+				<span :class="$style.fg">
+					<i v-if="choice.isVoted" class="ti ti-check" :class="$style.check"></i>
+					<Mfm :text="choice.text" :plain="true" v-bind="{ ...(author === undefined ? {} : { author }), ...(emojiUrls === undefined ? {} : { emojiUrls }) }"/>
+				</span>
+				<span v-if="showResult" :class="$style.count">{{ i18n.tsx._poll.votesCount({ n: choice.votes }) }}</span>
+			</button>
 		</li>
 	</ul>
 	<p v-if="!readOnly" :class="$style.info">
@@ -129,21 +131,44 @@ const vote = async (id: number) => {
 
 <style lang="scss" module>
 .choices {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	gap: var(--MI-step-2);
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
 .choice {
-	display: block;
 	position: relative;
-	margin: 4px 0;
-	padding: 4px;
-	background: var(--MI_THEME-accentedBg);
-	border-radius: 4px;
-	overflow: clip;
+	display: flex;
+	align-items: center;
+	gap: var(--MI-step-3);
+	width: 100%;
+	min-height: var(--MI-step-6);
+	padding: 0 var(--MI-step-4);
+	box-sizing: border-box;
+	border: solid 1px var(--MI-border-muted);
+	border-radius: var(--MI-radius-md);
+	background: var(--MI_THEME-panel);
+	color: inherit;
+	font: inherit;
+	text-align: start;
 	cursor: pointer;
+	overflow: clip;
+	-webkit-tap-highlight-color: transparent;
+
+	&:not(:disabled):hover {
+		border-color: var(--MI_THEME-accent);
+	}
+
+	&:disabled {
+		cursor: default;
+	}
+
+	&.voted {
+		border-color: var(--MI_THEME-accent);
+	}
 }
 
 .bg {
@@ -151,26 +176,36 @@ const vote = async (id: number) => {
 	top: 0;
 	left: 0;
 	height: 100%;
-	background: var(--MI_THEME-accent);
-	background: linear-gradient(90deg,var(--MI_THEME-buttonGradateA),var(--MI_THEME-buttonGradateB));
+	background: var(--MI_THEME-accentedBg);
 	transition: width 1s ease;
+}
+
+.voted > .bg {
+	background: color-mix(in srgb, var(--MI_THEME-accent) 28%, transparent);
 }
 
 .fg {
 	position: relative;
-	display: inline-block;
-	padding: 3px 5px;
-	background: var(--MI_THEME-panel);
-	border-radius: 3px;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.check {
+	margin-right: var(--MI-step-2);
+	color: var(--MI_THEME-accent);
+}
+
+.count {
+	position: relative;
+	flex-shrink: 0;
+	margin-left: auto;
+	font-size: var(--MI-text-meta);
+	opacity: 0.7;
 }
 
 .info {
+	margin: var(--MI-step-3) 0 0;
+	font-size: var(--MI-text-meta);
 	color: var(--MI_THEME-fg);
-}
-
-.done {
-	.choice {
-		cursor: initial;
-	}
 }
 </style>

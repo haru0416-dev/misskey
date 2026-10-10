@@ -32,7 +32,7 @@
 
 		&.collapsed {
 			position: relative;
-			max-height: 9em;
+			max-height: var(--MI-collapsed-height);
 			overflow: clip;
 
 			> .fade {

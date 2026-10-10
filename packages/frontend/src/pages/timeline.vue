@@ -329,7 +329,7 @@ const headerTabs = computed(
 				key: tl,
 				title: i18n.ts._timelines[tl],
 				icon: basicTimelineIconClass(tl),
-				iconOnly: true,
+				iconOnlyWhenNarrow: true,
 			})),
 			{
 				icon: 'ti ti-list',
@@ -359,7 +359,7 @@ const headerTabsWhenNotLogin = computed(
 				key: tl,
 				title: i18n.ts._timelines[tl],
 				icon: basicTimelineIconClass(tl),
-				iconOnly: true,
+				iconOnlyWhenNarrow: true,
 			})),
 		] as Tab[],
 );

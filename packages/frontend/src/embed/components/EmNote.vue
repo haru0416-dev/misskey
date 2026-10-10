@@ -375,7 +375,7 @@ const isDeleted = ref(false);
 
 .contentCollapsed {
 	position: relative;
-	max-height: 9em;
+	max-height: var(--MI-collapsed-height);
 	overflow: clip;
 }
 

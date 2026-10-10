@@ -49,7 +49,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="appearNote.channel" :class="$style.colorBar" :style="{ background: appearNote.channel.color }"></div>
 		<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="appearNote.user" :link="!mock" :preview="!mock"/>
 		<div :class="$style.main">
-			<MkNoteHeader :class="$style.header" :note="appearNote" :mini="true"/>
+			<MkNoteHeader :note="appearNote" :mini="true"/>
 			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :displayMode="prefer.instanceTickerDisplay" v-bind="appearNote.user.instance === undefined ? {} : { instance: appearNote.user.instance }"/>
 			<div style="container-type: inline-size;">
 				<p v-if="appearNote.cw != null" :class="$style.cw">
@@ -62,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:enableEmojiMenuReaction="true"
 						/>
 					</span>
-					<MkCwButton v-model="showContent" :text="appearNote.text" v-bind="{ ...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }), ...(appearNote.files === undefined ? {} : { files: appearNote.files }), ...(appearNote.poll === undefined ? {} : { poll: appearNote.poll }) }" style="margin: 4px 0;"/>
+					<MkCwButton v-model="showContent" :text="appearNote.text" v-bind="{ ...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }), ...(appearNote.files === undefined ? {} : { files: appearNote.files }), ...(appearNote.poll === undefined ? {} : { poll: appearNote.poll }) }" :class="$style.cwButton"/>
 				</p>
 				<div v-show="appearNote.cw == null || showContent" :class="[{ [$style.contentCollapsed]: collapsed }]">
 					<div :class="$style.text">
@@ -88,7 +88,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 						</div>
 					</div>
-					<div v-if="appearNote.files && appearNote.files.length > 0" style="margin-top: 8px;">
+					<div v-if="appearNote.files && appearNote.files.length > 0" :class="$style.files">
 						<MkMediaList ref="galleryEl" :mediaList="appearNote.files"/>
 					</div>
 					<MkPoll
@@ -116,7 +116,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<MkReactionsViewer
 				v-if="appearNote.reactionAcceptance !== 'likeOnly'"
-				style="margin-top: 6px;"
+				:class="$style.reactions"
 				:reactions="$appearNote.reactions"
 				:reactionEmojis="$appearNote.reactionEmojis"
 				:myReaction="$appearNote.myReaction"
@@ -930,9 +930,9 @@ function emitUpdReaction(emoji: string, delta: number) {
 		.footer {
 			visibility: hidden;
 			position: absolute;
-			top: 12px;
-			right: 12px;
-			padding: 0 4px;
+			top: var(--MI-step-4);
+			right: var(--MI-step-4);
+			padding: 0 var(--MI-step-2);
 			margin-bottom: 0;
 			background: var(--MI_THEME-popup);
 			border-radius: var(--MI-radius-md);
@@ -965,15 +965,15 @@ function emitUpdReaction(emoji: string, delta: number) {
 .tip {
 	display: flex;
 	align-items: center;
-	padding: 16px 24px 8px 24px;
-	line-height: 24px;
-	font-size: 90%;
+	padding: var(--MI-step-4) var(--MI-step-5) 0;
+	line-height: var(--MI-step-5);
+	font-size: var(--MI-text-meta);
 	white-space: pre;
 	color: var(--MI_THEME-warn);
 }
 
 .tip + .article {
-	padding-top: 8px;
+	padding-top: var(--MI-step-3);
 }
 
 .replyTo {
@@ -985,13 +985,14 @@ function emitUpdReaction(emoji: string, delta: number) {
 	position: relative;
 	display: flex;
 	align-items: center;
-	padding: 16px 24px 8px 24px;
-	line-height: 28px;
+	padding: var(--MI-step-4) var(--MI-step-5) 0;
+	line-height: var(--MI-step-5);
+	font-size: var(--MI-text-meta);
 	white-space: pre;
 	color: var(--MI_THEME-renote);
 
 	& + .article {
-		padding-top: 8px;
+		padding-top: var(--MI-step-3);
 	}
 
 	> .colorBar {
@@ -1002,9 +1003,9 @@ function emitUpdReaction(emoji: string, delta: number) {
 .renoteAvatar {
 	flex-shrink: 0;
 	display: inline-block;
-	width: 28px;
-	height: 28px;
-	margin: 0 8px 0 0;
+	width: var(--MI-step-5);
+	height: var(--MI-step-5);
+	margin: 0 var(--MI-step-3) 0 0;
 }
 
 .renoteText {
@@ -1020,7 +1021,6 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .renoteInfo {
 	margin-left: auto;
-	font-size: 0.9em;
 }
 
 .renoteTime {
@@ -1037,17 +1037,17 @@ function emitUpdReaction(emoji: string, delta: number) {
 .collapsedRenoteTarget {
 	display: flex;
 	align-items: center;
-	line-height: 28px;
+	line-height: var(--MI-step-5);
 	white-space: pre;
-	padding: 0 24px 18px;
+	padding: var(--MI-step-3) var(--MI-step-5) var(--MI-step-4);
 }
 
 .collapsedRenoteTargetAvatar {
 	flex-shrink: 0;
 	display: inline-block;
-	width: 28px;
-	height: 28px;
-	margin: 0 8px 0 0;
+	width: var(--MI-step-5);
+	height: var(--MI-step-5);
+	margin: 0 var(--MI-step-3) 0 0;
 }
 
 .collapsedRenoteTargetText {
@@ -1055,7 +1055,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 	flex-shrink: 1;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 90%;
+	font-size: var(--MI-text-meta);
 	opacity: 0.7;
 	cursor: pointer;
 
@@ -1067,29 +1067,33 @@ function emitUpdReaction(emoji: string, delta: number) {
 .article {
 	position: relative;
 	display: flex;
-	padding: 22px 24px 18px;
+	// 下端は操作ボタン自身の内側の余白 (step-3) と合わせて、見た目の余白が上と同じ step-5 になる。
+	padding: var(--MI-step-5) var(--MI-step-5) var(--MI-step-4);
 }
 
 .colorBar {
 	position: absolute;
-	top: 8px;
-	left: 8px;
-	width: 5px;
-	height: calc(100% - 16px);
+	top: var(--MI-step-3);
+	left: var(--MI-step-3);
+	width: var(--MI-step-2);
+	height: calc(100% - 2 * var(--MI-step-3));
 	border-radius: 999px;
 	pointer-events: none;
 }
 
 .avatar {
+	--avatarSize: calc(2em * var(--MI-leading));
+
 	flex-shrink: 0;
 	display: block !important;
-	margin: 0 12px 0 0;
-	width: 48px;
-	height: 48px;
+	margin: 0 var(--MI-step-4) 0 0;
+	// 名前の行と本文 1 行目の 2 行分に揃える。
+	width: var(--avatarSize);
+	height: var(--avatarSize);
 
 	&.useSticky {
 		position: sticky;
-		top: calc(22px + var(--MI-stickyTop, 0px));
+		top: calc(var(--MI-step-5) + var(--MI-stickyTop, 0px));
 		left: 0;
 	}
 }
@@ -1097,11 +1101,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 .main {
 	flex: 1;
 	min-width: 0;
-	line-height: 1.55;
-}
-
-.header {
-	margin-bottom: 2px;
+	line-height: var(--MI-leading);
 }
 
 .cw {
@@ -1112,11 +1112,15 @@ function emitUpdReaction(emoji: string, delta: number) {
 	overflow-wrap: break-word;
 }
 
+.cwButton {
+	margin-top: var(--MI-step-3);
+}
+
 .showLess {
 	width: 100%;
-	margin-top: 14px;
+	margin-top: var(--MI-step-4);
 	position: sticky;
-	bottom: calc(var(--MI-stickyBottom, 0px) + 14px);
+	bottom: calc(var(--MI-stickyBottom, 0px) + var(--MI-step-4));
 }
 
 .showLessLabel {
@@ -1130,7 +1134,7 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .contentCollapsed {
 	position: relative;
-	max-height: 9em;
+	max-height: var(--MI-collapsed-height);
 	overflow: clip;
 }
 
@@ -1170,51 +1174,60 @@ function emitUpdReaction(emoji: string, delta: number) {
 .translation {
 	border: solid 0.5px var(--MI_THEME-divider);
 	border-radius: var(--MI-radius);
-	padding: 12px;
-	margin-top: 8px;
+	padding: var(--MI-step-4);
+	margin-top: var(--MI-step-3);
 }
 
 .urlPreview {
-	margin-top: 8px;
+	margin-top: var(--MI-step-3);
+}
+
+.files {
+	margin-top: var(--MI-step-3);
 }
 
 .poll {
-	font-size: 80%;
+	margin-top: var(--MI-step-3);
 }
 
 .quote {
-	padding: 8px 0 0;
+	padding: var(--MI-step-3) 0 0;
 }
 
 .quoteNote {
-	padding: 16px;
+	padding: var(--MI-step-4);
 	border: solid 1px var(--MI-border-muted);
-	border-radius: var(--MI-radius-md);
+	border-radius: var(--MI-radius-lg);
 	overflow: clip;
 }
 
 .channel {
 	opacity: 0.7;
-	font-size: 80%;
+	font-size: var(--MI-text-meta);
+}
+
+.reactions {
+	margin-top: var(--MI-step-3);
 }
 
 .footer {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: var(--MI-space-sm);
-	margin: 12px 0 -4px calc(-1 * var(--MI-space-sm));
+	gap: var(--MI-step-2);
+	// 左は操作ボタンの内側の余白ぶん戻し、アイコンを本文の左端に揃える。
+	margin: var(--MI-step-3) 0 0 calc(-1 * var(--MI-step-3));
 }
 
 .footerButton {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: var(--MI-control-sm);
-	min-height: var(--MI-control-sm);
+	min-width: var(--MI-step-6);
+	min-height: var(--MI-step-6);
 	margin: 0;
-	padding: 6px var(--MI-space-sm);
-	border-radius: var(--MI-radius-sm);
+	padding: 0 var(--MI-step-3);
+	border-radius: var(--MI-radius-md);
 	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
 
 	&:hover {
@@ -1225,59 +1238,38 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .footerButtonCount {
 	display: inline;
-	margin: 0 0 0 8px;
+	margin: 0 0 0 var(--MI-step-2);
+	font-size: var(--MI-text-meta);
 }
 
-@container (max-width: 580px) {
-	.root {
-		font-size: 0.95em;
-	}
-
-	.renote {
-		padding: 12px 22px 0 22px;
-	}
-
+// 狭い幅では余白を物差しの 1 段下 (step-5 → step-4、step-4 → step-3) にする。
+@container (max-width: 500px) {
+	.renote,
 	.tip {
-		padding: 16px 22px 8px;
+		padding: var(--MI-step-3) var(--MI-step-4) 0;
 	}
 
 	.collapsedRenoteTarget {
-		padding: 0 22px 18px;
+		padding: var(--MI-step-2) var(--MI-step-4) var(--MI-step-3);
 	}
 
 	.article {
-		padding: 20px 22px 16px;
+		padding: var(--MI-step-4) var(--MI-step-4) var(--MI-step-3);
 	}
 
 	.avatar {
-		width: 46px;
-		height: 46px;
-	}
-}
+		margin: 0 var(--MI-step-3) 0 0;
 
-@container (max-width: 500px) {
-	.root {
-		font-size: 0.9em;
+		&.useSticky {
+			top: calc(var(--MI-step-4) + var(--MI-stickyTop, 0px));
+		}
 	}
 
-	.renote {
-		padding: 10px 18px 0 18px;
-	}
-
-	.tip {
-		padding: 16px 18px 8px;
-	}
-
-	.collapsedRenoteTarget {
-		padding: 0 18px 18px;
-	}
-
-	.article {
-		padding: 17px 18px 14px;
-	}
-
+	// 指で押す幅では操作ボタンを 44px にする。広がった内側の余白ぶん下端と左端を戻し、
+	// アイコンを本文の左端に揃える (44px のボタンの内側の余白は step-4 に近い)。
 	.footer {
-		margin-bottom: -8px;
+		margin-bottom: calc(-1 * var(--MI-step-3));
+		margin-left: calc(-1 * var(--MI-step-4));
 	}
 
 	.root:not(.showActionsOnlyHover) {
@@ -1288,69 +1280,28 @@ function emitUpdReaction(emoji: string, delta: number) {
 	}
 }
 
-@container (max-width: 480px) {
-	.renote {
-		padding: 8px 16px 0 16px;
-	}
-
-	.tip {
-		padding: 8px 16px 0 16px;
-	}
-
-	.collapsedRenoteTarget {
-		padding: 0 16px 9px;
-		margin-top: 4px;
-	}
-
-	.article {
-		padding: 14px 16px;
-	}
-}
-
-@container (max-width: 450px) {
-	.avatar {
-		margin: 0 10px 0 0;
-		width: 46px;
-		height: 46px;
-
-		&.useSticky {
-			top: calc(14px + var(--MI-stickyTop, 0px));
-		}
-	}
-}
-
 @container (max-width: 350px) {
 	.colorBar {
-		top: 6px;
-		left: 6px;
-		width: 4px;
-		height: calc(100% - 12px);
-	}
-}
-
-@container (max-width: 320px) {
-	.quoteNote {
-		padding: 12px;
+		top: var(--MI-step-2);
+		left: var(--MI-step-2);
+		width: var(--MI-step-1);
+		height: calc(100% - 2 * var(--MI-step-2));
 	}
 }
 
 @container (max-width: 300px) {
-	.avatar {
-		width: 44px;
-		height: 44px;
-	}
-
 	// 極狭カラム (通知ウィジェット/デッキ等) では @container 500px で拡大した 44px の
 	// アクションボタンが1行に収まらず2段へ折り返す。この幅はほぼマウス操作のデスクトップ文脈
 	// なので、控えめな寸法と詰めた gap に戻して返信/リノート/リアクション/メニューを1行へ収める
 	.root:not(.showActionsOnlyHover) {
 		.footer {
-			gap: var(--MI-space-xs);
+			gap: var(--MI-step-1);
+			margin-left: calc(-1 * var(--MI-step-3));
 		}
 
 		.footerButton {
-			min-width: var(--MI-control-sm);
-			min-height: var(--MI-control-sm);
+			min-width: var(--MI-step-6);
+			min-height: var(--MI-step-6);
 		}
 	}
 }

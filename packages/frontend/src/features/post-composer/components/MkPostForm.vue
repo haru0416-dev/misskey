@@ -1503,12 +1503,14 @@ defineExpose({
 }
 
 //#region header
+// 左右の余白はヘッダー・本文・下部の道具で同じ step-5 にして、左端の線を 1 本に揃える。
+// ヘッダーの各ボタンは step-6 の高さで、上下の余白と合わせてヘッダーが step-7 になる。
 .header {
 	z-index: 1000;
-	min-height: 50px;
+	min-height: var(--MI-step-7);
 	display: flex;
 	flex-wrap: nowrap;
-	gap: 4px;
+	gap: var(--MI-step-2);
 }
 
 .headerLeft {
@@ -1516,36 +1518,37 @@ defineExpose({
 	flex: 1;
 	flex-wrap: nowrap;
 	align-items: center;
-	gap: 6px;
-	padding-left: 12px;
+	gap: var(--MI-step-2);
+	// 閉じるボタンの内側の余白 (step-3) を差し引き、アイコンを本文の左端に揃える。
+	padding-left: calc(var(--MI-step-5) - var(--MI-step-3));
 }
 
 .cancel {
-	padding: 8px;
+	padding: var(--MI-step-3);
 }
 
 .avatar {
 	display: block;
-	width: 28px;
-	height: 28px;
+	width: var(--MI-step-6);
+	height: var(--MI-step-6);
 	margin: auto;
 	object-fit: cover;
 }
 
 .headerRight {
 	display: flex;
-	min-height: 48px;
-	font-size: 0.9em;
+	min-height: var(--MI-step-7);
+	font-size: var(--MI-text-meta);
 	flex-wrap: nowrap;
 	align-items: center;
 	margin-left: auto;
-	gap: 4px;
+	gap: var(--MI-step-1);
 	overflow: clip;
-	padding-left: 4px;
+	padding-left: var(--MI-step-2);
 }
 
 .submit {
-	margin: 12px 12px 12px 6px;
+	margin: 0 var(--MI-step-5) 0 var(--MI-step-2);
 	vertical-align: bottom;
 
 	&:focus-visible {
@@ -1580,20 +1583,21 @@ defineExpose({
 
 .colorBar {
 	position: absolute;
-	top: 0px;
-	left: 12px;
-	width: 5px;
-	height: 100% ;
+	top: 0;
+	left: var(--MI-step-3);
+	width: var(--MI-step-2);
+	height: 100%;
 	border-radius: 999px;
 	pointer-events: none;
 }
 
 .submitInner {
-	padding: 0 12px;
-	line-height: 34px;
+	padding: 0 var(--MI-step-4);
+	line-height: var(--MI-step-6);
 	font-weight: bold;
-	border-radius: 6px;
-	min-width: 90px;
+	border-radius: var(--MI-radius-md);
+	// 高さ step-6 に対して φ² 倍強の幅 (89px) を最小にし、文言が短くても押しやすい横長にする。
+	min-width: 89px;
 	box-sizing: border-box;
 	color: var(--MI_THEME-fgOnAccent);
 	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
@@ -1601,8 +1605,8 @@ defineExpose({
 
 .headerRightItem {
 	margin: 0;
-	padding: 8px;
-	border-radius: 6px;
+	padding: var(--MI-step-3);
+	border-radius: var(--MI-radius-md);
 
 	&:hover {
 		background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
@@ -1614,7 +1618,7 @@ defineExpose({
 }
 
 .headerRightButtonText {
-	padding-left: 6px;
+	padding-left: var(--MI-step-2);
 }
 
 .visibility {
@@ -1631,34 +1635,27 @@ defineExpose({
 }
 //#endregion
 
+// 投稿前の見た目は無地の一段沈んだ面に置き、入力欄と区別する。
 .preview {
-	padding: 16px 20px 0 20px;
+	padding: var(--MI-step-4) var(--MI-step-5) 0;
 	min-height: 75px;
 	max-height: 150px;
 	overflow: auto;
-	background-size: auto auto;
-}
-
-html[data-color-scheme=dark] .preview {
-	background-image: repeating-linear-gradient(135deg, transparent, transparent 5px, #0004 5px, #0004 10px);
-}
-
-html[data-color-scheme=light] .preview {
-	background-image: repeating-linear-gradient(135deg, transparent, transparent 5px, #00000005 5px, #00000005 10px);
+	background: var(--MI-surface-subtle);
 }
 
 .targetNote {
-	padding: 0 20px 16px 20px;
+	padding: 0 var(--MI-step-5) var(--MI-step-4);
 }
 
 .withQuote {
-	margin: 0 0 8px 0;
+	margin: 0 0 var(--MI-step-3) 0;
 	color: var(--MI_THEME-accent);
 }
 
 .toSpecified {
-	padding: 6px 24px;
-	margin-bottom: 8px;
+	padding: var(--MI-step-2) var(--MI-step-5);
+	margin-bottom: var(--MI-step-3);
 	overflow: auto;
 	white-space: nowrap;
 }
@@ -1666,24 +1663,21 @@ html[data-color-scheme=light] .preview {
 .visibleUsers {
 	display: inline;
 	top: -1px;
-	font-size: 14px;
+	font-size: 1rem;
 }
 
 .visibleUser {
-	margin-right: 14px;
-	padding: 8px 0 8px 8px;
-	border-radius: 8px;
+	margin-right: var(--MI-step-4);
+	padding: var(--MI-step-3) 0 var(--MI-step-3) var(--MI-step-3);
+	border-radius: var(--MI-radius-lg);
 	background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
 }
 
 .hasNotSpecifiedMentions,
 .scheduledAt,
-.showHowToUse {
-	margin: 0 20px 16px 20px;
-}
-
+.showHowToUse,
 .serverRulesNotice {
-	margin: 0 20px 16px 20px;
+	margin: 0 var(--MI-step-5) var(--MI-step-4);
 }
 
 .cw,
@@ -1691,10 +1685,11 @@ html[data-color-scheme=light] .preview {
 .text {
 	display: block;
 	box-sizing: border-box;
-	padding: 0 24px;
+	padding: 0 var(--MI-step-5);
 	margin: 0;
 	width: 100%;
-	font-size: 110%;
+	font-size: var(--MI-text-large);
+	line-height: var(--MI-leading);
 	border: none;
 	border-radius: 0;
 	background: transparent;
@@ -1717,18 +1712,18 @@ html[data-color-scheme=light] .preview {
 
 .cw {
 	z-index: 1;
-	padding-bottom: 8px;
+	padding-bottom: var(--MI-step-3);
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
 }
 
 .cwTextCount {
 	position: absolute;
 	top: 0;
-	right: 2px;
-	padding: 2px 6px;
-	font-size: .9em;
+	right: var(--MI-step-1);
+	padding: var(--MI-step-1) var(--MI-step-2);
+	font-size: var(--MI-text-meta);
 	color: var(--MI_THEME-warn);
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
 	max-width: 100%;
 	min-width: 1.6em;
 	text-align: center;
@@ -1736,8 +1731,8 @@ html[data-color-scheme=light] .preview {
 
 .hashtags {
 	z-index: 1;
-	padding-top: 8px;
-	padding-bottom: 8px;
+	padding-top: var(--MI-step-3);
+	padding-bottom: var(--MI-step-3);
 	border-top: solid 0.5px var(--MI_THEME-divider);
 }
 
@@ -1746,15 +1741,16 @@ html[data-color-scheme=light] .preview {
 	position: relative;
 
 	&.withCw {
-		padding-top: 8px;
+		padding-top: var(--MI-step-3);
 	}
 }
 
+// 空のときも 3 行分の高さを持たせ、書き始める場所を示す。
 .text {
 	max-width: 100%;
 	min-width: 100%;
 	width: 100%;
-	min-height: 90px;
+	min-height: calc(3em * var(--MI-leading));
 	max-height: 500px;
 	field-sizing: content;
 }
@@ -1762,11 +1758,11 @@ html[data-color-scheme=light] .preview {
 .textCount {
 	position: absolute;
 	top: 0;
-	right: 2px;
-	padding: 4px 6px;
-	font-size: .9em;
+	right: var(--MI-step-1);
+	padding: var(--MI-step-2);
+	font-size: var(--MI-text-meta);
 	color: var(--MI_THEME-warn);
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
 	min-width: 1.6em;
 	text-align: center;
 }
@@ -1777,9 +1773,13 @@ html[data-color-scheme=light] .preview {
 	color: #ff2a2a;
 }
 
+// 道具のマスは step-6 角。マスの内側の余白ぶん外側を詰め、アイコン (幅およそ 1.25em) の左端を本文に揃える。
 .footer {
+	--cell: var(--MI-step-6);
+	--icon: 1.25em;
+
 	display: flex;
-	padding: 0 16px 16px 16px;
+	padding: var(--MI-step-3) var(--MI-step-4) var(--MI-step-4) calc(var(--MI-step-5) - (var(--cell) - var(--icon)) / 2);
 	font-size: 1em;
 }
 
@@ -1787,17 +1787,17 @@ html[data-color-scheme=light] .preview {
 	flex: 1;
 	display: grid;
 	grid-auto-flow: row;
-	grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
-	grid-auto-rows: 40px;
+	grid-template-columns: repeat(auto-fill, var(--cell));
+	grid-auto-rows: var(--cell);
 }
 
 .footerRight {
-	flex: 0;
+	flex: none;
 	margin-left: auto;
 	display: grid;
 	grid-auto-flow: row;
-	grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
-	grid-auto-rows: 40px;
+	grid-template-columns: repeat(auto-fill, var(--cell));
+	grid-auto-rows: var(--cell);
 	direction: rtl;
 }
 
@@ -1806,9 +1806,9 @@ html[data-color-scheme=light] .preview {
 	padding: 0;
 	margin: 0;
 	font-size: 1em;
-	width: auto;
+	width: 100%;
 	height: 100%;
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
 
 	&:hover {
 		background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
@@ -1823,11 +1823,8 @@ html[data-color-scheme=light] .preview {
 	color: var(--MI_THEME-accent);
 }
 
+// 狭い幅では左右の余白を物差しの 1 段下にし、道具のマスは指で押せる 44px にする。
 @container (max-width: 500px) {
-	.headerRight {
-		font-size: .9em;
-	}
-
 	.headerRightButtonText {
 		display: none;
 	}
@@ -1836,48 +1833,48 @@ html[data-color-scheme=light] .preview {
 		overflow: initial;
 	}
 
+	.headerLeft {
+		padding-left: calc(var(--MI-step-4) - var(--MI-step-3));
+	}
+
 	.submit {
-		margin: 8px 8px 8px 4px;
+		margin: 0 var(--MI-step-4) 0 var(--MI-step-1);
 	}
 
-	.toSpecified {
-		padding: 6px 16px;
-	}
-
-	.preview {
-		padding: 16px 14px 0 14px;
-	}
+	.toSpecified,
+	.preview,
 	.cw,
 	.hashtags,
 	.text {
-		padding: 0 16px;
+		padding-left: var(--MI-step-4);
+		padding-right: var(--MI-step-4);
 	}
 
-	.text {
-		min-height: 80px;
+	.hasNotSpecifiedMentions,
+	.scheduledAt,
+	.showHowToUse,
+	.serverRulesNotice {
+		margin: 0 var(--MI-step-4) var(--MI-step-4);
+	}
+
+	.targetNote {
+		padding: 0 var(--MI-step-4) var(--MI-step-4);
 	}
 
 	.footer {
-		padding: 0 8px 8px 8px;
+		--cell: var(--MI-control-md);
+
+		padding: var(--MI-step-2) var(--MI-step-3) var(--MI-step-3) calc(var(--MI-step-4) - (var(--cell) - var(--icon)) / 2);
 	}
 }
 
 @container (max-width: 350px) {
 	.footer {
-		font-size: 0.9em;
-	}
-
-	.footerLeft {
-		grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
-	}
-
-	.footerRight {
-		grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+		--cell: var(--MI-step-6);
 	}
 
 	.headerRight {
 		gap: 0;
 	}
-
 }
 </style>

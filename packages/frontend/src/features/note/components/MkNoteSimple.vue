@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div v-if="note" :class="$style.root">
 	<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="note.user" link preview/>
 	<div :class="$style.main">
-		<MkNoteHeader :class="$style.header" :note="note" :mini="true"/>
+		<MkNoteHeader :note="note" :mini="true"/>
 		<div>
 			<p v-if="note.cw != null" :class="$style.cw">
 				<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'" v-bind="note.emojis === undefined ? {} : { emojiUrls: note.emojis }"/>
@@ -44,20 +44,22 @@ const showContent = ref(false);
 .root {
 	display: flex;
 	margin: 0;
-	font-size: 0.95em;
+	font-size: var(--MI-text-meta);
+	line-height: var(--MI-leading);
 }
 
+// 名前の行と本文 1 行目の 2 行分に揃える。
 .avatar {
 	flex-shrink: 0;
 	display: block;
-	margin: 0 10px 0 0;
-	width: 34px;
-	height: 34px;
-	border-radius: 8px;
+	margin: 0 var(--MI-step-3) 0 0;
+	width: calc(2em * var(--MI-leading));
+	height: calc(2em * var(--MI-leading));
+	border-radius: var(--MI-radius-lg);
 
 	&.useSticky {
 		position: sticky;
-		top: calc(16px + var(--MI-stickyTop, 0px));
+		top: calc(var(--MI-step-4) + var(--MI-stickyTop, 0px));
 		left: 0;
 	}
 }
@@ -65,10 +67,6 @@ const showContent = ref(false);
 .main {
 	flex: 1;
 	min-width: 0;
-}
-
-.header {
-	margin-bottom: 2px;
 }
 
 .cw {
@@ -85,16 +83,9 @@ const showContent = ref(false);
 	padding: 0;
 }
 
-@container (min-width: 350px) {
-	.avatar {
-		width: 40px;
-		height: 40px;
-	}
-}
-
 .deleted {
 	text-align: center;
-	padding: 8px !important;
+	padding: var(--MI-step-3) !important;
 	--color: light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.15));
 	background-size: auto auto;
 	background-image: repeating-linear-gradient(135deg, transparent, transparent 10px, var(--color) 4px, var(--color) 14px);

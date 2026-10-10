@@ -369,7 +369,7 @@ const collapsed = ref(appearNote.value.cw == null && isLong);
 
 .contentCollapsed {
 	position: relative;
-	max-height: 9em;
+	max-height: var(--MI-collapsed-height);
 	overflow: clip;
 }
 

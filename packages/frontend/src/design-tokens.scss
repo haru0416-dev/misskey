@@ -19,6 +19,26 @@
 	--MI-radius-lg: 8px;
 	--MI-radius-full: 9999px;
 
+	/*
+	 * 黄金比 φ ≈ 1.618 に基づく物差し。余白は隣の段との比が φ に近づくフィボナッチ数で、
+	 * 「要素の中」「要素の間」「まとまりの外」を一定の比で見分けられるようにする。
+	 * 文字と行送りは利用者の文字サイズ設定 (html の font-size) に追従させるため rem で表す。
+	 */
+	--MI-step-1: 3px;
+	--MI-step-2: 5px;
+	--MI-step-3: 8px;
+	--MI-step-4: 13px;
+	--MI-step-5: 21px;
+	--MI-step-6: 34px;
+	--MI-step-7: 55px;
+	--MI-leading: 1.618;
+	/* 1 段は φ の 4 乗根 (≈ 1.128)。2 段で √φ、4 段で φ になる。 */
+	--MI-text-meta: 0.887rem;
+	--MI-text-large: 1.128rem;
+	--MI-text-lead: 1.272rem;
+	/* 長いノートを畳んだときに見せる高さ (8 行)。畳む条件 (13 行超) との比が φ になる。 */
+	--MI-collapsed-height: calc(8em * var(--MI-leading));
+
 	--MI-duration-fast: 120ms;
 	--MI-duration-normal: 180ms;
 	--MI-duration-slow: 240ms;

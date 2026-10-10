@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<template v-for="media in previewableMedia" :key="media.id">
 				<XVideo v-if="media.type.startsWith('video')" :ref="(comp) => setMediaComponent(media.id, comp)" :class="$style.media" :video="media" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
-				<XImage v-else :ref="(comp) => setMediaComponent(media.id, comp)" :class="$style.media" :image="media" :raw="raw" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
+				<XImage v-else :ref="(comp) => setMediaComponent(media.id, comp)" :class="$style.media" :image="media" :raw="raw" :cover="count > 1" :marker="`${markerId}:${media.id}`" @mediaClick="onMediaClick(media, $event)"/>
 			</template>
 		</div>
 	</div>
@@ -191,29 +191,33 @@ defineExpose({ openGallery });
 <style lang="scss" module>
 .root { container-type: inline-size; }
 .container { position: relative; width: 100%; }
+// 複数枚は φ:1 の黄金長方形を基準に切り抜き、間隔を詰めて 1 つのまとまりとして見せる。
 .medias {
 	display: grid;
-	gap: 8px;
+	gap: var(--MI-step-1);
 	height: 100%;
 	width: 100%;
 	&.n1 { grid-template-rows: 1fr; min-height: 64px; max-height: clamp(64px, 50cqh, min(360px, 50vh)); }
 	&.n1.n116_9 { min-height: initial; max-height: initial; aspect-ratio: 16 / 9; }
 	&.n1.n11_1 { min-height: initial; max-height: initial; aspect-ratio: 1 / 1; }
 	&.n1.n12_3 { min-height: initial; max-height: initial; aspect-ratio: 2 / 3; }
-	&.n2 { aspect-ratio: 16 / 9; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
-	&.n3 { aspect-ratio: 16 / 9; grid-template-columns: 1fr .5fr; grid-template-rows: 1fr 1fr; }
+	&.n2 { aspect-ratio: 1.618 / 1; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+	&.n3 { aspect-ratio: 1.618 / 1; grid-template-columns: 1.618fr 1fr; grid-template-rows: 1fr 1fr; }
 	&.n3 > .media:nth-child(1) { grid-row: 1 / 3; }
 	&.n3 > .media:nth-child(3) { grid-column: 2 / 3; grid-row: 2 / 3; }
-	&.n4 { aspect-ratio: 16 / 9; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+	&.n4 { aspect-ratio: 1.618 / 1; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
 	&.nMany { grid-template-columns: 1fr 1fr; }
-	&.nMany > .media { aspect-ratio: 16 / 9; }
+	&.nMany > .media { aspect-ratio: 1.618 / 1; }
 	&.square { min-height: 0; max-height: none; aspect-ratio: 1 / 1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 	&.square > .media { grid-column: auto; grid-row: auto; aspect-ratio: auto; border-radius: 0; }
 	&.square > .media:only-child { grid-column: 1 / -1; grid-row: 1 / -1; }
 }
-.media { overflow: hidden; border-radius: 8px; cursor: zoom-in; }
+.media { overflow: hidden; border-radius: var(--MI-radius-lg); cursor: zoom-in; }
+// 複数枚は外側の角だけを丸め、内側の角は詰めた間隔に合わせて小さくする。
+.medias:not(.n1):not(.square) > .media { border-radius: var(--MI-radius-xs); }
+.medias:not(.n1):not(.square) { border-radius: var(--MI-radius-lg); overflow: hidden; }
 @container (min-width: 500px) {
-	.medias.gridInWideArea:not(.square) { display: grid; aspect-ratio: auto; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto; gap: 8px; }
+	.medias.gridInWideArea:not(.square) { display: grid; aspect-ratio: auto; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto; gap: var(--MI-step-1); }
 	.medias.gridInWideArea:not(.square) > .media { aspect-ratio: 1 / 1; }
 }
 </style>

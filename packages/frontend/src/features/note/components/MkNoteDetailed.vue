@@ -933,7 +933,7 @@ function loadConversation() {
 }
 
 .poll {
-	font-size: 80%;
+	margin-top: var(--MI-step-3);
 }
 
 .quote {

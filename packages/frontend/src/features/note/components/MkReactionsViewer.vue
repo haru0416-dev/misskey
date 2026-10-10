@@ -174,7 +174,7 @@ watch(
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px;
+	gap: var(--MI-step-2);
 
 	&:empty {
 		display: none;

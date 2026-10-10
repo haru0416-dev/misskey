@@ -43,6 +43,7 @@
 	.username {
 		flex-shrink: 9999999;
 		margin: 0 .5em 0 0;
+		font-size: var(--MI-text-meta);
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
@@ -50,7 +51,7 @@
 	.info {
 		flex-shrink: 0;
 		margin-left: auto;
-		font-size: 0.9em;
+		font-size: var(--MI-text-meta);
 	}
 
 	.badgeRoles {

@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="[hide ? $style.hidden : $style.visible, (image.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive]" @click="onClick" @contextmenu.stop="onContextmenu">
+<div :class="[hide ? $style.hidden : $style.visible, cover && $style.cover, (image.isSensitive && prefer.highlightSensitiveMedia) && $style.sensitive]" @click="onClick" @contextmenu.stop="onContextmenu">
 	<component
 		:is="disableImageLink ? 'div' : 'a'"
 		v-bind="disableImageLink ? {
@@ -213,11 +213,11 @@ defineExpose({
 	background-color: rgba(0, 0, 0, 0.3);
 	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
 	backdrop-filter: var(--MI-blur, blur(15px));
-	border-radius: 0 0 0 9px;
+	border-radius: 0 0 0 var(--MI-radius-lg);
 	color: #fff;
-	font-size: 12px;
+	font-size: var(--MI-text-meta);
 	opacity: .5;
-	padding: 5px 8px;
+	padding: var(--MI-step-2) var(--MI-step-3);
 	text-align: center;
 	cursor: pointer;
 	top: 0;
@@ -231,33 +231,29 @@ defineExpose({
 	color: #fff;
 }
 
+// 縦横比が枠と合わない画像の余りは無地の面にして、画像の輪郭だけが目に入るようにする。
 .visible {
 	position: relative;
-	background: var(--MI_THEME-bg);
-	background-size: 16px 16px;
+	background: var(--MI-surface-subtle);
 }
 
-html[data-color-scheme=dark] .visible {
-	--c: rgb(255 255 255 / 2%);
-	background-image: linear-gradient(45deg, var(--c) 16.67%, var(--MI_THEME-bg) 16.67%, var(--MI_THEME-bg) 50%, var(--c) 50%, var(--c) 66.67%, var(--MI_THEME-bg) 66.67%, var(--MI_THEME-bg) 100%);
-}
-
-html[data-color-scheme=light] .visible {
-	--c: rgb(0 0 0 / 2%);
-	background-image: linear-gradient(45deg, var(--c) 16.67%, var(--MI_THEME-bg) 16.67%, var(--MI_THEME-bg) 50%, var(--c) 50%, var(--c) 66.67%, var(--MI_THEME-bg) 66.67%, var(--MI_THEME-bg) 100%);
+.cover .image {
+	object-fit: cover;
 }
 
 .menu {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	position: absolute;
 	background-color: rgba(0, 0, 0, 0.3);
 	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
 	backdrop-filter: var(--MI-blur, blur(15px));
-	border-radius: 9px 0 0 0;
+	border-radius: var(--MI-radius-lg) 0 0 0;
 	color: #fff;
-	font-size: 0.8em;
-	width: 28px;
-	height: 28px;
+	font-size: var(--MI-text-meta);
+	width: var(--MI-step-6);
+	height: var(--MI-step-6);
 	text-align: center;
 	bottom: 0;
 	right: 0;
@@ -276,11 +272,11 @@ html[data-color-scheme=light] .visible {
 .indicators {
 	display: inline-flex;
 	position: absolute;
-	top: 10px;
-	left: 10px;
+	top: var(--MI-step-3);
+	left: var(--MI-step-3);
 	pointer-events: none;
 	opacity: .5;
-	gap: 6px;
+	gap: var(--MI-step-2);
 }
 
 .indicator {

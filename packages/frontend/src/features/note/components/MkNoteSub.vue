@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="note.channel" :class="$style.colorBar" :style="{ background: note.channel.color }"></div>
 		<MkAvatar :class="$style.avatar" :user="note.user" link preview/>
 		<div :class="$style.body">
-			<MkNoteHeader :class="$style.header" :note="note" :mini="true"/>
+			<MkNoteHeader :note="note" :mini="true"/>
 			<div>
 				<p v-if="note.cw != null" :class="$style.cw">
 					<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'"/>
@@ -84,7 +84,7 @@ if (props.detail && props.note) {
 @use '@/shared/styles/_note-sub.scss' as note-sub;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
-.avatar, .body, .children, .colorBar, .cw, .header, .main, .more, .muted, .reply, .root, .text {}
+.avatar, .body, .children, .colorBar, .cw, .main, .more, .muted, .reply, .root, .text {}
 
 @include note-sub.base;
 

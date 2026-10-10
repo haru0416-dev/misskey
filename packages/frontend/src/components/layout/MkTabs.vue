@@ -52,6 +52,8 @@ export type Tab<K = string> = {
 	key: K;
 	onClick?: (ev: PointerEvent) => void;
 	iconOnly?: boolean;
+	/** 見出しが狭い (幅 500px 未満) ときだけアイコンのみにする。MkPageHeader のタブで使う。 */
+	iconOnlyWhenNarrow?: boolean;
 	title: string;
 	icon?: string;
 };

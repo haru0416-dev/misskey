@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="note.channel" :class="$style.colorBar" :style="{ background: note.channel.color }"></div>
 		<EmAvatar :class="$style.avatar" :user="note.user" link preview/>
 		<div :class="$style.body">
-			<EmNoteHeader :class="$style.header" :note="note" :mini="true"/>
+			<EmNoteHeader :note="note" :mini="true"/>
 			<div>
 				<p v-if="note.cw != null" :class="$style.cw">
 					<EmMfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'"/>
@@ -69,7 +69,7 @@ if (props.detail && props.depth < 5) {
 @use '@/shared/styles/_note-sub.scss' as note-sub;
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。
-.avatar, .body, .children, .colorBar, .cw, .header, .main, .more, .reply, .root, .text {}
+.avatar, .body, .children, .colorBar, .cw, .main, .more, .reply, .root, .text {}
 
 @include note-sub.base;
 </style>

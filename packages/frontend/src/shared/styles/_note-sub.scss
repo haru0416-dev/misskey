@@ -8,13 +8,15 @@
 // vue-tsc は `@include` 先のセレクタを読まないので、利用側はテンプレートで使うクラス名を空のルールで列挙する。
 
 @mixin base {
+	// 左右はノート本体と同じ step-5 にして、アバターの左端を揃える。
 	.root {
-		padding: 16px 32px;
-		font-size: 0.9em;
+		padding: var(--MI-step-4) var(--MI-step-5);
+		font-size: var(--MI-text-meta);
+		line-height: var(--MI-leading);
 		position: relative;
 
 		&.children {
-			padding: 10px 0 0 16px;
+			padding: var(--MI-step-3) 0 0 var(--MI-step-4);
 			font-size: 1em;
 		}
 	}
@@ -25,30 +27,27 @@
 
 	.colorBar {
 		position: absolute;
-		top: 8px;
-		left: 8px;
-		width: 5px;
-		height: calc(100% - 8px);
+		top: var(--MI-step-3);
+		left: var(--MI-step-3);
+		width: var(--MI-step-2);
+		height: calc(100% - var(--MI-step-3));
 		border-radius: 999px;
 		pointer-events: none;
 	}
 
+	// 名前の行と本文 1 行目の 2 行分に揃える。
 	.avatar {
 		flex-shrink: 0;
 		display: block;
-		margin: 0 8px 0 0;
-		width: 38px;
-		height: 38px;
-		border-radius: 8px;
+		margin: 0 var(--MI-step-3) 0 0;
+		width: calc(2em * var(--MI-leading));
+		height: calc(2em * var(--MI-leading));
+		border-radius: var(--MI-radius-lg);
 	}
 
 	.body {
 		flex: 1;
 		min-width: 0;
-	}
-
-	.header {
-		margin-bottom: 2px;
 	}
 
 	.cw {
@@ -66,28 +65,29 @@
 
 	.reply, .more {
 		border-left: solid 0.5px var(--MI_THEME-divider);
-		margin-top: 10px;
+		margin-top: var(--MI-step-3);
 	}
 
 	.more {
-		padding: 10px 0 0 16px;
+		padding: var(--MI-step-3) 0 0 var(--MI-step-4);
 	}
 
-	@container (max-width: 450px) {
+	// ノート本体と同じく、狭い幅では余白を物差しの 1 段下にする。
+	@container (max-width: 500px) {
 		.root {
-			padding: 14px 16px;
+			padding: var(--MI-step-3) var(--MI-step-4);
 
 			&.children {
-				padding: 10px 0 0 8px;
+				padding: var(--MI-step-3) 0 0 var(--MI-step-3);
 			}
 		}
 	}
 
 	.muted {
 		text-align: center;
-		padding: 8px !important;
+		padding: var(--MI-step-3) !important;
 		border: 1px solid var(--MI_THEME-divider);
-		margin: 8px 8px 0 8px;
-		border-radius: 8px;
+		margin: var(--MI-step-3) var(--MI-step-3) 0 var(--MI-step-3);
+		border-radius: var(--MI-radius-lg);
 	}
 }

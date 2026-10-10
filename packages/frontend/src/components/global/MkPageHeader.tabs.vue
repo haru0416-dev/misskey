@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.tabInner">
 				<i v-if="t.icon" :class="[$style.tabIcon, t.icon]"></i>
 				<div
-					v-if="!t.iconOnly || (!prefer.animation && t.key === tab)"
+					v-if="!isIconOnly(t) || (!prefer.animation && t.key === tab)"
 					:class="$style.tabTitle"
 				>
 					{{ t.title }}
@@ -60,11 +60,17 @@ const props = withDefaults(
 		tabs?: Tab[];
 		tab?: string;
 		rootEl?: HTMLElement | null;
+		narrow?: boolean;
 	}>(),
 	{
 		tabs: () => [] as Tab[],
+		narrow: false,
 	},
 );
+
+function isIconOnly(t: Tab): boolean {
+	return t.iconOnly === true || (t.iconOnlyWhenNarrow === true && props.narrow);
+}
 
 const emit = defineEmits<{
 	(ev: 'update:tab', key: string): void;
@@ -175,7 +181,7 @@ onUnmounted(() => {
 	position: relative;
 	margin: 0;
 	height: var(--height);
-	font-size: 0.84em;
+	font-size: var(--MI-text-meta);
 	text-align: center;
 	overflow-x: auto;
 	overflow-y: hidden;
@@ -203,7 +209,7 @@ onUnmounted(() => {
 .tab {
 	display: inline-block;
 	position: relative;
-	padding: 0 12px;
+	padding: 0 var(--MI-step-4);
 	height: 100%;
 	font-weight: 500;
 	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 72%, transparent);
@@ -228,7 +234,7 @@ onUnmounted(() => {
 }
 
 .tabIcon + .tabTitle {
-	padding-left: 4px;
+	padding-left: var(--MI-step-2);
 }
 
 .tabTitle {
