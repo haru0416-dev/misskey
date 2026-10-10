@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1.23
 
-ARG BUN_VERSION=1.4.2
+ARG BUN_VERSION=1.4.3
 
 FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION}-debian AS native-builder
 
